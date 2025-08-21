@@ -1,0 +1,236 @@
+/* AssetSearch 组件样式 */
+
+.searchCard {
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.searchCard .ant-card-head {
+  border-bottom: 1px solid #f0f0f0;
+  background: #fafafa;
+}
+
+.searchCard .ant-card-head-title {
+  font-weight: 600;
+}
+
+.quickFilters {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+}
+
+.quickFilters .ant-btn {
+  margin: 2px 4px;
+  border-radius: 16px;
+  font-size: 12px;
+  height: 28px;
+  padding: 0 12px;
+  transition: all 0.3s ease;
+}
+
+.quickFilters .ant-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.advancedSearch {
+  background: #ffffff;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+}
+
+.advancedSearch .ant-collapse-header {
+  background: #f8f9fa !important;
+  border-radius: 6px 6px 0 0 !important;
+  font-weight: 500;
+}
+
+.advancedSearch .ant-collapse-content {
+  border-radius: 0 0 6px 6px;
+}
+
+.areaSlider {
+  padding: 0 8px;
+}
+
+.areaSlider .ant-slider-track {
+  background: linear-gradient(90deg, #1890ff, #52c41a);
+}
+
+.areaSlider .ant-slider-handle {
+  border: 2px solid #1890ff;
+  box-shadow: 0 2px 6px rgba(24, 144, 255, 0.3);
+}
+
+.actionButtons {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.actionButtons .ant-btn {
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.actionButtons .ant-btn-primary {
+  background: linear-gradient(135deg, #1890ff, #096dd9);
+  border: none;
+  box-shadow: 0 2px 6px rgba(24, 144, 255, 0.3);
+}
+
+.actionButtons .ant-btn-primary:hover {
+  background: linear-gradient(135deg, #40a9ff, #1890ff);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.4);
+}
+
+/* 搜索历史样式 */
+.historyModal .ant-list-item {
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
+  transition: all 0.3s ease;
+}
+
+.historyModal .ant-list-item:hover {
+  background: #f0f8ff;
+  border-color: #1890ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.1);
+}
+
+.historyModal .ant-list-item-meta-title {
+  margin-bottom: 8px;
+}
+
+.historyModal .ant-tag {
+  margin: 2px;
+  border-radius: 12px;
+  font-size: 11px;
+  padding: 2px 8px;
+}
+
+.historyModal .ant-list-item-action {
+  margin-left: 16px;
+}
+
+.historyModal .ant-list-item-action .ant-btn {
+  border-radius: 4px;
+  font-size: 12px;
+  height: 28px;
+  padding: 0 8px;
+}
+
+/* 保存模态框样式 */
+.saveModal .ant-input {
+  border-radius: 6px;
+  border: 1px solid #d9d9d9;
+  transition: all 0.3s ease;
+}
+
+.saveModal .ant-input:focus {
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .quickFilters {
+    padding: 8px;
+  }
+  
+  .quickFilters .ant-btn {
+    margin: 2px;
+    font-size: 11px;
+    height: 26px;
+    padding: 0 8px;
+  }
+  
+  .actionButtons {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .actionButtons .ant-btn {
+    width: 100%;
+  }
+  
+  .historyModal .ant-list-item {
+    padding: 12px;
+  }
+  
+  .historyModal .ant-list-item-action {
+    margin-left: 8px;
+  }
+}
+
+/* 高亮样式 */
+.highlight {
+  background: linear-gradient(120deg, #fff2b8 0%, #fff2b8 100%);
+  padding: 1px 3px;
+  border-radius: 3px;
+  font-weight: 600;
+  color: #d46b08;
+  box-shadow: 0 1px 2px rgba(212, 107, 8, 0.1);
+}
+
+/* 动画效果 */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.searchCard {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+.historyModal .ant-list-item {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+/* 加载状态样式 */
+.searchCard .ant-spin-container {
+  min-height: 200px;
+}
+
+.searchCard .ant-spin-spinning {
+  opacity: 0.7;
+}
+
+/* 表单项样式优化 */
+.searchCard .ant-form-item-label > label {
+  font-weight: 500;
+  color: #262626;
+}
+
+.searchCard .ant-select,
+.searchCard .ant-input,
+.searchCard .ant-input-number {
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+.searchCard .ant-select:hover,
+.searchCard .ant-input:hover,
+.searchCard .ant-input-number:hover {
+  border-color: #40a9ff;
+}
+
+.searchCard .ant-select-focused,
+.searchCard .ant-input:focus,
+.searchCard .ant-input-number:focus {
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
+}

@@ -1,0 +1,102 @@
+.assetDetailPage {
+  padding: 24px;
+  background: #f5f5f5;
+  min-height: 100vh;
+}
+
+.pageHeader {
+  background: white;
+  padding: 24px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.pageTitle {
+  margin: 0 !important;
+  color: #1890ff;
+}
+
+.actionButtons {
+  margin-top: 16px;
+}
+
+.tabsContainer {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.tabsContainer .ant-tabs-content-holder {
+  padding: 24px;
+}
+
+.loadingContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+.errorContainer {
+  padding: 50px 0;
+  text-align: center;
+}
+
+/* 打印样式 */
+@media print {
+  .assetDetailPage {
+    background: white;
+    padding: 0;
+  }
+  
+  .pageHeader {
+    box-shadow: none;
+    border: 1px solid #d9d9d9;
+  }
+  
+  .actionButtons {
+    display: none;
+  }
+  
+  .tabsContainer {
+    box-shadow: none;
+    border: 1px solid #d9d9d9;
+  }
+  
+  .ant-tabs-tab {
+    display: none;
+  }
+  
+  .ant-tabs-content-holder {
+    padding: 16px !important;
+  }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .assetDetailPage {
+    padding: 16px;
+  }
+  
+  .pageHeader {
+    padding: 16px;
+  }
+  
+  .pageTitle {
+    font-size: 20px !important;
+  }
+  
+  .actionButtons {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .actionButtons .ant-btn {
+    width: 100%;
+  }
+  
+  .tabsContainer .ant-tabs-content-holder {
+    padding: 16px;
+  }
+}

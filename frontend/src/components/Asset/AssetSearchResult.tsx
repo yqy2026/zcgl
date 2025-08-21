@@ -1,0 +1,206 @@
+import React from 'react'
+import { Card, List, Typography, Tag, Space, Button, Tooltip } from 'antd'
+import {
+  EyeOutlined,
+  EditOutlined,
+  EnvironmentOutlined,
+  UserOutlined,
+  HomeOutlined,
+} from '@ant-design/icons'
+
+import type { Asset, AssetSearchParams } from '@/types/asset'
+import { highlightText, extractSearchTerms } from '@/utils/highlight'
+import { formatArea, getStatusColor } from '@/utils/format'
+
+const { Text, Paragraph } = Typography
+
+interface AssetSearchResultProps {
+  assets: Asset[]
+  searchParams: AssetSearchParams
+  loading?: boolean
+  onViewDetail: (asset: Asset) => void
+  onEdit: (asset: Asset) => void
+}
+
+const AssetSearchResult: React.FC<AssetSearchResultProps> = ({
+  assets,
+  searchParams,
+  loading = false,
+  onViewDetail,
+  onEdit,
+}) => {
+  // 提取搜索关键词
+  const searchTerms = extractSearchTerms(searchParams.search || '')
+
+  // 高亮文本的辅助函数
+  const highlightSearchText = (text: string) => {
+    if (!searchTerms.length) return text
+    return highlightText(text, searchParams.search || '')
+  }
+
+  return (
+    <List
+      loading={loading}
+      dataSource={assets}
+      renderItem={(asset) => (
+        <List.Item
+          key={asset.id}
+          actions={[
+            <Tooltip title="查看详情">
+              <Button
+                type="text"
+                icon={<EyeOutlined />}
+                onClick={() => onViewDetail(asset)}
+              />
+            </Tooltip>,
+            <Tooltip title="编辑">
+              <Button
+                type="text"
+                icon={<EditOutlined />}
+                onClick={() => onEdit(asset)}
+              />
+            </Tooltip>,
+          ]}
+        >
+          <List.Item.Meta
+            title={
+              <Space>
+                <HomeOutlined style={{ color: '#1890ff' }} />
+                <Text strong style={{ fontSize: '16px' }}>
+                  {highlightSearchText(asset.property_name)}
+                </Text>
+                <Tag color={getStatusColor(asset.ownership_status, 'ownership')}>
+                  {asset.ownership_status}
+                </Tag>
+                <Tag color={getStatusColor(asset.property_nature, 'property')}>
+                  {asset.property_nature}
+                </Tag>
+                <Tag color={getStatusColor(asset.usage_status, 'usage')}>
+                  {asset.usage_status}
+                </Tag>
+              </Space>
+            }
+            description={
+              <div>
+                {/* 地址信息 */}
+                <div style={{ marginBottom: 8 }}>
+                  <Space>
+                    <EnvironmentOutlined style={{ color: '#8c8c8c' }} />
+                    <Text type="secondary">
+                      {highlightSearchText(asset.address)}
+                    </Text>
+                  </Space>
+                </div>
+
+                {/* 权属信息 */}
+                <div style={{ marginBottom: 8 }}>
+                  <Space>
+                    <UserOutlined style={{ color: '#8c8c8c' }} />
+                    <Text type="secondary">
+                      权属方: {highlightSearchText(asset.ownership_entity)}
+                    </Text>
+                    {asset.management_entity && (
+                      <>
+                        <Text type="secondary">|</Text>
+                        <Text type="secondary">
+                          管理方: {highlightSearchText(asset.management_entity)}
+                        </Text>
+                      </>
+                    )}
+                  </Space>
+                </div>
+
+                {/* 面积信息 */}
+                <div style={{ marginBottom: 8 }}>
+                  <Space wrap>
+                    {asset.actual_property_area && (
+                      <Text type="secondary">
+                        实际面积: {formatArea(asset.actual_property_area)}
+                      </Text>
+                    )}
+                    {asset.rentable_area && (
+                      <Text type="secondary">
+                        可租面积: {formatArea(asset.rentable_area)}
+                      </Text>
+                    )}
+                    {asset.rented_area && (
+                      <Text type="secondary">
+                        已租面积: {formatArea(asset.rented_area)}
+                      </Text>
+                    )}
+                    {asset.occupancy_rate && (
+                      <Text type="secondary">
+                        出租率: {asset.occupancy_rate}
+                      </Text>
+                    )}
+                  </Space>
+                </div>
+
+                {/* 用途信息 */}
+                {(asset.certificated_usage || asset.actual_usage || asset.business_category) && (
+                  <div style={{ marginBottom: 8 }}>
+                    <Space wrap>
+                      {asset.certificated_usage && (
+                        <Text type="secondary">
+                          证载用途: {highlightSearchText(asset.certificated_usage)}
+                        </Text>
+                      )}
+                      {asset.actual_usage && (
+                        <Text type="secondary">
+                          实际用途: {highlightSearchText(asset.actual_usage)}
+                        </Text>
+                      )}
+                      {asset.business_category && (
+                        <Text type="secondary">
+                          业态: {highlightSearchText(asset.business_category)}
+                        </Text>
+                      )}
+                    </Space>
+                  </div>
+                )}
+
+                {/* 租户信息 */}
+                {asset.tenant_name && (
+                  <div style={{ marginBottom: 8 }}>
+                    <Text type="secondary">
+                      租户: {highlightSearchText(asset.tenant_name)}
+                    </Text>
+                  </div>
+                )}
+
+                {/* 特殊标记 */}
+                <div>
+                  <Space>
+                    {asset.is_litigated && (
+                      <Tag color="red">涉诉</Tag>
+                    )}
+                    {asset.include_in_occupancy_rate && (
+                      <Tag color="green">计入出租率</Tag>
+                    )}
+                    {asset.wuyang_project_name && (
+                      <Tag color="blue">五羊项目</Tag>
+                    )}
+                  </Space>
+                </div>
+
+                {/* 描述信息 */}
+                {asset.description && (
+                  <div style={{ marginTop: 8 }}>
+                    <Paragraph
+                      ellipsis={{ rows: 2, expandable: true, symbol: '展开' }}
+                      style={{ margin: 0, fontSize: '12px', color: '#8c8c8c' }}
+                    >
+                      {highlightSearchText(asset.description)}
+                    </Paragraph>
+                  </div>
+                )}
+              </div>
+            }
+          />
+        </List.Item>
+      )}
+    />
+  )
+}
+
+export default AssetSearchResult
