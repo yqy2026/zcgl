@@ -24,41 +24,43 @@ import {
   BarChartOutlined,
 } from '@ant-design/icons'
 import { useQuery } from '@tanstack/react-query'
+import { apiRequest, API_ENDPOINTS } from '../../config/api'
 
 const { Title, Text } = Typography
 const { TabPane } = Tabs
 
-// 模拟获取资产详情
+// 获取资产详情
 const fetchAssetDetail = async (id: string) => {
-  await new Promise(resolve => setTimeout(resolve, 1000))
+  const result = await apiRequest<any>(API_ENDPOINTS.assetDetail(id))
   
+  // 转换数据格式
   return {
-    id,
-    propertyName: '示例商业大厦A座',
-    ownershipEntity: '示例集团有限公司',
-    managementEntity: '示例物业管理公司',
-    address: '广东省广州市天河区珠江新城示例路123号',
-    landArea: 5000,
-    actualPropertyArea: 12000,
-    rentableArea: 10000,
-    rentedArea: 8000,
-    unrentedArea: 2000,
-    nonCommercialArea: 2000,
-    ownershipStatus: '已确权',
-    certificatedUsage: '商业',
-    actualUsage: '办公、商业',
-    businessCategory: '写字楼',
-    usageStatus: '出租',
-    isLitigated: '否',
-    propertyNature: '经营类',
-    businessModel: '整体出租',
-    includeInOccupancyRate: '是',
-    occupancyRate: '80.00%',
-    leaseContract: 'HT-2024-001',
-    tenantName: '示例科技有限公司',
-    description: '位于珠江新城核心区域的高端商业大厦，交通便利，配套完善。',
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-15T10:30:00Z',
+    id: result.id,
+    propertyName: result.property_name,
+    ownershipEntity: result.ownership_entity,
+    managementEntity: result.management_entity,
+    address: result.address,
+    landArea: result.land_area,
+    actualPropertyArea: result.total_area,
+    rentableArea: result.usable_area,
+    rentedArea: result.usable_area, // 暂时使用可用面积
+    unrentedArea: 0, // 需要计算
+    nonCommercialArea: 0, // 需要计算
+    ownershipStatus: result.ownership_status,
+    certificatedUsage: result.certificated_usage,
+    actualUsage: result.actual_usage,
+    businessCategory: result.business_category,
+    usageStatus: result.usage_status,
+    isLitigated: result.is_litigated,
+    propertyNature: result.property_nature,
+    businessModel: result.business_model,
+    includeInOccupancyRate: result.include_in_occupancy_rate,
+    occupancyRate: result.usage_status === '出租' ? '100.00%' : '0.00%',
+    leaseContract: result.lease_contract,
+    tenantName: result.tenant_name,
+    description: result.notes || result.description,
+    createdAt: result.created_at,
+    updatedAt: result.updated_at,
   }
 }
 

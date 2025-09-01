@@ -34,7 +34,7 @@ api_router.include_router(
 
 api_router.include_router(
     statistics_router,
-    prefix="",
+    prefix="/statistics",
     tags=["数据统计和报表"]
 )
 

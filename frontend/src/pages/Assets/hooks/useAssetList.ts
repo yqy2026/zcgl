@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { message } from 'antd'
+import { apiRequest, API_ENDPOINTS, ApiError } from '../../../config/api'
 
 interface AssetFilters {
   propertyNature?: string
@@ -56,13 +57,7 @@ const fetchAssets = async (params: {
     }
   }
 
-  const response = await fetch(`http://127.0.0.1:8001/api/v1/assets/?${searchParams}`)
-  
-  if (!response.ok) {
-    throw new Error('Failed to fetch assets')
-  }
-
-  const result = await response.json()
+  const result = await apiRequest<any>(`${API_ENDPOINTS.assets}?${searchParams}`)
   
   // 转换数据格式以匹配前端期望的格式
   const transformedData = result.items.map((item: any) => ({
@@ -75,8 +70,8 @@ const fetchAssets = async (params: {
     usageStatus: item.usage_status,
     actualPropertyArea: item.total_area || 0,
     rentableArea: item.usable_area || 0,
-    rentedArea: 0, // 需要根据实际字段调整
-    occupancyRate: '0', // 需要根据实际字段调整
+    rentedArea: item.usable_area || 0, // 暂时使用可用面积
+    occupancyRate: item.usage_status === '出租' ? '100%' : '0%', // 根据使用状态计算
     ownershipStatus: item.ownership_status,
     businessCategory: item.business_category,
     isLitigated: item.is_litigated,
@@ -95,22 +90,31 @@ const fetchAssets = async (params: {
 
 const fetchAssetSummary = async (): Promise<AssetSummary> => {
   try {
-    const response = await fetch('http://127.0.0.1:8001/api/v1/statistics/basic')
+    const result = await apiRequest<any>(API_ENDPOINTS.statistics.basic)
     
-    if (!response.ok) {
-      throw new Error('Failed to fetch asset summary')
-    }
-
-    const result = await response.json()
+    // 处理API响应格式
+    const data = result.success ? result.data : result
+    
+    const total = data.total_assets || 0
+    const rented = data.usage_status?.rented || 0
+    const vacant = data.usage_status?.vacant || 0
+    const selfUsed = data.usage_status?.self_used || 0
+    
+    // 计算平均出租率
+    const rentableAssets = rented + vacant
+    const avgOccupancyRate = rentableAssets > 0 ? (rented / rentableAssets) * 100 : 0
     
     return {
-      total: result.total_assets || 0,
-      rented: result.rented_assets || 0,
-      vacant: result.vacant_assets || 0,
-      avgOccupancyRate: result.avg_occupancy_rate || 0,
+      total,
+      rented,
+      vacant,
+      avgOccupancyRate: Math.round(avgOccupancyRate * 100) / 100, // 保留两位小数
     }
   } catch (error) {
     console.error('Error fetching asset summary:', error)
+    if (error instanceof ApiError) {
+      message.error(`获取统计数据失败: ${error.message}`)
+    }
     // 返回默认值
     return {
       total: 0,
@@ -123,13 +127,13 @@ const fetchAssetSummary = async (): Promise<AssetSummary> => {
 
 const deleteAssets = async (ids: string[]) => {
   const deletePromises = ids.map(id => 
-    fetch(`http://127.0.0.1:8001/api/v1/assets/${id}`, {
+    apiRequest(API_ENDPOINTS.assetDetail(id), {
       method: 'DELETE',
-    })
+    }).catch(() => null) // 捕获单个删除失败
   )
   
-  const responses = await Promise.all(deletePromises)
-  const successCount = responses.filter(response => response.ok).length
+  const results = await Promise.all(deletePromises)
+  const successCount = results.filter(result => result !== null).length
   
   return { success: successCount === ids.length, deletedCount: successCount }
 }
@@ -154,7 +158,8 @@ const exportAssets = async (filters?: AssetFilters) => {
     }
   }
 
-  const response = await fetch(`http://127.0.0.1:8001/api/v1/excel/export?${searchParams}`)
+  // 对于文件下载，我们仍然使用原生fetch，因为需要处理blob响应
+  const response = await fetch(`http://127.0.0.1:8001${API_ENDPOINTS.excel.export}?${searchParams}`)
   
   if (!response.ok) {
     throw new Error('Export failed')
