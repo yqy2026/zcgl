@@ -39,6 +39,9 @@ def create_tables():
     """
     创建所有数据库表
     """
+    # 导入所有模型以确保它们被注册到Base.metadata中
+    from models import Asset, AssetHistory, AssetDocument
+    
     Base.metadata.create_all(bind=engine)
 
 

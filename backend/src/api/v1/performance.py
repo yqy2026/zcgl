@@ -6,8 +6,8 @@ from typing import Dict, Any
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from ...database import get_db
-from ...services.performance_service import PerformanceService
+from database import get_db
+from services.performance_service import PerformanceService
 
 router = APIRouter()
 
@@ -29,7 +29,7 @@ def optimize_database(db: Session = Depends(get_db)):
         service = PerformanceService(db)
         return service.optimize_database()
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"数据库优化失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"数据库优化失�? {str(e)}")
 
 
 @router.get("/statistics", response_model=Dict[str, Any])

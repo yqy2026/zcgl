@@ -10,14 +10,14 @@ import logging
 import time
 from functools import wraps
 
-from ..models.asset import Asset, AssetHistory, AssetDocument
-from ..schemas.asset import AssetSearchParams
+from models.asset import Asset, AssetHistory, AssetDocument
+from schemas.asset import AssetSearchParams
 
 logger = logging.getLogger(__name__)
 
 
 def performance_monitor(func):
-    """性能监控装饰器"""
+    """性能监控装饰�?""
     @wraps(func)
     def wrapper(*args, **kwargs):
         start_time = time.time()
@@ -45,7 +45,7 @@ def performance_monitor(func):
 
 
 class PerformanceService:
-    """性能优化服务类"""
+    """性能优化服务�?""
     
     def __init__(self, db: Session):
         self.db = db
@@ -58,16 +58,16 @@ class PerformanceService:
         limit: int = 20
     ) -> Tuple[List[Asset], int]:
         """
-        优化的资产查询方法
-        使用索引、预加载和查询优化
+        优化的资产查询方�?
+        使用索引、预加载和查询优�?
         """
         # 构建基础查询
         query = self.db.query(Asset)
         
-        # 应用筛选条件（利用索引）
+        # 应用筛选条件（利用索引�?
         query = self._apply_filters_optimized(query, params)
         
-        # 获取总数（使用优化的计数查询）
+        # 获取总数（使用优化的计数查询�?
         total = self._get_count_optimized(query)
         
         # 应用排序（利用索引）
@@ -77,7 +77,7 @@ class PerformanceService:
         offset = (page - 1) * limit
         query = query.offset(offset).limit(limit)
         
-        # 预加载关联数据（避免N+1查询）
+        # 预加载关联数据（避免N+1查询�?
         if params.include_history:
             query = query.options(selectinload(Asset.history))
         
@@ -90,10 +90,10 @@ class PerformanceService:
         return assets, total
     
     def _apply_filters_optimized(self, query: Select, params: AssetSearchParams) -> Select:
-        """应用优化的筛选条件"""
+        """应用优化的筛选条�?""
         conditions = []
         
-        # 文本搜索（SQLite使用LIKE搜索）
+        # 文本搜索（SQLite使用LIKE搜索�?
         if params.search:
             search_term = f"%{params.search}%"
             search_condition = or_(
@@ -107,7 +107,7 @@ class PerformanceService:
             )
             conditions.append(search_condition)
         
-        # 精确匹配筛选（利用索引）
+        # 精确匹配筛选（利用索引�?
         if params.ownership_status:
             conditions.append(Asset.ownership_status == params.ownership_status)
         
@@ -123,34 +123,34 @@ class PerformanceService:
         if params.is_litigated is not None:
             conditions.append(Asset.is_litigated == str(params.is_litigated))
         
-        # 范围筛选
+        # 范围筛�?
         if params.area_min is not None:
             conditions.append(Asset.actual_property_area >= params.area_min)
         
         if params.area_max is not None:
             conditions.append(Asset.actual_property_area <= params.area_max)
         
-        # 日期范围筛选（利用索引）
+        # 日期范围筛选（利用索引�?
         if params.created_start:
             conditions.append(Asset.created_at >= params.created_start)
         
         if params.created_end:
             conditions.append(Asset.created_at <= params.created_end)
         
-        # 应用所有条件
+        # 应用所有条�?
         if conditions:
             query = query.filter(and_(*conditions))
         
         return query
     
     def _get_count_optimized(self, query: Select) -> int:
-        """优化的计数查询"""
-        # 使用子查询避免加载所有数据
+        """优化的计数查�?""
+        # 使用子查询避免加载所有数�?
         count_query = query.statement.with_only_columns([func.count(Asset.id)])
         return self.db.execute(count_query).scalar()
     
     def _apply_sorting_optimized(self, query: Select, params: AssetSearchParams) -> Select:
-        """应用优化的排序（利用索引）"""
+        """应用优化的排序（利用索引�?""
         sort_field = params.sort_field or 'created_at'
         sort_order = params.sort_order or 'desc'
         
@@ -175,8 +175,8 @@ class PerformanceService:
     
     @performance_monitor
     def get_asset_statistics_optimized(self) -> Dict[str, Any]:
-        """优化的统计查询"""
-        # 使用聚合查询一次性获取所有统计数据
+        """优化的统计查�?""
+        # 使用聚合查询一次性获取所有统计数�?
         stats = self.db.query(
             func.count(Asset.id).label('total_count'),
             func.sum(Asset.actual_property_area).label('total_area'),
@@ -192,13 +192,13 @@ class PerformanceService:
             func.sum(Asset.actual_property_area).label('total_area')
         ).group_by(Asset.property_nature).all()
         
-        # 按状态分组统计
+        # 按状态分组统�?
         status_stats = self.db.query(
             Asset.usage_status,
             func.count(Asset.id).label('count')
         ).group_by(Asset.usage_status).all()
         
-        # 按确权状态分组统计
+        # 按确权状态分组统�?
         ownership_stats = self.db.query(
             Asset.ownership_status,
             func.count(Asset.id).label('count')
@@ -245,7 +245,7 @@ class PerformanceService:
         page: int = 1, 
         limit: int = 20
     ) -> Tuple[List[AssetHistory], int]:
-        """优化的历史记录查询"""
+        """优化的历史记录查�?""
         # 使用索引查询
         query = self.db.query(AssetHistory).filter(
             AssetHistory.asset_id == asset_id
@@ -266,10 +266,10 @@ class PerformanceService:
         search_term: str, 
         limit: int = 10
     ) -> List[Asset]:
-        """全文搜索资产（SQLite版本）"""
+        """全文搜索资产（SQLite版本�?""
         search_pattern = f"%{search_term}%"
         
-        # 使用SQLite的LIKE搜索，按相关性排序
+        # 使用SQLite的LIKE搜索，按相关性排�?
         query = self.db.query(Asset).filter(
             or_(
                 Asset.property_name.ilike(search_pattern),
@@ -314,7 +314,7 @@ class PerformanceService:
             return {'error': str(e)}
     
     def get_slow_queries(self, limit: int = 10) -> List[Dict[str, Any]]:
-        """获取慢查询日志（需要配置PostgreSQL日志）"""
+        """获取慢查询日志（需要配置PostgreSQL日志�?""
         # 这需要在PostgreSQL中启用慢查询日志
         # 这里返回模拟数据，实际实现需要读取PostgreSQL日志
         return [
@@ -327,20 +327,20 @@ class PerformanceService:
         ]
     
     def optimize_database(self) -> Dict[str, Any]:
-        """数据库优化建议"""
+        """数据库优化建�?""
         results = {}
         
         try:
-            # SQLite数据库优化
-            # 1. 执行VACUUM清理数据库
+            # SQLite数据库优�?
+            # 1. 执行VACUUM清理数据�?
             self.db.execute(text("VACUUM"))
             results['vacuum'] = "已执行VACUUM操作"
             
-            # 2. 分析表统计信息
+            # 2. 分析表统计信�?
             self.db.execute(text("ANALYZE"))
             results['analyze'] = "已更新表统计信息"
             
-            # 3. 获取表信息
+            # 3. 获取表信�?
             tables = self.db.execute(text("""
                 SELECT name FROM sqlite_master 
                 WHERE type='table' AND name NOT LIKE 'sqlite_%'
@@ -356,7 +356,7 @@ class PerformanceService:
                         'row_count': count
                     })
                 except Exception as e:
-                    logger.warning(f"无法获取表 {table_name} 的行数: {e}")
+                    logger.warning(f"无法获取�?{table_name} 的行�? {e}")
             
             results['table_info'] = table_info
             
@@ -381,7 +381,7 @@ class PerformanceService:
             self.db.commit()
             
         except Exception as e:
-            logger.error(f"数据库优化失败: {e}")
+            logger.error(f"数据库优化失�? {e}")
             results['error'] = str(e)
             self.db.rollback()
         
@@ -401,7 +401,7 @@ class PerformanceService:
             table_names = [table[0] for table in tables]
             
             if 'assets' in table_names:
-                # 资产表索引
+                # 资产表索�?
                 indexes_to_create = [
                     ("idx_assets_property_name", "assets", "property_name"),
                     ("idx_assets_address", "assets", "address"),
@@ -445,7 +445,7 @@ class PerformanceService:
                         logger.warning(f"创建复合索引 {index_name} 失败: {e}")
             
             if 'asset_history' in table_names:
-                # 历史记录表索引
+                # 历史记录表索�?
                 history_indexes = [
                     ("idx_asset_history_asset_id", "asset_history", "asset_id"),
                     ("idx_asset_history_changed_at", "asset_history", "changed_at"),
@@ -458,12 +458,12 @@ class PerformanceService:
                             CREATE INDEX IF NOT EXISTS {index_name} 
                             ON {table_name} ({column_name})
                         """))
-                        results.append(f"创建历史表索引: {index_name}")
+                        results.append(f"创建历史表索�? {index_name}")
                     except Exception as e:
-                        logger.warning(f"创建历史表索引 {index_name} 失败: {e}")
+                        logger.warning(f"创建历史表索�?{index_name} 失败: {e}")
             
             if 'asset_documents' in table_names:
-                # 文档表索引
+                # 文档表索�?
                 document_indexes = [
                     ("idx_asset_documents_asset_id", "asset_documents", "asset_id"),
                     ("idx_asset_documents_uploaded_at", "asset_documents", "uploaded_at"),
@@ -475,9 +475,9 @@ class PerformanceService:
                             CREATE INDEX IF NOT EXISTS {index_name} 
                             ON {table_name} ({column_name})
                         """))
-                        results.append(f"创建文档表索引: {index_name}")
+                        results.append(f"创建文档表索�? {index_name}")
                     except Exception as e:
-                        logger.warning(f"创建文档表索引 {index_name} 失败: {e}")
+                        logger.warning(f"创建文档表索�?{index_name} 失败: {e}")
             
             return {
                 "created_indexes": results,

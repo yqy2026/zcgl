@@ -29,8 +29,8 @@ echo [SUCCESS] 环境检查通过
 echo.
 
 REM 检查项目文件
-if not exist "backend\src\main_simple.py" (
-    echo [ERROR] 后端文件缺失: backend\src\main_simple.py
+if not exist "backend\run.py" (
+    echo [ERROR] 后端文件缺失: backend\run.py
     pause
     exit /b 1
 )
@@ -90,7 +90,7 @@ echo [INFO] 启动服务...
 REM 启动后端
 echo [INFO] 启动后端API服务...
 cd backend
-start "后端API服务 - 端口8001" cmd /k "echo 后端服务启动中... && py src\main_simple.py"
+start "后端API服务 - 端口8001" cmd /k "echo 后端服务启动中... && py run.py"
 cd ..
 
 REM 等待后端启动

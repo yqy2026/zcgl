@@ -23,91 +23,144 @@ interface PaginationConfig {
   total: number
 }
 
-// 模拟API调用
+// 真实API调用
 const fetchAssets = async (params: {
   page: number
   pageSize: number
   search?: string
   filters?: AssetFilters
 }) => {
-  await new Promise(resolve => setTimeout(resolve, 1000))
-  
-  // 模拟数据
-  const mockAssets = Array.from({ length: 50 }, (_, index) => ({
-    id: `asset-${index + 1}`,
-    propertyName: `物业${index + 1}`,
-    address: `地址${index + 1}`,
-    ownershipEntity: ['华润集团', '万科集团', '中信集团', '绿地集团'][index % 4],
-    propertyNature: index % 3 === 0 ? '经营类' : '非经营类',
-    usageStatus: ['出租', '闲置', '自用', '公房'][index % 4],
-    actualPropertyArea: 100 + index * 10,
-    rentableArea: 80 + index * 8,
-    rentedArea: 60 + index * 6,
-    occupancyRate: (75 + (index % 25)).toString(),
-    ownershipStatus: ['已确权', '未确权', '部分确权'][index % 3],
-  }))
+  const searchParams = new URLSearchParams({
+    page: params.page.toString(),
+    limit: params.pageSize.toString(),
+  })
 
-  // 应用搜索和筛选
-  let filteredAssets = mockAssets
-  
   if (params.search) {
-    filteredAssets = filteredAssets.filter(asset =>
-      asset.propertyName.includes(params.search!) ||
-      asset.address.includes(params.search!) ||
-      asset.ownershipEntity.includes(params.search!)
-    )
+    searchParams.append('search', params.search)
   }
 
   if (params.filters) {
     const { propertyNature, usageStatus, ownershipStatus, ownershipEntity } = params.filters
     
     if (propertyNature) {
-      filteredAssets = filteredAssets.filter(asset => asset.propertyNature === propertyNature)
+      searchParams.append('property_nature', propertyNature)
     }
     if (usageStatus) {
-      filteredAssets = filteredAssets.filter(asset => asset.usageStatus === usageStatus)
+      searchParams.append('usage_status', usageStatus)
     }
     if (ownershipStatus) {
-      filteredAssets = filteredAssets.filter(asset => asset.ownershipStatus === ownershipStatus)
+      searchParams.append('ownership_status', ownershipStatus)
     }
     if (ownershipEntity) {
-      filteredAssets = filteredAssets.filter(asset => asset.ownershipEntity === ownershipEntity)
+      searchParams.append('ownership_entity', ownershipEntity)
     }
   }
 
-  // 分页
-  const start = (params.page - 1) * params.pageSize
-  const end = start + params.pageSize
-  const paginatedAssets = filteredAssets.slice(start, end)
+  const response = await fetch(`http://127.0.0.1:8001/api/v1/assets/?${searchParams}`)
+  
+  if (!response.ok) {
+    throw new Error('Failed to fetch assets')
+  }
+
+  const result = await response.json()
+  
+  // 转换数据格式以匹配前端期望的格式
+  const transformedData = result.items.map((item: any) => ({
+    id: item.id,
+    propertyName: item.property_name,
+    address: item.address,
+    ownershipEntity: item.ownership_entity,
+    managementEntity: item.management_entity,
+    propertyNature: item.property_nature,
+    usageStatus: item.usage_status,
+    actualPropertyArea: item.total_area || 0,
+    rentableArea: item.usable_area || 0,
+    rentedArea: 0, // 需要根据实际字段调整
+    occupancyRate: '0', // 需要根据实际字段调整
+    ownershipStatus: item.ownership_status,
+    businessCategory: item.business_category,
+    isLitigated: item.is_litigated,
+    notes: item.notes,
+    createdAt: item.created_at,
+    updatedAt: item.updated_at,
+  }))
 
   return {
-    data: paginatedAssets,
-    total: filteredAssets.length,
-    page: params.page,
-    pageSize: params.pageSize,
+    data: transformedData,
+    total: result.total,
+    page: result.page,
+    pageSize: result.limit,
   }
 }
 
 const fetchAssetSummary = async (): Promise<AssetSummary> => {
-  await new Promise(resolve => setTimeout(resolve, 500))
-  
-  return {
-    total: 156,
-    rented: 136,
-    vacant: 20,
-    avgOccupancyRate: 87.2,
+  try {
+    const response = await fetch('http://127.0.0.1:8001/api/v1/statistics/basic')
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch asset summary')
+    }
+
+    const result = await response.json()
+    
+    return {
+      total: result.total_assets || 0,
+      rented: result.rented_assets || 0,
+      vacant: result.vacant_assets || 0,
+      avgOccupancyRate: result.avg_occupancy_rate || 0,
+    }
+  } catch (error) {
+    console.error('Error fetching asset summary:', error)
+    // 返回默认值
+    return {
+      total: 0,
+      rented: 0,
+      vacant: 0,
+      avgOccupancyRate: 0,
+    }
   }
 }
 
 const deleteAssets = async (ids: string[]) => {
-  await new Promise(resolve => setTimeout(resolve, 1000))
-  return { success: true, deletedCount: ids.length }
+  const deletePromises = ids.map(id => 
+    fetch(`http://127.0.0.1:8001/api/v1/assets/${id}`, {
+      method: 'DELETE',
+    })
+  )
+  
+  const responses = await Promise.all(deletePromises)
+  const successCount = responses.filter(response => response.ok).length
+  
+  return { success: successCount === ids.length, deletedCount: successCount }
 }
 
 const exportAssets = async (filters?: AssetFilters) => {
-  await new Promise(resolve => setTimeout(resolve, 2000))
-  // 模拟导出文件
-  const blob = new Blob(['资产数据导出'], { type: 'application/vnd.ms-excel' })
+  const searchParams = new URLSearchParams()
+
+  if (filters) {
+    const { propertyNature, usageStatus, ownershipStatus, ownershipEntity } = filters
+    
+    if (propertyNature) {
+      searchParams.append('property_nature', propertyNature)
+    }
+    if (usageStatus) {
+      searchParams.append('usage_status', usageStatus)
+    }
+    if (ownershipStatus) {
+      searchParams.append('ownership_status', ownershipStatus)
+    }
+    if (ownershipEntity) {
+      searchParams.append('ownership_entity', ownershipEntity)
+    }
+  }
+
+  const response = await fetch(`http://127.0.0.1:8001/api/v1/excel/export?${searchParams}`)
+  
+  if (!response.ok) {
+    throw new Error('Export failed')
+  }
+
+  const blob = await response.blob()
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url

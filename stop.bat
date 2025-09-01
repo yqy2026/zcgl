@@ -29,6 +29,6 @@ for /f "tokens=5" %%a in ('netstat -aon ^| find ":5173" ^| find "LISTENING"') do
 echo.
 echo [SUCCESS] ✅ 所有服务已停止
 echo.
-echo 💡 提示：如需重新启动，请运行 start_final.bat
+echo 💡 提示：如需重新启动，请运行 start.bat
 echo.
 pause

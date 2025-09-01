@@ -11,8 +11,8 @@ import logging
 import traceback
 from datetime import datetime
 
-from .database import create_tables
-from .exceptions import AssetNotFoundError, DuplicateAssetError, BusinessLogicError
+from database import create_tables
+from exceptions import AssetNotFoundError, DuplicateAssetError, BusinessLogicError
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
@@ -83,7 +83,7 @@ async def asset_not_found_handler(request: Request, exc: AssetNotFoundError):
         status_code=404,
         content={
             "error": "Asset Not Found",
-            "message": f"未找到ID为 {exc.asset_id} 的资产",
+            "message": f"未找到ID为{exc.asset_id} 的资产",
             "timestamp": datetime.now().isoformat(),
         }
     )
@@ -159,6 +159,9 @@ async def startup_event():
         logger.error(f"数据库表创建失败: {e}")
         raise
     
+    # 跳过演示数据初始化，使用真实导入的数据
+    logger.info("跳过演示数据初始化，使用真实数据")
+    
     logger.info("土地物业资产管理系统启动完成")
 
 
@@ -170,7 +173,7 @@ async def shutdown_event():
 
 
 # 导入并包含API路由
-from .api import api_router
+from api import api_router
 app.include_router(api_router)
 
 
