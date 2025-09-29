@@ -16,7 +16,7 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   DashboardOutlined,
-  BuildingOutlined,
+  BuildOutlined as BuildingOutlined,
   PlusOutlined,
   SearchOutlined,
   FileExcelOutlined,
@@ -50,7 +50,7 @@ const ModernAppLayout: React.FC = () => {
       key: '/dashboard',
       icon: <DashboardOutlined />,
       label: '仪表板',
-      onClick: () => navigate('/dashboard'),
+      onClick: () => window.open('/dashboard', '_blank'),
     },
     {
       type: 'divider',
@@ -64,19 +64,19 @@ const ModernAppLayout: React.FC = () => {
       key: '/assets',
       icon: <BuildingOutlined />,
       label: '资产列表',
-      onClick: () => navigate('/assets'),
+      onClick: () => window.open('/assets', '_blank'),
     },
     {
       key: '/assets/new',
       icon: <PlusOutlined />,
       label: '新增资产',
-      onClick: () => navigate('/assets/new'),
+      onClick: () => window.open('/assets/new', '_blank'),
     },
     {
       key: '/assets/search',
       icon: <SearchOutlined />,
       label: '高级搜索',
-      onClick: () => navigate('/assets/search'),
+      onClick: () => window.open('/assets/search', '_blank'),
     },
     {
       type: 'divider',
@@ -90,19 +90,19 @@ const ModernAppLayout: React.FC = () => {
       key: '/import-export',
       icon: <FileExcelOutlined />,
       label: '导入导出',
-      onClick: () => navigate('/import-export'),
+      onClick: () => window.open('/import-export', '_blank'),
     },
     {
       key: '/analytics',
       icon: <LineChartOutlined />,
       label: '数据分析',
-      onClick: () => navigate('/analytics'),
+      onClick: () => window.open('/analytics', '_blank'),
     },
     {
       key: '/reports',
       icon: <BarChartOutlined />,
       label: '报表中心',
-      onClick: () => navigate('/reports'),
+      onClick: () => window.open('/reports', '_blank'),
     },
   ]
 
@@ -277,7 +277,7 @@ const ModernAppLayout: React.FC = () => {
               <Button 
                 type="primary" 
                 icon={<PlusOutlined />}
-                onClick={() => navigate('/assets/new')}
+                onClick={() => window.open('/assets/new', '_blank')}
                 style={{
                   borderRadius: 8,
                   boxShadow: '0 2px 4px rgba(24,144,255,0.2)',

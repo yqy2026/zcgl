@@ -11,8 +11,8 @@ import logging
 import traceback
 from datetime import datetime
 
-from database import create_tables
-from exceptions import AssetNotFoundError, DuplicateAssetError, BusinessLogicError
+from .database import create_tables
+from .exceptions import AssetNotFoundError, DuplicateAssetError, BusinessLogicError
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
@@ -36,10 +36,22 @@ app.add_middleware(
         "http://127.0.0.1:3000",
         "http://localhost:5173",  # Vite开发服务器
         "http://127.0.0.1:5173",
+        "http://localhost:5174",  # Vite开发服务器
+        "http://127.0.0.1:5174",
+        "http://localhost:5175",  # Vite开发服务器
+        "http://127.0.0.1:5175",
+        "http://localhost:5177",  # Vite开发服务器
+        "http://127.0.0.1:5177",
+        "http://localhost:5178",  # Vite开发服务器
+        "http://127.0.0.1:5178",
+        "http://127.0.0.1:8001",  # 后端服务器
+        "http://localhost:8001",  # 后端服务器
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=600,
 )
 
 
@@ -173,7 +185,7 @@ async def shutdown_event():
 
 
 # 导入并包含API路由
-from api import api_router
+from .api import api_router
 app.include_router(api_router)
 
 

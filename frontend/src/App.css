@@ -1,143 +1,34 @@
-/* 全局样式 */
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-/* Ant Design 主题定制 */
-.ant-layout {
-  background: #f0f2f5;
-}
-
-.ant-layout-header {
-  background: #fff;
-  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
-  padding: 0 24px;
-}
-
-.ant-layout-sider {
-  background: #fff;
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
-}
-
-.ant-layout-content {
-  margin: 24px;
-  padding: 24px;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
-}
-
-/* 自定义组件样式 */
-.page-header {
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.page-title {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 600;
-  color: #262626;
-}
-
-.page-description {
-  margin-top: 8px;
-  color: #8c8c8c;
-  font-size: 14px;
-}
-
-/* 卡片样式 */
-.asset-card {
-  margin-bottom: 16px;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
-  transition: all 0.3s ease;
-}
-
-.asset-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  transform: translateY(-2px);
-}
-
-/* 统计卡片 */
-.stat-card {
+/* App.css */
+.App {
   text-align: center;
-  padding: 24px;
 }
 
-.stat-value {
-  font-size: 32px;
-  font-weight: bold;
-  color: #1890ff;
-  margin-bottom: 8px;
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
 }
 
-.stat-label {
-  font-size: 14px;
-  color: #8c8c8c;
-}
-
-/* 表格样式 */
-.ant-table-thead > tr > th {
-  background: #fafafa;
-  font-weight: 600;
-}
-
-/* 搜索表单 */
-.search-form {
-  background: #fafafa;
-  padding: 24px;
-  border-radius: 8px;
-  margin-bottom: 24px;
-}
-
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .ant-layout-content {
-    margin: 16px;
-    padding: 16px;
-  }
-  
-  .page-title {
-    font-size: 20px;
-  }
-  
-  .stat-value {
-    font-size: 24px;
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
   }
 }
 
-/* 加载状态 */
-.loading-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 200px;
+.App-header {
+  background-color: #282c34;
+  padding: 20px;
+  color: white;
 }
 
-/* 空状态 */
-.empty-container {
-  text-align: center;
-  padding: 48px 24px;
+.App-link {
+  color: #61dafb;
 }
 
-.empty-icon {
-  font-size: 64px;
-  color: #d9d9d9;
-  margin-bottom: 16px;
-}
-
-.empty-text {
-  color: #8c8c8c;
-  font-size: 16px;
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }

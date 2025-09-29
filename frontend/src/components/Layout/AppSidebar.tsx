@@ -3,16 +3,25 @@ import { Layout, Menu, Typography } from 'antd'
 import {
   DashboardOutlined,
   HomeOutlined,
-  SearchOutlined,
   FileExcelOutlined,
   BarChartOutlined,
   SettingOutlined,
   PlusOutlined,
   UnorderedListOutlined,
   UploadOutlined,
-  DownloadOutlined,
   LineChartOutlined,
   PieChartOutlined,
+  UserOutlined,
+  TeamOutlined,
+  AuditOutlined,
+  BookOutlined,
+  ApartmentOutlined,
+  TagsOutlined,
+  IdcardOutlined,
+  AccountBookOutlined,
+  FileTextOutlined,
+  AppstoreOutlined,
+  FileAddOutlined,
 } from '@ant-design/icons'
 import { useLocation, useNavigate } from 'react-router-dom'
 import type { MenuProps } from 'antd'
@@ -41,7 +50,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed }) => {
       label: '资产管理',
       children: [
         {
-          key: '/assets',
+          key: '/assets/list',
           icon: <UnorderedListOutlined />,
           label: '资产列表',
         },
@@ -51,53 +60,51 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed }) => {
           label: '新增资产',
         },
         {
-          key: '/assets/search',
-          icon: <SearchOutlined />,
-          label: '高级搜索',
-        },
-      ],
-    },
-    {
-      key: 'data',
-      icon: <FileExcelOutlined />,
-      label: '数据管理',
-      children: [
-        {
-          key: '/data/import',
+          key: '/assets/import',
           icon: <UploadOutlined />,
           label: '数据导入',
         },
         {
-          key: '/data/export',
-          icon: <DownloadOutlined />,
-          label: '数据导出',
-        },
-        {
-          key: '/data/import-export',
-          icon: <FileExcelOutlined />,
-          label: '导入导出',
+          key: '/assets/analytics',
+          icon: <BarChartOutlined />,
+          label: '数据分析',
         },
       ],
     },
     {
-      key: 'analytics',
-      icon: <BarChartOutlined />,
-      label: '数据分析',
+      key: '/ownership',
+      icon: <IdcardOutlined />,
+      label: '权属方管理',
+    },
+    {
+      key: '/project',
+      icon: <AppstoreOutlined />,
+      label: '项目管理',
+    },
+    {
+      key: 'rental',
+      icon: <AccountBookOutlined />,
+      label: '租赁管理',
       children: [
         {
-          key: '/analytics/occupancy',
-          icon: <LineChartOutlined />,
-          label: '出租率分析',
+          key: '/rental/contracts',
+          icon: <UnorderedListOutlined />,
+          label: '合同列表',
         },
         {
-          key: '/analytics/distribution',
-          icon: <PieChartOutlined />,
-          label: '资产分布',
+          key: '/rental/contracts/new',
+          icon: <PlusOutlined />,
+          label: '新建合同',
         },
         {
-          key: '/analytics/area',
+          key: '/rental/ledger',
+          icon: <AccountBookOutlined />,
+          label: '租金台账',
+        },
+        {
+          key: '/rental/statistics',
           icon: <BarChartOutlined />,
-          label: '面积统计',
+          label: '统计报表',
         },
       ],
     },
@@ -108,17 +115,32 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed }) => {
       children: [
         {
           key: '/system/users',
-          icon: <SettingOutlined />,
+          icon: <UserOutlined />,
           label: '用户管理',
         },
         {
           key: '/system/roles',
-          icon: <SettingOutlined />,
+          icon: <TeamOutlined />,
           label: '角色管理',
         },
         {
+          key: '/system/organizations',
+          icon: <ApartmentOutlined />,
+          label: '组织架构',
+        },
+        {
+          key: '/system/dictionaries',
+          icon: <BookOutlined />,
+          label: '字典管理',
+        },
+        {
+          key: '/system/templates',
+          icon: <FileAddOutlined />,
+          label: '数据模板',
+        },
+        {
           key: '/system/logs',
-          icon: <SettingOutlined />,
+          icon: <AuditOutlined />,
           label: '操作日志',
         },
       ],
@@ -128,26 +150,28 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed }) => {
   // 获取当前选中的菜单项
   const getSelectedKeys = () => {
     const pathname = location.pathname
-    
+
     // 精确匹配
     if (pathname === '/') return ['/dashboard']
-    
+
     // 资产详情页面特殊处理
     if (pathname.match(/^\/assets\/\d+$/)) return ['/assets']
     if (pathname.match(/^\/assets\/\d+\/edit$/)) return ['/assets']
-    
+
+    // 权属方管理页面
+    if (pathname === '/ownership') return ['/ownership']
+
     return [pathname]
   }
 
   // 获取展开的菜单项
   const getOpenKeys = () => {
     const pathname = location.pathname
-    
-    if (pathname.startsWith('/assets')) return ['assets']
-    if (pathname.startsWith('/data')) return ['data']
-    if (pathname.startsWith('/analytics')) return ['analytics']
+
+    if (pathname.startsWith('/assets') && !pathname.startsWith('/assets/list')) return ['assets']
+    if (pathname.startsWith('/rental')) return ['rental']
     if (pathname.startsWith('/system')) return ['system']
-    
+
     return []
   }
 

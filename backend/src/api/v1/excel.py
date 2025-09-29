@@ -10,10 +10,11 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 import pandas as pd
 
-from database import get_db
-from models.asset import Asset
-from schemas.asset import AssetCreate, AssetResponse
-from crud.asset import asset_crud
+from ...database import get_db
+from ...models.asset import Asset
+from ...schemas.asset import AssetCreate, AssetResponse
+from ...crud.asset import asset_crud
+from ...config.excel_config import STANDARD_SHEET_NAME
 
 # 创建Excel路由器
 router = APIRouter()
@@ -22,23 +23,39 @@ router = APIRouter()
 @router.get("/template", summary="下载Excel导入模板")
 async def download_template():
     """
-    下载Excel导入模板文件
+    下载Excel导入模板文件 - 已优化与新增资产表单字段保持一致
     """
     try:
-        # 创建示例数据
+        # 创建示例数据 - 按照新增资产表单字段顺序排列，删除自动计算、高级选项和文件上传字段
         template_data = {
-            "物业名称": ["示例物业1", "示例物业2"],
-            "地址": ["示例地址1", "示例地址2"],
-            "确权状态": ["已确权", "未确权"],
-            "物业性质": ["经营性", "非经营性"],
-            "使用状态": ["出租", "自用"],
+            # 基本信息
             "权属方": ["示例权属方1", "示例权属方2"],
-            "经营管理方": ["示例管理方1", "示例管理方2"],
-            "业态类别": ["商业", "办公"],
-            "总面积": [1000.0, 2000.0],
-            "可使用面积": [800.0, 1800.0],
+            "权属类别": ["国有", "集体"],
+            "项目名称": ["示例项目1", "示例项目2"],
+            "物业名称": ["示例物业1", "示例物业2"],
+            "物业地址": ["示例地址1", "示例地址2"],
+
+            # 面积信息
+            "土地面积(平方米)": [1000.0, 2000.0],
+            "实际房产面积(平方米)": [800.0, 1800.0],
+            "非经营物业面积(平方米)": [200.0, 300.0],
+            "可出租面积(平方米)": [600.0, 1500.0],
+            "已出租面积(平方米)": [400.0, 1200.0],
+
+            # 状态信息
+            "确权状态（已确权、未确权、部分确权）": ["已确权", "未确权"],
+            "证载用途（商业、住宅、办公、厂房、车库等）": ["商业", "办公"],
+            "实际用途（商业、住宅、办公、厂房、车库等）": ["商业", "办公"],
+            "业态类别": ["零售", "餐饮"],
+            "使用状态（出租、闲置、自用、公房、其他）": ["出租", "闲置"],
             "是否涉诉": ["否", "否"],
-            "备注": ["示例备注1", "示例备注2"]
+            "物业性质（经营类、非经营类）": ["经营类", "非经营类"],
+            "是否计入出租率": ["是", "是"],
+
+            # 接收信息
+            "接收模式": ["自营", "合作"],
+            "(当前)接收协议开始日期": ["2024-01-01", "2024-02-01"],
+            "(当前)接收协议结束日期": ["2024-12-31", "2024-12-31"]
         }
         
         # 创建DataFrame
@@ -47,14 +64,14 @@ async def download_template():
         # 写入Excel文件
         buffer = io.BytesIO()
         with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-            df.to_excel(writer, sheet_name="资产导入模板", index=False)
+            df.to_excel(writer, sheet_name=STANDARD_SHEET_NAME, index=False)
         buffer.seek(0)
         
         # 返回文件流
         return StreamingResponse(
             io.BytesIO(buffer.read()),
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": "attachment; filename=asset_import_template.xlsx"}
+            headers={"Content-Disposition": "attachment; filename=land_property_asset_template.xlsx"}
         )
         
     except Exception as e:
@@ -89,11 +106,11 @@ async def preview_excel(
         df = pd.read_excel(io.BytesIO(content))
         
         # 获取基本信息
-        total_rows = len(df)
+        total = len(df)
         columns = df.columns.tolist()
         
         # 限制预览行数
-        preview_rows = min(max_rows, total_rows)
+        preview_rows = min(max_rows, total)
         preview_df = df.head(preview_rows)
         
         # 转换为字典格式，处理NaN值
@@ -112,7 +129,7 @@ async def preview_excel(
         return {
             "message": "预览成功",
             "filename": file.filename,
-            "total_rows": total_rows,
+            "total": total,
             "preview_rows": preview_rows,
             "columns": columns,
             "data": preview_data
@@ -129,13 +146,15 @@ async def preview_excel(
 async def import_excel(
     file: UploadFile = File(...),
     skip_errors: bool = Query(False, description="是否跳过错误行"),
+    sheet_name: str = Query(STANDARD_SHEET_NAME, description="Excel工作表名称"),
     db: Session = Depends(get_db)
 ):
     """
     从Excel文件导入资产数据
-    
+
     - **file**: Excel文件
     - **skip_errors**: 是否跳过错误行继续导入
+    - **sheet_name**: Excel工作表名称，默认为"{STANDARD_SHEET_NAME}"
     """
     # 验证文件类型
     if not file.filename.endswith(('.xlsx', '.xls')):
@@ -143,84 +162,46 @@ async def import_excel(
             status_code=400,
             detail="文件格式不支持，请上传Excel文件(.xlsx/.xls)"
         )
-    
+
     try:
-        # 读取文件内容
-        content = await file.read()
-        
-        # 直接从内存读取Excel
-        df = pd.read_excel(io.BytesIO(content))
-        
-        # 字段映射
-        field_mapping = {
-            "物业名称": "property_name",
-            "地址": "address",
-            "确权状态": "ownership_status",
-            "物业性质": "property_nature",
-            "使用状态": "usage_status",
-            "权属方": "ownership_entity",
-            "经营管理方": "management_entity",
-            "业态类别": "business_category",
-            "总面积": "total_area",
-            "可使用面积": "usable_area",
-            "是否涉诉": "is_litigated",
-            "备注": "notes"
-        }
-        
-        # 重命名列
-        df = df.rename(columns=field_mapping)
-        
-        # 转换为字典列表
-        records = df.to_dict('records')
-        
-        success_count = 0
-        error_count = 0
-        errors = []
-        
-        for i, record in enumerate(records, 1):
-            try:
-                # 清理数据
-                cleaned_record = {}
-                for key, value in record.items():
-                    if pd.notna(value) and str(value).strip():
-                        cleaned_record[key] = value
-                
-                # 验证必填字段
-                required_fields = ["property_name", "address", "ownership_status", "property_nature", "usage_status"]
-                missing_fields = [field for field in required_fields if field not in cleaned_record or not cleaned_record[field]]
-                
-                if missing_fields:
-                    raise ValueError(f"缺少必填字段: {', '.join(missing_fields)}")
-                
-                # 创建资产数据对象
-                asset_create = AssetCreate(**cleaned_record)
-                
-                # 实际创建资产记录
-                created_asset = asset_crud.create(db=db, obj_in=asset_create)
-                
-                if created_asset:
-                    success_count += 1
-                else:
-                    raise ValueError("创建资产记录失败")
-                
-            except Exception as e:
-                if skip_errors:
-                    errors.append(f"第{i}行: {str(e)}")
-                    error_count += 1
-                else:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"第{i}行导入失败: {str(e)}"
-                    )
-        
-        return {
-            "message": "导入完成",
-            "total_rows": len(records),
-            "success_count": success_count,
-            "error_count": error_count,
-            "errors": errors
-        }
-            
+        # 保存上传的文件到临时位置
+        import tempfile
+        import os
+        from pathlib import Path
+
+        # 创建临时文件
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
+            # 写入上传的文件内容
+            content = await file.read()
+            tmp_file.write(content)
+            tmp_file_path = tmp_file.name
+
+        try:
+            # 使用修复过的ExcelImportService进行导入
+            from src.services.excel_import import ExcelImportService
+            import_service = ExcelImportService()
+
+            # 执行导入
+            result = await import_service.import_assets_from_excel(
+                file_path=tmp_file_path,
+                sheet_name=sheet_name,
+                db=db
+            )
+
+            # 转换结果格式以匹配前端期望
+            return {
+                "message": "导入完成",
+                "total": result.get("total", 0),
+                "success": result.get("success", 0),
+                "failed": result.get("failed", 0),
+                "errors": result.get("errors", [])
+            }
+
+        finally:
+            # 清理临时文件
+            if os.path.exists(tmp_file_path):
+                os.unlink(tmp_file_path)
+
     except HTTPException:
         raise
     except Exception as e:
@@ -270,8 +251,6 @@ async def export_excel(
                 "权属方": asset.ownership_entity,
                 "经营管理方": asset.management_entity or "",
                 "业态类别": asset.business_category or "",
-                "总面积": asset.total_area or 0.0,
-                "可使用面积": asset.usable_area or 0.0,
                 "是否涉诉": asset.is_litigated or "否",
                 "备注": asset.notes or "",
                 "创建时间": asset.created_at.strftime("%Y-%m-%d %H:%M:%S") if asset.created_at else "",
@@ -305,7 +284,7 @@ async def export_excel(
         # 写入Excel文件
         buffer = io.BytesIO()
         with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-            df.to_excel(writer, sheet_name="资产数据", index=False)
+            df.to_excel(writer, sheet_name=STANDARD_SHEET_NAME, index=False)
         buffer.seek(0)
         
         # 返回文件流

@@ -1,6 +1,6 @@
 // 前端性能优化工具
 
-import { useCallback, useMemo, useRef, useEffect } from 'react'
+import React, { useCallback, useMemo, useRef, useEffect, useState } from 'react'
 
 // 防抖Hook
 export const useDebounce = <T extends (...args: any[]) => any>(
@@ -351,7 +351,7 @@ export const withPerformanceMonitoring = <P extends object>(
     const renderCount = useRenderPerformance(componentName)
     useMemoryLeakDetection(componentName)
     
-    return <Component {...props} />
+    return React.createElement(Component, props)
   })
 }
 

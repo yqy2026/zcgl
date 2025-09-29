@@ -40,7 +40,9 @@ def create_tables():
     创建所有数据库表
     """
     # 导入所有模型以确保它们被注册到Base.metadata中
-    from models import Asset, AssetHistory, AssetDocument
+    from .models.asset import Asset, AssetHistory, AssetDocument, SystemDictionary, AssetCustomField
+    from .models.organization import Organization, OrganizationHistory
+    from .models.enum_field import EnumFieldType, EnumFieldValue, EnumFieldUsage, EnumFieldHistory
     
     Base.metadata.create_all(bind=engine)
 

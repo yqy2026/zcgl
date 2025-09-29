@@ -128,11 +128,11 @@ const AssetFormHelp: React.FC<AssetFormHelpProps> = ({
           </Paragraph>
           <Paragraph>
             <Text strong>有业态类别：</Text>
-            显示经营模式字段。
+            显示接收模式字段。
           </Paragraph>
           <Paragraph>
             <Text strong>有五羊项目：</Text>
-            显示协议开始和结束日期字段。
+            显示接收协议开始和结束日期字段。
           </Paragraph>
         </div>
       ),
@@ -158,7 +158,7 @@ const AssetFormHelp: React.FC<AssetFormHelpProps> = ({
           </Paragraph>
           <Paragraph>
             <Text strong>日期验证：</Text>
-            合同结束日期必须晚于开始日期。
+            合同结束日期必须晚于开始日期，接收协议结束日期必须晚于开始日期。
           </Paragraph>
           <Paragraph>
             <Text strong>字符限制：</Text>

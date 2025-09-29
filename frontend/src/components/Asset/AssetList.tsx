@@ -6,7 +6,6 @@ import {
   EyeOutlined,
   HistoryOutlined,
 } from '@ant-design/icons'
-import { useNavigate } from 'react-router-dom'
 import type { ColumnsType } from 'antd/es/table'
 
 import type { Asset, AssetListResponse } from '@/types/asset'
@@ -18,6 +17,7 @@ interface AssetListProps {
   onEdit: (asset: Asset) => void
   onDelete: (id: string) => void
   onView: (asset: Asset) => void
+  onViewHistory: (asset: Asset) => void
   onTableChange: (pagination: any, filters: any, sorter: any) => void
   selectedRowKeys?: string[]
   onSelectChange?: (selectedRowKeys: string[]) => void
@@ -29,14 +29,30 @@ const AssetList: React.FC<AssetListProps> = ({
   onEdit,
   onDelete,
   onView,
+  onViewHistory,
   onTableChange,
   selectedRowKeys = [],
   onSelectChange,
 }) => {
-  const navigate = useNavigate()
 
   // 表格列定义
   const columns: ColumnsType<Asset> = [
+    {
+      title: '项目名称',
+      dataIndex: 'project_name',
+      key: 'project_name',
+      width: 150,
+      fixed: 'left',
+      sorter: true,
+      ellipsis: {
+        showTitle: false,
+      },
+      render: (text) => (
+        <Tooltip title={text || '未设置'}>
+          {text || '-'}
+        </Tooltip>
+      ),
+    },
     {
       title: '物业名称',
       dataIndex: 'property_name',
@@ -68,20 +84,6 @@ const AssetList: React.FC<AssetListProps> = ({
       render: (text) => (
         <Tooltip title={text}>
           {text}
-        </Tooltip>
-      ),
-    },
-    {
-      title: '经营管理方',
-      dataIndex: 'management_entity',
-      key: 'management_entity',
-      width: 150,
-      ellipsis: {
-        showTitle: false,
-      },
-      render: (text) => (
-        <Tooltip title={text || '未设置'}>
-          {text || '-'}
         </Tooltip>
       ),
     },
@@ -157,8 +159,8 @@ const AssetList: React.FC<AssetListProps> = ({
       key: 'property_nature',
       width: 100,
       filters: [
-        { text: '经营类', value: '经营类' },
-        { text: '非经营类', value: '非经营类' },
+        { text: '经营性', value: '经营性' },
+        { text: '非经营性', value: '非经营性' },
       ],
       render: (nature) => (
         <Tag color={getStatusColor(nature, 'property')}>
@@ -173,9 +175,11 @@ const AssetList: React.FC<AssetListProps> = ({
       width: 100,
       filters: [
         { text: '出租', value: '出租' },
-        { text: '闲置', value: '闲置' },
+        { text: '空置', value: '空置' },
         { text: '自用', value: '自用' },
         { text: '公房', value: '公房' },
+        { text: '待移交', value: '待移交' },
+        { text: '待处置', value: '待处置' },
         { text: '其他', value: '其他' },
       ],
       render: (status) => (
@@ -273,7 +277,7 @@ const AssetList: React.FC<AssetListProps> = ({
             <Button
               type="text"
               icon={<HistoryOutlined />}
-              onClick={() => navigate(`/assets/${record.id}/history`)}
+              onClick={() => onViewHistory(record)}
               size="small"
             />
           </Tooltip>
@@ -312,7 +316,7 @@ const AssetList: React.FC<AssetListProps> = ({
   return (
     <Table
       columns={columns}
-      dataSource={data?.data || []}
+      dataSource={data?.items || []}
       rowKey="id"
       loading={loading}
       scroll={{ x: 1800, y: 600 }}

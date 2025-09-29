@@ -21,14 +21,14 @@ const mockAssetData: Asset = {
   rented_area: 8000,
   unrented_area: 2000,
   non_commercial_area: 2000,
-  ownership_status: OwnershipStatus.CONFIRMED,
+  ownership_status: '已确权',
   certificated_usage: '商业',
   actual_usage: '办公、商业',
   business_category: '写字楼',
-  usage_status: UsageStatus.RENTED,
+  usage_status: '出租',
   is_litigated: false,
-  property_nature: PropertyNature.COMMERCIAL,
-  business_model: '整体出租',
+  property_nature: '经营类',
+  business_model: '整体出租',  // 接收模式
   include_in_occupancy_rate: true,
   occupancy_rate: '80.00%',
   lease_contract: 'HT-2024-001',
@@ -140,8 +140,8 @@ const AssetFormDemo: React.FC = () => {
           <li>选择"经营类"物业性质时，显示出租相关字段（可出租面积、已出租面积等）</li>
           <li>选择"非经营类"物业性质时，显示非经营物业面积字段</li>
           <li>选择"出租"使用状态时，显示租户和合同相关字段</li>
-          <li>填写业态类别时，显示经营模式字段</li>
-          <li>填写五羊项目名称时，显示协议日期字段</li>
+          <li>填写业态类别时，显示接收模式字段</li>
+          <li>填写五羊项目名称时，显示接收协议日期字段</li>
         </ul>
 
         <Title level={4}>智能计算功能</Title>
@@ -157,6 +157,7 @@ const AssetFormDemo: React.FC = () => {
           <li>面积字段必须为非负数</li>
           <li>已出租面积不能大于可出租面积</li>
           <li>合同结束日期必须晚于开始日期</li>
+          <li>接收协议结束日期必须晚于开始日期</li>
           <li>各字段都有相应的字符长度限制</li>
         </ul>
       </Card>

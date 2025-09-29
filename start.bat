@@ -63,6 +63,16 @@ if errorlevel 1 (
     exit /b 1
 )
 
+REM 安装额外的必需依赖
+echo [INFO] 安装额外必需依赖...
+py -m pip install email-validator --quiet
+if errorlevel 1 (
+    echo [ERROR] email-validator 安装失败
+    cd ..
+    pause
+    exit /b 1
+)
+
 echo [SUCCESS] 后端依赖安装完成
 cd ..
 

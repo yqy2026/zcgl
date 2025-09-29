@@ -38,6 +38,8 @@ const AppBreadcrumb: React.FC = () => {
     '/system/users': { name: '用户管理', icon: <SettingOutlined /> },
     '/system/roles': { name: '角色管理', icon: <SettingOutlined /> },
     '/system/logs': { name: '操作日志', icon: <SettingOutlined /> },
+    '/system/dictionaries': { name: '枚举值字段', icon: <SettingOutlined /> },
+    '/ownership': { name: '权属方管理', icon: <SettingOutlined /> },
   }
 
   // 生成面包屑项
@@ -227,9 +229,9 @@ const AppBreadcrumb: React.FC = () => {
       })
     }
 
-    if (pathname.startsWith('/system') && !breadcrumbItems.some(item => 
-      typeof item.title === 'object' && 
-      React.isValidElement(item.title) && 
+    if (pathname.startsWith('/system') && !breadcrumbItems.some(item =>
+      typeof item.title === 'object' &&
+      React.isValidElement(item.title) &&
       item.title.props.children?.includes?.('系统管理')
     )) {
       breadcrumbItems.splice(1, 0, {
@@ -237,6 +239,21 @@ const AppBreadcrumb: React.FC = () => {
           <span>
             <SettingOutlined style={{ marginRight: 4 }} />
             系统管理
+          </span>
+        ),
+      })
+    }
+
+    if (pathname.startsWith('/ownership') && !breadcrumbItems.some(item =>
+      typeof item.title === 'object' &&
+      React.isValidElement(item.title) &&
+      item.title.props.children?.includes?.('资产管理')
+    )) {
+      breadcrumbItems.splice(1, 0, {
+        title: (
+          <span>
+            <UnorderedListOutlined style={{ marginRight: 4 }} />
+            资产管理
           </span>
         ),
       })

@@ -19,12 +19,17 @@ export const formatNumber = (value: number | string | undefined | null): string 
 /**
  * 格式化面积（平方米）
  */
-export const formatArea = (value: number | undefined | null): string => {
-  if (value === undefined || value === null) {
+export const formatArea = (value: number | string | undefined | null): string => {
+  if (value === undefined || value === null || value === '') {
     return '-'
   }
-  
-  return `${formatNumber(value)} ㎡`
+
+  const num = typeof value === 'string' ? parseFloat(value) : value
+  if (isNaN(num)) {
+    return '-'
+  }
+
+  return `${formatNumber(num)} ㎡`
 }
 
 /**
@@ -34,12 +39,12 @@ export const formatPercentage = (value: number | string | undefined | null): str
   if (value === undefined || value === null || value === '') {
     return '-'
   }
-  
+
   const num = typeof value === 'string' ? parseFloat(value) : value
   if (isNaN(num)) {
     return '-'
   }
-  
+
   return `${num.toFixed(2)}%`
 }
 
@@ -123,14 +128,16 @@ export const getStatusColor = (
       '部分确权': 'orange',
     },
     property: {
-      '经营类': 'blue',
-      '非经营类': 'default',
+      '经营性': 'blue',
+      '非经营性': 'default',
     },
     usage: {
       '出租': 'green',
-      '闲置': 'red',
+      '空置': 'red',
       '自用': 'blue',
       '公房': 'purple',
+      '待移交': 'orange',
+      '待处置': 'orange',
       '其他': 'default',
     },
   }
@@ -143,14 +150,21 @@ export const getStatusColor = (
  * 计算出租率
  */
 export const calculateOccupancyRate = (
-  rentedArea: number | undefined | null,
-  rentableArea: number | undefined | null
+  rentedArea: number | string | undefined | null,
+  rentableArea: number | string | undefined | null
 ): number => {
-  if (!rentedArea || !rentableArea || rentableArea === 0) {
+  if (!rentedArea || !rentableArea || rentableArea === 0 || rentableArea === '') {
     return 0
   }
-  
-  return (rentedArea / rentableArea) * 100
+
+  const rented = typeof rentedArea === 'string' ? parseFloat(rentedArea) : rentedArea
+  const rentable = typeof rentableArea === 'string' ? parseFloat(rentableArea) : rentableArea
+
+  if (isNaN(rented) || isNaN(rentable) || rentable === 0) {
+    return 0
+  }
+
+  return (rented / rentable) * 100
 }
 
 /**
@@ -168,4 +182,13 @@ export const safeNumber = (value: any, defaultValue = 0): number => {
     return typeof value === 'string' ? parseFloat(value) : value
   }
   return defaultValue
+}
+
+/**
+ * React Hook for formatting functions
+ */
+export const useFormat = () => {
+  return {
+    currency: formatCurrency
+  }
 }

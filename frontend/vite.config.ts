@@ -2,7 +2,7 @@ import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 import { visualizer } from 'rollup-plugin-visualizer'
-import { compression } from 'vite-plugin-compression'
+import compression from 'vite-plugin-compression'
 import { createHtmlPlugin } from 'vite-plugin-html'
 
 // https://vitejs.dev/config/
@@ -13,18 +13,7 @@ export default defineConfig(({ command, mode }) => {
 
   return {
     plugins: [
-      react({
-        // 生产环境下启用React优化
-        babel: isProduction ? {
-          plugins: [
-            ['babel-plugin-import', {
-              libraryName: 'antd',
-              libraryDirectory: 'es',
-              style: true,
-            }],
-          ],
-        } : undefined,
-      }),
+      react(),
       
       // HTML模板处理
       createHtmlPlugin({
@@ -77,8 +66,23 @@ export default defineConfig(({ command, mode }) => {
     host: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:8001',
+        target: 'http://127.0.0.1:8001',
         changeOrigin: true,
+        secure: false,
+        ws: true,
+        timeout: 30000,
+        rewrite: (path) => path,
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, _req, _res) => {
+            console.log('proxy error', err);
+          });
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            console.log('Sending Request to the Target:', req.method, req.url);
+          });
+          proxy.on('proxyRes', (proxyRes, req, _res) => {
+            console.log('Received Response from the Target:', proxyRes.statusCode, req.url);
+          });
+        },
       },
     },
   },

@@ -6,7 +6,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 
-from models.asset import AssetHistory
+from ..models.asset import AssetHistory
 
 
 class HistoryCRUD:

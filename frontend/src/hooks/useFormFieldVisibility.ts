@@ -71,21 +71,26 @@ const fieldVisibilityRules: FieldVisibilityRule[] = [
     dependsOn: ['property_nature'],
   },
 
-  // 有业态类别时显示经营模式
+  // 有业态类别时显示接收模式
   {
     field: 'business_model',
     condition: (values) => Boolean(values.business_category && values.business_category.trim()),
     dependsOn: ['business_category'],
   },
 
-  // 有五羊项目名称时显示协议日期
+  // 有五羊项目名称时显示接收协议日期
   {
-    field: 'agreement_start_date',
+    field: 'operation_agreement_start_date',
     condition: (values) => Boolean(values.wuyang_project_name && values.wuyang_project_name.trim()),
     dependsOn: ['wuyang_project_name'],
   },
   {
-    field: 'agreement_end_date',
+    field: 'operation_agreement_end_date',
+    condition: (values) => Boolean(values.wuyang_project_name && values.wuyang_project_name.trim()),
+    dependsOn: ['wuyang_project_name'],
+  },
+  {
+    field: 'operation_agreement_attachments',
     condition: (values) => Boolean(values.wuyang_project_name && values.wuyang_project_name.trim()),
     dependsOn: ['wuyang_project_name'],
   },

@@ -6,9 +6,9 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 import uuid
 
-from database import SessionLocal, create_tables
-from models.asset import Asset
-from crud.asset import CRUDAsset
+from .database import SessionLocal, create_tables
+from .models.asset import Asset
+from .crud.asset import CRUDAsset
 
 
 def init_demo_data():

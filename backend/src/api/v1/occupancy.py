@@ -8,8 +8,8 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from database import get_db
-from crud.asset import asset_crud
+from ...database import get_db
+from ...crud.asset import asset_crud
 
 # 配置日志
 logger = logging.getLogger(__name__)

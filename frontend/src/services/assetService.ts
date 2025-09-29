@@ -6,20 +6,36 @@ import type {
   AssetCreateRequest,
   AssetUpdateRequest,
   AssetHistory,
+  SystemDictionary,
+  AssetCustomField,
+  CustomFieldValue,
 } from '@/types/asset'
 import type { ApiResponse, PaginatedResponse } from '@/types/api'
 
 export class AssetService {
   // 获取资产列表
   async getAssets(params?: AssetSearchParams): Promise<AssetListResponse> {
-    const response = await apiClient.get<AssetListResponse>('/assets', {
-      params: {
-        ...params,
-        page: params?.page || 1,
-        limit: params?.limit || 20,
-      },
-    })
-    return response.data || response as AssetListResponse
+    try {
+      const response = await apiClient.get<AssetListResponse>('/assets', {
+        params: {
+          ...params,
+          page: params?.page || 1,
+          limit: params?.limit || 20,
+        },
+      })
+
+      // 处理响应数据 - 后端直接返回数据格式
+      // ApiClient 已经解包了 response.data，所以 response 就是实际的数据
+      if (response) {
+        return response as AssetListResponse
+      }
+
+      return response as AssetListResponse
+    } catch (error) {
+      console.error('获取资产列表失败:', error)
+      // 抛出错误而不是返回空数据，让React Query能够正确处理错误状态
+      throw new Error(error instanceof Error ? error.message : '获取资产列表失败')
+    }
   }
 
   // 获取单个资产
@@ -40,14 +56,62 @@ export class AssetService {
     return response.data || response as Asset
   }
 
-  // 删除资产
-  async deleteAsset(id: string): Promise<void> {
-    await apiClient.delete(`/assets/${id}`)
+  // 导出资产
+  async exportAssets(params: { format: string, filters?: AssetSearchParams }): Promise<Blob> {
+    const response = await apiClient.get('/assets/export', {
+      params: {
+        export_format: params.format,
+        ...params.filters,
+      },
+      responseType: 'blob',
+    })
+    return response.data || response
+  }
+
+  // 导出选中资产
+  async exportSelectedAssets(assetIds: string[], format: string): Promise<Blob> {
+    const response = await apiClient.post(
+      '/assets/export',
+      {
+        asset_ids: assetIds,
+        export_format: format,
+      },
+      {
+        responseType: 'blob',
+      }
+    )
+    return response.data || (response as unknown as Blob)
+  }
+
+  // 导入资产
+  async importAssets(file: File): Promise<any> {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const response = await apiClient.post('/assets/import', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+    return response.data || response
+  }
+
+  // 批量更新资产
+  async batchUpdateAssets(data: { ids: string[], fields: Partial<AssetUpdateRequest> }): Promise<any> {
+    const response = await apiClient.post('/assets/batch-update', data)
+    return response.data || response
   }
 
   // 批量删除资产
   async deleteAssets(ids: string[]): Promise<void> {
-    await apiClient.post('/assets/batch-delete', { ids })
+    // 由于后端没有批量删除接口，逐个删除
+    const deletePromises = ids.map(id => this.deleteAsset(id))
+    await Promise.all(deletePromises)
+  }
+
+  // 删除单个资产
+  async deleteAsset(id: string): Promise<void> {
+    await apiClient.delete(`/assets/${id}`)
   }
 
   // 获取资产变更历史
@@ -114,20 +178,29 @@ export class AssetService {
 
   // 获取权属方列表
   async getOwnershipEntities(): Promise<string[]> {
-    const response = await apiClient.get('/assets/ownership-entities')
-    return response.data || []
+    try {
+      const response = await apiClient.get('/assets/ownership-entities', {
+        timeout: 3000 // 3秒超时
+      })
+      return response.data || []
+    } catch (error) {
+      console.warn('获取权属方列表失败:', error)
+      throw error // 重新抛出错误，让上层处理
+    }
   }
 
-  // 获取管理方列表
-  async getManagementEntities(): Promise<string[]> {
-    const response = await apiClient.get('/assets/management-entities')
-    return response.data || []
-  }
-
+  
   // 获取业态类别列表
   async getBusinessCategories(): Promise<string[]> {
-    const response = await apiClient.get('/assets/business-categories')
-    return response.data || []
+    try {
+      const response = await apiClient.get('/assets/business-categories', {
+        timeout: 3000
+      })
+      return response.data || []
+    } catch (error) {
+      console.warn('获取业态类别列表失败:', error)
+      throw error
+    }
   }
 
   // 验证资产数据
@@ -149,42 +222,7 @@ export class AssetService {
     }
   }
 
-  // 导出资产数据
-  async exportAssets(
-    filters?: Record<string, any>,
-    options?: {
-      format?: 'xlsx' | 'csv'
-      includeHeaders?: boolean
-      selectedFields?: string[]
-    }
-  ): Promise<any> {
-    const response = await apiClient.post('/excel/export', {
-      filters,
-      format: options?.format || 'xlsx',
-      include_headers: options?.includeHeaders !== false,
-      selected_fields: options?.selectedFields,
-    })
-    return response.data || response
-  }
-
-  // 导出选中的资产
-  async exportSelectedAssets(
-    assetIds: string[],
-    options?: {
-      format?: 'xlsx' | 'csv'
-      includeHeaders?: boolean
-      selectedFields?: string[]
-    }
-  ): Promise<any> {
-    const response = await apiClient.post('/excel/export-selected', {
-      asset_ids: assetIds,
-      format: options?.format || 'xlsx',
-      include_headers: options?.includeHeaders !== false,
-      selected_fields: options?.selectedFields,
-    })
-    return response.data || response
-  }
-
+  
   // 获取导出状态
   async getExportStatus(taskId: string): Promise<any> {
     const response = await apiClient.get(`/excel/export-status/${taskId}`)
@@ -276,6 +314,32 @@ export class AssetService {
     await apiClient.delete(`/excel/import-history/${id}`)
   }
 
+  // 上传资产附件
+  async uploadAssetAttachments(assetId: string, files: File[]): Promise<{ success: string[], failed: string[] }> {
+    const formData = new FormData()
+    files.forEach((file, index) => {
+      formData.append(`file_${index}`, file)
+    })
+
+    const response = await apiClient.post(`/assets/${assetId}/attachments`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+    return response.data || { success: [], failed: [] }
+  }
+
+  // 获取资产附件列表
+  async getAssetAttachments(assetId: string): Promise<Array<{ id: string, name: string, size: number, url: string }>> {
+    const response = await apiClient.get(`/assets/${assetId}/attachments`)
+    return response.data || []
+  }
+
+  // 删除资产附件
+  async deleteAssetAttachment(assetId: string, attachmentId: string): Promise<void> {
+    await apiClient.delete(`/assets/${assetId}/attachments/${attachmentId}`)
+  }
+
   // 获取出租率统计数据
   async getOccupancyRateStats(filters?: AssetSearchParams): Promise<any> {
     const response = await apiClient.get('/statistics/occupancy-rate', {
@@ -306,6 +370,185 @@ export class AssetService {
       params: filters,
     })
     return response.data || response
+  }
+
+  // 获取面积汇总统计数据
+  async getAreaSummaryStats(): Promise<any> {
+    const response = await apiClient.get('/statistics/area-summary')
+    return response.data || response
+  }
+
+  // 获取财务汇总统计数据
+  async getFinancialSummaryStats(): Promise<any> {
+    const response = await apiClient.get('/statistics/financial-summary')
+    return response.data || response
+  }
+
+  // 获取按类别出租率统计数据
+  async getOccupancyRateByCategory(categoryField: string = 'business_category'): Promise<any> {
+    const response = await apiClient.get('/statistics/occupancy-rate/by-category', {
+      params: { category_field: categoryField }
+    })
+    return response.data || response
+  }
+
+  // 获取整体出租率统计数据
+  async getOverallOccupancyRate(): Promise<any> {
+    const response = await apiClient.get('/statistics/occupancy-rate/overall')
+    return response.data || response
+  }
+
+  // ===== 系统字典管理 =====
+  
+  // 获取系统字典列表
+  async getSystemDictionaries(dict_type?: string): Promise<SystemDictionary[]> {
+    const response = await apiClient.get('/system-dictionaries', {
+      params: dict_type ? { dict_type } : undefined,
+    })
+    return response.data || []
+  }
+
+  // 获取单个系统字典
+  async getSystemDictionary(id: string): Promise<SystemDictionary> {
+    const response = await apiClient.get(`/system-dictionaries/${id}`)
+    return response.data
+  }
+
+  // 创建系统字典
+  async createSystemDictionary(data: Omit<SystemDictionary, 'id' | 'created_at' | 'updated_at'>): Promise<SystemDictionary> {
+    const response = await apiClient.post('/system-dictionaries', data)
+    return response.data
+  }
+
+  // 更新系统字典
+  async updateSystemDictionary(id: string, data: Partial<SystemDictionary>): Promise<SystemDictionary> {
+    const response = await apiClient.put(`/system-dictionaries/${id}`, data)
+    return response.data
+  }
+
+  // 删除系统字典
+  async deleteSystemDictionary(id: string): Promise<void> {
+    await apiClient.delete(`/system-dictionaries/${id}`)
+  }
+
+  // 批量更新系统字典
+  async batchUpdateSystemDictionaries(updates: Array<{id: string, data: Partial<SystemDictionary>}>): Promise<SystemDictionary[]> {
+    const response = await apiClient.post('/system-dictionaries/batch-update', { updates })
+    return response.data || []
+  }
+
+  // 获取字典类型列表
+  async getDictionaryTypes(): Promise<{ types: string[] }> {
+    const response = await apiClient.get('/system-dictionaries/types/list')
+    return response.data || { types: [] }
+  }
+
+  // ===== 自定义字段管理 =====
+
+  // 获取资产自定义字段配置
+  async getAssetCustomFields(assetId?: string): Promise<AssetCustomField[]> {
+    const response = await apiClient.get('/asset-custom-fields', {
+      params: assetId ? { asset_id: assetId } : undefined,
+    })
+    return response.data || []
+  }
+
+  // 获取单个自定义字段配置
+  async getAssetCustomField(id: string): Promise<AssetCustomField> {
+    const response = await apiClient.get(`/asset-custom-fields/${id}`)
+    return response.data
+  }
+
+  // 创建自定义字段配置
+  async createAssetCustomField(data: Omit<AssetCustomField, 'id' | 'created_at' | 'updated_at'>): Promise<AssetCustomField> {
+    const response = await apiClient.post('/asset-custom-fields', data)
+    return response.data
+  }
+
+  // 更新自定义字段配置
+  async updateAssetCustomField(id: string, data: Partial<AssetCustomField>): Promise<AssetCustomField> {
+    const response = await apiClient.put(`/asset-custom-fields/${id}`, data)
+    return response.data
+  }
+
+  // 删除自定义字段配置
+  async deleteAssetCustomField(id: string): Promise<void> {
+    await apiClient.delete(`/asset-custom-fields/${id}`)
+  }
+
+  // 获取资产的自定义字段值
+  async getAssetCustomFieldValues(assetId: string): Promise<CustomFieldValue[]> {
+    const response = await apiClient.get(`/assets/${assetId}/custom-fields`)
+    return response.data || []
+  }
+
+  // 更新资产的自定义字段值
+  async updateAssetCustomFieldValues(assetId: string, values: CustomFieldValue[]): Promise<CustomFieldValue[]> {
+    const response = await apiClient.put(`/assets/${assetId}/custom-fields`, { values })
+    return response.data || []
+  }
+
+  // 批量设置自定义字段值
+  async batchSetCustomFieldValues(updates: Array<{assetId: string, values: CustomFieldValue[]}>): Promise<void> {
+    await apiClient.post('/assets/batch-custom-fields', { updates })
+  }
+
+  // ===== 数据字典相关的便捷方法 =====
+
+  // 获取权属方字典
+  async getOwnershipEntitiesFromDict(): Promise<SystemDictionary[]> {
+    return this.getSystemDictionaries('ownership_status')
+  }
+
+  // 获取管理方字典
+  async getManagementEntitiesFromDict(): Promise<SystemDictionary[]> {
+    return this.getSystemDictionaries('management_entity')
+  }
+
+  // 获取业态类别字典
+  async getBusinessCategoriesFromDict(): Promise<SystemDictionary[]> {
+    return this.getSystemDictionaries('business_category')
+  }
+
+  // 获取资产状态字典
+  async getAssetStatusFromDict(): Promise<SystemDictionary[]> {
+    return this.getSystemDictionaries('property_nature')
+  }
+
+  // 获取权属性质字典
+  async getOwnershipNatureFromDict(): Promise<SystemDictionary[]> {
+    return this.getSystemDictionaries('usage_status')
+  }
+
+  // 获取租赁状态字典
+  async getLeaseStatusFromDict(): Promise<SystemDictionary[]> {
+    return this.getSystemDictionaries('contract_status')
+  }
+
+  // ===== 数据验证和转换 =====
+
+  // 验证自定义字段值
+  async validateCustomFieldValue(fieldId: string, value: any): Promise<{valid: boolean, error?: string}> {
+    try {
+      const response = await apiClient.post('/asset-custom-fields/validate', {
+        field_id: fieldId,
+        value: value,
+      })
+      return { valid: true }
+    } catch (error: any) {
+      return {
+        valid: false,
+        error: error.message || '验证失败',
+      }
+    }
+  }
+
+  // 获取字段选项（用于下拉框等）
+  async getFieldOptions(fieldType: string, category?: string): Promise<Array<{label: string, value: any}>> {
+    const response = await apiClient.get('/field-options', {
+      params: { field_type: fieldType, category },
+    })
+    return response.data || []
   }
 }
 

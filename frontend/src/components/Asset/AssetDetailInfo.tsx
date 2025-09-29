@@ -51,6 +51,17 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
             label={
               <span>
                 <HomeOutlined style={{ marginRight: 4 }} />
+                项目名称
+              </span>
+            }
+          >
+            {asset.project_name || '-'}
+          </Descriptions.Item>
+          
+          <Descriptions.Item 
+            label={
+              <span>
+                <HomeOutlined style={{ marginRight: 4 }} />
                 物业名称
               </span>
             }
@@ -74,17 +85,6 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
           <Descriptions.Item 
             label={
               <span>
-                <UserOutlined style={{ marginRight: 4 }} />
-                经营管理方
-              </span>
-            }
-          >
-            {asset.management_entity || '-'}
-          </Descriptions.Item>
-          
-          <Descriptions.Item 
-            label={
-              <span>
                 <EnvironmentOutlined style={{ marginRight: 4 }} />
                 所在地址
               </span>
@@ -99,22 +99,34 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
               {asset.ownership_status}
             </Tag>
           </Descriptions.Item>
-          
-          <Descriptions.Item label="物业性质">
-            <Tag color={getStatusColor(asset.property_nature, 'property')}>
-              {asset.property_nature}
-            </Tag>
+
+          <Descriptions.Item label="证载用途">
+            {asset.certificated_usage || '-'}
           </Descriptions.Item>
-          
+
+          <Descriptions.Item label="实际用途">
+            {asset.actual_usage || '-'}
+          </Descriptions.Item>
+
+          <Descriptions.Item label="业态类别">
+            {asset.business_category || '-'}
+          </Descriptions.Item>
+
           <Descriptions.Item label="使用状态">
             <Tag color={getStatusColor(asset.usage_status, 'usage')}>
               {asset.usage_status}
             </Tag>
           </Descriptions.Item>
-          
+
           <Descriptions.Item label="是否涉诉">
             <Tag color={asset.is_litigated ? 'red' : 'green'}>
               {asset.is_litigated ? '是' : '否'}
+            </Tag>
+          </Descriptions.Item>
+
+          <Descriptions.Item label="物业性质">
+            <Tag color={getStatusColor(asset.property_nature, 'property')}>
+              {asset.property_nature}
             </Tag>
           </Descriptions.Item>
           
@@ -147,7 +159,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
         title="面积信息" 
         style={{ marginBottom: 16 }}
         extra={
-          asset.property_nature === '经营类' && (
+          asset.property_nature === '经营性' && (
             <span style={{ color: '#1890ff' }}>
               <PercentageOutlined style={{ marginRight: 4 }} />
               出租率: {occupancyRate.toFixed(2)}%
@@ -210,7 +222,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
             </>
           )}
           
-          {asset.property_nature === '非经营类' && asset.non_commercial_area && (
+          {asset.property_nature === '非经营性' && asset.non_commercial_area && (
             <Col xs={24} sm={12} md={8} lg={6}>
               <Statistic
                 title="非经营物业面积"
@@ -224,7 +236,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
         </Row>
 
         {/* 出租率进度条 */}
-        {asset.property_nature === '经营类' && asset.rentable_area && asset.rentable_area > 0 && (
+        {asset.property_nature === '经营性' && asset.rentable_area && asset.rentable_area > 0 && (
           <div style={{ marginTop: 24 }}>
             <Divider orientation="left">出租率分析</Divider>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -245,40 +257,62 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
         )}
       </Card>
 
-      {/* 用途和经营信息 */}
-      <Card title="用途和经营信息" style={{ marginBottom: 16 }}>
+      {/* 接收信息 */}
+      <Card title="接收信息" style={{ marginBottom: 16 }}>
         <Descriptions
           bordered
           column={{ xs: 1, sm: 2 }}
           labelStyle={{ width: '120px' }}
         >
-          <Descriptions.Item label="证载用途">
-            {asset.certificated_usage || '-'}
-          </Descriptions.Item>
-          
-          <Descriptions.Item label="实际用途">
-            {asset.actual_usage || '-'}
-          </Descriptions.Item>
-          
-          <Descriptions.Item label="业态类别">
-            {asset.business_category || '-'}
-          </Descriptions.Item>
-          
-          <Descriptions.Item label="经营模式">
+          <Descriptions.Item label="接收模式">
             {asset.business_model || '-'}
           </Descriptions.Item>
-          
+
           <Descriptions.Item label="是否计入出租率">
             <Tag color={asset.include_in_occupancy_rate ? 'green' : 'default'}>
               {asset.include_in_occupancy_rate ? '是' : '否'}
             </Tag>
           </Descriptions.Item>
-          
+
           <Descriptions.Item label="权属类别">
             {asset.ownership_category || '-'}
           </Descriptions.Item>
         </Descriptions>
       </Card>
+
+      {/* 接收协议详情 */}
+      {(asset.operation_agreement_start_date || asset.operation_agreement_end_date || asset.operation_agreement_attachments) && (
+        <Card title="接收协议详情" style={{ marginBottom: 16 }}>
+          <Descriptions
+            bordered
+            column={{ xs: 1, sm: 2 }}
+            labelStyle={{ width: '150px' }}
+          >
+            <Descriptions.Item label="(当前)接收协议开始日期">
+              {asset.operation_agreement_start_date ? formatDate(asset.operation_agreement_start_date) : '-'}
+            </Descriptions.Item>
+
+            <Descriptions.Item label="(当前)接收协议结束日期">
+              {asset.operation_agreement_end_date ? formatDate(asset.operation_agreement_end_date) : '-'}
+            </Descriptions.Item>
+
+            <Descriptions.Item label="接收协议文件" span={2}>
+              {asset.operation_agreement_attachments ? (
+                <div>
+                  {asset.operation_agreement_attachments.split(',').map((fileName, index) => (
+                    <div key={index} style={{ marginBottom: 4 }}>
+                      <Tag color="blue">PDF</Tag>
+                      <span style={{ marginLeft: 8 }}>{fileName.trim()}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                '-'
+              )}
+            </Descriptions.Item>
+          </Descriptions>
+        </Card>
+      )}
 
       {/* 合同信息 */}
       {asset.usage_status === '出租' && (
@@ -292,71 +326,39 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
               {asset.tenant_name || '-'}
             </Descriptions.Item>
             
-            <Descriptions.Item label="承租合同">
-              {asset.lease_contract || '-'}
+            <Descriptions.Item label="租赁合同编号">
+              {asset.lease_contract_number || '-'}
             </Descriptions.Item>
             
             <Descriptions.Item label="合同开始日期">
-              {asset.current_contract_start_date ? formatDate(asset.current_contract_start_date) : '-'}
+              {asset.contract_start_date ? formatDate(asset.contract_start_date) : '-'}
             </Descriptions.Item>
             
             <Descriptions.Item label="合同结束日期">
-              {asset.current_contract_end_date ? formatDate(asset.current_contract_end_date) : '-'}
+              {asset.contract_end_date ? formatDate(asset.contract_end_date) : '-'}
             </Descriptions.Item>
             
-            <Descriptions.Item label="现租赁合同">
-              {asset.current_lease_contract || '-'}
+            <Descriptions.Item label="合同状态">
+              {asset.contract_status || '-'}
             </Descriptions.Item>
             
-            <Descriptions.Item label="终端出租合同">
-              {asset.current_terminal_contract || '-'}
+            <Descriptions.Item label="月租金">
+              {asset.monthly_rent ? `¥${asset.monthly_rent.toLocaleString()}` : '-'}
             </Descriptions.Item>
           </Descriptions>
         </Card>
       )}
 
-      {/* 项目信息 */}
-      {asset.wuyang_project_name && (
-        <Card title="项目信息" style={{ marginBottom: 16 }}>
-          <Descriptions
-            bordered
-            column={{ xs: 1, sm: 2 }}
-            labelStyle={{ width: '150px' }}
-          >
-            <Descriptions.Item label="五羊项目名称">
-              {asset.wuyang_project_name}
-            </Descriptions.Item>
-            
-            <Descriptions.Item label="协议开始日期">
-              {asset.agreement_start_date ? formatDate(asset.agreement_start_date) : '-'}
-            </Descriptions.Item>
-            
-            <Descriptions.Item label="协议结束日期">
-              {asset.agreement_end_date ? formatDate(asset.agreement_end_date) : '-'}
-            </Descriptions.Item>
-          </Descriptions>
-        </Card>
-      )}
 
       {/* 备注信息 */}
-      {(asset.description || asset.notes) && (
+      {asset.notes && (
         <Card title="备注信息">
           <Descriptions bordered column={1}>
-            {asset.description && (
-              <Descriptions.Item label="说明">
-                <div style={{ whiteSpace: 'pre-wrap' }}>
-                  {asset.description}
-                </div>
-              </Descriptions.Item>
-            )}
-            
-            {asset.notes && (
-              <Descriptions.Item label="其他备注">
-                <div style={{ whiteSpace: 'pre-wrap' }}>
-                  {asset.notes}
-                </div>
-              </Descriptions.Item>
-            )}
+            <Descriptions.Item label="备注">
+              <div style={{ whiteSpace: 'pre-wrap' }}>
+                {asset.notes}
+              </div>
+            </Descriptions.Item>
           </Descriptions>
         </Card>
       )}

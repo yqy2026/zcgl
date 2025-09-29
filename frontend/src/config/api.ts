@@ -3,33 +3,33 @@
  */
 
 // API基础URL配置
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8001'
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api/v1'
 
 // API端点配置
 export const API_ENDPOINTS = {
   // 资产管理
-  assets: '/api/v1/assets',
-  assetDetail: (id: string) => `/api/v1/assets/${id}`,
-  
+  assets: '/assets/',
+  assetDetail: (id: string) => `/assets/${id}`,
+
   // 统计数据
   statistics: {
-    basic: '/api/v1/statistics/basic',
-    dashboard: '/api/v1/statistics/dashboard',
-    summary: '/api/v1/statistics/summary',
+    basic: '/statistics/basic',
+    dashboard: '/statistics/dashboard',
+    summary: '/statistics/summary',
   },
-  
+
   // Excel导入导出
   excel: {
-    export: '/api/v1/excel/export',
-    import: '/api/v1/excel/import',
-    template: '/api/v1/excel/template',
+    export: '/excel/export',
+    import: '/excel/import',
+    template: '/excel/template',
   },
-  
+
   // 备份恢复
   backup: {
-    create: '/api/v1/backup/create',
-    restore: '/api/v1/backup/restore',
-    list: '/api/v1/backup/list',
+    create: '/backup/create',
+    restore: '/backup/restore',
+    list: '/backup/list',
   },
 } as const
 

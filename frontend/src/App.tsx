@@ -1,13 +1,13 @@
 import React from 'react'
-import BusinessLayout from './components/Layout/BusinessLayout'
+import AppLayout from './components/Layout/AppLayout'
 import AppRoutes from './routes/AppRoutes'
 import './App.css'
 
 const App: React.FC = () => {
   return (
-    <BusinessLayout>
+    <AppLayout>
       <AppRoutes />
-    </BusinessLayout>
+    </AppLayout>
   )
 }
 

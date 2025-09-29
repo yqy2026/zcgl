@@ -46,7 +46,7 @@ const mockAsset: Asset = {
   certificated_usage: '商业用途',
   actual_usage: '办公楼',
   business_category: '商业办公',
-  business_model: '整租',
+  business_model: '整租',  // 接收模式
   is_litigated: false,
   include_in_occupancy_rate: true,
   occupancy_rate: '80.00',

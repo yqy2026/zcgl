@@ -117,7 +117,7 @@ const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
             current={current}
             status={status === 'exception' ? 'error' : undefined}
             direction={direction}
-            size={size}
+            size={size === 'large' ? 'default' : size}
           >
             {steps.map((step, index) => (
               <Step

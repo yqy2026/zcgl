@@ -6,7 +6,7 @@ import {
   CloseCircleOutlined,
   WifiOutlined,
   LockOutlined,
-  ServerOutlined
+  CheckCircleOutlined as ServerOutlined
 } from '@ant-design/icons'
 
 interface NotificationOptions {

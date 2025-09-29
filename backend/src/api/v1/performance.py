@@ -6,8 +6,8 @@ from typing import Dict, Any
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from database import get_db
-from services.performance_service import PerformanceService
+from ...database import get_db
+from ...services.performance_service import PerformanceService
 
 router = APIRouter()
 

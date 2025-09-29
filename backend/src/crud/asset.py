@@ -6,8 +6,9 @@ from typing import List, Optional, Dict, Any, Tuple
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, desc, asc, func
 
-from models.asset import Asset, AssetHistory
-from schemas.asset import AssetCreate, AssetUpdate
+from ..models.asset import Asset, AssetHistory
+from ..schemas.asset import AssetCreate, AssetUpdate
+from ..services.asset_calculator import AssetCalculator
 
 
 class AssetCRUD:
@@ -20,6 +21,10 @@ class AssetCRUD:
     def get_by_name(self, db: Session, property_name: str) -> Optional[Asset]:
         """根据物业名称获取资产"""
         return db.query(Asset).filter(Asset.property_name == property_name).first()
+
+    def get_by_property_name(self, db: Session, property_name: str) -> Optional[Asset]:
+        """根据物业名称获取资产（别名方法）"""
+        return self.get_by_name(db, property_name)
 
     def get_multi(
         self, 
@@ -63,8 +68,7 @@ class AssetCRUD:
                 Asset.property_name.contains(search),
                 Asset.address.contains(search),
                 Asset.ownership_entity.contains(search),
-                Asset.management_entity.contains(search),
-                Asset.business_category.contains(search)
+                                Asset.business_category.contains(search)
             )
             query = query.filter(search_filter)
         
@@ -121,8 +125,7 @@ class AssetCRUD:
                 Asset.property_name.contains(search),
                 Asset.address.contains(search),
                 Asset.ownership_entity.contains(search),
-                Asset.management_entity.contains(search),
-                Asset.business_category.contains(search)
+                                Asset.business_category.contains(search)
             )
             query = query.filter(search_filter)
         
@@ -148,7 +151,16 @@ class AssetCRUD:
 
     def create(self, db: Session, obj_in: AssetCreate) -> Asset:
         """创建资产"""
-        db_obj = Asset(**obj_in.dict())
+        # 获取数据并进行自动计算
+        asset_data = obj_in.dict()
+        asset_data = AssetCalculator.auto_calculate_fields(asset_data)
+        
+        # 验证数据一致性
+        errors = AssetCalculator.validate_area_consistency(asset_data)
+        if errors:
+            raise ValueError(f"数据验证失败: {'; '.join(errors)}")
+        
+        db_obj = Asset(**asset_data)
         db.add(db_obj)
         db.commit()
         db.refresh(db_obj)
@@ -180,9 +192,31 @@ class AssetCRUD:
         """更新资产"""
         update_data = obj_in.dict(exclude_unset=True)
         
-        for field, value in update_data.items():
+        # 合并当前数据和更新数据进行计算
+        current_data = {}
+        for field in ['rentable_area', 'rented_area', 'annual_income', 'annual_expense']:
+            if hasattr(db_obj, field):
+                current_data[field] = getattr(db_obj, field)
+        
+        # 合并更新数据
+        current_data.update(update_data)
+        
+        # 自动计算相关字段
+        calculated_data = AssetCalculator.auto_calculate_fields(current_data)
+        
+        # 验证数据一致性
+        errors = AssetCalculator.validate_area_consistency(calculated_data)
+        if errors:
+            raise ValueError(f"数据验证失败: {'; '.join(errors)}")
+        
+        # 更新所有字段（包括计算得出的字段）
+        for field, value in calculated_data.items():
             if hasattr(db_obj, field):
                 setattr(db_obj, field, value)
+        
+        # 更新版本号
+        if hasattr(db_obj, 'version'):
+            db_obj.version = (db_obj.version or 0) + 1
         
         db.add(db_obj)
         db.commit()

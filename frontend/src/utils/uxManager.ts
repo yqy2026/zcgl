@@ -169,7 +169,7 @@ class UXManager {
     }
 
     // 显示用户友好的错误消息
-    this.showErrorFeedback(error, context)
+    this.showErrorFeedbackInternal(error, context)
 
     // 发送错误报告
     if (this.config.errorReportingEndpoint) {
@@ -177,7 +177,7 @@ class UXManager {
     }
   }
 
-  private showErrorFeedback(error: Error, context?: any) {
+  private showErrorFeedbackInternal(error: Error, context?: any) {
     // 根据错误类型显示不同的反馈
     if (error.message.includes('Network')) {
       notification.error({

@@ -4,7 +4,7 @@ import type { AssetSearchParams } from '@/types/asset'
 interface SearchHistoryItem {
   id: string
   name: string
-  params: AssetSearchParams
+  conditions: AssetSearchParams
   createdAt: string
   usageCount: number
 }
@@ -38,23 +38,24 @@ export const useSearchHistory = () => {
   }, [])
 
   // 添加搜索记录
-  const addSearchHistory = useCallback((name: string, params: AssetSearchParams) => {
+  const addSearchHistory = useCallback((historyItem: { id: string, name: string, conditions: AssetSearchParams, createdAt: string }) => {
+    const { id, name, conditions, createdAt } = historyItem
     const newItem: SearchHistoryItem = {
-      id: Date.now().toString(),
+      id: id || Date.now().toString(),
       name,
-      params,
-      createdAt: new Date().toISOString(),
+      conditions,
+      createdAt: createdAt || new Date().toISOString(),
       usageCount: 1,
     }
 
     setSearchHistory(prev => {
       // 检查是否已存在相同的搜索条件
-      const existingIndex = prev.findIndex(item => 
-        JSON.stringify(item.params) === JSON.stringify(params)
+      const existingIndex = prev.findIndex(item =>
+        JSON.stringify(item.conditions) === JSON.stringify(conditions)
       )
 
       let newHistory: SearchHistoryItem[]
-      
+
       if (existingIndex >= 0) {
         // 如果存在，更新使用次数和时间
         newHistory = [...prev]
@@ -66,7 +67,7 @@ export const useSearchHistory = () => {
       } else {
         // 如果不存在，添加新记录
         newHistory = [newItem, ...prev]
-        
+
         // 限制历史记录数量
         if (newHistory.length > MAX_HISTORY_ITEMS) {
           newHistory = newHistory.slice(0, MAX_HISTORY_ITEMS)

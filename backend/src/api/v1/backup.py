@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
-from database import get_db
+from ...database import get_db
 DATABASE_URL = "sqlite:///:memory:"
 
 # 配置日志

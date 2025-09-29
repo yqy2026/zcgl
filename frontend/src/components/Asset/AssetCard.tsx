@@ -122,12 +122,6 @@ const AssetCard: React.FC<AssetCardProps> = ({
               <UserOutlined style={{ marginRight: 4, color: '#8c8c8c' }} />
               <span style={{ color: '#8c8c8c' }}>权属方：{asset.ownership_entity}</span>
             </div>
-            {asset.management_entity && (
-              <div style={{ marginBottom: 8 }}>
-                <HomeOutlined style={{ marginRight: 4, color: '#8c8c8c' }} />
-                <span style={{ color: '#8c8c8c' }}>管理方：{asset.management_entity}</span>
-              </div>
-            )}
           </div>
         }
       />

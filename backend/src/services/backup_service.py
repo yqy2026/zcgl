@@ -17,7 +17,7 @@ from concurrent.futures import ThreadPoolExecutor
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
-from database import get_db, DATABASE_URL
+from ..database import get_db, DATABASE_URL
 from models.asset import Asset
 from crud.asset import CRUDAsset
 

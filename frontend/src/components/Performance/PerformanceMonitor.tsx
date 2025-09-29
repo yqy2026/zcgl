@@ -244,7 +244,7 @@ const PerformanceMonitor: React.FC = () => {
       >
         {!isMonitoring ? (
           <Alert
-            message="点击"开始监控"按钮开始收集性能数据"
+            message="点击开始监控按钮开始收集性能数据"
             type="info"
             showIcon
           />

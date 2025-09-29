@@ -6,11 +6,11 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Path
 from sqlalchemy.orm import Session
 
-from database import get_db
-from schemas.asset import AssetHistoryResponse
-from crud.history import history_crud
-from crud.asset import asset_crud
-from exceptions import AssetNotFoundError
+from ...database import get_db
+from ...schemas.asset import AssetHistoryResponse
+from ...crud.history import history_crud
+from ...crud.asset import asset_crud
+from ...exceptions import AssetNotFoundError
 
 # 创建历史路由器
 router = APIRouter()

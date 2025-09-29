@@ -1,8 +1,10 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
 import type { ApiResponse, ErrorResponse } from '@/types/api'
 
-// 环境配置
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1'
+// 环境配置 - 开发环境使用相对路径利用Vite代理，生产环境使用完整URL
+const API_BASE_URL = import.meta.env.DEV
+  ? '/api/v1'  // 开发环境使用相对路径，通过Vite代理转发
+  : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api/v1')  // 生产环境使用完整URL
 const API_TIMEOUT = import.meta.env.VITE_API_TIMEOUT || 30000
 
 // 请求重试配置
@@ -19,27 +21,25 @@ const RETRY_CONFIG = {
 const createApiInstance = (): AxiosInstance => {
   const instance = axios.create({
     baseURL: API_BASE_URL,
-    timeout: API_TIMEOUT,
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    timeout: 600000, // 10分钟超时，给导入操作足够时间
+    // 不设置默认的Content-Type，让axios根据请求数据自动设置
   })
 
   // 请求拦截器
   instance.interceptors.request.use(
     (config) => {
-      // 添加认证token
-      const token = localStorage.getItem('auth_token')
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`
-      }
+      // 对于文件上传请求，不添加认证token和请求ID，避免干扰multipart/form-data
+      const isFileUpload = config.data instanceof FormData
 
-      // 添加请求ID用于追踪
-      config.headers['X-Request-ID'] = generateRequestId()
+      if (!isFileUpload) {
+        // 添加认证token
+        const token = localStorage.getItem('auth_token')
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`
+        }
 
-      // 添加时间戳防止缓存
-      if (config.method === 'get' && config.params) {
-        config.params._t = Date.now()
+        // 添加请求ID用于追踪
+        config.headers['X-Request-ID'] = generateRequestId()
       }
 
       console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`)
@@ -79,7 +79,8 @@ const createApiInstance = (): AxiosInstance => {
             // 重试失败，返回网络错误
           }
         }
-        
+
+        console.warn('网络连接失败，可能后端服务未启动或网络问题')
         return Promise.reject({
           error: 'Network Error',
           message: '网络连接失败，请检查网络设置',

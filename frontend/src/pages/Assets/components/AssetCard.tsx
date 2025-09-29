@@ -119,7 +119,7 @@ const AssetCard: React.FC<AssetCardProps> = ({ asset, onView, onEdit, onDelete }
             {/* 出租率 */}
             <div>
               <div style={{ marginBottom: '4px' }}>
-                <Space justify="space-between" style={{ width: '100%' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
                   <Text style={{ fontSize: '12px' }}>出租率</Text>
                   <Text 
                     strong 
@@ -130,7 +130,7 @@ const AssetCard: React.FC<AssetCardProps> = ({ asset, onView, onEdit, onDelete }
                   >
                     {occupancyRate.toFixed(1)}%
                   </Text>
-                </Space>
+                </div>
               </div>
               <Progress
                 percent={occupancyRate}
