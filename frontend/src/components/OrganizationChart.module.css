@@ -1,0 +1,133 @@
+.organizationChartContainer {
+  background: #fafafa;
+  border-radius: 6px;
+  padding: 16px;
+}
+
+.organizationTree .ant-tree-node-content-wrapper {
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 4px;
+  background: white;
+  border: 1px solid #f0f0f0;
+  transition: all 0.3s;
+}
+
+.organizationTree .ant-tree-node-content-wrapper:hover {
+  background: #e6f7ff;
+  border-color: #1890ff;
+}
+
+.organizationTree .ant-tree-node-content-wrapper.ant-tree-node-selected {
+  background: #bae7ff;
+  border-color: #1890ff;
+}
+
+.orgNodeContent {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.orgNodeMain {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.orgName {
+  font-weight: 500;
+  color: #262626;
+}
+
+.orgCode {
+  color: #8c8c8c;
+  font-size: 12px;
+}
+
+.orgNodeInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+}
+
+.orgLeader {
+  color: #595959;
+}
+
+.orgStatus {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.statusActive {
+  background: #f6ffed;
+  color: #52c41a;
+  border: 1px solid #b7eb8f;
+}
+
+.statusInactive {
+  background: #fff2f0;
+  color: #ff4d4f;
+  border: 1px solid #ffb3b3;
+}
+
+.statusSuspended {
+  background: #fff7e6;
+  color: #fa8c16;
+  border: 1px solid #ffd591;
+}
+
+.orgNodeActions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.organizationTree .ant-tree-node-content-wrapper:hover .orgNodeActions {
+  opacity: 1;
+}
+
+.orgActive {
+  border-left: 3px solid #52c41a;
+}
+
+.orgInactive {
+  border-left: 3px solid #ff4d4f;
+  opacity: 0.7;
+}
+
+.orgSuspended {
+  border-left: 3px solid #fa8c16;
+  opacity: 0.8;
+}
+
+/* 状态样式的驼峰命名版本 */
+.statusActive {
+  background: #f6ffed;
+  color: #52c41a;
+  border: 1px solid #b7eb8f;
+}
+
+.statusInactive {
+  background: #fff2f0;
+  color: #ff4d4f;
+  border: 1px solid #ffb3b3;
+}
+
+.statusSuspended {
+  background: #fff7e6;
+  color: #fa8c16;
+  border: 1px solid #ffd591;
+}
+
+.organizationTree .ant-tree-draggable-icon {
+  color: #bfbfbf;
+}
+
+.organizationTree .ant-tree-draggable-icon:hover {
+  color: #1890ff;
+}
