@@ -5,20 +5,37 @@
 export interface Organization {
   id: string;
   name: string;
+  code: string;
   level: number;
   sort_order: number;
   parent_id?: string;
   path?: string;
-  
+
+  // 组织基本信息
+  type: 'company' | 'department' | 'group' | 'division' | 'team' | 'branch' | 'office';
+  status: 'active' | 'inactive' | 'suspended';
+
+  // 联系信息
+  phone?: string;
+  email?: string;
+  address?: string;
+
+  // 负责人信息
+  leader_name?: string;
+  leader_phone?: string;
+  leader_email?: string;
+
+  // 其他信息
   description?: string;
   functions?: string;
-  
+
+  // 系统字段
   is_deleted: boolean;
   created_at: string;
   updated_at: string;
   created_by?: string;
   updated_by?: string;
-  
+
   children?: Organization[];
 }
 
@@ -26,31 +43,64 @@ export interface Organization {
 
 export interface OrganizationCreate {
   name: string;
+  code: string;
   level?: number;
   sort_order?: number;
   parent_id?: string;
-  
+  type: 'company' | 'department' | 'group' | 'division' | 'team' | 'branch' | 'office';
+  status: 'active' | 'inactive' | 'suspended';
+
+  // 联系信息
+  phone?: string;
+  email?: string;
+  address?: string;
+
+  // 负责人信息
+  leader_name?: string;
+  leader_phone?: string;
+  leader_email?: string;
+
+  // 其他信息
   description?: string;
   functions?: string;
+
   created_by?: string;
 }
 
 export interface OrganizationUpdate {
   name?: string;
+  code?: string;
   level?: number;
   sort_order?: number;
   parent_id?: string;
-  
+  type?: 'company' | 'department' | 'group' | 'division' | 'team' | 'branch' | 'office';
+  status?: 'active' | 'inactive' | 'suspended';
+
+  // 联系信息
+  phone?: string;
+  email?: string;
+  address?: string;
+
+  // 负责人信息
+  leader_name?: string;
+  leader_phone?: string;
+  leader_email?: string;
+
+  // 其他信息
   description?: string;
   functions?: string;
+
   updated_by?: string;
 }
 
 export interface OrganizationTree {
   id: string;
   name: string;
+  code: string;
   level: number;
   sort_order: number;
+  type: 'company' | 'department' | 'group' | 'division' | 'team' | 'branch' | 'office';
+  status: 'active' | 'inactive' | 'suspended';
   children: OrganizationTree[];
 }
 
@@ -68,7 +118,10 @@ export interface OrganizationHistory {
 
 export interface OrganizationStatistics {
   total: number;
+  active: number;
+  inactive: number;
   by_level: Record<string, number>;
+  by_type: Record<string, number>;
 }
 
 export interface OrganizationMoveRequest {

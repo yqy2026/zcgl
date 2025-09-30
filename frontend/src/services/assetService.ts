@@ -16,7 +16,7 @@ export class AssetService {
   // 获取资产列表
   async getAssets(params?: AssetSearchParams): Promise<AssetListResponse> {
     try {
-      const response = await apiClient.get<AssetListResponse>('/assets', {
+      const response = await apiClient.get<AssetListResponse>('/assets/', {
         params: {
           ...params,
           page: params?.page || 1,
@@ -58,7 +58,7 @@ export class AssetService {
 
   // 导出资产
   async exportAssets(params: { format: string, filters?: AssetSearchParams }): Promise<Blob> {
-    const response = await apiClient.get('/assets/export', {
+    const response = await apiClient.get('/excel/export', {
       params: {
         export_format: params.format,
         ...params.filters,
@@ -71,12 +71,12 @@ export class AssetService {
   // 导出选中资产
   async exportSelectedAssets(assetIds: string[], format: string): Promise<Blob> {
     const response = await apiClient.post(
-      '/assets/export',
+      '/excel/export',
+      assetIds,
       {
-        asset_ids: assetIds,
-        export_format: format,
-      },
-      {
+        params: {
+          export_format: format,
+        },
         responseType: 'blob',
       }
     )

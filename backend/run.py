@@ -15,15 +15,15 @@ if __name__ == "__main__":
     
     print("启动土地物业资产管理系统 - 完整版API")
     print("访问地址:")
-    print("   API: http://localhost:8001")
-    print("   文档: http://localhost:8001/docs")
-    print("   健康检查: http://localhost:8001/health")
+    print("   API: http://localhost:8002")
+    print("   文档: http://localhost:8002/docs")
+    print("   健康检查: http://localhost:8002/health")
     print()
     
     uvicorn.run(
         app,
         host="127.0.0.1",
-        port=8001,
+        port=8002,
         reload=False,
         log_level="info"
     )

@@ -304,6 +304,75 @@ const AssetList: React.FC<AssetListProps> = ({
     },
   ]
 
+  // 计算当前页汇总数据
+  const calculateSummary = () => {
+    const items = data?.items || []
+    if (items.length === 0) return null
+
+    const summary = items.reduce((acc, item) => {
+      return {
+        landArea: acc.landArea + (Number(item.land_area) || 0),
+        actualArea: acc.actualArea + (Number(item.actual_property_area) || 0),
+        rentableArea: acc.rentableArea + (Number(item.rentable_area) || 0),
+        rentedArea: acc.rentedArea + (Number(item.rented_area) || 0),
+      }
+    }, {
+      landArea: 0,
+      actualArea: 0,
+      rentableArea: 0,
+      rentedArea: 0,
+    })
+
+    // 正确计算未出租面积和出租率
+    const unrentedArea = summary.rentableArea - summary.rentedArea
+    const occupancyRate = summary.rentableArea > 0 ? (summary.rentedArea / summary.rentableArea) * 100 : 0
+
+    return {
+      ...summary,
+      unrentedArea,
+      occupancyRate,
+    }
+  }
+
+  const summary = calculateSummary()
+
+  // 汇总行渲染函数
+  const renderSummary = (pageData: any[]) => {
+    if (!summary) return null
+
+    return (
+      <Table.Summary fixed>
+        <Table.Summary.Row>
+          <Table.Summary.Cell index={0} colSpan={5} align="right">
+            <strong>当前页合计：</strong>
+          </Table.Summary.Cell>
+          <Table.Summary.Cell index={5} align="right">
+            <strong>{formatArea(summary.landArea)}</strong>
+          </Table.Summary.Cell>
+          <Table.Summary.Cell index={6} align="right">
+            <strong>{formatArea(summary.actualArea)}</strong>
+          </Table.Summary.Cell>
+          <Table.Summary.Cell index={7} align="right">
+            <strong>{formatArea(summary.rentableArea)}</strong>
+          </Table.Summary.Cell>
+          <Table.Summary.Cell index={8} align="right">
+            <strong>{formatArea(summary.rentedArea)}</strong>
+          </Table.Summary.Cell>
+          <Table.Summary.Cell index={9} colSpan={5} />
+          <Table.Summary.Cell index={14} align="right">
+            <strong style={{
+              color: summary.occupancyRate >= 80 ? '#52c41a' :
+                     summary.occupancyRate >= 60 ? '#faad14' : '#ff4d4f'
+            }}>
+              {formatPercentage(summary.occupancyRate)}
+            </strong>
+          </Table.Summary.Cell>
+          <Table.Summary.Cell index={15} colSpan={3} />
+        </Table.Summary.Row>
+      </Table.Summary>
+    )
+  }
+
   // 行选择配置
   const rowSelection = onSelectChange ? {
     selectedRowKeys,
@@ -321,6 +390,7 @@ const AssetList: React.FC<AssetListProps> = ({
       loading={loading}
       scroll={{ x: 1800, y: 600 }}
       rowSelection={rowSelection}
+      summary={renderSummary}
       pagination={{
         current: data?.page || 1,
         pageSize: data?.limit || 20,

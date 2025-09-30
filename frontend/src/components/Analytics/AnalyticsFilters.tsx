@@ -1,6 +1,33 @@
 import React, { useState, useCallback, useEffect } from 'react'
-import { Card, Row, Col, Typography, Select, DatePicker, Button, Space, Tag, Input, Switch, Checkbox, Tooltip } from 'antd'
+import {
+  Card,
+  Row,
+  Col,
+  Typography,
+  Select,
+  DatePicker,
+  Button,
+  Space,
+  Tag,
+  Input,
+  Tooltip,
+  message,
+  Empty,
+  Checkbox
+} from 'antd'
+import {
+  FilterOutlined,
+  ClearOutlined,
+  SaveOutlined,
+  HistoryOutlined,
+  ReloadOutlined,
+  DownOutlined,
+  UpOutlined
+} from '@ant-design/icons'
 import { debounce } from 'lodash'
+import { useQuery } from '@tanstack/react-query'
+import { assetService } from '@/services/assetService'
+import { useSearchHistory } from '@/hooks/useSearchHistory'
 import type { AssetSearchParams } from '../../types/asset'
 import { UsageStatus, PropertyNature, OwnershipStatus } from '../../types/asset'
 import type { FilterPreset } from '../../types/analytics'
@@ -14,12 +41,13 @@ const { Group: CheckboxGroup } = Checkbox
 interface AnalyticsFiltersProps {
   filters: AssetSearchParams
   onFiltersChange: (filters: AssetSearchParams) => void
-  onApplyFilters: () => void
-  onResetFilters: () => void
+  onApplyFilters?: () => void
+  onResetFilters?: () => void
   onPresetSelect?: (presetKey: string) => void
   loading?: boolean
   showAdvanced?: boolean
   onToggleAdvanced?: () => void
+  realTimeUpdate?: boolean
 }
 
 // 筛选预设配置
@@ -54,18 +82,18 @@ const FILTER_PRESETS: FilterPreset[] = [
     filters: { usage_status: UsageStatus.VACANT },
     description: '仅显示空置的资产'
   },
-  {
-    key: 'high_value',
-    label: '高价值资产',
-    filters: { min_value: 1000000 },
-    description: '价值超过100万的资产'
-  },
-  {
-    key: 'high_occupancy',
-    label: '高出租率资产',
-    filters: { min_occupancy_rate: 80 },
-    description: '出租率超过80%的资产'
-  },
+  // {
+  //   key: 'high_value',
+  //   label: '高价值资产',
+  //   filters: { min_rent: 1000000 },
+  //   description: '价值超过100万的资产'
+  // },
+  // {
+  //   key: 'high_occupancy',
+  //   label: '高出租率资产',
+  //   filters: { /* min_occupancy_rate: 80 */ },
+  //   description: '出租率超过80%的资产'
+  // },
 ]
 
 export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
@@ -76,30 +104,86 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
   onPresetSelect,
   loading = false,
   showAdvanced = false,
-  onToggleAdvanced
+  onToggleAdvanced,
+  realTimeUpdate = true
 }) => {
   const [localFilters, setLocalFilters] = useState<AssetSearchParams>(filters)
   const [selectedPreset, setSelectedPreset] = useState<string>('all')
   const [searchText, setSearchText] = useState<string>('')
+  const [showHistory, setShowHistory] = useState<boolean>(false)
+  const [saveName, setSaveName] = useState<string>('')
+
+  // 搜索历史Hook
+  const {
+    searchHistory,
+    addSearchHistory,
+    removeSearchHistory,
+    clearSearchHistory,
+    updateSearchHistoryName
+  } = useSearchHistory()
+
+  // 获取筛选选项数据
+  const { data: filterOptions, isLoading: optionsLoading } = useQuery({
+    queryKey: ['analytics-filter-options'],
+    queryFn: async () => {
+      try {
+        const [ownershipEntities, businessCategories] = await Promise.all([
+          assetService.getOwnershipEntities(),
+          assetService.getBusinessCategories()
+        ])
+        return {
+          ownershipEntities,
+          businessCategories
+        }
+      } catch (error) {
+        console.warn('获取筛选选项失败:', error)
+        return {
+          ownershipEntities: [],
+          businessCategories: []
+        }
+      }
+    },
+    staleTime: 30 * 60 * 1000 // 30分钟缓存
+  })
 
   // 初始化时应用默认筛选值
   useEffect(() => {
     if (Object.keys(filters).length === 0) {
-      // 如果父组件没有提供筛选值，应用默认预设
       const defaultPreset = FILTER_PRESETS.find(preset => preset.key === 'all')
       if (defaultPreset) {
         setLocalFilters(defaultPreset.filters)
-        onFiltersChange(defaultPreset.filters)
+        setSelectedPreset('all')
+        if (onFiltersChange) {
+          onFiltersChange(defaultPreset.filters)
+        }
       }
     }
   }, [filters, onFiltersChange])
 
+  // 同步localFilters和selectedPreset状态与外部filters
+  useEffect(() => {
+    setLocalFilters(filters)
+
+    const matchingPreset = FILTER_PRESETS.find(preset =>
+      JSON.stringify(preset.filters) === JSON.stringify(filters)
+    )
+    if (matchingPreset) {
+      setSelectedPreset(matchingPreset.key)
+    } else if (Object.keys(filters).length === 0) {
+      setSelectedPreset('all')
+    } else {
+      setSelectedPreset('custom')
+    }
+  }, [filters])
+
   // 防抖处理筛选器变化
   const debouncedFilterChange = useCallback(
     debounce((newFilters: AssetSearchParams) => {
-      onFiltersChange(newFilters)
-    }, 300),
-    [onFiltersChange]
+      if (onFiltersChange) {
+        onFiltersChange(newFilters)
+      }
+    }, realTimeUpdate ? 500 : 0),
+    [onFiltersChange, realTimeUpdate]
   )
 
   const handleFilterChange = (field: string, value: any) => {
@@ -138,33 +222,86 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
   const handleValueRangeChange = (values: [number, number] | null) => {
     const newFilters = {
       ...localFilters,
-      min_value: values?.[0] || undefined,
-      max_value: values?.[1] || undefined
+      min_rent: values?.[0] || undefined,
+      max_rent: values?.[1] || undefined
     }
     setLocalFilters(newFilters)
     debouncedFilterChange(newFilters)
   }
 
-  const handleOccupancyRangeChange = (values: [number, number] | null) => {
-    const newFilters = {
-      ...localFilters,
-      min_occupancy_rate: values?.[0] || undefined,
-      max_occupancy_rate: values?.[1] || undefined
-    }
-    setLocalFilters(newFilters)
-    debouncedFilterChange(newFilters)
-  }
+  // const handleOccupancyRangeChange = (values: [number, number] | null) => {
+  //   const newFilters = {
+  //     ...localFilters,
+  //     // min_occupancy_rate: values?.[0] || undefined,
+  //     // max_occupancy_rate: values?.[1] || undefined
+  //   }
+  //   setLocalFilters(newFilters)
+  //   debouncedFilterChange(newFilters)
+  // }
 
   const handleReset = () => {
     const resetFilters = {}
     setLocalFilters(resetFilters)
     setSelectedPreset('all')
     setSearchText('')
-    onResetFilters()
+    onResetFilters?.()
+    message.success('筛选条件已重置')
   }
 
   const handleApply = () => {
-    onApplyFilters()
+    onApplyFilters?.()
+    message.success('筛选条件已应用')
+  }
+
+  // 保存当前筛选条件
+  const handleSaveFilters = () => {
+    if (!saveName.trim()) {
+      message.warning('请输入保存名称')
+      return
+    }
+
+    const activeFiltersCount = Object.keys(localFilters).filter(key =>
+      localFilters[key] !== undefined && localFilters[key] !== ''
+    ).length
+
+    if (activeFiltersCount === 0) {
+      message.warning('请先设置筛选条件')
+      return
+    }
+
+    addSearchHistory({
+      id: Date.now().toString(),
+      name: saveName,
+      conditions: localFilters,
+      createdAt: new Date().toISOString()
+    })
+
+    setSaveName('')
+    message.success('筛选条件已保存')
+  }
+
+  // 应用历史筛选条件
+  const handleApplyHistory = (historyId: string) => {
+    const history = searchHistory.find(h => h.id === historyId)
+    if (history) {
+      setLocalFilters(history.conditions)
+      if (onFiltersChange) {
+        onFiltersChange(history.conditions)
+      }
+
+      // 找到匹配的预设
+      const matchingPreset = FILTER_PRESETS.find(preset =>
+        JSON.stringify(preset.filters) === JSON.stringify(history.conditions)
+      )
+      if (matchingPreset) {
+        setSelectedPreset(matchingPreset.key)
+      } else {
+        setSelectedPreset('custom')
+      }
+
+      setShowHistory(false)
+      message.success(`已应用历史筛选条件: ${history.name}`)
+    }
   }
 
   const handlePresetSelect = (presetKey: string) => {
@@ -172,23 +309,180 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
     if (preset) {
       setLocalFilters(preset.filters)
       setSelectedPreset(presetKey)
-      onFiltersChange(preset.filters)
+      if (onFiltersChange) {
+        onFiltersChange(preset.filters)
+      }
       if (onPresetSelect) {
         onPresetSelect(presetKey)
       }
     }
   }
 
+  // 获取当前激活的筛选条件数量
+  const activeFiltersCount = Object.keys(localFilters).filter(key =>
+    localFilters[key] !== undefined && localFilters[key] !== ''
+  ).length
+
   return (
-    <Card style={{ marginBottom: '24px' }}>
+    <Card
+      size="small"
+      title={
+        <Space>
+          <FilterOutlined />
+          <span>数据筛选</span>
+          {activeFiltersCount > 0 && (
+            <Tag color="blue">
+              {activeFiltersCount} 个筛选条件
+            </Tag>
+          )}
+        </Space>
+      }
+      extra={
+        <Space>
+          <Tooltip title="保存筛选条件">
+            <Button
+              type="text"
+              icon={<SaveOutlined />}
+              onClick={() => setSaveName('')}
+              disabled={activeFiltersCount === 0}
+              size="small"
+            />
+          </Tooltip>
+
+          <Tooltip title="筛选历史">
+            <Button
+              type="text"
+              icon={<HistoryOutlined />}
+              onClick={() => setShowHistory(!showHistory)}
+              size="small"
+            />
+          </Tooltip>
+
+          <Tooltip title="重置筛选">
+            <Button
+              type="text"
+              icon={<ClearOutlined />}
+              onClick={handleReset}
+              disabled={activeFiltersCount === 0}
+              size="small"
+            />
+          </Tooltip>
+
+          <Tooltip title="刷新数据">
+            <Button
+              type="text"
+              icon={<ReloadOutlined />}
+              onClick={handleApply}
+              loading={loading}
+              size="small"
+            />
+          </Tooltip>
+
+          {onToggleAdvanced && (
+            <Button
+              type="text"
+              icon={showAdvanced ? <UpOutlined /> : <DownOutlined />}
+              onClick={onToggleAdvanced}
+              size="small"
+            >
+              {showAdvanced ? '收起' : '高级'}
+            </Button>
+          )}
+        </Space>
+      }
+      style={{ marginBottom: 16 }}
+    >
+      {/* 保存筛选条件输入框 */}
+      {saveName !== undefined && (
+        <div style={{ marginBottom: 16, padding: '12px', background: '#f5f5f5', borderRadius: 6 }}>
+          <Space.Compact style={{ width: '100%' }}>
+            <input
+              type="text"
+              placeholder="输入保存名称"
+              value={saveName}
+              onChange={(e) => setSaveName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSaveFilters()
+                }
+              }}
+              style={{ flex: 1, padding: '4px 11px', border: '1px solid #d9d9d9', borderRadius: 6 }}
+              autoFocus
+            />
+            <Button type="primary" onClick={handleSaveFilters}>
+              保存
+            </Button>
+            <Button onClick={() => setSaveName('')}>
+              取消
+            </Button>
+          </Space.Compact>
+        </div>
+      )}
+
+      {/* 筛选历史 */}
+      {showHistory && (
+        <div style={{ marginBottom: 16, padding: '12px', background: '#f5f5f5', borderRadius: 6 }}>
+          <Text strong style={{ marginBottom: 8, display: 'block' }}>筛选历史</Text>
+          {searchHistory.length > 0 ? (
+            <div>
+              {searchHistory.slice(0, 5).map(history => (
+                <div
+                  key={history.id}
+                  style={{
+                    padding: '8px 12px',
+                    background: 'white',
+                    border: '1px solid #e8e8e8',
+                    borderRadius: 4,
+                    marginBottom: 8,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}
+                  onClick={() => handleApplyHistory(history.id)}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#f0f0f0'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'white'
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 'bold' }}>{history.name}</div>
+                    <div style={{ fontSize: 12, color: '#8c8c8c' }}>
+                      {new Date(history.createdAt).toLocaleDateString()}
+                    </div>
+                  </div>
+                  <Button
+                    type="text"
+                    size="small"
+                    danger
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      removeSearchHistory(history.id)
+                      message.success('历史记录已删除')
+                    }}
+                  >
+                    删除
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <Empty description="暂无筛选历史" imageStyle={{ height: 60 }} />
+          )}
+        </div>
+      )}
+
       {/* 搜索和预设筛选器 */}
-      <Row gutter={[16, 16]} style={{ marginBottom: '16px' }}>
+      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={24} md={8}>
-          <Text strong style={{ marginRight: '12px' }}>搜索资产:</Text>
+          <Text strong>搜索资产:</Text>
           <Search
             placeholder="输入资产名称、地址等关键词"
             allowClear
-            enterButton
+            style={{ marginTop: 8 }}
             value={searchText}
             onChange={(e) => handleSearch(e.target.value)}
             onSearch={handleSearch}
@@ -196,20 +490,22 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
           />
         </Col>
         <Col xs={24} md={16}>
-          <Text strong style={{ marginRight: '12px' }}>快速筛选:</Text>
-          <Space wrap>
-            {FILTER_PRESETS.map(preset => (
-              <Tooltip key={preset.key} title={preset.description}>
-                <Tag
-                  color={selectedPreset === preset.key ? 'blue' : 'default'}
-                  style={{ cursor: 'pointer', padding: '4px 8px' }}
-                  onClick={() => handlePresetSelect(preset.key)}
-                >
-                  {preset.label}
-                </Tag>
-              </Tooltip>
-            ))}
-          </Space>
+          <Text strong>快速筛选:</Text>
+          <div style={{ marginTop: 8 }}>
+            <Space wrap>
+              {FILTER_PRESETS.map(preset => (
+                <Tooltip key={preset.key} title={preset.description}>
+                  <Tag
+                    color={selectedPreset === preset.key ? 'blue' : 'default'}
+                    style={{ cursor: 'pointer', padding: '4px 8px' }}
+                    onClick={() => handlePresetSelect(preset.key)}
+                  >
+                    {preset.label}
+                  </Tag>
+                </Tooltip>
+              ))}
+            </Space>
+          </div>
         </Col>
       </Row>
 
@@ -297,70 +593,26 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
           </Col>
 
           <Col xs={24} md={8}>
-            <Text strong>价值范围 (万元):</Text>
+            <Text strong>租金范围 (元):</Text>
             <Input.Group compact style={{ marginTop: '8px' }}>
               <Input
                 style={{ width: '50%' }}
-                placeholder="最小价值"
+                placeholder="最小租金"
                 type="number"
-                value={localFilters.min_value}
-                onChange={(e) => handleFilterChange('min_value', e.target.value ? Number(e.target.value) : undefined)}
+                value={localFilters.min_rent}
+                onChange={(e) => handleFilterChange('min_rent', e.target.value ? Number(e.target.value) : undefined)}
               />
               <Input
                 style={{ width: '50%' }}
-                placeholder="最大价值"
+                placeholder="最大租金"
                 type="number"
-                value={localFilters.max_value}
-                onChange={(e) => handleFilterChange('max_value', e.target.value ? Number(e.target.value) : undefined)}
+                value={localFilters.max_rent}
+                onChange={(e) => handleFilterChange('max_rent', e.target.value ? Number(e.target.value) : undefined)}
               />
             </Input.Group>
           </Col>
 
           <Col xs={24} md={8}>
-            <Text strong>出租率范围 (%):</Text>
-            <Input.Group compact style={{ marginTop: '8px' }}>
-              <Input
-                style={{ width: '50%' }}
-                placeholder="最小出租率"
-                type="number"
-                min={0}
-                max={100}
-                value={localFilters.min_occupancy_rate}
-                onChange={(e) => handleFilterChange('min_occupancy_rate', e.target.value ? Number(e.target.value) : undefined)}
-              />
-              <Input
-                style={{ width: '50%' }}
-                placeholder="最大出租率"
-                type="number"
-                min={0}
-                max={100}
-                value={localFilters.max_occupancy_rate}
-                onChange={(e) => handleFilterChange('max_occupancy_rate', e.target.value ? Number(e.target.value) : undefined)}
-              />
-            </Input.Group>
-          </Col>
-
-          <Col xs={24} md={6}>
-            <Text strong>业态类别:</Text>
-            <Select
-              style={{ width: '100%', marginTop: '8px' }}
-              placeholder="请选择业态类别"
-              allowClear
-              value={localFilters.business_category}
-              onChange={(value) => handleFilterChange('business_category', value)}
-              loading={loading}
-              mode="multiple"
-            >
-              <Option value="零售">零售</Option>
-              <Option value="餐饮">餐饮</Option>
-              <Option value="办公">办公</Option>
-              <Option value="仓储">仓储</Option>
-              <Option value="工业">工业</Option>
-              <Option value="其他">其他</Option>
-            </Select>
-          </Col>
-
-          <Col xs={24} md={6}>
             <Text strong>管理状态:</Text>
             <Select
               style={{ width: '100%', marginTop: '8px' }}
@@ -377,23 +629,44 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
             </Select>
           </Col>
 
-          <Col xs={24} md={6}>
-            <Text strong>数据状态:</Text>
+          <Col xs={24} md={8}>
+            <Text strong>业态类别:</Text>
             <Select
               style={{ width: '100%', marginTop: '8px' }}
-              placeholder="请选择数据状态"
+              placeholder="请选择业态类别"
               allowClear
-              value={localFilters.data_status}
-              onChange={(value) => handleFilterChange('data_status', value)}
+              value={localFilters.business_category}
+              onChange={(value) => handleFilterChange('business_category', value)}
               loading={loading}
             >
-              <Option value="active">正常</Option>
-              <Option value="inactive">停用</Option>
-              <Option value="archived">归档</Option>
+              <Option value="零售">零售</Option>
+              <Option value="餐饮">餐饮</Option>
+              <Option value="办公">办公</Option>
+              <Option value="仓储">仓储</Option>
+              <Option value="工业">工业</Option>
+              <Option value="其他">其他</Option>
             </Select>
           </Col>
 
-          <Col xs={24} md={6}>
+          <Col xs={24} md={8}>
+            <Text strong>租户类型:</Text>
+            <Select
+              style={{ width: '100%', marginTop: '8px' }}
+              placeholder="请选择租户类型"
+              allowClear
+              value={localFilters.tenant_type}
+              onChange={(value) => handleFilterChange('tenant_type', value)}
+              loading={loading}
+            >
+              <Option value="企业">企业</Option>
+              <Option value="个人">个人</Option>
+              <Option value="政府">政府</Option>
+              <Option value="事业单位">事业单位</Option>
+              <Option value="其他">其他</Option>
+            </Select>
+          </Col>
+
+          <Col xs={24} md={8}>
             <Text strong>权属主体:</Text>
             <Select
               style={{ width: '100%', marginTop: '8px' }}
@@ -402,7 +675,6 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
               value={localFilters.ownership_entity}
               onChange={(value) => handleFilterChange('ownership_entity', value)}
               loading={loading}
-              mode="multiple"
             >
               <Option value="政府">政府</Option>
               <Option value="企业">企业</Option>
@@ -452,3 +724,6 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
     </Card>
   )
 }
+
+// 添加默认导出
+export default AnalyticsFilters

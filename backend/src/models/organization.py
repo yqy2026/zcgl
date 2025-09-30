@@ -18,9 +18,24 @@ class Organization(Base):
     
     # 基本信息
     name = Column(String(200), nullable=False, comment="组织名称")
+    code = Column(String(50), nullable=False, comment="组织编码")
     level = Column(Integer, nullable=False, default=1, comment="组织层级")
     sort_order = Column(Integer, default=0, comment="排序")
-    
+
+    # 组织基本信息
+    type = Column(String(20), nullable=False, comment="组织类型")
+    status = Column(String(20), nullable=False, default="active", comment="状态")
+
+    # 联系信息
+    phone = Column(String(20), comment="联系电话")
+    email = Column(String(100), comment="邮箱")
+    address = Column(String(200), comment="地址")
+
+    # 负责人信息
+    leader_name = Column(String(50), comment="负责人姓名")
+    leader_phone = Column(String(20), comment="负责人电话")
+    leader_email = Column(String(100), comment="负责人邮箱")
+
     # 层级关系
     parent_id = Column(String, ForeignKey("organizations.id"), comment="上级组织ID")
     path = Column(String(1000), comment="组织路径，用/分隔")

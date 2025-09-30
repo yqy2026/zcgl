@@ -385,7 +385,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
                     allowClear
                     showSearch
                     optionFilterProp="children"
-                    loading={searchQueries[2].isLoading}
+                    loading={searchQueries[1].isLoading}
                   >
                     {businessCategories.map(category => (
                       <Option key={category} value={category}>
@@ -409,7 +409,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
             <Row gutter={16}>
               <Col xs={24} sm={12} md={8}>
                 <Form.Item label="面积范围">
-                  <Input.Group compact>
+                  <Space.Compact>
                     <InputNumber
                       style={{ width: '45%' }}
                       placeholder="最小面积"
@@ -431,7 +431,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
                         setAreaRange([areaRange[0], value || 100000])
                       }
                     />
-                  </Input.Group>
+                  </Space.Compact>
                 </Form.Item>
               </Col>
 
@@ -446,7 +446,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
 
               <Col xs={24} sm={12} md={8}>
                 <Form.Item label="排序方式">
-                  <Input.Group compact>
+                  <Space.Compact>
                     <Form.Item name="sort_field" noStyle>
                       <Select style={{ width: '60%' }} defaultValue="created_at">
                         <Option value="created_at">创建时间</Option>
@@ -461,7 +461,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
                         <Option value="desc">降序</Option>
                       </Select>
                     </Form.Item>
-                  </Input.Group>
+                  </Space.Compact>
                 </Form.Item>
               </Col>
             </Row>

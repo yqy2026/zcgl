@@ -84,6 +84,9 @@ class AssetCRUD:
                     filter_conditions.append(Asset.total_area >= value)
                 elif key == "max_area" and hasattr(Asset, 'total_area'):
                     filter_conditions.append(Asset.total_area <= value)
+                elif key == "ids" and isinstance(value, list):
+                    # 支持按多个资产ID筛选
+                    filter_conditions.append(Asset.id.in_(value))
                 elif hasattr(Asset, key):
                     filter_conditions.append(getattr(Asset, key) == value)
             
@@ -141,6 +144,9 @@ class AssetCRUD:
                     filter_conditions.append(Asset.total_area >= value)
                 elif key == "max_area" and hasattr(Asset, 'total_area'):
                     filter_conditions.append(Asset.total_area <= value)
+                elif key == "ids" and isinstance(value, list):
+                    # 支持按多个资产ID筛选
+                    filter_conditions.append(Asset.id.in_(value))
                 elif hasattr(Asset, key):
                     filter_conditions.append(getattr(Asset, key) == value)
             

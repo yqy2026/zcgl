@@ -9,13 +9,16 @@ import {
   Alert,
   message
 } from 'antd'
-import { PlusOutlined, ExportOutlined } from '@ant-design/icons'
+import { PlusOutlined, ExportOutlined, ImportOutlined } from '@ant-design/icons'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { assetService } from '@/services/assetService'
+import { analyticsService } from '@/services/analyticsService'
 import AssetList from '@/components/Asset/AssetList'
 import AssetSearch from '@/components/Asset/AssetSearch'
+import AssetAreaSummary from '@/components/Asset/AssetAreaSummary'
 import type { AssetSearchParams } from '@/types/asset'
+import type { AnalyticsData } from '@/services/analyticsService'
 
 const { Title } = Typography
 
@@ -33,6 +36,27 @@ const AssetListPage: React.FC = () => {
   const { data, isLoading, error } = useQuery({
     queryKey: ['assets', searchParams],
     queryFn: () => assetService.getAssets(searchParams),
+  })
+
+  
+  // 获取统计分析数据
+  const { data: analyticsData, isLoading: analyticsLoading, error: analyticsError } = useQuery({
+    queryKey: ['analytics', searchParams],
+    queryFn: () => analyticsService.getComprehensiveAnalytics(searchParams),
+    // 暂时移除enabled条件来测试
+  })
+
+  // 调试信息
+  console.log('AssetListPage Analytics 调试信息:', {
+    data,
+    hasData: !!data,
+    hasItems: !!data?.items,
+    itemsCount: data?.items?.length,
+    analyticsData,
+    hasAnalyticsData: !!analyticsData,
+    analyticsLoading,
+    analyticsError,
+    searchParams
   })
 
   // 删除资产
@@ -99,6 +123,60 @@ const AssetListPage: React.FC = () => {
     setSelectedRowKeys(selectedRowKeys)
   }
 
+  // 处理导出所有资产
+  const handleExportAll = async () => {
+    try {
+      message.success('正在导出资产数据，请稍候...')
+      const blob = await assetService.exportAssets({
+        format: 'excel',
+        filters: searchParams
+      })
+
+      // 创建下载链接
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `资产数据导出_${new Date().toISOString().split('T')[0]}.xlsx`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+
+      message.success('资产数据导出成功')
+    } catch (error: any) {
+      console.error('导出失败:', error)
+      message.error(error.message || '导出失败，请稍后重试')
+    }
+  }
+
+  // 处理导出选中资产
+  const handleExportSelected = async () => {
+    if (selectedRowKeys.length === 0) {
+      message.warning('请先选择要导出的资产')
+      return
+    }
+
+    try {
+      message.success('正在导出选中的资产数据，请稍候...')
+      const blob = await assetService.exportSelectedAssets(selectedRowKeys, 'excel')
+
+      // 创建下载链接
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `选中资产数据导出_${new Date().toISOString().split('T')[0]}.xlsx`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+
+      message.success('选中资产数据导出成功')
+    } catch (error: any) {
+      console.error('导出失败:', error)
+      message.error(error.message || '导出失败，请稍后重试')
+    }
+  }
+
   if (isLoading) {
     return (
       <div style={{ padding: '24px', textAlign: 'center' }}>
@@ -140,19 +218,34 @@ const AssetListPage: React.FC = () => {
           </Col>
           <Col>
             <Space>
-              <Button 
-                type="primary" 
+              <Button
+                type="primary"
                 icon={<PlusOutlined />}
                 onClick={() => navigate('/assets/new')}
               >
                 新增资产
               </Button>
-              <Button 
-                icon={<ExportOutlined />}
+              <Button
+                icon={<ImportOutlined />}
                 onClick={() => navigate('/assets/import')}
               >
-                导入导出
+                导入资产
               </Button>
+              <Button
+                icon={<ExportOutlined />}
+                onClick={handleExportAll}
+              >
+                导出全部
+              </Button>
+              {selectedRowKeys.length > 0 && (
+                <Button
+                  type="dashed"
+                  icon={<ExportOutlined />}
+                  onClick={handleExportSelected}
+                >
+                  导出选中 ({selectedRowKeys.length})
+                </Button>
+              )}
             </Space>
           </Col>
         </Row>
@@ -164,6 +257,12 @@ const AssetListPage: React.FC = () => {
         onReset={handleReset}
         initialValues={searchParams}
         loading={isLoading}
+      />
+
+      {/* 面积汇总组件 */}
+      <AssetAreaSummary
+        analyticsData={analyticsData?.data}
+        loading={analyticsLoading}
       />
 
       {/* 资产列表组件 */}

@@ -18,6 +18,107 @@ from pydantic import BaseModel
 router = APIRouter(prefix="/dictionaries", tags=["统一字典管理"])
 
 
+def fix_chinese_label(dict_type: str, value: str, original_label: str) -> str:
+    """
+    修复中文标签，如果数据库中的标签是乱码，则返回正确的中文标签
+    """
+    # 定义正确的中文标签映射
+    correct_labels = {
+        'property_nature': {
+            'commercial': '经营性',
+            'non_commercial': '非经营性'
+        },
+        'usage_status': {
+            'rented': '出租',
+            'vacant': '空置',
+            'self_use': '自用',
+            'public_housing': '公房',
+            'pending_transfer': '待移交',
+            'pending_disposal': '待处置',
+            'other': '其他'
+        },
+        'ownership_status': {
+            'confirmed': '已确权',
+            'unconfirmed': '未确权',
+            'partial': '部分确权'
+        },
+        'business_category': {
+            'commercial': '商业',
+            'office': '办公',
+            'residential': '住宅',
+            'warehouse': '仓储',
+            'industrial': '工业',
+            'other': '其他'
+        },
+        'tenant_type': {
+            'individual': '个人',
+            'enterprise': '企业',
+            'government': '政府机构',
+            'other': '其他'
+        },
+        'contract_status': {
+            'active': '生效中',
+            'expired': '已到期',
+            'terminated': '已终止',
+            'pending': '待签署'
+        },
+        'business_model': {
+            'sublease': '承租转租',
+            'entrusted': '委托经营',
+            'self_operated': '自营',
+            'other': '其他'
+        },
+        'operation_status': {
+            'normal': '正常经营',
+            'suspended': '停业整顿',
+            'renovating': '装修中',
+            'vacant_for_rent': '待招租'
+        },
+        'ownership_category': {
+            'state_owned': '国有资产',
+            'collective': '集体资产',
+            'private': '私有资产',
+            'mixed': '混合所有制',
+            'other': '其他'
+        },
+        'certificated_usage': {
+            'commercial': '商业',
+            'office': '办公',
+            'residential': '住宅',
+            'industrial': '工业',
+            'other': '其他'
+        },
+        'actual_usage': {
+            'commercial': '商业',
+            'office': '办公',
+            'residential': '住宅',
+            'industrial': '工业',
+            'other': '其他'
+        }
+    }
+
+    # 直接替换已知乱码值
+    # 检查原标签是否包含常见乱码字符特征
+    corrupted_patterns = [
+        '\udca7', '\udc80', '\u30e6', '\u93ac', '\u60c0', '\u5fda', '\u7f01',
+        '\u9480', '\u70b5', '\u95c8', '\u7ca1', '\u30e6', '\u77e3', '\u7d5e'
+    ]
+
+    is_corrupted = any(pattern in original_label for pattern in corrupted_patterns)
+
+    # 如果有乱码且存在正确的映射，则返回正确的中文标签
+    if is_corrupted and dict_type in correct_labels and value in correct_labels[dict_type]:
+        return correct_labels[dict_type][value]
+
+    # 如果原标签是英文但应该显示中文，也进行替换
+    if dict_type in correct_labels and value in correct_labels[dict_type]:
+        if original_label == value or original_label.isascii():  # 如果标签和value相同或是纯ASCII
+            return correct_labels[dict_type][value]
+
+    # 默认返回原标签
+    return original_label
+
+
 class DictionaryOptionResponse(BaseModel):
     """字典选项响应模型"""
     label: str
@@ -59,7 +160,7 @@ async def get_dictionary_options(
             
             return [
                 DictionaryOptionResponse(
-                    label=value.label,
+                    label=fix_chinese_label(dict_type, value.value, value.label),
                     value=value.value,
                     code=value.code,
                     sort_order=value.sort_order,

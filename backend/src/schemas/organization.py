@@ -10,12 +10,42 @@ from datetime import datetime
 class OrganizationBase(BaseModel):
     """组织架构基础模式"""
     name: str = Field(..., min_length=1, max_length=200, description="组织名称")
+    code: str = Field(..., min_length=1, max_length=50, description="组织编码")
     level: int = Field(default=1, ge=1, le=10, description="组织层级")
     sort_order: int = Field(default=0, ge=0, description="排序")
     parent_id: Optional[str] = Field(None, description="上级组织ID")
-    
+
+    # 组织基本信息
+    type: str = Field(..., description="组织类型")
+    status: str = Field(..., description="状态")
+
+    # 联系信息
+    phone: Optional[str] = Field(None, max_length=20, description="联系电话")
+    email: Optional[str] = Field(None, max_length=100, description="邮箱")
+    address: Optional[str] = Field(None, max_length=200, description="地址")
+
+    # 负责人信息
+    leader_name: Optional[str] = Field(None, max_length=50, description="负责人姓名")
+    leader_phone: Optional[str] = Field(None, max_length=20, description="负责人电话")
+    leader_email: Optional[str] = Field(None, max_length=100, description="负责人邮箱")
+
+    # 其他信息
     description: Optional[str] = Field(None, max_length=1000, description="组织描述")
     functions: Optional[str] = Field(None, max_length=1000, description="主要职能")
+
+    @validator('type')
+    def validate_type(cls, v):
+        allowed_types = ['company', 'department', 'group', 'division', 'team', 'branch', 'office']
+        if v not in allowed_types:
+            raise ValueError(f'type must be one of {allowed_types}')
+        return v
+
+    @validator('status')
+    def validate_status(cls, v):
+        allowed_statuses = ['active', 'inactive', 'suspended']
+        if v not in allowed_statuses:
+            raise ValueError(f'status must be one of {allowed_statuses}')
+        return v
 
 
 
@@ -28,13 +58,48 @@ class OrganizationCreate(OrganizationBase):
 class OrganizationUpdate(BaseModel):
     """更新组织架构模式"""
     name: Optional[str] = Field(None, min_length=1, max_length=200, description="组织名称")
+    code: Optional[str] = Field(None, min_length=1, max_length=50, description="组织编码")
     level: Optional[int] = Field(None, ge=1, le=10, description="组织层级")
     sort_order: Optional[int] = Field(None, ge=0, description="排序")
     parent_id: Optional[str] = Field(None, description="上级组织ID")
-    
+
+    # 组织基本信息
+    type: Optional[str] = Field(None, description="组织类型")
+    status: Optional[str] = Field(None, description="状态")
+
+    # 联系信息
+    phone: Optional[str] = Field(None, max_length=20, description="联系电话")
+    email: Optional[str] = Field(None, max_length=100, description="邮箱")
+    address: Optional[str] = Field(None, max_length=200, description="地址")
+
+    # 负责人信息
+    leader_name: Optional[str] = Field(None, max_length=50, description="负责人姓名")
+    leader_phone: Optional[str] = Field(None, max_length=20, description="负责人电话")
+    leader_email: Optional[str] = Field(None, max_length=100, description="负责人邮箱")
+
+    # 其他信息
     description: Optional[str] = Field(None, max_length=1000, description="组织描述")
     functions: Optional[str] = Field(None, max_length=1000, description="主要职能")
+
     updated_by: Optional[str] = Field(None, max_length=100, description="更新人")
+
+    @validator('type')
+    def validate_type(cls, v):
+        if v is None:
+            return v
+        allowed_types = ['company', 'department', 'group', 'division', 'team', 'branch', 'office']
+        if v not in allowed_types:
+            raise ValueError(f'type must be one of {allowed_types}')
+        return v
+
+    @validator('status')
+    def validate_status(cls, v):
+        if v is None:
+            return v
+        allowed_statuses = ['active', 'inactive', 'suspended']
+        if v not in allowed_statuses:
+            raise ValueError(f'status must be one of {allowed_statuses}')
+        return v
 
 
 

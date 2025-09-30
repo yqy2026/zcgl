@@ -100,7 +100,7 @@ echo [INFO] 启动服务...
 REM 启动后端
 echo [INFO] 启动后端API服务...
 cd backend
-start "后端API服务 - 端口8001" cmd /k "echo 后端服务启动中... && py run.py"
+start "后端API服务 - 端口8001" cmd /k "echo 后端服务启动中... && py run_dev.py"
 cd ..
 
 REM 等待后端启动
@@ -118,7 +118,7 @@ echo [SUCCESS] 🎉 系统启动完成！
 echo.
 echo 📱 访问地址：
 echo   ┌─ 前端应用: http://localhost:5173
-echo   ├─ 后端API: http://localhost:8001  
+echo   ├─ 后端API: http://localhost:8001
 echo   └─ API文档: http://localhost:8001/docs
 echo.
 echo 💡 使用提示：

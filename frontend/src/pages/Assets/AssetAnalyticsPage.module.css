@@ -1,0 +1,357 @@
+/* 资产分析页面响应式样式 */
+
+/* 页面容器 */
+.analyticsContainer {
+  padding: 16px;
+  background-color: #f5f5f5;
+  min-height: 100vh;
+}
+
+@media (min-width: 768px) {
+  .analyticsContainer {
+    padding: 24px;
+  }
+}
+
+/* 头部操作栏 */
+.headerActions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@media (min-width: 576px) {
+  .headerActions {
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: center;
+  }
+}
+
+/* 按钮样式优化 */
+.btnText {
+  display: inline;
+}
+
+@media (max-width: 576px) {
+  .btnText {
+    display: none;
+  }
+
+  .headerActions .ant-btn {
+    min-width: 40px;
+    padding: 0 8px;
+  }
+}
+
+/* 分布列表样式 */
+.distributionList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.distributionItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: #fafafa;
+  border-radius: 6px;
+  border-left: 3px solid #1890ff;
+  transition: all 0.3s ease;
+}
+
+.distributionItem:hover {
+  background-color: #f0f8ff;
+  transform: translateX(2px);
+}
+
+.itemName {
+  font-weight: 500;
+  color: #333;
+  flex: 1;
+}
+
+.itemStats {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+.occupancyRate {
+  color: #666;
+  font-size: 12px;
+}
+
+/* 统计卡片响应式优化 */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+@media (min-width: 1200px) {
+  .statsGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* 图表容器响应式优化 */
+.chartsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+@media (min-width: 1400px) {
+  .chartsGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (min-width: 992px) and (max-width: 1399px) {
+  .chartsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 576px) and (max-width: 991px) {
+  .chartsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 575px) {
+  .chartsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 图表卡片样式 */
+.chartCard {
+  height: 100%;
+  transition: box-shadow 0.3s ease;
+}
+
+.chartCard:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* 财务指标网格 */
+.financialGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+@media (min-width: 1200px) {
+  .financialGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  .financialGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* 详细数据表格响应式优化 */
+.detailsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+@media (min-width: 1200px) {
+  .detailsGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (min-width: 992px) and (max-width: 1199px) {
+  .detailsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 576px) and (max-width: 991px) {
+  .detailsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 575px) {
+  .detailsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 加载状态优化 */
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 16px;
+}
+
+.loadingText {
+  color: #666;
+  font-size: 16px;
+}
+
+/* 空状态优化 */
+.emptyContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 16px;
+  text-align: center;
+}
+
+.emptyText {
+  color: #999;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* 错误状态优化 */
+.errorContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 16px;
+  text-align: center;
+}
+
+.errorText {
+  color: #ff4d4f;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* 筛选器响应式优化 */
+.filtersCard {
+  margin-bottom: 24px;
+}
+
+@media (max-width: 576px) {
+  .filtersCard {
+    margin-bottom: 16px;
+  }
+
+  .filtersCard .ant-form-item {
+    margin-bottom: 12px;
+  }
+}
+
+/* 趋势图表优化 */
+.trendChart {
+  min-height: 400px;
+}
+
+@media (max-width: 768px) {
+  .trendChart {
+    min-height: 300px;
+  }
+}
+
+/* 卡片通用样式优化 */
+.analyticsCard {
+  margin-bottom: 16px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+}
+
+.analyticsCard:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* 数据标签样式 */
+.dataLabel {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.dataValue {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.dataUnit {
+  font-size: 14px;
+  color: #999;
+  margin-left: 4px;
+}
+
+/* 趋势指示器样式 */
+.trendIndicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.trendUp {
+  background-color: #f6ffed;
+  color: #52c41a;
+}
+
+.trendDown {
+  background-color: #fff2f0;
+  color: #ff4d4f;
+}
+
+/* 颜色主题 */
+.colorPrimary {
+  color: #1890ff;
+}
+
+.colorSuccess {
+  color: #52c41a;
+}
+
+.colorWarning {
+  color: #faad14;
+}
+
+.colorError {
+  color: #ff4d4f;
+}
+
+/* 打印样式 */
+@media print {
+  .analyticsContainer {
+    padding: 0;
+    background-color: white;
+  }
+
+  .noPrint {
+    display: none !important;
+  }
+
+  .analyticsCard {
+    box-shadow: none;
+    border: 1px solid #ddd;
+    page-break-inside: avoid;
+  }
+}

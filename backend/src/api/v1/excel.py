@@ -5,7 +5,7 @@ Excel导入导出API路由
 import io
 import tempfile
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query, Body
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 import pandas as pd
@@ -243,16 +243,16 @@ async def export_excel(
         export_data = []
         for asset in assets:
             export_data.append({
-                "物业名称": asset.property_name,
-                "地址": asset.address,
-                "确权状态": asset.ownership_status,
-                "物业性质": asset.property_nature,
-                "使用状态": asset.usage_status,
-                "权属方": asset.ownership_entity,
-                "经营管理方": asset.management_entity or "",
-                "业态类别": asset.business_category or "",
-                "是否涉诉": asset.is_litigated or "否",
-                "备注": asset.notes or "",
+                "物业名称": getattr(asset, 'property_name', ''),
+                "地址": getattr(asset, 'address', ''),
+                "确权状态": getattr(asset, 'ownership_status', ''),
+                "物业性质": getattr(asset, 'property_nature', ''),
+                "使用状态": getattr(asset, 'usage_status', ''),
+                "权属方": getattr(asset, 'ownership_entity', ''),
+                "经营管理方": getattr(asset, 'management_entity', ''),
+                "业态类别": getattr(asset, 'business_category', ''),
+                "是否涉诉": "是" if getattr(asset, 'is_litigated', False) else "否",
+                "备注": getattr(asset, 'notes', ''),
                 "创建时间": asset.created_at.strftime("%Y-%m-%d %H:%M:%S") if asset.created_at else "",
                 "更新时间": asset.updated_at.strftime("%Y-%m-%d %H:%M:%S") if asset.updated_at else ""
             })
@@ -298,3 +298,102 @@ async def export_excel(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"导出失败: {str(e)}")
+
+
+@router.post("/export", summary="导出选中资产Excel文件")
+async def export_selected_assets(
+    asset_ids: Optional[List[str]] = Body(None, description="资产ID列表"),
+    export_format: str = Query("excel", description="导出格式"),
+    search: Optional[str] = Query(None, description="搜索关键词"),
+    ownership_status: Optional[str] = Query(None, description="确权状态筛选"),
+    property_nature: Optional[str] = Query(None, description="物业性质筛选"),
+    usage_status: Optional[str] = Query(None, description="使用状态筛选"),
+    db: Session = Depends(get_db)
+):
+    """
+    导出选中资产数据为Excel文件
+
+    支持按条件筛选导出和指定资产ID导出
+    """
+    try:
+        # 构建筛选条件
+        filters = {}
+        if ownership_status:
+            filters["ownership_status"] = ownership_status
+        if property_nature:
+            filters["property_nature"] = property_nature
+        if usage_status:
+            filters["usage_status"] = usage_status
+
+        # 如果指定了资产ID，添加到筛选条件中
+        if asset_ids:
+            filters["ids"] = asset_ids
+
+        # 从数据库获取资产数据
+        assets, total = asset_crud.get_multi_with_search(
+            db=db,
+            search=search,
+            filters=filters,
+            limit=1000  # 导出时获取更多数据
+        )
+
+        # 转换为导出格式 - 使用与GET端点相同的字段映射
+        export_data = []
+        for asset in assets:
+            export_data.append({
+                "物业名称": getattr(asset, 'property_name', ''),
+                "地址": getattr(asset, 'address', ''),
+                "确权状态": getattr(asset, 'ownership_status', ''),
+                "物业性质": getattr(asset, 'property_nature', ''),
+                "使用状态": getattr(asset, 'usage_status', ''),
+                "权属方": getattr(asset, 'ownership_entity', ''),
+                "经营管理方": getattr(asset, 'management_entity', ''),
+                "业态类别": getattr(asset, 'business_category', ''),
+                "是否涉诉": "是" if getattr(asset, 'is_litigated', False) else "否",
+                "备注": getattr(asset, 'notes', ''),
+                "创建时间": asset.created_at.strftime("%Y-%m-%d %H:%M:%S") if asset.created_at else "",
+                "更新时间": asset.updated_at.strftime("%Y-%m-%d %H:%M:%S") if asset.updated_at else ""
+            })
+
+        # 如果没有数据，提供示例数据
+        if not export_data:
+            export_data = [
+                {
+                    "物业名称": "暂无数据",
+                    "地址": "请先导入资产数据",
+                    "确权状态": "",
+                    "物业性质": "",
+                    "使用状态": "",
+                    "权属方": "",
+                    "经营管理方": "",
+                    "业态类别": "",
+                    "是否涉诉": "",
+                    "备注": "",
+                    "创建时间": "",
+                    "更新时间": ""
+                }
+            ]
+
+        # 创建DataFrame
+        df = pd.DataFrame(export_data)
+
+        # 写入Excel文件
+        buffer = io.BytesIO()
+        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name=STANDARD_SHEET_NAME, index=False)
+        buffer.seek(0)
+
+        # 根据导出类型确定文件名
+        filename = "selected_assets_export.xlsx" if asset_ids else "filtered_assets_export.xlsx"
+
+        # 返回文件流
+        return StreamingResponse(
+            io.BytesIO(buffer.read()),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"导出选中资产失败: {str(e)}")
