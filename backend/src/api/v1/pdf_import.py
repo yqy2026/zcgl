@@ -1,6 +1,6 @@
 """
-修复后的PDF智能导入API
-使用修复后的提取器，确保返回真实的合同信息
+PDF智能导入API
+智能提取PDF合同信息并导入系统
 """
 
 import os
@@ -29,18 +29,18 @@ from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["fixed-pdf-import"])
+router = APIRouter(tags=["pdf-import"])
 
-class FixedExtractionRequest(BaseModel):
-    """修复后的提取请求模型"""
+class ExtractionRequest(BaseModel):
+    """PDF信息提取请求模型"""
     text: str
     include_raw_text: bool = Field(default=False, description="是否包含原始文本")
     validate_fields: bool = Field(default=True, description="是否验证字段有效性")
 
-class FixedExtractionResponse(BaseModel):
-    """修复后的提取响应模型"""
+class ExtractionResponse(BaseModel):
+    """PDF信息提取响应模型"""
     success: bool
-    extractor_used: str = "fixed_rental_contract_extractor"
+    extractor_used: str = "rental_contract_extractor"
     confidence: float = 0.0
     extracted_fields: Dict[str, Any] = {}
     validation_results: Dict[str, Any] = {}
@@ -88,8 +88,8 @@ async def get_fixed_import_info():
         }
     }
 
-@router.post("/extract", response_model=FixedExtractionResponse)
-async def extract_contract_from_text(request: FixedExtractionRequest):
+@router.post("/extract", response_model=ExtractionResponse)
+async def extract_contract_from_text(request: ExtractionRequest):
     """从文本提取合同信息（使用修复后的提取器）"""
     start_time = datetime.now()
 
@@ -109,7 +109,7 @@ async def extract_contract_from_text(request: FixedExtractionRequest):
                 validation_results = _validate_extracted_fields(result.get('extracted_fields', {}))
 
             # 构建响应
-            response = FixedExtractionResponse(
+            response = ExtractionResponse(
                 success=True,
                 confidence=result.get('overall_confidence', 0.0),
                 extracted_fields=result.get('extracted_fields', {}),
@@ -126,7 +126,7 @@ async def extract_contract_from_text(request: FixedExtractionRequest):
             return response
         else:
             logger.warning(f"文本提取失败: {result.get('error', '未知错误')}")
-            return FixedExtractionResponse(
+            return ExtractionResponse(
                 success=False,
                 error=result.get('error', '提取失败'),
                 processing_time_ms=processing_time,
@@ -137,14 +137,14 @@ async def extract_contract_from_text(request: FixedExtractionRequest):
         logger.error(f"文本提取异常: {e}")
         processing_time = (datetime.now() - start_time).total_seconds() * 1000
 
-        return FixedExtractionResponse(
+        return ExtractionResponse(
             success=False,
             error=f"处理异常: {str(e)}",
             processing_time_ms=processing_time,
             real_data_verified=False
         )
 
-@router.post("/upload_and_extract", response_model=FixedExtractionResponse)
+@router.post("/upload_and_extract", response_model=ExtractionResponse)
 async def upload_and_extract_pdf(
     file: UploadFile = File(...),
     include_raw_text: bool = Form(default=False),
@@ -207,7 +207,7 @@ async def upload_and_extract_pdf(
                 validation_results = _validate_extracted_fields(extraction_result.get('extracted_fields', {}))
 
             # 构建响应
-            response = FixedExtractionResponse(
+            response = ExtractionResponse(
                 success=True,
                 confidence=extraction_result.get('overall_confidence', 0.0),
                 extracted_fields=extraction_result.get('extracted_fields', {}),
@@ -237,7 +237,7 @@ async def upload_and_extract_pdf(
             # 清理临时文件
             background_tasks.add_task(cleanup_temp_file, temp_file_path)
 
-            return FixedExtractionResponse(
+            return ExtractionResponse(
                 success=False,
                 error=f"信息提取失败: {extraction_result.get('error', '未知错误')}",
                 processing_time_ms=processing_time,
@@ -250,7 +250,7 @@ async def upload_and_extract_pdf(
         logger.error(f"PDF处理异常: {e}")
         processing_time = (datetime.now() - start_time).total_seconds() * 1000
 
-        return FixedExtractionResponse(
+        return ExtractionResponse(
             success=False,
             error=f"处理异常: {str(e)}",
             processing_time_ms=processing_time,

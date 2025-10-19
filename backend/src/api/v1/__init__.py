@@ -23,7 +23,7 @@ from .analytics import router as analytics_router
 # from .simple_pdf_import import router as pdf_import_router  # 已删除
 # from .enhanced_pdf_import import router as enhanced_pdf_import_router  # 暂时注释，有导入错误
 # from .ocr_pdf_import import router as ocr_pdf_import_router  # 暂时注释，有导入错误
-from .fixed_pdf_import import router as fixed_pdf_import_router
+from .pdf_import import router as pdf_import_router
 # from .organization_permissions import router as organization_permissions_router  # 已删除
 # from .rbac import router as rbac_router  # 已删除
 # from .dynamic_permissions import router as dynamic_permissions_router  # 已删除
@@ -36,7 +36,6 @@ from .fixed_pdf_import import router as fixed_pdf_import_router
 # from .test_assets import router as test_assets_router  # 已删除
 # from .security_monitor import router as security_monitor_router  # 已删除
 # from .ocr_analysis import router as ocr_analysis_router  # 已删除
-from .system_dictionaries_compat import router as system_dictionaries_compat_router
 
 # 创建API v1路由器
 api_router = APIRouter(prefix="/api/v1")
@@ -163,9 +162,9 @@ api_router.include_router(
 # )
 
 api_router.include_router(
-    fixed_pdf_import_router,
-    prefix="/fixed_pdf_import",
-    tags=["修复后PDF智能导入"]
+    pdf_import_router,
+    prefix="/pdf_import",
+    tags=["PDF智能导入"]
 )
 
 # 注释掉已删除的API路由器
@@ -181,10 +180,5 @@ api_router.include_router(
 # api_router.include_router(security_monitor_router, ...)  # 已删除
 # api_router.include_router(ocr_analysis_router, ...)  # 已删除
 
-# 废弃的兼容性API - 将在2025年12月31日移除
-api_router.include_router(
-    system_dictionaries_compat_router,
-    tags=["系统字典兼容 - 已废弃"]
-)
 
 __all__ = ["api_router"]

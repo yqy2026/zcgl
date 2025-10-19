@@ -271,9 +271,9 @@ class EnhancedAuditLogger:
 
 
 # 创建全局实例
-enhanced_audit_logger = EnhancedAuditLogger()
+audit_logger = EnhancedAuditLogger()
 
 
-def get_enhanced_audit_logger() -> EnhancedAuditLogger:
-    """获取增强审计日志服务实例"""
-    return enhanced_audit_logger
+def get_audit_logger() -> EnhancedAuditLogger:
+    """获取审计日志服务实例"""
+    return audit_logger

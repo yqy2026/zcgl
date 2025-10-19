@@ -53,6 +53,8 @@ uv run python -m pytest tests/test_specific.py -v   # Single test file
 uv run python -m pytest tests/ -k "test_name" -v    # Filter by test name
 uv run python -m pytest tests/ --tb=short           # Short traceback
 uv run python -m pytest tests/ --cov=src            # With coverage
+uv run python -m pytest tests/ -x                   # Stop on first failure
+uv run python -m pytest tests/ --lf                 # Run only failed tests from last run
 ```
 
 ### Frontend (React + TypeScript + Vite)
@@ -70,6 +72,8 @@ npm run lint:fix                   # Fix ESLint issues
 npm run test:watch                  # Watch mode
 npm run test:unit                  # Unit tests only
 npm run test:integration           # Integration tests only
+npm run test:e2e                   # End-to-end tests
+npm run test:performance           # Performance tests
 npm run test:ci                    # CI mode (no watch)
 npm run test:debug                 # Debug mode
 
@@ -125,6 +129,26 @@ The backend follows a layered architecture with clear separation of concerns:
 ```python
 # Processing flow: Upload → Convert → Extract → Validate → Import
 PDF → Text conversion → Information extraction → Validation → Database import
+
+# Service implementation example
+class PDFImportService:
+    def __init__(self, db: Session):
+        self.db = db
+        self.converter = PDFConverter()
+        self.extractor = ContractExtractor()
+
+    async def process_pdf_file(self, session_id: str, file_path: str) -> Dict[str, Any]:
+        # 1. PDF conversion (markitdown → pdfplumber → OCR fallback)
+        text_content = await self.converter.convert_pdf(file_path)
+
+        # 2. Information extraction (58-field recognition)
+        extracted_data = await self.extractor.extract_contract_info(text_content)
+
+        # 3. Data validation (OCR-specific handling)
+        validated_data = await self.validate_extracted_data(extracted_data)
+
+        # 4. Database import with audit trail
+        return await self.import_asset_data(session_id, validated_data)
 ```
 - **PDF Converter**: Multiple extraction methods (markitdown, pdfplumber, OCR fallback)
 - **Contract Extractor**: AI-driven 58-field extraction with confidence scoring
@@ -132,6 +156,28 @@ PDF → Text conversion → Information extraction → Validation → Database i
 - **Import Service**: Session management with progress tracking
 
 #### RBAC System
+```python
+# Permission management service example
+class RBACService:
+    def __init__(self, db: Session):
+        self.db = db
+
+    async def assign_user_permission(self, user_id: int, permission_code: str, scope: str = None):
+        # Dynamic permission assignment with organization scoping
+        permission = await self.get_permission_by_code(permission_code)
+        user_permission = UserPermission(
+            user_id=user_id,
+            permission_id=permission.id,
+            scope=scope or user.organization_id
+        )
+        self.db.add(user_permission)
+        await self.audit_log_permission_change(user_id, permission_code, "ASSIGN")
+        return user_permission
+
+    async def check_user_permission(self, user_id: int, resource: str, action: str) -> bool:
+        # Hierarchical permission checking with inheritance
+        return await self.evaluate_permission_chain(user_id, resource, action)
+```
 - **Dynamic Permissions**: Runtime permission assignment and inheritance
 - **Multi-tenant Support**: Organization-level data isolation
 - **Audit Logging**: Complete permission change tracking
@@ -310,6 +356,7 @@ VITE_API_TIMEOUT=30000
 - **TypeScript Errors**: Check import paths and type definitions
 - **Dependency Issues**: Use `uv sync` for backend, `npm install` for frontend
 - **Environment Variables**: Check `.env` files for proper configuration
+- **Startup Scripts**: Use `start_uv.bat` (Windows) for quick backend startup
 
 ## Key Business Logic
 
@@ -512,8 +559,11 @@ frontend/
 # Quick database test
 cd backend && uv run python -c "from src.database import engine; print('DB OK')"
 
-# Development server
-cd backend && uv run python run_dev.py  # Port 8002
+# Development server (multiple options)
+cd backend && uv run python run_dev.py              # Port 8002
+# OR use Windows batch script:
+./start_uv.bat                                     # Quick startup (Windows)
+./stop_uv.bat                                      # Stop server (Windows)
 
 # Code quality checks
 cd backend && uv run ruff check src/ && uv run mypy src/
@@ -529,6 +579,10 @@ cd frontend && ANALYZE=true npm run build
 
 # Type checking
 cd frontend && npm run type-check
+
+# Advanced build options
+cd frontend && npm run build -- --mode production
+cd frontend && npm run preview                   # Preview production build
 ```
 
 ### Debugging

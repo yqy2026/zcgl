@@ -65,7 +65,7 @@ class BackupConfig:
 
 
 class DatabaseBackupService:
-    """数据库备份服�?""
+    """数据库备份服务"""
     
     def __init__(self, config: Optional[BackupConfig] = None):
         self.config = config or BackupConfig()

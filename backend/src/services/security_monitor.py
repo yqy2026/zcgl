@@ -11,7 +11,7 @@ import logging
 from dataclasses import dataclass
 from enum import Enum
 
-from ..services.enhanced_audit import get_enhanced_audit_logger
+from ..services.audit_service import get_audit_logger
 
 
 class SecurityEventType(Enum):
@@ -46,7 +46,7 @@ class RealTimeSecurityMonitor:
     
     def __init__(self, alert_thresholds: Optional[Dict] = None):
         self.logger = logging.getLogger("security_monitor")
-        self.audit_logger = get_enhanced_audit_logger()
+        self.audit_logger = get_audit_logger()
         
         # 事件缓冲区（保存最近1000个事件）
         self.event_buffer = deque(maxlen=1000)

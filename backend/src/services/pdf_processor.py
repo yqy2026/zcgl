@@ -507,12 +507,12 @@ class AdvancedPDFProcessor:
 
 
 # 全局实例
-advanced_pdf_processor = AdvancedPDFProcessor()
+pdf_processor = AdvancedPDFProcessor()
 
 
 def process_pdf_intelligently(file_path: str) -> ProcessingResult:
     """智能PDF处理函数"""
-    return advanced_pdf_processor.process_pdf(file_path)
+    return pdf_processor.process_pdf(file_path)
 
 
 if __name__ == "__main__":
