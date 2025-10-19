@@ -3,8 +3,11 @@
 """
 
 from typing import List, Optional
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 from ...database import get_db
 from ...crud.project import project
@@ -273,9 +276,9 @@ async def get_project_statistics(
         return response_data
     except Exception as e:
         # Log the actual error for debugging
-        print(f"Statistics API error: {e}")
+        logger.error(f"Statistics API error: {e}")
         import traceback
-        traceback.print_exc()
+        logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Statistics calculation failed: {str(e)}")
 
 

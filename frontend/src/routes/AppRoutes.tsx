@@ -10,16 +10,26 @@ const AssetDetailPage = React.lazy(() => import('../pages/Assets/AssetDetailPage
 const AssetCreatePage = React.lazy(() => import('../pages/Assets/AssetCreatePage'))
 const AssetImportPage = React.lazy(() => import('../pages/Assets/AssetImportPage'))
 const AssetAnalyticsPage = React.lazy(() => import('../pages/Assets/AssetAnalyticsPage'))
-const UXDemoPage = React.lazy(() => import('../pages/UXDemoPage'))
 const DictionaryPage = React.lazy(() => import('../pages/System/DictionaryPage'))
 const OrganizationPage = React.lazy(() => import('../pages/System/OrganizationPage'))
 const TemplateManagementPage = React.lazy(() => import('../pages/System/TemplateManagementPage'))
+const UserManagementPage = React.lazy(() => import('../pages/System/UserManagementPage'))
+const RoleManagementPage = React.lazy(() => import('../pages/System/RoleManagementPage'))
+const OperationLogPage = React.lazy(() => import('../pages/System/OperationLogPage'))
 const OwnershipManagementPage = React.lazy(() => import('../pages/Ownership/OwnershipManagementPage'))
 const ProjectManagementPage = React.lazy(() => import('../pages/Project/ProjectManagementPage'))
 const ContractListPage = React.lazy(() => import('../pages/Rental/ContractListPage'))
 const ContractCreatePage = React.lazy(() => import('../pages/Rental/ContractCreatePage'))
 const RentLedgerPage = React.lazy(() => import('../pages/Rental/RentLedgerPage'))
 const RentStatisticsPage = React.lazy(() => import('../pages/Rental/RentStatisticsPage'))
+const PDFImportPage = React.lazy(() => import('../pages/Contract/PDFImportPage'))
+import SystemErrorBoundary from '../components/System/SystemErrorBoundary'
+import {
+  UserManagementGuard,
+  RoleManagementGuard,
+  SystemLogsGuard,
+  AssetManagementGuard
+} from '../components/System/PermissionGuard'
 
 // 加载组件
 const LoadingSpinner: React.FC = () => (
@@ -57,6 +67,7 @@ const AppRoutes: React.FC = () => {
           <Route path="/rental" element={<Navigate to="/rental/contracts" replace />} />
           <Route path="/rental/contracts" element={<ContractListPage />} />
           <Route path="/rental/contracts/new" element={<ContractCreatePage />} />
+          <Route path="/rental/contracts/pdf-import" element={<PDFImportPage />} />
           <Route path="/rental/ledger" element={<RentLedgerPage />} />
           <Route path="/rental/statistics" element={<RentStatisticsPage />} />
 
@@ -67,9 +78,42 @@ const AppRoutes: React.FC = () => {
           <Route path="/project" element={<ProjectManagementPage />} />
 
           {/* 系统管理 */}
-          <Route path="/system/dictionaries" element={<DictionaryPage />} />
-          <Route path="/system/organizations" element={<OrganizationPage />} />
-          <Route path="/system/templates" element={<TemplateManagementPage />} />
+          <Route path="/system/users" element={
+            <SystemErrorBoundary>
+              <UserManagementGuard>
+                <UserManagementPage />
+              </UserManagementGuard>
+            </SystemErrorBoundary>
+          } />
+          <Route path="/system/roles" element={
+            <SystemErrorBoundary>
+              <RoleManagementGuard>
+                <RoleManagementPage />
+              </RoleManagementGuard>
+            </SystemErrorBoundary>
+          } />
+          <Route path="/system/organizations" element={
+            <SystemErrorBoundary>
+              <OrganizationPage />
+            </SystemErrorBoundary>
+          } />
+          <Route path="/system/dictionaries" element={
+            <SystemErrorBoundary>
+              <DictionaryPage />
+            </SystemErrorBoundary>
+          } />
+          <Route path="/system/templates" element={
+            <SystemErrorBoundary>
+              <TemplateManagementPage />
+            </SystemErrorBoundary>
+          } />
+          <Route path="/system/logs" element={
+            <SystemErrorBoundary>
+              <SystemLogsGuard>
+                <OperationLogPage />
+              </SystemLogsGuard>
+            </SystemErrorBoundary>
+          } />
           {/* 兼容旧的枚举字段路由，重定向到字典管理 */}
           <Route path="/system/enum-fields" element={<Navigate to="/system/dictionaries" replace />} />
 
@@ -81,9 +125,6 @@ const AppRoutes: React.FC = () => {
 
           {/* 系统设置 - 暂时重定向到工作台 */}
           <Route path="/settings/*" element={<Navigate to="/dashboard" replace />} />
-
-          {/* UX演示页面 */}
-          <Route path="/ux-demo" element={<UXDemoPage />} />
 
           {/* 404页面 */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

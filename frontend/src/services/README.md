@@ -10,7 +10,10 @@ services/
 ├── assetService.ts         # 资产管理服务
 ├── statisticsService.ts    # 统计分析服务
 ├── excelService.ts         # Excel导入导出服务
-├── backupService.ts        # 数据备份服务
+├── pdfService.ts           # PDF处理服务
+├── rbacService.ts          # 权限管理服务
+├── organizationService.ts  # 组织架构服务
+├── dictionary/             # 字典服务
 ├── config.ts               # API配置文件
 ├── errorHandler.ts         # 错误处理工具
 ├── cacheManager.ts         # 缓存管理器
@@ -112,28 +115,57 @@ const exportResult = await excelService.exportExcel({
 await excelService.downloadTemplate()
 ```
 
-### 5. 备份服务 (backupService.ts)
+### 5. PDF服务 (pdfService.ts)
 
-管理数据备份和恢复：
+处理PDF文件的导入和信息提取：
 
 ```typescript
-import { backupService } from '@/services'
+import { pdfService } from '@/services'
 
-// 创建备份
-const backup = await backupService.createBackup({
-  description: '手动备份',
-  async_backup: false,
-})
+// 上传PDF文件
+const uploadResult = await pdfService.uploadPdf(file)
 
-// 列出备份
-const backups = await backupService.listBackups()
+// 提取合同信息
+const contractData = await pdfService.extractContract(sessionId)
 
-// 恢复备份
-const restore = await backupService.restoreBackup({
-  backup_filename: 'backup_20240101_120000.db.gz',
-  confirm: true,
-})
+// 验证合同数据
+const validation = await pdfService.validateContract(contractData)
 ```
+
+### 6. 权限管理服务 (rbacService.ts)
+
+处理用户认证和权限管理：
+
+```typescript
+import { rbacService } from '@/services'
+
+// 用户登录
+const loginResult = await rbacService.login(username, password)
+
+// 获取用户权限
+const permissions = await rbacService.getUserPermissions(userId)
+
+// 创建角色
+const role = await rbacService.createRole(roleData)
+```
+
+### 7. 组织架构服务 (organizationService.ts)
+
+处理组织架构管理：
+
+```typescript
+import { organizationService } from '@/services'
+
+// 获取组织架构
+const orgTree = await organizationService.getOrganizationTree()
+
+// 创建组织
+const org = await organizationService.createOrganization(orgData)
+```
+
+## 字典服务 (dictionary/)
+
+专门的字典数据服务，请参考 [dictionary/README.md](dictionary/README.md) 获取详细信息。
 
 ## 高级功能
 
@@ -217,7 +249,7 @@ const createAsset = async (data: AssetCreateRequest): Promise<Asset> => {
 
 ```env
 # API基础URL
-VITE_API_BASE_URL=http://localhost:8001/api/v1
+VITE_API_BASE_URL=http://localhost:8002/api/v1
 
 # 请求超时时间（毫秒）
 VITE_API_TIMEOUT=30000

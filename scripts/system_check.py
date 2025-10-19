@@ -11,7 +11,7 @@ def check_backend():
     """检查后端服务状态"""
     try:
         # 检查基本健康状态
-        response = requests.get("http://localhost:8001/", timeout=5)
+        response = requests.get("http://localhost:8002/", timeout=5)
         if response.status_code == 200:
             data = response.json()
             print("✅ 后端服务正常运行")
@@ -37,7 +37,7 @@ def check_api_endpoints():
     print("\n🔍 检查API端点:")
     for endpoint, method, description in endpoints:
         try:
-            url = f"http://localhost:8001{endpoint}"
+            url = f"http://localhost:8002{endpoint}"
             response = requests.request(method, url, timeout=5)
             if response.status_code in [200, 404]:  # 404也算正常，因为可能没有数据
                 print(f"   ✅ {description} ({endpoint})")
@@ -85,8 +85,8 @@ def main():
     
     if backend_ok and frontend_ok:
         print("🎉 系统运行正常！")
-        print("   后端API: http://localhost:8001/")
-        print("   API文档: http://localhost:8001/docs")
+        print("   后端API: http://localhost:8002/")
+        print("   API文档: http://localhost:8002/docs")
         print("   前端界面: http://localhost:5174/")
     else:
         print("⚠️  系统存在问题，请检查服务状态")

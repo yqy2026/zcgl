@@ -15,7 +15,7 @@ import type {
 } from '@/types/ownership';
 
 export class OwnershipService {
-  private baseUrl = '/ownerships';
+  private baseUrl = '/ownerships/';
 
   /**
    * 获取权属方列表
@@ -29,7 +29,7 @@ export class OwnershipService {
    * 搜索权属方
    */
   async searchOwnerships(searchParams: OwnershipSearchRequest): Promise<OwnershipListResponse> {
-    const response = await apiClient.post(`${this.baseUrl}/search`, searchParams);
+    const response = await apiClient.post(`${this.baseUrl}search`, searchParams);
     return response;
   }
 
@@ -37,7 +37,7 @@ export class OwnershipService {
    * 获取权属方详情
    */
   async getOwnership(id: string): Promise<Ownership> {
-    const response = await apiClient.get(`${this.baseUrl}/${id}`);
+    const response = await apiClient.get(`${this.baseUrl}${id}`);
     return response;
   }
 
@@ -54,7 +54,7 @@ export class OwnershipService {
    * 更新权属方
    */
   async updateOwnership(id: string, data: OwnershipUpdate): Promise<Ownership> {
-    const response = await apiClient.put(`${this.baseUrl}/${id}`, data);
+    const response = await apiClient.put(`${this.baseUrl}${id}`, data);
     return response;
   }
 
@@ -62,7 +62,7 @@ export class OwnershipService {
    * 删除权属方
    */
   async deleteOwnership(id: string): Promise<OwnershipDeleteResponse> {
-    const response = await apiClient.delete(`${this.baseUrl}/${id}`);
+    const response = await apiClient.delete(`${this.baseUrl}${id}`);
     return response;
   }
 
@@ -70,7 +70,7 @@ export class OwnershipService {
    * 切换权属方状态
    */
   async toggleOwnershipStatus(id: string): Promise<Ownership> {
-    const response = await apiClient.post(`${this.baseUrl}/${id}/toggle-status`);
+    const response = await apiClient.post(`${this.baseUrl}${id}/toggle-status`);
     return response;
   }
 
@@ -78,7 +78,7 @@ export class OwnershipService {
    * 获取权属方统计信息
    */
   async getOwnershipStatistics(): Promise<OwnershipStatisticsResponse> {
-    const response = await apiClient.get(`${this.baseUrl}/statistics/summary`);
+    const response = await apiClient.get(`${this.baseUrl}statistics/summary`);
     return response;
   }
 
@@ -87,7 +87,7 @@ export class OwnershipService {
    * 获取权属方选项列表
    */
   async getOwnershipOptions(isActive: boolean = true): Promise<Ownership[]> {
-    const response = await apiClient.get(`${this.baseUrl}/dropdown-options?is_active=${isActive}`);
+    const response = await apiClient.get(`${this.baseUrl}dropdown-options?is_active=${isActive}`);
     return response;
   }
 
@@ -134,7 +134,7 @@ export class OwnershipService {
    */
   async updateOwnershipProjects(ownershipId: string, projectIds: string[]): Promise<void> {
     try {
-      const response = await apiClient.put(`${this.baseUrl}/${ownershipId}/projects`, projectIds);
+      const response = await apiClient.put(`${this.baseUrl}${ownershipId}/projects`, projectIds);
       return response;
     } catch (error) {
       console.error('更新权属方关联项目失败:', error);

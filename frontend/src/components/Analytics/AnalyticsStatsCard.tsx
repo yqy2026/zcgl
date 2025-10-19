@@ -3,12 +3,6 @@ import { Card, Statistic, Row, Col } from 'antd'
 import {
   ArrowUpOutlined,
   ArrowDownOutlined,
-  HomeOutlined,
-  BankOutlined,
-  DollarOutlined,
-  PercentageOutlined,
-  RiseOutlined,
-  FallOutlined,
   ApartmentOutlined,
   ThunderboltOutlined,
   PieChartOutlined,

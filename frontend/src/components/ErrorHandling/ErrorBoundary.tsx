@@ -22,15 +22,18 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('ErrorBoundary caught an error:', error, errorInfo)
+    console.error('Error stack:', error.stack)
+    console.error('Component stack:', errorInfo.componentStack)
   }
 
   render() {
     if (this.state.hasError) {
+      console.error('ErrorBoundary rendering error state:', this.state.error?.message)
       return (
         <Result
           status="error"
           title="页面加载出错"
-          subTitle="抱歉，页面加载时出现了错误。"
+          subTitle={`抱歉，页面加载时出现了错误。${this.state.error?.message ? `错误信息：${this.state.error.message}` : ''}`}
           extra={
             <Button type="primary" onClick={() => window.location.reload()}>
               刷新页面

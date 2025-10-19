@@ -1,88 +1,123 @@
 # 土地物业资产管理系统
 
-[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.68+-green.svg)](https://fastapi.tiangolo.com)
+[![Python](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com)
+[![React](https://img.shields.io/badge/React-18+-blue.svg)](https://reactjs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5+-blue.svg)](https://typescriptlang.org)
 [![SQLite](https://img.shields.io/badge/SQLite-3.x-lightgrey.svg)](https://sqlite.org)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-专业的土地物业资产管理系统，提供完整的资产档案管理、出租率统计、财务分析等功能。
+专业的土地物业资产管理系统，专为资产管理经理设计的个人工作助手工具。系统提供完整的资产档案管理、出租率统计、财务分析、智能PDF合同导入等功能。
 
 ## ✨ 主要特性
 
 - 🏢 **完整资产管理** - 58个字段的全面资产档案
+- 📄 **智能PDF导入** - AI驱动的合同信息提取，58字段自动识别
 - 📊 **智能出租率统计** - 实时计算和多维度分析
 - 💰 **财务数据管理** - 收益、支出、净利润跟踪
+- 🔐 **高级权限管理** - RBAC权限系统，多租户支持
 - 📈 **统计分析** - 多维度数据统计和可视化
 - 🔧 **自动计算** - 出租率、净收益等自动计算
 - 📋 **数据验证** - 完善的数据一致性验证
 - 🚀 **高性能** - 优化的数据库查询和API响应
+- 🎯 **OCR支持** - 图片和PDF的文字识别功能
+- 🏢 **组织架构管理** - 支持多层级组织架构管理
+- 📝 **审计日志** - 完整的操作审计和安全日志
+- 💾 **数据备份** - 自动数据备份和恢复机制
 
 ## 🚀 快速开始
 
 ### 环境要求
-- Python 3.8+
-- SQLite 3.x
-- 2GB+ 内存
+- **Python**: 3.12+ (推荐使用 uv 包管理器)
+- **Node.js**: 18.0+
+- **数据库**: SQLite 3.x (开发环境，支持扩展到PostgreSQL生产环境)
+- **缓存**: Redis (生产环境推荐，开发环境使用内存缓存)
+- **内存**: 4GB+ (推荐8GB+用于PDF处理)
+- **操作系统**: Windows 10+, macOS 10.15+, Linux
 
 ### 安装启动
+
+#### 方式一：手动启动（推荐）
 ```bash
-# 1. 克隆项目
-git clone <repository-url>
-cd land-property-management
-
-# 2. 安装依赖
+# 后端服务 (FastAPI + SQLAlchemy)
 cd backend
-pip install -r requirements.txt
+uv sync                              # 安装依赖（推荐使用uv）
+uv run python run_dev.py             # 开发模式 (端口 8002)
 
-# 3. 启动系统
-python run_dev.py
+# 前端服务 (React + TypeScript + Vite)
+cd frontend
+npm install                          # 安装依赖
+npm run dev                          # 开发服务器 (端口 5173)
 
-# 4. 访问系统
-# API文档: http://localhost:8001/docs
-# 健康检查: http://localhost:8001/health
+# 测试数据库连接
+uv run python -c "from src.database import engine; print('DB OK')"
+
+# 访问系统
+# 前端应用: http://localhost:5173
+# API文档: http://localhost:8002/docs
+# 健康检查: http://localhost:8002/health
 ```
 
-详细说明请参考 [docs/quick-start-guide.md](docs/quick-start-guide.md)
+#### 方式二：Docker启动
+```bash
+# 使用Docker Compose
+docker-compose up -d
+
+# 查看服务状态
+docker-compose ps
+```
 
 ## 📊 系统概览
 
 ### 数据规模
 - **数据库字段**: 58个（完整资产信息）
 - **测试数据**: 1,269条资产记录
-- **API接口**: 9个RESTful接口
-- **统计维度**: 7个分析维度
+- **API接口**: 40+个RESTful接口
+- **统计维度**: 8个分析维度
+- **PDF处理**: 支持智能合同信息提取
+- **权限模型**: RBAC权限系统，支持动态权限分配
 
 ### 核心功能
-- **资产管理**: 增删改查、批量操作、历史记录
+- **资产管理**: 增删改查、批量操作、历史记录、资产分类
+- **智能PDF导入**: AI驱动的58字段自动识别和提取
 - **出租率统计**: 整体出租率、分类统计、趋势分析
 - **财务分析**: 收益统计、成本分析、利润计算
-- **数据导入导出**: Excel导入导出、模板管理
+- **权限管理**: 基于角色的访问控制(RBAC)、多租户支持
+- **组织架构管理**: 多层级组织架构、部门管理、权限继承
+- **数据导入导出**: Excel导入导出、PDF导入、模板管理
+- **合同管理**: 租赁合同全生命周期管理
+- **项目管理**: 项目维度的资产统计和管理
+- **审计日志**: 完整的操作审计和数据变更追踪
+- **数据备份**: 定期数据库备份、自动备份脚本、数据恢复流程
 
 ## 🏗️ 系统架构
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   前端 (React)   │    │  后端 (FastAPI)  │    │ 数据库 (SQLite) │
-│   Port: 3000    │◄──►│   Port: 8001    │◄──►│  land_property  │
-│                 │    │                 │    │      .db        │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   前端 (React)   │    │  后端 (FastAPI)  │    │   数据服务层     │    │ 数据库 (SQLite) │
+│   Port: 5173    │◄──►│   Port: 8002    │◄──►│ PDF/OCR处理     │◄──►│  land_property  │
+│   TypeScript    │    │   Python 3.12   │    │ 权限管理        │    │      .db        │
+│   Vite构建      │    │   uv包管理      │    │ 审计日志        │    │   (支持PostgreSQL)   │
+└─────────────────┘    └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
 ### 技术栈
-- **后端**: FastAPI + SQLAlchemy + Pydantic
-- **数据库**: SQLite（支持MySQL/PostgreSQL）
-- **前端**: React + TypeScript + Ant Design（规划中）
+- **后端**: Python 3.12 + FastAPI + SQLAlchemy 2.0 + Pydantic v2 + UV包管理器
+- **数据库**: SQLite（开发环境，支持扩展到PostgreSQL生产环境）
+- **缓存**: Redis（生产环境，开发环境使用内存缓存）
+- **前端**: React 18 + TypeScript + Ant Design 5 + Vite
 - **部署**: Docker + Nginx + Gunicorn
+- **AI增强**: PaddleOCR（OCR识别）、spaCy（NLP文本处理，可选）
 
 ## 📈 数据模型
 
 ### 核心字段分组
-- **基础信息** (8字段): 物业名称、地址、确权状态等
-- **面积信息** (11字段): 总面积、可租面积、已租面积等
-- **租户信息** (3字段): 租户名称、联系方式、类型
-- **合同信息** (8字段): 合同编号、期限、租金等
+- **基本信息** (8字段): 权属方、权属类别、项目名称、物业名称、物业地址等
+- **面积信息** (11字段): 土地面积、实际房产面积、可出租面积、已出租面积等
+- **租户信息** (3字段): 租户名称、租户类型、租户联系方式
+- **合同信息** (8字段): 租赁合同编号、合同期限、租金等
 - **财务信息** (3字段): 年收益、年支出、净收益
-- **管理信息** (6字段): 管理员、经营模式、项目等
+- **管理信息** (6字段): 管理责任人、经营模式、项目等
 - **系统信息** (6字段): 版本、状态、审核等
 
 ### 自动计算字段
@@ -92,78 +127,107 @@ python run_dev.py
 
 ## 🔌 API接口
 
-### 资产管理
-- `GET /api/v1/assets` - 获取资产列表
-- `POST /api/v1/assets` - 创建资产
-- `PUT /api/v1/assets/{id}` - 更新资产
+### 资产管理 (`/api/v1/assets`)
+- `GET /api/v1/assets` - 获取资产列表（支持分页、搜索、筛选）
+- `POST /api/v1/assets` - 创建新资产
+- `GET /api/v1/assets/{id}` - 获取资产详情
+- `PUT /api/v1/assets/{id}` - 更新资产信息
 - `DELETE /api/v1/assets/{id}` - 删除资产
+- `GET /api/v1/assets/{id}/history` - 获取资产变更历史
+- `POST /api/v1/assets/batch` - 批量操作资产
+- `GET /api/v1/assets/export` - 导出资产数据
+- `POST /api/v1/assets/import` - 导入资产数据
 
-### 统计分析
+### 智能PDF导入 (`/api/v1/pdf`)
+- `POST /api/v1/pdf/process` - 处理PDF合同文件
+- `POST /api/v1/pdf/extract-contract` - 提取合同信息
+- `POST /api/v1/pdf/validate-contract` - 验证合同数据
+
+### 统计分析 (`/api/v1/statistics`)
 - `GET /api/v1/statistics/occupancy-rate/overall` - 整体出租率
 - `GET /api/v1/statistics/occupancy-rate/by-category` - 分类出租率
 - `GET /api/v1/statistics/area-summary` - 面积汇总
 - `GET /api/v1/statistics/financial-summary` - 财务汇总
 
-详细API文档请参考 [docs/API_DOCUMENTATION.md](docs/API_DOCUMENTATION.md)
+### 权限管理 (`/api/v1/auth` 和 `/api/v1/rbac`)
+- `POST /api/v1/auth/login` - 用户登录
+- `POST /api/v1/auth/logout` - 用户登出
+- `GET /api/v1/users` - 获取用户列表
+- `POST /api/v1/users` - 创建用户
+- `PUT /api/v1/users/{id}` - 更新用户
+- `DELETE /api/v1/users/{id}` - 删除用户
+- `GET /api/v1/roles` - 获取角色列表
+- `POST /api/v1/roles` - 创建角色
+- `PUT /api/v1/roles/{id}` - 更新角色
+- `DELETE /api/v1/roles/{id}` - 删除角色
+- `GET /api/v1/permissions` - 获取权限列表
 
-## 📊 实际数据展示
+### 组织架构 (`/api/v1/organizations`)
+- `GET /api/v1/organizations` - 获取组织架构
+- `POST /api/v1/organizations` - 创建组织
+- `PUT /api/v1/organizations/{id}` - 更新组织
+- `DELETE /api/v1/organizations/{id}` - 删除组织
 
-### 系统统计（基于1,269条真实数据）
-- **整体出租率**: 25.67%
-- **总可租面积**: 59,501.12 ㎡
-- **年收益总额**: 1,120.94 万元
-- **净收益总额**: 918.84 万元
-- **平均月租金**: 8,942 元
+### 数据导入导出 (`/api/v1/excel`)
+- `POST /api/v1/excel/import` - Excel导入
+- `GET /api/v1/excel/export` - Excel导出
+- `GET /api/v1/excel/template` - 下载模板
 
-### 分类统计示例
-- **商业类资产**: 出租率 78.5%
-- **办公类资产**: 出租率 58.9%
-- **住宅类资产**: 出租率 45.2%
+详细API文档请访问: http://localhost:8002/docs
 
 ## 🛠️ 开发工具
 
-### 系统管理脚本
+### 后端开发命令
 ```bash
-# 系统健康检查
-python check_system.py
+cd backend
 
-# 数据迁移工具
-python scripts/data_migration_tool.py
+# UV包管理器 (推荐)
+uv sync                              # 安装依赖
+uv run python run_dev.py             # 开发模式 (端口 8002)
+uv run python -m pytest tests/ -v    # 运行测试
+uv run mypy src/                     # 类型检查
+uv run ruff check src/               # 代码检查
 
-# 性能优化工具
-python scripts/performance_optimizer.py
-
-# 健康监控
-python scripts/health_monitor.py
+# 数据库测试
+uv run python -c "from src.database import engine; print('DB OK')"
 ```
 
-### 测试工具
+### 前端开发命令
 ```bash
-# API功能测试
-python test_api.py
+cd frontend
+npm install                          # 安装依赖
+npm run dev                          # 开发服务器 (端口 5173)
+npm run build                        # 生产构建
+npm test                             # 运行测试
+npm run lint                         # ESLint检查
+```
 
-# 新功能测试
-python test_new_features.py
+### 系统管理脚本
+```bash
+# 健康监控
+python scripts/health_monitor.py
 
-# 数据修复
-python fix_data.py
+# 环境设置
+python scripts/environment_setup.py
+
+# 性能测试
+bash scripts/performance-test.sh
+
+# 系统检查
+python scripts/system_check.py
 ```
 
 ## 📚 文档资源
 
-### 用户文档
-- [用户使用手册](docs/user-manual.md) - 完整的操作指导
-- [快速启动指南](docs/quick-start-guide.md) - 5分钟快速上手
+### 开发文档
+- [CLAUDE.md](CLAUDE.md) - 开发指导文档
+- [后端README](backend/README.md) - 后端开发文档
+- [前端README](frontend/README.md) - 前端开发文档
+- [文档中心](docs/README.md) - 完整文档导航
 
 ### 技术文档
-- [API接口文档](docs/API_DOCUMENTATION.md) - 完整的API说明
-- [技术文档](docs/TECHNICAL_DOCUMENTATION.md) - 系统设计和架构
-- [数据迁移指南](docs/migration-guide.md) - 数据迁移说明
-
-### 运维文档
-- [部署计划](docs/DEPLOYMENT_PLAN.md) - 生产环境部署指南
-- [回滚计划](docs/ROLLBACK_PLAN.md) - 应急回滚方案
-- [常见问题](docs/faq.md) - 问题解答
+- **API文档**: http://localhost:8002/docs - 交互式API文档
+- **ReDoc**: http://localhost:8002/redoc - API参考文档
 
 ## 🚀 部署方案
 
@@ -176,27 +240,22 @@ docker-compose up -d
 docker-compose ps
 ```
 
-### 传统部署
-```bash
-# 安装依赖
-pip install -r requirements.txt
-
-# 配置环境变量
-cp .env.example .env
-
-# 启动服务
-gunicorn -c gunicorn.conf.py src.main:app
-```
-
-详细部署说明请参考 [docs/DEPLOYMENT_PLAN.md](docs/DEPLOYMENT_PLAN.md)
+### 生产环境部署
+- 使用Docker容器化部署
+- Nginx反向代理和负载均衡
+- Gunicorn作为WSGI服务器
+- PostgreSQL作为生产数据库
+- Redis作为缓存服务器
 
 ## 🔐 安全特性
 
+- **JWT Token认证**: 用户认证和授权
 - **数据验证**: 完善的输入验证和数据约束
 - **访问控制**: 基于角色的权限管理（可扩展）
 - **数据备份**: 自动备份和恢复机制
 - **审计日志**: 完整的操作历史记录
-- **安全配置**: HTTPS、CORS、防火墙配置
+- **密码安全**: 密码加密存储、安全策略
+- **防护机制**: SQL注入防护、XSS防护、CSRF防护
 
 ## 📈 性能指标
 
@@ -212,23 +271,21 @@ gunicorn -c gunicorn.conf.py src.main:app
 ```bash
 # 克隆项目
 git clone <repository-url>
+cd zcgl
 
-# 安装开发依赖
-pip install -r requirements-dev.txt
+# 后端环境设置
+cd backend
+uv sync
 
-# 运行测试
-python -m pytest tests/
-
-# 代码格式化
-black src/
-isort src/
+# 前端环境设置
+cd ../frontend
+npm install
 ```
 
-### 提交规范
-- 使用清晰的提交信息
-- 遵循代码规范和最佳实践
-- 添加必要的测试用例
-- 更新相关文档
+### 代码规范
+- 后端遵循PEP 8代码规范和类型提示
+- 前端使用ESLint和Prettier进行代码检查和格式化
+- 实现单元测试和集成测试
 
 ## 📄 许可证
 
@@ -236,36 +293,36 @@ isort src/
 
 ## 📞 支持与反馈
 
-- **技术支持**: support@your-domain.com
 - **问题反馈**: 请提交 GitHub Issues
 - **功能建议**: 欢迎提交 Pull Requests
 - **文档改进**: 帮助完善项目文档
 
 ## 🎯 路线图
 
-### v1.1 (计划中)
-- [ ] 前端界面开发
-- [ ] 用户认证系统
-- [ ] 高级报表功能
-- [ ] 移动端支持
-
-### v1.2 (规划中)
-- [ ] 多租户支持
+### v2.1 (计划中)
+- [ ] 移动端适配 (响应式优化)
+- [ ] 数据可视化仪表板
+- [ ] 高级报表导出功能
 - [ ] 工作流引擎
 - [ ] 消息通知系统
-- [ ] 数据分析仪表板
+- [ ] API限流和缓存优化
 
 ## 🏆 项目状态
 
-- **开发状态**: ✅ 生产就绪
-- **测试覆盖**: ✅ 100%功能测试
-- **文档完整性**: ✅ 完整文档体系
+- **开发状态**: ✅ 生产就绪 (持续迭代中)
+- **核心功能**: ✅ 100%完成
+- **PDF导入**: ✅ 智能提取功能已完成
+- **权限系统**: ✅ RBAC完整实现
+- **前端界面**: ✅ React现代化界面
+- **测试覆盖**: ✅ 核心功能测试完成
+- **文档完整性**: ✅ 完整开发文档体系
 - **部署就绪**: ✅ 支持多种部署方式
 
 ---
 
-**版本**: v1.0  
-**更新时间**: 2025年9月5日  
-**维护状态**: 积极维护  
+**版本**: v2.1
+**更新时间**: 2025年10月17日
+**维护状态**: 🚀 活跃开发中
+**技术栈**: Python 3.12 + FastAPI + React 18 + TypeScript
 
 🎉 **感谢使用土地物业资产管理系统！**

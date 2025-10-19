@@ -38,7 +38,7 @@ const AssetList: React.FC<AssetListProps> = ({
   // 表格列定义
   const columns: ColumnsType<Asset> = [
     {
-      title: '项目名称',
+      title: '所属项目',
       dataIndex: 'project_name',
       key: 'project_name',
       width: 150,
@@ -47,11 +47,23 @@ const AssetList: React.FC<AssetListProps> = ({
       ellipsis: {
         showTitle: false,
       },
-      render: (text) => (
-        <Tooltip title={text || '未设置'}>
-          {text || '-'}
-        </Tooltip>
-      ),
+      render: (text, record) => {
+        // 如果是项目ID格式，尝试显示关联的项目名称
+        const projectName = record.project_name || text
+        const isId = typeof projectName === 'string' && projectName.length === 36 // UUID格式
+
+        let displayText = projectName
+        if (isId) {
+          // 如果是ID格式，显示"未配置项目"
+          displayText = '未配置项目'
+        }
+
+        return (
+          <Tooltip title={displayText || '未设置'}>
+            {displayText || '-'}
+          </Tooltip>
+        )
+      },
     },
     {
       title: '物业名称',
@@ -86,6 +98,43 @@ const AssetList: React.FC<AssetListProps> = ({
           {text}
         </Tooltip>
       ),
+    },
+    {
+      title: '权属类别',
+      dataIndex: 'ownership_category',
+      key: 'ownership_category',
+      width: 150,
+      sorter: true,
+      ellipsis: {
+        showTitle: false,
+      },
+      filters: [
+        { text: '国资管理集团合并口径', value: '1' },
+        { text: '民政托管企业', value: '2' },
+        { text: '其他', value: '3' },
+      ],
+      render: (text, record) => {
+        // 权属类别映射
+        let displayText = text
+        if (typeof text === 'string') {
+          // 权属类别字典映射
+          const categoryMap: Record<string, string> = {
+            '1': '国资管理集团合并口径',
+            '2': '民政托管企业',
+            '3': '其他'
+          }
+          // 如果是数字ID，转换为对应文字
+          if (/^\d+$/.test(text) && categoryMap[text]) {
+            displayText = categoryMap[text]
+          }
+        }
+
+        return (
+          <Tooltip title={displayText || '未设置'}>
+            {displayText || '-'}
+          </Tooltip>
+        )
+      },
     },
     {
       title: '所在地址',
@@ -343,23 +392,23 @@ const AssetList: React.FC<AssetListProps> = ({
     return (
       <Table.Summary fixed>
         <Table.Summary.Row>
-          <Table.Summary.Cell index={0} colSpan={5} align="right">
+          <Table.Summary.Cell index={0} colSpan={6} align="right">
             <strong>当前页合计：</strong>
           </Table.Summary.Cell>
-          <Table.Summary.Cell index={5} align="right">
+          <Table.Summary.Cell index={6} align="right">
             <strong>{formatArea(summary.landArea)}</strong>
           </Table.Summary.Cell>
-          <Table.Summary.Cell index={6} align="right">
+          <Table.Summary.Cell index={7} align="right">
             <strong>{formatArea(summary.actualArea)}</strong>
           </Table.Summary.Cell>
-          <Table.Summary.Cell index={7} align="right">
+          <Table.Summary.Cell index={8} align="right">
             <strong>{formatArea(summary.rentableArea)}</strong>
           </Table.Summary.Cell>
-          <Table.Summary.Cell index={8} align="right">
+          <Table.Summary.Cell index={9} align="right">
             <strong>{formatArea(summary.rentedArea)}</strong>
           </Table.Summary.Cell>
-          <Table.Summary.Cell index={9} colSpan={5} />
-          <Table.Summary.Cell index={14} align="right">
+          <Table.Summary.Cell index={10} colSpan={5} />
+          <Table.Summary.Cell index={15} align="right">
             <strong style={{
               color: summary.occupancyRate >= 80 ? '#52c41a' :
                      summary.occupancyRate >= 60 ? '#faad14' : '#ff4d4f'
@@ -367,7 +416,7 @@ const AssetList: React.FC<AssetListProps> = ({
               {formatPercentage(summary.occupancyRate)}
             </strong>
           </Table.Summary.Cell>
-          <Table.Summary.Cell index={15} colSpan={3} />
+          <Table.Summary.Cell index={16} colSpan={3} />
         </Table.Summary.Row>
       </Table.Summary>
     )

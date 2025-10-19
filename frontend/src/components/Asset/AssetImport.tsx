@@ -1,507 +1,542 @@
 import React, { useState } from 'react'
 import {
   Card,
+  Typography,
   Upload,
   Button,
   Progress,
+  Space,
   Alert,
   Steps,
   Table,
-  Typography,
-  Space,
-  Divider,
   Tag,
-  Modal,
-  List,
-  Tooltip,
   message,
+  Row,
+  Col,
+  Statistic,
+  Divider,
+  Switch,
+  Form,
+  InputNumber,
+  Select
 } from 'antd'
 import {
-  InboxOutlined,
   UploadOutlined,
   DownloadOutlined,
+  FileExcelOutlined,
   CheckCircleOutlined,
   ExclamationCircleOutlined,
-  CloseCircleOutlined,
-  FileExcelOutlined,
-  EyeOutlined,
-  DeleteOutlined,
+  SettingOutlined,
+  ThunderboltOutlined,
+  ClockCircleOutlined
 } from '@ant-design/icons'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { UploadProps, UploadFile } from 'antd'
+import { api } from '../../services/api'
+import { STANDARD_SHEET_NAME, IMPORT_INSTRUCTIONS } from '../../config/excelConfig'
 
-import { assetService } from '@/services/assetService'
-
-const { Dragger } = Upload
+const { Title, Text } = Typography
 const { Step } = Steps
-const { Title, Text, Paragraph } = Typography
+const { Option } = Select
 
 interface ImportResult {
-  id: string
-  filename: string
-  status: 'processing' | 'completed' | 'failed'
-  total_rows: number
-  success_count: number
-  error_count: number
-  errors: Array<{
-    row: number
-    field: string
-    message: string
-    value: any
-  }>
-  created_at: string
-  completed_at?: string
+  success: number
+  failed: number
+  total: number
+  errors: string[]
+  message: string
+  processing_time?: number
+  filename?: string
+  performance_metrics?: {
+    records_per_second: number
+    estimated_time_for_1000: number
+  }
 }
 
-interface AssetImportProps {
-  onImportComplete?: (result: ImportResult) => void
+interface ImportConfig {
+  useOptimized: boolean
+  batchSize: number
+  skipErrors: boolean
+  timeout: number
 }
 
-const AssetImport: React.FC<AssetImportProps> = ({ onImportComplete }) => {
+const OptimizedAssetImport: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(0)
-  const [uploadedFile, setUploadedFile] = useState<UploadFile | null>(null)
+  const [fileList, setFileList] = useState<UploadFile[]>([])
+  const [uploading, setUploading] = useState(false)
   const [importResult, setImportResult] = useState<ImportResult | null>(null)
-  const [previewVisible, setPreviewVisible] = useState(false)
-  const [previewData, setPreviewData] = useState<any[]>([])
-  const [errorDetailVisible, setErrorDetailVisible] = useState(false)
-  
-  const queryClient = useQueryClient()
-
-  // 获取导入历史
-  const { data: importHistory, refetch: refetchHistory } = useQuery({
-    queryKey: ['import-history'],
-    queryFn: () => assetService.getImportHistory(),
-    refetchInterval: 5000, // 每5秒刷新一次
+  const [progress, setProgress] = useState(0)
+  const [showConfig, setShowConfig] = useState(false)
+  const [config, setConfig] = useState<ImportConfig>({
+    useOptimized: true,
+    batchSize: 100,
+    skipErrors: true,
+    timeout: 600 // 10分钟
   })
-
-  // 文件上传变更
-  const uploadMutation = useMutation({
-    mutationFn: (file: File) => assetService.uploadImportFile(file),
-    onSuccess: (result) => {
-      setImportResult(result)
-      setCurrentStep(1)
-      message.success('文件上传成功，开始处理...')
-      
-      // 开始轮询导入状态
-      pollImportStatus(result.id)
-    },
-    onError: (error: any) => {
-      message.error(error.message || '文件上传失败')
-    },
-  })
-
-  // 轮询导入状态
-  const pollImportStatus = (importId: string) => {
-    const interval = setInterval(async () => {
-      try {
-        const result = await assetService.getImportStatus(importId)
-        setImportResult(result)
-        
-        if (result.status === 'completed' || result.status === 'failed') {
-          clearInterval(interval)
-          setCurrentStep(2)
-          refetchHistory()
-          
-          if (result.status === 'completed') {
-            message.success(`导入完成！成功导入 ${result.success_count} 条记录`)
-            onImportComplete?.(result)
-          } else {
-            message.error('导入失败，请查看错误详情')
-          }
-        }
-      } catch (error) {
-        clearInterval(interval)
-        message.error('获取导入状态失败')
-      }
-    }, 2000)
-  }
-
-  // 文件上传配置
-  const uploadProps: UploadProps = {
-    name: 'file',
-    multiple: false,
-    accept: '.xlsx,.xls',
-    beforeUpload: (file) => {
-      // 检查文件类型
-      const isExcel = file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
-                     file.type === 'application/vnd.ms-excel'
-      
-      if (!isExcel) {
-        message.error('只能上传 Excel 文件！')
-        return false
-      }
-
-      // 检查文件大小（限制为10MB）
-      const isLt10M = file.size / 1024 / 1024 < 10
-      if (!isLt10M) {
-        message.error('文件大小不能超过 10MB！')
-        return false
-      }
-
-      setUploadedFile(file as UploadFile)
-      return false // 阻止自动上传
-    },
-    onRemove: () => {
-      setUploadedFile(null)
-      setCurrentStep(0)
-      setImportResult(null)
-    },
-  }
-
-  // 开始导入
-  const handleStartImport = () => {
-    if (!uploadedFile?.originFileObj) {
-      message.error('请先选择文件')
-      return
-    }
-
-    uploadMutation.mutate(uploadedFile.originFileObj)
-  }
-
-  // 预览数据
-  const handlePreviewData = async () => {
-    if (!uploadedFile?.originFileObj) return
-    
-    try {
-      const data = await assetService.previewImportFile(uploadedFile.originFileObj)
-      setPreviewData(data)
-      setPreviewVisible(true)
-    } catch (error: any) {
-      message.error(error.message || '预览失败')
-    }
-  }
 
   // 下载模板
   const handleDownloadTemplate = async () => {
     try {
-      await assetService.downloadImportTemplate()
+      const response = await api.get('/excel/template', {
+        responseType: 'blob'
+      })
+
+      const blob = new Blob([response.data])
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'land_property_asset_template.xlsx'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+
       message.success('模板下载成功')
+    } catch (error) {
+      message.error('模板下载失败')
+    }
+  }
+
+  // 文件上传配置
+  const uploadProps: UploadProps = {
+    fileList,
+    beforeUpload: (file) => {
+      const isExcel = file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+                     file.type === 'application/vnd.ms-excel'
+
+      if (!isExcel) {
+        message.error('只能上传Excel文件(.xlsx, .xls)')
+        return false
+      }
+
+      const isLt50M = file.size / 1024 / 1024 < 50
+      if (!isLt50M) {
+        message.error('文件大小不能超过50MB')
+        return false
+      }
+
+      setFileList([file])
+      setCurrentStep(1)
+      return false
+    },
+    onRemove: () => {
+      setFileList([])
+      setCurrentStep(0)
+      setImportResult(null)
+    },
+    maxCount: 1,
+  }
+
+  // 模拟进度条
+  const simulateProgress = () => {
+    setProgress(0)
+    const interval = setInterval(() => {
+      setProgress(prev => {
+        if (prev >= 95) {
+          clearInterval(interval)
+          return 95
+        }
+        return prev + Math.random() * 10
+      })
+    }, 500)
+    return interval
+  }
+
+  // 执行导入
+  const handleImport = async () => {
+    if (fileList.length === 0) {
+      message.error('请先选择要导入的文件')
+      return
+    }
+
+    setUploading(true)
+    const progressInterval = simulateProgress()
+
+    try {
+      const formData = new FormData()
+      formData.append('file', fileList[0] as any)
+
+      console.log('=== 优化导入开始 ===')
+      console.log('配置:', config)
+      console.log('文件名:', fileList[0].name)
+      console.log('文件大小:', fileList[0].size)
+
+      const endpoint = config.useOptimized ? '/excel/import/optimized' : '/excel/import'
+
+      const response = await api.post(endpoint, formData, {
+        params: {
+          sheet_name: STANDARD_SHEET_NAME,
+          skip_errors: config.skipErrors
+        },
+        timeout: config.timeout * 1000
+      })
+
+      clearInterval(progressInterval)
+      setProgress(100)
+
+      const result = response.data
+      console.log('=== 导入结果 ===')
+      console.log('响应数据:', result)
+
+      setImportResult(result)
+      setCurrentStep(2)
+
+      // 显示性能信息
+      if (result.processing_time) {
+        message.success(`🎉 导入完成！用时 ${result.processing_time} 秒`)
+      } else {
+        message.success(`🎉 导入完成！成功导入 ${result.success} 条记录`)
+      }
+
     } catch (error: any) {
-      message.error(error.message || '模板下载失败')
+      clearInterval(progressInterval)
+      console.error('导入错误:', error)
+      console.error('错误响应:', error.response?.data)
+
+      const errorResult = error.response?.data || {
+        success: 0,
+        failed: 0,
+        total: 0,
+        errors: [error.message || '网络错误'],
+        processing_time: 0,
+        filename: fileList[0]?.name
+      }
+
+      setImportResult(errorResult)
+      setCurrentStep(2)
+      message.error(`❌ 导入失败: ${errorResult.errors?.[0] || '未知错误'}`)
+    } finally {
+      setUploading(false)
     }
   }
 
   // 重新开始
-  const handleRestart = () => {
+  const handleReset = () => {
     setCurrentStep(0)
-    setUploadedFile(null)
+    setFileList([])
     setImportResult(null)
-    setPreviewData([])
+    setProgress(0)
   }
 
-  // 删除导入记录
-  const handleDeleteImportRecord = async (id: string) => {
-    try {
-      await assetService.deleteImportRecord(id)
-      message.success('删除成功')
-      refetchHistory()
-    } catch (error: any) {
-      message.error(error.message || '删除失败')
-    }
-  }
-
-  // 预览表格列配置
-  const previewColumns = [
-    { title: '行号', dataIndex: 'rowIndex', width: 60 },
-    { title: '物业名称', dataIndex: 'property_name', width: 150 },
-    { title: '权属方', dataIndex: 'ownership_entity', width: 120 },
-    { title: '地址', dataIndex: 'address', width: 200 },
-    { title: '确权状态', dataIndex: 'ownership_status', width: 100 },
-    { title: '物业性质', dataIndex: 'property_nature', width: 100 },
-    { title: '使用状态', dataIndex: 'usage_status', width: 100 },
-  ]
-
-  // 错误详情表格列配置
+  // 错误信息表格列
   const errorColumns = [
-    { title: '行号', dataIndex: 'row', width: 60 },
-    { title: '字段', dataIndex: 'field', width: 100 },
-    { title: '错误信息', dataIndex: 'message', width: 200 },
-    { title: '原始值', dataIndex: 'value', width: 150 },
+    {
+      title: '序号',
+      dataIndex: 'index',
+      key: 'index',
+      width: 80,
+      render: (_: any, __: any, index: number) => index + 1,
+    },
+    {
+      title: '错误信息',
+      dataIndex: 'error',
+      key: 'error',
+      ellipsis: true,
+    },
   ]
+
+  const errorData = importResult?.errors?.map((error, index) => ({
+    key: index,
+    error,
+  })) || []
 
   return (
-    <div>
-      {/* 导入步骤 */}
-      <Card title="Excel 数据导入" style={{ marginBottom: 16 }}>
-        <Steps current={currentStep} style={{ marginBottom: 24 }}>
-          <Step title="选择文件" description="上传 Excel 文件" />
-          <Step title="处理中" description="解析和验证数据" />
-          <Step title="完成" description="查看导入结果" />
+    <div style={{ padding: '24px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <Title level={2}>
+          <FileExcelOutlined />
+          {' '}
+          数据导入
+        </Title>
+        <Button
+          type="dashed"
+          icon={<SettingOutlined />}
+          onClick={() => setShowConfig(!showConfig)}
+        >
+          {showConfig ? '隐藏配置' : '显示配置'}
+        </Button>
+      </div>
+
+      {/* 配置面板 */}
+      {showConfig && (
+        <Card title="导入配置" size="small" style={{ marginBottom: '24px' }}>
+          <Row gutter={[16, 16]}>
+            <Col xs={24} sm={12} md={6}>
+              <Form.Item label="使用优化导入">
+                <Switch
+                  checked={config.useOptimized}
+                  onChange={(checked) => setConfig(prev => ({ ...prev, useOptimized: checked }))}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={6}>
+              <Form.Item label="超时时间(秒)">
+                <InputNumber
+                  min={60}
+                  max={1800}
+                  value={config.timeout}
+                  onChange={(value) => setConfig(prev => ({ ...prev, timeout: value || 600 }))}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={6}>
+              <Form.Item label="跳过错误">
+                <Switch
+                  checked={config.skipErrors}
+                  onChange={(checked) => setConfig(prev => ({ ...prev, skipErrors: checked }))}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={6}>
+              <Form.Item label="批量大小">
+                <Select
+                  value={config.batchSize}
+                  onChange={(value) => setConfig(prev => ({ ...prev, batchSize: value || 100 }))}
+                >
+                  <Option value={50}>50</Option>
+                  <Option value={100}>100</Option>
+                  <Option value={200}>200</Option>
+                  <Option value={500}>500</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+        </Card>
+      )}
+
+      <Card>
+        <Steps current={currentStep} style={{ marginBottom: '32px' }}>
+          <Step title="选择文件" description="上传Excel文件" />
+          <Step title="执行导入" description="处理数据" />
+          <Step title="查看结果" description="导入完成" />
         </Steps>
 
-        {/* 步骤1：文件上传 */}
+        {/* 步骤0: 选择文件 */}
         {currentStep === 0 && (
           <div>
-            <Space direction="vertical" style={{ width: '100%' }}>
-              <Alert
-                message="导入说明"
-                description={
-                  <div>
-                    <p>1. 请使用标准的 Excel 模板文件进行数据导入</p>
-                    <p>2. 支持 .xlsx 和 .xls 格式，文件大小不超过 10MB</p>
-                    <p>3. 必填字段：物业名称、权属方、地址、确权状态、物业性质、使用状态</p>
-                    <p>4. 导入前请确保数据格式正确，避免导入失败</p>
-                  </div>
-                }
-                type="info"
-                showIcon
-                style={{ marginBottom: 16 }}
-              />
-
-              <div style={{ textAlign: 'center', marginBottom: 16 }}>
-                <Button
-                  type="primary"
-                  icon={<DownloadOutlined />}
-                  onClick={handleDownloadTemplate}
-                >
-                  下载导入模板
-                </Button>
-              </div>
-
-              <Dragger {...uploadProps} style={{ marginBottom: 16 }}>
-                <p className="ant-upload-drag-icon">
-                  <InboxOutlined />
-                </p>
-                <p className="ant-upload-text">点击或拖拽文件到此区域上传</p>
-                <p className="ant-upload-hint">
-                  支持 Excel 文件格式（.xlsx, .xls），单个文件不超过 10MB
-                </p>
-              </Dragger>
-
-              {uploadedFile && (
+            <Alert
+              message="导入说明"
+              description={
                 <div>
-                  <Alert
-                    message={`已选择文件: ${uploadedFile.name}`}
-                    type="success"
-                    showIcon
-                    style={{ marginBottom: 16 }}
-                  />
-                  
-                  <Space>
+                  <p>• 支持Excel文件批量导入资产数据</p>
+                  <p>• 智能数据验证和错误处理</p>
+                  <p>• 实时导入进度反馈</p>
+                  <p>• 支持大文件导入 (最大50MB)</p>
+                  {IMPORT_INSTRUCTIONS.map((instruction, index) => (
+                    <p key={index}>{index + 1}. {instruction}</p>
+                  ))}
+                </div>
+              }
+              type="info"
+              showIcon
+              style={{ marginBottom: '24px' }}
+            />
+
+            <Row gutter={[16, 16]}>
+              <Col xs={24} sm={12}>
+                <Card size="small" title="第一步：下载模板">
+                  <Space direction="vertical" style={{ width: '100%' }}>
+                    <Text>下载标准的Excel导入模板</Text>
                     <Button
                       type="primary"
-                      icon={<UploadOutlined />}
-                      onClick={handleStartImport}
-                      loading={uploadMutation.isPending}
+                      icon={<DownloadOutlined />}
+                      onClick={handleDownloadTemplate}
+                      block
                     >
-                      开始导入
-                    </Button>
-                    <Button
-                      icon={<EyeOutlined />}
-                      onClick={handlePreviewData}
-                    >
-                      预览数据
+                      下载Excel模板
                     </Button>
                   </Space>
-                </div>
-              )}
+                </Card>
+              </Col>
+
+              <Col xs={24} sm={12}>
+                <Card size="small" title="第二步：上传文件">
+                  <Space direction="vertical" style={{ width: '100%' }}>
+                    <Text>选择填写好的Excel文件</Text>
+                    <Upload.Dragger {...uploadProps}>
+                      <p className="ant-upload-drag-icon">
+                        <FileExcelOutlined style={{ fontSize: '48px', color: '#1890ff' }} />
+                      </p>
+                      <p className="ant-upload-text">点击或拖拽文件到此区域上传</p>
+                      <p className="ant-upload-hint">
+                        支持单个文件上传，仅支持.xlsx和.xls格式，最大50MB
+                      </p>
+                    </Upload.Dragger>
+                  </Space>
+                </Card>
+              </Col>
+            </Row>
+          </div>
+        )}
+
+        {/* 步骤1: 执行导入 */}
+        {currentStep === 1 && (
+          <div style={{ textAlign: 'center' }}>
+            <FileExcelOutlined style={{ fontSize: '64px', color: '#52c41a', marginBottom: '16px' }} />
+            <Title level={4}>文件已选择</Title>
+            <Text>文件名：{fileList[0]?.name}</Text>
+            <br />
+            <Text type="secondary">
+              文件大小：{((fileList[0]?.size || 0) / 1024 / 1024).toFixed(2)} MB
+            </Text>
+
+            {uploading && (
+              <div style={{ marginTop: '24px' }}>
+                <Progress percent={Math.round(progress)} status="active" />
+                <Text type="secondary">
+                  导入中...
+                </Text>
+              </div>
+            )}
+
+            <Divider />
+
+            <Space size="large">
+              <Button onClick={() => setCurrentStep(0)}>
+                重新选择
+              </Button>
+              <Button
+                type="primary"
+                icon={<UploadOutlined />}
+                onClick={handleImport}
+                loading={uploading}
+                size="large"
+              >
+                {uploading ? '导入中...' : '开始导入'}
+              </Button>
             </Space>
           </div>
         )}
 
-        {/* 步骤2：处理中 */}
-        {currentStep === 1 && importResult && (
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ marginBottom: 24 }}>
-              <FileExcelOutlined style={{ fontSize: 48, color: '#1890ff' }} />
-            </div>
-            <Title level={4}>正在处理文件...</Title>
-            <Paragraph type="secondary">
-              文件名: {importResult.filename}
-            </Paragraph>
-            <Progress
-              type="circle"
-              percent={75}
-              status="active"
-              style={{ marginBottom: 16 }}
-            />
-            <div>
-              <Text type="secondary">请稍候，正在解析和验证数据...</Text>
-            </div>
-          </div>
-        )}
-
-        {/* 步骤3：完成 */}
+        {/* 步骤2: 查看结果 */}
         {currentStep === 2 && importResult && (
           <div>
-            <div style={{ textAlign: 'center', marginBottom: 24 }}>
-              {importResult.status === 'completed' ? (
-                <CheckCircleOutlined style={{ fontSize: 48, color: '#52c41a' }} />
-              ) : (
-                <CloseCircleOutlined style={{ fontSize: 48, color: '#ff4d4f' }} />
-              )}
-            </div>
+            {/* 导入状态概览 */}
+            <Card
+              size="small"
+              style={{
+                marginBottom: '24px',
+                backgroundColor: importResult.success > 0 ? '#f6ffed' :
+                               importResult.failed > 0 ? '#fff2f0' : '#f0f2f5',
+                border: importResult.success > 0 ? '1px solid #b7eb8f' :
+                         importResult.failed > 0 ? '1px solid #ffccc7' : '1px solid #d9d9d9'
+              }}
+            >
+              <div style={{ textAlign: 'center', padding: '16px' }}>
+                {importResult.success > 0 && importResult.failed === 0 ? (
+                  <CheckCircleOutlined style={{ fontSize: '64px', color: '#52c41a' }} />
+                ) : importResult.success > 0 && importResult.failed > 0 ? (
+                  <ExclamationCircleOutlined style={{ fontSize: '64px', color: '#faad14' }} />
+                ) : (
+                  <ExclamationCircleOutlined style={{ fontSize: '64px', color: '#ff4d4f' }} />
+                )}
 
-            <div style={{ marginBottom: 24 }}>
-              <Title level={4} style={{ textAlign: 'center' }}>
-                {importResult.status === 'completed' ? '导入完成' : '导入失败'}
-              </Title>
-              
-              <Space direction="vertical" style={{ width: '100%' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Text>文件名:</Text>
-                  <Text strong>{importResult.filename}</Text>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Text>总行数:</Text>
-                  <Text strong>{importResult.total_rows}</Text>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Text>成功导入:</Text>
-                  <Text strong style={{ color: '#52c41a' }}>
-                    {importResult.success_count}
-                  </Text>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Text>失败记录:</Text>
-                  <Text strong style={{ color: '#ff4d4f' }}>
-                    {importResult.error_count}
-                  </Text>
-                </div>
-              </Space>
-            </div>
+                <Title level={3} style={{ marginTop: '8px' }}>
+                  {importResult.success > 0 && importResult.failed === 0 ? '🎉 导入成功！' :
+                   importResult.success > 0 && importResult.failed > 0 ? '⚠️ 部分成功' :
+                   importResult.failed > 0 ? '❌ 导入失败' : '📄 导入完成'}
+                </Title>
 
-            {importResult.error_count > 0 && (
-              <Alert
-                message="部分数据导入失败"
-                description={
-                  <div>
-                    <p>有 {importResult.error_count} 条记录导入失败，请查看错误详情并修正后重新导入。</p>
-                    <Button
-                      type="link"
-                      onClick={() => setErrorDetailVisible(true)}
-                    >
-                      查看错误详情
-                    </Button>
+                <Text type="secondary" style={{ fontSize: '16px' }}>
+                  {importResult.processing_time && (
+                    <span>处理时间: {importResult.processing_time}秒 | </span>
+                  )}
+                  {importResult.success > 0 && importResult.failed === 0 ? (
+                    `成功导入 ${importResult.success} 条资产记录`
+                  ) : importResult.success > 0 && importResult.failed > 0 ? (
+                    `成功 ${importResult.success} 条，失败 ${importResult.failed} 条，总计 ${importResult.total} 条`
+                  ) : importResult.failed > 0 ? (
+                    `${importResult.failed} 条记录导入失败`
+                  ) : (
+                    '没有数据被导入，请检查文件格式和内容'
+                  )}
+                </Text>
+
+                {/* 性能指标 */}
+                {importResult.performance_metrics && (
+                  <div style={{ marginTop: '16px' }}>
+                    <Text type="secondary">
+                      性能指标: {importResult.performance_metrics.records_per_second} 记录/秒
+                      {importResult.performance_metrics.estimated_time_for_1000 > 0 && (
+                        <span> | 预估1000条记录需 {importResult.performance_metrics.estimated_time_for_1000} 秒</span>
+                      )}
+                    </Text>
                   </div>
+                )}
+              </div>
+            </Card>
+
+            {/* 详细统计 */}
+            <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+              <Col xs={24} sm={8}>
+                <Card size="small" bordered={false}>
+                  <Statistic
+                    title="成功记录"
+                    value={importResult.success}
+                    valueStyle={{ color: '#3f8600' }}
+                  />
+                </Card>
+              </Col>
+              <Col xs={24} sm={8}>
+                <Card size="small" bordered={false}>
+                  <Statistic
+                    title="失败记录"
+                    value={importResult.failed}
+                    valueStyle={{ color: importResult.failed > 0 ? '#cf1322' : '#d9d9d9' }}
+                  />
+                </Card>
+              </Col>
+              <Col xs={24} sm={8}>
+                <Card size="small" bordered={false}>
+                  <Statistic
+                    title="总计"
+                    value={importResult.total}
+                    valueStyle={{ color: '#1890ff' }}
+                  />
+                </Card>
+              </Col>
+            </Row>
+
+            {/* 错误详情 */}
+            {importResult.failed > 0 && importResult.errors.length > 0 && (
+              <Card
+                title={`错误详情 (${importResult.errors.length} 条)`}
+                size="small"
+                style={{ marginBottom: '16px' }}
+                extra={
+                  <Button type="link" onClick={() => {
+                    const errorText = importResult.errors.join('\\n')
+                    navigator.clipboard.writeText(errorText)
+                    message.success('错误信息已复制到剪贴板')
+                  }}>
+                    复制错误信息
+                  </Button>
                 }
-                type="warning"
-                showIcon
-                style={{ marginBottom: 16 }}
-              />
+              >
+                <Table
+                  columns={errorColumns}
+                  dataSource={errorData}
+                  pagination={{ pageSize: 10 }}
+                  size="small"
+                  scroll={{ y: 300 }}
+                />
+              </Card>
             )}
 
-            <div style={{ textAlign: 'center' }}>
-              <Space>
-                <Button type="primary" onClick={handleRestart}>
+            <div style={{ textAlign: 'center', marginTop: '24px' }}>
+              <Space size="large">
+                <Button onClick={handleReset}>
                   重新导入
                 </Button>
-                <Button onClick={() => queryClient.invalidateQueries({ queryKey: ['assets'] })}>
-                  刷新资产列表
+                <Button type="primary" onClick={() => window.location.href = '/assets'}>
+                  查看资产列表
                 </Button>
               </Space>
             </div>
           </div>
         )}
       </Card>
-
-      {/* 导入历史 */}
-      <Card title="导入历史" size="small">
-        <List
-          dataSource={importHistory}
-          renderItem={(item: ImportResult) => (
-            <List.Item
-              actions={[
-                <Tooltip title="查看详情">
-                  <Button
-                    type="text"
-                    icon={<EyeOutlined />}
-                    onClick={() => {
-                      setImportResult(item)
-                      setErrorDetailVisible(true)
-                    }}
-                  />
-                </Tooltip>,
-                <Tooltip title="删除记录">
-                  <Button
-                    type="text"
-                    danger
-                    icon={<DeleteOutlined />}
-                    onClick={() => {
-                      Modal.confirm({
-                        title: '确认删除',
-                        content: '确定要删除这条导入记录吗？',
-                        onOk: () => handleDeleteImportRecord(item.id),
-                      })
-                    }}
-                  />
-                </Tooltip>,
-              ]}
-            >
-              <List.Item.Meta
-                title={
-                  <Space>
-                    <Text strong>{item.filename}</Text>
-                    <Tag color={
-                      item.status === 'completed' ? 'green' :
-                      item.status === 'failed' ? 'red' : 'blue'
-                    }>
-                      {item.status === 'completed' ? '完成' :
-                       item.status === 'failed' ? '失败' : '处理中'}
-                    </Tag>
-                  </Space>
-                }
-                description={
-                  <div>
-                    <div>
-                      导入时间: {new Date(item.created_at).toLocaleString()}
-                    </div>
-                    <div>
-                      成功: {item.success_count} / 失败: {item.error_count} / 总计: {item.total_rows}
-                    </div>
-                  </div>
-                }
-              />
-            </List.Item>
-          )}
-        />
-      </Card>
-
-      {/* 数据预览模态框 */}
-      <Modal
-        title="数据预览"
-        open={previewVisible}
-        onCancel={() => setPreviewVisible(false)}
-        footer={[
-          <Button key="close" onClick={() => setPreviewVisible(false)}>
-            关闭
-          </Button>,
-        ]}
-        width={1000}
-      >
-        <Table
-          dataSource={previewData}
-          columns={previewColumns}
-          scroll={{ x: 800, y: 400 }}
-          pagination={{ pageSize: 10 }}
-          size="small"
-        />
-      </Modal>
-
-      {/* 错误详情模态框 */}
-      <Modal
-        title="错误详情"
-        open={errorDetailVisible}
-        onCancel={() => setErrorDetailVisible(false)}
-        footer={[
-          <Button key="close" onClick={() => setErrorDetailVisible(false)}>
-            关闭
-          </Button>,
-        ]}
-        width={800}
-      >
-        {importResult?.errors && (
-          <Table
-            dataSource={importResult.errors}
-            columns={errorColumns}
-            scroll={{ y: 400 }}
-            pagination={{ pageSize: 10 }}
-            size="small"
-          />
-        )}
-      </Modal>
     </div>
   )
 }
 
-export default AssetImport
+export default OptimizedAssetImport

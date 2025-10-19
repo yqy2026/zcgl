@@ -144,7 +144,7 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
       </div>
 
       {visible && (
-        <div style={{ spaceY: '4px' }}>
+        <div style={{ marginBottom: '4px' }}>
           {Object.entries(metrics).map(([key, value]) => {
             const type = key as keyof PerformanceMetrics
             const { grade, color } = getPerformanceGrade(value, type)

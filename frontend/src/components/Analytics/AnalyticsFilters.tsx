@@ -12,8 +12,7 @@ import {
   Input,
   Tooltip,
   message,
-  Empty,
-  Checkbox
+  Empty
 } from 'antd'
 import {
   FilterOutlined,
@@ -36,7 +35,6 @@ const { Text } = Typography
 const { RangePicker } = DatePicker
 const { Option } = Select
 const { Search } = Input
-const { Group: CheckboxGroup } = Checkbox
 
 interface AnalyticsFiltersProps {
   filters: AssetSearchParams
@@ -117,13 +115,11 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
   const {
     searchHistory,
     addSearchHistory,
-    removeSearchHistory,
-    clearSearchHistory,
-    updateSearchHistoryName
+    removeSearchHistory
   } = useSearchHistory()
 
   // 获取筛选选项数据
-  const { data: filterOptions, isLoading: optionsLoading } = useQuery({
+  useQuery({
     queryKey: ['analytics-filter-options'],
     queryFn: async () => {
       try {
@@ -192,7 +188,7 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
     debouncedFilterChange(newFilters)
   }
 
-  const handleDateRangeChange = (dates: any, dateStrings: [string, string]) => {
+  const handleDateRangeChange = (_dates: any, dateStrings: [string, string]) => {
     const newFilters = {
       ...localFilters,
       start_date: dateStrings[0] || undefined,
@@ -209,26 +205,7 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
     debouncedFilterChange(newFilters)
   }
 
-  const handleAreaRangeChange = (values: [number, number] | null) => {
-    const newFilters = {
-      ...localFilters,
-      min_area: values?.[0] || undefined,
-      max_area: values?.[1] || undefined
-    }
-    setLocalFilters(newFilters)
-    debouncedFilterChange(newFilters)
-  }
-
-  const handleValueRangeChange = (values: [number, number] | null) => {
-    const newFilters = {
-      ...localFilters,
-      min_rent: values?.[0] || undefined,
-      max_rent: values?.[1] || undefined
-    }
-    setLocalFilters(newFilters)
-    debouncedFilterChange(newFilters)
-  }
-
+  
   // const handleOccupancyRangeChange = (values: [number, number] | null) => {
   //   const newFilters = {
   //     ...localFilters,

@@ -1,8 +1,8 @@
 import React from 'react'
-import OptimizedAssetImport from '../../components/Asset/OptimizedAssetImport'
+import AssetImport from '../../components/Asset/AssetImport'
 
 const AssetImportPage: React.FC = () => {
-  return <OptimizedAssetImport />
+  return <AssetImport />
 }
 
 export default AssetImportPage

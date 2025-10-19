@@ -1,0 +1,156 @@
+/* PDF导入页面动画样式 */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes progressPulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* 页面主容器 */
+.pdf-import-page {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+/* 统计卡片动画 */
+.pdf-import-page .ant-statistic {
+  transition: all 0.3s ease;
+}
+
+.pdf-import-page .ant-statistic:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* 按钮悬停效果 */
+.pdf-import-page .ant-btn {
+  transition: all 0.2s ease;
+}
+
+.pdf-import-page .ant-btn:hover {
+  transform: translateY(-1px);
+}
+
+/* 标签页切换动画 */
+.pdf-import-page .ant-tabs-tabpane {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* 状态标签动画 */
+.pdf-import-page .ant-tag {
+  transition: all 0.2s ease;
+}
+
+.pdf-import-page .ant-tag:hover {
+  transform: scale(1.05);
+}
+
+/* 卡片进入动画 */
+.pdf-import-page .ant-card {
+  animation: slideInLeft 0.4s ease-in-out;
+}
+
+/* 上传区域悬停效果 */
+.pdf-import-page .ant-upload-drag {
+  transition: all 0.3s ease;
+}
+
+.pdf-import-page .ant-upload-drag:hover {
+  border-color: #1890ff;
+  background-color: #f0f8ff;
+}
+
+/* 进度条动画增强 */
+.pdf-import-page .ant-progress-bg {
+  animation: progressPulse 2s ease-in-out infinite;
+}
+
+/* 状态图标动画 */
+.pdf-import-page .status-icon {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* 加载状态优化 */
+.pdf-import-page .ant-spin-text {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .pdf-import-page {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+
+  .pdf-import-page .ant-card {
+    animation: slideInLeft 0.3s ease-in-out;
+  }
+}
+
+/* 深色模式适配 */
+@media (prefers-color-scheme: dark) {
+  .pdf-import-page .ant-upload-drag:hover {
+    background-color: #1f1f1f;
+  }
+}
+
+/* 无障碍优化 */
+@media (prefers-reduced-motion: reduce) {
+  .pdf-import-page,
+  .pdf-import-page .ant-card,
+  .pdf-import-page .ant-statistic,
+  .pdf-import-page .ant-btn,
+  .pdf-import-page .ant-tabs-tabpane {
+    animation: none;
+    transition: none;
+  }
+}

@@ -7,7 +7,6 @@ import {
   FullscreenOutlined,
   FullscreenExitOutlined
 } from '@ant-design/icons'
-import type { AnalyticsData, ExportOptions } from '../../types/analytics'
 import { useAnalytics } from '../../hooks/useAnalytics'
 import type { AssetSearchParams } from '../../types/asset'
 
@@ -17,8 +16,7 @@ import { ChartCard } from './AnalyticsCard'
 import {
   AnalyticsPieChart,
   AnalyticsBarChart,
-  AnalyticsLineChart,
-  AnalyticsMultiBarChart
+  AnalyticsLineChart
 } from './Charts'
 import AdvancedAnalyticsCard from './AdvancedAnalyticsCard'
 import { PerformanceMonitor } from './PerformanceMonitor'
@@ -42,14 +40,9 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   const { data: analyticsResponse, isLoading, error, refetch } = useAnalytics(filters)
   const analytics = analyticsResponse?.data
 
-  const hasData = analytics?.area_summary.total_assets > 0
+  const hasData = analytics?.area_summary?.total_assets && analytics.area_summary.total_assets > 0
 
-  // 导出选项
-  const exportOptions: ExportOptions = {
-    format: 'excel',
-    includeCharts: true,
-    includeRawData: false
-  }
+  // 导出选项 - removed unused variable
 
   const handleExport = (format: 'excel' | 'pdf' | 'csv') => {
     // 实现导出逻辑
@@ -270,7 +263,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
           </Row>
 
           {/* 高级分析指标 */}
-          {analytics.performance_metrics && (
+          {analytics?.performance_metrics && (
             <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
               <Col xs={24}>
                 <AdvancedAnalyticsCard
@@ -304,12 +297,12 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             <Col xs={24} lg={12}>
               <ChartCard
                 title="物业性质分布"
-                hasData={analytics.property_nature_distribution.length > 0}
+                hasData={analytics?.property_nature_distribution?.length > 0}
                 loading={isLoading}
               >
                 <AnalyticsPieChart
-                  data={analytics.property_nature_distribution}
-                  dataKey="count"
+                  data={analytics?.property_nature_distribution?.map(item => ({ name: item.name, value: item.count, percentage: item.percentage })) || []}
+                  dataKey="value"
                   labelKey="name"
                 />
               </ChartCard>
@@ -319,11 +312,11 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             <Col xs={24} lg={12}>
               <ChartCard
                 title="确权状态分布"
-                hasData={analytics.ownership_status_distribution.length > 0}
+                hasData={analytics?.ownership_status_distribution?.length > 0}
                 loading={isLoading}
               >
                 <AnalyticsBarChart
-                  data={analytics.ownership_status_distribution}
+                  data={analytics?.ownership_status_distribution || []}
                   xDataKey="status"
                   yDataKey="count"
                   barName="资产数量"
@@ -335,15 +328,15 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             <Col xs={24} lg={12}>
               <ChartCard
                 title="使用状态分布"
-                hasData={analytics.usage_status_distribution.length > 0}
+                hasData={analytics?.usage_status_distribution?.length > 0}
                 loading={isLoading}
               >
                 <AnalyticsPieChart
-                  data={analytics.usage_status_distribution.map(item => ({
+                  data={analytics?.usage_status_distribution?.map(item => ({
                     name: item.status,
                     value: item.count,
                     percentage: item.percentage
-                  }))}
+                  })) || []}
                   dataKey="value"
                   labelKey="name"
                 />
@@ -354,11 +347,11 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             <Col xs={24} lg={12}>
               <ChartCard
                 title="出租率区间分布"
-                hasData={analytics.occupancy_distribution.length > 0}
+                hasData={analytics?.occupancy_distribution?.length > 0}
                 loading={isLoading}
               >
                 <AnalyticsBarChart
-                  data={analytics.occupancy_distribution}
+                  data={analytics?.occupancy_distribution || []}
                   xDataKey="range"
                   yDataKey="count"
                   barName="资产数量"
@@ -371,11 +364,11 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             <Col xs={24} lg={12}>
               <ChartCard
                 title="业态类别出租率"
-                hasData={analytics.business_category_distribution.length > 0}
+                hasData={analytics?.business_category_distribution?.length > 0}
                 loading={isLoading}
               >
                 <AnalyticsBarChart
-                  data={analytics.business_category_distribution}
+                  data={analytics?.business_category_distribution || []}
                   xDataKey="category"
                   yDataKey="occupancy_rate"
                   barName="出租率"
@@ -388,11 +381,11 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             <Col xs={24} lg={12}>
               <ChartCard
                 title="出租率趋势"
-                hasData={analytics.occupancy_trend.length > 0}
+                hasData={analytics?.occupancy_trend?.length > 0}
                 loading={isLoading}
               >
                 <AnalyticsLineChart
-                  data={analytics.occupancy_trend}
+                  data={analytics?.occupancy_trend || []}
                   xDataKey="date"
                   yDataKey="occupancy_rate"
                   lineName="出租率"

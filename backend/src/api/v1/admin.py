@@ -8,6 +8,7 @@ from datetime import datetime
 
 from ...database import get_db, drop_tables, create_tables
 from ...models.asset import Asset, AssetHistory, AssetDocument
+from ...middleware.auth import require_admin, audit_action
 
 # 创建管理员路由器
 router = APIRouter()
@@ -16,7 +17,8 @@ router = APIRouter()
 @router.post("/clear-database", summary="清空数据库")
 async def clear_database(
     confirm: bool = False,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(require_admin)
 ):
     """
     清空数据库中的所有数据
@@ -65,7 +67,8 @@ async def clear_database(
 @router.post("/reset-database", summary="重置数据库")
 async def reset_database(
     confirm: bool = False,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(require_admin)
 ):
     """
     重置数据库（删除表结构并重新创建）
@@ -102,7 +105,10 @@ async def reset_database(
 
 
 @router.get("/database-info", summary="获取数据库信息")
-async def get_database_info(db: Session = Depends(get_db)):
+async def get_database_info(
+    db: Session = Depends(get_db),
+    current_user = Depends(require_admin)
+):
     """
     获取数据库统计信息
     """

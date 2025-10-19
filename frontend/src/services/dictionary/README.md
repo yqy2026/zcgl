@@ -2,7 +2,7 @@
 
 ## 概述
 
-统一字典服务提供了简洁、高效的字典数据获取和管理功能，整合了原有的多套字典服务，消除了功能重叠和数据冗余。
+统一字典服务提供了简洁、高效的字典数据获取和管理功能，整合了原有的多套字典服务，消除了功能重叠和数据冗余。作为土地物业资产管理系统的重要组成部分，该服务为前端应用提供了完整的字典数据支持。
 
 ## 架构设计
 
@@ -177,6 +177,14 @@ console.log('活跃类型数:', stats.activeTypes)
 console.log('总数值数:', stats.totalValues)
 ```
 
+## 与RBAC权限系统的集成
+
+字典服务与系统的RBAC权限管理模块紧密集成，确保只有具有相应权限的用户才能管理字典数据：
+
+- 字典类型管理需要 `dict_type:manage` 权限
+- 字典值管理需要 `dict_value:manage` 权限
+- 字典数据查看需要 `dict:read` 权限
+
 ## 配置字典
 
 ### 添加新字典类型
@@ -186,6 +194,33 @@ console.log('总数值数:', stats.totalValues)
 ```typescript
 export const DICTIONARY_CONFIGS: Record<string, DictionaryConfig> = {
   // 现有字典...
+  
+  // 资产管理相关字典
+  property_nature: {
+    code: 'property_nature',
+    name: '物业性质',
+    category: '资产管理',
+    description: '物业的性质分类',
+    apiEndpoint: '/api/v1/dictionaries/property_nature/options',
+    fallbackOptions: [
+      { label: '商业', value: 'commercial', sort_order: 1 },
+      { label: '办公', value: 'office', sort_order: 2 },
+      { label: '住宅', value: 'residential', sort_order: 3 }
+    ]
+  },
+
+  usage_status: {
+    code: 'usage_status',
+    name: '使用状态',
+    category: '资产管理',
+    description: '资产的使用状态',
+    apiEndpoint: '/api/v1/dictionaries/usage_status/options',
+    fallbackOptions: [
+      { label: '自用', value: 'self_use', sort_order: 1 },
+      { label: '出租', value: 'rented', sort_order: 2 },
+      { label: '空置', value: 'vacant', sort_order: 3 }
+    ]
+  },
 
   new_dictionary_type: {
     code: 'new_dictionary_type',
@@ -238,6 +273,16 @@ const result = await dictionaryService.getOptions(dictType, {
   useFallback: true
 })
 ```
+
+## 系统集成
+
+字典服务与土地物业资产管理系统深度集成：
+
+- 为58个资产字段提供字典数据支持
+- 支持资产表单中的下拉选择和数据验证
+- 与统计分析模块集成，提供维度分类
+- 与权限管理模块集成，控制访问权限
+- 支持组织架构相关的字典数据
 
 ## 最佳实践
 

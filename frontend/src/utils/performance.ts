@@ -35,7 +35,7 @@ export const defaultPerformanceConfig: PerformanceConfig = {
 export function createLazyComponent<T extends ComponentType<any>>(
   importFn: () => Promise<{ default: T }>,
   chunkName?: string
-): T {
+) {
   return lazy(() => {
     // 添加性能标记
     if (chunkName && performance.mark) {
@@ -174,9 +174,9 @@ class PerformanceMonitor {
 
     // First Input Delay
     this.observeMetric('first-input', (entry) => {
-      const fid = entry.processingStart - entry.startTime
+      const fid = (entry as any).processingStart - entry.startTime
       this.metrics.set('fid', fid)
-      
+
       if (fid > this.config.thresholds.fid) {
         console.warn(`FID is slow: ${fid}ms (threshold: ${this.config.thresholds.fid}ms)`)
       }
@@ -184,11 +184,11 @@ class PerformanceMonitor {
 
     // Cumulative Layout Shift
     this.observeMetric('layout-shift', (entry) => {
-      if (!entry.hadRecentInput) {
+      if (!(entry as any).hadRecentInput) {
         const currentCLS = this.metrics.get('cls') || 0
-        const newCLS = currentCLS + entry.value
+        const newCLS = currentCLS + (entry as any).value
         this.metrics.set('cls', newCLS)
-        
+
         if (newCLS > this.config.thresholds.cls) {
           console.warn(`CLS is high: ${newCLS} (threshold: ${this.config.thresholds.cls})`)
         }
@@ -198,13 +198,13 @@ class PerformanceMonitor {
 
   private observeResourceTiming() {
     this.observeMetric('resource', (entry) => {
-      const duration = entry.responseEnd - entry.startTime
-      
+      const duration = (entry as any).responseEnd - entry.startTime
+
       // 记录慢资源
       if (duration > 1000) { // 超过1秒
         console.warn(`Slow resource: ${entry.name} took ${duration}ms`)
       }
-      
+
       // 按资源类型分类
       const resourceType = this.getResourceType(entry.name)
       const typeMetrics = this.metrics.get(`resource-${resourceType}`) || 0

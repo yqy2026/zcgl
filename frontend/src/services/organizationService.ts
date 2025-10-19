@@ -29,7 +29,7 @@ class OrganizationService {
     limit?: number;
   }): Promise<Organization[]> {
     const response = await apiClient.get(this.baseUrl, { params });
-    return response.data;
+    return response;
   }
 
   /**
@@ -38,7 +38,7 @@ class OrganizationService {
   async getOrganizationTree(parentId?: string): Promise<OrganizationTree[]> {
     const params = parentId ? { parent_id: parentId } : {};
     const response = await apiClient.get(`${this.baseUrl}/tree`, { params });
-    return response.data;
+    return response;
   }
 
   /**
@@ -69,7 +69,7 @@ class OrganizationService {
    */
   async getStatistics(): Promise<OrganizationStatistics> {
     const response = await apiClient.get(`${this.baseUrl}/statistics`);
-    return response.data;
+    return response;
   }
 
   /**

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF上传测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .upload-area.dragover {
+            border-color: #1890ff;
+            background-color: #f0f8ff;
+        }
+        .progress {
+            width: 100%;
+            height: 20px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-bar {
+            height: 100%;
+            background-color: #1890ff;
+            transition: width 0.3s ease;
+        }
+        .result {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #f6ffed;
+            border: 1px solid #b7eb8f;
+            color: #52c41a;
+        }
+        .error {
+            background-color: #fff2f0;
+            border: 1px solid #ffccc7;
+            color: #ff4d4f;
+        }
+        .info {
+            background-color: #e6f7ff;
+            border: 1px solid #91d5ff;
+            color: #1890ff;
+        }
+    </style>
+</head>
+<body>
+    <h1>PDF上传功能测试</h1>
+
+    <div class="upload-area" id="uploadArea">
+        <p>点击或拖拽PDF文件到此区域</p>
+        <input type="file" id="fileInput" accept=".pdf" style="display: none;">
+    </div>
+
+    <div class="progress" id="progress" style="display: none;">
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <div id="result"></div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const progress = document.getElementById('progress');
+        const progressBar = document.getElementById('progressBar');
+        const result = document.getElementById('result');
+
+        // 点击上传区域触发文件选择
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // 拖拽功能
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        // 文件选择处理
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function showResult(message, type = 'info') {
+            result.innerHTML = `<div class="result ${type}">${message}</div>`;
+        }
+
+        function updateProgress(percent) {
+            progress.style.display = 'block';
+            progressBar.style.width = percent + '%';
+        }
+
+        async function handleFile(file) {
+            // 验证文件
+            if (!file.name.toLowerCase().endsWith('.pdf')) {
+                showResult('只支持PDF文件格式', 'error');
+                return;
+            }
+
+            if (file.size > 50 * 1024 * 1024) {
+                showResult('文件大小不能超过50MB', 'error');
+                return;
+            }
+
+            showResult(`开始上传文件: ${file.name}`, 'info');
+            updateProgress(0);
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('prefer_markitdown', 'true');
+
+            try {
+                const xhr = new XMLHttpRequest();
+
+                // 监听上传进度
+                xhr.upload.addEventListener('progress', (e) => {
+                    if (e.lengthComputable) {
+                        const percent = Math.round((e.loaded / e.total) * 100);
+                        updateProgress(percent);
+                    }
+                });
+
+                // 处理完成
+                xhr.addEventListener('load', () => {
+                    if (xhr.status === 200) {
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            if (response.success) {
+                                showResult(
+                                    `上传成功！<br>
+                                    会话ID: ${response.session_id}<br>
+                                    预计处理时间: ${response.estimated_time}`,
+                                    'success'
+                                );
+                            } else {
+                                showResult(`上传失败: ${response.error || response.message}`, 'error');
+                            }
+                        } catch (e) {
+                            showResult('响应解析失败', 'error');
+                        }
+                    } else {
+                        showResult(`上传失败: ${xhr.statusText}`, 'error');
+                    }
+                });
+
+                // 处理错误
+                xhr.addEventListener('error', () => {
+                    showResult('网络错误，请检查连接', 'error');
+                });
+
+                // 发送请求
+                xhr.open('POST', 'http://127.0.0.1:8002/api/v1/pdf_import/upload');
+                xhr.send(formData);
+
+            } catch (error) {
+                showResult(`上传失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 测试系统信息
+        async function testSystemInfo() {
+            try {
+                const response = await fetch('http://127.0.0.1:8002/api/v1/pdf_import/system/info');
+                const data = await response.json();
+                if (data.success) {
+                    showResult(
+                        `系统状态正常<br>
+                        MarkItDown: ${data.capabilities.markitdown_available ? '可用' : '不可用'}<br>
+                        PDFPlumber: ${data.capabilities.pdfplumber_available ? '可用' : '不可用'}<br>
+                        NLP增强: ${data.capabilities.spacy_available ? '可用' : '不可用'}`,
+                        'success'
+                    );
+                } else {
+                    showResult('系统信息获取失败', 'error');
+                }
+            } catch (error) {
+                showResult('无法连接到后端服务', 'error');
+            }
+        }
+
+        // 页面加载时测试系统信息
+        window.addEventListener('load', testSystemInfo);
+    </script>
+</body>
+</html>

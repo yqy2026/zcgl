@@ -67,7 +67,7 @@ test_frontend_performance() {
 test_backend_performance() {
     log_info "开始后端性能测试..."
     
-    local base_url=${1:-"http://localhost:8001"}
+    local base_url=${1:-"http://localhost:8002"}
     local output_dir="performance-reports/backend"
     
     mkdir -p $output_dir

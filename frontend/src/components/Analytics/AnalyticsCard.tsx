@@ -45,10 +45,13 @@ export const ChartCard: React.FC<ChartCardProps> = ({
   height = 300,
   ...props
 }) => {
+  // Convert ReactNode to ReactElement for ResponsiveContainer
+  const childElement = React.isValidElement(children) ? children : <div>{children}</div>
+
   return (
     <AnalyticsCard title={title} {...props}>
       <ResponsiveContainer width="100%" height={height}>
-        {children}
+        {childElement}
       </ResponsiveContainer>
     </AnalyticsCard>
   )

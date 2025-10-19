@@ -70,7 +70,7 @@ export default defineConfig(({ command, mode }) => {
         changeOrigin: true,
         secure: false,
         ws: true,
-        timeout: 30000,
+        timeout: 120000, // 增加到120秒，匹配前端axios超时时间
         rewrite: (path) => path,
         configure: (proxy, _options) => {
           proxy.on('error', (err, _req, _res) => {
@@ -78,6 +78,8 @@ export default defineConfig(({ command, mode }) => {
           });
           proxy.on('proxyReq', (proxyReq, req, _res) => {
             console.log('Sending Request to the Target:', req.method, req.url);
+            // 设置keep-alive头部以改善连接管理
+            proxyReq.setHeader('Connection', 'keep-alive');
           });
           proxy.on('proxyRes', (proxyRes, req, _res) => {
             console.log('Received Response from the Target:', proxyRes.statusCode, req.url);

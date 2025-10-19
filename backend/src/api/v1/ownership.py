@@ -53,8 +53,6 @@ async def create_ownership(
 ):
     """创建新权属方"""
     try:
-        # Debug: Log received data
-        print(f"Received ownership data: {ownership_in.model_dump()}")
         db_ownership = ownership.create(db, obj_in=ownership_in)
         return OwnershipResponse.model_validate(db_ownership)
     except ValueError as e:

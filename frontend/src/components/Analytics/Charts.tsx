@@ -75,7 +75,7 @@ export const AnalyticsPieChart: React.FC<PieChartProps> = ({
             fill="#8884d8"
             dataKey={dataKey}
           >
-            {chartData.map((entry, index) => (
+            {chartData.map((_entry, index) => (
               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
             ))}
           </Pie>
@@ -312,7 +312,7 @@ export const AnalyticsMultiBarChart: React.FC<MultiBarChartProps> = ({
           <YAxis />
           <Tooltip />
           {showLegend && <Legend />}
-          {bars.map((bar, index) => (
+          {bars.map((bar) => (
             <Bar
               key={bar.dataKey}
               dataKey={bar.dataKey}
@@ -343,10 +343,7 @@ interface AreaChartProps {
 export const AnalyticsAreaChart: React.FC<AreaChartProps> = ({
   data,
   xDataKey,
-  yDataKey,
   areaName = '数值',
-  fill = '#8884d8',
-  stroke = '#8884d8',
   height = 300,
   showLegend = true,
   loading = false,

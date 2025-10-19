@@ -1,0 +1,84 @@
+# 日志配置文件
+version: 1
+disable_existing_loggers: false
+
+formatters:
+  default:
+    format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    datefmt: '%Y-%m-%d %H:%M:%S'
+
+  detailed:
+    format: '%(asctime)s - %(name)s - %(levelname)s - %(module)s - %(funcName)s - %(message)s'
+    datefmt: '%Y-%m-%d %H:%M:%S'
+
+  json:
+    format: '{"timestamp": "%(asctime)s", "level": "%(levelname)s", "logger": "%(name)s", "message": "%(message)s"}'
+    datefmt: '%Y-%m-%dT%H:%M:%S'
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: INFO
+    formatter: default
+    stream: ext://sys.stdout
+
+  file_default:
+    class: logging.handlers.RotatingFileHandler
+    level: INFO
+    formatter: detailed
+    filename: logs/application/app.log
+    maxBytes: 10485760  # 10MB
+    backupCount: 5
+
+  file_error:
+    class: logging.handlers.RotatingFileHandler
+    level: ERROR
+    formatter: detailed
+    filename: logs/application/error.log
+    maxBytes: 10485760  # 10MB
+    backupCount: 5
+
+  file_debug:
+    class: logging.handlers.RotatingFileHandler
+    level: DEBUG
+    formatter: detailed
+    filename: logs/application/debug.log
+    maxBytes: 10485760  # 10MB
+    backupCount: 3
+
+loggers:
+  root:
+    level: INFO
+    handlers: [console, file_default]
+
+  uvicorn:
+    level: INFO
+    handlers: [console, file_default]
+    propagate: false
+
+  sqlalchemy:
+    level: WARNING
+    handlers: [file_default]
+    propagate: false
+
+  app:
+    level: DEBUG
+    handlers: [console, file_default, file_debug]
+    propagate: false
+
+# 环境特定配置
+environments:
+  development:
+    root:
+      level: DEBUG
+      handlers: [console, file_default, file_debug]
+
+  production:
+    root:
+      level: INFO
+      handlers: [file_default, file_error]
+
+  staging:
+    root:
+      level: INFO
+      handlers: [console, file_default]

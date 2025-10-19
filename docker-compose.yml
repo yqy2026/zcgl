@@ -1,0 +1,98 @@
+version: '3.8'
+
+services:
+  # 前端服务
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../deployment/docker/Dockerfile.frontend
+      target: production
+    container_name: zcgl-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    environment:
+      - VITE_API_BASE_URL=http://backend:8000
+    depends_on:
+      - backend
+    networks:
+      - zcgl-network
+
+  # 后端服务
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ../deployment/docker/Dockerfile.backend
+    container_name: zcgl-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://zcgl_user:zcgl_password@postgres:5432/zcgl_db
+      - REDIS_URL=redis://redis:6379/0
+      - CORS_ORIGINS=http://localhost:3000,http://frontend:80
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./database/data:/app/database/data
+      - ./logs:/app/logs
+      - ./config:/app/config
+    networks:
+      - zcgl-network
+
+  # 数据库服务
+  postgres:
+    image: postgres:15-alpine
+    container_name: zcgl-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=zcgl_db
+      - POSTGRES_USER=zcgl_user
+      - POSTGRES_PASSWORD=zcgl_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    networks:
+      - zcgl-network
+
+  # Redis缓存
+  redis:
+    image: redis:7-alpine
+    container_name: zcgl-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - zcgl-network
+
+  # Nginx反向代理
+  nginx:
+    image: nginx:alpine
+    container_name: zcgl-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deployment/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./deployment/nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - zcgl-network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  zcgl-network:
+    driver: bridge

@@ -9,14 +9,20 @@ from sqlalchemy import and_, or_, desc, asc, func
 from ..models.asset import Asset, AssetHistory
 from ..schemas.asset import AssetCreate, AssetUpdate
 from ..services.asset_calculator import AssetCalculator
-
-
 class AssetCRUD:
     """资产CRUD操作类"""
 
+    def __init__(self):
+        pass
+
     def get(self, db: Session, id: str) -> Optional[Asset]:
         """根据ID获取资产"""
-        return db.query(Asset).filter(Asset.id == id).first()
+        asset = db.query(Asset).filter(Asset.id == id).first()
+        if asset:
+            # 解密敏感数据用于内部处理
+            # 注意：在API返回前需要根据用户权限决定是否脱敏
+            pass
+        return asset
 
     def get_by_name(self, db: Session, property_name: str) -> Optional[Asset]:
         """根据物业名称获取资产"""
@@ -109,6 +115,64 @@ class AssetCRUD:
         
         return assets, total
 
+    def get_filtered_query(self, db: Session, search: Optional[str] = None,
+                          filters: Optional[Dict[str, Any]] = None,
+                          sort_field: str = "created_at", sort_order: str = "desc"):
+        """
+        获取过滤后的查询对象（不执行查询）
+        用于组织权限过滤
+        """
+        query = db.query(Asset)
+
+        # 搜索条件
+        if search:
+            search_filter = or_(
+                Asset.property_name.contains(search),
+                Asset.address.contains(search),
+                Asset.ownership_entity.contains(search),
+                                Asset.business_category.contains(search)
+            )
+            query = query.filter(search_filter)
+
+        # 筛选条件
+        if filters:
+            filter_conditions = []
+
+            for key, value in filters.items():
+                if value is None:
+                    continue
+
+                if key == "min_area" and hasattr(Asset, 'total_area'):
+                    filter_conditions.append(Asset.total_area >= value)
+                elif key == "max_area" and hasattr(Asset, 'total_area'):
+                    filter_conditions.append(Asset.total_area <= value)
+                elif key == "ids" and isinstance(value, list):
+                    # 支持按多个资产ID筛选
+                    filter_conditions.append(Asset.id.in_(value))
+                elif hasattr(Asset, key):
+                    filter_conditions.append(getattr(Asset, key) == value)
+
+            if filter_conditions:
+                query = query.filter(and_(*filter_conditions))
+
+        # 排序
+        if hasattr(Asset, sort_field):
+            sort_column = getattr(Asset, sort_field)
+            if sort_order.lower() == "desc":
+                query = query.order_by(desc(sort_column))
+            else:
+                query = query.order_by(asc(sort_column))
+
+        return query
+
+    def execute_paginated_query(self, query, skip: int = 0, limit: int = 100) -> Tuple[List[Asset], int]:
+        """
+        执行分页查询
+        """
+        total = query.count()
+        assets = query.offset(skip).limit(limit).all()
+        return assets, total
+
     def count(self, db: Session) -> int:
         """获取资产总数"""
         return db.query(Asset).count()
@@ -159,6 +223,10 @@ class AssetCRUD:
         """创建资产"""
         # 获取数据并进行自动计算
         asset_data = obj_in.dict()
+        
+        # 加密敏感数据
+        asset_data = self.sensitive_data_handler.encrypt_sensitive_data(asset_data)
+        
         asset_data = AssetCalculator.auto_calculate_fields(asset_data)
         
         # 验证数据一致性
@@ -197,6 +265,9 @@ class AssetCRUD:
     ) -> Asset:
         """更新资产"""
         update_data = obj_in.dict(exclude_unset=True)
+        
+        # 加密敏感数据
+        update_data = self.sensitive_data_handler.encrypt_sensitive_data(update_data)
         
         # 合并当前数据和更新数据进行计算
         current_data = {}

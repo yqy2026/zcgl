@@ -17,6 +17,10 @@ engine = create_engine(
     echo=True,  # 开发环境显示SQL语句
 )
 
+# 增强数据库安全
+from .database_security import enhance_database_security
+enhance_database_security(engine)
+
 # 创建会话工厂
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -43,7 +47,9 @@ def create_tables():
     from .models.asset import Asset, AssetHistory, AssetDocument, SystemDictionary, AssetCustomField
     from .models.organization import Organization, OrganizationHistory
     from .models.enum_field import EnumFieldType, EnumFieldValue, EnumFieldUsage, EnumFieldHistory
-    
+    from .models.auth import User, UserSession, AuditLog
+    from .models.rbac import Role, Permission, UserRoleAssignment, ResourcePermission, PermissionAuditLog
+
     Base.metadata.create_all(bind=engine)
 
 

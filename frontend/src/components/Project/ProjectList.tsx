@@ -95,15 +95,40 @@ const ProjectList: React.FC<ProjectListProps> = ({
         params.ownership_id = ownershipFilter;
       }
 
-      const response: ProjectListResponse = await projectService.getProjects(params);
-      setProjects(response.items);
-      setPagination(prev => ({
-        ...prev,
-        total: response.total
-      }));
+      const response = await projectService.getProjects(params);
+      console.log('Project API response:', response);
+
+      // 处理不同的响应格式
+      if (response && response.data) {
+        // 如果响应格式是 {data: {items: []}}
+        setProjects(response.data.items);
+        setPagination(prev => ({
+          ...prev,
+          total: response.data.total || response.data.total_count || 0
+        }));
+      } else if (response && response.items) {
+        // 如果响应格式是 {items: []}
+        setProjects(response.items);
+        setPagination(prev => ({
+          ...prev,
+          total: response.total || response.total_count || 0
+        }));
+      } else {
+        console.error('Unexpected response format:', response);
+        setProjects([]);
+        setPagination(prev => ({
+          ...prev,
+          total: 0
+        }));
+      }
     } catch (error) {
       console.error('获取项目列表失败:', error);
-      message.error('获取项目列表失败');
+      console.error('Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data
+      });
+      message.error(`获取项目列表失败: ${error.message || '未知错误'}`);
     } finally {
       setLoading(false);
     }
@@ -113,10 +138,24 @@ const ProjectList: React.FC<ProjectListProps> = ({
   const fetchStatistics = async () => {
     setStatsLoading(true);
     try {
-      const response: ProjectStatisticsResponse = await projectService.getProjectStatistics();
-      setStatistics(response);
+      const response = await projectService.getProjectStatistics();
+      console.log('Statistics API response:', response);
+
+      // 处理不同的响应格式
+      if (response && response.data) {
+        setStatistics(response.data);
+      } else if (response) {
+        setStatistics(response);
+      } else {
+        console.error('Unexpected statistics response format:', response);
+      }
     } catch (error) {
       console.error('获取统计信息失败:', error);
+      console.error('Statistics error details:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data
+      });
     } finally {
       setStatsLoading(false);
     }
@@ -136,9 +175,14 @@ const ProjectList: React.FC<ProjectListProps> = ({
   };
 
   useEffect(() => {
-    fetchProjects();
-    fetchStatistics();
-    fetchOwnerships();
+    const loadData = async () => {
+      await Promise.all([
+        fetchProjects(),
+        fetchStatistics(),
+        fetchOwnerships()
+      ]);
+    };
+    loadData();
   }, [pagination.current, pagination.pageSize, searchKeyword, isActiveFilter, ownershipFilter]);
 
   // 删除项目

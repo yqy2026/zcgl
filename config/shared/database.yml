@@ -1,0 +1,32 @@
+# 数据库配置文件
+development:
+  url: "sqlite:///./database/data/land_property.db"
+  echo: false
+  pool_pre_ping: true
+  pool_recycle: 3600
+
+staging:
+  url: "sqlite:///./database/data/land_property_staging.db"
+  echo: false
+  pool_pre_ping: true
+  pool_recycle: 3600
+
+production:
+  # 生产环境建议使用MySQL或PostgreSQL
+  url: "${DATABASE_URL}"
+  echo: false
+  pool_pre_ping: true
+  pool_recycle: 3600
+  pool_size: 20
+  max_overflow: 30
+
+# 迁移配置
+alembic:
+  script_location: "alembic"
+  file_template: "%%(year)d_%%(month).2d_%%(day).2d_%%(hour).2d%%(minute).2d_%%(rev)s_%%(slug)s"
+
+# 种子数据配置
+seeds:
+  path: "database/seeds"
+  auto_load: false
+  environments: ["development"]

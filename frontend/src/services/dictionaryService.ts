@@ -130,11 +130,9 @@ class DictionaryService {
   private getFallbackDictionaryData(dictType: string): DictionaryOption[] {
     const fallbackData: Record<string, DictionaryOption[]> = {
       ownership_category: [
-        { label: '国有资产', value: 'state_owned', code: 'state_owned' },
-        { label: '集体资产', value: 'collective', code: 'collective' },
-        { label: '私有资产', value: 'private', code: 'private' },
-        { label: '混合所有制', value: 'mixed', code: 'mixed' },
-        { label: '其他', value: 'other', code: 'other' }
+        { label: '国资管理集团合并口径', value: '1', code: 'state_group_merged' },
+        { label: '民政托管企业', value: '2', code: 'civil_administration_trustee' },
+        { label: '其他', value: '3', code: 'other' }
       ],
       property_nature: [
         { label: '经营性', value: 'commercial', code: 'commercial' },
@@ -338,11 +336,9 @@ class DictionaryService {
       },
       ownership_category: {
         options: [
-          { label: '国有资产', value: 'state_owned', code: 'state_owned' },
-          { label: '集体资产', value: 'collective', code: 'collective' },
-          { label: '私有资产', value: 'private', code: 'private' },
-          { label: '混合所有制', value: 'mixed', code: 'mixed' },
-          { label: '其他', value: 'other', code: 'other' }
+          { label: '国资管理集团合并口径', value: '1', code: 'state_group_merged' },
+          { label: '民政托管企业', value: '2', code: 'civil_administration_trustee' },
+          { label: '其他', value: '3', code: 'other' }
         ],
         description: '权属类别分类'
       }

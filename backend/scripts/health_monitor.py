@@ -27,7 +27,7 @@ class HealthMonitor:
     def load_config(self, config_file):
         """加载监控配置"""
         default_config = {
-            "api_url": "http://localhost:8001",
+            "api_url": "http://localhost:8002",
             "db_path": "../land_property.db",
             "check_interval": 300,  # 5分钟
             "alert_email": {

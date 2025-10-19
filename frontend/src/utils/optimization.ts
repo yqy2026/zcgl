@@ -227,7 +227,9 @@ export const useCache = <T>(key: string, factory: () => T, deps: any[] = []) => 
     // 限制缓存大小
     if (cache.current.size > 100) {
       const firstKey = cache.current.keys().next().value
-      cache.current.delete(firstKey)
+      if (firstKey) {
+        cache.current.delete(firstKey)
+      }
     }
     
     return value
@@ -348,9 +350,9 @@ export const withPerformanceMonitoring = <P extends object>(
   componentName: string
 ) => {
   return React.memo((props: P) => {
-    const renderCount = useRenderPerformance(componentName)
+    useRenderPerformance(componentName)
     useMemoryLeakDetection(componentName)
-    
+
     return React.createElement(Component, props)
   })
 }

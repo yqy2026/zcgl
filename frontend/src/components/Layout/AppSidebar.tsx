@@ -97,6 +97,11 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed }) => {
           label: '新建合同',
         },
         {
+          key: '/rental/contracts/pdf-import',
+          icon: <FileTextOutlined />,
+          label: 'PDF智能导入',
+        },
+        {
           key: '/rental/ledger',
           icon: <AccountBookOutlined />,
           label: '租金台账',

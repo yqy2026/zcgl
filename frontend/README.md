@@ -6,13 +6,44 @@
 
 - **框架**: React 18 + TypeScript
 - **构建工具**: Vite
-- **UI组件库**: Ant Design 5.x
+- **UI组件库**: Ant Design 5
 - **路由**: React Router v6
 - **状态管理**: Zustand
 - **数据获取**: TanStack Query (React Query)
 - **HTTP客户端**: Axios
 - **图表**: Recharts
 - **日期处理**: Day.js
+
+## 核心功能模块
+
+### 1. 资产管理
+- 资产增删改查操作
+- 58个字段的详细资产信息展示
+- 批量操作支持
+- 资产历史记录追踪
+- 资产出租率自动计算
+- 资产财务数据汇总
+
+### 2. 统计分析
+- 整体出租率统计
+- 按分类的出租率分析
+- 面积汇总统计
+- 财务数据汇总
+- 多维度数据可视化
+
+### 3. 智能PDF导入
+- PDF文件上传
+- 合同信息预览
+- 数据确认导入
+
+### 4. 权限管理
+- 用户登录/登出
+- 角色权限控制
+- 组织架构展示
+
+### 5. 数据导入导出
+- Excel导入导出
+- 模板下载
 
 ## 项目结构
 
@@ -21,9 +52,21 @@ frontend/
 ├── public/                 # 静态资源
 ├── src/
 │   ├── components/         # 可复用组件
-│   │   └── Layout/         # 布局组件
+│   │   ├── Asset/          # 资产相关组件
+│   │   ├── Layout/         # 布局组件
+│   │   ├── Statistics/     # 统计相关组件
+│   │   └── ...
 │   ├── pages/              # 页面组件
+│   │   ├── Asset/          # 资产页面
+│   │   ├── Dashboard/      # 仪表板页面
+│   │   ├── Login/          # 登录页面
+│   │   ├── Statistics/     # 统计页面
+│   │   └── ...
 │   ├── services/           # API服务层
+│   │   ├── api.ts          # API客户端
+│   │   ├── assetService.ts # 资产服务
+│   │   ├── dictionary/     # 字典服务
+│   │   └── ...
 │   ├── store/              # Zustand状态管理
 │   ├── types/              # TypeScript类型定义
 │   ├── utils/              # 工具函数
@@ -47,6 +90,7 @@ frontend/
 - ✅ **数据导入导出** - Excel文件处理
 - ✅ **统计仪表板** - 数据可视化展示
 - ✅ **变更历史** - 资产变更记录追踪
+- ✅ **权限控制** - 基于角色的访问控制
 
 ### 技术特性
 - ✅ **响应式设计** - 适配各种屏幕尺寸
@@ -59,8 +103,8 @@ frontend/
 ## 开发环境设置
 
 ### 前置要求
-- Node.js >= 16.0.0
-- npm >= 8.0.0 或 yarn >= 1.22.0
+- Node.js >= 18.0.0
+- npm >= 8.0.0
 
 ### 安装依赖
 ```bash
@@ -73,7 +117,7 @@ npm install
 npm run dev
 ```
 
-应用将在 http://localhost:3000 启动
+应用将在 http://localhost:5173 启动
 
 ### 构建生产版本
 ```bash
@@ -92,7 +136,7 @@ npm run preview
 
 ```env
 # API基础URL
-VITE_API_BASE_URL=http://localhost:8001/api/v1
+VITE_API_BASE_URL=http://localhost:8002/api/v1
 
 # 应用标题
 VITE_APP_TITLE=土地物业资产管理系统
@@ -104,44 +148,48 @@ VITE_APP_TITLE=土地物业资产管理系统
 ```typescript
 // vite.config.ts
 server: {
-  port: 3000,
+  port: 5173,
   proxy: {
     '/api': {
-      target: 'http://localhost:8001',
+      target: 'http://localhost:8002',
       changeOrigin: true,
     },
   },
 }
 ```
 
-## 主要组件说明
+## 主要页面说明
 
-### 1. 布局组件 (AppLayout)
-- 侧边栏导航
-- 顶部导航栏
-- 响应式布局
-- 用户信息显示
+### 1. 登录页面 (LoginPage)
+- 用户身份验证
+- JWT Token获取
 
-### 2. 资产列表页面 (AssetListPage)
+### 2. 仪表板页面 (DashboardPage)
+- 关键指标展示
+- 统计图表
+- 快速操作入口
+
+### 3. 资产列表页面 (AssetListPage)
 - 数据表格展示
 - 搜索和筛选功能
 - 分页处理
 - 批量操作
 
-### 3. 资产详情页面 (AssetDetailPage)
+### 4. 资产详情页面 (AssetDetailPage)
 - 详细信息展示
 - 变更历史记录
 - 编辑操作入口
 
-### 4. 仪表板页面 (DashboardPage)
-- 关键指标展示
-- 统计图表
-- 快速操作入口
+### 5. 统计分析页面 (StatisticsPage)
+- 整体出租率统计
+- 分类出租率分析
+- 面积汇总统计
+- 财务数据汇总
 
-### 5. 导入导出页面 (ImportExportPage)
-- Excel文件上传
-- 模板下载
-- 数据导出功能
+### 6. PDF导入页面 (PdfImportPage)
+- PDF文件上传
+- 合同信息预览
+- 数据确认导入
 
 ## 状态管理
 
@@ -173,6 +221,10 @@ server: {
 - 历史记录查询
 - 数据导入导出
 
+### Dictionary Service (dictionary/)
+- 统一字典服务
+- 字典数据获取和管理
+
 ## 自定义Hooks
 
 ### useAssets
@@ -185,6 +237,7 @@ server: {
 - useAssetHistory - 变更历史
 - useAssetStats - 统计数据
 - useValidateAsset - 数据验证
+- useDictionary - 字典数据获取
 
 ## 样式和主题
 
@@ -286,18 +339,18 @@ CMD ["nginx", "-g", "daemon off;"]
 - 使用 React Developer Tools
 - 查看 Console 面板的错误信息
 
-## 贡献指南
+## 开发约定
 
-1. Fork 项目
-2. 创建功能分支
-3. 提交更改
-4. 推送到分支
-5. 创建 Pull Request
+### 前端开发
+- 使用React 18和TypeScript
+- Ant Design 5组件库
+- Vite构建工具
+- 遵循组件化开发模式
+- 使用ESLint和Prettier进行代码检查和格式化
+- 实现单元测试和端到端测试
 
-## 许可证
+## 系统访问
 
-MIT License
-
-## 联系方式
-
-如有问题或建议，请联系开发团队。
+- 前端应用：http://localhost:5173
+- API文档：http://localhost:8002/docs
+- 健康检查：http://localhost:8002/health

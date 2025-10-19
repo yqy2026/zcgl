@@ -12,6 +12,7 @@ from ...database import get_db
 from ...crud.asset import asset_crud
 from ...services.asset_calculator import OccupancyRateCalculator
 from ...schemas.asset import DataStatus
+from ...utils.cache_manager import cache_statistics, get_cache_manager
 
 # 配置日志
 logger = logging.getLogger(__name__)
@@ -150,6 +151,7 @@ async def get_basic_statistics(
 # - /api/v1/statistics/financial-summary - 财务汇总
 
 
+@cache_statistics(expire=1800)  # 30分钟缓存
 @router.get("/summary", summary="获取统计摘要")
 async def get_statistics_summary(
     db: Session = Depends(get_db)
@@ -160,7 +162,7 @@ async def get_statistics_summary(
     try:
         # 总资产数
         total_assets = asset_crud.count(db=db)
-        
+
         # 按确权状态统计
         confirmed_count = asset_crud.count_with_search(
             db=db, filters={"ownership_status": "已确权"}
@@ -171,7 +173,7 @@ async def get_statistics_summary(
         partial_count = asset_crud.count_with_search(
             db=db, filters={"ownership_status": "部分确权"}
         )
-        
+
         # 按物业性质统计
         commercial_count = asset_crud.count_with_search(
             db=db, filters={"property_nature": "经营性"}
@@ -179,7 +181,7 @@ async def get_statistics_summary(
         non_commercial_count = asset_crud.count_with_search(
             db=db, filters={"property_nature": "非经营性"}
         )
-        
+
         # 按使用状态统计
         rented_count = asset_crud.count_with_search(
             db=db, filters={"usage_status": "出租"}
@@ -190,7 +192,7 @@ async def get_statistics_summary(
         vacant_count = asset_crud.count_with_search(
             db=db, filters={"usage_status": "空置"}
         )
-        
+
         return {
             "total_assets": total_assets,
             "ownership_status": {
@@ -208,12 +210,13 @@ async def get_statistics_summary(
                 "vacant": vacant_count
             }
         }
-        
+
     except Exception as e:
         logger.error(f"获取统计摘要异常: {str(e)}")
         raise HTTPException(status_code=500, detail=f"获取统计摘要失败: {str(e)}")
 
 
+@cache_statistics(expire=1800)  # 30分钟缓存
 @router.get("/occupancy-rate/overall", response_model=Dict[str, Any])
 def get_overall_occupancy_rate(
     include_deleted: bool = False,
@@ -221,11 +224,11 @@ def get_overall_occupancy_rate(
 ):
     """
     获取整体出租率统计
-    
+
     Args:
         include_deleted: 是否包含已删除的资产
         db: 数据库会话
-        
+
     Returns:
         整体出租率统计信息
     """
@@ -234,22 +237,22 @@ def get_overall_occupancy_rate(
         filters = {}
         if not include_deleted:
             filters['data_status'] = DataStatus.NORMAL.value
-            
+
         assets, _ = asset_crud.get_multi_with_search(
             db=db,
             skip=0,
             limit=10000,  # 获取所有资产
             filters=filters
         )
-        
+
         # 计算整体出租率
         stats = OccupancyRateCalculator.calculate_overall_occupancy_rate(assets)
-        
+
         return {
             "success": True,
             "data": stats
         }
-        
+
     except Exception as e:
         logger.error(f"获取出租率统计失败: {str(e)}")
         raise HTTPException(status_code=500, detail=f"获取出租率统计失败: {str(e)}")
@@ -316,6 +319,7 @@ def get_occupancy_rate_by_category(
         raise HTTPException(status_code=500, detail=f"获取分类出租率统计失败: {str(e)}")
 
 
+@cache_statistics(expire=1800)  # 30分钟缓存
 @router.get("/area-summary", response_model=Dict[str, Any])
 def get_area_summary(
     include_deleted: bool = False,
@@ -323,11 +327,11 @@ def get_area_summary(
 ):
     """
     获取面积汇总统计
-    
+
     Args:
         include_deleted: 是否包含已删除的资产
         db: 数据库会话
-        
+
     Returns:
         面积汇总统计信息
     """
@@ -336,14 +340,14 @@ def get_area_summary(
         filters = {}
         if not include_deleted:
             filters['data_status'] = DataStatus.NORMAL.value
-            
+
         assets, _ = asset_crud.get_multi_with_search(
             db=db,
             skip=0,
             limit=10000,  # 获取所有资产
             filters=filters
         )
-        
+
         # 计算面积汇总
         summary = {
             'total_assets': len(assets),
@@ -385,17 +389,18 @@ def get_area_summary(
             summary['overall_occupancy_rate'] = round(overall_occupancy_rate, 2)
         else:
             summary['overall_occupancy_rate'] = 0.0
-        
+
         return {
             "success": True,
             "data": summary
         }
-        
+
     except Exception as e:
         logger.error(f"获取面积汇总统计失败: {str(e)}")
         raise HTTPException(status_code=500, detail=f"获取面积汇总统计失败: {str(e)}")
 
 
+@cache_statistics(expire=1800)  # 30分钟缓存
 @router.get("/financial-summary", response_model=Dict[str, Any])
 def get_financial_summary(
     include_deleted: bool = False,
@@ -403,11 +408,11 @@ def get_financial_summary(
 ):
     """
     获取财务汇总统计
-    
+
     Args:
         include_deleted: 是否包含已删除的资产
         db: 数据库会话
-        
+
     Returns:
         财务汇总统计信息
     """
@@ -416,14 +421,14 @@ def get_financial_summary(
         filters = {}
         if not include_deleted:
             filters['data_status'] = DataStatus.NORMAL.value
-            
+
         assets, _ = asset_crud.get_multi_with_search(
             db=db,
             skip=0,
             limit=10000,  # 获取所有资产
             filters=filters
         )
-        
+
         # 计算财务汇总
         summary = {
             'total_assets': len(assets),
@@ -460,12 +465,60 @@ def get_financial_summary(
                 summary[key] = round(summary[key], 2)
             else:
                 summary[key] = 0.0
-        
+
         return {
             "success": True,
             "data": summary
         }
-        
+
     except Exception as e:
         logger.error(f"获取财务汇总统计失败: {str(e)}")
         raise HTTPException(status_code=500, detail=f"获取财务汇总统计失败: {str(e)}")
+
+
+@router.post("/cache/clear", summary="清除统计数据缓存")
+async def clear_statistics_cache():
+    """
+    清除统计数据缓存
+    """
+    try:
+        cache_mgr = await get_cache_manager()
+        cleared_count = await cache_mgr.clear_pattern("statistics:*")
+
+        logger.info(f"用户请求清除统计数据缓存，清除了 {cleared_count} 个缓存条目")
+
+        return {
+            "success": True,
+            "message": f"统计数据缓存已清除，共清除 {cleared_count} 个缓存条目",
+            "data": {
+                "cleared_count": cleared_count
+            }
+        }
+    except Exception as e:
+        logger.error(f"清除统计数据缓存失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"清除缓存失败: {str(e)}")
+
+
+@router.get("/cache/info", summary="获取缓存信息")
+async def get_cache_info():
+    """
+    获取缓存信息
+    """
+    try:
+        cache_mgr = await get_cache_manager()
+
+        # 简单的缓存状态检查
+        cache_status = {
+            "cache_type": "Redis" if cache_mgr.redis_client else "In-Memory",
+            "cache_enabled": cache_mgr.redis_client is not None,
+            "description": "统计数据使用Redis缓存，TTL为30分钟"
+        }
+
+        return {
+            "success": True,
+            "message": "获取缓存信息成功",
+            "data": cache_status
+        }
+    except Exception as e:
+        logger.error(f"获取缓存信息失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"获取缓存信息失败: {str(e)}")

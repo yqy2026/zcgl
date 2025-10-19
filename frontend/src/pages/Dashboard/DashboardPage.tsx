@@ -7,26 +7,33 @@ const { Title } = Typography
 
 interface AreaSummary {
   total_assets: number
-  total_area: number
-  total_usable_area: number
+  total_land_area: number
   total_rentable_area: number
   total_rented_area: number
   total_unrented_area: number
+  total_non_commercial_area: number
+  assets_with_area_data: number
+  overall_occupancy_rate: number
 }
 
 const DashboardPage: React.FC = () => {
-  const { data: areaSummary, isLoading, error } = useQuery({
+  const { data: areaSummary, isLoading, error, refetch } = useQuery({
     queryKey: ['statistics', 'area-summary'],
     queryFn: async () => {
       try {
+        console.log('🔄 Starting API request for area summary...')
         const response = await apiClient.get('/statistics/area-summary')
-        console.log('API Response:', response)
-        return response.data
+        console.log('✅ API Response received:', response)
+        return response
       } catch (err) {
-        console.error('API Error:', err)
+        console.error('❌ API Error:', err)
         throw err
       }
     },
+    retry: 2,
+    retryDelay: 1000,
+    staleTime: 0, // 总是重新获取数据
+    cacheTime: 0, // 不缓存数据
   })
 
   if (isLoading) {
@@ -46,14 +53,24 @@ const DashboardPage: React.FC = () => {
           description={`错误详情: ${error instanceof Error ? error.message : '未知错误'}`}
           type="error"
           showIcon
+          action={
+            <button onClick={() => window.location.reload()}>
+              重试
+            </button>
+          }
         />
       </div>
     )
   }
 
-  const occupancyRate = areaSummary?.total_rentable_area 
-    ? (areaSummary.total_rented_area / areaSummary.total_rentable_area * 100).toFixed(2)
-    : '0.00'
+  const occupancyRate = areaSummary?.data?.overall_occupancy_rate?.toFixed(2) || '0.00'
+
+  // 添加调试日志
+  console.log('Dashboard Data:', {
+    areaSummary,
+    totalAssets: areaSummary?.data?.total_assets,
+    occupancyRate
+  })
 
   return (
     <div style={{ padding: '24px' }}>
@@ -64,7 +81,7 @@ const DashboardPage: React.FC = () => {
           <Card>
             <Statistic
               title="资产总数"
-              value={areaSummary?.total_assets || 0}
+              value={areaSummary?.data?.total_assets || 0}
               suffix="个"
             />
           </Card>
@@ -72,8 +89,8 @@ const DashboardPage: React.FC = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="总面积"
-              value={areaSummary?.total_area || 0}
+              title="土地面积"
+              value={areaSummary?.data?.total_land_area || 0}
               precision={2}
               suffix="㎡"
             />
@@ -83,7 +100,7 @@ const DashboardPage: React.FC = () => {
           <Card>
             <Statistic
               title="可租面积"
-              value={areaSummary?.total_rentable_area || 0}
+              value={areaSummary?.data?.total_rentable_area || 0}
               precision={2}
               suffix="㎡"
             />
@@ -108,7 +125,7 @@ const DashboardPage: React.FC = () => {
               <Col span={12}>
                 <Statistic
                   title="已租面积"
-                  value={areaSummary?.total_rented_area || 0}
+                  value={areaSummary?.data?.total_rented_area || 0}
                   precision={2}
                   suffix="㎡"
                 />
@@ -116,7 +133,7 @@ const DashboardPage: React.FC = () => {
               <Col span={12}>
                 <Statistic
                   title="空置面积"
-                  value={areaSummary?.total_unrented_area || 0}
+                  value={areaSummary?.data?.total_unrented_area || 0}
                   precision={2}
                   suffix="㎡"
                 />
@@ -125,22 +142,21 @@ const DashboardPage: React.FC = () => {
           </Card>
         </Col>
         <Col xs={24} lg={12}>
-          <Card title="使用情况">
+          <Card title="面积详情">
             <Row gutter={16}>
               <Col span={12}>
                 <Statistic
-                  title="可用面积"
-                  value={areaSummary?.total_usable_area || 0}
+                  title="非商业面积"
+                  value={areaSummary?.data?.total_non_commercial_area || 0}
                   precision={2}
                   suffix="㎡"
                 />
               </Col>
               <Col span={12}>
                 <Statistic
-                  title="可租面积"
-                  value={areaSummary?.total_rentable_area || 0}
-                  precision={2}
-                  suffix="㎡"
+                  title="有数据资产数"
+                  value={areaSummary?.data?.assets_with_area_data || 0}
+                  suffix="个"
                 />
               </Col>
             </Row>

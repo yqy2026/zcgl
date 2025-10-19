@@ -42,7 +42,6 @@ import { rentContractService } from '../../services/rentContractService';
 import { assetService } from '../../services/assetService';
 import { ownershipService } from '../../services/ownershipService';
 import { useFormat } from '../../utils/format';
-import RentContractExcelImport from '../../components/Rental/RentContractExcelImport';
 
 const { Title } = Typography;
 const { Search } = Input;
@@ -461,8 +460,8 @@ const ContractListPage: React.FC = () => {
         </Row>
       </Card>
 
-      {/* Excel导入导出 */}
-      <RentContractExcelImport onImportSuccess={handleImportSuccess} />
+      {/* Excel导入导出功能暂时移除 */}
+      {/* <RentContractExcelImport onImportSuccess={handleImportSuccess} /> */}
 
       {/* 合同列表 */}
       <Card>

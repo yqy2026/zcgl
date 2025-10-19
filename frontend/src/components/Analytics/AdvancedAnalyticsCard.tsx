@@ -19,15 +19,7 @@ const AdvancedAnalyticsCard: React.FC<AdvancedAnalyticsCardProps> = ({
   comparisonData,
   loading = false
 }) => {
-  const formatPercentage = (value: number) => {
-    return `${value > 0 ? '+' : ''}${value.toFixed(1)}%`
-  }
-
-  const getChangeColor = (value: number) => {
-    if (value > 0) return '#3f8600'
-    if (value < 0) return '#cf1322'
-    return '#666666'
-  }
+  // Helper functions removed (unused)
 
   const getPerformanceStatus = (value: number, thresholds: { good: number; average: number }) => {
     if (value >= thresholds.good) return { color: 'success', text: '优秀' }

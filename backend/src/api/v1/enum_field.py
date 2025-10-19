@@ -21,6 +21,13 @@ from sqlalchemy import and_
 router = APIRouter(prefix="/enum-fields", tags=["枚举字段管理"])
 
 
+# Debug endpoint for testing
+@router.get("/debug")
+async def debug_endpoint():
+    """Debug endpoint to test basic API functionality"""
+    return {"message": "Debug endpoint working", "timestamp": "2025-10-17T22:07:00Z"}
+
+
 # 枚举字段类型管理
 @router.get("/types", response_model=List[EnumFieldTypeResponse])
 async def get_enum_field_types(
@@ -33,14 +40,35 @@ async def get_enum_field_types(
     db: Session = Depends(get_db)
 ):
     """获取枚举字段类型列表"""
+    # 显式处理Query参数，确保传递实际值而不是Query对象
+    # 这解决了FastAPI Query(None)对象没有正确转换为None值的问题
+
+    # 确保Query对象被正确转换为实际值
+    # 处理可能的Query对象问题
+    actual_skip = int(skip) if skip is not None else 0
+    actual_limit = int(limit) if limit is not None else 100
+
+    # 对于Optional参数，确保None值被正确传递
+    actual_category = str(category) if category is not None and category != "" else None
+    actual_status = str(status) if status is not None and status != "" else None
+    actual_keyword = str(keyword) if keyword is not None and keyword != "" else None
+
+    # 对于布尔值，需要特殊处理
+    actual_is_system = None
+    if is_system is not None:
+        try:
+            actual_is_system = bool(is_system)
+        except (ValueError, TypeError):
+            actual_is_system = None
+
     crud = get_enum_field_type_crud(db)
     enum_types = crud.get_multi(
-        skip=skip, 
-        limit=limit, 
-        category=category, 
-        status=status, 
-        is_system=is_system,
-        keyword=keyword
+        skip=actual_skip,
+        limit=actual_limit,
+        category=actual_category,
+        status=actual_status,
+        is_system=actual_is_system,
+        keyword=actual_keyword
     )
     return enum_types
 

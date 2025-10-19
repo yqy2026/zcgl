@@ -174,7 +174,7 @@ check_services() {
     fi
     
     # 检查后端API
-    if curl -f http://localhost:8001/health > /dev/null 2>&1; then
+    if curl -f http://localhost:8002/health > /dev/null 2>&1; then
         log_success "后端API服务正常"
     else
         log_error "后端API服务异常"
@@ -211,7 +211,7 @@ optimize_performance() {
     
     # 预热缓存
     log_info "预热应用缓存..."
-    curl -s http://localhost:8001/api/assets?limit=1 > /dev/null || true
+    curl -s http://localhost:8002/api/assets?limit=1 > /dev/null || true
     
     # 生成sitemap（如果需要）
     # curl -s http://localhost/api/sitemap > /dev/null || true
@@ -278,8 +278,8 @@ main() {
     echo ""
     log_info "访问信息:"
     log_info "前端地址: http://localhost"
-    log_info "后端API: http://localhost:8001"
-    log_info "API文档: http://localhost:8001/docs"
+    log_info "后端API: http://localhost:8002"
+    log_info "API文档: http://localhost:8002/docs"
     
     if [ "$ENVIRONMENT" != "production" ]; then
         log_info "监控面板: http://localhost:3001 (admin/admin123)"

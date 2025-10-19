@@ -16,7 +16,7 @@ import type {
 } from '@/types/project';
 
 export class ProjectService {
-  private baseUrl = '/projects';
+  private baseUrl = '/projects/';
 
   /**
    * 获取项目列表
@@ -30,16 +30,16 @@ export class ProjectService {
    * 搜索项目
    */
   async searchProjects(searchParams: ProjectSearchRequest): Promise<ProjectListResponse> {
-    const response = await apiClient.post(`${this.baseUrl}/search`, searchParams);
-    return response;
+    const response = await apiClient.post(`${this.baseUrl}search`, searchParams);
+    return response.data;
   }
 
   /**
    * 获取项目详情
    */
   async getProject(id: string): Promise<Project> {
-    const response = await apiClient.get(`${this.baseUrl}/${id}`);
-    return response;
+    const response = await apiClient.get(`${this.baseUrl}${id}`);
+    return response.data;
   }
 
   /**
@@ -47,38 +47,38 @@ export class ProjectService {
    */
   async createProject(data: ProjectCreate): Promise<Project> {
     const response = await apiClient.post(this.baseUrl, data);
-    return response;
+    return response.data;
   }
 
   /**
    * 更新项目
    */
   async updateProject(id: string, data: ProjectUpdate): Promise<Project> {
-    const response = await apiClient.put(`${this.baseUrl}/${id}`, data);
-    return response;
+    const response = await apiClient.put(`${this.baseUrl}${id}`, data);
+    return response.data;
   }
 
   /**
    * 删除项目
    */
   async deleteProject(id: string): Promise<ProjectDeleteResponse> {
-    const response = await apiClient.delete(`${this.baseUrl}/${id}`);
-    return response;
+    const response = await apiClient.delete(`${this.baseUrl}${id}`);
+    return response.data;
   }
 
   /**
    * 切换项目状态
    */
   async toggleProjectStatus(id: string): Promise<Project> {
-    const response = await apiClient.post(`${this.baseUrl}/${id}/toggle-status`);
-    return response;
+    const response = await apiClient.post(`${this.baseUrl}${id}/toggle-status`);
+    return response.data;
   }
 
   /**
    * 获取项目统计信息
    */
   async getProjectStatistics(): Promise<ProjectStatisticsResponse> {
-    const response = await apiClient.get(`${this.baseUrl}/statistics/summary`);
+    const response = await apiClient.get(`${this.baseUrl}statistics/summary`);
     return response;
   }
 
@@ -86,10 +86,10 @@ export class ProjectService {
    * 获取项目选项列表
    */
   async getProjectOptions(isActive: boolean = true): Promise<ProjectDropdownOption[]> {
-    const response = await apiClient.get(`${this.baseUrl}/dropdown-options?is_active=${isActive}`);
+    const response = await apiClient.get(`${this.baseUrl}dropdown-options?is_active=${isActive}`);
     // 处理响应数据格式，确保返回数组
     const data = response.data;
-    return Array.isArray(response) ? response : (response?.data || []);
+    return Array.isArray(data) ? data : (data?.data || []);
   }
 
   /**

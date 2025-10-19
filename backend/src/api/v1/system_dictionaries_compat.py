@@ -1,7 +1,11 @@
 """
-系统字典兼容性API
+系统字典兼容性API - 🚨 已废弃
 为了向后兼容，保留原有的系统字典API接口
 内部实际调用统一的字典管理功能
+
+⚠️ 警告：此API已废弃，请使用 /api/v1/dictionaries 接口替代
+计划移除时间：2025年12月31日
+迁移指南：参见 /api/v1/system-dictionaries-compat/migration-status
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Path

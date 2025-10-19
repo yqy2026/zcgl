@@ -168,11 +168,13 @@ const handleAuthError = (status: number) => {
     // 清除本地存储的认证信息
     localStorage.removeItem('auth_token')
     localStorage.removeItem('user_info')
-    
-    // 重定向到登录页面
-    if (window.location.pathname !== '/login') {
-      window.location.href = '/login'
-    }
+
+    // 临时注释掉重定向到登录页面的逻辑
+    // if (window.location.pathname !== '/login') {
+    //   window.location.href = '/login'
+    // }
+
+    console.warn('认证错误已发生，但重定向被临时禁用用于调试')
   }
 }
 

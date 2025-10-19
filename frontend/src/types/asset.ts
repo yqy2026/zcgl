@@ -208,10 +208,11 @@ export interface AssetSearchParams {
   page?: number
   limit?: number
   search?: string
+  search_keyword?: string  // 添加搜索关键字字段
   ownership_status?: OwnershipStatus
   usage_status?: UsageStatus
   property_nature?: PropertyNature
-  business_category?: BusinessCategory
+  business_category?: string  // 改为string类型以匹配使用
   tenant_type?: TenantType
   contract_status?: ContractStatus
   audit_status?: AuditStatus
@@ -226,6 +227,11 @@ export interface AssetSearchParams {
   // 日期范围筛选
   start_date?: string
   end_date?: string
+  // 新增字段以匹配AnalyticsFilters的使用
+  operation_status?: string
+  ownership_entity?: string
+  // 添加索引签名以支持动态字段访问
+  [key: string]: any
 }
 
 // 创建资产请求

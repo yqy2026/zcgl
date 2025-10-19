@@ -12,11 +12,9 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer,
-  Rectangle
+  ResponsiveContainer
 } from 'recharts'
 import { Card, Empty, Spin } from 'antd'
-import type { AnalyticsData } from '@/services/analyticsService'
 
 // 图表颜色主题
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#ff7300']
@@ -135,7 +133,7 @@ export const AnalyticsPieChart: React.FC<PieChartProps> = ({
             label={renderCustomizedLabel}
             labelLine={false}
           >
-            {data.map((entry, index) => (
+            {data.map((_, index) => (
               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
             ))}
           </Pie>
@@ -300,7 +298,7 @@ export const AnalyticsLineChart: React.FC<LineChartProps> = ({
           <YAxis tick={{ fontSize: 12 }} />
           {showTooltip && <Tooltip />}
           {showLegend && <Legend />}
-          {lines.map((line, index) => (
+          {lines.map((line) => (
             <Line
               key={line.key}
               type="monotone"

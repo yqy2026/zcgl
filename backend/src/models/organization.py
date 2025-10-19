@@ -152,12 +152,14 @@ class Employee(Base):
     updated_at = Column(DateTime, nullable=False, default=datetime.now, onupdate=datetime.now, comment="更新时间")
     created_by = Column(String(100), comment="创建人")
     updated_by = Column(String(100), comment="更新人")
-    
+
     # 关系定义
     organization = relationship("Organization", back_populates="employees")
     position = relationship("Position", back_populates="employees")
     direct_supervisor = relationship("Employee", remote_side=[id], back_populates="subordinates")
     subordinates = relationship("Employee", back_populates="direct_supervisor")
+    # 暂时移除双向关系以避免循环依赖问题
+    # user = relationship("User", back_populates="employee", uselist=False)
     
     def __repr__(self):
         return f"<Employee(id={self.id}, name={self.name}, employee_no={self.employee_no})>"

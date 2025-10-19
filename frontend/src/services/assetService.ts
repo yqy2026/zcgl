@@ -16,7 +16,7 @@ export class AssetService {
   // 获取资产列表
   async getAssets(params?: AssetSearchParams): Promise<AssetListResponse> {
     try {
-      const response = await apiClient.get<AssetListResponse>('/assets/', {
+      const response = await apiClient.get<AssetListResponse>('/assets', {
         params: {
           ...params,
           page: params?.page || 1,
@@ -515,9 +515,9 @@ export class AssetService {
     return this.getSystemDictionaries('property_nature')
   }
 
-  // 获取权属性质字典
-  async getOwnershipNatureFromDict(): Promise<SystemDictionary[]> {
-    return this.getSystemDictionaries('usage_status')
+  // 获取权属类别字典
+  async getOwnershipCategoryFromDict(): Promise<SystemDictionary[]> {
+    return this.getSystemDictionaries('ownership_category')
   }
 
   // 获取租赁状态字典

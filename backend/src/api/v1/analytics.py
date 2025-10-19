@@ -22,7 +22,6 @@ from sqlalchemy import text
 
 from ...database import get_db
 from ...crud.asset import asset_crud
-from ...services.asset_calculator import OccupancyRateCalculator
 from ...schemas.asset import DataStatus
 
 logger = logging.getLogger(__name__)

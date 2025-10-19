@@ -12,13 +12,13 @@ import {
 import { PlusOutlined, ExportOutlined, ImportOutlined } from '@ant-design/icons'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { assetService } from '@/services/assetService'
-import { analyticsService } from '@/services/analyticsService'
-import AssetList from '@/components/Asset/AssetList'
-import AssetSearch from '@/components/Asset/AssetSearch'
-import AssetAreaSummary from '@/components/Asset/AssetAreaSummary'
-import type { AssetSearchParams } from '@/types/asset'
-import type { AnalyticsData } from '@/services/analyticsService'
+import { assetService } from '../../services/assetService'
+import { analyticsService } from '../../services/analyticsService'
+import AssetList from '../../components/Asset/AssetList'
+import AssetSearch from '../../components/Asset/AssetSearch'
+import AssetAreaSummary from '../../components/Asset/AssetAreaSummary'
+import type { AssetSearchParams } from '../../types/asset'
+import type { AnalyticsData } from '../../services/analyticsService'
 
 const { Title } = Typography
 
