@@ -1,0 +1,163 @@
+/* 数据趋势卡片样式 */
+
+.trendCard {
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+  overflow: hidden;
+  border: 1px solid #f0f0f0;
+  background: #fff;
+}
+
+.trendCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.trendCard.primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  border: none;
+}
+
+.trendCard.success {
+  background: linear-gradient(135deg, #13c2c2 0%, #36cfc9 100%);
+  color: #fff;
+  border: none;
+}
+
+.trendCard.warning {
+  background: linear-gradient(135deg, #fadb14 0%, #faad14 100%);
+  color: #fff;
+  border: none;
+}
+
+.trendCard.error {
+  background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%);
+  color: #fff;
+  border: none;
+}
+
+.trendCard.small {
+  min-height: 120px;
+}
+
+.trendCard.default {
+  min-height: 140px;
+}
+
+.trendCard.large {
+  min-height: 160px;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.cardTitle {
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0.9;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.cardIcon {
+  font-size: 20px;
+  opacity: 0.8;
+}
+
+.cardContent {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.trendUp {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #52c41a;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.trendDown {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #ff4d4f;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.trendNeutral {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #8c8c8c;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.trendIcon {
+  display: flex;
+  align-items: center;
+}
+
+.trendText {
+  font-weight: 700;
+}
+
+.trendPeriod {
+  opacity: 0.8;
+  font-size: 11px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .trendCard.small {
+    min-height: 100px;
+  }
+
+  .trendCard.default {
+    min-height: 120px;
+  }
+
+  .trendCard.large {
+    min-height: 140px;
+  }
+
+  .cardTitle {
+    font-size: 13px;
+  }
+
+  .cardIcon {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 576px) {
+  .trendCard.small {
+    min-height: 80px;
+  }
+
+  .trendCard.default {
+    min-height: 100px;
+  }
+
+  .trendCard.large {
+    min-height: 120px;
+  }
+
+  .cardTitle {
+    font-size: 12px;
+  }
+
+  .cardIcon {
+    font-size: 16px;
+  }
+}

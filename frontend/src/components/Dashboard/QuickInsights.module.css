@@ -1,0 +1,172 @@
+/* 快速洞察组件样式 */
+
+.insightsContainer {
+  margin-bottom: 24px;
+}
+
+.titleContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.title {
+  margin: 0 !important;
+  color: #1a1a1a;
+}
+
+.insightCard {
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+  overflow: hidden;
+  height: 100%;
+  border: 1px solid #f0f0f0;
+}
+
+.insightCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.insightCard.info {
+  border-left: 4px solid #1890ff;
+}
+
+.insightCard.success {
+  border-left: 4px solid #52c41a;
+}
+
+.insightCard.warning {
+  border-left: 4px solid #faad14;
+}
+
+.insightCard.error {
+  border-left: 4px solid #ff4d4f;
+}
+
+.insightHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.insightIcon {
+  font-size: 18px;
+  padding: 8px;
+  border-radius: 8px;
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.insightCard.info .insightIcon {
+  background: #e6f7ff;
+  color: #1890ff;
+}
+
+.insightCard.success .insightIcon {
+  background: #f6ffed;
+  color: #52c41a;
+}
+
+.insightCard.warning .insightIcon {
+  background: #fffbe6;
+  color: #faad14;
+}
+
+.insightCard.error .insightIcon {
+  background: #fff2e8;
+  color: #ff4d4f;
+}
+
+.insightTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.insightContent {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.insightDescription {
+  margin: 0;
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.insightHighlight {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a1a;
+  background: #f5f5f5;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.insightCard.info .insightHighlight {
+  background: #e6f7ff;
+  color: #1890ff;
+}
+
+.insightCard.success .insightHighlight {
+  background: #f6ffed;
+  color: #52c41a;
+}
+
+.insightCard.warning .insightHighlight {
+  background: #fffbe6;
+  color: #faad14;
+}
+
+.insightCard.error .insightHighlight {
+  background: #fff2e8;
+  color: #ff4d4f;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .insightIcon {
+    font-size: 16px;
+    padding: 6px;
+  }
+
+  .insightTitle {
+    font-size: 13px;
+  }
+
+  .insightDescription {
+    font-size: 11px;
+  }
+
+  .insightHighlight {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 576px) {
+  .insightIcon {
+    font-size: 14px;
+    padding: 4px;
+  }
+
+  .insightTitle {
+    font-size: 12px;
+  }
+
+  .insightDescription {
+    font-size: 11px;
+  }
+
+  .insightHighlight {
+    font-size: 11px;
+  }
+}

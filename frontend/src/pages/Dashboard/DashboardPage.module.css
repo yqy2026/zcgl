@@ -1,0 +1,402 @@
+/* 数据看板页面样式 */
+
+/* 主要容器 */
+.dashboardContainer {
+  padding: 24px;
+  background: #f5f7fa;
+  min-height: 100vh;
+}
+
+/* 页面标题区域 */
+.dashboardHeader {
+  margin-bottom: 24px;
+  background: #fff;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.dashboardTitle {
+  margin: 0;
+  color: #1a1a1a;
+  font-weight: 600;
+  font-size: 24px;
+}
+
+.dashboardSubtitle {
+  margin: 8px 0 0 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* 快速操作栏 */
+.dashboardActions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+}
+
+.refreshButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 关键指标卡片区域 */
+.keyMetricsSection {
+  margin-bottom: 24px;
+}
+
+/* 关键指标卡片 */
+.keyMetricCard {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+  border: 1px solid #f0f0f0;
+  overflow: hidden;
+}
+
+.keyMetricCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.keyMetricCard.primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+}
+
+.keyMetricCard.success {
+  background: linear-gradient(135deg, #13c2c2 0%, #36cfc9 100%);
+  color: #fff;
+}
+
+.keyMetricCard.warning {
+  background: linear-gradient(135deg, #fadb14 0%, #faad14 100%);
+  color: #fff;
+}
+
+.keyMetricCard.error {
+  background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%);
+  color: #fff;
+}
+
+.keyMetricCardContent {
+  padding: 20px;
+  position: relative;
+}
+
+.keyMetricIcon {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  font-size: 24px;
+  opacity: 0.8;
+}
+
+.keyMetricTitle {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+.keyMetricValue {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.keyMetricSuffix {
+  font-size: 16px;
+  font-weight: 400;
+  opacity: 0.8;
+}
+
+.keyMetricTrend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.trendUp {
+  color: #52c41a;
+}
+
+.trendDown {
+  color: #ff4d4f;
+}
+
+.trendNeutral {
+  color: #8c8c8c;
+}
+
+/* 详细统计区域 */
+.detailedStatsSection {
+  margin-bottom: 24px;
+}
+
+.statsCard {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  height: 100%;
+}
+
+.statsCardHeader {
+  padding: 20px 20px 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.statsCardTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a1a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.statsCardBody {
+  padding: 20px;
+}
+
+.statItem {
+  text-align: center;
+  padding: 16px 0;
+}
+
+.statItem:not(:last-child) {
+  border-right: 1px solid #f0f0f0;
+}
+
+.statValue {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 4px 0;
+}
+
+.statLabel {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* 快速洞察区域 */
+.insightsSection {
+  margin-bottom: 24px;
+}
+
+.insightCard {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  padding: 20px;
+  height: 100%;
+  border-left: 4px solid #1890ff;
+}
+
+.insightTitle {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.insightContent {
+  color: #6b7280;
+  line-height: 1.6;
+}
+
+.insightHighlight {
+  color: #1890ff;
+  font-weight: 600;
+}
+
+/* 加载状态 */
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.loadingText {
+  margin-top: 16px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* 全屏模式 */
+.fullscreen {
+  padding: 16px;
+  background: #f0f2f5;
+}
+
+/* 页面头部 */
+.headerContent {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dashboardActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.actionButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 错误状态 */
+.errorContainer {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.errorTitle {
+  margin: 0 0 16px 0;
+  color: #ff4d4f;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.errorDescription {
+  margin: 0 0 24px 0;
+  color: #6b7280;
+  line-height: 1.6;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .dashboardContainer {
+    padding: 16px;
+  }
+
+  .dashboardHeader {
+    padding: 20px;
+    text-align: center;
+  }
+
+  .dashboardActions {
+    justify-content: center;
+    margin-top: 16px;
+  }
+
+  .keyMetricValue {
+    font-size: 24px;
+  }
+
+  .statItem:not(:last-child) {
+    border-right: none;
+    border-bottom: 1px solid #f0f0f0;
+    padding-bottom: 16px;
+  }
+}
+
+@media (max-width: 576px) {
+  .dashboardContainer {
+    padding: 12px;
+  }
+
+  .dashboardHeader {
+    padding: 16px;
+  }
+
+  .keyMetricCardContent {
+    padding: 16px;
+  }
+
+  .keyMetricValue {
+    font-size: 20px;
+  }
+
+  .statsCardHeader {
+    padding: 16px 16px 12px 16px;
+  }
+
+  .statsCardBody {
+    padding: 16px;
+  }
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fadeIn {
+  animation: fadeIn 0.6s ease-out;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.pulse {
+  animation: pulse 2s infinite;
+}
+
+/* 工具提示样式 */
+.tooltip {
+  font-size: 12px;
+  max-width: 200px;
+}
+
+/* 数据趋势指示器 */
+.trendIndicator {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.trendIndicator.up {
+  background: #f6ffed;
+  color: #52c41a;
+}
+
+.trendIndicator.down {
+  background: #fff2e8;
+  color: #fa8c16;
+}
+
+.trendIndicator.neutral {
+  background: #f0f0f0;
+  color: #8c8c8c;
+}
