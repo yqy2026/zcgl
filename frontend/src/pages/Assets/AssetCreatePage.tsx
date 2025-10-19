@@ -162,7 +162,8 @@ const AssetCreatePage: React.FC = () => {
   if (isEdit && isLoading) {
     return (
       <div style={{ padding: '24px', textAlign: 'center' }}>
-        <Spin size="large" tip="加载资产信息中..." />
+        <Spin size="large" />
+        <div style={{ marginTop: '16px' }}>加载资产信息中...</div>
       </div>
     )
   }

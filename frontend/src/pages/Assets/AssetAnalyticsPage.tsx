@@ -114,7 +114,8 @@ const AssetAnalyticsPage: React.FC = () => {
   if (isLoading) {
     return (
       <div style={{ padding: '24px', textAlign: 'center' }}>
-        <Spin size="large" tip="加载分析数据中..." />
+        <Spin size="large" />
+        <div style={{ marginTop: '16px' }}>加载分析数据中...</div>
       </div>
     )
   }

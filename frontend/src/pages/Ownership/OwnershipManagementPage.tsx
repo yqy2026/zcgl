@@ -28,7 +28,8 @@ const OwnershipManagementPage: React.FC = () => {
             textAlign: 'center',
             backgroundColor: '#fafafa'
           }}>
-            <Spin size="large" tip="正在加载权属方管理功能..." />
+            <Spin size="large" />
+            <div style={{ marginTop: '16' }}>正在加载权属方管理功能...</div>
           </div>
         }
       >

@@ -39,7 +39,8 @@ const LoadingSpinner: React.FC = () => (
     alignItems: 'center',
     height: '200px'
   }}>
-    <Spin size="large" tip="加载中..." />
+    <Spin size="large" />
+    <div style={{ marginTop: '16' }}>加载中...</div>
   </div>
 )
 

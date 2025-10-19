@@ -28,7 +28,8 @@ const ProjectManagementPage: React.FC = () => {
             textAlign: 'center',
             backgroundColor: '#fafafa'
           }}>
-            <Spin size="large" tip="正在加载项目管理功能..." />
+            <Spin size="large" />
+            <div style={{ marginTop: '16' }}>正在加载项目管理功能...</div>
           </div>
         }
       >
