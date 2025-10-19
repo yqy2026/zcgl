@@ -246,6 +246,8 @@ async def shutdown_event():
 # 导入并包含API路由
 from .api import api_router
 from .api.v1 import auth as auth_api
+from .api.v1 import export as export_api
+from .api.v1 import monitoring as monitoring_api
 # from .api.v1 import chinese_ocr as chinese_ocr_api  # 已删除
 # from .api.v1 import next_gen_pdf_import as next_gen_pdf_api  # 暂时禁用
 
@@ -257,6 +259,8 @@ for route in enum_routes[:5]:  # 只显示前5个
 
 app.include_router(api_router)
 app.include_router(auth_api.router, prefix="/api/v1/auth", tags=["认证管理"])
+app.include_router(export_api.router, prefix="/api/v1/export", tags=["数据导出"])
+app.include_router(monitoring_api.router, prefix="/api/v1/monitoring", tags=["系统监控"])
 # app.include_router(chinese_ocr_api.router, prefix="/api/v1/chinese_ocr", tags=["中文OCR服务"])  # 已删除
 # app.include_router(next_gen_pdf_api.router, prefix="/api/v1", tags=["下一代PDF智能导入"])  # 暂时禁用
 

@@ -34,7 +34,6 @@ def test_create_asset(db):
     """测试创建资产"""
     asset_data = {
         "ownership_entity": "国资集团",
-        "management_entity": "五羊公司",
         "property_name": "测试物业",
         "address": "测试地址",
         "actual_property_area": 100.0,
@@ -45,9 +44,9 @@ def test_create_asset(db):
         "ownership_status": "已确权",
         "actual_usage": "商业",
         "usage_status": "出租",
-        "is_litigated": "否",
+        "is_litigated": False,
         "property_nature": "经营类",
-        "occupancy_rate": "75%"
+        "occupancy_rate": 75.0
     }
     
     asset = Asset(**asset_data)
@@ -76,9 +75,9 @@ def test_asset_relationships(db):
         ownership_status="已确权",
         actual_usage="商业",
         usage_status="出租",
-        is_litigated="否",
+        is_litigated=False,
         property_nature="经营类",
-        occupancy_rate="75%"
+        occupancy_rate=75.0
     )
     db.add(asset)
     db.commit()
@@ -87,18 +86,19 @@ def test_asset_relationships(db):
     # 创建历史记录
     history = AssetHistory(
         asset_id=asset.id,
-        change_type="create",
-        changed_fields=["property_name"],
-        old_values={},
-        new_values={"property_name": "测试物业"},
-        changed_by="test_user"
+        operation_type="create",
+        field_name="property_name",
+        old_value="",
+        new_value="测试物业",
+        operator="test_user"
     )
     db.add(history)
     
     # 创建文档记录
     document = AssetDocument(
         asset_id=asset.id,
-        file_name="test.pdf",
+        document_name="test.pdf",
+        document_type="PDF",
         file_path="/test/test.pdf",
         file_size=1024,
         mime_type="application/pdf"
@@ -107,10 +107,10 @@ def test_asset_relationships(db):
     db.commit()
     
     # 验证关联关系
-    assert len(asset.history) == 1
+    assert len(asset.history_records) == 1
     assert len(asset.documents) == 1
-    assert asset.history[0].change_type == "create"
-    assert asset.documents[0].file_name == "test.pdf"
+    assert asset.history_records[0].operation_type == "create"
+    assert asset.documents[0].document_name == "test.pdf"
 
 
 def test_asset_crud_operations(db):
@@ -118,7 +118,6 @@ def test_asset_crud_operations(db):
     # 测试数据
     asset_data = {
         "ownership_entity": "国资集团",
-        "management_entity": "五羊公司",
         "property_name": "CRUD测试物业",
         "address": "CRUD测试地址",
         "actual_property_area": 200.0,
@@ -129,9 +128,9 @@ def test_asset_crud_operations(db):
         "ownership_status": "已确权",
         "actual_usage": "办公",
         "usage_status": "出租",
-        "is_litigated": "否",
+        "is_litigated": False,
         "property_nature": "经营类",
-        "occupancy_rate": "75%"
+        "occupancy_rate": 75.0
     }
     
     # 创建资产
@@ -179,9 +178,9 @@ def test_asset_search_and_filter(db):
             "ownership_status": "已确权",
             "actual_usage": "商业",
             "usage_status": "出租",
-            "is_litigated": "否",
+            "is_litigated": False,
             "property_nature": "经营类",
-            "occupancy_rate": "75%"
+            "occupancy_rate": 75.0
         },
         {
             "ownership_entity": "市政府",
@@ -195,9 +194,9 @@ def test_asset_search_and_filter(db):
             "ownership_status": "未确权",
             "actual_usage": "办公",
             "usage_status": "闲置",
-            "is_litigated": "是",
+            "is_litigated": True,
             "property_nature": "非经营类",
-            "occupancy_rate": "62.5%"
+            "occupancy_rate": 62.5
         }
     ]
     
@@ -207,23 +206,26 @@ def test_asset_search_and_filter(db):
     db.commit()
     
     # 测试搜索
-    search_results = asset_crud.get_multi_with_search(db, search="商业")
+    search_results, total = asset_crud.get_multi_with_search(db, search="商业物业A")
     assert len(search_results) == 1
+    assert total == 1
     assert search_results[0].property_name == "商业物业A"
     
     # 测试筛选
-    filter_results = asset_crud.get_multi_with_search(
-        db, 
+    filter_results, filter_total = asset_crud.get_multi_with_search(
+        db,
         filters={"ownership_status": "已确权"}
     )
     assert len(filter_results) == 1
+    assert filter_total == 1
     assert filter_results[0].ownership_status == "已确权"
-    
+
     # 测试组合筛选
-    combined_results = asset_crud.get_multi_with_search(
+    combined_results, combined_total = asset_crud.get_multi_with_search(
         db,
         search="物业",
         filters={"property_nature": "经营类"}
     )
     assert len(combined_results) == 1
+    assert combined_total == 1
     assert combined_results[0].property_nature == "经营类"

@@ -1,36 +1,36 @@
 import { renderHook, act } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, jest } from '@jest/globals'
 import { useNavigate } from 'react-router-dom'
 
 import { useErrorHandler } from '../useErrorHandler'
 
 // Mock react-router-dom
-vi.mock('react-router-dom', () => ({
-  useNavigate: vi.fn(),
+jest.mock('react-router-dom', () => ({
+  useNavigate: jest.fn(),
 }))
 
 // Mock SuccessNotification
-vi.mock('@/components/Feedback/SuccessNotification', () => ({
+jest.mock('@/components/Feedback/SuccessNotification', () => ({
   default: {
-    notify: vi.fn(),
+    notify: jest.fn(),
     warning: {
-      permission: vi.fn(),
+      permission: jest.fn(),
     },
     error: {
-      network: vi.fn(),
-      server: vi.fn(),
-      validation: vi.fn(),
-      upload: vi.fn(),
+      network: jest.fn(),
+      server: jest.fn(),
+      validation: jest.fn(),
+      upload: jest.fn(),
     },
   },
 }))
 
 describe('useErrorHandler', () => {
-  const mockNavigate = vi.fn()
+  const mockNavigate = jest.fn()
 
   beforeEach(() => {
-    vi.clearAllMocks()
-    vi.mocked(useNavigate).mockReturnValue(mockNavigate)
+    jest.clearAllMocks()
+    ;(useNavigate as jest.MockedFunction<typeof useNavigate>).mockReturnValue(mockNavigate)
   })
 
   it('handles API errors correctly', () => {
@@ -148,7 +148,7 @@ describe('useErrorHandler', () => {
     const { result } = renderHook(() => useErrorHandler())
 
     let attemptCount = 0
-    const failingOperation = vi.fn().mockImplementation(() => {
+    const failingOperation = jest.fn().mockImplementation(() => {
       attemptCount++
       if (attemptCount < 3) {
         throw new Error('Operation failed')
@@ -167,7 +167,7 @@ describe('useErrorHandler', () => {
   it('fails after max retries', async () => {
     const { result } = renderHook(() => useErrorHandler())
 
-    const alwaysFailingOperation = vi.fn().mockRejectedValue(new Error('Always fails'))
+    const alwaysFailingOperation = jest.fn().mockRejectedValue(new Error('Always fails'))
 
     await act(async () => {
       await expect(

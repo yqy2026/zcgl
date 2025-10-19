@@ -6,7 +6,7 @@ module.exports = {
   setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup.ts'],
 
   // Module name mapping for path aliases
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@/__tests__/(.*)$': '<rootDir>/src/__tests__/$1',
   },
@@ -67,7 +67,7 @@ module.exports = {
   moduleDirectories: ['node_modules', '<rootDir>/src'],
 
   // Handle static assets
-  moduleNameMapping: {
+  moduleNameMapper: {
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
     '\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$':
       '<rootDir>/src/__tests__/__mocks__/fileMock.js',
@@ -139,6 +139,6 @@ module.exports = {
   // Custom matchers
   setupFilesAfterEnv: [
     '<rootDir>/src/__tests__/setup.ts',
-    '@testing-library/jest-dom/extend-expect',
+    '@testing-library/jest-dom',
   ],
 }

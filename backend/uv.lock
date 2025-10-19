@@ -1110,6 +1110,7 @@ dev = [
 [package.dev-dependencies]
 dev = [
     { name = "aiohttp" },
+    { name = "pytest" },
 ]
 
 [package.metadata]
@@ -1154,7 +1155,10 @@ requires-dist = [
 provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
-dev = [{ name = "aiohttp", specifier = ">=3.13.0" }]
+dev = [
+    { name = "aiohttp", specifier = ">=3.13.0" },
+    { name = "pytest" },
+]
 
 [[package]]
 name = "langcodes"

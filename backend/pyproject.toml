@@ -78,4 +78,5 @@ testpaths = ["tests"]
 [dependency-groups]
 dev = [
     "aiohttp>=3.13.0",
+    "pytest",
 ]
