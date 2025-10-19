@@ -56,7 +56,6 @@ class UnifiedDictionaryService {
   clearCache = baseDictionaryService.clearCache.bind(baseDictionaryService)
   preload = baseDictionaryService.preload.bind(baseDictionaryService)
   getStats = baseDictionaryService.getStats.bind(baseDictionaryService)
-  getTypes = this.getTypes.bind(this)
 
   // 管理功能
   getEnumFieldTypes = dictionaryManagerService.getEnumFieldTypes.bind(dictionaryManagerService)

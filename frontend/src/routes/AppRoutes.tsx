@@ -59,6 +59,7 @@ const AppRoutes: React.FC = () => {
           <Route path="/assets" element={<Navigate to="/assets/list" replace />} />
           <Route path="/assets/list" element={<AssetListPage />} />
           <Route path="/assets/new" element={<AssetCreatePage />} />
+          <Route path="/assets/create" element={<AssetCreatePage />} />
           <Route path="/assets/import" element={<AssetImportPage />} />
           <Route path="/assets/analytics" element={<AssetAnalyticsPage />} />
           <Route path="/assets/:id" element={<AssetDetailPage />} />
