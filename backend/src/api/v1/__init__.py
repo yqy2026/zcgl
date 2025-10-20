@@ -23,7 +23,7 @@ from .analytics import router as analytics_router
 # from .simple_pdf_import import router as pdf_import_router  # 已删除
 # from .enhanced_pdf_import import router as enhanced_pdf_import_router  # 暂时注释，有导入错误
 # from .ocr_pdf_import import router as ocr_pdf_import_router  # 暂时注释，有导入错误
-from .pdf_import import router as pdf_import_router
+# from .pdf_import import router as pdf_import_router  # 已弃用，功能整合到V2
 from .pdf_import_v2 import router as pdf_import_v2_router
 # from .organization_permissions import router as organization_permissions_router  # 已删除
 # from .rbac import router as rbac_router  # 已删除
@@ -162,17 +162,18 @@ api_router.include_router(
 #     tags=["完整OCR PDF导入"]
 # )
 
+# PDF智能导入API (V2统一版本，包含V1兼容功能)
 api_router.include_router(
-    pdf_import_router,
+    pdf_import_v2_router,
     prefix="/pdf_import",
     tags=["PDF智能导入"]
 )
 
-# 新版PDF导入API
+# 为向后兼容性保留V2路径（重定向到主路径）
 api_router.include_router(
     pdf_import_v2_router,
     prefix="/pdf_import_v2",
-    tags=["PDF智能导入V2"]
+    tags=["PDF智能导入V2 (兼容路径)"]
 )
 
 # 注释掉已删除的API路由器

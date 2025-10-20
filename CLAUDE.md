@@ -126,35 +126,37 @@ The backend follows a layered architecture with clear separation of concerns:
 
 ### Key Service Components
 
-#### PDF Import Pipeline
+#### PDF Import Pipeline (V2 Unified)
 ```python
 # Processing flow: Upload → Convert → Extract → Validate → Import
 PDF → Text conversion → Information extraction → Validation → Database import
 
-# Service implementation example
+# V2 Service implementation (unified architecture)
 class PDFImportService:
     def __init__(self, db: Session):
         self.db = db
-        self.converter = PDFConverter()
-        self.extractor = ContractExtractor()
+        self.processing_service = pdf_processing_service
+        self.session_service = pdf_session_service
+        self.validation_service = PDFValidationMatchingService(db)
 
     async def process_pdf_file(self, session_id: str, file_path: str) -> Dict[str, Any]:
-        # 1. PDF conversion (markitdown → pdfplumber → OCR fallback)
-        text_content = await self.converter.convert_pdf(file_path)
+        # 1. PDF conversion (multi-engine: PyMuPDF → pdfplumber → OCR fallback)
+        text_result = await self.processing_service.extract_text_from_pdf(file_path)
 
-        # 2. Information extraction (58-field recognition)
-        extracted_data = await self.extractor.extract_contract_info(text_content)
+        # 2. Information extraction (58-field AI recognition with confidence scoring)
+        extraction_result = await self.extract_contract_info(text_result['text'])
 
-        # 3. Data validation (OCR-specific handling)
-        validated_data = await self.validate_extracted_data(extracted_data)
+        # 3. Data validation (intelligent validation and matching)
+        validated_data = await self.validation_service.validate_extracted_data(extraction_result)
 
-        # 4. Database import with audit trail
-        return await self.import_asset_data(session_id, validated_data)
+        # 4. Database import with audit trail and session tracking
+        return await self.import_asset_data_with_session(session_id, validated_data)
 ```
-- **PDF Converter**: Multiple extraction methods (markitdown, pdfplumber, OCR fallback)
+- **Multi-Engine PDF Processor**: PyMuPDF, pdfplumber, and PaddleOCR fallback
 - **Contract Extractor**: AI-driven 58-field extraction with confidence scoring
-- **Data Validator**: Validation with OCR-specific error handling
-- **Import Service**: Session management with progress tracking
+- **Session Management**: Real-time progress tracking and batch processing
+- **Validation Service**: Intelligent data validation and asset/ownership matching
+- **Import Service**: Complete audit trail with session-based tracking
 
 #### RBAC System
 ```python
@@ -212,11 +214,13 @@ class RBACService:
 - Change history tracking
 - Bulk operations support
 
-### PDF Import (`/api/v1/pdf_import/`)
-- File upload with session management
-- Real-time progress tracking
-- Multi-stage processing pipeline
-- Result preview and confirmation
+### PDF Import (`/api/v1/pdf_import/`) - V2 Unified
+- **Unified API**: Single endpoint with V1 backward compatibility
+- **Multi-Engine Processing**: PyMuPDF, pdfplumber, and OCR fallback
+- **Session Management**: Real-time progress tracking and batch processing
+- **Smart Validation**: Intelligent data validation and asset/ownership matching
+- **Complete Audit Trail**: Full session-based tracking and logging
+- **V1 Compatibility**: All legacy endpoints supported with enhanced functionality
 
 ### RBAC (`/api/v1/rbac/`)
 - Dynamic role and permission management

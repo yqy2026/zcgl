@@ -34,6 +34,24 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["pdf-import-v2"])
 
+# === V1兼容性数据传输对象 ===
+class ExtractionRequest(BaseModel):
+    """PDF信息提取请求模型 (V1兼容)"""
+    text: str
+    include_raw_text: bool = Field(default=False, description="是否包含原始文本")
+    validate_fields: bool = Field(default=True, description="是否验证字段有效性")
+
+class ExtractionResponse(BaseModel):
+    """PDF信息提取响应模型 (V1兼容)"""
+    success: bool
+    extractor_used: str = "rental_contract_extractor"
+    confidence: float = 0.0
+    extracted_fields: Dict[str, Any] = {}
+    validation_results: Dict[str, Any] = {}
+    error: Optional[str] = None
+    processing_time_ms: float = 0.0
+    real_data_verified: bool = False
+
 # 数据传输对象 (DTOs)
 class FileUploadResponse(BaseModel):
     """文件上传响应"""
@@ -454,13 +472,178 @@ async def health_check():
             "timestamp": datetime.now().isoformat()
         }
 
+# === V1兼容性API端点 ===
+@router.post("/extract", response_model=ExtractionResponse)
+async def extract_contract_from_text_v1_compatible(request: ExtractionRequest):
+    """从文本提取合同信息 (V1兼容版本)"""
+    start_time = datetime.now()
+
+    try:
+        logger.info(f"开始使用V2兼容模式处理文本，长度: {len(request.text)}")
+
+        # 使用合同提取器 (与V1相同的提取器)
+        from ...services.contract_extractor import extract_contract_info
+        result = extract_contract_info(request.text)
+
+        # 计算处理时间
+        processing_time = (datetime.now() - start_time).total_seconds() * 1000
+
+        if result.get('success'):
+            # 字段验证
+            validation_results = {}
+            if request.validate_fields:
+                validation_results = _validate_extracted_fields_v1(result.get('extracted_fields', {}))
+
+            # 构建V1兼容响应
+            response = ExtractionResponse(
+                success=True,
+                confidence=result.get('overall_confidence', 0.0),
+                extracted_fields=result.get('extracted_fields', {}),
+                validation_results=validation_results,
+                processing_time_ms=processing_time,
+                real_data_verified=result.get('validation_passed', False)
+            )
+
+            # 如果需要，包含原始文本
+            if request.include_raw_text:
+                response.extracted_fields['_raw_text'] = request.text
+
+            logger.info(f"V1兼容模式文本提取完成，置信度: {result.get('overall_confidence', 0):.2f}, 提取字段数: {len(result.get('extracted_fields', {}))}")
+            return response
+        else:
+            logger.warning(f"V1兼容模式文本提取失败: {result.get('error', '未知错误')}")
+            return ExtractionResponse(
+                success=False,
+                error=result.get('error', '提取失败'),
+                processing_time_ms=processing_time,
+                real_data_verified=False
+            )
+
+    except Exception as e:
+        logger.error(f"V1兼容模式文本提取异常: {e}")
+        processing_time = (datetime.now() - start_time).total_seconds() * 1000
+
+        return ExtractionResponse(
+            success=False,
+            error=f"处理异常: {str(e)}",
+            processing_time_ms=processing_time,
+            real_data_verified=False
+        )
+
+@router.post("/upload_and_extract", response_model=ExtractionResponse)
+async def upload_and_extract_pdf_v1_compatible(
+    file: UploadFile = File(...),
+    include_raw_text: bool = Form(default=False),
+    validate_fields: bool = Form(default=True),
+    background_tasks: BackgroundTasks = BackgroundTasks()
+):
+    """上传PDF文件并提取信息 (V1兼容版本)"""
+    start_time = datetime.now()
+
+    # 验证文件类型
+    if not file.content_type == 'application/pdf':
+        raise HTTPException(
+            status_code=400,
+            detail="只支持PDF文件上传"
+        )
+
+    # 验证文件大小（50MB限制）
+    max_size = 50 * 1024 * 1024  # 50MB
+    file_content = await file.read()
+    if len(file_content) > max_size:
+        raise HTTPException(
+            status_code=400,
+            detail=f"文件大小超过限制({max_size // (1024*1024)}MB)"
+        )
+
+    try:
+        # 使用V2的文件管理服务
+        file_info = await pdf_import_service.upload_file(file_content, file.filename)
+
+        # 使用V2的处理服务提取文本
+        text_result = await pdf_processing_service.extract_text_from_pdf(file_info['file_path'])
+
+        if not text_result.get('success'):
+            return ExtractionResponse(
+                success=False,
+                error="PDF文本提取失败",
+                processing_time_ms=(datetime.now() - start_time).total_seconds() * 1000,
+                real_data_verified=False
+            )
+
+        # 使用V1的提取器处理文本
+        from ...services.contract_extractor import extract_contract_info
+        extraction_result = extract_contract_info(text_result.get('text', ''))
+
+        processing_time = (datetime.now() - start_time).total_seconds() * 1000
+
+        if extraction_result.get('success'):
+            # 字段验证
+            validation_results = {}
+            if validate_fields:
+                validation_results = _validate_extracted_fields_v1(extraction_result.get('extracted_fields', {}))
+
+            # 构建V1兼容响应
+            response = ExtractionResponse(
+                success=True,
+                confidence=extraction_result.get('overall_confidence', 0.0),
+                extracted_fields=extraction_result.get('extracted_fields', {}),
+                validation_results=validation_results,
+                processing_time_ms=processing_time,
+                real_data_verified=extraction_result.get('validation_passed', False)
+            )
+
+            # 如果需要，包含原始文本
+            if include_raw_text:
+                response.extracted_fields['_raw_text'] = text_result.get('text', '')
+
+            logger.info(f"V1兼容模式PDF处理完成，置信度: {extraction_result.get('overall_confidence', 0):.2f}")
+            return response
+        else:
+            return ExtractionResponse(
+                success=False,
+                error=extraction_result.get('error', 'PDF内容提取失败'),
+                processing_time_ms=processing_time,
+                real_data_verified=False
+            )
+
+    except Exception as e:
+        logger.error(f"V1兼容模式PDF处理异常: {e}")
+        return ExtractionResponse(
+            success=False,
+            error=f"PDF处理异常: {str(e)}",
+            processing_time_ms=(datetime.now() - start_time).total_seconds() * 1000,
+            real_data_verified=False
+        )
+
+def _validate_extracted_fields_v1(extracted_fields: Dict[str, Any]) -> Dict[str, Any]:
+    """V1兼容的字段验证函数"""
+    validation_results = {}
+
+    # 基本字段验证
+    for field_name, field_value in extracted_fields.items():
+        if field_value and str(field_value).strip():
+            validation_results[field_name] = {
+                "is_valid": True,
+                "validation_errors": [],
+                "confidence": 0.8  # 默认置信度
+            }
+        else:
+            validation_results[field_name] = {
+                "is_valid": False,
+                "validation_errors": ["字段值为空"],
+                "confidence": 0.0
+            }
+
+    return validation_results
+
 @router.post("/extract")
-async def extract_contract_info(
+async def extract_contract_info_v2_enhanced(
     text: str = Form(...),
     validate_fields: bool = Form(default=True),
     db: Session = Depends(get_db)
 ):
-    """直接从文本提取合同信息（用于测试）"""
+    """直接从文本提取合同信息 (V2增强版本)"""
     try:
         from ...services.contract_extractor import extract_contract_info
 
