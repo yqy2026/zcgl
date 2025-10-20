@@ -214,13 +214,13 @@ class RBACService:
 - Change history tracking
 - Bulk operations support
 
-### PDF Import (`/api/v1/pdf_import/`) - V2 Unified
-- **Unified API**: Single endpoint with V1 backward compatibility
+### PDF Import (`/api/v1/pdf_import/`) - Unified Architecture
+- **Single API Endpoint**: Unified interface with complete functionality
 - **Multi-Engine Processing**: PyMuPDF, pdfplumber, and OCR fallback
 - **Session Management**: Real-time progress tracking and batch processing
 - **Smart Validation**: Intelligent data validation and asset/ownership matching
 - **Complete Audit Trail**: Full session-based tracking and logging
-- **V1 Compatibility**: All legacy endpoints supported with enhanced functionality
+- **Backward Compatible**: Supports all legacy calling patterns
 
 ### RBAC (`/api/v1/rbac/`)
 - Dynamic role and permission management

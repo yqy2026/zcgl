@@ -9,279 +9,157 @@ from datetime import datetime
 
 class StatisticsRequest(BaseModel):
     """统计请求模型"""
-    
+
     filters: Optional[Dict[str, Any]] = Field(
         None,
-        description="筛选条�?,
+        description="筛选条件",
         example={
-            "ownership_status": "已确�?,
-            "property_nature": "经营�?,
+            "ownership_status": "已确权",
+            "property_nature": "经营性",
             "ownership_entity": "国资集团"
         }
     )
-    
+
     class Config:
         json_schema_extra = {
             "example": {
                 "filters": {
-                    "ownership_status": "已确�?,
-                    "property_nature": "经营�?,
+                    "ownership_status": "已确权",
+                    "property_nature": "经营性",
                     "ownership_entity": "国资集团"
                 }
             }
         }
 
 
-class StatisticsResponse(BaseModel):
-    """统计响应模型"""
-    
-    success: bool = Field(..., description="是否成功")
-    message: str = Field(..., description="响应消息")
-    data: Optional[Dict[str, Any]] = Field(None, description="统计数据")
-    
+class BasicStatisticsResponse(BaseModel):
+    """基础统计数据响应模型"""
+
+    total_assets: int = Field(..., description="总资产数")
+    ownership_status: Dict[str, int] = Field(..., description="按确权状态统计")
+    property_nature: Dict[str, int] = Field(..., description="按物业性质统计")
+    usage_status: Dict[str, int] = Field(..., description="按使用状态统计")
+    generated_at: datetime = Field(..., description="生成时间")
+    filters_applied: Dict[str, Any] = Field(default_factory=dict, description="应用的筛选条件")
+
     class Config:
         json_schema_extra = {
             "example": {
-                "success": True,
-                "message": "成功获取统计数据",
-                "data": {
-                    "total_count": 100,
-                    "total_area": 50000.0,
-                    "avg_area": 500.0,
-                    "generated_at": "2024-01-01T12:00:00"
-                }
+                "total_assets": 100,
+                "ownership_status": {
+                    "confirmed": 80,
+                    "unconfirmed": 15,
+                    "partial": 5
+                },
+                "property_nature": {
+                    "commercial": 70,
+                    "non_commercial": 30
+                },
+                "usage_status": {
+                    "rented": 60,
+                    "available": 30,
+                    "maintenance": 10
+                },
+                "generated_at": "2025-01-20T10:30:00",
+                "filters_applied": {}
             }
         }
 
 
-class BasicStatistics(BaseModel):
-    """基础统计数据模型"""
-    
-    total_count: int = Field(..., description="资产总数")
-    total_area: float = Field(..., description="总面积（平方米）")
-    avg_area: float = Field(..., description="平均面积（平方米�?)
-    total_rentable_area: float = Field(..., description="总可出租面积（平方米�?)
-    total_rented_area: float = Field(..., description="总已出租面积（平方米�?)
-    total_unrented_area: float = Field(..., description="总未出租面积（平方米�?)
-    overall_occupancy_rate: float = Field(..., description="整体出租率（%�?)
-    generated_at: str = Field(..., description="生成时间")
-    filters_applied: Dict[str, Any] = Field(..., description="应用的筛选条�?)
-    data_count: int = Field(..., description="数据条数")
+class DetailedStatisticsResponse(BaseModel):
+    """详细统计数据响应模型"""
 
+    summary: BasicStatisticsResponse = Field(..., description="基础统计摘要")
+    area_analysis: Dict[str, Any] = Field(..., description="面积分析")
+    financial_analysis: Dict[str, Any] = Field(..., description="财务分析")
+    occupancy_analysis: Dict[str, Any] = Field(..., description="出租率分析")
+    contract_analysis: Dict[str, Any] = Field(..., description="合同分析")
+    filters_applied: Dict[str, Any] = Field(default_factory=dict, description="应用的筛选条件")
 
-class DistributionItem(BaseModel):
-    """分布项模�?""
-    
-    name: str = Field(..., description="项目名称")
-    count: int = Field(..., description="数量")
-    percentage: float = Field(..., description="百分�?)
-    total_area: Optional[float] = Field(None, description="总面�?)
-    area_percentage: Optional[float] = Field(None, description="面积百分�?)
-
-
-class DistributionAnalysis(BaseModel):
-    """分布分析模型"""
-    
-    distribution: Dict[str, Dict[str, Any]] = Field(..., description="分布详情")
-    chart_data: List[DistributionItem] = Field(..., description="图表数据")
-    generated_at: str = Field(..., description="生成时间")
-    filters_applied: Dict[str, Any] = Field(..., description="应用的筛选条�?)
-    data_count: int = Field(..., description="数据条数")
-
-
-class OccupancyAnalysis(BaseModel):
-    """出租率分析模�?""
-    
-    overall_occupancy: float = Field(..., description="整体出租率（%�?)
-    by_property_nature: Dict[str, Dict[str, Any]] = Field(..., description="按物业性质分析")
-    by_ownership_entity: Dict[str, Dict[str, Any]] = Field(..., description="按权属方分析")
-    occupancy_ranges: Dict[str, int] = Field(..., description="出租率区间分�?)
-    chart_data: List[Dict[str, Any]] = Field(..., description="图表数据")
-    generated_at: str = Field(..., description="生成时间")
-    filters_applied: Dict[str, Any] = Field(..., description="应用的筛选条�?)
-    data_count: int = Field(..., description="数据条数")
-
-
-class AreaDistribution(BaseModel):
-    """面积分布模型"""
-    
-    area_ranges: Dict[str, Dict[str, Any]] = Field(..., description="面积区间分布")
-    chart_data: List[Dict[str, Any]] = Field(..., description="图表数据")
-    statistics: Dict[str, float] = Field(..., description="面积统计")
-    generated_at: str = Field(..., description="生成时间")
-    filters_applied: Dict[str, Any] = Field(..., description="应用的筛选条�?)
-    data_count: int = Field(..., description="数据条数")
-
-
-class KeyMetrics(BaseModel):
-    """关键指标模型"""
-    
-    total_assets: int = Field(..., description="资产总数")
-    total_area: float = Field(..., description="总面�?)
-    total_rentable_area: float = Field(..., description="总可出租面积")
-    overall_occupancy_rate: float = Field(..., description="整体出租�?)
-    total_rented_area: float = Field(..., description="总已出租面积")
-    total_unrented_area: float = Field(..., description="总未出租面积")
-
-
-class ChartData(BaseModel):
-    """图表数据模型"""
-    
-    ownership_distribution: List[Dict[str, Any]] = Field(..., description="确权状态分�?)
-    property_nature_distribution: List[Dict[str, Any]] = Field(..., description="物业性质分布")
-    usage_status_distribution: List[Dict[str, Any]] = Field(..., description="使用状态分�?)
-    occupancy_ranges: List[Dict[str, Any]] = Field(..., description="出租率区间分�?)
-
-
-class DashboardData(BaseModel):
-    """仪表板数据模�?""
-    
-    key_metrics: KeyMetrics = Field(..., description="关键指标")
-    charts: ChartData = Field(..., description="图表数据")
-    generated_at: str = Field(..., description="生成时间")
-    data_count: int = Field(..., description="数据条数")
-
-
-class DashboardResponse(BaseModel):
-    """仪表板响应模�?""
-    
-    success: bool = Field(..., description="是否成功")
-    message: str = Field(..., description="响应消息")
-    data: Optional[DashboardData] = Field(None, description="仪表板数�?)
-    
     class Config:
         json_schema_extra = {
             "example": {
-                "success": True,
-                "message": "成功生成仪表板数�?,
-                "data": {
-                    "key_metrics": {
-                        "total_assets": 100,
-                        "total_area": 50000.0,
-                        "total_rentable_area": 40000.0,
-                        "overall_occupancy_rate": 75.5,
-                        "total_rented_area": 30200.0,
-                        "total_unrented_area": 9800.0
-                    },
-                    "charts": {
-                        "ownership_distribution": [
-                            {"name": "已确�?, "value": 80, "percentage": 80.0},
-                            {"name": "未确�?, "value": 20, "percentage": 20.0}
-                        ]
-                    },
-                    "generated_at": "2024-01-01T12:00:00",
-                    "data_count": 100
-                }
+                "summary": {
+                    "total_assets": 100,
+                    "ownership_status": {"confirmed": 80, "unconfirmed": 15, "partial": 5},
+                    "property_nature": {"commercial": 70, "non_commercial": 30},
+                    "usage_status": {"rented": 60, "available": 30, "maintenance": 10},
+                    "generated_at": "2025-01-20T10:30:00",
+                    "filters_applied": {}
+                },
+                "area_analysis": {
+                    "total_area": 10000.0,
+                    "rentable_area": 8500.0,
+                    "rented_area": 6800.0,
+                    "occupancy_rate": 80.0
+                },
+                "financial_analysis": {
+                    "total_annual_income": 1000000.0,
+                    "total_annual_expense": 200000.0,
+                    "net_income": 800000.0
+                },
+                "occupancy_analysis": {
+                    "by_area": {"rented": 6800.0, "available": 1700.0},
+                    "by_count": {"rented": 60, "available": 30}
+                },
+                "contract_analysis": {
+                    "active_contracts": 60,
+                    "expiring_soon": 5,
+                    "expired": 2
+                },
+                "filters_applied": {}
             }
         }
 
 
-class ComprehensiveReport(BaseModel):
-    """综合报表模型"""
-    
-    basic_statistics: Dict[str, Any] = Field(..., description="基础统计")
-    ownership_distribution: Dict[str, Any] = Field(..., description="确权状态分�?)
-    property_nature_distribution: Dict[str, Any] = Field(..., description="物业性质分布")
-    usage_status_distribution: Dict[str, Any] = Field(..., description="使用状态分�?)
-    ownership_entity_distribution: Dict[str, Any] = Field(..., description="权属方分�?)
-    area_distribution: Dict[str, Any] = Field(..., description="面积分布")
-    occupancy_analysis: Dict[str, Any] = Field(..., description="出租率分�?)
-    generated_at: str = Field(..., description="生成时间")
-    filters_applied: Dict[str, Any] = Field(..., description="应用的筛选条�?)
-    data_count: int = Field(..., description="数据条数")
+class TimeSeriesDataPoint(BaseModel):
+    """时间序列数据点"""
+
+    date: datetime = Field(..., description="日期")
+    value: float = Field(..., description="数值")
+    label: Optional[str] = Field(None, description="标签")
 
 
-class ReportResponse(BaseModel):
-    """报表响应模型"""
-    
-    success: bool = Field(..., description="是否成功")
-    message: str = Field(..., description="响应消息")
-    data: Optional[ComprehensiveReport] = Field(None, description="综合报表数据")
-    
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "success": True,
-                "message": "成功生成综合报表",
-                "data": {
-                    "basic_statistics": {
-                        "total_count": 100,
-                        "total_area": 50000.0,
-                        "avg_area": 500.0,
-                        "overall_occupancy_rate": 75.5
-                    },
-                    "ownership_distribution": {
-                        "distribution": {
-                            "已确�?: {"count": 80, "percentage": 80.0},
-                            "未确�?: {"count": 20, "percentage": 20.0}
-                        }
-                    },
-                    "generated_at": "2024-01-01T12:00:00",
-                    "data_count": 100
-                }
-            }
-        }
+class TimeSeriesStatisticsResponse(BaseModel):
+    """时间序列统计数据响应模型"""
+
+    metric_name: str = Field(..., description="指标名称")
+    data_points: List[TimeSeriesDataPoint] = Field(..., description="数据点列表")
+    period_start: datetime = Field(..., description="统计开始时间")
+    period_end: datetime = Field(..., description="统计结束时间")
+    filters_applied: Dict[str, Any] = Field(default_factory=dict, description="应用的筛选条件")
 
 
-# 导出的筛选条件模�?
-class StatisticsFilters(BaseModel):
-    """统计筛选条件模�?""
-    
-    ownership_status: Optional[str] = Field(None, description="确权状�?)
-    property_nature: Optional[str] = Field(None, description="物业性质")
-    usage_status: Optional[str] = Field(None, description="使用状�?)
-    ownership_entity: Optional[str] = Field(None, description="权属�?)
-    search: Optional[str] = Field(None, description="搜索关键�?)
-    
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "ownership_status": "已确�?,
-                "property_nature": "经营�?,
-                "usage_status": "出租",
-                "ownership_entity": "国资集团",
-                "search": "办公�?
-            }
-        }
+class OccupancyRateStatsResponse(BaseModel):
+    """出租率统计响应模型"""
+    overall_occupancy_rate: float = Field(..., description="总体出租率")
+    total_rentable_area: float = Field(..., description="总可租面积")
+    total_rented_area: float = Field(..., description="总已租面积")
+    calculated_at: datetime = Field(..., description="计算时间")
 
 
-# 统计图表数据点模�?
-class ChartDataPoint(BaseModel):
-    """图表数据点模�?""
-    
-    name: str = Field(..., description="数据点名�?)
-    value: float = Field(..., description="数�?)
-    percentage: Optional[float] = Field(None, description="百分�?)
-    count: Optional[int] = Field(None, description="数量")
-    area: Optional[float] = Field(None, description="面积")
-    
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "name": "已确�?,
-                "value": 80,
-                "percentage": 80.0,
-                "count": 80,
-                "area": 40000.0
-            }
-        }
+class CategoryOccupancyRateResponse(BaseModel):
+    """分类出租率响应模型"""
+    category: str = Field(..., description="分类名称")
+    occupancy_rate: float = Field(..., description="出租率")
+    rentable_area: float = Field(..., description="可租面积")
+    rented_area: float = Field(..., description="已租面积")
+    asset_count: int = Field(..., description="资产数量")
 
 
-# 统计趋势数据模型
-class TrendData(BaseModel):
-    """趋势数据模型"""
-    
-    period: str = Field(..., description="时间周期")
-    value: float = Field(..., description="数�?)
-    change: Optional[float] = Field(None, description="变化�?)
-    change_percentage: Optional[float] = Field(None, description="变化百分�?)
-    
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "period": "2024-01",
-                "value": 75.5,
-                "change": 2.3,
-                "change_percentage": 3.14
-            }
-        }
+class AreaSummaryResponse(BaseModel):
+    """面积汇总响应模型"""
+    total_area: float = Field(..., description="总面积")
+    rentable_area: float = Field(..., description="可租面积")
+    rented_area: float = Field(..., description="已租面积")
+    unrented_area: float = Field(..., description="未租面积")
+    occupancy_rate: float = Field(..., description="出租率")
+
+
+class FinancialSummaryResponse(BaseModel):
+    """财务汇总响应模型"""
+    total_annual_income: float = Field(..., description="年总收入")
+    total_annual_expense: float = Field(..., description="年总支出")
+    net_annual_income: float = Field(..., description="年净收入")
+    income_per_sqm: float = Field(..., description="每平方米年收入")
+    expense_per_sqm: float = Field(..., description="每平方米年支出")

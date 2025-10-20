@@ -1,6 +1,6 @@
 """
-PDF智能导入API V2
-完全重写的PDF导入API，整合完整的PDF处理流程
+PDF智能导入API (统一版本)
+整合了完整的PDF处理流程和V1兼容功能的统一API
 """
 
 import os
@@ -32,7 +32,7 @@ from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["pdf-import-v2"])
+router = APIRouter(tags=["pdf-import"])
 
 # === V1兼容性数据传输对象 ===
 class ExtractionRequest(BaseModel):

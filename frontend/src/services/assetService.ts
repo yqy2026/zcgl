@@ -422,7 +422,7 @@ export class AssetService {
   
   // 获取系统字典列表
   async getSystemDictionaries(dict_type?: string): Promise<SystemDictionary[]> {
-    const response = await apiClient.get('/system-dictionaries', {
+    const response = await apiClient.get('/dictionaries', {
       params: dict_type ? { dict_type } : undefined,
     })
     return response.data || []
@@ -430,25 +430,25 @@ export class AssetService {
 
   // 获取单个系统字典
   async getSystemDictionary(id: string): Promise<SystemDictionary> {
-    const response = await apiClient.get(`/system-dictionaries/${id}`)
+    const response = await apiClient.get(`/dictionaries/${id}`)
     return response.data
   }
 
   // 创建系统字典
   async createSystemDictionary(data: Omit<SystemDictionary, 'id' | 'created_at' | 'updated_at'>): Promise<SystemDictionary> {
-    const response = await apiClient.post('/system-dictionaries', data)
+    const response = await apiClient.post('/dictionaries', data)
     return response.data
   }
 
   // 更新系统字典
   async updateSystemDictionary(id: string, data: Partial<SystemDictionary>): Promise<SystemDictionary> {
-    const response = await apiClient.put(`/system-dictionaries/${id}`, data)
+    const response = await apiClient.put(`/dictionaries/${id}`, data)
     return response.data
   }
 
   // 删除系统字典
   async deleteSystemDictionary(id: string): Promise<void> {
-    await apiClient.delete(`/system-dictionaries/${id}`)
+    await apiClient.delete(`/dictionaries/${id}`)
   }
 
   // 批量更新系统字典
@@ -459,7 +459,7 @@ export class AssetService {
 
   // 获取字典类型列表
   async getDictionaryTypes(): Promise<{ types: string[] }> {
-    const response = await apiClient.get('/system-dictionaries/types/list')
+    const response = await apiClient.get('/dictionaries/types')
     return response.data || { types: [] }
   }
 

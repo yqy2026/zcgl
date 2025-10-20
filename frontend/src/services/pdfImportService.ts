@@ -156,7 +156,7 @@ export interface SystemInfoResponse {
 }
 
 // API基础配置 - 使用相对路径通过代理转发
-const API_BASE_URL = '/api/v1/pdf_import_v2';
+const API_BASE_URL = '/api/v1/pdf_import';
 
 class PDFImportService {
   /**

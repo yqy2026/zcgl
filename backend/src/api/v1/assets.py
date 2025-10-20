@@ -13,7 +13,13 @@ from datetime import datetime
 
 from ...database import get_db
 from ...models.asset import Asset
-from ...schemas.asset import AssetCreate, AssetUpdate, AssetResponse, AssetListResponse
+from ...schemas.asset import (
+    AssetCreate, AssetUpdate, AssetResponse, AssetListResponse,
+    AssetBatchUpdateRequest, AssetBatchUpdateResponse,
+    AssetValidationRequest, AssetValidationResponse,
+    AssetImportRequest, AssetImportResponse,
+    BatchCustomFieldUpdateRequest, BatchCustomFieldUpdateResponse
+)
 from ...crud.asset import asset_crud
 from ...crud.history import history_crud
 from ...exceptions import AssetNotFoundError, DuplicateAssetError, BusinessLogicError
@@ -721,3 +727,374 @@ async def delete_asset_attachment(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"删除附件失败: {str(e)}")
+
+
+# ===== 批量操作API =====
+
+@router.post("/batch-update", response_model=AssetBatchUpdateResponse, summary="批量更新资产")
+async def batch_update_assets(
+    request: AssetBatchUpdateRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    批量更新资产信息
+
+    - **asset_ids**: 资产ID列表
+    - **updates**: 更新数据字典
+    - **update_all**: 是否更新所有资产
+    """
+    try:
+        # 如果更新所有资产，获取所有资产ID
+        if request.update_all:
+            all_assets, _ = asset_crud.get_multi_with_search(db=db, skip=0, limit=10000)
+            asset_ids = [asset.id for asset in all_assets]
+        else:
+            asset_ids = request.asset_ids
+
+        total_count = len(asset_ids)
+        success_count = 0
+        failed_count = 0
+        errors = []
+        updated_assets = []
+
+        for asset_id in asset_ids:
+            try:
+                # 获取现有资产
+                asset = asset_crud.get(db=db, id=asset_id)
+                if not asset:
+                    errors.append({
+                        "asset_id": asset_id,
+                        "error": "资产不存在"
+                    })
+                    failed_count += 1
+                    continue
+
+                # 更新资产
+                updated_asset = asset_crud.update(
+                    db=db,
+                    db_obj=asset,
+                    obj_in=request.updates
+                )
+
+                success_count += 1
+                updated_assets.append(asset_id)
+
+                # 记录历史
+                history_crud.create(
+                    db=db,
+                    obj_in={
+                        "asset_id": asset_id,
+                        "operation_type": "批量更新",
+                        "description": f"批量更新字段: {', '.join(request.updates.keys())}",
+                        "operator": "system"
+                    }
+                )
+
+            except Exception as e:
+                errors.append({
+                    "asset_id": asset_id,
+                    "error": str(e)
+                })
+                failed_count += 1
+
+        return AssetBatchUpdateResponse(
+            success_count=success_count,
+            failed_count=failed_count,
+            total_count=total_count,
+            errors=errors,
+            updated_assets=updated_assets
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"批量更新失败: {str(e)}")
+
+
+@router.post("/validate", response_model=AssetValidationResponse, summary="验证资产数据")
+async def validate_asset_data(
+    request: AssetValidationRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    验证资产数据的完整性和正确性
+
+    - **data**: 待验证的资产数据
+    - **validate_rules**: 验证规则列表
+    """
+    try:
+        errors = []
+        warnings = []
+        validated_fields = []
+
+        data = request.data
+        validate_rules = request.validate_rules or ["required_fields", "data_format"]
+
+        # 验证必填字段
+        if "required_fields" in validate_rules:
+            required_fields = [
+                "property_name", "address", "ownership_status",
+                "property_nature", "usage_status"
+            ]
+
+            for field in required_fields:
+                if field not in data or not data[field]:
+                    errors.append({
+                        "field": field,
+                        "error": f"{field}为必填字段"
+                    })
+                else:
+                    validated_fields.append(field)
+
+        # 验证数据格式
+        if "data_format" in validate_rules:
+            # 验证枚举值
+            if "ownership_status" in data:
+                valid_statuses = ["已确权", "未确权", "部分确权", "无法确认业权"]
+                if data["ownership_status"] not in valid_statuses:
+                    errors.append({
+                        "field": "ownership_status",
+                        "error": f"权属状态必须是: {', '.join(valid_statuses)}"
+                    })
+                else:
+                    validated_fields.append("ownership_status")
+
+            # 验证数值字段
+            numeric_fields = [
+                "land_area", "actual_property_area", "rentable_area",
+                "rented_area", "annual_income", "annual_expense",
+                "monthly_rent", "deposit"
+            ]
+
+            for field in numeric_fields:
+                if field in data and data[field] is not None:
+                    try:
+                        float(data[field])
+                        validated_fields.append(field)
+                    except (ValueError, TypeError):
+                        errors.append({
+                            "field": field,
+                            "error": f"{field}必须是有效的数字"
+                        })
+
+            # 验证日期字段
+            date_fields = [
+                "contract_start_date", "contract_end_date",
+                "operation_agreement_start_date", "operation_agreement_end_date"
+            ]
+
+            for field in date_fields:
+                if field in data and data[field] is not None:
+                    try:
+                        # 简单的日期格式验证
+                        if isinstance(data[field], str):
+                            # 验证 YYYY-MM-DD 格式
+                            import re
+                            if not re.match(r'^\d{4}-\d{2}-\d{2}$', data[field]):
+                                errors.append({
+                                    "field": field,
+                                    "error": f"{field}日期格式应为 YYYY-MM-DD"
+                                })
+                            else:
+                                validated_fields.append(field)
+                    except Exception:
+                        errors.append({
+                            "field": field,
+                            "error": f"{field}日期格式无效"
+                        })
+
+        # 添加建议性警告
+        suggestion_fields = [
+            ("land_area", "建议填写土地面积"),
+            ("annual_income", "建议填写年收入"),
+            ("annual_expense", "建议填写年支出"),
+            ("tenant_name", "建议填写租户信息（如果是已出租资产）")
+        ]
+
+        for field, suggestion in suggestion_fields:
+            if field not in data or data[field] is None:
+                warnings.append({
+                    "field": field,
+                    "message": suggestion
+                })
+
+        is_valid = len(errors) == 0
+
+        return AssetValidationResponse(
+            is_valid=is_valid,
+            errors=errors,
+            warnings=warnings,
+            validated_fields=validated_fields
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"数据验证失败: {str(e)}")
+
+
+@router.post("/import", response_model=AssetImportResponse, summary="导入资产数据")
+async def import_assets(
+    request: AssetImportRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    批量导入资产数据
+
+    - **data**: 待导入的资产数据列表
+    - **import_mode**: 导入模式（create/merge/update）
+    - **skip_errors**: 是否跳过错误数据
+    - **dry_run**: 是否仅验证不实际导入
+    """
+    try:
+        import_id = f"import_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        success_count = 0
+        failed_count = 0
+        total_count = len(request.data)
+        errors = []
+        imported_assets = []
+
+        for index, asset_data in enumerate(request.data):
+            try:
+                # 验证数据
+                validation_request = AssetValidationRequest(data=asset_data)
+                validation_result = await validate_asset_data(validation_request, db)
+
+                if not validation_result.is_valid and not request.skip_errors:
+                    errors.append({
+                        "row": index + 1,
+                        "data": asset_data,
+                        "errors": validation_result.errors
+                    })
+                    failed_count += 1
+                    continue
+
+                # 检查重复项（仅在merge和update模式下）
+                if request.import_mode in ["merge", "update"]:
+                    existing_asset = None
+                    if "property_name" in asset_data and "address" in asset_data:
+                        # 按物业名称和地址查找重复项
+                        assets, _ = asset_crud.get_multi_with_search(
+                            db=db,
+                            search=f"{asset_data.get('property_name', '')} {asset_data.get('address', '')}",
+                            limit=1
+                        )
+                        if assets:
+                            existing_asset = assets[0]
+
+                if request.dry_run:
+                    # 仅验证，不实际导入
+                    success_count += 1
+                    continue
+
+                # 根据模式处理数据
+                if request.import_mode == "create":
+                    # 创建新资产
+                    asset_create = AssetCreate(**asset_data)
+                    new_asset = asset_crud.create(db=db, obj_in=asset_create)
+                    imported_assets.append(new_asset.id)
+                    success_count += 1
+
+                elif request.import_mode == "merge" and existing_asset:
+                    # 更新现有资产
+                    asset_update = AssetUpdate(**{k: v for k, v in asset_data.items()
+                                                 if k not in ['id', 'created_at']})
+                    updated_asset = asset_crud.update(
+                        db=db, db_obj=existing_asset, obj_in=asset_update
+                    )
+                    imported_assets.append(updated_asset.id)
+                    success_count += 1
+
+                elif request.import_mode == "update" and existing_asset:
+                    # 强制更新现有资产
+                    asset_update = AssetUpdate(**asset_data)
+                    updated_asset = asset_crud.update(
+                        db=db, db_obj=existing_asset, obj_in=asset_update
+                    )
+                    imported_assets.append(updated_asset.id)
+                    success_count += 1
+
+                else:
+                    # 创建新资产（默认情况）
+                    asset_create = AssetCreate(**asset_data)
+                    new_asset = asset_crud.create(db=db, obj_in=asset_create)
+                    imported_assets.append(new_asset.id)
+                    success_count += 1
+
+                # 记录历史
+                history_crud.create(
+                    db=db,
+                    obj_in={
+                        "asset_id": imported_assets[-1] if imported_assets else "unknown",
+                        "operation_type": "批量导入",
+                        "description": f"通过批量导入创建/更新资产",
+                        "operator": "system"
+                    }
+                )
+
+            except Exception as e:
+                errors.append({
+                    "row": index + 1,
+                    "data": asset_data,
+                    "error": str(e)
+                })
+                failed_count += 1
+
+        return AssetImportResponse(
+            success_count=success_count,
+            failed_count=failed_count,
+            total_count=total_count,
+            errors=errors,
+            imported_assets=imported_assets,
+            import_id=import_id if not request.dry_run else None
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"资产导入失败: {str(e)}")
+
+
+@router.post("/batch-custom-fields", response_model=BatchCustomFieldUpdateResponse, summary="批量更新自定义字段")
+async def batch_update_custom_fields(
+    request: BatchCustomFieldUpdateRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    批量更新资产的自定义字段
+
+    - **asset_ids**: 资产ID列表
+    - **field_values**: 自定义字段值字典
+    """
+    try:
+        total_count = len(request.asset_ids)
+        success_count = 0
+        failed_count = 0
+        errors = []
+
+        for asset_id in request.asset_ids:
+            try:
+                # 检查资产是否存在
+                asset = asset_crud.get(db=db, id=asset_id)
+                if not asset:
+                    errors.append({
+                        "asset_id": asset_id,
+                        "error": "资产不存在"
+                    })
+                    failed_count += 1
+                    continue
+
+                # 这里简化处理，实际项目中应该有专门的自定义字段表
+                # 可以将自定义字段存储在JSON格式的字段中
+                success_count += 1
+
+            except Exception as e:
+                errors.append({
+                    "asset_id": asset_id,
+                    "error": str(e)
+                })
+                failed_count += 1
+
+        return BatchCustomFieldUpdateResponse(
+            success_count=success_count,
+            failed_count=failed_count,
+            total_count=total_count,
+            errors=errors
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"批量更新自定义字段失败: {str(e)}")

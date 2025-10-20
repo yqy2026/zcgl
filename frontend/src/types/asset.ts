@@ -35,7 +35,6 @@ export interface Asset {
   lease_contract_number?: string
   contract_start_date?: string
   contract_end_date?: string
-  contract_status?: ContractStatus
   monthly_rent?: number  // 金额字段，使用高精度number
   deposit?: number       // 金额字段，使用高精度number
   is_sublease?: boolean
@@ -143,12 +142,6 @@ export enum TenantType {
   OTHER = '其他'
 }
 
-export enum ContractStatus {
-  ACTIVE = '生效中',
-  EXPIRED = '已到期',
-  TERMINATED = '已终止',
-  PENDING = '待签署'
-}
 
 export enum BusinessModel {
   LEASE_SUBLEASE = '承租转租',

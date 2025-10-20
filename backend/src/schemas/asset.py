@@ -449,6 +449,176 @@ class AssetCustomFieldResponse(BaseModel):
         from_attributes = True
 
 
+# ===== 批量操作相关模型 =====
+
+class AssetBatchUpdateRequest(BaseModel):
+    """资产批量更新请求模型"""
+
+    asset_ids: List[str] = Field(..., description="资产ID列表")
+    updates: dict = Field(..., description="更新数据")
+    update_all: bool = Field(False, description="是否更新所有资产")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "asset_ids": ["asset1", "asset2", "asset3"],
+                "updates": {
+                    "ownership_status": "已确权",
+                    "property_nature": "经营性"
+                },
+                "update_all": False
+            }
+        }
+
+
+class AssetBatchUpdateResponse(BaseModel):
+    """资产批量更新响应模型"""
+
+    success_count: int = Field(..., description="成功更新数量")
+    failed_count: int = Field(..., description="失败数量")
+    total_count: int = Field(..., description="总数量")
+    errors: List[dict] = Field(default_factory=list, description="错误信息列表")
+    updated_assets: List[str] = Field(default_factory=list, description="成功更新的资产ID")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "success_count": 2,
+                "failed_count": 1,
+                "total_count": 3,
+                "errors": [
+                    {"asset_id": "asset3", "error": "数据验证失败"}
+                ],
+                "updated_assets": ["asset1", "asset2"]
+            }
+        }
+
+
+class AssetValidationRequest(BaseModel):
+    """资产数据验证请求模型"""
+
+    data: dict = Field(..., description="待验证的资产数据")
+    validate_rules: Optional[List[str]] = Field(None, description="验证规则列表")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "data": {
+                    "property_name": "示例物业",
+                    "address": "示例地址",
+                    "ownership_status": "已确权"
+                },
+                "validate_rules": ["required_fields", "data_format"]
+            }
+        }
+
+
+class AssetValidationResponse(BaseModel):
+    """资产数据验证响应模型"""
+
+    is_valid: bool = Field(..., description="是否通过验证")
+    errors: List[dict] = Field(default_factory=list, description="错误信息列表")
+    warnings: List[dict] = Field(default_factory=list, description="警告信息列表")
+    validated_fields: List[str] = Field(default_factory=list, description="已验证字段")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "is_valid": True,
+                "errors": [],
+                "warnings": [
+                    {"field": "land_area", "message": "建议填写土地面积"}
+                ],
+                "validated_fields": ["property_name", "address", "ownership_status"]
+            }
+        }
+
+
+class AssetImportRequest(BaseModel):
+    """资产导入请求模型"""
+
+    data: List[dict] = Field(..., description="待导入的资产数据列表")
+    import_mode: str = Field("create", description="导入模式：create/merge/update")
+    skip_errors: bool = Field(False, description="是否跳过错误数据")
+    dry_run: bool = Field(False, description="是否仅验证不实际导入")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "data": [
+                    {
+                        "property_name": "示例物业1",
+                        "address": "示例地址1",
+                        "ownership_status": "已确权"
+                    }
+                ],
+                "import_mode": "create",
+                "skip_errors": False,
+                "dry_run": False
+            }
+        }
+
+
+class AssetImportResponse(BaseModel):
+    """资产导入响应模型"""
+
+    success_count: int = Field(..., description="成功导入数量")
+    failed_count: int = Field(..., description="失败数量")
+    total_count: int = Field(..., description="总数量")
+    errors: List[dict] = Field(default_factory=list, description="错误信息列表")
+    imported_assets: List[str] = Field(default_factory=list, description="成功导入的资产ID")
+    import_id: Optional[str] = Field(None, description="导入任务ID")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "success_count": 5,
+                "failed_count": 0,
+                "total_count": 5,
+                "errors": [],
+                "imported_assets": ["asset1", "asset2", "asset3", "asset4", "asset5"],
+                "import_id": "import_task_123"
+            }
+        }
+
+
+class BatchCustomFieldUpdateRequest(BaseModel):
+    """批量自定义字段更新请求模型"""
+
+    asset_ids: List[str] = Field(..., description="资产ID列表")
+    field_values: dict = Field(..., description="自定义字段值")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "asset_ids": ["asset1", "asset2"],
+                "field_values": {
+                    "custom_field_1": "值1",
+                    "custom_field_2": 123
+                }
+            }
+        }
+
+
+class BatchCustomFieldUpdateResponse(BaseModel):
+    """批量自定义字段更新响应模型"""
+
+    success_count: int = Field(..., description="成功更新数量")
+    failed_count: int = Field(..., description="失败数量")
+    total_count: int = Field(..., description="总数量")
+    errors: List[dict] = Field(default_factory=list, description="错误信息列表")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "success_count": 2,
+                "failed_count": 0,
+                "total_count": 2,
+                "errors": []
+            }
+        }
+
+
 class AssetCustomFieldCreate(BaseModel):
     """创建资产自定义字段模型"""
     asset_id: str = Field(..., description="关联资产ID")
