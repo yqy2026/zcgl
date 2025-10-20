@@ -5,15 +5,15 @@
 这是一个专业的土地物业资产管理系统，专为资产管理经理设计的个人工作助手工具。系统提供完整的资产档案管理、出租率统计、财务分析、智能PDF合同导入等功能。
 
 ### 核心特性
-- 完整资产管理：58个字段的全面资产档案
+- 完整资产管理：支持资产增删改查、历史记录追踪、附件管理等
 - 智能出租率统计：实时计算和多维度分析
 - 财务数据管理：收益、支出、净利润跟踪
 - 统计分析：多维度数据统计和可视化
 - 自动计算：出租率、净收益等自动计算
 - 数据验证：完善的数据一致性验证
-- 高性能：优化的数据库查询和API响应
+- 高性能：优化的数据库查询和API响应，支持缓存机制
 - 智能PDF导入：支持扫描件PDF的OCR识别和合同信息自动提取
-- 权限管理：基于RBAC的角色权限控制系统
+- 权限管理：基于RBAC的角色权限控制系统，支持多租户
 - 组织架构：支持多层级组织架构管理
 - 审计日志：完整的操作审计和安全日志
 - 缓存优化：Redis缓存提升系统性能
@@ -21,7 +21,7 @@
 
 ### 技术栈
 - **后端**: Python 3.12 + FastAPI + SQLAlchemy 2.0 + Pydantic v2 + UV包管理器
-- **数据库**: SQLite（开发环境，支持扩展到PostgreSQL生产环境）
+- **数据库**: SQLite（开发环境）/ PostgreSQL（生产环境）
 - **缓存**: Redis（生产环境，开发环境使用内存缓存）
 - **前端**: React 18 + TypeScript + Ant Design 5 + Vite
 - **部署**: Docker + Nginx + Gunicorn
@@ -68,16 +68,17 @@ zcgl/
 
 ### 1. 资产管理
 - 资产增删改查操作
-- 58个字段的详细资产信息管理
+- 详细的资产信息管理（包含权属方、物业信息、面积、租户、合同、财务等字段）
 - 批量操作支持
 - 资产历史记录追踪
+- 资产附件管理（支持PDF文件上传和下载）
 - 资产出租率自动计算
 - 资产财务数据汇总
 - 资产数据导入导出（Excel格式）
 
 ### 2. 统计分析
 - 整体出租率统计
-- 按分类的出租率分析
+- 按分类的出租率分析（按业态、物业性质等维度）
 - 面积汇总统计
 - 财务数据汇总
 - 多维度数据可视化
@@ -174,20 +175,26 @@ npm run test
 - `GET /api/v1/assets/{id}` - 获取资产详情
 - `PUT /api/v1/assets/{id}` - 更新资产
 - `DELETE /api/v1/assets/{id}` - 删除资产
-- `POST /api/v1/assets/batch` - 批量操作资产
-- `GET /api/v1/assets/export` - 导出资产数据
-- `POST /api/v1/assets/import` - 导入资产数据
+- `GET /api/v1/assets/{id}/history` - 获取资产历史记录
+- `GET /api/v1/assets/ownership-entities` - 获取权属方列表
+- `GET /api/v1/assets/business-categories` - 获取业态类别列表
+- `GET /api/v1/assets/usage-statuses` - 获取使用状态列表
+- `GET /api/v1/assets/property-natures` - 获取物业性质列表
+- `GET /api/v1/assets/ownership-statuses` - 获取确权状态列表
+- `GET /api/v1/assets/statistics/summary` - 获取资产统计摘要
 
 ### 统计分析
+- `GET /api/v1/statistics/basic` - 基础统计数据
+- `GET /api/v1/statistics/summary` - 统计摘要
 - `GET /api/v1/statistics/occupancy-rate/overall` - 整体出租率
 - `GET /api/v1/statistics/occupancy-rate/by-category` - 分类出租率
 - `GET /api/v1/statistics/area-summary` - 面积汇总
 - `GET /api/v1/statistics/financial-summary` - 财务汇总
 
 ### PDF合同处理
-- `POST /api/v1/pdf/process` - 处理PDF合同文件
-- `POST /api/v1/pdf/extract-contract` - 提取合同信息
-- `POST /api/v1/pdf/validate-contract` - 验证合同数据
+- `POST /api/v1/pdf/upload_and_extract` - 上传并提取PDF合同信息
+- `POST /api/v1/pdf/extract` - 从文本提取合同信息
+- `POST /api/v1/pdf/confirm_and_save` - 确认并保存提取的数据
 
 ### 权限管理
 - `POST /api/v1/auth/login` - 用户登录
@@ -284,8 +291,8 @@ npm run test
 - 资产模型：`backend/src/models/asset.py`
 - 资产API：`backend/src/api/v1/assets.py`
 - 统计API：`backend/src/api/v1/statistics.py`
-- PDF处理服务：`backend/src/services/enhanced_pdf_extractor.py`
-- 合同信息提取器：`backend/src/services/enhanced_pdf_extractor.py`
+- PDF处理服务：`backend/src/services/pdf_import_service.py`
+- 合同信息提取器：`backend/src/services/contract_extractor.py`
 - 权限管理：`backend/src/models/rbac.py`
 
 ### 文档

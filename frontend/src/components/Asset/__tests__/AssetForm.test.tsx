@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
@@ -8,6 +8,7 @@ import { vi, describe, it, expect, beforeEach } from 'vitest'
 import AssetForm from '../AssetForm'
 import { assetService } from '@/services/assetService'
 import type { Asset } from '@/types/asset'
+import { OwnershipStatus, PropertyNature, UsageStatus } from '@/types/asset'
 
 // Mock the asset service
 vi.mock('@/services/assetService', () => ({
@@ -15,7 +16,6 @@ vi.mock('@/services/assetService', () => ({
     createAsset: vi.fn(),
     updateAsset: vi.fn(),
     getOwnershipEntities: vi.fn(),
-    getManagementEntities: vi.fn(),
     getBusinessCategories: vi.fn(),
   },
 }))
@@ -33,9 +33,9 @@ const mockAsset: Asset = {
   property_name: '测试物业',
   ownership_entity: '测试权属方',
   address: '测试地址',
-  ownership_status: '已确权',
-  property_nature: '经营类',
-  usage_status: '出租',
+  ownership_status: OwnershipStatus.CONFIRMED,
+  property_nature: PropertyNature.COMMERCIAL_CLASS,
+  usage_status: UsageStatus.RENTED,
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-01T00:00:00Z',
 }

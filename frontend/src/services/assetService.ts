@@ -1,4 +1,9 @@
 import { apiClient } from './api'
+import {
+  convertBackendToFrontend,
+  convertFrontendToBackend,
+  validateNumericFields
+} from '@/utils/dataConversion'
 import type {
   Asset,
   AssetSearchParams,
@@ -24,10 +29,9 @@ export class AssetService {
         },
       })
 
-      // 处理响应数据 - 后端直接返回数据格式
-      // ApiClient 已经解包了 response.data，所以 response 就是实际的数据
+      // 转换后端数据为前端格式
       if (response) {
-        return response as AssetListResponse
+        return convertBackendToFrontend<AssetListResponse>(response)
       }
 
       return response as AssetListResponse
@@ -41,19 +45,35 @@ export class AssetService {
   // 获取单个资产
   async getAsset(id: string): Promise<Asset> {
     const response = await apiClient.get<Asset>(`/assets/${id}`)
-    return response.data || response as Asset
+    return convertBackendToFrontend<Asset>(response.data || response as Asset)
   }
 
   // 创建资产
   async createAsset(data: AssetCreateRequest): Promise<Asset> {
-    const response = await apiClient.post<Asset>('/assets', data)
-    return response.data || response as Asset
+    // 验证数值字段
+    const validationErrors = validateNumericFields(data)
+    if (validationErrors.length > 0) {
+      throw new Error(`数据验证失败: ${validationErrors.join(', ')}`)
+    }
+
+    // 转换前端数据为后端格式
+    const backendData = convertFrontendToBackend<AssetCreateRequest>(data)
+    const response = await apiClient.post<Asset>('/assets', backendData)
+    return convertBackendToFrontend<Asset>(response.data || response as Asset)
   }
 
   // 更新资产
   async updateAsset(id: string, data: AssetUpdateRequest): Promise<Asset> {
-    const response = await apiClient.put<Asset>(`/assets/${id}`, data)
-    return response.data || response as Asset
+    // 验证数值字段
+    const validationErrors = validateNumericFields(data)
+    if (validationErrors.length > 0) {
+      throw new Error(`数据验证失败: ${validationErrors.join(', ')}`)
+    }
+
+    // 转换前端数据为后端格式
+    const backendData = convertFrontendToBackend<AssetUpdateRequest>(data)
+    const response = await apiClient.put<Asset>(`/assets/${id}`, backendData)
+    return convertBackendToFrontend<Asset>(response.data || response as Asset)
   }
 
   // 导出资产
@@ -342,7 +362,7 @@ export class AssetService {
 
   // 获取出租率统计数据
   async getOccupancyRateStats(filters?: AssetSearchParams): Promise<any> {
-    const response = await apiClient.get('/statistics/occupancy-rate', {
+    const response = await apiClient.get('/statistics/occupancy-rate/overall', {
       params: filters,
     })
     return response.data || response

@@ -355,15 +355,16 @@ const PDFImportPage: React.FC = () => {
 
     const { capabilities } = systemInfo;
     const availableCount = [
-      capabilities.markitdown_available,
       capabilities.pdfplumber_available,
-      capabilities.spacy_available
+      capabilities.pymupdf_available,
+      capabilities.spacy_available,
+      capabilities.ocr_available
     ].filter(Boolean).length;
 
     return {
-      total: 3,
+      total: 4,
       available: availableCount,
-      percentage: Math.round((availableCount / 3) * 100)
+      percentage: Math.round((availableCount / 4) * 100)
     };
   }, [systemInfo]);
 
@@ -542,18 +543,18 @@ const PDFImportPage: React.FC = () => {
               <div>
                 <Row gutter={16}>
                   <Col span={6}>
-                    <Tag color={systemInfo.capabilities.markitdown_available ? 'green' : 'orange'}>
-                      MarkItDown: {systemInfo.capabilities.markitdown_available ? '可用' : '不可用'}
-                    </Tag>
-                  </Col>
-                  <Col span={6}>
                     <Tag color={systemInfo.capabilities.pdfplumber_available ? 'green' : 'orange'}>
                       PDFPlumber: {systemInfo.capabilities.pdfplumber_available ? '可用' : '不可用'}
                     </Tag>
                   </Col>
                   <Col span={6}>
-                    <Tag color={systemInfo.capabilities.spacy_available ? 'green' : 'default'}>
-                      NLP增强: {systemInfo.capabilities.spacy_available ? '可用' : '不可用'}
+                    <Tag color={systemInfo.capabilities.pymupdf_available ? 'green' : 'orange'}>
+                      PyMuPDF: {systemInfo.capabilities.pymupdf_available ? '可用' : '不可用'}
+                    </Tag>
+                  </Col>
+                  <Col span={6}>
+                    <Tag color={systemInfo.capabilities.ocr_available ? 'green' : 'default'}>
+                      OCR: {systemInfo.capabilities.ocr_available ? '可用' : '不可用'}
                     </Tag>
                   </Col>
                   <Col span={6}>

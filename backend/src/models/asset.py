@@ -323,7 +323,7 @@ class Ownership(Base):
     updated_by = Column(String(100), nullable=True, comment="更新人")
 
     # 关联关系
-    rent_contracts = relationship("RentContract", back_populates="ownership", cascade="all, delete-orphan")
+    owned_rent_contracts = relationship("RentContract", back_populates="ownership", cascade="all, delete-orphan")
     assets = relationship("Asset", back_populates="ownership")
     ownership_relations = relationship("ProjectOwnershipRelation", back_populates="ownership", cascade="all, delete-orphan")
 

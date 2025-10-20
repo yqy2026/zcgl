@@ -54,9 +54,12 @@ class RentContract(Base):
     # 多租户支持
     tenant_id = Column(String(50), nullable=True, comment="租户ID")
 
+    # PDF导入追踪
+    source_session_id = Column(String(100), nullable=True, comment="PDF导入会话ID")
+
     # 关联关系
     asset = relationship("Asset", back_populates="rent_contracts")
-    ownership = relationship("Ownership", back_populates="rent_contracts")
+    ownership = relationship("Ownership", back_populates="owned_rent_contracts")
     rent_terms = relationship("RentTerm", back_populates="contract", cascade="all, delete-orphan")
     rent_ledger = relationship("RentLedger", back_populates="contract", cascade="all, delete-orphan")
 

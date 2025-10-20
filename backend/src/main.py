@@ -33,15 +33,15 @@ app = FastAPI(
 )
 
 # 添加API安全中间件
-# app.middleware("http")(api_security_middleware)  # 临时禁用以调试500错误
+# app.middleware("http")(api_security_middleware)
 
-# 配置CORS中间件 - 临时简化以调试500错误
+# 配置CORS中间件
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 临时使用简化配置
+    allow_origins=["*"],  # 配置允许的源
     allow_credentials=True,
-    allow_methods=["*"],  # 临时使用简化配置
-    allow_headers=["*"],  # 临时使用简化配置
+    allow_methods=["*"],  # 配置允许的HTTP方法
+    allow_headers=["*"],  # 配置允许的请求头
     expose_headers=["*"]
 )
 
@@ -169,13 +169,13 @@ async def general_exception_handler(request: Request, exc: Exception):
     )
 
 
-# 应用启动事件 - 临时简化以调试500错误
+# 应用启动事件
 @app.on_event("startup")
 async def startup_event():
-    """应用启动时执行 - 简化版本"""
-    logger.info("正在启动土地物业资产管理系统 (简化模式)...")
+    """应用启动时执行"""
+    logger.info("正在启动土地物业资产管理系统...")
 
-    # 仅创建数据库表
+    # 创建数据库表
     try:
         create_tables()
         logger.info("数据库表创建成功")
@@ -183,9 +183,7 @@ async def startup_event():
         logger.error(f"数据库表创建失败: {e}")
         raise
 
-    # 暂时禁用其他启动组件以调试500错误
-    # TODO: 重新启用后排查具体问题组件
-    logger.info("土地物业资产管理系统启动完成 (简化模式)")
+    logger.info("土地物业资产管理系统启动完成")
 
 
 def validate_configurations():

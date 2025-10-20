@@ -109,7 +109,7 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
 
       const response: FileUploadResponse = await pdfImportService.uploadPDFFile(
         file,
-        true, // 默认优先使用markitdown
+        false, // 不再使用markitdown
         controller.signal
       );
 
@@ -193,12 +193,7 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
     const { capabilities } = systemInfo;
     const tags = [];
 
-    if (capabilities.markitdown_available) {
-      tags.push(<Tag color="green" key="markitdown">MarkItDown可用</Tag>);
-    } else {
-      tags.push(<Tag color="orange" key="markitdown">MarkItDown不可用</Tag>);
-    }
-
+    
     if (capabilities.pdfplumber_available) {
       tags.push(<Tag color="green" key="pdfplumber">PDFPlumber可用</Tag>);
     } else {

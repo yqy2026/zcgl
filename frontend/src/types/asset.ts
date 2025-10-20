@@ -11,9 +11,9 @@ export interface Asset {
   property_nature: PropertyNature
   usage_status: UsageStatus
   business_category?: string
-  
-  // 面积相关字段 - 使用number类型，前端处理精度
-  land_area?: number
+
+  // 面积相关字段 - 使用Decimal精度类型以匹配后端
+  land_area?: number // 前端使用number，传输时转换为Decimal字符串
   actual_property_area?: number
   rentable_area?: number
   rented_area?: number
@@ -21,41 +21,48 @@ export interface Asset {
   non_commercial_area?: number
   occupancy_rate?: number  // 自动计算字段，0-100
   include_in_occupancy_rate?: boolean
-  
+
   // 用途相关字段
   certificated_usage?: string
   actual_usage?: string
-  
+
   // 租户相关字段
   tenant_name?: string
   tenant_contact?: string
   tenant_type?: TenantType
-  
+
   // 合同相关字段
   lease_contract_number?: string
   contract_start_date?: string
   contract_end_date?: string
   contract_status?: ContractStatus
-  monthly_rent?: number  // 金额字段
-  deposit?: number       // 金额字段
+  monthly_rent?: number  // 金额字段，使用高精度number
+  deposit?: number       // 金额字段，使用高精度number
   is_sublease?: boolean
   sublease_notes?: string
-  
+
   // 管理相关字段
   manager_name?: string
   business_model?: BusinessModel  // 接收模式
   operation_status?: OperationStatus
-  
+
   // 财务相关字段
-  annual_income?: number   // 金额字段
-  annual_expense?: number  // 金额字段
+  annual_income?: number   // 金额字段，使用高精度number
+  annual_expense?: number  // 金额字段，使用高精度number
   net_income?: number      // 自动计算字段
   
   // 接收相关字段
   operation_agreement_start_date?: string
   operation_agreement_end_date?: string
   operation_agreement_attachments?: string
-  
+
+  // 终端合同相关字段
+  terminal_contract_files?: string
+
+  // 项目相关字段
+  project_id?: string
+  ownership_id?: string
+
   // 项目相关字段已移至基本信息部分
   
   // 系统字段
@@ -87,12 +94,28 @@ export interface Asset {
 export enum OwnershipStatus {
   CONFIRMED = '已确权',
   UNCONFIRMED = '未确权',
-  PARTIAL = '部分确权'
+  PARTIAL = '部分确权',
+  CANNOT_CONFIRM = '无法确认业权'
 }
 
 export enum PropertyNature {
   COMMERCIAL = '经营性',
-  NON_COMMERCIAL = '非经营性'
+  NON_COMMERCIAL = '非经营性',
+  COMMERCIAL_EXTERNAL = '经营-外部',
+  COMMERCIAL_INTERNAL = '经营-内部',
+  COMMERCIAL_LEASE = '经营-租赁',
+  NON_COMMERCIAL_PUBLIC = '非经营类-公配',
+  NON_COMMERCIAL_OTHER = '非经营类-其他',
+  COMMERCIAL_CLASS = '经营类',
+  NON_COMMERCIAL_CLASS = '非经营类',
+  COMMERCIAL_SUPPORTING = '经营-配套',
+  NON_COMMERCIAL_SUPPORTING = '非经营-配套',
+  COMMERCIAL_SUPPORTING_TOWN = '经营-配套镇',
+  NON_COMMERCIAL_SUPPORTING_TOWN = '非经营-配套镇',
+  COMMERCIAL_DISPOSAL = '经营-处置类',
+  NON_COMMERCIAL_DISPOSAL = '非经营-处置类',
+  NON_COMMERCIAL_PUBLIC_HOUSING = '非经营-公配房',
+  NON_COMMERCIAL_SUPPORTING_HOUSING = '非经营类-配套'
 }
 
 export enum UsageStatus {
@@ -100,9 +123,17 @@ export enum UsageStatus {
   VACANT = '空置',
   SELF_USED = '自用',
   PUBLIC_HOUSING = '公房',
-  PENDING_TRANSFER = '待移交',
+  OTHER = '其他',
+  SUBLEASE = '转租',
+  PUBLIC_FACILITY = '公配',
+  VACANT_PLANNING = '空置规划',
+  VACANT_RESERVED = '空置预留',
+  SUPPORTING_FACILITY = '配套',
+  VACANT_SUPPORTING = '空置配套',
+  VACANT_SUPPORTING_SHORT = '空置配',
   PENDING_DISPOSAL = '待处置',
-  OTHER = '其他'
+  PENDING_HANDOVER = '待移交',
+  VACANT_DISPOSAL = '闲置'
 }
 
 export enum TenantType {
@@ -279,6 +310,61 @@ export interface FieldValidationRule {
   max?: number
   pattern?: string
   message?: string
+}
+
+// 数值精度处理工具 - 处理前后端Decimal/number类型转换
+export const DecimalUtils = {
+  // 将后端Decimal字符串转换为前端number，处理精度
+  parseDecimal: (decimalStr: string | number | null | undefined): number | undefined => {
+    if (decimalStr === null || decimalStr === undefined || decimalStr === '') {
+      return undefined
+    }
+
+    // 如果已经是number，直接返回
+    if (typeof decimalStr === 'number') {
+      return decimalStr
+    }
+
+    // 转换字符串为number，处理精度
+    const num = parseFloat(decimalStr.toString())
+    return isNaN(num) ? undefined : num
+  },
+
+  // 将前端number转换为后端Decimal字符串
+  formatDecimal: (num: number | null | undefined): string | undefined => {
+    if (num === null || num === undefined || isNaN(num)) {
+      return undefined
+    }
+
+    // 保持精度，使用toFixed避免精度丢失
+    return num.toString()
+  },
+
+  // 安全的数值运算，避免浮点精度问题
+  safeAdd: (a: number | undefined, b: number | undefined): number => {
+    const numA = a || 0
+    const numB = b || 0
+    return Math.round((numA + numB) * 100) / 100
+  },
+
+  safeSubtract: (a: number | undefined, b: number | undefined): number => {
+    const numA = a || 0
+    const numB = b || 0
+    return Math.round((numA - numB) * 100) / 100
+  },
+
+  safeMultiply: (a: number | undefined, b: number | undefined): number => {
+    const numA = a || 0
+    const numB = b || 0
+    return Math.round((numA * numB) * 100) / 100
+  },
+
+  safeDivide: (a: number | undefined, b: number | undefined): number => {
+    const numA = a || 0
+    const numB = b || 0
+    if (numB === 0) return 0
+    return Math.round((numA / numB) * 100) / 100
+  }
 }
 
 export interface AssetValidationRules {

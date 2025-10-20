@@ -4,6 +4,7 @@ import { vi, describe, it, expect } from 'vitest'
 
 import AssetDetailInfo from '../AssetDetailInfo'
 import type { Asset } from '@/types/asset'
+import { OwnershipStatus, PropertyNature, UsageStatus, BusinessModel } from '@/types/asset'
 
 // Mock the format utilities
 vi.mock('@/utils/format', () => ({
@@ -32,7 +33,6 @@ const mockAsset: Asset = {
   id: '1',
   property_name: '测试物业',
   ownership_entity: '测试权属方',
-  management_entity: '测试管理方',
   address: '测试地址123号',
   land_area: 5000,
   actual_property_area: 3000,
@@ -40,16 +40,16 @@ const mockAsset: Asset = {
   rented_area: 2000,
   unrented_area: 500,
   non_commercial_area: 0,
-  ownership_status: '已确权',
-  property_nature: '经营类',
-  usage_status: '出租',
+  ownership_status: OwnershipStatus.CONFIRMED,
+  property_nature: PropertyNature.COMMERCIAL_CLASS,
+  usage_status: UsageStatus.RENTED,
   certificated_usage: '商业用途',
   actual_usage: '办公楼',
   business_category: '商业办公',
-  business_model: '整租',  // 接收模式
+  business_model: BusinessModel.SELF_OPERATION,
   is_litigated: false,
   include_in_occupancy_rate: true,
-  occupancy_rate: '80.00',
+  occupancy_rate: 80.00,
   tenant_name: '测试租户',
   lease_contract: 'LC001',
   current_contract_start_date: '2024-01-01',
@@ -151,9 +151,9 @@ describe('AssetDetailInfo', () => {
       property_name: '最小物业',
       ownership_entity: '权属方',
       address: '地址',
-      ownership_status: '已确权',
-      property_nature: '非经营类',
-      usage_status: '自用',
+      ownership_status: OwnershipStatus.CONFIRMED,
+      property_nature: PropertyNature.NON_COMMERCIAL_CLASS,
+      usage_status: UsageStatus.SELF_USED,
       created_at: '2024-01-01T00:00:00Z',
       updated_at: '2024-01-01T00:00:00Z',
     }
@@ -172,7 +172,7 @@ describe('AssetDetailInfo', () => {
   it('displays non-commercial area for non-commercial properties', () => {
     const nonCommercialAsset: Asset = {
       ...mockAsset,
-      property_nature: '非经营类',
+      property_nature: PropertyNature.NON_COMMERCIAL_CLASS,
       non_commercial_area: 1500,
       rentable_area: undefined,
       rented_area: undefined,

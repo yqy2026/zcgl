@@ -1,36 +1,164 @@
-# 依赖文件
-node_modules/
+# ============================================
+# Land Property Asset Management System - Git Ignore File
+# Configured following best practices to avoid sensitive and unnecessary files
+# Updated: 2025-10-20
+# ============================================
+
+# ----------
+# Python & Backend
+# ----------
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
+*.so
 .Python
-env/
-venv/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# UV 包管理器
 .venv/
-pip-log.txt
-pip-delete-this-directory.txt
-.tox/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Python 测试和覆盖率
 .coverage
+.pytest_cache/
+.hypothesis/
+.tox/
 .coverage.*
 .cache
 nosetests.xml
 coverage.xml
 *.cover
-*.log
-.git
-.mypy_cache
-.pytest_cache
-.hypothesis
+*.py,cover
+htmlcov/
 
-# IDE和编辑器
+# Python 环境
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# mypy 类型检查
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ----------
+# Node.js / Frontend
+# ----------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# 运行时数据
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# 覆盖率目录
+coverage/
+*.lcov
+.nyc_output
+
+# 依赖锁定文件（根据团队需求选择）
+# package-lock.json
+# yarn.lock
+
+# 构建输出
+dist/
+build/
+.next/
+out/
+
+# TypeScript & JavaScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Vite
+.vite/
+.vite-cache/
+
+# React & Build Artifacts
+.eslintcache
+.stylelintcache
+.turbo/
+
+# Package managers
+.pnpm-debug.log*
+.yarn-integrity
+
+# ----------
+# IDE 和编辑器
+# ----------
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# 操作系统
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# JetBrains
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# VS Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
+
+# ----------
+# 操作系统生成文件
+# ----------
 .DS_Store
 .DS_Store?
 ._*
@@ -38,71 +166,96 @@ coverage.xml
 .Trashes
 ehthumbs.db
 Thumbs.db
+desktop.ini
 
-# 环境变量文件
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# 构建输出
-dist/
-build/
-*.egg-info/
-.eggs/
-
-# 前端特定
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# 数据库文件
+# ----------
+# Database Files
+# ----------
 *.db
 *.sqlite
 *.sqlite3
 *.db-journal
 *.sqlite-journal
 *.sqlite3-journal
+*.db-shm
+*.db-wal
 
-# 测试数据库文件
-test*.db
-test*.sqlite
-test*.sqlite3
-*test*.db
-*test*.sqlite
-*test*.sqlite3
+# Production databases (keep examples only)
+# backend/data/land_property.db
 
+# Database backups and exports
+*.sql.backup
+*_dump.sql
+*.sql.gz
+
+# ----------
 # 日志文件
+# ----------
 logs/
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# 临时文件
+# 应用日志
+/backend/logs/
+/frontend/logs/
+/logs/
+
+# ----------
+# 临时文件和缓存
+# ----------
 tmp/
 temp/
 .tmp/
-
-# Docker
-.dockerignore
-
-# 备份文件
-backups/
-*.backup
-*.bak
-
-# 上传文件
-uploads/
-!uploads/.gitkeep
-
-# 性能测试报告
-performance-reports/
-
-# 缓存
+*.tmp
+*.temp
 .cache/
 .parcel-cache/
 
-# 编译文件
+# ----------
+# 环境变量和配置文件
+# ----------
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+
+# 配置文件
+config.local.js
+config.local.ts
+local.properties
+
+# ----------
+# 备份文件
+# ----------
+backups/
+*.backup
+*.bak
+*.old
+*.orig
+*.rej
+
+# ----------
+# 上传文件
+# ----------
+uploads/
+!uploads/.gitkeep
+
+# ----------
+# 性能和测试报告
+# ----------
+performance-reports/
+test-results/
+benchmark/
+
+# ----------
+# 编译文件和可执行文件
+# ----------
 *.com
 *.class
 *.dll
@@ -110,7 +263,9 @@ performance-reports/
 *.o
 *.so
 
-# 包文件
+# ----------
+# 压缩文件和包
+# ----------
 *.7z
 *.dmg
 *.gz
@@ -120,14 +275,199 @@ performance-reports/
 *.tar
 *.zip
 
-# 敏感信息
+# ----------
+# 敏感信息和证书
+# ----------
 secrets/
 private/
 *.key
 *.pem
 *.p12
 *.pfx
+*.crt
+*.cer
+*.der
 
-# 本地配置
-local.properties
-config.local.js
+# ----------
+# Project-Specific Ignores
+# ----------
+# Land Property Asset Management System
+
+# PDF processing temporary files
+*_temp.pdf
+*_processing.pdf
+temp_*.pdf
+*_ocr.pdf
+*_extracted.pdf
+
+# Excel import/export temporary files
+*_temp.xlsx
+*_processing.xlsx
+temp_*.xlsx
+*_template.xlsx
+
+# Data migration and backup files
+migration_backup/
+*_migration.sql
+*_data_export.*
+
+# Asset management specific
+contract_uploads/
+asset_images/
+document_scans/
+receipt_uploads/
+
+# OCR and AI processing
+ocr_cache/
+nlp_models/
+*.tessdata
+*.traineddata
+
+# Monitoring and analytics
+monitoring_data/
+analytics_cache/
+performance_metrics/
+
+# Development tools generated files
+.eslintcache
+.stylelintcache
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# ----------
+# Experimental Features
+# ----------
+experimental/
+beta/
+feature-flags/
+
+# ----------
+# Modern Development Tools
+# ----------
+# AI/ML development
+.mlflow/
+.dvc/
+*.pkl
+*.joblib
+
+# API development
+.postman_collection.json
+.insomnia/
+.openapi-generator/
+
+# Security scanning
+.bandit/
+.safety/
+.semgrep/
+
+# Performance profiling
+*.prof
+*.profile
+py-spy*
+
+# Container and orchestration
+.skaffold/
+helm/charts/templates/
+k8s/overlays/
+
+# ----------
+# 文档生成
+# ----------
+docs/_build/
+docs/.doctrees/
+site/
+
+# ============================================
+# 特殊保留规则（需要版本控制的文件）
+# ============================================
+
+# 保留空的目录结构
+!uploads/.gitkeep
+!logs/.gitkeep
+!data/.gitkeep
+
+# 保留示例配置文件
+!.env.example
+!.env.template
+!config.example.js
+
+# 保留文档
+!README.md
+!CHANGELOG.md
+!CONTRIBUTING.md
+
+# 保留许可证文件
+!LICENSE
+!LICENCE
+
+# 保留包管理文件
+!package.json
+!package-lock.json
+!requirements.txt
+!pyproject.toml
+!poetry.lock
+
+# ============================================
+# Project Cleanup & Maintenance Rules
+# ============================================
+
+# Prevent re-introduction of cleaned test files
+/tools/
+/test_contract.pdf
+/dictionaries_page_test.png
+/backend/single_page_test.pdf
+/dashboard_optimization_screenshot.png
+
+# Prevent temporary debug files from being committed
+debug_*
+temp_*
+test_*
+demo_*
+sample_*
+*_debug.*
+
+# Prevent backup and archive files from being committed
+*_backup.*
+*_archive.*
+*_$(date +%Y%m%d)*
+*_old.*
+*_orig.*
+
+# Prevent IDE and editor backup files
+*.bak
+*.tmp
+*.swp
+*.swo
+*~
+
+# ============================================
+# Production Environment Protection
+# ============================================
+
+# Production environment configurations
+production/
+prod/
+.env.production
+.env.prod
+
+# Production data directories
+/data/production/
+/data/prod/
+/backend/data/production/
+
+# Production logs
+/logs/production/
+/logs/prod/
+/backend/logs/production/
+
+# Production backups
+/backups/production/
+/backups/prod/
+
+# Production SSL certificates and keys
+/ssl/production/
+/ssl/prod/
+*.production.key
+*.production.crt

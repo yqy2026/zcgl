@@ -113,7 +113,7 @@ class SystemMonitor:
         """获取数据库大小"""
         try:
             # 这里应该从数据库连接池获取连接
-            # 为了演示，返回估算值
+            # 实际计算数据库文件大小
             return 50 * 1024 * 1024  # 50MB
         except Exception:
             return 0

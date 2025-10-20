@@ -1,4 +1,5 @@
 # CLAUDE.md
+不要采用临时措施，不要使用模拟数据。
 
 This file provides guidance to Claude Code (claude.ai/code) when working with this Land Property Asset Management System.
 

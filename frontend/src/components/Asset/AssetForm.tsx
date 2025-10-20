@@ -26,6 +26,15 @@ import { DictionarySelect } from '../Dictionary'
 import { useDictionaries } from '../../hooks/useDictionary'
 import OwnershipSelect from '../Ownership/OwnershipSelect'
 import ProjectSelect from '../Project/ProjectSelect'
+import GroupedSelectSingle from '../Common/GroupedSelect'
+import {
+  PropertyNatureGroups,
+  UsageStatusGroups,
+  OwnershipStatusOptions,
+  BusinessModelOptions,
+  TenantTypeOptions,
+  OperationStatusOptions
+} from '../../utils/enumHelpers'
 import { assetService } from '../../services/assetService'
 import { rentContractService } from '../../services/rentContractService'
 import type { RentContract } from '../../types/rentContract'
@@ -505,9 +514,10 @@ const AssetForm: React.FC<AssetFormProps> = ({
                 name="ownership_status"
                 rules={[{ required: true, message: '请选择确权状态' }]}
               >
-                <DictionarySelect
-                  dictType="ownership_status"
+                <GroupedSelectSingle
+                  groups={[{ label: '确权状态', options: OwnershipStatusOptions }]}
                   placeholder="请选择确权状态"
+                  showGroupLabel={false}
                 />
               </Form.Item>
             </Col>
@@ -553,9 +563,11 @@ const AssetForm: React.FC<AssetFormProps> = ({
                 name="usage_status"
                 rules={[{ required: true, message: '请选择使用状态' }]}
               >
-                <DictionarySelect
-                  dictType="usage_status"
+                <GroupedSelectSingle
+                  groups={UsageStatusGroups}
                   placeholder="请选择使用状态"
+                  showSearch={true}
+                  maxDisplayCount={20}
                 />
               </Form.Item>
             </Col>
@@ -579,9 +591,11 @@ const AssetForm: React.FC<AssetFormProps> = ({
                 name="property_nature"
                 rules={[{ required: true, message: '请选择物业性质' }]}
               >
-                <DictionarySelect
-                  dictType="property_nature"
+                <GroupedSelectSingle
+                  groups={PropertyNatureGroups}
                   placeholder="请选择物业性质"
+                  showSearch={true}
+                  maxDisplayCount={25}
                 />
               </Form.Item>
             </Col>
@@ -616,9 +630,10 @@ const AssetForm: React.FC<AssetFormProps> = ({
                 label="接收模式"
                 name="business_model"
               >
-                <DictionarySelect
-                  dictType="business_model"
+                <GroupedSelectSingle
+                  groups={[{ label: '接收模式', options: BusinessModelOptions }]}
                   placeholder="请选择接收模式"
+                  showGroupLabel={false}
                 />
               </Form.Item>
             </Col>
@@ -779,10 +794,11 @@ const AssetForm: React.FC<AssetFormProps> = ({
                     label="租户类型"
                     name="tenant_type"
                   >
-                    <DictionarySelect
-                      dictType="tenant_type"
+                    <GroupedSelectSingle
+                      groups={[{ label: '租户类型', options: TenantTypeOptions }]}
                       placeholder="自动从合同获取"
                       disabled
+                      showGroupLabel={false}
                     />
                   </Form.Item>
                 </Col>

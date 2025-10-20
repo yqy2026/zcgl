@@ -42,18 +42,18 @@ export class StatisticsService {
 
   // 获取出租率分布
   async getOccupancyRateDistribution(filters?: Record<string, any>): Promise<ChartDataItem[]> {
-    const response = await apiClient.get<ChartDataItem[]>('/statistics/occupancy-rate-distribution', {
-      params: filters,
+    const response = await apiClient.get<ChartDataItem[]>('/statistics/occupancy-rate/by-category', {
+      params: { category_field: 'business_category', ...filters },
     })
-    return response.data || []
+    return response.data?.data?.categories || []
   }
 
   // 获取面积统计
   async getAreaStatistics(filters?: Record<string, any>): Promise<any> {
-    const response = await apiClient.get('/statistics/area', {
+    const response = await apiClient.get('/statistics/area-summary', {
       params: filters,
     })
-    return response.data || response
+    return response.data?.data || response.data
   }
 
   // 获取趋势数据

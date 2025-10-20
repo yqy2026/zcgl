@@ -49,6 +49,10 @@ def create_tables():
     from .models.enum_field import EnumFieldType, EnumFieldValue, EnumFieldUsage, EnumFieldHistory
     from .models.auth import User, UserSession, AuditLog
     from .models.rbac import Role, Permission, UserRoleAssignment, ResourcePermission, PermissionAuditLog
+    from .models.asset import Ownership
+    from .models.asset import Project
+    from .models.rent_contract import RentContract, RentTerm, RentLedger, RentContractHistory
+    from .models.pdf_import_session import PDFImportSession, SessionLog, ProcessingConfiguration
 
     Base.metadata.create_all(bind=engine)
 

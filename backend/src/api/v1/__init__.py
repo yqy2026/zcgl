@@ -24,6 +24,7 @@ from .analytics import router as analytics_router
 # from .enhanced_pdf_import import router as enhanced_pdf_import_router  # 暂时注释，有导入错误
 # from .ocr_pdf_import import router as ocr_pdf_import_router  # 暂时注释，有导入错误
 from .pdf_import import router as pdf_import_router
+from .pdf_import_v2 import router as pdf_import_v2_router
 # from .organization_permissions import router as organization_permissions_router  # 已删除
 # from .rbac import router as rbac_router  # 已删除
 # from .dynamic_permissions import router as dynamic_permissions_router  # 已删除
@@ -165,6 +166,13 @@ api_router.include_router(
     pdf_import_router,
     prefix="/pdf_import",
     tags=["PDF智能导入"]
+)
+
+# 新版PDF导入API
+api_router.include_router(
+    pdf_import_v2_router,
+    prefix="/pdf_import_v2",
+    tags=["PDF智能导入V2"]
 )
 
 # 注释掉已删除的API路由器
