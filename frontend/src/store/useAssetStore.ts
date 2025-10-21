@@ -60,7 +60,7 @@ const initialState = {
 
 export const useAssetStore = create<AssetState>()(
   devtools(
-    (set, get) => ({
+    (set) => ({
       ...initialState,
       
       setAssets: (assets) => set({ assets }),

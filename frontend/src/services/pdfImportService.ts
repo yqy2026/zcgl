@@ -28,6 +28,17 @@ export interface SessionProgress {
   created_at: string;
   updated_at: string;
   error_message?: string;
+  processing_method?: string;
+  extracted_data?: Record<string, any>;
+  validated_data?: Record<string, any>;
+  matching_results?: {
+    matched_assets?: AssetMatch[];
+    matched_ownerships?: OwnershipMatch[];
+    duplicate_contracts?: DuplicateContract[];
+    recommendations?: Record<string, string>;
+    overall_match_confidence?: number;
+  };
+  confidence_score?: number;
 }
 
 export interface AssetMatch {

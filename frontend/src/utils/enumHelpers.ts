@@ -163,7 +163,7 @@ export class EnumSearchHelper {
    * 获取所有选项的扁平列表
    */
   static flattenGroups(groups: EnumGroup[]): EnumOption[] {
-    return groups.reduce((acc, group) => [...acc, ...group.options], [])
+    return groups.reduce((acc: EnumOption[], group) => [...acc, ...group.options], [])
   }
 
   /**

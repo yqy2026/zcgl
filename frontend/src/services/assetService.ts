@@ -48,6 +48,39 @@ export class AssetService {
     }
   }
 
+  // 获取所有资产（不分页，用于导出等场景）
+  async getAllAssets(params?: Omit<AssetSearchParams, 'page' | 'limit'>): Promise<Asset[]> {
+    try {
+      const response = await apiClient.get<Asset[]>('/assets/all', {
+        params: {
+          ...params,
+          // 设置较大的限制以获取所有数据
+          limit: 10000
+        },
+      })
+
+      if (response.data) {
+        return response.data
+      }
+
+      return response as Asset[]
+    } catch (error) {
+      console.error('获取所有资产失败:', error)
+      throw new Error(error instanceof Error ? error.message : '获取所有资产失败')
+    }
+  }
+
+  // 根据ID列表获取资产
+  async getAssetsByIds(ids: string[]): Promise<Asset[]> {
+    try {
+      const response = await apiClient.post<Asset[]>('/assets/by-ids', { ids })
+      return response.data || response as Asset[]
+    } catch (error) {
+      console.error('根据ID列表获取资产失败:', error)
+      throw new Error(error instanceof Error ? error.message : '根据ID列表获取资产失败')
+    }
+  }
+
   // 获取单个资产
   async getAsset(id: string): Promise<Asset> {
     const response = await apiClient.get<Asset>(`/assets/${id}`)
@@ -448,6 +481,17 @@ export class AssetService {
   // 获取权属方字典
   async getOwnershipEntitiesFromDict(): Promise<SystemDictionary[]> {
     return this.getSystemDictionaries('ownership_status')
+  }
+
+  // 获取管理实体列表
+  async getManagementEntities(): Promise<string[]> {
+    try {
+      const response = await apiClient.get<string[]>('/assets/management-entities')
+      return response.data || response as string[]
+    } catch (error) {
+      console.error('获取管理实体列表失败:', error)
+      return []
+    }
   }
 
   // 获取管理方字典

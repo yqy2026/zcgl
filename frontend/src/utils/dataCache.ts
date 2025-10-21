@@ -82,7 +82,6 @@ export class DataCache {
   }
 
   cleanup(): number {
-    const now = Date.now()
     let deletedCount = 0
 
     for (const [key, entry] of this.cache.entries()) {

@@ -165,6 +165,14 @@ export enum AuditStatus {
   REJECTED = '审核不通过'
 }
 
+export enum ContractStatus {
+  ACTIVE = '生效中',
+  EXPIRED = '已过期',
+  TERMINATED = '已终止',
+  PENDING = '待生效',
+  SUSPENDED = '暂停'
+}
+
 export enum BusinessCategory {
   COMMERCIAL = '商业',
   OFFICE = '办公',
@@ -196,6 +204,12 @@ export interface AssetCustomField {
   field_value?: string
   created_at: string
   updated_at: string
+}
+
+export interface CustomFieldValue {
+  field_name: string
+  field_value: string | number | boolean | null
+  field_type?: 'text' | 'number' | 'date' | 'boolean'
 }
 
 // 表单数据接口

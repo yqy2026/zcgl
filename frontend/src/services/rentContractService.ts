@@ -32,7 +32,7 @@ class RentContractService {
   // 租金合同相关API
   async getContracts(params?: RentContractQueryParams): Promise<RentContractListResponse> {
     const response = await apiClient.get(`${this.baseUrl}/contracts`, { params });
-    return response;
+    return response.data || response as RentContractListResponse;
   }
 
   async getContract(id: string): Promise<RentContract> {

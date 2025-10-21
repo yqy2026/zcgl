@@ -23,7 +23,7 @@ export class ProjectService {
    */
   async getProjects(params?: ProjectSearchParams): Promise<ProjectListResponse> {
     const response = await apiClient.get(this.baseUrl, { params });
-    return response;
+    return response.data || response as ProjectListResponse;
   }
 
   /**
@@ -79,7 +79,7 @@ export class ProjectService {
    */
   async getProjectStatistics(): Promise<ProjectStatisticsResponse> {
     const response = await apiClient.get(`${this.baseUrl}/statistics/summary`);
-    return response;
+    return response.data || response as ProjectStatisticsResponse;
   }
 
   /**

@@ -1,5 +1,4 @@
 import { message, notification, Modal } from 'antd'
-import { ExclamationCircleOutlined } from '@ant-design/icons'
 
 export interface UXConfig {
   // 全局设置
@@ -179,6 +178,7 @@ class UXManager {
 
   private showErrorFeedbackInternal(error: Error, context?: any) {
     // 根据错误类型显示不同的反馈
+    console.log('Error context:', context) // 使用context参数避免未使用警告
     if (error.message.includes('Network')) {
       notification.error({
         message: '网络错误',
