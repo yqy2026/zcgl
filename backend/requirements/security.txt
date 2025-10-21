@@ -1,0 +1,18 @@
+# 安全模块依赖
+
+# 文件类型检测
+python-magic==0.4.27
+
+# 系统依赖说明：
+# Ubuntu/Debian:
+#   sudo apt-get install libmagic1
+#
+# CentOS/RHEL:
+#   sudo yum install file-devel
+#
+# macOS:
+#   brew install libmagic
+#
+# Windows:
+#   需要下载并安装 python-magic-bin：
+#   pip install python-magic-bin

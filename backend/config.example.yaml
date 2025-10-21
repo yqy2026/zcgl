@@ -1,0 +1,49 @@
+# 土地物业管理资产系统配置文件示例
+# 复制此文件为 config.yaml 并根据需要修改配置
+
+# 数据库配置
+database_url: "sqlite:///./data/land_property.db"
+database_echo: false
+
+# API配置
+api_host: "0.0.0.0"
+api_port: 8002
+api_title: "Land Property Asset Management API"
+
+# 安全配置
+secret_key: "your-secret-key-change-in-production"  # 生产环境必须修改
+access_token_expire_minutes: 30
+
+# 文件上传配置
+upload_max_size_mb: 50
+upload_allowed_extensions:
+  - "xlsx"
+  - "xls"
+  - "pdf"
+  - "doc"
+  - "docx"
+
+# Excel处理配置
+excel_batch_size: 1000
+excel_timeout_seconds: 300
+
+# 任务处理配置
+task_max_retries: 3
+task_retention_days: 30
+
+# 日志配置
+log_level: "INFO"
+log_file: "logs/app.log"
+
+# 缓存配置
+cache_enabled: false
+cache_ttl_seconds: 3600
+
+# 开发模式配置
+dev_mode: false
+debug: false
+
+# CORS配置
+cors_origins:
+  - "http://localhost:5173"
+  - "http://localhost:3000"

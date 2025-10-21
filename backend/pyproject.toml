@@ -35,6 +35,17 @@ dependencies = [
     "python-jose[cryptography]>=3.3.0",
     "passlib[bcrypt]>=1.7.4",
     "pymupdf==1.24.5",
+    "python-magic>=0.4.27",
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.6.22",
+    "mkdocs-macros-plugin>=1.4.0",
+    "mkdocs-minify-plugin>=0.8.0",
+    "mkdocs-git-revision-date-localized-plugin>=1.4.7",
+    "pymdown-extensions>=10.16.1",
+    "pre-commit>=4.3.0",
+    "bandit>=1.8.6",
+    "radon>=6.0.1",
+    "safety>=3.6.2",
 ]
 
 [project.optional-dependencies]

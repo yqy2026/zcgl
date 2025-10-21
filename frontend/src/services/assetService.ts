@@ -193,7 +193,7 @@ export class AssetService {
     const response = await apiClient.get('/statistics/basic', {
       params: filters,
     })
-    return response.data || response
+    return response.data
   }
 
   // 获取权属方列表
@@ -365,15 +365,31 @@ export class AssetService {
     const response = await apiClient.get('/statistics/occupancy-rate/overall', {
       params: filters,
     })
-    return response.data || response
+    return response.data
   }
 
-  // 获取资产分布统计数据
-  async getAssetDistributionStats(filters?: AssetSearchParams): Promise<any> {
-    const response = await apiClient.get('/statistics/asset-distribution', {
+  // 获取权属分布统计数据
+  async getOwnershipDistributionStats(filters?: AssetSearchParams): Promise<any> {
+    const response = await apiClient.get('/statistics/ownership-distribution', {
       params: filters,
     })
-    return response.data || response
+    return response.data
+  }
+
+  // 获取物业性质分布统计数据
+  async getPropertyNatureDistributionStats(filters?: AssetSearchParams): Promise<any> {
+    const response = await apiClient.get('/statistics/property-nature-distribution', {
+      params: filters,
+    })
+    return response.data
+  }
+
+  // 获取使用状态分布统计数据
+  async getUsageStatusDistributionStats(filters?: AssetSearchParams): Promise<any> {
+    const response = await apiClient.get('/statistics/usage-status-distribution', {
+      params: filters,
+    })
+    return response.data
   }
 
   // 获取面积统计数据
@@ -395,13 +411,13 @@ export class AssetService {
   // 获取面积汇总统计数据
   async getAreaSummaryStats(): Promise<any> {
     const response = await apiClient.get('/statistics/area-summary')
-    return response.data || response
+    return response.data
   }
 
   // 获取财务汇总统计数据
   async getFinancialSummaryStats(): Promise<any> {
     const response = await apiClient.get('/statistics/financial-summary')
-    return response.data || response
+    return response.data
   }
 
   // 获取按类别出租率统计数据
@@ -409,13 +425,68 @@ export class AssetService {
     const response = await apiClient.get('/statistics/occupancy-rate/by-category', {
       params: { category_field: categoryField }
     })
-    return response.data || response
+    return response.data
   }
 
   // 获取整体出租率统计数据
   async getOverallOccupancyRate(): Promise<any> {
     const response = await apiClient.get('/statistics/occupancy-rate/overall')
-    return response.data || response
+    return response.data
+  }
+
+  // 获取仪表板数据
+  async getDashboardData(): Promise<any> {
+    const response = await apiClient.get('/statistics/dashboard')
+    return response.data
+  }
+
+  // 获取趋势数据
+  async getTrendData(metric: string, period: string = 'monthly'): Promise<any> {
+    const response = await apiClient.get(`/statistics/trend/${metric}`, {
+      params: { period },
+    })
+    return response.data
+  }
+
+  // ===== 批量操作 =====
+
+  // 批量更新资产
+  async batchUpdateAssets(assetIds: string[], updates: any): Promise<any> {
+    const response = await apiClient.post('/assets/batch-update', {
+      asset_ids: assetIds,
+      updates: updates,
+      update_all: false
+    })
+    return response.data
+  }
+
+  // 验证资产数据
+  async validateAssetData(data: any, validateRules?: string[]): Promise<any> {
+    const response = await apiClient.post('/assets/validate', {
+      data: data,
+      validate_rules: validateRules || ['required_fields', 'data_format']
+    })
+    return response.data
+  }
+
+  // 导入资产数据
+  async importAssets(data: any[], importMode: string = 'create', options?: any): Promise<any> {
+    const response = await apiClient.post('/assets/import', {
+      data: data,
+      import_mode: importMode,
+      skip_errors: options?.skipErrors || false,
+      dry_run: options?.dryRun || false
+    })
+    return response.data
+  }
+
+  // 批量更新自定义字段
+  async batchUpdateCustomFields(assetIds: string[], fieldValues: any): Promise<any> {
+    const response = await apiClient.post('/assets/batch-custom-fields', {
+      asset_ids: assetIds,
+      field_values: fieldValues
+    })
+    return response.data
   }
 
   // ===== 系统字典管理 =====

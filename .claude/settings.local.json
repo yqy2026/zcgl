@@ -25,7 +25,10 @@
       "Bash(npm cache clean:*)",
       "Bash(rm:*)",
       "Bash(npm install:*)",
-      "Bash(uv run python:*)"
+      "Bash(uv run python:*)",
+      "Bash(npm run lint)",
+      "Bash(npx tsc:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

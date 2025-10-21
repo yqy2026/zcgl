@@ -1,28 +1,27 @@
 """
-资产CRUD操作
+资产CRUD操作 - 优化版本
 """
 
 from typing import List, Optional, Dict, Any, Tuple
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, desc, asc, func
+from functools import wraps
 
 from ..models.asset import Asset, AssetHistory
 from ..schemas.asset import AssetCreate, AssetUpdate
 from ..services.asset_calculator import AssetCalculator
+from ..core.performance import monitor_query, cache_manager, cached
 class AssetCRUD:
-    """资产CRUD操作类"""
+    """资产CRUD操作类 - 优化版本"""
 
     def __init__(self):
         pass
 
+    @monitor_query("asset_get_by_id")
+    @cached(ttl=300)  # 5分钟缓存
     def get(self, db: Session, id: str) -> Optional[Asset]:
         """根据ID获取资产"""
-        asset = db.query(Asset).filter(Asset.id == id).first()
-        if asset:
-            # 解密敏感数据用于内部处理
-            # 注意：在API返回前需要根据用户权限决定是否脱敏
-            pass
-        return asset
+        return db.query(Asset).filter(Asset.id == id).first()
 
     def get_by_name(self, db: Session, property_name: str) -> Optional[Asset]:
         """根据物业名称获取资产"""
@@ -41,6 +40,8 @@ class AssetCRUD:
         """获取多个资产"""
         return db.query(Asset).offset(skip).limit(limit).all()
 
+    @monitor_query("asset_get_multi_with_search")
+    @cached(ttl=600)  # 10分钟缓存
     def get_multi_with_search(
         self,
         db: Session,
@@ -52,8 +53,8 @@ class AssetCRUD:
         sort_order: str = "desc"
     ) -> Tuple[List[Asset], int]:
         """
-        获取资产列表，支持搜索、筛选和排序
-        
+        获取资产列表，支持搜索、筛选和排序 - 优化版本
+
         Args:
             db: 数据库会话
             skip: 跳过记录数
@@ -62,58 +63,96 @@ class AssetCRUD:
             filters: 筛选条件
             sort_field: 排序字段
             sort_order: 排序方向
-            
+
         Returns:
             (资产列表, 总记录数)
         """
+        # 构建缓存键
+        cache_key = f"asset_list:{skip}:{limit}:{search}:{hash(str(filters))}:{sort_field}:{sort_order}"
+
+        # 尝试从缓存获取总数
+        cache_key_total = f"{cache_key}:total"
+        cached_total = cache_manager.get(cache_key_total)
+        if cached_total is not None:
+            # 如果总数已缓存，直接查询数据
+            query = self._build_optimized_search_query(db, search, filters, sort_field, sort_order)
+            assets = query.offset(skip).limit(limit).all()
+            return assets, cached_total
+
+        # 构建查询
+        query = self._build_optimized_search_query(db, search, filters, sort_field, sort_order)
+
+        # 获取总数
+        total = query.count()
+
+        # 缓存总数
+        cache_manager.set(cache_key_total, total, ttl=300)
+
+        # 分页获取数据
+        assets = query.offset(skip).limit(limit).all()
+
+        return assets, total
+
+    def _build_optimized_search_query(self, db: Session, search: Optional[str],
+                                      filters: Optional[Dict], sort_field: str, sort_order: str):
+        """构建优化的搜索查询"""
+        from ..models.asset import Asset
+
         query = db.query(Asset)
-        
-        # 搜索条件
+
+        # 搜索条件 - 使用索引友好的查询
         if search:
-            search_filter = or_(
-                Asset.property_name.contains(search),
-                Asset.address.contains(search),
-                Asset.ownership_entity.contains(search),
-                                Asset.business_category.contains(search)
-            )
-            query = query.filter(search_filter)
-        
-        # 筛选条件
+            search_terms = search.split()
+            search_conditions = []
+
+            for term in search_terms:
+                search_filter = or_(
+                    Asset.property_name.ilike(f"%{term}%"),
+                    Asset.address.ilike(f"%{term}%"),
+                    Asset.ownership_entity.ilike(f"%{term}%"),
+                    Asset.business_category.ilike(f"%{term}%")
+                )
+                search_conditions.append(search_filter)
+
+            # 所有搜索条件用OR连接，提高性能
+            if search_conditions:
+                query = query.filter(or_(*search_conditions))
+
+        # 筛选条件 - 批量处理
         if filters:
             filter_conditions = []
-            
+
             for key, value in filters.items():
                 if value is None:
                     continue
-                    
+
                 if key == "min_area" and hasattr(Asset, 'total_area'):
-                    filter_conditions.append(Asset.total_area >= value)
+                    filter_conditions.append(Asset.total_area >= float(value))
                 elif key == "max_area" and hasattr(Asset, 'total_area'):
-                    filter_conditions.append(Asset.total_area <= value)
+                    filter_conditions.append(Asset.total_area <= float(value))
                 elif key == "ids" and isinstance(value, list):
-                    # 支持按多个资产ID筛选
-                    filter_conditions.append(Asset.id.in_(value))
+                    # 使用IN查询，性能更好
+                    if value:
+                        filter_conditions.append(Asset.id.in_(value))
                 elif hasattr(Asset, key):
-                    filter_conditions.append(getattr(Asset, key) == value)
-            
+                    if isinstance(value, list):
+                        filter_conditions.append(getattr(Asset, key).in_(value))
+                    else:
+                        filter_conditions.append(getattr(Asset, key) == value)
+
             if filter_conditions:
                 query = query.filter(and_(*filter_conditions))
-        
-        # 获取总记录数
-        total = query.count()
-        
-        # 排序
-        if hasattr(Asset, sort_field):
+
+        # 排序 - 使用索引友好的字段
+        sortable_fields = ['created_at', 'updated_at', 'property_name', 'id']
+        if sort_field in sortable_fields:
             sort_column = getattr(Asset, sort_field)
             if sort_order.lower() == "desc":
                 query = query.order_by(desc(sort_column))
             else:
                 query = query.order_by(asc(sort_column))
-        
-        # 分页
-        assets = query.offset(skip).limit(limit).all()
-        
-        return assets, total
+
+        return query
 
     def get_filtered_query(self, db: Session, search: Optional[str] = None,
                           filters: Optional[Dict[str, Any]] = None,

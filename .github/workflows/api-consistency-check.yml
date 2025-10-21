@@ -1,0 +1,130 @@
+name: API Consistency Check
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  api-consistency-check:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Install dependencies
+      run: |
+        # 后端依赖
+        cd backend
+        if [ -f pyproject.toml ]; then
+          pip install uv
+          uv sync
+        else
+          pip install -r requirements.txt
+        fi
+
+        # 前端依赖
+        cd ../frontend
+        npm install
+
+    - name: Run Backend API Consistency Check
+      run: |
+        cd backend
+        python scripts/api_consistency_check.py . ../frontend
+
+    - name: Run Frontend API Consistency Check
+      run: |
+        cd frontend
+        node scripts/check-api-consistency.js
+
+    - name: Upload Reports
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: api-consistency-reports
+        path: |
+          backend/api_consistency_report.json
+          frontend/frontend-api-consistency-report.json
+
+    - name: Comment PR with Results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+
+          try {
+            const backendReport = JSON.parse(fs.readFileSync('backend/api_consistency_report.json', 'utf8'));
+            const frontendReport = JSON.parse(fs.readFileSync('frontend/frontend-api-consistency-report.json', 'utf8'));
+
+            const totalIssues = backendReport.total_issues + frontendReport.total_issues;
+            const criticalIssues = [
+              ...backendReport.issues.filter(i => i.severity === 'critical'),
+              ...frontendReport.issues.filter(i => i.severity === 'critical')
+            ];
+
+            let comment = `## 🔍 API一致性检查结果\n\n`;
+            comment += `📊 **总问题数**: ${totalIssues}\n`;
+            comment += `🚨 **严重问题**: ${criticalIssues.length}\n`;
+            comment += `⚠️ **警告**: ${backendReport.issues.filter(i => i.severity === 'warning').length + frontendReport.issues.filter(i => i.severity === 'warning').length}\n`;
+            comment += `ℹ️ **信息**: ${backendReport.issues.filter(i => i.severity === 'info').length + frontendReport.issues.filter(i => i.severity === 'info').length}\n\n`;
+
+            if (criticalIssues.length > 0) {
+              comment += `## 🚨 严重问题\n\n`;
+              criticalIssues.slice(0, 5).forEach(issue => {
+                comment += `- **${issue.type}**: ${issue.message}\n`;
+              });
+
+              if (criticalIssues.length > 5) {
+                comment += `- ... 还有 ${criticalIssues.length - 5} 个严重问题\n`;
+              }
+            }
+
+            if (totalIssues === 0) {
+              comment += `✅ 所有API一致性检查通过！\n\n`;
+              comment += `🎉 恭喜！代码质量很高，API接口完全一致。`;
+            }
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+          } catch (error) {
+            console.log('无法读取报告文件:', error.message);
+          }
+
+    - name: Fail on Critical Issues
+      if: steps.api-consistency-check.outcome == 'success'
+      run: |
+        python -c "
+        import json
+        try:
+            backend_report = json.load(open('backend/api_consistency_report.json'))
+            frontend_report = json.load(open('frontend/frontend-api-consistency-report.json'))
+            critical_issues = [
+                *backend_report['issues'].filter(lambda i: i['severity'] == 'critical'),
+                *frontend_report['issues'].filter(lambda i: i['severity'] == 'critical')
+            ]
+            if critical_issues:
+                print(f'发现 {len(critical_issues)} 个严重问题，检查失败')
+                exit(1)
+            else:
+                print('没有严重问题，检查通过')
+        except Exception as e:
+            print(f'检查报告时出错: {e}')
+            exit(1)
+        "

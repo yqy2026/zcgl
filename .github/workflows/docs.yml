@@ -1,0 +1,116 @@
+name: Documentation Generation
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # 每天UTC 02:00生成文档
+    - cron: '0 2 * * *'
+
+jobs:
+  generate-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libmagic1
+
+    - name: Install Python dependencies
+      run: |
+        cd backend
+        pip install uv
+        uv sync --dev
+
+    - name: Install Node.js dependencies
+      run: |
+        cd frontend
+        npm ci
+
+    - name: Generate API documentation
+      run: |
+        cd backend
+        uv run python -m sphinx -b html docs/source docs/build/html
+        uv run python scripts/generate_api_docs.py
+
+    - name: Generate TypeScript API client
+      run: |
+        cd frontend
+        npm run generate-api-client
+
+    - name: Generate database documentation
+      run: |
+        cd backend
+        uv run python scripts/generate_db_docs.py
+
+    - name: Generate system documentation
+      run: |
+        cd backend
+        uv run python scripts/generate_system_docs.py
+
+    - name: Build documentation site
+      run: |
+        cd backend
+        mkdocs build
+
+    - name: Check for documentation changes
+      id: docs-changes
+      run: |
+        if [[ -n $(git status --porcelain docs/) ]]; then
+          echo "changed=true" >> $GITHUB_OUTPUT
+        else
+          echo "changed=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Commit documentation changes
+      if: steps.docs-changes.outputs.changed == 'true'
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add docs/
+        git diff --staged --quiet || git commit -m "📚 Auto-update documentation"
+
+    - name: Push documentation changes
+      if: steps.docs-changes.outputs.changed == 'true'
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: ${{ github.ref }}
+
+    - name: Upload documentation artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: documentation
+        path: |
+          backend/docs/build/html/
+          backend/site/
+          frontend/src/types/api-generated.ts
+        retention-days: 30
+
+    - name: Deploy to GitHub Pages
+      if: github.ref == 'refs/heads/main'
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./backend/site
+        keep_files: true
