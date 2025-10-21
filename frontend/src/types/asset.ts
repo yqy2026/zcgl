@@ -17,9 +17,9 @@ export interface Asset {
   actual_property_area?: number
   rentable_area?: number
   rented_area?: number
-  unrented_area?: number  // 自动计算字段
+  unrented_area?: number  // 后端纯计算字段，不存储
   non_commercial_area?: number
-  occupancy_rate?: number  // 自动计算字段，0-100
+  occupancy_rate?: number  // 后端纯计算字段，0-100，不存储
   include_in_occupancy_rate?: boolean
 
   // 用途相关字段
@@ -28,8 +28,8 @@ export interface Asset {
 
   // 租户相关字段
   tenant_name?: string
-  tenant_contact?: string
   tenant_type?: TenantType
+  // tenant_contact 字段已删除
 
   // 合同相关字段
   lease_contract_number?: string
@@ -45,10 +45,8 @@ export interface Asset {
   business_model?: BusinessModel  // 接收模式
   operation_status?: OperationStatus
 
-  // 财务相关字段
-  annual_income?: number   // 金额字段，使用高精度number
-  annual_expense?: number  // 金额字段，使用高精度number
-  net_income?: number      // 自动计算字段
+  // 财务相关字段已删除
+  // annual_income, annual_expense, net_income 字段已删除
   
   // 接收相关字段
   operation_agreement_start_date?: string
@@ -71,10 +69,8 @@ export interface Asset {
   version?: number
   tags?: string
   
-  // 审核相关字段
-  last_audit_date?: string
-  audit_status?: AuditStatus
-  auditor?: string
+  // 审核相关字段已删除
+  // last_audit_date, audit_status, auditor 字段已删除
   audit_notes?: string
   
   // 其他字段

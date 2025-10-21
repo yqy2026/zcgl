@@ -1,5 +1,5 @@
 """
-数据库关系迁移脚本
+数据库关系迁移脚本 - 修复版
 为权属方、项目和资产建立正确的关联关系
 """
 
@@ -10,7 +10,7 @@ from datetime import datetime
 def migrate_relationships():
     """执行关系迁移"""
 
-    conn = sqlite3.connect('land_property.db')
+    conn = sqlite3.connect('./land_property.db')
     cursor = conn.cursor()
 
     print("开始执行关系迁移...")
@@ -24,34 +24,10 @@ def migrate_relationships():
             print("添加ownership_id列到assets表...")
             cursor.execute("ALTER TABLE assets ADD COLUMN ownership_id VARCHAR(36)")
 
-        # 2. 创建项目-权属方关系表
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS project_ownership_relations (
-                id VARCHAR(36) PRIMARY KEY,
-                project_id VARCHAR(36) NOT NULL,
-                ownership_id VARCHAR(36) NOT NULL,
-                relation_type VARCHAR(50) DEFAULT '合作',
-                start_date DATE,
-                end_date DATE,
-                description TEXT,
-                is_active BOOLEAN DEFAULT 1,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                created_by VARCHAR(100),
-                updated_by VARCHAR(100),
-                FOREIGN KEY (project_id) REFERENCES projects(id),
-                FOREIGN KEY (ownership_id) REFERENCES ownerships(id)
-            )
-        ''')
-
-        # 3. 为ownership_id列创建索引
+        # 2. 为ownership_id列创建索引
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_assets_ownership_id ON assets(ownership_id)")
 
-        # 4. 为项目-权属方关系表创建索引
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_project_ownership_project_id ON project_ownership_relations(project_id)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_project_ownership_ownership_id ON project_ownership_relations(ownership_id)")
-
-        # 5. 迁移现有数据：根据ownership_entity匹配ownerships表
+        # 3. 迁移现有数据：根据ownership_entity匹配ownerships表
         print("迁移现有权属方数据...")
         cursor.execute('''
             UPDATE assets
@@ -64,15 +40,16 @@ def migrate_relationships():
             AND ownership_entity != ''
         ''')
 
-        # 6. 创建项目-权属方关系数据
+        # 4. 创建项目-权属方关系数据（使用现有表结构）
         print("创建项目-权属方关系数据...")
         cursor.execute('''
-            INSERT OR IGNORE INTO project_ownership_relations (id, project_id, ownership_id, relation_type, created_at)
+            INSERT OR IGNORE INTO project_ownership_relations (id, project_id, ownership_id, is_active, created_at, updated_at)
             SELECT
                 lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(6))),
                 p.id,
                 o.id,
-                '管理',
+                1,
+                CURRENT_TIMESTAMP,
                 CURRENT_TIMESTAMP
             FROM projects p
             JOIN ownerships o ON p.ownership_entity = o.name
@@ -83,7 +60,7 @@ def migrate_relationships():
         conn.commit()
         print("关系迁移完成！")
 
-        # 7. 显示迁移结果统计
+        # 5. 显示迁移结果统计
         print("\n迁移结果统计:")
 
         # 资产表迁移统计

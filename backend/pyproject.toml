@@ -46,6 +46,7 @@ dependencies = [
     "bandit>=1.8.6",
     "radon>=6.0.1",
     "safety>=3.6.2",
+    "python-magic-bin>=0.4.14",
 ]
 
 [project.optional-dependencies]

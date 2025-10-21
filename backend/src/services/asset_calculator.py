@@ -1,14 +1,14 @@
 """
-资产计算服务
-处理出租率、净收益等自动计算逻辑
+资产计算服务 - 简化版本
+处理纯计算字段，不存储到数据库
 """
 
-from typing import Optional
+from typing import Optional, Dict, Any
 from decimal import Decimal, ROUND_HALF_UP
 
 
 class AssetCalculator:
-    """资产计算器"""
+    """资产计算器 - 纯计算逻辑"""
     
     @staticmethod
     def calculate_occupancy_rate(rentable_area: Optional[float], rented_area: Optional[float]) -> Optional[float]:
@@ -60,25 +60,26 @@ class AssetCalculator:
             
         return rentable_area - rented_area
     
-    @staticmethod
-    def calculate_net_income(annual_income: Optional[float], annual_expense: Optional[float]) -> Optional[float]:
-        """
-        计算净收益
-        
-        Args:
-            annual_income: 年收益
-            annual_expense: 年支出
-            
-        Returns:
-            净收益
-        """
-        if annual_income is None and annual_expense is None:
-            return None
-            
-        income = annual_income or 0.0
-        expense = annual_expense or 0.0
-        
-        return income - expense
+    # 注释：净收益计算已移除，因为财务字段已简化
+    # @staticmethod
+    # def calculate_net_income(annual_income: Optional[float], annual_expense: Optional[float]) -> Optional[float]:
+    #     """
+    #     计算净收益
+    #
+    #     Args:
+    #         annual_income: 年收益
+    #         annual_expense: 年支出
+    #
+    #     Returns:
+    #         净收益
+    #     """
+    #     if annual_income is None and annual_expense is None:
+    #         return None
+    #
+    #     income = annual_income or 0.0
+    #     expense = annual_expense or 0.0
+    #
+    #     return income - expense
     
     @staticmethod
     def validate_area_consistency(data: dict) -> list:
@@ -109,28 +110,45 @@ class AssetCalculator:
     @staticmethod
     def auto_calculate_fields(data: dict) -> dict:
         """
-        自动计算相关字段
-        
+        自动计算相关字段 - 简化版本
+
         Args:
             data: 资产数据字典
-            
+
         Returns:
-            更新后的数据字典
+            包含计算字段的结果字典（不修改原数据）
         """
-        # 计算出租率
+        calculated_fields = {}
+
+        # 计算出租率相关字段（纯计算，不存储）
         if 'rentable_area' in data or 'rented_area' in data:
             rentable_area = data.get('rentable_area')
             rented_area = data.get('rented_area')
-            data['occupancy_rate'] = AssetCalculator.calculate_occupancy_rate(rentable_area, rented_area)
-            data['unrented_area'] = AssetCalculator.calculate_unrented_area(rentable_area, rented_area)
-        
-        # 计算净收益
-        if 'annual_income' in data or 'annual_expense' in data:
-            annual_income = data.get('annual_income')
-            annual_expense = data.get('annual_expense')
-            data['net_income'] = AssetCalculator.calculate_net_income(annual_income, annual_expense)
-        
-        return data
+            calculated_fields['occupancy_rate'] = AssetCalculator.calculate_occupancy_rate(rentable_area, rented_area)
+            calculated_fields['unrented_area'] = AssetCalculator.calculate_unrented_area(rentable_area, rented_area)
+
+        # 注意：财务相关计算已移除
+
+        return calculated_fields
+
+    @staticmethod
+    def enrich_asset_with_calculations(asset_data: dict) -> dict:
+        """
+        为资产数据添加计算字段（用于API响应）
+
+        Args:
+            asset_data: 资产数据字典
+
+        Returns:
+            包含计算字段的完整资产数据
+        """
+        # 计算字段
+        calculated = AssetCalculator.auto_calculate_fields(asset_data)
+
+        # 合并原数据和计算字段
+        enriched_data = {**asset_data, **calculated}
+
+        return enriched_data
 
 
 class OccupancyRateCalculator:

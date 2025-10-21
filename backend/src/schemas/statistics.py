@@ -163,3 +163,36 @@ class FinancialSummaryResponse(BaseModel):
     net_annual_income: float = Field(..., description="年净收入")
     income_per_sqm: float = Field(..., description="每平方米年收入")
     expense_per_sqm: float = Field(..., description="每平方米年支出")
+
+
+class DashboardDataResponse(BaseModel):
+    """仪表板数据响应模型"""
+    basic_stats: BasicStatisticsResponse = Field(..., description="基础统计数据")
+    area_summary: AreaSummaryResponse = Field(..., description="面积汇总")
+    financial_summary: FinancialSummaryResponse = Field(..., description="财务汇总")
+    occupancy_stats: OccupancyRateStatsResponse = Field(..., description="出租率统计")
+    category_occupancy: List[CategoryOccupancyRateResponse] = Field(..., description="分类出租率")
+    generated_at: datetime = Field(..., description="生成时间")
+    filters_applied: Dict[str, Any] = Field(default_factory=dict, description="应用的筛选条件")
+
+
+class ChartDataItem(BaseModel):
+    """图表数据项"""
+    name: str = Field(..., description="名称")
+    value: float = Field(..., description="数值")
+    percentage: Optional[float] = Field(None, description="百分比")
+
+
+class DistributionResponse(BaseModel):
+    """分布数据响应模型"""
+    total: int = Field(..., description="总数")
+    categories: List[ChartDataItem] = Field(..., description="分类数据")
+    chart_type: str = Field(default="pie", description="图表类型")
+
+
+class TrendDataResponse(BaseModel):
+    """趋势数据响应模型"""
+    metric_name: str = Field(..., description="指标名称")
+    time_series: List[TimeSeriesDataPoint] = Field(..., description="时间序列数据")
+    trend_direction: Optional[str] = Field(None, description="趋势方向")
+    change_percentage: Optional[float] = Field(None, description="变化百分比")

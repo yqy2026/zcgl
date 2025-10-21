@@ -36,7 +36,7 @@ export class AnalyticsService {
 
   async getAreaSummary(): Promise<AnalyticsResponse> {
     try {
-      const response = await this.api.get<AnalyticsResponse>('/statistics/area-summary')
+      const response = await this.api.get<AnalyticsResponse>('/assets/statistics/summary')
       // The ApiClient already returns response.data, so we don't need to access .data again
       return response
     } catch (error) {

@@ -389,6 +389,8 @@ def setup_logging_security():
     logger = logging.getLogger(__name__)
     logger.info("日志安全设置完成")
 
+    return logger
+
 
 # 便捷函数
 def log_security_event(event_type: str, message: str, **kwargs):

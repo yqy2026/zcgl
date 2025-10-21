@@ -5,7 +5,7 @@
 import logging
 from typing import Optional, Dict, Any
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Path
 from sqlalchemy.orm import Session
 
 from ...database import get_db
@@ -29,7 +29,7 @@ from ...utils.cache_manager import cache_statistics, get_cache_manager
 logger = logging.getLogger(__name__)
 
 # 创建统计路由器
-router = APIRouter()
+router = APIRouter(prefix="/statistics", tags=["统计分析"])
 
 
 # 将可能为 None/Decimal/str 的值安全转换为 float
@@ -729,7 +729,7 @@ async def get_usage_status_distribution(db: Session = Depends(get_db)):
 
 @router.get("/trend/{metric}", response_model=TrendDataResponse, summary="获取趋势数据")
 async def get_trend_data(
-    metric: str = Query(..., description="指标名称"),
+    metric: str = Path(..., description="指标名称"),
     period: str = Query("monthly", regex="^(daily|weekly|monthly|yearly)$", description="时间周期"),
     db: Session = Depends(get_db)
 ):

@@ -115,8 +115,8 @@ const RentLedgerPage: React.FC = () => {
   const loadReferenceData = async () => {
     try {
       const [assetsResponse, ownershipsResponse] = await Promise.all([
-        assetService.getAssets({ limit: 100 }),
-        ownershipService.getOwnerships({ size: 100 }),
+        assetService.getAssets({ limit: 1000 }),
+        ownershipService.getOwnerships({ limit: 1000 }),
       ]);
       setAssets(assetsResponse.items);
       setOwnerships(ownershipsResponse.items);

@@ -73,6 +73,8 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
 
 # 便捷函数创建中间件
-def create_request_logging_middleware():
+def create_request_logging_middleware(app=None):
     """创建请求日志中间件"""
-    return RequestLoggingMiddleware
+    if app is None:
+        return RequestLoggingMiddleware
+    return RequestLoggingMiddleware(app)

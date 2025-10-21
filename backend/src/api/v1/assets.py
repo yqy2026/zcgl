@@ -332,6 +332,7 @@ async def get_ownership_statuses(
 @router.get("/{asset_id}", response_model=AssetResponse, summary="获取资产详情")
 async def get_asset(
     asset_id: str = Path(..., description="资产ID"),
+    current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -481,9 +482,12 @@ async def get_asset_statistics(
     获取资产统计摘要信息
     """
     try:
+        from sqlalchemy import func
+        from ...models.asset import Asset
+
         # 总资产数
         total_assets = asset_crud.count(db=db)
-        
+
         # 按确权状态统计
         confirmed_count = asset_crud.count_with_search(
             db=db, filters={"ownership_status": "已确权"}
@@ -494,7 +498,7 @@ async def get_asset_statistics(
         partial_count = asset_crud.count_with_search(
             db=db, filters={"ownership_status": "部分确权"}
         )
-        
+
         # 按物业性质统计
         commercial_count = asset_crud.count_with_search(
             db=db, filters={"property_nature": "经营性"}
@@ -502,7 +506,7 @@ async def get_asset_statistics(
         non_commercial_count = asset_crud.count_with_search(
             db=db, filters={"property_nature": "非经营性"}
         )
-        
+
         # 按使用状态统计
         rented_count = asset_crud.count_with_search(
             db=db, filters={"usage_status": "出租"}
@@ -513,7 +517,38 @@ async def get_asset_statistics(
         vacant_count = asset_crud.count_with_search(
             db=db, filters={"usage_status": "空置"}
         )
-        
+
+        # 获取面积统计数据
+        area_result = db.query(Asset).filter(Asset.data_status == 'NORMAL').with_entities(
+            func.sum(Asset.land_area).label('total_land_area'),
+            func.sum(Asset.rentable_area).label('total_rentable_area'),
+            func.sum(Asset.rented_area).label('total_rented_area'),
+            func.sum(Asset.unrented_area).label('total_unrented_area'),
+            func.sum(Asset.non_commercial_area).label('total_non_commercial_area')
+        ).first()
+
+        # 转换为float并处理None值
+        def to_float(value):
+            return float(value) if value is not None else 0.0
+
+        total_land_area = to_float(area_result.total_land_area)
+        total_rentable_area = to_float(area_result.total_rentable_area)
+        total_rented_area = to_float(area_result.total_rented_area)
+        total_unrented_area = to_float(area_result.total_unrented_area)
+        total_non_commercial_area = to_float(area_result.total_non_commercial_area)
+
+        # 计算有面积数据的资产数
+        assets_with_area = db.query(Asset).filter(
+            Asset.data_status == 'NORMAL',
+            (Asset.land_area.isnot(None)) |
+            (Asset.rentable_area.isnot(None))
+        ).count()
+
+        # 计算整体出租率
+        overall_occupancy_rate = 0.0
+        if total_rentable_area > 0:
+            overall_occupancy_rate = (total_rented_area / total_rentable_area) * 100
+
         return {
             "total_assets": total_assets,
             "ownership_status": {
@@ -529,11 +564,80 @@ async def get_asset_statistics(
                 "rented": rented_count,
                 "self_used": self_used_count,
                 "vacant": vacant_count
-            }
+            },
+            # 添加面积统计数据
+            "total_land_area": total_land_area,
+            "total_rentable_area": total_rentable_area,
+            "total_rented_area": total_rented_area,
+            "total_unrented_area": total_unrented_area,
+            "total_non_commercial_area": total_non_commercial_area,
+            "assets_with_area_data": assets_with_area,
+            "overall_occupancy_rate": overall_occupancy_rate
         }
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取统计信息失败: {str(e)}")
+
+
+@router.get("/statistics/area-summary", summary="获取资产面积统计摘要")
+async def get_asset_area_statistics(
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_active_user if not DEV_MODE else lambda: None)
+):
+    """
+    获取资产面积统计摘要信息
+    """
+    try:
+        from sqlalchemy import func
+        from ...models.asset import Asset
+
+        # 获取所有正常状态的资产
+        assets_query = db.query(Asset).filter(Asset.data_status == 'NORMAL')
+
+        # 计算总面积数据
+        total_result = assets_query.with_entities(
+            func.sum(Asset.land_area).label('total_land_area'),
+            func.sum(Asset.rentable_area).label('total_rentable_area'),
+            func.sum(Asset.rented_area).label('total_rented_area'),
+            func.sum(Asset.unrented_area).label('total_unrented_area'),
+            func.sum(Asset.non_commercial_area).label('total_non_commercial_area'),
+            func.count(Asset.id).label('total_assets')
+        ).first()
+
+        # 转换为float并处理None值
+        def to_float(value):
+            return float(value) if value is not None else 0.0
+
+        total_land_area = to_float(total_result.total_land_area)
+        total_rentable_area = to_float(total_result.total_rentable_area)
+        total_rented_area = to_float(total_result.total_rented_area)
+        total_unrented_area = to_float(total_result.total_unrented_area)
+        total_non_commercial_area = to_float(total_result.total_non_commercial_area)
+        total_assets = int(total_result.total_assets) if total_result.total_assets else 0
+
+        # 计算有面积数据的资产数
+        assets_with_area = assets_query.filter(
+            (Asset.land_area.isnot(None)) |
+            (Asset.rentable_area.isnot(None))
+        ).count()
+
+        # 计算整体出租率
+        overall_occupancy_rate = 0.0
+        if total_rentable_area > 0:
+            overall_occupancy_rate = (total_rented_area / total_rentable_area) * 100
+
+        return {
+            "total_assets": total_assets,
+            "total_land_area": total_land_area,
+            "total_rentable_area": total_rentable_area,
+            "total_rented_area": total_rented_area,
+            "total_unrented_area": total_unrented_area,
+            "total_non_commercial_area": total_non_commercial_area,
+            "assets_with_area_data": assets_with_area,
+            "overall_occupancy_rate": overall_occupancy_rate
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取面积统计信息失败: {str(e)}")
 
 
 # ===== 资产附件管理接口 =====

@@ -45,8 +45,8 @@ interface AssetFormData {
   
   // 租户相关字段
   tenant_name?: string
-  tenant_contact?: string
   tenant_type?: string
+  // tenant_contact 字段已删除
   
   // 合同相关字段
   lease_contract_number?: string
@@ -63,10 +63,8 @@ interface AssetFormData {
   business_model?: string
   operation_status?: string
   
-  // 财务相关字段
-  annual_income?: number
-  annual_expense?: number
-  net_income?: number
+  // 财务相关字段已删除
+  // annual_income, annual_expense, net_income 字段已删除
   
   // 协议相关字段
   operation_agreement_start_date?: string
@@ -85,10 +83,8 @@ interface AssetFormData {
   version?: number
   tags?: string
   
-  // 审核相关字段
-  last_audit_date?: string
-  audit_status?: string
-  auditor?: string
+  // 审核相关字段已删除
+  // last_audit_date, audit_status, auditor 字段已删除
   audit_notes?: string
   
   // 其他字段

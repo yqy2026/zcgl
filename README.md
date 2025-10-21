@@ -11,8 +11,8 @@
 
 ## ✨ 主要特性
 
-- 🏢 **完整资产管理** - 58个字段的全面资产档案
-- 📄 **智能PDF导入** - AI驱动的合同信息提取，58字段自动识别
+- 🏢 **完整资产管理** - 全面资产档案
+- 📄 **智能PDF导入** - AI驱动的合同信息提取，自动识别
 - 📊 **智能出租率统计** - 实时计算和多维度分析
 - 💰 **财务数据管理** - 收益、支出、净利润跟踪
 - 🔐 **高级权限管理** - RBAC权限系统，多租户支持
@@ -220,7 +220,7 @@ python scripts/system_check.py
 ## 📚 文档资源
 
 ### 开发文档
-- [CLAUDE.md](CLAUDE.md) - 开发指导文档
+- [开发指南](docs/guides/CLAUDE.md) - 开发指导文档
 - [后端README](backend/README.md) - 后端开发文档
 - [前端README](frontend/README.md) - 前端开发文档
 - [文档中心](docs/README.md) - 完整文档导航
@@ -228,6 +228,12 @@ python scripts/system_check.py
 ### 技术文档
 - **API文档**: http://localhost:8002/docs - 交互式API文档
 - **ReDoc**: http://localhost:8002/redoc - API参考文档
+
+### 项目报告
+- [API报告](docs/reports/api/) - API相关报告
+- [数据模型报告](docs/reports/data-model/) - 数据模型相关报告
+- [PDF导入报告](docs/reports/pdf-import/) - PDF导入功能报告
+- [合同报告](docs/reports/contracts/) - 合同相关报告
 
 ## 🚀 部署方案
 

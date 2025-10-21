@@ -33,10 +33,13 @@ from ...crud.task import task_crud
 from ...enums.task import TaskStatus, TaskType
 from ...core.security import security_middleware, validate_file_upload_dependency
 from ...core.exception_handler import ValidationException
-from ...core.logging_security import logger, security_auditor
+from ...core.logging_security import security_auditor
+import logging
+
+logger = logging.getLogger(__name__)
 
 # 创建Excel路由器
-router = APIRouter()
+router = APIRouter(prefix="/excel", tags=["Excel导入导出"])
 
 
 @router.get("/template", summary="下载Excel导入模板")

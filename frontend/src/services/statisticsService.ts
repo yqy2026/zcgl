@@ -50,7 +50,7 @@ export class StatisticsService {
 
   // 获取面积统计
   async getAreaStatistics(filters?: Record<string, any>): Promise<any> {
-    const response = await apiClient.get('/statistics/area-summary', {
+    const response = await apiClient.get('/assets/statistics/summary', {
       params: filters,
     })
     return response.data?.data || response.data

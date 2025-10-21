@@ -2,8 +2,7 @@
  * 租金合同Excel导入导出服务
  */
 
-import { apiClient } from './api';
-import axios from 'axios';
+import { api } from './api';
 import { RentContract, RentTerm, RentLedger } from '../types/rentContract';
 
 export interface ExcelImportResult {
@@ -38,15 +37,14 @@ export interface ExcelTemplateResult {
 }
 
 class RentContractExcelService {
-  private baseUrl = '/rent_contract';
+  private baseUrl = '/api/v1/rental';
 
   /**
    * 下载Excel导入模板
    */
   async downloadTemplate(): Promise<Blob> {
     try {
-      const apiBase = import.meta.env.DEV ? '/api/v1' : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api/v1');
-      const response = await axios.get(`${apiBase}${this.baseUrl}/excel/template`, {
+      const response = await api.get(`${this.baseUrl}/excel/template`, {
         responseType: 'blob',
       });
 
@@ -75,7 +73,7 @@ class RentContractExcelService {
       formData.append('import_ledger', String(options.import_ledger ?? false));
       formData.append('overwrite_existing', String(options.overwrite_existing ?? false));
 
-      const response = await apiClient.post<ExcelImportResult>(
+      const response = await api.post<ExcelImportResult>(
         `${this.baseUrl}/excel/import`,
         formData,
         {
@@ -122,8 +120,7 @@ class RentContractExcelService {
         params.append('end_date', options.end_date);
       }
 
-      const apiBase = import.meta.env.DEV ? '/api/v1' : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api/v1');
-      const response = await axios.get(`${apiBase}${this.baseUrl}/excel/export`, {
+      const response = await api.get(`${this.baseUrl}/excel/export`, {
         params,
         responseType: 'blob',
       });
@@ -141,25 +138,14 @@ class RentContractExcelService {
   async downloadTemplateFile(): Promise<void> {
     try {
       const blob = await this.downloadTemplate();
-
-      // 确保blob是有效的
-      if (!(blob instanceof Blob)) {
-        throw new Error('无效的文件数据');
-      }
-
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.download = '租金合同导入模板.xlsx';
-      link.style.display = 'none';
       document.body.appendChild(link);
       link.click();
-
-      // 延迟清理以确保下载开始
-      setTimeout(() => {
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-      }, 100);
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('下载模板文件失败:', error);
       throw error;
@@ -181,12 +167,6 @@ class RentContractExcelService {
   ): Promise<void> {
     try {
       const blob = await this.exportToFile(options);
-
-      // 确保blob是有效的
-      if (!(blob instanceof Blob)) {
-        throw new Error('无效的文件数据');
-      }
-
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -195,16 +175,11 @@ class RentContractExcelService {
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
       const filename = options.filename || `租金合同导出_${timestamp}.xlsx`;
       link.download = filename;
-      link.style.display = 'none';
 
       document.body.appendChild(link);
       link.click();
-
-      // 延迟清理以确保下载开始
-      setTimeout(() => {
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-      }, 100);
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('导出并下载文件失败:', error);
       throw error;

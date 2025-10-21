@@ -1,5 +1,5 @@
 /**
- * 租户合同列表页面
+ * 租金合同列表页面
  */
 
 import React, { useState, useEffect } from 'react';
@@ -33,7 +33,6 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
-import { useNavigate } from 'react-router-dom';
 
 import { RentContract, RentContractQueryParams, RentContractPageState } from '../../types/rentContract';
 import { Asset } from '../../types/asset';
@@ -42,6 +41,7 @@ import { rentContractService } from '../../services/rentContractService';
 import { assetService } from '../../services/assetService';
 import { ownershipService } from '../../services/ownershipService';
 import { useFormat } from '../../utils/format';
+import RentContractExcelImport from '../../components/Rental/RentContractExcelImport';
 
 const { Title } = Typography;
 const { Search } = Input;
@@ -49,7 +49,6 @@ const { Option } = Select;
 const { RangePicker } = DatePicker;
 
 const ContractListPage: React.FC = () => {
-  const navigate = useNavigate();
   const [state, setState] = useState<RentContractPageState>({
     loading: false,
     contracts: [],
@@ -110,8 +109,8 @@ const ContractListPage: React.FC = () => {
   const loadReferenceData = async () => {
     try {
       const [assetsResponse, ownershipsResponse] = await Promise.all([
-        assetService.getAssets({ limit: 100 }),
-        ownershipService.getOwnerships({ size: 100 }),
+        assetService.getAssets({ limit: 1000 }),
+        ownershipService.getOwnerships({ limit: 1000 }),
       ]);
       setAssets(assetsResponse.items);
       setOwnerships(ownershipsResponse.items);
@@ -194,25 +193,20 @@ const ContractListPage: React.FC = () => {
 
   // 查看合同详情
   const handleViewDetail = (contract: RentContract) => {
-    Modal.info({
-      title: '功能开发中',
-      content: '合同详情查看功能正在开发中，敬请期待！',
-      okText: '知道了',
-    });
+    // TODO: 实现查看详情逻辑
+    console.log('查看合同详情:', contract);
   };
 
   // 编辑合同
   const handleEdit = (contract: RentContract) => {
-    Modal.info({
-      title: '功能开发中',
-      content: '合同编辑功能正在开发中，敬请期待！',
-      okText: '知道了',
-    });
+    // TODO: 实现编辑逻辑
+    console.log('编辑合同:', contract);
   };
 
   // 创建新合同
   const handleCreate = () => {
-    navigate('/rental/contracts/new');
+    // TODO: 实现创建逻辑
+    console.log('创建新合同');
   };
 
   // 导入成功的回调
@@ -343,7 +337,7 @@ const ContractListPage: React.FC = () => {
     <div style={{ padding: '24px' }}>
       {/* 页面标题 */}
       <div style={{ marginBottom: '24px' }}>
-        <Title level={2}>租户合同管理</Title>
+        <Title level={2}>租金合同管理</Title>
         <p style={{ color: '#666' }}>管理物业租赁合同，支持租金条款设置和台账生成</p>
       </div>
 
@@ -460,8 +454,8 @@ const ContractListPage: React.FC = () => {
         </Row>
       </Card>
 
-      {/* Excel导入导出功能暂时移除 */}
-      {/* <RentContractExcelImport onImportSuccess={handleImportSuccess} /> */}
+      {/* Excel导入导出 */}
+      <RentContractExcelImport onImportSuccess={handleImportSuccess} />
 
       {/* 合同列表 */}
       <Card>

@@ -1,9 +1,4 @@
 import { apiClient } from './api'
-import {
-  convertBackendToFrontend,
-  convertFrontendToBackend,
-  validateNumericFields
-} from '@/utils/dataConversion'
 import type {
   Asset,
   AssetSearchParams,
@@ -29,9 +24,20 @@ export class AssetService {
         },
       })
 
-      // 转换后端数据为前端格式
-      if (response) {
-        return convertBackendToFrontend<AssetListResponse>(response)
+      // 处理响应数据
+      if (response.data) {
+        return response.data
+      }
+
+      // 如果响应直接是数据，构造标准格式
+      if (Array.isArray(response)) {
+        return {
+          items: response,
+          total: response.length,
+          page: params?.page || 1,
+          limit: params?.limit || 20,
+          pages: 1
+        }
       }
 
       return response as AssetListResponse
@@ -45,93 +51,34 @@ export class AssetService {
   // 获取单个资产
   async getAsset(id: string): Promise<Asset> {
     const response = await apiClient.get<Asset>(`/assets/${id}`)
-    return convertBackendToFrontend<Asset>(response.data || response as Asset)
+    return response.data || response as Asset
   }
 
   // 创建资产
   async createAsset(data: AssetCreateRequest): Promise<Asset> {
-    // 验证数值字段
-    const validationErrors = validateNumericFields(data)
-    if (validationErrors.length > 0) {
-      throw new Error(`数据验证失败: ${validationErrors.join(', ')}`)
-    }
-
-    // 转换前端数据为后端格式
-    const backendData = convertFrontendToBackend<AssetCreateRequest>(data)
-    const response = await apiClient.post<Asset>('/assets', backendData)
-    return convertBackendToFrontend<Asset>(response.data || response as Asset)
+    const response = await apiClient.post<Asset>('/assets', data)
+    return response.data || response as Asset
   }
 
   // 更新资产
   async updateAsset(id: string, data: AssetUpdateRequest): Promise<Asset> {
-    // 验证数值字段
-    const validationErrors = validateNumericFields(data)
-    if (validationErrors.length > 0) {
-      throw new Error(`数据验证失败: ${validationErrors.join(', ')}`)
+    const response = await apiClient.put<Asset>(`/assets/${id}`, data)
+    return response.data || response as Asset
+  }
+
+  // 删除资产
+  async deleteAsset(id: string): Promise<void> {
+    try {
+      await apiClient.delete(`/assets/${id}`)
+    } catch (error) {
+      console.error('删除资产失败:', error)
+      throw error
     }
-
-    // 转换前端数据为后端格式
-    const backendData = convertFrontendToBackend<AssetUpdateRequest>(data)
-    const response = await apiClient.put<Asset>(`/assets/${id}`, backendData)
-    return convertBackendToFrontend<Asset>(response.data || response as Asset)
-  }
-
-  // 导出资产
-  async exportAssets(params: { format: string, filters?: AssetSearchParams }): Promise<Blob> {
-    const response = await apiClient.get('/excel/export', {
-      params: {
-        export_format: params.format,
-        ...params.filters,
-      },
-      responseType: 'blob',
-    })
-    return response.data || response
-  }
-
-  // 导出选中资产
-  async exportSelectedAssets(assetIds: string[], format: string): Promise<Blob> {
-    const response = await apiClient.post(
-      '/excel/export',
-      assetIds,
-      {
-        params: {
-          export_format: format,
-        },
-        responseType: 'blob',
-      }
-    )
-    return response.data || (response as unknown as Blob)
-  }
-
-  // 导入资产
-  async importAssets(file: File): Promise<any> {
-    const formData = new FormData()
-    formData.append('file', file)
-
-    const response = await apiClient.post('/assets/import', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    })
-    return response.data || response
-  }
-
-  // 批量更新资产
-  async batchUpdateAssets(data: { ids: string[], fields: Partial<AssetUpdateRequest> }): Promise<any> {
-    const response = await apiClient.post('/assets/batch-update', data)
-    return response.data || response
   }
 
   // 批量删除资产
   async deleteAssets(ids: string[]): Promise<void> {
-    // 由于后端没有批量删除接口，逐个删除
-    const deletePromises = ids.map(id => this.deleteAsset(id))
-    await Promise.all(deletePromises)
-  }
-
-  // 删除单个资产
-  async deleteAsset(id: string): Promise<void> {
-    await apiClient.delete(`/assets/${id}`)
+    await apiClient.post('/assets/batch-delete', { ids })
   }
 
   // 获取资产变更历史
@@ -193,7 +140,7 @@ export class AssetService {
     const response = await apiClient.get('/statistics/basic', {
       params: filters,
     })
-    return response.data
+    return response.data || response
   }
 
   // 获取权属方列表
@@ -242,7 +189,42 @@ export class AssetService {
     }
   }
 
-  
+  // 导出资产数据
+  async exportAssets(
+    filters?: Record<string, any>,
+    options?: {
+      format?: 'xlsx' | 'csv'
+      includeHeaders?: boolean
+      selectedFields?: string[]
+    }
+  ): Promise<any> {
+    const response = await apiClient.post('/excel/export', {
+      filters,
+      format: options?.format || 'xlsx',
+      include_headers: options?.includeHeaders !== false,
+      selected_fields: options?.selectedFields,
+    })
+    return response.data || response
+  }
+
+  // 导出选中的资产
+  async exportSelectedAssets(
+    assetIds: string[],
+    options?: {
+      format?: 'xlsx' | 'csv'
+      includeHeaders?: boolean
+      selectedFields?: string[]
+    }
+  ): Promise<any> {
+    const response = await apiClient.post('/excel/export-selected', {
+      asset_ids: assetIds,
+      format: options?.format || 'xlsx',
+      include_headers: options?.includeHeaders !== false,
+      selected_fields: options?.selectedFields,
+    })
+    return response.data || response
+  }
+
   // 获取导出状态
   async getExportStatus(taskId: string): Promise<any> {
     const response = await apiClient.get(`/excel/export-status/${taskId}`)
@@ -334,62 +316,20 @@ export class AssetService {
     await apiClient.delete(`/excel/import-history/${id}`)
   }
 
-  // 上传资产附件
-  async uploadAssetAttachments(assetId: string, files: File[]): Promise<{ success: string[], failed: string[] }> {
-    const formData = new FormData()
-    files.forEach((file, index) => {
-      formData.append(`file_${index}`, file)
-    })
-
-    const response = await apiClient.post(`/assets/${assetId}/attachments`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    })
-    return response.data || { success: [], failed: [] }
-  }
-
-  // 获取资产附件列表
-  async getAssetAttachments(assetId: string): Promise<Array<{ id: string, name: string, size: number, url: string }>> {
-    const response = await apiClient.get(`/assets/${assetId}/attachments`)
-    return response.data || []
-  }
-
-  // 删除资产附件
-  async deleteAssetAttachment(assetId: string, attachmentId: string): Promise<void> {
-    await apiClient.delete(`/assets/${assetId}/attachments/${attachmentId}`)
-  }
-
   // 获取出租率统计数据
   async getOccupancyRateStats(filters?: AssetSearchParams): Promise<any> {
-    const response = await apiClient.get('/statistics/occupancy-rate/overall', {
+    const response = await apiClient.get('/statistics/occupancy-rate', {
       params: filters,
     })
-    return response.data
+    return response.data || response
   }
 
-  // 获取权属分布统计数据
-  async getOwnershipDistributionStats(filters?: AssetSearchParams): Promise<any> {
-    const response = await apiClient.get('/statistics/ownership-distribution', {
+  // 获取资产分布统计数据
+  async getAssetDistributionStats(filters?: AssetSearchParams): Promise<any> {
+    const response = await apiClient.get('/statistics/asset-distribution', {
       params: filters,
     })
-    return response.data
-  }
-
-  // 获取物业性质分布统计数据
-  async getPropertyNatureDistributionStats(filters?: AssetSearchParams): Promise<any> {
-    const response = await apiClient.get('/statistics/property-nature-distribution', {
-      params: filters,
-    })
-    return response.data
-  }
-
-  // 获取使用状态分布统计数据
-  async getUsageStatusDistributionStats(filters?: AssetSearchParams): Promise<any> {
-    const response = await apiClient.get('/statistics/usage-status-distribution', {
-      params: filters,
-    })
-    return response.data
+    return response.data || response
   }
 
   // 获取面积统计数据
@@ -408,92 +348,11 @@ export class AssetService {
     return response.data || response
   }
 
-  // 获取面积汇总统计数据
-  async getAreaSummaryStats(): Promise<any> {
-    const response = await apiClient.get('/statistics/area-summary')
-    return response.data
-  }
-
-  // 获取财务汇总统计数据
-  async getFinancialSummaryStats(): Promise<any> {
-    const response = await apiClient.get('/statistics/financial-summary')
-    return response.data
-  }
-
-  // 获取按类别出租率统计数据
-  async getOccupancyRateByCategory(categoryField: string = 'business_category'): Promise<any> {
-    const response = await apiClient.get('/statistics/occupancy-rate/by-category', {
-      params: { category_field: categoryField }
-    })
-    return response.data
-  }
-
-  // 获取整体出租率统计数据
-  async getOverallOccupancyRate(): Promise<any> {
-    const response = await apiClient.get('/statistics/occupancy-rate/overall')
-    return response.data
-  }
-
-  // 获取仪表板数据
-  async getDashboardData(): Promise<any> {
-    const response = await apiClient.get('/statistics/dashboard')
-    return response.data
-  }
-
-  // 获取趋势数据
-  async getTrendData(metric: string, period: string = 'monthly'): Promise<any> {
-    const response = await apiClient.get(`/statistics/trend/${metric}`, {
-      params: { period },
-    })
-    return response.data
-  }
-
-  // ===== 批量操作 =====
-
-  // 批量更新资产
-  async batchUpdateAssets(assetIds: string[], updates: any): Promise<any> {
-    const response = await apiClient.post('/assets/batch-update', {
-      asset_ids: assetIds,
-      updates: updates,
-      update_all: false
-    })
-    return response.data
-  }
-
-  // 验证资产数据
-  async validateAssetData(data: any, validateRules?: string[]): Promise<any> {
-    const response = await apiClient.post('/assets/validate', {
-      data: data,
-      validate_rules: validateRules || ['required_fields', 'data_format']
-    })
-    return response.data
-  }
-
-  // 导入资产数据
-  async importAssets(data: any[], importMode: string = 'create', options?: any): Promise<any> {
-    const response = await apiClient.post('/assets/import', {
-      data: data,
-      import_mode: importMode,
-      skip_errors: options?.skipErrors || false,
-      dry_run: options?.dryRun || false
-    })
-    return response.data
-  }
-
-  // 批量更新自定义字段
-  async batchUpdateCustomFields(assetIds: string[], fieldValues: any): Promise<any> {
-    const response = await apiClient.post('/assets/batch-custom-fields', {
-      asset_ids: assetIds,
-      field_values: fieldValues
-    })
-    return response.data
-  }
-
   // ===== 系统字典管理 =====
   
   // 获取系统字典列表
   async getSystemDictionaries(dict_type?: string): Promise<SystemDictionary[]> {
-    const response = await apiClient.get('/dictionaries', {
+    const response = await apiClient.get('/system-dictionaries', {
       params: dict_type ? { dict_type } : undefined,
     })
     return response.data || []
@@ -501,25 +360,25 @@ export class AssetService {
 
   // 获取单个系统字典
   async getSystemDictionary(id: string): Promise<SystemDictionary> {
-    const response = await apiClient.get(`/dictionaries/${id}`)
+    const response = await apiClient.get(`/system-dictionaries/${id}`)
     return response.data
   }
 
   // 创建系统字典
   async createSystemDictionary(data: Omit<SystemDictionary, 'id' | 'created_at' | 'updated_at'>): Promise<SystemDictionary> {
-    const response = await apiClient.post('/dictionaries', data)
+    const response = await apiClient.post('/system-dictionaries', data)
     return response.data
   }
 
   // 更新系统字典
   async updateSystemDictionary(id: string, data: Partial<SystemDictionary>): Promise<SystemDictionary> {
-    const response = await apiClient.put(`/dictionaries/${id}`, data)
+    const response = await apiClient.put(`/system-dictionaries/${id}`, data)
     return response.data
   }
 
   // 删除系统字典
   async deleteSystemDictionary(id: string): Promise<void> {
-    await apiClient.delete(`/dictionaries/${id}`)
+    await apiClient.delete(`/system-dictionaries/${id}`)
   }
 
   // 批量更新系统字典
@@ -530,7 +389,7 @@ export class AssetService {
 
   // 获取字典类型列表
   async getDictionaryTypes(): Promise<{ types: string[] }> {
-    const response = await apiClient.get('/dictionaries/types')
+    const response = await apiClient.get('/system-dictionaries/types/list')
     return response.data || { types: [] }
   }
 
@@ -606,9 +465,9 @@ export class AssetService {
     return this.getSystemDictionaries('property_nature')
   }
 
-  // 获取权属类别字典
-  async getOwnershipCategoryFromDict(): Promise<SystemDictionary[]> {
-    return this.getSystemDictionaries('ownership_category')
+  // 获取权属性质字典
+  async getOwnershipNatureFromDict(): Promise<SystemDictionary[]> {
+    return this.getSystemDictionaries('usage_status')
   }
 
   // 获取租赁状态字典

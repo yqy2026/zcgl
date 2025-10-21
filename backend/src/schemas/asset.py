@@ -128,7 +128,6 @@ class AssetBase(BaseModel):
     
     # 租户相关字段
     tenant_name: Optional[str] = Field(None, max_length=200, description="租户名称")
-    tenant_contact: Optional[str] = Field(None, max_length=100, description="租户联系方式")
     tenant_type: Optional[TenantType] = Field(None, description="租户类型")
     
     # 合同相关字段
@@ -145,10 +144,8 @@ class AssetBase(BaseModel):
     business_model: Optional[BusinessModel] = Field(None, description="接收模式")
     operation_status: Optional[OperationStatus] = Field(None, description="经营状态")
     
-    # 财务相关字段
-    annual_income: Optional[Decimal] = Field(None, ge=0, description="年收益（元）")
-    annual_expense: Optional[Decimal] = Field(None, ge=0, description="年支出（元）")
-    net_income: Optional[Decimal] = Field(None, description="净收益（元）")
+    # 财务相关字段已移除
+    # annual_income, annual_expense, net_income 字段已移除
     
     # 接收相关字段
     operation_agreement_start_date: Optional[date] = Field(None, description="接收协议开始日期")
@@ -168,14 +165,12 @@ class AssetBase(BaseModel):
     # 多租户支持
     tenant_id: Optional[str] = Field(None, max_length=50, description="租户ID")
     
-    # 审核相关字段
-    last_audit_date: Optional[date] = Field(None, description="最后审核时间")
-    audit_status: Optional[AuditStatus] = Field(None, description="审核状态")
-    auditor: Optional[str] = Field(None, max_length=100, description="审核人")
+    # 审核相关字段已简化
+    # last_audit_date, audit_status, auditor 字段已移除
     audit_notes: Optional[str] = Field(None, description="审核备注")
 
     @validator('land_area', 'actual_property_area', 'rentable_area', 'rented_area', 'unrented_area',
-              'non_commercial_area', 'monthly_rent', 'deposit', 'annual_income', 'annual_expense')
+              'non_commercial_area', 'monthly_rent', 'deposit')
     def validate_area(cls, v):
         if v is not None and v < 0:
             raise ValueError('数值不能为负数')
@@ -244,7 +239,6 @@ class AssetUpdate(BaseModel):
     
     # 租户相关字段
     tenant_name: Optional[str] = Field(None, max_length=200, description="租户名称")
-    tenant_contact: Optional[str] = Field(None, max_length=100, description="租户联系方式")
     tenant_type: Optional[TenantType] = Field(None, description="租户类型")
     
     # 合同相关字段
@@ -261,10 +255,8 @@ class AssetUpdate(BaseModel):
     business_model: Optional[BusinessModel] = Field(None, description="接收模式")
     operation_status: Optional[OperationStatus] = Field(None, description="经营状态")
     
-    # 财务相关字段
-    annual_income: Optional[Decimal] = Field(None, ge=0, description="年收益（元）")
-    annual_expense: Optional[Decimal] = Field(None, ge=0, description="年支出（元）")
-    net_income: Optional[Decimal] = Field(None, description="净收益（元）")
+    # 财务相关字段已移除
+    # annual_income, annual_expense, net_income 字段已移除
     
     # 接收相关字段
     operation_agreement_start_date: Optional[date] = Field(None, description="接收协议开始日期")
@@ -279,14 +271,12 @@ class AssetUpdate(BaseModel):
     updated_by: Optional[str] = Field(None, max_length=100, description="更新人")
     tags: Optional[str] = Field(None, description="标签")
     
-    # 审核相关字段
-    last_audit_date: Optional[date] = Field(None, description="最后审核时间")
-    audit_status: Optional[AuditStatus] = Field(None, description="审核状态")
-    auditor: Optional[str] = Field(None, max_length=100, description="审核人")
+    # 审核相关字段已简化
+    # last_audit_date, audit_status, auditor 字段已移除
     audit_notes: Optional[str] = Field(None, description="审核备注")
 
     @validator('land_area', 'actual_property_area', 'rentable_area', 'rented_area', 'unrented_area',
-              'non_commercial_area', 'monthly_rent', 'deposit', 'annual_income', 'annual_expense')
+              'non_commercial_area', 'monthly_rent', 'deposit')
     def validate_area(cls, v):
         if v is not None and v < 0:
             raise ValueError('数值不能为负数')

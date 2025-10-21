@@ -1,10 +1,8 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
 import type { ApiResponse, ErrorResponse } from '@/types/api'
 
-// 环境配置 - 开发环境使用相对路径利用Vite代理，生产环境使用完整URL
-const API_BASE_URL = import.meta.env.DEV
-  ? '/api/v1'  // 开发环境使用相对路径，通过Vite代理转发
-  : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api/v1')  // 生产环境使用完整URL
+// 环境配置
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1'
 const API_TIMEOUT = import.meta.env.VITE_API_TIMEOUT || 30000
 
 // 请求重试配置
@@ -21,25 +19,27 @@ const RETRY_CONFIG = {
 const createApiInstance = (): AxiosInstance => {
   const instance = axios.create({
     baseURL: API_BASE_URL,
-    timeout: 600000, // 10分钟超时，给导入操作足够时间
-    // 不设置默认的Content-Type，让axios根据请求数据自动设置
+    timeout: 30000,
+    headers: {
+      'Content-Type': 'application/json',
+    },
   })
 
   // 请求拦截器
   instance.interceptors.request.use(
     (config) => {
-      // 对于文件上传请求，不添加认证token和请求ID，避免干扰multipart/form-data
-      const isFileUpload = config.data instanceof FormData
+      // 添加认证token
+      const token = localStorage.getItem('auth_token')
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`
+      }
 
-      if (!isFileUpload) {
-        // 添加认证token
-        const token = localStorage.getItem('auth_token')
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`
-        }
+      // 添加请求ID用于追踪
+      config.headers['X-Request-ID'] = generateRequestId()
 
-        // 添加请求ID用于追踪
-        config.headers['X-Request-ID'] = generateRequestId()
+      // 添加时间戳防止缓存
+      if (config.method === 'get' && config.params) {
+        config.params._t = Date.now()
       }
 
       console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`)
@@ -168,13 +168,11 @@ const handleAuthError = (status: number) => {
     // 清除本地存储的认证信息
     localStorage.removeItem('auth_token')
     localStorage.removeItem('user_info')
-
-    // 临时注释掉重定向到登录页面的逻辑
-    // if (window.location.pathname !== '/login') {
-    //   window.location.href = '/login'
-    // }
-
-    console.warn('认证错误已发生，但重定向被临时禁用用于调试')
+    
+    // 重定向到登录页面
+    if (window.location.pathname !== '/login') {
+      window.location.href = '/login'
+    }
   }
 }
 

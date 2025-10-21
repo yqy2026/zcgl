@@ -70,8 +70,7 @@ class User(Base):
     # delegated_permissions = relationship("PermissionDelegation", foreign_keys="PermissionDelegation.delegatee_id", back_populates="delegatee")
     # delegated_permissions_to_others = relationship("PermissionDelegation", foreign_keys="PermissionDelegation.delegator_id", back_populates="delegator")
 
-    # 多租户关系
-    tenant_memberships = relationship("TenantUser")  # 移除 back_populates 以避免循环依赖
+    
 
     def __repr__(self):
         return f"<User(id={self.id}, username={self.username}, role={self.role})>"

@@ -12,9 +12,11 @@ import logging
 import asyncio
 from collections import defaultdict
 
-from ..core.security import security_middleware, RateLimiter, RequestSecurity
-from ..core.logging_security import logger, security_auditor
+from ..core.security import RateLimiter, RequestSecurity
+from ..core.logging_security import security_auditor
 from ..core.exception_handler import ValidationException
+
+logger = logging.getLogger(__name__)
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """安全头部中间件"""
@@ -117,7 +119,9 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
     def _check_rate_limit(self, ip: str, request: Request) -> bool:
         """检查请求频率限制"""
         # 不同请求类型的限制
-        path = request.url.path
+        path = getattr(request.url, 'path', '')
+        if path is None:
+            path = ''
 
         if path.startswith('/api/v1/pdf_import'):
             # PDF导入限制：每分钟最多5次
@@ -140,7 +144,11 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
             await self._log_suspicious_request(request, "INVALID_USER_AGENT")
 
         # 检查请求路径中的可疑模式
-        path = request.url.path.lower()
+        path = getattr(request.url, 'path', None)
+        if path is None:
+            path = ""
+        else:
+            path = path.lower()
         for pattern in self.suspicious_patterns:
             if pattern in path:
                 await self._log_suspicious_request(request, "SUSPICIOUS_PATH")
@@ -149,7 +157,7 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         # 检查查询参数
         query_params = dict(request.query_params)
         for key, value in query_params.items():
-            if any(pattern in value.lower() for pattern in self.suspicious_patterns):
+            if value is not None and isinstance(value, str) and any(pattern in value.lower() for pattern in self.suspicious_patterns):
                 await self._log_suspicious_request(request, "SUSPICIOUS_QUERY_PARAM")
                 break
 
@@ -160,7 +168,7 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
             details={
                 "ip": ip,
                 "reason": reason,
-                "path": request.url.path,
+                "path": getattr(request.url, 'path', ''),
                 "method": request.method,
                 "user_agent": request.headers.get("User-Agent", ""),
                 "timestamp": time.time()
@@ -180,7 +188,7 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
             details={
                 "ip": client_ip,
                 "reason": reason,
-                "path": request.url.path,
+                "path": getattr(request.url, 'path', ''),
                 "method": request.method,
                 "user_agent": request.headers.get("User-Agent", ""),
                 "query_params": dict(request.query_params),
@@ -199,7 +207,7 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
                 event_type="SLOW_REQUEST",
                 details={
                     "ip": ip,
-                    "path": request.url.path,
+                    "path": getattr(request.url, 'path', ''),
                     "method": request.method,
                     "processing_time": processing_time,
                     "status_code": response.status_code
@@ -258,10 +266,11 @@ class FileUploadSecurityMiddleware(BaseHTTPMiddleware):
             )
 
         # 检查文件数量限制
-        if request.url.path.startswith('/api/v1/excel'):
+        path = getattr(request.url, 'path', '')
+        if path and path.startswith('/api/v1/excel'):
             # Excel导入限制：单次最多上传10个文件
             max_files = 10
-        elif request.url.path.startswith('/api/v1/pdf_import'):
+        elif path and path.startswith('/api/v1/pdf_import'):
             # PDF导入限制：单次最多上传5个文件
             max_files = 5
         else:
@@ -289,7 +298,7 @@ class CORSExtendedMiddleware(BaseHTTPMiddleware):
 
         # 设置CORS头部
         origin = request.headers.get("origin")
-        if origin in self.allowed_origins or "localhost" in origin:
+        if origin and (origin in self.allowed_origins or "localhost" in origin):
             response.headers["Access-Control-Allow-Origin"] = origin
             response.headers["Access-Control-Allow-Methods"] = ", ".join(self.allowed_methods)
             response.headers["Access-Control-Allow-Headers"] = (

@@ -36,7 +36,7 @@ const DashboardPage: React.FC = () => {
     queryKey: ['statistics', 'area-summary'],
     queryFn: async () => {
       try {
-        const response = await apiClient.get('/statistics/area-summary')
+        const response = await apiClient.get('/assets/statistics/summary')
         return response
       } catch (err) {
         console.error('Dashboard API Error:', err)

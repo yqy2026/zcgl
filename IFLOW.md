@@ -18,6 +18,9 @@
 - 审计日志：完整的操作审计和安全日志
 - 缓存优化：Redis缓存提升系统性能
 - 数据备份：自动数据备份和恢复机制
+- API一致性检查：自动化API接口一致性验证工具
+- 性能监控：全面的系统性能监控和优化
+- 安全增强：多层次安全防护和漏洞扫描
 
 ### 技术栈
 - **后端**: Python 3.12 + FastAPI + SQLAlchemy 2.0 + Pydantic v2 + UV包管理器
@@ -26,6 +29,8 @@
 - **前端**: React 18 + TypeScript + Ant Design 5 + Vite
 - **部署**: Docker + Nginx + Gunicorn
 - **AI增强**: PaddleOCR（OCR识别）、spaCy（NLP文本处理，可选）
+- **文档**: MkDocs + Material主题
+- **代码质量**: mypy + ruff + pre-commit + bandit（安全扫描）
 
 ## 目录结构
 ```
@@ -68,7 +73,7 @@ zcgl/
 
 ### 1. 资产管理
 - 资产增删改查操作
-- 详细的资产信息管理（包含权属方、物业信息、面积、租户、合同、财务等字段）
+- 详细的资产信息管理（包含权属方、物业信息、面积、租户、合同、财务等58个字段）
 - 批量操作支持
 - 资产历史记录追踪
 - 资产附件管理（支持PDF文件上传和下载）
@@ -116,6 +121,28 @@ zcgl/
 - 合同信息：租赁合同编号、合同期限、租金等
 - 财务信息：年收益、年支出、净收益
 - 管理信息：管理责任人、经营模式、项目等
+
+### 7. API一致性检查
+- 自动化API接口一致性验证
+- 前后端数据格式校验
+- 实时API文档同步检查
+- 接口变更影响分析
+
+### 8. 性能优化
+- 数据库查询优化
+- 缓存策略实施
+- 前端代码分割和懒加载
+- 静态资源压缩和优化
+- API响应时间监控
+
+### 9. 安全增强
+- 多层次身份验证
+- 数据加密传输和存储
+- 安全漏洞扫描（Bandit）
+- SQL注入防护
+- XSS攻击防护
+- CSRF防护
+- 安全审计日志
 
 ## 构建和运行
 
@@ -165,6 +192,9 @@ uv run pytest
 # 前端测试
 cd frontend
 npm run test
+
+# API一致性检查
+npm run check-all-api
 ```
 
 ## API接口
@@ -231,6 +261,9 @@ npm run test
 - 遵循PEP 8代码规范
 - 使用类型提示
 - 实现单元测试和集成测试
+- 使用mypy进行类型检查
+- 使用ruff进行代码格式化和检查
+- 使用bandit进行安全漏洞扫描
 
 ### 前端开发
 - 使用React 18和TypeScript
@@ -239,13 +272,16 @@ npm run test
 - 遵循组件化开发模式
 - 使用ESLint和Prettier进行代码检查和格式化
 - 实现单元测试和端到端测试
+- 使用Zustand进行状态管理
+- 使用TanStack Query进行数据获取和缓存
 
 ### 代码质量
 - 后端使用pytest进行测试
 - 前端使用Jest进行测试
 - ESLint进行代码检查
-- Black进行Python代码格式化
 - 使用pre-commit钩子保证代码质量
+- 使用radon进行代码复杂度分析
+- 使用safety进行依赖安全扫描
 
 ## 部署和运维
 
@@ -256,6 +292,8 @@ npm run test
 - PostgreSQL作为生产数据库
 - Redis作为缓存服务器
 - 配置环境变量和密钥管理
+- 多阶段Docker构建优化镜像大小
+- 非root用户运行容器提升安全性
 
 ### 监控和日志
 - 系统健康检查端点
@@ -263,6 +301,7 @@ npm run test
 - 错误日志记录
 - 性能监控指标
 - API调用日志
+- 容器健康检查
 
 ### 数据备份和恢复
 - 定期数据库备份
@@ -277,6 +316,9 @@ npm run test
 - XSS防护
 - CSRF防护
 - 安全头设置
+- 容器安全扫描
+- 依赖安全扫描
+- 定期安全审计
 
 ## 重要文件位置
 
@@ -285,22 +327,53 @@ npm run test
 - 前端依赖：`frontend/package.json`
 - 数据库配置：`backend/src/database.py`
 - 环境变量：`backend/.env`
+- Docker配置：`docker-compose.yml`
+- Nginx配置：`deployment/nginx/nginx.conf`
 
 ### 主要源文件
 - 后端入口：`backend/src/main.py`
 - 资产模型：`backend/src/models/asset.py`
 - 资产API：`backend/src/api/v1/assets.py`
 - 统计API：`backend/src/api/v1/statistics.py`
-- PDF处理服务：`backend/src/services/pdf_import_service.py`
-- 合同信息提取器：`backend/src/services/contract_extractor.py`
+- PDF处理服务：`backend/src/services/enhanced_pdf_extractor.py`
 - 权限管理：`backend/src/models/rbac.py`
+- API一致性检查：`backend/scripts/api_consistency_check.py`
 
 ### 文档
 - 用户文档：`docs/`目录下
 - API文档：访问`/docs`或`/redoc`路径
+- MkDocs文档：`backend/mkdocs.yml`
 
 ## 系统访问
 
 - 前端应用：http://localhost:5173
 - API文档：http://localhost:8002/docs
 - 健康检查：http://localhost:8002/health
+- Docker环境前端：http://localhost:3000
+- Docker环境API：http://localhost:8000
+
+## 新增功能和工具
+
+### API一致性检查工具
+- 自动化验证前后端API接口一致性
+- 实时检测接口变更和兼容性问题
+- 支持TypeScript类型定义自动生成
+- 集成到CI/CD流程中
+
+### 性能优化工具
+- 数据库查询性能分析
+- 前端打包优化和代码分割
+- 缓存策略实施和监控
+- API响应时间优化
+
+### 安全增强工具
+- Bandit安全漏洞扫描
+- 依赖包安全扫描（Safety）
+- 代码质量分析（Radon）
+- 安全审计日志
+
+### 文档生成工具
+- MkDocs + Material主题文档生成
+- API文档自动生成
+- 数据库文档生成
+- 系统架构文档维护

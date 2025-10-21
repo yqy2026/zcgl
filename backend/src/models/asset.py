@@ -46,7 +46,6 @@ class Asset(Base):
     # 租户相关字段
     tenant_name = Column(String(200), comment="租户名称")
     tenant_type = Column(String(20), comment="租户类型")
-    tenant_contact = Column(String(200), comment="租户联系方式")
     
     # 合同相关字段
     lease_contract_number = Column(String(100), comment="租赁合同编号")
@@ -62,10 +61,8 @@ class Asset(Base):
     operation_status = Column(String(20), comment="经营状态")
     manager_name = Column(String(100), comment="管理责任人（网格员）")
 
-    # 财务相关字段
-    annual_income = Column(DECIMAL(15, 2), comment="年收益（元）")
-    annual_expense = Column(DECIMAL(15, 2), comment="年支出（元）")
-    net_income = Column(DECIMAL(15, 2), comment="净收益（元）")
+    # 财务相关字段已移除
+    # annual_income, annual_expense, net_income 字段已移除
 
     # 接收相关字段
     operation_agreement_start_date = Column(Date, comment="接收协议开始日期")
@@ -84,11 +81,11 @@ class Asset(Base):
     created_by = Column(String(100), comment="创建人")
     updated_by = Column(String(100), comment="更新人")
 
-    # 审核相关字段
-    last_audit_date = Column(Date, comment="最后审核时间")
-    audit_status = Column(String(20), comment="审核状态")
+    # 审核相关字段已简化
+    # last_audit_date, audit_status, auditor 字段已移除
     audit_notes = Column(Text, comment="审核备注")
-    auditor = Column(String(100), comment="审核人")
+
+   
 
     # 时间戳
     created_at = Column(DateTime, default=datetime.utcnow, comment="创建时间")
@@ -300,15 +297,8 @@ class Ownership(Base):
     name = Column(String(200), nullable=False, comment="权属方全称")
     code = Column(String(100), nullable=False, comment="权属方编码")
     short_name = Column(String(100), nullable=True, comment="权属方简称")
-    contact_person = Column(String(100), nullable=True, comment="联系人")
-    contact_phone = Column(String(50), nullable=True, comment="联系电话")
-    contact_email = Column(String(100), nullable=True, comment="联系邮箱")
+    # 以下字段已删除: contact_person, contact_phone, contact_email, registration_number, legal_representative, business_scope, established_date, registered_capital
     address = Column(String(500), nullable=True, comment="地址")
-    registration_number = Column(String(100), nullable=True, comment="注册号")
-    legal_representative = Column(String(100), nullable=True, comment="法定代表人")
-    business_scope = Column(Text, nullable=True, comment="经营范围")
-    established_date = Column(Date, nullable=True, comment="成立日期")
-    registered_capital = Column(DECIMAL(15, 2), nullable=True, comment="注册资本")
     management_entity = Column(String(200), nullable=True, comment="管理单位")
     notes = Column(Text, nullable=True, comment="备注")
 

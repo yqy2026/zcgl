@@ -59,15 +59,34 @@ app.add_middleware(create_request_logging_middleware)
 # 设置统一异常处理器
 setup_exception_handlers(app)
 
+# 健康检查端点（必须在路由注册之前定义）
+@app.get("/api/v1/health", tags=["健康检查"])
+async def health_check():
+    """健康检查端点"""
+    try:
+        return {
+            "status": "healthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "version": "2.0.0"
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e),
+            "timestamp": datetime.utcnow().isoformat(),
+            "version": "2.0.0"
+        }
+
+@app.get("/api/v1/", tags=["根路径"])
+async def root():
+    """根路径"""
+    return {"message": "土地物业资产管理系统 API", "version": "2.0.0"}
+
 # 导入API路由
-from .api.v1 import assets, projects, ownership, excel, tasks
+from .api.v1 import api_router
 
 # 注册API路由
-app.include_router(assets.router, prefix="/api/v1")
-app.include_router(projects.router, prefix="/api/v1")
-app.include_router(ownership.router, prefix="/api/v1")
-app.include_router(excel.router, prefix="/api/v1")
-app.include_router(tasks.router, prefix="/api/v1")
+app.include_router(api_router)
 
 # 创建数据库表
 create_tables()

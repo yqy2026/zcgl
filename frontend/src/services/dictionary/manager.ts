@@ -10,12 +10,6 @@ import {
   DICTIONARY_CONFIGS,
   getDictionaryConfig
 } from './config'
-import {
-  globalDataCache,
-  batchOptimizer,
-  createCachedRequest,
-  type DataCache
-} from '@/utils/dataCache'
 
 export interface EnumFieldType {
   id: string
@@ -56,27 +50,15 @@ export interface EnumFieldWithType {
 }
 
 class DictionaryManagerService {
-  private readonly API_BASE = '/enum-fields'
+  private readonly API_BASE = '/api/v1/enum-fields'
 
   /**
-   * 获取所有枚举类型（用于管理界面）- 带缓存
+   * 获取所有枚举类型（用于管理界面）
    */
   async getEnumFieldTypes(): Promise<EnumFieldType[]> {
-    const cacheKey = 'enum_field_types'
-
-    // 尝试从缓存获取
-    const cached = globalDataCache.get<EnumFieldType[]>(cacheKey)
-    if (cached) {
-      return cached
-    }
-
     try {
       const response = await apiRequest.get(`${this.API_BASE}/types`)
-      const data = response.data
-
-      // 缓存结果（5分钟）
-      globalDataCache.set(cacheKey, data, 5 * 60 * 1000)
-      return data
+      return response.data
     } catch (error) {
       console.error('获取枚举类型失败:', error)
       // 返回基于配置的备用数据
@@ -114,33 +96,25 @@ class DictionaryManagerService {
     } catch (error) {
       console.error(`获取枚举值失败 [${typeId}]:`, error)
 
-      // 尝试从配置中获取备用数据（这里typeId是UUID，需要通过types映射找到对应的code）
-      try {
-        const types = await this.getEnumFieldTypes()
-        const type = types.find(t => t.id === typeId)
-        if (type) {
-          const config = Object.values(DICTIONARY_CONFIGS).find(c => c.code === type.code)
-          if (config) {
-            return config.fallbackOptions.map((option, index) => ({
-              id: `fallback-${typeId}-${index}`,
-              enum_type_id: typeId,
-              label: option.label,
-              value: option.value,
-              code: option.code,
-              description: '',
-              level: 1,
-              sort_order: option.sort_order || index + 1,
-              color: option.color,
-              icon: option.icon,
-              is_active: true,
-              is_default: index === 0,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            }))
-          }
-        }
-      } catch (fallbackError) {
-        console.warn('获取备用数据失败:', fallbackError)
+      // 尝试从配置中获取备用数据
+      const config = Object.values(DICTIONARY_CONFIGS).find(c => c.code === typeId)
+      if (config) {
+        return config.fallbackOptions.map((option, index) => ({
+          id: `fallback-${typeId}-${index}`,
+          enum_type_id: typeId,
+          label: option.label,
+          value: option.value,
+          code: option.code,
+          description: '',
+          level: 1,
+          sort_order: option.sort_order || index + 1,
+          color: option.color,
+          icon: option.icon,
+          is_active: true,
+          is_default: index === 0,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }))
       }
 
       return []
@@ -156,7 +130,7 @@ class DictionaryManagerService {
       const data: EnumFieldWithType[] = []
 
       for (const type of types) {
-        const values = await this.getEnumFieldValues(type.id)  // 使用 type.id 而不是 type.code
+        const values = await this.getEnumFieldValues(type.code)
         data.push({ type, values })
       }
 
@@ -219,8 +193,6 @@ class DictionaryManagerService {
   async deleteEnumFieldType(typeId: string): Promise<boolean> {
     try {
       await apiRequest.delete(`${this.API_BASE}/types/${typeId}`)
-      // 清理相关缓存
-      this.clearCache()
       return true
     } catch (error) {
       console.error('删除枚举类型失败:', error)
@@ -375,60 +347,10 @@ class DictionaryManagerService {
         }
       })
 
-      // 导入完成后清理缓存
-      this.clearCache()
       return response.data
     } catch (error) {
       console.error('导入枚举字段数据失败:', error)
       throw error
-    }
-  }
-
-  /**
-   * 清理相关缓存
-   */
-  private clearCache(): void {
-    // 清理所有字典相关的缓存
-    const cacheKeys = [
-      'enum_field_types',
-      'enum_field_data',
-      'enum_field_values'
-    ]
-
-    cacheKeys.forEach(key => {
-      // 删除匹配该模式的所有缓存
-      globalDataCache.cache.forEach((_, cacheKey) => {
-        if (cacheKey.includes(key)) {
-          globalDataCache.cache.delete(cacheKey)
-        }
-      })
-    })
-
-    // 强制清理枚举类型缓存
-    globalDataCache.cache.delete('enum_field_types')
-  }
-
-  /**
-   * 预加载常用数据
-   */
-  async preloadData(): Promise<void> {
-    try {
-      // 预加载枚举类型
-      await this.getEnumFieldTypes()
-
-      // 预加载前10个类型的枚举值
-      const types = await this.getEnumFieldTypes()
-      const limitedTypes = types.slice(0, 10)
-
-      await Promise.all(
-        limitedTypes.map(type =>
-          this.getEnumFieldValues(type.id).catch(() => {
-            // 静默失败，不影响其他预加载
-          })
-        )
-      )
-    } catch (error) {
-      console.warn('预加载数据失败:', error)
     }
   }
 }

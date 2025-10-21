@@ -7,7 +7,7 @@ from .auth import router as auth_router
 from .assets import router as assets_router
 from .excel import router as excel_router
 from .history import router as history_router
-# from .statistics import router as statistics_router  # 暂时注释，修复导入错误
+from .statistics import router as statistics_router
 from .occupancy import router as occupancy_router
 from .backup import router as backup_router
 from .admin import router as admin_router
@@ -20,8 +20,8 @@ from .ownership import router as ownership_router
 from .project import router as project_router
 from .rent_contract import router as rent_contract_router
 from .analytics import router as analytics_router
-# PDF导入API已统一到 pdf_import_unified.py
-from .pdf_import_unified import router as pdf_import_router
+# PDF导入API已统一到 pdf_import_unified.py，在main.py中直接注册
+# from .pdf_import_unified import router as pdf_import_router
 # from .organization_permissions import router as organization_permissions_router  # 已删除
 # from .rbac import router as rbac_router  # 已删除
 # from .dynamic_permissions import router as dynamic_permissions_router  # 已删除
@@ -64,11 +64,11 @@ api_router.include_router(
     tags=["变更历史"]
 )
 
-# api_router.include_router(
-#     statistics_router,
-#     prefix="/statistics",
-#     tags=["数据统计和报表"]
-# )  # 暂时注释，修复导入错误
+api_router.include_router(
+    statistics_router,
+    prefix="/statistics",
+    tags=["数据统计和报表"]
+)
 
 api_router.include_router(
     occupancy_router,
@@ -159,12 +159,12 @@ api_router.include_router(
 #     tags=["完整OCR PDF导入"]
 # )
 
-# PDF智能导入API (统一版本，包含完整功能)
-api_router.include_router(
-    pdf_import_router,
-    prefix="/pdf_import",
-    tags=["PDF智能导入"]
-)
+# PDF智能导入API (统一版本，包含完整功能) - 已移至main.py注册
+# api_router.include_router(
+#     pdf_import_router,
+#     prefix="/pdf_import",
+#     tags=["PDF智能导入"]
+# )
 
 # 注释掉已删除的API路由器
 # api_router.include_router(organization_permissions_router, ...)  # 已删除

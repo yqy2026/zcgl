@@ -9,7 +9,7 @@ import hashlib
 from typing import Optional, Dict, Any, List, Tuple
 from pathlib import Path
 from datetime import datetime, timedelta
-from fastapi import Request, HTTPException, UploadFile, status
+from fastapi import Request, HTTPException, UploadFile, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, validator
@@ -21,7 +21,9 @@ import logging
 
 from ..core.config_manager import get_config
 from ..core.exception_handler import ValidationException
-from ..core.logging_security import logger, security_auditor
+from ..core.logging_security import security_auditor
+
+logger = logging.getLogger(__name__)
 
 class FileValidationConfig:
     """文件验证配置"""

@@ -3,7 +3,7 @@
  */
 
 // API基础URL配置
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api/v1'
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1'
 
 // API端点配置
 export const API_ENDPOINTS = {

@@ -3,7 +3,7 @@
 """
 
 from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, Query, Path
+from fastapi import APIRouter, Depends, HTTPException, Query, Path, Body
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 
@@ -122,7 +122,7 @@ async def get_task(
 @router.put("/{task_id}", response_model=TaskResponse, summary="更新任务")
 async def update_task(
     task_id: str = Path(..., description="任务ID"),
-    task_in: TaskUpdate,
+    task_in: TaskUpdate = Body(...),
     db: Session = Depends(get_db)
 ):
     """
@@ -372,7 +372,7 @@ async def get_excel_config(
 @router.put("/configs/excel/{config_id}", response_model=ExcelTaskConfigResponse, summary="更新Excel配置")
 async def update_excel_config(
     config_id: str = Path(..., description="配置ID"),
-    config_in: Dict[str, Any],
+    config_in: Dict[str, Any] = Body(...),
     db: Session = Depends(get_db)
 ):
     """
