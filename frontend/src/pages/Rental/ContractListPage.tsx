@@ -108,12 +108,12 @@ const ContractListPage: React.FC = () => {
   // 加载资产和权属方数据
   const loadReferenceData = async () => {
     try {
-      const [assetsResponse, ownershipsResponse] = await Promise.all([
-        assetService.getAssets({ limit: 1000 }),
-        ownershipService.getOwnerships({ limit: 1000 }),
+      const [assetsResponse, ownershipsData] = await Promise.all([
+        assetService.getAssets({ limit: 100 }),
+        ownershipService.getOwnershipOptions(true),
       ]);
       setAssets(assetsResponse.items);
-      setOwnerships(ownershipsResponse.items);
+      setOwnerships(ownershipsData);
     } catch (error) {
       message.error('加载参考数据失败');
     }
