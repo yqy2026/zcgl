@@ -204,7 +204,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       okButtonProps={{
         danger: danger !== undefined ? danger : config.danger,
       }}
-      destroyOnClose
+      destroyOnHidden
     >
       {content || config.getContent()}
     </Modal>

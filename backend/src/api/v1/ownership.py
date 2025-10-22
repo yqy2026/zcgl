@@ -22,7 +22,7 @@ router = APIRouter()
 
 
 @router.get("/dropdown-options", summary="获取权属方选项列表")
-async def get_ownership_options(
+async def get_ownership_dropdown_options(
     db: Session = Depends(get_db),
     is_active: Optional[bool] = Query(True, description="是否启用")
 ):
@@ -45,6 +45,8 @@ async def get_ownership_options(
         raise HTTPException(status_code=500, detail=f"获取权属方选项失败: {str(e)}")
 
 
+
+
 @router.post("/", response_model=OwnershipResponse, summary="创建权属方")
 async def create_ownership(
     *,
@@ -59,27 +61,6 @@ async def create_ownership(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"创建权属方失败: {str(e)}")
-
-
-@router.get("/{ownership_id}", response_model=OwnershipResponse, summary="获取权属方详情")
-async def get_ownership(
-    ownership_id: str,
-    db: Session = Depends(get_db)
-):
-    """获取指定权属方的详细信息"""
-    db_ownership = ownership.get(db, id=ownership_id)
-    if not db_ownership:
-        raise HTTPException(status_code=404, detail="权属方不存在")
-
-    # 获取关联资产数量
-    asset_count = ownership.get_asset_count(db, ownership_id)
-    # 获取关联项目数量
-    project_count = ownership.get_project_count(db, ownership_id)
-
-    response = OwnershipResponse.from_orm(db_ownership)
-    response.asset_count = asset_count
-    response.project_count = project_count
-    return response
 
 
 @router.put("/{ownership_id}", response_model=OwnershipResponse, summary="更新权属方")
@@ -98,7 +79,7 @@ async def update_ownership(
         updated_ownership = ownership.update(
             db, db_obj=db_ownership, obj_in=ownership_in
         )
-        return OwnershipResponse.from_orm(updated_ownership)
+        return OwnershipResponse.model_validate(updated_ownership)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -123,7 +104,7 @@ async def update_ownership_projects(
 
         # 返回更新后的权属方信息
         updated_ownership = ownership.get(db, id=ownership_id)
-        response = OwnershipResponse.from_orm(updated_ownership)
+        response = OwnershipResponse.model_validate(updated_ownership)
 
         # 获取实际的项目计数
         actual_project_count = ownership.get_project_count(db, ownership_id)
@@ -179,7 +160,7 @@ async def get_ownerships(
     # 转换为响应格式，并添加关联计数
     items = []
     for item in result["items"]:
-        response = OwnershipResponse.from_orm(item)
+        response = OwnershipResponse.model_validate(item)
         # 获取关联资产数量
         response.asset_count = ownership.get_asset_count(db, item.id)
         # 获取关联项目数量
@@ -207,7 +188,7 @@ async def search_ownerships(
     # 转换为响应格式，并添加关联计数
     items = []
     for item in result["items"]:
-        response = OwnershipResponse.from_orm(item)
+        response = OwnershipResponse.model_validate(item)
         # 获取关联资产数量
         response.asset_count = ownership.get_asset_count(db, item.id)
         # 获取关联项目数量

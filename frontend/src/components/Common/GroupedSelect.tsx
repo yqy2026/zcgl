@@ -181,7 +181,7 @@ const GroupedSelect: React.FC<GroupedSelectProps> = ({
       showSearch={showSearch}
       filterOption={false} // 禁用默认过滤，使用自定义搜索
       onSearch={handleSearch}
-      dropdownRender={dropdownRender}
+      popupRender={dropdownRender}
       tagRender={tagRender}
     >
       {renderOptions()}

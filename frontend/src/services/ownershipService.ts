@@ -16,7 +16,7 @@ import type {
 } from '@/types/ownership';
 
 export class OwnershipService {
-  private baseUrl = `${API_BASE_URL}/ownerships`;
+  private baseUrl = `/ownerships`;
 
   /**
    * 获取权属方列表
@@ -97,7 +97,7 @@ export class OwnershipService {
    * 获取权属方选项列表
    */
   async getOwnershipOptions(isActive: boolean = true): Promise<Ownership[]> {
-    const response = await apiRequest.get(`${this.baseUrl}/options?is_active=${isActive}`);
+    const response = await apiRequest.get(`${this.baseUrl}/dropdown-options?is_active=${isActive}`);
     return response.data;
   }
 
@@ -112,7 +112,7 @@ export class OwnershipService {
       );
     } catch (error) {
       console.error('验证权属方编码失败:', error);
-      return false;
+      throw new Error('Network error during ownership code validation');
     }
   }
 
@@ -127,7 +127,7 @@ export class OwnershipService {
       );
     } catch (error) {
       console.error('验证权属方名称失败:', error);
-      return false;
+      throw new Error('Network error during ownership name validation');
     }
   }
 }
