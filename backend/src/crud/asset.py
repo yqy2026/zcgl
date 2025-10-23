@@ -370,6 +370,12 @@ class AssetCRUD:
         
         return updated_asset
 
+    def get_multi_by_ids(self, db: Session, ids: List[str]) -> List[Asset]:
+        """根据ID列表批量获取资产"""
+        if not ids:
+            return []
+        return db.query(Asset).filter(Asset.id.in_(ids)).all()
+
     def remove(self, db: Session, id: str) -> Asset:
         """删除资产"""
         obj = db.query(Asset).get(id)

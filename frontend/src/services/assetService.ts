@@ -59,7 +59,18 @@ export class AssetService {
         },
       })
 
-      if (response.data) {
+      // 处理新的响应格式：{success: true, data: Asset[], message: string}
+      if (response.data && Array.isArray(response.data)) {
+        return response.data
+      }
+
+      // 如果响应是包装格式，提取data字段
+      if (response?.data && Array.isArray(response.data)) {
+        return response.data
+      }
+
+      // 处理统一响应格式：{success: true, data: [...], message: "..."}
+      if (response?.success && Array.isArray(response?.data)) {
         return response.data
       }
 
@@ -74,7 +85,23 @@ export class AssetService {
   async getAssetsByIds(ids: string[]): Promise<Asset[]> {
     try {
       const response = await apiClient.post<Asset[]>('/assets/by-ids', { ids })
-      return response.data || response as Asset[]
+
+      // 处理新的响应格式：{success: true, data: Asset[], message: string}
+      if (response.data && Array.isArray(response.data)) {
+        return response.data
+      }
+
+      // 如果响应是包装格式，提取data字段
+      if (response?.data && Array.isArray(response.data)) {
+        return response.data
+      }
+
+      // 处理统一响应格式：{success: true, data: [...], message: "..."}
+      if (response?.success && Array.isArray(response?.data)) {
+        return response.data
+      }
+
+      return response as Asset[]
     } catch (error) {
       console.error('根据ID列表获取资产失败:', error)
       throw new Error(error instanceof Error ? error.message : '根据ID列表获取资产失败')

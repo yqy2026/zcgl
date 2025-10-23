@@ -1202,3 +1202,126 @@ async def batch_update_custom_fields(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"批量更新自定义字段失败: {str(e)}")
+
+
+@router.get("/all", summary="获取所有资产（不分页）")
+async def get_all_assets(
+    db: Session = Depends(get_db),
+    search: Optional[str] = Query(None, description="搜索关键字"),
+    ownership_status: Optional[str] = Query(None, description="确权状态"),
+    usage_status: Optional[str] = Query(None, description="使用状态"),
+    property_nature: Optional[str] = Query(None, description="物业性质"),
+    business_category: Optional[str] = Query(None, description="业态类别"),
+    sort_by: Optional[str] = Query("created_at", description="排序字段"),
+    sort_order: Optional[str] = Query("desc", description="排序顺序"),
+    limit: int = Query(10000, ge=1, le=50000, description="最大返回数量")
+):
+    """
+    获取所有资产列表，不分页，用于导出等场景
+
+    支持的查询参数：
+    - **search**: 搜索关键字（物业名称、地址等）
+    - **ownership_status**: 确权状态过滤
+    - **usage_status**: 使用状态过滤
+    - **property_nature**: 物业性质过滤
+    - **business_category**: 业态类别过滤
+    - **sort_by**: 排序字段
+    - **sort_order**: 排序顺序（asc/desc）
+    - **limit**: 最大返回数量限制
+    """
+    try:
+        # 构建查询过滤器
+        filters = {}
+        if search:
+            filters["search"] = search
+        if ownership_status:
+            filters["ownership_status"] = ownership_status
+        if usage_status:
+            filters["usage_status"] = usage_status
+        if property_nature:
+            filters["property_nature"] = property_nature
+        if business_category:
+            filters["business_category"] = business_category
+
+        # 排序
+        order_by = None
+        if sort_by and sort_order:
+            if sort_order.lower() == "desc":
+                order_by = f"{sort_by} desc"
+            else:
+                order_by = f"{sort_by} asc"
+
+        # 获取所有资产（不分页）
+        assets = asset_crud.get_multi(
+            db=db,
+            filters=filters if filters else None,
+            order_by=order_by,
+            limit=limit
+        )
+
+        # 转换为响应格式
+        asset_responses = []
+        for asset in assets:
+            asset_dict = asset.__dict__.copy()
+            asset_dict['_sa_instance_state'] = None  # 移除SQLAlchemy实例状态
+
+            # 确保计算字段包含在响应中
+            if hasattr(asset, 'unrented_area'):
+                asset_dict['unrented_area'] = float(asset.unrented_area)
+            if hasattr(asset, 'occupancy_rate'):
+                asset_dict['occupancy_rate'] = float(asset.occupancy_rate)
+
+            asset_responses.append(AssetResponse.model_validate(asset_dict))
+
+        # 返回统一格式，符合前端期望
+        return {
+            "success": True,
+            "data": asset_responses,
+            "message": f"成功获取{len(asset_responses)}个资产"
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取资产列表失败: {str(e)}")
+
+
+@router.post("/by-ids", summary="根据ID列表获取资产")
+async def get_assets_by_ids(
+    request: dict,
+    db: Session = Depends(get_db)
+):
+    """
+    根据资产ID列表批量获取资产信息
+
+    - **ids**: 资产ID列表
+    """
+    try:
+        asset_ids = request.get("ids", [])
+        if not asset_ids:
+            return []
+
+        # 批量查询资产
+        assets = asset_crud.get_multi_by_ids(db=db, ids=asset_ids)
+
+        # 转换为响应格式
+        asset_responses = []
+        for asset in assets:
+            asset_dict = asset.__dict__.copy()
+            asset_dict['_sa_instance_state'] = None  # 移除SQLAlchemy实例状态
+
+            # 确保计算字段包含在响应中
+            if hasattr(asset, 'unrented_area'):
+                asset_dict['unrented_area'] = float(asset.unrented_area)
+            if hasattr(asset, 'occupancy_rate'):
+                asset_dict['occupancy_rate'] = float(asset.occupancy_rate)
+
+            asset_responses.append(AssetResponse.model_validate(asset_dict))
+
+        # 返回统一格式，符合前端期望
+        return {
+            "success": True,
+            "data": asset_responses,
+            "message": f"成功获取{len(asset_responses)}个资产"
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"根据ID列表获取资产失败: {str(e)}")
