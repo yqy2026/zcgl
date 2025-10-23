@@ -14,11 +14,20 @@ from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Background
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
-# 导入新的PDF处理服务
-from ...services.pdf_import_service import pdf_import_service
-from ...services.pdf_session_service import pdf_session_service
-from ...services.pdf_processing_service import pdf_processing_service
-from ...services.pdf_validation_matching_service import PDFValidationMatchingService
+# 导入新的PDF处理服务 - 安全导入
+try:
+    from ...services.pdf_import_service import pdf_import_service
+    from ...services.pdf_session_service import pdf_session_service
+    from ...services.pdf_processing_service import pdf_processing_service
+    from ...services.pdf_validation_matching_service import PDFValidationMatchingService
+    PDF_SERVICES_AVAILABLE = True
+except ImportError as e:
+    logger.error(f"PDF服务导入失败: {e}")
+    pdf_import_service = None
+    pdf_session_service = None
+    pdf_processing_service = None
+    PDFValidationMatchingService = None
+    PDF_SERVICES_AVAILABLE = False
 
 # 数据库和模型
 from ...database import get_db
@@ -113,21 +122,19 @@ class SystemInfoResponse(BaseModel):
 async def get_system_info():
     """获取系统信息和能力"""
     try:
-        # 设置系统能力
-        capabilities = SystemCapabilities(
-            pdfplumber_available=True,
-            pymupdf_available=True,
-            spacy_available=True,
-            ocr_available=True,
-            supported_formats=['.pdf', '.jpg', '.jpeg', '.png'],
-            max_file_size_mb=50,
-            estimated_processing_time="30-60秒"
-        )
-
+        # 简单版本 - 不依赖复杂服务
         return SystemInfoResponse(
             success=True,
             message="PDF导入系统正常运行",
-            capabilities=capabilities,
+            capabilities=SystemCapabilities(
+                pdfplumber_available=True,
+                pymupdf_available=True,
+                spacy_available=True,
+                ocr_available=True,
+                supported_formats=['.pdf', '.jpg', '.jpeg', '.png'],
+                max_file_size_mb=50,
+                estimated_processing_time="30-60秒"
+            ),
             extractor_summary={
                 "method": "multi_engine",
                 "description": "支持多种PDF处理引擎，包括PyMuPDF、PDFPlumber和OCR（PaddleOCR）",
@@ -141,6 +148,8 @@ async def get_system_info():
         )
     except Exception as e:
         logger.error(f"获取系统信息失败: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"获取系统信息失败: {str(e)}")
 
 @router.get("/test_system")
@@ -166,60 +175,74 @@ async def upload_pdf_file(
             detail="只支持PDF文件上传"
         )
 
-    # 验证文件大小（50MB限制）
+    # 验证并保存文件大小（流式处理，避免内存耗尽）
     max_size = 50 * 1024 * 1024  # 50MB
-    file_content = await file.read()
-    if len(file_content) > max_size:
-        raise HTTPException(
-            status_code=400,
-            detail=f"文件大小超过限制({max_size // (1024*1024)}MB)"
-        )
+    temp_dir = Path("temp_uploads")
+    temp_dir.mkdir(exist_ok=True)
+
+    file_id = str(uuid.uuid4())
+    temp_file_path = temp_dir / f"{file_id}_{file.filename}"
+
+    # 使用流式保存，同时验证文件大小
+    total_size = 0
+    chunk_size = 64 * 1024  # 64KB chunks
 
     try:
-        # 创建临时文件
-        temp_dir = Path("temp_uploads")
-        temp_dir.mkdir(exist_ok=True)
-
-        file_id = str(uuid.uuid4())
-        temp_file_path = temp_dir / f"{file_id}_{file.filename}"
-
-        # 保存文件
         with open(temp_file_path, "wb") as temp_file:
-            temp_file.write(file_content)
+            while chunk := await file.read(chunk_size):
+                total_size += len(chunk)
+                if total_size > max_size:
+                    # 清理部分写入的文件
+                    temp_file.close()
+                    temp_file_path.unlink(missing_ok=True)
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"文件大小超过限制({max_size // (1024*1024)}MB)"
+                    )
+                temp_file.write(chunk)
 
-        logger.info(f"PDF文件已保存: {temp_file_path}")
+        logger.info(f"PDF文件已流式保存: {temp_file_path}, 大小: {total_size} bytes")
 
-        # 创建会话
-        processing_options = {
-            "prefer_ocr": prefer_ocr,
-            "prefer_markitdown": prefer_markitdown,
-            "max_pages": 100,
-            "dpi": 300 if prefer_ocr else 150,
-            "validate_fields": True,
-            "enable_asset_matching": True,
-            "enable_ownership_matching": True,
-            "enable_duplicate_check": True
-        }
-
-        session = await pdf_session_service.create_session(
-            db=db,
-            filename=file.filename,
-            file_size=len(file_content),
-            file_path=str(temp_file_path),
-            content_type=file.content_type or 'application/pdf',
-            organization_id=organization_id,
-            processing_options=processing_options
+    except Exception as e:
+        # 清理临时文件
+        temp_file_path.unlink(missing_ok=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"文件处理失败: {str(e)}"
         )
 
-        # 开始异步处理
-        process_result = await pdf_import_service.process_pdf_file(
-            db=db,
-            session_id=session.session_id,
-            organization_id=organization_id
-        )
+    # 创建会话
+    processing_options = {
+        "prefer_ocr": prefer_ocr,
+        "prefer_markitdown": prefer_markitdown,
+        "max_pages": 100,
+        "dpi": 300 if prefer_ocr else 150,
+        "validate_fields": True,
+        "enable_asset_matching": True,
+        "enable_ownership_matching": True,
+        "enable_duplicate_check": True
+    }
 
-        processing_time = (datetime.now() - start_time).total_seconds()
+    session = await pdf_session_service.create_session(
+        db=db,
+        filename=file.filename,
+        file_size=total_size,  # 使用流式计算的大小
+        file_path=str(temp_file_path),
+        content_type=file.content_type or 'application/pdf',
+        organization_id=organization_id,
+        processing_options=processing_options
+    )
 
+    # 开始异步处理
+    process_result = await pdf_import_service.process_pdf_file(
+        db=db,
+        session_id=session.session_id,
+        organization_id=organization_id
+    )
+
+    processing_time = (datetime.now() - start_time).total_seconds()
+
+    try:
         if process_result['success']:
             return FileUploadResponse(
                 success=True,
@@ -233,7 +256,6 @@ async def upload_pdf_file(
                 message="处理启动失败",
                 error=process_result.get('error', '未知错误')
             )
-
     except HTTPException:
         raise
     except Exception as e:
@@ -272,6 +294,14 @@ async def get_active_sessions(
 ):
     """获取活跃会话列表"""
     try:
+        if not PDF_SERVICES_AVAILABLE or pdf_session_service is None:
+            return ActiveSessionResponse(
+                success=False,
+                active_sessions=[],
+                total_count=0,
+                error="PDF会话服务不可用"
+            )
+
         sessions = await pdf_session_service.get_active_sessions(
             db, organization_id=organization_id
         )
@@ -298,6 +328,8 @@ async def get_active_sessions(
 
     except Exception as e:
         logger.error(f"获取活跃会话失败: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return ActiveSessionResponse(
             success=False,
             active_sessions=[],

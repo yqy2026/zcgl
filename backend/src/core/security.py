@@ -92,11 +92,14 @@ class FileValidator:
                 details={"allowed_extensions": list(self.config.ALLOWED_MIME_TYPES.values())}
             )
 
-        # 检查MIME类型
+        # 检查MIME类型 - 使用流式读取避免内存耗尽攻击
         try:
-            # 读取文件前1024字节用于MIME类型检测
+            # 保存当前位置
+            original_position = file.file.tell()
+
+            # 读取文件前1024字节用于MIME类型检测（限制读取大小）
             file_content = file.file.read(1024)
-            file.file.seek(0)  # 重置文件指针
+            file.file.seek(original_position)  # 重置文件指针到原始位置
 
             detected_mime = magic.from_buffer(file_content, mime=True)
 
@@ -117,7 +120,10 @@ class FileValidator:
         except Exception as e:
             if isinstance(e, ValidationException):
                 raise
-            raise ValidationException(f"文件类型检测失败: {str(e)}")
+            raise ValidationException(
+                f"文件类型验证失败: {str(e)}",
+                details={"filename": file.filename}
+            )
 
         return True
 
@@ -192,17 +198,33 @@ class FileValidator:
             bool: 扫描是否通过
         """
         try:
-            # 读取文件内容进行扫描
-            content = file.file.read()
-            file.file.seek(0)  # 重置文件指针
+            # 保存当前位置
+            original_position = file.file.tell()
 
-            # 检查恶意签名
-            for signature in self.config.MALICIOUS_SIGNATURES:
-                if signature in content.lower():
-                    raise ValidationException(
-                        "检测到可能的恶意内容",
-                        details={"malicious_signature": signature.decode('utf-8', errors='ignore')}
-                    )
+            # 使用流式读取进行恶意软件扫描，避免内存耗尽
+            max_scan_size = 10 * 1024 * 1024  # 限制扫描前10MB
+            chunk_size = 8192  # 8KB chunks
+            scanned_data = b""
+            bytes_scanned = 0
+
+            while bytes_scanned < max_scan_size:
+                chunk = file.file.read(min(chunk_size, max_scan_size - bytes_scanned))
+                if not chunk:
+                    break
+
+                scanned_data += chunk
+                bytes_scanned += len(chunk)
+
+                # 检查恶意签名（只扫描小签名）
+                for signature in self.config.MALICIOUS_SIGNATURES:
+                    if signature in chunk.lower():
+                        raise ValidationException(
+                            "检测到可能的恶意内容",
+                            details={"malicious_signature": signature.decode('utf-8', errors='ignore')}
+                        )
+
+            # 重置文件指针
+            file.file.seek(original_position)
 
             return True
 
@@ -271,6 +293,7 @@ class FileValidator:
             # 记录安全审计
             security_auditor.log_security_event(
                 event_type="FILE_VALIDATION_SUCCESS",
+                message=f"File validation successful: {file.filename}",
                 details=validation_result
             )
 
@@ -280,6 +303,7 @@ class FileValidator:
             # 记录验证失败
             security_auditor.log_security_event(
                 event_type="FILE_VALIDATION_FAILED",
+                message=f"File validation failed: {file.filename} - {str(e)}",
                 details={
                     "filename": file.filename,
                     "error": str(e),
@@ -325,6 +349,7 @@ class RateLimiter:
         if len(request_queue) >= max_requests:
             security_auditor.log_security_event(
                 event_type="RATE_LIMIT_EXCEEDED",
+                message=f"Rate limit exceeded for {key}: {len(request_queue)}/{max_requests}",
                 details={
                     "key": key,
                     "request_count": len(request_queue),
@@ -406,7 +431,9 @@ class SecurityMiddleware:
         if not user_agent or len(user_agent) < 10:
             security_auditor.log_security_event(
                 event_type="SUSPICIOUS_USER_AGENT",
-                details={"user_agent": user_agent, "ip": client_ip}
+                message=f"Suspicious User-Agent from {client_ip}: '{user_agent}'",
+                ip_address=client_ip,
+                details={"user_agent": user_agent}
             )
 
         return True

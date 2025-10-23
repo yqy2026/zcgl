@@ -84,9 +84,13 @@ async def root():
 
 # 导入API路由
 from .api.v1 import api_router
+from .api.v1.pdf_import_unified import router as pdf_import_router
 
 # 注册API路由
 app.include_router(api_router)
+
+# 注册PDF导入API路由
+app.include_router(pdf_import_router, prefix="/api/v1/pdf_import")
 
 # 创建数据库表
 create_tables()
