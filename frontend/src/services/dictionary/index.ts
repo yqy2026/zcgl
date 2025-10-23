@@ -41,7 +41,7 @@ export interface SystemDictionary {
 // 导入服务实例
 import { baseDictionaryService } from './base'
 import { dictionaryManagerService } from './manager'
-import { apiRequest } from '@/utils/request'
+import { apiClient } from '../api'
 
 /**
  * 统一字典服务类
@@ -85,7 +85,7 @@ class UnifiedDictionaryService {
   /**
    * 快速创建字典（向后兼容）
    */
-  async quickCreate(dictType: string, data: { options: Array<{ label: string; value: string }> }): Promise<boolean> {
+  async quickCreate(dictType: string, _data: { options: Array<{ label: string; value: string }> }): Promise<boolean> {
     try {
       // 检查是否为系统字典类型
       const config = baseDictionaryService.getAvailableTypes().find(c => c.code === dictType)
@@ -198,7 +198,7 @@ class UnifiedDictionaryService {
    */
   async getSystemDictionaries(dictType: string): Promise<any[]> {
     try {
-      const response = await apiRequest.get(`system-dictionaries`, {
+      const response = await apiClient.get(`system-dictionaries`, {
         params: { dict_type: dictType }
       })
       return response.data
@@ -331,7 +331,30 @@ class UnifiedDictionaryService {
    */
   async toggleEnumValueActive(valueId: string, isActive: boolean): Promise<boolean> {
     try {
-      return await this.updateEnumValue(valueId, { is_active: isActive })
+      // 首先获取当前的枚举值信息
+      const enumData = await this.getEnumFieldData()
+      let currentValue = null
+      for (const item of enumData) {
+        const value = item.values.find(v => v.id === valueId)
+        if (value) {
+          currentValue = value
+          break
+        }
+      }
+      if (!currentValue) {
+        console.error('未找到指定的枚举值')
+        return false
+      }
+
+      // 然后更新状态，保持原有的其他字段
+      return await this.updateEnumValue(valueId, {
+        label: currentValue.label,
+        value: currentValue.value,
+        code: currentValue.code,
+        description: currentValue.description,
+        sort_order: currentValue.sort_order,
+        is_active: isActive
+      })
     } catch (error) {
       console.error('切换枚举值状态失败:', error)
       return false

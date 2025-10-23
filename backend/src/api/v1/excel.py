@@ -292,6 +292,7 @@ async def preview_excel_advanced(
         # 记录文件验证成功
         security_auditor.log_security_event(
             event_type="FILE_UPLOAD_VALIDATED",
+            message=f"Excel file validated successfully: {file.filename}",
             details={
                 "filename": file.filename,
                 "size": file.size,
@@ -479,6 +480,7 @@ async def import_excel(
         # 记录导入操作开始
         security_auditor.log_security_event(
             event_type="EXCEL_IMPORT_STARTED",
+            message=f"Excel import started: {file.filename} (sheet: {sheet_name})",
             details={
                 "filename": file.filename,
                 "size": file.size,
@@ -567,6 +569,7 @@ async def import_excel_async(
         # 记录异步导入操作开始
         security_auditor.log_security_event(
             event_type="EXCEL_ASYNC_IMPORT_STARTED",
+            message=f"Async Excel import started: {file.filename}",
             details={
                 "filename": file.filename,
                 "size": file.size,

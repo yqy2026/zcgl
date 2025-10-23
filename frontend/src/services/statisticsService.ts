@@ -45,7 +45,7 @@ export class StatisticsService {
     const response = await apiClient.get<{data: {categories: ChartDataItem[]}}>('/statistics/occupancy-rate/by-category', {
       params: { category_field: 'business_category', ...filters },
     })
-    return response.data?.data?.categories || response.data || []
+    return response.data?.data?.categories || []
   }
 
   // 获取面积统计

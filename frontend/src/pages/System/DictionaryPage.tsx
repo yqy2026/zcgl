@@ -50,7 +50,7 @@ const DictionaryPage: React.FC = () => {
 
       // 同时获取枚举类型详细信息
       const typesData = await unifiedDictionaryService.getEnumFieldTypes()
-      setEnumTypes(typesData)
+      setEnumTypes(typesData || [])
     }, {
       errorMessage: '获取字典类型失败',
       successMessage: undefined
@@ -260,6 +260,9 @@ const DictionaryPage: React.FC = () => {
 
   // 获取所有分类
   const categories = useMemo(() => {
+    if (!enumTypes || enumTypes.length === 0) {
+      return ['all']
+    }
     const cats = enumTypes.map(type => type.category || '未分类')
     return ['all', ...Array.from(new Set(cats))]
   }, [enumTypes])

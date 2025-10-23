@@ -16,6 +16,7 @@ const TemplateManagementPage = React.lazy(() => import('../pages/System/Template
 const UserManagementPage = React.lazy(() => import('../pages/System/UserManagementPage'))
 const RoleManagementPage = React.lazy(() => import('../pages/System/RoleManagementPage'))
 const OperationLogPage = React.lazy(() => import('../pages/System/OperationLogPage'))
+const SystemSettingsPage = React.lazy(() => import('../pages/System/SystemSettingsPage'))
 const OwnershipManagementPage = React.lazy(() => import('../pages/Ownership/OwnershipManagementPage'))
 const ProjectManagementPage = React.lazy(() => import('../pages/Project/ProjectManagementPage'))
 const ContractListPage = React.lazy(() => import('../pages/Rental/ContractListPage'))
@@ -73,6 +74,9 @@ const AppRoutes: React.FC = () => {
           <Route path="/rental/ledger" element={<RentLedgerPage />} />
           <Route path="/rental/statistics" element={<RentStatisticsPage />} />
 
+          {/* 兼容旧路径重定向 */}
+          <Route path="/rental/rent-ledger" element={<RentLedgerPage />} />
+
           {/* 权属方管理 */}
           <Route path="/ownership" element={<OwnershipManagementPage />} />
 
@@ -114,6 +118,11 @@ const AppRoutes: React.FC = () => {
               <SystemLogsGuard>
                 <OperationLogPage />
               </SystemLogsGuard>
+            </SystemErrorBoundary>
+          } />
+          <Route path="/system/settings" element={
+            <SystemErrorBoundary>
+              <SystemSettingsPage />
             </SystemErrorBoundary>
           } />
           {/* 兼容旧的枚举字段路由，重定向到字典管理 */}

@@ -97,7 +97,7 @@ class APIVersionMiddleware(BaseHTTPMiddleware):
                 response.headers["Sunset"] = request.state.version_sunset_date.isoformat()
                 response.headers[
                     "Link"
-                ] = f'</api/{self.default_version}{request.url.path}>; rel="successor-version"'
+                ] = f'</api/{self.default_version}{str(request.url.path)}>; rel="successor-version"'
 
             # 添加性能信息
             process_time = time.time() - start_time
@@ -114,7 +114,7 @@ class APIVersionMiddleware(BaseHTTPMiddleware):
     def _determine_version(self, request: Request) -> str:
         """确定API版本"""
         # 1. 检查URL路径中的版本
-        path_parts = request.url.path.strip("/").split("/")
+        path_parts = str(request.url.path).strip("/").split("/")
         if len(path_parts) >= 2 and path_parts[0] == "api":
             potential_version = path_parts[1]
             if potential_version.startswith("v") and potential_version[1:].isdigit():

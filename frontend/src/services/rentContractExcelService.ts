@@ -3,7 +3,6 @@
  */
 
 import { api } from './api';
-import { RentContract, RentTerm, RentLedger } from '../types/rentContract';
 
 export interface ExcelImportResult {
   success: boolean;

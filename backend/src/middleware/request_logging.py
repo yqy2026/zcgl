@@ -38,7 +38,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         # 记录请求日志
         log_request_info(
             method=request.method,
-            path=request.url.path,
+            path=str(request.url.path),
             query_string=str(request.query_params) if request.query_params else None,
             status_code=response.status_code,
             duration_ms=duration_ms,

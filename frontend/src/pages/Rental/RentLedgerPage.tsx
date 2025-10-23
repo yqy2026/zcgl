@@ -85,19 +85,31 @@ const RentLedgerPage: React.FC = () => {
         ...params,
       });
 
+      // 安全检查：确保response和response.items存在
+      if (!response) {
+        console.error('API响应为空');
+        message.error('加载台账列表失败：响应为空');
+        setState(prev => ({ ...prev, loading: false }));
+        return;
+      }
+
+      // 确保items是一个数组
+      const ledgers = Array.isArray(response.items) ? response.items : [];
+
       setState(prev => ({
         ...prev,
         loading: false,
-        ledgers: response.items,
+        ledgers: ledgers,
         pagination: {
           ...prev.pagination,
-          total: response.total,
-          pages: response.pages,
+          total: response.total || 0,
+          pages: response.pages || 0,
         },
       }));
     } catch (error) {
-      message.error('加载台账列表失败');
-      setState(prev => ({ ...prev, loading: false }));
+      console.error('加载台账列表失败:', error);
+      message.error(`加载台账列表失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      setState(prev => ({ ...prev, loading: false, ledgers: [] }));
     }
   };
 
@@ -115,13 +127,19 @@ const RentLedgerPage: React.FC = () => {
   const loadReferenceData = async () => {
     try {
       const [assetsResponse, ownershipsResponse] = await Promise.all([
-        assetService.getAssets({ limit: 1000 }),
-        ownershipService.getOwnerships({ limit: 1000 }),
+        assetService.getAssets({ limit: 100 }),
+        ownershipService.getOwnerships({ size: 100 }),
       ]);
-      setAssets(assetsResponse.items);
-      setOwnerships(ownershipsResponse.items);
+
+      // 安全检查：确保响应和items存在
+      const assets = assetsResponse?.items || [];
+      const ownerships = ownershipsResponse?.items || [];
+
+      setAssets(assets);
+      setOwnerships(ownerships);
     } catch (error) {
-      message.error('加载参考数据失败');
+      console.error('加载参考数据失败:', error);
+      message.error(`加载参考数据失败: ${error instanceof Error ? error.message : '未知错误'}`);
     }
   };
 

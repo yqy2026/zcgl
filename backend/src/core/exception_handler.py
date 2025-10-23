@@ -272,7 +272,7 @@ class ExceptionHandler:
             extra={
                 "exception_code": exc.code,
                 "exception_details": exc.details,
-                "request_path": request.url.path,
+                "request_path": str(request.url.path),
                 "request_method": request.method
             }
         )
@@ -334,7 +334,7 @@ class ExceptionHandler:
             extra={
                 "exception_type": type(exc).__name__,
                 "exception_message": str(exc),
-                "request_path": request.url.path,
+                "request_path": str(request.url.path),
                 "request_method": request.method,
                 "traceback": traceback.format_exc()
             }
@@ -342,7 +342,7 @@ class ExceptionHandler:
 
         # 根据环境决定是否暴露详细错误信息
         from .config_manager import get_config
-        debug_mode = get_config("debug", False)
+        debug_mode = get_config("debug", True)
 
         if debug_mode:
             message = f"内部服务器错误: {str(exc)}"

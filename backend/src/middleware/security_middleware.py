@@ -106,6 +106,21 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
 
     def _is_ip_blocked(self, ip: str) -> bool:
         """检查IP是否被封禁"""
+        # 本地开发环境IP白名单
+        local_whitelist = [
+            '127.0.0.1', 'localhost', '::1',
+            '0.0.0.0',  # Docker/容器环境
+            '192.168.1.90'  # 当前本地网络IP
+        ]
+
+        # 如果是本地IP，直接允许
+        if ip in local_whitelist or ip.startswith('192.168.') or ip.startswith('10.') or ip.startswith('172.'):
+            # 如果本地IP被封禁，清除封禁记录
+            if ip in self.blocked_ips:
+                del self.blocked_ips[ip]
+                logger.info(f" cleared block for local IP: {ip}")
+            return False
+
         # 临时封禁（1小时）
         if ip in self.blocked_ips:
             block_time = self.blocked_ips[ip]
@@ -118,23 +133,31 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
 
     def _check_rate_limit(self, ip: str, request: Request) -> bool:
         """检查请求频率限制"""
+        # 本地开发环境更宽松的限制
+        is_local = (ip in ['127.0.0.1', 'localhost', '::1', '0.0.0.0'] or
+                   ip.startswith('192.168.') or ip.startswith('10.') or ip.startswith('172.'))
+
         # 不同请求类型的限制
-        path = getattr(request.url, 'path', '')
+        path = request.url.path
         if path is None:
             path = ''
 
         if path.startswith('/api/v1/pdf_import'):
-            # PDF导入限制：每分钟最多5次
-            return self.rate_limiter.check_rate_limit(f"{ip}:pdf_import", 5, 60)
+            # PDF导入限制：本地每分钟最多50次，生产环境每分钟最多5次
+            max_requests = 50 if is_local else 5
+            return self.rate_limiter.check_rate_limit(f"{ip}:pdf_import", max_requests, 60)
         elif path.startswith('/api/v1/excel'):
-            # Excel操作限制：每分钟最多10次
-            return self.rate_limiter.check_rate_limit(f"{ip}:excel", 10, 60)
+            # Excel操作限制：本地每分钟最多100次，生产环境每分钟最多10次
+            max_requests = 100 if is_local else 10
+            return self.rate_limiter.check_rate_limit(f"{ip}:excel", max_requests, 60)
         elif request.method == 'POST':
-            # POST请求限制：每分钟最多30次
-            return self.rate_limiter.check_rate_limit(f"{ip}:post", 30, 60)
+            # POST请求限制：本地每分钟最多300次，生产环境每分钟最多30次
+            max_requests = 300 if is_local else 30
+            return self.rate_limiter.check_rate_limit(f"{ip}:post", max_requests, 60)
         else:
-            # 一般请求限制：每分钟最多100次
-            return self.rate_limiter.check_rate_limit(ip, 100, 60)
+            # 一般请求限制：本地每分钟最多1000次，生产环境每分钟最多100次
+            max_requests = 1000 if is_local else 100
+            return self.rate_limiter.check_rate_limit(ip, max_requests, 60)
 
     async def _validate_request_content(self, request: Request):
         """验证请求内容"""
@@ -144,7 +167,7 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
             await self._log_suspicious_request(request, "INVALID_USER_AGENT")
 
         # 检查请求路径中的可疑模式
-        path = getattr(request.url, 'path', None)
+        path = request.url.path
         if path is None:
             path = ""
         else:
@@ -165,12 +188,14 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         """记录被封禁的请求"""
         security_auditor.log_security_event(
             event_type="REQUEST_BLOCKED",
+            message=f"Request blocked from {ip}: {reason}",
+            user_id=None,
+            ip_address=ip,
+            user_agent=request.headers.get("User-Agent", ""),
             details={
-                "ip": ip,
                 "reason": reason,
-                "path": getattr(request.url, 'path', ''),
+                "path": request.url.path,
                 "method": request.method,
-                "user_agent": request.headers.get("User-Agent", ""),
                 "timestamp": time.time()
             }
         )
@@ -185,12 +210,14 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
 
         security_auditor.log_security_event(
             event_type="SUSPICIOUS_REQUEST",
+            message=f"Suspicious request from {client_ip}: {reason}",
+            user_id=None,
+            ip_address=client_ip,
+            user_agent=request.headers.get("User-Agent", ""),
             details={
-                "ip": client_ip,
                 "reason": reason,
-                "path": getattr(request.url, 'path', ''),
+                "path": request.url.path,
                 "method": request.method,
-                "user_agent": request.headers.get("User-Agent", ""),
                 "query_params": dict(request.query_params),
                 "timestamp": time.time()
             }
@@ -205,9 +232,11 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         if processing_time > 5.0:  # 5秒以上为慢请求
             security_auditor.log_security_event(
                 event_type="SLOW_REQUEST",
+                message=f"Slow request from {ip}: {processing_time:.2f}s",
+                user_id=None,
+                ip_address=ip,
                 details={
-                    "ip": ip,
-                    "path": getattr(request.url, 'path', ''),
+                    "path": request.url.path,
                     "method": request.method,
                     "processing_time": processing_time,
                     "status_code": response.status_code
@@ -266,7 +295,7 @@ class FileUploadSecurityMiddleware(BaseHTTPMiddleware):
             )
 
         # 检查文件数量限制
-        path = getattr(request.url, 'path', '')
+        path = request.url.path
         if path and path.startswith('/api/v1/excel'):
             # Excel导入限制：单次最多上传10个文件
             max_files = 10

@@ -39,7 +39,7 @@ zcgl/
 │   ├── src/           # 源代码
 │   │   ├── api/       # API路由
 │   │   ├── models/    # 数据模型
-│   │   ├── schemas/   # 数据模式
+│   │   ├── schemas/    # 数据模式
 │   │   ├── crud/      # 数据访问层
 │   │   ├── services/  # 业务逻辑层
 │   │   ├── utils/     # 工具函数
@@ -222,9 +222,11 @@ npm run check-all-api
 - `GET /api/v1/statistics/financial-summary` - 财务汇总
 
 ### PDF合同处理
-- `POST /api/v1/pdf/upload_and_extract` - 上传并提取PDF合同信息
-- `POST /api/v1/pdf/extract` - 从文本提取合同信息
-- `POST /api/v1/pdf/confirm_and_save` - 确认并保存提取的数据
+- `POST /api/v1/pdf_import/upload` - 上传PDF文件
+- `GET /api/v1/pdf_import/progress/{session_id}` - 获取处理进度
+- `POST /api/v1/pdf_import/confirm_import` - 确认并保存提取的数据
+- `GET /api/v1/pdf_import/sessions` - 获取活跃会话列表
+- `DELETE /api/v1/pdf_import/session/{session_id}` - 取消会话处理
 
 ### 权限管理
 - `POST /api/v1/auth/login` - 用户登录
@@ -246,8 +248,8 @@ npm run check-all-api
 - `DELETE /api/v1/organizations/{id}` - 删除组织
 
 ### 健康检查
-- `GET /health` - 系统健康状态
-- `GET /` - API根路径
+- `GET /api/v1/health` - 系统健康状态
+- `GET /api/v1/` - API根路径
 
 ## 开发约定
 
@@ -335,7 +337,7 @@ npm run check-all-api
 - 资产模型：`backend/src/models/asset.py`
 - 资产API：`backend/src/api/v1/assets.py`
 - 统计API：`backend/src/api/v1/statistics.py`
-- PDF处理服务：`backend/src/services/enhanced_pdf_extractor.py`
+- PDF处理服务：`backend/src/services/pdf_import_service.py`
 - 权限管理：`backend/src/models/rbac.py`
 - API一致性检查：`backend/scripts/api_consistency_check.py`
 

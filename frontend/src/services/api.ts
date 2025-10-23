@@ -3,7 +3,6 @@ import type { ApiResponse, ErrorResponse } from '@/types/api'
 
 // 环境配置
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1'
-const API_TIMEOUT = import.meta.env.VITE_API_TIMEOUT || 30000
 
 // 请求重试配置
 const RETRY_CONFIG = {
@@ -193,7 +192,8 @@ export class ApiClient {
     config?: AxiosRequestConfig
   ): Promise<ApiResponse<T>> {
     const response = await this.instance.get<ApiResponse<T>>(url, config)
-    return response.data
+    // Handle both wrapped and unwrapped response formats
+    return response.data || response as ApiResponse<T>
   }
 
   // POST请求
@@ -203,7 +203,8 @@ export class ApiClient {
     config?: AxiosRequestConfig
   ): Promise<ApiResponse<T>> {
     const response = await this.instance.post<ApiResponse<T>>(url, data, config)
-    return response.data
+    // Handle both wrapped and unwrapped response formats
+    return response.data || response as ApiResponse<T>
   }
 
   // PUT请求
@@ -213,7 +214,8 @@ export class ApiClient {
     config?: AxiosRequestConfig
   ): Promise<ApiResponse<T>> {
     const response = await this.instance.put<ApiResponse<T>>(url, data, config)
-    return response.data
+    // Handle both wrapped and unwrapped response formats
+    return response.data || response as ApiResponse<T>
   }
 
   // DELETE请求
@@ -222,7 +224,8 @@ export class ApiClient {
     config?: AxiosRequestConfig
   ): Promise<ApiResponse<T>> {
     const response = await this.instance.delete<ApiResponse<T>>(url, config)
-    return response.data
+    // Handle both wrapped and unwrapped response formats
+    return response.data || response as ApiResponse<T>
   }
 
   // 文件上传
@@ -299,7 +302,8 @@ export class ApiClient {
     config?: AxiosRequestConfig
   ): Promise<ApiResponse<T>> {
     const response = await this.instance.patch<ApiResponse<T>>(url, data, config)
-    return response.data
+    // Handle both wrapped and unwrapped response formats
+    return response.data || response as ApiResponse<T>
   }
 
   // HEAD请求

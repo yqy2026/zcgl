@@ -14,13 +14,13 @@ export class ExcelService {
       onProgress,
       { sheet_name: sheetName }
     )
-    return response.data || response as ExcelImportResponse
+    return response.data!
   }
 
   // 导出Excel文件
   async exportExcel(request: ExcelExportRequest): Promise<ExcelExportResponse> {
     const response = await apiClient.post<ExcelExportResponse>('/excel/export', request)
-    return response.data || response as ExcelExportResponse
+    return response.data!
   }
 
   // 下载导出的文件
