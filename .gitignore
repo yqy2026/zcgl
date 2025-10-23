@@ -450,6 +450,11 @@ sample_*
 .claude/temp/
 .claude/logs/
 
+# BMad-Method Framework
+.bmad-core/
+.claude/commands/BMad/
+docs/
+
 # ============================================
 # Production Environment Protection
 # ============================================
