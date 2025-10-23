@@ -193,7 +193,7 @@ export class ApiClient {
   ): Promise<ApiResponse<T>> {
     const response = await this.instance.get<ApiResponse<T>>(url, config)
     // Handle both wrapped and unwrapped response formats
-    return response.data || response as ApiResponse<T>
+    return response.data || (response as unknown) as ApiResponse<T>
   }
 
   // POST请求
@@ -204,7 +204,7 @@ export class ApiClient {
   ): Promise<ApiResponse<T>> {
     const response = await this.instance.post<ApiResponse<T>>(url, data, config)
     // Handle both wrapped and unwrapped response formats
-    return response.data || response as ApiResponse<T>
+    return response.data || (response as unknown) as ApiResponse<T>
   }
 
   // PUT请求
@@ -215,7 +215,7 @@ export class ApiClient {
   ): Promise<ApiResponse<T>> {
     const response = await this.instance.put<ApiResponse<T>>(url, data, config)
     // Handle both wrapped and unwrapped response formats
-    return response.data || response as ApiResponse<T>
+    return response.data || (response as unknown) as ApiResponse<T>
   }
 
   // DELETE请求
@@ -225,7 +225,7 @@ export class ApiClient {
   ): Promise<ApiResponse<T>> {
     const response = await this.instance.delete<ApiResponse<T>>(url, config)
     // Handle both wrapped and unwrapped response formats
-    return response.data || response as ApiResponse<T>
+    return response.data || (response as unknown) as ApiResponse<T>
   }
 
   // 文件上传
@@ -303,7 +303,7 @@ export class ApiClient {
   ): Promise<ApiResponse<T>> {
     const response = await this.instance.patch<ApiResponse<T>>(url, data, config)
     // Handle both wrapped and unwrapped response formats
-    return response.data || response as ApiResponse<T>
+    return response.data || (response as unknown) as ApiResponse<T>
   }
 
   // HEAD请求

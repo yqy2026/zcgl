@@ -116,7 +116,7 @@ jest.mock('dayjs', () => {
     valueOf: jest.fn(() => 1704067200000),
   }))
   
-  mockDayjs.extend = jest.fn()
+  ;(mockDayjs as any).extend = jest.fn()
   
   return mockDayjs
 })

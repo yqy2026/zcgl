@@ -10,7 +10,7 @@ import type {
   AssetCustomField,
   CustomFieldValue,
 } from '@/types/asset'
-import type { ApiResponse, PaginatedResponse } from '@/types/api'
+import type { PaginatedResponse } from '@/types/api'
 
 export class AssetService {
   // 获取资产列表
@@ -127,7 +127,7 @@ export class AssetService {
         params: { page, limit, change_type: changeType },
       }
     )
-    return response.data || response as PaginatedResponse<AssetHistory>
+    return response.data || (response as unknown) as PaginatedResponse<AssetHistory>
   }
 
   // 获取历史记录详情

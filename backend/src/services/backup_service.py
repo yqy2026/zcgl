@@ -73,7 +73,7 @@ class DatabaseBackupService:
         self.executor = ThreadPoolExecutor(max_workers=2)
     
     def create_backup(self, description: Optional[str] = None) -> Dict[str, Any]:
-        """创建数据库备�?""
+        """创建数据库备份""
         try:
             timestamp = datetime.now()
             filename = self.config.get_backup_filename(timestamp)
@@ -116,12 +116,12 @@ class DatabaseBackupService:
             }
     
     async def create_backup_async(self, description: Optional[str] = None) -> Dict[str, Any]:
-        """异步创建数据库备�?""
+        """异步创建数据库备份""
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(self.executor, self.create_backup, description)
     
     def restore_backup(self, backup_filename: str, confirm: bool = False) -> Dict[str, Any]:
-        """恢复数据库备�?""
+        """恢复数据库备份""
         try:
             if not confirm:
                 return {

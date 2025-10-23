@@ -1,6 +1,6 @@
 import React from 'react'
 import { render, screen } from '@testing-library/react'
-import { vi, describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 
 import AssetDetailInfo from '../AssetDetailInfo'
 import type { Asset } from '@/types/asset'

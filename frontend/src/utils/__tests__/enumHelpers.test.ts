@@ -31,12 +31,12 @@ describe('enumHelpers', () => {
       it('应该搜索所有分组', () => {
         const result = EnumSearchHelper.searchInGroups(PropertyNatureGroups, '配套')
 
-        const配套Groups = result.filter(group =>
+        const matchingGroups = result.filter(group =>
           group.label.includes('配套') ||
           group.options.some(option => option.label.includes('配套'))
         )
 
-        expect(配套Groups.length).toBeGreaterThan(0)
+        expect(matchingGroups.length).toBeGreaterThan(0)
       })
 
       it('应该处理空关键词', () => {
@@ -54,13 +54,13 @@ describe('enumHelpers', () => {
       it('应该搜索描述信息', () => {
         const result = EnumSearchHelper.searchInGroups(UsageStatusGroups, '出租')
 
-        const出租Options = result.flatMap(group => group.options)
+        const rentalOptions = result.flatMap(group => group.options)
           .filter(option =>
             option.label.includes('出租') ||
             (option.description && option.description.includes('出租'))
           )
 
-        expect(出租Options.length).toBeGreaterThan(0)
+        expect(rentalOptions.length).toBeGreaterThan(0)
       })
     })
 
