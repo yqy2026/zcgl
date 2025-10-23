@@ -21,6 +21,7 @@ from .project import router as project_router
 from .rent_contract import router as rent_contract_router
 from .analytics import router as analytics_router
 from .system_settings import router as system_settings_router
+from .monitoring import router as monitoring_router
 # PDF导入API已统一到 pdf_import_unified.py，在main.py中直接注册
 # from .pdf_import_unified import router as pdf_import_router
 # from .organization_permissions import router as organization_permissions_router  # 已删除
@@ -91,7 +92,7 @@ api_router.include_router(
 
 api_router.include_router(
     system_dictionaries_router,
-    prefix="/system-dictionaries",
+    prefix="/system/dictionaries",
     tags=["系统字典管理"]
 )
 
@@ -131,8 +132,8 @@ api_router.include_router(
 
 api_router.include_router(
     rent_contract_router,
-    prefix="/rent_contract",
-    tags=["租金台账管理"]
+    prefix="/rental-contracts",
+    tags=["租赁合同管理"]
 )
 
 api_router.include_router(
@@ -145,6 +146,12 @@ api_router.include_router(
     system_settings_router,
     prefix="/system",
     tags=["系统设置"]
+)
+
+api_router.include_router(
+    monitoring_router,
+    prefix="/monitoring",
+    tags=["系统监控"]
 )
 
 # from .simple_pdf_import import router as pdf_import_router  # 已删除

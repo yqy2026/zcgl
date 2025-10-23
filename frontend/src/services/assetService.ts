@@ -236,7 +236,7 @@ export class AssetService {
     errors: string[]
   }> {
     try {
-      const response = await apiClient.post('/assets/validate', data)
+      await apiClient.post('/assets/validate', data)
       return {
         valid: true,
         errors: [],
@@ -551,7 +551,7 @@ export class AssetService {
   // 验证自定义字段值
   async validateCustomFieldValue(fieldId: string, value: any): Promise<{valid: boolean, error?: string}> {
     try {
-      const response = await apiClient.post('/asset-custom-fields/validate', {
+      await apiClient.post('/asset-custom-fields/validate', {
         field_id: fieldId,
         value: value,
       })
