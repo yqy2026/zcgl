@@ -481,49 +481,43 @@ async def get_asset_statistics(
     """
     获取资产统计摘要信息
     """
+    # DEBUG: 添加调试日志
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info("=== API函数 get_asset_statistics 被调用 ===")
+    print("=== DEBUG: API函数 get_asset_statistics 被调用 ===")
+
     try:
         from sqlalchemy import func
         from ...models.asset import Asset
 
-        # 总资产数
-        total_assets = asset_crud.count(db=db)
+        # 总资产数 - 直接查询避免缓存问题
+        total_assets = db.query(Asset).count()
 
-        # 按确权状态统计
-        confirmed_count = asset_crud.count_with_search(
-            db=db, filters={"ownership_status": "已确权"}
-        )
-        unconfirmed_count = asset_crud.count_with_search(
-            db=db, filters={"ownership_status": "未确权"}
-        )
-        partial_count = asset_crud.count_with_search(
-            db=db, filters={"ownership_status": "部分确权"}
-        )
+        # 按确权状态统计 - 使用精确匹配
+        from sqlalchemy import func
+        confirmed_count = db.query(Asset).filter(Asset.ownership_status == '已确权').count()
+        unconfirmed_count = db.query(Asset).filter(Asset.ownership_status == '未确权').count()
+        partial_count = db.query(Asset).filter(Asset.ownership_status == '部分确权').count()
 
-        # 按物业性质统计
-        commercial_count = asset_crud.count_with_search(
-            db=db, filters={"property_nature": "经营性"}
-        )
-        non_commercial_count = asset_crud.count_with_search(
-            db=db, filters={"property_nature": "非经营性"}
-        )
+        # 按物业性质统计 - 使用精确匹配和模糊查询结合
+        commercial_count = db.query(Asset).filter(
+            (Asset.property_nature == '经营性') |
+            (Asset.property_nature == '经营类') |
+            (Asset.property_nature.like('%经营性%'))
+        ).count()
+        non_commercial_count = db.query(Asset).filter(Asset.property_nature == '非经营类').count()
 
-        # 按使用状态统计
-        rented_count = asset_crud.count_with_search(
-            db=db, filters={"usage_status": "出租"}
-        )
-        self_used_count = asset_crud.count_with_search(
-            db=db, filters={"usage_status": "自用"}
-        )
-        vacant_count = asset_crud.count_with_search(
-            db=db, filters={"usage_status": "空置"}
-        )
+        # 按使用状态统计 - 使用数据库中实际的状态值
+        rented_count = db.query(Asset).filter(Asset.usage_status == '出租').count()
+        self_used_count = db.query(Asset).filter(Asset.usage_status == '自用').count()
+        vacant_count = db.query(Asset).filter(Asset.usage_status == '闲置').count()  # 修复：数据库中是"闲置"而不是"空置"
 
         # 获取面积统计数据
-        area_result = db.query(Asset).filter(Asset.data_status == 'NORMAL').with_entities(
+        area_result = db.query(Asset).filter(Asset.data_status == '正常').with_entities(
             func.sum(Asset.land_area).label('total_land_area'),
             func.sum(Asset.rentable_area).label('total_rentable_area'),
             func.sum(Asset.rented_area).label('total_rented_area'),
-            func.sum(Asset.unrented_area).label('total_unrented_area'),
             func.sum(Asset.non_commercial_area).label('total_non_commercial_area')
         ).first()
 
@@ -534,12 +528,13 @@ async def get_asset_statistics(
         total_land_area = to_float(area_result.total_land_area)
         total_rentable_area = to_float(area_result.total_rentable_area)
         total_rented_area = to_float(area_result.total_rented_area)
-        total_unrented_area = to_float(area_result.total_unrented_area)
+        # 计算未出租面积（可出租面积 - 已出租面积）
+        total_unrented_area = max(total_rentable_area - total_rented_area, 0.0)
         total_non_commercial_area = to_float(area_result.total_non_commercial_area)
 
         # 计算有面积数据的资产数
         assets_with_area = db.query(Asset).filter(
-            Asset.data_status == 'NORMAL',
+            Asset.data_status == '正常',
             (Asset.land_area.isnot(None)) |
             (Asset.rentable_area.isnot(None))
         ).count()
@@ -599,7 +594,6 @@ async def get_asset_area_statistics(
             func.sum(Asset.land_area).label('total_land_area'),
             func.sum(Asset.rentable_area).label('total_rentable_area'),
             func.sum(Asset.rented_area).label('total_rented_area'),
-            func.sum(Asset.unrented_area).label('total_unrented_area'),
             func.sum(Asset.non_commercial_area).label('total_non_commercial_area'),
             func.count(Asset.id).label('total_assets')
         ).first()
@@ -611,7 +605,8 @@ async def get_asset_area_statistics(
         total_land_area = to_float(total_result.total_land_area)
         total_rentable_area = to_float(total_result.total_rentable_area)
         total_rented_area = to_float(total_result.total_rented_area)
-        total_unrented_area = to_float(total_result.total_unrented_area)
+        # 计算未出租面积（可出租面积 - 已出租面积）
+        total_unrented_area = max(total_rentable_area - total_rented_area, 0.0)
         total_non_commercial_area = to_float(total_result.total_non_commercial_area)
         total_assets = int(total_result.total_assets) if total_result.total_assets else 0
 

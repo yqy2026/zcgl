@@ -302,7 +302,6 @@ def _calculate_area_summary_with_aggregation(db: Session, filters: Dict[str, Any
             func.cast(func.sum(func.coalesce(Asset.land_area, 0)), func.Float).label('total_land_area'),
             func.cast(func.sum(func.coalesce(Asset.rentable_area, 0)), func.Float).label('total_rentable_area'),
             func.cast(func.sum(func.coalesce(Asset.rented_area, 0)), func.Float).label('total_rented_area'),
-            func.cast(func.sum(func.coalesce(Asset.unrented_area, 0)), func.Float).label('total_unrented_area'),
             func.cast(func.sum(func.coalesce(Asset.non_commercial_area, 0)), func.Float).label('total_non_commercial_area'),
             func.count(case([(Asset.land_area.isnot(None), 1)])).label('assets_with_area_data')
         ).first()
@@ -312,7 +311,8 @@ def _calculate_area_summary_with_aggregation(db: Session, filters: Dict[str, Any
         total_land_area = to_float(result.total_land_area)
         total_rentable_area = to_float(result.total_rentable_area)
         total_rented_area = to_float(result.total_rented_area)
-        total_unrented_area = to_float(result.total_unrented_area)
+        # 计算未出租面积（可出租面积 - 已出租面积）
+        total_unrented_area = max(total_rentable_area - total_rented_area, 0.0)
         total_non_commercial_area = to_float(result.total_non_commercial_area)
         assets_with_area_data = int(result.assets_with_area_data or 0)
 
@@ -543,7 +543,7 @@ async def get_basic_statistics(
 # - /api/v1/statistics/financial-summary - 财务汇总
 
 
-@cache_statistics(expire=1800)  # 30分钟缓存
+# @cache_statistics(expire=1800)  # 30分钟缓存 - 临时禁用
 @router.get("/summary", response_model=BasicStatisticsResponse, summary="获取统计摘要")
 async def get_statistics_summary(
     db: Session = Depends(get_db)
@@ -551,6 +551,10 @@ async def get_statistics_summary(
     """
     获取统计摘要信息
     """
+    # DEBUG: 添加调试日志
+    print("=== DEBUG: statistics.py中的get_statistics_summary被调用 ===")
+    logger.info("=== statistics.py中的get_statistics摘要函数被调用 ===")
+
     try:
         # 总资产数
         total_assets = asset_crud.count(db=db)
