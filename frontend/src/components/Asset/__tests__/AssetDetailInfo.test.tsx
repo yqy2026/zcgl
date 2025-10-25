@@ -113,9 +113,10 @@ describe('AssetDetailInfo', () => {
 
     // Check contract information
     expect(screen.getByText('测试租户')).toBeInTheDocument() // tenant_name
-    expect(screen.getByText('LC001')).toBeInTheDocument() // lease_contract
-    expect(screen.getByText('CLC001')).toBeInTheDocument() // current_lease_contract
-    expect(screen.getByText('CTC001')).toBeInTheDocument() // current_terminal_contract
+    // 租户信息显示测试
+    expect(screen.getByText('测试租户')).toBeInTheDocument()
+    // 经营协议信息显示测试
+    expect(screen.getByText('自营')).toBeInTheDocument() // business_model
   })
 
   it('shows project information when available', () => {

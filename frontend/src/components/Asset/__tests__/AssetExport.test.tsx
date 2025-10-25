@@ -81,7 +81,7 @@ describe('AssetExport', () => {
       download: '',
       click: mockClick,
     }
-    jest.spyOn(document, 'createElement').mockReturnValue(mockLink as any)
+    jest.spyOn(document, 'createElement').mockReturnValue(mockLink)
 
     renderWithProviders(<AssetExport />)
 
@@ -108,8 +108,8 @@ describe('AssetExport', () => {
   it('exports filtered assets successfully', async () => {
     const mockFilteredAssets = mockAssetData.list(5)
     const filters = {
-      property_nature: '经营类',
-      ownership_status: '已确权',
+      property_nature: PropertyNature.COMMERCIAL_CLASS,
+      ownership_status: OwnershipStatus.CONFIRMED,
     }
 
     mockedAssetService.searchAssets.mockResolvedValue({
@@ -146,13 +146,13 @@ describe('AssetExport', () => {
 
     mockedAssetService.getAssetsByIds.mockResolvedValue(mockSelectedAssetsData)
 
-    renderWithProviders(<AssetExport selectedAssets={selectedAssets} />)
+    renderWithProviders(<AssetExport selectedAssetIds={selectedAssets} />)
 
     // Select custom selection
     const customRadio = screen.getByLabelText('自定义选择')
     await user.click(customRadio)
 
-    expect(screen.getByText('已选择 3 个资产')).toBeInTheDocument()
+    expect(screen.getByText('已选择 3 项资产')).toBeInTheDocument()
 
     // Click export button
     const exportButton = screen.getByRole('button', { name: /开始导出/ })
@@ -178,7 +178,7 @@ describe('AssetExport', () => {
       download: '',
       click: mockClick,
     }
-    jest.spyOn(document, 'createElement').mockReturnValue(mockLink as any)
+    jest.spyOn(document, 'createElement').mockReturnValue(mockLink)
 
     renderWithProviders(<AssetExport />)
 
@@ -210,7 +210,7 @@ describe('AssetExport', () => {
       download: '',
       click: mockClick,
     }
-    jest.spyOn(document, 'createElement').mockReturnValue(mockLink as any)
+    jest.spyOn(document, 'createElement').mockReturnValue(mockLink)
 
     renderWithProviders(<AssetExport />)
 
@@ -398,7 +398,7 @@ describe('AssetExport', () => {
       download: '',
       click: mockClick,
     }
-    jest.spyOn(document, 'createElement').mockReturnValue(mockLink as any)
+    jest.spyOn(document, 'createElement').mockReturnValue(mockLink)
 
     renderWithProviders(<AssetExport />)
 

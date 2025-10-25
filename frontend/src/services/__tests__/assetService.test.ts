@@ -340,7 +340,7 @@ describe('AssetService', () => {
         usage_status: '出租',
       }
 
-      mockApiClient.post.mockResolvedValue({})
+      mockApiClient.post.mockResolvedValue({ data: null })
 
       const result = await assetService.validateAsset(assetData)
 

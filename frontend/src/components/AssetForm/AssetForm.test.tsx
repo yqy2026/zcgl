@@ -4,7 +4,7 @@
  * 包括字段验证、计算逻辑、用户交互和数据处理
  */
 
-import React from 'react';
+// React is implicitly used by JSX, no need for explicit import
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
