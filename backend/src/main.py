@@ -80,7 +80,20 @@ async def health_check():
 @app.get("/api/v1/", tags=["根路径"])
 async def root():
     """根路径"""
-    return {"message": "土地物业资产管理系统 API", "version": "2.0.0"}
+    return {
+        "message": "土地物业资产管理系统 API",
+        "version": "2.0.0",
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+@app.get("/api/v1/info", tags=["应用信息"])
+async def app_info():
+    """应用信息端点"""
+    return {
+        "name": "土地物业资产管理系统",
+        "version": "2.0.0",
+        "docs_url": "/docs"
+    }
 
 # 导入API路由
 from .api.v1 import api_router

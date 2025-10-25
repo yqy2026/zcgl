@@ -12,15 +12,16 @@ client = TestClient(app)
 
 def test_root():
     """测试根路径"""
-    response = client.get("/")
+    response = client.get("/api/v1/")
     assert response.status_code == 200
     assert "message" in response.json()
 
 
 def test_health_check():
     """测试健康检查"""
-    response = client.get("/health")
+    response = client.get("/api/v1/health")
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "healthy"
-    assert data["service"] == "land-property-management"
+    assert "version" in data
+    assert "timestamp" in data

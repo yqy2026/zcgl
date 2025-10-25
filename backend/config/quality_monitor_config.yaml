@@ -1,0 +1,129 @@
+# 持续质量监控配置
+# Continuous Quality Monitoring Configuration
+
+name: "Backend Quality Monitor"
+version: "1.0.0"
+description: "地产资产管理系统后端质量监控体系"
+
+# 监控目标配置
+monitoring_targets:
+  test_coverage:
+    enabled: true
+    minimum_threshold: 50  # 最低覆盖率要求
+    target_threshold: 70    # 目标覆盖率
+    critical_threshold: 45   # 严重警告阈值
+
+  test_performance:
+    enabled: true
+    max_execution_time: 60   # 最大执行时间(秒)
+    target_execution_time: 30  # 目标执行时间(秒)
+    memory_limit_mb: 512       # 内存限制(MB)
+
+  code_quality:
+    enabled: true
+    ruff_score_min: 8.5       # Ruff代码质量最低分数
+    mypy_errors_max: 10        # MyPy类型错误最大数量
+    security_issues_max: 0      # 安全问题最大数量
+
+  api_health:
+    enabled: true
+    response_time_max: 2000    # API响应时间最大值(毫秒)
+    success_rate_min: 95       # 成功率最低要求(%)
+    uptime_min: 99.0          # 可用性最低要求(%)
+
+# 监控频率配置
+schedule:
+  quick_checks:
+    interval: "*/5 * * * *"   # 每5分钟执行一次
+    checks: ["api_health", "basic_tests"]
+
+  medium_checks:
+    interval: "0 */2 * * *"   # 每2小时执行一次
+    checks: ["test_performance", "code_quality"]
+
+  full_checks:
+    interval: "0 0 * * *"     # 每日执行一次
+    checks: ["test_coverage", "comprehensive_tests"]
+
+# 通知配置
+notifications:
+  channels:
+    email:
+      enabled: false  # 开发阶段暂不启用
+      recipients: ["admin@example.com"]
+
+    console:
+      enabled: true
+      level: "INFO"  # INFO, WARNING, ERROR
+
+    file_log:
+      enabled: true
+      path: "logs/quality_monitor.log"
+      max_size_mb: 10
+      backup_count: 5
+
+# 报告配置
+reporting:
+  daily_report:
+    enabled: true
+    format: "markdown"
+    output_path: "reports/quality_daily_{date}.md"
+
+  weekly_report:
+    enabled: true
+    format: "html"
+    output_path: "reports/quality_weekly_{date}.html"
+
+  trend_analysis:
+    enabled: true
+    window_days: 30
+    output_path: "reports/quality_trends.json"
+
+# 质量门禁配置
+quality_gates:
+  pre_commit:
+    enabled: true
+    checks: ["quick_syntax_check", "import_test"]
+    fail_action: "block_commit"
+
+  pre_push:
+    enabled: true
+    checks: ["unit_tests", "code_quality"]
+    fail_action: "block_push"
+
+  pre_deployment:
+    enabled: true
+    checks: ["full_test_suite", "security_scan", "performance_test"]
+    fail_action: "block_deployment"
+
+# 性能基准
+performance_baselines:
+  test_execution:
+    baseline_time: 30  # 基准执行时间(秒)
+    tolerance: 20       # 容差百分比
+
+  api_response:
+    baseline_get: 100    # GET请求基准时间(毫秒)
+    baseline_post: 300   # POST请求基准时间(毫秒)
+    tolerance: 50        # 容差百分比
+
+  memory_usage:
+    baseline_mb: 256    # 基准内存使用(MB)
+    tolerance: 30       # 容差百分比
+
+# 代码质量标准
+quality_standards:
+  complexity:
+    max_cyclomatic_complexity: 10
+    max_cognitive_complexity: 15
+
+  maintainability:
+    min_maintainability_index: 70
+    max_technical_debt_ratio: 0.05
+
+  documentation:
+    min_doc_coverage: 80  # 文档覆盖率最低要求(%)
+    required_for_public: true  # 公共API必须文档化
+
+  test_density:
+    min_test_to_code_ratio: 0.3  # 测试代码与产品代码比例最低要求

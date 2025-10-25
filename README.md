@@ -25,7 +25,74 @@
 - 📝 **审计日志** - 完整的操作审计和安全日志
 - 💾 **数据备份** - 自动数据备份和恢复机制
 
-## 🚀 快速开始
+## 🏗️ 项目结构
+
+```
+zcgl/
+├── backend/                    # 后端服务 (FastAPI + Python)
+│   ├── src/                   # 源代码
+│   │   ├── api/              # API接口层 (25个模块)
+│   │   ├── services/         # 业务服务层 (40+服务)
+│   │   ├── models/           # 数据模型层
+│   │   ├── crud/             # 数据访问层
+│   │   ├── core/             # 核心模块
+│   │   ├── decorators/       # 装饰器系统
+│   │   └── constants/        # 常量定义
+│   ├── tests/                # 测试套件
+│   ├── scripts/              # 脚本工具
+│   │   ├── migration/        # 数据迁移脚本
+│   │   ├── quality/          # 质量监控脚本
+│   │   ├── documentation/    # 文档生成脚本
+│   │   ├── setup/           # 初始化脚本
+│   │   └── maintenance/     # 维护脚本
+│   ├── config/               # 配置文件
+│   └── data/                 # 数据文件
+├── frontend/                  # 前端应用 (React + TypeScript)
+│   ├── src/                  # 源代码
+│   │   ├── components/       # 组件库 (80+组件)
+│   │   │   ├── Asset/       # 资产组件
+│   │   │   ├── Layout/      # 布局组件
+│   │   │   ├── Charts/      # 图表组件
+│   │   │   ├── Router/      # 路由组件
+│   │   │   └── System/      # 系统组件
+│   │   ├── pages/           # 页面组件
+│   │   ├── services/        # API服务
+│   │   ├── hooks/           # 自定义钩子
+│   │   ├── monitoring/      # 性能监控
+│   │   └── utils/           # 工具函数
+│   └── tests/               # 测试套件
+├── docs/                     # 项目文档
+│   ├── reports/             # 项目报告
+│   │   ├── test-coverage/   # 测试覆盖率报告
+│   │   ├── test-automation/ # 测试自动化报告
+│   │   ├── project-status/  # 项目状态报告
+│   │   └── backend/         # 后端报告
+│   ├── architecture/        # 架构文档
+│   ├── api/                 # API文档
+│   ├── development/         # 开发指南
+│   ├── deployment/          # 部署文档
+│   └── user-guide/          # 用户指南
+├── scripts/                  # 项目脚本
+│   ├── unified_test_runner.py # 统一测试运行器
+│   └── ...                  # 其他工具脚本
+├── tools/                    # 开发工具
+│   ├── development/         # 开发工具
+│   ├── deployment/          # 部署工具
+│   └── analysis/            # 分析工具
+├── config/                   # 全局配置
+│   ├── environments/        # 环境配置
+│   └── templates/           # 配置模板
+├── nginx/                    # 部署配置
+└── database/                 # 数据库脚本
+```
+
+### 核心技术栈
+- **后端**: FastAPI + Python 3.12 + SQLAlchemy + UV + Pydantic
+- **前端**: React 18 + TypeScript + Vite + Ant Design + Zustand
+- **数据库**: SQLite (支持扩展到PostgreSQL/MySQL)
+- **AI处理**: pdfplumber + OCR + NLP (spaCy + jieba) + PaddleOCR
+- **监控**: 路由性能监控 + 健康检查 + 实时指标
+- **部署**: Docker + Nginx + 自动化部署
 
 ### 环境要求
 - **Python**: 3.12+ (推荐使用 uv 包管理器)
@@ -35,9 +102,28 @@
 - **内存**: 4GB+ (推荐8GB+用于PDF处理)
 - **操作系统**: Windows 10+, macOS 10.15+, Linux
 
+### 环境要求
+
 ### 安装启动
 
-#### 方式一：手动启动（推荐）
+## 🚀 快速开始
+
+### 方式一：统一测试运行器
+```bash
+# 运行所有测试（推荐）
+python scripts/unified_test_runner.py
+
+# 仅运行后端测试
+python scripts/unified_test_runner.py --backend-only
+
+# 仅运行前端测试
+python scripts/unified_test_runner.py --frontend-only
+
+# 不生成覆盖率报告
+python scripts/unified_test_runner.py --no-coverage
+```
+
+### 方式二：手动启动
 ```bash
 # 后端服务 (FastAPI + SQLAlchemy)
 cd backend

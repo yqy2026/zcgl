@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "email_smtp_host": "smtp.gmail.com",
+  "email_smtp_port": 587,
+  "email_username": "",
+  "email_password": "",
+  "email_recipients": [],
+  "dingtalk_webhook": "",
+  "dingtalk_secret": "",
+  "wechat_webhook": "",
+  "slack_webhook": "",
+  "slack_channel": "#testing",
+  "failure_rate_threshold": 5.0,
+  "coverage_threshold": 80.0,
+  "performance_threshold": 10.0
+}
