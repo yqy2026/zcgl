@@ -10,7 +10,7 @@ import type {
   AssetCustomField,
   CustomFieldValue,
 } from '@/types/asset'
-import type { ApiResponse, PaginatedResponse } from '@/types/api'
+import type { PaginatedResponse } from '@/types/api'
 
 export class AssetService {
   // 获取资产列表
@@ -59,7 +59,18 @@ export class AssetService {
         },
       })
 
-      if (response.data) {
+      // 处理新的响应格式：{success: true, data: Asset[], message: string}
+      if (response.data && Array.isArray(response.data)) {
+        return response.data
+      }
+
+      // 如果响应是包装格式，提取data字段
+      if (response?.data && Array.isArray(response.data)) {
+        return response.data
+      }
+
+      // 处理统一响应格式：{success: true, data: [...], message: "..."}
+      if (response?.success && Array.isArray(response?.data)) {
         return response.data
       }
 
@@ -74,7 +85,23 @@ export class AssetService {
   async getAssetsByIds(ids: string[]): Promise<Asset[]> {
     try {
       const response = await apiClient.post<Asset[]>('/assets/by-ids', { ids })
-      return response.data || response as Asset[]
+
+      // 处理新的响应格式：{success: true, data: Asset[], message: string}
+      if (response.data && Array.isArray(response.data)) {
+        return response.data
+      }
+
+      // 如果响应是包装格式，提取data字段
+      if (response?.data && Array.isArray(response.data)) {
+        return response.data
+      }
+
+      // 处理统一响应格式：{success: true, data: [...], message: "..."}
+      if (response?.success && Array.isArray(response?.data)) {
+        return response.data
+      }
+
+      return response as Asset[]
     } catch (error) {
       console.error('根据ID列表获取资产失败:', error)
       throw new Error(error instanceof Error ? error.message : '根据ID列表获取资产失败')
@@ -127,7 +154,7 @@ export class AssetService {
         params: { page, limit, change_type: changeType },
       }
     )
-    return response.data || response as PaginatedResponse<AssetHistory>
+    return response.data || (response as unknown) as PaginatedResponse<AssetHistory>
   }
 
   // 获取历史记录详情
@@ -209,7 +236,7 @@ export class AssetService {
     errors: string[]
   }> {
     try {
-      const response = await apiClient.post('/assets/validate', data)
+      await apiClient.post('/assets/validate', data)
       return {
         valid: true,
         errors: [],
@@ -524,7 +551,7 @@ export class AssetService {
   // 验证自定义字段值
   async validateCustomFieldValue(fieldId: string, value: any): Promise<{valid: boolean, error?: string}> {
     try {
-      const response = await apiClient.post('/asset-custom-fields/validate', {
+      await apiClient.post('/asset-custom-fields/validate', {
         field_id: fieldId,
         value: value,
       })

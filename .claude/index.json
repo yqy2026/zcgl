@@ -1,0 +1,88 @@
+{
+  "scan_metadata": {
+    "timestamp": "2025-10-23T10:45:44",
+    "project_name": "Land Property Asset Management System",
+    "total_estimated_files": 1500+,
+    "scanned_files": 45,
+    "coverage_percentage": 3.0,
+    "scan_duration": "medium",
+    "truncated": false
+  },
+  "modules": [
+    {
+      "path": "backend",
+      "name": "Backend Service",
+      "type": "fastapi_service",
+      "language": "Python",
+      "entry_point": "src/main.py",
+      "startup_script": "run_dev.py",
+      "config_file": "pyproject.toml",
+      "has_tests": true,
+      "test_directory": "tests/",
+      "api_count": 18,
+      "service_count": 35,
+      "model_count": 9
+    },
+    {
+      "path": "frontend",
+      "name": "Frontend Application",
+      "type": "react_app",
+      "language": "TypeScript",
+      "entry_point": "src/main.tsx",
+      "config_file": "package.json",
+      "has_tests": true,
+      "test_directory": "src/**/__tests__/",
+      "component_count": 70+,
+      "page_count": 15,
+      "service_count": 10
+    }
+  ],
+  "gaps": [
+    {
+      "module": "backend",
+      "missing_items": [
+        "detailed service layer documentation",
+        "PDF processing pipeline documentation",
+        "RBAC system implementation details",
+        "database migration scripts"
+      ]
+    },
+    {
+      "module": "frontend",
+      "missing_items": [
+        "state management patterns",
+        "component library documentation",
+        "routing architecture details",
+        "performance optimization patterns"
+      ]
+    }
+  ],
+  "ignored_directories": [
+    {
+      "path": "node_modules/",
+      "reason": "npm dependencies"
+    },
+    {
+      "path": "__pycache__/",
+      "reason": "Python bytecode cache"
+    },
+    {
+      "path": ".git/",
+      "reason": "Git metadata"
+    }
+  ],
+  "next_scan_recommendations": [
+    "backend/src/services/ - 深度扫描核心业务服务",
+    "backend/src/api/v1/ - 详细API接口文档",
+    "frontend/src/components/ - 组件库架构分析",
+    "frontend/src/pages/ - 页面层业务逻辑",
+    "database/ - 数据库架构和迁移脚本"
+  ],
+  "architecture_highlights": [
+    "58-field comprehensive asset model",
+    "Multi-engine PDF processing pipeline",
+    "Advanced RBAC with dynamic permissions",
+    "React Query + Zustand state management",
+    "Real-time analytics and reporting"
+  ]
+}

@@ -80,13 +80,30 @@ async def health_check():
 @app.get("/api/v1/", tags=["根路径"])
 async def root():
     """根路径"""
-    return {"message": "土地物业资产管理系统 API", "version": "2.0.0"}
+    return {
+        "message": "土地物业资产管理系统 API",
+        "version": "2.0.0",
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+@app.get("/api/v1/info", tags=["应用信息"])
+async def app_info():
+    """应用信息端点"""
+    return {
+        "name": "土地物业资产管理系统",
+        "version": "2.0.0",
+        "docs_url": "/docs"
+    }
 
 # 导入API路由
 from .api.v1 import api_router
+from .api.v1.pdf_import_unified import router as pdf_import_router
 
 # 注册API路由
 app.include_router(api_router)
+
+# 注册PDF导入API路由 - 使用统一的连字符命名
+app.include_router(pdf_import_router, prefix="/api/v1/pdf-import")
 
 # 创建数据库表
 create_tables()

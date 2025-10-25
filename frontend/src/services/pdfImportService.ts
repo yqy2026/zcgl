@@ -39,6 +39,8 @@ export interface SessionProgress {
     overall_match_confidence?: number;
   };
   confidence_score?: number;
+  file_name?: string;
+  file_size?: number;
 }
 
 export interface AssetMatch {
@@ -318,7 +320,7 @@ class PDFImportService {
               match_confidence: session.matching_results?.overall_match_confidence || 0.7,
               total_confidence: 0.75
             },
-            recommendations: session.matching_results?.recommendations || [],
+            recommendations: session.matching_results?.recommendations || {},
             ready_for_import: true
           };
 

@@ -105,6 +105,11 @@ const RentStatisticsPage: React.FC = () => {
     } catch (error) {
       message.error('获取统计数据失败');
       console.error('Statistics fetch error:', error);
+      // 设置默认值以防止undefined错误
+      setOverviewData(null);
+      setOwnershipStats([]);
+      setAssetStats([]);
+      setMonthlyStats([]);
     } finally {
       setLoading(false);
     }
@@ -288,14 +293,14 @@ const RentStatisticsPage: React.FC = () => {
   ];
 
   // 准备图表数据
-  const ownershipChartData = ownershipStats.map(item => ({
+  const ownershipChartData = (ownershipStats || []).map(item => ({
     name: item.ownership_name,
     value: Number(item.total_due_amount),
     paid: Number(item.total_paid_amount),
     overdue: Number(item.total_overdue_amount)
   }));
 
-  const monthlyChartData = monthlyStats.map(item => ({
+  const monthlyChartData = (monthlyStats || []).map(item => ({
     month: item.year_month,
     due: Number(item.total_due_amount),
     paid: Number(item.total_paid_amount),

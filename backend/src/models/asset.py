@@ -5,6 +5,7 @@
 from sqlalchemy import Column, String, Float, DateTime, Integer, Text, ForeignKey, JSON, Boolean, Date, DECIMAL
 from sqlalchemy.orm import relationship
 from datetime import datetime
+from decimal import Decimal
 import uuid
 
 from ..database import Base
@@ -34,9 +35,9 @@ class Asset(Base):
     actual_property_area = Column(DECIMAL(12, 2), comment="实际房产面积（平方米）")
     rentable_area = Column(DECIMAL(12, 2), comment="可出租面积（平方米）")
     rented_area = Column(DECIMAL(12, 2), comment="已出租面积（平方米）")
-    unrented_area = Column(DECIMAL(12, 2), comment="未出租面积（平方米）")
+    # unrented_area 和 occupancy_rate 改为计算字段，不存储在数据库中
     non_commercial_area = Column(DECIMAL(12, 2), comment="非经营物业面积（平方米）")
-    occupancy_rate = Column(DECIMAL(5, 2), comment="出租率（百分比）")
+    # occupancy_rate 字段已移除，改为计算字段
     include_in_occupancy_rate = Column(Boolean, nullable=False, default=True, comment="是否计入出租率统计")
     
     # 用途相关字段
@@ -104,6 +105,29 @@ class Asset(Base):
     # 关系定义
     project = relationship("Project", back_populates="assets")
     ownership = relationship("Ownership", back_populates="assets")
+
+    # 计算属性 - 未出租面积（自动计算，不存储）
+    @property
+    def unrented_area(self) -> Decimal:
+        """计算未出租面积"""
+        rentable = self.rentable_area or Decimal('0')
+        rented = self.rented_area or Decimal('0')
+        return max(rentable - rented, Decimal('0'))
+
+    # 计算属性 - 出租率（自动计算，不存储）
+    @property
+    def occupancy_rate(self) -> Decimal:
+        """计算出租率（百分比）"""
+        if not self.include_in_occupancy_rate:
+            return Decimal('0')
+
+        rentable = self.rentable_area or Decimal('0')
+        if rentable == 0:
+            return Decimal('0')
+
+        rented = self.rented_area or Decimal('0')
+        rate = (rented / rentable) * Decimal('100')
+        return round(rate, 2)
 
     def __repr__(self):
         return f"<Asset(id={self.id}, name={self.property_name})>"

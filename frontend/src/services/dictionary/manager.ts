@@ -3,12 +3,10 @@
  * 提供字典的完整CRUD操作，主要用于管理界面
  */
 
-import { apiRequest } from '@/utils/request'
+import { apiClient } from '../api'
 import {
-  DictionaryConfig,
   DictionaryOption,
-  DICTIONARY_CONFIGS,
-  getDictionaryConfig
+  DICTIONARY_CONFIGS
 } from './config'
 
 export interface EnumFieldType {
@@ -21,9 +19,37 @@ export interface EnumFieldType {
   is_multiple: boolean
   is_hierarchical: boolean
   default_value?: string
+  validation_rules?: any
+  display_config?: any
   status: 'active' | 'inactive'
+  is_deleted?: boolean
+  created_by?: string
+  updated_by?: string
   created_at: string
   updated_at: string
+  enum_values?: Array<{
+    id: string
+    enum_type_id: string
+    label: string
+    value: string
+    code?: string
+    description?: string
+    parent_id?: string
+    level: number
+    sort_order: number
+    color?: string
+    icon?: string
+    extra_properties?: any
+    is_active: boolean
+    is_default: boolean
+    path?: string
+    is_deleted?: boolean
+    created_at: string
+    updated_at: string
+    created_by?: string
+    updated_by?: string
+    children?: any[]
+  }>
 }
 
 export interface EnumFieldValue {
@@ -50,14 +76,14 @@ export interface EnumFieldWithType {
 }
 
 class DictionaryManagerService {
-  private readonly API_BASE = '/api/v1/enum-fields'
+  private readonly API_BASE = '/enum-fields'
 
   /**
    * 获取所有枚举类型（用于管理界面）
    */
   async getEnumFieldTypes(): Promise<EnumFieldType[]> {
     try {
-      const response = await apiRequest.get(`${this.API_BASE}/types`)
+      const response = await apiClient.get(`${this.API_BASE}/types`)
       return response.data
     } catch (error) {
       console.error('获取枚举类型失败:', error)
@@ -79,7 +105,7 @@ class DictionaryManagerService {
       is_system: true,
       is_multiple: false,
       is_hierarchical: false,
-      default_value: null,
+      default_value: undefined,
       status: 'active' as const,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -91,7 +117,7 @@ class DictionaryManagerService {
    */
   async getEnumFieldValues(typeId: string): Promise<EnumFieldValue[]> {
     try {
-      const response = await apiRequest.get(`${this.API_BASE}/types/${typeId}/values`)
+      const response = await apiClient.get(`${this.API_BASE}/types/${typeId}/values`)
       return response.data
     } catch (error) {
       console.error(`获取枚举值失败 [${typeId}]:`, error)
@@ -130,8 +156,31 @@ class DictionaryManagerService {
       const data: EnumFieldWithType[] = []
 
       for (const type of types) {
-        const values = await this.getEnumFieldValues(type.code)
-        data.push({ type, values })
+        // 使用API返回的数据中的enum_values，而不是再次调用API
+        if (type.enum_values && Array.isArray(type.enum_values)) {
+          const values: EnumFieldValue[] = type.enum_values.map(val => ({
+            id: val.id,
+            enum_type_id: val.enum_type_id,
+            label: val.label,
+            value: val.value,
+            code: val.code,
+            description: val.description,
+            parent_id: val.parent_id,
+            level: val.level,
+            sort_order: val.sort_order,
+            color: val.color,
+            icon: val.icon,
+            is_active: val.is_active,
+            is_default: val.is_default,
+            created_at: val.created_at,
+            updated_at: val.updated_at
+          }))
+          data.push({ type, values })
+        } else {
+          // 如果没有enum_values数据，则调用API获取
+          const values = await this.getEnumFieldValues(type.id)
+          data.push({ type, values })
+        }
       }
 
       return data
@@ -154,7 +203,7 @@ class DictionaryManagerService {
     default_value?: string
   }): Promise<EnumFieldType | null> {
     try {
-      const response = await apiRequest.post(`${this.API_BASE}/types`, data)
+      const response = await apiClient.post(`${this.API_BASE}/types`, data)
       return response.data
     } catch (error) {
       console.error('创建枚举类型失败:', error)
@@ -179,7 +228,7 @@ class DictionaryManagerService {
     }>
   ): Promise<EnumFieldType | null> {
     try {
-      const response = await apiRequest.put(`${this.API_BASE}/types/${typeId}`, data)
+      const response = await apiClient.put(`${this.API_BASE}/types/${typeId}`, data)
       return response.data
     } catch (error) {
       console.error('更新枚举类型失败:', error)
@@ -192,7 +241,7 @@ class DictionaryManagerService {
    */
   async deleteEnumFieldType(typeId: string): Promise<boolean> {
     try {
-      await apiRequest.delete(`${this.API_BASE}/types/${typeId}`)
+      await apiClient.delete(`${this.API_BASE}/types/${typeId}`)
       return true
     } catch (error) {
       console.error('删除枚举类型失败:', error)
@@ -217,7 +266,7 @@ class DictionaryManagerService {
     }
   ): Promise<EnumFieldValue | null> {
     try {
-      const response = await apiRequest.post(`${this.API_BASE}/types/${typeId}/values`, data)
+      const response = await apiClient.post(`${this.API_BASE}/types/${typeId}/values`, data)
       return response.data
     } catch (error) {
       console.error('添加枚举值失败:', error)
@@ -244,7 +293,7 @@ class DictionaryManagerService {
     }>
   ): Promise<EnumFieldValue | null> {
     try {
-      const response = await apiRequest.put(`${this.API_BASE}/types/${typeId}/values/${valueId}`, data)
+      const response = await apiClient.put(`${this.API_BASE}/types/${typeId}/values/${valueId}`, data)
       return response.data
     } catch (error) {
       console.error('更新枚举值失败:', error)
@@ -257,7 +306,7 @@ class DictionaryManagerService {
    */
   async deleteEnumFieldValue(typeId: string, valueId: string): Promise<boolean> {
     try {
-      await apiRequest.delete(`${this.API_BASE}/types/${typeId}/values/${valueId}`)
+      await apiClient.delete(`${this.API_BASE}/types/${typeId}/values/${valueId}`)
       return true
     } catch (error) {
       console.error('删除枚举值失败:', error)
@@ -274,7 +323,7 @@ class DictionaryManagerService {
     usage_by_field: Record<string, number>
   }> {
     try {
-      const response = await apiRequest.get(`${this.API_BASE}/types/${typeId}/usage`)
+      const response = await apiClient.get(`${this.API_BASE}/types/${typeId}/usage`)
       return response.data
     } catch (error) {
       console.error('获取枚举字段使用统计失败:', error)
@@ -320,7 +369,7 @@ class DictionaryManagerService {
    */
   async exportEnumFieldData(typeId: string): Promise<string> {
     try {
-      const response = await apiRequest.get(`${this.API_BASE}/types/${typeId}/export`, {
+      const response = await apiClient.get(`${this.API_BASE}/types/${typeId}/export`, {
         responseType: 'blob'
       })
       return URL.createObjectURL(response.data)
@@ -341,7 +390,7 @@ class DictionaryManagerService {
       const formData = new FormData()
       formData.append('file', file)
 
-      const response = await apiRequest.post(`${this.API_BASE}/types/${typeId}/import`, formData, {
+      const response = await apiClient.post(`${this.API_BASE}/types/${typeId}/import`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }

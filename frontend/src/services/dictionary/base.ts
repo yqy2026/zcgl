@@ -3,7 +3,7 @@
  * 提供核心的字典数据获取功能
  */
 
-import { apiRequest } from '@/utils/request'
+import { apiClient } from '../api'
 import {
   DictionaryConfig,
   DictionaryOption,
@@ -50,6 +50,13 @@ class DictionaryCache {
 
   clearForType(dictType: string): void {
     this.cache.delete(dictType)
+  }
+
+  getCacheInfo(): { keys: string[]; size: number } {
+    return {
+      keys: Array.from(this.cache.keys()),
+      size: this.cache.size
+    }
   }
 }
 
@@ -99,7 +106,7 @@ class BaseDictionaryService {
     // 尝试从API获取
     try {
       console.log(`🌐 请求API: ${config.apiEndpoint}`)
-      const response = await apiRequest.get(config.apiEndpoint, {
+      const response = await apiClient.get(config.apiEndpoint, {
         params: { is_active: isActive },
         timeout: 5000
       })
@@ -162,7 +169,7 @@ class BaseDictionaryService {
     const results = await Promise.all(promises)
 
     return results.reduce((acc, [dictType, result]) => {
-      acc[dictType] = result
+      acc[dictType as string] = result
       return acc
     }, {} as Record<string, DictionaryServiceResult>)
   }
@@ -210,11 +217,11 @@ class BaseDictionaryService {
     totalTypes: number
     cacheSize: number
   } {
-    const cachedTypes = Array.from(cache.cache.keys())
+    const cacheInfo = cache.getCacheInfo()
     return {
-      cachedTypes,
+      cachedTypes: cacheInfo.keys,
       totalTypes: Object.keys(DICTIONARY_CONFIGS).length,
-      cacheSize: cache.cache.size
+      cacheSize: cacheInfo.size
     }
   }
 }

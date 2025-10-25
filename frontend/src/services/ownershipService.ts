@@ -2,7 +2,6 @@
  * 权属方相关服务
  */
 
-import { API_BASE_URL } from '@/config/api';
 import { apiRequest } from '@/utils/request';
 import type {
   Ownership,

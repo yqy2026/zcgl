@@ -120,12 +120,8 @@ class AssetCalculator:
         """
         calculated_fields = {}
 
-        # 计算出租率相关字段（纯计算，不存储）
-        if 'rentable_area' in data or 'rented_area' in data:
-            rentable_area = data.get('rentable_area')
-            rented_area = data.get('rented_area')
-            calculated_fields['occupancy_rate'] = AssetCalculator.calculate_occupancy_rate(rentable_area, rented_area)
-            calculated_fields['unrented_area'] = AssetCalculator.calculate_unrented_area(rentable_area, rented_area)
+        # 出租率相关字段都是计算属性，不需要存储在数据库中
+        # occupancy_rate 和 unrented_area 都是通过@property计算的，不在这里设置
 
         # 注意：财务相关计算已移除
 

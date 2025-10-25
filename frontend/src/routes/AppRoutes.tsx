@@ -2,6 +2,9 @@ import React, { Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { Spin } from 'antd'
 import ErrorBoundary from '../components/ErrorHandling/ErrorBoundary'
+import RouteBuilder from '../components/Router/RouteBuilder'
+import { PERMISSIONS } from '../hooks/usePermission'
+import { ROUTE_CONFIG, REDIRECTS, NOT_FOUND_REDIRECT } from '../constants/routes'
 
 // 懒加载页面组件
 const DashboardPage = React.lazy(() => import('../pages/Dashboard/DashboardPage'))
@@ -16,6 +19,7 @@ const TemplateManagementPage = React.lazy(() => import('../pages/System/Template
 const UserManagementPage = React.lazy(() => import('../pages/System/UserManagementPage'))
 const RoleManagementPage = React.lazy(() => import('../pages/System/RoleManagementPage'))
 const OperationLogPage = React.lazy(() => import('../pages/System/OperationLogPage'))
+const SystemSettingsPage = React.lazy(() => import('../pages/System/SystemSettingsPage'))
 const OwnershipManagementPage = React.lazy(() => import('../pages/Ownership/OwnershipManagementPage'))
 const ProjectManagementPage = React.lazy(() => import('../pages/Project/ProjectManagementPage'))
 const ContractListPage = React.lazy(() => import('../pages/Rental/ContractListPage'))
@@ -23,13 +27,6 @@ const ContractCreatePage = React.lazy(() => import('../pages/Rental/ContractCrea
 const RentLedgerPage = React.lazy(() => import('../pages/Rental/RentLedgerPage'))
 const RentStatisticsPage = React.lazy(() => import('../pages/Rental/RentStatisticsPage'))
 const PDFImportPage = React.lazy(() => import('../pages/Contract/PDFImportPage'))
-import SystemErrorBoundary from '../components/System/SystemErrorBoundary'
-import {
-  UserManagementGuard,
-  RoleManagementGuard,
-  SystemLogsGuard,
-  AssetManagementGuard
-} from '../components/System/PermissionGuard'
 
 // 加载组件
 const LoadingSpinner: React.FC = () => (
@@ -44,92 +41,231 @@ const LoadingSpinner: React.FC = () => (
   </div>
 )
 
+// 路由配置
+const ROUTE_BUILDER_CONFIG = [
+  // 根路径重定向
+  {
+    path: '/',
+    element: <Navigate to={REDIRECTS.ROOT} replace />,
+    title: '根重定向',
+  },
+
+  // 工作台
+  {
+    path: '/dashboard',
+    component: DashboardPage,
+    lazy: true,
+    title: '工作台',
+  },
+
+  // 资产管理模块 - 嵌套路由
+  {
+    path: '/assets',
+    title: '资产管理',
+    children: [
+      {
+        path: '',
+        element: <Navigate to="/assets/list" replace />,
+      },
+      {
+        path: 'list',
+        component: AssetListPage,
+        lazy: true,
+        permissions: [PERMISSIONS.ASSET_VIEW],
+        title: '资产列表',
+      },
+      {
+        path: 'new',
+        component: AssetCreatePage,
+        lazy: true,
+        permissions: [PERMISSIONS.ASSET_CREATE],
+        title: '创建资产',
+      },
+      {
+        path: 'import',
+        component: AssetImportPage,
+        lazy: true,
+        permissions: [PERMISSIONS.ASSET_IMPORT],
+        title: '资产导入',
+      },
+      {
+        path: 'analytics',
+        component: AssetAnalyticsPage,
+        lazy: true,
+        permissions: [PERMISSIONS.ASSET_VIEW],
+        title: '资产分析',
+      },
+      {
+        path: ':id',
+        component: AssetDetailPage,
+        lazy: true,
+        permissions: [PERMISSIONS.ASSET_VIEW],
+        title: '资产详情',
+      },
+      {
+        path: ':id/edit',
+        component: AssetCreatePage,
+        lazy: true,
+        permissions: [PERMISSIONS.ASSET_EDIT],
+        title: '编辑资产',
+      },
+    ],
+  },
+
+  // 租赁管理模块 - 嵌套路由
+  {
+    path: '/rental',
+    title: '租赁管理',
+    children: [
+      {
+        path: '',
+        element: <Navigate to="/rental/contracts" replace />,
+      },
+      {
+        path: 'contracts',
+        children: [
+          {
+            path: '',
+            component: ContractListPage,
+            lazy: true,
+            permissions: [PERMISSIONS.RENTAL_VIEW],
+            title: '合同列表',
+          },
+          {
+            path: 'new',
+            component: ContractCreatePage,
+            lazy: true,
+            permissions: [PERMISSIONS.RENTAL_CREATE],
+            title: '创建合同',
+          },
+          {
+            path: 'pdf-import',
+            component: PDFImportPage,
+            lazy: true,
+            permissions: [PERMISSIONS.RENTAL_CREATE],
+            title: 'PDF导入合同',
+          },
+        ],
+      },
+      {
+        path: 'ledger',
+        component: RentLedgerPage,
+        lazy: true,
+        permissions: [PERMISSIONS.RENTAL_VIEW],
+        title: '租金台账',
+      },
+      {
+        path: 'statistics',
+        component: RentStatisticsPage,
+        lazy: true,
+        permissions: [PERMISSIONS.RENTAL_VIEW],
+        title: '租赁统计',
+      },
+    ],
+  },
+
+  // 权属方管理
+  {
+    path: '/ownership',
+    component: OwnershipManagementPage,
+    lazy: true,
+    title: '权属方管理',
+  },
+
+  // 项目管理
+  {
+    path: '/project',
+    component: ProjectManagementPage,
+    lazy: true,
+    title: '项目管理',
+  },
+
+  // 系统管理模块 - 嵌套路由
+  {
+    path: '/system',
+    title: '系统管理',
+    children: [
+      {
+        path: 'users',
+        component: UserManagementPage,
+        lazy: true,
+        permissions: [PERMISSIONS.USER_VIEW],
+        title: '用户管理',
+      },
+      {
+        path: 'roles',
+        component: RoleManagementPage,
+        lazy: true,
+        permissions: [PERMISSIONS.ROLE_VIEW],
+        title: '角色管理',
+      },
+      {
+        path: 'organizations',
+        component: OrganizationPage,
+        lazy: true,
+        permissions: [PERMISSIONS.ORGANIZATION_VIEW],
+        title: '组织架构',
+      },
+      {
+        path: 'dictionaries',
+        component: DictionaryPage,
+        lazy: true,
+        permissions: [PERMISSIONS.SYSTEM_DICTIONARY],
+        title: '字典管理',
+      },
+      {
+        path: 'templates',
+        component: TemplateManagementPage,
+        lazy: true,
+        title: '模板管理',
+      },
+      {
+        path: 'logs',
+        component: OperationLogPage,
+        lazy: true,
+        permissions: [PERMISSIONS.SYSTEM_LOGS],
+        title: '操作日志',
+      },
+      {
+        path: 'settings',
+        component: SystemSettingsPage,
+        lazy: true,
+        title: '系统设置',
+      },
+    ],
+  },
+
+  // 临时重定向路由
+  {
+    path: '/finance/*',
+    element: <Navigate to="/dashboard" replace />,
+    title: '财务模块重定向',
+  },
+  {
+    path: '/documents/*',
+    element: <Navigate to="/dashboard" replace />,
+    title: '文档模块重定向',
+  },
+  {
+    path: '/settings/*',
+    element: <Navigate to="/dashboard" replace />,
+    title: '设置模块重定向',
+  },
+
+  // 404页面
+  {
+    path: '*',
+    element: <Navigate to={NOT_FOUND_REDIRECT} replace />,
+    title: '404重定向',
+  },
+]
+
 const AppRoutes: React.FC = () => {
   return (
     <ErrorBoundary>
       <Suspense fallback={<LoadingSpinner />}>
         <Routes>
-          {/* 默认重定向到工作台 */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-
-          {/* 工作台 */}
-          <Route path="/dashboard" element={<DashboardPage />} />
-
-          {/* 资产管理 */}
-          <Route path="/assets" element={<Navigate to="/assets/list" replace />} />
-          <Route path="/assets/list" element={<AssetListPage />} />
-          <Route path="/assets/new" element={<AssetCreatePage />} />
-          <Route path="/assets/create" element={<AssetCreatePage />} />
-          <Route path="/assets/import" element={<AssetImportPage />} />
-          <Route path="/assets/analytics" element={<AssetAnalyticsPage />} />
-          <Route path="/assets/:id" element={<AssetDetailPage />} />
-          <Route path="/assets/:id/edit" element={<AssetCreatePage />} />
-
-          {/* 租赁管理 */}
-          <Route path="/rental" element={<Navigate to="/rental/contracts" replace />} />
-          <Route path="/rental/contracts" element={<ContractListPage />} />
-          <Route path="/rental/contracts/new" element={<ContractCreatePage />} />
-          <Route path="/rental/contracts/pdf-import" element={<PDFImportPage />} />
-          <Route path="/rental/ledger" element={<RentLedgerPage />} />
-          <Route path="/rental/statistics" element={<RentStatisticsPage />} />
-
-          {/* 权属方管理 */}
-          <Route path="/ownership" element={<OwnershipManagementPage />} />
-
-          {/* 项目管理 */}
-          <Route path="/project" element={<ProjectManagementPage />} />
-
-          {/* 系统管理 */}
-          <Route path="/system/users" element={
-            <SystemErrorBoundary>
-              <UserManagementGuard>
-                <UserManagementPage />
-              </UserManagementGuard>
-            </SystemErrorBoundary>
-          } />
-          <Route path="/system/roles" element={
-            <SystemErrorBoundary>
-              <RoleManagementGuard>
-                <RoleManagementPage />
-              </RoleManagementGuard>
-            </SystemErrorBoundary>
-          } />
-          <Route path="/system/organizations" element={
-            <SystemErrorBoundary>
-              <OrganizationPage />
-            </SystemErrorBoundary>
-          } />
-          <Route path="/system/dictionaries" element={
-            <SystemErrorBoundary>
-              <DictionaryPage />
-            </SystemErrorBoundary>
-          } />
-          <Route path="/system/templates" element={
-            <SystemErrorBoundary>
-              <TemplateManagementPage />
-            </SystemErrorBoundary>
-          } />
-          <Route path="/system/logs" element={
-            <SystemErrorBoundary>
-              <SystemLogsGuard>
-                <OperationLogPage />
-              </SystemLogsGuard>
-            </SystemErrorBoundary>
-          } />
-          {/* 兼容旧的枚举字段路由，重定向到字典管理 */}
-          <Route path="/system/enum-fields" element={<Navigate to="/system/dictionaries" replace />} />
-
-          {/* 财务管理 - 暂时重定向到工作台 */}
-          <Route path="/finance/*" element={<Navigate to="/dashboard" replace />} />
-
-          {/* 文档中心 - 暂时重定向到工作台 */}
-          <Route path="/documents/*" element={<Navigate to="/dashboard" replace />} />
-
-          {/* 系统设置 - 暂时重定向到工作台 */}
-          <Route path="/settings/*" element={<Navigate to="/dashboard" replace />} />
-
-          {/* 404页面 */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          {RouteBuilder.buildRoutes(ROUTE_BUILDER_CONFIG)}
         </Routes>
       </Suspense>
     </ErrorBoundary>

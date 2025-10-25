@@ -79,19 +79,31 @@ const ContractListPage: React.FC = () => {
         ...params,
       });
 
+      // 安全检查：确保response和response.items存在
+      if (!response) {
+        console.error('合同API响应为空');
+        message.error('加载合同列表失败：响应为空');
+        setState(prev => ({ ...prev, loading: false }));
+        return;
+      }
+
+      // 确保items是一个数组
+      const contracts = Array.isArray(response.items) ? response.items : [];
+
       setState(prev => ({
         ...prev,
         loading: false,
-        contracts: response.items,
+        contracts: contracts,
         pagination: {
           ...prev.pagination,
-          total: response.total,
-          pages: response.pages,
+          total: response.total || 0,
+          pages: response.pages || 0,
         },
       }));
     } catch (error) {
-      message.error('加载合同列表失败');
-      setState(prev => ({ ...prev, loading: false }));
+      console.error('加载合同列表失败:', error);
+      message.error(`加载合同列表失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      setState(prev => ({ ...prev, loading: false, contracts: [] }));
     }
   };
 

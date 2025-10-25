@@ -117,9 +117,9 @@ class AssetBase(BaseModel):
     actual_property_area: Optional[Decimal] = Field(None, ge=0, description="实际房产面积（平方米）")
     rentable_area: Optional[Decimal] = Field(None, ge=0, description="可出租面积（平方米）")
     rented_area: Optional[Decimal] = Field(None, ge=0, description="已出租面积（平方米）")
-    unrented_area: Optional[Decimal] = Field(None, ge=0, description="未出租面积（平方米）")
+    # unrented_area 已移除，改为计算字段
     non_commercial_area: Optional[Decimal] = Field(None, ge=0, description="非经营物业面积（平方米）")
-    occupancy_rate: Optional[Decimal] = Field(None, ge=0, le=100, description="出租率（百分比）")
+    # occupancy_rate 已移除，改为计算字段
     include_in_occupancy_rate: bool = Field(True, description="是否计入出租率统计")
     
     # 用途相关字段
@@ -169,18 +169,14 @@ class AssetBase(BaseModel):
     # last_audit_date, audit_status, auditor 字段已移除
     audit_notes: Optional[str] = Field(None, description="审核备注")
 
-    @validator('land_area', 'actual_property_area', 'rentable_area', 'rented_area', 'unrented_area',
+    @validator('land_area', 'actual_property_area', 'rentable_area', 'rented_area',
               'non_commercial_area', 'monthly_rent', 'deposit')
     def validate_area(cls, v):
         if v is not None and v < 0:
             raise ValueError('数值不能为负数')
         return v
 
-    @validator('occupancy_rate')
-    def validate_occupancy_rate(cls, v):
-        if v is not None and (v < 0 or v > 100):
-            raise ValueError('出租率必须在0-100之间')
-        return v
+    # occupancy_rate 验证器已移除，因为现在是计算字段
 
     @validator('is_litigated')
     def validate_is_litigated(cls, v):
@@ -228,9 +224,9 @@ class AssetUpdate(BaseModel):
     actual_property_area: Optional[Decimal] = Field(None, ge=0, description="实际房产面积（平方米）")
     rentable_area: Optional[Decimal] = Field(None, ge=0, description="可出租面积（平方米）")
     rented_area: Optional[Decimal] = Field(None, ge=0, description="已出租面积（平方米）")
-    unrented_area: Optional[Decimal] = Field(None, ge=0, description="未出租面积（平方米）")
+    # unrented_area 已移除，改为计算字段
     non_commercial_area: Optional[Decimal] = Field(None, ge=0, description="非经营物业面积（平方米）")
-    occupancy_rate: Optional[Decimal] = Field(None, ge=0, le=100, description="出租率（百分比）")
+    # occupancy_rate 已移除，改为计算字段
     include_in_occupancy_rate: Optional[bool] = Field(None, description="是否计入出租率统计")
     
     # 用途相关字段
@@ -275,18 +271,14 @@ class AssetUpdate(BaseModel):
     # last_audit_date, audit_status, auditor 字段已移除
     audit_notes: Optional[str] = Field(None, description="审核备注")
 
-    @validator('land_area', 'actual_property_area', 'rentable_area', 'rented_area', 'unrented_area',
+    @validator('land_area', 'actual_property_area', 'rentable_area', 'rented_area',
               'non_commercial_area', 'monthly_rent', 'deposit')
     def validate_area(cls, v):
         if v is not None and v < 0:
             raise ValueError('数值不能为负数')
         return v
 
-    @validator('occupancy_rate')
-    def validate_occupancy_rate(cls, v):
-        if v is not None and (v < 0 or v > 100):
-            raise ValueError('出租率必须在0-100之间')
-        return v
+    # occupancy_rate 验证器已移除，因为现在是计算字段
 
     @validator('is_litigated')
     def validate_is_litigated(cls, v):

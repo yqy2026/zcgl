@@ -203,7 +203,7 @@ export class ApiErrorHandler {
   }
   
   // 发送错误到日志服务
-  private sendErrorToLogService(logData: any): void {
+  private sendErrorToLogService(_logData: any): void {
     // 这里可以集成第三方日志服务，如 Sentry、LogRocket 等
     // 示例：
     // Sentry.captureException(new Error(logData.message), {

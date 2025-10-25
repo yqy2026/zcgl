@@ -1,5 +1,5 @@
-"""数据备份和恢复服�?
-使用SQLite数据库的备份和恢复功�?
+"""数据备份和恢复服务"""
+使用SQLite数据库的备份和恢复功能
 """
 
 import os
@@ -39,7 +39,7 @@ class BackupConfig:
     
     def __init__(self):
         self.backup_dir = Path("backups")
-        self.max_backups = 30  # 保留最�?0个备�?
+        self.max_backups = 30  # 保留最多30个备份
         self.compress = True  # 是否压缩备份文件
         self.auto_backup_enabled = True  # 是否启用自动备份
         self.backup_interval_hours = 24  # 自动备份间隔（小时）
@@ -49,7 +49,7 @@ class BackupConfig:
         self.backup_dir.mkdir(exist_ok=True)
     
     def get_backup_filename(self, timestamp: Optional[datetime] = None) -> str:
-        """生成备份文件�?""
+        """生成备份文件名"""
         if timestamp is None:
             timestamp = datetime.now()
         
@@ -73,7 +73,7 @@ class DatabaseBackupService:
         self.executor = ThreadPoolExecutor(max_workers=2)
     
     def create_backup(self, description: Optional[str] = None) -> Dict[str, Any]:
-        """创建数据库备�?""
+        """创建数据库备份""
         try:
             timestamp = datetime.now()
             filename = self.config.get_backup_filename(timestamp)
@@ -116,17 +116,17 @@ class DatabaseBackupService:
             }
     
     async def create_backup_async(self, description: Optional[str] = None) -> Dict[str, Any]:
-        """异步创建数据库备�?""
+        """异步创建数据库备份""
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(self.executor, self.create_backup, description)
     
     def restore_backup(self, backup_filename: str, confirm: bool = False) -> Dict[str, Any]:
-        """恢复数据库备�?""
+        """恢复数据库备份""
         try:
             if not confirm:
                 return {
                     "success": False,
-                    "message": "恢复操作需要确认参�?,
+                    "message": "恢复操作需要确认参数",
                     "restored": False
                 }
             
@@ -154,11 +154,11 @@ class DatabaseBackupService:
                 if not self._validate_restored_database(db_path):
                     raise RestoreError("恢复的数据库验证失败")
                 
-                logger.info(f"数据库备份恢复完�? {backup_filename}")
+                logger.info(f"数据库备份恢复完成: {backup_filename}")
                 
                 return {
                     "success": True,
-                    "message": "数据库恢复成�?,
+                    "message": "数据库恢复成功",
                     "restored": True,
                     "safety_backup": safety_backup
                 }
@@ -313,7 +313,7 @@ class DatabaseBackupService:
             }
     
     def cleanup_old_backups(self) -> Dict[str, Any]:
-        """清理过期的备份文�?""
+        """清理过期的备份文件""""
         try:
             deleted_count = self._cleanup_old_backups()
             
@@ -332,15 +332,15 @@ class DatabaseBackupService:
             }
     
     def _get_database_path(self) -> str:
-        """获取数据库文件路�?""
-        # 从DATABASE_URL中提取文件路�?
+        """获取数据库文件路径"""
+        # 从DATABASE_URL中提取文件路径
         if DATABASE_URL.startswith('sqlite:///'):
             return DATABASE_URL[10:]  # 移除 'sqlite:///' 前缀
         else:
-            raise BackupError(f"不支持的数据库类�? {DATABASE_URL}")
+            raise BackupError(f"不支持的数据库类型: {DATABASE_URL}")
     
     def _create_simple_backup(self, source_path: str, backup_path: Path):
-        """创建简单备份（直接复制�?""
+        """创建简单备份（直接复制）"""
         shutil.copy2(source_path, backup_path)
     
     def _create_compressed_backup(self, source_path: str, backup_path: Path):
@@ -438,7 +438,7 @@ class DatabaseBackupService:
             return None
     
     def _cleanup_old_backups(self) -> int:
-        """清理过期的备份文�?""
+        """清理过期的备份文件""""
         try:
             deleted_count = 0
             cutoff_date = datetime.now() - timedelta(days=self.config.backup_retention_days)

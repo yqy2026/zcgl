@@ -1,4 +1,4 @@
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { assetService } from '../assetService'
 import type { Asset, AssetCreateRequest, AssetUpdateRequest } from '@/types/asset'
 
@@ -25,6 +25,34 @@ const mockAsset: Asset = {
   usage_status: '出租',
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-01T00:00:00Z',
+  // 58字段的完整数据
+  land_area: 5000,
+  actual_property_area: 4000,
+  rentable_area: 3500,
+  rented_area: 2800,
+  unrented_area: 700,
+  occupancy_rate: 80.0,
+  monthly_rent: 500000,
+  deposit: 1500000,
+  lease_contract_number: 'LC2024001',
+  contract_start_date: '2024-01-01',
+  contract_end_date: '2024-12-31',
+  tenant_name: '测试租户有限公司',
+  tenant_type: '企业',
+  business_model: '自营',
+  operation_status: '正常营业',
+  manager_name: '张经理',
+  project_name: '城市商业综合体项目',
+  certificated_usage: '商业用地',
+  actual_usage: '零售商场',
+  non_commercial_area: 500,
+  include_in_occupancy_rate: true,
+  data_status: '正常',
+  version: 1,
+  tags: '优质资产,商业地产',
+  audit_notes: '首次录入，数据完整',
+  created_by: 'test_user',
+  updated_by: 'test_user',
 }
 
 describe('AssetService', () => {

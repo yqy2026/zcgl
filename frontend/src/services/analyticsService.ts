@@ -13,8 +13,8 @@ export class AnalyticsService {
       const response = await this.api.get<AnalyticsResponse>('/analytics/comprehensive', {
         params: filters
       })
-      // The ApiClient already returns response.data, so we don't need to access .data again
-      return response
+      // ApiClient returns ApiResponse<AnalyticsResponse>, so we need to access .data to get the actual analytics data
+      return response.data!
     } catch (error) {
       console.error('Analytics API Error:', error)
       throw error
@@ -26,8 +26,8 @@ export class AnalyticsService {
       const response = await this.api.get<AnalyticsResponse>('/statistics/basic', {
         params: filters
       })
-      // The ApiClient already returns response.data, so we don't need to access .data again
-      return response
+      // ApiClient returns ApiResponse<AnalyticsResponse>, so we need to access .data to get the actual analytics data
+      return response.data!
     } catch (error) {
       console.error('Basic statistics API Error:', error)
       throw error
@@ -37,8 +37,8 @@ export class AnalyticsService {
   async getAreaSummary(): Promise<AnalyticsResponse> {
     try {
       const response = await this.api.get<AnalyticsResponse>('/assets/statistics/summary')
-      // The ApiClient already returns response.data, so we don't need to access .data again
-      return response
+      // ApiClient returns ApiResponse<AnalyticsResponse>, so we need to access .data to get the actual analytics data
+      return response.data!
     } catch (error) {
       console.error('Area summary API Error:', error)
       throw error
@@ -48,8 +48,8 @@ export class AnalyticsService {
   async getFinancialSummary(): Promise<AnalyticsResponse> {
     try {
       const response = await this.api.get<AnalyticsResponse>('/statistics/financial-summary')
-      // The ApiClient already returns response.data, so we don't need to access .data again
-      return response
+      // ApiClient returns ApiResponse<AnalyticsResponse>, so we need to access .data to get the actual analytics data
+      return response.data!
     } catch (error) {
       console.error('Financial summary API Error:', error)
       throw error

@@ -44,6 +44,7 @@ const PermissionGuard: React.FC<PermissionGuardProps> = ({
 }
 
 export default PermissionGuard
+export { PermissionGuard }
 
 // 预定义的权限保护组件
 export const UserManagementGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => (

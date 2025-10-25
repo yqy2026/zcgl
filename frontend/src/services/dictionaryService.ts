@@ -44,11 +44,11 @@ class DictionaryService {
     useFallback?: boolean
     isActive?: boolean
   } = {}): Promise<DictionaryServiceResult> {
-    const { useCache = true, useFallback = true, isActive = true } = options
+    const { useCache = true, useFallback = true, isActive: _isActive = true } = options
 
     try {
       const response = await apiClient.get(`dictionaries/${dictType}/options`, {
-        params: { is_active: isActive },
+        params: { is_active: _isActive },
         timeout: 5000 // 5秒超时
       })
       const data = response.data || []
@@ -101,14 +101,14 @@ class DictionaryService {
     useFallback?: boolean
     isActive?: boolean
   } = {}): Promise<Record<string, DictionaryServiceResult>> {
-    const { useCache = true, useFallback = true, isActive = true } = options
+    const { useCache = true, useFallback = true, isActive: _isActive = true } = options
 
     const results: Record<string, DictionaryServiceResult> = {}
 
     // 并行请求所有字典类型
     const promises = dictTypes.map(async (dictType) => {
       try {
-        const result = await this.getOptions(dictType, { useCache, useFallback, isActive })
+        const result = await this.getOptions(dictType, { useCache, useFallback, isActive: _isActive })
         results[dictType] = result
       } catch (error) {
         console.error(`批量获取字典失败 [${dictType}]:`, error)

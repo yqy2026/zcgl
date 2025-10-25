@@ -49,49 +49,49 @@ export const userService = {
     role?: string
     organization_id?: string
   }) {
-    const response = await api.get('/system/users', { params })
+    const response = await api.get('/auth/users', { params })
     return response.data
   },
 
   // 获取用户详情
   async getUser(id: string) {
-    const response = await api.get(`/system/users/${id}`)
+    const response = await api.get(`/auth/users/${id}`)
     return response.data
   },
 
   // 创建用户
   async createUser(data: CreateUserData) {
-    const response = await api.post('/system/users', data)
+    const response = await api.post('/auth/users', data)
     return response.data
   },
 
   // 更新用户
   async updateUser(id: string, data: UpdateUserData) {
-    const response = await api.put(`/system/users/${id}`, data)
+    const response = await api.put(`/auth/users/${id}`, data)
     return response.data
   },
 
   // 删除用户
   async deleteUser(id: string) {
-    const response = await api.delete(`/system/users/${id}`)
+    const response = await api.delete(`/auth/users/${id}`)
     return response.data
   },
 
   // 重置密码
   async resetPassword(id: string, password: string) {
-    const response = await api.post(`/system/users/${id}/reset-password`, { password })
+    const response = await api.post(`/auth/users/${id}/reset-password`, { password })
     return response.data
   },
 
   // 锁定/解锁用户
   async toggleUserLock(id: string) {
-    const response = await api.post(`/system/users/${id}/toggle-lock`)
+    const response = await api.post(`/auth/users/${id}/toggle-lock`)
     return response.data
   },
 
   // 获取用户统计
   async getUserStatistics() {
-    const response = await api.get('/system/users/statistics')
+    const response = await api.get('/auth/users/statistics')
     return response.data
   }
 }

@@ -105,7 +105,7 @@ class APISecurityMiddleware:
             body_str = body.decode('utf-8') if body else ""
             
             # 构造签名字符串
-            sign_string = f"{request.method}\n{request.url.path}\n{timestamp}\n{body_str}"
+            sign_string = f"{request.method}\n{str(request.url.path)}\n{timestamp}\n{body_str}"
             
             # 计算HMAC签名
             expected_signature = hmac.new(
@@ -133,7 +133,7 @@ class APISecurityMiddleware:
                 return False
         
         # 特定端点限制
-        endpoint = request.url.path
+        endpoint = str(request.url.path)
         if endpoint in ["/api/v1/auth/login", "/api/v1/auth/refresh"]:
             # 认证端点更严格的限制（每小时100次）
             if not await rate_limiter.is_allowed(client_ip, 100, 3600):
@@ -163,7 +163,7 @@ class APISecurityMiddleware:
     async def log_request(self, request: Request, user_id: Optional[str] = None):
         """记录请求日志"""
         # 这里可以集成到审计日志系统
-        print(f"API请求: {request.method} {request.url.path} from {self.get_client_ip(request)} user: {user_id}")
+        print(f"API请求: {request.method} {str(request.url.path)} from {self.get_client_ip(request)} user: {user_id}")
 
 
 # 创建全局API安全中间件实例
