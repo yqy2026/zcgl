@@ -65,6 +65,28 @@ venv.bak/
 .dmypy.json
 dmypy.json
 
+# 后端日志文件
+logs/
+*.log
+backend/logs/
+
+# 测试覆盖率报告
+htmlcov/
+.coverage
+coverage.xml
+*.cover
+.pytest_cache/
+
+# 缓存文件
+.cache/
+__pycache__/
+*.pyc
+*.pyo
+
+# 质量监控报告
+backend/reports/quality_check_*.txt
+backend/quality_monitor_*.json
+
 # ----------
 # Node.js / Frontend
 # ----------

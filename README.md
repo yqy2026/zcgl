@@ -73,6 +73,7 @@ zcgl/
 │   ├── deployment/          # 部署文档
 │   └── user-guide/          # 用户指南
 ├── scripts/                  # 项目脚本
+│   ├── startup/             # 启动脚本
 │   ├── unified_test_runner.py # 统一测试运行器
 │   └── ...                  # 其他工具脚本
 ├── tools/                    # 开发工具
@@ -81,7 +82,8 @@ zcgl/
 │   └── analysis/            # 分析工具
 ├── config/                   # 全局配置
 │   ├── environments/        # 环境配置
-│   └── templates/           # 配置模板
+│   ├── templates/           # 配置模板
+│   └── root/                # 根目录配置
 ├── nginx/                    # 部署配置
 └── database/                 # 数据库脚本
 ```
