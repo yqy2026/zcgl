@@ -1,14 +1,26 @@
 module.exports = {
   root: true,
-  env: { browser: true, es2020: true },
+  env: { browser: true, es2020: true, node: true },
   extends: [
     'eslint:recommended',
-    '@typescript-eslint/recommended',
+    'plugin:@typescript-eslint/recommended',
     'plugin:react-hooks/recommended',
   ],
-  ignorePatterns: ['dist', '.eslintrc.js'],
+  ignorePatterns: ['dist', '.eslintrc.js', 'node_modules'],
   parser: '@typescript-eslint/parser',
-  plugins: ['react-refresh'],
+  parserOptions: {
+    ecmaVersion: 2020,
+    sourceType: 'module',
+    ecmaFeatures: {
+      jsx: true,
+    },
+  },
+  plugins: ['@typescript-eslint', 'react-hooks', 'react-refresh'],
+  settings: {
+    react: {
+      version: 'detect',
+    },
+  },
   rules: {
     'react-refresh/only-export-components': [
       'warn',

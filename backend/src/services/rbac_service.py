@@ -555,3 +555,7 @@ class RBACService:
 
         self.db.add(audit_log)
         self.db.commit()
+
+    def _can_manage_role(self, manager_level: int, subordinate_level: int) -> bool:
+        """检查是否可以管理指定级别的角色"""
+        return manager_level > subordinate_level

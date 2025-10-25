@@ -1,4 +1,4 @@
-import React from 'react'
+// React is implicitly used by JSX, no need for explicit import
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 
@@ -51,11 +51,6 @@ const mockAsset: Asset = {
   include_in_occupancy_rate: true,
   occupancy_rate: 80.00,
   tenant_name: '测试租户',
-  lease_contract: 'LC001',
-  current_contract_start_date: '2024-01-01',
-  current_contract_end_date: '2024-12-31',
-  current_lease_contract: 'CLC001',
-  current_terminal_contract: 'CTC001',
   wuyang_project_name: '五羊测试项目',
   agreement_start_date: '2024-01-01',
   agreement_end_date: '2025-12-31',

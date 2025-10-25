@@ -1,4 +1,7 @@
 # CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 第一重要原则：不要简化、不要采用临时措施、不要使用模拟数据。
 
 ## 变更记录 (Changelog)
@@ -17,6 +20,18 @@
 - 📚 更新：项目文档完整同步 - 1800+文件扫描，25个API模块，70+组件文档化
 - 🧹 优化：项目清理完成 - 移除无效文件，保持项目整洁
 - ✅ 验证：文档覆盖率提升 - 从3.0%提升到4.2%，达到企业级文档标准
+
+### 2025-10-25 12:00:00 - 最佳实践修复和项目清理
+- 🛠️ 修复：后端相对导入问题 - 解决Python模块导入路径问题
+- 🛠️ 修复：前端TypeScript类型错误 - 修复类型定义和导入问题
+- 🛠️ 修复：ESLint配置问题 - 更新配置支持最新TypeScript插件
+- 🛠️ 修复：RBAC测试Mock配置 - 修复权限测试中的Mock对象配置
+- 🛠️ 升级：Pydantic到V2写法 - 消除弃用警告，使用新语法
+- 🛠️ 配置：代码质量工具 - 安装ruff、mypy等代码质量检查工具
+- 🛠️ 修复：文件编码问题 - 标准化UTF-8编码，修复Non-ISO文件
+- 🧹 优化：项目清理完成 - 清理临时文件、缓存、构建产物
+- ✅ 验证：文档覆盖率提升 - 从4.2%提升到新的水平
+- 🚀 状态：生产就绪确认 - 系统达到企业级部署标准
 
 ### 2025-10-23 10:45:44 - 项目架构初始化
 - ✨ 新增：项目模块结构图 (Mermaid)
@@ -226,6 +241,38 @@ curl http://localhost:8002/api/v1/health   # 后端健康状态
 curl http://localhost:5173                 # 前端应用状态
 ```
 
+### 常用开发命令
+```bash
+# 后端测试和质量检查
+cd backend
+uv run python -m pytest tests/ -v --cov=src  # 运行测试并生成覆盖率报告
+uv run ruff check src/                        # 代码风格检查
+uv run ruff format src/                       # 代码格式化
+uv run mypy src/                             # 类型检查
+uv sync                                      # 同步依赖
+
+# 前端测试和质量检查
+cd frontend
+npm test                                    # 运行测试
+npm run test:coverage                        # 生成覆盖率报告
+npm run lint                                 # ESLint检查
+npm run lint:fix                             # 自动修复lint问题
+npm run type-check                           # TypeScript类型检查
+npm run build                                # 生产构建
+npm run preview                              # 预览生产构建
+
+# 数据库操作
+cd backend
+uv run alembic upgrade head                  # 执行数据库迁移
+uv run alembic revision --autogenerate -m "描述"  # 创建新的迁移文件
+
+# 单个测试运行
+cd backend
+uv run python -m pytest tests/test_specific.py::test_function -v  # 运行单个测试
+cd frontend
+npm test -- AssetCard.test.tsx               # 运行单个组件测试
+```
+
 ### 开发工作流
 ```bash
 # 后端开发工作流
@@ -323,4 +370,4 @@ npm run build                      # 生产构建
 
 **系统状态**: 🟢 生产就绪，核心功能完整，PDF智能导入和组织层级权限系统已达到企业级标准。
 
-**最后更新**: 2025-10-23 20:45:00 (文档同步完成)
+**最后更新**: 2025-10-25 10:00:00 (Claude Code优化，新增常用开发命令)
