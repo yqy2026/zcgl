@@ -4,7 +4,7 @@
 
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, EmailStr, Field, validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 import re
 
 from ..models.auth import UserRole
@@ -17,14 +17,16 @@ class UserBase(BaseModel):
     email: EmailStr = Field(..., description="邮箱地址")
     full_name: str = Field(..., min_length=2, max_length=100, description="全名")
 
-    @validator('username')
+    @field_validator('username')
+    @classmethod
     def validate_username(cls, v):
         """验证用户名格式"""
         if not re.match(r'^[a-zA-Z0-9_-]+$', v):
             raise ValueError('用户名只能包含字母、数字、下划线和连字符')
         return v
 
-    @validator('full_name')
+    @field_validator('full_name')
+    @classmethod
     def validate_full_name(cls, v):
         """验证姓名格式"""
         if not v.strip():
@@ -39,7 +41,8 @@ class UserCreate(UserBase):
     employee_id: Optional[str] = Field(None, description="关联员工ID")
     default_organization_id: Optional[str] = Field(None, description="默认组织ID")
 
-    @validator('password')
+    @field_validator('password')
+    @classmethod
     def validate_password_strength(cls, v):
         """验证密码强度"""
         if len(v) < 8:

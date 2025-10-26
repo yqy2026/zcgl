@@ -6,13 +6,14 @@ module.exports = {
   setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup.ts'],
 
   // Module name mapping for path aliases
-  moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1',
-    '^@/__tests__/(.*)$': '<rootDir>/src/__tests__/$1',
-    '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
-    '\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$':
-      '<rootDir>/src/__tests__/__mocks__/fileMock.js',
-  },
+  moduleNameMapper: require('./jest.modulePaths.js'),
+  // {
+  //   '^@/(.*)$': '<rootDir>/src/$1',
+  //   '^@/__tests__/(.*)$': '<rootDir>/src/__tests__/$1',
+  //   '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
+  //   '\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$':
+  //     '<rootDir>/src/__tests__/__mocks__/fileMock.js',
+  // },
 
   // File extensions to consider
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
@@ -75,6 +76,16 @@ module.exports = {
     'ts-jest': {
       tsconfig: {
         jsx: 'react-jsx',
+        paths: {
+          '@/*': ['src/*'],
+          '@/components/*': ['src/components/*'],
+          '@/pages/*': ['src/pages/*'],
+          '@/services/*': ['src/services/*'],
+          '@/types/*': ['src/types/*'],
+          '@/utils/*': ['src/utils/*'],
+          '@/hooks/*': ['src/hooks/*'],
+          '@/store/*': ['src/store/*']
+        }
       },
     },
   },

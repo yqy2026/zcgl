@@ -81,11 +81,21 @@ async def health_check():
             "version": "2.0.0"
         }
 
-@app.get("/api/v1/", tags=["根路径"])
-async def root():
-    """根路径"""
+@app.get("/", tags=["根路由"])
+async def root_endpoint():
+    """根路由端点"""
     return {
         "message": "土地物业资产管理系统 API",
+        "version": "2.0.0",
+        "docs": "/docs",
+        "health": "/api/v1/health"
+    }
+
+@app.get("/api/v1/", tags=["根路径"])
+async def api_v1_root():
+    """API v1根路径"""
+    return {
+        "message": "土地物业资产管理系统 API v1",
         "version": "2.0.0",
         "timestamp": datetime.utcnow().isoformat()
     }

@@ -4,7 +4,7 @@ PDF导入会话数据模型
 """
 
 from sqlalchemy import Column, Integer, String, Text, DateTime, Float, JSON, Boolean, Enum
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.sql import func
 from datetime import datetime
 import enum
