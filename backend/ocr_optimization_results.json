@@ -1,0 +1,125 @@
+{
+  "file_info": {
+    "file_path": "D:\\code\\zcgl\\tools\\pdf-samples\\【包装合字（2025）第022号】租赁合同-番禺区洛浦南浦环岛西路29号1号商业楼14号铺-王军20250401-20280331.pdf",
+    "page_count": 22,
+    "total_text_length": 0,
+    "avg_text_per_page": 0.0,
+    "has_images": true,
+    "scanned_page_ratio": 1.0,
+    "is_likely_scanned": true,
+    "page_details": [
+      {
+        "page_num": 1,
+        "text_length": 0,
+        "has_images": true,
+        "image_count": 1,
+        "is_scanned_page": true
+      },
+      {
+        "page_num": 2,
+        "text_length": 0,
+        "has_images": true,
+        "image_count": 1,
+        "is_scanned_page": true
+      },
+      {
+        "page_num": 3,
+        "text_length": 0,
+        "has_images": true,
+        "image_count": 1,
+        "is_scanned_page": true
+      }
+    ]
+  },
+  "ocr_tests": {
+    "new_paddleocr": {
+      "success": false,
+      "error": "Unknown argument: use_gpu",
+      "method": "new_paddleocr"
+    },
+    "preprocessed_ocr": {
+      "success": false,
+      "error": "PaddleOCR.predict() got an unexpected keyword argument 'cls'",
+      "method": "preprocessed_ocr"
+    },
+    "multi_resolution": {
+      "success": true,
+      "processing_time": 3.5993027687072754,
+      "text_length": 0,
+      "text_preview": "",
+      "avg_confidence": 0,
+      "best_resolution": "Found in resolution tests",
+      "method": "multi_resolution"
+    },
+    "pymupdf_text": {
+      "success": true,
+      "processing_time": 0.003999948501586914,
+      "text_length": 22,
+      "text_preview": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "best_method": "plain_text",
+      "all_methods": {
+        "plain_text": {
+          "text_length": 22,
+          "preview": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+        },
+        "formatted_text": {
+          "text_length": 22,
+          "preview": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+        },
+        "words_extraction": {
+          "text_length": 0,
+          "word_count": 0,
+          "preview": ""
+        }
+      },
+      "method": "pymupdf_extraction"
+    },
+    "combined_method": {
+      "success": true,
+      "processing_time": 3.4501967430114746,
+      "text_length": 22,
+      "text_preview": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+      "best_method": "pymupdf",
+      "all_results": {
+        "pymupdf": {
+          "success": true,
+          "processing_time": 0.004999876022338867,
+          "text_length": 22,
+          "text_preview": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+          "best_method": "plain_text",
+          "all_methods": {
+            "plain_text": {
+              "text_length": 22,
+              "preview": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+            },
+            "formatted_text": {
+              "text_length": 22,
+              "preview": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+            },
+            "words_extraction": {
+              "text_length": 0,
+              "word_count": 0,
+              "preview": ""
+            }
+          },
+          "method": "pymupdf_extraction"
+        }
+      },
+      "method": "combined_method"
+    }
+  },
+  "best_result": {
+    "best_method": "pymupdf_text",
+    "text_length": 22,
+    "text_preview": "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+    "confidence": 0,
+    "processing_time": 0.003999948501586914
+  },
+  "recommendations": [
+    "PDF可能为扫描件，建议使用高分辨率OCR处理",
+    "启用图像预处理以提高文本识别准确率",
+    "大部分页面为扫描件，推荐使用专门的OCR引擎",
+    "识别文本较少，可能是PDF质量问题",
+    "尝试提高DPI设置或使用更专业的OCR工具"
+  ]
+}

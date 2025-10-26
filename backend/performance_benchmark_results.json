@@ -1,0 +1,82 @@
+{
+  "test_time": "2025-10-26 07:23:46",
+  "sample_count": 1,
+  "test_results": [
+    {
+      "sample_path": "D:\\code\\zcgl\\tools\\pdf-samples\\【包装合字（2025）第022号】租赁合同-番禺区洛浦南浦环岛西路29号1号商业楼14号铺-王军20250401-20280331.pdf",
+      "sample_name": "【包装合字（2025）第022号】租赁合同-番禺区洛浦南浦环岛西路29号1号商业楼14号铺-王军20250401-20280331.pdf",
+      "tests": {
+        "file_info": {
+          "file_path": "D:\\code\\zcgl\\tools\\pdf-samples\\【包装合字（2025）第022号】租赁合同-番禺区洛浦南浦环岛西路29号1号商业楼14号铺-王军20250401-20280331.pdf",
+          "file_size_mb": 13.82,
+          "file_size_bytes": 14494384,
+          "modification_time": 1748933694.0
+        },
+        "basic_processing": {
+          "success": true,
+          "processing_times": {
+            "file_read": 0.003998994827270508,
+            "pdf_parse": 0.05100107192993164,
+            "page_count": 22,
+            "pdfplumber_parse": 0.09400057792663574,
+            "text_pages": 0,
+            "total_processing": 0.1490006446838379
+          },
+          "file_size_mb": 13.82
+        },
+        "ocr_performance": {
+          "success": true,
+          "total_time": 8.576271295547485,
+          "ocr_results": {
+            "paddleocr": {
+              "success": true,
+              "processing_time": 8.576271295547485,
+              "text_length": 0,
+              "has_text": false
+            },
+            "quality_score": 0.0
+          }
+        },
+        "enhanced_services": {
+          "success": true,
+          "total_time": 0.6235864162445068,
+          "service_results": {
+            "chinese_nlp": {
+              "success": true,
+              "processing_time": 0.6215860843658447,
+              "entities_found": 25,
+              "names_found": 15,
+              "phones_found": 3,
+              "addresses_found": 2,
+              "amounts_found": 0
+            },
+            "multi_engine_fusion": {
+              "success": true,
+              "processing_time": 0.0020003318786621094,
+              "fusion_methods_supported": 6,
+              "result_confidence": 0.9
+            }
+          }
+        }
+      }
+    }
+  ],
+  "summary_statistics": {
+    "processing_times": {
+      "avg_file_read": 0.004,
+      "avg_pdf_parse": 0.051,
+      "avg_ocr_processing": 8.576,
+      "avg_total_processing": 0.149
+    },
+    "success_rates": {
+      "pdf_processing_success": 100.0,
+      "ocr_processing_success": 100.0,
+      "enhanced_services_success": 100.0
+    },
+    "performance_indicators": {
+      "avg_file_size_mb": 13.82,
+      "total_text_extracted": 0,
+      "quality_scores": []
+    }
+  }
+}
