@@ -10,6 +10,8 @@ from typing import Dict, List, Any, Optional
 from datetime import datetime
 from pathlib import Path
 
+logger = logging.getLogger(__name__)
+
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks, Depends, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
@@ -20,6 +22,9 @@ try:
     from ...services.pdf_session_service import pdf_session_service
     from ...services.pdf_processing_service import pdf_processing_service
     from ...services.pdf_validation_matching_service import PDFValidationMatchingService
+    from ...services.enhanced_matching_service import EnhancedPDFValidationMatchingService
+    from ...services.enhanced_error_handler import enhanced_error_handler, handle_pdf_error
+    from ...services.performance_monitor import performance_monitor
     PDF_SERVICES_AVAILABLE = True
 except ImportError as e:
     logger.error(f"PDF服务导入失败: {e}")
@@ -27,6 +32,7 @@ except ImportError as e:
     pdf_session_service = None
     pdf_processing_service = None
     PDFValidationMatchingService = None
+    EnhancedPDFValidationMatchingService = None
     PDF_SERVICES_AVAILABLE = False
 
 # 数据库和模型
@@ -75,6 +81,35 @@ class SessionProgressResponse(BaseModel):
     success: bool
     session_status: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
+
+class MatchingResults(BaseModel):
+    """匹配结果详细模型"""
+    matched_assets: List[Dict[str, Any]] = []
+    matched_ownerships: List[Dict[str, Any]] = []
+    duplicate_contracts: List[Dict[str, Any]] = []
+    recommendations: Dict[str, str] = {}
+    overall_match_confidence: float = 0.0
+
+class ExtractionResult(BaseModel):
+    """提取结果详细模型"""
+    success: bool
+    data: Dict[str, Any] = {}
+    confidence_score: float = 0.0
+    extraction_method: str = ""
+    processed_fields: int = 0
+    total_fields: int = 0
+    error: Optional[str] = None
+
+class ValidationResult(BaseModel):
+    """验证结果详细模型"""
+    success: bool
+    errors: List[str] = []
+    warnings: List[str] = []
+    validated_data: Dict[str, Any] = {}
+    validation_score: float = 0.0
+    processed_fields: int = 0
+    required_fields_count: int = 0
+    missing_required_fields: List[str] = []
 
 class ConfirmImportRequest(BaseModel):
     """确认导入请求"""
@@ -233,12 +268,45 @@ async def upload_pdf_file(
         processing_options=processing_options
     )
 
-    # 开始异步处理
+    # 开始异步处理（带性能优化）
+    start_time = time.time()
     process_result = await pdf_import_service.process_pdf_file(
         db=db,
         session_id=session.session_id,
-        organization_id=organization_id
+        organization_id=organization_id,
+        file_size=total_size,  # 使用流式计算的大小
+        file_path=str(temp_file_path),
+        content_type=file.content_type or 'application/pdf',
+        processing_options=processing_options
     )
+    processing_time = (datetime.now() - start_time).total_seconds()
+
+    # 记录API调用和性能数据
+    record_api_call(
+        endpoint="/upload",
+        method="upload_pdf_file",
+        response_time_ms=processing_time * 1000,
+        status_code=200 if process_result['success'] else 500,
+        success=process_result['success'],
+        cache_hit=False
+    )
+
+    # 返回优化后的结果
+    if process_result['success']:
+        return FileUploadResponse(
+            success=True,
+            message="PDF文件上传成功，正在处理中（优化版）",
+            session_id=session.session_id,
+            estimated_time="30-60秒",
+            processing_options=processing_options
+        )
+    else:
+        return FileUploadResponse(
+            success=False,
+            message=f"处理启动失败: {process_result.get('error_message', '未知错误')}",
+            session_id=session.session_id,
+            estimated_time="60-120秒"
+        )
 
     processing_time = (datetime.now() - start_time).total_seconds()
 
@@ -708,4 +776,60 @@ async def extract_contract_info_v2_enhanced(
         return {
             "success": False,
             "error": str(e)
+        }
+
+# === 增强性能监控端点 ===
+@router.get("/performance/realtime")
+async def get_realtime_performance():
+    """获取实时性能监控数据"""
+    try:
+        performance_data = await performance_monitor.get_real_time_performance()
+        return {
+            "success": True,
+            "data": performance_data,
+            "message": "实时性能数据获取成功"
+        }
+    except Exception as e:
+        logger.error(f"获取实时性能数据失败: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e),
+            "data": None
+        }
+
+@router.get("/performance/report")
+async def get_performance_report(hours: int = Query(default=24, ge=1, le=168)):
+    """获取性能报告"""
+    try:
+        report = await performance_monitor.get_performance_report(hours)
+        return {
+            "success": True,
+            "data": report,
+            "message": "性能报告生成成功"
+        }
+    except Exception as e:
+        logger.error(f"获取性能报告失败: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e),
+            "data": None
+        }
+
+@router.get("/performance/health")
+async def get_system_health():
+    """获取系统健康状态"""
+    try:
+        from ...services.enhanced_error_handler import monitor_processing_health
+        health_data = await monitor_processing_health()
+        return {
+            "success": True,
+            "data": health_data,
+            "message": "系统健康状态获取成功"
+        }
+    except Exception as e:
+        logger.error(f"获取系统健康状态失败: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e),
+            "data": None
         }

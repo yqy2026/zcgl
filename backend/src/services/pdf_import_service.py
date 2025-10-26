@@ -15,6 +15,11 @@ from .pdf_processing_service import pdf_processing_service
 from .pdf_session_service import pdf_session_service
 from .pdf_validation_matching_service import PDFValidationMatchingService
 from .contract_extractor import extract_contract_info
+# from .enhanced_contract_extractor import extract_enhanced_contract_info  # 暂时注释，待实现
+from .enhanced_pdf_processor import enhanced_pdf_processor
+from .ml_enhanced_extractor import ml_enhanced_extractor
+from .enhanced_field_mapper import enhanced_field_mapper
+from .pdf_processing_monitor import pdf_processing_monitor
 from ..models.pdf_import_session import SessionStatus, ProcessingStep
 
 logger = logging.getLogger(__name__)
@@ -74,17 +79,17 @@ class PDFImportService:
         session_id = session.session_id
 
         try:
-            # 步骤1: PDF文本提取
-            await self._extract_text_step(db, session)
+            # 步骤1: PDF文本提取 - 监控版本
+            await self._extract_text_step_monitored(db, session, session_id)
 
-            # 步骤2: 信息提取
-            await self._extract_info_step(db, session)
+            # 步骤2: 信息提取 - 监控版本
+            await self._extract_info_step_monitored(db, session, session_id)
 
-            # 步骤3: 数据验证
-            await self._validate_data_step(db, session)
+            # 步骤3: 数据验证 - 监控版本
+            await self._validate_data_step_monitored(db, session, session_id)
 
-            # 步骤4: 数据匹配
-            await self._match_data_step(db, session)
+            # 步骤4: 数据匹配 - 监控版本
+            await self._match_data_step_monitored(db, session, session_id)
 
             # 完成处理
             await pdf_session_service.update_session_progress(
@@ -106,23 +111,63 @@ class PDFImportService:
             pdf_session_service.unregister_background_task(session_id)
 
     async def _extract_text_step(self, db: Session, session):
-        """步骤1: PDF文本提取"""
+        """步骤1: PDF文本提取 - 增强版本"""
         session_id = session.session_id
 
         await pdf_session_service.update_session_progress(
             db, session_id, SessionStatus.PROCESSING,
-            ProcessingStep.PDF_CONVERSION, 20.0
+            ProcessingStep.PDF_CONVERSION, 15.0
         )
 
         # 获取处理配置
         processing_options = session.processing_options or {}
-        prefer_ocr = processing_options.get('prefer_ocr', False)
 
-        # 执行文本提取
-        # 从processing_options中排除prefer_ocr，避免重复参数
+        # 使用增强PDF处理器进行智能分析
+        try:
+            # 文档分析
+            logger.info(f"开始文档分析: {session_id}")
+            document_analysis = await enhanced_pdf_processor.analyze_document(session.file_path)
+
+            # 优化处理配置
+            processing_config = await enhanced_pdf_processor.optimize_processing_config(document_analysis)
+
+            logger.info(f"文档分析完成: {session_id}, 类型: {document_analysis.document_type.value}, 质量: {document_analysis.processing_quality.value}")
+
+            # 执行增强文本提取
+            extraction_result = await enhanced_pdf_processor.process_with_enhanced_config(
+                file_path=session.file_path,
+                custom_config=processing_config
+            )
+
+            if not extraction_result.get('success'):
+                raise Exception(f"增强PDF处理失败: {extraction_result.get('error', '未知错误')}")
+
+            # 更新会话，包含增强处理信息
+            await pdf_session_service.update_session_progress(
+                db, session_id, SessionStatus.TEXT_EXTRACTED,
+                ProcessingStep.TEXT_EXTRACTION, 40.0,
+                extracted_text=extraction_result.get('text', ''),
+                processing_method=extraction_result.get('processing_method', 'enhanced'),
+                ocr_used=extraction_result.get('ocr_used', False),
+                confidence_score=extraction_result.get('overall_confidence_score', 0.8),
+                enhanced_processing=extraction_result.get('enhanced_processing', {})
+            )
+
+            logger.info(f"增强文本提取完成: {session_id}, 方法: {extraction_result.get('processing_method')}, 置信度: {extraction_result.get('overall_confidence_score', 0):.2f}")
+
+        except Exception as e:
+            logger.warning(f"增强处理失败，回退到标准处理: {str(e)}")
+            # 回退到原始处理方法
+            await self._fallback_text_extraction(db, session, processing_options)
+
+    async def _fallback_text_extraction(self, db: Session, session, processing_options: Dict[str, Any]):
+        """回退文本提取方法"""
+        session_id = session.session_id
+
+        prefer_ocr = processing_options.get('prefer_ocr', False)
         filtered_options = {k: v for k, v in processing_options.items() if k != 'prefer_ocr'}
 
-        extraction_result = await self.processing_service.extract_text_from_pdf(
+        extraction_result = await pdf_processing_service.extract_text_from_pdf(
             session.file_path,
             prefer_ocr=prefer_ocr,
             **filtered_options
@@ -141,41 +186,221 @@ class PDFImportService:
             confidence_score=extraction_result.get('overall_confidence_score', 0.8)
         )
 
-        logger.info(f"文本提取完成: {session_id}, 方法: {extraction_result['processing_method']}")
+        logger.info(f"回退文本提取完成: {session_id}, 方法: {extraction_result['processing_method']}")
+
+    async def _extract_text_step_monitored(self, db: Session, session, operation_id: str):
+        """文本提取步骤 - 监控版本"""
+        session_id = session.session_id
+
+        async with pdf_processing_monitor.monitor_operation(
+            operation_type="pdf_text_extraction",
+            session_id=session_id,
+            processing_method="enhanced"
+        ) as step_operation_id:
+
+            try:
+                await self._extract_text_step(db, session)
+            except Exception as e:
+                # 错误已经被外层监控捕获，这里只需记录详细信息
+                logger.error(f"文本提取步骤失败: {session_id}, 错误: {str(e)}")
+                raise
+
+    async def _extract_info_step_monitored(self, db: Session, session, operation_id: str):
+        """信息提取步骤 - 监控版本"""
+        session_id = session.session_id
+
+        async with pdf_processing_monitor.monitor_operation(
+            operation_type="contract_info_extraction",
+            session_id=session_id,
+            processing_method="ml_enhanced"
+        ) as step_operation_id:
+
+            try:
+                await self._extract_info_step(db, session)
+            except Exception as e:
+                logger.error(f"信息提取步骤失败: {session_id}, 错误: {str(e)}")
+                raise
+
+    async def _validate_data_step_monitored(self, db: Session, session, operation_id: str):
+        """数据验证步骤 - 监控版本"""
+        session_id = session.session_id
+
+        async with pdf_processing_monitor.monitor_operation(
+            operation_type="data_validation_mapping",
+            session_id=session_id,
+            processing_method="enhanced"
+        ) as step_operation_id:
+
+            try:
+                await self._validate_data_step(db, session)
+            except Exception as e:
+                logger.error(f"数据验证步骤失败: {session_id}, 错误: {str(e)}")
+                raise
+
+    async def _match_data_step_monitored(self, db: Session, session, operation_id: str):
+        """数据匹配步骤 - 监控版本"""
+        session_id = session.session_id
+
+        async with pdf_processing_monitor.monitor_operation(
+            operation_type="data_matching",
+            session_id=session_id,
+            processing_method="intelligent"
+        ) as step_operation_id:
+
+            try:
+                await self._match_data_step(db, session)
+            except Exception as e:
+                logger.error(f"数据匹配步骤失败: {session_id}, 错误: {str(e)}")
+                raise
 
     async def _extract_info_step(self, db: Session, session):
-        """步骤2: 信息提取"""
+        """步骤2: 信息提取 - ML增强版本"""
         session_id = session.session_id
 
         await pdf_session_service.update_session_progress(
-            db, session_id, SessionStatus.INFO_EXTRACTED,
-            ProcessingStep.INFO_EXTRACTION, 60.0
+            db, session_id, SessionStatus.PROCESSING,
+            ProcessingStep.INFO_EXTRACTION, 50.0
         )
 
-        # 使用合同提取器
-        extracted_info = extract_contract_info(session.extracted_text)
+        # 获取提取的文本
+        text = session.extracted_text or ""
 
-        if not extracted_info.get('success'):
-            raise Exception(f"合同信息提取失败: {extracted_info.get('error', '未知错误')}")
+        if not text.strip():
+            raise Exception("没有可用的文本内容进行信息提取")
+
+        # 使用ML增强提取器
+        try:
+            logger.info(f"开始ML增强信息提取: {session_id}")
+            extraction_result = await ml_enhanced_extractor.extract_contract_info(text, method="hybrid")
+
+            if extraction_result.success:
+                # 转换为标准格式
+                extracted_data = {name: field.value for name, field in extraction_result.extracted_fields.items()}
+
+                # 添加提取元数据
+                extraction_metadata = {
+                    "method": extraction_result.method_used.value,
+                    "processing_time": extraction_result.processing_time,
+                    "field_count": len(extracted_data),
+                    "suggestions": extraction_result.suggestions,
+                    "warnings": extraction_result.warnings,
+                    "errors": extraction_result.errors,
+                    "field_details": {
+                        name: {
+                            "confidence": field.confidence,
+                            "method": field.method.value,
+                            "source_text": field.source_text,
+                            "position": field.position,
+                            "metadata": field.metadata
+                        } for name, field in extraction_result.extracted_fields.items()
+                    }
+                }
+
+                logger.info(f"ML增强提取完成: {session_id}, 提取字段数: {len(extracted_data)}, 置信度: {extraction_result.overall_confidence:.2f}")
+
+            else:
+                raise Exception(f"ML增强提取失败: {', '.join(extraction_result.errors)}")
+
+        except Exception as e:
+            logger.warning(f"ML增强提取失败，回退到标准提取: {str(e)}")
+            # 回退到标准提取
+            # 暂时使用标准提取
+            extracted_info = extract_contract_info(text)
+            extracted_data = extracted_info.get('extracted_fields', {})
+            extraction_metadata = {
+                "method": extracted_info.get('method', 'rule_based'),
+                "fallback_used": True,
+                "fallback_reason": str(e)
+            }
 
         # 更新会话
         await pdf_session_service.update_session_progress(
             db, session_id, SessionStatus.INFO_EXTRACTED,
-            ProcessingStep.INFO_EXTRACTION, 60.0,
-            extracted_data=extracted_info.get('extracted_fields', {}),
-            confidence_score=extracted_info.get('overall_confidence', 0.0)
+            ProcessingStep.INFO_VALIDATION, 80.0,
+            extracted_data=extracted_data,
+            confidence_score=extraction_result.overall_confidence if 'extraction_result' in locals() and hasattr(extraction_result, 'overall_confidence') else extracted_info.get('overall_confidence', 0.8),
+            extraction_method=extraction_result.method_used.value if 'extraction_result' in locals() and hasattr(extraction_result, 'method_used') else extracted_info.get('method', 'enhanced_rule_based'),
+            processed_fields=len(extracted_data),
+            extraction_metadata=extraction_metadata if 'extraction_metadata' in locals() else {}
         )
 
-        logger.info(f"信息提取完成: {session_id}, 字段数: {len(extracted_info.get('extracted_fields', {}))}")
+        logger.info(f"信息提取完成: {session_id}, 提取字段数: {len(extracted_data)}")
 
     async def _validate_data_step(self, db: Session, session):
-        """步骤3: 数据验证"""
+        """步骤3: 数据验证和字段映射 - 增强版本"""
         session_id = session.session_id
 
         await pdf_session_service.update_session_progress(
             db, session_id, SessionStatus.VALIDATING,
-            ProcessingStep.DATA_VALIDATION, 75.0
+            ProcessingStep.DATA_VALIDATION, 70.0
         )
+
+        try:
+            # 使用增强字段映射器进行数据映射和验证
+            logger.info(f"开始增强字段映射: {session_id}")
+
+            extraction_metadata = getattr(session, 'extraction_metadata', {})
+            mapping_result = await enhanced_field_mapper.map_extracted_data(
+                session.extracted_data,
+                extraction_metadata
+            )
+
+            if mapping_result.success:
+                # 执行智能匹配
+                logger.info(f"开始智能匹配: {session_id}")
+                validation_service = PDFValidationMatchingService(db)
+
+                # 合并资产和合同数据进行匹配
+                combined_data = {
+                    **mapping_result.asset_data,
+                    **mapping_result.contract_data
+                }
+
+                matching_result = await validation_service.validate_extracted_data(combined_data)
+
+                # 更新会话
+                await pdf_session_service.update_session_progress(
+                    db, session_id, SessionStatus.VALIDATING,
+                    ProcessingStep.DATA_VALIDATION, 85.0,
+                    validation_results={
+                        "mapping_result": {
+                            "success": mapping_result.success,
+                            "overall_confidence": mapping_result.overall_confidence,
+                            "asset_data": mapping_result.asset_data,
+                            "contract_data": mapping_result.contract_data,
+                            "validation_summary": mapping_result.validation_summary,
+                            "recommendations": mapping_result.recommendations,
+                            "processing_time": mapping_result.processing_time,
+                            "field_mappings": {
+                                name: {
+                                    "target_field": mapping.target_field,
+                                    "confidence": mapping.confidence,
+                                    "validation_status": mapping.validation_status.value,
+                                    "transformation_applied": mapping.transformation_applied,
+                                    "errors": mapping.validation_errors,
+                                    "warnings": mapping.validation_warnings
+                                } for name, mapping in mapping_result.mappings.items()
+                            }
+                        },
+                        "matching_result": matching_result
+                    },
+                    validated_data=mapping_result.asset_data,
+                    validation_score=max(mapping_result.overall_confidence, matching_result.get('validation_score', 0.0))
+                )
+
+                logger.info(f"增强验证完成: {session_id}, 映射置信度: {mapping_result.overall_confidence:.2f}, 匹配分数: {matching_result.get('validation_score', 0.0):.2f}")
+
+            else:
+                raise Exception(f"字段映射失败: {', '.join(mapping_result.recommendations)}")
+
+        except Exception as e:
+            logger.warning(f"增强验证失败，回退到标准验证: {str(e)}")
+            # 回退到原始验证方法
+            await self._fallback_validation(db, session)
+
+    async def _fallback_validation(self, db: Session, session):
+        """回退验证方法"""
+        session_id = session.session_id
 
         # 创建验证服务
         validation_service = PDFValidationMatchingService(db)
@@ -188,11 +413,11 @@ class PDFImportService:
         # 更新会话
         await pdf_session_service.update_session_progress(
             db, session_id, SessionStatus.VALIDATING,
-            ProcessingStep.DATA_VALIDATION, 75.0,
+            ProcessingStep.DATA_VALIDATION, 85.0,
             validation_results=validation_result
         )
 
-        logger.info(f"数据验证完成: {session_id}, 验证分数: {validation_result['validation_score']:.2f}")
+        logger.info(f"回退验证完成: {session_id}, 验证分数: {validation_result['validation_score']:.2f}")
 
     async def _match_data_step(self, db: Session, session):
         """步骤4: 数据匹配"""
