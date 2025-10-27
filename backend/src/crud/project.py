@@ -2,48 +2,55 @@
 项目管理相关CRUD操作
 """
 
-from typing import List, Optional, Dict, Any
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, func, desc, asc
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from typing import Any
 
-from ..models import Project, Asset
-from ..schemas.project import ProjectCreate, ProjectUpdate, ProjectSearchRequest
+from sqlalchemy import desc, or_
+from sqlalchemy.orm import Session
+
+from ..models import Asset, Project
+from ..schemas.project import ProjectCreate, ProjectSearchRequest, ProjectUpdate
 
 
 class CRUDProject:
     """项目管理CRUD操作类"""
 
-    def get(self, db: Session, id: str) -> Optional[Project]:
+    def get(self, db: Session, id: str) -> Project | None:
         """获取单个项目"""
         project_obj = db.query(Project).filter(Project.id == id).first()
         if project_obj:
             # 获取权属方关系
-            from ..models import ProjectOwnershipRelation, Ownership
-            ownership_relations = db.query(ProjectOwnershipRelation, Ownership).join(
-                Ownership, ProjectOwnershipRelation.ownership_id == Ownership.id
-            ).filter(
-                ProjectOwnershipRelation.project_id == id,
-                ProjectOwnershipRelation.is_active == True
-            ).all()
+            from ..models import Ownership, ProjectOwnershipRelation
+
+            ownership_relations = (
+                db.query(ProjectOwnershipRelation, Ownership)
+                .join(Ownership, ProjectOwnershipRelation.ownership_id == Ownership.id)
+                .filter(
+                    ProjectOwnershipRelation.project_id == id,
+                    ProjectOwnershipRelation.is_active == True,
+                )
+                .all()
+            )
 
             # 将关系数据存储为简单属性，而不是SQLAlchemy关系
             project_obj.ownership_relations_data = []
             for relation, ownership in ownership_relations:
-                project_obj.ownership_relations_data.append({
-                    'id': relation.id,
-                    'ownership_id': ownership.id,
-                    'ownership_name': ownership.name,
-                    'is_active': relation.is_active
-                })
+                project_obj.ownership_relations_data.append(
+                    {
+                        "id": relation.id,
+                        "ownership_id": ownership.id,
+                        "ownership_name": ownership.name,
+                        "is_active": relation.is_active,
+                    }
+                )
 
         return project_obj
 
-    def get_by_code(self, db: Session, code: str) -> Optional[Project]:
+    def get_by_code(self, db: Session, code: str) -> Project | None:
         """通过编码获取项目"""
         return db.query(Project).filter(Project.code == code).first()
 
-    def get_by_name(self, db: Session, name: str) -> Optional[Project]:
+    def get_by_name(self, db: Session, name: str) -> Project | None:
         """通过名称获取项目"""
         return db.query(Project).filter(Project.name == name).first()
 
@@ -53,9 +60,9 @@ class CRUDProject:
         *,
         skip: int = 0,
         limit: int = 100,
-        is_active: Optional[bool] = None,
-        keyword: Optional[str] = None,
-    ) -> List[Project]:
+        is_active: bool | None = None,
+        keyword: str | None = None,
+    ) -> list[Project]:
         """获取多个项目"""
         query = db.query(Project)
 
@@ -68,34 +75,42 @@ class CRUDProject:
                 or_(
                     Project.name.contains(keyword),
                     Project.code.contains(keyword),
-                    Project.project_description.contains(keyword)
+                    Project.project_description.contains(keyword),
                 )
             )
 
         # 获取项目列表
-        projects = query.order_by(desc(Project.created_at)).offset(skip).limit(limit).all()
+        projects = (
+            query.order_by(desc(Project.created_at)).offset(skip).limit(limit).all()
+        )
 
         # 为每个项目添加权属方关系和资产计数
-        from ..models import ProjectOwnershipRelation, Ownership
+        from ..models import Ownership, ProjectOwnershipRelation
+
         for project in projects:
             # 获取权属方关系
-            ownership_relations = db.query(ProjectOwnershipRelation, Ownership).join(
-                Ownership, ProjectOwnershipRelation.ownership_id == Ownership.id
-            ).filter(
-                ProjectOwnershipRelation.project_id == project.id,
-                ProjectOwnershipRelation.is_active == True
-            ).all()
+            ownership_relations = (
+                db.query(ProjectOwnershipRelation, Ownership)
+                .join(Ownership, ProjectOwnershipRelation.ownership_id == Ownership.id)
+                .filter(
+                    ProjectOwnershipRelation.project_id == project.id,
+                    ProjectOwnershipRelation.is_active == True,
+                )
+                .all()
+            )
 
             # 将关系数据存储为简单属性，而不是SQLAlchemy关系
             project.ownership_relations_data = []
             for relation, ownership in ownership_relations:
                 ownership_name = ownership.name if ownership else None
-                project.ownership_relations_data.append({
-                    'id': relation.id,
-                    'ownership_id': ownership.id,
-                    'ownership_name': ownership_name,
-                    'is_active': relation.is_active
-                })
+                project.ownership_relations_data.append(
+                    {
+                        "id": relation.id,
+                        "ownership_id": ownership.id,
+                        "ownership_name": ownership_name,
+                        "is_active": relation.is_active,
+                    }
+                )
 
             # 添加资产计数
             project.asset_count = self.get_asset_count(db, project.id)
@@ -115,7 +130,7 @@ class CRUDProject:
         Returns:
             str: 唯一的项目编码
         """
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         # 固定前缀
         prefix = "PJ"
@@ -128,16 +143,23 @@ class CRUDProject:
         base_format = f"{prefix}{year_month}"
 
         # 查询所有已存在的编码（包括新格式和旧格式）
-        existing_codes = db.query(Project.code).filter(
-            Project.code.like(f"{prefix}%")
-        ).order_by(Project.code.desc()).all()
+        existing_codes = (
+            db.query(Project.code)
+            .filter(Project.code.like(f"{prefix}%"))
+            .order_by(Project.code.desc())
+            .all()
+        )
 
         # 找到新格式的最大序列号
         max_sequence = 0
         for existing_code in existing_codes:
             code_str = existing_code[0]
             # 新格式：PJ2509001 (9位)
-            if len(code_str) == 9 and code_str[:2] == prefix and code_str[2:6].isdigit():
+            if (
+                len(code_str) == 9
+                and code_str[:2] == prefix
+                and code_str[2:6].isdigit()
+            ):
                 try:
                     sequence = int(code_str[6:])
                     if sequence > max_sequence:
@@ -165,6 +187,7 @@ class CRUDProject:
 
         # 如果所有尝试都失败了，返回一个基于时间戳的编码
         import time
+
         timestamp = int(time.time())
         code = f"{base_format}{timestamp % 1000:03d}"
         return code
@@ -177,7 +200,7 @@ class CRUDProject:
         import re
 
         # 清理名称
-        clean_name = re.sub(r'[^\u4e00-\u9fa5a-zA-Z0-9\s]', '', name).strip()
+        clean_name = re.sub(r"[^\u4e00-\u9fa5a-zA-Z0-9\s]", "", name).strip()
 
         if not clean_name:
             return "XM"
@@ -185,48 +208,141 @@ class CRUDProject:
         # 增强的中文拼音首字母映射
         enhanced_pinyin_map = {
             # 项目管理相关
-            '项': 'X', '目': 'M', '工': 'G', '程': 'C', '建': 'J', '设': 'S',
-            '开': 'K', '发': 'F', '规': 'G', '划': 'H', '管': 'G', '理': 'L',
-            '施': 'S', '工': 'G', '监': 'J', '理': 'L', '运': 'Y', '营': 'Y',
-            '维': 'W', '护': 'H', '验': 'Y', '收': 'S',
-
+            "项": "X",
+            "目": "M",
+            "工": "G",
+            "程": "C",
+            "建": "J",
+            "设": "S",
+            "开": "K",
+            "发": "F",
+            "规": "G",
+            "划": "H",
+            "管": "G",
+            "理": "L",
+            "施": "S",
+            "工": "G",
+            "监": "J",
+            "理": "L",
+            "运": "Y",
+            "营": "Y",
+            "维": "W",
+            "护": "H",
+            "验": "Y",
+            "收": "S",
             # 地产相关
-            '房': 'F', '地': 'D', '产': 'C', '园': 'Y', '小': 'X', '区': 'Q',
-            '商': 'S', '住': 'Z', '宅': 'Z', '写': 'X', '字': 'Z', '楼': 'L',
-            '中': 'Z', '心': 'X', '广': 'G', '场': 'C', '城': 'C', '市': 'S',
-            '街': 'J', '道': 'D', '路': 'L', '巷': 'X', '里': 'L', '弄': 'N',
-
+            "房": "F",
+            "地": "D",
+            "产": "C",
+            "园": "Y",
+            "小": "X",
+            "区": "Q",
+            "商": "S",
+            "住": "Z",
+            "宅": "Z",
+            "写": "X",
+            "字": "Z",
+            "楼": "L",
+            "中": "Z",
+            "心": "X",
+            "广": "G",
+            "场": "C",
+            "城": "C",
+            "市": "S",
+            "街": "J",
+            "道": "D",
+            "路": "L",
+            "巷": "X",
+            "里": "L",
+            "弄": "N",
             # 建筑类型
-            '大': 'D', '厦': 'S', '楼': 'L', '馆': 'G', '所': 'S', '站': 'Z',
-            '堂': 'T', '厅': 'T', '室': 'S', '房': 'F', '间': 'J', '屋': 'W',
-            '库': 'K', '棚': 'P', '场': 'C', '地': 'D', '基': 'J', '坑': 'K',
-
+            "大": "D",
+            "厦": "S",
+            "楼": "L",
+            "馆": "G",
+            "所": "S",
+            "站": "Z",
+            "堂": "T",
+            "厅": "T",
+            "室": "S",
+            "房": "F",
+            "间": "J",
+            "屋": "W",
+            "库": "K",
+            "棚": "P",
+            "场": "C",
+            "地": "D",
+            "基": "J",
+            "坑": "K",
             # 商业用途
-            '购': 'G', '物': 'W', '中': 'Z', '心': 'X', '办': 'B', '公': 'G',
-            '酒': 'J', '店': 'D', '餐': 'C', '饮': 'Y', '娱': 'Y', '乐': 'L',
-            '健': 'J', '身': 'S', '教': 'J', '育': 'Y', '医': 'Y', '疗': 'L',
-
+            "购": "G",
+            "物": "W",
+            "中": "Z",
+            "心": "X",
+            "办": "B",
+            "公": "G",
+            "酒": "J",
+            "店": "D",
+            "餐": "C",
+            "饮": "Y",
+            "娱": "Y",
+            "乐": "L",
+            "健": "J",
+            "身": "S",
+            "教": "J",
+            "育": "Y",
+            "医": "Y",
+            "疗": "L",
             # 区域描述
-            '新': 'X', '旧': 'J', '高': 'G', '低': 'D', '南': 'N', '北': 'B',
-            '东': 'D', '西': 'X', '上': 'S', '下': 'X', '前': 'Q', '后': 'H',
-            '左': 'Z', '右': 'Y', '内': 'N', '外': 'W', '中': 'Z', '央': 'Y',
-
+            "新": "X",
+            "旧": "J",
+            "高": "G",
+            "低": "D",
+            "南": "N",
+            "北": "B",
+            "东": "D",
+            "西": "X",
+            "上": "S",
+            "下": "X",
+            "前": "Q",
+            "后": "H",
+            "左": "Z",
+            "右": "Y",
+            "内": "N",
+            "外": "W",
+            "中": "Z",
+            "央": "Y",
             # 常用词汇
-            '国': 'G', '家': 'J', '人': 'R', '民': 'M', '公': 'G', '司': 'S',
-            '集': 'J', '团': 'T', '合': 'H', '作': 'Z', '联': 'L', '盟': 'M',
-            '世': 'S', '界': 'J', '全': 'Q', '球': 'Q', '亚': 'Y', '洲': 'Z',
+            "国": "G",
+            "家": "J",
+            "人": "R",
+            "民": "M",
+            "公": "G",
+            "司": "S",
+            "集": "J",
+            "团": "T",
+            "合": "H",
+            "作": "Z",
+            "联": "L",
+            "盟": "M",
+            "世": "S",
+            "界": "J",
+            "全": "Q",
+            "球": "Q",
+            "亚": "Y",
+            "洲": "Z",
         }
 
         # 生成编码
-        code = ''
+        code = ""
         for char in clean_name[:6]:  # 最多取前6个字符
-            if '\u4e00' <= char <= '\u9fa5':  # 中文字符
-                code += enhanced_pinyin_map.get(char, 'X')
+            if "\u4e00" <= char <= "\u9fa5":  # 中文字符
+                code += enhanced_pinyin_map.get(char, "X")
             else:
                 code += char.upper()
 
         # 清理编码，只保留字母和数字
-        code = re.sub(r'[^A-Z0-9]', '', code)
+        code = re.sub(r"[^A-Z0-9]", "", code)
 
         # 如果编码为空或太短，使用默认
         if len(code) < 2:
@@ -240,7 +356,7 @@ class CRUDProject:
         使用简单的加权求和算法生成校验位
         """
         if not code:
-            return 'A'
+            return "A"
 
         # 权重分配
         weights = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29]
@@ -250,7 +366,7 @@ class CRUDProject:
         for i, char in enumerate(code):
             # 字符转数字（A=1, B=2...）
             if char.isalpha():
-                char_value = ord(char.upper()) - ord('A') + 1
+                char_value = ord(char.upper()) - ord("A") + 1
             else:
                 char_value = int(char)
 
@@ -260,9 +376,11 @@ class CRUDProject:
 
         # 计算校验位（A-Z）
         checksum_value = (total % 26) + 1
-        return chr(ord('A') + checksum_value - 1)
+        return chr(ord("A") + checksum_value - 1)
 
-    def create(self, db: Session, *, obj_in: ProjectCreate, created_by: str = None) -> Project:
+    def create(
+        self, db: Session, *, obj_in: ProjectCreate, created_by: str = None
+    ) -> Project:
         """创建项目"""
         # 检查名称是否已存在
         if self.get_by_name(db, obj_in.name):
@@ -273,17 +391,13 @@ class CRUDProject:
 
         # 创建数据对象
         create_data = obj_in.dict()
-        create_data['code'] = code
+        create_data["code"] = code
 
         # 提取权属方关系数据
-        ownership_relations = create_data.pop('ownership_relations', [])
-        ownership_ids = create_data.pop('ownership_ids', [])
+        ownership_relations = create_data.pop("ownership_relations", [])
+        ownership_ids = create_data.pop("ownership_ids", [])
 
-        db_obj = Project(
-            **create_data,
-            created_by=created_by,
-            updated_by=created_by
-        )
+        db_obj = Project(**create_data, created_by=created_by, updated_by=created_by)
         db.add(db_obj)
         db.commit()
         db.refresh(db_obj)
@@ -291,11 +405,12 @@ class CRUDProject:
         # 创建权属方关系
         if ownership_relations:
             from ..models import ProjectOwnershipRelation
+
             for relation in ownership_relations:
                 ownership_relation = ProjectOwnershipRelation(
                     project_id=db_obj.id,
-                    ownership_id=relation['ownership_id'],
-                    is_active=True
+                    ownership_id=relation["ownership_id"],
+                    is_active=True,
                 )
                 db.add(ownership_relation)
             db.commit()
@@ -309,7 +424,7 @@ class CRUDProject:
         *,
         db_obj: Project,
         obj_in: ProjectUpdate,
-        updated_by: str = None
+        updated_by: str = None,
     ) -> Project:
         """更新项目"""
         # 检查名称是否已被其他项目使用
@@ -320,15 +435,15 @@ class CRUDProject:
 
         update_data = obj_in.dict(exclude_unset=True)
         update_data["updated_by"] = updated_by
-        update_data["updated_at"] = datetime.now(timezone.utc)
+        update_data["updated_at"] = datetime.now(UTC)
 
         # 不允许更新编码
         if "code" in update_data:
             del update_data["code"]
 
         # 提取权属方关系数据
-        ownership_relations = update_data.pop('ownership_relations', None)
-        ownership_ids = update_data.pop('ownership_ids', None)
+        ownership_relations = update_data.pop("ownership_relations", None)
+        ownership_ids = update_data.pop("ownership_ids", None)
 
         for field, value in update_data.items():
             setattr(db_obj, field, value)
@@ -346,8 +461,8 @@ class CRUDProject:
             for relation in ownership_relations:
                 ownership_relation = ProjectOwnershipRelation(
                     project_id=db_obj.id,
-                    ownership_id=relation['ownership_id'],
-                    is_active=True
+                    ownership_id=relation["ownership_id"],
+                    is_active=True,
                 )
                 db.add(ownership_relation)
 
@@ -373,10 +488,8 @@ class CRUDProject:
         return db_obj
 
     def search(
-        self,
-        db: Session,
-        search_params: ProjectSearchRequest
-    ) -> Dict[str, Any]:
+        self, db: Session, search_params: ProjectSearchRequest
+    ) -> dict[str, Any]:
         """搜索项目"""
         query = db.query(Project)
 
@@ -386,7 +499,7 @@ class CRUDProject:
                 or_(
                     Project.name.contains(search_params.keyword),
                     Project.code.contains(search_params.keyword),
-                    Project.project_description.contains(search_params.keyword)
+                    Project.project_description.contains(search_params.keyword),
                 )
             )
 
@@ -394,14 +507,20 @@ class CRUDProject:
             query = query.filter(Project.is_active == search_params.is_active)
 
         if search_params.ownership_entity:
-            query = query.filter(Project.ownership_entity.contains(search_params.ownership_entity))
+            query = query.filter(
+                Project.ownership_entity.contains(search_params.ownership_entity)
+            )
 
         # 如果有ownership_id，需要查询项目-权属方关联表
         if search_params.ownership_id:
             from ..models import ProjectOwnershipRelation
-            query = query.join(ProjectOwnershipRelation, Project.id == ProjectOwnershipRelation.project_id).filter(
+
+            query = query.join(
+                ProjectOwnershipRelation,
+                Project.id == ProjectOwnershipRelation.project_id,
+            ).filter(
                 ProjectOwnershipRelation.ownership_id == search_params.ownership_id,
-                ProjectOwnershipRelation.is_active == True
+                ProjectOwnershipRelation.is_active == True,
             )
 
         # 获取总数
@@ -409,29 +528,40 @@ class CRUDProject:
 
         # 分页
         skip = (search_params.page - 1) * search_params.size
-        items = query.order_by(desc(Project.created_at)).offset(skip).limit(search_params.size).all()
+        items = (
+            query.order_by(desc(Project.created_at))
+            .offset(skip)
+            .limit(search_params.size)
+            .all()
+        )
 
         # 为每个项目添加权属方关系和资产计数
-        from ..models import ProjectOwnershipRelation, Ownership
+        from ..models import Ownership, ProjectOwnershipRelation
+
         for project in items:
             # 获取权属方关系
-            ownership_relations = db.query(ProjectOwnershipRelation, Ownership).join(
-                Ownership, ProjectOwnershipRelation.ownership_id == Ownership.id
-            ).filter(
-                ProjectOwnershipRelation.project_id == project.id,
-                ProjectOwnershipRelation.is_active == True
-            ).all()
+            ownership_relations = (
+                db.query(ProjectOwnershipRelation, Ownership)
+                .join(Ownership, ProjectOwnershipRelation.ownership_id == Ownership.id)
+                .filter(
+                    ProjectOwnershipRelation.project_id == project.id,
+                    ProjectOwnershipRelation.is_active == True,
+                )
+                .all()
+            )
 
             # 将关系数据存储为简单属性，而不是SQLAlchemy关系
             project.ownership_relations_data = []
             for relation, ownership in ownership_relations:
                 ownership_name = ownership.name if ownership else None
-                project.ownership_relations_data.append({
-                    'id': relation.id,
-                    'ownership_id': ownership.id,
-                    'ownership_name': ownership_name,
-                    'is_active': relation.is_active
-                })
+                project.ownership_relations_data.append(
+                    {
+                        "id": relation.id,
+                        "ownership_id": ownership.id,
+                        "ownership_name": ownership_name,
+                        "is_active": relation.is_active,
+                    }
+                )
 
             # 添加资产计数
             project.asset_count = self.get_asset_count(db, project.id)
@@ -444,10 +574,10 @@ class CRUDProject:
             "total": total,
             "page": search_params.page,
             "size": search_params.size,
-            "pages": pages
+            "pages": pages,
         }
 
-    def get_statistics(self, db: Session) -> Dict[str, Any]:
+    def get_statistics(self, db: Session) -> dict[str, Any]:
         """获取项目统计信息"""
         # 基础统计
         total_count = db.query(Project).count()
@@ -455,19 +585,33 @@ class CRUDProject:
         inactive_count = total_count - active_count
 
         # 最近创建的项目
-        recent_created = db.query(Project).order_by(desc(Project.created_at)).limit(5).all()
+        recent_created = (
+            db.query(Project).order_by(desc(Project.created_at)).limit(5).all()
+        )
 
         # 项目类型分布
         type_distribution = {}
-        project_types = db.query(Project.project_type).filter(Project.project_type.isnot(None)).all()
+        project_types = (
+            db.query(Project.project_type)
+            .filter(Project.project_type.isnot(None))
+            .all()
+        )
         for pt in project_types:
-            type_distribution[pt.project_type] = type_distribution.get(pt.project_type, 0) + 1
+            type_distribution[pt.project_type] = (
+                type_distribution.get(pt.project_type, 0) + 1
+            )
 
         # 项目状态分布
         status_distribution = {}
-        project_statuses = db.query(Project.project_status).filter(Project.project_status.isnot(None)).all()
+        project_statuses = (
+            db.query(Project.project_status)
+            .filter(Project.project_status.isnot(None))
+            .all()
+        )
         for ps in project_statuses:
-            status_distribution[ps.project_status] = status_distribution.get(ps.project_status, 0) + 1
+            status_distribution[ps.project_status] = (
+                status_distribution.get(ps.project_status, 0) + 1
+            )
 
         # 城市分布
         city_distribution = {}
@@ -477,9 +621,19 @@ class CRUDProject:
 
         # 投资统计
         investment_stats = {
-            "total_investment": sum(p.total_investment or 0 for p in db.query(Project).filter(Project.total_investment.isnot(None)).all()),
-            "total_budget": sum(p.project_budget or 0 for p in db.query(Project).filter(Project.project_budget.isnot(None)).all()),
-            "project_count": total_count
+            "total_investment": sum(
+                p.total_investment or 0
+                for p in db.query(Project)
+                .filter(Project.total_investment.isnot(None))
+                .all()
+            ),
+            "total_budget": sum(
+                p.project_budget or 0
+                for p in db.query(Project)
+                .filter(Project.project_budget.isnot(None))
+                .all()
+            ),
+            "project_count": total_count,
         }
 
         return {
@@ -490,7 +644,7 @@ class CRUDProject:
             "type_distribution": type_distribution,
             "status_distribution": status_distribution,
             "city_distribution": city_distribution,
-            "investment_stats": investment_stats
+            "investment_stats": investment_stats,
         }
 
     def get_asset_count(self, db: Session, project_id: str) -> int:
@@ -505,22 +659,23 @@ class CRUDProject:
 
         db_obj.is_active = not db_obj.is_active
         db_obj.updated_by = updated_by
-        db_obj.updated_at = datetime.now(timezone.utc)
+        db_obj.updated_at = datetime.now(UTC)
 
         db.add(db_obj)
         db.commit()
         db.refresh(db_obj)
         return db_obj
 
-    def get_dropdown_options(self, db: Session) -> List[Dict[str, Any]]:
+    def get_dropdown_options(self, db: Session) -> list[dict[str, Any]]:
         """获取下拉选项"""
-        projects = db.query(Project).filter(Project.is_active == True).order_by(Project.name).all()
+        projects = (
+            db.query(Project)
+            .filter(Project.is_active == True)
+            .order_by(Project.name)
+            .all()
+        )
         return [
-            {
-                "id": project.id,
-                "name": project.name,
-                "code": project.code
-            }
+            {"id": project.id, "name": project.name, "code": project.code}
             for project in projects
         ]
 

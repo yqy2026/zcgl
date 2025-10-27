@@ -1,19 +1,19 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 API响应时间优化器
 提供快速响应、缓存、异步处理等优化功能
 """
 
-import time
-import asyncio
-import logging
 import hashlib
-from typing import Dict, Any, Optional, Callable, List
+import logging
+import time
+from collections.abc import Callable
+from datetime import datetime
 from functools import wraps
-from datetime import datetime, timedelta, timezone
+from typing import Any
 
 logger = logging.getLogger(__name__)
+
 
 class PerformanceOptimizer:
     """API性能优化器"""
@@ -28,11 +28,12 @@ class PerformanceOptimizer:
             "max_response_time": 0.0,
             "slow_requests_count": 0,
             "cache_hit_rate": 0.0,
-            "error_rate": 0.0
+            "error_rate": 0.0,
         }
 
     def timing_decorator(self, target_time_ms: float = 500.0):
         """性能监控装饰器"""
+
         def decorator(func):
             @wraps(func)
             async def wrapper(*args, **kwargs):
@@ -64,6 +65,7 @@ class PerformanceOptimizer:
                     raise
 
             return wrapper
+
         return decorator
 
     def _record_performance_stats(self, response_time: float):
@@ -82,14 +84,16 @@ class PerformanceOptimizer:
 
     def _record_slow_request(self, func_name: str, response_time: float, args, kwargs):
         """记录慢请求"""
-        self.slow_requests.append({
-            "function": func_name,
-            "response_time": response_time,
-            "args_count": len(args) + len(kwargs),
-            "timestamp": datetime.now().isoformat(),
-            "args": {k: str(v) for k, v in list(args) + list(kwargs)},
-            "details": f"响应时间: {response_time:.1f}ms"
-        })
+        self.slow_requests.append(
+            {
+                "function": func_name,
+                "response_time": response_time,
+                "args_count": len(args) + len(kwargs),
+                "timestamp": datetime.now().isoformat(),
+                "args": {k: str(v) for k, v in list(args) + list(kwargs)},
+                "details": f"响应时间: {response_time:.1f}ms",
+            }
+        )
         self.performance_stats["slow_requests_count"] += 1
 
     def _record_error(self, func_name: str, error: str):
@@ -97,7 +101,9 @@ class PerformanceOptimizer:
         self.performance_stats["error_rate"] += 1
         logger.error(f"API错误: {func_name} - {error}")
 
-    async def async_cache_result(self, cache_key: str, func: Callable, *args, **kwargs) -> Any:
+    async def async_cache_result(
+        self, cache_key: str, func: Callable, *args, **kwargs
+    ) -> Any:
         """异步缓存装饰器"""
         # 检查缓存
         if cache_key in self.response_cache:
@@ -123,7 +129,9 @@ class PerformanceOptimizer:
             self.response_cache[cache_key] = (result, datetime.now())
             logger.info(f"结果已缓存: {cache_key}")
         else:
-            logger.info(f"结果未缓存: {cache_key} - {self._should_cache_result(result)}")
+            logger.info(
+                f"结果未缓存: {cache_key} - {self._should_cache_result(result)}"
+            )
 
         # 记录性能
         response_time = (time.time() - start_time) * 1000
@@ -153,15 +161,19 @@ class PerformanceOptimizer:
 
         # 添加关键参数
         if "file" in kwargs:
-            key_parts.append(f"file_{hashlib.md5(kwargs['file'].filename.encode('utf-8')).hexdigest()}")
+            key_parts.append(
+                f"file_{hashlib.md5(kwargs['file'].filename.encode('utf-8')).hexdigest()}"
+            )
 
         if "options" in kwargs:
             options_str = str(sorted(kwargs["options"].items()))
-            key_parts.append(f"options_{hashlib.md5(options_str.encode('utf-8')).hexdigest()}")
+            key_parts.append(
+                f"options_{hashlib.md5(options_str.encode('utf-8')).hexdigest()}"
+            )
 
         return "_".join(key_parts)
 
-    def get_performance_report(self) -> Dict[str, Any]:
+    def get_performance_report(self) -> dict[str, Any]:
         """获取性能报告"""
         now = datetime.now()
 
@@ -170,21 +182,38 @@ class PerformanceOptimizer:
             "performance_stats": self.performance_stats,
             "cache_stats": {
                 "cache_size": len(self.response_cache),
-                "cache_hit_rate": self.performance_stats["cache_hit_rate"] / max(self.performance_stats["total_requests"], 1),
-                "cache_hit_details": [f"{k}: {v[0]},{v[1].isoformat()}" for k, v in list(self.response_cache.items())[-5:]]
+                "cache_hit_rate": self.performance_stats["cache_hit_rate"]
+                / max(self.performance_stats["total_requests"], 1),
+                "cache_hit_details": [
+                    f"{k}: {v[0]},{v[1].isoformat()}"
+                    for k, v in list(self.response_cache.items())[-5:]
+                ],
             },
             "slow_requests_summary": {
                 "count": len(self.slow_requests),
-                "count_in_last_hour": len([r for r in self.slow_requests
-                                       if (now - datetime.fromisoformat(r["timestamp"])).total_seconds() < 3600]),
-                "avg_response_time": sum(r["response_time"] for r in self.slow_requests) / len(self.slow_requests) if self.slow_requests else 0,
-                "slowest_requests": sorted(self.slow_requests, key=lambda x: x["response_time"], reverse=True)[:3]
+                "count_in_last_hour": len(
+                    [
+                        r
+                        for r in self.slow_requests
+                        if (
+                            now - datetime.fromisoformat(r["timestamp"])
+                        ).total_seconds()
+                        < 3600
+                    ]
+                ),
+                "avg_response_time": sum(r["response_time"] for r in self.slow_requests)
+                / len(self.slow_requests)
+                if self.slow_requests
+                else 0,
+                "slowest_requests": sorted(
+                    self.slow_requests, key=lambda x: x["response_time"], reverse=True
+                )[:3],
             },
             "recommendations": self._generate_optimization_recommendations(),
-            "request_patterns": self._analyze_request_patterns()
+            "request_patterns": self._analyze_request_patterns(),
         }
 
-    def _generate_optimization_recommendations(self) -> List[str]:
+    def _generate_optimization_recommendations(self) -> list[str]:
         """生成优化建议"""
         recommendations = []
 
@@ -199,7 +228,11 @@ class PerformanceOptimizer:
             recommendations.append("建议减少外部API调用时间")
 
         # 错误率建议
-        error_rate = (self.performance_stats["error_rate"] / total_requests) * 100 if total_requests > 0 else 0
+        error_rate = (
+            (self.performance_stats["error_rate"] / total_requests) * 100
+            if total_requests > 0
+            else 0
+        )
         if error_rate > 5:
             recommendations.append("错误率较高，建议增强错误处理机制")
 
@@ -208,7 +241,11 @@ class PerformanceOptimizer:
             recommendations.append("慢请求较多，建议分析瓶颈并优化")
 
         # 缓存效率建议
-        cache_hit_rate = self.performance_stats["cache_hit_rate"] / total_requests * 100 if total_requests > 0 else 0
+        cache_hit_rate = (
+            self.performance_stats["cache_hit_rate"] / total_requests * 100
+            if total_requests > 0
+            else 0
+        )
         if cache_hit_rate < 30:
             recommendations.append("缓存命中率较低，建议增加缓存策略")
 
@@ -217,7 +254,7 @@ class PerformanceOptimizer:
 
         return recommendations
 
-    def _analyze_request_patterns(self) -> Dict[str, Any]:
+    def _analyze_request_patterns(self) -> dict[str, Any]:
         """分析请求模式"""
         if not self.slow_requests:
             return {"patterns": [], "analysis": "无慢请求数据"}
@@ -226,14 +263,18 @@ class PerformanceOptimizer:
         functions = {}
         for request in self.slow_requests[-10:]:  # 最近10个慢请求
             func_name = request["function"]
-            functions[func_name] = functions.get(func_name, {"count": 0, "avg_time": 0.0})
+            functions[func_name] = functions.get(
+                func_name, {"count": 0, "avg_time": 0.0}
+            )
             functions[func_name]["count"] += 1
             functions[func_name]["avg_time"] += request["response_time"]
 
         return {
-            "patterns": [{"function": k, "count": v["count"], "avg_time": v["avg_time"]}
-                     for k, v in functions.items()],
-            "analysis": "已分析慢请求模式，建议针对性优化"
+            "patterns": [
+                {"function": k, "count": v["count"], "avg_time": v["avg_time"]}
+                for k, v in functions.items()
+            ],
+            "analysis": "已分析慢请求模式，建议针对性优化",
         }
 
     def clear_cache(self):
@@ -256,25 +297,31 @@ class PerformanceOptimizer:
 
         logger.info(f"已清空{len(keys_to_remove)}个过期缓存条目")
 
+
 # 创建全局性能优化器实例
 performance_optimizer = PerformanceOptimizer()
 logger.info("API性能优化器初始化完成")
+
 
 def optimize_api_response_time(target_ms: float = 500.0):
     """快速响应时间优化装饰器"""
     return performance_optimizer.timing_decorator(target_ms)
 
+
 def cache_api_result(cache_duration_minutes: int = 5):
     """异步缓存装饰器"""
     return performance_optimizer.async_cache_result
+
 
 def get_performance_stats():
     """获取性能统计"""
     return performance_optimizer.get_performance_report()
 
+
 def clear_performance_cache():
     """清空性能缓存"""
     return performance_optimizer.clear_cache()
+
 
 # 性能监控中间件
 class PerformanceMiddleware:
@@ -290,18 +337,20 @@ class PerformanceMiddleware:
         response = await call_next(request)
 
         # 记录性能（如果response有body）
-        if hasattr(response, 'body'):
+        if hasattr(response, "body"):
             response_time = (time.time() - start_time) * 1000
             self.optimizer._record_performance_stats(response_time)
 
             # 添加性能信息到响应头
-            if hasattr(response, 'headers'):
+            if hasattr(response, "headers"):
                 response.headers["X-Response-Time"] = f"{response_time:.1f}ms"
                 if response_time > 1000:
                     response.headers["X-Performance-Warning"] = "slow-response"
 
             # 如果响应太慢，记录详细日志
             if response_time > 2000:  # 大于2秒
-                logger.warning(f"慢响应检测: {request.method} {request.url} - {response_time:.1f}ms")
+                logger.warning(
+                    f"慢响应检测: {request.method} {request.url} - {response_time:.1f}ms"
+                )
 
         return response

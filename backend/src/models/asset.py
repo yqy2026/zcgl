@@ -2,21 +2,33 @@
 资产相关数据库模型
 """
 
-from sqlalchemy import Column, String, Float, DateTime, Integer, Text, ForeignKey, JSON, Boolean, Date, DECIMAL
-from sqlalchemy.orm import relationship
-from datetime import datetime, timezone
-from decimal import Decimal
 import uuid
+from datetime import datetime
+from decimal import Decimal
+
+from sqlalchemy import (
+    DECIMAL,
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
+from sqlalchemy.orm import relationship
 
 from ..database import Base
 
 
 class Asset(Base):
     """资产模型"""
+
     __tablename__ = "assets"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    
+
     # 基本信息 - 按照权属方、权属类别、项目名称、物业名称、物业地址顺序
     ownership_entity = Column(String(200), nullable=False, comment="权属方")
     ownership_category = Column(String(100), comment="权属类别")
@@ -29,7 +41,7 @@ class Asset(Base):
     business_category = Column(String(100), comment="业态类别")
     is_litigated = Column(Boolean, nullable=False, default=False, comment="是否涉诉")
     notes = Column(Text, comment="备注")
-    
+
     # 面积相关字段
     land_area = Column(DECIMAL(12, 2), comment="土地面积（平方米）")
     actual_property_area = Column(DECIMAL(12, 2), comment="实际房产面积（平方米）")
@@ -38,25 +50,29 @@ class Asset(Base):
     # unrented_area 和 occupancy_rate 改为计算字段，不存储在数据库中
     non_commercial_area = Column(DECIMAL(12, 2), comment="非经营物业面积（平方米）")
     # occupancy_rate 字段已移除，改为计算字段
-    include_in_occupancy_rate = Column(Boolean, nullable=False, default=True, comment="是否计入出租率统计")
-    
+    include_in_occupancy_rate = Column(
+        Boolean, nullable=False, default=True, comment="是否计入出租率统计"
+    )
+
     # 用途相关字段
     certificated_usage = Column(String(100), comment="证载用途")
     actual_usage = Column(String(100), comment="实际用途")
-    
+
     # 租户相关字段
     tenant_name = Column(String(200), comment="租户名称")
     tenant_type = Column(String(20), comment="租户类型")
-    
+
     # 合同相关字段
     lease_contract_number = Column(String(100), comment="租赁合同编号")
     contract_start_date = Column(Date, comment="合同开始日期")
     contract_end_date = Column(Date, comment="合同结束日期")
     monthly_rent = Column(DECIMAL(15, 2), comment="月租金（元）")
     deposit = Column(DECIMAL(15, 2), comment="押金（元）")
-    is_sublease = Column(Boolean, nullable=False, default=False, comment="是否分租/转租")
+    is_sublease = Column(
+        Boolean, nullable=False, default=False, comment="是否分租/转租"
+    )
     sublease_notes = Column(Text, comment="分租/转租备注")
-    
+
     # 管理相关字段
     business_model = Column(String(50), comment="接收模式")
     operation_status = Column(String(20), comment="经营状态")
@@ -72,9 +88,9 @@ class Asset(Base):
 
     # 终端合同相关字段
     terminal_contract_files = Column(Text, comment="终端合同文件")
-    
+
     # 项目相关字段
-    
+
     # 系统字段
     data_status = Column(String(20), nullable=False, default="正常", comment="数据状态")
     version = Column(Integer, nullable=False, default=1, comment="版本号")
@@ -86,21 +102,31 @@ class Asset(Base):
     # last_audit_date, audit_status, auditor 字段已移除
     audit_notes = Column(Text, comment="审核备注")
 
-   
-
     # 时间戳
     created_at = Column(DateTime, default=datetime.utcnow, comment="创建时间")
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")
-    
+    updated_at = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间"
+    )
+
     # 多租户支持
     tenant_id = Column(String(50), nullable=True, comment="租户ID")
-    
+
     # 关联关系
-    history_records = relationship("AssetHistory", back_populates="asset", cascade="all, delete-orphan")
-    documents = relationship("AssetDocument", back_populates="asset", cascade="all, delete-orphan")
-    rent_contracts = relationship("RentContract", back_populates="asset", cascade="all, delete-orphan")
-    project_id = Column(String, ForeignKey("projects.id"), nullable=True, comment="项目ID")
-    ownership_id = Column(String, ForeignKey("ownerships.id"), nullable=True, comment="权属方ID")
+    history_records = relationship(
+        "AssetHistory", back_populates="asset", cascade="all, delete-orphan"
+    )
+    documents = relationship(
+        "AssetDocument", back_populates="asset", cascade="all, delete-orphan"
+    )
+    rent_contracts = relationship(
+        "RentContract", back_populates="asset", cascade="all, delete-orphan"
+    )
+    project_id = Column(
+        String, ForeignKey("projects.id"), nullable=True, comment="项目ID"
+    )
+    ownership_id = Column(
+        String, ForeignKey("ownerships.id"), nullable=True, comment="权属方ID"
+    )
 
     # 关系定义
     project = relationship("Project", back_populates="assets")
@@ -110,23 +136,23 @@ class Asset(Base):
     @property
     def unrented_area(self) -> Decimal:
         """计算未出租面积"""
-        rentable = self.rentable_area or Decimal('0')
-        rented = self.rented_area or Decimal('0')
-        return max(rentable - rented, Decimal('0'))
+        rentable = self.rentable_area or Decimal("0")
+        rented = self.rented_area or Decimal("0")
+        return max(rentable - rented, Decimal("0"))
 
     # 计算属性 - 出租率（自动计算，不存储）
     @property
     def occupancy_rate(self) -> Decimal:
         """计算出租率（百分比）"""
         if not self.include_in_occupancy_rate:
-            return Decimal('0')
+            return Decimal("0")
 
-        rentable = self.rentable_area or Decimal('0')
+        rentable = self.rentable_area or Decimal("0")
         if rentable == 0:
-            return Decimal('0')
+            return Decimal("0")
 
-        rented = self.rented_area or Decimal('0')
-        rate = (rented / rentable) * Decimal('100')
+        rented = self.rented_area or Decimal("0")
+        rate = (rented / rentable) * Decimal("100")
         return round(rate, 2)
 
     def __repr__(self):
@@ -135,6 +161,7 @@ class Asset(Base):
 
 class AssetHistory(Base):
     """资产变更历史模型"""
+
     __tablename__ = "asset_history"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -146,13 +173,13 @@ class AssetHistory(Base):
     operator = Column(String(100), comment="操作人")
     operation_time = Column(DateTime, default=datetime.utcnow, comment="操作时间")
     description = Column(Text, comment="操作描述")
-    
+
     # 新增审计字段
     change_reason = Column(String(200), nullable=True, comment="变更原因")
     ip_address = Column(String(45), nullable=True, comment="IP地址")
     user_agent = Column(Text, nullable=True, comment="用户代理")
     session_id = Column(String(100), nullable=True, comment="会话ID")
-    
+
     # 关联关系
     asset = relationship("Asset", back_populates="history_records")
 
@@ -162,6 +189,7 @@ class AssetHistory(Base):
 
 class AssetDocument(Base):
     """资产文档模型"""
+
     __tablename__ = "asset_documents"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -174,7 +202,7 @@ class AssetDocument(Base):
     upload_time = Column(DateTime, default=datetime.utcnow, comment="上传时间")
     uploader = Column(String(100), comment="上传人")
     description = Column(Text, comment="文档描述")
-    
+
     # 关联关系
     asset = relationship("Asset", back_populates="documents")
 
@@ -184,6 +212,7 @@ class AssetDocument(Base):
 
 class SystemDictionary(Base):
     """系统数据字典模型"""
+
     __tablename__ = "system_dictionaries"
 
     id = Column(String(50), primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -193,8 +222,16 @@ class SystemDictionary(Base):
     dict_value = Column(String(100), nullable=False, comment="字典值")
     sort_order = Column(Integer, nullable=False, default=0, comment="排序")
     is_active = Column(Boolean, nullable=False, default=True, comment="是否启用")
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, comment="创建时间")
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")
+    created_at = Column(
+        DateTime, nullable=False, default=datetime.utcnow, comment="创建时间"
+    )
+    updated_at = Column(
+        DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        comment="更新时间",
+    )
 
     def __repr__(self):
         return f"<SystemDictionary(type={self.dict_type}, code={self.dict_code}, label={self.dict_label})>"
@@ -202,6 +239,7 @@ class SystemDictionary(Base):
 
 class AssetCustomField(Base):
     """资产自定义字段模型"""
+
     __tablename__ = "asset_custom_fields"
 
     id = Column(String(50), primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -216,8 +254,16 @@ class AssetCustomField(Base):
     validation_rules = Column(Text, nullable=True, comment="验证规则(JSON)")
     help_text = Column(Text, nullable=True, comment="帮助文本")
     description = Column(Text, nullable=True, comment="描述")
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, comment="创建时间")
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")
+    created_at = Column(
+        DateTime, nullable=False, default=datetime.utcnow, comment="创建时间"
+    )
+    updated_at = Column(
+        DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        comment="更新时间",
+    )
 
     def __repr__(self):
         return f"<AssetCustomField(field_name={self.field_name}, display_name={self.display_name})>"
@@ -225,16 +271,29 @@ class AssetCustomField(Base):
 
 class ProjectOwnershipRelation(Base):
     """项目-权属方多对多关系表（简化版）"""
+
     __tablename__ = "project_ownership_relations"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    project_id = Column(String, ForeignKey("projects.id"), nullable=False, comment="项目ID")
-    ownership_id = Column(String, ForeignKey("ownerships.id"), nullable=False, comment="权属方ID")
+    project_id = Column(
+        String, ForeignKey("projects.id"), nullable=False, comment="项目ID"
+    )
+    ownership_id = Column(
+        String, ForeignKey("ownerships.id"), nullable=False, comment="权属方ID"
+    )
     is_active = Column(Boolean, nullable=False, default=True, comment="是否有效")
 
     # 时间戳
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, comment="创建时间")
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")
+    created_at = Column(
+        DateTime, nullable=False, default=datetime.utcnow, comment="创建时间"
+    )
+    updated_at = Column(
+        DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        comment="更新时间",
+    )
     created_by = Column(String(100), nullable=True, comment="创建人")
     updated_by = Column(String(100), nullable=True, comment="更新人")
 
@@ -248,6 +307,7 @@ class ProjectOwnershipRelation(Base):
 
 class Project(Base):
     """项目模型"""
+
     __tablename__ = "projects"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -258,7 +318,9 @@ class Project(Base):
     code = Column(String(100), unique=True, nullable=False, comment="项目编码")
     project_type = Column(String(50), nullable=True, comment="项目类型")
     project_scale = Column(String(50), nullable=True, comment="项目规模")
-    project_status = Column(String(50), nullable=False, default="规划中", comment="项目状态")
+    project_status = Column(
+        String(50), nullable=False, default="规划中", comment="项目状态"
+    )
     start_date = Column(Date, nullable=True, comment="开始日期")
     end_date = Column(Date, nullable=True, comment="结束日期")
     expected_completion_date = Column(Date, nullable=True, comment="预计完成日期")
@@ -298,14 +360,28 @@ class Project(Base):
     data_status = Column(String(20), nullable=False, default="正常", comment="数据状态")
 
     # 时间戳
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, comment="创建时间")
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")
+    created_at = Column(
+        DateTime, nullable=False, default=datetime.utcnow, comment="创建时间"
+    )
+    updated_at = Column(
+        DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        comment="更新时间",
+    )
     created_by = Column(String(100), nullable=True, comment="创建人")
     updated_by = Column(String(100), nullable=True, comment="更新人")
 
     # 关联关系
-    assets = relationship("Asset", back_populates="project", cascade="all, delete-orphan")
-    ownership_relations = relationship("ProjectOwnershipRelation", back_populates="project", cascade="all, delete-orphan")
+    assets = relationship(
+        "Asset", back_populates="project", cascade="all, delete-orphan"
+    )
+    ownership_relations = relationship(
+        "ProjectOwnershipRelation",
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self):
         return f"<Project(id={self.id}, name={self.name}, code={self.code})>"
@@ -313,6 +389,7 @@ class Project(Base):
 
 class Ownership(Base):
     """权属方模型"""
+
     __tablename__ = "ownerships"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -331,15 +408,29 @@ class Ownership(Base):
     data_status = Column(String(20), nullable=False, default="正常", comment="数据状态")
 
     # 时间戳
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, comment="创建时间")
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")
+    created_at = Column(
+        DateTime, nullable=False, default=datetime.utcnow, comment="创建时间"
+    )
+    updated_at = Column(
+        DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        comment="更新时间",
+    )
     created_by = Column(String(100), nullable=True, comment="创建人")
     updated_by = Column(String(100), nullable=True, comment="更新人")
 
     # 关联关系
-    owned_rent_contracts = relationship("RentContract", back_populates="ownership", cascade="all, delete-orphan")
+    owned_rent_contracts = relationship(
+        "RentContract", back_populates="ownership", cascade="all, delete-orphan"
+    )
     assets = relationship("Asset", back_populates="ownership")
-    ownership_relations = relationship("ProjectOwnershipRelation", back_populates="ownership", cascade="all, delete-orphan")
+    ownership_relations = relationship(
+        "ProjectOwnershipRelation",
+        back_populates="ownership",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self):
         return f"<Ownership(id={self.id}, name={self.name}, code={self.code})>"

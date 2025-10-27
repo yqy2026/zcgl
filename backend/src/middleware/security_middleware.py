@@ -3,20 +3,21 @@ FastAPI安全中间件
 提供请求验证、文件上传安全和速率限制功能
 """
 
-import time
-from typing import Callable
-from fastapi import Request, Response, HTTPException, status, UploadFile
-from starlette.middleware.base import BaseHTTPMiddleware
-from fastapi.responses import JSONResponse
 import logging
-import asyncio
+import time
 from collections import defaultdict
+from collections.abc import Callable
 
-from ..core.security import RateLimiter, RequestSecurity
-from ..core.logging_security import security_auditor
+from fastapi import HTTPException, Request, Response, status
+from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
+
 from ..core.exception_handler import ValidationException
+from ..core.logging_security import security_auditor
+from ..core.security import RateLimiter
 
 logger = logging.getLogger(__name__)
+
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """安全头部中间件"""
@@ -29,11 +30,14 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
-        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Strict-Transport-Security"] = (
+            "max-age=31536000; includeSubDomains"
+        )
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Content-Security-Policy"] = "default-src 'self'"
 
         return response
+
 
 class RequestValidationMiddleware(BaseHTTPMiddleware):
     """请求验证中间件"""
@@ -45,8 +49,15 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         self.request_count = defaultdict(int)
         self.blocked_ips = {}
         self.suspicious_patterns = [
-            r'<script', r'javascript:', r'vbscript:', r'onload=', r'onerror=',
-            r'document\.cookie', r'eval\(', r'alert\(', r'window\.'
+            r"<script",
+            r"javascript:",
+            r"vbscript:",
+            r"onload=",
+            r"onerror=",
+            r"document\.cookie",
+            r"eval\(",
+            r"alert\(",
+            r"window\.",
         ]
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
@@ -59,16 +70,17 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
             if self._is_ip_blocked(client_ip):
                 await self._log_blocked_request(request, client_ip, "IP_BLOCKED")
                 raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="IP地址已被封禁"
+                    status_code=status.HTTP_403_FORBIDDEN, detail="IP地址已被封禁"
                 )
 
             # 请求频率限制
             if not self._check_rate_limit(client_ip, request):
-                await self._log_blocked_request(request, client_ip, "RATE_LIMIT_EXCEEDED")
+                await self._log_blocked_request(
+                    request, client_ip, "RATE_LIMIT_EXCEEDED"
+                )
                 raise HTTPException(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    detail="请求过于频繁，请稍后重试"
+                    detail="请求过于频繁，请稍后重试",
                 )
 
             # 请求内容验证
@@ -87,8 +99,7 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         except Exception as e:
             logger.error(f"Security middleware error: {str(e)}")
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="请求处理失败"
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="请求处理失败"
             )
 
     def _get_client_ip(self, request: Request) -> str:
@@ -108,13 +119,20 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         """检查IP是否被封禁"""
         # 本地开发环境IP白名单
         local_whitelist = [
-            '127.0.0.1', 'localhost', '::1',
-            '0.0.0.0',  # Docker/容器环境
-            '192.168.1.90'  # 当前本地网络IP
+            "127.0.0.1",
+            "localhost",
+            "::1",
+            "0.0.0.0",  # Docker/容器环境
+            "192.168.1.90",  # 当前本地网络IP
         ]
 
         # 如果是本地IP，直接允许
-        if ip in local_whitelist or ip.startswith('192.168.') or ip.startswith('10.') or ip.startswith('172.'):
+        if (
+            ip in local_whitelist
+            or ip.startswith("192.168.")
+            or ip.startswith("10.")
+            or ip.startswith("172.")
+        ):
             # 如果本地IP被封禁，清除封禁记录
             if ip in self.blocked_ips:
                 del self.blocked_ips[ip]
@@ -134,23 +152,29 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
     def _check_rate_limit(self, ip: str, request: Request) -> bool:
         """检查请求频率限制"""
         # 本地开发环境更宽松的限制
-        is_local = (ip in ['127.0.0.1', 'localhost', '::1', '0.0.0.0'] or
-                   ip.startswith('192.168.') or ip.startswith('10.') or ip.startswith('172.'))
+        is_local = (
+            ip in ["127.0.0.1", "localhost", "::1", "0.0.0.0"]
+            or ip.startswith("192.168.")
+            or ip.startswith("10.")
+            or ip.startswith("172.")
+        )
 
         # 不同请求类型的限制
         path = request.url.path
         if path is None:
-            path = ''
+            path = ""
 
-        if path.startswith('/api/v1/pdf_import'):
+        if path.startswith("/api/v1/pdf_import"):
             # PDF导入限制：本地每分钟最多50次，生产环境每分钟最多5次
             max_requests = 50 if is_local else 5
-            return self.rate_limiter.check_rate_limit(f"{ip}:pdf_import", max_requests, 60)
-        elif path.startswith('/api/v1/excel'):
+            return self.rate_limiter.check_rate_limit(
+                f"{ip}:pdf_import", max_requests, 60
+            )
+        elif path.startswith("/api/v1/excel"):
             # Excel操作限制：本地每分钟最多100次，生产环境每分钟最多10次
             max_requests = 100 if is_local else 10
             return self.rate_limiter.check_rate_limit(f"{ip}:excel", max_requests, 60)
-        elif request.method == 'POST':
+        elif request.method == "POST":
             # POST请求限制：本地每分钟最多300次，生产环境每分钟最多30次
             max_requests = 300 if is_local else 30
             return self.rate_limiter.check_rate_limit(f"{ip}:post", max_requests, 60)
@@ -180,7 +204,13 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         # 检查查询参数
         query_params = dict(request.query_params)
         for key, value in query_params.items():
-            if value is not None and isinstance(value, str) and any(pattern in value.lower() for pattern in self.suspicious_patterns):
+            if (
+                value is not None
+                and isinstance(value, str)
+                and any(
+                    pattern in value.lower() for pattern in self.suspicious_patterns
+                )
+            ):
                 await self._log_suspicious_request(request, "SUSPICIOUS_QUERY_PARAM")
                 break
 
@@ -196,8 +226,8 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
                 "reason": reason,
                 "path": request.url.path,
                 "method": request.method,
-                "timestamp": time.time()
-            }
+                "timestamp": time.time(),
+            },
         )
 
         # 临时封禁IP
@@ -219,12 +249,13 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
                 "path": request.url.path,
                 "method": request.method,
                 "query_params": dict(request.query_params),
-                "timestamp": time.time()
-            }
+                "timestamp": time.time(),
+            },
         )
 
-    async def _log_request_stats(self, request: Request, response: Response,
-                                start_time: float, ip: str):
+    async def _log_request_stats(
+        self, request: Request, response: Response, start_time: float, ip: str
+    ):
         """记录请求统计信息"""
         processing_time = time.time() - start_time
 
@@ -239,12 +270,13 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
                     "path": request.url.path,
                     "method": request.method,
                     "processing_time": processing_time,
-                    "status_code": response.status_code
-                }
+                    "status_code": response.status_code,
+                },
             )
 
         # 更新请求计数
         self.request_count[ip] += 1
+
 
 class FileUploadSecurityMiddleware(BaseHTTPMiddleware):
     """文件上传安全中间件"""
@@ -267,8 +299,8 @@ class FileUploadSecurityMiddleware(BaseHTTPMiddleware):
                     content={
                         "success": False,
                         "message": str(e),
-                        "error_type": "validation_error"
-                    }
+                        "error_type": "validation_error",
+                    },
                 )
             except Exception as e:
                 logger.error(f"File upload security check failed: {str(e)}")
@@ -277,8 +309,8 @@ class FileUploadSecurityMiddleware(BaseHTTPMiddleware):
                     content={
                         "success": False,
                         "message": "文件上传验证失败",
-                        "error_type": "security_error"
-                    }
+                        "error_type": "security_error",
+                    },
                 )
 
         return await call_next(request)
@@ -291,15 +323,15 @@ class FileUploadSecurityMiddleware(BaseHTTPMiddleware):
         if content_length > self.max_file_size:
             raise ValidationException(
                 f"请求过大: {content_length / (1024 * 1024):.2f}MB",
-                details={"max_size": self.max_file_size / (1024 * 1024)}
+                details={"max_size": self.max_file_size / (1024 * 1024)},
             )
 
         # 检查文件数量限制
         path = request.url.path
-        if path and path.startswith('/api/v1/excel'):
+        if path and path.startswith("/api/v1/excel"):
             # Excel导入限制：单次最多上传10个文件
             max_files = 10
-        elif path and path.startswith('/api/v1/pdf_import'):
+        elif path and path.startswith("/api/v1/pdf_import"):
             # PDF导入限制：单次最多上传5个文件
             max_files = 5
         else:
@@ -308,13 +340,23 @@ class FileUploadSecurityMiddleware(BaseHTTPMiddleware):
         # 注意：这里不能直接读取request.body，因为流已经被消耗
         # 实际的文件验证需要在具体的API端点中进行
 
+
 class CORSExtendedMiddleware(BaseHTTPMiddleware):
     """扩展的CORS中间件"""
 
     def __init__(self, app, allowed_origins: list = None, allowed_methods: list = None):
         super().__init__(app)
-        self.allowed_origins = allowed_origins or ["http://localhost:5173", "http://localhost:3000"]
-        self.allowed_methods = allowed_methods or ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+        self.allowed_origins = allowed_origins or [
+            "http://localhost:5173",
+            "http://localhost:3000",
+        ]
+        self.allowed_methods = allowed_methods or [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE",
+            "OPTIONS",
+        ]
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """处理CORS和安全头部"""
@@ -329,7 +371,9 @@ class CORSExtendedMiddleware(BaseHTTPMiddleware):
         origin = request.headers.get("origin")
         if origin and (origin in self.allowed_origins or "localhost" in origin):
             response.headers["Access-Control-Allow-Origin"] = origin
-            response.headers["Access-Control-Allow-Methods"] = ", ".join(self.allowed_methods)
+            response.headers["Access-Control-Allow-Methods"] = ", ".join(
+                self.allowed_methods
+            )
             response.headers["Access-Control-Allow-Headers"] = (
                 "Authorization, Content-Type, X-Requested-With, Accept, Origin"
             )
@@ -343,6 +387,7 @@ class CORSExtendedMiddleware(BaseHTTPMiddleware):
 
         return response
 
+
 def create_security_middleware(app, config: dict = None):
     """
     创建安全中间件链
@@ -355,13 +400,19 @@ def create_security_middleware(app, config: dict = None):
 
     # 按顺序添加中间件
     app.add_middleware(SecurityHeadersMiddleware)
-    app.add_middleware(CORSExtendedMiddleware,
-                      allowed_origins=config.get("allowed_origins"),
-                      allowed_methods=config.get("allowed_methods"))
-    app.add_middleware(FileUploadSecurityMiddleware,
-                      max_file_size=config.get("max_file_size", 50 * 1024 * 1024))
-    app.add_middleware(RequestValidationMiddleware,
-                      rate_limit_config=config.get("rate_limit", {}))
+    app.add_middleware(
+        CORSExtendedMiddleware,
+        allowed_origins=config.get("allowed_origins"),
+        allowed_methods=config.get("allowed_methods"),
+    )
+    app.add_middleware(
+        FileUploadSecurityMiddleware,
+        max_file_size=config.get("max_file_size", 50 * 1024 * 1024),
+    )
+    app.add_middleware(
+        RequestValidationMiddleware, rate_limit_config=config.get("rate_limit", {})
+    )
+
 
 # 创建中间件工厂函数
 def setup_security_middleware(app):
@@ -374,8 +425,8 @@ def setup_security_middleware(app):
             "pdf_import": {"max_requests": 5, "time_window": 60},
             "excel": {"max_requests": 10, "time_window": 60},
             "post": {"max_requests": 30, "time_window": 60},
-            "default": {"max_requests": 100, "time_window": 60}
-        }
+            "default": {"max_requests": 100, "time_window": 60},
+        },
     }
 
     create_security_middleware(app, config)

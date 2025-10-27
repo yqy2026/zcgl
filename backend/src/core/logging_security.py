@@ -3,14 +3,14 @@
 提供敏感信息脱敏、结构化日志和安全审计功能
 """
 
-import logging
-import json
-import re
 import hashlib
+import json
+import logging
+import re
 import uuid
-from typing import Any, Dict, Optional, List, Set
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from .config_manager import get_config
 
@@ -22,53 +22,70 @@ class SensitiveDataFilter(logging.Filter):
         super().__init__()
         self.sensitive_patterns = [
             # 密码相关
-            (r'(?i)(password|pwd|pass)\s*[:=]\s*[^\s,}]+', 'password=***'),
-            (r'(?i)(token|jwt)\s*[:=]\s*[^\s,}]+', 'token=***'),
-            (r'(?i)(secret|key)\s*[:=]\s*[^\s,}]+', 'secret=***'),
-
+            (r"(?i)(password|pwd|pass)\s*[:=]\s*[^\s,}]+", "password=***"),
+            (r"(?i)(token|jwt)\s*[:=]\s*[^\s,}]+", "token=***"),
+            (r"(?i)(secret|key)\s*[:=]\s*[^\s,}]+", "secret=***"),
             # 个人信息
-            (r'(?i)(email|mail)\s*[:=]\s*[^\s,}]+@', 'email=***@'),
-            (r'(?i)(phone|mobile|tel)\s*[:=]\s*[0-9\-\s\(\)]{10,}', 'phone=***'),
-            (r'(?i)(idcard|身份证)\s*[:=]\s*[0-9]{15,}', 'idcard=***'),
-
+            (r"(?i)(email|mail)\s*[:=]\s*[^\s,}]+@", "email=***@"),
+            (r"(?i)(phone|mobile|tel)\s*[:=]\s*[0-9\-\s\(\)]{10,}", "phone=***"),
+            (r"(?i)(idcard|身份证)\s*[:=]\s*[0-9]{15,}", "idcard=***"),
             # 身份证号码（15位或18位）
-            (r'\b[1-9]\d{5}(19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\d{3}[\dXx]\b', 'idcard=***'),
-            (r'\b[1-9]\d{7}(0[1-9]|1[0-2])\d{4}\b', 'idcard=***'),
-
+            (
+                r"\b[1-9]\d{5}(19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\d{3}[\dXx]\b",
+                "idcard=***",
+            ),
+            (r"\b[1-9]\d{7}(0[1-9]|1[0-2])\d{4}\b", "idcard=***"),
             # 手机号码
-            (r'\b1[3-9]\d{9}\b', 'phone=***'),
-
+            (r"\b1[3-9]\d{9}\b", "phone=***"),
             # 银行卡号
-            (r'\b[1-9]\d{12,19}\b', 'card=***'),
-
+            (r"\b[1-9]\d{12,19}\b", "card=***"),
             # IP地址（可选，根据需求）
             # (r'\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b', 'ip=***'),
-
             # URL中的敏感参数
-            (r'(?i)(token|key|secret)=[^&\s]+', r'\1=***'),
+            (r"(?i)(token|key|secret)=[^&\s]+", r"\1=***"),
         ]
 
         # 敏感字段名称列表
         self.sensitive_fields = {
-            'password', 'pwd', 'passwd', 'pass',
-            'token', 'jwt', 'access_token', 'refresh_token',
-            'secret', 'secret_key', 'private_key', 'api_key',
-            'credit_card', 'card_number', 'cc_number',
-            'ssn', 'social_security_number',
-            'bank_account', 'account_number',
-            'email_address', 'email',
-            'phone_number', 'mobile', 'telephone',
-            'id_card', 'idcard', 'identity_card',
-            'user_id', 'user_id_hash',
-            'session_id', 'session_token',
+            "password",
+            "pwd",
+            "passwd",
+            "pass",
+            "token",
+            "jwt",
+            "access_token",
+            "refresh_token",
+            "secret",
+            "secret_key",
+            "private_key",
+            "api_key",
+            "credit_card",
+            "card_number",
+            "cc_number",
+            "ssn",
+            "social_security_number",
+            "bank_account",
+            "account_number",
+            "email_address",
+            "email",
+            "phone_number",
+            "mobile",
+            "telephone",
+            "id_card",
+            "idcard",
+            "identity_card",
+            "user_id",
+            "user_id_hash",
+            "session_id",
+            "session_token",
         }
 
     def filter(self, record: logging.LogRecord) -> logging.LogRecord:
         """过滤敏感信息"""
-        if hasattr(record, 'msg'):
+        if hasattr(record, "msg"):
             record.msg = self._filter_sensitive_data(record.msg)
 
-        if hasattr(record, 'args'):
+        if hasattr(record, "args"):
             record.args = tuple(
                 self._filter_sensitive_data(str(arg)) if isinstance(arg, str) else arg
                 for arg in record.args
@@ -85,11 +102,13 @@ class SensitiveDataFilter(logging.Filter):
 
         # 应用正则模式过滤
         for pattern, replacement in self.sensitive_patterns:
-            filtered_text = re.sub(pattern, replacement, filtered_text, flags=re.IGNORECASE)
+            filtered_text = re.sub(
+                pattern, replacement, filtered_text, flags=re.IGNORECASE
+            )
 
         # 过滤JSON中的敏感字段
         try:
-            if text.strip().startswith('{') or text.strip().startswith('['):
+            if text.strip().startswith("{") or text.strip().startswith("["):
                 data = json.loads(text)
                 filtered_data = self._filter_dict(data)
                 return json.dumps(filtered_data, ensure_ascii=False)
@@ -113,7 +132,7 @@ class SensitiveDataFilter(logging.Filter):
     def _filter_value(self, value: Any, is_sensitive: bool) -> Any:
         """过滤单个值"""
         if is_sensitive:
-            return '***'
+            return "***"
         elif isinstance(value, (dict, list)):
             return self._filter_dict(value)
         elif isinstance(value, str):
@@ -132,37 +151,37 @@ class StructuredFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         """格式化日志记录为结构化JSON"""
         log_entry = {
-            'timestamp': datetime.now(timezone.utc).isoformat(),
-            'level': record.levelname,
-            'logger': record.name,
-            'message': record.getMessage(),
-            'module': record.module,
-            'function': record.funcName,
-            'line': record.lineno,
+            "timestamp": datetime.now(UTC).isoformat(),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+            "module": record.module,
+            "function": record.funcName,
+            "line": record.lineno,
         }
 
         # 添加请求ID（如果存在）
-        if hasattr(record, 'request_id'):
-            log_entry['request_id'] = record.request_id
+        if hasattr(record, "request_id"):
+            log_entry["request_id"] = record.request_id
 
         # 添加用户ID（如果存在）
-        if hasattr(record, 'user_id'):
-            log_entry['user_id'] = record.user_id
+        if hasattr(record, "user_id"):
+            log_entry["user_id"] = record.user_id
 
         # 添加会话ID（如果存在）
-        if hasattr(record, 'session_id'):
-            log_entry['session_id'] = record.session_id
+        if hasattr(record, "session_id"):
+            log_entry["session_id"] = record.session_id
 
         # 添加IP地址（如果存在）
-        if hasattr(record, 'client_ip'):
-            log_entry['client_ip'] = record.client_ip
+        if hasattr(record, "client_ip"):
+            log_entry["client_ip"] = record.client_ip
 
         # 添加异常信息
         if record.exc_info:
-            log_entry['exception'] = self._format_exception(record.exc_info)
+            log_entry["exception"] = self._format_exception(record.exc_info)
 
         # 添加额外字段
-        if hasattr(record, 'extra_fields'):
+        if hasattr(record, "extra_fields"):
             log_entry.update(record.extra_fields)
 
         return json.dumps(log_entry, ensure_ascii=False)
@@ -170,7 +189,8 @@ class StructuredFormatter(logging.Formatter):
     def _format_exception(self, exc_info) -> str:
         """格式化异常信息"""
         import traceback
-        return ''.join(traceback.format_exception(*exc_info))
+
+        return "".join(traceback.format_exception(*exc_info))
 
 
 class SecurityAuditor:
@@ -191,7 +211,7 @@ class SecurityAuditor:
         log_dir.mkdir(parents=True, exist_ok=True)
 
         # 创建安全日志记录器
-        self.security_logger = logging.getLogger('security')
+        self.security_logger = logging.getLogger("security")
         self.security_logger.setLevel(logging.INFO)
 
         # 创建文件处理器
@@ -206,32 +226,32 @@ class SecurityAuditor:
         self,
         event_type: str,
         message: str,
-        user_id: Optional[str] = None,
-        ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None,
-        request_id: Optional[str] = None,
-        **kwargs
+        user_id: str | None = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+        request_id: str | None = None,
+        **kwargs,
     ):
         """记录安全事件"""
         if not self.enabled:
             return
 
         security_event = {
-            'event_type': event_type,
-            'message': message,
-            'timestamp': datetime.now(timezone.utc).isoformat(),
-            'severity': self._get_event_severity(event_type)
+            "event_type": event_type,
+            "message": message,
+            "timestamp": datetime.now(UTC).isoformat(),
+            "severity": self._get_event_severity(event_type),
         }
 
         # 添加可选字段
         if user_id:
-            security_event['user_id'] = self._hash_sensitive_data(user_id)
+            security_event["user_id"] = self._hash_sensitive_data(user_id)
         if ip_address:
-            security_event['ip_address'] = self._hash_sensitive_data(ip_address)
+            security_event["ip_address"] = self._hash_sensitive_data(ip_address)
         if user_agent:
-            security_event['user_agent'] = user_agent[:500]  # 限制长度
+            security_event["user_agent"] = user_agent[:500]  # 限制长度
         if request_id:
-            security_event['request_id'] = request_id
+            security_event["request_id"] = request_id
 
         # 添加额外字段
         security_event.update(kwargs)
@@ -241,28 +261,28 @@ class SecurityAuditor:
     def _get_event_severity(self, event_type: str) -> str:
         """获取事件严重程度"""
         high_severity_events = {
-            'AUTHENTICATION_FAILURE',
-            'AUTHORIZATION_FAILURE',
-            'PRIVILEGE_ESCALATION',
-            'SUSPICIOUS_ACTIVITY',
-            'DATA_BREACH_ATTEMPT',
-            'MALICIOUS_REQUEST',
-            'BRUTE_FORCE_ATTACK',
+            "AUTHENTICATION_FAILURE",
+            "AUTHORIZATION_FAILURE",
+            "PRIVILEGE_ESCALATION",
+            "SUSPICIOUS_ACTIVITY",
+            "DATA_BREACH_ATTEMPT",
+            "MALICIOUS_REQUEST",
+            "BRUTE_FORCE_ATTACK",
         }
 
         medium_severity_events = {
-            'INVALID_TOKEN',
-            'SESSION_EXPIRED',
-            'ACCESS_DENIED',
-            'RATE_LIMIT_EXCEEDED',
+            "INVALID_TOKEN",
+            "SESSION_EXPIRED",
+            "ACCESS_DENIED",
+            "RATE_LIMIT_EXCEEDED",
         }
 
         if event_type in high_severity_events:
-            return 'HIGH'
+            return "HIGH"
         elif event_type in medium_severity_events:
-            return 'MEDIUM'
+            return "MEDIUM"
         else:
-            return 'LOW'
+            return "LOW"
 
     def _hash_sensitive_data(self, data: str) -> str:
         """对敏感数据进行哈希处理"""
@@ -292,7 +312,7 @@ class RequestLogger:
         log_dir.mkdir(parents=True, exist_ok=True)
 
         # 创建请求日志记录器
-        self.request_logger = logging.getLogger('requests')
+        self.request_logger = logging.getLogger("requests")
         self.request_logger.setLevel(logging.INFO)
 
         # 创建文件处理器
@@ -309,33 +329,33 @@ class RequestLogger:
         path: str,
         status_code: int,
         duration_ms: float,
-        user_id: Optional[str] = None,
-        ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None,
-        request_id: Optional[str] = None,
-        **kwargs
+        user_id: str | None = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+        request_id: str | None = None,
+        **kwargs,
     ):
         """记录请求信息"""
         if not self.enabled:
             return
 
         request_info = {
-            'method': method,
-            'path': path,
-            'status_code': status_code,
-            'duration_ms': round(duration_ms, 2),
-            'timestamp': datetime.now(timezone.utc).isoformat(),
+            "method": method,
+            "path": path,
+            "status_code": status_code,
+            "duration_ms": round(duration_ms, 2),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
 
         # 添加可选字段
         if user_id:
-            request_info['user_id'] = self._hash_sensitive_data(user_id)
+            request_info["user_id"] = self._hash_sensitive_data(user_id)
         if ip_address:
-            request_info['ip_address'] = self._hash_sensitive_data(ip_address)
+            request_info["ip_address"] = self._hash_sensitive_data(ip_address)
         if user_agent:
-            request_info['user_agent'] = user_agent[:500]
+            request_info["user_agent"] = user_agent[:500]
         if request_id:
-            request_info['request_id'] = request_id
+            request_info["request_id"] = request_id
 
         # 添加额外字段
         request_info.update(kwargs)
@@ -375,11 +395,8 @@ def setup_logging_security():
     # 配置根日志记录器
     logging.basicConfig(
         level=getattr(logging, log_level.upper()),
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler(log_file),
-            logging.StreamHandler()
-        ]
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        handlers=[logging.FileHandler(log_file), logging.StreamHandler()],
     )
 
     # 添加敏感数据过滤器到所有处理器
@@ -403,12 +420,9 @@ def log_request_info(**kwargs):
     request_logger.log_request(**kwargs)
 
 
-def get_request_context() -> Dict[str, str]:
+def get_request_context() -> dict[str, str]:
     """获取请求上下文"""
-    return {
-        'request_id': str(uuid.uuid4()),
-        'timestamp': datetime.now(timezone.utc).isoformat()
-    }
+    return {"request_id": str(uuid.uuid4()), "timestamp": datetime.now(UTC).isoformat()}
 
 
 if __name__ == "__main__":
@@ -418,12 +432,14 @@ if __name__ == "__main__":
     logger = logging.getLogger(__name__)
     logger.info("测试敏感数据过滤: password=secret123, email=user@example.com")
 
-    log_security_event("TEST_EVENT", "测试安全事件", user_id="user123", ip_address="192.168.1.1")
+    log_security_event(
+        "TEST_EVENT", "测试安全事件", user_id="user123", ip_address="192.168.1.1"
+    )
 
     log_request_info(
         method="POST",
         path="/api/v1/login",
         status_code=200,
         duration_ms=150.5,
-        user_id="user123"
+        user_id="user123",
     )

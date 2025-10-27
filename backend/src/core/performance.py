@@ -3,17 +3,16 @@
 提供数据库查询优化、缓存策略和性能监控功能
 """
 
-import time
-import json
 import logging
-from typing import Any, Dict, List, Optional, Union, Callable
-from functools import wraps
+import time
+from collections.abc import Callable
 from contextlib import contextmanager
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
+from functools import wraps
+from typing import Any
 
-from sqlalchemy.orm import Session, joinedload, selectinload
-from sqlalchemy import text, Index, func
-from sqlalchemy.sql.expression import ClauseElement
+from sqlalchemy import Index, func
+from sqlalchemy.orm import Session, joinedload
 
 from .config_manager import get_config
 
@@ -26,14 +25,14 @@ class PerformanceMonitor:
     def __init__(self):
         self.slow_query_threshold = get_config("slow_query_threshold_ms", 1000)
         self.enabled = get_config("performance_monitoring_enabled", True)
-        self.query_stats: Dict[str, Dict] = {}
+        self.query_stats: dict[str, dict] = {}
 
     def record_query(
         self,
         query_name: str,
         duration_ms: float,
-        parameters: Optional[Dict] = None,
-        result_count: Optional[int] = None
+        parameters: dict | None = None,
+        result_count: int | None = None,
     ):
         """记录查询性能数据"""
         if not self.enabled:
@@ -44,10 +43,10 @@ class PerformanceMonitor:
                 "count": 0,
                 "total_duration_ms": 0,
                 "avg_duration_ms": 0,
-                "min_duration_ms": float('inf'),
+                "min_duration_ms": float("inf"),
                 "max_duration_ms": 0,
                 "slow_queries": 0,
-                "result_counts": []
+                "result_counts": [],
             }
 
         stats = self.query_stats[query_name]
@@ -66,13 +65,15 @@ class PerformanceMonitor:
 
         if result_count is not None:
             stats["result_counts"].append(result_count)
-            stats["avg_result_count"] = sum(stats["result_counts"]) / len(stats["result_counts"])
+            stats["avg_result_count"] = sum(stats["result_counts"]) / len(
+                stats["result_counts"]
+            )
 
         # 定期清理旧数据
         if stats["count"] % 100 == 0:
             stats["result_counts"] = stats["result_counts"][-50:]  # 保留最近50条
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """获取性能统计"""
         if not self.enabled:
             return {"enabled": False}
@@ -82,7 +83,9 @@ class PerformanceMonitor:
             "threshold_ms": self.slow_query_threshold,
             "query_stats": self.query_stats,
             "total_queries": sum(stats["count"] for stats in self.query_stats.values()),
-            "total_slow_queries": sum(stats["slow_queries"] for stats in self.query_stats.values())
+            "total_slow_queries": sum(
+                stats["slow_queries"] for stats in self.query_stats.values()
+            ),
         }
 
     def reset_stats(self):
@@ -97,6 +100,7 @@ performance_monitor = PerformanceMonitor()
 
 def monitor_query(query_name: str):
     """查询性能监控装饰器"""
+
     def decorator(func: Callable):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -107,7 +111,7 @@ def monitor_query(query_name: str):
 
                 # 尝试获取结果数量
                 result_count = None
-                if hasattr(result, '__len__'):
+                if hasattr(result, "__len__"):
                     result_count = len(result)
                 elif isinstance(result, list):
                     result_count = len(result)
@@ -115,7 +119,7 @@ def monitor_query(query_name: str):
                 performance_monitor.record_query(
                     query_name=query_name,
                     duration_ms=duration_ms,
-                    result_count=result_count
+                    result_count=result_count,
                 )
 
                 return result
@@ -124,11 +128,12 @@ def monitor_query(query_name: str):
                 performance_monitor.record_query(
                     query_name=f"{query_name}_FAILED",
                     duration_ms=duration_ms,
-                    parameters={"error": str(e)}
+                    parameters={"error": str(e)},
                 )
                 raise
 
         return wrapper
+
     return decorator
 
 
@@ -148,7 +153,9 @@ class QueryOptimizer:
             yield
         finally:
             duration_ms = (time.time() - start_time) * 1000
-            performance_monitor.record_query(query_name=query_name, duration_ms=duration_ms)
+            performance_monitor.record_query(
+                query_name=query_name, duration_ms=duration_ms
+            )
 
     def optimize_asset_query(self, include_related: bool = False):
         """优化资产查询"""
@@ -160,19 +167,18 @@ class QueryOptimizer:
             if include_related:
                 # 使用joinedload避免N+1查询
                 query = query.options(
-                    joinedload(Asset.project),
-                    joinedload(Asset.ownership)
+                    joinedload(Asset.project), joinedload(Asset.ownership)
                 )
 
             return query
 
     def optimize_asset_list_query(
         self,
-        search: Optional[str] = None,
-        filters: Optional[Dict] = None,
-        order_by: Optional[str] = None,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None
+        search: str | None = None,
+        filters: dict | None = None,
+        order_by: str | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
     ):
         """优化资产列表查询"""
         from ..models.asset import Asset
@@ -185,7 +191,7 @@ class QueryOptimizer:
                 search_conditions = [
                     Asset.property_name.ilike(f"%{search}%"),
                     Asset.address.ilike(f"%{search}%"),
-                    Asset.ownership_entity.ilike(f"%{search}%")
+                    Asset.ownership_entity.ilike(f"%{search}%"),
                 ]
                 query = query.filter(*search_conditions)
 
@@ -197,7 +203,7 @@ class QueryOptimizer:
 
             # 添加排序
             if order_by:
-                if order_by.startswith('-'):
+                if order_by.startswith("-"):
                     field = order_by[1:]
                     query = query.order_by(getattr(Asset, field).desc())
                 else:
@@ -211,7 +217,7 @@ class QueryOptimizer:
 
             return query
 
-    def optimize_batch_update_query(self, asset_ids: List[str], update_data: Dict):
+    def optimize_batch_update_query(self, asset_ids: list[str], update_data: dict):
         """优化批量更新查询"""
         from ..models.asset import Asset
 
@@ -229,17 +235,16 @@ class QueryOptimizer:
 
         with self.query_with_monitoring("optimized_statistics_query"):
             # 使用聚合查询减少数据库往返
-            stats = (
-                self.db.query(
-                    func.count(Asset.id).label('total_assets'),
-                    func.count(Asset.id).filter(Asset.usage_status == '出租').label('rented_assets'),
-                    func.sum(Asset.land_area).label('total_land_area'),
-                    func.sum(Asset.actual_property_area).label('total_property_area'),
-                    func.sum(Asset.rentable_area).label('total_rentable_area'),
-                    func.sum(Asset.rented_area).label('total_rented_area')
-                )
-                .first()
-            )
+            stats = self.db.query(
+                func.count(Asset.id).label("total_assets"),
+                func.count(Asset.id)
+                .filter(Asset.usage_status == "出租")
+                .label("rented_assets"),
+                func.sum(Asset.land_area).label("total_land_area"),
+                func.sum(Asset.actual_property_area).label("total_property_area"),
+                func.sum(Asset.rentable_area).label("total_rentable_area"),
+                func.sum(Asset.rented_area).label("total_rented_area"),
+            ).first()
 
             return stats
 
@@ -253,32 +258,28 @@ class CacheManager:
         self.default_ttl = get_config("cache_ttl_seconds", 3600)
         self.max_size = get_config("cache_max_size", 1000)
 
-    def _is_expired(self, cache_item: Dict) -> bool:
+    def _is_expired(self, cache_item: dict) -> bool:
         """检查缓存是否过期"""
         if not cache_item:
             return True
-        return datetime.now(timezone.utc) > cache_item['expires_at']
+        return datetime.now(UTC) > cache_item["expires_at"]
 
     def _cleanup_expired(self):
         """清理过期缓存"""
         expired_keys = [
-            key for key, item in self.cache.items()
-            if self._is_expired(item)
+            key for key, item in self.cache.items() if self._is_expired(item)
         ]
         for key in expired_keys:
             del self.cache[key]
 
         # 如果缓存太大，删除最旧的一半
         if len(self.cache) > self.max_size:
-            sorted_items = sorted(
-                self.cache.items(),
-                key=lambda x: x[1]['created_at']
-            )
+            sorted_items = sorted(self.cache.items(), key=lambda x: x[1]["created_at"])
             delete_count = len(sorted_items) // 2
             for key, _ in sorted_items[:delete_count]:
                 del self.cache[key]
 
-    def get(self, key: str) -> Optional[Any]:
+    def get(self, key: str) -> Any | None:
         """获取缓存值"""
         if not self.cache_enabled:
             return None
@@ -287,11 +288,11 @@ class CacheManager:
 
         cache_item = self.cache.get(key)
         if cache_item and not self._is_expired(cache_item):
-            return cache_item['value']
+            return cache_item["value"]
 
         return None
 
-    def set(self, key: str, value: Any, ttl: Optional[int] = None) -> None:
+    def set(self, key: str, value: Any, ttl: int | None = None) -> None:
         """设置缓存值"""
         if not self.cache_enabled:
             return
@@ -301,10 +302,10 @@ class CacheManager:
         ttl = ttl or self.default_ttl
 
         self.cache[key] = {
-            'value': value,
-            'created_at': datetime.now(timezone.utc),
-            'expires_at': datetime.now(timezone.utc) + timedelta(seconds=ttl),
-            'ttl': ttl
+            "value": value,
+            "created_at": datetime.now(UTC),
+            "expires_at": datetime.now(UTC) + timedelta(seconds=ttl),
+            "ttl": ttl,
         }
 
     def delete(self, key: str) -> None:
@@ -316,13 +317,15 @@ class CacheManager:
         """清空缓存"""
         self.cache.clear()
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """获取缓存统计"""
         return {
-            'enabled': self.cache_enabled,
-            'total_items': len(self.cache),
-            'max_size': self.max_size,
-            'memory_usage': sum(len(str(item['value'])) for item in self.cache.values())
+            "enabled": self.cache_enabled,
+            "total_items": len(self.cache),
+            "max_size": self.max_size,
+            "memory_usage": sum(
+                len(str(item["value"])) for item in self.cache.values()
+            ),
         }
 
 
@@ -330,8 +333,9 @@ class CacheManager:
 cache_manager = CacheManager()
 
 
-def cached(ttl: Optional[int] = None, key_prefix: str = ""):
+def cached(ttl: int | None = None, key_prefix: str = ""):
     """缓存装饰器"""
+
     def decorator(func: Callable):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -350,7 +354,9 @@ def cached(ttl: Optional[int] = None, key_prefix: str = ""):
             cache_manager.set(cache_key, result, ttl)
 
             return result
+
         return wrapper
+
     return decorator
 
 
@@ -367,17 +373,16 @@ class DatabaseOptimizer:
 
         indexes = [
             # 资产相关索引
-            Index('idx_asset_property_name', Asset.property_name),
-            Index('idx_asset_address', Asset.address),
-            Index('idx_asset_ownership_status', Asset.ownership_status),
-            Index('idx_asset_property_nature', Asset.property_nature),
-            Index('idx_asset_usage_status', Asset.usage_status),
-            Index('idx_asset_project_id', Asset.project_id),
-            Index('idx_asset_created_at', Asset.created_at),
-
+            Index("idx_asset_property_name", Asset.property_name),
+            Index("idx_asset_address", Asset.address),
+            Index("idx_asset_ownership_status", Asset.ownership_status),
+            Index("idx_asset_property_nature", Asset.property_nature),
+            Index("idx_asset_usage_status", Asset.usage_status),
+            Index("idx_asset_project_id", Asset.project_id),
+            Index("idx_asset_created_at", Asset.created_at),
             # 复合索引
-            Index('idx_asset_status_usage', Asset.ownership_status, Asset.usage_status),
-            Index('idx_asset_search', Asset.property_name, Asset.address),
+            Index("idx_asset_status_usage", Asset.ownership_status, Asset.usage_status),
+            Index("idx_asset_search", Asset.property_name, Asset.address),
         ]
 
         for index in indexes:
@@ -387,32 +392,32 @@ class DatabaseOptimizer:
             except Exception as e:
                 logger.warning(f"Failed to create index {index.name}: {e}")
 
-    def analyze_slow_queries(self) -> Dict[str, Any]:
+    def analyze_slow_queries(self) -> dict[str, Any]:
         """分析慢查询"""
         stats = performance_monitor.get_stats()
 
         slow_queries = []
         for query_name, query_stats in stats["query_stats"].items():
             if query_stats["avg_duration_ms"] > 200:  # 超过200ms的查询
-                slow_queries.append({
-                    "query_name": query_name,
-                    "avg_duration_ms": query_stats["avg_duration_ms"],
-                    "max_duration_ms": query_stats["max_duration_ms"],
-                    "count": query_stats["count"],
-                    "slow_queries": query_stats["slow_queries"]
-                })
+                slow_queries.append(
+                    {
+                        "query_name": query_name,
+                        "avg_duration_ms": query_stats["avg_duration_ms"],
+                        "max_duration_ms": query_stats["max_duration_ms"],
+                        "count": query_stats["count"],
+                        "slow_queries": query_stats["slow_queries"],
+                    }
+                )
 
         return {
             "total_slow_queries": stats["total_slow_queries"],
             "slow_queries": sorted(
-                slow_queries,
-                key=lambda x: x["avg_duration_ms"],
-                reverse=True
+                slow_queries, key=lambda x: x["avg_duration_ms"], reverse=True
             ),
-            "recommendations": self._generate_recommendations(slow_queries)
+            "recommendations": self._generate_recommendations(slow_queries),
         }
 
-    def _generate_recommendations(self, slow_queries: List[Dict]) -> List[str]:
+    def _generate_recommendations(self, slow_queries: list[dict]) -> list[str]:
         """生成优化建议"""
         recommendations = []
 
@@ -441,7 +446,7 @@ class DatabaseOptimizer:
 
 
 # 便捷函数
-def get_performance_stats() -> Dict[str, Any]:
+def get_performance_stats() -> dict[str, Any]:
     """获取性能统计"""
     return performance_monitor.get_stats()
 
@@ -451,7 +456,7 @@ def reset_performance_stats():
     performance_monitor.reset_stats()
 
 
-def get_cache_stats() -> Dict[str, Any]:
+def get_cache_stats() -> dict[str, Any]:
     """获取缓存统计"""
     return cache_manager.get_stats()
 

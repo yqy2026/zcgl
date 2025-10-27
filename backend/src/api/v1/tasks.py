@@ -2,29 +2,35 @@
 任务管理API路由
 """
 
-from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, Query, Path, Body
-from sqlalchemy.orm import Session
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
+from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query
+from sqlalchemy import and_
+from sqlalchemy.orm import Session
+
+from ...crud.task import excel_task_config_crud, task_crud
 from ...database import get_db
-from ...crud.task import task_crud, excel_task_config_crud
-from ...schemas.task import (
-    TaskCreate, TaskUpdate, TaskResponse, TaskListResponse, TaskStatistics,
-    TaskHistoryResponse, ExcelTaskConfigCreate, ExcelTaskConfigResponse,
-    TaskCancelRequest
-)
-from ...enums.task import TaskStatus, TaskType
+from ...enums.task import TaskStatus
 from ...exceptions import BusinessLogicError
+from ...models.task import AsyncTask
+from ...schemas.task import (
+    ExcelTaskConfigCreate,
+    ExcelTaskConfigResponse,
+    TaskCancelRequest,
+    TaskCreate,
+    TaskHistoryResponse,
+    TaskListResponse,
+    TaskResponse,
+    TaskStatistics,
+    TaskUpdate,
+)
 
 router = APIRouter(prefix="/tasks", tags=["任务管理"])
 
 
 @router.post("/", response_model=TaskResponse, summary="创建新任务")
-async def create_task(
-    task_in: TaskCreate,
-    db: Session = Depends(get_db)
-):
+async def create_task(task_in: TaskCreate, db: Session = Depends(get_db)):
     """
     创建新的异步任务
 
@@ -45,14 +51,14 @@ async def create_task(
 async def get_tasks(
     skip: int = Query(0, ge=0, description="跳过记录数"),
     limit: int = Query(20, ge=1, le=100, description="每页记录数"),
-    task_type: Optional[str] = Query(None, description="任务类型筛选"),
-    status: Optional[str] = Query(None, description="状态筛选"),
-    user_id: Optional[str] = Query(None, description="用户ID筛选"),
-    created_after: Optional[str] = Query(None, description="创建时间起始筛选"),
-    created_before: Optional[str] = Query(None, description="创建时间结束筛选"),
+    task_type: str | None = Query(None, description="任务类型筛选"),
+    status: str | None = Query(None, description="状态筛选"),
+    user_id: str | None = Query(None, description="用户ID筛选"),
+    created_after: str | None = Query(None, description="创建时间起始筛选"),
+    created_before: str | None = Query(None, description="创建时间结束筛选"),
     order_by: str = Query("created_at", description="排序字段"),
     order_dir: str = Query("desc", regex="^(asc|desc)$", description="排序方向"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     获取任务列表，支持分页和筛选
@@ -86,7 +92,7 @@ async def get_tasks(
             created_after=created_after_dt,
             created_before=created_before_dt,
             order_by=order_by,
-            order_dir=order_dir
+            order_dir=order_dir,
         )
 
         # 计算总数
@@ -97,7 +103,7 @@ async def get_tasks(
             total=total,
             page=skip // limit + 1,
             limit=limit,
-            pages=(total + limit - 1) // limit
+            pages=(total + limit - 1) // limit,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取任务列表失败: {str(e)}")
@@ -105,8 +111,7 @@ async def get_tasks(
 
 @router.get("/{task_id}", response_model=TaskResponse, summary="获取任务详情")
 async def get_task(
-    task_id: str = Path(..., description="任务ID"),
-    db: Session = Depends(get_db)
+    task_id: str = Path(..., description="任务ID"), db: Session = Depends(get_db)
 ):
     """
     获取单个任务的详细信息
@@ -123,7 +128,7 @@ async def get_task(
 async def update_task(
     task_id: str = Path(..., description="任务ID"),
     task_in: TaskUpdate = Body(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     更新任务信息
@@ -150,7 +155,7 @@ async def update_task(
 async def cancel_task(
     task_id: str = Path(..., description="任务ID"),
     cancel_request: TaskCancelRequest = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     取消正在运行的任务
@@ -170,7 +175,7 @@ async def cancel_task(
         # 更新任务状态为已取消
         update_data = TaskUpdate(
             status=TaskStatus.CANCELLED,
-            error_message=f"任务被取消: {cancel_request.reason if cancel_request and cancel_request.reason else '无原因'}"
+            error_message=f"任务被取消: {cancel_request.reason if cancel_request and cancel_request.reason else '无原因'}",
         )
         updated_task = task_crud.update(db=db, db_obj=task, obj_in=update_data)
         return updated_task
@@ -180,8 +185,7 @@ async def cancel_task(
 
 @router.delete("/{task_id}", summary="删除任务")
 async def delete_task(
-    task_id: str = Path(..., description="任务ID"),
-    db: Session = Depends(get_db)
+    task_id: str = Path(..., description="任务ID"), db: Session = Depends(get_db)
 ):
     """
     删除任务（软删除）
@@ -197,10 +201,13 @@ async def delete_task(
         raise HTTPException(status_code=500, detail=f"删除任务失败: {str(e)}")
 
 
-@router.get("/{task_id}/history", response_model=List[TaskHistoryResponse], summary="获取任务历史")
+@router.get(
+    "/{task_id}/history",
+    response_model=list[TaskHistoryResponse],
+    summary="获取任务历史",
+)
 async def get_task_history(
-    task_id: str = Path(..., description="任务ID"),
-    db: Session = Depends(get_db)
+    task_id: str = Path(..., description="任务ID"), db: Session = Depends(get_db)
 ):
     """
     获取任务的历史记录
@@ -220,8 +227,8 @@ async def get_task_history(
 
 @router.get("/statistics", response_model=TaskStatistics, summary="获取任务统计")
 async def get_task_statistics(
-    user_id: Optional[str] = Query(None, description="用户ID筛选"),
-    db: Session = Depends(get_db)
+    user_id: str | None = Query(None, description="用户ID筛选"),
+    db: Session = Depends(get_db),
 ):
     """
     获取任务统计信息
@@ -235,10 +242,8 @@ async def get_task_statistics(
         raise HTTPException(status_code=500, detail=f"获取任务统计失败: {str(e)}")
 
 
-@router.get("/running", response_model=List[TaskResponse], summary="获取正在运行的任务")
-async def get_running_tasks(
-    db: Session = Depends(get_db)
-):
+@router.get("/running", response_model=list[TaskResponse], summary="获取正在运行的任务")
+async def get_running_tasks(db: Session = Depends(get_db)):
     """
     获取当前正在运行的所有任务
     """
@@ -248,17 +253,17 @@ async def get_running_tasks(
             limit=100,
             status=TaskStatus.RUNNING.value,
             order_by="started_at",
-            order_dir="asc"
+            order_dir="asc",
         )
         return tasks
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取运行任务失败: {str(e)}")
 
 
-@router.get("/recent", response_model=List[TaskResponse], summary="获取最近任务")
+@router.get("/recent", response_model=list[TaskResponse], summary="获取最近任务")
 async def get_recent_tasks(
     limit: int = Query(10, ge=1, le=50, description="返回数量"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     获取最近的任务
@@ -267,10 +272,7 @@ async def get_recent_tasks(
     """
     try:
         tasks = task_crud.get_multi(
-            db=db,
-            limit=limit,
-            order_by="created_at",
-            order_dir="desc"
+            db=db, limit=limit, order_by="created_at", order_dir="desc"
         )
         return tasks
     except Exception as e:
@@ -279,10 +281,14 @@ async def get_recent_tasks(
 
 # ===== Excel任务配置管理 =====
 
-@router.post("/configs/excel", response_model=ExcelTaskConfigResponse, summary="创建Excel任务配置")
+
+@router.post(
+    "/configs/excel",
+    response_model=ExcelTaskConfigResponse,
+    summary="创建Excel任务配置",
+)
 async def create_excel_config(
-    config_in: ExcelTaskConfigCreate,
-    db: Session = Depends(get_db)
+    config_in: ExcelTaskConfigCreate, db: Session = Depends(get_db)
 ):
     """
     创建Excel任务配置
@@ -302,11 +308,15 @@ async def create_excel_config(
         raise HTTPException(status_code=500, detail=f"创建Excel配置失败: {str(e)}")
 
 
-@router.get("/configs/excel", response_model=List[ExcelTaskConfigResponse], summary="获取Excel配置列表")
+@router.get(
+    "/configs/excel",
+    response_model=list[ExcelTaskConfigResponse],
+    summary="获取Excel配置列表",
+)
 async def get_excel_configs(
-    config_type: Optional[str] = Query(None, description="配置类型"),
-    task_type: Optional[str] = Query(None, description="任务类型"),
-    db: Session = Depends(get_db)
+    config_type: str | None = Query(None, description="配置类型"),
+    task_type: str | None = Query(None, description="任务类型"),
+    db: Session = Depends(get_db),
 ):
     """
     获取Excel任务配置列表
@@ -316,21 +326,22 @@ async def get_excel_configs(
     """
     try:
         configs = excel_task_config_crud.get_multi(
-            db=db,
-            limit=50,
-            config_type=config_type,
-            task_type=task_type
+            db=db, limit=50, config_type=config_type, task_type=task_type
         )
         return configs
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取Excel配置失败: {str(e)}")
 
 
-@router.get("/configs/excel/default", response_model=ExcelTaskConfigResponse, summary="获取默认Excel配置")
+@router.get(
+    "/configs/excel/default",
+    response_model=ExcelTaskConfigResponse,
+    summary="获取默认Excel配置",
+)
 async def get_default_excel_config(
     config_type: str = Query(..., description="配置类型"),
     task_type: str = Query(..., description="任务类型"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     获取默认的Excel任务配置
@@ -340,9 +351,7 @@ async def get_default_excel_config(
     """
     try:
         config = excel_task_config_crud.get_default(
-            db=db,
-            config_type=config_type,
-            task_type=task_type
+            db=db, config_type=config_type, task_type=task_type
         )
         if not config:
             raise HTTPException(status_code=404, detail="未找到默认配置")
@@ -353,10 +362,13 @@ async def get_default_excel_config(
         raise HTTPException(status_code=500, detail=f"获取默认Excel配置失败: {str(e)}")
 
 
-@router.get("/configs/excel/{config_id}", response_model=ExcelTaskConfigResponse, summary="获取Excel配置详情")
+@router.get(
+    "/configs/excel/{config_id}",
+    response_model=ExcelTaskConfigResponse,
+    summary="获取Excel配置详情",
+)
 async def get_excel_config(
-    config_id: str = Path(..., description="配置ID"),
-    db: Session = Depends(get_db)
+    config_id: str = Path(..., description="配置ID"), db: Session = Depends(get_db)
 ):
     """
     获取单个Excel配置的详细信息
@@ -369,11 +381,15 @@ async def get_excel_config(
     return config
 
 
-@router.put("/configs/excel/{config_id}", response_model=ExcelTaskConfigResponse, summary="更新Excel配置")
+@router.put(
+    "/configs/excel/{config_id}",
+    response_model=ExcelTaskConfigResponse,
+    summary="更新Excel配置",
+)
 async def update_excel_config(
     config_id: str = Path(..., description="配置ID"),
-    config_in: Dict[str, Any] = Body(...),
-    db: Session = Depends(get_db)
+    config_in: dict[str, Any] = Body(...),
+    db: Session = Depends(get_db),
 ):
     """
     更新Excel任务配置
@@ -387,9 +403,7 @@ async def update_excel_config(
 
     try:
         updated_config = excel_task_config_crud.update(
-            db=db,
-            db_obj=config,
-            obj_in=config_in
+            db=db, db_obj=config, obj_in=config_in
         )
         return updated_config
     except Exception as e:
@@ -398,8 +412,7 @@ async def update_excel_config(
 
 @router.delete("/configs/excel/{config_id}", summary="删除Excel配置")
 async def delete_excel_config(
-    config_id: str = Path(..., description="配置ID"),
-    db: Session = Depends(get_db)
+    config_id: str = Path(..., description="配置ID"), db: Session = Depends(get_db)
 ):
     """
     删除Excel配置（软删除）
@@ -419,7 +432,7 @@ async def delete_excel_config(
 async def cleanup_old_tasks(
     days: int = Query(30, ge=1, le=365, description="清理多少天前的任务"),
     dry_run: bool = Query(False, description="是否为试运行"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     清理过期的任务记录
@@ -428,22 +441,28 @@ async def cleanup_old_tasks(
     - **dry_run**: 是否为试运行
     """
     try:
-        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
+        cutoff_date = datetime.now(UTC) - timedelta(days=days)
 
         # 查找过期的任务
-        old_tasks = db.query(AsyncTask).filter(
-            and_(
-                AsyncTask.created_at < cutoff_date,
-                AsyncTask.status.in_([TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]),
-                AsyncTask.is_active == True
+        old_tasks = (
+            db.query(AsyncTask)
+            .filter(
+                and_(
+                    AsyncTask.created_at < cutoff_date,
+                    AsyncTask.status.in_(
+                        [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]
+                    ),
+                    AsyncTask.is_active == True,
+                )
             )
-        ).all()
+            .all()
+        )
 
         if dry_run:
             return {
                 "message": f"试运行模式，发现 {len(old_tasks)} 个可清理的任务",
                 "cleanup_date": cutoff_date.isoformat(),
-                "task_count": len(old_tasks)
+                "task_count": len(old_tasks),
             }
         else:
             # 执行清理
@@ -457,7 +476,7 @@ async def cleanup_old_tasks(
             return {
                 "message": f"成功清理 {count} 个过期任务",
                 "cleanup_date": cutoff_date.isoformat(),
-                "cleaned_count": count
+                "cleaned_count": count,
             }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"清理任务失败: {str(e)}")

@@ -3,35 +3,32 @@
 支持合同和台账数据的批量导入导出
 """
 
-import polars as pl
-from typing import Dict, Any, List, Optional, Union, Tuple
-from pathlib import Path
 import logging
-from datetime import datetime, date, timedelta, timezone
-import tempfile
 import os
-import uuid
+import tempfile
+from datetime import date, datetime
 from decimal import Decimal
-from sqlalchemy.orm import Session
-from openpyxl import load_workbook, Workbook
-from openpyxl.styles import Font, PatternFill, Alignment
+from typing import Any
+
+from openpyxl import Workbook, load_workbook
+from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.worksheet import Worksheet
 
-from src.models.rent_contract import RentContract, RentTerm, RentLedger
-from src.models.asset import Asset
-from src.models import Ownership
-from src.crud.rent_contract import rent_contract, rent_term, rent_ledger
 from src.crud.asset import asset_crud
 from src.crud.ownership import ownership
-from src.schemas.rent_contract import RentContractCreate, RentTermCreate, RentLedgerCreate
+from src.crud.rent_contract import rent_contract, rent_ledger, rent_term
 from src.database import get_db
+from src.models import Ownership
+from src.models.asset import Asset
+from src.models.rent_contract import RentContract
 
 logger = logging.getLogger(__name__)
 
 
 class RentContractExcelError(Exception):
     """租金合同Excel操作异常"""
+
     pass
 
 
@@ -56,7 +53,7 @@ class RentContractExcelService:
         "押金支付方式": "deposit_payment_method",
         "违约金比例": "penalty_rate",
         "合同状态": "contract_status",
-        "备注": "notes"
+        "备注": "notes",
     }
 
     # 租金条款Excel列名映射
@@ -67,7 +64,7 @@ class RentContractExcelService:
         "月租金": "monthly_rent",
         "支付方式": "payment_method",
         "支付周期": "payment_cycle",
-        "备注": "notes"
+        "备注": "notes",
     }
 
     # 台账Excel列名映射
@@ -79,30 +76,33 @@ class RentContractExcelService:
         "欠款金额": "overdue_amount",
         "支付状态": "payment_status",
         "支付日期": "payment_date",
-        "备注": "notes"
+        "备注": "notes",
     }
 
     # 必填字段
     CONTRACT_REQUIRED_FIELDS = [
-        "合同编号", "资产名称", "权属方名称", "承租方名称",
-        "合同开始日期", "合同结束日期", "月租金"
+        "合同编号",
+        "资产名称",
+        "权属方名称",
+        "承租方名称",
+        "合同开始日期",
+        "合同结束日期",
+        "月租金",
     ]
 
-    TERM_REQUIRED_FIELDS = [
-        "合同编号", "开始日期", "结束日期", "月租金"
-    ]
+    TERM_REQUIRED_FIELDS = ["合同编号", "开始日期", "结束日期", "月租金"]
 
     def __init__(self):
         self.db = next(get_db())
 
     def export_contracts_to_excel(
         self,
-        contract_ids: Optional[List[str]] = None,
+        contract_ids: list[str] | None = None,
         include_terms: bool = True,
         include_ledger: bool = True,
-        start_date: Optional[date] = None,
-        end_date: Optional[date] = None
-    ) -> Dict[str, Any]:
+        start_date: date | None = None,
+        end_date: date | None = None,
+    ) -> dict[str, Any]:
         """导出租金合同数据到Excel文件"""
         try:
             # 获取合同数据
@@ -114,7 +114,7 @@ class RentContractExcelService:
                 return {
                     "success": False,
                     "message": "没有找到符合条件的合同数据",
-                    "file_path": None
+                    "file_path": None,
                 }
 
             # 创建Excel文件
@@ -125,6 +125,7 @@ class RentContractExcelService:
 
             # 创建工作簿
             from openpyxl import Workbook
+
             wb = Workbook()
 
             # 删除默认工作表
@@ -158,8 +159,8 @@ class RentContractExcelService:
                 "stats": {
                     "total_contracts": len(contracts),
                     "total_terms": sum(len(c.terms) for c in contracts),
-                    "total_ledgers": sum(len(c.ledgers) for c in contracts)
-                }
+                    "total_ledgers": sum(len(c.ledgers) for c in contracts),
+                },
             }
 
         except Exception as e:
@@ -167,7 +168,7 @@ class RentContractExcelService:
             return {
                 "success": False,
                 "message": f"导出失败: {str(e)}",
-                "file_path": None
+                "file_path": None,
             }
 
     def import_contracts_from_excel(
@@ -175,8 +176,8 @@ class RentContractExcelService:
         file_path: str,
         import_terms: bool = True,
         import_ledger: bool = False,
-        overwrite_existing: bool = False
-    ) -> Dict[str, Any]:
+        overwrite_existing: bool = False,
+    ) -> dict[str, Any]:
         """从Excel文件导入租金合同数据"""
         try:
             if not os.path.exists(file_path):
@@ -192,14 +193,13 @@ class RentContractExcelService:
                 "imported_terms": 0,
                 "imported_ledgers": 0,
                 "errors": [],
-                "warnings": []
+                "warnings": [],
             }
 
             # 导入合同数据
             if "合同信息" in wb.sheetnames:
                 contract_result = self._import_contracts_sheet(
-                    wb["合同信息"],
-                    overwrite_existing
+                    wb["合同信息"], overwrite_existing
                 )
                 results.update(contract_result)
 
@@ -222,10 +222,10 @@ class RentContractExcelService:
                 "success": False,
                 "message": f"导入失败: {str(e)}",
                 "imported_contracts": 0,
-                "errors": [str(e)]
+                "errors": [str(e)],
             }
 
-    def download_contract_template(self) -> Dict[str, Any]:
+    def download_contract_template(self) -> dict[str, Any]:
         """下载合同导入模板"""
         try:
             # 创建模板文件
@@ -234,6 +234,7 @@ class RentContractExcelService:
             file_path = os.path.join(temp_dir, filename)
 
             from openpyxl import Workbook
+
             wb = Workbook()
 
             # 删除默认工作表
@@ -254,7 +255,7 @@ class RentContractExcelService:
                 "message": "模板下载成功",
                 "file_path": file_path,
                 "file_name": filename,
-                "file_size": file_size
+                "file_size": file_size,
             }
 
         except Exception as e:
@@ -262,22 +263,24 @@ class RentContractExcelService:
             return {
                 "success": False,
                 "message": f"下载模板失败: {str(e)}",
-                "file_path": None
+                "file_path": None,
             }
 
     def _get_contracts_for_export(
         self,
-        contract_ids: Optional[List[str]] = None,
-        start_date: Optional[date] = None,
-        end_date: Optional[date] = None
-    ) -> List[RentContract]:
+        contract_ids: list[str] | None = None,
+        start_date: date | None = None,
+        end_date: date | None = None,
+    ) -> list[RentContract]:
         """获取要导出的合同数据 - 优化版本使用join预加载关联数据"""
         try:
             # 使用join预加载关联数据，避免N+1查询
-            query = self.db.query(RentContract).join(
-                Asset, RentContract.asset_id == Asset.id, isouter=True
-            ).join(
-                Ownership, RentContract.ownership_id == Ownership.id, isouter=True
+            query = (
+                self.db.query(RentContract)
+                .join(Asset, RentContract.asset_id == Asset.id, isouter=True)
+                .join(
+                    Ownership, RentContract.ownership_id == Ownership.id, isouter=True
+                )
             )
 
             if contract_ids:
@@ -297,7 +300,7 @@ class RentContractExcelService:
             logger.error(f"获取合同数据失败: {str(e)}")
             raise RentContractExcelError(f"获取合同数据失败: {str(e)}")
 
-    def _export_contracts_sheet(self, wb: Workbook, contracts: List[RentContract]):
+    def _export_contracts_sheet(self, wb: Workbook, contracts: list[RentContract]):
         """导出合同信息工作表 - 优化版本使用预加载的关联数据"""
         ws = wb.create_sheet("合同信息")
 
@@ -306,7 +309,9 @@ class RentContractExcelService:
         for col, header in enumerate(headers, 1):
             cell = ws.cell(row=1, column=col, value=header)
             cell.font = Font(bold=True)
-            cell.fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+            cell.fill = PatternFill(
+                start_color="4F81BD", end_color="4F81BD", fill_type="solid"
+            )
             cell.alignment = Alignment(horizontal="center")
 
         # 填充数据
@@ -320,7 +325,9 @@ class RentContractExcelService:
                 elif header == "资产地址":
                     value = contract.asset.address if contract.asset else ""
                 elif header == "权属方名称":
-                    value = contract.ownership.ownership_name if contract.ownership else ""
+                    value = (
+                        contract.ownership.ownership_name if contract.ownership else ""
+                    )
                 else:
                     value = getattr(contract, field_name, "")
 
@@ -336,7 +343,7 @@ class RentContractExcelService:
         for col in range(1, len(headers) + 1):
             ws.column_dimensions[get_column_letter(col)].width = 15
 
-    def _export_terms_sheet(self, wb: Workbook, contracts: List[RentContract]):
+    def _export_terms_sheet(self, wb: Workbook, contracts: list[RentContract]):
         """导出租金条款工作表"""
         ws = wb.create_sheet("租金条款")
 
@@ -345,13 +352,15 @@ class RentContractExcelService:
         for col, header in enumerate(headers, 1):
             cell = ws.cell(row=1, column=col, value=header)
             cell.font = Font(bold=True)
-            cell.fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+            cell.fill = PatternFill(
+                start_color="4F81BD", end_color="4F81BD", fill_type="solid"
+            )
             cell.alignment = Alignment(horizontal="center")
 
         # 填充数据
         row = 2
         for contract in contracts:
-            if hasattr(contract, 'terms') and contract.terms:
+            if hasattr(contract, "terms") and contract.terms:
                 for term in contract.terms:
                     for col, header in enumerate(headers, 1):
                         field_name = self.TERM_COLUMN_MAPPING[header]
@@ -372,7 +381,7 @@ class RentContractExcelService:
         for col in range(1, len(headers) + 1):
             ws.column_dimensions[get_column_letter(col)].width = 15
 
-    def _export_ledger_sheet(self, wb: Workbook, contracts: List[RentContract]):
+    def _export_ledger_sheet(self, wb: Workbook, contracts: list[RentContract]):
         """导出台账工作表"""
         ws = wb.create_sheet("租金台账")
 
@@ -381,13 +390,15 @@ class RentContractExcelService:
         for col, header in enumerate(headers, 1):
             cell = ws.cell(row=1, column=col, value=header)
             cell.font = Font(bold=True)
-            cell.fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+            cell.fill = PatternFill(
+                start_color="4F81BD", end_color="4F81BD", fill_type="solid"
+            )
             cell.alignment = Alignment(horizontal="center")
 
         # 填充数据
         row = 2
         for contract in contracts:
-            if hasattr(contract, 'ledgers') and contract.ledgers:
+            if hasattr(contract, "ledgers") and contract.ledgers:
                 for ledger in contract.ledgers:
                     for col, header in enumerate(headers, 1):
                         field_name = self.LEDGER_COLUMN_MAPPING[header]
@@ -417,7 +428,9 @@ class RentContractExcelService:
         for col, header in enumerate(headers, 1):
             cell = ws.cell(row=1, column=col, value=header)
             cell.font = Font(bold=True)
-            cell.fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+            cell.fill = PatternFill(
+                start_color="4F81BD", end_color="4F81BD", fill_type="solid"
+            )
             cell.alignment = Alignment(horizontal="center")
 
         # 添加示例数据
@@ -438,7 +451,7 @@ class RentContractExcelService:
             "押金支付方式": "银行转账",
             "违约金比例": "0.001",
             "合同状态": "生效",
-            "备注": "示例备注"
+            "备注": "示例备注",
         }
 
         for col, header in enumerate(headers, 1):
@@ -457,7 +470,9 @@ class RentContractExcelService:
         for col, header in enumerate(headers, 1):
             cell = ws.cell(row=1, column=col, value=header)
             cell.font = Font(bold=True)
-            cell.fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+            cell.fill = PatternFill(
+                start_color="4F81BD", end_color="4F81BD", fill_type="solid"
+            )
             cell.alignment = Alignment(horizontal="center")
 
         # 添加示例数据
@@ -468,7 +483,7 @@ class RentContractExcelService:
             "月租金": "10000",
             "支付方式": "银行转账",
             "支付周期": "月付",
-            "备注": "上半年租金"
+            "备注": "上半年租金",
         }
 
         for col, header in enumerate(headers, 1):
@@ -487,7 +502,9 @@ class RentContractExcelService:
         for col, header in enumerate(headers, 1):
             cell = ws.cell(row=1, column=col, value=header)
             cell.font = Font(bold=True)
-            cell.fill = PatternFill(start_color="4F81BD", end_color="4F81BD", fill_type="solid")
+            cell.fill = PatternFill(
+                start_color="4F81BD", end_color="4F81BD", fill_type="solid"
+            )
             cell.alignment = Alignment(horizontal="center")
 
         # 添加示例数据
@@ -499,7 +516,7 @@ class RentContractExcelService:
             "欠款金额": "0",
             "支付状态": "已支付",
             "支付日期": "2024-01-05",
-            "备注": "1月份租金"
+            "备注": "1月份租金",
         }
 
         for col, header in enumerate(headers, 1):
@@ -510,16 +527,10 @@ class RentContractExcelService:
             ws.column_dimensions[get_column_letter(col)].width = 15
 
     def _import_contracts_sheet(
-        self,
-        ws: Worksheet,
-        overwrite_existing: bool
-    ) -> Dict[str, Any]:
+        self, ws: Worksheet, overwrite_existing: bool
+    ) -> dict[str, Any]:
         """导入合同信息工作表"""
-        result = {
-            "imported_contracts": 0,
-            "errors": [],
-            "warnings": []
-        }
+        result = {"imported_contracts": 0, "errors": [], "warnings": []}
 
         try:
             # 读取表头
@@ -532,7 +543,9 @@ class RentContractExcelService:
             # 验证必填字段
             missing_fields = set(self.CONTRACT_REQUIRED_FIELDS) - set(headers)
             if missing_fields:
-                raise RentContractExcelError(f"缺少必填字段: {', '.join(missing_fields)}")
+                raise RentContractExcelError(
+                    f"缺少必填字段: {', '.join(missing_fields)}"
+                )
 
             # 处理数据行
             for row in range(2, ws.max_row + 1):
@@ -543,34 +556,39 @@ class RentContractExcelService:
                         row_data[header] = cell_value
 
                     # 验证必填字段
-                    if not all(row_data.get(field) for field in self.CONTRACT_REQUIRED_FIELDS):
+                    if not all(
+                        row_data.get(field) for field in self.CONTRACT_REQUIRED_FIELDS
+                    ):
                         result["warnings"].append(f"第{row}行: 缺少必填字段，跳过")
                         continue
 
                     # 查找资产和权属方
                     asset = asset_crud.get_by_property_name(
-                        self.db,
-                        row_data["资产名称"]
+                        self.db, row_data["资产名称"]
                     )
                     if not asset:
-                        result["warnings"].append(f"第{row}行: 未找到资产'{row_data['资产名称']}'，跳过")
+                        result["warnings"].append(
+                            f"第{row}行: 未找到资产'{row_data['资产名称']}'，跳过"
+                        )
                         continue
 
                     ownership_entity = ownership.get_by_name(
-                        self.db,
-                        row_data["权属方名称"]
+                        self.db, row_data["权属方名称"]
                     )
                     if not ownership_entity:
-                        result["warnings"].append(f"第{row}行: 未找到权属方'{row_data['权属方名称']}'，跳过")
+                        result["warnings"].append(
+                            f"第{row}行: 未找到权属方'{row_data['权属方名称']}'，跳过"
+                        )
                         continue
 
                     # 检查合同编号是否重复
                     existing_contract = rent_contract.get_by_contract_number(
-                        self.db,
-                        row_data["合同编号"]
+                        self.db, row_data["合同编号"]
                     )
                     if existing_contract and not overwrite_existing:
-                        result["warnings"].append(f"第{row}行: 合同编号'{row_data['合同编号']}'已存在，跳过")
+                        result["warnings"].append(
+                            f"第{row}行: 合同编号'{row_data['合同编号']}'已存在，跳过"
+                        )
                         continue
 
                     # 创建合同数据
@@ -590,15 +608,13 @@ class RentContractExcelService:
                         "deposit_payment_method": row_data.get("押金支付方式"),
                         "penalty_rate": Decimal(str(row_data.get("违约金比例", 0))),
                         "contract_status": row_data.get("合同状态", "草稿"),
-                        "notes": row_data.get("备注")
+                        "notes": row_data.get("备注"),
                     }
 
                     # 创建或更新合同
                     if existing_contract and overwrite_existing:
                         contract = rent_contract.update(
-                            self.db,
-                            db_obj=existing_contract,
-                            obj_in=contract_data
+                            self.db, db_obj=existing_contract, obj_in=contract_data
                         )
                     else:
                         contract = rent_contract.create(self.db, obj_in=contract_data)
@@ -616,13 +632,9 @@ class RentContractExcelService:
             result["errors"].append(f"导入合同信息失败: {str(e)}")
             return result
 
-    def _import_terms_sheet(self, ws: Worksheet) -> Dict[str, Any]:
+    def _import_terms_sheet(self, ws: Worksheet) -> dict[str, Any]:
         """导入租金条款工作表"""
-        result = {
-            "imported_terms": 0,
-            "errors": [],
-            "warnings": []
-        }
+        result = {"imported_terms": 0, "errors": [], "warnings": []}
 
         try:
             # 读取表头
@@ -635,7 +647,9 @@ class RentContractExcelService:
             # 验证必填字段
             missing_fields = set(self.TERM_REQUIRED_FIELDS) - set(headers)
             if missing_fields:
-                raise RentContractExcelError(f"缺少必填字段: {', '.join(missing_fields)}")
+                raise RentContractExcelError(
+                    f"缺少必填字段: {', '.join(missing_fields)}"
+                )
 
             # 处理数据行
             for row in range(2, ws.max_row + 1):
@@ -646,17 +660,20 @@ class RentContractExcelService:
                         row_data[header] = cell_value
 
                     # 验证必填字段
-                    if not all(row_data.get(field) for field in self.TERM_REQUIRED_FIELDS):
+                    if not all(
+                        row_data.get(field) for field in self.TERM_REQUIRED_FIELDS
+                    ):
                         result["warnings"].append(f"第{row}行: 缺少必填字段，跳过")
                         continue
 
                     # 查找合同
                     contract = rent_contract.get_by_contract_number(
-                        self.db,
-                        row_data["合同编号"]
+                        self.db, row_data["合同编号"]
                     )
                     if not contract:
-                        result["warnings"].append(f"第{row}行: 未找到合同'{row_data['合同编号']}'，跳过")
+                        result["warnings"].append(
+                            f"第{row}行: 未找到合同'{row_data['合同编号']}'，跳过"
+                        )
                         continue
 
                     # 创建条款数据
@@ -667,7 +684,7 @@ class RentContractExcelService:
                         "monthly_rent": Decimal(str(row_data["月租金"])),
                         "payment_method": row_data.get("支付方式"),
                         "payment_cycle": row_data.get("支付周期", "月付"),
-                        "notes": row_data.get("备注")
+                        "notes": row_data.get("备注"),
                     }
 
                     # 创建条款
@@ -685,13 +702,9 @@ class RentContractExcelService:
             result["errors"].append(f"导入租金条款失败: {str(e)}")
             return result
 
-    def _import_ledger_sheet(self, ws: Worksheet) -> Dict[str, Any]:
+    def _import_ledger_sheet(self, ws: Worksheet) -> dict[str, Any]:
         """导入台账工作表"""
-        result = {
-            "imported_ledgers": 0,
-            "errors": [],
-            "warnings": []
-        }
+        result = {"imported_ledgers": 0, "errors": [], "warnings": []}
 
         try:
             # 读取表头
@@ -711,11 +724,12 @@ class RentContractExcelService:
 
                     # 查找合同
                     contract = rent_contract.get_by_contract_number(
-                        self.db,
-                        row_data["合同编号"]
+                        self.db, row_data["合同编号"]
                     )
                     if not contract:
-                        result["warnings"].append(f"第{row}行: 未找到合同'{row_data['合同编号']}'，跳过")
+                        result["warnings"].append(
+                            f"第{row}行: 未找到合同'{row_data['合同编号']}'，跳过"
+                        )
                         continue
 
                     # 创建台账数据
@@ -727,22 +741,18 @@ class RentContractExcelService:
                         "overdue_amount": Decimal(str(row_data.get("欠款金额", 0))),
                         "payment_status": row_data.get("支付状态", "未支付"),
                         "payment_date": self._parse_date(row_data.get("支付日期")),
-                        "notes": row_data.get("备注")
+                        "notes": row_data.get("备注"),
                     }
 
                     # 检查是否已存在
                     existing_ledger = rent_ledger.get_by_contract_and_month(
-                        self.db,
-                        contract.id,
-                        row_data["年月"]
+                        self.db, contract.id, row_data["年月"]
                     )
 
                     if existing_ledger:
                         # 更新现有台账
                         ledger = rent_ledger.update(
-                            self.db,
-                            db_obj=existing_ledger,
-                            obj_in=ledger_data
+                            self.db, db_obj=existing_ledger, obj_in=ledger_data
                         )
                     else:
                         # 创建新台账
@@ -761,7 +771,7 @@ class RentContractExcelService:
             result["errors"].append(f"导入台账失败: {str(e)}")
             return result
 
-    def _parse_date(self, date_value: Any) -> Optional[date]:
+    def _parse_date(self, date_value: Any) -> date | None:
         """解析日期值"""
         if not date_value:
             return None

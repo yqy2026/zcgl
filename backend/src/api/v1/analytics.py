@@ -9,19 +9,18 @@
 - 数据验证和一致性检查
 """
 
-import logging
 import hashlib
 import json
+import logging
 import time
-from typing import Dict, Any, Optional, List, Tuple
-from datetime import datetime, timedelta, timezone
 from collections import defaultdict
+from datetime import datetime, timedelta
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import text
 
 from ...database import get_db
-from ...crud.asset import asset_crud
 from ...schemas.asset import DataStatus
 
 logger = logging.getLogger(__name__)
@@ -31,6 +30,7 @@ router = APIRouter()
 
 class AnalyticsError(Exception):
     """分析服务专用异常"""
+
     pass
 
 
@@ -39,22 +39,18 @@ class AnalyticsCache:
 
     def __init__(self):
         self.cache = {}
-        self.cache_stats = {
-            "hits": 0,
-            "misses": 0,
-            "total_time_saved": 0.0
-        }
+        self.cache_stats = {"hits": 0, "misses": 0, "total_time_saved": 0.0}
 
-    def _generate_cache_key(self, filters: Dict[str, Any], analysis_type: str) -> str:
+    def _generate_cache_key(self, filters: dict[str, Any], analysis_type: str) -> str:
         """生成缓存键"""
         # 创建筛选条件的规范化字符串
         filter_str = json.dumps(filters, sort_keys=True, default=str)
         cache_input = f"{analysis_type}:{filter_str}"
 
         # 使用MD5哈希生成键
-        return hashlib.md5(cache_input.encode('utf-8')).hexdigest()
+        return hashlib.md5(cache_input.encode("utf-8")).hexdigest()
 
-    def get(self, filters: Dict[str, Any], analysis_type: str) -> Optional[Dict[str, Any]]:
+    def get(self, filters: dict[str, Any], analysis_type: str) -> dict[str, Any] | None:
         """从缓存获取数据"""
         cache_key = self._generate_cache_key(filters, analysis_type)
 
@@ -75,28 +71,40 @@ class AnalyticsCache:
         self.cache_stats["misses"] += 1
         return None
 
-    def set(self, filters: Dict[str, Any], analysis_type: str, data: Dict[str, Any], calculation_time: float):
+    def set(
+        self,
+        filters: dict[str, Any],
+        analysis_type: str,
+        data: dict[str, Any],
+        calculation_time: float,
+    ):
         """设置缓存数据"""
         cache_key = self._generate_cache_key(filters, analysis_type)
 
         # 限制缓存大小（最多50个条目）
         if len(self.cache) >= 50:
             # 删除最老的条目
-            oldest_key = min(self.cache.keys(), key=lambda k: self.cache[k]["timestamp"])
+            oldest_key = min(
+                self.cache.keys(), key=lambda k: self.cache[k]["timestamp"]
+            )
             del self.cache[oldest_key]
 
         self.cache[cache_key] = {
             "data": data,
             "timestamp": time.time(),
-            "calculation_time": calculation_time
+            "calculation_time": calculation_time,
         }
 
         logger.debug(f"缓存设置: {analysis_type}, 计算时间: {calculation_time:.2f}s")
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """获取缓存统计信息"""
         total_requests = self.cache_stats["hits"] + self.cache_stats["misses"]
-        hit_rate = (self.cache_stats["hits"] / total_requests * 100) if total_requests > 0 else 0
+        hit_rate = (
+            (self.cache_stats["hits"] / total_requests * 100)
+            if total_requests > 0
+            else 0
+        )
 
         return {
             "cache_size": len(self.cache),
@@ -104,7 +112,11 @@ class AnalyticsCache:
             "misses": self.cache_stats["misses"],
             "hit_rate": round(hit_rate, 2),
             "total_time_saved": round(self.cache_stats["total_time_saved"], 2),
-            "avg_time_saved": round(self.cache_stats["total_time_saved"] / self.cache_stats["hits"], 2) if self.cache_stats["hits"] > 0 else 0
+            "avg_time_saved": round(
+                self.cache_stats["total_time_saved"] / self.cache_stats["hits"], 2
+            )
+            if self.cache_stats["hits"] > 0
+            else 0,
         }
 
     def clear(self):
@@ -123,6 +135,7 @@ class PerformanceMonitor:
     @staticmethod
     def monitor_performance(func_name: str):
         """性能监控装饰器"""
+
         def decorator(func):
             def wrapper(*args, **kwargs):
                 start_time = time.time()
@@ -131,18 +144,28 @@ class PerformanceMonitor:
                     execution_time = time.time() - start_time
 
                     if execution_time > 1.0:  # 超过1秒的慢查询
-                        logger.warning(f"性能警告: {func_name} 执行时间 {execution_time:.2f}s")
+                        logger.warning(
+                            f"性能警告: {func_name} 执行时间 {execution_time:.2f}s"
+                        )
                     elif execution_time > 0.5:  # 超过0.5秒的中等查询
-                        logger.info(f"性能信息: {func_name} 执行时间 {execution_time:.2f}s")
+                        logger.info(
+                            f"性能信息: {func_name} 执行时间 {execution_time:.2f}s"
+                        )
                     else:
-                        logger.debug(f"性能信息: {func_name} 执行时间 {execution_time:.3f}s")
+                        logger.debug(
+                            f"性能信息: {func_name} 执行时间 {execution_time:.3f}s"
+                        )
 
                     return result
                 except Exception as e:
                     execution_time = time.time() - start_time
-                    logger.error(f"性能监控: {func_name} 执行失败，时间 {execution_time:.2f}s，错误: {str(e)}")
+                    logger.error(
+                        f"性能监控: {func_name} 执行失败，时间 {execution_time:.2f}s，错误: {str(e)}"
+                    )
                     raise
+
             return wrapper
+
         return decorator
 
 
@@ -150,14 +173,17 @@ class DatabaseQueryOptimizer:
     """数据库查询优化器"""
 
     @staticmethod
-    def optimize_asset_query(db: Session, filters: Dict[str, Any], search: Optional[str] = None) -> Tuple[List[Any], int]:
+    def optimize_asset_query(
+        db: Session, filters: dict[str, Any], search: str | None = None
+    ) -> tuple[list[Any], int]:
         """优化的资产查询方法"""
         start_time = time.time()
 
         try:
             # 使用更高效的查询方式
+            from sqlalchemy import and_, or_
+
             from ...models.asset import Asset
-            from sqlalchemy import and_, or_, desc
 
             # 构建基础查询
             query = db.query(Asset).filter(Asset.data_status == DataStatus.NORMAL.value)
@@ -178,7 +204,7 @@ class DatabaseQueryOptimizer:
                     Asset.property_name.contains(search),
                     Asset.address.contains(search),
                     Asset.ownership_entity.contains(search),
-                    Asset.business_category.contains(search)
+                    Asset.business_category.contains(search),
                 )
                 query = query.filter(search_filter)
 
@@ -187,45 +213,62 @@ class DatabaseQueryOptimizer:
             assets = query.limit(10000).all()  # 限制最大数量
 
             execution_time = time.time() - start_time
-            logger.info(f"优化查询完成，获取 {len(assets)} 条资产数据，执行时间: {execution_time:.3f}s")
+            logger.info(
+                f"优化查询完成，获取 {len(assets)} 条资产数据，执行时间: {execution_time:.3f}s"
+            )
 
             return assets, total_count
 
         except Exception as e:
             execution_time = time.time() - start_time
-            logger.error(f"优化查询失败，执行时间: {execution_time:.3f}s，错误: {str(e)}")
+            logger.error(
+                f"优化查询失败，执行时间: {execution_time:.3f}s，错误: {str(e)}"
+            )
             raise
 
     @staticmethod
-    def optimize_history_query(db: Session, asset_ids: List[str], fields: List[str], days_back: int = 730) -> List[Any]:
+    def optimize_history_query(
+        db: Session, asset_ids: list[str], fields: list[str], days_back: int = 730
+    ) -> list[Any]:
         """优化的历史记录查询"""
         start_time = time.time()
 
         try:
-            from ...models.asset import AssetHistory
+            from datetime import datetime, timedelta
+
             from sqlalchemy import and_, desc
-            from datetime import datetime, timedelta, timezone
+
+            from ...models.asset import AssetHistory
 
             # 构建优化的历史查询
             cutoff_date = datetime.now() - timedelta(days=days_back)
 
-            history_records = db.query(AssetHistory).filter(
-                and_(
-                    AssetHistory.asset_id.in_(asset_ids),
-                    AssetHistory.field_name.in_(fields),
-                    AssetHistory.operation_type == 'UPDATE',
-                    AssetHistory.operation_time >= cutoff_date
+            history_records = (
+                db.query(AssetHistory)
+                .filter(
+                    and_(
+                        AssetHistory.asset_id.in_(asset_ids),
+                        AssetHistory.field_name.in_(fields),
+                        AssetHistory.operation_type == "UPDATE",
+                        AssetHistory.operation_time >= cutoff_date,
+                    )
                 )
-            ).order_by(desc(AssetHistory.operation_time)).all()
+                .order_by(desc(AssetHistory.operation_time))
+                .all()
+            )
 
             execution_time = time.time() - start_time
-            logger.info(f"历史记录查询完成，获取 {len(history_records)} 条记录，执行时间: {execution_time:.3f}s")
+            logger.info(
+                f"历史记录查询完成，获取 {len(history_records)} 条记录，执行时间: {execution_time:.3f}s"
+            )
 
             return history_records
 
         except Exception as e:
             execution_time = time.time() - start_time
-            logger.error(f"历史记录查询失败，执行时间: {execution_time:.3f}s，错误: {str(e)}")
+            logger.error(
+                f"历史记录查询失败，执行时间: {execution_time:.3f}s，错误: {str(e)}"
+            )
             raise
 
 
@@ -251,8 +294,12 @@ class DistributionCalculator:
     """分布数据计算器 - 遵循单一职责原则"""
 
     @staticmethod
-    def calculate_distribution(assets: List[Any], field_name: str,
-                           result_key: str = None, value_key: str = "name") -> List[Dict[str, Any]]:
+    def calculate_distribution(
+        assets: list[Any],
+        field_name: str,
+        result_key: str = None,
+        value_key: str = "name",
+    ) -> list[dict[str, Any]]:
         """
         通用分布计算方法
 
@@ -283,11 +330,13 @@ class DistributionCalculator:
         # 生成分布数据
         for category, count in distribution_counts.items():
             if count > 0:  # 只包含有数据的类别
-                distribution.append({
-                    result_key: category,
-                    "count": count,
-                    "percentage": calculate_percentage(count, total_count)
-                })
+                distribution.append(
+                    {
+                        result_key: category,
+                        "count": count,
+                        "percentage": calculate_percentage(count, total_count),
+                    }
+                )
 
         # 按数量降序排列
         distribution.sort(key=lambda x: x["count"], reverse=True)
@@ -296,22 +345,32 @@ class DistributionCalculator:
         return distribution
 
     @staticmethod
-    def calculate_property_nature_distribution(assets: List[Any]) -> List[Dict[str, Any]]:
+    def calculate_property_nature_distribution(
+        assets: list[Any],
+    ) -> list[dict[str, Any]]:
         """计算物业性质分布"""
         return DistributionCalculator.calculate_distribution(assets, "property_nature")
 
     @staticmethod
-    def calculate_ownership_status_distribution(assets: List[Any]) -> List[Dict[str, Any]]:
+    def calculate_ownership_status_distribution(
+        assets: list[Any],
+    ) -> list[dict[str, Any]]:
         """计算确权状态分布"""
-        return DistributionCalculator.calculate_distribution(assets, "ownership_status", "status")
+        return DistributionCalculator.calculate_distribution(
+            assets, "ownership_status", "status"
+        )
 
     @staticmethod
-    def calculate_usage_status_distribution(assets: List[Any]) -> List[Dict[str, Any]]:
+    def calculate_usage_status_distribution(assets: list[Any]) -> list[dict[str, Any]]:
         """计算使用状态分布"""
-        return DistributionCalculator.calculate_distribution(assets, "usage_status", "status")
+        return DistributionCalculator.calculate_distribution(
+            assets, "usage_status", "status"
+        )
 
     @staticmethod
-    def calculate_business_category_distribution(assets: List[Any]) -> List[Dict[str, Any]]:
+    def calculate_business_category_distribution(
+        assets: list[Any],
+    ) -> list[dict[str, Any]]:
         """计算业态类别分布（包含出租率计算）"""
         if not assets:
             return []
@@ -340,11 +399,12 @@ class DistributionCalculator:
                 rentable_area_float = float(rentable_area)
                 rented_area_float = float(rented_area)
                 occupancy_rate = (rented_area_float / rentable_area_float) * 100
-                occupancy_rate = round(min(max(occupancy_rate, 0), 100), 2)  # 确保在0-100范围内
+                occupancy_rate = round(
+                    min(max(occupancy_rate, 0), 100), 2
+                )  # 确保在0-100范围内
             else:
                 occupancy_rate = 0.0
 
-    
             category_stats[category]["occupancy_rates"].append(occupancy_rate)
 
         distribution = []
@@ -355,17 +415,21 @@ class DistributionCalculator:
             occupancy_rates = stats["occupancy_rates"]
 
             # 计算平均出租率
-            avg_occupancy = sum(occupancy_rates) / len(occupancy_rates) if occupancy_rates else 0.0
+            avg_occupancy = (
+                sum(occupancy_rates) / len(occupancy_rates) if occupancy_rates else 0.0
+            )
 
             # 计算占比
             percentage = calculate_percentage(count, total_count)
 
-            distribution.append({
-                "category": category,
-                "count": count,
-                "percentage": percentage,
-                "occupancy_rate": round(avg_occupancy, 2)
-            })
+            distribution.append(
+                {
+                    "category": category,
+                    "count": count,
+                    "percentage": percentage,
+                    "occupancy_rate": round(avg_occupancy, 2),
+                }
+            )
 
         # 按数量降序排列
         distribution.sort(key=lambda x: x["count"], reverse=True)
@@ -374,8 +438,12 @@ class DistributionCalculator:
         return distribution
 
     @staticmethod
-    def calculate_area_distribution(assets: List[Any], field_name: str,
-                                result_key: str = None, value_key: str = "name") -> List[Dict[str, Any]]:
+    def calculate_area_distribution(
+        assets: list[Any],
+        field_name: str,
+        result_key: str = None,
+        value_key: str = "name",
+    ) -> list[dict[str, Any]]:
         """
         计算面积维度分布数据
 
@@ -402,7 +470,9 @@ class DistributionCalculator:
 
                 # 累计面积 - 优先使用实际物业面积，其次使用土地面积
                 area = 0.0
-                if hasattr(asset, "actual_property_area") and getattr(asset, "actual_property_area"):
+                if hasattr(asset, "actual_property_area") and getattr(
+                    asset, "actual_property_area"
+                ):
                     area = to_float(getattr(asset, "actual_property_area"))
                 elif hasattr(asset, "land_area") and getattr(asset, "land_area"):
                     area = to_float(getattr(asset, "land_area"))
@@ -420,14 +490,18 @@ class DistributionCalculator:
             category_total_area = stats["total_area"]
 
             if count > 0 and category_total_area > 0:  # 只包含有数据的类别
-                distribution.append({
-                    result_key: category,
-                    "count": count,
-                    "percentage": calculate_percentage(count, total_count),
-                    "total_area": round(category_total_area, 2),
-                    "area_percentage": calculate_percentage(category_total_area, total_area),
-                    "avg_area": round(category_total_area / count, 2)
-                })
+                distribution.append(
+                    {
+                        result_key: category,
+                        "count": count,
+                        "percentage": calculate_percentage(count, total_count),
+                        "total_area": round(category_total_area, 2),
+                        "area_percentage": calculate_percentage(
+                            category_total_area, total_area
+                        ),
+                        "avg_area": round(category_total_area / count, 2),
+                    }
+                )
 
         # 按面积降序排列
         distribution.sort(key=lambda x: x["total_area"], reverse=True)
@@ -436,27 +510,43 @@ class DistributionCalculator:
         return distribution
 
     @staticmethod
-    def calculate_property_nature_area_distribution(assets: List[Any]) -> List[Dict[str, Any]]:
+    def calculate_property_nature_area_distribution(
+        assets: list[Any],
+    ) -> list[dict[str, Any]]:
         """计算物业性质面积分布"""
-        return DistributionCalculator.calculate_area_distribution(assets, "property_nature")
+        return DistributionCalculator.calculate_area_distribution(
+            assets, "property_nature"
+        )
 
     @staticmethod
-    def calculate_ownership_status_area_distribution(assets: List[Any]) -> List[Dict[str, Any]]:
+    def calculate_ownership_status_area_distribution(
+        assets: list[Any],
+    ) -> list[dict[str, Any]]:
         """计算确权状态面积分布"""
-        return DistributionCalculator.calculate_area_distribution(assets, "ownership_status", "status")
+        return DistributionCalculator.calculate_area_distribution(
+            assets, "ownership_status", "status"
+        )
 
     @staticmethod
-    def calculate_usage_status_area_distribution(assets: List[Any]) -> List[Dict[str, Any]]:
+    def calculate_usage_status_area_distribution(
+        assets: list[Any],
+    ) -> list[dict[str, Any]]:
         """计算使用状态面积分布"""
-        return DistributionCalculator.calculate_area_distribution(assets, "usage_status", "status")
+        return DistributionCalculator.calculate_area_distribution(
+            assets, "usage_status", "status"
+        )
 
     @staticmethod
-    def calculate_business_category_area_distribution(assets: List[Any]) -> List[Dict[str, Any]]:
+    def calculate_business_category_area_distribution(
+        assets: list[Any],
+    ) -> list[dict[str, Any]]:
         """计算业态类别面积分布（包含出租率计算）"""
         if not assets:
             return []
 
-        category_stats = defaultdict(lambda: {"count": 0, "total_area": 0.0, "occupancy_rates": []})
+        category_stats = defaultdict(
+            lambda: {"count": 0, "total_area": 0.0, "occupancy_rates": []}
+        )
 
         for asset in assets:
             category = getattr(asset, "business_category", None)
@@ -476,7 +566,9 @@ class DistributionCalculator:
 
             # 累计面积
             area = 0.0
-            if hasattr(asset, "actual_property_area") and getattr(asset, "actual_property_area"):
+            if hasattr(asset, "actual_property_area") and getattr(
+                asset, "actual_property_area"
+            ):
                 area = to_float(getattr(asset, "actual_property_area"))
             elif hasattr(asset, "land_area") and getattr(asset, "land_area"):
                 area = to_float(getattr(asset, "land_area"))
@@ -489,7 +581,9 @@ class DistributionCalculator:
                 rentable_area_float = float(rentable_area)
                 rented_area_float = float(rented_area)
                 occupancy_rate = (rented_area_float / rentable_area_float) * 100
-                occupancy_rate = round(min(max(occupancy_rate, 0), 100), 2)  # 确保在0-100范围内
+                occupancy_rate = round(
+                    min(max(occupancy_rate, 0), 100), 2
+                )  # 确保在0-100范围内
             else:
                 occupancy_rate = 0.0
 
@@ -505,18 +599,24 @@ class DistributionCalculator:
             occupancy_rates = stats["occupancy_rates"]
 
             # 计算平均出租率
-            avg_occupancy = sum(occupancy_rates) / len(occupancy_rates) if occupancy_rates else 0.0
+            avg_occupancy = (
+                sum(occupancy_rates) / len(occupancy_rates) if occupancy_rates else 0.0
+            )
 
             if count > 0 and category_total_area > 0:
-                distribution.append({
-                    "category": category,
-                    "count": count,
-                    "percentage": calculate_percentage(count, total_count),
-                    "total_area": round(category_total_area, 2),
-                    "area_percentage": calculate_percentage(category_total_area, total_area),
-                    "avg_area": round(category_total_area / count, 2),
-                    "occupancy_rate": round(avg_occupancy, 2)
-                })
+                distribution.append(
+                    {
+                        "category": category,
+                        "count": count,
+                        "percentage": calculate_percentage(count, total_count),
+                        "total_area": round(category_total_area, 2),
+                        "area_percentage": calculate_percentage(
+                            category_total_area, total_area
+                        ),
+                        "avg_area": round(category_total_area / count, 2),
+                        "occupancy_rate": round(avg_occupancy, 2),
+                    }
+                )
 
         # 按面积降序排列
         distribution.sort(key=lambda x: x["total_area"], reverse=True)
@@ -529,7 +629,7 @@ class AreaSummaryCalculator:
     """面积汇总计算器"""
 
     @staticmethod
-    def calculate_area_summary(assets: List[Any]) -> Dict[str, Any]:
+    def calculate_area_summary(assets: list[Any]) -> dict[str, Any]:
         """计算面积汇总信息"""
         if not assets:
             return {
@@ -540,7 +640,7 @@ class AreaSummaryCalculator:
                 "total_rentable_area": 0.0,
                 "total_rented_area": 0.0,
                 "total_unrented_area": 0.0,
-                "occupancy_rate": 0.0
+                "occupancy_rate": 0.0,
             }
 
         summary = {
@@ -551,7 +651,7 @@ class AreaSummaryCalculator:
             "total_rentable_area": 0.0,
             "total_rented_area": 0.0,
             "total_unrented_area": 0.0,
-            "assets_with_area_data": 0
+            "assets_with_area_data": 0,
         }
 
         # 累计各种面积数据
@@ -576,7 +676,9 @@ class AreaSummaryCalculator:
 
             # 可租面积
             if getattr(asset, "rentable_area", None):
-                summary["total_rentable_area"] += to_float(getattr(asset, "rentable_area"))
+                summary["total_rentable_area"] += to_float(
+                    getattr(asset, "rentable_area")
+                )
                 has_area_data = True
 
             # 已租面积
@@ -587,20 +689,31 @@ class AreaSummaryCalculator:
                 summary["assets_with_area_data"] += 1
 
         # 计算未租面积（可出租面积 - 已出租面积）
-        summary["total_unrented_area"] = summary["total_rentable_area"] - summary["total_rented_area"]
+        summary["total_unrented_area"] = (
+            summary["total_rentable_area"] - summary["total_rented_area"]
+        )
 
         # 计算整体出租率
         if summary["total_rentable_area"] > 0:
-            occupancy_rate = (summary["total_rented_area"] / summary["total_rentable_area"]) * 100
+            occupancy_rate = (
+                summary["total_rented_area"] / summary["total_rentable_area"]
+            ) * 100
             summary["occupancy_rate"] = round(occupancy_rate, 2)
         else:
             summary["occupancy_rate"] = 0.0
 
         # 格式化数据
-        for key in ["total_area", "total_rentable_area", "total_rented_area", "total_unrented_area"]:
+        for key in [
+            "total_area",
+            "total_rentable_area",
+            "total_rented_area",
+            "total_unrented_area",
+        ]:
             summary[key] = round(summary[key], 2)
 
-        logger.info(f"面积汇总计算完成，总面积: {summary['total_area']}㎡，出租率: {summary['occupancy_rate']}%")
+        logger.info(
+            f"面积汇总计算完成，总面积: {summary['total_area']}㎡，出租率: {summary['occupancy_rate']}%"
+        )
         return summary
 
 
@@ -608,7 +721,7 @@ class FinancialSummaryCalculator:
     """财务汇总计算器"""
 
     @staticmethod
-    def calculate_financial_summary(assets: List[Any]) -> Dict[str, Any]:
+    def calculate_financial_summary(assets: list[Any]) -> dict[str, Any]:
         """计算财务汇总信息"""
         if not assets:
             return {
@@ -617,7 +730,7 @@ class FinancialSummaryCalculator:
                 "total_net_income": 0.0,
                 "total_monthly_rent": 0.0,
                 "assets_with_income_data": 0,
-                "assets_with_rent_data": 0
+                "assets_with_rent_data": 0,
             }
 
         summary = {
@@ -627,22 +740,28 @@ class FinancialSummaryCalculator:
             "total_monthly_rent": 0.0,
             "total_deposit": 0.0,
             "assets_with_income_data": 0,
-            "assets_with_rent_data": 0
+            "assets_with_rent_data": 0,
         }
 
         for asset in assets:
             # 年收入数据
             if getattr(asset, "annual_income", None):
-                summary["total_annual_income"] += to_float(getattr(asset, "annual_income"))
+                summary["total_annual_income"] += to_float(
+                    getattr(asset, "annual_income")
+                )
                 summary["assets_with_income_data"] += 1
 
             # 年支出数据
             if getattr(asset, "annual_expense", None):
-                summary["total_annual_expense"] += to_float(getattr(asset, "annual_expense"))
+                summary["total_annual_expense"] += to_float(
+                    getattr(asset, "annual_expense")
+                )
 
             # 月租金数据
             if getattr(asset, "monthly_rent", None):
-                summary["total_monthly_rent"] += to_float(getattr(asset, "monthly_rent"))
+                summary["total_monthly_rent"] += to_float(
+                    getattr(asset, "monthly_rent")
+                )
                 summary["assets_with_rent_data"] += 1
 
             # 押金数据
@@ -650,14 +769,23 @@ class FinancialSummaryCalculator:
                 summary["total_deposit"] += to_float(getattr(asset, "deposit"))
 
         # 计算净收益
-        summary["total_net_income"] = summary["total_annual_income"] - summary["total_annual_expense"]
+        summary["total_net_income"] = (
+            summary["total_annual_income"] - summary["total_annual_expense"]
+        )
 
         # 格式化数据
-        for key in ["total_annual_income", "total_annual_expense", "total_net_income",
-                   "total_monthly_rent", "total_deposit"]:
+        for key in [
+            "total_annual_income",
+            "total_annual_expense",
+            "total_net_income",
+            "total_monthly_rent",
+            "total_deposit",
+        ]:
             summary[key] = round(summary[key], 2)
 
-        logger.info(f"财务汇总计算完成，年收入: {summary['total_annual_income']}，净收益: {summary['total_net_income']}")
+        logger.info(
+            f"财务汇总计算完成，年收入: {summary['total_annual_income']}，净收益: {summary['total_net_income']}"
+        )
         return summary
 
 
@@ -665,7 +793,7 @@ class OccupancyDistributionCalculator:
     """出租率分布计算器"""
 
     @staticmethod
-    def calculate_occupancy_distribution(assets: List[Any]) -> List[Dict[str, Any]]:
+    def calculate_occupancy_distribution(assets: list[Any]) -> list[dict[str, Any]]:
         """计算出租率区间分布"""
         if not assets:
             return []
@@ -676,7 +804,7 @@ class OccupancyDistributionCalculator:
             (20, 40, "20-40%"),
             (40, 60, "40-60%"),
             (60, 80, "60-80%"),
-            (80, 101, "80-100%")
+            (80, 101, "80-100%"),
         ]
 
         total_count = len(assets)
@@ -685,17 +813,15 @@ class OccupancyDistributionCalculator:
         for min_rate, max_rate, range_label in ranges:
             count = 0
             for asset in assets:
-                occupancy_rate = getattr(asset, 'occupancy_rate', 0) or 0
+                occupancy_rate = getattr(asset, "occupancy_rate", 0) or 0
                 if min_rate <= occupancy_rate < max_rate:
                     count += 1
 
             if count > 0:
                 percentage = calculate_percentage(count, total_count)
-                occupancy_distribution.append({
-                    "range": range_label,
-                    "count": count,
-                    "percentage": percentage
-                })
+                occupancy_distribution.append(
+                    {"range": range_label, "count": count, "percentage": percentage}
+                )
 
         logger.info(f"出租率分布计算完成，共{len(occupancy_distribution)}个区间")
         return occupancy_distribution
@@ -706,7 +832,9 @@ class OccupancyTrendGenerator:
 
     @staticmethod
     @PerformanceMonitor.monitor_performance("generate_occupancy_trend")
-    def generate_occupancy_trend(assets: List[Any], db: Session) -> List[Dict[str, Any]]:
+    def generate_occupancy_trend(
+        assets: list[Any], db: Session
+    ) -> list[dict[str, Any]]:
         """基于AssetHistory历史数据计算真实的出租率趋势"""
         if not assets:
             return []
@@ -718,7 +846,9 @@ class OccupancyTrendGenerator:
             # 生成缓存键
             cache_filters = {
                 "asset_count": len(assets),
-                "asset_ids_hash": hashlib.md5(','.join(sorted(asset_ids)).encode()).hexdigest()[:8]
+                "asset_ids_hash": hashlib.md5(
+                    ",".join(sorted(asset_ids)).encode()
+                ).hexdigest()[:8],
             }
 
             # 检查缓存
@@ -730,9 +860,17 @@ class OccupancyTrendGenerator:
             logger.info(f"开始基于历史数据计算出租率趋势，涉及{len(asset_ids)}个资产")
 
             # 使用优化的历史记录查询
-            area_fields = ['rented_area', 'rentable_area', 'occupancy_rate', 'unrented_area']
+            area_fields = [
+                "rented_area",
+                "rentable_area",
+                "occupancy_rate",
+                "unrented_area",
+            ]
             history_records = DatabaseQueryOptimizer.optimize_history_query(
-                db, asset_ids, area_fields, days_back=180  # 6个月的历史数据
+                db,
+                asset_ids,
+                area_fields,
+                days_back=180,  # 6个月的历史数据
             )
 
             logger.info(f"找到{len(history_records)}条相关历史记录")
@@ -746,18 +884,29 @@ class OccupancyTrendGenerator:
             # 如果没有历史数据，返回基于当前数据的趋势
             if not history_records:
                 logger.info("未找到历史数据，使用当前数据生成趋势")
-                trend_data = OccupancyTrendGenerator._generate_current_data_trend(current_rate, current_rented, current_rentable)
+                trend_data = OccupancyTrendGenerator._generate_current_data_trend(
+                    current_rate, current_rented, current_rentable
+                )
             else:
                 # 分析历史数据，按月份分组
                 trend_data = OccupancyTrendGenerator._analyze_historical_trends(
-                    history_records, assets, db, current_rate, current_rented, current_rentable
+                    history_records,
+                    assets,
+                    db,
+                    current_rate,
+                    current_rented,
+                    current_rentable,
                 )
 
             calculation_time = time.time() - start_time
-            logger.info(f"出租率趋势计算完成，共{len(trend_data)}个月的数据点，耗时: {calculation_time:.3f}s")
+            logger.info(
+                f"出租率趋势计算完成，共{len(trend_data)}个月的数据点，耗时: {calculation_time:.3f}s"
+            )
 
             # 设置缓存
-            analytics_cache.set(cache_filters, "occupancy_trend", trend_data, calculation_time)
+            analytics_cache.set(
+                cache_filters, "occupancy_trend", trend_data, calculation_time
+            )
 
             return trend_data
 
@@ -767,33 +916,46 @@ class OccupancyTrendGenerator:
             return []
 
     @staticmethod
-    def _generate_current_data_trend(current_rate: float, current_rented: float, current_rentable: float) -> List[Dict[str, Any]]:
+    def _generate_current_data_trend(
+        current_rate: float, current_rented: float, current_rentable: float
+    ) -> list[dict[str, Any]]:
         """基于当前数据生成趋势"""
-        from datetime import datetime, timedelta, timezone
+        from datetime import datetime, timedelta
 
         trend_data = []
         for i in range(5, -1, -1):
             month_date = datetime.now() - timedelta(days=30 * i)
             month_label = f"{month_date.month}月"
 
-            trend_data.append({
-                "date": month_label,
-                "occupancy_rate": round(current_rate, 2),
-                "total_rented_area": round(current_rented, 2),
-                "total_rentable_area": round(current_rentable, 2),
-                "data_source": "current_snapshot"
-            })
+            trend_data.append(
+                {
+                    "date": month_label,
+                    "occupancy_rate": round(current_rate, 2),
+                    "total_rented_area": round(current_rented, 2),
+                    "total_rentable_area": round(current_rentable, 2),
+                    "data_source": "current_snapshot",
+                }
+            )
 
         return trend_data
 
     @staticmethod
-    def _analyze_historical_trends(history_records, assets, db, current_rate: float, current_rented: float, current_rentable: float) -> List[Dict[str, Any]]:
+    def _analyze_historical_trends(
+        history_records,
+        assets,
+        db,
+        current_rate: float,
+        current_rented: float,
+        current_rentable: float,
+    ) -> list[dict[str, Any]]:
         """分析历史数据生成趋势"""
-        from datetime import datetime, timedelta, timezone
         from collections import defaultdict
+        from datetime import datetime, timedelta
 
         # 按月份分组历史记录
-        monthly_data = defaultdict(lambda: {"rented_area": 0, "rentable_area": 0, "records": []})
+        monthly_data = defaultdict(
+            lambda: {"rented_area": 0, "rentable_area": 0, "records": []}
+        )
 
         # 计算过去6个月的月份范围
         months = []
@@ -827,7 +989,7 @@ class OccupancyTrendGenerator:
                     month_data = {
                         "occupancy_rate": current_rate,
                         "total_rented_area": current_rented,
-                        "total_rentable_area": current_rentable
+                        "total_rentable_area": current_rentable,
                     }
                 else:  # 其他月份使用前一个月份的数据或估算
                     month_data = OccupancyTrendGenerator._estimate_month_data(
@@ -835,13 +997,15 @@ class OccupancyTrendGenerator:
                     )
                 data_source = "estimated"
 
-            trend_data.append({
-                "date": month_label,
-                "occupancy_rate": round(month_data["occupancy_rate"], 2),
-                "total_rented_area": round(month_data["total_rented_area"], 2),
-                "total_rentable_area": round(month_data["total_rentable_area"], 2),
-                "data_source": data_source
-            })
+            trend_data.append(
+                {
+                    "date": month_label,
+                    "occupancy_rate": round(month_data["occupancy_rate"], 2),
+                    "total_rented_area": round(month_data["total_rented_area"], 2),
+                    "total_rentable_area": round(month_data["total_rentable_area"], 2),
+                    "data_source": data_source,
+                }
+            )
 
         # 反转趋势数据，使其按时间顺序排列
         trend_data.reverse()
@@ -855,14 +1019,13 @@ class OccupancyTrendGenerator:
             area_map[asset.id] = {
                 "rentable_area": float(getattr(asset, "rentable_area", 0) or 0),
                 "rented_area": float(getattr(asset, "rented_area", 0) or 0),
-                "occupancy_rate": float(getattr(asset, "occupancy_rate", 0) or 0)
+                "occupancy_rate": float(getattr(asset, "occupancy_rate", 0) or 0),
             }
         return area_map
 
     @staticmethod
     def _calculate_month_from_history(records, asset_area_map):
         """基于历史记录计算月份数据"""
-        from collections import defaultdict
 
         # 跟踪每个资产的最新状态
         asset_states = {}
@@ -870,11 +1033,10 @@ class OccupancyTrendGenerator:
         for record in records:
             asset_id = record.asset_id
             if asset_id not in asset_states:
-                asset_states[asset_id] = asset_area_map.get(asset_id, {
-                    "rentable_area": 0,
-                    "rented_area": 0,
-                    "occupancy_rate": 0
-                })
+                asset_states[asset_id] = asset_area_map.get(
+                    asset_id,
+                    {"rentable_area": 0, "rented_area": 0, "occupancy_rate": 0},
+                )
 
             # 应用历史变更
             if record.field_name == "rented_area" and record.new_value:
@@ -904,17 +1066,19 @@ class OccupancyTrendGenerator:
         return {
             "occupancy_rate": avg_occupancy_rate,
             "total_rented_area": total_rented,
-            "total_rentable_area": total_rentable
+            "total_rentable_area": total_rentable,
         }
 
     @staticmethod
-    def _estimate_month_data(trend_data, month_index, current_rate, current_rented, current_rentable):
+    def _estimate_month_data(
+        trend_data, month_index, current_rate, current_rented, current_rentable
+    ):
         """估算月份数据"""
         if month_index == 0:
             return {
                 "occupancy_rate": current_rate,
                 "total_rented_area": current_rented,
-                "total_rentable_area": current_rentable
+                "total_rentable_area": current_rentable,
             }
 
         # 简单的线性插值
@@ -923,13 +1087,13 @@ class OccupancyTrendGenerator:
             return {
                 "occupancy_rate": prev_data["occupancy_rate"],
                 "total_rented_area": prev_data["total_rented_area"],
-                "total_rentable_area": prev_data["total_rentable_area"]
+                "total_rentable_area": prev_data["total_rentable_area"],
             }
         else:
             return {
                 "occupancy_rate": current_rate * 0.95,  # 简单估算
                 "total_rented_area": current_rented * 0.95,
-                "total_rentable_area": current_rentable
+                "total_rentable_area": current_rentable,
             }
 
 
@@ -938,7 +1102,9 @@ class TimeDimensionTrendGenerator:
 
     @staticmethod
     @PerformanceMonitor.monitor_performance("generate_quarterly_trend")
-    def generate_quarterly_trend(assets: List[Any], db: Session) -> List[Dict[str, Any]]:
+    def generate_quarterly_trend(
+        assets: list[Any], db: Session
+    ) -> list[dict[str, Any]]:
         """生成季度趋势数据"""
         if not assets:
             return []
@@ -948,8 +1114,10 @@ class TimeDimensionTrendGenerator:
             asset_ids = [asset.id for asset in assets]
             cache_filters = {
                 "asset_count": len(assets),
-                "asset_ids_hash": hashlib.md5(','.join(sorted(asset_ids)).encode()).hexdigest()[:8],
-                "trend_type": "quarterly"
+                "asset_ids_hash": hashlib.md5(
+                    ",".join(sorted(asset_ids)).encode()
+                ).hexdigest()[:8],
+                "trend_type": "quarterly",
             }
 
             # 检查缓存
@@ -961,9 +1129,12 @@ class TimeDimensionTrendGenerator:
             logger.info("开始生成季度趋势数据")
 
             # 使用优化的历史记录查询
-            area_fields = ['rented_area', 'rentable_area', 'occupancy_rate']
+            area_fields = ["rented_area", "rentable_area", "occupancy_rate"]
             history_records = DatabaseQueryOptimizer.optimize_history_query(
-                db, asset_ids, area_fields, days_back=730  # 2年历史数据
+                db,
+                asset_ids,
+                area_fields,
+                days_back=730,  # 2年历史数据
             )
 
             # 计算当前状态
@@ -982,14 +1153,23 @@ class TimeDimensionTrendGenerator:
 
             # 分析季度趋势
             trend_data = TimeDimensionTrendGenerator._analyze_quarterly_trends(
-                history_records, assets, quarters, current_rate, current_rented, current_rentable
+                history_records,
+                assets,
+                quarters,
+                current_rate,
+                current_rented,
+                current_rentable,
             )
 
             calculation_time = time.time() - start_time
-            logger.info(f"季度趋势计算完成，共{len(trend_data)}个季度，耗时: {calculation_time:.3f}s")
+            logger.info(
+                f"季度趋势计算完成，共{len(trend_data)}个季度，耗时: {calculation_time:.3f}s"
+            )
 
             # 设置缓存
-            analytics_cache.set(cache_filters, "quarterly_trend", trend_data, calculation_time)
+            analytics_cache.set(
+                cache_filters, "quarterly_trend", trend_data, calculation_time
+            )
 
             return trend_data
 
@@ -999,7 +1179,7 @@ class TimeDimensionTrendGenerator:
 
     @staticmethod
     @PerformanceMonitor.monitor_performance("generate_yearly_trend")
-    def generate_yearly_trend(assets: List[Any], db: Session) -> List[Dict[str, Any]]:
+    def generate_yearly_trend(assets: list[Any], db: Session) -> list[dict[str, Any]]:
         """生成年度趋势数据"""
         if not assets:
             return []
@@ -1009,8 +1189,10 @@ class TimeDimensionTrendGenerator:
             asset_ids = [asset.id for asset in assets]
             cache_filters = {
                 "asset_count": len(assets),
-                "asset_ids_hash": hashlib.md5(','.join(sorted(asset_ids)).encode()).hexdigest()[:8],
-                "trend_type": "yearly"
+                "asset_ids_hash": hashlib.md5(
+                    ",".join(sorted(asset_ids)).encode()
+                ).hexdigest()[:8],
+                "trend_type": "yearly",
             }
 
             # 检查缓存
@@ -1022,9 +1204,12 @@ class TimeDimensionTrendGenerator:
             logger.info("开始生成年度趋势数据")
 
             # 使用优化的历史记录查询
-            area_fields = ['rented_area', 'rentable_area', 'occupancy_rate']
+            area_fields = ["rented_area", "rentable_area", "occupancy_rate"]
             history_records = DatabaseQueryOptimizer.optimize_history_query(
-                db, asset_ids, area_fields, days_back=1825  # 5年历史数据
+                db,
+                asset_ids,
+                area_fields,
+                days_back=1825,  # 5年历史数据
             )
 
             # 计算当前状态
@@ -1041,14 +1226,23 @@ class TimeDimensionTrendGenerator:
 
             # 分析年度趋势
             trend_data = TimeDimensionTrendGenerator._analyze_yearly_trends(
-                history_records, assets, years, current_rate, current_rented, current_rentable
+                history_records,
+                assets,
+                years,
+                current_rate,
+                current_rented,
+                current_rentable,
             )
 
             calculation_time = time.time() - start_time
-            logger.info(f"年度趋势计算完成，共{len(trend_data)}年，耗时: {calculation_time:.3f}s")
+            logger.info(
+                f"年度趋势计算完成，共{len(trend_data)}年，耗时: {calculation_time:.3f}s"
+            )
 
             # 设置缓存
-            analytics_cache.set(cache_filters, "yearly_trend", trend_data, calculation_time)
+            analytics_cache.set(
+                cache_filters, "yearly_trend", trend_data, calculation_time
+            )
 
             return trend_data
 
@@ -1057,14 +1251,23 @@ class TimeDimensionTrendGenerator:
             return []
 
     @staticmethod
-    def _analyze_quarterly_trends(history_records, assets, quarters, current_rate, current_rented, current_rentable):
+    def _analyze_quarterly_trends(
+        history_records,
+        assets,
+        quarters,
+        current_rate,
+        current_rented,
+        current_rentable,
+    ):
         """分析季度趋势"""
         from collections import defaultdict
 
         # 按季度分组历史记录
         quarterly_data = defaultdict(list)
         for record in history_records:
-            quarter = TimeDimensionTrendGenerator._get_quarter_from_date(record.operation_time)
+            quarter = TimeDimensionTrendGenerator._get_quarter_from_date(
+                record.operation_time
+            )
             if quarter in quarters:
                 quarterly_data[quarter].append(record)
 
@@ -1082,24 +1285,32 @@ class TimeDimensionTrendGenerator:
             else:
                 # 使用估算数据
                 quarter_data = {
-                    "occupancy_rate": current_rate * (0.9 + 0.02 * len(trend_data)),  # 简单渐进变化
-                    "total_rented_area": current_rented * (0.9 + 0.02 * len(trend_data)),
-                    "total_rentable_area": current_rentable
+                    "occupancy_rate": current_rate
+                    * (0.9 + 0.02 * len(trend_data)),  # 简单渐进变化
+                    "total_rented_area": current_rented
+                    * (0.9 + 0.02 * len(trend_data)),
+                    "total_rentable_area": current_rentable,
                 }
                 data_source = "estimated"
 
-            trend_data.append({
-                "date": quarter,
-                "occupancy_rate": round(quarter_data["occupancy_rate"], 2),
-                "total_rented_area": round(quarter_data["total_rented_area"], 2),
-                "total_rentable_area": round(quarter_data["total_rentable_area"], 2),
-                "data_source": data_source
-            })
+            trend_data.append(
+                {
+                    "date": quarter,
+                    "occupancy_rate": round(quarter_data["occupancy_rate"], 2),
+                    "total_rented_area": round(quarter_data["total_rented_area"], 2),
+                    "total_rentable_area": round(
+                        quarter_data["total_rentable_area"], 2
+                    ),
+                    "data_source": data_source,
+                }
+            )
 
         return trend_data
 
     @staticmethod
-    def _analyze_yearly_trends(history_records, assets, years, current_rate, current_rented, current_rentable):
+    def _analyze_yearly_trends(
+        history_records, assets, years, current_rate, current_rented, current_rentable
+    ):
         """分析年度趋势"""
         from collections import defaultdict
 
@@ -1124,19 +1335,23 @@ class TimeDimensionTrendGenerator:
             else:
                 # 使用估算数据
                 year_data = {
-                    "occupancy_rate": current_rate * (0.85 + 0.04 * len(trend_data)),  # 简单渐进变化
-                    "total_rented_area": current_rented * (0.85 + 0.04 * len(trend_data)),
-                    "total_rentable_area": current_rentable
+                    "occupancy_rate": current_rate
+                    * (0.85 + 0.04 * len(trend_data)),  # 简单渐进变化
+                    "total_rented_area": current_rented
+                    * (0.85 + 0.04 * len(trend_data)),
+                    "total_rentable_area": current_rentable,
                 }
                 data_source = "estimated"
 
-            trend_data.append({
-                "date": year,
-                "occupancy_rate": round(year_data["occupancy_rate"], 2),
-                "total_rented_area": round(year_data["total_rented_area"], 2),
-                "total_rentable_area": round(year_data["total_rentable_area"], 2),
-                "data_source": data_source
-            })
+            trend_data.append(
+                {
+                    "date": year,
+                    "occupancy_rate": round(year_data["occupancy_rate"], 2),
+                    "total_rented_area": round(year_data["total_rented_area"], 2),
+                    "total_rentable_area": round(year_data["total_rentable_area"], 2),
+                    "data_source": data_source,
+                }
+            )
 
         return trend_data
 
@@ -1152,7 +1367,7 @@ class CategoryTrendGenerator:
 
     @staticmethod
     @PerformanceMonitor.monitor_performance("generate_category_trends")
-    def generate_category_trends(assets: List[Any], db: Session) -> Dict[str, Any]:
+    def generate_category_trends(assets: list[Any], db: Session) -> dict[str, Any]:
         """生成各类别的趋势数据"""
         if not assets:
             return {}
@@ -1162,8 +1377,10 @@ class CategoryTrendGenerator:
             asset_ids = [asset.id for asset in assets]
             cache_filters = {
                 "asset_count": len(assets),
-                "asset_ids_hash": hashlib.md5(','.join(sorted(asset_ids)).encode()).hexdigest()[:8],
-                "trend_type": "category"
+                "asset_ids_hash": hashlib.md5(
+                    ",".join(sorted(asset_ids)).encode()
+                ).hexdigest()[:8],
+                "trend_type": "category",
             }
 
             # 检查缓存
@@ -1188,34 +1405,52 @@ class CategoryTrendGenerator:
                 else:
                     minor_categories.append((category, category_assets))
 
-            logger.info(f"主要类别数量: {len(major_categories)}，次要类别数量: {len(minor_categories)}")
+            logger.info(
+                f"主要类别数量: {len(major_categories)}，次要类别数量: {len(minor_categories)}"
+            )
 
             # 优先处理主要类别
-            for category, category_assets in major_categories[:10]:  # 限制最多10个主要类别
+            for category, category_assets in major_categories[
+                :10
+            ]:  # 限制最多10个主要类别
                 try:
                     category_trends[category] = {
-                        "monthly_trend": OccupancyTrendGenerator.generate_occupancy_trend(category_assets, db),
+                        "monthly_trend": OccupancyTrendGenerator.generate_occupancy_trend(
+                            category_assets, db
+                        ),
                         "asset_count": len(category_assets),
-                        "area_summary": AreaSummaryCalculator.calculate_area_summary(category_assets)
+                        "area_summary": AreaSummaryCalculator.calculate_area_summary(
+                            category_assets
+                        ),
                     }
                 except Exception as e:
                     logger.warning(f"生成类别 {category} 趋势失败: {str(e)}")
                     continue
 
             # 生成类别对比趋势
-            comparison_trend = CategoryTrendGenerator._generate_category_comparison_trend(category_groups)
+            comparison_trend = (
+                CategoryTrendGenerator._generate_category_comparison_trend(
+                    category_groups
+                )
+            )
 
             result = {
                 "category_trends": category_trends,
                 "comparison_trend": comparison_trend,
-                "summary": CategoryTrendGenerator._generate_category_summary(category_groups)
+                "summary": CategoryTrendGenerator._generate_category_summary(
+                    category_groups
+                ),
             }
 
             calculation_time = time.time() - start_time
-            logger.info(f"类别趋势计算完成，涉及{len(category_trends)}个类别，耗时: {calculation_time:.3f}s")
+            logger.info(
+                f"类别趋势计算完成，涉及{len(category_trends)}个类别，耗时: {calculation_time:.3f}s"
+            )
 
             # 设置缓存
-            analytics_cache.set(cache_filters, "category_trends", result, calculation_time)
+            analytics_cache.set(
+                cache_filters, "category_trends", result, calculation_time
+            )
 
             return result
 
@@ -1227,6 +1462,7 @@ class CategoryTrendGenerator:
     def _group_assets_by_category(assets):
         """按业态类别分组资产"""
         from collections import defaultdict
+
         category_groups = defaultdict(list)
 
         for asset in assets:
@@ -1247,16 +1483,20 @@ class CategoryTrendGenerator:
             category_rates = []
             for category, category_assets in category_groups.items():
                 if len(category_assets) >= 3:  # 只包含有足够数量资产的类别
-                    area_summary = AreaSummaryCalculator.calculate_area_summary(category_assets)
+                    area_summary = AreaSummaryCalculator.calculate_area_summary(
+                        category_assets
+                    )
                     occupancy_rate = area_summary["occupancy_rate"]
                     total_area = area_summary["total_area"]
 
-                    category_rates.append({
-                        "category": category,
-                        "occupancy_rate": occupancy_rate,
-                        "total_area": total_area,
-                        "asset_count": len(category_assets)
-                    })
+                    category_rates.append(
+                        {
+                            "category": category,
+                            "occupancy_rate": occupancy_rate,
+                            "total_area": total_area,
+                            "asset_count": len(category_assets),
+                        }
+                    )
 
             # 按出租率排序
             category_rates.sort(key=lambda x: x["occupancy_rate"], reverse=True)
@@ -1277,7 +1517,7 @@ class CategoryTrendGenerator:
                 "highest_occupancy_category": None,
                 "lowest_occupancy_category": None,
                 "average_occupancy_rate": 0,
-                "category_details": []
+                "category_details": [],
             }
 
             category_stats = []
@@ -1288,7 +1528,9 @@ class CategoryTrendGenerator:
                 if len(category_assets) > 0:
                     summary["categories_with_assets"] += 1
 
-                    area_summary = AreaSummaryCalculator.calculate_area_summary(category_assets)
+                    area_summary = AreaSummaryCalculator.calculate_area_summary(
+                        category_assets
+                    )
                     occupancy_rate = area_summary["occupancy_rate"]
                     total_area = area_summary["total_area"]
 
@@ -1303,7 +1545,7 @@ class CategoryTrendGenerator:
                         "occupancy_rate": occupancy_rate,
                         "total_area": total_area,
                         "total_rentable_area": area_summary["total_rentable_area"],
-                        "total_rented_area": area_summary["total_rented_area"]
+                        "total_rented_area": area_summary["total_rented_area"],
                     }
                     category_stats.append(category_detail)
 
@@ -1312,9 +1554,15 @@ class CategoryTrendGenerator:
 
             # 找出最高和最低出租率的类别
             if category_stats:
-                summary["highest_occupancy_category"] = max(category_stats, key=lambda x: x["occupancy_rate"])
-                summary["lowest_occupancy_category"] = min(category_stats, key=lambda x: x["occupancy_rate"])
-                summary["category_details"] = sorted(category_stats, key=lambda x: x["occupancy_rate"], reverse=True)
+                summary["highest_occupancy_category"] = max(
+                    category_stats, key=lambda x: x["occupancy_rate"]
+                )
+                summary["lowest_occupancy_category"] = min(
+                    category_stats, key=lambda x: x["occupancy_rate"]
+                )
+                summary["category_details"] = sorted(
+                    category_stats, key=lambda x: x["occupancy_rate"], reverse=True
+                )
 
             return summary
 
@@ -1323,7 +1571,7 @@ class CategoryTrendGenerator:
             return summary
 
 
-def validate_filters(filters: Dict[str, Any]) -> Dict[str, Any]:
+def validate_filters(filters: dict[str, Any]) -> dict[str, Any]:
     """验证和清理筛选条件"""
     validated_filters = {}
 
@@ -1332,13 +1580,13 @@ def validate_filters(filters: Dict[str, Any]) -> Dict[str, Any]:
             validated_filters[key] = str(value).strip()
 
     # 添加数据状态筛选
-    validated_filters['data_status'] = DataStatus.NORMAL.value
+    validated_filters["data_status"] = DataStatus.NORMAL.value
 
     logger.info(f"筛选条件验证完成: {validated_filters}")
     return validated_filters
 
 
-def create_empty_response() -> Dict[str, Any]:
+def create_empty_response() -> dict[str, Any]:
     """创建空数据响应"""
     return {
         "success": True,
@@ -1352,7 +1600,7 @@ def create_empty_response() -> Dict[str, Any]:
                 "total_rentable_area": 0.0,
                 "total_rented_area": 0.0,
                 "total_unrented_area": 0.0,
-                "occupancy_rate": 0.0
+                "occupancy_rate": 0.0,
             },
             "financial_summary": {
                 "total_annual_income": 0.0,
@@ -1360,27 +1608,27 @@ def create_empty_response() -> Dict[str, Any]:
                 "total_net_income": 0.0,
                 "total_monthly_rent": 0.0,
                 "assets_with_income_data": 0,
-                "assets_with_rent_data": 0
+                "assets_with_rent_data": 0,
             },
             "occupancy_distribution": [],
             "property_nature_distribution": [],
             "ownership_status_distribution": [],
             "usage_status_distribution": [],
             "business_category_distribution": [],
-            "occupancy_trend": []
-        }
+            "occupancy_trend": [],
+        },
     }
 
 
 @router.get("/comprehensive", summary="获取综合统计分析数据")
 async def get_comprehensive_analytics(
-    search: Optional[str] = Query(None, description="搜索筛选"),
-    ownership_status: Optional[str] = Query(None, description="确权状态筛选"),
-    property_nature: Optional[str] = Query(None, description="物业性质筛选"),
-    usage_status: Optional[str] = Query(None, description="使用状态筛选"),
-    ownership_entity: Optional[str] = Query(None, description="权属方筛选"),
+    search: str | None = Query(None, description="搜索筛选"),
+    ownership_status: str | None = Query(None, description="确权状态筛选"),
+    property_nature: str | None = Query(None, description="物业性质筛选"),
+    usage_status: str | None = Query(None, description="使用状态筛选"),
+    ownership_entity: str | None = Query(None, description="权属方筛选"),
     clear_cache: bool = Query(False, description="清除缓存"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     获取综合统计分析数据，包含所有必要的分析指标
@@ -1404,32 +1652,31 @@ async def get_comprehensive_analytics(
             "ownership_status": ownership_status,
             "property_nature": property_nature,
             "usage_status": usage_status,
-            "ownership_entity": ownership_entity
+            "ownership_entity": ownership_entity,
         }
 
         filters = validate_filters(raw_filters)
         logger.info(f"开始获取综合分析数据，筛选条件: {filters}")
 
         # 检查综合分析缓存
-        cache_filters = {
-            **filters,
-            "search": search
-        }
+        cache_filters = {**filters, "search": search}
         cached_result = analytics_cache.get(cache_filters, "comprehensive_analytics")
         if cached_result:
             logger.info("综合分析数据缓存命中")
             return {
                 "success": True,
-                "message": f"成功获取缓存的综合分析数据（缓存命中）",
+                "message": "成功获取缓存的综合分析数据（缓存命中）",
                 "data": cached_result,
-                "cache_stats": analytics_cache.get_stats()
+                "cache_stats": analytics_cache.get_stats(),
             }
 
         start_time = time.time()
         logger.info("缓存未命中，开始计算综合分析数据")
 
         # 使用优化的资产查询
-        assets, total_count = DatabaseQueryOptimizer.optimize_asset_query(db, filters, search)
+        assets, total_count = DatabaseQueryOptimizer.optimize_asset_query(
+            db, filters, search
+        )
 
         if total_count == 0:
             logger.info("未找到符合条件的资产数据")
@@ -1439,27 +1686,49 @@ async def get_comprehensive_analytics(
 
         # 使用专门的计算器进行各项统计计算
         area_summary = AreaSummaryCalculator.calculate_area_summary(assets)
-        financial_summary = FinancialSummaryCalculator.calculate_financial_summary(assets)
+        financial_summary = FinancialSummaryCalculator.calculate_financial_summary(
+            assets
+        )
 
         # 计算各种分布数据
-        property_nature_distribution = DistributionCalculator.calculate_property_nature_distribution(assets)
-        ownership_status_distribution = DistributionCalculator.calculate_ownership_status_distribution(assets)
-        usage_status_distribution = DistributionCalculator.calculate_usage_status_distribution(assets)
-        business_category_distribution = DistributionCalculator.calculate_business_category_distribution(assets)
+        property_nature_distribution = (
+            DistributionCalculator.calculate_property_nature_distribution(assets)
+        )
+        ownership_status_distribution = (
+            DistributionCalculator.calculate_ownership_status_distribution(assets)
+        )
+        usage_status_distribution = (
+            DistributionCalculator.calculate_usage_status_distribution(assets)
+        )
+        business_category_distribution = (
+            DistributionCalculator.calculate_business_category_distribution(assets)
+        )
 
         # 计算面积维度分布数据
-        property_nature_area_distribution = DistributionCalculator.calculate_property_nature_area_distribution(assets)
-        ownership_status_area_distribution = DistributionCalculator.calculate_ownership_status_area_distribution(assets)
-        usage_status_area_distribution = DistributionCalculator.calculate_usage_status_area_distribution(assets)
-        business_category_area_distribution = DistributionCalculator.calculate_business_category_area_distribution(assets)
+        property_nature_area_distribution = (
+            DistributionCalculator.calculate_property_nature_area_distribution(assets)
+        )
+        ownership_status_area_distribution = (
+            DistributionCalculator.calculate_ownership_status_area_distribution(assets)
+        )
+        usage_status_area_distribution = (
+            DistributionCalculator.calculate_usage_status_area_distribution(assets)
+        )
+        business_category_area_distribution = (
+            DistributionCalculator.calculate_business_category_area_distribution(assets)
+        )
 
         # 计算出租率分布和趋势
-        occupancy_distribution = OccupancyDistributionCalculator.calculate_occupancy_distribution(assets)
+        occupancy_distribution = (
+            OccupancyDistributionCalculator.calculate_occupancy_distribution(assets)
+        )
         occupancy_trend = OccupancyTrendGenerator.generate_occupancy_trend(assets, db)
 
         # 计算多时间维度趋势
         try:
-            quarterly_trend = TimeDimensionTrendGenerator.generate_quarterly_trend(assets, db)
+            quarterly_trend = TimeDimensionTrendGenerator.generate_quarterly_trend(
+                assets, db
+            )
             logger.info(f"季度趋势计算完成，数据点数量: {len(quarterly_trend)}")
         except Exception as e:
             logger.error(f"季度趋势计算失败: {str(e)}")
@@ -1474,11 +1743,18 @@ async def get_comprehensive_analytics(
 
         # 计算按资产类别细分的趋势
         try:
-            category_trends = CategoryTrendGenerator.generate_category_trends(assets, db)
-            logger.info(f"类别趋势计算完成，类别数量: {len(category_trends.get('category_trends', {}))}")
+            category_trends = CategoryTrendGenerator.generate_category_trends(
+                assets, db
+            )
+            logger.info(
+                f"类别趋势计算完成，类别数量: {len(category_trends.get('category_trends', {}))}"
+            )
         except Exception as e:
             logger.error(f"类别趋势计算失败: {str(e)}")
-            category_trends = {"category_trends": {}, "summary": {"total_categories": 0, "categories_with_data": 0}}
+            category_trends = {
+                "category_trends": {},
+                "summary": {"total_categories": 0, "categories_with_data": 0},
+            }
 
         # 构建响应数据
         logger.info("开始构建响应数据，包含新趋势字段")
@@ -1500,14 +1776,18 @@ async def get_comprehensive_analytics(
             "property_nature_area_distribution": property_nature_area_distribution,
             "ownership_status_area_distribution": ownership_status_area_distribution,
             "usage_status_area_distribution": usage_status_area_distribution,
-            "business_category_area_distribution": business_category_area_distribution
+            "business_category_area_distribution": business_category_area_distribution,
         }
 
         calculation_time = time.time() - start_time
-        logger.info(f"综合分析数据计算完成，资产总数: {total_count}，出租率: {area_summary['occupancy_rate']}%，总耗时: {calculation_time:.3f}s")
+        logger.info(
+            f"综合分析数据计算完成，资产总数: {total_count}，出租率: {area_summary['occupancy_rate']}%，总耗时: {calculation_time:.3f}s"
+        )
 
         # 设置缓存
-        analytics_cache.set(cache_filters, "comprehensive_analytics", response_data, calculation_time)
+        analytics_cache.set(
+            cache_filters, "comprehensive_analytics", response_data, calculation_time
+        )
 
         return {
             "success": True,
@@ -1517,8 +1797,8 @@ async def get_comprehensive_analytics(
             "performance_info": {
                 "calculation_time": round(calculation_time, 3),
                 "asset_count": total_count,
-                "cache_enabled": True
-            }
+                "cache_enabled": True,
+            },
         }
 
     except HTTPException:
@@ -1526,10 +1806,7 @@ async def get_comprehensive_analytics(
         raise
     except Exception as e:
         logger.error(f"获取综合分析数据时发生异常: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=500,
-            detail=f"获取综合分析数据失败: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"获取综合分析数据失败: {str(e)}")
 
 
 @router.get("/cache/stats", summary="获取缓存统计信息")
@@ -1537,17 +1814,10 @@ async def get_cache_stats():
     """获取分析缓存统计信息"""
     try:
         stats = analytics_cache.get_stats()
-        return {
-            "success": True,
-            "message": "成功获取缓存统计信息",
-            "data": stats
-        }
+        return {"success": True, "message": "成功获取缓存统计信息", "data": stats}
     except Exception as e:
         logger.error(f"获取缓存统计信息失败: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"获取缓存统计信息失败: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"获取缓存统计信息失败: {str(e)}")
 
 
 @router.post("/cache/clear", summary="清除分析缓存")
@@ -1563,12 +1833,9 @@ async def clear_cache():
             "message": "分析缓存已成功清除",
             "data": {
                 "cleared_cache_size": old_stats["cache_size"],
-                "cache_stats_before_clear": old_stats
-            }
+                "cache_stats_before_clear": old_stats,
+            },
         }
     except Exception as e:
         logger.error(f"清除分析缓存失败: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"清除分析缓存失败: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"清除分析缓存失败: {str(e)}")

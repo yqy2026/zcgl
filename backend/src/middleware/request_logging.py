@@ -5,7 +5,8 @@
 
 import time
 import uuid
-from typing import Callable
+from collections.abc import Callable
+
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -46,7 +47,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             client_ip=client_ip,
             user_agent=user_agent,
             # 尝试获取用户ID（如果有认证）
-            user_id=getattr(request.state, 'user_id', None)
+            user_id=getattr(request.state, "user_id", None),
         )
 
         # 添加请求ID到响应头

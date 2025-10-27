@@ -3,21 +3,23 @@
 支持权限的层级继承和用户间委托
 """
 
-from typing import List, Optional, Dict, Any, Tuple, Set
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, func
+from typing import Any
 
-from ..models.rbac import Role, Permission, UserRoleAssignment, role_permissions
-from ..models.auth import User
-from ..models.dynamic_permission import PermissionDelegation, DynamicPermission
-from ..models.organization import Organization
+from sqlalchemy import and_, or_
+from sqlalchemy.orm import Session
+
 from ..exceptions import BusinessLogicError
+from ..models.auth import User
+from ..models.dynamic_permission import PermissionDelegation
+from ..models.organization import Organization
+from ..models.rbac import Permission, Role, UserRoleAssignment
 
 
 class DelegationScope(str, Enum):
     """委托范围"""
+
     GLOBAL = "global"
     ORGANIZATION = "organization"
     DEPARTMENT = "department"
@@ -27,9 +29,10 @@ class DelegationScope(str, Enum):
 
 class InheritanceType(str, Enum):
     """继承类型"""
-    DIRECT = "direct"          # 直接继承
-    INDIRECT = "indirect"      # 间接继承
-    DELEGATED = "delegated"    # 委托继承
+
+    DIRECT = "direct"  # 直接继承
+    INDIRECT = "indirect"  # 间接继承
+    DELEGATED = "delegated"  # 委托继承
 
 
 class PermissionDelegationService:
@@ -42,14 +45,14 @@ class PermissionDelegationService:
         self,
         delegator_id: str,
         delegatee_id: str,
-        permission_ids: List[str],
+        permission_ids: list[str],
         scope: DelegationScope,
-        scope_id: Optional[str] = None,
-        starts_at: Optional[datetime] = None,
-        ends_at: Optional[datetime] = None,
-        conditions: Optional[Dict[str, Any]] = None,
-        reason: Optional[str] = None,
-        can_redelegate: bool = False
+        scope_id: str | None = None,
+        starts_at: datetime | None = None,
+        ends_at: datetime | None = None,
+        conditions: dict[str, Any] | None = None,
+        reason: str | None = None,
+        can_redelegate: bool = False,
     ) -> PermissionDelegation:
         """
         委托权限给其他用户
@@ -79,7 +82,9 @@ class PermissionDelegationService:
             raise BusinessLogicError(f"被委托人 {delegatee_id} 不存在")
 
         # 检查委托人是否拥有这些权限
-        delegator_permissions = self.get_user_effective_permissions(delegator_id, scope, scope_id)
+        delegator_permissions = self.get_user_effective_permissions(
+            delegator_id, scope, scope_id
+        )
         delegator_permission_ids = {p["permission_id"] for p in delegator_permissions}
 
         missing_permissions = set(permission_ids) - delegator_permission_ids
@@ -87,29 +92,33 @@ class PermissionDelegationService:
             raise BusinessLogicError(f"委托人缺少权限: {list(missing_permissions)}")
 
         # 检查是否已存在相同的委托
-        existing = self.db.query(PermissionDelegation).filter(
-            and_(
-                PermissionDelegation.delegator_id == delegator_id,
-                PermissionDelegation.delegatee_id == delegatee_id,
-                PermissionDelegation.scope == scope,
-                PermissionDelegation.scope_id == scope_id,
-                PermissionDelegation.is_active == True,
-                or_(
-                    PermissionDelegation.ends_at.is_(None),
-                    PermissionDelegation.ends_at > datetime.now(timezone.utc)
+        existing = (
+            self.db.query(PermissionDelegation)
+            .filter(
+                and_(
+                    PermissionDelegation.delegator_id == delegator_id,
+                    PermissionDelegation.delegatee_id == delegatee_id,
+                    PermissionDelegation.scope == scope,
+                    PermissionDelegation.scope_id == scope_id,
+                    PermissionDelegation.is_active == True,
+                    or_(
+                        PermissionDelegation.ends_at.is_(None),
+                        PermissionDelegation.ends_at > datetime.now(UTC),
+                    ),
                 )
             )
-        ).first()
+            .first()
+        )
 
         if existing:
             # 更新现有委托
             existing.permission_ids = permission_ids
-            existing.starts_at = starts_at or datetime.now(timezone.utc)
+            existing.starts_at = starts_at or datetime.now(UTC)
             existing.ends_at = ends_at
             existing.conditions = conditions
             existing.reason = reason
             existing.can_redelegate = can_redelegate
-            existing.updated_at = datetime.now(timezone.utc)
+            existing.updated_at = datetime.now(UTC)
             delegation = existing
         else:
             # 创建新的委托
@@ -119,13 +128,13 @@ class PermissionDelegationService:
                 permission_ids=permission_ids,
                 scope=scope,
                 scope_id=scope_id,
-                starts_at=starts_at or datetime.now(timezone.utc),
+                starts_at=starts_at or datetime.now(UTC),
                 ends_at=ends_at,
                 conditions=conditions,
                 reason=reason,
                 can_redelegate=can_redelegate,
                 is_active=True,
-                created_at=datetime.now(timezone.utc)
+                created_at=datetime.now(UTC),
             )
             self.db.add(delegation)
 
@@ -137,8 +146,8 @@ class PermissionDelegationService:
     def revoke_delegation(
         self,
         delegation_id: str,
-        revoked_by: Optional[str] = None,
-        reason: Optional[str] = None
+        revoked_by: str | None = None,
+        reason: str | None = None,
     ) -> bool:
         """
         撤销权限委托
@@ -151,15 +160,17 @@ class PermissionDelegationService:
         Returns:
             是否成功撤销
         """
-        delegation = self.db.query(PermissionDelegation).filter(
-            PermissionDelegation.id == delegation_id
-        ).first()
+        delegation = (
+            self.db.query(PermissionDelegation)
+            .filter(PermissionDelegation.id == delegation_id)
+            .first()
+        )
 
         if not delegation:
             return False
 
         delegation.is_active = False
-        delegation.revoked_at = datetime.now(timezone.utc)
+        delegation.revoked_at = datetime.now(UTC)
         delegation.revoked_by = revoked_by
         delegation.revocation_reason = reason
 
@@ -169,10 +180,10 @@ class PermissionDelegationService:
     def get_user_delegated_permissions(
         self,
         user_id: str,
-        scope: Optional[DelegationScope] = None,
-        scope_id: Optional[str] = None,
-        include_expired: bool = False
-    ) -> List[Dict[str, Any]]:
+        scope: DelegationScope | None = None,
+        scope_id: str | None = None,
+        include_expired: bool = False,
+    ) -> list[dict[str, Any]]:
         """
         获取用户被委托的权限
 
@@ -188,7 +199,7 @@ class PermissionDelegationService:
         query = self.db.query(PermissionDelegation).filter(
             and_(
                 PermissionDelegation.delegatee_id == user_id,
-                PermissionDelegation.is_active == True
+                PermissionDelegation.is_active == True,
             )
         )
 
@@ -196,7 +207,7 @@ class PermissionDelegationService:
             query = query.filter(
                 or_(
                     PermissionDelegation.ends_at.is_(None),
-                    PermissionDelegation.ends_at > datetime.now(timezone.utc)
+                    PermissionDelegation.ends_at > datetime.now(UTC),
                 )
             )
 
@@ -207,11 +218,11 @@ class PermissionDelegationService:
             query = query.filter(PermissionDelegation.scope_id == scope_id)
 
         # 检查委托时间是否已开始
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         query = query.filter(
             or_(
                 PermissionDelegation.starts_at.is_(None),
-                PermissionDelegation.starts_at <= now
+                PermissionDelegation.starts_at <= now,
             )
         )
 
@@ -220,34 +231,36 @@ class PermissionDelegationService:
 
         for delegation in delegations:
             # 获取权限详细信息
-            permissions = self.db.query(Permission).filter(
-                Permission.id.in_(delegation.permission_ids)
-            ).all()
+            permissions = (
+                self.db.query(Permission)
+                .filter(Permission.id.in_(delegation.permission_ids))
+                .all()
+            )
 
             for permission in permissions:
-                result.append({
-                    "delegation_id": delegation.id,
-                    "permission_id": permission.id,
-                    "permission_name": permission.name,
-                    "permission_code": permission.code,
-                    "delegator_id": delegation.delegator_id,
-                    "scope": delegation.scope,
-                    "scope_id": delegation.scope_id,
-                    "starts_at": delegation.starts_at,
-                    "ends_at": delegation.ends_at,
-                    "conditions": delegation.conditions,
-                    "can_redelegate": delegation.can_redelegate,
-                    "inheritance_type": InheritanceType.DELEGATED,
-                    "reason": delegation.reason
-                })
+                result.append(
+                    {
+                        "delegation_id": delegation.id,
+                        "permission_id": permission.id,
+                        "permission_name": permission.name,
+                        "permission_code": permission.code,
+                        "delegator_id": delegation.delegator_id,
+                        "scope": delegation.scope,
+                        "scope_id": delegation.scope_id,
+                        "starts_at": delegation.starts_at,
+                        "ends_at": delegation.ends_at,
+                        "conditions": delegation.conditions,
+                        "can_redelegate": delegation.can_redelegate,
+                        "inheritance_type": InheritanceType.DELEGATED,
+                        "reason": delegation.reason,
+                    }
+                )
 
         return result
 
     def get_user_delegated_permissions_to_others(
-        self,
-        user_id: str,
-        include_expired: bool = False
-    ) -> List[Dict[str, Any]]:
+        self, user_id: str, include_expired: bool = False
+    ) -> list[dict[str, Any]]:
         """
         获取用户委托给他人的权限
 
@@ -268,8 +281,8 @@ class PermissionDelegationService:
                     PermissionDelegation.is_active == True,
                     or_(
                         PermissionDelegation.ends_at.is_(None),
-                        PermissionDelegation.ends_at > datetime.now(timezone.utc)
-                    )
+                        PermissionDelegation.ends_at > datetime.now(UTC),
+                    ),
                 )
             )
 
@@ -278,32 +291,33 @@ class PermissionDelegationService:
 
         for delegation in delegations:
             # 获取被委托人信息
-            delegatee = self.db.query(User).filter(User.id == delegation.delegatee_id).first()
+            delegatee = (
+                self.db.query(User).filter(User.id == delegation.delegatee_id).first()
+            )
             if delegatee:
-                result.append({
-                    "delegation_id": delegation.id,
-                    "delegatee_id": delegation.delegatee_id,
-                    "delegatee_name": delegatee.username,
-                    "delegatee_email": delegatee.email,
-                    "permission_ids": delegation.permission_ids,
-                    "scope": delegation.scope,
-                    "scope_id": delegation.scope_id,
-                    "starts_at": delegation.starts_at,
-                    "ends_at": delegation.ends_at,
-                    "is_active": delegation.is_active,
-                    "can_redelegate": delegation.can_redelegate,
-                    "reason": delegation.reason,
-                    "created_at": delegation.created_at
-                })
+                result.append(
+                    {
+                        "delegation_id": delegation.id,
+                        "delegatee_id": delegation.delegatee_id,
+                        "delegatee_name": delegatee.username,
+                        "delegatee_email": delegatee.email,
+                        "permission_ids": delegation.permission_ids,
+                        "scope": delegation.scope,
+                        "scope_id": delegation.scope_id,
+                        "starts_at": delegation.starts_at,
+                        "ends_at": delegation.ends_at,
+                        "is_active": delegation.is_active,
+                        "can_redelegate": delegation.can_redelegate,
+                        "reason": delegation.reason,
+                        "created_at": delegation.created_at,
+                    }
+                )
 
         return result
 
     def get_inherited_permissions(
-        self,
-        user_id: str,
-        organization_id: str,
-        include_indirect: bool = True
-    ) -> List[Dict[str, Any]]:
+        self, user_id: str, organization_id: str, include_indirect: bool = True
+    ) -> list[dict[str, Any]]:
         """
         获取从组织层级继承的权限
 
@@ -316,9 +330,11 @@ class PermissionDelegationService:
             继承的权限列表
         """
         # 获取组织信息
-        organization = self.db.query(Organization).filter(
-            Organization.id == organization_id
-        ).first()
+        organization = (
+            self.db.query(Organization)
+            .filter(Organization.id == organization_id)
+            .first()
+        )
 
         if not organization:
             return []
@@ -326,7 +342,10 @@ class PermissionDelegationService:
         inherited_permissions = []
 
         # 获取用户在该组织的角色
-        from ..services.organization_permission_service import OrganizationPermissionService
+        from ..services.organization_permission_service import (
+            OrganizationPermissionService,
+        )
+
         org_service = OrganizationPermissionService(self.db)
         user_role = org_service.get_user_organization_role(user_id)
 
@@ -334,31 +353,38 @@ class PermissionDelegationService:
             return []
 
         # 获取组织级别的权限分配
-        role_assignments = self.db.query(UserRoleAssignment).join(Role).filter(
-            and_(
-                UserRoleAssignment.user_id == user_id,
-                Role.organization_id == organization_id,
-                UserRoleAssignment.is_active == True
+        role_assignments = (
+            self.db.query(UserRoleAssignment)
+            .join(Role)
+            .filter(
+                and_(
+                    UserRoleAssignment.user_id == user_id,
+                    Role.organization_id == organization_id,
+                    UserRoleAssignment.is_active == True,
+                )
             )
-        ).all()
+            .all()
+        )
 
         for assignment in role_assignments:
             # 获取角色的权限
             role = self.db.query(Role).filter(Role.id == assignment.role_id).first()
             if role:
                 for permission in role.permissions:
-                    inherited_permissions.append({
-                        "permission_id": permission.id,
-                        "permission_name": permission.name,
-                        "permission_code": permission.code,
-                    "source_type": "role",
-                    "source_id": assignment.role_id,
-                    "source_name": assignment.role.name,
-                    "organization_id": organization_id,
-                    "organization_name": organization.name,
-                    "inheritance_type": InheritanceType.DIRECT,
-                    "user_role": user_role
-                })
+                    inherited_permissions.append(
+                        {
+                            "permission_id": permission.id,
+                            "permission_name": permission.name,
+                            "permission_code": permission.code,
+                            "source_type": "role",
+                            "source_id": assignment.role_id,
+                            "source_name": assignment.role.name,
+                            "organization_id": organization_id,
+                            "organization_name": organization.name,
+                            "inheritance_type": InheritanceType.DIRECT,
+                            "user_role": user_role,
+                        }
+                    )
 
         # 如果包含间接继承，获取父级组织的权限
         if include_indirect and organization.parent_id:
@@ -377,9 +403,9 @@ class PermissionDelegationService:
     def get_user_effective_permissions(
         self,
         user_id: str,
-        scope: Optional[DelegationScope] = None,
-        scope_id: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+        scope: DelegationScope | None = None,
+        scope_id: str | None = None,
+    ) -> list[dict[str, Any]]:
         """
         获取用户的有效权限（包括直接权限、继承权限和委托权限）
 
@@ -399,25 +425,30 @@ class PermissionDelegationService:
 
         # 2. 获取动态权限
         from ..services.dynamic_permission_service import DynamicPermissionService
+
         dynamic_service = DynamicPermissionService(self.db)
         dynamic_permissions = dynamic_service.get_user_dynamic_permissions(user_id)
 
         for dp in dynamic_permissions:
             if not scope or dp["scope"] == scope.value:
-                all_permissions.append({
-                    "permission_id": dp["permission_id"],
-                    "permission_name": dp["permission_name"],
-                    "permission_code": dp["permission_code"],
-                    "source_type": "dynamic",
-                    "source_id": dp["id"],
-                    "scope": dp["scope"],
-                    "scope_id": dp["scope_id"],
-                    "inheritance_type": InheritanceType.DIRECT,
-                    "expires_at": dp["expires_at"]
-                })
+                all_permissions.append(
+                    {
+                        "permission_id": dp["permission_id"],
+                        "permission_name": dp["permission_name"],
+                        "permission_code": dp["permission_code"],
+                        "source_type": "dynamic",
+                        "source_id": dp["id"],
+                        "scope": dp["scope"],
+                        "scope_id": dp["scope_id"],
+                        "inheritance_type": InheritanceType.DIRECT,
+                        "expires_at": dp["expires_at"],
+                    }
+                )
 
         # 3. 获取委托权限
-        delegated_permissions = self.get_user_delegated_permissions(user_id, scope, scope_id)
+        delegated_permissions = self.get_user_delegated_permissions(
+            user_id, scope, scope_id
+        )
         all_permissions.extend(delegated_permissions)
 
         # 4. 如果指定了组织范围，获取继承权限
@@ -436,13 +467,16 @@ class PermissionDelegationService:
                 existing = unique_permissions[key]
                 if perm.get("inheritance_type") == InheritanceType.DELEGATED:
                     unique_permissions[key] = perm
-                elif (perm.get("inheritance_type") == InheritanceType.INDIRECT and
-                      existing.get("inheritance_type") not in [InheritanceType.DELEGATED, InheritanceType.INDIRECT]):
+                elif perm.get(
+                    "inheritance_type"
+                ) == InheritanceType.INDIRECT and existing.get(
+                    "inheritance_type"
+                ) not in [InheritanceType.DELEGATED, InheritanceType.INDIRECT]:
                     unique_permissions[key] = perm
 
         return list(unique_permissions.values())
 
-    def get_user_role_permissions(self, user_id: str) -> List[Dict[str, Any]]:
+    def get_user_role_permissions(self, user_id: str) -> list[dict[str, Any]]:
         """
         获取用户基于角色的权限
 
@@ -453,16 +487,21 @@ class PermissionDelegationService:
             角色权限列表
         """
         # 获取用户的活跃角色分配
-        role_assignments = self.db.query(UserRoleAssignment).join(Role).filter(
-            and_(
-                UserRoleAssignment.user_id == user_id,
-                UserRoleAssignment.is_active == True,
-                or_(
-                    UserRoleAssignment.expires_at.is_(None),
-                    UserRoleAssignment.expires_at > datetime.now(timezone.utc)
+        role_assignments = (
+            self.db.query(UserRoleAssignment)
+            .join(Role)
+            .filter(
+                and_(
+                    UserRoleAssignment.user_id == user_id,
+                    UserRoleAssignment.is_active == True,
+                    or_(
+                        UserRoleAssignment.expires_at.is_(None),
+                        UserRoleAssignment.expires_at > datetime.now(UTC),
+                    ),
                 )
             )
-        ).all()
+            .all()
+        )
 
         permissions = []
         for assignment in role_assignments:
@@ -470,16 +509,18 @@ class PermissionDelegationService:
             role = self.db.query(Role).filter(Role.id == assignment.role_id).first()
             if role:
                 for permission in role.permissions:
-                    permissions.append({
-                        "permission_id": permission.id,
-                        "permission_name": permission.name,
-                        "permission_code": permission.code,
-                    "source_type": "role",
-                    "source_id": assignment.role_id,
-                    "source_name": assignment.role.name,
-                    "inheritance_type": InheritanceType.DIRECT,
-                    "assignment_id": assignment.id
-                })
+                    permissions.append(
+                        {
+                            "permission_id": permission.id,
+                            "permission_name": permission.name,
+                            "permission_code": permission.code,
+                            "source_type": "role",
+                            "source_id": assignment.role_id,
+                            "source_name": assignment.role.name,
+                            "inheritance_type": InheritanceType.DIRECT,
+                            "assignment_id": assignment.id,
+                        }
+                    )
 
         return permissions
 
@@ -487,10 +528,10 @@ class PermissionDelegationService:
         self,
         user_id: str,
         permission_code: str,
-        scope: Optional[DelegationScope] = None,
-        scope_id: Optional[str] = None,
-        context: Optional[Dict[str, Any]] = None
-    ) -> Tuple[bool, str, Dict[str, Any]]:
+        scope: DelegationScope | None = None,
+        scope_id: str | None = None,
+        context: dict[str, Any] | None = None,
+    ) -> tuple[bool, str, dict[str, Any]]:
         """
         检查用户权限（包括委托权限）
 
@@ -505,25 +546,31 @@ class PermissionDelegationService:
             (是否有权限, 原因, 权限详情)
         """
         # 获取用户的有效权限
-        effective_permissions = self.get_user_effective_permissions(user_id, scope, scope_id)
+        effective_permissions = self.get_user_effective_permissions(
+            user_id, scope, scope_id
+        )
 
         # 查找匹配的权限
         for perm in effective_permissions:
             if perm.get("permission_code") == permission_code:
                 # 检查权限是否过期
-                if perm.get("expires_at") and perm["expires_at"] <= datetime.now(timezone.utc):
+                if perm.get("expires_at") and perm["expires_at"] <= datetime.now(UTC):
                     continue
 
                 # 检查权限条件
                 if perm.get("conditions") and context:
-                    if not self._evaluate_delegation_conditions(perm["conditions"], context):
+                    if not self._evaluate_delegation_conditions(
+                        perm["conditions"], context
+                    ):
                         continue
 
                 return True, f"通过 {perm.get('inheritance_type', 'direct')} 权限", perm
 
         return False, "没有找到相应权限", {}
 
-    def _evaluate_delegation_conditions(self, conditions: Dict[str, Any], context: Dict[str, Any]) -> bool:
+    def _evaluate_delegation_conditions(
+        self, conditions: dict[str, Any], context: dict[str, Any]
+    ) -> bool:
         """
         评估委托条件
 
@@ -538,7 +585,7 @@ class PermissionDelegationService:
             # 时间条件
             if "time_range" in conditions:
                 time_range = conditions["time_range"]
-                current_time = datetime.now(timezone.utc).time()
+                current_time = datetime.now(UTC).time()
                 start_time = datetime.strptime(time_range["start"], "%H:%M").time()
                 end_time = datetime.strptime(time_range["end"], "%H:%M").time()
 
@@ -559,7 +606,9 @@ class PermissionDelegationService:
                     value = condition["value"]
 
                     context_value = context.get(field)
-                    if not self._evaluate_single_condition(context_value, operator, value):
+                    if not self._evaluate_single_condition(
+                        context_value, operator, value
+                    ):
                         return False
 
             return True
@@ -568,7 +617,9 @@ class PermissionDelegationService:
             # 条件评估出错，默认拒绝
             return False
 
-    def _evaluate_single_condition(self, context_value: Any, operator: str, expected_value: Any) -> bool:
+    def _evaluate_single_condition(
+        self, context_value: Any, operator: str, expected_value: Any
+    ) -> bool:
         """评估单个条件"""
         if operator == "equals":
             return context_value == expected_value
@@ -596,12 +647,16 @@ class PermissionDelegationService:
         Returns:
             清理的委托数量
         """
-        expired_delegations = self.db.query(PermissionDelegation).filter(
-            and_(
-                PermissionDelegation.is_active == True,
-                PermissionDelegation.ends_at <= datetime.now(timezone.utc)
+        expired_delegations = (
+            self.db.query(PermissionDelegation)
+            .filter(
+                and_(
+                    PermissionDelegation.is_active == True,
+                    PermissionDelegation.ends_at <= datetime.now(UTC),
+                )
             )
-        ).all()
+            .all()
+        )
 
         for delegation in expired_delegations:
             delegation.is_active = False
@@ -610,11 +665,8 @@ class PermissionDelegationService:
         return len(expired_delegations)
 
     def get_delegation_chain(
-        self,
-        original_delegator_id: str,
-        permission_id: str,
-        max_depth: int = 5
-    ) -> List[Dict[str, Any]]:
+        self, original_delegator_id: str, permission_id: str, max_depth: int = 5
+    ) -> list[dict[str, Any]]:
         """
         获取权限委托链
 
@@ -636,35 +688,43 @@ class PermissionDelegationService:
             visited.add(delegator_id)
 
             # 查找该用户委托出去的权限
-            delegations = self.db.query(PermissionDelegation).filter(
-                and_(
-                    PermissionDelegation.delegator_id == delegator_id,
-                    PermissionDelegation.is_active == True,
-                    PermissionDelegation.permission_ids.contains([permission_id]),
-                    or_(
-                        PermissionDelegation.ends_at.is_(None),
-                        PermissionDelegation.ends_at > datetime.now(timezone.utc)
+            delegations = (
+                self.db.query(PermissionDelegation)
+                .filter(
+                    and_(
+                        PermissionDelegation.delegator_id == delegator_id,
+                        PermissionDelegation.is_active == True,
+                        PermissionDelegation.permission_ids.contains([permission_id]),
+                        or_(
+                            PermissionDelegation.ends_at.is_(None),
+                            PermissionDelegation.ends_at > datetime.now(UTC),
+                        ),
                     )
                 )
-            ).all()
+                .all()
+            )
 
             for delegation in delegations:
-                delegatee_info = self.db.query(User).filter(
-                    User.id == delegation.delegatee_id
-                ).first()
+                delegatee_info = (
+                    self.db.query(User)
+                    .filter(User.id == delegation.delegatee_id)
+                    .first()
+                )
 
                 if delegatee_info:
-                    chain.append({
-                        "level": depth,
-                        "delegator_id": delegator_id,
-                        "delegatee_id": delegation.delegatee_id,
-                        "delegatee_name": delegatee_info.username,
-                        "delegation_id": delegation.id,
-                        "scope": delegation.scope,
-                        "scope_id": delegation.scope_id,
-                        "can_redelegate": delegation.can_redelegate,
-                        "created_at": delegation.created_at
-                    })
+                    chain.append(
+                        {
+                            "level": depth,
+                            "delegator_id": delegator_id,
+                            "delegatee_id": delegation.delegatee_id,
+                            "delegatee_name": delegatee_info.username,
+                            "delegation_id": delegation.id,
+                            "scope": delegation.scope,
+                            "scope_id": delegation.scope_id,
+                            "can_redelegate": delegation.can_redelegate,
+                            "created_at": delegation.created_at,
+                        }
+                    )
 
                     # 如果可以再委托，继续追踪
                     if delegation.can_redelegate:
@@ -675,10 +735,7 @@ class PermissionDelegationService:
         trace_delegation(original_delegator_id, 1)
         return chain
 
-    def analyze_permission_coverage(
-        self,
-        organization_id: str
-    ) -> Dict[str, Any]:
+    def analyze_permission_coverage(self, organization_id: str) -> dict[str, Any]:
         """
         分析权限覆盖情况
 
@@ -689,9 +746,14 @@ class PermissionDelegationService:
             权限覆盖分析结果
         """
         # 获取组织中的所有用户
-        from ..services.organization_permission_service import OrganizationPermissionService
+        from ..services.organization_permission_service import (
+            OrganizationPermissionService,
+        )
+
         org_service = OrganizationPermissionService(self.db)
-        accessible_users = org_service.get_accessible_users_in_organization("", organization_id)
+        accessible_users = org_service.get_accessible_users_in_organization(
+            "", organization_id
+        )
 
         total_users = len(accessible_users)
         if total_users == 0:
@@ -706,20 +768,27 @@ class PermissionDelegationService:
 
             for user_id in accessible_users:
                 has_perm, _, _ = self.check_permission_with_delegation(
-                    user_id, permission.code, DelegationScope.ORGANIZATION, organization_id
+                    user_id,
+                    permission.code,
+                    DelegationScope.ORGANIZATION,
+                    organization_id,
                 )
                 if has_perm:
                     users_with_permission += 1
 
-            coverage_percentage = (users_with_permission / total_users) * 100 if total_users > 0 else 0
+            coverage_percentage = (
+                (users_with_permission / total_users) * 100 if total_users > 0 else 0
+            )
 
-            coverage_analysis.append({
-                "permission_id": permission.id,
-                "permission_name": permission.name,
-                "permission_code": permission.code,
-                "users_with_permission": users_with_permission,
-                "coverage_percentage": round(coverage_percentage, 2)
-            })
+            coverage_analysis.append(
+                {
+                    "permission_id": permission.id,
+                    "permission_name": permission.name,
+                    "permission_code": permission.code,
+                    "users_with_permission": users_with_permission,
+                    "coverage_percentage": round(coverage_percentage, 2),
+                }
+            )
 
         # 按覆盖率排序
         coverage_analysis.sort(key=lambda x: x["coverage_percentage"], reverse=True)
@@ -729,6 +798,10 @@ class PermissionDelegationService:
             "total_permissions": len(all_permissions),
             "coverage_analysis": coverage_analysis,
             "average_coverage": round(
-                sum(c["coverage_percentage"] for c in coverage_analysis) / len(coverage_analysis), 2
-            ) if coverage_analysis else 0
+                sum(c["coverage_percentage"] for c in coverage_analysis)
+                / len(coverage_analysis),
+                2,
+            )
+            if coverage_analysis
+            else 0,
         }

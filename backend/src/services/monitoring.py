@@ -3,23 +3,25 @@
 提供系统性能监控、日志记录和健康检查功能
 """
 
-import time
-import psutil
-import logging
-from typing import Dict, Any, List, Optional
-from datetime import datetime, timedelta, timezone
-from sqlalchemy.orm import Session
-from sqlalchemy import text, func
-from dataclasses import dataclass
-import json
 import asyncio
+import logging
+import time
 from collections import defaultdict, deque
+from dataclasses import dataclass
+from datetime import datetime, timedelta
+from typing import Any
+
+import psutil
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class SystemMetrics:
     """系统指标数据类"""
+
     timestamp: datetime
     cpu_percent: float
     memory_percent: float
@@ -30,15 +32,18 @@ class SystemMetrics:
     database_size: int
     response_time: float
 
+
 @dataclass
 class APIMetrics:
     """API指标数据类"""
+
     timestamp: datetime
     endpoint: str
     method: str
     status_code: int
     response_time: float
-    user_id: Optional[str] = None
+    user_id: str | None = None
+
 
 class SystemMonitor:
     """系统监控器"""
@@ -83,7 +88,7 @@ class SystemMonitor:
         memory = psutil.virtual_memory()
 
         # 磁盘使用情况
-        disk = psutil.disk_usage('/')
+        disk = psutil.disk_usage("/")
         disk_usage_percent = disk.used / disk.total * 100
 
         # 网络连接数
@@ -106,7 +111,7 @@ class SystemMonitor:
             disk_usage_percent=disk_usage_percent,
             active_connections=active_connections,
             database_size=database_size,
-            response_time=response_time
+            response_time=response_time,
         )
 
     async def _get_database_size(self) -> int:
@@ -118,8 +123,14 @@ class SystemMonitor:
         except Exception:
             return 0
 
-    def record_api_call(self, endpoint: str, method: str, status_code: int,
-                       response_time: float, user_id: Optional[str] = None):
+    def record_api_call(
+        self,
+        endpoint: str,
+        method: str,
+        status_code: int,
+        response_time: float,
+        user_id: str | None = None,
+    ):
         """记录API调用"""
         metrics = APIMetrics(
             timestamp=datetime.now(),
@@ -127,7 +138,7 @@ class SystemMonitor:
             method=method,
             status_code=status_code,
             response_time=response_time,
-            user_id=user_id
+            user_id=user_id,
         )
 
         self.api_metrics_history.append(metrics)
@@ -137,18 +148,22 @@ class SystemMonitor:
         if status_code >= 400:
             self.error_counts[f"{method} {endpoint}"] += 1
 
-    def get_system_status(self) -> Dict[str, Any]:
+    def get_system_status(self) -> dict[str, Any]:
         """获取系统状态摘要"""
         if not self.system_metrics_history:
             return {
                 "status": "no_data",
-                "uptime_seconds": (datetime.now() - self.start_time).total_seconds()
+                "uptime_seconds": (datetime.now() - self.start_time).total_seconds(),
             }
 
         latest = self.system_metrics_history[-1]
 
         # 计算平均响应时间
-        avg_response_time = sum(self.response_times) / len(self.response_times) if self.response_times else 0
+        avg_response_time = (
+            sum(self.response_times) / len(self.response_times)
+            if self.response_times
+            else 0
+        )
 
         # 计算错误率
         total_calls = len(self.api_metrics_history)
@@ -156,7 +171,9 @@ class SystemMonitor:
         error_rate = (error_calls / total_calls * 100) if total_calls > 0 else 0
 
         return {
-            "status": "healthy" if latest.cpu_percent < 80 and latest.memory_percent < 80 else "warning",
+            "status": "healthy"
+            if latest.cpu_percent < 80 and latest.memory_percent < 80
+            else "warning",
             "uptime_seconds": (datetime.now() - self.start_time).total_seconds(),
             "current_metrics": {
                 "cpu_percent": latest.cpu_percent,
@@ -166,23 +183,25 @@ class SystemMonitor:
                 "disk_usage_percent": latest.disk_usage_percent,
                 "active_connections": latest.active_connections,
                 "database_size_mb": latest.database_size // (1024 * 1024),
-                "response_time_ms": latest.response_time * 1000
+                "response_time_ms": latest.response_time * 1000,
             },
             "performance": {
                 "avg_response_time_ms": avg_response_time * 1000,
                 "error_rate_percent": error_rate,
                 "total_api_calls": total_calls,
-                "total_errors": error_calls
+                "total_errors": error_calls,
             },
-            "timestamp": latest.timestamp.isoformat()
+            "timestamp": latest.timestamp.isoformat(),
         }
 
-    def get_performance_summary(self, hours: int = 1) -> Dict[str, Any]:
+    def get_performance_summary(self, hours: int = 1) -> dict[str, Any]:
         """获取性能摘要"""
         cutoff_time = datetime.now() - timedelta(hours=hours)
 
         # 筛选指定时间范围内的指标
-        recent_system = [m for m in self.system_metrics_history if m.timestamp >= cutoff_time]
+        recent_system = [
+            m for m in self.system_metrics_history if m.timestamp >= cutoff_time
+        ]
         recent_api = [m for m in self.api_metrics_history if m.timestamp >= cutoff_time]
 
         if not recent_system:
@@ -202,24 +221,36 @@ class SystemMonitor:
                 "cpu": {
                     "avg": sum(cpu_values) / len(cpu_values),
                     "max": max(cpu_values),
-                    "min": min(cpu_values)
+                    "min": min(cpu_values),
                 },
                 "memory": {
                     "avg": sum(memory_values) / len(memory_values),
                     "max": max(memory_values),
-                    "min": min(memory_values)
-                }
+                    "min": min(memory_values),
+                },
             },
             "api_stats": {
                 "total_calls": len(recent_api),
-                "avg_response_time_ms": (sum(response_times) / len(response_times) * 1000) if response_times else 0,
-                "max_response_time_ms": (max(response_times) * 1000) if response_times else 0,
-                "error_rate_percent": (sum(1 for s in status_codes if s >= 400) / len(status_codes) * 100) if status_codes else 0
+                "avg_response_time_ms": (
+                    sum(response_times) / len(response_times) * 1000
+                )
+                if response_times
+                else 0,
+                "max_response_time_ms": (max(response_times) * 1000)
+                if response_times
+                else 0,
+                "error_rate_percent": (
+                    sum(1 for s in status_codes if s >= 400) / len(status_codes) * 100
+                )
+                if status_codes
+                else 0,
             },
-            "top_errors": dict(sorted(self.error_counts.items(), key=lambda x: x[1], reverse=True)[:5])
+            "top_errors": dict(
+                sorted(self.error_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+            ),
         }
 
-    def get_database_stats(self, db: Session) -> Dict[str, Any]:
+    def get_database_stats(self, db: Session) -> dict[str, Any]:
         """获取数据库统计信息"""
         try:
             # 获取表统计信息
@@ -239,29 +270,26 @@ class SystemMonitor:
                     count = db.execute(count_query).scalar()
                     total_records += count
 
-                    table_stats.append({
-                        "name": table_name,
-                        "record_count": count
-                    })
+                    table_stats.append({"name": table_name, "record_count": count})
                 except Exception as e:
                     logger.warning(f"Could not get stats for table {table_name}: {e}")
 
             return {
                 "total_tables": len(tables),
                 "total_records": total_records,
-                "tables": table_stats
+                "tables": table_stats,
             }
 
         except Exception as e:
             logger.error(f"Error getting database stats: {e}")
             return {"error": str(e)}
 
-    def get_health_check(self, db: Session) -> Dict[str, Any]:
+    def get_health_check(self, db: Session) -> dict[str, Any]:
         """健康检查"""
         health_status = {
             "overall": "healthy",
             "timestamp": datetime.now().isoformat(),
-            "checks": {}
+            "checks": {},
         }
 
         # 检查数据库连接
@@ -269,12 +297,12 @@ class SystemMonitor:
             db.execute(text("SELECT 1"))
             health_status["checks"]["database"] = {
                 "status": "healthy",
-                "message": "Database connection OK"
+                "message": "Database connection OK",
             }
         except Exception as e:
             health_status["checks"]["database"] = {
                 "status": "unhealthy",
-                "message": f"Database connection failed: {e}"
+                "message": f"Database connection failed: {e}",
             }
             health_status["overall"] = "unhealthy"
 
@@ -286,67 +314,72 @@ class SystemMonitor:
             if latest.cpu_percent > 90:
                 health_status["checks"]["cpu"] = {
                     "status": "critical",
-                    "message": f"High CPU usage: {latest.cpu_percent:.1f}%"
+                    "message": f"High CPU usage: {latest.cpu_percent:.1f}%",
                 }
                 health_status["overall"] = "critical"
             elif latest.cpu_percent > 80:
                 health_status["checks"]["cpu"] = {
                     "status": "warning",
-                    "message": f"Elevated CPU usage: {latest.cpu_percent:.1f}%"
+                    "message": f"Elevated CPU usage: {latest.cpu_percent:.1f}%",
                 }
                 if health_status["overall"] == "healthy":
                     health_status["overall"] = "warning"
             else:
                 health_status["checks"]["cpu"] = {
                     "status": "healthy",
-                    "message": f"CPU usage normal: {latest.cpu_percent:.1f}%"
+                    "message": f"CPU usage normal: {latest.cpu_percent:.1f}%",
                 }
 
             # 内存检查
             if latest.memory_percent > 90:
                 health_status["checks"]["memory"] = {
                     "status": "critical",
-                    "message": f"High memory usage: {latest.memory_percent:.1f}%"
+                    "message": f"High memory usage: {latest.memory_percent:.1f}%",
                 }
                 health_status["overall"] = "critical"
             elif latest.memory_percent > 80:
                 health_status["checks"]["memory"] = {
                     "status": "warning",
-                    "message": f"Elevated memory usage: {latest.memory_percent:.1f}%"
+                    "message": f"Elevated memory usage: {latest.memory_percent:.1f}%",
                 }
                 if health_status["overall"] == "healthy":
                     health_status["overall"] = "warning"
             else:
                 health_status["checks"]["memory"] = {
                     "status": "healthy",
-                    "message": f"Memory usage normal: {latest.memory_percent:.1f}%"
+                    "message": f"Memory usage normal: {latest.memory_percent:.1f}%",
                 }
 
         # 检查错误率
         if self.api_metrics_history:
             recent_calls = list(self.api_metrics_history)[-100:]  # 最近100次调用
-            error_rate = sum(1 for m in recent_calls if m.status_code >= 400) / len(recent_calls) * 100
+            error_rate = (
+                sum(1 for m in recent_calls if m.status_code >= 400)
+                / len(recent_calls)
+                * 100
+            )
 
             if error_rate > 20:
                 health_status["checks"]["api_errors"] = {
                     "status": "critical",
-                    "message": f"High error rate: {error_rate:.1f}%"
+                    "message": f"High error rate: {error_rate:.1f}%",
                 }
                 health_status["overall"] = "critical"
             elif error_rate > 10:
                 health_status["checks"]["api_errors"] = {
                     "status": "warning",
-                    "message": f"Elevated error rate: {error_rate:.1f}%"
+                    "message": f"Elevated error rate: {error_rate:.1f}%",
                 }
                 if health_status["overall"] == "healthy":
                     health_status["overall"] = "warning"
             else:
                 health_status["checks"]["api_errors"] = {
                     "status": "healthy",
-                    "message": f"Error rate normal: {error_rate:.1f}%"
+                    "message": f"Error rate normal: {error_rate:.1f}%",
                 }
 
         return health_status
+
 
 # 全局监控器实例
 system_monitor = SystemMonitor()

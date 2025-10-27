@@ -2,14 +2,15 @@
 通用工具函数模块
 """
 
-from sqlalchemy.orm import class_mapper
-from datetime import datetime, date, timezone
-from decimal import Decimal
-from typing import Any, Dict, Optional, List
 import uuid
+from datetime import date, datetime
+from decimal import Decimal
+from typing import Any
+
+from sqlalchemy.orm import class_mapper
 
 
-def model_to_dict(model: Any, include_relations: bool = False) -> Optional[Dict[str, Any]]:
+def model_to_dict(model: Any, include_relations: bool = False) -> dict[str, Any] | None:
     """
     通用的模型转字典工具函数
 
@@ -50,7 +51,9 @@ def model_to_dict(model: Any, include_relations: bool = False) -> Optional[Dict[
     return result
 
 
-def batch_to_dict(models: List[Any], include_relations: bool = False) -> List[Dict[str, Any]]:
+def batch_to_dict(
+    models: list[Any], include_relations: bool = False
+) -> list[dict[str, Any]]:
     """
     批量转换模型为字典
 
@@ -120,7 +123,7 @@ def validate_date_range(start_date: date, end_date: date) -> bool:
     return start_date <= end_date
 
 
-def generate_month_range(start_month: str, end_month: str) -> List[str]:
+def generate_month_range(start_month: str, end_month: str) -> list[str]:
     """
     生成月份范围列表
 
@@ -132,14 +135,16 @@ def generate_month_range(start_month: str, end_month: str) -> List[str]:
         月份列表
     """
     try:
-        start_year, start_month_num = map(int, start_month.split('-'))
-        end_year, end_month_num = map(int, end_month.split('-'))
+        start_year, start_month_num = map(int, start_month.split("-"))
+        end_year, end_month_num = map(int, end_month.split("-"))
 
         months = []
         current_year = start_year
         current_month = start_month_num
 
-        while (current_year < end_year) or (current_year == end_year and current_month <= end_month_num):
+        while (current_year < end_year) or (
+            current_year == end_year and current_month <= end_month_num
+        ):
             months.append(f"{current_year}-{current_month:02d}")
 
             current_month += 1
@@ -152,7 +157,9 @@ def generate_month_range(start_month: str, end_month: str) -> List[str]:
         raise ValueError(f"无效的月份格式: {start_month}, {end_month}")
 
 
-def safe_divide(numerator: Decimal, denominator: Decimal, default: float = 0.0) -> float:
+def safe_divide(
+    numerator: Decimal, denominator: Decimal, default: float = 0.0
+) -> float:
     """
     安全除法，避免除零错误
 
@@ -183,7 +190,7 @@ def format_phone_number(phone: str) -> str:
         return ""
 
     # 移除所有非数字字符
-    digits = ''.join(c for c in phone if c.isdigit())
+    digits = "".join(c for c in phone if c.isdigit())
 
     if len(digits) == 11:
         return f"{digits[:3]}-{digits[3:7]}-{digits[7:]}"
@@ -210,4 +217,4 @@ def truncate_string(text: str, max_length: int = 100) -> str:
     if len(text) <= max_length:
         return text
 
-    return text[:max_length-3] + "..."
+    return text[: max_length - 3] + "..."

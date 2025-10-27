@@ -2,41 +2,48 @@
 资产管理API路由
 """
 
-from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, Path, UploadFile, File, Form, Response
-from fastapi.responses import FileResponse
-from starlette.status import HTTP_204_NO_CONTENT
-from sqlalchemy.orm import Session
 import os
-import uuid
 import shutil
-from datetime import datetime, timezone
+import uuid
+from datetime import datetime
 
-from ...database import get_db
-from ...models.asset import Asset
-from ...schemas.asset import (
-    AssetCreate, AssetUpdate, AssetResponse, AssetListResponse,
-    AssetBatchUpdateRequest, AssetBatchUpdateResponse,
-    AssetValidationRequest, AssetValidationResponse,
-    AssetImportRequest, AssetImportResponse,
-    BatchCustomFieldUpdateRequest, BatchCustomFieldUpdateResponse
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    Path,
+    Query,
+    Response,
+    UploadFile,
 )
+from fastapi.responses import FileResponse
+from sqlalchemy.orm import Session
+from starlette.status import HTTP_204_NO_CONTENT
+
 from ...crud.asset import asset_crud
 from ...crud.history import history_crud
-from ...exceptions import AssetNotFoundError, DuplicateAssetError, BusinessLogicError
+from ...database import get_db
+from ...exceptions import AssetNotFoundError, DuplicateAssetError
 
 # 开发模式配置 - 用于开发环境绕过认证
-import os
-from ...middleware.auth import (
-    get_current_active_user, require_permission, audit_action,
-    get_user_rbac_permissions
-)
-from ...middleware.organization_permission import (
-    get_organization_filter, require_organization_access,
-    require_organization_management, get_accessible_organizations,
-    OrganizationDataFilter
-)
+from ...middleware.auth import audit_action, get_current_active_user, require_permission
+from ...models.asset import Asset
 from ...models.auth import User
+from ...schemas.asset import (
+    AssetBatchUpdateRequest,
+    AssetBatchUpdateResponse,
+    AssetCreate,
+    AssetImportRequest,
+    AssetImportResponse,
+    AssetListResponse,
+    AssetResponse,
+    AssetUpdate,
+    AssetValidationRequest,
+    AssetValidationResponse,
+    BatchCustomFieldUpdateRequest,
+    BatchCustomFieldUpdateResponse,
+)
 
 # 获取开发模式配置，但不完全绕过认证
 DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
@@ -140,16 +147,16 @@ router = APIRouter()
 async def get_assets(
     page: int = Query(1, ge=1, description="页码"),
     limit: int = Query(20, ge=1, le=100, description="每页记录数"),
-    search: Optional[str] = Query(None, description="搜索关键词"),
-    ownership_status: Optional[str] = Query(None, description="确权状态筛选"),
-    property_nature: Optional[str] = Query(None, description="物业性质筛选"),
-    usage_status: Optional[str] = Query(None, description="使用状态筛选"),
-    ownership_entity: Optional[str] = Query(None, description="权属方筛选"),
-    management_entity: Optional[str] = Query(None, description="经营管理方筛选"),
-    business_category: Optional[str] = Query(None, description="业态类别筛选"),
-    min_area: Optional[float] = Query(None, ge=0, description="最小面积筛选"),
-    max_area: Optional[float] = Query(None, ge=0, description="最大面积筛选"),
-    is_litigated: Optional[str] = Query(None, description="是否涉诉筛选"),
+    search: str | None = Query(None, description="搜索关键词"),
+    ownership_status: str | None = Query(None, description="确权状态筛选"),
+    property_nature: str | None = Query(None, description="物业性质筛选"),
+    usage_status: str | None = Query(None, description="使用状态筛选"),
+    ownership_entity: str | None = Query(None, description="权属方筛选"),
+    management_entity: str | None = Query(None, description="经营管理方筛选"),
+    business_category: str | None = Query(None, description="业态类别筛选"),
+    min_area: float | None = Query(None, ge=0, description="最小面积筛选"),
+    max_area: float | None = Query(None, ge=0, description="最大面积筛选"),
+    is_litigated: str | None = Query(None, description="是否涉诉筛选"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
     sort_field: str = Query("created_at", description="排序字段"),
@@ -157,7 +164,7 @@ async def get_assets(
 ):
     """
     获取资产列表，支持分页、搜索和筛选
-    
+
     - **page**: 页码，从1开始
     - **limit**: 每页记录数，最多100
     - **search**: 搜索关键词，会在物业名称、地址、权属方等字段中搜索
@@ -191,13 +198,13 @@ async def get_assets(
             filters["is_litigated"] = is_litigated
 
         # 获取资产列表
-        query = asset_crud.get_filtered_query(db, search, filters, sort_field, sort_order)
+        query = asset_crud.get_filtered_query(
+            db, search, filters, sort_field, sort_order
+        )
 
         # 执行分页查询
         assets, total = asset_crud.execute_paginated_query(
-            query,
-            skip=(page - 1) * limit,
-            limit=limit
+            query, skip=(page - 1) * limit, limit=limit
         )
 
         return AssetListResponse(
@@ -205,7 +212,7 @@ async def get_assets(
             total=total,
             page=page,
             limit=limit,
-            pages=(total + limit - 1) // limit
+            pages=(total + limit - 1) // limit,
         )
 
     except Exception as e:
@@ -214,20 +221,22 @@ async def get_assets(
 
 # ===== 搜索筛选辅助接口 ===== (必须在 /{asset_id} 路由之前)
 
+
 @router.get("/ownership-entities", summary="获取权属方列表")
 async def get_ownership_entities(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
 ):
     """获取所有权属方列表，用于搜索筛选"""
     try:
         # 从资产表中获取所有不重复的权属方
-        entities = db.query(Asset.ownership_entity)\
-                     .filter(Asset.ownership_entity.isnot(None))\
-                     .filter(Asset.ownership_entity != '')\
-                     .distinct()\
-                     .order_by(Asset.ownership_entity)\
-                     .all()
+        entities = (
+            db.query(Asset.ownership_entity)
+            .filter(Asset.ownership_entity.isnot(None))
+            .filter(Asset.ownership_entity != "")
+            .distinct()
+            .order_by(Asset.ownership_entity)
+            .all()
+        )
 
         return [entity[0] for entity in entities if entity[0]]
 
@@ -237,18 +246,19 @@ async def get_ownership_entities(
 
 @router.get("/business-categories", summary="获取业态类别列表")
 async def get_business_categories(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
 ):
     """获取所有业态类别列表，用于搜索筛选"""
     try:
         # 从资产表中获取所有不重复的业态类别
-        categories = db.query(Asset.business_category)\
-                      .filter(Asset.business_category.isnot(None))\
-                      .filter(Asset.business_category != '')\
-                      .distinct()\
-                      .order_by(Asset.business_category)\
-                      .all()
+        categories = (
+            db.query(Asset.business_category)
+            .filter(Asset.business_category.isnot(None))
+            .filter(Asset.business_category != "")
+            .distinct()
+            .order_by(Asset.business_category)
+            .all()
+        )
 
         return [category[0] for category in categories if category[0]]
 
@@ -258,18 +268,19 @@ async def get_business_categories(
 
 @router.get("/usage-statuses", summary="获取使用情况列表")
 async def get_usage_statuses(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
 ):
     """获取所有使用情况列表，用于搜索筛选"""
     try:
         # 从资产表中获取所有不重复的使用情况
-        statuses = db.query(Asset.usage_status)\
-                    .filter(Asset.usage_status.isnot(None))\
-                    .filter(Asset.usage_status != '')\
-                    .distinct()\
-                    .order_by(Asset.usage_status)\
-                    .all()
+        statuses = (
+            db.query(Asset.usage_status)
+            .filter(Asset.usage_status.isnot(None))
+            .filter(Asset.usage_status != "")
+            .distinct()
+            .order_by(Asset.usage_status)
+            .all()
+        )
         return [status[0] for status in statuses if status[0]]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取使用情况列表失败: {str(e)}")
@@ -277,18 +288,19 @@ async def get_usage_statuses(
 
 @router.get("/property-natures", summary="获取物业性质列表")
 async def get_property_natures(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
 ):
     """获取所有物业性质列表，用于搜索筛选"""
     try:
         # 从资产表中获取所有不重复的物业性质
-        natures = db.query(Asset.property_nature)\
-                   .filter(Asset.property_nature.isnot(None))\
-                   .filter(Asset.property_nature != '')\
-                   .distinct()\
-                   .order_by(Asset.property_nature)\
-                   .all()
+        natures = (
+            db.query(Asset.property_nature)
+            .filter(Asset.property_nature.isnot(None))
+            .filter(Asset.property_nature != "")
+            .distinct()
+            .order_by(Asset.property_nature)
+            .all()
+        )
         return [nature[0] for nature in natures if nature[0]]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取物业性质列表失败: {str(e)}")
@@ -296,18 +308,19 @@ async def get_property_natures(
 
 @router.get("/ownership-statuses", summary="获取确权状态列表")
 async def get_ownership_statuses(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
 ):
     """获取所有确权状态列表，用于搜索筛选"""
     try:
         # 从资产表中获取所有不重复的确权状态
-        statuses = db.query(Asset.ownership_status)\
-                    .filter(Asset.ownership_status.isnot(None))\
-                    .filter(Asset.ownership_status != '')\
-                    .distinct()\
-                    .order_by(Asset.ownership_status)\
-                    .all()
+        statuses = (
+            db.query(Asset.ownership_status)
+            .filter(Asset.ownership_status.isnot(None))
+            .filter(Asset.ownership_status != "")
+            .distinct()
+            .order_by(Asset.ownership_status)
+            .all()
+        )
         return [status[0] for status in statuses if status[0]]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取确权状态列表失败: {str(e)}")
@@ -315,15 +328,16 @@ async def get_ownership_statuses(
 
 # ===== 单个资产操作接口 =====
 
+
 @router.get("/{asset_id}", response_model=AssetResponse, summary="获取资产详情")
 async def get_asset(
     asset_id: str = Path(..., description="资产ID"),
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     根据ID获取单个资产的详细信息
-    
+
     - **asset_id**: 资产ID
     """
     try:
@@ -342,23 +356,25 @@ async def create_asset(
     asset_in: AssetCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("asset", "create")),
-    audit_logger = Depends(audit_action("asset_create", "asset"))
+    audit_logger=Depends(audit_action("asset_create", "asset")),
 ):
     """
     创建新的资产记录
-    
+
     - **asset_in**: 资产创建数据
     """
     try:
         # 检查是否存在同名资产
-        existing_asset = asset_crud.get_by_name(db=db, property_name=asset_in.property_name)
+        existing_asset = asset_crud.get_by_name(
+            db=db, property_name=asset_in.property_name
+        )
         if existing_asset:
             raise DuplicateAssetError(asset_in.property_name)
-        
+
         # 创建资产并记录历史
         asset = asset_crud.create_with_history(db=db, obj_in=asset_in)
         return asset
-        
+
     except DuplicateAssetError:
         raise
     except Exception as e:
@@ -371,11 +387,11 @@ async def update_asset(
     asset_in: AssetUpdate = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("asset", "update")),
-    audit_logger = Depends(audit_action("asset_update", "asset"))
+    audit_logger=Depends(audit_action("asset_update", "asset")),
 ):
     """
     更新资产信息
-    
+
     - **asset_id**: 资产ID
     - **asset_in**: 资产更新数据
     """
@@ -384,21 +400,21 @@ async def update_asset(
         asset = asset_crud.get(db=db, id=asset_id)
         if not asset:
             raise AssetNotFoundError(asset_id)
-        
+
         # 如果更新了物业名称，检查是否重复
         if asset_in.property_name and asset_in.property_name != asset.property_name:
-            existing_asset = asset_crud.get_by_name(db=db, property_name=asset_in.property_name)
+            existing_asset = asset_crud.get_by_name(
+                db=db, property_name=asset_in.property_name
+            )
             if existing_asset and existing_asset.id != asset_id:
                 raise DuplicateAssetError(asset_in.property_name)
-        
+
         # 更新资产并记录历史
         updated_asset = asset_crud.update_with_history(
-            db=db,
-            db_obj=asset,
-            obj_in=asset_in
+            db=db, db_obj=asset, obj_in=asset_in
         )
         return updated_asset
-        
+
     except (AssetNotFoundError, DuplicateAssetError):
         raise
     except Exception as e:
@@ -410,11 +426,11 @@ async def delete_asset(
     asset_id: str = Path(..., description="资产ID"),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("asset", "delete")),
-    audit_logger = Depends(audit_action("asset_delete", "asset"))
+    audit_logger=Depends(audit_action("asset_delete", "asset")),
 ):
     """
     删除资产记录
-    
+
     - **asset_id**: 资产ID
     """
     try:
@@ -422,11 +438,11 @@ async def delete_asset(
         asset = asset_crud.get(db=db, id=asset_id)
         if not asset:
             raise AssetNotFoundError(asset_id)
-        
+
         # 删除资产
         asset_crud.remove(db=db, id=asset_id)
         return Response(status_code=HTTP_204_NO_CONTENT)
-        
+
     except AssetNotFoundError:
         raise
     except Exception as e:
@@ -437,11 +453,11 @@ async def delete_asset(
 async def get_asset_history(
     asset_id: str = Path(..., description="资产ID"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     获取资产的变更历史记录
-    
+
     - **asset_id**: 资产ID
     """
     try:
@@ -449,11 +465,11 @@ async def get_asset_history(
         asset = asset_crud.get(db=db, id=asset_id)
         if not asset:
             raise AssetNotFoundError(asset_id)
-        
+
         # 获取历史记录
         history_records = history_crud.get_by_asset_id(db=db, asset_id=asset_id)
         return {"asset_id": asset_id, "history": history_records}
-        
+
     except AssetNotFoundError:
         raise
     except Exception as e:
@@ -462,44 +478,63 @@ async def get_asset_history(
 
 @router.get("/statistics/summary", summary="获取资产统计摘要")
 async def get_asset_statistics(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
 ):
     """
     获取资产统计摘要信息
     """
     try:
         from sqlalchemy import func
+
         from ...models.asset import Asset
 
         # 总资产数 - 直接查询避免缓存问题
         total_assets = db.query(Asset).count()
 
         # 按确权状态统计 - 使用精确匹配
-        confirmed_count = db.query(Asset).filter(Asset.ownership_status == '已确权').count()
-        unconfirmed_count = db.query(Asset).filter(Asset.ownership_status == '未确权').count()
-        partial_count = db.query(Asset).filter(Asset.ownership_status == '部分确权').count()
+        confirmed_count = (
+            db.query(Asset).filter(Asset.ownership_status == "已确权").count()
+        )
+        unconfirmed_count = (
+            db.query(Asset).filter(Asset.ownership_status == "未确权").count()
+        )
+        partial_count = (
+            db.query(Asset).filter(Asset.ownership_status == "部分确权").count()
+        )
 
         # 按物业性质统计 - 使用精确匹配和模糊查询结合
-        commercial_count = db.query(Asset).filter(
-            (Asset.property_nature == '经营性') |
-            (Asset.property_nature == '经营类') |
-            (Asset.property_nature.like('%经营性%'))
-        ).count()
-        non_commercial_count = db.query(Asset).filter(Asset.property_nature == '非经营类').count()
+        commercial_count = (
+            db.query(Asset)
+            .filter(
+                (Asset.property_nature == "经营性")
+                | (Asset.property_nature == "经营类")
+                | (Asset.property_nature.like("%经营性%"))
+            )
+            .count()
+        )
+        non_commercial_count = (
+            db.query(Asset).filter(Asset.property_nature == "非经营类").count()
+        )
 
         # 按使用状态统计 - 使用数据库中实际的状态值
-        rented_count = db.query(Asset).filter(Asset.usage_status == '出租').count()
-        self_used_count = db.query(Asset).filter(Asset.usage_status == '自用').count()
-        vacant_count = db.query(Asset).filter(Asset.usage_status == '闲置').count()  # 修复：数据库中是"闲置"而不是"空置"
+        rented_count = db.query(Asset).filter(Asset.usage_status == "出租").count()
+        self_used_count = db.query(Asset).filter(Asset.usage_status == "自用").count()
+        vacant_count = (
+            db.query(Asset).filter(Asset.usage_status == "闲置").count()
+        )  # 修复：数据库中是"闲置"而不是"空置"
 
         # 获取面积统计数据
-        area_result = db.query(Asset).filter(Asset.data_status == '正常').with_entities(
-            func.sum(Asset.land_area).label('total_land_area'),
-            func.sum(Asset.rentable_area).label('total_rentable_area'),
-            func.sum(Asset.rented_area).label('total_rented_area'),
-            func.sum(Asset.non_commercial_area).label('total_non_commercial_area')
-        ).first()
+        area_result = (
+            db.query(Asset)
+            .filter(Asset.data_status == "正常")
+            .with_entities(
+                func.sum(Asset.land_area).label("total_land_area"),
+                func.sum(Asset.rentable_area).label("total_rentable_area"),
+                func.sum(Asset.rented_area).label("total_rented_area"),
+                func.sum(Asset.non_commercial_area).label("total_non_commercial_area"),
+            )
+            .first()
+        )
 
         # 转换为float并处理None值
         def to_float(value):
@@ -513,11 +548,14 @@ async def get_asset_statistics(
         total_non_commercial_area = to_float(area_result.total_non_commercial_area)
 
         # 计算有面积数据的资产数
-        assets_with_area = db.query(Asset).filter(
-            Asset.data_status == '正常',
-            (Asset.land_area.isnot(None)) |
-            (Asset.rentable_area.isnot(None))
-        ).count()
+        assets_with_area = (
+            db.query(Asset)
+            .filter(
+                Asset.data_status == "正常",
+                (Asset.land_area.isnot(None)) | (Asset.rentable_area.isnot(None)),
+            )
+            .count()
+        )
 
         # 计算整体出租率
         overall_occupancy_rate = 0.0
@@ -529,16 +567,16 @@ async def get_asset_statistics(
             "ownership_status": {
                 "confirmed": confirmed_count,
                 "unconfirmed": unconfirmed_count,
-                "partial": partial_count
+                "partial": partial_count,
             },
             "property_nature": {
                 "commercial": commercial_count,
-                "non_commercial": non_commercial_count
+                "non_commercial": non_commercial_count,
             },
             "usage_status": {
                 "rented": rented_count,
                 "self_used": self_used_count,
-                "vacant": vacant_count
+                "vacant": vacant_count,
             },
             # 添加面积统计数据
             "total_land_area": total_land_area,
@@ -547,7 +585,7 @@ async def get_asset_statistics(
             "total_unrented_area": total_unrented_area,
             "total_non_commercial_area": total_non_commercial_area,
             "assets_with_area_data": assets_with_area,
-            "overall_occupancy_rate": overall_occupancy_rate
+            "overall_occupancy_rate": overall_occupancy_rate,
         }
 
     except Exception as e:
@@ -556,26 +594,26 @@ async def get_asset_statistics(
 
 @router.get("/statistics/area-summary", summary="获取资产面积统计摘要")
 async def get_asset_area_statistics(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
 ):
     """
     获取资产面积统计摘要信息
     """
     try:
         from sqlalchemy import func
+
         from ...models.asset import Asset
 
         # 获取所有正常状态的资产
-        assets_query = db.query(Asset).filter(Asset.data_status == 'NORMAL')
+        assets_query = db.query(Asset).filter(Asset.data_status == "NORMAL")
 
         # 计算总面积数据
         total_result = assets_query.with_entities(
-            func.sum(Asset.land_area).label('total_land_area'),
-            func.sum(Asset.rentable_area).label('total_rentable_area'),
-            func.sum(Asset.rented_area).label('total_rented_area'),
-            func.sum(Asset.non_commercial_area).label('total_non_commercial_area'),
-            func.count(Asset.id).label('total_assets')
+            func.sum(Asset.land_area).label("total_land_area"),
+            func.sum(Asset.rentable_area).label("total_rentable_area"),
+            func.sum(Asset.rented_area).label("total_rented_area"),
+            func.sum(Asset.non_commercial_area).label("total_non_commercial_area"),
+            func.count(Asset.id).label("total_assets"),
         ).first()
 
         # 转换为float并处理None值
@@ -588,12 +626,13 @@ async def get_asset_area_statistics(
         # 计算未出租面积（可出租面积 - 已出租面积）
         total_unrented_area = max(total_rentable_area - total_rented_area, 0.0)
         total_non_commercial_area = to_float(total_result.total_non_commercial_area)
-        total_assets = int(total_result.total_assets) if total_result.total_assets else 0
+        total_assets = (
+            int(total_result.total_assets) if total_result.total_assets else 0
+        )
 
         # 计算有面积数据的资产数
         assets_with_area = assets_query.filter(
-            (Asset.land_area.isnot(None)) |
-            (Asset.rentable_area.isnot(None))
+            (Asset.land_area.isnot(None)) | (Asset.rentable_area.isnot(None))
         ).count()
 
         # 计算整体出租率
@@ -609,7 +648,7 @@ async def get_asset_area_statistics(
             "total_unrented_area": total_unrented_area,
             "total_non_commercial_area": total_non_commercial_area,
             "assets_with_area_data": assets_with_area,
-            "overall_occupancy_rate": overall_occupancy_rate
+            "overall_occupancy_rate": overall_occupancy_rate,
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取面积统计信息失败: {str(e)}")
@@ -617,12 +656,13 @@ async def get_asset_area_statistics(
 
 # ===== 资产附件管理接口 =====
 
+
 @router.post("/{asset_id}/attachments", summary="上传资产附件")
 async def upload_asset_attachments(
     asset_id: str = Path(..., description="资产ID"),
-    files: List[UploadFile] = File(...),
+    files: list[UploadFile] = File(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("asset", "update"))
+    current_user: User = Depends(require_permission("asset", "update")),
 ):
     """
     上传资产附件（PDF格式）
@@ -646,7 +686,7 @@ async def upload_asset_attachments(
         for file in files:
             try:
                 # 验证文件类型
-                if not file.filename.lower().endswith('.pdf'):
+                if not file.filename.lower().endswith(".pdf"):
                     failed_files.append(f"{file.filename}: 仅支持PDF格式")
                     continue
 
@@ -677,7 +717,7 @@ async def upload_asset_attachments(
         return {
             "success": success_files,
             "failed": failed_files,
-            "message": f"成功上传 {len(success_files)} 个文件，失败 {len(failed_files)} 个文件"
+            "message": f"成功上传 {len(success_files)} 个文件，失败 {len(failed_files)} 个文件",
         }
 
     except AssetNotFoundError:
@@ -690,7 +730,7 @@ async def upload_asset_attachments(
 async def get_asset_attachments(
     asset_id: str = Path(..., description="资产ID"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     获取资产附件列表
@@ -711,17 +751,19 @@ async def get_asset_attachments(
 
         attachments = []
         for filename in os.listdir(upload_dir):
-            if filename.lower().endswith('.pdf'):
+            if filename.lower().endswith(".pdf"):
                 file_path = os.path.join(upload_dir, filename)
                 file_stat = os.stat(file_path)
 
-                attachments.append({
-                    "id": filename,
-                    "name": filename,
-                    "size": file_stat.st_size,
-                    "url": f"/api/v1/assets/{asset_id}/attachments/{filename}",
-                    "upload_time": file_stat.st_mtime
-                })
+                attachments.append(
+                    {
+                        "id": filename,
+                        "name": filename,
+                        "size": file_stat.st_size,
+                        "url": f"/api/v1/assets/{asset_id}/attachments/{filename}",
+                        "upload_time": file_stat.st_mtime,
+                    }
+                )
 
         return attachments
 
@@ -736,7 +778,7 @@ async def download_asset_attachment(
     asset_id: str = Path(..., description="资产ID"),
     filename: str = Path(..., description="文件名"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     下载资产附件
@@ -757,14 +799,10 @@ async def download_asset_attachment(
             raise HTTPException(status_code=404, detail="文件不存在")
 
         # 验证文件类型
-        if not filename.lower().endswith('.pdf'):
+        if not filename.lower().endswith(".pdf"):
             raise HTTPException(status_code=400, detail="仅支持PDF文件")
 
-        return FileResponse(
-            file_path,
-            filename=filename,
-            media_type="application/pdf"
-        )
+        return FileResponse(file_path, filename=filename, media_type="application/pdf")
 
     except AssetNotFoundError:
         raise
@@ -779,7 +817,7 @@ async def delete_asset_attachment(
     asset_id: str = Path(..., description="资产ID"),
     attachment_id: str = Path(..., description="附件ID"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("asset", "delete"))
+    current_user: User = Depends(require_permission("asset", "delete")),
 ):
     """
     删除资产附件
@@ -814,11 +852,14 @@ async def delete_asset_attachment(
 
 # ===== 批量操作API =====
 
-@router.post("/batch-update", response_model=AssetBatchUpdateResponse, summary="批量更新资产")
+
+@router.post(
+    "/batch-update", response_model=AssetBatchUpdateResponse, summary="批量更新资产"
+)
 async def batch_update_assets(
     request: AssetBatchUpdateRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("asset", "update"))
+    current_user: User = Depends(require_permission("asset", "update")),
 ):
     """
     批量更新资产信息
@@ -846,18 +887,13 @@ async def batch_update_assets(
                 # 获取现有资产
                 asset = asset_crud.get(db=db, id=asset_id)
                 if not asset:
-                    errors.append({
-                        "asset_id": asset_id,
-                        "error": "资产不存在"
-                    })
+                    errors.append({"asset_id": asset_id, "error": "资产不存在"})
                     failed_count += 1
                     continue
 
                 # 更新资产
                 updated_asset = asset_crud.update(
-                    db=db,
-                    db_obj=asset,
-                    obj_in=request.updates
+                    db=db, db_obj=asset, obj_in=request.updates
                 )
 
                 success_count += 1
@@ -870,15 +906,12 @@ async def batch_update_assets(
                         "asset_id": asset_id,
                         "operation_type": "批量更新",
                         "description": f"批量更新字段: {', '.join(request.updates.keys())}",
-                        "operator": "system"
-                    }
+                        "operator": "system",
+                    },
                 )
 
             except Exception as e:
-                errors.append({
-                    "asset_id": asset_id,
-                    "error": str(e)
-                })
+                errors.append({"asset_id": asset_id, "error": str(e)})
                 failed_count += 1
 
         return AssetBatchUpdateResponse(
@@ -886,18 +919,20 @@ async def batch_update_assets(
             failed_count=failed_count,
             total_count=total_count,
             errors=errors,
-            updated_assets=updated_assets
+            updated_assets=updated_assets,
         )
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"批量更新失败: {str(e)}")
 
 
-@router.post("/validate", response_model=AssetValidationResponse, summary="验证资产数据")
+@router.post(
+    "/validate", response_model=AssetValidationResponse, summary="验证资产数据"
+)
 async def validate_asset_data(
     request: AssetValidationRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     验证资产数据的完整性和正确性
@@ -916,16 +951,16 @@ async def validate_asset_data(
         # 验证必填字段
         if "required_fields" in validate_rules:
             required_fields = [
-                "property_name", "address", "ownership_status",
-                "property_nature", "usage_status"
+                "property_name",
+                "address",
+                "ownership_status",
+                "property_nature",
+                "usage_status",
             ]
 
             for field in required_fields:
                 if field not in data or not data[field]:
-                    errors.append({
-                        "field": field,
-                        "error": f"{field}为必填字段"
-                    })
+                    errors.append({"field": field, "error": f"{field}为必填字段"})
                 else:
                     validated_fields.append(field)
 
@@ -935,18 +970,25 @@ async def validate_asset_data(
             if "ownership_status" in data:
                 valid_statuses = ["已确权", "未确权", "部分确权", "无法确认业权"]
                 if data["ownership_status"] not in valid_statuses:
-                    errors.append({
-                        "field": "ownership_status",
-                        "error": f"权属状态必须是: {', '.join(valid_statuses)}"
-                    })
+                    errors.append(
+                        {
+                            "field": "ownership_status",
+                            "error": f"权属状态必须是: {', '.join(valid_statuses)}",
+                        }
+                    )
                 else:
                     validated_fields.append("ownership_status")
 
             # 验证数值字段
             numeric_fields = [
-                "land_area", "actual_property_area", "rentable_area",
-                "rented_area", "annual_income", "annual_expense",
-                "monthly_rent", "deposit"
+                "land_area",
+                "actual_property_area",
+                "rentable_area",
+                "rented_area",
+                "annual_income",
+                "annual_expense",
+                "monthly_rent",
+                "deposit",
             ]
 
             for field in numeric_fields:
@@ -955,15 +997,16 @@ async def validate_asset_data(
                         float(data[field])
                         validated_fields.append(field)
                     except (ValueError, TypeError):
-                        errors.append({
-                            "field": field,
-                            "error": f"{field}必须是有效的数字"
-                        })
+                        errors.append(
+                            {"field": field, "error": f"{field}必须是有效的数字"}
+                        )
 
             # 验证日期字段
             date_fields = [
-                "contract_start_date", "contract_end_date",
-                "operation_agreement_start_date", "operation_agreement_end_date"
+                "contract_start_date",
+                "contract_end_date",
+                "operation_agreement_start_date",
+                "operation_agreement_end_date",
             ]
 
             for field in date_fields:
@@ -973,33 +1016,30 @@ async def validate_asset_data(
                         if isinstance(data[field], str):
                             # 验证 YYYY-MM-DD 格式
                             import re
-                            if not re.match(r'^\d{4}-\d{2}-\d{2}$', data[field]):
-                                errors.append({
-                                    "field": field,
-                                    "error": f"{field}日期格式应为 YYYY-MM-DD"
-                                })
+
+                            if not re.match(r"^\d{4}-\d{2}-\d{2}$", data[field]):
+                                errors.append(
+                                    {
+                                        "field": field,
+                                        "error": f"{field}日期格式应为 YYYY-MM-DD",
+                                    }
+                                )
                             else:
                                 validated_fields.append(field)
                     except Exception:
-                        errors.append({
-                            "field": field,
-                            "error": f"{field}日期格式无效"
-                        })
+                        errors.append({"field": field, "error": f"{field}日期格式无效"})
 
         # 添加建议性警告
         suggestion_fields = [
             ("land_area", "建议填写土地面积"),
             ("annual_income", "建议填写年收入"),
             ("annual_expense", "建议填写年支出"),
-            ("tenant_name", "建议填写租户信息（如果是已出租资产）")
+            ("tenant_name", "建议填写租户信息（如果是已出租资产）"),
         ]
 
         for field, suggestion in suggestion_fields:
             if field not in data or data[field] is None:
-                warnings.append({
-                    "field": field,
-                    "message": suggestion
-                })
+                warnings.append({"field": field, "message": suggestion})
 
         is_valid = len(errors) == 0
 
@@ -1007,7 +1047,7 @@ async def validate_asset_data(
             is_valid=is_valid,
             errors=errors,
             warnings=warnings,
-            validated_fields=validated_fields
+            validated_fields=validated_fields,
         )
 
     except Exception as e:
@@ -1018,7 +1058,7 @@ async def validate_asset_data(
 async def import_assets(
     request: AssetImportRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("asset", "create"))
+    current_user: User = Depends(require_permission("asset", "create")),
 ):
     """
     批量导入资产数据
@@ -1043,11 +1083,13 @@ async def import_assets(
                 validation_result = await validate_asset_data(validation_request, db)
 
                 if not validation_result.is_valid and not request.skip_errors:
-                    errors.append({
-                        "row": index + 1,
-                        "data": asset_data,
-                        "errors": validation_result.errors
-                    })
+                    errors.append(
+                        {
+                            "row": index + 1,
+                            "data": asset_data,
+                            "errors": validation_result.errors,
+                        }
+                    )
                     failed_count += 1
                     continue
 
@@ -1059,7 +1101,7 @@ async def import_assets(
                         assets, _ = asset_crud.get_multi_with_search(
                             db=db,
                             search=f"{asset_data.get('property_name', '')} {asset_data.get('address', '')}",
-                            limit=1
+                            limit=1,
                         )
                         if assets:
                             existing_asset = assets[0]
@@ -1079,8 +1121,13 @@ async def import_assets(
 
                 elif request.import_mode == "merge" and existing_asset:
                     # 更新现有资产
-                    asset_update = AssetUpdate(**{k: v for k, v in asset_data.items()
-                                                 if k not in ['id', 'created_at']})
+                    asset_update = AssetUpdate(
+                        **{
+                            k: v
+                            for k, v in asset_data.items()
+                            if k not in ["id", "created_at"]
+                        }
+                    )
                     updated_asset = asset_crud.update(
                         db=db, db_obj=existing_asset, obj_in=asset_update
                     )
@@ -1107,19 +1154,17 @@ async def import_assets(
                 history_crud.create(
                     db=db,
                     obj_in={
-                        "asset_id": imported_assets[-1] if imported_assets else "unknown",
+                        "asset_id": imported_assets[-1]
+                        if imported_assets
+                        else "unknown",
                         "operation_type": "批量导入",
-                        "description": f"通过批量导入创建/更新资产",
-                        "operator": "system"
-                    }
+                        "description": "通过批量导入创建/更新资产",
+                        "operator": "system",
+                    },
                 )
 
             except Exception as e:
-                errors.append({
-                    "row": index + 1,
-                    "data": asset_data,
-                    "error": str(e)
-                })
+                errors.append({"row": index + 1, "data": asset_data, "error": str(e)})
                 failed_count += 1
 
         return AssetImportResponse(
@@ -1128,18 +1173,22 @@ async def import_assets(
             total_count=total_count,
             errors=errors,
             imported_assets=imported_assets,
-            import_id=import_id if not request.dry_run else None
+            import_id=import_id if not request.dry_run else None,
         )
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"资产导入失败: {str(e)}")
 
 
-@router.post("/batch-custom-fields", response_model=BatchCustomFieldUpdateResponse, summary="批量更新自定义字段")
+@router.post(
+    "/batch-custom-fields",
+    response_model=BatchCustomFieldUpdateResponse,
+    summary="批量更新自定义字段",
+)
 async def batch_update_custom_fields(
     request: BatchCustomFieldUpdateRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission("asset", "update"))
+    current_user: User = Depends(require_permission("asset", "update")),
 ):
     """
     批量更新资产的自定义字段
@@ -1158,10 +1207,7 @@ async def batch_update_custom_fields(
                 # 检查资产是否存在
                 asset = asset_crud.get(db=db, id=asset_id)
                 if not asset:
-                    errors.append({
-                        "asset_id": asset_id,
-                        "error": "资产不存在"
-                    })
+                    errors.append({"asset_id": asset_id, "error": "资产不存在"})
                     failed_count += 1
                     continue
 
@@ -1170,17 +1216,14 @@ async def batch_update_custom_fields(
                 success_count += 1
 
             except Exception as e:
-                errors.append({
-                    "asset_id": asset_id,
-                    "error": str(e)
-                })
+                errors.append({"asset_id": asset_id, "error": str(e)})
                 failed_count += 1
 
         return BatchCustomFieldUpdateResponse(
             success_count=success_count,
             failed_count=failed_count,
             total_count=total_count,
-            errors=errors
+            errors=errors,
         )
 
     except Exception as e:
@@ -1191,14 +1234,14 @@ async def batch_update_custom_fields(
 async def get_all_assets(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    search: Optional[str] = Query(None, description="搜索关键字"),
-    ownership_status: Optional[str] = Query(None, description="确权状态"),
-    usage_status: Optional[str] = Query(None, description="使用状态"),
-    property_nature: Optional[str] = Query(None, description="物业性质"),
-    business_category: Optional[str] = Query(None, description="业态类别"),
-    sort_by: Optional[str] = Query("created_at", description="排序字段"),
-    sort_order: Optional[str] = Query("desc", description="排序顺序"),
-    limit: int = Query(10000, ge=1, le=50000, description="最大返回数量")
+    search: str | None = Query(None, description="搜索关键字"),
+    ownership_status: str | None = Query(None, description="确权状态"),
+    usage_status: str | None = Query(None, description="使用状态"),
+    property_nature: str | None = Query(None, description="物业性质"),
+    business_category: str | None = Query(None, description="业态类别"),
+    sort_by: str | None = Query("created_at", description="排序字段"),
+    sort_order: str | None = Query("desc", description="排序顺序"),
+    limit: int = Query(10000, ge=1, le=50000, description="最大返回数量"),
 ):
     """
     获取所有资产列表，不分页，用于导出等场景
@@ -1237,23 +1280,20 @@ async def get_all_assets(
 
         # 获取所有资产（不分页）
         assets = asset_crud.get_multi(
-            db=db,
-            filters=filters if filters else None,
-            order_by=order_by,
-            limit=limit
+            db=db, filters=filters if filters else None, order_by=order_by, limit=limit
         )
 
         # 转换为响应格式
         asset_responses = []
         for asset in assets:
             asset_dict = asset.__dict__.copy()
-            asset_dict['_sa_instance_state'] = None  # 移除SQLAlchemy实例状态
+            asset_dict["_sa_instance_state"] = None  # 移除SQLAlchemy实例状态
 
             # 确保计算字段包含在响应中
-            if hasattr(asset, 'unrented_area'):
-                asset_dict['unrented_area'] = float(asset.unrented_area)
-            if hasattr(asset, 'occupancy_rate'):
-                asset_dict['occupancy_rate'] = float(asset.occupancy_rate)
+            if hasattr(asset, "unrented_area"):
+                asset_dict["unrented_area"] = float(asset.unrented_area)
+            if hasattr(asset, "occupancy_rate"):
+                asset_dict["occupancy_rate"] = float(asset.occupancy_rate)
 
             asset_responses.append(AssetResponse.model_validate(asset_dict))
 
@@ -1261,7 +1301,7 @@ async def get_all_assets(
         return {
             "success": True,
             "data": asset_responses,
-            "message": f"成功获取{len(asset_responses)}个资产"
+            "message": f"成功获取{len(asset_responses)}个资产",
         }
 
     except Exception as e:
@@ -1272,7 +1312,7 @@ async def get_all_assets(
 async def get_assets_by_ids(
     request: dict,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     根据资产ID列表批量获取资产信息
@@ -1291,13 +1331,13 @@ async def get_assets_by_ids(
         asset_responses = []
         for asset in assets:
             asset_dict = asset.__dict__.copy()
-            asset_dict['_sa_instance_state'] = None  # 移除SQLAlchemy实例状态
+            asset_dict["_sa_instance_state"] = None  # 移除SQLAlchemy实例状态
 
             # 确保计算字段包含在响应中
-            if hasattr(asset, 'unrented_area'):
-                asset_dict['unrented_area'] = float(asset.unrented_area)
-            if hasattr(asset, 'occupancy_rate'):
-                asset_dict['occupancy_rate'] = float(asset.occupancy_rate)
+            if hasattr(asset, "unrented_area"):
+                asset_dict["unrented_area"] = float(asset.unrented_area)
+            if hasattr(asset, "occupancy_rate"):
+                asset_dict["occupancy_rate"] = float(asset.occupancy_rate)
 
             asset_responses.append(AssetResponse.model_validate(asset_dict))
 
@@ -1305,7 +1345,7 @@ async def get_assets_by_ids(
         return {
             "success": True,
             "data": asset_responses,
-            "message": f"成功获取{len(asset_responses)}个资产"
+            "message": f"成功获取{len(asset_responses)}个资产",
         }
 
     except Exception as e:

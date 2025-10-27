@@ -2,27 +2,38 @@
 基于角色的访问控制(RBAC)数据模型
 """
 
-from sqlalchemy import Column, String, DateTime, Boolean, Integer, Text, ForeignKey, Table
-from sqlalchemy.orm import relationship
-from datetime import datetime, timezone
 import uuid
+from datetime import datetime
+
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Table,
+    Text,
+)
+from sqlalchemy.orm import relationship
 
 from ..database import Base
 
 # 角色权限关联表
 role_permissions = Table(
-    'role_permissions',
+    "role_permissions",
     Base.metadata,
-    Column('role_id', String, ForeignKey('roles.id'), primary_key=True),
-    Column('permission_id', String, ForeignKey('permissions.id'), primary_key=True),
-    Column('created_at', DateTime, default=datetime.now, comment='创建时间'),
-    Column('created_by', String(100), comment='创建人'),
-    extend_existing=True
+    Column("role_id", String, ForeignKey("roles.id"), primary_key=True),
+    Column("permission_id", String, ForeignKey("permissions.id"), primary_key=True),
+    Column("created_at", DateTime, default=datetime.now, comment="创建时间"),
+    Column("created_by", String(100), comment="创建人"),
+    extend_existing=True,
 )
 
 
 class Role(Base):
     """角色模型"""
+
     __tablename__ = "roles"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -35,36 +46,57 @@ class Role(Base):
     # 角色级别和类型
     level = Column(Integer, nullable=False, default=1, comment="角色级别")
     category = Column(String(50), comment="角色类别")
-    is_system_role = Column(Boolean, nullable=False, default=False, comment="是否系统角色")
+    is_system_role = Column(
+        Boolean, nullable=False, default=False, comment="是否系统角色"
+    )
 
     # 状态信息
     is_active = Column(Boolean, nullable=False, default=True, comment="是否激活")
 
     # 组织关联
-    organization_id = Column(String, ForeignKey("organizations.id"), comment="所属组织ID")
+    organization_id = Column(
+        String, ForeignKey("organizations.id"), comment="所属组织ID"
+    )
 
     # 权限范围
-    scope = Column(String(50), default="global", comment="权限范围(global/organization/department)")
+    scope = Column(
+        String(50), default="global", comment="权限范围(global/organization/department)"
+    )
     scope_id = Column(String, comment="范围ID")
 
     # 审计信息
-    created_at = Column(DateTime, nullable=False, default=datetime.now, comment="创建时间")
-    updated_at = Column(DateTime, nullable=False, default=datetime.now, onupdate=datetime.now, comment="更新时间")
+    created_at = Column(
+        DateTime, nullable=False, default=datetime.now, comment="创建时间"
+    )
+    updated_at = Column(
+        DateTime,
+        nullable=False,
+        default=datetime.now,
+        onupdate=datetime.now,
+        comment="更新时间",
+    )
     created_by = Column(String(100), comment="创建人")
     updated_by = Column(String(100), comment="更新人")
 
     # 关系
     organization = relationship("Organization")
-    permissions = relationship("Permission", secondary=role_permissions, back_populates="roles")
+    permissions = relationship(
+        "Permission", secondary=role_permissions, back_populates="roles"
+    )
     # users = relationship("User", secondary="user_role_assignments")  # 完全移除以避免循环依赖
-    user_assignments = relationship("UserRoleAssignment", back_populates="role", overlaps="roles")
+    user_assignments = relationship(
+        "UserRoleAssignment", back_populates="role", overlaps="roles"
+    )
 
     def __repr__(self):
-        return f"<Role(id={self.id}, name={self.name}, display_name={self.display_name})>"
+        return (
+            f"<Role(id={self.id}, name={self.name}, display_name={self.display_name})>"
+        )
 
 
 class Permission(Base):
     """权限模型"""
+
     __tablename__ = "permissions"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -79,7 +111,9 @@ class Permission(Base):
     action = Column(String(50), nullable=False, comment="操作类型")
 
     # 权限特征
-    is_system_permission = Column(Boolean, nullable=False, default=False, comment="是否系统权限")
+    is_system_permission = Column(
+        Boolean, nullable=False, default=False, comment="是否系统权限"
+    )
     requires_approval = Column(Boolean, default=False, comment="是否需要审批")
 
     # 权限限制
@@ -87,16 +121,30 @@ class Permission(Base):
     conditions = Column(Text, comment="权限条件(JSON格式)")
 
     # 审计信息
-    created_at = Column(DateTime, nullable=False, default=datetime.now, comment="创建时间")
-    updated_at = Column(DateTime, nullable=False, default=datetime.now, onupdate=datetime.now, comment="更新时间")
+    created_at = Column(
+        DateTime, nullable=False, default=datetime.now, comment="创建时间"
+    )
+    updated_at = Column(
+        DateTime,
+        nullable=False,
+        default=datetime.now,
+        onupdate=datetime.now,
+        comment="更新时间",
+    )
     created_by = Column(String(100), comment="创建人")
     updated_by = Column(String(100), comment="更新人")
 
     # 关系
-    roles = relationship("Role", secondary=role_permissions, back_populates="permissions")
+    roles = relationship(
+        "Role", secondary=role_permissions, back_populates="permissions"
+    )
     dynamic_permissions = relationship("DynamicPermission", back_populates="permission")
-    temporary_permissions = relationship("TemporaryPermission", back_populates="permission")
-    conditional_permissions = relationship("ConditionalPermission", back_populates="permission")
+    temporary_permissions = relationship(
+        "TemporaryPermission", back_populates="permission"
+    )
+    conditional_permissions = relationship(
+        "ConditionalPermission", back_populates="permission"
+    )
 
     def __repr__(self):
         return f"<Permission(id={self.id}, name={self.name}, resource={self.resource}, action={self.action})>"
@@ -104,8 +152,9 @@ class Permission(Base):
 
 class UserRoleAssignment(Base):
     """用户角色分配模型"""
+
     __tablename__ = "user_role_assignments"
-    __table_args__ = {'extend_existing': True}
+    __table_args__ = {"extend_existing": True}
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
 
@@ -115,7 +164,9 @@ class UserRoleAssignment(Base):
 
     # 分配信息
     assigned_by = Column(String(100), comment="分配人")
-    assigned_at = Column(DateTime, nullable=False, default=datetime.now, comment="分配时间")
+    assigned_at = Column(
+        DateTime, nullable=False, default=datetime.now, comment="分配时间"
+    )
 
     # 有效期
     expires_at = Column(DateTime, comment="过期时间")
@@ -129,8 +180,16 @@ class UserRoleAssignment(Base):
     context = Column(Text, comment="上下文信息(JSON格式)")
 
     # 审计信息
-    created_at = Column(DateTime, nullable=False, default=datetime.now, comment="创建时间")
-    updated_at = Column(DateTime, nullable=False, default=datetime.now, onupdate=datetime.now, comment="更新时间")
+    created_at = Column(
+        DateTime, nullable=False, default=datetime.now, comment="创建时间"
+    )
+    updated_at = Column(
+        DateTime,
+        nullable=False,
+        default=datetime.now,
+        onupdate=datetime.now,
+        comment="更新时间",
+    )
 
     # 关系 - 修复映射冲突
     user = relationship("User", back_populates="role_assignments")
@@ -142,6 +201,7 @@ class UserRoleAssignment(Base):
 
 class ResourcePermission(Base):
     """资源权限模型 - 用于资源级别的权限控制"""
+
     __tablename__ = "resource_permissions"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -156,10 +216,14 @@ class ResourcePermission(Base):
     permission_id = Column(String, ForeignKey("permissions.id"), comment="权限ID")
 
     # 权限级别
-    permission_level = Column(String(20), default="read", comment="权限级别(read/write/delete/admin)")
+    permission_level = Column(
+        String(20), default="read", comment="权限级别(read/write/delete/admin)"
+    )
 
     # 有效期
-    granted_at = Column(DateTime, nullable=False, default=datetime.now, comment="授权时间")
+    granted_at = Column(
+        DateTime, nullable=False, default=datetime.now, comment="授权时间"
+    )
     expires_at = Column(DateTime, comment="过期时间")
     is_active = Column(Boolean, nullable=False, default=True, comment="是否激活")
 
@@ -171,8 +235,16 @@ class ResourcePermission(Base):
     conditions = Column(Text, comment="权限条件(JSON格式)")
 
     # 审计信息
-    created_at = Column(DateTime, nullable=False, default=datetime.now, comment="创建时间")
-    updated_at = Column(DateTime, nullable=False, default=datetime.now, onupdate=datetime.now, comment="更新时间")
+    created_at = Column(
+        DateTime, nullable=False, default=datetime.now, comment="创建时间"
+    )
+    updated_at = Column(
+        DateTime,
+        nullable=False,
+        default=datetime.now,
+        onupdate=datetime.now,
+        comment="更新时间",
+    )
 
     # 关系
     user = relationship("User")
@@ -185,6 +257,7 @@ class ResourcePermission(Base):
 
 class PermissionAuditLog(Base):
     """权限审计日志"""
+
     __tablename__ = "permission_audit_logs"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -210,7 +283,9 @@ class PermissionAuditLog(Base):
     user_agent = Column(Text, comment="用户代理")
 
     # 时间信息
-    created_at = Column(DateTime, nullable=False, default=datetime.now, comment="创建时间")
+    created_at = Column(
+        DateTime, nullable=False, default=datetime.now, comment="创建时间"
+    )
 
     # 关系
     user = relationship("User", foreign_keys=[user_id], overlaps="roles")

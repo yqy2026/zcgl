@@ -3,43 +3,59 @@ PDF导入会话数据模型
 用于跟踪PDF文件处理进度和状态
 """
 
-from sqlalchemy import Column, Integer, String, Text, DateTime, Float, JSON, Boolean, Enum
+import enum
+
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Column,
+    DateTime,
+    Enum,
+    Float,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.sql import func
-from datetime import datetime
-import enum
 
 Base = declarative_base()
 
+
 class SessionStatus(str, enum.Enum):
     """会话状态枚举"""
-    UPLOADING = "uploading"           # 文件上传中
-    UPLOADED = "uploaded"             # 文件上传完成
-    PROCESSING = "processing"         # PDF处理中
-    TEXT_EXTRACTED = "text_extracted" # 文本提取完成
-    INFO_EXTRACTED = "info_extracted" # 信息提取完成
-    VALIDATING = "validating"         # 数据验证中
-    MATCHING = "matching"             # 数据匹配中
+
+    UPLOADING = "uploading"  # 文件上传中
+    UPLOADED = "uploaded"  # 文件上传完成
+    PROCESSING = "processing"  # PDF处理中
+    TEXT_EXTRACTED = "text_extracted"  # 文本提取完成
+    INFO_EXTRACTED = "info_extracted"  # 信息提取完成
+    VALIDATING = "validating"  # 数据验证中
+    MATCHING = "matching"  # 数据匹配中
     READY_FOR_REVIEW = "ready_for_review"  # 待用户确认
-    COMPLETED = "completed"           # 处理完成
-    FAILED = "failed"                 # 处理失败
-    CANCELLED = "cancelled"           # 用户取消
-    CONFIRMED = "confirmed"           # 用户确认导入
+    COMPLETED = "completed"  # 处理完成
+    FAILED = "failed"  # 处理失败
+    CANCELLED = "cancelled"  # 用户取消
+    CONFIRMED = "confirmed"  # 用户确认导入
+
 
 class ProcessingStep(str, enum.Enum):
     """处理步骤枚举"""
-    FILE_UPLOAD = "file_upload"                    # 文件上传
-    PDF_CONVERSION = "pdf_conversion"              # PDF转换
-    TEXT_EXTRACTION = "text_extraction"            # 文本提取
-    INFO_EXTRACTION = "info_extraction"            # 信息提取
-    DATA_VALIDATION = "data_validation"            # 数据验证
-    ASSET_MATCHING = "asset_matching"              # 资产匹配
-    OWNERSHIP_MATCHING = "ownership_matching"      # 权属方匹配
-    DUPLICATE_CHECK = "duplicate_check"            # 重复检查
-    FINAL_REVIEW = "final_review"                  # 最终审核
+
+    FILE_UPLOAD = "file_upload"  # 文件上传
+    PDF_CONVERSION = "pdf_conversion"  # PDF转换
+    TEXT_EXTRACTION = "text_extraction"  # 文本提取
+    INFO_EXTRACTION = "info_extraction"  # 信息提取
+    DATA_VALIDATION = "data_validation"  # 数据验证
+    ASSET_MATCHING = "asset_matching"  # 资产匹配
+    OWNERSHIP_MATCHING = "ownership_matching"  # 权属方匹配
+    DUPLICATE_CHECK = "duplicate_check"  # 重复检查
+    FINAL_REVIEW = "final_review"  # 最终审核
+
 
 class PDFImportSession(Base):
     """PDF导入会话模型"""
+
     __tablename__ = "pdf_import_sessions"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -52,7 +68,9 @@ class PDFImportSession(Base):
     content_type = Column(String(100), default="application/pdf")
 
     # 状态信息
-    status = Column(Enum(SessionStatus), default=SessionStatus.UPLOADING, nullable=False)
+    status = Column(
+        Enum(SessionStatus), default=SessionStatus.UPLOADING, nullable=False
+    )
     current_step = Column(Enum(ProcessingStep))
     progress_percentage = Column(Float, default=0.0)
     error_message = Column(Text)
@@ -61,7 +79,7 @@ class PDFImportSession(Base):
     extracted_text = Column(Text)  # 原始提取的文本
     extracted_data = Column(JSON)  # 提取的结构化数据
     validation_results = Column(JSON)  # 验证结果
-    matching_results = Column(JSON)   # 匹配结果
+    matching_results = Column(JSON)  # 匹配结果
     confidence_score = Column(Float, default=0.0)  # 整体置信度
 
     # 处理配置
@@ -90,7 +108,7 @@ class PDFImportSession(Base):
             SessionStatus.TEXT_EXTRACTED,
             SessionStatus.INFO_EXTRACTED,
             SessionStatus.VALIDATING,
-            SessionStatus.MATCHING
+            SessionStatus.MATCHING,
         ]
 
     @property
@@ -99,7 +117,7 @@ class PDFImportSession(Base):
         return self.status in [
             SessionStatus.COMPLETED,
             SessionStatus.FAILED,
-            SessionStatus.CANCELLED
+            SessionStatus.CANCELLED,
         ]
 
     @property
@@ -107,8 +125,10 @@ class PDFImportSession(Base):
         """是否需要用户操作"""
         return self.status == SessionStatus.READY_FOR_REVIEW
 
+
 class SessionLog(Base):
     """会话操作日志"""
+
     __tablename__ = "pdf_import_session_logs"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -130,8 +150,10 @@ class SessionLog(Base):
     def __repr__(self):
         return f"<SessionLog(session_id='{self.session_id}', step='{self.step}', status='{self.status}')>"
 
+
 class ProcessingConfiguration(Base):
     """处理配置模型"""
+
     __tablename__ = "pdf_import_configurations"
 
     id = Column(Integer, primary_key=True, index=True)

@@ -5,12 +5,12 @@
 
 import logging
 import traceback
-from typing import Any, Dict, Optional, Union
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from typing import Any
 
-from fastapi import Request, HTTPException, status
-from fastapi.responses import JSONResponse
+from fastapi import HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
 logger = logging.getLogger(__name__)
@@ -23,17 +23,17 @@ class BaseBusinessException(Exception):
         self,
         message: str,
         code: str = "BUSINESS_ERROR",
-        details: Optional[Dict[str, Any]] = None,
-        status_code: int = status.HTTP_400_BAD_REQUEST
+        details: dict[str, Any] | None = None,
+        status_code: int = status.HTTP_400_BAD_REQUEST,
     ):
         self.message = message
         self.code = code
         self.details = details or {}
         self.status_code = status_code
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
         super().__init__(message)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """转换为字典格式"""
         return {
             "success": False,
@@ -41,8 +41,8 @@ class BaseBusinessException(Exception):
                 "code": self.code,
                 "message": self.message,
                 "details": self.details,
-                "timestamp": self.timestamp.isoformat()
-            }
+                "timestamp": self.timestamp.isoformat(),
+            },
         }
 
 
@@ -52,18 +52,15 @@ class ValidationException(BaseBusinessException):
     def __init__(
         self,
         message: str,
-        field_errors: Optional[Dict[str, list]] = None,
-        details: Optional[Dict[str, Any]] = None
+        field_errors: dict[str, list] | None = None,
+        details: dict[str, Any] | None = None,
     ):
         self.field_errors = field_errors or {}
         super().__init__(
             message=message,
             code="VALIDATION_ERROR",
-            details={
-                "field_errors": self.field_errors,
-                **(details or {})
-            },
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY
+            details={"field_errors": self.field_errors, **(details or {})},
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         )
 
 
@@ -73,8 +70,8 @@ class ResourceNotFoundException(BaseBusinessException):
     def __init__(
         self,
         resource_type: str,
-        resource_id: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None
+        resource_id: str | None = None,
+        details: dict[str, Any] | None = None,
     ):
         message = f"{resource_type}未找到"
         if resource_id:
@@ -86,9 +83,9 @@ class ResourceNotFoundException(BaseBusinessException):
             details={
                 "resource_type": resource_type,
                 "resource_id": resource_id,
-                **(details or {})
+                **(details or {}),
             },
-            status_code=status.HTTP_404_NOT_FOUND
+            status_code=status.HTTP_404_NOT_FOUND,
         )
 
 
@@ -100,7 +97,7 @@ class DuplicateResourceException(BaseBusinessException):
         resource_type: str,
         field: str,
         value: str,
-        details: Optional[Dict[str, Any]] = None
+        details: dict[str, Any] | None = None,
     ):
         message = f"{resource_type}已存在，{field}: {value}"
 
@@ -111,9 +108,9 @@ class DuplicateResourceException(BaseBusinessException):
                 "resource_type": resource_type,
                 "field": field,
                 "value": value,
-                **(details or {})
+                **(details or {}),
             },
-            status_code=status.HTTP_409_CONFLICT
+            status_code=status.HTTP_409_CONFLICT,
         )
 
 
@@ -123,17 +120,14 @@ class PermissionDeniedException(BaseBusinessException):
     def __init__(
         self,
         message: str = "权限不足",
-        required_permission: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None
+        required_permission: str | None = None,
+        details: dict[str, Any] | None = None,
     ):
         super().__init__(
             message=message,
             code="PERMISSION_DENIED",
-            details={
-                "required_permission": required_permission,
-                **(details or {})
-            },
-            status_code=status.HTTP_403_FORBIDDEN
+            details={"required_permission": required_permission, **(details or {})},
+            status_code=status.HTTP_403_FORBIDDEN,
         )
 
 
@@ -141,15 +135,13 @@ class AuthenticationException(BaseBusinessException):
     """认证异常"""
 
     def __init__(
-        self,
-        message: str = "认证失败",
-        details: Optional[Dict[str, Any]] = None
+        self, message: str = "认证失败", details: dict[str, Any] | None = None
     ):
         super().__init__(
             message=message,
             code="AUTHENTICATION_ERROR",
             details=details,
-            status_code=status.HTTP_401_UNAUTHORIZED
+            status_code=status.HTTP_401_UNAUTHORIZED,
         )
 
 
@@ -159,19 +151,15 @@ class FileProcessingException(BaseBusinessException):
     def __init__(
         self,
         message: str,
-        file_name: Optional[str] = None,
-        file_type: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None
+        file_name: str | None = None,
+        file_type: str | None = None,
+        details: dict[str, Any] | None = None,
     ):
         super().__init__(
             message=message,
             code="FILE_PROCESSING_ERROR",
-            details={
-                "file_name": file_name,
-                "file_type": file_type,
-                **(details or {})
-            },
-            status_code=status.HTTP_400_BAD_REQUEST
+            details={"file_name": file_name, "file_type": file_type, **(details or {})},
+            status_code=status.HTTP_400_BAD_REQUEST,
         )
 
 
@@ -181,19 +169,15 @@ class TaskProcessingException(BaseBusinessException):
     def __init__(
         self,
         message: str,
-        task_id: Optional[str] = None,
-        task_type: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None
+        task_id: str | None = None,
+        task_type: str | None = None,
+        details: dict[str, Any] | None = None,
     ):
         super().__init__(
             message=message,
             code="TASK_PROCESSING_ERROR",
-            details={
-                "task_id": task_id,
-                "task_type": task_type,
-                **(details or {})
-            },
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            details={"task_id": task_id, "task_type": task_type, **(details or {})},
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
 
@@ -203,17 +187,14 @@ class ConfigurationException(BaseBusinessException):
     def __init__(
         self,
         message: str,
-        config_key: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None
+        config_key: str | None = None,
+        details: dict[str, Any] | None = None,
     ):
         super().__init__(
             message=message,
             code="CONFIGURATION_ERROR",
-            details={
-                "config_key": config_key,
-                **(details or {})
-            },
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            details={"config_key": config_key, **(details or {})},
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
 
@@ -223,9 +204,9 @@ class ExternalServiceException(BaseBusinessException):
     def __init__(
         self,
         message: str,
-        service_name: Optional[str] = None,
-        service_error: Optional[str] = None,
-        details: Optional[Dict[str, Any]] = None
+        service_name: str | None = None,
+        service_error: str | None = None,
+        details: dict[str, Any] | None = None,
     ):
         super().__init__(
             message=message,
@@ -233,9 +214,9 @@ class ExternalServiceException(BaseBusinessException):
             details={
                 "service_name": service_name,
                 "service_error": service_error,
-                **(details or {})
+                **(details or {}),
             },
-            status_code=status.HTTP_502_BAD_GATEWAY
+            status_code=status.HTTP_502_BAD_GATEWAY,
         )
 
 
@@ -245,17 +226,14 @@ class RateLimitException(BaseBusinessException):
     def __init__(
         self,
         message: str = "请求过于频繁，请稍后再试",
-        retry_after: Optional[int] = None,
-        details: Optional[Dict[str, Any]] = None
+        retry_after: int | None = None,
+        details: dict[str, Any] | None = None,
     ):
         super().__init__(
             message=message,
             code="RATE_LIMIT_EXCEEDED",
-            details={
-                "retry_after": retry_after,
-                **(details or {})
-            },
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS
+            details={"retry_after": retry_after, **(details or {})},
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
         )
 
 
@@ -265,7 +243,9 @@ class ExceptionHandler:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
 
-    def handle_business_exception(self, request: Request, exc: BaseBusinessException) -> JSONResponse:
+    def handle_business_exception(
+        self, request: Request, exc: BaseBusinessException
+    ) -> JSONResponse:
         """处理业务异常"""
         self.logger.warning(
             f"Business exception: {exc.code} - {exc.message}",
@@ -273,16 +253,15 @@ class ExceptionHandler:
                 "exception_code": exc.code,
                 "exception_details": exc.details,
                 "request_path": str(request.url.path),
-                "request_method": request.method
-            }
+                "request_method": request.method,
+            },
         )
 
-        return JSONResponse(
-            status_code=exc.status_code,
-            content=exc.to_dict()
-        )
+        return JSONResponse(status_code=exc.status_code, content=exc.to_dict())
 
-    def handle_validation_exception(self, request: Request, exc: RequestValidationError) -> JSONResponse:
+    def handle_validation_exception(
+        self, request: Request, exc: RequestValidationError
+    ) -> JSONResponse:
         """处理请求验证异常"""
         field_errors = {}
         for error in exc.errors():
@@ -294,12 +273,14 @@ class ExceptionHandler:
         business_exc = ValidationException(
             message="请求参数验证失败",
             field_errors=field_errors,
-            details={"errors": exc.errors()}
+            details={"errors": exc.errors()},
         )
 
         return self.handle_business_exception(request, business_exc)
 
-    def handle_pydantic_validation_exception(self, request: Request, exc: ValidationError) -> JSONResponse:
+    def handle_pydantic_validation_exception(
+        self, request: Request, exc: ValidationError
+    ) -> JSONResponse:
         """处理Pydantic验证异常"""
         field_errors = {}
         for error in exc.errors():
@@ -311,22 +292,26 @@ class ExceptionHandler:
         business_exc = ValidationException(
             message="数据验证失败",
             field_errors=field_errors,
-            details={"errors": exc.errors()}
+            details={"errors": exc.errors()},
         )
 
         return self.handle_business_exception(request, business_exc)
 
-    def handle_http_exception(self, request: Request, exc: HTTPException) -> JSONResponse:
+    def handle_http_exception(
+        self, request: Request, exc: HTTPException
+    ) -> JSONResponse:
         """处理HTTP异常"""
         business_exc = BaseBusinessException(
             message=exc.detail,
             code=f"HTTP_{exc.status_code}",
-            status_code=exc.status_code
+            status_code=exc.status_code,
         )
 
         return self.handle_business_exception(request, business_exc)
 
-    def handle_general_exception(self, request: Request, exc: Exception) -> JSONResponse:
+    def handle_general_exception(
+        self, request: Request, exc: Exception
+    ) -> JSONResponse:
         """处理通用异常"""
         # 记录完整的错误堆栈
         self.logger.error(
@@ -336,17 +321,21 @@ class ExceptionHandler:
                 "exception_message": str(exc),
                 "request_path": str(request.url.path),
                 "request_method": request.method,
-                "traceback": traceback.format_exc()
-            }
+                "traceback": traceback.format_exc(),
+            },
         )
 
         # 根据环境决定是否暴露详细错误信息
         from .config_manager import get_config
+
         debug_mode = get_config("debug", True)
 
         if debug_mode:
             message = f"内部服务器错误: {str(exc)}"
-            details = {"exception_type": type(exc).__name__, "traceback": traceback.format_exc()}
+            details = {
+                "exception_type": type(exc).__name__,
+                "traceback": traceback.format_exc(),
+            }
         else:
             message = "内部服务器错误"
             details = {}
@@ -355,7 +344,7 @@ class ExceptionHandler:
             message=message,
             code="INTERNAL_SERVER_ERROR",
             details=details,
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
         return self.handle_business_exception(request, business_exc)
@@ -375,12 +364,16 @@ def setup_exception_handlers(app):
 
     # FastAPI验证异常处理器
     @app.exception_handler(RequestValidationError)
-    async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    async def validation_exception_handler(
+        request: Request, exc: RequestValidationError
+    ):
         return exception_handler.handle_validation_exception(request, exc)
 
     # Pydantic验证异常处理器
     @app.exception_handler(ValidationError)
-    async def pydantic_validation_exception_handler(request: Request, exc: ValidationError):
+    async def pydantic_validation_exception_handler(
+        request: Request, exc: ValidationError
+    ):
         return exception_handler.handle_pydantic_validation_exception(request, exc)
 
     # HTTP异常处理器
@@ -395,7 +388,7 @@ def setup_exception_handlers(app):
 
 
 # 便捷异常抛出函数
-def raise_not_found(resource_type: str, resource_id: Optional[str] = None, **kwargs):
+def raise_not_found(resource_type: str, resource_id: str | None = None, **kwargs):
     """抛出资源未找到异常"""
     raise ResourceNotFoundException(resource_type, resource_id, kwargs)
 
@@ -405,37 +398,47 @@ def raise_duplicate(resource_type: str, field: str, value: str, **kwargs):
     raise DuplicateResourceException(resource_type, field, value, kwargs)
 
 
-def raise_permission_denied(message: Optional[str] = None, required_permission: Optional[str] = None, **kwargs):
+def raise_permission_denied(
+    message: str | None = None, required_permission: str | None = None, **kwargs
+):
     """抛出权限不足异常"""
     raise PermissionDeniedException(message or "权限不足", required_permission, kwargs)
 
 
-def raise_validation_error(message: str, field_errors: Optional[Dict[str, list]] = None, **kwargs):
+def raise_validation_error(
+    message: str, field_errors: dict[str, list] | None = None, **kwargs
+):
     """抛出验证异常"""
     raise ValidationException(message, field_errors, kwargs)
 
 
-def raise_file_error(message: str, file_name: Optional[str] = None, file_type: Optional[str] = None, **kwargs):
+def raise_file_error(
+    message: str, file_name: str | None = None, file_type: str | None = None, **kwargs
+):
     """抛出文件处理异常"""
     raise FileProcessingException(message, file_name, file_type, kwargs)
 
 
-def raise_task_error(message: str, task_id: Optional[str] = None, task_type: Optional[str] = None, **kwargs):
+def raise_task_error(
+    message: str, task_id: str | None = None, task_type: str | None = None, **kwargs
+):
     """抛出任务处理异常"""
     raise TaskProcessingException(message, task_id, task_type, kwargs)
 
 
-def raise_config_error(message: str, config_key: Optional[str] = None, **kwargs):
+def raise_config_error(message: str, config_key: str | None = None, **kwargs):
     """抛出配置异常"""
     raise ConfigurationException(message, config_key, kwargs)
 
 
-def raise_external_service_error(message: str, service_name: Optional[str] = None, **kwargs):
+def raise_external_service_error(
+    message: str, service_name: str | None = None, **kwargs
+):
     """抛出外部服务异常"""
     raise ExternalServiceException(message, service_name, **kwargs)
 
 
-def raise_rate_limit(retry_after: Optional[int] = None, **kwargs):
+def raise_rate_limit(retry_after: int | None = None, **kwargs):
     """抛出频率限制异常"""
     raise RateLimitException(retry_after=retry_after, **kwargs)
 

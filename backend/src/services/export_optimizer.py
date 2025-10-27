@@ -3,15 +3,18 @@
 提供高性能的数据导出功能，使用分页查询和批量处理
 """
 
-from typing import List, Dict, Any, Optional, Iterator
-from sqlalchemy.orm import Session
-from sqlalchemy import text
 import csv
 import io
-from datetime import datetime, timezone
 import logging
+from collections.abc import Iterator
+from datetime import datetime
+from typing import Any
+
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
+
 
 class ExportOptimizer:
     """数据导出优化器"""
@@ -22,9 +25,9 @@ class ExportOptimizer:
     def export_assets_to_csv_optimized(
         self,
         db: Session,
-        columns: Optional[List[str]] = None,
-        filters: Optional[Dict[str, Any]] = None,
-        progress_callback: Optional[callable] = None
+        columns: list[str] | None = None,
+        filters: dict[str, Any] | None = None,
+        progress_callback: callable | None = None,
     ) -> Iterator[str]:
         """
         优化的CSV导出功能，使用流式处理减少内存占用
@@ -40,10 +43,20 @@ class ExportOptimizer:
         """
         # 默认导出字段
         default_columns = [
-            "property_name", "address", "ownership_entity", "ownership_status",
-            "property_nature", "usage_status", "actual_property_area",
-            "rentable_area", "rented_area", "annual_income", "annual_expense",
-            "tenant_name", "contract_start_date", "contract_end_date"
+            "property_name",
+            "address",
+            "ownership_entity",
+            "ownership_status",
+            "property_nature",
+            "usage_status",
+            "actual_property_area",
+            "rentable_area",
+            "rented_area",
+            "annual_income",
+            "annual_expense",
+            "tenant_name",
+            "contract_start_date",
+            "contract_end_date",
         ]
 
         export_columns = columns or default_columns
@@ -119,10 +132,10 @@ class ExportOptimizer:
     def export_assets_to_json_optimized(
         self,
         db: Session,
-        columns: Optional[List[str]] = None,
-        filters: Optional[Dict[str, Any]] = None,
-        progress_callback: Optional[callable] = None
-    ) -> List[Dict[str, Any]]:
+        columns: list[str] | None = None,
+        filters: dict[str, Any] | None = None,
+        progress_callback: callable | None = None,
+    ) -> list[dict[str, Any]]:
         """
         优化的JSON导出功能
 
@@ -136,10 +149,20 @@ class ExportOptimizer:
             JSON数据列表
         """
         default_columns = [
-            "property_name", "address", "ownership_entity", "ownership_status",
-            "property_nature", "usage_status", "actual_property_area",
-            "rentable_area", "rented_area", "annual_income", "annual_expense",
-            "tenant_name", "contract_start_date", "contract_end_date"
+            "property_name",
+            "address",
+            "ownership_entity",
+            "ownership_status",
+            "property_nature",
+            "usage_status",
+            "actual_property_area",
+            "rentable_area",
+            "rented_area",
+            "annual_income",
+            "annual_expense",
+            "tenant_name",
+            "contract_start_date",
+            "contract_end_date",
         ]
 
         export_columns = columns or default_columns
@@ -186,9 +209,7 @@ class ExportOptimizer:
         return result
 
     def _build_optimized_query(
-        self,
-        columns: List[str],
-        filters: Optional[Dict[str, Any]] = None
+        self, columns: list[str], filters: dict[str, Any] | None = None
     ) -> str:
         """构建优化的SQL查询"""
 
@@ -224,7 +245,9 @@ class ExportOptimizer:
 
         return query
 
-    def _get_total_count(self, db: Session, filters: Optional[Dict[str, Any]] = None) -> int:
+    def _get_total_count(
+        self, db: Session, filters: dict[str, Any] | None = None
+    ) -> int:
         """获取总记录数"""
         where_conditions = []
         if filters:
@@ -248,12 +271,8 @@ class ExportOptimizer:
         return result or 0
 
     def _batch_query(
-        self,
-        db: Session,
-        query: str,
-        columns: List[str],
-        offset: int = 0
-    ) -> Iterator[List[Dict[str, Any]]]:
+        self, db: Session, query: str, columns: list[str], offset: int = 0
+    ) -> Iterator[list[dict[str, Any]]]:
         """分批查询数据"""
 
         while True:
@@ -285,6 +304,7 @@ class ExportOptimizer:
             except Exception as e:
                 logger.error(f"查询批次数据时出错: {e}")
                 break
+
 
 # 全局导出优化器实例
 export_optimizer = ExportOptimizer(batch_size=1000)

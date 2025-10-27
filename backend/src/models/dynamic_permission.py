@@ -3,29 +3,33 @@
 支持临时权限、条件权限和动态权限分配
 """
 
-from datetime import datetime, timezone
-from typing import Optional, Dict, Any, List
-from sqlalchemy import Column, String, DateTime, Boolean, Text, JSON, ForeignKey
+from datetime import datetime
+
+from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.sqlite import JSON as SQLiteJSON
 
 from ..database import Base
 
 
 class DynamicPermission(Base):
     """动态权限模型"""
+
     __tablename__ = "dynamic_permissions"
 
     id = Column(String, primary_key=True, index=True)
     user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
-    permission_id = Column(String, ForeignKey("permissions.id"), nullable=False, index=True)
+    permission_id = Column(
+        String, ForeignKey("permissions.id"), nullable=False, index=True
+    )
 
     # 权限类型: role_based, user_specific, temporary, conditional, template_based
     permission_type = Column(String, nullable=False, index=True)
 
     # 权限范围: global, organization, project, asset, custom
     scope = Column(String, nullable=False, index=True)
-    scope_id = Column(String, nullable=True, index=True)  # 范围ID，当scope不是global时使用
+    scope_id = Column(
+        String, nullable=True, index=True
+    )  # 范围ID，当scope不是global时使用
 
     # 权限条件（JSON格式）
     conditions = Column(JSON, nullable=True)
@@ -53,11 +57,14 @@ class DynamicPermission(Base):
 
 class TemporaryPermission(Base):
     """临时权限模型"""
+
     __tablename__ = "temporary_permissions"
 
     id = Column(String, primary_key=True, index=True)
     user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
-    permission_id = Column(String, ForeignKey("permissions.id"), nullable=False, index=True)
+    permission_id = Column(
+        String, ForeignKey("permissions.id"), nullable=False, index=True
+    )
 
     # 权限范围: global, organization, project, asset, custom
     scope = Column(String, nullable=False, index=True)
@@ -81,11 +88,14 @@ class TemporaryPermission(Base):
 
 class ConditionalPermission(Base):
     """条件权限模型"""
+
     __tablename__ = "conditional_permissions"
 
     id = Column(String, primary_key=True, index=True)
     user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
-    permission_id = Column(String, ForeignKey("permissions.id"), nullable=False, index=True)
+    permission_id = Column(
+        String, ForeignKey("permissions.id"), nullable=False, index=True
+    )
 
     # 权限范围: global, organization, project, asset, custom
     scope = Column(String, nullable=False, index=True)
@@ -109,6 +119,7 @@ class ConditionalPermission(Base):
 
 class PermissionTemplate(Base):
     """权限模板模型"""
+
     __tablename__ = "permission_templates"
 
     id = Column(String, primary_key=True, index=True)
@@ -137,11 +148,14 @@ class PermissionTemplate(Base):
 
 class DynamicPermissionAudit(Base):
     """动态权限审计日志模型"""
+
     __tablename__ = "dynamic_permission_audit"
 
     id = Column(String, primary_key=True, index=True)
     user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
-    permission_id = Column(String, ForeignKey("permissions.id"), nullable=False, index=True)
+    permission_id = Column(
+        String, ForeignKey("permissions.id"), nullable=False, index=True
+    )
 
     # 操作类型: ASSIGN, REVOKE, ASSIGN_TEMPORARY, ASSIGN_CONDITIONAL
     action = Column(String, nullable=False, index=True)
@@ -173,6 +187,7 @@ class DynamicPermissionAudit(Base):
 
 class PermissionRequest(Base):
     """权限申请模型"""
+
     __tablename__ = "permission_requests"
 
     id = Column(String, primary_key=True, index=True)
@@ -204,7 +219,9 @@ class PermissionRequest(Base):
 
     # 申请信息
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    updated_at = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
 
     # 关系 - 暂时注释掉User关系引用
     # user = relationship("User", foreign_keys=[user_id])
@@ -213,11 +230,16 @@ class PermissionRequest(Base):
 
 class PermissionDelegation(Base):
     """权限委托模型"""
+
     __tablename__ = "permission_delegations"
 
     id = Column(String, primary_key=True, index=True)
-    delegator_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)  # 委托人
-    delegatee_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)  # 被委托人
+    delegator_id = Column(
+        String, ForeignKey("users.id"), nullable=False, index=True
+    )  # 委托人
+    delegatee_id = Column(
+        String, ForeignKey("users.id"), nullable=False, index=True
+    )  # 被委托人
     permission_ids = Column(JSON, nullable=False)  # 委托的权限ID列表
 
     # 委托范围

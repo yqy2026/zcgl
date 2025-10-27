@@ -3,16 +3,13 @@
 实现基于组织架构的数据隔离和权限控制
 """
 
-from typing import List, Optional, Set
-from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
+from sqlalchemy.orm import Session
 
-from ..models.organization import Organization, Employee
+from ..models.asset import Asset, Ownership, Project
 from ..models.auth import User
-from ..models.rbac import Role, UserRoleAssignment
-from ..models.asset import Asset
-from ..models.asset import Project
-from ..models.asset import Ownership
+from ..models.organization import Employee, Organization
+from ..models.rbac import UserRoleAssignment
 
 
 class OrganizationPermissionService:
@@ -21,7 +18,7 @@ class OrganizationPermissionService:
     def __init__(self, db: Session):
         self.db = db
 
-    def get_user_accessible_organizations(self, user_id: str) -> List[str]:
+    def get_user_accessible_organizations(self, user_id: str) -> list[str]:
         """
         获取用户可访问的组织ID列表
 
@@ -35,18 +32,24 @@ class OrganizationPermissionService:
 
         # 超级管理员可访问所有组织
         if user.role == "ADMIN":
-            organizations = self.db.query(Organization.id).filter(
-                Organization.is_deleted == False
-            ).all()
+            organizations = (
+                self.db.query(Organization.id)
+                .filter(Organization.is_deleted == False)
+                .all()
+            )
             return [org.id for org in organizations]
 
         # 获取用户角色
-        user_roles = self.db.query(UserRoleAssignment).filter(
-            and_(
-                UserRoleAssignment.user_id == user_id,
-                UserRoleAssignment.is_active == True
+        user_roles = (
+            self.db.query(UserRoleAssignment)
+            .filter(
+                and_(
+                    UserRoleAssignment.user_id == user_id,
+                    UserRoleAssignment.is_active == True,
+                )
             )
-        ).all()
+            .all()
+        )
 
         # 检查是否有组织管理员角色
         has_org_admin_role = any(
@@ -61,18 +64,24 @@ class OrganizationPermissionService:
             # 普通用户可访问其所属组织及子组织
             return self._get_user_organization_access(user_id)
 
-    def get_user_accessible_organizations_with_details(self, user_id: str) -> List[dict]:
+    def get_user_accessible_organizations_with_details(
+        self, user_id: str
+    ) -> list[dict]:
         """
         获取用户可访问的组织详细信息
         """
         accessible_org_ids = self.get_user_accessible_organizations(user_id)
 
-        organizations = self.db.query(Organization).filter(
-            and_(
-                Organization.id.in_(accessible_org_ids),
-                Organization.is_deleted == False
+        organizations = (
+            self.db.query(Organization)
+            .filter(
+                and_(
+                    Organization.id.in_(accessible_org_ids),
+                    Organization.is_deleted == False,
+                )
             )
-        ).all()
+            .all()
+        )
 
         return [
             {
@@ -83,7 +92,7 @@ class OrganizationPermissionService:
                 "parent_id": org.parent_id,
                 "path": org.path,
                 "type": org.type,
-                "status": org.status
+                "status": org.status,
             }
             for org in organizations
         ]
@@ -95,7 +104,7 @@ class OrganizationPermissionService:
         accessible_orgs = self.get_user_accessible_organizations(user_id)
         return organization_id in accessible_orgs
 
-    def filter_assets_by_organization(self, user_id: str, query) -> 'Query':
+    def filter_assets_by_organization(self, user_id: str, query) -> "Query":
         """
         根据用户组织权限过滤资产查询
         """
@@ -105,22 +114,24 @@ class OrganizationPermissionService:
             return query.filter(False)  # 无权限访问任何组织
 
         # 获取这些组织的权属方列表
-        org_names = self.db.query(Organization.name).filter(
-            Organization.id.in_(accessible_orgs)
-        ).all()
+        org_names = (
+            self.db.query(Organization.name)
+            .filter(Organization.id.in_(accessible_orgs))
+            .all()
+        )
         org_name_list = [org[0] for org in org_names if org[0]]
 
         if org_name_list:
             return query.filter(
                 or_(
                     Asset.ownership_entity.in_(org_name_list),
-                    Asset.management_entity.in_(org_name_list)
+                    Asset.management_entity.in_(org_name_list),
                 )
             )
 
         return query
 
-    def filter_projects_by_organization(self, user_id: str, query) -> 'Query':
+    def filter_projects_by_organization(self, user_id: str, query) -> "Query":
         """
         根据用户组织权限过滤项目查询
         """
@@ -130,9 +141,11 @@ class OrganizationPermissionService:
             return query.filter(False)
 
         # 获取这些组织的权属方列表
-        org_names = self.db.query(Organization.name).filter(
-            Organization.id.in_(accessible_orgs)
-        ).all()
+        org_names = (
+            self.db.query(Organization.name)
+            .filter(Organization.id.in_(accessible_orgs))
+            .all()
+        )
         org_name_list = [org[0] for org in org_names if org[0]]
 
         if org_name_list:
@@ -140,7 +153,7 @@ class OrganizationPermissionService:
 
         return query
 
-    def filter_ownership_by_organization(self, user_id: str, query) -> 'Query':
+    def filter_ownership_by_organization(self, user_id: str, query) -> "Query":
         """
         根据用户组织权限过滤权属方查询
         """
@@ -150,9 +163,11 @@ class OrganizationPermissionService:
             return query.filter(False)
 
         # 获取这些组织的权属方列表
-        org_names = self.db.query(Organization.name).filter(
-            Organization.id.in_(accessible_orgs)
-        ).all()
+        org_names = (
+            self.db.query(Organization.name)
+            .filter(Organization.id.in_(accessible_orgs))
+            .all()
+        )
         org_name_list = [org[0] for org in org_names if org[0]]
 
         if org_name_list:
@@ -160,47 +175,55 @@ class OrganizationPermissionService:
 
         return query
 
-    def get_organization_descendants(self, organization_id: str) -> List[str]:
+    def get_organization_descendants(self, organization_id: str) -> list[str]:
         """
         获取组织的所有子组织ID
         """
-        organization = self.db.query(Organization).filter(
-            Organization.id == organization_id
-        ).first()
+        organization = (
+            self.db.query(Organization)
+            .filter(Organization.id == organization_id)
+            .first()
+        )
 
         if not organization:
             return []
 
         # 查找所有以该组织路径开头的子组织
-        descendants = self.db.query(Organization.id).filter(
-            and_(
-                Organization.path.like(f"{organization.path}/%"),
-                Organization.is_deleted == False
+        descendants = (
+            self.db.query(Organization.id)
+            .filter(
+                and_(
+                    Organization.path.like(f"{organization.path}/%"),
+                    Organization.is_deleted == False,
+                )
             )
-        ).all()
+            .all()
+        )
 
         return [desc.id for desc in descendants]
 
-    def get_organization_hierarchy(self, user_id: str) -> List[dict]:
+    def get_organization_hierarchy(self, user_id: str) -> list[dict]:
         """
         获取用户可访问的组织层次结构
         """
         accessible_orgs = self.get_user_accessible_organizations_with_details(user_id)
 
         # 构建层次结构
-        org_map = {org['id']: org for org in accessible_orgs}
+        org_map = {org["id"]: org for org in accessible_orgs}
         root_orgs = []
 
         for org in accessible_orgs:
-            if org['parent_id'] and org['parent_id'] in org_map:
-                org_map[org['parent_id']]['children'] = org_map.get(org['parent_id'], {}).get('children', [])
-                org_map[org['parent_id']]['children'].append(org)
+            if org["parent_id"] and org["parent_id"] in org_map:
+                org_map[org["parent_id"]]["children"] = org_map.get(
+                    org["parent_id"], {}
+                ).get("children", [])
+                org_map[org["parent_id"]]["children"].append(org)
             else:
                 root_orgs.append(org)
 
         return root_orgs
 
-    def _get_organization_tree_access(self, user_id: str) -> List[str]:
+    def _get_organization_tree_access(self, user_id: str) -> list[str]:
         """
         获取组织管理员的组织访问权限
         """
@@ -209,7 +232,9 @@ class OrganizationPermissionService:
         if not user or not user.employee_id:
             return []
 
-        employee = self.db.query(Employee).filter(Employee.id == user.employee_id).first()
+        employee = (
+            self.db.query(Employee).filter(Employee.id == user.employee_id).first()
+        )
         if not employee:
             return []
 
@@ -220,7 +245,7 @@ class OrganizationPermissionService:
 
         return accessible_orgs
 
-    def _get_user_organization_access(self, user_id: str) -> List[str]:
+    def _get_user_organization_access(self, user_id: str) -> list[str]:
         """
         获取普通用户的组织访问权限
         """
@@ -228,7 +253,9 @@ class OrganizationPermissionService:
         if not user or not user.employee_id:
             return []
 
-        employee = self.db.query(Employee).filter(Employee.id == user.employee_id).first()
+        employee = (
+            self.db.query(Employee).filter(Employee.id == user.employee_id).first()
+        )
         if not employee:
             return []
 
@@ -239,7 +266,7 @@ class OrganizationPermissionService:
 
         return accessible_orgs
 
-    def get_user_organization_role(self, user_id: str) -> Optional[str]:
+    def get_user_organization_role(self, user_id: str) -> str | None:
         """
         获取用户在组织中的角色
         """
@@ -247,7 +274,9 @@ class OrganizationPermissionService:
         if not user or not user.employee_id:
             return None
 
-        employee = self.db.query(Employee).filter(Employee.id == user.employee_id).first()
+        employee = (
+            self.db.query(Employee).filter(Employee.id == user.employee_id).first()
+        )
         if not employee:
             return None
 
@@ -271,19 +300,25 @@ class OrganizationPermissionService:
             return False
 
         # 检查是否是该组织的管理员
-        employee = self.db.query(Employee).filter(
-            and_(
-                Employee.id == user.employee_id,
-                Employee.organization_id == organization_id
+        employee = (
+            self.db.query(Employee)
+            .filter(
+                and_(
+                    Employee.id == user.employee_id,
+                    Employee.organization_id == organization_id,
+                )
             )
-        ).first()
+            .first()
+        )
 
         if employee and employee.position:
             return "manager" in employee.position.name.lower()
 
         return False
 
-    def get_accessible_users_in_organization(self, user_id: str, organization_id: str) -> List[str]:
+    def get_accessible_users_in_organization(
+        self, user_id: str, organization_id: str
+    ) -> list[str]:
         """
         获取用户在指定组织中可以访问的用户列表
         """
@@ -294,8 +329,11 @@ class OrganizationPermissionService:
         accessible_orgs = [organization_id]
         accessible_orgs.extend(self.get_organization_descendants(organization_id))
 
-        users = self.db.query(User.id).join(Employee).filter(
-            Employee.organization_id.in_(accessible_orgs)
-        ).all()
+        users = (
+            self.db.query(User.id)
+            .join(Employee)
+            .filter(Employee.organization_id.in_(accessible_orgs))
+            .all()
+        )
 
         return [user.id for user in users]

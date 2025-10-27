@@ -2,22 +2,21 @@
 认证中间件
 """
 
-from datetime import datetime, timedelta, timezone
-from typing import Optional, List
+import logging
+import os
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
-import logging
-import os
+from sqlalchemy import and_
 
+from ..core.config import settings
 from ..database import get_db
 from ..models.auth import User, UserRole
-from ..services.auth_service import AuthService, TokenData
-from ..services.rbac_service import RBACService
 from ..schemas.rbac import PermissionCheckRequest
-from ..exceptions import BusinessLogicError
-from ..core.config import settings
+from ..services.auth_service import TokenData
+from ..services.rbac_service import RBACService
 
 logger = logging.getLogger(__name__)
 
@@ -34,9 +33,8 @@ ALGORITHM = "HS256"
 
 
 def get_current_user(
-    token: Optional[str] = Depends(oauth2_scheme),
-    db: Session = Depends(get_db)
-) -> Optional[User]:
+    token: str | None = Depends(oauth2_scheme), db: Session = Depends(get_db)
+) -> User | None:
     """从JWT令牌中获取当前用户，支持开发模式自动认证"""
 
     # 开发模式下使用测试用户认证（更安全的方式）
@@ -81,14 +79,13 @@ def get_current_user(
 
     if not user.is_active:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="用户账户已被禁用"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="用户账户已被禁用"
         )
 
     if user.is_locked_now():
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="用户账户已被锁定，请稍后再试"
+            detail="用户账户已被锁定，请稍后再试",
         )
 
     return user
@@ -114,7 +111,7 @@ def get_or_create_dev_user(db: Session) -> User:
         email="dev@example.com",
         password="dev_password_123",
         full_name="Development User",
-        is_active=True
+        is_active=True,
     )
 
     try:
@@ -133,38 +130,31 @@ def get_or_create_dev_user(db: Session) -> User:
             username=dev_username,
             email="dev@example.com",
             is_active=True,
-            role=UserRole.ADMIN
+            role=UserRole.ADMIN,
         )
 
 
-def get_current_active_user(
-    current_user: User = Depends(get_current_user)
-) -> User:
+def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
     """获取当前活跃用户"""
     if not current_user.is_active:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="用户账户未激活"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="用户账户未激活"
         )
     return current_user
 
 
-def require_admin(
-    current_user: User = Depends(get_current_active_user)
-) -> User:
+def require_admin(current_user: User = Depends(get_current_active_user)) -> User:
     """要求管理员权限"""
     if current_user.role != UserRole.ADMIN:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="需要管理员权限"
+            status_code=status.HTTP_403_FORBIDDEN, detail="需要管理员权限"
         )
     return current_user
 
 
 def get_optional_current_user(
-    token: Optional[str] = Depends(oauth2_scheme),
-    db: Session = Depends(get_db)
-) -> Optional[User]:
+    token: str | None = Depends(oauth2_scheme), db: Session = Depends(get_db)
+) -> User | None:
     """获取可选的当前用户（用于可选认证的端点）"""
     if not token:
         return None
@@ -195,8 +185,7 @@ class PermissionChecker:
         """检查用户权限"""
         if not self._has_permission(current_user):
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="权限不足"
+                status_code=status.HTTP_403_FORBIDDEN, detail="权限不足"
             )
         return current_user
 
@@ -228,15 +217,14 @@ def require_permissions(required_permissions: list[str]):
 class OrganizationPermissionChecker:
     """组织权限检查器"""
 
-    def __init__(self, organization_id: Optional[str] = None):
+    def __init__(self, organization_id: str | None = None):
         self.organization_id = organization_id
 
     def __call__(self, current_user: User = Depends(get_current_active_user)):
         """检查用户是否有访问指定组织的权限"""
         if not self._can_access_organization(current_user):
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="无权访问该组织的数据"
+                status_code=status.HTTP_403_FORBIDDEN, detail="无权访问该组织的数据"
             )
         return current_user
 
@@ -258,7 +246,7 @@ class OrganizationPermissionChecker:
         return False
 
 
-def require_organization_access(organization_id: Optional[str] = None):
+def require_organization_access(organization_id: str | None = None):
     """组织权限装饰器工厂函数"""
     return OrganizationPermissionChecker(organization_id)
 
@@ -266,23 +254,34 @@ def require_organization_access(organization_id: Optional[str] = None):
 class AuditLogger:
     """审计日志记录器"""
 
-    def __init__(self, action: str, resource_type: Optional[str] = None):
+    def __init__(self, action: str, resource_type: str | None = None):
         self.action = action
         self.resource_type = resource_type
 
-    def __call__(self, current_user: Optional[User] = Depends(get_optional_current_user)):
+    def __call__(self, current_user: User | None = Depends(get_optional_current_user)):
         """记录审计日志"""
         # 这个装饰器不阻止操作，只是记录日志
         return current_user
 
-    def log_action(self, db: Session, user: User, resource_id: Optional[str] = None,
-                   resource_name: Optional[str] = None, api_endpoint: Optional[str] = None,
-                   http_method: Optional[str] = None, request_params: Optional[str] = None,
-                   request_body: Optional[str] = None, response_status: Optional[int] = None,
-                   response_message: Optional[str] = None, ip_address: Optional[str] = None,
-                   user_agent: Optional[str] = None, session_id: Optional[str] = None):
+    def log_action(
+        self,
+        db: Session,
+        user: User,
+        resource_id: str | None = None,
+        resource_name: str | None = None,
+        api_endpoint: str | None = None,
+        http_method: str | None = None,
+        request_params: str | None = None,
+        request_body: str | None = None,
+        response_status: int | None = None,
+        response_message: str | None = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+        session_id: str | None = None,
+    ):
         """记录操作日志"""
         from ..crud.auth import AuditLogCRUD
+
         audit_crud = AuditLogCRUD()
         audit_crud.create(
             db=db,
@@ -299,11 +298,11 @@ class AuditLogger:
             response_message=response_message,
             ip_address=ip_address,
             user_agent=user_agent,
-            session_id=session_id
+            session_id=session_id,
         )
 
 
-def audit_action(action: str, resource_type: Optional[str] = None):
+def audit_action(action: str, resource_type: str | None = None):
     """审计装饰器工厂函数"""
     return AuditLogger(action, resource_type)
 
@@ -338,7 +337,7 @@ class SecurityConfig:
             "require_uppercase": True,
             "require_lowercase": True,
             "require_digits": True,
-            "require_special_chars": True
+            "require_special_chars": True,
         }
 
     @classmethod
@@ -349,22 +348,26 @@ class SecurityConfig:
             "refresh_token_expire_days": cls.REFRESH_TOKEN_EXPIRE_DAYS,
             "algorithm": ALGORITHM,
             "max_concurrent_sessions": cls.MAX_CONCURRENT_SESSIONS,
-            "session_expire_days": cls.SESSION_EXPIRE_DAYS
+            "session_expire_days": cls.SESSION_EXPIRE_DAYS,
         }
 
 
 # ==================== RBAC权限检查器 ====================
 
+
 class RBACPermissionChecker:
     """RBAC权限检查器"""
 
-    def __init__(self, resource: str, action: str, resource_id: Optional[str] = None):
+    def __init__(self, resource: str, action: str, resource_id: str | None = None):
         self.resource = resource
         self.action = action
         self.resource_id = resource_id
 
-    def __call__(self, current_user: Optional[User] = Depends(get_current_user),
-                  db: Session = Depends(get_db)) -> Optional[User]:
+    def __call__(
+        self,
+        current_user: User | None = Depends(get_current_user),
+        db: Session = Depends(get_db),
+    ) -> User | None:
         """检查用户权限，支持开发模式"""
 
         # 如果没有用户（未认证），在开发模式下允许继续
@@ -374,8 +377,7 @@ class RBACPermissionChecker:
                 current_user = get_or_create_dev_user(db)
             else:
                 raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="需要认证"
+                    status_code=status.HTTP_401_UNAUTHORIZED, detail="需要认证"
                 )
 
         # 管理员拥有所有权限
@@ -389,23 +391,23 @@ class RBACPermissionChecker:
         # 使用RBAC服务检查权限
         rbac_service = RBACService(db)
         permission_request = PermissionCheckRequest(
-            resource=self.resource,
-            action=self.action,
-            resource_id=self.resource_id
+            resource=self.resource, action=self.action, resource_id=self.resource_id
         )
 
-        permission_result = rbac_service.check_permission(current_user.id, permission_request)
+        permission_result = rbac_service.check_permission(
+            current_user.id, permission_request
+        )
 
         if not permission_result.has_permission:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"权限不足，需要 {self.resource}:{self.action} 权限"
+                detail=f"权限不足，需要 {self.resource}:{self.action} 权限",
             )
 
         return current_user
 
 
-def require_permission(resource: str, action: str, resource_id: Optional[str] = None):
+def require_permission(resource: str, action: str, resource_id: str | None = None):
     """RBAC权限装饰器工厂函数，支持开发模式"""
     return RBACPermissionChecker(resource, action, resource_id)
 
@@ -417,9 +419,12 @@ class ResourcePermissionChecker:
         self.resource_type = resource_type
         self.required_level = required_level
 
-    def __call__(self, current_user: User = Depends(get_current_active_user),
-                  db: Session = Depends(get_db),
-                  resource_id: Optional[str] = None) -> User:
+    def __call__(
+        self,
+        current_user: User = Depends(get_current_active_user),
+        db: Session = Depends(get_db),
+        resource_id: str | None = None,
+    ) -> User:
         """检查用户资源权限"""
         # 管理员拥有所有权限
         if current_user.role == UserRole.ADMIN:
@@ -430,19 +435,24 @@ class ResourcePermissionChecker:
 
         # 检查是否有对应的资源权限
         from ..models.rbac import ResourcePermission
-        resource_permission = db.query(ResourcePermission).filter(
-            and_(
-                ResourcePermission.user_id == current_user.id,
-                ResourcePermission.resource_type == self.resource_type,
-                ResourcePermission.resource_id == resource_id,
-                ResourcePermission.is_active == True
+
+        resource_permission = (
+            db.query(ResourcePermission)
+            .filter(
+                and_(
+                    ResourcePermission.user_id == current_user.id,
+                    ResourcePermission.resource_type == self.resource_type,
+                    ResourcePermission.resource_id == resource_id,
+                    ResourcePermission.is_active == True,
+                )
             )
-        ).first()
+            .first()
+        )
 
         if not resource_permission:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"无权访问此{self.resource_type}资源"
+                detail=f"无权访问此{self.resource_type}资源",
             )
 
         # 检查权限级别
@@ -450,14 +460,14 @@ class ResourcePermissionChecker:
             "read": ["read"],
             "write": ["read", "write"],
             "delete": ["read", "write", "delete"],
-            "admin": ["read", "write", "delete", "admin"]
+            "admin": ["read", "write", "delete", "admin"],
         }
 
         # 简化处理：假设当前操作对应required_level
         if self.required_level not in level_actions:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"无效的权限级别: {self.required_level}"
+                detail=f"无效的权限级别: {self.required_level}",
             )
 
         return current_user
@@ -471,11 +481,14 @@ def require_resource_permission(resource_type: str, required_level: str = "read"
 class RoleBasedAccessChecker:
     """基于角色的访问检查器"""
 
-    def __init__(self, required_roles: List[str]):
+    def __init__(self, required_roles: list[str]):
         self.required_roles = required_roles
 
-    def __call__(self, current_user: User = Depends(get_current_active_user),
-                  db: Session = Depends(get_db)) -> User:
+    def __call__(
+        self,
+        current_user: User = Depends(get_current_active_user),
+        db: Session = Depends(get_db),
+    ) -> User:
         """检查用户角色"""
         # 管理员拥有所有权限
         if current_user.role == UserRole.ADMIN:
@@ -491,26 +504,23 @@ class RoleBasedAccessChecker:
         if not any(role_name in self.required_roles for role_name in user_role_names):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"需要以下角色之一: {', '.join(self.required_roles)}"
+                detail=f"需要以下角色之一: {', '.join(self.required_roles)}",
             )
 
         return current_user
 
 
-def require_roles(required_roles: List[str]):
+def require_roles(required_roles: list[str]):
     """角色权限装饰器工厂函数"""
     return RoleBasedAccessChecker(required_roles)
 
 
-def get_user_rbac_permissions(current_user: User = Depends(get_current_active_user),
-                               db: Session = Depends(get_db)):
+def get_user_rbac_permissions(
+    current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)
+):
     """获取用户RBAC权限信息"""
     if current_user.role == UserRole.ADMIN:
-        return {
-            "is_admin": True,
-            "roles": ["admin"],
-            "permissions": ["all"]
-        }
+        return {"is_admin": True, "roles": ["admin"], "permissions": ["all"]}
 
     rbac_service = RBACService(db)
     permissions_summary = rbac_service.get_user_permissions_summary(current_user.id)
@@ -521,5 +531,5 @@ def get_user_rbac_permissions(current_user: User = Depends(get_current_active_us
         "permissions": {
             resource: actions
             for resource, actions in permissions_summary.effective_permissions.items()
-        }
+        },
     }

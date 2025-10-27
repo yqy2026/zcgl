@@ -3,29 +3,34 @@
 用于跟踪Excel导入导出等异步任务的状态
 """
 
-from sqlalchemy import Column, String, DateTime, Integer, Text, JSON, Boolean
-from sqlalchemy.orm import relationship
-from datetime import datetime, timezone
 import uuid
+from datetime import UTC, datetime
+
+from sqlalchemy import JSON, Boolean, Column, DateTime, Integer, String, Text
 
 from ..database import Base
-from ..enums.task import TaskStatus, TaskType
+from ..enums.task import TaskStatus
 
 
 class AsyncTask(Base):
     """异步任务模型"""
+
     __tablename__ = "async_tasks"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
 
     # 基本信息
     task_type = Column(String(50), nullable=False, comment="任务类型")
-    status = Column(String(20), nullable=False, default=TaskStatus.PENDING, comment="任务状态")
+    status = Column(
+        String(20), nullable=False, default=TaskStatus.PENDING, comment="任务状态"
+    )
     title = Column(String(200), nullable=False, comment="任务标题")
     description = Column(Text, comment="任务描述")
 
     # 时间信息
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, comment="创建时间")
+    created_at = Column(
+        DateTime, nullable=False, default=datetime.utcnow, comment="创建时间"
+    )
     started_at = Column(DateTime, comment="开始时间")
     completed_at = Column(DateTime, comment="完成时间")
 
@@ -58,7 +63,11 @@ class AsyncTask(Base):
     @property
     def is_completed(self) -> bool:
         """任务是否已完成"""
-        return self.status in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]
+        return self.status in [
+            TaskStatus.COMPLETED,
+            TaskStatus.FAILED,
+            TaskStatus.CANCELLED,
+        ]
 
     @property
     def is_running(self) -> bool:
@@ -78,12 +87,13 @@ class AsyncTask(Base):
         if not self.started_at:
             return 0.0
 
-        end_time = self.completed_at or datetime.now(timezone.utc)
+        end_time = self.completed_at or datetime.now(UTC)
         return (end_time - self.started_at).total_seconds()
 
 
 class TaskHistory(Base):
     """任务历史记录模型"""
+
     __tablename__ = "task_history"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -95,17 +105,22 @@ class TaskHistory(Base):
     details = Column(JSON, comment="详细信息")
 
     # 时间信息
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, comment="创建时间")
+    created_at = Column(
+        DateTime, nullable=False, default=datetime.utcnow, comment="创建时间"
+    )
 
     # 用户信息
     user_id = Column(String(100), comment="用户ID")
 
     def __repr__(self):
-        return f"<TaskHistory(id={self.id}, task_id={self.task_id}, action={self.action})>"
+        return (
+            f"<TaskHistory(id={self.id}, task_id={self.task_id}, action={self.action})>"
+        )
 
 
 class ExcelTaskConfig(Base):
     """Excel任务配置模型"""
+
     __tablename__ = "excel_task_configs"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -126,8 +141,16 @@ class ExcelTaskConfig(Base):
 
     # 用户和创建信息
     created_by = Column(String(100), comment="创建者")
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, comment="创建时间")
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")
+    created_at = Column(
+        DateTime, nullable=False, default=datetime.utcnow, comment="创建时间"
+    )
+    updated_at = Column(
+        DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        comment="更新时间",
+    )
 
     def __repr__(self):
         return f"<ExcelTaskConfig(id={self.id}, name={self.config_name}, type={self.config_type})>"

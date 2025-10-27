@@ -3,10 +3,9 @@ OCR引擎选择器
 智能选择最适合的OCR引擎处理不同类型的文档
 """
 
-import os
 import logging
 import re
-from typing import Dict, Any, List, Tuple, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -23,26 +22,26 @@ class OCREngineSelector:
                     "established_reliability",
                     "language_coverage",
                     "lightweight",
-                    "fast_processing"
+                    "fast_processing",
                 ],
                 "weaknesses": [
                     "chinese_accuracy",
                     "layout_analysis",
                     "handwriting_support",
-                    "complex_documents"
+                    "complex_documents",
                 ],
                 "optimal_for": [
                     "simple_text",
                     "english_content",
                     "structured_layouts",
-                    "printed_text"
+                    "printed_text",
                 ],
                 "accuracy_estimates": {
                     "chinese": 0.85,
                     "english": 0.95,
                     "mixed": 0.80,
-                    "handwritten": 0.30
-                }
+                    "handwritten": 0.30,
+                },
             },
             "paddleocr": {
                 "strengths": [
@@ -50,26 +49,26 @@ class OCREngineSelector:
                     "layout_analysis",
                     "handwriting_support",
                     "complex_documents",
-                    "table_recognition"
+                    "table_recognition",
                 ],
                 "weaknesses": [
                     "resource_heavy",
                     "slower_startup",
-                    "complex_installation"
+                    "complex_installation",
                 ],
                 "optimal_for": [
                     "chinese_documents",
                     "complex_layouts",
                     "scanned_contracts",
-                    "mixed_content"
+                    "mixed_content",
                 ],
                 "accuracy_estimates": {
                     "chinese": 0.95,
                     "english": 0.93,
                     "mixed": 0.92,
-                    "handwritten": 0.85
-                }
-            }
+                    "handwritten": 0.85,
+                },
+            },
         }
 
         # 文档类型识别规则
@@ -77,34 +76,34 @@ class OCREngineSelector:
             "chinese_contract": [
                 r"租赁合同|合同编号|承租方|出租方",
                 r"包装合字|租字|第\d+号",
-                r"甲方|乙方|租赁期限|月租金"
+                r"甲方|乙方|租赁期限|月租金",
             ],
             "english_document": [
                 r"[A-Za-z\s]{100,}",  # 大段英文
                 r"Contract|Agreement|Lease",
-                r"Tenant|Landlord|Rent"
+                r"Tenant|Landlord|Rent",
             ],
             "mixed_content": [
                 r"[A-Za-z]+[\u4e00-\u9fff]+",  # 中英混合
                 r"[\u4e00-\u9fff]+[A-Za-z]+",
-                r"Contract.*合同|Agreement.*协议"
+                r"Contract.*合同|Agreement.*协议",
             ],
             "simple_text": [
                 r"^[A-Za-z0-9\s\.,!?;:()\-]+$",  # 简单文本
-                r"^[\u4e00-\u9fff\s\.,!?;:()\-]+$"  # 简单中文
+                r"^[\u4e00-\u9fff\s\.,!?;:()\-]+$",  # 简单中文
             ],
             "complex_layout": [
                 r"表格|Table|表\d+",
                 r"第.*页|Page\s*\d+",
-                r"附件|Appendix|附图"
+                r"附件|Appendix|附图",
             ],
             "scanned_document": [
                 # 这些特征通常通过图像分析检测
                 # 这里作为占位符
-            ]
+            ],
         }
 
-    def analyze_document_content(self, text: str) -> Dict[str, Any]:
+    def analyze_document_content(self, text: str) -> dict[str, Any]:
         """
         分析文档内容特征
 
@@ -120,13 +119,13 @@ class OCREngineSelector:
                 "chinese_ratio": 0.0,
                 "complexity_score": 0.0,
                 "recommended_engines": ["tesseract"],
-                "confidence_scores": {}
+                "confidence_scores": {},
             }
 
         # 基础文本分析
-        chinese_chars = len(re.findall(r'[\u4e00-\u9fff]', text))
-        english_chars = len(re.findall(r'[A-Za-z]', text))
-        total_chars = len(text.replace(' ', ''))
+        chinese_chars = len(re.findall(r"[\u4e00-\u9fff]", text))
+        english_chars = len(re.findall(r"[A-Za-z]", text))
+        total_chars = len(text.replace(" ", ""))
 
         chinese_ratio = chinese_chars / total_chars if total_chars > 0 else 0.0
         english_ratio = english_chars / total_chars if total_chars > 0 else 0.0
@@ -141,24 +140,34 @@ class OCREngineSelector:
             document_scores[doc_type] = score
 
         # 确定主要文档类型
-        primary_type = max(document_scores, key=document_scores.get) if document_scores else "unknown"
+        primary_type = (
+            max(document_scores, key=document_scores.get)
+            if document_scores
+            else "unknown"
+        )
 
         # 复杂度评分
         complexity_indicators = {
-            "tables": len(re.findall(r'表\s*\d+|Table\s*\d+', text, re.IGNORECASE)),
-            "numbers": len(re.findall(r'\d+', text)),
-            "special_chars": len(re.findall(r'[^\w\s\u4e00-\u9fff]', text)),
-            "line_count": len(text.split('\n')),
-            "avg_line_length": sum(len(line) for line in text.split('\n')) / len(text.split('\n'))
+            "tables": len(re.findall(r"表\s*\d+|Table\s*\d+", text, re.IGNORECASE)),
+            "numbers": len(re.findall(r"\d+", text)),
+            "special_chars": len(re.findall(r"[^\w\s\u4e00-\u9fff]", text)),
+            "line_count": len(text.split("\n")),
+            "avg_line_length": sum(len(line) for line in text.split("\n"))
+            / len(text.split("\n")),
         }
 
-        complexity_score = min(1.0, sum([
-            complexity_indicators["tables"] * 0.2,
-            complexity_indicators["numbers"] * 0.01,
-            complexity_indicators["special_chars"] * 0.02,
-            min(complexity_indicators["line_count"] / 50, 1.0) * 0.3,
-            min(complexity_indicators["avg_line_length"] / 100, 1.0) * 0.2
-        ]))
+        complexity_score = min(
+            1.0,
+            sum(
+                [
+                    complexity_indicators["tables"] * 0.2,
+                    complexity_indicators["numbers"] * 0.01,
+                    complexity_indicators["special_chars"] * 0.02,
+                    min(complexity_indicators["line_count"] / 50, 1.0) * 0.3,
+                    min(complexity_indicators["avg_line_length"] / 100, 1.0) * 0.2,
+                ]
+            ),
+        )
 
         return {
             "document_type": primary_type,
@@ -167,10 +176,12 @@ class OCREngineSelector:
             "complexity_score": complexity_score,
             "document_scores": document_scores,
             "complexity_indicators": complexity_indicators,
-            "total_length": total_chars
+            "total_length": total_chars,
         }
 
-    def select_best_engine(self, document_analysis: Dict[str, Any], available_engines: List[str]) -> Dict[str, Any]:
+    def select_best_engine(
+        self, document_analysis: dict[str, Any], available_engines: list[str]
+    ) -> dict[str, Any]:
         """
         选择最佳OCR引擎 - 优先使用PaddleOCR
 
@@ -186,7 +197,7 @@ class OCREngineSelector:
                 "primary_engine": None,
                 "fallback_engine": None,
                 "confidence": 0.0,
-                "reasoning": "没有可用的OCR引擎"
+                "reasoning": "没有可用的OCR引擎",
             }
 
         doc_type = document_analysis.get("document_type", "unknown")
@@ -213,7 +224,11 @@ class OCREngineSelector:
             if doc_type in capabilities["optimal_for"]:
                 score += 0.4
                 reasoning.append(f"引擎擅长处理{doc_type}")
-            elif doc_type in [opt for cap in self.engine_capabilities.values() for opt in cap["weaknesses"]]:
+            elif doc_type in [
+                opt
+                for cap in self.engine_capabilities.values()
+                for opt in cap["weaknesses"]
+            ]:
                 score -= 0.2
                 reasoning.append(f"引擎不擅长处理{doc_type}")
 
@@ -237,9 +252,12 @@ class OCREngineSelector:
 
             # 基于预期准确率的评分
             expected_accuracy = capabilities["accuracy_estimates"].get(
-                "mixed" if chinese_ratio > 0.1 and chinese_ratio < 0.9 else
-                "chinese" if chinese_ratio > 0.9 else "english",
-                0.8
+                "mixed"
+                if chinese_ratio > 0.1 and chinese_ratio < 0.9
+                else "chinese"
+                if chinese_ratio > 0.9
+                else "english",
+                0.8,
             )
             score += expected_accuracy * 0.3
             reasoning.append(f"预期准确率: {expected_accuracy:.0%}")
@@ -247,7 +265,7 @@ class OCREngineSelector:
             engine_scores[engine] = {
                 "score": score,
                 "reasoning": reasoning,
-                "expected_accuracy": expected_accuracy
+                "expected_accuracy": expected_accuracy,
             }
 
         # 选择最佳引擎
@@ -256,11 +274,13 @@ class OCREngineSelector:
                 "primary_engine": available_engines[0] if available_engines else None,
                 "fallback_engine": None,
                 "confidence": 0.0,
-                "reasoning": "无法评估引擎适用性，使用默认引擎"
+                "reasoning": "无法评估引擎适用性，使用默认引擎",
             }
 
         # 按评分排序
-        sorted_engines = sorted(engine_scores.items(), key=lambda x: x[1]["score"], reverse=True)
+        sorted_engines = sorted(
+            engine_scores.items(), key=lambda x: x[1]["score"], reverse=True
+        )
 
         primary_engine = sorted_engines[0][0]
         fallback_engine = sorted_engines[1][0] if len(sorted_engines) > 1 else None
@@ -271,7 +291,9 @@ class OCREngineSelector:
         # 如果PaddleOCR可用且评分接近，优先选择PaddleOCR
         if "paddleocr" in available_engines and primary_engine != "paddleocr":
             paddleocr_score = engine_scores.get("paddleocr", {}).get("score", 0.0)
-            if abs(paddleocr_score - primary_score) < 0.1:  # 如果评分差距小于0.1，选择PaddleOCR
+            if (
+                abs(paddleocr_score - primary_score) < 0.1
+            ):  # 如果评分差距小于0.1，选择PaddleOCR
                 primary_engine = "paddleocr"
                 if paddleocr_score < primary_score:
                     primary_reasoning.append("PaddleOCR优先策略：评分接近时优先选择")
@@ -288,10 +310,12 @@ class OCREngineSelector:
             "confidence": confidence,
             "primary_score": primary_score,
             "reasoning": primary_reasoning,
-            "all_engine_scores": engine_scores
+            "all_engine_scores": engine_scores,
         }
 
-    def get_processing_strategy(self, document_analysis: Dict[str, Any], engine_selection: Dict[str, Any]) -> Dict[str, Any]:
+    def get_processing_strategy(
+        self, document_analysis: dict[str, Any], engine_selection: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         获取处理策略
 
@@ -311,7 +335,7 @@ class OCREngineSelector:
             "parallel_processing": False,
             "quality_threshold": 0.8,
             "use_fallback": False,
-            "processing_mode": "standard"
+            "processing_mode": "standard",
         }
 
         # 如果置信度较低，启用备用引擎
@@ -332,21 +356,27 @@ class OCREngineSelector:
 
         # 根据引擎调整参数
         if primary_engine == "paddleocr":
-            strategy.update({
-                "use_high_accuracy": True,
-                "preprocessing_level": "advanced",
-                "confidence_threshold": 0.7
-            })
+            strategy.update(
+                {
+                    "use_high_accuracy": True,
+                    "preprocessing_level": "advanced",
+                    "confidence_threshold": 0.7,
+                }
+            )
         elif primary_engine == "tesseract":
-            strategy.update({
-                "use_high_accuracy": False,
-                "preprocessing_level": "standard",
-                "confidence_threshold": 0.8
-            })
+            strategy.update(
+                {
+                    "use_high_accuracy": False,
+                    "preprocessing_level": "standard",
+                    "confidence_threshold": 0.8,
+                }
+            )
 
         return strategy
 
-    def analyze_optimization_opportunities(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def analyze_optimization_opportunities(
+        self, results: list[dict[str, Any]]
+    ) -> dict[str, Any]:
         """
         分析优化机会
 
@@ -371,7 +401,7 @@ class OCREngineSelector:
                     "total": 0,
                     "successful": 0,
                     "avg_confidence": 0.0,
-                    "confidence_scores": []
+                    "confidence_scores": [],
                 }
 
             engine_performance[engine]["total"] += 1
@@ -382,7 +412,9 @@ class OCREngineSelector:
         # 计算统计数据
         for engine, stats in engine_performance.items():
             if stats["confidence_scores"]:
-                stats["avg_confidence"] = sum(stats["confidence_scores"]) / len(stats["confidence_scores"])
+                stats["avg_confidence"] = sum(stats["confidence_scores"]) / len(
+                    stats["confidence_scores"]
+                )
                 stats["success_rate"] = stats["successful"] / stats["total"]
             else:
                 stats["avg_confidence"] = 0.0
@@ -392,32 +424,40 @@ class OCREngineSelector:
         recommendations = []
 
         # 找出表现最好的引擎
-        best_engine = max(engine_performance.items(), key=lambda x: x[1]["avg_confidence"]) if engine_performance else None
+        best_engine = (
+            max(engine_performance.items(), key=lambda x: x[1]["avg_confidence"])
+            if engine_performance
+            else None
+        )
 
         if best_engine:
             engine_name, stats = best_engine
             if stats["success_rate"] > 0.9 and stats["avg_confidence"] > 0.85:
-                recommendations.append({
-                    "type": "engine_optimization",
-                    "priority": "high",
-                    "description": f"{engine_name}引擎表现优异，建议作为首选引擎",
-                    "action": f"在配置中优先使用{engine_name}"
-                })
+                recommendations.append(
+                    {
+                        "type": "engine_optimization",
+                        "priority": "high",
+                        "description": f"{engine_name}引擎表现优异，建议作为首选引擎",
+                        "action": f"在配置中优先使用{engine_name}",
+                    }
+                )
 
         # 检查是否需要引擎切换
         for engine, stats in engine_performance.items():
             if stats["success_rate"] < 0.7:
-                recommendations.append({
-                    "type": "engine_issue",
-                    "priority": "medium",
-                    "description": f"{engine}引擎成功率较低({stats['success_rate']:.1%})",
-                    "action": f"检查{engine}配置或考虑减少使用频率"
-                })
+                recommendations.append(
+                    {
+                        "type": "engine_issue",
+                        "priority": "medium",
+                        "description": f"{engine}引擎成功率较低({stats['success_rate']:.1%})",
+                        "action": f"检查{engine}配置或考虑减少使用频率",
+                    }
+                )
 
         return {
             "recommendations": recommendations,
             "performance_metrics": engine_performance,
-            "total_processed": len(results)
+            "total_processed": len(results),
         }
 
 

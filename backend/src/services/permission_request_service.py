@@ -3,14 +3,15 @@
 支持权限申请、审批、驳回等完整工作流程
 """
 
-from datetime import datetime, timedelta, timezone
-from typing import List, Dict, Any, Optional, Tuple
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
-from ..models.dynamic_permission import PermissionRequest, DynamicPermissionAudit
-from ..models.rbac import Permission
+from sqlalchemy import and_
+from sqlalchemy.orm import Session
+
 from ..models.auth import User
+from ..models.dynamic_permission import DynamicPermissionAudit, PermissionRequest
+from ..models.rbac import Permission
 from .dynamic_permission_assignment_service import DynamicPermissionService
 
 
@@ -24,19 +25,19 @@ class PermissionRequestService:
     def create_permission_request(
         self,
         user_id: str,
-        permission_ids: List[str],
+        permission_ids: list[str],
         scope: str,
-        scope_id: Optional[str],
+        scope_id: str | None,
         reason: str,
-        requested_duration_hours: Optional[int] = None,
-        requested_conditions: Optional[Dict[str, Any]] = None
+        requested_duration_hours: int | None = None,
+        requested_conditions: dict[str, Any] | None = None,
     ) -> PermissionRequest:
         """创建权限申请"""
 
         # 验证权限是否存在
-        permissions = self.db.query(Permission).filter(
-            Permission.id.in_(permission_ids)
-        ).all()
+        permissions = (
+            self.db.query(Permission).filter(Permission.id.in_(permission_ids)).all()
+        )
 
         if len(permissions) != len(permission_ids):
             raise ValueError("部分权限ID不存在")
@@ -47,15 +48,19 @@ class PermissionRequestService:
             raise ValueError(f"用户不存在: {user_id}")
 
         # 检查是否已有待审批的相同申请
-        existing_request = self.db.query(PermissionRequest).filter(
-            and_(
-                PermissionRequest.user_id == user_id,
-                PermissionRequest.permission_ids == permission_ids,
-                PermissionRequest.scope == scope,
-                PermissionRequest.scope_id == scope_id,
-                PermissionRequest.status == "pending"
+        existing_request = (
+            self.db.query(PermissionRequest)
+            .filter(
+                and_(
+                    PermissionRequest.user_id == user_id,
+                    PermissionRequest.permission_ids == permission_ids,
+                    PermissionRequest.scope == scope,
+                    PermissionRequest.scope_id == scope_id,
+                    PermissionRequest.status == "pending",
+                )
             )
-        ).first()
+            .first()
+        )
 
         if existing_request:
             raise ValueError("已有相同的权限申请在待审批中")
@@ -67,9 +72,11 @@ class PermissionRequestService:
             scope=scope,
             scope_id=scope_id,
             reason=reason,
-            requested_duration_hours=str(requested_duration_hours) if requested_duration_hours else None,
+            requested_duration_hours=str(requested_duration_hours)
+            if requested_duration_hours
+            else None,
             requested_conditions=requested_conditions,
-            status="pending"
+            status="pending",
         )
 
         self.db.add(permission_request)
@@ -82,16 +89,18 @@ class PermissionRequestService:
         self,
         request_id: str,
         approved_by: str,
-        approval_comment: Optional[str] = None,
-        custom_duration_hours: Optional[int] = None,
-        custom_conditions: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        approval_comment: str | None = None,
+        custom_duration_hours: int | None = None,
+        custom_conditions: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """审批权限申请"""
 
         # 获取权限申请
-        request = self.db.query(PermissionRequest).filter(
-            PermissionRequest.id == request_id
-        ).first()
+        request = (
+            self.db.query(PermissionRequest)
+            .filter(PermissionRequest.id == request_id)
+            .first()
+        )
 
         if not request:
             raise ValueError(f"权限申请不存在: {request_id}")
@@ -102,7 +111,7 @@ class PermissionRequestService:
         # 更新申请状态
         request.status = "approved"
         request.approved_by = approved_by
-        request.approved_at = datetime.now(timezone.utc)
+        request.approved_at = datetime.now(UTC)
         request.approval_comment = approval_comment
 
         # 根据申请类型分配权限
@@ -114,68 +123,79 @@ class PermissionRequestService:
                 # 确定权限类型和参数
                 if request.requested_duration_hours:
                     # 临时权限
-                    duration_hours = custom_duration_hours or int(request.requested_duration_hours)
-                    expires_at = datetime.now(timezone.utc) + timedelta(hours=duration_hours)
-
-                    temp_permission = self.dynamic_permission_service.create_temporary_permission(
-                        user_id=request.user_id,
-                        permission_id=permission_id,
-                        scope=request.scope,
-                        scope_id=request.scope_id,
-                        expires_at=expires_at,
-                        assigned_by=approved_by,
-                        reason=f"权限申请批准: {request.reason}"
+                    duration_hours = custom_duration_hours or int(
+                        request.requested_duration_hours
                     )
-                    assigned_permissions.append({
-                        "type": "temporary",
-                        "permission_id": permission_id,
-                        "expires_at": expires_at,
-                        "id": temp_permission.id
-                    })
+                    expires_at = datetime.now(UTC) + timedelta(hours=duration_hours)
+
+                    temp_permission = (
+                        self.dynamic_permission_service.create_temporary_permission(
+                            user_id=request.user_id,
+                            permission_id=permission_id,
+                            scope=request.scope,
+                            scope_id=request.scope_id,
+                            expires_at=expires_at,
+                            assigned_by=approved_by,
+                            reason=f"权限申请批准: {request.reason}",
+                        )
+                    )
+                    assigned_permissions.append(
+                        {
+                            "type": "temporary",
+                            "permission_id": permission_id,
+                            "expires_at": expires_at,
+                            "id": temp_permission.id,
+                        }
+                    )
 
                 elif request.requested_conditions:
                     # 条件权限
                     conditions = custom_conditions or request.requested_conditions
 
-                    conditional_permission = self.dynamic_permission_service.create_conditional_permission(
-                        user_id=request.user_id,
-                        permission_id=permission_id,
-                        scope=request.scope,
-                        scope_id=request.scope_id,
-                        conditions=conditions,
-                        assigned_by=approved_by,
-                        reason=f"权限申请批准: {request.reason}"
+                    conditional_permission = (
+                        self.dynamic_permission_service.create_conditional_permission(
+                            user_id=request.user_id,
+                            permission_id=permission_id,
+                            scope=request.scope,
+                            scope_id=request.scope_id,
+                            conditions=conditions,
+                            assigned_by=approved_by,
+                            reason=f"权限申请批准: {request.reason}",
+                        )
                     )
-                    assigned_permissions.append({
-                        "type": "conditional",
-                        "permission_id": permission_id,
-                        "conditions": conditions,
-                        "id": conditional_permission.id
-                    })
+                    assigned_permissions.append(
+                        {
+                            "type": "conditional",
+                            "permission_id": permission_id,
+                            "conditions": conditions,
+                            "id": conditional_permission.id,
+                        }
+                    )
 
                 else:
                     # 普通动态权限
-                    dynamic_permission = self.dynamic_permission_service.create_dynamic_permission(
-                        user_id=request.user_id,
-                        permission_id=permission_id,
-                        scope=request.scope,
-                        scope_id=request.scope_id,
-                        permission_type="request_based",
-                        conditions=None,
-                        assigned_by=approved_by,
-                        reason=f"权限申请批准: {request.reason}"
+                    dynamic_permission = (
+                        self.dynamic_permission_service.create_dynamic_permission(
+                            user_id=request.user_id,
+                            permission_id=permission_id,
+                            scope=request.scope,
+                            scope_id=request.scope_id,
+                            permission_type="request_based",
+                            conditions=None,
+                            assigned_by=approved_by,
+                            reason=f"权限申请批准: {request.reason}",
+                        )
                     )
-                    assigned_permissions.append({
-                        "type": "dynamic",
-                        "permission_id": permission_id,
-                        "id": dynamic_permission.id
-                    })
+                    assigned_permissions.append(
+                        {
+                            "type": "dynamic",
+                            "permission_id": permission_id,
+                            "id": dynamic_permission.id,
+                        }
+                    )
 
             except Exception as e:
-                errors.append({
-                    "permission_id": permission_id,
-                    "error": str(e)
-                })
+                errors.append({"permission_id": permission_id, "error": str(e)})
 
         self.db.commit()
 
@@ -184,21 +204,20 @@ class PermissionRequestService:
             "status": "approved",
             "assigned_permissions": assigned_permissions,
             "errors": errors,
-            "approved_at": request.approved_at
+            "approved_at": request.approved_at,
         }
 
     def reject_permission_request(
-        self,
-        request_id: str,
-        rejected_by: str,
-        rejection_reason: str
+        self, request_id: str, rejected_by: str, rejection_reason: str
     ) -> PermissionRequest:
         """驳回权限申请"""
 
         # 获取权限申请
-        request = self.db.query(PermissionRequest).filter(
-            PermissionRequest.id == request_id
-        ).first()
+        request = (
+            self.db.query(PermissionRequest)
+            .filter(PermissionRequest.id == request_id)
+            .first()
+        )
 
         if not request:
             raise ValueError(f"权限申请不存在: {request_id}")
@@ -209,7 +228,7 @@ class PermissionRequestService:
         # 更新申请状态
         request.status = "rejected"
         request.approved_by = rejected_by
-        request.approved_at = datetime.now(timezone.utc)
+        request.approved_at = datetime.now(UTC)
         request.approval_comment = rejection_reason
 
         # 创建审计日志
@@ -221,7 +240,7 @@ class PermissionRequestService:
             scope=request.scope,
             scope_id=request.scope_id,
             assigned_by=rejected_by,
-            reason=f"权限申请驳回: {rejection_reason}"
+            reason=f"权限申请驳回: {rejection_reason}",
         )
         self.db.add(audit_log)
 
@@ -231,11 +250,8 @@ class PermissionRequestService:
         return request
 
     def get_pending_requests(
-        self,
-        approver_id: Optional[str] = None,
-        scope: Optional[str] = None,
-        limit: int = 50
-    ) -> List[Dict[str, Any]]:
+        self, approver_id: str | None = None, scope: str | None = None, limit: int = 50
+    ) -> list[dict[str, Any]]:
         """获取待审批的权限申请"""
 
         query = self.db.query(PermissionRequest).filter(
@@ -250,46 +266,50 @@ class PermissionRequestService:
         result = []
         for request in requests:
             # 获取权限详情
-            permissions = self.db.query(Permission).filter(
-                Permission.id.in_(request.permission_ids)
-            ).all()
+            permissions = (
+                self.db.query(Permission)
+                .filter(Permission.id.in_(request.permission_ids))
+                .all()
+            )
 
             # 获取用户详情
             user = self.db.query(User).filter(User.id == request.user_id).first()
 
-            result.append({
-                "id": request.id,
-                "user": {
-                    "id": user.id,
-                    "username": user.username,
-                    "full_name": user.full_name,
-                    "email": user.email
-                } if user else None,
-                "permissions": [
-                    {
-                        "id": perm.id,
-                        "name": perm.name,
-                        "display_name": perm.display_name,
-                        "description": perm.description
-                    } for perm in permissions
-                ],
-                "scope": request.scope,
-                "scope_id": request.scope_id,
-                "reason": request.reason,
-                "requested_duration_hours": request.requested_duration_hours,
-                "requested_conditions": request.requested_conditions,
-                "created_at": request.created_at,
-                "status": request.status
-            })
+            result.append(
+                {
+                    "id": request.id,
+                    "user": {
+                        "id": user.id,
+                        "username": user.username,
+                        "full_name": user.full_name,
+                        "email": user.email,
+                    }
+                    if user
+                    else None,
+                    "permissions": [
+                        {
+                            "id": perm.id,
+                            "name": perm.name,
+                            "display_name": perm.display_name,
+                            "description": perm.description,
+                        }
+                        for perm in permissions
+                    ],
+                    "scope": request.scope,
+                    "scope_id": request.scope_id,
+                    "reason": request.reason,
+                    "requested_duration_hours": request.requested_duration_hours,
+                    "requested_conditions": request.requested_conditions,
+                    "created_at": request.created_at,
+                    "status": request.status,
+                }
+            )
 
         return result
 
     def get_user_request_history(
-        self,
-        user_id: str,
-        status: Optional[str] = None,
-        limit: int = 50
-    ) -> List[Dict[str, Any]]:
+        self, user_id: str, status: str | None = None, limit: int = 50
+    ) -> list[dict[str, Any]]:
         """获取用户的权限申请历史"""
 
         query = self.db.query(PermissionRequest).filter(
@@ -299,53 +319,62 @@ class PermissionRequestService:
         if status:
             query = query.filter(PermissionRequest.status == status)
 
-        requests = query.order_by(PermissionRequest.created_at.desc()).limit(limit).all()
+        requests = (
+            query.order_by(PermissionRequest.created_at.desc()).limit(limit).all()
+        )
 
         result = []
         for request in requests:
             # 获取权限详情
-            permissions = self.db.query(Permission).filter(
-                Permission.id.in_(request.permission_ids)
-            ).all()
+            permissions = (
+                self.db.query(Permission)
+                .filter(Permission.id.in_(request.permission_ids))
+                .all()
+            )
 
             # 获取审批人详情
             approver = None
             if request.approved_by:
-                approver = self.db.query(User).filter(User.id == request.approved_by).first()
+                approver = (
+                    self.db.query(User).filter(User.id == request.approved_by).first()
+                )
 
-            result.append({
-                "id": request.id,
-                "permissions": [
-                    {
-                        "id": perm.id,
-                        "name": perm.name,
-                        "display_name": perm.display_name
-                    } for perm in permissions
-                ],
-                "scope": request.scope,
-                "scope_id": request.scope_id,
-                "reason": request.reason,
-                "requested_duration_hours": request.requested_duration_hours,
-                "requested_conditions": request.requested_conditions,
-                "status": request.status,
-                "approval_comment": request.approval_comment,
-                "approver": {
-                    "id": approver.id,
-                    "username": approver.username,
-                    "full_name": approver.full_name
-                } if approver else None,
-                "created_at": request.created_at,
-                "updated_at": request.updated_at,
-                "approved_at": request.approved_at
-            })
+            result.append(
+                {
+                    "id": request.id,
+                    "permissions": [
+                        {
+                            "id": perm.id,
+                            "name": perm.name,
+                            "display_name": perm.display_name,
+                        }
+                        for perm in permissions
+                    ],
+                    "scope": request.scope,
+                    "scope_id": request.scope_id,
+                    "reason": request.reason,
+                    "requested_duration_hours": request.requested_duration_hours,
+                    "requested_conditions": request.requested_conditions,
+                    "status": request.status,
+                    "approval_comment": request.approval_comment,
+                    "approver": {
+                        "id": approver.id,
+                        "username": approver.username,
+                        "full_name": approver.full_name,
+                    }
+                    if approver
+                    else None,
+                    "created_at": request.created_at,
+                    "updated_at": request.updated_at,
+                    "approved_at": request.approved_at,
+                }
+            )
 
         return result
 
     def get_request_statistics(
-        self,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None
-    ) -> Dict[str, Any]:
+        self, start_date: datetime | None = None, end_date: datetime | None = None
+    ) -> dict[str, Any]:
         """获取权限申请统计信息"""
 
         query = self.db.query(PermissionRequest)
@@ -371,7 +400,7 @@ class PermissionRequestService:
                     "total": 0,
                     "pending": 0,
                     "approved": 0,
-                    "rejected": 0
+                    "rejected": 0,
                 }
             scope_stats[scope]["total"] += 1
             scope_stats[scope][request.status] += 1
@@ -379,16 +408,16 @@ class PermissionRequestService:
         # 按日期统计（最近7天）
         daily_stats = {}
         for i in range(7):
-            date = datetime.now(timezone.utc).date() - timedelta(days=i)
+            date = datetime.now(UTC).date() - timedelta(days=i)
             daily_stats[date.isoformat()] = {
                 "total": 0,
                 "pending": 0,
                 "approved": 0,
-                "rejected": 0
+                "rejected": 0,
             }
 
         recent_requests = query.filter(
-            PermissionRequest.created_at >= datetime.now(timezone.utc) - timedelta(days=7)
+            PermissionRequest.created_at >= datetime.now(UTC) - timedelta(days=7)
         ).all()
 
         for request in recent_requests:
@@ -402,23 +431,29 @@ class PermissionRequestService:
             "pending": pending_requests,
             "approved": approved_requests,
             "rejected": rejected_requests,
-            "approval_rate": (approved_requests / total_requests * 100) if total_requests > 0 else 0,
+            "approval_rate": (approved_requests / total_requests * 100)
+            if total_requests > 0
+            else 0,
             "scope_statistics": scope_stats,
-            "daily_statistics": daily_stats
+            "daily_statistics": daily_stats,
         }
 
     def cleanup_old_requests(self, days: int = 30) -> int:
         """清理旧的权限申请记录"""
 
-        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
+        cutoff_date = datetime.now(UTC) - timedelta(days=days)
 
         # 只清理已处理（approved/rejected）的申请
-        old_requests = self.db.query(PermissionRequest).filter(
-            and_(
-                PermissionRequest.created_at < cutoff_date,
-                PermissionRequest.status.in_(["approved", "rejected"])
+        old_requests = (
+            self.db.query(PermissionRequest)
+            .filter(
+                and_(
+                    PermissionRequest.created_at < cutoff_date,
+                    PermissionRequest.status.in_(["approved", "rejected"]),
+                )
             )
-        ).all()
+            .all()
+        )
 
         count = 0
         for request in old_requests:
@@ -430,10 +465,10 @@ class PermissionRequestService:
 
     def bulk_approve_requests(
         self,
-        request_ids: List[str],
+        request_ids: list[str],
         approved_by: str,
-        approval_comment: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+        approval_comment: str | None = None,
+    ) -> list[dict[str, Any]]:
         """批量审批权限申请"""
 
         results = []
@@ -443,28 +478,21 @@ class PermissionRequestService:
                 result = self.approve_permission_request(
                     request_id=request_id,
                     approved_by=approved_by,
-                    approval_comment=approval_comment
+                    approval_comment=approval_comment,
                 )
-                results.append({
-                    "request_id": request_id,
-                    "success": True,
-                    "result": result
-                })
+                results.append(
+                    {"request_id": request_id, "success": True, "result": result}
+                )
             except Exception as e:
-                results.append({
-                    "request_id": request_id,
-                    "success": False,
-                    "error": str(e)
-                })
+                results.append(
+                    {"request_id": request_id, "success": False, "error": str(e)}
+                )
 
         return results
 
     def bulk_reject_requests(
-        self,
-        request_ids: List[str],
-        rejected_by: str,
-        rejection_reason: str
-    ) -> List[Dict[str, Any]]:
+        self, request_ids: list[str], rejected_by: str, rejection_reason: str
+    ) -> list[dict[str, Any]]:
         """批量驳回权限申请"""
 
         results = []
@@ -474,17 +502,12 @@ class PermissionRequestService:
                 self.reject_permission_request(
                     request_id=request_id,
                     rejected_by=rejected_by,
-                    rejection_reason=rejection_reason
+                    rejection_reason=rejection_reason,
                 )
-                results.append({
-                    "request_id": request_id,
-                    "success": True
-                })
+                results.append({"request_id": request_id, "success": True})
             except Exception as e:
-                results.append({
-                    "request_id": request_id,
-                    "success": False,
-                    "error": str(e)
-                })
+                results.append(
+                    {"request_id": request_id, "success": False, "error": str(e)}
+                )
 
         return results

@@ -4,57 +4,64 @@
 """
 
 import logging
-from typing import Dict, List, Any, Optional, Tuple
-from dataclasses import dataclass, field
-from enum import Enum
-from datetime import datetime, date, timezone
-from decimal import Decimal
-import asyncio
 import re
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+from typing import Any
 
 # from .chinese_nlp_processor import ChineseNLPProcessor  # 暂时注释
 # from .contract_semantic_validator import contract_semantic_validator  # 暂时注释
 
 logger = logging.getLogger(__name__)
 
+
 class MappingConfidence(Enum):
     """映射置信度"""
-    HIGH = "high"          # 0.8+
-    MEDIUM = "medium"      # 0.6-0.8
-    LOW = "low"           # 0.4-0.6
-    VERY_LOW = "very_low" # <0.4
+
+    HIGH = "high"  # 0.8+
+    MEDIUM = "medium"  # 0.6-0.8
+    LOW = "low"  # 0.4-0.6
+    VERY_LOW = "very_low"  # <0.4
+
 
 class ValidationStatus(Enum):
     """验证状态"""
+
     VALID = "valid"
     WARNING = "warning"
     ERROR = "error"
     PENDING = "pending"
 
+
 @dataclass
 class FieldMapping:
     """字段映射"""
+
     source_field: str
     target_field: str
     value: Any
     confidence: float
     validation_status: ValidationStatus
-    transformation_applied: Optional[str] = None
-    validation_errors: List[str] = field(default_factory=list)
-    validation_warnings: List[str] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    transformation_applied: str | None = None
+    validation_errors: list[str] = field(default_factory=list)
+    validation_warnings: list[str] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
+
 
 @dataclass
 class MappingResult:
     """映射结果"""
+
     success: bool
-    mappings: Dict[str, FieldMapping]
+    mappings: dict[str, FieldMapping]
     overall_confidence: float
-    asset_data: Dict[str, Any]
-    contract_data: Dict[str, Any]
-    validation_summary: Dict[str, Any]
-    recommendations: List[str] = field(default_factory=list)
+    asset_data: dict[str, Any]
+    contract_data: dict[str, Any]
+    validation_summary: dict[str, Any]
+    recommendations: list[str] = field(default_factory=list)
     processing_time: float = 0.0
+
 
 class EnhancedFieldMapper:
     """增强字段映射器"""
@@ -65,7 +72,7 @@ class EnhancedFieldMapper:
         self.validation_rules = self._load_validation_rules()
         self.completeness_rules = self._load_completeness_rules()
 
-    def _load_field_mapping_rules(self) -> Dict[str, Dict[str, Any]]:
+    def _load_field_mapping_rules(self) -> dict[str, dict[str, Any]]:
         """加载字段映射规则"""
         return {
             # 基础信息映射
@@ -73,93 +80,88 @@ class EnhancedFieldMapper:
                 "target_fields": ["lease_contract_number"],
                 "priority": 1,
                 "required": True,
-                "transformations": ["clean_contract_number"]
+                "transformations": ["clean_contract_number"],
             },
             "landlord_name": {
                 "target_fields": [],
                 "priority": 1,
-                "note": "房东信息不直接映射到资产字段"
+                "note": "房东信息不直接映射到资产字段",
             },
             "tenant_name": {
                 "target_fields": ["tenant_name"],
                 "priority": 1,
                 "required": True,
-                "transformations": ["validate_person_name"]
+                "transformations": ["validate_person_name"],
             },
             "property_address": {
                 "target_fields": ["address"],
                 "priority": 1,
                 "required": True,
-                "transformations": ["validate_address", "extract_location_info"]
+                "transformations": ["validate_address", "extract_location_info"],
             },
-
             # 面积信息映射
             "property_area": {
                 "target_fields": ["rentable_area", "actual_property_area"],
                 "priority": 1,
                 "required": True,
-                "transformations": ["validate_area", "calculate_derived_areas"]
+                "transformations": ["validate_area", "calculate_derived_areas"],
             },
-
             # 金额信息映射
             "monthly_rent": {
                 "target_fields": ["monthly_rent"],
                 "priority": 1,
                 "required": True,
-                "transformations": ["validate_amount", "normalize_amount"]
+                "transformations": ["validate_amount", "normalize_amount"],
             },
             "total_deposit": {
                 "target_fields": ["deposit"],
                 "priority": 1,
                 "required": False,
-                "transformations": ["validate_amount", "normalize_amount"]
+                "transformations": ["validate_amount", "normalize_amount"],
             },
-
             # 日期信息映射
             "sign_date": {
                 "target_fields": [],
                 "priority": 1,
-                "note": "签署日期不直接映射到资产字段"
+                "note": "签署日期不直接映射到资产字段",
             },
             "start_date": {
                 "target_fields": ["contract_start_date"],
                 "priority": 1,
                 "required": True,
-                "transformations": ["validate_date", "normalize_date"]
+                "transformations": ["validate_date", "normalize_date"],
             },
             "end_date": {
                 "target_fields": ["contract_end_date"],
                 "priority": 1,
                 "required": True,
-                "transformations": ["validate_date", "normalize_date"]
+                "transformations": ["validate_date", "normalize_date"],
             },
-
             # 联系信息映射
             "landlord_phone": {
                 "target_fields": [],
                 "priority": 2,
-                "note": "房东电话不映射到资产字段"
+                "note": "房东电话不映射到资产字段",
             },
             "tenant_phone": {
                 "target_fields": [],
                 "priority": 2,
-                "note": "租户电话不映射到资产字段"
+                "note": "租户电话不映射到资产字段",
             },
-
             # 身份信息映射
             "landlord_id": {
                 "target_fields": [],
                 "priority": 2,
-                "note": "房东身份证不映射到资产字段"
+                "note": "房东身份证不映射到资产字段",
             },
             "tenant_id": {
                 "target_fields": [],
                 "priority": 2,
-                "note": "租户身份证不映射到资产字段"
-            }
+                "note": "租户身份证不映射到资产字段",
+            },
         }
 
-    def _load_transformation_rules(self) -> Dict[str, callable]:
+    def _load_transformation_rules(self) -> dict[str, callable]:
         """加载转换规则"""
         return {
             "clean_contract_number": self._clean_contract_number,
@@ -171,44 +173,58 @@ class EnhancedFieldMapper:
             "normalize_amount": self._normalize_amount,
             "normalize_date": self._normalize_date,
             "extract_location_info": self._extract_location_info,
-            "calculate_derived_areas": self._calculate_derived_areas
+            "calculate_derived_areas": self._calculate_derived_areas,
         }
 
-    def _load_validation_rules(self) -> Dict[str, Dict[str, Any]]:
+    def _load_validation_rules(self) -> dict[str, dict[str, Any]]:
         """加载验证规则"""
         return {
             "required_fields": {
                 "asset": [
-                    "ownership_entity", "property_name", "address", "ownership_status",
-                    "property_nature", "usage_status", "rentable_area", "monthly_rent",
-                    "contract_start_date", "contract_end_date"
+                    "ownership_entity",
+                    "property_name",
+                    "address",
+                    "ownership_status",
+                    "property_nature",
+                    "usage_status",
+                    "rentable_area",
+                    "monthly_rent",
+                    "contract_start_date",
+                    "contract_end_date",
                 ],
                 "contract": [
-                    "contract_number", "tenant_name", "start_date", "end_date"
-                ]
+                    "contract_number",
+                    "tenant_name",
+                    "start_date",
+                    "end_date",
+                ],
             },
             "field_constraints": {
                 "rentable_area": {"min": 0.1, "max": 10000, "type": "decimal"},
                 "monthly_rent": {"min": 0, "max": 1000000, "type": "decimal"},
                 "property_name": {"min_length": 2, "max_length": 200},
-                "address": {"min_length": 5, "max_length": 500}
-            }
+                "address": {"min_length": 5, "max_length": 500},
+            },
         }
 
-    def _load_completeness_rules(self) -> Dict[str, Any]:
+    def _load_completeness_rules(self) -> dict[str, Any]:
         """加载完整性规则"""
         return {
             "minimum_required_ratio": 0.8,  # 至少80%必填字段
-            "high_quality_threshold": 0.9,   # 90%以上字段为高质量
+            "high_quality_threshold": 0.9,  # 90%以上字段为高质量
             "critical_fields": [
-                "address", "tenant_name", "monthly_rent", "start_date", "end_date"
-            ]
+                "address",
+                "tenant_name",
+                "monthly_rent",
+                "start_date",
+                "end_date",
+            ],
         }
 
     async def map_extracted_data(
         self,
-        extracted_data: Dict[str, Any],
-        extraction_metadata: Optional[Dict[str, Any]] = None
+        extracted_data: dict[str, Any],
+        extraction_metadata: dict[str, Any] | None = None,
     ) -> MappingResult:
         """映射提取的数据到58字段模型"""
         start_time = datetime.now()
@@ -221,13 +237,19 @@ class EnhancedFieldMapper:
             validated_mappings = await self._transform_and_validate_mappings(mappings)
 
             # 第三步：构建资产和合同数据
-            asset_data, contract_data = await self._build_target_data(validated_mappings)
+            asset_data, contract_data = await self._build_target_data(
+                validated_mappings
+            )
 
             # 第四步：完整性检查
-            completeness_result = await self._check_completeness(asset_data, contract_data)
+            completeness_result = await self._check_completeness(
+                asset_data, contract_data
+            )
 
             # 第五步：生成建议
-            recommendations = self._generate_recommendations(validated_mappings, completeness_result)
+            recommendations = self._generate_recommendations(
+                validated_mappings, completeness_result
+            )
 
             # 计算总体置信度
             overall_confidence = self._calculate_overall_confidence(validated_mappings)
@@ -242,7 +264,7 @@ class EnhancedFieldMapper:
                 contract_data=contract_data,
                 validation_summary=completeness_result,
                 recommendations=recommendations,
-                processing_time=processing_time
+                processing_time=processing_time,
             )
 
         except Exception as e:
@@ -255,10 +277,12 @@ class EnhancedFieldMapper:
                 contract_data={},
                 validation_summary={},
                 recommendations=[f"映射失败: {str(e)}"],
-                processing_time=(datetime.now() - start_time).total_seconds()
+                processing_time=(datetime.now() - start_time).total_seconds(),
             )
 
-    async def _perform_field_mapping(self, extracted_data: Dict[str, Any]) -> List[FieldMapping]:
+    async def _perform_field_mapping(
+        self, extracted_data: dict[str, Any]
+    ) -> list[FieldMapping]:
         """执行字段映射"""
         mappings = []
 
@@ -290,14 +314,16 @@ class EnhancedFieldMapper:
                     metadata={
                         "priority": mapping_rule.get("priority", 2),
                         "required": mapping_rule.get("required", False),
-                        "mapping_rule": mapping_rule
-                    }
+                        "mapping_rule": mapping_rule,
+                    },
                 )
                 mappings.append(mapping)
 
         return mappings
 
-    async def _transform_and_validate_mappings(self, mappings: List[FieldMapping]) -> List[FieldMapping]:
+    async def _transform_and_validate_mappings(
+        self, mappings: list[FieldMapping]
+    ) -> list[FieldMapping]:
         """转换和验证映射"""
         validated_mappings = []
 
@@ -317,19 +343,29 @@ class EnhancedFieldMapper:
                             result = await transform_func(transformed_value, mapping)
                             if isinstance(result, tuple):
                                 transformed_value, validation_info = result
-                                mapping.validation_errors.extend(validation_info.get("errors", []))
-                                mapping.validation_warnings.extend(validation_info.get("warnings", []))
+                                mapping.validation_errors.extend(
+                                    validation_info.get("errors", [])
+                                )
+                                mapping.validation_warnings.extend(
+                                    validation_info.get("warnings", [])
+                                )
                             else:
                                 transformed_value = result
                             transformation_history.append(transformation)
                         except Exception as e:
                             logger.warning(f"转换失败 {transformation}: {str(e)}")
-                            mapping.validation_warnings.append(f"转换{transformation}失败: {str(e)}")
+                            mapping.validation_warnings.append(
+                                f"转换{transformation}失败: {str(e)}"
+                            )
                             mapping.confidence *= 0.9
 
                 # 更新映射值和转换历史
                 mapping.value = transformed_value
-                mapping.transformation_applied = " -> ".join(transformation_history) if transformation_history else None
+                mapping.transformation_applied = (
+                    " -> ".join(transformation_history)
+                    if transformation_history
+                    else None
+                )
                 mapping.metadata["transformed"] = True
 
                 # 执行验证
@@ -350,13 +386,13 @@ class EnhancedFieldMapper:
 
         return validated_mappings
 
-    async def _validate_mapping(self, mapping: FieldMapping) -> Dict[str, Any]:
+    async def _validate_mapping(self, mapping: FieldMapping) -> dict[str, Any]:
         """验证单个映射"""
         result = {
             "status": ValidationStatus.VALID,
             "errors": [],
             "warnings": [],
-            "confidence_multiplier": 1.0
+            "confidence_multiplier": 1.0,
         }
 
         try:
@@ -395,37 +431,42 @@ class EnhancedFieldMapper:
 
         return result
 
-    async def _build_target_data(self, mappings: List[FieldMapping]) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    async def _build_target_data(
+        self, mappings: list[FieldMapping]
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
         """构建目标数据结构"""
         asset_data = {}
         contract_data = {}
 
         # 设置默认值
-        asset_data.update({
-            "ownership_entity": "待确认",  # 需要后续手动确认
-            "ownership_category": "租赁",
-            "project_name": "导入项目",
-            "property_name": "待确认",  # 需要从地址提取
-            "ownership_status": "已确权",
-            "property_nature": "商业",
-            "usage_status": "已出租",
-            "business_category": "租赁",
-            "is_litigated": False,
-            "is_sublease": False,
-            "data_status": "正常",
-            "version": 1,
-            "include_in_occupancy_rate": True
-        })
+        asset_data.update(
+            {
+                "ownership_entity": "待确认",  # 需要后续手动确认
+                "ownership_category": "租赁",
+                "project_name": "导入项目",
+                "property_name": "待确认",  # 需要从地址提取
+                "ownership_status": "已确权",
+                "property_nature": "商业",
+                "usage_status": "已出租",
+                "business_category": "租赁",
+                "is_litigated": False,
+                "is_sublease": False,
+                "data_status": "正常",
+                "version": 1,
+                "include_in_occupancy_rate": True,
+            }
+        )
 
-        contract_data.update({
-            "contract_status": "有效",
-            "data_status": "正常",
-            "version": 1
-        })
+        contract_data.update(
+            {"contract_status": "有效", "data_status": "正常", "version": 1}
+        )
 
         # 应用映射
         for mapping in mappings:
-            if mapping.validation_status in [ValidationStatus.VALID, ValidationStatus.WARNING]:
+            if mapping.validation_status in [
+                ValidationStatus.VALID,
+                ValidationStatus.WARNING,
+            ]:
                 if mapping.target_field in asset_data:
                     asset_data[mapping.target_field] = mapping.value
                 elif mapping.target_field in contract_data:
@@ -433,7 +474,9 @@ class EnhancedFieldMapper:
 
         # 特殊处理：从地址提取物业名称
         if "address" in asset_data and asset_data["property_name"] == "待确认":
-            asset_data["property_name"] = self._extract_property_name_from_address(asset_data["address"])
+            asset_data["property_name"] = self._extract_property_name_from_address(
+                asset_data["address"]
+            )
 
         # 计算衍生字段
         await self._calculate_derived_fields(asset_data, contract_data)
@@ -450,9 +493,9 @@ class EnhancedFieldMapper:
         try:
             # 寻找路名、街道等关键词后的内容
             patterns = [
-                r'(?:路|街|大道|巷)[^，,。]*?(\d+[^，,。]*?)(?:号楼|栋|号|铺|室)',
-                r'(?:小区|花园|广场|大厦|中心|商城)[^，,。]*',
-                r'([^，,。]*?(?:号楼|栋|号|铺|室))'
+                r"(?:路|街|大道|巷)[^，,。]*?(\d+[^，,。]*?)(?:号楼|栋|号|铺|室)",
+                r"(?:小区|花园|广场|大厦|中心|商城)[^，,。]*",
+                r"([^，,。]*?(?:号楼|栋|号|铺|室))",
             ]
 
             for pattern in patterns:
@@ -463,7 +506,7 @@ class EnhancedFieldMapper:
                         return property_name.strip()
 
             # 如果没有找到合适的名称，返回地址的后半部分
-            parts = re.split(r'[，,。]', address)
+            parts = re.split(r"[，,。]", address)
             if len(parts) > 1:
                 return parts[-1].strip()
 
@@ -472,20 +515,34 @@ class EnhancedFieldMapper:
 
         return address[:30] + "..." if len(address) > 30 else address
 
-    async def _calculate_derived_fields(self, asset_data: Dict[str, Any], contract_data: Dict[str, Any]):
+    async def _calculate_derived_fields(
+        self, asset_data: dict[str, Any], contract_data: dict[str, Any]
+    ):
         """计算衍生字段"""
         # 计算租赁期限（月）
-        if "contract_start_date" in contract_data and "contract_end_date" in contract_data:
+        if (
+            "contract_start_date" in contract_data
+            and "contract_end_date" in contract_data
+        ):
             try:
-                start_date = datetime.strptime(contract_data["contract_start_date"], "%Y-%m-%d")
-                end_date = datetime.strptime(contract_data["contract_end_date"], "%Y-%m-%d")
-                months = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month)
+                start_date = datetime.strptime(
+                    contract_data["contract_start_date"], "%Y-%m-%d"
+                )
+                end_date = datetime.strptime(
+                    contract_data["contract_end_date"], "%Y-%m-%d"
+                )
+                months = (end_date.year - start_date.year) * 12 + (
+                    end_date.month - start_date.month
+                )
                 contract_data["lease_term_months"] = max(months, 1)
             except:
                 pass
 
         # 设置合同编号到资产数据（如果存在）
-        if "contract_number" in contract_data and "lease_contract_number" not in asset_data:
+        if (
+            "contract_number" in contract_data
+            and "lease_contract_number" not in asset_data
+        ):
             asset_data["lease_contract_number"] = contract_data["contract_number"]
 
         # 从合同数据同步日期到资产数据
@@ -494,16 +551,24 @@ class EnhancedFieldMapper:
         if "contract_end_date" in contract_data:
             asset_data["contract_end_date"] = contract_data["contract_end_date"]
 
-    async def _check_completeness(self, asset_data: Dict[str, Any], contract_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def _check_completeness(
+        self, asset_data: dict[str, Any], contract_data: dict[str, Any]
+    ) -> dict[str, Any]:
         """检查数据完整性"""
         required_asset_fields = self.validation_rules["required_fields"]["asset"]
         required_contract_fields = self.validation_rules["required_fields"]["contract"]
 
-        asset_completeness = self._calculate_field_completeness(asset_data, required_asset_fields)
-        contract_completeness = self._calculate_field_completeness(contract_data, required_contract_fields)
+        asset_completeness = self._calculate_field_completeness(
+            asset_data, required_asset_fields
+        )
+        contract_completeness = self._calculate_field_completeness(
+            contract_data, required_contract_fields
+        )
 
         critical_fields = self.completeness_rules["critical_fields"]
-        critical_completeness = self._check_critical_fields(asset_data, contract_data, critical_fields)
+        critical_completeness = self._check_critical_fields(
+            asset_data, contract_data, critical_fields
+        )
 
         overall_completeness = (asset_completeness + contract_completeness) / 2
 
@@ -512,23 +577,42 @@ class EnhancedFieldMapper:
             "contract_completeness": contract_completeness,
             "critical_completeness": critical_completeness,
             "overall_completeness": overall_completeness,
-            "missing_asset_fields": [f for f in required_asset_fields if f not in asset_data or not asset_data[f]],
-            "missing_contract_fields": [f for f in required_contract_fields if f not in contract_data or not contract_data[f]],
-            "quality_level": self._determine_quality_level(overall_completeness)
+            "missing_asset_fields": [
+                f
+                for f in required_asset_fields
+                if f not in asset_data or not asset_data[f]
+            ],
+            "missing_contract_fields": [
+                f
+                for f in required_contract_fields
+                if f not in contract_data or not contract_data[f]
+            ],
+            "quality_level": self._determine_quality_level(overall_completeness),
         }
 
-    def _calculate_field_completeness(self, data: Dict[str, Any], required_fields: List[str]) -> float:
+    def _calculate_field_completeness(
+        self, data: dict[str, Any], required_fields: list[str]
+    ) -> float:
         """计算字段完整性"""
         if not required_fields:
             return 1.0
 
-        present_fields = sum(1 for field in required_fields if field in data and data[field])
+        present_fields = sum(
+            1 for field in required_fields if field in data and data[field]
+        )
         return present_fields / len(required_fields)
 
-    def _check_critical_fields(self, asset_data: Dict[str, Any], contract_data: Dict[str, Any], critical_fields: List[str]) -> float:
+    def _check_critical_fields(
+        self,
+        asset_data: dict[str, Any],
+        contract_data: dict[str, Any],
+        critical_fields: list[str],
+    ) -> float:
         """检查关键字段"""
         all_data = {**asset_data, **contract_data}
-        present_critical = sum(1 for field in critical_fields if field in all_data and all_data[field])
+        present_critical = sum(
+            1 for field in critical_fields if field in all_data and all_data[field]
+        )
         return present_critical / len(critical_fields)
 
     def _determine_quality_level(self, completeness: float) -> str:
@@ -542,7 +626,9 @@ class EnhancedFieldMapper:
         else:
             return "very_low"
 
-    def _generate_recommendations(self, mappings: List[FieldMapping], completeness_result: Dict[str, Any]) -> List[str]:
+    def _generate_recommendations(
+        self, mappings: list[FieldMapping], completeness_result: dict[str, Any]
+    ) -> list[str]:
         """生成建议"""
         recommendations = []
 
@@ -550,23 +636,36 @@ class EnhancedFieldMapper:
         if completeness_result["overall_completeness"] < 0.8:
             recommendations.append("数据完整性较低，建议补充缺失字段")
 
-        missing_fields = completeness_result["missing_asset_fields"] + completeness_result["missing_contract_fields"]
+        missing_fields = (
+            completeness_result["missing_asset_fields"]
+            + completeness_result["missing_contract_fields"]
+        )
         if missing_fields:
             recommendations.append(f"缺失关键字段: {', '.join(missing_fields[:5])}")
 
         # 验证建议
-        error_mappings = [m for m in mappings if m.validation_status == ValidationStatus.ERROR]
+        error_mappings = [
+            m for m in mappings if m.validation_status == ValidationStatus.ERROR
+        ]
         if error_mappings:
-            recommendations.append(f"以下字段存在错误需要修正: {', '.join([m.target_field for m in error_mappings[:3]])}")
+            recommendations.append(
+                f"以下字段存在错误需要修正: {', '.join([m.target_field for m in error_mappings[:3]])}"
+            )
 
-        warning_mappings = [m for m in mappings if m.validation_status == ValidationStatus.WARNING]
+        warning_mappings = [
+            m for m in mappings if m.validation_status == ValidationStatus.WARNING
+        ]
         if warning_mappings:
-            recommendations.append(f"以下字段需要关注: {', '.join([m.target_field for m in warning_mappings[:3]])}")
+            recommendations.append(
+                f"以下字段需要关注: {', '.join([m.target_field for m in warning_mappings[:3]])}"
+            )
 
         # 置信度建议
         low_confidence_mappings = [m for m in mappings if m.confidence < 0.6]
         if low_confidence_mappings:
-            recommendations.append(f"以下字段置信度较低，建议人工确认: {', '.join([m.target_field for m in low_confidence_mappings[:3]])}")
+            recommendations.append(
+                f"以下字段置信度较低，建议人工确认: {', '.join([m.target_field for m in low_confidence_mappings[:3]])}"
+            )
 
         # 质量建议
         if completeness_result["quality_level"] in ["low", "very_low"]:
@@ -580,7 +679,7 @@ class EnhancedFieldMapper:
 
         return recommendations
 
-    def _calculate_overall_confidence(self, mappings: List[FieldMapping]) -> float:
+    def _calculate_overall_confidence(self, mappings: list[FieldMapping]) -> float:
         """计算总体置信度"""
         if not mappings:
             return 0.0
@@ -594,7 +693,7 @@ class EnhancedFieldMapper:
             "contract_end_date": 0.1,
             "rentable_area": 0.1,
             "lease_contract_number": 0.05,
-            "deposit": 0.05
+            "deposit": 0.05,
         }
 
         weighted_confidence = 0.0
@@ -618,11 +717,13 @@ class EnhancedFieldMapper:
         """清理合同编号"""
         if isinstance(value, str):
             # 移除特殊字符，保留字母数字和常用符号
-            cleaned = re.sub(r'[^\w\-()（）]', '', value)
+            cleaned = re.sub(r"[^\w\-()（）]", "", value)
             return cleaned.upper()
         return value
 
-    async def _validate_person_name(self, value: Any, mapping: FieldMapping) -> Tuple[Any, Dict[str, Any]]:
+    async def _validate_person_name(
+        self, value: Any, mapping: FieldMapping
+    ) -> tuple[Any, dict[str, Any]]:
         """验证姓名"""
         result = {"errors": [], "warnings": []}
 
@@ -634,17 +735,19 @@ class EnhancedFieldMapper:
                 result["warnings"].append("姓名较长，请确认是否正确")
 
             # 字符检查
-            if re.search(r'[0-9@#$%^&*()]', value):
+            if re.search(r"[0-9@#$%^&*()]", value):
                 result["errors"].append("姓名包含数字或特殊字符")
 
             # 中文字符检查
-            chinese_chars = len(re.findall(r'[\u4e00-\u9fff]', value))
+            chinese_chars = len(re.findall(r"[\u4e00-\u9fff]", value))
             if chinese_chars == 0:
                 result["warnings"].append("未检测到中文字符")
 
         return value, result
 
-    async def _validate_address(self, value: Any, mapping: FieldMapping) -> Tuple[Any, Dict[str, Any]]:
+    async def _validate_address(
+        self, value: Any, mapping: FieldMapping
+    ) -> tuple[Any, dict[str, Any]]:
         """验证地址"""
         result = {"errors": [], "warnings": []}
 
@@ -661,7 +764,9 @@ class EnhancedFieldMapper:
 
         return value, result
 
-    async def _validate_area(self, value: Any, mapping: FieldMapping) -> Tuple[Any, Dict[str, Any]]:
+    async def _validate_area(
+        self, value: Any, mapping: FieldMapping
+    ) -> tuple[Any, dict[str, Any]]:
         """验证面积"""
         result = {"errors": [], "warnings": []}
 
@@ -678,7 +783,9 @@ class EnhancedFieldMapper:
 
         return value, result
 
-    async def _validate_amount(self, value: Any, mapping: FieldMapping) -> Tuple[Any, Dict[str, Any]]:
+    async def _validate_amount(
+        self, value: Any, mapping: FieldMapping
+    ) -> tuple[Any, dict[str, Any]]:
         """验证金额"""
         result = {"errors": [], "warnings": []}
 
@@ -695,7 +802,9 @@ class EnhancedFieldMapper:
 
         return value, result
 
-    async def _validate_date(self, value: Any, mapping: FieldMapping) -> Tuple[Any, Dict[str, Any]]:
+    async def _validate_date(
+        self, value: Any, mapping: FieldMapping
+    ) -> tuple[Any, dict[str, Any]]:
         """验证日期"""
         result = {"errors": [], "warnings": []}
 
@@ -719,7 +828,7 @@ class EnhancedFieldMapper:
             return float(value)
         elif isinstance(value, str):
             # 移除非数字字符（除了小数点）
-            cleaned = re.sub(r'[^\d.]', '', value)
+            cleaned = re.sub(r"[^\d.]", "", value)
             try:
                 return float(cleaned)
             except ValueError:
@@ -732,11 +841,7 @@ class EnhancedFieldMapper:
             return value.strftime("%Y-%m-%d")
         elif isinstance(value, str):
             # 尝试解析并重新格式化
-            date_formats = [
-                "%Y-%m-%d",
-                "%Y/%m/%d",
-                "%Y年%m月%d日"
-            ]
+            date_formats = ["%Y-%m-%d", "%Y/%m/%d", "%Y年%m月%d日"]
             for fmt in date_formats:
                 try:
                     parsed = datetime.strptime(value, fmt)
@@ -757,6 +862,7 @@ class EnhancedFieldMapper:
         """计算衍生面积"""
         # 这里可以添加面积计算逻辑
         return value
+
 
 # 创建全局实例
 enhanced_field_mapper = EnhancedFieldMapper()

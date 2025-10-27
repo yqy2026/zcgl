@@ -2,31 +2,31 @@
 认证相关CRUD操作
 """
 
-from typing import Optional, List
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, desc, func
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
-from ..models.auth import User, UserSession, AuditLog, UserRole
-from ..schemas.auth import UserCreate, UserUpdate, UserQueryParams
+from sqlalchemy import and_, desc, func, or_
+from sqlalchemy.orm import Session
+
+from ..models.auth import AuditLog, User, UserRole, UserSession
+from ..schemas.auth import UserCreate, UserUpdate
 
 
 class UserCRUD:
     """用户CRUD操作"""
 
-    def get(self, db: Session, user_id: str) -> Optional[User]:
+    def get(self, db: Session, user_id: str) -> User | None:
         """根据ID获取用户"""
         return db.query(User).filter(User.id == user_id).first()
 
-    def get_by_username(self, db: Session, username: str) -> Optional[User]:
+    def get_by_username(self, db: Session, username: str) -> User | None:
         """根据用户名获取用户"""
         return db.query(User).filter(User.username == username).first()
 
-    def get_by_email(self, db: Session, email: str) -> Optional[User]:
+    def get_by_email(self, db: Session, email: str) -> User | None:
         """根据邮箱获取用户"""
         return db.query(User).filter(User.email == email).first()
 
-    def get_multi(self, db: Session, skip: int = 0, limit: int = 100) -> List[User]:
+    def get_multi(self, db: Session, skip: int = 0, limit: int = 100) -> list[User]:
         """获取用户列表"""
         return db.query(User).offset(skip).limit(limit).all()
 
@@ -35,11 +35,11 @@ class UserCRUD:
         db: Session,
         skip: int = 0,
         limit: int = 100,
-        search: Optional[str] = None,
-        role: Optional[UserRole] = None,
-        is_active: Optional[bool] = None,
-        organization_id: Optional[str] = None
-    ) -> tuple[List[User], int]:
+        search: str | None = None,
+        role: UserRole | None = None,
+        is_active: bool | None = None,
+        organization_id: str | None = None,
+    ) -> tuple[list[User], int]:
         """带筛选条件的用户列表"""
         query = db.query(User)
 
@@ -48,7 +48,7 @@ class UserCRUD:
             search_filter = or_(
                 User.username.ilike(f"%{search}%"),
                 User.email.ilike(f"%{search}%"),
-                User.full_name.ilike(f"%{search}%")
+                User.full_name.ilike(f"%{search}%"),
             )
             query = query.filter(search_filter)
 
@@ -65,11 +65,12 @@ class UserCRUD:
             query = query.filter(
                 or_(
                     User.default_organization_id == organization_id,
-                    User.employee_id.in_(
-                        db.query(Employee.id).filter(
-                            Employee.organization_id == organization_id
-                        ).subquery()
-                    )
+                    # Employee功能暂时注释掉，等待模型定义
+                    # User.employee_id.in_(
+                    #     db.query(Employee.id)
+                    #     .filter(Employee.organization_id == organization_id)
+                    #     .subquery()
+                    # ),
                 )
             )
 
@@ -84,12 +85,14 @@ class UserCRUD:
     def create(self, db: Session, obj_in: UserCreate) -> User:
         """创建用户"""
         from ..services.auth_service import AuthService
+
         auth_service = AuthService(db)
         return auth_service.create_user(obj_in)
 
     def update(self, db: Session, db_obj: User, obj_in: UserUpdate) -> User:
         """更新用户"""
         from ..services.auth_service import AuthService
+
         auth_service = AuthService(db)
         return auth_service.update_user(db_obj.id, obj_in)
 
@@ -116,34 +119,52 @@ class UserCRUD:
         """按角色统计用户数"""
         return db.query(func.count(User.id)).filter(User.role == role).scalar()
 
-    def get_recent_logins(self, db: Session, limit: int = 10) -> List[User]:
+    def get_recent_logins(self, db: Session, limit: int = 10) -> list[User]:
         """获取最近登录的用户"""
-        return db.query(User).filter(
-            User.last_login_at.isnot(None)
-        ).order_by(desc(User.last_login_at)).limit(limit).all()
+        return (
+            db.query(User)
+            .filter(User.last_login_at.isnot(None))
+            .order_by(desc(User.last_login_at))
+            .limit(limit)
+            .all()
+        )
 
 
 class UserSessionCRUD:
     """用户会话CRUD操作"""
 
-    def get(self, db: Session, session_id: str) -> Optional[UserSession]:
+    def get(self, db: Session, session_id: str) -> UserSession | None:
         """根据ID获取会话"""
         return db.query(UserSession).filter(UserSession.id == session_id).first()
 
-    def get_by_refresh_token(self, db: Session, refresh_token: str) -> Optional[UserSession]:
+    def get_by_refresh_token(
+        self, db: Session, refresh_token: str
+    ) -> UserSession | None:
         """根据刷新令牌获取会话"""
-        return db.query(UserSession).filter(UserSession.refresh_token == refresh_token).first()
+        return (
+            db.query(UserSession)
+            .filter(UserSession.refresh_token == refresh_token)
+            .first()
+        )
 
-    def get_user_sessions(self, db: Session, user_id: str, active_only: bool = True) -> List[UserSession]:
+    def get_user_sessions(
+        self, db: Session, user_id: str, active_only: bool = True
+    ) -> list[UserSession]:
         """获取用户的所有会话"""
         query = db.query(UserSession).filter(UserSession.user_id == user_id)
         if active_only:
             query = query.filter(UserSession.is_active == True)
         return query.order_by(desc(UserSession.created_at)).all()
 
-    def create(self, db: Session, user_id: str, refresh_token: str,
-               device_info: Optional[str] = None, ip_address: Optional[str] = None,
-               user_agent: Optional[str] = None) -> UserSession:
+    def create(
+        self,
+        db: Session,
+        user_id: str,
+        refresh_token: str,
+        device_info: str | None = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+    ) -> UserSession:
         """创建用户会话"""
         user_session = UserSession(
             user_id=user_id,
@@ -151,7 +172,7 @@ class UserSessionCRUD:
             device_info=device_info,
             ip_address=ip_address,
             user_agent=user_agent,
-            expires_at=datetime.now() + timedelta(days=7)  # 7天过期
+            expires_at=datetime.now() + timedelta(days=7),  # 7天过期
         )
         db.add(user_session)
         db.commit()
@@ -170,42 +191,53 @@ class UserSessionCRUD:
 
     def deactivate_by_user(self, db: Session, user_id: str) -> int:
         """停用用户的所有会话"""
-        count = db.query(UserSession).filter(
-            UserSession.user_id == user_id,
-            UserSession.is_active == True
-        ).update({"is_active": False})
+        count = (
+            db.query(UserSession)
+            .filter(UserSession.user_id == user_id, UserSession.is_active == True)
+            .update({"is_active": False})
+        )
         db.commit()
         return count
 
     def cleanup_expired_sessions(self, db: Session) -> int:
         """清理过期会话"""
-        count = db.query(UserSession).filter(
-            UserSession.expires_at < datetime.now(),
-            UserSession.is_active == True
-        ).update({"is_active": False})
+        count = (
+            db.query(UserSession)
+            .filter(
+                UserSession.expires_at < datetime.now(), UserSession.is_active == True
+            )
+            .update({"is_active": False})
+        )
         db.commit()
         return count
 
     def count_active_sessions(self, db: Session) -> int:
         """活跃会话总数"""
-        return db.query(func.count(UserSession.id)).filter(
-            UserSession.is_active == True
-        ).scalar()
+        return (
+            db.query(func.count(UserSession.id))
+            .filter(UserSession.is_active == True)
+            .scalar()
+        )
 
 
 class AuditLogCRUD:
     """审计日志CRUD操作"""
 
-    def get(self, db: Session, log_id: str) -> Optional[AuditLog]:
+    def get(self, db: Session, log_id: str) -> AuditLog | None:
         """根据ID获取审计日志"""
         return db.query(AuditLog).filter(AuditLog.id == log_id).first()
 
-    def get_multi(self, db: Session, skip: int = 0, limit: int = 100,
-                   user_id: Optional[str] = None,
-                   action: Optional[str] = None,
-                   resource_type: Optional[str] = None,
-                   start_date: Optional[datetime] = None,
-                   end_date: Optional[datetime] = None) -> tuple[List[AuditLog], int]:
+    def get_multi(
+        self,
+        db: Session,
+        skip: int = 0,
+        limit: int = 100,
+        user_id: str | None = None,
+        action: str | None = None,
+        resource_type: str | None = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+    ) -> tuple[list[AuditLog], int]:
         """获取审计日志列表"""
         query = db.query(AuditLog)
 
@@ -229,63 +261,91 @@ class AuditLogCRUD:
 
         return logs, total
 
-    def create(self, db: Session, user_id: str, action: str, resource_type: Optional[str] = None,
-                resource_id: Optional[str] = None, resource_name: Optional[str] = None,
-                api_endpoint: Optional[str] = None, http_method: Optional[str] = None,
-                request_params: Optional[str] = None, request_body: Optional[str] = None,
-                response_status: Optional[int] = None, response_message: Optional[str] = None,
-                ip_address: Optional[str] = None, user_agent: Optional[str] = None,
-                session_id: Optional[str] = None) -> AuditLog:
+    def create(
+        self,
+        db: Session,
+        user_id: str,
+        action: str,
+        resource_type: str | None = None,
+        resource_id: str | None = None,
+        resource_name: str | None = None,
+        api_endpoint: str | None = None,
+        http_method: str | None = None,
+        request_params: str | None = None,
+        request_body: str | None = None,
+        response_status: int | None = None,
+        response_message: str | None = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+        session_id: str | None = None,
+    ) -> AuditLog:
         """创建审计日志"""
         from ..services.auth_service import AuthService
+
         auth_service = AuthService(db)
         return auth_service.create_audit_log(
-            user_id=user_id, action=action, resource_type=resource_type,
-            resource_id=resource_id, resource_name=resource_name,
-            api_endpoint=api_endpoint, http_method=http_method,
-            request_params=request_params, request_body=request_body,
-            response_status=response_status, response_message=response_message,
-            ip_address=ip_address, user_agent=user_agent,
-            session_id=session_id
+            user_id=user_id,
+            action=action,
+            resource_type=resource_type,
+            resource_id=resource_id,
+            resource_name=resource_name,
+            api_endpoint=api_endpoint,
+            http_method=http_method,
+            request_params=request_params,
+            request_body=request_body,
+            response_status=response_status,
+            response_message=response_message,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            session_id=session_id,
         )
 
     def count(self, db: Session) -> int:
         """审计日志总数"""
         return db.query(func.count(AuditLog.id)).scalar()
 
-    def get_user_actions(self, db: Session, user_id: str, days: int = 30) -> List[str]:
+    def get_user_actions(self, db: Session, user_id: str, days: int = 30) -> list[str]:
         """获取用户最近操作"""
-        from datetime import datetime, timedelta, timezone
+        from datetime import datetime, timedelta
+
         start_date = datetime.now() - timedelta(days=days)
 
-        actions = db.query(AuditLog.action).filter(
-            AuditLog.user_id == user_id,
-            AuditLog.created_at >= start_date
-        ).distinct().all()
+        actions = (
+            db.query(AuditLog.action)
+            .filter(AuditLog.user_id == user_id, AuditLog.created_at >= start_date)
+            .distinct()
+            .all()
+        )
 
         return [action[0] for action in actions]
 
     def get_login_statistics(self, db: Session, days: int = 30) -> dict:
         """获取登录统计"""
-        from datetime import datetime, timedelta, timezone
+        from datetime import datetime, timedelta
+
         start_date = datetime.now() - timedelta(days=days)
 
         # 总登录次数
-        total_logins = db.query(func.count(AuditLog.id)).filter(
-            and_(
-                AuditLog.action == "user_login",
-                AuditLog.created_at >= start_date
+        total_logins = (
+            db.query(func.count(AuditLog.id))
+            .filter(
+                and_(AuditLog.action == "user_login", AuditLog.created_at >= start_date)
             )
-        ).scalar()
+            .scalar()
+        )
 
         # 成功登录次数
-        successful_logins = db.query(func.count(AuditLog.id)).filter(
-            and_(
-                AuditLog.action == "user_login",
-                AuditLog.response_status == 200,
-                AuditLog.created_at >= start_date
+        successful_logins = (
+            db.query(func.count(AuditLog.id))
+            .filter(
+                and_(
+                    AuditLog.action == "user_login",
+                    AuditLog.response_status == 200,
+                    AuditLog.created_at >= start_date,
+                )
             )
-        ).scalar()
+            .scalar()
+        )
 
         # 失败登录次数
         failed_logins = total_logins - successful_logins
@@ -294,5 +354,7 @@ class AuditLogCRUD:
             "total_logins": total_logins,
             "successful_logins": successful_logins,
             "failed_logins": failed_logins,
-            "success_rate": round(successful_logins / total_logins * 100, 2) if total_logins > 0 else 0
+            "success_rate": round(successful_logins / total_logins * 100, 2)
+            if total_logins > 0
+            else 0,
         }

@@ -4,55 +4,62 @@
 """
 
 import asyncio
-import logging
-import time
 import hashlib
-from typing import Dict, List, Any, Optional, Tuple, Callable
-from dataclasses import dataclass, field
-from enum import Enum
-from datetime import datetime, timedelta, timezone
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from pathlib import Path
-import threading
 import json
-import pickle
+import logging
 import os
+import pickle
+import threading
+import time
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from enum import Enum
 from functools import wraps
-import weakref
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
+
 class TaskPriority(Enum):
     """任务优先级"""
+
     LOW = 1
     NORMAL = 2
     HIGH = 3
     URGENT = 4
 
+
 class CacheStrategy(Enum):
     """缓存策略"""
+
     MEMORY_ONLY = "memory_only"
     DISK_PERSISTENT = "disk_persistent"
     DISTRIBUTED = "distributed"
 
+
 @dataclass
 class ProcessingTask:
     """处理任务"""
+
     task_id: str
     file_path: str
     priority: TaskPriority
-    processing_options: Dict[str, Any]
+    processing_options: dict[str, Any]
     created_at: datetime = field(default_factory=datetime.now)
-    started_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
     status: str = "pending"  # pending, processing, completed, failed, cancelled
-    result: Optional[Dict[str, Any]] = None
-    error: Optional[str] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    result: dict[str, Any] | None = None
+    error: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+
 
 @dataclass
 class CacheEntry:
     """缓存条目"""
+
     key: str
     value: Any
     created_at: datetime
@@ -60,7 +67,8 @@ class CacheEntry:
     access_count: int = 0
     last_accessed: datetime = field(default_factory=datetime.now)
     size_bytes: int = 0
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
+
 
 class ParallelPDFProcessor:
     """并行PDF处理器"""
@@ -69,11 +77,11 @@ class ParallelPDFProcessor:
         self.max_workers = max_workers
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
         self.task_queue = asyncio.Queue()
-        self.active_tasks: Dict[str, asyncio.Task] = {}
-        self.completed_tasks: List[ProcessingTask] = []
+        self.active_tasks: dict[str, asyncio.Task] = {}
+        self.completed_tasks: list[ProcessingTask] = []
 
         # 缓存系统
-        self.memory_cache: Dict[str, CacheEntry] = {}
+        self.memory_cache: dict[str, CacheEntry] = {}
         self.max_cache_size = max_cache_size
         self.cache_hits = 0
         self.cache_misses = 0
@@ -84,15 +92,17 @@ class ParallelPDFProcessor:
 
         # 统计信息
         self.stats = {
-            'total_tasks': 0,
-            'completed_tasks': 0,
-            'failed_tasks': 0,
-            'avg_processing_time': 0.0,
-            'cache_hit_rate': 0.0,
-            'parallel_efficiency': 0.0
+            "total_tasks": 0,
+            "completed_tasks": 0,
+            "failed_tasks": 0,
+            "avg_processing_time": 0.0,
+            "cache_hit_rate": 0.0,
+            "parallel_efficiency": 0.0,
         }
 
-    def _generate_cache_key(self, file_path: str, processing_options: Dict[str, Any]) -> str:
+    def _generate_cache_key(
+        self, file_path: str, processing_options: dict[str, Any]
+    ) -> str:
         """生成缓存键"""
         # 使用文件路径和关键处理选项生成唯一键
         file_stat = os.stat(file_path)
@@ -100,10 +110,14 @@ class ParallelPDFProcessor:
 
         # 添加关键处理选项到键中
         key_options = {
-            'prefer_ocr': processing_options.get('prefer_ocr', False),
-            'enable_chinese_optimization': processing_options.get('enable_chinese_optimization', True),
-            'confidence_threshold': processing_options.get('confidence_threshold', 0.7),
-            'enable_multi_engine_fusion': processing_options.get('enable_multi_engine_fusion', True)
+            "prefer_ocr": processing_options.get("prefer_ocr", False),
+            "enable_chinese_optimization": processing_options.get(
+                "enable_chinese_optimization", True
+            ),
+            "confidence_threshold": processing_options.get("confidence_threshold", 0.7),
+            "enable_multi_engine_fusion": processing_options.get(
+                "enable_multi_engine_fusion", True
+            ),
         }
 
         options_str = json.dumps(key_options, sort_keys=True)
@@ -112,7 +126,7 @@ class ParallelPDFProcessor:
         # 生成哈希
         return hashlib.md5(combined.encode()).hexdigest()
 
-    def _get_from_cache(self, cache_key: str) -> Optional[Any]:
+    def _get_from_cache(self, cache_key: str) -> Any | None:
         """从缓存获取数据"""
         with self._cache_lock:
             entry = self.memory_cache.get(cache_key)
@@ -134,7 +148,13 @@ class ParallelPDFProcessor:
 
             return entry.value
 
-    def _set_cache(self, cache_key: str, value: Any, ttl_minutes: int = 60, metadata: Optional[Dict[str, Any]] = None):
+    def _set_cache(
+        self,
+        cache_key: str,
+        value: Any,
+        ttl_minutes: int = 60,
+        metadata: dict[str, Any] | None = None,
+    ):
         """设置缓存数据"""
         with self._cache_lock:
             expires_at = datetime.now() + timedelta(minutes=ttl_minutes)
@@ -151,7 +171,7 @@ class ParallelPDFProcessor:
                 created_at=datetime.now(),
                 expires_at=expires_at,
                 size_bytes=size_bytes,
-                metadata=metadata or {}
+                metadata=metadata or {},
             )
 
             # 检查缓存大小限制
@@ -166,8 +186,7 @@ class ParallelPDFProcessor:
 
         # 按最后访问时间排序，删除最旧的条目
         sorted_items = sorted(
-            self.memory_cache.items(),
-            key=lambda item: item[1].last_accessed
+            self.memory_cache.items(), key=lambda item: item[1].last_accessed
         )
 
         # 删除最旧的条目直到缓存大小合适
@@ -193,8 +212,12 @@ class ParallelPDFProcessor:
 
         return priority_score + time_score + size_score
 
-    async def submit_task(self, file_path: str, processing_options: Dict[str, Any],
-                         priority: TaskPriority = TaskPriority.NORMAL) -> str:
+    async def submit_task(
+        self,
+        file_path: str,
+        processing_options: dict[str, Any],
+        priority: TaskPriority = TaskPriority.NORMAL,
+    ) -> str:
         """提交处理任务"""
         task_id = f"task_{int(time.time() * 1000)}_{os.path.basename(file_path)}"
 
@@ -202,7 +225,7 @@ class ParallelPDFProcessor:
             task_id=task_id,
             file_path=file_path,
             priority=priority,
-            processing_options=processing_options
+            processing_options=processing_options,
         )
 
         # 检查缓存
@@ -213,14 +236,14 @@ class ParallelPDFProcessor:
             task.status = "completed"
             task.result = cached_result
             task.completed_at = datetime.now()
-            task.metadata['cache_hit'] = True
+            task.metadata["cache_hit"] = True
             self.completed_tasks.append(task)
             logger.info(f"缓存命中: {file_path}")
             return task_id
 
         # 添加到队列
         await self.task_queue.put(task)
-        self.stats['total_tasks'] += 1
+        self.stats["total_tasks"] += 1
 
         logger.info(f"任务提交: {task_id}, 文件: {file_path}, 优先级: {priority.name}")
         return task_id
@@ -237,31 +260,33 @@ class ParallelPDFProcessor:
             # 执行PDF处理
             result = await enhanced_pdf_processor.process_with_enhanced_config(
                 file_path=task.file_path,
-                custom_config=None  # 使用任务中的处理选项
+                custom_config=None,  # 使用任务中的处理选项
             )
 
-            if result.get('success'):
+            if result.get("success"):
                 task.status = "completed"
                 task.result = result
                 task.completed_at = datetime.now()
 
                 # 缓存结果
-                cache_key = self._generate_cache_key(task.file_path, task.processing_options)
+                cache_key = self._generate_cache_key(
+                    task.file_path, task.processing_options
+                )
                 self._set_cache(
                     cache_key=cache_key,
                     value=result,
                     ttl_minutes=120,  # 2小时缓存
                     metadata={
-                        'task_id': task.task_id,
-                        'file_path': task.file_path,
-                        'processing_options': task.processing_options
-                    }
+                        "task_id": task.task_id,
+                        "file_path": task.file_path,
+                        "processing_options": task.processing_options,
+                    },
                 )
 
                 logger.info(f"任务完成: {task.task_id}")
             else:
                 task.status = "failed"
-                task.error = result.get('error', '处理失败')
+                task.error = result.get("error", "处理失败")
 
         except Exception as e:
             task.status = "failed"
@@ -282,11 +307,11 @@ class ParallelPDFProcessor:
 
                 # 添加到完成列表
                 self.completed_tasks.append(processed_task)
-                self.stats['completed_tasks'] += 1
+                self.stats["completed_tasks"] += 1
 
                 # 如果任务失败，增加失败计数
                 if processed_task.status == "failed":
-                    self.stats['failed_tasks'] += 1
+                    self.stats["failed_tasks"] += 1
 
                 # 更新平均处理时间
                 self._update_stats()
@@ -304,23 +329,27 @@ class ParallelPDFProcessor:
         completed_tasks = [t for t in self.completed_tasks if t.status == "completed"]
         if completed_tasks:
             total_time = sum(
-                (t.completed_at - t.started_at).total_seconds()
-                for t in completed_tasks
+                (t.completed_at - t.started_at).total_seconds() for t in completed_tasks
             )
-            self.stats['avg_processing_time'] = total_time / len(completed_tasks)
+            self.stats["avg_processing_time"] = total_time / len(completed_tasks)
 
         # 计算缓存命中率
         total_requests = self.cache_hits + self.cache_misses
         if total_requests > 0:
-            self.stats['cache_hit_rate'] = self.cache_hits / total_requests
+            self.stats["cache_hit_rate"] = self.cache_hits / total_requests
 
         # 计算并行效率
-        if self.stats['total_tasks'] > 0:
-            self.stats['parallel_efficiency'] = len(self.completed_tasks) / self.stats['total_tasks']
+        if self.stats["total_tasks"] > 0:
+            self.stats["parallel_efficiency"] = (
+                len(self.completed_tasks) / self.stats["total_tasks"]
+            )
 
-    async def process_batch(self, file_paths: List[str],
-                         processing_options: Dict[str, Any] = None,
-                         max_concurrent: Optional[int] = None) -> List[ProcessingTask]:
+    async def process_batch(
+        self,
+        file_paths: list[str],
+        processing_options: dict[str, Any] = None,
+        max_concurrent: int | None = None,
+    ) -> list[ProcessingTask]:
         """批量处理文件"""
         processing_options = processing_options or {}
         max_concurrent = max_concurrent or min(len(file_paths), self.max_workers)
@@ -336,15 +365,17 @@ class ParallelPDFProcessor:
         for task_id in tasks:
             # 轮询任务状态
             while True:
-                task = next((t for t in self.completed_tasks if t.task_id == task_id), None)
-                if task and task.status in ['completed', 'failed']:
+                task = next(
+                    (t for t in self.completed_tasks if t.task_id == task_id), None
+                )
+                if task and task.status in ["completed", "failed"]:
                     results.append(task)
                     break
                 await asyncio.sleep(0.5)
 
         return results
 
-    def get_task_status(self, task_id: str) -> Optional[ProcessingTask]:
+    def get_task_status(self, task_id: str) -> ProcessingTask | None:
         """获取任务状态"""
         # 在活跃任务中查找
         for task in self.completed_tasks:
@@ -353,40 +384,45 @@ class ParallelPDFProcessor:
 
         return None
 
-    def get_queue_status(self) -> Dict[str, Any]:
+    def get_queue_status(self) -> dict[str, Any]:
         """获取队列状态"""
         return {
-            'queue_size': self.task_queue.qsize(),
-            'active_tasks': len(self.active_tasks),
-            'completed_tasks': len(self.completed_tasks),
-            'max_workers': self.max_workers
+            "queue_size": self.task_queue.qsize(),
+            "active_tasks": len(self.active_tasks),
+            "completed_tasks": len(self.completed_tasks),
+            "max_workers": self.max_workers,
         }
 
-    def get_cache_stats(self) -> Dict[str, Any]:
+    def get_cache_stats(self) -> dict[str, Any]:
         """获取缓存统计"""
         with self._cache_lock:
             total_entries = len(self.memory_cache)
             total_size = sum(entry.size_bytes for entry in self.memory_cache.values())
 
             return {
-                'total_entries': total_entries,
-                'total_size_bytes': total_size,
-                'total_size_mb': total_size / (1024 * 1024),
-                'hit_rate': self.stats['cache_hit_rate'],
-                'max_entries': self.max_cache_size,
-                'oldest_entry': min(
-                    (entry.created_at.isoformat() for entry in self.memory_cache.values()),
-                    default=None
-                ) if self.memory_cache else None
+                "total_entries": total_entries,
+                "total_size_bytes": total_size,
+                "total_size_mb": total_size / (1024 * 1024),
+                "hit_rate": self.stats["cache_hit_rate"],
+                "max_entries": self.max_cache_size,
+                "oldest_entry": min(
+                    (
+                        entry.created_at.isoformat()
+                        for entry in self.memory_cache.values()
+                    ),
+                    default=None,
+                )
+                if self.memory_cache
+                else None,
             }
 
-    def get_performance_stats(self) -> Dict[str, Any]:
+    def get_performance_stats(self) -> dict[str, Any]:
         """获取性能统计"""
         return {
             **self.stats,
-            'queue_status': self.get_queue_status(),
-            'cache_stats': self.get_cache_stats(),
-            'timestamp': datetime.now().isoformat()
+            "queue_status": self.get_queue_status(),
+            "cache_stats": self.get_cache_stats(),
+            "timestamp": datetime.now().isoformat(),
         }
 
     def clear_cache(self):
@@ -425,9 +461,13 @@ class ParallelPDFProcessor:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.shutdown()
 
+
 # 缓存装饰器
-def cached_result(ttl_minutes: int = 60, cache_strategy: CacheStrategy = CacheStrategy.MEMORY_ONLY):
+def cached_result(
+    ttl_minutes: int = 60, cache_strategy: CacheStrategy = CacheStrategy.MEMORY_ONLY
+):
     """缓存结果装饰器"""
+
     def decorator(func: Callable):
         @wraps(func)
         async def wrapper(*args, **kwargs):
@@ -448,18 +488,19 @@ def cached_result(ttl_minutes: int = 60, cache_strategy: CacheStrategy = CacheSt
 
             # 存入缓存
             processor._set_cache(
-                cache_key=cache_key,
-                value=result,
-                ttl_minutes=ttl_minutes
+                cache_key=cache_key, value=result, ttl_minutes=ttl_minutes
             )
 
             return result
 
         return wrapper
+
     return decorator
 
+
 # 全局处理器实例
-_global_processor: Optional[ParallelPDFProcessor] = None
+_global_processor: ParallelPDFProcessor | None = None
+
 
 def get_parallel_processor() -> ParallelPDFProcessor:
     """获取全局并行处理器实例"""
@@ -471,25 +512,33 @@ def get_parallel_processor() -> ParallelPDFProcessor:
             asyncio.create_task(_global_processor.worker_loop())
     return _global_processor
 
+
 # 便捷函数
-async def process_pdf_parallel(file_path: str, processing_options: Dict[str, Any] = None,
-                          priority: TaskPriority = TaskPriority.NORMAL) -> str:
+async def process_pdf_parallel(
+    file_path: str,
+    processing_options: dict[str, Any] = None,
+    priority: TaskPriority = TaskPriority.NORMAL,
+) -> str:
     """并行处理PDF文件"""
     processor = get_parallel_processor()
     return await processor.submit_task(file_path, processing_options or {}, priority)
 
-async def process_batch_parallel(file_paths: List[str],
-                               processing_options: Dict[str, Any] = None) -> List[ProcessingTask]:
+
+async def process_batch_parallel(
+    file_paths: list[str], processing_options: dict[str, Any] = None
+) -> list[ProcessingTask]:
     """并行批量处理PDF文件"""
     processor = get_parallel_processor()
     return await processor.process_batch(file_paths, processing_options)
+
 
 def clear_pdf_cache():
     """清空PDF缓存"""
     processor = get_parallel_processor()
     processor.clear_cache()
 
-def get_processing_stats() -> Dict[str, Any]:
+
+def get_processing_stats() -> dict[str, Any]:
     """获取处理统计信息"""
     processor = get_parallel_processor()
     return processor.get_performance_stats()

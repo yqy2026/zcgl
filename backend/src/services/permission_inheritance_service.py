@@ -3,34 +3,37 @@
 支持权限的自动继承、委托和临时授权
 """
 
-from typing import List, Optional, Dict, Any, Tuple, Set
-from datetime import datetime, timedelta, timezone
-from enum import Enum
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, func
 import uuid
+from datetime import UTC, datetime
+from enum import Enum
+from typing import Any
 
-from ..models.rbac import Role, Permission, UserRoleAssignment
-from ..models.auth import User
-from ..models.organization import Organization
-from ..models.dynamic_permission import DynamicPermissionAudit
+from sqlalchemy import and_, or_
+from sqlalchemy.orm import Session
+
 from ..exceptions import BusinessLogicError
+from ..models.auth import User
+from ..models.dynamic_permission import DynamicPermissionAudit
+from ..models.organization import Organization
+from ..models.rbac import Permission, Role, UserRoleAssignment
 
 
 class InheritanceType(str, Enum):
     """继承类型"""
-    ROLE_INHERITANCE = "role_inheritance"          # 角色继承
+
+    ROLE_INHERITANCE = "role_inheritance"  # 角色继承
     ORGANIZATION_INHERITANCE = "org_inheritance"  # 组织继承
     POSITION_INHERITANCE = "position_inheritance"  # 职位继承
-    DELEGATED = "delegated"                       # 委托权限
+    DELEGATED = "delegated"  # 委托权限
 
 
 class DelegationScope(str, Enum):
     """委托范围"""
-    SPECIFIC_RESOURCE = "specific_resource"       # 特定资源
-    RESOURCE_TYPE = "resource_type"              # 资源类型
-    ORGANIZATION = "organization"                 # 组织范围
-    GLOBAL = "global"                            # 全局范围
+
+    SPECIFIC_RESOURCE = "specific_resource"  # 特定资源
+    RESOURCE_TYPE = "resource_type"  # 资源类型
+    ORGANIZATION = "organization"  # 组织范围
+    GLOBAL = "global"  # 全局范围
 
 
 class PermissionInheritanceService:
@@ -40,10 +43,8 @@ class PermissionInheritanceService:
         self.db = db
 
     def get_inherited_permissions(
-        self,
-        user_id: str,
-        inheritance_types: Optional[List[InheritanceType]] = None
-    ) -> List[Dict[str, Any]]:
+        self, user_id: str, inheritance_types: list[InheritanceType] | None = None
+    ) -> list[dict[str, Any]]:
         """
         获取用户继承的权限
 
@@ -75,7 +76,8 @@ class PermissionInheritanceService:
         # 按继承类型筛选
         if inheritance_types:
             inherited_permissions = [
-                perm for perm in inherited_permissions
+                perm
+                for perm in inherited_permissions
                 if perm.get("inheritance_type") in inheritance_types
             ]
 
@@ -88,13 +90,13 @@ class PermissionInheritanceService:
         self,
         delegator_id: str,
         delegatee_id: str,
-        permission_codes: List[str],
+        permission_codes: list[str],
         delegation_scope: DelegationScope,
-        scope_id: Optional[str] = None,
-        expires_at: Optional[datetime] = None,
-        conditions: Optional[Dict[str, Any]] = None,
-        reason: Optional[str] = None
-    ) -> Dict[str, Any]:
+        scope_id: str | None = None,
+        expires_at: datetime | None = None,
+        conditions: dict[str, Any] | None = None,
+        reason: str | None = None,
+    ) -> dict[str, Any]:
         """
         委托权限给其他用户
 
@@ -130,14 +132,17 @@ class PermissionInheritanceService:
 
         # 这里需要创建一个权限委托模型，暂时使用动态权限模型
         from ..services.dynamic_permission_service import DynamicPermissionService
+
         dynamic_service = DynamicPermissionService(self.db)
 
         delegated_permissions = []
         for permission_code in permission_codes:
             # 获取权限ID
-            permission = self.db.query(Permission).filter(
-                Permission.code == permission_code
-            ).first()
+            permission = (
+                self.db.query(Permission)
+                .filter(Permission.code == permission_code)
+                .first()
+            )
 
             if permission:
                 # 通过动态权限服务创建委托权限
@@ -151,10 +156,10 @@ class PermissionInheritanceService:
                     conditions={
                         **(conditions or {}),
                         "delegated_by": delegator_id,
-                        "delegation_id": delegation_id
+                        "delegation_id": delegation_id,
                     },
                     assigned_by=delegator_id,
-                    reason=reason or f"权限委托: {permission_code}"
+                    reason=reason or f"权限委托: {permission_code}",
                 )
                 delegated_permissions.extend(dynamic_perms)
 
@@ -166,7 +171,7 @@ class PermissionInheritanceService:
             delegation_scope=delegation_scope,
             scope_id=scope_id,
             expires_at=expires_at,
-            reason=reason
+            reason=reason,
         )
 
         return {
@@ -181,16 +186,14 @@ class PermissionInheritanceService:
                 {
                     "id": perm.id,
                     "permission_id": perm.permission_id,
-                    "expires_at": perm.expires_at
-                } for perm in delegated_permissions
-            ]
+                    "expires_at": perm.expires_at,
+                }
+                for perm in delegated_permissions
+            ],
         }
 
     def revoke_delegation(
-        self,
-        delegation_id: str,
-        revoked_by: str,
-        reason: Optional[str] = None
+        self, delegation_id: str, revoked_by: str, reason: str | None = None
     ) -> bool:
         """
         撤销权限委托
@@ -204,15 +207,22 @@ class PermissionInheritanceService:
             是否成功撤销
         """
         from ..services.dynamic_permission_service import DynamicPermissionService
+
         dynamic_service = DynamicPermissionService(self.db)
 
         # 查找所有相关的委托权限
-        delegated_permissions = self.db.query(DynamicPermissionAudit).filter(
-            and_(
-                DynamicPermissionAudit.assigned_by.contains({"delegation_id": delegation_id}),
-                DynamicPermissionAudit.action == "ASSIGN"
+        delegated_permissions = (
+            self.db.query(DynamicPermissionAudit)
+            .filter(
+                and_(
+                    DynamicPermissionAudit.assigned_by.contains(
+                        {"delegation_id": delegation_id}
+                    ),
+                    DynamicPermissionAudit.action == "ASSIGN",
+                )
             )
-        ).all()
+            .all()
+        )
 
         revoked_count = 0
         for delegation in delegated_permissions:
@@ -221,7 +231,7 @@ class PermissionInheritanceService:
                 permission_id=delegation.permission_id,
                 user_id=delegation.user_id,
                 revoked_by=revoked_by,
-                reason=reason
+                reason=reason,
             )
             if success:
                 revoked_count += 1
@@ -231,16 +241,14 @@ class PermissionInheritanceService:
             delegation_id=delegation_id,
             revoked_by=revoked_by,
             revoked_count=revoked_count,
-            reason=reason
+            reason=reason,
         )
 
         return revoked_count > 0
 
     def get_delegation_chain(
-        self,
-        user_id: str,
-        max_depth: int = 5
-    ) -> List[Dict[str, Any]]:
+        self, user_id: str, max_depth: int = 5
+    ) -> list[dict[str, Any]]:
         """
         获取权限委托链
 
@@ -254,33 +262,41 @@ class PermissionInheritanceService:
         delegation_chain = []
         visited_users = set()
 
-        def _build_chain(current_user_id: str, depth: int, path: List[str]):
+        def _build_chain(current_user_id: str, depth: int, path: list[str]):
             if depth >= max_depth or current_user_id in visited_users:
                 return
 
             visited_users.add(current_user_id)
 
             # 查找当前用户的委托权限
-            delegated_from = self.db.query(DynamicPermissionAudit).filter(
-                and_(
-                    DynamicPermissionAudit.user_id == current_user_id,
-                    DynamicPermissionAudit.action == "ASSIGN",
-                    DynamicPermissionAudit.conditions.contains({"delegated_by": {"$exists": True}})
+            delegated_from = (
+                self.db.query(DynamicPermissionAudit)
+                .filter(
+                    and_(
+                        DynamicPermissionAudit.user_id == current_user_id,
+                        DynamicPermissionAudit.action == "ASSIGN",
+                        DynamicPermissionAudit.conditions.contains(
+                            {"delegated_by": {"$exists": True}}
+                        ),
+                    )
                 )
-            ).all()
+                .all()
+            )
 
             for delegation in delegated_from:
                 delegator_id = delegation.conditions.get("delegated_by")
                 if delegator_id and delegator_id not in path:
                     new_path = path + [delegator_id]
-                    delegation_chain.append({
-                        "delegator_id": delegator_id,
-                        "delegatee_id": current_user_id,
-                        "depth": depth,
-                        "path": new_path,
-                        "permission_id": delegation.permission_id,
-                        "delegated_at": delegation.created_at
-                    })
+                    delegation_chain.append(
+                        {
+                            "delegator_id": delegator_id,
+                            "delegatee_id": current_user_id,
+                            "depth": depth,
+                            "path": new_path,
+                            "permission_id": delegation.permission_id,
+                            "delegated_at": delegation.created_at,
+                        }
+                    )
 
                     # 递归查找上级委托
                     _build_chain(delegator_id, depth + 1, new_path)
@@ -293,10 +309,8 @@ class PermissionInheritanceService:
         return delegation_chain
 
     def get_permission_inheritance_tree(
-        self,
-        user_id: str,
-        permission_code: str
-    ) -> Dict[str, Any]:
+        self, user_id: str, permission_code: str
+    ) -> dict[str, Any]:
         """
         获取特定权限的继承树
 
@@ -312,7 +326,8 @@ class PermissionInheritanceService:
 
         # 筛选指定权限的继承路径
         permission_inheritance = [
-            perm for perm in inherited_permissions
+            perm
+            for perm in inherited_permissions
             if perm.get("permission_code") == permission_code
         ]
 
@@ -321,17 +336,17 @@ class PermissionInheritanceService:
             "permission_code": permission_code,
             "inheritance_paths": permission_inheritance,
             "total_paths": len(permission_inheritance),
-            "inheritance_types": list(set([
-                perm.get("inheritance_type") for perm in permission_inheritance
-            ]))
+            "inheritance_types": list(
+                set([perm.get("inheritance_type") for perm in permission_inheritance])
+            ),
         }
 
     def calculate_effective_permissions(
         self,
         user_id: str,
         include_inherited: bool = True,
-        include_delegated: bool = True
-    ) -> List[Dict[str, Any]]:
+        include_delegated: bool = True,
+    ) -> list[dict[str, Any]]:
         """
         计算用户的有效权限
 
@@ -364,52 +379,71 @@ class PermissionInheritanceService:
 
         return unique_permissions
 
-    def _get_role_inherited_permissions(self, user_id: str) -> List[Dict[str, Any]]:
+    def _get_role_inherited_permissions(self, user_id: str) -> list[dict[str, Any]]:
         """获取角色继承权限"""
-        user_roles = self.db.query(UserRoleAssignment).filter(
-            and_(
-                UserRoleAssignment.user_id == user_id,
-                UserRoleAssignment.is_active == True,
-                or_(
-                    UserRoleAssignment.expires_at.is_(None),
-                    UserRoleAssignment.expires_at > datetime.now(timezone.utc)
+        user_roles = (
+            self.db.query(UserRoleAssignment)
+            .filter(
+                and_(
+                    UserRoleAssignment.user_id == user_id,
+                    UserRoleAssignment.is_active == True,
+                    or_(
+                        UserRoleAssignment.expires_at.is_(None),
+                        UserRoleAssignment.expires_at > datetime.now(UTC),
+                    ),
                 )
             )
-        ).all()
+            .all()
+        )
 
         inherited_permissions = []
         for role_assignment in user_roles:
-            role = self.db.query(Role).filter(Role.id == role_assignment.role_id).first()
+            role = (
+                self.db.query(Role).filter(Role.id == role_assignment.role_id).first()
+            )
             if role:
                 # 获取角色权限
-                role_permissions = self.db.query(Permission).join(
-                    # 这里需要关联角色权限表
-                    # 暂时简化处理
-                ).all()
+                role_permissions = (
+                    self.db.query(Permission)
+                    .join(
+                        # 这里需要关联角色权限表
+                        # 暂时简化处理
+                    )
+                    .all()
+                )
 
                 for permission in role_permissions:
-                    inherited_permissions.append({
-                        "user_id": user_id,
-                        "permission_id": permission.id,
-                        "permission_code": permission.code,
-                        "permission_name": permission.name,
-                        "inheritance_type": InheritanceType.ROLE_INHERITANCE,
-                        "source_id": role.id,
-                        "source_name": role.name,
-                        "inherited_at": role_assignment.assigned_at
-                    })
+                    inherited_permissions.append(
+                        {
+                            "user_id": user_id,
+                            "permission_id": permission.id,
+                            "permission_code": permission.code,
+                            "permission_name": permission.name,
+                            "inheritance_type": InheritanceType.ROLE_INHERITANCE,
+                            "source_id": role.id,
+                            "source_name": role.name,
+                            "inherited_at": role_assignment.assigned_at,
+                        }
+                    )
 
         return inherited_permissions
 
-    def _get_organization_inherited_permissions(self, user_id: str) -> List[Dict[str, Any]]:
+    def _get_organization_inherited_permissions(
+        self, user_id: str
+    ) -> list[dict[str, Any]]:
         """获取组织继承权限"""
         # 获取用户所属组织
-        user_orgs = self.db.query(Organization).join(
-            # 这里需要关联用户组织表
-            # 暂时简化处理
-        ).filter(
-            # 添加用户组织关联条件
-        ).all()
+        user_orgs = (
+            self.db.query(Organization)
+            .join(
+                # 这里需要关联用户组织表
+                # 暂时简化处理
+            )
+            .filter(
+                # 添加用户组织关联条件
+            )
+            .all()
+        )
 
         inherited_permissions = []
         for org in user_orgs:
@@ -417,34 +451,36 @@ class PermissionInheritanceService:
             org_permissions = self._get_organization_permissions(org.id)
 
             for permission in org_permissions:
-                inherited_permissions.append({
-                    "user_id": user_id,
-                    "permission_id": permission["id"],
-                    "permission_code": permission["code"],
-                    "permission_name": permission["name"],
-                    "inheritance_type": InheritanceType.ORGANIZATION_INHERITANCE,
-                    "source_id": org.id,
-                    "source_name": org.name,
-                    "inherited_at": datetime.now(timezone.utc)  # 这里应该记录实际继承时间
-                })
+                inherited_permissions.append(
+                    {
+                        "user_id": user_id,
+                        "permission_id": permission["id"],
+                        "permission_code": permission["code"],
+                        "permission_name": permission["name"],
+                        "inheritance_type": InheritanceType.ORGANIZATION_INHERITANCE,
+                        "source_id": org.id,
+                        "source_name": org.name,
+                        "inherited_at": datetime.now(UTC),  # 这里应该记录实际继承时间
+                    }
+                )
 
         return inherited_permissions
 
-    def _get_position_inherited_permissions(self, user_id: str) -> List[Dict[str, Any]]:
+    def _get_position_inherited_permissions(self, user_id: str) -> list[dict[str, Any]]:
         """获取职位继承权限"""
         # 获取用户职位信息
         # 这里需要关联员工表和职位表
         # 暂时返回空列表
         return []
 
-    def _get_delegated_permissions(self, user_id: str) -> List[Dict[str, Any]]:
+    def _get_delegated_permissions(self, user_id: str) -> list[dict[str, Any]]:
         """获取委托权限"""
         from ..services.dynamic_permission_service import DynamicPermissionService
+
         dynamic_service = DynamicPermissionService(self.db)
 
         delegated_permissions = dynamic_service.get_user_dynamic_permissions(
-            user_id=user_id,
-            include_expired=False
+            user_id=user_id, include_expired=False
         )
 
         # 筛选出委托类型的权限
@@ -459,7 +495,7 @@ class PermissionInheritanceService:
                 "source_name": "委托人",
                 "inherited_at": perm["assigned_at"],
                 "expires_at": perm["expires_at"],
-                "conditions": perm.get("conditions", {})
+                "conditions": perm.get("conditions", {}),
             }
             for perm in delegated_permissions
             if perm.get("permission_type") == "delegated"
@@ -467,19 +503,25 @@ class PermissionInheritanceService:
 
         return delegated
 
-    def _get_user_direct_permissions(self, user_id: str) -> List[Dict[str, Any]]:
+    def _get_user_direct_permissions(self, user_id: str) -> list[dict[str, Any]]:
         """获取用户直接权限"""
         # 获取用户的直接角色权限
-        user_roles = self.db.query(UserRoleAssignment).filter(
-            and_(
-                UserRoleAssignment.user_id == user_id,
-                UserRoleAssignment.is_active == True
+        user_roles = (
+            self.db.query(UserRoleAssignment)
+            .filter(
+                and_(
+                    UserRoleAssignment.user_id == user_id,
+                    UserRoleAssignment.is_active == True,
+                )
             )
-        ).all()
+            .all()
+        )
 
         direct_permissions = []
         for role_assignment in user_roles:
-            role = self.db.query(Role).filter(Role.id == role_assignment.role_id).first()
+            role = (
+                self.db.query(Role).filter(Role.id == role_assignment.role_id).first()
+            )
             if role:
                 # 这里需要获取角色的直接权限
                 # 暂时简化处理
@@ -487,17 +529,21 @@ class PermissionInheritanceService:
 
         return direct_permissions
 
-    def _get_user_effective_permissions(self, user_id: str) -> List[Dict[str, Any]]:
+    def _get_user_effective_permissions(self, user_id: str) -> list[dict[str, Any]]:
         """获取用户有效权限（用于委托验证）"""
         return self.calculate_effective_permissions(user_id)
 
-    def _get_organization_permissions(self, organization_id: str) -> List[Dict[str, Any]]:
+    def _get_organization_permissions(
+        self, organization_id: str
+    ) -> list[dict[str, Any]]:
         """获取组织权限"""
         # 这里需要实现组织权限查询
         # 暂时返回空列表
         return []
 
-    def _merge_duplicate_permissions(self, permissions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _merge_duplicate_permissions(
+        self, permissions: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
         """合并重复权限"""
         unique_permissions = {}
 
@@ -512,12 +558,14 @@ class PermissionInheritanceService:
                     if "inheritance_sources" not in existing:
                         existing["inheritance_sources"] = []
 
-                    existing["inheritance_sources"].append({
-                        "inheritance_type": perm.get("inheritance_type"),
-                        "source_id": perm.get("source_id"),
-                        "source_name": perm.get("source_name"),
-                        "inherited_at": perm.get("inherited_at")
-                    })
+                    existing["inheritance_sources"].append(
+                        {
+                            "inheritance_type": perm.get("inheritance_type"),
+                            "source_id": perm.get("source_id"),
+                            "source_name": perm.get("source_name"),
+                            "inherited_at": perm.get("inherited_at"),
+                        }
+                    )
 
         return list(unique_permissions.values())
 
@@ -525,11 +573,11 @@ class PermissionInheritanceService:
         self,
         delegator_id: str,
         delegatee_id: str,
-        permission_codes: List[str],
+        permission_codes: list[str],
         delegation_scope: DelegationScope,
-        scope_id: Optional[str],
-        expires_at: Optional[datetime],
-        reason: Optional[str]
+        scope_id: str | None,
+        expires_at: datetime | None,
+        reason: str | None,
     ):
         """记录委托审计日志"""
         audit_log = DynamicPermissionAudit(
@@ -544,9 +592,9 @@ class PermissionInheritanceService:
             conditions={
                 "delegated_permissions": permission_codes,
                 "delegation_scope": delegation_scope,
-                "expires_at": expires_at.isoformat() if expires_at else None
+                "expires_at": expires_at.isoformat() if expires_at else None,
             },
-            created_at=datetime.now(timezone.utc)
+            created_at=datetime.now(UTC),
         )
         self.db.add(audit_log)
         self.db.commit()
@@ -556,7 +604,7 @@ class PermissionInheritanceService:
         delegation_id: str,
         revoked_by: str,
         revoked_count: int,
-        reason: Optional[str]
+        reason: str | None,
     ):
         """记录委托撤销审计日志"""
         audit_log = DynamicPermissionAudit(
@@ -568,11 +616,8 @@ class PermissionInheritanceService:
             scope_id=None,
             assigned_by=revoked_by,
             reason=reason or f"撤销委托: {delegation_id}",
-            conditions={
-                "delegation_id": delegation_id,
-                "revoked_count": revoked_count
-            },
-            created_at=datetime.now(timezone.utc)
+            conditions={"delegation_id": delegation_id, "revoked_count": revoked_count},
+            created_at=datetime.now(UTC),
         )
         self.db.add(audit_log)
         self.db.commit()

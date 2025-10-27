@@ -2,9 +2,8 @@
 资产历史CRUD操作
 """
 
-from typing import List, Optional
-from sqlalchemy.orm import Session
 from sqlalchemy import desc
+from sqlalchemy.orm import Session
 
 from ..models.asset import AssetHistory
 
@@ -12,11 +11,11 @@ from ..models.asset import AssetHistory
 class HistoryCRUD:
     """资产历史CRUD操作类"""
 
-    def get(self, db: Session, id: str) -> Optional[AssetHistory]:
+    def get(self, db: Session, id: str) -> AssetHistory | None:
         """根据ID获取历史记录"""
         return db.query(AssetHistory).filter(AssetHistory.id == id).first()
 
-    def get_by_asset_id(self, db: Session, asset_id: str) -> List[AssetHistory]:
+    def get_by_asset_id(self, db: Session, asset_id: str) -> list[AssetHistory]:
         """根据资产ID获取历史记录"""
         return (
             db.query(AssetHistory)
@@ -26,11 +25,8 @@ class HistoryCRUD:
         )
 
     def get_multi(
-        self, 
-        db: Session, 
-        skip: int = 0, 
-        limit: int = 100
-    ) -> List[AssetHistory]:
+        self, db: Session, skip: int = 0, limit: int = 100
+    ) -> list[AssetHistory]:
         """获取多个历史记录"""
         return (
             db.query(AssetHistory)

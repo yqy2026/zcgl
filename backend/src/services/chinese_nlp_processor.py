@@ -3,70 +3,82 @@
 专门处理中文合同中的姓名、地址、电话等信息的提取和标准化
 """
 
-import re
-import jieba
 import logging
-from typing import Dict, List, Optional, Any
+import re
 from dataclasses import dataclass
+from typing import Any
+
+import jieba
 
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class StructuredAddress:
     """结构化地址"""
+
     original_text: str
     confidence: float = 0.0
-    country: Optional[str] = None
-    province: Optional[str] = None
-    city: Optional[str] = None
-    district: Optional[str] = None
-    street: Optional[str] = None
-    building: Optional[str] = None
-    room: Optional[str] = None
-    number: Optional[str] = None
-    postal_code: Optional[str] = None
+    country: str | None = None
+    province: str | None = None
+    city: str | None = None
+    district: str | None = None
+    street: str | None = None
+    building: str | None = None
+    room: str | None = None
+    number: str | None = None
+    postal_code: str | None = None
+
 
 @dataclass
 class StructuredName:
     """结构化姓名"""
+
     original_text: str
-    full_name: str                    # 全名
+    full_name: str  # 全名
     confidence: float = 0.0
-    family_name: Optional[str] = None    # 姓
-    given_name: Optional[str] = None     # 名
-    gender: Optional[str] = None        # 性别
+    family_name: str | None = None  # 姓
+    given_name: str | None = None  # 名
+    gender: str | None = None  # 性别
+
 
 @dataclass
 class StructuredPhone:
     """结构化电话"""
+
     original_text: str
     phone_number: str
     confidence: float = 0.0
-    phone_type: str = "mobile"     # mobile, landline, fax
+    phone_type: str = "mobile"  # mobile, landline, fax
     is_valid: bool = True
-    country_code: Optional[str] = "+86"
+    country_code: str | None = "+86"
+
 
 @dataclass
 class StructuredIDCard:
     """结构化身份证"""
+
     original_text: str
     id_number: str
     confidence: float = 0.0
-    birth_date: Optional[str] = None
-    gender: Optional[str] = None
-    region: Optional[str] = None
-    age: Optional[int] = None
+    birth_date: str | None = None
+    gender: str | None = None
+    region: str | None = None
+    age: int | None = None
     is_valid: bool = True
+
 
 @dataclass
 class ExtractionEntity:
     """提取的实体"""
+
     text: str
-    entity_type: str    # name, phone, address, id_card, amount, date, etc.
+    entity_type: str  # name, phone, address, id_card, amount, date, etc.
     start_pos: int
     end_pos: int
     confidence: float = 0.0
-    metadata: Dict[str, Any] = None
+    metadata: dict[str, Any] = None
+
 
 class ChineseNLPProcessor:
     """中文自然语言处理服务"""
@@ -75,6 +87,7 @@ class ChineseNLPProcessor:
         # 初始化jieba分词器
         try:
             import jieba
+
             jieba.initialize()
             logger.info("jieba分词器初始化成功")
         except Exception as e:
@@ -82,31 +95,158 @@ class ChineseNLPProcessor:
 
         # 常见的中文名字
         self.common_family_names = [
-            "王", "李", "张", "刘", "陈", "杨", "黄", "赵", "吴", "周",
-            "徐", "孙", "马", "朱", "胡", "郭", "何", "林", "高", "罗", "郑", "梁",
-            "谢", "宋", "唐", "许", "韩", "冯", "邓", "曹", "彭", "曾", "萧", "田", "董", "袁",
-            "潘", "于", "蒋", "蔡", "余", "杜", "叶", "程", "魏", "苏", "吕", "丁", "任", "沈",
-            "姚", "卢", "姜", "钟", "崔", "谭", "廖", "汪", "石", "金", "秦", "史", "江", "范", "方",
-            "白", "邹", "孟", "章", "尹", "常", "武", "乔", "贺", "龚", "庞", "庞", "康"
+            "王",
+            "李",
+            "张",
+            "刘",
+            "陈",
+            "杨",
+            "黄",
+            "赵",
+            "吴",
+            "周",
+            "徐",
+            "孙",
+            "马",
+            "朱",
+            "胡",
+            "郭",
+            "何",
+            "林",
+            "高",
+            "罗",
+            "郑",
+            "梁",
+            "谢",
+            "宋",
+            "唐",
+            "许",
+            "韩",
+            "冯",
+            "邓",
+            "曹",
+            "彭",
+            "曾",
+            "萧",
+            "田",
+            "董",
+            "袁",
+            "潘",
+            "于",
+            "蒋",
+            "蔡",
+            "余",
+            "杜",
+            "叶",
+            "程",
+            "魏",
+            "苏",
+            "吕",
+            "丁",
+            "任",
+            "沈",
+            "姚",
+            "卢",
+            "姜",
+            "钟",
+            "崔",
+            "谭",
+            "廖",
+            "汪",
+            "石",
+            "金",
+            "秦",
+            "史",
+            "江",
+            "范",
+            "方",
+            "白",
+            "邹",
+            "孟",
+            "章",
+            "尹",
+            "常",
+            "武",
+            "乔",
+            "贺",
+            "龚",
+            "庞",
+            "庞",
+            "康",
         ]
 
         # 常见的中文名字
         self.common_given_names = [
-            "伟", "芳", "娜", "敏", "静", "丽", "强", "磊", "洋", "勇", "艳", "杰", "洁", "文", "婷", "慧",
-            "君", "小", "晓", "燕", "军", "华", "平", "健", "梅", "红", "新", "春", "兰", "宁", "萍",
-            "桂", "阳", "蓉", "雪", "婷", "娟", "彦", "斌", "超", "雄", "飞", "龙", "玲", "琳", "玲",
-            "欢", "英", "颖", "红", "军", "成", "芳", "琴", "瑶", "霞", "卫", "萍", "婷"
+            "伟",
+            "芳",
+            "娜",
+            "敏",
+            "静",
+            "丽",
+            "强",
+            "磊",
+            "洋",
+            "勇",
+            "艳",
+            "杰",
+            "洁",
+            "文",
+            "婷",
+            "慧",
+            "君",
+            "小",
+            "晓",
+            "燕",
+            "军",
+            "华",
+            "平",
+            "健",
+            "梅",
+            "红",
+            "新",
+            "春",
+            "兰",
+            "宁",
+            "萍",
+            "桂",
+            "阳",
+            "蓉",
+            "雪",
+            "婷",
+            "娟",
+            "彦",
+            "斌",
+            "超",
+            "雄",
+            "飞",
+            "龙",
+            "玲",
+            "琳",
+            "玲",
+            "欢",
+            "英",
+            "颖",
+            "红",
+            "军",
+            "成",
+            "芳",
+            "琴",
+            "瑶",
+            "霞",
+            "卫",
+            "萍",
+            "婷",
         ]
 
-    def extract_chinese_names(self, text: str) -> List[StructuredName]:
+    def extract_chinese_names(self, text: str) -> list[StructuredName]:
         """提取中文姓名"""
         names = []
 
         # 使用正则表达式匹配中文姓名模式
         name_patterns = [
-            r'([一-龥]{2,4})(?:[先生|女士|同学|老师|师傅|师傅])?',
-            r'(?:姓|名)[：:]\s*([一-龥]{1,3})\s*([一-龥]{1,2})',
-            r'([一-龥]{1,2})\s*[、，]\s*([一-龥]{1,2})',
+            r"([一-龥]{2,4})(?:[先生|女士|同学|老师|师傅|师傅])?",
+            r"(?:姓|名)[：:]\s*([一-龥]{1,3})\s*([一-龥]{1,2})",
+            r"([一-龥]{1,2})\s*[、，]\s*([一-龥]{1,2})",
         ]
 
         for pattern in name_patterns:
@@ -122,7 +262,9 @@ class ChineseNLPProcessor:
                         else:
                             family_name = None
                             given_name = None
-                            full_name = full_name[:2] if len(full_name) > 2 else full_name
+                            full_name = (
+                                full_name[:2] if len(full_name) > 2 else full_name
+                            )
                     else:
                         continue
 
@@ -136,30 +278,32 @@ class ChineseNLPProcessor:
                     if given_name and given_name in self.common_given_names:
                         confidence += 0.05
 
-                    names.append(StructuredName(
-                        original_text=match.group(0),
-                        confidence=confidence,
-                        family_name=family_name,
-                        given_name=given_name,
-                        full_name=full_name
-                    ))
+                    names.append(
+                        StructuredName(
+                            original_text=match.group(0),
+                            confidence=confidence,
+                            family_name=family_name,
+                            given_name=given_name,
+                            full_name=full_name,
+                        )
+                    )
                 except Exception as e:
                     logger.warning(f"姓名提取失败: {e}")
                     continue
 
         return names
 
-    def extract_chinese_addresses(self, text: str) -> List[StructuredAddress]:
+    def extract_chinese_addresses(self, text: str) -> list[StructuredAddress]:
         """提取中文地址"""
         addresses = []
 
         # 中文地址正则表达式模式
         address_patterns = [
-            r'([^。，\n]*?[省市区县旗区州][：:])\s*([^，。\n]+)',
-            r'([^。，\n]*?[市辖区县][：:])\s*([^，。\n]+)',
-            r'([^。，\n]*?[路街道巷弄里胡同村][：:])\s*([^，。\n]+)',
-            r'([^。，\n]*?[号楼栋层室][：:])\s*([^，。\n]+)',
-            r'([一-龥]{2,}[省市区县][一-龥]*?[市辖区县])[^，。\n]*[路街道巷弄里胡同村][一-龥]*?\d+号',
+            r"([^。，\n]*?[省市区县旗区州][：:])\s*([^，。\n]+)",
+            r"([^。，\n]*?[市辖区县][：:])\s*([^，。\n]+)",
+            r"([^。，\n]*?[路街道巷弄里胡同村][：:])\s*([^，。\n]+)",
+            r"([^。，\n]*?[号楼栋层室][：:])\s*([^，。\n]+)",
+            r"([一-龥]{2,}[省市区县][一-龥]*?[市辖区县])[^，。\n]*[路街道巷弄里胡同村][一-龥]*?\d+号",
         ]
 
         for pattern in address_patterns:
@@ -179,72 +323,76 @@ class ChineseNLPProcessor:
 
                     confidence = 0.85
 
-                    addresses.append(StructuredAddress(
-                        original_text=match.group(0),
-                        confidence=confidence,
-                        country="中国",
-                        province=self._normalize_address_part(province),
-                        city=self._normalize_address_part(city),
-                        district=None,
-                        street=self._normalize_address_part(street),
-                        building=None,
-                        room=None,
-                        number=None,
-                        postal_code=None
-                    ))
+                    addresses.append(
+                        StructuredAddress(
+                            original_text=match.group(0),
+                            confidence=confidence,
+                            country="中国",
+                            province=self._normalize_address_part(province),
+                            city=self._normalize_address_part(city),
+                            district=None,
+                            street=self._normalize_address_part(street),
+                            building=None,
+                            room=None,
+                            number=None,
+                            postal_code=None,
+                        )
+                    )
                 except Exception as e:
                     logger.warning(f"地址提取失败: {e}")
                     continue
 
         return addresses
 
-    def extract_chinese_phones(self, text: str) -> List[StructuredPhone]:
+    def extract_chinese_phones(self, text: str) -> list[StructuredPhone]:
         """提取中文电话号码"""
         phones = []
 
         # 中国电话号码正则表达式
         phone_patterns = [
-            r'1[3-9]\d{9}',  # 13位手机号
-            r'\d{3,4}-\d{7,8}',  # 固定电话格式
-            r'[+]?\d{1,3}-\d{7,8}',  # 带国际区号
-            r'(?:手机|电话|TEL)[：:]?\s*(1[3-9]\d{9})',
-            r'(?:手机|电话|TEL)[：:]?\s*(\d{3,4}-\d{7,8})',
+            r"1[3-9]\d{9}",  # 13位手机号
+            r"\d{3,4}-\d{7,8}",  # 固定电话格式
+            r"[+]?\d{1,3}-\d{7,8}",  # 带国际区号
+            r"(?:手机|电话|TEL)[：:]?\s*(1[3-9]\d{9})",
+            r"(?:手机|电话|TEL)[：:]?\s*(\d{3,4}-\d{7,8})",
         ]
 
         for pattern in phone_patterns:
             matches = re.finditer(pattern, text, re.IGNORECASE)
             for match in matches:
                 try:
-                    phone_number = re.sub(r'[^\d]', '', match.group(0))
+                    phone_number = re.sub(r"[^\d]", "", match.group(0))
 
                     # 验证手机号
-                    if len(phone_number) == 11 and phone_number.startswith('1'):
+                    if len(phone_number) == 11 and phone_number.startswith("1"):
                         phone_type = "mobile"
                     elif len(phone_number) >= 7 and len(phone_number) <= 12:
                         phone_type = "landline"
                     else:
                         phone_type = "unknown"
 
-                    phones.append(StructuredPhone(
-                        original_text=match.group(0),
-                        confidence=0.9,
-                        phone_number=phone_number,
-                        phone_type=phone_type,
-                        is_valid=True,
-                        country_code="+86"
-                    ))
+                    phones.append(
+                        StructuredPhone(
+                            original_text=match.group(0),
+                            confidence=0.9,
+                            phone_number=phone_number,
+                            phone_type=phone_type,
+                            is_valid=True,
+                            country_code="+86",
+                        )
+                    )
                 except Exception as e:
                     logger.warning(f"电话提取失败: {e}")
                     continue
 
         return phones
 
-    def extract_chinese_id_cards(self, text: str) -> List[StructuredIDCard]:
+    def extract_chinese_id_cards(self, text: str) -> list[StructuredIDCard]:
         """提取中国身份证号码"""
         id_cards = []
 
         # 18位身份证正则表达式
-        id_pattern = r'[1-9]\d{16}[\dXx]'
+        id_pattern = r"[1-9]\d{16}[\dXx]"
 
         matches = re.finditer(id_pattern, text)
         for match in matches:
@@ -253,9 +401,9 @@ class ChineseNLPProcessor:
 
                 # 简单验证
                 is_valid = (
-                    len(id_number) == 18 and
-                    id_number[:17].isdigit() and
-                    id_number[-1] in '0123456789X'
+                    len(id_number) == 18
+                    and id_number[:17].isdigit()
+                    and id_number[-1] in "0123456789X"
                 )
 
                 # 提取出生日期
@@ -269,33 +417,35 @@ class ChineseNLPProcessor:
                 # 计算年龄
                 age = 2025 - int(birth_date[:4]) if birth_date else None
 
-                id_cards.append(StructuredIDCard(
-                    original_text=match.group(0),
-                    confidence=0.95 if is_valid else 0.6,
-                    id_number=id_number,
-                    birth_date=birth_date,
-                    gender=gender,
-                    region=None,
-                    age=age,
-                    is_valid=is_valid
-                ))
+                id_cards.append(
+                    StructuredIDCard(
+                        original_text=match.group(0),
+                        confidence=0.95 if is_valid else 0.6,
+                        id_number=id_number,
+                        birth_date=birth_date,
+                        gender=gender,
+                        region=None,
+                        age=age,
+                        is_valid=is_valid,
+                    )
+                )
             except Exception as e:
                 logger.warning(f"身份证提取失败: {e}")
                 continue
 
         return id_cards
 
-    def extract_chinese_amounts(self, text: str) -> List[ExtractionEntity]:
+    def extract_chinese_amounts(self, text: str) -> list[ExtractionEntity]:
         """提取金额信息"""
         amounts = []
 
         # 中文金额正则表达式
         amount_patterns = [
-            r'([一二三四五六七八九十百千万亿]+[零一二三四五六七八九]+元)',
-            r'￥\s*(\d+(?:\.\d{1,2})?)\s*元',
-            r'(\d+(?:\.\d{1,2})?)\s*万元',
-            r'人民币\s*(\d+(?:\.\d{1,2})?)\s*元',
-            r'([一二三四五六七八九十百千万亿]+点[一二三四五六七八九十]+元)',
+            r"([一二三四五六七八九十百千万亿]+[零一二三四五六七八九]+元)",
+            r"￥\s*(\d+(?:\.\d{1,2})?)\s*元",
+            r"(\d+(?:\.\d{1,2})?)\s*万元",
+            r"人民币\s*(\d+(?:\.\d{1,2})?)\s*元",
+            r"([一二三四五六七八九十百千万亿]+点[一二三四五六七八九十]+元)",
         ]
 
         for pattern in amount_patterns:
@@ -305,30 +455,32 @@ class ChineseNLPProcessor:
                     amount_text = match.group(0)
                     confidence = 0.8
 
-                    amounts.append(ExtractionEntity(
-                        text=amount_text,
-                        entity_type="amount",
-                        confidence=confidence,
-                        start_pos=match.start(),
-                        end_pos=match.end(),
-                        metadata={"unit": "元", "pattern": pattern}
-                    ))
+                    amounts.append(
+                        ExtractionEntity(
+                            text=amount_text,
+                            entity_type="amount",
+                            confidence=confidence,
+                            start_pos=match.start(),
+                            end_pos=match.end(),
+                            metadata={"unit": "元", "pattern": pattern},
+                        )
+                    )
                 except Exception as e:
                     logger.warning(f"金额提取失败: {e}")
                     continue
 
         return amounts
 
-    def extract_chinese_dates(self, text: str) -> List[ExtractionEntity]:
+    def extract_chinese_dates(self, text: str) -> list[ExtractionEntity]:
         """提取日期信息"""
         dates = []
 
         # 中文日期正则表达式
         date_patterns = [
-            r'(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日',
-            r'(\d{4})[/-](\d{1,2})[/-](\d{1,2})',
-            r'([二〇一二三四五六七八九]+年[二〇一二三四五六七八九]+月[二〇一二三四五六七八九]+日)',
-            r'(\d{1,2})\s*月\s*(\d{1,2})\s*日',
+            r"(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日",
+            r"(\d{4})[/-](\d{1,2})[/-](\d{1,2})",
+            r"([二〇一二三四五六七八九]+年[二〇一二三四五六七八九]+月[二〇一二三四五六七八九]+日)",
+            r"(\d{1,2})\s*月\s*(\d{1,2})\s*日",
         ]
 
         for pattern in date_patterns:
@@ -338,37 +490,59 @@ class ChineseNLPProcessor:
                     date_text = match.group(0)
                     confidence = 0.85
 
-                    dates.append(ExtractionEntity(
-                        text=date_text,
-                        entity_type="date",
-                        confidence=confidence,
-                        start_pos=match.start(),
-                        end_pos=match.end(),
-                        metadata={"format": "chinese"}
-                    ))
+                    dates.append(
+                        ExtractionEntity(
+                            text=date_text,
+                            entity_type="date",
+                            confidence=confidence,
+                            start_pos=match.start(),
+                            end_pos=match.end(),
+                            metadata={"format": "chinese"},
+                        )
+                    )
                 except Exception as e:
                     logger.warning(f"日期提取失败: {e}")
                     continue
 
         return dates
 
-    def _normalize_address_part(self, part: Optional[str]) -> Optional[str]:
+    def _normalize_address_part(self, part: str | None) -> str | None:
         """标准化地址部分"""
         if not part:
             return None
 
         # 移除空格和特殊字符
-        normalized = re.sub(r'\s+', '', part.strip())
+        normalized = re.sub(r"\s+", "", part.strip())
 
         # 标准化省份名称
         province_mapping = {
-            "北京": "北京市", "天津": "天津市", "上海": "上海市", "重庆": "重庆市",
-            "河北": "河北省", "山西": "山西省", "辽宁": "辽宁省", "吉林": "吉林省",
-            "黑龙江": "黑龙江省", "江苏": "江苏省", "浙江": "浙江省", "安徽": "安徽省",
-            "福建": "福建省", "江西": "江西省", "山东": "山东省", "河南": "河南省",
-            "湖北": "湖北省", "湖南": "湖南省", "广东": "广东省", "海南": "海南省",
-            "四川": "四川省", "贵州": "贵州省", "云南": "云南省", "陕西": "陕西省",
-            "甘肃": "甘肃省", "青海": "青海省", "台湾": "台湾省"
+            "北京": "北京市",
+            "天津": "天津市",
+            "上海": "上海市",
+            "重庆": "重庆市",
+            "河北": "河北省",
+            "山西": "山西省",
+            "辽宁": "辽宁省",
+            "吉林": "吉林省",
+            "黑龙江": "黑龙江省",
+            "江苏": "江苏省",
+            "浙江": "浙江省",
+            "安徽": "安徽省",
+            "福建": "福建省",
+            "江西": "江西省",
+            "山东": "山东省",
+            "河南": "河南省",
+            "湖北": "湖北省",
+            "湖南": "湖南省",
+            "广东": "广东省",
+            "海南": "海南省",
+            "四川": "四川省",
+            "贵州": "贵州省",
+            "云南": "云南省",
+            "陕西": "陕西省",
+            "甘肃": "甘肃省",
+            "青海": "青海省",
+            "台湾": "台湾省",
         }
 
         for short_name, full_name in province_mapping.items():
@@ -377,7 +551,7 @@ class ChineseNLPProcessor:
 
         return normalized
 
-    def process_chinese_text(self, text: str) -> Dict[str, Any]:
+    def process_chinese_text(self, text: str) -> dict[str, Any]:
         """处理中文文本，提取各种实体"""
         if not text or not text.strip():
             return {
@@ -389,7 +563,7 @@ class ChineseNLPProcessor:
                 "dates": [],
                 "entities": [],
                 "word_count": 0,
-                "language": "unknown"
+                "language": "unknown",
             }
 
         # 分词
@@ -408,15 +582,28 @@ class ChineseNLPProcessor:
         all_entities = []
         for entity_list in [names, addresses, phones, id_cards, amounts, dates]:
             for entity in entity_list:
-                if isinstance(entity, (StructuredName, StructuredAddress, StructuredPhone, StructuredIDCard)):
-                    all_entities.append(ExtractionEntity(
-                        text=entity.original_text,
-                        entity_type=entity.__class__.__name__.lower().replace("structured", ""),
-                        confidence=entity.confidence,
-                        start_pos=text.find(entity.original_text),
-                        end_pos=text.find(entity.original_text) + len(entity.original_text),
-                        metadata={"structured_data": entity}
-                    ))
+                if isinstance(
+                    entity,
+                    (
+                        StructuredName,
+                        StructuredAddress,
+                        StructuredPhone,
+                        StructuredIDCard,
+                    ),
+                ):
+                    all_entities.append(
+                        ExtractionEntity(
+                            text=entity.original_text,
+                            entity_type=entity.__class__.__name__.lower().replace(
+                                "structured", ""
+                            ),
+                            confidence=entity.confidence,
+                            start_pos=text.find(entity.original_text),
+                            end_pos=text.find(entity.original_text)
+                            + len(entity.original_text),
+                            metadata={"structured_data": entity},
+                        )
+                    )
                 else:
                     all_entities.append(entity)
 
@@ -432,13 +619,16 @@ class ChineseNLPProcessor:
             "language": "chinese",
             "text_stats": {
                 "total_length": len(text),
-                "chinese_ratio": len([c for c in text if '\u4e00' <= c <= '\u9fff']) / len(text),
-                "has_chinese": any('\u4e00' <= c <= '\u9fff' for c in text)
-            }
+                "chinese_ratio": len([c for c in text if "\u4e00" <= c <= "\u9fff"])
+                / len(text),
+                "has_chinese": any("\u4e00" <= c <= "\u9fff" for c in text),
+            },
         }
+
 
 # 全局中文NLP处理器实例
 # chinese_nlp_processor = ChineseNLPProcessor()  # 注释掉全局实例化
+
 
 # 创建全局实例的函数
 def get_chinese_nlp_processor() -> ChineseNLPProcessor:

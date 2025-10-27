@@ -3,37 +3,43 @@
 支持临时权限、条件权限和动态权限分配
 """
 
-from typing import List, Optional, Dict, Any, Tuple
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from enum import Enum
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_
+from typing import Any
 
-from ..models.rbac import Role, Permission, UserRoleAssignment
+from sqlalchemy import and_, or_
+from sqlalchemy.orm import Session
+
+from ..exceptions import BusinessLogicError
 from ..models.auth import User as AuthUser
 from ..models.dynamic_permission import (
-    DynamicPermission, TemporaryPermission, ConditionalPermission,
-    PermissionTemplate, DynamicPermissionAudit
+    ConditionalPermission,
+    DynamicPermission,
+    DynamicPermissionAudit,
+    PermissionTemplate,
+    TemporaryPermission,
 )
-from ..exceptions import BusinessLogicError
+from ..models.rbac import Permission
 
 
 class PermissionType(str, Enum):
     """权限类型"""
-    ROLE_BASED = "role_based"          # 基于角色的权限
-    USER_SPECIFIC = "user_specific"    # 用户特定权限
-    TEMPORARY = "temporary"             # 临时权限
-    CONDITIONAL = "conditional"         # 条件权限
-    TEMPLATE_BASED = "template_based"   # 基于模板的权限
+
+    ROLE_BASED = "role_based"  # 基于角色的权限
+    USER_SPECIFIC = "user_specific"  # 用户特定权限
+    TEMPORARY = "temporary"  # 临时权限
+    CONDITIONAL = "conditional"  # 条件权限
+    TEMPLATE_BASED = "template_based"  # 基于模板的权限
 
 
 class AssignmentScope(str, Enum):
     """分配范围"""
-    GLOBAL = "global"                  # 全局范围
-    ORGANIZATION = "organization"      # 组织范围
-    PROJECT = "project"               # 项目范围
-    ASSET = "asset"                   # 资产范围
-    CUSTOM = "custom"                 # 自定义范围
+
+    GLOBAL = "global"  # 全局范围
+    ORGANIZATION = "organization"  # 组织范围
+    PROJECT = "project"  # 项目范围
+    ASSET = "asset"  # 资产范围
+    CUSTOM = "custom"  # 自定义范围
 
 
 class DynamicPermissionService:
@@ -45,15 +51,15 @@ class DynamicPermissionService:
     def assign_dynamic_permission(
         self,
         user_id: str,
-        permission_ids: List[str],
+        permission_ids: list[str],
         permission_type: PermissionType,
         scope: AssignmentScope,
-        scope_id: Optional[str] = None,
-        expires_at: Optional[datetime] = None,
-        conditions: Optional[Dict[str, Any]] = None,
-        assigned_by: Optional[str] = None,
-        reason: Optional[str] = None
-    ) -> List[DynamicPermission]:
+        scope_id: str | None = None,
+        expires_at: datetime | None = None,
+        conditions: dict[str, Any] | None = None,
+        assigned_by: str | None = None,
+        reason: str | None = None,
+    ) -> list[DynamicPermission]:
         """
         分配动态权限
 
@@ -83,25 +89,31 @@ class DynamicPermissionService:
 
         for permission_id in permission_ids:
             # 验证权限存在
-            permission = self.db.query(Permission).filter(Permission.id == permission_id).first()
+            permission = (
+                self.db.query(Permission).filter(Permission.id == permission_id).first()
+            )
             if not permission:
                 raise BusinessLogicError(f"权限 {permission_id} 不存在")
 
             # 检查是否已存在相同的动态权限
-            existing = self.db.query(DynamicPermission).filter(
-                and_(
-                    DynamicPermission.user_id == user_id,
-                    DynamicPermission.permission_id == permission_id,
-                    DynamicPermission.permission_type == permission_type,
-                    DynamicPermission.scope == scope,
-                    DynamicPermission.scope_id == scope_id,
-                    DynamicPermission.is_active == True,
-                    or_(
-                        DynamicPermission.expires_at.is_(None),
-                        DynamicPermission.expires_at > datetime.now(timezone.utc)
+            existing = (
+                self.db.query(DynamicPermission)
+                .filter(
+                    and_(
+                        DynamicPermission.user_id == user_id,
+                        DynamicPermission.permission_id == permission_id,
+                        DynamicPermission.permission_type == permission_type,
+                        DynamicPermission.scope == scope,
+                        DynamicPermission.scope_id == scope_id,
+                        DynamicPermission.is_active == True,
+                        or_(
+                            DynamicPermission.expires_at.is_(None),
+                            DynamicPermission.expires_at > datetime.now(UTC),
+                        ),
                     )
                 )
-            ).first()
+                .first()
+            )
 
             if existing:
                 continue  # 跳过已存在的权限
@@ -116,8 +128,8 @@ class DynamicPermissionService:
                 expires_at=expires_at,
                 conditions=conditions,
                 assigned_by=assigned_by,
-                assigned_at=datetime.now(timezone.utc),
-                is_active=True
+                assigned_at=datetime.now(UTC),
+                is_active=True,
             )
 
             self.db.add(dynamic_permission)
@@ -133,7 +145,7 @@ class DynamicPermissionService:
                 scope_id=scope_id,
                 assigned_by=assigned_by,
                 reason=reason or "动态权限分配",
-                created_at=datetime.now(timezone.utc)
+                created_at=datetime.now(UTC),
             )
             self.db.add(audit_log)
 
@@ -143,13 +155,13 @@ class DynamicPermissionService:
     def assign_temporary_permission(
         self,
         user_id: str,
-        permission_ids: List[str],
+        permission_ids: list[str],
         duration_hours: int,
         scope: AssignmentScope = AssignmentScope.GLOBAL,
-        scope_id: Optional[str] = None,
-        assigned_by: Optional[str] = None,
-        reason: Optional[str] = None
-    ) -> List[TemporaryPermission]:
+        scope_id: str | None = None,
+        assigned_by: str | None = None,
+        reason: str | None = None,
+    ) -> list[TemporaryPermission]:
         """
         分配临时权限
 
@@ -165,26 +177,32 @@ class DynamicPermissionService:
         Returns:
             创建的临时权限列表
         """
-        expires_at = datetime.now(timezone.utc) + timedelta(hours=duration_hours)
+        expires_at = datetime.now(UTC) + timedelta(hours=duration_hours)
         created_permissions = []
 
         for permission_id in permission_ids:
             # 验证权限存在
-            permission = self.db.query(Permission).filter(Permission.id == permission_id).first()
+            permission = (
+                self.db.query(Permission).filter(Permission.id == permission_id).first()
+            )
             if not permission:
                 raise BusinessLogicError(f"权限 {permission_id} 不存在")
 
             # 检查是否已存在相同的临时权限
-            existing = self.db.query(TemporaryPermission).filter(
-                and_(
-                    TemporaryPermission.user_id == user_id,
-                    TemporaryPermission.permission_id == permission_id,
-                    TemporaryPermission.scope == scope,
-                    TemporaryPermission.scope_id == scope_id,
-                    TemporaryPermission.is_active == True,
-                    TemporaryPermission.expires_at > datetime.now(timezone.utc)
+            existing = (
+                self.db.query(TemporaryPermission)
+                .filter(
+                    and_(
+                        TemporaryPermission.user_id == user_id,
+                        TemporaryPermission.permission_id == permission_id,
+                        TemporaryPermission.scope == scope,
+                        TemporaryPermission.scope_id == scope_id,
+                        TemporaryPermission.is_active == True,
+                        TemporaryPermission.expires_at > datetime.now(UTC),
+                    )
                 )
-            ).first()
+                .first()
+            )
 
             if existing:
                 continue  # 跳过已存在的权限
@@ -197,8 +215,8 @@ class DynamicPermissionService:
                 scope_id=scope_id,
                 expires_at=expires_at,
                 assigned_by=assigned_by,
-                assigned_at=datetime.now(timezone.utc),
-                is_active=True
+                assigned_at=datetime.now(UTC),
+                is_active=True,
             )
 
             self.db.add(temporary_permission)
@@ -214,7 +232,7 @@ class DynamicPermissionService:
                 scope_id=scope_id,
                 assigned_by=assigned_by,
                 reason=reason or f"临时权限分配，有效期{duration_hours}小时",
-                created_at=datetime.now(timezone.utc)
+                created_at=datetime.now(UTC),
             )
             self.db.add(audit_log)
 
@@ -225,11 +243,11 @@ class DynamicPermissionService:
         self,
         user_id: str,
         permission_id: str,
-        conditions: Dict[str, Any],
+        conditions: dict[str, Any],
         scope: AssignmentScope = AssignmentScope.GLOBAL,
-        scope_id: Optional[str] = None,
-        assigned_by: Optional[str] = None,
-        reason: Optional[str] = None
+        scope_id: str | None = None,
+        assigned_by: str | None = None,
+        reason: str | None = None,
     ) -> ConditionalPermission:
         """
         分配条件权限
@@ -247,26 +265,32 @@ class DynamicPermissionService:
             创建的条件权限
         """
         # 验证权限存在
-        permission = self.db.query(Permission).filter(Permission.id == permission_id).first()
+        permission = (
+            self.db.query(Permission).filter(Permission.id == permission_id).first()
+        )
         if not permission:
             raise BusinessLogicError(f"权限 {permission_id} 不存在")
 
         # 检查是否已存在相同的条件权限
-        existing = self.db.query(ConditionalPermission).filter(
-            and_(
-                ConditionalPermission.user_id == user_id,
-                ConditionalPermission.permission_id == permission_id,
-                ConditionalPermission.scope == scope,
-                ConditionalPermission.scope_id == scope_id,
-                ConditionalPermission.is_active == True
+        existing = (
+            self.db.query(ConditionalPermission)
+            .filter(
+                and_(
+                    ConditionalPermission.user_id == user_id,
+                    ConditionalPermission.permission_id == permission_id,
+                    ConditionalPermission.scope == scope,
+                    ConditionalPermission.scope_id == scope_id,
+                    ConditionalPermission.is_active == True,
+                )
             )
-        ).first()
+            .first()
+        )
 
         if existing:
             # 更新现有权限的条件
             existing.conditions = conditions
             existing.assigned_by = assigned_by
-            existing.assigned_at = datetime.now(timezone.utc)
+            existing.assigned_at = datetime.now(UTC)
             conditional_permission = existing
         else:
             # 创建新的条件权限
@@ -277,8 +301,8 @@ class DynamicPermissionService:
                 scope_id=scope_id,
                 conditions=conditions,
                 assigned_by=assigned_by,
-                assigned_at=datetime.now(timezone.utc),
-                is_active=True
+                assigned_at=datetime.now(UTC),
+                is_active=True,
             )
             self.db.add(conditional_permission)
 
@@ -293,7 +317,7 @@ class DynamicPermissionService:
             assigned_by=assigned_by,
             reason=reason or "条件权限分配",
             conditions=conditions,
-            created_at=datetime.now(timezone.utc)
+            created_at=datetime.now(UTC),
         )
         self.db.add(audit_log)
 
@@ -303,9 +327,9 @@ class DynamicPermissionService:
     def revoke_dynamic_permission(
         self,
         permission_id: str,
-        user_id: Optional[str] = None,
-        revoked_by: Optional[str] = None,
-        reason: Optional[str] = None
+        user_id: str | None = None,
+        revoked_by: str | None = None,
+        reason: str | None = None,
     ) -> bool:
         """
         撤销动态权限
@@ -320,8 +344,7 @@ class DynamicPermissionService:
             是否成功撤销
         """
         query = self.db.query(DynamicPermission).filter(
-            DynamicPermission.id == permission_id,
-            DynamicPermission.is_active == True
+            DynamicPermission.id == permission_id, DynamicPermission.is_active == True
         )
 
         if user_id:
@@ -334,7 +357,7 @@ class DynamicPermissionService:
 
         for permission in permissions:
             permission.is_active = False
-            permission.revoked_at = datetime.now(timezone.utc)
+            permission.revoked_at = datetime.now(UTC)
             permission.revoked_by = revoked_by
 
             # 记录审计日志
@@ -347,7 +370,7 @@ class DynamicPermissionService:
                 scope_id=permission.scope_id,
                 assigned_by=revoked_by,
                 reason=reason or "权限撤销",
-                created_at=datetime.now(timezone.utc)
+                created_at=datetime.now(UTC),
             )
             self.db.add(audit_log)
 
@@ -358,10 +381,10 @@ class DynamicPermissionService:
         self,
         name: str,
         description: str,
-        permission_ids: List[str],
+        permission_ids: list[str],
         scope: AssignmentScope,
-        conditions: Optional[Dict[str, Any]] = None,
-        created_by: Optional[str] = None
+        conditions: dict[str, Any] | None = None,
+        created_by: str | None = None,
     ) -> PermissionTemplate:
         """
         创建权限模板
@@ -378,9 +401,9 @@ class DynamicPermissionService:
             创建的权限模板
         """
         # 验证所有权限存在
-        permissions = self.db.query(Permission).filter(
-            Permission.id.in_(permission_ids)
-        ).all()
+        permissions = (
+            self.db.query(Permission).filter(Permission.id.in_(permission_ids)).all()
+        )
 
         if len(permissions) != len(permission_ids):
             raise BusinessLogicError("部分权限不存在")
@@ -392,8 +415,8 @@ class DynamicPermissionService:
             scope=scope,
             conditions=conditions,
             created_by=created_by,
-            created_at=datetime.now(timezone.utc),
-            is_active=True
+            created_at=datetime.now(UTC),
+            is_active=True,
         )
 
         self.db.add(template)
@@ -406,11 +429,11 @@ class DynamicPermissionService:
         self,
         user_id: str,
         template_id: str,
-        scope_id: Optional[str] = None,
-        expires_at: Optional[datetime] = None,
-        assigned_by: Optional[str] = None,
-        reason: Optional[str] = None
-    ) -> List[DynamicPermission]:
+        scope_id: str | None = None,
+        expires_at: datetime | None = None,
+        assigned_by: str | None = None,
+        reason: str | None = None,
+    ) -> list[DynamicPermission]:
         """
         从模板分配权限
 
@@ -425,10 +448,14 @@ class DynamicPermissionService:
         Returns:
             创建的动态权限列表
         """
-        template = self.db.query(PermissionTemplate).filter(
-            PermissionTemplate.id == template_id,
-            PermissionTemplate.is_active == True
-        ).first()
+        template = (
+            self.db.query(PermissionTemplate)
+            .filter(
+                PermissionTemplate.id == template_id,
+                PermissionTemplate.is_active == True,
+            )
+            .first()
+        )
 
         if not template:
             raise BusinessLogicError(f"权限模板 {template_id} 不存在或已禁用")
@@ -442,16 +469,16 @@ class DynamicPermissionService:
             expires_at=expires_at,
             conditions=template.conditions,
             assigned_by=assigned_by,
-            reason=reason or f"从模板 {template.name} 分配权限"
+            reason=reason or f"从模板 {template.name} 分配权限",
         )
 
     def get_user_dynamic_permissions(
         self,
         user_id: str,
         include_expired: bool = False,
-        scope: Optional[AssignmentScope] = None,
-        scope_id: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+        scope: AssignmentScope | None = None,
+        scope_id: str | None = None,
+    ) -> list[dict[str, Any]]:
         """
         获取用户的动态权限
 
@@ -468,15 +495,14 @@ class DynamicPermissionService:
 
         # 获取动态权限
         dynamic_query = self.db.query(DynamicPermission).filter(
-            DynamicPermission.user_id == user_id,
-            DynamicPermission.is_active == True
+            DynamicPermission.user_id == user_id, DynamicPermission.is_active == True
         )
 
         if not include_expired:
             dynamic_query = dynamic_query.filter(
                 or_(
                     DynamicPermission.expires_at.is_(None),
-                    DynamicPermission.expires_at > datetime.now(timezone.utc)
+                    DynamicPermission.expires_at > datetime.now(UTC),
                 )
             )
 
@@ -488,31 +514,36 @@ class DynamicPermissionService:
 
         dynamic_perms = dynamic_query.all()
         for perm in dynamic_perms:
-            permission_info = self.db.query(Permission).filter(
-                Permission.id == perm.permission_id
-            ).first()
+            permission_info = (
+                self.db.query(Permission)
+                .filter(Permission.id == perm.permission_id)
+                .first()
+            )
 
             if permission_info:
-                permissions.append({
-                    "id": perm.id,
-                    "permission_id": perm.permission_id,
-                    "permission_name": permission_info.name,
-                    "permission_code": permission_info.code,
-                    "permission_type": perm.permission_type,
-                    "scope": perm.scope,
-                    "scope_id": perm.scope_id,
-                    "expires_at": perm.expires_at,
-                    "conditions": perm.conditions,
-                    "assigned_by": perm.assigned_by,
-                    "assigned_at": perm.assigned_at,
-                    "is_expired": perm.expires_at and perm.expires_at <= datetime.now(timezone.utc)
-                })
+                permissions.append(
+                    {
+                        "id": perm.id,
+                        "permission_id": perm.permission_id,
+                        "permission_name": permission_info.name,
+                        "permission_code": permission_info.code,
+                        "permission_type": perm.permission_type,
+                        "scope": perm.scope,
+                        "scope_id": perm.scope_id,
+                        "expires_at": perm.expires_at,
+                        "conditions": perm.conditions,
+                        "assigned_by": perm.assigned_by,
+                        "assigned_at": perm.assigned_at,
+                        "is_expired": perm.expires_at
+                        and perm.expires_at <= datetime.now(UTC),
+                    }
+                )
 
         # 获取临时权限
         temp_query = self.db.query(TemporaryPermission).filter(
             TemporaryPermission.user_id == user_id,
             TemporaryPermission.is_active == True,
-            TemporaryPermission.expires_at > datetime.now(timezone.utc)
+            TemporaryPermission.expires_at > datetime.now(UTC),
         )
 
         if scope:
@@ -523,29 +554,33 @@ class DynamicPermissionService:
 
         temp_perms = temp_query.all()
         for perm in temp_perms:
-            permission_info = self.db.query(Permission).filter(
-                Permission.id == perm.permission_id
-            ).first()
+            permission_info = (
+                self.db.query(Permission)
+                .filter(Permission.id == perm.permission_id)
+                .first()
+            )
 
             if permission_info:
-                permissions.append({
-                    "id": perm.id,
-                    "permission_id": perm.permission_id,
-                    "permission_name": permission_info.name,
-                    "permission_code": permission_info.code,
-                    "permission_type": PermissionType.TEMPORARY,
-                    "scope": perm.scope,
-                    "scope_id": perm.scope_id,
-                    "expires_at": perm.expires_at,
-                    "assigned_by": perm.assigned_by,
-                    "assigned_at": perm.assigned_at,
-                    "is_expired": False
-                })
+                permissions.append(
+                    {
+                        "id": perm.id,
+                        "permission_id": perm.permission_id,
+                        "permission_name": permission_info.name,
+                        "permission_code": permission_info.code,
+                        "permission_type": PermissionType.TEMPORARY,
+                        "scope": perm.scope,
+                        "scope_id": perm.scope_id,
+                        "expires_at": perm.expires_at,
+                        "assigned_by": perm.assigned_by,
+                        "assigned_at": perm.assigned_at,
+                        "is_expired": False,
+                    }
+                )
 
         # 获取条件权限
         cond_query = self.db.query(ConditionalPermission).filter(
             ConditionalPermission.user_id == user_id,
-            ConditionalPermission.is_active == True
+            ConditionalPermission.is_active == True,
         )
 
         if scope:
@@ -556,33 +591,34 @@ class DynamicPermissionService:
 
         cond_perms = cond_query.all()
         for perm in cond_perms:
-            permission_info = self.db.query(Permission).filter(
-                Permission.id == perm.permission_id
-            ).first()
+            permission_info = (
+                self.db.query(Permission)
+                .filter(Permission.id == perm.permission_id)
+                .first()
+            )
 
             if permission_info:
-                permissions.append({
-                    "id": perm.id,
-                    "permission_id": perm.permission_id,
-                    "permission_name": permission_info.name,
-                    "permission_code": permission_info.code,
-                    "permission_type": PermissionType.CONDITIONAL,
-                    "scope": perm.scope,
-                    "scope_id": perm.scope_id,
-                    "conditions": perm.conditions,
-                    "assigned_by": perm.assigned_by,
-                    "assigned_at": perm.assigned_at,
-                    "is_expired": False
-                })
+                permissions.append(
+                    {
+                        "id": perm.id,
+                        "permission_id": perm.permission_id,
+                        "permission_name": permission_info.name,
+                        "permission_code": permission_info.code,
+                        "permission_type": PermissionType.CONDITIONAL,
+                        "scope": perm.scope,
+                        "scope_id": perm.scope_id,
+                        "conditions": perm.conditions,
+                        "assigned_by": perm.assigned_by,
+                        "assigned_at": perm.assigned_at,
+                        "is_expired": False,
+                    }
+                )
 
         return permissions
 
     def check_dynamic_permission(
-        self,
-        user_id: str,
-        permission_code: str,
-        context: Optional[Dict[str, Any]] = None
-    ) -> Tuple[bool, str]:
+        self, user_id: str, permission_code: str, context: dict[str, Any] | None = None
+    ) -> tuple[bool, str]:
         """
         检查用户是否具有动态权限
 
@@ -595,25 +631,29 @@ class DynamicPermissionService:
             (是否有权限, 原因)
         """
         # 获取权限信息
-        permission = self.db.query(Permission).filter(
-            Permission.code == permission_code
-        ).first()
+        permission = (
+            self.db.query(Permission).filter(Permission.code == permission_code).first()
+        )
 
         if not permission:
             return False, f"权限 {permission_code} 不存在"
 
         # 检查动态权限
-        dynamic_perm = self.db.query(DynamicPermission).filter(
-            and_(
-                DynamicPermission.user_id == user_id,
-                DynamicPermission.permission_id == permission.id,
-                DynamicPermission.is_active == True,
-                or_(
-                    DynamicPermission.expires_at.is_(None),
-                    DynamicPermission.expires_at > datetime.now(timezone.utc)
+        dynamic_perm = (
+            self.db.query(DynamicPermission)
+            .filter(
+                and_(
+                    DynamicPermission.user_id == user_id,
+                    DynamicPermission.permission_id == permission.id,
+                    DynamicPermission.is_active == True,
+                    or_(
+                        DynamicPermission.expires_at.is_(None),
+                        DynamicPermission.expires_at > datetime.now(UTC),
+                    ),
                 )
             )
-        ).first()
+            .first()
+        )
 
         if dynamic_perm:
             # 检查条件权限
@@ -625,26 +665,34 @@ class DynamicPermissionService:
             return True, "具有动态权限"
 
         # 检查临时权限
-        temp_perm = self.db.query(TemporaryPermission).filter(
-            and_(
-                TemporaryPermission.user_id == user_id,
-                TemporaryPermission.permission_id == permission.id,
-                TemporaryPermission.is_active == True,
-                TemporaryPermission.expires_at > datetime.now(timezone.utc)
+        temp_perm = (
+            self.db.query(TemporaryPermission)
+            .filter(
+                and_(
+                    TemporaryPermission.user_id == user_id,
+                    TemporaryPermission.permission_id == permission.id,
+                    TemporaryPermission.is_active == True,
+                    TemporaryPermission.expires_at > datetime.now(UTC),
+                )
             )
-        ).first()
+            .first()
+        )
 
         if temp_perm:
             return True, "具有临时权限"
 
         # 检查条件权限
-        cond_perm = self.db.query(ConditionalPermission).filter(
-            and_(
-                ConditionalPermission.user_id == user_id,
-                ConditionalPermission.permission_id == permission.id,
-                ConditionalPermission.is_active == True
+        cond_perm = (
+            self.db.query(ConditionalPermission)
+            .filter(
+                and_(
+                    ConditionalPermission.user_id == user_id,
+                    ConditionalPermission.permission_id == permission.id,
+                    ConditionalPermission.is_active == True,
+                )
             )
-        ).first()
+            .first()
+        )
 
         if cond_perm:
             if cond_perm.conditions and context:
@@ -657,7 +705,9 @@ class DynamicPermissionService:
 
         return False, "没有找到相应的动态权限"
 
-    def _evaluate_conditions(self, conditions: Dict[str, Any], context: Dict[str, Any]) -> bool:
+    def _evaluate_conditions(
+        self, conditions: dict[str, Any], context: dict[str, Any]
+    ) -> bool:
         """
         评估权限条件
 
@@ -672,7 +722,7 @@ class DynamicPermissionService:
             # 时间条件
             if "time_range" in conditions:
                 time_range = conditions["time_range"]
-                current_time = datetime.now(timezone.utc).time()
+                current_time = datetime.now(UTC).time()
                 start_time = datetime.strptime(time_range["start"], "%H:%M").time()
                 end_time = datetime.strptime(time_range["end"], "%H:%M").time()
 
@@ -700,16 +750,20 @@ class DynamicPermissionService:
                     value = condition["value"]
 
                     context_value = context.get(field)
-                    if not self._evaluate_single_condition(context_value, operator, value):
+                    if not self._evaluate_single_condition(
+                        context_value, operator, value
+                    ):
                         return False
 
             return True
 
-        except Exception as e:
+        except Exception:
             # 条件评估出错，默认拒绝
             return False
 
-    def _evaluate_single_condition(self, context_value: Any, operator: str, expected_value: Any) -> bool:
+    def _evaluate_single_condition(
+        self, context_value: Any, operator: str, expected_value: Any
+    ) -> bool:
         """评估单个条件"""
         if operator == "equals":
             return context_value == expected_value
@@ -740,24 +794,32 @@ class DynamicPermissionService:
         cleaned_count = 0
 
         # 清理过期的动态权限
-        expired_dynamic = self.db.query(DynamicPermission).filter(
-            and_(
-                DynamicPermission.is_active == True,
-                DynamicPermission.expires_at <= datetime.now(timezone.utc)
+        expired_dynamic = (
+            self.db.query(DynamicPermission)
+            .filter(
+                and_(
+                    DynamicPermission.is_active == True,
+                    DynamicPermission.expires_at <= datetime.now(UTC),
+                )
             )
-        ).all()
+            .all()
+        )
 
         for perm in expired_dynamic:
             perm.is_active = False
             cleaned_count += 1
 
         # 清理过期的临时权限
-        expired_temp = self.db.query(TemporaryPermission).filter(
-            and_(
-                TemporaryPermission.is_active == True,
-                TemporaryPermission.expires_at <= datetime.now(timezone.utc)
+        expired_temp = (
+            self.db.query(TemporaryPermission)
+            .filter(
+                and_(
+                    TemporaryPermission.is_active == True,
+                    TemporaryPermission.expires_at <= datetime.now(UTC),
+                )
             )
-        ).all()
+            .all()
+        )
 
         for perm in expired_temp:
             perm.is_active = False
@@ -768,14 +830,14 @@ class DynamicPermissionService:
 
     def get_permission_audit_logs(
         self,
-        user_id: Optional[str] = None,
-        permission_id: Optional[str] = None,
-        action: Optional[str] = None,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
+        user_id: str | None = None,
+        permission_id: str | None = None,
+        action: str | None = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
         page: int = 1,
-        limit: int = 50
-    ) -> Dict[str, Any]:
+        limit: int = 50,
+    ) -> dict[str, Any]:
         """
         获取权限审计日志
 
@@ -809,14 +871,17 @@ class DynamicPermissionService:
             query = query.filter(DynamicPermissionAudit.created_at <= end_date)
 
         total = query.count()
-        logs = query.order_by(DynamicPermissionAudit.created_at.desc()).offset(
-            (page - 1) * limit
-        ).limit(limit).all()
+        logs = (
+            query.order_by(DynamicPermissionAudit.created_at.desc())
+            .offset((page - 1) * limit)
+            .limit(limit)
+            .all()
+        )
 
         return {
             "logs": logs,
             "total": total,
             "page": page,
             "limit": limit,
-            "pages": (total + limit - 1) // limit
+            "pages": (total + limit - 1) // limit,
         }

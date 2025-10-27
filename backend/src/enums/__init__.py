@@ -3,11 +3,6 @@
 统一管理所有枚举类型定义
 """
 
-from .task import TaskStatus, TaskType, ExcelConfigType, TaskPriority
+from .task import ExcelConfigType, TaskPriority, TaskStatus, TaskType
 
-__all__ = [
-    'TaskStatus',
-    'TaskType',
-    'ExcelConfigType',
-    'TaskPriority'
-]
+__all__ = ["TaskStatus", "TaskType", "ExcelConfigType", "TaskPriority"]

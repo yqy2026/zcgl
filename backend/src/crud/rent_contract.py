@@ -2,34 +2,47 @@
 租金台账相关的CRUD操作
 """
 
-from typing import Any, Dict, List, Optional, Union, Tuple
-from datetime import datetime, date, timedelta, timezone
+from datetime import date, datetime
 from decimal import Decimal
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, func, desc
-from sqlalchemy.dialects import postgresql
+from typing import Any
 
-from ..models.rent_contract import RentContract, RentTerm, RentLedger, RentContractHistory
+from sqlalchemy import and_, desc, func
+from sqlalchemy.orm import Session
+
 from ..models import Asset, Ownership
-from ..schemas.rent_contract import (
-    RentContractCreate, RentContractUpdate, RentTermCreate, RentTermUpdate,
-    RentLedgerCreate, RentLedgerUpdate, RentLedgerBatchUpdate,
-    GenerateLedgerRequest, RentStatisticsQuery
+from ..models.rent_contract import (
+    RentContract,
+    RentContractHistory,
+    RentLedger,
+    RentTerm,
 )
+from ..schemas.rent_contract import (
+    GenerateLedgerRequest,
+    RentContractCreate,
+    RentContractUpdate,
+    RentLedgerBatchUpdate,
+    RentLedgerCreate,
+    RentLedgerUpdate,
+    RentStatisticsQuery,
+    RentTermCreate,
+    RentTermUpdate,
+)
+from ..utils.model_utils import model_to_dict
 from .base import CRUDBase
-from ..utils.model_utils import model_to_dict, batch_to_dict, generate_uuid, calculate_percentage, generate_month_range
 
 
 class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUpdate]):
     """租金合同CRUD操作"""
 
-    def get_with_details(self, db: Session, id: str) -> Optional[RentContract]:
+    def get_with_details(self, db: Session, id: str) -> RentContract | None:
         """获取合同详情（包含关联的租金条款）- 优化版本使用join预加载关联数据"""
-        return db.query(RentContract).join(
-            Asset, RentContract.asset_id == Asset.id, isouter=True
-        ).join(
-            Ownership, RentContract.ownership_id == Ownership.id, isouter=True
-        ).filter(RentContract.id == id).first()
+        return (
+            db.query(RentContract)
+            .join(Asset, RentContract.asset_id == Asset.id, isouter=True)
+            .join(Ownership, RentContract.ownership_id == Ownership.id, isouter=True)
+            .filter(RentContract.id == id)
+            .first()
+        )
 
     def get_multi_with_filters(
         self,
@@ -37,22 +50,24 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
         *,
         skip: int = 0,
         limit: int = 100,
-        contract_number: Optional[str] = None,
-        tenant_name: Optional[str] = None,
-        asset_id: Optional[str] = None,
-        ownership_id: Optional[str] = None,
-        contract_status: Optional[str] = None,
-        start_date: Optional[date] = None,
-        end_date: Optional[date] = None,
-        include_relations: bool = True
-    ) -> Tuple[List[RentContract], int]:
+        contract_number: str | None = None,
+        tenant_name: str | None = None,
+        asset_id: str | None = None,
+        ownership_id: str | None = None,
+        contract_status: str | None = None,
+        start_date: date | None = None,
+        end_date: date | None = None,
+        include_relations: bool = True,
+    ) -> tuple[list[RentContract], int]:
         """获取合同列表（支持筛选）- 优化版本使用join预加载关联数据"""
         # 使用join预加载关联数据，避免N+1查询
         if include_relations:
-            query = db.query(RentContract).join(
-                Asset, RentContract.asset_id == Asset.id, isouter=True
-            ).join(
-                Ownership, RentContract.ownership_id == Ownership.id, isouter=True
+            query = (
+                db.query(RentContract)
+                .join(Asset, RentContract.asset_id == Asset.id, isouter=True)
+                .join(
+                    Ownership, RentContract.ownership_id == Ownership.id, isouter=True
+                )
             )
         else:
             query = db.query(RentContract)
@@ -77,7 +92,12 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
         total = query.count()
 
         # 分页
-        contracts = query.order_by(desc(RentContract.created_at)).offset(skip).limit(limit).all()
+        contracts = (
+            query.order_by(desc(RentContract.created_at))
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
 
         return contracts, total
 
@@ -111,7 +131,7 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
             contract_id=db_contract.id,
             change_type="创建",
             change_description="创建新合同",
-            new_data=model_to_dict(db_contract)
+            new_data=model_to_dict(db_contract),
         )
 
         return db_contract
@@ -150,7 +170,7 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
             change_type="更新",
             change_description="更新合同信息",
             old_data=old_data,
-            new_data=model_to_dict(db_obj)
+            new_data=model_to_dict(db_obj),
         )
 
         return db_obj
@@ -161,9 +181,11 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
         date_str = today.strftime("%Y%m%d")
 
         # 获取今日合同数量
-        today_count = db.query(RentContract).filter(
-            RentContract.contract_number.like(f"ZJ{date_str}%")
-        ).count()
+        today_count = (
+            db.query(RentContract)
+            .filter(RentContract.contract_number.like(f"ZJ{date_str}%"))
+            .count()
+        )
 
         return f"ZJ{date_str}{today_count + 1:03d}"
 
@@ -173,10 +195,10 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
         contract_id: str,
         change_type: str,
         change_description: str,
-        old_data: Optional[Dict] = None,
-        new_data: Optional[Dict] = None,
-        operator: Optional[str] = None,
-        operator_id: Optional[str] = None
+        old_data: dict | None = None,
+        new_data: dict | None = None,
+        operator: str | None = None,
+        operator_id: str | None = None,
     ) -> RentContractHistory:
         """创建合同历史记录"""
         history = RentContractHistory(
@@ -186,35 +208,50 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
             old_data=old_data,
             new_data=new_data,
             operator=operator,
-            operator_id=operator_id
+            operator_id=operator_id,
         )
         db.add(history)
         db.commit()
         return history
 
-    def get_by_contract_number(self, db: Session, contract_number: str) -> Optional[RentContract]:
+    def get_by_contract_number(
+        self, db: Session, contract_number: str
+    ) -> RentContract | None:
         """根据合同编号获取合同"""
-        return db.query(RentContract).filter(RentContract.contract_number == contract_number).first()
+        return (
+            db.query(RentContract)
+            .filter(RentContract.contract_number == contract_number)
+            .first()
+        )
 
 
 class CRUDRentTerm(CRUDBase[RentTerm, RentTermCreate, RentTermUpdate]):
     """租金条款CRUD操作"""
 
-    def get_by_contract(self, db: Session, contract_id: str) -> List[RentTerm]:
+    def get_by_contract(self, db: Session, contract_id: str) -> list[RentTerm]:
         """获取合同的所有租金条款"""
-        return db.query(RentTerm).filter(RentTerm.contract_id == contract_id).order_by(RentTerm.start_date).all()
+        return (
+            db.query(RentTerm)
+            .filter(RentTerm.contract_id == contract_id)
+            .order_by(RentTerm.start_date)
+            .all()
+        )
 
     def get_by_date_range(
         self, db: Session, contract_id: str, target_date: date
-    ) -> Optional[RentTerm]:
+    ) -> RentTerm | None:
         """获取指定日期有效的租金条款"""
-        return db.query(RentTerm).filter(
-            and_(
-                RentTerm.contract_id == contract_id,
-                RentTerm.start_date <= target_date,
-                RentTerm.end_date >= target_date
+        return (
+            db.query(RentTerm)
+            .filter(
+                and_(
+                    RentTerm.contract_id == contract_id,
+                    RentTerm.start_date <= target_date,
+                    RentTerm.end_date >= target_date,
+                )
             )
-        ).first()
+            .first()
+        )
 
 
 class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
@@ -226,14 +263,14 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         *,
         skip: int = 0,
         limit: int = 100,
-        contract_id: Optional[str] = None,
-        asset_id: Optional[str] = None,
-        ownership_id: Optional[str] = None,
-        year_month: Optional[str] = None,
-        payment_status: Optional[str] = None,
-        start_date: Optional[date] = None,
-        end_date: Optional[date] = None
-    ) -> Tuple[List[RentLedger], int]:
+        contract_id: str | None = None,
+        asset_id: str | None = None,
+        ownership_id: str | None = None,
+        year_month: str | None = None,
+        payment_status: str | None = None,
+        start_date: date | None = None,
+        end_date: date | None = None,
+    ) -> tuple[list[RentLedger], int]:
         """获取台账列表（支持筛选）"""
         query = db.query(RentLedger)
 
@@ -257,21 +294,35 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         total = query.count()
 
         # 分页
-        ledgers = query.order_by(desc(RentLedger.year_month), desc(RentLedger.due_date)).offset(skip).limit(limit).all()
+        ledgers = (
+            query.order_by(desc(RentLedger.year_month), desc(RentLedger.due_date))
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
 
         return ledgers, total
 
     def generate_monthly_ledger(
         self, db: Session, *, request: GenerateLedgerRequest
-    ) -> List[RentLedger]:
+    ) -> list[RentLedger]:
         """生成月度台账"""
         # 获取合同信息
-        contract = db.query(RentContract).filter(RentContract.id == request.contract_id).first()
+        contract = (
+            db.query(RentContract)
+            .filter(RentContract.id == request.contract_id)
+            .first()
+        )
         if not contract:
             raise ValueError(f"合同不存在: {request.contract_id}")
 
         # 获取租金条款
-        rent_terms = db.query(RentTerm).filter(RentTerm.contract_id == request.contract_id).order_by(RentTerm.start_date).all()
+        rent_terms = (
+            db.query(RentTerm)
+            .filter(RentTerm.contract_id == request.contract_id)
+            .order_by(RentTerm.start_date)
+            .all()
+        )
         if not rent_terms:
             raise ValueError(f"合同没有租金条款: {request.contract_id}")
 
@@ -293,12 +344,16 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         created_ledgers = []
         for year_month in months:
             # 检查是否已存在
-            existing = db.query(RentLedger).filter(
-                and_(
-                    RentLedger.contract_id == request.contract_id,
-                    RentLedger.year_month == year_month
+            existing = (
+                db.query(RentLedger)
+                .filter(
+                    and_(
+                        RentLedger.contract_id == request.contract_id,
+                        RentLedger.year_month == year_month,
+                    )
                 )
-            ).first()
+                .first()
+            )
 
             if existing:
                 continue
@@ -320,7 +375,7 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
                     "due_amount": due_amount,
                     "paid_amount": Decimal("0"),
                     "overdue_amount": Decimal("0"),
-                    "payment_status": "未支付"
+                    "payment_status": "未支付",
                 }
 
                 db_ledger = RentLedger(**ledger_data)
@@ -332,11 +387,11 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
 
     def batch_update_payment(
         self, db: Session, *, request: RentLedgerBatchUpdate
-    ) -> List[RentLedger]:
+    ) -> list[RentLedger]:
         """批量更新支付状态"""
-        ledgers = db.query(RentLedger).filter(
-            RentLedger.id.in_(request.ledger_ids)
-        ).all()
+        ledgers = (
+            db.query(RentLedger).filter(RentLedger.id.in_(request.ledger_ids)).all()
+        )
 
         for ledger in ledgers:
             old_status = ledger.payment_status
@@ -365,57 +420,74 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
 
     def get_statistics(
         self, db: Session, *, query_params: RentStatisticsQuery
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """获取统计信息"""
         # 构建基础查询
         base_query = db.query(RentLedger)
 
         # 应用筛选条件
         if query_params.start_date:
-            base_query = base_query.filter(RentLedger.due_date >= query_params.start_date)
+            base_query = base_query.filter(
+                RentLedger.due_date >= query_params.start_date
+            )
         if query_params.end_date:
             base_query = base_query.filter(RentLedger.due_date <= query_params.end_date)
         if query_params.ownership_ids:
-            base_query = base_query.filter(RentLedger.ownership_id.in_(query_params.ownership_ids))
+            base_query = base_query.filter(
+                RentLedger.ownership_id.in_(query_params.ownership_ids)
+            )
         if query_params.asset_ids:
-            base_query = base_query.filter(RentLedger.asset_id.in_(query_params.asset_ids))
+            base_query = base_query.filter(
+                RentLedger.asset_id.in_(query_params.asset_ids)
+            )
 
         # 基础统计
         stats = base_query.with_entities(
-            func.sum(RentLedger.due_amount).label('total_due'),
-            func.sum(RentLedger.paid_amount).label('total_paid'),
-            func.sum(RentLedger.overdue_amount).label('total_overdue'),
-            func.count(RentLedger.id).label('total_records')
+            func.sum(RentLedger.due_amount).label("total_due"),
+            func.sum(RentLedger.paid_amount).label("total_paid"),
+            func.sum(RentLedger.overdue_amount).label("total_overdue"),
+            func.count(RentLedger.id).label("total_records"),
         ).first()
 
         # 按状态统计
-        status_stats = base_query.with_entities(
-            RentLedger.payment_status,
-            func.count(RentLedger.id).label('count'),
-            func.sum(RentLedger.due_amount).label('due_amount'),
-            func.sum(RentLedger.paid_amount).label('paid_amount')
-        ).group_by(RentLedger.payment_status).all()
+        status_stats = (
+            base_query.with_entities(
+                RentLedger.payment_status,
+                func.count(RentLedger.id).label("count"),
+                func.sum(RentLedger.due_amount).label("due_amount"),
+                func.sum(RentLedger.paid_amount).label("paid_amount"),
+            )
+            .group_by(RentLedger.payment_status)
+            .all()
+        )
 
         # 按月份统计
-        monthly_stats = base_query.with_entities(
-            RentLedger.year_month,
-            func.sum(RentLedger.due_amount).label('due_amount'),
-            func.sum(RentLedger.paid_amount).label('paid_amount'),
-            func.sum(RentLedger.overdue_amount).label('overdue_amount')
-        ).group_by(RentLedger.year_month).order_by(RentLedger.year_month).all()
+        monthly_stats = (
+            base_query.with_entities(
+                RentLedger.year_month,
+                func.sum(RentLedger.due_amount).label("due_amount"),
+                func.sum(RentLedger.paid_amount).label("paid_amount"),
+                func.sum(RentLedger.overdue_amount).label("overdue_amount"),
+            )
+            .group_by(RentLedger.year_month)
+            .order_by(RentLedger.year_month)
+            .all()
+        )
 
         return {
             "total_due": stats.total_due or Decimal("0"),
             "total_paid": stats.total_paid or Decimal("0"),
             "total_overdue": stats.total_overdue or Decimal("0"),
             "total_records": stats.total_records or 0,
-            "payment_rate": (stats.total_paid / stats.total_due * 100) if stats.total_due else Decimal("0"),
+            "payment_rate": (stats.total_paid / stats.total_due * 100)
+            if stats.total_due
+            else Decimal("0"),
             "status_breakdown": [
                 {
                     "status": stat.payment_status,
                     "count": stat.count,
                     "due_amount": stat.due_amount or Decimal("0"),
-                    "paid_amount": stat.paid_amount or Decimal("0")
+                    "paid_amount": stat.paid_amount or Decimal("0"),
                 }
                 for stat in status_stats
             ],
@@ -424,21 +496,23 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
                     "year_month": stat.year_month,
                     "due_amount": stat.due_amount or Decimal("0"),
                     "paid_amount": stat.paid_amount or Decimal("0"),
-                    "overdue_amount": stat.overdue_amount or Decimal("0")
+                    "overdue_amount": stat.overdue_amount or Decimal("0"),
                 }
                 for stat in monthly_stats
-            ]
+            ],
         }
 
-    def _generate_month_range(self, start_month: str, end_month: str) -> List[str]:
+    def _generate_month_range(self, start_month: str, end_month: str) -> list[str]:
         """生成月份范围"""
-        start_year, start_month_num = map(int, start_month.split('-'))
-        end_year, end_month_num = map(int, end_month.split('-'))
+        start_year, start_month_num = map(int, start_month.split("-"))
+        end_year, end_month_num = map(int, end_month.split("-"))
 
         months = []
         current_year, current_month = start_year, start_month_num
 
-        while (current_year < end_year) or (current_year == end_year and current_month <= end_month_num):
+        while (current_year < end_year) or (
+            current_year == end_year and current_month <= end_month_num
+        ):
             months.append(f"{current_year}-{current_month:02d}")
             current_month += 1
             if current_month > 12:
@@ -447,7 +521,9 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
 
         return months
 
-    def _get_rent_term_for_date(self, rent_terms: List[RentTerm], target_date: date) -> Optional[RentTerm]:
+    def _get_rent_term_for_date(
+        self, rent_terms: list[RentTerm], target_date: date
+    ) -> RentTerm | None:
         """获取指定日期的租金条款"""
         for term in rent_terms:
             if term.start_date <= target_date <= term.end_date:
@@ -460,26 +536,29 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         return month_date.replace(day=1)
 
     def get_ownership_statistics(
-        self, db: Session, *, start_date: Optional[date] = None, end_date: Optional[date] = None,
-        ownership_ids: Optional[List[str]] = None
-    ) -> List[Dict[str, Any]]:
+        self,
+        db: Session,
+        *,
+        start_date: date | None = None,
+        end_date: date | None = None,
+        ownership_ids: list[str] | None = None,
+    ) -> list[dict[str, Any]]:
         """按权属方统计租金情况"""
 
         # 构建基础查询
-        query = db.query(
-            Ownership.id,
-            Ownership.name,
-            Ownership.short_name,
-            func.count(RentContract.id).label('contract_count'),
-            func.sum(RentLedger.due_amount).label('total_due_amount'),
-            func.sum(RentLedger.paid_amount).label('total_paid_amount'),
-            func.sum(RentLedger.overdue_amount).label('total_overdue_amount')
-        ).join(
-            RentContract, RentContract.ownership_id == Ownership.id
-        ).join(
-            RentLedger, RentLedger.contract_id == RentContract.id
-        ).group_by(
-            Ownership.id, Ownership.name, Ownership.short_name
+        query = (
+            db.query(
+                Ownership.id,
+                Ownership.name,
+                Ownership.short_name,
+                func.count(RentContract.id).label("contract_count"),
+                func.sum(RentLedger.due_amount).label("total_due_amount"),
+                func.sum(RentLedger.paid_amount).label("total_paid_amount"),
+                func.sum(RentLedger.overdue_amount).label("total_overdue_amount"),
+            )
+            .join(RentContract, RentContract.ownership_id == Ownership.id)
+            .join(RentLedger, RentLedger.contract_id == RentContract.id)
+            .group_by(Ownership.id, Ownership.name, Ownership.short_name)
         )
 
         # 应用筛选条件
@@ -495,45 +574,52 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         # 转换为字典格式并计算收缴率
         ownership_stats = []
         for result in results:
-            total_due = result.total_due_amount or Decimal('0')
-            total_paid = result.total_paid_amount or Decimal('0')
-            payment_rate = (total_paid / total_due * 100) if total_due > 0 else Decimal('0')
+            total_due = result.total_due_amount or Decimal("0")
+            total_paid = result.total_paid_amount or Decimal("0")
+            payment_rate = (
+                (total_paid / total_due * 100) if total_due > 0 else Decimal("0")
+            )
 
-            ownership_stats.append({
-                'ownership_id': result.id,
-                'ownership_name': result.name,
-                'ownership_short_name': result.short_name,
-                'contract_count': result.contract_count,
-                'total_due_amount': total_due,
-                'total_paid_amount': total_paid,
-                'total_overdue_amount': result.total_overdue_amount or Decimal('0'),
-                'payment_rate': payment_rate
-            })
+            ownership_stats.append(
+                {
+                    "ownership_id": result.id,
+                    "ownership_name": result.name,
+                    "ownership_short_name": result.short_name,
+                    "contract_count": result.contract_count,
+                    "total_due_amount": total_due,
+                    "total_paid_amount": total_paid,
+                    "total_overdue_amount": result.total_overdue_amount or Decimal("0"),
+                    "payment_rate": payment_rate,
+                }
+            )
 
         return ownership_stats
 
     def get_asset_statistics(
-        self, db: Session, *, start_date: Optional[date] = None, end_date: Optional[date] = None,
-        asset_ids: Optional[List[str]] = None
-    ) -> List[Dict[str, Any]]:
+        self,
+        db: Session,
+        *,
+        start_date: date | None = None,
+        end_date: date | None = None,
+        asset_ids: list[str] | None = None,
+    ) -> list[dict[str, Any]]:
         """按资产统计租金情况"""
         from ..models.asset import Asset
 
         # 构建基础查询
-        query = db.query(
-            Asset.id,
-            Asset.property_name,
-            Asset.address,
-            func.count(RentContract.id).label('contract_count'),
-            func.sum(RentLedger.due_amount).label('total_due_amount'),
-            func.sum(RentLedger.paid_amount).label('total_paid_amount'),
-            func.sum(RentLedger.overdue_amount).label('total_overdue_amount')
-        ).join(
-            RentContract, RentContract.asset_id == Asset.id
-        ).join(
-            RentLedger, RentLedger.contract_id == RentContract.id
-        ).group_by(
-            Asset.id, Asset.property_name, Asset.address
+        query = (
+            db.query(
+                Asset.id,
+                Asset.property_name,
+                Asset.address,
+                func.count(RentContract.id).label("contract_count"),
+                func.sum(RentLedger.due_amount).label("total_due_amount"),
+                func.sum(RentLedger.paid_amount).label("total_paid_amount"),
+                func.sum(RentLedger.overdue_amount).label("total_overdue_amount"),
+            )
+            .join(RentContract, RentContract.asset_id == Asset.id)
+            .join(RentLedger, RentLedger.contract_id == RentContract.id)
+            .group_by(Asset.id, Asset.property_name, Asset.address)
         )
 
         # 应用筛选条件
@@ -549,39 +635,49 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         # 转换为字典格式并计算收缴率
         asset_stats = []
         for result in results:
-            total_due = result.total_due_amount or Decimal('0')
-            total_paid = result.total_paid_amount or Decimal('0')
-            payment_rate = (total_paid / total_due * 100) if total_due > 0 else Decimal('0')
+            total_due = result.total_due_amount or Decimal("0")
+            total_paid = result.total_paid_amount or Decimal("0")
+            payment_rate = (
+                (total_paid / total_due * 100) if total_due > 0 else Decimal("0")
+            )
 
-            asset_stats.append({
-                'asset_id': result.id,
-                'asset_name': result.property_name,
-                'asset_address': result.address,
-                'contract_count': result.contract_count,
-                'total_due_amount': total_due,
-                'total_paid_amount': total_paid,
-                'total_overdue_amount': result.total_overdue_amount or Decimal('0'),
-                'payment_rate': payment_rate
-            })
+            asset_stats.append(
+                {
+                    "asset_id": result.id,
+                    "asset_name": result.property_name,
+                    "asset_address": result.address,
+                    "contract_count": result.contract_count,
+                    "total_due_amount": total_due,
+                    "total_paid_amount": total_paid,
+                    "total_overdue_amount": result.total_overdue_amount or Decimal("0"),
+                    "payment_rate": payment_rate,
+                }
+            )
 
         return asset_stats
 
     def get_monthly_statistics(
-        self, db: Session, *, year: Optional[int] = None,
-        start_month: Optional[str] = None, end_month: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+        self,
+        db: Session,
+        *,
+        year: int | None = None,
+        start_month: str | None = None,
+        end_month: str | None = None,
+    ) -> list[dict[str, Any]]:
         """获取月度租金统计"""
         # 构建基础查询
-        query = db.query(
-            RentLedger.year_month,
-            func.count(func.distinct(RentLedger.contract_id)).label('total_contracts'),
-            func.sum(RentLedger.due_amount).label('total_due_amount'),
-            func.sum(RentLedger.paid_amount).label('total_paid_amount'),
-            func.sum(RentLedger.overdue_amount).label('total_overdue_amount')
-        ).group_by(
-            RentLedger.year_month
-        ).order_by(
-            RentLedger.year_month
+        query = (
+            db.query(
+                RentLedger.year_month,
+                func.count(func.distinct(RentLedger.contract_id)).label(
+                    "total_contracts"
+                ),
+                func.sum(RentLedger.due_amount).label("total_due_amount"),
+                func.sum(RentLedger.paid_amount).label("total_paid_amount"),
+                func.sum(RentLedger.overdue_amount).label("total_overdue_amount"),
+            )
+            .group_by(RentLedger.year_month)
+            .order_by(RentLedger.year_month)
         )
 
         # 应用年份筛选
@@ -599,31 +695,39 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         # 转换为字典格式并计算收缴率
         monthly_stats = []
         for result in results:
-            total_due = result.total_due_amount or Decimal('0')
-            total_paid = result.total_paid_amount or Decimal('0')
-            payment_rate = (total_paid / total_due * 100) if total_due > 0 else Decimal('0')
+            total_due = result.total_due_amount or Decimal("0")
+            total_paid = result.total_paid_amount or Decimal("0")
+            payment_rate = (
+                (total_paid / total_due * 100) if total_due > 0 else Decimal("0")
+            )
 
-            monthly_stats.append({
-                'year_month': result.year_month,
-                'total_contracts': result.total_contracts,
-                'total_due_amount': total_due,
-                'total_paid_amount': total_paid,
-                'total_overdue_amount': result.total_overdue_amount or Decimal('0'),
-                'payment_rate': payment_rate
-            })
+            monthly_stats.append(
+                {
+                    "year_month": result.year_month,
+                    "total_contracts": result.total_contracts,
+                    "total_due_amount": total_due,
+                    "total_paid_amount": total_paid,
+                    "total_overdue_amount": result.total_overdue_amount or Decimal("0"),
+                    "payment_rate": payment_rate,
+                }
+            )
 
         return monthly_stats
 
     def get_by_contract_and_month(
         self, db: Session, contract_id: str, year_month: str
-    ) -> Optional[RentLedger]:
+    ) -> RentLedger | None:
         """根据合同和年月获取台账记录"""
-        return db.query(RentLedger).filter(
-            and_(
-                RentLedger.contract_id == contract_id,
-                RentLedger.year_month == year_month
+        return (
+            db.query(RentLedger)
+            .filter(
+                and_(
+                    RentLedger.contract_id == contract_id,
+                    RentLedger.year_month == year_month,
+                )
             )
-        ).first()
+            .first()
+        )
 
 
 # 实例化CRUD对象

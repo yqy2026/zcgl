@@ -91,7 +91,7 @@ class FastResponseOptimizer:
             },
             "response": {
                 "target_time_ms": self.config.max_response_time_ms,
-                "enable_caching": True
+                "enable_caching": True,
                 "smart_cache_keys": True
             }
         }
@@ -103,8 +103,8 @@ class FastResponseOptimizer:
 
         try:
             # 生成响应键
-            if not response_data:
-                response_key = f"{endpoint}_{hashlib.md5(str(response_data).encode('utf-8'))}"
+            if response_data:
+                response_key = f"{endpoint}_{hashlib.md5(str(response_data).encode('utf-8')).hexdigest()}"
             else:
                 response_key = f"{endpoint}_empty_response"
 
@@ -125,6 +125,7 @@ class FastResponseOptimizer:
             # 响应时间检查
             if response_key in self.cache and not compression_enabled:
                 # 缓存命中但未压缩，立即返回
+                cached_data, timestamp = self.cache[response_key]
                 if cached_data:
                     logger.info(f"快速返回缓存结果: {response_key}")
                     return {
@@ -142,7 +143,7 @@ class FastResponseOptimizer:
                     # 模拟压缩（这里简化为just remove time）
                     compressed_data = f"compressed_{response_key}"
                     compressed_size = len(str(cached_data).encode('utf-8'))
-                    self.cache[compressed_data] = compressed_data
+                    self.cache[compressed_data] = (compressed_data, datetime.now())
                     compression_time = (time.time() - start_compression) * 1000
 
                     # 更新缓存
@@ -180,23 +181,14 @@ class FastResponseOptimizer:
                 success=True,
                 status_code=200,
                 cache_hit=False,
+                error_type="",
                 request_size_bytes=len(result_data.encode('utf-8')),
-                content_length=content_length,
-                timestamp=datetime.now()
+                content_length=content_length
             )
 
             # 记录到历史
             self.request_times.append(response_time)
             self.response_history.append(metrics)
-            self.response_times.append({
-                "timestamp": datetime.now().isoformat(),
-                "response_time_ms": response_time,
-                "endpoint": endpoint,
-                "response_length": content_length,
-                "cache_hit": False,
-                "optimization_level": OptimizationLevel.GOOD,
-                "optimization_techniques": ["used_cached", "compression_enabled"]
-            })
 
             # 清理过期缓存
             self._cleanup_cache()
@@ -431,7 +423,7 @@ class FastResponseOptimizer:
         """获取单个端点的优化等级"""
         return self._get_optimization_level(response_time_ms, False)
 
-    def _should_cache_response(self, response_data: Any) -> bool:
+    def _should_cache_response(self, response_data: Any, response_key: str) -> bool:
         """判断是否应该缓存响应"""
         # 基于数据大小、类型和配置判断
         data_size = len(str(response_data)) if isinstance(response_data, str) else len(response_data.encode('utf-8'))
@@ -456,57 +448,10 @@ class FastResponseOptimizer:
             key_data.update({
                 "data_hash": hashlib.md5(str(request_data).encode('utf-8')).hexdigest()
             })
-
-        return f"{endpoint}_{key_data['data_hash']}"
-
-    async def test_optimization_system(self):
-        """测试整个优化系统"""
-        print("=== 测试优化系统功能 ===")
-        start_time = time.time()
-
-        # 测试缓存功能
-        cache_stats = self.get_cache_stats()
-        print(f"缓存状态: {cache_stats}")
-
-        # 测试性能统计
-        perf_stats = self.get_performance_summary()
-        print(f"性能统计: {perf_stats}")
-
-        # 模拟多次快速请求
-        fast_requests = []
-        for i in range(10):
-            request_data = {"test": f"test_data_{i}", "small": i * 10}
-
-            start_time = time.time()
-            result = await self.optimize_response(f"/test_endpoint", request_data)
-
-            if result["success"]:
-                response_time = (time.time() - start_time) * 1000
-                fast_requests.append(response_time)
-                print(f"快速请求 {i+1}: {response_time:.1f}ms (优化等级: {self._get_optimization_level(response_time, result['cache_hit'])})}")
-
-        end_time = time.time()
-
-        avg_time = sum(fast_requests) / len(fast_requests) if fast_requests else 0
-        print(f"快速测试平均时间: {avg_time:.1f}ms")
-
-        print("=== 快速响应测试完成 ===")
-        if avg_time <= self.config.max_response_time_ms:
-            print("[优秀] 所有响应时间都在目标范围内")
-        elif avg_time <= self.config.max_response_time_ms * 2:
-            print("[良好] 大部分响应时间达标 (< 2s)")
-        elif avg_time <= self.config.max_response_time_ms * 3:
-            print("[一般] 部分响应时间达标 (< 3s)")
+            return f"{endpoint}_{key_data['data_hash']}"
         else:
-            print("[需要改进] 平均响应时间较慢")
+            data_hash = hashlib.md5(str(request_data).encode('utf-8')).hexdigest()
+            return f"{endpoint}_{data_hash}"
 
-        print("=== 优化系统测试完成 ===")
+    
 
-async def main():
-    print("开始API响应时间优化测试...")
-
-    await test_optimization_system()
-    print("所有测试完成，优化系统已准备就绪")
-
-if __name__ == "__main__":
-    asyncio.run(main())

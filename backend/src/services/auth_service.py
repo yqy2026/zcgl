@@ -2,23 +2,18 @@
 认证服务
 """
 
-from datetime import datetime, timedelta, timezone
-from typing import Optional, List
-import secrets
-import re
-import bcrypt
 import base64
 import json
+from datetime import UTC, datetime, timedelta
+
+import bcrypt
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
-from ..models.auth import User, UserSession, AuditLog, UserRole
-from ..schemas.auth import (
-    UserCreate, UserUpdate, TokenResponse, TokenData,
-    PasswordChangeRequest, UserSessionResponse
-)
-from ..exceptions import BusinessLogicError
 from ..core.config import settings
+from ..exceptions import BusinessLogicError
+from ..models.auth import AuditLog, User, UserSession
+from ..schemas.auth import TokenResponse, UserCreate, UserSessionResponse, UserUpdate
 
 # JWT配置
 SECRET_KEY = settings.SECRET_KEY
@@ -31,7 +26,7 @@ MIN_PASSWORD_LENGTH = settings.MIN_PASSWORD_LENGTH
 MAX_FAILED_ATTEMPTS = settings.MAX_FAILED_ATTEMPTS
 LOCKOUT_DURATION_MINUTES = settings.LOCKOUT_DURATION
 # 密码过期策略（天数）
-PASSWORD_EXPIRE_DAYS = int(getattr(settings, 'PASSWORD_EXPIRE_DAYS', 90))
+PASSWORD_EXPIRE_DAYS = int(getattr(settings, "PASSWORD_EXPIRE_DAYS", 90))
 
 
 class AuthService:
@@ -45,26 +40,33 @@ class AuthService:
         try:
             # 处理base64编码的哈希
             if isinstance(hashed_password, str):
-                if hashed_password.startswith('$2b$'):
+                if hashed_password.startswith("$2b$"):
                     # 标准bcrypt哈希
-                    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+                    return bcrypt.checkpw(
+                        plain_password.encode("utf-8"), hashed_password.encode("utf-8")
+                    )
                 else:
                     # 可能是base64编码的
                     try:
                         decoded_hash = base64.b64decode(hashed_password)
-                        return bcrypt.checkpw(plain_password.encode('utf-8'), decoded_hash)
+                        return bcrypt.checkpw(
+                            plain_password.encode("utf-8"), decoded_hash
+                        )
                     except:
-                        return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+                        return bcrypt.checkpw(
+                            plain_password.encode("utf-8"),
+                            hashed_password.encode("utf-8"),
+                        )
             else:
-                return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password)
+                return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password)
         except Exception:
             return False
 
     def get_password_hash(self, password: str) -> str:
         """生成密码哈希"""
         salt = bcrypt.gensalt()
-        hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
-        return hashed.decode('utf-8')
+        hashed = bcrypt.hashpw(password.encode("utf-8"), salt)
+        return hashed.decode("utf-8")
 
     def validate_password_strength(self, password: str) -> bool:
         """验证密码强度"""
@@ -74,7 +76,7 @@ class AuthService:
         has_upper = any(c.isupper() for c in password)
         has_lower = any(c.islower() for c in password)
         has_digit = any(c.isdigit() for c in password)
-        has_special = any(c in '!@#$%^&*()_+-=[]{}|;:,.<>?' for c in password)
+        has_special = any(c in "!@#$%^&*()_+-=[]{}|;:,.<>?" for c in password)
 
         return has_upper and has_lower and has_digit and has_special
 
@@ -82,14 +84,14 @@ class AuthService:
         """检查密码是否在历史记录中"""
         if not user.password_history:
             return False
-        
+
         try:
             # 解析密码历史记录
             if isinstance(user.password_history, str):
                 password_history = json.loads(user.password_history)
             else:
                 password_history = user.password_history
-            
+
             # 检查密码是否与历史记录中的任何密码匹配
             for old_hash in password_history:
                 if self.verify_password(password, old_hash):
@@ -97,7 +99,7 @@ class AuthService:
         except (json.JSONDecodeError, TypeError):
             # 如果解析失败，返回False
             return False
-        
+
         return False
 
     def add_password_to_history(self, user: User, password_hash: str):
@@ -113,14 +115,14 @@ class AuthService:
                 password_history = []
         else:
             password_history = []
-        
+
         # 添加新密码哈希到历史记录
         password_history.append(password_hash)
-        
+
         # 保留最近10个密码
         if len(password_history) > 10:
             password_history = password_history[-10:]
-        
+
         # 更新用户记录
         user.password_history = json.dumps(password_history)
         user.password_last_changed = datetime.now()
@@ -128,9 +130,13 @@ class AuthService:
     def create_user(self, user_data: UserCreate) -> User:
         """创建用户"""
         # 检查用户名是否已存在
-        existing_user = self.db.query(User).filter(
-            (User.username == user_data.username) | (User.email == user_data.email)
-        ).first()
+        existing_user = (
+            self.db.query(User)
+            .filter(
+                (User.username == user_data.username) | (User.email == user_data.email)
+            )
+            .first()
+        )
         if existing_user:
             if existing_user.username == user_data.username:
                 raise BusinessLogicError("用户名已存在")
@@ -162,13 +168,17 @@ class AuthService:
 
         return db_user
 
-    def authenticate_user(self, username: str, password: str) -> Optional[User]:
+    def authenticate_user(self, username: str, password: str) -> User | None:
         """用户认证"""
         # 支持用户名或邮箱登录
-        user = self.db.query(User).filter(
-            (User.username == username) | (User.email == username),
-            User.is_active == True
-        ).first()
+        user = (
+            self.db.query(User)
+            .filter(
+                (User.username == username) | (User.email == username),
+                User.is_active == True,
+            )
+            .first()
+        )
 
         if not user:
             return None
@@ -185,7 +195,9 @@ class AuthService:
             # 如果达到最大失败次数，锁定账户
             if user.failed_login_attempts >= MAX_FAILED_ATTEMPTS:
                 user.is_locked = True
-                user.locked_until = datetime.now() + timedelta(minutes=LOCKOUT_DURATION_MINUTES)
+                user.locked_until = datetime.now() + timedelta(
+                    minutes=LOCKOUT_DURATION_MINUTES
+                )
 
             self.db.commit()
             return None
@@ -208,11 +220,11 @@ class AuthService:
         """检查密码是否过期"""
         if not user.password_last_changed:
             return False
-        
+
         # 如果PASSWORD_EXPIRE_DAYS为0或负数，表示不启用密码过期策略
         if PASSWORD_EXPIRE_DAYS <= 0:
             return False
-        
+
         # 计算密码过期时间
         expire_time = user.password_last_changed + timedelta(days=PASSWORD_EXPIRE_DAYS)
         return datetime.now() > expire_time
@@ -223,8 +235,8 @@ class AuthService:
         access_token_data = {
             "sub": user.id,
             "username": user.username,
-            "role": user.role.value if hasattr(user.role, 'value') else user.role,
-            "exp": datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+            "role": user.role.value if hasattr(user.role, "value") else user.role,
+            "exp": datetime.now(UTC) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
         }
         access_token = jwt.encode(access_token_data, SECRET_KEY, algorithm=ALGORITHM)
 
@@ -232,7 +244,7 @@ class AuthService:
         refresh_token_data = {
             "sub": user.id,
             "type": "refresh",
-            "exp": datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
+            "exp": datetime.now(UTC) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
         }
         refresh_token = jwt.encode(refresh_token_data, SECRET_KEY, algorithm=ALGORITHM)
 
@@ -243,16 +255,21 @@ class AuthService:
             expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         )
 
-    def create_user_session(self, user_id: str, refresh_token: str,
-                           device_info: Optional[str] = None,
-                           ip_address: Optional[str] = None,
-                           user_agent: Optional[str] = None) -> UserSession:
+    def create_user_session(
+        self,
+        user_id: str,
+        refresh_token: str,
+        device_info: str | None = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+    ) -> UserSession:
         """创建用户会话"""
         # 检查是否已有活跃会话
-        existing_sessions = self.db.query(UserSession).filter(
-            UserSession.user_id == user_id,
-            UserSession.is_active == True
-        ).all()
+        existing_sessions = (
+            self.db.query(UserSession)
+            .filter(UserSession.user_id == user_id, UserSession.is_active == True)
+            .all()
+        )
 
         # 限制并发会话数量
         if len(existing_sessions) >= settings.MAX_CONCURRENT_SESSIONS:
@@ -275,7 +292,7 @@ class AuthService:
 
         return user_session
 
-    def validate_refresh_token(self, refresh_token: str) -> Optional[UserSession]:
+    def validate_refresh_token(self, refresh_token: str) -> UserSession | None:
         """验证刷新令牌"""
         try:
             payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -288,10 +305,14 @@ class AuthService:
             return None
 
         # 查找会话
-        session = self.db.query(UserSession).filter(
-            UserSession.refresh_token == refresh_token,
-            UserSession.is_active == True
-        ).first()
+        session = (
+            self.db.query(UserSession)
+            .filter(
+                UserSession.refresh_token == refresh_token,
+                UserSession.is_active == True,
+            )
+            .first()
+        )
 
         if not session or session.is_expired():
             return None
@@ -312,9 +333,11 @@ class AuthService:
 
     def revoke_session(self, refresh_token: str) -> bool:
         """撤销会话"""
-        session = self.db.query(UserSession).filter(
-            UserSession.refresh_token == refresh_token
-        ).first()
+        session = (
+            self.db.query(UserSession)
+            .filter(UserSession.refresh_token == refresh_token)
+            .first()
+        )
 
         if session:
             session.is_active = False
@@ -325,15 +348,18 @@ class AuthService:
 
     def revoke_all_user_sessions(self, user_id: str) -> int:
         """撤销用户的所有会话"""
-        count = self.db.query(UserSession).filter(
-            UserSession.user_id == user_id,
-            UserSession.is_active == True
-        ).update({"is_active": False})
+        count = (
+            self.db.query(UserSession)
+            .filter(UserSession.user_id == user_id, UserSession.is_active == True)
+            .update({"is_active": False})
+        )
 
         self.db.commit()
         return count
 
-    def change_password(self, user: User, current_password: str, new_password: str) -> bool:
+    def change_password(
+        self, user: User, current_password: str, new_password: str
+    ) -> bool:
         """修改密码"""
         # 验证当前密码
         if not self.verify_password(current_password, user.password_hash):
@@ -350,10 +376,10 @@ class AuthService:
         # 更新密码
         new_password_hash = self.get_password_hash(new_password)
         user.password_hash = new_password_hash
-        
+
         # 将新密码添加到历史记录
         self.add_password_to_history(user, new_password_hash)
-        
+
         self.db.commit()
 
         # 撤销所有会话，强制重新登录
@@ -361,19 +387,19 @@ class AuthService:
 
         return True
 
-    def get_user_by_id(self, user_id: str) -> Optional[User]:
+    def get_user_by_id(self, user_id: str) -> User | None:
         """根据ID获取用户"""
         return self.db.query(User).filter(User.id == user_id).first()
 
-    def get_user_by_username(self, username: str) -> Optional[User]:
+    def get_user_by_username(self, username: str) -> User | None:
         """根据用户名获取用户"""
         return self.db.query(User).filter(User.username == username).first()
 
-    def get_user_by_email(self, email: str) -> Optional[User]:
+    def get_user_by_email(self, email: str) -> User | None:
         """根据邮箱获取用户"""
         return self.db.query(User).filter(User.email == email).first()
 
-    def update_user(self, user_id: str, user_data: UserUpdate) -> Optional[User]:
+    def update_user(self, user_id: str, user_data: UserUpdate) -> User | None:
         """更新用户信息"""
         user = self.get_user_by_id(user_id)
         if not user:
@@ -431,21 +457,34 @@ class AuthService:
         self.db.commit()
         return True
 
-    def get_user_sessions(self, user_id: str) -> List[UserSessionResponse]:
+    def get_user_sessions(self, user_id: str) -> list[UserSessionResponse]:
         """获取用户会话列表"""
-        sessions = self.db.query(UserSession).filter(
-            UserSession.user_id == user_id
-        ).order_by(UserSession.created_at.desc()).all()
+        sessions = (
+            self.db.query(UserSession)
+            .filter(UserSession.user_id == user_id)
+            .order_by(UserSession.created_at.desc())
+            .all()
+        )
 
         return [UserSessionResponse.from_orm(session) for session in sessions]
 
-    def create_audit_log(self, user_id: str, action: str, resource_type: Optional[str] = None,
-                        resource_id: Optional[str] = None, resource_name: Optional[str] = None,
-                        api_endpoint: Optional[str] = None, http_method: Optional[str] = None,
-                        request_params: Optional[str] = None, request_body: Optional[str] = None,
-                        response_status: Optional[int] = None, response_message: Optional[str] = None,
-                        ip_address: Optional[str] = None, user_agent: Optional[str] = None,
-                        session_id: Optional[str] = None) -> AuditLog:
+    def create_audit_log(
+        self,
+        user_id: str,
+        action: str,
+        resource_type: str | None = None,
+        resource_id: str | None = None,
+        resource_name: str | None = None,
+        api_endpoint: str | None = None,
+        http_method: str | None = None,
+        request_params: str | None = None,
+        request_body: str | None = None,
+        response_status: int | None = None,
+        response_message: str | None = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+        session_id: str | None = None,
+    ) -> AuditLog:
         """创建审计日志"""
         user = self.get_user_by_id(user_id)
         if not user:
@@ -454,7 +493,7 @@ class AuthService:
         audit_log = AuditLog(
             user_id=user_id,
             username=user.username,
-            user_role=user.role.value if hasattr(user.role, 'value') else user.role,
+            user_role=user.role.value if hasattr(user.role, "value") else user.role,
             action=action,
             resource_type=resource_type,
             resource_id=resource_id,
@@ -495,6 +534,7 @@ class AuthService:
 import asyncio
 from contextlib import asynccontextmanager
 
+
 async def cleanup_expired_tasks():
     """定期清理过期任务"""
     while True:
@@ -509,27 +549,32 @@ async def cleanup_expired_tasks():
 async def cleanup_expired_sessions():
     """定期清理过期会话"""
     from ..database import SessionLocal
+
     while True:
         try:
             # 创建数据库会话
             db = SessionLocal()
             try:
                 # 获取所有过期且活跃的会话
-                expired_sessions = db.query(UserSession).filter(
-                    UserSession.is_active == True,
-                    UserSession.expires_at < datetime.now()
-                ).all()
-                
+                expired_sessions = (
+                    db.query(UserSession)
+                    .filter(
+                        UserSession.is_active == True,
+                        UserSession.expires_at < datetime.now(),
+                    )
+                    .all()
+                )
+
                 # 撤销过期会话
                 for session in expired_sessions:
                     session.is_active = False
-                
+
                 if expired_sessions:
                     db.commit()
                     print(f"清理了 {len(expired_sessions)} 个过期会话")
             finally:
                 db.close()
-            
+
             await asyncio.sleep(3600)  # 1小时清理一次
         except Exception as e:
             print(f"清理过期会话时出错: {e}")
@@ -543,13 +588,13 @@ async def lifespan(app):
     print("🚀 启动土地物业资产管理系统（简化版）")
     print(f"📊 数据库: {settings.DATABASE_URL}")
     print(f"🔧 调试模式: {settings.DEBUG}")
-    
+
     # 启动后台清理任务
     cleanup_task = asyncio.create_task(cleanup_expired_tasks())
     cleanup_sessions_task = asyncio.create_task(cleanup_expired_sessions())
-    
+
     yield
-    
+
     # 关闭时
     cleanup_task.cancel()
     cleanup_sessions_task.cancel()

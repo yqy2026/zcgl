@@ -2,7 +2,8 @@
 性能优化API端点
 """
 
-from typing import Dict, Any
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -12,7 +13,7 @@ from ...services.performance_service import PerformanceService
 router = APIRouter()
 
 
-@router.get("/analyze", response_model=Dict[str, Any])
+@router.get("/analyze", response_model=dict[str, Any])
 def analyze_database_performance(db: Session = Depends(get_db)):
     """分析数据库性能"""
     try:
@@ -22,7 +23,7 @@ def analyze_database_performance(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"性能分析失败: {str(e)}")
 
 
-@router.post("/optimize", response_model=Dict[str, Any])
+@router.post("/optimize", response_model=dict[str, Any])
 def optimize_database(db: Session = Depends(get_db)):
     """优化数据库性能"""
     try:
@@ -32,7 +33,7 @@ def optimize_database(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"数据库优化失�? {str(e)}")
 
 
-@router.get("/statistics", response_model=Dict[str, Any])
+@router.get("/statistics", response_model=dict[str, Any])
 def get_performance_statistics(db: Session = Depends(get_db)):
     """获取性能统计信息"""
     try:
@@ -42,7 +43,7 @@ def get_performance_statistics(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"获取统计信息失败: {str(e)}")
 
 
-@router.post("/indexes", response_model=Dict[str, Any])
+@router.post("/indexes", response_model=dict[str, Any])
 def create_performance_indexes(db: Session = Depends(get_db)):
     """创建性能优化索引"""
     try:

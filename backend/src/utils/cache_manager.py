@@ -3,14 +3,13 @@
 提供Redis缓存功能，用于优化API性能
 """
 
-import json
-import pickle
 import logging
-import asyncio
-from typing import Any, Optional, Union
-from datetime import datetime, timedelta, timezone
+import pickle
+from datetime import datetime, timedelta
+from typing import Any
+
 import redis.asyncio as redis
-from fastapi import Depends
+
 
 # 设置默认配置，避免依赖外部配置文件
 class Settings:
@@ -19,15 +18,17 @@ class Settings:
     REDIS_DB = 0
     REDIS_PASSWORD = None
 
+
 settings = Settings()
 
 logger = logging.getLogger(__name__)
+
 
 class CacheManager:
     """缓存管理器 - 支持Redis和内存缓存后备"""
 
     def __init__(self):
-        self.redis_client: Optional[redis.Redis] = None
+        self.redis_client: redis.Redis | None = None
         self.memory_cache: dict = {}
         self.memory_cache_expiry: dict = {}
         self.use_memory_fallback = True
@@ -42,7 +43,7 @@ class CacheManager:
                 password=settings.REDIS_PASSWORD,
                 decode_responses=False,
                 socket_timeout=5,
-                socket_connect_timeout=5
+                socket_connect_timeout=5,
             )
             # 测试连接
             await self.redis_client.ping()
@@ -59,7 +60,8 @@ class CacheManager:
         """清理过期的内存缓存"""
         current_time = datetime.now()
         expired_keys = [
-            key for key, expiry_time in self.memory_cache_expiry.items()
+            key
+            for key, expiry_time in self.memory_cache_expiry.items()
             if expiry_time <= current_time
         ]
         for key in expired_keys:
@@ -75,7 +77,7 @@ class CacheManager:
         """生成缓存键"""
         return f"{prefix}:{key}"
 
-    async def get(self, prefix: str, key: str) -> Optional[Any]:
+    async def get(self, prefix: str, key: str) -> Any | None:
         """获取缓存数据"""
         cache_key = self._get_key(prefix, key)
 
@@ -163,8 +165,9 @@ class CacheManager:
         if self.use_memory_fallback:
             try:
                 keys_to_delete = [
-                    key for key in self.memory_cache.keys()
-                    if pattern.replace('*', '') in key
+                    key
+                    for key in self.memory_cache.keys()
+                    if pattern.replace("*", "") in key
                 ]
                 for key in keys_to_delete:
                     self.memory_cache.pop(key, None)
@@ -175,18 +178,24 @@ class CacheManager:
 
         return deleted_count
 
+
 # 全局缓存管理器实例
 cache_manager = CacheManager()
+
 
 async def get_cache_manager() -> CacheManager:
     """获取缓存管理器依赖"""
     return cache_manager
 
+
 def cache_key_builder(func_name: str, **kwargs) -> str:
     """构建缓存键"""
     # 过滤掉不需要包含在缓存键中的参数
-    filtered_kwargs = {k: v for k, v in kwargs.items()
-                      if k not in ['db', 'current_user', 'skip', 'limit']}
+    filtered_kwargs = {
+        k: v
+        for k, v in kwargs.items()
+        if k not in ["db", "current_user", "skip", "limit"]
+    }
 
     # 将参数转换为字符串
     key_parts = [func_name]
@@ -194,6 +203,7 @@ def cache_key_builder(func_name: str, **kwargs) -> str:
         key_parts.append(f"{k}={v}")
 
     return ":".join(key_parts)
+
 
 class CacheDecorator:
     """缓存装饰器"""
@@ -223,14 +233,17 @@ class CacheDecorator:
 
         return wrapper
 
+
 # 常用缓存装饰器
 def cache_statistics(expire: int = 1800):  # 30分钟
     """统计数据缓存"""
     return CacheDecorator("statistics", expire)
 
+
 def cache_assets(expire: int = 3600):  # 1小时
     """资产数据缓存"""
     return CacheDecorator("assets", expire)
+
 
 def cache_dictionary(expire: int = 7200):  # 2小时
     """字典数据缓存"""

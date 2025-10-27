@@ -3,7 +3,6 @@ API路径常量定义
 统一API命名规范，使用 kebab-case 和 snake_case
 """
 
-from typing import Dict, Callable
 
 # 基础路径常量
 class BasePaths:
@@ -11,6 +10,7 @@ class BasePaths:
     API_V2 = "/api/v2"  # 预留
     HEALTH = "/api/v1/health"
     ROOT = "/api/v1"
+
 
 # 资产管理API路径
 class AssetPaths:
@@ -29,6 +29,7 @@ class AssetPaths:
     HISTORY = "/assets/{asset_id}/history"
     FIELD_HISTORY = "/assets/{asset_id}/field-history/{field}"
 
+
 # PDF导入API路径 (统一使用连字符)
 class PDFImportPaths:
     BASE = "/pdf-import"
@@ -44,6 +45,7 @@ class PDFImportPaths:
     CORRECTIONS = "/pdf-import/corrections"
     EXPORT = "/pdf-import/export"
 
+
 # 认证管理API路径
 class AuthPaths:
     BASE = "/auth"
@@ -55,6 +57,7 @@ class AuthPaths:
     PASSWORD_CHANGE = "/auth/password/change"
     PASSWORD_RESET = "/auth/password/reset"
     PASSWORD_CONFIRM = "/auth/password/confirm"
+
 
 # 用户管理API路径
 class UserPaths:
@@ -69,6 +72,7 @@ class UserPaths:
     ROLES = "/users/{user_id}/roles"
     PERMISSIONS = "/users/{user_id}/permissions"
 
+
 # 角色管理API路径
 class RolePaths:
     BASE = "/roles"
@@ -79,6 +83,7 @@ class RolePaths:
     DELETE = "/roles/{role_id}"
     PERMISSIONS = "/roles/{role_id}/permissions"
     USERS = "/roles/{role_id}/users"
+
 
 # 组织架构API路径
 class OrganizationPaths:
@@ -92,27 +97,29 @@ class OrganizationPaths:
     USERS = "/organizations/{org_id}/users"
     CHILDREN = "/organizations/{org_id}/children"
 
+
 # 租赁管理API路径 (统一使用连字符)
 class RentalPaths:
     CONTRACTS = {
-        BASE: "/rental-contracts",
-        LIST: "/rental-contracts",
-        CREATE: "/rental-contracts",
-        DETAIL: "/rental-contracts/{contract_id}",
-        UPDATE: "/rental-contracts/{contract_id}",
-        DELETE: "/rental-contracts/{contract_id}",
-        TERMINATE: "/rental-contracts/{contract_id}/terminate",
-        RENEW: "/rental-contracts/{contract_id}/renew",
+        "BASE": "/rental-contracts",
+        "LIST": "/rental-contracts",
+        "CREATE": "/rental-contracts",
+        "DETAIL": "/rental-contracts/{contract_id}",
+        "UPDATE": "/rental-contracts/{contract_id}",
+        "DELETE": "/rental-contracts/{contract_id}",
+        "TERMINATE": "/rental-contracts/{contract_id}/terminate",
+        "RENEW": "/rental-contracts/{contract_id}/renew",
     }
     LEDGER = {
-        BASE: "/rental-ledger",
-        LIST: "/rental-ledger",
-        CREATE: "/rental-ledger",
-        DETAIL: "/rental-ledger/{ledger_id}",
-        UPDATE: "/rental-ledger/{ledger_id}",
-        DELETE: "/rental-ledger/{ledger_id}",
+        "BASE": "/rental-ledger",
+        "LIST": "/rental-ledger",
+        "CREATE": "/rental-ledger",
+        "DETAIL": "/rental-ledger/{ledger_id}",
+        "UPDATE": "/rental-ledger/{ledger_id}",
+        "DELETE": "/rental-ledger/{ledger_id}",
     }
     STATISTICS = "/rental-statistics"
+
 
 # 权属方管理API路径
 class OwnershipPaths:
@@ -125,6 +132,7 @@ class OwnershipPaths:
     ASSETS = "/ownerships/{ownership_id}/assets"
     STATISTICS = "/ownerships/statistics"
 
+
 # 项目管理API路径
 class ProjectPaths:
     BASE = "/projects"
@@ -135,6 +143,7 @@ class ProjectPaths:
     DELETE = "/projects/{project_id}"
     ASSETS = "/projects/{project_id}/assets"
     STATISTICS = "/projects/{project_id}/statistics"
+
 
 # 数据分析API路径
 class AnalyticsPaths:
@@ -148,6 +157,7 @@ class AnalyticsPaths:
     COMPARISON = "/analytics/comparison"
     EXPORT = "/analytics/export"
 
+
 # 统计信息API路径
 class StatisticsPaths:
     BASE = "/statistics"
@@ -159,6 +169,7 @@ class StatisticsPaths:
     TREND = "/statistics/trend/{metric}"
     COMPARISON = "/statistics/comparison/{metric}"
 
+
 # Excel导入导出API路径
 class ExcelPaths:
     IMPORT = "/excel/import"
@@ -167,6 +178,7 @@ class ExcelPaths:
     DOWNLOAD = "/excel/download/{filename}"
     VALIDATE = "/excel/validate"
     PREVIEW = "/excel/preview"
+
 
 # 数据备份API路径
 class BackupPaths:
@@ -177,6 +189,7 @@ class BackupPaths:
     DELETE = "/backup/{filename}"
     CLEANUP = "/backup/cleanup"
     SCHEDULER = "/backup/scheduler/status"
+
 
 # 系统管理API路径
 class SystemPaths:
@@ -189,12 +202,14 @@ class SystemPaths:
     MONITORING = "/system/monitoring"
     HEALTH = "/system/health"
 
+
 # 历史记录API路径
 class HistoryPaths:
     DETAIL = "/history/{history_id}"
     COMPARE = "/history/compare/{id1}/{id2}"
     ASSET_HISTORY = "/assets/{asset_id}/history"
     REVERT = "/history/revert/{history_id}"
+
 
 # 自定义字段API路径
 class CustomFieldPaths:
@@ -205,6 +220,7 @@ class CustomFieldPaths:
     UPDATE = "/asset-custom-fields/{field_id}"
     DELETE = "/asset-custom-fields/{field_id}"
     BATCH_UPDATE = "/asset-custom-fields/batch-update"
+
 
 # 统一路径字典
 API_PATHS = {
@@ -227,10 +243,12 @@ API_PATHS = {
     "custom_fields": CustomFieldPaths,
 }
 
+
 # 动态路径生成器
 def dynamic_path(path_template: str, **kwargs) -> str:
     """生成动态API路径"""
     return path_template.format(**kwargs)
+
 
 # 路径前缀映射
 PREFIX_MAPPING = {

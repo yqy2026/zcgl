@@ -1,22 +1,27 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 优化的API端点
 集成性能监控、缓存、错误处理等功能
 """
 
 import logging
-import asyncio
 import time
-from typing import Dict, List, Any, Optional, Union
-from datetime import datetime, timezone
+from datetime import datetime
+from typing import Any
 
-from .monitoring import APIMonitoringService, record_api_call, get_performance_summary, generate_performance_report
-from ...services.unified_pdf_processor import unified_pdf_processor
-from .utils.api_performance_optimizer import optimize_api_response_time, cache_api_result, get_performance_stats
-from ...services.enhanced_error_handler import enhanced_error_handler, handle_pdf_error, handle_ocr_error
+from ...services.enhanced_error_handler import (
+    handle_pdf_error,
+)
+from .monitoring import (
+    APIMonitoringService,
+    record_api_call,
+)
+from .utils.api_performance_optimizer import (
+    get_performance_stats,
+)
 
 logger = logging.getLogger(__name__)
+
 
 class OptimizedPDFEndpoints:
     """优化的PDF API端点"""
@@ -36,12 +41,15 @@ class OptimizedPDFEndpoints:
         """延迟初始化PDF处理器"""
         try:
             from ...services.unified_pdf_processor import unified_pdf_processor
+
             self.pdf_processor = unified_pdf_processor()
             logger.info("延迟PDF处理器初始化成功")
         except ImportError as e:
             logger.warning(f"延迟初始化失败，使用fallback: {e}")
 
-    async def upload_pdf_file_optimized(self, file_path: str, options: Dict[str, Any] = None) -> Dict[str, Any]:
+    async def upload_pdf_file_optimized(
+        self, file_path: str, options: dict[str, Any] = None
+    ) -> dict[str, Any]:
         """优化的PDF文件上传端点"""
         start_time = time.time()
 
@@ -49,7 +57,7 @@ class OptimizedPDFEndpoints:
             return handle_pdf_error(
                 "PDF处理器未初始化",
                 "pdf_processor_unavailable",
-                {"upload_time": 0, "success": False}
+                {"upload_time": 0, "success": False},
             )
 
         try:
@@ -57,15 +65,19 @@ class OptimizedPDFEndpoints:
             record_api_call("/upload", "upload_pdf_file_optimized", 0, 200, True)
 
             # 执行优化的PDF处理
-            result = await self.pdf_processor.process_pdf_contract(file_path, options or {})
+            result = await self.pdf_processor.process_pdf_contract(
+                file_path, options or {}
+            )
 
             processing_time = (time.time() - start_time) * 1000
 
             # 记录处理完成
             record_api_call(
-                "/upload", "process_pdf_contract", processing_time,
+                "/upload",
+                "process_pdf_contract",
+                processing_time,
                 200 if result.success else 500,
-                result.success
+                result.success,
             )
 
             if result.success:
@@ -79,14 +91,18 @@ class OptimizedPDFEndpoints:
                     "quality_metrics": result.quality_metrics,
                     "structured_data": result.structured_data,
                     "processing_method": result.processing_method,
-                    "recommendations": self._generate_processing_recommendations(result),
-                    "optimization_level": self._assess_optimization_level(processing_time)
+                    "recommendations": self._generate_processing_recommendations(
+                        result
+                    ),
+                    "optimization_level": self._assess_optimization_level(
+                        processing_time
+                    ),
                 }
             else:
                 return handle_pdf_error(
                     f"PDF处理失败: {result.get('error_message', '未知错误')}",
                     "processing_failed",
-                    {"upload_time": 0, "success": False}
+                    {"upload_time": 0, "success": False},
                 )
 
         except Exception as e:
@@ -94,10 +110,10 @@ class OptimizedPDFEndpoints:
             return handle_pdf_error(
                 f"系统错误: {str(e)}",
                 "system_error",
-                {"upload_time": 0, "success": False}
+                {"upload_time": 0, "success": False},
             )
 
-    def _generate_processing_recommendations(self, result: Dict[str, Any]) -> List[str]:
+    def _generate_processing_recommendations(self, result: dict[str, Any]) -> list[str]:
         """生成处理建议"""
         recommendations = []
 
@@ -145,7 +161,7 @@ class OptimizedPDFEndpoints:
         else:
             return "poor"
 
-    async def get_session_status_optimized(self, session_id: str) -> Dict[str, Any]:
+    async def get_session_status_optimized(self, session_id: str) -> dict[str, Any]:
         """优化的会话状态查询"""
         start_time = time.time()
 
@@ -157,7 +173,7 @@ class OptimizedPDFEndpoints:
                 return {
                     "success": False,
                     "error_message": "PDF处理器未初始化",
-                    "session_status": None
+                    "session_status": None,
                 }
 
             # 使用统一处理器查询状态
@@ -171,7 +187,7 @@ class OptimizedPDFEndpoints:
                 "system_components": status.get("components", {}),
                 "performance_stats": status.get("ocr_performance", {}),
                 "recommendations": status.get("capabilities", {}),
-                "response_time": processing_time
+                "response_time": processing_time,
             }
 
         except Exception as e:
@@ -181,11 +197,12 @@ class OptimizedPDFEndpoints:
             return {
                 "success": False,
                 "error_message": f"查询失败: {str(e)}",
-                "session_status": None
+                "session_status": None,
             }
 
-    async def process_pdf_with_optimization(self, session_id: str, file_path: str,
-                                             processing_options: Dict[str, Any]) -> Dict[str, Any]:
+    async def process_pdf_with_optimization(
+        self, session_id: str, file_path: str, processing_options: dict[str, Any]
+    ) -> dict[str, Any]:
         """带有优化的PDF处理"""
         start_time = time.time()
 
@@ -197,22 +214,26 @@ class OptimizedPDFEndpoints:
                 return handle_pdf_error(
                     "PDF处理器未初始化",
                     "processor_unavailable",
-                    {"processing_time": 0, "success": False}
+                    {"processing_time": 0, "success": False},
                 )
 
             # 应用优化选项
             optimized_options = self._apply_optimization_rules(processing_options)
 
             # 执行优化处理
-            result = await self.pdf_processor.process_pdf_contract(file_path, optimized_options)
+            result = await self.pdf_processor.process_pdf_contract(
+                file_path, optimized_options
+            )
 
             processing_time = (time.time() - start_time) * 1000
 
             # 记录处理完成
             record_api_call(
-                "/process", "process_pdf_with_optimization", processing_time,
+                "/process",
+                "process_pdf_with_optimization",
+                processing_time,
                 200 if result.success else 500,
-                result.success
+                result.success,
             )
 
             if result.success:
@@ -226,14 +247,18 @@ class OptimizedPDFEndpoints:
                     "quality_metrics": result.quality_metrics,
                     "structured_data": result.structured_data,
                     "processing_method": result.processing_method,
-                    "optimization_level": self._assess_optimization_level(processing_time),
-                    "recommendations": self._generate_processing_recommendations(result)
+                    "optimization_level": self._assess_optimization_level(
+                        processing_time
+                    ),
+                    "recommendations": self._generate_processing_recommendations(
+                        result
+                    ),
                 }
             else:
                 return handle_pdf_error(
                     f"PDF处理失败: {result.get('error_message', '未知错误')}",
                     "processing_failed",
-                    {"processing_time": 0, "success": False}
+                    {"processing_time": 0, "success": False},
                 )
 
         except Exception as e:
@@ -243,10 +268,10 @@ class OptimizedPDFEndpoints:
             return handle_pdf_error(
                 f"系统错误: {str(e)}",
                 "system_error",
-                {"processing_time": 0, "success": False}
+                {"processing_time": 0, "success": False},
             )
 
-    def _apply_optimization_rules(self, options: Dict[str, Any]) -> Dict[str, Any]:
+    def _apply_optimization_rules(self, options: dict[str, Any]) -> dict[str, Any]:
         """应用优化规则"""
         optimized_options = options.copy()
 
@@ -255,26 +280,32 @@ class OptimizedPDFEndpoints:
 
         return optimized_options
 
-    def get_optimization_summary(self) -> Dict[str, Any]:
+    def get_optimization_summary(self) -> dict[str, Any]:
         """获取优化总结"""
         try:
             performance_stats = get_performance_stats()
-            monitoring_status = self.monitoring.get_real_time_monitoring("/upload", 60) if self.monitoring else {}
+            monitoring_status = (
+                self.monitoring.get_real_time_monitoring("/upload", 60)
+                if self.monitoring
+                else {}
+            )
 
             return {
                 "timestamp": datetime.now().isoformat(),
-                "pdf_processor_status": "ready" if self.pdf_processor else "unavailable",
+                "pdf_processor_status": "ready"
+                if self.pdf_processor
+                else "unavailable",
                 "monitoring_active": len(monitoring_status.get("calls", [])) > 0,
                 "performance_summary": performance_stats,
                 "optimization_enabled": True,
                 "recent_alerts": len(self.monitoring.alerts[-10:]),
-                "recommendations": self._generate_system_recommendations()
+                "recommendations": self._generate_system_recommendations(),
             }
         except Exception as e:
             logger.error(f"获取优化总结失败: {e}")
             return {"error": str(e)}
 
-    def _generate_system_recommendations(self) -> List[str]:
+    def _generate_system_recommendations(self) -> list[str]:
         """生成系统优化建议"""
         recommendations = []
 
@@ -294,10 +325,11 @@ class OptimizedPDFEndpoints:
             if len(performance_stats.get("slow_requests", [])) > 0:
                 recommendations.append("建议分析慢请求并优化数据库查询")
 
-        except Exception as e:
+        except Exception:
             recommendations.append("无法获取性能统计")
 
         return recommendations
+
 
 # 创建全局优化端点实例
 optimized_endpoints = OptimizedPDFEndpoints()

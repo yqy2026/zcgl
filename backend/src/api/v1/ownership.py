@@ -2,20 +2,19 @@
 权属方相关API端点
 """
 
-from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, Body
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from ...database import get_db
 from ...crud.ownership import ownership
+from ...database import get_db
 from ...schemas.ownership import (
     OwnershipCreate,
-    OwnershipUpdate,
-    OwnershipResponse,
-    OwnershipListResponse,
     OwnershipDeleteResponse,
+    OwnershipListResponse,
+    OwnershipResponse,
     OwnershipSearchRequest,
-    OwnershipStatisticsResponse
+    OwnershipStatisticsResponse,
+    OwnershipUpdate,
 )
 
 router = APIRouter()
@@ -24,13 +23,11 @@ router = APIRouter()
 @router.get("/dropdown-options", summary="获取权属方选项列表")
 async def get_ownership_dropdown_options(
     db: Session = Depends(get_db),
-    is_active: Optional[bool] = Query(True, description="是否启用")
+    is_active: bool | None = Query(True, description="是否启用"),
 ):
     """获取权属方选项列表（用于下拉选择等）"""
     try:
-        ownerships = ownership.get_multi(
-            db, skip=0, limit=1000, is_active=is_active
-        )
+        ownerships = ownership.get_multi(db, skip=0, limit=1000, is_active=is_active)
         # 为下拉选项添加关联计数
         responses = []
         for item in ownerships:
@@ -45,13 +42,9 @@ async def get_ownership_dropdown_options(
         raise HTTPException(status_code=500, detail=f"获取权属方选项失败: {str(e)}")
 
 
-
-
 @router.post("/", response_model=OwnershipResponse, summary="创建权属方")
 async def create_ownership(
-    *,
-    db: Session = Depends(get_db),
-    ownership_in: OwnershipCreate
+    *, db: Session = Depends(get_db), ownership_in: OwnershipCreate
 ):
     """创建新权属方"""
     try:
@@ -65,10 +58,7 @@ async def create_ownership(
 
 @router.put("/{ownership_id}", response_model=OwnershipResponse, summary="更新权属方")
 async def update_ownership(
-    *,
-    db: Session = Depends(get_db),
-    ownership_id: str,
-    ownership_in: OwnershipUpdate
+    *, db: Session = Depends(get_db), ownership_id: str, ownership_in: OwnershipUpdate
 ):
     """更新权属方信息"""
     db_ownership = ownership.get(db, id=ownership_id)
@@ -91,7 +81,7 @@ async def update_ownership_projects(
     *,
     db: Session = Depends(get_db),
     ownership_id: str,
-    project_ids: List[str] = Body(..., description="关联项目ID列表")
+    project_ids: list[str] = Body(..., description="关联项目ID列表"),
 ):
     """更新权属方的关联项目"""
     db_ownership = ownership.get(db, id=ownership_id)
@@ -100,7 +90,9 @@ async def update_ownership_projects(
 
     try:
         # 更新关联项目
-        ownership.update_related_projects(db, ownership_id=ownership_id, project_ids=project_ids)
+        ownership.update_related_projects(
+            db, ownership_id=ownership_id, project_ids=project_ids
+        )
 
         # 返回更新后的权属方信息
         updated_ownership = ownership.get(db, id=ownership_id)
@@ -114,12 +106,10 @@ async def update_ownership_projects(
         raise HTTPException(status_code=500, detail=f"更新关联项目失败: {str(e)}")
 
 
-@router.delete("/{ownership_id}", response_model=OwnershipDeleteResponse, summary="删除权属方")
-async def delete_ownership(
-    *,
-    db: Session = Depends(get_db),
-    ownership_id: str
-):
+@router.delete(
+    "/{ownership_id}", response_model=OwnershipDeleteResponse, summary="删除权属方"
+)
+async def delete_ownership(*, db: Session = Depends(get_db), ownership_id: str):
     """删除权属方"""
     try:
         # 先检查关联资产数量
@@ -129,7 +119,7 @@ async def delete_ownership(
         return OwnershipDeleteResponse(
             message="权属方删除成功",
             id=deleted_ownership.id,
-            affected_assets=asset_count
+            affected_assets=asset_count,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -137,22 +127,17 @@ async def delete_ownership(
         raise HTTPException(status_code=500, detail=f"删除权属方失败: {str(e)}")
 
 
-
-
 @router.get("/", response_model=OwnershipListResponse, summary="获取权属方列表")
 async def get_ownerships(
     db: Session = Depends(get_db),
     page: int = Query(1, ge=1, description="页码"),
     size: int = Query(10, ge=1, le=100, description="每页数量"),
-    keyword: Optional[str] = Query(None, description="搜索关键词"),
-    is_active: Optional[bool] = Query(None, description="是否启用")
+    keyword: str | None = Query(None, description="搜索关键词"),
+    is_active: bool | None = Query(None, description="是否启用"),
 ):
     """获取权属方列表"""
     search_params = OwnershipSearchRequest(
-        page=page,
-        size=size,
-        keyword=keyword,
-        is_active=is_active
+        page=page, size=size, keyword=keyword, is_active=is_active
     )
 
     result = ownership.search(db, search_params)
@@ -172,15 +157,13 @@ async def get_ownerships(
         total=result["total"],
         page=result["page"],
         size=result["size"],
-        pages=result["pages"]
+        pages=result["pages"],
     )
 
 
 @router.post("/search", response_model=OwnershipListResponse, summary="搜索权属方")
 async def search_ownerships(
-    *,
-    db: Session = Depends(get_db),
-    search_params: OwnershipSearchRequest
+    *, db: Session = Depends(get_db), search_params: OwnershipSearchRequest
 ):
     """搜索权属方"""
     result = ownership.search(db, search_params)
@@ -200,36 +183,38 @@ async def search_ownerships(
         total=result["total"],
         page=result["page"],
         size=result["size"],
-        pages=result["pages"]
+        pages=result["pages"],
     )
 
 
-@router.get("/statistics/summary", response_model=OwnershipStatisticsResponse, summary="获取权属方统计")
-async def get_ownership_statistics(
-    db: Session = Depends(get_db)
-):
+@router.get(
+    "/statistics/summary",
+    response_model=OwnershipStatisticsResponse,
+    summary="获取权属方统计",
+)
+async def get_ownership_statistics(db: Session = Depends(get_db)):
     """获取权属方统计信息"""
     stats = ownership.get_statistics(db)
 
     # 转换最近创建的权属方
-    recent_created = [OwnershipResponse.model_validate(item) for item in stats["recent_created"]]
+    recent_created = [
+        OwnershipResponse.model_validate(item) for item in stats["recent_created"]
+    ]
 
     return OwnershipStatisticsResponse(
         total_count=stats["total_count"],
         active_count=stats["active_count"],
         inactive_count=stats["inactive_count"],
-        recent_created=recent_created
+        recent_created=recent_created,
     )
 
 
-
-
-@router.post("/{ownership_id}/toggle-status", response_model=OwnershipResponse, summary="切换权属方状态")
-async def toggle_ownership_status(
-    *,
-    db: Session = Depends(get_db),
-    ownership_id: str
-):
+@router.post(
+    "/{ownership_id}/toggle-status",
+    response_model=OwnershipResponse,
+    summary="切换权属方状态",
+)
+async def toggle_ownership_status(*, db: Session = Depends(get_db), ownership_id: str):
     """切换权属方启用/禁用状态"""
     try:
         db_ownership = ownership.toggle_status(db, id=ownership_id)
@@ -238,7 +223,3 @@ async def toggle_ownership_status(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"切换状态失败: {str(e)}")
-
-
-
-

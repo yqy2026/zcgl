@@ -2,24 +2,23 @@
 数据导出API路由
 """
 
-from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
-from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
+import asyncio
 import csv
 import io
 import json
-from datetime import datetime, timezone
 import uuid
-import asyncio
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
+from typing import Any
 
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi.responses import StreamingResponse
+from sqlalchemy.orm import Session
+
+from ...crud.asset import asset_crud
 from ...database import get_db
 from ...middleware.auth import get_current_user
 from ...models.auth import User
-from ...crud.asset import asset_crud
-from ...schemas.asset import AssetResponse
-from ...services.export_optimizer import export_optimizer
 
 router = APIRouter()
 
@@ -27,6 +26,7 @@ router = APIRouter()
 
 # 导出任务状态存储（实际项目中应使用Redis或数据库）
 export_tasks = {}
+
 
 class ExportService:
     """数据导出服务"""
@@ -37,8 +37,8 @@ class ExportService:
     async def export_assets_to_csv(
         self,
         db: Session,
-        filters: Optional[Dict[str, Any]] = None,
-        columns: Optional[List[str]] = None
+        filters: dict[str, Any] | None = None,
+        columns: list[str] | None = None,
     ) -> str:
         """
         导出资产数据为CSV格式
@@ -49,7 +49,9 @@ class ExportService:
         task_id = str(uuid.uuid4())
 
         # 异步执行导出任务
-        asyncio.create_task(self._export_assets_csv_background(db, task_id, filters, columns))
+        asyncio.create_task(
+            self._export_assets_csv_background(db, task_id, filters, columns)
+        )
 
         return task_id
 
@@ -57,8 +59,8 @@ class ExportService:
         self,
         db: Session,
         task_id: str,
-        filters: Optional[Dict[str, Any]],
-        columns: Optional[List[str]]
+        filters: dict[str, Any] | None,
+        columns: list[str] | None,
     ):
         """后台执行CSV导出任务"""
         try:
@@ -69,7 +71,7 @@ class ExportService:
                 db,
                 skip=0,
                 limit=10000,  # 限制导出数量
-                filters=filters
+                filters=filters,
             )
 
             export_tasks[task_id]["progress"] = 30
@@ -79,10 +81,20 @@ class ExportService:
 
             # 默认导出字段
             default_columns = [
-                "property_name", "address", "ownership_entity", "ownership_status",
-                "property_nature", "usage_status", "actual_property_area",
-                "rentable_area", "rented_area", "annual_income", "annual_expense",
-                "tenant_name", "contract_start_date", "contract_end_date"
+                "property_name",
+                "address",
+                "ownership_entity",
+                "ownership_status",
+                "property_nature",
+                "usage_status",
+                "actual_property_area",
+                "rentable_area",
+                "rented_area",
+                "annual_income",
+                "annual_expense",
+                "tenant_name",
+                "contract_start_date",
+                "contract_end_date",
             ]
 
             export_columns = columns or default_columns
@@ -122,20 +134,14 @@ class ExportService:
                 "progress": 100,
                 "content": csv_content,
                 "filename": f"assets_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                "record_count": len(assets)
+                "record_count": len(assets),
             }
 
         except Exception as e:
-            export_tasks[task_id] = {
-                "status": "failed",
-                "progress": 0,
-                "error": str(e)
-            }
+            export_tasks[task_id] = {"status": "failed", "progress": 0, "error": str(e)}
 
     async def export_assets_to_json(
-        self,
-        db: Session,
-        filters: Optional[Dict[str, Any]] = None
+        self, db: Session, filters: dict[str, Any] | None = None
     ) -> str:
         """
         导出资产数据为JSON格式
@@ -151,10 +157,7 @@ class ExportService:
         return task_id
 
     async def _export_assets_json_background(
-        self,
-        db: Session,
-        task_id: str,
-        filters: Optional[Dict[str, Any]]
+        self, db: Session, task_id: str, filters: dict[str, Any] | None
     ):
         """后台执行JSON导出任务"""
         try:
@@ -162,10 +165,7 @@ class ExportService:
 
             # 获取数据
             assets, total = asset_crud.get_multi_with_search(
-                db,
-                skip=0,
-                limit=10000,
-                filters=filters
+                db, skip=0, limit=10000, filters=filters
             )
 
             export_tasks[task_id]["progress"] = 50
@@ -187,47 +187,53 @@ class ExportService:
                     "annual_income": float(asset.annual_income or 0),
                     "annual_expense": float(asset.annual_expense or 0),
                     "tenant_name": asset.tenant_name,
-                    "contract_start_date": asset.contract_start_date.isoformat() if asset.contract_start_date else None,
-                    "contract_end_date": asset.contract_end_date.isoformat() if asset.contract_end_date else None,
+                    "contract_start_date": asset.contract_start_date.isoformat()
+                    if asset.contract_start_date
+                    else None,
+                    "contract_end_date": asset.contract_end_date.isoformat()
+                    if asset.contract_end_date
+                    else None,
                     "created_at": asset.created_at.isoformat(),
-                    "updated_at": asset.updated_at.isoformat()
+                    "updated_at": asset.updated_at.isoformat(),
                 }
                 export_data.append(asset_data)
 
             # 准备最终结果
-            json_content = json.dumps({
-                "export_info": {
-                    "timestamp": datetime.now().isoformat(),
-                    "total_records": len(export_data),
-                    "filters": filters or {}
+            json_content = json.dumps(
+                {
+                    "export_info": {
+                        "timestamp": datetime.now().isoformat(),
+                        "total_records": len(export_data),
+                        "filters": filters or {},
+                    },
+                    "data": export_data,
                 },
-                "data": export_data
-            }, ensure_ascii=False, indent=2)
+                ensure_ascii=False,
+                indent=2,
+            )
 
             export_tasks[task_id] = {
                 "status": "completed",
                 "progress": 100,
                 "content": json_content,
                 "filename": f"assets_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-                "record_count": len(export_data)
+                "record_count": len(export_data),
             }
 
         except Exception as e:
-            export_tasks[task_id] = {
-                "status": "failed",
-                "progress": 0,
-                "error": str(e)
-            }
+            export_tasks[task_id] = {"status": "failed", "progress": 0, "error": str(e)}
+
 
 # 导出服务实例
 export_service = ExportService()
 
+
 @router.post("/assets/csv")
 async def export_assets_csv(
     background_tasks: BackgroundTasks,
-    filters: Optional[Dict[str, Any]] = None,
-    columns: Optional[List[str]] = None,
-    db: Session = Depends(get_db)
+    filters: dict[str, Any] | None = None,
+    columns: list[str] | None = None,
+    db: Session = Depends(get_db),
 ):
     """
     导出资产数据为CSV格式
@@ -242,14 +248,15 @@ async def export_assets_csv(
         "message": "导出任务已启动",
         "task_id": task_id,
         "status_url": f"/api/v1/export/status/{task_id}",
-        "download_url": f"/api/v1/export/download/{task_id}"
+        "download_url": f"/api/v1/export/download/{task_id}",
     }
+
 
 @router.post("/assets/json")
 async def export_assets_json(
     background_tasks: BackgroundTasks,
-    filters: Optional[Dict[str, Any]] = None,
-    db: Session = Depends(get_db)
+    filters: dict[str, Any] | None = None,
+    db: Session = Depends(get_db),
 ):
     """
     导出资产数据为JSON格式
@@ -263,13 +270,13 @@ async def export_assets_json(
         "message": "导出任务已启动",
         "task_id": task_id,
         "status_url": f"/api/v1/export/status/{task_id}",
-        "download_url": f"/api/v1/export/download/{task_id}"
+        "download_url": f"/api/v1/export/download/{task_id}",
     }
+
 
 @router.get("/status/{task_id}")
 async def get_export_status(
-    task_id: str,
-    current_user: User = Depends(get_current_user)
+    task_id: str, current_user: User = Depends(get_current_user)
 ):
     """
     获取导出任务状态
@@ -279,10 +286,10 @@ async def get_export_status(
 
     return export_tasks[task_id]
 
+
 @router.get("/download/{task_id}")
 async def download_export_file(
-    task_id: str,
-    current_user: User = Depends(get_current_user)
+    task_id: str, current_user: User = Depends(get_current_user)
 ):
     """
     下载导出文件
@@ -299,9 +306,9 @@ async def download_export_file(
     filename = task_info["filename"]
 
     # 根据文件类型确定MIME类型
-    if filename.endswith('.csv'):
+    if filename.endswith(".csv"):
         media_type = "text/csv; charset=utf-8-sig"
-    elif filename.endswith('.json'):
+    elif filename.endswith(".json"):
         media_type = "application/json"
     else:
         media_type = "application/octet-stream"
@@ -309,8 +316,9 @@ async def download_export_file(
     return StreamingResponse(
         io.StringIO(content),
         media_type=media_type,
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
+
 
 @router.get("/templates")
 async def get_export_templates():
@@ -322,42 +330,62 @@ async def get_export_templates():
             "basic": {
                 "name": "基础资产信息",
                 "columns": [
-                    "property_name", "address", "ownership_entity",
-                    "ownership_status", "actual_property_area"
-                ]
+                    "property_name",
+                    "address",
+                    "ownership_entity",
+                    "ownership_status",
+                    "actual_property_area",
+                ],
             },
             "financial": {
                 "name": "财务信息",
                 "columns": [
-                    "property_name", "annual_income", "annual_expense",
-                    "net_income", "monthly_rent", "rentable_area"
-                ]
+                    "property_name",
+                    "annual_income",
+                    "annual_expense",
+                    "net_income",
+                    "monthly_rent",
+                    "rentable_area",
+                ],
             },
             "rental": {
                 "name": "租赁信息",
                 "columns": [
-                    "property_name", "tenant_name", "usage_status",
-                    "contract_start_date", "contract_end_date", "rented_area"
-                ]
+                    "property_name",
+                    "tenant_name",
+                    "usage_status",
+                    "contract_start_date",
+                    "contract_end_date",
+                    "rented_area",
+                ],
             },
             "complete": {
                 "name": "完整信息",
                 "columns": [
-                    "property_name", "address", "ownership_entity", "ownership_status",
-                    "property_nature", "usage_status", "actual_property_area",
-                    "rentable_area", "rented_area", "annual_income", "annual_expense",
-                    "tenant_name", "contract_start_date", "contract_end_date"
-                ]
-            }
+                    "property_name",
+                    "address",
+                    "ownership_entity",
+                    "ownership_status",
+                    "property_nature",
+                    "usage_status",
+                    "actual_property_area",
+                    "rentable_area",
+                    "rented_area",
+                    "annual_income",
+                    "annual_expense",
+                    "tenant_name",
+                    "contract_start_date",
+                    "contract_end_date",
+                ],
+            },
         }
     }
 
     return templates
 
+
 @router.delete("/cleanup")
-async def cleanup_old_exports(
-    current_user: User = Depends(get_current_user)
-):
+async def cleanup_old_exports(current_user: User = Depends(get_current_user)):
     """
     清理旧的导出任务（只保留最近24小时的）
     """
@@ -374,5 +402,5 @@ async def cleanup_old_exports(
 
     return {
         "message": f"已清理 {len(to_delete)} 个旧的导出任务",
-        "remaining_tasks": len(export_tasks)
+        "remaining_tasks": len(export_tasks),
     }

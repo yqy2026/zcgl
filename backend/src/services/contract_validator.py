@@ -4,18 +4,19 @@
 """
 
 import logging
-from typing import Dict, List, Any, Optional, Tuple
-from datetime import datetime, date, timezone
+from datetime import datetime
 from decimal import Decimal, InvalidOperation
+from typing import Any
 
 from sqlalchemy.orm import Session
 
-from ..models import Asset, Ownership, RentContract
 from ..database import get_db
+from ..models import Asset, RentContract
 
 # 导入fuzzywuzzy，如果不可用则使用简单替代方案
 try:
     from fuzzywuzzy import fuzz, process
+
     FUZZYWUZZY_AVAILABLE = True
 except ImportError:
     FUZZYWUZZY_AVAILABLE = False
@@ -42,6 +43,7 @@ logger = logging.getLogger(__name__)
 
 class ContractValidationError(Exception):
     """合同验证异常"""
+
     pass
 
 
@@ -55,7 +57,7 @@ class ContractValidator:
             "tenant_name": "承租方名称",
             "start_date": "合同开始日期",
             "end_date": "合同结束日期",
-            "monthly_rent": "月租金"
+            "monthly_rent": "月租金",
         }
 
         # 字段验证规则
@@ -77,13 +79,13 @@ class ContractValidator:
             "payment_method": self._validate_text,
             "payment_terms": self._validate_text,
             "contract_status": self._validate_status,
-            "business_category": self._validate_text
+            "business_category": self._validate_text,
         }
 
         # 合同状态标准值
         self.VALID_STATUSES = ["有效", "生效", "到期", "终止", "暂停", "草稿", "待生效"]
 
-    def validate_extracted_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def validate_extracted_data(self, data: dict[str, Any]) -> dict[str, Any]:
         """
         验证提取的合同数据
 
@@ -129,7 +131,9 @@ class ContractValidator:
             warnings.extend(consistency_warnings)
 
             # 5. 计算验证分数
-            validation_score = self._calculate_validation_score(validated_data, errors, warnings)
+            validation_score = self._calculate_validation_score(
+                validated_data, errors, warnings
+            )
 
             return {
                 "success": len(errors) == 0,
@@ -139,7 +143,7 @@ class ContractValidator:
                 "validation_score": validation_score,
                 "processed_fields": len(validated_data),
                 "required_fields_count": len(self.REQUIRED_FIELDS),
-                "missing_required_fields": missing_fields
+                "missing_required_fields": missing_fields,
             }
 
         except Exception as e:
@@ -149,10 +153,12 @@ class ContractValidator:
                 "errors": [f"验证过程出现异常: {str(e)}"],
                 "warnings": [],
                 "validated_data": {},
-                "validation_score": 0.0
+                "validation_score": 0.0,
             }
 
-    def match_with_existing_data(self, validated_data: Dict[str, Any]) -> Dict[str, Any]:
+    def match_with_existing_data(
+        self, validated_data: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         与现有系统数据进行智能匹配
 
@@ -168,7 +174,7 @@ class ContractValidator:
                 "matched_assets": [],
                 "matched_ownerships": [],
                 "duplicate_contracts": [],
-                "recommendations": {}
+                "recommendations": {},
             }
 
             # 1. 根据地址匹配资产
@@ -187,7 +193,9 @@ class ContractValidator:
                 )
                 result["matched_ownerships"] = matched_ownerships
                 if matched_ownerships:
-                    result["recommendations"]["ownership_id"] = matched_ownerships[0]["id"]
+                    result["recommendations"]["ownership_id"] = matched_ownerships[0][
+                        "id"
+                    ]
 
             # 3. 检查合同编号重复
             if "contract_number" in validated_data:
@@ -209,10 +217,10 @@ class ContractValidator:
                 "duplicate_contracts": [],
                 "recommendations": {},
                 "match_confidence": 0.0,
-                "error": str(e)
+                "error": str(e),
             }
 
-    def _check_required_fields(self, data: Dict[str, Any]) -> List[str]:
+    def _check_required_fields(self, data: dict[str, Any]) -> list[str]:
         """检查必填字段是否缺失"""
         missing = []
         for field, display_name in self.REQUIRED_FIELDS.items():
@@ -268,12 +276,7 @@ class ContractValidator:
         date_str = str(value).strip()
 
         # 尝试解析日期
-        date_formats = [
-            "%Y-%m-%d",
-            "%Y/%m/%d",
-            "%Y年%m月%d日",
-            "%Y年%m月%d"
-        ]
+        date_formats = ["%Y-%m-%d", "%Y/%m/%d", "%Y年%m月%d日", "%Y年%m月%d"]
 
         for fmt in date_formats:
             try:
@@ -284,9 +287,10 @@ class ContractValidator:
 
         # 尝试从复杂字符串中提取日期
         import re
+
         date_patterns = [
-            r'(\d{4})[-/年](\d{1,2})[-/月](\d{1,2})日?',
-            r'(\d{4})年(\d{1,2})月(\d{1,2})日?'
+            r"(\d{4})[-/年](\d{1,2})[-/月](\d{1,2})日?",
+            r"(\d{4})年(\d{1,2})月(\d{1,2})日?",
         ]
 
         for pattern in date_patterns:
@@ -314,7 +318,8 @@ class ContractValidator:
 
         # 提取数字
         import re
-        numbers = re.findall(r'\d+\.?\d*', money_str)
+
+        numbers = re.findall(r"\d+\.?\d*", money_str)
         if not numbers:
             raise ContractValidationError(f"无法解析金额: {value}")
 
@@ -334,7 +339,7 @@ class ContractValidator:
 
             return str(money_value)
 
-        except (ValueError, InvalidOperation) as e:
+        except (ValueError, InvalidOperation):
             raise ContractValidationError(f"金额格式错误: {value}")
 
     def _validate_area(self, value: Any) -> str:
@@ -350,7 +355,8 @@ class ContractValidator:
 
         # 提取数字
         import re
-        numbers = re.findall(r'\d+\.?\d*', area_str)
+
+        numbers = re.findall(r"\d+\.?\d*", area_str)
         if not numbers:
             raise ContractValidationError(f"无法解析面积: {value}")
 
@@ -365,7 +371,7 @@ class ContractValidator:
 
             return str(area_value)
 
-        except (ValueError, InvalidOperation) as e:
+        except (ValueError, InvalidOperation):
             raise ContractValidationError(f"面积格式错误: {value}")
 
     def _validate_contact(self, value: Any) -> str:
@@ -419,7 +425,7 @@ class ContractValidator:
 
         return str(value)
 
-    def _validate_business_logic(self, data: Dict[str, Any]) -> List[str]:
+    def _validate_business_logic(self, data: dict[str, Any]) -> list[str]:
         """业务逻辑验证"""
         errors = []
 
@@ -470,7 +476,7 @@ class ContractValidator:
 
         return errors
 
-    def _check_data_consistency(self, data: Dict[str, Any]) -> List[str]:
+    def _check_data_consistency(self, data: dict[str, Any]) -> list[str]:
         """数据一致性检查"""
         warnings = []
 
@@ -498,11 +504,15 @@ class ContractValidator:
 
         return warnings
 
-    def _calculate_validation_score(self, data: Dict[str, Any], errors: List[str], warnings: List[str]) -> float:
+    def _calculate_validation_score(
+        self, data: dict[str, Any], errors: list[str], warnings: list[str]
+    ) -> float:
         """计算验证分数"""
         # 基础分数：必填字段完成度
         required_count = len(self.REQUIRED_FIELDS)
-        completed_required = sum(1 for field in self.REQUIRED_FIELDS.keys() if field in data and data[field])
+        completed_required = sum(
+            1 for field in self.REQUIRED_FIELDS.keys() if field in data and data[field]
+        )
         base_score = (completed_required / required_count) * 0.6
 
         # 可选字段分数
@@ -519,7 +529,9 @@ class ContractValidator:
         final_score = base_score + optional_score - error_penalty - warning_penalty
         return round(max(0.0, final_score), 2)
 
-    def _match_assets_by_address(self, db: Session, address: str) -> List[Dict[str, Any]]:
+    def _match_assets_by_address(
+        self, db: Session, address: str
+    ) -> list[dict[str, Any]]:
         """根据地址匹配资产"""
         if not address:
             return []
@@ -533,12 +545,14 @@ class ContractValidator:
                 if asset.address:
                     similarity = fuzz.ratio(address.lower(), asset.address.lower())
                     if similarity >= 60:  # 相似度阈值
-                        asset_matches.append({
-                            "id": asset.id,
-                            "property_name": asset.property_name,
-                            "address": asset.address,
-                            "similarity": similarity
-                        })
+                        asset_matches.append(
+                            {
+                                "id": asset.id,
+                                "property_name": asset.property_name,
+                                "address": asset.address,
+                                "similarity": similarity,
+                            }
+                        )
 
             # 按相似度排序
             asset_matches.sort(key=lambda x: x["similarity"], reverse=True)
@@ -548,25 +562,30 @@ class ContractValidator:
             logger.error(f"Asset matching failed: {e}")
             return []
 
-    def _match_ownerships_by_name(self, db: Session, name: str) -> List[Dict[str, Any]]:
+    def _match_ownerships_by_name(self, db: Session, name: str) -> list[dict[str, Any]]:
         """根据名称匹配权属方"""
         if not name:
             return []
 
         try:
             from ..models.ownership import Ownership
+
             ownerships = db.query(Ownership).all()
             ownership_matches = []
 
             for ownership in ownerships:
                 if ownership.ownership_name:
-                    similarity = fuzz.ratio(name.lower(), ownership.ownership_name.lower())
+                    similarity = fuzz.ratio(
+                        name.lower(), ownership.ownership_name.lower()
+                    )
                     if similarity >= 60:  # 相似度阈值
-                        ownership_matches.append({
-                            "id": ownership.id,
-                            "ownership_name": ownership.ownership_name,
-                            "similarity": similarity
-                        })
+                        ownership_matches.append(
+                            {
+                                "id": ownership.id,
+                                "ownership_name": ownership.ownership_name,
+                                "similarity": similarity,
+                            }
+                        )
 
             # 按相似度排序
             ownership_matches.sort(key=lambda x: x["similarity"], reverse=True)
@@ -576,24 +595,32 @@ class ContractValidator:
             logger.error(f"Ownership matching failed: {e}")
             return []
 
-    def _check_contract_duplicate(self, db: Session, contract_number: str) -> List[Dict[str, Any]]:
+    def _check_contract_duplicate(
+        self, db: Session, contract_number: str
+    ) -> list[dict[str, Any]]:
         """检查合同编号重复"""
         if not contract_number:
             return []
 
         try:
-            existing_contracts = db.query(RentContract).filter(
-                RentContract.contract_number == contract_number
-            ).all()
+            existing_contracts = (
+                db.query(RentContract)
+                .filter(RentContract.contract_number == contract_number)
+                .all()
+            )
 
             duplicates = []
             for contract in existing_contracts:
-                duplicates.append({
-                    "id": contract.id,
-                    "contract_number": contract.contract_number,
-                    "tenant_name": contract.tenant_name,
-                    "created_at": contract.created_at.isoformat() if contract.created_at else None
-                })
+                duplicates.append(
+                    {
+                        "id": contract.id,
+                        "contract_number": contract.contract_number,
+                        "tenant_name": contract.tenant_name,
+                        "created_at": contract.created_at.isoformat()
+                        if contract.created_at
+                        else None,
+                    }
+                )
 
             return duplicates
 
@@ -601,7 +628,7 @@ class ContractValidator:
             logger.error(f"Contract duplicate check failed: {e}")
             return []
 
-    def _calculate_match_confidence(self, match_result: Dict[str, Any]) -> float:
+    def _calculate_match_confidence(self, match_result: dict[str, Any]) -> float:
         """计算匹配置信度"""
         score = 0.0
 
@@ -623,14 +650,14 @@ class ContractValidator:
 
         return round(max(0.0, score), 2)
 
-    def get_validation_summary(self) -> Dict[str, Any]:
+    def get_validation_summary(self) -> dict[str, Any]:
         """获取验证器配置摘要"""
         return {
             "required_fields": list(self.REQUIRED_FIELDS.keys()),
             "required_fields_display": self.REQUIRED_FIELDS,
             "total_validators": len(self.FIELD_VALIDATORS),
             "available_validators": list(self.FIELD_VALIDATORS.keys()),
-            "valid_statuses": self.VALID_STATUSES
+            "valid_statuses": self.VALID_STATUSES,
         }
 
 

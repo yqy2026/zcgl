@@ -2,26 +2,22 @@
 数据加密服务
 """
 
+import base64
+import os
+
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-import base64
-import os
-import json
-from typing import Optional, Union
-import hashlib
-
-from ..core.config import settings
 
 
 class DataEncryptionService:
     """数据加密服务"""
-    
+
     def __init__(self):
         # 从环境变量获取加密密钥，如果不存在则生成一个
         self.encryption_key = self._get_or_create_encryption_key()
         self.cipher_suite = Fernet(self.encryption_key)
-    
+
     def _get_or_create_encryption_key(self) -> bytes:
         """获取或创建加密密钥"""
         # 优先从环境变量获取密钥
@@ -33,10 +29,10 @@ class DataEncryptionService:
             except Exception:
                 # 如果解码失败，可能是直接的密钥字符串
                 return self._derive_key_from_password(key_env.encode(), b"salt")
-        
+
         # 如果没有环境变量，生成一个新的密钥
         return Fernet.generate_key()
-    
+
     def _derive_key_from_password(self, password: bytes, salt: bytes) -> bytes:
         """从密码派生密钥"""
         kdf = PBKDF2HMAC(
@@ -47,42 +43,46 @@ class DataEncryptionService:
         )
         key = base64.urlsafe_b64encode(kdf.derive(password))
         return key
-    
-    def encrypt_data(self, data: Union[str, bytes]) -> str:
+
+    def encrypt_data(self, data: str | bytes) -> str:
         """加密数据"""
         if isinstance(data, str):
-            data = data.encode('utf-8')
-        
+            data = data.encode("utf-8")
+
         encrypted_data = self.cipher_suite.encrypt(data)
-        return base64.urlsafe_b64encode(encrypted_data).decode('utf-8')
-    
+        return base64.urlsafe_b64encode(encrypted_data).decode("utf-8")
+
     def decrypt_data(self, encrypted_data: str) -> str:
         """解密数据"""
         try:
-            encrypted_bytes = base64.urlsafe_b64decode(encrypted_data.encode('utf-8'))
+            encrypted_bytes = base64.urlsafe_b64decode(encrypted_data.encode("utf-8"))
             decrypted_data = self.cipher_suite.decrypt(encrypted_bytes)
-            return decrypted_data.decode('utf-8')
+            return decrypted_data.decode("utf-8")
         except Exception as e:
             raise ValueError(f"数据解密失败: {e}")
-    
+
     def encrypt_sensitive_fields(self, data: dict, sensitive_fields: list) -> dict:
         """加密敏感字段"""
         encrypted_data = data.copy()
         for field in sensitive_fields:
             if field in encrypted_data and encrypted_data[field]:
                 try:
-                    encrypted_data[field] = self.encrypt_data(str(encrypted_data[field]))
+                    encrypted_data[field] = self.encrypt_data(
+                        str(encrypted_data[field])
+                    )
                 except Exception as e:
                     print(f"加密字段 {field} 失败: {e}")
         return encrypted_data
-    
+
     def decrypt_sensitive_fields(self, data: dict, sensitive_fields: list) -> dict:
         """解密敏感字段"""
         decrypted_data = data.copy()
         for field in sensitive_fields:
             if field in decrypted_data and decrypted_data[field]:
                 try:
-                    decrypted_data[field] = self.decrypt_data(str(decrypted_data[field]))
+                    decrypted_data[field] = self.decrypt_data(
+                        str(decrypted_data[field])
+                    )
                 except Exception as e:
                     print(f"解密字段 {field} 失败: {e}")
         return decrypted_data
@@ -90,60 +90,60 @@ class DataEncryptionService:
 
 class DataMaskingService:
     """数据脱敏服务"""
-    
+
     @staticmethod
     def mask_email(email: str) -> str:
         """邮箱脱敏"""
         if not email or "@" not in email:
             return email
-        
+
         parts = email.split("@")
         username = parts[0]
         domain = parts[1]
-        
+
         if len(username) <= 2:
             masked_username = "*" * len(username)
         else:
             masked_username = username[0] + "*" * (len(username) - 2) + username[-1]
-        
+
         return f"{masked_username}@{domain}"
-    
+
     @staticmethod
     def mask_phone(phone: str) -> str:
         """手机号脱敏"""
         if not phone or len(phone) < 11:
             return phone
-        
+
         # 保留前3位和后4位
         return phone[:3] + "****" + phone[-4:]
-    
+
     @staticmethod
     def mask_id_card(id_card: str) -> str:
         """身份证号脱敏"""
         if not id_card or len(id_card) < 18:
             return id_card
-        
+
         # 保留前6位和后4位
         return id_card[:6] + "**********" + id_card[-4:]
-    
+
     @staticmethod
     def mask_bank_card(card_number: str) -> str:
         """银行卡号脱敏"""
         if not card_number:
             return card_number
-        
+
         # 保留前6位和后4位
         if len(card_number) > 10:
             return card_number[:6] + "*" * (len(card_number) - 10) + card_number[-4:]
         else:
             return "*" * len(card_number)
-    
+
     @staticmethod
     def mask_name(name: str) -> str:
         """姓名脱敏"""
         if not name:
             return name
-        
+
         if len(name) == 1:
             return "*"
         elif len(name) == 2:

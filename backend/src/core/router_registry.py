@@ -3,32 +3,34 @@
 统一管理API路由注册，支持版本控制和中间件配置
 """
 
-from typing import List, Dict, Any, Optional, Callable
-from fastapi import APIRouter, FastAPI
-from ..constants.api_paths import API_PATHS, PREFIX_MAPPING
 import logging
+from collections.abc import Callable
+from typing import Any
+
+from fastapi import APIRouter, FastAPI
 
 logger = logging.getLogger(__name__)
+
 
 class RouteRegistry:
     """路由注册器"""
 
     def __init__(self):
-        self.routers: List[Dict[str, Any]] = []
-        self.versioned_routers: Dict[str, List[Dict[str, Any]]] = {}
-        self.global_middlewares: List[Callable] = []
-        self.global_dependencies: List[Any] = []
+        self.routers: list[dict[str, Any]] = []
+        self.versioned_routers: dict[str, list[dict[str, Any]]] = {}
+        self.global_middlewares: list[Callable] = []
+        self.global_dependencies: list[Any] = []
 
     def register_router(
         self,
         router: APIRouter,
         prefix: str,
-        tags: List[str],
+        tags: list[str],
         version: str = "v1",
-        middleware: Optional[List[Callable]] = None,
-        dependencies: Optional[List[Any]] = None,
+        middleware: list[Callable] | None = None,
+        dependencies: list[Any] | None = None,
         include_in_schema: bool = True,
-        deprecated: bool = False
+        deprecated: bool = False,
     ) -> None:
         """
         注册路由器
@@ -51,7 +53,7 @@ class RouteRegistry:
             "dependencies": dependencies or [],
             "include_in_schema": include_in_schema,
             "deprecated": deprecated,
-            "version": version
+            "version": version,
         }
 
         if version not in self.versioned_routers:
@@ -110,25 +112,29 @@ class RouteRegistry:
             if deprecated:
                 logger.warning(f"路由 {prefix} 已标记为废弃")
 
-        logger.info(f"完成版本 {version} 的路由注册，共 {len(self.versioned_routers[version])} 个路由")
+        logger.info(
+            f"完成版本 {version} 的路由注册，共 {len(self.versioned_routers[version])} 个路由"
+        )
 
-    def get_router_info(self, version: str = "v1") -> List[Dict[str, Any]]:
+    def get_router_info(self, version: str = "v1") -> list[dict[str, Any]]:
         """获取路由信息"""
         if version not in self.versioned_routers:
             return []
 
         router_info = []
         for config in self.versioned_routers[version]:
-            router_info.append({
-                "prefix": config["prefix"],
-                "tags": config["tags"],
-                "deprecated": config["deprecated"],
-                "route_count": len(config["router"].routes)
-            })
+            router_info.append(
+                {
+                    "prefix": config["prefix"],
+                    "tags": config["tags"],
+                    "deprecated": config["deprecated"],
+                    "route_count": len(config["router"].routes),
+                }
+            )
 
         return router_info
 
-    def validate_routes(self) -> List[str]:
+    def validate_routes(self) -> list[str]:
         """验证路由配置，返回警告信息"""
         warnings = []
 
@@ -177,13 +183,14 @@ class APIVersionManager:
             return {
                 "supported_versions": self.supported_versions,
                 "default_version": self.default_version,
-                "latest_version": self.get_latest_version()
+                "latest_version": self.get_latest_version(),
             }
 
         # 添加版本重定向
         @app.get("/api", tags=["API版本"])
         async def redirect_to_default_version():
             from fastapi.responses import RedirectResponse
+
             return RedirectResponse(url=f"/api/{self.default_version}")
 
 
@@ -198,19 +205,17 @@ def register_api_routes():
 
     # 注册v1路由
     route_registry.register_router(
-        router=v1_router,
-        prefix="/api/v1",
-        tags=["API v1"],
-        version="v1"
+        router=v1_router, prefix="/api/v1", tags=["API v1"], version="v1"
     )
 
     # 注册PDF导入路由（独立注册）
     from ..api.v1.pdf_import_unified import router as pdf_import_router
+
     route_registry.register_router(
         router=pdf_import_router,
         prefix="/api/v1/pdf-import",
         tags=["PDF智能导入"],
-        version="v1"
+        version="v1",
     )
 
     logger.info("完成所有API路由注册")
@@ -233,7 +238,7 @@ def setup_app_routing(app: FastAPI) -> None:
 
 
 # 路由信息工具函数
-def get_all_routes_info() -> Dict[str, List[Dict[str, Any]]]:
+def get_all_routes_info() -> dict[str, list[dict[str, Any]]]:
     """获取所有版本的路由信息"""
     routes_info = {}
     for version in route_registry.versioned_routers.keys():
@@ -241,13 +246,13 @@ def get_all_routes_info() -> Dict[str, List[Dict[str, Any]]]:
     return routes_info
 
 
-def get_routes_by_tag(tag: str, version: str = "v1") -> List[Dict[str, Any]]:
+def get_routes_by_tag(tag: str, version: str = "v1") -> list[dict[str, Any]]:
     """根据标签获取路由信息"""
     routes = route_registry.get_router_info(version)
     return [route for route in routes if tag in route["tags"]]
 
 
-def get_deprecated_routes(version: str = "v1") -> List[Dict[str, Any]]:
+def get_deprecated_routes(version: str = "v1") -> list[dict[str, Any]]:
     """获取已废弃的路由"""
     routes = route_registry.get_router_info(version)
     return [route for route in routes if route["deprecated"]]

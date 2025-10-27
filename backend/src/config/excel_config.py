@@ -12,8 +12,8 @@ EXCEL_CONFIG = {
     "allowed_extensions": [".xlsx", ".xls"],
     "content_types": [
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "application/vnd.ms-excel"
-    ]
+        "application/vnd.ms-excel",
+    ],
 }
 
 # 导入配置
@@ -23,13 +23,13 @@ IMPORT_CONFIG = {
     "default_values": {
         "ownership_status": "未确权",
         "usage_status": "其他",
-        "property_nature": "经营类"
-    }
+        "property_nature": "经营类",
+    },
 }
 
 # 导出配置
 EXPORT_CONFIG = {
     "max_records": 1000,
     "include_headers": True,
-    "date_format": "%Y-%m-%d %H:%M:%S"
+    "date_format": "%Y-%m-%d %H:%M:%S",
 }

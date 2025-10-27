@@ -3,22 +3,17 @@
 提供实时出租率计算、趋势分析和预测功能
 """
 
-import polars as pl
-from typing import Dict, Any, List, Optional, Union, Tuple
-from datetime import datetime, timedelta, timezone
 import logging
-from sqlalchemy.orm import Session
-from sqlalchemy import text, func, and_, or_
+from typing import Any
 
 from src.models.asset import Asset
-from src.crud.asset import asset_crud
-from src.database import get_db
 
 logger = logging.getLogger(__name__)
 
 
 class OccupancyCalculationError(Exception):
     """出租率计算异常"""
+
     pass
 
 
@@ -27,8 +22,7 @@ class OccupancyRateCalculator:
 
     @staticmethod
     def calculate_individual_occupancy_rate(
-        rentable_area: float,
-        rented_area: float
+        rentable_area: float, rented_area: float
     ) -> float:
         """
         计算单个资产的出租率
@@ -53,7 +47,7 @@ class OccupancyRateCalculator:
         return round(occupancy_rate, 2)
 
     @staticmethod
-    def calculate_overall_occupancy_rate(assets: List[Asset]) -> Dict[str, Any]:
+    def calculate_overall_occupancy_rate(assets: list[Asset]) -> dict[str, Any]:
         """
         计算整体出租率
 
@@ -71,12 +65,13 @@ class OccupancyRateCalculator:
                     "total_rented_area": 0.0,
                     "total_unrented_area": 0.0,
                     "asset_count": 0,
-                    "rentable_asset_count": 0
+                    "rentable_asset_count": 0,
                 }
 
             # 筛选出有可出租面积的资产
             rentable_assets = [
-                asset for asset in assets
+                asset
+                for asset in assets
                 if asset.rentable_area and asset.rentable_area > 0
             ]
 
@@ -87,11 +82,12 @@ class OccupancyRateCalculator:
                     "total_rented_area": 0.0,
                     "total_unrented_area": 0.0,
                     "asset_count": len(assets),
-                    "rentable_asset_count": 0
+                    "rentable_asset_count": 0,
                 }
 
             # 使用数据库聚合计算，避免在内存中加载所有数据
-            from sqlalchemy import func, case
+            from sqlalchemy import func
+
             from ..database import get_db
 
             # 获取数据库连接
@@ -99,15 +95,25 @@ class OccupancyRateCalculator:
 
             try:
                 # 使用SQL聚合函数计算总面积
-                occupancy_stats = db.query(
-                    func.sum(func.coalesce(Asset.rentable_area, 0)).label('total_rentable'),
-                    func.sum(func.coalesce(Asset.rented_area, 0)).label('total_rented'),
-                    func.count(Asset.id).label('total_count'),
-                    func.count(func.case([(Asset.rentable_area > 0, Asset.id)])).label('rentable_count')
-                ).filter(
-                    Asset.include_in_occupancy_rate == True,
-                    Asset.data_status.in_(['正常', '正常数据'])
-                ).first()
+                occupancy_stats = (
+                    db.query(
+                        func.sum(func.coalesce(Asset.rentable_area, 0)).label(
+                            "total_rentable"
+                        ),
+                        func.sum(func.coalesce(Asset.rented_area, 0)).label(
+                            "total_rented"
+                        ),
+                        func.count(Asset.id).label("total_count"),
+                        func.count(
+                            func.case([(Asset.rentable_area > 0, Asset.id)])
+                        ).label("rentable_count"),
+                    )
+                    .filter(
+                        Asset.include_in_occupancy_rate == True,
+                        Asset.data_status.in_(["正常", "正常数据"]),
+                    )
+                    .first()
+                )
 
                 total_rentable = float(occupancy_stats.total_rentable or 0)
                 total_rented = float(occupancy_stats.total_rented or 0)
@@ -119,7 +125,9 @@ class OccupancyRateCalculator:
                 db.close()
 
             # 计算整体出租率
-            overall_rate = (total_rented / total_rentable * 100) if total_rentable > 0 else 0.0
+            overall_rate = (
+                (total_rented / total_rentable * 100) if total_rentable > 0 else 0.0
+            )
 
             return {
                 "overall_rate": round(overall_rate, 2),
@@ -127,7 +135,7 @@ class OccupancyRateCalculator:
                 "total_rented_area": round(total_rented, 2),
                 "total_unrented_area": round(total_unrented, 2),
                 "asset_count": asset_count,
-                "rentable_asset_count": rentable_asset_count
+                "rentable_asset_count": rentable_asset_count,
             }
 
         except Exception as e:
@@ -136,9 +144,8 @@ class OccupancyRateCalculator:
 
     @staticmethod
     def calculate_occupancy_by_category(
-        assets: List[Asset],
-        category_field: str
-    ) -> Dict[str, Dict[str, Any]]:
+        assets: list[Asset], category_field: str
+    ) -> dict[str, dict[str, Any]]:
         """
         按分类计算出租率
 
@@ -164,7 +171,11 @@ class OccupancyRateCalculator:
             # 计算每个分类的出租率
             result = {}
             for category, category_assets in categories.items():
-                category_stats = OccupancyRateCalculator.calculate_overall_occupancy_rate(category_assets)
+                category_stats = (
+                    OccupancyRateCalculator.calculate_overall_occupancy_rate(
+                        category_assets
+                    )
+                )
                 result[category] = category_stats
 
             return result

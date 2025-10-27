@@ -2,21 +2,24 @@
 任务管理CRUD操作
 """
 
-from typing import Optional, Dict, Any, List
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, desc, asc
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from typing import Any
 
-from ..models.task import AsyncTask, TaskHistory, ExcelTaskConfig
-from ..enums.task import TaskStatus, TaskType, ExcelConfigType
-from ..schemas.task import TaskCreate, TaskUpdate, ExcelTaskConfigCreate
+from sqlalchemy import and_, asc, desc
+from sqlalchemy.orm import Session
+
+from ..enums.task import TaskStatus, TaskType
 from ..exceptions import BusinessLogicError
+from ..models.task import AsyncTask, ExcelTaskConfig, TaskHistory
+from ..schemas.task import ExcelTaskConfigCreate, TaskCreate, TaskUpdate
 
 
 class TaskCRUD:
     """任务CRUD操作类"""
 
-    def create(self, db: Session, *, obj_in: TaskCreate, user_id: str = None) -> AsyncTask:
+    def create(
+        self, db: Session, *, obj_in: TaskCreate, user_id: str = None
+    ) -> AsyncTask:
         """创建新任务"""
         db_obj = AsyncTask(
             task_type=obj_in.task_type,
@@ -26,7 +29,7 @@ class TaskCRUD:
             config=obj_in.config,
             user_id=user_id,
             status=TaskStatus.PENDING,
-            progress=0
+            progress=0,
         )
 
         db.add(db_obj)
@@ -39,12 +42,12 @@ class TaskCRUD:
             task_id=db_obj.id,
             action="created",
             message=f"任务 '{db_obj.title}' 已创建",
-            user_id=user_id
+            user_id=user_id,
         )
 
         return db_obj
 
-    def get(self, db: Session, id: str) -> Optional[AsyncTask]:
+    def get(self, db: Session, id: str) -> AsyncTask | None:
         """获取单个任务"""
         return db.query(AsyncTask).filter(AsyncTask.id == id).first()
 
@@ -54,14 +57,14 @@ class TaskCRUD:
         *,
         skip: int = 0,
         limit: int = 100,
-        task_type: Optional[str] = None,
-        status: Optional[str] = None,
-        user_id: Optional[str] = None,
-        created_after: Optional[datetime] = None,
-        created_before: Optional[datetime] = None,
+        task_type: str | None = None,
+        status: str | None = None,
+        user_id: str | None = None,
+        created_after: datetime | None = None,
+        created_before: datetime | None = None,
         order_by: str = "created_at",
-        order_dir: str = "desc"
-    ) -> List[AsyncTask]:
+        order_dir: str = "desc",
+    ) -> list[AsyncTask]:
         """获取任务列表"""
         query = db.query(AsyncTask).filter(AsyncTask.is_active == True)
 
@@ -88,7 +91,9 @@ class TaskCRUD:
         # 应用分页
         return query.offset(skip).limit(limit).all()
 
-    def update(self, db: Session, *, db_obj: AsyncTask, obj_in: TaskUpdate) -> AsyncTask:
+    def update(
+        self, db: Session, *, db_obj: AsyncTask, obj_in: TaskUpdate
+    ) -> AsyncTask:
         """更新任务"""
         update_data = obj_in.dict(exclude_unset=True)
 
@@ -99,11 +104,18 @@ class TaskCRUD:
 
             # 开始运行时设置开始时间
             if old_status == TaskStatus.PENDING and new_status == TaskStatus.RUNNING:
-                update_data["started_at"] = datetime.now(timezone.utc)
+                update_data["started_at"] = datetime.now(UTC)
 
             # 完成时设置完成时间
-            if old_status in [TaskStatus.PENDING, TaskStatus.RUNNING] and new_status in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]:
-                update_data["completed_at"] = datetime.now(timezone.utc)
+            if old_status in [
+                TaskStatus.PENDING,
+                TaskStatus.RUNNING,
+            ] and new_status in [
+                TaskStatus.COMPLETED,
+                TaskStatus.FAILED,
+                TaskStatus.CANCELLED,
+            ]:
+                update_data["completed_at"] = datetime.now(UTC)
 
                 # 完成时设置进度为100%
                 if new_status == TaskStatus.COMPLETED:
@@ -125,7 +137,7 @@ class TaskCRUD:
                 action="status_changed",
                 message=f"任务状态从 {old_status} 变更为 {new_status}",
                 user_id=db_obj.user_id,
-                details={"old_status": old_status, "new_status": new_status}
+                details={"old_status": old_status, "new_status": new_status},
             )
 
         return db_obj
@@ -146,7 +158,7 @@ class TaskCRUD:
             task_id=db_obj.id,
             action="deleted",
             message=f"任务 '{db_obj.title}' 已删除",
-            user_id=db_obj.user_id
+            user_id=db_obj.user_id,
         )
 
         return db_obj
@@ -159,7 +171,7 @@ class TaskCRUD:
         action: str,
         message: str,
         user_id: str = None,
-        details: Dict[str, Any] = None
+        details: dict[str, Any] = None,
     ) -> TaskHistory:
         """创建任务历史记录"""
         history = TaskHistory(
@@ -167,7 +179,7 @@ class TaskCRUD:
             action=action,
             message=message,
             user_id=user_id,
-            details=details or {}
+            details=details or {},
         )
 
         db.add(history)
@@ -176,11 +188,18 @@ class TaskCRUD:
 
         return history
 
-    def get_history(self, db: Session, task_id: str) -> List[TaskHistory]:
+    def get_history(self, db: Session, task_id: str) -> list[TaskHistory]:
         """获取任务历史记录"""
-        return db.query(TaskHistory).filter(TaskHistory.task_id == task_id).order_by(desc(TaskHistory.created_at)).all()
+        return (
+            db.query(TaskHistory)
+            .filter(TaskHistory.task_id == task_id)
+            .order_by(desc(TaskHistory.created_at))
+            .all()
+        )
 
-    def count(self, db: Session, *, task_type: Optional[str] = None, status: Optional[str] = None) -> int:
+    def count(
+        self, db: Session, *, task_type: str | None = None, status: str | None = None
+    ) -> int:
         """统计任务数量"""
         query = db.query(AsyncTask).filter(AsyncTask.is_active == True)
 
@@ -191,7 +210,7 @@ class TaskCRUD:
 
         return query.count()
 
-    def get_statistics(self, db: Session, user_id: Optional[str] = None) -> Dict[str, Any]:
+    def get_statistics(self, db: Session, user_id: str | None = None) -> dict[str, Any]:
         """获取任务统计信息"""
         base_query = db.query(AsyncTask).filter(AsyncTask.is_active == True)
 
@@ -199,8 +218,12 @@ class TaskCRUD:
             base_query = base_query.filter(AsyncTask.user_id == user_id)
 
         total_tasks = base_query.count()
-        running_tasks = base_query.filter(AsyncTask.status == TaskStatus.RUNNING).count()
-        completed_tasks = base_query.filter(AsyncTask.status == TaskStatus.COMPLETED).count()
+        running_tasks = base_query.filter(
+            AsyncTask.status == TaskStatus.RUNNING
+        ).count()
+        completed_tasks = base_query.filter(
+            AsyncTask.status == TaskStatus.COMPLETED
+        ).count()
         failed_tasks = base_query.filter(AsyncTask.status == TaskStatus.FAILED).count()
 
         # 按类型统计
@@ -222,7 +245,7 @@ class TaskCRUD:
             and_(
                 AsyncTask.status == TaskStatus.COMPLETED,
                 AsyncTask.started_at.isnot(None),
-                AsyncTask.completed_at.isnot(None)
+                AsyncTask.completed_at.isnot(None),
             )
         )
 
@@ -241,14 +264,16 @@ class TaskCRUD:
             "failed_tasks": failed_tasks,
             "by_type": by_type,
             "by_status": by_status,
-            "avg_duration": avg_duration
+            "avg_duration": avg_duration,
         }
 
 
 class ExcelTaskConfigCRUD:
     """Excel任务配置CRUD操作类"""
 
-    def create(self, db: Session, *, obj_in: ExcelTaskConfigCreate, user_id: str = None) -> ExcelTaskConfig:
+    def create(
+        self, db: Session, *, obj_in: ExcelTaskConfigCreate, user_id: str = None
+    ) -> ExcelTaskConfig:
         """创建Excel任务配置"""
         # 如果设置为默认配置，取消其他默认配置
         if obj_in.is_default:
@@ -256,7 +281,7 @@ class ExcelTaskConfigCRUD:
                 and_(
                     ExcelTaskConfig.config_type == obj_in.config_type,
                     ExcelTaskConfig.task_type == obj_in.task_type,
-                    ExcelTaskConfig.is_default == True
+                    ExcelTaskConfig.is_default == True,
                 )
             ).update({"is_default": False})
 
@@ -268,7 +293,7 @@ class ExcelTaskConfigCRUD:
             validation_rules=obj_in.validation_rules,
             format_config=obj_in.format_config,
             is_default=obj_in.is_default,
-            created_by=user_id
+            created_by=user_id,
         )
 
         db.add(db_obj)
@@ -277,20 +302,26 @@ class ExcelTaskConfigCRUD:
 
         return db_obj
 
-    def get(self, db: Session, id: str) -> Optional[ExcelTaskConfig]:
+    def get(self, db: Session, id: str) -> ExcelTaskConfig | None:
         """获取单个配置"""
         return db.query(ExcelTaskConfig).filter(ExcelTaskConfig.id == id).first()
 
-    def get_default(self, db: Session, config_type: str, task_type: str) -> Optional[ExcelTaskConfig]:
+    def get_default(
+        self, db: Session, config_type: str, task_type: str
+    ) -> ExcelTaskConfig | None:
         """获取默认配置"""
-        return db.query(ExcelTaskConfig).filter(
-            and_(
-                ExcelTaskConfig.config_type == config_type,
-                ExcelTaskConfig.task_type == task_type,
-                ExcelTaskConfig.is_default == True,
-                ExcelTaskConfig.is_active == True
+        return (
+            db.query(ExcelTaskConfig)
+            .filter(
+                and_(
+                    ExcelTaskConfig.config_type == config_type,
+                    ExcelTaskConfig.task_type == task_type,
+                    ExcelTaskConfig.is_default == True,
+                    ExcelTaskConfig.is_active == True,
+                )
             )
-        ).first()
+            .first()
+        )
 
     def get_multi(
         self,
@@ -298,10 +329,10 @@ class ExcelTaskConfigCRUD:
         *,
         skip: int = 0,
         limit: int = 100,
-        config_type: Optional[str] = None,
-        task_type: Optional[str] = None,
-        is_active: bool = True
-    ) -> List[ExcelTaskConfig]:
+        config_type: str | None = None,
+        task_type: str | None = None,
+        is_active: bool = True,
+    ) -> list[ExcelTaskConfig]:
         """获取配置列表"""
         query = db.query(ExcelTaskConfig).filter(ExcelTaskConfig.is_active == is_active)
 
@@ -310,14 +341,23 @@ class ExcelTaskConfigCRUD:
         if task_type:
             query = query.filter(ExcelTaskConfig.task_type == task_type)
 
-        return query.order_by(ExcelTaskConfig.is_default.desc(), ExcelTaskConfig.created_at.desc()).offset(skip).limit(limit).all()
+        return (
+            query.order_by(
+                ExcelTaskConfig.is_default.desc(), ExcelTaskConfig.created_at.desc()
+            )
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
 
-    def update(self, db: Session, *, db_obj: ExcelTaskConfig, obj_in: Dict[str, Any]) -> ExcelTaskConfig:
+    def update(
+        self, db: Session, *, db_obj: ExcelTaskConfig, obj_in: dict[str, Any]
+    ) -> ExcelTaskConfig:
         """更新配置"""
         for field, value in obj_in.items():
             setattr(db_obj, field, value)
 
-        db_obj.updated_at = datetime.now(timezone.utc)
+        db_obj.updated_at = datetime.now(UTC)
         db.add(db_obj)
         db.commit()
         db.refresh(db_obj)

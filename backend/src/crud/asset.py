@@ -2,49 +2,51 @@
 资产CRUD操作 - 优化版本
 """
 
-from typing import List, Optional, Dict, Any, Tuple
-from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_, desc, asc, func
-from functools import wraps
+from typing import Any
 
+from sqlalchemy import and_, asc, desc, or_
+from sqlalchemy.orm import Session
+
+from ..core.performance import cache_manager, cached, monitor_query
 from ..models.asset import Asset, AssetHistory
 from ..schemas.asset import AssetCreate, AssetUpdate
 from ..services.asset_calculator import AssetCalculator
-from ..core.performance import monitor_query, cache_manager, cached
-class SensitiveDataHandler:
-    """敏感数据处理器"""
-    def encrypt_sensitive_data(self, data):
-        """加密敏感数据"""
-        # 在实际应用中，这里应该实现真正的数据加密逻辑
-        # 例如使用AES加密算法
+
+
+class SensitiveDataHandler:
+    """敏感数据处理器"""
+
+    def encrypt_sensitive_data(self, data):
+        """加密敏感数据"""
+
+        # 在实际应用中，这里应该实现真正的数据加密逻辑
+
+        # 例如使用AES加密算法
+
         return data
 
-class AssetCRUD:
-    """资产CRUD操作类 - 优化版本"""
-
-    def __init__(self):
+
+class AssetCRUD:
+    """资产CRUD操作类 - 优化版本"""
+
+    def __init__(self):
         self.sensitive_data_handler = SensitiveDataHandler()
 
     @monitor_query("asset_get_by_id")
     @cached(ttl=300)  # 5分钟缓存
-    def get(self, db: Session, id: str) -> Optional[Asset]:
+    def get(self, db: Session, id: str) -> Asset | None:
         """根据ID获取资产"""
         return db.query(Asset).filter(Asset.id == id).first()
 
-    def get_by_name(self, db: Session, property_name: str) -> Optional[Asset]:
+    def get_by_name(self, db: Session, property_name: str) -> Asset | None:
         """根据物业名称获取资产"""
         return db.query(Asset).filter(Asset.property_name == property_name).first()
 
-    def get_by_property_name(self, db: Session, property_name: str) -> Optional[Asset]:
+    def get_by_property_name(self, db: Session, property_name: str) -> Asset | None:
         """根据物业名称获取资产（别名方法）"""
         return self.get_by_name(db, property_name)
 
-    def get_multi(
-        self, 
-        db: Session, 
-        skip: int = 0, 
-        limit: int = 100
-    ) -> List[Asset]:
+    def get_multi(self, db: Session, skip: int = 0, limit: int = 100) -> list[Asset]:
         """获取多个资产"""
         return db.query(Asset).offset(skip).limit(limit).all()
 
@@ -55,11 +57,11 @@ class AssetCRUD:
         db: Session,
         skip: int = 0,
         limit: int = 100,
-        search: Optional[str] = None,
-        filters: Optional[Dict[str, Any]] = None,
+        search: str | None = None,
+        filters: dict[str, Any] | None = None,
         sort_field: str = "created_at",
-        sort_order: str = "desc"
-    ) -> Tuple[List[Asset], int]:
+        sort_order: str = "desc",
+    ) -> tuple[list[Asset], int]:
         """
         获取资产列表，支持搜索、筛选和排序 - 优化版本
 
@@ -83,12 +85,16 @@ class AssetCRUD:
         cached_total = cache_manager.get(cache_key_total)
         if cached_total is not None:
             # 如果总数已缓存，直接查询数据
-            query = self._build_optimized_search_query(db, search, filters, sort_field, sort_order)
+            query = self._build_optimized_search_query(
+                db, search, filters, sort_field, sort_order
+            )
             assets = query.offset(skip).limit(limit).all()
             return assets, cached_total
 
         # 构建查询
-        query = self._build_optimized_search_query(db, search, filters, sort_field, sort_order)
+        query = self._build_optimized_search_query(
+            db, search, filters, sort_field, sort_order
+        )
 
         # 获取总数
         total = query.count()
@@ -101,8 +107,14 @@ class AssetCRUD:
 
         return assets, total
 
-    def _build_optimized_search_query(self, db: Session, search: Optional[str],
-                                      filters: Optional[Dict], sort_field: str, sort_order: str):
+    def _build_optimized_search_query(
+        self,
+        db: Session,
+        search: str | None,
+        filters: dict | None,
+        sort_field: str,
+        sort_order: str,
+    ):
         """构建优化的搜索查询"""
         from ..models.asset import Asset
 
@@ -118,7 +130,7 @@ class AssetCRUD:
                     Asset.property_name.ilike(f"%{term}%"),
                     Asset.address.ilike(f"%{term}%"),
                     Asset.ownership_entity.ilike(f"%{term}%"),
-                    Asset.business_category.ilike(f"%{term}%")
+                    Asset.business_category.ilike(f"%{term}%"),
                 )
                 search_conditions.append(search_filter)
 
@@ -134,9 +146,9 @@ class AssetCRUD:
                 if value is None:
                     continue
 
-                if key == "min_area" and hasattr(Asset, 'total_area'):
+                if key == "min_area" and hasattr(Asset, "total_area"):
                     filter_conditions.append(Asset.total_area >= float(value))
-                elif key == "max_area" and hasattr(Asset, 'total_area'):
+                elif key == "max_area" and hasattr(Asset, "total_area"):
                     filter_conditions.append(Asset.total_area <= float(value))
                 elif key == "ids" and isinstance(value, list):
                     # 使用IN查询，性能更好
@@ -152,7 +164,7 @@ class AssetCRUD:
                 query = query.filter(and_(*filter_conditions))
 
         # 排序 - 使用索引友好的字段
-        sortable_fields = ['created_at', 'updated_at', 'property_name', 'id']
+        sortable_fields = ["created_at", "updated_at", "property_name", "id"]
         if sort_field in sortable_fields:
             sort_column = getattr(Asset, sort_field)
             if sort_order.lower() == "desc":
@@ -162,9 +174,14 @@ class AssetCRUD:
 
         return query
 
-    def get_filtered_query(self, db: Session, search: Optional[str] = None,
-                          filters: Optional[Dict[str, Any]] = None,
-                          sort_field: str = "created_at", sort_order: str = "desc"):
+    def get_filtered_query(
+        self,
+        db: Session,
+        search: str | None = None,
+        filters: dict[str, Any] | None = None,
+        sort_field: str = "created_at",
+        sort_order: str = "desc",
+    ):
         """
         获取过滤后的查询对象（不执行查询）
         用于组织权限过滤
@@ -177,7 +194,7 @@ class AssetCRUD:
                 Asset.property_name.contains(search),
                 Asset.address.contains(search),
                 Asset.ownership_entity.contains(search),
-                                Asset.business_category.contains(search)
+                Asset.business_category.contains(search),
             )
             query = query.filter(search_filter)
 
@@ -189,9 +206,9 @@ class AssetCRUD:
                 if value is None:
                     continue
 
-                if key == "min_area" and hasattr(Asset, 'total_area'):
+                if key == "min_area" and hasattr(Asset, "total_area"):
                     filter_conditions.append(Asset.total_area >= value)
-                elif key == "max_area" and hasattr(Asset, 'total_area'):
+                elif key == "max_area" and hasattr(Asset, "total_area"):
                     filter_conditions.append(Asset.total_area <= value)
                 elif key == "ids" and isinstance(value, list):
                     # 支持按多个资产ID筛选
@@ -212,7 +229,9 @@ class AssetCRUD:
 
         return query
 
-    def execute_paginated_query(self, query, skip: int = 0, limit: int = 100) -> Tuple[List[Asset], int]:
+    def execute_paginated_query(
+        self, query, skip: int = 0, limit: int = 100
+    ) -> tuple[list[Asset], int]:
         """
         执行分页查询
         """
@@ -225,45 +244,45 @@ class AssetCRUD:
         return db.query(Asset).count()
 
     def count_with_search(
-        self, 
-        db: Session, 
-        search: Optional[str] = None,
-        filters: Optional[Dict[str, Any]] = None
+        self,
+        db: Session,
+        search: str | None = None,
+        filters: dict[str, Any] | None = None,
     ) -> int:
         """获取符合条件的资产数量"""
         query = db.query(Asset)
-        
+
         # 搜索条件
         if search:
             search_filter = or_(
                 Asset.property_name.contains(search),
                 Asset.address.contains(search),
                 Asset.ownership_entity.contains(search),
-                                Asset.business_category.contains(search)
+                Asset.business_category.contains(search),
             )
             query = query.filter(search_filter)
-        
+
         # 筛选条件
         if filters:
             filter_conditions = []
-            
+
             for key, value in filters.items():
                 if value is None:
                     continue
-                    
-                if key == "min_area" and hasattr(Asset, 'total_area'):
+
+                if key == "min_area" and hasattr(Asset, "total_area"):
                     filter_conditions.append(Asset.total_area >= value)
-                elif key == "max_area" and hasattr(Asset, 'total_area'):
+                elif key == "max_area" and hasattr(Asset, "total_area"):
                     filter_conditions.append(Asset.total_area <= value)
                 elif key == "ids" and isinstance(value, list):
                     # 支持按多个资产ID筛选
                     filter_conditions.append(Asset.id.in_(value))
                 elif hasattr(Asset, key):
                     filter_conditions.append(getattr(Asset, key) == value)
-            
+
             if filter_conditions:
                 query = query.filter(and_(*filter_conditions))
-        
+
         return query.count()
 
     def create(self, db: Session, obj_in: AssetCreate) -> Asset:
@@ -295,48 +314,48 @@ class AssetCRUD:
         """创建资产并记录历史"""
         # 创建资产
         db_obj = self.create(db=db, obj_in=obj_in)
-        
+
         # 记录创建历史
         history = AssetHistory(
             asset_id=db_obj.id,
             operation_type="CREATE",
             description=f"创建资产: {db_obj.property_name}",
-            operator="system"
+            operator="system",
         )
         db.add(history)
         db.commit()
-        
+
         return db_obj
 
-    def update(
-        self,
-        db: Session,
-        db_obj: Asset,
-        obj_in: AssetUpdate
-    ) -> Asset:
+    def update(self, db: Session, db_obj: Asset, obj_in: AssetUpdate) -> Asset:
         """更新资产"""
         update_data = obj_in.dict(exclude_unset=True)
-        
+
         # 加密敏感数据
         update_data = self.sensitive_data_handler.encrypt_sensitive_data(update_data)
-        
+
         # 合并当前数据和更新数据进行计算
         current_data = {}
-        for field in ['rentable_area', 'rented_area', 'annual_income', 'annual_expense']:
+        for field in [
+            "rentable_area",
+            "rented_area",
+            "annual_income",
+            "annual_expense",
+        ]:
             if hasattr(db_obj, field):
                 current_data[field] = getattr(db_obj, field)
-        
+
         # 合并更新数据
         current_data.update(update_data)
 
         # 自动计算相关字段
         calculated_data = AssetCalculator.auto_calculate_fields(current_data)
-        
+
         # 验证数据一致性
         errors = AssetCalculator.validate_area_consistency(calculated_data)
         if errors:
             raise ValueError(f"数据验证失败: {'; '.join(errors)}")
-        
+
         # 首先更新原始数据中的字段
         for field, value in update_data.items():
             if hasattr(db_obj, field):
@@ -348,7 +367,7 @@ class AssetCRUD:
                 setattr(db_obj, field, value)
 
         # 更新版本号
-        if hasattr(db_obj, 'version'):
+        if hasattr(db_obj, "version"):
             db_obj.version = (db_obj.version or 0) + 1
 
         db.add(db_obj)
@@ -357,14 +376,11 @@ class AssetCRUD:
         return db_obj
 
     def update_with_history(
-        self,
-        db: Session,
-        db_obj: Asset,
-        obj_in: AssetUpdate
+        self, db: Session, db_obj: Asset, obj_in: AssetUpdate
     ) -> Asset:
         """更新资产并记录历史"""
         update_data = obj_in.dict(exclude_unset=True)
-        
+
         # 记录变更历史
         for field, new_value in update_data.items():
             if hasattr(db_obj, field):
@@ -377,17 +393,17 @@ class AssetCRUD:
                         old_value=str(old_value) if old_value is not None else None,
                         new_value=str(new_value) if new_value is not None else None,
                         description=f"更新字段 {field}: {old_value} -> {new_value}",
-                        operator="system"
+                        operator="system",
                     )
                     db.add(history)
-        
+
         # 更新资产
         updated_asset = self.update(db=db, db_obj=db_obj, obj_in=obj_in)
         db.commit()
-        
+
         return updated_asset
 
-    def get_multi_by_ids(self, db: Session, ids: List[str]) -> List[Asset]:
+    def get_multi_by_ids(self, db: Session, ids: list[str]) -> list[Asset]:
         """根据ID列表批量获取资产"""
         if not ids:
             return []

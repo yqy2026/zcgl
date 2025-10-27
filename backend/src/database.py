@@ -2,10 +2,10 @@
 数据库配置和连接管理
 """
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base
-from sqlalchemy.orm import sessionmaker
 import os
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 # 数据库URL配置
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./data/land_property.db")
@@ -19,6 +19,7 @@ engine = create_engine(
 
 # 增强数据库安全
 from .database_security import enhance_database_security
+
 enhance_database_security(engine)
 
 # 创建会话工厂
@@ -44,15 +45,6 @@ def create_tables():
     创建所有数据库表
     """
     # 导入所有模型以确保它们被注册到Base.metadata中
-    from .models.asset import Asset, AssetHistory, AssetDocument, SystemDictionary, AssetCustomField
-    from .models.organization import Organization, OrganizationHistory
-    from .models.enum_field import EnumFieldType, EnumFieldValue, EnumFieldUsage, EnumFieldHistory
-    from .models.auth import User, UserSession, AuditLog
-    from .models.rbac import Role, Permission, UserRoleAssignment, ResourcePermission, PermissionAuditLog
-    from .models.asset import Ownership
-    from .models.asset import Project
-    from .models.rent_contract import RentContract, RentTerm, RentLedger, RentContractHistory
-    from .models.pdf_import_session import PDFImportSession, SessionLog, ProcessingConfiguration
 
     Base.metadata.create_all(bind=engine)
 

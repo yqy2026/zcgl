@@ -2,26 +2,19 @@
 土地物业资产管理系统 - 主应用入口
 """
 
-from fastapi import FastAPI, Request, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from fastapi.exceptions import RequestValidationError
-from pydantic import ValidationError
-from jose import JWTError
 import logging
-import traceback
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from .database import create_tables
-from .exceptions import AssetNotFoundError, DuplicateAssetError, BusinessLogicError
-from .utils.cache_manager import cache_manager
-from .core.config_manager import initialize_config, get_config
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from .core.config_manager import get_config, initialize_config
 from .core.exception_handler import setup_exception_handlers
 from .core.logging_security import setup_logging_security
-from .middleware.api_security import api_security_middleware
+from .database import create_tables
+from .middleware.error_recovery_middleware import ErrorRecoveryMiddleware
 from .middleware.request_logging import create_request_logging_middleware
 from .middleware.security_middleware import setup_security_middleware
-from .middleware.error_recovery_middleware import ErrorRecoveryMiddleware
 
 # 初始化配置管理器
 initialize_config()
@@ -51,7 +44,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"]
+    expose_headers=["*"],
 )
 
 # 添加错误恢复中间件（在其他中间件之前）
@@ -63,6 +56,7 @@ app.add_middleware(create_request_logging_middleware)
 # 设置统一异常处理器
 setup_exception_handlers(app)
 
+
 # 健康检查端点（必须在路由注册之前定义）
 @app.get("/api/v1/health", tags=["健康检查"])
 async def health_check():
@@ -70,16 +64,17 @@ async def health_check():
     try:
         return {
             "status": "healthy",
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "version": "2.0.0"
+            "timestamp": datetime.now(UTC).isoformat(),
+            "version": "2.0.0",
         }
     except Exception as e:
         return {
             "status": "error",
             "error": str(e),
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "version": "2.0.0"
+            "timestamp": datetime.now(UTC).isoformat(),
+            "version": "2.0.0",
         }
+
 
 @app.get("/", tags=["根路由"])
 async def root_endpoint():
@@ -89,8 +84,9 @@ async def root_endpoint():
         "version": "2.0.0",
         "docs": "/docs",
         "health": "/api/v1/health",
-        "timestamp": datetime.now(timezone.utc).isoformat()
+        "timestamp": datetime.now(UTC).isoformat(),
     }
+
 
 @app.get("/api/v1/", tags=["根路径"])
 async def api_v1_root():
@@ -98,21 +94,20 @@ async def api_v1_root():
     return {
         "message": "土地物业资产管理系统 API v1",
         "version": "2.0.0",
-        "timestamp": datetime.now(timezone.utc).isoformat()
+        "timestamp": datetime.now(UTC).isoformat(),
     }
+
 
 @app.get("/api/v1/info", tags=["应用信息"])
 async def app_info():
     """应用信息端点"""
-    return {
-        "name": "土地物业资产管理系统",
-        "version": "2.0.0",
-        "docs_url": "/docs"
-    }
+    return {"name": "土地物业资产管理系统", "version": "2.0.0", "docs_url": "/docs"}
+
 
 # 导入API路由
 from .api.v1 import api_router
 from .api.v1.pdf_import_unified import router as pdf_import_router
+
 # from .api.v1.pdf_import_enhanced import router as pdf_import_enhanced_router  # 暂时注释
 # from .api.v1.error_recovery import router as error_recovery_router  # 暂时注释
 

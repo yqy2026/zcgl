@@ -3,20 +3,22 @@
 提供集中的配置管理、环境变量处理和配置验证功能
 """
 
-import os
 import json
-import yaml
-from typing import Any, Dict, Optional, Union, Type, get_type_hints
-from pathlib import Path
-from dataclasses import dataclass, field
-from enum import Enum
 import logging
+import os
+from dataclasses import dataclass
+from enum import Enum
+from pathlib import Path
+from typing import Any
+
+import yaml
 
 logger = logging.getLogger(__name__)
 
 
 class ConfigSource(str, Enum):
     """配置来源枚举"""
+
     ENVIRONMENT = "environment"
     FILE = "file"
     DEFAULTS = "defaults"
@@ -25,23 +27,24 @@ class ConfigSource(str, Enum):
 @dataclass
 class ConfigField:
     """配置字段定义"""
+
     name: str
-    field_type: Type
+    field_type: type
     default_value: Any = None
     required: bool = True
     description: str = ""
-    env_var: Optional[str] = None
-    validator: Optional[callable] = None
+    env_var: str | None = None
+    validator: callable | None = None
     sensitive: bool = False  # 是否为敏感信息
 
 
 class ConfigManager:
     """统一配置管理器"""
 
-    def __init__(self, config_file: Optional[str] = None):
+    def __init__(self, config_file: str | None = None):
         self.config_file = config_file or os.getenv("CONFIG_FILE", "config.yaml")
-        self._config: Dict[str, Any] = {}
-        self._fields: Dict[str, ConfigField] = {}
+        self._config: dict[str, Any] = {}
+        self._fields: dict[str, ConfigField] = {}
         self._initialized = False
 
     def register_field(self, field: ConfigField):
@@ -90,10 +93,10 @@ class ConfigManager:
         try:
             file_ext = Path(self.config_file).suffix.lower()
 
-            with open(self.config_file, 'r', encoding='utf-8') as f:
-                if file_ext in ['.yaml', '.yml']:
+            with open(self.config_file, encoding="utf-8") as f:
+                if file_ext in [".yaml", ".yml"]:
                     file_config = yaml.safe_load(f)
-                elif file_ext == '.json':
+                elif file_ext == ".json":
                     file_config = json.load(f)
                 else:
                     logger.warning(f"Unsupported config file format: {file_ext}")
@@ -117,21 +120,25 @@ class ConfigManager:
                 try:
                     converted_value = self._convert_type(env_value, field.field_type)
                     self._config[field_name] = converted_value
-                    logger.debug(f"Loaded {field_name} from environment variable {env_var}")
+                    logger.debug(
+                        f"Loaded {field_name} from environment variable {env_var}"
+                    )
                 except (ValueError, TypeError) as e:
-                    logger.error(f"Failed to convert environment variable {env_var}: {e}")
+                    logger.error(
+                        f"Failed to convert environment variable {env_var}: {e}"
+                    )
 
-    def _convert_type(self, value: str, target_type: Type) -> Any:
+    def _convert_type(self, value: str, target_type: type) -> Any:
         """类型转换"""
         if target_type == bool:
-            return value.lower() in ('true', '1', 'yes', 'on')
+            return value.lower() in ("true", "1", "yes", "on")
         elif target_type == int:
             return int(value)
         elif target_type == float:
             return float(value)
         elif target_type == list:
             # 支持逗号分隔的列表
-            return [item.strip() for item in value.split(',') if item.strip()]
+            return [item.strip() for item in value.split(",") if item.strip()]
         else:
             return value
 
@@ -155,7 +162,9 @@ class ConfigManager:
             if not isinstance(value, field.field_type):
                 try:
                     # 尝试类型转换
-                    self._config[field_name] = self._convert_type(str(value), field.field_type)
+                    self._config[field_name] = self._convert_type(
+                        str(value), field.field_type
+                    )
                 except (ValueError, TypeError):
                     errors.append(
                         f"Field '{field_name}' should be of type {field.field_type.__name__}, "
@@ -171,14 +180,20 @@ class ConfigManager:
                     errors.append(f"Field '{field_name}' validation error: {e}")
 
         if errors:
-            error_msg = "Configuration validation failed:\n" + "\n".join(f"  - {error}" for error in errors)
+            error_msg = "Configuration validation failed:\n" + "\n".join(
+                f"  - {error}" for error in errors
+            )
             logger.error(error_msg)
             raise ValueError(error_msg)
 
-    def _deep_update(self, base_dict: Dict, update_dict: Dict):
+    def _deep_update(self, base_dict: dict, update_dict: dict):
         """深度更新字典"""
         for key, value in update_dict.items():
-            if key in base_dict and isinstance(base_dict[key], dict) and isinstance(value, dict):
+            if (
+                key in base_dict
+                and isinstance(base_dict[key], dict)
+                and isinstance(value, dict)
+            ):
                 self._deep_update(base_dict[key], value)
             else:
                 base_dict[key] = value
@@ -194,7 +209,7 @@ class ConfigManager:
         """设置配置值"""
         self._config[key] = value
 
-    def get_all(self) -> Dict[str, Any]:
+    def get_all(self) -> dict[str, Any]:
         """获取所有配置（过滤敏感信息）"""
         if not self._initialized:
             self.initialize()
@@ -214,7 +229,7 @@ class ConfigManager:
         self._initialized = False
         self.initialize()
 
-    def save_to_file(self, file_path: Optional[str] = None) -> None:
+    def save_to_file(self, file_path: str | None = None) -> None:
         """保存配置到文件"""
         if not file_path:
             file_path = self.config_file
@@ -231,10 +246,12 @@ class ConfigManager:
         try:
             file_ext = Path(file_path).suffix.lower()
 
-            with open(file_path, 'w', encoding='utf-8') as f:
-                if file_ext in ['.yaml', '.yml']:
-                    yaml.dump(config_to_save, f, default_flow_style=False, allow_unicode=True)
-                elif file_ext == '.json':
+            with open(file_path, "w", encoding="utf-8") as f:
+                if file_ext in [".yaml", ".yml"]:
+                    yaml.dump(
+                        config_to_save, f, default_flow_style=False, allow_unicode=True
+                    )
+                elif file_ext == ".json":
                     json.dump(config_to_save, f, indent=2, ensure_ascii=False)
 
             logger.info(f"Configuration saved to {file_path}")
@@ -259,39 +276,37 @@ def setup_default_config():
             field_type=str,
             default_value="sqlite:///./data/land_property.db",
             env_var="DATABASE_URL",
-            description="数据库连接URL"
+            description="数据库连接URL",
         ),
         ConfigField(
             name="database_echo",
             field_type=bool,
             default_value=False,
             env_var="DATABASE_ECHO",
-            description="是否打印SQL语句"
+            description="是否打印SQL语句",
         ),
-
         # API配置
         ConfigField(
             name="api_host",
             field_type=str,
             default_value="0.0.0.0",
             env_var="API_HOST",
-            description="API服务器主机"
+            description="API服务器主机",
         ),
         ConfigField(
             name="api_port",
             field_type=int,
             default_value=8002,
             env_var="API_PORT",
-            description="API服务器端口"
+            description="API服务器端口",
         ),
         ConfigField(
             name="api_title",
             field_type=str,
             default_value="Land Property Asset Management API",
             env_var="API_TITLE",
-            description="API标题"
+            description="API标题",
         ),
-
         # 安全配置
         ConfigField(
             name="secret_key",
@@ -300,64 +315,60 @@ def setup_default_config():
             env_var="SECRET_KEY",
             description="JWT密钥",
             sensitive=True,
-            required=True
+            required=True,
         ),
         ConfigField(
             name="access_token_expire_minutes",
             field_type=int,
             default_value=30,
             env_var="ACCESS_TOKEN_EXPIRE_MINUTES",
-            description="访问令牌过期时间（分钟）"
+            description="访问令牌过期时间（分钟）",
         ),
-
         # 文件上传配置
         ConfigField(
             name="upload_max_size_mb",
             field_type=int,
             default_value=50,
             env_var="UPLOAD_MAX_SIZE_MB",
-            description="文件上传最大大小（MB）"
+            description="文件上传最大大小（MB）",
         ),
         ConfigField(
             name="upload_allowed_extensions",
             field_type=list,
             default_value=["xlsx", "xls", "pdf", "doc", "docx"],
             env_var="UPLOAD_ALLOWED_EXTENSIONS",
-            description="允许上传的文件扩展名"
+            description="允许上传的文件扩展名",
         ),
-
         # Excel处理配置
         ConfigField(
             name="excel_batch_size",
             field_type=int,
             default_value=1000,
             env_var="EXCEL_BATCH_SIZE",
-            description="Excel处理批次大小"
+            description="Excel处理批次大小",
         ),
         ConfigField(
             name="excel_timeout_seconds",
             field_type=int,
             default_value=300,
             env_var="EXCEL_TIMEOUT_SECONDS",
-            description="Excel处理超时时间（秒）"
+            description="Excel处理超时时间（秒）",
         ),
-
         # 任务处理配置
         ConfigField(
             name="task_max_retries",
             field_type=int,
             default_value=3,
             env_var="TASK_MAX_RETRIES",
-            description="任务最大重试次数"
+            description="任务最大重试次数",
         ),
         ConfigField(
             name="task_retention_days",
             field_type=int,
             default_value=30,
             env_var="TASK_RETENTION_DAYS",
-            description="任务记录保留天数"
+            description="任务记录保留天数",
         ),
-
         # 日志配置
         ConfigField(
             name="log_level",
@@ -365,55 +376,53 @@ def setup_default_config():
             default_value="INFO",
             env_var="LOG_LEVEL",
             description="日志级别",
-            validator=lambda x: x.upper() in ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+            validator=lambda x: x.upper()
+            in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
         ),
         ConfigField(
             name="log_file",
             field_type=str,
             default_value="logs/app.log",
             env_var="LOG_FILE",
-            description="日志文件路径"
+            description="日志文件路径",
         ),
-
         # 缓存配置
         ConfigField(
             name="cache_enabled",
             field_type=bool,
             default_value=False,
             env_var="CACHE_ENABLED",
-            description="是否启用缓存"
+            description="是否启用缓存",
         ),
         ConfigField(
             name="cache_ttl_seconds",
             field_type=int,
             default_value=3600,
             env_var="CACHE_TTL_SECONDS",
-            description="缓存过期时间（秒）"
+            description="缓存过期时间（秒）",
         ),
-
         # 开发模式配置
         ConfigField(
             name="dev_mode",
             field_type=bool,
             default_value=False,
             env_var="DEV_MODE",
-            description="开发模式"
+            description="开发模式",
         ),
         ConfigField(
             name="debug",
             field_type=bool,
             default_value=False,
             env_var="DEBUG",
-            description="调试模式"
+            description="调试模式",
         ),
-
         # CORS配置
         ConfigField(
             name="cors_origins",
             field_type=list,
             default_value=["http://localhost:5173"],
             env_var="CORS_ORIGINS",
-            description="CORS允许的源"
+            description="CORS允许的源",
         ),
     ]
 
@@ -426,7 +435,7 @@ def get_config(key: str, default: Any = None) -> Any:
     return config_manager.get(key, default)
 
 
-def get_all_config() -> Dict[str, Any]:
+def get_all_config() -> dict[str, Any]:
     """获取所有配置的便捷函数"""
     return config_manager.get_all()
 

@@ -8,6 +8,7 @@ from enum import Enum
 
 class TaskStatus(str, Enum):
     """任务状态枚举"""
+
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -32,6 +33,7 @@ class TaskStatus(str, Enum):
 
 class TaskType(str, Enum):
     """任务类型枚举"""
+
     EXCEL_EXPORT = "excel_export"
     EXCEL_IMPORT = "excel_import"
     DATA_VALIDATION = "data_validation"
@@ -51,6 +53,7 @@ class TaskType(str, Enum):
 
 class ExcelConfigType(str, Enum):
     """Excel配置类型枚举"""
+
     IMPORT = "import"
     EXPORT = "export"
     VALIDATION = "validation"
@@ -64,6 +67,7 @@ class ExcelConfigType(str, Enum):
 
 class TaskPriority(str, Enum):
     """任务优先级枚举"""
+
     LOW = "low"
     NORMAL = "normal"
     HIGH = "high"
