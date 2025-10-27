@@ -5,7 +5,7 @@
 from typing import Optional, List
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, desc, func
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from ..models.auth import User, UserSession, AuditLog, UserRole
 from ..schemas.auth import UserCreate, UserUpdate, UserQueryParams
@@ -255,7 +255,7 @@ class AuditLogCRUD:
 
     def get_user_actions(self, db: Session, user_id: str, days: int = 30) -> List[str]:
         """获取用户最近操作"""
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
         start_date = datetime.now() - timedelta(days=days)
 
         actions = db.query(AuditLog.action).filter(
@@ -267,7 +267,7 @@ class AuditLogCRUD:
 
     def get_login_statistics(self, db: Session, days: int = 30) -> dict:
         """获取登录统计"""
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
         start_date = datetime.now() - timedelta(days=days)
 
         # 总登录次数

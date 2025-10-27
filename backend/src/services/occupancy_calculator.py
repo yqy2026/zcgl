@@ -5,7 +5,7 @@
 
 import polars as pl
 from typing import Dict, Any, List, Optional, Union, Tuple
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import logging
 from sqlalchemy.orm import Session
 from sqlalchemy import text, func, and_, or_

@@ -5,7 +5,7 @@
 
 from sqlalchemy import Column, String, DateTime, Integer, Text, JSON, Boolean
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 
 from ..database import Base
@@ -78,7 +78,7 @@ class AsyncTask(Base):
         if not self.started_at:
             return 0.0
 
-        end_time = self.completed_at or datetime.utcnow()
+        end_time = self.completed_at or datetime.now(timezone.utc)
         return (end_time - self.started_at).total_seconds()
 
 

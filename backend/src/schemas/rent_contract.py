@@ -2,7 +2,7 @@
 租金台账相关的Pydantic schemas
 """
 
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import Optional, List, Dict, Any
 from decimal import Decimal
 from pydantic import BaseModel, Field, field_validator, ConfigDict

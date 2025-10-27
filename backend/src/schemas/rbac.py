@@ -3,7 +3,7 @@ RBAC相关的Pydantic模式
 """
 
 from typing import List, Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 

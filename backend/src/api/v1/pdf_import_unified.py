@@ -7,7 +7,7 @@ import os
 import uuid
 import logging
 from typing import Dict, List, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,6 @@ try:
     from ...services.pdf_session_service import pdf_session_service
     from ...services.pdf_processing_service import pdf_processing_service
     from ...services.pdf_validation_matching_service import PDFValidationMatchingService
-    from ...services.enhanced_matching_service import EnhancedPDFValidationMatchingService
     from ...services.enhanced_error_handler import enhanced_error_handler, handle_pdf_error
     from ...services.performance_monitor import performance_monitor
     PDF_SERVICES_AVAILABLE = True

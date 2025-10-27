@@ -8,7 +8,7 @@ import pickle
 import logging
 import asyncio
 from typing import Any, Optional, Union
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import redis.asyncio as redis
 from fastapi import Depends
 

@@ -9,7 +9,7 @@ import logging
 from pathlib import Path
 from typing import Optional, Dict, Any, Tuple
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pdfplumber
 import fitz  # PyMuPDF
@@ -18,6 +18,8 @@ import pytesseract
 from pdf2image import convert_from_path
 from paddleocr import PaddleOCR
 import aiofiles
+
+logger = logging.getLogger(__name__)
 
 try:
     from ..models.pdf_import_session import ProcessingStep, SessionStatus
@@ -78,13 +80,13 @@ class PDFProcessingService:
             try:
                 # 修复PaddleOCR配置问题
                 self._ocr_engine = PaddleOCR(
-                    use_angle_cls=True,
+                    use_textline_orientation=True,
                     lang='ch',
                     show_log=False,
                     use_gpu=False,  # 修复GPU参数问题
-                    det_db_thresh=0.3,  # 降低检测阈值
-                    det_limit_side_len=960,  # 优化检测性能
-                    rec_batch_num=6  # 优化识别性能
+                    text_det_thresh=0.3,  # 新的检测阈值参数
+                    text_det_limit_side_len=960,  # 新的检测性能参数
+                    text_recognition_batch_size=6  # 新的识别性能参数
                 )
                 self._ocr_initialized = True
                 logger.info("PaddleOCR引擎初始化成功")

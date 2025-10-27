@@ -9,7 +9,7 @@ import time
 import traceback
 import uuid
 from typing import Callable, Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 from fastapi import Request, Response, HTTPException
 from fastapi.responses import JSONResponse

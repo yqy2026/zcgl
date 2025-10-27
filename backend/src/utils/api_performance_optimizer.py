@@ -11,7 +11,7 @@ import logging
 import hashlib
 from typing import Dict, Any, Optional, Callable, List
 from functools import wraps
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 logger = logging.getLogger(__name__)
 

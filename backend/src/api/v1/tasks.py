@@ -5,7 +5,7 @@
 from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, Body
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from ...database import get_db
 from ...crud.task import task_crud, excel_task_config_crud
@@ -428,7 +428,7 @@ async def cleanup_old_tasks(
     - **dry_run**: 是否为试运行
     """
     try:
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
 
         # 查找过期的任务
         old_tasks = db.query(AsyncTask).filter(

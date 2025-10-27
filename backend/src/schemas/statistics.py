@@ -4,7 +4,7 @@
 
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 from typing import Dict, Any, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class StatisticsRequest(BaseModel):
@@ -13,10 +13,12 @@ class StatisticsRequest(BaseModel):
     filters: Optional[Dict[str, Any]] = Field(
         None,
         description="筛选条件",
-        example={
-            "ownership_status": "已确权",
-            "property_nature": "经营性",
-            "ownership_entity": "国资集团"
+        json_schema_extra={
+            "example": {
+                "ownership_status": "已确权",
+                "property_nature": "经营性",
+                "ownership_entity": "国资集团"
+            }
         }
     )
 

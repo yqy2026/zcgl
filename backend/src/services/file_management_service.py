@@ -9,7 +9,7 @@ import asyncio
 import logging
 from pathlib import Path
 from typing import List, Dict, Any, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import aiofiles
 from sqlalchemy.orm import Session
 

@@ -4,7 +4,7 @@
 """
 
 from typing import List, Optional, Dict, Any, Tuple, Set
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
@@ -96,7 +96,7 @@ class PermissionDelegationService:
                 PermissionDelegation.is_active == True,
                 or_(
                     PermissionDelegation.ends_at.is_(None),
-                    PermissionDelegation.ends_at > datetime.utcnow()
+                    PermissionDelegation.ends_at > datetime.now(timezone.utc)
                 )
             )
         ).first()
@@ -104,12 +104,12 @@ class PermissionDelegationService:
         if existing:
             # 更新现有委托
             existing.permission_ids = permission_ids
-            existing.starts_at = starts_at or datetime.utcnow()
+            existing.starts_at = starts_at or datetime.now(timezone.utc)
             existing.ends_at = ends_at
             existing.conditions = conditions
             existing.reason = reason
             existing.can_redelegate = can_redelegate
-            existing.updated_at = datetime.utcnow()
+            existing.updated_at = datetime.now(timezone.utc)
             delegation = existing
         else:
             # 创建新的委托
@@ -119,13 +119,13 @@ class PermissionDelegationService:
                 permission_ids=permission_ids,
                 scope=scope,
                 scope_id=scope_id,
-                starts_at=starts_at or datetime.utcnow(),
+                starts_at=starts_at or datetime.now(timezone.utc),
                 ends_at=ends_at,
                 conditions=conditions,
                 reason=reason,
                 can_redelegate=can_redelegate,
                 is_active=True,
-                created_at=datetime.utcnow()
+                created_at=datetime.now(timezone.utc)
             )
             self.db.add(delegation)
 
@@ -159,7 +159,7 @@ class PermissionDelegationService:
             return False
 
         delegation.is_active = False
-        delegation.revoked_at = datetime.utcnow()
+        delegation.revoked_at = datetime.now(timezone.utc)
         delegation.revoked_by = revoked_by
         delegation.revocation_reason = reason
 
@@ -196,7 +196,7 @@ class PermissionDelegationService:
             query = query.filter(
                 or_(
                     PermissionDelegation.ends_at.is_(None),
-                    PermissionDelegation.ends_at > datetime.utcnow()
+                    PermissionDelegation.ends_at > datetime.now(timezone.utc)
                 )
             )
 
@@ -207,7 +207,7 @@ class PermissionDelegationService:
             query = query.filter(PermissionDelegation.scope_id == scope_id)
 
         # 检查委托时间是否已开始
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         query = query.filter(
             or_(
                 PermissionDelegation.starts_at.is_(None),
@@ -268,7 +268,7 @@ class PermissionDelegationService:
                     PermissionDelegation.is_active == True,
                     or_(
                         PermissionDelegation.ends_at.is_(None),
-                        PermissionDelegation.ends_at > datetime.utcnow()
+                        PermissionDelegation.ends_at > datetime.now(timezone.utc)
                     )
                 )
             )
@@ -459,7 +459,7 @@ class PermissionDelegationService:
                 UserRoleAssignment.is_active == True,
                 or_(
                     UserRoleAssignment.expires_at.is_(None),
-                    UserRoleAssignment.expires_at > datetime.utcnow()
+                    UserRoleAssignment.expires_at > datetime.now(timezone.utc)
                 )
             )
         ).all()
@@ -511,7 +511,7 @@ class PermissionDelegationService:
         for perm in effective_permissions:
             if perm.get("permission_code") == permission_code:
                 # 检查权限是否过期
-                if perm.get("expires_at") and perm["expires_at"] <= datetime.utcnow():
+                if perm.get("expires_at") and perm["expires_at"] <= datetime.now(timezone.utc):
                     continue
 
                 # 检查权限条件
@@ -538,7 +538,7 @@ class PermissionDelegationService:
             # 时间条件
             if "time_range" in conditions:
                 time_range = conditions["time_range"]
-                current_time = datetime.utcnow().time()
+                current_time = datetime.now(timezone.utc).time()
                 start_time = datetime.strptime(time_range["start"], "%H:%M").time()
                 end_time = datetime.strptime(time_range["end"], "%H:%M").time()
 
@@ -599,7 +599,7 @@ class PermissionDelegationService:
         expired_delegations = self.db.query(PermissionDelegation).filter(
             and_(
                 PermissionDelegation.is_active == True,
-                PermissionDelegation.ends_at <= datetime.utcnow()
+                PermissionDelegation.ends_at <= datetime.now(timezone.utc)
             )
         ).all()
 
@@ -643,7 +643,7 @@ class PermissionDelegationService:
                     PermissionDelegation.permission_ids.contains([permission_id]),
                     or_(
                         PermissionDelegation.ends_at.is_(None),
-                        PermissionDelegation.ends_at > datetime.utcnow()
+                        PermissionDelegation.ends_at > datetime.now(timezone.utc)
                     )
                 )
             ).all()

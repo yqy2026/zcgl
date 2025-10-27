@@ -2,7 +2,7 @@
 认证相关的Pydantic模型
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from pydantic import BaseModel, EmailStr, Field, field_validator, ConfigDict
 import re

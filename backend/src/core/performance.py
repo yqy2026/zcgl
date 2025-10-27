@@ -9,7 +9,7 @@ import logging
 from typing import Any, Dict, List, Optional, Union, Callable
 from functools import wraps
 from contextlib import contextmanager
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy import text, Index, func
@@ -257,7 +257,7 @@ class CacheManager:
         """检查缓存是否过期"""
         if not cache_item:
             return True
-        return datetime.utcnow() > cache_item['expires_at']
+        return datetime.now(timezone.utc) > cache_item['expires_at']
 
     def _cleanup_expired(self):
         """清理过期缓存"""
@@ -302,8 +302,8 @@ class CacheManager:
 
         self.cache[key] = {
             'value': value,
-            'created_at': datetime.utcnow(),
-            'expires_at': datetime.utcnow() + timedelta(seconds=ttl),
+            'created_at': datetime.now(timezone.utc),
+            'expires_at': datetime.now(timezone.utc) + timedelta(seconds=ttl),
             'ttl': ttl
         }
 

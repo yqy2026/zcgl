@@ -10,7 +10,7 @@ import ast
 from typing import Dict, List, Set, Tuple, Any
 from pathlib import Path
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 
 @dataclass
 class APIEndpoint:

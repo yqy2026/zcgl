@@ -7,7 +7,7 @@ import io
 import os
 import tempfile
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any
 
 # 第三方库导入
@@ -640,7 +640,7 @@ async def _process_excel_import_async(
             db_obj=task_crud.get(db=db_session, id=task_id),
             obj_in=TaskUpdate(
                 status=TaskStatus.RUNNING,
-                started_at=datetime.utcnow()
+                started_at=datetime.now(timezone.utc)
             )
         )
         db_session.commit()
@@ -667,7 +667,7 @@ async def _process_excel_import_async(
             db_obj=task_crud.get(db=db_session, id=task_id),
             obj_in=TaskUpdate(
                 status=TaskStatus.COMPLETED,
-                completed_at=datetime.utcnow(),
+                completed_at=datetime.now(timezone.utc),
                 progress=100,
                 result_data={
                     "total": result.get("total", 0),
@@ -689,7 +689,7 @@ async def _process_excel_import_async(
             db_obj=task_crud.get(db=db_session, id=task_id),
             obj_in=TaskUpdate(
                 status=TaskStatus.FAILED,
-                completed_at=datetime.utcnow(),
+                completed_at=datetime.now(timezone.utc),
                 error_message=str(e)
             )
         )
@@ -862,7 +862,7 @@ async def _process_excel_export_async(
             db_obj=task_crud.get(db=db_session, id=task_id),
             obj_in=TaskUpdate(
                 status=TaskStatus.RUNNING,
-                started_at=datetime.utcnow()
+                started_at=datetime.now(timezone.utc)
             )
         )
         db_session.commit()
@@ -958,7 +958,7 @@ async def _process_excel_export_async(
             db_obj=task_crud.get(db=db_session, id=task_id),
             obj_in=TaskUpdate(
                 status=TaskStatus.COMPLETED,
-                completed_at=datetime.utcnow(),
+                completed_at=datetime.now(timezone.utc),
                 progress=100,
                 total_items=total,
                 processed_items=total,
@@ -968,7 +968,7 @@ async def _process_excel_export_async(
                     "file_size": os.path.getsize(file_path),
                     "record_count": len(export_data),
                     "columns": list(df.columns),
-                    "export_time": datetime.utcnow().isoformat(),
+                    "export_time": datetime.now(timezone.utc).isoformat(),
                     "download_url": f"/api/v1/excel/download/{task_id}"
                 }
             )
@@ -982,7 +982,7 @@ async def _process_excel_export_async(
             db_obj=task_crud.get(db=db_session, id=task_id),
             obj_in=TaskUpdate(
                 status=TaskStatus.FAILED,
-                completed_at=datetime.utcnow(),
+                completed_at=datetime.now(timezone.utc),
                 error_message=str(e)
             )
         )

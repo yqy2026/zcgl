@@ -4,7 +4,7 @@
 
 from typing import Optional, List
 from pydantic import BaseModel, Field, field_validator, ConfigDict
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from enum import Enum
 from decimal import Decimal
 

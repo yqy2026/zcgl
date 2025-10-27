@@ -8,7 +8,7 @@ import magic
 import hashlib
 from typing import Optional, Dict, Any, List, Tuple
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from fastapi import Request, HTTPException, UploadFile, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import JSONResponse
@@ -287,7 +287,7 @@ class FileValidator:
                 "filename": file.filename,
                 "size": file.size,
                 "hash": file_hash,
-                "validation_time": datetime.utcnow().isoformat()
+                "validation_time": datetime.now(timezone.utc).isoformat()
             }
 
             # 记录安全审计
@@ -307,7 +307,7 @@ class FileValidator:
                 details={
                     "filename": file.filename,
                     "error": str(e),
-                    "validation_time": datetime.utcnow().isoformat()
+                    "validation_time": datetime.now(timezone.utc).isoformat()
                 }
             )
             raise

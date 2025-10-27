@@ -8,7 +8,7 @@ import asyncio
 import logging
 from pathlib import Path
 from typing import Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from .pdf_processing_service import pdf_processing_service

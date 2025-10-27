@@ -14,7 +14,7 @@ import hashlib
 import json
 import time
 from typing import Dict, Any, Optional, List, Tuple
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from collections import defaultdict
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -204,7 +204,7 @@ class DatabaseQueryOptimizer:
         try:
             from ...models.asset import AssetHistory
             from sqlalchemy import and_, desc
-            from datetime import datetime, timedelta
+            from datetime import datetime, timedelta, timezone
 
             # 构建优化的历史查询
             cutoff_date = datetime.now() - timedelta(days=days_back)
@@ -769,7 +769,7 @@ class OccupancyTrendGenerator:
     @staticmethod
     def _generate_current_data_trend(current_rate: float, current_rented: float, current_rentable: float) -> List[Dict[str, Any]]:
         """基于当前数据生成趋势"""
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
 
         trend_data = []
         for i in range(5, -1, -1):
@@ -789,7 +789,7 @@ class OccupancyTrendGenerator:
     @staticmethod
     def _analyze_historical_trends(history_records, assets, db, current_rate: float, current_rented: float, current_rentable: float) -> List[Dict[str, Any]]:
         """分析历史数据生成趋势"""
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
         from collections import defaultdict
 
         # 按月份分组历史记录

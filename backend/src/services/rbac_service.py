@@ -5,7 +5,7 @@ RBAC服务层
 from typing import List, Optional, Dict, Any, Set
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, desc
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 
 from ..models.rbac import Role, Permission, UserRoleAssignment, ResourcePermission, PermissionAuditLog

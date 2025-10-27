@@ -9,7 +9,7 @@ import logging
 import asyncio
 import time
 from typing import Dict, List, Any, Optional, Union
-from datetime import datetime
+from datetime import datetime, timezone
 
 from .monitoring import APIMonitoringService, record_api_call, get_performance_summary, generate_performance_report
 from ...services.unified_pdf_processor import unified_pdf_processor

@@ -4,7 +4,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ...database import get_db, drop_tables, create_tables
 from ...models.asset import Asset, AssetHistory, AssetDocument

@@ -7,7 +7,7 @@ import polars as pl
 from typing import Dict, Any, List, Optional, Union
 from pathlib import Path
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import tempfile
 import os
 from sqlalchemy.orm import Session

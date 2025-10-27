@@ -7,7 +7,7 @@ import time
 import psutil
 import logging
 from typing import Dict, Any, List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import text, func
 from dataclasses import dataclass

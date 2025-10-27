@@ -194,7 +194,7 @@ def _analyze_api_quality(docs_data: dict) -> dict:
 def _save_analysis_report(analysis: dict, output_dir: str):
     """保存分析报告"""
     import json
-    from datetime import datetime
+    from datetime import datetime, timezone
 
     analysis['timestamp'] = datetime.now().isoformat()
 

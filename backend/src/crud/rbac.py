@@ -3,7 +3,7 @@ RBAC相关CRUD操作
 """
 
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, desc, func
 
@@ -532,7 +532,7 @@ class PermissionAuditLogCRUD:
 
     def get_action_statistics(self, db: Session, days: int = 30) -> dict:
         """获取操作统计"""
-        from datetime import timedelta
+        from datetime import timedelta, timezone
         start_date = datetime.now() - timedelta(days=days)
 
         result = db.query(

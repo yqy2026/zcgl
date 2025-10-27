@@ -3,7 +3,7 @@
 支持临时权限、条件权限和权限模板的动态分配
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any, Optional, Union
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
@@ -52,7 +52,7 @@ class DynamicPermissionService:
                 TemporaryPermission.scope == scope,
                 TemporaryPermission.scope_id == scope_id,
                 TemporaryPermission.is_active == True,
-                TemporaryPermission.expires_at > datetime.utcnow()
+                TemporaryPermission.expires_at > datetime.now(timezone.utc)
             )
         ).first()
 
@@ -340,7 +340,7 @@ class DynamicPermissionService:
         for perm in dynamic_permissions:
             perm.is_active = False
             perm.revoked_by = revoked_by
-            perm.revoked_at = datetime.utcnow()
+            perm.revoked_at = datetime.now(timezone.utc)
             revoked_count += 1
 
         # 撤销临时权限
@@ -412,7 +412,7 @@ class DynamicPermissionService:
             query = query.filter(
                 or_(
                     DynamicPermission.expires_at.is_(None),
-                    DynamicPermission.expires_at > datetime.utcnow()
+                    DynamicPermission.expires_at > datetime.now(timezone.utc)
                 )
             )
 
@@ -436,7 +436,7 @@ class DynamicPermissionService:
         if not include_inactive:
             query = query.filter(TemporaryPermission.is_active == True)
         if not include_expired:
-            query = query.filter(TemporaryPermission.expires_at > datetime.utcnow())
+            query = query.filter(TemporaryPermission.expires_at > datetime.now(timezone.utc))
 
         temp_perms = query.all()
         for perm in temp_perms:
@@ -494,7 +494,7 @@ class DynamicPermissionService:
                 DynamicPermission.is_active == True,
                 or_(
                     DynamicPermission.expires_at.is_(None),
-                    DynamicPermission.expires_at > datetime.utcnow()
+                    DynamicPermission.expires_at > datetime.now(timezone.utc)
                 )
             )
         ).first()
@@ -520,7 +520,7 @@ class DynamicPermissionService:
                     TemporaryPermission.scope_id == scope_id
                 ),
                 TemporaryPermission.is_active == True,
-                TemporaryPermission.expires_at > datetime.utcnow()
+                TemporaryPermission.expires_at > datetime.now(timezone.utc)
             )
         ).first()
 
@@ -610,7 +610,7 @@ class DynamicPermissionService:
     def cleanup_expired_permissions(self) -> Dict[str, int]:
         """清理过期的权限"""
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         cleaned_count = {
             "dynamic_permissions": 0,
             "temporary_permissions": 0

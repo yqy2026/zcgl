@@ -5,7 +5,7 @@
 
 from typing import Generic, TypeVar, Optional, List, Any, Dict
 from pydantic import BaseModel, Field
-from datetime import datetime
+from datetime import datetime, timezone
 
 T = TypeVar('T')
 
@@ -128,7 +128,7 @@ class ResponseBuilder:
             "success": True,
             "message": message or "操作成功",
             "data": data,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
 
     @staticmethod
@@ -141,7 +141,7 @@ class ResponseBuilder:
                 "code": error_code,
                 "details": details or {}
             },
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
 
     @staticmethod
@@ -154,7 +154,7 @@ class ResponseBuilder:
                 "code": "validation_error",
                 "field_errors": field_errors
             },
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
 
     @staticmethod
@@ -179,7 +179,7 @@ class ResponseBuilder:
                 "has_next": page < total_pages,
                 "has_prev": page > 1
             },
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
 
     @staticmethod
@@ -199,7 +199,7 @@ class ResponseBuilder:
             "failed_count": failed_count,
             "errors": errors or [],
             "data": data,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
 
 

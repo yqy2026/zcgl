@@ -10,7 +10,7 @@ from pydantic import ValidationError
 from jose import JWTError
 import logging
 import traceback
-from datetime import datetime
+from datetime import datetime, timezone
 
 from .database import create_tables
 from .exceptions import AssetNotFoundError, DuplicateAssetError, BusinessLogicError
@@ -70,14 +70,14 @@ async def health_check():
     try:
         return {
             "status": "healthy",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "version": "2.0.0"
         }
     except Exception as e:
         return {
             "status": "error",
             "error": str(e),
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "version": "2.0.0"
         }
 
@@ -89,7 +89,7 @@ async def root_endpoint():
         "version": "2.0.0",
         "docs": "/docs",
         "health": "/api/v1/health",
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 @app.get("/api/v1/", tags=["根路径"])
@@ -98,7 +98,7 @@ async def api_v1_root():
     return {
         "message": "土地物业资产管理系统 API v1",
         "version": "2.0.0",
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 @app.get("/api/v1/info", tags=["应用信息"])

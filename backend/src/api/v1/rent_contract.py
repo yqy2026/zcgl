@@ -3,7 +3,7 @@
 """
 
 from typing import Any, List, Optional
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, Query, Body, Response, UploadFile, File, Form
 from fastapi.responses import FileResponse
@@ -411,7 +411,7 @@ def export_statistics(
     """
     try:
         from ..services.excel_export import export_statistics_report
-        from datetime import datetime
+        from datetime import datetime, timezone
 
         # 获取统计数据
         overview_stats = rent_ledger.get_statistics(

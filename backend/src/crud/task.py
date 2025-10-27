@@ -5,7 +5,7 @@
 from typing import Optional, Dict, Any, List
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, desc, asc
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ..models.task import AsyncTask, TaskHistory, ExcelTaskConfig
 from ..enums.task import TaskStatus, TaskType, ExcelConfigType
@@ -99,11 +99,11 @@ class TaskCRUD:
 
             # 开始运行时设置开始时间
             if old_status == TaskStatus.PENDING and new_status == TaskStatus.RUNNING:
-                update_data["started_at"] = datetime.utcnow()
+                update_data["started_at"] = datetime.now(timezone.utc)
 
             # 完成时设置完成时间
             if old_status in [TaskStatus.PENDING, TaskStatus.RUNNING] and new_status in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]:
-                update_data["completed_at"] = datetime.utcnow()
+                update_data["completed_at"] = datetime.now(timezone.utc)
 
                 # 完成时设置进度为100%
                 if new_status == TaskStatus.COMPLETED:
@@ -317,7 +317,7 @@ class ExcelTaskConfigCRUD:
         for field, value in obj_in.items():
             setattr(db_obj, field, value)
 
-        db_obj.updated_at = datetime.utcnow()
+        db_obj.updated_at = datetime.now(timezone.utc)
         db.add(db_obj)
         db.commit()
         db.refresh(db_obj)

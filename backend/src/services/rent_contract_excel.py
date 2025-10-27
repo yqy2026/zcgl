@@ -7,7 +7,7 @@ import polars as pl
 from typing import Dict, Any, List, Optional, Union, Tuple
 from pathlib import Path
 import logging
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 import tempfile
 import os
 import uuid

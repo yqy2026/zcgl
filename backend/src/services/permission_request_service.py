@@ -3,7 +3,7 @@
 支持权限申请、审批、驳回等完整工作流程
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any, Optional, Tuple
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
@@ -102,7 +102,7 @@ class PermissionRequestService:
         # 更新申请状态
         request.status = "approved"
         request.approved_by = approved_by
-        request.approved_at = datetime.utcnow()
+        request.approved_at = datetime.now(timezone.utc)
         request.approval_comment = approval_comment
 
         # 根据申请类型分配权限
@@ -115,7 +115,7 @@ class PermissionRequestService:
                 if request.requested_duration_hours:
                     # 临时权限
                     duration_hours = custom_duration_hours or int(request.requested_duration_hours)
-                    expires_at = datetime.utcnow() + timedelta(hours=duration_hours)
+                    expires_at = datetime.now(timezone.utc) + timedelta(hours=duration_hours)
 
                     temp_permission = self.dynamic_permission_service.create_temporary_permission(
                         user_id=request.user_id,
@@ -209,7 +209,7 @@ class PermissionRequestService:
         # 更新申请状态
         request.status = "rejected"
         request.approved_by = rejected_by
-        request.approved_at = datetime.utcnow()
+        request.approved_at = datetime.now(timezone.utc)
         request.approval_comment = rejection_reason
 
         # 创建审计日志
@@ -379,7 +379,7 @@ class PermissionRequestService:
         # 按日期统计（最近7天）
         daily_stats = {}
         for i in range(7):
-            date = datetime.utcnow().date() - timedelta(days=i)
+            date = datetime.now(timezone.utc).date() - timedelta(days=i)
             daily_stats[date.isoformat()] = {
                 "total": 0,
                 "pending": 0,
@@ -388,7 +388,7 @@ class PermissionRequestService:
             }
 
         recent_requests = query.filter(
-            PermissionRequest.created_at >= datetime.utcnow() - timedelta(days=7)
+            PermissionRequest.created_at >= datetime.now(timezone.utc) - timedelta(days=7)
         ).all()
 
         for request in recent_requests:
@@ -410,7 +410,7 @@ class PermissionRequestService:
     def cleanup_old_requests(self, days: int = 30) -> int:
         """清理旧的权限申请记录"""
 
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
 
         # 只清理已处理（approved/rejected）的申请
         old_requests = self.db.query(PermissionRequest).filter(

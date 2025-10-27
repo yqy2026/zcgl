@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 import os
 import uuid
 import shutil
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ...database import get_db
 from ...models.asset import Asset

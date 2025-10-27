@@ -2,13 +2,14 @@
 认证中间件
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 import logging
+import os
 
 from ..database import get_db
 from ..models.auth import User, UserRole

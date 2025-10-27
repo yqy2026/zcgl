@@ -4,7 +4,7 @@
 """
 
 from typing import List, Optional, Dict, Any, Tuple, Set
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
@@ -372,7 +372,7 @@ class PermissionInheritanceService:
                 UserRoleAssignment.is_active == True,
                 or_(
                     UserRoleAssignment.expires_at.is_(None),
-                    UserRoleAssignment.expires_at > datetime.utcnow()
+                    UserRoleAssignment.expires_at > datetime.now(timezone.utc)
                 )
             )
         ).all()
@@ -425,7 +425,7 @@ class PermissionInheritanceService:
                     "inheritance_type": InheritanceType.ORGANIZATION_INHERITANCE,
                     "source_id": org.id,
                     "source_name": org.name,
-                    "inherited_at": datetime.utcnow()  # 这里应该记录实际继承时间
+                    "inherited_at": datetime.now(timezone.utc)  # 这里应该记录实际继承时间
                 })
 
         return inherited_permissions
@@ -546,7 +546,7 @@ class PermissionInheritanceService:
                 "delegation_scope": delegation_scope,
                 "expires_at": expires_at.isoformat() if expires_at else None
             },
-            created_at=datetime.utcnow()
+            created_at=datetime.now(timezone.utc)
         )
         self.db.add(audit_log)
         self.db.commit()
@@ -572,7 +572,7 @@ class PermissionInheritanceService:
                 "delegation_id": delegation_id,
                 "revoked_count": revoked_count
             },
-            created_at=datetime.utcnow()
+            created_at=datetime.now(timezone.utc)
         )
         self.db.add(audit_log)
         self.db.commit()

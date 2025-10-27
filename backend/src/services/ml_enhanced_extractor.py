@@ -9,7 +9,7 @@ import logging
 from typing import Dict, List, Any, Optional, Tuple, Union
 from dataclasses import dataclass, field
 from enum import Enum
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from decimal import Decimal
 import asyncio
 from collections import defaultdict

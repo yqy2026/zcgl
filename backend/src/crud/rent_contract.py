@@ -3,7 +3,7 @@
 """
 
 from typing import Any, Dict, List, Optional, Union, Tuple
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from decimal import Decimal
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func, desc

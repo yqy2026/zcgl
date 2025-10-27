@@ -11,7 +11,7 @@ from sqlalchemy import text, inspect
 from sqlalchemy.orm import Session
 from sqlalchemy.engine import Engine
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import json
 
 logger = logging.getLogger(__name__)

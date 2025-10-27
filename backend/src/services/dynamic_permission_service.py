@@ -4,7 +4,7 @@
 """
 
 from typing import List, Optional, Dict, Any, Tuple
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
@@ -98,7 +98,7 @@ class DynamicPermissionService:
                     DynamicPermission.is_active == True,
                     or_(
                         DynamicPermission.expires_at.is_(None),
-                        DynamicPermission.expires_at > datetime.utcnow()
+                        DynamicPermission.expires_at > datetime.now(timezone.utc)
                     )
                 )
             ).first()
@@ -116,7 +116,7 @@ class DynamicPermissionService:
                 expires_at=expires_at,
                 conditions=conditions,
                 assigned_by=assigned_by,
-                assigned_at=datetime.utcnow(),
+                assigned_at=datetime.now(timezone.utc),
                 is_active=True
             )
 
@@ -133,7 +133,7 @@ class DynamicPermissionService:
                 scope_id=scope_id,
                 assigned_by=assigned_by,
                 reason=reason or "动态权限分配",
-                created_at=datetime.utcnow()
+                created_at=datetime.now(timezone.utc)
             )
             self.db.add(audit_log)
 
@@ -165,7 +165,7 @@ class DynamicPermissionService:
         Returns:
             创建的临时权限列表
         """
-        expires_at = datetime.utcnow() + timedelta(hours=duration_hours)
+        expires_at = datetime.now(timezone.utc) + timedelta(hours=duration_hours)
         created_permissions = []
 
         for permission_id in permission_ids:
@@ -182,7 +182,7 @@ class DynamicPermissionService:
                     TemporaryPermission.scope == scope,
                     TemporaryPermission.scope_id == scope_id,
                     TemporaryPermission.is_active == True,
-                    TemporaryPermission.expires_at > datetime.utcnow()
+                    TemporaryPermission.expires_at > datetime.now(timezone.utc)
                 )
             ).first()
 
@@ -197,7 +197,7 @@ class DynamicPermissionService:
                 scope_id=scope_id,
                 expires_at=expires_at,
                 assigned_by=assigned_by,
-                assigned_at=datetime.utcnow(),
+                assigned_at=datetime.now(timezone.utc),
                 is_active=True
             )
 
@@ -214,7 +214,7 @@ class DynamicPermissionService:
                 scope_id=scope_id,
                 assigned_by=assigned_by,
                 reason=reason or f"临时权限分配，有效期{duration_hours}小时",
-                created_at=datetime.utcnow()
+                created_at=datetime.now(timezone.utc)
             )
             self.db.add(audit_log)
 
@@ -266,7 +266,7 @@ class DynamicPermissionService:
             # 更新现有权限的条件
             existing.conditions = conditions
             existing.assigned_by = assigned_by
-            existing.assigned_at = datetime.utcnow()
+            existing.assigned_at = datetime.now(timezone.utc)
             conditional_permission = existing
         else:
             # 创建新的条件权限
@@ -277,7 +277,7 @@ class DynamicPermissionService:
                 scope_id=scope_id,
                 conditions=conditions,
                 assigned_by=assigned_by,
-                assigned_at=datetime.utcnow(),
+                assigned_at=datetime.now(timezone.utc),
                 is_active=True
             )
             self.db.add(conditional_permission)
@@ -293,7 +293,7 @@ class DynamicPermissionService:
             assigned_by=assigned_by,
             reason=reason or "条件权限分配",
             conditions=conditions,
-            created_at=datetime.utcnow()
+            created_at=datetime.now(timezone.utc)
         )
         self.db.add(audit_log)
 
@@ -334,7 +334,7 @@ class DynamicPermissionService:
 
         for permission in permissions:
             permission.is_active = False
-            permission.revoked_at = datetime.utcnow()
+            permission.revoked_at = datetime.now(timezone.utc)
             permission.revoked_by = revoked_by
 
             # 记录审计日志
@@ -347,7 +347,7 @@ class DynamicPermissionService:
                 scope_id=permission.scope_id,
                 assigned_by=revoked_by,
                 reason=reason or "权限撤销",
-                created_at=datetime.utcnow()
+                created_at=datetime.now(timezone.utc)
             )
             self.db.add(audit_log)
 
@@ -392,7 +392,7 @@ class DynamicPermissionService:
             scope=scope,
             conditions=conditions,
             created_by=created_by,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
             is_active=True
         )
 
@@ -476,7 +476,7 @@ class DynamicPermissionService:
             dynamic_query = dynamic_query.filter(
                 or_(
                     DynamicPermission.expires_at.is_(None),
-                    DynamicPermission.expires_at > datetime.utcnow()
+                    DynamicPermission.expires_at > datetime.now(timezone.utc)
                 )
             )
 
@@ -505,14 +505,14 @@ class DynamicPermissionService:
                     "conditions": perm.conditions,
                     "assigned_by": perm.assigned_by,
                     "assigned_at": perm.assigned_at,
-                    "is_expired": perm.expires_at and perm.expires_at <= datetime.utcnow()
+                    "is_expired": perm.expires_at and perm.expires_at <= datetime.now(timezone.utc)
                 })
 
         # 获取临时权限
         temp_query = self.db.query(TemporaryPermission).filter(
             TemporaryPermission.user_id == user_id,
             TemporaryPermission.is_active == True,
-            TemporaryPermission.expires_at > datetime.utcnow()
+            TemporaryPermission.expires_at > datetime.now(timezone.utc)
         )
 
         if scope:
@@ -610,7 +610,7 @@ class DynamicPermissionService:
                 DynamicPermission.is_active == True,
                 or_(
                     DynamicPermission.expires_at.is_(None),
-                    DynamicPermission.expires_at > datetime.utcnow()
+                    DynamicPermission.expires_at > datetime.now(timezone.utc)
                 )
             )
         ).first()
@@ -630,7 +630,7 @@ class DynamicPermissionService:
                 TemporaryPermission.user_id == user_id,
                 TemporaryPermission.permission_id == permission.id,
                 TemporaryPermission.is_active == True,
-                TemporaryPermission.expires_at > datetime.utcnow()
+                TemporaryPermission.expires_at > datetime.now(timezone.utc)
             )
         ).first()
 
@@ -672,7 +672,7 @@ class DynamicPermissionService:
             # 时间条件
             if "time_range" in conditions:
                 time_range = conditions["time_range"]
-                current_time = datetime.utcnow().time()
+                current_time = datetime.now(timezone.utc).time()
                 start_time = datetime.strptime(time_range["start"], "%H:%M").time()
                 end_time = datetime.strptime(time_range["end"], "%H:%M").time()
 
@@ -743,7 +743,7 @@ class DynamicPermissionService:
         expired_dynamic = self.db.query(DynamicPermission).filter(
             and_(
                 DynamicPermission.is_active == True,
-                DynamicPermission.expires_at <= datetime.utcnow()
+                DynamicPermission.expires_at <= datetime.now(timezone.utc)
             )
         ).all()
 
@@ -755,7 +755,7 @@ class DynamicPermissionService:
         expired_temp = self.db.query(TemporaryPermission).filter(
             and_(
                 TemporaryPermission.is_active == True,
-                TemporaryPermission.expires_at <= datetime.utcnow()
+                TemporaryPermission.expires_at <= datetime.now(timezone.utc)
             )
         ).all()
 

@@ -2,7 +2,7 @@
 权属方相关数据模式
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List
 
 from pydantic import BaseModel, Field, field_validator, ConfigDict

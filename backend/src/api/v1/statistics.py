@@ -4,7 +4,7 @@
 
 import logging
 from typing import Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query, Path
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case
@@ -1086,7 +1086,7 @@ async def get_usage_status_distribution(db: Session = Depends(get_db)):
 @router.get("/trend/{metric}", response_model=TrendDataResponse, summary="获取趋势数据")
 async def get_trend_data(
     metric: str = Path(..., description="指标名称"),
-    period: str = Query("monthly", regex="^(daily|weekly|monthly|yearly)$", description="时间周期"),
+    period: str = Query("monthly", pattern="^(daily|weekly|monthly|yearly)$", description="时间周期"),
     db: Session = Depends(get_db)
 ):
     """

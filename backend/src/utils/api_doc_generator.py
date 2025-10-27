@@ -8,7 +8,7 @@ import json
 import inspect
 from typing import Dict, List, Any, Optional
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import FastAPI
 from fastapi.routing import APIRoute

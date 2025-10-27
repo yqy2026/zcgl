@@ -4,7 +4,7 @@ Excel高级功能相关的Pydantic模型
 
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import Optional, List, Dict, Any, Union
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 from .task import TaskType

@@ -4,7 +4,7 @@
 
 from sqlalchemy import Column, String, Float, DateTime, Integer, Text, ForeignKey, JSON, Boolean, Date, DECIMAL
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 
 from ..database import Base

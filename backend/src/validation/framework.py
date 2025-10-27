@@ -6,7 +6,7 @@
 import re
 import os
 from typing import Any, Dict, List, Optional, Union, Callable, Type
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from decimal import Decimal
 from enum import Enum
 

@@ -6,7 +6,7 @@ from typing import List, Optional, Dict, Any, Tuple
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 
 from ..models.asset import AssetCustomField

@@ -11,7 +11,7 @@ import re
 from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass
 from enum import Enum
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from decimal import Decimal
 
 logger = logging.getLogger(__name__)

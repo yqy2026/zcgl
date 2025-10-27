@@ -14,7 +14,7 @@ from enum import Enum
 import re
 import jieba
 from collections import defaultdict, Counter
-from datetime import datetime
+from datetime import datetime, timezone
 import pickle
 
 logger = logging.getLogger(__name__)

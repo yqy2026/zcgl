@@ -3,7 +3,7 @@
 支持临时权限、条件权限和动态权限分配
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List
 from sqlalchemy import Column, String, DateTime, Boolean, Text, JSON, ForeignKey
 from sqlalchemy.orm import relationship

@@ -5,7 +5,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
 from typing import List, Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ..models.organization import Organization, OrganizationHistory
 from ..schemas.organization import OrganizationCreate, OrganizationUpdate

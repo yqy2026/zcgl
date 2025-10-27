@@ -5,7 +5,7 @@
 import json
 import logging
 from typing import Dict, Any, List, Optional, Set
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 
@@ -142,7 +142,7 @@ class HistoryTracker:
                 old_values=old_values or {},
                 new_values=new_values or {},
                 changed_by=changed_by,
-                changed_at=datetime.utcnow(),
+                changed_at=datetime.now(timezone.utc),
                 reason=reason
             )
             
@@ -479,10 +479,10 @@ class HistoryService:
             变更统计信息
         """
         try:
-            from datetime import timedelta
+            from datetime import timedelta, timezone
             
             # 计算时间范围
-            end_date = datetime.utcnow()
+            end_date = datetime.now(timezone.utc)
             start_date = end_date - timedelta(days=days)
             
             query = db.query(AssetHistory).filter(

@@ -5,7 +5,7 @@
 from sqlalchemy import Column, String, DateTime, Boolean, Integer, Text, ForeignKey, JSON
 from sqlalchemy.dialects.sqlite import JSON as JSONType
 from sqlalchemy.orm import relationship
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 import uuid
 

@@ -3,7 +3,7 @@
 """
 
 from sqlalchemy.orm import class_mapper
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from decimal import Decimal
 from typing import Any, Dict, Optional, List
 import uuid

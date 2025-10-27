@@ -7,7 +7,7 @@ import pandas as pd
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 import re
 
 from src.schemas.asset import AssetCreate, OwnershipStatus, UsageStatus, PropertyNature
@@ -455,7 +455,7 @@ class ExcelImportService:
                     for asset in batch_assets:
                         asset_dict = asset.model_dump()
                         # 添加必要的时间戳
-                        from datetime import datetime
+                        from datetime import datetime, timezone
                         asset_dict['created_at'] = datetime.now()
                         asset_dict['updated_at'] = datetime.now()
                         asset_dicts.append(asset_dict)

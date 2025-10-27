@@ -8,7 +8,7 @@ import psutil
 import asyncio
 import logging
 from typing import Dict, Any, List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass, asdict
 from collections import deque, defaultdict
 from sqlalchemy.orm import Session

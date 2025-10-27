@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy.orm import Session
 from typing import Optional
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ...database import get_db
 from ...services.pdf_processing_monitor import pdf_processing_monitor

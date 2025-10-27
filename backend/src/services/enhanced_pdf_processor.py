@@ -14,7 +14,7 @@ import cv2
 import numpy as np
 from PIL import Image, ImageEnhance, ImageFilter
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
 from .pdf_processing_service import pdf_processing_service
 

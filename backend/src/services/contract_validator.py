@@ -5,7 +5,7 @@
 
 import logging
 from typing import Dict, List, Any, Optional, Tuple
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from decimal import Decimal, InvalidOperation
 
 from sqlalchemy.orm import Session

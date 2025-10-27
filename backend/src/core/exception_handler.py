@@ -6,7 +6,7 @@
 import logging
 import traceback
 from typing import Any, Dict, Optional, Union
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import Request, HTTPException, status
 from fastapi.responses import JSONResponse
@@ -30,7 +30,7 @@ class BaseBusinessException(Exception):
         self.code = code
         self.details = details or {}
         self.status_code = status_code
-        self.timestamp = datetime.utcnow()
+        self.timestamp = datetime.now(timezone.utc)
         super().__init__(message)
 
     def to_dict(self) -> Dict[str, Any]:

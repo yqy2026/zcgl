@@ -5,7 +5,7 @@
 from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func, desc, asc
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ..models import Project, Asset
 from ..schemas.project import ProjectCreate, ProjectUpdate, ProjectSearchRequest
@@ -115,7 +115,7 @@ class CRUDProject:
         Returns:
             str: 唯一的项目编码
         """
-        from datetime import datetime
+        from datetime import datetime, timezone
 
         # 固定前缀
         prefix = "PJ"
@@ -320,7 +320,7 @@ class CRUDProject:
 
         update_data = obj_in.dict(exclude_unset=True)
         update_data["updated_by"] = updated_by
-        update_data["updated_at"] = datetime.utcnow()
+        update_data["updated_at"] = datetime.now(timezone.utc)
 
         # 不允许更新编码
         if "code" in update_data:
@@ -505,7 +505,7 @@ class CRUDProject:
 
         db_obj.is_active = not db_obj.is_active
         db_obj.updated_by = updated_by
-        db_obj.updated_at = datetime.utcnow()
+        db_obj.updated_at = datetime.now(timezone.utc)
 
         db.add(db_obj)
         db.commit()

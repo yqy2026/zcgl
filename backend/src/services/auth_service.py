@@ -2,7 +2,7 @@
 认证服务
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 import secrets
 import re
@@ -224,7 +224,7 @@ class AuthService:
             "sub": user.id,
             "username": user.username,
             "role": user.role.value if hasattr(user.role, 'value') else user.role,
-            "exp": datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
         }
         access_token = jwt.encode(access_token_data, SECRET_KEY, algorithm=ALGORITHM)
 
@@ -232,7 +232,7 @@ class AuthService:
         refresh_token_data = {
             "sub": user.id,
             "type": "refresh",
-            "exp": datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
+            "exp": datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
         }
         refresh_token = jwt.encode(refresh_token_data, SECRET_KEY, algorithm=ALGORITHM)
 

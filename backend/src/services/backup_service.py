@@ -8,7 +8,7 @@ import sqlite3
 import gzip
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, List, Optional, Union
 from pathlib import Path
 import asyncio

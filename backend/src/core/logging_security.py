@@ -9,7 +9,7 @@ import re
 import hashlib
 import uuid
 from typing import Any, Dict, Optional, List, Set
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from .config_manager import get_config
@@ -132,7 +132,7 @@ class StructuredFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         """格式化日志记录为结构化JSON"""
         log_entry = {
-            'timestamp': datetime.utcnow().isoformat() + 'Z',
+            'timestamp': datetime.now(timezone.utc).isoformat(),
             'level': record.levelname,
             'logger': record.name,
             'message': record.getMessage(),
@@ -219,7 +219,7 @@ class SecurityAuditor:
         security_event = {
             'event_type': event_type,
             'message': message,
-            'timestamp': datetime.utcnow().isoformat() + 'Z',
+            'timestamp': datetime.now(timezone.utc).isoformat(),
             'severity': self._get_event_severity(event_type)
         }
 
@@ -324,7 +324,7 @@ class RequestLogger:
             'path': path,
             'status_code': status_code,
             'duration_ms': round(duration_ms, 2),
-            'timestamp': datetime.utcnow().isoformat() + 'Z',
+            'timestamp': datetime.now(timezone.utc).isoformat(),
         }
 
         # 添加可选字段
@@ -407,7 +407,7 @@ def get_request_context() -> Dict[str, str]:
     """获取请求上下文"""
     return {
         'request_id': str(uuid.uuid4()),
-        'timestamp': datetime.utcnow().isoformat()
+        'timestamp': datetime.now(timezone.utc).isoformat()
     }
 
 

@@ -6,7 +6,7 @@
 import re
 import logging
 from typing import Dict, List, Any, Optional, Tuple
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from decimal import Decimal
 
 logger = logging.getLogger(__name__)

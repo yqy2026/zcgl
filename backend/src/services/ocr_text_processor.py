@@ -6,7 +6,7 @@ OCR文本预处理器
 import re
 import logging
 from typing import Dict, Any, Optional, List
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from decimal import Decimal
 
 logger = logging.getLogger(__name__)

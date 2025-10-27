@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 import csv
 import io
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 import asyncio
 from concurrent.futures import ThreadPoolExecutor

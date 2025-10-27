@@ -10,7 +10,7 @@ import time
 import logging
 import hashlib
 from typing import Dict, List, Any, Optional, Union
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass, asdict
 
 logger = logging.getLogger(__name__)
@@ -210,7 +210,6 @@ class FastResponseOptimizer:
                 "cache_hit": False,
                 "compression_saved": compression_enabled,
                 "techniques_used": ["used_cached", "compression_enabled"] if compression_enabled else []
-            }
             }
 
         except Exception as e:
