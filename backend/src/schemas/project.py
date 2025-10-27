@@ -5,7 +5,7 @@
 from datetime import datetime
 from typing import Optional, List
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 
 class ProjectBase(BaseModel):
@@ -42,7 +42,8 @@ class ProjectBase(BaseModel):
     is_active: Optional[bool] = Field(True, title="是否启用")
     data_status: Optional[str] = Field("正常", title="数据状态", max_length=20)
 
-    @validator('code')
+    @field_validator('code')
+    @classmethod
     def validate_code(cls, v):
         """验证项目编码格式"""
         if v is not None:
@@ -97,7 +98,8 @@ class ProjectUpdate(BaseModel):
     ownership_relations: Optional[List[dict]] = Field(None, title="权属方关系")
     ownership_ids: Optional[List[str]] = Field(None, title="权属方ID列表")
 
-    @validator('code')
+    @field_validator('code')
+    @classmethod
     def validate_code(cls, v):
         """验证项目编码格式"""
         if v is not None:
@@ -122,7 +124,8 @@ class ProjectResponse(ProjectBase):
     asset_count: int = 0
     ownership_relations: Optional[List[dict]] = None
 
-    @validator('ownership_relations', pre=True, always=True)
+    @field_validator('ownership_relations', mode="before")
+    @classmethod
     def convert_ownership_relations(cls, v):
         """转换权属方关系对象为字典格式"""
         if v is None:
@@ -159,10 +162,9 @@ class ProjectResponse(ProjectBase):
         # 如果是字典格式，直接返回
         return v
 
-    class Config:
+    model_config = ConfigDict(
         from_attributes = True
-
-
+    )
 class ProjectListResponse(BaseModel):
     """项目列表响应模式"""
     items: List[ProjectResponse]

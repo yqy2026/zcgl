@@ -89,6 +89,9 @@ if os.getenv("ENVIRONMENT") == "production":
     settings.DEBUG = False
     settings.DATABASE_ECHO = False
     settings.CORS_ORIGINS = ["https://your-production-domain.com"]
+elif os.getenv("ENVIRONMENT") == "development":
+    settings.DEBUG = True
+    settings.RELOAD = True
 
 # 验证必要配置
 def validate_config():

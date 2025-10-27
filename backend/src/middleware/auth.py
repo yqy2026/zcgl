@@ -21,7 +21,8 @@ from ..core.config import settings
 logger = logging.getLogger(__name__)
 
 # 开发模式检查 - 使用更安全的开发认证
-DEV_MODE = settings.DEBUG
+# 只有在明确设置为true时才启用开发模式
+DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
 
 # OAuth2密码流 - 始终启用安全性
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/login", auto_error=False)
@@ -48,9 +49,9 @@ def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
 
-    # 如果没有token且不是开发模式，返回None而不是抛出异常
+    # 如果没有token，抛出认证异常而不是返回None
     if not token:
-        return None
+        raise credentials_exception
 
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -71,11 +72,11 @@ def get_current_user(
 
         token_data = TokenData(sub=user_id, username=username, role=role_enum)
     except JWTError:
-        return None  # 在开发模式下静默失败，而不是抛出异常
+        raise credentials_exception
 
     user = db.query(User).filter(User.id == token_data.sub).first()
     if user is None:
-        return None
+        raise credentials_exception
 
     if not user.is_active:
         raise HTTPException(
@@ -136,12 +137,9 @@ def get_or_create_dev_user(db: Session) -> User:
 
 
 def get_current_active_user(
-    current_user: Optional[User] = Depends(get_current_user)
-) -> Optional[User]:
+    current_user: User = Depends(get_current_user)
+) -> User:
     """获取当前活跃用户"""
-    if current_user is None:
-        return None
-
     if not current_user.is_active:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

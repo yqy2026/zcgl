@@ -2,7 +2,7 @@
 组织架构相关数据验证模式
 """
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import Optional, List
 from datetime import datetime
 
@@ -33,14 +33,16 @@ class OrganizationBase(BaseModel):
     description: Optional[str] = Field(None, max_length=1000, description="组织描述")
     functions: Optional[str] = Field(None, max_length=1000, description="主要职能")
 
-    @validator('type')
+    @field_validator('type')
+    @classmethod
     def validate_type(cls, v):
         allowed_types = ['company', 'department', 'group', 'division', 'team', 'branch', 'office']
         if v not in allowed_types:
             raise ValueError(f'type must be one of {allowed_types}')
         return v
 
-    @validator('status')
+    @field_validator('status')
+    @classmethod
     def validate_status(cls, v):
         allowed_statuses = ['active', 'inactive', 'suspended']
         if v not in allowed_statuses:
@@ -83,7 +85,8 @@ class OrganizationUpdate(BaseModel):
 
     updated_by: Optional[str] = Field(None, max_length=100, description="更新人")
 
-    @validator('type')
+    @field_validator('type')
+    @classmethod
     def validate_type(cls, v):
         if v is None:
             return v
@@ -92,7 +95,8 @@ class OrganizationUpdate(BaseModel):
             raise ValueError(f'type must be one of {allowed_types}')
         return v
 
-    @validator('status')
+    @field_validator('status')
+    @classmethod
     def validate_status(cls, v):
         if v is None:
             return v
@@ -117,10 +121,9 @@ class OrganizationResponse(OrganizationBase):
     # 子组织列表
     children: Optional[List['OrganizationResponse']] = []
     
-    class Config:
+    model_config = ConfigDict(
         from_attributes = True
-
-
+    )
 class OrganizationTree(BaseModel):
     """组织架构树形结构"""
     id: str
@@ -129,10 +132,9 @@ class OrganizationTree(BaseModel):
     sort_order: int
     children: List['OrganizationTree'] = []
     
-    class Config:
+    model_config = ConfigDict(
         from_attributes = True
-
-
+    )
 class OrganizationHistoryResponse(BaseModel):
     """组织架构历史响应模式"""
     id: str
@@ -145,10 +147,9 @@ class OrganizationHistoryResponse(BaseModel):
     created_at: datetime
     created_by: Optional[str] = None
     
-    class Config:
+    model_config = ConfigDict(
         from_attributes = True
-
-
+    )
 class OrganizationStatistics(BaseModel):
     """组织架构统计信息"""
     total: int = Field(..., description="总数")
@@ -171,7 +172,8 @@ class OrganizationBatchRequest(BaseModel):
     action: str = Field(..., description="操作类型")
     updated_by: Optional[str] = Field(None, max_length=100, description="操作人")
 
-    @validator('action')
+    @field_validator('action')
+    @classmethod
     def validate_action(cls, v):
         allowed_actions = ['delete', 'move']
         if v not in allowed_actions:

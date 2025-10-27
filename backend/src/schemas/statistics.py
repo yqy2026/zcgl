@@ -2,7 +2,7 @@
 统计和报表相关的Pydantic模型
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 
@@ -20,18 +20,9 @@ class StatisticsRequest(BaseModel):
         }
     )
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "filters": {
-                    "ownership_status": "已确权",
-                    "property_nature": "经营性",
-                    "ownership_entity": "国资集团"
-                }
-            }
-        }
-
-
+    model_config = ConfigDict(
+        json_schema_extra={}
+    )
 class BasicStatisticsResponse(BaseModel):
     """基础统计数据响应模型"""
 
@@ -42,30 +33,9 @@ class BasicStatisticsResponse(BaseModel):
     generated_at: datetime = Field(..., description="生成时间")
     filters_applied: Dict[str, Any] = Field(default_factory=dict, description="应用的筛选条件")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "total_assets": 100,
-                "ownership_status": {
-                    "confirmed": 80,
-                    "unconfirmed": 15,
-                    "partial": 5
-                },
-                "property_nature": {
-                    "commercial": 70,
-                    "non_commercial": 30
-                },
-                "usage_status": {
-                    "rented": 60,
-                    "available": 30,
-                    "maintenance": 10
-                },
-                "generated_at": "2025-01-20T10:30:00",
-                "filters_applied": {}
-            }
-        }
-
-
+    model_config = ConfigDict(
+        json_schema_extra={}
+    )
 class DetailedStatisticsResponse(BaseModel):
     """详细统计数据响应模型"""
 
@@ -76,42 +46,9 @@ class DetailedStatisticsResponse(BaseModel):
     contract_analysis: Dict[str, Any] = Field(..., description="合同分析")
     filters_applied: Dict[str, Any] = Field(default_factory=dict, description="应用的筛选条件")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "summary": {
-                    "total_assets": 100,
-                    "ownership_status": {"confirmed": 80, "unconfirmed": 15, "partial": 5},
-                    "property_nature": {"commercial": 70, "non_commercial": 30},
-                    "usage_status": {"rented": 60, "available": 30, "maintenance": 10},
-                    "generated_at": "2025-01-20T10:30:00",
-                    "filters_applied": {}
-                },
-                "area_analysis": {
-                    "total_area": 10000.0,
-                    "rentable_area": 8500.0,
-                    "rented_area": 6800.0,
-                    "occupancy_rate": 80.0
-                },
-                "financial_analysis": {
-                    "total_annual_income": 1000000.0,
-                    "total_annual_expense": 200000.0,
-                    "net_income": 800000.0
-                },
-                "occupancy_analysis": {
-                    "by_area": {"rented": 6800.0, "available": 1700.0},
-                    "by_count": {"rented": 60, "available": 30}
-                },
-                "contract_analysis": {
-                    "active_contracts": 60,
-                    "expiring_soon": 5,
-                    "expired": 2
-                },
-                "filters_applied": {}
-            }
-        }
-
-
+    model_config = ConfigDict(
+        json_schema_extra={}
+    )
 class TimeSeriesDataPoint(BaseModel):
     """时间序列数据点"""
 

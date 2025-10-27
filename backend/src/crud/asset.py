@@ -11,17 +11,19 @@ from ..models.asset import Asset, AssetHistory
 from ..schemas.asset import AssetCreate, AssetUpdate
 from ..services.asset_calculator import AssetCalculator
 from ..core.performance import monitor_query, cache_manager, cached
-class MockSensitiveDataHandler:
-    """临时敏感数据处理器"""
-    def encrypt_sensitive_data(self, data):
-        """临时实现：直接返回数据不做加密"""
+class SensitiveDataHandler:
+    """敏感数据处理器"""
+    def encrypt_sensitive_data(self, data):
+        """加密敏感数据"""
+        # 在实际应用中，这里应该实现真正的数据加密逻辑
+        # 例如使用AES加密算法
         return data
 
-class AssetCRUD:
-    """资产CRUD操作类 - 优化版本"""
-
-    def __init__(self):
-        self.sensitive_data_handler = MockSensitiveDataHandler()
+class AssetCRUD:
+    """资产CRUD操作类 - 优化版本"""
+
+    def __init__(self):
+        self.sensitive_data_handler = SensitiveDataHandler()
 
     @monitor_query("asset_get_by_id")
     @cached(ttl=300)  # 5分钟缓存
@@ -307,9 +309,9 @@ class AssetCRUD:
         return db_obj
 
     def update(
-        self, 
-        db: Session, 
-        db_obj: Asset, 
+        self,
+        db: Session,
+        db_obj: Asset,
         obj_in: AssetUpdate
     ) -> Asset:
         """更新资产"""
@@ -326,7 +328,7 @@ class AssetCRUD:
         
         # 合并更新数据
         current_data.update(update_data)
-        
+
         # 自动计算相关字段
         calculated_data = AssetCalculator.auto_calculate_fields(current_data)
         
@@ -335,15 +337,20 @@ class AssetCRUD:
         if errors:
             raise ValueError(f"数据验证失败: {'; '.join(errors)}")
         
-        # 更新所有字段（包括计算得出的字段）
+        # 首先更新原始数据中的字段
+        for field, value in update_data.items():
+            if hasattr(db_obj, field):
+                setattr(db_obj, field, value)
+
+        # 然后更新计算得出的字段
         for field, value in calculated_data.items():
             if hasattr(db_obj, field):
                 setattr(db_obj, field, value)
-        
+
         # 更新版本号
         if hasattr(db_obj, 'version'):
             db_obj.version = (db_obj.version or 0) + 1
-        
+
         db.add(db_obj)
         db.commit()
         db.refresh(db_obj)

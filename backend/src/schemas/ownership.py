@@ -5,7 +5,7 @@
 from datetime import datetime
 from typing import Optional, List
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 
 class OwnershipBase(BaseModel):
@@ -18,7 +18,8 @@ class OwnershipBase(BaseModel):
 class OwnershipCreate(OwnershipBase):
     """创建权属方模式"""
 
-    @validator('code')
+    @field_validator('code')
+    @classmethod
     def validate_code(cls, v):
         """验证权属方编码格式"""
         if v is not None:
@@ -38,7 +39,8 @@ class OwnershipUpdate(BaseModel):
     short_name: Optional[str] = Field(None, title="权属方简称", max_length=100)
     is_active: Optional[bool] = Field(None, title="状态")
 
-    @validator('code')
+    @field_validator('code')
+    @classmethod
     def validate_code(cls, v):
         """验证权属方编码格式"""
         if v is not None:
@@ -58,19 +60,17 @@ class OwnershipInDB(OwnershipBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
+    model_config = ConfigDict(
         from_attributes = True
-
-
+    )
 class OwnershipResponse(OwnershipInDB):
     """权属方响应模式"""
     asset_count: Optional[int] = Field(None, title="关联资产数量")
     project_count: Optional[int] = Field(None, title="关联项目数量")
 
-    class Config:
+    model_config = ConfigDict(
         from_attributes = True
-
-
+    )
 class OwnershipListResponse(BaseModel):
     """权属方列表响应模式"""
     items: List[OwnershipResponse]

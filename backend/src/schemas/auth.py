@@ -4,7 +4,7 @@
 
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, ConfigDict
 import re
 
 from ..models.auth import UserRole
@@ -71,7 +71,8 @@ class UserUpdate(BaseModel):
     employee_id: Optional[str] = Field(None, description="关联员工ID")
     default_organization_id: Optional[str] = Field(None, description="默认组织ID")
 
-    @validator('full_name')
+    @field_validator('full_name')
+    @classmethod
     def validate_full_name(cls, v):
         if v is not None:
             return v.strip()
@@ -90,10 +91,9 @@ class UserResponse(UserBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
+    model_config = ConfigDict(
         from_attributes = True
-
-
+    )
 # 认证相关模型
 class LoginRequest(BaseModel):
     """登录请求模型"""
@@ -134,7 +134,8 @@ class PasswordChangeRequest(BaseModel):
     current_password: str = Field(..., description="当前密码")
     new_password: str = Field(..., min_length=8, max_length=128, description="新密码")
 
-    @validator('new_password')
+    @field_validator('new_password')
+    @classmethod
     def validate_password_strength(cls, v):
         """验证密码强度"""
         if len(v) < 8:
@@ -166,10 +167,9 @@ class UserSessionResponse(BaseModel):
     created_at: datetime
     last_accessed_at: datetime
 
-    class Config:
+    model_config = ConfigDict(
         from_attributes = True
-
-
+    )
 # 审计日志模型
 class AuditLogResponse(BaseModel):
     """审计日志响应模型"""
@@ -185,10 +185,9 @@ class AuditLogResponse(BaseModel):
     ip_address: Optional[str]
     created_at: datetime
 
-    class Config:
+    model_config = ConfigDict(
         from_attributes = True
-
-
+    )
 # 分页模型
 class UserListResponse(BaseModel):
     """用户列表响应模型"""
@@ -220,7 +219,8 @@ class PasswordResetConfirm(BaseModel):
     token: str = Field(..., description="重置令牌")
     new_password: str = Field(..., min_length=8, max_length=128, description="新密码")
 
-    @validator('new_password')
+    @field_validator('new_password')
+    @classmethod
     def validate_password_strength(cls, v):
         """验证密码强度"""
         if len(v) < 8:

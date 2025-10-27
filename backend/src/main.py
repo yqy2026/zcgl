@@ -88,7 +88,8 @@ async def root_endpoint():
         "message": "土地物业资产管理系统 API",
         "version": "2.0.0",
         "docs": "/docs",
-        "health": "/api/v1/health"
+        "health": "/api/v1/health",
+        "timestamp": datetime.utcnow().isoformat()
     }
 
 @app.get("/api/v1/", tags=["根路径"])

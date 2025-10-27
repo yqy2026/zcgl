@@ -2,7 +2,7 @@
 枚举字段管理相关数据验证模式
 """
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 
@@ -22,14 +22,16 @@ class EnumFieldTypeBase(BaseModel):
     display_config: Optional[Dict[str, Any]] = Field(None, description="显示配置")
     status: str = Field(default="active", description="状态")
 
-    @validator('status')
+    @field_validator('status')
+    @classmethod
     def validate_status(cls, v):
         allowed_statuses = ['active', 'inactive']
         if v not in allowed_statuses:
             raise ValueError(f'status must be one of {allowed_statuses}')
         return v
 
-    @validator('code')
+    @field_validator('code')
+    @classmethod
     def validate_code(cls, v):
         # 编码只能包含字母、数字和下划线
         import re
@@ -59,7 +61,8 @@ class EnumFieldTypeUpdate(BaseModel):
     status: Optional[str] = Field(None, description="状态")
     updated_by: Optional[str] = Field(None, max_length=100, description="更新人")
 
-    @validator('status')
+    @field_validator('status')
+    @classmethod
     def validate_status(cls, v):
         if v is not None:
             allowed_statuses = ['active', 'inactive']
@@ -67,7 +70,8 @@ class EnumFieldTypeUpdate(BaseModel):
                 raise ValueError(f'status must be one of {allowed_statuses}')
         return v
 
-    @validator('code')
+    @field_validator('code')
+    @classmethod
     def validate_code(cls, v):
         if v is not None:
             import re
@@ -96,7 +100,8 @@ class EnumFieldValueBase(BaseModel):
     is_active: bool = Field(default=True, description="是否启用")
     is_default: bool = Field(default=False, description="是否默认值")
 
-    @validator('color')
+    @field_validator('color')
+    @classmethod
     def validate_color(cls, v):
         if v is not None:
             # 验证颜色格式（支持hex格式）
@@ -131,7 +136,8 @@ class EnumFieldValueUpdate(BaseModel):
     is_default: Optional[bool] = Field(None, description="是否默认值")
     updated_by: Optional[str] = Field(None, max_length=100, description="更新人")
 
-    @validator('color')
+    @field_validator('color')
+    @classmethod
     def validate_color(cls, v):
         if v is not None:
             import re
@@ -184,10 +190,9 @@ class EnumFieldValueResponse(EnumFieldValueBase):
     
     children: Optional[List['EnumFieldValueResponse']] = []
     
-    class Config:
+    model_config = ConfigDict(
         from_attributes = True
-
-
+    )
 class EnumFieldTypeResponse(EnumFieldTypeBase):
     """枚举字段类型响应模式"""
     id: str
@@ -200,10 +205,9 @@ class EnumFieldTypeResponse(EnumFieldTypeBase):
     
     enum_values: Optional[List[EnumFieldValueResponse]] = []
     
-    class Config:
+    model_config = ConfigDict(
         from_attributes = True
-
-
+    )
 class EnumFieldUsageResponse(EnumFieldUsageBase):
     """枚举字段使用记录响应模式"""
     id: str
@@ -212,10 +216,9 @@ class EnumFieldUsageResponse(EnumFieldUsageBase):
     created_by: Optional[str] = None
     updated_by: Optional[str] = None
     
-    class Config:
+    model_config = ConfigDict(
         from_attributes = True
-
-
+    )
 class EnumFieldHistoryResponse(BaseModel):
     """枚举字段历史响应模式"""
     id: str
@@ -231,10 +234,9 @@ class EnumFieldHistoryResponse(BaseModel):
     created_by: Optional[str] = None
     ip_address: Optional[str] = None
     
-    class Config:
+    model_config = ConfigDict(
         from_attributes = True
-
-
+    )
 class EnumFieldTree(BaseModel):
     """枚举字段树形结构"""
     id: str
@@ -248,10 +250,9 @@ class EnumFieldTree(BaseModel):
     icon: Optional[str] = None
     children: List['EnumFieldTree'] = []
     
-    class Config:
+    model_config = ConfigDict(
         from_attributes = True
-
-
+    )
 class EnumFieldStatistics(BaseModel):
     """枚举字段统计信息"""
     total_types: int = 0

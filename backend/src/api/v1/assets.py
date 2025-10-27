@@ -3,8 +3,9 @@
 """
 
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, Path, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, Query, Path, UploadFile, File, Form, Response
 from fastapi.responses import FileResponse
+from starlette.status import HTTP_204_NO_CONTENT
 from sqlalchemy.orm import Session
 import os
 import uuid
@@ -26,133 +27,113 @@ from ...exceptions import AssetNotFoundError, DuplicateAssetError, BusinessLogic
 
 # 开发模式配置 - 用于开发环境绕过认证
 import os
-DEV_MODE = os.getenv("DEV_MODE", "true").lower() == "true"
+from ...middleware.auth import (
+    get_current_active_user, require_permission, audit_action,
+    get_user_rbac_permissions
+)
+from ...middleware.organization_permission import (
+    get_organization_filter, require_organization_access,
+    require_organization_management, get_accessible_organizations,
+    OrganizationDataFilter
+)
+from ...models.auth import User
 
-if not DEV_MODE:
-    from ...middleware.auth import (
-        get_current_active_user, require_permission, audit_action,
-        get_user_rbac_permissions
-    )
-    from ...middleware.organization_permission import (
-        get_organization_filter, require_organization_access,
-        require_organization_management, get_accessible_organizations,
-        OrganizationDataFilter
-    )
-    from ...models.auth import User
-else:
-    # 开发模式下的模拟依赖
-    def get_current_active_user():
-        return None
-
-    def require_permission(resource, action, resource_id=None):
-        def decorator():
-            return None
-        return decorator
-
-    def audit_action(action, resource_type=None):
-        def decorator():
-            return None
-        return decorator
-
-    def get_user_rbac_permissions():
-        return {}
-
-    class User:
-        pass
+# 获取开发模式配置，但不完全绕过认证
+DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
 
 # 创建资产路由器
 router = APIRouter()
 
 
-@router.get("/dev-test", summary="开发模式测试端点")
-async def dev_test(db: Session = Depends(get_db)):
-    """开发模式测试端点（无认证）"""
-    try:
-        # 测试数据库连接
-        asset_count = db.query(Asset).count()
-        return {
-            "success": True,
-            "message": "开发模式API测试成功",
-            "database_status": "正常",
-            "asset_count": asset_count,
-            "timestamp": datetime.now().isoformat()
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "message": f"开发模式API测试失败: {str(e)}",
-            "timestamp": datetime.now().isoformat()
-        }
+# @router.get("/dev-test", summary="开发模式测试端点")
+# async def dev_test(db: Session = Depends(get_db)):
+#     """开发模式测试端点（无认证）"""
+#     try:
+#         # 测试数据库连接
+#         asset_count = db.query(Asset).count()
+#         return {
+#             "success": True,
+#             "message": "开发模式API测试成功",
+#             "database_status": "正常",
+#             "asset_count": asset_count,
+#             "timestamp": datetime.now().isoformat()
+#         }
+#     except Exception as e:
+#         return {
+#             "success": False,
+#             "message": f"开发模式API测试失败: {str(e)}",
+#             "timestamp": datetime.now().isoformat()
+#         }
 
 
-@router.get("/temp-test", summary="临时API测试")
-async def temp_test(db: Session = Depends(get_db)):
-    """临时API测试端点（无认证）"""
-    try:
-        # 测试数据库连接
-        asset_count = db.query(Asset).count()
-        return {
-            "success": True,
-            "message": "临时API测试成功",
-            "database_status": "正常",
-            "asset_count": asset_count,
-            "timestamp": datetime.now().isoformat()
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "message": f"临时API测试失败: {str(e)}",
-            "timestamp": datetime.now().isoformat()
-        }
+# @router.get("/temp-test", summary="临时API测试")
+# async def temp_test(db: Session = Depends(get_db)):
+#     """临时API测试端点（无认证）"""
+#     try:
+#         # 测试数据库连接
+#         asset_count = db.query(Asset).count()
+#         return {
+#             "success": True,
+#             "message": "临时API测试成功",
+#             "database_status": "正常",
+#             "asset_count": asset_count,
+#             "timestamp": datetime.now().isoformat()
+#         }
+#     except Exception as e:
+#         return {
+#             "success": False,
+#             "message": f"临时API测试失败: {str(e)}",
+#             "timestamp": datetime.now().isoformat()
+#         }
 
 
-@router.get("/test-api", summary="API测试")
-async def api_test(db: Session = Depends(get_db)):
-    """简单的API测试端点"""
-    try:
-        # 测试数据库连接
-        asset_count = db.query(Asset).count()
-        return {
-            "success": True,
-            "message": "API测试成功",
-            "database_status": "正常",
-            "asset_count": asset_count,
-            "timestamp": datetime.now().isoformat()
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "message": f"API测试失败: {str(e)}",
-            "timestamp": datetime.now().isoformat()
-        }
+# @router.get("/test-api", summary="API测试")
+# async def api_test(db: Session = Depends(get_db)):
+#     """简单的API测试端点"""
+#     try:
+#         # 测试数据库连接
+#         asset_count = db.query(Asset).count()
+#     return {
+#         "success": True,
+#         "message": "API测试成功",
+#         "database_status": "正常",
+#         "asset_count": asset_count,
+#         "timestamp": datetime.now().isoformat()
+#     }
+#     except Exception as e:
+#         return {
+#             "success": False,
+#             "message": f"API测试失败: {str(e)}",
+#             "timestamp": datetime.now().isoformat()
+#         }
 
 
-@router.get("/list-test", summary="资产列表测试")
-async def list_test(page: int = Query(1, ge=1), limit: int = Query(5, ge=1, le=20), db: Session = Depends(get_db)):
-    """资产列表测试端点（无认证）"""
-    try:
-        # 获取资产列表
-        query = asset_crud.get_filtered_query(db, None, {}, "created_at", "desc")
-        assets, total = asset_crud.execute_paginated_query(query, skip=(page - 1) * limit, limit=limit)
+# @router.get("/list-test", summary="资产列表测试")
+# async def list_test(page: int = Query(1, ge=1), limit: int = Query(5, ge=1, le=20), db: Session = Depends(get_db)):
+#     """资产列表测试端点（无认证）"""
+#     try:
+#         # 获取资产列表
+#         query = asset_crud.get_filtered_query(db, None, {}, "created_at", "desc")
+#         assets, total = asset_crud.execute_paginated_query(query, skip=(page - 1) * limit, limit=limit)
 
-        return {
-            "success": True,
-            "data": {
-                "items": assets,
-                "total": total,
-                "page": page,
-                "limit": limit,
-                "pages": (total + limit - 1) // limit
-            },
-            "message": "资产列表测试成功",
-            "timestamp": datetime.now().isoformat()
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "message": f"资产列表测试失败: {str(e)}",
-            "timestamp": datetime.now().isoformat()
-        }
+#         return {
+#             "success": True,
+#             "data": {
+#                 "items": assets,
+#                 "total": total,
+#                 "page": page,
+#                 "limit": limit,
+#                 "pages": (total + limit - 1) // limit
+#             },
+#             "message": "资产列表测试成功",
+#             "timestamp": datetime.now().isoformat()
+#         }
+#     except Exception as e:
+#         return {
+#             "success": False,
+#             "message": f"资产列表测试失败: {str(e)}",
+#             "timestamp": datetime.now().isoformat()
+#         }
 
 
 @router.get("", response_model=AssetListResponse, summary="获取资产列表")
@@ -170,7 +151,7 @@ async def get_assets(
     max_area: Optional[float] = Query(None, ge=0, description="最大面积筛选"),
     is_litigated: Optional[str] = Query(None, description="是否涉诉筛选"),
     db: Session = Depends(get_db),
-    # 完全移除认证依赖用于测试
+    current_user: User = Depends(get_current_active_user),
     sort_field: str = Query("created_at", description="排序字段"),
     sort_order: str = Query("desc", pattern="^(asc|desc)$", description="排序方向"),
 ):
@@ -235,7 +216,8 @@ async def get_assets(
 
 @router.get("/ownership-entities", summary="获取权属方列表")
 async def get_ownership_entities(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     """获取所有权属方列表，用于搜索筛选"""
     try:
@@ -255,7 +237,8 @@ async def get_ownership_entities(
 
 @router.get("/business-categories", summary="获取业态类别列表")
 async def get_business_categories(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     """获取所有业态类别列表，用于搜索筛选"""
     try:
@@ -275,7 +258,8 @@ async def get_business_categories(
 
 @router.get("/usage-statuses", summary="获取使用情况列表")
 async def get_usage_statuses(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     """获取所有使用情况列表，用于搜索筛选"""
     try:
@@ -293,7 +277,8 @@ async def get_usage_statuses(
 
 @router.get("/property-natures", summary="获取物业性质列表")
 async def get_property_natures(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     """获取所有物业性质列表，用于搜索筛选"""
     try:
@@ -311,7 +296,8 @@ async def get_property_natures(
 
 @router.get("/ownership-statuses", summary="获取确权状态列表")
 async def get_ownership_statuses(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     """获取所有确权状态列表，用于搜索筛选"""
     try:
@@ -439,7 +425,7 @@ async def delete_asset(
         
         # 删除资产
         asset_crud.remove(db=db, id=asset_id)
-        return {"message": f"资产 {asset_id} 已成功删除"}
+        return Response(status_code=HTTP_204_NO_CONTENT)
         
     except AssetNotFoundError:
         raise
@@ -450,7 +436,8 @@ async def delete_asset(
 @router.get("/{asset_id}/history", summary="获取资产历史")
 async def get_asset_history(
     asset_id: str = Path(..., description="资产ID"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     """
     获取资产的变更历史记录
@@ -476,17 +463,11 @@ async def get_asset_history(
 @router.get("/statistics/summary", summary="获取资产统计摘要")
 async def get_asset_statistics(
     db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_active_user if not DEV_MODE else lambda: None)
+    current_user: User = Depends(get_current_active_user)
 ):
     """
     获取资产统计摘要信息
     """
-    # DEBUG: 添加调试日志
-    import logging
-    logger = logging.getLogger(__name__)
-    logger.info("=== API函数 get_asset_statistics 被调用 ===")
-    print("=== DEBUG: API函数 get_asset_statistics 被调用 ===")
-
     try:
         from sqlalchemy import func
         from ...models.asset import Asset
@@ -495,7 +476,6 @@ async def get_asset_statistics(
         total_assets = db.query(Asset).count()
 
         # 按确权状态统计 - 使用精确匹配
-        from sqlalchemy import func
         confirmed_count = db.query(Asset).filter(Asset.ownership_status == '已确权').count()
         unconfirmed_count = db.query(Asset).filter(Asset.ownership_status == '未确权').count()
         partial_count = db.query(Asset).filter(Asset.ownership_status == '部分确权').count()
@@ -577,7 +557,7 @@ async def get_asset_statistics(
 @router.get("/statistics/area-summary", summary="获取资产面积统计摘要")
 async def get_asset_area_statistics(
     db: Session = Depends(get_db),
-    current_user: Optional[User] = Depends(get_current_active_user if not DEV_MODE else lambda: None)
+    current_user: User = Depends(get_current_active_user)
 ):
     """
     获取资产面积统计摘要信息
@@ -641,7 +621,8 @@ async def get_asset_area_statistics(
 async def upload_asset_attachments(
     asset_id: str = Path(..., description="资产ID"),
     files: List[UploadFile] = File(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("asset", "update"))
 ):
     """
     上传资产附件（PDF格式）
@@ -708,7 +689,8 @@ async def upload_asset_attachments(
 @router.get("/{asset_id}/attachments", summary="获取资产附件列表")
 async def get_asset_attachments(
     asset_id: str = Path(..., description="资产ID"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     """
     获取资产附件列表
@@ -753,7 +735,8 @@ async def get_asset_attachments(
 async def download_asset_attachment(
     asset_id: str = Path(..., description="资产ID"),
     filename: str = Path(..., description="文件名"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     """
     下载资产附件
@@ -795,7 +778,8 @@ async def download_asset_attachment(
 async def delete_asset_attachment(
     asset_id: str = Path(..., description="资产ID"),
     attachment_id: str = Path(..., description="附件ID"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("asset", "delete"))
 ):
     """
     删除资产附件
@@ -833,7 +817,8 @@ async def delete_asset_attachment(
 @router.post("/batch-update", response_model=AssetBatchUpdateResponse, summary="批量更新资产")
 async def batch_update_assets(
     request: AssetBatchUpdateRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("asset", "update"))
 ):
     """
     批量更新资产信息
@@ -911,7 +896,8 @@ async def batch_update_assets(
 @router.post("/validate", response_model=AssetValidationResponse, summary="验证资产数据")
 async def validate_asset_data(
     request: AssetValidationRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     """
     验证资产数据的完整性和正确性
@@ -1031,7 +1017,8 @@ async def validate_asset_data(
 @router.post("/import", response_model=AssetImportResponse, summary="导入资产数据")
 async def import_assets(
     request: AssetImportRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("asset", "create"))
 ):
     """
     批量导入资产数据
@@ -1151,7 +1138,8 @@ async def import_assets(
 @router.post("/batch-custom-fields", response_model=BatchCustomFieldUpdateResponse, summary="批量更新自定义字段")
 async def batch_update_custom_fields(
     request: BatchCustomFieldUpdateRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission("asset", "update"))
 ):
     """
     批量更新资产的自定义字段
@@ -1202,6 +1190,7 @@ async def batch_update_custom_fields(
 @router.get("/all", summary="获取所有资产（不分页）")
 async def get_all_assets(
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
     search: Optional[str] = Query(None, description="搜索关键字"),
     ownership_status: Optional[str] = Query(None, description="确权状态"),
     usage_status: Optional[str] = Query(None, description="使用状态"),
@@ -1282,7 +1271,8 @@ async def get_all_assets(
 @router.post("/by-ids", summary="根据ID列表获取资产")
 async def get_assets_by_ids(
     request: dict,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
 ):
     """
     根据资产ID列表批量获取资产信息

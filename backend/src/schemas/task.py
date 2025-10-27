@@ -2,7 +2,7 @@
 任务管理相关的Pydantic模型
 """
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 
@@ -18,24 +18,9 @@ class TaskCreate(BaseModel):
     parameters: Optional[Dict[str, Any]] = Field(default_factory=dict, description="任务参数")
     config: Optional[Dict[str, Any]] = Field(default_factory=dict, description="任务配置")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "task_type": "excel_export",
-                "title": "导出资产数据",
-                "description": "导出筛选的资产数据到Excel文件",
-                "parameters": {
-                    "filters": {"ownership_status": "已确权"},
-                    "export_format": "xlsx"
-                },
-                "config": {
-                    "include_headers": True,
-                    "sheet_name": "资产数据"
-                }
-            }
-        }
-
-
+    model_config = ConfigDict(
+        json_schema_extra = {"example": {"description": "任务创建示例"}}
+    )
 class TaskUpdate(BaseModel):
     """更新任务请求模型"""
 
@@ -46,17 +31,9 @@ class TaskUpdate(BaseModel):
     error_message: Optional[str] = Field(None, description="错误信息")
     result_data: Optional[Dict[str, Any]] = Field(None, description="结果数据")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "status": "running",
-                "progress": 45,
-                "processed_items": 450,
-                "failed_items": 5
-            }
-        }
-
-
+    model_config = ConfigDict(
+        json_schema_extra = {"example": {"description": "任务创建示例"}}
+    )
 class TaskResponse(BaseModel):
     """任务响应模型"""
 
@@ -82,32 +59,10 @@ class TaskResponse(BaseModel):
     success_rate: float = Field(..., description="成功率")
     duration_seconds: float = Field(..., description="持续时间（秒）")
 
-    class Config:
-        from_attributes = True
-        json_schema_extra = {
-            "example": {
-                "id": "task_123",
-                "task_type": "excel_export",
-                "status": "completed",
-                "title": "导出资产数据",
-                "description": "成功导出1000条资产记录",
-                "created_at": "2024-01-01T10:00:00",
-                "started_at": "2024-01-01T10:00:05",
-                "completed_at": "2024-01-01T10:02:30",
-                "progress": 100,
-                "total_items": 1000,
-                "processed_items": 1000,
-                "failed_items": 0,
-                "result_data": {
-                    "file_path": "/exports/asset_export_20240101.xlsx",
-                    "file_size": 1024000
-                },
-                "success_rate": 100.0,
-                "duration_seconds": 145.5
-            }
-        }
-
-
+    model_config = ConfigDict(
+        from_attributes = True,
+        json_schema_extra = {"example": {"description": "任务响应示例"}}
+    )
 class TaskListResponse(BaseModel):
     """任务列表响应模型"""
 
@@ -117,18 +72,9 @@ class TaskListResponse(BaseModel):
     limit: int = Field(..., description="每页数量")
     pages: int = Field(..., description="总页数")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "items": [],
-                "total": 10,
-                "page": 1,
-                "limit": 20,
-                "pages": 1
-            }
-        }
-
-
+    model_config = ConfigDict(
+        json_schema_extra = {"example": {"description": "任务创建示例"}}
+    )
 class TaskHistoryResponse(BaseModel):
     """任务历史响应模型"""
 
@@ -140,10 +86,9 @@ class TaskHistoryResponse(BaseModel):
     created_at: datetime = Field(..., description="创建时间")
     user_id: Optional[str] = Field(None, description="用户ID")
 
-    class Config:
+    model_config = ConfigDict(
         from_attributes = True
-
-
+    )
 class TaskStatistics(BaseModel):
     """任务统计模型"""
 
@@ -156,28 +101,9 @@ class TaskStatistics(BaseModel):
     by_status: Dict[str, int] = Field(..., description="按状态统计")
     avg_duration: Optional[float] = Field(None, description="平均持续时间（秒）")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "total_tasks": 100,
-                "running_tasks": 5,
-                "completed_tasks": 90,
-                "failed_tasks": 5,
-                "by_type": {
-                    "excel_export": 60,
-                    "excel_import": 30,
-                    "batch_update": 10
-                },
-                "by_status": {
-                    "completed": 90,
-                    "failed": 5,
-                    "running": 5
-                },
-                "avg_duration": 120.5
-            }
-        }
-
-
+    model_config = ConfigDict(
+        json_schema_extra = {"example": {"description": "任务创建示例"}}
+    )
 class ExcelTaskConfigCreate(BaseModel):
     """Excel任务配置创建模型"""
 
@@ -189,28 +115,9 @@ class ExcelTaskConfigCreate(BaseModel):
     format_config: Optional[Dict[str, Any]] = Field(default_factory=dict, description="格式配置")
     is_default: bool = Field(False, description="是否默认配置")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "config_name": "标准资产导出配置",
-                "config_type": "export",
-                "task_type": "excel_export",
-                "field_mapping": {
-                    "property_name": "物业名称",
-                    "address": "地址",
-                    "ownership_status": "权属状态"
-                },
-                "validation_rules": {
-                    "required_fields": ["property_name", "address"]
-                },
-                "format_config": {
-                    "include_headers": True,
-                    "sheet_name": "资产数据"
-                }
-            }
-        }
-
-
+    model_config = ConfigDict(
+        json_schema_extra = {"example": {"description": "任务创建示例"}}
+    )
 class ExcelTaskConfigResponse(BaseModel):
     """Excel任务配置响应模型"""
 
@@ -227,18 +134,14 @@ class ExcelTaskConfigResponse(BaseModel):
     created_at: datetime = Field(..., description="创建时间")
     updated_at: datetime = Field(..., description="更新时间")
 
-    class Config:
+    model_config = ConfigDict(
         from_attributes = True
-
-
+    )
 class TaskCancelRequest(BaseModel):
     """任务取消请求模型"""
 
     reason: Optional[str] = Field(None, description="取消原因")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "reason": "用户取消操作"
-            }
-        }
+    model_config = ConfigDict(
+        json_schema_extra = {"example": {"description": "任务创建示例"}}
+    )

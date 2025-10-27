@@ -3,7 +3,7 @@
 """
 
 from typing import Optional, List
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from datetime import datetime, date
 from enum import Enum
 from decimal import Decimal
@@ -169,8 +169,8 @@ class AssetBase(BaseModel):
     # last_audit_date, audit_status, auditor 字段已移除
     audit_notes: Optional[str] = Field(None, description="审核备注")
 
-    @validator('land_area', 'actual_property_area', 'rentable_area', 'rented_area',
-              'non_commercial_area', 'monthly_rent', 'deposit')
+    @field_validator('land_area', 'actual_property_area', 'rentable_area', 'rented_area',              'non_commercial_area', 'monthly_rent', 'deposit')
+    @classmethod
     def validate_area(cls, v):
         if v is not None and v < 0:
             raise ValueError('数值不能为负数')
@@ -178,20 +178,23 @@ class AssetBase(BaseModel):
 
     # occupancy_rate 验证器已移除，因为现在是计算字段
 
-    @validator('is_litigated')
+    @field_validator('is_litigated')
+    @classmethod
     def validate_is_litigated(cls, v):
         if v is not None and not isinstance(v, bool):
             raise ValueError('是否涉诉必须是布尔值')
         return v
 
-    @validator('contract_end_date')
+    @field_validator('contract_end_date')
+    @classmethod
     def validate_contract_dates(cls, v, values):
         if v and 'contract_start_date' in values and values['contract_start_date']:
             if v < values['contract_start_date']:
                 raise ValueError('合同结束日期不能早于开始日期')
         return v
 
-    @validator('operation_agreement_end_date')
+    @field_validator('operation_agreement_end_date')
+    @classmethod
     def validate_agreement_dates(cls, v, values):
         if v and 'operation_agreement_start_date' in values and values['operation_agreement_start_date']:
             if v < values['operation_agreement_start_date']:
@@ -271,8 +274,8 @@ class AssetUpdate(BaseModel):
     # last_audit_date, audit_status, auditor 字段已移除
     audit_notes: Optional[str] = Field(None, description="审核备注")
 
-    @validator('land_area', 'actual_property_area', 'rentable_area', 'rented_area',
-              'non_commercial_area', 'monthly_rent', 'deposit')
+    @field_validator('land_area', 'actual_property_area', 'rentable_area', 'rented_area',              'non_commercial_area', 'monthly_rent', 'deposit')
+    @classmethod
     def validate_area(cls, v):
         if v is not None and v < 0:
             raise ValueError('数值不能为负数')
@@ -280,7 +283,8 @@ class AssetUpdate(BaseModel):
 
     # occupancy_rate 验证器已移除，因为现在是计算字段
 
-    @validator('is_litigated')
+    @field_validator('is_litigated')
+    @classmethod
     def validate_is_litigated(cls, v):
         if v is not None and not isinstance(v, bool):
             raise ValueError('是否涉诉必须是布尔值')
@@ -293,10 +297,9 @@ class AssetResponse(AssetBase):
     created_at: datetime = Field(..., description="创建时间")
     updated_at: datetime = Field(..., description="更新时间")
 
-    class Config:
+    model_config = ConfigDict(
         from_attributes = True
-
-
+    )
 class AssetListResponse(BaseModel):
     """资产列表响应模型"""
     items: List[AssetResponse] = Field(..., description="资产列表")
@@ -318,10 +321,9 @@ class AssetHistoryResponse(BaseModel):
     operation_time: datetime = Field(..., description="操作时间")
     description: Optional[str] = Field(None, description="操作描述")
 
-    class Config:
+    model_config = ConfigDict(
         from_attributes = True
-
-
+    )
 class AssetDocumentResponse(BaseModel):
     """资产文档响应模型"""
     id: str = Field(..., description="文档ID")
@@ -335,10 +337,9 @@ class AssetDocumentResponse(BaseModel):
     uploader: Optional[str] = Field(None, description="上传人")
     description: Optional[str] = Field(None, description="文档描述")
 
-    class Config:
+    model_config = ConfigDict(
         from_attributes = True
-
-
+    )
 class SystemDictionaryCreate(BaseModel):
     """系统数据字典创建模型"""
     dict_type: str = Field(..., description="字典类型")
@@ -371,10 +372,9 @@ class SystemDictionaryResponse(BaseModel):
     created_at: datetime = Field(..., description="创建时间")
     updated_at: datetime = Field(..., description="更新时间")
 
-    class Config:
+    model_config = ConfigDict(
         from_attributes = True
-
-
+    )
 class AssetCustomFieldCreate(BaseModel):
     """资产自定义字段创建模型"""
     field_name: str = Field(..., description="字段名称")
@@ -427,10 +427,9 @@ class AssetCustomFieldResponse(BaseModel):
     created_at: datetime = Field(..., description="创建时间")
     updated_at: datetime = Field(..., description="更新时间")
 
-    class Config:
+    model_config = ConfigDict(
         from_attributes = True
-
-
+    )
 # ===== 批量操作相关模型 =====
 
 class AssetBatchUpdateRequest(BaseModel):
@@ -440,19 +439,9 @@ class AssetBatchUpdateRequest(BaseModel):
     updates: dict = Field(..., description="更新数据")
     update_all: bool = Field(False, description="是否更新所有资产")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "asset_ids": ["asset1", "asset2", "asset3"],
-                "updates": {
-                    "ownership_status": "已确权",
-                    "property_nature": "经营性"
-                },
-                "update_all": False
-            }
-        }
-
-
+    model_config = ConfigDict(
+        json_schema_extra = {"example": {"description": "示例"}}
+    )
 class AssetBatchUpdateResponse(BaseModel):
     """资产批量更新响应模型"""
 
@@ -462,39 +451,18 @@ class AssetBatchUpdateResponse(BaseModel):
     errors: List[dict] = Field(default_factory=list, description="错误信息列表")
     updated_assets: List[str] = Field(default_factory=list, description="成功更新的资产ID")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "success_count": 2,
-                "failed_count": 1,
-                "total_count": 3,
-                "errors": [
-                    {"asset_id": "asset3", "error": "数据验证失败"}
-                ],
-                "updated_assets": ["asset1", "asset2"]
-            }
-        }
-
-
+    model_config = ConfigDict(
+        json_schema_extra = {"example": {"description": "示例"}}
+    )
 class AssetValidationRequest(BaseModel):
     """资产数据验证请求模型"""
 
     data: dict = Field(..., description="待验证的资产数据")
     validate_rules: Optional[List[str]] = Field(None, description="验证规则列表")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "data": {
-                    "property_name": "示例物业",
-                    "address": "示例地址",
-                    "ownership_status": "已确权"
-                },
-                "validate_rules": ["required_fields", "data_format"]
-            }
-        }
-
-
+    model_config = ConfigDict(
+        json_schema_extra = {"example": {"description": "示例"}}
+    )
 class AssetValidationResponse(BaseModel):
     """资产数据验证响应模型"""
 
@@ -503,19 +471,9 @@ class AssetValidationResponse(BaseModel):
     warnings: List[dict] = Field(default_factory=list, description="警告信息列表")
     validated_fields: List[str] = Field(default_factory=list, description="已验证字段")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "is_valid": True,
-                "errors": [],
-                "warnings": [
-                    {"field": "land_area", "message": "建议填写土地面积"}
-                ],
-                "validated_fields": ["property_name", "address", "ownership_status"]
-            }
-        }
-
-
+    model_config = ConfigDict(
+        json_schema_extra = {"example": {"description": "示例"}}
+    )
 class AssetImportRequest(BaseModel):
     """资产导入请求模型"""
 
@@ -524,23 +482,9 @@ class AssetImportRequest(BaseModel):
     skip_errors: bool = Field(False, description="是否跳过错误数据")
     dry_run: bool = Field(False, description="是否仅验证不实际导入")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "data": [
-                    {
-                        "property_name": "示例物业1",
-                        "address": "示例地址1",
-                        "ownership_status": "已确权"
-                    }
-                ],
-                "import_mode": "create",
-                "skip_errors": False,
-                "dry_run": False
-            }
-        }
-
-
+    model_config = ConfigDict(
+        json_schema_extra = {"example": {"description": "示例"}}
+    )
 class AssetImportResponse(BaseModel):
     """资产导入响应模型"""
 
@@ -551,37 +495,18 @@ class AssetImportResponse(BaseModel):
     imported_assets: List[str] = Field(default_factory=list, description="成功导入的资产ID")
     import_id: Optional[str] = Field(None, description="导入任务ID")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "success_count": 5,
-                "failed_count": 0,
-                "total_count": 5,
-                "errors": [],
-                "imported_assets": ["asset1", "asset2", "asset3", "asset4", "asset5"],
-                "import_id": "import_task_123"
-            }
-        }
-
-
+    model_config = ConfigDict(
+        json_schema_extra = {"example": {"description": "示例"}}
+    )
 class BatchCustomFieldUpdateRequest(BaseModel):
     """批量自定义字段更新请求模型"""
 
     asset_ids: List[str] = Field(..., description="资产ID列表")
     field_values: dict = Field(..., description="自定义字段值")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "asset_ids": ["asset1", "asset2"],
-                "field_values": {
-                    "custom_field_1": "值1",
-                    "custom_field_2": 123
-                }
-            }
-        }
-
-
+    model_config = ConfigDict(
+        json_schema_extra = {"example": {"description": "示例"}}
+    )
 class BatchCustomFieldUpdateResponse(BaseModel):
     """批量自定义字段更新响应模型"""
 
@@ -590,17 +515,9 @@ class BatchCustomFieldUpdateResponse(BaseModel):
     total_count: int = Field(..., description="总数量")
     errors: List[dict] = Field(default_factory=list, description="错误信息列表")
 
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "success_count": 2,
-                "failed_count": 0,
-                "total_count": 2,
-                "errors": []
-            }
-        }
-
-
+    model_config = ConfigDict(
+        json_schema_extra = {"example": {"description": "示例"}}
+    )
 class AssetCustomFieldCreate(BaseModel):
     """创建资产自定义字段模型"""
     asset_id: str = Field(..., description="关联资产ID")
@@ -608,7 +525,8 @@ class AssetCustomFieldCreate(BaseModel):
     field_type: str = Field(..., description="字段类型：text/number/date/boolean")
     field_value: Optional[str] = Field(None, description="字段值")
 
-    @validator('field_type')
+    @field_validator('field_type')
+    @classmethod
     def validate_field_type(cls, v):
         if v not in ['text', 'number', 'date', 'boolean']:
             raise ValueError('字段类型必须是text、number、date或boolean之一')

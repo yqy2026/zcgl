@@ -135,7 +135,9 @@ def test_get_nonexistent_asset():
     response = client.get("/api/v1/assets/nonexistent-id")
     assert response.status_code == 404
     data = response.json()
-    assert data["error"] == "Asset Not Found"
+    assert "error" in data
+    assert data["error"]["code"] == "ASSET_NOT_FOUND"
+    assert "Asset with id nonexistent-id not found" in data["error"]["message"]
 
 
 def test_update_asset():
@@ -154,8 +156,8 @@ def test_update_asset():
     assert response.status_code == 200
     data = response.json()
     assert data["property_name"] == "更新后的物业名称"
-    assert data["actual_property_area"] == 1200.0
-    assert data["occupancy_rate"] == "80%"
+    assert data["actual_property_area"] == "1200.00"
+    # occupancy_rate 是计算属性，不包含在响应中
 
 
 def test_delete_asset():
@@ -197,7 +199,7 @@ def test_create_duplicate_asset():
     response = client.post("/api/v1/assets/", json=asset_data)
     assert response.status_code == 409
     data = response.json()
-    assert data["error"] == "Duplicate Asset"
+    assert data["error"]["code"] == "DUPLICATE_ASSET"
 
 
 def test_create_asset_validation_error():
@@ -212,7 +214,7 @@ def test_create_asset_validation_error():
     response = client.post("/api/v1/assets/", json=invalid_data)
     assert response.status_code == 422
     data = response.json()
-    assert data["message"] == "数据验证失败"  # 修复: 匹配实际错误消息
+    assert data["error"]["code"] == "VALIDATION_ERROR"
 
 
 def test_get_assets_with_pagination():
@@ -289,7 +291,7 @@ def test_filter_assets():
         "ownership_status": "已确权",
         "actual_usage": "商业",
         "usage_status": "出租",
-        "is_litigated": "否",
+        "is_litigated": False,
         "property_nature": "经营性",
         "occupancy_rate": "75%"
     }
@@ -306,7 +308,7 @@ def test_filter_assets():
         "ownership_status": "未确权",
         "actual_usage": "办公",
         "usage_status": "闲置",
-        "is_litigated": "否",
+        "is_litigated": False,
         "property_nature": "非经营类",
         "occupancy_rate": "0%"
     }
@@ -319,7 +321,7 @@ def test_filter_assets():
     assert response.status_code == 200
     data = response.json()
     assert data["total"] == 1
-    assert data["data"][0]["ownership_status"] == "已确权"
+    assert data["items"][0]["ownership_status"] == "已确权"
 
 
 def test_get_asset_stats():
@@ -337,14 +339,14 @@ def test_get_asset_stats():
         "ownership_status": "已确权",
         "actual_usage": "商业",
         "usage_status": "出租",
-        "is_litigated": "否",
+        "is_litigated": False,
         "property_nature": "经营性",
         "occupancy_rate": "75%"
     }
     client.post("/api/v1/assets/", json=asset_data)
     
     # 获取统计信息
-    response = client.get("/api/v1/assets/stats/summary")
+    response = client.get("/api/v1/statistics/summary")
     assert response.status_code == 200
     data = response.json()
     assert "total_assets" in data
@@ -360,7 +362,7 @@ def test_openapi_docs():
     assert response.status_code == 200
     data = response.json()
     assert data["info"]["title"] == "土地物业资产管理系统"
-    assert data["info"]["version"] == "0.1.0"
+    assert data["info"]["version"] == "2.0.0"
 
 
 def test_docs_endpoint():

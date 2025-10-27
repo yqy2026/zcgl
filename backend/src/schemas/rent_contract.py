@@ -5,7 +5,7 @@
 from datetime import datetime, date
 from typing import Optional, List, Dict, Any
 from decimal import Decimal
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 
 # 基础Schema
@@ -19,7 +19,8 @@ class RentTermBase(BaseModel):
     other_fees: Decimal = Field(0, ge=0, description="其他费用")
     total_monthly_amount: Optional[Decimal] = Field(None, ge=0, description="月总金额")
 
-    @validator('total_monthly_amount', always=True)
+    @field_validator('total_monthly_amount')
+    @classmethod
     def calculate_total_amount(cls, v, values):
         """计算月总金额"""
         if v is None:
@@ -29,7 +30,8 @@ class RentTermBase(BaseModel):
             return monthly_rent + management_fee + other_fees
         return v
 
-    @validator('end_date')
+    @field_validator('end_date')
+    @classmethod
     def validate_date_range(cls, v, values):
         """验证日期范围"""
         start_date = values.get('start_date')
@@ -55,10 +57,9 @@ class RentTermResponse(RentTermBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
+    model_config = ConfigDict(
         from_attributes = True
-
-
+    )
 class RentContractBase(BaseModel):
     """租金合同基础Schema"""
     contract_number: str = Field(..., description="合同编号")
@@ -77,7 +78,8 @@ class RentContractBase(BaseModel):
     payment_terms: Optional[str] = Field(None, description="支付条款")
     contract_notes: Optional[str] = Field(None, description="合同备注")
 
-    @validator('end_date')
+    @field_validator('end_date')
+    @classmethod
     def validate_date_range(cls, v, values):
         """验证日期范围"""
         start_date = values.get('start_date')
@@ -90,7 +92,8 @@ class RentContractCreate(RentContractBase):
     """创建租金合同Schema"""
     rent_terms: List[RentTermCreate] = Field(..., description="租金条款列表")
 
-    @validator('rent_terms')
+    @field_validator('rent_terms')
+    @classmethod
     def validate_rent_terms(cls, v, values):
         """验证租金条款"""
         if not v:
@@ -141,10 +144,9 @@ class RentContractResponse(RentContractBase):
     tenant_id: Optional[str] = Field(None, description="租户ID")
     rent_terms: List[RentTermResponse] = Field([], description="租金条款列表")
 
-    class Config:
+    model_config = ConfigDict(
         from_attributes = True
-
-
+    )
 class RentLedgerBase(BaseModel):
     """租金台账基础Schema"""
     contract_id: str = Field(..., description="关联合同ID")
@@ -163,7 +165,8 @@ class RentLedgerBase(BaseModel):
     late_fee_days: int = Field(0, ge=0, description="滞纳天数")
     notes: Optional[str] = Field(None, description="备注")
 
-    @validator('year_month')
+    @field_validator('year_month')
+    @classmethod
     def validate_year_month(cls, v):
         """验证年月格式"""
         if len(v) != 7 or v[4] != '-':
@@ -177,7 +180,8 @@ class RentLedgerBase(BaseModel):
             raise ValueError("年月格式无效")
         return v
 
-    @validator('payment_status')
+    @field_validator('payment_status')
+    @classmethod
     def validate_payment_status(cls, v):
         """验证支付状态"""
         valid_statuses = ["未支付", "部分支付", "已支付", "逾期"]
@@ -211,10 +215,9 @@ class RentLedgerResponse(RentLedgerBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
+    model_config = ConfigDict(
         from_attributes = True
-
-
+    )
 class RentLedgerBatchUpdate(BaseModel):
     """批量更新租金台账Schema"""
     ledger_ids: List[str] = Field(..., description="台账ID列表")
@@ -276,7 +279,8 @@ class GenerateLedgerRequest(BaseModel):
     start_year_month: Optional[str] = Field(None, description="开始年月")
     end_year_month: Optional[str] = Field(None, description="结束年月")
 
-    @validator('start_year_month', 'end_year_month')
+    @field_validator('start_year_month', 'end_year_month')
+    @classmethod
     def validate_year_month(cls, v):
         """验证年月格式"""
         if v is None:

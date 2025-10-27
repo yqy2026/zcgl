@@ -4,7 +4,7 @@ RBAC相关的Pydantic模式
 
 from typing import List, Optional, Dict, Any
 from datetime import datetime
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 
 # Permission相关模式
@@ -41,10 +41,9 @@ class PermissionResponse(PermissionBase):
     updated_at: datetime
     created_by: Optional[str]
 
-    class Config:
+    model_config = ConfigDict(
         from_attributes = True
-
-
+    )
 # Role相关模式
 class RoleBase(BaseModel):
     name: str = Field(..., description="角色名称")
@@ -84,10 +83,9 @@ class RoleResponse(RoleBase):
     updated_by: Optional[str]
     permissions: List[PermissionResponse] = []
 
-    class Config:
+    model_config = ConfigDict(
         from_attributes = True
-
-
+    )
 # UserRoleAssignment相关模式
 class UserRoleAssignmentCreate(BaseModel):
     user_id: str = Field(..., description="用户ID")
@@ -119,10 +117,9 @@ class UserRoleAssignmentResponse(BaseModel):
     user: Optional[Dict[str, Any]]
     role: Optional[RoleResponse]
 
-    class Config:
+    model_config = ConfigDict(
         from_attributes = True
-
-
+    )
 # ResourcePermission相关模式
 class ResourcePermissionCreate(BaseModel):
     resource_type: str = Field(..., description="资源类型")
@@ -158,10 +155,9 @@ class ResourcePermissionResponse(BaseModel):
     reason: Optional[str]
     conditions: Optional[Dict[str, Any]]
 
-    class Config:
+    model_config = ConfigDict(
         from_attributes = True
-
-
+    )
 # 权限检查相关模式
 class PermissionCheckRequest(BaseModel):
     resource: str = Field(..., description="资源类型")
