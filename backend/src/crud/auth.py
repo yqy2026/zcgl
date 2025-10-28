@@ -113,7 +113,7 @@ class UserCRUD:
 
     def count_active(self, db: Session) -> int:
         """活跃用户总数"""
-        return db.query(func.count(User.id)).filter(User.is_active == True).scalar()
+        return db.query(func.count(User.id)).filter(User.is_active).scalar()
 
     def count_by_role(self, db: Session, role: UserRole) -> int:
         """按角色统计用户数"""
@@ -153,7 +153,7 @@ class UserSessionCRUD:
         """获取用户的所有会话"""
         query = db.query(UserSession).filter(UserSession.user_id == user_id)
         if active_only:
-            query = query.filter(UserSession.is_active == True)
+            query = query.filter(UserSession.is_active)
         return query.order_by(desc(UserSession.created_at)).all()
 
     def create(
@@ -193,7 +193,7 @@ class UserSessionCRUD:
         """停用用户的所有会话"""
         count = (
             db.query(UserSession)
-            .filter(UserSession.user_id == user_id, UserSession.is_active == True)
+            .filter(UserSession.user_id == user_id, UserSession.is_active)
             .update({"is_active": False})
         )
         db.commit()
@@ -204,7 +204,7 @@ class UserSessionCRUD:
         count = (
             db.query(UserSession)
             .filter(
-                UserSession.expires_at < datetime.now(), UserSession.is_active == True
+                UserSession.expires_at < datetime.now(), UserSession.is_active
             )
             .update({"is_active": False})
         )
@@ -215,7 +215,7 @@ class UserSessionCRUD:
         """活跃会话总数"""
         return (
             db.query(func.count(UserSession.id))
-            .filter(UserSession.is_active == True)
+            .filter(UserSession.is_active)
             .scalar()
         )
 
@@ -278,6 +278,7 @@ class AuditLogCRUD:
         ip_address: str | None = None,
         user_agent: str | None = None,
         session_id: str | None = None,
+    details: str | None = None,
     ) -> AuditLog:
         """创建审计日志"""
         from ..services.auth_service import AuthService

@@ -1,8 +1,6 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
 import type { ApiResponse, ErrorResponse } from '@/types/api'
-
-// 环境配置
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1'
+import { API_CONFIG } from '@/constants/api'
 
 // 请求重试配置
 const RETRY_CONFIG = {
@@ -17,7 +15,7 @@ const RETRY_CONFIG = {
 // 创建axios实例
 const createApiInstance = (): AxiosInstance => {
   const instance = axios.create({
-    baseURL: API_BASE_URL,
+    baseURL: API_CONFIG.FULL_BASE_URL,
     timeout: 30000,
     headers: {
       'Content-Type': 'application/json',
