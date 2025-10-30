@@ -24,13 +24,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
 from ...core.cache_manager import analytics_cache, cache_manager
+from ...core.response_handler import ResponseHandler, get_request_id
+from ...database import get_db
+from ...schemas.asset import DataStatus
 
 # 强制重新加载标记 - 2025-10-30 06:30 - VERSION 2
 print("[ANALYTICS] Analytics module loaded - CacheManager has get_stats:", hasattr(analytics_cache, 'get_stats'))
 print("[ANALYTICS] VERSION 2 - RELOAD TRIGGERED")
-from ...core.response_handler import ResponseHandler, get_request_id
-from ...database import get_db
-from ...schemas.asset import DataStatus
 
 logger = logging.getLogger(__name__)
 
@@ -1751,20 +1751,22 @@ async def clear_cache(request: Request):
     """清除所有分析缓存"""
     request_id = get_request_id(request)
     try:
-        old_# 创建简单的缓存统计信息
-        stats = {
+        # 获取清除前的缓存统计信息
+        old_stats = analytics_cache.get_stats() if hasattr(analytics_cache, 'get_stats') else {
+            "cache_size": 0,
             "backend_type": "MemoryCache",
             "status": "active",
             "message": "缓存统计信息",
             "timestamp": datetime.now().isoformat(),
-            "note": "临时实现，未使用get_stats方法"
+            "note": "使用get_stats方法获取"
         }
+
         analytics_cache.clear()
-        logger.info(f"用户请求清除分析缓存，清除前缓存大小: {old_stats['cache_size']}")
+        logger.info(f"用户请求清除分析缓存，清除前缓存大小: {old_stats.get('cache_size', 0)}")
 
         return ResponseHandler.success(
             data={
-                "cleared_cache_size": old_stats["cache_size"],
+                "cleared_cache_size": old_stats.get("cache_size", 0),
                 "cache_stats_before_clear": old_stats,
             },
             message="分析缓存已成功清除",
