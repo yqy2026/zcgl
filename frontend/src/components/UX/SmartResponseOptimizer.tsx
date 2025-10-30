@@ -7,11 +7,11 @@ import {
   ExclamationCircleOutlined,
   SyncOutlined,
   EyeOutlined,
-  EyeInvisibleOutlined
-  CompressOutlined
-  FullscreenOutlined
+  EyeInvisibleOutlined,
+  CompressOutlined,
+  FullscreenOutlined,
   InfoCircleOutlined,
-  TrendingUpOutlined
+  TrendingUpOutlined,
   TrendingDownOutlined
 } from '@ant-design/icons'
 
@@ -52,7 +52,6 @@ interface ResponseOptimizationContextType {
       average: number
       byType: Record<OptimizationType, number>
       byLevel: Record<ResponseLevel, number>
-    }
     }
     clearMetrics: () => void
     toggleOptimization: (type: OptimizationType) => void
@@ -375,7 +374,6 @@ const ResponseOptimizationDashboard: React.FC<{ config: SmartResponseConfig; met
                       {level === 'excellent' ? '优秀性能' :
                        level === 'good' ? '良好性能' :
                        level === 'acceptable' ? '可接受性能' : '需要优化'}
-                    }
                   </div>
                 </Col>
               ))}
@@ -401,7 +399,6 @@ const ResponseOptimizationDashboard: React.FC<{ config: SmartResponseConfig; met
                        type === 'compression' ? '压缩' :
                        type === 'caching' ? '缓存' :
                        type === 'network' ? '网络' : '数据库'}
-                    }
                     </Text>
                   </div>
                   <div style={{ marginTop: '4px', fontSize: '20px' }}>

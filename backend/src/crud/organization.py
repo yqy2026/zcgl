@@ -22,13 +22,13 @@ class OrganizationCRUD:
         """根据ID获取组织"""
         return (
             self.db.query(Organization)
-            .filter(and_(Organization.id == org_id, Organization.is_deleted == False))
+            .filter(and_(Organization.id == org_id, not Organization.is_deleted))
             .first()
         )
 
     def get_all(self, skip: int = 0, limit: int = 100) -> list[Organization]:
         """获取所有组织"""
-        query = self.db.query(Organization).filter(Organization.is_deleted == False)
+        query = self.db.query(Organization).filter(not Organization.is_deleted)
 
         return (
             query.order_by(Organization.level, Organization.sort_order)
@@ -40,7 +40,7 @@ class OrganizationCRUD:
     def get_tree(self, parent_id: str | None = None) -> list[Organization]:
         """获取组织树形结构"""
         query = self.db.query(Organization).filter(
-            and_(Organization.is_deleted == False, Organization.parent_id == parent_id)
+            and_(not Organization.is_deleted, Organization.parent_id == parent_id)
         )
         return query.order_by(Organization.sort_order, Organization.name).all()
 
@@ -54,7 +54,7 @@ class OrganizationCRUD:
                 .filter(
                     and_(
                         Organization.parent_id == parent_id,
-                        Organization.is_deleted == False,
+                        not Organization.is_deleted,
                     )
                 )
                 .order_by(Organization.sort_order, Organization.name)
@@ -91,7 +91,7 @@ class OrganizationCRUD:
             self.db.query(Organization)
             .filter(
                 and_(
-                    Organization.is_deleted == False,
+                    not Organization.is_deleted,
                     or_(
                         Organization.name.contains(keyword),
                         Organization.description.contains(keyword),
@@ -222,7 +222,7 @@ class OrganizationCRUD:
     def get_statistics(self) -> dict[str, Any]:
         """获取组织统计信息"""
         total = (
-            self.db.query(Organization).filter(Organization.is_deleted == False).count()
+            self.db.query(Organization).filter(not Organization.is_deleted).count()
         )
         active = total  # 由于删除了status字段，所有未删除的组织都视为活跃
         inactive = 0  # 非活跃数量为0，因为没有status字段
@@ -231,7 +231,7 @@ class OrganizationCRUD:
         level_stats = {}
         levels = (
             self.db.query(Organization.level)
-            .filter(Organization.is_deleted == False)
+            .filter(not Organization.is_deleted)
             .distinct()
             .all()
         )
@@ -240,7 +240,7 @@ class OrganizationCRUD:
             count = (
                 self.db.query(Organization)
                 .filter(
-                    and_(Organization.is_deleted == False, Organization.level == level)
+                    and_(not Organization.is_deleted, Organization.level == level)
                 )
                 .count()
             )

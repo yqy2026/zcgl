@@ -11,50 +11,27 @@ import {
   BarChartOutlined
 } from '@ant-design/icons'
 import { useQuery } from '@tanstack/react-query'
-import { apiClient } from '../../services/api'
+import { useAnalytics } from '../../hooks/useAnalytics'
 import DataTrendCard from '../../components/Dashboard/DataTrendCard'
 import QuickInsights from '../../components/Dashboard/QuickInsights'
 import styles from './DashboardPage.module.css'
 
 const { Title, Text } = Typography
 
-interface AreaSummary {
-  total_assets: number
-  total_land_area: number
-  total_rentable_area: number
-  total_rented_area: number
-  total_unrented_area: number
-  total_non_commercial_area: number
-  assets_with_area_data: number
-  overall_occupancy_rate: number
-}
-
 const DashboardPage: React.FC = () => {
   const [isFullscreen, setIsFullscreen] = React.useState(false)
 
-  const { data: areaSummary, isLoading, error, refetch } = useQuery({
-    queryKey: ['statistics', 'area-summary'],
-    queryFn: async () => {
-      try {
-        const response = await apiClient.get('/assets/statistics/summary')
-        return response
-      } catch (err) {
-        console.error('Dashboard API Error:', err)
-        throw err
-      }
-    },
-    retry: 3,
-    retryDelay: 2000,
-    staleTime: 5 * 60 * 1000, // 5分钟缓存
-    refetchOnWindowFocus: true,
-    refetchOnMount: true
-  })
+  // 使用统一的Analytics hook，避免重复请求
+  const { data: analyticsData, isLoading, error, refetch } = useAnalytics()
+
+  // 从综合分析数据中提取面积汇总信息
+  const areaSummary = analyticsData?.data?.area_summary
 
   // 计算模拟趋势数据（实际项目中应该从API获取历史数据）
   const mockTrends = React.useMemo(() => {
-    if (!areaSummary?.data) return null
+    if (!areaSummary) return null
 
-    const occupancyRate = areaSummary.data.overall_occupancy_rate
+    const occupancyRate = areaSummary.occupancy_rate || 0
     const previousRate = Math.max(85, occupancyRate - (Math.random() * 10 - 5))
     const trendValue = ((occupancyRate - previousRate) / previousRate) * 100
 

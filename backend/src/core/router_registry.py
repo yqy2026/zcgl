@@ -174,7 +174,6 @@ class APIVersionManager:
     def setup_version_routing(self, app: FastAPI) -> None:
         """设置版本路由"""
         for version in self.supported_versions:
-            version_prefix = f"/api/{version}"
             self.registry.include_all_routers(app, version)
 
         # 添加版本信息端点

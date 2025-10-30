@@ -18,6 +18,7 @@ from fastapi import (
     UploadFile,
 )
 from fastapi.responses import FileResponse
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 from starlette.status import HTTP_204_NO_CONTENT
 
@@ -476,6 +477,33 @@ async def get_asset_history(
         raise HTTPException(status_code=500, detail=f"获取资产历史失败: {str(e)}")
 
 
+@router.get("/statistics/test", summary="测试统计API")
+async def test_statistics(
+    db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
+):
+    """
+    简单的统计测试API
+    """
+    try:
+        print("[DEBUG] 测试统计API开始")
+
+        # 简单测试查询
+        total_assets = db.query(Asset).count()
+
+        return {
+            "success": True,
+            "message": "测试成功",
+            "total_assets": total_assets,
+            "timestamp": "2024-01-01T00:00:00Z"
+        }
+
+    except Exception as e:
+        print(f"[ERROR] 测试统计API失败: {e}")
+        import traceback
+        print(f"[ERROR] 详细错误: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"测试失败: {str(e)}")
+
+
 @router.get("/statistics/summary", summary="获取资产统计摘要")
 async def get_asset_statistics(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
@@ -488,8 +516,19 @@ async def get_asset_statistics(
 
         from ...models.asset import Asset
 
+        # 添加调试信息
+        print(f"[DEBUG] 开始执行资产统计查询，用户: {current_user.username if current_user else 'unknown'}")
+
+        # 检查数据库连接是否正常
+        try:
+            db.execute(text("SELECT 1"))
+        except Exception as e:
+            print(f"[ERROR] 数据库连接检查失败: {e}")
+            raise HTTPException(status_code=500, detail="数据库连接失败")
+
         # 总资产数 - 直接查询避免缓存问题
         total_assets = db.query(Asset).count()
+        print(f"[DEBUG] 总资产数: {total_assets}")
 
         # 按确权状态统计 - 使用精确匹配
         confirmed_count = (
@@ -538,7 +577,13 @@ async def get_asset_statistics(
 
         # 转换为float并处理None值
         def to_float(value):
-            return float(value) if value is not None else 0.0
+            if value is None:
+                return 0.0
+            try:
+                return float(value)
+            except (ValueError, TypeError) as e:
+                print(f"[WARNING] 转换数值失败: {value} -> {e}")
+                return 0.0
 
         total_land_area = to_float(area_result.total_land_area)
         total_rentable_area = to_float(area_result.total_rentable_area)
@@ -589,7 +634,15 @@ async def get_asset_statistics(
         }
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取统计信息失败: {str(e)}")
+        # 记录详细的错误信息用于调试
+        import traceback
+        error_detail = traceback.format_exc()
+        print(f"[ERROR] 资产统计查询失败: {str(e)}")
+        print(f"[ERROR] 详细错误信息: {error_detail}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"获取统计信息失败: {str(e)}. 请检查数据库连接和表结构。"
+        )
 
 
 @router.get("/statistics/area-summary", summary="获取资产面积统计摘要")
@@ -605,7 +658,7 @@ async def get_asset_area_statistics(
         from ...models.asset import Asset
 
         # 获取所有正常状态的资产
-        assets_query = db.query(Asset).filter(Asset.data_status == "NORMAL")
+        assets_query = db.query(Asset).filter(Asset.data_status == "正常")
 
         # 计算总面积数据
         total_result = assets_query.with_entities(
@@ -618,7 +671,13 @@ async def get_asset_area_statistics(
 
         # 转换为float并处理None值
         def to_float(value):
-            return float(value) if value is not None else 0.0
+            if value is None:
+                return 0.0
+            try:
+                return float(value)
+            except (ValueError, TypeError) as e:
+                print(f"[WARNING] 转换数值失败: {value} -> {e}")
+                return 0.0
 
         total_land_area = to_float(total_result.total_land_area)
         total_rentable_area = to_float(total_result.total_rentable_area)
@@ -651,7 +710,15 @@ async def get_asset_area_statistics(
             "overall_occupancy_rate": overall_occupancy_rate,
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取面积统计信息失败: {str(e)}")
+        # 记录详细的错误信息用于调试
+        import traceback
+        error_detail = traceback.format_exc()
+        print(f"[ERROR] 面积统计查询失败: {str(e)}")
+        print(f"[ERROR] 详细错误信息: {error_detail}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"获取面积统计信息失败: {str(e)}. 请检查数据库连接和表结构。"
+        )
 
 
 # ===== 资产附件管理接口 =====
@@ -892,7 +959,7 @@ async def batch_update_assets(
                     continue
 
                 # 更新资产
-                updated_asset = asset_crud.update(
+                asset_crud.update(
                     db=db, db_obj=asset, obj_in=request.updates
                 )
 

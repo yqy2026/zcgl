@@ -172,7 +172,6 @@ class OCRTextProcessor:
         char_corrections = {
             "�": "",  # 移除替换字符
             '"': '"',
-            '"': '"',
             "'": "'",  # UTF-8编码错误
             "æ": "æ",
             "œ": "œ",

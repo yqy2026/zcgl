@@ -1,5 +1,6 @@
+import React, { useState, useEffect } from 'react'
 import { unifiedDictionaryService } from '../../services/dictionary'
-import type { EnumFieldType, EnumFieldValue, SystemDictionary } from '../../services/dictionary'
+import type { EnumFieldType, EnumFieldValue, SystemDictionary, EnumFieldStatistics } from '../../services/dictionary'
 import EnumValuePreview from '../../components/Dictionary/EnumValuePreview'
 import { withErrorHandling, createErrorHandler } from '../../utils/errorHandler'
 

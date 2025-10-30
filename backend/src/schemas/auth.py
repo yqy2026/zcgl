@@ -113,8 +113,20 @@ class TokenData(BaseModel):
 
     sub: str  # 用户ID
     username: str
-    role: UserRole
+    role: UserRole | str  # 支持枚举或字符串
     exp: int | None = None
+    
+    @field_validator("role", mode="before")
+    @classmethod
+    def validate_role(cls, v):
+        """验证角色字段，支持字符串和枚举"""
+        if isinstance(v, str):
+            try:
+                return UserRole(v)
+            except ValueError:
+                # 如果无法转换为枚举，返回原始字符串
+                return v
+        return v
 
 
 class TokenResponse(BaseModel):

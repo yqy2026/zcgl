@@ -71,7 +71,6 @@ export default defineConfig(({ command, mode }) => {
         secure: false,
         ws: true,
         timeout: 120000, // 增加到120秒，匹配前端axios超时时间
-        rewrite: (path) => path,
         configure: (proxy, _options) => {
           proxy.on('error', (err, _req, _res) => {
             console.log('proxy error', err);

@@ -6,6 +6,7 @@
 import json
 import logging
 import os
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -34,7 +35,7 @@ class ConfigField:
     required: bool = True
     description: str = ""
     env_var: str | None = None
-    validator: callable | None = None
+    validator: Callable | None = None
     sensitive: bool = False  # 是否为敏感信息
 
 

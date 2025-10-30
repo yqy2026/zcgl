@@ -66,7 +66,7 @@ class APIDocGenerator:
         query_params = [param for param in route.dependant.call_params.values()]
 
         # 解析端点函数
-        sig = inspect.signature(endpoint)
+        inspect.signature(endpoint)  # 预留字段，当前未使用
         docstring = inspect.getdoc(endpoint) or ""
 
         # 提取标签

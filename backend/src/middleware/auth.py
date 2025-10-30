@@ -8,14 +8,14 @@ import os
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
-from sqlalchemy.orm import Session
 from sqlalchemy import and_
+from sqlalchemy.orm import Session
 
 from ..core.config import settings
 from ..database import get_db
 from ..models.auth import User, UserRole
+from ..schemas.auth import TokenData
 from ..schemas.rbac import PermissionCheckRequest
-from ..services.auth_service import TokenData
 from ..services.rbac_service import RBACService
 
 logger = logging.getLogger(__name__)
@@ -30,6 +30,13 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/login", auto_error=Fa
 # JWT配置
 SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = "HS256"
+
+
+def safe_role_compare(role_value, target_role) -> bool:
+    """安全地比较角色值，支持字符串和枚举类型"""
+    if isinstance(role_value, str):
+        return role_value == target_role.value
+    return role_value == target_role
 
 
 def get_current_user(
@@ -67,9 +74,28 @@ def get_current_user(
             try:
                 role_enum = UserRole(role)
             except ValueError:
+                logger.warning(f"Invalid role value '{role}', defaulting to USER")
                 role_enum = UserRole.USER  # Default fallback
+        elif isinstance(role, UserRole):
+            # Already an enum, use as-is
+            pass
+        else:
+            # Unknown type, default to USER
+            logger.warning(f"Unknown role type '{type(role)}' with value '{role}', defaulting to USER")
+            role_enum = UserRole.USER
 
-        token_data = TokenData(sub=user_id, username=username, role=role_enum)
+        # 使用标准的TokenData Pydantic模型
+        try:
+            token_data = TokenData(
+                sub=user_id,
+                username=username,
+                role=role_enum,
+                exp=payload.get('exp') if payload else None
+            )
+        except Exception as e:
+            # 如果TokenData验证失败，记录错误并抛出认证异常
+            logger.error(f"TokenData validation failed: {e}")
+            raise credentials_exception
     except JWTError:
         raise credentials_exception
 
@@ -117,7 +143,7 @@ def get_or_create_dev_user(db: Session) -> User:
     try:
         dev_user = user_crud.create(db=db, obj_in=user_data)
         # 设置为管理员角色以便开发测试
-        dev_user.role = UserRole.ADMIN
+        dev_user.role = UserRole.ADMIN.value
         db.commit()
         db.refresh(dev_user)
         logger.info(f"Created development user: {dev_username}")
@@ -130,7 +156,7 @@ def get_or_create_dev_user(db: Session) -> User:
             username=dev_username,
             email="dev@example.com",
             is_active=True,
-            role=UserRole.ADMIN,
+            role=UserRole.ADMIN.value,
         )
 
 
@@ -145,7 +171,7 @@ def get_current_active_user(current_user: User = Depends(get_current_user)) -> U
 
 def require_admin(current_user: User = Depends(get_current_active_user)) -> User:
     """要求管理员权限"""
-    if current_user.role != UserRole.ADMIN:
+    if not safe_role_compare(current_user.role, UserRole.ADMIN):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="需要管理员权限"
         )
@@ -192,7 +218,7 @@ class PermissionChecker:
     def _has_permission(self, user: User) -> bool:
         """检查用户是否有所需权限"""
         # 管理员拥有所有权限
-        if user.role == UserRole.ADMIN:
+        if safe_role_compare(user.role, UserRole.ADMIN):
             return True
 
         # 这里可以扩展为更复杂的权限检查逻辑
@@ -231,7 +257,7 @@ class OrganizationPermissionChecker:
     def _can_access_organization(self, user: User) -> bool:
         """检查用户是否可以访问组织"""
         # 管理员可以访问所有组织
-        if user.role == UserRole.ADMIN:
+        if safe_role_compare(user.role, UserRole.ADMIN):
             return True
 
         # 用户可以访问自己的默认组织
@@ -381,7 +407,7 @@ class RBACPermissionChecker:
                 )
 
         # 管理员拥有所有权限
-        if current_user.role == UserRole.ADMIN:
+        if safe_role_compare(current_user.role, UserRole.ADMIN):
             return current_user
 
         # 开发模式下，给予开发用户所有权限
@@ -427,11 +453,8 @@ class ResourcePermissionChecker:
     ) -> User:
         """检查用户资源权限"""
         # 管理员拥有所有权限
-        if current_user.role == UserRole.ADMIN:
+        if safe_role_compare(current_user.role, UserRole.ADMIN):
             return current_user
-
-        # 使用RBAC服务检查资源权限
-        rbac_service = RBACService(db)
 
         # 检查是否有对应的资源权限
         from ..models.rbac import ResourcePermission
@@ -443,7 +466,7 @@ class ResourcePermissionChecker:
                     ResourcePermission.user_id == current_user.id,
                     ResourcePermission.resource_type == self.resource_type,
                     ResourcePermission.resource_id == resource_id,
-                    ResourcePermission.is_active == True,
+                    ResourcePermission.is_active,
                 )
             )
             .first()
@@ -491,7 +514,7 @@ class RoleBasedAccessChecker:
     ) -> User:
         """检查用户角色"""
         # 管理员拥有所有权限
-        if current_user.role == UserRole.ADMIN:
+        if safe_role_compare(current_user.role, UserRole.ADMIN):
             return current_user
 
         # 获取用户角色

@@ -13,7 +13,8 @@ from sqlalchemy.orm import Session
 from ..core.config import settings
 from ..exceptions import BusinessLogicError
 from ..models.auth import AuditLog, User, UserSession
-from ..schemas.auth import TokenResponse, UserCreate, UserSessionResponse, UserUpdate
+from ..schemas.auth import TokenData, TokenResponse, UserCreate, UserSessionResponse, UserUpdate
+
 
 # JWT配置
 SECRET_KEY = settings.SECRET_KEY
@@ -52,7 +53,7 @@ class AuthService:
                         return bcrypt.checkpw(
                             plain_password.encode("utf-8"), decoded_hash
                         )
-                    except:
+                    except (base64.binascii.Error, ValueError):
                         return bcrypt.checkpw(
                             plain_password.encode("utf-8"),
                             hashed_password.encode("utf-8"),
@@ -175,7 +176,7 @@ class AuthService:
             self.db.query(User)
             .filter(
                 (User.username == username) | (User.email == username),
-                User.is_active == True,
+                User.is_active,
             )
             .first()
         )
@@ -267,7 +268,7 @@ class AuthService:
         # 检查是否已有活跃会话
         existing_sessions = (
             self.db.query(UserSession)
-            .filter(UserSession.user_id == user_id, UserSession.is_active == True)
+            .filter(UserSession.user_id == user_id, UserSession.is_active)
             .all()
         )
 
@@ -309,7 +310,7 @@ class AuthService:
             self.db.query(UserSession)
             .filter(
                 UserSession.refresh_token == refresh_token,
-                UserSession.is_active == True,
+                UserSession.is_active,
             )
             .first()
         )
@@ -350,7 +351,7 @@ class AuthService:
         """撤销用户的所有会话"""
         count = (
             self.db.query(UserSession)
-            .filter(UserSession.user_id == user_id, UserSession.is_active == True)
+            .filter(UserSession.user_id == user_id, UserSession.is_active)
             .update({"is_active": False})
         )
 
@@ -531,71 +532,79 @@ class AuthService:
 
 
 # 定期清理过期任务的后台任务
-import asyncio
-from contextlib import asynccontextmanager
-
-
-async def cleanup_expired_tasks():
-    """定期清理过期任务"""
-    while True:
-        try:
-            task_store.cleanup_expired()
-            await asyncio.sleep(300)  # 5分钟清理一次
-        except Exception as e:
-            print(f"清理过期任务时出错: {e}")
-            await asyncio.sleep(60)  # 出错时等1分钟再重试
-
-
-async def cleanup_expired_sessions():
-    """定期清理过期会话"""
-    from ..database import SessionLocal
-
-    while True:
-        try:
-            # 创建数据库会话
-            db = SessionLocal()
-            try:
-                # 获取所有过期且活跃的会话
-                expired_sessions = (
-                    db.query(UserSession)
-                    .filter(
-                        UserSession.is_active == True,
-                        UserSession.expires_at < datetime.now(),
-                    )
-                    .all()
-                )
-
-                # 撤销过期会话
-                for session in expired_sessions:
-                    session.is_active = False
-
-                if expired_sessions:
-                    db.commit()
-                    print(f"清理了 {len(expired_sessions)} 个过期会话")
-            finally:
-                db.close()
-
-            await asyncio.sleep(3600)  # 1小时清理一次
-        except Exception as e:
-            print(f"清理过期会话时出错: {e}")
-            await asyncio.sleep(300)  # 出错时等5分钟再重试
-
-
-@asynccontextmanager
-async def lifespan(app):
-    """应用生命周期管理"""
-    # 启动时
-    print("🚀 启动土地物业资产管理系统（简化版）")
-    print(f"📊 数据库: {settings.DATABASE_URL}")
-    print(f"🔧 调试模式: {settings.DEBUG}")
-
-    # 启动后台清理任务
-    cleanup_task = asyncio.create_task(cleanup_expired_tasks())
-    cleanup_sessions_task = asyncio.create_task(cleanup_expired_sessions())
-
-    yield
-
-    # 关闭时
-    cleanup_task.cancel()
-    cleanup_sessions_task.cancel()
-    print("🛑 系统已关闭")
+# 注意：这些函数尚未实现，需要task_store支持
+# import asyncio
+# from contextlib import asynccontextmanager
+#
+#
+#
+# async def cleanup_expired_tasks():
+#     """定期清理过期任务"""
+#     while True:
+#         try:
+#             task_store.cleanup_expired()
+#             await asyncio.sleep(300)  # 5分钟清理一次
+#         except Exception as e:
+#             print(f"清理过期任务时出错: {e}")
+#             await asyncio.sleep(60)  # 出错时等1分钟再重试
+#
+#
+#
+# 注意：这些函数是示例代码，实际使用时需要在应用启动时正确配置
+# import asyncio
+# from contextlib import asynccontextmanager
+#
+#
+# async def cleanup_expired_sessions():
+#     """定期清理过期会话"""
+#     from ..database import SessionLocal
+#
+#     while True:
+#         try:
+#             # 创建数据库会话
+#             db = SessionLocal()
+#             try:
+#                 # 获取所有过期且活跃的会话
+#                 expired_sessions = (
+#                     db.query(UserSession)
+#                     .filter(
+#                         UserSession.is_active,
+#                         UserSession.expires_at < datetime.now(),
+#                     )
+#                     .all()
+#                 )
+#
+#                 # 撤销过期会话
+#                 for session in expired_sessions:
+#                     session.is_active = False
+#
+#                 if expired_sessions:
+#                     db.commit()
+#                     print(f"清理了 {len(expired_sessions)} 个过期会话")
+#             finally:
+#                 db.close()
+#
+#             await asyncio.sleep(3600)  # 1小时清理一次
+#         except Exception as e:
+#             print(f"清理过期会话时出错: {e}")
+#             await asyncio.sleep(300)  # 出错时等5分钟再重试
+#
+#
+# @asynccontextmanager
+# async def lifespan(app):
+#     """应用生命周期管理"""
+#     # 启动时
+#     print("🚀 启动土地物业资产管理系统（简化版）")
+#     print(f"📊 数据库: {settings.DATABASE_URL}")
+#     print(f"🔧 调试模式: {settings.DEBUG}")
+#
+#     # 启动后台清理任务
+#     # cleanup_task = asyncio.create_task(cleanup_expired_tasks())
+#     # cleanup_sessions_task = asyncio.create_task(cleanup_expired_sessions())
+#
+#     yield
+#
+#     # 关闭时
+#     # cleanup_task.cancel()
+#     # cleanup_sessions_task.cancel()
+#     print("🛑 系统已关闭")

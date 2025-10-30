@@ -59,7 +59,7 @@ class DynamicPermissionService:
                     TemporaryPermission.permission_id == permission_id,
                     TemporaryPermission.scope == scope,
                     TemporaryPermission.scope_id == scope_id,
-                    TemporaryPermission.is_active == True,
+                    TemporaryPermission.is_active,
                     TemporaryPermission.expires_at > datetime.now(UTC),
                 )
             )
@@ -137,7 +137,7 @@ class DynamicPermissionService:
                     ConditionalPermission.permission_id == permission_id,
                     ConditionalPermission.scope == scope,
                     ConditionalPermission.scope_id == scope_id,
-                    ConditionalPermission.is_active == True,
+                    ConditionalPermission.is_active,
                 )
             )
             .first()
@@ -200,7 +200,7 @@ class DynamicPermissionService:
         existing = (
             self.db.query(PermissionTemplate)
             .filter(
-                PermissionTemplate.name == name, PermissionTemplate.is_active == True
+                PermissionTemplate.name == name, PermissionTemplate.is_active
             )
             .first()
         )
@@ -239,7 +239,7 @@ class DynamicPermissionService:
             self.db.query(PermissionTemplate)
             .filter(
                 PermissionTemplate.id == template_id,
-                PermissionTemplate.is_active == True,
+                PermissionTemplate.is_active,
             )
             .first()
         )
@@ -360,7 +360,7 @@ class DynamicPermissionService:
                     DynamicPermission.permission_id == permission_id,
                     DynamicPermission.scope == scope,
                     DynamicPermission.scope_id == scope_id,
-                    DynamicPermission.is_active == True,
+                    DynamicPermission.is_active,
                 )
             )
             .all()
@@ -381,7 +381,7 @@ class DynamicPermissionService:
                     TemporaryPermission.permission_id == permission_id,
                     TemporaryPermission.scope == scope,
                     TemporaryPermission.scope_id == scope_id,
-                    TemporaryPermission.is_active == True,
+                    TemporaryPermission.is_active,
                 )
             )
             .all()
@@ -400,7 +400,7 @@ class DynamicPermissionService:
                     ConditionalPermission.permission_id == permission_id,
                     ConditionalPermission.scope == scope,
                     ConditionalPermission.scope_id == scope_id,
-                    ConditionalPermission.is_active == True,
+                    ConditionalPermission.is_active,
                 )
             )
             .all()
@@ -446,7 +446,7 @@ class DynamicPermissionService:
             DynamicPermission.user_id == user_id
         )
         if not include_inactive:
-            query = query.filter(DynamicPermission.is_active == True)
+            query = query.filter(DynamicPermission.is_active)
         if not include_expired:
             query = query.filter(
                 or_(
@@ -477,7 +477,7 @@ class DynamicPermissionService:
             TemporaryPermission.user_id == user_id
         )
         if not include_inactive:
-            query = query.filter(TemporaryPermission.is_active == True)
+            query = query.filter(TemporaryPermission.is_active)
         if not include_expired:
             query = query.filter(TemporaryPermission.expires_at > datetime.now(UTC))
 
@@ -501,7 +501,7 @@ class DynamicPermissionService:
             ConditionalPermission.user_id == user_id
         )
         if not include_inactive:
-            query = query.filter(ConditionalPermission.is_active == True)
+            query = query.filter(ConditionalPermission.is_active)
 
         conditional_perms = query.all()
         for perm in conditional_perms:
@@ -543,7 +543,7 @@ class DynamicPermissionService:
                         DynamicPermission.scope_id.is_(None),
                         DynamicPermission.scope_id == scope_id,
                     ),
-                    DynamicPermission.is_active == True,
+                    DynamicPermission.is_active,
                     or_(
                         DynamicPermission.expires_at.is_(None),
                         DynamicPermission.expires_at > datetime.now(UTC),
@@ -584,7 +584,7 @@ class DynamicPermissionService:
                         TemporaryPermission.scope_id.is_(None),
                         TemporaryPermission.scope_id == scope_id,
                     ),
-                    TemporaryPermission.is_active == True,
+                    TemporaryPermission.is_active,
                     TemporaryPermission.expires_at > datetime.now(UTC),
                 )
             )
@@ -611,7 +611,7 @@ class DynamicPermissionService:
                         ConditionalPermission.scope_id.is_(None),
                         ConditionalPermission.scope_id == scope_id,
                     ),
-                    ConditionalPermission.is_active == True,
+                    ConditionalPermission.is_active,
                 )
             )
             .first()
@@ -702,7 +702,7 @@ class DynamicPermissionService:
                 and_(
                     DynamicPermission.expires_at.is_not(None),
                     DynamicPermission.expires_at <= now,
-                    DynamicPermission.is_active == True,
+                    DynamicPermission.is_active,
                 )
             )
             .all()
@@ -718,7 +718,7 @@ class DynamicPermissionService:
             .filter(
                 and_(
                     TemporaryPermission.expires_at <= now,
-                    TemporaryPermission.is_active == True,
+                    TemporaryPermission.is_active,
                 )
             )
             .all()

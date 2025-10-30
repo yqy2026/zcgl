@@ -317,11 +317,6 @@ class ContractTableAnalyzer:
                 '（）【】《》""'
                 "—–至起止面积平方米元"
             )
-            custom_config = (
-                r'--psm 6 --oem 3 -c tessedit_char_whitelist 0123456789年月日，。；：""'
-                '（）【】《》""'
-                "—–至起止面积平方米元甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未申酉戌亥"
-            )
 
             # 识别文本并保留位置信息
             data = pytesseract.image_to_data(table_image, config=config)

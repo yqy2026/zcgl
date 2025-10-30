@@ -100,7 +100,7 @@ class PermissionDelegationService:
                     PermissionDelegation.delegatee_id == delegatee_id,
                     PermissionDelegation.scope == scope,
                     PermissionDelegation.scope_id == scope_id,
-                    PermissionDelegation.is_active == True,
+                    PermissionDelegation.is_active,
                     or_(
                         PermissionDelegation.ends_at.is_(None),
                         PermissionDelegation.ends_at > datetime.now(UTC),
@@ -199,7 +199,7 @@ class PermissionDelegationService:
         query = self.db.query(PermissionDelegation).filter(
             and_(
                 PermissionDelegation.delegatee_id == user_id,
-                PermissionDelegation.is_active == True,
+                PermissionDelegation.is_active,
             )
         )
 
@@ -278,7 +278,7 @@ class PermissionDelegationService:
         if not include_expired:
             query = query.filter(
                 and_(
-                    PermissionDelegation.is_active == True,
+                    PermissionDelegation.is_active,
                     or_(
                         PermissionDelegation.ends_at.is_(None),
                         PermissionDelegation.ends_at > datetime.now(UTC),
@@ -360,7 +360,7 @@ class PermissionDelegationService:
                 and_(
                     UserRoleAssignment.user_id == user_id,
                     Role.organization_id == organization_id,
-                    UserRoleAssignment.is_active == True,
+                    UserRoleAssignment.is_active,
                 )
             )
             .all()
@@ -493,7 +493,7 @@ class PermissionDelegationService:
             .filter(
                 and_(
                     UserRoleAssignment.user_id == user_id,
-                    UserRoleAssignment.is_active == True,
+                    UserRoleAssignment.is_active,
                     or_(
                         UserRoleAssignment.expires_at.is_(None),
                         UserRoleAssignment.expires_at > datetime.now(UTC),
@@ -651,7 +651,7 @@ class PermissionDelegationService:
             self.db.query(PermissionDelegation)
             .filter(
                 and_(
-                    PermissionDelegation.is_active == True,
+                    PermissionDelegation.is_active,
                     PermissionDelegation.ends_at <= datetime.now(UTC),
                 )
             )
@@ -693,7 +693,7 @@ class PermissionDelegationService:
                 .filter(
                     and_(
                         PermissionDelegation.delegator_id == delegator_id,
-                        PermissionDelegation.is_active == True,
+                        PermissionDelegation.is_active,
                         PermissionDelegation.permission_ids.contains([permission_id]),
                         or_(
                             PermissionDelegation.ends_at.is_(None),

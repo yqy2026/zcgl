@@ -3,13 +3,13 @@ PDF文本处理服务
 支持多种PDF处理引擎和OCR功能
 """
 
-import logging
-import time
-import re
 import asyncio
+import logging
+import re
+import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import fitz  # PyMuPDF
 import pdfplumber
@@ -56,13 +56,13 @@ logger = logging.getLogger(__name__)
 
 class PDFProcessingCache:
     """PDF处理缓存类"""
-    
+
     def __init__(self, max_size: int = 100, ttl_seconds: int = 3600):
         self.cache = {}
         self.access_times = {}
         self.max_size = max_size
         self.ttl_seconds = ttl_seconds
-    
+
     def get(self, key: str) -> Any:
         """获取缓存项"""
         if key in self.cache:
@@ -74,7 +74,7 @@ class PDFProcessingCache:
             self.access_times[key] = time.time()
             return self.cache[key]
         return None
-    
+
     def set(self, key: str, value: Any):
         """设置缓存项"""
         # 如果缓存已满，清理最旧的项
@@ -82,10 +82,10 @@ class PDFProcessingCache:
             oldest_key = min(self.access_times, key=self.access_times.get)
             del self.cache[oldest_key]
             del self.access_times[oldest_key]
-        
+
         self.cache[key] = value
         self.access_times[key] = time.time()
-    
+
     def clear(self):
         """清空缓存"""
         self.cache.clear()
@@ -116,6 +116,7 @@ class PDFProcessingService:
         # 初始化缓存服务
         try:
             from .pdf_processing_cache import PDFProcessingCache
+
             self.cache = PDFProcessingCache()
         except ImportError as e:
             logger.warning(f"无法导入PDF处理缓存: {e}")
@@ -124,6 +125,7 @@ class PDFProcessingService:
         # 初始化质量评估器
         try:
             from .pdf_quality_assessment import pdf_quality_assessor
+
             self.quality_assessor = pdf_quality_assessor
         except ImportError as e:
             logger.warning(f"无法导入质量评估器: {e}")
@@ -132,6 +134,7 @@ class PDFProcessingService:
         # 初始化并发处理优化器
         try:
             from .concurrent_processing_optimizer import concurrent_optimizer
+
             self.concurrent_optimizer = concurrent_optimizer
             # 启动并发处理器
             self.concurrent_optimizer.start()
@@ -143,6 +146,7 @@ class PDFProcessingService:
         # 初始化PDF处理监控器
         try:
             from .pdf_processing_monitor import pdf_processing_monitor
+
             self.monitor = pdf_processing_monitor
             self.monitor.start_monitoring()
             logger.info("PDF处理监控器已启动")
@@ -226,12 +230,13 @@ class PDFProcessingService:
         if self.monitor:
             try:
                 from .pdf_processing_monitor import ProcessingStage
+
                 self.monitor.start_session(
                     session_id=session_id,
                     file_name=file_path.name,
                     file_size=file_path.stat().st_size,
                     processing_method=method,
-                    prefer_ocr=prefer_ocr
+                    prefer_ocr=prefer_ocr,
                 )
             except Exception as e:
                 logger.warning(f"启动监控会话失败: {e}")
@@ -240,61 +245,74 @@ class PDFProcessingService:
             # 验证文件
             if not file_path.exists():
                 if self.monitor:
-                    from .pdf_processing_monitor import ProcessingStage, LogLevel
+                    from .pdf_processing_monitor import LogLevel, ProcessingStage
+
                     self.monitor.log_event(
                         session_id=session_id,
                         stage=ProcessingStage.VALIDATION,
-                        event_type='file_not_found',
+                        event_type="file_not_found",
                         event_level=LogLevel.ERROR,
                         message=f"文件不存在: {file_path}",
-                        details={'file_path': str(file_path)}
+                        details={"file_path": str(file_path)},
                     )
                 raise FileNotFoundError(f"文件不存在: {file_path}")
 
             if file_path.suffix.lower() != ".pdf":
                 if self.monitor:
-                    from .pdf_processing_monitor import ProcessingStage, LogLevel
+                    from .pdf_processing_monitor import LogLevel, ProcessingStage
+
                     self.monitor.log_event(
                         session_id=session_id,
                         stage=ProcessingStage.VALIDATION,
-                        event_type='invalid_file_format',
+                        event_type="invalid_file_format",
                         event_level=LogLevel.ERROR,
                         message=f"不支持的文件格式: {file_path.suffix}",
-                        details={'file_path': str(file_path), 'file_suffix': file_path.suffix}
+                        details={
+                            "file_path": str(file_path),
+                            "file_suffix": file_path.suffix,
+                        },
                     )
                 raise ValueError(f"不支持的文件格式: {file_path.suffix}")
 
             # 记录文件验证成功
             if self.monitor:
-                from .pdf_processing_monitor import ProcessingStage, LogLevel
+                from .pdf_processing_monitor import LogLevel, ProcessingStage
+
                 self.monitor.log_event(
                     session_id=session_id,
                     stage=ProcessingStage.VALIDATION,
-                    event_type='validation_success',
+                    event_type="validation_success",
                     event_level=LogLevel.INFO,
                     message="文件验证通过",
-                    details={'file_size': file_path.stat().st_size, 'file_format': file_path.suffix}
+                    details={
+                        "file_size": file_path.stat().st_size,
+                        "file_format": file_path.suffix,
+                    },
                 )
 
             # 检查缓存
             cache_key = f"processing_{file_path.name}"
 
-            cache_result = self.cache.get(file_path, method, **kwargs) if hasattr(self, 'cache') else None
+            cache_result = (
+                self.cache.get(file_path, method, **kwargs)
+                if hasattr(self, "cache")
+                else None
+            )
 
             if cache_result:
                 logger.info(f"缓存命中: {file_path.name}")
-                result_data = cache_result['result']
-                logger.info(f"使用缓存结果，跳过处理")
+                logger.info("使用缓存结果，跳过处理")
 
                 if self.monitor:
-                    from .pdf_processing_monitor import ProcessingStage, LogLevel
+                    from .pdf_processing_monitor import LogLevel, ProcessingStage
+
                     self.monitor.log_event(
                         session_id=session_id,
                         stage=ProcessingStage.EXTRACTION,
-                        event_type='cache_hit',
+                        event_type="cache_hit",
                         event_level=LogLevel.INFO,
                         message=f"缓存命中: {file_path.name}",
-                        details={'cache_key': cache_key}
+                        details={"cache_key": cache_key},
                     )
 
                 return cache_result
@@ -304,14 +322,15 @@ class PDFProcessingService:
                 method = await self._select_best_method(file_path, prefer_ocr)
 
             if self.monitor:
-                from .pdf_processing_monitor import ProcessingStage, LogLevel
+                from .pdf_processing_monitor import LogLevel, ProcessingStage
+
                 self.monitor.log_event(
                     session_id=session_id,
                     stage=ProcessingStage.PREPROCESSING,
-                    event_type='method_selected',
+                    event_type="method_selected",
                     event_level=LogLevel.INFO,
                     message=f"选择处理方法: {method}",
-                    details={'method': method, 'prefer_ocr': prefer_ocr}
+                    details={"method": method, "prefer_ocr": prefer_ocr},
                 )
 
             logger.info(f"开始处理PDF文件: {file_path.name}, 使用方法: {method}")
@@ -340,37 +359,42 @@ class PDFProcessingService:
             )
 
             # 执行质量评估
-            if self.quality_assessor and result.get('text'):
+            if self.quality_assessor and result.get("text"):
                 try:
                     logger.info(f"开始对 {file_path.name} 进行质量评估")
-                    quality_assessment = self.quality_assessor.assess_processing_quality(
-                        extracted_data=result.get('extracted_fields', {}),
-                        original_text=result.get('text', ''),
-                        processing_metadata={
-                            'processing_method': method,
-                            'processing_time_seconds': processing_time,
-                            'file_size_bytes': file_path.stat().st_size,
-                            'ocr_used': method == PDFProcessingMethod.OCR,
-                            'page_count': result.get('page_count', 1),
-                            'dpi': kwargs.get('dpi', 150)
-                        },
-                        ocr_results=result.get('ocr_results')
+                    quality_assessment = (
+                        self.quality_assessor.assess_processing_quality(
+                            extracted_data=result.get("extracted_fields", {}),
+                            original_text=result.get("text", ""),
+                            processing_metadata={
+                                "processing_method": method,
+                                "processing_time_seconds": processing_time,
+                                "file_size_bytes": file_path.stat().st_size,
+                                "ocr_used": method == PDFProcessingMethod.OCR,
+                                "page_count": result.get("page_count", 1),
+                                "dpi": kwargs.get("dpi", 150),
+                            },
+                            ocr_results=result.get("ocr_results"),
+                        )
                     )
-                    result['quality_assessment'] = quality_assessment
+                    result["quality_assessment"] = quality_assessment
                     logger.info(
                         f"质量评估完成 - 总分: {quality_assessment['overall_quality_score']:.3f}, "
                         f"等级: {quality_assessment['quality_level']['description']}"
                     )
                 except Exception as e:
                     logger.error(f"质量评估失败: {e}")
-                    result['quality_assessment'] = {
-                        'overall_quality_score': 0.5,
-                        'quality_level': {'level': 'unknown', 'description': '评估失败'},
-                        'error': str(e)
+                    result["quality_assessment"] = {
+                        "overall_quality_score": 0.5,
+                        "quality_level": {
+                            "level": "unknown",
+                            "description": "评估失败",
+                        },
+                        "error": str(e),
                     }
 
             # 缓存结果（包括质量评估）
-            if hasattr(self, 'cache') and self.cache:
+            if hasattr(self, "cache") and self.cache:
                 try:
                     self.cache.set(file_path, method, result, **kwargs)
                     logger.debug(f"结果已缓存: {file_path.name}")
@@ -861,7 +885,7 @@ class PDFProcessingService:
         method: str | None = None,
         prefer_ocr: bool = False,
         max_concurrency: int | None = None,
-        **kwargs
+        **kwargs,
     ) -> list[dict[str, Any]]:
         """
         并发处理多个PDF文件
@@ -889,9 +913,11 @@ class PDFProcessingService:
         # 限制并发数
         if max_concurrency is None:
             stats = self.concurrent_optimizer.get_statistics()
-            max_concurrency = min(4, stats.get('optimal_concurrency', 4))
+            max_concurrency = min(4, stats.get("optimal_concurrency", 4))
 
-        logger.info(f"开始并发处理 {len(file_paths)} 个PDF文件，最大并发数: {max_concurrency}")
+        logger.info(
+            f"开始并发处理 {len(file_paths)} 个PDF文件，最大并发数: {max_concurrency}"
+        )
 
         # 创建任务
         tasks = []
@@ -899,6 +925,7 @@ class PDFProcessingService:
             task_id = f"pdf_process_{i}_{Path(file_path).name}"
             try:
                 from .concurrent_processing_optimizer import TaskPriority
+
                 task_id = self.concurrent_optimizer.submit_task(
                     task_id=task_id,
                     func=self._extract_single_pdf_wrapper,
@@ -907,10 +934,10 @@ class PDFProcessingService:
                     priority=TaskPriority.NORMAL,
                     estimated_duration=30.0,  # 估算30秒
                     resource_requirements={
-                        'cpu_intensive': True,
-                        'memory_intensive': True,
-                        'io_intensive': True
-                    }
+                        "cpu_intensive": True,
+                        "memory_intensive": True,
+                        "io_intensive": True,
+                    },
                 )
                 tasks.append(task_id)
             except Exception as e:
@@ -925,27 +952,34 @@ class PDFProcessingService:
         start_time = time.time()
         timeout = max(300, len(file_paths) * 60)  # 至少5分钟，每文件额外1分钟
 
-        while completed_count < len(file_paths) and (time.time() - start_time) < timeout:
+        while (
+            completed_count < len(file_paths) and (time.time() - start_time) < timeout
+        ):
             await asyncio.sleep(1)  # 检查间隔
 
             for i, task_id in enumerate(tasks):
-                if task_id.startswith('failed_'):
+                if task_id.startswith("failed_"):
                     if results[i] is None:
                         results[i] = {
-                            'success': False,
-                            'error': '任务提交失败',
-                            'file_path': file_paths[i]
+                            "success": False,
+                            "error": "任务提交失败",
+                            "file_path": file_paths[i],
                         }
                         completed_count += 1
 
-        logger.info(f"并发处理完成，处理文件数: {len(results)}, 耗时: {time.time() - start_time:.2f}秒")
+        logger.info(
+            f"并发处理完成，处理文件数: {len(results)}, 耗时: {time.time() - start_time:.2f}秒"
+        )
         return results
 
-    def _extract_single_pdf_wrapper(self, file_path: str, method: str | None, prefer_ocr: bool, **kwargs) -> Dict[str, Any]:
+    def _extract_single_pdf_wrapper(
+        self, file_path: str, method: str | None, prefer_ocr: bool, **kwargs
+    ) -> dict[str, Any]:
         """
         单个PDF文件提取的包装器（用于并发处理）
         """
         import asyncio
+
         try:
             # 由于在线程池中运行，需要创建新的事件循环
             loop = asyncio.new_event_loop()
@@ -961,22 +995,19 @@ class PDFProcessingService:
         except Exception as e:
             logger.error(f"PDF处理包装器异常: {file_path}, 错误: {e}")
             return {
-                'success': False,
-                'error': str(e),
-                'file_path': file_path,
-                'processing_method': method,
-                'text': '',
-                'pages': []
+                "success": False,
+                "error": str(e),
+                "file_path": file_path,
+                "processing_method": method,
+                "text": "",
+                "pages": [],
             }
 
     def get_concurrent_stats(self) -> dict[str, Any]:
         """获取并发处理统计信息"""
         if self.concurrent_optimizer:
             return self.concurrent_optimizer.get_statistics()
-        return {
-            'concurrent_optimizer_available': False,
-            'message': '并发优化器不可用'
-        }
+        return {"concurrent_optimizer_available": False, "message": "并发优化器不可用"}
 
     def cleanup_concurrent_resources(self):
         """清理并发处理资源"""

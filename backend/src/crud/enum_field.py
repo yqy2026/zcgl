@@ -35,7 +35,7 @@ class EnumFieldTypeCRUD:
             self.db.query(EnumFieldType)
             .filter(
                 and_(
-                    EnumFieldType.id == enum_type_id, EnumFieldType.is_deleted == False
+                    EnumFieldType.id == enum_type_id, not EnumFieldType.is_deleted
                 )
             )
             .first()
@@ -48,8 +48,8 @@ class EnumFieldTypeCRUD:
                 .filter(
                     and_(
                         EnumFieldValue.enum_type_id == enum_type.id,
-                        EnumFieldValue.is_deleted == False,
-                        EnumFieldValue.is_active == True,
+                        not EnumFieldValue.is_deleted,
+                        EnumFieldValue.is_active,
                     )
                 )
                 .order_by(EnumFieldValue.sort_order.asc())
@@ -63,7 +63,7 @@ class EnumFieldTypeCRUD:
         """根据编码获取枚举类型"""
         return (
             self.db.query(EnumFieldType)
-            .filter(and_(EnumFieldType.code == code, EnumFieldType.is_deleted == False))
+            .filter(and_(EnumFieldType.code == code, not EnumFieldType.is_deleted))
             .first()
         )
 
@@ -77,7 +77,7 @@ class EnumFieldTypeCRUD:
         keyword: str | None = None,
     ) -> list[EnumFieldType]:
         """获取枚举类型列表"""
-        query = self.db.query(EnumFieldType).filter(EnumFieldType.is_deleted == False)
+        query = self.db.query(EnumFieldType).filter(not EnumFieldType.is_deleted)
 
         if category:
             query = query.filter(EnumFieldType.category == category)
@@ -111,8 +111,8 @@ class EnumFieldTypeCRUD:
                 .filter(
                     and_(
                         EnumFieldValue.enum_type_id == enum_type.id,
-                        EnumFieldValue.is_deleted == False,
-                        EnumFieldValue.is_active == True,
+                        not EnumFieldValue.is_deleted,
+                        EnumFieldValue.is_active,
                     )
                 )
                 .order_by(EnumFieldValue.sort_order.asc())
@@ -181,7 +181,7 @@ class EnumFieldTypeCRUD:
             .filter(
                 and_(
                     EnumFieldValue.enum_type_id == enum_type_id,
-                    EnumFieldValue.is_deleted == False,
+                    not EnumFieldValue.is_deleted,
                 )
             )
             .count()
@@ -196,7 +196,7 @@ class EnumFieldTypeCRUD:
             .filter(
                 and_(
                     EnumFieldUsage.enum_type_id == enum_type_id,
-                    EnumFieldUsage.is_active == True,
+                    EnumFieldUsage.is_active,
                 )
             )
             .count()
@@ -227,7 +227,7 @@ class EnumFieldTypeCRUD:
             .filter(
                 and_(
                     EnumFieldType.category.isnot(None),
-                    EnumFieldType.is_deleted == False,
+                    not EnumFieldType.is_deleted,
                 )
             )
             .distinct()
@@ -239,14 +239,14 @@ class EnumFieldTypeCRUD:
         """获取枚举类型统计信息"""
         total_types = (
             self.db.query(EnumFieldType)
-            .filter(EnumFieldType.is_deleted == False)
+            .filter(not EnumFieldType.is_deleted)
             .count()
         )
         active_types = (
             self.db.query(EnumFieldType)
             .filter(
                 and_(
-                    EnumFieldType.is_deleted == False, EnumFieldType.status == "active"
+                    not EnumFieldType.is_deleted, EnumFieldType.status == "active"
                 )
             )
             .count()
@@ -257,7 +257,7 @@ class EnumFieldTypeCRUD:
             self.db.query(
                 EnumFieldType.category, func.count(EnumFieldType.id).label("count")
             )
-            .filter(EnumFieldType.is_deleted == False)
+            .filter(not EnumFieldType.is_deleted)
             .group_by(EnumFieldType.category)
             .all()
         )
@@ -306,7 +306,7 @@ class EnumFieldValueCRUD:
             .filter(
                 and_(
                     EnumFieldValue.id == enum_value_id,
-                    EnumFieldValue.is_deleted == False,
+                    not EnumFieldValue.is_deleted,
                 )
             )
             .first()
@@ -322,7 +322,7 @@ class EnumFieldValueCRUD:
                 and_(
                     EnumFieldValue.enum_type_id == enum_type_id,
                     EnumFieldValue.value == value,
-                    EnumFieldValue.is_deleted == False,
+                    not EnumFieldValue.is_deleted,
                 )
             )
             .first()
@@ -338,7 +338,7 @@ class EnumFieldValueCRUD:
         query = self.db.query(EnumFieldValue).filter(
             and_(
                 EnumFieldValue.enum_type_id == enum_type_id,
-                EnumFieldValue.is_deleted == False,
+                not EnumFieldValue.is_deleted,
             )
         )
 
@@ -451,7 +451,7 @@ class EnumFieldValueCRUD:
             .filter(
                 and_(
                     EnumFieldValue.parent_id == enum_value_id,
-                    EnumFieldValue.is_deleted == False,
+                    not EnumFieldValue.is_deleted,
                 )
             )
             .count()

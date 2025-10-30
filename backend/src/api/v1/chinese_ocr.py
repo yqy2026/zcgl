@@ -225,22 +225,22 @@ async def chinese_ocr_health() -> dict[str, Any]:
 
         # 尝试导入检查依赖
         try:
-            import cv2
+            import cv2  # noqa: F401
         except ImportError:
             dependencies["cv2"] = False
 
         try:
-            from PIL import Image
+            from PIL import Image  # noqa: F401
         except ImportError:
             dependencies["pil"] = False
 
         try:
-            import numpy as np
+            import numpy as np  # noqa: F401
         except ImportError:
             dependencies["numpy"] = False
 
         try:
-            import fitz
+            import fitz  # noqa: F401
         except ImportError:
             dependencies["pymupdf"] = False
 

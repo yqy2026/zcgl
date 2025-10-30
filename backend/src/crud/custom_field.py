@@ -66,7 +66,7 @@ class CRUDCustomField(
         """获取所有启用的字段"""
         return (
             db.query(AssetCustomField)
-            .filter(AssetCustomField.is_active == True)
+            .filter(AssetCustomField.is_active)
             .order_by(AssetCustomField.sort_order, AssetCustomField.created_at)
             .all()
         )

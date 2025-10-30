@@ -1,8 +1,8 @@
 // React is implicitly used by JSX, no need for explicit import
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { renderWithProviders } from '@/__tests__/utils'
-import { mockAssetData } from '@/utils/testDataGenerator'
+import { renderWithProviders } from '../../../__tests__/utils/testUtils'
+import { generateMockAssetData } from '@/utils/testDataGenerator'
 import AssetExport from '../AssetExport'
 import { assetService } from '@/services/assetService'
 import { message } from 'antd'

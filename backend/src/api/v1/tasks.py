@@ -452,7 +452,7 @@ async def cleanup_old_tasks(
                     AsyncTask.status.in_(
                         [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]
                     ),
-                    AsyncTask.is_active == True,
+                    AsyncTask.is_active,
                 )
             )
             .all()

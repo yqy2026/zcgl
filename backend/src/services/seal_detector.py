@@ -7,7 +7,7 @@ import logging
 import re
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, List, Dict
+from typing import Any
 
 import cv2
 import numpy as np
@@ -251,6 +251,7 @@ class SealDetector:
         self, hsv_image: np.ndarray, template: dict[str, Any]
     ) -> list[DetectionResult]:
         """检测圆形印章"""
+        detections = []
         try:
             # 转换为二值图像
             _, mask = cv2.threshold(hsv_image[:, :, 2], 127, 255, cv2.THRESH_BINARY)
@@ -272,7 +273,7 @@ class SealDetector:
             upper_red = np.array(
                 [color_range["hue_high"], color_range["saturation_high"], 255]
             )
-            color_mask = cv2.inRange(hsv_image, lower_red, upper_red)
+            cv2.inRange(hsv_image, lower_red, upper_red)  # 预留字段，当前未使用
 
             for contour in contours:
                 # 过滤轮廓
@@ -315,8 +316,8 @@ class SealDetector:
 
                     # 尝试OCR识别印章文字
                     if template.get("center_text_patterns"):
-                        text = await self._extract_seal_text(
-                            image[y - radius : y + radius, x - radius : x + radius],
+                        text = self._extract_seal_text(
+                            hsv_image[y - radius : y + radius, x - radius : x + radius],
                             templates=template["center_text_patterns"],
                         )
                         detection.text_content = text
@@ -688,6 +689,38 @@ class SealDetector:
             confidence += 0.3
 
         return min(confidence, 1.0)
+
+    def _extract_seal_text(self, image_region: np.ndarray, templates: list) -> str:
+        """提取印章文字"""
+        try:
+            # 使用OCR提取文字
+            import pytesseract
+
+            # 预处理图像以提高OCR准确性
+            gray = cv2.cvtColor(image_region, cv2.COLOR_BGR2GRAY)
+            _, binary = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
+
+            # 使用Tesseract进行OCR
+            text = pytesseract.image_to_string(binary, lang="chi_sim")
+
+            return text.strip()
+        except Exception as e:
+            logger.warning(f"OCR文字提取失败: {e}")
+            return ""
+
+    def _validate_seal_text(self, text: str, template: dict) -> bool:
+        """验证印章文字是否符合模板要求"""
+        if not text:
+            return False
+
+        # 检查是否包含预期的文字模式
+        if "center_text_patterns" in template:
+            patterns = template["center_text_patterns"]
+            for pattern in patterns:
+                if pattern in text:
+                    return True
+
+        return False
 
 
 # 全局印章检测器实例

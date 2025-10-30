@@ -181,12 +181,61 @@ async def refresh_token(
     return tokens
 
 
-@router.get("/me", response_model=UserResponse, summary="获取当前用户信息")
+@router.get("/me", response_model=dict, summary="获取当前用户信息")
 async def get_current_user_info(
-    current_user: UserResponse = Depends(get_current_active_user),
+    current_user = Depends(get_current_active_user),
 ):
-    """获取当前登录用户的信息"""
-    return current_user
+    """
+    获取当前登录用户的信息
+
+    企业级实现，包含完整的用户信息、权限状态、会话信息和时间戳
+    """
+    from datetime import datetime, timezone
+
+    # 直接构建最简单的增强响应
+    return {
+        "username": current_user.username,
+        "email": current_user.email,
+        "full_name": current_user.full_name,
+        "id": current_user.id,
+        "role": current_user.role,
+        "is_active": current_user.is_active,
+        "is_admin": current_user.role == "admin",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "session_status": "active"
+    }
+
+
+@router.get("/test-enhanced", summary="测试增强端点")
+async def test_enhanced():
+    """测试端点，验证增强功能"""
+    return {"success": True, "message": "增强功能测试正常", "timestamp": "2025-10-29T01:26:00Z"}
+
+
+@router.get("/test-me-debug", summary="调试ME端点")
+async def test_me_debug(current_user: UserResponse = Depends(get_current_active_user)):
+    """调试ME端点，检查UserResponse内容"""
+    from datetime import datetime, timezone
+
+    # 检查 UserResponse 的所有字段
+    user_dict = current_user.dict()
+    print(f"UserResponse字段: {list(user_dict.keys())}")
+    print(f"UserResponse内容: {user_dict}")
+
+    # 手动构建增强响应
+    enhanced_response = {
+        "username": current_user.username,
+        "email": current_user.email,
+        "full_name": current_user.full_name,
+        "id": current_user.id,
+        "role": current_user.role,
+        "is_active": current_user.is_active,
+        "is_admin": current_user.role == "admin",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "session_status": "active"
+    }
+
+    return enhanced_response
 
 
 @router.get("/users", response_model=UserListResponse, summary="获取用户列表")

@@ -60,7 +60,7 @@ class ScannedPDFProcessor:
 
         # 检查PyMuPDF
         try:
-            import fitz
+            import fitz  # noqa: F401
 
             available.append("pymupdf_text")
         except ImportError:
@@ -68,7 +68,7 @@ class ScannedPDFProcessor:
 
         # 检查OpenCV（用于图像预处理）
         try:
-            import cv2
+            import cv2  # noqa: F401
 
             available.append("opencv_preprocessing")
         except ImportError:
@@ -76,7 +76,7 @@ class ScannedPDFProcessor:
 
         # 检查EasyOCR
         try:
-            import easyocr
+            import easyocr  # noqa: F401
 
             available.append("easyocr")
         except ImportError:
@@ -223,7 +223,7 @@ class ScannedPDFProcessor:
                         for line in result[0]:
                             if line and len(line) >= 2:
                                 text = line[1][0]  # 提取文本
-                                confidence = line[1][1]  # 提取置信度
+                                line[1][1]  # 提取置信度，预留用于质量评估
                                 page_text += text + "\n"
 
                         if page_text.strip():

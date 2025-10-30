@@ -1,0 +1,477 @@
+F841 Local variable `comparison_data` is assigned to but never used
+    --> src\api\v1\analytics.py:1480:13
+     |
+1478 |         """生成类别对比趋势"""
+1479 |         try:
+1480 |             comparison_data = []
+     |             ^^^^^^^^^^^^^^^
+1481 |
+1482 |             # 计算每个类别的当前出租率
+     |
+help: Remove assignment to unused variable `comparison_data`
+
+F841 Local variable `updated_asset` is assigned to but never used
+   --> src\api\v1\assets.py:895:17
+    |
+894 |                 # 更新资产
+895 |                 updated_asset = asset_crud.update(
+    |                 ^^^^^^^^^^^^^
+896 |                     db=db, db_obj=asset, obj_in=request.updates
+897 |                 )
+    |
+help: Remove assignment to unused variable `updated_asset`
+
+F841 Local variable `value_crud` is assigned to but never used
+  --> src\api\v1\enum_field.py:91:5
+   |
+89 |     """获取枚举字段统计信息"""
+90 |     type_crud = get_enum_field_type_crud(db)
+91 |     value_crud = get_enum_field_value_crud(db)
+   |     ^^^^^^^^^^
+92 |     usage_crud = get_enum_field_usage_crud(db)
+   |
+help: Remove assignment to unused variable `value_crud`
+
+F841 Local variable `usage_crud` is assigned to but never used
+  --> src\api\v1\enum_field.py:92:5
+   |
+90 |     type_crud = get_enum_field_type_crud(db)
+91 |     value_crud = get_enum_field_value_crud(db)
+92 |     usage_crud = get_enum_field_usage_crud(db)
+   |     ^^^^^^^^^^
+93 |
+94 |     type_stats = type_crud.get_statistics()
+   |
+help: Remove assignment to unused variable `usage_crud`
+
+F841 Local variable `validation_result` is assigned to but never used
+   --> src\api\v1\excel.py:387:9
+    |
+385 |     try:
+386 |         # 安全验证文件
+387 |         validation_result = await security_middleware.validate_file_upload(
+    |         ^^^^^^^^^^^^^^^^^
+388 |             file,
+389 |             allowed_types=[
+    |
+help: Remove assignment to unused variable `validation_result`
+
+F841 Local variable `fields` is assigned to but never used
+   --> src\api\v1\excel.py:877:9
+    |
+876 |         # 确定导出字段
+877 |         fields = request.fields or [
+    |         ^^^^^^
+878 |             "property_name",
+879 |             "address",
+    |
+help: Remove assignment to unused variable `fields`
+
+F841 Local variable `current_time` is assigned to but never used
+   --> src\api\v1\export.py:392:5
+    |
+390 |     清理旧的导出任务（只保留最近24小时的）
+391 |     """
+392 |     current_time = datetime.now()
+    |     ^^^^^^^^^^^^
+393 |     to_delete = []
+    |
+help: Remove assignment to unused variable `current_time`
+
+F841 Local variable `compressed_size` is assigned to but never used
+   --> src\api\v1\fast_response_optimized.py:157:21
+    |
+155 |                     # 模拟压缩（这里简化为just remove time）
+156 |                     compressed_data = f"compressed_{response_key}"
+157 |                     compressed_size = len(str(cached_data).encode("utf-8"))
+    |                     ^^^^^^^^^^^^^^^
+158 |                     self.cache[compressed_data] = (compressed_data, datetime.now())
+159 |                     compression_time = (time.time() - start_compression) * 1000
+    |
+help: Remove assignment to unused variable `compressed_size`
+
+F841 Local variable `current_time` is assigned to but never used
+   --> src\api\v1\fast_response_optimized.py:277:9
+    |
+275 |     async def get_cache_stats(self) -> Dict[str, Any]:
+276 |         """获取缓存统计"""
+277 |         current_time = datetime.now()
+    |         ^^^^^^^^^^^^
+278 |         active_items = 0
+279 |         total_size = 0
+    |
+help: Remove assignment to unused variable `current_time`
+
+F841 Local variable `processing_time` is assigned to but never used
+   --> src\api\v1\pdf_import_unified.py:416:5
+    |
+414 |         )
+415 |
+416 |     processing_time = (datetime.now() - start_time).total_seconds()
+    |     ^^^^^^^^^^^^^^^
+417 |
+418 |     try:
+    |
+help: Remove assignment to unused variable `processing_time`
+
+F841 Local variable `version_prefix` is assigned to but never used
+   --> src\core\router_registry.py:177:13
+    |
+175 |         """设置版本路由"""
+176 |         for version in self.supported_versions:
+177 |             version_prefix = f"/api/{version}"
+    |             ^^^^^^^^^^^^^^
+178 |             self.registry.include_all_routers(app, version)
+    |
+help: Remove assignment to unused variable `version_prefix`
+
+F841 Local variable `ownership_ids` is assigned to but never used
+   --> src\crud\project.py:398:9
+    |
+396 |         # 提取权属方关系数据
+397 |         ownership_relations = create_data.pop("ownership_relations", [])
+398 |         ownership_ids = create_data.pop("ownership_ids", [])
+    |         ^^^^^^^^^^^^^
+399 |
+400 |         db_obj = Project(**create_data, created_by=created_by, updated_by=created_by)
+    |
+help: Remove assignment to unused variable `ownership_ids`
+
+F841 Local variable `ownership_ids` is assigned to but never used
+   --> src\crud\project.py:446:9
+    |
+444 |         # 提取权属方关系数据
+445 |         ownership_relations = update_data.pop("ownership_relations", None)
+446 |         ownership_ids = update_data.pop("ownership_ids", None)
+    |         ^^^^^^^^^^^^^
+447 |
+448 |         for field, value in update_data.items():
+    |
+help: Remove assignment to unused variable `ownership_ids`
+
+F841 Local variable `old_status` is assigned to but never used
+   --> src\crud\rent_contract.py:397:13
+    |
+396 |         for ledger in ledgers:
+397 |             old_status = ledger.payment_status
+    |             ^^^^^^^^^^
+398 |
+399 |             # 更新支付信息
+    |
+help: Remove assignment to unused variable `old_status`
+
+F841 Local variable `rbac_service` is assigned to but never used
+   --> src\middleware\auth.py:434:9
+    |
+433 |         # 使用RBAC服务检查资源权限
+434 |         rbac_service = RBACService(db)
+    |         ^^^^^^^^^^^^
+435 |
+436 |         # 检查是否有对应的资源权限
+    |
+help: Remove assignment to unused variable `rbac_service`
+
+F841 Local variable `max_files` is assigned to but never used
+   --> src\middleware\security_middleware.py:338:13
+    |
+336 |             max_files = 5
+337 |         else:
+338 |             max_files = 1
+    |             ^^^^^^^^^
+339 |
+340 |         # 注意：这里不能直接读取request.body，因为流已经被消耗
+    |
+help: Remove assignment to unused variable `max_files`
+
+F841 Local variable `year` is assigned to but never used
+   --> src\schemas\rent_contract.py:188:13
+    |
+186 |             raise ValueError("年月格式必须是YYYY-MM")
+187 |         try:
+188 |             year = int(v[:4])
+    |             ^^^^
+189 |             month = int(v[5:7])
+190 |             if not (1 <= month <= 12):
+    |
+help: Remove assignment to unused variable `year`
+
+F841 Local variable `year` is assigned to but never used
+   --> src\schemas\rent_contract.py:313:13
+    |
+311 |             raise ValueError("年月格式必须是YYYY-MM")
+312 |         try:
+313 |             year = int(v[:4])
+    |             ^^^^
+314 |             month = int(v[5:7])
+315 |             if not (1 <= month <= 12):
+    |
+help: Remove assignment to unused variable `year`
+
+F841 Local variable `actual_property_area` is assigned to but never used
+   --> src\services\asset_calculator.py:105:9
+    |
+103 |         rentable_area = data.get("rentable_area")
+104 |         rented_area = data.get("rented_area")
+105 |         actual_property_area = data.get("actual_property_area")
+    |         ^^^^^^^^^^^^^^^^^^^^
+106 |         land_area = data.get("land_area")
+    |
+help: Remove assignment to unused variable `actual_property_area`
+
+F841 Local variable `land_area` is assigned to but never used
+   --> src\services\asset_calculator.py:106:9
+    |
+104 |         rented_area = data.get("rented_area")
+105 |         actual_property_area = data.get("actual_property_area")
+106 |         land_area = data.get("land_area")
+    |         ^^^^^^^^^
+107 |
+108 |         # 验证逻辑关系
+    |
+help: Remove assignment to unused variable `land_area`
+
+F841 Local variable `result` is assigned to but never used
+   --> src\services\concurrent_processing_optimizer.py:433:21
+    |
+431 |                     # 提交到线程池执行
+432 |                     future = self.executor.submit(task.func, *task.args, **task.kwargs)
+433 |                     result = future.result()
+    |                     ^^^^^^
+434 |
+435 |                     # 更新统计信息
+    |
+help: Remove assignment to unused variable `result`
+
+F841 Local variable `now` is assigned to but never used
+   --> src\services\contract_semantic_validator.py:725:9
+    |
+724 |         # 日期合理性检查
+725 |         now = datetime.now()
+    |         ^^^
+726 |         if parsed_date.year < 1900 or parsed_date.year > 2100:
+727 |             result["level"] = ValidationLevel.WARNING
+    |
+help: Remove assignment to unused variable `now`
+
+F841 Local variable `total_fields` is assigned to but never used
+    --> src\services\contract_semantic_validator.py:1532:9
+     |
+1530 |     ) -> tuple[str, list[str]]:
+1531 |         """生成摘要和建议"""
+1532 |         total_fields = len(field_results)
+     |         ^^^^^^^^^^^^
+1533 |         error_count = sum(
+1534 |             1
+     |
+help: Remove assignment to unused variable `total_fields`
+
+F841 Local variable `custom_config` is assigned to but never used
+   --> src\services\contract_table_analyzer.py:320:13
+    |
+318 |                 "—–至起止面积平方米元"
+319 |             )
+320 |             custom_config = (
+    |             ^^^^^^^^^^^^^
+321 |                 r'--psm 6 --oem 3 -c tessedit_char_whitelist 0123456789年月日，。；：""'
+322 |                 '（）【】《》""'
+    |
+help: Remove assignment to unused variable `custom_config`
+
+F841 Local variable `assets_columns` is assigned to but never used
+   --> src\services\database_optimizer.py:110:17
+    |
+108 |             # 分析资产表
+109 |             if "assets" in inspector.get_table_names():
+110 |                 assets_columns = [
+    |                 ^^^^^^^^^^^^^^
+111 |                     col["name"] for col in inspector.get_columns("assets")
+112 |                 ]
+    |
+help: Remove assignment to unused variable `assets_columns`
+
+F841 Local variable `status_code` is assigned to but never used
+   --> src\services\enhanced_error_handler.py:152:13
+    |
+151 |         else:
+152 |             status_code = 500
+    |             ^^^^^^^^^^^
+153 |             detail = f"未知错误: {str(error)}"
+154 |             return {
+    |
+help: Remove assignment to unused variable `status_code`
+
+F841 Local variable `detail` is assigned to but never used
+   --> src\services\enhanced_error_handler.py:153:13
+    |
+151 |         else:
+152 |             status_code = 500
+153 |             detail = f"未知错误: {str(error)}"
+    |             ^^^^^^
+154 |             return {
+155 |                 "success": False,
+    |
+help: Remove assignment to unused variable `detail`
+
+F841 Local variable `best_text` is assigned to but never used
+   --> src\services\multi_engine_fusion.py:242:9
+    |
+241 |         best_result = max(results, key=lambda x: x.confidence)
+242 |         best_text = best_result.text
+    |         ^^^^^^^^^
+243 |
+244 |         for result in results:
+    |
+help: Remove assignment to unused variable `best_text`
+
+F841 Local variable `step_operation_id` is assigned to but never used
+   --> src\services\pdf_import_service.py:226:14
+    |
+224 |             session_id=session_id,
+225 |             processing_method="enhanced",
+226 |         ) as step_operation_id:
+    |              ^^^^^^^^^^^^^^^^^
+227 |             try:
+228 |                 await self._extract_text_step(db, session)
+    |
+help: Remove assignment to unused variable `step_operation_id`
+
+F841 Local variable `step_operation_id` is assigned to but never used
+   --> src\services\pdf_import_service.py:244:14
+    |
+242 |             session_id=session_id,
+243 |             processing_method="ml_enhanced",
+244 |         ) as step_operation_id:
+    |              ^^^^^^^^^^^^^^^^^
+245 |             try:
+246 |                 await self._extract_info_step(db, session)
+    |
+help: Remove assignment to unused variable `step_operation_id`
+
+F841 Local variable `step_operation_id` is assigned to but never used
+   --> src\services\pdf_import_service.py:261:14
+    |
+259 |             session_id=session_id,
+260 |             processing_method="enhanced",
+261 |         ) as step_operation_id:
+    |              ^^^^^^^^^^^^^^^^^
+262 |             try:
+263 |                 await self._validate_data_step(db, session)
+    |
+help: Remove assignment to unused variable `step_operation_id`
+
+F841 Local variable `step_operation_id` is assigned to but never used
+   --> src\services\pdf_import_service.py:276:14
+    |
+274 |             session_id=session_id,
+275 |             processing_method="intelligent",
+276 |         ) as step_operation_id:
+    |              ^^^^^^^^^^^^^^^^^
+277 |             try:
+278 |                 await self._match_data_step(db, session)
+    |
+help: Remove assignment to unused variable `step_operation_id`
+
+F841 Local variable `result_data` is assigned to but never used
+   --> src\services\pdf_processing_service.py:304:17
+    |
+302 |             if cache_result:
+303 |                 logger.info(f"缓存命中: {file_path.name}")
+304 |                 result_data = cache_result["result"]
+    |                 ^^^^^^^^^^^
+305 |                 logger.info(f"使用缓存结果，跳过处理")
+    |
+help: Remove assignment to unused variable `result_data`
+
+F841 Local variable `contract` is assigned to but never used
+   --> src\services\rent_contract_excel.py:620:25
+    |
+618 |                         )
+619 |                     else:
+620 |                         contract = rent_contract.create(self.db, obj_in=contract_data)
+    |                         ^^^^^^^^
+621 |
+622 |                     result["imported_contracts"] += 1
+    |
+help: Remove assignment to unused variable `contract`
+
+F841 Local variable `term` is assigned to but never used
+   --> src\services\rent_contract_excel.py:691:21
+    |
+690 |                     # 创建条款
+691 |                     term = rent_term.create(self.db, obj_in=term_data)
+    |                     ^^^^
+692 |                     result["imported_terms"] += 1
+    |
+help: Remove assignment to unused variable `term`
+
+F841 Local variable `ledger` is assigned to but never used
+   --> src\services\rent_contract_excel.py:759:25
+    |
+757 |                     else:
+758 |                         # 创建新台账
+759 |                         ledger = rent_ledger.create(self.db, obj_in=ledger_data)
+    |                         ^^^^^^
+760 |
+761 |                     result["imported_ledgers"] += 1
+    |
+help: Remove assignment to unused variable `ledger`
+
+F841 Local variable `confidence` is assigned to but never used
+   --> src\services\scanned_pdf_processor.py:226:33
+    |
+224 | …                     if line and len(line) >= 2:
+225 | …                         text = line[1][0]  # 提取文本
+226 | …                         confidence = line[1][1]  # 提取置信度
+    |                           ^^^^^^^^^^
+227 | …                         page_text += text + "\n"
+    |
+help: Remove assignment to unused variable `confidence`
+
+F841 Local variable `color_mask` is assigned to but never used
+   --> src\services\seal_detector.py:275:13
+    |
+273 |                 [color_range["hue_high"], color_range["saturation_high"], 255]
+274 |             )
+275 |             color_mask = cv2.inRange(hsv_image, lower_red, upper_red)
+    |             ^^^^^^^^^^
+276 |
+277 |             for contour in contours:
+    |
+help: Remove assignment to unused variable `color_mask`
+
+F841 Local variable `quality_metrics` is assigned to but never used
+   --> src\services\unified_pdf_processor.py:134:13
+    |
+132 |             # 阶段2: 质量评估和优化
+133 |             logger.info("阶段2: 质量评估")
+134 |             quality_metrics = self._assess_processing_quality(ocr_result)
+    |             ^^^^^^^^^^^^^^^
+135 |
+136 |             # 阶段3: 结构化数据提取
+    |
+help: Remove assignment to unused variable `quality_metrics`
+
+F841 Local variable `page_results` is assigned to but never used
+   --> src\services\unified_pdf_processor.py:228:13
+    |
+226 |         try:
+227 |             processing_stats = ocr_result.get("processing_stats", {})
+228 |             page_results = ocr_result.get("page_results", [])
+    |             ^^^^^^^^^^^^
+229 |
+230 |             total_pages = processing_stats.get("total_pages", 0)
+    |
+help: Remove assignment to unused variable `page_results`
+
+F841 Local variable `sig` is assigned to but never used
+  --> src\utils\api_doc_generator.py:69:9
+   |
+68 |         # 解析端点函数
+69 |         sig = inspect.signature(endpoint)
+   |         ^^^
+70 |         docstring = inspect.getdoc(endpoint) or ""
+   |
+help: Remove assignment to unused variable `sig`
+
+Found 41 errors.
+No fixes available (41 hidden fixes can be enabled with the `--unsafe-fixes` option).

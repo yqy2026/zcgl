@@ -86,7 +86,7 @@ export class AuthService {
       const response = await api.get('/auth/me')
 
       if (response.data.success) {
-        return response.data.data.user
+        return response.data.data  // 修复：me端点直接返回用户数据，不是嵌套在user字段中
       } else {
         throw new Error('获取用户信息失败')
       }
@@ -166,6 +166,39 @@ export class AuthService {
       })
     } catch (error: any) {
       throw new Error(error.response?.data?.error?.message || error.message || '密码修改失败')
+    }
+  }
+
+  // 更新个人资料
+  static async updateProfile(profileData: any): Promise<User> {
+    try {
+      const response = await api.put('/auth/profile', profileData)
+
+      if (response.data.success) {
+        // 更新本地存储的用户信息
+        const updatedUser = response.data.data
+        localStorage.setItem('user', JSON.stringify(updatedUser))
+        return updatedUser
+      } else {
+        throw new Error('更新个人资料失败')
+      }
+    } catch (error: any) {
+      throw new Error(error.response?.data?.error?.message || error.message || '更新个人资料失败')
+    }
+  }
+
+  // 获取用户活动记录
+  static async getUserActivity(limit: number = 20): Promise<any[]> {
+    try {
+      const response = await api.get(`/auth/activity?limit=${limit}`)
+
+      if (response.data.success) {
+        return response.data.data
+      } else {
+        throw new Error('获取活动记录失败')
+      }
+    } catch (error: any) {
+      throw new Error(error.response?.data?.error?.message || error.message || '获取活动记录失败')
     }
   }
 }

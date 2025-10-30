@@ -102,8 +102,6 @@ class AssetCalculator:
         # 获取面积字段
         rentable_area = data.get("rentable_area")
         rented_area = data.get("rented_area")
-        actual_property_area = data.get("actual_property_area")
-        land_area = data.get("land_area")
 
         # 验证逻辑关系
         if rentable_area and rented_area and rented_area > rentable_area:

@@ -1,0 +1,414 @@
+# 代码质量监控 - GitHub Actions 工作流
+# 此工作流用于在PR和定期执行代码质量检查
+
+name: Code Quality Monitor
+
+on:
+  # 拉取请求触发
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**/*.py'
+      - 'backend/pyproject.toml'
+      - 'backend/.pre-commit-config.yaml'
+  
+  # 推送触发（主分支）
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**/*.py'
+      - 'backend/pyproject.toml'
+      - 'backend/.pre-commit-config.yaml'
+  
+  # 定期执行（每日凌晨2点）
+  schedule:
+    - cron: '0 2 * * *'
+  
+  # 手动触发
+  workflow_dispatch:
+    inputs:
+      full_analysis:
+        description: '执行完整分析'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+env:
+  PYTHON_VERSION: '3.12'
+  UV_VERSION: '0.4.x'
+
+jobs:
+  # 快速质量检查（PR触发）
+  quick-quality-check:
+    if: github.event_name == 'pull_request'
+    name: 快速质量检查
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: 安装UV
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: ${{ env.UV_VERSION }}
+      
+      - name: 设置Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: 安装依赖
+        run: |
+          uv sync --dev
+      
+      - name: 获取变更文件
+        id: changed-files
+        uses: tj-actions/changed-files@v45
+        with:
+          files: |
+            backend/**/*.py
+      
+      - name: Ruff快速检查
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: |
+          echo "检查变更的文件:"
+          echo "${{ steps.changed-files.outputs.all_changed_files }}"
+          
+          # 对变更的文件进行Ruff检查
+          for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
+            if [[ -f "$file" ]]; then
+              echo "检查: $file"
+              uv run ruff check --format=github "$file" || true
+            fi
+          done
+      
+      - name: MyPy类型检查（仅变更文件）
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: |
+          # 对变更的文件进行MyPy检查
+          for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
+            if [[ -f "$file" ]]; then
+              echo "类型检查: $file"
+              uv run mypy --config-file=pyproject.toml "$file" || true
+            fi
+          done
+      
+      - name: 安全检查（Bandit）
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: |
+          uv run bandit -r src/ -f json -o reports/bandit_pr_report.json || true
+          
+          # 检查是否有高危安全问题
+          if [ -f reports/bandit_pr_report.json ]; then
+            HIGH_SEVERITY=$(jq '[.results[] | select(.issue_severity == "HIGH")] | length' reports/bandit_pr_report.json)
+            if [ "$HIGH_SEVERITY" -gt 0 ]; then
+              echo "❌ 发现 $HIGH_SEVERITY 个高危安全问题"
+              echo "请查看详细报告: reports/bandit_pr_report.json"
+              exit 1
+            fi
+          fi
+      
+      - name: 上传PR检查报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-quality-report
+          path: backend/reports/
+          retention-days: 7
+
+  # 完整质量分析（定期和手动触发）
+  full-quality-analysis:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    name: 完整质量分析
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: 安装UV
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: ${{ env.UV_VERSION }}
+      
+      - name: 设置Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: 安装依赖
+        run: |
+          uv sync --dev
+      
+      - name: 创建报告目录
+        run: mkdir -p reports logs
+      
+      - name: 运行完整代码质量分析
+        run: |
+          echo "开始完整代码质量分析..."
+          uv run python scripts/code_quality_monitor.py --history
+      
+      - name: 生成质量趋势图
+        run: |
+          if [ -f reports/quality_trends.png ]; then
+            echo "质量趋势图已生成"
+          fi
+      
+      - name: 运行复杂度分析
+        run: |
+          uv run radon cc --average --min C src/ > reports/complexity_report.txt || true
+          uv run radon mi src/ > reports/maintainability_report.txt || true
+      
+      - name: 运行重复度分析
+        run: |
+          uv run jscpd src/ --min-lines 5 --min-tokens 50 --reporters json,html || true
+          if [ -f jscpd-report.json ]; then
+            mv jscpd-report.json reports/
+          fi
+          if [ -f jscpd-report.html ]; then
+            mv jscpd-report.html reports/
+          fi
+      
+      - name: 生成质量门禁报告
+        run: |
+          echo "# 代码质量门禁报告" > reports/quality_gate_report.md
+          echo "生成时间: $(date)" >> reports/quality_gate_report.md
+          echo "" >> reports/quality_gate_report.md
+          
+          # 读取最新质量报告
+          if [ -f reports/quality_history.json ]; then
+            LATEST_REPORT=$(ls -t reports/quality_report_*.json | head -1)
+            if [ -f "$LATEST_REPORT" ]; then
+              echo "## 质量指标" >> reports/quality_gate_report.md
+              echo '```json' >> reports/quality_gate_report.md
+              cat "$LATEST_REPORT" | jq '.metrics' >> reports/quality_gate_report.md
+              echo '```' >> reports/quality_gate_report.md
+            fi
+          fi
+          
+          # 质量门禁检查
+          echo "## 质量门禁状态" >> reports/quality_gate_report.md
+          
+          # 检查错误数量
+          ERROR_COUNT=$(jq '.metrics.error_count' "$LATEST_REPORT" 2>/dev/null || echo "0")
+          if [ "$ERROR_COUNT" -gt 10 ]; then
+            echo "❌ 错误数量 ($ERROR_COUNT) 超过阈值 (10)" >> reports/quality_gate_report.md
+          else
+            echo "✅ 错误数量 ($ERROR_COUNT) 在可接受范围内" >> reports/quality_gate_report.md
+          fi
+          
+          # 检查安全问题
+          SECURITY_ISSUES=$(jq '.metrics.security_issues' "$LATEST_REPORT" 2>/dev/null || echo "0")
+          if [ "$SECURITY_ISSUES" -gt 0 ]; then
+            echo "❌ 发现 $SECURITY_ISSUES 个安全问题" >> reports/quality_gate_report.md
+          else
+            echo "✅ 未发现安全问题" >> reports/quality_gate_report.md
+          fi
+          
+          # 检查复杂度
+          COMPLEXITY=$(jq '.metrics.complexity_score' "$LATEST_REPORT" 2>/dev/null || echo "0")
+          if (( $(echo "$COMPLEXITY > 10" | bc -l) )); then
+            echo "❌ 代码复杂度 ($COMPLEXITY) 过高" >> reports/quality_gate_report.md
+          else
+            echo "✅ 代码复杂度 ($COMPLEXITY) 正常" >> reports/quality_gate_report.md
+          fi
+      
+      - name: 上传完整分析报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-quality-analysis-${{ github.run_number }}
+          path: |
+            backend/reports/
+            backend/logs/
+          retention-days: 30
+
+  # 质量报告通知
+  quality-report-notification:
+    needs: [full-quality-analysis]
+    if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    name: 质量报告通知
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+      
+      - name: 下载分析报告
+        uses: actions/download-artifact@v4
+        with:
+          name: full-quality-analysis-${{ github.run_number }}
+          path: backend/reports/
+      
+      - name: 生成通知内容
+        run: |
+          echo "# 🚀 代码质量监控报告" > notification.md
+          echo "" >> notification.md
+          echo "**项目**: ${{ github.repository }}" >> notification.md
+          echo "**分支**: ${{ github.ref_name }}" >> notification.md
+          echo "**时间**: $(date)" >> notification.md
+          echo "**工作流**: [查看详情](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> notification.md
+          echo "" >> notification.md
+          
+          # 读取质量指标
+          if [ -f reports/quality_report_*.json ]; then
+            LATEST_REPORT=$(ls -t reports/quality_report_*.json | head -1)
+            if [ -f "$LATEST_REPORT" ]; then
+              echo "## 📊 质量指标" >> notification.md
+              echo "| 指标 | 值 | 状态 |" >> notification.md
+              echo "|------|-----|------|" >> notification.md
+              
+              TOTAL_ISSUES=$(jq '.metrics.total_issues' "$LATEST_REPORT")
+              ERROR_COUNT=$(jq '.metrics.error_count' "$LATEST_REPORT")
+              WARNING_COUNT=$(jq '.metrics.warning_count' "$LATEST_REPORT")
+              COMPLEXITY=$(jq '.metrics.complexity_score' "$LATEST_REPORT")
+              DUPLICATION=$(jq '.metrics.duplication_percentage' "$LATEST_REPORT")
+              SECURITY_ISSUES=$(jq '.metrics.security_issues' "$LATEST_REPORT")
+              
+              # 判断状态
+              ERROR_STATUS=$([ "$ERROR_COUNT" -gt 10 ] && echo "🔴" || echo "🟢")
+              SECURITY_STATUS=$([ "$SECURITY_ISSUES" -gt 0 ] && echo "🔴" || echo "🟢")
+              COMPLEXITY_STATUS=$(( $(echo "$COMPLEXITY > 10" | bc -l) ) && echo "🟡" || echo "🟢")
+              
+              echo "| 总问题数 | $TOTAL_ISSUES | - |" >> notification.md
+              echo "| 错误数 | $ERROR_COUNT | $ERROR_STATUS |" >> notification.md
+              echo "| 警告数 | $WARNING_COUNT | - |" >> notification.md
+              echo "| 代码复杂度 | $COMPLEXITY | $COMPLEXITY_STATUS |" >> notification.md
+              echo "| 代码重复度 | ${DUPLICATION}% | - |" >> notification.md
+              echo "| 安全问题 | $SECURITY_ISSUES | $SECURITY_STATUS |" >> notification.md
+            fi
+          fi
+          
+          echo "" >> notification.md
+          echo "## 🔗 相关链接" >> notification.md
+          echo "- [详细报告](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> notification.md
+          echo "- [代码质量指南](${{ github.server_url }}/${{ github.repository }}/blob/main/backend/docs/code_quality_guidelines.md)" >> notification.md
+          echo "- [趋势分析](${{ github.server_url }}/${{ github.repository }}/actions/workflows/code-quality-monitor.yml)" >> notification.md
+          
+          echo "通知内容已生成"
+      
+      - name: 创建Issue（如有严重问题）
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = 'backend/reports/quality_report_*.json';
+            const glob = require('glob');
+            
+            // 找到最新的质量报告
+            const files = glob.sync(path);
+            if (files.length === 0) return;
+            
+            const latestReport = files[0];
+            const report = JSON.parse(fs.readFileSync(latestReport, 'utf8'));
+            const metrics = report.metrics;
+            
+            // 判断是否需要创建Issue
+            const hasSeriousIssues = metrics.error_count > 20 || metrics.security_issues > 0;
+            
+            if (hasSeriousIssues) {
+              const title = `🚨 代码质量警报 - ${new Date().toISOString().split('T')[0]}`;
+              const body = `## 代码质量监控发现严重问题
+              
+**发现时间**: ${new Date().toLocaleString()}
+**分支**: ${{ github.ref_name }}
+**工作流**: [查看详情](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+### 📊 质量指标
+- 总问题数: ${metrics.total_issues}
+- 错误数: ${metrics.error_count}
+- 警告数: ${metrics.warning_count}
+- 安全问题: ${metrics.security_issues}
+- 代码复杂度: ${metrics.complexity_score.toFixed(2)}
+
+### 🔧 建议行动
+1. 优先修复安全相关问题
+2. 处理高严重度的代码错误
+3. 进行代码重构以降低复杂度
+4. 运行代码质量工具进行自动修复
+
+### 📋 详细报告
+查看完整的[质量分析报告](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})。
+
+**此Issue由代码质量监控工作流自动创建。**`;
+              
+              // 创建Issue
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['code-quality', 'automated', 'urgent']
+              });
+              
+              console.log('已创建代码质量警报Issue');
+            }
+
+  # 质量趋势分析
+  quality-trend-analysis:
+    needs: [full-quality-analysis]
+    if: always() && github.event_name == 'schedule'
+    name: 质量趋势分析
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: 下载历史报告
+        uses: actions/download-artifact@v4
+        with:
+          name: full-quality-analysis-${{ github.run_number }}
+          path: backend/reports/
+      
+      - name: 生成周度质量报告
+        run: |
+          cd backend
+          if [ -f reports/quality_history.json ]; then
+            echo "# 📈 周度代码质量趋势报告" > reports/weekly_quality_report.md
+            echo "" >> reports/weekly_quality_report.md
+            echo "**报告周期**: $(date -d '7 days ago' '+%Y-%m-%d') 至 $(date '+%Y-%m-%d')" >> reports/weekly_quality_report.md
+            echo "" >> reports/weekly_quality_report.md
+            
+            # 分析趋势
+            echo "## 📊 趋势分析" >> reports/weekly_quality_report.md
+            echo "- 问题数量变化趋势" >> reports/weekly_quality_report.md
+            echo "- 代码复杂度变化" >> reports/weekly_quality_report.md
+            echo "- 安全问题的发现和处理情况" >> reports/weekly_quality_report.md
+            echo "- 代码重复度变化" >> reports/weekly_quality_report.md
+            
+            echo "报告已生成，可用于团队评审和持续改进。"
+          fi
+
+# 环境变量配置
+env:
+  # 配置质量门禁阈值
+  QUALITY_GATE_ERROR_THRESHOLD: 10
+  QUALITY_GATE_SECURITY_THRESHOLD: 0
+  QUALITY_GATE_COMPLEXITY_THRESHOLD: 10
+  QUALITY_GATE_DUPLICATION_THRESHOLD: 5
+  
+  # 工具版本
+  RUFF_VERSION: '0.6.8'
+  MYPY_VERSION: '1.11.2'
+  BANDIT_VERSION: '1.7.9'

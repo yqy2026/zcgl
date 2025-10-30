@@ -252,7 +252,7 @@ class CRUDOwnership:
         """获取权属方统计信息"""
         # 基础统计
         total_count = db.query(Ownership).count()
-        active_count = db.query(Ownership).filter(Ownership.is_active == True).count()
+        active_count = db.query(Ownership).filter(Ownership.is_active).count()
         inactive_count = total_count - active_count
 
         # 最近创建的权属方
@@ -295,7 +295,7 @@ class CRUDOwnership:
                 db.query(ProjectOwnershipRelation)
                 .filter(
                     ProjectOwnershipRelation.ownership_id == ownership_id,
-                    ProjectOwnershipRelation.is_active == True,
+                    ProjectOwnershipRelation.is_active,
                 )
                 .count()
             )

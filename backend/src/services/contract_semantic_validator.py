@@ -722,7 +722,6 @@ class ContractSemanticValidator:
             return result
 
         # 日期合理性检查
-        now = datetime.now()
         if parsed_date.year < 1900 or parsed_date.year > 2100:
             result["level"] = ValidationLevel.WARNING
             result["warnings"].append("日期年份可能不正确")
@@ -1529,7 +1528,6 @@ class ContractSemanticValidator:
         overall_confidence: float,
     ) -> tuple[str, list[str]]:
         """生成摘要和建议"""
-        total_fields = len(field_results)
         error_count = sum(
             1
             for r in field_results.values()

@@ -1,23 +1,23 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 快速响应API端点 - 综一的性能优化实现
 包含异步处理、响应压缩、智能缓存等功能
 """
 
-import asyncio
-import time
-import logging
 import hashlib
-from typing import Dict, List, Any, Optional, Union
-from datetime import datetime, timedelta, timezone
-from dataclasses import dataclass, asdict
+import logging
+import time
+from dataclasses import asdict, dataclass
+from datetime import datetime
+from typing import Any
 
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class ResponseMetrics:
     """响应指标"""
+
     endpoint: str
     method: str
     response_time_ms: float
@@ -28,17 +28,21 @@ class ResponseMetrics:
     request_size_bytes: int
     content_length: int
 
+
 @dataclass
 class CacheConfig:
     """缓存配置"""
+
     max_size: int = 1000  # 100MB
     ttl_seconds: int = 300  # 5分钟
     cleanup_interval_seconds: int = 900  # 15分钟
     min_size_to_cache: int = 1024  # 1KB
 
+
 @dataclass
 class FastEndpointConfig:
     """快速端点配置"""
+
     max_response_time_ms: int = 1000  # 1秒
     enable_compression: bool = True
     min_compression_size: int = 1024
@@ -46,12 +50,15 @@ class FastEndpointConfig:
     batch_processing: bool = True
     max_concurrent_requests: int = 10
 
+
 @dataclass
 class OptimizationLevel:
     """优化水平"""
+
     GOOD = "good"
     EXCELLENT = "excellent"
     NEEDS_IMPROVEMENT = "needs_improvement"
+
 
 class FastResponseOptimizer:
     """快速响应优化器"""
@@ -63,41 +70,45 @@ class FastResponseOptimizer:
         self.response_history = []
         self.optimization_rules = self._initialize_optimization_rules()
 
-    def _initialize_optimization_rules(self) -> Dict[str, Any]:
+    def _initialize_optimization_rules(self) -> dict[str, Any]:
         """初始化优化规则"""
         return {
             "compression": {
                 "enable": True,
                 "min_size_to_compress": self.config.min_compression_size,
-                "algorithms": ["gzip", "deflate", "brotli"]
+                "algorithms": ["gzip", "deflate", "brotli"],
             },
             "caching": {
                 "enable": True,
                 "strategy": "memory_based",
                 "max_size": self.config.max_size,
                 "ttl_seconds": self.config.ttl_seconds,
-                "min_size_to_cache": self.config.min_size_to_cache
+                "min_size_to_cache": self.config.min_size_to_cache,
             },
             "database": {
                 "enable_connection_pooling": True,
                 "query_timeout_seconds": 10,
                 "index_optimization": True,
-                "preload_data": True
+                "preload_data": True,
             },
             "async_processing": {
                 "enable": self.config.batch_processing,
                 "max_workers": 5,
-                "chunk_size": 50
+                "chunk_size": 50,
             },
             "response": {
                 "target_time_ms": self.config.max_response_time_ms,
                 "enable_caching": True,
-                "smart_cache_keys": True
-            }
+                "smart_cache_keys": True,
+            },
         }
 
-    async def optimize_response(self, endpoint: str, response_data: Any,
-                                   compression_enabled: Optional[bool] = None) -> Dict[str, Any]:
+    async def optimize_response(
+        self,
+        endpoint: str,
+        response_data: Any,
+        compression_enabled: bool | None = None,
+    ) -> dict[str, Any]:
         """优化响应"""
         start_time = time.time()
 
@@ -119,7 +130,7 @@ class FastResponseOptimizer:
                         "cached_data": cached_data,
                         "response_time_ms": 0,
                         "cache_hit": True,
-                        "optimization_level": OptimizationLevel.EXCELLENT
+                        "optimization_level": OptimizationLevel.EXCELLENT,
                     }
 
             # 响应时间检查
@@ -134,7 +145,7 @@ class FastResponseOptimizer:
                         "response_time_ms": 0,
                         "cache_hit": True,
                         "compression_saved": False,
-                        "optimization_level": OptimizationLevel.EXCELLENT
+                        "optimization_level": OptimizationLevel.EXCELLENT,
                     }
                 else:
                     # 缓存命中但需要压缩
@@ -142,7 +153,6 @@ class FastResponseOptimizer:
 
                     # 模拟压缩（这里简化为just remove time）
                     compressed_data = f"compressed_{response_key}"
-                    compressed_size = len(str(cached_data).encode('utf-8'))
                     self.cache[compressed_data] = (compressed_data, datetime.now())
                     compression_time = (time.time() - start_compression) * 1000
 
@@ -155,7 +165,7 @@ class FastResponseOptimizer:
                         "response_time_ms": compression_time,
                         "cache_hit": True,
                         "compression_saved": True,
-                        "optimization_level": OptimizationLevel.EXCELLENT
+                        "optimization_level": OptimizationLevel.EXCELLENT,
                     }
 
             # 缓存未命中，处理正常响应
@@ -182,8 +192,8 @@ class FastResponseOptimizer:
                 status_code=200,
                 cache_hit=False,
                 error_type="",
-                request_size_bytes=len(result_data.encode('utf-8')),
-                content_length=content_length
+                request_size_bytes=len(result_data.encode("utf-8")),
+                content_length=content_length,
             )
 
             # 记录到历史
@@ -201,22 +211,22 @@ class FastResponseOptimizer:
                 "response_time_ms": response_time,
                 "cache_hit": False,
                 "compression_saved": compression_enabled,
-                "techniques_used": ["used_cached", "compression_enabled"] if compression_enabled else []
+                "techniques_used": ["used_cached", "compression_enabled"]
+                if compression_enabled
+                else [],
             }
 
         except Exception as e:
             logger.error(f"响应优化失败: {endpoint} - {e}")
-            return {
-                "success": False,
-                "error_message": str(e)
-            }
+            return {"success": False, "error_message": str(e)}
 
     async def _compress_response_data(self, data: Any) -> str:
         """压缩响应数据"""
         try:
             import zlib
+
             if isinstance(data, str):
-                return zlib.compress(data.encode('utf-8'), level=9)
+                return zlib.compress(data.encode("utf-8"), level=9)
             else:
                 return str(data)
         except Exception as e:
@@ -239,7 +249,9 @@ class FastResponseOptimizer:
 
         if len(self.cache) > self.config.max_size:
             # 清理最旧条目
-            items_to_remove = sorted(self.cache.items(), key=lambda item: item[1][1])[:50]
+            items_to_remove = sorted(self.cache.items(), key=lambda item: item[1][1])[
+                :50
+            ]
             for item in items_to_remove:
                 del self.cache[item[0]]
 
@@ -258,16 +270,17 @@ class FastResponseOptimizer:
         else:
             return OptimizationLevel.NEEDS_IMPROVEMENT
 
-    async def get_cache_stats(self) -> Dict[str, Any]:
+    async def get_cache_stats(self) -> dict[str, Any]:
         """获取缓存统计"""
-        current_time = datetime.now()
         active_items = 0
         total_size = 0
         cache_hits = 0
 
-        for (key, (data, timestamp)) in self.cache.items():
+        for key, (data, timestamp) in self.cache.items():
             active_items += 1
-            total_size += len(str(data)) if isinstance(data, str) else len(data.encode('utf-8'))
+            total_size += (
+                len(str(data)) if isinstance(data, str) else len(data.encode("utf-8"))
+            )
             cache_hits += 1
 
         total_requests = len(self.request_times)
@@ -278,10 +291,10 @@ class FastResponseOptimizer:
             "cache_hit_rate": cache_hits / total_requests if total_requests > 0 else 0,
             "total_requests": total_requests,
             "memory_usage_mb": total_size / (1024 * 1024),  # 假设MB
-            "items_count": len(self.cache)
+            "items_count": len(self.cache),
         }
 
-    def get_performance_stats(self) -> Dict[str, Any]:
+    def get_performance_stats(self) -> dict[str, Any]:
         """获取性能统计"""
         if not self.request_times:
             return {
@@ -289,19 +302,23 @@ class FastResponseOptimizer:
                 "avg_response_time_ms": 0,
                 "max_response_time_ms": 0,
                 "cache_hit_rate": 0.0,
-                "optimization_level": OptimizationLevel.NEEDS_IMPROVEMENT
+                "optimization_level": OptimizationLevel.NEEDS_IMPROVEMENT,
             }
 
         # 计算响应时间统计
         response_times = [rt.response_time_ms for rt in self.response_history]
         if response_times:
             # 取最近100个响应时间
-            latest_times = response_times[-100:] if len(response_times) > 100 else response_times
+            latest_times = (
+                response_times[-100:] if len(response_times) > 100 else response_times
+            )
 
             avg_time_ms = sum(latest_times) / len(latest_times)
             max_time_ms = max(latest_times)
             p95 = sorted(latest_times)[int(len(latest_times) * 0.95)]  # 95百分位数
-            avg_time_ms_95 = sum(rt for rt in latest_times if rt <= p95) / max(1, len([rt for rt in latest_times if rt <= p95]))
+            avg_time_ms_95 = sum(rt for rt in latest_times if rt <= p95) / max(
+                1, len([rt for rt in latest_times if rt <= p95])
+            )
 
             return {
                 "total_requests": len(self.request_times),
@@ -309,7 +326,7 @@ class FastResponseOptimizer:
                 "max_response_time_ms": max_time_ms,
                 "p95": p95,
                 "avg_time_ms_95": avg_time_ms_95,
-                "optimization_level": self._get_optimization_level(max_time_ms, False)
+                "optimization_level": self._get_optimization_level(max_time_ms, False),
             }
         else:
             return {
@@ -317,10 +334,10 @@ class FastResponseOptimizer:
                 "avg_response_time_ms": 0,
                 "max_response_time_ms": 0,
                 "cache_hit_rate": 0.0,
-                "optimization_level": OptimizationLevel.NEEDS_IMPROVEMENT
+                "optimization_level": OptimizationLevel.NEEDS_IMPROVEMENT,
             }
 
-    def generate_performance_report(self) -> Dict[str, Any]:
+    def generate_performance_report(self) -> dict[str, Any]:
         """生成性能报告"""
         # 获取缓存统计
         cache_stats = self.get_cache_stats()
@@ -333,24 +350,27 @@ class FastResponseOptimizer:
                 "max_cache_size": self.config.max_size,
                 "ttl_seconds": self.config.ttl_seconds,
                 "compression_algorithms": self.config.compression["algorithms"],
-                "cleanup_interval_seconds": self.config.cleanup_interval_seconds
+                "cleanup_interval_seconds": self.config.cleanup_interval_seconds,
             },
             "cache_stats": cache_stats,
             "recent_slow_requests": [asdict(rt) for rt in self.response_history[-20:]],
             "optimization_summary": self._generate_optimization_summary(),
-            "recommendations": self._generate_recommendations()
+            "recommendations": self._generate_recommendations(),
         }
 
         # 保存报告
-        report_file = f"performance_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-        with open(report_file, 'w', encoding='utf-8') as f:
+        report_file = (
+            f"performance_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        )
+        with open(report_file, "w", encoding="utf-8") as f:
             import json
+
             json.dump(report, f, ensure_ascii=False, indent=2)
 
         logger.info(f"性能报告已生成: {report_file}")
         return report
 
-    def _generate_optimization_summary(self) -> Dict[str, Any]:
+    def _generate_optimization_summary(self) -> dict[str, Any]:
         """生成优化总结"""
         stats = self.get_performance_stats()
 
@@ -359,14 +379,16 @@ class FastResponseOptimizer:
         for rt in self.response_history[-50:]:
             endpoint = rt.endpoint
             if endpoint not in endpoint_levels:
-                endpoint_levels[endpoint] = self._get_optimization_level(rt.response_time_ms, rt.cache_hit)
+                endpoint_levels[endpoint] = self._get_optimization_level(
+                    rt.response_time_ms, rt.cache_hit
+                )
 
         # 总体优化等级
         level_counts = {
             OptimizationLevel.EXCELLENT: 0,
             OptimizationLevel.GOOD: 0,
             OptimizationLevel.NEEDS_IMPROVEMENT: 0,
-            OptimizationLevel.NEEDS_IMPROVEMENT: 0
+            OptimizationLevel.NEEDS_IMPROVEMENT: 0,
         }
 
         # 基于平均时间计算优化等级
@@ -388,10 +410,10 @@ class FastResponseOptimizer:
             "overall_level": overall_level,
             "cache_hit_rate": stats["cache_hit_rate"],
             "avg_response_time_ms": stats["avg_response_time_ms"],
-            "optimization_level": overall_level
+            "optimization_level": overall_level,
         }
 
-    def _generate_recommendations(self) -> List[str]:
+    def _generate_recommendations(self) -> list[str]:
         """生成优化建议"""
         recommendations = []
 
@@ -419,14 +441,20 @@ class FastResponseOptimizer:
 
         return recommendations
 
-    def get_response_time_ms(self, endpoint: str, response_time_ms: float) -> Optional[OptimizationLevel]:
+    def get_response_time_ms(
+        self, endpoint: str, response_time_ms: float
+    ) -> OptimizationLevel | None:
         """获取单个端点的优化等级"""
         return self._get_optimization_level(response_time_ms, False)
 
     def _should_cache_response(self, response_data: Any, response_key: str) -> bool:
         """判断是否应该缓存响应"""
         # 基于数据大小、类型和配置判断
-        data_size = len(str(response_data)) if isinstance(response_data, str) else len(response_data.encode('utf-8'))
+        data_size = (
+            len(str(response_data))
+            if isinstance(response_data, str)
+            else len(response_data.encode("utf-8"))
+        )
 
         # 小响应不缓存
         if data_size < self.config.min_size_to_cache:
@@ -443,15 +471,16 @@ class FastResponseOptimizer:
         # 基于请求内容生成唯一键
         if isinstance(request_data, dict):
             # 包含特定字段的使用dict
-            fields = ['session_id', 'organization_id', 'method']
+            fields = ["session_id", "organization_id", "method"]
             key_data = {k: str(v) for k, v in request_data.items() if k in fields}
-            key_data.update({
-                "data_hash": hashlib.md5(str(request_data).encode('utf-8')).hexdigest()
-            })
+            key_data.update(
+                {
+                    "data_hash": hashlib.md5(
+                        str(request_data).encode("utf-8")
+                    ).hexdigest()
+                }
+            )
             return f"{endpoint}_{key_data['data_hash']}"
         else:
-            data_hash = hashlib.md5(str(request_data).encode('utf-8')).hexdigest()
+            data_hash = hashlib.md5(str(request_data).encode("utf-8")).hexdigest()
             return f"{endpoint}_{data_hash}"
-
-    
-

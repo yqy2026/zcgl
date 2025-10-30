@@ -330,15 +330,12 @@ class FileUploadSecurityMiddleware(BaseHTTPMiddleware):
         path = request.url.path
         if path and path.startswith("/api/v1/excel"):
             # Excel导入限制：单次最多上传10个文件
-            max_files = 10
+            pass
         elif path and path.startswith("/api/v1/pdf_import"):
             # PDF导入限制：单次最多上传5个文件
-            max_files = 5
-        else:
-            max_files = 1
-
-        # 注意：这里不能直接读取request.body，因为流已经被消耗
-        # 实际的文件验证需要在具体的API端点中进行
+            pass
+            # 注意：这里不能直接读取request.body，因为流已经被消耗
+            # 实际的文件验证需要在具体的API端点中进行
 
 
 class CORSExtendedMiddleware(BaseHTTPMiddleware):

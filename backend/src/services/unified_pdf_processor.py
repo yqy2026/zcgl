@@ -131,7 +131,7 @@ class UnifiedPDFProcessor:
 
             # 阶段2: 质量评估和优化
             logger.info("阶段2: 质量评估")
-            quality_metrics = self._assess_processing_quality(ocr_result)
+            self._assess_processing_quality(ocr_result)  # 预留字段，当前未使用
 
             # 阶段3: 结构化数据提取
             structured_data = {}
@@ -225,7 +225,7 @@ class UnifiedPDFProcessor:
         """评估处理质量"""
         try:
             processing_stats = ocr_result.get("processing_stats", {})
-            page_results = ocr_result.get("page_results", [])
+            ocr_result.get("page_results", [])  # 预留字段，当前未使用
 
             total_pages = processing_stats.get("total_pages", 0)
             processed_pages = processing_stats.get("processed_pages", 0)

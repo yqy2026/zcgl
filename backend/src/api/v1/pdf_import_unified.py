@@ -4,7 +4,6 @@ PDF智能导入API (统一版本)
 """
 
 import logging
-import time
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -233,7 +232,6 @@ async def upload_pdf_file(
     db: Session = Depends(get_db),
 ):
     """上传PDF文件并开始处理"""
-    start_time = datetime.now()
     retry_count = 0
 
     # 验证文件类型
@@ -246,18 +244,22 @@ async def upload_pdf_file(
                 ValueError("不支持的文件类型"),
                 {"filename": file.filename, "content_type": file.content_type},
                 "file_format_unsupported",
-                retry_count
+                retry_count,
             )
             return FileUploadResponse(
                 success=False,
                 message=error_result["error"],
-                error=error_result["suggested_action"]
+                error=error_result["suggested_action"],
             )
         else:
             raise HTTPException(status_code=400, detail="只支持PDF文件上传")
 
     # 验证并保存文件大小（流式处理，避免内存耗尽）
-    max_size = enhanced_error_handler.max_file_size_mb * 1024 * 1024 if enhanced_error_handler else 50 * 1024 * 1024
+    max_size = (
+        enhanced_error_handler.max_file_size_mb * 1024 * 1024
+        if enhanced_error_handler
+        else 50 * 1024 * 1024
+    )
     temp_dir = Path("temp_uploads")
     temp_dir.mkdir(exist_ok=True)
 
@@ -282,12 +284,12 @@ async def upload_pdf_file(
                             ValueError(f"文件大小 {total_size} 超过限制 {max_size}"),
                             {"filename": file.filename, "file_size": total_size},
                             "file_too_large",
-                            retry_count
+                            retry_count,
                         )
                         return FileUploadResponse(
                             success=False,
                             message=error_result["error"],
-                            error=error_result["suggested_action"]
+                            error=error_result["suggested_action"],
                         )
                     else:
                         raise HTTPException(
@@ -307,12 +309,12 @@ async def upload_pdf_file(
                 e,
                 {"filename": file.filename, "step": "file_upload"},
                 "unknown_error",
-                retry_count
+                retry_count,
             )
             return FileUploadResponse(
                 success=False,
                 message=error_result["error"],
-                error=error_result["suggested_action"]
+                error=error_result["suggested_action"],
             )
         else:
             raise HTTPException(status_code=500, detail=f"文件处理失败: {str(e)}")
@@ -340,8 +342,6 @@ async def upload_pdf_file(
     )
 
     # 开始异步处理（带性能优化和错误处理）
-    start_time = time.time()
-
     try:
         process_result = await pdf_import_service.process_pdf_file(
             db=db,
@@ -352,7 +352,6 @@ async def upload_pdf_file(
             content_type=file.content_type or "application/pdf",
             processing_options=processing_options,
         )
-        processing_time = (datetime.now() - start_time).total_seconds()
 
     except Exception as e:
         logger.error(f"PDF处理失败: {str(e)}")
@@ -364,17 +363,19 @@ async def upload_pdf_file(
                     "session_id": session.session_id,
                     "file_path": str(temp_file_path),
                     "processing_options": processing_options,
-                    "step": "pdf_processing"
+                    "step": "pdf_processing",
                 },
-                "processing_timeout" if "timeout" in str(e).lower() else "unknown_error",
-                retry_count
+                "processing_timeout"
+                if "timeout" in str(e).lower()
+                else "unknown_error",
+                retry_count,
             )
 
             return FileUploadResponse(
                 success=False,
                 message=error_result["error"],
                 error=error_result["suggested_action"],
-                session_id=session.session_id
+                session_id=session.session_id,
             )
         else:
             raise HTTPException(status_code=500, detail=f"PDF处理失败: {str(e)}")
@@ -406,8 +407,6 @@ async def upload_pdf_file(
             session_id=session.session_id,
             estimated_time="60-120秒",
         )
-
-    processing_time = (datetime.now() - start_time).total_seconds()
 
     try:
         if process_result["success"]:
@@ -673,28 +672,24 @@ async def get_quality_assessment(session_id: str, db: Session = Depends(get_db))
             return {
                 "success": False,
                 "error": "PDF会话服务不可用",
-                "quality_assessment": None
+                "quality_assessment": None,
             }
 
         # 获取会话信息
         session = await pdf_session_service.get_session(db, session_id)
         if not session:
-            return {
-                "success": False,
-                "error": "会话不存在",
-                "quality_assessment": None
-            }
+            return {"success": False, "error": "会话不存在", "quality_assessment": None}
 
         # 获取处理结果中的质量评估
         processing_result = session.processing_result or {}
-        quality_assessment = processing_result.get('quality_assessment')
+        quality_assessment = processing_result.get("quality_assessment")
 
         if not quality_assessment:
             return {
                 "success": False,
                 "error": "该会话尚未完成质量评估",
                 "session_status": session.status.value,
-                "quality_assessment": None
+                "quality_assessment": None,
             }
 
         return {
@@ -702,15 +697,25 @@ async def get_quality_assessment(session_id: str, db: Session = Depends(get_db))
             "session_id": session_id,
             "session_status": session.status.value,
             "quality_assessment": quality_assessment,
-            "generated_at": quality_assessment.get('assessment_timestamp'),
+            "generated_at": quality_assessment.get("assessment_timestamp"),
             "summary": {
-                "overall_score": quality_assessment.get('overall_quality_score', 0),
-                "quality_level": quality_assessment.get('quality_level', {}).get('description', 'Unknown'),
-                "total_fields_expected": quality_assessment.get('field_analysis', {}).get('total_expected_fields', 0),
-                "fields_extracted": quality_assessment.get('field_analysis', {}).get('extracted_fields_count', 0),
-                "extraction_rate": quality_assessment.get('field_analysis', {}).get('extraction_rate_percentage', 0),
-                "improvement_suggestions_count": len(quality_assessment.get('improvement_suggestions', []))
-            }
+                "overall_score": quality_assessment.get("overall_quality_score", 0),
+                "quality_level": quality_assessment.get("quality_level", {}).get(
+                    "description", "Unknown"
+                ),
+                "total_fields_expected": quality_assessment.get(
+                    "field_analysis", {}
+                ).get("total_expected_fields", 0),
+                "fields_extracted": quality_assessment.get("field_analysis", {}).get(
+                    "extracted_fields_count", 0
+                ),
+                "extraction_rate": quality_assessment.get("field_analysis", {}).get(
+                    "extraction_rate_percentage", 0
+                ),
+                "improvement_suggestions_count": len(
+                    quality_assessment.get("improvement_suggestions", [])
+                ),
+            },
         }
 
     except Exception as e:
@@ -718,7 +723,7 @@ async def get_quality_assessment(session_id: str, db: Session = Depends(get_db))
         return {
             "success": False,
             "error": f"获取质量评估失败: {str(e)}",
-            "quality_assessment": None
+            "quality_assessment": None,
         }
 
 
@@ -733,15 +738,15 @@ async def analyze_pdf_quality(
             return {
                 "success": False,
                 "error": "PDF处理服务不可用",
-                "quality_report": None
+                "quality_report": None,
             }
 
         # 验证文件类型
-        if not file.filename.lower().endswith('.pdf'):
+        if not file.filename.lower().endswith(".pdf"):
             return {
                 "success": False,
                 "error": "只支持PDF文件质量分析",
-                "quality_report": None
+                "quality_report": None,
             }
 
         # 保存临时文件
@@ -763,24 +768,24 @@ async def analyze_pdf_quality(
             # 处理PDF并获取质量评估
             result = await pdf_processing_service.extract_text_from_pdf(
                 str(temp_file_path),
-                prefer_ocr=False  # 默认不使用OCR进行质量评估
+                prefer_ocr=False,  # 默认不使用OCR进行质量评估
             )
 
-            if not result.get('success'):
+            if not result.get("success"):
                 return {
                     "success": False,
                     "error": f"PDF处理失败: {result.get('error', '未知错误')}",
-                    "quality_report": None
+                    "quality_report": None,
                 }
 
             # 获取质量评估结果
-            quality_assessment = result.get('quality_assessment')
+            quality_assessment = result.get("quality_assessment")
             if not quality_assessment:
                 return {
                     "success": False,
                     "error": "质量评估失败",
                     "quality_report": None,
-                    "processing_result": result
+                    "processing_result": result,
                 }
 
             return {
@@ -788,12 +793,12 @@ async def analyze_pdf_quality(
                 "message": "PDF质量分析完成",
                 "quality_report": quality_assessment,
                 "processing_summary": {
-                    "processing_method": result.get('processing_method'),
-                    "processing_time": result.get('processing_time_seconds'),
-                    "file_size_bytes": result.get('file_size_bytes'),
-                    "text_length": len(result.get('text', '')),
-                    "page_count": result.get('page_count', 1)
-                }
+                    "processing_method": result.get("processing_method"),
+                    "processing_time": result.get("processing_time_seconds"),
+                    "file_size_bytes": result.get("file_size_bytes"),
+                    "text_length": len(result.get("text", "")),
+                    "page_count": result.get("page_count", 1),
+                },
             }
 
         finally:
@@ -809,7 +814,7 @@ async def analyze_pdf_quality(
         return {
             "success": False,
             "error": f"质量分析异常: {str(e)}",
-            "quality_report": None
+            "quality_report": None,
         }
 
 

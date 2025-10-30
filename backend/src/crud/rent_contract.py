@@ -394,8 +394,6 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         )
 
         for ledger in ledgers:
-            old_status = ledger.payment_status
-
             # 更新支付信息
             if request.payment_status is not None:
                 ledger.payment_status = request.payment_status

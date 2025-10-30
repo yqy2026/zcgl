@@ -1,5 +1,5 @@
 import React from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, Route } from 'react-router-dom'
 import ProtectedRoute from './ProtectedRoute'
 import LazyRoute from './LazyRoute'
 import { RouteConfig } from '@/constants/routes'
@@ -30,34 +30,38 @@ class RouteBuilder {
       fallback,
       preload,
       title,
+      element,
       children,
       ...props
     } = config
 
-    // 如果没有组件，可能是重定向路由或容器路由
-    if (!Component) {
-      if (children && children.length > 0) {
-        // 容器路由，渲染子路由
-        return (
-          <Route key={path} path={path} {...props}>
-            {children.map((child, index) => (
-              <React.Fragment key={child.path || index}>
-                {RouteBuilder.buildRoute(child)}
-              </React.Fragment>
-            ))}
-          </Route>
-        )
-      }
+    // 如果有明确的 element 属性（如重定向），使用 Route
+    if (element) {
+      return (
+        <Route key={path} path={path} element={element} {...props} />
+      )
+    }
 
-      // 重定向路由
+    // 如果没有组件，但有子路由，创建容器路由
+    if (!Component && children && children.length > 0) {
+      return (
+        <Route key={path} path={path} {...props}>
+          {children.map((child, index) => (
+            RouteBuilder.buildRoute(child)
+          ))}
+        </Route>
+      )
+    }
+
+    // 如果没有组件也没有子路由，返回重定向
+    if (!Component) {
       return (
         <Route key={path} path={path} element={<Navigate to="/" replace />} {...props} />
       )
     }
 
-    // 构建路由属性
+    // 构建路由属性（不传递 key 和 element，这些由 Route 组件处理）
     const routeProps = {
-      key: path,
       path,
       title,
       permissions,

@@ -389,7 +389,6 @@ async def cleanup_old_exports(current_user: User = Depends(get_current_user)):
     """
     清理旧的导出任务（只保留最近24小时的）
     """
-    current_time = datetime.now()
     to_delete = []
 
     for task_id, task_info in export_tasks.items():

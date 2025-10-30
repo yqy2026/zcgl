@@ -126,7 +126,7 @@ class RBACService:
             .filter(
                 and_(
                     UserRoleAssignment.role_id == role_id,
-                    UserRoleAssignment.is_active == True,
+                    UserRoleAssignment.is_active,
                 )
             )
             .count()
@@ -299,7 +299,7 @@ class RBACService:
                 and_(
                     UserRoleAssignment.user_id == assignment_data.user_id,
                     UserRoleAssignment.role_id == assignment_data.role_id,
-                    UserRoleAssignment.is_active == True,
+                    UserRoleAssignment.is_active,
                 )
             )
             .first()
@@ -349,7 +349,7 @@ class RBACService:
                 and_(
                     UserRoleAssignment.user_id == user_id,
                     UserRoleAssignment.role_id == role_id,
-                    UserRoleAssignment.is_active == True,
+                    UserRoleAssignment.is_active,
                 )
             )
             .first()
@@ -384,7 +384,7 @@ class RBACService:
         )
 
         if active_only:
-            query = query.filter(UserRoleAssignment.is_active == True)
+            query = query.filter(UserRoleAssignment.is_active)
             query = query.filter(
                 or_(
                     UserRoleAssignment.expires_at.is_(None),
@@ -475,7 +475,7 @@ class RBACService:
             .filter(
                 and_(
                     ResourcePermission.user_id == user_id,
-                    ResourcePermission.is_active == True,
+                    ResourcePermission.is_active,
                     or_(
                         ResourcePermission.expires_at.is_(None),
                         ResourcePermission.expires_at > datetime.now(),
@@ -505,14 +505,18 @@ class RBACService:
         self, role_id: str, permission_ids: list[str], operator_id: str
     ):
         """为角色分配权限"""
+        from ..models.rbac import role_permissions
+
         # 清除现有权限
-        self.db.execute(Role.__table__.delete().where(Role.id == role_id))
+        self.db.execute(role_permissions.delete().where(role_permissions.c.role_id == role_id))
 
         # 添加新权限
         for permission_id in permission_ids:
             self.db.execute(
                 role_permissions.insert().values(
-                    role_id=role_id, permission_id=permission_id, created_by=operator_id
+                    role_id=role_id,
+                    permission_id=permission_id,
+                    created_by=operator_id
                 )
             )
 
@@ -531,7 +535,7 @@ class RBACService:
                         ResourcePermission.resource_id
                         == permission_request.resource_id,
                     ),
-                    ResourcePermission.is_active == True,
+                    ResourcePermission.is_active,
                     or_(
                         ResourcePermission.expires_at.is_(None),
                         ResourcePermission.expires_at > datetime.now(),

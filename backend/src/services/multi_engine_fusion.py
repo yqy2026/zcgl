@@ -239,7 +239,6 @@ class MultiEngineFusion:
         contributing_engines = []
 
         best_result = max(results, key=lambda x: x.confidence)
-        best_text = best_result.text
 
         for result in results:
             weight = weights.get(result.engine_type, 0.1)

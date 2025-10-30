@@ -66,7 +66,7 @@ class TaskCRUD:
         order_dir: str = "desc",
     ) -> list[AsyncTask]:
         """获取任务列表"""
-        query = db.query(AsyncTask).filter(AsyncTask.is_active == True)
+        query = db.query(AsyncTask).filter(AsyncTask.is_active)
 
         # 应用筛选条件
         if task_type:
@@ -201,7 +201,7 @@ class TaskCRUD:
         self, db: Session, *, task_type: str | None = None, status: str | None = None
     ) -> int:
         """统计任务数量"""
-        query = db.query(AsyncTask).filter(AsyncTask.is_active == True)
+        query = db.query(AsyncTask).filter(AsyncTask.is_active)
 
         if task_type:
             query = query.filter(AsyncTask.task_type == task_type)
@@ -212,7 +212,7 @@ class TaskCRUD:
 
     def get_statistics(self, db: Session, user_id: str | None = None) -> dict[str, Any]:
         """获取任务统计信息"""
-        base_query = db.query(AsyncTask).filter(AsyncTask.is_active == True)
+        base_query = db.query(AsyncTask).filter(AsyncTask.is_active)
 
         if user_id:
             base_query = base_query.filter(AsyncTask.user_id == user_id)
@@ -281,7 +281,7 @@ class ExcelTaskConfigCRUD:
                 and_(
                     ExcelTaskConfig.config_type == obj_in.config_type,
                     ExcelTaskConfig.task_type == obj_in.task_type,
-                    ExcelTaskConfig.is_default == True,
+                    ExcelTaskConfig.is_default,
                 )
             ).update({"is_default": False})
 
@@ -316,8 +316,8 @@ class ExcelTaskConfigCRUD:
                 and_(
                     ExcelTaskConfig.config_type == config_type,
                     ExcelTaskConfig.task_type == task_type,
-                    ExcelTaskConfig.is_default == True,
-                    ExcelTaskConfig.is_active == True,
+                    ExcelTaskConfig.is_default,
+                    ExcelTaskConfig.is_active,
                 )
             )
             .first()

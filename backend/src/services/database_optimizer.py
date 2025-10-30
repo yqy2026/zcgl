@@ -107,7 +107,7 @@ class DatabaseOptimizer:
 
             # 分析资产表
             if "assets" in inspector.get_table_names():
-                assets_columns = [
+                [  # 预留字段，当前未使用
                     col["name"] for col in inspector.get_columns("assets")
                 ]
                 existing_indexes = [

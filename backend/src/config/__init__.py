@@ -5,8 +5,8 @@
 import asyncio
 import os
 from contextlib import asynccontextmanager
-from typing import List, Optional
 
+# typing imports removed - not used in this file
 import redis.asyncio as redis
 
 

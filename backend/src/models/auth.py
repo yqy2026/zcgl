@@ -101,18 +101,37 @@ class User(Base):
     @property
     def is_admin(self) -> bool:
         """检查是否为管理员"""
+        # 处理数据库中存储的字符串和枚举类型的兼容性
+        # 修复：字符串和枚举比较问题
+        if isinstance(self.role, str):
+            return self.role == UserRole.ADMIN.value
         return self.role == UserRole.ADMIN
 
     def is_locked_now(self) -> bool:
         """检查当前是否被锁定"""
-        if not self.is_locked:
+        # 安全地检查 is_locked 字段
+        is_locked = self.is_locked
+        if isinstance(is_locked, str):
+            is_locked = is_locked.lower() in ('true', '1', 'yes')
+        elif not isinstance(is_locked, bool):
+            is_locked = bool(is_locked) if is_locked is not None else False
+            
+        if not is_locked:
             return False
+            
+        # 检查锁定时间
         if self.locked_until and self.locked_until > datetime.now():
             return True
-        # 如果锁定时间已过，自动解锁
-        self.is_locked = False
-        self.locked_until = None
-        self.failed_login_attempts = 0
+            
+        # 如果锁定时间已过，自动解锁（安全地设置字段）
+        try:
+            self.is_locked = False
+            self.locked_until = None
+            self.failed_login_attempts = 0
+        except Exception:
+            # 如果无法设置字段，忽略错误，只返回结果
+            pass
+            
         return False
 
 

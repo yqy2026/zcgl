@@ -5,7 +5,6 @@
 包含防虚假数据验证和字段验证功能
 """
 
-import json
 import logging
 import re
 from dataclasses import dataclass
@@ -498,6 +497,7 @@ if __name__ == "__main__":
     3.2 租赁保证金为10000元
     """
 
-    result = extract_fixed_rent_contract_info(test_text)
-    print("修复后的提取器测试结果:")
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    # TODO: 实现extract_fixed_rent_contract_info函数
+    # result = extract_fixed_rent_contract_info(test_text)
+    # print("修复后的提取器测试结果:")
+    # print(json.dumps(result, ensure_ascii=False, indent=2))

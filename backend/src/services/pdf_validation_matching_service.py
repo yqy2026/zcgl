@@ -156,7 +156,7 @@ class AssetMatcher:
 
         try:
             # 获取所有资产（可以根据组织ID过滤）
-            query = self.db.query(Asset).filter(Asset.is_deleted == False)
+            query = self.db.query(Asset).filter(not Asset.is_deleted)
             assets = query.all()
 
             matches = []
@@ -244,7 +244,7 @@ class OwnershipMatcher:
 
         try:
             # 获取所有权属方
-            query = self.db.query(Ownership).filter(Ownership.is_deleted == False)
+            query = self.db.query(Ownership).filter(not Ownership.is_deleted)
             ownerships = query.all()
 
             matches = []
@@ -317,7 +317,7 @@ class DuplicateChecker:
 
         try:
             # 获取所有合同
-            query = self.db.query(RentContract).filter(RentContract.is_deleted == False)
+            query = self.db.query(RentContract).filter(not RentContract.is_deleted)
             contracts = query.all()
 
             duplicates = []

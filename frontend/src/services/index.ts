@@ -1,6 +1,7 @@
 // 统一导出所有服务
 
 export { apiClient, ApiClient } from './api'
+export { api } from './api'
 export { assetService, AssetService } from './assetService'
 export { statisticsService, StatisticsService } from './statisticsService'
 export { excelService, ExcelService } from './excelService'

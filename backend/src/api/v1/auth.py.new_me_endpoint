@@ -1,0 +1,99 @@
+@router.get("/me", response_model=dict, summary="获取当前用户信息")
+async def get_current_user_profile(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """
+    获取当前用户信息 - 直接处理Authorization header
+    """
+    from datetime import datetime, timezone
+    from jose import JWTError, jwt
+
+    try:
+        # 从请求头中获取Authorization token
+        authorization = request.headers.get("authorization")
+        if not authorization or not authorization.startswith("Bearer "):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="无效的认证凭据",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        token = authorization.split(" ")[1]
+
+        # 解码JWT token
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            user_id: str = payload.get("sub")
+            if user_id is None:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="无效的认证凭据",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+        except JWTError as e:
+            logger.error(f"JWT decode error: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="无效的认证凭据",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        # 查询用户
+        user = db.query(User).filter(User.id == user_id).first()
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="用户不存在"
+            )
+
+        # 检查用户状态
+        if not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="用户账户已被禁用"
+            )
+
+        # 构建安全的用户数据
+        user_data = {
+            "id": str(user.id),
+            "username": user.username,
+            "email": user.email,
+            "full_name": user.full_name,
+            "role": user.role.value if hasattr(user.role, "value") else str(user.role),
+            "is_active": bool(user.is_active),
+            "is_locked": bool(user.is_locked),
+            "last_login_at": user.last_login_at.isoformat() if user.last_login_at else None,
+            "created_at": user.created_at.isoformat() if user.created_at else None,
+            "updated_at": user.updated_at.isoformat() if user.updated_at else None,
+        }
+
+        # 安全地获取额外信息
+        try:
+            user_data["is_locked_now"] = user.is_locked_now()
+        except Exception as e:
+            logger.warning(f"Error checking is_locked_now: {e}")
+            user_data["is_locked_now"] = False
+
+        try:
+            user_data["is_admin"] = user.is_admin
+        except Exception as e:
+            logger.warning(f"Error checking is_admin: {e}")
+            user_data["is_admin"] = False
+
+        return {
+            "success": True,
+            "message": "获取用户信息成功",
+            "data": user_data,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting user profile: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取用户信息失败: {str(e)}"
+        )
+

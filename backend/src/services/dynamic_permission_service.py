@@ -105,7 +105,7 @@ class DynamicPermissionService:
                         DynamicPermission.permission_type == permission_type,
                         DynamicPermission.scope == scope,
                         DynamicPermission.scope_id == scope_id,
-                        DynamicPermission.is_active == True,
+                        DynamicPermission.is_active,
                         or_(
                             DynamicPermission.expires_at.is_(None),
                             DynamicPermission.expires_at > datetime.now(UTC),
@@ -197,7 +197,7 @@ class DynamicPermissionService:
                         TemporaryPermission.permission_id == permission_id,
                         TemporaryPermission.scope == scope,
                         TemporaryPermission.scope_id == scope_id,
-                        TemporaryPermission.is_active == True,
+                        TemporaryPermission.is_active,
                         TemporaryPermission.expires_at > datetime.now(UTC),
                     )
                 )
@@ -280,7 +280,7 @@ class DynamicPermissionService:
                     ConditionalPermission.permission_id == permission_id,
                     ConditionalPermission.scope == scope,
                     ConditionalPermission.scope_id == scope_id,
-                    ConditionalPermission.is_active == True,
+                    ConditionalPermission.is_active,
                 )
             )
             .first()
@@ -344,7 +344,7 @@ class DynamicPermissionService:
             是否成功撤销
         """
         query = self.db.query(DynamicPermission).filter(
-            DynamicPermission.id == permission_id, DynamicPermission.is_active == True
+            DynamicPermission.id == permission_id, DynamicPermission.is_active
         )
 
         if user_id:
@@ -452,7 +452,7 @@ class DynamicPermissionService:
             self.db.query(PermissionTemplate)
             .filter(
                 PermissionTemplate.id == template_id,
-                PermissionTemplate.is_active == True,
+                PermissionTemplate.is_active,
             )
             .first()
         )
@@ -495,7 +495,7 @@ class DynamicPermissionService:
 
         # 获取动态权限
         dynamic_query = self.db.query(DynamicPermission).filter(
-            DynamicPermission.user_id == user_id, DynamicPermission.is_active == True
+            DynamicPermission.user_id == user_id, DynamicPermission.is_active
         )
 
         if not include_expired:
@@ -542,7 +542,7 @@ class DynamicPermissionService:
         # 获取临时权限
         temp_query = self.db.query(TemporaryPermission).filter(
             TemporaryPermission.user_id == user_id,
-            TemporaryPermission.is_active == True,
+            TemporaryPermission.is_active,
             TemporaryPermission.expires_at > datetime.now(UTC),
         )
 
@@ -580,7 +580,7 @@ class DynamicPermissionService:
         # 获取条件权限
         cond_query = self.db.query(ConditionalPermission).filter(
             ConditionalPermission.user_id == user_id,
-            ConditionalPermission.is_active == True,
+            ConditionalPermission.is_active,
         )
 
         if scope:
@@ -645,7 +645,7 @@ class DynamicPermissionService:
                 and_(
                     DynamicPermission.user_id == user_id,
                     DynamicPermission.permission_id == permission.id,
-                    DynamicPermission.is_active == True,
+                    DynamicPermission.is_active,
                     or_(
                         DynamicPermission.expires_at.is_(None),
                         DynamicPermission.expires_at > datetime.now(UTC),
@@ -671,7 +671,7 @@ class DynamicPermissionService:
                 and_(
                     TemporaryPermission.user_id == user_id,
                     TemporaryPermission.permission_id == permission.id,
-                    TemporaryPermission.is_active == True,
+                    TemporaryPermission.is_active,
                     TemporaryPermission.expires_at > datetime.now(UTC),
                 )
             )
@@ -688,7 +688,7 @@ class DynamicPermissionService:
                 and_(
                     ConditionalPermission.user_id == user_id,
                     ConditionalPermission.permission_id == permission.id,
-                    ConditionalPermission.is_active == True,
+                    ConditionalPermission.is_active,
                 )
             )
             .first()
@@ -798,7 +798,7 @@ class DynamicPermissionService:
             self.db.query(DynamicPermission)
             .filter(
                 and_(
-                    DynamicPermission.is_active == True,
+                    DynamicPermission.is_active,
                     DynamicPermission.expires_at <= datetime.now(UTC),
                 )
             )
@@ -814,7 +814,7 @@ class DynamicPermissionService:
             self.db.query(TemporaryPermission)
             .filter(
                 and_(
-                    TemporaryPermission.is_active == True,
+                    TemporaryPermission.is_active,
                     TemporaryPermission.expires_at <= datetime.now(UTC),
                 )
             )

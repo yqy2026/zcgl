@@ -223,7 +223,7 @@ class PDFImportService:
             operation_type="pdf_text_extraction",
             session_id=session_id,
             processing_method="enhanced",
-        ) as step_operation_id:
+        ) as _step_operation_id:
             try:
                 await self._extract_text_step(db, session)
             except Exception as e:
@@ -241,7 +241,7 @@ class PDFImportService:
             operation_type="contract_info_extraction",
             session_id=session_id,
             processing_method="ml_enhanced",
-        ) as step_operation_id:
+        ) as _step_operation_id:
             try:
                 await self._extract_info_step(db, session)
             except Exception as e:
@@ -258,7 +258,7 @@ class PDFImportService:
             operation_type="data_validation_mapping",
             session_id=session_id,
             processing_method="enhanced",
-        ) as step_operation_id:
+        ) as _step_operation_id:
             try:
                 await self._validate_data_step(db, session)
             except Exception as e:
@@ -273,7 +273,7 @@ class PDFImportService:
             operation_type="data_matching",
             session_id=session_id,
             processing_method="intelligent",
-        ) as step_operation_id:
+        ) as _step_operation_id:
             try:
                 await self._match_data_step(db, session)
             except Exception as e:

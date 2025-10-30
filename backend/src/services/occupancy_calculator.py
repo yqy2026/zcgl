@@ -109,7 +109,7 @@ class OccupancyRateCalculator:
                         ).label("rentable_count"),
                     )
                     .filter(
-                        Asset.include_in_occupancy_rate == True,
+                        Asset.include_in_occupancy_rate,
                         Asset.data_status.in_(["正常", "正常数据"]),
                     )
                     .first()

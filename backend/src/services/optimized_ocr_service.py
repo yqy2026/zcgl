@@ -515,7 +515,7 @@ class OptimizedOCRService:
     def _check_opencv_availability(self) -> bool:
         """检查OpenCV可用性"""
         try:
-            import cv2
+            import cv2  # noqa: F401
 
             return True
         except ImportError:

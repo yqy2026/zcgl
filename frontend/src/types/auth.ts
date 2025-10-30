@@ -12,13 +12,22 @@ export interface LoginCredentials {
 export interface User {
   id: string
   username: string
-  email: string
+  email?: string
   full_name: string
   role: string
   organization_id?: string
   is_active: boolean
   created_at: string
   updated_at: string
+  // 个人资料相关字段
+  phone?: string
+  last_login_at?: string
+  password_last_changed?: string
+  failed_login_attempts?: number
+  is_locked?: boolean
+  locked_until?: string
+  employee_id?: string
+  default_organization_id?: string
   // 向后兼容的属性
   fullName?: string
   roles?: Role[]

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Layout, Button, Space, Avatar, Dropdown, Badge, Typography, Tooltip } from 'antd'
+import { Layout, Button, Space, Avatar, Dropdown, Badge, Typography, Tooltip, Modal, message } from 'antd'
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -9,7 +9,10 @@ import {
   LogoutOutlined,
   QuestionCircleOutlined,
   GlobalOutlined,
+  ExclamationCircleOutlined,
 } from '@ant-design/icons'
+import { useNavigate } from 'react-router-dom'
+import { AuthService } from '../../services/authService'
 import type { MenuProps } from 'antd'
 
 const { Header } = Layout
@@ -21,6 +24,34 @@ interface AppHeaderProps {
 }
 
 const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) => {
+  const navigate = useNavigate()
+  const user = AuthService.getLocalUser()
+
+  // 处理退出登录
+  const handleLogout = async () => {
+    try {
+      await AuthService.logout()
+      navigate('/login')
+    } catch (error) {
+      console.error('退出登录失败:', error)
+      // 即使API失败，也要跳转到登录页面
+      navigate('/login')
+    }
+  }
+
+  // 处理退出登录确认对话框
+  const handleLogoutConfirm = () => {
+    Modal.confirm({
+      title: '确认退出登录',
+      icon: <ExclamationCircleOutlined />,
+      content: '退出后需要重新登录才能访问系统',
+      okText: '确认退出',
+      cancelText: '取消',
+      okType: 'danger',
+      onOk: handleLogout
+    })
+  }
+
   // 用户菜单
   const userMenuItems: MenuProps['items'] = [
     {
@@ -115,16 +146,16 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
   const handleUserMenuClick = ({ key }: { key: string }) => {
     switch (key) {
       case 'profile':
-        console.log('打开个人资料')
+        navigate('/profile')
         break
       case 'settings':
-        console.log('打开系统设置')
+        message.info('系统设置功能开发中')
         break
       case 'help':
-        console.log('打开帮助中心')
+        message.info('帮助中心功能开发中')
         break
       case 'logout':
-        console.log('退出登录')
+        handleLogoutConfirm()
         break
     }
   }
@@ -161,7 +192,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
             height: 40,
           }}
         />
-        
+
         <div style={{ marginLeft: 16 }}>
           <Text strong style={{ fontSize: '18px', color: '#1890ff' }}>
             土地房产资产管理系统
@@ -222,7 +253,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
               icon={<UserOutlined />}
               style={{ backgroundColor: '#1890ff' }}
             />
-            <Text>管理员</Text>
+            <Text>{user?.full_name || user?.username || '用户'}</Text>
           </Space>
         </Dropdown>
       </Space>

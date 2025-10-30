@@ -9,30 +9,24 @@ export { SmartInteractionProvider, useSmartInteraction, SmartInteractionExample,
 export { SmartResponseProvider, useSmartResponse, ResponseOptimizationDashboard } from './SmartResponseOptimizer'
 
 // 主要UX组件包
-export {
+export const UXComponents = {
   // 智能加载管理器
-  Loading: SmartLoadingManager,
+  Loading: 'SmartLoadingManager',
 
   // 智能错误处理器
-  ErrorHandler: SmartErrorHandler,
+  ErrorHandler: 'SmartErrorHandler',
 
   // 智能进度跟踪器
-  ProgressTracker: SmartProgressTracker,
+  ProgressTracker: 'SmartProgressTracker',
 
   // 智能表单优化器
-  FormOptimizer: SmartFormOptimizer,
+  FormOptimizer: 'SmartFormOptimizer',
 
   // 智能交互管理器
-  InteractionManager: SmartInteractionManager,
+  InteractionManager: 'SmartInteractionManager',
 
   // 智能响应优化器
-  ResponseOptimizer: SmartResponseProvider,
-
-  // 基础组件（已优化）
-  Skeleton: SmartSkeleton,
-  Preloader: SmartPreloader,
-
-  // 增强版组件
-  EnhancedContractReview: () => import('./Contract/EnhancedContractReview'),
-  EnhancedProcessingStatus: () => import('./Contract/EnhancedProcessingStatus')
+  ResponseOptimizer: 'SmartResponseOptimizer'
 }
+
+export default UXComponents

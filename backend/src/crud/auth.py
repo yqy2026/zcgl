@@ -278,7 +278,6 @@ class AuditLogCRUD:
         ip_address: str | None = None,
         user_agent: str | None = None,
         session_id: str | None = None,
-    details: str | None = None,
     ) -> AuditLog:
         """创建审计日志"""
         from ..services.auth_service import AuthService

@@ -150,7 +150,7 @@ class RoleCRUD:
             .filter(
                 and_(
                     UserRoleAssignment.role_id == role_id,
-                    UserRoleAssignment.is_active == True,
+                    UserRoleAssignment.is_active,
                 )
             )
             .count()
@@ -323,7 +323,7 @@ class UserRoleAssignmentCRUD:
             .filter(
                 and_(
                     UserRoleAssignment.user_id == user_id,
-                    UserRoleAssignment.is_active == True,
+                    UserRoleAssignment.is_active,
                     or_(
                         UserRoleAssignment.expires_at.is_(None),
                         UserRoleAssignment.expires_at > func.now(),
@@ -377,7 +377,7 @@ class UserRoleAssignmentCRUD:
                 and_(
                     UserRoleAssignment.user_id == obj_in.user_id,
                     UserRoleAssignment.role_id == obj_in.role_id,
-                    UserRoleAssignment.is_active == True,
+                    UserRoleAssignment.is_active,
                 )
             )
             .first()
@@ -428,7 +428,7 @@ class UserRoleAssignmentCRUD:
                 and_(
                     UserRoleAssignment.user_id == user_id,
                     UserRoleAssignment.role_id == role_id,
-                    UserRoleAssignment.is_active == True,
+                    UserRoleAssignment.is_active,
                 )
             )
             .first()
@@ -448,7 +448,7 @@ class UserRoleAssignmentCRUD:
         """活跃分配总数"""
         return (
             db.query(func.count(UserRoleAssignment.id))
-            .filter(UserRoleAssignment.is_active == True)
+            .filter(UserRoleAssignment.is_active)
             .scalar()
         )
 
@@ -475,7 +475,7 @@ class ResourcePermissionCRUD:
         query = db.query(ResourcePermission).filter(
             and_(
                 ResourcePermission.user_id == user_id,
-                ResourcePermission.is_active == True,
+                ResourcePermission.is_active,
                 or_(
                     ResourcePermission.expires_at.is_(None),
                     ResourcePermission.expires_at > func.now(),
@@ -594,7 +594,7 @@ class ResourcePermissionCRUD:
         """活跃资源权限总数"""
         return (
             db.query(func.count(ResourcePermission.id))
-            .filter(ResourcePermission.is_active == True)
+            .filter(ResourcePermission.is_active)
             .scalar()
         )
 

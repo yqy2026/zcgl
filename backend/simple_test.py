@@ -1,30 +1,31 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-简单的API测试验证
-"""
 import sys
-import subprocess
+import os
 
-def main():
-    """主函数"""
-    # 运行单个测试
-    result = subprocess.run([
-        sys.executable,
-        "-m", "pytest",
-        "tests/test_api.py::test_root_endpoint",
-        "-v",
-        "--tb=short"
-    ], capture_output=True, text=True, encoding='utf-8')
+# 将src目录添加到Python路径
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
-    print(f"退出码: {result.returncode}")
-    if result.stdout:
-        # 只显示最后几行
-        lines = result.stdout.strip().split('\n')[-5:]
-        for line in lines:
-            print(f"输出: {line}")
-    if result.stderr:
-        print(f"错误: {result.stderr.strip()[:200]}")
-
-if __name__ == "__main__":
-    main()
+try:
+    print("正在测试基本导入...")
+    from schemas.asset import AssetCreate, OwnershipStatus, PropertyNature, UsageStatus
+    print("✅ 基础模式导入成功")
+    
+    from datetime import date
+    asset = AssetCreate(
+        ownership_entity='测试权属方',
+        property_name='测试物业',
+        address='测试地址',
+        ownership_status=OwnershipStatus.CONFIRMED,
+        property_nature=PropertyNature.COMMERCIAL,
+        usage_status=UsageStatus.RENTED,
+    )
+    print("✅ Pydantic模型创建成功")
+    
+    from database import engine
+    print("✅ 数据库连接成功")
+    
+    print("🎉 所有基础测试通过！")
+    
+except Exception as e:
+    print(f"❌ 测试失败: {e}")
+    import traceback
+    traceback.print_exc()

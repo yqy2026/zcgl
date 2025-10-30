@@ -51,6 +51,7 @@ dependencies = [
     "pytest-cov>=7.0.0",
     "ruff>=0.14.0",
     "mypy>=1.18.2",
+    "factory-boy>=3.3.3",
 ]
 
 [project.optional-dependencies]

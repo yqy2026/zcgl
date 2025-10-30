@@ -613,11 +613,11 @@ class RentContractExcelService:
 
                     # 创建或更新合同
                     if existing_contract and overwrite_existing:
-                        contract = rent_contract.update(
+                        rent_contract.update(
                             self.db, db_obj=existing_contract, obj_in=contract_data
                         )
                     else:
-                        contract = rent_contract.create(self.db, obj_in=contract_data)
+                        rent_contract.create(self.db, obj_in=contract_data)
 
                     result["imported_contracts"] += 1
 
@@ -688,7 +688,7 @@ class RentContractExcelService:
                     }
 
                     # 创建条款
-                    term = rent_term.create(self.db, obj_in=term_data)
+                    rent_term.create(self.db, obj_in=term_data)
                     result["imported_terms"] += 1
 
                 except Exception as e:
@@ -751,12 +751,12 @@ class RentContractExcelService:
 
                     if existing_ledger:
                         # 更新现有台账
-                        ledger = rent_ledger.update(
+                        rent_ledger.update(
                             self.db, db_obj=existing_ledger, obj_in=ledger_data
                         )
                     else:
                         # 创建新台账
-                        ledger = rent_ledger.create(self.db, obj_in=ledger_data)
+                        rent_ledger.create(self.db, obj_in=ledger_data)
 
                     result["imported_ledgers"] += 1
 

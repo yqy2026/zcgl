@@ -4,34 +4,41 @@
 """
 
 import asyncio
+import gc
 import logging
-from datetime import datetime, timezone
-from typing import Dict, Any, Optional, List, Callable, Union
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass
-from enum import Enum
 import threading
 import time
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from enum import Enum
+from typing import Any
+
+logger = logging.getLogger(__name__)
+
 try:
     import psutil
+
     PSUTIL_AVAILABLE = True
 except ImportError:
     PSUTIL_AVAILABLE = False
     logger.warning("psutil未安装，资源监控功能将被禁用")
-import gc
 
-logger = logging.getLogger(__name__)
 
 class TaskPriority(Enum):
     """任务优先级"""
+
     LOW = 1
     NORMAL = 2
     HIGH = 3
     CRITICAL = 4
 
+
 @dataclass
 class ProcessingTask:
     """处理任务数据结构"""
+
     task_id: str
     func: Callable
     args: tuple
@@ -39,34 +46,37 @@ class ProcessingTask:
     priority: TaskPriority
     created_at: datetime
     estimated_duration: float = 0.0
-    resource_requirements: Dict[str, Any] = None
+    resource_requirements: dict[str, Any] = None
 
     def __post_init__(self):
         if self.resource_requirements is None:
             self.resource_requirements = {}
 
+
 class ResourceMonitor:
     """系统资源监控器"""
 
     def __init__(self):
-        self.start_time = datetime.now(timezone.utc)
+        self.start_time = datetime.now(UTC)
         self.monitoring_active = True
         self.thresholds = {
-            'cpu_percent': 80.0,      # CPU使用率阈值
-            'memory_percent': 85.0,   # 内存使用率阈值
-            'disk_io_percent': 90.0,  # 磁盘I/O阈值
-            'active_processes': 10,     # 最大活跃进程数
+            "cpu_percent": 80.0,  # CPU使用率阈值
+            "memory_percent": 85.0,  # 内存使用率阈值
+            "disk_io_percent": 90.0,  # 磁盘I/O阈值
+            "active_processes": 10,  # 最大活跃进程数
         }
 
-    def get_system_metrics(self) -> Dict[str, float]:
+    def get_system_metrics(self) -> dict[str, float]:
         """获取系统指标"""
         if not PSUTIL_AVAILABLE:
             return {
-                'cpu_percent': 25.0,  # 模拟值
-                'memory_percent': 40.0,  # 模拟值
-                'disk_io_percent': 10.0,  # 模拟值
-                'active_processes': 5,     # 模拟值
-                'uptime_seconds': (datetime.now(timezone.utc) - self.start_time).total_seconds()
+                "cpu_percent": 25.0,  # 模拟值
+                "memory_percent": 40.0,  # 模拟值
+                "disk_io_percent": 10.0,  # 模拟值
+                "active_processes": 5,  # 模拟值
+                "uptime_seconds": (
+                    datetime.now(UTC) - self.start_time
+                ).total_seconds(),
             }
 
         try:
@@ -80,7 +90,7 @@ class ResourceMonitor:
             # 磁盘使用率（取所有磁盘的平均值）
             disk_io = 0.0
             try:
-                disk_usage = psutil.disk_usage('/')
+                disk_usage = psutil.disk_usage("/")
                 disk_io = (disk_usage.used / disk_usage.total) * 100
             except:
                 pass
@@ -89,40 +99,46 @@ class ResourceMonitor:
             process_count = len(psutil.pids())
 
             return {
-                'cpu_percent': cpu_percent,
-                'memory_percent': memory_percent,
-                'disk_io_percent': disk_io,
-                'active_processes': process_count,
-                'uptime_seconds': (datetime.now(timezone.utc) - self.start_time).total_seconds()
+                "cpu_percent": cpu_percent,
+                "memory_percent": memory_percent,
+                "disk_io_percent": disk_io,
+                "active_processes": process_count,
+                "uptime_seconds": (
+                    datetime.now(UTC) - self.start_time
+                ).total_seconds(),
             }
 
         except Exception as e:
             logger.error(f"获取系统指标失败: {e}")
             return {
-                'cpu_percent': 0.0,
-                'memory_percent': 0.0,
-                'disk_io_percent': 0.0,
-                'active_processes': 0,
-                'uptime_seconds': 0.0
+                "cpu_percent": 0.0,
+                "memory_percent": 0.0,
+                "disk_io_percent": 0.0,
+                "active_processes": 0,
+                "uptime_seconds": 0.0,
             }
 
-    def can_accept_new_task(self, task_requirements: Dict[str, Any]) -> bool:
+    def can_accept_new_task(self, task_requirements: dict[str, Any]) -> bool:
         """检查是否可以接受新任务"""
         metrics = self.get_system_metrics()
 
         # CPU检查
-        if metrics['cpu_percent'] > self.thresholds['cpu_percent']:
+        if metrics["cpu_percent"] > self.thresholds["cpu_percent"]:
             logger.warning(f"CPU使用率过高 ({metrics['cpu_percent']:.1f}%)，拒绝新任务")
             return False
 
         # 内存检查
-        if metrics['memory_percent'] > self.thresholds['memory_percent']:
-            logger.warning(f"内存使用率过高 ({metrics['memory_percent']:.1f}%)，拒绝新任务")
+        if metrics["memory_percent"] > self.thresholds["memory_percent"]:
+            logger.warning(
+                f"内存使用率过高 ({metrics['memory_percent']:.1f}%)，拒绝新任务"
+            )
             return False
 
         # 进程数检查
-        if metrics['active_processes'] > self.thresholds['active_processes']:
-            logger.warning(f"活跃进程数过多 ({metrics['active_processes']})，拒绝新任务")
+        if metrics["active_processes"] > self.thresholds["active_processes"]:
+            logger.warning(
+                f"活跃进程数过多 ({metrics['active_processes']})，拒绝新任务"
+            )
             return False
 
         return True
@@ -142,24 +158,27 @@ class ResourceMonitor:
         load_factor = 1.0
 
         # CPU负载调整
-        if metrics['cpu_percent'] > 70:
+        if metrics["cpu_percent"] > 70:
             load_factor *= 0.7
-        elif metrics['cpu_percent'] > 50:
+        elif metrics["cpu_percent"] > 50:
             load_factor *= 0.85
 
         # 内存负载调整
-        if metrics['memory_percent'] > 80:
+        if metrics["memory_percent"] > 80:
             load_factor *= 0.6
-        elif metrics['memory_percent'] > 60:
+        elif metrics["memory_percent"] > 60:
             load_factor *= 0.8
 
         optimal_concurrency = max(1, int(base_concurrency * load_factor))
 
-        logger.debug(f"系统负载评估 - CPU: {metrics['cpu_percent']:.1f}%, "
-                    f"内存: {metrics['memory_percent']:.1f}%, "
-                    f"最优并发数: {optimal_concurrency}")
+        logger.debug(
+            f"系统负载评估 - CPU: {metrics['cpu_percent']:.1f}%, "
+            f"内存: {metrics['memory_percent']:.1f}%, "
+            f"最优并发数: {optimal_concurrency}"
+        )
 
         return optimal_concurrency
+
 
 class TaskQueue:
     """优先级任务队列"""
@@ -177,7 +196,7 @@ class TaskQueue:
             self._queue.sort(key=lambda t: t.priority.value, reverse=True)
             self._condition.notify()
 
-    def get(self, timeout: Optional[float] = None) -> Optional[ProcessingTask]:
+    def get(self, timeout: float | None = None) -> ProcessingTask | None:
         """从队列获取任务"""
         with self._condition:
             if not self._queue:
@@ -197,6 +216,7 @@ class TaskQueue:
         with self._lock:
             return len(self._queue) == 0
 
+
 class ConcurrentProcessingOptimizer:
     """并发处理优化器"""
 
@@ -204,7 +224,7 @@ class ConcurrentProcessingOptimizer:
         self,
         max_workers: int = 4,
         enable_monitoring: bool = True,
-        resource_aware: bool = True
+        resource_aware: bool = True,
     ):
         """
         初始化并发处理优化器
@@ -231,20 +251,22 @@ class ConcurrentProcessingOptimizer:
 
         # 统计信息
         self.stats = {
-            'total_tasks': 0,
-            'completed_tasks': 0,
-            'failed_tasks': 0,
-            'average_processing_time': 0.0,
-            'peak_concurrent_tasks': 0,
-            'current_concurrent_tasks': 0,
-            'resource_rejections': 0
+            "total_tasks": 0,
+            "completed_tasks": 0,
+            "failed_tasks": 0,
+            "average_processing_time": 0.0,
+            "peak_concurrent_tasks": 0,
+            "current_concurrent_tasks": 0,
+            "resource_rejections": 0,
         }
 
         # 控制标志
         self.shutdown_flag = False
 
-        logger.info(f"并发处理优化器初始化 - 最大工作线程: {max_workers}, "
-                   f"资源监控: {enable_monitoring}, 资源感知: {resource_aware}")
+        logger.info(
+            f"并发处理优化器初始化 - 最大工作线程: {max_workers}, "
+            f"资源监控: {enable_monitoring}, 资源感知: {resource_aware}"
+        )
 
     def start(self):
         """启动并发处理器"""
@@ -260,16 +282,13 @@ class ConcurrentProcessingOptimizer:
             actual_workers = self.max_workers
 
         self.executor = ThreadPoolExecutor(
-            max_workers=actual_workers,
-            thread_name_prefix="PDFProcessor"
+            max_workers=actual_workers, thread_name_prefix="PDFProcessor"
         )
 
         # 启动工作线程
         for i in range(actual_workers):
             worker_thread = threading.Thread(
-                target=self._worker_loop,
-                name=f"PDFWorker-{i}",
-                daemon=True
+                target=self._worker_loop, name=f"PDFWorker-{i}", daemon=True
             )
             worker_thread.start()
 
@@ -308,7 +327,7 @@ class ConcurrentProcessingOptimizer:
         kwargs: dict = None,
         priority: TaskPriority = TaskPriority.NORMAL,
         estimated_duration: float = 0.0,
-        resource_requirements: Dict[str, Any] = None
+        resource_requirements: dict[str, Any] = None,
     ) -> str:
         """
         提交处理任务
@@ -334,7 +353,7 @@ class ConcurrentProcessingOptimizer:
         # 资源感知检查
         if self.resource_aware and self.resource_monitor:
             if not self.resource_monitor.can_accept_new_task(resource_requirements):
-                self.stats['resource_rejections'] += 1
+                self.stats["resource_rejections"] += 1
                 raise ResourceError("系统资源不足，无法接受新任务")
 
         # 创建任务
@@ -344,17 +363,19 @@ class ConcurrentProcessingOptimizer:
             args=args,
             kwargs=kwargs,
             priority=priority,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
             estimated_duration=estimated_duration,
-            resource_requirements=resource_requirements
+            resource_requirements=resource_requirements,
         )
 
         # 添加到队列
         self.task_queue.put(task)
-        self.stats['total_tasks'] += 1
+        self.stats["total_tasks"] += 1
 
-        logger.debug(f"任务已提交: {task_id}, 优先级: {priority.name}, "
-                     f"队列大小: {self.task_queue.size()}")
+        logger.debug(
+            f"任务已提交: {task_id}, 优先级: {priority.name}, "
+            f"队列大小: {self.task_queue.size()}"
+        )
 
         return task_id
 
@@ -366,14 +387,20 @@ class ConcurrentProcessingOptimizer:
         kwargs: dict = None,
         priority: TaskPriority = TaskPriority.NORMAL,
         estimated_duration: float = 0.0,
-        resource_requirements: Dict[str, Any] = None
+        resource_requirements: dict[str, Any] = None,
     ) -> str:
         """异步提交任务"""
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(
             None,
             self.submit_task,
-            task_id, func, args, kwargs, priority, estimated_duration, resource_requirements
+            task_id,
+            func,
+            args,
+            kwargs,
+            priority,
+            estimated_duration,
+            resource_requirements,
         )
 
     def _worker_loop(self):
@@ -389,9 +416,9 @@ class ConcurrentProcessingOptimizer:
                 with self.worker_lock:
                     self.active_workers += 1
                     current_concurrent = self.active_workers
-                    self.stats['current_concurrent_tasks'] = current_concurrent
-                    self.stats['peak_concurrent_tasks'] = max(
-                        self.stats['peak_concurrent_tasks'], current_concurrent
+                    self.stats["current_concurrent_tasks"] = current_concurrent
+                    self.stats["peak_concurrent_tasks"] = max(
+                        self.stats["peak_concurrent_tasks"], current_concurrent
                     )
 
                 try:
@@ -399,18 +426,20 @@ class ConcurrentProcessingOptimizer:
                     start_time = time.time()
 
                     # 添加任务元数据到kwargs
-                    task.kwargs['_task_id'] = task.task_id
-                    task.kwargs['_worker_thread'] = threading.current_thread().name
+                    task.kwargs["_task_id"] = task.task_id
+                    task.kwargs["_worker_thread"] = threading.current_thread().name
 
                     # 提交到线程池执行
                     future = self.executor.submit(task.func, *task.args, **task.kwargs)
-                    result = future.result()
+                    future.result()  # 等待任务完成
 
                     # 更新统计信息
                     processing_time = time.time() - start_time
                     self._update_task_stats(processing_time, True)
 
-                    logger.debug(f"任务完成: {task.task_id}, 耗时: {processing_time:.3f}秒")
+                    logger.debug(
+                        f"任务完成: {task.task_id}, 耗时: {processing_time:.3f}秒"
+                    )
 
                 except Exception as e:
                     # 任务执行失败
@@ -429,41 +458,43 @@ class ConcurrentProcessingOptimizer:
     def _update_task_stats(self, processing_time: float, success: bool):
         """更新任务统计信息"""
         if success:
-            self.stats['completed_tasks'] += 1
+            self.stats["completed_tasks"] += 1
         else:
-            self.stats['failed_tasks'] += 1
+            self.stats["failed_tasks"] += 1
 
         # 更新平均处理时间
-        completed = self.stats['completed_tasks']
+        completed = self.stats["completed_tasks"]
         if completed > 0:
-            current_avg = self.stats['average_processing_time']
+            current_avg = self.stats["average_processing_time"]
             new_avg = (current_avg * (completed - 1) + processing_time) / completed
-            self.stats['average_processing_time'] = new_avg
+            self.stats["average_processing_time"] = new_avg
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """获取统计信息"""
         stats = self.stats.copy()
 
         # 添加实时系统指标
         if self.resource_monitor:
-            stats['system_metrics'] = self.resource_monitor.get_system_metrics()
-            stats['optimal_concurrency'] = self.resource_monitor.get_optimal_concurrency()
+            stats["system_metrics"] = self.resource_monitor.get_system_metrics()
+            stats["optimal_concurrency"] = (
+                self.resource_monitor.get_optimal_concurrency()
+            )
 
         # 计算成功率
-        total = self.stats['total_tasks']
+        total = self.stats["total_tasks"]
         if total > 0:
-            stats['success_rate'] = self.stats['completed_tasks'] / total
+            stats["success_rate"] = self.stats["completed_tasks"] / total
         else:
-            stats['success_rate'] = 0.0
+            stats["success_rate"] = 0.0
 
         # 计算队列状态
-        stats['queue_size'] = self.task_queue.size()
-        stats['active_workers'] = self.active_workers
-        stats['max_workers'] = self.max_workers
+        stats["queue_size"] = self.task_queue.size()
+        stats["active_workers"] = self.active_workers
+        stats["max_workers"] = self.max_workers
 
         return stats
 
-    def get_health_status(self) -> Dict[str, Any]:
+    def get_health_status(self) -> dict[str, Any]:
         """获取健康状态"""
         stats = self.get_statistics()
 
@@ -471,23 +502,23 @@ class ConcurrentProcessingOptimizer:
         health_score = 100.0
 
         # 成功率检查
-        if stats['success_rate'] < 0.9:
+        if stats["success_rate"] < 0.9:
             health_score -= 20
 
         # 资源拒绝检查
-        if stats.get('resource_rejections', 0) > 0:
+        if stats.get("resource_rejections", 0) > 0:
             health_score -= 15
 
         # 队列积压检查
-        if stats['queue_size'] > 10:
+        if stats["queue_size"] > 10:
             health_score -= 10
 
         # 系统资源检查
-        system_metrics = stats.get('system_metrics', {})
+        system_metrics = stats.get("system_metrics", {})
         if system_metrics:
-            if system_metrics.get('cpu_percent', 0) > 90:
+            if system_metrics.get("cpu_percent", 0) > 90:
                 health_score -= 15
-            if system_metrics.get('memory_percent', 0) > 90:
+            if system_metrics.get("memory_percent", 0) > 90:
                 health_score -= 15
 
         # 确定健康等级
@@ -501,30 +532,30 @@ class ConcurrentProcessingOptimizer:
             status = "poor"
 
         return {
-            'status': status,
-            'health_score': max(0, health_score),
-            'uptime_seconds': stats.get('uptime_seconds', 0),
-            'issues': self._identify_health_issues(stats)
+            "status": status,
+            "health_score": max(0, health_score),
+            "uptime_seconds": stats.get("uptime_seconds", 0),
+            "issues": self._identify_health_issues(stats),
         }
 
-    def _identify_health_issues(self, stats: Dict[str, Any]) -> List[str]:
+    def _identify_health_issues(self, stats: dict[str, Any]) -> list[str]:
         """识别健康问题"""
         issues = []
 
-        if stats['success_rate'] < 0.8:
+        if stats["success_rate"] < 0.8:
             issues.append(f"任务成功率过低 ({stats['success_rate']:.1%})")
 
-        if stats.get('resource_rejections', 0) > 5:
+        if stats.get("resource_rejections", 0) > 5:
             issues.append("资源拒绝次数过多")
 
-        if stats['queue_size'] > 20:
+        if stats["queue_size"] > 20:
             issues.append("任务队列积压严重")
 
-        system_metrics = stats.get('system_metrics', {})
+        system_metrics = stats.get("system_metrics", {})
         if system_metrics:
-            if system_metrics.get('cpu_percent', 0) > 85:
+            if system_metrics.get("cpu_percent", 0) > 85:
                 issues.append("CPU使用率过高")
-            if system_metrics.get('memory_percent', 0) > 85:
+            if system_metrics.get("memory_percent", 0) > 85:
                 issues.append("内存使用率过高")
 
         return issues
@@ -537,13 +568,14 @@ class ConcurrentProcessingOptimizer:
         except Exception as e:
             logger.error(f"垃圾回收失败: {e}")
 
+
 class ResourceError(Exception):
     """资源不足异常"""
+
     pass
+
 
 # 创建全局并发处理器实例
 concurrent_optimizer = ConcurrentProcessingOptimizer(
-    max_workers=4,
-    enable_monitoring=True,
-    resource_aware=True
+    max_workers=4, enable_monitoring=True, resource_aware=True
 )

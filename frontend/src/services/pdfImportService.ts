@@ -517,14 +517,19 @@ class PDFImportService {
       };
     }
   }
-          spacy_available: true,
-          ocr_available: true,
-          supported_formats: ['.pdf', '.jpg', '.jpeg', '.png'],
-          max_file_size_mb: 50,
-          estimated_processing_time: '30-60秒'
-        },
+
+  // 获取系统能力信息
+  static async getSystemCapabilities() {
+    try {
+      const response = await api.get('/pdf-import/capabilities');
+      return {
+        spacy_available: true,
+        ocr_available: true,
+        supported_formats: ['.pdf', '.jpg', '.jpeg', '.png'],
+        max_file_size_mb: 50,
+        estimated_processing_time: '30-60秒',
         extractor_summary: response.data.extractor_summary,
-        validator_summary: response.data.validator_summary
+        validator_summary: response.data.validator_summary,
       };
     } catch (error: any) {
       console.error('获取系统信息失败:', error);

@@ -386,7 +386,7 @@ class PermissionInheritanceService:
             .filter(
                 and_(
                     UserRoleAssignment.user_id == user_id,
-                    UserRoleAssignment.is_active == True,
+                    UserRoleAssignment.is_active,
                     or_(
                         UserRoleAssignment.expires_at.is_(None),
                         UserRoleAssignment.expires_at > datetime.now(UTC),
@@ -511,7 +511,7 @@ class PermissionInheritanceService:
             .filter(
                 and_(
                     UserRoleAssignment.user_id == user_id,
-                    UserRoleAssignment.is_active == True,
+                    UserRoleAssignment.is_active,
                 )
             )
             .all()

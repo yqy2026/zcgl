@@ -15,7 +15,7 @@ from ..models import Asset, RentContract
 
 # 导入fuzzywuzzy，如果不可用则使用简单替代方案
 try:
-    from fuzzywuzzy import fuzz, process
+    from fuzzywuzzy import fuzz
 
     FUZZYWUZZY_AVAILABLE = True
 except ImportError:

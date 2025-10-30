@@ -136,9 +136,9 @@ async def get_system_info(db: Session = Depends(get_db)):
 
 @router.post("/backup", summary="备份系统数据")
 async def backup_system(
-    background_tasks: BackgroundTasks, 
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    current_user: UserResponse = Depends(get_current_active_user)
+    current_user: UserResponse = Depends(get_current_active_user),
 ):
     """
     备份系统数据

@@ -222,21 +222,17 @@ class AssetBase(BaseModel):
 
     @field_validator("contract_end_date")
     @classmethod
-    def validate_contract_dates(cls, v, values):
-        if v and "contract_start_date" in values and values["contract_start_date"]:
-            if v < values["contract_start_date"]:
+    def validate_contract_dates(cls, v, info):
+        if v and info.data.get("contract_start_date"):
+            if v < info.data["contract_start_date"]:
                 raise ValueError("合同结束日期不能早于开始日期")
         return v
 
     @field_validator("operation_agreement_end_date")
     @classmethod
-    def validate_agreement_dates(cls, v, values):
-        if (
-            v
-            and "operation_agreement_start_date" in values
-            and values["operation_agreement_start_date"]
-        ):
-            if v < values["operation_agreement_start_date"]:
+    def validate_agreement_dates(cls, v, info):
+        if v and info.data.get("operation_agreement_start_date"):
+            if v < info.data["operation_agreement_start_date"]:
                 raise ValueError("接收协议结束日期不能早于开始日期")
         return v
 

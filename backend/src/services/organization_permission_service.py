@@ -34,7 +34,7 @@ class OrganizationPermissionService:
         if user.role == "ADMIN":
             organizations = (
                 self.db.query(Organization.id)
-                .filter(Organization.is_deleted == False)
+                .filter(not Organization.is_deleted)
                 .all()
             )
             return [org.id for org in organizations]
@@ -45,7 +45,7 @@ class OrganizationPermissionService:
             .filter(
                 and_(
                     UserRoleAssignment.user_id == user_id,
-                    UserRoleAssignment.is_active == True,
+                    UserRoleAssignment.is_active,
                 )
             )
             .all()
@@ -77,7 +77,7 @@ class OrganizationPermissionService:
             .filter(
                 and_(
                     Organization.id.in_(accessible_org_ids),
-                    Organization.is_deleted == False,
+                    not Organization.is_deleted,
                 )
             )
             .all()
@@ -194,7 +194,7 @@ class OrganizationPermissionService:
             .filter(
                 and_(
                     Organization.path.like(f"{organization.path}/%"),
-                    Organization.is_deleted == False,
+                    not Organization.is_deleted,
                 )
             )
             .all()

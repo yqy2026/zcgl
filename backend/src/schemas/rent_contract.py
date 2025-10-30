@@ -185,7 +185,6 @@ class RentLedgerBase(BaseModel):
         if len(v) != 7 or v[4] != "-":
             raise ValueError("年月格式必须是YYYY-MM")
         try:
-            year = int(v[:4])
             month = int(v[5:7])
             if not (1 <= month <= 12):
                 raise ValueError("月份必须在1-12之间")
@@ -310,7 +309,6 @@ class GenerateLedgerRequest(BaseModel):
         if len(v) != 7 or v[4] != "-":
             raise ValueError("年月格式必须是YYYY-MM")
         try:
-            year = int(v[:4])
             month = int(v[5:7])
             if not (1 <= month <= 12):
                 raise ValueError("月份必须在1-12之间")

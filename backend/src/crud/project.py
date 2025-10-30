@@ -27,7 +27,7 @@ class CRUDProject:
                 .join(Ownership, ProjectOwnershipRelation.ownership_id == Ownership.id)
                 .filter(
                     ProjectOwnershipRelation.project_id == id,
-                    ProjectOwnershipRelation.is_active == True,
+                    ProjectOwnershipRelation.is_active,
                 )
                 .all()
             )
@@ -94,7 +94,7 @@ class CRUDProject:
                 .join(Ownership, ProjectOwnershipRelation.ownership_id == Ownership.id)
                 .filter(
                     ProjectOwnershipRelation.project_id == project.id,
-                    ProjectOwnershipRelation.is_active == True,
+                    ProjectOwnershipRelation.is_active,
                 )
                 .all()
             )
@@ -221,9 +221,7 @@ class CRUDProject:
             "管": "G",
             "理": "L",
             "施": "S",
-            "工": "G",
             "监": "J",
-            "理": "L",
             "运": "Y",
             "营": "Y",
             "维": "W",
@@ -258,27 +256,21 @@ class CRUDProject:
             # 建筑类型
             "大": "D",
             "厦": "S",
-            "楼": "L",
             "馆": "G",
             "所": "S",
             "站": "Z",
             "堂": "T",
             "厅": "T",
             "室": "S",
-            "房": "F",
             "间": "J",
             "屋": "W",
             "库": "K",
             "棚": "P",
-            "场": "C",
-            "地": "D",
             "基": "J",
             "坑": "K",
             # 商业用途
             "购": "G",
             "物": "W",
-            "中": "Z",
-            "心": "X",
             "办": "B",
             "公": "G",
             "酒": "J",
@@ -310,14 +302,12 @@ class CRUDProject:
             "右": "Y",
             "内": "N",
             "外": "W",
-            "中": "Z",
             "央": "Y",
             # 常用词汇
             "国": "G",
             "家": "J",
             "人": "R",
             "民": "M",
-            "公": "G",
             "司": "S",
             "集": "J",
             "团": "T",
@@ -395,7 +385,6 @@ class CRUDProject:
 
         # 提取权属方关系数据
         ownership_relations = create_data.pop("ownership_relations", [])
-        ownership_ids = create_data.pop("ownership_ids", [])
 
         db_obj = Project(**create_data, created_by=created_by, updated_by=created_by)
         db.add(db_obj)
@@ -443,7 +432,6 @@ class CRUDProject:
 
         # 提取权属方关系数据
         ownership_relations = update_data.pop("ownership_relations", None)
-        ownership_ids = update_data.pop("ownership_ids", None)
 
         for field, value in update_data.items():
             setattr(db_obj, field, value)
@@ -520,7 +508,7 @@ class CRUDProject:
                 Project.id == ProjectOwnershipRelation.project_id,
             ).filter(
                 ProjectOwnershipRelation.ownership_id == search_params.ownership_id,
-                ProjectOwnershipRelation.is_active == True,
+                ProjectOwnershipRelation.is_active,
             )
 
         # 获取总数
@@ -545,7 +533,7 @@ class CRUDProject:
                 .join(Ownership, ProjectOwnershipRelation.ownership_id == Ownership.id)
                 .filter(
                     ProjectOwnershipRelation.project_id == project.id,
-                    ProjectOwnershipRelation.is_active == True,
+                    ProjectOwnershipRelation.is_active,
                 )
                 .all()
             )
@@ -581,7 +569,7 @@ class CRUDProject:
         """获取项目统计信息"""
         # 基础统计
         total_count = db.query(Project).count()
-        active_count = db.query(Project).filter(Project.is_active == True).count()
+        active_count = db.query(Project).filter(Project.is_active).count()
         inactive_count = total_count - active_count
 
         # 最近创建的项目
@@ -670,7 +658,7 @@ class CRUDProject:
         """获取下拉选项"""
         projects = (
             db.query(Project)
-            .filter(Project.is_active == True)
+            .filter(Project.is_active)
             .order_by(Project.name)
             .all()
         )

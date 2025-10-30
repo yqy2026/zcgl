@@ -88,26 +88,24 @@ async def get_enum_field_types(
 async def get_enum_field_statistics(db: Session = Depends(get_db)):
     """获取枚举字段统计信息"""
     type_crud = get_enum_field_type_crud(db)
-    value_crud = get_enum_field_value_crud(db)
-    usage_crud = get_enum_field_usage_crud(db)
 
     type_stats = type_crud.get_statistics()
 
     # 获取枚举值统计
     total_values = (
-        db.query(EnumFieldValue).filter(EnumFieldValue.is_deleted == False).count()
+        db.query(EnumFieldValue).filter(not EnumFieldValue.is_deleted).count()
     )
     active_values = (
         db.query(EnumFieldValue)
         .filter(
-            and_(EnumFieldValue.is_deleted == False, EnumFieldValue.is_active == True)
+            and_(not EnumFieldValue.is_deleted, EnumFieldValue.is_active)
         )
         .count()
     )
 
     # 获取使用统计
     usage_count = (
-        db.query(EnumFieldUsage).filter(EnumFieldUsage.is_active == True).count()
+        db.query(EnumFieldUsage).filter(EnumFieldUsage.is_active).count()
     )
 
     return EnumFieldStatistics(
