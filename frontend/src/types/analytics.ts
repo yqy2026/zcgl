@@ -11,15 +11,12 @@ export interface AreaSummary {
 }
 
 export interface FinancialSummary {
-  total_annual_income: number
-  total_annual_expense: number
-  total_net_income: number
+  estimated_annual_income: number
   total_monthly_rent: number
   total_deposit: number
   assets_with_income_data: number
   assets_with_rent_data: number
   profit_margin: number
-  roi: number
 }
 
 export interface OccupancyDistribution {
@@ -88,8 +85,8 @@ export interface AnalyticsData {
   usage_status_distribution: UsageStatusDistribution[]
   business_category_distribution: BusinessCategoryDistribution[]
   occupancy_trend: OccupancyTrend[]
-  performance_metrics: PerformanceMetrics
-  comparison_data?: ComparisonData
+  // performance_metrics: PerformanceMetrics  // 暂时注释，等待后端API支持
+  // comparison_data?: ComparisonData  // 暂时注释，等待后端API支持
 }
 
 export interface AnalyticsResponse {

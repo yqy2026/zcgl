@@ -282,12 +282,14 @@ export interface AssetHistory {
   id: string
   asset_id: string
   operation_type: string
+  change_type?: string  // 添加change_type字段
   field_name?: string
   old_value?: string
   new_value?: string
   operator?: string
   operation_time: string
   description?: string
+  changed_fields?: string[]  // 添加changed_fields字段
   // 新增审计字段
   change_reason?: string
   ip_address?: string

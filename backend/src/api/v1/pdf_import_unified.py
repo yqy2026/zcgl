@@ -9,8 +9,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-logger = logging.getLogger(__name__)
-
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -21,7 +19,12 @@ from fastapi import (
     Query,
     UploadFile,
 )
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
+
+from ...database import get_db
+
+logger = logging.getLogger(__name__)
 
 # 导入新的PDF处理服务 - 安全导入
 try:
@@ -41,14 +44,6 @@ except ImportError as e:
     PDFValidationMatchingService = None
     enhanced_error_handler = None
     PDF_SERVICES_AVAILABLE = False
-
-# 数据库和模型
-# 配置
-from pydantic import BaseModel, Field
-
-from ...database import get_db
-
-logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["pdf-import"])
 
@@ -612,8 +607,8 @@ async def cancel_session(
         }
 
 
-@router.get("/test")
-async def test_system():
+@router.get("/test_detailed")
+async def test_system_detailed():
     """测试系统功能"""
     try:
         # 测试PDF处理服务

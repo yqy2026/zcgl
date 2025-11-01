@@ -92,7 +92,7 @@ class ResourceMonitor:
             try:
                 disk_usage = psutil.disk_usage("/")
                 disk_io = (disk_usage.used / disk_usage.total) * 100
-            except:
+            except (OSError, PermissionError):
                 pass
 
             # 活跃进程数

@@ -33,6 +33,7 @@ export const useAnalytics = (filters?: AssetSearchParams) => {
               estimated_annual_income: 0.0,
               assets_with_rent_data: 0,
               assets_with_deposit_data: 0,
+              profit_margin: 0.0,
             },
             business_category_distribution: [],
             property_nature_distribution: [],

@@ -3,6 +3,8 @@
 实现基于组织架构的数据隔离和权限控制
 """
 
+from typing import Any
+
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 
@@ -104,7 +106,7 @@ class OrganizationPermissionService:
         accessible_orgs = self.get_user_accessible_organizations(user_id)
         return organization_id in accessible_orgs
 
-    def filter_assets_by_organization(self, user_id: str, query) -> "Query":
+    def filter_assets_by_organization(self, user_id: str, query: Any) -> Any:
         """
         根据用户组织权限过滤资产查询
         """
@@ -131,7 +133,7 @@ class OrganizationPermissionService:
 
         return query
 
-    def filter_projects_by_organization(self, user_id: str, query) -> "Query":
+    def filter_projects_by_organization(self, user_id: str, query: Any) -> Any:
         """
         根据用户组织权限过滤项目查询
         """
@@ -153,7 +155,7 @@ class OrganizationPermissionService:
 
         return query
 
-    def filter_ownership_by_organization(self, user_id: str, query) -> "Query":
+    def filter_ownership_by_organization(self, user_id: str, query: Any) -> Any:
         """
         根据用户组织权限过滤权属方查询
         """

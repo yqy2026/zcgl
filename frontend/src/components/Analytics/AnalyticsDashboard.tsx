@@ -18,7 +18,7 @@ import {
   AnalyticsBarChart,
   AnalyticsLineChart
 } from './Charts'
-import AdvancedAnalyticsCard from './AdvancedAnalyticsCard'
+// import AdvancedAnalyticsCard from './AdvancedAnalyticsCard'  // 暂时注释，等待后端API支持
 import { PerformanceMonitor } from './PerformanceMonitor'
 
 const { Title } = Typography
@@ -139,30 +139,32 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
 
     return [
       {
-        title: '年收入',
-        value: analytics.financial_summary.total_annual_income,
+        title: '预估年收入',
+        value: analytics.financial_summary.estimated_annual_income,
         suffix: '元',
         precision: 2,
         isPositive: true
       },
       {
-        title: '年支出',
-        value: analytics.financial_summary.total_annual_expense,
-        suffix: '元',
-        precision: 2,
-        isPositive: false
-      },
-      {
-        title: '净收益',
-        value: analytics.financial_summary.total_net_income,
-        suffix: '元',
-        precision: 2,
-        isPositive: analytics.financial_summary.total_net_income >= 0
-      },
-      {
         title: '月租金',
         value: analytics.financial_summary.total_monthly_rent,
         suffix: '元',
+        precision: 2,
+        isPositive: true
+      },
+      {
+        title: '押金总额',
+        value: analytics.financial_summary.total_deposit,
+        suffix: '元',
+        precision: 2,
+        isPositive: true
+      },
+      {
+        title: '资产收益率',
+        value: analytics.financial_summary.estimated_annual_income > 0 && analytics.area_summary.total_area > 0
+          ? (analytics.financial_summary.estimated_annual_income / analytics.area_summary.total_area) * 100
+          : 0,
+        suffix: '%',
         precision: 2,
         isPositive: true
       }
@@ -262,8 +264,8 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             ))}
           </Row>
 
-          {/* 高级分析指标 */}
-          {analytics?.performance_metrics && (
+          {/* 高级分析指标 - 暂时隐藏，等待后端API支持 */}
+          {/* {analytics?.performance_metrics && (
             <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
               <Col xs={24}>
                 <AdvancedAnalyticsCard
@@ -273,7 +275,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                 />
               </Col>
             </Row>
-          )}
+          )} */}
 
           {/* 财务指标 */}
           <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>

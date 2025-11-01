@@ -4,16 +4,16 @@
 
 import json
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from ...crud.auth import AuditLogCRUD, UserCRUD, UserSessionCRUD
 from ...database import get_db
 from ...exceptions import BusinessLogicError
 from ...middleware.auth import SecurityConfig, get_current_active_user, require_admin
-from ...models.auth import User, AuditLog, UserSession
+from ...models.auth import User, UserSession
 from ...schemas.auth import (
     LoginRequest,
     LoginResponse,
@@ -27,7 +27,6 @@ from ...schemas.auth import (
     UserUpdate,
 )
 from ...schemas.auth import UserQueryParams as UserQueryParamsSchema
-from ...schemas.common import create_success_response
 from ...services.auth_service import AuthService
 from ...services.security_service import SecurityService
 
@@ -167,14 +166,13 @@ async def logout(
     - 记录审计日志
     - 返回登出结果
     """
-    client_ip = request.client.host
-    user_agent = request.headers.get("user-agent", "Unknown")
+    request.headers.get("user-agent", "Unknown")
 
     try:
         # 1. 撤销用户所有会话
         revoked_count = db.query(UserSession).filter(
             UserSession.user_id == current_user.id,
-            UserSession.is_active == True
+            UserSession.is_active
         ).update({"is_active": False})
         db.commit()
 
@@ -189,7 +187,7 @@ async def logout(
                 "user_id": str(current_user.id),
                 "username": current_user.username,
                 "revoked_sessions": revoked_count,
-                "logout_time": datetime.now(timezone.utc).isoformat()
+                "logout_time": datetime.now(UTC).isoformat()
             }
         }
 
@@ -202,10 +200,11 @@ async def logout(
         try:
             db.query(UserSession).filter(
                 UserSession.user_id == current_user.id,
-                UserSession.is_active == True
+                UserSession.is_active
             ).update({"is_active": False})
             db.commit()
-        except:
+        except Exception:
+            # 静默处理会话清理失败，不影响主要登录流程
             pass
 
         return {
@@ -215,7 +214,7 @@ async def logout(
                 "user_id": str(current_user.id),
                 "username": current_user.username,
                 "revoked_sessions": 0,
-                "logout_time": datetime.now(timezone.utc).isoformat()
+                "logout_time": datetime.now(UTC).isoformat()
             }
         }
 
@@ -736,7 +735,6 @@ async def debug_current_user_profile():
 
     # 尝试导入依赖
     try:
-        from ..models.auth import User
         error_info += "User model import: SUCCESS\n"
     except Exception as e:
         error_info += f"User model import FAILED: {str(e)}\n"
@@ -744,7 +742,6 @@ async def debug_current_user_profile():
         error_info += f"Traceback: {traceback_str}\n"
 
     try:
-        from ..middleware.auth import get_current_active_user
         error_info += "get_current_active_user import: SUCCESS\n"
     except Exception as e:
         error_info += f"get_current_active_user import FAILED: {str(e)}\n"
@@ -753,7 +750,6 @@ async def debug_current_user_profile():
 
     # 尝试获取数据库
     try:
-        from ..database import get_db
         error_info += "get_db import: SUCCESS\n"
     except Exception as e:
         error_info += f"get_db import FAILED: {str(e)}\n"
@@ -800,8 +796,8 @@ async def debug_auth_dependency():
     """
     逐步测试认证依赖
     """
-    from datetime import datetime, timezone
-    from ..database import get_db
+    from datetime import datetime
+
 
     try:
         # 测试1: 数据库连接
@@ -810,7 +806,6 @@ async def debug_auth_dependency():
 
         # 测试2: 导入认证模块
         print("[DEBUG] Step 2: Importing auth middleware")
-        from ..middleware.auth import get_current_user, oauth2_scheme
 
         # 测试3: 检查枚举
         print("[DEBUG] Step 3: Checking UserRole enum")
@@ -827,7 +822,7 @@ async def debug_auth_dependency():
         return {
             "success": True,
             "message": "认证依赖调试成功",
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": datetime.now(UTC).isoformat()
         }
 
     except Exception as e:

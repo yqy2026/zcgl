@@ -621,7 +621,8 @@ class PDFProcessingService:
                                 "type": img[-1],
                             }
                         )
-                    except:
+                    except (Exception, ValueError, TypeError):
+                        # API处理失败时跳过当前项
                         continue
 
                 page_info = {

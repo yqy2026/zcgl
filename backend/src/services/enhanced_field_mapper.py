@@ -535,7 +535,8 @@ class EnhancedFieldMapper:
                     end_date.month - start_date.month
                 )
                 contract_data["lease_term_months"] = max(months, 1)
-            except:
+            except (ValueError, TypeError, KeyError):
+                # 日期解析失败时静默处理，保持原有数据
                 pass
 
         # 设置合同编号到资产数据（如果存在）

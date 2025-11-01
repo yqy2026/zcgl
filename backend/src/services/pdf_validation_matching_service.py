@@ -356,7 +356,8 @@ class DuplicateChecker:
                         contract_date = contract.start_date.date()
                         date_diff = abs((input_date - contract_date).days)
                         date_match = max(0, 1 - date_diff / 365)  # 一年内为高匹配
-                    except:
+                    except Exception:
+                        # 通用异常处理，静默处理
                         pass
 
                 # 计算重复概率

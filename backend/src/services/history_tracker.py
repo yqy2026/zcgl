@@ -67,7 +67,7 @@ class HistoryTracker:
         return changes
 
     @staticmethod
-    def model_to_dict(model: Asset) -> Dict[str, Any]:
+    def model_to_dict(model: Asset) -> dict[str, Any]:
         """
         将SQLAlchemy模型转换为字典
 
@@ -94,10 +94,10 @@ class HistoryTracker:
         db: Session,
         asset_id: str,
         change_type: str,
-        old_values: Optional[Dict[str, Any]] = None,
-        new_values: Optional[Dict[str, Any]] = None,
+        old_values: dict[str, Any] | None = None,
+        new_values: dict[str, Any] | None = None,
         changed_by: str = "system",
-        reason: Optional[str] = None,
+        reason: str | None = None,
     ) -> AssetHistory:
         """
         创建变更历史记录
@@ -157,7 +157,7 @@ class HistoryTracker:
         db: Session,
         asset: Asset,
         changed_by: str = "system",
-        reason: Optional[str] = None,
+        reason: str | None = None,
     ) -> AssetHistory:
         """
         跟踪资产创建
@@ -189,8 +189,8 @@ class HistoryTracker:
         old_asset: Asset,
         new_asset: Asset,
         changed_by: str = "system",
-        reason: Optional[str] = None,
-    ) -> Optional[AssetHistory]:
+        reason: str | None = None,
+    ) -> AssetHistory | None:
         """
         跟踪资产更新
 
@@ -228,7 +228,7 @@ class HistoryTracker:
         db: Session,
         asset: Asset,
         changed_by: str = "system",
-        reason: Optional[str] = None,
+        reason: str | None = None,
     ) -> AssetHistory:
         """
         跟踪资产删除
@@ -267,8 +267,8 @@ class HistoryService:
         asset_id: str,
         skip: int = 0,
         limit: int = 20,
-        change_type: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        change_type: str | None = None,
+    ) -> dict[str, Any]:
         """
         获取资产变更历史
 
@@ -311,7 +311,7 @@ class HistoryService:
             logger.error(f"获取资产历史失败: {str(e)}")
             raise
 
-    def get_history_by_id(self, db: Session, history_id: str) -> Optional[AssetHistory]:
+    def get_history_by_id(self, db: Session, history_id: str) -> AssetHistory | None:
         """
         根据ID获取历史记录
 
@@ -326,7 +326,7 @@ class HistoryService:
 
     def compare_history_records(
         self, db: Session, history_id1: str, history_id2: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         比较两个历史记录
 
@@ -380,7 +380,7 @@ class HistoryService:
 
     def get_field_history(
         self, db: Session, asset_id: str, field_name: str, limit: int = 10
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         获取特定字段的变更历史
 
@@ -434,8 +434,8 @@ class HistoryService:
             raise
 
     def get_recent_changes(
-        self, db: Session, limit: int = 50, change_type: Optional[str] = None
-    ) -> List[AssetHistory]:
+        self, db: Session, limit: int = 50, change_type: str | None = None
+    ) -> list[AssetHistory]:
         """
         获取最近的变更记录
 
@@ -460,8 +460,8 @@ class HistoryService:
             raise
 
     def get_change_statistics(
-        self, db: Session, asset_id: Optional[str] = None, days: int = 30
-    ) -> Dict[str, Any]:
+        self, db: Session, asset_id: str | None = None, days: int = 30
+    ) -> dict[str, Any]:
         """
         获取变更统计信息
 

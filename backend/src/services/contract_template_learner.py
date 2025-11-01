@@ -3,11 +3,12 @@
 通过机器学习识别标准合同格式和模板
 """
 
+import glob
 import json
 import logging
 import re
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from enum import Enum
 from typing import Any
@@ -295,7 +296,7 @@ class ContractTemplateLearner:
                 pos_tags = jieba.posseg.cut(text, HMM=True)
 
                 # 分析每个词
-                for word, pos in zip(words, pos_tags):
+                for i, (word, pos) in enumerate(zip(words, pos_tags)):
                     if len(word.strip()) > 1:
                         # 付款相关模式
                         if pos.startswith("v") and any(
@@ -581,10 +582,16 @@ class ContractTemplateLearner:
     ) -> float:
         """计算模式重要性"""
         base_importance = 0.1
+        type_score = 0.0
 
         # 基于频率的重要性
-        frequency = len(pattern_data["word_list"][pattern])
-        frequency_score = min(frequency / 10.0, 1.0)
+        word_list = pattern_data.get("word_list", {})
+        if word_list:
+            # 计算所有模式的平均频率
+            total_frequency = sum(len(words) for words in word_list.values())
+            frequency_score = min(total_frequency / 10.0, 1.0)
+        else:
+            frequency_score = 0.0
 
         # 基于字段类型的权重
         word_types = pattern_data.get("word_types", [])
@@ -675,22 +682,18 @@ class ContractTemplateLearner:
             return False
 
         # 根据字段类型进行验证
-        if field.field_type == "text":
+        if field_type == "text":
             return len(value) > 0
 
-        elif field.field_type == "number":
+        elif field_type == "number":
             try:
                 # 提取数字
                 number = float(re.sub(r"[^\d.]", "", value))
-                return (
-                    field.validation_rules.get("min_value", 0)
-                    <= number
-                    <= field.validation_rules.get("max_value", 10000000)
-                )
+                return 0 <= number <= 10000000  # 简化的数字验证
             except ValueError:
                 return False
 
-        elif field.field_type == "date":
+        elif field_type == "date":
             # 日期格式验证
             date_formats = ["%Y-%m-%d", "%Y年%m月%d日"]
             for fmt in date_formats:
@@ -704,7 +707,7 @@ class ContractTemplateLearner:
             # 证件号格式验证
             return len(value) >= 15 and len(value) <= 18
 
-        elif field.field_type == "phone":
+        elif field_type == "phone":
             # 电话号码格式验证
             phone_pattern = r"^1[3-9]\d{9}$"
             return bool(re.match(phone_pattern, value))

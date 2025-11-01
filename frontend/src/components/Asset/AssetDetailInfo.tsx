@@ -18,8 +18,8 @@ interface AssetDetailInfoProps {
 
 const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
   // 计算出租率
-  const occupancyRate = asset.occupancy_rate 
-    ? parseFloat(asset.occupancy_rate)
+  const occupancyRate = asset.occupancy_rate
+    ? asset.occupancy_rate
     : calculateOccupancyRate(asset.rented_area, asset.rentable_area)
 
   // 获取出租率颜色
