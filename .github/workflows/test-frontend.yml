@@ -1,7 +1,7 @@
 name: Frontend Tests
 on:
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main, develop, "feature/*", "hotfix/*" ]
 jobs:
     test:
       runs-on: ubuntu-latest

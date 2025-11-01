@@ -4,15 +4,19 @@
 """
 
 import logging
-from datetime import datetime
-from typing import Any
+import psutil
+import asyncio
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ...database import get_db
 from ...decorators.permission import permission_required
+from ...middleware.auth import get_current_user
+from ...models.auth import User
 
 logger = logging.getLogger(__name__)
 
@@ -166,3 +170,254 @@ async def get_performance_dashboard():
     except Exception as e:
         logger.error(f"获取仪表板数据失败: {str(e)}")
         raise HTTPException(status_code=500, detail="获取仪表板数据失败")
+
+
+# === 新增系统监控API ===
+
+class SystemMetrics(BaseModel):
+    """系统性能指标模型"""
+    timestamp: datetime = Field(..., description="指标采集时间")
+    cpu_percent: float = Field(..., ge=0, le=100, description="CPU使用率(%)")
+    memory_percent: float = Field(..., ge=0, le=100, description="内存使用率(%)")
+    memory_available_gb: float = Field(..., ge=0, description="可用内存(GB)")
+    disk_usage_percent: float = Field(..., ge=0, le=100, description="磁盘使用率(%)")
+    disk_free_gb: float = Field(..., ge=0, description="可用磁盘空间(GB)")
+    network_io: Dict[str, int] = Field(..., description="网络IO统计")
+    process_count: int = Field(..., ge=0, description="运行进程数")
+    load_average: Optional[List[float]] = Field(None, description="系统负载平均值")
+
+
+class ApplicationMetrics(BaseModel):
+    """应用性能指标模型"""
+    timestamp: datetime = Field(..., description="指标采集时间")
+    active_connections: int = Field(..., ge=0, description="活跃连接数")
+    total_requests: int = Field(..., ge=0, description="总请求数")
+    average_response_time: float = Field(..., ge=0, description="平均响应时间(ms)")
+    error_rate: float = Field(..., ge=0, le=100, description="错误率(%)")
+    cache_hit_rate: float = Field(..., ge=0, le=100, description="缓存命中率(%)")
+    database_connections: int = Field(..., ge=0, description="数据库连接数")
+
+
+class HealthStatus(BaseModel):
+    """健康状态模型"""
+    status: str = Field(..., pattern="^(healthy|degraded|unhealthy)$", description="健康状态")
+    timestamp: datetime = Field(..., description="检查时间")
+    components: Dict[str, Dict[str, Any]] = Field(..., description="组件状态详情")
+    overall_score: float = Field(..., ge=0, le=100, description="总体健康评分")
+
+
+class PerformanceAlert(BaseModel):
+    """性能告警模型"""
+    id: str = Field(..., description="告警ID")
+    level: str = Field(..., pattern="^(info|warning|critical)$", description="告警级别")
+    message: str = Field(..., description="告警消息")
+    metric_name: str = Field(..., description="指标名称")
+    current_value: float = Field(..., description="当前值")
+    threshold: float = Field(..., description="阈值")
+    timestamp: datetime = Field(..., description="告警时间")
+    resolved: bool = Field(False, description="是否已解决")
+
+
+# 全局变量存储指标历史数据
+_metrics_history: List[SystemMetrics] = []
+_application_metrics: List[ApplicationMetrics] = []
+_active_alerts: List[PerformanceAlert] = []
+
+
+def collect_system_metrics() -> SystemMetrics:
+    """收集系统性能指标"""
+    try:
+        # CPU使用率
+        cpu_percent = psutil.cpu_percent(interval=1)
+
+        # 内存信息
+        memory = psutil.virtual_memory()
+        memory_percent = memory.percent
+        memory_available_gb = memory.available / (1024**3)
+
+        # 磁盘信息
+        disk = psutil.disk_usage('/')
+        disk_usage_percent = disk.percent
+        disk_free_gb = disk.free / (1024**3)
+
+        # 网络IO
+        network_io = {
+            "bytes_sent": psutil.net_io_counters().bytes_sent,
+            "bytes_recv": psutil.net_io_counters().bytes_recv,
+            "packets_sent": psutil.net_io_counters().packets_sent,
+            "packets_recv": psutil.net_io_counters().packets_recv
+        }
+
+        # 进程数
+        process_count = len(psutil.pids())
+
+        # 系统负载 (Linux/Mac)
+        load_average = None
+        try:
+            load_average = list(psutil.getloadavg())
+        except (AttributeError, OSError):
+            # Windows不支持getloadavg
+            pass
+
+        metrics = SystemMetrics(
+            timestamp=datetime.now(),
+            cpu_percent=cpu_percent,
+            memory_percent=memory_percent,
+            memory_available_gb=memory_available_gb,
+            disk_usage_percent=disk_usage_percent,
+            disk_free_gb=disk_free_gb,
+            network_io=network_io,
+            process_count=process_count,
+            load_average=load_average
+        )
+
+        # 保存历史数据 (保留最近100条)
+        _metrics_history.append(metrics)
+        if len(_metrics_history) > 100:
+            _metrics_history.pop(0)
+
+        return metrics
+
+    except Exception as e:
+        logger.error(f"收集系统指标失败: {e}")
+        raise HTTPException(status_code=500, detail=f"收集系统指标失败: {str(e)}")
+
+
+def collect_application_metrics() -> ApplicationMetrics:
+    """收集应用性能指标"""
+    try:
+        # 模拟应用指标 (实际项目中应该从监控系统获取)
+        metrics = ApplicationMetrics(
+            timestamp=datetime.now(),
+            active_connections=42,
+            total_requests=15847,
+            average_response_time=125.5,
+            error_rate=0.2,
+            cache_hit_rate=85.3,
+            database_connections=8
+        )
+
+        # 保存历史数据
+        _application_metrics.append(metrics)
+        if len(_application_metrics) > 100:
+            _application_metrics.pop(0)
+
+        return metrics
+
+    except Exception as e:
+        logger.error(f"收集应用指标失败: {e}")
+        raise HTTPException(status_code=500, detail=f"收集应用指标失败: {str(e)}")
+
+
+@router.get("/system-metrics", response_model=SystemMetrics, summary="获取系统性能指标")
+@permission_required("system_monitoring", "read")
+async def get_system_metrics(current_user: User = Depends(get_current_user)):
+    """获取当前系统性能指标"""
+    return collect_system_metrics()
+
+
+@router.get("/application-metrics", response_model=ApplicationMetrics, summary="获取应用性能指标")
+@permission_required("system_monitoring", "read")
+async def get_application_metrics(current_user: User = Depends(get_current_user)):
+    """获取应用性能指标"""
+    return collect_application_metrics()
+
+
+@router.get("/dashboard", summary="获取系统监控仪表板")
+@permission_required("system_monitoring", "read")
+async def get_system_monitoring_dashboard(current_user: User = Depends(get_current_user)):
+    """获取系统监控仪表板综合数据"""
+    try:
+        system_metrics = collect_system_metrics()
+        app_metrics = collect_application_metrics()
+
+        # 健康状态检查
+        components = {}
+        overall_score = 100
+
+        # 检查CPU
+        if system_metrics.cpu_percent > 90:
+            components["cpu"] = {"status": "unhealthy", "value": system_metrics.cpu_percent}
+            overall_score -= 30
+        elif system_metrics.cpu_percent > 70:
+            components["cpu"] = {"status": "warning", "value": system_metrics.cpu_percent}
+            overall_score -= 15
+        else:
+            components["cpu"] = {"status": "healthy", "value": system_metrics.cpu_percent}
+
+        # 检查内存
+        if system_metrics.memory_percent > 90:
+            components["memory"] = {"status": "unhealthy", "value": system_metrics.memory_percent}
+            overall_score -= 30
+        elif system_metrics.memory_percent > 80:
+            components["memory"] = {"status": "warning", "value": system_metrics.memory_percent}
+            overall_score -= 15
+        else:
+            components["memory"] = {"status": "healthy", "value": system_metrics.memory_percent}
+
+        # 检查磁盘
+        if system_metrics.disk_usage_percent > 95:
+            components["disk"] = {"status": "unhealthy", "value": system_metrics.disk_usage_percent}
+            overall_score -= 20
+        elif system_metrics.disk_usage_percent > 85:
+            components["disk"] = {"status": "warning", "value": system_metrics.disk_usage_percent}
+            overall_score -= 10
+        else:
+            components["disk"] = {"status": "healthy", "value": system_metrics.disk_usage_percent}
+
+        # 确定整体状态
+        if overall_score >= 90:
+            status = "healthy"
+        elif overall_score >= 70:
+            status = "degraded"
+        else:
+            status = "unhealthy"
+
+        health_status = HealthStatus(
+            status=status,
+            timestamp=datetime.now(),
+            components=components,
+            overall_score=max(0, overall_score)
+        )
+
+        return {
+            "current_system": system_metrics,
+            "current_application": app_metrics,
+            "health_status": health_status,
+            "active_alerts": _active_alerts[-10:],  # 最近10个告警
+            "trends": {
+                "system_metrics": _metrics_history[-20:],  # 最近20个数据点
+                "application_metrics": _application_metrics[-20:]
+            },
+            "summary": {
+                "total_alerts": len(_active_alerts),
+                "critical_alerts": len([a for a in _active_alerts if a.level == "critical"]),
+                "warning_alerts": len([a for a in _active_alerts if a.level == "warning"]),
+                "health_score": overall_score,
+                "last_updated": datetime.now().isoformat()
+            }
+        }
+
+    except Exception as e:
+        logger.error(f"获取监控仪表板数据失败: {e}")
+        raise HTTPException(status_code=500, detail=f"获取监控仪表板数据失败: {str(e)}")
+
+
+@router.post("/metrics/collect", summary="手动触发指标收集")
+@permission_required("system_monitoring", "write")
+async def trigger_metrics_collection(current_user: User = Depends(get_current_user)):
+    """手动触发一次指标收集"""
+    try:
+        system_metrics = collect_system_metrics()
+        app_metrics = collect_application_metrics()
+
+        return {
+            "message": "指标收集完成",
+            "system_metrics": system_metrics,
+            "application_metrics": app_metrics,
+            "timestamp": datetime.now().isoformat()
+        }
+
+    except Exception as e:
+        logger.error(f"手动指标收集失败: {e}")
+        raise HTTPException(status_code=500, detail=f"手动指标收集失败: {str(e)}")
