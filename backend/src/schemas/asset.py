@@ -603,8 +603,8 @@ class BatchCustomFieldUpdateResponse(BaseModel):
     model_config = ConfigDict(json_schema_extra={"example": {"description": "示例"}})
 
 
-class AssetCustomFieldCreate(BaseModel):
-    """创建资产自定义字段模型"""
+class AssetCustomFieldAssignment(BaseModel):
+    """资产自定义字段分配模型"""
 
     asset_id: str = Field(..., description="关联资产ID")
     field_name: str = Field(..., min_length=1, max_length=100, description="字段名称")

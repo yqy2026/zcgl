@@ -13,9 +13,6 @@ import click
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from src.utils.api_consistency_checker import check_api_consistency
-from src.utils.api_doc_generator import generate_api_docs
-
 
 @click.group()
 @click.version_option(version="2.0.0")
@@ -49,6 +46,13 @@ def docs(app_path: str, output_dir: str, format: str):
         module = __import__(module_path, fromlist=[app_name])
         app = getattr(module, app_name)
 
+        # 动态导入生成API文档函数
+        try:
+            from src.utils.api_doc_generator import generate_api_docs
+        except ImportError as e:
+            click.echo(f"❌ 无法导入API文档生成器: {e}", err=True)
+            sys.exit(1)
+
         # 生成文档
         docs_data = generate_api_docs(app, output_dir)
 
@@ -77,6 +81,9 @@ def check(frontend_dir: str, backend_dir: str, output_dir: str, severity: str):
     click.echo("🔍 开始API一致性检查...")
 
     try:
+        # 动态导入一致性检查函数
+        from src.utils.api_consistency_checker import check_api_consistency
+
         # 执行检查
         report = check_api_consistency(frontend_dir, backend_dir, output_dir)
 
@@ -132,6 +139,9 @@ def analyze(output_dir: str):
         try:
             # 尝试导入应用
             from src.main import app
+
+            # 尝试导入API文档生成器
+            from src.utils.api_doc_generator import generate_api_docs
 
             docs_data = generate_api_docs(app, output_dir)
 

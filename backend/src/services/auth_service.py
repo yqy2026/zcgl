@@ -13,8 +13,12 @@ from sqlalchemy.orm import Session
 from ..core.config import settings
 from ..exceptions import BusinessLogicError
 from ..models.auth import AuditLog, User, UserSession
-from ..schemas.auth import TokenData, TokenResponse, UserCreate, UserSessionResponse, UserUpdate
-
+from ..schemas.auth import (
+    TokenResponse,
+    UserCreate,
+    UserSessionResponse,
+    UserUpdate,
+)
 
 # JWT配置
 SECRET_KEY = settings.SECRET_KEY

@@ -259,12 +259,12 @@ class ExcelExportService:
 
     async def export_assets_to_excel(
         self,
-        filters: Optional[Dict[str, Any]] = None,
-        columns: Optional[List[str]] = None,
+        filters: dict[str, Any] | None = None,
+        columns: list[str] | None = None,
         format: str = "xlsx",
         include_headers: bool = True,
-        db: Optional[Session] = None,
-    ) -> Dict[str, Any]:
+        db: Session | None = None,
+    ) -> dict[str, Any]:
         """导出资产数据到Excel文件"""
         try:
             if db is None:
@@ -326,8 +326,8 @@ class ExcelExportService:
             }
 
     async def _get_filtered_assets(
-        self, filters: Optional[Dict[str, Any]], db: Session
-    ) -> List[Asset]:
+        self, filters: dict[str, Any] | None, db: Session
+    ) -> list[Asset]:
         """根据筛选条件获取资产数据"""
         try:
             if not filters:
@@ -380,7 +380,7 @@ class ExcelExportService:
             logger.error(f"获取筛选资产数据失�? {str(e)}")
             raise ExcelExportError(f"获取筛选资产数据失�? {str(e)}")
 
-    async def get_export_template_info(self) -> Dict[str, Any]:
+    async def get_export_template_info(self) -> dict[str, Any]:
         """获取导出模板信息"""
         return {
             "available_columns": list(AssetDataExporter.FIELD_TO_COLUMN_MAPPING.keys()),
@@ -409,12 +409,12 @@ class ExcelExportService:
 
 
 def export_statistics_report(
-    overview_data: Dict[str, Any],
-    ownership_data: List[Dict[str, Any]],
-    asset_data: List[Dict[str, Any]],
-    monthly_data: List[Dict[str, Any]],
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None,
+    overview_data: dict[str, Any],
+    ownership_data: list[dict[str, Any]],
+    asset_data: list[dict[str, Any]],
+    monthly_data: list[dict[str, Any]],
+    start_date: str | None = None,
+    end_date: str | None = None,
 ) -> bytes:
     """导出统计数据报表"""
     try:

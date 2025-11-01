@@ -9,6 +9,7 @@ import json
 import logging
 import os
 import pickle
+import queue
 import threading
 import time
 from collections.abc import Callable
@@ -162,7 +163,8 @@ class ParallelPDFProcessor:
             # 计算值的大小（近似）
             try:
                 size_bytes = len(pickle.dumps(value))
-            except:
+            except (Exception, pickle.PickleError, TypeError):
+                # 序列化失败时使用字符串长度
                 size_bytes = len(str(value).encode())
 
             entry = CacheEntry(
@@ -207,8 +209,9 @@ class ParallelPDFProcessor:
         try:
             file_size_mb = os.path.getsize(task.file_path) / (1024 * 1024)
             size_score = max(0, 5 - file_size_mb)
-        except:
-            size_score = 2.5
+        except (Exception, OSError, FileNotFoundError):
+                # 文件操作失败时使用默认分数
+                size_score = 2.5
 
         return priority_score + time_score + size_score
 
@@ -450,7 +453,8 @@ class ParallelPDFProcessor:
         while not self.task_queue.empty():
             try:
                 self.task_queue.get_nowait(timeout=1)
-            except:
+            except (Exception, queue.Empty, OSError):
+                # 队列操作完成时退出循环
                 break
 
         logger.info("并行PDF处理器已关闭")

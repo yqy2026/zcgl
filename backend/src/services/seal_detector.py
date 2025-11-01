@@ -335,6 +335,7 @@ class SealDetector:
         self, hsv_image: np.ndarray, template: dict[str, Any]
     ) -> list[DetectionResult]:
         """检测椭圆形印章"""
+        detections = []
         try:
             _, mask = cv2.threshold(hsv_image[:, :, 2], 127, 255, cv2.THRESH_BINARY)
 

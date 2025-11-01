@@ -35,10 +35,10 @@ app = FastAPI(
 initialize_config()
 
 # 设置CORS中间件
-config = get_config()
+cors_origins = get_config("cors_origins", ["http://localhost:5173"])
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=config.cors_origins,
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

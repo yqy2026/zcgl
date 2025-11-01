@@ -2,7 +2,7 @@
 认证相关API路由
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
@@ -190,7 +190,7 @@ async def get_current_user_info(
 
     企业级实现，包含完整的用户信息、权限状态、会话信息和时间戳
     """
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     # 直接构建最简单的增强响应
     return {
@@ -201,7 +201,7 @@ async def get_current_user_info(
         "role": current_user.role,
         "is_active": current_user.is_active,
         "is_admin": current_user.role == "admin",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "session_status": "active"
     }
 
@@ -215,7 +215,7 @@ async def test_enhanced():
 @router.get("/test-me-debug", summary="调试ME端点")
 async def test_me_debug(current_user: UserResponse = Depends(get_current_active_user)):
     """调试ME端点，检查UserResponse内容"""
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     # 检查 UserResponse 的所有字段
     user_dict = current_user.dict()
@@ -231,7 +231,7 @@ async def test_me_debug(current_user: UserResponse = Depends(get_current_active_
         "role": current_user.role,
         "is_active": current_user.is_active,
         "is_admin": current_user.role == "admin",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "session_status": "active"
     }
 

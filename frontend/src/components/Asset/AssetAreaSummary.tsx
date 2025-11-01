@@ -8,15 +8,6 @@ interface AssetAreaSummaryProps {
   loading?: boolean
 }
 
-interface AreaSummary {
-  totalLandArea: number
-  totalActualArea: number
-  totalRentableArea: number
-  totalRentedArea: number
-  totalUnrentedArea: number
-  averageOccupancyRate: number
-}
-
 const AssetAreaSummary: React.FC<AssetAreaSummaryProps> = ({
   analyticsData,
   loading = false
@@ -26,8 +17,8 @@ const AssetAreaSummary: React.FC<AssetAreaSummaryProps> = ({
   const hasAnalyticsData = analyticsData?.area_summary && analyticsData.area_summary.total_assets >= 0
 
   const summary = hasAnalyticsData ? {
-    totalLandArea: analyticsData.area_summary.total_land_area,
-    totalActualArea: analyticsData.area_summary.total_actual_property_area,
+    totalLandArea: analyticsData.area_summary.total_area,
+    totalActualArea: analyticsData.area_summary.total_area,
     totalRentableArea: analyticsData.area_summary.total_rentable_area,
     totalRentedArea: analyticsData.area_summary.total_rented_area,
     totalUnrentedArea: analyticsData.area_summary.total_unrented_area,

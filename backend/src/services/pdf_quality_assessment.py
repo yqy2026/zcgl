@@ -574,7 +574,8 @@ class PDFProcessingQualityAssessment:
                     consistency_score += 1.0
                 else:
                     consistency_score += 0.5
-            except:
+            except (Exception, ValueError, TypeError):
+                # 计算异常时使用保守分数
                 consistency_score += 0.3
 
         # 检查地址信息完整性

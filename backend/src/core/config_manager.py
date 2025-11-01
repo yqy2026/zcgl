@@ -131,13 +131,13 @@ class ConfigManager:
 
     def _convert_type(self, value: str, target_type: type) -> Any:
         """类型转换"""
-        if target_type == bool:
+        if target_type is bool:
             return value.lower() in ("true", "1", "yes", "on")
-        elif target_type == int:
+        elif target_type is int:
             return int(value)
-        elif target_type == float:
+        elif target_type is float:
             return float(value)
-        elif target_type == list:
+        elif target_type is list:
             # 支持逗号分隔的列表
             return [item.strip() for item in value.split(",") if item.strip()]
         else:

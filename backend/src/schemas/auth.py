@@ -115,7 +115,7 @@ class TokenData(BaseModel):
     username: str
     role: UserRole | str  # 支持枚举或字符串
     exp: int | None = None
-    
+
     @field_validator("role", mode="before")
     @classmethod
     def validate_role(cls, v):

@@ -593,8 +593,8 @@ def get_optimization_suggestions(engine) -> dict[str, Any]:
     with engine.connect() as conn:
         from sqlalchemy.orm import sessionmaker
 
-        Session = sessionmaker(bind=conn)
-        db = Session()
+        session_class = sessionmaker(bind=conn)
+        db = session_class()
 
         try:
             # 生成索引推荐

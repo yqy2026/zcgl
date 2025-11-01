@@ -3,7 +3,8 @@
  * 提供完整的、符合业务逻辑的测试数据
  */
 
-import type { Asset, AssetCreateRequest, AssetUpdateRequest } from '@/types/asset'
+import type { Asset, AssetCreateRequest, AssetUpdateRequest } from '../types/asset'
+import { OwnershipStatus, PropertyNature, UsageStatus, TenantType, BusinessModel, OperationStatus, DataStatus } from '../types/asset'
 
 // 权属方名称库
 const OWNERSHIP_ENTITIES = [
@@ -105,7 +106,7 @@ export class AssetDataGenerator {
       .replace('{{city}}', city)
       .replace('{{district}}', district)
       .replace('{{street}}', street)
-      .replace('{{number}}', Math.floor(Math.random() * 999) + 1)
+      .replace('{{number}}', String(Math.floor(Math.random() * 999) + 1))
       .replace('{{area}}', street)
       .replace('{{road}}', street)
       .replace('{{zone}}', street)
@@ -133,9 +134,19 @@ export class AssetDataGenerator {
       project_name: PROPERTY_NAMES[Math.floor(Math.random() * PROPERTY_NAMES.length)] + '项目',
       property_name: PROPERTY_NAMES[Math.floor(Math.random() * PROPERTY_NAMES.length)],
       address,
-      ownership_status: '已确权',
-      property_nature: ['商业用途', '办公用途', '工业用途', '住宅用途'][Math.floor(Math.random() * 4)],
-      usage_status: ['使用中', '空置', '装修中', '待租'][Math.floor(Math.random() * 4)],
+      ownership_status: OwnershipStatus.CONFIRMED,
+      property_nature: [
+        PropertyNature.COMMERCIAL,
+        PropertyNature.NON_COMMERCIAL,
+        PropertyNature.COMMERCIAL_LEASE,
+        PropertyNature.NON_COMMERCIAL_PUBLIC
+      ][Math.floor(Math.random() * 4)],
+      usage_status: [
+        UsageStatus.RENTED,
+        UsageStatus.VACANT,
+        UsageStatus.SELF_USED,
+        UsageStatus.OTHER
+      ][Math.floor(Math.random() * 4)],
       business_category: BUSINESS_CATEGORIES[Math.floor(Math.random() * BUSINESS_CATEGORIES.length)],
       is_litigated: Math.random() > 0.9,
       notes: '这是一个测试资产，包含了完整的58个字段数据。',
@@ -156,7 +167,12 @@ export class AssetDataGenerator {
 
       // 租户相关字段 (2个)
       tenant_name: rentedArea > 0 ? TENANT_NAMES[Math.floor(Math.random() * TENANT_NAMES.length)] : '',
-      tenant_type: rentedArea > 0 ? ['企业', '个人', '事业单位', '社会组织'][Math.floor(Math.random() * 4)] : '',
+      tenant_type: rentedArea > 0 ? [
+        TenantType.ENTERPRISE,
+        TenantType.INDIVIDUAL,
+        TenantType.GOVERNMENT,
+        TenantType.OTHER
+      ][Math.floor(Math.random() * 4)] : undefined,
 
       // 合同相关字段 (10个)
       lease_contract_number: `LC${contractStart.getFullYear()}${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
@@ -171,8 +187,18 @@ export class AssetDataGenerator {
       special_terms: Math.random() > 0.7 ? '包含物业管理费' : '',
 
       // 管理相关字段 (3个)
-      business_model: ['自营', '委托经营', '租赁经营', '合作经营'][Math.floor(Math.random() * 4)],
-      operation_status: ['正常营业', '装修中', '暂停营业', '已关闭'][Math.floor(Math.random() * 4)],
+      business_model: [
+        BusinessModel.SELF_OPERATION,
+        BusinessModel.ENTRUSTED_OPERATION,
+        BusinessModel.LEASE_SUBLEASE,
+        BusinessModel.OTHER
+      ][Math.floor(Math.random() * 4)],
+      operation_status: [
+        OperationStatus.NORMAL,
+        OperationStatus.RENOVATING,
+        OperationStatus.SUSPENDED,
+        OperationStatus.SEEKING_TENANT
+      ][Math.floor(Math.random() * 4)],
       manager_name: ['张经理', '李经理', '王经理', '陈经理', '刘经理'][Math.floor(Math.random() * 5)],
 
       // 接收相关字段 (3个)
@@ -204,7 +230,7 @@ export class AssetDataGenerator {
       deposit: monthlyRent * 3,
 
       // 系统字段 (6个)
-      data_status: '正常',
+      data_status: DataStatus.NORMAL,
       version: 1,
       tags: ['优质资产', '商业地产', '稳定收益'][Math.floor(Math.random() * 3)],
       audit_notes: '数据录入完成，审核通过',
@@ -253,7 +279,7 @@ export class AssetDataGenerator {
 
     // 随机选择要更新的字段
     const numFields = Math.floor(Math.random() * 5) + 1
-    const selectedFields = []
+    const selectedFields: string[] = []
     for (let i = 0; i < numFields; i++) {
       const field = updateFields[Math.floor(Math.random() * updateFields.length)]
       if (!selectedFields.includes(field)) {
@@ -293,12 +319,12 @@ export class AssetDataGenerator {
       ...baseAsset,
       rented_area: rentedArea,
       unrented_area: rentableArea - rentedArea,
-      occupancy_rate: Number(((rentedArea / rentableArea) * 100).toFixed(2)),
-      usage_status: '使用中',
+      occupancy_rate: Number(((rentedArea / (rentableArea || 1)) * 100).toFixed(2)),
+      usage_status: UsageStatus.RENTED,
       tenant_name: TENANT_NAMES[Math.floor(Math.random() * TENANT_NAMES.length)],
-      tenant_type: '企业',
-      operation_status: '正常营业',
-      monthly_rent: Math.floor(rentableArea * (150 + Math.random() * 100)), // 高租金
+      tenant_type: TenantType.ENTERPRISE,
+      operation_status: OperationStatus.NORMAL,
+      monthly_rent: Math.floor((rentableArea || 0) * (150 + Math.random() * 100)), // 高租金
       ...overrides
     })
   }
@@ -315,12 +341,12 @@ export class AssetDataGenerator {
       ...baseAsset,
       rented_area: rentedArea,
       unrented_area: rentableArea - rentedArea,
-      occupancy_rate: Number(((rentedArea / rentableArea) * 100).toFixed(2)),
-      usage_status: '空置',
+      occupancy_rate: Number(((rentedArea / (rentableArea || 1)) * 100).toFixed(2)),
+      usage_status: UsageStatus.VACANT,
       tenant_name: '',
-      tenant_type: '',
-      operation_status: '空置',
-      monthly_rent: Math.floor(rentableArea * (30 + Math.random() * 50)), // 低租金
+      tenant_type: TenantType.INDIVIDUAL,
+      operation_status: OperationStatus.SUSPENDED,
+      monthly_rent: Math.floor((rentableArea || 0) * (30 + Math.random() * 50)), // 低租金
       ...overrides
     })
   }
@@ -348,15 +374,7 @@ export class AssetDataGenerator {
       annual_income: annualIncome,
       annual_expense: annualExpense,
       net_income: annualIncome - annualExpense,
-      rent_price_per_sqm: Number((monthlyRent / rentableArea).toFixed(2)),
-      management_fee_per_sqm: Number((monthlyRent * 0.05 / rentableArea).toFixed(2)),
-      property_tax: Math.floor(annualIncome * 0.012),
-      insurance_fee: Math.floor(actualPropertyArea * 3),
-      maintenance_fee: Math.floor(actualPropertyArea * 25),
-      other_fees: Math.floor(monthlyRent * 0.1),
-      rent_income_tax: Math.floor(annualIncome * 0.12),
-      net_rental_income: Math.floor(monthlyRent * 0.88),
-      total_cost: annualExpense + Math.floor(monthlyRent * 0.12),
+      // 移除Asset接口中不存在的字段
       ...overrides
     })
   }

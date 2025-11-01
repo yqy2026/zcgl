@@ -7,8 +7,6 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-logger = logging.getLogger(__name__)
-
 from ...crud.project import project
 from ...database import get_db
 from ...schemas.project import (
@@ -20,6 +18,7 @@ from ...schemas.project import (
     ProjectUpdate,
 )
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 

@@ -1,7 +1,6 @@
 """API v1版本路由"""
 
 from fastapi import APIRouter
-from sqlalchemy import or_
 
 # 导入各个模块的路由
 from .admin import router as admin_router

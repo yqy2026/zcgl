@@ -322,8 +322,8 @@ class MultiEngineFusion:
             quality_factor = result.quality_score
             time_factor = 1.0 / (1.0 + result.processing_time)  # 处理时间越短越好
 
-            综合得分 = result.confidence * weight * quality_factor * time_factor
-            engine_scores.append((result, 综合得分))
+            composite_score = result.confidence * weight * quality_factor * time_factor
+            engine_scores.append((result, composite_score))
 
         # 选择得分最高的结果
         best_result, best_score = max(engine_scores, key=lambda x: x[1])
@@ -924,7 +924,8 @@ class MultiEngineFusion:
                             engine_enum = EngineType.PDFPLUMBER
                         else:
                             engine_enum = EngineType.CUSTOM_NLP
-                    except:
+                    except (ValueError, AttributeError, KeyError):
+                        # 引擎类型解析失败时使用默认引擎
                         engine_enum = EngineType.CUSTOM_NLP
 
                     engine_result = EngineResult(

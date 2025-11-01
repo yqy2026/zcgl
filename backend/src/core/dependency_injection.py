@@ -27,7 +27,7 @@ class ServiceDescriptor:
         implementation: type | Callable,
         lifetime: str = ServiceLifetime.TRANSIENT,
         factory: Callable | None = None,
-        dependencies: List[type] | None = None
+        dependencies: list[type] | None = None
     ):
         self.service_type = service_type
         self.implementation = implementation

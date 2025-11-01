@@ -7,9 +7,10 @@ Version: 1.1 - 添加了get_stats方法
 import json
 import logging
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from hashlib import md5
-from typing import Any, Callable, Optional
+from typing import Any
 
 from .config import settings
 

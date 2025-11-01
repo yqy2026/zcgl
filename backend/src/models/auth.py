@@ -7,7 +7,7 @@ from datetime import datetime
 from enum import Enum
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text
-from sqlalchemy.dialects.sqlite import JSON as JSONType
+from sqlalchemy.dialects.sqlite import JSON
 from sqlalchemy.orm import relationship
 
 from ..database import Base
@@ -36,7 +36,7 @@ class User(Base):
 
     # 认证信息
     password_hash = Column(String(255), nullable=False, comment="密码哈希")
-    password_history = Column(JSONType, comment="密码历史记录")
+    password_history = Column(JSON, comment="密码历史记录")
 
     # 角色和状态
     role = Column(
@@ -115,14 +115,14 @@ class User(Base):
             is_locked = is_locked.lower() in ('true', '1', 'yes')
         elif not isinstance(is_locked, bool):
             is_locked = bool(is_locked) if is_locked is not None else False
-            
+
         if not is_locked:
             return False
-            
+
         # 检查锁定时间
         if self.locked_until and self.locked_until > datetime.now():
             return True
-            
+
         # 如果锁定时间已过，自动解锁（安全地设置字段）
         try:
             self.is_locked = False
@@ -131,7 +131,7 @@ class User(Base):
         except Exception:
             # 如果无法设置字段，忽略错误，只返回结果
             pass
-            
+
         return False
 
 

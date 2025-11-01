@@ -484,12 +484,12 @@ class MLEnhancedExtractor:
         extracted_fields = await self._extract_with_rules(text)
 
         # 应用一些启发式NLP分析
-        for field in extracted_fields:
-            if field.name.endswith("_name"):
+        for extracted_field in extracted_fields:
+            if extracted_field.name.endswith("_name"):
                 # 姓名长度合理性检查
-                if isinstance(field.value, str):
-                    if len(field.value) < 2 or len(field.value) > 10:
-                        field.confidence *= 0.7
+                if isinstance(extracted_field.value, str):
+                    if len(extracted_field.value) < 2 or len(extracted_field.value) > 10:
+                        extracted_field.confidence *= 0.7
                     # 检查是否包含常见姓氏
                     common_surnames = [
                         "王",
@@ -503,8 +503,8 @@ class MLEnhancedExtractor:
                         "周",
                         "吴",
                     ]
-                    if field.value[0] not in common_surnames:
-                        field.confidence *= 0.9
+                    if extracted_field.value[0] not in common_surnames:
+                        extracted_field.confidence *= 0.9
 
         return extracted_fields
 
@@ -518,8 +518,8 @@ class MLEnhancedExtractor:
 
         # 合并结果，选择置信度最高的
         field_map = defaultdict(list)
-        for field in rule_fields + nlp_fields:
-            field_map[field.name].append(field)
+        for rule_field in rule_fields + nlp_fields:
+            field_map[rule_field.name].append(rule_field)
 
         # 选择每个字段的最佳结果
         best_fields = []
@@ -585,19 +585,19 @@ class MLEnhancedExtractor:
         """后处理字段"""
         processed_fields = []
 
-        for field in fields:
+        for processed_field in fields:
             # 验证字段
-            validation_result = self._validate_field(field, text)
-            field.confidence *= validation_result["confidence_multiplier"]
-            field.metadata.update(validation_result.get("metadata", {}))
+            validation_result = self._validate_field(processed_field, text)
+            processed_field.confidence *= validation_result["confidence_multiplier"]
+            processed_field.metadata.update(validation_result.get("metadata", {}))
 
             # 应用业务逻辑验证
-            business_validation = self._validate_business_logic(field, fields, text)
-            field.confidence *= business_validation["confidence_multiplier"]
-            field.metadata.update(business_validation.get("metadata", {}))
+            business_validation = self._validate_business_logic(processed_field, fields, text)
+            processed_field.confidence *= business_validation["confidence_multiplier"]
+            processed_field.metadata.update(business_validation.get("metadata", {}))
 
-            if field.confidence > 0.3:  # 过滤低置信度字段
-                processed_fields.append(field)
+            if processed_field.confidence > 0.3:  # 过滤低置信度字段
+                processed_fields.append(processed_field)
 
         return processed_fields
 
@@ -669,7 +669,8 @@ class MLEnhancedExtractor:
                         result["metadata"]["validation_warning"] = (
                             "身份证校验码可能有误"
                         )
-                except:
+                except (ValueError, IndexError, AttributeError):
+                    # 身份证验证异常时降低置信度
                     result["confidence_multiplier"] = 0.7
                     result["metadata"]["validation_warning"] = "身份证校验失败"
 
@@ -766,7 +767,8 @@ class MLEnhancedExtractor:
                     if start_date >= end_date:
                         result["confidence_multiplier"] *= 0.7
                         result["metadata"]["business_warning"] = "开始日期晚于结束日期"
-                except:
+                except (ValueError, TypeError, AttributeError):
+                    # 数据提取异常时静默处理
                     pass
 
             if field.name == "sign_date" and "start_date" in other_dates:
@@ -778,7 +780,8 @@ class MLEnhancedExtractor:
                     if sign_date > start_date:
                         result["confidence_multiplier"] *= 0.8
                         result["metadata"]["business_warning"] = "签署日期晚于起租日期"
-                except:
+                except (ValueError, TypeError, AttributeError):
+                    # 数据提取异常时静默处理
                     pass
 
         # 金额逻辑验证
@@ -798,8 +801,9 @@ class MLEnhancedExtractor:
                 elif deposit_months < 0.5:
                     result["confidence_multiplier"] *= 0.9
                     result["metadata"]["business_warning"] = "押金金额异常低"
-            except:
-                pass
+            except (ValueError, TypeError, AttributeError):
+                    # 数据提取异常时静默处理
+                    pass
 
         return result
 
@@ -867,9 +871,9 @@ class MLEnhancedExtractor:
         weighted_confidence = 0.0
         total_weight = 0.0
 
-        for field in fields:
-            weight = field_weights.get(field.name, 0.05)
-            weighted_confidence += field.confidence * weight
+        for weighted_field in fields:
+            weight = field_weights.get(weighted_field.name, 0.05)
+            weighted_confidence += weighted_field.confidence * weight
             total_weight += weight
 
         return weighted_confidence / total_weight if total_weight > 0 else 0.0
@@ -907,8 +911,9 @@ class MLEnhancedExtractor:
                     suggestions.append("月租金金额较高，请确认是否正确")
                 elif rent < 100:  # 月租金100以下
                     suggestions.append("月租金金额较低，请确认是否正确")
-            except:
-                suggestions.append("租金金额格式异常，请检查")
+            except (ValueError, TypeError, AttributeError):
+                # 数据验证异常时添加建议
+                suggestions.append("数据格式异常，请检查")
 
         # 检查日期合理性
         date_fields = [f for f in fields if f.name in ["start_date", "end_date"]]
@@ -926,8 +931,9 @@ class MLEnhancedExtractor:
                     suggestions.append("租赁期限超过10年，请确认是否正确")
                 elif (end_date - start_date).days < 30:  # 少于1个月
                     suggestions.append("租赁期限过短，请确认是否正确")
-            except:
-                suggestions.append("日期格式异常，请检查")
+            except (ValueError, TypeError, AttributeError):
+                # 数据验证异常时添加建议
+                suggestions.append("数据格式异常，请检查")
 
         return suggestions
 

@@ -304,7 +304,7 @@ class PDFImportService {
           const result: CompleteResult = {
             session_id: sessionId,
             file_info: {
-              filename: session.file_name || 'unknown.pdf',
+              filename: session.filename || 'unknown.pdf',
               size: session.file_size || 0,
               content_type: 'application/pdf'
             },
@@ -330,7 +330,7 @@ class PDFImportService {
               matched_assets: session.matching_results?.matched_assets || [],
               matched_ownerships: session.matching_results?.matched_ownerships || [],
               duplicate_contracts: session.matching_results?.duplicate_contracts || [],
-              recommendations: session.matching_results?.recommendations || {},
+              recommendations: session.matching_results?.recommendations || [],
               match_confidence: session.matching_results?.overall_match_confidence || 0.7
             },
             summary: {
@@ -339,7 +339,7 @@ class PDFImportService {
               match_confidence: session.matching_results?.overall_match_confidence || 0.7,
               total_confidence: 0.75
             },
-            recommendations: session.matching_results?.recommendations || {},
+            recommendations: session.matching_results?.recommendations || [],
             ready_for_import: true
           };
 
@@ -512,8 +512,7 @@ class PDFImportService {
           estimated_processing_time: "未知"
         },
         extractor_summary: { method: "unavailable" },
-        validator_summary: { enabled: false },
-        error: error.response?.data?.detail || error.message
+        validator_summary: { enabled: false }
       };
     }
   }
@@ -521,7 +520,7 @@ class PDFImportService {
   // 获取系统能力信息
   static async getSystemCapabilities() {
     try {
-      const response = await api.get('/pdf-import/capabilities');
+      const response = await axios.get('/pdf-import/capabilities');
       return {
         spacy_available: true,
         ocr_available: true,
@@ -880,7 +879,7 @@ class PDFImportService {
           const result: EnhancedCompleteResult = {
             session_id: sessionId,
             file_info: {
-              filename: session.file_name || 'unknown.pdf',
+              filename: session.filename || 'unknown.pdf',
               size: session.file_size || 0,
               content_type: 'application/pdf'
             },

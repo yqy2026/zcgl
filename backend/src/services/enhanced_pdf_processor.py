@@ -274,8 +274,9 @@ class EnhancedPDFProcessor:
             blurred = cv2.GaussianBlur(img_array, (5, 5), 0)
             noise = np.abs(img_array.astype(float) - blurred.astype(float))
             return np.mean(noise)
-        except:
-            return 25.0  # 默认中等噪声水平
+        except (Exception, OSError, ValueError):
+                # 图像处理异常时返回默认值
+                return 25.0  # 默认中等噪声水平
 
     def _detect_scanned_page(self, image: Image.Image) -> bool:
         """检测是否为扫描页面"""
@@ -301,8 +302,9 @@ class EnhancedPDFProcessor:
             gray = image.convert("L")
             img_array = np.array(gray)
             return np.mean(img_array) / 255.0
-        except:
-            return 0.5
+        except (Exception, OSError, ValueError):
+                # 数据计算异常时返回默认值
+                return 0.5
 
     def _calculate_contrast(self, image: Image.Image) -> float:
         """计算图像对比度"""
@@ -310,8 +312,9 @@ class EnhancedPDFProcessor:
             gray = image.convert("L")
             img_array = np.array(gray)
             return np.std(img_array) / 128.0
-        except:
-            return 0.5
+        except (Exception, OSError, ValueError):
+                # 数据计算异常时返回默认值
+                return 0.5
 
     def _combine_analysis_results(
         self, quick_analysis: dict, page_analysis: dict, file_size_mb: float
@@ -460,10 +463,10 @@ class EnhancedPDFProcessor:
 
             # 对比度增强
             lab = cv2.cvtColor(img_array, cv2.COLOR_RGB2LAB)
-            l, a, b = cv2.split(lab)
+            l_channel, a_channel, b_channel = cv2.split(lab)
             clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-            l = clahe.apply(l)
-            img_array = cv2.merge([l, a, b])
+            l_channel = clahe.apply(l_channel)
+            img_array = cv2.merge([l_channel, a_channel, b_channel])
             img_array = cv2.cvtColor(img_array, cv2.COLOR_LAB2RGB)
 
             # 转换回PIL格式

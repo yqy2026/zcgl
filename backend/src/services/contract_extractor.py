@@ -424,7 +424,7 @@ class ContractExtractor:
                 day = int(re.search(r"(\d{1,2})日", value_str).group(1))
                 datetime.date(year, month, day)
                 return True
-            except:
+            except (ValueError, AttributeError, TypeError):
                 return False
 
         return len(value_str) > 0 and len(value_str) <= 500  # 基本长度检查
