@@ -54,7 +54,7 @@ const mockAsset: Asset = {
   wuyang_project_name: '五羊测试项目',
   agreement_start_date: '2024-01-01',
   contract_end_date: '2025-12-31',
-  description: '这是一个测试物业的描述信息',
+  // description: '这是一个测试物业的描述信息', // 移除不存在的字段
   notes: '备注信息',
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-01T12:00:00Z',

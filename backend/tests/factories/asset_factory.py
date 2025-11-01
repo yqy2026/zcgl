@@ -20,7 +20,7 @@ class AssetFactory(factory.Factory):
 
     class Meta:
         model = Asset
-        sqlalchemy_session_persistence = True
+        sqlalchemy_session = None  # 将在测试中设置
 
     # 基本信息 (8字段)
     ownership_entity = factory.Faker('company')
