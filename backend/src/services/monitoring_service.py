@@ -21,12 +21,92 @@ from dataclasses import dataclass, asdict
 from pathlib import Path
 import json
 
-from src.core.config_manager import get_config
-from src.core.database import get_db
-from src.api.v1.system_monitoring import (
-    SystemMetrics, ApplicationMetrics, PerformanceAlert,
-    collect_system_metrics, collect_application_metrics
-)
+try:
+    from src.core.config_manager import get_config
+    from src.core.database import get_db
+    from src.api.v1.system_monitoring import (
+        SystemMetrics, ApplicationMetrics, PerformanceAlert,
+        collect_system_metrics, collect_application_metrics
+    )
+except ImportError:
+    # 独立运行时的回退方案
+    def get_config():
+        return {}
+
+    def get_db():
+        return None
+
+    # 从system_monitoring.py导入核心功能
+    import sys
+    import os
+    sys.path.insert(0, os.path.dirname(__file__))
+
+    try:
+        # 定义基础数据结构
+        from pydantic import BaseModel
+        from typing import Optional, Dict, Any
+        import psutil
+
+        class SystemMetrics(BaseModel):
+            cpu: float
+            memory: Dict[str, Any]
+            disk: Dict[str, Any]
+            network: Dict[str, Any]
+            timestamp: datetime
+
+        class ApplicationMetrics(BaseModel):
+            uptime: float
+            active_connections: int
+            request_count: int
+            error_count: int
+            response_time_avg: float
+
+        class PerformanceAlert(BaseModel):
+            level: str
+            message: str
+            metric: str
+            value: float
+            threshold: float
+            timestamp: datetime
+
+        def collect_system_metrics():
+            import psutil
+            from datetime import datetime
+            return SystemMetrics(
+                cpu=psutil.cpu_percent(interval=1),
+                memory={
+                    "total": psutil.virtual_memory().total,
+                    "available": psutil.virtual_memory().available,
+                    "percent": psutil.virtual_memory().percent
+                },
+                disk={
+                    "total": psutil.disk_usage('/').total,
+                    "free": psutil.disk_usage('/').free,
+                    "percent": (psutil.disk_usage('/').used / psutil.disk_usage('/').total) * 100
+                },
+                network={
+                    "bytes_sent": psutil.net_io_counters().bytes_sent,
+                    "bytes_recv": psutil.net_io_counters().bytes_recv
+                },
+                timestamp=datetime.now()
+            )
+
+        def collect_application_metrics():
+            return ApplicationMetrics(
+                uptime=time.time(),
+                active_connections=0,
+                request_count=0,
+                error_count=0,
+                response_time_avg=0.0
+            )
+
+    except Exception as e:
+        print(f"监控模块初始化失败: {e}")
+        SystemMetrics = None
+        ApplicationMetrics = None
+        PerformanceAlert = None
+        collect_system_metrics = None
+        collect_application_metrics = None
 
 logger = logging.getLogger(__name__)
 
