@@ -178,8 +178,7 @@ export class AssetDataGenerator {
       lease_contract_number: `LC${contractStart.getFullYear()}${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
       contract_start_date: contractStart.toISOString().split('T')[0],
       contract_end_date: contractEnd.toISOString().split('T')[0],
-      contract_term: Math.floor((contractEnd.getTime() - contractStart.getTime()) / (1000 * 60 * 60 * 24 * 30)),
-      rent_payment_method: ['月付', '季付', '半年付', '年付'][Math.floor(Math.random() * 4)],
+            rent_payment_method: ['月付', '季付', '半年付', '年付'][Math.floor(Math.random() * 4)],
       deposit_amount: monthlyRent * (2 + Math.floor(Math.random() * 3)), // 2-4个月押金
       rent_increase_clause: Math.random() > 0.5 ? `每年递增${(Math.random() * 5 + 3).toFixed(1)}%` : '',
       termination_clause: '合同到期前30天书面通知',

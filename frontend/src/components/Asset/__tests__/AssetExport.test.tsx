@@ -1,8 +1,7 @@
-// React is implicitly used by JSX, no need for explicit import
+import React from 'react'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { render } from '../../../__tests__/utils/testUtils'
-import { createTestAsset } from '@/utils/testDataGenerator'
 import AssetExport from '../AssetExport'
 import { assetService } from '@/services/assetService'
 import { message } from 'antd'
