@@ -2,11 +2,15 @@
 高级搜索和筛选功能测试
 """
 
+import os
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime, timedelta
+
+# 设置开发模式
+os.environ["DEV_MODE"] = "true"
 
 from src.main import app
 from src.database import Base, get_db

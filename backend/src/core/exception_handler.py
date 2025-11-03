@@ -247,17 +247,41 @@ class ExceptionHandler:
         self, request: Request, exc: BaseBusinessException
     ) -> JSONResponse:
         """处理业务异常"""
+        # 清理异常详情中的不可序列化内容
+        safe_details = self._sanitize_exception_details(exc.details)
+
         self.logger.warning(
             f"Business exception: {exc.code} - {exc.message}",
             extra={
                 "exception_code": exc.code,
-                "exception_details": exc.details,
+                "exception_details": safe_details,
                 "request_path": str(request.url.path),
                 "request_method": request.method,
             },
         )
 
         return JSONResponse(status_code=exc.status_code, content=exc.to_dict())
+
+    def _sanitize_exception_details(self, details):
+        """清理异常详情中的不可序列化内容"""
+        if details is None:
+            return None
+
+        try:
+            import json
+            # 测试序列化
+            json.dumps(details)
+            return details
+        except (TypeError, ValueError):
+            # 如果无法序列化，转换为字符串
+            try:
+                details_str = str(details)
+                # 限制长度
+                if len(details_str) > 200:
+                    details_str = details_str[:200] + "...(截断)"
+                return details_str
+            except Exception:
+                return "<无法序列化的异常详情>"
 
     def handle_validation_exception(
         self, request: Request, exc: RequestValidationError

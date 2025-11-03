@@ -178,7 +178,7 @@ export class ApiErrorHandler {
     console.error('Server Error:', error)
     
     // 如果是开发环境，显示详细错误信息
-    if (import.meta.env.DEV && error.details) {
+    if (process.env.NODE_ENV === 'development' && error.details) {
       console.error('Error Details:', error.details)
     }
   }
@@ -197,7 +197,7 @@ export class ApiErrorHandler {
     console.error('API Error:', logData)
     
     // 在生产环境中，可以将错误发送到日志服务
-    if (import.meta.env.PROD) {
+    if (process.env.NODE_ENV === 'production') {
       this.sendErrorToLogService(logData)
     }
   }

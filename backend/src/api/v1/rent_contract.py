@@ -214,7 +214,12 @@ def generate_monthly_ledger(
     """
     try:
         ledgers = rent_ledger.generate_monthly_ledger(db=db, request=request)
-        return {"message": f"成功生成 {len(ledgers)} 条台账记录", "ledgers": ledgers}
+        # 转换为Pydantic响应模型
+        ledger_responses = []
+        for ledger in ledgers:
+            ledger_responses.append(RentLedgerResponse.model_validate(ledger))
+
+        return {"message": f"成功生成 {len(ledger_responses)} 条台账记录", "ledgers": ledger_responses}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

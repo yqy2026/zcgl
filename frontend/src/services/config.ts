@@ -1,9 +1,15 @@
 // API配置文件
 
+// 获取环境变量的辅助函数，兼容Jest测试环境
+const getEnvVar = (key: string, defaultValue: string) => {
+  // 统一使用process.env，在setup.ts中提供import.meta.env的映射
+  return process.env[key] || defaultValue;
+};
+
 export const API_CONFIG = {
   // 基础配置
-  BASE_URL: import.meta.env.VITE_API_BASE_URL || '/api/v1',
-  TIMEOUT: parseInt(import.meta.env.VITE_API_TIMEOUT || '30000'),
+  BASE_URL: getEnvVar('VITE_API_BASE_URL', '/api/v1'),
+  TIMEOUT: parseInt(getEnvVar('VITE_API_TIMEOUT', '30000')),
   
   // 重试配置
   RETRY: {

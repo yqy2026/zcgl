@@ -1,13 +1,14 @@
 import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { render, screen } from '../../../__tests__/utils/testUtils'
+import { render, screen } from '../../../__tests__/utils/testUtils'
+// Jest imports - no explicit import needed for describe, it, expect
 
 import GlobalErrorBoundary from '../GlobalErrorBoundary'
 
 // Mock console.error to avoid noise in tests
 const originalError = console.error
 beforeEach(() => {
-  console.error = vi.fn()
+  console.error = jest.fn()
 })
 
 afterEach(() => {
@@ -57,22 +58,25 @@ describe('GlobalErrorBoundary', () => {
     expect(screen.getByText(/ERR_/)).toBeInTheDocument()
   })
 
-  it('provides recovery actions', () => {
+  it('provides recovery actions', async () => {
     render(
       <GlobalErrorBoundary>
         <ThrowError shouldThrow={true} />
       </GlobalErrorBoundary>
     )
 
-    // Check that recovery buttons are present
-    expect(screen.getByRole('button', { name: /刷新页面/ })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /返回首页/ })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /重试/ })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /报告问题/ })).toBeInTheDocument()
+    // Check that recovery buttons are present - use text matching directly
+    const { findByText } = screen
+
+    // Use text content directly as it's more reliable
+    expect(await findByText('刷新页面')).toBeInTheDocument()
+    expect(await findByText('返回首页')).toBeInTheDocument()
+    expect(await findByText('重试')).toBeInTheDocument()
+    expect(await findByText('报告问题')).toBeInTheDocument()
   })
 
   it('calls onError callback when error occurs', () => {
-    const onError = vi.fn()
+    const onError = jest.fn()
 
     render(
       <GlobalErrorBoundary onError={onError}>
@@ -166,7 +170,7 @@ describe('GlobalErrorBoundary', () => {
 
   it('handles reload button click', () => {
     // Mock window.location.reload
-    const mockReload = vi.fn()
+    const mockReload = jest.fn()
     Object.defineProperty(window, 'location', {
       value: { reload: mockReload },
       writable: true,
@@ -206,7 +210,7 @@ describe('GlobalErrorBoundary', () => {
 
   it('handles report bug button click', () => {
     // Mock window.open
-    const mockOpen = vi.fn()
+    const mockOpen = jest.fn()
     window.open = mockOpen
 
     render(

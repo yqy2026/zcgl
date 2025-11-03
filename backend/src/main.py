@@ -48,7 +48,7 @@ app.add_middleware(
 setup_security_middleware(app)
 
 # 设置请求日志中间件
-app.middleware("http")(create_request_logging_middleware())
+app.add_middleware(create_request_logging_middleware())
 
 # 设置错误恢复中间件
 app.add_middleware(ErrorRecoveryMiddleware)

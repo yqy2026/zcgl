@@ -1,17 +1,17 @@
-import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+// Jest imports - no explicit import needed for describe, it, expect
 import { assetService } from '../assetService'
 import type { Asset, AssetCreateRequest, AssetUpdateRequest } from '@/types/asset'
 
 // Mock the API client
 const mockApiClient = {
-  get: vi.fn(),
-  post: vi.fn(),
-  put: vi.fn(),
-  delete: vi.fn(),
-  download: vi.fn(),
+  get: jest.fn(),
+  post: jest.fn(),
+  put: jest.fn(),
+  delete: jest.fn(),
+  download: jest.fn(),
 }
 
-vi.mock('../api', () => ({
+jest.mock('../api', () => ({
   apiClient: mockApiClient,
 }))
 
@@ -57,7 +57,7 @@ const mockAsset: Asset = {
 
 describe('AssetService', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    jest.clearAllMocks()
   })
 
   describe('getAssets', () => {
@@ -268,21 +268,21 @@ describe('AssetService', () => {
 
       // Mock URL.createObjectURL and related methods
       const mockUrl = 'blob:http://localhost/template'
-      global.URL.createObjectURL = vi.fn(() => mockUrl)
-      global.URL.revokeObjectURL = vi.fn()
+      global.URL.createObjectURL = jest.fn(() => mockUrl)
+      global.URL.revokeObjectURL = jest.fn()
 
       // Mock document.createElement and appendChild/removeChild
       const mockLink = {
         href: '',
         download: '',
-        click: vi.fn(),
+        click: jest.fn(),
       }
-      const mockAppendChild = vi.fn()
-      const mockRemoveChild = vi.fn()
+      const mockAppendChild = jest.fn()
+      const mockRemoveChild = jest.fn()
 
-      vi.spyOn(document, 'createElement').mockReturnValue(mockLink as any)
-      vi.spyOn(document.body, 'appendChild').mockImplementation(mockAppendChild)
-      vi.spyOn(document.body, 'removeChild').mockImplementation(mockRemoveChild)
+      jest.spyOn(document, 'createElement').mockReturnValue(mockLink as any)
+      jest.spyOn(document.body, 'appendChild').mockImplementation(mockAppendChild)
+      jest.spyOn(document.body, 'removeChild').mockImplementation(mockRemoveChild)
 
       await assetService.downloadImportTemplate()
 

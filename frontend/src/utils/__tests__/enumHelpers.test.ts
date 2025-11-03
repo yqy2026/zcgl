@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+// Jest imports - no explicit import needed for describe, it, expect
 import {
   PropertyNatureGroups,
   UsageStatusGroups,

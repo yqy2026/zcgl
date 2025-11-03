@@ -97,10 +97,48 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         except HTTPException:
             raise
         except Exception as e:
-            logger.error(f"Security middleware error: {str(e)}")
+            # 清理异常信息中的不可序列化对象
+            error_message = self._sanitize_exception_message(str(e))
+            # 确保异常对象可以被序列化
+            try:
+                import json
+                json.dumps({"error": str(e)})  # 测试序列化
+                logger.error(f"Security middleware error: {error_message}")
+            except (TypeError, ValueError):
+                # 如果异常信息不能序列化，使用通用消息
+                logger.error("Security middleware error: Unable to serialize exception object")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="请求处理失败"
             )
+
+    def _sanitize_exception_message(self, message: str) -> str:
+        """清理异常消息中的不可序列化内容"""
+        if not isinstance(message, str):
+            try:
+                message = str(message)
+            except Exception:
+                message = "<无法序列化的异常信息>"
+
+        # 限制消息长度
+        if len(message) > 500:
+            message = message[:500] + "...(截断)"
+
+        # 移除可能包含对象引用的模式
+        import re
+        # 移除类似 "<class 'src.models.rent_contract.RentLedger'>" 的内容
+        message = re.sub(r"<class '[^']*'>", "<模型对象>", message)
+        # 移除可能的对象ID引用
+        message = re.sub(r"object at 0x[0-9a-fA-F]+>", "<对象实例>", message)
+        # 移除更多的对象引用模式
+        message = re.sub(r"<[^>]*object[^>]*>", "<对象实例>", message)
+        # 移除可能的内存地址引用
+        message = re.sub(r"0x[0-9a-fA-F]{8,}", "<内存地址>", message)
+        # 移除可能的模块路径引用
+        message = re.sub(r"[a-zA-Z_][a-zA-Z0-9_.]*\.[a-zA-Z_][a-zA-Z0-9_.]*", "<模块引用>", message)
+        # 移除可能的尖括号包围的内容（除了我们替换的占位符）
+        message = re.sub(r"<(?!模型对象|对象实例|内存地址|模块引用|无法序列化的异常信息)[^>]*>", "<未知对象>", message)
+
+        return message
 
     def _get_client_ip(self, request: Request) -> str:
         """获取客户端真实IP"""

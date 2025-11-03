@@ -2,11 +2,15 @@
 FastAPI API端点测试
 """
 
+import os
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
+
+# 设置开发模式
+os.environ["DEV_MODE"] = "true"
 
 from src.main import app
 from src.database import Base, get_db
@@ -50,8 +54,10 @@ def test_root_endpoint():
     data = response.json()
     assert "message" in data
     assert "version" in data
-    assert "timestamp" in data
+    assert "docs_url" in data
+    assert "health_check" in data
     assert data["version"] == "2.0.0"
+    assert data["message"] == "土地物业资产管理系统 API"
 
 
 def test_health_check():
@@ -60,8 +66,9 @@ def test_health_check():
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "healthy"
-    assert data["status"] == "healthy"
+    assert "timestamp" in data
     assert data["version"] == "2.0.0"
+    assert "service" in data
 
 
 def test_app_info():
@@ -72,6 +79,8 @@ def test_app_info():
     assert data["name"] == "土地物业资产管理系统"
     assert data["version"] == "2.0.0"
     assert data["docs_url"] == "/docs"
+    assert "description" in data
+    assert "features" in data
 
 
 def test_get_assets_empty():
