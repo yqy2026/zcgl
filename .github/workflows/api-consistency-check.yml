@@ -42,7 +42,7 @@ jobs:
     - name: Run Backend API Consistency Check
       run: |
         cd backend
-        python scripts/api_consistency_check.py . ../frontend
+        python scripts/maintenance/api_consistency_check.py . ../frontend
 
     - name: Run Frontend API Consistency Check
       run: |
