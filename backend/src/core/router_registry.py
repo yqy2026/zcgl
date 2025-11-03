@@ -238,7 +238,7 @@ def setup_app_routing(app: FastAPI) -> None:
 
 
 # 路由信息工具函数
-def get_all_routes_info() -> dict[str, Any][str, list[dict[str, Any]]]:
+def get_all_routes_info() -> dict[str, list[dict[str, Any]]]:
     """获取所有版本的路由信息"""
     routes_info = {}
     for version in route_registry.versioned_routers.keys():

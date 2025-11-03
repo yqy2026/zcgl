@@ -309,7 +309,7 @@ class ContractTableAnalyzer:
 
     async def _ocr_table_content(
         self, table_image: np.ndarray
-    ) -> dict[str, Any][str, str]:
+    ) -> dict[str, str]:
         """OCR识别表格内容"""
         try:
             # 使用Tesseract进行表格识别

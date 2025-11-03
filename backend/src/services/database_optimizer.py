@@ -218,7 +218,7 @@ class DatabaseOptimizer:
 
         return optimized_query
 
-    def create_performance_indexes(self, db: Session) -> dict[str, Any][str, bool]:
+    def create_performance_indexes(self, db: Session) -> dict[str, bool]:
         """创建性能索引"""
         index_results = {}
 

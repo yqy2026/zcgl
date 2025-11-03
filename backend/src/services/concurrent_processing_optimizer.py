@@ -67,7 +67,7 @@ class ResourceMonitor:
             "active_processes": 10,  # 最大活跃进程数
         }
 
-    def get_system_metrics(self) -> dict[str, Any][str, float]:
+    def get_system_metrics(self) -> dict[str, float]:
         """获取系统指标"""
         if not PSUTIL_AVAILABLE:
             return {

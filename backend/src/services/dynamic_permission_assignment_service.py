@@ -431,7 +431,7 @@ class DynamicPermissionService:
         user_id: str,
         include_expired: bool = False,
         include_inactive: bool = False,
-    ) -> dict[str, Any][str, list[dict[str, Any]]]:
+    ) -> dict[str, list[dict[str, Any]]]:
         """获取用户的所有动态权限"""
 
         result = {
@@ -688,7 +688,7 @@ class DynamicPermissionService:
         except Exception:
             return False
 
-    def cleanup_expired_permissions(self) -> dict[str, Any][str, int]:
+    def cleanup_expired_permissions(self) -> dict[str, int]:
         """清理过期的权限"""
 
         now = datetime.now(UTC)

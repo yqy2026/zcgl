@@ -263,7 +263,7 @@ class MonitoringService:
 
     def get_metrics_history(
         self, hours: int = 24, metric_type: str = "all"
-    ) -> dict[str, Any][str, list[Any]]:
+    ) -> dict[str, list[Any]]:
         """获取历史指标数据"""
         cutoff_time = datetime.now() - timedelta(hours=hours)
 

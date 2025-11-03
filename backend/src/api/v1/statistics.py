@@ -54,7 +54,7 @@ def to_float(value: Any) -> float:
 
 def _calculate_occupancy_with_aggregation(
     db: Session, filters: dict[str, Any]
-) -> dict[str, Any][str, float]:
+) -> dict[str, float]:
     """
     使用数据库聚合查询计算出租率 - 推荐方法
 
@@ -124,7 +124,7 @@ def _calculate_occupancy_with_aggregation(
 
 def _calculate_occupancy_in_memory(
     db: Session, filters: dict[str, Any]
-) -> dict[str, Any][str, float]:
+) -> dict[str, float]:
     """
     在内存中计算出租率 - 兼容性方法
 
@@ -295,7 +295,7 @@ def _calculate_category_occupancy_in_memory(
 
 def _calculate_area_summary_with_aggregation(
     db: Session, filters: dict[str, Any]
-) -> dict[str, Any][str, float]:
+) -> dict[str, float]:
     """
     使用数据库聚合查询计算面积汇总
 
@@ -378,7 +378,7 @@ def _calculate_area_summary_with_aggregation(
 
 def _calculate_area_summary_in_memory(
     db: Session, filters: dict[str, Any]
-) -> dict[str, Any][str, float]:
+) -> dict[str, float]:
     """
     在内存中计算面积汇总
 

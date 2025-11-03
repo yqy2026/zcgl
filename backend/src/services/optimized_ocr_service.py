@@ -404,7 +404,7 @@ class OptimizedOCRService:
 
     def _get_method_distribution(
         self, results: list[OCRResult]
-    ) -> dict[str, Any][str, int]:
+    ) -> dict[str, int]:
         """获取方法使用分布"""
         distribution = {}
         for result in results:

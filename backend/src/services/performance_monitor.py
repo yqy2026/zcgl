@@ -61,7 +61,7 @@ class PerformanceMonitor:
         self.baseline_metrics = None
         self.anomaly_detector = AnomalyDetector()
 
-    def _load_alert_thresholds(self) -> dict[str, Any][str, float]:
+    def _load_alert_thresholds(self) -> dict[str, float]:
         """加载告警阈值"""
         return {
             "cpu_usage": 80.0,  # CPU使用率超过80%
@@ -72,7 +72,7 @@ class PerformanceMonitor:
             "concurrent_requests": 50,  # 并发请求超过50
         }
 
-    async def collect_system_metrics(self) -> dict[str, Any][str, float]:
+    async def collect_system_metrics(self) -> dict[str, float]:
         """收集系统性能指标"""
         try:
             # CPU使用率

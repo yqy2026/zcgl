@@ -247,7 +247,7 @@ class DIContainer:
         if scope_id in self._scoped:
             del self._scoped[scope_id]
 
-    def get_registered_services(self) -> dict[str, Any][type, ServiceDescriptor]:
+    def get_registered_services(self) -> dict[type, ServiceDescriptor]:
         """获取已注册的服务"""
         return self._services.copy()
 

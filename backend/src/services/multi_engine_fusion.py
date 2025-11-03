@@ -64,7 +64,7 @@ class MultiEngineFusion:
         self.quality_thresholds = self._initialize_quality_thresholds()
         self.performance_history = defaultdict(list)
 
-    def _initialize_engine_weights(self) -> dict[str, Any][EngineType, float]:
+    def _initialize_engine_weights(self) -> dict[EngineType, float]:
         """初始化引擎权重"""
         return {
             EngineType.PADDLE_OCR: 0.35,  # 中文识别效果较好
@@ -76,7 +76,7 @@ class MultiEngineFusion:
             EngineType.VISION_AI: 0.40,  # AI视觉
         }
 
-    def _initialize_fusion_methods(self) -> dict[str, Any][str, callable]:
+    def _initialize_fusion_methods(self) -> dict[str, callable]:
         """初始化融合方法"""
         return {
             "weighted_average": self._weighted_average_fusion,
@@ -87,7 +87,7 @@ class MultiEngineFusion:
             "quality_weighted": self._quality_weighted_fusion,
         }
 
-    def _initialize_quality_thresholds(self) -> dict[str, Any][str, float]:
+    def _initialize_quality_thresholds(self) -> dict[str, float]:
         """初始化质量阈值"""
         return {
             "min_confidence": 0.3,
@@ -173,7 +173,7 @@ class MultiEngineFusion:
 
     def _adjust_weights_for_context(
         self, base_weights: dict[EngineType, float], context_type: str
-    ) -> dict[str, Any][EngineType, float]:
+    ) -> dict[EngineType, float]:
         """根据上下文调整引擎权重"""
         adjusted_weights = base_weights.copy()
 
@@ -482,7 +482,7 @@ class MultiEngineFusion:
 
     def _calculate_quality_indicators(
         self, results: list[EngineResult]
-    ) -> dict[str, Any][str, float]:
+    ) -> dict[str, float]:
         """计算质量指标"""
         if not results:
             return {}

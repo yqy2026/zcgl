@@ -258,7 +258,7 @@ class ContractSemanticValidator:
             },
         }
 
-    def _load_validation_rules(self) -> dict[str, Any][str, callable]:
+    def _load_validation_rules(self) -> dict[str, callable]:
         """加载验证规则"""
         return {
             FieldType.TEXT: self._validate_text,
@@ -276,7 +276,7 @@ class ContractSemanticValidator:
             FieldType.ENUM: self._validate_enum,
         }
 
-    def _load_semantic_patterns(self) -> dict[str, Any][str, list[dict[str, Any]]]:
+    def _load_semantic_patterns(self) -> dict[str, list[dict[str, Any]]]:
         """加载语义模式"""
         return {
             "contract_patterns": [
@@ -339,7 +339,7 @@ class ContractSemanticValidator:
             ],
         }
 
-    def _load_business_rules(self) -> dict[str, Any][str, callable]:
+    def _load_business_rules(self) -> dict[str, callable]:
         """加载业务规则"""
         return {
             "date_consistency": self._check_date_consistency,
@@ -1267,7 +1267,7 @@ class ContractSemanticValidator:
 
     def _analyze_field_relationships(
         self, field_name: str, field_value: Any, contract_text: str | None
-    ) -> dict[str, Any][str, str]:
+    ) -> dict[str, str]:
         """分析字段关系"""
         relationships = {}
 

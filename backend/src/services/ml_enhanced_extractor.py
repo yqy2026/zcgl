@@ -69,7 +69,7 @@ class MLEnhancedExtractor:
         self.validation_rules = self._load_validation_rules()
         self.context_analyzers = self._load_context_analyzers()
 
-    def _load_enhanced_rules(self) -> dict[str, Any][str, list[dict[str, Any]]]:
+    def _load_enhanced_rules(self) -> dict[str, list[dict[str, Any]]]:
         """加载增强的提取规则"""
         return {
             # 合同基本信息
@@ -334,7 +334,7 @@ class MLEnhancedExtractor:
             },
         }
 
-    def _load_validation_rules(self) -> dict[str, Any][str, callable]:
+    def _load_validation_rules(self) -> dict[str, callable]:
         """加载验证规则"""
         return {
             "person_name": self._validate_person_name,
@@ -346,7 +346,7 @@ class MLEnhancedExtractor:
             "area": self._validate_area,
         }
 
-    def _load_context_analyzers(self) -> dict[str, Any][str, callable]:
+    def _load_context_analyzers(self) -> dict[str, callable]:
         """加载上下文分析器"""
         return {
             "contract_context": self._analyze_contract_context,
