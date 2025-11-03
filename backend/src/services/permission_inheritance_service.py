@@ -1,3 +1,22 @@
+from typing import Any
+class BusinessLogicError(Exception):
+    """Business logic error"""
+
+    pass
+
+
+class AssetNotFoundError(Exception):
+    """Asset not found error"""
+
+    pass
+
+
+class DuplicateAssetError(Exception):
+    """Duplicate asset error"""
+
+    pass
+
+
 """
 权限继承和委托服务
 支持权限的自动继承、委托和临时授权
@@ -6,7 +25,7 @@
 import uuid
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
+
 
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
@@ -44,7 +63,7 @@ class PermissionInheritanceService:
 
     def get_inherited_permissions(
         self, user_id: str, inheritance_types: list[InheritanceType] | None = None
-    ) -> List[dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         获取用户继承的权限
 
@@ -96,7 +115,7 @@ class PermissionInheritanceService:
         expires_at: datetime | None = None,
         conditions: dict[str, Any] | None = None,
         reason: str | None = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         委托权限给其他用户
 
@@ -248,7 +267,7 @@ class PermissionInheritanceService:
 
     def get_delegation_chain(
         self, user_id: str, max_depth: int = 5
-    ) -> List[dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         获取权限委托链
 
@@ -310,7 +329,7 @@ class PermissionInheritanceService:
 
     def get_permission_inheritance_tree(
         self, user_id: str, permission_code: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         获取特定权限的继承树
 
@@ -346,7 +365,7 @@ class PermissionInheritanceService:
         user_id: str,
         include_inherited: bool = True,
         include_delegated: bool = True,
-    ) -> List[dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         计算用户的有效权限
 
@@ -379,7 +398,7 @@ class PermissionInheritanceService:
 
         return unique_permissions
 
-    def _get_role_inherited_permissions(self, user_id: str) -> List[dict[str, Any]]:
+    def _get_role_inherited_permissions(self, user_id: str) -> list[dict[str, Any]]:
         """获取角色继承权限"""
         user_roles = (
             self.db.query(UserRoleAssignment)
@@ -430,7 +449,7 @@ class PermissionInheritanceService:
 
     def _get_organization_inherited_permissions(
         self, user_id: str
-    ) -> List[dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """获取组织继承权限"""
         # 获取用户所属组织
         user_orgs = (
@@ -466,14 +485,14 @@ class PermissionInheritanceService:
 
         return inherited_permissions
 
-    def _get_position_inherited_permissions(self, user_id: str) -> List[dict[str, Any]]:
+    def _get_position_inherited_permissions(self, user_id: str) -> list[dict[str, Any]]:
         """获取职位继承权限"""
         # 获取用户职位信息
         # 这里需要关联员工表和职位表
         # 暂时返回空列表
         return []
 
-    def _get_delegated_permissions(self, user_id: str) -> List[dict[str, Any]]:
+    def _get_delegated_permissions(self, user_id: str) -> list[dict[str, Any]]:
         """获取委托权限"""
         from ..services.dynamic_permission_service import DynamicPermissionService
 
@@ -503,7 +522,7 @@ class PermissionInheritanceService:
 
         return delegated
 
-    def _get_user_direct_permissions(self, user_id: str) -> List[dict[str, Any]]:
+    def _get_user_direct_permissions(self, user_id: str) -> list[dict[str, Any]]:
         """获取用户直接权限"""
         # 获取用户的直接角色权限
         user_roles = (
@@ -529,13 +548,13 @@ class PermissionInheritanceService:
 
         return direct_permissions
 
-    def _get_user_effective_permissions(self, user_id: str) -> List[dict[str, Any]]:
+    def _get_user_effective_permissions(self, user_id: str) -> list[dict[str, Any]]:
         """获取用户有效权限（用于委托验证）"""
         return self.calculate_effective_permissions(user_id)
 
     def _get_organization_permissions(
         self, organization_id: str
-    ) -> List[dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """获取组织权限"""
         # 这里需要实现组织权限查询
         # 暂时返回空列表
@@ -543,7 +562,7 @@ class PermissionInheritanceService:
 
     def _merge_duplicate_permissions(
         self, permissions: list[dict[str, Any]]
-    ) -> List[dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """合并重复权限"""
         unique_permissions = {}
 

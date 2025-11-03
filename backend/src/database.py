@@ -24,9 +24,12 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./data/land_property.db")
 # 尝试导入增强数据库管理器
 try:
     from .enhanced_database import get_database_manager, initialize_enhanced_database
+
     ENHANCED_DB_AVAILABLE = True
 except ImportError:
-    logger.warning("Enhanced database manager not available, falling back to basic configuration")
+    logger.warning(
+        "Enhanced database manager not available, falling back to basic configuration"
+    )
     ENHANCED_DB_AVAILABLE = False
 
 # 创建基础数据库引擎（作为回退）
@@ -77,6 +80,7 @@ def get_db():
     if ENHANCED_DB_AVAILABLE and _database_manager_initialized:
         try:
             from .enhanced_database import get_enhanced_db_session
+
             yield from get_enhanced_db_session()
             return
         except Exception as e:
@@ -127,7 +131,7 @@ def get_database_status():
         "enhanced_available": ENHANCED_DB_AVAILABLE,
         "enhanced_active": _database_manager_initialized,
         "database_url": DATABASE_URL,
-        "engine_type": type(engine).__name__
+        "engine_type": type(engine).__name__,
     }
 
     if ENHANCED_DB_AVAILABLE and _database_manager_initialized:
@@ -136,11 +140,13 @@ def get_database_status():
             metrics = db_manager.get_metrics()
             pool_status = db_manager.get_connection_pool_status()
 
-            status.update({
-                "enhanced_metrics": metrics.__dict__,
-                "pool_status": pool_status,
-                "health_check": db_manager.run_health_check()
-            })
+            status.update(
+                {
+                    "enhanced_metrics": metrics.__dict__,
+                    "pool_status": pool_status,
+                    "health_check": db_manager.run_health_check(),
+                }
+            )
         except Exception as e:
             status["enhanced_error"] = str(e)
 

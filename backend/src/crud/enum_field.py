@@ -1,8 +1,7 @@
+from typing import Any
 """
 枚举字段管理CRUD操作
 """
-
-from typing import Any
 
 from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
@@ -73,7 +72,7 @@ class EnumFieldTypeCRUD:
         status: str | None = None,
         is_system: bool | None = None,
         keyword: str | None = None,
-    ) -> List[EnumFieldType]:
+    ) -> list[EnumFieldType]:
         """获取枚举类型列表"""
         query = self.db.query(EnumFieldType).filter(not EnumFieldType.is_deleted)
 
@@ -218,7 +217,7 @@ class EnumFieldTypeCRUD:
         self.db.commit()
         return True
 
-    def get_categories(self) -> List[str]:
+    def get_categories(self) -> list[str]:
         """获取所有枚举类别"""
         result = (
             self.db.query(EnumFieldType.category)
@@ -233,7 +232,7 @@ class EnumFieldTypeCRUD:
         )
         return [r[0] for r in result if r[0]]
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """获取枚举类型统计信息"""
         total_types = (
             self.db.query(EnumFieldType).filter(not EnumFieldType.is_deleted).count()
@@ -327,7 +326,7 @@ class EnumFieldValueCRUD:
         enum_type_id: str,
         parent_id: str | None = None,
         is_active: bool | None = None,
-    ) -> List[EnumFieldValue]:
+    ) -> list[EnumFieldValue]:
         """根据类型ID获取枚举值列表"""
         query = self.db.query(EnumFieldValue).filter(
             and_(
@@ -346,10 +345,10 @@ class EnumFieldValueCRUD:
             EnumFieldValue.sort_order, EnumFieldValue.created_at
         ).all()
 
-    def get_tree(self, enum_type_id: str) -> List[EnumFieldValue]:
+    def get_tree(self, enum_type_id: str) -> list[EnumFieldValue]:
         """获取枚举值树形结构"""
 
-        def build_tree(parent_id: str | None = None) -> List[EnumFieldValue]:
+        def build_tree(parent_id: str | None = None) -> list[EnumFieldValue]:
             values = self.get_by_type(enum_type_id, parent_id=parent_id, is_active=True)
             for value in values:
                 value.children = build_tree(value.id)
@@ -475,7 +474,7 @@ class EnumFieldValueCRUD:
         enum_type_id: str,
         values_data: list[dict[str, Any]],
         created_by: str | None = None,
-    ) -> List[EnumFieldValue]:
+    ) -> list[EnumFieldValue]:
         """批量创建枚举值"""
         created_values = []
 
@@ -538,7 +537,7 @@ class EnumFieldUsageCRUD:
             .first()
         )
 
-    def get_by_enum_type(self, enum_type_id: str) -> List[EnumFieldUsage]:
+    def get_by_enum_type(self, enum_type_id: str) -> list[EnumFieldUsage]:
         """根据枚举类型ID获取使用记录"""
         return (
             self.db.query(EnumFieldUsage)

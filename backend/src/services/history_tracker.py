@@ -1,10 +1,11 @@
+from typing import Any
 """
 资产变更历史跟踪服务
 """
 
 import logging
 from datetime import UTC, datetime
-from typing import Any
+
 
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
@@ -26,7 +27,7 @@ class HistoryTracker:
     @staticmethod
     def get_field_changes(
         old_data: dict[str, Any], new_data: dict[str, Any]
-    ) -> Dict[str, Dict[str, Any]]:
+    ) -> dict[str, dict[str, Any]]:
         """
         比较两个数据字典，返回变更的字段
 
@@ -67,7 +68,7 @@ class HistoryTracker:
         return changes
 
     @staticmethod
-    def model_to_dict(model: Asset) -> Dict[str, Any]:
+    def model_to_dict(model: Asset) -> dict[str, Any]:
         """
         将SQLAlchemy模型转换为字典
 
@@ -268,7 +269,7 @@ class HistoryService:
         skip: int = 0,
         limit: int = 20,
         change_type: str | None = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         获取资产变更历史
 
@@ -326,7 +327,7 @@ class HistoryService:
 
     def compare_history_records(
         self, db: Session, history_id1: str, history_id2: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         比较两个历史记录
 
@@ -380,7 +381,7 @@ class HistoryService:
 
     def get_field_history(
         self, db: Session, asset_id: str, field_name: str, limit: int = 10
-    ) -> List[dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         获取特定字段的变更历史
 
@@ -435,7 +436,7 @@ class HistoryService:
 
     def get_recent_changes(
         self, db: Session, limit: int = 50, change_type: str | None = None
-    ) -> List[AssetHistory]:
+    ) -> list[AssetHistory]:
         """
         获取最近的变更记录
 
@@ -461,7 +462,7 @@ class HistoryService:
 
     def get_change_statistics(
         self, db: Session, asset_id: str | None = None, days: int = 30
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         获取变更统计信息
 

@@ -1,3 +1,4 @@
+from typing import Any
 """
 PDF智能导入API (统一版本)
 整合了完整的PDF处理流程和V1兼容功能的统一API
@@ -7,7 +8,7 @@ import logging
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+
 
 from fastapi import (
     APIRouter,
@@ -967,7 +968,7 @@ async def upload_and_extract_pdf_v1_compatible(
         )
 
 
-def _validate_extracted_fields_v1(extracted_fields: dict[str, Any]) -> Dict[str, Any]:
+def _validate_extracted_fields_v1(extracted_fields: dict[str, Any]) -> dict[str, Any]:
     """V1兼容的字段验证函数"""
     validation_results = {}
 

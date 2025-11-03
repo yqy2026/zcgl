@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from typing import Any
 """
 优化的OCR服务
 解决PaddleOCR数据类型和API兼容性问题，提供高性能扫描件处理
@@ -9,7 +10,7 @@ import logging
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+
 
 import numpy as np
 
@@ -309,7 +310,7 @@ class OptimizedOCRService:
 
     async def process_pdf_document(
         self, pdf_path: str, max_pages: int = 10
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """处理整个PDF文档"""
         logger.info(f"开始处理PDF文档: {Path(pdf_path).name}")
 
@@ -401,7 +402,9 @@ class OptimizedOCRService:
             logger.error(f"PDF文档处理失败: {e}")
             return {"success": False, "error": str(e), "pdf_path": pdf_path}
 
-    def _get_method_distribution(self, results: list[OCRResult]) -> Dict[str, Any][str, int]:
+    def _get_method_distribution(
+        self, results: list[OCRResult]
+    ) -> dict[str, Any][str, int]:
         """获取方法使用分布"""
         distribution = {}
         for result in results:
@@ -409,7 +412,7 @@ class OptimizedOCRService:
             distribution[method] = distribution.get(method, 0) + 1
         return distribution
 
-    def _assess_quality(self, results: list[OCRResult]) -> Dict[str, Any]:
+    def _assess_quality(self, results: list[OCRResult]) -> dict[str, Any]:
         """评估处理质量"""
         successful_results = [r for r in results if r.confidence > 0]
 
@@ -451,7 +454,7 @@ class OptimizedOCRService:
 
     async def extract_structured_data(
         self, ocr_result: dict[str, Any]
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """提取结构化数据"""
         try:
             from .chinese_nlp_processor import get_chinese_nlp_processor
@@ -493,7 +496,7 @@ class OptimizedOCRService:
             logger.error(f"结构化数据提取失败: {e}")
             return {"success": False, "error": str(e), "entities_found": 0}
 
-    def get_performance_report(self) -> Dict[str, Any]:
+    def get_performance_report(self) -> dict[str, Any]:
         """获取性能报告"""
         return {
             "service_status": "ready",
@@ -521,7 +524,7 @@ class OptimizedOCRService:
         except ImportError:
             return False
 
-    def _get_optimization_recommendations(self) -> List[str]:
+    def _get_optimization_recommendations(self) -> list[str]:
         """获取优化建议"""
         recommendations = []
 

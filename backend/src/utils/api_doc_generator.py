@@ -1,3 +1,4 @@
+from typing import Any
 """
 API文档生成工具
 自动扫描FastAPI应用并生成标准化的API文档
@@ -7,7 +8,7 @@ import inspect
 import json
 import os
 from datetime import datetime
-from typing import Any
+
 
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
@@ -35,7 +36,7 @@ class APIDocGenerator:
             "examples": {},
         }
 
-    def generate_docs(self) -> Dict[str, Any]:
+    def generate_docs(self) -> dict[str, Any]:
         """生成完整的API文档"""
         print("🔍 扫描API路由...")
 

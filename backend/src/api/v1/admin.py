@@ -1,8 +1,7 @@
+from typing import Any
 """
 管理员API路由
 """
-
-from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 

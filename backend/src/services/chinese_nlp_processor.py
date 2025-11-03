@@ -1,3 +1,4 @@
+from typing import Any
 """
 中文自然语言处理服务
 专门处理中文合同中的姓名、地址、电话等信息的提取和标准化
@@ -6,7 +7,7 @@
 import logging
 import re
 from dataclasses import dataclass
-from typing import Any
+
 
 import jieba
 
@@ -238,7 +239,7 @@ class ChineseNLPProcessor:
             "婷",
         ]
 
-    def extract_chinese_names(self, text: str) -> List[StructuredName]:
+    def extract_chinese_names(self, text: str) -> list[StructuredName]:
         """提取中文姓名"""
         names = []
 
@@ -293,7 +294,7 @@ class ChineseNLPProcessor:
 
         return names
 
-    def extract_chinese_addresses(self, text: str) -> List[StructuredAddress]:
+    def extract_chinese_addresses(self, text: str) -> list[StructuredAddress]:
         """提取中文地址"""
         addresses = []
 
@@ -344,7 +345,7 @@ class ChineseNLPProcessor:
 
         return addresses
 
-    def extract_chinese_phones(self, text: str) -> List[StructuredPhone]:
+    def extract_chinese_phones(self, text: str) -> list[StructuredPhone]:
         """提取中文电话号码"""
         phones = []
 
@@ -387,7 +388,7 @@ class ChineseNLPProcessor:
 
         return phones
 
-    def extract_chinese_id_cards(self, text: str) -> List[StructuredIDCard]:
+    def extract_chinese_id_cards(self, text: str) -> list[StructuredIDCard]:
         """提取中国身份证号码"""
         id_cards = []
 
@@ -435,7 +436,7 @@ class ChineseNLPProcessor:
 
         return id_cards
 
-    def extract_chinese_amounts(self, text: str) -> List[ExtractionEntity]:
+    def extract_chinese_amounts(self, text: str) -> list[ExtractionEntity]:
         """提取金额信息"""
         amounts = []
 
@@ -471,7 +472,7 @@ class ChineseNLPProcessor:
 
         return amounts
 
-    def extract_chinese_dates(self, text: str) -> List[ExtractionEntity]:
+    def extract_chinese_dates(self, text: str) -> list[ExtractionEntity]:
         """提取日期信息"""
         dates = []
 
@@ -551,7 +552,7 @@ class ChineseNLPProcessor:
 
         return normalized
 
-    def process_chinese_text(self, text: str) -> Dict[str, Any]:
+    def process_chinese_text(self, text: str) -> dict[str, Any]:
         """处理中文文本，提取各种实体"""
         if not text or not text.strip():
             return {

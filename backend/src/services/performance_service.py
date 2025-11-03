@@ -1,3 +1,4 @@
+from typing import Any
 """
 性能优化服务
 """
@@ -5,7 +6,7 @@
 import logging
 import time
 from functools import wraps
-from typing import Any
+
 
 from sqlalchemy import and_, asc, desc, func, or_, text
 from sqlalchemy.orm import Session, selectinload
@@ -178,7 +179,7 @@ class PerformanceService:
         return query
 
     @performance_monitor
-    def get_asset_statistics_optimized(self) -> Dict[str, Any]:
+    def get_asset_statistics_optimized(self) -> dict[str, Any]:
         """优化的统计查询"""
         # 使用聚合查询一次性获取所有统计数据
         stats = self.db.query(
@@ -265,7 +266,7 @@ class PerformanceService:
         return history, total
 
     @performance_monitor
-    def search_assets_fulltext(self, search_term: str, limit: int = 10) -> List[Asset]:
+    def search_assets_fulltext(self, search_term: str, limit: int = 10) -> list[Asset]:
         """全文搜索资产(SQLite版本)"""
         search_pattern = f"%{search_term}%"
 
@@ -294,7 +295,7 @@ class PerformanceService:
 
         return query.all()
 
-    def analyze_query_performance(self, query_sql: str) -> Dict[str, Any]:
+    def analyze_query_performance(self, query_sql: str) -> dict[str, Any]:
         """分析查询性能"""
         try:
             # SQLite使用EXPLAIN QUERY PLAN
@@ -318,7 +319,7 @@ class PerformanceService:
             logger.error(f"Query analysis failed: {str(e)}")
             return {"error": str(e)}
 
-    def get_slow_queries(self, limit: int = 10) -> List[dict[str, Any]]:
+    def get_slow_queries(self, limit: int = 10) -> list[dict[str, Any]]:
         """获取慢查询日志(需要配置PostgreSQL日志)"""
         # 这需要在PostgreSQL中启用慢查询日志
         # 这里返回模拟数据，实际实现需要读取PostgreSQL日志
@@ -331,7 +332,7 @@ class PerformanceService:
             }
         ]
 
-    def optimize_database(self) -> Dict[str, Any]:
+    def optimize_database(self) -> dict[str, Any]:
         """数据库优化建议"""
         results = {}
 
@@ -389,7 +390,7 @@ class PerformanceService:
 
         return results
 
-    def create_performance_indexes(self) -> Dict[str, Any]:
+    def create_performance_indexes(self) -> dict[str, Any]:
         """创建性能优化索引"""
         results = []
 

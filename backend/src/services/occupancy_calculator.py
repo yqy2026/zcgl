@@ -1,10 +1,11 @@
+from typing import Any
 """
 出租率自动计算服务
 提供实时出租率计算、趋势分析和预测功能
 """
 
 import logging
-from typing import Any
+
 
 from src.models.asset import Asset
 
@@ -47,7 +48,7 @@ class OccupancyRateCalculator:
         return round(occupancy_rate, 2)
 
     @staticmethod
-    def calculate_overall_occupancy_rate(assets: list[Asset]) -> Dict[str, Any]:
+    def calculate_overall_occupancy_rate(assets: list[Asset]) -> dict[str, Any]:
         """
         计算整体出租率
 
@@ -145,7 +146,7 @@ class OccupancyRateCalculator:
     @staticmethod
     def calculate_occupancy_by_category(
         assets: list[Asset], category_field: str
-    ) -> Dict[str, Dict[str, Any]]:
+    ) -> dict[str, dict[str, Any]]:
         """
         按分类计算出租率
 

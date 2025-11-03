@@ -1,3 +1,4 @@
+from typing import Any
 """
 PDF处理性能监控和错误处理系统
 提供全面的性能指标收集、错误分析和系统健康监控
@@ -14,7 +15,7 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any
+
 
 import psutil
 
@@ -103,7 +104,7 @@ class PDFProcessingMonitor:
         self._monitoring_active = False
         self._monitoring_thread: threading.Thread | None = None
 
-    def _load_performance_thresholds(self) -> Dict[str, Any][str, dict[str, float]]:
+    def _load_performance_thresholds(self) -> dict[str, Any][str, dict[str, float]]:
         """加载性能阈值"""
         return {
             "pdf_processing": {
@@ -132,7 +133,7 @@ class PDFProcessingMonitor:
             },
         }
 
-    def _load_alert_thresholds(self) -> Dict[str, Any][str, float]:
+    def _load_alert_thresholds(self) -> dict[str, Any][str, float]:
         """加载告警阈值"""
         return {
             "error_rate": 0.1,  # 10%错误率
@@ -493,7 +494,7 @@ class PDFProcessingMonitor:
         # 默认为中等错误
         return ErrorSeverity.MEDIUM
 
-    def get_performance_stats(self, hours: int = 24) -> Dict[str, Any]:
+    def get_performance_stats(self, hours: int = 24) -> dict[str, Any]:
         """获取性能统计"""
         cutoff_time = datetime.now() - timedelta(hours=hours)
         recent_metrics = [
@@ -570,7 +571,7 @@ class PDFProcessingMonitor:
         else:
             return PerformanceLevel.VERY_POOR
 
-    def get_error_stats(self, hours: int = 24) -> Dict[str, Any]:
+    def get_error_stats(self, hours: int = 24) -> dict[str, Any]:
         """获取错误统计"""
         cutoff_time = datetime.now() - timedelta(hours=hours)
         recent_errors = [e for e in self.error_records if e.timestamp > cutoff_time]
@@ -636,7 +637,7 @@ class PDFProcessingMonitor:
         successful_operations = sum(1 for m in metrics if m.success)
         return successful_operations / len(metrics)
 
-    def get_recommendations(self) -> List[str]:
+    def get_recommendations(self) -> list[str]:
         """获取优化建议"""
         recommendations = []
 

@@ -1,10 +1,11 @@
+from typing import Any
 """
 统计分析API路由
 """
 
 import logging
 from datetime import datetime
-from typing import Any
+
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy import case, func
@@ -53,7 +54,7 @@ def to_float(value: Any) -> float:
 
 def _calculate_occupancy_with_aggregation(
     db: Session, filters: dict[str, Any]
-) -> Dict[str, Any][str, float]:
+) -> dict[str, Any][str, float]:
     """
     使用数据库聚合查询计算出租率 - 推荐方法
 
@@ -123,7 +124,7 @@ def _calculate_occupancy_with_aggregation(
 
 def _calculate_occupancy_in_memory(
     db: Session, filters: dict[str, Any]
-) -> Dict[str, Any][str, float]:
+) -> dict[str, Any][str, float]:
     """
     在内存中计算出租率 - 兼容性方法
 
@@ -169,7 +170,7 @@ def _calculate_occupancy_in_memory(
 
 def _calculate_category_occupancy_with_aggregation(
     db: Session, category_field: str, filters: dict[str, Any]
-) -> Dict[str, Dict[str, Any]]:
+) -> dict[str, dict[str, Any]]:
     """
     使用数据库聚合查询计算分类出租率
 
@@ -245,7 +246,7 @@ def _calculate_category_occupancy_with_aggregation(
 
 def _calculate_category_occupancy_in_memory(
     db: Session, category_field: str, filters: dict[str, Any]
-) -> Dict[str, Dict[str, Any]]:
+) -> dict[str, dict[str, Any]]:
     """
     在内存中计算分类出租率
 
@@ -294,7 +295,7 @@ def _calculate_category_occupancy_in_memory(
 
 def _calculate_area_summary_with_aggregation(
     db: Session, filters: dict[str, Any]
-) -> Dict[str, Any][str, float]:
+) -> dict[str, Any][str, float]:
     """
     使用数据库聚合查询计算面积汇总
 
@@ -377,7 +378,7 @@ def _calculate_area_summary_with_aggregation(
 
 def _calculate_area_summary_in_memory(
     db: Session, filters: dict[str, Any]
-) -> Dict[str, Any][str, float]:
+) -> dict[str, Any][str, float]:
     """
     在内存中计算面积汇总
 
@@ -591,7 +592,9 @@ async def get_basic_statistics(
 # - /api/v1/statistics/financial-summary - 财务汇总
 
 
-@router.get("/basic", response_model=BasicStatisticsResponse, summary="获取基础统计数据")
+@router.get(
+    "/basic", response_model=BasicStatisticsResponse, summary="获取基础统计数据"
+)
 async def get_basic_statistics(db: Session = Depends(get_db)):
     """
     获取基础统计数据
@@ -642,7 +645,11 @@ async def get_basic_statistics(db: Session = Depends(get_db)):
             "FROM assets"
         ).scalar()
 
-        occupancy_rate = (total_rented_area / total_rentable_area * 100) if total_rentable_area > 0 else 0
+        occupancy_rate = (
+            (total_rented_area / total_rentable_area * 100)
+            if total_rentable_area > 0
+            else 0
+        )
 
         return {
             "success": True,
@@ -651,21 +658,21 @@ async def get_basic_statistics(db: Session = Depends(get_db)):
                 "ownership_status": {
                     "confirmed": confirmed_count,
                     "pending": pending_count,
-                    "unowned": unowned_count
+                    "unowned": unowned_count,
                 },
                 "usage_status": {
                     "rented": rented_count,
                     "vacant": vacant_count,
-                    "under_maintenance": under_maintenance_count
+                    "under_maintenance": under_maintenance_count,
                 },
                 "areas": {
                     "total_land_area": float(total_land_area),
-                    "total_property_area": float(total_property_area)
+                    "total_property_area": float(total_property_area),
                 },
                 "occupancy_rate": float(occupancy_rate),
-                "last_updated": datetime.now().isoformat()
+                "last_updated": datetime.now().isoformat(),
             },
-            "message": "基础统计数据获取成功"
+            "message": "基础统计数据获取成功",
         }
 
     except Exception as e:
@@ -1462,13 +1469,14 @@ async def get_occupancy_rate_statistics(
                 "overall_occupancy_rate": stats["overall_rate"],
                 "total_rentable_area": stats["total_rentable_area"],
                 "total_rented_area": stats["total_rented_area"],
-                "total_unrented_area": stats["total_rentable_area"] - stats["total_rented_area"],
+                "total_unrented_area": stats["total_rentable_area"]
+                - stats["total_rented_area"],
                 "total_assets": stats["total_assets"],
                 "rentable_assets": stats["rentable_assets_count"],
                 "generated_at": datetime.now().isoformat(),
                 "filters_applied": filters,
             },
-            "message": "出租率统计数据获取成功"
+            "message": "出租率统计数据获取成功",
         }
 
     except Exception as e:
@@ -1493,13 +1501,13 @@ async def get_asset_distribution(
             "usage_status",
             "business_category",
             "manager_name",
-            "project_name"
+            "project_name",
         ]
 
         if group_by not in valid_fields:
             raise HTTPException(
                 status_code=400,
-                detail=f"无效的分组字段。支持的字段: {', '.join(valid_fields)}"
+                detail=f"无效的分组字段。支持的字段: {', '.join(valid_fields)}",
             )
 
         # 构建筛选条件
@@ -1527,7 +1535,9 @@ async def get_asset_distribution(
             {
                 "name": key,
                 "value": count,
-                "percentage": round((count / total_assets * 100), 2) if total_assets > 0 else 0
+                "percentage": round((count / total_assets * 100), 2)
+                if total_assets > 0
+                else 0,
             }
             for key, count in distribution.items()
         ]
@@ -1539,9 +1549,9 @@ async def get_asset_distribution(
                 "distribution": distribution_data,
                 "total_assets": total_assets,
                 "generated_at": datetime.now().isoformat(),
-                "filters_applied": filters
+                "filters_applied": filters,
             },
-            "message": "资产分布统计数据获取成功"
+            "message": "资产分布统计数据获取成功",
         }
 
     except Exception as e:
@@ -1580,7 +1590,9 @@ async def get_area_statistics(
             "data": {
                 "total_assets": summary["total_assets"],
                 "total_land_area": summary["total_land_area"],
-                "total_property_area": summary["total_land_area"],  # 土地面积作为物业面积
+                "total_property_area": summary[
+                    "total_land_area"
+                ],  # 土地面积作为物业面积
                 "total_rentable_area": summary["total_rentable_area"],
                 "total_rented_area": summary["total_rented_area"],
                 "total_unrented_area": summary["total_unrented_area"],
@@ -1588,9 +1600,9 @@ async def get_area_statistics(
                 "assets_with_area_data": summary["assets_with_area_data"],
                 "overall_occupancy_rate": summary["overall_occupancy_rate"],
                 "generated_at": datetime.now().isoformat(),
-                "filters_applied": filters
+                "filters_applied": filters,
             },
-            "message": "面积统计数据获取成功"
+            "message": "面积统计数据获取成功",
         }
 
     except Exception as e:
@@ -1628,7 +1640,7 @@ async def get_comprehensive_statistics(
             return {
                 "success": False,
                 "message": "没有找到符合条件的资产数据",
-                "data": None
+                "data": None,
             }
 
         # 获取面积统计
@@ -1647,22 +1659,30 @@ async def get_comprehensive_statistics(
             "total_annual_expense": 0.0,
             "total_net_income": 0.0,
             "total_monthly_rent": 0.0,
-            "assets_with_financial_data": 0
+            "assets_with_financial_data": 0,
         }
 
         for asset in assets:
             if getattr(asset, "annual_income", None):
-                financial_stats["total_annual_income"] += to_float(getattr(asset, "annual_income"))
+                financial_stats["total_annual_income"] += to_float(
+                    getattr(asset, "annual_income")
+                )
                 financial_stats["assets_with_financial_data"] += 1
 
             if getattr(asset, "annual_expense", None):
-                financial_stats["total_annual_expense"] += to_float(getattr(asset, "annual_expense"))
+                financial_stats["total_annual_expense"] += to_float(
+                    getattr(asset, "annual_expense")
+                )
 
             if getattr(asset, "net_income", None):
-                financial_stats["total_net_income"] += to_float(getattr(asset, "net_income"))
+                financial_stats["total_net_income"] += to_float(
+                    getattr(asset, "net_income")
+                )
 
             if getattr(asset, "monthly_rent", None):
-                financial_stats["total_monthly_rent"] += to_float(getattr(asset, "monthly_rent"))
+                financial_stats["total_monthly_rent"] += to_float(
+                    getattr(asset, "monthly_rent")
+                )
 
         # 按状态统计
         ownership_distribution = {}
@@ -1672,15 +1692,21 @@ async def get_comprehensive_statistics(
         for asset in assets:
             # 权属状态分布
             ownership = getattr(asset, "ownership_status", None) or "未知"
-            ownership_distribution[ownership] = ownership_distribution.get(ownership, 0) + 1
+            ownership_distribution[ownership] = (
+                ownership_distribution.get(ownership, 0) + 1
+            )
 
             # 物业性质分布
             nature = getattr(asset, "property_nature", None) or "未知"
-            property_nature_distribution[nature] = property_nature_distribution.get(nature, 0) + 1
+            property_nature_distribution[nature] = (
+                property_nature_distribution.get(nature, 0) + 1
+            )
 
             # 使用状态分布
             usage = getattr(asset, "usage_status", None) or "未知"
-            usage_status_distribution[usage] = usage_status_distribution.get(usage, 0) + 1
+            usage_status_distribution[usage] = (
+                usage_status_distribution.get(usage, 0) + 1
+            )
 
         comprehensive_data = {
             # 基础统计
@@ -1688,7 +1714,7 @@ async def get_comprehensive_statistics(
                 "total_assets": total_assets,
                 "ownership_distribution": ownership_distribution,
                 "property_nature_distribution": property_nature_distribution,
-                "usage_status_distribution": usage_status_distribution
+                "usage_status_distribution": usage_status_distribution,
             },
             # 面积统计
             "area_stats": area_stats,
@@ -1698,18 +1724,20 @@ async def get_comprehensive_statistics(
             "financial_stats": {
                 **financial_stats,
                 "total_annual_income": round(financial_stats["total_annual_income"], 2),
-                "total_annual_expense": round(financial_stats["total_annual_expense"], 2),
+                "total_annual_expense": round(
+                    financial_stats["total_annual_expense"], 2
+                ),
                 "total_net_income": round(financial_stats["total_net_income"], 2),
-                "total_monthly_rent": round(financial_stats["total_monthly_rent"], 2)
+                "total_monthly_rent": round(financial_stats["total_monthly_rent"], 2),
             },
             "generated_at": datetime.now().isoformat(),
-            "filters_applied": filters
+            "filters_applied": filters,
         }
 
         return {
             "success": True,
             "data": comprehensive_data,
-            "message": "综合统计数据获取成功"
+            "message": "综合统计数据获取成功",
         }
 
     except Exception as e:

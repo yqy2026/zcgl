@@ -1,9 +1,28 @@
+from typing import Any
+class BusinessLogicError(Exception):
+    """Business logic error"""
+
+    pass
+
+
+class AssetNotFoundError(Exception):
+    """Asset not found error"""
+
+    pass
+
+
+class DuplicateAssetError(Exception):
+    """Duplicate asset error"""
+
+    pass
+
+
 """
 RBAC相关CRUD操作
 """
 
 from datetime import datetime
-from typing import Any
+
 
 from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session

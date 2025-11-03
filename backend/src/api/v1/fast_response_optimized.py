@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from typing import Any
 """
 快速响应API端点 - 综一的性能优化实现
 包含异步处理、响应压缩、智能缓存等功能
@@ -9,7 +10,7 @@ import logging
 import time
 from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import Any
+
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +71,7 @@ class FastResponseOptimizer:
         self.response_history = []
         self.optimization_rules = self._initialize_optimization_rules()
 
-    def _initialize_optimization_rules(self) -> Dict[str, Any]:
+    def _initialize_optimization_rules(self) -> dict[str, Any]:
         """初始化优化规则"""
         return {
             "compression": {
@@ -108,7 +109,7 @@ class FastResponseOptimizer:
         endpoint: str,
         response_data: Any,
         compression_enabled: bool | None = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """优化响应"""
         start_time = time.time()
 
@@ -270,7 +271,7 @@ class FastResponseOptimizer:
         else:
             return OptimizationLevel.NEEDS_IMPROVEMENT
 
-    async def get_cache_stats(self) -> Dict[str, Any]:
+    async def get_cache_stats(self) -> dict[str, Any]:
         """获取缓存统计"""
         active_items = 0
         total_size = 0
@@ -294,7 +295,7 @@ class FastResponseOptimizer:
             "items_count": len(self.cache),
         }
 
-    def get_performance_stats(self) -> Dict[str, Any]:
+    def get_performance_stats(self) -> dict[str, Any]:
         """获取性能统计"""
         if not self.request_times:
             return {
@@ -337,7 +338,7 @@ class FastResponseOptimizer:
                 "optimization_level": OptimizationLevel.NEEDS_IMPROVEMENT,
             }
 
-    def generate_performance_report(self) -> Dict[str, Any]:
+    def generate_performance_report(self) -> dict[str, Any]:
         """生成性能报告"""
         # 获取缓存统计
         cache_stats = self.get_cache_stats()
@@ -370,7 +371,7 @@ class FastResponseOptimizer:
         logger.info(f"性能报告已生成: {report_file}")
         return report
 
-    def _generate_optimization_summary(self) -> Dict[str, Any]:
+    def _generate_optimization_summary(self) -> dict[str, Any]:
         """生成优化总结"""
         stats = self.get_performance_stats()
 
@@ -413,7 +414,7 @@ class FastResponseOptimizer:
             "optimization_level": overall_level,
         }
 
-    def _generate_recommendations(self) -> List[str]:
+    def _generate_recommendations(self) -> list[str]:
         """生成优化建议"""
         recommendations = []
 

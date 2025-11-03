@@ -1,3 +1,4 @@
+from typing import Any
 """
 合同数据逻辑校验器
 对提取的合同数据进行逻辑一致性和合理性检查
@@ -6,7 +7,7 @@
 import logging
 import re
 from datetime import date, datetime
-from typing import Any
+
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,7 @@ class DataValidator:
             "max": 30,  # 最长租期
         }
 
-    def validate_contract_data(self, data: dict[str, Any]) -> Dict[str, Any]:
+    def validate_contract_data(self, data: dict[str, Any]) -> dict[str, Any]:
         """
         验证合同数据的逻辑一致性
 
@@ -91,7 +92,7 @@ class DataValidator:
         logger.info(f"数据校验完成，评分: {validation_result['validation_score']:.2f}")
         return validation_result
 
-    def _validate_dates(self, data: dict[str, Any]) -> Dict[str, Any]:
+    def _validate_dates(self, data: dict[str, Any]) -> dict[str, Any]:
         """验证日期逻辑"""
         result = {"errors": [], "warnings": [], "suggestions": [], "corrected_data": {}}
 
@@ -139,7 +140,7 @@ class DataValidator:
 
         return result
 
-    def _validate_rent_amounts(self, data: dict[str, Any]) -> Dict[str, Any]:
+    def _validate_rent_amounts(self, data: dict[str, Any]) -> dict[str, Any]:
         """验证租金逻辑"""
         result = {"errors": [], "warnings": [], "suggestions": [], "corrected_data": {}}
 
@@ -186,7 +187,7 @@ class DataValidator:
 
         return result
 
-    def _validate_areas(self, data: dict[str, Any]) -> Dict[str, Any]:
+    def _validate_areas(self, data: dict[str, Any]) -> dict[str, Any]:
         """验证面积逻辑"""
         result = {"errors": [], "warnings": [], "suggestions": [], "corrected_data": {}}
 
@@ -235,7 +236,7 @@ class DataValidator:
 
         return result
 
-    def _validate_lease_term(self, data: dict[str, Any]) -> Dict[str, Any]:
+    def _validate_lease_term(self, data: dict[str, Any]) -> dict[str, Any]:
         """验证租赁期限"""
         result = {"errors": [], "warnings": [], "suggestions": [], "corrected_data": {}}
 
@@ -274,7 +275,7 @@ class DataValidator:
 
         return result
 
-    def _validate_field_consistency(self, data: dict[str, Any]) -> Dict[str, Any]:
+    def _validate_field_consistency(self, data: dict[str, Any]) -> dict[str, Any]:
         """验证字段一致性"""
         result = {"errors": [], "warnings": [], "suggestions": [], "corrected_data": {}}
 
@@ -322,7 +323,7 @@ class DataValidator:
 
         return result
 
-    def _validate_business_logic(self, data: dict[str, Any]) -> Dict[str, Any]:
+    def _validate_business_logic(self, data: dict[str, Any]) -> dict[str, Any]:
         """验证业务逻辑"""
         result = {"errors": [], "warnings": [], "suggestions": [], "corrected_data": {}}
 

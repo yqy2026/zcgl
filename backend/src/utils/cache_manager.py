@@ -1,3 +1,4 @@
+from typing import Any
 """
 缓存管理模块
 提供Redis缓存功能，用于优化API性能
@@ -6,7 +7,7 @@
 import logging
 import pickle
 from datetime import datetime, timedelta
-from typing import Any
+
 
 import redis.asyncio as redis
 
@@ -29,8 +30,8 @@ class CacheManager:
 
     def __init__(self):
         self.redis_client: redis.Redis | None = None
-        self.memory_cache: Dict[str, Any] = {}
-        self.memory_cache_expiry: Dict[str, Any] = {}
+        self.memory_cache: dict[str, Any] = {}
+        self.memory_cache_expiry: dict[str, Any] = {}
         self.use_memory_fallback = True
 
     async def initialize(self):

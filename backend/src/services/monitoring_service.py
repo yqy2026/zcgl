@@ -1,3 +1,4 @@
+from typing import Any
 """
 系统监控服务 - 提供全面的系统监控和性能分析功能
 
@@ -19,7 +20,7 @@ import time
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any
+
 
 try:
     from src.core.database import get_db
@@ -48,7 +49,6 @@ except ImportError:
 
     try:
         # 定义基础数据结构
-        from typing import Any
 
         import psutil
         from pydantic import BaseModel
@@ -263,7 +263,7 @@ class MonitoringService:
 
     def get_metrics_history(
         self, hours: int = 24, metric_type: str = "all"
-    ) -> Dict[str, Any][str, list[Any]]:
+    ) -> dict[str, Any][str, list[Any]]:
         """获取历史指标数据"""
         cutoff_time = datetime.now() - timedelta(hours=hours)
 
@@ -365,7 +365,7 @@ class MonitoringService:
             status=status,
         )
 
-    def get_performance_summary(self, hours: int = 24) -> Dict[str, Any]:
+    def get_performance_summary(self, hours: int = 24) -> dict[str, Any]:
         """获取性能摘要"""
         cutoff_time = datetime.now() - timedelta(hours=hours)
 
@@ -505,7 +505,7 @@ class MonitoringService:
         except Exception as e:
             logger.error(f"加载监控数据失败: {e}")
 
-    def get_service_status(self) -> Dict[str, Any]:
+    def get_service_status(self) -> dict[str, Any]:
         """获取服务状态"""
         return {
             "is_running": self._is_running,

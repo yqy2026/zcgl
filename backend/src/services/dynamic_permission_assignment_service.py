@@ -1,10 +1,11 @@
+from typing import Any
 """
 动态权限分配服务
 支持临时权限、条件权限和权限模板的动态分配
 """
 
 from datetime import UTC, datetime
-from typing import Any
+
 
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
@@ -229,7 +230,7 @@ class DynamicPermissionService:
         scope_id: str | None,
         assigned_by: str,
         reason: str | None = None,
-    ) -> List[TemporaryPermission | ConditionalPermission]:
+    ) -> list[TemporaryPermission | ConditionalPermission]:
         """从模板分配权限给用户"""
 
         # 获取权限模板
@@ -430,7 +431,7 @@ class DynamicPermissionService:
         user_id: str,
         include_expired: bool = False,
         include_inactive: bool = False,
-    ) -> Dict[str, Any][str, list[dict[str, Any]]]:
+    ) -> dict[str, Any][str, list[dict[str, Any]]]:
         """获取用户的所有动态权限"""
 
         result = {
@@ -525,7 +526,7 @@ class DynamicPermissionService:
         scope: str,
         scope_id: str | None = None,
         context: dict[str, Any] | None = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """检查用户是否拥有特定权限"""
 
         # 检查动态权限
@@ -687,7 +688,7 @@ class DynamicPermissionService:
         except Exception:
             return False
 
-    def cleanup_expired_permissions(self) -> Dict[str, Any][str, int]:
+    def cleanup_expired_permissions(self) -> dict[str, Any][str, int]:
         """清理过期的权限"""
 
         now = datetime.now(UTC)
@@ -737,7 +738,7 @@ class DynamicPermissionService:
         start_date: datetime | None = None,
         end_date: datetime | None = None,
         limit: int = 100,
-    ) -> List[dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """获取权限审计日志"""
 
         query = self.db.query(DynamicPermissionAudit)

@@ -1,3 +1,4 @@
+from typing import Any
 """
 安全日志记录器
 提供敏感信息脱敏、结构化日志和安全审计功能
@@ -10,7 +11,7 @@ import re
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+
 
 from .config_manager import get_config
 
@@ -555,7 +556,7 @@ def log_request_info(**kwargs):
     request_logger.log_request(**kwargs)
 
 
-def get_request_context() -> Dict[str, Any][str, str]:
+def get_request_context() -> dict[str, Any][str, str]:
     """获取请求上下文"""
     return {"request_id": str(uuid.uuid4()), "timestamp": datetime.now(UTC).isoformat()}
 

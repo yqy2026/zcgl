@@ -2,7 +2,6 @@
 资产历史记录API路由
 """
 
-
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy.orm import Session
 

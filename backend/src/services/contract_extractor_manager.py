@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from typing import Any
 """
 合同提取器管理器
 统一管理所有合同提取器，提供最佳提取策略
@@ -6,7 +7,7 @@
 
 import logging
 from datetime import datetime
-from typing import Any
+
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,7 @@ class ContractExtractorManager:
 
     def extract_contract_info(
         self, text: str, strategy: str = "auto"
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         提取合同信息
 
@@ -51,7 +52,7 @@ class ContractExtractorManager:
             logger.warning(f"未知的提取策略: {strategy}")
             return self._auto_extract(text)
 
-    def _auto_extract(self, text: str) -> Dict[str, Any]:
+    def _auto_extract(self, text: str) -> dict[str, Any]:
         """自动选择最佳提取策略"""
         results = {}
 
@@ -87,7 +88,7 @@ class ContractExtractorManager:
             },
         }
 
-    def _extract_with_strategy(self, text: str, strategy: str) -> Dict[str, Any]:
+    def _extract_with_strategy(self, text: str, strategy: str) -> dict[str, Any]:
         """使用指定策略提取信息"""
         if strategy not in self.extractors:
             raise ValueError(f"未知的提取策略: {strategy}")
@@ -106,11 +107,11 @@ class ContractExtractorManager:
                 "overall_confidence": 0.0,
             }
 
-    def get_available_strategies(self) -> List[str]:
+    def get_available_strategies(self) -> list[str]:
         """获取可用的提取策略"""
         return list(self.extractors.keys())
 
-    def get_strategy_info(self) -> Dict[str, Any]:
+    def get_strategy_info(self) -> dict[str, Any]:
         """获取提取器信息"""
         return {
             "available_strategies": self.get_available_strategies(),
@@ -126,7 +127,7 @@ class ContractExtractorManager:
 extractor_manager = ContractExtractorManager()
 
 
-def extract_contract_info(text: str, strategy: str = "auto") -> Dict[str, Any]:
+def extract_contract_info(text: str, strategy: str = "auto") -> dict[str, Any]:
     """
     提取合同信息的便捷函数
 
@@ -140,6 +141,6 @@ def extract_contract_info(text: str, strategy: str = "auto") -> Dict[str, Any]:
     return extractor_manager.extract_contract_info(text, strategy)
 
 
-def get_extractor_info() -> Dict[str, Any]:
+def get_extractor_info() -> dict[str, Any]:
     """获取提取器信息"""
     return extractor_manager.get_strategy_info()

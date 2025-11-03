@@ -1,3 +1,4 @@
+from typing import Any
 """
 PDF处理结果缓存服务
 提供智能缓存机制，提升处理性能和用户体验
@@ -8,7 +9,7 @@ import json
 import logging
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +105,7 @@ class PDFProcessingCache:
         if expired_keys:
             logger.info(f"清理了 {len(expired_keys)} 个过期缓存条目")
 
-    def get(self, file_path: Path, method: str, **kwargs) -> Dict[str, Any] | None:
+    def get(self, file_path: Path, method: str, **kwargs) -> dict[str, Any] | None:
         """获取缓存结果"""
         cache_key = self._generate_cache_key(file_path, method, **kwargs)
 
@@ -153,7 +154,7 @@ class PDFProcessingCache:
         logger.info(f"清理缓存: {len(keys_to_remove)} 个条目")
         self._save_cache()
 
-    def get_cache_stats(self) -> Dict[str, Any]:
+    def get_cache_stats(self) -> dict[str, Any]:
         """获取缓存统计信息"""
         total_entries = len(self.cache)
         successful_entries = sum(

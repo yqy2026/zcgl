@@ -1,3 +1,4 @@
+from typing import Any
 """
 FastAPI安全中间件
 提供请求验证、文件上传安全和速率限制功能
@@ -7,7 +8,7 @@ import logging
 import time
 from collections import defaultdict
 from collections.abc import Callable
-from typing import Any
+
 
 from fastapi import HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
@@ -390,7 +391,9 @@ class FileUploadSecurityMiddleware(BaseHTTPMiddleware):
 class CORSExtendedMiddleware(BaseHTTPMiddleware):
     """扩展的CORS中间件"""
 
-    def __init__(self, app, allowed_origins: list[Any] = None, allowed_methods: list[Any] = None):
+    def __init__(
+        self, app, allowed_origins: list[Any] = None, allowed_methods: list[Any] = None
+    ):
         super().__init__(app)
         self.allowed_origins = allowed_origins or [
             "http://localhost:5173",

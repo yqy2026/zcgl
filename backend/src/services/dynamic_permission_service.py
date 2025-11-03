@@ -1,3 +1,22 @@
+from typing import Any
+class BusinessLogicError(Exception):
+    """Business logic error"""
+
+    pass
+
+
+class AssetNotFoundError(Exception):
+    """Asset not found error"""
+
+    pass
+
+
+class DuplicateAssetError(Exception):
+    """Duplicate asset error"""
+
+    pass
+
+
 """
 动态权限分配服务
 支持临时权限、条件权限和动态权限分配
@@ -5,7 +24,7 @@
 
 from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Any
+
 
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
@@ -59,7 +78,7 @@ class DynamicPermissionService:
         conditions: dict[str, Any] | None = None,
         assigned_by: str | None = None,
         reason: str | None = None,
-    ) -> List[DynamicPermission]:
+    ) -> list[DynamicPermission]:
         """
         分配动态权限
 
@@ -161,7 +180,7 @@ class DynamicPermissionService:
         scope_id: str | None = None,
         assigned_by: str | None = None,
         reason: str | None = None,
-    ) -> List[TemporaryPermission]:
+    ) -> list[TemporaryPermission]:
         """
         分配临时权限
 
@@ -433,7 +452,7 @@ class DynamicPermissionService:
         expires_at: datetime | None = None,
         assigned_by: str | None = None,
         reason: str | None = None,
-    ) -> List[DynamicPermission]:
+    ) -> list[DynamicPermission]:
         """
         从模板分配权限
 
@@ -478,7 +497,7 @@ class DynamicPermissionService:
         include_expired: bool = False,
         scope: AssignmentScope | None = None,
         scope_id: str | None = None,
-    ) -> List[dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         获取用户的动态权限
 
@@ -837,7 +856,7 @@ class DynamicPermissionService:
         end_date: datetime | None = None,
         page: int = 1,
         limit: int = 50,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         获取权限审计日志
 

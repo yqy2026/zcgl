@@ -1,3 +1,4 @@
+from typing import Any
 """
 数据统计和报表服务
 使用Python内置功能进行数据分析和统计
@@ -5,7 +6,7 @@
 
 import logging
 import statistics
-from typing import Any
+
 
 from sqlalchemy.orm import Session
 
@@ -25,7 +26,7 @@ class AssetStatisticsAnalyzer:
     """资产数据统计分析器"""
 
     @staticmethod
-    def calculate_basic_statistics(assets: list[Asset]) -> Dict[str, Any]:
+    def calculate_basic_statistics(assets: list[Asset]) -> dict[str, Any]:
         """计算基础统计信息"""
         try:
             if not assets:
@@ -97,7 +98,7 @@ class StatisticsService:
         self.analyzer = AssetStatisticsAnalyzer()
         self.asset_crud = CRUDAsset(Asset)
 
-    def get_basic_statistics(self) -> Dict[str, Any]:
+    def get_basic_statistics(self) -> dict[str, Any]:
         """获取基础统计信息"""
         try:
             assets = self.asset_crud.get_multi(self.db, limit=10000)

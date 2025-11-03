@@ -1,3 +1,4 @@
+from typing import Any
 """
 机器学习增强的合同信息提取器
 集成NLP模型和规则引擎，提供智能化的中文租赁合同信息提取
@@ -9,7 +10,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any
+
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +69,7 @@ class MLEnhancedExtractor:
         self.validation_rules = self._load_validation_rules()
         self.context_analyzers = self._load_context_analyzers()
 
-    def _load_enhanced_rules(self) -> Dict[str, Any][str, list[dict[str, Any]]]:
+    def _load_enhanced_rules(self) -> dict[str, Any][str, list[dict[str, Any]]]:
         """加载增强的提取规则"""
         return {
             # 合同基本信息
@@ -295,7 +296,7 @@ class MLEnhancedExtractor:
             ],
         }
 
-    def _load_field_patterns(self) -> Dict[str, Any]:
+    def _load_field_patterns(self) -> dict[str, Any]:
         """加载字段模式"""
         return {
             "person_name": {
@@ -333,7 +334,7 @@ class MLEnhancedExtractor:
             },
         }
 
-    def _load_validation_rules(self) -> Dict[str, Any][str, callable]:
+    def _load_validation_rules(self) -> dict[str, Any][str, callable]:
         """加载验证规则"""
         return {
             "person_name": self._validate_person_name,
@@ -345,7 +346,7 @@ class MLEnhancedExtractor:
             "area": self._validate_area,
         }
 
-    def _load_context_analyzers(self) -> Dict[str, Any][str, callable]:
+    def _load_context_analyzers(self) -> dict[str, Any][str, callable]:
         """加载上下文分析器"""
         return {
             "contract_context": self._analyze_contract_context,
@@ -436,7 +437,7 @@ class MLEnhancedExtractor:
 
         return text.strip()
 
-    async def _extract_with_rules(self, text: str) -> List[ExtractedField]:
+    async def _extract_with_rules(self, text: str) -> list[ExtractedField]:
         """基于规则提取"""
         extracted_fields = []
 
@@ -472,12 +473,12 @@ class MLEnhancedExtractor:
 
         return extracted_fields
 
-    async def _extract_with_patterns(self, text: str) -> List[ExtractedField]:
+    async def _extract_with_patterns(self, text: str) -> list[ExtractedField]:
         """基于模式匹配提取"""
         # 这里可以集成更复杂的模式匹配算法
         return await self._extract_with_rules(text)
 
-    async def _extract_with_nlp(self, text: str) -> List[ExtractedField]:
+    async def _extract_with_nlp(self, text: str) -> list[ExtractedField]:
         """基于NLP模型提取"""
         # 这里可以集成BERT、CRF等NLP模型
         # 目前先使用规则作为基础
@@ -511,7 +512,7 @@ class MLEnhancedExtractor:
 
         return extracted_fields
 
-    async def _extract_hybrid(self, text: str) -> List[ExtractedField]:
+    async def _extract_hybrid(self, text: str) -> list[ExtractedField]:
         """混合方法提取"""
         # 先用规则提取
         rule_fields = await self._extract_with_rules(text)
@@ -584,7 +585,7 @@ class MLEnhancedExtractor:
 
     async def _post_process_fields(
         self, fields: list[ExtractedField], text: str
-    ) -> List[ExtractedField]:
+    ) -> list[ExtractedField]:
         """后处理字段"""
         processed_fields = []
 
@@ -606,7 +607,7 @@ class MLEnhancedExtractor:
 
         return processed_fields
 
-    def _validate_field(self, field: ExtractedField, text: str) -> Dict[str, Any]:
+    def _validate_field(self, field: ExtractedField, text: str) -> dict[str, Any]:
         """验证字段"""
         result = {"confidence_multiplier": 1.0, "metadata": {}}
 
@@ -618,7 +619,7 @@ class MLEnhancedExtractor:
 
         return result
 
-    def _validate_person_name(self, value: str) -> Dict[str, Any]:
+    def _validate_person_name(self, value: str) -> dict[str, Any]:
         """验证姓名"""
         result = {"confidence_multiplier": 1.0, "metadata": {}}
 
@@ -639,7 +640,7 @@ class MLEnhancedExtractor:
 
         return result
 
-    def _validate_phone(self, value: str) -> Dict[str, Any]:
+    def _validate_phone(self, value: str) -> dict[str, Any]:
         """验证电话号码"""
         result = {"confidence_multiplier": 1.0, "metadata": {}}
 
@@ -649,7 +650,7 @@ class MLEnhancedExtractor:
 
         return result
 
-    def _validate_id_card(self, value: str) -> Dict[str, Any]:
+    def _validate_id_card(self, value: str) -> dict[str, Any]:
         """验证身份证号"""
         result = {"confidence_multiplier": 1.0, "metadata": {}}
 
@@ -681,7 +682,7 @@ class MLEnhancedExtractor:
 
         return result
 
-    def _validate_address(self, value: str) -> Dict[str, Any]:
+    def _validate_address(self, value: str) -> dict[str, Any]:
         """验证地址"""
         result = {"confidence_multiplier": 1.0, "metadata": {}}
 
@@ -698,7 +699,7 @@ class MLEnhancedExtractor:
 
         return result
 
-    def _validate_date(self, value: str) -> Dict[str, Any]:
+    def _validate_date(self, value: str) -> dict[str, Any]:
         """验证日期"""
         result = {"confidence_multiplier": 1.0, "metadata": {}}
 
@@ -715,7 +716,7 @@ class MLEnhancedExtractor:
 
         return result
 
-    def _validate_amount(self, value: str | float) -> Dict[str, Any]:
+    def _validate_amount(self, value: str | float) -> dict[str, Any]:
         """验证金额"""
         result = {"confidence_multiplier": 1.0, "metadata": {}}
 
@@ -733,7 +734,7 @@ class MLEnhancedExtractor:
 
         return result
 
-    def _validate_area(self, value: str | float) -> Dict[str, Any]:
+    def _validate_area(self, value: str | float) -> dict[str, Any]:
         """验证面积"""
         result = {"confidence_multiplier": 1.0, "metadata": {}}
 
@@ -753,7 +754,7 @@ class MLEnhancedExtractor:
 
     def _validate_business_logic(
         self, field: ExtractedField, all_fields: list[ExtractedField], text: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """验证业务逻辑"""
         result = {"confidence_multiplier": 1.0, "metadata": {}}
 
@@ -812,7 +813,7 @@ class MLEnhancedExtractor:
 
         return result
 
-    def _analyze_contract_context(self, text: str) -> Dict[str, Any]:
+    def _analyze_contract_context(self, text: str) -> dict[str, Any]:
         """分析合同上下文"""
         return {
             "is_rental_contract": any(
@@ -827,7 +828,7 @@ class MLEnhancedExtractor:
             else "low",
         }
 
-    def _analyze_party_relationship(self, text: str) -> Dict[str, Any]:
+    def _analyze_party_relationship(self, text: str) -> dict[str, Any]:
         """分析当事方关系"""
         return {
             "party_structure": "bilateral"
@@ -837,7 +838,7 @@ class MLEnhancedExtractor:
             "has_contact_info": "联系电话" in text or "联系地址" in text,
         }
 
-    def _analyze_financial_context(self, text: str) -> Dict[str, Any]:
+    def _analyze_financial_context(self, text: str) -> dict[str, Any]:
         """分析财务上下文"""
         return {
             "has_rent_info": "租金" in text,
@@ -845,7 +846,7 @@ class MLEnhancedExtractor:
             "payment_terms_mentioned": "付款方式" in text or "支付方式" in text,
         }
 
-    def _analyze_temporal_context(self, text: str) -> Dict[str, Any]:
+    def _analyze_temporal_context(self, text: str) -> dict[str, Any]:
         """分析时间上下文"""
         return {
             "has_lease_term": "租赁期限" in text,
@@ -883,7 +884,7 @@ class MLEnhancedExtractor:
 
         return weighted_confidence / total_weight if total_weight > 0 else 0.0
 
-    def _generate_suggestions(self, fields: list[ExtractedField]) -> List[str]:
+    def _generate_suggestions(self, fields: list[ExtractedField]) -> list[str]:
         """生成建议"""
         suggestions = []
 

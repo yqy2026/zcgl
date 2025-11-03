@@ -1,3 +1,4 @@
+from typing import Any
 """
 缺陷跟踪和分析API模块
 提供缺陷报告、分析、趋势跟踪和预防建议功能
@@ -10,7 +11,7 @@ import uuid
 from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Any
+
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -1001,7 +1002,7 @@ def _generate_defect_recommendations(
     severity_dist: dict[str, int],
     category_dist: dict[str, int],
     module_dist: dict[str, int],
-) -> List[str]:
+) -> list[str]:
     """生成缺陷改进建议"""
     recommendations = []
 

@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
+from typing import Any
 """
 错误恢复配置
 定义错误恢复策略和配置参数
 """
-
-from typing import Any
 
 from ..services.error_recovery_service import (
     ErrorCategory,
@@ -426,12 +425,12 @@ def get_recovery_strategy(error_category: ErrorCategory) -> RecoveryStrategy:
     return RECOVERY_STRATEGIES.get(error_category)
 
 
-def get_error_classification_rules() -> Dict[str, Any][ErrorCategory, list[str]]:
+def get_error_classification_rules() -> dict[str, Any][ErrorCategory, list[str]]:
     """获取错误分类规则"""
     return ERROR_CLASSIFICATION_RULES
 
 
-def get_fallback_response(error_category: ErrorCategory) -> Dict[str, Any]:
+def get_fallback_response(error_category: ErrorCategory) -> dict[str, Any]:
     """获取fallback响应"""
     return FALLBACK_RESPONSES.get(
         error_category,

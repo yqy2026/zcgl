@@ -1,3 +1,22 @@
+from typing import Any
+class BusinessLogicError(Exception):
+    """Business logic error"""
+
+    pass
+
+
+class AssetNotFoundError(Exception):
+    """Asset not found error"""
+
+    pass
+
+
+class DuplicateAssetError(Exception):
+    """Duplicate asset error"""
+
+    pass
+
+
 """
 统一验证器
 提供通用的数据验证和转换功能
@@ -5,7 +24,7 @@
 
 import re
 from datetime import datetime
-from typing import Any
+
 
 from sqlalchemy.orm import Session
 
@@ -91,7 +110,7 @@ class AssetValidator(BaseValidator):
     ]
 
     @classmethod
-    def validate_asset_data(cls, data: dict[str, Any]) -> List[str]:
+    def validate_asset_data(cls, data: dict[str, Any]) -> list[str]:
         """
         验证资产数据
 
@@ -157,7 +176,7 @@ class AssetValidator(BaseValidator):
     @classmethod
     def validate_asset_unique(
         cls, db: Session, property_name: str, exclude_id: str | None = None
-    ) -> List[str]:
+    ) -> list[str]:
         """
         验证资产唯一性
 
@@ -186,7 +205,7 @@ class UserValidator(BaseValidator):
     """用户数据验证器"""
 
     @classmethod
-    def validate_user_data(cls, data: dict[str, Any]) -> List[str]:
+    def validate_user_data(cls, data: dict[str, Any]) -> list[str]:
         """
         验证用户数据
 
@@ -230,7 +249,7 @@ class UserValidator(BaseValidator):
         username: str | None = None,
         email: str | None = None,
         exclude_id: str | None = None,
-    ) -> List[str]:
+    ) -> list[str]:
         """
         验证用户唯一性
 
@@ -272,7 +291,7 @@ class OrganizationValidator(BaseValidator):
     """组织数据验证器"""
 
     @classmethod
-    def validate_organization_data(cls, data: dict[str, Any]) -> List[str]:
+    def validate_organization_data(cls, data: dict[str, Any]) -> list[str]:
         """
         验证组织数据
 
@@ -313,7 +332,7 @@ class RentContractValidator(BaseValidator):
     """租赁合同验证器"""
 
     @classmethod
-    def validate_contract_data(cls, data: dict[str, Any]) -> List[str]:
+    def validate_contract_data(cls, data: dict[str, Any]) -> list[str]:
         """
         验证租赁合同数据
 
@@ -417,7 +436,7 @@ class DataCleaner:
 # 便捷函数
 def validate_required_fields(
     data: dict[str, Any], required_fields: list[str]
-) -> List[str]:
+) -> list[str]:
     """验证必填字段"""
     errors = []
     for field in required_fields:
@@ -428,7 +447,7 @@ def validate_required_fields(
 
 def validate_field_length(
     data: dict[str, Any], field_lengths: dict[str, dict[str, int]]
-) -> List[str]:
+) -> list[str]:
     """验证字段长度"""
     errors = []
     for field, config in field_lengths.items():
@@ -447,7 +466,7 @@ def validate_field_length(
 
 def validate_field_values(
     data: dict[str, Any], field_values: dict[str, list[Any]]
-) -> List[str]:
+) -> list[str]:
     """验证字段值范围"""
     errors = []
     for field, valid_values in field_values.items():

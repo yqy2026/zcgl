@@ -1,10 +1,11 @@
+from typing import Any
 """
 权限申请和审批工作流服务
 支持权限申请、审批、驳回等完整工作流程
 """
 
 from datetime import UTC, datetime, timedelta
-from typing import Any
+
 
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
@@ -92,7 +93,7 @@ class PermissionRequestService:
         approval_comment: str | None = None,
         custom_duration_hours: int | None = None,
         custom_conditions: dict[str, Any] | None = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """审批权限申请"""
 
         # 获取权限申请
@@ -251,7 +252,7 @@ class PermissionRequestService:
 
     def get_pending_requests(
         self, approver_id: str | None = None, scope: str | None = None, limit: int = 50
-    ) -> List[dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """获取待审批的权限申请"""
 
         query = self.db.query(PermissionRequest).filter(
@@ -309,7 +310,7 @@ class PermissionRequestService:
 
     def get_user_request_history(
         self, user_id: str, status: str | None = None, limit: int = 50
-    ) -> List[dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """获取用户的权限申请历史"""
 
         query = self.db.query(PermissionRequest).filter(
@@ -374,7 +375,7 @@ class PermissionRequestService:
 
     def get_request_statistics(
         self, start_date: datetime | None = None, end_date: datetime | None = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """获取权限申请统计信息"""
 
         query = self.db.query(PermissionRequest)
@@ -468,7 +469,7 @@ class PermissionRequestService:
         request_ids: list[str],
         approved_by: str,
         approval_comment: str | None = None,
-    ) -> List[dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """批量审批权限申请"""
 
         results = []
@@ -492,7 +493,7 @@ class PermissionRequestService:
 
     def bulk_reject_requests(
         self, request_ids: list[str], rejected_by: str, rejection_reason: str
-    ) -> List[dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """批量驳回权限申请"""
 
         results = []

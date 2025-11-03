@@ -1,3 +1,4 @@
+from typing import Any
 """
 系统监控API - 提供全面的系统性能和健康状态监控
 
@@ -13,7 +14,7 @@
 """
 
 from datetime import datetime, timedelta
-from typing import Any
+
 
 import psutil
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -233,7 +234,7 @@ def collect_application_metrics() -> ApplicationMetrics:
         raise HTTPException(status_code=500, detail=f"收集应用指标失败: {str(e)}")
 
 
-def check_component_health() -> Dict[str, Dict[str, Any]]:
+def check_component_health() -> dict[str, dict[str, Any]]:
     """检查各组件健康状态"""
     components = {}
 
@@ -254,14 +255,18 @@ def check_component_health() -> Dict[str, Dict[str, Any]]:
 
             components["database"] = {
                 "status": status,
-                "response_time_ms": health_check["checks"].get("basic_connection", {}).get("response_time_ms", 0),
+                "response_time_ms": health_check["checks"]
+                .get("basic_connection", {})
+                .get("response_time_ms", 0),
                 "connection_pool_utilization": pool_status.get("utilization", 0),
                 "active_connections": pool_status.get("active_connections", 0),
                 "total_queries": pool_status.get("total_queries", 0),
                 "slow_queries": pool_status.get("slow_queries", 0),
                 "avg_response_time_ms": pool_status.get("avg_response_time_ms", 0),
                 "pool_hit_rate": pool_status.get("pool_hit_rate", 0),
-                "database_size_mb": health_check["checks"].get("database_size", {}).get("size_mb", 0),
+                "database_size_mb": health_check["checks"]
+                .get("database_size", {})
+                .get("size_mb", 0),
                 "last_check": health_check["timestamp"],
                 "details": f"数据库连接正常，健康评分: {health_check.get('overall_score', 'N/A')}",
             }
@@ -347,7 +352,7 @@ def calculate_overall_health_score(components: dict[str, dict[str, Any]]) -> flo
 
 def check_performance_alerts(
     system_metrics: SystemMetrics, app_metrics: ApplicationMetrics
-) -> List[PerformanceAlert]:
+) -> list[PerformanceAlert]:
     """检查性能告警"""
     alerts = []
     current_time = datetime.now()
@@ -663,7 +668,11 @@ async def trigger_metrics_collection(current_user: User = Depends(get_current_us
     }
 
 
-@router.get("/database/health", response_model=DatabaseHealthMetrics, summary="获取数据库健康指标")
+@router.get(
+    "/database/health",
+    response_model=DatabaseHealthMetrics,
+    summary="获取数据库健康指标",
+)
 @require_permission("system_monitoring", "read")
 async def get_database_health_metrics(current_user: User = Depends(get_current_user)):
     """
@@ -726,7 +735,9 @@ async def get_database_health_metrics(current_user: User = Depends(get_current_u
             slow_queries=metrics.slow_queries,
             avg_response_time=metrics.avg_response_time,
             pool_hit_rate=pool_status.get("pool_hit_rate", 0),
-            database_size_mb=health_check["checks"].get("database_size", {}).get("size_mb", 0),
+            database_size_mb=health_check["checks"]
+            .get("database_size", {})
+            .get("size_mb", 0),
             health_score=health_score,
         )
 
@@ -740,7 +751,7 @@ async def get_database_health_metrics(current_user: User = Depends(get_current_u
 @require_permission("system_monitoring", "read")
 async def get_slow_queries(
     limit: int = Query(default=20, ge=1, le=100, description="返回数量限制"),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     """
     获取数据库慢查询列表
@@ -769,7 +780,11 @@ async def get_slow_queries(
         raise HTTPException(status_code=500, detail=f"获取慢查询失败: {str(e)}")
 
 
-@router.post("/database/optimize", response_model=DatabaseOptimizationReport, summary="执行数据库优化")
+@router.post(
+    "/database/optimize",
+    response_model=DatabaseOptimizationReport,
+    summary="执行数据库优化",
+)
 @require_permission("system_monitoring", "write")
 async def optimize_database(current_user: User = Depends(get_current_user)):
     """
@@ -806,12 +821,21 @@ async def optimize_database(current_user: User = Depends(get_current_user)):
         # 计算性能改进
         performance_improvement = {}
         if before_metrics.avg_response_time > 0:
-            improvement_percent = ((before_metrics.avg_response_time - after_metrics.avg_response_time) / before_metrics.avg_response_time) * 100
-            performance_improvement["avg_response_time_improvement_percent"] = round(improvement_percent, 2)
+            improvement_percent = (
+                (before_metrics.avg_response_time - after_metrics.avg_response_time)
+                / before_metrics.avg_response_time
+            ) * 100
+            performance_improvement["avg_response_time_improvement_percent"] = round(
+                improvement_percent, 2
+            )
 
         if before_pool_status.get("utilization", 0) > 0:
-            utilization_improvement = before_pool_status.get("utilization", 0) - after_pool_status.get("utilization", 0)
-            performance_improvement["pool_utilization_improvement_percent"] = round(utilization_improvement, 2)
+            utilization_improvement = before_pool_status.get(
+                "utilization", 0
+            ) - after_pool_status.get("utilization", 0)
+            performance_improvement["pool_utilization_improvement_percent"] = round(
+                utilization_improvement, 2
+            )
 
         return DatabaseOptimizationReport(
             timestamp=datetime.now(),
@@ -835,7 +859,7 @@ async def optimize_database(current_user: User = Depends(get_current_user)):
 @require_permission("system_monitoring", "write")
 async def cleanup_database(
     days: int = Query(default=7, ge=1, le=90, description="清理多少天前的数据"),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     """
     清理数据库过期数据

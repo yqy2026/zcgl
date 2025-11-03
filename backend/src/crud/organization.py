@@ -1,9 +1,10 @@
+from typing import Any
 """
 组织架构数据访问层
 """
 
 from datetime import datetime
-from typing import Any
+
 
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
@@ -26,7 +27,7 @@ class OrganizationCRUD:
             .first()
         )
 
-    def get_all(self, skip: int = 0, limit: int = 100) -> List[Organization]:
+    def get_all(self, skip: int = 0, limit: int = 100) -> list[Organization]:
         """获取所有组织"""
         query = self.db.query(Organization).filter(not Organization.is_deleted)
 
@@ -37,7 +38,7 @@ class OrganizationCRUD:
             .all()
         )
 
-    def get_tree(self, parent_id: str | None = None) -> List[Organization]:
+    def get_tree(self, parent_id: str | None = None) -> list[Organization]:
         """获取组织树形结构"""
         query = self.db.query(Organization).filter(
             and_(not Organization.is_deleted, Organization.parent_id == parent_id)
@@ -46,7 +47,7 @@ class OrganizationCRUD:
 
     def get_children(
         self, parent_id: str, recursive: bool = False
-    ) -> List[Organization]:
+    ) -> list[Organization]:
         """获取子组织"""
         if not recursive:
             return (
@@ -69,7 +70,7 @@ class OrganizationCRUD:
                 children.extend(self.get_children(child.id, True))
             return children
 
-    def get_path_to_root(self, org_id: str) -> List[Organization]:
+    def get_path_to_root(self, org_id: str) -> list[Organization]:
         """获取到根节点的路径"""
         path = []
         current = self.get(org_id)
@@ -85,7 +86,7 @@ class OrganizationCRUD:
 
     def search(
         self, keyword: str, skip: int = 0, limit: int = 100
-    ) -> List[Organization]:
+    ) -> list[Organization]:
         """搜索组织"""
         return (
             self.db.query(Organization)
@@ -219,7 +220,7 @@ class OrganizationCRUD:
 
         return True
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """获取组织统计信息"""
         total = self.db.query(Organization).filter(not Organization.is_deleted).count()
         active = total  # 由于删除了status字段，所有未删除的组织都视为活跃
@@ -255,7 +256,7 @@ class OrganizationCRUD:
 
     def get_history(
         self, org_id: str, skip: int = 0, limit: int = 100
-    ) -> List[OrganizationHistory]:
+    ) -> list[OrganizationHistory]:
         """获取组织变更历史"""
         return (
             self.db.query(OrganizationHistory)

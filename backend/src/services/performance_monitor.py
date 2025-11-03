@@ -1,3 +1,4 @@
+from typing import Any
 """
 PDF导入性能监控和优化服务
 提供实时性能监控、指标收集和优化建议
@@ -8,7 +9,7 @@ import statistics
 from collections import defaultdict, deque
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
-from typing import Any
+
 
 import psutil
 
@@ -60,7 +61,7 @@ class PerformanceMonitor:
         self.baseline_metrics = None
         self.anomaly_detector = AnomalyDetector()
 
-    def _load_alert_thresholds(self) -> Dict[str, Any][str, float]:
+    def _load_alert_thresholds(self) -> dict[str, Any][str, float]:
         """加载告警阈值"""
         return {
             "cpu_usage": 80.0,  # CPU使用率超过80%
@@ -71,7 +72,7 @@ class PerformanceMonitor:
             "concurrent_requests": 50,  # 并发请求超过50
         }
 
-    async def collect_system_metrics(self) -> Dict[str, Any][str, float]:
+    async def collect_system_metrics(self) -> dict[str, Any][str, float]:
         """收集系统性能指标"""
         try:
             # CPU使用率
@@ -140,7 +141,7 @@ class PerformanceMonitor:
         except Exception as e:
             logger.error(f"记录处理指标失败: {e}")
 
-    async def get_real_time_performance(self) -> Dict[str, Any]:
+    async def get_real_time_performance(self) -> dict[str, Any]:
         """获取实时性能数据"""
         try:
             # 收集系统指标
@@ -252,7 +253,7 @@ class PerformanceMonitor:
         system_metrics: dict[str, float],
         success_rate: float,
         avg_processing_time: float,
-    ) -> List[dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """检查性能告警"""
         alerts = []
 
@@ -310,7 +311,7 @@ class PerformanceMonitor:
 
     async def _generate_optimization_recommendations(
         self, system_metrics: dict[str, float], recent_processing: list[dict]
-    ) -> List[str]:
+    ) -> list[str]:
         """生成优化建议"""
         recommendations = []
 
@@ -397,7 +398,7 @@ class PerformanceMonitor:
         logger.warning("触发紧急扩容: 系统负载过高")
         # 这里可以添加扩容逻辑
 
-    async def get_performance_report(self, hours: int = 24) -> Dict[str, Any]:
+    async def get_performance_report(self, hours: int = 24) -> dict[str, Any]:
         """获取性能报告"""
         try:
             cutoff_time = datetime.now() - timedelta(hours=hours)
@@ -469,7 +470,7 @@ class PerformanceMonitor:
         else:
             return "stable"
 
-    async def _identify_optimization_opportunities(self, data: list[dict]) -> List[str]:
+    async def _identify_optimization_opportunities(self, data: list[dict]) -> list[str]:
         """识别优化机会"""
         opportunities = []
 
@@ -500,7 +501,7 @@ class AnomalyDetector:
 
     async def detect_anomalies(
         self, metrics: ProcessingTimeMetrics
-    ) -> List[dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """检测性能异常"""
         anomalies = []
 
@@ -519,7 +520,7 @@ class AnomalyDetector:
 
     async def _detect_processing_time_anomaly(
         self, metrics: ProcessingTimeMetrics
-    ) -> Dict[str, Any] | None:
+    ) -> dict[str, Any] | None:
         """检测处理时间异常"""
         # 这里可以实现更复杂的异常检测算法
         # 简单示例：如果处理时间超过平均值的3倍，则认为是异常
@@ -547,7 +548,7 @@ class AnomalyDetector:
 
     async def _detect_success_rate_anomaly(
         self, metrics: ProcessingTimeMetrics
-    ) -> Dict[str, Any] | None:
+    ) -> dict[str, Any] | None:
         """检测成功率异常"""
         # 这里可以实现成功率异常检测逻辑
         return None

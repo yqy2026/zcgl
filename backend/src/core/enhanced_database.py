@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from typing import Any
 """
 增强的数据库连接管理模块
 提供连接池、查询优化、性能监控和健康检查功能
@@ -12,7 +13,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from queue import Empty, Queue
-from typing import Any
+
 
 from sqlalchemy import create_engine, event, text
 from sqlalchemy.engine import Engine
@@ -78,7 +79,7 @@ class EnhancedDatabaseManager:
             pool_recycle=get_config("database.pool_recycle", 3600),
             pool_pre_ping=get_config("database.pool_pre_ping", True),
             echo=get_config("database.echo", False),
-            connect_args={}
+            connect_args={},
         )
 
     def initialize_engine(self, database_url: str) -> Engine:
@@ -94,24 +95,28 @@ class EnhancedDatabaseManager:
 
         # 根据数据库类型配置连接池
         if "sqlite" in database_url.lower():
-            engine_kwargs.update({
-                "poolclass": StaticPool,
-                "connect_args": {
-                    "check_same_thread": False,
-                    "timeout": 20,
-                    "isolation_level": None
+            engine_kwargs.update(
+                {
+                    "poolclass": StaticPool,
+                    "connect_args": {
+                        "check_same_thread": False,
+                        "timeout": 20,
+                        "isolation_level": None,
+                    },
                 }
-            })
+            )
         else:
-            engine_kwargs.update({
-                "poolclass": QueuePool,
-                "pool_size": self.config.pool_size,
-                "max_overflow": self.config.max_overflow,
-                "pool_timeout": self.config.pool_timeout,
-                "pool_recycle": self.config.pool_recycle,
-                "pool_pre_ping": self.config.pool_pre_ping,
-                "connect_args": self.config.connect_args
-            })
+            engine_kwargs.update(
+                {
+                    "poolclass": QueuePool,
+                    "pool_size": self.config.pool_size,
+                    "max_overflow": self.config.max_overflow,
+                    "pool_timeout": self.config.pool_timeout,
+                    "pool_recycle": self.config.pool_recycle,
+                    "pool_pre_ping": self.config.pool_pre_ping,
+                    "connect_args": self.config.connect_args,
+                }
+            )
 
         # 创建引擎
         self.engine = create_engine(database_url, **engine_kwargs)
@@ -121,10 +126,7 @@ class EnhancedDatabaseManager:
 
         # 创建会话工厂
         self.session_factory = sessionmaker(
-            bind=self.engine,
-            autocommit=False,
-            autoflush=False,
-            expire_on_commit=False
+            bind=self.engine, autocommit=False, autoflush=False, expire_on_commit=False
         )
 
         logger.info("数据库引擎初始化完成")
@@ -145,11 +147,13 @@ class EnhancedDatabaseManager:
                     self._optimize_sqlite_connection(dbapi_connection)
 
         @event.listens_for(self.engine, "checkout")
-        def on_checkout(dbapi_connection: DBAPIConnection, connection_record, connection_proxy):
+        def on_checkout(
+            dbapi_connection: DBAPIConnection, connection_record, connection_proxy
+        ):
             """检出连接事件"""
             with self._metrics_lock:
-                if connection_record and hasattr(connection_record, 'info'):
-                    if connection_record.info.get('origin', '') == 'pool':
+                if connection_record and hasattr(connection_record, "info"):
+                    if connection_record.info.get("origin", "") == "pool":
                         self.metrics.pool_hits += 1
                     else:
                         self.metrics.pool_misses += 1
@@ -170,13 +174,15 @@ class EnhancedDatabaseManager:
         @event.listens_for(self.engine, "before_execute")
         def on_execute(conn, clauseelement, multiparams, params, execution_options):
             """执行查询事件"""
-            conn.info.setdefault('query_start_time', time.time())
+            conn.info.setdefault("query_start_time", time.time())
 
         @event.listens_for(self.engine, "after_execute")
-        def after_execute(conn, clauseelement, multiparams, params, execution_options, result):
+        def after_execute(
+            conn, clauseelement, multiparams, params, execution_options, result
+        ):
             """查询执行后事件"""
             try:
-                start_time = conn.info.pop('query_start_time', time.time())
+                start_time = conn.info.pop("query_start_time", time.time())
                 execution_time = (time.time() - start_time) * 1000  # ms
 
                 # 更新指标
@@ -198,7 +204,7 @@ class EnhancedDatabaseManager:
                         "query": str(clauseelement),
                         "execution_time_ms": execution_time,
                         "timestamp": datetime.now(),
-                        "params": params
+                        "params": params,
                     }
 
                     try:
@@ -303,7 +309,7 @@ class EnhancedDatabaseManager:
         pool = self.engine.pool
 
         # 检查是否为SQLite StaticPool
-        if hasattr(pool, 'size'):
+        if hasattr(pool, "size"):
             # 标准连接池（如MySQL/PostgreSQL）
             status = {
                 "pool_size": pool.size(),
@@ -311,7 +317,7 @@ class EnhancedDatabaseManager:
                 "checked_out": pool.checkedout(),
                 "overflow": pool.overflow(),
                 "invalid": pool.invalid(),
-                "pool_type": "QueuePool"
+                "pool_type": "QueuePool",
             }
 
             # 计算连接使用率
@@ -328,23 +334,26 @@ class EnhancedDatabaseManager:
                 "overflow": 0,
                 "invalid": 0,
                 "pool_type": "StaticPool",
-                "utilization": 0
+                "utilization": 0,
             }
 
         # 添加指标信息
         metrics = self.get_metrics()
-        status.update({
-            "active_connections": metrics.active_connections,
-            "total_queries": metrics.total_queries,
-            "slow_queries": metrics.slow_queries,
-            "avg_response_time_ms": metrics.avg_response_time,
-            "pool_hits": metrics.pool_hits,
-            "pool_misses": metrics.pool_misses,
-            "pool_hit_rate": (
-                metrics.pool_hits / (metrics.pool_hits + metrics.pool_misses) * 100
-                if (metrics.pool_hits + metrics.pool_misses) > 0 else 0
-            )
-        })
+        status.update(
+            {
+                "active_connections": metrics.active_connections,
+                "total_queries": metrics.total_queries,
+                "slow_queries": metrics.slow_queries,
+                "avg_response_time_ms": metrics.avg_response_time,
+                "pool_hits": metrics.pool_hits,
+                "pool_misses": metrics.pool_misses,
+                "pool_hit_rate": (
+                    metrics.pool_hits / (metrics.pool_hits + metrics.pool_misses) * 100
+                    if (metrics.pool_hits + metrics.pool_misses) > 0
+                    else 0
+                ),
+            }
+        )
 
         return status
 
@@ -354,19 +363,19 @@ class EnhancedDatabaseManager:
             "healthy": True,
             "checks": {},
             "timestamp": datetime.now().isoformat(),
-            "metrics": self.get_metrics().__dict__
+            "metrics": self.get_metrics().__dict__,
         }
 
         try:
             with self.get_session() as session:
                 # 检查基本连接
                 start_time = time.time()
-                result = session.execute(text("SELECT 1"))
+                session.execute(text("SELECT 1"))
                 response_time = (time.time() - start_time) * 1000
 
                 health_status["checks"]["basic_connection"] = {
                     "status": "healthy" if response_time < 1000 else "degraded",
-                    "response_time_ms": response_time
+                    "response_time_ms": response_time,
                 }
 
                 # 检查表是否存在
@@ -380,11 +389,13 @@ class EnhancedDatabaseManager:
                 health_status["checks"]["table_access"] = {
                     "status": "healthy",
                     "table_count": len(tables),
-                    "tables": tables[:10]  # 限制显示数量
+                    "tables": tables[:10],  # 限制显示数量
                 }
 
                 # 检查数据库大小
-                size_query = text("SELECT page_count * page_size as size FROM pragma_page_count(), pragma_page_size()")
+                size_query = text(
+                    "SELECT page_count * page_size as size FROM pragma_page_count(), pragma_page_size()"
+                )
                 try:
                     size_result = session.execute(size_query).fetchone()
                     if size_result:
@@ -392,19 +403,19 @@ class EnhancedDatabaseManager:
                         health_status["checks"]["database_size"] = {
                             "status": "healthy",
                             "size_bytes": db_size_bytes,
-                            "size_mb": round(db_size_bytes / (1024 * 1024), 2)
+                            "size_mb": round(db_size_bytes / (1024 * 1024), 2),
                         }
                 except:
                     health_status["checks"]["database_size"] = {
                         "status": "unknown",
-                        "message": "无法获取数据库大小"
+                        "message": "无法获取数据库大小",
                     }
 
         except Exception as e:
             health_status["healthy"] = False
             health_status["checks"]["connection_test"] = {
                 "status": "failed",
-                "error": str(e)
+                "error": str(e),
             }
             logger.error(f"数据库健康检查失败: {e}")
 
@@ -419,13 +430,15 @@ class EnhancedDatabaseManager:
                 "status": "warning",
                 "slow_queries": metrics.slow_queries,
                 "total_queries": metrics.total_queries,
-                "slow_query_rate": round(metrics.slow_queries / max(metrics.total_queries, 1) * 100, 2)
+                "slow_query_rate": round(
+                    metrics.slow_queries / max(metrics.total_queries, 1) * 100, 2
+                ),
             }
         else:
             health_status["checks"]["slow_queries"] = {
                 "status": "healthy",
                 "slow_queries": metrics.slow_queries,
-                "total_queries": metrics.total_queries
+                "total_queries": metrics.total_queries,
             }
 
         return health_status
@@ -446,7 +459,9 @@ class EnhancedDatabaseManager:
                         DELETE FROM query_history
                         WHERE timestamp < :cutoff_date
                     """)
-                    result = session.execute(cleanup_query, {"cutoff_date": cutoff_date})
+                    result = session.execute(
+                        cleanup_query, {"cutoff_date": cutoff_date}
+                    )
                     cleaned_count += result.rowcount
                     session.commit()
                 except Exception:
@@ -471,7 +486,7 @@ class EnhancedDatabaseManager:
         optimization_results = {
             "timestamp": datetime.now().isoformat(),
             "actions_taken": [],
-            "recommendations": []
+            "recommendations": [],
         }
 
         try:

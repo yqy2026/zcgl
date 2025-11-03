@@ -1,10 +1,11 @@
+from typing import Any
 """
 认证中间件
 """
 
 import logging
 import os
-from typing import Any
+
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -357,7 +358,7 @@ class SecurityConfig:
     AUDIT_LOG_RETENTION_DAYS = settings.AUDIT_LOG_RETENTION_DAYS
 
     @classmethod
-    def get_password_policy(self) -> dict[str, Any]:
+    def get_password_policy(cls) -> dict[str, Any]:
         """获取密码策略"""
         return {
             "min_length": cls.MIN_PASSWORD_LENGTH,
@@ -370,7 +371,7 @@ class SecurityConfig:
         }
 
     @classmethod
-    def get_token_config(self) -> dict[str, Any]:
+    def get_token_config(cls) -> dict[str, Any]:
         """获取令牌配置"""
         return {
             "access_token_expire_minutes": cls.ACCESS_TOKEN_EXPIRE_MINUTES,

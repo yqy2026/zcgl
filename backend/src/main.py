@@ -81,8 +81,8 @@ async def health_check():
             "database": {
                 "enhanced_active": db_status.get("enhanced_active", False),
                 "enhanced_available": db_status.get("enhanced_available", False),
-                "engine_type": db_status.get("engine_type", "Unknown")
-            }
+                "engine_type": db_status.get("engine_type", "Unknown"),
+            },
         }
 
         # 如果增强数据库激活，添加更多指标
@@ -91,14 +91,20 @@ async def health_check():
                 pool_status = db_status.get("pool_status", {})
                 metrics = db_status.get("enhanced_metrics", {})
 
-                health_response["database"].update({
-                    "connection_pool_utilization": pool_status.get("utilization", 0),
-                    "active_connections": metrics.get("active_connections", 0),
-                    "total_queries": metrics.get("total_queries", 0),
-                    "slow_queries": metrics.get("slow_queries", 0),
-                    "avg_response_time_ms": round(metrics.get("avg_response_time", 0), 2),
-                    "pool_hit_rate": pool_status.get("pool_hit_rate", 0)
-                })
+                health_response["database"].update(
+                    {
+                        "connection_pool_utilization": pool_status.get(
+                            "utilization", 0
+                        ),
+                        "active_connections": metrics.get("active_connections", 0),
+                        "total_queries": metrics.get("total_queries", 0),
+                        "slow_queries": metrics.get("slow_queries", 0),
+                        "avg_response_time_ms": round(
+                            metrics.get("avg_response_time", 0), 2
+                        ),
+                        "pool_hit_rate": pool_status.get("pool_hit_rate", 0),
+                    }
+                )
             except Exception as db_e:
                 logger.warning(f"Failed to get detailed database metrics: {db_e}")
                 health_response["database"]["metrics_error"] = str(db_e)
@@ -111,7 +117,7 @@ async def health_check():
             "status": "unhealthy",
             "timestamp": datetime.now(UTC).isoformat(),
             "error": str(e),
-            "database": {"status": "unknown"}
+            "database": {"status": "unknown"},
         }
 
 

@@ -1,3 +1,4 @@
+from typing import Any
 """
 Excel数据导出服务
 使用Polars进行高性能数据处理和导�?
@@ -7,7 +8,7 @@ import logging
 import os
 import tempfile
 from datetime import datetime
-from typing import Any
+
 
 import polars as pl
 from sqlalchemy.orm import Session
@@ -197,7 +198,7 @@ class AssetDataExporter:
             raise ExcelExportError(f"导出Excel文件失败: {str(e)}")
 
     @staticmethod
-    def calculate_export_stats(df: pl.DataFrame) -> Dict[str, Any]:
+    def calculate_export_stats(df: pl.DataFrame) -> dict[str, Any]:
         """计算导出统计信息"""
         try:
             stats = {
@@ -264,7 +265,7 @@ class ExcelExportService:
         format: str = "xlsx",
         include_headers: bool = True,
         db: Session | None = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """导出资产数据到Excel文件"""
         try:
             if db is None:
@@ -327,7 +328,7 @@ class ExcelExportService:
 
     async def _get_filtered_assets(
         self, filters: dict[str, Any] | None, db: Session
-    ) -> List[Asset]:
+    ) -> list[Asset]:
         """根据筛选条件获取资产数据"""
         try:
             if not filters:
@@ -380,7 +381,7 @@ class ExcelExportService:
             logger.error(f"获取筛选资产数据失�? {str(e)}")
             raise ExcelExportError(f"获取筛选资产数据失�? {str(e)}")
 
-    async def get_export_template_info(self) -> Dict[str, Any]:
+    async def get_export_template_info(self) -> dict[str, Any]:
         """获取导出模板信息"""
         return {
             "available_columns": list(AssetDataExporter.FIELD_TO_COLUMN_MAPPING.keys()),

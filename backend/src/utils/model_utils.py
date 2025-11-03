@@ -1,3 +1,4 @@
+from typing import Any
 """
 通用工具函数模块
 """
@@ -5,12 +6,12 @@
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any
+
 
 from sqlalchemy.orm import class_mapper
 
 
-def model_to_dict(model: Any, include_relations: bool = False) -> Dict[str, Any] | None:
+def model_to_dict(model: Any, include_relations: bool = False) -> dict[str, Any] | None:
     """
     通用的模型转字典工具函数
 
@@ -53,7 +54,7 @@ def model_to_dict(model: Any, include_relations: bool = False) -> Dict[str, Any]
 
 def batch_to_dict(
     models: list[Any], include_relations: bool = False
-) -> List[dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """
     批量转换模型为字典
 
@@ -123,7 +124,7 @@ def validate_date_range(start_date: date, end_date: date) -> bool:
     return start_date <= end_date
 
 
-def generate_month_range(start_month: str, end_month: str) -> List[str]:
+def generate_month_range(start_month: str, end_month: str) -> list[str]:
     """
     生成月份范围列表
 

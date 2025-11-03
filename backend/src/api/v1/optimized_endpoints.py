@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from typing import Any
 """
 优化的API端点
 集成性能监控、缓存、错误处理等功能
@@ -7,7 +8,7 @@
 import logging
 import time
 from datetime import datetime
-from typing import Any
+
 
 from ...services.enhanced_error_handler import (
     handle_pdf_error,
@@ -49,7 +50,7 @@ class OptimizedPDFEndpoints:
 
     async def upload_pdf_file_optimized(
         self, file_path: str, options: dict[str, Any] = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """优化的PDF文件上传端点"""
         start_time = time.time()
 
@@ -113,7 +114,7 @@ class OptimizedPDFEndpoints:
                 {"upload_time": 0, "success": False},
             )
 
-    def _generate_processing_recommendations(self, result: dict[str, Any]) -> List[str]:
+    def _generate_processing_recommendations(self, result: dict[str, Any]) -> list[str]:
         """生成处理建议"""
         recommendations = []
 
@@ -161,7 +162,7 @@ class OptimizedPDFEndpoints:
         else:
             return "poor"
 
-    async def get_session_status_optimized(self, session_id: str) -> Dict[str, Any]:
+    async def get_session_status_optimized(self, session_id: str) -> dict[str, Any]:
         """优化的会话状态查询"""
         start_time = time.time()
 
@@ -202,7 +203,7 @@ class OptimizedPDFEndpoints:
 
     async def process_pdf_with_optimization(
         self, session_id: str, file_path: str, processing_options: dict[str, Any]
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """带有优化的PDF处理"""
         start_time = time.time()
 
@@ -271,7 +272,7 @@ class OptimizedPDFEndpoints:
                 {"processing_time": 0, "success": False},
             )
 
-    def _apply_optimization_rules(self, options: dict[str, Any]) -> Dict[str, Any]:
+    def _apply_optimization_rules(self, options: dict[str, Any]) -> dict[str, Any]:
         """应用优化规则"""
         optimized_options = options.copy()
 
@@ -280,7 +281,7 @@ class OptimizedPDFEndpoints:
 
         return optimized_options
 
-    def get_optimization_summary(self) -> Dict[str, Any]:
+    def get_optimization_summary(self) -> dict[str, Any]:
         """获取优化总结"""
         try:
             performance_stats = get_performance_stats()
@@ -305,7 +306,7 @@ class OptimizedPDFEndpoints:
             logger.error(f"获取优化总结失败: {e}")
             return {"error": str(e)}
 
-    def _generate_system_recommendations(self) -> List[str]:
+    def _generate_system_recommendations(self) -> list[str]:
         """生成系统优化建议"""
         recommendations = []
 

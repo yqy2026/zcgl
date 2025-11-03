@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from typing import Any
 """
 统一PDF处理服务
 整合优化的OCR、NLP处理和多引擎融合功能，提供统一的中文合同处理接口
@@ -9,7 +10,7 @@ import time
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+
 
 logger = logging.getLogger(__name__)
 
@@ -208,7 +209,7 @@ class UnifiedPDFProcessor:
         max_pages: int,
         use_preprocessing: bool,
         parallel_processing: bool,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """执行OCR文本提取"""
         if self.optimized_ocr is None:
             return {"success": False, "error": "OCR服务未初始化"}
@@ -279,7 +280,7 @@ class UnifiedPDFProcessor:
 
     async def _extract_structured_data(
         self, ocr_result: dict[str, Any]
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """提取结构化数据"""
         try:
             if self.nlp_processor is None:
@@ -332,7 +333,7 @@ class UnifiedPDFProcessor:
 
     async def _apply_multi_engine_fusion(
         self, ocr_result: dict[str, Any]
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """应用多引擎融合优化"""
         try:
             if self.multi_engine_fusion is None:
@@ -459,7 +460,7 @@ class UnifiedPDFProcessor:
         else:
             return "+".join(methods)
 
-    def get_system_status(self) -> Dict[str, Any]:
+    def get_system_status(self) -> dict[str, Any]:
         """获取系统状态"""
         try:
             status = {
@@ -496,7 +497,7 @@ class UnifiedPDFProcessor:
                 "error": str(e),
             }
 
-    async def test_processing_pipeline(self, pdf_path: str) -> Dict[str, Any]:
+    async def test_processing_pipeline(self, pdf_path: str) -> dict[str, Any]:
         """测试处理管道"""
         logger.info(f"开始测试处理管道: {Path(pdf_path).name}")
 

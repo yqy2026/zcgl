@@ -1,3 +1,4 @@
+from typing import Any
 """
 统一错误码定义系统
 功能: 标准化所有系统错误、定义统一的错误响应格式
@@ -6,7 +7,6 @@
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any
 
 
 class ErrorCode(Enum):
@@ -63,7 +63,7 @@ class APIResponse:
     error: dict[str, Any] | None = None
     message: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """转换为字典"""
         from datetime import datetime
 

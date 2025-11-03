@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from typing import Any
 """
 API响应时间优化器
 提供快速响应、缓存、异步处理等优化功能
@@ -10,7 +11,7 @@ import time
 from collections.abc import Callable
 from datetime import datetime
 from functools import wraps
-from typing import Any
+
 
 logger = logging.getLogger(__name__)
 
@@ -174,7 +175,7 @@ class PerformanceOptimizer:
 
         return "_".join(key_parts)
 
-    def get_performance_report(self) -> Dict[str, Any]:
+    def get_performance_report(self) -> dict[str, Any]:
         """获取性能报告"""
         now = datetime.now()
 
@@ -214,7 +215,7 @@ class PerformanceOptimizer:
             "request_patterns": self._analyze_request_patterns(),
         }
 
-    def _generate_optimization_recommendations(self) -> List[str]:
+    def _generate_optimization_recommendations(self) -> list[str]:
         """生成优化建议"""
         recommendations = []
 
@@ -255,7 +256,7 @@ class PerformanceOptimizer:
 
         return recommendations
 
-    def _analyze_request_patterns(self) -> Dict[str, Any]:
+    def _analyze_request_patterns(self) -> dict[str, Any]:
         """分析请求模式"""
         if not self.slow_requests:
             return {"patterns": [], "analysis": "无慢请求数据"}

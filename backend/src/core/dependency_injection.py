@@ -1,3 +1,4 @@
+from typing import Any
 """
 依赖注入容器
 提供统一的服务注册和管理
@@ -6,7 +7,7 @@
 import inspect
 from abc import ABC
 from collections.abc import Callable
-from typing import Any, TypeVar
+, TypeVar
 
 T = TypeVar("T")
 
@@ -246,7 +247,7 @@ class DIContainer:
         if scope_id in self._scoped:
             del self._scoped[scope_id]
 
-    def get_registered_services(self) -> Dict[str, Any][type, ServiceDescriptor]:
+    def get_registered_services(self) -> dict[str, Any][type, ServiceDescriptor]:
         """获取已注册的服务"""
         return self._services.copy()
 

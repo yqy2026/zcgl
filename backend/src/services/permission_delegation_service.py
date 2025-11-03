@@ -1,3 +1,22 @@
+from typing import Any
+class BusinessLogicError(Exception):
+    """Business logic error"""
+
+    pass
+
+
+class AssetNotFoundError(Exception):
+    """Asset not found error"""
+
+    pass
+
+
+class DuplicateAssetError(Exception):
+    """Duplicate asset error"""
+
+    pass
+
+
 """
 权限委托和继承服务
 支持权限的层级继承和用户间委托
@@ -5,7 +24,7 @@
 
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
+
 
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
@@ -183,7 +202,7 @@ class PermissionDelegationService:
         scope: DelegationScope | None = None,
         scope_id: str | None = None,
         include_expired: bool = False,
-    ) -> List[dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         获取用户被委托的权限
 
@@ -260,7 +279,7 @@ class PermissionDelegationService:
 
     def get_user_delegated_permissions_to_others(
         self, user_id: str, include_expired: bool = False
-    ) -> List[dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         获取用户委托给他人的权限
 
@@ -317,7 +336,7 @@ class PermissionDelegationService:
 
     def get_inherited_permissions(
         self, user_id: str, organization_id: str, include_indirect: bool = True
-    ) -> List[dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         获取从组织层级继承的权限
 
@@ -405,7 +424,7 @@ class PermissionDelegationService:
         user_id: str,
         scope: DelegationScope | None = None,
         scope_id: str | None = None,
-    ) -> List[dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         获取用户的有效权限（包括直接权限、继承权限和委托权限）
 
@@ -476,7 +495,7 @@ class PermissionDelegationService:
 
         return list(unique_permissions.values())
 
-    def get_user_role_permissions(self, user_id: str) -> List[dict[str, Any]]:
+    def get_user_role_permissions(self, user_id: str) -> list[dict[str, Any]]:
         """
         获取用户基于角色的权限
 
@@ -666,7 +685,7 @@ class PermissionDelegationService:
 
     def get_delegation_chain(
         self, original_delegator_id: str, permission_id: str, max_depth: int = 5
-    ) -> List[dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         获取权限委托链
 
@@ -735,7 +754,7 @@ class PermissionDelegationService:
         trace_delegation(original_delegator_id, 1)
         return chain
 
-    def analyze_permission_coverage(self, organization_id: str) -> Dict[str, Any]:
+    def analyze_permission_coverage(self, organization_id: str) -> dict[str, Any]:
         """
         分析权限覆盖情况
 

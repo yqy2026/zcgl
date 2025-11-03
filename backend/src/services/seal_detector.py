@@ -1,3 +1,4 @@
+from typing import Any
 """
 印章和手写体识别服务
 专门识别合同中的红色印章、签名和手写文字
@@ -7,7 +8,7 @@ import logging
 import re
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any
+
 
 import cv2
 import numpy as np
@@ -64,7 +65,7 @@ class SealDetector:
         self.red_seal_templates = self._load_red_seal_templates()
         self.signatures_patterns = self._load_signature_patterns()
 
-    def _load_red_seal_templates(self) -> List[dict[str, Any]]:
+    def _load_red_seal_templates(self) -> list[dict[str, Any]]:
         """加载红色印章模板"""
         return [
             {
@@ -116,7 +117,7 @@ class SealDetector:
             },
         ]
 
-    def _load_signature_patterns(self) -> List[dict[str, Any]]:
+    def _load_signature_patterns(self) -> list[dict[str, Any]]:
         """加载签名模式"""
         return [
             {
@@ -144,7 +145,7 @@ class SealDetector:
             },
         ]
 
-    async def detect_seals(self, image_path: str) -> List[DetectionResult]:
+    async def detect_seals(self, image_path: str) -> list[DetectionResult]:
         """检测图像中的印章和签名"""
         try:
             # 读取图像
@@ -207,7 +208,7 @@ class SealDetector:
 
         return enhanced
 
-    async def _detect_red_seals(self, image: np.ndarray) -> List[DetectionResult]:
+    async def _detect_red_seals(self, image: np.ndarray) -> list[DetectionResult]:
         """检测红色印章"""
         try:
             # 转换为HSV色彩空间
@@ -233,7 +234,7 @@ class SealDetector:
 
     def _apply_seal_template(
         self, hsv_image: np.ndarray, template: dict[str, Any]
-    ) -> List[DetectionResult]:
+    ) -> list[DetectionResult]:
         """应用单个印章模板"""
         detections = []
 
@@ -249,7 +250,7 @@ class SealDetector:
 
     def _detect_circular_seals(
         self, hsv_image: np.ndarray, template: dict[str, Any]
-    ) -> List[DetectionResult]:
+    ) -> list[DetectionResult]:
         """检测圆形印章"""
         detections = []
         try:
@@ -333,7 +334,7 @@ class SealDetector:
 
     def _detect_elliptical_seals(
         self, hsv_image: np.ndarray, template: dict[str, Any]
-    ) -> List[DetectionResult]:
+    ) -> list[DetectionResult]:
         """检测椭圆形印章"""
         detections = []
         try:
@@ -416,7 +417,7 @@ class SealDetector:
 
     def _filter_seal_detections(
         self, detections: list[DetectionResult]
-    ) -> List[DetectionResult]:
+    ) -> list[DetectionResult]:
         """过滤重叠的印章检测结果"""
         if not detections:
             return []
@@ -442,7 +443,7 @@ class SealDetector:
 
         return filtered_detections
 
-    async def _detect_signatures(self, image: np.ndarray) -> List[DetectionResult]:
+    async def _detect_signatures(self, image: np.ndarray) -> list[DetectionResult]:
         """检测签名"""
         try:
             # 转换为灰度图

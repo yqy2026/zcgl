@@ -1,3 +1,4 @@
+from typing import Any
 """
 合同数据验证和匹配服务
 验证提取的数据完整性，并与现有系统数据进行智能匹配
@@ -6,7 +7,7 @@
 import logging
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
-from typing import Any
+
 
 from sqlalchemy.orm import Session
 
@@ -85,7 +86,7 @@ class ContractValidator:
         # 合同状态标准值
         self.VALID_STATUSES = ["有效", "生效", "到期", "终止", "暂停", "草稿", "待生效"]
 
-    def validate_extracted_data(self, data: dict[str, Any]) -> Dict[str, Any]:
+    def validate_extracted_data(self, data: dict[str, Any]) -> dict[str, Any]:
         """
         验证提取的合同数据
 
@@ -158,7 +159,7 @@ class ContractValidator:
 
     def match_with_existing_data(
         self, validated_data: dict[str, Any]
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         与现有系统数据进行智能匹配
 
@@ -220,7 +221,7 @@ class ContractValidator:
                 "error": str(e),
             }
 
-    def _check_required_fields(self, data: dict[str, Any]) -> List[str]:
+    def _check_required_fields(self, data: dict[str, Any]) -> list[str]:
         """检查必填字段是否缺失"""
         missing = []
         for field, display_name in self.REQUIRED_FIELDS.items():
@@ -425,7 +426,7 @@ class ContractValidator:
 
         return str(value)
 
-    def _validate_business_logic(self, data: dict[str, Any]) -> List[str]:
+    def _validate_business_logic(self, data: dict[str, Any]) -> list[str]:
         """业务逻辑验证"""
         errors = []
 
@@ -476,7 +477,7 @@ class ContractValidator:
 
         return errors
 
-    def _check_data_consistency(self, data: dict[str, Any]) -> List[str]:
+    def _check_data_consistency(self, data: dict[str, Any]) -> list[str]:
         """数据一致性检查"""
         warnings = []
 
@@ -531,7 +532,7 @@ class ContractValidator:
 
     def _match_assets_by_address(
         self, db: Session, address: str
-    ) -> List[dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """根据地址匹配资产"""
         if not address:
             return []
@@ -562,7 +563,7 @@ class ContractValidator:
             logger.error(f"Asset matching failed: {e}")
             return []
 
-    def _match_ownerships_by_name(self, db: Session, name: str) -> List[dict[str, Any]]:
+    def _match_ownerships_by_name(self, db: Session, name: str) -> list[dict[str, Any]]:
         """根据名称匹配权属方"""
         if not name:
             return []
@@ -597,7 +598,7 @@ class ContractValidator:
 
     def _check_contract_duplicate(
         self, db: Session, contract_number: str
-    ) -> List[dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """检查合同编号重复"""
         if not contract_number:
             return []
@@ -650,7 +651,7 @@ class ContractValidator:
 
         return round(max(0.0, score), 2)
 
-    def get_validation_summary(self) -> Dict[str, Any]:
+    def get_validation_summary(self) -> dict[str, Any]:
         """获取验证器配置摘要"""
         return {
             "required_fields": list(self.REQUIRED_FIELDS.keys()),

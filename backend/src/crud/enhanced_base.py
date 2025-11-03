@@ -1,3 +1,4 @@
+from typing import Any
 """
 增强的基础CRUD操作类
 提供统一的数据访问模式和通用功能
@@ -6,7 +7,7 @@
 import logging
 from abc import ABC, abstractmethod
 from datetime import UTC, datetime
-from typing import Any, TypeVar
+, TypeVar
 
 from pydantic import BaseModel
 from sqlalchemy import asc, desc
@@ -179,7 +180,7 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
         sorts: list[QuerySort] | None = None,
         include_deleted: bool = False,
         eager_loads: list[str] | None = None,
-    ) -> List[ModelType]:
+    ) -> list[ModelType]:
         """
         获取多个记录
 
@@ -494,7 +495,7 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
         *,
         objects_in: list[CreateSchemaType],
         created_by: str | None = None,
-    ) -> List[ModelType]:
+    ) -> list[ModelType]:
         """
         批量创建记录
 

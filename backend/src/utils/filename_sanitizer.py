@@ -1,3 +1,4 @@
+from typing import Any
 """
 文件名清理和标准化工具
 处理PDF上传时的文件名兼容性问题
@@ -7,7 +8,7 @@ import logging
 import os
 import re
 import unicodedata
-from typing import Any
+
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +60,7 @@ class FilenameSanitizer:
 
     def sanitize_filename(
         self, filename: str, options: dict[str, Any] | None = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         清理文件名，确保跨平台兼容性
 
@@ -242,7 +243,7 @@ class FilenameSanitizer:
             logger.error(f"文件名安全检查失败: {e}")
             return False
 
-    def validate_filename(self, filename: str) -> Dict[str, Any]:
+    def validate_filename(self, filename: str) -> dict[str, Any]:
         """
         验证文件名
 
@@ -323,7 +324,7 @@ class FilenameSanitizer:
         result = self.sanitize_filename(filename)
         return result["sanitized_filename"]
 
-    def get_filename_info(self, filename: str) -> Dict[str, Any]:
+    def get_filename_info(self, filename: str) -> dict[str, Any]:
         """
         获取文件名详细信息
 
@@ -356,12 +357,12 @@ filename_sanitizer = FilenameSanitizer()
 
 
 # 便捷函数
-def sanitize_filename(filename: str, **kwargs) -> Dict[str, Any]:
+def sanitize_filename(filename: str, **kwargs) -> dict[str, Any]:
     """便捷的文件名清理函数"""
     return filename_sanitizer.sanitize_filename(filename, kwargs)
 
 
-def validate_filename(filename: str) -> Dict[str, Any]:
+def validate_filename(filename: str) -> dict[str, Any]:
     """便捷的文件名验证函数"""
     return filename_sanitizer.validate_filename(filename)
 

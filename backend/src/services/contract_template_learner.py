@@ -1,3 +1,4 @@
+from typing import Any
 """
 合同模板学习和匹配服务
 通过机器学习识别标准合同格式和模板
@@ -11,7 +12,7 @@ from collections import defaultdict
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Any
+
 
 import jieba
 import numpy as np
@@ -279,7 +280,7 @@ class ContractTemplateLearner:
             logger.error(f"模板学习失败: {e}")
             return False
 
-    def _discover_patterns(self, contract_texts: list[str]) -> Dict[str, Any]:
+    def _discover_patterns(self, contract_texts: list[str]) -> dict[str, Any]:
         """发现合同文本中的模式"""
         try:
             patterns = {
@@ -367,7 +368,7 @@ class ContractTemplateLearner:
 
     def _create_templates_from_patterns(
         self, patterns: dict[str, Any], feedback_scores: list[float] | None = None
-    ) -> List[ContractTemplate]:
+    ) -> list[ContractTemplate]:
         """从模式中创建模板"""
         new_templates = []
 
@@ -421,7 +422,7 @@ class ContractTemplateLearner:
 
     def _analyze_pattern_for_fields(
         self, pattern_data: dict[str, Any]
-    ) -> List[TemplateField]:
+    ) -> list[TemplateField]:
         """分析模式以提取字段"""
         template_fields = []
 
@@ -513,7 +514,7 @@ class ContractTemplateLearner:
         }
         return type_mapping.get(field_name, "text")
 
-    def _get_field_validation_rules(self, field_name: str) -> Dict[str, Any]:
+    def _get_field_validation_rules(self, field_name: str) -> dict[str, Any]:
         """获取字段验证规则"""
         rules_mapping = {
             "contract_number": {
@@ -618,7 +619,7 @@ class ContractTemplateLearner:
 
     async def match_contract_to_templates(
         self, contract_text: str
-    ) -> List[TemplateMatch]:
+    ) -> list[TemplateMatch]:
         """匹配合同到模板"""
         try:
             matches = []
@@ -642,7 +643,7 @@ class ContractTemplateLearner:
             logger.error(f"模板匹配失败: {e}")
             return []
 
-    def _extract_contract_fields(self, contract_text: str) -> Dict[str, Any]:
+    def _extract_contract_fields(self, contract_text: str) -> dict[str, Any]:
         """从合同文本中提取字段"""
         fields = {}
 

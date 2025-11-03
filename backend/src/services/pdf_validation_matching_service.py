@@ -1,3 +1,4 @@
+from typing import Any
 """
 PDF数据验证和匹配服务
 负责验证提取的数据并进行资产、权属方匹配
@@ -6,7 +7,7 @@ PDF数据验证和匹配服务
 import logging
 import re
 from datetime import datetime
-from typing import Any
+
 
 from fuzzywuzzy import fuzz
 from sqlalchemy.orm import Session
@@ -18,7 +19,7 @@ class FieldValidator:
     """字段验证器"""
 
     @staticmethod
-    def validate_phone_number(phone: str) -> Dict[str, Any]:
+    def validate_phone_number(phone: str) -> dict[str, Any]:
         """验证电话号码"""
         phone = re.sub(r"[^\d]", "", phone)  # 移除非数字字符
 
@@ -41,7 +42,7 @@ class FieldValidator:
         }
 
     @staticmethod
-    def validate_amount(amount: str) -> Dict[str, Any]:
+    def validate_amount(amount: str) -> dict[str, Any]:
         """验证金额"""
         try:
             # 移除货币符号和空格
@@ -65,7 +66,7 @@ class FieldValidator:
             }
 
     @staticmethod
-    def validate_date(date_str: str) -> Dict[str, Any]:
+    def validate_date(date_str: str) -> dict[str, Any]:
         """验证日期格式"""
         date_formats = [
             "%Y-%m-%d",
@@ -98,7 +99,7 @@ class FieldValidator:
         }
 
     @staticmethod
-    def validate_area(area_str: str) -> Dict[str, Any]:
+    def validate_area(area_str: str) -> dict[str, Any]:
         """验证面积数值"""
         try:
             # 提取数字部分
@@ -125,7 +126,7 @@ class FieldValidator:
             }
 
     @staticmethod
-    def validate_email(email: str) -> Dict[str, Any]:
+    def validate_email(email: str) -> dict[str, Any]:
         """验证邮箱地址"""
         email_pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
         is_valid = re.match(email_pattern, email.strip()) is not None
@@ -150,7 +151,7 @@ class AssetMatcher:
         property_nature: str = "",
         min_confidence: float = 0.6,
         max_results: int = 10,
-    ) -> List[dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """查找匹配的资产"""
         from ..models.asset import Asset
 
@@ -238,7 +239,7 @@ class OwnershipMatcher:
         contact_info: str = "",
         min_confidence: float = 0.6,
         max_results: int = 10,
-    ) -> List[dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """查找匹配的权属方"""
         from ..models.ownership import Ownership
 
@@ -311,7 +312,7 @@ class DuplicateChecker:
         property_address: str = "",
         start_date: str = "",
         min_confidence: float = 0.8,
-    ) -> List[dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """查找重复合同"""
         from ..models.rent_contract import RentContract
 
@@ -416,7 +417,7 @@ class PDFValidationMatchingService:
 
     async def validate_extracted_data(
         self, extracted_data: dict[str, Any]
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """验证提取的数据"""
 
         validation_results = {}
@@ -492,7 +493,7 @@ class PDFValidationMatchingService:
 
     async def perform_data_matching(
         self, extracted_data: dict[str, Any]
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """执行数据匹配"""
 
         # 资产匹配
@@ -588,7 +589,7 @@ class PDFValidationMatchingService:
 
     async def validate_and_match(
         self, extracted_data: dict[str, Any]
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """执行完整的验证和匹配流程"""
 
         # 数据验证

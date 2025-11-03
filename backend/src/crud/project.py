@@ -1,9 +1,10 @@
+from typing import Any
 """
 项目管理相关CRUD操作
 """
 
 from datetime import UTC, datetime
-from typing import Any
+
 
 from sqlalchemy import desc, or_
 from sqlalchemy.orm import Session
@@ -62,7 +63,7 @@ class CRUDProject:
         limit: int = 100,
         is_active: bool | None = None,
         keyword: str | None = None,
-    ) -> List[Project]:
+    ) -> list[Project]:
         """获取多个项目"""
         query = db.query(Project)
 
@@ -477,7 +478,7 @@ class CRUDProject:
 
     def search(
         self, db: Session, search_params: ProjectSearchRequest
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """搜索项目"""
         query = db.query(Project)
 
@@ -565,7 +566,7 @@ class CRUDProject:
             "pages": pages,
         }
 
-    def get_statistics(self, db: Session) -> Dict[str, Any]:
+    def get_statistics(self, db: Session) -> dict[str, Any]:
         """获取项目统计信息"""
         # 基础统计
         total_count = db.query(Project).count()
@@ -654,7 +655,7 @@ class CRUDProject:
         db.refresh(db_obj)
         return db_obj
 
-    def get_dropdown_options(self, db: Session) -> List[dict[str, Any]]:
+    def get_dropdown_options(self, db: Session) -> list[dict[str, Any]]:
         """获取下拉选项"""
         projects = (
             db.query(Project).filter(Project.is_active).order_by(Project.name).all()

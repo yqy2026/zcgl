@@ -1,3 +1,4 @@
+from typing import Any
 """
 统一缓存管理器
 提供标准化的缓存操作和策略
@@ -10,7 +11,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from hashlib import md5
-from typing import Any
+
 
 from .config import settings
 
@@ -291,7 +292,7 @@ class CacheManager:
 
     def get_multi(
         self, keys: list[str], namespace: str | None = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         批量获取缓存值
 
@@ -346,7 +347,7 @@ class CacheManager:
                 count += 1
         return count
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """
         获取缓存统计信息
 

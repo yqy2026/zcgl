@@ -1,3 +1,4 @@
+from typing import Any
 """
 OCR文本预处理器
 专门处理扫描版PDF合同OCR后的文本，清理和标准化文本内容
@@ -6,7 +7,7 @@ OCR文本预处理器
 import logging
 import re
 from datetime import date
-from typing import Any
+
 
 logger = logging.getLogger(__name__)
 
@@ -339,7 +340,7 @@ class OCRTextProcessor:
 
         return text
 
-    def extract_dates(self, text: str) -> List[dict[str, Any]]:
+    def extract_dates(self, text: str) -> list[dict[str, Any]]:
         """
         提取日期信息
 
@@ -393,7 +394,7 @@ class OCRTextProcessor:
         dates.sort(key=lambda x: x["confidence"], reverse=True)
         return dates
 
-    def extract_amounts(self, text: str) -> List[dict[str, Any]]:
+    def extract_amounts(self, text: str) -> list[dict[str, Any]]:
         """
         提取金额信息
 
@@ -437,7 +438,7 @@ class OCRTextProcessor:
 
         return unique_amounts
 
-    def extract_areas(self, text: str) -> List[dict[str, Any]]:
+    def extract_areas(self, text: str) -> list[dict[str, Any]]:
         """
         提取面积信息
 
@@ -562,7 +563,7 @@ class OCRTextProcessor:
 
         return min(confidence, 1.0)
 
-    def process_contract_text(self, text: str) -> Dict[str, Any]:
+    def process_contract_text(self, text: str) -> dict[str, Any]:
         """
         处理合同文本的综合方法
 

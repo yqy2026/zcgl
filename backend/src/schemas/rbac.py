@@ -1,9 +1,10 @@
+from typing import Any
 """
 RBAC相关的Pydantic模式
 """
 
 from datetime import datetime
-from typing import Any
+
 
 from pydantic import BaseModel, ConfigDict, Field
 

@@ -1,3 +1,4 @@
+from typing import Any
 """
 API工具命令行接口
 提供API文档生成、一致性检查等功能
@@ -6,7 +7,7 @@ API工具命令行接口
 import os
 import sys
 from pathlib import Path
-from typing import Any
+
 
 import click
 

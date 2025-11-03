@@ -1,3 +1,4 @@
+from typing import Any
 """
 API一致性检查工具
 检查前后端API的一致性，包括路径、参数、响应格式等
@@ -9,7 +10,6 @@ import re
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 
 @dataclass
@@ -354,7 +354,9 @@ class APIConsistencyChecker:
 
         print(f"📄 报告已保存到: {json_path}")
 
-    def _generate_markdown_report(self, report: dict[str, Any], output_dir: str) -> None:
+    def _generate_markdown_report(
+        self, report: dict[str, Any], output_dir: str
+    ) -> None:
         """生成Markdown格式报告"""
         md_content = f"""# API一致性检查报告
 

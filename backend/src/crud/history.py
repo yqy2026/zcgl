@@ -2,7 +2,6 @@
 资产历史CRUD操作
 """
 
-
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 

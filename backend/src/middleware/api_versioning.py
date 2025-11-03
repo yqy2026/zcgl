@@ -1,3 +1,4 @@
+from typing import Any
 """
 API版本控制中间件
 提供灵活的API版本管理功能
@@ -7,7 +8,7 @@ import logging
 import time
 from collections.abc import Callable
 from datetime import datetime, timedelta
-from typing import Any
+
 
 from fastapi import HTTPException, Request, Response
 from fastapi.routing import APIRoute
@@ -165,7 +166,7 @@ class APIVersionMiddleware(BaseHTTPMiddleware):
             if not success:
                 self.version_stats[version]["errors"] += 1
 
-    def get_version_stats(self) -> Dict[str, Any]:
+    def get_version_stats(self) -> dict[str, Any]:
         """获取版本使用统计"""
         return {
             "stats": self.version_stats,
@@ -287,7 +288,7 @@ class APIVersionManager:
         else:
             return "active"
 
-    def get_version_info(self) -> Dict[str, Any]:
+    def get_version_info(self) -> dict[str, Any]:
         """获取版本信息"""
         return {
             "versions": self.versions,
@@ -311,7 +312,7 @@ class APIVersionManager:
 
     def generate_migration_guide(
         self, from_version: str, to_version: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """生成迁移指南"""
         migration_key = f"{from_version}->{to_version}"
         steps = self.migration_plans.get(migration_key, [])
@@ -331,12 +332,12 @@ class APIVersionManager:
             ),
         }
 
-    def _get_breaking_changes(self, from_version: str, to_version: str) -> List[str]:
+    def _get_breaking_changes(self, from_version: str, to_version: str) -> list[str]:
         """获取破坏性变更（简化版本）"""
         # 这里应该基于实际的API变更来计算
         return ["端点路径变更", "请求参数格式变更", "响应结构变更"]
 
-    def _get_recommended_actions(self, from_version: str, to_version: str) -> List[str]:
+    def _get_recommended_actions(self, from_version: str, to_version: str) -> list[str]:
         """获取推荐操作"""
         return [
             f"更新API调用从 {from_version} 到 {to_version}",

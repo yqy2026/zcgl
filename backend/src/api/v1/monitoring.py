@@ -1,3 +1,4 @@
+from typing import Any
 """
 监控API路由
 收集和分析系统性能指标
@@ -5,7 +6,7 @@
 
 import logging
 from datetime import datetime
-from typing import Any
+
 
 import psutil
 from fastapi import APIRouter, Depends, HTTPException

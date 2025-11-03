@@ -1,3 +1,4 @@
+from typing import Any
 """
 统一异常处理机制
 提供标准化的异常定义、处理和响应格式
@@ -6,7 +7,7 @@
 import logging
 import traceback
 from datetime import UTC, datetime
-from typing import Any
+
 
 from fastapi import HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError

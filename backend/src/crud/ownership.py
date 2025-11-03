@@ -1,9 +1,10 @@
+from typing import Any
 """
 权属方相关CRUD操作
 """
 
 from datetime import UTC, datetime
-from typing import Any
+
 
 from sqlalchemy import desc, or_
 from sqlalchemy.orm import Session
@@ -40,7 +41,7 @@ class CRUDOwnership:
         limit: int = 100,
         is_active: bool | None = None,
         keyword: str | None = None,
-    ) -> List[Ownership]:
+    ) -> list[Ownership]:
         """获取多个权属方"""
         query = db.query(Ownership)
 
@@ -208,7 +209,7 @@ class CRUDOwnership:
 
     def search(
         self, db: Session, search_params: OwnershipSearchRequest
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """搜索权属方"""
         query = db.query(Ownership)
 
@@ -248,7 +249,7 @@ class CRUDOwnership:
             "pages": pages,
         }
 
-    def get_statistics(self, db: Session) -> Dict[str, Any]:
+    def get_statistics(self, db: Session) -> dict[str, Any]:
         """获取权属方统计信息"""
         # 基础统计
         total_count = db.query(Ownership).count()

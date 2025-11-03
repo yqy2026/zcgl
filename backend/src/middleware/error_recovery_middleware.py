@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from typing import Any
 """
 错误恢复中间件
 在API层面集成错误恢复机制，提供透明的错误处理和恢复
@@ -10,7 +11,7 @@ import traceback
 import uuid
 from collections.abc import Callable
 from datetime import datetime
-from typing import Any
+
 
 from fastapi import HTTPException, Request, Response
 from fastapi.responses import JSONResponse
@@ -280,7 +281,7 @@ class ErrorRecoveryMiddleware(BaseHTTPMiddleware):
 
         return status_map.get(error_category, 500)
 
-    def _get_error_suggestions(self) -> List[Any]:
+    def _get_error_suggestions(self) -> list[Any]:
         """获取错误处理建议"""
 
         suggestions_map = {

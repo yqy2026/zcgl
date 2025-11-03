@@ -370,7 +370,9 @@ async def create_asset(
             db=db, property_name=asset_in.property_name
         )
         if existing_asset:
-            raise DuplicateResourceError("Asset", "property_name", asset_in.property_name)
+            raise DuplicateResourceError(
+                "Asset", "property_name", asset_in.property_name
+            )
 
         # 创建资产并记录历史
         asset = asset_crud.create_with_history(db=db, obj_in=asset_in)
@@ -408,7 +410,9 @@ async def update_asset(
                 db=db, property_name=asset_in.property_name
             )
             if existing_asset and existing_asset.id != asset_id:
-                raise DuplicateResourceError("Asset", "property_name", asset_in.property_name)
+                raise DuplicateResourceError(
+                    "Asset", "property_name", asset_in.property_name
+                )
 
         # 更新资产并记录历史
         updated_asset = asset_crud.update_with_history(
@@ -1452,7 +1456,7 @@ async def batch_delete_assets(
         return {
             "success": True,
             "data": {"deleted_count": deleted_count},
-            "message": f"成功删除{deleted_count}个资产"
+            "message": f"成功删除{deleted_count}个资产",
         }
 
     except Exception as e:
@@ -1475,7 +1479,13 @@ async def validate_asset_data(
         warnings = []
 
         # 检查必填字段
-        required_fields = ["propertyName", "address", "ownershipStatus", "propertyNature", "usageStatus"]
+        required_fields = [
+            "propertyName",
+            "address",
+            "ownershipStatus",
+            "propertyNature",
+            "usageStatus",
+        ]
         for field in required_fields:
             if field not in asset_data or not asset_data[field]:
                 validation_errors.append(f"缺少必填字段: {field}")
@@ -1494,7 +1504,9 @@ async def validate_asset_data(
                 validation_errors.append("实际面积必须是有效数字")
 
         # 检查业务规则
-        if asset_data.get("ownershipStatus") == "已出租" and not asset_data.get("leaseContractNumber"):
+        if asset_data.get("ownershipStatus") == "已出租" and not asset_data.get(
+            "leaseContractNumber"
+        ):
             warnings.append("已出租资产建议填写租赁合同号")
 
         if asset_data.get("rentedArea", 0) > asset_data.get("rentableArea", 0):
@@ -1506,9 +1518,11 @@ async def validate_asset_data(
                 "is_valid": len(validation_errors) == 0,
                 "errors": validation_errors,
                 "warnings": warnings,
-                "validation_score": max(0, 100 - len(validation_errors) * 10)
+                "validation_score": max(0, 100 - len(validation_errors) * 10),
             },
-            "message": "验证完成" if len(validation_errors) == 0 else f"发现{len(validation_errors)}个验证错误"
+            "message": "验证完成"
+            if len(validation_errors) == 0
+            else f"发现{len(validation_errors)}个验证错误",
         }
 
     except Exception as e:
@@ -1525,14 +1539,16 @@ async def get_ownership_entities(
     """
     try:
         # 从资产表中提取所有唯一的权属实体
-        query = text("SELECT DISTINCT ownership_entity FROM assets WHERE ownership_entity IS NOT NULL ORDER BY ownership_entity")
+        query = text(
+            "SELECT DISTINCT ownership_entity FROM assets WHERE ownership_entity IS NOT NULL ORDER BY ownership_entity"
+        )
         result = db.execute(query)
         ownership_entities = [row[0] for row in result.fetchall()]
 
         return {
             "success": True,
             "data": ownership_entities,
-            "message": f"获取到{len(ownership_entities)}个权属实体"
+            "message": f"获取到{len(ownership_entities)}个权属实体",
         }
 
     except Exception as e:
@@ -1549,14 +1565,16 @@ async def get_business_categories(
     """
     try:
         # 从资产表中提取所有唯一的业务分类
-        query = text("SELECT DISTINCT ownership_category FROM assets WHERE ownership_category IS NOT NULL ORDER BY ownership_category")
+        query = text(
+            "SELECT DISTINCT ownership_category FROM assets WHERE ownership_category IS NOT NULL ORDER BY ownership_category"
+        )
         result = db.execute(query)
         business_categories = [row[0] for row in result.fetchall()]
 
         return {
             "success": True,
             "data": business_categories,
-            "message": f"获取到{len(business_categories)}个业务分类"
+            "message": f"获取到{len(business_categories)}个业务分类",
         }
 
     except Exception as e:
@@ -1615,10 +1633,10 @@ async def get_asset_statistics_summary(
                     "total_land_area": float(area_stats[0] or 0),
                     "total_property_area": float(area_stats[1] or 0),
                     "total_rentable_area": float(area_stats[2] or 0),
-                    "total_rented_area": float(area_stats[3] or 0)
-                }
+                    "total_rented_area": float(area_stats[3] or 0),
+                },
             },
-            "message": "资产统计摘要获取成功"
+            "message": "资产统计摘要获取成功",
         }
 
     except Exception as e:

@@ -1,3 +1,4 @@
+from typing import Any
 """
 多引擎融合和置信度加权系统
 整合多个OCR和AI引擎的结果，通过智能算法提高整体识别准确度
@@ -10,7 +11,7 @@ import statistics
 from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+
 
 import numpy as np
 
@@ -63,7 +64,7 @@ class MultiEngineFusion:
         self.quality_thresholds = self._initialize_quality_thresholds()
         self.performance_history = defaultdict(list)
 
-    def _initialize_engine_weights(self) -> Dict[str, Any][EngineType, float]:
+    def _initialize_engine_weights(self) -> dict[str, Any][EngineType, float]:
         """初始化引擎权重"""
         return {
             EngineType.PADDLE_OCR: 0.35,  # 中文识别效果较好
@@ -75,7 +76,7 @@ class MultiEngineFusion:
             EngineType.VISION_AI: 0.40,  # AI视觉
         }
 
-    def _initialize_fusion_methods(self) -> Dict[str, Any][str, callable]:
+    def _initialize_fusion_methods(self) -> dict[str, Any][str, callable]:
         """初始化融合方法"""
         return {
             "weighted_average": self._weighted_average_fusion,
@@ -86,7 +87,7 @@ class MultiEngineFusion:
             "quality_weighted": self._quality_weighted_fusion,
         }
 
-    def _initialize_quality_thresholds(self) -> Dict[str, Any][str, float]:
+    def _initialize_quality_thresholds(self) -> dict[str, Any][str, float]:
         """初始化质量阈值"""
         return {
             "min_confidence": 0.3,
@@ -138,7 +139,7 @@ class MultiEngineFusion:
             logger.error(f"多引擎融合失败: {e}")
             return self._create_fallback_fusion_result(engine_results)
 
-    def _filter_valid_results(self, results: list[EngineResult]) -> List[EngineResult]:
+    def _filter_valid_results(self, results: list[EngineResult]) -> list[EngineResult]:
         """筛选有效的引擎结果"""
         valid_results = []
         thresholds = self.quality_thresholds
@@ -172,7 +173,7 @@ class MultiEngineFusion:
 
     def _adjust_weights_for_context(
         self, base_weights: dict[EngineType, float], context_type: str
-    ) -> Dict[str, Any][EngineType, float]:
+    ) -> dict[str, Any][EngineType, float]:
         """根据上下文调整引擎权重"""
         adjusted_weights = base_weights.copy()
 
@@ -481,7 +482,7 @@ class MultiEngineFusion:
 
     def _calculate_quality_indicators(
         self, results: list[EngineResult]
-    ) -> Dict[str, Any][str, float]:
+    ) -> dict[str, Any][str, float]:
         """计算质量指标"""
         if not results:
             return {}
@@ -550,7 +551,7 @@ class MultiEngineFusion:
         results: list[EngineResult],
         similarity_matrix: np.ndarray,
         threshold: float = 0.7,
-    ) -> List[list[EngineResult]]:
+    ) -> list[list[EngineResult]]:
         """找到文本簇"""
         n = len(results)
         visited = [False] * n
@@ -570,7 +571,7 @@ class MultiEngineFusion:
 
         return clusters
 
-    def _extract_semantic_features(self, text: str) -> Dict[str, Any]:
+    def _extract_semantic_features(self, text: str) -> dict[str, Any]:
         """提取语义特征"""
         features = {
             "length": len(text),
@@ -639,7 +640,7 @@ class MultiEngineFusion:
         self,
         semantic_features: list[tuple[EngineResult, dict[str, Any]]],
         semantic_similarity: float,
-    ) -> List[EngineResult]:
+    ) -> list[EngineResult]:
         """找到语义共识"""
         if semantic_similarity < 0.5:
             return []
@@ -856,7 +857,7 @@ class MultiEngineFusion:
         else:
             return self._create_empty_fusion_result()
 
-    def get_performance_statistics(self) -> Dict[str, Any]:
+    def get_performance_statistics(self) -> dict[str, Any]:
         """获取性能统计信息"""
         stats = {}
 
@@ -888,7 +889,7 @@ class MultiEngineFusion:
         self.engine_weights.update(normalized_weights)
         logger.info(f"引擎权重已更新: {normalized_weights}")
 
-    def fuse_results(self, mock_engine_results: list[dict[str, Any]]) -> Dict[str, Any]:
+    def fuse_results(self, mock_engine_results: list[dict[str, Any]]) -> dict[str, Any]:
         """
         兼容性方法：融合简单格式的引擎结果
         用于兼容测试和简化调用

@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
+from typing import Any
 """
 错误恢复管理API
 提供错误恢复策略管理、监控和统计功能
 """
 
 from datetime import datetime
-from typing import Any
+
 
 from fastapi import APIRouter, Body, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -136,7 +137,7 @@ async def get_recovery_statistics(
 )
 @api_error_recovery(ErrorCategory.DATABASE)
 @require_permissions("system:error_recovery:view")
-async def get_recovery_strategies() -> List[RecoveryConfigResponse]:
+async def get_recovery_strategies() -> list[RecoveryConfigResponse]:
     """获取错误恢复策略配置"""
 
     try:
@@ -173,7 +174,7 @@ async def get_recovery_strategies() -> List[RecoveryConfigResponse]:
 @require_permissions("system:error_recovery:edit")
 async def update_recovery_strategy(
     category: str, strategy_update: RecoveryStrategyUpdate
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """更新错误恢复策略"""
 
     try:
@@ -234,7 +235,7 @@ async def update_recovery_strategy(
 )
 @api_error_recovery(ErrorCategory.DATABASE)
 @require_permissions("system:error_recovery:view")
-async def get_circuit_breaker_status() -> List[CircuitBreakerStatus]:
+async def get_circuit_breaker_status() -> list[CircuitBreakerStatus]:
     """获取熔断器状态"""
 
     try:
@@ -269,7 +270,7 @@ async def get_circuit_breaker_status() -> List[CircuitBreakerStatus]:
 )
 @api_error_recovery(ErrorCategory.DATABASE)
 @require_permissions("system:error_recovery:edit")
-async def reset_circuit_breaker(category: str) -> Dict[str, Any]:
+async def reset_circuit_breaker(category: str) -> dict[str, Any]:
     """重置熔断器"""
 
     try:
@@ -313,7 +314,7 @@ async def get_recovery_history(
     success: bool | None = Query(None, description="按是否成功筛选"),
     limit: int = Query(50, ge=1, le=1000, description="每页记录数"),
     offset: int = Query(0, ge=0, description="偏移量"),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """获取错误恢复历史"""
 
     try:
@@ -352,7 +353,7 @@ async def get_recovery_history(
 async def test_error_recovery(
     category: str = Body(..., description="错误类别"),
     simulate_error: bool = Body(True, description="是否模拟错误"),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """测试错误恢复"""
 
     try:
@@ -416,7 +417,7 @@ async def test_error_recovery(
 @require_permissions("system:error_recovery:edit")
 async def clear_recovery_history(
     before_time: datetime | None = Query(None, description="清理此时间之前的记录"),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """清理错误恢复历史"""
 
     try:
@@ -448,7 +449,7 @@ async def clear_recovery_history(
     summary="获取错误恢复系统健康状态",
     description="检查错误恢复系统的整体健康状态",
 )
-async def get_error_recovery_health() -> Dict[str, Any]:
+async def get_error_recovery_health() -> dict[str, Any]:
     """获取错误恢复系统健康状态"""
 
     try:

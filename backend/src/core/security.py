@@ -1,3 +1,4 @@
+from typing import Any
 """
 文件验证和安全模块
 提供文件上传验证、请求限制和安全防护功能
@@ -10,7 +11,7 @@ from collections import defaultdict, deque
 from datetime import UTC, datetime
 from pathlib import Path
 from time import time
-from typing import Any
+
 
 import magic
 from fastapi import Depends, HTTPException, Request, UploadFile, status
@@ -295,7 +296,7 @@ class FileValidator:
 
     def validate_upload(
         self, file: UploadFile, allowed_types: list[str] = None, max_size: int = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         执行完整的文件上传验证
 
@@ -489,7 +490,7 @@ class SecurityMiddleware:
 
     async def validate_file_upload(
         self, file: UploadFile, allowed_types: list[str] = None, max_size: int = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         验证文件上传
 
@@ -606,6 +607,6 @@ async def get_current_user(
 
 async def validate_file_upload_dependency(
     file: UploadFile, allowed_types: list[str] = None, max_size: int = None
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """文件上传验证依赖"""
     return await security_middleware.validate_file_upload(file, allowed_types, max_size)
