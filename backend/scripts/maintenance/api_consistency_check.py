@@ -170,7 +170,7 @@ class APIConsistencyChecker:
                 missing_endpoints.append(key)
                 self.issues.append(ConsistencyIssue(
                     issue_type="missing_endpoint",
-                    severity="warning",
+                    severity="critical",
                     message=f"前端调用但后端不存在的API: {frontend_call.method} {frontend_call.path}",
                     frontend_file="前端服务文件"
                 ))
