@@ -203,9 +203,7 @@ class UserSessionCRUD:
         """清理过期会话"""
         count = (
             db.query(UserSession)
-            .filter(
-                UserSession.expires_at < datetime.now(), UserSession.is_active
-            )
+            .filter(UserSession.expires_at < datetime.now(), UserSession.is_active)
             .update({"is_active": False})
         )
         db.commit()
@@ -214,9 +212,7 @@ class UserSessionCRUD:
     def count_active_sessions(self, db: Session) -> int:
         """活跃会话总数"""
         return (
-            db.query(func.count(UserSession.id))
-            .filter(UserSession.is_active)
-            .scalar()
+            db.query(func.count(UserSession.id)).filter(UserSession.is_active).scalar()
         )
 
 

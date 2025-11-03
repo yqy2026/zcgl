@@ -112,7 +112,7 @@ class User(Base):
         # 安全地检查 is_locked 字段
         is_locked = self.is_locked
         if isinstance(is_locked, str):
-            is_locked = is_locked.lower() in ('true', '1', 'yes')
+            is_locked = is_locked.lower() in ("true", "1", "yes")
         elif not isinstance(is_locked, bool):
             is_locked = bool(is_locked) if is_locked is not None else False
 

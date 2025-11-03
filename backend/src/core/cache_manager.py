@@ -62,8 +62,8 @@ class MemoryCache(CacheBackend):
         """获取缓存值"""
         if key in self._cache:
             item = self._cache[key]
-            if item['expires_at'] > datetime.now(UTC):
-                return item['value']
+            if item["expires_at"] > datetime.now(UTC):
+                return item["value"]
             else:
                 # 过期了，删除
                 del self._cache[key]
@@ -74,16 +74,17 @@ class MemoryCache(CacheBackend):
         try:
             # 如果缓存已满，删除最旧的条目
             if len(self._cache) >= self.max_size:
-                oldest_key = min(self._cache.keys(),
-                               key=lambda k: self._cache[k]['created_at'])
+                oldest_key = min(
+                    self._cache.keys(), key=lambda k: self._cache[k]["created_at"]
+                )
                 del self._cache[oldest_key]
 
             # 设置缓存项
             expires_at = datetime.now(UTC) + timedelta(seconds=ttl or 300)  # 默认5分钟
             self._cache[key] = {
-                'value': value,
-                'created_at': datetime.now(UTC),
-                'expires_at': expires_at
+                "value": value,
+                "created_at": datetime.now(UTC),
+                "expires_at": expires_at,
             }
             return True
         except Exception as e:
@@ -114,7 +115,7 @@ class MemoryCache(CacheBackend):
     def get_ttl(self, key: str) -> int | None:
         """获取缓存剩余时间"""
         if key in self._cache:
-            expires_at = self._cache[key]['expires_at']
+            expires_at = self._cache[key]["expires_at"]
             remaining = (expires_at - datetime.now(UTC)).total_seconds()
             return max(0, int(remaining))
         return None
@@ -131,8 +132,12 @@ class CacheManager:
             backend: 缓存后端实现
         """
         self.backend = backend or MemoryCache()
-        self.default_ttl = settings.CACHE_TTL if hasattr(settings, 'CACHE_TTL') else 300
-        self.key_prefix = settings.CACHE_KEY_PREFIX if hasattr(settings, 'CACHE_KEY_PREFIX') else 'zcgl'
+        self.default_ttl = settings.CACHE_TTL if hasattr(settings, "CACHE_TTL") else 300
+        self.key_prefix = (
+            settings.CACHE_KEY_PREFIX
+            if hasattr(settings, "CACHE_KEY_PREFIX")
+            else "zcgl"
+        )
 
     def _make_key(self, key: str, namespace: str | None = None) -> str:
         """生成缓存键"""
@@ -144,7 +149,7 @@ class CacheManager:
         """序列化值"""
         if isinstance(value, (dict, list, tuple, set)):
             return json.dumps(value, ensure_ascii=False, default=str)
-        elif hasattr(value, 'dict'):
+        elif hasattr(value, "dict"):
             return json.dumps(value.dict(), ensure_ascii=False, default=str)
         return value
 
@@ -159,12 +164,7 @@ class CacheManager:
 
     # ==================== 基础缓存操作 ====================
 
-    def get(
-        self,
-        key: str,
-        namespace: str | None = None,
-        default: Any = None
-    ) -> Any:
+    def get(self, key: str, namespace: str | None = None, default: Any = None) -> Any:
         """
         获取缓存值
 
@@ -183,11 +183,7 @@ class CacheManager:
         return default
 
     def set(
-        self,
-        key: str,
-        value: Any,
-        ttl: int | None = None,
-        namespace: str | None = None
+        self, key: str, value: Any, ttl: int | None = None, namespace: str | None = None
     ) -> bool:
         """
         设置缓存值
@@ -233,11 +229,7 @@ class CacheManager:
         cache_key = self._make_key(key, namespace)
         return self.backend.exists(cache_key)
 
-    def clear(
-        self,
-        namespace: str | None = None,
-        pattern: str | None = None
-    ) -> bool:
+    def clear(self, namespace: str | None = None, pattern: str | None = None) -> bool:
         """
         清空缓存
 
@@ -266,7 +258,7 @@ class CacheManager:
         ttl: int | None = None,
         namespace: str | None = None,
         *args,
-        **kwargs
+        **kwargs,
     ) -> Any:
         """
         获取缓存或设置新值
@@ -298,9 +290,7 @@ class CacheManager:
             raise
 
     def get_multi(
-        self,
-        keys: list[str],
-        namespace: str | None = None
+        self, keys: list[str], namespace: str | None = None
     ) -> dict[str, Any]:
         """
         批量获取缓存值
@@ -320,10 +310,7 @@ class CacheManager:
         return result
 
     def set_multi(
-        self,
-        data: dict[str, Any],
-        ttl: int | None = None,
-        namespace: str | None = None
+        self, data: dict[str, Any], ttl: int | None = None, namespace: str | None = None
     ) -> bool:
         """
         批量设置缓存值
@@ -342,11 +329,7 @@ class CacheManager:
                 success = False
         return success
 
-    def delete_multi(
-        self,
-        keys: list[str],
-        namespace: str | None = None
-    ) -> int:
+    def delete_multi(self, keys: list[str], namespace: str | None = None) -> int:
         """
         批量删除缓存值
 
@@ -382,7 +365,7 @@ class CacheManager:
                 current_time = datetime.now(UTC)
 
                 for item in cache_data.values():
-                    if item['expires_at'] <= current_time:
+                    if item["expires_at"] <= current_time:
                         expired_items += 1
                     else:
                         valid_items += 1
@@ -390,8 +373,10 @@ class CacheManager:
                 # 计算内存使用估算
                 total_memory = 0
                 for key, item in cache_data.items():
-                    total_memory += len(key.encode('utf-8'))  # key大小
-                    total_memory += len(str(item['value']).encode('utf-8'))  # value大小估算
+                    total_memory += len(key.encode("utf-8"))  # key大小
+                    total_memory += len(
+                        str(item["value"]).encode("utf-8")
+                    )  # value大小估算
 
                 return {
                     "backend_type": "MemoryCache",
@@ -399,13 +384,15 @@ class CacheManager:
                     "valid_items": valid_items,
                     "expired_items": expired_items,
                     "max_size": self.backend.max_size,
-                    "usage_ratio": round(total_items / self.backend.max_size, 2) if self.backend.max_size > 0 else 0,
+                    "usage_ratio": round(total_items / self.backend.max_size, 2)
+                    if self.backend.max_size > 0
+                    else 0,
                     "memory_usage_bytes": total_memory,
                     "memory_usage_mb": round(total_memory / (1024 * 1024), 2),
                     "default_ttl": self.default_ttl,
                     "key_prefix": self.key_prefix,
                     "hit_rate": None,  # MemoryCache没有跟踪命中率
-                    "created_at": datetime.now(UTC).isoformat()
+                    "created_at": datetime.now(UTC).isoformat(),
                 }
             else:
                 # 对于其他类型的缓存后端，返回基本信息
@@ -421,7 +408,7 @@ class CacheManager:
                     "default_ttl": self.default_ttl,
                     "key_prefix": self.key_prefix,
                     "hit_rate": None,
-                    "created_at": datetime.now(UTC).isoformat()
+                    "created_at": datetime.now(UTC).isoformat(),
                 }
         except Exception as e:
             logger.error(f"获取缓存统计失败: {e}")
@@ -430,7 +417,7 @@ class CacheManager:
                 "error": str(e),
                 "default_ttl": self.default_ttl,
                 "key_prefix": self.key_prefix,
-                "created_at": datetime.now(UTC).isoformat()
+                "created_at": datetime.now(UTC).isoformat(),
             }
 
     def generate_key(self, prefix: str, **kwargs) -> str:
@@ -458,7 +445,7 @@ class CacheManager:
         sorted_kwargs = dict(sorted(filtered_kwargs.items()))
 
         # 生成参数的哈希值
-        params_str = json.dumps(sorted_kwargs, sort_keys=True, separators=(',', ':'))
+        params_str = json.dumps(sorted_kwargs, sort_keys=True, separators=(",", ":"))
         params_hash = hashlib.md5(params_str.encode()).hexdigest()[:8]
 
         return f"{prefix}_{params_hash}"
@@ -469,7 +456,7 @@ class CacheManager:
         self,
         ttl: int | None = None,
         namespace: str | None = None,
-        key_generator: Callable | None = None
+        key_generator: Callable | None = None,
     ):
         """
         缓存装饰器
@@ -479,6 +466,7 @@ class CacheManager:
             namespace: 命名空间
             key_generator: 键生成函数
         """
+
         def decorator(func):
             def wrapper(*args, **kwargs):
                 # 生成缓存键
@@ -502,12 +490,11 @@ class CacheManager:
                     raise
 
             return wrapper
+
         return decorator
 
     def cache_invalidate(
-        self,
-        namespace: str | None = None,
-        pattern: str | None = None
+        self, namespace: str | None = None, pattern: str | None = None
     ):
         """
         缓存失效装饰器
@@ -516,6 +503,7 @@ class CacheManager:
             namespace: 命名空间
             pattern: 匹配模式
         """
+
         def decorator(func):
             def wrapper(*args, **kwargs):
                 try:
@@ -528,6 +516,7 @@ class CacheManager:
                     raise
 
             return wrapper
+
         return decorator
 
 
@@ -537,7 +526,7 @@ def _hash_function_call(args: tuple, kwargs: dict) -> str:
         # 尝试序列化参数
         serializable_args = []
         for arg in args:
-            if hasattr(arg, 'dict'):
+            if hasattr(arg, "dict"):
                 serializable_args.append(arg.dict())
             elif isinstance(arg, (str, int, float, bool, type(None))):
                 serializable_args.append(arg)
@@ -546,7 +535,7 @@ def _hash_function_call(args: tuple, kwargs: dict) -> str:
 
         serializable_kwargs = {}
         for key, value in kwargs.items():
-            if hasattr(value, 'dict'):
+            if hasattr(value, "dict"):
                 serializable_kwargs[key] = value.dict()
             elif isinstance(value, (str, int, float, bool, type(None))):
                 serializable_kwargs[key] = value
@@ -554,10 +543,11 @@ def _hash_function_call(args: tuple, kwargs: dict) -> str:
                 serializable_kwargs[key] = str(value)
 
         # 生成哈希
-        content = json.dumps({
-            'args': serializable_args,
-            'kwargs': serializable_kwargs
-        }, sort_keys=True, default=str)
+        content = json.dumps(
+            {"args": serializable_args, "kwargs": serializable_kwargs},
+            sort_keys=True,
+            default=str,
+        )
 
         return md5(content.encode()).hexdigest()[:16]
     except Exception:
@@ -570,9 +560,7 @@ def _hash_function_call(args: tuple, kwargs: dict) -> str:
 cache_manager = CacheManager()
 
 # 专用缓存实例
-analytics_cache = CacheManager(
-    backend=MemoryCache(max_size=500)
-)
+analytics_cache = CacheManager(backend=MemoryCache(max_size=500))
 # 覆盖默认配置
 analytics_cache.default_ttl = 600  # 10分钟缓存
 analytics_cache.key_prefix = "analytics"
@@ -595,10 +583,7 @@ def get_cache(key: str, namespace: str | None = None, default: Any = None) -> An
 
 
 def set_cache(
-    key: str,
-    value: Any,
-    ttl: int | None = None,
-    namespace: str | None = None
+    key: str, value: Any, ttl: int | None = None, namespace: str | None = None
 ) -> bool:
     """设置缓存便捷函数"""
     return cache_manager.set(key, value, ttl, namespace)

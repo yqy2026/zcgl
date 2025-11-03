@@ -488,7 +488,10 @@ class MLEnhancedExtractor:
             if extracted_field.name.endswith("_name"):
                 # 姓名长度合理性检查
                 if isinstance(extracted_field.value, str):
-                    if len(extracted_field.value) < 2 or len(extracted_field.value) > 10:
+                    if (
+                        len(extracted_field.value) < 2
+                        or len(extracted_field.value) > 10
+                    ):
                         extracted_field.confidence *= 0.7
                     # 检查是否包含常见姓氏
                     common_surnames = [
@@ -592,7 +595,9 @@ class MLEnhancedExtractor:
             processed_field.metadata.update(validation_result.get("metadata", {}))
 
             # 应用业务逻辑验证
-            business_validation = self._validate_business_logic(processed_field, fields, text)
+            business_validation = self._validate_business_logic(
+                processed_field, fields, text
+            )
             processed_field.confidence *= business_validation["confidence_multiplier"]
             processed_field.metadata.update(business_validation.get("metadata", {}))
 
@@ -802,8 +807,8 @@ class MLEnhancedExtractor:
                     result["confidence_multiplier"] *= 0.9
                     result["metadata"]["business_warning"] = "押金金额异常低"
             except (ValueError, TypeError, AttributeError):
-                    # 数据提取异常时静默处理
-                    pass
+                # 数据提取异常时静默处理
+                pass
 
         return result
 

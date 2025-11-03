@@ -41,7 +41,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-class ContractValidationError(Exception):
+class ContractBusinessValidationError(Exception):
     """合同验证异常"""
 
     pass
@@ -116,7 +116,7 @@ class ContractValidator:
                     else:
                         # 未定义验证规则的字段，进行基本清理
                         validated_data[field] = self._basic_clean(value)
-                except ContractValidationError as e:
+                except ContractBusinessValidationError as e:
                     errors.append(f"字段 '{field}' 验证失败: {str(e)}")
                 except Exception as e:
                     warnings.append(f"字段 '{field}' 处理时出现警告: {str(e)}")
@@ -231,40 +231,40 @@ class ContractValidator:
     def _validate_contract_number(self, value: Any) -> str:
         """验证合同编号"""
         if not value:
-            raise ContractValidationError("合同编号不能为空")
+            raise ContractBusinessValidationError("合同编号不能为空")
 
         contract_number = str(value).strip()
         if len(contract_number) < 3:
-            raise ContractValidationError("合同编号长度过短")
+            raise ContractBusinessValidationError("合同编号长度过短")
 
         # 检查是否包含基本字符
         if not any(c.isalnum() for c in contract_number):
-            raise ContractValidationError("合同编号必须包含字母或数字")
+            raise ContractBusinessValidationError("合同编号必须包含字母或数字")
 
         return contract_number
 
     def _validate_name(self, value: Any) -> str:
         """验证名称字段"""
         if not value:
-            raise ContractValidationError("名称不能为空")
+            raise ContractBusinessValidationError("名称不能为空")
 
         name = str(value).strip()
         if len(name) < 2:
-            raise ContractValidationError("名称长度过短")
+            raise ContractBusinessValidationError("名称长度过短")
 
         if len(name) > 100:
-            raise ContractValidationError("名称长度过长")
+            raise ContractBusinessValidationError("名称长度过长")
 
         return name
 
     def _validate_address(self, value: Any) -> str:
         """验证地址"""
         if not value:
-            raise ContractValidationError("地址不能为空")
+            raise ContractBusinessValidationError("地址不能为空")
 
         address = str(value).strip()
         if len(address) < 5:
-            raise ContractValidationError("地址长度过短，可能不完整")
+            raise ContractBusinessValidationError("地址长度过短，可能不完整")
 
         return address
 
@@ -303,7 +303,7 @@ class ContractValidator:
                 except ValueError:
                     continue
 
-        raise ContractValidationError(f"无法解析日期格式: {date_str}")
+        raise ContractBusinessValidationError(f"无法解析日期格式: {date_str}")
 
     def _validate_money(self, value: Any) -> str:
         """验证金额"""
@@ -321,7 +321,7 @@ class ContractValidator:
 
         numbers = re.findall(r"\d+\.?\d*", money_str)
         if not numbers:
-            raise ContractValidationError(f"无法解析金额: {value}")
+            raise ContractBusinessValidationError(f"无法解析金额: {value}")
 
         try:
             # 处理大单位
@@ -333,14 +333,14 @@ class ContractValidator:
 
             # 验证金额合理性
             if money_value < 0:
-                raise ContractValidationError("金额不能为负数")
+                raise ContractBusinessValidationError("金额不能为负数")
             if money_value > 999999999:
-                raise ContractValidationError("金额过大")
+                raise ContractBusinessValidationError("金额过大")
 
             return str(money_value)
 
         except (ValueError, InvalidOperation):
-            raise ContractValidationError(f"金额格式错误: {value}")
+            raise ContractBusinessValidationError(f"金额格式错误: {value}")
 
     def _validate_area(self, value: Any) -> str:
         """验证面积"""
@@ -358,21 +358,21 @@ class ContractValidator:
 
         numbers = re.findall(r"\d+\.?\d*", area_str)
         if not numbers:
-            raise ContractValidationError(f"无法解析面积: {value}")
+            raise ContractBusinessValidationError(f"无法解析面积: {value}")
 
         try:
             area_value = float(numbers[0])
 
             # 验证面积合理性
             if area_value < 0:
-                raise ContractValidationError("面积不能为负数")
+                raise ContractBusinessValidationError("面积不能为负数")
             if area_value > 100000:
-                raise ContractValidationError("面积过大")
+                raise ContractBusinessValidationError("面积过大")
 
             return str(area_value)
 
         except (ValueError, InvalidOperation):
-            raise ContractValidationError(f"面积格式错误: {value}")
+            raise ContractBusinessValidationError(f"面积格式错误: {value}")
 
     def _validate_contact(self, value: Any) -> str:
         """验证联系方式"""
@@ -383,7 +383,7 @@ class ContractValidator:
 
         # 基本长度检查
         if len(contact_str) > 50:
-            raise ContractValidationError("联系方式过长")
+            raise ContractBusinessValidationError("联系方式过长")
 
         return contact_str
 
@@ -396,7 +396,7 @@ class ContractValidator:
 
         # 长度限制
         if len(text) > 500:
-            raise ContractValidationError("文本内容过长")
+            raise ContractBusinessValidationError("文本内容过长")
 
         return text
 

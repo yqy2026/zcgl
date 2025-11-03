@@ -657,10 +657,7 @@ class CRUDProject:
     def get_dropdown_options(self, db: Session) -> list[dict[str, Any]]:
         """获取下拉选项"""
         projects = (
-            db.query(Project)
-            .filter(Project.is_active)
-            .order_by(Project.name)
-            .all()
+            db.query(Project).filter(Project.is_active).order_by(Project.name).all()
         )
         return [
             {"id": project.id, "name": project.name, "code": project.code}

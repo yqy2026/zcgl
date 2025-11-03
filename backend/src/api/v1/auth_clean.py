@@ -64,7 +64,7 @@ async def login(
         "ip_address": client_ip,
         "user_agent": user_agent,
         "device_id": request.headers.get("X-Device-ID"),
-        "platform": request.headers.get("X-Platform")
+        "platform": request.headers.get("X-Platform"),
     }
 
     try:
@@ -80,7 +80,7 @@ async def login(
                 security_service.handle_suspicious_activity(
                     existing_user,
                     "multiple_failed_logins",
-                    {"ip_address": client_ip, "user_agent": user_agent}
+                    {"ip_address": client_ip, "user_agent": user_agent},
                 )
 
                 audit_crud.create(
@@ -90,11 +90,10 @@ async def login(
                     resource_type="authentication",
                     ip_address=client_ip,
                     user_agent=user_agent,
-                      )
+                )
 
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="用户名或密码错误"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="用户名或密码错误"
             )
 
         # 检查账户安全状态
@@ -108,7 +107,7 @@ async def login(
                 resource_type="authentication",
                 ip_address=client_ip,
                 user_agent=user_agent,
-              )
+            )
 
         # 创建增强的令牌
         tokens_data = security_service.create_tokens_enhanced(user, device_info)
@@ -132,20 +131,18 @@ async def login(
             response_status=200,
             ip_address=client_ip,
             user_agent=user_agent,
-          )
+        )
 
         # 转换为TokenResponse格式
         tokens = TokenResponse(
             access_token=tokens_data["access_token"],
             refresh_token=tokens_data["refresh_token"],
             token_type=tokens_data["token_type"],
-            expires_in=tokens_data["expires_in"]
+            expires_in=tokens_data["expires_in"],
         )
 
         return LoginResponse(
-            user=UserResponse.from_orm(user),
-            tokens=tokens,
-            message="登录成功"
+            user=UserResponse.from_orm(user), tokens=tokens, message="登录成功"
         )
 
     except BusinessLogicError as e:
@@ -170,10 +167,11 @@ async def logout(
 
     try:
         # 1. 撤销用户所有会话
-        revoked_count = db.query(UserSession).filter(
-            UserSession.user_id == current_user.id,
-            UserSession.is_active
-        ).update({"is_active": False})
+        revoked_count = (
+            db.query(UserSession)
+            .filter(UserSession.user_id == current_user.id, UserSession.is_active)
+            .update({"is_active": False})
+        )
         db.commit()
 
         # 2. 记录审计日志（暂时禁用，专注核心功能测试）
@@ -187,8 +185,8 @@ async def logout(
                 "user_id": str(current_user.id),
                 "username": current_user.username,
                 "revoked_sessions": revoked_count,
-                "logout_time": datetime.now(UTC).isoformat()
-            }
+                "logout_time": datetime.now(UTC).isoformat(),
+            },
         }
 
     except Exception as e:
@@ -199,8 +197,7 @@ async def logout(
         # 即使出错也尝试撤销会话
         try:
             db.query(UserSession).filter(
-                UserSession.user_id == current_user.id,
-                UserSession.is_active
+                UserSession.user_id == current_user.id, UserSession.is_active
             ).update({"is_active": False})
             db.commit()
         except Exception:
@@ -214,8 +211,8 @@ async def logout(
                 "user_id": str(current_user.id),
                 "username": current_user.username,
                 "revoked_sessions": 0,
-                "logout_time": datetime.now(UTC).isoformat()
-            }
+                "logout_time": datetime.now(UTC).isoformat(),
+            },
         }
 
 
@@ -256,8 +253,6 @@ async def refresh_token(
     db.commit()
 
     return tokens
-
-
 
 
 @router.get("/users", response_model=UserListResponse, summary="获取用户列表")
@@ -549,11 +544,9 @@ async def get_security_config(current_user: UserResponse = Depends(require_admin
 
 # ==================== 增强安全API端点 ====================
 
+
 @router.post("/security/validate-password", summary="验证密码强度")
-async def validate_password_strength(
-    password: str,
-    db: Session = Depends(get_db)
-):
+async def validate_password_strength(password: str, db: Session = Depends(get_db)):
     """
     验证密码强度
     """
@@ -563,10 +556,7 @@ async def validate_password_strength(
 
 
 @router.post("/security/generate-password", summary="生成安全密码")
-async def generate_secure_password(
-    length: int = 12,
-    db: Session = Depends(get_db)
-):
+async def generate_secure_password(length: int = 12, db: Session = Depends(get_db)):
     """
     生成安全密码
     """
@@ -578,7 +568,7 @@ async def generate_secure_password(
 @router.get("/security/account-status", summary="获取账户安全状态")
 async def get_account_security_status(
     current_user: UserResponse = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     获取当前用户的账户安全状态
@@ -587,14 +577,12 @@ async def get_account_security_status(
 
     # 获取用户实体
     from ...crud.auth import UserCRUD
+
     user_crud = UserCRUD()
     user = user_crud.get_by_id(db, current_user.id)
 
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="用户不存在"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在")
 
     security_status = security_service.check_account_security(user)
     return security_status
@@ -605,7 +593,7 @@ async def get_security_audit_log(
     days: int = 30,
     limit: int = 100,
     current_user: UserResponse = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     获取安全审计日志
@@ -618,10 +606,7 @@ async def get_security_audit_log(
 
     # 获取日志
     logs = security_service.get_security_audit_log(
-        user_id=current_user.id,
-        start_date=start_date,
-        end_date=end_date,
-        limit=limit
+        user_id=current_user.id, start_date=start_date, end_date=end_date, limit=limit
     )
 
     return {"logs": logs, "total": len(logs)}
@@ -631,7 +616,7 @@ async def get_security_audit_log(
 async def generate_security_report(
     days: int = 30,
     current_user: UserResponse = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     生成个人安全报告
@@ -652,7 +637,7 @@ async def generate_security_report(
 @router.post("/security/revoke-sessions", summary="撤销所有会话")
 async def revoke_all_sessions(
     current_user: UserResponse = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     撤销当前用户的所有会话（强制重新登录）
@@ -663,13 +648,14 @@ async def revoke_all_sessions(
 
     # 记录审计日志
     from ...crud.auth import AuditLogCRUD
+
     audit_crud = AuditLogCRUD()
     audit_crud.create(
         db=db,
         user_id=current_user.id,
         action="sessions_revoked",
         resource_type="security",
-        )
+    )
 
     return {"message": f"已撤销{count}个会话", "revoked_count": count}
 
@@ -679,7 +665,7 @@ async def get_admin_security_report(
     days: int = 30,
     user_id: str | None = None,
     current_user: UserResponse = Depends(require_admin),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     获取管理员安全报告（仅管理员）
@@ -699,7 +685,7 @@ async def get_admin_audit_log(
     user_id: str | None = None,
     limit: int = 1000,
     current_user: UserResponse = Depends(require_admin),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     获取管理员审计日志（仅管理员）
@@ -712,16 +698,14 @@ async def get_admin_audit_log(
 
     # 获取日志
     logs = security_service.get_security_audit_log(
-        user_id=user_id,
-        start_date=start_date,
-        end_date=end_date,
-        limit=limit
+        user_id=user_id, start_date=start_date, end_date=end_date, limit=limit
     )
 
     return {"logs": logs, "total": len(logs), "period": {"days": days}}
 
 
 # ==================== 个人资料管理API ====================
+
 
 @router.get("/debug-me", summary="调试用户信息端点（不需要认证）")
 async def debug_current_user_profile():
@@ -731,6 +715,7 @@ async def debug_current_user_profile():
     # 临时调试：抛出明确异常来查看错误详情
     import sys
     import traceback
+
     error_info = f"Debug info:\nPython version: {sys.version}\nPath: {sys.path}\n"
 
     # 尝试导入依赖
@@ -768,8 +753,7 @@ async def test_auth():
 
 @router.get("/test-auth", summary="测试认证端点")
 async def test_auth_endpoint(
-    current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)
 ):
     """测试认证端点"""
     try:
@@ -780,14 +764,16 @@ async def test_auth_endpoint(
                 "id": str(current_user.id),
                 "username": current_user.username,
                 "email": current_user.email,
-                "role": current_user.role.value if hasattr(current_user.role, "value") else current_user.role
-            }
+                "role": current_user.role.value
+                if hasattr(current_user.role, "value")
+                else current_user.role,
+            },
         }
     except Exception as e:
         logger.error(f"Test auth error: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"认证测试失败: {str(e)}"
+            detail=f"认证测试失败: {str(e)}",
         )
 
 
@@ -797,7 +783,6 @@ async def debug_auth_dependency():
     逐步测试认证依赖
     """
     from datetime import datetime
-
 
     try:
         # 测试1: 数据库连接
@@ -810,28 +795,31 @@ async def debug_auth_dependency():
         # 测试3: 检查枚举
         print("[DEBUG] Step 3: Checking UserRole enum")
         from ..models.auth import UserRole
+
         admin_role = UserRole.ADMIN
         print(f"[DEBUG] UserRole.ADMIN = {admin_role}, type = {type(admin_role)}")
 
         # 测试4: 检查JWT配置
         print("[DEBUG] Step 4: Checking JWT config")
         from ..core.config import settings
+
         secret_key = settings.SECRET_KEY
         print(f"[DEBUG] SECRET_KEY exists: {bool(secret_key)}")
 
         return {
             "success": True,
             "message": "认证依赖调试成功",
-            "timestamp": datetime.now(UTC).isoformat()
+            "timestamp": datetime.now(UTC).isoformat(),
         }
 
     except Exception as e:
         import traceback
+
         error_detail = f"调试失败: {str(e)}\n{traceback.format_exc()}"
         print(error_detail)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"调试失败: {str(e)}"
+            detail=f"调试失败: {str(e)}",
         )
 
 
@@ -839,7 +827,7 @@ async def debug_auth_dependency():
 async def update_user_profile(
     profile_data: UserUpdate,
     db: Session = Depends(get_db),
-    current_user: UserResponse = Depends(get_current_active_user)
+    current_user: UserResponse = Depends(get_current_active_user),
 ):
     """
     更新当前用户的个人资料
@@ -855,8 +843,7 @@ async def update_user_profile(
         user = user_crud.get(db, current_user.id)
         if not user:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="用户不存在"
+                status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在"
             )
 
         # 验证只能更新允许的字段
@@ -869,8 +856,7 @@ async def update_user_profile(
 
         if not update_data:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="没有可更新的字段"
+                status_code=status.HTTP_400_BAD_REQUEST, detail="没有可更新的字段"
             )
 
         # 更新用户信息
@@ -884,22 +870,19 @@ async def update_user_profile(
             action="profile_updated",
             resource_type="user_profile",
             resource_id=current_user.id,
-              )
+        )
 
         return UserResponse.from_orm(updated_user)
 
     except BusinessLogicError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.post("/profile/change-password", summary="修改密码")
 async def change_user_password(
     password_data: PasswordChangeRequest,
     db: Session = Depends(get_db),
-    current_user: UserResponse = Depends(get_current_active_user)
+    current_user: UserResponse = Depends(get_current_active_user),
 ):
     """
     修改当前用户的密码
@@ -918,27 +901,25 @@ async def change_user_password(
 
         if not user:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="用户不存在"
+                status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在"
             )
 
         # 验证当前密码
-        if not auth_service.authenticate_user(user.username, password_data.old_password):
+        if not auth_service.authenticate_user(
+            user.username, password_data.old_password
+        ):
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="当前密码不正确"
+                status_code=status.HTTP_400_BAD_REQUEST, detail="当前密码不正确"
             )
 
         # 更新密码
         success = auth_service.change_password(
-            user_id=current_user.id,
-            new_password=password_data.new_password
+            user_id=current_user.id, new_password=password_data.new_password
         )
 
         if not success:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="密码修改失败"
+                status_code=status.HTTP_400_BAD_REQUEST, detail="密码修改失败"
             )
 
         # 记录审计日志
@@ -949,15 +930,12 @@ async def change_user_password(
             action="password_changed",
             resource_type="user_security",
             resource_id=current_user.id,
-                )
+        )
 
         return {"message": "密码修改成功"}
 
     except BusinessLogicError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.get("/activity", response_model=list[dict], summary="获取用户活动记录")
@@ -965,7 +943,7 @@ async def get_user_activity(
     limit: int = 20,
     days: int = 30,
     db: Session = Depends(get_db),
-    current_user: UserResponse = Depends(get_current_active_user)
+    current_user: UserResponse = Depends(get_current_active_user),
 ):
     """
     获取当前用户的活动记录
@@ -987,30 +965,32 @@ async def get_user_activity(
             user_id=current_user.id,
             start_date=start_date,
             end_date=end_date,
-            limit=limit
+            limit=limit,
         )
 
         # 格式化返回数据
         formatted_activities = []
         for activity in activities:
-            formatted_activities.append({
-                "id": activity.id,
-                "action": activity.action,
-                "resource_type": activity.resource_type,
-                "resource_id": activity.resource_id,
-                "details": json.loads(activity.details) if activity.details else {},
-                "ip_address": activity.ip_address,
-                "user_agent": activity.user_agent,
-                "created_at": activity.created_at.isoformat(),
-                "action_display": _get_action_display_name(activity.action)
-            })
+            formatted_activities.append(
+                {
+                    "id": activity.id,
+                    "action": activity.action,
+                    "resource_type": activity.resource_type,
+                    "resource_id": activity.resource_id,
+                    "details": json.loads(activity.details) if activity.details else {},
+                    "ip_address": activity.ip_address,
+                    "user_agent": activity.user_agent,
+                    "created_at": activity.created_at.isoformat(),
+                    "action_display": _get_action_display_name(activity.action),
+                }
+            )
 
         return formatted_activities
 
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"获取活动记录失败: {str(e)}"
+            detail=f"获取活动记录失败: {str(e)}",
         )
 
 

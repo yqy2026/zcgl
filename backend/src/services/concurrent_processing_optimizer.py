@@ -74,9 +74,7 @@ class ResourceMonitor:
                 "memory_percent": 40.0,  # 模拟值
                 "disk_io_percent": 10.0,  # 模拟值
                 "active_processes": 5,  # 模拟值
-                "uptime_seconds": (
-                    datetime.now(UTC) - self.start_time
-                ).total_seconds(),
+                "uptime_seconds": (datetime.now(UTC) - self.start_time).total_seconds(),
             }
 
         try:
@@ -103,9 +101,7 @@ class ResourceMonitor:
                 "memory_percent": memory_percent,
                 "disk_io_percent": disk_io,
                 "active_processes": process_count,
-                "uptime_seconds": (
-                    datetime.now(UTC) - self.start_time
-                ).total_seconds(),
+                "uptime_seconds": (datetime.now(UTC) - self.start_time).total_seconds(),
             }
 
         except Exception as e:

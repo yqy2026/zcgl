@@ -9,7 +9,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, BusinessValidationError
 
 
 class ValidationRule:
@@ -471,7 +471,7 @@ def validate_data(schema_name: str):
                 data = args[0]
                 errors = validation_framework.validate(schema_name, data)
                 if errors:
-                    raise ValidationError(errors)
+                    raise BusinessValidationError(errors)
             return func(*args, **kwargs)
 
         return wrapper

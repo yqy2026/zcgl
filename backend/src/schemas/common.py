@@ -59,7 +59,7 @@ class PaginatedResponse[T](BaseModel):
     request_id: str | None = Field(None, description="请求ID")
 
 
-class ValidationErrorResponse(BaseModel):
+class BusinessValidationErrorResponse(BaseModel):
     """验证错误响应模式"""
 
     success: bool = Field(False, description="请求失败")
@@ -268,7 +268,7 @@ __all__ = [
     "ErrorResponse",
     "PaginationInfo",
     "PaginatedResponse",
-    "ValidationErrorResponse",
+    "BusinessValidationErrorResponse",
     "SuccessResponse",
     "CreatedResponse",
     "UpdatedResponse",

@@ -183,7 +183,7 @@ async def refresh_token(
 
 @router.get("/me", response_model=dict, summary="获取当前用户信息")
 async def get_current_user_info(
-    current_user = Depends(get_current_active_user),
+    current_user=Depends(get_current_active_user),
 ):
     """
     获取当前登录用户的信息
@@ -202,14 +202,18 @@ async def get_current_user_info(
         "is_active": current_user.is_active,
         "is_admin": current_user.role == "admin",
         "timestamp": datetime.now(UTC).isoformat(),
-        "session_status": "active"
+        "session_status": "active",
     }
 
 
 @router.get("/test-enhanced", summary="测试增强端点")
 async def test_enhanced():
     """测试端点，验证增强功能"""
-    return {"success": True, "message": "增强功能测试正常", "timestamp": "2025-10-29T01:26:00Z"}
+    return {
+        "success": True,
+        "message": "增强功能测试正常",
+        "timestamp": "2025-10-29T01:26:00Z",
+    }
 
 
 @router.get("/test-me-debug", summary="调试ME端点")
@@ -232,7 +236,7 @@ async def test_me_debug(current_user: UserResponse = Depends(get_current_active_
         "is_active": current_user.is_active,
         "is_admin": current_user.role == "admin",
         "timestamp": datetime.now(UTC).isoformat(),
-        "session_status": "active"
+        "session_status": "active",
     }
 
     return enhanced_response

@@ -151,8 +151,8 @@ class PerformanceOptimizer:
                 return is_success and text_length < 1000  # 成功且文本不太大
             return False
         except (Exception, ValueError, TypeError):
-                # 通用异常处理时返回False
-                return False
+            # 通用异常处理时返回False
+            return False
 
     def get_cache_key(self, *args, **kwargs) -> str:
         """生成缓存键"""

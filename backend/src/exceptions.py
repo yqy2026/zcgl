@@ -4,10 +4,10 @@
 
 from fastapi import status
 
-from .core.exception_handler import BaseBusinessException
+from .core.exception_handler import BaseBusinessError
 
 
-class AssetNotFoundError(BaseBusinessException):
+class AssetNotFoundError(BaseBusinessError):
     """资产未找到异常"""
 
     def __init__(self, asset_id: str):
@@ -19,7 +19,7 @@ class AssetNotFoundError(BaseBusinessException):
         )
 
 
-class DuplicateAssetError(BaseBusinessException):
+class DuplicateAssetError(BaseBusinessError):
     """重复资产异常"""
 
     def __init__(self, property_name: str):
@@ -31,7 +31,7 @@ class DuplicateAssetError(BaseBusinessException):
         )
 
 
-class BusinessLogicError(BaseBusinessException):
+class BusinessLogicError(BaseBusinessError):
     """业务逻辑异常"""
 
     def __init__(self, message: str):

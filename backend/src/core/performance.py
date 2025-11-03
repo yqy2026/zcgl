@@ -467,7 +467,7 @@ def get_cache_stats() -> dict[str, Any]:
             "status": "active",
             "message": "缓存统计信息（基础版本）",
             "timestamp": datetime.now(UTC).isoformat(),
-            "note": "使用临时实现"
+            "note": "使用临时实现",
         }
 
 

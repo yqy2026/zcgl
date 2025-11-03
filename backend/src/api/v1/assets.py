@@ -494,12 +494,13 @@ async def test_statistics(
             "success": True,
             "message": "测试成功",
             "total_assets": total_assets,
-            "timestamp": "2024-01-01T00:00:00Z"
+            "timestamp": "2024-01-01T00:00:00Z",
         }
 
     except Exception as e:
         print(f"[ERROR] 测试统计API失败: {e}")
         import traceback
+
         print(f"[ERROR] 详细错误: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"测试失败: {str(e)}")
 
@@ -517,7 +518,9 @@ async def get_asset_statistics(
         from ...models.asset import Asset
 
         # 添加调试信息
-        print(f"[DEBUG] 开始执行资产统计查询，用户: {current_user.username if current_user else 'unknown'}")
+        print(
+            f"[DEBUG] 开始执行资产统计查询，用户: {current_user.username if current_user else 'unknown'}"
+        )
 
         # 检查数据库连接是否正常
         try:
@@ -636,12 +639,13 @@ async def get_asset_statistics(
     except Exception as e:
         # 记录详细的错误信息用于调试
         import traceback
+
         error_detail = traceback.format_exc()
         print(f"[ERROR] 资产统计查询失败: {str(e)}")
         print(f"[ERROR] 详细错误信息: {error_detail}")
         raise HTTPException(
             status_code=500,
-            detail=f"获取统计信息失败: {str(e)}. 请检查数据库连接和表结构。"
+            detail=f"获取统计信息失败: {str(e)}. 请检查数据库连接和表结构。",
         )
 
 
@@ -712,12 +716,13 @@ async def get_asset_area_statistics(
     except Exception as e:
         # 记录详细的错误信息用于调试
         import traceback
+
         error_detail = traceback.format_exc()
         print(f"[ERROR] 面积统计查询失败: {str(e)}")
         print(f"[ERROR] 详细错误信息: {error_detail}")
         raise HTTPException(
             status_code=500,
-            detail=f"获取面积统计信息失败: {str(e)}. 请检查数据库连接和表结构。"
+            detail=f"获取面积统计信息失败: {str(e)}. 请检查数据库连接和表结构。",
         )
 
 
@@ -959,9 +964,7 @@ async def batch_update_assets(
                     continue
 
                 # 更新资产
-                asset_crud.update(
-                    db=db, db_obj=asset, obj_in=request.updates
-                )
+                asset_crud.update(db=db, db_obj=asset, obj_in=request.updates)
 
                 success_count += 1
                 updated_assets.append(asset_id)

@@ -34,9 +34,7 @@ class EnumFieldTypeCRUD:
         enum_type = (
             self.db.query(EnumFieldType)
             .filter(
-                and_(
-                    EnumFieldType.id == enum_type_id, not EnumFieldType.is_deleted
-                )
+                and_(EnumFieldType.id == enum_type_id, not EnumFieldType.is_deleted)
             )
             .first()
         )
@@ -238,16 +236,12 @@ class EnumFieldTypeCRUD:
     def get_statistics(self) -> dict[str, Any]:
         """获取枚举类型统计信息"""
         total_types = (
-            self.db.query(EnumFieldType)
-            .filter(not EnumFieldType.is_deleted)
-            .count()
+            self.db.query(EnumFieldType).filter(not EnumFieldType.is_deleted).count()
         )
         active_types = (
             self.db.query(EnumFieldType)
             .filter(
-                and_(
-                    not EnumFieldType.is_deleted, EnumFieldType.status == "active"
-                )
+                and_(not EnumFieldType.is_deleted, EnumFieldType.status == "active")
             )
             .count()
         )

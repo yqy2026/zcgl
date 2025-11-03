@@ -6,7 +6,7 @@
 import logging
 from abc import ABC, abstractmethod
 from datetime import UTC, datetime
-from typing import Any, Generic, TypeVar
+from typing import Any, TypeVar
 
 from pydantic import BaseModel
 from sqlalchemy import asc, desc
@@ -22,6 +22,7 @@ UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
 
 class FilterOperator:
     """查询过滤器操作符"""
+
     EQ = "eq"
     NE = "ne"
     GT = "gt"
@@ -44,7 +45,7 @@ class QueryFilter:
         field: str,
         operator: str,
         value: Any = None,
-        model_class: type | None = None
+        model_class: type | None = None,
     ):
         self.field = field
         self.operator = operator
@@ -90,6 +91,7 @@ class QueryFilter:
 
 class SortOrder:
     """排序顺序"""
+
     ASC = "asc"
     DESC = "desc"
 
@@ -98,10 +100,7 @@ class QuerySort:
     """查询排序"""
 
     def __init__(
-        self,
-        field: str,
-        order: str = SortOrder.ASC,
-        model_class: type | None = None
+        self, field: str, order: str = SortOrder.ASC, model_class: type | None = None
     ):
         self.field = field
         self.order = order
@@ -122,7 +121,7 @@ class QuerySort:
             return query.order_by(desc(field_attr))
 
 
-class EnhancedCRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType], ABC):
+class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
     """增强的基础CRUD操作类"""
 
     def __init__(self, model: type[ModelType]):
@@ -142,7 +141,7 @@ class EnhancedCRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType], A
         id: Any,
         *,
         include_deleted: bool = False,
-        eager_loads: list[str] | None = None
+        eager_loads: list[str] | None = None,
     ) -> ModelType | None:
         """
         根据ID获取单个记录
@@ -165,7 +164,7 @@ class EnhancedCRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType], A
                     query = query.options(joinedload(getattr(self.model, field)))
 
         # 应用删除过滤器
-        if not include_deleted and hasattr(self.model, 'is_deleted'):
+        if not include_deleted and hasattr(self.model, "is_deleted"):
             query = query.filter(not self.model.is_deleted)
 
         return query.filter(self.model.id == id).first()
@@ -179,7 +178,7 @@ class EnhancedCRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType], A
         filters: list[QueryFilter] | None = None,
         sorts: list[QuerySort] | None = None,
         include_deleted: bool = False,
-        eager_loads: list[str] | None = None
+        eager_loads: list[str] | None = None,
     ) -> list[ModelType]:
         """
         获取多个记录
@@ -201,7 +200,7 @@ class EnhancedCRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType], A
             filters=filters,
             sorts=sorts,
             include_deleted=include_deleted,
-            eager_loads=eager_loads
+            eager_loads=eager_loads,
         )
 
         return query.offset(skip).limit(limit).all()
@@ -211,7 +210,7 @@ class EnhancedCRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType], A
         db: Session,
         *,
         filters: list[QueryFilter] | None = None,
-        include_deleted: bool = False
+        include_deleted: bool = False,
     ) -> int:
         """
         获取记录总数
@@ -225,9 +224,7 @@ class EnhancedCRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType], A
             记录总数
         """
         query = self._build_query(
-            db=db,
-            filters=filters,
-            include_deleted=include_deleted
+            db=db, filters=filters, include_deleted=include_deleted
         )
 
         return query.count()
@@ -238,7 +235,7 @@ class EnhancedCRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType], A
         *,
         obj_in: CreateSchemaType,
         created_by: str | None = None,
-        **kwargs
+        **kwargs,
     ) -> ModelType:
         """
         创建新记录
@@ -258,12 +255,12 @@ class EnhancedCRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType], A
             obj_in_data = obj_in
 
         # 添加创建者信息
-        if created_by and hasattr(self.model, 'created_by'):
-            obj_in_data['created_by'] = created_by
+        if created_by and hasattr(self.model, "created_by"):
+            obj_in_data["created_by"] = created_by
 
         # 添加创建时间
-        if hasattr(self.model, 'created_at'):
-            obj_in_data['created_at'] = datetime.now(UTC)
+        if hasattr(self.model, "created_at"):
+            obj_in_data["created_at"] = datetime.now(UTC)
 
         # 添加额外字段
         obj_in_data.update(kwargs)
@@ -283,7 +280,7 @@ class EnhancedCRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType], A
         db_obj: ModelType,
         obj_in: UpdateSchemaType | dict[str, Any],
         updated_by: str | None = None,
-        **kwargs
+        **kwargs,
     ) -> ModelType:
         """
         更新记录
@@ -304,12 +301,12 @@ class EnhancedCRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType], A
             update_data = obj_in.dict(exclude_unset=True)
 
         # 添加更新者信息
-        if updated_by and hasattr(self.model, 'updated_by'):
-            update_data['updated_by'] = updated_by
+        if updated_by and hasattr(self.model, "updated_by"):
+            update_data["updated_by"] = updated_by
 
         # 添加更新时间
-        if hasattr(self.model, 'updated_at'):
-            update_data['updated_at'] = datetime.now(UTC)
+        if hasattr(self.model, "updated_at"):
+            update_data["updated_at"] = datetime.now(UTC)
 
         # 添加额外字段
         update_data.update(kwargs)
@@ -331,7 +328,7 @@ class EnhancedCRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType], A
         *,
         id: Any,
         deleted_by: str | None = None,
-        soft_delete: bool = True
+        soft_delete: bool = True,
     ) -> ModelType | None:
         """
         删除记录
@@ -349,12 +346,12 @@ class EnhancedCRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType], A
         if not obj:
             return None
 
-        if soft_delete and hasattr(obj, 'is_deleted'):
+        if soft_delete and hasattr(obj, "is_deleted"):
             # 软删除
             obj.is_deleted = True
-            if deleted_by and hasattr(obj, 'deleted_by'):
+            if deleted_by and hasattr(obj, "deleted_by"):
                 obj.deleted_by = deleted_by
-            if hasattr(obj, 'deleted_at'):
+            if hasattr(obj, "deleted_at"):
                 obj.deleted_at = datetime.now(UTC)
         else:
             # 硬删除
@@ -365,11 +362,7 @@ class EnhancedCRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType], A
         return obj
 
     def restore(
-        self,
-        db: Session,
-        *,
-        id: Any,
-        restored_by: str | None = None
+        self, db: Session, *, id: Any, restored_by: str | None = None
     ) -> ModelType | None:
         """
         恢复软删除的记录
@@ -386,11 +379,11 @@ class EnhancedCRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType], A
         if not obj:
             return None
 
-        if hasattr(obj, 'is_deleted'):
+        if hasattr(obj, "is_deleted"):
             obj.is_deleted = False
-            if restored_by and hasattr(obj, 'restored_by'):
+            if restored_by and hasattr(obj, "restored_by"):
                 obj.restored_by = restored_by
-            if hasattr(obj, 'restored_at'):
+            if hasattr(obj, "restored_at"):
                 obj.restored_at = datetime.now(UTC)
 
         db.commit()
@@ -407,7 +400,7 @@ class EnhancedCRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType], A
         filters: list[QueryFilter] | None = None,
         sorts: list[QuerySort] | None = None,
         include_deleted: bool = False,
-        eager_loads: list[str] | None = None
+        eager_loads: list[str] | None = None,
     ):
         """
         构建查询
@@ -431,7 +424,7 @@ class EnhancedCRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType], A
                     query = query.options(joinedload(getattr(self.model, field)))
 
         # 应用删除过滤器
-        if not include_deleted and hasattr(self.model, 'is_deleted'):
+        if not include_deleted and hasattr(self.model, "is_deleted"):
             query = query.filter(not self.model.is_deleted)
 
         # 应用过滤器
@@ -449,12 +442,7 @@ class EnhancedCRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType], A
     # ==================== 便捷方法 ====================
 
     def get_by_field(
-        self,
-        db: Session,
-        field_name: str,
-        value: Any,
-        *,
-        include_deleted: bool = False
+        self, db: Session, field_name: str, value: Any, *, include_deleted: bool = False
     ) -> ModelType | None:
         """
         根据字段值获取记录
@@ -469,14 +457,13 @@ class EnhancedCRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType], A
             模型实例或None
         """
         if not hasattr(self.model, field_name):
-            raise ValueError(f"Model {self.model.__name__} does not have field {field_name}")
+            raise ValueError(
+                f"Model {self.model.__name__} does not have field {field_name}"
+            )
 
         filter_obj = QueryFilter(field_name, FilterOperator.EQ, value)
         results = self.get_multi(
-            db=db,
-            filters=[filter_obj],
-            limit=1,
-            include_deleted=include_deleted
+            db=db, filters=[filter_obj], limit=1, include_deleted=include_deleted
         )
         return results[0] if results else None
 
@@ -485,7 +472,7 @@ class EnhancedCRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType], A
         db: Session,
         *,
         filters: list[QueryFilter] | None = None,
-        include_deleted: bool = False
+        include_deleted: bool = False,
     ) -> bool:
         """
         检查记录是否存在
@@ -506,7 +493,7 @@ class EnhancedCRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType], A
         db: Session,
         *,
         objects_in: list[CreateSchemaType],
-        created_by: str | None = None
+        created_by: str | None = None,
     ) -> list[ModelType]:
         """
         批量创建记录
@@ -526,10 +513,10 @@ class EnhancedCRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType], A
             else:
                 obj_in_data = obj_in
 
-            if created_by and hasattr(self.model, 'created_by'):
-                obj_in_data['created_by'] = created_by
-            if hasattr(self.model, 'created_at'):
-                obj_in_data['created_at'] = datetime.now(UTC)
+            if created_by and hasattr(self.model, "created_by"):
+                obj_in_data["created_by"] = created_by
+            if hasattr(self.model, "created_at"):
+                obj_in_data["created_at"] = datetime.now(UTC)
 
             db_obj = self.model(**obj_in_data)
             db_objects.append(db_obj)
@@ -557,10 +544,7 @@ class EnhancedCRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType], A
 
     @abstractmethod
     def validate_update_data(
-        self,
-        db: Session,
-        db_obj: ModelType,
-        obj_in: UpdateSchemaType
+        self, db: Session, db_obj: ModelType, obj_in: UpdateSchemaType
     ) -> None:
         """验证更新数据"""
         pass

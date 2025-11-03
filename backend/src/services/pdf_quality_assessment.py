@@ -160,9 +160,7 @@ class PDFProcessingQualityAssessment:
             ),
         }
 
-        processing_time = (
-            datetime.now(UTC) - assessment_start
-        ).total_seconds()
+        processing_time = (datetime.now(UTC) - assessment_start).total_seconds()
         logger.info(
             f"PDF处理质量评估完成，耗时: {processing_time:.3f}秒，质量分数: {quality_score:.3f}"
         )

@@ -35,9 +35,7 @@ class OrganizationPermissionService:
         # 超级管理员可访问所有组织
         if user.role == "ADMIN":
             organizations = (
-                self.db.query(Organization.id)
-                .filter(not Organization.is_deleted)
-                .all()
+                self.db.query(Organization.id).filter(not Organization.is_deleted).all()
             )
             return [org.id for org in organizations]
 

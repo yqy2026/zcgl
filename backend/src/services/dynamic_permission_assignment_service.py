@@ -199,9 +199,7 @@ class DynamicPermissionService:
         # 检查模板名称是否已存在
         existing = (
             self.db.query(PermissionTemplate)
-            .filter(
-                PermissionTemplate.name == name, PermissionTemplate.is_active
-            )
+            .filter(PermissionTemplate.name == name, PermissionTemplate.is_active)
             .first()
         )
 

@@ -213,19 +213,23 @@ class StructuredFormatter(logging.Formatter):
         elif isinstance(obj, datetime):
             return obj.isoformat()
         elif isinstance(obj, dict):
-            return {key: self._ensure_json_serializable(value) for key, value in obj.items()}
+            return {
+                key: self._ensure_json_serializable(value) for key, value in obj.items()
+            }
         elif isinstance(obj, list):
             return [self._ensure_json_serializable(item) for item in obj]
-        elif hasattr(obj, '__dict__'):
+        elif hasattr(obj, "__dict__"):
             # 处理SQLAlchemy模型对象和其他自定义对象
             try:
                 # 尝试获取对象的字典表示
                 obj_dict = obj.__dict__.copy()
                 # 移除SQLAlchemy的内部属性
-                obj_dict.pop('_sa_instance_state', None)
-                return {key: self._ensure_json_serializable(value)
-                       for key, value in obj_dict.items()
-                       if not key.startswith('_')}
+                obj_dict.pop("_sa_instance_state", None)
+                return {
+                    key: self._ensure_json_serializable(value)
+                    for key, value in obj_dict.items()
+                    if not key.startswith("_")
+                }
             except Exception:
                 # 如果无法序列化，返回字符串表示
                 return str(obj)[:500]  # 限制长度
@@ -347,19 +351,23 @@ class SecurityAuditor:
         elif isinstance(obj, datetime):
             return obj.isoformat()
         elif isinstance(obj, dict):
-            return {key: self._ensure_json_serializable(value) for key, value in obj.items()}
+            return {
+                key: self._ensure_json_serializable(value) for key, value in obj.items()
+            }
         elif isinstance(obj, list):
             return [self._ensure_json_serializable(item) for item in obj]
-        elif hasattr(obj, '__dict__'):
+        elif hasattr(obj, "__dict__"):
             # 处理SQLAlchemy模型对象和其他自定义对象
             try:
                 # 尝试获取对象的字典表示
                 obj_dict = obj.__dict__.copy()
                 # 移除SQLAlchemy的内部属性
-                obj_dict.pop('_sa_instance_state', None)
-                return {key: self._ensure_json_serializable(value)
-                       for key, value in obj_dict.items()
-                       if not key.startswith('_')}
+                obj_dict.pop("_sa_instance_state", None)
+                return {
+                    key: self._ensure_json_serializable(value)
+                    for key, value in obj_dict.items()
+                    if not key.startswith("_")
+                }
             except Exception:
                 # 如果无法序列化，返回字符串表示
                 return str(obj)[:500]  # 限制长度
@@ -467,19 +475,23 @@ class RequestLogger:
         elif isinstance(obj, datetime):
             return obj.isoformat()
         elif isinstance(obj, dict):
-            return {key: self._ensure_json_serializable(value) for key, value in obj.items()}
+            return {
+                key: self._ensure_json_serializable(value) for key, value in obj.items()
+            }
         elif isinstance(obj, list):
             return [self._ensure_json_serializable(item) for item in obj]
-        elif hasattr(obj, '__dict__'):
+        elif hasattr(obj, "__dict__"):
             # 处理SQLAlchemy模型对象和其他自定义对象
             try:
                 # 尝试获取对象的字典表示
                 obj_dict = obj.__dict__.copy()
                 # 移除SQLAlchemy的内部属性
-                obj_dict.pop('_sa_instance_state', None)
-                return {key: self._ensure_json_serializable(value)
-                       for key, value in obj_dict.items()
-                       if not key.startswith('_')}
+                obj_dict.pop("_sa_instance_state", None)
+                return {
+                    key: self._ensure_json_serializable(value)
+                    for key, value in obj_dict.items()
+                    if not key.startswith("_")
+                }
             except Exception:
                 # 如果无法序列化，返回字符串表示
                 return str(obj)[:500]  # 限制长度

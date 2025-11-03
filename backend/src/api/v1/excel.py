@@ -26,7 +26,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from ...config.excel_config import STANDARD_SHEET_NAME
-from ...core.exception_handler import ValidationException
+from ...core.exception_handler import BusinessValidationError
 from ...core.logging_security import security_auditor
 from ...core.security import security_middleware
 from ...crud.asset import asset_crud
@@ -372,7 +372,7 @@ async def preview_excel_advanced(
             detected_field_mapping=detected_mapping,
         )
 
-    except ValidationException as e:
+    except BusinessValidationError as e:
         logger.error(f"Excel preview validation failed: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -401,7 +401,7 @@ async def preview_excel(
 
         # 验证文件类型（额外检查）
         if not file.filename or not file.filename.endswith((".xlsx", ".xls")):
-            raise ValidationException("文件格式不支持，请上传Excel文件(.xlsx/.xls)")
+            raise BusinessValidationError("文件格式不支持，请上传Excel文件(.xlsx/.xls)")
 
         # 读取文件内容
         content = await file.read()
@@ -443,7 +443,7 @@ async def preview_excel(
             "data": preview_data,
         }
 
-    except ValidationException as e:
+    except BusinessValidationError as e:
         logger.error(f"Excel preview validation failed: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -478,7 +478,7 @@ async def import_excel(
 
         # 验证文件类型（额外检查）
         if not file.filename or not file.filename.endswith((".xlsx", ".xls")):
-            raise ValidationException("文件格式不支持，请上传Excel文件(.xlsx/.xls)")
+            raise BusinessValidationError("文件格式不支持，请上传Excel文件(.xlsx/.xls)")
 
         # 记录导入操作开始
         security_auditor.log_security_event(
@@ -524,7 +524,7 @@ async def import_excel(
             if os.path.exists(tmp_file_path):
                 os.unlink(tmp_file_path)
 
-    except ValidationException as e:
+    except BusinessValidationError as e:
         logger.error(f"Excel import validation failed: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
@@ -564,7 +564,7 @@ async def import_excel_async(
 
         # 验证文件类型（额外检查）
         if not file.filename or not file.filename.endswith((".xlsx", ".xls")):
-            raise ValidationException("文件格式不支持，请上传Excel文件(.xlsx/.xls)")
+            raise BusinessValidationError("文件格式不支持，请上传Excel文件(.xlsx/.xls)")
 
         # 记录异步导入操作开始
         security_auditor.log_security_event(

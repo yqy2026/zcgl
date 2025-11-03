@@ -17,7 +17,7 @@ from fastapi import Depends, HTTPException, Request, UploadFile, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from ..core.config_manager import get_config
-from ..core.exception_handler import ValidationException
+from ..core.exception_handler import BusinessValidationError
 from ..core.logging_security import security_auditor
 
 logger = logging.getLogger(__name__)
@@ -119,7 +119,7 @@ class FileValidator:
             for exts in self.config.ALLOWED_MIME_TYPES.values()
             for ext in exts.split(",")
         ]:
-            raise ValidationException(
+            raise BusinessValidationError(
                 f"不支持的文件扩展名: {file_ext}",
                 details={
                     "allowed_extensions": list(self.config.ALLOWED_MIME_TYPES.values())
@@ -138,7 +138,7 @@ class FileValidator:
             detected_mime = magic.from_buffer(file_content, mime=True)
 
             if detected_mime not in allowed_types:
-                raise ValidationException(
+                raise BusinessValidationError(
                     f"不支持的文件类型: {detected_mime}",
                     details={"allowed_types": allowed_types},
                 )
@@ -146,7 +146,7 @@ class FileValidator:
             # 验证扩展名与MIME类型匹配
             expected_ext = self.config.ALLOWED_MIME_TYPES.get(detected_mime, "")
             if expected_ext and file_ext not in expected_ext.split(","):
-                raise ValidationException(
+                raise BusinessValidationError(
                     f"文件扩展名与实际类型不匹配: {file_ext} != {expected_ext}",
                     details={
                         "detected_mime": detected_mime,
@@ -155,9 +155,9 @@ class FileValidator:
                 )
 
         except Exception as e:
-            if isinstance(e, ValidationException):
+            if isinstance(e, BusinessValidationError):
                 raise
-            raise ValidationException(
+            raise BusinessValidationError(
                 f"文件类型验证失败: {str(e)}", details={"filename": file.filename}
             )
 
@@ -189,7 +189,7 @@ class FileValidator:
         # 检查文件大小
         if file.size and file.size > max_size:
             max_size_mb = max_size / (1024 * 1024)
-            raise ValidationException(
+            raise BusinessValidationError(
                 f"文件过大: {file.size / (1024 * 1024):.2f}MB > {max_size_mb}MB",
                 details={"max_size_bytes": max_size, "file_size_bytes": file.size},
             )
@@ -207,16 +207,16 @@ class FileValidator:
             bool: 验证是否通过
         """
         if not filename:
-            raise ValidationException("文件名不能为空")
+            raise BusinessValidationError("文件名不能为空")
 
         # 检查文件名长度
         if len(filename) > 255:
-            raise ValidationException("文件名过长")
+            raise BusinessValidationError("文件名过长")
 
         # 检查黑名单模式
         for pattern in self.config.BLACKLISTED_PATTERNS:
             if re.search(pattern, filename, re.IGNORECASE):
-                raise ValidationException(
+                raise BusinessValidationError(
                     f"文件名包含非法字符或模式: {pattern}",
                     details={"blacklisted_pattern": pattern},
                 )
@@ -254,7 +254,7 @@ class FileValidator:
                 # 检查恶意签名（只扫描小签名）
                 for signature in self.config.MALICIOUS_SIGNATURES:
                     if signature in chunk.lower():
-                        raise ValidationException(
+                        raise BusinessValidationError(
                             "检测到可能的恶意内容",
                             details={
                                 "malicious_signature": signature.decode(
@@ -269,9 +269,9 @@ class FileValidator:
             return True
 
         except Exception as e:
-            if isinstance(e, ValidationException):
+            if isinstance(e, BusinessValidationError):
                 raise
-            raise ValidationException(f"恶意内容扫描失败: {str(e)}")
+            raise BusinessValidationError(f"恶意内容扫描失败: {str(e)}")
 
     def calculate_file_hash(self, file: UploadFile) -> str:
         """
@@ -340,7 +340,7 @@ class FileValidator:
 
             return validation_result
 
-        except ValidationException as e:
+        except BusinessValidationError as e:
             # 记录验证失败
             security_auditor.log_security_event(
                 event_type="FILE_VALIDATION_FAILED",

@@ -81,7 +81,9 @@ def get_current_user(
             pass
         else:
             # Unknown type, default to USER
-            logger.warning(f"Unknown role type '{type(role)}' with value '{role}', defaulting to USER")
+            logger.warning(
+                f"Unknown role type '{type(role)}' with value '{role}', defaulting to USER"
+            )
             role_enum = UserRole.USER
 
         # 使用标准的TokenData Pydantic模型
@@ -90,7 +92,7 @@ def get_current_user(
                 sub=user_id,
                 username=username,
                 role=role_enum,
-                exp=payload.get('exp') if payload else None
+                exp=payload.get("exp") if payload else None,
             )
         except Exception as e:
             # 如果TokenData验证失败，记录错误并抛出认证异常

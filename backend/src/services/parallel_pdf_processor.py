@@ -210,8 +210,8 @@ class ParallelPDFProcessor:
             file_size_mb = os.path.getsize(task.file_path) / (1024 * 1024)
             size_score = max(0, 5 - file_size_mb)
         except (Exception, OSError, FileNotFoundError):
-                # 文件操作失败时使用默认分数
-                size_score = 2.5
+            # 文件操作失败时使用默认分数
+            size_score = 2.5
 
         return priority_score + time_score + size_score
 

@@ -123,7 +123,9 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
                 monthly_rent = term_data_dict.get("monthly_rent", Decimal("0"))
                 management_fee = term_data_dict.get("management_fee", Decimal("0"))
                 other_fees = term_data_dict.get("other_fees", Decimal("0"))
-                term_data_dict["total_monthly_amount"] = monthly_rent + management_fee + other_fees
+                term_data_dict["total_monthly_amount"] = (
+                    monthly_rent + management_fee + other_fees
+                )
 
             term_data_dict["contract_id"] = db_contract.id
             db_term = RentTerm(**term_data_dict)

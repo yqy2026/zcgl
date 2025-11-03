@@ -25,7 +25,7 @@ class RentTermBase(BaseModel):
     def calculate_total_amount(cls, v, info):
         """计算月总金额"""
         if v is None:
-            data = info.data if hasattr(info, 'data') else {}
+            data = info.data if hasattr(info, "data") else {}
             monthly_rent = data.get("monthly_rent", Decimal("0"))
             management_fee = data.get("management_fee", Decimal("0"))
             other_fees = data.get("other_fees", Decimal("0"))
@@ -36,7 +36,7 @@ class RentTermBase(BaseModel):
     @classmethod
     def validate_date_range(cls, v, info):
         """验证日期范围"""
-        data = info.data if hasattr(info, 'data') else {}
+        data = info.data if hasattr(info, "data") else {}
         start_date = data.get("start_date")
         if start_date and v <= start_date:
             raise ValueError("结束日期必须大于开始日期")
@@ -89,7 +89,7 @@ class RentContractBase(BaseModel):
     @classmethod
     def validate_date_range(cls, v, info):
         """验证日期范围"""
-        data = info.data if hasattr(info, 'data') else {}
+        data = info.data if hasattr(info, "data") else {}
         start_date = data.get("start_date")
         if start_date and v <= start_date:
             raise ValueError("结束日期必须大于开始日期")
@@ -108,7 +108,7 @@ class RentContractCreate(RentContractBase):
         if not v:
             raise ValueError("租金条款不能为空")
 
-        data = info.data if hasattr(info, 'data') else {}
+        data = info.data if hasattr(info, "data") else {}
         start_date = data.get("start_date")
         end_date = data.get("end_date")
 

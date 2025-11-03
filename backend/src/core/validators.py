@@ -16,31 +16,33 @@ class BaseValidator:
     @staticmethod
     def validate_email(email: str) -> bool:
         """验证邮箱格式"""
-        pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
         return bool(re.match(pattern, email))
 
     @staticmethod
     def validate_phone(phone: str) -> bool:
         """验证手机号格式"""
-        pattern = r'^1[3-9]\d{9}$'
+        pattern = r"^1[3-9]\d{9}$"
         return bool(re.match(pattern, phone))
 
     @staticmethod
     def validate_id_card(id_card: str) -> bool:
         """验证身份证号格式"""
-        pattern = r'^[1-9]\d{5}(19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\d{3}[\dXx]$'
+        pattern = (
+            r"^[1-9]\d{5}(19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\d{3}[\dXx]$"
+        )
         return bool(re.match(pattern, id_card))
 
     @staticmethod
     def validate_url(url: str) -> bool:
         """验证URL格式"""
-        pattern = r'^https?://(?:[-\w.])+(?:\:[0-9]+)?(?:/(?:[\w/_.])*(?:\?(?:[\w&=%.])*)?(?:\#(?:[\w.])*)?)?$'
+        pattern = r"^https?://(?:[-\w.])+(?:\:[0-9]+)?(?:/(?:[\w/_.])*(?:\?(?:[\w&=%.])*)?(?:\#(?:[\w.])*)?)?$"
         return bool(re.match(pattern, url))
 
     @staticmethod
     def validate_ip_address(ip: str) -> bool:
         """验证IP地址格式"""
-        pattern = r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
+        pattern = r"^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
         return bool(re.match(pattern, ip))
 
     @staticmethod
@@ -82,10 +84,10 @@ class AssetValidator(BaseValidator):
     """资产数据验证器"""
 
     REQUIRED_FIELDS = [
-        'property_name',
-        'property_address',
-        'ownership_status',
-        'property_nature'
+        "property_name",
+        "property_address",
+        "ownership_status",
+        "property_nature",
     ]
 
     @classmethod
@@ -107,49 +109,54 @@ class AssetValidator(BaseValidator):
                 errors.append(f"缺少必填字段: {field}")
 
         # 验证物业名称
-        if 'property_name' in data:
-            if not cls.validate_length(data['property_name'], 1, 200):
+        if "property_name" in data:
+            if not cls.validate_length(data["property_name"], 1, 200):
                 errors.append("物业名称长度应在1-200个字符之间")
 
         # 验证物业地址
-        if 'property_address' in data:
-            if not cls.validate_length(data['property_address'], 5, 500):
+        if "property_address" in data:
+            if not cls.validate_length(data["property_address"], 5, 500):
                 errors.append("物业地址长度应在5-500个字符之间")
 
         # 验证建筑面积
-        if 'building_area' in data and data['building_area']:
-            if not cls.validate_positive_number(data['building_area']):
+        if "building_area" in data and data["building_area"]:
+            if not cls.validate_positive_number(data["building_area"]):
                 errors.append("建筑面积必须为正数")
 
         # 验证土地面积
-        if 'land_area' in data and data['land_area']:
-            if not cls.validate_positive_number(data['land_area']):
+        if "land_area" in data and data["land_area"]:
+            if not cls.validate_positive_number(data["land_area"]):
                 errors.append("土地面积必须为正数")
 
         # 验证建成年份
-        if 'construction_year' in data and data['construction_year']:
+        if "construction_year" in data and data["construction_year"]:
             current_year = datetime.now().year
-            if not (1900 <= data['construction_year'] <= current_year):
+            if not (1900 <= data["construction_year"] <= current_year):
                 errors.append(f"建成年份应在1900-{current_year}之间")
 
         # 验证所有权状态
-        valid_ownership_statuses = ['确权', '未确权', '争议中', '其他']
-        if 'ownership_status' in data and data['ownership_status'] not in valid_ownership_statuses:
-            errors.append(f"所有权状态应为以下之一: {', '.join(valid_ownership_statuses)}")
+        valid_ownership_statuses = ["确权", "未确权", "争议中", "其他"]
+        if (
+            "ownership_status" in data
+            and data["ownership_status"] not in valid_ownership_statuses
+        ):
+            errors.append(
+                f"所有权状态应为以下之一: {', '.join(valid_ownership_statuses)}"
+            )
 
         # 验证物业性质
-        valid_property_natures = ['住宅', '商业', '办公', '工业', '其他']
-        if 'property_nature' in data and data['property_nature'] not in valid_property_natures:
+        valid_property_natures = ["住宅", "商业", "办公", "工业", "其他"]
+        if (
+            "property_nature" in data
+            and data["property_nature"] not in valid_property_natures
+        ):
             errors.append(f"物业性质应为以下之一: {', '.join(valid_property_natures)}")
 
         return errors
 
     @classmethod
     def validate_asset_unique(
-        cls,
-        db: Session,
-        property_name: str,
-        exclude_id: str | None = None
+        cls, db: Session, property_name: str, exclude_id: str | None = None
     ) -> list[str]:
         """
         验证资产唯一性
@@ -192,26 +199,26 @@ class UserValidator(BaseValidator):
         errors = []
 
         # 验证用户名
-        if 'username' in data:
-            username = data['username']
+        if "username" in data:
+            username = data["username"]
             if not cls.validate_length(username, 3, 50):
                 errors.append("用户名长度应在3-50个字符之间")
-            if not re.match(r'^[a-zA-Z0-9_]+$', username):
+            if not re.match(r"^[a-zA-Z0-9_]+$", username):
                 errors.append("用户名只能包含字母、数字和下划线")
 
         # 验证邮箱
-        if 'email' in data:
-            if not cls.validate_email(data['email']):
+        if "email" in data:
+            if not cls.validate_email(data["email"]):
                 errors.append("邮箱格式不正确")
 
         # 验证手机号
-        if 'phone' in data and data['phone']:
-            if not cls.validate_phone(data['phone']):
+        if "phone" in data and data["phone"]:
+            if not cls.validate_phone(data["phone"]):
                 errors.append("手机号格式不正确")
 
         # 验证全名
-        if 'full_name' in data:
-            if not cls.validate_length(data['full_name'], 1, 100):
+        if "full_name" in data:
+            if not cls.validate_length(data["full_name"], 1, 100):
                 errors.append("姓名长度应在1-100个字符之间")
 
         return errors
@@ -222,7 +229,7 @@ class UserValidator(BaseValidator):
         db: Session,
         username: str | None = None,
         email: str | None = None,
-        exclude_id: str | None = None
+        exclude_id: str | None = None,
     ) -> list[str]:
         """
         验证用户唯一性
@@ -278,25 +285,25 @@ class OrganizationValidator(BaseValidator):
         errors = []
 
         # 验证组织名称
-        if 'name' in data:
-            if not cls.validate_length(data['name'], 1, 200):
+        if "name" in data:
+            if not cls.validate_length(data["name"], 1, 200):
                 errors.append("组织名称长度应在1-200个字符之间")
 
         # 验证组织代码
-        if 'code' in data:
-            if not cls.validate_length(data['code'], 2, 50):
+        if "code" in data:
+            if not cls.validate_length(data["code"], 2, 50):
                 errors.append("组织代码长度应在2-50个字符之间")
-            if not re.match(r'^[A-Z0-9_]+$', data['code']):
+            if not re.match(r"^[A-Z0-9_]+$", data["code"]):
                 errors.append("组织代码只能包含大写字母、数字和下划线")
 
         # 验证联系电话
-        if 'phone' in data and data['phone']:
-            if not cls.validate_phone(data['phone']):
+        if "phone" in data and data["phone"]:
+            if not cls.validate_phone(data["phone"]):
                 errors.append("联系电话格式不正确")
 
         # 验证邮箱
-        if 'email' in data and data['email']:
-            if not cls.validate_email(data['email']):
+        if "email" in data and data["email"]:
+            if not cls.validate_email(data["email"]):
                 errors.append("邮箱格式不正确")
 
         return errors
@@ -319,23 +326,25 @@ class RentContractValidator(BaseValidator):
         errors = []
 
         # 验证合同编号
-        if 'contract_number' in data:
-            if not cls.validate_length(data['contract_number'], 1, 100):
+        if "contract_number" in data:
+            if not cls.validate_length(data["contract_number"], 1, 100):
                 errors.append("合同编号长度应在1-100个字符之间")
 
         # 验证租金金额
-        if 'monthly_rent' in data and data['monthly_rent']:
-            if not cls.validate_positive_number(data['monthly_rent']):
+        if "monthly_rent" in data and data["monthly_rent"]:
+            if not cls.validate_positive_number(data["monthly_rent"]):
                 errors.append("月租金必须为正数")
 
         # 验证保证金
-        if 'security_deposit' in data and data['security_deposit']:
-            if not cls.validate_non_negative_number(data['security_deposit']):
+        if "security_deposit" in data and data["security_deposit"]:
+            if not cls.validate_non_negative_number(data["security_deposit"]):
                 errors.append("保证金不能为负数")
 
         # 验证租赁期限
-        if 'lease_start_date' in data and 'lease_end_date' in data:
-            if not cls.validate_date_range(data['lease_start_date'], data['lease_end_date']):
+        if "lease_start_date" in data and "lease_end_date" in data:
+            if not cls.validate_date_range(
+                data["lease_start_date"], data["lease_end_date"]
+            ):
                 errors.append("租赁开始日期不能晚于结束日期")
 
         return errors
@@ -348,6 +357,7 @@ class ValidationMixin:
         """验证并抛出异常"""
         if errors:
             from ..exceptions import BusinessLogicError
+
             raise BusinessLogicError(f"{context}失败: {'; '.join(errors)}")
 
 
@@ -357,17 +367,17 @@ class DataCleaner:
     @staticmethod
     def clean_phone(phone: str) -> str:
         """清理手机号"""
-        return re.sub(r'[^\d]', '', phone)
+        return re.sub(r"[^\d]", "", phone)
 
     @staticmethod
     def clean_whitespace(text: str) -> str:
         """清理多余空白字符"""
-        return ' '.join(text.split())
+        return " ".join(text.split())
 
     @staticmethod
     def clean_numeric_string(text: str) -> str:
         """清理数字字符串，只保留数字和小数点"""
-        return re.sub(r'[^\d.]', '', text)
+        return re.sub(r"[^\d.]", "", text)
 
     @staticmethod
     def standardize_boolean(value: Any) -> bool:
@@ -375,7 +385,7 @@ class DataCleaner:
         if isinstance(value, bool):
             return value
         if isinstance(value, str):
-            return value.lower() in ('true', '1', 'yes', 'on')
+            return value.lower() in ("true", "1", "yes", "on")
         if isinstance(value, (int, float)):
             return bool(value)
         return False
@@ -389,10 +399,10 @@ class DataCleaner:
             try:
                 # 尝试多种日期格式
                 formats = [
-                    '%Y-%m-%d %H:%M:%S',
-                    '%Y-%m-%d',
-                    '%Y/%m/%d %H:%M:%S',
-                    '%Y/%m/%d'
+                    "%Y-%m-%d %H:%M:%S",
+                    "%Y-%m-%d",
+                    "%Y/%m/%d %H:%M:%S",
+                    "%Y/%m/%d",
                 ]
                 for fmt in formats:
                     try:
@@ -405,26 +415,27 @@ class DataCleaner:
 
 
 # 便捷函数
-def validate_required_fields(data: dict[str, Any], required_fields: list[str]) -> list[str]:
+def validate_required_fields(
+    data: dict[str, Any], required_fields: list[str]
+) -> list[str]:
     """验证必填字段"""
     errors = []
     for field in required_fields:
-        if field not in data or data[field] is None or data[field] == '':
+        if field not in data or data[field] is None or data[field] == "":
             errors.append(f"缺少必填字段: {field}")
     return errors
 
 
 def validate_field_length(
-    data: dict[str, Any],
-    field_lengths: dict[str, dict[str, int]]
+    data: dict[str, Any], field_lengths: dict[str, dict[str, int]]
 ) -> list[str]:
     """验证字段长度"""
     errors = []
     for field, config in field_lengths.items():
         if field in data and data[field] is not None:
             length = len(str(data[field]))
-            min_length = config.get('min', 0)
-            max_length = config.get('max', float('inf'))
+            min_length = config.get("min", 0)
+            max_length = config.get("max", float("inf"))
 
             if length < min_length:
                 errors.append(f"{field}长度不能少于{min_length}个字符")
@@ -435,13 +446,14 @@ def validate_field_length(
 
 
 def validate_field_values(
-    data: dict[str, Any],
-    field_values: dict[str, list[Any]]
+    data: dict[str, Any], field_values: dict[str, list[Any]]
 ) -> list[str]:
     """验证字段值范围"""
     errors = []
     for field, valid_values in field_values.items():
         if field in data and data[field] not in valid_values:
-            errors.append(f"{field}的值应为以下之一: {', '.join(map(str, valid_values))}")
+            errors.append(
+                f"{field}的值应为以下之一: {', '.join(map(str, valid_values))}"
+            )
 
     return errors

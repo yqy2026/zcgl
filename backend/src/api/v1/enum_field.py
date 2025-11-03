@@ -97,16 +97,12 @@ async def get_enum_field_statistics(db: Session = Depends(get_db)):
     )
     active_values = (
         db.query(EnumFieldValue)
-        .filter(
-            and_(not EnumFieldValue.is_deleted, EnumFieldValue.is_active)
-        )
+        .filter(and_(not EnumFieldValue.is_deleted, EnumFieldValue.is_active))
         .count()
     )
 
     # 获取使用统计
-    usage_count = (
-        db.query(EnumFieldUsage).filter(EnumFieldUsage.is_active).count()
-    )
+    usage_count = db.query(EnumFieldUsage).filter(EnumFieldUsage.is_active).count()
 
     return EnumFieldStatistics(
         total_types=type_stats["total_types"],

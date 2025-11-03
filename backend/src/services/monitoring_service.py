@@ -13,21 +13,25 @@
 """
 
 import asyncio
+import json
 import logging
 import time
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Tuple
-from dataclasses import dataclass, asdict
 from pathlib import Path
-import json
+from typing import Any
 
 try:
-    from src.core.config_manager import get_config
     from src.core.database import get_db
+
     from src.api.v1.system_monitoring import (
-        SystemMetrics, ApplicationMetrics, PerformanceAlert,
-        collect_system_metrics, collect_application_metrics
+        ApplicationMetrics,
+        PerformanceAlert,
+        SystemMetrics,
+        collect_application_metrics,
+        collect_system_metrics,
     )
+    from src.core.config_manager import get_config
 except ImportError:
     # 独立运行时的回退方案
     def get_config():
@@ -37,21 +41,23 @@ except ImportError:
         return None
 
     # 从system_monitoring.py导入核心功能
-    import sys
     import os
+    import sys
+
     sys.path.insert(0, os.path.dirname(__file__))
 
     try:
         # 定义基础数据结构
-        from pydantic import BaseModel
-        from typing import Optional, Dict, Any
+        from typing import Any
+
         import psutil
+        from pydantic import BaseModel
 
         class SystemMetrics(BaseModel):
             cpu: float
-            memory: Dict[str, Any]
-            disk: Dict[str, Any]
-            network: Dict[str, Any]
+            memory: dict[str, Any]
+            disk: dict[str, Any]
+            network: dict[str, Any]
             timestamp: datetime
 
         class ApplicationMetrics(BaseModel):
@@ -70,25 +76,28 @@ except ImportError:
             timestamp: datetime
 
         def collect_system_metrics():
-            import psutil
             from datetime import datetime
+
             return SystemMetrics(
                 cpu=psutil.cpu_percent(interval=1),
                 memory={
                     "total": psutil.virtual_memory().total,
                     "available": psutil.virtual_memory().available,
-                    "percent": psutil.virtual_memory().percent
+                    "percent": psutil.virtual_memory().percent,
                 },
                 disk={
-                    "total": psutil.disk_usage('/').total,
-                    "free": psutil.disk_usage('/').free,
-                    "percent": (psutil.disk_usage('/').used / psutil.disk_usage('/').total) * 100
+                    "total": psutil.disk_usage("/").total,
+                    "free": psutil.disk_usage("/").free,
+                    "percent": (
+                        psutil.disk_usage("/").used / psutil.disk_usage("/").total
+                    )
+                    * 100,
                 },
                 network={
                     "bytes_sent": psutil.net_io_counters().bytes_sent,
-                    "bytes_recv": psutil.net_io_counters().bytes_recv
+                    "bytes_recv": psutil.net_io_counters().bytes_recv,
                 },
-                timestamp=datetime.now()
+                timestamp=datetime.now(),
             )
 
         def collect_application_metrics():
@@ -97,7 +106,7 @@ except ImportError:
                 active_connections=0,
                 request_count=0,
                 error_count=0,
-                response_time_avg=0.0
+                response_time_avg=0.0,
             )
 
     except Exception as e:
@@ -114,6 +123,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class MonitoringConfig:
     """监控配置"""
+
     collection_interval: int = 60  # 数据收集间隔(秒)
     history_retention_hours: int = 168  # 历史数据保留时间(小时)
     alert_threshold_cpu: float = 80.0  # CPU告警阈值
@@ -128,26 +138,27 @@ class MonitoringConfig:
 @dataclass
 class TrendAnalysis:
     """趋势分析结果"""
+
     metric_name: str
     current_value: float
     avg_value_1h: float
     avg_value_24h: float
     trend_direction: str  # "up", "down", "stable"
     trend_percent: float
-    prediction_1h: Optional[float]
+    prediction_1h: float | None
     status: str  # "normal", "warning", "critical"
 
 
 class MonitoringService:
     """系统监控服务"""
 
-    def __init__(self, config: Optional[MonitoringConfig] = None):
+    def __init__(self, config: MonitoringConfig | None = None):
         self.config = config or MonitoringConfig()
-        self._system_metrics_history: List[SystemMetrics] = []
-        self._application_metrics_history: List[ApplicationMetrics] = []
-        self._alerts_history: List[PerformanceAlert] = []
+        self._system_metrics_history: list[SystemMetrics] = []
+        self._application_metrics_history: list[ApplicationMetrics] = []
+        self._alerts_history: list[PerformanceAlert] = []
         self._is_running = False
-        self._collection_task: Optional[asyncio.Task] = None
+        self._collection_task: asyncio.Task | None = None
 
         # 确保数据目录存在
         self.data_dir = Path("data/monitoring")
@@ -197,14 +208,17 @@ class MonitoringService:
                 # 检查告警
                 if self.config.enable_alerting:
                     from src.api.v1.system_monitoring import check_performance_alerts
+
                     new_alerts = check_performance_alerts(system_metrics, app_metrics)
                     self._alerts_history.extend(new_alerts)
 
                 # 清理历史数据
                 await self._cleanup_old_data()
 
-                logger.debug(f"收集指标完成: CPU={system_metrics.cpu_percent:.1f}%, "
-                           f"内存={system_metrics.memory_percent:.1f}%")
+                logger.debug(
+                    f"收集指标完成: CPU={system_metrics.cpu_percent:.1f}%, "
+                    f"内存={system_metrics.memory_percent:.1f}%"
+                )
 
             except Exception as e:
                 logger.error(f"收集监控指标失败: {e}")
@@ -217,7 +231,9 @@ class MonitoringService:
 
     async def _cleanup_old_data(self):
         """清理过期数据"""
-        cutoff_time = datetime.now() - timedelta(hours=self.config.history_retention_hours)
+        cutoff_time = datetime.now() - timedelta(
+            hours=self.config.history_retention_hours
+        )
 
         # 清理系统指标历史
         self._system_metrics_history = [
@@ -235,7 +251,7 @@ class MonitoringService:
             a for a in self._alerts_history if a.timestamp > alert_cutoff_time
         ]
 
-    def get_current_metrics(self) -> Tuple[SystemMetrics, ApplicationMetrics]:
+    def get_current_metrics(self) -> tuple[SystemMetrics, ApplicationMetrics]:
         """获取当前指标"""
         if not self._system_metrics_history:
             raise ValueError("暂无系统指标数据")
@@ -243,16 +259,11 @@ class MonitoringService:
         if not self._application_metrics_history:
             raise ValueError("暂无应用指标数据")
 
-        return (
-            self._system_metrics_history[-1],
-            self._application_metrics_history[-1]
-        )
+        return (self._system_metrics_history[-1], self._application_metrics_history[-1])
 
     def get_metrics_history(
-        self,
-        hours: int = 24,
-        metric_type: str = "all"
-    ) -> Dict[str, List[Any]]:
+        self, hours: int = 24, metric_type: str = "all"
+    ) -> dict[str, list[Any]]:
         """获取历史指标数据"""
         cutoff_time = datetime.now() - timedelta(hours=hours)
 
@@ -265,7 +276,9 @@ class MonitoringService:
 
         if metric_type in ("all", "application"):
             result["application"] = [
-                m for m in self._application_metrics_history if m.timestamp > cutoff_time
+                m
+                for m in self._application_metrics_history
+                if m.timestamp > cutoff_time
             ]
 
         return result
@@ -294,15 +307,21 @@ class MonitoringService:
         # 计算1小时平均值
         one_hour_ago = datetime.now() - timedelta(hours=1)
         metrics_1h = [m for m in recent_metrics if m.timestamp > one_hour_ago]
-        avg_value_1h = sum(getattr(m, field_name, 0) for m in metrics_1h) / len(metrics_1h)
+        avg_value_1h = sum(getattr(m, field_name, 0) for m in metrics_1h) / len(
+            metrics_1h
+        )
 
         # 计算24小时平均值
-        avg_value_24h = sum(getattr(m, field_name, 0) for m in recent_metrics) / len(recent_metrics)
+        avg_value_24h = sum(getattr(m, field_name, 0) for m in recent_metrics) / len(
+            recent_metrics
+        )
 
         # 计算趋势
         if len(recent_metrics) >= 2:
             recent_values = [getattr(m, field_name, 0) for m in recent_metrics[-10:]]
-            trend_percent = ((recent_values[-1] - recent_values[0]) / recent_values[0]) * 100
+            trend_percent = (
+                (recent_values[-1] - recent_values[0]) / recent_values[0]
+            ) * 100
 
             if trend_percent > 5:
                 trend_direction = "up"
@@ -343,57 +362,66 @@ class MonitoringService:
             trend_direction=trend_direction,
             trend_percent=trend_percent,
             prediction_1h=prediction_1h,
-            status=status
+            status=status,
         )
 
-    def get_performance_summary(self, hours: int = 24) -> Dict[str, Any]:
+    def get_performance_summary(self, hours: int = 24) -> dict[str, Any]:
         """获取性能摘要"""
         cutoff_time = datetime.now() - timedelta(hours=hours)
 
         # 系统指标摘要
-        system_metrics = [m for m in self._system_metrics_history if m.timestamp > cutoff_time]
+        system_metrics = [
+            m for m in self._system_metrics_history if m.timestamp > cutoff_time
+        ]
         system_summary = {}
 
         if system_metrics:
             system_summary = {
                 "cpu": {
-                    "avg": sum(m.cpu_percent for m in system_metrics) / len(system_metrics),
+                    "avg": sum(m.cpu_percent for m in system_metrics)
+                    / len(system_metrics),
                     "max": max(m.cpu_percent for m in system_metrics),
-                    "min": min(m.cpu_percent for m in system_metrics)
+                    "min": min(m.cpu_percent for m in system_metrics),
                 },
                 "memory": {
-                    "avg": sum(m.memory_percent for m in system_metrics) / len(system_metrics),
+                    "avg": sum(m.memory_percent for m in system_metrics)
+                    / len(system_metrics),
                     "max": max(m.memory_percent for m in system_metrics),
-                    "min": min(m.memory_percent for m in system_metrics)
+                    "min": min(m.memory_percent for m in system_metrics),
                 },
                 "disk": {
-                    "avg": sum(m.disk_usage_percent for m in system_metrics) / len(system_metrics),
+                    "avg": sum(m.disk_usage_percent for m in system_metrics)
+                    / len(system_metrics),
                     "max": max(m.disk_usage_percent for m in system_metrics),
-                    "min": min(m.disk_usage_percent for m in system_metrics)
-                }
+                    "min": min(m.disk_usage_percent for m in system_metrics),
+                },
             }
 
         # 应用指标摘要
-        app_metrics = [m for m in self._application_metrics_history if m.timestamp > cutoff_time]
+        app_metrics = [
+            m for m in self._application_metrics_history if m.timestamp > cutoff_time
+        ]
         app_summary = {}
 
         if app_metrics:
             app_summary = {
                 "response_time": {
-                    "avg": sum(m.average_response_time for m in app_metrics) / len(app_metrics),
+                    "avg": sum(m.average_response_time for m in app_metrics)
+                    / len(app_metrics),
                     "max": max(m.average_response_time for m in app_metrics),
-                    "min": min(m.average_response_time for m in app_metrics)
+                    "min": min(m.average_response_time for m in app_metrics),
                 },
                 "error_rate": {
                     "avg": sum(m.error_rate for m in app_metrics) / len(app_metrics),
                     "max": max(m.error_rate for m in app_metrics),
-                    "min": min(m.error_rate for m in app_metrics)
+                    "min": min(m.error_rate for m in app_metrics),
                 },
                 "cache_hit_rate": {
-                    "avg": sum(m.cache_hit_rate for m in app_metrics) / len(app_metrics),
+                    "avg": sum(m.cache_hit_rate for m in app_metrics)
+                    / len(app_metrics),
                     "max": max(m.cache_hit_rate for m in app_metrics),
-                    "min": min(m.cache_hit_rate for m in app_metrics)
-                }
+                    "min": min(m.cache_hit_rate for m in app_metrics),
+                },
             }
 
         # 告警摘要
@@ -403,19 +431,19 @@ class MonitoringService:
             "critical": len([a for a in recent_alerts if a.level == "critical"]),
             "warning": len([a for a in recent_alerts if a.level == "warning"]),
             "info": len([a for a in recent_alerts if a.level == "info"]),
-            "resolved": len([a for a in recent_alerts if a.resolved])
+            "resolved": len([a for a in recent_alerts if a.resolved]),
         }
 
         return {
             "time_range_hours": hours,
             "data_points": {
                 "system": len(system_metrics),
-                "application": len(app_metrics)
+                "application": len(app_metrics),
             },
             "system_metrics": system_summary,
             "application_metrics": app_summary,
             "alerts": alert_summary,
-            "generated_at": datetime.now().isoformat()
+            "generated_at": datetime.now().isoformat(),
         }
 
     async def _save_data_to_file(self):
@@ -424,19 +452,19 @@ class MonitoringService:
             # 保存系统指标
             system_file = self.data_dir / "system_metrics.json"
             system_data = [asdict(m) for m in self._system_metrics_history]
-            with open(system_file, 'w', encoding='utf-8') as f:
+            with open(system_file, "w", encoding="utf-8") as f:
                 json.dump(system_data, f, ensure_ascii=False, indent=2, default=str)
 
             # 保存应用指标
             app_file = self.data_dir / "application_metrics.json"
             app_data = [asdict(m) for m in self._application_metrics_history]
-            with open(app_file, 'w', encoding='utf-8') as f:
+            with open(app_file, "w", encoding="utf-8") as f:
                 json.dump(app_data, f, ensure_ascii=False, indent=2, default=str)
 
             # 保存告警历史
             alert_file = self.data_dir / "alerts.json"
             alert_data = [asdict(a) for a in self._alerts_history]
-            with open(alert_file, 'w', encoding='utf-8') as f:
+            with open(alert_file, "w", encoding="utf-8") as f:
                 json.dump(alert_data, f, ensure_ascii=False, indent=2, default=str)
 
             logger.info(f"监控数据已保存到 {self.data_dir}")
@@ -450,7 +478,7 @@ class MonitoringService:
             # 加载系统指标
             system_file = self.data_dir / "system_metrics.json"
             if system_file.exists():
-                with open(system_file, 'r', encoding='utf-8') as f:
+                with open(system_file, encoding="utf-8") as f:
                     system_data = json.load(f)
                 self._system_metrics_history = [
                     SystemMetrics(**item) for item in system_data
@@ -459,7 +487,7 @@ class MonitoringService:
             # 加载应用指标
             app_file = self.data_dir / "application_metrics.json"
             if app_file.exists():
-                with open(app_file, 'r', encoding='utf-8') as f:
+                with open(app_file, encoding="utf-8") as f:
                     app_data = json.load(f)
                 self._application_metrics_history = [
                     ApplicationMetrics(**item) for item in app_data
@@ -468,18 +496,16 @@ class MonitoringService:
             # 加载告警历史
             alert_file = self.data_dir / "alerts.json"
             if alert_file.exists():
-                with open(alert_file, 'r', encoding='utf-8') as f:
+                with open(alert_file, encoding="utf-8") as f:
                     alert_data = json.load(f)
-                self._alerts_history = [
-                    PerformanceAlert(**item) for item in alert_data
-                ]
+                self._alerts_history = [PerformanceAlert(**item) for item in alert_data]
 
             logger.info(f"从 {self.data_dir} 加载监控数据完成")
 
         except Exception as e:
             logger.error(f"加载监控数据失败: {e}")
 
-    def get_service_status(self) -> Dict[str, Any]:
+    def get_service_status(self) -> dict[str, Any]:
         """获取服务状态"""
         return {
             "is_running": self._is_running,
@@ -487,19 +513,20 @@ class MonitoringService:
             "data_points": {
                 "system_metrics": len(self._system_metrics_history),
                 "application_metrics": len(self._application_metrics_history),
-                "alerts": len(self._alerts_history)
+                "alerts": len(self._alerts_history),
             },
             "config": asdict(self.config),
             "data_directory": str(self.data_dir),
             "last_collection": (
                 self._system_metrics_history[-1].timestamp.isoformat()
-                if self._system_metrics_history else None
-            )
+                if self._system_metrics_history
+                else None
+            ),
         }
 
 
 # 全局监控服务实例
-_monitoring_service: Optional[MonitoringService] = None
+_monitoring_service: MonitoringService | None = None
 
 
 def get_monitoring_service() -> MonitoringService:

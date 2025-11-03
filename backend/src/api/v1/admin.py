@@ -10,12 +10,14 @@ from ...middleware.auth import require_admin
 # 创建管理员路由器
 router = APIRouter(prefix="/admin", tags=["系统管理"])
 
+
 @router.get("/health")
 async def health_check():
     """
     健康检查
     """
     return {"status": "healthy"}
+
 
 @router.post("/database/reset")
 async def reset_database(current_user: dict = Depends(require_admin)):

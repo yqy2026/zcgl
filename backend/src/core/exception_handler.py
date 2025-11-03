@@ -11,12 +11,11 @@ from typing import Any
 from fastapi import HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from pydantic import ValidationError
 
 logger = logging.getLogger(__name__)
 
 
-class BaseBusinessException(Exception):
+class BaseBusinessError(Exception):
     """业务异常基类"""
 
     def __init__(
@@ -46,7 +45,7 @@ class BaseBusinessException(Exception):
         }
 
 
-class ValidationException(BaseBusinessException):
+class BusinessValidationError(BaseBusinessError):
     """数据验证异常"""
 
     def __init__(
@@ -64,7 +63,7 @@ class ValidationException(BaseBusinessException):
         )
 
 
-class ResourceNotFoundException(BaseBusinessException):
+class ResourceNotFoundError(BaseBusinessError):
     """资源未找到异常"""
 
     def __init__(
@@ -89,7 +88,7 @@ class ResourceNotFoundException(BaseBusinessException):
         )
 
 
-class DuplicateResourceException(BaseBusinessException):
+class DuplicateResourceError(BaseBusinessError):
     """资源重复异常"""
 
     def __init__(
@@ -114,7 +113,7 @@ class DuplicateResourceException(BaseBusinessException):
         )
 
 
-class PermissionDeniedException(BaseBusinessException):
+class PermissionDeniedError(BaseBusinessError):
     """权限不足异常"""
 
     def __init__(
@@ -131,7 +130,7 @@ class PermissionDeniedException(BaseBusinessException):
         )
 
 
-class AuthenticationException(BaseBusinessException):
+class AuthenticationError(BaseBusinessError):
     """认证异常"""
 
     def __init__(
@@ -145,7 +144,7 @@ class AuthenticationException(BaseBusinessException):
         )
 
 
-class FileProcessingException(BaseBusinessException):
+class FileProcessingError(BaseBusinessError):
     """文件处理异常"""
 
     def __init__(
@@ -163,7 +162,7 @@ class FileProcessingException(BaseBusinessException):
         )
 
 
-class TaskProcessingException(BaseBusinessException):
+class TaskProcessingError(BaseBusinessError):
     """任务处理异常"""
 
     def __init__(
@@ -181,7 +180,7 @@ class TaskProcessingException(BaseBusinessException):
         )
 
 
-class ConfigurationException(BaseBusinessException):
+class ConfigurationError(BaseBusinessError):
     """配置异常"""
 
     def __init__(
@@ -198,7 +197,7 @@ class ConfigurationException(BaseBusinessException):
         )
 
 
-class ExternalServiceException(BaseBusinessException):
+class ExternalServiceError(BaseBusinessError):
     """外部服务异常"""
 
     def __init__(
@@ -220,7 +219,7 @@ class ExternalServiceException(BaseBusinessException):
         )
 
 
-class RateLimitException(BaseBusinessException):
+class RateLimitError(BaseBusinessError):
     """频率限制异常"""
 
     def __init__(
@@ -244,7 +243,7 @@ class ExceptionHandler:
         self.logger = logging.getLogger(__name__)
 
     def handle_business_exception(
-        self, request: Request, exc: BaseBusinessException
+        self, request: Request, exc: BaseBusinessError
     ) -> JSONResponse:
         """处理业务异常"""
         # 清理异常详情中的不可序列化内容
@@ -269,6 +268,7 @@ class ExceptionHandler:
 
         try:
             import json
+
             # 测试序列化
             json.dumps(details)
             return details
@@ -294,7 +294,7 @@ class ExceptionHandler:
                 field_errors[field_name] = []
             field_errors[field_name].append(error["msg"])
 
-        business_exc = ValidationException(
+        business_exc = BusinessValidationError(
             message="请求参数验证失败",
             field_errors=field_errors,
             details={"errors": exc.errors()},
@@ -303,7 +303,7 @@ class ExceptionHandler:
         return self.handle_business_exception(request, business_exc)
 
     def handle_pydantic_validation_exception(
-        self, request: Request, exc: ValidationError
+        self, request: Request, exc: BusinessValidationError
     ) -> JSONResponse:
         """处理Pydantic验证异常"""
         field_errors = {}
@@ -313,7 +313,7 @@ class ExceptionHandler:
                 field_errors[field_name] = []
             field_errors[field_name].append(error["msg"])
 
-        business_exc = ValidationException(
+        business_exc = BusinessValidationError(
             message="数据验证失败",
             field_errors=field_errors,
             details={"errors": exc.errors()},
@@ -325,7 +325,7 @@ class ExceptionHandler:
         self, request: Request, exc: HTTPException
     ) -> JSONResponse:
         """处理HTTP异常"""
-        business_exc = BaseBusinessException(
+        business_exc = BaseBusinessError(
             message=exc.detail,
             code=f"HTTP_{exc.status_code}",
             status_code=exc.status_code,
@@ -364,7 +364,7 @@ class ExceptionHandler:
             message = "内部服务器错误"
             details = {}
 
-        business_exc = BaseBusinessException(
+        business_exc = BaseBusinessError(
             message=message,
             code="INTERNAL_SERVER_ERROR",
             details=details,
@@ -382,8 +382,8 @@ def setup_exception_handlers(app):
     """设置应用异常处理器"""
 
     # 业务异常处理器
-    @app.exception_handler(BaseBusinessException)
-    async def business_exception_handler(request: Request, exc: BaseBusinessException):
+    @app.exception_handler(BaseBusinessError)
+    async def business_exception_handler(request: Request, exc: BaseBusinessError):
         return exception_handler.handle_business_exception(request, exc)
 
     # FastAPI验证异常处理器
@@ -394,9 +394,9 @@ def setup_exception_handlers(app):
         return exception_handler.handle_validation_exception(request, exc)
 
     # Pydantic验证异常处理器
-    @app.exception_handler(ValidationError)
+    @app.exception_handler(BusinessValidationError)
     async def pydantic_validation_exception_handler(
-        request: Request, exc: ValidationError
+        request: Request, exc: BusinessValidationError
     ):
         return exception_handler.handle_pydantic_validation_exception(request, exc)
 
@@ -414,62 +414,62 @@ def setup_exception_handlers(app):
 # 便捷异常抛出函数
 def raise_not_found(resource_type: str, resource_id: str | None = None, **kwargs):
     """抛出资源未找到异常"""
-    raise ResourceNotFoundException(resource_type, resource_id, kwargs)
+    raise ResourceNotFoundError(resource_type, resource_id, kwargs)
 
 
 def raise_duplicate(resource_type: str, field: str, value: str, **kwargs):
     """抛出资源重复异常"""
-    raise DuplicateResourceException(resource_type, field, value, kwargs)
+    raise DuplicateResourceError(resource_type, field, value, kwargs)
 
 
 def raise_permission_denied(
     message: str | None = None, required_permission: str | None = None, **kwargs
 ):
     """抛出权限不足异常"""
-    raise PermissionDeniedException(message or "权限不足", required_permission, kwargs)
+    raise PermissionDeniedError(message or "权限不足", required_permission, kwargs)
 
 
 def raise_validation_error(
     message: str, field_errors: dict[str, list] | None = None, **kwargs
 ):
     """抛出验证异常"""
-    raise ValidationException(message, field_errors, kwargs)
+    raise BusinessValidationError(message, field_errors, kwargs)
 
 
 def raise_file_error(
     message: str, file_name: str | None = None, file_type: str | None = None, **kwargs
 ):
     """抛出文件处理异常"""
-    raise FileProcessingException(message, file_name, file_type, kwargs)
+    raise FileProcessingError(message, file_name, file_type, kwargs)
 
 
 def raise_task_error(
     message: str, task_id: str | None = None, task_type: str | None = None, **kwargs
 ):
     """抛出任务处理异常"""
-    raise TaskProcessingException(message, task_id, task_type, kwargs)
+    raise TaskProcessingError(message, task_id, task_type, kwargs)
 
 
 def raise_config_error(message: str, config_key: str | None = None, **kwargs):
     """抛出配置异常"""
-    raise ConfigurationException(message, config_key, kwargs)
+    raise ConfigurationError(message, config_key, kwargs)
 
 
 def raise_external_service_error(
     message: str, service_name: str | None = None, **kwargs
 ):
     """抛出外部服务异常"""
-    raise ExternalServiceException(message, service_name, **kwargs)
+    raise ExternalServiceError(message, service_name, **kwargs)
 
 
 def raise_rate_limit(retry_after: int | None = None, **kwargs):
     """抛出频率限制异常"""
-    raise RateLimitException(retry_after=retry_after, **kwargs)
+    raise RateLimitError(retry_after=retry_after, **kwargs)
 
 
 if __name__ == "__main__":
     # 测试异常处理
     try:
         raise_not_found("Asset", "123", reason="测试")
-    except BaseBusinessException as e:
+    except BaseBusinessError as e:
         print("Exception handled:", e.to_dict())

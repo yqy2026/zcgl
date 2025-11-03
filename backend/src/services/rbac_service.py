@@ -508,15 +508,15 @@ class RBACService:
         from ..models.rbac import role_permissions
 
         # 清除现有权限
-        self.db.execute(role_permissions.delete().where(role_permissions.c.role_id == role_id))
+        self.db.execute(
+            role_permissions.delete().where(role_permissions.c.role_id == role_id)
+        )
 
         # 添加新权限
         for permission_id in permission_ids:
             self.db.execute(
                 role_permissions.insert().values(
-                    role_id=role_id,
-                    permission_id=permission_id,
-                    created_by=operator_id
+                    role_id=role_id, permission_id=permission_id, created_by=operator_id
                 )
             )
 

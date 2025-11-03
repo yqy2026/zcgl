@@ -12,9 +12,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from .api.v1 import api_router
 from .api.v1.pdf_import_unified import router as pdf_import_router
 from .core.config_manager import get_config, initialize_config
+from .core.error_handler import create_error_handlers
 from .core.exception_handler import setup_exception_handlers
 from .core.logging_security import setup_logging_security
-from .core.error_handler import create_error_handlers
 from .database import create_tables
 from .middleware.error_recovery_middleware import ErrorRecoveryMiddleware
 from .middleware.request_logging import create_request_logging_middleware
@@ -29,7 +29,7 @@ app = FastAPI(
     description="专为资产管理经理设计的智能化工作平台",
     version="2.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
 )
 
 # 初始化配置
@@ -60,6 +60,7 @@ setup_exception_handlers(app)
 # 设置新的统一错误处理框架
 create_error_handlers(app)
 
+
 # 健康检查端点（必须在路由注册之前定义）
 @app.get("/api/v1/health", tags=["健康检查"])
 async def health_check():
@@ -69,15 +70,16 @@ async def health_check():
             "status": "healthy",
             "timestamp": datetime.now(UTC).isoformat(),
             "version": "2.0.0",
-            "service": "土地物业资产管理系统"
+            "service": "土地物业资产管理系统",
         }
     except Exception as e:
         logger.error(f"健康检查失败: {e}")
         return {
             "status": "unhealthy",
             "timestamp": datetime.now(UTC).isoformat(),
-            "error": str(e)
+            "error": str(e),
         }
+
 
 # 根路由端点
 @app.get("/", tags=["根路由"])
@@ -87,8 +89,9 @@ async def root_endpoint():
         "message": "土地物业资产管理系统 API",
         "version": "2.0.0",
         "docs_url": "/docs",
-        "health_check": "/api/v1/health"
+        "health_check": "/api/v1/health",
     }
+
 
 # API v1根路径
 @app.get("/api/v1/", tags=["根路径"])
@@ -101,9 +104,10 @@ async def api_v1_root():
             "health": "/api/v1/health",
             "assets": "/api/v1/assets",
             "auth": "/api/v1/auth",
-            "docs": "/docs"
-        }
+            "docs": "/docs",
+        },
     }
+
 
 # 应用信息端点
 @app.get("/api/v1/info", tags=["应用信息"])
@@ -119,9 +123,10 @@ async def app_info():
             "58字段资产管理",
             "RBAC权限控制",
             "实时数据分析",
-            "Excel导入导出"
-        ]
+            "Excel导入导出",
+        ],
     }
+
 
 # 注册API路由
 app.include_router(api_router)
