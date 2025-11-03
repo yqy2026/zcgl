@@ -1,11 +1,11 @@
-from typing import Any
+from typing import Any, TypeVar
+
 """
 通用响应模式
 定义统一的API响应格式
 """
 
 from datetime import UTC, datetime
-, TypeVar
 
 from pydantic import BaseModel, Field
 

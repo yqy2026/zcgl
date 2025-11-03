@@ -317,7 +317,7 @@ class AuditLogCRUD:
 
         return [action[0] for action in actions]
 
-    def get_login_statistics(self) -> dict[str, Any]:
+    def get_login_statistics(self, db: Session, days: int = 7) -> dict[str, Any]:
         """获取登录统计"""
         from datetime import datetime, timedelta
 

@@ -1,4 +1,5 @@
 from typing import Any, TypeVar
+
 """
 增强的基础CRUD操作类 - 支持缓存、性能监控和错误处理
 """

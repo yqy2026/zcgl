@@ -1,4 +1,5 @@
-from typing import Any
+from typing import Any, TypeVar
+
 """
 增强的基础CRUD操作类
 提供统一的数据访问模式和通用功能
@@ -7,7 +8,6 @@ from typing import Any
 import logging
 from abc import ABC, abstractmethod
 from datetime import UTC, datetime
-, TypeVar
 
 from pydantic import BaseModel
 from sqlalchemy import asc, desc

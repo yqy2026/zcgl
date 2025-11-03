@@ -28,7 +28,6 @@ from datetime import datetime
 from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
-from ..exceptions import BusinessLogicError
 from ..models.rbac import (
     Permission,
     PermissionAuditLog,
@@ -693,7 +692,7 @@ class PermissionAuditLogCRUD:
         """审计日志总数"""
         return db.query(func.count(PermissionAuditLog.id)).scalar()
 
-    def get_action_statistics(self) -> dict[str, Any]:
+    def get_action_statistics(self, db: Session, days: int = 30) -> dict[str, Any]:
         """获取操作统计"""
         from datetime import timedelta
 
