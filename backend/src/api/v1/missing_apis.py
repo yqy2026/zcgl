@@ -1,19 +1,19 @@
 from typing import Any
+
 """
 缺失的API端点补充
 根据前端API调用需求，补充后端缺失的32个关键API端点
 """
 
-from fastapi import APIRouter, HTTPException, Depends, Query, Path, Body
-from sqlalchemy.orm import Session
-from typing import Optional
-from pydantic import BaseModel, EmailStr
 import logging
+
+from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query
+from sqlalchemy.orm import Session
 
 # 临时导入修复 - 避免复杂的依赖问题
 try:
-    from ..core.database import get_db
     from ..core.auth import get_current_user, require_permission
+    from ..core.database import get_db
     from ..models.user import User
     from ..schemas.common import ApiResponse, PaginatedResponse
 except ImportError:
@@ -168,7 +168,7 @@ async def add_organization_member(
 ) -> dict[str, Any]:
     """添加组织成员"""
     try:
-        user_id = member_data.get("user_id")
+        member_data.get("user_id")
         # 实际应该验证用户ID并添加到组织
         return {"success": True, "message": "成员添加成功"}
     except Exception as e:
@@ -347,8 +347,8 @@ async def update_role_permissions(
                         summary="获取操作日志统计",
                         description="获取操作日志的统计信息")
 async def get_log_statistics(
-    start_date: Optional[str] = Query(None, description="开始日期"),
-    end_date: Optional[str] = Query(None, description="结束日期"),
+    start_date: str | None = Query(None, description="开始日期"),
+    end_date: str | None = Query(None, description="结束日期"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> dict[str, Any]:
@@ -379,12 +379,12 @@ async def get_log_statistics(
                         summary="导出操作日志",
                         description="导出操作日志为Excel或CSV文件")
 async def export_logs(
-    search: Optional[str] = Query(None, description="搜索关键词"),
-    user_id: Optional[str] = Query(None, description="用户ID"),
-    module: Optional[str] = Query(None, description="模块"),
-    action: Optional[str] = Query(None, description="操作"),
-    start_date: Optional[str] = Query(None, description="开始日期"),
-    end_date: Optional[str] = Query(None, description="结束日期"),
+    search: str | None = Query(None, description="搜索关键词"),
+    user_id: str | None = Query(None, description="用户ID"),
+    module: str | None = Query(None, description="模块"),
+    action: str | None = Query(None, description="操作"),
+    start_date: str | None = Query(None, description="开始日期"),
+    end_date: str | None = Query(None, description="结束日期"),
     format: str = Query("excel", description="导出格式"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
