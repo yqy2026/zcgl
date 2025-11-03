@@ -1,4 +1,5 @@
 from typing import Any
+
 """
 数据验证框架
 提供统一的验证机制和自定义验证器
@@ -8,7 +9,6 @@ import re
 from collections.abc import Callable
 from datetime import date, datetime
 from decimal import Decimal
-
 
 from pydantic import BaseModel, BusinessValidationError
 

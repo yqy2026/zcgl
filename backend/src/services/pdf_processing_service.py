@@ -1,4 +1,5 @@
 from typing import Any
+
 """
 PDF文本处理服务
 支持多种PDF处理引擎和OCR功能
@@ -10,7 +11,6 @@ import re
 import time
 from datetime import datetime
 from pathlib import Path
-
 
 import fitz  # PyMuPDF
 import pdfplumber

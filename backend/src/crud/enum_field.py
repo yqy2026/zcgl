@@ -1,4 +1,5 @@
 from typing import Any
+
 """
 枚举字段管理CRUD操作
 """

@@ -1,10 +1,10 @@
 from typing import Any
+
 """
 统计和报表相关的Pydantic模型
 """
 
 from datetime import datetime
-
 
 from pydantic import BaseModel, ConfigDict, Field
 

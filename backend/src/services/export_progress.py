@@ -1,4 +1,5 @@
 from typing import Any
+
 """
 导出进度跟踪服务
 """
@@ -8,7 +9,6 @@ import logging
 import uuid
 from datetime import datetime, timedelta
 from enum import Enum
-
 
 logger = logging.getLogger(__name__)
 

@@ -1,10 +1,10 @@
 from typing import Any
+
 """
 组织架构数据访问层
 """
 
 from datetime import datetime
-
 
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session

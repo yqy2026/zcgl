@@ -1,4 +1,5 @@
 from typing import Any
+
 """
 并发处理优化服务
 提供智能的并发处理控制和资源管理
@@ -14,7 +15,6 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
-
 
 logger = logging.getLogger(__name__)
 

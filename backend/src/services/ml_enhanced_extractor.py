@@ -1,4 +1,5 @@
 from typing import Any
+
 """
 机器学习增强的合同信息提取器
 集成NLP模型和规则引擎，提供智能化的中文租赁合同信息提取
@@ -10,7 +11,6 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-
 
 logger = logging.getLogger(__name__)
 

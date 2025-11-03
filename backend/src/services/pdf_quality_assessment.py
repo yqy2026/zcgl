@@ -1,4 +1,5 @@
 from typing import Any
+
 """
 PDF处理质量评估服务
 提供智能化的PDF处理质量评估和改进建议
@@ -7,7 +8,6 @@ PDF处理质量评估服务
 import logging
 import re
 from datetime import UTC, datetime
-
 
 logger = logging.getLogger(__name__)
 

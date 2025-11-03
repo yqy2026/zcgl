@@ -1,4 +1,5 @@
 from typing import Any
+
 """
 PDF导入会话管理服务
 负责处理会话的创建、更新、查询和清理
@@ -8,7 +9,6 @@ import asyncio
 import logging
 import uuid
 from datetime import datetime, timedelta
-
 
 from sqlalchemy.orm import Session
 

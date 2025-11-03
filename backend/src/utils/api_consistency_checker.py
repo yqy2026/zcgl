@@ -1,4 +1,5 @@
 from typing import Any
+
 """
 API一致性检查工具
 检查前后端API的一致性，包括路径、参数、响应格式等

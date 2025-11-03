@@ -1,4 +1,5 @@
 from typing import Any
+
 """
 路由注册器
 统一管理API路由注册，支持版本控制和中间件配置
@@ -6,7 +7,6 @@ from typing import Any
 
 import logging
 from collections.abc import Callable
-
 
 from fastapi import APIRouter, FastAPI
 

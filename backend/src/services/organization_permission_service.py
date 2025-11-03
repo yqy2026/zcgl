@@ -1,4 +1,5 @@
 from typing import Any
+
 """
 组织架构权限服务
 实现基于组织架构的数据隔离和权限控制

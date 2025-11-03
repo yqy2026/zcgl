@@ -1,11 +1,11 @@
 from typing import Any
+
 """
 数据加密服务
 """
 
 import base64
 import os
-
 
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes

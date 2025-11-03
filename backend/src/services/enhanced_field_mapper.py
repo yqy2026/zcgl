@@ -1,4 +1,5 @@
 from typing import Any
+
 """
 增强字段映射和验证服务
 专门处理合同信息到58字段资产模型的映射和验证
@@ -9,7 +10,6 @@ import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-
 
 # from .chinese_nlp_processor import ChineseNLPProcessor  # 暂时注释
 # from .contract_semantic_validator import contract_semantic_validator  # 暂时注释

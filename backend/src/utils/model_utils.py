@@ -1,4 +1,5 @@
 from typing import Any
+
 """
 通用工具函数模块
 """
@@ -6,7 +7,6 @@ from typing import Any
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
-
 
 from sqlalchemy.orm import class_mapper
 

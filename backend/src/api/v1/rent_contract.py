@@ -1,4 +1,5 @@
 from typing import Any
+
 """
 租金台账相关API接口
 """
@@ -6,7 +7,6 @@ from typing import Any
 import os
 import tempfile
 from datetime import date
-
 
 from fastapi import (
     APIRouter,

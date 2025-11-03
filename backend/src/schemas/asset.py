@@ -1,4 +1,5 @@
 from typing import Any
+
 """
 资产相关的Pydantic模型
 """
@@ -6,7 +7,6 @@ from typing import Any
 from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
-
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 

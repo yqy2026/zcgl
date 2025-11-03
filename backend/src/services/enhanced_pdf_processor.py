@@ -1,4 +1,5 @@
 from typing import Any
+
 """
 增强PDF处理器
 专门针对中文租赁合同的智能处理和质量优化
@@ -9,7 +10,6 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-
 
 import cv2
 import numpy as np

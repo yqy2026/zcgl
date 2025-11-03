@@ -1,10 +1,10 @@
 from typing import Any
+
 """
 组织架构相关数据验证模式
 """
 
 from datetime import datetime
-
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 

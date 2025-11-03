@@ -1,4 +1,5 @@
 from typing import Any
+
 """
 安全日志记录器
 提供敏感信息脱敏、结构化日志和安全审计功能
@@ -11,7 +12,6 @@ import re
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
-
 
 from .config_manager import get_config
 

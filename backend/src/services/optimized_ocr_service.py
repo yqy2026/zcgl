@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from typing import Any
+
 """
 优化的OCR服务
 解决PaddleOCR数据类型和API兼容性问题，提供高性能扫描件处理
@@ -10,7 +11,6 @@ import logging
 import time
 from dataclasses import dataclass
 from pathlib import Path
-
 
 import numpy as np
 

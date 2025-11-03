@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from typing import Any
+
 """
 快速响应API端点 - 综一的性能优化实现
 包含异步处理、响应压缩、智能缓存等功能
@@ -10,7 +11,6 @@ import logging
 import time
 from dataclasses import asdict, dataclass
 from datetime import datetime
-
 
 logger = logging.getLogger(__name__)
 

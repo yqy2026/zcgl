@@ -1,4 +1,5 @@
 from typing import Any
+
 """
 合同表格数据提取和分析服务
 专门处理租赁合同中的复杂表格结构
@@ -8,7 +9,6 @@ import logging
 import re
 from dataclasses import dataclass
 from enum import Enum
-
 
 import cv2
 import numpy as np

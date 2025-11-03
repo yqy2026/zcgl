@@ -1,11 +1,11 @@
 from typing import Any
+
 """
 认证中间件
 """
 
 import logging
 import os
-
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer

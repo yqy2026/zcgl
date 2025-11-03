@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from typing import Any
+
 """
 错误恢复中间件
 在API层面集成错误恢复机制，提供透明的错误处理和恢复
@@ -11,7 +12,6 @@ import traceback
 import uuid
 from collections.abc import Callable
 from datetime import datetime
-
 
 from fastapi import HTTPException, Request, Response
 from fastapi.responses import JSONResponse

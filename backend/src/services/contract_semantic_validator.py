@@ -1,4 +1,5 @@
 from typing import Any
+
 """
 合同关键字段语义理解和验证系统
 对提取的合同字段进行语义分析、验证和标准化
@@ -10,7 +11,6 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from enum import Enum
-
 
 import jieba
 

@@ -1,4 +1,5 @@
 from typing import Any
+
 """
 异步任务队列系统 - 支持后台任务处理
 功能: 任务队列、任务调度、进度追踪、失败重试
@@ -14,7 +15,6 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from enum import Enum
 from queue import PriorityQueue
-
 
 logger = logging.getLogger(__name__)
 

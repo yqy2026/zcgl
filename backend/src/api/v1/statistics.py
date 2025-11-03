@@ -1,11 +1,11 @@
 from typing import Any
+
 """
 统计分析API路由
 """
 
 import logging
 from datetime import datetime
-
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy import case, func

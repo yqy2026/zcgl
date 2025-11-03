@@ -1,11 +1,11 @@
 from typing import Any
+
 """
 数据过滤服务 - 方案B：前端优先简化
 在API层面过滤掉前端不需要的字段，而不删除数据库字段
 """
 
 import logging
-
 
 logger = logging.getLogger(__name__)
 

@@ -1,4 +1,5 @@
 from typing import Any
+
 """
 系统设置API路由
 """
@@ -6,7 +7,6 @@ from typing import Any
 import json
 import os
 from datetime import datetime
-
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel

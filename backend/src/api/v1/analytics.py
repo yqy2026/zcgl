@@ -1,4 +1,5 @@
 from typing import Any
+
 """
 资产分析API路由 - 提供综合的统计分析数据
 Version: 2025-10-30_06-28 - Fixed cache stats issue
@@ -19,7 +20,6 @@ import logging
 import time
 from collections import defaultdict
 from datetime import datetime, timedelta
-
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session

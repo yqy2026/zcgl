@@ -1,4 +1,5 @@
 from typing import Any
+
 """
 多引擎融合和置信度加权系统
 整合多个OCR和AI引擎的结果，通过智能算法提高整体识别准确度
@@ -11,7 +12,6 @@ import statistics
 from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
-
 
 import numpy as np
 

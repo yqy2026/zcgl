@@ -1,4 +1,5 @@
 from typing import Any
+
 """
 PDF数据验证和匹配服务
 负责验证提取的数据并进行资产、权属方匹配
@@ -7,7 +8,6 @@ PDF数据验证和匹配服务
 import logging
 import re
 from datetime import datetime
-
 
 from fuzzywuzzy import fuzz
 from sqlalchemy.orm import Session

@@ -1,4 +1,5 @@
 from typing import Any
+
 """
 资产CRUD操作 - 优化版本
 """

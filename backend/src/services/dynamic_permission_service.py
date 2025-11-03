@@ -1,4 +1,6 @@
 from typing import Any
+
+
 class BusinessLogicError(Exception):
     """Business logic error"""
 
@@ -24,7 +26,6 @@ class DuplicateAssetError(Exception):
 
 from datetime import UTC, datetime, timedelta
 from enum import Enum
-
 
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session

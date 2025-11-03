@@ -1,10 +1,10 @@
 from typing import Any
+
 """
 权属方相关CRUD操作
 """
 
 from datetime import UTC, datetime
-
 
 from sqlalchemy import desc, or_
 from sqlalchemy.orm import Session

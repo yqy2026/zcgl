@@ -1,4 +1,5 @@
 from typing import Any
+
 """
 增强审计日志服务
 """
@@ -7,7 +8,6 @@ import json
 import logging
 from collections import defaultdict
 from datetime import datetime, timedelta
-
 
 from ..core.config import settings
 from ..database import SessionLocal

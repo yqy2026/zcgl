@@ -1,4 +1,5 @@
 from typing import Any
+
 """
 增强安全服务
 提供密码策略、JWT管理、安全审计等高级安全功能
@@ -8,7 +9,6 @@ import re
 import secrets
 import string
 from datetime import UTC, datetime, timedelta
-
 
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session

@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from typing import Any
+
 """
 优化的API端点
 集成性能监控、缓存、错误处理等功能
@@ -8,7 +9,6 @@ from typing import Any
 import logging
 import time
 from datetime import datetime
-
 
 from ...services.enhanced_error_handler import (
     handle_pdf_error,

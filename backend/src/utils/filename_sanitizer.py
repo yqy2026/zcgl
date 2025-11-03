@@ -1,4 +1,5 @@
 from typing import Any
+
 """
 文件名清理和标准化工具
 处理PDF上传时的文件名兼容性问题
@@ -8,7 +9,6 @@ import logging
 import os
 import re
 import unicodedata
-
 
 logger = logging.getLogger(__name__)
 

@@ -1,11 +1,11 @@
 from typing import Any
+
 """
 动态权限分配服务
 支持临时权限、条件权限和权限模板的动态分配
 """
 
 from datetime import UTC, datetime
-
 
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session

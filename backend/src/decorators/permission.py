@@ -1,4 +1,6 @@
 from typing import Any
+
+
 class BusinessLogicError(Exception):
     """Business logic error"""
 
@@ -25,7 +27,6 @@ class DuplicateAssetError(Exception):
 import logging
 from collections.abc import Callable
 from functools import wraps
-
 
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session

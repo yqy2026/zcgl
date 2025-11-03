@@ -1,4 +1,6 @@
 from typing import Any
+
+
 class BusinessLogicError(Exception):
     """Business logic error"""
 
@@ -22,7 +24,6 @@ RBAC相关CRUD操作
 """
 
 from datetime import datetime
-
 
 from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session

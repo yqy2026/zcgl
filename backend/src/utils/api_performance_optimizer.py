@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from typing import Any
+
 """
 API响应时间优化器
 提供快速响应、缓存、异步处理等优化功能
@@ -11,7 +12,6 @@ import time
 from collections.abc import Callable
 from datetime import datetime
 from functools import wraps
-
 
 logger = logging.getLogger(__name__)
 

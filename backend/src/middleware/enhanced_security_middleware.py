@@ -1,11 +1,11 @@
 from typing import Any
+
 """
 增强安全中间件
 集成密码策略、JWT管理、账户安全等功能
 """
 
 import time
-
 
 from fastapi import HTTPException, Request, Response, status
 from starlette.middleware.base import BaseHTTPMiddleware

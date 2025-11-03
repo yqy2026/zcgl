@@ -1,4 +1,5 @@
 from typing import Any
+
 """
 性能优化模块
 提供数据库查询优化、缓存策略和性能监控功能
@@ -10,7 +11,6 @@ from collections.abc import Callable
 from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 from functools import wraps
-
 
 from sqlalchemy import Index, func
 from sqlalchemy.orm import Session, joinedload

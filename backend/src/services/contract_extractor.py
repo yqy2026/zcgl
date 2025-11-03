@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from typing import Any
+
 """
 合同信息提取器
 智能PDF导入功能的核心提取器，支持真实合同信息的准确提取
@@ -10,7 +11,6 @@ import logging
 import re
 from dataclasses import dataclass
 from enum import Enum
-
 
 logger = logging.getLogger(__name__)
 

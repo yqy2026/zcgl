@@ -1,4 +1,5 @@
 from typing import Any
+
 """
 性能优化API端点
 """

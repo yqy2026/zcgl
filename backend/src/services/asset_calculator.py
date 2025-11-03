@@ -1,4 +1,5 @@
 from typing import Any
+
 """
 资产计算服务 - 简化版本
 处理纯计算字段，不存储到数据库

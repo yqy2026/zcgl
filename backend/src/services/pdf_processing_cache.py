@@ -1,4 +1,5 @@
 from typing import Any
+
 """
 PDF处理结果缓存服务
 提供智能缓存机制，提升处理性能和用户体验
@@ -9,7 +10,6 @@ import json
 import logging
 from datetime import UTC, datetime
 from pathlib import Path
-
 
 logger = logging.getLogger(__name__)
 

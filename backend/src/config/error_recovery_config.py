@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from typing import Any
+
 """
 错误恢复配置
 定义错误恢复策略和配置参数

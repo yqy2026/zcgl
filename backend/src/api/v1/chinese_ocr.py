@@ -1,11 +1,11 @@
 from typing import Any
+
 """
 中文OCR服务API
 提供中文OCR识别能力查询和使用接口
 """
 
 import logging
-
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 

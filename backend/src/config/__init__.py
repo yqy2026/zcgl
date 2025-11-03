@@ -1,4 +1,5 @@
 from typing import Any
+
 """
 应用配置设置
 """
@@ -6,7 +7,6 @@ from typing import Any
 import asyncio
 import os
 from contextlib import asynccontextmanager
-
 
 # typing imports removed - not used in this file
 import redis.asyncio as redis
