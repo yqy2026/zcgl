@@ -47,7 +47,7 @@ class SensitiveDataFilter(logging.Filter):
         ]
 
         # 敏感字段名称列表
-        self.sensitive_fields = {
+        self.["owner_name", "contact_info"] = {
             "password",
             "pwd",
             "passwd",

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TypeVar
 """
 依赖注入容器
 提供统一的服务注册和管理
@@ -7,7 +7,6 @@ from typing import Any
 import inspect
 from abc import ABC
 from collections.abc import Callable
-, TypeVar
 
 T = TypeVar("T")
 

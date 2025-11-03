@@ -173,7 +173,7 @@ def analyze(output_dir: str):
 
 def _analyze_api_quality(api_data: dict[str, Any]) -> dict[str, Any]:
     """分析API质量"""
-    paths = docs_data.get("paths", {})
+    paths = api_data.get("paths", {})
     total_endpoints = sum(len(methods) for methods in paths.values())
 
     # 计算文档覆盖率
