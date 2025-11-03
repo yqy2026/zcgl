@@ -393,7 +393,7 @@ async def export_logs(
     try:
         # 实际应该查询数据库并生成文件
         # 暂时返回空文件
-        content = b"导出文件内容"
+        content = b"export file content"
         headers = {
             "Content-Disposition": f"attachment; filename=logs.{format}"
         }
