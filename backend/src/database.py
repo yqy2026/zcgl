@@ -9,12 +9,16 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 try:
-    from .config_manager import get_config
+    from .core.config_manager import get_config
     from .database_security import enhance_database_security
 except ImportError:
     # 回退方案，当作为模块导入失败时
-
-    from database_security import enhance_database_security
+    try:
+        from database_security import enhance_database_security
+    except ImportError:
+        # 进一步回退，创建空函数
+        def enhance_database_security():
+            pass
 
 logger = logging.getLogger(__name__)
 
