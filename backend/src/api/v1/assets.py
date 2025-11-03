@@ -1,14 +1,15 @@
 
 # 异常类定义
-class AssetNotFoundError(
+class AssetNotFoundError(Exception):
     pass
-)
-class DuplicateAssetError(
+
+
+class DuplicateAssetError(Exception):
     pass
-)
-class NotFoundError(
+
+
+class NotFoundError(Exception):
     pass
-)
 """
 资产管理API路由
 """
