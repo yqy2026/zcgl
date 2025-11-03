@@ -175,7 +175,7 @@ jobs:
 
       - name: 上传通知历史
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: notification-history
           path: reports/notifications/

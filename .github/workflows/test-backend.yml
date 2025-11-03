@@ -20,7 +20,7 @@ jobs:
           run: |
             python -m pytest tests/ --cov=src --cov-report=xml --cov-report=html --junitxml
         - name: Upload Coverage Reports
-          uses: actions/upload-artifact@v3
+          uses: actions/upload-artifact@v4
           with:
             name: coverage-xml
             path: backend/coverage.xml
