@@ -15,7 +15,7 @@ router = APIRouter()
 
 
 @router.get("/info", summary="获取中文OCR服务信息")
-async def get_chinese_ocr_info() -> dict[str, Any]:
+async def get_chinese_ocr_info() -> Dict[str, Any]:
     """
     获取中文OCR服务的状态和配置信息
 
@@ -35,7 +35,7 @@ async def get_chinese_ocr_info() -> dict[str, Any]:
 @router.post("/extract_text", summary="从图像提取中文文本")
 async def extract_chinese_text(
     file: UploadFile = File(...), high_accuracy: bool = Form(True)
-) -> dict[str, Any]:
+) -> Dict[str, Any]:
     """
     从上传的图像文件中提取中文文本
 
@@ -129,7 +129,7 @@ async def extract_chinese_text(
 
 
 @router.get("/features", summary="获取中文OCR功能特性")
-async def get_chinese_ocr_features() -> dict[str, Any]:
+async def get_chinese_ocr_features() -> Dict[str, Any]:
     """
     获取中文OCR服务的功能特性
 
@@ -202,7 +202,7 @@ async def get_chinese_ocr_features() -> dict[str, Any]:
 
 
 @router.get("/health", summary="中文OCR服务健康检查")
-async def chinese_ocr_health() -> dict[str, Any]:
+async def chinese_ocr_health() -> Dict[str, Any]:
     """
     检查中文OCR服务的健康状态
 

@@ -152,7 +152,7 @@ class ResponseBuilder:
     """响应构建器"""
 
     @staticmethod
-    def success(data: Any | None = None, message: str | None = None) -> dict[str, Any]:
+    def success(data: Any | None = None, message: str | None = None) -> Dict[str, Any]:
         """构建成功响应"""
         return {
             "success": True,
@@ -164,7 +164,7 @@ class ResponseBuilder:
     @staticmethod
     def error(
         message: str, error_code: str = "unknown_error", details: dict | None = None
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """构建错误响应"""
         return {
             "success": False,
@@ -174,7 +174,7 @@ class ResponseBuilder:
         }
 
     @staticmethod
-    def validation_error(field_errors: dict[str, list[str]]) -> dict[str, Any]:
+    def validation_error(field_errors: dict[str, list[str]]) -> Dict[str, Any]:
         """构建验证错误响应"""
         return {
             "success": False,
@@ -190,7 +190,7 @@ class ResponseBuilder:
         page_size: int,
         total: int,
         message: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """构建分页响应"""
         total_pages = (total + page_size - 1) // page_size
         return {
@@ -215,7 +215,7 @@ class ResponseBuilder:
         failed_count: int,
         errors: list[dict] = None,
         data: dict | None = None,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """构建批量操作响应"""
         return {
             "success": failed_count == 0,

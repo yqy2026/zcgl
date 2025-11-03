@@ -41,7 +41,7 @@ class EnhancedPDFImportError:
         context: dict[str, Any],
         error_type: str = "unknown_error",
         retry_count: int = 0,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """处理错误并提供用户友好的错误信息
 
         Args:

@@ -3,6 +3,7 @@
 """
 
 from datetime import datetime, timedelta
+from typing import Any
 
 from sqlalchemy import and_, desc, func, or_
 from sqlalchemy.orm import Session
@@ -315,7 +316,7 @@ class AuditLogCRUD:
 
         return [action[0] for action in actions]
 
-    def get_login_statistics(self, db: Session, days: int = 30) -> dict:
+    def get_login_statistics(self) -> dict[str, Any]:
         """获取登录统计"""
         from datetime import datetime, timedelta
 

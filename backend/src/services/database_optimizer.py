@@ -50,7 +50,7 @@ class DatabaseOptimizer:
 
     def analyze_slow_queries(
         self, db: Session, limit: int = 50
-    ) -> list[QueryPerformanceMetrics]:
+    ) -> List[QueryPerformanceMetrics]:
         """分析慢查询"""
         try:
             # SQLite查询日志分析
@@ -97,7 +97,7 @@ class DatabaseOptimizer:
             logger.error(f"分析慢查询失败: {e}")
             return []
 
-    def generate_index_recommendations(self, db: Session) -> list[IndexRecommendation]:
+    def generate_index_recommendations(self, db: Session) -> List[IndexRecommendation]:
         """生成索引推荐"""
         recommendations = []
 
@@ -217,7 +217,7 @@ class DatabaseOptimizer:
 
         return optimized_query
 
-    def create_performance_indexes(self, db: Session) -> dict[str, bool]:
+    def create_performance_indexes(self, db: Session) -> Dict[str, Any][str, bool]:
         """创建性能索引"""
         index_results = {}
 
@@ -304,7 +304,7 @@ class DatabaseOptimizer:
 
         return index_results
 
-    def analyze_query_plan(self, db: Session, query: str) -> dict[str, Any]:
+    def analyze_query_plan(self, db: Session, query: str) -> Dict[str, Any]:
         """分析查询执行计划"""
         try:
             # SQLite EXPLAIN QUERY PLAN
@@ -348,7 +348,7 @@ class DatabaseOptimizer:
             logger.error(f"分析查询执行计划失败: {e}")
             return {"error": str(e)}
 
-    def get_query_optimization_suggestions(self, query: str) -> list[str]:
+    def get_query_optimization_suggestions(self, query: str) -> List[str]:
         """获取查询优化建议"""
         suggestions = []
 
@@ -401,7 +401,7 @@ class DatabaseOptimizer:
         return [s["suggestion"] for s in suggestions]
 
     def monitor_query_performance(
-        self, db: Session, query: str, params: dict = None
+        self, db: Session, query: str, params: Dict[str, Any] = None
     ) -> QueryPerformanceMetrics:
         """监控查询性能"""
         start_time = datetime.now()
@@ -453,7 +453,7 @@ class DatabaseOptimizer:
                 timestamp=start_time,
             )
 
-    def generate_performance_report(self) -> dict[str, Any]:
+    def generate_performance_report(self) -> Dict[str, Any]:
         """生成性能报告"""
         if not self.query_history:
             return {"error": "没有查询历史数据"}
@@ -542,7 +542,7 @@ class DatabaseOptimizer:
             "performance_trends": self._analyze_performance_trends(),
         }
 
-    def _analyze_performance_trends(self) -> dict[str, Any]:
+    def _analyze_performance_trends(self) -> Dict[str, Any]:
         """分析性能趋势"""
         if len(self.query_history) < 10:
             return {"message": "数据不足，无法分析趋势"}
@@ -586,7 +586,7 @@ def create_database_optimizer(engine) -> DatabaseOptimizer:
 
 
 # 便捷函数
-def get_optimization_suggestions(engine) -> dict[str, Any]:
+def get_optimization_suggestions(engine) -> Dict[str, Any]:
     """获取数据库优化建议"""
     optimizer = create_database_optimizer(engine)
 

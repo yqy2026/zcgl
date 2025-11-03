@@ -5,6 +5,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -517,7 +518,7 @@ class AssetBatchUpdateRequest(BaseModel):
     """资产批量更新请求模型"""
 
     asset_ids: list[str] = Field(..., description="资产ID列表")
-    updates: dict = Field(..., description="更新数据")
+    updates: dict[str, Any] = Field(..., description="更新数据")
     update_all: bool = Field(False, description="是否更新所有资产")
 
     model_config = ConfigDict(json_schema_extra={"example": {"description": "示例"}})
@@ -540,7 +541,7 @@ class AssetBatchUpdateResponse(BaseModel):
 class AssetValidationRequest(BaseModel):
     """资产数据验证请求模型"""
 
-    data: dict = Field(..., description="待验证的资产数据")
+    data: dict[str, Any] = Field(..., description="待验证的资产数据")
     validate_rules: list[str] | None = Field(None, description="验证规则列表")
 
     model_config = ConfigDict(json_schema_extra={"example": {"description": "示例"}})
@@ -587,7 +588,7 @@ class BatchCustomFieldUpdateRequest(BaseModel):
     """批量自定义字段更新请求模型"""
 
     asset_ids: list[str] = Field(..., description="资产ID列表")
-    field_values: dict = Field(..., description="自定义字段值")
+    field_values: dict[str, Any] = Field(..., description="自定义字段值")
 
     model_config = ConfigDict(json_schema_extra={"example": {"description": "示例"}})
 

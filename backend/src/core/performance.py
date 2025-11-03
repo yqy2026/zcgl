@@ -73,7 +73,7 @@ class PerformanceMonitor:
         if stats["count"] % 100 == 0:
             stats["result_counts"] = stats["result_counts"][-50:]  # 保留最近50条
 
-    def get_stats(self) -> dict[str, Any]:
+    def get_stats(self) -> Dict[str, Any]:
         """获取性能统计"""
         if not self.enabled:
             return {"enabled": False}
@@ -317,7 +317,7 @@ class CacheManager:
         """清空缓存"""
         self.cache.clear()
 
-    def get_stats(self) -> dict[str, Any]:
+    def get_stats(self) -> Dict[str, Any]:
         """获取缓存统计"""
         return {
             "enabled": self.cache_enabled,
@@ -392,7 +392,7 @@ class DatabaseOptimizer:
             except Exception as e:
                 logger.warning(f"Failed to create index {index.name}: {e}")
 
-    def analyze_slow_queries(self) -> dict[str, Any]:
+    def analyze_slow_queries(self) -> Dict[str, Any]:
         """分析慢查询"""
         stats = performance_monitor.get_stats()
 
@@ -417,7 +417,7 @@ class DatabaseOptimizer:
             "recommendations": self._generate_recommendations(slow_queries),
         }
 
-    def _generate_recommendations(self, slow_queries: list[dict]) -> list[str]:
+    def _generate_recommendations(self, slow_queries: list[dict]) -> List[str]:
         """生成优化建议"""
         recommendations = []
 
@@ -446,7 +446,7 @@ class DatabaseOptimizer:
 
 
 # 便捷函数
-def get_performance_stats() -> dict[str, Any]:
+def get_performance_stats() -> Dict[str, Any]:
     """获取性能统计"""
     return performance_monitor.get_stats()
 
@@ -456,7 +456,7 @@ def reset_performance_stats():
     performance_monitor.reset_stats()
 
 
-def get_cache_stats() -> dict[str, Any]:
+def get_cache_stats() -> Dict[str, Any]:
     """获取缓存统计"""
     try:
         return cache_manager.get_stats()

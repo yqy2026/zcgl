@@ -555,7 +555,7 @@ def log_request_info(**kwargs):
     request_logger.log_request(**kwargs)
 
 
-def get_request_context() -> dict[str, str]:
+def get_request_context() -> Dict[str, Any][str, str]:
     """获取请求上下文"""
     return {"request_id": str(uuid.uuid4()), "timestamp": datetime.now(UTC).isoformat()}
 

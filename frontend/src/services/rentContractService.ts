@@ -30,7 +30,7 @@ class RentContractService {
   // 租金合同相关API
   async getContracts(params?: RentContractQueryParams): Promise<RentContractListResponse> {
     try {
-      const response = await apiClient.get(`${this.baseUrl}/contracts`, { params });
+      const response = await apiClient.get(`/api/v1contracts`, { params });
 
       // 确保响应数据存在且格式正确
       if (!response) {
@@ -59,39 +59,39 @@ class RentContractService {
   }
 
   async getContract(id: string): Promise<RentContract> {
-    const response = await apiClient.get(`${this.baseUrl}/contracts/${id}`);
+    const response = await apiClient.get(`/api/v1contracts/${id}`);
     return response as RentContract;
   }
 
   async createContract(data: RentContractCreate): Promise<RentContract> {
-    const response = await apiClient.post(`${this.baseUrl}/contracts`, data);
+    const response = await apiClient.post(`/api/v1contracts`, data);
     return response as RentContract;
   }
 
   async updateContract(id: string, data: RentContractUpdate): Promise<RentContract> {
-    const response = await apiClient.put(`${this.baseUrl}/contracts/${id}`, data);
+    const response = await apiClient.put(`/api/v1contracts/${id}`, data);
     return response as RentContract;
   }
 
   async deleteContract(id: string): Promise<void> {
-    await apiClient.delete(`${this.baseUrl}/contracts/${id}`);
+    await apiClient.delete(`/api/v1contracts/${id}`);
   }
 
   // 租金条款相关API
   async getContractTerms(contractId: string): Promise<RentTerm[]> {
-    const response = await apiClient.get(`${this.baseUrl}/contracts/${contractId}/terms`);
+    const response = await apiClient.get(`/api/v1contracts/${contractId}/terms`);
     return response as RentTerm[];
   }
 
   async addRentTerm(contractId: string, data: RentTermCreate): Promise<RentTerm> {
-    const response = await apiClient.post(`${this.baseUrl}/contracts/${contractId}/terms`, data);
+    const response = await apiClient.post(`/api/v1contracts/${contractId}/terms`, data);
     return response as RentTerm;
   }
 
   // 租金台账相关API
   async getRentLedgers(params?: RentLedgerQueryParams): Promise<RentLedgerListResponse> {
     try {
-      const response = await apiClient.get(`${this.baseUrl}/ledger`, { params });
+      const response = await apiClient.get(`/api/v1ledger`, { params });
 
       // 确保响应数据存在且格式正确
       if (!response) {
@@ -120,28 +120,28 @@ class RentContractService {
   }
 
   async getRentLedger(id: string): Promise<RentLedger> {
-    const response = await apiClient.get(`${this.baseUrl}/ledger/${id}`);
+    const response = await apiClient.get(`/api/v1ledger/${id}`);
     return response as RentLedger;
   }
 
   async updateRentLedger(id: string, data: RentLedgerUpdate): Promise<RentLedger> {
-    const response = await apiClient.put(`${this.baseUrl}/ledger/${id}`, data);
+    const response = await apiClient.put(`/api/v1ledger/${id}`, data);
     return response as RentLedger;
   }
 
   async batchUpdateRentLedger(data: RentLedgerBatchUpdate): Promise<{ message: string; ledgers: RentLedger[] }> {
-    const response = await apiClient.put(`${this.baseUrl}/ledger/batch`, data);
+    const response = await apiClient.put(`/api/v1ledger/batch`, data);
     return response as { message: string; ledgers: RentLedger[] };
   }
 
   async generateMonthlyLedger(data: GenerateLedgerRequest): Promise<{ message: string; ledgers: RentLedger[] }> {
-    const response = await apiClient.post(`${this.baseUrl}/ledger/generate`, data);
+    const response = await apiClient.post(`/api/v1ledger/generate`, data);
     return response as { message: string; ledgers: RentLedger[] };
   }
 
   // 统计相关API
   async getRentStatistics(params?: RentStatisticsQuery): Promise<RentStatisticsOverview> {
-    const response = await apiClient.get(`${this.baseUrl}/statistics/overview`, { params });
+    const response = await apiClient.get(`/api/v1statistics/overview`, { params });
     return response as RentStatisticsOverview;
   }
 
@@ -150,23 +150,23 @@ class RentContractService {
   }
 
   async getOwnershipStatistics(params?: RentStatisticsQuery): Promise<OwnershipRentStatistics[]> {
-    const response = await apiClient.get(`${this.baseUrl}/statistics/ownership`, { params });
+    const response = await apiClient.get(`/api/v1statistics/ownership`, { params });
     return response as OwnershipRentStatistics[];
   }
 
   async getAssetStatistics(params?: RentStatisticsQuery): Promise<AssetRentStatistics[]> {
-    const response = await apiClient.get(`${this.baseUrl}/statistics/asset`, { params });
+    const response = await apiClient.get(`/api/v1statistics/asset`, { params });
     return response as AssetRentStatistics[];
   }
 
   async getMonthlyStatistics(params?: { year?: number; start_month?: string; end_month?: string }): Promise<MonthlyRentStatistics[]> {
-    const response = await apiClient.get(`${this.baseUrl}/statistics/monthly`, { params });
+    const response = await apiClient.get(`/api/v1statistics/monthly`, { params });
     return response as MonthlyRentStatistics[];
   }
 
   // 导出统计相关方法
   async exportStatistics(params?: RentStatisticsQuery): Promise<Blob> {
-    const response = await apiClient.get(`${this.baseUrl}/statistics/export`, {
+    const response = await apiClient.get(`/api/v1statistics/export`, {
       params,
       responseType: 'blob'
     });
@@ -175,12 +175,12 @@ class RentContractService {
 
   // 辅助API
   async getContractLedger(contractId: string): Promise<RentLedger[]> {
-    const response = await apiClient.get(`${this.baseUrl}/contracts/${contractId}/ledger`);
+    const response = await apiClient.get(`/api/v1contracts/${contractId}/ledger`);
     return response as RentLedger[];
   }
 
   async getAssetContracts(assetId: string): Promise<RentContract[]> {
-    const response = await apiClient.get(`${this.baseUrl}/assets/${assetId}/contracts`);
+    const response = await apiClient.get(`/api/v1assets/${assetId}/contracts`);
     return response as RentContract[];
   }
 
@@ -250,7 +250,7 @@ class RentContractService {
 
   // 导出相关方法
   async exportContractsToExcel(filters?: any): Promise<Blob> {
-    const response = await apiClient.get(`${this.baseUrl}/contracts/export`, {
+    const response = await apiClient.get(`/api/v1contracts/export`, {
       params: filters,
       responseType: 'blob'
     });
@@ -258,7 +258,7 @@ class RentContractService {
   }
 
   async exportLedgersToExcel(filters?: any): Promise<Blob> {
-    const response = await apiClient.get(`${this.baseUrl}/ledger/export`, {
+    const response = await apiClient.get(`/api/v1ledger/export`, {
       params: filters,
       responseType: 'blob'
     });

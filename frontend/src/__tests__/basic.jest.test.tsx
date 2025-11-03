@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 // 最基础的React组件测试
@@ -53,7 +53,6 @@ describe('基础React测试', () => {
     input.value = '测试值';
 
     // 使用fireEvent来模拟输入
-    const { fireEvent } = require('@testing-library/react');
     fireEvent.change(input, { target: { value: '测试值' } });
 
     expect(input.value).toBe('测试值');
@@ -93,6 +92,7 @@ describe('Mock功能测试', () => {
       getValue: jest.fn(() => 'mocked value'),
     }));
 
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const mockModule = require('./mock-module');
     expect(mockModule.getValue()).toBe('mocked value');
   });
@@ -231,7 +231,6 @@ describe('集成测试', () => {
     const input = screen.getByTestId('input-field') as HTMLInputElement;
     input.value = '测试文本';
 
-    const { fireEvent } = require('@testing-library/react');
     fireEvent.change(input, { target: { value: '测试文本' } });
 
     expect(screen.getByTestId('input-display')).toHaveTextContent('Input: 测试文本');
@@ -281,7 +280,6 @@ describe('集成测试', () => {
     nameInput.value = 'John Doe';
     emailInput.value = 'john@example.com';
 
-    const { fireEvent } = require('@testing-library/react');
     fireEvent.change(nameInput, { target: { value: 'John Doe' } });
     fireEvent.change(emailInput, { target: { value: 'john@example.com' } });
 

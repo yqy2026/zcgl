@@ -73,7 +73,7 @@ class EnhancedPDFProcessor:
         self.preprocessing_cache = {}
         self.quality_models = self._load_quality_models()
 
-    def _load_quality_models(self) -> dict[str, Any]:
+    def _load_quality_models(self) -> Dict[str, Any]:
         """加载质量评估模型"""
         return {
             "text_density_threshold": 0.1,
@@ -122,7 +122,7 @@ class EnhancedPDFProcessor:
                 recommendations=["文档分析失败，请检查文件格式"],
             )
 
-    async def _quick_quality_assessment(self, file_path: Path) -> dict[str, Any]:
+    async def _quick_quality_assessment(self, file_path: Path) -> Dict[str, Any]:
         """快速质量评估"""
         try:
             # 使用pdfplumber进行快速检测
@@ -179,7 +179,7 @@ class EnhancedPDFProcessor:
 
     async def _detailed_page_analysis(
         self, file_path: Path, max_pages: int = 5
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """详细页面分析"""
         try:
             # 转换前几页为图像进行分析
@@ -373,7 +373,7 @@ class EnhancedPDFProcessor:
         quality: ProcessingQuality,
         quick_analysis: dict,
         page_analysis: dict,
-    ) -> list[str]:
+    ) -> List[str]:
         """生成处理建议"""
         recommendations = []
 
@@ -478,7 +478,7 @@ class EnhancedPDFProcessor:
 
     async def process_with_enhanced_config(
         self, file_path: str, custom_config: ProcessingConfig | None = None
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """使用增强配置处理PDF"""
         try:
             # 分析文档

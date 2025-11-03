@@ -146,7 +146,7 @@ class DatabaseQueryOptimizer:
     @staticmethod
     def optimize_history_query(
         db: Session, asset_ids: list[str], fields: list[str], days_back: int = 730
-    ) -> list[Any]:
+    ) -> List[Any]:
         """优化的历史记录查询"""
         start_time = time.time()
 
@@ -216,7 +216,7 @@ class DistributionCalculator:
         field_name: str,
         result_key: str = None,
         value_key: str = "name",
-    ) -> list[dict[str, Any]]:
+    ) -> List[dict[str, Any]]:
         """
         通用分布计算方法
 
@@ -264,21 +264,21 @@ class DistributionCalculator:
     @staticmethod
     def calculate_property_nature_distribution(
         assets: list[Any],
-    ) -> list[dict[str, Any]]:
+    ) -> List[dict[str, Any]]:
         """计算物业性质分布"""
         return DistributionCalculator.calculate_distribution(assets, "property_nature")
 
     @staticmethod
     def calculate_ownership_status_distribution(
         assets: list[Any],
-    ) -> list[dict[str, Any]]:
+    ) -> List[dict[str, Any]]:
         """计算确权状态分布"""
         return DistributionCalculator.calculate_distribution(
             assets, "ownership_status", "status"
         )
 
     @staticmethod
-    def calculate_usage_status_distribution(assets: list[Any]) -> list[dict[str, Any]]:
+    def calculate_usage_status_distribution(assets: list[Any]) -> List[dict[str, Any]]:
         """计算使用状态分布"""
         return DistributionCalculator.calculate_distribution(
             assets, "usage_status", "status"
@@ -287,7 +287,7 @@ class DistributionCalculator:
     @staticmethod
     def calculate_business_category_distribution(
         assets: list[Any],
-    ) -> list[dict[str, Any]]:
+    ) -> List[dict[str, Any]]:
         """计算业态类别分布（包含出租率计算）"""
         if not assets:
             return []
@@ -360,7 +360,7 @@ class DistributionCalculator:
         field_name: str,
         result_key: str = None,
         value_key: str = "name",
-    ) -> list[dict[str, Any]]:
+    ) -> List[dict[str, Any]]:
         """
         计算面积维度分布数据
 
@@ -429,7 +429,7 @@ class DistributionCalculator:
     @staticmethod
     def calculate_property_nature_area_distribution(
         assets: list[Any],
-    ) -> list[dict[str, Any]]:
+    ) -> List[dict[str, Any]]:
         """计算物业性质面积分布"""
         return DistributionCalculator.calculate_area_distribution(
             assets, "property_nature"
@@ -438,7 +438,7 @@ class DistributionCalculator:
     @staticmethod
     def calculate_ownership_status_area_distribution(
         assets: list[Any],
-    ) -> list[dict[str, Any]]:
+    ) -> List[dict[str, Any]]:
         """计算确权状态面积分布"""
         return DistributionCalculator.calculate_area_distribution(
             assets, "ownership_status", "status"
@@ -447,7 +447,7 @@ class DistributionCalculator:
     @staticmethod
     def calculate_usage_status_area_distribution(
         assets: list[Any],
-    ) -> list[dict[str, Any]]:
+    ) -> List[dict[str, Any]]:
         """计算使用状态面积分布"""
         return DistributionCalculator.calculate_area_distribution(
             assets, "usage_status", "status"
@@ -456,7 +456,7 @@ class DistributionCalculator:
     @staticmethod
     def calculate_business_category_area_distribution(
         assets: list[Any],
-    ) -> list[dict[str, Any]]:
+    ) -> List[dict[str, Any]]:
         """计算业态类别面积分布（包含出租率计算）"""
         if not assets:
             return []
@@ -546,7 +546,7 @@ class AreaSummaryCalculator:
     """面积汇总计算器"""
 
     @staticmethod
-    def calculate_area_summary(assets: list[Any]) -> dict[str, Any]:
+    def calculate_area_summary(assets: list[Any]) -> Dict[str, Any]:
         """计算面积汇总信息"""
         if not assets:
             return {
@@ -638,7 +638,7 @@ class FinancialSummaryCalculator:
     """财务汇总计算器"""
 
     @staticmethod
-    def calculate_financial_summary(assets: list[Any]) -> dict[str, Any]:
+    def calculate_financial_summary(assets: list[Any]) -> Dict[str, Any]:
         """计算财务汇总信息"""
         if not assets:
             return {
@@ -690,7 +690,7 @@ class OccupancyDistributionCalculator:
     """出租率分布计算器"""
 
     @staticmethod
-    def calculate_occupancy_distribution(assets: list[Any]) -> list[dict[str, Any]]:
+    def calculate_occupancy_distribution(assets: list[Any]) -> List[dict[str, Any]]:
         """计算出租率区间分布"""
         if not assets:
             return []
@@ -731,7 +731,7 @@ class OccupancyTrendGenerator:
     @PerformanceMonitor.monitor_performance("generate_occupancy_trend")
     def generate_occupancy_trend(
         assets: list[Any], db: Session
-    ) -> list[dict[str, Any]]:
+    ) -> List[dict[str, Any]]:
         """基于AssetHistory历史数据计算真实的出租率趋势"""
         if not assets:
             return []
@@ -818,7 +818,7 @@ class OccupancyTrendGenerator:
     @staticmethod
     def _generate_current_data_trend(
         current_rate: float, current_rented: float, current_rentable: float
-    ) -> list[dict[str, Any]]:
+    ) -> List[dict[str, Any]]:
         """基于当前数据生成趋势"""
         from datetime import datetime, timedelta
 
@@ -847,7 +847,7 @@ class OccupancyTrendGenerator:
         current_rate: float,
         current_rented: float,
         current_rentable: float,
-    ) -> list[dict[str, Any]]:
+    ) -> List[dict[str, Any]]:
         """分析历史数据生成趋势"""
         from collections import defaultdict
         from datetime import datetime, timedelta
@@ -1004,7 +1004,7 @@ class TimeDimensionTrendGenerator:
     @PerformanceMonitor.monitor_performance("generate_quarterly_trend")
     def generate_quarterly_trend(
         assets: list[Any], db: Session
-    ) -> list[dict[str, Any]]:
+    ) -> List[dict[str, Any]]:
         """生成季度趋势数据"""
         if not assets:
             return []
@@ -1079,7 +1079,7 @@ class TimeDimensionTrendGenerator:
 
     @staticmethod
     @PerformanceMonitor.monitor_performance("generate_yearly_trend")
-    def generate_yearly_trend(assets: list[Any], db: Session) -> list[dict[str, Any]]:
+    def generate_yearly_trend(assets: list[Any], db: Session) -> List[dict[str, Any]]:
         """生成年度趋势数据"""
         if not assets:
             return []
@@ -1267,7 +1267,7 @@ class CategoryTrendGenerator:
 
     @staticmethod
     @PerformanceMonitor.monitor_performance("generate_category_trends")
-    def generate_category_trends(assets: list[Any], db: Session) -> dict[str, Any]:
+    def generate_category_trends(assets: list[Any], db: Session) -> Dict[str, Any]:
         """生成各类别的趋势数据"""
         if not assets:
             return {}
@@ -1469,7 +1469,7 @@ class CategoryTrendGenerator:
             return summary
 
 
-def validate_filters(filters: dict[str, Any]) -> dict[str, Any]:
+def validate_filters(filters: dict[str, Any]) -> Dict[str, Any]:
     """验证和清理筛选条件"""
     validated_filters = {}
 
@@ -1484,7 +1484,7 @@ def validate_filters(filters: dict[str, Any]) -> dict[str, Any]:
     return validated_filters
 
 
-def create_empty_response() -> dict[str, Any]:
+def create_empty_response() -> Dict[str, Any]:
     """创建空数据响应"""
     return {
         "success": True,

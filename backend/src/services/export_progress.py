@@ -144,13 +144,13 @@ class ExportProgressTracker:
         logger.info(f"取消导出任务: {task_id}")
         return True
 
-    def get_task_status(self, task_id: str) -> dict[str, Any] | None:
+    def get_task_status(self, task_id: str) -> Dict[str, Any] | None:
         """获取任务状态"""
         return self._tasks.get(task_id)
 
     def list_tasks(
         self, status: ExportStatus | None = None, limit: int = 50
-    ) -> list[dict[str, Any]]:
+    ) -> List[dict[str, Any]]:
         """列出任务"""
         tasks = list(self._tasks.values())
 
@@ -180,7 +180,7 @@ class ExportProgressTracker:
         logger.info(f"清理了 {len(tasks_to_remove)} 个旧任务")
         return len(tasks_to_remove)
 
-    def get_task_statistics(self) -> dict[str, Any]:
+    def get_task_statistics(self) -> Dict[str, Any]:
         """获取任务统计信息"""
         total_tasks = len(self._tasks)
         status_counts = {}
@@ -205,7 +205,7 @@ export_progress_tracker = ExportProgressTracker()
 
 async def track_export_progress(
     task_id: str, export_function, *args, **kwargs
-) -> dict[str, Any]:
+) -> Dict[str, Any]:
     """
     包装导出函数以跟踪进度
 

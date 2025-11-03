@@ -238,7 +238,7 @@ class ChineseNLPProcessor:
             "婷",
         ]
 
-    def extract_chinese_names(self, text: str) -> list[StructuredName]:
+    def extract_chinese_names(self, text: str) -> List[StructuredName]:
         """提取中文姓名"""
         names = []
 
@@ -293,7 +293,7 @@ class ChineseNLPProcessor:
 
         return names
 
-    def extract_chinese_addresses(self, text: str) -> list[StructuredAddress]:
+    def extract_chinese_addresses(self, text: str) -> List[StructuredAddress]:
         """提取中文地址"""
         addresses = []
 
@@ -344,7 +344,7 @@ class ChineseNLPProcessor:
 
         return addresses
 
-    def extract_chinese_phones(self, text: str) -> list[StructuredPhone]:
+    def extract_chinese_phones(self, text: str) -> List[StructuredPhone]:
         """提取中文电话号码"""
         phones = []
 
@@ -387,7 +387,7 @@ class ChineseNLPProcessor:
 
         return phones
 
-    def extract_chinese_id_cards(self, text: str) -> list[StructuredIDCard]:
+    def extract_chinese_id_cards(self, text: str) -> List[StructuredIDCard]:
         """提取中国身份证号码"""
         id_cards = []
 
@@ -435,7 +435,7 @@ class ChineseNLPProcessor:
 
         return id_cards
 
-    def extract_chinese_amounts(self, text: str) -> list[ExtractionEntity]:
+    def extract_chinese_amounts(self, text: str) -> List[ExtractionEntity]:
         """提取金额信息"""
         amounts = []
 
@@ -471,7 +471,7 @@ class ChineseNLPProcessor:
 
         return amounts
 
-    def extract_chinese_dates(self, text: str) -> list[ExtractionEntity]:
+    def extract_chinese_dates(self, text: str) -> List[ExtractionEntity]:
         """提取日期信息"""
         dates = []
 
@@ -551,7 +551,7 @@ class ChineseNLPProcessor:
 
         return normalized
 
-    def process_chinese_text(self, text: str) -> dict[str, Any]:
+    def process_chinese_text(self, text: str) -> Dict[str, Any]:
         """处理中文文本，提取各种实体"""
         if not text or not text.strip():
             return {

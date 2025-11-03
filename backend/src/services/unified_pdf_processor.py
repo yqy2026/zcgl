@@ -208,7 +208,7 @@ class UnifiedPDFProcessor:
         max_pages: int,
         use_preprocessing: bool,
         parallel_processing: bool,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """执行OCR文本提取"""
         if self.optimized_ocr is None:
             return {"success": False, "error": "OCR服务未初始化"}
@@ -279,7 +279,7 @@ class UnifiedPDFProcessor:
 
     async def _extract_structured_data(
         self, ocr_result: dict[str, Any]
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """提取结构化数据"""
         try:
             if self.nlp_processor is None:
@@ -332,7 +332,7 @@ class UnifiedPDFProcessor:
 
     async def _apply_multi_engine_fusion(
         self, ocr_result: dict[str, Any]
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """应用多引擎融合优化"""
         try:
             if self.multi_engine_fusion is None:
@@ -459,7 +459,7 @@ class UnifiedPDFProcessor:
         else:
             return "+".join(methods)
 
-    def get_system_status(self) -> dict[str, Any]:
+    def get_system_status(self) -> Dict[str, Any]:
         """获取系统状态"""
         try:
             status = {
@@ -496,7 +496,7 @@ class UnifiedPDFProcessor:
                 "error": str(e),
             }
 
-    async def test_processing_pipeline(self, pdf_path: str) -> dict[str, Any]:
+    async def test_processing_pipeline(self, pdf_path: str) -> Dict[str, Any]:
         """测试处理管道"""
         logger.info(f"开始测试处理管道: {Path(pdf_path).name}")
 

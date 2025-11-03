@@ -3,6 +3,7 @@ RBAC相关CRUD操作
 """
 
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
@@ -168,7 +169,7 @@ class RoleCRUD:
         """角色总数"""
         return db.query(func.count(Role.id)).scalar()
 
-    def count_by_category(self, db: Session) -> dict:
+    def count_by_category(self) -> dict[str, Any]:
         """按类别统计角色数"""
         result = (
             db.query(Role.category, func.count(Role.id)).group_by(Role.category).all()
@@ -293,7 +294,7 @@ class PermissionCRUD:
         """权限总数"""
         return db.query(func.count(Permission.id)).scalar()
 
-    def count_by_resource(self, db: Session) -> dict:
+    def count_by_resource(self) -> dict[str, Any]:
         """按资源统计权限数"""
         result = (
             db.query(Permission.resource, func.count(Permission.id))
@@ -672,7 +673,7 @@ class PermissionAuditLogCRUD:
         """审计日志总数"""
         return db.query(func.count(PermissionAuditLog.id)).scalar()
 
-    def get_action_statistics(self, db: Session, days: int = 30) -> dict:
+    def get_action_statistics(self) -> dict[str, Any]:
         """获取操作统计"""
         from datetime import timedelta
 

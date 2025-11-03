@@ -2,6 +2,8 @@
 管理员API路由
 """
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException
 
 from ...database import create_tables, drop_tables
@@ -20,7 +22,7 @@ async def health_check():
 
 
 @router.post("/database/reset")
-async def reset_database(current_user: dict = Depends(require_admin)):
+async def reset_database(current_user: dict[str, Any] = Depends(require_admin)):
     """
     重置数据库（仅管理员）
     """

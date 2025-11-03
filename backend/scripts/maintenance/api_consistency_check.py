@@ -53,15 +53,15 @@ class APIConsistencyChecker:
 
     def run_checks(self) -> List[ConsistencyIssue]:
         """运行所有检查"""
-        print("🔍 开始API一致性检查...")
+        print("开始API一致性检查...")
 
         # 检查1: 提取后端API端点
         backend_endpoints = self.extract_backend_endpoints()
-        print(f"✓ 找到 {len(backend_endpoints)} 个后端API端点")
+        print(f"找到 {len(backend_endpoints)} 个后端API端点")
 
         # 检查2: 提取前端API调用
         frontend_calls = self.extract_frontend_api_calls()
-        print(f"✓ 找到 {len(frontend_calls)} 个前端API调用")
+        print(f"* 找到 {len(frontend_calls)} 个前端API调用")
 
         # 检查3: 路径一致性检查
         self.check_path_consistency(backend_endpoints, frontend_calls)
@@ -75,7 +75,7 @@ class APIConsistencyChecker:
         # 检查6: 参数一致性检查
         self.check_parameter_consistency(backend_endpoints, frontend_calls)
 
-        print(f"\n📊 检查完成，发现 {len(self.issues)} 个问题")
+        print(f"\n检查完成，发现 {len(self.issues)} 个问题")
         return self.issues
 
     def extract_backend_endpoints(self) -> Dict[str, APIEndpoint]:
@@ -161,7 +161,7 @@ class APIConsistencyChecker:
 
     def check_path_consistency(self, backend_endpoints: Dict[str, APIEndpoint], frontend_calls: Dict[str, APIEndpoint]):
         """检查路径一致性"""
-        print("\n🔍 检查API路径一致性...")
+        print("\n* 检查API路径一致性...")
 
         # 找出前端调用但后端不存在的API
         missing_endpoints = []
@@ -187,12 +187,12 @@ class APIConsistencyChecker:
                     backend_file="后端API文件"
                 ))
 
-        print(f"  ⚠️  缺失的端点: {len(missing_endpoints)}")
-        print(f"  ℹ️  未使用的端点: {len(unused_endpoints)}")
+        print(f"  *  缺失的端点: {len(missing_endpoints)}")
+        print(f"  *  未使用的端点: {len(unused_endpoints)}")
 
     def check_model_consistency(self):
         """检查数据模型一致性"""
-        print("\n🔍 检查数据模型一致性...")
+        print("\n* 检查数据模型一致性...")
 
         # 检查前端类型定义
         asset_types_file = self.frontend_path / "src/types/asset.ts"
@@ -222,12 +222,12 @@ class APIConsistencyChecker:
                     backend_file=str(backend_model_file)
                 ))
 
-            print(f"  ⚠️  前端缺失字段: {len(missing_in_frontend)}")
-            print(f"  ⚠️  后端缺失字段: {len(missing_in_backend)}")
+            print(f"  *  前端缺失字段: {len(missing_in_frontend)}")
+            print(f"  *  后端缺失字段: {len(missing_in_backend)}")
 
     def check_response_format_consistency(self, backend_endpoints: Dict[str, APIEndpoint]):
         """检查响应格式一致性"""
-        print("\n🔍 检查响应格式一致性...")
+        print("\n* 检查响应格式一致性...")
 
         # 检查是否有统一的响应模型
         response_models = {}
@@ -245,11 +245,11 @@ class APIConsistencyChecker:
                     backend_file="后端API文件"
                 ))
 
-        print(f"  ✓ 响应模型数量: {len(response_models)}")
+        print(f"  * 响应模型数量: {len(response_models)}")
 
     def check_parameter_consistency(self, backend_endpoints: Dict[str, APIEndpoint], frontend_calls: Dict[str, APIEndpoint]):
         """检查参数一致性"""
-        print("\n🔍 检查参数一致性...")
+        print("\n* 检查参数一致性...")
 
         # 这里可以扩展更复杂的参数检查逻辑
         # 目前只做基本的路径参数检查
@@ -273,7 +273,7 @@ class APIConsistencyChecker:
                     frontend_file="前端服务文件"
                 ))
 
-        print(f"  ⚠️  参数不匹配的端点: {inconsistent_params}")
+        print(f"  *  参数不匹配的端点: {inconsistent_params}")
 
     def extract_type_fields(self, types_file: Path) -> Set[str]:
         """从类型文件中提取字段名"""
@@ -320,24 +320,24 @@ class APIConsistencyChecker:
             print("\n✅ 所有API一致性检查通过！")
             return
 
-        print("\n📋 问题摘要:")
+        print("\n* 问题摘要:")
 
         # 按严重程度分组
         critical = [i for i in self.issues if i.severity == "critical"]
         warnings = [i for i in self.issues if i.severity == "warning"]
         info = [i for i in self.issues if i.severity == "info"]
 
-        print(f"  🚨 严重问题: {len(critical)}")
-        print(f"  ⚠️  警告: {len(warnings)}")
-        print(f"  ℹ️  信息: {len(info)}")
+        print(f"  * 严重问题: {len(critical)}")
+        print(f"  *  警告: {len(warnings)}")
+        print(f"  *  信息: {len(info)}")
 
         if critical:
-            print("\n🚨 严重问题:")
+            print("\n* 严重问题:")
             for issue in critical:
                 print(f"  - {issue.message}")
 
         if warnings:
-            print("\n⚠️  警告:")
+            print("\n*  警告:")
             for issue in warnings[:5]:  # 只显示前5个警告
                 print(f"  - {issue.message}")
             if len(warnings) > 5:

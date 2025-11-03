@@ -207,7 +207,7 @@ class PDFProcessingService:
         method: str | None = None,
         prefer_ocr: bool = False,
         **kwargs,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """
         从PDF文件提取文本
 
@@ -597,7 +597,7 @@ class PDFProcessingService:
             logger.warning(f"检查扫描版PDF失败: {str(e)}")
             return False  # 默认认为不是扫描版
 
-    async def _extract_with_pymupdf(self, file_path: Path, **kwargs) -> dict[str, Any]:
+    async def _extract_with_pymupdf(self, file_path: Path, **kwargs) -> Dict[str, Any]:
         """使用PyMuPDF提取文本"""
         doc = fitz.open(str(file_path))
         pages_text = []
@@ -656,7 +656,7 @@ class PDFProcessingService:
 
     async def _extract_with_pdfplumber(
         self, file_path: Path, **kwargs
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """使用pdfplumber提取文本"""
         pages_text = []
         full_text = ""
@@ -710,7 +710,7 @@ class PDFProcessingService:
             ),
         }
 
-    async def _extract_with_ocr(self, file_path: Path, **kwargs) -> dict[str, Any]:
+    async def _extract_with_ocr(self, file_path: Path, **kwargs) -> Dict[str, Any]:
         """使用OCR提取文本 - 优化版本"""
         dpi = kwargs.get("dpi", 300)
         max_pages = kwargs.get("max_pages", 10)
@@ -887,7 +887,7 @@ class PDFProcessingService:
         prefer_ocr: bool = False,
         max_concurrency: int | None = None,
         **kwargs,
-    ) -> list[dict[str, Any]]:
+    ) -> List[dict[str, Any]]:
         """
         并发处理多个PDF文件
 
@@ -975,7 +975,7 @@ class PDFProcessingService:
 
     def _extract_single_pdf_wrapper(
         self, file_path: str, method: str | None, prefer_ocr: bool, **kwargs
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """
         单个PDF文件提取的包装器（用于并发处理）
         """
@@ -1004,7 +1004,7 @@ class PDFProcessingService:
                 "pages": [],
             }
 
-    def get_concurrent_stats(self) -> dict[str, Any]:
+    def get_concurrent_stats(self) -> Dict[str, Any]:
         """获取并发处理统计信息"""
         if self.concurrent_optimizer:
             return self.concurrent_optimizer.get_statistics()
@@ -1021,7 +1021,7 @@ class PDFProcessingService:
 
     async def extract_text_from_image(
         self, image_path: str, **kwargs
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """从图像文件提取文本（OCR）"""
         start_time = datetime.now()
 

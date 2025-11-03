@@ -426,12 +426,12 @@ def get_recovery_strategy(error_category: ErrorCategory) -> RecoveryStrategy:
     return RECOVERY_STRATEGIES.get(error_category)
 
 
-def get_error_classification_rules() -> dict[ErrorCategory, list[str]]:
+def get_error_classification_rules() -> Dict[str, Any][ErrorCategory, list[str]]:
     """获取错误分类规则"""
     return ERROR_CLASSIFICATION_RULES
 
 
-def get_fallback_response(error_category: ErrorCategory) -> dict[str, Any]:
+def get_fallback_response(error_category: ErrorCategory) -> Dict[str, Any]:
     """获取fallback响应"""
     return FALLBACK_RESPONSES.get(
         error_category,

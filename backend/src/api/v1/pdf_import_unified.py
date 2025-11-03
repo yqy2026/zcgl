@@ -967,7 +967,7 @@ async def upload_and_extract_pdf_v1_compatible(
         )
 
 
-def _validate_extracted_fields_v1(extracted_fields: dict[str, Any]) -> dict[str, Any]:
+def _validate_extracted_fields_v1(extracted_fields: dict[str, Any]) -> Dict[str, Any]:
     """V1兼容的字段验证函数"""
     validation_results = {}
 

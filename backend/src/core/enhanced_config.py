@@ -311,7 +311,7 @@ class EnhancedSettings(BaseSettings):
         """获取密钥"""
         return self.security.secret_key
 
-    def validate_config(self) -> list[str]:
+    def validate_config(self) -> List[str]:
         """
         验证配置
 

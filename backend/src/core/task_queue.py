@@ -13,6 +13,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from enum import Enum
 from queue import PriorityQueue
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +44,7 @@ class Task:
     id: str
     func_name: str
     args: tuple = ()
-    kwargs: dict = field(default_factory=dict)
+    kwargs: dict[str, Any] = field(default_factory=dict)
     status: TaskStatus = TaskStatus.PENDING
     priority: TaskPriority = TaskPriority.NORMAL
     created_at: datetime = field(default_factory=datetime.now)
@@ -60,7 +61,7 @@ class Task:
             return self.priority.value < other.priority.value
         return self.created_at < other.created_at
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """转换为字典"""
         data = asdict(self)
         data["status"] = self.status.value
@@ -122,7 +123,7 @@ class TaskQueue:
         logger.info(f"✅ 任务已提交: {task.id} ({func_name})")
         return task.id
 
-    def get_task_status(self, task_id: str) -> dict | None:
+    def get_task_status(self, task_id: str) -> dict[str, Any] | None:
         """获取任务状态"""
         if task_id not in self.tasks:
             return None
@@ -217,7 +218,7 @@ class TaskQueue:
 
         logger.info("✅ 任务队列已停止")
 
-    def get_stats(self) -> dict:
+    def get_stats(self) -> dict[str, Any]:
         """获取队列统计"""
         pending = sum(1 for t in self.tasks.values() if t.status == TaskStatus.PENDING)
         processing = sum(
@@ -324,7 +325,7 @@ def submit_task(
     )
 
 
-def get_task_status(task_id: str) -> dict | None:
+def get_task_status(task_id: str) -> dict[str, Any] | None:
     """获取任务状态"""
     queue = get_task_queue()
     return queue.get_task_status(task_id)

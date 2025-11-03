@@ -1001,7 +1001,7 @@ def _generate_defect_recommendations(
     severity_dist: dict[str, int],
     category_dist: dict[str, int],
     module_dist: dict[str, int],
-) -> list[str]:
+) -> List[str]:
     """生成缺陷改进建议"""
     recommendations = []
 

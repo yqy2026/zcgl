@@ -36,7 +36,7 @@ class CRUDCustomField(
         filters: dict[str, Any] = None,
         skip: int = 0,
         limit: int = 100,
-    ) -> list[AssetCustomField]:
+    ) -> List[AssetCustomField]:
         """根据筛选条件获取字段列表"""
         query = db.query(self.model)
 
@@ -62,7 +62,7 @@ class CRUDCustomField(
             .all()
         )
 
-    def get_active_fields(self, db: Session) -> list[AssetCustomField]:
+    def get_active_fields(self, db: Session) -> List[AssetCustomField]:
         """获取所有启用的字段"""
         return (
             db.query(AssetCustomField)
@@ -247,7 +247,7 @@ class CRUDCustomField(
 
     def get_asset_field_values(
         self, db: Session, *, asset_id: str
-    ) -> list[dict[str, Any]]:
+    ) -> List[dict[str, Any]]:
         """获取资产的自定义字段值"""
         # 这里需要实现获取资产自定义字段值的逻辑
         # 由于我们还没有创建存储字段值的表，这里返回空列表
@@ -256,7 +256,7 @@ class CRUDCustomField(
 
     def update_asset_field_values(
         self, db: Session, *, asset_id: str, values: list[dict[str, Any]]
-    ) -> list[dict[str, Any]]:
+    ) -> List[dict[str, Any]]:
         """更新资产的自定义字段值"""
         # 这里需要实现更新资产自定义字段值的逻辑
         # 在实际实现中，需要：
@@ -309,7 +309,7 @@ class CRUDCustomField(
 
     def update_sort_orders(
         self, db: Session, *, sort_data: list[dict[str, Any]]
-    ) -> list[AssetCustomField]:
+    ) -> List[AssetCustomField]:
         """批量更新排序"""
         updated_fields = []
 

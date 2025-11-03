@@ -64,7 +64,7 @@ class TaskCRUD:
         created_before: datetime | None = None,
         order_by: str = "created_at",
         order_dir: str = "desc",
-    ) -> list[AsyncTask]:
+    ) -> List[AsyncTask]:
         """获取任务列表"""
         query = db.query(AsyncTask).filter(AsyncTask.is_active)
 
@@ -188,7 +188,7 @@ class TaskCRUD:
 
         return history
 
-    def get_history(self, db: Session, task_id: str) -> list[TaskHistory]:
+    def get_history(self, db: Session, task_id: str) -> List[TaskHistory]:
         """获取任务历史记录"""
         return (
             db.query(TaskHistory)
@@ -210,7 +210,7 @@ class TaskCRUD:
 
         return query.count()
 
-    def get_statistics(self, db: Session, user_id: str | None = None) -> dict[str, Any]:
+    def get_statistics(self, db: Session, user_id: str | None = None) -> Dict[str, Any]:
         """获取任务统计信息"""
         base_query = db.query(AsyncTask).filter(AsyncTask.is_active)
 
@@ -332,7 +332,7 @@ class ExcelTaskConfigCRUD:
         config_type: str | None = None,
         task_type: str | None = None,
         is_active: bool = True,
-    ) -> list[ExcelTaskConfig]:
+    ) -> List[ExcelTaskConfig]:
         """获取配置列表"""
         query = db.query(ExcelTaskConfig).filter(ExcelTaskConfig.is_active == is_active)
 

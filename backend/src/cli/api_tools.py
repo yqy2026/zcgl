@@ -6,6 +6,7 @@ API工具命令行接口
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 import click
 
@@ -169,7 +170,7 @@ def analyze(output_dir: str):
         sys.exit(1)
 
 
-def _analyze_api_quality(docs_data: dict) -> dict:
+def _analyze_api_quality(api_data: dict[str, Any]) -> dict[str, Any]:
     """分析API质量"""
     paths = docs_data.get("paths", {})
     total_endpoints = sum(len(methods) for methods in paths.values())

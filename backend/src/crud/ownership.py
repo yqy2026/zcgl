@@ -40,7 +40,7 @@ class CRUDOwnership:
         limit: int = 100,
         is_active: bool | None = None,
         keyword: str | None = None,
-    ) -> list[Ownership]:
+    ) -> List[Ownership]:
         """获取多个权属方"""
         query = db.query(Ownership)
 
@@ -208,7 +208,7 @@ class CRUDOwnership:
 
     def search(
         self, db: Session, search_params: OwnershipSearchRequest
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """搜索权属方"""
         query = db.query(Ownership)
 
@@ -248,7 +248,7 @@ class CRUDOwnership:
             "pages": pages,
         }
 
-    def get_statistics(self, db: Session) -> dict[str, Any]:
+    def get_statistics(self, db: Session) -> Dict[str, Any]:
         """获取权属方统计信息"""
         # 基础统计
         total_count = db.query(Ownership).count()

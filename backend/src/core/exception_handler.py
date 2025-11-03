@@ -59,7 +59,7 @@ class BusinessValidationError(BaseBusinessError):
             message=message,
             code="VALIDATION_ERROR",
             details={"field_errors": self.field_errors, **(details or {})},
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         )
 
 

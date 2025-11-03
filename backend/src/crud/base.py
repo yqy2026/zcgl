@@ -91,7 +91,7 @@ class CRUDBase[
 
     def get_multi(
         self, db: Session, *, skip: int = 0, limit: int = 100, use_cache: bool = False
-    ) -> list[ModelType]:
+    ) -> List[ModelType]:
         """获取多个记录（支持缓存）"""
         cache_key = self._get_cache_key("get_multi", skip=skip, limit=limit)
 
@@ -220,7 +220,7 @@ class CRUDBase[
         limit: int = 100,
         order_by: str | None = None,
         order_desc: bool = False,
-    ) -> list[ModelType]:
+    ) -> List[ModelType]:
         """高级查询方法（支持筛选、搜索、排序）"""
         try:
             query = db.query(self.model)
@@ -260,7 +260,7 @@ class CRUDBase[
 
     def bulk_create(
         self, db: Session, *, objects_in: list[CreateSchemaType]
-    ) -> list[ModelType]:
+    ) -> List[ModelType]:
         """批量创建记录"""
         try:
             db_objects = []
@@ -304,7 +304,7 @@ class CRUDBase[
         self._cache.clear()
         logger.info(f"Cache cleared for {self.model.__tablename__}")
 
-    def get_cache_stats(self) -> dict[str, Any]:
+    def get_cache_stats(self) -> Dict[str, Any]:
         """获取缓存统计信息"""
         return {
             "model": self.model.__tablename__,

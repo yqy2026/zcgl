@@ -4,9 +4,9 @@
 """
 
 import time
+from typing import Any
 
 from fastapi import HTTPException, Request, Response, status
-from fastapi.security import HTTPAuthorizationCredentials
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from ..core.config import settings
@@ -256,9 +256,7 @@ class EnhancedTokenValidator:
     def __init__(self):
         self.security_service = None
 
-    async def validate_token(
-        self, credentials: HTTPAuthorizationCredentials, request: Request
-    ) -> dict:
+    async def validate_token(self) -> dict[str, Any]:
         """验证令牌"""
         if not self.security_service:
             from ..database import SessionLocal
@@ -327,8 +325,6 @@ class EnhancedTokenValidator:
 enhanced_token_validator = EnhancedTokenValidator()
 
 
-async def get_current_user_enhanced(
-    credentials: HTTPAuthorizationCredentials, request: Request
-) -> dict:
+async def get_current_user_enhanced(self) -> dict[str, Any]:
     """获取当前用户（增强版）"""
     return await enhanced_token_validator.validate_token(credentials, request)

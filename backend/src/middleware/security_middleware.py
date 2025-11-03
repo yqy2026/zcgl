@@ -7,6 +7,7 @@ import logging
 import time
 from collections import defaultdict
 from collections.abc import Callable
+from typing import Any
 
 from fastapi import HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
@@ -42,7 +43,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 class RequestValidationMiddleware(BaseHTTPMiddleware):
     """请求验证中间件"""
 
-    def __init__(self, app, rate_limit_config: dict = None):
+    def __init__(self, app, rate_limit_config: dict[str, Any] = None):
         super().__init__(app)
         self.rate_limiter = RateLimiter()
         self.config = rate_limit_config or {}
@@ -389,7 +390,7 @@ class FileUploadSecurityMiddleware(BaseHTTPMiddleware):
 class CORSExtendedMiddleware(BaseHTTPMiddleware):
     """扩展的CORS中间件"""
 
-    def __init__(self, app, allowed_origins: list = None, allowed_methods: list = None):
+    def __init__(self, app, allowed_origins: list[Any] = None, allowed_methods: list[Any] = None):
         super().__init__(app)
         self.allowed_origins = allowed_origins or [
             "http://localhost:5173",
@@ -433,7 +434,7 @@ class CORSExtendedMiddleware(BaseHTTPMiddleware):
         return response
 
 
-def create_security_middleware(app, config: dict = None):
+def create_security_middleware(app, config: dict[str, Any] = None):
     """
     创建安全中间件链
 

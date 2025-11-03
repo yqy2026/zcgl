@@ -26,7 +26,7 @@ class SecurityService:
 
     # ==================== 密码策略增强 ====================
 
-    def validate_password_strength_advanced(self, password: str) -> dict[str, Any]:
+    def validate_password_strength_advanced(self, password: str) -> Dict[str, Any]:
         """
         高级密码强度验证
         返回详细的验证结果
@@ -134,7 +134,7 @@ class SecurityService:
 
     def create_tokens_enhanced(
         self, user: User, device_info: dict | None = None
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """
         创建增强的JWT令牌
         """
@@ -200,7 +200,7 @@ class SecurityService:
 
     def validate_token_enhanced(
         self, token: str, expected_type: str = "access"
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """
         增强的令牌验证
         """
@@ -255,7 +255,7 @@ class SecurityService:
 
     # ==================== 账户安全增强 ====================
 
-    def check_account_security(self, user: User) -> dict[str, Any]:
+    def check_account_security(self, user: User) -> Dict[str, Any]:
         """
         检查账户安全状态
         """
@@ -400,7 +400,7 @@ class SecurityService:
         start_date: datetime | None = None,
         end_date: datetime | None = None,
         limit: int = 100,
-    ) -> list[dict]:
+    ) -> List[dict]:
         """
         获取安全审计日志
         """
@@ -440,7 +440,7 @@ class SecurityService:
 
         return logs
 
-    def generate_security_report(self, user_id: str | None = None) -> dict[str, Any]:
+    def generate_security_report(self, user_id: str | None = None) -> Dict[str, Any]:
         """
         生成安全报告
         """

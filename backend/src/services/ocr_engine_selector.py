@@ -103,7 +103,7 @@ class OCREngineSelector:
             ],
         }
 
-    def analyze_document_content(self, text: str) -> dict[str, Any]:
+    def analyze_document_content(self, text: str) -> Dict[str, Any]:
         """
         分析文档内容特征
 
@@ -181,7 +181,7 @@ class OCREngineSelector:
 
     def select_best_engine(
         self, document_analysis: dict[str, Any], available_engines: list[str]
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """
         选择最佳OCR引擎 - 优先使用PaddleOCR
 
@@ -315,7 +315,7 @@ class OCREngineSelector:
 
     def get_processing_strategy(
         self, document_analysis: dict[str, Any], engine_selection: dict[str, Any]
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """
         获取处理策略
 
@@ -376,7 +376,7 @@ class OCREngineSelector:
 
     def analyze_optimization_opportunities(
         self, results: list[dict[str, Any]]
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """
         分析优化机会
 

@@ -128,7 +128,7 @@ class RealTimeSecurityMonitor:
             additional_data=event.details,
         )
 
-    def _check_immediate_alert(self, event: SecurityEvent) -> dict[str, Any] | None:
+    def _check_immediate_alert(self, event: SecurityEvent) -> Dict[str, Any] | None:
         """检查是否需要立即告警"""
         # 关键事件立即告警
         if event.severity == "critical":
@@ -281,7 +281,7 @@ class RealTimeSecurityMonitor:
             if not self.ip_activities[ip]:
                 del self.ip_activities[ip]
 
-    def get_user_security_profile(self, user_id: str) -> dict[str, Any]:
+    def get_user_security_profile(self, user_id: str) -> Dict[str, Any]:
         """获取用户安全档案"""
         user_events = list(self.user_activities.get(user_id, []))
 
@@ -341,7 +341,7 @@ class RealTimeSecurityMonitor:
             "last_activity": max(event.timestamp for event in user_events).isoformat(),
         }
 
-    def get_system_security_status(self) -> dict[str, Any]:
+    def get_system_security_status(self) -> Dict[str, Any]:
         """获取系统安全状态"""
         total_events = len(self.event_buffer)
         failed_logins = len(

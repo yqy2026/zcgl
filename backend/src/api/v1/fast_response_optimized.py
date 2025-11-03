@@ -70,7 +70,7 @@ class FastResponseOptimizer:
         self.response_history = []
         self.optimization_rules = self._initialize_optimization_rules()
 
-    def _initialize_optimization_rules(self) -> dict[str, Any]:
+    def _initialize_optimization_rules(self) -> Dict[str, Any]:
         """初始化优化规则"""
         return {
             "compression": {
@@ -108,7 +108,7 @@ class FastResponseOptimizer:
         endpoint: str,
         response_data: Any,
         compression_enabled: bool | None = None,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """优化响应"""
         start_time = time.time()
 
@@ -270,7 +270,7 @@ class FastResponseOptimizer:
         else:
             return OptimizationLevel.NEEDS_IMPROVEMENT
 
-    async def get_cache_stats(self) -> dict[str, Any]:
+    async def get_cache_stats(self) -> Dict[str, Any]:
         """获取缓存统计"""
         active_items = 0
         total_size = 0
@@ -294,7 +294,7 @@ class FastResponseOptimizer:
             "items_count": len(self.cache),
         }
 
-    def get_performance_stats(self) -> dict[str, Any]:
+    def get_performance_stats(self) -> Dict[str, Any]:
         """获取性能统计"""
         if not self.request_times:
             return {
@@ -337,7 +337,7 @@ class FastResponseOptimizer:
                 "optimization_level": OptimizationLevel.NEEDS_IMPROVEMENT,
             }
 
-    def generate_performance_report(self) -> dict[str, Any]:
+    def generate_performance_report(self) -> Dict[str, Any]:
         """生成性能报告"""
         # 获取缓存统计
         cache_stats = self.get_cache_stats()
@@ -370,7 +370,7 @@ class FastResponseOptimizer:
         logger.info(f"性能报告已生成: {report_file}")
         return report
 
-    def _generate_optimization_summary(self) -> dict[str, Any]:
+    def _generate_optimization_summary(self) -> Dict[str, Any]:
         """生成优化总结"""
         stats = self.get_performance_stats()
 
@@ -413,7 +413,7 @@ class FastResponseOptimizer:
             "optimization_level": overall_level,
         }
 
-    def _generate_recommendations(self) -> list[str]:
+    def _generate_recommendations(self) -> List[str]:
         """生成优化建议"""
         recommendations = []
 

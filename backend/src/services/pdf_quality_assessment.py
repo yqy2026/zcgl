@@ -67,7 +67,7 @@ class PDFProcessingQualityAssessment:
         original_text: str,
         processing_metadata: dict[str, Any],
         ocr_results: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """
         评估PDF处理质量
 
@@ -426,7 +426,7 @@ class PDFProcessingQualityAssessment:
 
         return cleaned
 
-    def _determine_quality_level(self, score: float) -> dict[str, Any]:
+    def _determine_quality_level(self, score: float) -> Dict[str, Any]:
         """确定质量等级"""
         for level_name, level_info in reversed(self.quality_levels.items()):
             if score >= level_info["min_score"]:
@@ -440,7 +440,7 @@ class PDFProcessingQualityAssessment:
 
     def _identify_missing_critical_fields(
         self, extracted_data: dict[str, Any]
-    ) -> list[str]:
+    ) -> List[str]:
         """识别缺失的关键字段"""
         critical_fields = [
             "contract_number",
@@ -460,7 +460,7 @@ class PDFProcessingQualityAssessment:
 
         return missing_fields
 
-    def _identify_text_quality_issues(self, text: str) -> list[str]:
+    def _identify_text_quality_issues(self, text: str) -> List[str]:
         """识别文本质量问题"""
         issues = []
 
@@ -484,7 +484,7 @@ class PDFProcessingQualityAssessment:
 
     def _generate_improvement_suggestions(
         self, quality_metrics: dict[str, float]
-    ) -> list[dict[str, Any]]:
+    ) -> List[dict[str, Any]]:
         """生成改进建议"""
         suggestions = []
 
@@ -594,7 +594,7 @@ class PDFProcessingQualityAssessment:
 
     def _generate_processing_recommendations(
         self, extracted_data: dict[str, Any], processing_metadata: dict[str, Any]
-    ) -> list[str]:
+    ) -> List[str]:
         """生成处理推荐"""
         recommendations = []
 

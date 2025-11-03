@@ -35,7 +35,7 @@ class APIDocGenerator:
             "examples": {},
         }
 
-    def generate_docs(self) -> dict[str, Any]:
+    def generate_docs(self) -> Dict[str, Any]:
         """生成完整的API文档"""
         print("🔍 扫描API路由...")
 

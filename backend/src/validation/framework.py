@@ -229,7 +229,7 @@ class ValidationSchema:
         """添加自定义验证器"""
         self.custom_validators[field] = validator
 
-    def validate(self, data: dict[str, Any]) -> dict[str, list[str]]:
+    def validate(self, data: dict[str, Any]) -> Dict[str, List[str]]:
         """验证数据"""
         errors = {}
 
@@ -272,7 +272,7 @@ class ValidationFramework:
         """注册全局验证器"""
         self.global_validators[name] = validator
 
-    def validate(self, schema_name: str, data: dict[str, Any]) -> dict[str, list[str]]:
+    def validate(self, schema_name: str, data: dict[str, Any]) -> Dict[str, List[str]]:
         """验证数据"""
         if schema_name not in self.schemas:
             raise ValueError(f"未知的验证模式: {schema_name}")
@@ -480,7 +480,7 @@ def validate_data(schema_name: str):
 
 
 # 工具函数
-def validate_excel_file(file_obj) -> dict[str, list[str]]:
+def validate_excel_file(file_obj) -> Dict[str, List[str]]:
     """验证Excel文件"""
     errors = {}
 
@@ -494,7 +494,7 @@ def validate_excel_file(file_obj) -> dict[str, list[str]]:
     return errors
 
 
-def validate_pdf_file(file_obj) -> dict[str, list[str]]:
+def validate_pdf_file(file_obj) -> Dict[str, List[str]]:
     """验证PDF文件"""
     errors = {}
 
@@ -506,7 +506,7 @@ def validate_pdf_file(file_obj) -> dict[str, list[str]]:
     return errors
 
 
-def validate_date_range(start_date: str, end_date: str) -> dict[str, list[str]]:
+def validate_date_range(start_date: str, end_date: str) -> Dict[str, List[str]]:
     """验证日期范围"""
     errors = {}
 

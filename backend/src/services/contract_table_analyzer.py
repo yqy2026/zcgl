@@ -68,7 +68,7 @@ class ContractTableAnalyzer:
         self.table_patterns = self._load_table_patterns()
         self.chinese_keywords = self._load_chinese_keywords()
 
-    def _load_table_patterns(self) -> dict[str, Any]:
+    def _load_table_patterns(self) -> Dict[str, Any]:
         """加载表格识别模式"""
         return {
             # 付款计划表模式
@@ -123,7 +123,7 @@ class ContractTableAnalyzer:
             },
         }
 
-    def _load_chinese_keywords(self) -> dict[str, list[str]]:
+    def _load_chinese_keywords(self) -> Dict[str, List[str]]:
         """加载中文关键词"""
         return {
             "lease": ["租赁", "出租", "承租", "租期", "租金", "押金", "保证金"],
@@ -134,7 +134,7 @@ class ContractTableAnalyzer:
             "fees": ["管理", "物业", "水电", "费用", "其他", "杂项"],
         }
 
-    async def extract_tables_from_image(self, image_path: str) -> list[TableStructure]:
+    async def extract_tables_from_image(self, image_path: str) -> List[TableStructure]:
         """从图像中提取表格"""
         try:
             # 读取图像
@@ -186,7 +186,7 @@ class ContractTableAnalyzer:
 
         return binary
 
-    async def _detect_tables(self, image: np.ndarray) -> list[np.ndarray]:
+    async def _detect_tables(self, image: np.ndarray) -> List[np.ndarray]:
         """检测表格区域"""
         try:
             # 使用多种方法检测表格
@@ -306,7 +306,7 @@ class ContractTableAnalyzer:
             logger.error(f"表格结构分析失败: {e}")
             return None
 
-    async def _ocr_table_content(self, table_image: np.ndarray) -> dict[str, str]:
+    async def _ocr_table_content(self, table_image: np.ndarray) -> Dict[str, Any][str, str]:
         """OCR识别表格内容"""
         try:
             # 使用Tesseract进行表格识别
@@ -366,7 +366,7 @@ class ContractTableAnalyzer:
 
     async def _segment_table_cells(
         self, table_image: np.ndarray, text_data: dict[str, str]
-    ) -> list[list[TableCell]]:
+    ) -> List[list[TableCell]]:
         """分割表格为单元格"""
         try:
             # 获取图像尺寸
@@ -430,7 +430,7 @@ class ContractTableAnalyzer:
 
     async def _segment_by_columns(
         self, table_image: np.ndarray, text_data: dict[str, str]
-    ) -> list[list[TableCell]]:
+    ) -> List[list[TableCell]]:
         """按列分割表格（针对简单表格）"""
         # 这里可以实现更复杂的列分割算法
         # 暂时返回简单结构
@@ -438,7 +438,7 @@ class ContractTableAnalyzer:
 
     def _extract_table_headers(
         self, cells: list[list[TableCell]], table_type: TableType
-    ) -> list[str]:
+    ) -> List[str]:
         """提取表头"""
         if not cells:
             return []
@@ -456,7 +456,7 @@ class ContractTableAnalyzer:
 
     def _extract_payment_schedule_headers(
         self, cells: list[list[TableCell]]
-    ) -> list[str]:
+    ) -> List[str]:
         """提取付款计划表的表头"""
         if not cells:
             return []
@@ -481,7 +481,7 @@ class ContractTableAnalyzer:
 
         return standard_headers
 
-    def _extract_party_info_headers(self, cells: list[list[TableCell]]) -> list[str]:
+    def _extract_party_info_headers(self, cells: list[list[TableCell]]) -> List[str]:
         """提取当事方信息表的表头"""
         if not cells:
             return []
@@ -507,7 +507,7 @@ class ContractTableAnalyzer:
 
         return standard_headers
 
-    def _extract_lease_terms_headers(self, cells: list[list[TableCell]]) -> list[str]:
+    def _extract_lease_terms_headers(self, cells: list[list[TableCell]]) -> List[str]:
         """提取租赁条款表的表头"""
         if not cells:
             return []
@@ -533,7 +533,7 @@ class ContractTableAnalyzer:
 
         return standard_headers
 
-    def _extract_first_row_as_headers(self, cells: list[list[TableCell]]) -> list[str]:
+    def _extract_first_row_as_headers(self, cells: list[list[TableCell]]) -> List[str]:
         """提取第一行作为表头"""
         if not cells or len(cells) == 0:
             return []
@@ -606,7 +606,7 @@ class ContractTableAnalyzer:
 
     async def extract_structured_data_from_tables(
         self, table_structures: list[TableStructure]
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """从表格结构中提取结构化数据"""
         structured_data = {
             "tables_found": len(table_structures),
@@ -636,22 +636,22 @@ class ContractTableAnalyzer:
 
     async def _extract_payment_schedule_data(
         self, table: TableStructure
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """提取付款计划数据"""
         # 实现具体的付款计划数据提取逻辑
         return {"confidence": table.confidence, "data": {}}
 
-    async def _extract_party_info_data(self, table: TableStructure) -> dict[str, Any]:
+    async def _extract_party_info_data(self, table: TableStructure) -> Dict[str, Any]:
         """提取当事方信息数据"""
         # 实现具体的当事方信息数据提取逻辑
         return {"confidence": table.confidence, "data": {}}
 
-    async def _extract_lease_terms_data(self, table: TableStructure) -> dict[str, Any]:
+    async def _extract_lease_terms_data(self, table: TableStructure) -> Dict[str, Any]:
         """提取租赁条款数据"""
         # 实现具体的租赁条款数据提取逻辑
         return {"confidence": table.confidence, "data": {}}
 
-    async def _extract_fees_data(self, table: TableStructure) -> dict[str, Any]:
+    async def _extract_fees_data(self, table: TableStructure) -> Dict[str, Any]:
         """提取费用明细数据"""
         # 实现具体的费用明细数据提取逻辑
         return {"confidence": table.confidence, "data": {}}

@@ -20,7 +20,7 @@ class OrganizationPermissionService:
     def __init__(self, db: Session):
         self.db = db
 
-    def get_user_accessible_organizations(self, user_id: str) -> list[str]:
+    def get_user_accessible_organizations(self, user_id: str) -> List[str]:
         """
         获取用户可访问的组织ID列表
 
@@ -66,7 +66,7 @@ class OrganizationPermissionService:
 
     def get_user_accessible_organizations_with_details(
         self, user_id: str
-    ) -> list[dict]:
+    ) -> List[dict]:
         """
         获取用户可访问的组织详细信息
         """
@@ -175,7 +175,7 @@ class OrganizationPermissionService:
 
         return query
 
-    def get_organization_descendants(self, organization_id: str) -> list[str]:
+    def get_organization_descendants(self, organization_id: str) -> List[str]:
         """
         获取组织的所有子组织ID
         """
@@ -202,7 +202,7 @@ class OrganizationPermissionService:
 
         return [desc.id for desc in descendants]
 
-    def get_organization_hierarchy(self, user_id: str) -> list[dict]:
+    def get_organization_hierarchy(self, user_id: str) -> List[dict]:
         """
         获取用户可访问的组织层次结构
         """
@@ -223,7 +223,7 @@ class OrganizationPermissionService:
 
         return root_orgs
 
-    def _get_organization_tree_access(self, user_id: str) -> list[str]:
+    def _get_organization_tree_access(self, user_id: str) -> List[str]:
         """
         获取组织管理员的组织访问权限
         """
@@ -245,7 +245,7 @@ class OrganizationPermissionService:
 
         return accessible_orgs
 
-    def _get_user_organization_access(self, user_id: str) -> list[str]:
+    def _get_user_organization_access(self, user_id: str) -> List[str]:
         """
         获取普通用户的组织访问权限
         """
@@ -318,7 +318,7 @@ class OrganizationPermissionService:
 
     def get_accessible_users_in_organization(
         self, user_id: str, organization_id: str
-    ) -> list[str]:
+    ) -> List[str]:
         """
         获取用户在指定组织中可以访问的用户列表
         """

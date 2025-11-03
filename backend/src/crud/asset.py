@@ -46,7 +46,7 @@ class AssetCRUD:
         """根据物业名称获取资产（别名方法）"""
         return self.get_by_name(db, property_name)
 
-    def get_multi(self, db: Session, skip: int = 0, limit: int = 100) -> list[Asset]:
+    def get_multi(self, db: Session, skip: int = 0, limit: int = 100) -> List[Asset]:
         """获取多个资产"""
         return db.query(Asset).offset(skip).limit(limit).all()
 
@@ -403,7 +403,7 @@ class AssetCRUD:
 
         return updated_asset
 
-    def get_multi_by_ids(self, db: Session, ids: list[str]) -> list[Asset]:
+    def get_multi_by_ids(self, db: Session, ids: list[str]) -> List[Asset]:
         """根据ID列表批量获取资产"""
         if not ids:
             return []

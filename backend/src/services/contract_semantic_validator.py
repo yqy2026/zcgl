@@ -111,7 +111,7 @@ class ContractSemanticValidator:
         # 字段间关系定义
         self.field_relationships = self._load_field_relationships()
 
-    def _load_field_types_config(self) -> dict[str, dict[str, Any]]:
+    def _load_field_types_config(self) -> Dict[str, Dict[str, Any]]:
         """加载字段类型配置"""
         return {
             # 基础信息字段
@@ -257,7 +257,7 @@ class ContractSemanticValidator:
             },
         }
 
-    def _load_validation_rules(self) -> dict[str, callable]:
+    def _load_validation_rules(self) -> Dict[str, Any][str, callable]:
         """加载验证规则"""
         return {
             FieldType.TEXT: self._validate_text,
@@ -275,7 +275,7 @@ class ContractSemanticValidator:
             FieldType.ENUM: self._validate_enum,
         }
 
-    def _load_semantic_patterns(self) -> dict[str, list[dict[str, Any]]]:
+    def _load_semantic_patterns(self) -> Dict[str, Any][str, list[dict[str, Any]]]:
         """加载语义模式"""
         return {
             "contract_patterns": [
@@ -338,7 +338,7 @@ class ContractSemanticValidator:
             ],
         }
 
-    def _load_business_rules(self) -> dict[str, callable]:
+    def _load_business_rules(self) -> Dict[str, Any][str, callable]:
         """加载业务规则"""
         return {
             "date_consistency": self._check_date_consistency,
@@ -350,7 +350,7 @@ class ContractSemanticValidator:
             "id_card_validity": self._check_id_card_validity,
         }
 
-    def _load_field_relationships(self) -> dict[str, list[str]]:
+    def _load_field_relationships(self) -> Dict[str, List[str]]:
         """加载字段间关系"""
         return {
             "signing_date": ["effective_date", "expiry_date"],
@@ -546,7 +546,7 @@ class ContractSemanticValidator:
 
     async def _validate_business_rules(
         self, contract_data: dict[str, Any], field_results: dict[str, ValidationResult]
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """验证业务规则"""
         results = {}
 
@@ -590,7 +590,7 @@ class ContractSemanticValidator:
 
     async def _validate_text(
         self, value: str, config: dict[str, Any]
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """验证文本字段"""
         result = {
             "level": ValidationLevel.SUCCESS,
@@ -626,7 +626,7 @@ class ContractSemanticValidator:
 
     async def _validate_number(
         self, value: int | float, config: dict[str, Any]
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """验证数字字段"""
         result = {
             "level": ValidationLevel.SUCCESS,
@@ -660,7 +660,7 @@ class ContractSemanticValidator:
 
     async def _validate_decimal(
         self, value: Decimal | float | str, config: dict[str, Any]
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """验证小数字段"""
         result = {
             "level": ValidationLevel.SUCCESS,
@@ -697,7 +697,7 @@ class ContractSemanticValidator:
 
     async def _validate_date(
         self, value: Any, config: dict[str, Any]
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """验证日期字段"""
         result = {
             "level": ValidationLevel.SUCCESS,
@@ -735,7 +735,7 @@ class ContractSemanticValidator:
 
     async def _validate_phone(
         self, value: str, config: dict[str, Any]
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """验证电话号码字段"""
         result = {
             "level": ValidationLevel.SUCCESS,
@@ -771,7 +771,7 @@ class ContractSemanticValidator:
 
     async def _validate_address(
         self, value: str, config: dict[str, Any]
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """验证地址字段"""
         result = {
             "level": ValidationLevel.SUCCESS,
@@ -810,7 +810,7 @@ class ContractSemanticValidator:
 
     async def _validate_person_name(
         self, value: str, config: dict[str, Any]
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """验证姓名字段"""
         result = {
             "level": ValidationLevel.SUCCESS,
@@ -848,7 +848,7 @@ class ContractSemanticValidator:
 
     async def _validate_id_card(
         self, value: str, config: dict[str, Any]
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """验证身份证字段"""
         result = {
             "level": ValidationLevel.SUCCESS,
@@ -892,7 +892,7 @@ class ContractSemanticValidator:
 
     async def _validate_email(
         self, value: str, config: dict[str, Any]
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """验证邮箱字段"""
         result = {
             "level": ValidationLevel.SUCCESS,
@@ -914,7 +914,7 @@ class ContractSemanticValidator:
 
     async def _validate_enum(
         self, value: str, config: dict[str, Any]
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """验证枚举字段"""
         result = {
             "level": ValidationLevel.SUCCESS,
@@ -936,7 +936,7 @@ class ContractSemanticValidator:
 
     async def _validate_organization(
         self, value: str, config: dict[str, Any]
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """验证机构名称字段"""
         result = {
             "level": ValidationLevel.SUCCESS,
@@ -973,7 +973,7 @@ class ContractSemanticValidator:
 
         return result
 
-    async def _validate_url(self, value: str, config: dict[str, Any]) -> dict[str, Any]:
+    async def _validate_url(self, value: str, config: dict[str, Any]) -> Dict[str, Any]:
         """验证URL字段"""
         result = {
             "level": ValidationLevel.SUCCESS,
@@ -995,7 +995,7 @@ class ContractSemanticValidator:
 
     async def _validate_boolean(
         self, value: Any, config: dict[str, Any]
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """验证布尔字段"""
         result = {
             "level": ValidationLevel.SUCCESS,
@@ -1026,7 +1026,7 @@ class ContractSemanticValidator:
 
     async def _validate_field_config(
         self, value: Any, config: dict[str, Any]
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """验证字段配置"""
         result = {"errors": [], "warnings": []}
 
@@ -1114,7 +1114,7 @@ class ContractSemanticValidator:
 
         return min(relevance_score, 1.0)
 
-    def _get_field_synonyms(self, field_name: str) -> list[str]:
+    def _get_field_synonyms(self, field_name: str) -> List[str]:
         """获取字段同义词"""
         synonym_map = {
             "party_a_name": ["甲方", "出租方", "房东"],
@@ -1129,7 +1129,7 @@ class ContractSemanticValidator:
 
     async def _extract_entities_from_field(
         self, field_value: Any, field_type: FieldType
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """从字段中提取实体"""
         entities = {}
 
@@ -1149,7 +1149,7 @@ class ContractSemanticValidator:
 
         return entities
 
-    def _extract_address_entities(self, address: str) -> dict[str, Any]:
+    def _extract_address_entities(self, address: str) -> Dict[str, Any]:
         """提取地址实体"""
         entities = {}
 
@@ -1185,7 +1185,7 @@ class ContractSemanticValidator:
 
         return entities
 
-    def _extract_name_entities(self, name: str) -> dict[str, Any]:
+    def _extract_name_entities(self, name: str) -> Dict[str, Any]:
         """提取姓名实体"""
         entities = {}
 
@@ -1200,7 +1200,7 @@ class ContractSemanticValidator:
 
         return entities
 
-    def _extract_phone_entities(self, phone: str) -> dict[str, Any]:
+    def _extract_phone_entities(self, phone: str) -> Dict[str, Any]:
         """提取电话实体"""
         entities = {}
 
@@ -1216,7 +1216,7 @@ class ContractSemanticValidator:
 
         return entities
 
-    def _extract_amount_entities(self, amount: str) -> dict[str, Any]:
+    def _extract_amount_entities(self, amount: str) -> Dict[str, Any]:
         """提取金额实体"""
         entities = {}
 
@@ -1241,7 +1241,7 @@ class ContractSemanticValidator:
 
         return entities
 
-    def _extract_date_entities(self, date_str: str) -> dict[str, Any]:
+    def _extract_date_entities(self, date_str: str) -> Dict[str, Any]:
         """提取日期实体"""
         entities = {}
 
@@ -1266,7 +1266,7 @@ class ContractSemanticValidator:
 
     def _analyze_field_relationships(
         self, field_name: str, field_value: Any, contract_text: str | None
-    ) -> dict[str, str]:
+    ) -> Dict[str, Any][str, str]:
         """分析字段关系"""
         relationships = {}
 
@@ -1301,7 +1301,7 @@ class ContractSemanticValidator:
     # 业务规则验证方法
     async def _check_date_consistency(
         self, contract_data: dict[str, Any], field_results: dict[str, ValidationResult]
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """检查日期一致性"""
         result = {"status": "pass", "message": ""}
 
@@ -1328,7 +1328,7 @@ class ContractSemanticValidator:
 
     async def _check_amount_reasonableness(
         self, contract_data: dict[str, Any], field_results: dict[str, ValidationResult]
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """检查金额合理性"""
         result = {"status": "pass", "message": ""}
 
@@ -1370,7 +1370,7 @@ class ContractSemanticValidator:
 
     async def _check_party_completeness(
         self, contract_data: dict[str, Any], field_results: dict[str, ValidationResult]
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """检查当事方完整性"""
         result = {"status": "pass", "message": ""}
 
@@ -1410,7 +1410,7 @@ class ContractSemanticValidator:
 
     async def _check_address_validity(
         self, contract_data: dict[str, Any], field_results: dict[str, ValidationResult]
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """检查地址有效性"""
         result = {"status": "pass", "message": ""}
 
@@ -1435,7 +1435,7 @@ class ContractSemanticValidator:
 
     async def _check_term_consistency(
         self, contract_data: dict[str, Any], field_results: dict[str, ValidationResult]
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """检查期限一致性"""
         result = {"status": "pass", "message": ""}
 
@@ -1470,7 +1470,7 @@ class ContractSemanticValidator:
 
     async def _check_payment_logic(
         self, contract_data: dict[str, Any], field_results: dict[str, ValidationResult]
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """检查付款逻辑"""
         result = {"status": "pass", "message": ""}
 
@@ -1494,7 +1494,7 @@ class ContractSemanticValidator:
 
     async def _check_id_card_validity(
         self, contract_data: dict[str, Any], field_results: dict[str, ValidationResult]
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """检查身份证有效性"""
         result = {"status": "pass", "message": ""}
 

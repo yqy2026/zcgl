@@ -27,7 +27,7 @@ class DataFilterService:
     API_RESPONSE_FILTER_FIELDS = REMOVED_FIELDS.copy()
 
     @staticmethod
-    def filter_asset_data(asset_data: dict[str, Any]) -> dict[str, Any]:
+    def filter_asset_data(asset_data: dict[str, Any]) -> Dict[str, Any]:
         """
         过滤资产数据，移除前端不需要的字段
 
@@ -52,7 +52,7 @@ class DataFilterService:
         return filtered_data
 
     @staticmethod
-    def filter_asset_list(assets: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def filter_asset_list(assets: list[dict[str, Any]]) -> List[dict[str, Any]]:
         """
         过滤资产列表
 
@@ -68,7 +68,7 @@ class DataFilterService:
         return [DataFilterService.filter_asset_data(asset) for asset in assets]
 
     @staticmethod
-    def filter_request_data(request_data: dict[str, Any]) -> dict[str, Any]:
+    def filter_request_data(request_data: dict[str, Any]) -> Dict[str, Any]:
         """
         过滤请求数据，移除不应该由客户端设置的字段
 
@@ -103,7 +103,7 @@ class DataFilterService:
         return filtered_data
 
     @staticmethod
-    def sanitize_search_params(params: dict[str, Any]) -> dict[str, Any]:
+    def sanitize_search_params(params: dict[str, Any]) -> Dict[str, Any]:
         """
         清理搜索参数，移除无效的搜索字段
 
@@ -130,7 +130,7 @@ class DataFilterService:
         return sanitized_params
 
     @staticmethod
-    def get_field_mapping_info() -> dict[str, Any]:
+    def get_field_mapping_info() -> Dict[str, Any]:
         """
         获取字段映射信息
 

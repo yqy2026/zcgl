@@ -111,7 +111,7 @@ class ResponseHandler:
         return ResponseHandler.error(
             message=message,
             error_code="VALIDATION_ERROR",
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             details={"validation_errors": errors},
             request_id=request_id,
         )

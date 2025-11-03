@@ -66,7 +66,7 @@ class ResourceMonitor:
             "active_processes": 10,  # 最大活跃进程数
         }
 
-    def get_system_metrics(self) -> dict[str, float]:
+    def get_system_metrics(self) -> Dict[str, Any][str, float]:
         """获取系统指标"""
         if not PSUTIL_AVAILABLE:
             return {
@@ -320,7 +320,7 @@ class ConcurrentProcessingOptimizer:
         task_id: str,
         func: Callable,
         args: tuple = (),
-        kwargs: dict = None,
+        kwargs: Dict[str, Any] = None,
         priority: TaskPriority = TaskPriority.NORMAL,
         estimated_duration: float = 0.0,
         resource_requirements: dict[str, Any] = None,
@@ -380,7 +380,7 @@ class ConcurrentProcessingOptimizer:
         task_id: str,
         func: Callable,
         args: tuple = (),
-        kwargs: dict = None,
+        kwargs: Dict[str, Any] = None,
         priority: TaskPriority = TaskPriority.NORMAL,
         estimated_duration: float = 0.0,
         resource_requirements: dict[str, Any] = None,
@@ -465,7 +465,7 @@ class ConcurrentProcessingOptimizer:
             new_avg = (current_avg * (completed - 1) + processing_time) / completed
             self.stats["average_processing_time"] = new_avg
 
-    def get_statistics(self) -> dict[str, Any]:
+    def get_statistics(self) -> Dict[str, Any]:
         """获取统计信息"""
         stats = self.stats.copy()
 
@@ -490,7 +490,7 @@ class ConcurrentProcessingOptimizer:
 
         return stats
 
-    def get_health_status(self) -> dict[str, Any]:
+    def get_health_status(self) -> Dict[str, Any]:
         """获取健康状态"""
         stats = self.get_statistics()
 
@@ -534,7 +534,7 @@ class ConcurrentProcessingOptimizer:
             "issues": self._identify_health_issues(stats),
         }
 
-    def _identify_health_issues(self, stats: dict[str, Any]) -> list[str]:
+    def _identify_health_issues(self, stats: dict[str, Any]) -> List[str]:
         """识别健康问题"""
         issues = []
 

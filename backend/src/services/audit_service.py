@@ -137,7 +137,7 @@ class EnhancedAuditLogger:
 
     def get_user_activity_summary(
         self, user_id: str, hours: int = 24
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """获取用户活动摘要"""
         cutoff_time = datetime.now() - timedelta(hours=hours)
         user_events = [
@@ -172,7 +172,7 @@ class EnhancedAuditLogger:
             return max(resource_counts.items(), key=lambda x: x[1])[0]
         return None
 
-    def detect_suspicious_activity(self, user_id: str) -> list[dict[str, Any]]:
+    def detect_suspicious_activity(self, user_id: str) -> List[dict[str, Any]]:
         """检测可疑活动"""
         suspicious_events = []
         user_events = self.user_activity.get(user_id, [])
@@ -230,7 +230,7 @@ class EnhancedAuditLogger:
 
         return suspicious_events
 
-    def get_security_statistics(self, days: int = 30) -> dict[str, Any]:
+    def get_security_statistics(self, days: int = 30) -> Dict[str, Any]:
         """获取安全统计信息"""
         cutoff_date = datetime.now() - timedelta(days=days)
 

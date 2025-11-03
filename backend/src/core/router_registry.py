@@ -116,7 +116,7 @@ class RouteRegistry:
             f"完成版本 {version} 的路由注册，共 {len(self.versioned_routers[version])} 个路由"
         )
 
-    def get_router_info(self, version: str = "v1") -> list[dict[str, Any]]:
+    def get_router_info(self, version: str = "v1") -> List[dict[str, Any]]:
         """获取路由信息"""
         if version not in self.versioned_routers:
             return []
@@ -134,7 +134,7 @@ class RouteRegistry:
 
         return router_info
 
-    def validate_routes(self) -> list[str]:
+    def validate_routes(self) -> List[str]:
         """验证路由配置，返回警告信息"""
         warnings = []
 
@@ -237,7 +237,7 @@ def setup_app_routing(app: FastAPI) -> None:
 
 
 # 路由信息工具函数
-def get_all_routes_info() -> dict[str, list[dict[str, Any]]]:
+def get_all_routes_info() -> Dict[str, Any][str, list[dict[str, Any]]]:
     """获取所有版本的路由信息"""
     routes_info = {}
     for version in route_registry.versioned_routers.keys():
@@ -245,13 +245,13 @@ def get_all_routes_info() -> dict[str, list[dict[str, Any]]]:
     return routes_info
 
 
-def get_routes_by_tag(tag: str, version: str = "v1") -> list[dict[str, Any]]:
+def get_routes_by_tag(tag: str, version: str = "v1") -> List[dict[str, Any]]:
     """根据标签获取路由信息"""
     routes = route_registry.get_router_info(version)
     return [route for route in routes if tag in route["tags"]]
 
 
-def get_deprecated_routes(version: str = "v1") -> list[dict[str, Any]]:
+def get_deprecated_routes(version: str = "v1") -> List[dict[str, Any]]:
     """获取已废弃的路由"""
     routes = route_registry.get_router_info(version)
     return [route for route in routes if route["deprecated"]]

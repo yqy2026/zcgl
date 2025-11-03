@@ -161,7 +161,7 @@ class EnhancedFieldMapper:
             },
         }
 
-    def _load_transformation_rules(self) -> dict[str, callable]:
+    def _load_transformation_rules(self) -> dict[str, Any]:
         """加载转换规则"""
         return {
             "clean_contract_number": self._clean_contract_number,

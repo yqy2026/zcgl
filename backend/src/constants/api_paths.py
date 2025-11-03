@@ -245,7 +245,7 @@ API_PATHS = {
 
 
 # 动态路径生成器
-def dynamic_path(path_template: str, **kwargs) -> str:
+def dynamic_path(path_template: str, **kwargs: str) -> str:
     """生成动态API路径"""
     return path_template.format(**kwargs)
 

@@ -33,7 +33,7 @@ class FileManagementService:
 
     async def save_uploaded_file(
         self, file_content: bytes, filename: str, session_id: str
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """保存上传的文件"""
 
         try:
@@ -61,7 +61,7 @@ class FileManagementService:
             logger.error(f"文件保存失败: {filename}, 错误: {str(e)}")
             return {"success": False, "error": str(e), "file_path": None}
 
-    async def get_file_info(self, file_path: str) -> dict[str, Any]:
+    async def get_file_info(self, file_path: str) -> Dict[str, Any]:
         """获取文件信息"""
         try:
             path = Path(file_path)
@@ -96,7 +96,7 @@ class FileManagementService:
 
     async def cleanup_temp_files(
         self, db: Session, force: bool = False
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """清理临时文件"""
 
         try:
@@ -168,7 +168,7 @@ class FileManagementService:
                 "freed_space_mb": 0,
             }
 
-    async def storage_statistics(self) -> dict[str, Any]:
+    async def storage_statistics(self) -> Dict[str, Any]:
         """获取存储统计信息"""
 
         try:
@@ -199,7 +199,7 @@ class FileManagementService:
             logger.error(f"获取存储统计失败: {str(e)}")
             return {"error": str(e), "total_size_mb": 0, "total_files": 0}
 
-    async def _directory_statistics(self, directory: Path) -> dict[str, Any]:
+    async def _directory_statistics(self, directory: Path) -> Dict[str, Any]:
         """获取目录统计信息"""
         if not directory.exists():
             return {
@@ -249,7 +249,7 @@ class FileManagementService:
 
     async def archive_session_file(
         self, session_id: str, db: Session
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """归档会话文件到永久存储"""
 
         try:
@@ -300,7 +300,7 @@ class FileManagementService:
             logger.error(f"文件归档失败: {session_id}, 错误: {str(e)}")
             return {"success": False, "error": str(e)}
 
-    async def delete_session_file(self, session_id: str, db: Session) -> dict[str, Any]:
+    async def delete_session_file(self, session_id: str, db: Session) -> Dict[str, Any]:
         """删除会话文件"""
 
         try:
@@ -367,7 +367,7 @@ class FileManagementService:
             # 等待下次执行
             await asyncio.sleep(interval_hours * 3600)
 
-    def validate_file(self, file_content: bytes, filename: str) -> dict[str, Any]:
+    def validate_file(self, file_content: bytes, filename: str) -> Dict[str, Any]:
         """验证文件"""
 
         validation_result = {

@@ -68,7 +68,7 @@ class APIConsistencyChecker:
         print(f"✅ 检查完成，发现 {len(self.inconsistencies)} 个问题")
         return report
 
-    def _scan_frontend_apis(self):
+    def _scan_frontend_apis(self) -> None:
         """扫描前端API调用"""
         # 扫描TypeScript/JavaScript文件中的API调用
         for file_path in self.frontend_dir.rglob("*.ts"):
@@ -81,7 +81,7 @@ class APIConsistencyChecker:
                 continue
             self._parse_frontend_file(file_path)
 
-    def _parse_frontend_file(self, file_path: Path):
+    def _parse_frontend_file(self, file_path: Path) -> None:
         """解析前端文件中的API调用"""
         try:
             content = file_path.read_text(encoding="utf-8")
@@ -134,7 +134,7 @@ class APIConsistencyChecker:
 
         return "GET"  # 默认
 
-    def _scan_backend_apis(self):
+    def _scan_backend_apis(self) -> None:
         """扫描后端API定义"""
         # 扫描Python文件中的FastAPI路由定义
         for file_path in self.backend_dir.rglob("*.py"):
@@ -142,7 +142,7 @@ class APIConsistencyChecker:
                 continue
             self._parse_backend_file(file_path)
 
-    def _parse_backend_file(self, file_path: Path):
+    def _parse_backend_file(self, file_path: Path) -> None:
         """解析后端文件中的API定义"""
         try:
             content = file_path.read_text(encoding="utf-8")
@@ -192,7 +192,7 @@ class APIConsistencyChecker:
             "tags": [],
         }
 
-    def _check_inconsistencies(self):
+    def _check_inconsistencies(self) -> None:
         """检查不一致性"""
         # 1. 检查缺失的后端端点
         for key, frontend_api in self.frontend_apis.items():
@@ -228,7 +228,7 @@ class APIConsistencyChecker:
         # 4. 检查命名约定不一致
         self._check_naming_conventions()
 
-    def _check_path_format_inconsistencies(self):
+    def _check_path_format_inconsistencies(self) -> None:
         """检查路径格式不一致"""
         # 检查API版本前缀一致性
         for api in self.frontend_apis.values():
@@ -244,7 +244,7 @@ class APIConsistencyChecker:
                     )
                 )
 
-    def _check_naming_conventions(self):
+    def _check_naming_conventions(self) -> None:
         """检查命名约定不一致"""
         # 检查复数形式一致性
         resource_patterns = {
@@ -279,7 +279,7 @@ class APIConsistencyChecker:
         low_issues = [i for i in self.inconsistencies if i.severity == "low"]
 
         # 按类型分类
-        type_counts = {}
+        type_counts: dict[str, int] = {}
         for issue in self.inconsistencies:
             type_counts[issue.type] = type_counts.get(issue.type, 0) + 1
 
@@ -338,7 +338,7 @@ class APIConsistencyChecker:
 
         return recommendations
 
-    def save_report(self, output_dir: str = "reports"):
+    def save_report(self, output_dir: str = "reports") -> None:
         """保存检查报告"""
         os.makedirs(output_dir, exist_ok=True)
 
@@ -353,9 +353,8 @@ class APIConsistencyChecker:
         self._generate_markdown_report(report, output_dir)
 
         print(f"📄 报告已保存到: {json_path}")
-        return report
 
-    def _generate_markdown_report(self, report: dict[str, Any], output_dir: str):
+    def _generate_markdown_report(self, report: dict[str, Any], output_dir: str) -> None:
         """生成Markdown格式报告"""
         md_content = f"""# API一致性检查报告
 
@@ -418,8 +417,9 @@ def check_api_consistency(
         检查报告字典
     """
     checker = APIConsistencyChecker(frontend_dir, backend_dir)
-    checker.check_consistency()
-    return checker.save_report(output_dir)
+    report = checker.check_consistency()
+    checker.save_report(output_dir)
+    return report
 
 
 if __name__ == "__main__":

@@ -313,7 +313,7 @@ class AssetDataProcessor:
             raise ExcelImportError(f"数据清洗失败: {str(e)}")
 
     @staticmethod
-    def validate_data(df: pd.DataFrame) -> list[str]:
+    def validate_data(df: pd.DataFrame) -> List[str]:
         """数据验证"""
         errors = []
 
@@ -363,7 +363,7 @@ class AssetDataProcessor:
         return errors
 
     @staticmethod
-    def convert_to_asset_models(df: pd.DataFrame) -> list[AssetCreate]:
+    def convert_to_asset_models(df: pd.DataFrame) -> List[AssetCreate]:
         """将DataFrame转换为AssetCreate模型列表"""
         assets = []
 
@@ -449,7 +449,7 @@ class ExcelImportService:
 
     async def import_assets_from_excel(
         self, file_path: str, sheet_name: str = STANDARD_SHEET_NAME, db: Session = None
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """从Excel导入资产数据"""
         try:
             # 读取Excel文件

@@ -135,7 +135,7 @@ class ExportOptimizer:
         columns: list[str] | None = None,
         filters: dict[str, Any] | None = None,
         progress_callback: callable | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> List[dict[str, Any]]:
         """
         优化的JSON导出功能
 

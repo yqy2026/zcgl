@@ -59,7 +59,7 @@ class DynamicPermissionService:
         conditions: dict[str, Any] | None = None,
         assigned_by: str | None = None,
         reason: str | None = None,
-    ) -> list[DynamicPermission]:
+    ) -> List[DynamicPermission]:
         """
         分配动态权限
 
@@ -161,7 +161,7 @@ class DynamicPermissionService:
         scope_id: str | None = None,
         assigned_by: str | None = None,
         reason: str | None = None,
-    ) -> list[TemporaryPermission]:
+    ) -> List[TemporaryPermission]:
         """
         分配临时权限
 
@@ -433,7 +433,7 @@ class DynamicPermissionService:
         expires_at: datetime | None = None,
         assigned_by: str | None = None,
         reason: str | None = None,
-    ) -> list[DynamicPermission]:
+    ) -> List[DynamicPermission]:
         """
         从模板分配权限
 
@@ -478,7 +478,7 @@ class DynamicPermissionService:
         include_expired: bool = False,
         scope: AssignmentScope | None = None,
         scope_id: str | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> List[dict[str, Any]]:
         """
         获取用户的动态权限
 
@@ -837,7 +837,7 @@ class DynamicPermissionService:
         end_date: datetime | None = None,
         page: int = 1,
         limit: int = 50,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """
         获取权限审计日志
 

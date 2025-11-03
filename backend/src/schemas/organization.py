@@ -3,6 +3,7 @@
 """
 
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -174,8 +175,8 @@ class OrganizationStatistics(BaseModel):
     total: int = Field(..., description="总数")
     active: int = Field(..., description="活跃数量")
     inactive: int = Field(..., description="非活跃数量")
-    by_type: dict = Field(..., description="按类型统计")
-    by_level: dict = Field(..., description="按层级统计")
+    by_type: dict[str, Any] = Field(..., description="按类型统计")
+    by_level: dict[str, Any] = Field(..., description="按层级统计")
 
 
 class OrganizationMoveRequest(BaseModel):

@@ -291,7 +291,7 @@ class CacheManager:
 
     def get_multi(
         self, keys: list[str], namespace: str | None = None
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """
         批量获取缓存值
 
@@ -346,7 +346,7 @@ class CacheManager:
                 count += 1
         return count
 
-    def get_stats(self) -> dict[str, Any]:
+    def get_stats(self) -> Dict[str, Any]:
         """
         获取缓存统计信息
 

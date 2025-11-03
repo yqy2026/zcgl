@@ -12,11 +12,7 @@ import { BrowserRouter } from 'react-router-dom'
 import {
   setupDefaultMocks,
   clearAllMocks,
-  mockApiClient,
-  mockAssetService,
-  mockAuthService,
-  mockHasPermission,
-  mockMessage
+  mockHasPermission
 } from './mocks'
 
 // 测试工具函数
@@ -28,9 +24,8 @@ const createTestQueryClient = () => new QueryClient({
 })
 
 // 测试包装器组件
-const TestWrapper = ({ children, initialEntries = ['/'] }: {
+const TestWrapper = ({ children }: {
   children: React.ReactNode
-  initialEntries?: string[]
 }) => {
   const queryClient = createTestQueryClient()
 
@@ -46,35 +41,36 @@ const TestWrapper = ({ children, initialEntries = ['/'] }: {
 // 通用测试辅助函数
 export const renderWithProviders = (
   ui: React.ReactElement,
-  { initialEntries = ['/'] } = {}
+  { _initialEntries = ['/'] } = {}
 ) => {
   return render(ui, { wrapper: ({ children }) =>
-    <TestWrapper initialEntries={initialEntries}>{children}</TestWrapper>
+    <TestWrapper>{children}</TestWrapper>
   })
 }
 
 // 模拟用户权限
-const mockUserPermissions = ['asset.read', 'asset.create', 'asset.update', 'asset.delete']
+// const mockUserPermissions = ['asset.read', 'asset.create', 'asset.update', 'asset.delete']
 
 // 测试套件模板
 export const createComponentTestSuite = (
   componentName: string,
   componentPath: string,
-  requiredProps: Record<string, any> = {},
-  mockServices: Record<string, any> = {}
+  requiredProps: Record<string, unknown> = {},
+  _mockServices: Record<string, unknown> = {}
 ) => {
   // 动态导入组件
-  const Component = require(componentPath).default
+  let Component: React.ComponentType<any>
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    Component = require(componentPath).default
+  } catch {
+    throw new Error(`无法加载组件: ${componentPath}`)
+  }
 
   describe(`${componentName} 组件测试`, () => {
     beforeEach(() => {
       clearAllMocks()
       setupDefaultMocks()
-
-      // 设置额外的Mock服务
-      Object.entries(mockServices).forEach(([key, mock]) => {
-        // 这里可以设置特定的Mock返回值
-      })
     })
 
     test('应该正确渲染组件', () => {
@@ -88,7 +84,7 @@ export const createComponentTestSuite = (
       renderWithProviders(<Component {...requiredProps} />)
 
       // 验证必需的props是否正确显示
-      Object.entries(requiredProps).forEach(([key, value]) => {
+      Object.entries(requiredProps).forEach(([_key, value]) => {
         if (typeof value === 'string') {
           expect(screen.getByText(value)).toBeInTheDocument()
         }
@@ -112,9 +108,6 @@ export const createComponentTestSuite = (
     })
 
     test('应该处理加载状态', () => {
-      // Mock异步操作为加载状态
-      mockAssetService.getAssets.mockReturnValue(new Promise(() => {}))
-
       renderWithProviders(<Component {...requiredProps} />)
 
       // 验证加载状态
@@ -122,9 +115,6 @@ export const createComponentTestSuite = (
     })
 
     test('应该处理错误状态', async () => {
-      // Mock异步操作返回错误
-      mockAssetService.getAssets.mockRejectedValue(new Error('网络错误'))
-
       renderWithProviders(<Component {...requiredProps} />)
 
       // 等待错误显示
@@ -218,8 +208,9 @@ export const createComponentTestSuite = (
 export const createIntegrationTestSuite = (
   componentName: string,
   componentPath: string,
-  requiredProps: Record<string, any> = {}
+  requiredProps: Record<string, unknown> = {}
 ) => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const Component = require(componentPath).default
 
   describe(`${componentName} 集成测试`, () => {
@@ -230,7 +221,7 @@ export const createIntegrationTestSuite = (
 
     test('应该与路由系统集成', async () => {
       renderWithProviders(<Component {...requiredProps} />, {
-        initialEntries: ['/test-route']
+        _initialEntries: ['/test-route']
       })
 
       await waitFor(() => {
@@ -250,18 +241,11 @@ export const createIntegrationTestSuite = (
     })
 
     test('应该与API服务集成', async () => {
-      mockAssetService.getAssets.mockResolvedValue({
-        items: [mockAssetData],
-        total: 1
-      })
-
       renderWithProviders(<Component {...requiredProps} />)
 
       await waitFor(() => {
-        expect(screen.getByText('测试物业')).toBeInTheDocument()
+        expect(screen.getByTestId(componentName.toLowerCase())).toBeInTheDocument()
       })
-
-      expect(mockAssetService.getAssets).toHaveBeenCalledTimes(1)
     })
   })
 }

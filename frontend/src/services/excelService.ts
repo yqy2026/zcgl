@@ -25,7 +25,11 @@ export class ExcelService {
 
   // 下载导出的文件
   async downloadExportFile(filename: string): Promise<void> {
-    await apiClient.download(`/excel/download/${filename}`, filename)
+  try {
+      await apiClient.download(`/excel/download/${filename}`, filename)
+  } catch (error) {
+    console.error('操作失败:', error)
+    throw new Error(error instanceof Error ? error.message : '操作失败')
   }
 
   // 获取导入模板

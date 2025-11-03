@@ -12,7 +12,6 @@ from sqlalchemy.orm import Session
 from ...crud.task import excel_task_config_crud, task_crud
 from ...database import get_db
 from ...enums.task import TaskStatus
-from ...exceptions import BusinessLogicError
 from ...models.task import AsyncTask
 from ...schemas.task import (
     ExcelTaskConfigCreate,

@@ -4,6 +4,7 @@
 
 import base64
 import os
+from typing import Any
 
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
@@ -61,7 +62,7 @@ class DataEncryptionService:
         except Exception as e:
             raise ValueError(f"数据解密失败: {e}")
 
-    def encrypt_sensitive_fields(self, data: dict, sensitive_fields: list) -> dict:
+    def encrypt_sensitive_fields(self) -> dict[str, Any]:
         """加密敏感字段"""
         encrypted_data = data.copy()
         for field in sensitive_fields:
@@ -74,7 +75,7 @@ class DataEncryptionService:
                     print(f"加密字段 {field} 失败: {e}")
         return encrypted_data
 
-    def decrypt_sensitive_fields(self, data: dict, sensitive_fields: list) -> dict:
+    def decrypt_sensitive_fields(self) -> dict[str, Any]:
         """解密敏感字段"""
         decrypted_data = data.copy()
         for field in sensitive_fields:

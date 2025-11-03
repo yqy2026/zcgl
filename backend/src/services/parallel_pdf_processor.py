@@ -352,7 +352,7 @@ class ParallelPDFProcessor:
         file_paths: list[str],
         processing_options: dict[str, Any] = None,
         max_concurrent: int | None = None,
-    ) -> list[ProcessingTask]:
+    ) -> List[ProcessingTask]:
         """批量处理文件"""
         processing_options = processing_options or {}
         max_concurrent = max_concurrent or min(len(file_paths), self.max_workers)
@@ -387,7 +387,7 @@ class ParallelPDFProcessor:
 
         return None
 
-    def get_queue_status(self) -> dict[str, Any]:
+    def get_queue_status(self) -> Dict[str, Any]:
         """获取队列状态"""
         return {
             "queue_size": self.task_queue.qsize(),
@@ -396,7 +396,7 @@ class ParallelPDFProcessor:
             "max_workers": self.max_workers,
         }
 
-    def get_cache_stats(self) -> dict[str, Any]:
+    def get_cache_stats(self) -> Dict[str, Any]:
         """获取缓存统计"""
         with self._cache_lock:
             total_entries = len(self.memory_cache)
@@ -419,7 +419,7 @@ class ParallelPDFProcessor:
                 else None,
             }
 
-    def get_performance_stats(self) -> dict[str, Any]:
+    def get_performance_stats(self) -> Dict[str, Any]:
         """获取性能统计"""
         return {
             **self.stats,
@@ -530,7 +530,7 @@ async def process_pdf_parallel(
 
 async def process_batch_parallel(
     file_paths: list[str], processing_options: dict[str, Any] = None
-) -> list[ProcessingTask]:
+) -> List[ProcessingTask]:
     """并行批量处理PDF文件"""
     processor = get_parallel_processor()
     return await processor.process_batch(file_paths, processing_options)
@@ -542,7 +542,7 @@ def clear_pdf_cache():
     processor.clear_cache()
 
 
-def get_processing_stats() -> dict[str, Any]:
+def get_processing_stats() -> Dict[str, Any]:
     """获取处理统计信息"""
     processor = get_parallel_processor()
     return processor.get_performance_stats()

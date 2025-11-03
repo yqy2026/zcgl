@@ -25,7 +25,7 @@ class AssetStatisticsAnalyzer:
     """资产数据统计分析器"""
 
     @staticmethod
-    def calculate_basic_statistics(assets: list[Asset]) -> dict[str, Any]:
+    def calculate_basic_statistics(assets: list[Asset]) -> Dict[str, Any]:
         """计算基础统计信息"""
         try:
             if not assets:
@@ -97,7 +97,7 @@ class StatisticsService:
         self.analyzer = AssetStatisticsAnalyzer()
         self.asset_crud = CRUDAsset(Asset)
 
-    def get_basic_statistics(self) -> dict[str, Any]:
+    def get_basic_statistics(self) -> Dict[str, Any]:
         """获取基础统计信息"""
         try:
             assets = self.asset_crud.get_multi(self.db, limit=10000)

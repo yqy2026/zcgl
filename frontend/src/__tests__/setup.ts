@@ -2,9 +2,6 @@ import '@testing-library/jest-dom'
 
 // 测试超时时间已在jest.config.js中统一设置
 
-// React Mocks - 确保React正确导入和初始化
-import React from 'react'
-
 // Mock import.meta for Jest compatibility
 Object.defineProperty(global, 'import', {
   value: {

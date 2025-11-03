@@ -292,7 +292,7 @@ class ErrorRecoveryEngine:
 
     async def _attempt_recovery(
         self, recovery_func: Callable, error_context: ErrorContext, *args, **kwargs
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """执行单次恢复尝试"""
 
         try:
@@ -323,7 +323,7 @@ class ErrorRecoveryEngine:
 
     async def _recover_validation_error(
         self, recovery_func: Callable, error_context: ErrorContext, *args, **kwargs
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """验证错误恢复"""
 
         logger.info("执行验证错误恢复")
@@ -350,7 +350,7 @@ class ErrorRecoveryEngine:
 
     async def _recover_authentication_error(
         self, recovery_func: Callable, error_context: ErrorContext, *args, **kwargs
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """认证错误恢复"""
 
         logger.info("执行认证错误恢复")
@@ -378,7 +378,7 @@ class ErrorRecoveryEngine:
 
     async def _recover_database_error(
         self, recovery_func: Callable, error_context: ErrorContext, *args, **kwargs
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """数据库错误恢复"""
 
         logger.info("执行数据库错误恢复")
@@ -414,7 +414,7 @@ class ErrorRecoveryEngine:
 
     async def _recover_file_system_error(
         self, recovery_func: Callable, error_context: ErrorContext, *args, **kwargs
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """文件系统错误恢复"""
 
         logger.info("执行文件系统错误恢复")
@@ -534,7 +534,7 @@ class ErrorRecoveryEngine:
         self.metrics_collector.record_recovery_failure(error_context.category.value)
 
     # 辅助方法（这些方法需要根据实际项目实现）
-    async def _auto_correct_data(self, data: dict[str, Any]) -> dict[str, Any]:
+    async def _auto_correct_data(self, data: dict[str, Any]) -> Dict[str, Any]:
         """自动纠正数据"""
         # 这里实现数据自动纠正逻辑
         return data
@@ -554,7 +554,7 @@ class ErrorRecoveryEngine:
         # 这里实现备用数据库连接逻辑
         return "backup_connection"
 
-    def get_recovery_statistics(self) -> dict[str, Any]:
+    def get_recovery_statistics(self) -> Dict[str, Any]:
         """获取恢复统计信息"""
         if not self.recovery_history:
             return {
@@ -578,7 +578,7 @@ class ErrorRecoveryEngine:
             "by_category": self._get_category_statistics(),
         }
 
-    def _get_category_statistics(self) -> dict[str, dict[str, Any]]:
+    def _get_category_statistics(self) -> Dict[str, Dict[str, Any]]:
         """获取按类别分组的统计信息"""
         stats = {}
 
@@ -632,7 +632,7 @@ class MetricsCollector:
             self.metrics["failure_count"].get(category, 0) + 1
         )
 
-    def get_metrics(self) -> dict[str, Any]:
+    def get_metrics(self) -> Dict[str, Any]:
         """获取指标"""
         return self.metrics.copy()
 

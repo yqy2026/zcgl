@@ -148,7 +148,7 @@ class SystemMonitor:
         if status_code >= 400:
             self.error_counts[f"{method} {endpoint}"] += 1
 
-    def get_system_status(self) -> dict[str, Any]:
+    def get_system_status(self) -> Dict[str, Any]:
         """获取系统状态摘要"""
         if not self.system_metrics_history:
             return {
@@ -194,7 +194,7 @@ class SystemMonitor:
             "timestamp": latest.timestamp.isoformat(),
         }
 
-    def get_performance_summary(self, hours: int = 1) -> dict[str, Any]:
+    def get_performance_summary(self, hours: int = 1) -> Dict[str, Any]:
         """获取性能摘要"""
         cutoff_time = datetime.now() - timedelta(hours=hours)
 
@@ -250,7 +250,7 @@ class SystemMonitor:
             ),
         }
 
-    def get_database_stats(self, db: Session) -> dict[str, Any]:
+    def get_database_stats(self, db: Session) -> Dict[str, Any]:
         """获取数据库统计信息"""
         try:
             # 获取表统计信息
@@ -284,7 +284,7 @@ class SystemMonitor:
             logger.error(f"Error getting database stats: {e}")
             return {"error": str(e)}
 
-    def get_health_check(self, db: Session) -> dict[str, Any]:
+    def get_health_check(self, db: Session) -> Dict[str, Any]:
         """健康检查"""
         health_status = {
             "overall": "healthy",

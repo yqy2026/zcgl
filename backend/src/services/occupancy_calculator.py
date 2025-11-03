@@ -47,7 +47,7 @@ class OccupancyRateCalculator:
         return round(occupancy_rate, 2)
 
     @staticmethod
-    def calculate_overall_occupancy_rate(assets: list[Asset]) -> dict[str, Any]:
+    def calculate_overall_occupancy_rate(assets: list[Asset]) -> Dict[str, Any]:
         """
         计算整体出租率
 
@@ -145,7 +145,7 @@ class OccupancyRateCalculator:
     @staticmethod
     def calculate_occupancy_by_category(
         assets: list[Asset], category_field: str
-    ) -> dict[str, dict[str, Any]]:
+    ) -> Dict[str, Dict[str, Any]]:
         """
         按分类计算出租率
 

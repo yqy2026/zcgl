@@ -45,7 +45,7 @@ jobs:
         python-version: ${{ env.PYTHON_VERSION }}
 
     - name: Cache Python dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/.cache/uv
         key: ${{ runner.os }}-uv-${{ hashFiles('backend/pyproject.toml') }}
@@ -146,6 +146,7 @@ jobs:
       with:
         name: test-coverage
         path: frontend/coverage/
+        retention-days: 30
 
   # Integration Tests
   integration-tests:
@@ -266,6 +267,7 @@ jobs:
       with:
         name: frontend-build
         path: frontend/dist/
+        retention-days: 7
 
   # Summary Report
   summary:

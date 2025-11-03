@@ -1,5 +1,7 @@
 """API v1版本路由"""
 
+from typing import Any, Dict, List
+
 from fastapi import APIRouter
 
 # 导入各个模块的路由

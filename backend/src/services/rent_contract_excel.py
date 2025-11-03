@@ -102,7 +102,7 @@ class RentContractExcelService:
         include_ledger: bool = True,
         start_date: date | None = None,
         end_date: date | None = None,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """导出租金合同数据到Excel文件"""
         try:
             # 获取合同数据
@@ -177,7 +177,7 @@ class RentContractExcelService:
         import_terms: bool = True,
         import_ledger: bool = False,
         overwrite_existing: bool = False,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """从Excel文件导入租金合同数据"""
         try:
             if not os.path.exists(file_path):
@@ -225,7 +225,7 @@ class RentContractExcelService:
                 "errors": [str(e)],
             }
 
-    def download_contract_template(self) -> dict[str, Any]:
+    def download_contract_template(self) -> Dict[str, Any]:
         """下载合同导入模板"""
         try:
             # 创建模板文件
@@ -271,7 +271,7 @@ class RentContractExcelService:
         contract_ids: list[str] | None = None,
         start_date: date | None = None,
         end_date: date | None = None,
-    ) -> list[RentContract]:
+    ) -> List[RentContract]:
         """获取要导出的合同数据 - 优化版本使用join预加载关联数据"""
         try:
             # 使用join预加载关联数据，避免N+1查询
@@ -528,7 +528,7 @@ class RentContractExcelService:
 
     def _import_contracts_sheet(
         self, ws: Worksheet, overwrite_existing: bool
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """导入合同信息工作表"""
         result = {"imported_contracts": 0, "errors": [], "warnings": []}
 
@@ -632,7 +632,7 @@ class RentContractExcelService:
             result["errors"].append(f"导入合同信息失败: {str(e)}")
             return result
 
-    def _import_terms_sheet(self, ws: Worksheet) -> dict[str, Any]:
+    def _import_terms_sheet(self, ws: Worksheet) -> Dict[str, Any]:
         """导入租金条款工作表"""
         result = {"imported_terms": 0, "errors": [], "warnings": []}
 
@@ -702,7 +702,7 @@ class RentContractExcelService:
             result["errors"].append(f"导入租金条款失败: {str(e)}")
             return result
 
-    def _import_ledger_sheet(self, ws: Worksheet) -> dict[str, Any]:
+    def _import_ledger_sheet(self, ws: Worksheet) -> Dict[str, Any]:
         """导入台账工作表"""
         result = {"imported_ledgers": 0, "errors": [], "warnings": []}
 

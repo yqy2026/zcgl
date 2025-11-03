@@ -37,7 +37,7 @@ class PDFImportService:
         session_id: str,
         user_id: int | None = None,
         organization_id: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """异步处理PDF文件的完整流程"""
 
         try:
@@ -526,7 +526,7 @@ class PDFImportService:
         session_id: str,
         confirmed_data: dict[str, Any],
         user_id: int | None = None,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """确认导入数据到数据库"""
 
         try:
@@ -661,7 +661,7 @@ class PDFImportService:
 
         return None
 
-    async def get_session_status(self, db: Session, session_id: str) -> dict[str, Any]:
+    async def get_session_status(self, db: Session, session_id: str) -> Dict[str, Any]:
         """获取会话状态"""
 
         session = await pdf_session_service.get_session(db, session_id)
@@ -691,7 +691,7 @@ class PDFImportService:
 
     async def cancel_processing(
         self, db: Session, session_id: str, reason: str = "用户取消"
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """取消PDF处理"""
 
         success = await pdf_session_service.cancel_session(db, session_id, reason)

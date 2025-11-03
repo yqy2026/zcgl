@@ -39,7 +39,7 @@ class CRUDSystemDictionary(
         filters: dict[str, Any] = None,
         skip: int = 0,
         limit: int = 100,
-    ) -> list[SystemDictionary]:
+    ) -> List[SystemDictionary]:
         """根据筛选条件获取字典列表"""
         query = db.query(self.model)
 
@@ -58,7 +58,7 @@ class CRUDSystemDictionary(
 
     def get_by_type(
         self, db: Session, *, dict_type: str, is_active: bool = True
-    ) -> list[SystemDictionary]:
+    ) -> List[SystemDictionary]:
         """根据类型获取字典列表"""
         query = db.query(SystemDictionary).filter(
             SystemDictionary.dict_type == dict_type
@@ -71,20 +71,20 @@ class CRUDSystemDictionary(
             SystemDictionary.sort_order, SystemDictionary.created_at
         ).all()
 
-    def get_types(self, db: Session) -> list[str]:
+    def get_types(self, db: Session) -> List[str]:
         """获取所有字典类型"""
         result = db.query(SystemDictionary.dict_type).distinct().all()
         return [row[0] for row in result if row[0]]
 
     def get_active_by_type(
         self, db: Session, *, dict_type: str
-    ) -> list[SystemDictionary]:
+    ) -> List[SystemDictionary]:
         """获取指定类型的启用字典项"""
         return self.get_by_type(db=db, dict_type=dict_type, is_active=True)
 
     def update_sort_orders(
         self, db: Session, *, dict_type: str, sort_data: list[dict[str, Any]]
-    ) -> list[SystemDictionary]:
+    ) -> List[SystemDictionary]:
         """批量更新排序"""
         updated_items = []
 

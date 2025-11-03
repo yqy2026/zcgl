@@ -54,7 +54,7 @@ class ScannedPDFProcessor:
         self.fallback_methods = self._check_fallback_methods()
         logger.info(f"可用备用方法: {len(self.fallback_methods)}个")
 
-    def _check_fallback_methods(self) -> list[str]:
+    def _check_fallback_methods(self) -> List[str]:
         """检查可用的备用处理方法"""
         available = []
 
@@ -328,7 +328,7 @@ class ScannedPDFProcessor:
 
     async def process_scanned_pdf(
         self, pdf_path: str, max_pages: int = 5
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """处理扫描件PDF的主入口"""
         logger.info(f"开始处理扫描件PDF: {pdf_path}")
 
@@ -366,7 +366,7 @@ class ScannedPDFProcessor:
         logger.info(f"扫描件PDF处理完成: {len(result.text_extracted)}字符")
         return processing_result
 
-    def _generate_recommendations(self, result: ScanProcessingResult) -> list[str]:
+    def _generate_recommendations(self, result: ScanProcessingResult) -> List[str]:
         """生成处理建议"""
         recommendations = []
 

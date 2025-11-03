@@ -63,7 +63,7 @@ class APIResponse:
     error: dict[str, Any] | None = None
     message: str | None = None
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
         from datetime import datetime
 

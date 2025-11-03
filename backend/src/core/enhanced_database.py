@@ -5,18 +5,19 @@
 """
 
 import logging
-import time
 import threading
+import time
+from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Generator
-from queue import Queue, Empty
+from queue import Empty, Queue
+from typing import Any
 
 from sqlalchemy import create_engine, event, text
-from sqlalchemy.engine import Engine, make_url
+from sqlalchemy.engine import Engine
 from sqlalchemy.engine.interfaces import DBAPIConnection
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import QueuePool, StaticPool
 
 from .config_manager import get_config
@@ -34,7 +35,7 @@ class DatabaseMetrics:
     avg_response_time: float = 0.0
     total_response_time: float = 0.0
     connection_errors: int = 0
-    last_activity: Optional[datetime] = None
+    last_activity: datetime | None = None
     pool_hits: int = 0
     pool_misses: int = 0
 
@@ -49,15 +50,15 @@ class ConnectionPoolConfig:
     pool_recycle: int = 3600
     pool_pre_ping: bool = True
     echo: bool = False
-    connect_args: Dict[str, Any] = field(default_factory=dict)
+    connect_args: dict[str, Any] = field(default_factory=dict)
 
 
 class EnhancedDatabaseManager:
     """增强的数据库管理器"""
 
     def __init__(self):
-        self.engine: Optional[Engine] = None
-        self.session_factory: Optional[sessionmaker] = None
+        self.engine: Engine | None = None
+        self.session_factory: sessionmaker | None = None
         self.config: ConnectionPoolConfig = self._load_config()
         self.metrics: DatabaseMetrics = DatabaseMetrics()
         self.query_history: Queue = Queue(maxsize=1000)
@@ -272,7 +273,7 @@ class EnhancedDatabaseManager:
         with self._metrics_lock:
             return DatabaseMetrics(**self.metrics.__dict__)
 
-    def get_slow_queries(self, limit: int = 50) -> List[Dict[str, Any]]:
+    def get_slow_queries(self, limit: int = 50) -> list[dict[str, Any]]:
         """获取慢查询列表"""
         slow_queries = []
 
@@ -294,7 +295,7 @@ class EnhancedDatabaseManager:
         slow_queries.sort(key=lambda x: x["execution_time_ms"], reverse=True)
         return slow_queries[:limit]
 
-    def get_connection_pool_status(self) -> Dict[str, Any]:
+    def get_connection_pool_status(self) -> dict[str, Any]:
         """获取连接池状态"""
         if not self.engine or not self.engine.pool:
             return {"status": "未初始化"}
@@ -347,7 +348,7 @@ class EnhancedDatabaseManager:
 
         return status
 
-    def run_health_check(self) -> Dict[str, Any]:
+    def run_health_check(self) -> dict[str, Any]:
         """运行数据库健康检查"""
         health_status = {
             "healthy": True,
@@ -465,7 +466,7 @@ class EnhancedDatabaseManager:
 
         return cleaned_count
 
-    def optimize_database(self) -> Dict[str, Any]:
+    def optimize_database(self) -> dict[str, Any]:
         """优化数据库性能"""
         optimization_results = {
             "timestamp": datetime.now().isoformat(),

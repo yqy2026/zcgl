@@ -15,7 +15,11 @@ from .core.config_manager import get_config, initialize_config
 from .core.error_handler import create_error_handlers
 from .core.exception_handler import setup_exception_handlers
 from .core.logging_security import setup_logging_security
-from .database import create_tables
+from .database import (
+    create_tables,
+    get_database_status,
+    initialize_enhanced_database_if_available,
+)
 from .middleware.error_recovery_middleware import ErrorRecoveryMiddleware
 from .middleware.request_logging import create_request_logging_middleware
 from .middleware.security_middleware import setup_security_middleware
@@ -64,20 +68,50 @@ create_error_handlers(app)
 # 健康检查端点（必须在路由注册之前定义）
 @app.get("/api/v1/health", tags=["健康检查"])
 async def health_check():
-    """健康检查端点"""
+    """健康检查端点 - 包含数据库状态"""
     try:
-        return {
+        # 获取数据库状态
+        db_status = get_database_status()
+
+        health_response = {
             "status": "healthy",
             "timestamp": datetime.now(UTC).isoformat(),
             "version": "2.0.0",
             "service": "土地物业资产管理系统",
+            "database": {
+                "enhanced_active": db_status.get("enhanced_active", False),
+                "enhanced_available": db_status.get("enhanced_available", False),
+                "engine_type": db_status.get("engine_type", "Unknown")
+            }
         }
+
+        # 如果增强数据库激活，添加更多指标
+        if db_status.get("enhanced_active"):
+            try:
+                pool_status = db_status.get("pool_status", {})
+                metrics = db_status.get("enhanced_metrics", {})
+
+                health_response["database"].update({
+                    "connection_pool_utilization": pool_status.get("utilization", 0),
+                    "active_connections": metrics.get("active_connections", 0),
+                    "total_queries": metrics.get("total_queries", 0),
+                    "slow_queries": metrics.get("slow_queries", 0),
+                    "avg_response_time_ms": round(metrics.get("avg_response_time", 0), 2),
+                    "pool_hit_rate": pool_status.get("pool_hit_rate", 0)
+                })
+            except Exception as db_e:
+                logger.warning(f"Failed to get detailed database metrics: {db_e}")
+                health_response["database"]["metrics_error"] = str(db_e)
+
+        return health_response
+
     except Exception as e:
         logger.error(f"健康检查失败: {e}")
         return {
             "status": "unhealthy",
             "timestamp": datetime.now(UTC).isoformat(),
             "error": str(e),
+            "database": {"status": "unknown"}
         }
 
 
@@ -135,6 +169,19 @@ app.include_router(pdf_import_router, prefix="/api/v1/pdf-import", tags=["PDF智
 # 设置日志安全
 setup_logging_security()
 
+# 初始化增强数据库管理器（如果可用）
+initialize_enhanced_database_if_available()
+
 # 创建数据库表
 create_tables()
+
+# 记录数据库状态
+db_status = get_database_status()
+logger.info(f"数据库状态: {db_status}")
+
+if db_status.get("enhanced_active"):
+    logger.info("增强数据库管理器已激活 - 性能监控和连接池优化已启用")
+else:
+    logger.info("使用基础数据库配置")
+
 logger.info("FastAPI应用启动完成")

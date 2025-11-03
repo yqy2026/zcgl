@@ -29,8 +29,8 @@ class CacheManager:
 
     def __init__(self):
         self.redis_client: redis.Redis | None = None
-        self.memory_cache: dict = {}
-        self.memory_cache_expiry: dict = {}
+        self.memory_cache: Dict[str, Any] = {}
+        self.memory_cache_expiry: Dict[str, Any] = {}
         self.use_memory_fallback = True
 
     async def initialize(self):

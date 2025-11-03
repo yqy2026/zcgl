@@ -11,7 +11,6 @@ from sqlalchemy.orm import Session
 
 from ...crud.auth import AuditLogCRUD, UserCRUD, UserSessionCRUD
 from ...database import get_db
-from ...exceptions import BusinessLogicError
 from ...middleware.auth import SecurityConfig, get_current_active_user, require_admin
 from ...models.auth import User, UserSession
 from ...schemas.auth import (

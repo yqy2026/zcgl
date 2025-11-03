@@ -183,7 +183,7 @@ class PermissionDelegationService:
         scope: DelegationScope | None = None,
         scope_id: str | None = None,
         include_expired: bool = False,
-    ) -> list[dict[str, Any]]:
+    ) -> List[dict[str, Any]]:
         """
         获取用户被委托的权限
 
@@ -260,7 +260,7 @@ class PermissionDelegationService:
 
     def get_user_delegated_permissions_to_others(
         self, user_id: str, include_expired: bool = False
-    ) -> list[dict[str, Any]]:
+    ) -> List[dict[str, Any]]:
         """
         获取用户委托给他人的权限
 
@@ -317,7 +317,7 @@ class PermissionDelegationService:
 
     def get_inherited_permissions(
         self, user_id: str, organization_id: str, include_indirect: bool = True
-    ) -> list[dict[str, Any]]:
+    ) -> List[dict[str, Any]]:
         """
         获取从组织层级继承的权限
 
@@ -405,7 +405,7 @@ class PermissionDelegationService:
         user_id: str,
         scope: DelegationScope | None = None,
         scope_id: str | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> List[dict[str, Any]]:
         """
         获取用户的有效权限（包括直接权限、继承权限和委托权限）
 
@@ -476,7 +476,7 @@ class PermissionDelegationService:
 
         return list(unique_permissions.values())
 
-    def get_user_role_permissions(self, user_id: str) -> list[dict[str, Any]]:
+    def get_user_role_permissions(self, user_id: str) -> List[dict[str, Any]]:
         """
         获取用户基于角色的权限
 
@@ -666,7 +666,7 @@ class PermissionDelegationService:
 
     def get_delegation_chain(
         self, original_delegator_id: str, permission_id: str, max_depth: int = 5
-    ) -> list[dict[str, Any]]:
+    ) -> List[dict[str, Any]]:
         """
         获取权限委托链
 
@@ -735,7 +735,7 @@ class PermissionDelegationService:
         trace_delegation(original_delegator_id, 1)
         return chain
 
-    def analyze_permission_coverage(self, organization_id: str) -> dict[str, Any]:
+    def analyze_permission_coverage(self, organization_id: str) -> Dict[str, Any]:
         """
         分析权限覆盖情况
 

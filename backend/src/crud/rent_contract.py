@@ -237,7 +237,7 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
 class CRUDRentTerm(CRUDBase[RentTerm, RentTermCreate, RentTermUpdate]):
     """租金条款CRUD操作"""
 
-    def get_by_contract(self, db: Session, contract_id: str) -> list[RentTerm]:
+    def get_by_contract(self, db: Session, contract_id: str) -> List[RentTerm]:
         """获取合同的所有租金条款"""
         return (
             db.query(RentTerm)
@@ -314,7 +314,7 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
 
     def generate_monthly_ledger(
         self, db: Session, *, request: GenerateLedgerRequest
-    ) -> list[RentLedger]:
+    ) -> List[RentLedger]:
         """生成月度台账"""
         # 获取合同信息
         contract = (
@@ -396,7 +396,7 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
 
     def batch_update_payment(
         self, db: Session, *, request: RentLedgerBatchUpdate
-    ) -> list[RentLedger]:
+    ) -> List[RentLedger]:
         """批量更新支付状态"""
         ledgers = (
             db.query(RentLedger).filter(RentLedger.id.in_(request.ledger_ids)).all()
@@ -427,7 +427,7 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
 
     def get_statistics(
         self, db: Session, *, query_params: RentStatisticsQuery
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """获取统计信息"""
         # 构建基础查询
         base_query = db.query(RentLedger)
@@ -509,7 +509,7 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
             ],
         }
 
-    def _generate_month_range(self, start_month: str, end_month: str) -> list[str]:
+    def _generate_month_range(self, start_month: str, end_month: str) -> List[str]:
         """生成月份范围"""
         start_year, start_month_num = map(int, start_month.split("-"))
         end_year, end_month_num = map(int, end_month.split("-"))
@@ -549,7 +549,7 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         start_date: date | None = None,
         end_date: date | None = None,
         ownership_ids: list[str] | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> List[dict[str, Any]]:
         """按权属方统计租金情况"""
 
         # 构建基础查询
@@ -609,7 +609,7 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         start_date: date | None = None,
         end_date: date | None = None,
         asset_ids: list[str] | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> List[dict[str, Any]]:
         """按资产统计租金情况"""
         from ..models.asset import Asset
 
@@ -670,7 +670,7 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         year: int | None = None,
         start_month: str | None = None,
         end_month: str | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> List[dict[str, Any]]:
         """获取月度租金统计"""
         # 构建基础查询
         query = (

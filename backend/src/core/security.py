@@ -295,7 +295,7 @@ class FileValidator:
 
     def validate_upload(
         self, file: UploadFile, allowed_types: list[str] = None, max_size: int = None
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """
         执行完整的文件上传验证
 
@@ -489,7 +489,7 @@ class SecurityMiddleware:
 
     async def validate_file_upload(
         self, file: UploadFile, allowed_types: list[str] = None, max_size: int = None
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """
         验证文件上传
 
@@ -606,6 +606,6 @@ async def get_current_user(
 
 async def validate_file_upload_dependency(
     file: UploadFile, allowed_types: list[str] = None, max_size: int = None
-) -> dict[str, Any]:
+) -> Dict[str, Any]:
     """文件上传验证依赖"""
     return await security_middleware.validate_file_upload(file, allowed_types, max_size)
