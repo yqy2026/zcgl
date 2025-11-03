@@ -14,6 +14,7 @@ from .api.v1.pdf_import_unified import router as pdf_import_router
 from .core.config_manager import get_config, initialize_config
 from .core.exception_handler import setup_exception_handlers
 from .core.logging_security import setup_logging_security
+from .core.error_handler import create_error_handlers
 from .database import create_tables
 from .middleware.error_recovery_middleware import ErrorRecoveryMiddleware
 from .middleware.request_logging import create_request_logging_middleware
@@ -55,6 +56,9 @@ app.add_middleware(ErrorRecoveryMiddleware)
 
 # 设置统一异常处理器
 setup_exception_handlers(app)
+
+# 设置新的统一错误处理框架
+create_error_handlers(app)
 
 # 健康检查端点（必须在路由注册之前定义）
 @app.get("/api/v1/health", tags=["健康检查"])
