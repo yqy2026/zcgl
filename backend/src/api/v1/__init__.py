@@ -15,6 +15,7 @@ from .dictionaries import router as dictionaries_router
 from .enum_field import router as enum_field_router
 from .excel import router as excel_router
 from .history import router as history_router
+from .missing_apis import missing_apis_router
 from .monitoring import router as monitoring_router
 from .occupancy import router as occupancy_router
 from .organization import router as organization_router
@@ -78,6 +79,7 @@ api_router.include_router(monitoring_router, prefix="/monitoring", tags=["系统
 api_router.include_router(test_coverage_router, tags=["测试覆盖率监控"])
 api_router.include_router(test_performance_router, tags=["测试性能监控"])
 api_router.include_router(defect_tracking_router, prefix="/defects", tags=["缺陷跟踪"])
+api_router.include_router(missing_apis_router, tags=["缺失API补充"])
 
 # from .simple_pdf_import import router as pdf_import_router  # 已删除
 # api_router.include_router(
