@@ -536,7 +536,8 @@ async def get_asset_statistics(
 
         # 添加调试信息
         print(
-            f"[DEBUG] 开始执行资产统计查询，用户: {current_user.username if current_user else 'unknown'}"
+            f"[DEBUG] 开始执行资产统计查询，
+                    "用户: {current_user.username if current_user else 'unknown'}"
         )
 
         # 检查数据库连接是否正常
@@ -1187,7 +1188,8 @@ async def import_assets(
                         # 按物业名称和地址查找重复项
                         assets, _ = asset_crud.get_multi_with_search(
                             db=db,
-                            search=f"{asset_data.get('property_name', '')} {asset_data.get('address', '')}",
+                            search=f"{asset_data.get('property_name',
+                    '')} {asset_data.get('address', '')}",
                             limit=1,
                         )
                         if assets:

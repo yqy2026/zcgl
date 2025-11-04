@@ -78,7 +78,8 @@ class PerformanceMonitor:
                 except Exception as e:
                     execution_time = time.time() - start_time
                     logger.error(
-                        f"性能监控: {func_name} 执行失败，时间 {execution_time:.2f}s，错误: {str(e)}"
+                        f"性能监控: {func_name} 执行失败，时间 {execution_time:.2f}s，"
+                        f"错误: {str(e)}"
                     )
                     raise
 

@@ -394,7 +394,8 @@ class EnhancedDatabaseManager:
 
                 # 检查数据库大小
                 size_query = text(
-                    "SELECT page_count * page_size as size FROM pragma_page_count(), pragma_page_size()"
+                    "SELECT page_count * page_size as size FROM pragma_page_count(),
+                    pragma_page_size()"
                 )
                 try:
                     size_result = session.execute(size_query).fetchone()

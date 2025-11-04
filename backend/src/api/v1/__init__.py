@@ -71,7 +71,8 @@ api_router.include_router(project_router, prefix="/projects", tags=["项目管�
 api_router.include_router(
     rent_contract_router, prefix="/rental-contracts", tags=["租赁合同管理"]
 )
-# api_router.include_router(analytics_router, prefix="/analytics", tags=["综合分析"])  # 暂时禁用
+# api_router.include_router(analytics_router,
+                    prefix="/analytics", tags=["综合分析"])  # 暂时禁用
 api_router.include_router(system_settings_router, prefix="/system", tags=["系统设置"])
 api_router.include_router(monitoring_router, prefix="/monitoring", tags=["系统监控"])
 api_router.include_router(test_coverage_router, tags=["测试覆盖率监控"])
