@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 应用配置设置
 """
@@ -122,7 +124,7 @@ class RedisTaskStore:
             except Exception as e:
                 print(f"设置任务状态失败: {e}")
 
-    async def get_task_status(self, task_id: str) -> dict | None:
+    async def get_task_status(self, task_id: str) -> dict[str, Any] | None:
         """获取任务状态"""
         if redis_client:
             try:

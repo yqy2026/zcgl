@@ -1,5 +1,29 @@
 import '@testing-library/jest-dom'
 
+// 测试超时时间已在jest.config.js中统一设置
+
+// Mock import.meta for Jest compatibility
+Object.defineProperty(global, 'import', {
+  value: {
+    meta: {
+      env: {
+        VITE_API_BASE_URL: '/api/v1',
+        VITE_API_TIMEOUT: '30000',
+        NODE_ENV: 'test'
+      }
+    }
+  },
+  writable: true
+})
+
+// Mock process.env for Jest compatibility
+process.env = {
+  ...process.env,
+  VITE_API_BASE_URL: '/api/v1',
+  VITE_API_TIMEOUT: '30000',
+  NODE_ENV: 'test'
+}
+
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
@@ -28,3 +52,6 @@ global.IntersectionObserver = jest.fn().mockImplementation(() => ({
   unobserve: jest.fn(),
   disconnect: jest.fn(),
 }))
+
+// Mock fetch if needed
+global.fetch = jest.fn()

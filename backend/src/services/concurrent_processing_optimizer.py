@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 并发处理优化服务
 提供智能的并发处理控制和资源管理
@@ -13,7 +15,6 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -74,9 +75,7 @@ class ResourceMonitor:
                 "memory_percent": 40.0,  # 模拟值
                 "disk_io_percent": 10.0,  # 模拟值
                 "active_processes": 5,  # 模拟值
-                "uptime_seconds": (
-                    datetime.now(UTC) - self.start_time
-                ).total_seconds(),
+                "uptime_seconds": (datetime.now(UTC) - self.start_time).total_seconds(),
             }
 
         try:
@@ -103,9 +102,7 @@ class ResourceMonitor:
                 "memory_percent": memory_percent,
                 "disk_io_percent": disk_io,
                 "active_processes": process_count,
-                "uptime_seconds": (
-                    datetime.now(UTC) - self.start_time
-                ).total_seconds(),
+                "uptime_seconds": (datetime.now(UTC) - self.start_time).total_seconds(),
             }
 
         except Exception as e:
@@ -324,7 +321,7 @@ class ConcurrentProcessingOptimizer:
         task_id: str,
         func: Callable,
         args: tuple = (),
-        kwargs: dict = None,
+        kwargs: dict[str, Any] = None,
         priority: TaskPriority = TaskPriority.NORMAL,
         estimated_duration: float = 0.0,
         resource_requirements: dict[str, Any] = None,
@@ -384,7 +381,7 @@ class ConcurrentProcessingOptimizer:
         task_id: str,
         func: Callable,
         args: tuple = (),
-        kwargs: dict = None,
+        kwargs: dict[str, Any] = None,
         priority: TaskPriority = TaskPriority.NORMAL,
         estimated_duration: float = 0.0,
         resource_requirements: dict[str, Any] = None,

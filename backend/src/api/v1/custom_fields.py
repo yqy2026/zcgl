@@ -1,8 +1,8 @@
+from typing import Any
+
 """
 自定义字段管理API路由
 """
-
-from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy.orm import Session

@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 API版本控制中间件
 提供灵活的API版本管理功能
@@ -7,7 +9,6 @@ import logging
 import time
 from collections.abc import Callable
 from datetime import datetime, timedelta
-from typing import Any
 
 from fastapi import HTTPException, Request, Response
 from fastapi.routing import APIRoute

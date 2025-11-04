@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 资产分析API路由 - 提供综合的统计分析数据
 Version: 2025-10-30_06-28 - Fixed cache stats issue
@@ -18,7 +20,6 @@ import logging
 import time
 from collections import defaultdict
 from datetime import datetime, timedelta
-from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
@@ -29,7 +30,10 @@ from ...database import get_db
 from ...schemas.asset import DataStatus
 
 # 强制重新加载标记 - 2025-10-30 06:30 - VERSION 2
-print("[ANALYTICS] Analytics module loaded - CacheManager has get_stats:", hasattr(analytics_cache, 'get_stats'))
+print(
+    "[ANALYTICS] Analytics module loaded - CacheManager has get_stats:",
+    hasattr(analytics_cache, "get_stats"),
+)
 print("[ANALYTICS] VERSION 2 - RELOAD TRIGGERED")
 
 logger = logging.getLogger(__name__)
@@ -74,7 +78,8 @@ class PerformanceMonitor:
                 except Exception as e:
                     execution_time = time.time() - start_time
                     logger.error(
-                        f"性能监控: {func_name} 执行失败，时间 {execution_time:.2f}s，错误: {str(e)}"
+                        f"性能监控: {func_name} 执行失败，时间 {execution_time:.2f}s，"
+                        f"错误: {str(e)}"
                     )
                     raise
 
@@ -747,7 +752,9 @@ class OccupancyTrendGenerator:
 
             # 检查缓存
             # 生成缓存键 - 简化版本
-            filter_str = "_".join([f"{k}_{v}" for k, v in sorted(cache_filters.items())])
+            filter_str = "_".join(
+                [f"{k}_{v}" for k, v in sorted(cache_filters.items())]
+            )
             cache_key = f"occupancy_trend_{filter_str}"
             cached_result = analytics_cache.get(cache_key)
             if cached_result:
@@ -1562,7 +1569,7 @@ async def get_comprehensive_analytics(
                 "backend_type": "MemoryCache",
                 "status": "active",
                 "message": "缓存命中",
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
             }
             return ResponseHandler.success(
                 data={
@@ -1570,7 +1577,7 @@ async def get_comprehensive_analytics(
                     "cache_stats": cache_stats,
                 },
                 message="成功获取缓存的综合分析数据（缓存命中）",
-                request_id=request_id
+                request_id=request_id,
             )
 
         start_time = time.time()
@@ -1699,7 +1706,7 @@ async def get_comprehensive_analytics(
                     "backend_type": "MemoryCache",
                     "status": "active",
                     "message": "新数据计算完成",
-                    "timestamp": datetime.now().isoformat()
+                    "timestamp": datetime.now().isoformat(),
                 },
                 "performance_info": {
                     "calculation_time": round(calculation_time, 3),
@@ -1708,7 +1715,7 @@ async def get_comprehensive_analytics(
                 },
             },
             message=f"成功获取 {total_count} 条资产的综合分析数据",
-            request_id=request_id
+            request_id=request_id,
         )
 
     except HTTPException:
@@ -1730,19 +1737,17 @@ async def get_cache_stats(request: Request):
             "status": "active",
             "message": "缓存统计信息",
             "timestamp": datetime.now().isoformat(),
-            "note": "临时实现，未使用get_stats方法"
+            "note": "临时实现，未使用get_stats方法",
         }
         return ResponseHandler.success(
-            data=stats,
-            message="成功获取缓存统计信息",
-            request_id=request_id
+            data=stats, message="成功获取缓存统计信息", request_id=request_id
         )
     except Exception as e:
         logger.error(f"获取缓存统计信息失败: {str(e)}")
         raise ResponseHandler.internal_error(
             message="获取缓存统计信息失败",
             error_details={"error": str(e)},
-            request_id=request_id
+            request_id=request_id,
         )
 
 
@@ -1752,17 +1757,23 @@ async def clear_cache(request: Request):
     request_id = get_request_id(request)
     try:
         # 获取清除前的缓存统计信息
-        old_stats = analytics_cache.get_stats() if hasattr(analytics_cache, 'get_stats') else {
-            "cache_size": 0,
-            "backend_type": "MemoryCache",
-            "status": "active",
-            "message": "缓存统计信息",
-            "timestamp": datetime.now().isoformat(),
-            "note": "使用get_stats方法获取"
-        }
+        old_stats = (
+            analytics_cache.get_stats()
+            if hasattr(analytics_cache, "get_stats")
+            else {
+                "cache_size": 0,
+                "backend_type": "MemoryCache",
+                "status": "active",
+                "message": "缓存统计信息",
+                "timestamp": datetime.now().isoformat(),
+                "note": "使用get_stats方法获取",
+            }
+        )
 
         analytics_cache.clear()
-        logger.info(f"用户请求清除分析缓存，清除前缓存大小: {old_stats.get('cache_size', 0)}")
+        logger.info(
+            f"用户请求清除分析缓存，清除前缓存大小: {old_stats.get('cache_size', 0)}"
+        )
 
         return ResponseHandler.success(
             data={
@@ -1770,14 +1781,14 @@ async def clear_cache(request: Request):
                 "cache_stats_before_clear": old_stats,
             },
             message="分析缓存已成功清除",
-            request_id=request_id
+            request_id=request_id,
         )
     except Exception as e:
         logger.error(f"清除分析缓存失败: {str(e)}")
         raise ResponseHandler.internal_error(
             message="清除分析缓存失败",
             error_details={"error": str(e)},
-            request_id=request_id
+            request_id=request_id,
         )
 
 
@@ -1790,35 +1801,39 @@ async def debug_cache_status(request: Request):
         debug_info = {
             "analytics_cache_type": str(type(analytics_cache)),
             "cache_manager_type": str(type(cache_manager)),
-            "analytics_cache_has_get_stats": hasattr(analytics_cache, 'get_stats'),
-            "cache_manager_has_get_stats": hasattr(cache_manager, 'get_stats'),
-            "analytics_cache_methods": [m for m in dir(analytics_cache) if not m.startswith('_') and callable(getattr(analytics_cache, m))],
+            "analytics_cache_has_get_stats": hasattr(analytics_cache, "get_stats"),
+            "cache_manager_has_get_stats": hasattr(cache_manager, "get_stats"),
+            "analytics_cache_methods": [
+                m
+                for m in dir(analytics_cache)
+                if not m.startswith("_") and callable(getattr(analytics_cache, m))
+            ],
             "memory_usage": "N/A",  # 可以添加内存使用检查
             "request_id": request_id,
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
 
         # 尝试调用get_stats方法
         try:
-            if hasattr(analytics_cache, 'get_stats'):
+            if hasattr(analytics_cache, "get_stats"):
                 debug_info["get_stats_result"] = analytics_cache.get_stats()
                 debug_info["get_stats_success"] = True
             else:
                 debug_info["get_stats_success"] = False
-                debug_info["get_stats_error"] = "analytics_cache does not have get_stats method"
+                debug_info["get_stats_error"] = (
+                    "analytics_cache does not have get_stats method"
+                )
         except Exception as e:
             debug_info["get_stats_success"] = False
             debug_info["get_stats_error"] = str(e)
 
         return ResponseHandler.success(
-            data=debug_info,
-            message="缓存状态调试信息",
-            request_id=request_id
+            data=debug_info, message="缓存状态调试信息", request_id=request_id
         )
     except Exception as e:
         logger.error(f"调试缓存状态失败: {str(e)}")
         raise ResponseHandler.internal_error(
             message="调试缓存状态失败",
             error_details={"error": str(e)},
-            request_id=request_id
+            request_id=request_id,
         )

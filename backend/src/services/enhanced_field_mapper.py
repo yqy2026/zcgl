@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 增强字段映射和验证服务
 专门处理合同信息到58字段资产模型的映射和验证
@@ -8,7 +10,6 @@ import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any
 
 # from .chinese_nlp_processor import ChineseNLPProcessor  # 暂时注释
 # from .contract_semantic_validator import contract_semantic_validator  # 暂时注释
@@ -161,7 +162,7 @@ class EnhancedFieldMapper:
             },
         }
 
-    def _load_transformation_rules(self) -> dict[str, callable]:
+    def _load_transformation_rules(self) -> dict[str, Any]:
         """加载转换规则"""
         return {
             "clean_contract_number": self._clean_contract_number,

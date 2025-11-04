@@ -44,8 +44,13 @@ export class BackupService {
     message: string
     info?: BackupInfo
   }> {
-    const response = await apiClient.get(`/backup/info/${filename}`)
-    return response.data || response
+    try {
+      const response = await apiClient.get(`/backup/info/${filename}`)
+      return response.data || response
+    } catch (error) {
+      console.error('获取备份信息失败:', error)
+      throw new Error(error instanceof Error ? error.message : '获取备份信息失败')
+    }
   }
 
   // 恢复备份

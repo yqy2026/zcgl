@@ -1,0 +1,15 @@
+[
+  {
+    "timestamp": "2025-11-03T10:30:45.667919",
+    "metrics": {
+      "pass_rate": 82.5,
+      "fail_rate": 12.5,
+      "error_rate": 0.0,
+      "module_quality_score": 55.56,
+      "overall_quality_score": 79,
+      "quality_grade": "合格",
+      "high_quality_modules": 5,
+      "total_modules": 9
+    }
+  }
+]

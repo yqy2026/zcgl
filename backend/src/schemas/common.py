@@ -1,10 +1,11 @@
+from typing import Any, TypeVar
+
 """
 通用响应模式
 定义统一的API响应格式
 """
 
 from datetime import UTC, datetime
-from typing import Any, TypeVar
 
 from pydantic import BaseModel, Field
 
@@ -59,7 +60,7 @@ class PaginatedResponse[T](BaseModel):
     request_id: str | None = Field(None, description="请求ID")
 
 
-class ValidationErrorResponse(BaseModel):
+class BusinessValidationErrorResponse(BaseModel):
     """验证错误响应模式"""
 
     success: bool = Field(False, description="请求失败")
@@ -268,7 +269,7 @@ __all__ = [
     "ErrorResponse",
     "PaginationInfo",
     "PaginatedResponse",
-    "ValidationErrorResponse",
+    "BusinessValidationErrorResponse",
     "SuccessResponse",
     "CreatedResponse",
     "UpdatedResponse",

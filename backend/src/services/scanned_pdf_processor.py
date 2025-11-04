@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+from typing import Any
+
 """
 扫描件PDF专用处理器
 专门解决扫描件PDF的OCR识别问题，使用多种方法确保文本提取成功
@@ -7,7 +9,6 @@
 import logging
 import time
 from dataclasses import dataclass
-from typing import Any
 
 import numpy as np
 

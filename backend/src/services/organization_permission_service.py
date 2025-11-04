@@ -1,9 +1,9 @@
+from typing import Any
+
 """
 组织架构权限服务
 实现基于组织架构的数据隔离和权限控制
 """
-
-from typing import Any
 
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
@@ -35,9 +35,7 @@ class OrganizationPermissionService:
         # 超级管理员可访问所有组织
         if user.role == "ADMIN":
             organizations = (
-                self.db.query(Organization.id)
-                .filter(not Organization.is_deleted)
-                .all()
+                self.db.query(Organization.id).filter(not Organization.is_deleted).all()
             )
             return [org.id for org in organizations]
 

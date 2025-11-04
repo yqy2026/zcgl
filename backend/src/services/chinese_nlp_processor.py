@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 中文自然语言处理服务
 专门处理中文合同中的姓名、地址、电话等信息的提取和标准化
@@ -6,7 +8,6 @@
 import logging
 import re
 from dataclasses import dataclass
-from typing import Any
 
 import jieba
 

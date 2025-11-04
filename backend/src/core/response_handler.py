@@ -1,3 +1,5 @@
+from typing import Any, TypeVar
+
 """
 统一响应处理器
 提供标准化的API响应格式和错误处理
@@ -6,14 +8,13 @@
 import logging
 import traceback
 from datetime import UTC, datetime
-from typing import Any, TypeVar
 
 from fastapi import HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from .config import settings
-from .exception_handler import BaseBusinessException
+from .exception_handler import BaseBusinessError
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +53,7 @@ class ResponseHandler:
         message: str = "操作成功",
         status_code: int = status.HTTP_200_OK,
         request_id: str | None = None,
-        pagination: PaginationInfo | None = None
+        pagination: PaginationInfo | None = None,
     ) -> JSONResponse:
         """成功响应"""
 
@@ -62,13 +63,10 @@ class ResponseHandler:
             "data": data,
             "timestamp": datetime.now(UTC).isoformat(),
             "request_id": request_id,
-            "pagination": pagination.dict() if pagination else None
+            "pagination": pagination.dict() if pagination else None,
         }
 
-        return JSONResponse(
-            status_code=status_code,
-            content=response_data
-        )
+        return JSONResponse(status_code=status_code, content=response_data)
 
     @staticmethod
     def error(
@@ -76,22 +74,18 @@ class ResponseHandler:
         error_code: str = "UNKNOWN_ERROR",
         status_code: int = status.HTTP_500_INTERNAL_SERVER_ERROR,
         details: dict[str, Any] | None = None,
-        request_id: str | None = None
+        request_id: str | None = None,
     ) -> JSONResponse:
         """错误响应"""
 
-        error_info = {
-            "code": error_code,
-            "message": message,
-            "details": details or {}
-        }
+        error_info = {"code": error_code, "message": message, "details": details or {}}
 
         response_data = {
             "success": False,
             "message": message,
             "error": error_info,
             "timestamp": datetime.now(UTC).isoformat(),
-            "request_id": request_id
+            "request_id": request_id,
         }
 
         # 记录错误日志
@@ -101,36 +95,33 @@ class ResponseHandler:
                 "error_code": error_code,
                 "status_code": status_code,
                 "details": details,
-                "request_id": request_id
-            }
+                "request_id": request_id,
+            },
         )
 
-        return JSONResponse(
-            status_code=status_code,
-            content=response_data
-        )
+        return JSONResponse(status_code=status_code, content=response_data)
 
     @staticmethod
     def validation_error(
         errors: list[dict[str, Any]],
         message: str = "请求参数验证失败",
-        request_id: str | None = None
+        request_id: str | None = None,
     ) -> JSONResponse:
         """验证错误响应"""
 
         return ResponseHandler.error(
             message=message,
             error_code="VALIDATION_ERROR",
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             details={"validation_errors": errors},
-            request_id=request_id
+            request_id=request_id,
         )
 
     @staticmethod
     def not_found(
         resource: str = "资源",
         resource_id: str | None = None,
-        request_id: str | None = None
+        request_id: str | None = None,
     ) -> JSONResponse:
         """404未找到响应"""
 
@@ -143,7 +134,7 @@ class ResponseHandler:
             error_code="NOT_FOUND",
             status_code=status.HTTP_404_NOT_FOUND,
             details={"resource": resource, "resource_id": resource_id},
-            request_id=request_id
+            request_id=request_id,
         )
 
     @staticmethod
@@ -151,7 +142,7 @@ class ResponseHandler:
         message: str,
         conflict_type: str = "CONFLICT",
         details: dict[str, Any] | None = None,
-        request_id: str | None = None
+        request_id: str | None = None,
     ) -> JSONResponse:
         """409冲突响应"""
 
@@ -160,13 +151,12 @@ class ResponseHandler:
             error_code=conflict_type,
             status_code=status.HTTP_409_CONFLICT,
             details=details,
-            request_id=request_id
+            request_id=request_id,
         )
 
     @staticmethod
     def unauthorized(
-        message: str = "未授权访问",
-        request_id: str | None = None
+        message: str = "未授权访问", request_id: str | None = None
     ) -> JSONResponse:
         """401未授权响应"""
 
@@ -174,13 +164,12 @@ class ResponseHandler:
             message=message,
             error_code="UNAUTHORIZED",
             status_code=status.HTTP_401_UNAUTHORIZED,
-            request_id=request_id
+            request_id=request_id,
         )
 
     @staticmethod
     def forbidden(
-        message: str = "禁止访问",
-        request_id: str | None = None
+        message: str = "禁止访问", request_id: str | None = None
     ) -> JSONResponse:
         """403禁止访问响应"""
 
@@ -188,7 +177,7 @@ class ResponseHandler:
             message=message,
             error_code="FORBIDDEN",
             status_code=status.HTTP_403_FORBIDDEN,
-            request_id=request_id
+            request_id=request_id,
         )
 
     @staticmethod
@@ -198,7 +187,7 @@ class ResponseHandler:
         page_size: int,
         total: int,
         message: str = "获取成功",
-        request_id: str | None = None
+        request_id: str | None = None,
     ) -> JSONResponse:
         """分页响应"""
 
@@ -209,14 +198,14 @@ class ResponseHandler:
             total=total,
             total_pages=total_pages,
             has_next=page < total_pages,
-            has_prev=page > 1
+            has_prev=page > 1,
         )
 
         return ResponseHandler.success(
             data=data,
             message=message,
             request_id=request_id,
-            pagination=pagination_info
+            pagination=pagination_info,
         )
 
 
@@ -225,8 +214,7 @@ class ExceptionHandler:
 
     @staticmethod
     def handle_business_exception(
-        exc: BaseBusinessException,
-        request_id: str | None = None
+        exc: BaseBusinessError, request_id: str | None = None
     ) -> JSONResponse:
         """处理业务异常"""
 
@@ -234,14 +222,13 @@ class ExceptionHandler:
             message=exc.message,
             error_code=exc.code,
             status_code=exc.status_code,
-            details=getattr(exc, 'details', None),
-            request_id=request_id
+            details=getattr(exc, "details", None),
+            request_id=request_id,
         )
 
     @staticmethod
     def handle_http_exception(
-        exc: HTTPException,
-        request_id: str | None = None
+        exc: HTTPException, request_id: str | None = None
     ) -> JSONResponse:
         """处理HTTP异常"""
 
@@ -249,33 +236,31 @@ class ExceptionHandler:
             message=exc.detail,
             error_code=f"HTTP_{exc.status_code}",
             status_code=exc.status_code,
-            details=getattr(exc, 'details', None),
-            request_id=request_id
+            details=getattr(exc, "details", None),
+            request_id=request_id,
         )
 
     @staticmethod
     def handle_validation_exception(
-        exc: Exception,
-        request_id: str | None = None
+        exc: Exception, request_id: str | None = None
     ) -> JSONResponse:
         """处理验证异常"""
 
         # 尝试从异常中提取验证错误详情
         details = {}
-        if hasattr(exc, 'errors'):
+        if hasattr(exc, "errors"):
             details = {"validation_errors": exc.errors()}
         elif str(exc):
             details = {"error_detail": str(exc)}
 
         return ResponseHandler.validation_error(
             errors=[details] if isinstance(details, dict) else details,
-            request_id=request_id
+            request_id=request_id,
         )
 
     @staticmethod
     def handle_general_exception(
-        exc: Exception,
-        request_id: str | None = None
+        exc: Exception, request_id: str | None = None
     ) -> JSONResponse:
         """处理通用异常"""
 
@@ -284,7 +269,7 @@ class ExceptionHandler:
             details = {
                 "exception_type": type(exc).__name__,
                 "exception_message": str(exc),
-                "traceback": traceback.format_exc()
+                "traceback": traceback.format_exc(),
             }
         else:
             details = {}
@@ -295,7 +280,7 @@ class ExceptionHandler:
             error_code="INTERNAL_SERVER_ERROR",
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             details=details,
-            request_id=request_id
+            request_id=request_id,
         )
 
 
@@ -313,25 +298,38 @@ def get_request_id(request: Request) -> str | None:
 
     # 生成新的请求ID
     import uuid
+
     return str(uuid.uuid4())
 
 
 # 便捷函数
-def success_response(data: Any = None, message: str = "操作成功", **kwargs) -> JSONResponse:
+def success_response(
+    data: Any = None, message: str = "操作成功", **kwargs
+) -> JSONResponse:
     """成功响应便捷函数"""
     return ResponseHandler.success(data=data, message=message, **kwargs)
 
 
-def error_response(message: str, error_code: str = "UNKNOWN_ERROR", **kwargs) -> JSONResponse:
+def error_response(
+    message: str, error_code: str = "UNKNOWN_ERROR", **kwargs
+) -> JSONResponse:
     """错误响应便捷函数"""
     return ResponseHandler.error(message=message, error_code=error_code, **kwargs)
 
 
-def not_found_response(resource: str = "资源", resource_id: str | None = None, **kwargs) -> JSONResponse:
+def not_found_response(
+    resource: str = "资源", resource_id: str | None = None, **kwargs
+) -> JSONResponse:
     """404响应便捷函数"""
-    return ResponseHandler.not_found(resource=resource, resource_id=resource_id, **kwargs)
+    return ResponseHandler.not_found(
+        resource=resource, resource_id=resource_id, **kwargs
+    )
 
 
-def paginated_response(data: list[Any], page: int, page_size: int, total: int, **kwargs) -> JSONResponse:
+def paginated_response(
+    data: list[Any], page: int, page_size: int, total: int, **kwargs
+) -> JSONResponse:
     """分页响应便捷函数"""
-    return ResponseHandler.paginated(data=data, page=page, page_size=page_size, total=total, **kwargs)
+    return ResponseHandler.paginated(
+        data=data, page=page, page_size=page_size, total=total, **kwargs
+    )

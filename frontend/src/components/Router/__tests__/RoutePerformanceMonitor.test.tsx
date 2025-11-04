@@ -1,5 +1,6 @@
 import React from 'react'
-import { render, screen, waitFor, act, fireEvent } from '@testing-library/react'
+import { render, screen } from '../../../__tests__/utils/testUtils'
+import { render, screen } from '../../../__tests__/utils/testUtils'
 import { BrowserRouter } from 'react-router-dom'
 import RoutePerformanceMonitor from '../RoutePerformanceMonitor'
 import { RouteMetrics } from '@/types/route'

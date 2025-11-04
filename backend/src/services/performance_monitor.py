@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 PDF导入性能监控和优化服务
 提供实时性能监控、指标收集和优化建议
@@ -8,7 +10,6 @@ import statistics
 from collections import defaultdict, deque
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
-from typing import Any
 
 import psutil
 

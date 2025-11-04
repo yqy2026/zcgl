@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 OCR文本预处理器
 专门处理扫描版PDF合同OCR后的文本，清理和标准化文本内容
@@ -6,7 +8,6 @@ OCR文本预处理器
 import logging
 import re
 from datetime import date
-from typing import Any
 
 logger = logging.getLogger(__name__)
 

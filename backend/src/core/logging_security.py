@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 安全日志记录器
 提供敏感信息脱敏、结构化日志和安全审计功能
@@ -10,7 +12,6 @@ import re
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
 
 from .config_manager import get_config
 
@@ -154,7 +155,7 @@ class StructuredFormatter(logging.Formatter):
             "timestamp": datetime.now(UTC).isoformat(),
             "level": record.levelname,
             "logger": record.name,
-            "message": record.getMessage(),
+            "message": self._sanitize_message(record.getMessage()),
             "module": record.module,
             "function": record.funcName,
             "line": record.lineno,
@@ -184,7 +185,62 @@ class StructuredFormatter(logging.Formatter):
         if hasattr(record, "extra_fields"):
             log_entry.update(record.extra_fields)
 
+        # 确保所有字段都可以被JSON序列化
+        log_entry = self._ensure_json_serializable(log_entry)
+
         return json.dumps(log_entry, ensure_ascii=False)
+
+    def _sanitize_message(self, message: str) -> str:
+        """清理消息中的不可序列化内容"""
+        if not isinstance(message, str):
+            try:
+                # 尝试转换为字符串
+                message = str(message)
+            except Exception:
+                message = "<无法序列化的消息对象>"
+
+        # 限制消息长度
+        if len(message) > 1000:
+            message = message[:1000] + "...(截断)"
+
+        return message
+
+    def _ensure_json_serializable(self, obj: Any) -> Any:
+        """确保对象可以被JSON序列化"""
+        if obj is None:
+            return None
+        elif isinstance(obj, (str, int, float, bool)):
+            return obj
+        elif isinstance(obj, datetime):
+            return obj.isoformat()
+        elif isinstance(obj, dict):
+            return {
+                key: self._ensure_json_serializable(value) for key, value in obj.items()
+            }
+        elif isinstance(obj, list):
+            return [self._ensure_json_serializable(item) for item in obj]
+        elif hasattr(obj, "__dict__"):
+            # 处理SQLAlchemy模型对象和其他自定义对象
+            try:
+                # 尝试获取对象的字典表示
+                obj_dict = obj.__dict__.copy()
+                # 移除SQLAlchemy的内部属性
+                obj_dict.pop("_sa_instance_state", None)
+                return {
+                    key: self._ensure_json_serializable(value)
+                    for key, value in obj_dict.items()
+                    if not key.startswith("_")
+                }
+            except Exception:
+                # 如果无法序列化，返回字符串表示
+                return str(obj)[:500]  # 限制长度
+        else:
+            # 对于其他类型，尝试转换为字符串
+            try:
+                json.dumps(obj)  # 测试是否可序列化
+                return obj
+            except (TypeError, ValueError):
+                return str(obj)[:500]  # 限制长度
 
     def _format_exception(self, exc_info) -> str:
         """格式化异常信息"""
@@ -256,7 +312,10 @@ class SecurityAuditor:
         # 添加额外字段
         security_event.update(kwargs)
 
-        self.security_logger.info(security_event)
+        # 确保所有数据都可以被JSON序列化
+        serializable_event = self._ensure_json_serializable(security_event)
+
+        self.security_logger.info(serializable_event)
 
     def _get_event_severity(self, event_type: str) -> str:
         """获取事件严重程度"""
@@ -283,6 +342,43 @@ class SecurityAuditor:
             return "MEDIUM"
         else:
             return "LOW"
+
+    def _ensure_json_serializable(self, obj: Any) -> Any:
+        """确保对象可以被JSON序列化"""
+        if obj is None:
+            return None
+        elif isinstance(obj, (str, int, float, bool)):
+            return obj
+        elif isinstance(obj, datetime):
+            return obj.isoformat()
+        elif isinstance(obj, dict):
+            return {
+                key: self._ensure_json_serializable(value) for key, value in obj.items()
+            }
+        elif isinstance(obj, list):
+            return [self._ensure_json_serializable(item) for item in obj]
+        elif hasattr(obj, "__dict__"):
+            # 处理SQLAlchemy模型对象和其他自定义对象
+            try:
+                # 尝试获取对象的字典表示
+                obj_dict = obj.__dict__.copy()
+                # 移除SQLAlchemy的内部属性
+                obj_dict.pop("_sa_instance_state", None)
+                return {
+                    key: self._ensure_json_serializable(value)
+                    for key, value in obj_dict.items()
+                    if not key.startswith("_")
+                }
+            except Exception:
+                # 如果无法序列化，返回字符串表示
+                return str(obj)[:500]  # 限制长度
+        else:
+            # 对于其他类型，尝试转换为字符串
+            try:
+                json.dumps(obj)  # 测试是否可序列化
+                return obj
+            except (TypeError, ValueError):
+                return str(obj)[:500]  # 限制长度
 
     def _hash_sensitive_data(self, data: str) -> str:
         """对敏感数据进行哈希处理"""
@@ -360,13 +456,53 @@ class RequestLogger:
         # 添加额外字段
         request_info.update(kwargs)
 
+        # 确保所有数据都可以被JSON序列化
+        serializable_request = self._ensure_json_serializable(request_info)
+
         # 根据状态码决定日志级别
         if status_code >= 500:
-            self.request_logger.error(request_info)
+            self.request_logger.error(serializable_request)
         elif status_code >= 400:
-            self.request_logger.warning(request_info)
+            self.request_logger.warning(serializable_request)
         else:
-            self.request_logger.info(request_info)
+            self.request_logger.info(serializable_request)
+
+    def _ensure_json_serializable(self, obj: Any) -> Any:
+        """确保对象可以被JSON序列化"""
+        if obj is None:
+            return None
+        elif isinstance(obj, (str, int, float, bool)):
+            return obj
+        elif isinstance(obj, datetime):
+            return obj.isoformat()
+        elif isinstance(obj, dict):
+            return {
+                key: self._ensure_json_serializable(value) for key, value in obj.items()
+            }
+        elif isinstance(obj, list):
+            return [self._ensure_json_serializable(item) for item in obj]
+        elif hasattr(obj, "__dict__"):
+            # 处理SQLAlchemy模型对象和其他自定义对象
+            try:
+                # 尝试获取对象的字典表示
+                obj_dict = obj.__dict__.copy()
+                # 移除SQLAlchemy的内部属性
+                obj_dict.pop("_sa_instance_state", None)
+                return {
+                    key: self._ensure_json_serializable(value)
+                    for key, value in obj_dict.items()
+                    if not key.startswith("_")
+                }
+            except Exception:
+                # 如果无法序列化，返回字符串表示
+                return str(obj)[:500]  # 限制长度
+        else:
+            # 对于其他类型，尝试转换为字符串
+            try:
+                json.dumps(obj)  # 测试是否可序列化
+                return obj
+            except (TypeError, ValueError):
+                return str(obj)[:500]  # 限制长度
 
     def _hash_sensitive_data(self, data: str) -> str:
         """对敏感数据进行哈希处理"""

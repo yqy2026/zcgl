@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 PDF处理质量评估服务
 提供智能化的PDF处理质量评估和改进建议
@@ -6,7 +8,6 @@ PDF处理质量评估服务
 import logging
 import re
 from datetime import UTC, datetime
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -160,9 +161,7 @@ class PDFProcessingQualityAssessment:
             ),
         }
 
-        processing_time = (
-            datetime.now(UTC) - assessment_start
-        ).total_seconds()
+        processing_time = (datetime.now(UTC) - assessment_start).total_seconds()
         logger.info(
             f"PDF处理质量评估完成，耗时: {processing_time:.3f}秒，质量分数: {quality_score:.3f}"
         )

@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 PDF处理性能监控和错误处理系统
 提供全面的性能指标收集、错误分析和系统健康监控
@@ -14,7 +16,6 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any
 
 import psutil
 

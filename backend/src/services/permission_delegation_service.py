@@ -1,3 +1,18 @@
+from typing import Any
+
+
+class AssetNotFoundError(Exception):
+    """Asset not found error"""
+
+    pass
+
+
+class DuplicateAssetError(Exception):
+    """Duplicate asset error"""
+
+    pass
+
+
 """
 权限委托和继承服务
 支持权限的层级继承和用户间委托
@@ -5,7 +20,6 @@
 
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
 
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session

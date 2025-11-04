@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 合同模板学习和匹配服务
 通过机器学习识别标准合同格式和模板
@@ -11,7 +13,6 @@ from collections import defaultdict
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Any
 
 import jieba
 import numpy as np

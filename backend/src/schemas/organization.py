@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 组织架构相关数据验证模式
 """
@@ -174,8 +176,8 @@ class OrganizationStatistics(BaseModel):
     total: int = Field(..., description="总数")
     active: int = Field(..., description="活跃数量")
     inactive: int = Field(..., description="非活跃数量")
-    by_type: dict = Field(..., description="按类型统计")
-    by_level: dict = Field(..., description="按层级统计")
+    by_type: dict[str, Any] = Field(..., description="按类型统计")
+    by_level: dict[str, Any] = Field(..., description="按层级统计")
 
 
 class OrganizationMoveRequest(BaseModel):

@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+from typing import Any
+
 """
 API响应时间优化器
 提供快速响应、缓存、异步处理等优化功能
@@ -10,7 +12,6 @@ import time
 from collections.abc import Callable
 from datetime import datetime
 from functools import wraps
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -151,8 +152,8 @@ class PerformanceOptimizer:
                 return is_success and text_length < 1000  # 成功且文本不太大
             return False
         except (Exception, ValueError, TypeError):
-                # 通用异常处理时返回False
-                return False
+            # 通用异常处理时返回False
+            return False
 
     def get_cache_key(self, *args, **kwargs) -> str:
         """生成缓存键"""

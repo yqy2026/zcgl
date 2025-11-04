@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 性能优化服务
 """
@@ -5,7 +7,6 @@
 import logging
 import time
 from functools import wraps
-from typing import Any
 
 from sqlalchemy import and_, asc, desc, func, or_, text
 from sqlalchemy.orm import Session, selectinload

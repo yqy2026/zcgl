@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 文件管理服务
 负责处理PDF文件的上传、存储、清理和管理
@@ -8,7 +10,6 @@ import logging
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 import aiofiles
 from sqlalchemy.orm import Session

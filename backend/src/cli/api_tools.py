@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 API工具命令行接口
 提供API文档生成、一致性检查等功能
@@ -169,9 +171,9 @@ def analyze(output_dir: str):
         sys.exit(1)
 
 
-def _analyze_api_quality(docs_data: dict) -> dict:
+def _analyze_api_quality(api_data: dict[str, Any]) -> dict[str, Any]:
     """分析API质量"""
-    paths = docs_data.get("paths", {})
+    paths = api_data.get("paths", {})
     total_endpoints = sum(len(methods) for methods in paths.values())
 
     # 计算文档覆盖率

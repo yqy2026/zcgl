@@ -1,10 +1,11 @@
+from typing import Any
+
 """
 权限申请和审批工作流服务
 支持权限申请、审批、驳回等完整工作流程
 """
 
 from datetime import UTC, datetime, timedelta
-from typing import Any
 
 from sqlalchemy import and_
 from sqlalchemy.orm import Session

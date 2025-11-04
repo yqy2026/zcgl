@@ -1,8 +1,8 @@
+from typing import Any
+
 """
 系统字典CRUD操作
 """
-
-from typing import Any
 
 from sqlalchemy import and_
 from sqlalchemy.orm import Session

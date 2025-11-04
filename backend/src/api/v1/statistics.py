@@ -1,10 +1,11 @@
+from typing import Any
+
 """
 统计分析API路由
 """
 
 import logging
 from datetime import datetime
-from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy import case, func
@@ -1346,3 +1347,311 @@ async def get_trend_data(
     except Exception as e:
         logger.error(f"获取趋势数据失败: {str(e)}")
         raise HTTPException(status_code=500, detail=f"获取趋势数据失败: {str(e)}")
+
+
+@router.get("/occupancy-rate", summary="获取出租率统计")
+async def get_occupancy_rate_statistics(
+    ownership_status: str | None = Query(None, description="确权状态筛选"),
+    property_nature: str | None = Query(None, description="物业性质筛选"),
+    usage_status: str | None = Query(None, description="使用状态筛选"),
+    business_category: str | None = Query(None, description="业务分类筛选"),
+    db: Session = Depends(get_db),
+):
+    """
+    获取出租率统计数据
+    """
+    try:
+        # 构建筛选条件
+        filters = {}
+        if ownership_status:
+            filters["ownership_status"] = ownership_status
+        if property_nature:
+            filters["property_nature"] = property_nature
+        if usage_status:
+            filters["usage_status"] = usage_status
+        if business_category:
+            filters["business_category"] = business_category
+
+        # 计算出租率
+        stats = _calculate_occupancy_with_aggregation(db, filters)
+
+        return {
+            "success": True,
+            "data": {
+                "overall_occupancy_rate": stats["overall_rate"],
+                "total_rentable_area": stats["total_rentable_area"],
+                "total_rented_area": stats["total_rented_area"],
+                "total_unrented_area": stats["total_rentable_area"]
+                - stats["total_rented_area"],
+                "total_assets": stats["total_assets"],
+                "rentable_assets": stats["rentable_assets_count"],
+                "generated_at": datetime.now().isoformat(),
+                "filters_applied": filters,
+            },
+            "message": "出租率统计数据获取成功",
+        }
+
+    except Exception as e:
+        logger.error(f"获取出租率统计失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"获取出租率统计失败: {str(e)}")
+
+
+@router.get("/asset-distribution", summary="获取资产分布统计")
+async def get_asset_distribution(
+    group_by: str = Query("ownership_status", description="分组字段"),
+    include_deleted: bool = Query(False, description="是否包含已删除资产"),
+    db: Session = Depends(get_db),
+):
+    """
+    获取资产分布统计数据
+    """
+    try:
+        # 验证分组字段
+        valid_fields = [
+            "ownership_status",
+            "property_nature",
+            "usage_status",
+            "business_category",
+            "manager_name",
+            "project_name",
+        ]
+
+        if group_by not in valid_fields:
+            raise HTTPException(
+                status_code=400,
+                detail=f"无效的分组字段。支持的字段: {', '.join(valid_fields)}",
+            )
+
+        # 构建筛选条件
+        filters = {}
+        if not include_deleted:
+            filters["data_status"] = DataStatus.NORMAL.value
+
+        # 获取资产数据
+        assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters=filters
+        )
+
+        # 按字段分组统计
+        distribution = {}
+        total_assets = len(assets)
+
+        for asset in assets:
+            group_value = getattr(asset, group_by, None) or "未知"
+            if group_value not in distribution:
+                distribution[group_value] = 0
+            distribution[group_value] += 1
+
+        # 构建响应数据
+        distribution_data = [
+            {
+                "name": key,
+                "value": count,
+                "percentage": round((count / total_assets * 100), 2)
+                if total_assets > 0
+                else 0,
+            }
+            for key, count in distribution.items()
+        ]
+
+        return {
+            "success": True,
+            "data": {
+                "group_by": group_by,
+                "distribution": distribution_data,
+                "total_assets": total_assets,
+                "generated_at": datetime.now().isoformat(),
+                "filters_applied": filters,
+            },
+            "message": "资产分布统计数据获取成功",
+        }
+
+    except Exception as e:
+        logger.error(f"获取资产分布统计失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"获取资产分布统计失败: {str(e)}")
+
+
+@router.get("/area-statistics", summary="获取面积统计")
+async def get_area_statistics(
+    ownership_status: str | None = Query(None, description="确权状态筛选"),
+    property_nature: str | None = Query(None, description="物业性质筛选"),
+    usage_status: str | None = Query(None, description="使用状态筛选"),
+    include_deleted: bool = Query(False, description="是否包含已删除资产"),
+    db: Session = Depends(get_db),
+):
+    """
+    获取面积统计数据
+    """
+    try:
+        # 构建筛选条件
+        filters = {}
+        if ownership_status:
+            filters["ownership_status"] = ownership_status
+        if property_nature:
+            filters["property_nature"] = property_nature
+        if usage_status:
+            filters["usage_status"] = usage_status
+        if not include_deleted:
+            filters["data_status"] = DataStatus.NORMAL.value
+
+        # 计算面积汇总
+        summary = _calculate_area_summary_with_aggregation(db, filters)
+
+        return {
+            "success": True,
+            "data": {
+                "total_assets": summary["total_assets"],
+                "total_land_area": summary["total_land_area"],
+                "total_property_area": summary[
+                    "total_land_area"
+                ],  # 土地面积作为物业面积
+                "total_rentable_area": summary["total_rentable_area"],
+                "total_rented_area": summary["total_rented_area"],
+                "total_unrented_area": summary["total_unrented_area"],
+                "total_non_commercial_area": summary["total_non_commercial_area"],
+                "assets_with_area_data": summary["assets_with_area_data"],
+                "overall_occupancy_rate": summary["overall_occupancy_rate"],
+                "generated_at": datetime.now().isoformat(),
+                "filters_applied": filters,
+            },
+            "message": "面积统计数据获取成功",
+        }
+
+    except Exception as e:
+        logger.error(f"获取面积统计失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"获取面积统计失败: {str(e)}")
+
+
+@router.get("/comprehensive", summary="获取综合统计")
+async def get_comprehensive_statistics(
+    ownership_status: str | None = Query(None, description="确权状态筛选"),
+    property_nature: str | None = Query(None, description="物业性质筛选"),
+    usage_status: str | None = Query(None, description="使用状态筛选"),
+    include_deleted: bool = Query(False, description="是否包含已删除资产"),
+    db: Session = Depends(get_db),
+):
+    """
+    获取综合统计数据
+    """
+    try:
+        # 构建筛选条件
+        filters = {}
+        if ownership_status:
+            filters["ownership_status"] = ownership_status
+        if property_nature:
+            filters["property_nature"] = property_nature
+        if usage_status:
+            filters["usage_status"] = usage_status
+        if not include_deleted:
+            filters["data_status"] = DataStatus.NORMAL.value
+
+        # 基础统计
+        total_assets = asset_crud.count_with_search(db=db, filters=filters)
+
+        if total_assets == 0:
+            return {
+                "success": False,
+                "message": "没有找到符合条件的资产数据",
+                "data": None,
+            }
+
+        # 获取面积统计
+        area_stats = _calculate_area_summary_with_aggregation(db, filters)
+
+        # 获取出租率统计
+        occupancy_stats = _calculate_occupancy_with_aggregation(db, filters)
+
+        # 获取财务统计
+        assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters=filters
+        )
+
+        financial_stats = {
+            "total_annual_income": 0.0,
+            "total_annual_expense": 0.0,
+            "total_net_income": 0.0,
+            "total_monthly_rent": 0.0,
+            "assets_with_financial_data": 0,
+        }
+
+        for asset in assets:
+            if getattr(asset, "annual_income", None):
+                financial_stats["total_annual_income"] += to_float(
+                    getattr(asset, "annual_income")
+                )
+                financial_stats["assets_with_financial_data"] += 1
+
+            if getattr(asset, "annual_expense", None):
+                financial_stats["total_annual_expense"] += to_float(
+                    getattr(asset, "annual_expense")
+                )
+
+            if getattr(asset, "net_income", None):
+                financial_stats["total_net_income"] += to_float(
+                    getattr(asset, "net_income")
+                )
+
+            if getattr(asset, "monthly_rent", None):
+                financial_stats["total_monthly_rent"] += to_float(
+                    getattr(asset, "monthly_rent")
+                )
+
+        # 按状态统计
+        ownership_distribution = {}
+        property_nature_distribution = {}
+        usage_status_distribution = {}
+
+        for asset in assets:
+            # 权属状态分布
+            ownership = getattr(asset, "ownership_status", None) or "未知"
+            ownership_distribution[ownership] = (
+                ownership_distribution.get(ownership, 0) + 1
+            )
+
+            # 物业性质分布
+            nature = getattr(asset, "property_nature", None) or "未知"
+            property_nature_distribution[nature] = (
+                property_nature_distribution.get(nature, 0) + 1
+            )
+
+            # 使用状态分布
+            usage = getattr(asset, "usage_status", None) or "未知"
+            usage_status_distribution[usage] = (
+                usage_status_distribution.get(usage, 0) + 1
+            )
+
+        comprehensive_data = {
+            # 基础统计
+            "basic_stats": {
+                "total_assets": total_assets,
+                "ownership_distribution": ownership_distribution,
+                "property_nature_distribution": property_nature_distribution,
+                "usage_status_distribution": usage_status_distribution,
+            },
+            # 面积统计
+            "area_stats": area_stats,
+            # 出租率统计
+            "occupancy_stats": occupancy_stats,
+            # 财务统计
+            "financial_stats": {
+                **financial_stats,
+                "total_annual_income": round(financial_stats["total_annual_income"], 2),
+                "total_annual_expense": round(
+                    financial_stats["total_annual_expense"], 2
+                ),
+                "total_net_income": round(financial_stats["total_net_income"], 2),
+                "total_monthly_rent": round(financial_stats["total_monthly_rent"], 2),
+            },
+            "generated_at": datetime.now().isoformat(),
+            "filters_applied": filters,
+        }
+
+        return {
+            "success": True,
+            "data": comprehensive_data,
+            "message": "综合统计数据获取成功",
+        }
+
+    except Exception as e:
+        logger.error(f"获取综合统计失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"获取综合统计失败: {str(e)}")

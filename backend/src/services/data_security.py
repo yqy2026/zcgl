@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 数据加密服务
 """
@@ -61,10 +63,10 @@ class DataEncryptionService:
         except Exception as e:
             raise ValueError(f"数据解密失败: {e}")
 
-    def encrypt_sensitive_fields(self, data: dict, sensitive_fields: list) -> dict:
+    def encrypt_sensitive_fields(self, data: dict[str, Any]) -> dict[str, Any]:
         """加密敏感字段"""
         encrypted_data = data.copy()
-        for field in sensitive_fields:
+        for field in ["owner_name", "contact_info"]:
             if field in encrypted_data and encrypted_data[field]:
                 try:
                     encrypted_data[field] = self.encrypt_data(
@@ -74,10 +76,10 @@ class DataEncryptionService:
                     print(f"加密字段 {field} 失败: {e}")
         return encrypted_data
 
-    def decrypt_sensitive_fields(self, data: dict, sensitive_fields: list) -> dict:
+    def decrypt_sensitive_fields(self, data: dict[str, Any]) -> dict[str, Any]:
         """解密敏感字段"""
         decrypted_data = data.copy()
-        for field in sensitive_fields:
+        for field in ["owner_name", "contact_info"]:
             if field in decrypted_data and decrypted_data[field]:
                 try:
                     decrypted_data[field] = self.decrypt_data(

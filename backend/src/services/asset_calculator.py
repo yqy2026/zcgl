@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 资产计算服务 - 简化版本
 处理纯计算字段，不存储到数据库
@@ -87,7 +89,7 @@ class AssetCalculator:
     #     return income - expense
 
     @staticmethod
-    def validate_area_consistency(data: dict) -> list:
+    def validate_area_consistency(data: dict[str, Any]) -> list[str]:
         """
         验证面积数据的一致性
 
@@ -110,7 +112,7 @@ class AssetCalculator:
         return errors
 
     @staticmethod
-    def auto_calculate_fields(data: dict) -> dict:
+    def auto_calculate_fields(data: dict[str, Any]) -> dict[str, Any]:
         """
         自动计算相关字段 - 简化版本
 
@@ -130,7 +132,7 @@ class AssetCalculator:
         return calculated_fields
 
     @staticmethod
-    def enrich_asset_with_calculations(asset_data: dict) -> dict:
+    def enrich_asset_with_calculations(asset_data: dict[str, Any]) -> dict[str, Any]:
         """
         为资产数据添加计算字段（用于API响应）
 
@@ -153,7 +155,7 @@ class OccupancyRateCalculator:
     """出租率统计计算器"""
 
     @staticmethod
-    def calculate_overall_occupancy_rate(assets: list) -> dict:
+    def calculate_overall_occupancy_rate(assets: list) -> dict[str, Any]:
         """
         计算整体出租率
 
@@ -196,7 +198,9 @@ class OccupancyRateCalculator:
         }
 
     @staticmethod
-    def calculate_occupancy_by_category(assets: list, category_field: str) -> dict:
+    def calculate_occupancy_by_category(
+        assets: list, category_field: str = "asset_category"
+    ) -> dict[str, Any]:
         """
         按类别计算出租率
 

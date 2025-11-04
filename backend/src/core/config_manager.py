@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 统一配置管理器
 提供集中的配置管理、环境变量处理和配置验证功能
@@ -10,7 +12,6 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any
 
 import yaml
 

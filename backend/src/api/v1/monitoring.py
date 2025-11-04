@@ -1,15 +1,15 @@
+from typing import Any
+
 """
 监控API路由
 收集和分析系统性能指标
 """
 
 import logging
-import psutil
-import asyncio
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+import psutil
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -174,21 +174,24 @@ async def get_performance_dashboard():
 
 # === 新增系统监控API ===
 
+
 class SystemMetrics(BaseModel):
     """系统性能指标模型"""
+
     timestamp: datetime = Field(..., description="指标采集时间")
     cpu_percent: float = Field(..., ge=0, le=100, description="CPU使用率(%)")
     memory_percent: float = Field(..., ge=0, le=100, description="内存使用率(%)")
     memory_available_gb: float = Field(..., ge=0, description="可用内存(GB)")
     disk_usage_percent: float = Field(..., ge=0, le=100, description="磁盘使用率(%)")
     disk_free_gb: float = Field(..., ge=0, description="可用磁盘空间(GB)")
-    network_io: Dict[str, int] = Field(..., description="网络IO统计")
+    network_io: dict[str, int] = Field(..., description="网络IO统计")
     process_count: int = Field(..., ge=0, description="运行进程数")
-    load_average: Optional[List[float]] = Field(None, description="系统负载平均值")
+    load_average: list[float] | None = Field(None, description="系统负载平均值")
 
 
 class ApplicationMetrics(BaseModel):
     """应用性能指标模型"""
+
     timestamp: datetime = Field(..., description="指标采集时间")
     active_connections: int = Field(..., ge=0, description="活跃连接数")
     total_requests: int = Field(..., ge=0, description="总请求数")
@@ -200,14 +203,18 @@ class ApplicationMetrics(BaseModel):
 
 class HealthStatus(BaseModel):
     """健康状态模型"""
-    status: str = Field(..., pattern="^(healthy|degraded|unhealthy)$", description="健康状态")
+
+    status: str = Field(
+        ..., pattern="^(healthy|degraded|unhealthy)$", description="健康状态"
+    )
     timestamp: datetime = Field(..., description="检查时间")
-    components: Dict[str, Dict[str, Any]] = Field(..., description="组件状态详情")
+    components: dict[str, dict[str, Any]] = Field(..., description="组件状态详情")
     overall_score: float = Field(..., ge=0, le=100, description="总体健康评分")
 
 
 class PerformanceAlert(BaseModel):
     """性能告警模型"""
+
     id: str = Field(..., description="告警ID")
     level: str = Field(..., pattern="^(info|warning|critical)$", description="告警级别")
     message: str = Field(..., description="告警消息")
@@ -219,9 +226,9 @@ class PerformanceAlert(BaseModel):
 
 
 # 全局变量存储指标历史数据
-_metrics_history: List[SystemMetrics] = []
-_application_metrics: List[ApplicationMetrics] = []
-_active_alerts: List[PerformanceAlert] = []
+_metrics_history: list[SystemMetrics] = []
+_application_metrics: list[ApplicationMetrics] = []
+_active_alerts: list[PerformanceAlert] = []
 
 
 def collect_system_metrics() -> SystemMetrics:
@@ -236,7 +243,7 @@ def collect_system_metrics() -> SystemMetrics:
         memory_available_gb = memory.available / (1024**3)
 
         # 磁盘信息
-        disk = psutil.disk_usage('/')
+        disk = psutil.disk_usage("/")
         disk_usage_percent = disk.percent
         disk_free_gb = disk.free / (1024**3)
 
@@ -245,7 +252,7 @@ def collect_system_metrics() -> SystemMetrics:
             "bytes_sent": psutil.net_io_counters().bytes_sent,
             "bytes_recv": psutil.net_io_counters().bytes_recv,
             "packets_sent": psutil.net_io_counters().packets_sent,
-            "packets_recv": psutil.net_io_counters().packets_recv
+            "packets_recv": psutil.net_io_counters().packets_recv,
         }
 
         # 进程数
@@ -268,7 +275,7 @@ def collect_system_metrics() -> SystemMetrics:
             disk_free_gb=disk_free_gb,
             network_io=network_io,
             process_count=process_count,
-            load_average=load_average
+            load_average=load_average,
         )
 
         # 保存历史数据 (保留最近100条)
@@ -294,7 +301,7 @@ def collect_application_metrics() -> ApplicationMetrics:
             average_response_time=125.5,
             error_rate=0.2,
             cache_hit_rate=85.3,
-            database_connections=8
+            database_connections=8,
         )
 
         # 保存历史数据
@@ -316,7 +323,11 @@ async def get_system_metrics(current_user: User = Depends(get_current_user)):
     return collect_system_metrics()
 
 
-@router.get("/application-metrics", response_model=ApplicationMetrics, summary="获取应用性能指标")
+@router.get(
+    "/application-metrics",
+    response_model=ApplicationMetrics,
+    summary="获取应用性能指标",
+)
 @permission_required("system_monitoring", "read")
 async def get_application_metrics(current_user: User = Depends(get_current_user)):
     """获取应用性能指标"""
@@ -325,7 +336,9 @@ async def get_application_metrics(current_user: User = Depends(get_current_user)
 
 @router.get("/dashboard", summary="获取系统监控仪表板")
 @permission_required("system_monitoring", "read")
-async def get_system_monitoring_dashboard(current_user: User = Depends(get_current_user)):
+async def get_system_monitoring_dashboard(
+    current_user: User = Depends(get_current_user),
+):
     """获取系统监控仪表板综合数据"""
     try:
         system_metrics = collect_system_metrics()
@@ -337,33 +350,60 @@ async def get_system_monitoring_dashboard(current_user: User = Depends(get_curre
 
         # 检查CPU
         if system_metrics.cpu_percent > 90:
-            components["cpu"] = {"status": "unhealthy", "value": system_metrics.cpu_percent}
+            components["cpu"] = {
+                "status": "unhealthy",
+                "value": system_metrics.cpu_percent,
+            }
             overall_score -= 30
         elif system_metrics.cpu_percent > 70:
-            components["cpu"] = {"status": "warning", "value": system_metrics.cpu_percent}
+            components["cpu"] = {
+                "status": "warning",
+                "value": system_metrics.cpu_percent,
+            }
             overall_score -= 15
         else:
-            components["cpu"] = {"status": "healthy", "value": system_metrics.cpu_percent}
+            components["cpu"] = {
+                "status": "healthy",
+                "value": system_metrics.cpu_percent,
+            }
 
         # 检查内存
         if system_metrics.memory_percent > 90:
-            components["memory"] = {"status": "unhealthy", "value": system_metrics.memory_percent}
+            components["memory"] = {
+                "status": "unhealthy",
+                "value": system_metrics.memory_percent,
+            }
             overall_score -= 30
         elif system_metrics.memory_percent > 80:
-            components["memory"] = {"status": "warning", "value": system_metrics.memory_percent}
+            components["memory"] = {
+                "status": "warning",
+                "value": system_metrics.memory_percent,
+            }
             overall_score -= 15
         else:
-            components["memory"] = {"status": "healthy", "value": system_metrics.memory_percent}
+            components["memory"] = {
+                "status": "healthy",
+                "value": system_metrics.memory_percent,
+            }
 
         # 检查磁盘
         if system_metrics.disk_usage_percent > 95:
-            components["disk"] = {"status": "unhealthy", "value": system_metrics.disk_usage_percent}
+            components["disk"] = {
+                "status": "unhealthy",
+                "value": system_metrics.disk_usage_percent,
+            }
             overall_score -= 20
         elif system_metrics.disk_usage_percent > 85:
-            components["disk"] = {"status": "warning", "value": system_metrics.disk_usage_percent}
+            components["disk"] = {
+                "status": "warning",
+                "value": system_metrics.disk_usage_percent,
+            }
             overall_score -= 10
         else:
-            components["disk"] = {"status": "healthy", "value": system_metrics.disk_usage_percent}
+            components["disk"] = {
+                "status": "healthy",
+                "value": system_metrics.disk_usage_percent,
+            }
 
         # 确定整体状态
         if overall_score >= 90:
@@ -377,7 +417,7 @@ async def get_system_monitoring_dashboard(current_user: User = Depends(get_curre
             status=status,
             timestamp=datetime.now(),
             components=components,
-            overall_score=max(0, overall_score)
+            overall_score=max(0, overall_score),
         )
 
         return {
@@ -387,15 +427,19 @@ async def get_system_monitoring_dashboard(current_user: User = Depends(get_curre
             "active_alerts": _active_alerts[-10:],  # 最近10个告警
             "trends": {
                 "system_metrics": _metrics_history[-20:],  # 最近20个数据点
-                "application_metrics": _application_metrics[-20:]
+                "application_metrics": _application_metrics[-20:],
             },
             "summary": {
                 "total_alerts": len(_active_alerts),
-                "critical_alerts": len([a for a in _active_alerts if a.level == "critical"]),
-                "warning_alerts": len([a for a in _active_alerts if a.level == "warning"]),
+                "critical_alerts": len(
+                    [a for a in _active_alerts if a.level == "critical"]
+                ),
+                "warning_alerts": len(
+                    [a for a in _active_alerts if a.level == "warning"]
+                ),
                 "health_score": overall_score,
-                "last_updated": datetime.now().isoformat()
-            }
+                "last_updated": datetime.now().isoformat(),
+            },
         }
 
     except Exception as e:
@@ -415,7 +459,7 @@ async def trigger_metrics_collection(current_user: User = Depends(get_current_us
             "message": "指标收集完成",
             "system_metrics": system_metrics,
             "application_metrics": app_metrics,
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
 
     except Exception as e:

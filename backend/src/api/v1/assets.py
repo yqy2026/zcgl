@@ -1,3 +1,16 @@
+# 异常类定义
+class AssetNotFoundError(Exception):
+    pass
+
+
+class DuplicateAssetError(Exception):
+    pass
+
+
+class NotFoundError(Exception):
+    pass
+
+
 """
 资产管理API路由
 """
@@ -22,10 +35,10 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 from starlette.status import HTTP_204_NO_CONTENT
 
+from ...core.exception_handler import DuplicateResourceError, ResourceNotFoundError
 from ...crud.asset import asset_crud
 from ...crud.history import history_crud
 from ...database import get_db
-from ...exceptions import AssetNotFoundError, DuplicateAssetError
 
 # 开发模式配置 - 用于开发环境绕过认证
 from ...middleware.auth import audit_action, get_current_active_user, require_permission
@@ -344,9 +357,9 @@ async def get_asset(
     try:
         asset = asset_crud.get(db=db, id=asset_id)
         if not asset:
-            raise AssetNotFoundError(asset_id)
+            raise ResourceNotFoundError("Asset", asset_id)
         return asset
-    except AssetNotFoundError:
+    except ResourceNotFoundError:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取资产详情失败: {str(e)}")
@@ -370,13 +383,15 @@ async def create_asset(
             db=db, property_name=asset_in.property_name
         )
         if existing_asset:
-            raise DuplicateAssetError(asset_in.property_name)
+            raise DuplicateResourceError(
+                "Asset", "property_name", asset_in.property_name
+            )
 
         # 创建资产并记录历史
         asset = asset_crud.create_with_history(db=db, obj_in=asset_in)
         return asset
 
-    except DuplicateAssetError:
+    except DuplicateResourceError:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"创建资产失败: {str(e)}")
@@ -400,7 +415,7 @@ async def update_asset(
         # 检查资产是否存在
         asset = asset_crud.get(db=db, id=asset_id)
         if not asset:
-            raise AssetNotFoundError(asset_id)
+            raise ResourceNotFoundError("Asset", asset_id)
 
         # 如果更新了物业名称，检查是否重复
         if asset_in.property_name and asset_in.property_name != asset.property_name:
@@ -408,7 +423,9 @@ async def update_asset(
                 db=db, property_name=asset_in.property_name
             )
             if existing_asset and existing_asset.id != asset_id:
-                raise DuplicateAssetError(asset_in.property_name)
+                raise DuplicateResourceError(
+                    "Asset", "property_name", asset_in.property_name
+                )
 
         # 更新资产并记录历史
         updated_asset = asset_crud.update_with_history(
@@ -438,13 +455,13 @@ async def delete_asset(
         # 检查资产是否存在
         asset = asset_crud.get(db=db, id=asset_id)
         if not asset:
-            raise AssetNotFoundError(asset_id)
+            raise ResourceNotFoundError("Asset", asset_id)
 
         # 删除资产
         asset_crud.remove(db=db, id=asset_id)
         return Response(status_code=HTTP_204_NO_CONTENT)
 
-    except AssetNotFoundError:
+    except ResourceNotFoundError:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"删除资产失败: {str(e)}")
@@ -465,13 +482,13 @@ async def get_asset_history(
         # 检查资产是否存在
         asset = asset_crud.get(db=db, id=asset_id)
         if not asset:
-            raise AssetNotFoundError(asset_id)
+            raise ResourceNotFoundError("Asset", asset_id)
 
         # 获取历史记录
         history_records = history_crud.get_by_asset_id(db=db, asset_id=asset_id)
         return {"asset_id": asset_id, "history": history_records}
 
-    except AssetNotFoundError:
+    except ResourceNotFoundError:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取资产历史失败: {str(e)}")
@@ -494,12 +511,13 @@ async def test_statistics(
             "success": True,
             "message": "测试成功",
             "total_assets": total_assets,
-            "timestamp": "2024-01-01T00:00:00Z"
+            "timestamp": "2024-01-01T00:00:00Z",
         }
 
     except Exception as e:
         print(f"[ERROR] 测试统计API失败: {e}")
         import traceback
+
         print(f"[ERROR] 详细错误: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"测试失败: {str(e)}")
 
@@ -517,7 +535,10 @@ async def get_asset_statistics(
         from ...models.asset import Asset
 
         # 添加调试信息
-        print(f"[DEBUG] 开始执行资产统计查询，用户: {current_user.username if current_user else 'unknown'}")
+        print(
+            f"[DEBUG] 开始执行资产统计查询，"
+            f"用户: {current_user.username if current_user else 'unknown'}"
+        )
 
         # 检查数据库连接是否正常
         try:
@@ -636,12 +657,13 @@ async def get_asset_statistics(
     except Exception as e:
         # 记录详细的错误信息用于调试
         import traceback
+
         error_detail = traceback.format_exc()
         print(f"[ERROR] 资产统计查询失败: {str(e)}")
         print(f"[ERROR] 详细错误信息: {error_detail}")
         raise HTTPException(
             status_code=500,
-            detail=f"获取统计信息失败: {str(e)}. 请检查数据库连接和表结构。"
+            detail=f"获取统计信息失败: {str(e)}. 请检查数据库连接和表结构。",
         )
 
 
@@ -712,12 +734,13 @@ async def get_asset_area_statistics(
     except Exception as e:
         # 记录详细的错误信息用于调试
         import traceback
+
         error_detail = traceback.format_exc()
         print(f"[ERROR] 面积统计查询失败: {str(e)}")
         print(f"[ERROR] 详细错误信息: {error_detail}")
         raise HTTPException(
             status_code=500,
-            detail=f"获取面积统计信息失败: {str(e)}. 请检查数据库连接和表结构。"
+            detail=f"获取面积统计信息失败: {str(e)}. 请检查数据库连接和表结构。",
         )
 
 
@@ -741,7 +764,7 @@ async def upload_asset_attachments(
         # 检查资产是否存在
         asset = asset_crud.get(db=db, id=asset_id)
         if not asset:
-            raise AssetNotFoundError(asset_id)
+            raise ResourceNotFoundError("Asset", asset_id)
 
         # 创建附件目录
         upload_dir = f"uploads/attachments/{asset_id}"
@@ -787,7 +810,7 @@ async def upload_asset_attachments(
             "message": f"成功上传 {len(success_files)} 个文件，失败 {len(failed_files)} 个文件",
         }
 
-    except AssetNotFoundError:
+    except ResourceNotFoundError:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"上传附件失败: {str(e)}")
@@ -808,7 +831,7 @@ async def get_asset_attachments(
         # 检查资产是否存在
         asset = asset_crud.get(db=db, id=asset_id)
         if not asset:
-            raise AssetNotFoundError(asset_id)
+            raise ResourceNotFoundError("Asset", asset_id)
 
         # 获取附件目录
         upload_dir = f"uploads/attachments/{asset_id}"
@@ -834,7 +857,7 @@ async def get_asset_attachments(
 
         return attachments
 
-    except AssetNotFoundError:
+    except ResourceNotFoundError:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取附件列表失败: {str(e)}")
@@ -857,7 +880,7 @@ async def download_asset_attachment(
         # 检查资产是否存在
         asset = asset_crud.get(db=db, id=asset_id)
         if not asset:
-            raise AssetNotFoundError(asset_id)
+            raise ResourceNotFoundError("Asset", asset_id)
 
         # 验证文件路径
         file_path = f"uploads/attachments/{asset_id}/{filename}"
@@ -871,7 +894,7 @@ async def download_asset_attachment(
 
         return FileResponse(file_path, filename=filename, media_type="application/pdf")
 
-    except AssetNotFoundError:
+    except ResourceNotFoundError:
         raise
     except HTTPException:
         raise
@@ -896,7 +919,7 @@ async def delete_asset_attachment(
         # 检查资产是否存在
         asset = asset_crud.get(db=db, id=asset_id)
         if not asset:
-            raise AssetNotFoundError(asset_id)
+            raise ResourceNotFoundError("Asset", asset_id)
 
         # 验证文件路径
         file_path = f"uploads/attachments/{asset_id}/{attachment_id}"
@@ -909,7 +932,7 @@ async def delete_asset_attachment(
 
         return {"message": "附件删除成功"}
 
-    except AssetNotFoundError:
+    except ResourceNotFoundError:
         raise
     except HTTPException:
         raise
@@ -959,9 +982,7 @@ async def batch_update_assets(
                     continue
 
                 # 更新资产
-                asset_crud.update(
-                    db=db, db_obj=asset, obj_in=request.updates
-                )
+                asset_crud.update(db=db, db_obj=asset, obj_in=request.updates)
 
                 success_count += 1
                 updated_assets.append(asset_id)
@@ -1167,7 +1188,8 @@ async def import_assets(
                         # 按物业名称和地址查找重复项
                         assets, _ = asset_crud.get_multi_with_search(
                             db=db,
-                            search=f"{asset_data.get('property_name', '')} {asset_data.get('address', '')}",
+                            search=f"{asset_data.get('property_name',
+                    '')} {asset_data.get('address', '')}",
                             limit=1,
                         )
                         if assets:
@@ -1417,3 +1439,40 @@ async def get_assets_by_ids(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"根据ID列表获取资产失败: {str(e)}")
+
+
+@router.post("/batch-delete", summary="批量删除资产")
+async def batch_delete_assets(
+    request: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    批量删除资产
+
+    - **asset_ids**: 要删除的资产ID列表
+    """
+    try:
+        asset_ids = request.get("asset_ids", [])
+        if not asset_ids:
+            raise HTTPException(status_code=400, detail="未提供要删除的资产ID列表")
+
+        # 批量删除资产
+        deleted_count = 0
+        for asset_id in asset_ids:
+            try:
+                asset = asset_crud.get(db=db, id=asset_id)
+                if asset:
+                    asset_crud.remove(db=db, id=asset_id)
+                    deleted_count += 1
+            except Exception:
+                continue  # 即使单个资产删除失败也继续处理其他资产
+
+        return {
+            "success": True,
+            "data": {"deleted_count": deleted_count},
+            "message": f"成功删除{deleted_count}个资产",
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"批量删除资产失败: {str(e)}")

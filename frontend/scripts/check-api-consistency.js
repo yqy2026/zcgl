@@ -149,7 +149,7 @@ class APIConsistencyChecker {
 
       // 检查是否有try-catch块
       const hasTryCatch = /try\s*\{/.test(content);
-      const hasErrorHandling = /catch\s*\([^)]+)\s*\{/.test(content);
+      const hasErrorHandling = /catch\s*\([^\)]+\)\s*\{/.test(content);
 
       if (hasTryCatch && !hasErrorHandling) {
         this.issues.push({

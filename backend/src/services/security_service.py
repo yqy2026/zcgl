@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 增强安全服务
 提供密码策略、JWT管理、安全审计等高级安全功能
@@ -7,7 +9,6 @@ import re
 import secrets
 import string
 from datetime import UTC, datetime, timedelta
-from typing import Any
 
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
@@ -31,12 +32,7 @@ class SecurityService:
         高级密码强度验证
         返回详细的验证结果
         """
-        result = {
-            "is_valid": True,
-            "score": 0,
-            "issues": [],
-            "suggestions": []
-        }
+        result = {"is_valid": True, "score": 0, "issues": [], "suggestions": []}
 
         # 长度检查
         if len(password) < settings.MIN_PASSWORD_LENGTH:
@@ -65,14 +61,24 @@ class SecurityService:
                 missing_types.append("数字")
             if not has_special:
                 missing_types.append("特殊字符")
-            result["issues"].append(f"密码必须包含以下字符类型中的至少3种：{', '.join(missing_types)}")
+            result["issues"].append(
+                f"密码必须包含以下字符类型中的至少3种：{', '.join(missing_types)}"
+            )
         else:
             result["score"] += char_type_count
 
         # 常见弱密码检查
         weak_passwords = [
-            "123456", "password", "12345678", "qwerty", "abc123",
-            "111111", "1234567890", "admin", "letmein", "welcome"
+            "123456",
+            "password",
+            "12345678",
+            "qwerty",
+            "abc123",
+            "111111",
+            "1234567890",
+            "admin",
+            "letmein",
+            "welcome",
         ]
 
         if password.lower() in weak_passwords:
@@ -84,14 +90,12 @@ class SecurityService:
             result["suggestions"].append("建议增加字符多样性，避免过多重复字符")
 
         # 连续字符检查
-        consecutive_pattern = re.compile(r'(.)\1{2,}')  # 3个或更多连续相同字符
+        consecutive_pattern = re.compile(r"(.)\1{2,}")  # 3个或更多连续相同字符
         if consecutive_pattern.search(password):
             result["suggestions"].append("避免连续使用相同字符")
 
         # 键盘模式检查
-        keyboard_patterns = [
-            "qwerty", "asdf", "1234", "abcd"
-        ]
+        keyboard_patterns = ["qwerty", "asdf", "1234", "abcd"]
         password_lower = password.lower()
         for pattern in keyboard_patterns:
             if pattern in password_lower:
@@ -113,14 +117,14 @@ class SecurityService:
         """
         # 确保包含所有字符类型
         alphabet = (
-            string.ascii_uppercase +  # 大写字母
-            string.ascii_lowercase +  # 小写字母
-            string.digits +           # 数字
-            "!@#$%^&*()_+-=[]{}|;:,.<>?"  # 特殊字符
+            string.ascii_uppercase  # 大写字母
+            + string.ascii_lowercase  # 小写字母
+            + string.digits  # 数字
+            + "!@#$%^&*()_+-=[]{}|;:,.<>?"  # 特殊字符
         )
 
         while True:
-            password = ''.join(secrets.choice(alphabet) for _ in range(length))
+            password = "".join(secrets.choice(alphabet) for _ in range(length))
 
             # 验证生成的密码
             validation = self.validate_password_strength_advanced(password)
@@ -129,7 +133,9 @@ class SecurityService:
 
     # ==================== JWT管理增强 ====================
 
-    def create_tokens_enhanced(self, user: User, device_info: dict | None = None) -> dict[str, Any]:
+    def create_tokens_enhanced(
+        self, user: User, device_info: dict | None = None
+    ) -> dict[str, Any]:
         """
         创建增强的JWT令牌
         """
@@ -144,13 +150,13 @@ class SecurityService:
             "iat": now,
             "jti": secrets.token_urlsafe(32),  # JWT ID
             "session_id": secrets.token_urlsafe(16),
-            "device_fingerprint": self._generate_device_fingerprint(device_info) if device_info else None
+            "device_fingerprint": self._generate_device_fingerprint(device_info)
+            if device_info
+            else None,
         }
 
         access_token = jwt.encode(
-            access_token_data,
-            settings.SECRET_KEY,
-            algorithm="HS256"
+            access_token_data, settings.SECRET_KEY, algorithm="HS256"
         )
 
         # 刷新令牌 - 增强安全性
@@ -161,13 +167,11 @@ class SecurityService:
             "iat": now,
             "jti": secrets.token_urlsafe(32),
             "session_id": access_token_data["session_id"],
-            "device_fingerprint": access_token_data["device_fingerprint"]
+            "device_fingerprint": access_token_data["device_fingerprint"],
         }
 
         refresh_token = jwt.encode(
-            refresh_token_data,
-            settings.SECRET_KEY,
-            algorithm="HS256"
+            refresh_token_data, settings.SECRET_KEY, algorithm="HS256"
         )
 
         return {
@@ -176,7 +180,7 @@ class SecurityService:
             "token_type": "bearer",
             "expires_in": settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
             "session_id": access_token_data["session_id"],
-            "issued_at": now.isoformat()
+            "issued_at": now.isoformat(),
         }
 
     def _generate_device_fingerprint(self, device_info: dict) -> str:
@@ -189,13 +193,15 @@ class SecurityService:
             device_info.get("user_agent", ""),
             device_info.get("ip_address", ""),
             device_info.get("device_id", ""),
-            device_info.get("platform", "")
+            device_info.get("platform", ""),
         ]
 
         fingerprint_string = "|".join(filter(None, fingerprint_data))
         return hashlib.sha256(fingerprint_string.encode()).hexdigest()[:16]
 
-    def validate_token_enhanced(self, token: str, expected_type: str = "access") -> dict[str, Any]:
+    def validate_token_enhanced(
+        self, token: str, expected_type: str = "access"
+    ) -> dict[str, Any]:
         """
         增强的令牌验证
         """
@@ -222,7 +228,7 @@ class SecurityService:
                 "user_id": payload.get("sub"),
                 "username": payload.get("username"),
                 "role": payload.get("role"),
-                "session_id": session_id
+                "session_id": session_id,
             }
 
         except JWTError as e:
@@ -242,10 +248,7 @@ class SecurityService:
         """
         session = (
             self.db.query(UserSession)
-            .filter(
-                UserSession.session_id == session_id,
-                UserSession.is_active
-            )
+            .filter(UserSession.session_id == session_id, UserSession.is_active)
             .first()
         )
 
@@ -257,11 +260,7 @@ class SecurityService:
         """
         检查账户安全状态
         """
-        security_status = {
-            "overall_score": 0,
-            "issues": [],
-            "recommendations": []
-        }
+        security_status = {"overall_score": 0, "issues": [], "recommendations": []}
 
         # 检查密码年龄
         if user.password_last_changed:
@@ -277,10 +276,7 @@ class SecurityService:
         # 检查活跃会话
         active_sessions = (
             self.db.query(UserSession)
-            .filter(
-                UserSession.user_id == user.id,
-                UserSession.is_active
-            )
+            .filter(UserSession.user_id == user.id, UserSession.is_active)
             .count()
         )
 
@@ -292,7 +288,9 @@ class SecurityService:
 
         # 检查登录失败次数
         if user.failed_login_attempts and user.failed_login_attempts > 0:
-            security_status["issues"].append(f"最近有{user.failed_login_attempts}次登录失败")
+            security_status["issues"].append(
+                f"最近有{user.failed_login_attempts}次登录失败"
+            )
             security_status["recommendations"].append("建议检查是否有异常登录尝试")
         else:
             security_status["overall_score"] += 1
@@ -306,7 +304,9 @@ class SecurityService:
 
         return security_status
 
-    def handle_suspicious_activity(self, user: User, activity_type: str, details: dict) -> bool:
+    def handle_suspicious_activity(
+        self, user: User, activity_type: str, details: dict
+    ) -> bool:
         """
         处理可疑活动
         """
@@ -344,7 +344,7 @@ class SecurityService:
             details=str(details),
             ip_address=details.get("ip_address"),
             user_agent=details.get("user_agent"),
-            timestamp=datetime.now()
+            timestamp=datetime.now(),
         )
 
         self.db.add(audit_log)
@@ -355,7 +355,9 @@ class SecurityService:
         锁定账户
         """
         user.is_locked = True
-        user.locked_until = datetime.now() + timedelta(seconds=settings.LOCKOUT_DURATION)
+        user.locked_until = datetime.now() + timedelta(
+            seconds=settings.LOCKOUT_DURATION
+        )
         user.lock_reason = reason
 
         self.db.commit()
@@ -376,10 +378,7 @@ class SecurityService:
         # 保留最近的3个会话，撤销其他的
         old_sessions = (
             self.db.query(UserSession)
-            .filter(
-                UserSession.user_id == user.id,
-                UserSession.is_active
-            )
+            .filter(UserSession.user_id == user.id, UserSession.is_active)
             .order_by(UserSession.last_accessed_at.desc())
             .offset(3)
             .all()
@@ -390,7 +389,9 @@ class SecurityService:
 
         self.db.commit()
 
-        self._log_security_event(user.id, "old_sessions_revoked", {"count": len(old_sessions)})
+        self._log_security_event(
+            user.id, "old_sessions_revoked", {"count": len(old_sessions)}
+        )
 
     # ==================== 安全审计 ====================
 
@@ -399,7 +400,7 @@ class SecurityService:
         user_id: str | None = None,
         start_date: datetime | None = None,
         end_date: datetime | None = None,
-        limit: int = 100
+        limit: int = 100,
     ) -> list[dict]:
         """
         获取安全审计日志
@@ -417,22 +418,26 @@ class SecurityService:
 
         # 只返回安全相关的事件
         query = query.filter(
-            AuditLog.action.like("security_%") |
-            AuditLog.action.in_(["login", "logout", "password_change", "account_locked"])
+            AuditLog.action.like("security_%")
+            | AuditLog.action.in_(
+                ["login", "logout", "password_change", "account_locked"]
+            )
         )
 
         query = query.order_by(AuditLog.timestamp.desc()).limit(limit)
 
         logs = []
         for log in query.all():
-            logs.append({
-                "timestamp": log.timestamp.isoformat(),
-                "user_id": log.user_id,
-                "action": log.action,
-                "details": log.details,
-                "ip_address": log.ip_address,
-                "user_agent": log.user_agent
-            })
+            logs.append(
+                {
+                    "timestamp": log.timestamp.isoformat(),
+                    "user_id": log.user_id,
+                    "action": log.action,
+                    "details": log.details,
+                    "ip_address": log.ip_address,
+                    "user_agent": log.user_agent,
+                }
+            )
 
         return logs
 
@@ -444,24 +449,24 @@ class SecurityService:
         start_date = end_date - timedelta(days=30)
 
         audit_logs = self.get_security_audit_log(
-            user_id=user_id,
-            start_date=start_date,
-            end_date=end_date,
-            limit=1000
+            user_id=user_id, start_date=start_date, end_date=end_date, limit=1000
         )
 
         report = {
-            "period": {
-                "start": start_date.isoformat(),
-                "end": end_date.isoformat()
-            },
+            "period": {"start": start_date.isoformat(), "end": end_date.isoformat()},
             "summary": {
                 "total_events": len(audit_logs),
-                "failed_logins": len([log for log in audit_logs if "failed_login" in log["action"]]),
-                "account_locks": len([log for log in audit_logs if log["action"] == "account_locked"]),
-                "suspicious_activities": len([log for log in audit_logs if "suspicious" in log["action"]])
+                "failed_logins": len(
+                    [log for log in audit_logs if "failed_login" in log["action"]]
+                ),
+                "account_locks": len(
+                    [log for log in audit_logs if log["action"] == "account_locked"]
+                ),
+                "suspicious_activities": len(
+                    [log for log in audit_logs if "suspicious" in log["action"]]
+                ),
             },
-            "recent_events": audit_logs[:10]
+            "recent_events": audit_logs[:10],
         }
 
         if user_id:

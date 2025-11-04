@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 印章和手写体识别服务
 专门识别合同中的红色印章、签名和手写文字
@@ -7,7 +9,6 @@ import logging
 import re
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any
 
 import cv2
 import numpy as np

@@ -5,10 +5,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy.orm import Session
 
+from ...core.exception_handler import ResourceNotFoundError
 from ...crud.asset import asset_crud
 from ...crud.history import history_crud
 from ...database import get_db
-from ...exceptions import AssetNotFoundError
 from ...schemas.asset import AssetHistoryResponse
 
 # 创建历史路由器
@@ -34,7 +34,7 @@ async def get_history_list(
             # 检查资产是否存在
             asset = asset_crud.get(db=db, id=asset_id)
             if not asset:
-                raise AssetNotFoundError(asset_id)
+                raise ResourceNotFoundError("Asset", asset_id)
 
             # 获取特定资产的历史记录
             history_records = history_crud.get_by_asset_id(db=db, asset_id=asset_id)
@@ -65,7 +65,7 @@ async def get_history_list(
                 "pages": 1,  # 简化处理
             }
 
-    except AssetNotFoundError:
+    except ResourceNotFoundError:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取历史记录失败: {str(e)}")

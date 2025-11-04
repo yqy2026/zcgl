@@ -1,9 +1,10 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '../../../__tests__/utils/testUtils'
+import { render, screen } from '../../../__tests__/utils/testUtils'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+// Jest imports - no explicit import needed for describe, it, expect
 
 import AssetForm from '../AssetForm'
 import { assetService } from '@/services/assetService'
@@ -11,20 +12,20 @@ import type { Asset } from '@/types/asset'
 import { OwnershipStatus, PropertyNature, UsageStatus } from '@/types/asset'
 
 // Mock the asset service
-vi.mock('@/services/assetService', () => ({
+jest.mock('@/services/assetService', () => ({
   assetService: {
-    createAsset: vi.fn(),
-    updateAsset: vi.fn(),
-    getOwnershipEntities: vi.fn(),
-    getBusinessCategories: vi.fn(),
+    createAsset: jest.fn(),
+    updateAsset: jest.fn(),
+    getOwnershipEntities: jest.fn(),
+    getBusinessCategories: jest.fn(),
   },
 }))
 
 // Mock the form field visibility hook
-vi.mock('@/hooks/useFormFieldVisibility', () => ({
+jest.mock('@/hooks/useFormFieldVisibility', () => ({
   useFormFieldVisibility: () => ({
-    isFieldVisible: vi.fn(() => true),
-    getVisibleFields: vi.fn(() => []),
+    isFieldVisible: jest.fn(() => true),
+    getVisibleFields: jest.fn(() => []),
   }),
 }))
 
@@ -59,12 +60,12 @@ const renderWithProviders = (component: React.ReactElement) => {
 
 describe('AssetForm', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-    
+    jest.clearAllMocks()
+
     // Mock service responses
-    vi.mocked(assetService.getOwnershipEntities).mockResolvedValue(['权属方1', '权属方2'])
-    vi.mocked(assetService.getManagementEntities).mockResolvedValue(['管理方1', '管理方2'])
-    vi.mocked(assetService.getBusinessCategories).mockResolvedValue(['商业', '办公'])
+    jest.mocked(assetService.getOwnershipEntities).mockResolvedValue(['权属方1', '权属方2'])
+    jest.mocked(assetService.getManagementEntities).mockResolvedValue(['管理方1', '管理方2'])
+    jest.mocked(assetService.getBusinessCategories).mockResolvedValue(['商业', '办公'])
   })
 
   it('renders form fields correctly', async () => {
@@ -95,9 +96,9 @@ describe('AssetForm', () => {
 
   it('submits form with valid data in create mode', async () => {
     const user = userEvent.setup()
-    const onSuccess = vi.fn()
+    const onSuccess = jest.fn()
     
-    vi.mocked(assetService.createAsset).mockResolvedValue(mockAsset)
+    jest.mocked(assetService.createAsset).mockResolvedValue(mockAsset)
 
     renderWithProviders(
       <AssetForm mode="create" onSuccess={onSuccess} />
@@ -139,9 +140,9 @@ describe('AssetForm', () => {
 
   it('submits form with valid data in edit mode', async () => {
     const user = userEvent.setup()
-    const onSuccess = vi.fn()
+    const onSuccess = jest.fn()
     
-    vi.mocked(assetService.updateAsset).mockResolvedValue(mockAsset)
+    jest.mocked(assetService.updateAsset).mockResolvedValue(mockAsset)
 
     renderWithProviders(
       <AssetForm 
@@ -175,7 +176,7 @@ describe('AssetForm', () => {
     const user = userEvent.setup()
     const error = new Error('提交失败')
     
-    vi.mocked(assetService.createAsset).mockRejectedValue(error)
+    jest.mocked(assetService.createAsset).mockRejectedValue(error)
 
     renderWithProviders(<AssetForm mode="create" />)
 

@@ -32,8 +32,7 @@ import {
   UsageStatusGroups,
   OwnershipStatusOptions,
   BusinessModelOptions,
-  TenantTypeOptions,
-  OperationStatusOptions
+  TenantTypeOptions
 } from '../../utils/enumHelpers'
 import { assetService } from '../../services/assetService'
 import { rentContractService } from '../../services/rentContractService'
@@ -45,8 +44,8 @@ const { TextArea } = Input
 const { Title, Text } = Typography
 
 interface AssetFormProps {
-  initialData?: any
-  onSubmit: (data: any) => Promise<void>
+  initialData?: Record<string, unknown>
+  onSubmit: (data: Record<string, unknown>) => Promise<void>
   onCancel: () => void
   loading?: boolean
   mode?: 'create' | 'edit'

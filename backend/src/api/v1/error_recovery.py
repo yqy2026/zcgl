@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
+from typing import Any
+
 """
 错误恢复管理API
 提供错误恢复策略管理、监控和统计功能
 """
 
 from datetime import datetime
-from typing import Any
 
 from fastapi import APIRouter, Body, HTTPException, Query
 from pydantic import BaseModel, Field

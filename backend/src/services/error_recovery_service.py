@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from typing import Any
+
 """
 错误恢复服务
 提供企业级的多层错误检测、自动重试和智能恢复策略
@@ -14,7 +16,6 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any
 
 logger = logging.getLogger(__name__)
 

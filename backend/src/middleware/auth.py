@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 认证中间件
 """
@@ -81,7 +83,9 @@ def get_current_user(
             pass
         else:
             # Unknown type, default to USER
-            logger.warning(f"Unknown role type '{type(role)}' with value '{role}', defaulting to USER")
+            logger.warning(
+                f"Unknown role type '{type(role)}' with value '{role}', defaulting to USER"
+            )
             role_enum = UserRole.USER
 
         # 使用标准的TokenData Pydantic模型
@@ -90,7 +94,7 @@ def get_current_user(
                 sub=user_id,
                 username=username,
                 role=role_enum,
-                exp=payload.get('exp') if payload else None
+                exp=payload.get("exp") if payload else None,
             )
         except Exception as e:
             # 如果TokenData验证失败，记录错误并抛出认证异常
@@ -354,7 +358,7 @@ class SecurityConfig:
     AUDIT_LOG_RETENTION_DAYS = settings.AUDIT_LOG_RETENTION_DAYS
 
     @classmethod
-    def get_password_policy(cls) -> dict:
+    def get_password_policy(cls) -> dict[str, Any]:
         """获取密码策略"""
         return {
             "min_length": cls.MIN_PASSWORD_LENGTH,
@@ -367,7 +371,7 @@ class SecurityConfig:
         }
 
     @classmethod
-    def get_token_config(cls) -> dict:
+    def get_token_config(cls) -> dict[str, Any]:
         """获取令牌配置"""
         return {
             "access_token_expire_minutes": cls.ACCESS_TOKEN_EXPIRE_MINUTES,

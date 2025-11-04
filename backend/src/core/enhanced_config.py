@@ -1,3 +1,5 @@
+from typing import Any, TypeVar
+
 """
 增强配置管理器
 提供统一的配置加载、验证和管理功能
@@ -6,7 +8,6 @@
 import secrets
 from enum import Enum
 from pathlib import Path
-from typing import Any, TypeVar
 
 from pydantic import BaseModel, Field, validator
 from pydantic_settings import BaseSettings
@@ -20,6 +21,7 @@ T = TypeVar("T")
 
 class Environment(Enum):
     """环境枚举"""
+
     DEVELOPMENT = "development"
     TESTING = "testing"
     STAGING = "staging"
@@ -28,6 +30,7 @@ class Environment(Enum):
 
 class LogLevel(str, Enum):
     """日志级别枚举"""
+
     CRITICAL = "CRITICAL"
     ERROR = "ERROR"
     WARNING = "WARNING"
@@ -38,6 +41,7 @@ class LogLevel(str, Enum):
 
 class DatabaseConfig(BaseModel):
     """数据库配置"""
+
     url: str = Field(..., description="数据库连接URL")
     echo: bool = Field(False, description="是否打印SQL语句")
     pool_size: int = Field(5, description="连接池大小")
@@ -46,15 +50,16 @@ class DatabaseConfig(BaseModel):
     pool_recycle: int = Field(3600, description="连接池回收时间")
     isolation_level: str = Field("READ COMMITTED", description="事务隔离级别")
 
-    @validator('url')
+    @validator("url")
     def validate_url(self, v):
         if not v:
-            raise ValueError('数据库URL不能为空')
+            raise ValueError("数据库URL不能为空")
         return v
 
 
 class RedisConfig(BaseModel):
     """Redis配置"""
+
     host: str = Field("localhost", description="Redis主机")
     port: int = Field(6379, description="Redis端口")
     db: int = Field(0, description="Redis数据库")
@@ -66,6 +71,7 @@ class RedisConfig(BaseModel):
 
 class SecurityConfig(BaseModel):
     """安全配置"""
+
     secret_key: str = Field(..., description="JWT密钥")
     algorithm: str = Field("HS256", description="JWT算法")
     access_token_expire_minutes: int = Field(30, description="访问令牌过期时间（分钟）")
@@ -79,35 +85,36 @@ class SecurityConfig(BaseModel):
     rate_limit_requests: int = Field(100, description="速率限制请求数")
     rate_limit_window: int = Field(60, description="速率限制时间窗口（秒）")
 
-    @validator('secret_key')
+    @validator("secret_key")
     def validate_secret_key(self, v):
         if len(v) < 32:
-            raise ValueError('密钥长度至少为32个字符')
+            raise ValueError("密钥长度至少为32个字符")
         return v
 
 
 class CacheConfig(BaseModel):
     """缓存配置"""
+
     backend: str = Field("memory", description="缓存后端")
     ttl: int = Field(300, description="默认缓存时间（秒）")
     key_prefix: str = Field("zcgl", description="缓存键前缀")
     max_size: int = Field(1000, description="内存缓存最大条目数")
     redis_db: int = Field(1, description="Redis缓存数据库")
 
-    @validator('backend')
+    @validator("backend")
     def validate_backend(self, v):
         valid_backends = ["memory", "redis", "memcached"]
         if v not in valid_backends:
-            raise ValueError(f'缓存后端必须是以下之一: {", ".join(valid_backends)}')
+            raise ValueError(f"缓存后端必须是以下之一: {', '.join(valid_backends)}")
         return v
 
 
 class LoggingConfig(BaseModel):
     """日志配置"""
+
     level: LogLevel = Field(LogLevel.INFO, description="日志级别")
     format: str = Field(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        description="日志格式"
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s", description="日志格式"
     )
     file_path: str | None = Field(None, description="日志文件路径")
     max_bytes: int = Field(10485760, description="日志文件最大字节数")
@@ -119,6 +126,7 @@ class LoggingConfig(BaseModel):
 
 class CORSConfig(BaseModel):
     """CORS配置"""
+
     allow_origins: list[str] = Field(["*"], description="允许的源")
     allow_credentials: bool = Field(True, description="是否允许凭据")
     allow_methods: list[str] = Field(["*"], description="允许的方法")
@@ -128,10 +136,11 @@ class CORSConfig(BaseModel):
 
 class FileUploadConfig(BaseModel):
     """文件上传配置"""
+
     max_file_size: int = Field(10 * 1024 * 1024, description="最大文件大小（字节）")
     allowed_extensions: list[str] = Field(
         [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".jpg", ".jpeg", ".png"],
-        description="允许的文件扩展名"
+        description="允许的文件扩展名",
     )
     upload_path: str = Field("uploads", description="上传路径")
     chunk_size: int = Field(8192, description="分块大小")
@@ -157,7 +166,9 @@ class EnhancedSettings(BaseSettings):
     cache: CacheConfig = Field(CacheConfig(), description="缓存配置")
     logging: LoggingConfig = Field(LoggingConfig(), description="日志配置")
     cors: CORSConfig = Field(CORSConfig(), description="CORS配置")
-    file_upload: FileUploadConfig = Field(FileUploadConfig(), description="文件上传配置")
+    file_upload: FileUploadConfig = Field(
+        FileUploadConfig(), description="文件上传配置"
+    )
 
     # 业务配置
     timezone: str = Field("Asia/Shanghai", description="时区")
@@ -173,22 +184,22 @@ class EnhancedSettings(BaseSettings):
         case_sensitive = False
         env_prefix = "APP"
 
-    @validator('environment', pre=True)
+    @validator("environment", pre=True)
     def parse_environment(self, v):
         if isinstance(v, str):
             return Environment(v.lower())
         return v
 
-    @validator('debug', pre=True)
+    @validator("debug", pre=True)
     def parse_debug(self, v, values):
         if v is None:
-            return values.get('environment') == Environment.DEVELOPMENT
+            return values.get("environment") == Environment.DEVELOPMENT
         return v
 
-    @validator('reload', pre=True)
+    @validator("reload", pre=True)
     def parse_reload(self, v, values):
         if v is None:
-            return values.get('environment') == Environment.DEVELOPMENT
+            return values.get("environment") == Environment.DEVELOPMENT
         return v
 
     @classmethod
@@ -207,9 +218,9 @@ class EnhancedSettings(BaseSettings):
             raise FileNotFoundError(f"配置文件不存在: {config_path}")
 
         # 这里可以支持多种配置文件格式
-        if config_path.suffix.lower() in ['.yml', '.yaml']:
+        if config_path.suffix.lower() in [".yml", ".yaml"]:
             return cls._load_from_yaml(config_path)
-        elif config_path.suffix.lower() == '.json':
+        elif config_path.suffix.lower() == ".json":
             return cls._load_from_json(config_path)
         else:
             raise ValueError(f"不支持的配置文件格式: {config_path.suffix}")
@@ -219,7 +230,8 @@ class EnhancedSettings(BaseSettings):
         """从YAML文件加载配置"""
         try:
             import yaml
-            with open(config_path, encoding='utf-8') as f:
+
+            with open(config_path, encoding="utf-8") as f:
                 config_data = yaml.safe_load(f)
             return cls(**config_data)
         except ImportError:
@@ -229,7 +241,8 @@ class EnhancedSettings(BaseSettings):
     def _load_from_json(cls, config_path: Path) -> "EnhancedSettings":
         """从JSON文件加载配置"""
         import json
-        with open(config_path, encoding='utf-8') as f:
+
+        with open(config_path, encoding="utf-8") as f:
             config_data = json.load(f)
         return cls(**config_data)
 
@@ -245,9 +258,9 @@ class EnhancedSettings(BaseSettings):
 
         config_data = self.dict()
 
-        if config_path.suffix.lower() in ['.yml', '.yaml']:
+        if config_path.suffix.lower() in [".yml", ".yaml"]:
             self._save_to_yaml(config_path, config_data)
-        elif config_path.suffix.lower() == '.json':
+        elif config_path.suffix.lower() == ".json":
             self._save_to_json(config_path, config_data)
         else:
             raise ValueError(f"不支持的配置文件格式: {config_path.suffix}")
@@ -256,7 +269,8 @@ class EnhancedSettings(BaseSettings):
         """保存到YAML文件"""
         try:
             import yaml
-            with open(config_path, 'w', encoding='utf-8') as f:
+
+            with open(config_path, "w", encoding="utf-8") as f:
                 yaml.dump(config_data, f, default_flow_style=False, allow_unicode=True)
         except ImportError:
             raise ImportError("需要安装PyYAML来支持YAML配置文件")
@@ -264,7 +278,8 @@ class EnhancedSettings(BaseSettings):
     def _save_to_json(self, config_path: Path, config_data: dict) -> None:
         """保存到JSON文件"""
         import json
-        with open(config_path, 'w', encoding='utf-8') as f:
+
+        with open(config_path, "w", encoding="utf-8") as f:
             json.dump(config_data, f, indent=2, ensure_ascii=False)
 
     def get_database_url(self) -> str:
@@ -325,6 +340,7 @@ class EnhancedSettings(BaseSettings):
         # 验证数据库配置
         try:
             from sqlalchemy import create_engine
+
             engine = create_engine(self.database.url)
             engine.dispose()
         except Exception as e:
@@ -345,9 +361,7 @@ class ConfigManager:
         self._config_cache: dict[str, Any] = {}
 
     def load_settings(
-        self,
-        config_file: str | Path | None = None,
-        environment: str | None = None
+        self, config_file: str | Path | None = None, environment: str | None = None
     ) -> EnhancedSettings:
         """
         加载设置

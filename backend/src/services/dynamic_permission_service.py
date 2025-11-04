@@ -1,3 +1,18 @@
+from typing import Any
+
+
+class AssetNotFoundError(Exception):
+    """Asset not found error"""
+
+    pass
+
+
+class DuplicateAssetError(Exception):
+    """Duplicate asset error"""
+
+    pass
+
+
 """
 动态权限分配服务
 支持临时权限、条件权限和动态权限分配
@@ -5,7 +20,6 @@
 
 from datetime import UTC, datetime, timedelta
 from enum import Enum
-from typing import Any
 
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session

@@ -1,10 +1,11 @@
+from typing import Any
+
 """
 资产变更历史跟踪服务
 """
 
 import logging
 from datetime import UTC, datetime
-from typing import Any
 
 from sqlalchemy import desc
 from sqlalchemy.orm import Session

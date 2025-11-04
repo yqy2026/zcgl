@@ -1,8 +1,8 @@
+from typing import Any
+
 """
 性能优化API端点
 """
-
-from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session

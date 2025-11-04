@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 数据统计和报表服务
 使用Python内置功能进行数据分析和统计
@@ -5,7 +7,6 @@
 
 import logging
 import statistics
-from typing import Any
 
 from sqlalchemy.orm import Session
 

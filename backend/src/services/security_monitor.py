@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 实时安全监控服务
 """
@@ -8,7 +10,6 @@ from collections import defaultdict, deque
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any
 
 from ..services.audit_service import get_audit_logger
 

@@ -1,15 +1,34 @@
+from typing import Any
+
+
+class BusinessLogicError(Exception):
+    """Business logic error"""
+
+    pass
+
+
+class AssetNotFoundError(Exception):
+    """Asset not found error"""
+
+    pass
+
+
+class DuplicateAssetError(Exception):
+    """Duplicate asset error"""
+
+    pass
+
+
 """
 任务管理CRUD操作
 """
 
 from datetime import UTC, datetime
-from typing import Any
 
 from sqlalchemy import and_, asc, desc
 from sqlalchemy.orm import Session
 
 from ..enums.task import TaskStatus, TaskType
-from ..exceptions import BusinessLogicError
 from ..models.task import AsyncTask, ExcelTaskConfig, TaskHistory
 from ..schemas.task import ExcelTaskConfigCreate, TaskCreate, TaskUpdate
 

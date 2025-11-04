@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 并行PDF处理器
 提供多任务并行处理和智能缓存优化
@@ -18,7 +20,6 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 from functools import wraps
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -210,8 +211,8 @@ class ParallelPDFProcessor:
             file_size_mb = os.path.getsize(task.file_path) / (1024 * 1024)
             size_score = max(0, 5 - file_size_mb)
         except (Exception, OSError, FileNotFoundError):
-                # 文件操作失败时使用默认分数
-                size_score = 2.5
+            # 文件操作失败时使用默认分数
+            size_score = 2.5
 
         return priority_score + time_score + size_score
 

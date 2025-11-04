@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 OCR引擎选择器
 智能选择最适合的OCR引擎处理不同类型的文档
@@ -5,7 +7,6 @@ OCR引擎选择器
 
 import logging
 import re
-from typing import Any
 
 logger = logging.getLogger(__name__)
 

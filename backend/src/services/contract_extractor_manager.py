@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from typing import Any
+
 """
 合同提取器管理器
 统一管理所有合同提取器，提供最佳提取策略
@@ -6,7 +8,6 @@
 
 import logging
 from datetime import datetime
-from typing import Any
 
 logger = logging.getLogger(__name__)
 

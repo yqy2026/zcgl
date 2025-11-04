@@ -22,20 +22,22 @@ class RentTermBase(BaseModel):
 
     @field_validator("total_monthly_amount")
     @classmethod
-    def calculate_total_amount(cls, v, values):
+    def calculate_total_amount(cls, v, info):
         """计算月总金额"""
         if v is None:
-            monthly_rent = values.get("monthly_rent", Decimal("0"))
-            management_fee = values.get("management_fee", Decimal("0"))
-            other_fees = values.get("other_fees", Decimal("0"))
+            data = info.data if hasattr(info, "data") else {}
+            monthly_rent = data.get("monthly_rent", Decimal("0"))
+            management_fee = data.get("management_fee", Decimal("0"))
+            other_fees = data.get("other_fees", Decimal("0"))
             return monthly_rent + management_fee + other_fees
         return v
 
     @field_validator("end_date")
     @classmethod
-    def validate_date_range(cls, v, values):
+    def validate_date_range(cls, v, info):
         """验证日期范围"""
-        start_date = values.get("start_date")
+        data = info.data if hasattr(info, "data") else {}
+        start_date = data.get("start_date")
         if start_date and v <= start_date:
             raise ValueError("结束日期必须大于开始日期")
         return v
@@ -85,9 +87,10 @@ class RentContractBase(BaseModel):
 
     @field_validator("end_date")
     @classmethod
-    def validate_date_range(cls, v, values):
+    def validate_date_range(cls, v, info):
         """验证日期范围"""
-        start_date = values.get("start_date")
+        data = info.data if hasattr(info, "data") else {}
+        start_date = data.get("start_date")
         if start_date and v <= start_date:
             raise ValueError("结束日期必须大于开始日期")
         return v
@@ -100,13 +103,14 @@ class RentContractCreate(RentContractBase):
 
     @field_validator("rent_terms")
     @classmethod
-    def validate_rent_terms(cls, v, values):
+    def validate_rent_terms(cls, v, info):
         """验证租金条款"""
         if not v:
             raise ValueError("租金条款不能为空")
 
-        start_date = values.get("start_date")
-        end_date = values.get("end_date")
+        data = info.data if hasattr(info, "data") else {}
+        start_date = data.get("start_date")
+        end_date = data.get("end_date")
 
         if start_date and end_date:
             # 验证条款覆盖完整租期

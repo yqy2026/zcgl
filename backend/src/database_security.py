@@ -14,6 +14,7 @@ def enhance_sqlite_security(engine: Engine):
     """
     增强SQLite数据库安全
     """
+
     @event.listens_for(engine, "connect")
     def set_sqlite_pragma(dbapi_connection, connection_record):
         if isinstance(dbapi_connection, sqlite3.Connection):
@@ -29,6 +30,7 @@ def enhance_sqlite_security(engine: Engine):
             # 启用自动清理
             cursor.execute("PRAGMA auto_vacuum=FULL")
             cursor.close()
+
 
 def enhance_database_security(engine: Engine):
     """

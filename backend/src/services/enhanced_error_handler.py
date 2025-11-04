@@ -1,10 +1,11 @@
+from typing import Any
+
 """
 增强的错误处理服务
 为PDF导入提供更好的错误处理、重试机制和用户友好的错误信息
 """
 
 import logging
-from typing import Any
 
 logger = logging.getLogger(__name__)
 

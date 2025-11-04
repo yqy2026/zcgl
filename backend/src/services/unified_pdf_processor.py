@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+from typing import Any
+
 """
 统一PDF处理服务
 整合优化的OCR、NLP处理和多引擎融合功能，提供统一的中文合同处理接口
@@ -9,7 +11,6 @@ import time
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 logger = logging.getLogger(__name__)
 

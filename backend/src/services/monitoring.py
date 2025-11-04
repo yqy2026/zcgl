@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 系统监控服务
 提供系统性能监控、日志记录和健康检查功能
@@ -9,7 +11,6 @@ import time
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any
 
 import psutil
 from sqlalchemy import text

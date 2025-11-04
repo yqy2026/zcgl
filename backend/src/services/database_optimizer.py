@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from typing import Any
+
 """
 数据库查询优化服务
 提供索引策略、查询优化和性能监控功能
@@ -7,7 +9,6 @@
 import logging
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
 
 from sqlalchemy import inspect, text
 from sqlalchemy.engine import Engine
@@ -401,7 +402,7 @@ class DatabaseOptimizer:
         return [s["suggestion"] for s in suggestions]
 
     def monitor_query_performance(
-        self, db: Session, query: str, params: dict = None
+        self, db: Session, query: str, params: dict[str, Any] = None
     ) -> QueryPerformanceMetrics:
         """监控查询性能"""
         start_time = datetime.now()

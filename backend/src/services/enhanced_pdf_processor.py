@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 增强PDF处理器
 专门针对中文租赁合同的智能处理和质量优化
@@ -8,7 +10,6 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any
 
 import cv2
 import numpy as np
@@ -275,8 +276,8 @@ class EnhancedPDFProcessor:
             noise = np.abs(img_array.astype(float) - blurred.astype(float))
             return np.mean(noise)
         except (Exception, OSError, ValueError):
-                # 图像处理异常时返回默认值
-                return 25.0  # 默认中等噪声水平
+            # 图像处理异常时返回默认值
+            return 25.0  # 默认中等噪声水平
 
     def _detect_scanned_page(self, image: Image.Image) -> bool:
         """检测是否为扫描页面"""
@@ -303,8 +304,8 @@ class EnhancedPDFProcessor:
             img_array = np.array(gray)
             return np.mean(img_array) / 255.0
         except (Exception, OSError, ValueError):
-                # 数据计算异常时返回默认值
-                return 0.5
+            # 数据计算异常时返回默认值
+            return 0.5
 
     def _calculate_contrast(self, image: Image.Image) -> float:
         """计算图像对比度"""
@@ -313,8 +314,8 @@ class EnhancedPDFProcessor:
             img_array = np.array(gray)
             return np.std(img_array) / 128.0
         except (Exception, OSError, ValueError):
-                # 数据计算异常时返回默认值
-                return 0.5
+            # 数据计算异常时返回默认值
+            return 0.5
 
     def _combine_analysis_results(
         self, quick_analysis: dict, page_analysis: dict, file_size_mb: float

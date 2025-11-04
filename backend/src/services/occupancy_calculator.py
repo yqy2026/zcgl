@@ -1,10 +1,11 @@
+from typing import Any
+
 """
 出租率自动计算服务
 提供实时出租率计算、趋势分析和预测功能
 """
 
 import logging
-from typing import Any
 
 from src.models.asset import Asset
 

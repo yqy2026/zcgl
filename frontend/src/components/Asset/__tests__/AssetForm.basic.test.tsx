@@ -1,35 +1,106 @@
 import React from 'react'
-import { render, screen } from '@testing-library/react'
-import { describe, it, expect, vi } from 'vitest'
+// Jest imports - no explicit import needed for describe, it, expect
+import { render, screen } from '../../../__tests__/utils/testUtils'
 
 import AssetForm from '../AssetForm'
 
+// Mock localStorage
+const localStorageMock = {
+  getItem: jest.fn(),
+  setItem: jest.fn(),
+  removeItem: jest.fn(),
+  clear: jest.fn(),
+}
+global.localStorage = localStorageMock
+
 // Mock the hooks and dependencies
-vi.mock('@/hooks/useFormFieldVisibility', () => ({
+jest.mock('@/hooks/useFormFieldVisibility', () => ({
   useFormFieldVisibility: () => ({
-    isFieldVisible: vi.fn(() => true),
-    isFieldHidden: vi.fn(() => false),
-    getFieldDependencies: vi.fn(() => []),
-    getAllVisibleFields: vi.fn(() => []),
-    getAllHiddenFields: vi.fn(() => []),
+    isFieldVisible: jest.fn(() => true),
+    isFieldHidden: jest.fn(() => false),
+    getFieldDependencies: jest.fn(() => []),
+    getAllVisibleFields: jest.fn(() => []),
+    getAllHiddenFields: jest.fn(() => []),
     visibleFields: new Set(),
     hiddenFields: new Set(),
   }),
   useFormGroupVisibility: () => ({
-    isGroupVisible: vi.fn(() => true),
-    getVisibleFieldsInGroup: vi.fn(() => ['property_name', 'ownership_entity']),
-    getHiddenFieldsInGroup: vi.fn(() => []),
+    isGroupVisible: jest.fn(() => true),
+    getVisibleFieldsInGroup: jest.fn(() => ['property_name', 'ownership_entity']),
+    getHiddenFieldsInGroup: jest.fn(() => []),
   }),
 }))
 
-vi.mock('@/utils/format', () => ({
-  calculateOccupancyRate: vi.fn(() => 80),
+jest.mock('@/utils/format', () => ({
+  calculateOccupancyRate: jest.fn(() => 80),
 }))
+
+// Mock the dictionary hooks to avoid API calls
+jest.mock('@/hooks/useDictionary', () => ({
+  useDictionaries: jest.fn(() => ({})),
+  useDictionary: jest.fn(() => ({
+    options: [],
+    loading: false,
+    error: null
+  })),
+}))
+
+// Mock DictionarySelect component
+jest.mock('@/components/Dictionary/DictionarySelect', () => {
+  return {
+    __esModule: true,
+    default: ({ placeholder }: any) => (
+      <div data-testid="dictionary-select">
+        {placeholder || 'Select'}
+      </div>
+    ),
+    DictionarySelect: ({ placeholder }: any) => (
+      <div data-testid="dictionary-select">
+        {placeholder || 'Select'}
+      </div>
+    )
+  }
+})
+
+// Mock OwnershipSelect and ProjectSelect components
+jest.mock('@/components/Ownership/OwnershipSelect', () => {
+  return {
+    __esModule: true,
+    default: ({ placeholder }: any) => (
+      <div data-testid="ownership-select">
+        {placeholder || 'Select Ownership'}
+      </div>
+    )
+  }
+})
+
+jest.mock('@/components/Project/ProjectSelect', () => {
+  return {
+    __esModule: true,
+    default: ({ placeholder }: any) => (
+      <div data-testid="project-select">
+        {placeholder || 'Select Project'}
+      </div>
+    )
+  }
+})
+
+// Mock GroupedSelectSingle component
+jest.mock('@/components/Common/GroupedSelect', () => {
+  return {
+    __esModule: true,
+    default: ({ placeholder }: any) => (
+      <div data-testid="grouped-select">
+        {placeholder || 'Select Option'}
+      </div>
+    )
+  }
+})
 
 describe('AssetForm Basic Tests', () => {
   const mockProps = {
-    onSubmit: vi.fn(),
-    onCancel: vi.fn(),
+    onSubmit: jest.fn(),
+    onCancel: jest.fn(),
     loading: false,
     mode: 'create' as const,
   }
@@ -57,26 +128,27 @@ describe('AssetForm Basic Tests', () => {
     expect(screen.getByText('状态信息')).toBeInTheDocument()
   })
 
-  it('shows action buttons', () => {
+  it('shows action buttons', async () => {
     render(<AssetForm {...mockProps} />)
-    
-    // Check if action buttons are present
-    expect(screen.getByText('取消')).toBeInTheDocument()
-    expect(screen.getByText('重置')).toBeInTheDocument()
-    expect(screen.getByText('创建资产')).toBeInTheDocument()
+
+    // Wait for buttons to be present since they might render asynchronously
+    const { findByText } = screen
+    expect(await findByText('取消')).toBeInTheDocument()
+    expect(await findByText('重置')).toBeInTheDocument()
+    expect(await findByText('创建资产')).toBeInTheDocument()
   })
 
   it('shows edit mode button text', () => {
     render(<AssetForm {...mockProps} mode="edit" />)
-    
+
     // Check if edit mode button text is correct
-    expect(screen.getByText('更新资产')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /更新资产/i })).toBeInTheDocument()
   })
 
   it('shows advanced options toggle', () => {
     render(<AssetForm {...mockProps} />)
-    
-    // Check if advanced options toggle is present
-    expect(screen.getByText('显示高级选项')).toBeInTheDocument()
+
+    // Check if advanced options section is present
+    expect(screen.getByText('高级选项')).toBeInTheDocument()
   })
 })

@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 FastAPI安全中间件
 提供请求验证、文件上传安全和速率限制功能
@@ -12,7 +14,7 @@ from fastapi import HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from ..core.exception_handler import ValidationException
+from ..core.exception_handler import BusinessValidationError
 from ..core.logging_security import security_auditor
 from ..core.security import RateLimiter
 
@@ -42,7 +44,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 class RequestValidationMiddleware(BaseHTTPMiddleware):
     """请求验证中间件"""
 
-    def __init__(self, app, rate_limit_config: dict = None):
+    def __init__(self, app, rate_limit_config: dict[str, Any] = None):
         super().__init__(app)
         self.rate_limiter = RateLimiter()
         self.config = rate_limit_config or {}
@@ -97,10 +99,58 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         except HTTPException:
             raise
         except Exception as e:
-            logger.error(f"Security middleware error: {str(e)}")
+            # 清理异常信息中的不可序列化对象
+            error_message = self._sanitize_exception_message(str(e))
+            # 确保异常对象可以被序列化
+            try:
+                import json
+
+                json.dumps({"error": str(e)})  # 测试序列化
+                logger.error(f"Security middleware error: {error_message}")
+            except (TypeError, ValueError):
+                # 如果异常信息不能序列化，使用通用消息
+                logger.error(
+                    "Security middleware error: Unable to serialize exception object"
+                )
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="请求处理失败"
             )
+
+    def _sanitize_exception_message(self, message: str) -> str:
+        """清理异常消息中的不可序列化内容"""
+        if not isinstance(message, str):
+            try:
+                message = str(message)
+            except Exception:
+                message = "<无法序列化的异常信息>"
+
+        # 限制消息长度
+        if len(message) > 500:
+            message = message[:500] + "...(截断)"
+
+        # 移除可能包含对象引用的模式
+        import re
+
+        # 移除类似 "<class 'src.models.rent_contract.RentLedger'>" 的内容
+        message = re.sub(r"<class '[^']*'>", "<模型对象>", message)
+        # 移除可能的对象ID引用
+        message = re.sub(r"object at 0x[0-9a-fA-F]+>", "<对象实例>", message)
+        # 移除更多的对象引用模式
+        message = re.sub(r"<[^>]*object[^>]*>", "<对象实例>", message)
+        # 移除可能的内存地址引用
+        message = re.sub(r"0x[0-9a-fA-F]{8,}", "<内存地址>", message)
+        # 移除可能的模块路径引用
+        message = re.sub(
+            r"[a-zA-Z_][a-zA-Z0-9_.]*\.[a-zA-Z_][a-zA-Z0-9_.]*", "<模块引用>", message
+        )
+        # 移除可能的尖括号包围的内容（除了我们替换的占位符）
+        message = re.sub(
+            r"<(?!模型对象|对象实例|内存地址|模块引用|无法序列化的异常信息)[^>]*>",
+            "<未知对象>",
+            message,
+        )
+
+        return message
 
     def _get_client_ip(self, request: Request) -> str:
         """获取客户端真实IP"""
@@ -292,7 +342,7 @@ class FileUploadSecurityMiddleware(BaseHTTPMiddleware):
         if request.headers.get("content-type", "").startswith("multipart/form-data"):
             try:
                 await self._validate_file_upload(request)
-            except ValidationException as e:
+            except BusinessValidationError as e:
                 logger.error(f"File upload validation failed: {str(e)}")
                 return JSONResponse(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -321,7 +371,7 @@ class FileUploadSecurityMiddleware(BaseHTTPMiddleware):
 
         # 检查请求大小
         if content_length > self.max_file_size:
-            raise ValidationException(
+            raise BusinessValidationError(
                 f"请求过大: {content_length / (1024 * 1024):.2f}MB",
                 details={"max_size": self.max_file_size / (1024 * 1024)},
             )
@@ -341,7 +391,9 @@ class FileUploadSecurityMiddleware(BaseHTTPMiddleware):
 class CORSExtendedMiddleware(BaseHTTPMiddleware):
     """扩展的CORS中间件"""
 
-    def __init__(self, app, allowed_origins: list = None, allowed_methods: list = None):
+    def __init__(
+        self, app, allowed_origins: list[Any] = None, allowed_methods: list[Any] = None
+    ):
         super().__init__(app)
         self.allowed_origins = allowed_origins or [
             "http://localhost:5173",
@@ -385,7 +437,7 @@ class CORSExtendedMiddleware(BaseHTTPMiddleware):
         return response
 
 
-def create_security_middleware(app, config: dict = None):
+def create_security_middleware(app, config: dict[str, Any] = None):
     """
     创建安全中间件链
 

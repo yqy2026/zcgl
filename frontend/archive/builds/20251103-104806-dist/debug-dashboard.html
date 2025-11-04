@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Debug</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .data-display { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .error { color: red; }
+        .success { color: green; }
+        pre { background: #fff; padding: 10px; border: 1px solid #ddd; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>Dashboard Debug Page</h1>
+    <button onclick="fetchData()">Fetch Dashboard Data</button>
+    <div id="result"></div>
+
+    <script>
+        async function fetchData() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<div class="data-display">Fetching data...</div>';
+
+            try {
+                console.log('Starting API request...');
+                const response = await fetch('/api/v1/statistics/area-summary');
+                console.log('Response status:', response.status);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const apiResponse = await response.json();
+                console.log('Full API Response:', apiResponse);
+
+                // 模拟React组件的数据访问方式
+                const areaSummary = apiResponse; // 相当于React中的areaSummary
+                const totalAssets = areaSummary?.data?.total_assets;
+                const landArea = areaSummary?.data?.total_land_area;
+                const rentableArea = areaSummary?.data?.total_rentable_area;
+                const occupancyRate = areaSummary?.data?.overall_occupancy_rate?.toFixed(2) || '0.00';
+
+                console.log('Extracted data:', {
+                    areaSummary,
+                    totalAssets,
+                    landArea,
+                    rentableArea,
+                    occupancyRate
+                });
+
+                resultDiv.innerHTML = `
+                    <div class="data-display success">
+                        <h2>✅ API Success!</h2>
+                        <h3>Data Access Test:</h3>
+                        <p><strong>资产总数:</strong> ${totalAssets || 'NOT FOUND'}</p>
+                        <p><strong>土地面积:</strong> ${landArea || 'NOT FOUND'} ㎡</p>
+                        <p><strong>可租面积:</strong> ${rentableArea || 'NOT FOUND'} ㎡</p>
+                        <p><strong>出租率:</strong> ${occupancyRate}%</p>
+
+                        <h3>Full API Response:</h3>
+                        <pre>${JSON.stringify(apiResponse, null, 2)}</pre>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('API Error:', error);
+                resultDiv.innerHTML = `
+                    <div class="data-display error">
+                        <h2>❌ Error!</h2>
+                        <p><strong>Error Message:</strong> ${error.message}</p>
+                        <p><strong>Stack:</strong> ${error.stack}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Auto fetch on load
+        window.onload = () => {
+            setTimeout(fetchData, 1000);
+        };
+    </script>
+</body>
+</html>

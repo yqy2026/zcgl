@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 合同数据逻辑校验器
 对提取的合同数据进行逻辑一致性和合理性检查
@@ -6,7 +8,6 @@
 import logging
 import re
 from datetime import date, datetime
-from typing import Any
 
 logger = logging.getLogger(__name__)
 

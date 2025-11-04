@@ -95,9 +95,6 @@ ci:
 # 执行顺序配置
 minimum_pre_commit_version: "3.0.0"
 
-# 并行执行
-parallel: true
-
 # 排除文件
 exclude: |
   (?x)^(

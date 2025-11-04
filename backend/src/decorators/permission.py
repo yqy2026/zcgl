@@ -1,3 +1,18 @@
+from typing import Any
+
+
+class AssetNotFoundError(Exception):
+    """Asset not found error"""
+
+    pass
+
+
+class DuplicateAssetError(Exception):
+    """Duplicate asset error"""
+
+    pass
+
+
 """
 权限验证装饰器
 提供统一的权限验证装饰器，简化API端点的权限控制
@@ -6,7 +21,6 @@
 import logging
 from collections.abc import Callable
 from functools import wraps
-from typing import Any
 
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session

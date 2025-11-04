@@ -1,7 +1,8 @@
 import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen } from '../../../__tests__/utils/testUtils'
+import { render, screen } from '../../../__tests__/utils/testUtils'
 import userEvent from '@testing-library/user-event'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+// Jest imports - no explicit import needed for describe, it, expect
 
 import { GlobalErrorBoundary, ErrorPage, UXProvider } from '@/components/ErrorHandling'
 import { LoadingSpinner, SkeletonLoader } from '@/components/Loading'
@@ -15,7 +16,7 @@ import {
 // Mock console.error to avoid noise in tests
 const originalError = console.error
 beforeEach(() => {
-  console.error = vi.fn()
+  console.error = jest.fn()
 })
 
 afterEach(() => {
@@ -54,7 +55,7 @@ describe('UX Components', () => {
     })
 
     it('calls onError callback when error occurs', () => {
-      const onError = vi.fn()
+      const onError = jest.fn()
       
       render(
         <GlobalErrorBoundary onError={onError}>
@@ -114,9 +115,9 @@ describe('UX Components', () => {
 
     it('calls action callbacks when buttons are clicked', async () => {
       const user = userEvent.setup()
-      const onBack = vi.fn()
-      const onHome = vi.fn()
-      const onReload = vi.fn()
+      const onBack = jest.fn()
+      const onHome = jest.fn()
+      const onReload = jest.fn()
 
       render(
         <ErrorPage 
@@ -212,8 +213,8 @@ describe('UX Components', () => {
 
     it('calls action callbacks when buttons are clicked', async () => {
       const user = userEvent.setup()
-      const onCreate = vi.fn()
-      const onRefresh = vi.fn()
+      const onCreate = jest.fn()
+      const onRefresh = jest.fn()
 
       render(
         <EmptyState 
@@ -249,8 +250,8 @@ describe('UX Components', () => {
 
     it('calls confirm and cancel callbacks', async () => {
       const user = userEvent.setup()
-      const onConfirm = vi.fn()
-      const onCancel = vi.fn()
+      const onConfirm = jest.fn()
+      const onCancel = jest.fn()
 
       render(
         <ConfirmDialog 
@@ -359,7 +360,7 @@ describe('UX Components', () => {
 
     it('renders error feedback with retry button', async () => {
       const user = userEvent.setup()
-      const onRetry = vi.fn()
+      const onRetry = jest.fn()
 
       render(
         <ActionFeedback 
@@ -379,7 +380,7 @@ describe('UX Components', () => {
     })
 
     it('auto-hides success feedback after delay', async () => {
-      const onClose = vi.fn()
+      const onClose = jest.fn()
 
       render(
         <ActionFeedback 

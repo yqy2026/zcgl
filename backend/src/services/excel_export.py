@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 Excel数据导出服务
 使用Polars进行高性能数据处理和导�?
@@ -7,7 +9,6 @@ import logging
 import os
 import tempfile
 from datetime import datetime
-from typing import Any
 
 import polars as pl
 from sqlalchemy.orm import Session
