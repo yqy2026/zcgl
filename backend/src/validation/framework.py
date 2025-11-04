@@ -209,8 +209,10 @@ class FileRule(ValidationRule):
 
                 ext = filename.split(".")[-1].lower()
                 if ext not in self.allowed_extensions:
-                    self.error_message = f"文件类型不支持，允许的类型: {',
-                    '.join(self.allowed_extensions)}"
+                    self.error_message = (
+                        f"文件类型不支持，允许的类型: "
+                        f"{', '.join(self.allowed_extensions)}"
+                    )
                     return False
 
             # 检查文件大小

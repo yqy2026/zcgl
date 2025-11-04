@@ -40,16 +40,17 @@ export class BackupService {
 
   // 获取备份详细信息
   async getBackupInfo(filename: string): Promise<{
-  try {
-      success: boolean
-      message: string
-      info?: BackupInfo
-    }> {
+    success: boolean
+    message: string
+    info?: BackupInfo
+  }> {
+    try {
       const response = await apiClient.get(`/backup/info/${filename}`)
       return response.data || response
-  } catch (error) {
-    console.error('操作失败:', error)
-    throw new Error(error instanceof Error ? error.message : '操作失败')
+    } catch (error) {
+      console.error('获取备份信息失败:', error)
+      throw new Error(error instanceof Error ? error.message : '获取备份信息失败')
+    }
   }
 
   // 恢复备份

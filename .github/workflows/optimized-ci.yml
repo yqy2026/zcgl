@@ -67,7 +67,7 @@ jobs:
       run: |
         cd backend
         echo "🐍 Python语法检查..."
-        uv run python -m py_compile src/
+        find src/ -name "*.py" -exec uv run python -m py_compile {} \;
         echo "✅ Python语法检查通过"
 
     - name: Run Ruff linting

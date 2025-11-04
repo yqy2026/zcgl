@@ -199,8 +199,8 @@ class EnhancedSecurityMiddleware(BaseHTTPMiddleware):
             try:
                 # 这里可以根据需要实现更复杂的日志记录
                 print(
-                    f"[SECURITY] 可疑活动检测: {activity_type},
-                    IP: {client_ip}, 详情: {details}"
+                    f"[SECURITY] 可疑活动检测: {activity_type}, "
+                    f"IP: {client_ip}, 详情: {details}"
                 )
             except Exception as e:
                 print(f"[SECURITY] 记录可疑活动失败: {e}")

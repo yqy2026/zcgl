@@ -536,8 +536,8 @@ async def get_asset_statistics(
 
         # 添加调试信息
         print(
-            f"[DEBUG] 开始执行资产统计查询，
-                    "用户: {current_user.username if current_user else 'unknown'}"
+            f"[DEBUG] 开始执行资产统计查询，"
+            f"用户: {current_user.username if current_user else 'unknown'}"
         )
 
         # 检查数据库连接是否正常
