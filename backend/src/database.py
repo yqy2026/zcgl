@@ -20,6 +20,7 @@ except ImportError:
         def enhance_database_security():
             pass
 
+
 logger = logging.getLogger(__name__)
 
 # 数据库URL配置

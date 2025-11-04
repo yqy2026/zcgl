@@ -1,9 +1,3 @@
-class BusinessLogicError(Exception):
-    """Business logic error"""
-
-    pass
-
-
 class AssetNotFoundError(Exception):
     """Asset not found error"""
 

@@ -10,7 +10,17 @@ from collections.abc import Callable
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, BusinessValidationError
+from pydantic import BaseModel
+
+
+# 创建自定义业务验证异常
+class BusinessValidationError(Exception):
+    """业务验证错误"""
+
+    def __init__(self, message: str, code: str = None):
+        self.message = message
+        self.code = code
+        super().__init__(message)
 
 
 class ValidationRule:

@@ -268,7 +268,8 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         """记录被封禁的请求"""
         security_auditor.log_security_event(
             event_type="REQUEST_BLOCKED",
-            message=f"Request blocked from {ip}: {reason}", user_id=None,
+            message=f"Request blocked from {ip}: {reason}",
+            user_id=None,
             ip_address=ip,
             user_agent=request.headers.get("User-Agent", ""),
             details={
@@ -289,7 +290,8 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
 
         security_auditor.log_security_event(
             event_type="SUSPICIOUS_REQUEST",
-            message=f"Suspicious request from {client_ip}: {reason}", user_id=None,
+            message=f"Suspicious request from {client_ip}: {reason}",
+            user_id=None,
             ip_address=client_ip,
             user_agent=request.headers.get("User-Agent", ""),
             details={
@@ -311,7 +313,8 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         if processing_time > 5.0:  # 5秒以上为慢请求
             security_auditor.log_security_event(
                 event_type="SLOW_REQUEST",
-                message=f"Slow request from {ip}: {processing_time:.2f}s", user_id=None,
+                message=f"Slow request from {ip}: {processing_time:.2f}s",
+                user_id=None,
                 ip_address=ip,
                 details={
                     "path": request.url.path,

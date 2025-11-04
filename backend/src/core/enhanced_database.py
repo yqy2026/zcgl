@@ -209,7 +209,7 @@ class EnhancedDatabaseManager:
 
                     try:
                         self.query_history.put_nowait(query_info)
-                    except:
+                    except Exception:
                         # 如果队列满了，移除最旧的记录
                         try:
                             self.query_history.get_nowait()
@@ -405,7 +405,7 @@ class EnhancedDatabaseManager:
                             "size_bytes": db_size_bytes,
                             "size_mb": round(db_size_bytes / (1024 * 1024), 2),
                         }
-                except:
+                except Exception:
                     health_status["checks"]["database_size"] = {
                         "status": "unknown",
                         "message": "无法获取数据库大小",

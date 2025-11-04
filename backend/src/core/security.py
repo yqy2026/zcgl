@@ -476,7 +476,8 @@ class SecurityMiddleware:
         if not user_agent or len(user_agent) < 10:
             security_auditor.log_security_event(
                 event_type="SUSPICIOUS_USER_AGENT",
-                message=f"Suspicious User-Agent from {client_ip}: '{user_agent}'", ip_address=client_ip,
+                message=f"Suspicious User-Agent from {client_ip}: '{user_agent}'",
+                ip_address=client_ip,
                 details={"user_agent": user_agent},
             )
 

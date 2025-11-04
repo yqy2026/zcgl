@@ -307,9 +307,7 @@ class ContractTableAnalyzer:
             logger.error(f"表格结构分析失败: {e}")
             return None
 
-    async def _ocr_table_content(
-        self, table_image: np.ndarray
-    ) -> dict[str, str]:
+    async def _ocr_table_content(self, table_image: np.ndarray) -> dict[str, str]:
         """OCR识别表格内容"""
         try:
             # 使用Tesseract进行表格识别

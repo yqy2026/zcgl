@@ -188,7 +188,7 @@ class RoleCRUD:
         """角色总数"""
         return db.query(func.count(Role.id)).scalar()
 
-    def count_by_category(self) -> dict[str, Any]:
+    def count_by_category(self, db: Session) -> dict[str, Any]:
         """按类别统计角色数"""
         result = (
             db.query(Role.category, func.count(Role.id)).group_by(Role.category).all()
@@ -313,7 +313,7 @@ class PermissionCRUD:
         """权限总数"""
         return db.query(func.count(Permission.id)).scalar()
 
-    def count_by_resource(self) -> dict[str, Any]:
+    def count_by_resource(self, db: Session) -> dict[str, Any]:
         """按资源统计权限数"""
         result = (
             db.query(Permission.resource, func.count(Permission.id))

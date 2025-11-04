@@ -132,7 +132,7 @@ class AssetCalculator:
         return calculated_fields
 
     @staticmethod
-    def enrich_asset_with_calculations(self) -> dict[str, Any]:
+    def enrich_asset_with_calculations(asset_data: dict[str, Any]) -> dict[str, Any]:
         """
         为资产数据添加计算字段（用于API响应）
 
@@ -155,7 +155,7 @@ class OccupancyRateCalculator:
     """出租率统计计算器"""
 
     @staticmethod
-    def calculate_overall_occupancy_rate(self) -> dict[str, Any]:
+    def calculate_overall_occupancy_rate(assets: list) -> dict[str, Any]:
         """
         计算整体出租率
 
@@ -198,7 +198,9 @@ class OccupancyRateCalculator:
         }
 
     @staticmethod
-    def calculate_occupancy_by_category(self) -> dict[str, Any]:
+    def calculate_occupancy_by_category(
+        assets: list, category_field: str = "asset_category"
+    ) -> dict[str, Any]:
         """
         按类别计算出租率
 

@@ -281,7 +281,7 @@ class ErrorRecoveryMiddleware(BaseHTTPMiddleware):
 
         return status_map.get(error_category, 500)
 
-    def _get_error_suggestions(self) -> list[Any]:
+    def _get_error_suggestions(self, error_category) -> list[Any]:
         """获取错误处理建议"""
 
         suggestions_map = {

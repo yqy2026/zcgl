@@ -402,9 +402,7 @@ class OptimizedOCRService:
             logger.error(f"PDF文档处理失败: {e}")
             return {"success": False, "error": str(e), "pdf_path": pdf_path}
 
-    def _get_method_distribution(
-        self, results: list[OCRResult]
-    ) -> dict[str, int]:
+    def _get_method_distribution(self, results: list[OCRResult]) -> dict[str, int]:
         """获取方法使用分布"""
         distribution = {}
         for result in results:
