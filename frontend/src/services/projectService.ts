@@ -3,6 +3,7 @@
  */
 
 import { apiClient } from './api';
+import { API_CONFIG, API_ENDPOINTS } from '@/constants/api';
 import type {
   Project,
   ProjectCreate,
@@ -16,25 +17,13 @@ import type {
 } from '@/types/project';
 
 export class ProjectService {
-  private baseUrl = '/projects';
-
-  /**
-   * 获取项目列表
-   */
-  async getProjects(params?: ProjectSearchParams): Promise<ProjectListResponse> {
-  try {
-      const response = await apiClient.get(this.baseUrl, { params });
-      return response.data || response as ProjectListResponse;
-  } catch (error) {
-    console.error('操作失败:', error)
-    throw new Error(error instanceof Error ? error.message : '操作失败')
-  }
+  private baseUrl = API_ENDPOINTS.PROJECT.LIST;
 
   /**
    * 搜索项目
    */
   async searchProjects(searchParams: ProjectSearchRequest): Promise<ProjectListResponse> {
-    const response = await apiClient.post(`/api/v1search`, searchParams);
+    const response = await apiClient.post('/search', searchParams);
     return response.data;
   }
 
@@ -42,8 +31,31 @@ export class ProjectService {
    * 获取项目详情
    */
   async getProject(id: string): Promise<Project> {
-    const response = await apiClient.get(`/api/v1${id}`);
+    const response = await apiClient.get(`${this.baseUrl}/${id}`);
     return response.data;
+  }
+
+  /**
+   * 获取项目列表
+   */
+  async getProjects(params?: ProjectSearchParams): Promise<ProjectListResponse> {
+    try {
+      // 确保提供必需的分页参数
+      const requestParams = {
+        page: params?.page || 1,
+        size: params?.size || 10,
+        keyword: params?.keyword,
+        is_active: params?.is_active,
+        ownership_id: params?.ownership_id,
+      };
+
+      // 修复URL路径问题，确保以斜杠结尾避免307重定向
+      const response = await apiClient.get(`${this.baseUrl}/`, { params: requestParams });
+      return response.data || response as ProjectListResponse;
+    } catch (error) {
+      console.error('获取项目列表失败:', error)
+      throw new Error(error instanceof Error ? error.message : '获取项目列表失败')
+    }
   }
 
   /**
@@ -58,7 +70,7 @@ export class ProjectService {
    * 更新项目
    */
   async updateProject(id: string, data: ProjectUpdate): Promise<Project> {
-    const response = await apiClient.put(`/api/v1${id}`, data);
+    const response = await apiClient.put(`${this.baseUrl}/${id}`, data);
     return response.data;
   }
 
@@ -66,7 +78,7 @@ export class ProjectService {
    * 删除项目
    */
   async deleteProject(id: string): Promise<ProjectDeleteResponse> {
-    const response = await apiClient.delete(`/api/v1${id}`);
+    const response = await apiClient.delete(`${this.baseUrl}/${id}`);
     return response.data;
   }
 
@@ -74,7 +86,7 @@ export class ProjectService {
    * 切换项目状态
    */
   async toggleProjectStatus(id: string): Promise<Project> {
-    const response = await apiClient.post(`/api/v1${id}/toggle-status`);
+    const response = await apiClient.post(`${this.baseUrl}/${id}/toggle-status`);
     return response.data;
   }
 
@@ -82,7 +94,7 @@ export class ProjectService {
    * 获取项目统计信息
    */
   async getProjectStatistics(): Promise<ProjectStatisticsResponse> {
-    const response = await apiClient.get(`/api/v1statistics/summary`);
+    const response = await apiClient.get('/statistics/summary');
     return response.data || response as ProjectStatisticsResponse;
   }
 
@@ -90,7 +102,7 @@ export class ProjectService {
    * 获取项目选项列表
    */
   async getProjectOptions(isActive: boolean = true): Promise<ProjectDropdownOption[]> {
-    const response = await apiClient.get(`/api/v1dropdown-options?is_active=${isActive}`);
+    const response = await apiClient.get(`${this.baseUrl}/dropdown-options?is_active=${isActive}`);
     // 处理响应数据格式，确保返回数组
     const data = response.data;
     return Array.isArray(data) ? data : (data?.data || []);

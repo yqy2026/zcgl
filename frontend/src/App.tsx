@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { routes } from './routes/AppRoutes'
 import AppLayout from './components/Layout/AppLayout'
 import LoginPage from './pages/LoginPage'
+import ErrorBoundary from './components/ErrorHandling/ErrorBoundary'
 import { AuthService } from './services/authService'
 import { AuthProvider } from './contexts/AuthContext'
 import './App.css'
@@ -24,23 +25,22 @@ const queryClient = new QueryClient({
 
 // 简单的应用组件，内部处理路由逻辑
 const AppContent: React.FC = () => {
-  // 使用AuthService检查认证状态
-  const isAuthenticated = AuthService.isAuthenticated()
   const location = useLocation()
+  const isAuthenticated = AuthService.isAuthenticated()
 
-  // 如果未登录，显示登录页面
-  if (!isAuthenticated) {
-    return (
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
-    )
+  // 如果在登录页面，始终显示登录页面（不被AppLayout包装）
+  if (location.pathname === '/login') {
+    if (isAuthenticated) {
+      // 已登录用户访问登录页面，重定向到仪表板
+      return <Navigate to="/dashboard" replace />
+    }
+    // 未登录用户访问登录页面，显示登录页面
+    return <LoginPage />
   }
 
-  // 如果已登录但在登录页面，重定向到仪表板
-  if (location.pathname === '/login') {
-    return <Navigate to="/dashboard" replace />
+  // 如果未登录且不在登录页面，重定向到登录页面
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />
   }
 
   // 如果已登录，显示主应用布局和路由
@@ -62,25 +62,27 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <ConfigProvider
-          theme={{
-            token: {
-              colorPrimary: '#1890ff',
-              colorSuccess: '#52c41a',
-              colorWarning: '#faad14',
-              colorError: '#f5222d',
-              borderRadius: 8,
-            },
-          }}
-        >
-          <BrowserRouter>
-            <AppContent />
-          </BrowserRouter>
-        </ConfigProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <ConfigProvider
+            theme={{
+              token: {
+                colorPrimary: '#1890ff',
+                colorSuccess: '#52c41a',
+                colorWarning: '#faad14',
+                colorError: '#f5222d',
+                borderRadius: 8,
+              },
+            }}
+          >
+            <BrowserRouter>
+              <AppContent />
+            </BrowserRouter>
+          </ConfigProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   )
 }
 

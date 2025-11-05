@@ -111,8 +111,10 @@ class BaseDictionaryService {
         timeout: 5000
       })
 
-      const data = response.data || []
+      // apiClient 直接返回数据，不是包装的响应对象
+      const data = Array.isArray(response) ? response : (response.data || [])
       console.log(`✅ API响应成功 [${dictType}]: ${data.length} 项`)
+      console.log(`🔍 API响应数据类型: ${typeof response}, 数据长度: ${data.length}`)
 
       // 缓存数据
       if (useCache) {

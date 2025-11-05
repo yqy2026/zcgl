@@ -1,11 +1,12 @@
 import { api } from './index'
+import { API_CONFIG } from './config'
 import type { LoginCredentials, AuthResponse, User } from '../types/auth'
 
 export class AuthService {
   // 用户登录
   static async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
-      const response = await api.post('/auth/login', credentials)
+      const response = await api.post(API_CONFIG.ENDPOINTS.AUTH.LOGIN, credentials)
 
       // 后端返回的数据结构：{user, tokens: {access_token, refresh_token, ...}, message}
       if (response.data.user && response.data.tokens) {
@@ -40,7 +41,7 @@ export class AuthService {
   // 用户登出
   static async logout(): Promise<void> {
     try {
-      await api.post('/auth/logout')
+      await api.post(API_CONFIG.ENDPOINTS.AUTH.LOGOUT)
     } catch (error) {
       // 即使登出API调用失败，也要清除本地存储
       console.error('登出API调用失败:', error)
@@ -61,7 +62,7 @@ export class AuthService {
         throw new Error('没有刷新令牌')
       }
 
-      const response = await api.post('/auth/refresh', {
+      const response = await api.post(API_CONFIG.ENDPOINTS.AUTH.REFRESH, {
         refreshToken
       })
 
@@ -83,7 +84,7 @@ export class AuthService {
   // 获取当前用户信息
   static async getCurrentUser(): Promise<User> {
     try {
-      const response = await api.get('/auth/me')
+      const response = await api.get(API_CONFIG.ENDPOINTS.AUTH.ME)
 
       if (response.data.success) {
         return response.data.data  // 修复：me端点直接返回用户数据，不是嵌套在user字段中
@@ -95,17 +96,55 @@ export class AuthService {
     }
   }
 
+  // 开发环境模拟登录
+  static mockLogin(username: string = 'admin'): void {
+    if (process.env.NODE_ENV === 'development') {
+      const mockUser = {
+        id: '1',
+        username: username,
+        email: `${username}@example.com`,
+        full_name: username === 'admin' ? '系统管理员' : '测试用户',
+        roles: ['admin'],
+        organization: {
+          id: '1',
+          name: '默认组织'
+        }
+      }
+
+      const mockToken = 'mock_token_' + Date.now()
+
+      localStorage.setItem('auth_token', mockToken)
+      localStorage.setItem('user', JSON.stringify(mockUser))
+      localStorage.setItem('permissions', JSON.stringify([
+        { resource: 'assets', action: 'view' },
+        { resource: 'assets', action: 'create' },
+        { resource: 'assets', action: 'edit' },
+        { resource: 'contracts', action: 'view' },
+        { resource: 'contracts', action: 'create' },
+        { resource: 'dashboard', action: 'view' },
+        { resource: 'system', action: 'view' }
+      ]))
+
+      console.log('✅ 开发模式：模拟登录成功', mockUser)
+    }
+  }
+
   // 检查本地认证状态
   static isAuthenticated(): boolean {
     const token = localStorage.getItem('auth_token')
     const user = localStorage.getItem('user')
 
+    // 必须同时存在token和user信息
     if (!token || !user) {
       return false
     }
 
     try {
       // 检查token是否过期（简单检查，实际应该解析JWT）
+      if (token.startsWith('mock_token_')) {
+        return true // Mock token never expires
+      }
+
       const tokenData = JSON.parse(atob(token.split('.')[1] || '{}'))
       const currentTime = Date.now() / 1000
 
@@ -160,7 +199,7 @@ export class AuthService {
   // 修改密码
   static async changePassword(oldPassword: string, newPassword: string): Promise<void> {
     try {
-      await api.post('/auth/change-password', {
+      await api.post(API_CONFIG.ENDPOINTS.AUTH.CHANGE_PASSWORD, {
         oldPassword,
         newPassword
       })
@@ -172,7 +211,7 @@ export class AuthService {
   // 更新个人资料
   static async updateProfile(profileData: any): Promise<User> {
     try {
-      const response = await api.put('/auth/profile', profileData)
+      const response = await api.put(API_CONFIG.ENDPOINTS.AUTH.PROFILE, profileData)
 
       if (response.data.success) {
         // 更新本地存储的用户信息
@@ -190,7 +229,7 @@ export class AuthService {
   // 获取用户活动记录
   static async getUserActivity(limit: number = 20): Promise<any[]> {
     try {
-      const response = await api.get(`/auth/activity?limit=${limit}`)
+      const response = await api.get(`${API_CONFIG.ENDPOINTS.AUTH.ACTIVITY}?limit=${limit}`)
 
       if (response.data.success) {
         return response.data.data

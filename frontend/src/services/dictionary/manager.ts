@@ -4,6 +4,7 @@
  */
 
 import { apiClient } from '../api'
+import { API_CONFIG } from '../config'
 import {
   DictionaryOption,
   DICTIONARY_CONFIGS
@@ -76,17 +77,56 @@ export interface EnumFieldWithType {
 }
 
 class DictionaryManagerService {
-  private readonly API_BASE = '/enum-fields'
-
   /**
    * 获取所有枚举类型（用于管理界面）
    */
   async getEnumFieldTypes(): Promise<EnumFieldType[]> {
     try {
-      const response = await apiClient.get(`${this.API_BASE}/types`)
-      return response.data
+      const response = await apiClient.get(API_CONFIG.ENDPOINTS.DICTIONARIES.TYPES)
+      console.log('🔍 [manager] getEnumFieldTypes 响应类型:', typeof response)
+      console.log('🔍 [manager] getEnumFieldTypes 响应内容:', response)
+
+      // apiClient 直接返回数据，而不是包装在 response.data 中
+      const data = response
+
+      // 处理后端返回的字符串数组，转换为完整的枚举类型对象数组
+      if (Array.isArray(data)) {
+        // 如果是字符串数组，转换为完整的枚举类型对象
+        const enumTypes: EnumFieldType[] = data.map((typeCode: string, index: number) => {
+          // 从DICTIONARY_CONFIGS中查找配置
+          const config = Object.values(DICTIONARY_CONFIGS).find(c => c.code === typeCode)
+
+          return {
+            id: `enum-type-${index}`,
+            name: config?.name || typeCode.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+            code: typeCode,
+            category: config?.category || '系统字典',
+            description: config?.description || `${typeCode} 枚举类型`,
+            is_system: true,
+            is_multiple: false,
+            is_hierarchical: false,
+            default_value: undefined,
+            status: 'active' as const,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }
+        })
+
+        console.log('✅ [manager] getEnumFieldTypes 转换结果:', enumTypes)
+        return enumTypes
+      }
+
+      // 如果不是数组，尝试作为对象数组处理
+      if (data && typeof data === 'object') {
+        const enumTypes = Array.isArray(data) ? data : [data]
+        console.log('✅ [manager] getEnumFieldTypes 对象数组结果:', enumTypes)
+        return enumTypes
+      }
+
+      console.warn('⚠️ [manager] getEnumFieldTypes: 响应数据不是预期的格式')
+      return []
     } catch (error) {
-      console.error('获取枚举类型失败:', error)
+      console.error('❌ 获取枚举类型失败:', error)
       // 返回基于配置的备用数据
       return this.getFallbackEnumFieldTypes()
     }
@@ -117,14 +157,52 @@ class DictionaryManagerService {
    */
   async getEnumFieldValues(typeId: string): Promise<EnumFieldValue[]> {
     try {
-      const response = await apiClient.get(`${this.API_BASE}/types/${typeId}/values`)
-      return response.data
+      console.log(`🔍 [manager] getEnumFieldValues 调用, typeId: ${typeId}`)
+
+      // 优先尝试直接从字典API获取（支持类型代码）
+      console.log(`📡 [manager] 尝试从字典API获取: /dictionaries/${typeId}/options`)
+      const response = await apiClient.get(`/dictionaries/${typeId}/options`)
+      console.log(`✅ [manager] 字典API响应成功, 数据类型: ${typeof response}, 数据长度: ${response?.length || 0}`)
+
+      // apiClient 直接返回数据，不是包装的响应对象
+      const data = Array.isArray(response) ? response : (response.data || [])
+
+      const mappedData = data.map((option: any, index: number) => {
+        console.log(`🏷️ [manager] 映射选项 ${index}:`, {
+          originalLabel: option.label,
+          originalValue: option.value,
+          mappedLabel: option.label,
+          mappedValue: option.value
+        })
+
+        return {
+          id: option.id || `dict-${typeId}-${index}`,
+          enum_type_id: typeId,
+          label: option.label,
+          value: option.value,
+          code: option.code,
+          description: option.description,
+          level: 1,
+          sort_order: option.sort_order || index + 1,
+          color: option.color,
+          icon: option.icon,
+          is_active: option.is_active !== false,
+          is_default: index === 0,
+          created_at: option.created_at || new Date().toISOString(),
+          updated_at: option.updated_at || new Date().toISOString()
+        }
+      })
+
+      console.log(`🎯 [manager] 最终映射完成, 返回 ${mappedData.length} 个选项`)
+      return mappedData
+
     } catch (error) {
-      console.error(`获取枚举值失败 [${typeId}]:`, error)
+      console.error(`❌ 获取枚举值失败 [${typeId}]:`, error)
 
       // 尝试从配置中获取备用数据
       const config = Object.values(DICTIONARY_CONFIGS).find(c => c.code === typeId)
       if (config) {
+        console.log(`💾 [manager] 使用备用配置数据: ${typeId}`)
         return config.fallbackOptions.map((option, index) => ({
           id: `fallback-${typeId}-${index}`,
           enum_type_id: typeId,
@@ -143,6 +221,7 @@ class DictionaryManagerService {
         }))
       }
 
+      console.log(`🚫 [manager] 没有找到任何数据，返回空数组`)
       return []
     }
   }
@@ -155,10 +234,29 @@ class DictionaryManagerService {
       const types = await this.getEnumFieldTypes()
       const data: EnumFieldWithType[] = []
 
+      // 安全检查：确保types是可迭代的数组
+      if (!Array.isArray(types)) {
+        console.warn('getEnumFieldData: types is not an array, using empty array')
+        return []
+      }
+
       for (const type of types) {
-        // 使用API返回的数据中的enum_values，而不是再次调用API
-        if (type.enum_values && Array.isArray(type.enum_values)) {
-          const values: EnumFieldValue[] = type.enum_values.map(val => ({
+        // 优先使用type.code作为字典类型代码来获取枚举值
+        let values: EnumFieldValue[] = []
+
+        // 首先尝试使用type.code获取枚举值
+        if (type.code) {
+          values = await this.getEnumFieldValues(type.code)
+        }
+
+        // 如果没有获取到值，则尝试使用type.id
+        if (values.length === 0 && type.id) {
+          values = await this.getEnumFieldValues(type.id)
+        }
+
+        // 最后的备用方案：如果有enum_values数据，则使用它
+        if (values.length === 0 && type.enum_values && Array.isArray(type.enum_values)) {
+          values = type.enum_values.map(val => ({
             id: val.id,
             enum_type_id: val.enum_type_id,
             label: val.label,
@@ -175,12 +273,9 @@ class DictionaryManagerService {
             created_at: val.created_at,
             updated_at: val.updated_at
           }))
-          data.push({ type, values })
-        } else {
-          // 如果没有enum_values数据，则调用API获取
-          const values = await this.getEnumFieldValues(type.id)
-          data.push({ type, values })
         }
+
+        data.push({ type, values })
       }
 
       return data
@@ -203,7 +298,7 @@ class DictionaryManagerService {
     default_value?: string
   }): Promise<EnumFieldType | null> {
     try {
-      const response = await apiClient.post(`${this.API_BASE}/types`, data)
+      const response = await apiClient.post(`${API_CONFIG.ENDPOINTS.DICTIONARIES.BASE}/types`, data)
       return response.data
     } catch (error) {
       console.error('创建枚举类型失败:', error)
@@ -228,7 +323,7 @@ class DictionaryManagerService {
     }>
   ): Promise<EnumFieldType | null> {
     try {
-      const response = await apiClient.put(`${this.API_BASE}/types/${typeId}`, data)
+      const response = await apiClient.put(`${API_CONFIG.ENDPOINTS.DICTIONARIES.BASE}/types/${typeId}`, data)
       return response.data
     } catch (error) {
       console.error('更新枚举类型失败:', error)
@@ -241,7 +336,7 @@ class DictionaryManagerService {
    */
   async deleteEnumFieldType(typeId: string): Promise<boolean> {
     try {
-      await apiClient.delete(`${this.API_BASE}/types/${typeId}`)
+      await apiClient.delete(`${API_CONFIG.ENDPOINTS.DICTIONARIES.BASE}/types/${typeId}`)
       return true
     } catch (error) {
       console.error('删除枚举类型失败:', error)
@@ -266,7 +361,7 @@ class DictionaryManagerService {
     }
   ): Promise<EnumFieldValue | null> {
     try {
-      const response = await apiClient.post(`${this.API_BASE}/types/${typeId}/values`, data)
+      const response = await apiClient.post(`/dictionaries/${typeId}/values`, data)
       return response.data
     } catch (error) {
       console.error('添加枚举值失败:', error)
@@ -293,7 +388,7 @@ class DictionaryManagerService {
     }>
   ): Promise<EnumFieldValue | null> {
     try {
-      const response = await apiClient.put(`${this.API_BASE}/types/${typeId}/values/${valueId}`, data)
+      const response = await apiClient.put(`/dictionaries/${typeId}/values/${valueId}`, data)
       return response.data
     } catch (error) {
       console.error('更新枚举值失败:', error)
@@ -306,7 +401,7 @@ class DictionaryManagerService {
    */
   async deleteEnumFieldValue(typeId: string, valueId: string): Promise<boolean> {
     try {
-      await apiClient.delete(`${this.API_BASE}/types/${typeId}/values/${valueId}`)
+      await apiClient.delete(`/dictionaries/${typeId}/values/${valueId}`)
       return true
     } catch (error) {
       console.error('删除枚举值失败:', error)
@@ -323,7 +418,7 @@ class DictionaryManagerService {
     usage_by_field: Record<string, number>
   }> {
     try {
-      const response = await apiClient.get(`${this.API_BASE}/types/${typeId}/usage`)
+      const response = await apiClient.get(`/dictionaries/${typeId}/usage`)
       return response.data
     } catch (error) {
       console.error('获取枚举字段使用统计失败:', error)
@@ -369,7 +464,7 @@ class DictionaryManagerService {
    */
   async exportEnumFieldData(typeId: string): Promise<string> {
     try {
-      const response = await apiClient.get(`${this.API_BASE}/types/${typeId}/export`, {
+      const response = await apiClient.get(`/dictionaries/${typeId}/export`, {
         responseType: 'blob'
       })
       return URL.createObjectURL(response.data)
@@ -390,7 +485,7 @@ class DictionaryManagerService {
       const formData = new FormData()
       formData.append('file', file)
 
-      const response = await apiClient.post(`${this.API_BASE}/types/${typeId}/import`, formData, {
+      const response = await apiClient.post(`/dictionaries/${typeId}/import`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }

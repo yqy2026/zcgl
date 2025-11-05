@@ -9,6 +9,10 @@
 export const API_CONFIG = {
   // 开发环境通过Vite代理转发到后端
   BASE_PATH: '/v1',
+  // 基础URL（兼容性字段）
+  BASE_URL: process.env.NODE_ENV === 'development'
+    ? '/api/v1'
+    : '/api/v1',
   // 完整的基础URL（用于直接请求）
   FULL_BASE_URL: process.env.NODE_ENV === 'development'
     ? '/api/v1'
@@ -105,11 +109,24 @@ export const PROJECT_API = {
 
 // 租赁合同API
 export const RENT_CONTRACT_API = {
-  LIST: '/rental-contracts/',
-  DETAIL: (id: string) => `/rental-contracts/${id}`,
-  CREATE: '/rental-contracts/',
-  UPDATE: (id: string) => `/rental-contracts/${id}`,
-  DELETE: (id: string) => `/rental-contracts/${id}`,
+  LIST: '/rental-contracts/contracts',
+  DETAIL: (id: string) => `/rental-contracts/contracts/${id}`,
+  CREATE: '/rental-contracts/contracts',
+  UPDATE: (id: string) => `/rental-contracts/contracts/${id}`,
+  DELETE: (id: string) => `/rental-contracts/contracts/${id}`,
+
+  // 租金条款
+  TERMS: (id: string) => `/rental-contracts/contracts/${id}/terms`,
+  ADD_TERM: (id: string) => `/rental-contracts/contracts/${id}/terms`,
+
+  // 租金台账
+  LEDGER: (id: string) => `/rental-contracts/contracts/${id}/ledger`,
+  LEDGER_LIST: '/rental-contracts/ledger',
+  LEDGER_DETAIL: (id: string) => `/rental-contracts/ledger/${id}`,
+  LEDGER_UPDATE: (id: string) => `/rental-contracts/ledger/${id}`,
+  LEDGER_BATCH_UPDATE: '/rental-contracts/ledger/batch',
+  LEDGER_GENERATE: '/rental-contracts/ledger/generate',
+  LEDGER_EXPORT: '/rental-contracts/ledger/export',
 
   // 租金管理
   PAYMENTS: '/rental-contracts/payments',
@@ -118,6 +135,15 @@ export const RENT_CONTRACT_API = {
   // 合同状态
   ACTIVATE: (id: string) => `/rental-contracts/${id}/activate`,
   TERMINATE: (id: string) => `/rental-contracts/${id}/terminate`,
+  RENEW: (id: string) => `/rental-contracts/${id}/renew`,
+  CONTRACTS_EXPORT: '/rental-contracts/export',
+
+  // 租赁统计
+  STATISTICS_OVERVIEW: '/rental-contracts/statistics/overview',
+  STATISTICS_OWNERSHIP: '/rental-contracts/statistics/ownership',
+  STATISTICS_ASSET: '/rental-contracts/statistics/asset',
+  STATISTICS_MONTHLY: '/rental-contracts/statistics/monthly',
+  STATISTICS_EXPORT: '/rental-contracts/statistics/export',
 } as const
 
 // 数据统计API
@@ -288,4 +314,3 @@ export const API_ENDPOINTS = {
   SYSTEM: SYSTEM_API,
   BACKUP: BACKUP_API,
 } as const
-

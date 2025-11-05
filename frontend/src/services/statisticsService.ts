@@ -10,14 +10,15 @@ export class StatisticsService {
 
   // 获取基础统计信息
   async getBasicStatistics(filters?: Record<string, any>): Promise<any> {
-  try {
+    try {
       const response = await apiClient.get('/statistics/basic', {
         params: filters,
       })
       return response.data || response
-  } catch (error) {
-    console.error('操作失败:', error)
-    throw new Error(error instanceof Error ? error.message : '操作失败')
+    } catch (error) {
+      console.error('操作失败:', error)
+      throw new Error(error instanceof Error ? error.message : '操作失败')
+    }
   }
 
   // 获取权属分布统计

@@ -133,19 +133,20 @@ export class MonitoringService {
    * 获取系统性能指标
    */
   async getSystemMetrics(): Promise<SystemMetrics> {
-  try {
-      const response = await apiClient.get(`/api/v1system-metrics`)
+    try {
+      const response = await apiClient.get(`/api/v1/system-metrics`)
       return response.data
-  } catch (error) {
-    console.error('操作失败:', error)
-    throw new Error(error instanceof Error ? error.message : '操作失败')
+    } catch (error) {
+      console.error('操作失败:', error)
+      throw new Error(error instanceof Error ? error.message : '操作失败')
+    }
   }
 
   /**
    * 获取应用性能指标
    */
   async getApplicationMetrics(): Promise<ApplicationMetrics> {
-    const response = await apiClient.get(`/api/v1application-metrics`)
+    const response = await apiClient.get(`/api/v1/application-metrics`)
     return response.data
   }
 
@@ -153,7 +154,7 @@ export class MonitoringService {
    * 获取系统健康状态
    */
   async getHealthStatus(): Promise<HealthStatus> {
-    const response = await apiClient.get(`/api/v1health`)
+    const response = await apiClient.get(`/api/v1/health`)
     return response.data
   }
 
@@ -161,7 +162,7 @@ export class MonitoringService {
    * 获取系统指标历史数据
    */
   async getMetricsHistory(hours: number = 24): Promise<SystemMetrics[]> {
-    const response = await apiClient.get(`/api/v1metrics/history`, {
+    const response = await apiClient.get(`/api/v1/metrics/history`, {
       params: { hours }
     })
     return response.data
@@ -174,7 +175,7 @@ export class MonitoringService {
     level?: 'info' | 'warning' | 'critical'
     resolved?: boolean
   }): Promise<PerformanceAlert[]> {
-    const response = await apiClient.get(`/api/v1alerts`, { params })
+    const response = await apiClient.get(`/api/v1/alerts`, { params })
     return response.data
   }
 
@@ -182,7 +183,7 @@ export class MonitoringService {
    * 解决告警
    */
   async resolveAlert(alertId: string): Promise<{ message: string; success: boolean }> {
-    const response = await apiClient.post(`/api/v1alerts/${alertId}/resolve`)
+    const response = await apiClient.post(`/api/v1/alerts/${alertId}/resolve`)
     return response.data
   }
 
@@ -190,7 +191,7 @@ export class MonitoringService {
    * 获取监控仪表板数据
    */
   async getDashboardData(): Promise<DashboardData> {
-    const response = await apiClient.get(`/api/v1dashboard`)
+    const response = await apiClient.get(`/api/v1/dashboard`)
     return response.data
   }
 
@@ -198,7 +199,7 @@ export class MonitoringService {
    * 手动触发指标收集
    */
   async triggerMetricsCollection(): Promise<MetricsCollectionResult> {
-    const response = await apiClient.post(`/api/v1metrics/collect`)
+    const response = await apiClient.post(`/api/v1/metrics/collect`)
     return response.data
   }
 
@@ -227,7 +228,7 @@ export class MonitoringService {
     data_directory: string
     last_collection?: string
   }> {
-    const response = await apiClient.get(`/api/v1service/status`)
+    const response = await apiClient.get(`/api/v1/service/status`)
     return response.data
   }
 
@@ -244,7 +245,7 @@ export class MonitoringService {
     enable_auto_collection?: boolean
     enable_alerting?: boolean
   }): Promise<{ message: string; success: boolean }> {
-    const response = await apiClient.put(`/api/v1config`, config)
+    const response = await apiClient.put(`/api/v1/config`, config)
     return response.data
   }
 
@@ -259,7 +260,7 @@ export class MonitoringService {
     include_application_metrics: boolean
     include_alerts: boolean
   }): Promise<Blob> {
-    const response = await apiClient.post(`/api/v1export`, params, {
+    const response = await apiClient.post(`/api/v1/export`, params, {
       responseType: 'blob'
     })
     return response.data
@@ -280,7 +281,7 @@ export class MonitoringService {
       recommendation: string
     }>
   }> {
-    const response = await apiClient.get(`/api/v1reports/performance`, {
+    const response = await apiClient.get(`/api/v1/reports/performance`, {
       params: { timeRange }
     })
     return response.data
@@ -307,7 +308,7 @@ export class MonitoringService {
     }>
   }> {
     const params = componentName ? { component: componentName } : {}
-    const response = await apiClient.get(`/api/v1components/health`, { params })
+    const response = await apiClient.get(`/api/v1/components/health`, { params })
     return response.data
   }
 
@@ -324,7 +325,7 @@ export class MonitoringService {
     enabled: boolean
     notification_channels?: string[]
   }): Promise<{ message: string; rule_id: string }> {
-    const response = await apiClient.post(`/api/v1alerts/rules`, rule)
+    const response = await apiClient.post(`/api/v1/alerts/rules`, rule)
     return response.data
   }
 
@@ -343,7 +344,7 @@ export class MonitoringService {
     created_at: string
     last_triggered?: string
   }>> {
-    const response = await apiClient.get(`/api/v1alerts/rules`)
+    const response = await apiClient.get(`/api/v1/alerts/rules`)
     return response.data
   }
 
@@ -351,7 +352,7 @@ export class MonitoringService {
    * 删除告警规则
    */
   async deleteAlertRule(ruleId: string): Promise<{ message: string; success: boolean }> {
-    const response = await apiClient.delete(`/api/v1alerts/rules/${ruleId}`)
+    const response = await apiClient.delete(`/api/v1/alerts/rules/${ruleId}`)
     return response.data
   }
 }

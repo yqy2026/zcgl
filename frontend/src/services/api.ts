@@ -7,7 +7,7 @@ const RETRY_CONFIG = {
   retries: 3,
   retryDelay: 1000,
   retryCondition: (error: any) => {
-    return error.code === 'NETWORK_ERROR' || 
+    return error.code === 'NETWORK_ERROR' ||
            (error.response && error.response.status >= 500)
   },
 }
@@ -15,7 +15,7 @@ const RETRY_CONFIG = {
 // 创建axios实例
 const createApiInstance = (): AxiosInstance => {
   const instance = axios.create({
-    baseURL: API_CONFIG.FULL_BASE_URL,
+    baseURL: API_CONFIG.BASE_URL,
     timeout: 30000,
     headers: {
       'Content-Type': 'application/json',
@@ -53,18 +53,18 @@ const createApiInstance = (): AxiosInstance => {
     (response: AxiosResponse) => {
       const requestId = response.config.headers['X-Request-ID']
       console.log(`✅ API Response [${requestId}]: ${response.config.method?.toUpperCase()} ${response.config.url}`, response.data)
-      
+
       // 处理业务逻辑错误
       if (response.data && response.data.success === false) {
         console.warn('⚠️ Business Logic Error:', response.data.message)
       }
-      
+
       return response
     },
     async (error) => {
       const requestId = error.config?.headers['X-Request-ID']
       console.error(`❌ Response Error [${requestId}]:`, error)
-      
+
       // 处理网络错误
       if (!error.response) {
         // 尝试重试网络错误
@@ -121,12 +121,12 @@ const retryRequest = async (
   } catch (error: any) {
     if (retryCount < RETRY_CONFIG.retries && RETRY_CONFIG.retryCondition(error)) {
       console.log(`🔄 Retrying request (${retryCount + 1}/${RETRY_CONFIG.retries}): ${config.url}`)
-      
+
       // 等待重试延迟
-      await new Promise(resolve => 
+      await new Promise(resolve =>
         setTimeout(resolve, RETRY_CONFIG.retryDelay * Math.pow(2, retryCount))
       )
-      
+
       return retryRequest(instance, config, retryCount + 1)
     }
     throw error
@@ -165,7 +165,7 @@ const handleAuthError = (status: number) => {
     // 清除本地存储的认证信息
     localStorage.removeItem('auth_token')
     localStorage.removeItem('user_info')
-    
+
     // 重定向到登录页面
     if (window.location.pathname !== '/login') {
       window.location.href = '/login'
@@ -235,7 +235,7 @@ export class ApiClient {
   ): Promise<ApiResponse<T>> {
     const formData = new FormData()
     formData.append('file', file)
-    
+
     if (additionalData) {
       Object.entries(additionalData).forEach(([key, value]) => {
         formData.append(key, value)
@@ -273,7 +273,7 @@ export class ApiClient {
     // 从响应头获取文件名
     const contentDisposition = response.headers['content-disposition']
     let downloadFilename = filename
-    
+
     if (!downloadFilename && contentDisposition) {
       const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
       if (filenameMatch && filenameMatch[1]) {

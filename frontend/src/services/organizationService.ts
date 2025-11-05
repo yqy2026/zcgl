@@ -51,7 +51,7 @@ class OrganizationService {
   async getOrganizationTree(parentId?: string): Promise<OrganizationTree[]> {
     try {
       const params = parentId ? { parent_id: parentId } : {};
-      const response = await apiClient.get(`/api/v1tree`, { params });
+      const response = await apiClient.get(`${this.baseUrl}/tree`, { params });
 
       // 确保响应数据存在
       if (!response.data) {
@@ -74,7 +74,7 @@ class OrganizationService {
     keyword: string,
     params?: { skip?: number; limit?: number }
   ): Promise<Organization[]> {
-    const response = await apiClient.get(`/api/v1search`, {
+    const response = await apiClient.get(`${this.baseUrl}/search`, {
       params: { keyword, ...params }
     });
     return response.data;
@@ -86,7 +86,7 @@ class OrganizationService {
   async advancedSearchOrganizations(
     searchRequest: OrganizationAdvancedSearch
   ): Promise<Organization[]> {
-    const response = await apiClient.post(`/api/v1advanced-search`, searchRequest);
+    const response = await apiClient.post(`${this.baseUrl}/advanced-search`, searchRequest);
     return response.data;
   }
 
@@ -94,7 +94,7 @@ class OrganizationService {
    * 获取组织统计信息
    */
   async getStatistics(): Promise<OrganizationStatistics> {
-    const response = await apiClient.get(`/api/v1statistics`);
+    const response = await apiClient.get(`${this.baseUrl}/statistics`);
     return response.data;
   }
 
@@ -102,7 +102,7 @@ class OrganizationService {
    * 根据ID获取组织详情
    */
   async getOrganization(id: string): Promise<Organization> {
-    const response = await apiClient.get(`/api/v1${id}`);
+    const response = await apiClient.get(`${this.baseUrl}/${id}`);
     return response.data;
   }
 
@@ -113,7 +113,7 @@ class OrganizationService {
     id: string,
     recursive: boolean = false
   ): Promise<Organization[]> {
-    const response = await apiClient.get(`/api/v1${id}/children`, {
+    const response = await apiClient.get(`${this.baseUrl}/${id}/children`, {
       params: { recursive }
     });
     return response.data;
@@ -123,7 +123,7 @@ class OrganizationService {
    * 获取组织到根节点的路径
    */
   async getOrganizationPath(id: string): Promise<OrganizationPath> {
-    const response = await apiClient.get(`/api/v1${id}/path`);
+    const response = await apiClient.get(`${this.baseUrl}/${id}/path`);
     const organizations = response.data;
     const pathString = organizations.map((org: Organization) => org.name).join(' > ');
     return { organizations, path_string: pathString };
@@ -136,7 +136,7 @@ class OrganizationService {
     id: string,
     params?: { skip?: number; limit?: number }
   ): Promise<OrganizationHistory[]> {
-    const response = await apiClient.get(`/api/v1${id}/history`, { params });
+    const response = await apiClient.get(`${this.baseUrl}/${id}/history`, { params });
     return response.data;
   }
 
@@ -152,7 +152,7 @@ class OrganizationService {
    * 更新组织
    */
   async updateOrganization(id: string, organization: OrganizationUpdate): Promise<Organization> {
-    const response = await apiClient.put(`/api/v1${id}`, organization);
+    const response = await apiClient.put(`${this.baseUrl}/${id}`, organization);
     return response.data;
   }
 
@@ -161,7 +161,7 @@ class OrganizationService {
    */
   async deleteOrganization(id: string, deletedBy?: string): Promise<void> {
     const params = deletedBy ? { deleted_by: deletedBy } : {};
-    await apiClient.delete(`/api/v1${id}`, { params });
+    await apiClient.delete(`${this.baseUrl}/${id}`, { params });
   }
 
   /**
@@ -171,7 +171,7 @@ class OrganizationService {
     id: string,
     moveRequest: OrganizationMoveRequest
   ): Promise<OrganizationMoveResult> {
-    const response = await apiClient.post(`/api/v1${id}/move`, moveRequest);
+    const response = await apiClient.post(`${this.baseUrl}/${id}/move`, moveRequest);
     return response.data;
   }
 
@@ -181,7 +181,7 @@ class OrganizationService {
   async batchOrganizationOperation(
     batchRequest: OrganizationBatchRequest
   ): Promise<OrganizationBatchResult> {
-    const response = await apiClient.post(`/api/v1batch`, batchRequest);
+    const response = await apiClient.post(`${this.baseUrl}/batch`, batchRequest);
     return response.data;
   }
 
@@ -211,7 +211,7 @@ class OrganizationService {
   buildOrganizationTreeData(organizations: Organization[]) {
     const treeData: any[] = [];
     const organizationMap = new Map<string, Organization>();
-    
+
     // 创建组织映射
     organizations.forEach(org => {
       organizationMap.set(org.id, org);
@@ -314,7 +314,7 @@ class OrganizationService {
    * 导出组织数据
    */
   async exportOrganizations(format: 'excel' | 'csv' = 'excel'): Promise<Blob> {
-    const response = await apiClient.get(`/api/v1export`, {
+    const response = await apiClient.get(`${this.baseUrl}/export`, {
       params: { format },
       responseType: 'blob'
     });
@@ -327,8 +327,8 @@ class OrganizationService {
   async importOrganizations(file: File): Promise<any> {
     const formData = new FormData();
     formData.append('file', file);
-    
-    const response = await apiClient.post(`/api/v1import`, formData, {
+
+    const response = await apiClient.post(`${this.baseUrl}/import`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }

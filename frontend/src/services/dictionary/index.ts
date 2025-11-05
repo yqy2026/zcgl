@@ -42,6 +42,7 @@ export interface SystemDictionary {
 import { baseDictionaryService } from './base'
 import { dictionaryManagerService } from './manager'
 import { apiClient } from '../api'
+import { API_CONFIG } from '../config'
 
 /**
  * 统一字典服务类
@@ -198,7 +199,7 @@ class UnifiedDictionaryService {
    */
   async getSystemDictionaries(dictType: string): Promise<any[]> {
     try {
-      const response = await apiClient.get(`system-dictionaries`, {
+      const response = await apiClient.get(API_CONFIG.ENDPOINTS.DICTIONARIES.LIST_SYSTEM, {
         params: { dict_type: dictType }
       })
       return response.data

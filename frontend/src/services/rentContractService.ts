@@ -23,14 +23,15 @@ import {
   RentLedgerQueryParams
 } from '../types/rentContract';
 import { apiClient } from './api';
+import { API_CONFIG, API_ENDPOINTS } from '@/constants/api';
 
 class RentContractService {
-  private baseUrl = '/rent_contract';
+  private baseUrl = API_ENDPOINTS.RENT_CONTRACT.LIST;
 
   // 租金合同相关API
   async getContracts(params?: RentContractQueryParams): Promise<RentContractListResponse> {
     try {
-      const response = await apiClient.get(`/api/v1contracts`, { params });
+      const response = await apiClient.get(this.baseUrl, { params });
 
       // 确保响应数据存在且格式正确
       if (!response) {
@@ -59,39 +60,39 @@ class RentContractService {
   }
 
   async getContract(id: string): Promise<RentContract> {
-    const response = await apiClient.get(`/api/v1contracts/${id}`);
+    const response = await apiClient.get(API_ENDPOINTS.RENT_CONTRACT.DETAIL(id));
     return response as RentContract;
   }
 
   async createContract(data: RentContractCreate): Promise<RentContract> {
-    const response = await apiClient.post(`/api/v1contracts`, data);
+    const response = await apiClient.post(API_ENDPOINTS.RENT_CONTRACT.CREATE, data);
     return response as RentContract;
   }
 
   async updateContract(id: string, data: RentContractUpdate): Promise<RentContract> {
-    const response = await apiClient.put(`/api/v1contracts/${id}`, data);
+    const response = await apiClient.put(API_ENDPOINTS.RENT_CONTRACT.UPDATE(id), data);
     return response as RentContract;
   }
 
   async deleteContract(id: string): Promise<void> {
-    await apiClient.delete(`/api/v1contracts/${id}`);
+    await apiClient.delete(API_ENDPOINTS.RENT_CONTRACT.DELETE(id));
   }
 
   // 租金条款相关API
   async getContractTerms(contractId: string): Promise<RentTerm[]> {
-    const response = await apiClient.get(`/api/v1contracts/${contractId}/terms`);
+    const response = await apiClient.get(API_ENDPOINTS.RENT_CONTRACT.TERMS(contractId));
     return response as RentTerm[];
   }
 
   async addRentTerm(contractId: string, data: RentTermCreate): Promise<RentTerm> {
-    const response = await apiClient.post(`/api/v1contracts/${contractId}/terms`, data);
+    const response = await apiClient.post(API_ENDPOINTS.RENT_CONTRACT.ADD_TERM(contractId), data);
     return response as RentTerm;
   }
 
   // 租金台账相关API
   async getRentLedgers(params?: RentLedgerQueryParams): Promise<RentLedgerListResponse> {
     try {
-      const response = await apiClient.get(`/api/v1ledger`, { params });
+      const response = await apiClient.get(API_ENDPOINTS.RENT_CONTRACT.LEDGER_LIST, { params });
 
       // 确保响应数据存在且格式正确
       if (!response) {
@@ -120,28 +121,28 @@ class RentContractService {
   }
 
   async getRentLedger(id: string): Promise<RentLedger> {
-    const response = await apiClient.get(`/api/v1ledger/${id}`);
+    const response = await apiClient.get(API_ENDPOINTS.RENT_CONTRACT.LEDGER_DETAIL(id));
     return response as RentLedger;
   }
 
   async updateRentLedger(id: string, data: RentLedgerUpdate): Promise<RentLedger> {
-    const response = await apiClient.put(`/api/v1ledger/${id}`, data);
+    const response = await apiClient.put(API_ENDPOINTS.RENT_CONTRACT.LEDGER_UPDATE(id), data);
     return response as RentLedger;
   }
 
   async batchUpdateRentLedger(data: RentLedgerBatchUpdate): Promise<{ message: string; ledgers: RentLedger[] }> {
-    const response = await apiClient.put(`/api/v1ledger/batch`, data);
+    const response = await apiClient.put(API_ENDPOINTS.RENT_CONTRACT.LEDGER_BATCH_UPDATE, data);
     return response as { message: string; ledgers: RentLedger[] };
   }
 
   async generateMonthlyLedger(data: GenerateLedgerRequest): Promise<{ message: string; ledgers: RentLedger[] }> {
-    const response = await apiClient.post(`/api/v1ledger/generate`, data);
+    const response = await apiClient.post(API_ENDPOINTS.RENT_CONTRACT.LEDGER_GENERATE, data);
     return response as { message: string; ledgers: RentLedger[] };
   }
 
   // 统计相关API
   async getRentStatistics(params?: RentStatisticsQuery): Promise<RentStatisticsOverview> {
-    const response = await apiClient.get(`/api/v1statistics/overview`, { params });
+    const response = await apiClient.get(API_ENDPOINTS.RENT_CONTRACT.STATISTICS_OVERVIEW, { params });
     return response as RentStatisticsOverview;
   }
 
@@ -150,23 +151,23 @@ class RentContractService {
   }
 
   async getOwnershipStatistics(params?: RentStatisticsQuery): Promise<OwnershipRentStatistics[]> {
-    const response = await apiClient.get(`/api/v1statistics/ownership`, { params });
+    const response = await apiClient.get(API_ENDPOINTS.RENT_CONTRACT.STATISTICS_OWNERSHIP, { params });
     return response as OwnershipRentStatistics[];
   }
 
   async getAssetStatistics(params?: RentStatisticsQuery): Promise<AssetRentStatistics[]> {
-    const response = await apiClient.get(`/api/v1statistics/asset`, { params });
+    const response = await apiClient.get(API_ENDPOINTS.RENT_CONTRACT.STATISTICS_ASSET, { params });
     return response as AssetRentStatistics[];
   }
 
   async getMonthlyStatistics(params?: { year?: number; start_month?: string; end_month?: string }): Promise<MonthlyRentStatistics[]> {
-    const response = await apiClient.get(`/api/v1statistics/monthly`, { params });
+    const response = await apiClient.get(API_ENDPOINTS.RENT_CONTRACT.STATISTICS_MONTHLY, { params });
     return response as MonthlyRentStatistics[];
   }
 
   // 导出统计相关方法
   async exportStatistics(params?: RentStatisticsQuery): Promise<Blob> {
-    const response = await apiClient.get(`/api/v1statistics/export`, {
+    const response = await apiClient.get(API_ENDPOINTS.RENT_CONTRACT.STATISTICS_EXPORT, {
       params,
       responseType: 'blob'
     });
@@ -175,12 +176,12 @@ class RentContractService {
 
   // 辅助API
   async getContractLedger(contractId: string): Promise<RentLedger[]> {
-    const response = await apiClient.get(`/api/v1contracts/${contractId}/ledger`);
+    const response = await apiClient.get(API_ENDPOINTS.RENT_CONTRACT.LEDGER(contractId));
     return response as RentLedger[];
   }
 
   async getAssetContracts(assetId: string): Promise<RentContract[]> {
-    const response = await apiClient.get(`/api/v1assets/${assetId}/contracts`);
+    const response = await apiClient.get(API_ENDPOINTS.ASSET.DETAIL(assetId) + '/contracts');
     return response as RentContract[];
   }
 
@@ -250,7 +251,7 @@ class RentContractService {
 
   // 导出相关方法
   async exportContractsToExcel(filters?: any): Promise<Blob> {
-    const response = await apiClient.get(`/api/v1contracts/export`, {
+    const response = await apiClient.get(API_ENDPOINTS.RENT_CONTRACT.CONTRACTS_EXPORT, {
       params: filters,
       responseType: 'blob'
     });
@@ -258,7 +259,7 @@ class RentContractService {
   }
 
   async exportLedgersToExcel(filters?: any): Promise<Blob> {
-    const response = await apiClient.get(`/api/v1ledger/export`, {
+    const response = await apiClient.get(API_ENDPOINTS.RENT_CONTRACT.LEDGER_EXPORT, {
       params: filters,
       responseType: 'blob'
     });

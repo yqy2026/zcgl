@@ -1,30 +1,31 @@
 // API配置文件
 
-// 获取环境变量的辅助函数，兼容Jest测试环境
+// 获取环境变量的辅助函数，兼容Vite环境
 const getEnvVar = (key: string, defaultValue: string) => {
-  // 统一使用process.env，在setup.ts中提供import.meta.env的映射
-  return process.env[key] || defaultValue;
+  // 在Vite环境中使用import.meta.env
+  const envKey = key.replace('VITE_', '');
+  return import.meta.env[key] || import.meta.env[`VITE_${envKey}`] || defaultValue;
 };
 
 export const API_CONFIG = {
   // 基础配置
   BASE_URL: getEnvVar('VITE_API_BASE_URL', '/api/v1'),
   TIMEOUT: parseInt(getEnvVar('VITE_API_TIMEOUT', '30000')),
-  
+
   // 重试配置
   RETRY: {
     ATTEMPTS: 3,
     DELAY: 1000,
     BACKOFF_FACTOR: 2,
   },
-  
+
   // 缓存配置
   CACHE: {
     DEFAULT_TTL: 5 * 60 * 1000, // 5分钟
     LONG_TTL: 30 * 60 * 1000,   // 30分钟
     SHORT_TTL: 1 * 60 * 1000,   // 1分钟
   },
-  
+
   // 文件上传配置
   UPLOAD: {
     MAX_SIZE: 50 * 1024 * 1024, // 50MB
@@ -35,14 +36,14 @@ export const API_CONFIG = {
       'text/csv',
     ],
   },
-  
+
   // 分页配置
   PAGINATION: {
     DEFAULT_PAGE_SIZE: 20,
     MAX_PAGE_SIZE: 100,
     PAGE_SIZE_OPTIONS: [10, 20, 50, 100],
   },
-  
+
   // 端点配置 - 统一命名规范
   ENDPOINTS: {
     // 资产管理
@@ -86,6 +87,9 @@ export const API_CONFIG = {
       PASSWORD_CHANGE: '/auth/password/change',
       PASSWORD_RESET: '/auth/password/reset',
       PASSWORD_CONFIRM: '/auth/password/confirm',
+      PROFILE: '/auth/profile',
+      CHANGE_PASSWORD: '/auth/change-password',
+      ACTIVITY: '/auth/activity',
     },
 
     // 用户管理
@@ -127,22 +131,35 @@ export const API_CONFIG = {
     // 租赁管理 - 统一使用连字符
     RENTAL: {
       CONTRACTS: {
-        LIST: '/rental-contracts',
-        CREATE: '/rental-contracts',
-        DETAIL: (id: string) => `/rental-contracts/${id}`,
-        UPDATE: (id: string) => `/rental-contracts/${id}`,
-        DELETE: (id: string) => `/rental-contracts/${id}`,
-        TERMINATE: (id: string) => `/rental-contracts/${id}/terminate`,
-        RENEW: (id: string) => `/rental-contracts/${id}/renew`,
+        LIST: '/rental-contracts/contracts',
+        CREATE: '/rental-contracts/contracts',
+        DETAIL: (id: string) => `/rental-contracts/contracts/${id}`,
+        UPDATE: (id: string) => `/rental-contracts/contracts/${id}`,
+        DELETE: (id: string) => `/rental-contracts/contracts/${id}`,
+        TERMINATE: (id: string) => `/rental-contracts/contracts/${id}/terminate`,
+        RENEW: (id: string) => `/rental-contracts/contracts/${id}/renew`,
+        TERMS: (id: string) => `/rental-contracts/contracts/${id}/terms`,
+        ADD_TERM: (id: string) => `/rental-contracts/contracts/${id}/terms`,
+        LEDGER: (id: string) => `/rental-contracts/contracts/${id}/ledger`,
+        EXPORT: '/rental-contracts/contracts/export',
       },
       LEDGER: {
-        LIST: '/rental-ledger',
-        CREATE: '/rental-ledger',
-        DETAIL: (id: string) => `/rental-ledger/${id}`,
-        UPDATE: (id: string) => `/rental-ledger/${id}`,
-        DELETE: (id: string) => `/rental-ledger/${id}`,
+        LIST: '/rental-contracts/ledger',
+        CREATE: '/rental-contracts/ledger',
+        DETAIL: (id: string) => `/rental-contracts/ledger/${id}`,
+        UPDATE: (id: string) => `/rental-contracts/ledger/${id}`,
+        DELETE: (id: string) => `/rental-contracts/ledger/${id}`,
+        BATCH_UPDATE: '/rental-contracts/ledger/batch',
+        GENERATE: '/rental-contracts/ledger/generate',
+        EXPORT: '/rental-contracts/ledger/export',
       },
-      STATISTICS: '/rental-statistics',
+      STATISTICS: {
+        OVERVIEW: '/rental-contracts/statistics/overview',
+        OWNERSHIP: '/rental-contracts/statistics/ownership',
+        ASSET: '/rental-contracts/statistics/asset',
+        MONTHLY: '/rental-contracts/statistics/monthly',
+        EXPORT: '/rental-contracts/statistics/export',
+      },
     },
 
     // 权属方管理
@@ -223,6 +240,52 @@ export const API_CONFIG = {
       LOGS: '/system/logs',
       MONITORING: '/system/monitoring',
       HEALTH: '/system/health',
+
+      // 用户管理
+      USERS: {
+        LIST: '/auth/users',
+        DETAIL: (id: string) => `/auth/users/${id}`,
+        CREATE: '/auth/users',
+        UPDATE: (id: string) => `/auth/users/${id}`,
+        DELETE: (id: string) => `/auth/users/${id}`,
+        RESET_PASSWORD: (id: string) => `/auth/users/${id}/reset-password`,
+        TOGGLE_LOCK: (id: string) => `/auth/users/${id}/toggle-lock`,
+        STATISTICS: '/auth/users/statistics',
+      },
+
+      // 角色管理
+      ROLES: {
+        LIST: '/system/roles',
+        DETAIL: (id: string) => `/system/roles/${id}`,
+        CREATE: '/system/roles',
+        UPDATE: (id: string) => `/system/roles/${id}`,
+        DELETE: (id: string) => `/system/roles/${id}`,
+        PERMISSIONS: '/system/permissions',
+        UPDATE_PERMISSIONS: (id: string) => `/system/roles/${id}/permissions`,
+        STATISTICS: '/system/roles/statistics',
+      },
+
+      // 组织架构管理
+      ORGANIZATIONS: {
+        LIST: '/organizations',
+        DETAIL: (id: string) => `/organizations/${id}`,
+        CREATE: '/organizations',
+        UPDATE: (id: string) => `/organizations/${id}`,
+        DELETE: (id: string) => `/organizations/${id}`,
+        TREE: '/organizations/tree',
+        MEMBERS: (id: string) => `/system/organizations/${id}/members`,
+        ADD_MEMBER: (id: string) => `/system/organizations/${id}/members`,
+        REMOVE_MEMBER: (orgId: string, userId: string) => `/system/organizations/${orgId}/members/${userId}`,
+        STATISTICS: '/system/organizations/statistics',
+      },
+
+      // 操作日志
+      LOGS: {
+        LIST: '/system/logs',
+        DETAIL: (id: string) => `/system/logs/${id}`,
+        STATISTICS: '/system/logs/statistics',
+        EXPORT: '/system/logs/export',
+      },
     },
 
     // 历史记录
@@ -243,12 +306,29 @@ export const API_CONFIG = {
       BATCH_UPDATE: '/asset-custom-fields/batch-update',
     },
 
+    // 字典管理
+    DICTIONARIES: {
+      BASE: '/dictionaries',
+      OPTIONS: (dictType: string) => `/dictionaries/${dictType}/options`,
+      TYPES: '/dictionaries/types',
+      QUICK_CREATE: (dictType: string) => `/dictionaries/${dictType}/quick-create`,
+      ADD_VALUE: (dictType: string) => `/dictionaries/${dictType}/values`,
+      DELETE_TYPE: (dictType: string) => `/dictionaries/${dictType}`,
+      LIST_SYSTEM: '/system/dictionaries',
+      DETAIL_SYSTEM: (id: string) => `/system/dictionaries/${id}`,
+      CREATE_SYSTEM: '/system/dictionaries',
+      UPDATE_SYSTEM: (id: string) => `/system/dictionaries/${id}`,
+      DELETE_SYSTEM: (id: string) => `/system/dictionaries/${id}`,
+      BATCH_UPDATE_SYSTEM: '/system/dictionaries/batch-update',
+      GET_TYPES: '/system/dictionaries/types',
+    },
+
     // 系统信息
     HEALTH: '/health',
     INFO: '/info',
     VERSION: '/version',
   },
-  
+
   // 错误代码映射
   ERROR_CODES: {
     NETWORK_ERROR: 'NETWORK_ERROR',
@@ -258,7 +338,7 @@ export const API_CONFIG = {
     NOT_FOUND_ERROR: 'NOT_FOUND_ERROR',
     SERVER_ERROR: 'SERVER_ERROR',
   },
-  
+
   // HTTP状态码映射
   HTTP_STATUS: {
     OK: 200,
@@ -274,7 +354,7 @@ export const API_CONFIG = {
     BAD_GATEWAY: 502,
     SERVICE_UNAVAILABLE: 503,
   },
-  
+
   // 请求头配置
   HEADERS: {
     CONTENT_TYPE: 'Content-Type',
@@ -283,7 +363,7 @@ export const API_CONFIG = {
     USER_AGENT: 'X-User-Agent',
     CLIENT_VERSION: 'X-Client-Version',
   },
-  
+
   // 环境配置
   ENV: {
     DEVELOPMENT: import.meta.env.DEV,
@@ -330,11 +410,11 @@ export const isValidFileSize = (file: File) => {
 // 格式化文件大小
 export const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return '0 B'
-  
+
   const k = 1024
   const sizes = ['B', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
-  
+
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`
 }
 
