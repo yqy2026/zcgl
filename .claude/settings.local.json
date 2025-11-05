@@ -37,6 +37,8 @@
       "Bash(uv run mypy:*)",
       "Bash(uv run ruff:*)",
       "Bash(git push:*)",
+      "Bash(git pull:*)",
+      "Bash(git stash:*)",
       "Bash(gh pr create:*)",
       "Bash(gh pr view:*)",
       "Bash(gh pr:*)",
