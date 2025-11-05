@@ -281,21 +281,34 @@ async def quick_create_dictionary(
 async def get_dictionary_types(db: Session = Depends(get_db)):
     """获取所有字典类型列表"""
     try:
+        # 调试日志
+        print(f"[DEBUG] get_dictionary_types called")
+        print(f"[DEBUG] Database session: {db}")
+
         # 从枚举字段获取
         enum_types = (
-            db.query(EnumFieldType.code).filter(not EnumFieldType.is_deleted).all()
+            db.query(EnumFieldType.code).filter(EnumFieldType.is_deleted == False).all()
         )
+        print(f"[DEBUG] Enum types query result: {enum_types}")
+        print(f"[DEBUG] Enum types count: {len(enum_types)}")
 
         # 从系统字典获取（向后兼容）
         system_types = db.query(SystemDictionary.dict_type).distinct().all()
+        print(f"[DEBUG] System types query result: {system_types}")
+        print(f"[DEBUG] System types count: {len(system_types)}")
 
         all_types = set()
         all_types.update([t[0] for t in enum_types if t[0]])
         all_types.update([t[0] for t in system_types if t[0]])
 
-        return sorted(list(all_types))
+        result = sorted(list(all_types))
+        print(f"[DEBUG] Final result: {result}")
+        print(f"[DEBUG] Final result count: {len(result)}")
+
+        return result
 
     except Exception as e:
+        print(f"[ERROR] Exception in get_dictionary_types: {e}")
         raise HTTPException(status_code=500, detail=f"获取字典类型失败: {str(e)}")
 
 

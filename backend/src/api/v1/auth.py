@@ -544,3 +544,186 @@ async def get_security_config(current_user: UserResponse = Depends(require_admin
         },
         "audit_config": {"log_retention_days": SecurityConfig.AUDIT_LOG_RETENTION_DAYS},
     }
+
+
+# ==================== 用户管理补充端点 ====================
+
+@router.post("/users/{user_id}/lock", summary="锁定用户")
+async def lock_user(
+    user_id: str,
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(require_admin),
+):
+    """
+    锁定用户账户（仅管理员）
+    
+    锁定后用户无法登录
+    """
+    try:
+        user_crud = UserCRUD()
+        user = user_crud.get(db, user_id)
+        
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在")
+        
+        user.is_locked = True
+        user.updated_at = datetime.now(UTC)
+        db.commit()
+        db.refresh(user)
+        
+        # 记录审计日志
+        audit_crud = AuditLogCRUD()
+        audit_crud.create(
+            db=db,
+            user_id=user_id,
+            action="user_locked",
+            resource_type="user",
+            resource_id=user_id,
+            ip_address="system",
+            user_agent="admin_action",
+        )
+        
+        return {"success": True, "message": f"用户 {user.username} 已锁定"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post("/users/{user_id}/unlock", summary="解锁用户")
+async def unlock_user(
+    user_id: str,
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(require_admin),
+):
+    """
+    解锁用户账户（仅管理员）
+    
+    解锁后用户恢复正常登录
+    """
+    try:
+        user_crud = UserCRUD()
+        user = user_crud.get(db, user_id)
+        
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在")
+        
+        user.is_locked = False
+        user.updated_at = datetime.now(UTC)
+        db.commit()
+        db.refresh(user)
+        
+        # 记录审计日志
+        audit_crud = AuditLogCRUD()
+        audit_crud.create(
+            db=db,
+            user_id=user_id,
+            action="user_unlocked",
+            resource_type="user",
+            resource_id=user_id,
+            ip_address="system",
+            user_agent="admin_action",
+        )
+        
+        return {"success": True, "message": f"用户 {user.username} 已解锁"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.post("/users/{user_id}/reset-password", summary="重置用户密码")
+async def reset_user_password(
+    user_id: str,
+    password_data: dict = {"new_password": ..., "reason": None},
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(require_admin),
+):
+    """
+    重置用户密码（仅管理员）
+    
+    - 不需要验证当前密码
+    - 适用于用户忘记密码等情况
+    """
+    from pydantic import BaseModel
+    
+    class PasswordResetRequest(BaseModel):
+        new_password: str
+        reason: str | None = None
+    
+    try:
+        # 解析请求体
+        import json
+        if isinstance(password_data, str):
+            password_data = json.loads(password_data)
+        
+        reset_request = PasswordResetRequest(**password_data)
+        
+        user_crud = UserCRUD()
+        auth_service = AuthService(db)
+        
+        user = user_crud.get(db, user_id)
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在")
+        
+        # 设置新密码
+        user.hashed_password = auth_service.hash_password(reset_request.new_password)
+        user.updated_at = datetime.now(UTC)
+        db.commit()
+        db.refresh(user)
+        
+        # 记录审计日志
+        audit_crud = AuditLogCRUD()
+        audit_crud.create(
+            db=db,
+            user_id=user_id,
+            action="password_reset",
+            resource_type="user",
+            resource_id=user_id,
+            ip_address="system",
+            user_agent="admin_action",
+        )
+        
+        return {
+            "success": True,
+            "message": f"用户 {user.username} 密码已重置",
+            "user_id": user_id,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.get("/users/statistics/summary", response_model=dict, summary="获取用户统计")
+async def get_user_statistics(
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(require_admin),
+):
+    """
+    获取用户相关统计数据（仅管理员）
+    """
+    try:
+        from sqlalchemy import func
+        from ...models.auth import User
+        
+        total_users = db.query(func.count(User.id)).scalar()
+        active_users = db.query(func.count(User.id)).filter(User.is_active == True).scalar()
+        locked_users = db.query(func.count(User.id)).filter(User.is_locked == True).scalar()
+        inactive_users = db.query(func.count(User.id)).filter(User.is_active == False).scalar()
+        
+        return {
+            "success": True,
+            "data": {
+                "total_users": total_users,
+                "active_users": active_users,
+                "locked_users": locked_users,
+                "inactive_users": inactive_users,
+                "online_users": 0,  # 可根据会话表计算
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
