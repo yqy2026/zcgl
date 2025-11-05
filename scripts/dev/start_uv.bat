@@ -5,6 +5,11 @@ echo 🚀 Starting Land Property Asset Management System (UV Version)
 echo ========================================
 echo.
 
+REM Navigate to project root directory
+cd /d "%~dp0../.."
+echo [INFO] Current directory: %cd%
+echo.
+
 REM Check command line parameters
 set UPDATE_DEPS=0
 if "%1"=="--update" set UPDATE_DEPS=1
