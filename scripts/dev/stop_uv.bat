@@ -1,27 +1,33 @@
 @echo off
 setlocal enabledelayedexpansion
 chcp 65001 >nul
-echo 🛑 停止土地物业资产管理系统 (UV版本)
+echo 🛑 Stopping Land Property Asset Management System (UV Version)
 echo ========================================
+echo.
 
-REM 停止所有相关进程
-echo [INFO] 正在停止服务...
+REM Navigate to project root directory
+cd /d "%~dp0../../"
+echo [INFO] Current directory: %cd%
+echo.
 
-REM 停止Python/uv进程
+REM Stop all related processes
+echo [INFO] Stopping services...
+
+REM Stop Python/uv processes
 taskkill /f /im python.exe >nul 2>nul
 taskkill /f /im uv.exe >nul 2>nul
 
-REM 停止Node.js进程
+REM Stop Node.js processes
 taskkill /f /im node.exe >nul 2>nul
 
-REM 停止端口8002、5173和5174上的进程
+REM Stop processes on ports 8002, 5173 and 5174
 call :StopProcessesByPort 8002
 call :StopProcessesByPort 5173
 call :StopProcessesByPort 5174
 
-echo [SUCCESS] 所有服务已停止
+echo [SUCCESS] All services stopped
 echo.
-echo 🔄 如果需要重新启动，请运行 start_uv.bat
+echo 🔄 To restart, run start_uv.bat
 echo.
 goto :eof
 
@@ -30,15 +36,15 @@ setlocal
 set PORT=%1
 netstat -aon | findstr ":%PORT%" >nul 2>nul
 if %errorlevel% equ 0 (
-    echo [INFO] 停止端口 %PORT% 上的进程...
+    echo [INFO] Stopping processes on port %PORT%...
     for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":%PORT%"') do (
         taskkill /f /pid %%a >nul 2>nul
         if !errorlevel! equ 0 (
-            echo [SUCCESS] 已停止进程 %%a (端口 %PORT%)
+            echo [SUCCESS] Stopped process %%a (port %PORT%)
         )
     )
 ) else (
-    echo [INFO] 端口 %PORT% 未被占用
+    echo [INFO] Port %PORT% is not in use
 )
 endlocal
 goto :eof
