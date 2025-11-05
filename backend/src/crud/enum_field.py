@@ -34,7 +34,9 @@ class EnumFieldTypeCRUD:
         enum_type = (
             self.db.query(EnumFieldType)
             .filter(
-                and_(EnumFieldType.id == enum_type_id, EnumFieldType.is_deleted == False)
+                and_(
+                    EnumFieldType.id == enum_type_id, EnumFieldType.is_deleted == False
+                )
             )
             .first()
         )

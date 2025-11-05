@@ -548,6 +548,7 @@ async def get_security_config(current_user: UserResponse = Depends(require_admin
 
 # ==================== 用户管理补充端点 ====================
 
+
 @router.post("/users/{user_id}/lock", summary="锁定用户")
 async def lock_user(
     user_id: str,
@@ -556,21 +557,23 @@ async def lock_user(
 ):
     """
     锁定用户账户（仅管理员）
-    
+
     锁定后用户无法登录
     """
     try:
         user_crud = UserCRUD()
         user = user_crud.get(db, user_id)
-        
+
         if not user:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在")
-        
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在"
+            )
+
         user.is_locked = True
         user.updated_at = datetime.now(UTC)
         db.commit()
         db.refresh(user)
-        
+
         # 记录审计日志
         audit_crud = AuditLogCRUD()
         audit_crud.create(
@@ -582,7 +585,7 @@ async def lock_user(
             ip_address="system",
             user_agent="admin_action",
         )
-        
+
         return {"success": True, "message": f"用户 {user.username} 已锁定"}
     except HTTPException:
         raise
@@ -599,21 +602,23 @@ async def unlock_user(
 ):
     """
     解锁用户账户（仅管理员）
-    
+
     解锁后用户恢复正常登录
     """
     try:
         user_crud = UserCRUD()
         user = user_crud.get(db, user_id)
-        
+
         if not user:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在")
-        
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在"
+            )
+
         user.is_locked = False
         user.updated_at = datetime.now(UTC)
         db.commit()
         db.refresh(user)
-        
+
         # 记录审计日志
         audit_crud = AuditLogCRUD()
         audit_crud.create(
@@ -625,7 +630,7 @@ async def unlock_user(
             ip_address="system",
             user_agent="admin_action",
         )
-        
+
         return {"success": True, "message": f"用户 {user.username} 已解锁"}
     except HTTPException:
         raise
@@ -643,37 +648,40 @@ async def reset_user_password(
 ):
     """
     重置用户密码（仅管理员）
-    
+
     - 不需要验证当前密码
     - 适用于用户忘记密码等情况
     """
     from pydantic import BaseModel
-    
+
     class PasswordResetRequest(BaseModel):
         new_password: str
         reason: str | None = None
-    
+
     try:
         # 解析请求体
         import json
+
         if isinstance(password_data, str):
             password_data = json.loads(password_data)
-        
+
         reset_request = PasswordResetRequest(**password_data)
-        
+
         user_crud = UserCRUD()
         auth_service = AuthService(db)
-        
+
         user = user_crud.get(db, user_id)
         if not user:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在")
-        
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在"
+            )
+
         # 设置新密码
         user.hashed_password = auth_service.hash_password(reset_request.new_password)
         user.updated_at = datetime.now(UTC)
         db.commit()
         db.refresh(user)
-        
+
         # 记录审计日志
         audit_crud = AuditLogCRUD()
         audit_crud.create(
@@ -685,7 +693,7 @@ async def reset_user_password(
             ip_address="system",
             user_agent="admin_action",
         )
-        
+
         return {
             "success": True,
             "message": f"用户 {user.username} 密码已重置",
@@ -708,13 +716,20 @@ async def get_user_statistics(
     """
     try:
         from sqlalchemy import func
+
         from ...models.auth import User
-        
+
         total_users = db.query(func.count(User.id)).scalar()
-        active_users = db.query(func.count(User.id)).filter(User.is_active == True).scalar()
-        locked_users = db.query(func.count(User.id)).filter(User.is_locked == True).scalar()
-        inactive_users = db.query(func.count(User.id)).filter(User.is_active == False).scalar()
-        
+        active_users = (
+            db.query(func.count(User.id)).filter(User.is_active == True).scalar()
+        )
+        locked_users = (
+            db.query(func.count(User.id)).filter(User.is_locked == True).scalar()
+        )
+        inactive_users = (
+            db.query(func.count(User.id)).filter(User.is_active == False).scalar()
+        )
+
         return {
             "success": True,
             "data": {
@@ -723,7 +738,9 @@ async def get_user_statistics(
                 "locked_users": locked_users,
                 "inactive_users": inactive_users,
                 "online_users": 0,  # 可根据会话表计算
-            }
+            },
         }
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )

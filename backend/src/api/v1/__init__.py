@@ -4,10 +4,9 @@ from fastapi import APIRouter
 
 # 导入各个模块的路由
 from .admin import router as admin_router
+from .analytics import router as analytics_router
 from .assets import router as assets_router
 from .auth import router as auth_router
-from .roles import router as roles_router
-from .operation_logs import router as operation_logs_router
 from .backup import router as backup_router
 from .custom_fields import router as custom_fields_router
 from .defect_tracking import router as defect_tracking_router
@@ -18,17 +17,18 @@ from .history import router as history_router
 from .missing_apis import missing_apis_router
 from .monitoring import router as monitoring_router
 from .occupancy import router as occupancy_router
+from .operation_logs import router as operation_logs_router
 from .organization import router as organization_router
 from .ownership import router as ownership_router
 from .project import router as project_router
 from .rent_contract import router as rent_contract_router
+from .roles import router as roles_router
 from .statistics import router as statistics_router
 from .system_dictionaries import router as system_dictionaries_router
 from .system_settings import router as system_settings_router
 from .test_coverage import router as test_coverage_router
 from .test_performance import router as test_performance_router
 
-from .analytics import router as analytics_router
 # PDF导入API已统一到 pdf_import_unified.py，在main.py中直接注册
 # from .pdf_import_unified import router as pdf_import_router
 # from .organization_permissions import router as organization_permissions_router  # 已删除
@@ -75,9 +75,7 @@ api_router.include_router(project_router, prefix="/projects", tags=["项目管�
 api_router.include_router(
     rent_contract_router, prefix="/rental-contracts", tags=["租赁合同管理"]
 )
-api_router.include_router(
-    analytics_router, prefix="/analytics", tags=["综合分析"]
-)
+api_router.include_router(analytics_router, prefix="/analytics", tags=["综合分析"])
 api_router.include_router(system_settings_router, prefix="/system", tags=["系统设置"])
 api_router.include_router(monitoring_router, prefix="/monitoring", tags=["系统监控"])
 api_router.include_router(test_coverage_router, tags=["测试覆盖率监控"])

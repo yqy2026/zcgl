@@ -282,7 +282,7 @@ async def get_dictionary_types(db: Session = Depends(get_db)):
     """获取所有字典类型列表"""
     try:
         # 调试日志
-        print(f"[DEBUG] get_dictionary_types called")
+        print("[DEBUG] get_dictionary_types called")
         print(f"[DEBUG] Database session: {db}")
 
         # 从枚举字段获取

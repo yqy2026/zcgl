@@ -3,6 +3,7 @@
 """
 
 from datetime import datetime, timedelta
+
 from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
@@ -54,11 +55,11 @@ class OperationLogCRUD:
             details=details,
             created_at=datetime.now(),
         )
-        
+
         db.add(log)
         db.commit()
         db.refresh(log)
-        
+
         return log
 
     def get(self, db: Session, log_id: str) -> OperationLog | None:
@@ -125,9 +126,7 @@ class OperationLogCRUD:
 
         return logs, total
 
-    def delete_old_logs(
-        self, db: Session, days: int = 90
-    ) -> int:
+    def delete_old_logs(self, db: Session, days: int = 90) -> int:
         """删除指定天数前的日志"""
         cutoff_date = datetime.now() - timedelta(days=days)
         deleted = (
@@ -138,9 +137,7 @@ class OperationLogCRUD:
         db.commit()
         return deleted
 
-    def get_user_statistics(
-        self, db: Session, user_id: str, days: int = 30
-    ) -> dict:
+    def get_user_statistics(self, db: Session, user_id: str, days: int = 30) -> dict:
         """获取用户操作统计"""
         start_date = datetime.now() - timedelta(days=days)
 
@@ -157,9 +154,7 @@ class OperationLogCRUD:
 
         # 按操作类型统计
         action_stats = (
-            db.query(
-                OperationLog.action, func.count(OperationLog.id)
-            )
+            db.query(OperationLog.action, func.count(OperationLog.id))
             .filter(
                 and_(
                     OperationLog.user_id == user_id,
@@ -177,9 +172,7 @@ class OperationLogCRUD:
             "action_breakdown": {action: count for action, count in action_stats},
         }
 
-    def get_module_statistics(
-        self, db: Session, module: str, days: int = 30
-    ) -> dict:
+    def get_module_statistics(self, db: Session, module: str, days: int = 30) -> dict:
         """获取模块操作统计"""
         start_date = datetime.now() - timedelta(days=days)
 
@@ -196,9 +189,7 @@ class OperationLogCRUD:
 
         # 按操作类型统计
         action_stats = (
-            db.query(
-                OperationLog.action, func.count(OperationLog.id)
-            )
+            db.query(OperationLog.action, func.count(OperationLog.id))
             .filter(
                 and_(
                     OperationLog.module == module,
@@ -216,9 +207,7 @@ class OperationLogCRUD:
             "action_breakdown": {action: count for action, count in action_stats},
         }
 
-    def get_daily_statistics(
-        self, db: Session, days: int = 30
-    ) -> dict:
+    def get_daily_statistics(self, db: Session, days: int = 30) -> dict:
         """获取每日操作统计"""
         start_date = datetime.now() - timedelta(days=days)
 
@@ -238,9 +227,7 @@ class OperationLogCRUD:
             "daily_breakdown": {str(date): count for date, count in daily_stats},
         }
 
-    def get_error_statistics(
-        self, db: Session, days: int = 30
-    ) -> dict:
+    def get_error_statistics(self, db: Session, days: int = 30) -> dict:
         """获取错误操作统计"""
         start_date = datetime.now() - timedelta(days=days)
 

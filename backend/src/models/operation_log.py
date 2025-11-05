@@ -52,7 +52,9 @@ class OperationLog(Base):
     details = Column(Text, comment="详细信息(JSON)")
 
     # 时间信息
-    created_at = Column(DateTime, nullable=False, default=datetime.now, comment="创建时间")
+    created_at = Column(
+        DateTime, nullable=False, default=datetime.now, comment="创建时间"
+    )
 
     def __repr__(self):
         return f"<OperationLog(user={self.username}, action={self.action}, resource={self.resource_type}:{self.resource_id})>"
