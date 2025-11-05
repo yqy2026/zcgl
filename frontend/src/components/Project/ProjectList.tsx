@@ -56,7 +56,6 @@ const ProjectList: React.FC<ProjectListProps> = ({
   const [projects, setProjects] = useState<Project[]>([]);
   const [statistics, setStatistics] = useState<ProjectStatisticsResponse | null>(null);
   const [loading, setLoading] = useState(false);
-  const [statsLoading, setStatsLoading] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -98,20 +97,24 @@ const ProjectList: React.FC<ProjectListProps> = ({
       const response = await projectService.getProjects(params);
       console.log('Project API response:', response);
 
-      // 处理不同的响应格式
-      if (response && response.data) {
-        // 如果响应格式是 {data: {items: []}}
-        setProjects(response.data.items);
+      // 处理后端响应格式: {items: [...], total: 58, page: 1, size: 10, pages: 6}
+      if (response && response.items) {
+        // 标准响应格式：{items: [...], total: number, page: number, size: number}
+        setProjects(response.items || []);
         setPagination(prev => ({
           ...prev,
-          total: response.data.total || response.data.total_count || 0
+          total: response.total || 0,
+          current: response.page || prev.current,
+          pageSize: response.size || prev.pageSize
         }));
-      } else if (response && response.items) {
-        // 如果响应格式是 {items: []}
-        setProjects(response.items);
+      } else if (response && response.data && response.data.items) {
+        // 嵌套响应格式：{data: {items: [...], total: number}}
+        setProjects(response.data.items || []);
         setPagination(prev => ({
           ...prev,
-          total: response.total || response.total_count || 0
+          total: response.data.total || response.data.total_count || 0,
+          current: response.data.page || prev.current,
+          pageSize: response.data.size || prev.pageSize
         }));
       } else {
         console.error('Unexpected response format:', response);
@@ -121,6 +124,19 @@ const ProjectList: React.FC<ProjectListProps> = ({
           total: 0
         }));
       }
+
+      // 在项目数据加载后，基于实际数据计算统计信息
+      const loadedProjects = response?.items || response?.data?.items || [];
+      const activeCount = loadedProjects.filter(p => p.is_active).length;
+      const inactiveCount = loadedProjects.length - activeCount;
+
+      setStatistics({
+        total_count: loadedProjects.length,
+        active_count: activeCount,
+        inactive_count: inactiveCount,
+        type_distribution: {}, // 如需要可基于项目数据计算
+        status_distribution: {} // 如需要可基于项目数据计算
+      });
     } catch (error) {
       console.error('获取项目列表失败:', error);
       console.error('Error details:', {
@@ -134,30 +150,21 @@ const ProjectList: React.FC<ProjectListProps> = ({
     }
   };
 
-  // 获取统计信息
+  // 获取统计信息 - 基于本地项目数据计算
   const fetchStatistics = async () => {
-    setStatsLoading(true);
     try {
-      const response = await projectService.getProjectStatistics();
-      console.log('Statistics API response:', response);
-
-      // 处理不同的响应格式
-      if (response && response.data) {
-        setStatistics(response.data);
-      } else if (response) {
-        setStatistics(response);
-      } else {
-        console.error('Unexpected statistics response format:', response);
-      }
+      // 由于后端没有提供统计API，我们基于当前项目数据计算统计信息
+      // 这里使用空数组，实际统计会在项目数据加载后计算
+      setStatistics({
+        total_count: 0,
+        active_count: 0,
+        inactive_count: 0,
+        type_distribution: {},
+        status_distribution: {}
+      });
     } catch (error) {
       console.error('获取统计信息失败:', error);
-      console.error('Statistics error details:', {
-        message: error.message,
-        status: error.response?.status,
-        data: error.response?.data
-      });
-    } finally {
-      setStatsLoading(false);
+      setStatistics(null);
     }
   };
 
@@ -178,7 +185,6 @@ const ProjectList: React.FC<ProjectListProps> = ({
     const loadData = async () => {
       await Promise.all([
         fetchProjects(),
-        fetchStatistics(),
         fetchOwnerships()
       ]);
     };
@@ -198,7 +204,6 @@ const ProjectList: React.FC<ProjectListProps> = ({
           await projectService.deleteProject(project.id);
           message.success('项目删除成功');
           fetchProjects();
-          fetchStatistics();
         } catch (error) {
           console.error('删除项目失败:', error);
           message.error('删除项目失败');
@@ -213,7 +218,6 @@ const ProjectList: React.FC<ProjectListProps> = ({
       await projectService.toggleProjectStatus(project.id);
       message.success('项目状态切换成功');
       fetchProjects();
-      fetchStatistics();
     } catch (error) {
       console.error('切换项目状态失败:', error);
       message.error('切换项目状态失败');
@@ -409,7 +413,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
             <Statistic
               title="总项目数"
               value={statistics?.total_count || 0}
-              loading={statsLoading}
+              prefix={<span style={{ color: '#1890ff' }}>📊</span>}
             />
           </Card>
         </Col>
@@ -419,7 +423,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
               title="启用项目"
               value={statistics?.active_count || 0}
               valueStyle={{ color: '#3f8600' }}
-              loading={statsLoading}
+              prefix={<span style={{ color: '#52c41a' }}>✅</span>}
             />
           </Card>
         </Col>
@@ -429,7 +433,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
               title="禁用项目"
               value={statistics?.inactive_count || 0}
               valueStyle={{ color: '#cf1322' }}
-              loading={statsLoading}
+              prefix={<span style={{ color: '#ff4d4f' }}>❌</span>}
             />
           </Card>
         </Col>
@@ -438,7 +442,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
             <Statistic
               title="总关联资产"
               value={projects.reduce((sum, project) => sum + (project.asset_count || 0), 0)}
-              loading={statsLoading}
+              prefix={<span style={{ color: '#722ed1' }}>🏢</span>}
             />
           </Card>
         </Col>
@@ -556,7 +560,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
         }}
         footer={null}
         width={600}
-        destroyOnClose
+        destroyOnHidden
       >
         <ProjectForm
           project={editingProject}
@@ -564,7 +568,6 @@ const ProjectList: React.FC<ProjectListProps> = ({
             setIsModalVisible(false);
             setEditingProject(null);
             fetchProjects();
-            fetchStatistics();
           }}
           onCancel={() => {
             setIsModalVisible(false);
@@ -583,7 +586,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
         }}
         footer={null}
         width={800}
-        destroyOnClose
+        destroyOnHidden
       >
         {selectedProject && (
           <ProjectDetail

@@ -331,8 +331,8 @@ const AssetForm: React.FC<AssetFormProps> = ({
             <Text>表单完成度</Text>
           </Col>
           <Col flex="auto" style={{ marginLeft: '16px' }}>
-            <Progress 
-              percent={completionRate} 
+            <Progress
+              percent={completionRate}
               size="small"
               strokeColor={completionRate === 100 ? '#52c41a' : '#1890ff'}
             />
@@ -361,7 +361,7 @@ const AssetForm: React.FC<AssetFormProps> = ({
                 <OwnershipSelect
                   placeholder="请选择权属方"
                   allowClear={false}
-                  showCreateButton={false}
+                  showCreateButton={true}
                   onChange={(_, ownership) => {
                     // 当选择权属方时，可以自动填充其他相关信息
                     if (ownership) {
@@ -393,11 +393,12 @@ const AssetForm: React.FC<AssetFormProps> = ({
                 <ProjectSelect
                   placeholder="请选择项目"
                   allowClear={false}
-                  showCreateButton={false}
-                  onChange={(_, project) => {
+                  showCreateButton={true}
+                  onChange={(value, project) => {
                     // 当选择项目时，可以自动填充其他相关信息
                     if (project) {
                       // 可以在这里添加自动填充逻辑，比如填充项目相关信息
+                      console.log('项目选择变化:', { value, project })
                     }
                   }}
                 />
@@ -431,8 +432,8 @@ const AssetForm: React.FC<AssetFormProps> = ({
                 label="土地面积(㎡)"
                 name="land_area"
               >
-                <InputNumber 
-                  placeholder="请输入土地面积" 
+                <InputNumber
+                  placeholder="请输入土地面积"
                   style={{ width: '100%' }}
                   min={0}
                 />
@@ -722,11 +723,11 @@ const AssetForm: React.FC<AssetFormProps> = ({
         </Card>
 
         {/* 高级选项 */}
-        <Card 
+        <Card
           title={
             <Space>
               <span>高级选项</span>
-              <Switch 
+              <Switch
                 checked={showAdvanced}
                 onChange={setShowAdvanced}
                 size="small"
@@ -995,9 +996,9 @@ const AssetForm: React.FC<AssetFormProps> = ({
         {/* 操作按钮 */}
         <Card>
           <Space>
-            <Button 
-              type="primary" 
-              htmlType="submit" 
+            <Button
+              type="primary"
+              htmlType="submit"
               loading={loading}
               icon={<SaveOutlined />}
             >
@@ -1006,8 +1007,8 @@ const AssetForm: React.FC<AssetFormProps> = ({
             <Button onClick={onCancel}>
               取消
             </Button>
-            <Button 
-              icon={<ReloadOutlined />} 
+            <Button
+              icon={<ReloadOutlined />}
               onClick={handleReset}
             >
               重置

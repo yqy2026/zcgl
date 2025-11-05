@@ -389,7 +389,7 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
           确认使用
         </Button>
       ]}
-      destroyOnClose
+      destroyOnHidden
     >
       <Spin spinning={loading}>
         <Space direction="vertical" size="large" style={{ width: '100%' }}>

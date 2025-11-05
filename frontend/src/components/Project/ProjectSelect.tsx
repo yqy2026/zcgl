@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   Select,
   Button,
@@ -6,18 +6,19 @@ import {
   message,
   Space,
   Input,
-  Tooltip
+  Tooltip,
+  Tag
 } from 'antd';
 import {
   SearchOutlined,
   PlusOutlined,
-  ReloadOutlined
+  ReloadOutlined,
+  UnorderedListOutlined
 } from '@ant-design/icons';
 import { useProjectOptions } from '@/hooks/useProject';
 import type { Project } from '@/types/project';
 import ProjectList from '@/components/Project/ProjectList';
 
-const { Option } = Select;
 const { Search } = Input;
 
 interface ProjectSelectProps {
@@ -43,44 +44,60 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
   showCreateButton = true,
   onlyActive = true
 }) => {
-  const [searchText, setSearchText] = useState('');
-  const [selectModalVisible, setSelectModalVisible] = useState(false);
+    const [selectModalVisible, setSelectModalVisible] = useState(false);
+
+  // 内部状态，用于管理显示的项目名称
+  const [displayValue, setDisplayValue] = useState('');
 
   // 使用React Query获取项目数据
   const { projects: allProjects, loading, refresh } = useProjectOptions(onlyActive);
 
-  // 根据搜索文本过滤项目
+  // 所有可用项目（搜索功能由Select的filterOption处理）
   const filteredProjects = useMemo(() => {
-    if (!searchText) return allProjects;
-
-    return allProjects.filter(project =>
-      project.name.toLowerCase().includes(searchText.toLowerCase()) ||
-      project.code.toLowerCase().includes(searchText.toLowerCase()) ||
-      project.short_name?.toLowerCase().includes(searchText.toLowerCase())
-    );
-  }, [allProjects, searchText]);
+    return allProjects;
+  }, [allProjects]);
 
   // 当前选中的项目
   const selectedProject = useMemo(() => {
     if (!value) return null;
-    return filteredProjects.find(p => p.id === value) ||
-           filteredProjects.find(p => p.name === value) ||
+    return allProjects.find(p => p.id === value) ||
+           allProjects.find(p => p.name === value) ||
            null;
-  }, [value, filteredProjects]);
+  }, [value, allProjects]);
 
-  // 处理搜索 - 防抖处理
-  const handleSearch = useCallback((text: string) => {
-    setSearchText(text);
-  }, []);
+  // 监听value变化，更新显示值
+  useEffect(() => {
+    if (!value) {
+      setDisplayValue('');
+      return;
+    }
+
+    const project = allProjects.find(p => p.id === value);
+    if (project) {
+      const displayName = project.short_name ? `${project.name} (${project.short_name})` : project.name;
+      setDisplayValue(displayName);
+    } else {
+      // 如果在allProjects中找不到项目，不要覆盖现有的显示值
+      // 这可能发生在项目数据还在加载中的情况
+      // 只有当displayValue为空时才设置为原始value
+      if (!displayValue) {
+        setDisplayValue(value);
+      }
+    }
+  }, [value, allProjects, displayValue]);
+
 
   // 处理选择
-  const handleChange = (selectedValue: string) => {
-    const selected = filteredProjects.find(p => p.id === selectedValue) ||
-                    filteredProjects.find(p => p.name === selectedValue);
+  const handleChange = (selectedValue: string, option: any) => {
+    // 从option中获取真实的项目ID
+    const realValue = option?.realValue || option?.value;
+    const selected = filteredProjects.find(p => p.id === realValue);
 
     if (selected) {
+      setDisplayValue(selectedValue);
       onChange?.(selected.id, selected);
     } else {
+      setDisplayValue(selectedValue);
       onChange?.(selectedValue);
     }
   };
@@ -88,6 +105,7 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
   // 处理清除
   const handleClear = () => {
     onChange?.('');
+    setDisplayValue('');
   };
 
   // 打开选择弹窗
@@ -97,6 +115,11 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
 
   // 从弹窗中选择项目
   const handleModalSelect = (project: Project) => {
+    // 更新显示值
+    const displayName = project.short_name ? `${project.name} (${project.short_name})` : project.name;
+    setDisplayValue(displayName);
+
+    // 调用父组件的onChange
     onChange?.(project.id, project);
     setSelectModalVisible(false);
   };
@@ -116,7 +139,7 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
     <div style={style}>
       <Space.Compact style={{ width: '100%' }}>
         <Select
-          value={value || undefined}
+          value={displayValue || undefined}
           onChange={handleChange}
           onClear={handleClear}
           placeholder={placeholder}
@@ -126,13 +149,20 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
           style={{ flex: 1 }}
           loading={loading}
           showSearch
-          filterOption={false}
-          onSearch={handleSearch}
+          filterOption={(input, option) =>
+            (option?.children as string)?.toLowerCase().includes(input.toLowerCase()) ||
+            (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
+          }
           notFoundContent={loading ? '加载中...' : '暂无数据'}
-          optionLabelProp="children"
-        >
-          {filteredProjects.map(project => (
-            <Option key={project.id} value={project.id}>
+          optionLabelProp="label"
+          // 自定义显示文本，确保选择项目后显示项目名称而不是ID
+          options={filteredProjects.map(project => ({
+            label: project.short_name ? `${project.name} (${project.short_name})` : project.name,
+            value: project.short_name ? `${project.name} (${project.short_name})` : project.name,
+            // 存储真实的项目ID用于内部处理
+            realValue: project.id,
+            // 保留完整信息用于下拉显示
+            title: (
               <Space>
                 <span>{project.name}</span>
                 {project.short_name && (
@@ -144,13 +174,13 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
                   [{project.code}]
                 </span>
               </Space>
-            </Option>
-          ))}
-        </Select>
+            ),
+          }))}
+        />
 
         <Tooltip title="从列表中选择">
           <Button
-            icon={<SearchOutlined />}
+            icon={<UnorderedListOutlined />}
             onClick={openSelectModal}
             disabled={disabled}
             size={size}
@@ -186,7 +216,7 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
         onCancel={() => setSelectModalVisible(false)}
         footer={null}
         width={1200}
-        destroyOnClose
+        destroyOnHidden
       >
         <ProjectList
           mode="select"

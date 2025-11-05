@@ -100,9 +100,10 @@ const GroupedSelect: React.FC<GroupedSelectProps> = ({
     return filteredGroups.map((group, groupIndex) => {
       if (group.options.length === 0) return null
 
-      return (
-        <React.Fragment key={groupIndex}>
-          {showGroupLabel && (
+      if (showGroupLabel) {
+        // 显示分组标签
+        return (
+          <React.Fragment key={groupIndex}>
             <Select.OptGroup label={
               <Space>
                 <Text strong>{group.label}</Text>
@@ -134,9 +135,35 @@ const GroupedSelect: React.FC<GroupedSelectProps> = ({
                 </Option>
               ))}
             </Select.OptGroup>
-          )}
-        </React.Fragment>
-      )
+          </React.Fragment>
+        )
+      } else {
+        // 不显示分组标签，直接渲染选项
+        return group.options.map((option) => (
+          <Option key={option.value} value={option.value}>
+            <Space>
+              {option.color && (
+                <span
+                  style={{
+                    display: 'inline-block',
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    backgroundColor: getColorValue(option.color),
+                    marginRight: '4px'
+                  }}
+                />
+              )}
+              <span>{option.label}</span>
+              {option.description && (
+                <Text type="secondary" style={{ fontSize: '12px' }}>
+                  - {option.description}
+                </Text>
+              )}
+            </Space>
+          </Option>
+        ))
+      }
     })
   }
 

@@ -239,7 +239,7 @@ const UnifiedProjectSelect: React.FC<UnifiedProjectSelectProps> = ({
         onCancel={() => setSelectModalVisible(false)}
         footer={null}
         width={1200}
-        destroyOnClose
+        destroyOnHidden
       >
         <ProjectList
           mode="select"

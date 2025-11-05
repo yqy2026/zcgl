@@ -1,6 +1,6 @@
 import React from 'react'
-import { 
-  Typography, 
+import {
+  Typography,
   Button,
   Space,
   message,
@@ -10,9 +10,9 @@ import {
 import { ArrowLeftOutlined } from '@ant-design/icons'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { assetService } from '@/services/assetService'
-import AssetForm from '@/components/Asset/AssetForm'
-import type { AssetCreateRequest, AssetUpdateRequest } from '@/types/asset'
+import { assetService } from '../../services/assetService'
+import AssetForm from '../../components/Asset/AssetForm'
+import type { AssetCreateRequest, AssetUpdateRequest } from '../../types/asset'
 
 const { Title } = Typography
 
@@ -25,7 +25,7 @@ interface AssetFormData {
   ownership_entity: string
   management_entity?: string
   business_category?: string
-  
+
   // 面积相关字段
   total_area?: number
   usable_area?: number
@@ -38,16 +38,16 @@ interface AssetFormData {
   non_commercial_area?: number
   occupancy_rate?: number
   include_in_occupancy_rate?: boolean
-  
+
   // 用途相关字段
   certificated_usage?: string
   actual_usage?: string
-  
+
   // 租户相关字段
   tenant_name?: string
   tenant_type?: string
   // tenant_contact 字段已删除
-  
+
   // 合同相关字段
   lease_contract_number?: string
   contract_start_date?: string
@@ -57,40 +57,40 @@ interface AssetFormData {
   deposit?: number
   is_sublease?: boolean
   sublease_notes?: string
-  
+
   // 管理相关字段
   manager_name?: string
   business_model?: string
   operation_status?: string
-  
+
   // 财务相关字段已删除
   // annual_income, annual_expense, net_income 字段已删除
-  
+
   // 协议相关字段
   operation_agreement_start_date?: string
   operation_agreement_end_date?: string
   operation_agreement_attachments?: string
-  
+
   // 项目相关字段
   project_name?: string
   project_short_name?: string
   ownership_category?: string
-  
+
   // 系统字段
   data_status?: string
   created_by?: string
   updated_by?: string
   version?: number
   tags?: string
-  
+
   // 审核相关字段已删除
   // last_audit_date, audit_status, auditor 字段已删除
   audit_notes?: string
-  
+
   // 其他字段
   is_litigated?: boolean
   notes?: string
-  
+
   // 多租户支持
   tenant_id?: string
 }
@@ -100,7 +100,7 @@ const AssetCreatePage: React.FC = () => {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [form] = Form.useForm()
-  
+
   const isEdit = !!id
 
   // 获取资产详情（编辑模式）
@@ -116,7 +116,7 @@ const AssetCreatePage: React.FC = () => {
     onSuccess: () => {
       message.success('资产创建成功')
       queryClient.invalidateQueries({ queryKey: ['assets'] })
-      navigate('/assets')
+      navigate('/assets/list')
     },
     onError: (error: any) => {
       message.error(error.message || '创建失败')
@@ -168,8 +168,8 @@ const AssetCreatePage: React.FC = () => {
     <div style={{ padding: '24px' }}>
       <div style={{ marginBottom: '24px' }}>
         <Space>
-          <Button 
-            icon={<ArrowLeftOutlined />} 
+          <Button
+            icon={<ArrowLeftOutlined />}
             onClick={() => navigate(isEdit ? `/assets/${id}` : '/assets')}
           >
             返回

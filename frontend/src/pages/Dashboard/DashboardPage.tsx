@@ -94,12 +94,12 @@ const DashboardPage: React.FC = () => {
     )
   }
 
-  const insightsData = areaSummary?.data ? {
-    totalAssets: areaSummary.data.total_assets,
-    totalArea: areaSummary.data.total_land_area + (areaSummary.data.total_rentable_area - areaSummary.data.total_land_area),
-    occupancyRate: areaSummary.data.overall_occupancy_rate,
-    totalRentedArea: areaSummary.data.total_rented_area,
-    totalUnrentedArea: areaSummary.data.total_unrented_area
+  const insightsData = areaSummary ? {
+    totalAssets: areaSummary.total_assets,
+    totalArea: areaSummary.total_area,
+    occupancyRate: areaSummary.occupancy_rate,
+    totalRentedArea: areaSummary.total_rented_area,
+    totalUnrentedArea: areaSummary.total_unrented_area
   } : undefined
 
   return (
@@ -154,7 +154,7 @@ const DashboardPage: React.FC = () => {
           <Col xs={24} sm={12} lg={6}>
             <DataTrendCard
               title="资产总数"
-              value={areaSummary?.data?.total_assets || 0}
+              value={areaSummary?.total_assets || 0}
               suffix="个"
               precision={0}
               trend={mockTrends?.assets}
@@ -166,7 +166,7 @@ const DashboardPage: React.FC = () => {
           <Col xs={24} sm={12} lg={6}>
             <DataTrendCard
               title="管理总面积"
-              value={(areaSummary?.data?.total_land_area || 0) + (areaSummary?.data?.total_rentable_area || 0)}
+              value={areaSummary?.total_area || 0}
               suffix="㎡"
               precision={2}
               trend={mockTrends?.area}
@@ -178,7 +178,7 @@ const DashboardPage: React.FC = () => {
           <Col xs={24} sm={12} lg={6}>
             <DataTrendCard
               title="可租面积"
-              value={areaSummary?.data?.total_rentable_area || 0}
+              value={areaSummary?.total_rentable_area || 0}
               suffix="㎡"
               precision={2}
               trend={mockTrends?.area}
@@ -190,12 +190,12 @@ const DashboardPage: React.FC = () => {
           <Col xs={24} sm={12} lg={6}>
             <DataTrendCard
               title="整体出租率"
-              value={areaSummary?.data?.overall_occupancy_rate || 0}
+              value={areaSummary?.occupancy_rate || 0}
               suffix="%"
               precision={1}
               trend={mockTrends?.occupancy}
               icon={<PieChartOutlined />}
-              color={areaSummary?.data?.overall_occupancy_rate >= 95 ? 'success' : areaSummary?.data?.overall_occupancy_rate >= 85 ? 'warning' : 'error'}
+              color={areaSummary?.occupancy_rate >= 95 ? 'success' : areaSummary?.occupancy_rate >= 85 ? 'warning' : 'error'}
               loading={isLoading}
             />
           </Col>

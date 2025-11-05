@@ -385,9 +385,9 @@ const DictionaryPage: React.FC = () => {
         )
       },
     },
-    { 
-      title: '编码', 
-      dataIndex: 'dict_code', 
+    {
+      title: '编码',
+      dataIndex: 'dict_code',
       width: 160,
       render: (code: string) => code || '-'
     },
@@ -545,36 +545,36 @@ const DictionaryPage: React.FC = () => {
           <Form.Item name="dict_type" label="字典类型">
             <Input disabled placeholder="自动填充" />
           </Form.Item>
-          
-          <Form.Item 
-            name="dict_label" 
-            label="显示标签" 
+
+          <Form.Item
+            name="dict_label"
+            label="显示标签"
             rules={[{ required: true, message: '请输入显示标签' }]}
           >
             <Input placeholder="如：已确权、经营性等" />
           </Form.Item>
-          
-          <Form.Item 
-            name="dict_value" 
-            label="枚举值" 
+
+          <Form.Item
+            name="dict_value"
+            label="枚举值"
             rules={[{ required: true, message: '请输入枚举值' }]}
           >
             <Input placeholder="如：CONFIRMED、COMMERCIAL等" />
           </Form.Item>
-          
+
           <Form.Item name="dict_code" label="编码">
             <Input placeholder="可选，如：confirmed、commercial等" />
           </Form.Item>
-          
+
           <Form.Item name="description" label="描述">
             <Input.TextArea rows={2} placeholder="可选描述信息" />
           </Form.Item>
-          
+
           <Form.Item name="sort_order" label="排序">
             <Input type="number" placeholder="排序，数值越小越靠前" />
           </Form.Item>
-          
-          
+
+
           {enumTypes.find(t => t.code === activeType) && (
             <div style={{
               padding: '12px',
@@ -617,7 +617,7 @@ const DictionaryPage: React.FC = () => {
           </Button>
         ]}
         width={1200}
-        destroyOnClose
+        destroyOnHidden
       >
         <Table
           rowKey="id"

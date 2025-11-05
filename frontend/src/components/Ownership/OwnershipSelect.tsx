@@ -281,7 +281,7 @@ const OwnershipSelect: React.FC<OwnershipSelectProps> = ({
         onCancel={() => setSelectModalVisible(false)}
         footer={null}
         width={1200}
-        destroyOnClose
+        destroyOnHidden
       >
         <OwnershipList
           mode="select"

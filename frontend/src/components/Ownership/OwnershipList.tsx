@@ -430,7 +430,7 @@ const OwnershipList: React.FC<OwnershipListProps> = ({
         }}
         footer={null}
         width={600}
-        destroyOnClose
+        destroyOnHidden
       >
         <OwnershipForm
           initialValues={editingOwnership}
@@ -452,7 +452,7 @@ const OwnershipList: React.FC<OwnershipListProps> = ({
         }}
         footer={null}
         width={800}
-        destroyOnClose
+        destroyOnHidden
       >
         {viewingOwnership && (
           <OwnershipDetail

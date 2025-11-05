@@ -499,7 +499,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
         open={saveModalVisible}
         onOk={handleSaveSearch}
         onCancel={() => setSaveModalVisible(false)}
-        destroyOnClose
+        destroyOnHidden
       >
         <Input
           placeholder="输入保存名称"
@@ -520,7 +520,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
         }}
         footer={null}
         width={600}
-        destroyOnClose
+        destroyOnHidden
       >
         <List
           dataSource={searchHistory}

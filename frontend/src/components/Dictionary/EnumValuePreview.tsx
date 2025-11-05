@@ -1,6 +1,6 @@
 import React from 'react'
 import { Tag, Tooltip, Space } from 'antd'
-import type { EnumFieldValue } from '../../services/dictionary'
+import type { EnumFieldValue } from '../../services/dictionaryService'
 
 interface EnumValuePreviewProps {
   values: EnumFieldValue[]

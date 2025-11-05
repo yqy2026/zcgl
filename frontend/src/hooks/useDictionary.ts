@@ -3,10 +3,10 @@
  * 提供简单易用的字典数据获取和管理功能
  */
 
-import React from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { dictionaryService, DictionaryOption } from '../services/dictionary'
-import type { DictionaryServiceResult } from '../services/dictionary'
+import { unifiedDictionaryService } from '../services/dictionary'
+import type { DictionaryOption } from '../services/dictionary'
 
 interface UseDictionaryResult {
   options: DictionaryOption[]
@@ -26,7 +26,7 @@ export const useDictionary = (dictType: string, isActive: boolean = true): UseDi
     queryFn: async () => {
       if (!dictType) return { success: false, data: [], error: '字典类型不能为空' }
 
-      const result: DictionaryServiceResult = await dictionaryService.getOptions(dictType, {
+      const result: DictionaryServiceResult = await unifiedDictionaryService.getOptions(dictType, {
         useCache: true,
         useFallback: true,
         isActive
@@ -83,7 +83,7 @@ export const useDictionaryManager = () => {
   const loadTypes = useCallback(async () => {
     setLoading(true)
     try {
-      const configs = dictionaryService.getAvailableTypes()
+      const configs = unifiedDictionaryService.getAvailableTypes()
       const typeCodes = configs.map(config => config.code)
       setTypes(typeCodes)
     } catch (error) {
@@ -99,7 +99,7 @@ export const useDictionaryManager = () => {
     code?: string
   }>) => {
     try {
-      const success = await dictionaryService.quickCreate(dictType, { options })
+      const success = await unifiedDictionaryService.quickCreate(dictType, { options })
       if (success) {
         await loadTypes() // 刷新类型列表
       }
@@ -112,7 +112,7 @@ export const useDictionaryManager = () => {
 
   const deleteDictionary = useCallback(async (dictType: string) => {
     try {
-      const success = await dictionaryService.deleteType(dictType)
+      const success = await unifiedDictionaryService.deleteType(dictType)
       if (success) {
         await loadTypes() // 刷新类型列表
       }
