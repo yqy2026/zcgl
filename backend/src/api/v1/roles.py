@@ -419,13 +419,9 @@ async def get_role_statistics(
             "success": True,
             "data": {
                 "total_roles": total_roles,
-                "active_roles": db.query(Role).filter(Role.is_active == True).count(),
-                "system_roles": db.query(Role)
-                .filter(Role.is_system_role == True)
-                .count(),
-                "custom_roles": db.query(Role)
-                .filter(Role.is_system_role == False)
-                .count(),
+                "active_roles": db.query(Role).filter(Role.is_active).count(),
+                "system_roles": db.query(Role).filter(Role.is_system_role).count(),
+                "custom_roles": db.query(Role).filter(not Role.is_system_role).count(),
                 "by_category": by_category,
             },
         }

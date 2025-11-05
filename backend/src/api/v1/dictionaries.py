@@ -287,7 +287,7 @@ async def get_dictionary_types(db: Session = Depends(get_db)):
 
         # 从枚举字段获取
         enum_types = (
-            db.query(EnumFieldType.code).filter(EnumFieldType.is_deleted == False).all()
+            db.query(EnumFieldType.code).filter(not EnumFieldType.is_deleted).all()
         )
         print(f"[DEBUG] Enum types query result: {enum_types}")
         print(f"[DEBUG] Enum types count: {len(enum_types)}")

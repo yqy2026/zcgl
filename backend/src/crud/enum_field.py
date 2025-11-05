@@ -34,9 +34,7 @@ class EnumFieldTypeCRUD:
         enum_type = (
             self.db.query(EnumFieldType)
             .filter(
-                and_(
-                    EnumFieldType.id == enum_type_id, EnumFieldType.is_deleted == False
-                )
+                and_(EnumFieldType.id == enum_type_id, not EnumFieldType.is_deleted)
             )
             .first()
         )
@@ -48,8 +46,8 @@ class EnumFieldTypeCRUD:
                 .filter(
                     and_(
                         EnumFieldValue.enum_type_id == enum_type.id,
-                        EnumFieldValue.is_deleted == False,
-                        EnumFieldValue.is_active == True,
+                        not EnumFieldValue.is_deleted,
+                        EnumFieldValue.is_active,
                     )
                 )
                 .order_by(EnumFieldValue.sort_order.asc())
@@ -63,7 +61,7 @@ class EnumFieldTypeCRUD:
         """根据编码获取枚举类型"""
         return (
             self.db.query(EnumFieldType)
-            .filter(and_(EnumFieldType.code == code, EnumFieldType.is_deleted == False))
+            .filter(and_(EnumFieldType.code == code, not EnumFieldType.is_deleted))
             .first()
         )
 
@@ -334,7 +332,7 @@ class EnumFieldValueCRUD:
         query = self.db.query(EnumFieldValue).filter(
             and_(
                 EnumFieldValue.enum_type_id == enum_type_id,
-                EnumFieldValue.is_deleted == False,
+                not EnumFieldValue.is_deleted,
             )
         )
 

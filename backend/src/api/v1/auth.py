@@ -720,14 +720,10 @@ async def get_user_statistics(
         from ...models.auth import User
 
         total_users = db.query(func.count(User.id)).scalar()
-        active_users = (
-            db.query(func.count(User.id)).filter(User.is_active == True).scalar()
-        )
-        locked_users = (
-            db.query(func.count(User.id)).filter(User.is_locked == True).scalar()
-        )
+        active_users = db.query(func.count(User.id)).filter(User.is_active).scalar()
+        locked_users = db.query(func.count(User.id)).filter(User.is_locked).scalar()
         inactive_users = (
-            db.query(func.count(User.id)).filter(User.is_active == False).scalar()
+            db.query(func.count(User.id)).filter(not User.is_active).scalar()
         )
 
         return {

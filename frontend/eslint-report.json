@@ -1,0 +1,11 @@
+
+> land-property-asset-management-frontend@1.0.0 lint
+> eslint src --ext .ts,.tsx json
+
+
+Oops! Something went wrong! :(
+
+ESLint: 8.57.1
+
+No files matching the pattern "json" were found.
+Please check for typing mistakes in the pattern.

@@ -235,7 +235,7 @@ class OperationLogCRUD:
             db.query(func.count(OperationLog.id))
             .filter(
                 and_(
-                    OperationLog.error_message != None,
+                    OperationLog.error_message is not None,
                     OperationLog.created_at >= start_date,
                 )
             )
@@ -250,7 +250,7 @@ class OperationLogCRUD:
             )
             .filter(
                 and_(
-                    OperationLog.error_message != None,
+                    OperationLog.error_message is not None,
                     OperationLog.created_at >= start_date,
                 )
             )

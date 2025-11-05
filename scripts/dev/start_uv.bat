@@ -1,44 +1,44 @@
 @echo off
 setlocal enabledelayedexpansion
 chcp 65001 >nul
-echo 🚀 启动土地物业资产管理系统 (UV版本)
+echo 🚀 Starting Land Property Asset Management System (UV Version)
 echo ========================================
 echo.
 
-REM 检查命令行参数
+REM Check command line parameters
 set UPDATE_DEPS=0
 if "%1"=="--update" set UPDATE_DEPS=1
 if "%1"=="-u" set UPDATE_DEPS=1
 if %UPDATE_DEPS% equ 1 (
-    echo [INFO] 启用依赖更新模式
+    echo [INFO] Dependency update mode enabled
 )
 
-REM 设置日志文件
+REM Set log file
 set LOG_FILE=logs\startup_%date:~0,4%%date:~5,2%%date:~8,2%_%time:~0,2%%time:~3,2%.log
 if not exist "logs" mkdir logs
-echo [INFO] 日志文件: %LOG_FILE%
-echo [%date% %time%] 启动土地物业资产管理系统 (UV版本) > "%LOG_FILE%"
-echo [%date% %time%] 命令行参数: %* >> "%LOG_FILE%"
+echo [INFO] Log file: %LOG_FILE%
+echo [%date% %time%] Starting Land Property Asset Management System (UV Version) > "%LOG_FILE%"
+echo [%date% %time%] Command line parameters: %* >> "%LOG_FILE%"
 
-REM 检查uv是否安装
+REM Check if uv is installed
 where uv >nul 2>nul
 if %errorlevel% neq 0 (
-    echo ❌ 错误: 未找到uv包管理器
-    echo 请先安装uv: https://docs.astral.sh/uv/getting-started/installation/
-    echo [HINT] 安装命令: pip install uv
+    echo ❌ Error: uv package manager not found
+    echo Please install uv first: https://docs.astral.sh/uv/getting-started/installation/
+    echo [HINT] Install command: pip install uv
     pause
     exit /b 1
 )
 
-echo ✅ 检测到uv包管理器
+echo ✅ uv package manager detected
 echo.
 
-REM 检查运行环境
-echo [INFO] 检查运行环境...
+REM Check runtime environment
+echo [INFO] Checking runtime environment...
 python --version >nul 2>nul
 if %errorlevel% neq 0 (
-    echo ❌ 错误: 未找到Python，请先安装Python 3.12+
-    echo [HINT] 下载地址: https://www.python.org/downloads/
+    echo ❌ Error: Python not found, please install Python 3.12+
+    echo [HINT] Download: https://www.python.org/downloads/
     pause
     exit /b 1
 )
@@ -51,139 +51,139 @@ for /f "tokens=1,2 delims=." %%a in ("%PYTHON_VERSION%") do (
 )
 
 if !MAJOR_VERSION! lss 3 (
-    echo ❌ 错误: Python版本过低，需要Python 3.12+
-    echo [CURRENT] 当前版本: %PYTHON_VERSION%
+    echo ❌ Error: Python version is too low, need Python 3.12+
+    echo [CURRENT] Current version: %PYTHON_VERSION%
     pause
     exit /b 1
 )
 
 if !MAJOR_VERSION! equ 3 (
     if !MINOR_VERSION! lss 12 (
-        echo ❌ 错误: Python版本过低，需要Python 3.12+
-        echo [CURRENT] 当前版本: %PYTHON_VERSION%
+        echo ❌ Error: Python version is too low, need Python 3.12+
+        echo [CURRENT] Current version: %PYTHON_VERSION%
         pause
         exit /b 1
     )
 )
 
-echo ✅ Python版本检查通过: %PYTHON_VERSION%
+echo ✅ Python version check passed: %PYTHON_VERSION%
 
-REM 检查项目文件
+REM Check project files
 if not exist "backend\pyproject.toml" (
-    echo ❌ 错误: 未找到backend\pyproject.toml文件
-    echo 请确保在项目根目录运行此脚本
+    echo ❌ Error: backend\pyproject.toml file not found
+    echo Please make sure to run this script from the project root directory
     pause
     exit /b 1
 )
 
 if not exist "frontend\package.json" (
-    echo ❌ 错误: 未找到frontend\package.json文件
-    echo 请确保在项目根目录运行此脚本
+    echo ❌ Error: frontend\package.json file not found
+    echo Please make sure to run this script from the project root directory
     pause
     exit /b 1
 )
 
-echo [SUCCESS] 环境检查通过
+echo [SUCCESS] Environment check passed
 echo.
 
-REM 准备后端环境
-echo [INFO] 准备后端环境...
+REM Prepare backend environment
+echo [INFO] Preparing backend environment...
 cd backend
 
-REM 检查是否存在虚拟环境
+REM Check if virtual environment exists
 if not exist ".venv" (
-    echo [INFO] 创建虚拟环境...
+    echo [INFO] Creating virtual environment...
     uv sync
 ) else (
     if %UPDATE_DEPS% equ 1 (
-        echo [INFO] 强制更新依赖...
+        echo [INFO] Forcing dependency update...
         uv sync --refresh
     ) else (
-        echo [INFO] 虚拟环境已存在，同步依赖...
+        echo [INFO] Virtual environment exists, syncing dependencies...
         uv sync
     )
 )
 
-echo [SUCCESS] 后端环境准备完成
+echo [SUCCESS] Backend environment prepared
 cd ..
 
 echo.
-echo [INFO] 准备前端环境...
+echo [INFO] Preparing frontend environment...
 cd frontend
 
-REM 检查node_modules是否存在
+REM Check if node_modules exists
 if not exist "node_modules" (
-    echo [INFO] 安装前端依赖...
+    echo [INFO] Installing frontend dependencies...
     npm install
 ) else (
-    echo [INFO] 前端依赖已存在，跳过安装
+    echo [INFO] Frontend dependencies exist, skipping installation
 )
 
-echo [SUCCESS] 前端环境准备完成
+echo [SUCCESS] Frontend environment prepared
 cd ..
 
 echo.
-echo 🚀 启动服务...
+echo 🚀 Starting services...
 
-REM 启动前清理可能存在的服务
-echo [INFO] 清理可能存在的服务...
+REM Clean up existing services before startup
+echo [INFO] Cleaning up existing services...
 call :CleanExistingServices
 
-echo [INFO] 启动后端API服务...
+echo [INFO] Starting backend API service...
 cd backend
 start "Backend API Server" cmd /k "uv run python run_dev.py"
 cd ..
 
-echo [INFO] 等待后端服务启动...
+echo [INFO] Waiting for backend service to start...
 timeout /t 5 /nobreak >nul
 
-REM 检查后端服务健康状态
-echo [INFO] 检查后端服务健康状态...
-call :CheckServiceHealth http://localhost:8002 "后端API服务"
+REM Check backend service health status
+echo [INFO] Checking backend service health status...
+call :CheckServiceHealth http://localhost:8002 "Backend API Service"
 
-echo [INFO] 启动前端开发服务器...
+echo [INFO] Starting frontend development server...
 cd frontend
 start "Frontend Dev Server" cmd /k "npm run dev"
 cd ..
 
 echo.
-echo [SUCCESS] 🎉 系统启动完成！
-echo 📱 访问地址：
-echo    ┌─ 前端应用: http://localhost:5173
-echo    ├─ 后端API: http://localhost:8002
-echo    └─ API文档: http://localhost:8002/docs
+echo [SUCCESS] 🎉 System startup complete!
+echo 📱 Access addresses:
+echo    ├─ Frontend: http://localhost:5173
+echo    ├─ Backend API: http://localhost:8002
+echo    └─ API Documentation: http://localhost:8002/docs
 echo.
-echo 💡 使用提示：
-echo    ├─ 系统已预置演示数据，可直接体验
-echo    ├─ 前端支持热重载，修改代码自动刷新
-echo    ├─ 两个服务窗口已打开，请保持运行
-echo    └─ 运行 stop_uv.bat 可停止所有服务
+echo 💡 Usage tips:
+echo    ├─ System has demo data loaded, ready to use
+echo    ├─ Frontend supports hot reload, code changes auto-refresh
+echo    ├─ Two service windows have opened, keep them running
+echo    └─ Run stop_uv.bat to stop all services
 echo.
-echo [INFO] 等待服务完全启动...
+echo [INFO] Waiting for services to fully start...
 timeout /t 10 /nobreak >nul
 
-REM 检查前端服务健康状态
-echo [INFO] 检查前端服务健康状态...
-call :CheckServiceHealth http://localhost:5173 "前端开发服务器"
+REM Check frontend service health status
+echo [INFO] Checking frontend service health status...
+call :CheckServiceHealth http://localhost:5173 "Frontend Development Server"
 
-echo [INFO] 正在打开浏览器...
+echo [INFO] Opening browser...
 start http://localhost:5173
 
 echo.
-echo ✅ 启动完成！服务已在后台运行
+echo ✅ Startup complete! Services are running in the background
 echo.
 pause
 goto :eof
 
 :CleanExistingServices
-echo [INFO] 清理可能存在的服务...
+echo [INFO] Cleaning up existing services...
 taskkill /f /im python.exe >nul 2>nul
 taskkill /f /im uv.exe >nul 2>nul
 taskkill /f /im node.exe >nul 2>nul
 call :StopProcessesByPort 8002
 call :StopProcessesByPort 5173
 call :StopProcessesByPort 5174
-echo [SUCCESS] 现有服务清理完成
+echo [SUCCESS] Existing services cleaned up
 goto :eof
 
 :CheckServiceHealth
@@ -193,21 +193,21 @@ set SERVICE_NAME=%2
 set MAX_ATTEMPTS=15
 set ATTEMPT=1
 
-echo [INFO] 检查 %SERVICE_NAME% 健康状态...
+echo [INFO] Checking %SERVICE_NAME% health status...
 
 :health_check_loop
-curl -s "%URL%" >nul 2>&1
+powershell -Command "try { Invoke-WebRequest -Uri '%URL%' -UseBasicParsing -TimeoutSec 2 -ErrorAction SilentlyContinue | Out-Null; exit 0 } catch { exit 1 }" >nul 2>&1
 if !errorlevel! equ 0 (
-    echo [SUCCESS] %SERVICE_NAME% 响应正常
+    echo [SUCCESS] %SERVICE_NAME% is responding normally
     goto :health_check_success
 )
 
 if !ATTEMPT! geq %MAX_ATTEMPTS% (
-    echo [WARNING] %SERVICE_NAME% 启动超时，请检查服务状态
+    echo [WARNING] %SERVICE_NAME% startup timeout, please check service status
     goto :health_check_success
 )
 
-echo [INFO] 等待 %SERVICE_NAME% 响应... (!ATTEMPT!/%MAX_ATTEMPTS%)
+echo [INFO] Waiting for %SERVICE_NAME% response... (!ATTEMPT!/%MAX_ATTEMPTS%)
 timeout /t 2 /nobreak >nul
 set /a ATTEMPT+=1
 goto :health_check_loop
@@ -221,15 +221,15 @@ setlocal
 set PORT=%1
 netstat -aon | findstr ":%PORT%" >nul 2>nul
 if !errorlevel! equ 0 (
-    echo [INFO] 停止端口 %PORT% 上的进程...
+    echo [INFO] Stopping processes on port %PORT%...
     for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":%PORT%"') do (
         taskkill /f /pid %%a >nul 2>nul
         if !errorlevel! equ 0 (
-            echo [SUCCESS] 已停止进程 %%a (端口 %PORT%)
+            echo [SUCCESS] Stopped process %%a (port %PORT%)
         )
     )
 ) else (
-    echo [INFO] 端口 %PORT% 未被占用
+    echo [INFO] Port %PORT% is not in use
 )
 endlocal
 goto :eof

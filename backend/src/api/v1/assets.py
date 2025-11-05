@@ -1188,8 +1188,9 @@ async def import_assets(
                         # 按物业名称和地址查找重复项
                         assets, _ = asset_crud.get_multi_with_search(
                             db=db,
-                            search=f"{asset_data.get('property_name',
-                    '')} {asset_data.get('address', '')}",
+                            search=f"{asset_data.get('property_name', '')} {
+                                asset_data.get('address', '')
+                            }",
                             limit=1,
                         )
                         if assets:
