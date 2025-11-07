@@ -6,7 +6,7 @@
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
 from ...crud.operation_log import OperationLogCRUD
@@ -41,8 +41,7 @@ class OperationLogResponse(BaseModel):
     user_agent: str | None = None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class OperationLogListResponse(BaseModel):
@@ -132,7 +131,7 @@ async def get_operation_logs(
         pages = (total + limit - 1) // limit
 
         return OperationLogListResponse(
-            items=[OperationLogResponse.from_orm(log) for log in logs],
+            items=[OperationLogResponse.model_validate(log) for log in logs],
             total=total,
             page=page,
             limit=limit,
@@ -160,7 +159,7 @@ async def get_operation_log(
                 status_code=status.HTTP_404_NOT_FOUND, detail="日志不存在"
             )
 
-        return OperationLogResponse.from_orm(log)
+        return OperationLogResponse.model_validate(log)
     except HTTPException:
         raise
     except Exception as e:

@@ -20,8 +20,8 @@ export interface EnumFieldType {
   is_multiple: boolean
   is_hierarchical: boolean
   default_value?: string
-  validation_rules?: any
-  display_config?: any
+  validation_rules?: Record<string, unknown>
+  display_config?: Record<string, unknown>
   status: 'active' | 'inactive'
   is_deleted?: boolean
   created_by?: string
@@ -40,7 +40,7 @@ export interface EnumFieldType {
     sort_order: number
     color?: string
     icon?: string
-    extra_properties?: any
+    extra_properties?: Record<string, unknown>
     is_active: boolean
     is_default: boolean
     path?: string
@@ -49,7 +49,7 @@ export interface EnumFieldType {
     updated_at: string
     created_by?: string
     updated_by?: string
-    children?: any[]
+    children?: unknown[]
   }>
 }
 
@@ -83,8 +83,9 @@ class DictionaryManagerService {
   async getEnumFieldTypes(): Promise<EnumFieldType[]> {
     try {
       const response = await apiClient.get(API_CONFIG.ENDPOINTS.DICTIONARIES.TYPES)
-      console.log('🔍 [manager] getEnumFieldTypes 响应类型:', typeof response)
-      console.log('🔍 [manager] getEnumFieldTypes 响应内容:', response)
+      // Debug information for enum field types
+      // console.log('🔍 [manager] getEnumFieldTypes 响应类型:', typeof response)
+      // console.log('🔍 [manager] getEnumFieldTypes 响应内容:', response)
 
       // apiClient 直接返回数据，而不是包装在 response.data 中
       const data = response
@@ -112,14 +113,16 @@ class DictionaryManagerService {
           }
         })
 
-        console.log('✅ [manager] getEnumFieldTypes 转换结果:', enumTypes)
+        // Successfully converted enum field types
+        // console.log('✅ [manager] getEnumFieldTypes 转换结果:', enumTypes)
         return enumTypes
       }
 
       // 如果不是数组，尝试作为对象数组处理
       if (data && typeof data === 'object') {
         const enumTypes = Array.isArray(data) ? data : [data]
-        console.log('✅ [manager] getEnumFieldTypes 对象数组结果:', enumTypes)
+        // Successfully converted to object array
+        // console.log('✅ [manager] getEnumFieldTypes 对象数组结果:', enumTypes)
         return enumTypes
       }
 
@@ -157,23 +160,28 @@ class DictionaryManagerService {
    */
   async getEnumFieldValues(typeId: string): Promise<EnumFieldValue[]> {
     try {
-      console.log(`🔍 [manager] getEnumFieldValues 调用, typeId: ${typeId}`)
+      // Debug information for enum field values
+      // console.log(`🔍 [manager] getEnumFieldValues 调用, typeId: ${typeId}`)
 
       // 优先尝试直接从字典API获取（支持类型代码）
-      console.log(`📡 [manager] 尝试从字典API获取: /dictionaries/${typeId}/options`)
+      // console.log(`📡 [manager] 尝试从字典API获取: /dictionaries/${typeId}/options`)
       const response = await apiClient.get(`/dictionaries/${typeId}/options`)
-      console.log(`✅ [manager] 字典API响应成功, 数据类型: ${typeof response}, 数据长度: ${response?.length || 0}`)
+      // console.log(`✅ [manager] 字典API响应成功, 数据类型: ${typeof response}, 数据长度: ${response?.length || 0}`)
 
       // apiClient 直接返回数据，不是包装的响应对象
       const data = Array.isArray(response) ? response : (response.data || [])
 
-      const mappedData = data.map((option: any, index: number) => {
-        console.log(`🏷️ [manager] 映射选项 ${index}:`, {
-          originalLabel: option.label,
-          originalValue: option.value,
-          mappedLabel: option.label,
-          mappedValue: option.value
-        })
+      const mappedData = data.map((option: { label: string; value: string; [key: string]: unknown }, index: number) => {
+        // Mapping option
+        // console.log(`🏷️ [manager] 映射选项 ${index}:`, {
+        //   source: option,
+        //   target: {
+        //     value: option.code || option.id || index.toString(),
+        //     label: option.name || option.label || option.code || option.id || index.toString(),
+        //     color: option.color,
+        //     icon: option.icon
+        //   }
+        // })
 
         return {
           id: option.id || `dict-${typeId}-${index}`,
@@ -193,7 +201,8 @@ class DictionaryManagerService {
         }
       })
 
-      console.log(`🎯 [manager] 最终映射完成, 返回 ${mappedData.length} 个选项`)
+      // Final mapping completed
+      // console.log(`🎯 [manager] 最终映射完成, 返回 ${mappedData.length} 个选项`)
       return mappedData
 
     } catch (error) {
@@ -202,7 +211,8 @@ class DictionaryManagerService {
       // 尝试从配置中获取备用数据
       const config = Object.values(DICTIONARY_CONFIGS).find(c => c.code === typeId)
       if (config) {
-        console.log(`💾 [manager] 使用备用配置数据: ${typeId}`)
+        // Using fallback configuration data
+        // console.log(`💾 [manager] 使用备用配置数据: ${typeId}`)
         return config.fallbackOptions.map((option, index) => ({
           id: `fallback-${typeId}-${index}`,
           enum_type_id: typeId,
@@ -221,7 +231,8 @@ class DictionaryManagerService {
         }))
       }
 
-      console.log(`🚫 [manager] 没有找到任何数据，返回空数组`)
+      // No data found, return empty array
+      // console.log(`🚫 [manager] 没有找到任何数据，返回空数组`)
       return []
     }
   }

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 """
 缓存管理模块
@@ -9,7 +9,15 @@ import logging
 import pickle
 from datetime import datetime, timedelta
 
-import redis.asyncio as redis
+try:
+    import redis.asyncio as redis
+    REDIS_AVAILABLE = True
+except ImportError:
+    REDIS_AVAILABLE = False
+    redis = None  # type: ignore
+
+if TYPE_CHECKING:
+    from redis.asyncio import Redis
 
 
 # 设置默认配置，避免依赖外部配置文件
@@ -29,15 +37,19 @@ class CacheManager:
     """缓存管理器 - 支持Redis和内存缓存后备"""
 
     def __init__(self):
-        self.redis_client: redis.Redis | None = None
+        self.redis_client: "Redis | None" = None
         self.memory_cache: dict[str, Any] = {}
         self.memory_cache_expiry: dict[str, Any] = {}
         self.use_memory_fallback = True
 
     async def initialize(self):
         """初始化Redis连接"""
+        if not REDIS_AVAILABLE:
+            logger.warning("Redis库未安装，使用内存缓存")
+            return
+            
         try:
-            self.redis_client = redis.Redis(
+            self.redis_client = redis.Redis(  # type: ignore
                 host=settings.REDIS_HOST or "localhost",
                 port=settings.REDIS_PORT or 6379,
                 db=settings.REDIS_DB or 0,

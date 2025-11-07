@@ -199,7 +199,7 @@ def add_rent_term(
     if not contract:
         raise HTTPException(status_code=404, detail="合同不存在")
 
-    term_data = term_in.dict()
+    term_data = term_in.model_dump()
     term_data["contract_id"] = contract_id
     term = rent_term.create(db=db, obj_in=term_data)
     return term

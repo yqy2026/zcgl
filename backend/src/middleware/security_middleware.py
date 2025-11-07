@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Dict, List, Optional, Union
 
 """
 FastAPI安全中间件
@@ -17,6 +17,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from ..core.exception_handler import BusinessValidationError
 from ..core.logging_security import security_auditor
 from ..core.security import RateLimiter
+from ..core.security.ratelimit import adaptive_limiter
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +45,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 class RequestValidationMiddleware(BaseHTTPMiddleware):
     """请求验证中间件"""
 
-    def __init__(self, app, rate_limit_config: dict[str, Any] = None):
+    def __init__(self, app, rate_limit_config: Union[Dict[str, Any], None] = None):
         super().__init__(app)
         self.rate_limiter = RateLimiter()
         self.config = rate_limit_config or {}
@@ -163,7 +164,10 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         if real_ip:
             return real_ip.strip()
 
-        return request.client.host
+        # 确保返回默认IP而不是None
+        if request.client:
+            return request.client.host
+        return "unknown"
 
     def _is_ip_blocked(self, ip: str) -> bool:
         """检查IP是否被封禁"""
@@ -209,29 +213,52 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
             or ip.startswith("172.")
         )
 
-        # 不同请求类型的限制
-        path = request.url.path
-        if path is None:
-            path = ""
+        # 检查是否为可疑请求
+        is_suspicious = self._is_suspicious_request(request)
+        
+        # 使用自适应速率限制器
+        rate_limit_key = ip
+        path = request.url.path or ""
 
         if path.startswith("/api/v1/pdf_import"):
-            # PDF导入限制：本地每分钟最多50次，生产环境每分钟最多5次
-            max_requests = 50 if is_local else 5
-            return self.rate_limiter.check_rate_limit(
-                f"{ip}:pdf_import", max_requests, 60
-            )
+            # PDF导入限制
+            rate_limit_key = f"{ip}:pdf_import"
         elif path.startswith("/api/v1/excel"):
-            # Excel操作限制：本地每分钟最多100次，生产环境每分钟最多10次
-            max_requests = 100 if is_local else 10
-            return self.rate_limiter.check_rate_limit(f"{ip}:excel", max_requests, 60)
+            # Excel操作限制
+            rate_limit_key = f"{ip}:excel"
         elif request.method == "POST":
-            # POST请求限制：本地每分钟最多300次，生产环境每分钟最多30次
-            max_requests = 300 if is_local else 30
-            return self.rate_limiter.check_rate_limit(f"{ip}:post", max_requests, 60)
-        else:
-            # 一般请求限制：本地每分钟最多1000次，生产环境每分钟最多100次
-            max_requests = 1000 if is_local else 100
-            return self.rate_limiter.check_rate_limit(ip, max_requests, 60)
+            # POST请求限制
+            rate_limit_key = f"{ip}:post"
+
+        # 检查速率限制
+        return adaptive_limiter.check_rate_limit(rate_limit_key, is_suspicious)
+
+    def _is_suspicious_request(self, request: Request) -> bool:
+        """检查是否为可疑请求"""
+        # 检查User-Agent
+        user_agent = request.headers.get("User-Agent", "")
+        if not user_agent or len(user_agent) < 10:
+            return True
+
+        # 检查路径中的可疑模式
+        path = request.url.path or ""
+        for pattern in self.suspicious_patterns:
+            if pattern in path.lower():
+                return True
+
+        # 检查查询参数中的可疑模式
+        query_params = dict(request.query_params)
+        for key, value in query_params.items():
+            if (
+                value is not None
+                and isinstance(value, str)
+                and any(
+                    pattern in value.lower() for pattern in self.suspicious_patterns
+                )
+            ):
+                return True
+
+        return False
 
     async def _validate_request_content(self, request: Request):
         """验证请求内容"""
@@ -392,7 +419,10 @@ class CORSExtendedMiddleware(BaseHTTPMiddleware):
     """扩展的CORS中间件"""
 
     def __init__(
-        self, app, allowed_origins: list[Any] = None, allowed_methods: list[Any] = None
+        self, 
+        app, 
+        allowed_origins: Union[List[Any], None] = None, 
+        allowed_methods: Union[List[Any], None] = None
     ):
         super().__init__(app)
         self.allowed_origins = allowed_origins or [
@@ -437,7 +467,7 @@ class CORSExtendedMiddleware(BaseHTTPMiddleware):
         return response
 
 
-def create_security_middleware(app, config: dict[str, Any] = None):
+def create_security_middleware(app, config: Optional[Dict[str, Any]] = None):
     """
     创建安全中间件链
 
@@ -449,11 +479,6 @@ def create_security_middleware(app, config: dict[str, Any] = None):
 
     # 按顺序添加中间件
     app.add_middleware(SecurityHeadersMiddleware)
-    app.add_middleware(
-        CORSExtendedMiddleware,
-        allowed_origins=config.get("allowed_origins"),
-        allowed_methods=config.get("allowed_methods"),
-    )
     app.add_middleware(
         FileUploadSecurityMiddleware,
         max_file_size=config.get("max_file_size", 50 * 1024 * 1024),

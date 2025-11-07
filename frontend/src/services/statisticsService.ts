@@ -1,103 +1,157 @@
-import { apiClient } from './api'
-import type { DashboardData, ChartDataItem } from '@/types/api'
+import { apiClient } from "./api";
+import type { DashboardData, ChartDataItem } from "@/types/api";
+import type { Filters } from "@/types/common";
+
+// 基础统计信息接口
+export interface BasicStatistics {
+  totalAssets: number;
+  totalArea: number;
+  totalRentableArea: number;
+  totalRentedArea: number;
+  averageOccupancyRate: number;
+  categoryCount: Record<string, number>;
+  regionCount: Record<string, number>;
+}
+
+// 面积统计接口
+export interface AreaStatistics {
+  landArea: number;
+  totalPropertyArea: number;
+  totalRentableArea: number;
+  totalRentedArea: number;
+  vacantArea: number;
+  averageUnitPrice: number;
+  regionStats: Record<
+    string,
+    {
+      area: number;
+      rentableArea: number;
+      rentedArea: number;
+    }
+  >;
+}
+
+// 趋势数据接口
+export interface TrendDataItem {
+  date: string;
+  value: number;
+  label?: string;
+  category?: string;
+}
+
+// 报表生成响应接口
+export interface ReportGenerationResponse {
+  reportId: string;
+  status: "queued" | "processing" | "completed" | "failed";
+  downloadUrl?: string;
+  message?: string;
+}
+
+// 对比数据接口
+export interface ComparisonData {
+  categories: string[];
+  series: Array<{
+    name: string;
+    data: number[];
+  }>;
+  summary?: Record<string, unknown>;
+}
 
 export class StatisticsService {
-  // 获取仪表板数据
   async getDashboardData(): Promise<DashboardData> {
-    const response = await apiClient.get<DashboardData>('/statistics/dashboard')
-    return response.data || response as DashboardData
+    const response = await apiClient.get<DashboardData>("/statistics/dashboard");
+    return response.data || (response as DashboardData);
   }
 
-  // 获取基础统计信息
-  async getBasicStatistics(filters?: Record<string, any>): Promise<any> {
+  async getBasicStatistics(filters?: Filters): Promise<BasicStatistics> {
     try {
-      const response = await apiClient.get('/statistics/basic', {
+      const response = await apiClient.get<BasicStatistics>("/statistics/basic", {
         params: filters,
-      })
-      return response.data || response
+      });
+      return response.data || response;
     } catch (error) {
-      console.error('操作失败:', error)
-      throw new Error(error instanceof Error ? error.message : '操作失败')
+      console.error("操作失败:", error);
+      throw new Error(error instanceof Error ? error.message : "操作失败");
     }
   }
 
-  // 获取权属分布统计
-  async getOwnershipDistribution(filters?: Record<string, any>): Promise<ChartDataItem[]> {
-    const response = await apiClient.get<ChartDataItem[]>('/statistics/ownership-distribution', {
+  async getOwnershipDistribution(filters?: Filters): Promise<ChartDataItem[]> {
+    const response = await apiClient.get<ChartDataItem[]>("/statistics/ownership-distribution", {
       params: filters,
-    })
-    return response.data || []
+    });
+    return response.data || [];
   }
 
-  // 获取物业性质分布
-  async getPropertyNatureDistribution(filters?: Record<string, any>): Promise<ChartDataItem[]> {
-    const response = await apiClient.get<ChartDataItem[]>('/statistics/property-nature-distribution', {
+  async getPropertyNatureDistribution(filters?: Filters): Promise<ChartDataItem[]> {
+    const response = await apiClient.get<ChartDataItem[]>(
+      "/statistics/property-nature-distribution",
+      {
+        params: filters,
+      },
+    );
+    return response.data || [];
+  }
+
+  async getUsageStatusDistribution(filters?: Filters): Promise<ChartDataItem[]> {
+    const response = await apiClient.get<ChartDataItem[]>("/statistics/usage-status-distribution", {
       params: filters,
-    })
-    return response.data || []
+    });
+    return response.data || [];
   }
 
-  // 获取使用状态分布
-  async getUsageStatusDistribution(filters?: Record<string, any>): Promise<ChartDataItem[]> {
-    const response = await apiClient.get<ChartDataItem[]>('/statistics/usage-status-distribution', {
+  async getOccupancyRateDistribution(filters?: Filters): Promise<ChartDataItem[]> {
+    const response = await apiClient.get<{ data: { categories: ChartDataItem[] } }>(
+      "/statistics/occupancy-rate/by-category",
+      {
+        params: { category_field: "business_category", ...filters },
+      },
+    );
+    return response.data?.data?.categories || [];
+  }
+
+  async getAreaStatistics(filters?: Filters): Promise<AreaStatistics> {
+    const response = await apiClient.get<{ data: AreaStatistics }>("/assets/statistics/summary", {
       params: filters,
-    })
-    return response.data || []
+    });
+    return response.data?.data || response.data;
   }
 
-  // 获取出租率分布
-  async getOccupancyRateDistribution(filters?: Record<string, any>): Promise<ChartDataItem[]> {
-    const response = await apiClient.get<{data: {categories: ChartDataItem[]}}>('/statistics/occupancy-rate/by-category', {
-      params: { category_field: 'business_category', ...filters },
-    })
-    return response.data?.data?.categories || []
-  }
-
-  // 获取面积统计
-  async getAreaStatistics(filters?: Record<string, any>): Promise<any> {
-    const response = await apiClient.get('/assets/statistics/summary', {
-      params: filters,
-    })
-    return response.data?.data || response.data
-  }
-
-  // 获取趋势数据
   async getTrendData(
     metric: string,
-    period: 'daily' | 'weekly' | 'monthly' | 'yearly' = 'monthly',
-    filters?: Record<string, any>
-  ): Promise<any[]> {
-    const response = await apiClient.get(`/statistics/trend/${metric}`, {
+    period: "daily" | "weekly" | "monthly" | "yearly" = "monthly",
+    filters?: Filters,
+  ): Promise<TrendDataItem[]> {
+    const response = await apiClient.get<TrendDataItem[]>(`/statistics/trend/${metric}`, {
       params: { period, ...filters },
-    })
-    return response.data || []
+    });
+    return response.data || [];
   }
 
-  // 生成报表
   async generateReport(
     reportType: string,
-    filters?: Record<string, any>,
-    format: 'json' | 'excel' | 'pdf' = 'json'
-  ): Promise<any> {
-    const response = await apiClient.post(`/statistics/report/${reportType}`, {
-      filters,
-      format,
-    })
-    return response.data || response
+    filters?: Filters,
+    format: "json" | "excel" | "pdf" = "json",
+  ): Promise<ReportGenerationResponse> {
+    const response = await apiClient.post<ReportGenerationResponse>(
+      `/statistics/report/${reportType}`,
+      {
+        filters,
+        format,
+      },
+    );
+    return response.data || response;
   }
 
-  // 获取对比数据
   async getComparisonData(
     metric: string,
-    compareType: 'period' | 'category',
-    filters?: Record<string, any>
-  ): Promise<any> {
-    const response = await apiClient.get(`/statistics/comparison/${metric}`, {
+    compareType: "period" | "category",
+    filters?: Filters,
+  ): Promise<ComparisonData> {
+    const response = await apiClient.get<ComparisonData>(`/statistics/comparison/${metric}`, {
       params: { compare_type: compareType, ...filters },
-    })
-    return response.data || response
+    });
+    return response.data || response;
   }
 }
 
-// 导出服务实例
-export const statisticsService = new StatisticsService()
+export const statisticsService = new StatisticsService();

@@ -106,7 +106,7 @@ const OwnershipSelect: React.FC<OwnershipSelectProps> = ({
   }, []);
 
   // 处理单选
-  const handleSingleChange = (selectedValue: any) => {
+  const handleSingleChange = (selectedValue: string | { value: string; label: React.ReactNode }) => {
     // 处理labelInValue模式
     let valueStr: string;
     if (typeof selectedValue === 'object' && selectedValue !== null) {
@@ -155,7 +155,12 @@ const OwnershipSelect: React.FC<OwnershipSelectProps> = ({
   );
 
   // 多选模式下已选权属方的标签渲染
-  const tagRender = (props: any) => {
+  const tagRender = (props: {
+    label: React.ReactNode;
+    value: string;
+    closable: boolean;
+    onClose: () => void;
+  }) => {
     const { label, value, closable, onClose } = props;
     const ownership = allOwnerships.find(o => o.id === value);
 

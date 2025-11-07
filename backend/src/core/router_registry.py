@@ -117,6 +117,10 @@ class RouteRegistry:
             f"完成版本 {version} 的路由注册，共 {len(self.versioned_routers[version])} 个路由"
         )
 
+    def include_all(self, app: FastAPI, version: str = "v1") -> None:
+        """与 include_all_routers 等价的便捷别名，便于主入口统一调用"""
+        self.include_all_routers(app, version)
+
     def get_router_info(self, version: str = "v1") -> list[dict[str, Any]]:
         """获取路由信息"""
         if version not in self.versioned_routers:
@@ -201,24 +205,34 @@ version_manager = APIVersionManager(route_registry)
 
 def register_api_routes():
     """注册所有API路由的便捷函数"""
-    from ..api.v1 import api_router as v1_router
+    try:
+        from ..api.v1 import api_router as v1_router
 
-    # 注册v1路由
-    route_registry.register_router(
-        router=v1_router, prefix="/api/v1", tags=["API v1"], version="v1"
-    )
+        # 注册v1路由
+        route_registry.register_router(
+            router=v1_router, prefix="/api", tags=["API v1"], version="v1"
+        )
+        logger.info("✅ API v1 主路由注册成功")
+    except Exception as e:
+        logger.error(f"❌ API v1 主路由注册失败: {e}")
+        raise
 
-    # 注册PDF导入路由（独立注册）
-    from ..api.v1.pdf_import_unified import router as pdf_import_router
+    # 注册PDF导入路由（独立注册）- 添加异常处理
+    try:
+        from ..api.v1.pdf_import_unified import router as pdf_import_router
 
-    route_registry.register_router(
-        router=pdf_import_router,
-        prefix="/api/v1/pdf-import",
-        tags=["PDF智能导入"],
-        version="v1",
-    )
+        route_registry.register_router(
+            router=pdf_import_router,
+            prefix="/api/v1/pdf-import",
+            tags=["PDF智能导入"],
+            version="v1",
+        )
+        logger.info("✅ PDF导入路由注册成功")
+    except Exception as e:
+        logger.warning(f"⚠️ PDF导入路由注册失败（将跳过）: {e}")
+        logger.info("系统将继续运行，但PDF导入功能可能不可用")
 
-    logger.info("完成所有API路由注册")
+    logger.info("🎉 完成API路由注册")
 
 
 def setup_app_routing(app: FastAPI) -> None:

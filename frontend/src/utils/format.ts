@@ -170,16 +170,16 @@ export const calculateOccupancyRate = (
 /**
  * 验证是否为有效的数字
  */
-export const isValidNumber = (value: any): boolean => {
-  return !isNaN(parseFloat(value)) && isFinite(value)
+export const isValidNumber = (value: unknown): boolean => {
+  return !isNaN(parseFloat(value as string)) && isFinite(value as number)
 }
 
 /**
  * 安全的数字转换
  */
-export const safeNumber = (value: any, defaultValue = 0): number => {
+export const safeNumber = (value: unknown, defaultValue = 0): number => {
   if (isValidNumber(value)) {
-    return typeof value === 'string' ? parseFloat(value) : value
+    return typeof value === 'string' ? parseFloat(value) : Number(value)
   }
   return defaultValue
 }

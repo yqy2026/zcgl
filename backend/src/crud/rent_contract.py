@@ -164,7 +164,7 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
 
             # 创建新条款
             for term_data in obj_in.rent_terms:
-                term_data_dict = term_data.dict()
+                term_data_dict = term_data.model_dump()
                 term_data_dict["contract_id"] = db_obj.id
                 db_term = RentTerm(**term_data_dict)
                 db.add(db_term)

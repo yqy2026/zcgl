@@ -292,6 +292,24 @@ export class EnumFormatter {
   }
 }
 
+// 枚举验证错误接口
+export interface EnumValidationError {
+  field: string
+  value: unknown
+  expectedType: string
+}
+
+// 待验证数据接口
+export interface EnumValidationData {
+  property_nature?: string
+  usage_status?: string
+  ownership_status?: string
+  business_model?: string
+  tenant_type?: string
+  operation_status?: string
+  [key: string]: unknown
+}
+
 /**
  * 枚举值验证工具
  */
@@ -343,8 +361,8 @@ export class EnumValidator {
   /**
    * 获取所有无效的枚举值
    */
-  static getInvalidEnumValues(data: any): { field: string; value: any; expectedType: string }[] {
-    const errors: { field: string; value: any; expectedType: string }[] = []
+  static getInvalidEnumValues(data: EnumValidationData): EnumValidationError[] {
+    const errors: EnumValidationError[] = []
 
     if (data.property_nature && !this.isValidPropertyNature(data.property_nature)) {
       errors.push({ field: 'property_nature', value: data.property_nature, expectedType: 'PropertyNature' })

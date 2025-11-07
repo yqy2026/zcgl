@@ -94,7 +94,12 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
   }, [abortController]);
 
   // 自定义上传请求
-  const customRequest = useCallback(async (options: any) => {
+  const customRequest = useCallback(async (options: {
+    file: File;
+    onProgress: (percent: number) => void;
+    onSuccess: (response?: unknown) => void;
+    onError: (error: Error) => void;
+  }) => {
     const { file, onProgress, onSuccess, onError } = options;
 
     // 设置上传状态
@@ -145,7 +150,7 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
       } else {
         throw new Error(response.error || response.message || '上传失败');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       // 清理controller
       setAbortController(null);
 

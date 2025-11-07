@@ -202,8 +202,8 @@ export const setupDefaultMocks = () => {
   })
 
   mockAssetService.createAsset.mockResolvedValue({
-    id: 'new-asset-id',
     ...mockAssetData,
+    id: 'new-asset-id',
   })
 
   // Auth Service默认返回

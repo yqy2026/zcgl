@@ -43,13 +43,13 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
   // 加载项目选项
   const loadProjectOptions = async () => {
     try {
-      console.log('正在加载项目选项...');
+      // Loading project options
       const response = await projectService.getProjectOptions(true);
-      console.log('获取到的项目选项响应:', response);
+      // Got project options response
 
       // 确保响应数据是数组
       const projects = Array.isArray(response) ? response : (response?.data || []);
-      console.log('处理后的项目选项:', projects);
+      // Processed project options
 
       setProjectOptions(projects);
     } catch (error) {
@@ -70,8 +70,16 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
   }, [initialValues, form]);
 
   
+  // 表单验证规则接口
+  interface FormValidationRule {
+    field?: string
+    fullField?: string
+    type?: string
+    validator?: (rule: FormValidationRule, value: unknown) => Promise<void>
+  }
+
   // 验证名称唯一性
-  const validateName = async (_: any, value: string) => {
+  const validateName = async (_: FormValidationRule, value: string) => {
     if (!value) return Promise.resolve();
 
     const isUnique = await ownershipService.validateOwnershipName(
@@ -101,8 +109,9 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
           is_active: values.is_active
         };
 
-        console.log('提交的更新数据:', updateData);
-        console.log('关联项目数据:', values.related_projects);
+        // Submit update data
+        // console.log('提交的更新数据:', updateData);
+        // console.log('关联项目数据:', values.related_projects);
 
         // 先更新基本信息
         await ownershipService.updateOwnership(initialValues.id, updateData);
@@ -131,7 +140,7 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
       }
 
       onSuccess();
-    } catch (error: any) {
+    } catch (error: unknown) {
       message.error(error.message || '操作失败');
     } finally {
       setLoading(false);

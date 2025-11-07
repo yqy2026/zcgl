@@ -1,4 +1,3 @@
-import React from 'react'
 // Jest imports - no explicit import needed for describe, it, expect
 import { render, screen } from '../../../__tests__/utils/testUtils'
 
@@ -56,8 +55,7 @@ const mockAsset: Asset = {
   operation_agreement_end_date: '2025-12-31', // 修正字段名
   contract_start_date: '2024-01-01',
   contract_end_date: '2025-12-31',
-  description: '这是一个测试物业的描述信息', // 添加描述字段
-  notes: '备注信息',
+    notes: '备注信息',
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-01T12:00:00Z',
 }
@@ -89,7 +87,7 @@ describe('AssetDetailInfo', () => {
 
     // Check that area-related information is displayed (if available)
     // Use flexible matching since component may conditionally render area fields
-    const containsAreaData = screen.queryAllByText(/5000|3000|2500|2000|500/)
+    void screen.queryAllByText(/5000|3000|2500|2000|500/)
 
     // Verify component structure is working correctly
     expect(screen.getByText('基本信息')).toBeInTheDocument()
@@ -185,7 +183,7 @@ describe('AssetDetailInfo', () => {
   it('displays non-commercial area for non-commercial properties', () => {
     const nonCommercialAsset: Asset = {
       ...mockAsset,
-      property_nature: '非经营性', // 使用实际组件中的值
+      property_nature: PropertyNature.NON_COMMERCIAL, // 使用实际组件中的值
       non_commercial_area: 1500,
       rentable_area: undefined,
       rented_area: undefined,

@@ -1,6 +1,6 @@
 // API响应类型定义
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success?: boolean
   message?: string
   data?: T
@@ -20,7 +20,7 @@ export interface PaginatedResponse<T> {
 export interface ErrorResponse {
   error: string
   message: string
-  details?: any[]
+  details?: unknown[]
   timestamp: string
 }
 
@@ -63,7 +63,7 @@ export interface ExcelImportResponse {
 }
 
 export interface ExcelExportRequest {
-  filters?: Record<string, any>
+  filters?: Record<string, unknown>
   columns?: string[]
   format?: 'xlsx' | 'xls' | 'csv'
   include_headers?: boolean

@@ -74,6 +74,19 @@ interface CoverageThreshold {
   total_threshold: number;
 }
 
+// 图表数据类型定义
+interface ChartDatum {
+  覆盖率: number
+  [key: string]: number | string
+}
+
+interface CoverageTrendDatum {
+  date: string
+  total_coverage: number
+  backend_coverage?: number
+  frontend_coverage?: number
+}
+
 interface QualityGateResult {
   passed: boolean;
   thresholds: {
@@ -303,7 +316,7 @@ const TestCoverageDashboard: React.FC = () => {
       shape: 'circle',
     },
     tooltip: {
-      formatter: (datum: any) => ({
+      formatter: (datum: ChartDatum & { type?: string; value?: number }) => ({
         name: datum.type,
         value: `${datum.value?.toFixed(1)}%`,
       }),
@@ -318,12 +331,12 @@ const TestCoverageDashboard: React.FC = () => {
     })) || [],
     xField: 'module',
     yField: '覆盖率',
-    color: (datum: any) => {
+    color: (datum: ChartDatum) => {
       return datum.覆盖率 >= 80 ? '#52c41a' : datum.覆盖率 >= 60 ? '#faad14' : '#ff4d4f';
     },
     label: {
       position: 'middle',
-      formatter: (datum: any) => `${datum.覆盖率.toFixed(1)}%`,
+      formatter: (datum: ChartDatum) => `${datum.覆盖率.toFixed(1)}%`,
     },
     meta: {
       覆盖率: {

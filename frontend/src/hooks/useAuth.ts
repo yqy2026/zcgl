@@ -46,7 +46,7 @@ export const useAuth = () => {
       } else {
         setError('用户名或密码错误')
       }
-    } catch (err: any) {
+    } catch (err: { message?: string; response?: { status?: number; data?: Record<string, unknown> } }) {
       const errorMessage = err.message || '登录失败，请稍后重试'
       setError(errorMessage)
       message.error(errorMessage)
@@ -63,7 +63,7 @@ export const useAuth = () => {
       setUser(null)
       setError(null)
       message.success('已安全登出')
-    } catch (err: any) {
+    } catch (err: { message?: string; response?: { status?: number; data?: Record<string, unknown> } }) {
       console.error('登出失败:', err)
       // 即使API失败，也要清除本地状态
       setUser(null)

@@ -27,6 +27,14 @@ import ProjectList from '@/components/Project/ProjectList';
 const { Option } = Select;
 const { Search } = Input;
 
+// Select组件标签渲染属性接口
+interface CustomTagProps {
+  label: React.ReactNode;
+  value: string | number;
+  closable: boolean;
+  onClose: () => void;
+}
+
 interface UnifiedProjectSelectProps {
   /** 选中的项目ID(s) */
   value?: string | string[];
@@ -154,7 +162,7 @@ const UnifiedProjectSelect: React.FC<UnifiedProjectSelectProps> = ({
   );
 
   // 多选模式下已选项目的标签渲染
-  const tagRender = (props: any) => {
+  const tagRender = (props: CustomTagProps) => {
     const { label, value, closable, onClose } = props;
     const project = allProjects.find(p => p.id === value);
 

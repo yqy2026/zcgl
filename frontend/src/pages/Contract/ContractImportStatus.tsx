@@ -78,7 +78,7 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
 
   // 初始化步骤
   useEffect(() => {
-    console.log('ContractImportStatus initialized with sessionId:', sessionId, 'fileInfo:', fileInfo);
+    // Component initialized
 
     const initialSteps: ProcessingStep[] = [
       {
@@ -152,7 +152,7 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
           onError('处理已取消');
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('获取进度失败:', error);
       // 不立即调用onError，让轮询继续
       // 只有在连续多次失败时才停止

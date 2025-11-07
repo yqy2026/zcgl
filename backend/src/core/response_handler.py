@@ -63,7 +63,7 @@ class ResponseHandler:
             "data": data,
             "timestamp": datetime.now(UTC).isoformat(),
             "request_id": request_id,
-            "pagination": pagination.dict() if pagination else None,
+            "pagination": pagination.model_dump() if pagination else None,
         }
 
         return JSONResponse(status_code=status_code, content=response_data)

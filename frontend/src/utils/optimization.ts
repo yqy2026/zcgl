@@ -3,7 +3,7 @@
 import React, { useCallback, useMemo, useRef, useEffect, useState } from 'react'
 
 // 防抖Hook
-export const useDebounce = <T extends (...args: any[]) => any>(
+export const useDebounce = <T extends (...args: unknown[]) => unknown>(
   callback: T,
   delay: number
 ): T => {
@@ -24,7 +24,7 @@ export const useDebounce = <T extends (...args: any[]) => any>(
 }
 
 // 节流Hook
-export const useThrottle = <T extends (...args: any[]) => any>(
+export const useThrottle = <T extends (...args: unknown[]) => unknown>(
   callback: T,
   delay: number
 ): T => {
@@ -43,8 +43,8 @@ export const useThrottle = <T extends (...args: any[]) => any>(
 }
 
 // 虚拟滚动Hook
-export const useVirtualScroll = (
-  items: any[],
+export const useVirtualScroll = <T>(
+  items: T[],
   itemHeight: number,
   containerHeight: number
 ) => {
@@ -144,7 +144,7 @@ export const useMemoryLeakDetection = (componentName: string) => {
       
       // 在开发环境下记录组件生命周期
       if (process.env.NODE_ENV === 'development') {
-        console.log(`Component ${componentName} unmounted after ${lifeTime}ms`)
+        // Component unmounted
         
         if (timersRef.current.size > 0) {
           console.warn(`Component ${componentName} had ${timersRef.current.size} uncleaned timers`)
@@ -202,7 +202,7 @@ export const useRenderPerformance = (componentName: string) => {
   useEffect(() => {
     return () => {
       if (process.env.NODE_ENV === 'development') {
-        console.log(`Component ${componentName} rendered ${renderCountRef.current} times`)
+        // Component rendered
       }
     }
   }, [componentName])
@@ -211,7 +211,7 @@ export const useRenderPerformance = (componentName: string) => {
 }
 
 // 缓存Hook
-export const useCache = <T>(key: string, factory: () => T, deps: any[] = []) => {
+export const useCache = <T>(key: string, factory: () => T, deps: unknown[] = []) => {
   const cache = useRef<Map<string, T>>(new Map())
 
   return useMemo(() => {
@@ -283,7 +283,7 @@ export const useWebWorker = (workerScript: string) => {
     }
   }, [workerScript])
 
-  const postMessage = useCallback((data: any) => {
+  const postMessage = useCallback((data: unknown) => {
     if (workerRef.current) {
       setIsLoading(true)
       setError(undefined)
@@ -291,7 +291,7 @@ export const useWebWorker = (workerScript: string) => {
     }
   }, [])
 
-  const onMessage = useCallback((callback: (data: any) => void) => {
+  const onMessage = useCallback((callback: (data: unknown) => void) => {
     if (workerRef.current) {
       workerRef.current.onmessage = (event) => {
         setIsLoading(false)

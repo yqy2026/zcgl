@@ -140,7 +140,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
       },
       tooltip: {
         callbacks: {
-          label: (context: any) => {
+          label: (context: { dataset: { label: string }; parsed: { y: number } }) => {
             return `${context.dataset.label}: ${context.parsed.y.toLocaleString()} ㎡`
           },
         },
@@ -150,7 +150,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
       y: {
         beginAtZero: true,
         ticks: {
-          callback: (value: any) => `${Number(value).toLocaleString()} ㎡`,
+          callback: (value: number) => `${Number(value).toLocaleString()} ㎡`,
         },
       },
     },
@@ -201,7 +201,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
       },
       tooltip: {
         callbacks: {
-          label: (context: any) => {
+          label: (context: { dataset: { label: string }; parsed: number; label: string }) => {
             if (context.dataset.label?.includes('出租率')) {
               return `${context.dataset.label}: ${context.parsed.y.toFixed(2)}%`
             }
@@ -223,7 +223,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
         position: 'left' as const,
         beginAtZero: true,
         ticks: {
-          callback: (value: any) => `${Number(value).toLocaleString()} ㎡`,
+          callback: (value: number) => `${Number(value).toLocaleString()} ㎡`,
         },
       },
       y1: {
@@ -233,7 +233,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
         beginAtZero: true,
         max: 100,
         ticks: {
-          callback: (value: any) => `${value}%`,
+          callback: (value: number) => `${value}%`,
         },
         grid: {
           drawOnChartArea: false,
@@ -273,7 +273,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
       },
       tooltip: {
         callbacks: {
-          label: (context: any) => {
+          label: (context: { dataset: { label: string }; parsed: number; label: string }) => {
             const item = data?.area_ranges?.[context.dataIndex]
             return [
               `资产数量: ${context.parsed.y} 个`,

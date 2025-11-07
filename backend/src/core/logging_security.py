@@ -40,10 +40,21 @@ class SensitiveDataFilter(logging.Filter):
             (r"\b1[3-9]\d{9}\b", "phone=***"),
             # 银行卡号
             (r"\b[1-9]\d{12,19}\b", "card=***"),
-            # IP地址（可选，根据需求）
-            # (r'\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b', 'ip=***'),
+            # IP地址
+            (r'\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b', 'ip=***'),
             # URL中的敏感参数
             (r"(?i)(token|key|secret)=[^&\s]+", r"\1=***"),
+            # 地址信息
+            (r"(?i)(address|addr)\s*[:=]\s*[^,}]+", "address=***"),
+            # 银行账户信息
+            (r"(?i)(account|acct)\s*[:=]\s*[^\s,}]+", "account=***"),
+            # 生日信息
+            (r"(?i)(birthday|dob)\s*[:=]\s*[^\s,}]+", "birthday=***"),
+            # 更多敏感信息模式
+            (r"(?i)(username|user)\s*[:=]\s*[^\s,}]+", "username=***"),
+            (r"(?i)(name)\s*[:=]\s*[^\s,}]+", "name=***"),
+            (r"(?i)(realname|real_name)\s*[:=]\s*[^\s,}]+", "realname=***"),
+            (r"(?i)(nickname|nick_name)\s*[:=]\s*[^\s,}]+", "nickname=***"),
         ]
 
         # 敏感字段名称列表
@@ -79,14 +90,31 @@ class SensitiveDataFilter(logging.Filter):
             "user_id_hash",
             "session_id",
             "session_token",
+            "address",
+            "addr",
+            "birthday",
+            "dob",
+            "account",
+            "acct",
+            "ip",
+            "ip_address",
+            "username",
+            "user",
+            "name",
+            "realname",
+            "real_name",
+            "nickname",
+            "nick_name",
+            "full_name",
+            "fullname",
         }
 
     def filter(self, record: logging.LogRecord) -> logging.LogRecord:
         """过滤敏感信息"""
         if hasattr(record, "msg"):
-            record.msg = self._filter_sensitive_data(record.msg)
+            record.msg = self._filter_sensitive_data(str(record.msg))
 
-        if hasattr(record, "args"):
+        if hasattr(record, "args") and record.args is not None:
             record.args = tuple(
                 self._filter_sensitive_data(str(arg)) if isinstance(arg, str) else arg
                 for arg in record.args
@@ -163,27 +191,28 @@ class StructuredFormatter(logging.Formatter):
 
         # 添加请求ID（如果存在）
         if hasattr(record, "request_id"):
-            log_entry["request_id"] = record.request_id
+            log_entry["request_id"] = str(getattr(record, "request_id", ""))
 
         # 添加用户ID（如果存在）
         if hasattr(record, "user_id"):
-            log_entry["user_id"] = record.user_id
+            log_entry["user_id"] = str(getattr(record, "user_id", ""))
 
         # 添加会话ID（如果存在）
         if hasattr(record, "session_id"):
-            log_entry["session_id"] = record.session_id
+            log_entry["session_id"] = str(getattr(record, "session_id", ""))
 
         # 添加IP地址（如果存在）
         if hasattr(record, "client_ip"):
-            log_entry["client_ip"] = record.client_ip
+            log_entry["client_ip"] = str(getattr(record, "client_ip", ""))
 
         # 添加异常信息
         if record.exc_info:
             log_entry["exception"] = self._format_exception(record.exc_info)
 
         # 添加额外字段
-        if hasattr(record, "extra_fields"):
-            log_entry.update(record.extra_fields)
+        extra_fields = getattr(record, "extra_fields", None)
+        if extra_fields:
+            log_entry.update(extra_fields)
 
         # 确保所有字段都可以被JSON序列化
         log_entry = self._ensure_json_serializable(log_entry)
@@ -256,6 +285,7 @@ class SecurityAuditor:
         self.security_log_file = get_config("security_log_file", "logs/security.log")
         self.enabled = get_config("security_logging_enabled", True)
         self._setup_security_logger()
+        self.sensitive_filter = SensitiveDataFilter()
 
     def _setup_security_logger(self):
         """设置安全日志记录器"""
@@ -299,18 +329,33 @@ class SecurityAuditor:
             "severity": self._get_event_severity(event_type),
         }
 
-        # 添加可选字段
+        # 添加可选字段并进行脱敏处理
         if user_id:
             security_event["user_id"] = self._hash_sensitive_data(user_id)
         if ip_address:
             security_event["ip_address"] = self._hash_sensitive_data(ip_address)
         if user_agent:
-            security_event["user_agent"] = user_agent[:500]  # 限制长度
+            # 对用户代理进行脱敏处理
+            filtered_user_agent = self.sensitive_filter._filter_sensitive_data(user_agent)
+            security_event["user_agent"] = filtered_user_agent[:500]  # 限制长度
         if request_id:
             security_event["request_id"] = request_id
 
+        # 对额外字段进行脱敏处理
+        filtered_kwargs = {}
+        for key, value in kwargs.items():
+            if isinstance(value, str):
+                # 检查键是否敏感
+                if self.sensitive_filter._is_sensitive_key(key):
+                    filtered_kwargs[key] = "***"
+                else:
+                    # 对值进行脱敏处理
+                    filtered_kwargs[key] = self.sensitive_filter._filter_sensitive_data(value)
+            else:
+                filtered_kwargs[key] = value
+                
         # 添加额外字段
-        security_event.update(kwargs)
+        security_event.update(filtered_kwargs)
 
         # 确保所有数据都可以被JSON序列化
         serializable_event = self._ensure_json_serializable(security_event)
@@ -327,6 +372,10 @@ class SecurityAuditor:
             "DATA_BREACH_ATTEMPT",
             "MALICIOUS_REQUEST",
             "BRUTE_FORCE_ATTACK",
+            "FILE_UPLOAD_MALICIOUS",
+            "SQL_INJECTION_ATTEMPT",
+            "XSS_ATTACK",
+            "CSRF_ATTEMPT",
         }
 
         medium_severity_events = {
@@ -334,14 +383,26 @@ class SecurityAuditor:
             "SESSION_EXPIRED",
             "ACCESS_DENIED",
             "RATE_LIMIT_EXCEEDED",
+            "FILE_UPLOAD_REJECTED",
+            "PASSWORD_RESET_REQUEST",
+            "ACCOUNT_LOCKED",
+        }
+
+        low_severity_events = {
+            "AUTHENTICATION_SUCCESS",
+            "PASSWORD_CHANGED",
+            "PROFILE_UPDATED",
+            "FILE_UPLOAD_SUCCESS",
         }
 
         if event_type in high_severity_events:
             return "HIGH"
         elif event_type in medium_severity_events:
             return "MEDIUM"
-        else:
+        elif event_type in low_severity_events:
             return "LOW"
+        else:
+            return "INFO"
 
     def _ensure_json_serializable(self, obj: Any) -> Any:
         """确保对象可以被JSON序列化"""
@@ -397,6 +458,7 @@ class RequestLogger:
         self.request_log_file = get_config("request_log_file", "logs/requests.log")
         self.enabled = get_config("request_logging_enabled", True)
         self._setup_request_logger()
+        self.sensitive_filter = SensitiveDataFilter()
 
     def _setup_request_logger(self):
         """设置请求日志记录器"""
@@ -443,18 +505,33 @@ class RequestLogger:
             "timestamp": datetime.now(UTC).isoformat(),
         }
 
-        # 添加可选字段
+        # 添加可选字段并进行脱敏处理
         if user_id:
             request_info["user_id"] = self._hash_sensitive_data(user_id)
         if ip_address:
             request_info["ip_address"] = self._hash_sensitive_data(ip_address)
         if user_agent:
-            request_info["user_agent"] = user_agent[:500]
+            # 对用户代理进行脱敏处理
+            filtered_user_agent = self.sensitive_filter._filter_sensitive_data(user_agent)
+            request_info["user_agent"] = filtered_user_agent[:500]
         if request_id:
             request_info["request_id"] = request_id
 
+        # 对额外字段进行脱敏处理
+        filtered_kwargs = {}
+        for key, value in kwargs.items():
+            if isinstance(value, str):
+                # 检查键是否敏感
+                if self.sensitive_filter._is_sensitive_key(key):
+                    filtered_kwargs[key] = "***"
+                else:
+                    # 对值进行脱敏处理
+                    filtered_kwargs[key] = self.sensitive_filter._filter_sensitive_data(value)
+            else:
+                filtered_kwargs[key] = value
+                
         # 添加额外字段
-        request_info.update(kwargs)
+        request_info.update(filtered_kwargs)
 
         # 确保所有数据都可以被JSON序列化
         serializable_request = self._ensure_json_serializable(request_info)

@@ -4,13 +4,11 @@ import {
   ReloadOutlined,
   DownloadOutlined,
   FullscreenOutlined,
-  SettingOutlined,
   HomeOutlined,
   PieChartOutlined,
   AreaChartOutlined,
   BarChartOutlined
 } from '@ant-design/icons'
-import { useQuery } from '@tanstack/react-query'
 import { useAnalytics } from '../../hooks/useAnalytics'
 import DataTrendCard from '../../components/Dashboard/DataTrendCard'
 import QuickInsights from '../../components/Dashboard/QuickInsights'
@@ -75,7 +73,7 @@ const DashboardPage: React.FC = () => {
 
   const handleExport = () => {
     // 实现导出功能
-    console.log('Exporting dashboard data...')
+    // Exporting dashboard data
   }
 
   if (error) {

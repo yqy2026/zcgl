@@ -89,7 +89,7 @@ describe('React基础测试', () => {
     const element = React.createElement('div', { className: 'test' }, 'Hello');
     expect(element.type).toBe('div');
     expect(element.props.className).toBe('test');
-    expect(element.props.children).toBe('Hello');
+    expect((element.props as any).children).toBe('Hello');
   });
 });
 
@@ -149,7 +149,7 @@ describe('错误处理测试', () => {
       throw new Error('Test error');
     } catch (error) {
       expect(error).toBeInstanceOf(Error);
-      expect(error.message).toBe('Test error');
+      expect((error as Error).message).toBe('Test error');
     }
   });
 

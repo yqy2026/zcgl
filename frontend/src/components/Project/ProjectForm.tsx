@@ -93,7 +93,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
 
   
   // 表单提交
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: Record<string, unknown>) => {
     setLoading(true);
     try {
       // 构建简化的ownership_relations数据
@@ -115,7 +115,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
         message.success('项目创建成功');
       }
       onSuccess();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('保存项目失败:', error);
       message.error(error.response?.data?.detail || '保存项目失败');
     } finally {
@@ -124,8 +124,16 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
   };
 
   
+  // 表单验证规则接口
+  interface FormValidationRule {
+    field?: string
+    fullField?: string
+    type?: string
+    validator?: (rule: FormValidationRule, value: unknown) => Promise<void>
+  }
+
   // 验证项目名称
-  const validateProjectName = async (rule: any, value: string) => {
+  const validateProjectName = async (rule: FormValidationRule, value: string) => {
     if (!value) return Promise.reject('请输入项目名称');
     if (value.length < 1) return Promise.reject('项目名称至少1个字符');
     if (value.length > 200) return Promise.reject('项目名称不能超过200个字符');

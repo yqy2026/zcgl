@@ -4,12 +4,15 @@
 
 import logging
 import os
+from typing import TYPE_CHECKING, Callable, Optional
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.orm import Session, declarative_base, sessionmaker
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm.session import sessionmaker as SessionMaker
 
 try:
-    from .core.config_manager import get_config
     from .database_security import enhance_database_security
 except ImportError:
     # 回退方案，当作为模块导入失败时
@@ -17,7 +20,7 @@ except ImportError:
         from database_security import enhance_database_security
     except ImportError:
         # 进一步回退，创建空函数
-        def enhance_database_security():
+        def enhance_database_security(engine):
             pass
 
 
@@ -26,9 +29,37 @@ logger = logging.getLogger(__name__)
 # 数据库URL配置
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./data/land_property.db")
 
+# 确保SQLite数据目录存在
+if "sqlite" in DATABASE_URL.lower():
+    db_path = DATABASE_URL.replace("sqlite:///", "")
+    db_dir = os.path.dirname(db_path)
+    if db_dir and not os.path.exists(db_dir):
+        os.makedirs(db_dir, exist_ok=True)
+        logger.info(f"Created database directory: {db_dir}")
+
+# 数据库连接配置
+if "sqlite" in DATABASE_URL.lower():
+    # SQLite 配置
+    engine_kwargs = {
+        "connect_args": {"check_same_thread": False}
+    }
+else:
+    # PostgreSQL/MySQL 配置
+    engine_kwargs = {
+        "pool_size": 10,              # 连接池大小
+        "max_overflow": 20,           # 最大溢出连接
+        "pool_pre_ping": True,        # 连接健康检查
+        "pool_recycle": 3600,         # 连接回收时间(秒)
+        "echo": False,                # 生产环境关闭 SQL 输出
+    }
+
 # 尝试导入增强数据库管理器
 try:
-    from .enhanced_database import get_database_manager, initialize_enhanced_database
+    from .core.enhanced_database import (
+        get_database_manager,
+        get_enhanced_db_session,
+        initialize_enhanced_database,
+    )
 
     ENHANCED_DB_AVAILABLE = True
 except ImportError:
@@ -36,20 +67,21 @@ except ImportError:
         "Enhanced database manager not available, falling back to basic configuration"
     )
     ENHANCED_DB_AVAILABLE = False
+    # 提供类型安全的回退函数
+    get_database_manager = None  # type: ignore
+    get_enhanced_db_session = None  # type: ignore
+    initialize_enhanced_database = None  # type: ignore
 
 # 创建基础数据库引擎（作为回退）
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False}
-    if "sqlite" in DATABASE_URL.lower()
-    else {},
-)
+engine = create_engine(DATABASE_URL, **engine_kwargs)
 
 # 增强数据库安全
 enhance_database_security(engine)
 
 # 创建会话工厂（基础版本）
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+SessionLocal: Callable[[], Session] = sessionmaker(
+    autocommit=False, autoflush=False, bind=engine
+)
 
 # 创建基础模型类
 Base = declarative_base()
@@ -64,13 +96,18 @@ def initialize_enhanced_database_if_available():
 
     if ENHANCED_DB_AVAILABLE and not _database_manager_initialized:
         try:
+            if get_database_manager is None or initialize_enhanced_database is None:
+                logger.warning("Enhanced database functions not available")
+                return
+
             db_manager = get_database_manager()
             enhanced_engine = initialize_enhanced_database(DATABASE_URL)
 
             # 更新全局引擎和会话工厂
             global engine, SessionLocal
             engine = enhanced_engine
-            SessionLocal = db_manager.session_factory
+            if db_manager.session_factory is not None:
+                SessionLocal = db_manager.session_factory  # type: ignore[assignment]
 
             _database_manager_initialized = True
             logger.info("Enhanced database manager initialized successfully")
@@ -82,21 +119,28 @@ def initialize_enhanced_database_if_available():
 
 def get_db():
     """获取数据库会话 - 优先使用增强版本"""
-    if ENHANCED_DB_AVAILABLE and _database_manager_initialized:
-        try:
-            from .enhanced_database import get_enhanced_db_session
-
-            yield from get_enhanced_db_session()
-            return
-        except Exception as e:
-            logger.warning(f"Enhanced database session failed, falling back: {e}")
-
-    # 回退到基础会话
-    db = SessionLocal()
+    db = None
     try:
+        if ENHANCED_DB_AVAILABLE and _database_manager_initialized:
+            try:
+                if get_enhanced_db_session is not None:
+                    yield from get_enhanced_db_session()
+                    return
+            except Exception as e:
+                logger.warning(f"Enhanced database session failed, falling back: {e}")
+
+        # 回退到基础会话
+        db = SessionLocal()
         yield db
+    except Exception as e:
+        logger.error(f"Database session error: {e}")
+        raise
     finally:
-        db.close()
+        if db is not None:
+            try:
+                db.close()
+            except Exception as e:
+                logger.error(f"Error closing database session: {e}")
 
 
 def create_tables():
@@ -141,17 +185,18 @@ def get_database_status():
 
     if ENHANCED_DB_AVAILABLE and _database_manager_initialized:
         try:
-            db_manager = get_database_manager()
-            metrics = db_manager.get_metrics()
-            pool_status = db_manager.get_connection_pool_status()
+            if get_database_manager is not None:
+                db_manager = get_database_manager()
+                metrics = db_manager.get_metrics()
+                pool_status = db_manager.get_connection_pool_status()
 
-            status.update(
-                {
-                    "enhanced_metrics": metrics.__dict__,
-                    "pool_status": pool_status,
-                    "health_check": db_manager.run_health_check(),
-                }
-            )
+                status.update(
+                    {
+                        "enhanced_metrics": metrics.__dict__,
+                        "pool_status": pool_status,
+                        "health_check": db_manager.run_health_check(),
+                    }
+                )
         except Exception as e:
             status["enhanced_error"] = str(e)
 

@@ -76,12 +76,9 @@ class BaseDictionaryService {
   ): Promise<DictionaryServiceResult> {
     const { useCache = true, useFallback = true, isActive = true } = options
 
-    console.log(`🔍 获取字典选项: ${dictType}`, { useCache, useFallback, isActive })
-
     // 检查字典类型是否存在
     const config = getDictionaryConfig(dictType)
     if (!config) {
-      console.warn(`⚠️ 字典类型不存在: ${dictType}`)
       return {
         success: false,
         data: [],
@@ -94,7 +91,6 @@ class BaseDictionaryService {
     if (useCache) {
       const cached = cache.get(dictType)
       if (cached) {
-        console.log(`✅ 从缓存获取字典数据 [${dictType}]: ${cached.length} 项`)
         return {
           success: true,
           data: cached,
@@ -105,7 +101,6 @@ class BaseDictionaryService {
 
     // 尝试从API获取
     try {
-      console.log(`🌐 请求API: ${config.apiEndpoint}`)
       const response = await apiClient.get(config.apiEndpoint, {
         params: { is_active: isActive },
         timeout: 5000
@@ -113,8 +108,6 @@ class BaseDictionaryService {
 
       // apiClient 直接返回数据，不是包装的响应对象
       const data = Array.isArray(response) ? response : (response.data || [])
-      console.log(`✅ API响应成功 [${dictType}]: ${data.length} 项`)
-      console.log(`🔍 API响应数据类型: ${typeof response}, 数据长度: ${data.length}`)
 
       // 缓存数据
       if (useCache) {
@@ -126,14 +119,10 @@ class BaseDictionaryService {
         data,
         source: 'api'
       }
-    } catch (error: any) {
-      console.error(`❌ API请求失败 [${dictType}]:`, error)
-
+    } catch (error: unknown) {
       // 如果启用备用数据，返回备用数据
       if (useFallback) {
         const fallbackData = config.fallbackOptions || []
-        console.log(`🔄 使用备用数据 [${dictType}]: ${fallbackData.length} 项`)
-
         return {
           success: true,
           data: fallbackData,
@@ -161,7 +150,6 @@ class BaseDictionaryService {
       isActive?: boolean
     } = {}
   ): Promise<Record<string, DictionaryServiceResult>> {
-    console.log(`🔍 批量获取字典选项: ${dictTypes.join(', ')}`)
 
     const promises = dictTypes.map(async (dictType) => {
       const result = await this.getOptions(dictType, options)
@@ -196,10 +184,8 @@ class BaseDictionaryService {
   clearCache(dictType?: string): void {
     if (dictType) {
       cache.clearForType(dictType)
-      console.log(`🧹 清除字典缓存: ${dictType}`)
     } else {
       cache.clear()
-      console.log(`🧹 清除所有字典缓存`)
     }
   }
 
@@ -207,7 +193,6 @@ class BaseDictionaryService {
    * 预加载字典数据
    */
   async preload(dictTypes: string[]): Promise<void> {
-    console.log(`🚀 预加载字典数据: ${dictTypes.join(', ')}`)
     await this.getBatchOptions(dictTypes, { useCache: true, useFallback: false })
   }
 

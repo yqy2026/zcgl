@@ -182,7 +182,7 @@ const GroupedSelect: React.FC<GroupedSelectProps> = ({
   }
 
   // 自定义标签显示
-  const tagRender = (props: any) => {
+  const tagRender = (props: { label: string; value: string; closable: boolean; onClose: () => void }) => {
     const { label, value, closable, onClose } = props
     const optionInfo = getSelectedOptionInfo(value)
 

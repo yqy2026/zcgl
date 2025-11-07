@@ -59,9 +59,10 @@ class Settings(BaseSettings):
         json_schema_extra={"env": "CORS_ORIGINS"},
     )
 
-    # JWT配置
+    # JWT配置 - 生产环境必须设置环境变量
     SECRET_KEY: str = Field(
-        default="your-secret-key-change-in-production",
+        default="EMERGENCY-ONLY-REPLACE-WITH-ENV-SECRET-KEY-NOW",
+        description="JWT密钥 - 生产环境必须通过环境变量设置强密钥",
         json_schema_extra={"env": "SECRET_KEY"},
     )
     ALGORITHM: str = Field(default="HS256", json_schema_extra={"env": "ALGORITHM"})
@@ -96,6 +97,53 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = Field(default="INFO", json_schema_extra={"env": "LOG_LEVEL"})
     LOG_FILE: str | None = Field(default=None, json_schema_extra={"env": "LOG_FILE"})
 
+    def validate_security_config(self) -> list[str]:
+        """
+        验证安全配置
+        返回安全警告列表
+        """
+        warnings = []
+
+        # 检查JWT密钥安全性
+        if self.SECRET_KEY in [
+            "EMERGENCY-ONLY-REPLACE-WITH-ENV-SECRET-KEY-NOW",
+            "dev-secret-key-DO-NOT-USE-IN-PRODUCTION-REPLACE-WITH-ENV-VAR",
+            "dev-secret-key-change-in-production",
+        ]:
+            warnings.append(
+                "🚨 严重安全风险: 使用了默认或不安全的JWT密钥！"
+                "请立即设置环境变量SECRET_KEY为强随机密钥。"
+            )
+
+        if len(self.SECRET_KEY) < 32:
+            warnings.append("⚠️ JWT密钥长度不足32字符，建议使用更长的密钥。")
+
+        # 检查是否在调试模式运行
+        if self.DEBUG:
+            warnings.append("⚠️ 当前在调试模式运行，生产环境必须设置DEBUG=false。")
+
+        # 检查数据库是否为SQLite（生产环境推荐PostgreSQL）
+        if self.DATABASE_URL.startswith("sqlite:///./land_property.db"):
+            warnings.append("💾 使用默认SQLite数据库路径，生产环境建议使用PostgreSQL。")
+
+        return warnings
+
+    def log_security_status(self) -> None:
+        """记录安全配置状态"""
+        import logging
+
+        logger = logging.getLogger(__name__)
+        warnings = self.validate_security_config()
+
+        if warnings:
+            logger.warning("=" * 60)
+            logger.warning("🔐 安全配置检查发现以下问题:")
+            for warning in warnings:
+                logger.warning(f"  {warning}")
+            logger.warning("=" * 60)
+        else:
+            logger.info("✅ 安全配置检查通过")
+
     # 性能监控
     ENABLE_METRICS: bool = Field(
         default=True, json_schema_extra={"env": "ENABLE_METRICS"}
@@ -122,6 +170,29 @@ class Settings(BaseSettings):
     )
     AUDIT_LOG_RETENTION_DAYS: int = Field(
         default=90, json_schema_extra={"env": "AUDIT_LOG_RETENTION_DAYS"}
+    )
+
+    # LLM/ChatGLM3 配置（可选）
+    CHATGLM3_API_URL: str | None = Field(
+        default=None, json_schema_extra={"env": "CHATGLM3_API_URL"}
+    )
+    CHATGLM3_MAX_TOKENS: int = Field(
+        default=1500, json_schema_extra={"env": "CHATGLM3_MAX_TOKENS"}
+    )
+    CHATGLM3_TEMPERATURE: float = Field(
+        default=0.2, json_schema_extra={"env": "CHATGLM3_TEMPERATURE"}
+    )
+    CHATGLM3_TIMEOUT: int = Field(
+        default=30, json_schema_extra={"env": "CHATGLM3_TIMEOUT"}
+    )
+    CHATGLM3_MODEL_ID: str = Field(
+        default="THUDM/chatglm3-6b", json_schema_extra={"env": "CHATGLM3_MODEL_ID"}
+    )
+    CHATGLM3_DEVICE: str = Field(
+        default="cpu", json_schema_extra={"env": "CHATGLM3_DEVICE"}
+    )
+    LLM_TRIGGER_THRESHOLD: float = Field(
+        default=0.65, json_schema_extra={"env": "LLM_TRIGGER_THRESHOLD"}
     )
 
     # 创建全局配置实例

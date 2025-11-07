@@ -212,7 +212,7 @@ class PDFImportService {
           onUploadProgress: (progressEvent) => {
             if (progressEvent.total) {
               const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-              console.log(`Upload progress: ${percentCompleted}%`);
+              // Upload progress
             }
           },
           signal: signal, // 支持AbortController
@@ -221,7 +221,7 @@ class PDFImportService {
 
       // 直接返回后端API响应
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('PDF上传失败:', error);
 
       // 更详细的错误处理
@@ -274,7 +274,7 @@ class PDFImportService {
     try {
       const response = await axios.get(`${API_BASE_URL}/progress/${sessionId}`);
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('获取进度失败:', error);
       return {
         success: false,
@@ -289,7 +289,7 @@ class PDFImportService {
   async getResult(sessionId: string): Promise<{
     success: boolean;
     result?: CompleteResult;
-    processing_summary?: any;
+    processing_summary?: Record<string, unknown>;
     error?: string;
   }> {
     try {
@@ -368,7 +368,7 @@ class PDFImportService {
           error: progressResponse.error || '获取进度失败'
         };
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('获取结果失败:', error);
       return {
         success: false,
@@ -391,7 +391,7 @@ class PDFImportService {
       });
 
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('确认导入失败:', error);
       return {
         success: false,
@@ -412,7 +412,7 @@ class PDFImportService {
     try {
       const response = await axios.delete(`${API_BASE_URL}/session/${sessionId}`);
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('取消会话失败:', error);
       return {
         success: false,
@@ -441,7 +441,7 @@ class PDFImportService {
     try {
       const response = await axios.get(`${API_BASE_URL}/sessions`);
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('获取会话列表失败:', error);
       return {
         success: false,
@@ -497,7 +497,7 @@ class PDFImportService {
           accuracy_improvement: "15-20%"
         }
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('获取系统信息失败:', error);
       return {
         success: false,
@@ -530,7 +530,7 @@ class PDFImportService {
         extractor_summary: response.data.extractor_summary,
         validator_summary: response.data.validator_summary,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('获取系统信息失败:', error);
       throw new Error(error.response?.data?.detail || error.message);
     }
@@ -542,7 +542,7 @@ class PDFImportService {
   async testConversion(): Promise<{
     success: boolean;
     message: string;
-    test_result?: any;
+    test_result?: Record<string, unknown>;
     system_ready?: boolean;
   }> {
     try {
@@ -554,7 +554,7 @@ class PDFImportService {
         test_result: response.data.features,
         system_ready: true
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('测试转换失败:', error);
       return {
         success: false,
@@ -584,7 +584,7 @@ class PDFImportService {
         },
         timestamp: new Date().toISOString()
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('健康检查失败:', error);
       return {
         status: 'unhealthy',
@@ -680,7 +680,7 @@ class PDFImportService {
     try {
       const response = await axios.get(`${ENHANCED_API_BASE}/info`);
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('获取增强版系统信息失败:', error);
       return {
         success: false,
@@ -744,7 +744,7 @@ class PDFImportService {
           onUploadProgress: (progressEvent) => {
             if (progressEvent.total) {
               const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-              console.log(`Enhanced upload progress: ${percentCompleted}%`);
+              // Enhanced upload progress
             }
           },
           signal,
@@ -752,7 +752,7 @@ class PDFImportService {
       );
 
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('增强版PDF上传失败:', error);
 
       if (error.name === 'CanceledError' || error.code === 'ERR_CANCELED') {
@@ -794,7 +794,7 @@ class PDFImportService {
     try {
       const response = await axios.get(`${ENHANCED_API_BASE}/progress/${sessionId}`);
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('获取增强版进度失败:', error);
       return {
         success: false,
@@ -819,7 +819,7 @@ class PDFImportService {
         params: { reason }
       });
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('取消增强版会话失败:', error);
       return {
         success: false,
@@ -980,7 +980,7 @@ class PDFImportService {
           error: progressResponse.error || '获取进度失败'
         };
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('获取增强版结果失败:', error);
       return {
         success: false,
@@ -995,14 +995,14 @@ class PDFImportService {
   async testEnhancedFeatures(): Promise<{
     success: boolean;
     message: string;
-    test_results?: any;
+    test_results?: Array<{ name: string; status: string; message?: string; [key: string]: unknown }>;
     availability_rate?: number;
     system_ready?: boolean;
   }> {
     try {
       const response = await axios.get(`${ENHANCED_API_BASE}/test/all`);
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('测试增强版功能失败:', error);
       return {
         success: false,
@@ -1025,7 +1025,7 @@ class PDFImportService {
     try {
       const response = await axios.get(`${ENHANCED_API_BASE}/health`);
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('增强版健康检查失败:', error);
       return {
         status: 'unhealthy',
@@ -1042,12 +1042,12 @@ class PDFImportService {
   async getPerformanceSummary(): Promise<{
     success: boolean;
     message: string;
-    data?: any;
+    data?: Record<string, unknown>;
   }> {
     try {
       const response = await axios.get(`${ENHANCED_API_BASE}/performance/summary`);
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('获取性能摘要失败:', error);
       return {
         success: false,
@@ -1104,7 +1104,7 @@ class PDFImportService {
         features,
         message: available ? '增强版功能可用' : '部分增强版功能不可用'
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('检查增强版功能可用性失败:', error);
       return {
         available: false,

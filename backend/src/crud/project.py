@@ -381,7 +381,7 @@ class CRUDProject:
         code = self.generate_project_code(db, obj_in.name)
 
         # 创建数据对象
-        create_data = obj_in.dict()
+        create_data = obj_in.model_dump()
         create_data["code"] = code
 
         # 提取权属方关系数据

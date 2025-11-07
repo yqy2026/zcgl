@@ -51,11 +51,11 @@ const { TabPane } = Tabs;
 interface FieldReview {
   fieldName: string;
   label: string;
-  value: any;
+  value: unknown;
   confidence: number;
   validationStatus: 'valid' | 'warning' | 'error';
   validationMessage?: string;
-  suggestedValue?: any;
+  suggestedValue?: unknown;
   editMode: boolean;
 }
 
@@ -76,10 +76,10 @@ interface OwnershipMatch {
 }
 
 interface EnhancedContractReviewProps {
-  sessionData: any;
-  onConfirm: (confirmedData: any) => void;
+  sessionData: Record<string, unknown>;
+  onConfirm: (confirmedData: Record<string, unknown>) => void;
   onCancel: () => void;
-  onFieldChange?: (fieldName: string, value: any) => void;
+  onFieldChange?: (fieldName: string, value: unknown) => void;
 }
 
 const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
@@ -95,7 +95,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
   const [selectedOwnership, setSelectedOwnership] = useState<string>('');
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
-  const [validationSummary, setValidationSummary] = useState<any>({});
+  const [validationSummary, setValidationSummary] = useState<Record<string, unknown>>({});
 
   useEffect(() => {
     if (sessionData?.extracted_data) {
@@ -132,7 +132,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
     setFieldReviews(fields);
   };
 
-  const calculateFieldConfidence = (fieldName: string, value: any, sessionData: any): number => {
+  const calculateFieldConfidence = (fieldName: string, value: unknown, sessionData: Record<string, unknown>): number => {
     // 基础置信度
     let confidence = sessionData.confidence_score || 0.8;
 
@@ -150,7 +150,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
     return Math.min(confidence, 1.0);
   };
 
-  const getValidationStatus = (fieldName: string, value: any, validation: any): 'valid' | 'warning' | 'error' => {
+  const getValidationStatus = (fieldName: string, value: unknown, validation: Record<string, unknown>): 'valid' | 'warning' | 'error' => {
     const fieldValidation = validation?.validation_results?.[fieldName];
     if (!fieldValidation) return 'valid';
 
@@ -163,12 +163,12 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
     }
   };
 
-  const getValidationMessage = (fieldName: string, validation: any): string | undefined => {
+  const getValidationMessage = (fieldName: string, validation: { validation_results?: Record<string, { errors?: string[] }> }): string | undefined => {
     const fieldValidation = validation?.validation_results?.[fieldName];
     return fieldValidation?.errors?.[0];
   };
 
-  const getSuggestedValue = (fieldName: string, currentValue: any, matching: any): any => {
+  const getSuggestedValue = (fieldName: string, currentValue: unknown, matching: Record<string, unknown>): unknown => {
     // 从匹配结果中获取建议值
     if (fieldName === 'property_address' && matching?.matched_assets?.length > 0) {
       return matching.matched_assets[0].address;
@@ -212,7 +212,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
     ));
   };
 
-  const handleFieldChange = (fieldName: string, value: any) => {
+  const handleFieldChange = (fieldName: string, value: unknown) => {
     setFieldReviews(prev => prev.map(field =>
       field.fieldName === fieldName ? { ...field, value } : field
     ));
@@ -225,7 +225,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
     if (autoSaveEnabled) {
       const timer = setTimeout(() => {
         // 触发自动保存逻辑
-        console.log(`自动保存字段 ${fieldName}:`, value);
+        // Auto-save field value
       }, 1000);
       return () => clearTimeout(timer);
     }

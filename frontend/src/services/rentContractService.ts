@@ -250,7 +250,7 @@ class RentContractService {
   }
 
   // 导出相关方法
-  async exportContractsToExcel(filters?: any): Promise<Blob> {
+  async exportContractsToExcel(filters?: Record<string, unknown>): Promise<Blob> {
     const response = await apiClient.get(API_ENDPOINTS.RENT_CONTRACT.CONTRACTS_EXPORT, {
       params: filters,
       responseType: 'blob'
@@ -258,7 +258,7 @@ class RentContractService {
     return response as Blob;
   }
 
-  async exportLedgersToExcel(filters?: any): Promise<Blob> {
+  async exportLedgersToExcel(filters?: Record<string, unknown>): Promise<Blob> {
     const response = await apiClient.get(API_ENDPOINTS.RENT_CONTRACT.LEDGER_EXPORT, {
       params: filters,
       responseType: 'blob'

@@ -2,7 +2,7 @@
 
 import { CACHE } from './config'
 
-export interface CacheItem<T = any> {
+export interface CacheItem<T = unknown> {
   data: T
   timestamp: number
   ttl: number
@@ -35,7 +35,7 @@ export class ApiCacheManager {
   }
   
   // 生成缓存键
-  private generateKey(url: string, params?: any): string {
+  private generateKey(url: string, params?: Record<string, unknown>): string {
     const paramStr = params ? JSON.stringify(params) : ''
     return `${url}:${paramStr}`
   }
@@ -45,7 +45,7 @@ export class ApiCacheManager {
     url: string,
     data: T,
     options: CacheOptions = {},
-    params?: any
+    params?: Record<string, unknown>
   ): void {
     const key = this.generateKey(url, params)
     const ttl = options.ttl || CACHE.DEFAULT_TTL
@@ -71,7 +71,7 @@ export class ApiCacheManager {
   }
   
   // 获取缓存
-  get<T>(url: string, params?: any): T | null {
+  get<T>(url: string, params?: Record<string, unknown>): T | null {
     const key = this.generateKey(url, params)
     const cacheItem = this.cache.get(key)
     
@@ -89,7 +89,7 @@ export class ApiCacheManager {
   }
   
   // 检查缓存是否存在且未过期
-  has(url: string, params?: any): boolean {
+  has(url: string, params?: Record<string, unknown>): boolean {
     const key = this.generateKey(url, params)
     const cacheItem = this.cache.get(key)
     
@@ -106,7 +106,7 @@ export class ApiCacheManager {
   }
   
   // 删除缓存
-  delete(url: string, params?: any): boolean {
+  delete(url: string, params?: Record<string, unknown>): boolean {
     const key = this.generateKey(url, params)
     return this.cache.delete(key)
   }
@@ -196,9 +196,9 @@ export class ApiCacheManager {
   }
   
   // 预热缓存
-  async warmup(urls: Array<{ url: string; params?: any }>): Promise<void> {
+  async warmup(urls: Array<{ url: string; params?: Record<string, unknown> }>): Promise<void> {
     // 这里可以实现缓存预热逻辑
-    console.log('Cache warmup:', urls)
+    // Cache warmup
   }
 }
 
@@ -207,10 +207,10 @@ export const cacheManager = ApiCacheManager.getInstance()
 
 // 缓存装饰器
 export function cached(options: CacheOptions = {}) {
-  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+  return function (target: unknown, propertyKey: string, descriptor: PropertyDescriptor) {
     const originalMethod = descriptor.value
     
-    descriptor.value = async function (...args: any[]) {
+    descriptor.value = async function (...args: unknown[]) {
       const cacheKey = `${target.constructor.name}.${propertyKey}`
       const params = args.length > 0 ? args[0] : undefined
       
@@ -231,10 +231,10 @@ export function cached(options: CacheOptions = {}) {
 
 // 缓存失效装饰器
 export function invalidateCache(tags: string[]) {
-  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+  return function (target: unknown, propertyKey: string, descriptor: PropertyDescriptor) {
     const originalMethod = descriptor.value
     
-    descriptor.value = async function (...args: any[]) {
+    descriptor.value = async function (...args: unknown[]) {
       const result = await originalMethod.apply(this, args)
       
       // 执行成功后失效相关缓存

@@ -42,7 +42,7 @@ const TodoList: React.FC<TodoListProps> = ({ items, loading }) => {
   }
 
   const handleComplete = (id: string) => {
-    console.log('完成任务:', id)
+    // Task completed
   }
 
   if (!loading && items.length === 0) {

@@ -39,7 +39,7 @@ const UXProvider: React.FC<UXProviderProps> = ({
     }
 
     // 设置全局错误处理
-    const handleError = (error: Error, errorInfo?: any) => {
+    const handleError = (error: Error, errorInfo?: Record<string, unknown>) => {
       uxManager.handleError(error, errorInfo)
       
       // 调用自定义错误处理函数

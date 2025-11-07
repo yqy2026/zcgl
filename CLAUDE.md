@@ -7,39 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 变更记录 (Changelog)
 
-### 2025-11-05 - 系统架构深度分析更新
-- 🏗️ **架构重构**: 完整梳理前后端分离架构，25个API模块，70+前端组件深度分析
-- 📊 **数据模型**: 深度解析58字段资产管理模型，关联关系，计算字段逻辑
-- 🚀 **技术栈升级**: FastAPI + Python 3.12 + UV包管理，React 18 + TypeScript + Vite现代化构建
-- 🧪 **测试体系**: Jest + Testing Library前端测试，pytest后端测试，覆盖率报告完整
-- 🔧 **开发工具链**: ESLint + Prettier + ruff + mypy代码质量工具链完善
-- 📈 **性能优化**: Vite代码分割，智能路由监控，数据库连接池优化
-- 🛡️ **安全特性**: JWT认证，RBAC权限，输入验证，SQL注入防护
 
-### 2025-11-01 21:42:52 - 自适应架构初始化更新
-- 🚀 更新：模块结构图完善 - 新增性能监控、路由管理、PDF处理模块
-- 📊 分析：深度扫描完成 - 识别1800+文件，5个核心模块，25个API子模块
-- 🔧 优化：覆盖率统计 - 总体覆盖率4.2%，核心模块文档完整
-- 📦 新增：工具集分析 - PDF样本、开发工具、性能分析脚本
-- ✅ 验证：项目成熟度评估 - 生产就绪，智能路由、监控系统企业级实现
-- 🎯 新增：断点续跑建议 - 识别可进一步深挖的目录和模块
-
-### 2025-10-23 20:30:00 - 项目架构全面升级
-- 🚀 新增：智能路由管理系统 - 动态路由加载、性能监控、权限控制
-- 📊 新增：前端性能监控系统 - 路由性能追踪、缓存策略、用户体验指标
-- 🔧 新增：后端路由注册器 - 统一API管理、版本控制、中间件配置
-- 🛡️ 新增：权限装饰器系统 - 细粒度权限控制、动态权限验证
-- 📈 新增：系统监控API - 性能指标收集、健康检查、实时监控
-- 🎯 新增：智能预加载系统 - 基于用户行为预测的组件预加载
-- 🔍 新增：路由审计工具 - 路由使用分析、性能瓶颈识别
-- 📦 重构：API路径常量化 - 统一路径管理、避免硬编码
-- 🎨 优化：前端路由架构 - 模块化路由配置、懒加载优化
-- 🧪 新增：前端测试覆盖 - 组件测试、集成测试、性能测试
-- 📚 更新：项目文档完整同步 - 1800+文件扫描，25个API模块，70+组件文档化
-- 🧹 优化：项目清理完成 - 移除无效文件，保持项目整洁
-- ✅ 验证：文档覆盖率提升 - 从3.0%提升到4.2%，达到企业级文档标准
-
----
 
 ## 项目愿景
 
@@ -47,7 +15,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### 核心价值
 - **效率提升**: 合同录入时间从10-15分钟缩短至2-3分钟
-- **数据完整性**: 58字段全面资产信息管理，PDF智能识别准确率95%+
+- **数据完整性**: 全面资产信息管理，PDF智能识别准确率95%+
 - **权限控制**: 组织层级权限管理 + 动态权限分配 + 完整审计追踪
 - **智能决策**: 实时分析报表 + 出租率自动计算 + 财务指标监控
 
@@ -194,7 +162,7 @@ graph TD
 
 ## 核心数据模型
 
-### Asset 资产模型 (58字段)
+### Asset 资产模型 
 ```python
 class Asset(Base):
     """58字段资产模型 - 地产资产管理核心"""
@@ -315,19 +283,36 @@ curl http://localhost:5173                 # 前端应用状态
 ```bash
 # 后端开发工作流
 cd backend
+uv sync                              # 安装/同步依赖
+uv run python run_dev.py            # 开发模式启动 (端口 8002)
 uv run python -m pytest tests/ -v   # 运行测试套件
-uv run ruff check src/               # 代码检查
+uv run python -m pytest tests/test_assets.py -v  # 运行单个测试文件
+uv run python -m pytest --cov=src --cov-report=html  # 生成覆盖率报告
+uv run ruff check src/               # 代码风格检查
 uv run ruff format src/              # 代码格式化
 uv run mypy src/                     # 类型检查
-uv sync                              # 依赖同步
+uv run bandit -r src/                # 安全检查
 
 # 前端开发工作流
 cd frontend
-npm test                            # 运行测试
-npm run type-check                  # TypeScript检查
-npm run lint                       # ESLint检查
-npm run lint:fix                   # 自动修复lint问题
-npm run build                      # 生产构建
+npm install                          # 安装依赖
+npm run dev                          # 开发服务器 (端口 5173)
+npm test                            # 运行所有测试
+npm run test:watch                  # 监听模式运行测试
+npm run test:coverage              # 生成覆盖率报告
+npm run test:unit                   # 运行单元测试
+npm run test:integration            # 运行集成测试
+npm run type-check                  # TypeScript类型检查
+npm run lint                        # ESLint检查
+npm run lint:fix                    # 自动修复lint问题
+npm run build                       # 生产构建
+npm run preview                     # 预览生产构建
+
+# 数据库迁移
+cd backend
+uv run alembic revision --autogenerate -m "描述变更"  # 创建迁移
+uv run alembic upgrade head                              # 执行迁移
+uv run alembic downgrade -1                            # 回滚迁移
 ```
 
 ## 测试策略
@@ -404,7 +389,7 @@ npm run format                       # Prettier格式化
 
 ### 1. PDF智能导入系统
 - **多引擎处理**: pdfplumber + PyMuPDF + PaddleOCR
-- **智能字段识别**: 58字段自动映射，准确率95%+
+- **智能字段识别**: 合同字段自动映射，准确率95%+
 - **处理会话管理**: 支持大文件分步处理和进度追踪
 - **模板适配**: 支持多种合同模板的自定义识别
 
@@ -473,7 +458,9 @@ npm run format                       # Prettier格式化
 - **数据完整性**: 不使用模拟数据，确保数据真实性
 - **业务逻辑**: 保持58字段模型的完整性和一致性
 - **权限要求**: 严格遵循组织层级权限，不绕过权限检查
+- **类型安全**: 前端代码必须100%类型安全，禁止使用any类型
 - **性能标准**: 保持PDF处理95%+准确率，API响应<1秒
+- **代码质量**: 所有新增代码必须通过ESLint/ruff检查和类型检查
 
 ## 扩展指南
 
@@ -505,6 +492,6 @@ uv run alembic downgrade -1
 
 ---
 
-**系统状态**: 🟢 生产就绪，核心功能完整，PDF智能导入和58字段资产管理已达到企业级标准。
+**系统状态**: 
 
-**最后更新**: 2025-11-05 (系统架构深度分析更新)
+**最后更新**: 2025-11-06

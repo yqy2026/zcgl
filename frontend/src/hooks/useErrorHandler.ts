@@ -5,7 +5,7 @@ import SuccessNotification from '@/components/Feedback/SuccessNotification'
 interface ErrorInfo {
   code?: string | number
   message: string
-  details?: any
+  details?: Record<string, unknown>
   timestamp?: string
 }
 
@@ -25,7 +25,7 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}) => {
   const navigate = useNavigate()
 
   // 处理API错误
-  const handleApiError = useCallback((error: any) => {
+  const handleApiError = useCallback((error: { response?: { status: number; data?: Record<string, unknown> }; message?: string }) => {
     let errorInfo: ErrorInfo = {
       message: '未知错误',
       timestamp: new Date().toISOString(),
@@ -167,7 +167,7 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}) => {
   }, [showNotification, logErrors])
 
   // 处理文件上传错误
-  const handleUploadError = useCallback((error: any) => {
+  const handleUploadError = useCallback((error: { response?: { status: number }; message?: string }) => {
     let message = '文件上传失败'
 
     if (error?.response?.status === 413) {
@@ -202,7 +202,7 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}) => {
     maxRetries: number = 3,
     delay: number = 1000
   ): Promise<T> => {
-    let lastError: any
+    let lastError: unknown
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {

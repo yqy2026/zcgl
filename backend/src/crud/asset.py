@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from ..core.performance import cache_manager, cached, monitor_query
 from ..models.asset import Asset, AssetHistory
 from ..schemas.asset import AssetCreate, AssetUpdate
-from ..services.asset_calculator import AssetCalculator
+from ..services.asset.asset_calculator import AssetCalculator
 
 
 class SensitiveDataHandler:

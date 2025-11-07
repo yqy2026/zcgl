@@ -108,7 +108,7 @@ class OrganizationCRUD:
     def create(self, obj_in: OrganizationCreate) -> Organization:
         """创建组织"""
         # 创建组织对象
-        db_obj = Organization(**obj_in.dict())
+        db_obj = Organization(**obj_in.model_dump())
 
         # 设置层级和路径
         if obj_in.parent_id:

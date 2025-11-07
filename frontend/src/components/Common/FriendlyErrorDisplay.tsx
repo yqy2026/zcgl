@@ -16,7 +16,7 @@ interface FriendlyErrorDisplayProps {
     message?: string;
     status?: number;
     code?: string;
-    details?: any;
+    details?: unknown;
   };
   type?: 'network' | 'data' | 'server' | 'permission' | 'not-found';
   onRetry?: () => void;

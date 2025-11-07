@@ -21,7 +21,7 @@ interface ErrorInfo {
   severity: ErrorSeverity
   title: string
   message: string
-  details?: any
+  details?: unknown
   timestamp: Date
   stack?: string
   action?: {
@@ -34,9 +34,9 @@ interface ErrorInfo {
 
 interface ErrorContextType {
   showError: (error: Omit<ErrorInfo, 'id' | 'timestamp'>) => void
-  showWarning: (message: string, details?: any) => void
-  showSuccess: (message: string, details?: any) => void
-  showInfo: (message: string, details?: any) => void
+  showWarning: (message: string, details?: unknown) => void
+  showSuccess: (message: string, details?: unknown) => void
+  showInfo: (message: string, details?: unknown) => void
   clearError: (id: string) => void
   clearAllErrors: () => void
   retryError: (id: string) => void
@@ -103,7 +103,7 @@ export const SmartErrorHandler: React.FC<SmartErrorHandlerProps> = ({
     return errorInfo.id
   }, [maxErrors, autoHideDuration])
 
-  const showWarning = useCallback((message: string, details?: any) => {
+  const showWarning = useCallback((message: string, details?: unknown) => {
     showError({
       type: 'warning',
       severity: 'medium',
@@ -113,7 +113,7 @@ export const SmartErrorHandler: React.FC<SmartErrorHandlerProps> = ({
     })
   }, [showError])
 
-  const showSuccess = useCallback((message: string, details?: any) => {
+  const showSuccess = useCallback((message: string, details?: unknown) => {
     showError({
       type: 'success',
       severity: 'low',
@@ -123,7 +123,7 @@ export const SmartErrorHandler: React.FC<SmartErrorHandlerProps> = ({
     })
   }, [showError])
 
-  const showInfo = useCallback((message: string, details?: any) => {
+  const showInfo = useCallback((message: string, details?: unknown) => {
     showError({
       type: 'info',
       severity: 'low',

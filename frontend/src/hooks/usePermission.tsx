@@ -23,6 +23,15 @@ export interface UserPermissions {
   organizationId: string
 }
 
+export interface MenuItem {
+  key: string
+  label: string
+  icon?: React.ReactNode
+  path?: string
+  permission?: Permission
+  children?: MenuItem[]
+}
+
 const usePermission = () => {
   const [userPermissions, setUserPermissions] = useState<UserPermissions | null>(null)
   const [loading, setLoading] = useState(false)
@@ -126,7 +135,7 @@ const usePermission = () => {
   }, [hasAnyPermission])
 
   // 获取可访问的菜单项
-  const getAccessibleMenuItems = useCallback((menuItems: any[]) => {
+  const getAccessibleMenuItems = useCallback((menuItems: MenuItem[]) => {
     if (!userPermissions) return []
 
     return menuItems.filter(item => {

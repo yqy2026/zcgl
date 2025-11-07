@@ -147,7 +147,7 @@ class PerformanceBenchmark:
                 from paddleocr import PaddleOCR
                 import fitz
 
-                ocr = PaddleOCR(use_angle_cls=True, lang='ch')
+    ocr = PaddleOCR(use_textline_orientation=True, lang='ch')
                 doc = fitz.open(file_path)
 
                 all_text = ""

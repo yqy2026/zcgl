@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState } from "react";
 import {
   Card,
   Typography,
@@ -18,8 +18,8 @@ import {
   Switch,
   Form,
   InputNumber,
-  Select
-} from 'antd'
+  Select,
+} from "antd";
 import {
   UploadOutlined,
   DownloadOutlined,
@@ -28,243 +28,244 @@ import {
   ExclamationCircleOutlined,
   SettingOutlined,
   ThunderboltOutlined,
-  ClockCircleOutlined
-} from '@ant-design/icons'
-import type { UploadProps, UploadFile } from 'antd'
-import { api } from '../../services/api'
-import { STANDARD_SHEET_NAME, IMPORT_INSTRUCTIONS } from '../../config/excelConfig'
+  ClockCircleOutlined,
+} from "@ant-design/icons";
+import type { UploadProps, UploadFile } from "antd";
+import { api } from "../../services/api";
+import { STANDARD_SHEET_NAME, IMPORT_INSTRUCTIONS } from "../../config/excelConfig";
 
-const { Title, Text } = Typography
-const { Step } = Steps
-const { Option } = Select
+const { Title, Text } = Typography;
+const { Step } = Steps;
+const { Option } = Select;
 
 interface ImportResult {
-  success: number
-  failed: number
-  total: number
-  errors: string[]
-  message: string
-  processing_time?: number
-  filename?: string
+  success: number;
+  failed: number;
+  total: number;
+  errors: string[];
+  message: string;
+  processing_time?: number;
+  filename?: string;
   performance_metrics?: {
-    records_per_second: number
-    estimated_time_for_1000: number
-  }
+    records_per_second: number;
+    estimated_time_for_1000: number;
+  };
 }
 
 interface ImportConfig {
-  useOptimized: boolean
-  batchSize: number
-  skipErrors: boolean
-  timeout: number
+  useOptimized: boolean;
+  batchSize: number;
+  skipErrors: boolean;
+  timeout: number;
 }
 
 const OptimizedAssetImport: React.FC = () => {
-  const [currentStep, setCurrentStep] = useState(0)
-  const [fileList, setFileList] = useState<UploadFile[]>([])
-  const [uploading, setUploading] = useState(false)
-  const [importResult, setImportResult] = useState<ImportResult | null>(null)
-  const [progress, setProgress] = useState(0)
-  const [showConfig, setShowConfig] = useState(false)
+  const [currentStep, setCurrentStep] = useState(0);
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [showConfig, setShowConfig] = useState(false);
   const [config, setConfig] = useState<ImportConfig>({
     useOptimized: true,
     batchSize: 100,
     skipErrors: true,
-    timeout: 600 // 10分钟
-  })
+    timeout: 600, // 10分钟
+  });
 
   // 下载模板
   const handleDownloadTemplate = async () => {
     try {
-      const response = await api.get('/excel/template', {
-        responseType: 'blob'
-      })
+      const response = await api.get("/excel/template", {
+        responseType: "blob",
+      });
 
-      const blob = new Blob([response.data])
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = 'land_property_asset_template.xlsx'
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
+      const blob = new Blob([response.data]);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "land_property_asset_template.xlsx";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
 
-      message.success('模板下载成功')
+      message.success("模板下载成功");
     } catch (error) {
-      message.error('模板下载失败')
+      message.error("模板下载失败");
     }
-  }
+  };
 
   // 文件上传配置
   const uploadProps: UploadProps = {
     fileList,
     beforeUpload: (file) => {
-      const isExcel = file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
-                     file.type === 'application/vnd.ms-excel'
+      const isExcel =
+        file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+        file.type === "application/vnd.ms-excel";
 
       if (!isExcel) {
-        message.error('只能上传Excel文件(.xlsx, .xls)')
-        return false
+        message.error("只能上传Excel文件(.xlsx, .xls)");
+        return false;
       }
 
-      const isLt50M = file.size / 1024 / 1024 < 50
+      const isLt50M = file.size / 1024 / 1024 < 50;
       if (!isLt50M) {
-        message.error('文件大小不能超过50MB')
-        return false
+        message.error("文件大小不能超过50MB");
+        return false;
       }
 
-      setFileList([file])
-      setCurrentStep(1)
-      return false
+      setFileList([file]);
+      setCurrentStep(1);
+      return false;
     },
     onRemove: () => {
-      setFileList([])
-      setCurrentStep(0)
-      setImportResult(null)
+      setFileList([]);
+      setCurrentStep(0);
+      setImportResult(null);
     },
     maxCount: 1,
-  }
+  };
 
   // 模拟进度条
   const simulateProgress = () => {
-    setProgress(0)
+    setProgress(0);
     const interval = setInterval(() => {
-      setProgress(prev => {
+      setProgress((prev) => {
         if (prev >= 95) {
-          clearInterval(interval)
-          return 95
+          clearInterval(interval);
+          return 95;
         }
-        return prev + Math.random() * 10
-      })
-    }, 500)
-    return interval
-  }
+        return prev + Math.random() * 10;
+      });
+    }, 500);
+    return interval;
+  };
 
   // 执行导入
   const handleImport = async () => {
     if (fileList.length === 0) {
-      message.error('请先选择要导入的文件')
-      return
+      message.error("请先选择要导入的文件");
+      return;
     }
 
-    setUploading(true)
-    const progressInterval = simulateProgress()
+    setUploading(true);
+    const progressInterval = simulateProgress();
 
     try {
-      const formData = new FormData()
-      formData.append('file', fileList[0] as any)
+      const formData = new FormData();
+      formData.append("file", fileList[0] as File);
 
-      console.log('=== 优化导入开始 ===')
-      console.log('配置:', config)
-      console.log('文件名:', fileList[0].name)
-      console.log('文件大小:', fileList[0].size)
+      // Start enhanced import process
+      setImporting(true);
 
-      const endpoint = config.useOptimized ? '/excel/import/optimized' : '/excel/import'
+      const endpoint = config.useOptimized ? "/excel/import/optimized" : "/excel/import";
 
       const response = await api.post(endpoint, formData, {
         params: {
           sheet_name: STANDARD_SHEET_NAME,
-          skip_errors: config.skipErrors
+          skip_errors: config.skipErrors,
         },
-        timeout: config.timeout * 1000
-      })
+        timeout: config.timeout * 1000,
+      });
 
-      clearInterval(progressInterval)
-      setProgress(100)
+      clearInterval(progressInterval);
+      setProgress(100);
 
-      const result = response.data
-      console.log('=== 导入结果 ===')
-      console.log('响应数据:', result)
+      const result = response.data;
+      // Import completed successfully
+      // console.log('=== 导入结果 ===')
+      // console.log('响应数据:', result)
 
-      setImportResult(result)
-      setCurrentStep(2)
+      setImportResult(result);
+      setCurrentStep(2);
 
       // 显示性能信息
       if (result.processing_time) {
-        message.success(`🎉 导入完成！用时 ${result.processing_time} 秒`)
+        message.success(`🎉 导入完成！用时 ${result.processing_time} 秒`);
       } else {
-        message.success(`🎉 导入完成！成功导入 ${result.success} 条记录`)
+        message.success(`🎉 导入完成！成功导入 ${result.success} 条记录`);
       }
-
-    } catch (error: any) {
-      clearInterval(progressInterval)
-      console.error('导入错误:', error)
-      console.error('错误响应:', error.response?.data)
+    } catch (error: unknown) {
+      clearInterval(progressInterval);
+      console.error("导入错误:", error);
+      console.error("错误响应:", error.response?.data);
 
       const errorResult = error.response?.data || {
         success: 0,
         failed: 0,
         total: 0,
-        errors: [error.message || '网络错误'],
+        errors: [error.message || "网络错误"],
         processing_time: 0,
-        filename: fileList[0]?.name
-      }
+        filename: fileList[0]?.name,
+      };
 
-      setImportResult(errorResult)
-      setCurrentStep(2)
-      message.error(`❌ 导入失败: ${errorResult.errors?.[0] || '未知错误'}`)
+      setImportResult(errorResult);
+      setCurrentStep(2);
+      message.error(`❌ 导入失败: ${errorResult.errors?.[0] || "未知错误"}`);
     } finally {
-      setUploading(false)
+      setUploading(false);
     }
-  }
+  };
 
   // 重新开始
   const handleReset = () => {
-    setCurrentStep(0)
-    setFileList([])
-    setImportResult(null)
-    setProgress(0)
-  }
+    setCurrentStep(0);
+    setFileList([]);
+    setImportResult(null);
+    setProgress(0);
+  };
 
   // 错误信息表格列
   const errorColumns = [
     {
-      title: '序号',
-      dataIndex: 'index',
-      key: 'index',
+      title: "序号",
+      dataIndex: "index",
+      key: "index",
       width: 80,
-      render: (_: any, __: any, index: number) => index + 1,
+      render: (_: unknown, __: unknown, index: number) => index + 1,
     },
     {
-      title: '错误信息',
-      dataIndex: 'error',
-      key: 'error',
+      title: "错误信息",
+      dataIndex: "error",
+      key: "error",
       ellipsis: true,
     },
-  ]
+  ];
 
-  const errorData = importResult?.errors?.map((error, index) => ({
-    key: index,
-    error,
-  })) || []
+  const errorData =
+    importResult?.errors?.map((error, index) => ({
+      key: index,
+      error,
+    })) || [];
 
   return (
-    <div style={{ padding: '24px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+    <div style={{ padding: "24px" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "24px",
+        }}
+      >
         <Title level={2}>
-          <FileExcelOutlined />
-          {' '}
-          数据导入
+          <FileExcelOutlined /> 数据导入
         </Title>
-        <Button
-          type="dashed"
-          icon={<SettingOutlined />}
-          onClick={() => setShowConfig(!showConfig)}
-        >
-          {showConfig ? '隐藏配置' : '显示配置'}
+        <Button type="dashed" icon={<SettingOutlined />} onClick={() => setShowConfig(!showConfig)}>
+          {showConfig ? "隐藏配置" : "显示配置"}
         </Button>
       </div>
 
       {/* 配置面板 */}
       {showConfig && (
-        <Card title="导入配置" size="small" style={{ marginBottom: '24px' }}>
+        <Card title="导入配置" size="small" style={{ marginBottom: "24px" }}>
           <Row gutter={[16, 16]}>
             <Col xs={24} sm={12} md={6}>
               <Form.Item label="使用优化导入">
                 <Switch
                   checked={config.useOptimized}
-                  onChange={(checked) => setConfig(prev => ({ ...prev, useOptimized: checked }))}
+                  onChange={(checked) => setConfig((prev) => ({ ...prev, useOptimized: checked }))}
                 />
               </Form.Item>
             </Col>
@@ -274,7 +275,7 @@ const OptimizedAssetImport: React.FC = () => {
                   min={60}
                   max={1800}
                   value={config.timeout}
-                  onChange={(value) => setConfig(prev => ({ ...prev, timeout: value || 600 }))}
+                  onChange={(value) => setConfig((prev) => ({ ...prev, timeout: value || 600 }))}
                 />
               </Form.Item>
             </Col>
@@ -282,7 +283,7 @@ const OptimizedAssetImport: React.FC = () => {
               <Form.Item label="跳过错误">
                 <Switch
                   checked={config.skipErrors}
-                  onChange={(checked) => setConfig(prev => ({ ...prev, skipErrors: checked }))}
+                  onChange={(checked) => setConfig((prev) => ({ ...prev, skipErrors: checked }))}
                 />
               </Form.Item>
             </Col>
@@ -290,7 +291,7 @@ const OptimizedAssetImport: React.FC = () => {
               <Form.Item label="批量大小">
                 <Select
                   value={config.batchSize}
-                  onChange={(value) => setConfig(prev => ({ ...prev, batchSize: value || 100 }))}
+                  onChange={(value) => setConfig((prev) => ({ ...prev, batchSize: value || 100 }))}
                 >
                   <Option value={50}>50</Option>
                   <Option value={100}>100</Option>
@@ -304,7 +305,7 @@ const OptimizedAssetImport: React.FC = () => {
       )}
 
       <Card>
-        <Steps current={currentStep} style={{ marginBottom: '32px' }}>
+        <Steps current={currentStep} style={{ marginBottom: "32px" }}>
           <Step title="选择文件" description="上传Excel文件" />
           <Step title="执行导入" description="处理数据" />
           <Step title="查看结果" description="导入完成" />
@@ -322,19 +323,21 @@ const OptimizedAssetImport: React.FC = () => {
                   <p>• 实时导入进度反馈</p>
                   <p>• 支持大文件导入 (最大50MB)</p>
                   {IMPORT_INSTRUCTIONS.map((instruction, index) => (
-                    <p key={index}>{index + 1}. {instruction}</p>
+                    <p key={index}>
+                      {index + 1}. {instruction}
+                    </p>
                   ))}
                 </div>
               }
               type="info"
               showIcon
-              style={{ marginBottom: '24px' }}
+              style={{ marginBottom: "24px" }}
             />
 
             <Row gutter={[16, 16]}>
               <Col xs={24} sm={12}>
                 <Card size="small" title="第一步：下载模板">
-                  <Space direction="vertical" style={{ width: '100%' }}>
+                  <Space direction="vertical" style={{ width: "100%" }}>
                     <Text>下载标准的Excel导入模板</Text>
                     <Button
                       type="primary"
@@ -350,11 +353,11 @@ const OptimizedAssetImport: React.FC = () => {
 
               <Col xs={24} sm={12}>
                 <Card size="small" title="第二步：上传文件">
-                  <Space direction="vertical" style={{ width: '100%' }}>
+                  <Space direction="vertical" style={{ width: "100%" }}>
                     <Text>选择填写好的Excel文件</Text>
                     <Upload.Dragger {...uploadProps}>
                       <p className="ant-upload-drag-icon">
-                        <FileExcelOutlined style={{ fontSize: '48px', color: '#1890ff' }} />
+                        <FileExcelOutlined style={{ fontSize: "48px", color: "#1890ff" }} />
                       </p>
                       <p className="ant-upload-text">点击或拖拽文件到此区域上传</p>
                       <p className="ant-upload-hint">
@@ -370,8 +373,10 @@ const OptimizedAssetImport: React.FC = () => {
 
         {/* 步骤1: 执行导入 */}
         {currentStep === 1 && (
-          <div style={{ textAlign: 'center' }}>
-            <FileExcelOutlined style={{ fontSize: '64px', color: '#52c41a', marginBottom: '16px' }} />
+          <div style={{ textAlign: "center" }}>
+            <FileExcelOutlined
+              style={{ fontSize: "64px", color: "#52c41a", marginBottom: "16px" }}
+            />
             <Title level={4}>文件已选择</Title>
             <Text>文件名：{fileList[0]?.name}</Text>
             <br />
@@ -380,20 +385,16 @@ const OptimizedAssetImport: React.FC = () => {
             </Text>
 
             {uploading && (
-              <div style={{ marginTop: '24px' }}>
+              <div style={{ marginTop: "24px" }}>
                 <Progress percent={Math.round(progress)} status="active" />
-                <Text type="secondary">
-                  导入中...
-                </Text>
+                <Text type="secondary">导入中...</Text>
               </div>
             )}
 
             <Divider />
 
             <Space size="large">
-              <Button onClick={() => setCurrentStep(0)}>
-                重新选择
-              </Button>
+              <Button onClick={() => setCurrentStep(0)}>重新选择</Button>
               <Button
                 type="primary"
                 icon={<UploadOutlined />}
@@ -401,7 +402,7 @@ const OptimizedAssetImport: React.FC = () => {
                 loading={uploading}
                 size="large"
               >
-                {uploading ? '导入中...' : '开始导入'}
+                {uploading ? "导入中..." : "开始导入"}
               </Button>
             </Space>
           </div>
@@ -414,50 +415,64 @@ const OptimizedAssetImport: React.FC = () => {
             <Card
               size="small"
               style={{
-                marginBottom: '24px',
-                backgroundColor: importResult.success > 0 ? '#f6ffed' :
-                               importResult.failed > 0 ? '#fff2f0' : '#f0f2f5',
-                border: importResult.success > 0 ? '1px solid #b7eb8f' :
-                         importResult.failed > 0 ? '1px solid #ffccc7' : '1px solid #d9d9d9'
+                marginBottom: "24px",
+                backgroundColor:
+                  importResult.success > 0
+                    ? "#f6ffed"
+                    : importResult.failed > 0
+                      ? "#fff2f0"
+                      : "#f0f2f5",
+                border:
+                  importResult.success > 0
+                    ? "1px solid #b7eb8f"
+                    : importResult.failed > 0
+                      ? "1px solid #ffccc7"
+                      : "1px solid #d9d9d9",
               }}
             >
-              <div style={{ textAlign: 'center', padding: '16px' }}>
+              <div style={{ textAlign: "center", padding: "16px" }}>
                 {importResult.success > 0 && importResult.failed === 0 ? (
-                  <CheckCircleOutlined style={{ fontSize: '64px', color: '#52c41a' }} />
+                  <CheckCircleOutlined style={{ fontSize: "64px", color: "#52c41a" }} />
                 ) : importResult.success > 0 && importResult.failed > 0 ? (
-                  <ExclamationCircleOutlined style={{ fontSize: '64px', color: '#faad14' }} />
+                  <ExclamationCircleOutlined style={{ fontSize: "64px", color: "#faad14" }} />
                 ) : (
-                  <ExclamationCircleOutlined style={{ fontSize: '64px', color: '#ff4d4f' }} />
+                  <ExclamationCircleOutlined style={{ fontSize: "64px", color: "#ff4d4f" }} />
                 )}
 
-                <Title level={3} style={{ marginTop: '8px' }}>
-                  {importResult.success > 0 && importResult.failed === 0 ? '🎉 导入成功！' :
-                   importResult.success > 0 && importResult.failed > 0 ? '⚠️ 部分成功' :
-                   importResult.failed > 0 ? '❌ 导入失败' : '📄 导入完成'}
+                <Title level={3} style={{ marginTop: "8px" }}>
+                  {importResult.success > 0 && importResult.failed === 0
+                    ? "🎉 导入成功！"
+                    : importResult.success > 0 && importResult.failed > 0
+                      ? "⚠️ 部分成功"
+                      : importResult.failed > 0
+                        ? "❌ 导入失败"
+                        : "📄 导入完成"}
                 </Title>
 
-                <Text type="secondary" style={{ fontSize: '16px' }}>
+                <Text type="secondary" style={{ fontSize: "16px" }}>
                   {importResult.processing_time && (
                     <span>处理时间: {importResult.processing_time}秒 | </span>
                   )}
-                  {importResult.success > 0 && importResult.failed === 0 ? (
-                    `成功导入 ${importResult.success} 条资产记录`
-                  ) : importResult.success > 0 && importResult.failed > 0 ? (
-                    `成功 ${importResult.success} 条，失败 ${importResult.failed} 条，总计 ${importResult.total} 条`
-                  ) : importResult.failed > 0 ? (
-                    `${importResult.failed} 条记录导入失败`
-                  ) : (
-                    '没有数据被导入，请检查文件格式和内容'
-                  )}
+                  {importResult.success > 0 && importResult.failed === 0
+                    ? `成功导入 ${importResult.success} 条资产记录`
+                    : importResult.success > 0 && importResult.failed > 0
+                      ? `成功 ${importResult.success} 条，失败 ${importResult.failed} 条，总计 ${importResult.total} 条`
+                      : importResult.failed > 0
+                        ? `${importResult.failed} 条记录导入失败`
+                        : "没有数据被导入，请检查文件格式和内容"}
                 </Text>
 
                 {/* 性能指标 */}
                 {importResult.performance_metrics && (
-                  <div style={{ marginTop: '16px' }}>
+                  <div style={{ marginTop: "16px" }}>
                     <Text type="secondary">
                       性能指标: {importResult.performance_metrics.records_per_second} 记录/秒
                       {importResult.performance_metrics.estimated_time_for_1000 > 0 && (
-                        <span> | 预估1000条记录需 {importResult.performance_metrics.estimated_time_for_1000} 秒</span>
+                        <span>
+                          {" "}
+                          | 预估1000条记录需{" "}
+                          {importResult.performance_metrics.estimated_time_for_1000} 秒
+                        </span>
                       )}
                     </Text>
                   </div>
@@ -466,13 +481,13 @@ const OptimizedAssetImport: React.FC = () => {
             </Card>
 
             {/* 详细统计 */}
-            <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+            <Row gutter={[16, 16]} style={{ marginBottom: "24px" }}>
               <Col xs={24} sm={8}>
                 <Card size="small" bordered={false}>
                   <Statistic
                     title="成功记录"
                     value={importResult.success}
-                    valueStyle={{ color: '#3f8600' }}
+                    valueStyle={{ color: "#3f8600" }}
                   />
                 </Card>
               </Col>
@@ -481,7 +496,7 @@ const OptimizedAssetImport: React.FC = () => {
                   <Statistic
                     title="失败记录"
                     value={importResult.failed}
-                    valueStyle={{ color: importResult.failed > 0 ? '#cf1322' : '#d9d9d9' }}
+                    valueStyle={{ color: importResult.failed > 0 ? "#cf1322" : "#d9d9d9" }}
                   />
                 </Card>
               </Col>
@@ -490,7 +505,7 @@ const OptimizedAssetImport: React.FC = () => {
                   <Statistic
                     title="总计"
                     value={importResult.total}
-                    valueStyle={{ color: '#1890ff' }}
+                    valueStyle={{ color: "#1890ff" }}
                   />
                 </Card>
               </Col>
@@ -501,13 +516,16 @@ const OptimizedAssetImport: React.FC = () => {
               <Card
                 title={`错误详情 (${importResult.errors.length} 条)`}
                 size="small"
-                style={{ marginBottom: '16px' }}
+                style={{ marginBottom: "16px" }}
                 extra={
-                  <Button type="link" onClick={() => {
-                    const errorText = importResult.errors.join('\\n')
-                    navigator.clipboard.writeText(errorText)
-                    message.success('错误信息已复制到剪贴板')
-                  }}>
+                  <Button
+                    type="link"
+                    onClick={() => {
+                      const errorText = importResult.errors.join("\\n");
+                      navigator.clipboard.writeText(errorText);
+                      message.success("错误信息已复制到剪贴板");
+                    }}
+                  >
                     复制错误信息
                   </Button>
                 }
@@ -522,12 +540,10 @@ const OptimizedAssetImport: React.FC = () => {
               </Card>
             )}
 
-            <div style={{ textAlign: 'center', marginTop: '24px' }}>
+            <div style={{ textAlign: "center", marginTop: "24px" }}>
               <Space size="large">
-                <Button onClick={handleReset}>
-                  重新导入
-                </Button>
-                <Button type="primary" onClick={() => window.location.href = '/assets'}>
+                <Button onClick={handleReset}>重新导入</Button>
+                <Button type="primary" onClick={() => (window.location.href = "/assets")}>
                   查看资产列表
                 </Button>
               </Space>
@@ -536,7 +552,7 @@ const OptimizedAssetImport: React.FC = () => {
         )}
       </Card>
     </div>
-  )
-}
+  );
+};
 
-export default OptimizedAssetImport
+export default OptimizedAssetImport;

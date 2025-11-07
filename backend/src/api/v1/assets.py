@@ -502,7 +502,7 @@ async def test_statistics(
     简单的统计测试API
     """
     try:
-        print("[DEBUG] 测试统计API开始")
+        logger.debug("测试统计API开始")
 
         # 简单测试查询
         total_assets = db.query(Asset).count()
@@ -536,7 +536,7 @@ async def get_asset_statistics(
 
         # 添加调试信息
         print(
-            f"[DEBUG] 开始执行资产统计查询，"
+            f"开始执行资产统计查询，"
             f"用户: {current_user.username if current_user else 'unknown'}"
         )
 
@@ -549,7 +549,7 @@ async def get_asset_statistics(
 
         # 总资产数 - 直接查询避免缓存问题
         total_assets = db.query(Asset).count()
-        print(f"[DEBUG] 总资产数: {total_assets}")
+        logger.debug(f"总资产数: {total_assets}")
 
         # 按确权状态统计 - 使用精确匹配
         confirmed_count = (
@@ -766,34 +766,42 @@ async def upload_asset_attachments(
         if not asset:
             raise ResourceNotFoundError("Asset", asset_id)
 
-        # 创建附件目录
-        upload_dir = f"uploads/attachments/{asset_id}"
-        os.makedirs(upload_dir, exist_ok=True)
+        # 创建附件目录 - 安全处理
+        from ..utils.file_security import (
+            create_safe_upload_directory,
+            generate_safe_filename,
+            validate_file_extension,
+        )
+
+        upload_dir = create_safe_upload_directory("uploads/attachments", asset_id)
 
         success_files = []
         failed_files = []
 
         for file in files:
             try:
-                # 验证文件类型
-                if not file.filename.lower().endswith(".pdf"):
-                    failed_files.append(f"{file.filename}: 仅支持PDF格式")
-                    continue
-
-                # 验证文件大小（10MB限制）
-                max_size = 10 * 1024 * 1024  # 10MB
+                # 综合验证文件安全性
                 file.file.seek(0, 2)  # 移动到文件末尾
                 file_size = file.file.tell()
                 file.file.seek(0)  # 重置到文件开头
 
-                if file_size > max_size:
-                    failed_files.append(f"{file.filename}: 文件大小超过10MB限制")
+                validation_result = validate_upload_file(
+                    filename=file.filename,
+                    content_type=file.content_type,
+                    file_size=file_size,
+                    allowed_extensions=["pdf"],
+                    max_size=10 * 1024 * 1024,  # 10MB
+                )
+
+                if not validation_result["valid"]:
+                    failed_files.append(
+                        f"{file.filename}: {', '.join(validation_result['errors'])}"
+                    )
                     continue
 
-                # 生成唯一文件名
-                file_extension = os.path.splitext(file.filename)[1]
-                unique_filename = f"{uuid.uuid4()}{file_extension}"
-                file_path = os.path.join(upload_dir, unique_filename)
+                # 生成安全的唯一文件名
+                unique_filename = validation_result["safe_filename"]
+                file_path = upload_dir / unique_filename
 
                 # 保存文件
                 with open(file_path, "wb") as buffer:

@@ -124,7 +124,7 @@ export const useUserExperience = (options: UseUserExperienceOptions = {}) => {
   }, [])
 
   // 防抖函数
-  const debounce = useCallback(<T extends (...args: any[]) => any>(
+  const debounce = useCallback(<T extends (...args: unknown[]) => ReturnType<T>>(
     func: T,
     delay: number
   ): ((...args: Parameters<T>) => void) => {
@@ -137,7 +137,7 @@ export const useUserExperience = (options: UseUserExperienceOptions = {}) => {
   }, [])
 
   // 节流函数
-  const throttle = useCallback(<T extends (...args: any[]) => any>(
+  const throttle = useCallback(<T extends (...args: unknown[]) => ReturnType<T>>(
     func: T,
     delay: number
   ): ((...args: Parameters<T>) => void) => {

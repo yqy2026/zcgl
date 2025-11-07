@@ -2,6 +2,23 @@ import React, { useState, useCallback } from 'react'
 import { Form, Input, InputNumber, Select, Button, Card, message } from 'antd'
 import { CheckCircleOutlined, CloseOutlined } from '@ant-design/icons'
 
+// 表单数据类型
+export interface FormData {
+  [key: string]: unknown
+}
+
+// 验证函数类型
+export type ValidationFunction = (value: unknown) => boolean
+
+// 验证规则接口
+export interface ValidationRule {
+  required?: boolean
+  min?: number
+  max?: number
+  custom?: ValidationFunction
+  message: string
+}
+
 // 字段配置接口
 export interface FieldConfig {
   name: string
@@ -10,25 +27,27 @@ export interface FieldConfig {
   placeholder?: string
   required?: boolean
   maxLength?: number
-  validation?: Array<{
-    required?: boolean
-    min?: number
-    max?: number
-    custom?: (value: any) => boolean
-    message: string
-  }>
+  validation?: ValidationRule[]
   options?: Array<{ label: string; value: string | number }>
   suffix?: string
   help?: string
 }
 
+// 按钮属性接口
+export interface ButtonProps {
+  icon?: React.ReactNode
+  size?: 'small' | 'middle' | 'large'
+  type?: 'primary' | 'default' | 'dashed' | 'link' | 'text'
+  [key: string]: unknown
+}
+
 // 表单优化器属性
 interface SmartFormOptimizerProps {
   fields: FieldConfig[]
-  onSubmit: (data: any) => void
-  initialValues?: Record<string, any>
+  onSubmit: (data: FormData) => void | Promise<void>
+  initialValues?: FormData
   submitText?: string
-  submitButtonProps?: any
+  submitButtonProps?: ButtonProps
   disabled?: boolean
   loading?: boolean
   layout?: 'horizontal' | 'vertical' | 'inline'
@@ -52,7 +71,7 @@ const SmartFormOptimizer: React.FC<SmartFormOptimizerProps> = ({
   const [form] = Form.useForm()
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  const handleSubmit = useCallback(async (values: any) => {
+  const handleSubmit = useCallback(async (values: Record<string, unknown>) => {
     try {
       const newErrors: Record<string, string> = {}
 
@@ -215,7 +234,7 @@ const SmartFormOptimizer: React.FC<SmartFormOptimizerProps> = ({
 
 // 使用示例组件
 interface SmartFormExampleProps {
-  onFormSubmit: (data: any) => void
+  onFormSubmit: (data: FormData) => void
 }
 
 const SmartFormExample: React.FC<SmartFormExampleProps> = ({ onFormSubmit }) => {

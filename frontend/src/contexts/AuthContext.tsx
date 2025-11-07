@@ -1,8 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { message } from 'antd'
-import { User, LoginResponse, TokenResponse } from '../types/auth'
-import { api } from '../services/api'
-import { AUTH_API } from '../constants/api'
+import { User } from '../types/auth'
+import { AuthService } from '../services/authService'
 
 interface AuthContextType {
   user: User | null
@@ -54,27 +53,20 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(true)
       setError(null)
 
-      // 使用统一的API路径常量进行登录
-      const response = await api.post(AUTH_API.LOGIN, {
-        username,
-        password,
-      })
+      // 调用 AuthService 的登录方法
+      const response = await AuthService.login({ username, password })
 
-      const data = response.data
-
-      if (data && data.user && data.tokens) {
-        setUser(data.user)
-        localStorage.setItem('auth_token', data.tokens.access_token)
-        localStorage.setItem('user', JSON.stringify(data.user))
+      if (response.success && response.data) {
+        setUser(response.data.user)
+        message.success(response.message || '登录成功')
       } else {
         throw new Error('登录响应格式错误')
       }
-
-      message.success('登录成功')
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '登录失败'
       setError(errorMessage)
       message.error(errorMessage)
+      throw err
     } finally {
       setLoading(false)
     }
@@ -84,17 +76,10 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setLoading(true)
 
-      // 使用统一的API路径常量进行登出
-      try {
-        await api.post(AUTH_API.LOGOUT)
-      } catch (err) {
-        console.warn('Logout API call failed:', err)
-      }
-
-      localStorage.removeItem('auth_token')
-      localStorage.removeItem('user')
+      // 调用 AuthService 的登出方法
+      await AuthService.logout()
+      
       setUser(null)
-
       message.success('已退出登录')
     } catch (err) {
       console.error('Logout error:', err)

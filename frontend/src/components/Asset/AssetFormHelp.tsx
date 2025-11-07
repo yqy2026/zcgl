@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Card, Collapse, Typography, Tag, Space, Button, Modal } from 'antd'
+import { Collapse, Typography, Tag, Space, Button, Modal } from 'antd'
 import {
   QuestionCircleOutlined,
   InfoCircleOutlined,
@@ -7,7 +7,7 @@ import {
   CheckCircleOutlined,
 } from '@ant-design/icons'
 
-const { Panel } = Collapse
+const { Panel: CollapsePanel } = Collapse
 const { Text, Paragraph } = Typography
 
 interface AssetFormHelpProps {

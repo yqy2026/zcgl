@@ -227,7 +227,7 @@ const UserManagementPage: React.FC = () => {
     setDetailDrawerVisible(true)
   }
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: CreateUserData | UpdateUserData) => {
     try {
       if (editingUser) {
         // 模拟更新API调用

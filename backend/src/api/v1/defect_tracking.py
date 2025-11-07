@@ -371,9 +371,34 @@ async def get_defects(
         query += " AND assigned_to = ?"
         params.append(assigned_to)
 
-    # 排序
-    if sort_by in ["created_at", "updated_at", "severity", "priority"]:
-        query += f" ORDER BY {sort_by} {sort_order.upper()}"
+    # 排序 - 防止SQL注入
+    if sort_by in [
+        "created_at",
+        "updated_at",
+        "severity",
+        "priority",
+    ] and sort_order.upper() in ["ASC", "DESC"]:
+        # 使用参数化排序，防止SQL注入
+        if sort_by == "created_at":
+            if sort_order.upper() == "ASC":
+                query += " ORDER BY created_at ASC"
+            else:
+                query += " ORDER BY created_at DESC"
+        elif sort_by == "updated_at":
+            if sort_order.upper() == "ASC":
+                query += " ORDER BY updated_at ASC"
+            else:
+                query += " ORDER BY updated_at DESC"
+        elif sort_by == "severity":
+            if sort_order.upper() == "ASC":
+                query += " ORDER BY severity ASC"
+            else:
+                query += " ORDER BY severity DESC"
+        elif sort_by == "priority":
+            if sort_order.upper() == "ASC":
+                query += " ORDER BY priority ASC"
+            else:
+                query += " ORDER BY priority DESC"
     else:
         query += " ORDER BY created_at DESC"
 
@@ -520,7 +545,33 @@ async def update_defect(defect_id: str, updates: dict[str, Any]):
         # 添加defect_id参数
         update_params.append(defect_id)
 
-        # 执行更新
+        # 执行更新 - 使用安全的参数化查询
+        # 字段名已经通过白名单验证，这里构建的查询是安全的
+        allowed_fields = {
+            "title",
+            "description",
+            "severity",
+            "priority",
+            "status",
+            "category",
+            "module",
+            "assigned_to",
+            "environment",
+            "root_cause",
+            "resolution",
+            "fix_version",
+            "updated_at",
+        }
+
+        # 验证所有字段都在允许的列表中
+        for field_part in update_fields:
+            field_name = field_part.split(" = ")[0]
+            if field_name not in allowed_fields:
+                conn.close()
+                raise HTTPException(
+                    status_code=400, detail=f"不允许的字段: {field_name}"
+                )
+
         update_query = (
             f"UPDATE defect_reports SET {', '.join(update_fields)} WHERE defect_id = ?"
         )

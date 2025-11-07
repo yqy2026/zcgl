@@ -1,16 +1,12 @@
 import React from 'react'
-import { Navigate } from 'react-router-dom'
 
-// 路由定义 - 只包含已存在的页面文件
-export const routes = [
-  {
-    path: '/login',
-    element: React.lazy(() => import('../pages/LoginPage'))
-  },
-  {
-    path: '/',
-    element: React.lazy(() => import('../pages/LoginPage'))
-  },
+/**
+ * 受保护的路由配置
+ * 这些路由需要用户认证后才能访问,并会被 AppLayout 包装
+ * 注意: 登录页面路由不应该在此定义,应该在 App.tsx 中作为公共路由处理
+ */
+export const protectedRoutes = [
+  // 仪表板 - 首页
   {
     path: '/dashboard',
     element: React.lazy(() => import('../pages/Dashboard/DashboardPage'))
@@ -98,6 +94,10 @@ export const routes = [
   {
     path: '/system/logs',
     element: React.lazy(() => import('../pages/System/OperationLogPage'))
+  },
+  {
+    path: '/system/templates',
+    element: React.lazy(() => import('../pages/System/TemplateManagementPage'))
   },
   {
     path: '/system/settings',

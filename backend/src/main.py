@@ -3,29 +3,90 @@
 """
 
 import logging
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 # 导入API路由
-from .api.v1 import api_router
-from .api.v1.pdf_import_unified import router as pdf_import_router
+from .core.router_registry import register_api_routes, route_registry
+from .services.optimized_ocr_service import OptimizedOCRService
+from .services.providers.ocr_provider import get_ocr_service, set_ocr_service
+
+try:
+    from .services.adapters.paddle_ocr_engine_adapter import PaddleOCREngineAdapter
+except Exception:
+    PaddleOCREngineAdapter = None  # type: ignore
+from .core.config import settings
 from .core.config_manager import get_config, initialize_config
-from .core.error_handler import create_error_handlers
 from .core.exception_handler import setup_exception_handlers
+from .core.jwt_security import validate_current_jwt_config
 from .core.logging_security import setup_logging_security
+from .core.response_handler import success_response
 from .database import (
     create_tables,
     get_database_status,
     initialize_enhanced_database_if_available,
 )
 from .middleware.error_recovery_middleware import ErrorRecoveryMiddleware
-from .middleware.request_logging import create_request_logging_middleware
+from .middleware.request_logging import RequestLoggingMiddleware
 from .middleware.security_middleware import setup_security_middleware
 
 # 设置日志
 logger = logging.getLogger(__name__)
+
+
+# ===== 应用生命周期管理 =====
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """应用生命周期管理器"""
+    # 启动时执行
+    import os
+
+    # 🔐 安全配置检查
+    logger.info("🔐 开始安全配置检查...")
+    settings.log_security_status()
+
+    # 🔐 JWT安全专项检查
+    logger.info("🔐 JWT安全配置检查...")
+    jwt_config_result = validate_current_jwt_config()
+
+    if not jwt_config_result["config_valid"]:
+        logger.error("🚨 JWT配置存在严重安全问题:")
+        for issue in jwt_config_result["issues"]:
+            logger.error(f"  ❌ {issue}")
+    else:
+        logger.info("✅ JWT配置安全检查通过")
+
+    if jwt_config_result.get("recommendations"):
+        logger.info("💡 JWT安全建议:")
+        for rec in jwt_config_result["recommendations"]:
+            logger.info(f"  💡 {rec}")
+
+    provider = os.getenv("OCR_ENGINE_PROVIDER", "optimized").lower()
+    try:
+        if provider == "paddle" and PaddleOCREngineAdapter is not None:
+            ocr = PaddleOCREngineAdapter()
+            set_ocr_service(ocr)
+            logger.info("OCR 引擎: PaddleOCREngineAdapter 已初始化")
+        else:
+            ocr = OptimizedOCRService()
+            set_ocr_service(ocr)
+            logger.info("OCR 引擎: OptimizedOCRService 已初始化")
+    except Exception as e:
+        logger.error(f"OCR 服务初始化失败: {e}")
+
+    yield
+
+    # 关闭时执行
+    try:
+        # 重置 Provider，以避免悬挂实例
+        set_ocr_service(None)
+        logger.info("OCR 服务已释放并清理 Provider")
+    except Exception as e:
+        logger.warning(f"OCR 服务释放失败: {e}")
+
 
 # 创建FastAPI应用实例
 app = FastAPI(
@@ -34,6 +95,7 @@ app = FastAPI(
     version="2.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # 初始化配置
@@ -55,16 +117,19 @@ app.add_middleware(
 setup_security_middleware(app)
 
 # 设置请求日志中间件
-app.add_middleware(create_request_logging_middleware())
+app.add_middleware(RequestLoggingMiddleware)
 
 # 设置错误恢复中间件
 app.add_middleware(ErrorRecoveryMiddleware)
 
+# 设置文件上传安全中间件
+from .middleware.file_upload_security import create_file_security_middleware
+
+file_security_middleware = create_file_security_middleware(app)
+app.add_middleware(type(file_security_middleware))
+
 # 设置统一异常处理器
 setup_exception_handlers(app)
-
-# 设置新的统一错误处理框架
-create_error_handlers(app)
 
 
 # 健康检查端点（必须在路由注册之前定义）
@@ -75,9 +140,8 @@ async def health_check():
         # 获取数据库状态
         db_status = get_database_status()
 
-        health_response = {
+        health_data = {
             "status": "healthy",
-            "timestamp": datetime.now(UTC).isoformat(),
             "version": "2.0.0",
             "service": "土地物业资产管理系统",
             "database": {
@@ -93,7 +157,7 @@ async def health_check():
                 pool_status = db_status.get("pool_status", {})
                 metrics = db_status.get("enhanced_metrics", {})
 
-                health_response["database"].update(
+                health_data["database"].update(
                     {
                         "connection_pool_utilization": pool_status.get(
                             "utilization", 0
@@ -109,13 +173,14 @@ async def health_check():
                 )
             except Exception as db_e:
                 logger.warning(f"Failed to get detailed database metrics: {db_e}")
-                health_response["database"]["metrics_error"] = str(db_e)
+                health_data["database"]["metrics_error"] = str(db_e)
 
-        return health_response
+        return success_response(data=health_data, message="系统运行正常")
 
     except Exception as e:
         logger.error(f"健康检查失败: {e}")
         return {
+            "success": False,
             "status": "unhealthy",
             "timestamp": datetime.now(UTC).isoformat(),
             "error": str(e),
@@ -127,52 +192,67 @@ async def health_check():
 @app.get("/", tags=["根路由"])
 async def root_endpoint():
     """根路由端点"""
-    return {
-        "message": "土地物业资产管理系统 API",
-        "version": "2.0.0",
-        "docs_url": "/docs",
-        "health_check": "/api/v1/health",
-    }
+    return success_response(
+        data={
+            "service": "土地物业资产管理系统 API",
+            "version": "2.0.0",
+            "docs_url": "/docs",
+            "health_check": "/api/v1/health",
+        },
+        message="欢迎使用土地物业资产管理系统API",
+    )
 
 
 # API v1根路径
 @app.get("/api/v1/", tags=["根路径"])
 async def api_v1_root():
     """API v1根路径"""
-    return {
-        "message": "API v1 根路径",
-        "version": "2.0.0",
-        "endpoints": {
-            "health": "/api/v1/health",
-            "assets": "/api/v1/assets",
-            "auth": "/api/v1/auth",
-            "docs": "/docs",
+    return success_response(
+        data={
+            "version": "2.0.0",
+            "endpoints": {
+                "health": "/api/v1/health",
+                "assets": "/api/v1/assets",
+                "auth": "/api/v1/auth",
+                "docs": "/docs",
+            },
         },
-    }
+        message="API v1 根路径",
+    )
 
 
 # 应用信息端点
 @app.get("/api/v1/info", tags=["应用信息"])
 async def app_info():
     """应用信息端点"""
-    return {
-        "name": "土地物业资产管理系统",
-        "version": "2.0.0",
-        "description": "专为资产管理经理设计的智能化工作平台",
-        "docs_url": "/docs",
-        "features": [
-            "PDF智能导入",
-            "58字段资产管理",
-            "RBAC权限控制",
-            "实时数据分析",
-            "Excel导入导出",
-        ],
-    }
+    return success_response(
+        data={
+            "name": "土地物业资产管理系统",
+            "version": "2.0.0",
+            "description": "专为资产管理经理设计的智能化工作平台",
+            "docs_url": "/docs",
+            "features": [
+                "PDF智能导入",
+                "58字段资产管理",
+                "RBAC权限控制",
+                "实时数据分析",
+                "Excel导入导出",
+            ],
+        },
+        message="应用信息获取成功",
+    )
 
 
-# 注册API路由
-app.include_router(api_router)
-app.include_router(pdf_import_router, prefix="/api/v1/pdf-import", tags=["PDF智能导入"])
+# 统一通过路由注册器注册路由与全局依赖
+try:
+    register_api_routes()
+    # 全局依赖：OCR 服务（确保每个请求上下文可用）
+    route_registry.register_global_dependency(Depends(get_ocr_service))
+    # 统一注册 v1 路由
+    route_registry.include_all(app, version="v1")
+    logger.info("已通过路由注册器统一注册 API 路由")
+except Exception as e:
+    logger.error(f"路由注册器注册失败: {e}")
 
 # 设置日志安全
 setup_logging_security()

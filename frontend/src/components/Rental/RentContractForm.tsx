@@ -41,12 +41,42 @@ import { Ownership } from '../../types/ownership';
 import { assetService } from '../../services/assetService';
 import { ownershipService } from '../../services/ownershipService';
 
+// 租金条款接口（用于编辑时）
+interface RentTermData {
+  start_date: string;
+  end_date: string;
+  monthly_rent: number;
+  rent_description?: string;
+  management_fee?: number;
+  other_fees?: number;
+}
+
+// 租赁合同表单初始数据接口
+interface RentContractInitialData {
+  contract_number?: string;
+  asset_id: string;
+  ownership_id: string;
+  tenant_name: string;
+  tenant_contact?: string;
+  tenant_phone?: string;
+  tenant_address?: string;
+  sign_date?: string;
+  start_date: string;
+  end_date: string;
+  total_deposit?: number;
+  monthly_rent_base?: number;
+  contract_status?: string;
+  payment_terms?: string;
+  contract_notes?: string;
+  rent_terms?: RentTermData[];
+}
+
 const { Option } = Select;
 const { TextArea } = Input;
 const { Title, Text } = Typography;
 
 interface RentContractFormProps {
-  initialData?: any;
+  initialData?: RentContractInitialData;
   onSubmit: (data: RentContractCreate) => Promise<void>;
   onCancel: () => void;
   loading?: boolean;
@@ -98,7 +128,7 @@ const RentContractForm: React.FC<RentContractFormProps> = ({
       form.setFieldsValue(formData);
       
       if (initialData.rent_terms) {
-        const terms = initialData.rent_terms.map((term: any, index: number) => ({
+        const terms = initialData.rent_terms.map((term: RentTermData, index: number) => ({
           key: `term-${index}`,
           start_date: dayjs(term.start_date),
           end_date: dayjs(term.end_date),

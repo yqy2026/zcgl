@@ -32,7 +32,7 @@ export const useAssets = (params?: AssetSearchParams) => {
         })
         setError(null)
         return result
-      } catch (error: any) {
+      } catch (error: { message: string }) {
         setError(error.message)
         throw error
       } finally {
@@ -79,7 +79,7 @@ export const useCreateAsset = () => {
       
       message.success('资产创建成功')
     },
-    onError: (error: any) => {
+    onError: (error: { message: string }) => {
       message.error(`创建失败: ${error.message}`)
     },
   })
@@ -105,7 +105,7 @@ export const useUpdateAsset = () => {
       
       message.success('资产更新成功')
     },
-    onError: (error: any) => {
+    onError: (error: { message: string }) => {
       message.error(`更新失败: ${error.message}`)
     },
   })
@@ -129,7 +129,7 @@ export const useDeleteAsset = () => {
       
       message.success('资产删除成功')
     },
-    onError: (error: any) => {
+    onError: (error: { message: string }) => {
       message.error(`删除失败: ${error.message}`)
     },
   })
@@ -149,7 +149,7 @@ export const useBatchDeleteAssets = () => {
       
       message.success(`成功删除 ${ids.length} 个资产`)
     },
-    onError: (error: any) => {
+    onError: (error: { message: string }) => {
       message.error(`批量删除失败: ${error.message}`)
     },
   })

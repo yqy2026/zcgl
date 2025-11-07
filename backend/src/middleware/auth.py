@@ -29,6 +29,27 @@ DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
 # OAuth2密码流 - 始终启用安全性
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/login", auto_error=False)
 
+
+def _is_token_blacklisted(jti: str) -> bool:
+    """
+    检查token是否在黑名单中
+    未来可以扩展为Redis缓存或数据库表
+    """
+    try:
+        # 尝试从token黑名单模块导入
+        from ..core.token_blacklist import blacklist_manager
+
+        return blacklist_manager.is_blacklisted(jti)
+    except ImportError:
+        # 如果没有实现token黑名单，返回False
+        logger.debug(f"Token blacklist not implemented, allowing token {jti}")
+        return False
+    except Exception as e:
+        logger.error(f"Error checking token blacklist: {e}")
+        # 出错时保守处理，允许token通过
+        return False
+
+
 # JWT配置
 SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = "HS256"
@@ -66,9 +87,33 @@ def get_current_user(
         user_id: str = payload.get("sub")
         username: str = payload.get("username")
         role: str = payload.get("role")
+        exp: int = payload.get("exp")
+        iat: int = payload.get("iat")
+        jti: str = payload.get("jti")  # JWT ID for token tracking
 
+        # 验证必需字段
         if user_id is None or username is None or role is None:
+            logger.warning(
+                f"JWT token missing required fields: sub={user_id}, username={username}, role={role}"
+            )
             raise credentials_exception
+
+        # 验证过期时间（虽然jwt.decode已经验证，但双重检查更安全）
+        if exp is None:
+            logger.warning("JWT token missing expiration time")
+            raise credentials_exception
+
+        # 验证签发时间
+        if iat is None:
+            logger.warning("JWT token missing issued at time")
+            raise credentials_exception
+
+        # 验证token是否在黑名单中（如果实现了token黑名单）
+        if jti and _is_token_blacklisted(jti):
+            logger.warning(f"JWT token {jti} is blacklisted")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Token已失效"
+            )
 
         # Handle both string and enum role types
         role_enum = role

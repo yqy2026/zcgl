@@ -5,11 +5,10 @@
  */
 
 // React is implicitly used by JSX, no need for explicit import
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AssetForm from './AssetForm';
-import { AssetFormData } from '@/types/asset';
 
 // Mock 服务
 jest.mock('@/services/assetService', () => ({
@@ -37,19 +36,15 @@ const createTestQueryClient = () => new QueryClient({
 
 describe('AssetForm Component', () => {
   let queryClient: QueryClient;
-  let mockCreateAsset: jest.MockedFunction<any>;
-  let mockUpdateAsset: jest.MockedFunction<any>;
-
+  let mockCreateAsset: jest.MockedFunction<unknown>;
   beforeEach(() => {
     queryClient = createTestQueryClient();
     jest.clearAllMocks();
 
-    const assetService = require('@/services/assetService');
-    mockCreateAsset = assetService.createAsset;
-    mockUpdateAsset = assetService.updateAsset;
+    mockCreateAsset = createAsset;
   });
 
-  const renderAssetForm = (props: any = {}) => {
+  const renderAssetForm = (props: Record<string, unknown> = {}) => {
     return render(
       <QueryClientProvider client={queryClient}>
         <AssetForm {...props} />
@@ -390,15 +385,6 @@ describe('AssetForm Component', () => {
 
   describe('数据加载测试', () => {
     test('编辑模式下加载资产数据', async () => {
-      const mockAssetData = {
-        id: '123',
-        ownership_entity: '测试权属方',
-        property_name: '测试物业',
-        rentable_area: 1000,
-        rented_area: 800,
-        // ... 其他字段
-      };
-
       renderAssetForm({ mode: 'edit', assetId: '123' });
 
       await waitFor(() => {

@@ -84,11 +84,19 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
 
   }, [result, form]);
 
-  // 表单字段变更处理
-  const handleFieldChange = (changedFields: any) => {
+  // 表单字段变更接口
+interface FormFieldChange {
+  name: string[];
+  value: unknown;
+  touched?: boolean;
+  validating?: boolean;
+}
+
+// 表单字段变更处理
+  const handleFieldChange = (changedFields: FormFieldChange[]) => {
     // 标记已修改的字段
     const newModifiedFields = new Set(modifiedFields);
-    changedFields.forEach((field: any) => {
+    changedFields.forEach((field: FormFieldChange) => {
       if (field.name) {
         newModifiedFields.add(field.name[0]);
       }
@@ -120,8 +128,9 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
       } else {
         message.error(response.error || '导入失败');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('表单验证失败:', error);
+      const errorMessage = error instanceof Error ? error.message : '表单验证失败';
       message.error('请检查表单填写是否正确');
     } finally {
       setLoading(false);

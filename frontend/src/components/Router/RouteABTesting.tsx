@@ -11,8 +11,8 @@ interface ABTestVariant {
   name: string
   description?: string
   weight: number // 权重 (0-100)
-  component?: React.ComponentType<any>
-  props?: Record<string, any>
+  component?: React.ComponentType<Record<string, unknown>>
+  props?: Record<string, unknown>
   enabled: boolean
 }
 
@@ -31,7 +31,7 @@ interface ABTestConfig {
 interface ABTestContextType {
   currentTests: Map<string, string> // testId -> variantId
   getVariant: (testId: string) => ABTestVariant | null
-  trackConversion: (testId: string, metric: string, value?: any) => void
+  trackConversion: (testId: string, metric: string, value?: unknown) => void
   isTestActive: (testId: string) => boolean
   loading: boolean
 }
@@ -41,7 +41,7 @@ const ABTestContext = createContext<ABTestContextType | null>(null)
 class ABTestManager {
   private tests: Map<string, ABTestConfig>
   private userVariants: Map<string, string> // userId -> testVariants
-  private conversions: Map<string, Map<string, any>> // testId -> metric -> value
+  private conversions: Map<string, Map<string, unknown>> // testId -> metric -> value
   private userId: string | null = null
 
   constructor() {
@@ -215,7 +215,7 @@ class ABTestManager {
     return this.getAssignedVariant(testId)
   }
 
-  public trackConversion(testId: string, metric: string, value?: any) {
+  public trackConversion(testId: string, metric: string, value?: unknown) {
     if (!this.conversions.has(testId)) {
       this.conversions.set(testId, new Map())
     }
@@ -235,8 +235,8 @@ class ABTestManager {
     this.reportConversion(testId, metric, value)
   }
 
-  private trackEvent(eventType: string, data: any) {
-    console.log('A/B Test Event:', eventType, data)
+  private trackEvent(eventType: string, data: Record<string, unknown>) {
+    // A/B Test Event
 
     // 这里可以发送到分析服务
     if (process.env.NODE_ENV === 'production') {
@@ -257,7 +257,7 @@ class ABTestManager {
     }
   }
 
-  private async reportConversion(testId: string, metric: string, value?: any) {
+  private async reportConversion(testId: string, metric: string, value?: unknown) {
     try {
       await fetch('/api/v1/analytics/abtest-conversions', {
         method: 'POST',
@@ -323,7 +323,7 @@ export const ABTestProvider: React.FC<ABTestProviderProps> = ({ children, userId
   const contextValue: ABTestContextType = {
     currentTests,
     getVariant: (testId: string) => manager.getVariant(testId),
-    trackConversion: (testId: string, metric: string, value?: any) =>
+    trackConversion: (testId: string, metric: string, value?: unknown) =>
       manager.trackConversion(testId, metric, value),
     isTestActive: (testId: string) => manager.isTestActive(testId),
     loading
@@ -397,7 +397,7 @@ export const useRouteABTest = (route: string) => {
     return getVariant(testId)
   }
 
-  const trackRouteConversion = (testId: string, metric: string, value?: any) => {
+  const trackRouteConversion = (testId: string, metric: string, value?: unknown) => {
     trackConversion(testId, metric, value)
   }
 
@@ -434,7 +434,7 @@ export const useABTestAnalytics = (testId: string) => {
     }
   }
 
-  const trackClick = (element: string, data?: any) => {
+  const trackClick = (element: string, data?: unknown) => {
     if (currentVariant) {
       trackConversion(testId, 'click', {
         variant: currentVariant.id,
@@ -512,7 +512,7 @@ export const AssetListABTest: React.FC<{ children: ReactNode }> = ({ children })
     }
   }
 
-  const handleClick = (element: string, data?: any) => {
+  const handleClick = (element: string, data?: unknown) => {
     trackClick(element, data)
   }
 

@@ -1,20 +1,35 @@
 import React from 'react'
 import { Form, Select, DatePicker, Button, Space, Row, Col, Slider } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
+import dayjs from 'dayjs'
 
 const { RangePicker } = DatePicker
 const { Option } = Select
 
+// 资产筛选条件接口
+export interface AssetFilterConditions {
+  keyword?: string
+  ownership_status?: string
+  property_nature?: string
+  usage_status?: string
+  business_category?: string
+  area_range?: [number, number]
+  rent_range?: [number, number]
+  date_range?: [dayjs.Dayjs, dayjs.Dayjs]
+  tenant_type?: string
+  [key: string]: unknown
+}
+
 interface AssetFiltersProps {
-  filters: any
-  onChange: (filters: any) => void
+  filters: AssetFilterConditions
+  onChange: (filters: AssetFilterConditions) => void
   onReset: () => void
 }
 
 const AssetFilters: React.FC<AssetFiltersProps> = ({ filters, onChange, onReset }) => {
   const [form] = Form.useForm()
 
-  const handleValuesChange = (changedValues: any, allValues: any) => {
+  const handleValuesChange = (changedValues: AssetFilterConditions, allValues: AssetFilterConditions) => {
     onChange(allValues)
   }
 

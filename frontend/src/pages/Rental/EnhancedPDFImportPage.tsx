@@ -560,7 +560,7 @@ const EnhancedPDFImportPage: React.FC = () => {
             <EnhancedContractReview
               sessionData={currentStatus}
               onConfirm={(confirmedData) => {
-                console.log('确认导入数据:', confirmedData);
+                // Confirm import data
                 message.success('功能开发中，数据提交功能将在下个版本实现');
               }}
               onRetry={handleRetry}

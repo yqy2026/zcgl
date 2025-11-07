@@ -41,7 +41,7 @@ const TestWrapper = ({ children }: {
 // 通用测试辅助函数
 export const renderWithProviders = (
   ui: React.ReactElement,
-  { _initialEntries = ['/'] } = {}
+  _options: { initialEntries?: string[] } = {}
 ) => {
   return render(ui, { wrapper: ({ children }) =>
     <TestWrapper>{children}</TestWrapper>
@@ -221,7 +221,7 @@ export const createIntegrationTestSuite = (
 
     test('应该与路由系统集成', async () => {
       renderWithProviders(<Component {...requiredProps} />, {
-        _initialEntries: ['/test-route']
+        initialEntries: ['/test-route']
       })
 
       await waitFor(() => {
@@ -253,7 +253,6 @@ export const createIntegrationTestSuite = (
 // 导出模板和工具函数
 export {
   TestWrapper,
-  renderWithProviders,
   createTestQueryClient,
 }
 

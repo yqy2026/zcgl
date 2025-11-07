@@ -88,7 +88,12 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
 
 
   // 处理选择
-  const handleChange = (selectedValue: string, option: any) => {
+  const handleChange = (selectedValue: string, option: {
+    value: string;
+    realValue?: string;
+    label?: React.ReactNode;
+    title?: React.ReactNode;
+  }) => {
     // 从option中获取真实的项目ID
     const realValue = option?.realValue || option?.value;
     const selected = filteredProjects.find(p => p.id === realValue);

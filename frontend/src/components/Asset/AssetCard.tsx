@@ -7,11 +7,10 @@ import {
   HistoryOutlined,
   EnvironmentOutlined,
   UserOutlined,
-  HomeOutlined,
 } from '@ant-design/icons'
 
 import type { Asset } from '@/types/asset'
-import { formatArea, formatPercentage, formatDate, getStatusColor, calculateOccupancyRate } from '@/utils/format'
+import { formatPercentage, formatDate, getStatusColor, calculateOccupancyRate } from '@/utils/format'
 
 interface AssetCardProps {
   asset: Asset

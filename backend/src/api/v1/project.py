@@ -40,7 +40,7 @@ async def create_project(*, db: Session = Depends(get_db), project_in: ProjectCr
     """创建新项目"""
     try:
         db_project = project.create(db, obj_in=project_in, created_by="system")
-        return ProjectResponse.from_orm(db_project)
+        return ProjectResponse.model_validate(db_project)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -139,7 +139,7 @@ async def update_project(
         updated_project = project.update(
             db, db_obj=db_project, obj_in=project_in, updated_by="system"
         )
-        return ProjectResponse.from_orm(updated_project)
+        return ProjectResponse.model_validate(updated_project)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -198,8 +198,8 @@ async def get_projects(
     # 转换为响应格式，使用ownership_relations_data而不是SQLAlchemy关系
     items = []
     for item in result["items"]:
-        # 直接使用from_orm转换，CRUD层已经处理了ownership_relations_data
-        item_dict = ProjectResponse.from_orm(item)
+        # 直接使用model_validate转换，CRUD层已经处理了ownership_relations_data
+        item_dict = ProjectResponse.model_validate(item)
         items.append(item_dict)
 
     return ProjectListResponse(
@@ -221,8 +221,8 @@ async def search_projects(
     # 转换为响应格式，使用ownership_relations_data而不是SQLAlchemy关系
     items = []
     for item in result["items"]:
-        # 直接使用from_orm转换，CRUD层已经处理了ownership_relations_data
-        item_dict = ProjectResponse.from_orm(item)
+        # 直接使用model_validate转换，CRUD层已经处理了ownership_relations_data
+        item_dict = ProjectResponse.model_validate(item)
         items.append(item_dict)
 
     return ProjectListResponse(
@@ -258,7 +258,7 @@ async def get_project_statistics(db: Session = Depends(get_db)):
 
         # Convert each recent project to dict and handle datetime serialization
         for item in recent_created:
-            item_dict = item.dict()
+            item_dict = item.model_dump()
             # Handle datetime serialization manually
             for key, value in item_dict.items():
                 if hasattr(value, "isoformat"):

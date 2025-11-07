@@ -67,7 +67,7 @@ class GlobalErrorBoundary extends Component<Props, State> {
     }
 
     // 发送到错误监控服务
-    console.log('Error Report:', errorReport)
+    // Log error report for debugging
     
     // 示例：发送到后端API
     // fetch('/api/errors', {

@@ -127,7 +127,7 @@ const EnhancedPDFImportUploader: React.FC<EnhancedPDFImportUploaderProps> = ({
       const info = await pdfImportService.getEnhancedSystemInfo();
       setSystemInfo(info);
     } catch (error) {
-      console.warn('获取系统信息失败:', error);
+      // Failed to get system info
     }
   };
 
@@ -284,7 +284,7 @@ const EnhancedPDFImportUploader: React.FC<EnhancedPDFImportUploaderProps> = ({
           throw new Error(response.error || '上传失败');
         }
 
-      } catch (error: any) {
+      } catch (error: unknown) {
         clearInterval(progressInterval);
         setUploading(false);
         setUploadProgress(0);

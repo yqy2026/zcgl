@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 """
 应用配置设置
@@ -9,7 +9,15 @@ import os
 from contextlib import asynccontextmanager
 
 # typing imports removed - not used in this file
-import redis.asyncio as redis
+try:
+    import redis.asyncio as redis
+    REDIS_AVAILABLE = True
+except ImportError:
+    REDIS_AVAILABLE = False
+    redis = None  # type: ignore
+
+if TYPE_CHECKING and REDIS_AVAILABLE:
+    from redis.asyncio import Redis, ConnectionPool
 
 
 class Settings:
@@ -25,7 +33,9 @@ class Settings:
     REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
     # 应用配置
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
+    SECRET_KEY: str = os.getenv("SECRET_KEY")
+    if not SECRET_KEY:
+        raise ValueError("SECRET_KEY environment variable is required")
     DATA_ENCRYPTION_KEY: str = os.getenv("DATA_ENCRYPTION_KEY", "")
     DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"
 
@@ -83,16 +93,21 @@ class Settings:
 settings = Settings()
 
 # Redis连接池
-redis_pool: redis.ConnectionPool | None = None
-redis_client: redis.Redis | None = None
+redis_pool: "ConnectionPool | None" = None
+redis_client: "Redis | None" = None
 
 
 async def init_redis():
     """初始化Redis连接"""
     global redis_pool, redis_client
+    
+    if not REDIS_AVAILABLE:
+        print("⚠️ Redis库未安装，跳过Redis初始化")
+        return
+        
     try:
-        redis_pool = redis.ConnectionPool.from_url(settings.REDIS_URL)
-        redis_client = redis.Redis(connection_pool=redis_pool)
+        redis_pool = redis.ConnectionPool.from_url(settings.REDIS_URL)  # type: ignore
+        redis_client = redis.Redis(connection_pool=redis_pool)  # type: ignore
         # 测试连接
         await redis_client.ping()
         print(f"✅ Redis连接成功: {settings.REDIS_URL}")

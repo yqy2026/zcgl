@@ -11,7 +11,7 @@ import { PERMISSIONS } from '../../hooks/usePermission'
 interface DynamicRoute {
   id: string
   path: string
-  component: React.LazyExoticComponent<React.ComponentType<any>>
+  component: React.LazyExoticComponent<React.ComponentType<Record<string, unknown>>>
   permissions?: Array<{ resource: string; action: string }>
   exact?: boolean
   children?: DynamicRoute[]
@@ -53,7 +53,7 @@ interface RouteMetrics {
 
 class DynamicRouteLoader {
   private routes: Map<string, DynamicRoute>
-  private loadedModules: Map<string, any>
+  private loadedModules: Map<string, Record<string, unknown>>
   private routeMetrics: Map<string, {
     loadTime: number
     loadCount: number
@@ -118,14 +118,14 @@ class DynamicRouteLoader {
       this.preloadRoute(route)
     }
 
-    console.log(`Dynamic route registered: ${route.id} (${route.path})`)
+    // Dynamic route registered
   }
 
   public unregisterRoute(routeId: string) {
     if (this.routes.has(routeId)) {
       this.routes.delete(routeId)
       this.routeMetrics.delete(routeId)
-      console.log(`Dynamic route unregistered: ${routeId}`)
+      // Dynamic route unregistered
     }
   }
 
@@ -134,7 +134,7 @@ class DynamicRouteLoader {
     if (existingRoute) {
       const updatedRoute = { ...existingRoute, ...updates }
       this.routes.set(routeId, updatedRoute)
-      console.log(`Dynamic route updated: ${routeId}`)
+      // Dynamic route updated
     }
   }
 
@@ -180,7 +180,10 @@ class DynamicRouteLoader {
     }
   }
 
-  private extractRoutesFromModule(module: any): DynamicRoute[] {
+  private extractRoutesFromModule(module: {
+    routes?: DynamicRoute[];
+    default?: React.LazyExoticComponent<React.ComponentType<Record<string, unknown>>>;
+  }): DynamicRoute[] {
     // 模块应该导出 routes 数组
     if (module.routes && Array.isArray(module.routes)) {
       return module.routes
@@ -217,7 +220,7 @@ class DynamicRouteLoader {
     try {
       // 预加载组件
       await route.component
-      console.log(`Route preloaded: ${route.id}`)
+      // Route preloaded
     } catch (error) {
       console.warn(`Failed to preload route: ${route.id}`, error)
     }

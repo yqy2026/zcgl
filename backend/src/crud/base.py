@@ -114,8 +114,8 @@ class CRUDBase[
     def create(self, db: Session, *, obj_in: CreateSchemaType) -> ModelType:
         """创建新记录（支持事务回滚和错误处理）"""
         try:
-            if hasattr(obj_in, "dict"):
-                obj_in_data = obj_in.dict()
+            if hasattr(obj_in, "model_dump"):
+                obj_in_data = obj_in.model_dump()
             else:
                 obj_in_data = obj_in
 
@@ -266,8 +266,8 @@ class CRUDBase[
         try:
             db_objects = []
             for obj_in in objects_in:
-                if hasattr(obj_in, "dict"):
-                    obj_in_data = obj_in.dict()
+                if hasattr(obj_in, "model_dump"):
+                    obj_in_data = obj_in.model_dump()
                 else:
                     obj_in_data = obj_in
                 db_objects.append(self.model(**obj_in_data))

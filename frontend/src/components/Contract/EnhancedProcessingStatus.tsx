@@ -62,7 +62,7 @@ interface ProcessingStep {
   progress?: number;
   duration?: number;
   error?: string;
-  details?: any;
+  details?: Record<string, unknown>;
 }
 
 interface EnhancedProcessingStatusProps {

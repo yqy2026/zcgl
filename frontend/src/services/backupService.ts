@@ -105,7 +105,7 @@ export class BackupService {
   async validateBackup(filename: string): Promise<{
     valid: boolean
     message: string
-    details?: any
+    details?: Record<string, unknown>
   }> {
     const response = await apiClient.post(`/backup/validate/${filename}`)
     return response.data || response

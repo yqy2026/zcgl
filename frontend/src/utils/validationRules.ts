@@ -1,3 +1,11 @@
+// 表单验证规则接口
+interface FormValidationRule {
+  field?: string
+  fullField?: string
+  type?: string
+  validator?: (rule: FormValidationRule, value: unknown) => Promise<void>
+}
+
 // 通用验证规则
 export const validationRules = {
   // 必填验证
@@ -108,7 +116,7 @@ export const userValidationRules = {
     validationRules.password
   ],
   confirmPassword: (passwordFieldName: string = 'password') => ({
-    validator: (_: any, value: string) => {
+    validator: (_: FormValidationRule, value: string) => {
       if (!value) {
         return Promise.reject('请确认密码')
       }
@@ -186,8 +194,8 @@ export const assetValidationRules = {
 // 表单自定义验证器
 export const customValidators = {
   // 验证两次密码是否一致
-  passwordMatch: (getForm: () => any) => ({
-    validator: (_: any, value: string) => {
+  passwordMatch: (getForm: () => { getFieldValue: (field: string) => unknown }) => ({
+    validator: (_: FormValidationRule, value: string) => {
       if (!value || getForm().getFieldValue('password') === value) {
         return Promise.resolve()
       }
@@ -197,11 +205,11 @@ export const customValidators = {
 
   // 验证开始日期小于结束日期
   dateRange: (startDateField: string, _endDateField: string) => ({
-    validator: (_: any, value: string) => {
+    validator: (_: FormValidationRule, value: string) => {
       const form = document.querySelector('form')
       if (!form) return Promise.resolve()
 
-      const startDate = (form.querySelector(`[name="${startDateField}"]`) as any)?.value
+      const startDate = (form.querySelector(`[name="${startDateField}"]`) as HTMLInputElement)?.value
       const endDate = value
 
       if (startDate && endDate && new Date(startDate) >= new Date(endDate)) {
@@ -213,7 +221,7 @@ export const customValidators = {
 
   // 验证数字范围
   numberRange: (min: number, max: number, message?: string) => ({
-    validator: (_: any, value: number) => {
+    validator: (_: FormValidationRule, value: number) => {
       if (value === undefined || value === null) return Promise.resolve()
       if (value < min || value > max) {
         return Promise.reject(new Error(message || `数值应在${min}-${max}之间`))
@@ -224,7 +232,7 @@ export const customValidators = {
 
   // 验证字符串长度
   stringLength: (min: number, max: number, message?: string) => ({
-    validator: (_: any, value: string) => {
+    validator: (_: FormValidationRule, value: string) => {
       if (!value) return Promise.resolve()
       if (value.length < min || value.length > max) {
         return Promise.reject(new Error(message || `长度应在${min}-${max}个字符之间`))
@@ -235,7 +243,7 @@ export const customValidators = {
 
   // 验证文件类型
   fileType: (allowedTypes: string[]) => ({
-    validator: (_: any, file: File) => {
+    validator: (_: FormValidationRule, file: File) => {
       const fileType = file.type
       const isAllowedType = allowedTypes.some(type => {
         if (type.startsWith('.')) {
@@ -255,7 +263,7 @@ export const customValidators = {
 
   // 验证文件大小
   fileSize: (maxSizeMB: number) => ({
-    validator: (_: any, file: File) => {
+    validator: (_: FormValidationRule, file: File) => {
       const maxSizeBytes = maxSizeMB * 1024 * 1024
       if (file.size > maxSizeBytes) {
         return Promise.reject(new Error(`文件大小不能超过${maxSizeMB}MB`))
@@ -268,7 +276,7 @@ export const customValidators = {
 // 异步验证器
 export const asyncValidators = {
   // 验证用户名唯一性
-  uniqueUsername: async (_: any, value: string) => {
+  uniqueUsername: async (_: FormValidationRule, value: string) => {
     if (!value) return Promise.resolve()
 
     try {
@@ -287,7 +295,7 @@ export const asyncValidators = {
   },
 
   // 验证邮箱唯一性
-  uniqueEmail: async (_: any, value: string) => {
+  uniqueEmail: async (_: FormValidationRule, value: string) => {
     if (!value) return Promise.resolve()
 
     try {

@@ -68,9 +68,9 @@ const TemplateManagementPage: React.FC = () => {
         await rentContractExcelService.downloadTemplateFile()
         message.success('租赁合同导入模板下载成功')
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('下载模板失败:', error)
-      message.error(`下载模板失败: ${error.message || '网络错误'}`)
+      message.error(`下载模板失败: ${(error as Error).message || '网络错误'}`)
     } finally {
       setLoading(false)
     }

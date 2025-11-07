@@ -101,7 +101,7 @@ class RoutePerformanceMonitor {
     }
 
     // Memory timing (Chrome only)
-    if (this.config.enableMemoryTracking && (performance as any).memory) {
+    if (this.config.enableMemoryTracking && (performance as unknown as { memory?: { usedJSHeapSize: number; totalJSHeapSize: number } }).memory) {
       this.observeMemory()
     }
   }
@@ -133,7 +133,7 @@ class RoutePerformanceMonitor {
       // First Input Delay
       const fidObserver = new PerformanceObserver((list) => {
         for (const entry of list.getEntries()) {
-          this.updateCurrentMetric('FID', (entry as any).processingStart - entry.startTime)
+          this.updateCurrentMetric('FID', (entry as PerformanceEventTiming & { processingStart?: number }).processingStart ? (entry as PerformanceEventTiming & { processingStart: number }).processingStart - entry.startTime : 0)
         }
       })
       fidObserver.observe({ entryTypes: ['first-input'] })
@@ -143,8 +143,9 @@ class RoutePerformanceMonitor {
       let clsValue = 0
       const clsObserver = new PerformanceObserver((list) => {
         for (const entry of list.getEntries()) {
-          if (!(entry as any).hadRecentInput) {
-            clsValue += (entry as any).value
+          const layoutShiftEntry = entry as PerformanceEntry & { hadRecentInput?: boolean; value?: number }
+          if (!layoutShiftEntry.hadRecentInput && layoutShiftEntry.value) {
+            clsValue += layoutShiftEntry.value
           }
         }
         this.updateCurrentMetric('CLS', clsValue)
@@ -163,7 +164,7 @@ class RoutePerformanceMonitor {
         const resourceTimes = entries.map(entry => ({
           name: entry.name,
           duration: entry.duration,
-          size: (entry as any).transferSize || 0
+          size: (entry as PerformanceResourceTiming).transferSize || 0
         }))
         this.updateCurrentMetric('resourceLoadTimes', resourceTimes)
       })
@@ -177,7 +178,7 @@ class RoutePerformanceMonitor {
   private observeMemory() {
     try {
       const memoryObserver = new PerformanceObserver(() => {
-        const memory = (performance as any).memory
+        const memory = (performance as unknown as { memory?: { usedJSHeapSize: number; totalJSHeapSize: number } }).memory
         if (memory) {
           this.updateCurrentMetric('memoryUsage', memory.usedJSHeapSize)
           this.updateCurrentMetric('jsHeapSize', memory.totalJSHeapSize)
@@ -190,11 +191,11 @@ class RoutePerformanceMonitor {
     }
   }
 
-  private updateCurrentMetric(key: keyof RoutePerformanceMetrics, value: any) {
+  private updateCurrentMetric(key: keyof RoutePerformanceMetrics, value: unknown) {
     if (this.metrics.length === 0) return
 
     const currentMetric = this.metrics[this.metrics.length - 1]
-    (currentMetric as any)[key] = value
+    ;(currentMetric as Record<string, unknown>)[key] = value
   }
 
   startRouteMonitoring(route: string, navigationType: string) {
@@ -371,7 +372,7 @@ class RoutePerformanceMonitor {
         body: JSON.stringify(reportData)
       })
 
-      console.log('路由性能指标已上报')
+      // Route metrics reported
     } catch (error) {
       console.warn('性能指标上报失败:', error)
     }
@@ -403,7 +404,11 @@ export const useRoutePerformanceMonitor = (config?: Partial<RoutePerformanceConf
   const location = useLocation()
   const navigationType = useNavigationType()
   const monitorRef = useRef<RoutePerformanceMonitor>()
-  const monitoringRef = useRef<any>(null)
+  const monitoringRef = useRef<{
+    endComponentLoad: () => void;
+    endRender: () => void;
+    endInteractive: () => void;
+  } | null>(null)
 
   // Initialize monitor
   if (!monitorRef.current) {
@@ -480,7 +485,15 @@ export const usePerformanceDebug = () => {
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
       // 暴露到全局对象用于调试
-      (window as any).__ROUTE_PERFORMANCE__ = {
+      (window as unknown as { __ROUTE_PERFORMANCE__?: {
+        getMetrics: () => RoutePerformanceMetrics[];
+        getAggregatedMetrics: () => ReturnType<RoutePerformanceMonitor['getAggregatedMetrics']>;
+        exportData: () => {
+          metrics: RoutePerformanceMetrics[];
+          aggregated: ReturnType<RoutePerformanceMonitor['getAggregatedMetrics']>;
+          timestamp: number
+        }
+      } }).__ROUTE_PERFORMANCE__ = {
         getMetrics,
         getAggregatedMetrics,
         exportData: () => ({

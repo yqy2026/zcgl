@@ -59,7 +59,7 @@ interface OperationLog {
   response_status: number
   response_time: number
   error_message: string | null
-  details: any
+  details: Record<string, unknown> | null
   created_at: string
 }
 

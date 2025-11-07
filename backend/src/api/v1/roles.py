@@ -111,7 +111,7 @@ async def get_roles(
         pages = (total + limit - 1) // limit
 
         return RoleListResponse(
-            items=[RoleResponse.from_orm(role) for role in roles],
+            items=[RoleResponse.model_validate(role) for role in roles],
             total=total,
             page=page,
             limit=limit,
@@ -159,7 +159,7 @@ async def create_role(
             created_by=current_user.id,
         )
 
-        return RoleDetailResponse.from_orm(new_role)
+        return RoleDetailResponse.model_validate(new_role)
     except HTTPException:
         raise
     except Exception as e:
@@ -182,7 +182,7 @@ async def get_role(
                 status_code=status.HTTP_404_NOT_FOUND, detail="角色不存在"
             )
 
-        return RoleDetailResponse.from_orm(role)
+        return RoleDetailResponse.model_validate(role)
     except HTTPException:
         raise
     except Exception as e:
@@ -225,7 +225,7 @@ async def update_role(
             updated_by=current_user.id,
         )
 
-        return RoleDetailResponse.from_orm(updated_role)
+        return RoleDetailResponse.model_validate(updated_role)
     except HTTPException:
         raise
     except Exception as e:
@@ -284,7 +284,7 @@ async def get_all_permissions(
             resource = perm.resource
             if resource not in grouped:
                 grouped[resource] = []
-            grouped[resource].append(PermissionResponse.from_orm(perm))
+            grouped[resource].append(PermissionResponse.model_validate(perm))
 
         return {
             "success": True,

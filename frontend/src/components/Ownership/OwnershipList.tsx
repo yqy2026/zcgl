@@ -159,7 +159,7 @@ const OwnershipList: React.FC<OwnershipListProps> = ({
           message.success('删除成功');
           loadOwnerships();
           loadStatistics();
-        } catch (error: any) {
+        } catch (error: unknown) {
           message.error(error.message || '删除失败');
         }
       }

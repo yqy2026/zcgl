@@ -85,7 +85,7 @@ class Role(Base):
     )
     # users = relationship("User", secondary="user_role_assignments")  # 完全移除以避免循环依赖
     user_assignments = relationship(
-        "UserRoleAssignment", back_populates="role", overlaps="roles"
+        "UserRoleAssignment", back_populates="role"
     )
 
     def __repr__(self):
@@ -288,7 +288,7 @@ class PermissionAuditLog(Base):
     )
 
     # 关系
-    user = relationship("User", foreign_keys=[user_id], overlaps="roles")
+    user = relationship("User", foreign_keys=[user_id])
     operator = relationship("User", foreign_keys=[operator_id])
 
     def __repr__(self):

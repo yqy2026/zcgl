@@ -146,7 +146,7 @@ class OCRScanOptimization:
 
             # 使用新的参数
             ocr = PaddleOCR(
-                use_textline_orientation=True,  # 新参数替代use_angle_cls
+                use_textline_orientation=True,
                 lang='ch',
                 use_gpu=False  # 确保使用CPU
             )

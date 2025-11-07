@@ -1,4 +1,3 @@
-import React from 'react'
 import { render, screen, fireEvent } from '../../../__tests__/utils/testUtils'
 
 import AssetCard from '../AssetCard'
@@ -141,7 +140,7 @@ describe('AssetCard', () => {
   })
 
   it('handles card selection correctly', () => {
-    render(<AssetCard asset={mockAsset} onSelect={mockHandlers.onSelect} {...mockHandlers} />)
+    render(<AssetCard asset={mockAsset} {...mockHandlers} />)
 
     // Click on the card to select it
     fireEvent.click(screen.getByText('测试物业名称'))
@@ -233,7 +232,7 @@ describe('AssetCard', () => {
   it('shows non-commercial area for non-commercial properties', () => {
     const nonCommercialAsset: Asset = {
       ...mockAsset,
-      property_nature: '非经营性',
+      property_nature: PropertyNature.NON_COMMERCIAL,
       non_commercial_area: 1500,
       rentable_area: undefined,
       rented_area: undefined,
@@ -246,7 +245,7 @@ describe('AssetCard', () => {
   })
 
   it('prevents event propagation on action buttons', () => {
-    render(<AssetCard asset={mockAsset} onSelect={mockHandlers.onSelect} {...mockHandlers} />)
+    render(<AssetCard asset={mockAsset} {...mockHandlers} />)
 
     // Click on edit button - should not trigger selection
     const editButton = screen.getByRole('button', { name: 'edit' })

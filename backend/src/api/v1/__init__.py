@@ -43,8 +43,8 @@ from .test_performance import router as test_performance_router
 # from .security_monitor import router as security_monitor_router  # 已删除
 # from .ocr_analysis import router as ocr_analysis_router  # 已删除
 
-# 创建API v1路由器
-api_router = APIRouter(prefix="/api/v1")
+# 创建API v1路由器 - 前缀由路由注册器统一管理
+api_router = APIRouter()
 
 # 包含各个模块的路由
 api_router.include_router(auth_router, prefix="/auth", tags=["用户认证"])

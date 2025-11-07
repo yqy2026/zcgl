@@ -3,7 +3,7 @@
  */
 
 // API基础URL配置 - 使用相对路径，配合Vite代理
-export const API_BASE_URL = process.env.VITE_API_BASE_URL || '/v1'
+export const API_BASE_URL = process.env.VITE_API_BASE_URL || '/api/v1/api/v1'
 
 // API端点配置
 export const API_ENDPOINTS = {
@@ -51,7 +51,7 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public status?: number,
-    public response?: any
+    public response?: unknown
   ) {
     super(message)
     this.name = 'ApiError'

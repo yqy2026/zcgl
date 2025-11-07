@@ -109,7 +109,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
       },
       tooltip: {
         callbacks: {
-          label: (context: any) => {
+          label: (context: { dataIndex: number; parsed: number; label: string }) => {
             const item = data?.by_property_nature?.[context.dataIndex]
             return [
               `${context.label}: ${context.parsed} 个`,
@@ -149,7 +149,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
       },
       tooltip: {
         callbacks: {
-          label: (context: any) => {
+          label: (context: { dataIndex: number; parsed: number; label: string }) => {
             const item = data?.by_ownership_status?.[context.dataIndex]
             return [
               `${context.label}: ${context.parsed} 个`,
@@ -189,7 +189,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
       },
       tooltip: {
         callbacks: {
-          label: (context: any) => {
+          label: (context: { dataIndex: number; parsed: number; label: string }) => {
             const item = data?.by_usage_status?.[context.dataIndex]
             return [
               `${context.label}: ${context.parsed} 个`,
@@ -228,7 +228,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
       },
       tooltip: {
         callbacks: {
-          label: (context: any) => {
+          label: (context: { dataIndex: number; parsed: { y: number } }) => {
             const item = data?.by_ownership_entity?.[context.dataIndex]
             return [
               `资产数量: ${context.parsed.y} 个`,

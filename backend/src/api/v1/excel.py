@@ -574,7 +574,7 @@ async def import_excel_async(
             details={
                 "filename": file.filename,
                 "size": file.size,
-                "request_config": request.dict(),
+                "request_config": request.model_dump(),
                 "validation_hash": validation_result.get("hash"),
             },
         )

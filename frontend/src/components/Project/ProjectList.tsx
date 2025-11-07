@@ -40,6 +40,15 @@ import ProjectForm from './ProjectForm';
 import ProjectDetail from './ProjectDetail';
 // import OwnershipSelect from '@/components/Ownership/OwnershipSelect';
 
+// 项目查询参数接口
+interface ProjectQueryParams {
+  page: number;
+  size: number;
+  keyword?: string;
+  is_active?: boolean;
+  ownership_id?: string;
+}
+
 const { Search } = Input;
 const { Option } = Select;
 const { confirm } = Modal;
@@ -77,7 +86,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
   const fetchProjects = async () => {
     setLoading(true);
     try {
-      const params: any = {
+      const params: ProjectQueryParams = {
         page: pagination.current,
         size: pagination.pageSize
       };
@@ -95,7 +104,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
       }
 
       const response = await projectService.getProjects(params);
-      console.log('Project API response:', response);
+      // API response received
 
       // 处理后端响应格式: {items: [...], total: 58, page: 1, size: 10, pages: 6}
       if (response && response.items) {

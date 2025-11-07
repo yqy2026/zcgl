@@ -1,19 +1,20 @@
 import React from 'react'
 import { Card, Tag, Space, Button, Typography, Progress, Tooltip } from 'antd'
-import { 
-  EyeOutlined, 
-  EditOutlined, 
-  DeleteOutlined, 
+import {
+  EyeOutlined,
+  EditOutlined,
+  DeleteOutlined,
   EnvironmentOutlined,
   BuildOutlined,
   UserOutlined
 } from '@ant-design/icons'
+import type { Asset } from '@/types/asset'
 
 const { Text, Title } = Typography
 const { Meta } = Card
 
 interface AssetCardProps {
-  asset: any
+  asset: Asset
   onView: () => void
   onEdit: () => void
   onDelete: () => void

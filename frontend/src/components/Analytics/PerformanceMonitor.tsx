@@ -1,5 +1,16 @@
 import React, { useState, useEffect } from 'react'
 
+// Browser memory API interface (experimental)
+interface PerformanceMemory {
+  usedJSHeapSize: number
+  totalJSHeapSize: number
+  jsHeapSizeLimit: number
+}
+
+interface ExtendedPerformance extends Performance {
+  memory?: PerformanceMemory
+}
+
 interface PerformanceMetrics {
   renderTime: number
   memoryUsage: number
@@ -39,9 +50,9 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
 
     // 测量内存使用
     const measureMemoryUsage = () => {
-      if ((performance as any).memory) {
-        const memory = (performance as any).memory
-        const memoryUsage = memory.usedJSHeapSize / (1024 * 1024) // MB
+      const extendedPerformance = performance as ExtendedPerformance
+      if (extendedPerformance.memory) {
+        const memoryUsage = extendedPerformance.memory.usedJSHeapSize / (1024 * 1024) // MB
         setMetrics(prev => ({ ...prev, memoryUsage }))
       }
     }

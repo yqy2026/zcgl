@@ -91,7 +91,7 @@ class UnifiedDictionaryService {
       // 检查是否为系统字典类型
       const config = baseDictionaryService.getAvailableTypes().find(c => c.code === dictType)
       if (config) {
-        console.log(`系统字典类型 ${dictType} 已存在，跳过创建`)
+        // Dictionary type already exists, skip creation
         return true
       }
 

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import {
   Card,
   Row,
@@ -174,28 +174,35 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
 
   // 防抖处理筛选器变化
   const debouncedFilterChange = useCallback(
-    debounce((newFilters: AssetSearchParams) => {
+    (newFilters: AssetSearchParams) => {
       if (onFiltersChange) {
         onFiltersChange(newFilters)
       }
-    }, realTimeUpdate ? 500 : 0),
-    [onFiltersChange, realTimeUpdate]
+    },
+    [onFiltersChange]
   )
 
-  const handleFilterChange = (field: string, value: any) => {
+  // 创建防抖函数
+  const debouncedFilterChangeRef = useRef(debounce(debouncedFilterChange, 500))
+
+  useEffect(() => {
+    debouncedFilterChangeRef.current = debounce(debouncedFilterChange, realTimeUpdate ? 500 : 0)
+  }, [debouncedFilterChange, realTimeUpdate])
+
+  const handleFilterChange = (field: string, value: unknown) => {
     const newFilters = { ...localFilters, [field]: value }
     setLocalFilters(newFilters)
-    debouncedFilterChange(newFilters)
+    debouncedFilterChangeRef.current(newFilters)
   }
 
-  const handleDateRangeChange = (_dates: any, dateStrings: [string, string]) => {
+  const handleDateRangeChange = (_dates: [unknown, unknown] | null, dateStrings: [string, string]) => {
     const newFilters = {
       ...localFilters,
       start_date: dateStrings[0] || undefined,
       end_date: dateStrings[1] || undefined
     }
     setLocalFilters(newFilters)
-    debouncedFilterChange(newFilters)
+    debouncedFilterChangeRef.current(newFilters)
   }
 
   const handleSearch = (value: string) => {

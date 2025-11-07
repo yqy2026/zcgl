@@ -2,7 +2,7 @@ import * as XLSX from 'xlsx'
 
 export interface ExportData {
   sheetName: string
-  data: any[]
+  data: Record<string, unknown>[]
   headers: string[]
 }
 

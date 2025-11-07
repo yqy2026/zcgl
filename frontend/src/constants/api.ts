@@ -9,7 +9,7 @@
 export const API_CONFIG = {
   // 开发环境通过Vite代理转发到后端
   BASE_PATH: '/v1',
-  // 基础URL（兼容性字段）
+  // 基础URL - 统一路径配置
   BASE_URL: process.env.NODE_ENV === 'development'
     ? '/api/v1'
     : '/api/v1',

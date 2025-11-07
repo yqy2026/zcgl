@@ -18,7 +18,7 @@ const LoginPage: React.FC = () => {
     remember: false
   })
 
-  const handleFormChange = (changedFields: any, allFields: LoginFormData) => {
+  const handleFormChange = (changedFields: { [key: string]: unknown }, allFields: LoginFormData) => {
     setFormData(allFields)
   }
 

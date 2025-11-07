@@ -130,7 +130,35 @@ def test_paddleocr_installation():
         logger.info("✓ PaddleOCR导入成功")
 
         # 测试OCR功能
-        ocr = paddleocr.PaddleOCR(use_angle_cls=True, lang='ch', show_log=False)
+        # 初始化引擎（默认启用 MKLDNN 加速，CPU 模式）
+        # 兼容不同版本：优先使用 use_textline_orientation，失败回退到 use_angle_cls；移除不兼容的 show_log
+        base_args = {
+            "lang": "ch",
+            "use_gpu": False,
+            "enable_mkldnn": True,
+        }
+        try:
+            ocr = paddleocr.PaddleOCR(
+                **base_args,
+                use_textline_orientation=True,
+            )
+        except Exception as e:
+            msg = str(e)
+            if "Unknown argument" in msg and "use_textline_orientation" in msg:
+                # 回退到旧参数名
+                ocr = paddleocr.PaddleOCR(
+                    **base_args,
+                    use_angle_cls=True,
+                )
+            elif "Unknown argument" in msg and "enable_mkldnn" in msg:
+                # 某些版本不支持 enable_mkldnn 参数，移除后重试
+                base_args.pop("enable_mkldnn", None)
+                ocr = paddleocr.PaddleOCR(
+                    **base_args,
+                    use_textline_orientation=True,
+                )
+            else:
+                raise
         logger.info("✓ PaddleOCR引擎初始化成功")
 
         # 创建简单测试图像
@@ -181,10 +209,13 @@ PaddleOCR配置文件
 # PaddleOCR基础配置
 PADDLEOCR_BASE_CONFIG = {
     # 模型设置
-    "use_angle_cls": True,        # 启用文字方向分类
+    # 文字方向分类（兼容新旧版本参数名）
+    "use_textline_orientation": True,  # 新版参数，推荐
+    "use_angle_cls": True,             # 旧版参数，作为回退
     "lang": "ch",                 # 中文模式
     "use_gpu": False,             # CPU模式（可设置为True启用GPU）
     "gpu_mem": 8000,              # GPU内存限制（MB）
+    "enable_mkldnn": True,        # 在CPU上启用MKLDNN加速
 
     # 检测参数
     "det_db_thresh": 0.3,        # 检测阈值
@@ -197,7 +228,7 @@ PADDLEOCR_BASE_CONFIG = {
     "drop_score": 0.5,           # 识别置信度阈值
 
     # 性能设置
-    "show_log": False,           # 关闭详细日志
+    # "show_log": False,           # 某些版本不支持该参数，避免在初始化中使用
     "use_mp": True,              # 启用多进程
     "total_process_num": 1,      # 进程数
 

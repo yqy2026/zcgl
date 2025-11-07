@@ -15,7 +15,7 @@ interface CacheConfig {
 }
 
 export class DataCache {
-  private cache = new Map<string, CacheEntry<any>>()
+  private cache = new Map<string, CacheEntry<unknown>>()
   private config: Required<CacheConfig>
 
   constructor(config: CacheConfig = {}) {
@@ -26,12 +26,12 @@ export class DataCache {
     }
   }
 
-  private generateKey(key: string, params?: any): string {
+  private generateKey(key: string, params?: unknown): string {
     if (!params) return key
     return `${key}_${JSON.stringify(params)}`
   }
 
-  private isExpired(entry: CacheEntry<any>): boolean {
+  private isExpired(entry: CacheEntry<unknown>): boolean {
     return Date.now() - entry.timestamp > entry.ttl
   }
 
@@ -53,7 +53,7 @@ export class DataCache {
     })
   }
 
-  get<T>(key: string, params?: any): T | null {
+  get<T>(key: string, params?: unknown): T | null {
     const fullKey = this.generateKey(key, params)
     const entry = this.cache.get(fullKey)
 
@@ -66,13 +66,13 @@ export class DataCache {
     return entry.data
   }
 
-  has(key: string, params?: any): boolean {
+  has(key: string, params?: unknown): boolean {
     const fullKey = this.generateKey(key, params)
     const entry = this.cache.get(fullKey)
     return entry ? !this.isExpired(entry) : false
   }
 
-  delete(key: string, params?: any): boolean {
+  delete(key: string, params?: unknown): boolean {
     const fullKey = this.generateKey(key, params)
     return this.cache.delete(fullKey)
   }
@@ -110,7 +110,7 @@ export class DataCache {
 
 // 批量请求优化器
 export class BatchRequestOptimizer {
-  private pendingRequests = new Map<string, Promise<any>>()
+  private pendingRequests = new Map<string, Promise<unknown>>()
   private batchDelay = 50 // milliseconds
 
   async batchRequest<T>(
@@ -129,24 +129,16 @@ export class BatchRequestOptimizer {
       return this.pendingRequests.get(requestKey)!
     }
 
-    const promise = new Promise<T>(async (resolve, reject) => {
+    const promise = (async () => {
       try {
         // 添加小延迟以批量处理相同的请求
-        setTimeout(async () => {
-          try {
-            const result = await requestFn()
-            resolve(result)
-          } catch (error) {
-            reject(error)
-          } finally {
-            this.pendingRequests.delete(requestKey)
-          }
-        }, delay)
-      } catch (error) {
-        reject(error)
+        await new Promise<void>((resolve) => setTimeout(resolve, delay))
+        const result = await requestFn()
+        return result
+      } finally {
         this.pendingRequests.delete(requestKey)
       }
-    })
+    })()
 
     this.pendingRequests.set(requestKey, promise)
     return promise
@@ -159,10 +151,10 @@ export class BatchRequestOptimizer {
 
 // 数据预加载器
 export class DataPreloader {
-  private preloadQueue: Array<() => Promise<any>> = []
+  private preloadQueue: Array<() => Promise<unknown>> = []
   private isPreloading = false
 
-  addToPreload(requestFn: () => Promise<any>): void {
+  addToPreload(requestFn: () => Promise<unknown>): void {
     this.preloadQueue.push(requestFn)
   }
 
@@ -217,7 +209,7 @@ export const createCachedRequest = <T>(
   cache: DataCache = globalDataCache,
   ttl?: number
 ) => {
-  return async (params?: any): Promise<T> => {
+  return async (params?: unknown): Promise<T> => {
     // 尝试从缓存获取
     const cached = cache.get<T>(cacheKey, params)
     if (cached) {

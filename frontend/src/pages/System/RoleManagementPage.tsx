@@ -289,7 +289,12 @@ const RoleManagementPage: React.FC = () => {
     setPermissionModalVisible(true)
   }
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: {
+    name: string;
+    description?: string;
+    permissions?: string[];
+    isActive?: boolean;
+  }) => {
     try {
       if (editingRole) {
         // 模拟更新API调用

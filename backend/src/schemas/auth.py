@@ -136,6 +136,7 @@ class TokenResponse(BaseModel):
     refresh_token: str = Field(..., description="刷新令牌")
     token_type: str = Field(default="bearer", description="令牌类型")
     expires_in: int = Field(..., description="过期时间（秒）")
+    session_id: str | None = Field(None, description="会话ID")
 
 
 class LoginResponse(BaseModel):

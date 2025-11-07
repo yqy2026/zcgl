@@ -150,7 +150,7 @@ const RentLedgerPage: React.FC = () => {
   }, []);
 
   // 处理分页变化
-  const handleTableChange = (pagination: any) => {
+  const handleTableChange = (pagination: { current: number; pageSize: number; total?: number }) => {
     setState(prev => ({
       ...prev,
       pagination: {
@@ -166,7 +166,7 @@ const RentLedgerPage: React.FC = () => {
   };
 
   // 处理搜索
-  const handleSearch = (values: any) => {
+  const handleSearch = (values: Record<string, unknown>) => {
     setState(prev => ({
       ...prev,
       filters: values,
@@ -198,7 +198,7 @@ const RentLedgerPage: React.FC = () => {
   };
 
   // 批量更新支付状态
-  const handleBatchUpdate = async (values: any) => {
+  const handleBatchUpdate = async (values: { paymentStatus: string; paymentDate?: string }) => {
     if (state.selectedLedgers.length === 0) {
       message.warning('请先选择要更新的台账记录');
       return;

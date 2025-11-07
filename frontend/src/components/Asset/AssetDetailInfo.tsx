@@ -10,7 +10,7 @@ import {
 } from '@ant-design/icons'
 
 import type { Asset } from '@/types/asset'
-import { formatArea, formatDate, getStatusColor, calculateOccupancyRate } from '@/utils/format'
+import { formatDate, getStatusColor, calculateOccupancyRate } from '@/utils/format'
 
 interface AssetDetailInfoProps {
   asset: Asset

@@ -32,7 +32,7 @@ export interface StandardError {
   type: ErrorType
   code: string
   message: string
-  details?: any
+  details?: unknown
   timestamp: string
   stack?: string
 }
@@ -53,36 +53,38 @@ const ERROR_MESSAGES: Record<ErrorType, string> = {
 /**
  * 判断错误类型
  */
-export function getErrorType(error: any): ErrorType {
+export function getErrorType(error: unknown): ErrorType {
   if (!error) return ErrorType.UNKNOWN_ERROR
 
+  const err = error as Record<string, unknown>
+
   // 网络错误
-  if (error.name === 'NetworkError' || error.code === 'NETWORK_ERROR') {
+  if (err.name === 'NetworkError' || err.code === 'NETWORK_ERROR') {
     return ErrorType.NETWORK_ERROR
   }
 
   // 超时错误
-  if (error.name === 'TimeoutError' || error.code === 'ECONNABORTED') {
+  if (err.name === 'TimeoutError' || err.code === 'ECONNABORTED') {
     return ErrorType.TIMEOUT_ERROR
   }
 
   // 404 错误
-  if (error.status === 404 || error.response?.status === 404) {
+  if (err.status === 404 || (err.response as Record<string, unknown>)?.status === 404) {
     return ErrorType.NOT_FOUND_ERROR
   }
 
   // 403 错误
-  if (error.status === 403 || error.response?.status === 403) {
+  if (err.status === 403 || (err.response as Record<string, unknown>)?.status === 403) {
     return ErrorType.PERMISSION_ERROR
   }
 
   // 422 错误（验证错误）
-  if (error.status === 422 || error.response?.status === 422) {
+  if (err.status === 422 || (err.response as Record<string, unknown>)?.status === 422) {
     return ErrorType.VALIDATION_ERROR
   }
 
   // API 错误
-  if (error.response?.status >= 400) {
+  if ((err.response as Record<string, unknown>)?.status && (err.response as Record<string, unknown>).status as number >= 400) {
     return ErrorType.API_ERROR
   }
 
@@ -92,28 +94,37 @@ export function getErrorType(error: any): ErrorType {
 /**
  * 提取错误消息
  */
-export function extractErrorMessage(error: any): string {
+export function extractErrorMessage(error: unknown): string {
   if (!error) return ERROR_MESSAGES[ErrorType.UNKNOWN_ERROR]
 
   // 直接的错误消息
   if (typeof error === 'string') return error
 
+  const err = error as Record<string, unknown>
+
   // 对象中的错误消息
-  if (error.message) return error.message
+  if (err.message && typeof err.message === 'string') return err.message
 
   // API 响应错误
-  if (error.response?.data?.detail) return error.response.data.detail
-  if (error.response?.data?.message) return error.response.data.message
-  if (error.response?.data?.error) return error.response.data.error
+  const responseData = err.response as Record<string, unknown>
+  if (responseData?.data) {
+    const data = responseData.data as Record<string, unknown>
+    if (data.detail && typeof data.detail === 'string') return data.detail
+    if (data.message && typeof data.message === 'string') return data.message
+    if (data.error && typeof data.error === 'string') return data.error
+  }
 
   // 验证错误
-  if (error.response?.data?.errors) {
-    const errors = error.response.data.errors
-    if (Array.isArray(errors)) {
-      return errors.join(', ')
-    }
-    if (typeof errors === 'object') {
-      return Object.values(errors).flat().join(', ')
+  if (responseData?.data) {
+    const data = responseData.data as Record<string, unknown>
+    if (data.errors) {
+      const errors = data.errors
+      if (Array.isArray(errors)) {
+        return errors.filter(e => typeof e === 'string').join(', ')
+      }
+      if (typeof errors === 'object' && errors !== null) {
+        return Object.values(errors).flat().filter(e => typeof e === 'string').join(', ')
+      }
     }
   }
 
@@ -125,17 +136,18 @@ export function extractErrorMessage(error: any): string {
 /**
  * 标准化错误对象
  */
-export function normalizeError(error: any): StandardError {
+export function normalizeError(error: unknown): StandardError {
   const errorType = getErrorType(error)
   const message = extractErrorMessage(error)
+  const err = error as Record<string, unknown>
 
   return {
     type: errorType,
-    code: error.code || error.status?.toString() || 'UNKNOWN',
+    code: (err.code as string) || (err.status as number)?.toString() || 'UNKNOWN',
     message,
-    details: error.details || error.response?.data || null,
+    details: err.details || (err.response as Record<string, unknown>)?.data || null,
     timestamp: new Date().toISOString(),
-    stack: error.stack
+    stack: err.stack as string
   }
 }
 
@@ -143,7 +155,7 @@ export function normalizeError(error: any): StandardError {
  * 统一错误处理函数
  */
 export function handleError(
-  error: any,
+  error: unknown,
   options: ErrorHandlerOptions = {}
 ): StandardError {
   const {
@@ -211,7 +223,7 @@ export async function withErrorHandling<T>(
     }
 
     return { success: true, data }
-  } catch (error: any) {
+  } catch (error: unknown) {
     const standardError = handleError(error, {
       fallbackMessage: options.errorMessage,
       ...options
@@ -228,7 +240,7 @@ export function createErrorHandler(
   context: string,
   options: ErrorHandlerOptions = {}
 ) {
-  return (error: any) => {
+  return (error: unknown) => {
     console.error(`Error in ${context}:`, error)
     return handleError(error, {
       fallbackMessage: `${context}操作失败`,

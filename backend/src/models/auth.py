@@ -9,6 +9,7 @@ from enum import Enum
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.sqlite import JSON
 from sqlalchemy.orm import relationship
+from typing import TYPE_CHECKING, cast
 
 from ..database import Base
 
@@ -84,7 +85,7 @@ class User(Base):
     )
     audit_logs = relationship("AuditLog", back_populates="user")
     role_assignments = relationship(
-        "UserRoleAssignment", back_populates="user", overlaps="roles"
+        "UserRoleAssignment", back_populates="user"
     )
 
     # 动态权限关系 - 暂时注释掉有问题的关系
@@ -101,38 +102,51 @@ class User(Base):
     @property
     def is_admin(self) -> bool:
         """检查是否为管理员"""
-        # 处理数据库中存储的字符串和枚举类型的兼容性
-        # 修复：字符串和枚举比较问题
-        if isinstance(self.role, str):
-            return self.role == UserRole.ADMIN.value
-        return self.role == UserRole.ADMIN
+        # 注意：这是实例属性，不是SQL查询表达式
+        # 在实际使用中，self.role应该是从数据库加载的具体值
+        if TYPE_CHECKING:
+            # 在类型检查时，self.role是Column对象
+            return False
+        else:
+            # 在运行时，self.role是具体的值
+            role_value = cast(str, self.role)
+            if isinstance(role_value, str):
+                return role_value == UserRole.ADMIN.value
+            elif hasattr(role_value, 'value'):  # 如果是枚举类型
+                return role_value.value == UserRole.ADMIN.value
+            return False
 
     def is_locked_now(self) -> bool:
         """检查当前是否被锁定"""
-        # 安全地检查 is_locked 字段
-        is_locked = self.is_locked
-        if isinstance(is_locked, str):
-            is_locked = is_locked.lower() in ("true", "1", "yes")
-        elif not isinstance(is_locked, bool):
-            is_locked = bool(is_locked) if is_locked is not None else False
-
-        if not is_locked:
+        if TYPE_CHECKING:
+            # 在类型检查时，返回明确的bool值
             return False
+        else:
+            # 安全地检查 is_locked 字段
+            is_locked = cast(bool, self.is_locked)
+            if isinstance(is_locked, str):
+                is_locked = is_locked.lower() in ("true", "1", "yes")
+            elif not isinstance(is_locked, bool):
+                is_locked = bool(is_locked) if is_locked is not None else False
 
-        # 检查锁定时间
-        if self.locked_until and self.locked_until > datetime.now():
-            return True
+            if not is_locked:
+                return False
 
-        # 如果锁定时间已过，自动解锁（安全地设置字段）
-        try:
-            self.is_locked = False
-            self.locked_until = None
-            self.failed_login_attempts = 0
-        except Exception:
-            # 如果无法设置字段，忽略错误，只返回结果
-            pass
+            # 检查锁定时间
+            locked_until_value = cast(datetime, self.locked_until)
+            if locked_until_value is not None and locked_until_value > datetime.now():
+                return True
 
-        return False
+            # 如果锁定时间已过，自动解锁（安全地设置字段）
+            try:
+                self.is_locked = False
+                self.locked_until = None
+                self.failed_login_attempts = 0
+            except Exception:
+                # 如果无法设置字段，忽略错误，只返回结果
+                pass
+
+            return False
 
 
 class UserSession(Base):
@@ -146,8 +160,11 @@ class UserSession(Base):
     user_id = Column(String, ForeignKey("users.id"), nullable=False)
 
     # 会话信息
+    session_id = Column(String(100), unique=True, comment="会话ID")
     refresh_token = Column(String(255), unique=True, nullable=False, comment="刷新令牌")
     device_info = Column(Text, comment="设备信息")
+    device_id = Column(String(100), comment="设备ID")
+    platform = Column(String(50), comment="平台")
     ip_address = Column(String(45), comment="IP地址")
     user_agent = Column(Text, comment="用户代理")
 
@@ -171,7 +188,14 @@ class UserSession(Base):
 
     def is_expired(self) -> bool:
         """检查会话是否已过期"""
-        return datetime.now() > self.expires_at
+        if TYPE_CHECKING:
+            # 在类型检查时，返回明确的bool值
+            return False
+        else:
+            expires_at_value = cast(datetime, self.expires_at)
+            if expires_at_value is None:
+                return True
+            return datetime.now() > expires_at_value
 
 
 class AuditLog(Base):

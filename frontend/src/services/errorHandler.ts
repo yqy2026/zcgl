@@ -4,6 +4,21 @@ import { message, notification } from 'antd'
 import type { ErrorResponse } from '@/types/api'
 import { HTTP_STATUS, ERROR_CODES } from './config'
 
+// 日志数据接口
+export interface LogData {
+  timestamp: string
+  level: 'error' | 'warning' | 'info'
+  message: string
+  error?: {
+    message?: string
+    stack?: string
+    name?: string
+  }
+  context?: Record<string, unknown>
+  userAgent?: string
+  url?: string
+}
+
 export interface ErrorHandlerOptions {
   showMessage?: boolean
   showNotification?: boolean
@@ -203,7 +218,7 @@ export class ApiErrorHandler {
   }
   
   // 发送错误到日志服务
-  private sendErrorToLogService(_logData: any): void {
+  private sendErrorToLogService(_logData: LogData): void {
     // 这里可以集成第三方日志服务，如 Sentry、LogRocket 等
     // 示例：
     // Sentry.captureException(new Error(logData.message), {
@@ -213,7 +228,7 @@ export class ApiErrorHandler {
   
   // 创建用户友好的错误消息
   static createUserFriendlyError(
-    originalError: any,
+    originalError: unknown,
     context?: string
   ): ErrorResponse {
     let message = '操作失败，请稍后重试'
@@ -269,7 +284,7 @@ export const errorHandler = ApiErrorHandler.getInstance()
 
 // 导出便捷方法
 export const handleApiError = (
-  error: any,
+  error: unknown,
   options?: ErrorHandlerOptions,
   context?: string
 ) => {

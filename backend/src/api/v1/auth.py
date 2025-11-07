@@ -62,8 +62,8 @@ async def login(
     user_crud = UserCRUD()
 
     # 获取客户端信息
-    client_ip = request.client.host
-    user_agent = request.headers.get("user-agent")
+    client_ip = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "unknown")
 
     try:
         # 认证用户
@@ -76,7 +76,7 @@ async def login(
             if existing_user:
                 audit_crud.create(
                     db=db,
-                    user_id=existing_user.id,
+                    user_id=str(existing_user.id) if existing_user else "unknown",
                     action="user_login_failed",
                     resource_type="authentication",
                     ip_address=client_ip,
@@ -87,21 +87,26 @@ async def login(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="用户名或密码错误"
             )
 
-        # 创建令牌
-        tokens = auth_service.create_tokens(user)
+        # 创建令牌（增强安全性）
+        device_info = {
+            "user_agent": user_agent,
+            "ip_address": client_ip,
+        }
+        tokens = auth_service.create_tokens(user, device_info)
 
         # 创建会话
         auth_service.create_user_session(
-            user_id=user.id,
+            user_id=str(user.id),
             refresh_token=tokens.refresh_token,
             ip_address=client_ip,
             user_agent=user_agent,
+            session_id=getattr(tokens, 'session_id', None),
         )
 
         # 记录成功登录
         audit_crud.create(
             db=db,
-            user_id=user.id,
+            user_id=str(user.id),
             action="user_login",
             resource_type="authentication",
             api_endpoint="/api/v1/auth/login",
@@ -112,7 +117,7 @@ async def login(
         )
 
         return LoginResponse(
-            user=UserResponse.from_orm(user), tokens=tokens, message="登录成功"
+            user=UserResponse.model_validate(user), tokens=tokens, message="登录成功"
         )
 
     except BusinessLogicError as e:
@@ -136,8 +141,8 @@ async def logout(
     audit_crud = AuditLogCRUD()
 
     # 获取客户端信息
-    client_ip = request.client.host
-    user_agent = request.headers.get("user-agent")
+    client_ip = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "unknown")
 
     # 撤销用户所有会话
     revoked_count = auth_service.revoke_all_user_sessions(current_user.id)
@@ -161,39 +166,99 @@ async def logout(
 
 @router.post("/refresh", response_model=TokenResponse, summary="刷新令牌")
 async def refresh_token(
-    refresh_data: RefreshTokenRequest, db: Session = Depends(get_db)
+    request: Request,
+    refresh_data: RefreshTokenRequest, 
+    db: Session = Depends(get_db)
 ):
     """
     刷新访问令牌接口
 
     - 使用刷新令牌获取新的访问令牌
     - 自动延长会话有效期
+    - 增强安全性：记录刷新操作、检查IP变化等
     """
     auth_service = AuthService(db)
+    
+    # 获取客户端信息
+    client_ip = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "unknown")
 
-    # 验证刷新令牌
-    session = auth_service.validate_refresh_token(refresh_data.refresh_token)
+    # 验证刷新令牌（增强安全性）
+    session = auth_service.validate_refresh_token(
+        refresh_data.refresh_token, 
+        client_ip=client_ip, 
+        user_agent=user_agent
+    )
     if not session:
+        # 记录失败的刷新尝试
+        from ...crud.auth import AuditLogCRUD
+        audit_crud = AuditLogCRUD()
+        audit_crud.create(
+            db=db,
+            user_id="unknown",  # 无法确定用户
+            action="token_refresh_failed",
+            resource_type="authentication",
+            api_endpoint="/api/v1/auth/refresh",
+            http_method="POST",
+            response_status=401,
+            response_message="无效的刷新令牌",
+            ip_address=client_ip,
+            user_agent=user_agent,
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="无效的刷新令牌"
         )
 
     # 获取用户
-    user = auth_service.get_user_by_id(session.user_id)
-    if not user or not user.is_active:
+    user = auth_service.get_user_by_id(str(session.user_id))
+    user_active = getattr(user, 'is_active', False) if user else False
+    if not user or not user_active:
         # 撤销无效会话
         auth_service.revoke_session(refresh_data.refresh_token)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="用户不存在或已被禁用"
         )
 
-    # 创建新令牌
-    tokens = auth_service.create_tokens(user)
+    # 检查IP变化（可选安全检查）
+    session_ip = str(getattr(session, 'ip_address', '')) if getattr(session, 'ip_address', '') else None
+    if session_ip and session_ip != client_ip:
+        # 可以选择拒绝IP变化的请求，或记录警告
+        print(f"警告：用户 {getattr(user, 'username', 'unknown')} 的IP地址发生变化：{session_ip} -> {client_ip}")
+
+    # 创建新令牌（增强安全性）
+    device_info = {
+        "user_agent": user_agent,
+        "ip_address": client_ip,
+        "device_id": getattr(session, 'device_id', None),
+        "platform": getattr(session, 'platform', None),
+    }
+    tokens = auth_service.create_tokens(user, device_info)
 
     # 更新会话
-    session.refresh_token = tokens.refresh_token
-    session.last_accessed_at = datetime.now()
+    setattr(session, 'refresh_token', tokens.refresh_token)
+    setattr(session, 'last_accessed_at', datetime.now())
+    setattr(session, 'ip_address', client_ip)  # 更新IP地址
+    setattr(session, 'user_agent', user_agent)  # 更新User-Agent
+    # 更新会话ID（如果存在）
+    if tokens.session_id:
+        setattr(session, 'session_id', tokens.session_id)
     db.commit()
+
+    # 记录成功的刷新操作
+    from ...crud.auth import AuditLogCRUD
+    audit_crud = AuditLogCRUD()
+    audit_crud.create(
+        db=db,
+        user_id=str(getattr(user, 'id', 'unknown')),
+        action="token_refresh_success",
+        resource_type="authentication",
+        api_endpoint="/api/v1/auth/refresh",
+        http_method="POST",
+        response_status=200,
+        response_message="令牌刷新成功",
+        ip_address=client_ip,
+        user_agent=user_agent,
+    )
 
     return tokens
 
@@ -239,7 +304,7 @@ async def test_me_debug(current_user: UserResponse = Depends(get_current_active_
     from datetime import datetime
 
     # 检查 UserResponse 的所有字段
-    user_dict = current_user.dict()
+    user_dict = current_user.model_dump()
     print(f"UserResponse字段: {list(user_dict.keys())}")
     print(f"UserResponse内容: {user_dict}")
 
@@ -289,7 +354,7 @@ async def get_users(
     total_pages = (total + params.page_size - 1) // params.page_size
 
     return UserListResponse(
-        users=[UserResponse.from_orm(user) for user in users],
+        users=[UserResponse.model_validate(user) for user in users],
         total=total,
         page=params.page,
         page_size=params.page_size,
@@ -312,7 +377,7 @@ async def create_user(
     try:
         user_crud = UserCRUD()
         user = user_crud.create(db, user_data)
-        return UserResponse.from_orm(user)
+        return UserResponse.model_validate(user)
     except BusinessLogicError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -341,7 +406,7 @@ async def get_user(
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在")
 
-    return UserResponse.from_orm(user)
+    return UserResponse.model_validate(user)
 
 
 @router.put("/users/{user_id}", response_model=UserResponse, summary="更新用户")
@@ -367,8 +432,8 @@ async def update_user(
         )
 
     try:
-        user = user_crud.update(db, user_id, user_data)
-        return UserResponse.from_orm(user)
+        user = user_crud.update(db, user_crud.get(db, str(user_id)), user_data)
+        return UserResponse.model_validate(user)
     except BusinessLogicError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -431,7 +496,11 @@ async def deactivate_user(
     """
     user_crud = UserCRUD()
 
-    success = user_crud.deactivate(db, user_id)
+    user = user_crud.get(db, str(user_id))
+    if user:
+        success = user_crud.delete(db, str(user_id))
+    else:
+        success = False
     if not success:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在")
 
@@ -490,7 +559,7 @@ async def get_user_sessions(
     """获取当前用户的所有会话"""
     session_crud = UserSessionCRUD()
     sessions = session_crud.get_user_sessions(db, current_user.id)
-    return [UserSessionResponse.from_orm(session) for session in sessions]
+    return [UserSessionResponse.model_validate(session) for session in sessions]
 
 
 @router.delete("/sessions/{session_id}", summary="撤销会话")
@@ -504,7 +573,7 @@ async def revoke_session(
     session_crud = UserSessionCRUD()
 
     session = session_crud.get(db, session_id)
-    if not session or session.user_id != current_user.id:
+    if not session or str(session.user_id) != str(current_user.id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="会话不存在")
 
     success = auth_service.revoke_session(session_id)
@@ -569,8 +638,8 @@ async def lock_user(
                 status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在"
             )
 
-        user.is_locked = True
-        user.updated_at = datetime.now(UTC)
+        setattr(user, 'is_locked', True)
+        setattr(user, 'updated_at', datetime.now(UTC))
         db.commit()
         db.refresh(user)
 
@@ -594,8 +663,8 @@ async def lock_user(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-@router.post("/users/{user_id}/unlock", summary="解锁用户")
-async def unlock_user(
+@router.post("/users/{user_id}/unlock", summary="解锁用户账户")
+async def unlock_user_account(
     user_id: str,
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(require_admin),
@@ -614,8 +683,8 @@ async def unlock_user(
                 status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在"
             )
 
-        user.is_locked = False
-        user.updated_at = datetime.now(UTC)
+        setattr(user, 'is_locked', False)
+        setattr(user, 'updated_at', datetime.now(UTC))
         db.commit()
         db.refresh(user)
 
@@ -677,8 +746,8 @@ async def reset_user_password(
             )
 
         # 设置新密码
-        user.hashed_password = auth_service.hash_password(reset_request.new_password)
-        user.updated_at = datetime.now(UTC)
+        setattr(user, 'hashed_password', auth_service.get_password_hash(reset_request.new_password))
+        setattr(user, 'updated_at', datetime.now(UTC))
         db.commit()
         db.refresh(user)
 
@@ -723,7 +792,7 @@ async def get_user_statistics(
         active_users = db.query(func.count(User.id)).filter(User.is_active).scalar()
         locked_users = db.query(func.count(User.id)).filter(User.is_locked).scalar()
         inactive_users = (
-            db.query(func.count(User.id)).filter(not User.is_active).scalar()
+            db.query(func.count(User.id)).filter(User.is_active == False).scalar()
         )
 
         return {

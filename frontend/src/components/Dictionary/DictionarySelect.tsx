@@ -9,6 +9,13 @@ import { SelectProps } from 'antd/es/select'
 import { useDictionary } from '../../hooks/useDictionary'
 import { unifiedDictionaryService } from '../../services/dictionary'
 
+interface DictionaryOption {
+  value: string
+  label: string
+  color?: string
+  icon?: string
+}
+
 interface DictionarySelectProps extends SelectProps {
   /** 字典类型 */
   dictType: string
@@ -19,7 +26,7 @@ interface DictionarySelectProps extends SelectProps {
   /** 是否显示图标 */
   showIcon?: boolean
   /** 自定义选项渲染 */
-  optionRender?: (option: any) => React.ReactNode
+  optionRender?: (option: DictionaryOption) => React.ReactNode
 }
 
 const DictionarySelect: React.FC<DictionarySelectProps> = ({
@@ -33,30 +40,17 @@ const DictionarySelect: React.FC<DictionarySelectProps> = ({
 }) => {
   const { options, loading, error } = useDictionary(dictType, isActive)
 
-  // 调试日志：追踪数据传递
-  console.log(`🔍 [${dictType}] DictionarySelect调试信息:`, {
-    optionsCount: options.length,
-    isLoading: loading,
-    hasError: !!error,
-    errorMessage: error,
-    optionsSample: options.slice(0, 2)
-  })
+  // Track data flow for debugging
 
   // 检查字典类型是否可用
   const isAvailable = unifiedDictionaryService.isTypeAvailable(dictType)
 
-  // 如果字典类型不可用，显示警告
-  if (!isAvailable) {
-    console.warn(`字典类型不存在 [${dictType}]`)
-  }
+  // If dictionary type is not available, show warning
 
-  // 如果有错误，显示错误信息
-  if (error) {
-    console.error(`字典加载失败 [${dictType}]:`, error)
-  }
+  // If there's an error, show error message
 
   // 默认选项渲染
-  const renderOption = (option: any) => {
+  const renderOption = (option: DictionaryOption) => {
     if (optionRender) {
       return optionRender(option)
     }
@@ -82,28 +76,7 @@ const DictionarySelect: React.FC<DictionarySelectProps> = ({
     )
   }
 
-  // 准备选项数据格式 - Ant Design 5.x最佳实践
-  const selectOptions = options.map((option, index) => ({
-    key: `${option.value}-${index}`,
-    value: option.value,
-    label: typeof renderOption(option) === 'string' ? renderOption(option) :
-           React.isValidElement(renderOption(option)) ? renderOption(option) : option.label,
-    title: option.label,
-    disabled: false
-  }))
-
-  // 调试日志：追踪最终选项数据
-  console.log(`🎯 [${dictType}] 最终选项数据:`, {
-    selectOptionsCount: selectOptions.length,
-    selectOptionsSample: selectOptions.slice(0, 2),
-    firstOptionStructure: selectOptions[0] ? {
-      hasKey: !!selectOptions[0].key,
-      hasValue: !!selectOptions[0].value,
-      hasLabel: !!selectOptions[0].label,
-      valueType: typeof selectOptions[0].value,
-      labelType: typeof selectOptions[0].label
-    } : null
-  })
+  // Prepare options data format - Ant Design 5.x best practice
 
   return (
     <Select
@@ -116,7 +89,7 @@ const DictionarySelect: React.FC<DictionarySelectProps> = ({
         // 处理React元素类型的label
         const label = typeof option?.label === 'string' ? option.label :
                      (React.isValidElement(option?.label) ?
-                       (option?.label as any)?.props?.children?.toString() || '' :
+                       (option?.label as React.ReactElement)?.props?.children?.toString() || '' :
                        String(option?.label || ''))
         return label.toLowerCase().includes(input.toLowerCase())
       }}

@@ -5,6 +5,11 @@
 
 import { DecimalUtils } from '@/types/asset'
 
+// 数据对象接口
+interface DataObject {
+  [key: string]: unknown;
+}
+
 // 需要Decimal转换的字段列表
 const DECIMAL_FIELDS = [
   // 面积字段
@@ -28,15 +33,15 @@ const DECIMAL_FIELDS = [
  * 将后端数据转换为前端数据
  * 处理Decimal字符串转换为number类型
  */
-export const convertBackendToFrontend = <T = any>(data: any): T => {
+export const convertBackendToFrontend = <T = unknown>(data: unknown): T => {
   if (!data || typeof data !== 'object') {
     return data
   }
 
-  const result: any = Array.isArray(data) ? [] : {}
+  const result: DataObject = Array.isArray(data) ? [] : {}
 
   for (const key in data) {
-    if (data.hasOwnProperty(key)) {
+    if (Object.prototype.hasOwnProperty.call(data, key)) {
       const value = data[key]
 
       if (value === null || value === undefined) {
@@ -60,15 +65,15 @@ export const convertBackendToFrontend = <T = any>(data: any): T => {
  * 将前端数据转换为后端数据
  * 处理number类型转换为Decimal字符串
  */
-export const convertFrontendToBackend = <T = any>(data: any): T => {
+export const convertFrontendToBackend = <T = unknown>(data: unknown): T => {
   if (!data || typeof data !== 'object') {
     return data
   }
 
-  const result: any = Array.isArray(data) ? [] : {}
+  const result: DataObject = Array.isArray(data) ? [] : {}
 
   for (const key in data) {
-    if (data.hasOwnProperty(key)) {
+    if (Object.prototype.hasOwnProperty.call(data, key)) {
       const value = data[key]
 
       if (value === null || value === undefined) {
@@ -91,8 +96,8 @@ export const convertFrontendToBackend = <T = any>(data: any): T => {
 /**
  * 安全的数值计算函数，用于前端的自动计算字段
  */
-export const calculateDerivedFields = (asset: any) => {
-  const derived: any = {}
+export const calculateDerivedFields = (asset: DataObject) => {
+  const derived: DataObject = {}
 
   // 计算未出租面积 = 可出租面积 - 已出租面积
   if (asset.rentable_area && asset.rented_area) {
@@ -118,7 +123,7 @@ export const calculateDerivedFields = (asset: any) => {
 /**
  * 验证数值字段的合理性
  */
-export const validateNumericFields = (asset: any) => {
+export const validateNumericFields = (asset: DataObject) => {
   const errors: string[] = []
 
   // 验证面积字段
@@ -148,8 +153,9 @@ export const validateNumericFields = (asset: any) => {
   ]
 
   moneyFields.forEach(({ field, name }) => {
-    if (asset[field] !== undefined && asset[field] !== null) {
-      const value = parseFloat(asset[field])
+    const fieldValue = (asset as any)[field]
+    if (fieldValue !== undefined && fieldValue !== null) {
+      const value = parseFloat(String(fieldValue))
       if (isNaN(value) || value < 0) {
         errors.push(`${name}必须是非负数`)
       }
@@ -158,7 +164,7 @@ export const validateNumericFields = (asset: any) => {
 
   // 验证出租率
   if (asset.occupancy_rate !== undefined && asset.occupancy_rate !== null) {
-    const value = parseFloat(asset.occupancy_rate)
+    const value = parseFloat(String(asset.occupancy_rate))
     if (isNaN(value) || value < 0 || value > 100) {
       errors.push('出租率必须在0-100之间')
     }
@@ -166,8 +172,8 @@ export const validateNumericFields = (asset: any) => {
 
   // 验证面积逻辑关系
   if (asset.rentable_area && asset.rented_area) {
-    const rentableArea = parseFloat(asset.rentable_area)
-    const rentedArea = parseFloat(asset.rented_area)
+    const rentableArea = parseFloat(String(asset.rentable_area))
+    const rentedArea = parseFloat(String(asset.rented_area))
     if (rentedArea > rentableArea) {
       errors.push('已出租面积不能大于可出租面积')
     }

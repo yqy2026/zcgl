@@ -56,7 +56,7 @@ interface ApplicationMetrics {
 interface HealthStatus {
   status: 'healthy' | 'degraded' | 'unhealthy'
   timestamp: string
-  components: Record<string, any>
+  components: Record<string, unknown>
   overall_score: number
 }
 
@@ -69,6 +69,13 @@ interface PerformanceAlert {
   threshold: number
   timestamp: string
   resolved: boolean
+}
+
+// 图表数据点接口
+interface ChartDataPoint {
+  time: string
+  value: number
+  category?: string
 }
 
 interface DashboardData {
@@ -185,7 +192,7 @@ const SystemMonitoringDashboard: React.FC = () => {
       }
     ],
     tooltip: {
-      formatter: (datum: any) => ({
+      formatter: (datum: ChartDataPoint) => ({
         name: 'CPU使用率',
         value: `${datum.value}%`
       })
@@ -216,7 +223,7 @@ const SystemMonitoringDashboard: React.FC = () => {
       }
     ],
     tooltip: {
-      formatter: (datum: any) => ({
+      formatter: (datum: ChartDataPoint) => ({
         name: '内存使用率',
         value: `${datum.value}%`
       })
@@ -247,7 +254,7 @@ const SystemMonitoringDashboard: React.FC = () => {
       }
     ],
     tooltip: {
-      formatter: (datum: any) => ({
+      formatter: (datum: ChartDataPoint) => ({
         name: '响应时间',
         value: `${datum.value}ms`
       })

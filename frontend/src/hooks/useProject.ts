@@ -15,6 +15,15 @@ import type {
 } from '@/types/project'
 import { message } from 'antd'
 
+// 项目查询参数接口
+interface ProjectQueryParams {
+  keyword?: string;
+  is_active?: boolean;
+  ownership_id?: string;
+  skip?: number;
+  limit?: number;
+}
+
 interface UseProjectOptionsResult {
   projects: ProjectDropdownOption[]
   loading: boolean
@@ -113,7 +122,7 @@ interface UseProjectListResult {
 /**
  * 获取项目列表
  */
-export const useProjectList = (params: any = {}): UseProjectListResult => {
+export const useProjectList = (params: ProjectQueryParams = {}): UseProjectListResult => {
   const queryKey = ['project-list', params]
 
   const { data, isLoading, error, refetch } = useQuery({
@@ -209,7 +218,7 @@ export const useCreateProject = () => {
       queryClient.invalidateQueries({ queryKey: ['project-statistics'] })
       message.success('项目创建成功')
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error('创建项目失败:', error)
       message.error(error.response?.data?.detail || '创建项目失败')
     }
@@ -234,7 +243,7 @@ export const useUpdateProject = () => {
       queryClient.invalidateQueries({ queryKey: ['project-detail', data.id] })
       message.success('项目更新成功')
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error('更新项目失败:', error)
       message.error(error.response?.data?.detail || '更新项目失败')
     }
@@ -258,7 +267,7 @@ export const useDeleteProject = () => {
       queryClient.invalidateQueries({ queryKey: ['project-statistics'] })
       message.success('项目删除成功')
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error('删除项目失败:', error)
       message.error(error.response?.data?.detail || '删除项目失败')
     }
@@ -283,7 +292,7 @@ export const useToggleProjectStatus = () => {
       queryClient.invalidateQueries({ queryKey: ['project-detail', data.id] })
       message.success('项目状态切换成功')
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error('切换项目状态失败:', error)
       message.error(error.response?.data?.detail || '切换项目状态失败')
     }

@@ -66,9 +66,9 @@ const DictionaryPage: React.FC = () => {
     setLoading(true)
     try {
       const data = await unifiedDictionaryService.getEnumFieldData()
-      console.log('获取到的枚举数据:', data)
+      // Got enum data
       setAllEnumData(data)
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('获取枚举数据失败:', e)
       message.error(e?.message || '获取枚举数据失败')
     } finally {
@@ -88,7 +88,7 @@ const DictionaryPage: React.FC = () => {
       // 使用新的方法通过类型代码获取枚举值
       const list = await unifiedDictionaryService.getEnumFieldValuesByTypeCode(type)
       setData(list)
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('获取枚举值失败:', e)
       message.error(e?.message || '获取枚举值失败')
     } finally {
@@ -170,7 +170,7 @@ const DictionaryPage: React.FC = () => {
       } else {
         message.error('删除失败')
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(e?.message || '删除失败')
     }
   }
@@ -233,7 +233,7 @@ const DictionaryPage: React.FC = () => {
       if (detailModalVisible) {
         fetchList(activeType)
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       if (e?.errorFields) return
       message.error(e?.message || '保存失败')
     }
@@ -253,7 +253,7 @@ const DictionaryPage: React.FC = () => {
       } else {
         message.error('更新失败')
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(e?.message || '更新失败')
     }
   }

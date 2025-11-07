@@ -4,11 +4,11 @@ import { uxManager, recordAction, setLoading, isLoading } from '@/utils/uxManage
 
 // 错误处理Hook
 export const useErrorHandler = () => {
-  const handleError = useCallback((error: Error, context?: any) => {
+  const handleError = useCallback((error: Error, context?: unknown) => {
     uxManager.handleError(error, context)
   }, [])
 
-  const handleAsyncError = useCallback(async (asyncFn: () => Promise<any>, context?: any) => {
+  const handleAsyncError = useCallback(async <T>(asyncFn: () => Promise<T>, context?: unknown) => {
     try {
       return await asyncFn()
     } catch (error) {
@@ -45,19 +45,19 @@ export const useLoadingState = (key?: string) => {
 
 // 用户操作跟踪Hook
 export const useActionTracking = () => {
-  const trackAction = useCallback((action: string, data?: any) => {
+  const trackAction = useCallback((action: string, data?: unknown) => {
     recordAction(action, data)
   }, [])
 
-  const trackClick = useCallback((elementName: string, data?: any) => {
+  const trackClick = useCallback((elementName: string, data?: unknown) => {
     trackAction('click', { element: elementName, ...data })
   }, [trackAction])
 
-  const trackFormSubmit = useCallback((formName: string, data?: any) => {
+  const trackFormSubmit = useCallback((formName: string, data?: unknown) => {
     trackAction('formSubmit', { form: formName, ...data })
   }, [trackAction])
 
-  const trackPageView = useCallback((pageName: string, data?: any) => {
+  const trackPageView = useCallback((pageName: string, data?: unknown) => {
     trackAction('pageView', { page: pageName, ...data })
   }, [trackAction])
 
@@ -132,7 +132,7 @@ export const useUserFeedback = () => {
 }
 
 // 操作状态Hook
-export const useOperationState = <T = any>() => {
+export const useOperationState = <T = unknown>() => {
   const [state, setState] = useState<{
     loading: boolean
     error: Error | null
@@ -310,7 +310,7 @@ export const useNetworkStatus = () => {
     }
 
     const handleConnectionChange = () => {
-      const connection = (navigator as any).connection
+      const connection = (navigator as unknown as { connection?: { effectiveType?: string } }).connection
       if (connection) {
         setConnectionType(connection.effectiveType || 'unknown')
         recordAction('connectionChange', { type: connection.effectiveType })
@@ -321,7 +321,7 @@ export const useNetworkStatus = () => {
     window.addEventListener('offline', handleOffline)
 
     // 监听连接类型变化
-    const connection = (navigator as any).connection
+    const connection = (navigator as unknown as { connection?: { effectiveType?: string; addEventListener?: (type: string, handler: () => void) => void } }).connection
     if (connection) {
       connection.addEventListener('change', handleConnectionChange)
       setConnectionType(connection.effectiveType || 'unknown')

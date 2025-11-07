@@ -121,7 +121,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
       },
       tooltip: {
         callbacks: {
-          label: (context: any) => {
+          label: (context: { dataIndex: number; parsed: { y: number }; label: string }) => {
             const monthData = data?.monthly_trend?.[context.dataIndex]
             return [
               `出租率: ${context.parsed.y.toFixed(2)}%`,
@@ -137,7 +137,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
         beginAtZero: true,
         max: 100,
         ticks: {
-          callback: (value: any) => `${value}%`,
+          callback: (value: number) => `${value}%`,
         },
       },
     },
@@ -180,7 +180,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
       },
       tooltip: {
         callbacks: {
-          label: (context: any) => {
+          label: (context: { dataIndex: number; parsed: number; label: string }) => {
             const item = data?.by_property_nature?.[context.dataIndex]
             return [
               `${context.label}: ${context.parsed.toFixed(2)}%`,
@@ -228,7 +228,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
       },
       tooltip: {
         callbacks: {
-          label: (context: any) => {
+          label: (context: { dataIndex: number; parsed: { y: number } }) => {
             const item = data?.by_ownership_entity?.[context.dataIndex]
             return [
               `出租率: ${context.parsed.y.toFixed(2)}%`,
@@ -243,7 +243,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
         beginAtZero: true,
         max: 100,
         ticks: {
-          callback: (value: any) => `${value}%`,
+          callback: (value: number) => `${value}%`,
         },
       },
       x: {

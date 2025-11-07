@@ -282,19 +282,19 @@ async def get_dictionary_types(db: Session = Depends(get_db)):
     """获取所有字典类型列表"""
     try:
         # 调试日志
-        print("[DEBUG] get_dictionary_types called")
-        print(f"[DEBUG] Database session: {db}")
+        logger.debug("get_dictionary_types called")
+        logger.debug(f"Database session: {db}")
 
         # 从枚举字段获取
         enum_types = (
             db.query(EnumFieldType.code).filter(not EnumFieldType.is_deleted).all()
         )
-        print(f"[DEBUG] Enum types query result: {enum_types}")
-        print(f"[DEBUG] Enum types count: {len(enum_types)}")
+        logger.debug(f"Enum types query result: {enum_types}")
+        logger.debug(f"Enum types count: {len(enum_types)}")
 
         # 从系统字典获取（向后兼容）
         system_types = db.query(SystemDictionary.dict_type).distinct().all()
-        print(f"[DEBUG] System types query result: {system_types}")
+        logger.debug(f"System types query result: {system_types}")
         print(f"[DEBUG] System types count: {len(system_types)}")
 
         all_types = set()

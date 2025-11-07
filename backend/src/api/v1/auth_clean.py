@@ -159,7 +159,7 @@ async def login(
         )
 
         return LoginResponse(
-            user=UserResponse.from_orm(user), tokens=tokens, message="登录成功"
+            user=UserResponse.model_validate(user), tokens=tokens, message="登录成功"
         )
 
     except BusinessLogicError as e:
@@ -191,8 +191,26 @@ async def logout(
         )
         db.commit()
 
-        # 2. 记录审计日志（暂时禁用，专注核心功能测试）
-        # TODO: 修复AuditLog创建问题后重新启用
+        # 2. 记录审计日志
+        try:
+            audit_data = {
+                "user_id": current_user.id,
+                "username": current_user.username,
+                "action": "LOGOUT",
+                "resource": "auth",
+                "details": {
+                    "revoked_sessions": revoked_count,
+                    "ip_address": request.client.host if request else None,
+                },
+                "ip_address": request.client.host if request else None,
+                "user_agent": str(request.headers.get("user-agent", ""))
+                if request
+                else "",
+            }
+            AuditLogCRUD.create_log(db, audit_data)
+        except Exception as e:
+            # 审计日志失败不应该影响登出流程
+            logger.warning(f"记录登出审计日志失败: {e}")
         logger.info(f"用户登出: {current_user.username}, 撤销会话数: {revoked_count}")
 
         return {
@@ -302,7 +320,7 @@ async def get_users(
     total_pages = (total + params.page_size - 1) // params.page_size
 
     return UserListResponse(
-        users=[UserResponse.from_orm(user) for user in users],
+        users=[UserResponse.model_validate(user) for user in users],
         total=total,
         page=params.page,
         page_size=params.page_size,
@@ -325,7 +343,7 @@ async def create_user(
     try:
         user_crud = UserCRUD()
         user = user_crud.create(db, user_data)
-        return UserResponse.from_orm(user)
+        return UserResponse.model_validate(user)
     except BusinessLogicError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -354,7 +372,7 @@ async def get_user(
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在")
 
-    return UserResponse.from_orm(user)
+    return UserResponse.model_validate(user)
 
 
 @router.put("/users/{user_id}", response_model=UserResponse, summary="更新用户")
@@ -381,7 +399,7 @@ async def update_user(
 
     try:
         user = user_crud.update(db, user_id, user_data)
-        return UserResponse.from_orm(user)
+        return UserResponse.model_validate(user)
     except BusinessLogicError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -503,7 +521,7 @@ async def get_user_sessions(
     """获取当前用户的所有会话"""
     session_crud = UserSessionCRUD()
     sessions = session_crud.get_user_sessions(db, current_user.id)
-    return [UserSessionResponse.from_orm(session) for session in sessions]
+    return [UserSessionResponse.model_validate(session) for session in sessions]
 
 
 @router.delete("/sessions/{session_id}", summary="撤销会话")
@@ -803,25 +821,25 @@ async def debug_auth_dependency():
 
     try:
         # 测试1: 数据库连接
-        print("[DEBUG] Step 1: Testing database connection")
+        logger.debug("Step 1: Testing database connection")
         # next(get_db())  # 暂时注释掉，避免数据库连接问题
 
         # 测试2: 导入认证模块
-        print("[DEBUG] Step 2: Importing auth middleware")
+        logger.debug("Step 2: Importing auth middleware")
 
         # 测试3: 检查枚举
-        print("[DEBUG] Step 3: Checking UserRole enum")
+        logger.debug("Step 3: Checking UserRole enum")
         from ..models.auth import UserRole
 
         admin_role = UserRole.ADMIN
-        print(f"[DEBUG] UserRole.ADMIN = {admin_role}, type = {type(admin_role)}")
+        logger.debug(f"UserRole.ADMIN = {admin_role}, type = {type(admin_role)}")
 
         # 测试4: 检查JWT配置
-        print("[DEBUG] Step 4: Checking JWT config")
+        logger.debug("Step 4: Checking JWT config")
         from ..core.config import settings
 
         secret_key = settings.SECRET_KEY
-        print(f"[DEBUG] SECRET_KEY exists: {bool(secret_key)}")
+        logger.debug(f"SECRET_KEY exists: {bool(secret_key)}")
 
         return {
             "success": True,
@@ -867,7 +885,7 @@ async def update_user_profile(
         allowed_fields = {"full_name", "email", "phone"}
         update_data = {}
 
-        for field, value in profile_data.dict(exclude_unset=True).items():
+        for field, value in profile_data.model_dump(exclude_unset=True).items():
             if field in allowed_fields:
                 update_data[field] = value
 
@@ -889,7 +907,7 @@ async def update_user_profile(
             resource_id=current_user.id,
         )
 
-        return UserResponse.from_orm(updated_user)
+        return UserResponse.model_validate(updated_user)
 
     except BusinessLogicError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

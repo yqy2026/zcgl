@@ -99,7 +99,7 @@ export interface ChartDataPoint {
   name: string
   value: number
   percentage?: number
-  [key: string]: any
+  [key: string]: unknown
 }
 
 export interface FilterPreset {

@@ -122,7 +122,7 @@ class EnumFieldTypeCRUD:
 
     def create(self, obj_in: EnumFieldTypeCreate) -> EnumFieldType:
         """创建枚举类型"""
-        db_obj = EnumFieldType(**obj_in.dict())
+        db_obj = EnumFieldType(**obj_in.model_dump())
         self.db.add(db_obj)
         self.db.commit()
         self.db.refresh(db_obj)
@@ -142,7 +142,7 @@ class EnumFieldTypeCRUD:
         self, db_obj: EnumFieldType, obj_in: EnumFieldTypeUpdate
     ) -> EnumFieldType:
         """更新枚举类型"""
-        update_data = obj_in.dict(exclude_unset=True)
+        update_data = obj_in.model_dump(exclude_unset=True)
 
         # 记录变更历史
         for field, new_value in update_data.items():
@@ -369,7 +369,7 @@ class EnumFieldValueCRUD:
                 level = parent.level + 1
                 path = f"{parent.path}/{parent.id}" if parent.path else parent.id
 
-        db_obj = EnumFieldValue(**obj_in.dict())
+        db_obj = EnumFieldValue(**obj_in.model_dump())
         db_obj.level = level
         db_obj.path = path
 
@@ -393,7 +393,7 @@ class EnumFieldValueCRUD:
         self, db_obj: EnumFieldValue, obj_in: EnumFieldValueUpdate
     ) -> EnumFieldValue:
         """更新枚举值"""
-        update_data = obj_in.dict(exclude_unset=True)
+        update_data = obj_in.model_dump(exclude_unset=True)
 
         # 记录变更历史
         for field, new_value in update_data.items():
@@ -548,7 +548,7 @@ class EnumFieldUsageCRUD:
 
     def create(self, obj_in: EnumFieldUsageCreate) -> EnumFieldUsage:
         """创建使用记录"""
-        db_obj = EnumFieldUsage(**obj_in.dict())
+        db_obj = EnumFieldUsage(**obj_in.model_dump())
         self.db.add(db_obj)
         self.db.commit()
         self.db.refresh(db_obj)
@@ -558,7 +558,7 @@ class EnumFieldUsageCRUD:
         self, db_obj: EnumFieldUsage, obj_in: EnumFieldUsageUpdate
     ) -> EnumFieldUsage:
         """更新使用记录"""
-        update_data = obj_in.dict(exclude_unset=True)
+        update_data = obj_in.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(db_obj, field, value)
 

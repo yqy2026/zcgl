@@ -1,8 +1,35 @@
 import React, { useState, useEffect } from 'react'
+import { message, Form } from 'antd'
 import { unifiedDictionaryService } from '../../services/dictionaryService'
 import type { EnumFieldType, EnumFieldValue, SystemDictionary, EnumFieldStatistics } from '../../services/dictionaryService'
 import EnumValuePreview from '../../components/Dictionary/EnumValuePreview'
 import { withErrorHandling, createErrorHandler } from '../../utils/errorHandler'
+
+// 错误类型定义
+interface ApiError extends Error {
+  response?: {
+    data?: {
+      message?: string
+      detail?: string
+    }
+  }
+  message?: string
+}
+
+// 表单数据类型
+interface EnumTypeFormData {
+  type_name: string
+  type_description?: string
+  is_active: boolean
+}
+
+interface EnumValueFormData {
+  value_key: string
+  value_label: string
+  value_description?: string
+  is_active: boolean
+  sort_order?: number
+}
 
 const EnumFieldPage: React.FC = () => {
   const [enumTypes, setEnumTypes] = useState<EnumFieldType[]>([]);
@@ -28,8 +55,9 @@ const EnumFieldPage: React.FC = () => {
     try {
       const data = await unifiedDictionaryService.getEnumFieldTypes()
       setEnumTypes(data);
-    } catch (error: any) {
-      message.error(error?.message || '加载枚举类型失败');
+    } catch (error: unknown) {
+      const apiError = error as ApiError
+      message.error(apiError?.response?.data?.detail || apiError?.message || '加载枚举类型失败');
     } finally {
       setLoading(false);
     }
@@ -39,8 +67,9 @@ const EnumFieldPage: React.FC = () => {
     try {
       const data = await unifiedDictionaryService.getEnumFieldValues(typeId)
       setEnumValues(data);
-    } catch (error: any) {
-      message.error(error?.message || '加载枚举值失败');
+    } catch (error: unknown) {
+      const apiError = error as ApiError
+      message.error(apiError?.response?.data?.detail || apiError?.message || '加载枚举值失败');
     }
   };
 
@@ -55,7 +84,8 @@ const EnumFieldPage: React.FC = () => {
         usage_count: 0,
         categories: []
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError
       message.error(error?.message || '加载统计信息失败');
     }
   };
@@ -309,7 +339,8 @@ const EnumFieldPage: React.FC = () => {
       } else {
         message.error('删除失败');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError
       message.error(error?.message || '删除失败');
     }
   };
@@ -341,12 +372,13 @@ const EnumFieldPage: React.FC = () => {
       } else {
         message.error('删除失败');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError
       message.error(error?.message || '删除失败');
     }
   };
 
-  const handleTypeSubmit = async (values: any) => {
+  const handleTypeSubmit = async (values: EnumTypeFormData) => {
     try {
       let success = false
       if (editingType) {
@@ -363,12 +395,13 @@ const EnumFieldPage: React.FC = () => {
       } else {
         message.error('操作失败');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError
       message.error(error?.message || '操作失败');
     }
   };
 
-  const handleValueSubmit = async (values: any) => {
+  const handleValueSubmit = async (values: EnumValueFormData) => {
     try {
       let success = false
       if (editingValue) {
@@ -387,7 +420,8 @@ const EnumFieldPage: React.FC = () => {
       } else {
         message.error('操作失败');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError
       message.error(error?.message || '操作失败');
     }
   };

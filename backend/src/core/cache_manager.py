@@ -150,8 +150,8 @@ class CacheManager:
         """序列化值"""
         if isinstance(value, (dict, list, tuple, set)):
             return json.dumps(value, ensure_ascii=False, default=str)
-        elif hasattr(value, "dict"):
-            return json.dumps(value.dict(), ensure_ascii=False, default=str)
+        elif hasattr(value, "model_dump"):
+            return json.dumps(value.model_dump(), ensure_ascii=False, default=str)
         return value
 
     def _deserialize_value(self, value: Any) -> Any:
@@ -527,8 +527,8 @@ def _hash_function_call(args: tuple, kwargs: dict) -> str:
         # 尝试序列化参数
         serializable_args = []
         for arg in args:
-            if hasattr(arg, "dict"):
-                serializable_args.append(arg.dict())
+            if hasattr(arg, "model_dump"):
+                serializable_args.append(arg.model_dump())
             elif isinstance(arg, (str, int, float, bool, type(None))):
                 serializable_args.append(arg)
             else:
@@ -536,8 +536,8 @@ def _hash_function_call(args: tuple, kwargs: dict) -> str:
 
         serializable_kwargs = {}
         for key, value in kwargs.items():
-            if hasattr(value, "dict"):
-                serializable_kwargs[key] = value.dict()
+            if hasattr(value, "model_dump"):
+                serializable_kwargs[key] = value.model_dump()
             elif isinstance(value, (str, int, float, bool, type(None))):
                 serializable_kwargs[key] = value
             else:

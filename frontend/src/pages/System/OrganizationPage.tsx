@@ -36,9 +36,18 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { DataNode } from 'antd/es/tree';
-import { Organization, OrganizationStatistics, OrganizationHistory } from '../../types/organization';
+import { Organization, OrganizationStatistics, OrganizationHistory, OrganizationTree } from '../../types/organization';
 import { organizationService } from '../../services/organizationService';
-import OrganizationChart from '../../components/OrganizationChart';
+// 组织表单数据类型
+interface OrganizationFormData {
+  name: string
+  code: string
+  type: 'company' | 'department' | 'group' | 'division' | 'team' | 'branch' | 'office'
+  parent_id?: string
+  description?: string
+  status: 'active' | 'inactive' | 'suspended'
+  sort_order?: number
+}
 
 const { Option } = Select;
 const { TabPane } = Tabs;
@@ -127,7 +136,7 @@ const OrganizationPage: React.FC = () => {
     }));
   };
 
-  const convertTreeToDataNodes = (treeNodes: any[]): DataNode[] => {
+  const convertTreeToDataNodes = (treeNodes: OrganizationTree[]): DataNode[] => {
     return treeNodes.map(node => ({
       key: node.id,
       title: (
@@ -212,7 +221,7 @@ const OrganizationPage: React.FC = () => {
     }
   };
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: OrganizationFormData) => {
     try {
       if (editingOrganization) {
         await organizationService.updateOrganization(editingOrganization.id, values);
@@ -483,17 +492,6 @@ const OrganizationPage: React.FC = () => {
             />
           </TabPane>
 
-          <TabPane tab="组织架构图" key="chart">
-            <OrganizationChart
-              onEdit={handleEdit}
-              onRefresh={() => {
-                loadOrganizations();
-                loadOrganizationTree();
-                loadStatistics();
-              }}
-              height={600}
-            />
-          </TabPane>
         </Tabs>
       </Card>
 

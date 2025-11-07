@@ -60,7 +60,7 @@ const PerformanceMonitor: React.FC = () => {
       // LCP - Largest Contentful Paint
       const lcpObserver = new PerformanceObserver((list) => {
         const entries = list.getEntries()
-        const lastEntry = entries[entries.length - 1] as any
+        const lastEntry = entries[entries.length - 1] as PerformanceEntry
         setMetrics(prev => ({ ...prev, lcp: lastEntry.startTime }))
       })
       lcpObserver.observe({ entryTypes: ['largest-contentful-paint'] })
@@ -68,8 +68,9 @@ const PerformanceMonitor: React.FC = () => {
       // FID - First Input Delay
       const fidObserver = new PerformanceObserver((list) => {
         const entries = list.getEntries()
-        entries.forEach((entry: any) => {
-          setMetrics(prev => ({ ...prev, fid: entry.processingStart - entry.startTime }))
+        entries.forEach((entry) => {
+          const inputEntry = entry as PerformanceEventTiming
+          setMetrics(prev => ({ ...prev, fid: inputEntry.processingStart - inputEntry.startTime }))
         })
       })
       fidObserver.observe({ entryTypes: ['first-input'] })
@@ -78,9 +79,10 @@ const PerformanceMonitor: React.FC = () => {
       let clsValue = 0
       const clsObserver = new PerformanceObserver((list) => {
         const entries = list.getEntries()
-        entries.forEach((entry: any) => {
-          if (!entry.hadRecentInput) {
-            clsValue += entry.value
+        entries.forEach((entry) => {
+          const layoutShiftEntry = entry as PerformanceEntry & { value: number; hadRecentInput: boolean }
+          if (!layoutShiftEntry.hadRecentInput) {
+            clsValue += layoutShiftEntry.value
           }
         })
         setMetrics(prev => ({ ...prev, cls: clsValue }))
@@ -89,10 +91,24 @@ const PerformanceMonitor: React.FC = () => {
     }
   }, [])
 
-  // 收集网络信息
+  // 网络连接接口
+interface NetworkConnection {
+  type: string;
+  effectiveType: string;
+  downlink: number;
+  rtt: number;
+}
+
+// 内存信息接口
+interface MemoryInfo {
+  usedJSHeapSize: number;
+  jsHeapSizeLimit: number;
+}
+
+// 收集网络信息
   const collectNetworkInfo = useCallback(() => {
     if ('connection' in navigator) {
-      const connection = (navigator as any).connection
+      const connection = (navigator as unknown as { connection?: NetworkConnection }).connection
       if (connection) {
         setMetrics(prev => ({
           ...prev,
@@ -108,7 +124,7 @@ const PerformanceMonitor: React.FC = () => {
   // 收集内存使用情况
   const collectMemoryInfo = useCallback(() => {
     if ('memory' in performance) {
-      const memory = (performance as any).memory
+      const memory = (performance as unknown as { memory: MemoryInfo }).memory
       setMetrics(prev => ({
         ...prev,
         memoryUsage: memory.usedJSHeapSize / memory.jsHeapSizeLimit * 100

@@ -14,6 +14,17 @@ import { assetService } from '../../services/assetService'
 import AssetForm from '../../components/Asset/AssetForm'
 import type { AssetCreateRequest, AssetUpdateRequest } from '../../types/asset'
 
+// 错误类型接口
+interface ApiError extends Error {
+  response?: {
+    data?: {
+      message?: string
+      detail?: string
+    }
+  }
+  message?: string
+}
+
 const { Title } = Typography
 
 interface AssetFormData {
@@ -118,7 +129,8 @@ const AssetCreatePage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['assets'] })
       navigate('/assets/list')
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
+      const apiError = error as ApiError
       message.error(error.message || '创建失败')
     },
   })
@@ -132,7 +144,8 @@ const AssetCreatePage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['asset', id] })
       navigate(`/assets/${id}`)
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
+      const apiError = error as ApiError
       message.error(error.message || '更新失败')
     },
   })

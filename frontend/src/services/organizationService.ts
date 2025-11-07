@@ -18,6 +18,14 @@ import {
   OrganizationAdvancedSearch
 } from '../types/organization';
 
+// 树节点接口
+interface TreeNode {
+  key: string;
+  value: string;
+  title: string;
+  children?: TreeNode[];
+}
+
 class OrganizationService {
   private baseUrl = '/organizations';
 
@@ -208,8 +216,8 @@ class OrganizationService {
   /**
    * 构建组织树形数据
    */
-  buildOrganizationTreeData(organizations: Organization[]) {
-    const treeData: any[] = [];
+  buildOrganizationTreeData(organizations: Organization[]): TreeNode[] {
+    const treeData: TreeNode[] = [];
     const organizationMap = new Map<string, Organization>();
 
     // 创建组织映射
@@ -243,7 +251,7 @@ class OrganizationService {
   /**
    * 向树节点添加子节点
    */
-  private addChildToTreeNode(treeData: any[], parentId: string, childNode: any) {
+  private addChildToTreeNode(treeData: TreeNode[], parentId: string, childNode: TreeNode) {
     for (const node of treeData) {
       if (node.key === parentId) {
         node.children = node.children || [];
@@ -324,7 +332,11 @@ class OrganizationService {
   /**
    * 导入组织数据
    */
-  async importOrganizations(file: File): Promise<any> {
+  async importOrganizations(file: File): Promise<{
+    success: boolean;
+    message: string;
+    data?: unknown;
+  }> {
     const formData = new FormData();
     formData.append('file', file);
 

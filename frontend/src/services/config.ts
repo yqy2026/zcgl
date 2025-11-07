@@ -1,4 +1,8 @@
-// API配置文件
+/**
+ * API配置文件
+ * 注意: 端点配置已迁移至 constants/api.ts，请使用那里的配置
+ * 此文件仅保留通用配置（超时、重试、缓存等）
+ */
 
 // 获取环境变量的辅助函数，兼容Vite环境
 const getEnvVar = (key: string, defaultValue: string) => {
@@ -9,7 +13,7 @@ const getEnvVar = (key: string, defaultValue: string) => {
 
 export const API_CONFIG = {
   // 基础配置
-  BASE_URL: getEnvVar('VITE_API_BASE_URL', '/api/v1'),
+  BASE_URL: '/api/v1', // 统一使用 /api/v1
   TIMEOUT: parseInt(getEnvVar('VITE_API_TIMEOUT', '30000')),
 
   // 重试配置
@@ -44,290 +48,12 @@ export const API_CONFIG = {
     PAGE_SIZE_OPTIONS: [10, 20, 50, 100],
   },
 
-  // 端点配置 - 统一命名规范
-  ENDPOINTS: {
-    // 资产管理
-    ASSETS: '/assets',
-    ASSET_DETAIL: (id: string) => `/assets/${id}`,
-    ASSET_CREATE: '/assets',
-    ASSET_UPDATE: (id: string) => `/assets/${id}`,
-    ASSET_DELETE: (id: string) => `/assets/${id}`,
-    ASSET_BATCH: '/assets/batch',
-    ASSET_SEARCH: '/assets/search',
-    ASSET_EXPORT: '/assets/export',
-    ASSET_IMPORT: '/assets/import',
-    ASSET_VALIDATE: '/assets/validate',
-    ASSET_STATISTICS: '/assets/statistics',
-    ASSET_HISTORY: (id: string) => `/assets/${id}/history`,
-    ASSET_FIELD_HISTORY: (assetId: string, field: string) => `/assets/${assetId}/field-history/${field}`,
-
-    // PDF智能导入 - 统一使用连字符
-    PDF_IMPORT: {
-      BASE: '/pdf-import',
-      UPLOAD: '/pdf-import/upload',
-      PROCESS: '/pdf-import/process',
-      SESSION: (sessionId: string) => `/pdf-import/session/${sessionId}`,
-      VALIDATE: '/pdf-import/validate',
-      CONFIRM: '/pdf-import/confirm',
-      PROGRESS: '/pdf-import/progress',
-      CANCEL: '/pdf-import/cancel',
-      RETRY: '/pdf-import/retry',
-      ANALYSIS: '/pdf-import/analysis',
-      CORRECTIONS: '/pdf-import/corrections',
-      EXPORT: '/pdf-import/export',
-    },
-
-    // 认证管理
-    AUTH: {
-      LOGIN: '/auth/login',
-      LOGOUT: '/auth/logout',
-      REFRESH: '/auth/refresh',
-      ME: '/auth/me',
-      VERIFY: '/auth/verify',
-      PASSWORD_CHANGE: '/auth/password/change',
-      PASSWORD_RESET: '/auth/password/reset',
-      PASSWORD_CONFIRM: '/auth/password/confirm',
-      PROFILE: '/auth/profile',
-      CHANGE_PASSWORD: '/auth/change-password',
-      ACTIVITY: '/auth/activity',
-    },
-
-    // 用户管理
-    USERS: {
-      LIST: '/users',
-      CREATE: '/users',
-      DETAIL: (id: string) => `/users/${id}`,
-      UPDATE: (id: string) => `/users/${id}`,
-      DELETE: (id: string) => `/users/${id}`,
-      LOCK: (id: string) => `/users/${id}/lock`,
-      UNLOCK: (id: string) => `/users/${id}/unlock`,
-      ROLES: (id: string) => `/users/${id}/roles`,
-      PERMISSIONS: (id: string) => `/users/${id}/permissions`,
-    },
-
-    // 角色管理
-    ROLES: {
-      LIST: '/roles',
-      CREATE: '/roles',
-      DETAIL: (id: string) => `/roles/${id}`,
-      UPDATE: (id: string) => `/roles/${id}`,
-      DELETE: (id: string) => `/roles/${id}`,
-      PERMISSIONS: (id: string) => `/roles/${id}/permissions`,
-      USERS: (id: string) => `/roles/${id}/users`,
-    },
-
-    // 组织架构
-    ORGANIZATIONS: {
-      LIST: '/organizations',
-      CREATE: '/organizations',
-      DETAIL: (id: string) => `/organizations/${id}`,
-      UPDATE: (id: string) => `/organizations/${id}`,
-      DELETE: (id: string) => `/organizations/${id}`,
-      TREE: '/organizations/tree',
-      USERS: (id: string) => `/organizations/${id}/users`,
-      CHILDREN: (id: string) => `/organizations/${id}/children`,
-    },
-
-    // 租赁管理 - 统一使用连字符
-    RENTAL: {
-      CONTRACTS: {
-        LIST: '/rental-contracts/contracts',
-        CREATE: '/rental-contracts/contracts',
-        DETAIL: (id: string) => `/rental-contracts/contracts/${id}`,
-        UPDATE: (id: string) => `/rental-contracts/contracts/${id}`,
-        DELETE: (id: string) => `/rental-contracts/contracts/${id}`,
-        TERMINATE: (id: string) => `/rental-contracts/contracts/${id}/terminate`,
-        RENEW: (id: string) => `/rental-contracts/contracts/${id}/renew`,
-        TERMS: (id: string) => `/rental-contracts/contracts/${id}/terms`,
-        ADD_TERM: (id: string) => `/rental-contracts/contracts/${id}/terms`,
-        LEDGER: (id: string) => `/rental-contracts/contracts/${id}/ledger`,
-        EXPORT: '/rental-contracts/contracts/export',
-      },
-      LEDGER: {
-        LIST: '/rental-contracts/ledger',
-        CREATE: '/rental-contracts/ledger',
-        DETAIL: (id: string) => `/rental-contracts/ledger/${id}`,
-        UPDATE: (id: string) => `/rental-contracts/ledger/${id}`,
-        DELETE: (id: string) => `/rental-contracts/ledger/${id}`,
-        BATCH_UPDATE: '/rental-contracts/ledger/batch',
-        GENERATE: '/rental-contracts/ledger/generate',
-        EXPORT: '/rental-contracts/ledger/export',
-      },
-      STATISTICS: {
-        OVERVIEW: '/rental-contracts/statistics/overview',
-        OWNERSHIP: '/rental-contracts/statistics/ownership',
-        ASSET: '/rental-contracts/statistics/asset',
-        MONTHLY: '/rental-contracts/statistics/monthly',
-        EXPORT: '/rental-contracts/statistics/export',
-      },
-    },
-
-    // 权属方管理
-    OWNERSHIPS: {
-      LIST: '/ownerships',
-      CREATE: '/ownerships',
-      DETAIL: (id: string) => `/ownerships/${id}`,
-      UPDATE: (id: string) => `/ownerships/${id}`,
-      DELETE: (id: string) => `/ownerships/${id}`,
-      ASSETS: (id: string) => `/ownerships/${id}/assets`,
-      STATISTICS: '/ownerships/statistics',
-    },
-
-    // 项目管理
-    PROJECTS: {
-      LIST: '/projects',
-      CREATE: '/projects',
-      DETAIL: (id: string) => `/projects/${id}`,
-      UPDATE: (id: string) => `/projects/${id}`,
-      DELETE: (id: string) => `/projects/${id}`,
-      ASSETS: (id: string) => `/projects/${id}/assets`,
-      STATISTICS: (id: string) => `/projects/${id}/statistics`,
-    },
-
-    // 数据分析
-    ANALYTICS: {
-      BASE: '/analytics',
-      DASHBOARD: '/analytics/dashboard',
-      ASSETS: '/analytics/assets',
-      RENTAL: '/analytics/rental',
-      FINANCIAL: '/analytics/financial',
-      OCCUPANCY: '/analytics/occupancy',
-      TRENDS: '/analytics/trends',
-      COMPARISON: '/analytics/comparison',
-      EXPORT: '/analytics/export',
-    },
-
-    // 统计信息
-    STATISTICS: {
-      BASE: '/statistics',
-      DASHBOARD: '/statistics/dashboard',
-      BASIC: '/statistics/basic',
-      ASSETS: '/statistics/assets',
-      RENTAL: '/statistics/rental',
-      FINANCIAL: '/statistics/financial',
-      TREND: (metric: string) => `/statistics/trend/${metric}`,
-      COMPARISON: (metric: string) => `/statistics/comparison/${metric}`,
-    },
-
-    // Excel导入导出
-    EXCEL: {
-      IMPORT: '/excel/import',
-      EXPORT: '/excel/export',
-      TEMPLATE: '/excel/import/template',
-      DOWNLOAD: (filename: string) => `/excel/download/${filename}`,
-      VALIDATE: '/excel/validate',
-      PREVIEW: '/excel/preview',
-    },
-
-    // 数据备份
-    BACKUP: {
-      CREATE: '/backup/create',
-      LIST: '/backup/list',
-      INFO: (filename: string) => `/backup/info/${filename}`,
-      RESTORE: '/backup/restore',
-      DELETE: (filename: string) => `/backup/${filename}`,
-      CLEANUP: '/backup/cleanup',
-      SCHEDULER: '/backup/scheduler/status',
-    },
-
-    // 系统管理
-    SYSTEM: {
-      BASE: '/system',
-      INFO: '/system/info',
-      SETTINGS: '/system/settings',
-      DICTIONARIES: '/system/dictionaries',
-      TEMPLATES: '/system/templates',
-      LOGS: '/system/logs',
-      MONITORING: '/system/monitoring',
-      HEALTH: '/system/health',
-
-      // 用户管理
-      USERS: {
-        LIST: '/auth/users',
-        DETAIL: (id: string) => `/auth/users/${id}`,
-        CREATE: '/auth/users',
-        UPDATE: (id: string) => `/auth/users/${id}`,
-        DELETE: (id: string) => `/auth/users/${id}`,
-        RESET_PASSWORD: (id: string) => `/auth/users/${id}/reset-password`,
-        TOGGLE_LOCK: (id: string) => `/auth/users/${id}/toggle-lock`,
-        STATISTICS: '/auth/users/statistics',
-      },
-
-      // 角色管理
-      ROLES: {
-        LIST: '/system/roles',
-        DETAIL: (id: string) => `/system/roles/${id}`,
-        CREATE: '/system/roles',
-        UPDATE: (id: string) => `/system/roles/${id}`,
-        DELETE: (id: string) => `/system/roles/${id}`,
-        PERMISSIONS: '/system/permissions',
-        UPDATE_PERMISSIONS: (id: string) => `/system/roles/${id}/permissions`,
-        STATISTICS: '/system/roles/statistics',
-      },
-
-      // 组织架构管理
-      ORGANIZATIONS: {
-        LIST: '/organizations',
-        DETAIL: (id: string) => `/organizations/${id}`,
-        CREATE: '/organizations',
-        UPDATE: (id: string) => `/organizations/${id}`,
-        DELETE: (id: string) => `/organizations/${id}`,
-        TREE: '/organizations/tree',
-        MEMBERS: (id: string) => `/system/organizations/${id}/members`,
-        ADD_MEMBER: (id: string) => `/system/organizations/${id}/members`,
-        REMOVE_MEMBER: (orgId: string, userId: string) => `/system/organizations/${orgId}/members/${userId}`,
-        STATISTICS: '/system/organizations/statistics',
-      },
-
-      // 操作日志
-      LOGS: {
-        LIST: '/system/logs',
-        DETAIL: (id: string) => `/system/logs/${id}`,
-        STATISTICS: '/system/logs/statistics',
-        EXPORT: '/system/logs/export',
-      },
-    },
-
-    // 历史记录
-    HISTORY: {
-      DETAIL: (id: string) => `/history/${id}`,
-      COMPARE: (id1: string, id2: string) => `/history/compare/${id1}/${id2}`,
-      ASSET_HISTORY: (assetId: string) => `/assets/${assetId}/history`,
-      REVERT: (id: string) => `/history/revert/${id}`,
-    },
-
-    // 自定义字段
-    CUSTOM_FIELDS: {
-      LIST: '/asset-custom-fields',
-      CREATE: '/asset-custom-fields',
-      DETAIL: (id: string) => `/asset-custom-fields/${id}`,
-      UPDATE: (id: string) => `/asset-custom-fields/${id}`,
-      DELETE: (id: string) => `/asset-custom-fields/${id}`,
-      BATCH_UPDATE: '/asset-custom-fields/batch-update',
-    },
-
-    // 字典管理
-    DICTIONARIES: {
-      BASE: '/dictionaries',
-      OPTIONS: (dictType: string) => `/dictionaries/${dictType}/options`,
-      TYPES: '/dictionaries/types',
-      QUICK_CREATE: (dictType: string) => `/dictionaries/${dictType}/quick-create`,
-      ADD_VALUE: (dictType: string) => `/dictionaries/${dictType}/values`,
-      DELETE_TYPE: (dictType: string) => `/dictionaries/${dictType}`,
-      LIST_SYSTEM: '/system/dictionaries',
-      DETAIL_SYSTEM: (id: string) => `/system/dictionaries/${id}`,
-      CREATE_SYSTEM: '/system/dictionaries',
-      UPDATE_SYSTEM: (id: string) => `/system/dictionaries/${id}`,
-      DELETE_SYSTEM: (id: string) => `/system/dictionaries/${id}`,
-      BATCH_UPDATE_SYSTEM: '/system/dictionaries/batch-update',
-      GET_TYPES: '/system/dictionaries/types',
-    },
-
-    // 系统信息
-    HEALTH: '/health',
-    INFO: '/info',
-    VERSION: '/version',
-  },
+  /**
+   * 端点配置已迁移至 constants/api.ts
+   * 请使用 import { API_ENDPOINTS } from '@/constants/api'
+   * @deprecated 使用 constants/api.ts 中的 API_ENDPOINTS
+   */
+  ENDPOINTS: {} as const,
 
   // 错误代码映射
   ERROR_CODES: {
@@ -381,14 +107,13 @@ export const {
   CACHE,
   UPLOAD,
   PAGINATION,
-  ENDPOINTS,
   ERROR_CODES,
   HTTP_STATUS,
   HEADERS,
   ENV,
 } = API_CONFIG
 
-// 工具函数
+// 导出工具函数
 export const isProduction = () => ENV.PRODUCTION
 export const isDevelopment = () => ENV.DEVELOPMENT
 

@@ -5,6 +5,17 @@
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import './PDFImportPage.css';
+
+// API 错误接口
+interface ApiError extends Error {
+  response?: {
+    data?: {
+      message?: string
+      detail?: string
+    }
+  }
+  message?: string
+}
 import {
   Card,
   Tabs,
@@ -196,7 +207,7 @@ const PDFImportPage: React.FC = () => {
 
   // 文件上传成功处理
   const handleUploadSuccess = (sessionId: string, fileInfo: UploadFile) => {
-    console.log('Upload success, session:', sessionId, 'file:', fileInfo.name);
+    // Upload success
 
     const newSession: ProcessingSession = {
       sessionId,
@@ -222,7 +233,7 @@ const PDFImportPage: React.FC = () => {
 
   // 处理完成处理
   const handleProcessingComplete = (result: CompleteResult) => {
-    console.log('Processing complete, result:', result);
+    // Processing complete
 
     if (currentSession) {
       setCurrentSession({
@@ -280,7 +291,8 @@ const PDFImportPage: React.FC = () => {
       }
 
       return response;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError
       if (userPreferences.enableNotifications) {
         notification.error({
           message: '导入失败',
@@ -304,7 +316,8 @@ const PDFImportPage: React.FC = () => {
           message.info('已取消导入');
           setCurrentSession(null);
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
+      const apiError = error as ApiError
         message.error(error.message || '取消失败');
       }
     }
@@ -342,7 +355,8 @@ const PDFImportPage: React.FC = () => {
       } else {
         message.warning('系统可能存在问题');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError
       message.error('测试失败');
     } finally {
       setLoading(false);

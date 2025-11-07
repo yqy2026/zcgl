@@ -1,4 +1,16 @@
+import logging
+from collections.abc import Callable
+from functools import wraps
 from typing import Any
+
+from fastapi import Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
+from ..database import get_db
+from ..exceptions import BusinessLogicError
+from ..middleware.auth import get_current_user
+from ..models.auth import User
+from ..services.rbac_service import RBACService
 
 
 class AssetNotFoundError(Exception):
@@ -17,19 +29,6 @@ class DuplicateAssetError(Exception):
 权限验证装饰器
 提供统一的权限验证装饰器，简化API端点的权限控制
 """
-
-import logging
-from collections.abc import Callable
-from functools import wraps
-
-from fastapi import Depends, HTTPException, status
-from sqlalchemy.orm import Session
-
-from ..database import get_db
-from ..exceptions import BusinessLogicError
-from ..middleware.auth import get_current_user
-from ..models.auth import User
-from ..services.rbac_service import RBACService
 
 logger = logging.getLogger(__name__)
 
