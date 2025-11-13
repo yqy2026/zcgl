@@ -4,6 +4,7 @@
 
 import re
 from datetime import datetime
+from typing import Union
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
@@ -88,16 +89,50 @@ class UserResponse(UserBase):
     """用户响应模型"""
 
     id: str
-    role: UserRole
-    is_active: bool
-    is_locked: bool
-    last_login_at: datetime | None
+    role: Union[UserRole, str]
+    is_active: Union[bool, int]  # Handle SQLite boolean as int
+    is_locked: Union[bool, int]   # Handle SQLite boolean as int
+    last_login_at: Union[datetime, str, None]
     employee_id: str | None
     default_organization_id: str | None
-    created_at: datetime
-    updated_at: datetime
+    created_at: Union[datetime, str]
+    updated_at: Union[datetime, str]
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("role", mode="before")
+    @classmethod
+    def parse_role(cls, v):
+        """Parse role from string or enum"""
+        if isinstance(v, str):
+            return v
+        return v
+
+    @field_validator("is_active", "is_locked", mode="before")
+    @classmethod
+    def parse_boolean(cls, v):
+        """Parse boolean from int or bool"""
+        if isinstance(v, int):
+            return bool(v)
+        return v
+
+    @field_validator("last_login_at", "created_at", "updated_at", mode="before")
+    @classmethod
+    def parse_datetime(cls, v):
+        """Parse datetime from string or datetime object"""
+        if v is None:
+            return v
+        if isinstance(v, datetime):
+            return v
+        if isinstance(v, str):
+            try:
+                # Try to parse ISO format datetime string
+                return datetime.fromisoformat(v.replace('Z', '+00:00'))
+            except (ValueError, AttributeError):
+                # If parsing fails, return the original string
+                # This allows the response to work even if datetime parsing fails
+                return v
+        return v
 
 
 # 认证相关模型

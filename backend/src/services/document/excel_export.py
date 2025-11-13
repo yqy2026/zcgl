@@ -34,36 +34,36 @@ class AssetDataExporter:
 
     # 数据库字段到Excel列名的映射（与导入相反）
     FIELD_TO_COLUMN_MAPPING = {
-        "ownership_entity": "权属单位",
-        "management_entity": "经营管理方",
+        "ownership_entity": "权属�?,
+        "management_entity": "经营管理�?,
         "property_name": "物业名称",
         "address": "所在地址",
-        "land_area": "土地面积\n(平方米)",
-        "actual_property_area": "实际房产面积\n(平方米)",
-        "rentable_area": "经营性物业可出租面积\n(平方米)",
-        "rented_area": "经营性物业已出租面积\n(平方米)",
-        "unrented_area": "经营性物业未出租面积\n(平方米)",
-        "non_commercial_area": "非经营物业面积\n(平方米)",
+        "land_area": "土地面积\n(平方�?,
+        "actual_property_area": "实际房产面积\n(平方�?",
+        "rentable_area": "经营性物业可出租面积\n(平方�?",
+        "rented_area": "经营性物业已出租面积\n(平方�?",
+        "unrented_area": "经营性物业未出租面积\n(平方�?",
+        "non_commercial_area": "非经营物业面积\n(平方�?",
         "ownership_status": "是否确权\n（已确权、未确权、部分确权）",
-        "certificated_usage": "证载用途\n（商业、住宅、办公、厂房、车库等）",
-        "actual_usage": "实际用途\n（商业、住宅、办公、厂房、车库等）",
-        "business_category": "业态类别",
+        "certificated_usage": "证载用途\n（商业、住宅、办公、厂房、车库等�?,
+        "actual_usage": "实际用途\n（商业、住宅、办公、厂房、车库等�?,
+        "business_category": "业态类�?,
         "usage_status": "物业使用状态\n（出租、闲置、自用、公房、其他）",
         "is_litigated": "是否涉诉",
         "property_nature": "物业性质（经营类、非经营类）",
         "business_model": "经营模式",
-        "include_in_occupancy_rate": "是否计入出租率统计",
-        "occupancy_rate": "出租率(%)",
+        "include_in_occupancy_rate": "是否计入出租率统�?,
+        "occupancy_rate": "出租�?%)",
         "lease_contract": "承租合同/代理协议",
-        "current_contract_start_date": "现合同开始日期",
-        "current_contract_end_date": "现合同结束日期",
+        "current_contract_start_date": "现合同开始日�?,
+        "current_contract_end_date": "现合同结束日�?,
         "tenant_name": "租户名称",
         "ownership_category": "权属类别",
-        "current_lease_contract": "现租赁合同",
+        "current_lease_contract": "现租赁合�?,
         "wuyang_project_name": "五羊运营项目名称",
-        "agreement_start_date": "协议开始日期",
+        "agreement_start_date": "协议开始日�?,
         "agreement_end_date": "协议结束日期",
-        "current_terminal_contract": "现终端出租合同",
+        "current_terminal_contract": "现终端出租合�?,
         "description": "说明",
         "notes": "其他备注",
         "created_at": "创建时间",
@@ -113,7 +113,7 @@ class AssetDataExporter:
         """将资产列表转换为Polars DataFrame"""
         try:
             if not assets:
-                # 返回空的DataFrame，但包含列结构
+                # 返回空的DataFrame，但包含列结�?
                 columns_to_use = columns or AssetDataExporter.DEFAULT_EXPORT_COLUMNS
                 empty_data = {col: [] for col in columns_to_use}
                 return pl.DataFrame(empty_data)
@@ -127,12 +127,12 @@ class AssetDataExporter:
                 for field in columns_to_use:
                     value = getattr(asset, field, None)
 
-                    # 处理不同类型的数据
+                    # 处理不同类型的数�?
                     if value is None:
                         row[field] = ""
                     elif isinstance(value, datetime):
                         # 格式化日期为中文格式
-                        row[field] = value.strftime("%Y年%m月%d日")
+                        row[field] = value.strftime("%Y�?m�?d�?)
                     elif isinstance(value, (int, float)):
                         row[field] = value
                     else:
@@ -159,7 +159,7 @@ class AssetDataExporter:
             if not include_headers:
                 return df
 
-            # 创建重命名映射
+            # 创建重命名映�?
             rename_dict = {}
             for col in df.columns:
                 if col in AssetDataExporter.FIELD_TO_COLUMN_MAPPING:
@@ -278,7 +278,7 @@ class ExcelExportService:
             if not assets:
                 return {
                     "success": False,
-                    "message": "没有找到符合条件的数据",
+                    "message": "没有找到符合条件的资产数�?,
                     "file_path": None,
                     "stats": {"total_records": 0},
                 }
@@ -311,7 +311,7 @@ class ExcelExportService:
 
             return {
                 "success": True,
-                "message": f"成功导出 {len(assets)} 条资产数据",
+                "message": f"成功导出 {len(assets)} 条资产数�?,
                 "file_path": file_path,
                 "file_name": filename,
                 "file_size": file_size,
@@ -393,7 +393,7 @@ class ExcelExportService:
             "export_options": {
                 "include_headers": "是否包含表头",
                 "format": "导出格式(xlsx/xls/csv)",
-                "columns": "要导出的列(留空则导出所有默认列)",
+                "columns": "要导出的�?留空则导出所有默认列)",
             },
         }
 
@@ -402,7 +402,7 @@ class ExcelExportService:
         try:
             if os.path.exists(file_path):
                 os.unlink(file_path)
-                logger.info(f"已清理导出文件: {file_path}")
+                logger.info(f"已清理导出文�? {file_path}")
                 return True
             return False
         except Exception as e:
@@ -452,18 +452,18 @@ def export_statistics_report(
         overview_sheet.merge_range(0, 0, 0, 3, "租金统计报表", title_format)
 
         if start_date and end_date:
-            overview_sheet.write(1, 0, f"统计期间: {start_date} 至 {end_date}")
+            overview_sheet.write(1, 0, f"统计期间: {start_date} �?{end_date}")
             overview_sheet.merge_range(
-                1, 0, 1, 3, f"统计期间: {start_date} 至 {end_date}"
+                1, 0, 1, 3, f"统计期间: {start_date} �?{end_date}"
             )
 
         # 概览统计
         overview_data_list = [
-            ["指标", "数值"],
+            ["指标", "数�?],
             ["应收总额", overview_data.get("total_due_amount", 0)],
             ["已收总额", overview_data.get("total_paid_amount", 0)],
             ["欠款总额", overview_data.get("total_overdue_amount", 0)],
-            ["收缴率", overview_data.get("payment_rate", 0) / 100],
+            ["收缴�?, overview_data.get("payment_rate", 0) / 100],
             ["总台账数", overview_data.get("total_records", 0)],
         ]
 
@@ -481,13 +481,13 @@ def export_statistics_report(
         # 2. 权属方统计工作表
         ownership_sheet = workbook.add_worksheet("权属方统�?)
         ownership_headers = [
-            "权属方名称",
-            "简称",
+            "权属方名�?,
+            "简�?,
             "合同数量",
             "应收总额",
             "已收总额",
             "欠款总额",
-            "收缴率",
+            "收缴�?,
         ]
 
         for col_idx, header in enumerate(ownership_headers):
@@ -519,7 +519,7 @@ def export_statistics_report(
             "应收总额",
             "已收总额",
             "欠款总额",
-            "收缴率",
+            "收缴�?,
         ]
 
         for col_idx, header in enumerate(asset_headers):
@@ -546,11 +546,11 @@ def export_statistics_report(
         monthly_sheet = workbook.add_worksheet("月度统计")
         monthly_headers = [
             "年月",
-            "合同数",
+            "合同�?,
             "应收总额",
             "已收总额",
             "欠款总额",
-            "收缴率",
+            "收缴�?,
         ]
 
         for col_idx, header in enumerate(monthly_headers):
@@ -574,9 +574,9 @@ def export_statistics_report(
 
         # 设置列宽
         for sheet in [overview_sheet, ownership_sheet, asset_sheet, monthly_sheet]:
-            sheet.set_column(0, 0, 20)  # 第一列
-            sheet.set_column(1, 1, 15)  # 第二列
-            sheet.set_column(2, 5, 12)  # 数据列
+            sheet.set_column(0, 0, 20)  # 第一�?
+            sheet.set_column(1, 1, 15)  # 第二�?
+            sheet.set_column(2, 5, 12)  # 数据�?
 
         workbook.close()
         output.seek(0)

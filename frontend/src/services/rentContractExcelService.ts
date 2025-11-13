@@ -2,7 +2,7 @@
  * 租金合同Excel导入导出服务
  */
 
-import { api } from './api';
+import { enhancedApiClient } from './enhancedApiClient';
 
 export interface ExcelImportResult {
   success: boolean;
@@ -36,7 +36,7 @@ export interface ExcelTemplateResult {
 }
 
 class RentContractExcelService {
-  private baseUrl = '/api/v1/rental';
+  private baseUrl = '/api/rental';
 
   /**
    * 下载Excel导入模板

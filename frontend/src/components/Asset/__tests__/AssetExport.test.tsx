@@ -197,7 +197,7 @@ describe("AssetExport", () => {
 
     if (!exportButton) {
       // Try to find button by icon
-      exportButton = screen.queryByRole("button", { name: "download" });
+      exportButton = screen.queryByRole("button", { name: "download" }) || undefined;
     }
 
     if (!exportButton) {

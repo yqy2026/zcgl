@@ -1,6 +1,6 @@
 import React, { Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
-import { ConfigProvider, Spin } from 'antd'
+import { ConfigProvider, Spin, App as AntdApp } from 'antd'
 import { protectedRoutes } from './routes/AppRoutes'
 import AppLayout from './components/Layout/AppLayout'
 import LoginPage from './pages/LoginPage'
@@ -87,9 +87,16 @@ const App: React.FC = () => {
             },
           }}
         >
-          <BrowserRouter>
-            <AppContent />
-          </BrowserRouter>
+          <AntdApp>
+            <BrowserRouter
+              future={{
+                v7_startTransition: true,
+                v7_relativeSplatPath: true,
+              }}
+            >
+              <AppContent />
+            </BrowserRouter>
+          </AntdApp>
         </ConfigProvider>
       </AuthProvider>
     </ErrorBoundary>

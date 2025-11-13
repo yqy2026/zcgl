@@ -22,12 +22,9 @@ from ..services.rbac_service import RBACService
 
 logger = logging.getLogger(__name__)
 
-# 开发模式检查 - 使用更安全的开发认证
-# 只有在明确设置为true时才启用开发模式
-DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
 
 # OAuth2密码流 - 始终启用安全性
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/login", auto_error=False)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
 
 def _is_token_blacklisted(jti: str) -> bool:
@@ -65,12 +62,7 @@ def safe_role_compare(role_value, target_role) -> bool:
 def get_current_user(
     token: str | None = Depends(oauth2_scheme), db: Session = Depends(get_db)
 ) -> User | None:
-    """从JWT令牌中获取当前用户，支持开发模式自动认证"""
-
-    # 开发模式下使用测试用户认证（更安全的方式）
-    if DEV_MODE and not token:
-        # 创建或获取开发测试用户
-        return get_or_create_dev_user(db)
+    """从JWT令牌中获取当前用户"""
 
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -83,7 +75,13 @@ def get_current_user(
         raise credentials_exception
 
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(
+            token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM],
+            audience="land-property-system",
+            issuer="land-property-auth"
+        )
         user_id: str = payload.get("sub")
         username: str = payload.get("username")
         role: str = payload.get("role")
@@ -166,47 +164,6 @@ def get_current_user(
     return user
 
 
-def get_or_create_dev_user(db: Session) -> User:
-    """在开发模式下获取或创建测试用户"""
-    dev_username = "dev_user"
-
-    # 尝试获取现有的开发用户
-    dev_user = db.query(User).filter(User.username == dev_username).first()
-
-    if dev_user:
-        return dev_user
-
-    # 创建新的开发用户
-    from ..crud.auth import UserCRUD
-    from ..schemas.auth import UserCreate
-
-    user_crud = UserCRUD()
-    user_data = UserCreate(
-        username=dev_username,
-        email="dev@example.com",
-        password="dev_password_123",
-        full_name="Development User",
-        is_active=True,
-    )
-
-    try:
-        dev_user = user_crud.create(db=db, obj_in=user_data)
-        # 设置为管理员角色以便开发测试
-        dev_user.role = UserRole.ADMIN.value
-        db.commit()
-        db.refresh(dev_user)
-        logger.info(f"Created development user: {dev_username}")
-        return dev_user
-    except Exception as e:
-        logger.error(f"Failed to create development user: {e}")
-        # 如果创建失败，返回一个最小化的用户对象
-        return User(
-            id="dev-user-id",
-            username=dev_username,
-            email="dev@example.com",
-            is_active=True,
-            role=UserRole.ADMIN.value,
-        )
 
 
 def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
@@ -235,7 +192,13 @@ def get_optional_current_user(
         return None
 
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(
+            token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM],
+            audience="land-property-system",
+            issuer="land-property-auth"
+        )
         user_id: str = payload.get("sub")
 
         if user_id is None:
@@ -443,24 +406,16 @@ class RBACPermissionChecker:
         current_user: User | None = Depends(get_current_user),
         db: Session = Depends(get_db),
     ) -> User | None:
-        """检查用户权限，支持开发模式"""
+        """检查用户权限"""
 
-        # 如果没有用户（未认证），在开发模式下允许继续
+        # 如果没有用户（未认证），抛出认证异常
         if current_user is None:
-            if DEV_MODE:
-                # 开发模式下，创建临时用户进行权限检查
-                current_user = get_or_create_dev_user(db)
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED, detail="需要认证"
-                )
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="需要认证"
+            )
 
         # 管理员拥有所有权限
         if safe_role_compare(current_user.role, UserRole.ADMIN):
-            return current_user
-
-        # 开发模式下，给予开发用户所有权限
-        if DEV_MODE and current_user.username == "dev_user":
             return current_user
 
         # 使用RBAC服务检查权限
@@ -483,7 +438,7 @@ class RBACPermissionChecker:
 
 
 def require_permission(resource: str, action: str, resource_id: str | None = None):
-    """RBAC权限装饰器工厂函数，支持开发模式"""
+    """RBAC权限装饰器工厂函数"""
     return RBACPermissionChecker(resource, action, resource_id)
 
 

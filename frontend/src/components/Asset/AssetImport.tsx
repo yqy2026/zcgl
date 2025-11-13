@@ -483,7 +483,7 @@ const OptimizedAssetImport: React.FC = () => {
             {/* 详细统计 */}
             <Row gutter={[16, 16]} style={{ marginBottom: "24px" }}>
               <Col xs={24} sm={8}>
-                <Card size="small" bordered={false}>
+                <Card size="small" variant="borderless">
                   <Statistic
                     title="成功记录"
                     value={importResult.success}
@@ -492,7 +492,7 @@ const OptimizedAssetImport: React.FC = () => {
                 </Card>
               </Col>
               <Col xs={24} sm={8}>
-                <Card size="small" bordered={false}>
+                <Card size="small" variant="borderless">
                   <Statistic
                     title="失败记录"
                     value={importResult.failed}
@@ -501,7 +501,7 @@ const OptimizedAssetImport: React.FC = () => {
                 </Card>
               </Col>
               <Col xs={24} sm={8}>
-                <Card size="small" bordered={false}>
+                <Card size="small" variant="borderless">
                   <Statistic
                     title="总计"
                     value={importResult.total}

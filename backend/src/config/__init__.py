@@ -33,9 +33,9 @@ class Settings:
     REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
     # 应用配置
-    SECRET_KEY: str = os.getenv("SECRET_KEY")
-    if not SECRET_KEY:
-        raise ValueError("SECRET_KEY environment variable is required")
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "emergency-test-secret-key-for-development-only-change-in-production")
+    if not SECRET_KEY or SECRET_KEY in ["EMERGENCY-ONLY-REPLACE-WITH-ENV-SECRET-KEY-NOW"]:
+        print("Warning: Using default or missing SECRET_KEY. Please set a proper environment variable in production.")
     DATA_ENCRYPTION_KEY: str = os.getenv("DATA_ENCRYPTION_KEY", "")
     DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"
 

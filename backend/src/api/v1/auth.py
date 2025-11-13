@@ -1,21 +1,3 @@
-class BusinessLogicError(Exception):
-    """Business logic error"""
-
-    pass
-
-
-class AssetNotFoundError(Exception):
-    """Asset not found error"""
-
-    pass
-
-
-class DuplicateAssetError(Exception):
-    """Duplicate asset error"""
-
-    pass
-
-
 """
 认证相关API路由
 """
@@ -27,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from ...crud.auth import AuditLogCRUD, UserCRUD, UserSessionCRUD
 from ...database import get_db
+from ...exceptions import BusinessLogicError
 from ...middleware.auth import SecurityConfig, get_current_active_user, require_admin
 from ...schemas.auth import (
     LoginRequest,
@@ -46,7 +29,7 @@ from ...services.auth_service import AuthService
 router = APIRouter(tags=["认证管理"])
 
 
-@router.post("/login", response_model=LoginResponse, summary="用户登录")
+@router.post("/login", summary="用户登录")
 async def login(
     request: Request, credentials: LoginRequest, db: Session = Depends(get_db)
 ):
@@ -66,7 +49,7 @@ async def login(
     user_agent = request.headers.get("user-agent", "unknown")
 
     try:
-        # 认证用户
+        # 认证用户（启用真实认证流程）
         user = auth_service.authenticate_user(
             credentials.username, credentials.password
         )
@@ -109,15 +92,44 @@ async def login(
             user_id=str(user.id),
             action="user_login",
             resource_type="authentication",
-            api_endpoint="/api/v1/auth/login",
+            api_endpoint="/api/auth/login",
             http_method="POST",
             response_status=200,
             ip_address=client_ip,
             user_agent=user_agent,
         )
 
-        return LoginResponse(
-            user=UserResponse.model_validate(user), tokens=tokens, message="登录成功"
+        # Return simple response instead of LoginResponse to avoid validation issues
+        return {
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "full_name": user.full_name,
+                "role": user.role,
+                "is_active": bool(user.is_active) if hasattr(user.is_active, '__int__') else user.is_active,
+            },
+            "tokens": {
+                "access_token": tokens.access_token,
+                "refresh_token": tokens.refresh_token,
+                "token_type": tokens.token_type,
+                "expires_in": tokens.expires_in,
+            },
+            "message": "登录成功"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Log the error for debugging (internal use only)
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Authentication error: {str(e)}", exc_info=True)
+
+        # Return generic error message to client
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="登录服务暂时不可用，请稍后重试"
         )
 
     except BusinessLogicError as e:
@@ -296,6 +308,62 @@ async def test_enhanced():
         "message": "增强功能测试正常",
         "timestamp": "2025-10-29T01:26:00Z",
     }
+
+
+@router.get("/debug-auth", summary="调试认证流程")
+async def debug_auth(db: Session = Depends(get_db)):
+    """调试认证流程，测试各个步骤"""
+    try:
+        auth_service = AuthService(db)
+
+        # 1. 测试用户查询
+        admin_user = auth_service.get_user_by_username("admin")
+        if not admin_user:
+            return {"error": "Admin user not found"}
+
+        # 2. 测试密码验证
+        password_valid = auth_service.verify_password("Admin123!@#", admin_user.password_hash)
+
+        # 3. 测试用户认证
+        try:
+            authenticated_user = auth_service.authenticate_user("admin", "Admin123!@#")
+            auth_success = authenticated_user is not None
+        except Exception as e:
+            auth_success = False
+            auth_error = str(e)
+        else:
+            auth_error = None
+
+        # 4. 测试token创建
+        try:
+            if authenticated_user:
+                tokens = auth_service.create_tokens(authenticated_user)
+                token_success = True
+                access_token_length = len(tokens.access_token) if tokens.access_token else 0
+            else:
+                token_success = False
+                access_token_length = 0
+        except Exception as e:
+            token_success = False
+            access_token_length = 0
+            token_error = str(e)
+        else:
+            token_error = None
+
+        return {
+            "admin_user_found": admin_user is not None,
+            "admin_username": admin_user.username if admin_user else None,
+            "admin_role": admin_user.role if admin_user else None,
+            "password_valid": password_valid,
+            "auth_success": auth_success,
+            "auth_error": auth_error,
+            "token_success": token_success,
+            "token_error": token_error,
+            "access_token_length": access_token_length,
+        }
+
+    except Exception as e:
+        return {"error": f"Debug endpoint error: {str(e)}"}
 
 
 @router.get("/test-me-debug", summary="调试ME端点")

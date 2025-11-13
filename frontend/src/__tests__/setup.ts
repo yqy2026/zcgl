@@ -7,7 +7,7 @@ Object.defineProperty(global, 'import', {
   value: {
     meta: {
       env: {
-        VITE_API_BASE_URL: '/api/v1',
+        VITE_API_BASE_URL: '/api',
         VITE_API_TIMEOUT: '30000',
         NODE_ENV: 'test'
       }
@@ -19,7 +19,7 @@ Object.defineProperty(global, 'import', {
 // Mock process.env for Jest compatibility
 process.env = {
   ...process.env,
-  VITE_API_BASE_URL: '/api/v1',
+  VITE_API_BASE_URL: '/api',
   VITE_API_TIMEOUT: '30000',
   NODE_ENV: 'test'
 }

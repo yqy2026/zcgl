@@ -1,4 +1,6 @@
-import { apiClient } from "./api";
+import { enhancedApiClient } from "./enhancedApiClient";
+import { ResponseExtractor, ApiErrorHandler } from "../utils/responseExtractor";
+import { ASSET_API, STATISTICS_API, EXCEL_API } from "../constants/api";
 import type {
   Asset,
   AssetSearchParams,
@@ -9,19 +11,10 @@ import type {
   SystemDictionary,
   AssetCustomField,
   CustomFieldValue,
-} from "@/types/asset";
-import type { PaginatedResponse } from "@/types/api";
+} from "../types/asset";
+import type { StandardApiResponse, PaginatedApiResponse } from "../types/api-response";
 
-// API 错误接口
-interface ApiError extends Error {
-  response?: {
-    data?: {
-      details?: Array<{ msg: string }>;
-      message?: string;
-    };
-  };
-  message?: string;
-}
+// ==================== 接口定义 ====================
 
 // 字段选项接口
 interface FieldOption {
@@ -204,133 +197,168 @@ interface ComprehensiveStats extends AssetStats {
   }>;
 }
 
+// ==================== AssetService 实现 ====================
+
 export class AssetService {
   // 获取资产列表
   async getAssets(params?: AssetSearchParams): Promise<AssetListResponse> {
     try {
-      const response = await apiClient.get<AssetListResponse>("/assets", {
+      const result = await enhancedApiClient.get<AssetListResponse>(ASSET_API.LIST, {
         params: {
           ...params,
           page: params?.page || 1,
           limit: params?.limit || 20,
         },
+        cache: true,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true
       });
 
-      // 处理响应数据
-      if (response.data) {
-        return response.data;
+      if (!result.success) {
+        throw new Error(`获取资产列表失败: ${result.error}`);
       }
 
-      // 如果响应直接是数据，构造标准格式
-      if (Array.isArray(response)) {
-        return {
-          items: response,
-          total: response.length,
-          page: params?.page || 1,
-          limit: params?.limit || 20,
-          pages: 1,
-        };
-      }
-
-      return response as AssetListResponse;
+      return result.data;
     } catch (error) {
-      console.error("获取资产列表失败:", error);
-      // 抛出错误而不是返回空数据，让React Query能够正确处理错误状态
-      throw new Error(error instanceof Error ? error.message : "获取资产列表失败");
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
     }
   }
 
   // 获取所有资产（不分页，用于导出等场景）
   async getAllAssets(params?: Omit<AssetSearchParams, "page" | "limit">): Promise<Asset[]> {
     try {
-      const response = await apiClient.get<Asset[]>("/assets/all", {
+      const result = await enhancedApiClient.get<Asset[]>(`${ASSET_API.LIST}/all`, {
         params: {
           ...params,
           // 设置较大的限制以获取所有数据
           limit: 10000,
         },
+        cache: true,
+        retry: { maxAttempts: 2, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true
       });
 
-      // 处理新的响应格式：{success: true, data: Asset[], message: string}
-      if (response.data && Array.isArray(response.data)) {
-        return response.data;
+      if (!result.success) {
+        throw new Error(`获取所有资产失败: ${result.error}`);
       }
 
-      // 如果响应是包装格式，提取data字段
-      if (response?.data && Array.isArray(response.data)) {
-        return response.data;
-      }
-
-      // 处理统一响应格式：{success: true, data: [...], message: "..."}
-      if (response?.success && Array.isArray(response?.data)) {
-        return response.data;
-      }
-
-      return response as Asset[];
+      return result.data;
     } catch (error) {
-      console.error("获取所有资产失败:", error);
-      throw new Error(error instanceof Error ? error.message : "获取所有资产失败");
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
     }
   }
 
   // 根据ID列表获取资产
   async getAssetsByIds(ids: string[]): Promise<Asset[]> {
     try {
-      const response = await apiClient.post<Asset[]>("/assets/by-ids", { ids });
+      const result = await enhancedApiClient.post<Asset[]>(`${ASSET_API.LIST}/by-ids`, { ids }, {
+        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+        smartExtract: true
+      });
 
-      // 处理新的响应格式：{success: true, data: Asset[], message: string}
-      if (response.data && Array.isArray(response.data)) {
-        return response.data;
+      if (!result.success) {
+        throw new Error(`根据ID列表获取资产失败: ${result.error}`);
       }
 
-      // 如果响应是包装格式，提取data字段
-      if (response?.data && Array.isArray(response.data)) {
-        return response.data;
-      }
-
-      // 处理统一响应格式：{success: true, data: [...], message: "..."}
-      if (response?.success && Array.isArray(response?.data)) {
-        return response.data;
-      }
-
-      return response as Asset[];
+      return result.data;
     } catch (error) {
-      console.error("根据ID列表获取资产失败:", error);
-      throw new Error(error instanceof Error ? error.message : "根据ID列表获取资产失败");
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
     }
   }
 
   // 获取单个资产
   async getAsset(id: string): Promise<Asset> {
-    const response = await apiClient.get<Asset>(`/assets/${id}`);
-    return response.data || (response as Asset);
+    try {
+      const result = await enhancedApiClient.get<Asset>(ASSET_API.DETAIL(id), {
+        cache: true,
+        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        throw new Error(`获取资产详情失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // 创建资产
   async createAsset(data: AssetCreateRequest): Promise<Asset> {
-    const response = await apiClient.post<Asset>("/assets", data);
-    return response.data || (response as Asset);
+    try {
+      const result = await enhancedApiClient.post<Asset>(ASSET_API.CREATE, data, {
+        retry: false, // 创建操作不重试
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        throw new Error(`创建资产失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // 更新资产
   async updateAsset(id: string, data: AssetUpdateRequest): Promise<Asset> {
-    const response = await apiClient.put<Asset>(`/assets/${id}`, data);
-    return response.data || (response as Asset);
+    try {
+      const result = await enhancedApiClient.put<Asset>(ASSET_API.UPDATE(id), data, {
+        retry: false, // 更新操作不重试
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        throw new Error(`更新资产失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // 删除资产
   async deleteAsset(id: string): Promise<void> {
     try {
-      await apiClient.delete(`/assets/${id}`);
+      const result = await enhancedApiClient.delete<void>(ASSET_API.DELETE(id), {
+        retry: false, // 删除操作不重试
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        throw new Error(`删除资产失败: ${result.error}`);
+      }
     } catch (error) {
-      console.error("删除资产失败:", error);
-      throw error;
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
     }
   }
 
   // 批量删除资产
   async deleteAssets(ids: string[]): Promise<void> {
-    await apiClient.post("/assets/batch-delete", { ids });
+    try {
+      const result = await enhancedApiClient.post<void>(ASSET_API.BATCH_DELETE, { ids }, {
+        retry: false, // 批量删除不重试
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        throw new Error(`批量删除资产失败: ${result.error}`);
+      }
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // 获取资产变更历史
@@ -339,26 +367,70 @@ export class AssetService {
     page = 1,
     limit = 20,
     changeType?: string,
-  ): Promise<PaginatedResponse<AssetHistory>> {
-    const response = await apiClient.get<PaginatedResponse<AssetHistory>>(
-      `/assets/${assetId}/history`,
-      {
-        params: { page, limit, change_type: changeType },
-      },
-    );
-    return response.data || (response as unknown as PaginatedResponse<AssetHistory>);
+  ): Promise<PaginatedApiResponse<AssetHistory>> {
+    try {
+      const result = await enhancedApiClient.get<PaginatedApiResponse<AssetHistory>>(
+        `${ASSET_API.DETAIL(assetId)}/history`,
+        {
+          params: { page, limit, change_type: changeType },
+          cache: true,
+          retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+          smartExtract: true
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`获取资产历史失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // 获取历史记录详情
   async getHistoryDetail(historyId: string): Promise<AssetHistory> {
-    const response = await apiClient.get<AssetHistory>(`/history/${historyId}`);
-    return response.data || (response as AssetHistory);
+    try {
+      const result = await enhancedApiClient.get<AssetHistory>(`/history/${historyId}`, {
+        cache: true,
+        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        throw new Error(`获取历史详情失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // 比较历史记录
   async compareHistory(historyId1: string, historyId2: string): Promise<HistoryComparisonResult> {
-    const response = await apiClient.get(`/history/compare/${historyId1}/${historyId2}`);
-    return response.data || response;
+    try {
+      const result = await enhancedApiClient.get<HistoryComparisonResult>(
+        `/history/compare/${historyId1}/${historyId2}`,
+        {
+          cache: true,
+          retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+          smartExtract: true
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`比较历史记录失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // 获取字段变更历史
@@ -367,10 +439,26 @@ export class AssetService {
     fieldName: string,
     limit = 10,
   ): Promise<FieldHistoryRecord[]> {
-    const response = await apiClient.get(`/assets/${assetId}/field-history/${fieldName}`, {
-      params: { limit },
-    });
-    return response.data?.history || [];
+    try {
+      const result = await enhancedApiClient.get<{ history: FieldHistoryRecord[] }>(
+        `${ASSET_API.DETAIL(assetId)}/field-history/${fieldName}`,
+        {
+          params: { limit },
+          cache: true,
+          retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+          smartExtract: true
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`获取字段历史失败: ${result.error}`);
+      }
+
+      return result.data.history || [];
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // 搜索资产
@@ -383,33 +471,64 @@ export class AssetService {
 
   // 获取资产统计信息
   async getAssetStats(filters?: AssetSearchParams): Promise<AssetStats> {
-    const response = await apiClient.get("/statistics/basic", {
-      params: filters,
-    });
-    return response.data || response;
+    try {
+      const result = await enhancedApiClient.get<AssetStats>("/statistics/basic", {
+        params: filters,
+        cache: true,
+        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        throw new Error(`获取资产统计失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // 获取权属方列表
   async getOwnershipEntities(): Promise<string[]> {
     try {
-      const response = await apiClient.get("/assets/ownership-entities", {
+      const result = await enhancedApiClient.get<string[]>(ASSET_API.OWNERSHIP_ENTITIES, {
         timeout: 3000, // 3秒超时
+        cache: true,
+        retry: { maxAttempts: 2, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true
       });
-      return response.data || [];
+
+      if (!result.success) {
+        throw new Error(`获取权属方列表失败: ${result.error}`);
+      }
+
+      return result.data || [];
     } catch (error) {
-      throw error; // 重新抛出错误，让上层处理
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
     }
   }
 
   // 获取业态类别列表
   async getBusinessCategories(): Promise<string[]> {
     try {
-      const response = await apiClient.get("/assets/business-categories", {
+      const result = await enhancedApiClient.get<string[]>(ASSET_API.BUSINESS_CATEGORIES, {
         timeout: 3000,
+        cache: true,
+        retry: { maxAttempts: 2, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true
       });
-      return response.data || [];
+
+      if (!result.success) {
+        throw new Error(`获取业态类别失败: ${result.error}`);
+      }
+
+      return result.data || [];
     } catch (error) {
-      throw error;
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
     }
   }
 
@@ -419,57 +538,136 @@ export class AssetService {
     errors: string[];
   }> {
     try {
-      await apiClient.post("/assets/validate", data);
+      const result = await enhancedApiClient.post<void>(`${ASSET_API.LIST}/validate`, data, {
+        retry: false, // 验证操作不重试
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        return {
+          valid: false,
+          errors: [result.error || '验证失败']
+        };
+      }
+
       return {
         valid: true,
         errors: [],
       };
-    } catch (error: unknown) {
-      const apiError = error as ApiError;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
       return {
         valid: false,
-        errors: apiError.response?.data?.details?.map((d) => d.msg) || [apiError.message],
+        errors: [enhancedError.message]
       };
     }
   }
 
+  // ===== 导入导出功能 =====
+
   // 导出资产数据
   async exportAssets(filters?: AssetSearchParams, options?: ExportOptions): Promise<Blob> {
-    const response = await apiClient.post("/excel/export", {
-      filters,
-      format: options?.format || "xlsx",
-      include_headers: options?.includeHeaders !== false,
-      selected_fields: options?.selectedFields,
-    });
-    return response.data || response;
+    try {
+      const result = await enhancedApiClient.post<Blob>("/excel/export", {
+        filters,
+        format: options?.format || "xlsx",
+        include_headers: options?.includeHeaders !== false,
+        selected_fields: options?.selectedFields,
+      }, {
+        retry: { maxAttempts: 2, delay: 1000, backoffMultiplier: 2 },
+        responseType: 'blob'
+      });
+
+      if (!result.success) {
+        throw new Error(`导出资产数据失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // 导出选中的资产
   async exportSelectedAssets(assetIds: string[], options?: ExportOptions): Promise<Blob> {
-    const response = await apiClient.post("/excel/export-selected", {
-      asset_ids: assetIds,
-      format: options?.format || "xlsx",
-      include_headers: options?.includeHeaders !== false,
-      selected_fields: options?.selectedFields,
-    });
-    return response.data || response;
+    try {
+      const result = await enhancedApiClient.post<Blob>("/excel/export-selected", {
+        asset_ids: assetIds,
+        format: options?.format || "xlsx",
+        include_headers: options?.includeHeaders !== false,
+        selected_fields: options?.selectedFields,
+      }, {
+        retry: { maxAttempts: 2, delay: 1000, backoffMultiplier: 2 },
+        responseType: 'blob'
+      });
+
+      if (!result.success) {
+        throw new Error(`导出选中资产失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // 获取导出状态
   async getExportStatus(taskId: string): Promise<ExportTask> {
-    const response = await apiClient.get(`/excel/export-status/${taskId}`);
-    return response.data || response;
+    try {
+      const result = await enhancedApiClient.get<ExportTask>(`/excel/export-status/${taskId}`, {
+        cache: false, // 状态查询不缓存
+        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        throw new Error(`获取导出状态失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // 获取导出历史
   async getExportHistory(): Promise<ExportTask[]> {
-    const response = await apiClient.get("/excel/export-history");
-    return response.data || [];
+    try {
+      const result = await enhancedApiClient.get<ExportTask[]>("/excel/export-history", {
+        cache: true,
+        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        throw new Error(`获取导出历史失败: ${result.error}`);
+      }
+
+      return result.data || [];
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // 删除导出记录
   async deleteExportRecord(id: string): Promise<void> {
-    await apiClient.delete(`/excel/export-history/${id}`);
+    try {
+      const result = await enhancedApiClient.delete<void>(`/excel/export-history/${id}`, {
+        retry: false, // 删除操作不重试
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        throw new Error(`删除导出记录失败: ${result.error}`);
+      }
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // 下载导出文件
@@ -483,123 +681,292 @@ export class AssetService {
     document.body.removeChild(link);
   }
 
+  // ===== 导入功能 =====
+
   // 上传导入文件
   async uploadImportFile(file: File): Promise<ImportTask> {
-    const formData = new FormData();
-    formData.append("file", file);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
 
-    const response = await apiClient.post("/excel/import", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
-    return response.data || response;
+      const result = await enhancedApiClient.post<ImportTask>("/excel/import", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+        retry: false, // 文件上传不重试
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        throw new Error(`上传导入文件失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // 预览导入文件
   async previewImportFile(file: File): Promise<ImportPreviewResult> {
-    const formData = new FormData();
-    formData.append("file", file);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
 
-    const response = await apiClient.post("/excel/preview", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
-    return response.data || [];
+      const result = await enhancedApiClient.post<ImportPreviewResult>("/excel/preview", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+        retry: false, // 文件预览不重试
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        throw new Error(`预览导入文件失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // 下载导入模板
   async downloadImportTemplate(): Promise<void> {
-    const response = await apiClient.get("/excel/template", {
-      responseType: "blob",
-    });
+    try {
+      const result = await enhancedApiClient.get<Blob>("/excel/template", {
+        responseType: "blob",
+        cache: true, // 模板文件可以缓存
+        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 }
+      });
 
-    // 创建下载链接
-    const blob = new Blob([response.data], {
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "asset_import_template.xlsx";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
+      if (!result.success) {
+        throw new Error(`下载导入模板失败: ${result.error}`);
+      }
+
+      // 创建下载链接
+      const blob = result.data;
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "asset_import_template.xlsx";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // 获取导入状态
   async getImportStatus(importId: string): Promise<ImportTask> {
-    const response = await apiClient.get(`/excel/import-status/${importId}`);
-    return response.data || response;
+    try {
+      const result = await enhancedApiClient.get<ImportTask>(`/excel/import-status/${importId}`, {
+        cache: false, // 状态查询不缓存
+        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        throw new Error(`获取导入状态失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // 获取导入历史
   async getImportHistory(): Promise<ImportTask[]> {
-    const response = await apiClient.get("/excel/import-history");
-    return response.data || [];
+    try {
+      const result = await enhancedApiClient.get<ImportTask[]>("/excel/import-history", {
+        cache: true,
+        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        throw new Error(`获取导入历史失败: ${result.error}`);
+      }
+
+      return result.data || [];
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // 删除导入记录
   async deleteImportRecord(id: string): Promise<void> {
-    await apiClient.delete(`/excel/import-history/${id}`);
+    try {
+      const result = await enhancedApiClient.delete<void>(`/excel/import-history/${id}`, {
+        retry: false, // 删除操作不重试
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        throw new Error(`删除导入记录失败: ${result.error}`);
+      }
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
+
+  // ===== 统计分析功能 =====
 
   // 获取出租率统计数据
   async getOccupancyRateStats(filters?: AssetSearchParams): Promise<OccupancyRateStats> {
-    const response = await apiClient.get("/statistics/occupancy-rate", {
-      params: filters,
-    });
-    return response.data || response;
+    try {
+      const result = await enhancedApiClient.get<OccupancyRateStats>("/statistics/occupancy-rate", {
+        params: filters,
+        cache: true,
+        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        throw new Error(`获取出租率统计失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // 获取资产分布统计数据
   async getAssetDistributionStats(filters?: AssetSearchParams): Promise<AssetDistributionStats> {
-    const response = await apiClient.get("/statistics/asset-distribution", {
-      params: filters,
-    });
-    return response.data || response;
+    try {
+      const result = await enhancedApiClient.get<AssetDistributionStats>("/statistics/asset-distribution", {
+        params: filters,
+        cache: true,
+        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        throw new Error(`获取资产分布统计失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // 获取面积统计数据
   async getAreaStatistics(filters?: AssetSearchParams): Promise<AreaStatistics> {
-    const response = await apiClient.get("/statistics/area-statistics", {
-      params: filters,
-    });
-    return response.data || response;
+    try {
+      const result = await enhancedApiClient.get<AreaStatistics>("/statistics/area-statistics", {
+        params: filters,
+        cache: true,
+        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        throw new Error(`获取面积统计失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // 获取综合统计数据
   async getComprehensiveStats(filters?: AssetSearchParams): Promise<ComprehensiveStats> {
-    const response = await apiClient.get("/statistics/comprehensive", {
-      params: filters,
-    });
-    return response.data || response;
+    try {
+      const result = await enhancedApiClient.get<ComprehensiveStats>("/statistics/comprehensive", {
+        params: filters,
+        cache: true,
+        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        throw new Error(`获取综合统计失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // ===== 系统字典管理 =====
 
   // 获取系统字典列表
   async getSystemDictionaries(dict_type?: string): Promise<SystemDictionary[]> {
-    const response = await apiClient.get("/system-dictionaries", {
-      params: dict_type ? { dict_type } : undefined,
-    });
-    return response.data || [];
+    try {
+      const result = await enhancedApiClient.get<SystemDictionary[]>("/system-dictionaries", {
+        params: dict_type ? { dict_type } : undefined,
+        cache: true,
+        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        throw new Error(`获取系统字典失败: ${result.error}`);
+      }
+
+      return result.data || [];
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // 获取单个系统字典
   async getSystemDictionary(id: string): Promise<SystemDictionary> {
-    const response = await apiClient.get(`/system-dictionaries/${id}`);
-    return response.data;
+    try {
+      const result = await enhancedApiClient.get<SystemDictionary>(`/system-dictionaries/${id}`, {
+        cache: true,
+        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        throw new Error(`获取系统字典详情失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // 创建系统字典
   async createSystemDictionary(
     data: Omit<SystemDictionary, "id" | "created_at" | "updated_at">,
   ): Promise<SystemDictionary> {
-    const response = await apiClient.post("/system-dictionaries", data);
-    return response.data;
+    try {
+      const result = await enhancedApiClient.post<SystemDictionary>("/system-dictionaries", data, {
+        retry: false, // 创建操作不重试
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        throw new Error(`创建系统字典失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // 更新系统字典
@@ -607,51 +974,143 @@ export class AssetService {
     id: string,
     data: Partial<SystemDictionary>,
   ): Promise<SystemDictionary> {
-    const response = await apiClient.put(`/system-dictionaries/${id}`, data);
-    return response.data;
+    try {
+      const result = await enhancedApiClient.put<SystemDictionary>(`/system-dictionaries/${id}`, data, {
+        retry: false, // 更新操作不重试
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        throw new Error(`更新系统字典失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // 删除系统字典
   async deleteSystemDictionary(id: string): Promise<void> {
-    await apiClient.delete(`/system-dictionaries/${id}`);
+    try {
+      const result = await enhancedApiClient.delete<void>(`/system-dictionaries/${id}`, {
+        retry: false, // 删除操作不重试
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        throw new Error(`删除系统字典失败: ${result.error}`);
+      }
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // 批量更新系统字典
   async batchUpdateSystemDictionaries(
     updates: Array<{ id: string; data: Partial<SystemDictionary> }>,
   ): Promise<SystemDictionary[]> {
-    const response = await apiClient.post("/system-dictionaries/batch-update", { updates });
-    return response.data || [];
+    try {
+      const result = await enhancedApiClient.post<SystemDictionary[]>("/system-dictionaries/batch-update", { updates }, {
+        retry: false, // 批量操作不重试
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        throw new Error(`批量更新系统字典失败: ${result.error}`);
+      }
+
+      return result.data || [];
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // 获取字典类型列表
   async getDictionaryTypes(): Promise<{ types: string[] }> {
-    const response = await apiClient.get("/system-dictionaries/types/list");
-    return response.data || { types: [] };
+    try {
+      const result = await enhancedApiClient.get<{ types: string[] }>("/system-dictionaries/types/list", {
+        cache: true,
+        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        throw new Error(`获取字典类型列表失败: ${result.error}`);
+      }
+
+      return result.data || { types: [] };
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // ===== 自定义字段管理 =====
 
   // 获取资产自定义字段配置
   async getAssetCustomFields(assetId?: string): Promise<AssetCustomField[]> {
-    const response = await apiClient.get("/asset-custom-fields", {
-      params: assetId ? { asset_id: assetId } : undefined,
-    });
-    return response.data || [];
+    try {
+      const result = await enhancedApiClient.get<AssetCustomField[]>("/asset-custom-fields", {
+        params: assetId ? { asset_id: assetId } : undefined,
+        cache: true,
+        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        throw new Error(`获取资产自定义字段配置失败: ${result.error}`);
+      }
+
+      return result.data || [];
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // 获取单个自定义字段配置
   async getAssetCustomField(id: string): Promise<AssetCustomField> {
-    const response = await apiClient.get(`/asset-custom-fields/${id}`);
-    return response.data;
+    try {
+      const result = await enhancedApiClient.get<AssetCustomField>(`/asset-custom-fields/${id}`, {
+        cache: true,
+        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        throw new Error(`获取自定义字段配置失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // 创建自定义字段配置
   async createAssetCustomField(
     data: Omit<AssetCustomField, "id" | "created_at" | "updated_at">,
   ): Promise<AssetCustomField> {
-    const response = await apiClient.post("/asset-custom-fields", data);
-    return response.data;
+    try {
+      const result = await enhancedApiClient.post<AssetCustomField>("/asset-custom-fields", data, {
+        retry: false, // 创建操作不重试
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        throw new Error(`创建自定义字段配置失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // 更新自定义字段配置
@@ -659,19 +1118,58 @@ export class AssetService {
     id: string,
     data: Partial<AssetCustomField>,
   ): Promise<AssetCustomField> {
-    const response = await apiClient.put(`/asset-custom-fields/${id}`, data);
-    return response.data;
+    try {
+      const result = await enhancedApiClient.put<AssetCustomField>(`/asset-custom-fields/${id}`, data, {
+        retry: false, // 更新操作不重试
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        throw new Error(`更新自定义字段配置失败: ${result.error}`);
+      }
+
+      return result.data;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // 删除自定义字段配置
   async deleteAssetCustomField(id: string): Promise<void> {
-    await apiClient.delete(`/asset-custom-fields/${id}`);
+    try {
+      const result = await enhancedApiClient.delete<void>(`/asset-custom-fields/${id}`, {
+        retry: false, // 删除操作不重试
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        throw new Error(`删除自定义字段配置失败: ${result.error}`);
+      }
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // 获取资产的自定义字段值
   async getAssetCustomFieldValues(assetId: string): Promise<CustomFieldValue[]> {
-    const response = await apiClient.get(`/assets/${assetId}/custom-fields`);
-    return response.data || [];
+    try {
+      const result = await enhancedApiClient.get<CustomFieldValue[]>(`${ASSET_API.DETAIL(assetId)}/custom-fields`, {
+        cache: false, // 字段值数据不缓存
+        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        throw new Error(`获取资产自定义字段值失败: ${result.error}`);
+      }
+
+      return result.data || [];
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // 更新资产的自定义字段值
@@ -679,18 +1177,43 @@ export class AssetService {
     assetId: string,
     values: CustomFieldValue[],
   ): Promise<CustomFieldValue[]> {
-    const response = await apiClient.put(`/assets/${assetId}/custom-fields`, { values });
-    return response.data || [];
+    try {
+      const result = await enhancedApiClient.put<CustomFieldValue[]>(`${ASSET_API.DETAIL(assetId)}/custom-fields`, { values }, {
+        retry: false, // 字段值更新不重试
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        throw new Error(`更新资产自定义字段值失败: ${result.error}`);
+      }
+
+      return result.data || [];
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   // 批量设置自定义字段值
   async batchSetCustomFieldValues(
     updates: Array<{ assetId: string; values: CustomFieldValue[] }>,
   ): Promise<void> {
-    await apiClient.post("/assets/batch-custom-fields", { updates });
+    try {
+      const result = await enhancedApiClient.post<void>(`${ASSET_API.BATCH_UPDATE}/custom-fields`, { updates }, {
+        retry: false, // 批量操作不重试
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        throw new Error(`批量设置自定义字段值失败: ${result.error}`);
+      }
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
-  // ===== 数据字典相关的便捷方法 =====
+  // ===== 便捷方法 =====
 
   // 获取权属方字典
   async getOwnershipEntitiesFromDict(): Promise<SystemDictionary[]> {
@@ -700,11 +1223,20 @@ export class AssetService {
   // 获取管理实体列表
   async getManagementEntities(): Promise<string[]> {
     try {
-      const response = await apiClient.get<string[]>("/assets/management-entities");
-      return response.data || (response as string[]);
+      const result = await enhancedApiClient.get<string[]>(ASSET_API.OWNERSHIP_ENTITIES, {
+        cache: true,
+        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        throw new Error(`获取管理实体列表失败: ${result.error}`);
+      }
+
+      return result.data || [];
     } catch (error) {
-      console.error("获取管理实体列表失败:", error);
-      return [];
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
     }
   }
 
@@ -738,26 +1270,50 @@ export class AssetService {
   // 验证自定义字段值
   async validateCustomFieldValue(fieldId: string, value: unknown): Promise<FieldValidationResult> {
     try {
-      await apiClient.post("/asset-custom-fields/validate", {
+      const result = await enhancedApiClient.post<void>("/asset-custom-fields/validate", {
         field_id: fieldId,
         value: value,
+      }, {
+        retry: false, // 验证操作不重试
+        smartExtract: true
       });
+
+      if (!result.success) {
+        return {
+          valid: false,
+          error: result.error || "验证失败"
+        };
+      }
+
       return { valid: true };
-    } catch (error: unknown) {
-      const apiError = error as ApiError;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
       return {
         valid: false,
-        error: error.message || "验证失败",
+        error: enhancedError.message
       };
     }
   }
 
   // 获取字段选项（用于下拉框等）
   async getFieldOptions(fieldType: string, category?: string): Promise<FieldOption[]> {
-    const response = await apiClient.get("/field-options", {
-      params: { field_type: fieldType, category },
-    });
-    return response.data || [];
+    try {
+      const result = await enhancedApiClient.get<FieldOption[]>("/field-options", {
+        params: { field_type: fieldType, category },
+        cache: true,
+        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+        smartExtract: true
+      });
+
+      if (!result.success) {
+        throw new Error(`获取字段选项失败: ${result.error}`);
+      }
+
+      return result.data || [];
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 }
 

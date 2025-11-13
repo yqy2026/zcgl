@@ -444,7 +444,23 @@ const EnhancedPDFImportUploader: React.FC<EnhancedPDFImportUploaderProps> = ({
               items={processingSteps.map(step => ({
                 title: step.title,
                 description: step.description,
-                status: step.status as any,
+                status: ((): 'wait' | 'process' | 'finish' | 'error' => {
+                  switch (step.status) {
+                    case 'wait':
+                      return 'wait'
+                    case 'process':
+                    case 'uploading':
+                      return 'process'
+                    case 'finish':
+                    case 'completed':
+                      return 'finish'
+                    case 'error':
+                    case 'failed':
+                      return 'error'
+                    default:
+                      return 'process'
+                  }
+                })(),
                 icon: getStepIcon(step)
               }))}
             />

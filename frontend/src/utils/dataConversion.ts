@@ -153,7 +153,7 @@ export const validateNumericFields = (asset: DataObject) => {
   ]
 
   moneyFields.forEach(({ field, name }) => {
-    const fieldValue = (asset as any)[field]
+    const fieldValue = asset[field as keyof DataObject]
     if (fieldValue !== undefined && fieldValue !== null) {
       const value = parseFloat(String(fieldValue))
       if (isNaN(value) || value < 0) {

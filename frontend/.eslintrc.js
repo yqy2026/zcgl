@@ -14,6 +14,7 @@ module.exports = {
     ecmaFeatures: {
       jsx: true,
     },
+    project: ['./tsconfig.json'],
   },
   plugins: ['@typescript-eslint', 'react-hooks'],
   settings: {
@@ -24,6 +25,11 @@ module.exports = {
   rules: {
     '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
     '@typescript-eslint/no-explicit-any': 'error',
+    '@typescript-eslint/ban-ts-comment': ['warn', { 'ts-ignore': true }],
+    '@typescript-eslint/explicit-module-boundary-types': 'error',
+    '@typescript-eslint/consistent-type-definitions': ['error', 'interface'],
+    '@typescript-eslint/strict-boolean-expressions': 'warn',
+    '@typescript-eslint/no-unsafe-assignment': 'error',
     'react-hooks/rules-of-hooks': 'error',
     'react-hooks/exhaustive-deps': 'warn',
     'no-console': 'warn',

@@ -142,7 +142,7 @@ export const mockHasPermission = jest.fn(() => true)
 
 // Mock Environment Variables
 export const mockEnv = {
-  VITE_API_BASE_URL: '/api/v1',
+  VITE_API_BASE_URL: '/api',
   VITE_API_TIMEOUT: '30000',
   NODE_ENV: 'test',
 }

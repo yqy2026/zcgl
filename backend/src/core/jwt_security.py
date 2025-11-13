@@ -264,12 +264,13 @@ def validate_current_jwt_config() -> dict[str, Any]:
         "secret_key_analysis": jwt_security.validate_secret_key(settings.SECRET_KEY),
     }
 
-    # 检查算法
-    if settings.ALGORITHM not in jwt_security.RECOMMENDED_ALGORITHMS:
-        result["issues"].append(f"使用的算法 {settings.ALGORITHM} 不在推荐列表中")
+    # 检查算法 - 使用安全访问避免属性错误
+    algorithm = getattr(settings, 'ALGORITHM', 'HS256')
+    if algorithm not in jwt_security.RECOMMENDED_ALGORITHMS:
+        result["issues"].append(f"使用的算法 {algorithm} 不在推荐列表中")
 
-    # 检查令牌有效期
-    access_token_minutes = settings.ACCESS_TOKEN_EXPIRE_MINUTES
+    # 检查令牌有效期 - 使用安全访问避免属性错误
+    access_token_minutes = getattr(settings, 'ACCESS_TOKEN_EXPIRE_MINUTES', 30)
     if access_token_minutes > 60:  # 超过1小时
         result["recommendations"].append("访问令牌有效期建议不超过60分钟")
 

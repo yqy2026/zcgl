@@ -13,7 +13,16 @@ from datetime import UTC, datetime
 from pathlib import Path
 from time import time
 
-import magic
+logger = logging.getLogger(__name__)
+
+# magic模块的条件导入
+try:
+    import magic
+    MAGIC_AVAILABLE = True
+except ImportError:
+    magic = None
+    MAGIC_AVAILABLE = False
+    logger.warning("python-magic模块不可用，文件类型检测功能将受限")
 from fastapi import Depends, HTTPException, Request, UploadFile, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 

@@ -13,7 +13,7 @@ const getEnvVar = (key: string, defaultValue: string) => {
 
 export const API_CONFIG = {
   // 基础配置
-  BASE_URL: '/api/v1', // 统一使用 /api/v1
+  BASE_URL: '/api/v1', // 统一使用版本化路径
   TIMEOUT: parseInt(getEnvVar('VITE_API_TIMEOUT', '30000')),
 
   // 重试配置

@@ -6,6 +6,9 @@ interface FormValidationRule {
   validator?: (rule: FormValidationRule, value: unknown) => Promise<void>
 }
 
+// 导入API常量
+import { SYSTEM_API } from '../constants/api'
+
 // 通用验证规则
 export const validationRules = {
   // 必填验证

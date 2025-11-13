@@ -364,7 +364,7 @@ class RoutePerformanceMonitor {
       }
 
       // 发送到监控服务
-      await fetch('/api/v1/monitoring/route-performance', {
+      await fetch('/api/monitoring/route-performance', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

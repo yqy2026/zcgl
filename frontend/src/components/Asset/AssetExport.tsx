@@ -42,7 +42,21 @@ interface ExportOptions {
   filters?: AssetSearchParams;
 }
 
-// 使用service中的ExportTask接口定义
+// 扩展ExportTask接口以匹配API返回的实际字段名
+interface ExportTaskWithApiFields {
+  id: string;
+  status: "pending" | "running" | "processing" | "completed" | "failed";
+  progress: number;
+  download_url?: string;
+  downloadUrl?: string;  // 兼容原有字段
+  filename?: string;
+  total_records?: number;
+  file_size?: number;
+  created_at: string;
+  createdAt?: string;  // 兼容原有字段
+  completedAt?: string;
+  errorMessage?: string;
+}
 
 interface AssetExportProps {
   searchParams?: AssetSearchParams;
@@ -56,7 +70,7 @@ const AssetExport: React.FC<AssetExportProps> = ({
   onExportComplete,
 }) => {
   const [form] = Form.useForm();
-  const [exportTask, setExportTask] = useState<ExportTask | null>(null);
+  const [exportTask, setExportTask] = useState<ExportTaskWithApiFields | null>(null);
   const [historyVisible, setHistoryVisible] = useState(false);
 
   // 可导出的字段配置
@@ -97,18 +111,44 @@ const AssetExport: React.FC<AssetExportProps> = ({
   // 获取导出历史
   const { data: exportHistory, refetch: refetchHistory } = useQuery({
     queryKey: ["export-history"],
-    queryFn: () => assetService.getExportHistory(),
+    queryFn: () => assetService.getExportHistory() as Promise<ExportTaskWithApiFields[]>,
     refetchInterval: 5000, // 每5秒刷新一次
   });
 
   // 导出数据
   const exportMutation = useMutation({
-    mutationFn: (options: ExportOptions) => {
-      if (selectedAssetIds?.length) {
-        return assetService.exportSelectedAssets(selectedAssetIds, options);
-      } else {
-        return assetService.exportAssets(options.filters || searchParams, options);
+    mutationFn: async (options: ExportOptions): Promise<ExportTaskWithApiFields> => {
+      const blob = selectedAssetIds?.length
+        ? await assetService.exportSelectedAssets(selectedAssetIds, options)
+        : await assetService.exportAssets(options.filters || searchParams, options);
+
+      // 如果返回的是Blob，说明没有任务ID，直接下载
+      if (blob instanceof Blob) {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `assets_export_${new Date().toISOString().split('T')[0]}.${options.format}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        const task: ExportTaskWithApiFields = {
+          id: `direct_${Date.now()}`,
+          status: "completed",
+          progress: 100,
+          downloadUrl: url,
+          createdAt: new Date().toISOString(),
+          filename: `assets_export_${new Date().toISOString().split('T')[0]}.${options.format}`,
+          total_records: 0,
+          file_size: blob.size,
+          created_at: new Date().toISOString(),
+        };
+        return task;
       }
+
+      // 否则应该返回任务对象，但这里返回Blob是错误的设计
+      throw new Error("导出服务返回了意外的响应格式");
     },
     onSuccess: (task) => {
       setExportTask(task);
@@ -118,7 +158,7 @@ const AssetExport: React.FC<AssetExportProps> = ({
       pollExportStatus(task.id);
     },
     onError: (error: unknown) => {
-      message.error(error.message || "导出失败");
+      message.error((error as Error).message || "导出失败");
     },
   });
 
@@ -126,7 +166,7 @@ const AssetExport: React.FC<AssetExportProps> = ({
   const pollExportStatus = (taskId: string) => {
     const interval = setInterval(async () => {
       try {
-        const task = await assetService.getExportStatus(taskId);
+        const task = await assetService.getExportStatus(taskId) as ExportTaskWithApiFields;
         setExportTask(task);
 
         if (task.status === "completed" || task.status === "failed") {
@@ -135,7 +175,17 @@ const AssetExport: React.FC<AssetExportProps> = ({
 
           if (task.status === "completed") {
             message.success("导出完成！");
-            onExportComplete?.(task);
+            // 转换为标准ExportTask类型
+            const standardTask: ExportTask = {
+              id: task.id,
+              status: task.status,
+              progress: task.progress,
+              downloadUrl: task.download_url || task.downloadUrl,
+              createdAt: task.created_at || task.createdAt || new Date().toISOString(),
+              completedAt: task.completedAt,
+              errorMessage: task.errorMessage,
+            };
+            onExportComplete?.(standardTask);
           } else {
             message.error(task.errorMessage || "导出失败");
           }
@@ -162,14 +212,15 @@ const AssetExport: React.FC<AssetExportProps> = ({
   };
 
   // 下载文件
-  const handleDownload = async (task: ExportTask) => {
-    if (!task.download_url) return;
+  const handleDownload = async (task: ExportTaskWithApiFields) => {
+    const downloadUrl = task.download_url || task.downloadUrl;
+    if (!downloadUrl) return;
 
     try {
-      await assetService.downloadExportFile(task.download_url);
+      await assetService.downloadExportFile(downloadUrl);
       message.success("下载成功");
     } catch (error: unknown) {
-      message.error(error.message || "下载失败");
+      message.error((error as Error).message || "下载失败");
     }
   };
 
@@ -180,7 +231,7 @@ const AssetExport: React.FC<AssetExportProps> = ({
       message.success("删除成功");
       refetchHistory();
     } catch (error: unknown) {
-      message.error(error.message || "删除失败");
+      message.error((error as Error).message || "删除失败");
     }
   };
 
@@ -191,6 +242,38 @@ const AssetExport: React.FC<AssetExportProps> = ({
     const sizes = ["B", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
     return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
+  };
+
+  // 获取状态显示文本
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "等待中";
+      case "running":
+      case "processing":
+        return "处理中";
+      case "completed":
+        return "完成";
+      case "failed":
+        return "失败";
+      default:
+        return status;
+    }
+  };
+
+  // 获取状态颜色
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "completed":
+        return "green";
+      case "failed":
+        return "red";
+      case "running":
+      case "processing":
+        return "blue";
+      default:
+        return "default";
+    }
   };
 
   return (
@@ -335,7 +418,7 @@ const AssetExport: React.FC<AssetExportProps> = ({
                       ? "导出失败"
                       : "正在导出..."}
                 </Title>
-                {exportTask.status === "processing" && <LoadingOutlined />}
+                {(exportTask.status === "running" || exportTask.status === "processing") && <LoadingOutlined />}
                 {exportTask.status === "completed" && (
                   <CheckCircleOutlined style={{ color: "#52c41a" }} />
                 )}
@@ -345,10 +428,10 @@ const AssetExport: React.FC<AssetExportProps> = ({
             <div style={{ marginBottom: 16 }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
                 <Text>文件名: {exportTask.filename}</Text>
-                <Text>记录数: {exportTask.total_records}</Text>
+                <Text>记录数: {exportTask.total_records || 0}</Text>
               </div>
 
-              {exportTask.status === "processing" && (
+              {(exportTask.status === "running" || exportTask.status === "processing") && (
                 <Progress
                   percent={exportTask.progress}
                   status="active"
@@ -398,10 +481,10 @@ const AssetExport: React.FC<AssetExportProps> = ({
       >
         <List
           dataSource={exportHistory}
-          renderItem={(item: ExportTask) => (
+          renderItem={(item: ExportTaskWithApiFields) => (
             <List.Item
               actions={[
-                item.status === "completed" && item.download_url && (
+                item.status === "completed" && (item.download_url || item.downloadUrl) && (
                   <Tooltip title="下载文件">
                     <Button
                       type="text"
@@ -430,24 +513,8 @@ const AssetExport: React.FC<AssetExportProps> = ({
                 title={
                   <Space>
                     <Text strong>{item.filename}</Text>
-                    <Tag
-                      color={
-                        item.status === "completed"
-                          ? "green"
-                          : item.status === "failed"
-                            ? "red"
-                            : item.status === "processing"
-                              ? "blue"
-                              : "default"
-                      }
-                    >
-                      {item.status === "completed"
-                        ? "完成"
-                        : item.status === "failed"
-                          ? "失败"
-                          : item.status === "processing"
-                            ? "处理中"
-                            : "等待中"}
+                    <Tag color={getStatusColor(item.status)}>
+                      {getStatusText(item.status)}
                     </Tag>
                   </Space>
                 }
@@ -455,9 +522,9 @@ const AssetExport: React.FC<AssetExportProps> = ({
                   <div>
                     <div>创建时间: {new Date(item.created_at).toLocaleString()}</div>
                     <div>
-                      记录数: {item.total_records} | 文件大小: {formatFileSize(item.file_size)}
+                      记录数: {item.total_records || 0} | 文件大小: {formatFileSize(item.file_size)}
                     </div>
-                    {item.status === "processing" && (
+                    {(item.status === "running" || item.status === "processing") && (
                       <Progress percent={item.progress} size="small" style={{ marginTop: 4 }} />
                     )}
                   </div>

@@ -1,19 +1,9 @@
-import { api } from './index'
+// import { api } from './index' // 已迁移到enhancedApiClient
 import { AUTH_API } from '@/constants/api'
-import type { LoginCredentials, AuthResponse, User } from '../types/auth'
-
-// API 错误接口
-interface ApiError {
-  response?: {
-    data?: {
-      error?: {
-        message?: string
-      }
-      message?: string
-    }
-  }
-  message?: string
-}
+import { enhancedApiClient } from './enhancedApiClient'
+import { ResponseExtractor, ApiErrorHandler } from '../utils/responseExtractor'
+import { AuthResponse } from '../types/api-response'
+import type { LoginCredentials, User } from '../types/auth'
 
 // 权限接口
 interface Permission {
@@ -28,134 +18,164 @@ export class AuthService {
   // 用户登录
   static async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
-      const response = await api.post(AUTH_API.LOGIN, credentials)
-
-      // 后端返回的数据结构：{user, tokens: {access_token, refresh_token, ...}, message}
-      if (response.data.user && response.data.tokens) {
-        const { user, tokens } = response.data
-
-        // 存储认证信息到localStorage
-        localStorage.setItem('auth_token', tokens.access_token)
-        localStorage.setItem('refreshToken', tokens.refresh_token)
-        localStorage.setItem('user', JSON.stringify(user))
-        // 权限信息暂时为空数组，后续可以从用户信息中获取
-        localStorage.setItem('permissions', JSON.stringify([]))
-
-        // 返回符合前端期望的数据结构
-        return {
-          success: true,
-          data: {
-            user,
-            token: tokens.access_token,
-            refreshToken: tokens.refresh_token,
-            permissions: []
-          },
-          message: response.data.message || '登录成功'
+      // 使用增强型API客户端，自动处理响应提取和错误
+      const result = await enhancedApiClient.post(AUTH_API.LOGIN, credentials, {
+        retry: {
+          maxAttempts: 3,
+          delay: 1000,
+          backoffMultiplier: 2,
+          retryCondition: (error) => {
+            // 只对网络错误和5xx错误重试
+            return !error.response || (error.response.status >= 500 && error.response.status < 600)
+          }
         }
-      } else {
-        throw new Error(response.data.error?.message || '登录失败')
+      });
+
+      if (!result.success) {
+        throw new Error(`登录失败: ${result.error}`);
       }
-    } catch (error: unknown) {
-      const apiError = error as ApiError
-      throw new Error(apiError.response?.data?.error?.message || apiError.message || '网络错误，请稍后重试')
+
+      const responseData = result.data;
+
+      // 验证响应数据结构
+      if (!responseData.user || (!responseData.tokens && !responseData.token)) {
+        throw new Error('登录响应数据格式不正确');
+      }
+
+      const { user } = responseData;
+
+      // 处理tokens（新格式）或token（旧格式）
+      let accessToken: string;
+      let refreshToken: string;
+
+      if (responseData.tokens) {
+        // 新格式：嵌套的tokens对象
+        accessToken = responseData.tokens.access_token;
+        refreshToken = responseData.tokens.refresh_token;
+
+        // 存储到多个键以确保兼容性
+        localStorage.setItem('auth_token', accessToken);
+        localStorage.setItem('token', accessToken); // 前端常用的键
+        localStorage.setItem('refreshToken', refreshToken);
+      } else if (responseData.token) {
+        // 旧格式：单个token字段
+        accessToken = responseData.token;
+        refreshToken = responseData.token;
+
+        localStorage.setItem('auth_token', accessToken);
+        localStorage.setItem('token', accessToken);
+        localStorage.setItem('refreshToken', refreshToken);
+      } else {
+        throw new Error('未找到访问令牌');
+      }
+
+      localStorage.setItem('user', JSON.stringify(user));
+      // 权限信息暂时为空数组，后续可以从用户信息中获取
+      localStorage.setItem('permissions', JSON.stringify([]));
+
+      return {
+        success: true,
+        data: {
+          user,
+          token: accessToken,
+          refreshToken: refreshToken,
+          permissions: []
+        },
+        message: responseData.message || '登录成功'
+      };
+
+    } catch (error) {
+      // 使用统一的错误处理器
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
     }
   }
 
   // 用户登出
   static async logout(): Promise<void> {
     try {
-      await api.post(AUTH_API.LOGOUT)
+      // 使用增强型API客户端，即使失败也会清除本地存储
+      await enhancedApiClient.post(AUTH_API.LOGOUT, undefined, {
+        retry: false // 登出不重试
+      });
     } catch (error) {
       // 即使登出API调用失败，也要清除本地存储
-      console.error('登出API调用失败:', error)
+      console.warn('登出API调用失败:', ApiErrorHandler.handleError(error).message);
     } finally {
       // 清除本地存储的认证信息
-      localStorage.removeItem('auth_token')
-      localStorage.removeItem('refreshToken')
-      localStorage.removeItem('user')
-      localStorage.removeItem('permissions')
+      this.clearAuthData();
     }
   }
 
   // 刷新令牌
   static async refreshToken(): Promise<AuthResponse> {
     try {
-      const refreshToken = localStorage.getItem('refreshToken')
+      const refreshToken = localStorage.getItem('refreshToken');
       if (!refreshToken) {
-        throw new Error('没有刷新令牌')
+        throw new Error('没有刷新令牌');
       }
 
-      const response = await api.post(AUTH_API.REFRESH, {
+      const result = await enhancedApiClient.post(AUTH_API.REFRESH, {
         refreshToken
-      })
+      }, {
+        retry: {
+          maxAttempts: 2,
+          delay: 500,
+          backoffMultiplier: 1.5,
+          retryCondition: (error) => {
+            // 刷新令牌失败一般不重试，除非是网络问题
+            return !error.response;
+          }
+        }
+      });
 
-      if (response.data.success) {
-        const { token, permissions } = response.data.data
-
-        localStorage.setItem('auth_token', token)
-        localStorage.setItem('permissions', JSON.stringify(permissions))
-
-        return response.data
-      } else {
-        throw new Error('令牌刷新失败')
+      if (!result.success) {
+        throw new Error(`令牌刷新失败: ${result.error}`);
       }
-    } catch (error: unknown) {
-      const apiError = error as ApiError
-      throw new Error(apiError.response?.data?.error?.message || apiError.message || '网络错误')
+
+      const { token, permissions } = result.data;
+
+      localStorage.setItem('auth_token', token);
+      localStorage.setItem('permissions', JSON.stringify(permissions));
+
+      return {
+        success: true,
+        data: result.data,
+        message: '令牌刷新成功'
+      };
+
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
     }
   }
 
   // 获取当前用户信息
   static async getCurrentUser(): Promise<User> {
     try {
-      const response = await api.get(AUTH_API.PROFILE)
-
-      if (response.data.success) {
-        return response.data.data  // 修复：me端点直接返回用户数据，不是嵌套在user字段中
-      } else {
-        throw new Error('获取用户信息失败')
-      }
-    } catch (error: unknown) {
-      const apiError = error as ApiError
-      throw new Error(apiError.response?.data?.error?.message || apiError.message || '网络错误')
-    }
-  }
-
-  // 开发环境模拟登录
-  static mockLogin(username: string = 'admin'): void {
-    // 仅在开发环境启用Mock登录
-    if (import.meta.env.DEV) {
-      const mockUser = {
-        id: '1',
-        username: username,
-        email: `${username}@example.com`,
-        full_name: username === 'admin' ? '系统管理员' : '测试用户',
-        roles: ['admin'],
-        organization: {
-          id: '1',
-          name: '默认组织'
+      const result = await enhancedApiClient.get(AUTH_API.PROFILE, {
+        cache: false, // 用户信息不缓存
+        retry: {
+          maxAttempts: 2,
+          delay: 500,
+          backoffMultiplier: 2
         }
+      });
+
+      if (!result.success) {
+        throw new Error(`获取用户信息失败: ${result.error}`);
       }
 
-      const mockToken = 'mock_token_' + Date.now()
+      // me端点直接返回用户数据，不是嵌套在user字段中
+      return result.data;
 
-      localStorage.setItem('auth_token', mockToken)
-      localStorage.setItem('user', JSON.stringify(mockUser))
-      localStorage.setItem('permissions', JSON.stringify([
-        { resource: 'assets', action: 'view' },
-        { resource: 'assets', action: 'create' },
-        { resource: 'assets', action: 'edit' },
-        { resource: 'contracts', action: 'view' },
-        { resource: 'contracts', action: 'create' },
-        { resource: 'dashboard', action: 'view' },
-        { resource: 'system', action: 'view' }
-      ]))
-
-    } else {
-      throw new Error('⚠️ Mock登录仅在开发环境可用')
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
     }
   }
 
+  
   // 检查本地认证状态
   static isAuthenticated(): boolean {
     const token = localStorage.getItem('auth_token')
@@ -167,12 +187,7 @@ export class AuthService {
     }
 
     try {
-      // Mock token仅在开发环境有效
-      if (token.startsWith('mock_token_')) {
-        return import.meta.env.DEV // 仅开发环境返回true
-      }
-
-      // 生产环境验证JWT Token
+      // 验证JWT Token
       const tokenParts = token.split('.')
       if (tokenParts.length !== 3) {
         return false
@@ -237,16 +252,31 @@ export class AuthService {
     )
   }
 
+  // 清除认证数据
+  private static clearAuthData(): void {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
+    localStorage.removeItem('permissions');
+  }
+
   // 修改密码
   static async changePassword(oldPassword: string, newPassword: string): Promise<void> {
     try {
-      await api.post(AUTH_API.CHANGE_PASSWORD, {
+      const result = await enhancedApiClient.post(AUTH_API.CHANGE_PASSWORD, {
         oldPassword,
         newPassword
-      })
-    } catch (error: unknown) {
-      const apiError = error as ApiError
-      throw new Error(apiError.response?.data?.error?.message || apiError.message || '密码修改失败')
+      }, {
+        retry: false // 密码修改不重试
+      });
+
+      if (!result.success) {
+        throw new Error(`密码修改失败: ${result.error}`);
+      }
+
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
     }
   }
 
@@ -258,35 +288,46 @@ export class AuthService {
     avatar?: string;
   }): Promise<User> {
     try {
-      const response = await api.put(AUTH_API.PROFILE, profileData)
+      const result = await enhancedApiClient.put(AUTH_API.CHANGE_PASSWORD, profileData, {
+        retry: {
+          maxAttempts: 2,
+          delay: 500,
+          backoffMultiplier: 2
+        }
+      });
 
-      if (response.data.success) {
-        // 更新本地存储的用户信息
-        const updatedUser = response.data.data
-        localStorage.setItem('user', JSON.stringify(updatedUser))
-        return updatedUser
-      } else {
-        throw new Error('更新个人资料失败')
+      if (!result.success) {
+        throw new Error(`更新个人资料失败: ${result.error}`);
       }
-    } catch (error: unknown) {
-      const apiError = error as ApiError
-      throw new Error(apiError.response?.data?.error?.message || apiError.message || '更新个人资料失败')
+
+      // 更新本地存储的用户信息
+      const updatedUser = result.data;
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      return updatedUser;
+
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
     }
   }
 
   // 获取用户活动记录
   static async getUserActivity(limit: number = 20): Promise<any[]> {
     try {
-      const response = await api.get(`${AUTH_API.SESSIONS}?limit=${limit}`)
+      const result = await enhancedApiClient.get(AUTH_API.SESSIONS, {
+        params: { limit },
+        cache: true
+      });
 
-      if (response.data.success) {
-        return response.data.data
-      } else {
-        throw new Error('获取活动记录失败')
+      if (!result.success) {
+        throw new Error(`获取活动记录失败: ${result.error}`);
       }
-    } catch (error: unknown) {
-      const apiError = error as ApiError
-      throw new Error(apiError.response?.data?.error?.message || apiError.message || '获取活动记录失败')
+
+      return result.data;
+
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
     }
   }
 }

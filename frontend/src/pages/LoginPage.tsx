@@ -24,7 +24,7 @@ const LoginPage: React.FC = () => {
 
   const handleSubmit = async (values: LoginFormData) => {
     try {
-      await login(values.username, values.password)
+      await login({ username: values.username, password: values.password })
 
       // 登录成功，跳转到目标页面或默认工作台
       const from = location.state?.from?.pathname || '/dashboard'
@@ -49,7 +49,7 @@ const LoginPage: React.FC = () => {
   return (
     <div className="login-page">
       <div className="login-container">
-        <Card className="login-card" bordered={false}>
+        <Card className="login-card" variant="borderless">
           {/* 登录头部 */}
           <div className="login-header">
             <Space direction="vertical" size="middle" align="center">

@@ -2,8 +2,8 @@
 from typing import Any
 
 """
-Contract Extractor Manager
-Manages all contract extractors and provides the best extraction strategy
+合同提取器管理器
+统一管理所有合同提取器，提供最佳提取策�?
 """
 
 import logging
@@ -13,36 +13,36 @@ logger = logging.getLogger(__name__)
 
 
 class ContractExtractorManager:
-    """Contract Extractor Manager"""
+    """合同提取器管理器"""
 
     def __init__(self):
-        """Initialize extractor manager"""
+        """初始化提取器管理�?""
         self.extractors = {}
         self._load_extractors()
 
     def _load_extractors(self):
-        """Load all extractors"""
+        """加载所有提取器"""
         try:
-            # Import contract extractor (main extractor)
+            # 导入合同提取器（主要提取器）
             from .contract_extractor import extract_contract_info
 
             self.extractors["main"] = extract_contract_info
-            logger.info("Contract extractor loaded successfully")
+            logger.info("合同提取器加载成�?)
         except Exception as e:
-            logger.warning(f"Contract extractor failed to load: {e}")
+            logger.warning(f"合同提取器加载失�? {e}")
 
     def extract_contract_info(
         self, text: str, strategy: str = "auto"
     ) -> dict[str, Any]:
         """
-        Extract contract information
+        提取合同信息
 
         Args:
-            text: Contract text
-            strategy: Extraction strategy ('auto', 'ultra_enhanced', 'enhanced', 'rent_contract', 'fallback')
+            text: 合同文本
+            strategy: 提取策略 ('auto', 'ultra_enhanced', 'enhanced', 'rent_contract', 'fallback')
 
         Returns:
-            Extraction result dictionary
+            提取结果字典
         """
         if strategy == "auto":
             return self._auto_extract(text)
@@ -53,34 +53,34 @@ class ContractExtractorManager:
             return self._auto_extract(text)
 
     def _auto_extract(self, text: str) -> dict[str, Any]:
-        """Automatically select best extraction strategy"""
+        """自动选择最佳提取策�?""
         results = {}
 
-        # Use main extractor
+        # 使用主提取器
         if "main" in self.extractors:
             try:
                 result = self._extract_with_strategy(text, "main")
                 if result.get("success") and result.get("overall_confidence", 0) > 0.7:
-                    logger.info("Main extractor used successfully")
+                    logger.info("使用主提取器成功")
                     return result
                 results["main"] = result
             except Exception as e:
-                logger.warning(f"Main extractor execution failed: {e}")
+                logger.warning(f"主提取器执行失败: {e}")
 
-        # If all extractors fail, return best result
+        # 如果所有提取器都失败，返回最佳结�?
         if results:
             best_result = max(
                 results.values(), key=lambda x: x.get("overall_confidence", 0)
             )
             logger.warning(
-                f"All extractors performed poorly, returning best result (confidence: {best_result.get('overall_confidence', 0):.2f})"
+                f"所有提取器效果不佳，返回最佳结�?(置信�? {best_result.get('overall_confidence', 0):.2f})"
             )
             return best_result
 
-        # Complete failure
+        # 完全失败
         return {
             "success": False,
-            "error": "All extractors failed to process the text",
+            "error": "所有提取器都无法处理该文本",
             "overall_confidence": 0.0,
             "extraction_summary": {
                 "attempted_strategies": list(self.extractors.keys()),
@@ -89,9 +89,9 @@ class ContractExtractorManager:
         }
 
     def _extract_with_strategy(self, text: str, strategy: str) -> dict[str, Any]:
-        """Extract information using specified strategy"""
+        """使用指定策略提取信息"""
         if strategy not in self.extractors:
-            raise ValueError(f"Unknown extraction strategy: {strategy}")
+            raise ValueError(f"未知的提取策�? {strategy}")
 
         try:
             result = self.extractors[strategy](text)
@@ -99,7 +99,7 @@ class ContractExtractorManager:
             result["extraction_time"] = datetime.now().isoformat()
             return result
         except Exception as e:
-            logger.error(f"Extraction strategy {strategy} execution failed: {e}")
+            logger.error(f"提取策略 {strategy} 执行失败: {e}")
             return {
                 "success": False,
                 "error": str(e),
@@ -108,11 +108,11 @@ class ContractExtractorManager:
             }
 
     def get_available_strategies(self) -> list[str]:
-        """Get available extraction strategies"""
+        """获取可用的提取策�?""
         return list(self.extractors.keys())
 
     def get_strategy_info(self) -> dict[str, Any]:
-        """Get extractor information"""
+        """获取提取器信�?""
         return {
             "available_strategies": self.get_available_strategies(),
             "total_extractors": len(self.extractors),
@@ -123,24 +123,24 @@ class ContractExtractorManager:
         }
 
 
-# Global instance
+# 全局实例
 extractor_manager = ContractExtractorManager()
 
 
 def extract_contract_info(text: str, strategy: str = "auto") -> dict[str, Any]:
     """
-    Convenient function to extract contract information
+    提取合同信息的便捷函�?
 
     Args:
-        text: Contract text
-        strategy: Extraction strategy
+        text: 合同文本
+        strategy: 提取策略
 
     Returns:
-        Extraction result dictionary
+        提取结果字典
     """
     return extractor_manager.extract_contract_info(text, strategy)
 
 
 def get_extractor_info() -> dict[str, Any]:
-    """Get extractor information"""
+    """获取提取器信�?""
     return extractor_manager.get_strategy_info()

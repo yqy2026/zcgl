@@ -120,7 +120,7 @@ export interface DefectReport {
  * 测试覆盖率API服务类
  */
 class TestCoverageService {
-  private baseUrl = '/api/v1/test-coverage';
+  private baseUrl = '/api/test-coverage';
 
   /**
    * 获取当前测试覆盖率报告

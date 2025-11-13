@@ -31,9 +31,10 @@ logger = logging.getLogger(__name__)
 
 # 导入新的PDF处理服务 - 安全导入
 try:
-    from ...services.enhanced_error_handler import enhanced_error_handler
-    from ...services.pdf_import_service import pdf_import_service
-    from ...services.pdf_processing_service import pdf_processing_service
+    from ...services.core.enhanced_error_handler import enhanced_error_handler
+    from ...services.pdf_import_service import PDFImportService
+    pdf_import_service = PDFImportService()
+    from ...services.document.pdf_processing_service import pdf_processing_service
     from ...services.pdf_session_service import pdf_session_service
     from ...services.pdf_validation_matching_service import PDFValidationMatchingService
     from ...services.performance_monitor import performance_monitor
@@ -1081,7 +1082,7 @@ async def get_performance_report(hours: int = Query(default=24, ge=1, le=168)):
 async def get_system_health():
     """获取系统健康状态"""
     try:
-        from ...services.enhanced_error_handler import monitor_processing_health
+        from ...services.core.enhanced_error_handler import monitor_processing_health
 
         health_data = await monitor_processing_health()
         return {"success": True, "data": health_data, "message": "系统健康状态获取成功"}

@@ -7,7 +7,7 @@ import {
   CheckCircleOutlined,
 } from '@ant-design/icons'
 
-const { Panel: CollapsePanel } = Collapse
+const { Panel } = Collapse
 const { Text, Paragraph } = Typography
 
 interface AssetFormHelpProps {

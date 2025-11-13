@@ -241,7 +241,7 @@ class ABTestManager {
     // 这里可以发送到分析服务
     if (process.env.NODE_ENV === 'production') {
       // 实际项目中发送到分析服务
-      fetch('/api/v1/analytics/abtest-events', {
+      fetch('/api/analytics/abtest-events', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -259,7 +259,7 @@ class ABTestManager {
 
   private async reportConversion(testId: string, metric: string, value?: unknown) {
     try {
-      await fetch('/api/v1/analytics/abtest-conversions', {
+      await fetch('/api/analytics/abtest-conversions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

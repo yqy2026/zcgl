@@ -54,6 +54,7 @@ import ContractImportStatus from './ContractImportStatus';
 import ContractImportReview from './ContractImportReview';
 import PDFImportHelp from './PDFImportHelp';
 import { pdfImportService } from '../../services/pdfImportService';
+import type { SystemInfoResponse } from '../../services/pdfImportService';
 import type {
   FileUploadResponse,
   SessionProgress,
@@ -87,7 +88,7 @@ const PDFImportPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'upload' | 'history'>('upload');
   const [currentSession, setCurrentSession] = useState<ProcessingSession | null>(null);
   const [sessionHistory, setSessionHistory] = useState<ProcessingSession[]>([]);
-  const [systemInfo, setSystemInfo] = useState<any>(null);
+  const [systemInfo, setSystemInfo] = useState<SystemInfoResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [showSystemInfo, setShowSystemInfo] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
@@ -195,7 +196,20 @@ const PDFImportPage: React.FC = () => {
               size: 0,
               type: 'application/pdf'
             },
-            status: session.status === 'ready_for_review' ? 'ready' : session.status as any,
+            status: ((): 'ready' | 'completed' | 'failed' | 'processing' => {
+              switch (session.status) {
+                case 'ready_for_review':
+                  return 'ready'
+                case 'completed':
+                  return 'completed'
+                case 'failed':
+                  return 'failed'
+                case 'cancelled':
+                  return 'failed'
+                default:
+                  return 'processing'
+              }
+            })(),
             progress: session.progress
           }));
         setSessionHistory(history);

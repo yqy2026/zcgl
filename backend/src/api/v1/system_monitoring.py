@@ -22,8 +22,7 @@ from pydantic import BaseModel, Field, ConfigDict
 
 try:
     from src.core.config_manager import get_config
-    from src.core.database import get_db
-    from src.core.enhanced_database import get_database_manager
+    from src.database import get_db, get_database_manager
     from src.models.auth import User
     from src.services.auth_service import get_current_user, require_permission
 except ImportError:

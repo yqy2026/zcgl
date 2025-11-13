@@ -42,7 +42,12 @@ from ...schemas.rent_contract import (
     RentTermCreate,
     RentTermResponse,
 )
-from ...services.rent_contract_excel import rent_contract_excel_service
+try:
+    from ...services.document.rent_contract_excel import rent_contract_excel_service
+    EXCEL_SERVICE_AVAILABLE = True
+except (ImportError, SyntaxError) as e:
+    rent_contract_excel_service = None
+    EXCEL_SERVICE_AVAILABLE = False
 
 router = APIRouter()
 

@@ -109,6 +109,7 @@ class AreaSummaryResponse(BaseModel):
 class FinancialSummaryResponse(BaseModel):
     """财务汇总响应模型"""
 
+    total_assets: int = Field(..., description="总资产数量")
     total_annual_income: float = Field(..., description="年总收入")
     total_annual_expense: float = Field(..., description="年总支出")
     net_annual_income: float = Field(..., description="年净收入")

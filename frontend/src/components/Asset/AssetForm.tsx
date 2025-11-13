@@ -295,16 +295,18 @@ const AssetForm: React.FC<AssetFormProps> = ({
   const handleSubmit = async (values: Record<string, unknown>) => {
     try {
       // 处理日期字段
+      const formatDate = (val: unknown): string | undefined => {
+        if (!val) return undefined
+        if (dayjs.isDayjs(val)) return (val as dayjs.Dayjs).format('YYYY-MM-DD')
+        const parsed = dayjs(String(val))
+        return parsed.isValid() ? parsed.format('YYYY-MM-DD') : undefined
+      }
       const submitData = {
         ...values,
-        contract_start_date: (values.contract_start_date as any)?.format("YYYY-MM-DD"),
-        contract_end_date: (values.contract_end_date as any)?.format("YYYY-MM-DD"),
-        operation_agreement_start_date: (values.operation_agreement_start_date as any)?.format(
-          "YYYY-MM-DD",
-        ),
-        operation_agreement_end_date: (values.operation_agreement_end_date as any)?.format(
-          "YYYY-MM-DD",
-        ),
+        contract_start_date: formatDate(values.contract_start_date),
+        contract_end_date: formatDate(values.contract_end_date),
+        operation_agreement_start_date: formatDate(values.operation_agreement_start_date),
+        operation_agreement_end_date: formatDate(values.operation_agreement_end_date),
         // 处理附件信息，存储文件名列表
         operation_agreement_attachments: fileList.map((file) => file.name).join(","),
         // 处理终端合同文件信息

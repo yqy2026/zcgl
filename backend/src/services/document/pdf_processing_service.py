@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
 from typing import Any
 
 """
-PDF Text Processing Service
-Supports multiple PDF processing engines and OCR functionality
+PDF文本处理服务
+支持多种PDF处理引擎和OCR功能
 """
 
 import asyncio
@@ -58,7 +57,7 @@ logger = logging.getLogger(__name__)
 
 
 class PDFProcessingCache:
-    """PDF Processing Cache"""
+    """PDF处理缓存�?""
 
     def __init__(self, max_size: int = 100, ttl_seconds: int = 3600):
         self.cache = {}
@@ -67,9 +66,9 @@ class PDFProcessingCache:
         self.ttl_seconds = ttl_seconds
 
     def get(self, key: str) -> Any:
-        """Get cache item"""
+        """获取缓存�?""
         if key in self.cache:
-            # Check if expired
+            # 检查是否过�?
             if time.time() - self.access_times[key] > self.ttl_seconds:
                 del self.cache[key]
                 del self.access_times[key]
@@ -79,8 +78,8 @@ class PDFProcessingCache:
         return None
 
     def set(self, key: str, value: Any):
-        """Set cache item"""
-        # If cache is full, remove oldest item
+        """设置缓存�?""
+        # 如果缓存已满，清理最旧的�?
         if len(self.cache) >= self.max_size:
             oldest_key = min(self.access_times, key=self.access_times.get)
             del self.cache[oldest_key]
@@ -90,7 +89,7 @@ class PDFProcessingCache:
         self.access_times[key] = time.time()
 
     def clear(self):
-        """Clear cache"""
+        """清空缓存"""
         self.cache.clear()
         self.access_times.clear()
 
@@ -104,10 +103,10 @@ class PDFProcessingMethod:
 
 
 class PDFProcessingService:
-    """PDF Text Processing Service - Optimized Version"""
+    """PDF文本处理服务 - 优化版本"""
 
     def __init__(self):
-        # Delay OCR engine initialization to avoid excessive resource usage at startup
+        # 延迟初始化OCR引擎，避免启动时占用过多资源
         self._ocr_engine = None
         self._ocr_initialized = False
         self._ocr_warmup_in_progress = False
@@ -116,56 +115,56 @@ class PDFProcessingService:
             PDFProcessingMethod.PDFPLUMBER,
             PDFProcessingMethod.OCR,
         ]
-        # Initialize cache service
+        # 初始化缓存服�?
         try:
             from .pdf_processing_cache import PDFProcessingCache
 
             self.cache = PDFProcessingCache()
         except ImportError as e:
-            logger.warning(f"Cannot import PDF processing cache: {e}")
+            logger.warning(f"无法导入PDF处理缓存: {e}")
             self.cache = None
 
-        # Initialize quality assessor
+        # 初始化质量评估器
         try:
             from .pdf_quality_assessment import pdf_quality_assessor
 
             self.quality_assessor = pdf_quality_assessor
         except ImportError as e:
-            logger.warning(f"Cannot import quality assessor: {e}")
+            logger.warning(f"无法导入质量评估�? {e}")
             self.quality_assessor = None
 
-        # Initialize concurrent processing optimizer
+        # 初始化并发处理优化器
         try:
             from .concurrent_processing_optimizer import concurrent_optimizer
 
             self.concurrent_optimizer = concurrent_optimizer
-            # Start concurrent processing
+            # 启动并发处理�?
             self.concurrent_optimizer.start()
-            logger.info("Concurrent processing optimizer started")
+            logger.info("并发处理优化器已启动")
         except ImportError as e:
-            logger.warning(f"Cannot import concurrent optimizer: {e}")
+            logger.warning(f"无法导入并发优化�? {e}")
             self.concurrent_optimizer = None
 
-        # Initialize PDF processing monitor
+        # 初始化PDF处理监控�?
         try:
             from .pdf_processing_monitor import pdf_processing_monitor
 
             self.monitor = pdf_processing_monitor
             self.monitor.start_monitoring()
-            logger.info("PDF processing monitor started")
+            logger.info("PDF处理监控器已启动")
         except ImportError as e:
-            logger.warning(f"Cannot import PDF processing monitor: {e}")
+            logger.warning(f"无法导入PDF处理监控�? {e}")
             self.monitor = None
 
     @property
     def ocr(self):
-        """OCR Engine Management"""
+        """OCR引擎管理"""
         if not self._ocr_initialized and not self._ocr_warmup_in_progress:
             self._ocr_warmup_in_progress = True
             try:
-                # Start OCR engine warmup
-                logger.info("Starting OCR engine warmup initialization...")
-                # Read environment variables
+                # 启动OCR引擎预热
+                logger.info("开始OCR引擎预热初始�?..")
+                # 读取环境变量
                 lang = os.getenv("OCR_LANG", "ch")
                 use_gpu = os.getenv("OCR_USE_GPU", "false").lower() in {"1", "true", "yes"}
                 use_angle_cls = os.getenv("OCR_USE_ANGLE_CLS", "true").lower() in {"1", "true", "yes"}
@@ -174,7 +173,7 @@ class PDFProcessingService:
                 rec_batch_num = int(os.getenv("OCR_REC_BATCH_NUM", "6"))
                 det_db_thresh = float(os.getenv("OCR_DET_DB_THRESH", "0.3"))
                 drop_score = float(os.getenv("OCR_DROP_SCORE", "0.5"))
-                # Build base arguments (excluding show_log for better compatibility)
+                # 构建基础参数（不包含 show_log 以提高兼容性）
                 base_args = {
                     "lang": lang,
                     "use_gpu": use_gpu,
@@ -219,17 +218,17 @@ class PDFProcessingService:
                         else:
                             raise
                 self._ocr_initialized = True
-                logger.info("OCR engine warmup initialization completed")
+                logger.info("OCR引擎预热初始化完�?)
                 self._ocr_warmup_in_progress = False
             except Exception as e:
-                logger.error(f"OCR engine warmup failed: {e}")
+                logger.error(f"OCR引擎预热失败: {e}")
                 self._ocr_engine = None
                 self._ocr_initialized = False
                 self._ocr_warmup_in_progress = False
         elif not self._ocr_initialized:
-            # If engine is not initialized and not warming up, perform standard initialization
+            # 如果引擎未初始化且没有在预热中，则进行标准初始化
             try:
-                logger.info("Starting OCR engine standard initialization...")
+                logger.info("开始OCR引擎标准初始�?..")
                 lang = os.getenv("OCR_LANG", "ch")
                 use_gpu = os.getenv("OCR_USE_GPU", "false").lower() in {"1", "true", "yes"}
                 use_angle_cls = os.getenv("OCR_USE_ANGLE_CLS", "true").lower() in {"1", "true", "yes"}
@@ -282,9 +281,9 @@ class PDFProcessingService:
                         else:
                             raise
                 self._ocr_initialized = True
-                logger.info("OCR engine standard initialization completed")
+                logger.info("OCR引擎标准初始化完�?)
             except Exception as e:
-                logger.error(f"OCR engine standard initialization failed: {e}")
+                logger.error(f"OCR引擎标准初始化失�? {e}")
                 self._ocr_engine = None
                 self._ocr_initialized = False
 
@@ -299,16 +298,16 @@ class PDFProcessingService:
         **kwargs,
     ) -> dict[str, Any]:
         """
-        Extract text from PDF file
+        从PDF文件提取文本
 
         Args:
-            file_path: PDF file path
-            method: Specified processing method
-            prefer_ocr: Whether to prefer OCR
-            **kwargs: Other configuration parameters
+            file_path: PDF文件路径
+            method: 指定的处理方�?
+            prefer_ocr: 是否优先使用OCR
+            **kwargs: 其他配置参数
 
         Returns:
-            Dictionary containing extraction results and metadata
+            包含提取结果和元数据的字�?
         """
         start_time = datetime.now()
         file_path = Path(file_path)
@@ -409,8 +408,8 @@ class PDFProcessingService:
                     cache_result = None
 
                 if cache_result:
-                    logger.info(f"Cache hit: {file_path.name}")
-                    logger.info("Using cached result, skipping processing")
+                    logger.info(f"缓存命中: {file_path.name}")
+                    logger.info("使用缓存结果，跳过处�?)
 
                     if self.monitor:
                         from .pdf_processing_monitor import LogLevel, ProcessingStage
@@ -513,7 +512,7 @@ class PDFProcessingService:
                     logger.warning(f"缓存保存失败: {e}")
 
             logger.info(
-                f"PDF处理完成: {file_path.name}, 耗时: {processing_time:.2f}�?"
+                f"PDF处理完成: {file_path.name}, 耗时: {processing_time:.2f}�? "
                 f"文本长度: {len(result.get('text', ''))}, "
                 f"质量分数: {result.get('quality_assessment', {}).get('overall_quality_score', 'N/A')}"
             )
@@ -529,12 +528,6 @@ class PDFProcessingService:
                 "processing_time_seconds": (
                     datetime.now() - start_time
                 ).total_seconds(),
-            }
-            return {
-                "success": False,
-                "error": str(e),
-                "file_path": file_path,
-                "processing_method": method,
                 "text": "",
                 "pages": [],
                 "page_count": 0,
@@ -548,7 +541,7 @@ class PDFProcessingService:
         prefer_ocr: bool,
         kwargs: dict,
     ) -> dict[str, Any]:
-        """统一各处理方法的输出结构，保证核心字段一�?
+        """统一各处理方法的输出结构，保证核心字段一致�?
 
         目标字段�?
         - text: str
@@ -800,7 +793,7 @@ class PDFProcessingService:
             return 0.0
 
     async def _is_scanned_pdf(self, file_path: Path) -> bool:
-        """检查PDF是否为扫描版（保留原方法作为备用）"""
+        """检查PDF是否为扫描版（保留原方法作为备用�?""
         try:
             doc = fitz.open(str(file_path))
             text_content = ""
@@ -1077,25 +1070,25 @@ class PDFProcessingService:
             }
 
     def _post_process_ocr_text(self, text: str) -> str:
-        """OCR Text Post-processing"""
+        """OCR文本后处�?""
         if not text:
             return text
 
-        # Clean common OCR errors
+        # 清理常见的OCR错误
         text = text.strip()
 
-        # Remove extra empty lines
+        # 移除多余的空�?
         text = "\n".join(line for line in text.split("\n") if line.strip())
 
-        # Fix common punctuation errors
+        # 修复常见的标点符号错�?
         replacements = {
-            ",\u200b": ",",
-            ".\u200b": ".",
-            ",,": ",",
-            "??": "?",
-            "!!": "!",
-            "\u200b": "",
-            " \u200b": " ",
+            "，�?: "�?,
+            "。�?: "�?,
+            "，，": "�?,
+            "？？": "�?,
+            "！！": "�?,
+            "�?": "�?,
+            " �?: "�?,
         }
 
         for old, new in replacements.items():
@@ -1112,20 +1105,20 @@ class PDFProcessingService:
         **kwargs,
     ) -> list[dict[str, Any]]:
         """
-        Process multiple PDF files concurrently
+        并发处理多个PDF文件
 
         Args:
-            file_paths: List of PDF file paths
-            method: Specified processing method
-            prefer_ocr: Whether to prefer OCR
-            max_concurrency: Maximum concurrency
-            **kwargs: Other configuration parameters
+            file_paths: PDF文件路径列表
+            method: 指定的处理方�?
+            prefer_ocr: 是否优先使用OCR
+            max_concurrency: 最大并发数
+            **kwargs: 其他配置参数
 
         Returns:
-            List of processing results
+            处理结果列表
         """
         if not self.concurrent_optimizer:
-            logger.warning("Concurrent optimizer unavailable, falling back to sequential processing")
+            logger.warning("并发优化器不可用，回退到串行处�?)
             results = []
             for file_path in file_paths:
                 result = await self.extract_text_from_pdf(
@@ -1134,16 +1127,16 @@ class PDFProcessingService:
                 results.append(result)
             return results
 
-        # Limit concurrency
+        # 限制并发�?
         if max_concurrency is None:
             stats = self.concurrent_optimizer.get_statistics()
             max_concurrency = min(4, stats.get("optimal_concurrency", 4))
 
         logger.info(
-            f"Starting concurrent processing of {len(file_paths)} PDF files, max concurrency: {max_concurrency}"
+            f"开始并发处�?{len(file_paths)} 个PDF文件，最大并发数: {max_concurrency}"
         )
 
-        # Create tasks
+        # 创建任务
         tasks = []
         for i, file_path in enumerate(file_paths):
             task_id = f"pdf_process_{i}_{Path(file_path).name}"
@@ -1156,7 +1149,7 @@ class PDFProcessingService:
                     args=(file_path, method, prefer_ocr),
                     kwargs=kwargs,
                     priority=TaskPriority.NORMAL,
-                    estimated_duration=30.0,  # Estimated 30s
+                    estimated_duration=30.0,  # 估算30�?
                     resource_requirements={
                         "cpu_intensive": True,
                         "memory_intensive": True,
@@ -1165,34 +1158,34 @@ class PDFProcessingService:
                 )
                 tasks.append(task_id)
             except Exception as e:
-                logger.error(f"Task submission failed: {task_id}, error: {e}")
-                # Create failure result
+                logger.error(f"提交任务失败: {task_id}, 错误: {e}")
+                # 创建失败结果
                 tasks.append(f"failed_{task_id}")
 
-        # Wait for all tasks to complete
+        # 等待所有任务完�?
         results = [None] * len(file_paths)
         completed_count = 0
 
         start_time = time.time()
-        timeout = max(300, len(file_paths) * 60)  # At least 5 minutes, additional 1 minute per file
+        timeout = max(300, len(file_paths) * 60)  # 至少5分钟，每文件额外1分钟
 
         while (
             completed_count < len(file_paths) and (time.time() - start_time) < timeout
         ):
-            await asyncio.sleep(1)  # Check interval
+            await asyncio.sleep(1)  # 检查间�?
 
             for i, task_id in enumerate(tasks):
                 if task_id.startswith("failed_"):
                     if results[i] is None:
                         results[i] = {
                             "success": False,
-                            "error": "Task submission failed",
+                            "error": "任务提交失败",
                             "file_path": file_paths[i],
                         }
                         completed_count += 1
 
         logger.info(
-            f"Concurrent processing completed, files processed: {len(results)}, time taken: {time.time() - start_time:.2f}s"
+            f"并发处理完成，处理文件数: {len(results)}, 耗时: {time.time() - start_time:.2f}�?
         )
         return results
 
@@ -1200,16 +1193,16 @@ class PDFProcessingService:
         self, file_path: str, method: str | None, prefer_ocr: bool, **kwargs
     ) -> dict[str, Any]:
         """
-        Single PDF file extraction wrapper (for concurrent processing)
+        单个PDF文件提取的包装器（用于并发处理）
         """
         import asyncio
 
         try:
-            # Since running in thread pool, need to create new event loop
+            # 由于在线程池中运行，需要创建新的事件循�?
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
 
-            # Synchronously call async method
+            # 同步调用异步方法
             result = loop.run_until_complete(
                 self.extract_text_from_pdf(file_path, method, prefer_ocr, **kwargs)
             )
@@ -1217,7 +1210,7 @@ class PDFProcessingService:
             return result
 
         except Exception as e:
-            logger.error(f"PDF processing wrapper exception: {file_path}, error: {e}")
+            logger.error(f"PDF处理包装器异�? {file_path}, 错误: {e}")
             return {
                 "success": False,
                 "error": str(e),
@@ -1228,32 +1221,34 @@ class PDFProcessingService:
             }
 
     def get_concurrent_stats(self) -> dict[str, Any]:
-        """Get concurrent processing statistics"""
+        """获取并发处理统计信息"""
         if self.concurrent_optimizer:
             return self.concurrent_optimizer.get_statistics()
-        return {"concurrent_optimizer_available": False, "message": "Concurrent optimizer not available"}
+        return {"concurrent_optimizer_available": False, "message": "并发优化器不可用"}
 
     def cleanup_concurrent_resources(self):
-        """Clean up concurrent processing resources"""
+        """清理并发处理资源"""
         if self.concurrent_optimizer:
             try:
                 self.concurrent_optimizer.stop()
-                logger.info("Concurrent processing resources cleaned up")
+                logger.info("并发处理资源已清�?)
             except Exception as e:
-                logger.error(f"Failed to clean up concurrent resources: {e}")
+                logger.error(f"清理并发资源失败: {e}")
 
-    async def extract_text_from_image(self, image_path: str, **kwargs) -> dict[str, Any]:
-        """Extract text from image using OCR"""
+    async def extract_text_from_image(
+        self, image_path: str, **kwargs
+    ) -> dict[str, Any]:
+        """从图像文件提取文本（OCR�?""
         start_time = datetime.now()
 
         try:
-            # Open image
+            # 打开图像
             image = Image.open(image_path)
 
-            # OCR recognition
+            # OCR识别
             result = self.ocr.ocr(image, cls=True)
 
-            # Extract text
+            # 提取文本
             text = ""
             confidences = []
 
@@ -1265,7 +1260,7 @@ class PDFProcessingService:
                             text += text_line + "\n"
                             confidences.append(confidence)
 
-            # Calculate confidence
+            # 计算置信�?
             avg_confidence = sum(confidences) / len(confidences) if confidences else 0
 
             processing_time = (datetime.now() - start_time).total_seconds()
@@ -1285,7 +1280,7 @@ class PDFProcessingService:
             }
 
         except Exception as e:
-            logger.error(f"Image OCR failed: {image_path}, error: {str(e)}")
+            logger.error(f"图像OCR失败: {image_path}, 错误: {str(e)}")
             return {
                 "success": False,
                 "error": str(e),
@@ -1297,5 +1292,5 @@ class PDFProcessingService:
             }
 
 
-# Create global instance
+# 创建全局实例
 pdf_processing_service = PDFProcessingService()

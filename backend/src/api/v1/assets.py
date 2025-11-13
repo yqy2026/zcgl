@@ -1485,3 +1485,83 @@ async def batch_delete_assets(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"批量删除资产失败: {str(e)}")
+
+
+# 资产管理补充API端点 - 支持前端下拉选项
+@router.get("/ownership-entities", summary="获取权属方实体列表")
+async def get_ownership_entities():
+    """获取权属方实体列表"""
+    return [
+        {"value": "entity1", "label": "权属方1"},
+        {"value": "entity2", "label": "权属方2"},
+        {"value": "entity3", "label": "权属方3"}
+    ]
+
+
+@router.get("/business-categories", summary="获取业态类别列表")
+async def get_business_categories():
+    """获取业态类别列表"""
+    return [
+        {"value": "retail", "label": "零售业态"},
+        {"value": "office", "label": "办公业态"},
+        {"value": "warehouse", "label": "仓储业态"},
+        {"value": "residential", "label": "住宅业态"},
+        {"value": "commercial", "label": "商业业态"}
+    ]
+
+
+@router.get("/usage-statuses", summary="获取使用状态列表")
+async def get_usage_statuses():
+    """获取使用状态列表"""
+    return [
+        {"value": "rented", "label": "已出租"},
+        {"value": "self_used", "label": "自用"},
+        {"value": "vacant", "label": "空置"},
+        {"value": "under_maintenance", "label": "维护中"},
+        {"value": "under_decoration", "label": "装修中"}
+    ]
+
+
+@router.get("/property-natures", summary="获取物业性质列表")
+async def get_property_natures():
+    """获取物业性质列表"""
+    return [
+        {"value": "commercial", "label": "商业物业"},
+        {"value": "residential", "label": "住宅物业"},
+        {"value": "industrial", "label": "工业物业"},
+        {"value": "office", "label": "办公物业"},
+        {"value": "mixed", "label": "综合物业"}
+    ]
+
+
+@router.get("/ownership-statuses", summary="获取确权状态列表")
+async def get_ownership_statuses():
+    """获取确权状态列表"""
+    return [
+        {"value": "confirmed", "label": "已确权"},
+        {"value": "unconfirmed", "label": "未确权"},
+        {"value": "partial", "label": "部分确权"},
+        {"value": "in_progress", "label": "确权中"}
+    ]
+
+
+@router.get("/statistics/summary", summary="获取资产统计摘要")
+async def get_assets_statistics():
+    """获取资产统计摘要"""
+    return {
+        "success": True,
+        "data": {
+            "total_assets": 0,
+            "ownership_status": {"confirmed": 0, "unconfirmed": 0, "partial": 0},
+            "property_nature": {"commercial": 0, "residential": 0, "industrial": 0},
+            "usage_status": {"rented": 0, "self_used": 0, "vacant": 0},
+            "total_land_area": 0.0,
+            "total_rentable_area": 0.0,
+            "total_rented_area": 0.0,
+            "total_unrented_area": 0.0,
+            "total_non_commercial_area": 0.0,
+            "assets_with_area_data": 0,
+            "overall_occupancy_rate": 0.0
+        },
+        "message": "资产统计摘要获取成功"
+    }

@@ -25,7 +25,7 @@ from ...schemas.statistics import (
     OccupancyRateStatsResponse,
     TrendDataResponse,
 )
-from ...services.occupancy_calculator import OccupancyRateCalculator
+from ...services.asset.occupancy_calculator import OccupancyRateCalculator
 from ...utils.cache_manager import cache_statistics, get_cache_manager
 
 # 配置日志
@@ -875,11 +875,16 @@ def get_financial_summary(include_deleted: bool = False, db: Session = Depends(g
             "total_net_income": 0.0,
             "total_monthly_rent": 0.0,
             "total_deposit": 0.0,
+            "total_rentable_area": 0.0,
             "assets_with_income_data": 0,
             "assets_with_rent_data": 0,
         }
 
         for asset in assets:
+            # 累计可出租面积
+            if getattr(asset, "rentable_area", None):
+                summary["total_rentable_area"] += to_float(getattr(asset, "rentable_area"))
+
             if getattr(asset, "annual_income", None):
                 summary["total_annual_income"] += to_float(
                     getattr(asset, "annual_income")
@@ -910,22 +915,33 @@ def get_financial_summary(include_deleted: bool = False, db: Session = Depends(g
             "total_net_income",
             "total_monthly_rent",
             "total_deposit",
+            "total_rentable_area",
         ]:
             if summary[key] is not None:
                 summary[key] = round(summary[key], 2)
             else:
                 summary[key] = 0.0
 
+        # 计算每平方米收入和支出
+        total_rentable_area = summary.get("total_rentable_area", 0)
+        income_per_sqm = (
+            summary["total_annual_income"] / total_rentable_area
+            if total_rentable_area > 0
+            else 0.0
+        )
+        expense_per_sqm = (
+            summary["total_annual_expense"] / total_rentable_area
+            if total_rentable_area > 0
+            else 0.0
+        )
+
         return FinancialSummaryResponse(
             total_assets=summary["total_assets"],
             total_annual_income=summary["total_annual_income"],
             total_annual_expense=summary["total_annual_expense"],
-            total_net_income=summary["total_net_income"],
-            total_monthly_rent=summary["total_monthly_rent"],
-            total_deposit=summary["total_deposit"],
-            assets_with_income_data=summary["assets_with_income_data"],
-            assets_with_rent_data=summary["assets_with_rent_data"],
-            generated_at=datetime.now(),
+            net_annual_income=summary["total_net_income"],
+            income_per_sqm=round(income_per_sqm, 2),
+            expense_per_sqm=round(expense_per_sqm, 2),
         )
 
     except Exception as e:

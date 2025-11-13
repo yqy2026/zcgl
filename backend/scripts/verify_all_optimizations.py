@@ -159,13 +159,13 @@ def test_main_integration() -> Tuple[bool, Dict]:
         client = TestClient(app)
         
         # 测试健康检查
-        response = client.get("/api/v1/health")
+        response = client.get("/api/health")
         assert response.status_code == 200
         assert response.json()["status"] == "healthy"
         print("   ✅ 健康检查正常")
         
         # 测试应用信息
-        response = client.get("/api/v1/info")
+        response = client.get("/api/info")
         assert response.status_code == 200
         assert "version" in response.json()
         print("   ✅ 应用信息正常")

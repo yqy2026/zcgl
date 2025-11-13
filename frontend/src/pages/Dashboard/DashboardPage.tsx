@@ -209,7 +209,7 @@ const DashboardPage: React.FC = () => {
       <div className={styles.detailedStatsSection}>
         <Row gutter={[16, 16]}>
           <Col xs={24} lg={12}>
-            <Card className={styles.statsCard} bordered={false}>
+            <Card className={styles.statsCard} variant="borderless">
               <div className={styles.statsCardHeader}>
                 <Title level={4} className={styles.statsCardTitle}>
                   面积分布统计
@@ -255,7 +255,7 @@ const DashboardPage: React.FC = () => {
           </Col>
 
           <Col xs={24} lg={12}>
-            <Card className={styles.statsCard} bordered={false}>
+            <Card className={styles.statsCard} variant="borderless">
               <div className={styles.statsCardHeader}>
                 <Title level={4} className={styles.statsCardTitle}>
                   运营状况概览

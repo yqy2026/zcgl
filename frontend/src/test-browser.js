@@ -25,7 +25,7 @@ const checkApiConfig = () => {
   console.log('2. 检查API配置...');
 
   const apiConfig = {
-    'BASE_URL': '/api/v1/api/v1',
+    'BASE_URL': '/api',
     'Timeout': 30000,
     'Headers': {
       'Content-Type': 'application/json'
@@ -120,20 +120,20 @@ const simulateApiCalls = async () => {
   const mockApiCalls = [
     {
       name: '用户登录',
-      url: '/api/v1/api/v1/auth/login',
+      url: '/api/v1/auth/login',
       method: 'POST',
-      data: { username: 'admin', password: 'admin123' },
+      data: { username: 'admin', password: 'Admin123!@#' },
       expectedStatus: 200
     },
     {
       name: '获取资产列表',
-      url: '/api/v1/api/v1/assets',
+      url: '/api/v1/assets',
       method: 'GET',
       expectedStatus: 200
     },
     {
       name: '创建资产',
-      url: '/api/v1/api/v1/assets',
+      url: '/api/v1/assets',
       method: 'POST',
       data: {
         ownership_entity: '测试',
@@ -176,7 +176,7 @@ const runAllTests = async () => {
   if (allPassed) {
     console.log('\n🎉 前端页面已准备就绪，可以进行浏览器测试！');
     console.log('请访问: http://localhost:5180');
-    console.log('登录凭据: admin/admin123');
+    console.log('登录凭据: admin/Admin123!@#');
     console.log('重点测试页面: http://localhost:5180/assets/new');
   }
 

@@ -8,7 +8,6 @@ import {
   Form,
   Input,
   Select,
-  message,
   Popconfirm,
   Tag,
   Tooltip,
@@ -24,6 +23,7 @@ import {
 } from 'antd'
 import SystemBreadcrumb from '../../components/System/SystemBreadcrumb'
 import { userService, type User, type CreateUserData, type UpdateUserData } from '../../services/systemService'
+import { useMessage } from '../../hooks/useMessage'
 import {
   PlusOutlined,
   EditOutlined,
@@ -55,6 +55,7 @@ interface UserStatistics {
 }
 
 const UserManagementPage: React.FC = () => {
+  const { message } = useMessage()
   const [users, setUsers] = useState<User[]>([])
   const [organizations, setOrganizations] = useState<any[]>([])
   const [roles, setRoles] = useState<any[]>([])

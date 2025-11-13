@@ -37,7 +37,7 @@ class PDFProcessingCache:
         self._load_cache()
 
     def _generate_cache_key(self, file_path: Path, method: str, **kwargs) -> str:
-        """生成缓存键"""
+        """生成缓存�?""
         # 基于文件路径、大小、修改时间和处理方法生成唯一�?
         file_stat = file_path.stat()
         method_params = "_".join(
@@ -64,7 +64,7 @@ class PDFProcessingCache:
                     # 清理过期缓存
                     self._cleanup_expired_cache()
             else:
-                logger.info("缓存文件不存在，创建新缓存")
+                logger.info("缓存文件不存在，创建新缓�?)
         except Exception as e:
             logger.error(f"加载缓存失败: {e}")
             self.cache = {}
@@ -78,13 +78,13 @@ class PDFProcessingCache:
                 cache_items = list(self.cache.items())
                 cache_items.sort(key=lambda x: x[1]["access_time"], reverse=True)
 
-                # 保留最近的缓存
+                # 保留最近的缓存�?
                 self.cache = dict(cache_items[: self.max_cache_size])
-                logger.info(f"缓存已满，清理到 {self.max_cache_size} 个条目")
+                logger.info(f"缓存已满，清理到 {self.max_cache_size} 个条�?)
 
             with open(self.cache_file, "w", encoding="utf-8") as f:
                 json.dump(self.cache, f, ensure_ascii=False, indent=2)
-                logger.info(f"缓存已保存，包含 {len(self.cache)} 个条目")
+                logger.info(f"缓存已保存，包含 {len(self.cache)} 个条�?)
         except Exception as e:
             logger.error(f"保存缓存失败: {e}")
 
@@ -103,7 +103,7 @@ class PDFProcessingCache:
             del self.cache[key]
 
         if expired_keys:
-            logger.info(f"清理了 {len(expired_keys)} 个过期缓存条目")
+            logger.info(f"清理�?{len(expired_keys)} 个过期缓存条�?)
 
     def get(self, file_path: Path, method: str, **kwargs) -> dict[str, Any] | None:
         """获取缓存结果"""
@@ -151,7 +151,7 @@ class PDFProcessingCache:
         for key in keys_to_remove:
             del self.cache[key]
 
-        logger.info(f"清理缓存: {len(keys_to_remove)} 个条目")
+        logger.info(f"清理缓存: {len(keys_to_remove)} 个条�?)
         self._save_cache()
 
     def get_cache_stats(self) -> dict[str, Any]:

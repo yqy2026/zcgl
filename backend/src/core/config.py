@@ -67,11 +67,17 @@ class Settings(BaseSettings):
     )
     ALGORITHM: str = Field(default="HS256", json_schema_extra={"env": "ALGORITHM"})
     ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(
-        default=30, json_schema_extra={"env": "ACCESS_TOKEN_EXPIRE_MINUTES"}
-    )
+        default=15, json_schema_extra={"env": "ACCESS_TOKEN_EXPIRE_MINUTES"}
+    )  # 缩短为15分钟以提高安全性
     REFRESH_TOKEN_EXPIRE_DAYS: int = Field(
         default=7, json_schema_extra={"env": "REFRESH_TOKEN_EXPIRE_DAYS"}
     )
+
+    # JWT安全强化配置
+    JWT_ISSUER: str = Field(default="zcgl-system", json_schema_extra={"env": "JWT_ISSUER"})
+    JWT_AUDIENCE: str = Field(default="zcgl-users", json_schema_extra={"env": "JWT_AUDIENCE"})
+    ENABLE_JTI_CLAIM: bool = Field(default=True, json_schema_extra={"env": "ENABLE_JTI_CLAIM"})
+    TOKEN_BLACKLIST_ENABLED: bool = Field(default=True, json_schema_extra={"env": "TOKEN_BLACKLIST_ENABLED"})
 
     # 文件上传配置
     MAX_FILE_SIZE: int = Field(
@@ -111,20 +117,20 @@ class Settings(BaseSettings):
             "dev-secret-key-change-in-production",
         ]:
             warnings.append(
-                "🚨 严重安全风险: 使用了默认或不安全的JWT密钥！"
+                "严重安全风险: 使用了默认或不安全的JWT密钥！"
                 "请立即设置环境变量SECRET_KEY为强随机密钥。"
             )
 
         if len(self.SECRET_KEY) < 32:
-            warnings.append("⚠️ JWT密钥长度不足32字符，建议使用更长的密钥。")
+            warnings.append("警告: JWT密钥长度不足32字符，建议使用更长的密钥。")
 
         # 检查是否在调试模式运行
         if self.DEBUG:
-            warnings.append("⚠️ 当前在调试模式运行，生产环境必须设置DEBUG=false。")
+            warnings.append("警告: 当前在调试模式运行，生产环境必须设置DEBUG=false。")
 
         # 检查数据库是否为SQLite（生产环境推荐PostgreSQL）
         if self.DATABASE_URL.startswith("sqlite:///./land_property.db"):
-            warnings.append("💾 使用默认SQLite数据库路径，生产环境建议使用PostgreSQL。")
+            warnings.append("提醒: 使用默认SQLite数据库路径，生产环境建议使用PostgreSQL。")
 
         return warnings
 
@@ -137,12 +143,12 @@ class Settings(BaseSettings):
 
         if warnings:
             logger.warning("=" * 60)
-            logger.warning("🔐 安全配置检查发现以下问题:")
+            logger.warning("安全配置检查发现以下问题:")
             for warning in warnings:
                 logger.warning(f"  {warning}")
             logger.warning("=" * 60)
         else:
-            logger.info("✅ 安全配置检查通过")
+            logger.info("安全配置检查通过")
 
     # 性能监控
     ENABLE_METRICS: bool = Field(

@@ -134,6 +134,18 @@ jobs:
         echo "🔎 TypeScript类型检查..."
         npm run type-check || echo "⚠️ TypeScript检查发现问题，继续执行"
 
+    - name: Run type coverage check
+      run: |
+        cd frontend
+        echo "📊 类型覆盖率检查..."
+        npm run type-coverage:check || (echo "❌ 类型覆盖率低于阈值" && exit 1)
+
+    - name: Run tsd type tests
+      run: |
+        cd frontend
+        echo "🧪 运行类型测试 (tsd)..."
+        npm run tsd
+
     - name: Run tests
       run: |
         cd frontend

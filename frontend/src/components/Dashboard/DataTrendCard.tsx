@@ -63,7 +63,7 @@ const DataTrendCard: React.FC<DataTrendCardProps> = ({
     <Card
       className={getCardClassName()}
       loading={loading}
-      bordered={false}
+      variant="borderless"
     >
       <div className={styles.cardHeader}>
         <div className={styles.cardTitle}>{title}</div>

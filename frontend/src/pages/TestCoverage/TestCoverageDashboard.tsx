@@ -104,7 +104,7 @@ interface QualityGateResult {
 
 // API服务函数
 const fetchCoverageReport = async (): Promise<CoverageReport> => {
-  const response = await fetch('/api/v1/test-coverage/report');
+  const response = await fetch('/api/test-coverage/report');
   if (!response.ok) {
     throw new Error('获取覆盖率报告失败');
   }
@@ -112,7 +112,7 @@ const fetchCoverageReport = async (): Promise<CoverageReport> => {
 };
 
 const fetchCoverageTrend = async (days: number = 30): Promise<CoverageTrend[]> => {
-  const response = await fetch(`/api/v1/test-coverage/trend?days=${days}`);
+  const response = await fetch(`/api/test-coverage/trend?days=${days}`);
   if (!response.ok) {
     throw new Error('获取覆盖率趋势失败');
   }
@@ -124,7 +124,7 @@ const fetchModuleCoverage = async (
   maxCoverage: number = 100
 ): Promise<CoverageMetrics[]> => {
   const response = await fetch(
-    `/api/v1/test-coverage/modules?min_coverage=${minCoverage}&max_coverage=${maxCoverage}`
+    `/api/test-coverage/modules?min_coverage=${minCoverage}&max_coverage=${maxCoverage}`
   );
   if (!response.ok) {
     throw new Error('获取模块覆盖率失败');
@@ -133,7 +133,7 @@ const fetchModuleCoverage = async (
 };
 
 const fetchCoverageThresholds = async (): Promise<CoverageThreshold> => {
-  const response = await fetch('/api/v1/test-coverage/thresholds');
+  const response = await fetch('/api/test-coverage/thresholds');
   if (!response.ok) {
     throw new Error('获取覆盖率阈值失败');
   }
@@ -141,7 +141,7 @@ const fetchCoverageThresholds = async (): Promise<CoverageThreshold> => {
 };
 
 const updateCoverageThresholds = async (thresholds: CoverageThreshold): Promise<CoverageThreshold> => {
-  const response = await fetch('/api/v1/test-coverage/thresholds', {
+  const response = await fetch('/api/test-coverage/thresholds', {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -155,7 +155,7 @@ const updateCoverageThresholds = async (thresholds: CoverageThreshold): Promise<
 };
 
 const fetchQualityGate = async (): Promise<QualityGateResult> => {
-  const response = await fetch('/api/v1/test-coverage/quality-gate');
+  const response = await fetch('/api/test-coverage/quality-gate');
   if (!response.ok) {
     throw new Error('获取质量门禁状态失败');
   }

@@ -56,7 +56,7 @@ export default defineConfig(({ command, mode }) => {
       host: true,
       proxy: {
         "/api": {
-          target: "http://127.0.0.1:8002",
+          target: "http://127.0.0.1:8002",  // 修改为8002端口
           changeOrigin: true,
           secure: false,
           ws: true,

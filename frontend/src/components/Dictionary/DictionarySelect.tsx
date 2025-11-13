@@ -84,7 +84,7 @@ const DictionarySelect: React.FC<DictionarySelectProps> = ({
       loading={loading}
       placeholder={placeholder || `请选择${dictType.replace('_', '')}`}
       notFoundContent={loading ? <Spin size="small" /> : '暂无数据'}
-      options={selectOptions}
+      options={options}
       filterOption={(input, option) => {
         // 处理React元素类型的label
         const label = typeof option?.label === 'string' ? option.label :

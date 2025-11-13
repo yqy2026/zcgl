@@ -414,7 +414,7 @@ const RentContractForm: React.FC<RentContractFormProps> = ({
                     (option?.children as string)?.toLowerCase().includes(input.toLowerCase())
                   }
                 >
-                  {assets.map(asset => (
+                  {(assets || []).map(asset => (
                     <Option key={asset.id} value={asset.id}>
                       {asset.property_name} - {asset.address}
                     </Option>
@@ -437,7 +437,7 @@ const RentContractForm: React.FC<RentContractFormProps> = ({
                     (option?.children as string)?.toLowerCase().includes(input.toLowerCase())
                   }
                 >
-                  {ownerships.map(ownership => (
+                  {(ownerships || []).map(ownership => (
                     <Option key={ownership.id} value={ownership.id}>
                       {ownership.name}
                     </Option>

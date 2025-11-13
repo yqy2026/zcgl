@@ -2,20 +2,41 @@
  * API配置文件
  */
 
-// API基础URL配置 - 使用相对路径，配合Vite代理
-export const API_BASE_URL = process.env.VITE_API_BASE_URL || '/api/v1/api/v1'
+// API基础URL配置 - 统一使用版本化路径
+export const API_BASE_URL = process.env.VITE_API_BASE_URL || '/api/v1'
 
-// API端点配置
+// API端点配置 - 使用版本化路径，与后端API标准化保持一致
 export const API_ENDPOINTS = {
+  // 认证管理
+  auth: {
+    login: '/auth/login',
+    logout: '/auth/logout',
+    me: '/auth/me',
+    refresh: '/auth/refresh',
+  },
+
   // 资产管理
   assets: '/assets/',
   assetDetail: (id: string) => `/assets/${id}`,
+
+  // 数据分析
+  analytics: {
+    comprehensive: '/analytics/comprehensive',
+    dashboard: '/analytics/dashboard',
+    assets: '/analytics/assets',
+  },
 
   // 统计数据
   statistics: {
     basic: '/statistics/basic',
     dashboard: '/statistics/dashboard',
     summary: '/statistics/summary',
+  },
+
+  // 组织架构
+  organizations: {
+    list: '/organizations',
+    tree: '/organizations/tree',
   },
 
   // Excel导入导出

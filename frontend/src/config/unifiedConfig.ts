@@ -300,7 +300,7 @@ export class ConfigManager {
       case Environment.DEVELOPMENT:
         return {
           api: {
-            baseURL: "http://localhost:8002/api/v1",
+            baseURL: "http://localhost:8002/api",
             timeout: 60000,
             retryCount: 1,
             retryDelay: 500,
@@ -448,11 +448,11 @@ export class ConfigManager {
     const currentHost = window.location.hostname;
 
     if (currentHost === "localhost" || currentHost === "127.0.0.1") {
-      return "http://localhost:8002/api/v1";
+      return "http://localhost:8002/api";
     }
 
     // 生产环境使用相对路径
-    return "/api/v1";
+    return "/api";
   }
 
   /**

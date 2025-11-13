@@ -1,4 +1,13 @@
-import { apiClient } from "./api";
+/**
+ * 统计服务 - 统一响应处理版本
+ *
+ * @description 数据统计和分析核心服务，提供仪表板、图表数据、趋势分析等功能
+ * @author Claude Code
+ * @updated 2025-11-10
+ */
+
+import { enhancedApiClient } from './enhancedApiClient';
+import { ApiErrorHandler } from '../utils/responseExtractor';
 import type { DashboardData, ChartDataItem } from "@/types/api";
 import type { Filters } from "@/types/common";
 
@@ -58,99 +67,562 @@ export interface ComparisonData {
 }
 
 export class StatisticsService {
-  async getDashboardData(): Promise<DashboardData> {
-    const response = await apiClient.get<DashboardData>("/statistics/dashboard");
-    return response.data || (response as DashboardData);
-  }
+  // ==================== 仪表板数据 ====================
 
-  async getBasicStatistics(filters?: Filters): Promise<BasicStatistics> {
+  /**
+   * 获取仪表板数据
+   */
+  async getDashboardData(): Promise<DashboardData> {
     try {
-      const response = await apiClient.get<BasicStatistics>("/statistics/basic", {
-        params: filters,
-      });
-      return response.data || response;
+      const result = await enhancedApiClient.get<DashboardData>(
+        "/statistics/dashboard",
+        {
+          cache: true,
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`获取仪表板数据失败: ${result.error}`);
+      }
+
+      return result.data!;
     } catch (error) {
-      console.error("操作失败:", error);
-      throw new Error(error instanceof Error ? error.message : "操作失败");
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
     }
   }
 
-  async getOwnershipDistribution(filters?: Filters): Promise<ChartDataItem[]> {
-    const response = await apiClient.get<ChartDataItem[]>("/statistics/ownership-distribution", {
-      params: filters,
-    });
-    return response.data || [];
+  // ==================== 基础统计 ====================
+
+  /**
+   * 获取基础统计信息
+   */
+  async getBasicStatistics(filters?: Filters): Promise<BasicStatistics> {
+    try {
+      const result = await enhancedApiClient.get<BasicStatistics>(
+        "/statistics/basic",
+        {
+          params: filters,
+          cache: true,
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`获取基础统计信息失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
-  async getPropertyNatureDistribution(filters?: Filters): Promise<ChartDataItem[]> {
-    const response = await apiClient.get<ChartDataItem[]>(
-      "/statistics/property-nature-distribution",
-      {
-        params: filters,
-      },
-    );
-    return response.data || [];
-  }
-
-  async getUsageStatusDistribution(filters?: Filters): Promise<ChartDataItem[]> {
-    const response = await apiClient.get<ChartDataItem[]>("/statistics/usage-status-distribution", {
-      params: filters,
-    });
-    return response.data || [];
-  }
-
-  async getOccupancyRateDistribution(filters?: Filters): Promise<ChartDataItem[]> {
-    const response = await apiClient.get<{ data: { categories: ChartDataItem[] } }>(
-      "/statistics/occupancy-rate/by-category",
-      {
-        params: { category_field: "business_category", ...filters },
-      },
-    );
-    return response.data?.data?.categories || [];
-  }
-
+  /**
+   * 获取面积统计信息
+   */
   async getAreaStatistics(filters?: Filters): Promise<AreaStatistics> {
-    const response = await apiClient.get<{ data: AreaStatistics }>("/assets/statistics/summary", {
-      params: filters,
-    });
-    return response.data?.data || response.data;
+    try {
+      const result = await enhancedApiClient.get<{ data: AreaStatistics }>(
+        "/assets/statistics/summary",
+        {
+          params: filters,
+          cache: true,
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`获取面积统计信息失败: ${result.error}`);
+      }
+
+      // 处理嵌套数据结构
+      return (result.data as any)?.data || result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
+  // ==================== 分布数据 ====================
+
+  /**
+   * 获取权属方分布数据
+   */
+  async getOwnershipDistribution(filters?: Filters): Promise<ChartDataItem[]> {
+    try {
+      const result = await enhancedApiClient.get<ChartDataItem[]>(
+        "/statistics/ownership-distribution",
+        {
+          params: filters,
+          cache: true,
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`获取权属方分布数据失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      console.warn('获取权属方分布数据失败:', enhancedError.message);
+      return [];
+    }
+  }
+
+  /**
+   * 获取物业性质分布数据
+   */
+  async getPropertyNatureDistribution(filters?: Filters): Promise<ChartDataItem[]> {
+    try {
+      const result = await enhancedApiClient.get<ChartDataItem[]>(
+        "/statistics/property-nature-distribution",
+        {
+          params: filters,
+          cache: true,
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`获取物业性质分布数据失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      console.warn('获取物业性质分布数据失败:', enhancedError.message);
+      return [];
+    }
+  }
+
+  /**
+   * 获取使用状态分布数据
+   */
+  async getUsageStatusDistribution(filters?: Filters): Promise<ChartDataItem[]> {
+    try {
+      const result = await enhancedApiClient.get<ChartDataItem[]>(
+        "/statistics/usage-status-distribution",
+        {
+          params: filters,
+          cache: true,
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`获取使用状态分布数据失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      console.warn('获取使用状态分布数据失败:', enhancedError.message);
+      return [];
+    }
+  }
+
+  /**
+   * 获取出租率分布数据
+   */
+  async getOccupancyRateDistribution(filters?: Filters): Promise<ChartDataItem[]> {
+    try {
+      const result = await enhancedApiClient.get<{ data: { categories: ChartDataItem[] } }>(
+        "/statistics/occupancy-rate/by-category",
+        {
+          params: { category_field: "business_category", ...filters },
+          cache: true,
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`获取出租率分布数据失败: ${result.error}`);
+      }
+
+      // 处理嵌套数据结构
+      return (result.data as any)?.data?.categories || [];
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      console.warn('获取出租率分布数据失败:', enhancedError.message);
+      return [];
+    }
+  }
+
+  // ==================== 趋势数据 ====================
+
+  /**
+   * 获取趋势数据
+   */
   async getTrendData(
     metric: string,
     period: "daily" | "weekly" | "monthly" | "yearly" = "monthly",
     filters?: Filters,
   ): Promise<TrendDataItem[]> {
-    const response = await apiClient.get<TrendDataItem[]>(`/statistics/trend/${metric}`, {
-      params: { period, ...filters },
-    });
-    return response.data || [];
+    try {
+      const result = await enhancedApiClient.get<TrendDataItem[]>(
+        `/statistics/trend/${metric}`,
+        {
+          params: { period, ...filters },
+          cache: true,
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`获取趋势数据失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      console.warn(`获取趋势数据失败 (${metric}):`, enhancedError.message);
+      return [];
+    }
   }
 
-  async generateReport(
-    reportType: string,
+  /**
+   * 获取多个指标的趋势数据
+   */
+  async getMultipleTrends(
+    metrics: string[],
+    period: "daily" | "weekly" | "monthly" | "yearly" = "monthly",
     filters?: Filters,
-    format: "json" | "excel" | "pdf" = "json",
-  ): Promise<ReportGenerationResponse> {
-    const response = await apiClient.post<ReportGenerationResponse>(
-      `/statistics/report/${reportType}`,
-      {
-        filters,
-        format,
-      },
-    );
-    return response.data || response;
+  ): Promise<Record<string, TrendDataItem[]>> {
+    const results: Record<string, TrendDataItem[]> = {};
+    const errors: string[] = [];
+
+    for (const metric of metrics) {
+      try {
+        results[metric] = await this.getTrendData(metric, period, filters);
+      } catch (error) {
+        const enhancedError = ApiErrorHandler.handleError(error);
+        errors.push(`${metric}: ${enhancedError.message}`);
+        results[metric] = [];
+      }
+    }
+
+    if (errors.length > 0) {
+      console.warn('部分趋势数据获取失败:', errors);
+    }
+
+    return results;
   }
 
+  // ==================== 对比分析 ====================
+
+  /**
+   * 获取对比数据
+   */
   async getComparisonData(
     metric: string,
     compareType: "period" | "category",
     filters?: Filters,
   ): Promise<ComparisonData> {
-    const response = await apiClient.get<ComparisonData>(`/statistics/comparison/${metric}`, {
-      params: { compare_type: compareType, ...filters },
-    });
-    return response.data || response;
+    try {
+      const result = await enhancedApiClient.get<ComparisonData>(
+        `/statistics/comparison/${metric}`,
+        {
+          params: { compare_type: compareType, ...filters },
+          cache: true,
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`获取对比数据失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  /**
+   * 获取同期对比数据
+   */
+  async getPeriodComparison(
+    metric: string,
+    currentPeriod: string,
+    previousPeriod: string,
+    filters?: Filters,
+  ): Promise<{
+    current: TrendDataItem[];
+    previous: TrendDataItem[];
+    growth: number;
+  }> {
+    try {
+      const [currentResult, previousResult] = await Promise.all([
+        this.getTrendData(metric, "monthly", { ...filters, period: currentPeriod }),
+        this.getTrendData(metric, "monthly", { ...filters, period: previousPeriod })
+      ]);
+
+      // 计算增长率
+      const currentSum = currentResult.reduce((sum, item) => sum + item.value, 0);
+      const previousSum = previousResult.reduce((sum, item) => sum + item.value, 0);
+      const growth = previousSum === 0 ? 0 : ((currentSum - previousSum) / previousSum) * 100;
+
+      return {
+        current: currentResult,
+        previous: previousResult,
+        growth
+      };
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(`获取同期对比数据失败: ${enhancedError.message}`);
+    }
+  }
+
+  // ==================== 报表生成 ====================
+
+  /**
+   * 生成报表
+   */
+  async generateReport(
+    reportType: string,
+    filters?: Filters,
+    format: "json" | "excel" | "pdf" = "json",
+  ): Promise<ReportGenerationResponse> {
+    try {
+      const result = await enhancedApiClient.post<ReportGenerationResponse>(
+        `/statistics/report/${reportType}`,
+        {
+          filters,
+          format,
+        },
+        {
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`生成报表失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  /**
+   * 获取报表状态
+   */
+  async getReportStatus(reportId: string): Promise<ReportGenerationResponse> {
+    try {
+      const result = await enhancedApiClient.get<ReportGenerationResponse>(
+        `/statistics/report/status/${reportId}`,
+        {
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`获取报表状态失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  /**
+   * 下载报表
+   */
+  async downloadReport(reportId: string): Promise<Blob> {
+    try {
+      const result = await enhancedApiClient.get<Blob>(
+        `/statistics/report/download/${reportId}`,
+        {
+          responseType: 'blob',
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 }
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`下载报表失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  // ==================== 高级统计功能 ====================
+
+  /**
+   * 获取资产排名统计
+   */
+  async getAssetRankings(
+    metric: "area" | "rent" | "occupancy_rate",
+    limit: number = 10,
+    filters?: Filters,
+  ): Promise<Array<{ name: string; value: number; rank: number }>> {
+    try {
+      const result = await enhancedApiClient.get<Array<{ name: string; value: number; rank: number }>>(
+        `/statistics/rankings/asset/${metric}`,
+        {
+          params: { limit, ...filters },
+          cache: true,
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`获取资产排名失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      console.warn(`获取资产排名失败 (${metric}):`, enhancedError.message);
+      return [];
+    }
+  }
+
+  /**
+   * 获取区域统计对比
+   */
+  async getRegionalComparison(filters?: Filters): Promise<{
+    regions: string[];
+    metrics: Record<string, number[]>;
+  }> {
+    try {
+      const result = await enhancedApiClient.get<{
+        regions: string[];
+        metrics: Record<string, number[]>;
+      }>(
+        "/statistics/regional-comparison",
+        {
+          params: filters,
+          cache: true,
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`获取区域对比数据失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  /**
+   * 获取性能指标摘要
+   */
+  async getPerformanceSummary(filters?: Filters): Promise<{
+    totalAssets: number;
+    totalArea: number;
+    averageOccupancyRate: number;
+    averageRent: number;
+    revenueGrowth: number;
+    efficiency: number;
+  }> {
+    try {
+      const result = await enhancedApiClient.get<{
+        totalAssets: number;
+        totalArea: number;
+        averageOccupancyRate: number;
+        averageRent: number;
+        revenueGrowth: number;
+        efficiency: number;
+      }>(
+        "/statistics/performance-summary",
+        {
+          params: filters,
+          cache: true,
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`获取性能指标摘要失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  /**
+   * 批量获取统计数据
+   */
+  async batchGetStatistics(filters?: Filters): Promise<{
+    dashboard: DashboardData;
+    basic: BasicStatistics;
+    area: AreaStatistics;
+    distributions: {
+      ownership: ChartDataItem[];
+      propertyNature: ChartDataItem[];
+      usageStatus: ChartDataItem[];
+      occupancyRate: ChartDataItem[];
+    };
+  }> {
+    try {
+      const [
+        dashboard,
+        basic,
+        area,
+        ownership,
+        propertyNature,
+        usageStatus,
+        occupancyRate
+      ] = await Promise.allSettled([
+        this.getDashboardData(),
+        this.getBasicStatistics(filters),
+        this.getAreaStatistics(filters),
+        this.getOwnershipDistribution(filters),
+        this.getPropertyNatureDistribution(filters),
+        this.getUsageStatusDistribution(filters),
+        this.getOccupancyRateDistribution(filters)
+      ]);
+
+      return {
+        dashboard: dashboard.status === 'fulfilled' ? dashboard.value : {} as DashboardData,
+        basic: basic.status === 'fulfilled' ? basic.value : {} as BasicStatistics,
+        area: area.status === 'fulfilled' ? area.value : {} as AreaStatistics,
+        distributions: {
+          ownership: ownership.status === 'fulfilled' ? ownership.value : [],
+          propertyNature: propertyNature.status === 'fulfilled' ? propertyNature.value : [],
+          usageStatus: usageStatus.status === 'fulfilled' ? usageStatus.value : [],
+          occupancyRate: occupancyRate.status === 'fulfilled' ? occupancyRate.value : []
+        }
+      };
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(`批量获取统计数据失败: ${enhancedError.message}`);
+    }
   }
 }
 

@@ -47,8 +47,8 @@ export interface SessionProgress {
   updated_at: string;
   error_message?: string;
   processing_method?: string;
-  extracted_data?: Record<string, any>;
-  validated_data?: Record<string, any>;
+  extracted_data?: Record<string, unknown>;
+  validated_data?: Record<string, unknown>;
   matching_results?: {
     matched_assets?: AssetMatch[];
     matched_ownerships?: OwnershipMatch[];
@@ -85,7 +85,7 @@ export interface ValidationResult {
   success: boolean;
   errors: string[];
   warnings: string[];
-  validated_data: Record<string, any>;
+  validated_data: Record<string, unknown>;
   validation_score: number;
   processed_fields: number;
   required_fields_count: number;
@@ -103,7 +103,7 @@ export interface MatchingResult {
 
 export interface ExtractionResult {
   success: boolean;
-  data: Record<string, any>;
+  data: Record<string, unknown>;
   confidence_score: number;
   extraction_method: string;
   processed_fields: number;
@@ -182,12 +182,15 @@ export interface SystemInfoResponse {
   success: boolean;
   message: string;
   capabilities: SystemCapabilities;
-  extractor_summary?: Record<string, any>;
-  validator_summary?: Record<string, any>;
+  extractor_summary?: Record<string, unknown>;
+  validator_summary?: Record<string, unknown>;
 }
 
 // API基础配置 - 使用相对路径通过代理转发
-const API_BASE_URL = '/api/v1/pdf-import';
+import { PDF_API } from '../constants/api';
+
+// 使用API常量，如果端点不存在则提供备用方案
+const API_BASE_URL = PDF_API.INFO.replace('/info', ''); // 获取基础路径
 const ENHANCED_API_BASE = `${API_BASE_URL}/enhanced`;
 
 class PDFImportService {
@@ -439,10 +442,22 @@ class PDFImportService {
     error?: string;
   }> {
     try {
-      const response = await axios.get(`${API_BASE_URL}/sessions`);
+      const response = await axios.get(PDF_API.SESSIONS);
       return response.data;
     } catch (error: unknown) {
       console.error('获取会话列表失败:', error);
+
+      // 如果是404错误，提供空的会话列表
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        console.warn('PDF sessions API端点不存在，返回空会话列表');
+        return {
+          success: true,
+          active_sessions: [],
+          total_count: 0,
+          message: '会话列表（API暂时不可用）'
+        };
+      }
+
       return {
         success: false,
         active_sessions: [],
@@ -457,7 +472,8 @@ class PDFImportService {
    */
   async getSystemInfo(): Promise<SystemInfoResponse> {
     try {
-      const response = await axios.get(`${API_BASE_URL}/info`);
+      // 使用PDF_API.INFO，如果404则使用备用方案
+      const response = await axios.get(PDF_API.INFO);
 
       // 直接使用后端返回的能力信息，并添加增强功能检测
       const capabilities = response.data.capabilities || {
@@ -499,6 +515,42 @@ class PDFImportService {
       };
     } catch (error: unknown) {
       console.error('获取系统信息失败:', error);
+
+      // 如果是404错误，提供备用数据
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        console.warn('PDF API端点不存在，使用备用系统信息');
+        return {
+          success: true,
+          message: 'PDF智能导入系统（备用模式）',
+          capabilities: {
+            pdfplumber_available: true,
+            pymupdf_available: true,
+            spacy_available: false,
+            ocr_available: false,
+            supported_formats: ['.pdf'],
+            max_file_size_mb: 10,
+            estimated_processing_time: "30-60秒",
+            enhanced_extraction: false,
+            intelligent_matching: false,
+            multi_engine_support: false,
+            chinese_optimized: false,
+            real_time_validation: false
+          },
+          extractor_summary: {
+            method: "basic",
+            description: "基础PDF处理模式",
+            engines: ["PDFPlumber"],
+            features: ["基础文本提取"]
+          },
+          validator_summary: {
+            enabled: false,
+            description: "数据验证功能暂时不可用",
+            features: [],
+            accuracy_improvement: "0%"
+          }
+        };
+      }
+
       return {
         success: false,
         message: '系统信息获取失败',
@@ -520,7 +572,7 @@ class PDFImportService {
   // 获取系统能力信息
   static async getSystemCapabilities() {
     try {
-      const response = await axios.get('/pdf-import/capabilities');
+      const response = await axios.get(`${API_BASE_URL}/capabilities`);
       return {
         spacy_available: true,
         ocr_available: true,

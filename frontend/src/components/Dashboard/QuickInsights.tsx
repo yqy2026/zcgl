@@ -122,7 +122,7 @@ const QuickInsights: React.FC<QuickInsightsProps> = ({ data, loading }) => {
           </Text>
         </div>
       }
-      bordered={false}
+      variant="borderless"
       loading={loading}
     >
       <Row gutter={[16, 16]}>
@@ -130,7 +130,7 @@ const QuickInsights: React.FC<QuickInsightsProps> = ({ data, loading }) => {
           <Col xs={24} sm={12} lg={8} key={index}>
             <Card
               className={`${styles.insightCard} ${getTypeClass(insight.type)}`}
-              bordered={false}
+              variant="borderless"
               size="small"
             >
               <div className={styles.insightHeader}>

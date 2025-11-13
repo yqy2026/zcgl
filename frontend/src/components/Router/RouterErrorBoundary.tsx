@@ -89,7 +89,7 @@ class RouterErrorBoundaryComponent extends Component<RouterErrorBoundaryProps, R
       // 这里可以集成错误监控服务，如 Sentry
       if (process.env.NODE_ENV === 'production') {
         // 发送到错误监控服务
-        await fetch('/api/v1/errors/report', {
+        await fetch('/api/errors/report', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'

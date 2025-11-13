@@ -25,8 +25,8 @@ const createApiInstance = (): AxiosInstance => {
   // 请求拦截器
   instance.interceptors.request.use(
     (config) => {
-      // 添加认证token
-      const token = localStorage.getItem("auth_token");
+      // 使用JWT token进行认证
+      const token = localStorage.getItem("token") || localStorage.getItem("auth_token");
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -153,13 +153,20 @@ const getDefaultErrorMessage = (status: number): string => {
 // 处理认证错误
 const handleAuthError = (status: number) => {
   if (status === 401) {
-    // 清除本地存储的认证信息
+    // 清除所有可能的认证信息
     localStorage.removeItem("auth_token");
+    localStorage.removeItem("token");
+    localStorage.removeItem("refresh_token");
     localStorage.removeItem("user_info");
+    localStorage.removeItem("user");
+
+    console.warn("认证失败，已清除本地存储的认证信息");
 
     // 重定向到登录页面
     if (window.location.pathname !== "/login") {
-      window.location.href = "/login";
+      // 保存当前页面URL，登录后可以重定向回来
+      const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+      window.location.href = `/login?returnUrl=${returnUrl}`;
     }
   }
 };
