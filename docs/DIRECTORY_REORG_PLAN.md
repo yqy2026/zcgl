@@ -164,13 +164,15 @@ backend/src/
 
 ## 当前状态
 
-✅ **已完成** (Phase 1-4):
+✅ **已完成** (Phase 1-4 + Phase 3.2-3.6):
 - Phase 1: 快速清理
 - Phase 2: 前端重构（标记废弃组件）
 - Phase 2.3: 统一错误处理 (3→1) - 2025-12-24
 - Phase 2.4: 整合错误边界 (4→1) - 2025-12-24
 - Phase 2.5: 简化布局系统 (3→2) - 2025-12-24
 - Phase 3: 后端重构（删除冗余文件）
+- Phase 3.2-3.5: 清理 API 模块 - 2025-12-24
+- Phase 3.6: 清理文档服务导入 - 2025-12-24
 - Phase 3.4: 整合配置系统 (4→1) - 2025-12-24
 - Phase 4: 目录重组（全部完成）
   - 4.1-4.2: API 和 Forms 目录重组
@@ -293,6 +295,38 @@ backend/src/
 **代码减少统计:**
 - 删除文件: 1个
 - 代码行数减少: ~52行
+
+### Phase 3.2-3.5: 后端 API 模块清理 - 已完成 ✅
+
+**Git Commits:**
+- `a644551` - refactor: Phase 3.2-3.5 - Backend cleanup (API modules)
+
+**完成内容:**
+
+| 操作 | 详情 | 状态 |
+|------|------|------|
+| 删除 `test_coverage.py` | 测试文件不应在 api/v1/ | ✅ |
+| 删除 `test_performance.py` | 测试文件不应在 api/v1/ | ✅ |
+| 删除 `optimized_ocr_service_broken.py` | 损坏的 OCR 服务 | ✅ |
+| 删除 `missing_apis.py` | 临时占位符文件，导入损坏 | ✅ |
+| 更新 `api/v1/__init__.py` | 移除已删除文件的引用 | ✅ |
+
+**代码减少统计:**
+- 删除文件: 3个
+- 代码行数减少: ~1300行
+
+### Phase 3.6: 文档服务导入清理 - 已完成 ✅
+
+**Git Commit:** `954439b` - refactor: Phase 3.6 - Clean up document service imports
+
+**完成内容:**
+
+| 操作 | 详情 | 状态 |
+|------|------|------|
+| 移除 `unified_pdf_processor` 引用 | 文件不存在 | ✅ |
+| 移除 stub 文件引用 | pdf_import_service_stub, excel_export_stub | ✅ |
+| 重新组织导入 | 按逻辑分组 (PDF, OCR, Contract, Excel) | ✅ |
+| 清理 `__init__.py` 结构 | 删除损坏的导入引用 | ✅ |
 
 ### Phase 3.4: 整合配置系统 - 已完成 ✅
 
