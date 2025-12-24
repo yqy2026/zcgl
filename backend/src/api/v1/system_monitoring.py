@@ -24,7 +24,7 @@ try:
     from src.core.config_manager import get_config
     from src.database import get_db, get_database_manager
     from src.models.auth import User
-    from src.services.auth_service import get_current_user, require_permission
+    from src.services.core.auth_service import get_current_user, require_permission
 except ImportError:
     # 独立运行时的回退方案
     def get_db():
