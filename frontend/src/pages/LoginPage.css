@@ -95,28 +95,71 @@
   height: 22px;
 }
 
-.login-form .ant-input,
-.login-form .ant-input-password {
-  height: 48px;
-  border-radius: 8px;
-  border: 1px solid #d9d9d9;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  font-size: 16px;
-  padding: 12px 16px;
+/* 普通输入框样式（不包括密码框内部的input） */
+.login-form .ant-input:not(.ant-input-affix-wrapper .ant-input) {
+  height: 48px !important;
+  border-radius: 8px !important;
+  border: 1px solid #d9d9d9 !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  font-size: 16px !important;
+  padding: 12px 16px !important;
+  background-color: #ffffff !important;
 }
 
-.login-form .ant-input:hover,
-.login-form .ant-input-password:hover {
-  border-color: #4096ff;
-  box-shadow: 0 0 0 2px rgba(64, 150, 255, 0.06);
+.login-form .ant-input:not(.ant-input-affix-wrapper .ant-input):hover {
+  border-color: #4096ff !important;
+  box-shadow: 0 0 0 2px rgba(64, 150, 255, 0.06) !important;
 }
 
-.login-form .ant-input:focus,
-.login-form .ant-input-password:focus,
-.login-form .ant-input-focused,
-.login-form .ant-input-password-focused {
-  border-color: #1890ff;
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+.login-form .ant-input:not(.ant-input-affix-wrapper .ant-input):focus,
+.login-form .ant-input-focused:not(.ant-input-affix-wrapper .ant-input) {
+  border-color: #1890ff !important;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important;
+}
+
+/* 密码输入框外层容器样式 */
+.login-form .ant-input-affix-wrapper {
+  height: 48px !important;
+  border-radius: 8px !important;
+  border: 1px solid #d9d9d9 !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  font-size: 16px !important;
+  padding: 4px 11px !important;
+  background-color: #ffffff !important;
+}
+
+.login-form .ant-input-affix-wrapper:hover {
+  border-color: #4096ff !important;
+  box-shadow: 0 0 0 2px rgba(64, 150, 255, 0.06) !important;
+}
+
+.login-form .ant-input-affix-wrapper-focused {
+  border-color: #1890ff !important;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important;
+}
+
+/* 密码输入框内部的input - 完全透明，无样式 */
+.login-form .ant-input-affix-wrapper .ant-input {
+  padding: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  outline: none !important;
+}
+
+.login-form .ant-input-affix-wrapper .ant-input:hover,
+.login-form .ant-input-affix-wrapper .ant-input:focus {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+/* 覆盖浏览器自动填充的样式 */
+.login-form .ant-input:-webkit-autofill,
+.login-form .ant-input-affix-wrapper .ant-input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+  box-shadow: 0 0 0 1000px #ffffff inset !important;
+  -webkit-text-fill-color: #000000 !important;
 }
 
 .login-form .ant-input-prefix,
@@ -306,8 +349,7 @@
     color: #ffffff;
   }
 
-  .login-form .ant-input::placeholder,
-  .login-form .ant-input-password::placeholder {
+  .login-form .ant-input::placeholder {
     color: rgba(255, 255, 255, 0.4);
   }
 

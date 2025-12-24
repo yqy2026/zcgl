@@ -9,6 +9,7 @@ import {
 } from "@ant-design/icons";
 import { useAnalytics } from "../../hooks/useAnalytics";
 import type { AssetSearchParams } from "../../types/asset";
+import type { AnalyticsResponse } from "../../types/analytics";
 
 // Analytics数据类型定义
 interface DistributionItem {
@@ -68,7 +69,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   const [autoRefresh, setAutoRefresh] = useState(false);
 
   const { data: analyticsResponse, isLoading, error, refetch } = useAnalytics(filters);
-  const analytics = analyticsResponse?.data;
+  const analytics = (analyticsResponse as AnalyticsResponse | undefined)?.data;
 
   const hasData = analytics?.area_summary?.total_assets
     ? analytics.area_summary.total_assets > 0
@@ -335,7 +336,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             <Col xs={24} lg={12}>
               <ChartCard
                 title="物业性质分布"
-                hasData={analytics?.property_nature_distribution?.length > 0}
+                hasData={(analytics?.property_nature_distribution?.length ?? 0) > 0}
                 loading={isLoading}
               >
                 <AnalyticsPieChart
@@ -356,7 +357,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             <Col xs={24} lg={12}>
               <ChartCard
                 title="确权状态分布"
-                hasData={analytics?.ownership_status_distribution?.length > 0}
+                hasData={(analytics?.ownership_status_distribution?.length ?? 0) > 0}
                 loading={isLoading}
               >
                 <AnalyticsBarChart
@@ -378,7 +379,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             <Col xs={24} lg={12}>
               <ChartCard
                 title="使用状态分布"
-                hasData={analytics?.usage_status_distribution?.length > 0}
+                hasData={(analytics?.usage_status_distribution?.length ?? 0) > 0}
                 loading={isLoading}
               >
                 <AnalyticsPieChart
@@ -399,7 +400,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             <Col xs={24} lg={12}>
               <ChartCard
                 title="出租率区间分布"
-                hasData={analytics?.occupancy_distribution?.length > 0}
+                hasData={(analytics?.occupancy_distribution?.length ?? 0) > 0}
                 loading={isLoading}
               >
                 <AnalyticsBarChart
@@ -422,7 +423,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             <Col xs={24} lg={12}>
               <ChartCard
                 title="业态类别出租率"
-                hasData={analytics?.business_category_distribution?.length > 0}
+                hasData={(analytics?.business_category_distribution?.length ?? 0) > 0}
                 loading={isLoading}
               >
                 <AnalyticsBarChart
@@ -446,7 +447,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             <Col xs={24} lg={12}>
               <ChartCard
                 title="出租率趋势"
-                hasData={analytics?.occupancy_trend?.length > 0}
+                hasData={(analytics?.occupancy_trend?.length ?? 0) > 0}
                 loading={isLoading}
               >
                 <AnalyticsLineChart

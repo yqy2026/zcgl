@@ -8,12 +8,16 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+import logging
 
 from ...crud.enum_field import get_enum_field_type_crud, get_enum_field_value_crud
 from ...database import get_db
 from ...models.asset import SystemDictionary
 from ...models.enum_field import EnumFieldType
 from ...schemas.enum_field import EnumFieldTypeCreate, EnumFieldValueCreate
+
+# 创建logger
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/dictionaries", tags=["统一字典管理"])
 

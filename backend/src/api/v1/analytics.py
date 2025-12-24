@@ -1588,7 +1588,57 @@ async def get_comprehensive_analytics(
             db, filters, search
         )
 
+        # 临时诊断：当查询结果为空时，添加详细的诊断信息
         if total_count == 0:
+            logger.warning("Analytics查询结果为空，开始诊断...")
+
+            # 诊断：检查数据库中的实际资产数据
+            from ...models.asset import Asset
+            from sqlalchemy import func
+
+            # 1. 查询所有资产总数（无筛选）
+            all_assets_count = db.query(func.count(Asset.id)).scalar()
+            logger.info(f"数据库中总资产数: {all_assets_count}")
+
+            # 2. 查询data_status分布
+            status_distribution = (
+                db.query(Asset.data_status, func.count(Asset.id).label('count'))
+                .group_by(Asset.data_status)
+                .all()
+            )
+            logger.info(f"data_status分布: {status_distribution}")
+
+            # 3. 查询NULL和空值数量
+            null_status_count = (
+                db.query(func.count(Asset.id))
+                .filter(Asset.data_status.is_(None))
+                .scalar()
+            )
+            empty_status_count = (
+                db.query(func.count(Asset.id))
+                .filter(Asset.data_status == '')
+                .scalar()
+            )
+            logger.info(f"NULL状态数: {null_status_count}, 空状态数: {empty_status_count}")
+
+            # 4. 测试不同的筛选条件
+            normal_status_count = (
+                db.query(func.count(Asset.id))
+                .filter(Asset.data_status == DataStatus.NORMAL.value)
+                .scalar()
+            )
+            logger.info(f"正常状态资产数: {normal_status_count}")
+
+            # 5. 查询最近几条资产记录
+            recent_assets = (
+                db.query(Asset.id, Asset.property_name, Asset.data_status, Asset.created_at)
+                .order_by(Asset.created_at.desc())
+                .limit(5)
+                .all()
+            )
+            logger.info(f"最近5条资产记录: {recent_assets}")
+
+            logger.info("诊断完成")
             logger.info("未找到符合条件的资产数据")
             return create_empty_response()
 
@@ -1834,6 +1884,133 @@ async def debug_cache_status(request: Request):
         logger.error(f"调试缓存状态失败: {str(e)}")
         raise ResponseHandler.internal_error(
             message="调试缓存状态失败",
+            error_details={"error": str(e)},
+            request_id=request_id,
+        )
+
+
+@router.get("/debug/data-status-distribution", summary="数据库状态分布诊断")
+async def debug_data_status_distribution(request: Request, db: Session = Depends(get_db)):
+    """
+    诊断端点 - 检查资产数据状态分布
+    用于排查Analytics API返回空数据的问题
+    """
+    request_id = get_request_id(request)
+    try:
+        from ...models.asset import Asset
+        from sqlalchemy import func, and_
+
+        logger.info("开始诊断资产数据状态分布")
+
+        # 1. 查询所有资产记录总数
+        total_assets_query = db.query(func.count(Asset.id))
+        total_assets = total_assets_query.scalar()
+
+        # 2. 查询data_status字段值分布
+        status_distribution = (
+            db.query(
+                Asset.data_status,
+                func.count(Asset.id).label('count')
+            )
+            .group_by(Asset.data_status)
+            .all()
+        )
+
+        # 3. 查询NULL值记录数量
+        null_status_count = (
+            db.query(func.count(Asset.id))
+            .filter(Asset.data_status.is_(None))
+            .scalar()
+        )
+
+        # 4. 查询空字符串记录数量
+        empty_status_count = (
+            db.query(func.count(Asset.id))
+            .filter(Asset.data_status == '')
+            .scalar()
+        )
+
+        # 5. 测试Analytics API的筛选条件
+        normal_status_count = (
+            db.query(func.count(Asset.id))
+            .filter(Asset.data_status == DataStatus.NORMAL.value)
+            .scalar()
+        )
+
+        # 6. 测试没有data_status筛选的查询
+        without_status_filter_count = (
+            db.query(func.count(Asset.id))
+            .scalar()
+        )
+
+        # 7. 查询最近添加的几条记录的状态
+        recent_assets = (
+            db.query(
+                Asset.id,
+                Asset.property_name,
+                Asset.data_status,
+                Asset.created_at
+            )
+            .order_by(Asset.created_at.desc())
+            .limit(10)
+            .all()
+        )
+
+        # 构建诊断数据
+        diagnostic_data = {
+            "total_assets": total_assets,
+            "status_distribution": [
+                {
+                    "status": status[0] if status[0] is not None else "NULL",
+                    "count": status[1]
+                }
+                for status in status_distribution
+            ],
+            "null_status_count": null_status_count,
+            "empty_status_count": empty_status_count,
+            "normal_status_count": normal_status_count,
+            "without_status_filter_count": without_status_filter_count,
+            "filter_effect": {
+                "total_records": total_assets,
+                "after_normal_filter": normal_status_count,
+                "filtered_out_count": total_assets - normal_status_count
+            },
+            "recent_assets": [
+                {
+                    "id": asset.id,
+                    "property_name": asset.property_name,
+                    "data_status": asset.data_status,
+                    "created_at": asset.created_at.isoformat() if asset.created_at else None
+                }
+                for asset in recent_assets
+            ],
+            "data_status_expected": DataStatus.NORMAL.value,
+            "diagnosis_summary": {
+                "has_data": total_assets > 0,
+                "all_records_normal": normal_status_count == total_assets,
+                "has_null_status": null_status_count > 0,
+                "has_empty_status": empty_status_count > 0,
+                "problem_detected": (normal_status_count != total_assets) or (total_assets == 0)
+            }
+        }
+
+        logger.info(
+            f"诊断完成 - 总资产数: {total_assets}, "
+            f"正常状态数: {normal_status_count}, "
+            f"NULL状态数: {null_status_count}, "
+            f"空状态数: {empty_status_count}"
+        )
+
+        return ResponseHandler.success(
+            data=diagnostic_data,
+            message="资产数据状态分布诊断完成",
+            request_id=request_id,
+        )
+
+    except Exception as e:
+        logger.error(f"资产数据状态诊断失败: {str(e)}", exc_info=True)
+        raise ResponseHandler.internal_error(
+            message="资产数据状态诊断失败",
             error_details={"error": str(e)},
             request_id=request_id,
         )

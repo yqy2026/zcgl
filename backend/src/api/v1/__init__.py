@@ -1,4 +1,4 @@
-"""统一API路由 - 非版本化架构"""
+"""统一API路由 - 版本化架构 (/api/v1/*)"""
 
 from fastapi import APIRouter
 
@@ -57,10 +57,10 @@ except ImportError:
 # from .security_monitor import router as security_monitor_router  # 已删除
 # from .ocr_analysis import router as ocr_analysis_router  # 已删除
 
-# 创建统一API路由器 - 非版本化架构
+# 创建统一API路由器 - 版本化架构
 api_router = APIRouter()
 
-# 包含各个模块的路由（使用非版本化前缀）
+# 包含各个模块的路由（使用版本化前缀，最终路径为 /api/v1/*）
 api_router.include_router(auth_router, prefix="/auth", tags=["用户认证"])
 api_router.include_router(roles_router, prefix="/roles", tags=["角色管理"])
 api_router.include_router(operation_logs_router, prefix="/logs", tags=["操作日志"])

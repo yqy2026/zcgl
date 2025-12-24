@@ -1,11 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { analyticsService } from '../services/analyticsService'
 import type { AssetSearchParams } from '../types/asset'
+import type { AnalyticsResponse } from '../types/analytics'
 
 export const useAnalytics = (filters?: AssetSearchParams) => {
-  return useQuery({
+  return useQuery<AnalyticsResponse>({
     queryKey: ['analytics', 'comprehensive', filters],
-    queryFn: async () => {
+    queryFn: async (): Promise<AnalyticsResponse> => {
       try {
         const result = await analyticsService.getComprehensiveAnalytics(filters)
         return result
@@ -59,7 +60,7 @@ export const useAnalytics = (filters?: AssetSearchParams) => {
 }
 
 export const useBasicStatistics = (filters?: AssetSearchParams) => {
-  return useQuery({
+  return useQuery<AnalyticsResponse>({
     queryKey: ['basic-statistics', filters],
     queryFn: () => analyticsService.getBasicStatistics(filters),
     staleTime: 2 * 60 * 1000, // 2分钟缓存
@@ -68,7 +69,7 @@ export const useBasicStatistics = (filters?: AssetSearchParams) => {
 }
 
 export const useAreaSummary = () => {
-  return useQuery({
+  return useQuery<AnalyticsResponse>({
     queryKey: ['area-summary'],
     queryFn: () => analyticsService.getAreaSummary(),
     staleTime: 3 * 60 * 1000, // 3分钟缓存
@@ -77,7 +78,7 @@ export const useAreaSummary = () => {
 }
 
 export const useFinancialSummary = () => {
-  return useQuery({
+  return useQuery<AnalyticsResponse>({
     queryKey: ['financial-summary'],
     queryFn: () => analyticsService.getFinancialSummary(),
     staleTime: 3 * 60 * 1000, // 3分钟缓存

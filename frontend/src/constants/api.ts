@@ -305,6 +305,7 @@ export const SYSTEM_API = {
   // 用户管理 (引用AUTH_API中的定义)
   USERS: AUTH_API.USERS,
   USER_DETAIL: AUTH_API.USER_DETAIL,
+  USER_STATISTICS: AUTH_API.USER_STATISTICS,
 
   // 日志管理
   LOGS: buildApiPath('/logs'),

@@ -15,7 +15,9 @@
       "mcp__chrome-devtools__evaluate_script",
       "Bash(npm run dev)",
       "Bash(netstat:*)",
-      "mcp__chrome-devtools__new_page"
+      "mcp__chrome-devtools__new_page",
+      "mcp__chrome-devtools__get_network_request",
+      "mcp__chrome-devtools__wait_for"
     ]
   },
   "outputStyle": "Explanatory"

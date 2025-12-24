@@ -57,14 +57,18 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (credentials: LoginCredentials) => {
     try {
+      console.log('🔐 AuthContext.login 开始登录', credentials);
       setLoading(true)
       setError(null)
 
       // 调用 AuthService 的登录方法
       const response = await AuthService.login(credentials)
 
+      console.log('📤 AuthContext收到登录响应:', response);
+
       if (response.success && response.data) {
         setUser(response.data.user)
+        console.log('✅ 用户状态已更新:', response.data.user);
         message.success(response.message || '登录成功')
       } else {
         throw new Error('登录响应格式错误')

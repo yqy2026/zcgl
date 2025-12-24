@@ -12,11 +12,7 @@ export const protectedRoutes = [
     element: React.lazy(() => import('../pages/Dashboard/DashboardPage'))
   },
 
-  // 资产管理模块
-  {
-    path: '/assets/list',
-    element: React.lazy(() => import('../pages/Assets/AssetListPage'))
-  },
+  // 资产管理模块 - 注意路由顺序，更具体的路径要在前面
   {
     path: '/assets/new',
     element: React.lazy(() => import('../pages/Assets/AssetCreatePage'))
@@ -28,6 +24,10 @@ export const protectedRoutes = [
   {
     path: '/assets/analytics',
     element: React.lazy(() => import('../pages/Assets/AssetAnalyticsPage'))
+  },
+  {
+    path: '/assets/list',
+    element: React.lazy(() => import('../pages/Assets/AssetListPage'))
   },
   {
     path: '/assets/:id',

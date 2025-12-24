@@ -98,7 +98,7 @@ The Land Property Asset Management System (土地物业资产管理系统) is a 
   src/
   ├── models/          # SQLAlchemy ORM models
   ├── schemas/         # Pydantic request/response models
-  ├── api/v1/          # API endpoints (non-versioned architecture)
+  ├── api/v1/          # API endpoints (versioned architecture)
   ├── services/        # Business logic layer
   ├── crud/            # Database operations
   ├── core/            # Configuration and utilities
@@ -110,8 +110,8 @@ The Land Property Asset Management System (土地物业资产管理系统) is a 
 #### Backend Architecture
 - **Router Registry System**: Centralized route management with automatic registration
   - All APIs registered through `core/router_registry.py`
-  - Unified non-versioned API architecture (`/api/*`)
-  - Conflict resolution between manual and automatic registration
+  - Unified versioned API architecture (`/api/v1/*`)
+  - Automatic version prefix application and route management
 
 - **Dependency Injection**: Centralized DI container for service management
   - Service lifetimes: Singleton for services, Scoped per request
