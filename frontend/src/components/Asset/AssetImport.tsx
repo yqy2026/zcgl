@@ -31,7 +31,7 @@ import {
   ClockCircleOutlined,
 } from "@ant-design/icons";
 import type { UploadProps, UploadFile } from "antd";
-import { enhancedApiClient } from "../../services/enhancedApiClient";
+import { enhancedApiClient } from "@/api/client";
 import { STANDARD_SHEET_NAME, IMPORT_INSTRUCTIONS } from "../../config/excelConfig";
 
 const { Title, Text } = Typography;

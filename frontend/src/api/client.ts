@@ -18,6 +18,7 @@ import {
   CacheConfig,
   ExtractResult
 } from '../types/api-response';
+import { API_CONFIG } from './config';
 
 // ==================== 缓存管理器 ====================
 
