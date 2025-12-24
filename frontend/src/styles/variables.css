@@ -1,0 +1,103 @@
+/**
+ * CSS Variables
+ * Centralized design tokens for consistent theming
+ */
+
+:root {
+  /* Primary Colors */
+  --color-primary: #1890ff;
+  --color-primary-hover: #4096ff;
+  --color-primary-active: #0958d9;
+  --color-primary-light: #e6f4ff;
+
+  /* Secondary Colors */
+  --color-secondary: #722ed1;
+  --color-secondary-hover: #9254de;
+  --color-secondary-active: #531dab;
+
+  /* Semantic Colors */
+  --color-success: #52c41a;
+  --color-warning: #faad14;
+  --color-error: #ff4d4f;
+  --color-info: #1890ff;
+
+  /* Neutral Colors */
+  --color-text-primary: #262626;
+  --color-text-secondary: #595959;
+  --color-text-tertiary: #8c8c8c;
+  --color-text-quaternary: #bfbfbf;
+
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #fafafa;
+  --color-bg-tertiary: #f5f5f5;
+  --color-bg-quaternary: #f0f0f0;
+
+  /* Border Colors */
+  --color-border: #d9d9d9;
+  --color-border-light: #f0f0f0;
+  --color-border-dark: #bfbfbf;
+
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+  --spacing-xxl: 32px;
+  --spacing-xxxl: 48px;
+
+  /* Border Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* Shadows */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-xl: 0 20px 60px rgba(0, 0, 0, 0.15);
+
+  /* Transitions */
+  --transition-fast: 0.1s ease;
+  --transition-base: 0.2s ease;
+  --transition-slow: 0.3s ease;
+  --transition-slower: 0.5s ease;
+
+  /* Z-Index Layers */
+  --z-index-dropdown: 1000;
+  --z-index-sticky: 1020;
+  --z-index-fixed: 1030;
+  --z-index-modal-backdrop: 1040;
+  --z-index-modal: 1050;
+  --z-index-popover: 1060;
+  --z-index-tooltip: 1070;
+}
+
+/* Dark Theme Variables */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-text-primary: #ffffff;
+    --color-text-secondary: rgba(255, 255, 255, 0.85);
+    --color-text-tertiary: rgba(255, 255, 255, 0.7);
+    --color-text-quaternary: rgba(255, 255, 255, 0.4);
+
+    --color-bg-primary: #000000;
+    --color-bg-secondary: #141414;
+    --color-bg-tertiary: #1f1f1f;
+    --color-bg-quaternary: #262626;
+
+    --color-border: #434343;
+    --color-border-light: #262626;
+    --color-border-dark: #595959;
+  }
+}
+
+/* High Contrast Mode */
+@media (prefers-contrast: high) {
+  :root {
+    --color-text-primary: #000000;
+    --color-bg-primary: #ffffff;
+    --color-border: #000000;
+  }
+}

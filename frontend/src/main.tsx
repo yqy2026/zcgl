@@ -7,7 +7,7 @@ import dayjs from 'dayjs'
 import 'dayjs/locale/zh-cn'
 
 import App from './App.tsx'
-import './index.css'
+import './styles/index.css'
 
 // 配置dayjs中文
 dayjs.locale('zh-cn')

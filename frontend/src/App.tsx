@@ -7,7 +7,7 @@ import LoginPage from './pages/LoginPage'
 import ErrorBoundary from './components/ErrorHandling/ErrorBoundary'
 import { AuthService } from './services/authService'
 import { AuthProvider } from './contexts/AuthContext'
-import './App.css'
+// App.css removed - classes were unused default React template styles
 
 /**
  * 受保护的路由组件 - 需要认证才能访问

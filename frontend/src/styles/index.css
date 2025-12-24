@@ -1,0 +1,10 @@
+/**
+ * Styles Module Entry Point
+ * Imports all global styles in the correct order
+ */
+
+/* 1. CSS Variables - must be first */
+@import './variables.css';
+
+/* 2. Global Styles */
+@import './global.css';
