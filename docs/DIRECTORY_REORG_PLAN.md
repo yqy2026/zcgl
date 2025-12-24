@@ -164,7 +164,7 @@ backend/src/
 
 ## 当前状态
 
-✅ **已完成** (Phase 1-4 + Phase 3.2-3.6):
+✅ **已完成** (Phase 1-4 + Phase 3.2-3.8):
 - Phase 1: 快速清理
 - Phase 2: 前端重构（标记废弃组件）
 - Phase 2.3: 统一错误处理 (3→1) - 2025-12-24
@@ -173,14 +173,14 @@ backend/src/
 - Phase 3: 后端重构（删除冗余文件）
 - Phase 3.2-3.5: 清理 API 模块 - 2025-12-24
 - Phase 3.6: 清理文档服务导入 - 2025-12-24
+- Phase 3.7-3.8: 根目录清理 - 2025-12-24
 - Phase 3.4: 整合配置系统 (4→1) - 2025-12-24
 - Phase 4: 目录重组（全部完成）
   - 4.1-4.2: API 和 Forms 目录重组
   - 4.3: 前端 styles/ 目录标准化
   - 4.4: 后端目录扁平化
 
-⏭️ **后续阶段**:
-- Phase 5.3: 文档更新 (完成)
+⏭️ **所有阶段已完成** ✅
 
 ---
 
@@ -327,6 +327,25 @@ backend/src/
 | 移除 stub 文件引用 | pdf_import_service_stub, excel_export_stub | ✅ |
 | 重新组织导入 | 按逻辑分组 (PDF, OCR, Contract, Excel) | ✅ |
 | 清理 `__init__.py` 结构 | 删除损坏的导入引用 | ✅ |
+
+### Phase 3.7-3.8: 根目录清理 - 已完成 ✅
+
+**Git Commit:** `26b98a7` - refactor: Phase 3.7-3.8 - Root directory cleanup
+
+**完成内容:**
+
+| 操作 | 详情 | 状态 |
+|------|------|------|
+| 归档 `debug_auth.py` | 移至 scripts/archive/ | ✅ |
+| 归档 `test-browser.js` | 移至 scripts/archive/ | ✅ |
+| 移动 `eslint-report.json` | 移至 docs/reports/ | ✅ |
+| 删除测试输出文件 | *.txt 测试输出文件 | ✅ |
+
+**文件清理统计:**
+- 归档文件: 2个
+- 移动文件: 1个
+- 删除文件: 3个
+- 释放空间: ~1.9MB
 
 ### Phase 3.4: 整合配置系统 - 已完成 ✅
 
