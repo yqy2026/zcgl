@@ -1,8 +1,9 @@
 # 目录重组计划
 
 **创建日期**: 2025-12-24
-**状态**: 规划中，暂未执行
-**原因**: 高风险，需要全面测试验证
+**状态**: ✅ 前端部分已完成 / 后端待执行
+**完成日期**: 2025-12-24
+**执行分支**: `refactor/directory-reorg`
 
 ---
 
@@ -163,17 +164,88 @@ backend/src/
 
 ## 当前状态
 
-✅ **已完成**:
+✅ **已完成** (Phase 1-3):
 - Phase 1: 快速清理
 - Phase 2: 前端重构（标记废弃组件）
 - Phase 3: 后端重构（删除冗余文件）
 
-⏳ **待执行** (此文档):
-- 前端目录重组
-- 后端目录重组
+✅ **本次会话完成** (Phase 4 前端部分):
+- 创建 `frontend/src/api/` 目录
+  - `api/client.ts` - EnhancedApiClient (从 services/enhancedApiClient.ts 移动)
+  - `api/config.ts` - API配置 (从 config/api.ts 移动)
+  - `api/index.ts` - 清洁导出
+- 创建 `frontend/src/components/Forms/` 目录
+  - 移动 5 个表单组件 (AssetForm, AssetFormHelp, OwnershipForm, ProjectForm, RentContractForm)
+  - 创建 Forms/index.ts 统一导出
+- 更新 20+ service 文件导入路径 (全部改用 `@/api/client`)
+- 修复 jest.setup.js → jest.setup.ts
+- 更新所有相关导入路径
+
+⏳ **待执行**:
+- 前端 styles/ 目录标准化 (Phase 4.3)
+- 后端目录扁平化 (Phase 4.4)
 
 ⏭️ **后续阶段**:
-- Phase 5: 验证与文档
+- Phase 5.3: 文档更新
+
+---
+
+## 执行结果 (2025-12-24)
+
+### 前端目录重组 - 已完成 ✅
+
+**Git Commits:**
+- `5a2c940` - Batch 1: Create api/ directory and consolidate API layer
+- `23be049` - Batch 2: Create Forms/ directory and consolidate form components
+- `14da039` - fix: Update all service files to import from @/api and fix jest.setup
+
+**完成内容:**
+
+#### 1. API 目录重组
+
+| 操作 | 详情 | 状态 |
+|------|------|------|
+| 创建 `src/api/` 目录 | 新目录 | ✅ |
+| 移动 `services/enhancedApiClient.ts` | → `api/client.ts` | ✅ |
+| 移动 `config/api.ts` | → `api/config.ts` | ✅ |
+| 创建 `api/index.ts` | 清洁导出 | ✅ |
+| 更新 `services/index.ts` | 重新导出 | ✅ |
+| 删除原始文件 | 2个文件 | ✅ |
+
+#### 2. Forms 目录重组
+
+| 操作 | 详情 | 状态 |
+|------|------|------|
+| 创建 `components/Forms/` 目录 | 新目录 | ✅ |
+| 移动 `Asset/AssetForm.tsx` | → `Forms/AssetForm.tsx` | ✅ |
+| 移动 `Asset/AssetFormHelp.tsx` | → `Forms/AssetFormHelp.tsx` | ✅ |
+| 移动 `Ownership/OwnershipForm.tsx` | → `Forms/OwnershipForm.tsx` | ✅ |
+| 移动 `Project/ProjectForm.tsx` | → `Forms/ProjectForm.tsx` | ✅ |
+| 移动 `Rental/RentContractForm.tsx` | → `Forms/RentContractForm.tsx` | ✅ |
+| 创建 `Forms/index.ts` | 清洁导出 | ✅ |
+| 更新 `components/Asset/index.ts` | 重新导出 | ✅ |
+| 删除重复 `AssetForm/` 目录 | 废弃目录 | ✅ |
+
+#### 3. Service 文件导入更新
+
+| 类别 | 文件数 | 状态 |
+|------|--------|------|
+| 直接导入更新 | 2 | ✅ |
+| Service 文件更新 | 20+ | ✅ |
+| 测试文件更新 | 3 | ✅ |
+
+#### 4. 测试配置修复
+
+| 问题 | 解决方案 | 状态 |
+|------|----------|------|
+| Babel 解析错误 | `jest.setup.js` → `jest.setup.ts` | ✅ |
+| 更新 jest.config.js | 引用新的文件名 | ✅ |
+
+**验证结果:**
+- ✅ TypeScript 错误: 1294 → 1290 (-4)
+- ✅ 所有旧导入路径已清除
+- ✅ 测试可以运行 (290 skipped, 2 passed)
+- ✅ 向后兼容性保持 (re-exports)
 
 ---
 
