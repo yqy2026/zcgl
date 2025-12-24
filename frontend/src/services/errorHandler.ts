@@ -2,7 +2,7 @@
 
 import { message, notification } from 'antd'
 import type { ErrorResponse } from '@/types/api'
-import { HTTP_STATUS, ERROR_CODES } from './config'
+import { HTTP_STATUS, ERROR_CODES } from '../api/config'
 
 // 日志数据接口
 export interface LogData {
@@ -290,4 +290,69 @@ export const handleApiError = (
 ) => {
   const errorResponse = ApiErrorHandler.createUserFriendlyError(error, context)
   errorHandler.handle(errorResponse, options)
+}
+
+// ============================================================
+// 增强工具函数 (从 utils/errorHandler.ts 合并)
+// ============================================================
+
+/**
+ * 异步操作包装器
+ * 自动处理错误并返回标准化结果
+ */
+export async function withErrorHandling<T>(
+  operation: () => Promise<T>,
+  options: ErrorHandlerOptions & {
+    errorMessage?: string
+    successMessage?: string
+  } = {}
+): Promise<{ success: boolean; data?: T; error?: ErrorResponse }> {
+  try {
+    const data = await operation()
+
+    // 显示成功消息（如果配置）
+    if (options.successMessage) {
+      message.success({
+        content: options.successMessage,
+        duration: 2
+      })
+    }
+
+    return { success: true, data }
+  } catch (error: unknown) {
+    const errorResponse = ApiErrorHandler.createUserFriendlyError(error, options.errorMessage)
+
+    // 记录错误日志
+    if (options.logError !== false) {
+      (errorHandler as any).logError(errorResponse)
+    }
+
+    // 显示错误消息
+    if (options.showMessage !== false) {
+      message.error(errorResponse.message || '操作失败')
+    }
+
+    return { success: false, error: errorResponse }
+  }
+}
+
+/**
+ * 创建上下文错误处理器
+ * 为特定上下文创建带上下文信息的错误处理器
+ */
+export function createErrorHandler(
+  context: string,
+  baseOptions: ErrorHandlerOptions = {}
+) {
+  return (error: unknown, options?: ErrorHandlerOptions) => {
+    const errorResponse = ApiErrorHandler.createUserFriendlyError(error, `${context}操作失败`)
+
+    errorHandler.handle(errorResponse, {
+      ...baseOptions,
+      ...options,
+      logError: baseOptions.logError !== false && options?.logError !== false
+    })
+
+    return errorResponse
+  }
 }

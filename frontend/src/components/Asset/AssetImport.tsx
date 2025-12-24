@@ -31,7 +31,7 @@ import {
   ClockCircleOutlined,
 } from "@ant-design/icons";
 import type { UploadProps, UploadFile } from "antd";
-import { api } from "../../services/api";
+import { enhancedApiClient } from "@/api/client";
 import { STANDARD_SHEET_NAME, IMPORT_INSTRUCTIONS } from "../../config/excelConfig";
 
 const { Title, Text } = Typography;
@@ -76,7 +76,7 @@ const OptimizedAssetImport: React.FC = () => {
   // 下载模板
   const handleDownloadTemplate = async () => {
     try {
-      const response = await api.get("/excel/template", {
+      const response = await enhancedApiClient.get("/excel/template", {
         responseType: "blob",
       });
 
@@ -154,14 +154,18 @@ const OptimizedAssetImport: React.FC = () => {
 
     try {
       const formData = new FormData();
-      formData.append("file", fileList[0] as File);
+      // Get the actual File object from UploadFile
+      const file = fileList[0]?.originFileObj;
+      if (file) {
+        formData.append("file", file);
+      }
 
       // Start enhanced import process
-      setImporting(true);
+      setUploading(true);
 
       const endpoint = config.useOptimized ? "/excel/import/optimized" : "/excel/import";
 
-      const response = await api.post(endpoint, formData, {
+      const response = await enhancedApiClient.post(endpoint, formData, {
         params: {
           sheet_name: STANDARD_SHEET_NAME,
           skip_errors: config.skipErrors,
@@ -186,9 +190,11 @@ const OptimizedAssetImport: React.FC = () => {
       } else {
         message.success(`🎉 导入完成！成功导入 ${result.success} 条记录`);
       }
-    } catch (error: unknown) {
+    } catch (err: unknown) {
       clearInterval(progressInterval);
-      console.error("导入错误:", error);
+      console.error("导入错误:", err);
+
+      const error = err as { response?: { data?: any }; message?: string };
       console.error("错误响应:", error.response?.data);
 
       const errorResult = error.response?.data || {

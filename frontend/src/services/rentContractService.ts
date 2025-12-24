@@ -26,7 +26,7 @@ import {
   RentContractQueryParams,
   RentLedgerQueryParams
 } from '../types/rentContract';
-import { enhancedApiClient } from './enhancedApiClient';
+import { enhancedApiClient } from '@/api/client';
 import { ApiErrorHandler } from '../utils/responseExtractor';
 import { API_ENDPOINTS } from '@/constants/api';
 

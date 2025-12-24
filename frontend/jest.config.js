@@ -6,7 +6,7 @@ module.exports = {
   preset: "ts-jest/presets/default-esm",
 
   // Setup files
-  setupFilesAfterEnv: ["<rootDir>/jest.setup.js", "<rootDir>/src/__tests__/setup.ts"],
+  setupFilesAfterEnv: ["<rootDir>/jest.setup.ts", "<rootDir>/src/__tests__/setup.ts"],
 
   // Module name mapping for path aliases
   moduleNameMapper: require("./jest.modulePaths.js"),

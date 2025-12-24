@@ -21,11 +21,7 @@ import { Bar } from 'react-chartjs-2'
 import { assetService } from '@/services/assetService'
 import type { AssetSearchParams } from '@/types/asset'
 
-// 注册Chart.js组件
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
-
-const { Title: AntTitle, Text } = Typography
-
+// Local interface matching the actual API response structure
 interface AreaStatisticsData {
   total_statistics: {
     total_land_area: number
@@ -72,6 +68,11 @@ interface AreaStatisticsData {
   }>
 }
 
+// 注册Chart.js组件
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
+
+const { Title: AntTitle, Text } = Typography
+
 interface AreaStatisticsChartProps {
   filters?: AssetSearchParams
   height?: number
@@ -82,9 +83,12 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
   height = 400,
 }) => {
   // 获取面积统计数据
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error } = useQuery<AreaStatisticsData>({
     queryKey: ['area-statistics', filters],
-    queryFn: () => assetService.getAreaStatistics(filters),
+    queryFn: async (): Promise<AreaStatisticsData> => {
+      const result = await assetService.getAreaStatistics(filters);
+      return result as unknown as AreaStatisticsData;
+    },
     refetchInterval: 5 * 60 * 1000, // 5分钟刷新一次
   })
 

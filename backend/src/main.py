@@ -1,5 +1,6 @@
 """
 土地物业资产管理系统 - 主应用入口
+整合UTF-8编码安全处理
 """
 
 import logging
@@ -9,19 +10,22 @@ from datetime import UTC, datetime
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+# 导入编码安全工具
+from .core.encoding_utils import setup_utf8_encoding, safe_print, safe_log_format, safe_error_message
+
+# 立即设置UTF-8编码
+setup_utf8_encoding()
+
 # OCR服务导入 - 完全禁用以避免编码问题
 OCR_SERVICE_AVAILABLE = False
 OptimizedOCRService = None
-print("Info: OCR service disabled - avoiding encoding issues")
+safe_print("Info: OCR service disabled - avoiding encoding issues")
 
 try:
     from .services.providers.ocr_provider import get_ocr_service, set_ocr_service
     OCR_PROVIDER_AVAILABLE = True
 except ImportError as e:
-    try:
-        print(f"Warning: OCR provider not available - {e}")
-    except (UnicodeEncodeError, Exception):
-        print("Warning: OCR provider not available - encoding error")
+    safe_print(f"Warning: OCR provider not available - {safe_error_message(e)}")
     get_ocr_service = lambda: None
     set_ocr_service = lambda x: None
     OCR_PROVIDER_AVAILABLE = False
@@ -37,17 +41,13 @@ try:
     from .core.router_registry import register_api_routes, route_registry
     ROUTER_REGISTRY_AVAILABLE = True
 except ImportError as e:
-    try:
-        print(f"Warning: Router registry not available - {e}")
-    except (UnicodeEncodeError, Exception):
-        print("Warning: Router registry not available - encoding error")
+    safe_print(f"Warning: Router registry not available - {safe_error_message(e)}")
     register_api_routes = lambda: None
     route_registry = type('MockRegistry', (), {
         'register_global_dependency': lambda x: None,
         'include_all': lambda app, version: None
     })()
-from .core.config import settings
-from .core.config_manager import get_config, initialize_config
+from .core.config import settings, get_config, initialize_config
 from .core.exception_handler import setup_exception_handlers
 # from .core.jwt_security import validate_current_jwt_config  # 临时禁用
 from .core.logging_security import setup_logging_security
@@ -62,10 +62,7 @@ try:
     from .middleware.error_recovery_middleware import ErrorRecoveryMiddleware
     ERROR_RECOVERY_MIDDLEWARE_AVAILABLE = True
 except ImportError as e:
-    try:
-        print(f"Warning: Error recovery middleware not available - {e}")
-    except (UnicodeEncodeError, Exception):
-        print("Warning: Error recovery middleware not available - encoding error")
+    safe_print(f"Warning: Error recovery middleware not available - {safe_error_message(e)}")
     ErrorRecoveryMiddleware = None
     ERROR_RECOVERY_MIDDLEWARE_AVAILABLE = False
 
@@ -73,10 +70,7 @@ try:
     from .middleware.request_logging import RequestLoggingMiddleware
     REQUEST_LOGGING_MIDDLEWARE_AVAILABLE = True
 except ImportError as e:
-    try:
-        print(f"Warning: Request logging middleware not available - {e}")
-    except (UnicodeEncodeError, Exception):
-        print("Warning: Request logging middleware not available - encoding error")
+    safe_print(f"Warning: Request logging middleware not available - {safe_error_message(e)}")
     RequestLoggingMiddleware = None
     REQUEST_LOGGING_MIDDLEWARE_AVAILABLE = False
 
@@ -84,10 +78,7 @@ try:
     from .middleware.security_middleware import setup_security_middleware
     SECURITY_MIDDLEWARE_AVAILABLE = True
 except ImportError as e:
-    try:
-        print(f"Warning: Security middleware not available - {e}")
-    except (UnicodeEncodeError, Exception):
-        print("Warning: Security middleware not available - encoding error")
+    safe_print(f"Warning: Security middleware not available - {safe_error_message(e)}")
     setup_security_middleware = lambda app: None
     SECURITY_MIDDLEWARE_AVAILABLE = False
 
@@ -95,10 +86,7 @@ try:
     from .middleware.v1_compatibility import add_v1_compatibility, V1CompatibilityMiddleware
     V1_COMPATIBILITY_AVAILABLE = True
 except ImportError as e:
-    try:
-        print(f"Warning: V1 compatibility middleware not available - {e}")
-    except (UnicodeEncodeError, Exception):
-        print("Warning: V1 compatibility middleware not available - encoding error")
+    safe_print(f"Warning: V1 compatibility middleware not available - {safe_error_message(e)}")
     add_v1_compatibility = lambda app, preserve_endpoints=None: None
     V1CompatibilityMiddleware = None
     V1_COMPATIBILITY_AVAILABLE = False
@@ -192,24 +180,24 @@ app.add_middleware(
 if SECURITY_MIDDLEWARE_AVAILABLE:
     setup_security_middleware(app)
 else:
-    print("Warning: Skipping security middleware setup")
+    safe_print("Warning: Skipping security middleware setup")
 
 # 设置请求日志中间件
 if REQUEST_LOGGING_MIDDLEWARE_AVAILABLE and RequestLoggingMiddleware:
     app.add_middleware(RequestLoggingMiddleware)
 else:
-    print("Warning: Skipping request logging middleware")
+    safe_print("Warning: Skipping request logging middleware")
 
 # 设置错误恢复中间件
 if ERROR_RECOVERY_MIDDLEWARE_AVAILABLE and ErrorRecoveryMiddleware:
     app.add_middleware(ErrorRecoveryMiddleware)
 else:
-    print("Warning: Skipping error recovery middleware")
+    safe_print("Warning: Skipping error recovery middleware")
 
-# V1兼容性中间件已移除 - 统一使用非版本化架构
-# 所有API现在使用统一的 /api/* 路径，不再支持V1版本
-logger.info("统一非版本化架构 - 不再支持V1兼容性")
-print("统一非版本化架构已启用 - V1支持已移除")
+# API架构说明：系统使用统一的版本化架构 /api/v1/*
+# 所有API端点都通过路由注册器统一管理
+logger.info("版本化API架构已启用 - 使用 /api/v1/* 端点")
+safe_print("版本化API架构已配置完成")
 
 # 设置文件上传安全中间件
 try:
@@ -217,10 +205,7 @@ try:
     file_security_middleware = create_file_security_middleware(app)
     app.add_middleware(type(file_security_middleware))
 except ImportError as e:
-    try:
-        print(f"Warning: File upload security middleware not available - {e}")
-    except (UnicodeEncodeError, Exception):
-        print("Warning: File upload security middleware not available - encoding error")
+    safe_print(f"Warning: File upload security middleware not available - {safe_error_message(e)}")
 
 # 设置统一异常处理器
 setup_exception_handlers(app)
@@ -297,7 +282,7 @@ if ROUTER_REGISTRY_AVAILABLE:
     # @app.get("/api/assets", tags=["资产管理-最终兼容"])
     # async def final_assets_compatibility():
     #     """最终兼容性API - 获取资产列表（无认证）"""
-    #     print("DEBUG: 最终兼容性API被调用 - 这应该是唯一被调用的/api/assets路由")
+    #     safe_print("DEBUG: 最终兼容性API被调用 - 这应该是唯一被调用的/api/assets路由")
     #     logger.info("最终兼容性API被调用")
     #     return {
     #         "success": True,

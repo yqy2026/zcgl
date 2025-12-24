@@ -6,7 +6,7 @@
  * @updated 2025-11-10
  */
 
-import { enhancedApiClient } from './enhancedApiClient';
+import { enhancedApiClient } from '@/api/client';
 import { ApiErrorHandler } from '../utils/responseExtractor';
 import type { ExcelImportResponse, ExcelExportRequest, ExcelExportResponse } from '@/types/api';
 import type { ImportExportHistory, TaskStatusResponse, Filters } from '@/types/common';

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import './PDFImportPage.css';
+import styles from './PDFImportPage.module.css';
 
 // API 错误接口
 interface ApiError extends Error {
@@ -507,7 +507,7 @@ const PDFImportPage: React.FC = () => {
   }
 
   return (
-    <div className="pdf-import-page" style={{
+    <div className={styles['pdf-import-page']} style={{
       animation: 'fadeIn 0.3s ease-in-out',
       minHeight: '100vh'
     }}>
@@ -516,7 +516,7 @@ const PDFImportPage: React.FC = () => {
         <Row justify="space-between" align="middle">
           <Col>
             <Space size="large">
-              <div className="status-icon">
+              <div className={styles['status-icon']}>
                 <UploadOutlined style={{ fontSize: 24, color: '#1890ff' }} />
               </div>
               <div>

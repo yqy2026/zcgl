@@ -6,9 +6,9 @@ API路径常量定义
 
 # 基础路径常量
 class BasePaths:
-    API = "/api"  # 统一非版本化架构
-    HEALTH = "/api/health"  # 健康检查
-    ROOT = "/api"  # 根路径
+    API = "/api/v1"  # 统一版本化架构
+    HEALTH = "/api/v1/health"  # 健康检查
+    ROOT = "/api/v1"  # 根路径
 
 
 # 资产管理API路径

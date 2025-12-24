@@ -3,7 +3,7 @@ import { render, screen } from "../../../__tests__/utils/testUtils";
 import userEvent from "@testing-library/user-event";
 // Jest imports - no explicit import needed for describe, it, expect
 
-import { GlobalErrorBoundary, ErrorPage, UXProvider } from "@/components/ErrorHandling";
+import { ErrorBoundary, ErrorPage, UXProvider } from "@/components/ErrorHandling";
 import { LoadingSpinner, SkeletonLoader } from "@/components/Loading";
 import {
   EmptyState,
@@ -31,12 +31,12 @@ const ErrorThrowingComponent: React.FC<{ shouldThrow: boolean }> = ({ shouldThro
 };
 
 describe("UX Components", () => {
-  describe("GlobalErrorBoundary", () => {
+  describe("ErrorBoundary", () => {
     it("renders children when there is no error", () => {
       render(
-        <GlobalErrorBoundary>
+        <ErrorBoundary>
           <div>Test content</div>
-        </GlobalErrorBoundary>,
+        </ErrorBoundary>,
       );
 
       expect(screen.getByText("Test content")).toBeInTheDocument();
@@ -44,22 +44,21 @@ describe("UX Components", () => {
 
     it("renders error UI when child component throws", () => {
       render(
-        <GlobalErrorBoundary>
+        <ErrorBoundary>
           <ErrorThrowingComponent shouldThrow={true} />
-        </GlobalErrorBoundary>,
+        </ErrorBoundary>,
       );
 
-      expect(screen.getByText("页面出现错误")).toBeInTheDocument();
-      expect(screen.getByText("刷新页面")).toBeInTheDocument();
+      expect(screen.getByText("页面访问出错")).toBeInTheDocument();
     });
 
     it("calls onError callback when error occurs", () => {
       const onError = jest.fn();
 
       render(
-        <GlobalErrorBoundary onError={onError}>
+        <ErrorBoundary onError={onError}>
           <ErrorThrowingComponent shouldThrow={true} />
-        </GlobalErrorBoundary>,
+        </ErrorBoundary>,
       );
 
       expect(onError).toHaveBeenCalledWith(
@@ -74,9 +73,9 @@ describe("UX Components", () => {
       const customFallback = <div>Custom error message</div>;
 
       render(
-        <GlobalErrorBoundary fallback={customFallback}>
+        <ErrorBoundary fallback={customFallback}>
           <ErrorThrowingComponent shouldThrow={true} />
-        </GlobalErrorBoundary>,
+        </ErrorBoundary>,
       );
 
       expect(screen.getByText("Custom error message")).toBeInTheDocument();

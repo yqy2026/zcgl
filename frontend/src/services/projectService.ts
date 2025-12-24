@@ -6,7 +6,7 @@
  * @updated 2025-11-10
  */
 
-import { enhancedApiClient } from './enhancedApiClient';
+import { enhancedApiClient } from '@/api/client';
 import { ApiErrorHandler } from '../utils/responseExtractor';
 import { API_CONFIG, API_ENDPOINTS } from '@/constants/api';
 import type {

@@ -35,7 +35,7 @@ import type { SystemDictionary } from '@/types/asset'
 // 导入服务实例
 import { baseDictionaryService } from './base'
 import { dictionaryManagerService } from './manager'
-import { enhancedApiClient } from '../enhancedApiClient'
+import { enhancedApiClient } from '@/api/client'
 import { ApiErrorHandler } from '../../utils/responseExtractor'
 import type { DictionaryConfig } from './config'
 

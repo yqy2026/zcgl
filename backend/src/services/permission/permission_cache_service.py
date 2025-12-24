@@ -338,7 +338,7 @@ def get_permission_cache_service() -> PermissionCacheService:
         # 从配置获取TTL
         ttl_seconds = 300  # 默认5分钟
         try:
-            from ...core.config_manager import get_config  # type: ignore
+            from ...core.config import get_config  # type: ignore
 
             ttl_seconds = get_config("permission_cache_ttl", 300)
         except Exception as e:

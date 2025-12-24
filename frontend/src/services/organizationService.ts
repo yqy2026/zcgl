@@ -20,7 +20,7 @@ import {
   OrganizationPath,
   OrganizationAdvancedSearch
 } from '../types/organization';
-import { enhancedApiClient } from './enhancedApiClient';
+import { enhancedApiClient } from '@/api/client';
 import { ApiErrorHandler } from '../utils/responseExtractor';
 
 // 树节点接口

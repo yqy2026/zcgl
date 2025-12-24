@@ -107,10 +107,10 @@ const AssetBatchActions: React.FC<AssetBatchActionsProps> = ({
   const handleBatchEdit = () => {
     form.validateFields().then((values) => {
       // 过滤空值
-      const updates = Object.entries(values).reduce(
-        (acc: Partial<AssetUpdateRequest>, [key, value]) => {
+      const updates = Object.entries(values).reduce<Partial<AssetUpdateRequest>>(
+        (acc, [key, value]) => {
           if (value !== undefined && value !== null && value !== "") {
-            acc[key as keyof AssetUpdateRequest] = value;
+            (acc as any)[key] = value;
           }
           return acc;
         },

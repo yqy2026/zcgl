@@ -4,7 +4,7 @@
  */
 
 import { ResponseExtractor } from "./utils/responseExtractor";
-import { handleError } from "./utils/errorHandler";
+import { handleApiError as handleError } from "./services";
 import type { StandardApiResponse, PaginatedApiResponse } from "./types/api-response";
 
 // 模拟axios响应

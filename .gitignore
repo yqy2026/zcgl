@@ -239,7 +239,9 @@ temp/
 
 # 测试快照和临时测试文件（在test-reports目录中）
 test-reports/
-reports/
+/reports/
+# Exception: Allow docs/reports/ for project documentation
+!docs/reports/
 
 # ----------
 # 环境变量和配置文件
@@ -479,7 +481,8 @@ sample_*
 # BMad-Method Framework
 .bmad-core/
 .claude/commands/BMad/
-docs/
+# docs/ - Removed: Allow documentation files to be committed
+# BMad-specific docs should use .bmad-core/docs/ instead
 
 # ============================================
 # Production Environment Protection
@@ -518,7 +521,9 @@ prod/
 .playwright-mcp/
 *test-report*.md
 test-reports/
-reports/
+/reports/
+# Exception: Allow docs/reports/ for project documentation
+!docs/reports/
 
 # 权限控制测试目录（临时测试文件）
 权限控制测试/

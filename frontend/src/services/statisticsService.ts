@@ -6,7 +6,7 @@
  * @updated 2025-11-10
  */
 
-import { enhancedApiClient } from './enhancedApiClient';
+import { enhancedApiClient } from '@/api/client';
 import { ApiErrorHandler } from '../utils/responseExtractor';
 import type { DashboardData, ChartDataItem } from "@/types/api";
 import type { Filters } from "@/types/common";

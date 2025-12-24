@@ -17,12 +17,7 @@ try:
     from .permission.rbac_service import RBACService
     __all__.append('RBACService')
 except Exception:
-    try:
-        # Fallback to legacy shim
-        from .rbac_service import RBACService  # type: ignore
-        __all__.append('RBACService')
-    except Exception:
-        pass
+    pass
 
 try:
     from .permission.permission_cache_service import get_permission_cache_service
@@ -35,11 +30,29 @@ try:
     from .core.auth_service import AuthService
     __all__.append('AuthService')
 except Exception:
-    try:
-        from .auth_service import AuthService  # type: ignore
-        __all__.append('AuthService')
-    except Exception:
-        pass
+    pass
+
+try:
+    from .core.security_service import SecurityService
+    __all__.append('SecurityService')
+except Exception:
+    pass
+
+try:
+    from .core.audit_service import EnhancedAuditLogger
+    __all__.append('EnhancedAuditLogger')
+except Exception:
+    pass
+
+try:
+    from .core.error_recovery_service import ErrorRecoveryEngine
+    __all__.append('ErrorRecoveryEngine')
+except Exception:
+    # Provide a minimal stub to ensure import success
+    class ErrorRecoveryEngine:  # type: ignore
+        def __init__(self, *args, **kwargs):
+            pass
+    __all__.append('ErrorRecoveryEngine')
 
 # Asset services
 try:
@@ -48,10 +61,22 @@ try:
 except Exception:
     pass
 
-# Document services  
 try:
-    from .document.unified_pdf_processor import UnifiedPDFProcessor
-    __all__.append('UnifiedPDFProcessor')
+    from .asset.asset_calculator import OccupancyRateCalculator
+    __all__.append('OccupancyRateCalculator')
+except Exception:
+    pass
+
+# Document services
+try:
+    from .document.pdf_import_service import PDFImportService
+    __all__.append('PDFImportService')
+except Exception:
+    pass
+
+try:
+    from .document.excel_export import ExcelExportService
+    __all__.append('ExcelExportService')
 except Exception:
     pass
 
@@ -65,65 +90,5 @@ except Exception:
 try:
     from .analytics.data_filter import DataFilterService
     __all__.append('DataFilterService')
-except Exception:
-    pass
-
-# Other services
-try:
-    from .core.security_service import SecurityService
-    __all__.append('SecurityService')
-except Exception:
-    pass
-
-# Document services (exports for unified and classic)
-try:
-    from .document.pdf_import_service import PDFImportService
-    __all__.append('PDFImportService')
-except Exception:
-    try:
-        from .pdf_import_service import PDFImportService  # type: ignore
-        __all__.append('PDFImportService')
-    except Exception:
-        pass
-
-try:
-    from .document.excel_export import ExcelExportService
-    __all__.append('ExcelExportService')
-except Exception:
-    try:
-        from .excel_export import ExcelExportService  # type: ignore
-        __all__.append('ExcelExportService')
-    except Exception:
-        pass
-
-# Core service exports
-try:
-    from .core.audit_service import EnhancedAuditLogger
-    __all__.append('EnhancedAuditLogger')
-except Exception:
-    try:
-        from .audit_service import EnhancedAuditLogger  # type: ignore
-        __all__.append('EnhancedAuditLogger')
-    except Exception:
-        pass
-
-try:
-    from .core.error_recovery_service import ErrorRecoveryEngine
-    __all__.append('ErrorRecoveryEngine')
-except Exception:
-    try:
-        from .error_recovery_service import ErrorRecoveryEngine  # type: ignore
-        __all__.append('ErrorRecoveryEngine')
-    except Exception:
-        # Provide a minimal stub to ensure import success
-        class ErrorRecoveryEngine:  # type: ignore
-            def __init__(self, *args, **kwargs):
-                pass
-        __all__.append('ErrorRecoveryEngine')
-
-# Asset additional exports
-try:
-    from .asset.asset_calculator import OccupancyRateCalculator
-    __all__.append('OccupancyRateCalculator')
 except Exception:
     pass

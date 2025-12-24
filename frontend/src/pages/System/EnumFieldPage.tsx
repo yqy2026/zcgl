@@ -3,7 +3,7 @@ import { message, Form } from 'antd'
 import { unifiedDictionaryService } from '../../services/dictionaryService'
 import type { EnumFieldType, EnumFieldValue, SystemDictionary, EnumFieldStatistics } from '../../services/dictionaryService'
 import EnumValuePreview from '../../components/Dictionary/EnumValuePreview'
-import { withErrorHandling, createErrorHandler } from '../../utils/errorHandler'
+import { withErrorHandling, createErrorHandler } from '../../services'
 
 // 错误类型定义
 interface ApiError extends Error {

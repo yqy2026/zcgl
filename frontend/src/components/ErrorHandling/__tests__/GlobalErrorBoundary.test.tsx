@@ -3,7 +3,7 @@ import { render, screen } from "../../../__tests__/utils/testUtils";
 import { fireEvent } from "@testing-library/react";
 // Jest imports - no explicit import needed for describe, it, expect
 
-import GlobalErrorBoundary from "../GlobalErrorBoundary";
+import { ErrorBoundary } from "../ErrorBoundary";
 
 // Mock console.error to avoid noise in tests
 const originalError = console.error;
@@ -23,12 +23,12 @@ const ThrowError: React.FC<{ shouldThrow?: boolean }> = ({ shouldThrow = false }
   return <div>No error</div>;
 };
 
-describe("GlobalErrorBoundary", () => {
+describe("ErrorBoundary", () => {
   it("renders children when there is no error", () => {
     render(
-      <GlobalErrorBoundary>
+      <ErrorBoundary>
         <div>Test content</div>
-      </GlobalErrorBoundary>,
+      </ErrorBoundary>,
     );
 
     expect(screen.getByText("Test content")).toBeInTheDocument();
@@ -36,52 +36,37 @@ describe("GlobalErrorBoundary", () => {
 
   it("catches and displays error when child component throws", () => {
     render(
-      <GlobalErrorBoundary>
+      <ErrorBoundary>
         <ThrowError shouldThrow={true} />
-      </GlobalErrorBoundary>,
+      </ErrorBoundary>,
     );
 
     // Check that error UI is displayed
-    expect(screen.getByText("页面出现错误")).toBeInTheDocument();
-    expect(screen.getByText(/抱歉，页面遇到了一些问题/)).toBeInTheDocument();
-  });
-
-  it("displays error ID for tracking", () => {
-    render(
-      <GlobalErrorBoundary>
-        <ThrowError shouldThrow={true} />
-      </GlobalErrorBoundary>,
-    );
-
-    // Check that error ID is displayed
-    expect(screen.getByText("错误ID:")).toBeInTheDocument();
-    expect(screen.getByText(/ERR_/)).toBeInTheDocument();
+    expect(screen.getByText("页面访问出错")).toBeInTheDocument();
   });
 
   it("provides recovery actions", async () => {
     render(
-      <GlobalErrorBoundary>
+      <ErrorBoundary>
         <ThrowError shouldThrow={true} />
-      </GlobalErrorBoundary>,
+      </ErrorBoundary>,
     );
 
-    // Check that recovery buttons are present - use text matching directly
+    // Check that recovery buttons are present
     const { findByText } = screen;
 
-    // Use text content directly as it's more reliable
-    expect(await findByText("刷新页面")).toBeInTheDocument();
+    expect(await findByText(/重试/)).toBeInTheDocument();
+    expect(await findByText("返回上一页")).toBeInTheDocument();
     expect(await findByText("返回首页")).toBeInTheDocument();
-    expect(await findByText("重试")).toBeInTheDocument();
-    expect(await findByText("报告问题")).toBeInTheDocument();
   });
 
   it("calls onError callback when error occurs", () => {
     const onError = jest.fn();
 
     render(
-      <GlobalErrorBoundary onError={onError}>
+      <ErrorBoundary onError={onError}>
         <ThrowError shouldThrow={true} />
-      </GlobalErrorBoundary>,
+      </ErrorBoundary>,
     );
 
     expect(onError).toHaveBeenCalledWith(
@@ -92,25 +77,25 @@ describe("GlobalErrorBoundary", () => {
     );
   });
 
-  it("resets error state when reset button is clicked", () => {
+  it("resets error state when retry button is clicked", () => {
     const { rerender } = render(
-      <GlobalErrorBoundary>
+      <ErrorBoundary>
         <ThrowError shouldThrow={true} />
-      </GlobalErrorBoundary>,
+      </ErrorBoundary>,
     );
 
     // Error UI should be displayed
-    expect(screen.getByText("页面出现错误")).toBeInTheDocument();
+    expect(screen.getByText("页面访问出错")).toBeInTheDocument();
 
-    // Click reset button
-    const resetButton = screen.getByRole("button", { name: /重试/ });
-    fireEvent.click(resetButton);
+    // Click retry button
+    const retryButton = screen.getByRole("button", { name: /重试/ });
+    fireEvent.click(retryButton);
 
     // Rerender with no error
     rerender(
-      <GlobalErrorBoundary>
+      <ErrorBoundary>
         <ThrowError shouldThrow={false} />
-      </GlobalErrorBoundary>,
+      </ErrorBoundary>,
     );
 
     // Should show normal content
@@ -123,69 +108,60 @@ describe("GlobalErrorBoundary", () => {
     process.env.NODE_ENV = "development";
 
     render(
-      <GlobalErrorBoundary>
+      <ErrorBoundary showErrorDetails={true}>
         <ThrowError shouldThrow={true} />
-      </GlobalErrorBoundary>,
+      </ErrorBoundary>,
     );
 
     // Check that development debug info is shown
-    expect(screen.getByText("开发调试信息")).toBeInTheDocument();
-    expect(screen.getByText("错误信息:")).toBeInTheDocument();
+    expect(screen.getByText("错误详情 (开发模式)")).toBeInTheDocument();
+    expect(screen.getByText("错误类型:")).toBeInTheDocument();
     expect(screen.getByText("Test error")).toBeInTheDocument();
 
     // Restore environment
     process.env.NODE_ENV = originalEnv;
   });
 
-  it("hides detailed error information in production mode", () => {
-    // Mock production environment
-    const originalEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = "production";
-
+  it("hides detailed error information when showErrorDetails is false", () => {
     render(
-      <GlobalErrorBoundary>
+      <ErrorBoundary showErrorDetails={false}>
         <ThrowError shouldThrow={true} />
-      </GlobalErrorBoundary>,
+      </ErrorBoundary>,
     );
 
     // Check that development debug info is not shown
-    expect(screen.queryByText("开发调试信息")).not.toBeInTheDocument();
-
-    // Restore environment
-    process.env.NODE_ENV = originalEnv;
+    expect(screen.queryByText("错误详情 (开发模式)")).not.toBeInTheDocument();
   });
 
   it("renders custom fallback when provided", () => {
     const customFallback = <div>Custom error fallback</div>;
 
     render(
-      <GlobalErrorBoundary fallback={customFallback}>
+      <ErrorBoundary fallback={customFallback}>
         <ThrowError shouldThrow={true} />
-      </GlobalErrorBoundary>,
+      </ErrorBoundary>,
     );
 
     expect(screen.getByText("Custom error fallback")).toBeInTheDocument();
-    expect(screen.queryByText("页面出现错误")).not.toBeInTheDocument();
+    expect(screen.queryByText("页面访问出错")).not.toBeInTheDocument();
   });
 
-  it("handles reload button click", () => {
-    // Mock window.location.reload
-    const mockReload = jest.fn();
-    Object.defineProperty(window, "location", {
-      value: { reload: mockReload },
-      writable: true,
-    });
+  it("stores error to window object in development mode", () => {
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "development";
 
     render(
-      <GlobalErrorBoundary>
+      <ErrorBoundary>
         <ThrowError shouldThrow={true} />
-      </GlobalErrorBoundary>,
+      </ErrorBoundary>,
     );
 
-    const reloadButton = screen.getByRole("button", { name: /刷新页面/ });
-    fireEvent.click(reloadButton);
+    // Check that error is stored in window object
+    expect((window as any).__lastError).toBeDefined();
+    expect((window as any).__lastError.error).toBe("Test error");
 
-    expect(mockReload).toHaveBeenCalled();
+    // Restore environment
+    process.env.NODE_ENV = originalEnv;
   });
 
   it("handles go home button click", () => {
@@ -197,31 +173,25 @@ describe("GlobalErrorBoundary", () => {
     });
 
     render(
-      <GlobalErrorBoundary>
+      <ErrorBoundary>
         <ThrowError shouldThrow={true} />
-      </GlobalErrorBoundary>,
+      </ErrorBoundary>,
     );
 
     const homeButton = screen.getByRole("button", { name: /返回首页/ });
     fireEvent.click(homeButton);
 
-    expect(mockLocation.href).toBe("/");
+    expect(mockLocation.href).toBe("/dashboard");
   });
 
-  it("handles report bug button click", () => {
-    // Mock window.open
-    const mockOpen = jest.fn();
-    window.open = mockOpen;
-
+  it("shows retry counter", () => {
     render(
-      <GlobalErrorBoundary>
+      <ErrorBoundary maxRetries={2}>
         <ThrowError shouldThrow={true} />
-      </GlobalErrorBoundary>,
+      </ErrorBoundary>,
     );
 
-    const reportButton = screen.getByRole("button", { name: /报告问题/ });
-    fireEvent.click(reportButton);
-
-    expect(mockOpen).toHaveBeenCalledWith(expect.stringContaining("mailto:support@example.com"));
+    // Should show retry counter (0/2)
+    expect(screen.getByText(/重试 \(0\/2\)/)).toBeInTheDocument();
   });
 });

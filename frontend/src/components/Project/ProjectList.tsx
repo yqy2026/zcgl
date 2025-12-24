@@ -36,7 +36,7 @@ import { projectService } from '@/services/projectService';
 import { ownershipService } from '@/services/ownershipService';
 import type { Project, ProjectListResponse, ProjectStatisticsResponse } from '@/types/project';
 import type { Ownership } from '@/types/ownership';
-import ProjectForm from './ProjectForm';
+import { ProjectForm } from '@/components/Forms';
 import ProjectDetail from './ProjectDetail';
 // import OwnershipSelect from '@/components/Ownership/OwnershipSelect';
 

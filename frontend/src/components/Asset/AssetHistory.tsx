@@ -181,7 +181,13 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
           <Col xs={24} sm={10} md={8}>
             <RangePicker
               value={dateRange}
-              onChange={(dates: [Dayjs, Dayjs] | null) => setDateRange(dates)}
+              onChange={(dates) => {
+                if (dates && dates[0] && dates[1]) {
+                  setDateRange([dates[0] as Dayjs, dates[1] as Dayjs]);
+                } else {
+                  setDateRange(null);
+                }
+              }}
               placeholder={["开始日期", "结束日期"]}
               style={{ width: "100%" }}
             />
@@ -200,7 +206,7 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
 
           <Col xs={24} sm={24} md={6} style={{ textAlign: "right" }}>
             <span style={{ color: "#8c8c8c", fontSize: "14px" }}>
-              共 {historyData?.total || 0} 条记录
+              共 {historyData?.data?.pagination?.total || 0} 条记录
             </span>
           </Col>
         </Row>
@@ -216,10 +222,10 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
         }
       >
         <Spin spinning={isLoading}>
-          {historyData?.data && historyData.data.length > 0 ? (
+          {historyData?.data?.items && historyData.data.items.length > 0 ? (
             <>
               <Timeline>
-                {historyData.data.map((history) => {
+                {historyData.data.items.map((history) => {
                   const config = getChangeTypeConfig(history.change_type);
 
                   return (
@@ -275,12 +281,12 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
               </Timeline>
 
               {/* 分页 */}
-              {historyData.total > limit && (
+              {(historyData?.data?.pagination?.total || 0) > limit && (
                 <div style={{ textAlign: "center", marginTop: 24 }}>
                   <Pagination
                     current={page}
                     pageSize={limit}
-                    total={historyData.total}
+                    total={historyData?.data?.pagination?.total || 0}
                     showSizeChanger
                     showQuickJumper
                     showTotal={(total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`}

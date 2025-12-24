@@ -1,4 +1,4 @@
-import { enhancedApiClient } from "./enhancedApiClient";
+import { enhancedApiClient } from "@/api/client";
 import { ResponseExtractor, ApiErrorHandler } from "../utils/responseExtractor";
 import { ASSET_API, STATISTICS_API, EXCEL_API } from "../constants/api";
 import type {

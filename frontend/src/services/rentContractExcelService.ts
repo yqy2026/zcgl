@@ -2,7 +2,7 @@
  * 租金合同Excel导入导出服务
  */
 
-import { enhancedApiClient } from './enhancedApiClient';
+import { enhancedApiClient } from '@/api/client';
 
 export interface ExcelImportResult {
   success: boolean;

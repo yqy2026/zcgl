@@ -1,6 +1,6 @@
 // import { api } from './index' // 已迁移到enhancedApiClient
 import { AUTH_API } from '@/constants/api'
-import { enhancedApiClient } from './enhancedApiClient'
+import { enhancedApiClient } from '@/api/client'
 import { ResponseExtractor, ApiErrorHandler } from '../utils/responseExtractor'
 import { AuthResponse } from '../types/api-response'
 import type { LoginCredentials, User } from '../types/auth'
@@ -18,6 +18,8 @@ export class AuthService {
   // 用户登录
   static async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
+      console.log('🚀 AuthService.login 开始登录流程', { username: credentials.username });
+
       // 使用增强型API客户端，自动处理响应提取和错误
       const result = await enhancedApiClient.post(AUTH_API.LOGIN, credentials, {
         retry: {
@@ -37,12 +39,17 @@ export class AuthService {
 
       const responseData = result.data;
 
+      console.log('📥 API响应数据:', { responseData });
+
       // 验证响应数据结构
       if (!responseData.user || (!responseData.tokens && !responseData.token)) {
+        console.error('❌ 登录响应数据格式不正确:', responseData);
         throw new Error('登录响应数据格式不正确');
       }
 
       const { user } = responseData;
+
+      console.log('✅ 用户数据解析成功:', { user });
 
       // 处理tokens（新格式）或token（旧格式）
       let accessToken: string;

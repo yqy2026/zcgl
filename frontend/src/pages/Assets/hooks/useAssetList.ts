@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { message } from "antd";
-import { apiRequest, API_ENDPOINTS, ApiError, API_BASE_URL } from "../../../config/api";
+import { apiRequest, API_ENDPOINTS, ApiError, API_BASE_URL } from "@/api/config";
 
 // API返回的资产数据格式
 interface AssetApiResponse {

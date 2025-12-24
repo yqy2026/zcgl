@@ -79,12 +79,13 @@ class RouteRegistry:
 
         Args:
             app: FastAPI应用实例
-            version: API版本，None表示非版本化路由
+            version: API版本，默认使用版本化路由
         """
-        # 处理非版本化路由
+        # 确保使用版本化路由
         if version is None:
+            version = "v1"  # 默认使用v1版本
             if version not in self.versioned_routers:
-                logger.warning("没有注册的非版本化路由")
+                logger.warning(f"版本 {version} 没有注册的路由")
                 return
         else:
             if version not in self.versioned_routers:
@@ -119,14 +120,9 @@ class RouteRegistry:
             if deprecated:
                 logger.warning(f"路由 {prefix} 已标记为废弃")
 
-        if version is None:
-            logger.info(
-                f"完成非版本化路由注册，共 {len(self.versioned_routers[version])} 个路由"
-            )
-        else:
-            logger.info(
-                f"完成版本 {version} 的路由注册，共 {len(self.versioned_routers[version])} 个路由"
-            )
+        logger.info(
+            f"完成版本 {version} 的路由注册，共 {len(self.versioned_routers[version])} 个路由"
+        )
 
     def include_all(self, app: FastAPI, version: str | None = None) -> None:
         """与 include_all_routers 等价的便捷别名，便于主入口统一调用"""
@@ -223,9 +219,9 @@ def register_api_routes():
         route_registry.register_router(
             router=v1_router, prefix="/api/v1", tags=["API"], version="v1"
         )
-        logger.info("✅ API 主路由注册成功（版本化）")
+        logger.info("API 主路由注册成功（版本化）")
     except Exception as e:
-        logger.error(f"❌ API 主路由注册失败: {e}")
+        logger.error(f"API 主路由注册失败: {e}")
         raise
 
     # 注册PDF导入路由（独立注册）- 添加异常处理
@@ -238,9 +234,9 @@ def register_api_routes():
             tags=["PDF智能导入"],
             version=None,
         )
-        logger.info("✅ PDF导入路由注册成功（非版本化）")
+        logger.info("PDF导入路由注册成功（版本化）")
     except Exception as e:
-        logger.warning(f"⚠️ PDF导入路由注册失败（将跳过）: {e}")
+        logger.warning(f"PDF导入路由注册失败（将跳过）: {e}")
         logger.info("系统将继续运行，但PDF导入功能可能不可用")
 
         # 添加基础的PDF路由作为备用
@@ -277,9 +273,9 @@ def register_api_routes():
             tags=["PDF智能导入"],
             version="v1",
         )
-        logger.info("✅ PDF导入备用路由注册成功")
+        logger.info("PDF导入备用路由注册成功")
 
-    logger.info("🎉 完成API路由注册")
+    logger.info("完成API路由注册")
 
 
 def setup_app_routing(app: FastAPI) -> None:

@@ -26,7 +26,7 @@ except ImportError:
 from fastapi import Depends, HTTPException, Request, UploadFile, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from ..core.config_manager import get_config
+from ..core.config import get_config
 from ..core.exception_handler import BusinessValidationError
 from ..core.logging_security import security_auditor
 

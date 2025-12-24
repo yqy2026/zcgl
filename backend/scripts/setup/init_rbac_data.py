@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from src.database import get_db, engine
 from src.models.rbac import Role, Permission, UserRoleAssignment
 from src.models.auth import User
-from src.services.rbac_service import RBACService
+from src.services.permission.rbac_service import RBACService
 from datetime import datetime, timedelta
 import uuid
 

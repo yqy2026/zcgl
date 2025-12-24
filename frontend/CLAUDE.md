@@ -16,6 +16,23 @@
 - 📦 新增：路由常量化 - 统一路由管理、避免硬编码
 - 🔧 优化：性能监控 - FCP、LCP、FID、CLS等核心Web指标监控
 
+### 2025-12-24 - 目录结构重组 (Phase 4 前端部分)
+- 📁 新增：`src/api/` 目录 - 集中化API层统一管理
+  - `api/client.ts` - EnhancedApiClient主客户端
+  - `api/config.ts` - API配置常量
+  - `api/index.ts` - 清洁导出接口
+- 📁 新增：`src/components/Forms/` 目录 - 统一表单组件管理
+  - Forms/AssetForm.tsx - 资产表单（从Asset/迁移）
+  - Forms/AssetFormHelp.tsx - 资产表单帮助（从Asset/迁移）
+  - Forms/OwnershipForm.tsx - 权属方表单（从Ownership/迁移）
+  - Forms/ProjectForm.tsx - 项目表单（从Project/迁移）
+  - Forms/RentContractForm.tsx - 租赁合同表单（从Rental/迁移）
+  - Forms/index.ts - 统一导出接口
+- 🔄 更新：所有service文件导入路径 - 从`./enhancedApiClient`迁移到`@/api/client`
+- 🧪 修复：jest.setup.js → jest.setup.ts - TypeScript支持
+- 📦 保持：向后兼容性 - 通过services/index.ts重新导出
+- ✅ 验证：TypeScript类型检查、测试运行正常
+
 ### 2025-10-23 10:45:44 - 模块架构初始化
 - ✨ 新增：模块导航面包屑
 - ✨ 新增：组件库架构文档
@@ -129,8 +146,9 @@ npm run preview                     # 本地预览
 | 组件类别 | 数量 | 核心组件 | 功能描述 |
 |----------|------|----------|----------|
 | **Router路由管理** | 7 | `DynamicRouteLoader`, `RouteBuilder`, `RoutePerformanceMonitor` | 动态路由加载、性能监控、权限控制 |
-| **Asset资产管理** | 15 | `AssetForm`, `AssetList`, `AssetDetail` | 58字段表单、列表展示、详情页面 |
+| **Asset资产管理** | 13 | `AssetList`, `AssetDetail`, `AssetTable` | 列表展示、详情页面、数据表格 |
 | **Layout布局** | 8 | `AppLayout`, `AppHeader`, `ResponsiveLayout` | 响应式布局、导航、面包屑 |
+| **Forms表单** | 5 | `AssetForm`, `OwnershipForm`, `ProjectForm`, `RentContractForm` | 统一的表单组件管理（2025-12-24新增目录） |
 | **Charts图表** | 6 | `OccupancyRateChart`, `AssetDistributionChart` | 数据可视化、统计图表 |
 | **ErrorHandling错误处理** | 5 | `ErrorBoundary`, `ErrorPage`, `UXProvider` | 全局错误处理、用户反馈 |
 | **Loading加载状态** | 3 | `LoadingSpinner`, `SkeletonLoader` | 加载动画、骨架屏 |
@@ -235,6 +253,45 @@ interface AssetDistributionChartProps {
   data: AssetDistributionData;
   chartType: 'pie' | 'bar' | 'area';
 }
+```
+
+**Forms表单组件** (2025-12-24 统一到 `src/components/Forms/`)
+```typescript
+// AssetForm - 资产表单（58字段）
+interface AssetFormProps {
+  initialValues?: Partial<Asset>;
+  onSubmit: (values: AssetFormData) => void;
+  mode: 'create' | 'edit';
+}
+
+// OwnershipForm - 权属方表单
+interface OwnershipFormProps {
+  assetId?: string;
+  onSubmit: (values: OwnershipFormData) => void;
+}
+
+// ProjectForm - 项目表单
+interface ProjectFormProps {
+  onSubmit: (values: ProjectFormData) => void;
+}
+
+// RentContractForm - 租赁合同表单
+interface RentContractFormProps {
+  assetId?: string;
+  onSubmit: (values: RentContractFormData) => void;
+}
+```
+
+**导入表单组件的新方式**
+```typescript
+// 推荐使用：从Forms目录导入
+import { AssetForm } from '@/components/Forms';
+import { OwnershipForm } from '@/components/Forms';
+import { ProjectForm } from '@/components/Forms';
+import { RentContractForm } from '@/components/Forms';
+
+// 向后兼容：仍然支持从原目录导入
+import { AssetForm } from '@/components/Asset'; // 通过index.ts重新导出
 ```
 
 ## 关键依赖与配置
@@ -671,6 +728,23 @@ A: 在main.tsx中的ConfigProvider中配置theme对象，支持token和component
 ### Q: 如何处理PDF文件上传？
 A: 使用axios上传文件，配合进度显示组件，后端使用统一的PDF导入API。
 
+### Q: 如何导入API客户端和表单组件？ (2025-12-24 更新)
+A: 目录重组后推荐使用新的导入路径：
+```typescript
+// API客户端 - 推荐从api目录导入
+import { enhancedApiClient } from '@/api/client';
+import { API_CONFIG } from '@/api/config';
+import { enhancedApiClient, API_CONFIG } from '@/api'; // 统一导出
+
+// 表单组件 - 推荐从Forms目录导入
+import { AssetForm } from '@/components/Forms';
+import { OwnershipForm, ProjectForm, RentContractForm } from '@/components/Forms';
+
+// 向后兼容：旧导入路径仍然可用
+import { enhancedApiClient } from '@/services'; // 重新导出
+import { AssetForm } from '@/components/Asset'; // 重新导出
+```
+
 ## 相关文件清单
 
 ### 核心文件
@@ -707,8 +781,12 @@ A: 使用axios上传文件，配合进度显示组件，后端使用统一的PDF
 - `src/pages/System/UserManagementPage.tsx` - 用户管理页面
 
 ### 核心组件
-- `src/components/Asset/AssetForm.tsx` - 资产表单组件
 - `src/components/Asset/AssetList.tsx` - 资产列表组件
+- `src/components/Asset/AssetDetail.tsx` - 资产详情组件
+- `src/components/Forms/AssetForm.tsx` - 资产表单组件（2025-12-24迁移到Forms/）
+- `src/components/Forms/OwnershipForm.tsx` - 权属方表单（2025-12-24迁移到Forms/）
+- `src/components/Forms/ProjectForm.tsx` - 项目表单（2025-12-24迁移到Forms/）
+- `src/components/Forms/RentContractForm.tsx` - 租赁合同表单（2025-12-24迁移到Forms/）
 - `src/components/Layout/AppLayout.tsx` - 应用布局组件
 - `src/components/Charts/OccupancyRateChart.tsx` - 出租率图表
 - `src/components/ErrorHandling/ErrorBoundary.tsx` - 错误边界组件
@@ -718,10 +796,27 @@ A: 使用axios上传文件，配合进度显示组件，后端使用统一的PDF
 - `src/hooks/useAssets.ts` - 资产相关钩子
 - `src/hooks/useErrorHandler.ts` - 错误处理钩子
 
-### API服务
-- `src/services/index.ts` - API服务配置
+### API服务 (2025-12-24 重组)
+- `src/api/client.ts` - EnhancedApiClient主客户端
+- `src/api/config.ts` - API配置常量和端点
+- `src/api/index.ts` - API模块统一导出
+- `src/services/index.ts` - 服务配置（重新导出API）
 - `src/services/assetService.ts` - 资产API服务
-- `src/services/config.ts` - API配置
+- `src/services/authService.ts` - 认证API服务
+
+**导入API客户端的新方式**
+```typescript
+// 推荐使用：从api目录导入
+import { enhancedApiClient } from '@/api/client';
+import { EnhancedApiClient } from '@/api/client';
+import { API_CONFIG, ERROR_CODES } from '@/api/config';
+
+// 或使用统一导出
+import { enhancedApiClient, API_CONFIG } from '@/api';
+
+// 向后兼容：仍然支持从services导入
+import { enhancedApiClient } from '@/services'; // 通过index.ts重新导出
+```
 
 ### 类型定义
 - `src/types/api.ts` - API响应类型
@@ -747,4 +842,4 @@ A: 使用axios上传文件，配合进度显示组件，后端使用统一的PDF
 
 **模块状态**: 🟢 生产就绪，组件丰富，用户体验良好。
 
-**最后更新**: 2025-10-23 20:15:00 (前端架构全面升级)
+**最后更新**: 2025-12-24 (目录结构重组 - Phase 4 前端部分完成)

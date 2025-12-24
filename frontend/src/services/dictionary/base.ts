@@ -6,8 +6,8 @@
  * @updated 2025-11-10
  */
 
-import { enhancedApiClient } from '../enhancedApiClient';
-import { ApiErrorHandler } from '../../utils/responseExtractor';
+import { enhancedApiClient } from '@/api/client';
+// Note: ApiErrorHandler removed - using enhancedApiClient's error handling instead
 import {
   DictionaryConfig,
   DictionaryOption,
