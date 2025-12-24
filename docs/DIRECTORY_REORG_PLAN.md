@@ -164,34 +164,16 @@ backend/src/
 
 ## 当前状态
 
-✅ **已完成** (Phase 1-3):
+✅ **已完成** (Phase 1-4):
 - Phase 1: 快速清理
 - Phase 2: 前端重构（标记废弃组件）
+- Phase 2.3: 统一错误处理 (3→1) - 2025-12-24
 - Phase 3: 后端重构（删除冗余文件）
-
-✅ **本次会话完成** (Phase 4 前端部分):
-- 创建 `frontend/src/api/` 目录
-  - `api/client.ts` - EnhancedApiClient (从 services/enhancedApiClient.ts 移动)
-  - `api/config.ts` - API配置 (从 config/api.ts 移动)
-  - `api/index.ts` - 清洁导出
-- 创建 `frontend/src/components/Forms/` 目录
-  - 移动 5 个表单组件 (AssetForm, AssetFormHelp, OwnershipForm, ProjectForm, RentContractForm)
-  - 创建 Forms/index.ts 统一导出
-- 更新 20+ service 文件导入路径 (全部改用 `@/api/client`)
-- 修复 jest.setup.js → jest.setup.ts
-- 更新所有相关导入路径
-
-✅ **本次会话完成** (Phase 4.3-4.4):
-- Phase 4.3: 前端 styles/ 目录标准化
-  - 创建 `styles/` 目录 (global.css, variables.css, index.css)
-  - 转换 LoginPage.css 和 PDFImportPage.css 为 .module.css
-  - 更新 main.tsx 和 App.tsx 导入
-  - 删除冗余的 App.css 和 index.css
-- Phase 4.4: 后端目录扁平化
-  - 删除 5 个 services/ 根目录的 shim 文件
-  - 更新 API、测试、脚本文件的导入路径
-  - 清理 services/__init__.py 兼容层
-  - 修复 ProjectList.tsx 的 ProjectForm 导入
+- Phase 3.4: 整合配置系统 (4→1) - 2025-12-24
+- Phase 4: 目录重组（全部完成）
+  - 4.1-4.2: API 和 Forms 目录重组
+  - 4.3: 前端 styles/ 目录标准化
+  - 4.4: 后端目录扁平化
 
 ⏭️ **后续阶段**:
 - Phase 5.3: 文档更新 (进行中)
@@ -254,6 +236,41 @@ backend/src/
 - ✅ 所有旧导入路径已清除
 - ✅ 测试可以运行 (290 skipped, 2 passed)
 - ✅ 向后兼容性保持 (re-exports)
+
+---
+
+### Phase 2.3: 统一错误处理 - 已完成 ✅
+
+**Git Commit:** `6dbdbe7` - refactor: Phase 2.3 - Merge error handlers (3→1)
+
+**完成内容:**
+
+| 操作 | 详情 | 状态 |
+|------|------|------|
+| 删除 `services/unifiedErrorHandler.ts` | 已废弃 | ✅ |
+| 删除 `utils/errorHandler.ts` | 合并到 services/errorHandler.ts | ✅ |
+| 合并唯一功能 | withErrorHandling, createErrorHandler | ✅ |
+| 更新导入路径 | EnumFieldPage, DictionaryPage, test | ✅ |
+| 修复 config 导入 | cacheManager, errorHandler, dictionary | ✅ |
+
+### Phase 3.4: 整合配置系统 - 已完成 ✅
+
+**Git Commit:** `5227a78` - refactor: Phase 3.4 - Merge config files (4→1)
+
+**完成内容:**
+
+| 操作 | 详情 | 状态 |
+|------|------|------|
+| 删除 `core/config_manager.py` | 合并到 core/config.py | ✅ |
+| 删除 `core/unified_config.py` | 合并到 core/config.py | ✅ |
+| 删除 `core/enhanced_config.py` | 合并到 core/config.py | ✅ |
+| 添加兼容函数 | get_config(), initialize_config() | ✅ |
+| 更新导入路径 | 16个文件 | ✅ |
+
+**代码减少统计:**
+- 删除文件: 5个
+- 代码行数减少: 1,977行
+- 配置系统统一: 1个 Pydantic Settings类
 
 ---
 
