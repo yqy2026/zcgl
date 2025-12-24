@@ -2,7 +2,7 @@ import React from "react";
 // Jest imports - no explicit import needed for describe, it, expect
 import { render, screen } from "../../../__tests__/utils/testUtils";
 
-import AssetForm from "../AssetForm";
+import { AssetForm } from "../../Forms";
 
 // Mock localStorage
 const localStorageMock = {

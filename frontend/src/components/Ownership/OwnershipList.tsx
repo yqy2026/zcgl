@@ -34,7 +34,7 @@ import type { ColumnsType } from 'antd/es/table';
 
 import { ownershipService } from '@/services/ownershipService';
 import type { Ownership, OwnershipListResponse, OwnershipStatisticsResponse } from '@/types/ownership';
-import OwnershipForm from './OwnershipForm';
+import { OwnershipForm } from '../Forms';
 import OwnershipDetail from './OwnershipDetail';
 
 const { Search } = Input;

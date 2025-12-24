@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter } from "react-router-dom";
 // Jest imports - no explicit import needed for describe, it, expect
 
-import AssetForm from "../AssetForm";
+import { AssetForm } from "../../Forms";
 import { assetService } from "@/services/assetService";
 import type { Asset } from "@/types/asset";
 import { OwnershipStatus, PropertyNature, UsageStatus } from "@/types/asset";

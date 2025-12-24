@@ -24,7 +24,7 @@ import {
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 
-import RentContractForm from '../../components/Rental/RentContractForm';
+import { RentContractForm } from '../../components/Forms';
 import { RentContractCreate } from '../../types/rentContract';
 import { rentContractService } from '../../services/rentContractService';
 import { useFormat } from '../../utils/format';
