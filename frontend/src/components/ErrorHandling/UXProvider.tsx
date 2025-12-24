@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react'
 import { ConfigProvider, App } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
-import { GlobalErrorBoundary } from '@/components/ErrorHandling'
+import { ErrorBoundary } from '@/components/ErrorHandling'
 import { uxManager } from '@/utils/uxManager'
 
 interface UXProviderProps {
@@ -90,12 +90,12 @@ const UXProvider: React.FC<UXProviderProps> = ({
       theme={themeConfig}
     >
       <App>
-        <GlobalErrorBoundary
+        <ErrorBoundary
           fallback={config.errorBoundary?.fallback}
           onError={config.errorBoundary?.onError}
         >
           {children}
-        </GlobalErrorBoundary>
+        </ErrorBoundary>
       </App>
     </ConfigProvider>
   )

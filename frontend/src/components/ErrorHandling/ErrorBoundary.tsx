@@ -1,152 +1,181 @@
 /**
- * 通用错误边界组件
- * 捕获React组件树中的错误并显示友好的错误页面
+ * 统一错误边界组件
+ * 合并了 ErrorBoundary 和 RouterErrorBoundary 的所有功能
+ * 支持：重试机制、错误类型检测、路由导航、错误上报
  */
 
-import React, { Component, ReactNode, ErrorInfo } from 'react'
-import { Result, Button } from 'antd'
+import React, { Component, ErrorInfo, ReactNode, useCallback } from 'react'
+import { Result, Button, Typography, Alert, Space } from 'antd'
+import { useNavigate } from 'react-router-dom'
 
-interface Props {
-  children: ReactNode
-  fallback?: ReactNode
-  onError?: (error: Error, errorInfo: ErrorInfo) => void
-  showErrorDetails?: boolean
-}
+const { Title, Paragraph, Text } = Typography
 
-interface State {
+// ===== 类型定义 =====
+
+interface ErrorBoundaryState {
   hasError: boolean
   error: Error | null
   errorInfo: ErrorInfo | null
+  retryCount: number
 }
 
-export class ErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
+interface ErrorBoundaryProps {
+  children: ReactNode
+  fallback?: ReactNode
+  onError?: (error: Error, errorInfo: ErrorInfo) => void
+  maxRetries?: number
+  showErrorDetails?: boolean
+}
+
+interface ErrorReport {
+  error: string
+  stack: string
+  componentStack: string
+  timestamp: string
+  userAgent: string
+  url: string
+  retryCount: number
+}
+
+interface RouterErrorHandlerProps {
+  error: Error | null
+  errorInfo: ErrorInfo | null
+  onRetry: () => void
+  onGoHome: () => void
+  canRetry: boolean
+  retryCount: number
+  maxRetries: number
+  showErrorDetails?: boolean
+}
+
+// ===== 错误边界组件 =====
+
+class ErrorBoundaryComponent extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  private maxRetries: number
+
+  constructor(props: ErrorBoundaryProps) {
     super(props)
+
     this.state = {
       hasError: false,
       error: null,
       errorInfo: null,
+      retryCount: 0
     }
+
+    this.maxRetries = props.maxRetries || 3
   }
 
-  static getDerivedStateFromError(error: Error): Partial<State> {
+  static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
     return {
       hasError: true,
-      error,
+      error
     }
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     this.setState({
       error,
-      errorInfo,
+      errorInfo
     })
 
-    // 调用错误处理回调
+    // 报告错误
+    this.reportError(error, errorInfo)
+
+    // 调用错误回调
     if (this.props.onError) {
       this.props.onError(error, errorInfo)
     }
 
-    // 开发环境下打印错误详情
+    console.error('错误边界捕获到错误:', error, errorInfo)
+  }
+
+  private reportError = (error: Error, errorInfo: ErrorInfo) => {
+    const errorReport: ErrorReport = {
+      error: error.message,
+      stack: error.stack || '',
+      componentStack: errorInfo.componentStack,
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+      url: window.location.href,
+      retryCount: this.state.retryCount
+    }
+
+    // 存储错误到 window 对象用于调试
     if (process.env.NODE_ENV === 'development') {
-      console.error('ErrorBoundary caught an error:', error, errorInfo)
+      ;(window as any).__lastError = errorReport
     }
 
-    // 生产环境下上报错误
-    if (process.env.NODE_ENV === 'production') {
-      this.reportError(error, errorInfo)
-    }
+    // 发送错误报告到监控服务
+    this.sendErrorReport(errorReport)
   }
 
-  /**
-   * 上报错误到监控系统
-   */
-  private reportError(error: Error, errorInfo: ErrorInfo): void {
+  private sendErrorReport = async (errorReport: ErrorReport) => {
     try {
-      const errorData = {
-        message: error.message,
-        stack: error.stack,
-        componentStack: errorInfo.componentStack,
-        timestamp: new Date().toISOString(),
-        userAgent: navigator.userAgent,
-        url: window.location.href,
+      if (process.env.NODE_ENV === 'production') {
+        // 发送到错误监控服务
+        await fetch('/api/errors/report', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(errorReport)
+        })
+      } else {
+        // 开发环境打印到控制台
+        console.group('错误报告')
+        console.error('错误:', errorReport)
+        console.groupEnd()
       }
-
-      // 这里可以集成错误监控服务，如Sentry、LogRocket等
-      // errorMonitoringService.captureException(error, { extra: errorData })
-
-      console.warn('Error reported:', errorData)
-    } catch (reportError) {
-      console.error('Failed to report error:', reportError)
+    } catch (reportingError) {
+      console.warn('错误报告发送失败:', reportingError)
     }
   }
 
-  /**
-   * 重置错误状态
-   */
-  private handleReset = (): void => {
+  private handleRetry = () => {
+    if (this.state.retryCount < this.maxRetries) {
+      this.setState(prevState => ({
+        hasError: false,
+        error: null,
+        errorInfo: null,
+        retryCount: prevState.retryCount + 1
+      }))
+    }
+  }
+
+  private handleGoHome = () => {
+    // 重置状态并导航到首页
     this.setState({
       hasError: false,
       error: null,
       errorInfo: null,
+      retryCount: 0
     })
+    window.location.href = '/dashboard'
   }
 
-  /**
-   * 重新加载页面
-   */
-  private handleReload = (): void => {
-    window.location.reload()
+  private canRetry = () => {
+    return this.state.retryCount < this.maxRetries
   }
 
-  render(): ReactNode {
+  render() {
     if (this.state.hasError) {
-      // 如果有自定义fallback，使用它
+      // 如果提供了自定义fallback，使用它
       if (this.props.fallback) {
         return this.props.fallback
       }
 
-      // 默认错误页面
       return (
-        <div style={{ padding: '50px', textAlign: 'center' }}>
-          <Result
-            status="500"
-            title="500"
-            subTitle="抱歉，页面出现了错误。"
-            extra={[
-              <Button type="primary" key="retry" onClick={this.handleReset}>
-                重试
-              </Button>,
-              <Button key="reload" onClick={this.handleReload}>
-                刷新页面
-              </Button>,
-            ]}
-          >
-
-            {/* 开发环境显示错误详情 */}
-            {process.env.NODE_ENV === 'development' && this.props.showErrorDetails && (
-              <details style={{
-                marginTop: '20px',
-                textAlign: 'left',
-                whiteSpace: 'pre-wrap',
-                background: '#f5f5f5',
-                padding: '16px',
-                borderRadius: '4px',
-                border: '1px solid #d9d9d9'
-              }}>
-                <summary>错误详情（仅开发环境可见）</summary>
-                <h4>错误信息:</h4>
-                <p>{this.state.error?.toString()}</p>
-
-                <h4>组件堆栈:</h4>
-                <pre>{this.state.errorInfo?.componentStack}</pre>
-
-                <h4>错误堆栈:</h4>
-                <pre>{this.state.error?.stack}</pre>
-              </details>
-            )}
-          </Result>
-        </div>
+        <ErrorHandler
+          error={this.state.error}
+          errorInfo={this.state.errorInfo}
+          onRetry={this.handleRetry}
+          onGoHome={this.handleGoHome}
+          canRetry={this.canRetry()}
+          retryCount={this.state.retryCount}
+          maxRetries={this.maxRetries}
+          showErrorDetails={this.props.showErrorDetails}
+        />
       )
     }
 
@@ -154,7 +183,159 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 }
 
-// 便捷的错误边界Hook
+// ===== 错误处理UI组件 =====
+
+const ErrorHandler: React.FC<RouterErrorHandlerProps> = ({
+  error,
+  errorInfo,
+  onRetry,
+  onGoHome,
+  canRetry,
+  retryCount,
+  maxRetries,
+  showErrorDetails = process.env.NODE_ENV === 'development'
+}) => {
+  const navigate = useNavigate()
+
+  const handleGoBack = () => {
+    navigate(-1)
+  }
+
+  const getErrorType = (error: Error | null) => {
+    if (!error) return 'unknown'
+
+    if (error.name === 'ChunkLoadError') return 'chunk_load'
+    if (error.name === 'TypeError') return 'type_error'
+    if (error.name === 'NetworkError') return 'network'
+    if (error.message.includes('Loading chunk')) return 'chunk_load'
+
+    return 'runtime'
+  }
+
+  const errorType = getErrorType(error)
+  const isChunkLoadError = errorType === 'chunk_load'
+
+  const getErrorTitle = () => {
+    if (isChunkLoadError) return '页面加载失败'
+    if (errorType === 'network') return '网络连接错误'
+    if (errorType === 'type_error') return '页面渲染错误'
+    return '页面访问出错'
+  }
+
+  const getErrorDescription = () => {
+    if (isChunkLoadError) {
+      return '页面资源加载失败，可能是网络问题或应用版本更新。请尝试刷新页面。'
+    }
+    if (errorType === 'network') {
+      return '网络连接异常，请检查网络连接后重试。'
+    }
+    if (errorType === 'type_error') {
+      return '页面渲染时发生错误，这可能是临时的技术问题。'
+    }
+    return '访问页面时遇到了意外错误，我们正在努力修复。'
+  }
+
+  return (
+    <div style={{
+      padding: '50px',
+      maxWidth: '800px',
+      margin: '0 auto',
+      minHeight: '60vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
+    }}>
+      <Result
+        status="error"
+        title={getErrorTitle()}
+        subTitle={getErrorDescription()}
+        extra={[
+          <Space key="actions" direction="vertical" size="middle">
+            <Space>
+              {canRetry && (
+                <Button type="primary" onClick={onRetry}>
+                  重试 ({retryCount}/{maxRetries})
+                </Button>
+              )}
+              <Button onClick={handleGoBack}>
+                返回上一页
+              </Button>
+              <Button onClick={onGoHome}>
+                返回首页
+              </Button>
+              {isChunkLoadError && (
+                <Button onClick={() => window.location.reload()}>
+                  刷新页面
+                </Button>
+              )}
+            </Space>
+
+            {isChunkLoadError && (
+              <Alert
+                message="提示"
+                description="如果您经常遇到此错误，请尝试清除浏览器缓存或联系技术支持。"
+                type="info"
+                showIcon
+              />
+            )}
+          </Space>
+        ]}
+      />
+
+      {showErrorDetails && error && (
+        <div style={{
+          marginTop: '30px',
+          padding: '20px',
+          background: '#f5f5f5',
+          borderRadius: '6px',
+          fontSize: '12px',
+          fontFamily: 'monospace'
+        }}>
+          <Title level={5}>错误详情 (开发模式)</Title>
+          <Paragraph>
+            <Text strong>错误类型:</Text> {errorType}<br/>
+            <Text strong>错误消息:</Text> {error.message}<br/>
+            <Text strong>重试次数:</Text> {retryCount}/{maxRetries}
+          </Paragraph>
+
+          {error.stack && (
+            <details style={{ marginTop: '10px' }}>
+              <summary>错误堆栈</summary>
+              <pre style={{
+                marginTop: '10px',
+                fontSize: '11px',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word'
+              }}>
+                {error.stack}
+              </pre>
+            </details>
+          )}
+
+          {errorInfo?.componentStack && (
+            <details style={{ marginTop: '10px' }}>
+              <summary>组件堆栈</summary>
+              <pre style={{
+                marginTop: '10px',
+                fontSize: '11px',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word'
+              }}>
+                {errorInfo.componentStack}
+              </pre>
+            </details>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ===== Hooks =====
+
+/**
+ * 错误处理 Hook - 用于在组件内部处理错误
+ */
 export const useErrorHandler = () => {
   const [error, setError] = React.useState<Error | null>(null)
 
@@ -166,9 +347,18 @@ export const useErrorHandler = () => {
     console.error('Error captured by useErrorHandler:', error)
     setError(error)
 
+    // 存储错误到 window 对象用于调试
+    if (process.env.NODE_ENV === 'development') {
+      ;(window as any).__lastError = {
+        message: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+      }
+    }
+
     // 生产环境下上报错误
     if (process.env.NODE_ENV === 'production') {
-      // errorMonitoringService.captureException(error)
+      // TODO: 集成错误监控服务
     }
   }, [])
 
@@ -178,6 +368,59 @@ export const useErrorHandler = () => {
     resetError,
     hasError: !!error,
   }
+}
+
+/**
+ * 路由错误处理 Hook - 用于路由级别的错误处理
+ */
+export const useRouterErrorBoundary = () => {
+  const navigate = useNavigate()
+
+  const handleError = useCallback((error: Error, fallbackPath: string = '/dashboard') => {
+    console.error('路由错误:', error)
+
+    // 根据错误类型决定处理方式
+    if (error.name === 'ChunkLoadError') {
+      // 资源加载错误，刷新页面
+      window.location.reload()
+    } else {
+      // 其他错误，导航到安全页面
+      navigate(fallbackPath)
+    }
+  }, [navigate])
+
+  return { handleError }
+}
+
+// ===== 导出 =====
+
+export const ErrorBoundary = ErrorBoundaryComponent
+
+// 预定义的专用错误边界
+export const AssetErrorBoundary: React.FC<{ children: ReactNode }> = ({ children }) => {
+  return (
+    <ErrorBoundary
+      maxRetries={2}
+      onError={(error) => {
+        console.error('资产管理模块错误:', error)
+      }}
+    >
+      {children}
+    </ErrorBoundary>
+  )
+}
+
+export const SystemErrorBoundary: React.FC<{ children: ReactNode }> = ({ children }) => {
+  return (
+    <ErrorBoundary
+      maxRetries={1}
+      onError={(error) => {
+        console.error('系统管理模块错误:', error)
+      }}
+    >
+      {children}
+    </ErrorBoundary>
+  )
 }
 
 export default ErrorBoundary
