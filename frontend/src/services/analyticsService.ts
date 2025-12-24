@@ -1,4 +1,4 @@
-import { enhancedApiClient } from './enhancedApiClient'
+import { enhancedApiClient } from '@/api/client'
 import { STATISTICS_API } from '@/constants/api'
 import type { AssetSearchParams } from '../types/asset'
 import type { AnalyticsData, AnalyticsResponse } from '../types/analytics'

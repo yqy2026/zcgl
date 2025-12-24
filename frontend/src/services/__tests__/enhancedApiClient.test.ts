@@ -3,7 +3,7 @@
  * 测试增强型API客户端的核心功能
  */
 
-import { EnhancedApiClient } from '../enhancedApiClient';
+import { EnhancedApiClient } from '@/api/client';
 import { AxiosResponse } from 'axios';
 
 // Mock axios

@@ -3,7 +3,7 @@
  * 提供API可用性检查和健康监控功能
  */
 
-import { enhancedApiClient } from './enhancedApiClient'
+import { enhancedApiClient } from '@/api/client'
 import {
   AUTH_API,
   PDF_API,

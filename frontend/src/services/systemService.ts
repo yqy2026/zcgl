@@ -1,4 +1,4 @@
-import { enhancedApiClient } from './enhancedApiClient'
+import { enhancedApiClient } from '@/api/client'
 import { SYSTEM_API, BACKUP_API } from '../constants/api'
 
 // 使用增强型API客户端

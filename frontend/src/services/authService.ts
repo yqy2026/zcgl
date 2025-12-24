@@ -1,6 +1,6 @@
 // import { api } from './index' // 已迁移到enhancedApiClient
 import { AUTH_API } from '@/constants/api'
-import { enhancedApiClient } from './enhancedApiClient'
+import { enhancedApiClient } from '@/api/client'
 import { ResponseExtractor, ApiErrorHandler } from '../utils/responseExtractor'
 import { AuthResponse } from '../types/api-response'
 import type { LoginCredentials, User } from '../types/auth'
