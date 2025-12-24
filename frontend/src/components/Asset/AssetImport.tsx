@@ -154,10 +154,14 @@ const OptimizedAssetImport: React.FC = () => {
 
     try {
       const formData = new FormData();
-      formData.append("file", fileList[0] as File);
+      // Get the actual File object from UploadFile
+      const file = fileList[0]?.originFileObj;
+      if (file) {
+        formData.append("file", file);
+      }
 
       // Start enhanced import process
-      setImporting(true);
+      setUploading(true);
 
       const endpoint = config.useOptimized ? "/excel/import/optimized" : "/excel/import";
 
@@ -186,9 +190,11 @@ const OptimizedAssetImport: React.FC = () => {
       } else {
         message.success(`🎉 导入完成！成功导入 ${result.success} 条记录`);
       }
-    } catch (error: unknown) {
+    } catch (err: unknown) {
       clearInterval(progressInterval);
-      console.error("导入错误:", error);
+      console.error("导入错误:", err);
+
+      const error = err as { response?: { data?: any }; message?: string };
       console.error("错误响应:", error.response?.data);
 
       const errorResult = error.response?.data || {
