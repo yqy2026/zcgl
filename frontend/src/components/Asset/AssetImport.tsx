@@ -31,7 +31,7 @@ import {
   ClockCircleOutlined,
 } from "@ant-design/icons";
 import type { UploadProps, UploadFile } from "antd";
-import { api } from "../../services/api";
+import { enhancedApiClient } from "../../services/enhancedApiClient";
 import { STANDARD_SHEET_NAME, IMPORT_INSTRUCTIONS } from "../../config/excelConfig";
 
 const { Title, Text } = Typography;
@@ -76,7 +76,7 @@ const OptimizedAssetImport: React.FC = () => {
   // 下载模板
   const handleDownloadTemplate = async () => {
     try {
-      const response = await api.get("/excel/template", {
+      const response = await enhancedApiClient.get("/excel/template", {
         responseType: "blob",
       });
 
@@ -165,7 +165,7 @@ const OptimizedAssetImport: React.FC = () => {
 
       const endpoint = config.useOptimized ? "/excel/import/optimized" : "/excel/import";
 
-      const response = await api.post(endpoint, formData, {
+      const response = await enhancedApiClient.post(endpoint, formData, {
         params: {
           sheet_name: STANDARD_SHEET_NAME,
           skip_errors: config.skipErrors,
