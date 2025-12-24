@@ -1,7 +1,7 @@
 # 目录重组计划
 
 **创建日期**: 2025-12-24
-**状态**: ✅ 前端部分已完成 / 后端待执行
+**状态**: ✅ 全部完成 (Phase 4.1-4.4)
 **完成日期**: 2025-12-24
 **执行分支**: `refactor/directory-reorg`
 
@@ -9,11 +9,11 @@
 
 ## 前端目录重组建议
 
-### 当前问题
-1. Asset 组件分散在多个位置
-2. 缺少专门的 API 目录
-3. CSS 文件混合使用 `.css` 和 `.module.css`
-4. Form 组件未统一组织
+### 原始问题
+1. Asset 组件分散在多个位置 ✅ 已解决
+2. 缺少专门的 API 目录 ✅ 已解决
+3. CSS 文件混合使用 `.css` 和 `.module.css` ✅ 已解决
+4. Form 组件未统一组织 ✅ 已解决
 
 ### 建议的新结构
 
@@ -181,12 +181,20 @@ backend/src/
 - 修复 jest.setup.js → jest.setup.ts
 - 更新所有相关导入路径
 
-⏳ **待执行**:
-- 前端 styles/ 目录标准化 (Phase 4.3)
-- 后端目录扁平化 (Phase 4.4)
+✅ **本次会话完成** (Phase 4.3-4.4):
+- Phase 4.3: 前端 styles/ 目录标准化
+  - 创建 `styles/` 目录 (global.css, variables.css, index.css)
+  - 转换 LoginPage.css 和 PDFImportPage.css 为 .module.css
+  - 更新 main.tsx 和 App.tsx 导入
+  - 删除冗余的 App.css 和 index.css
+- Phase 4.4: 后端目录扁平化
+  - 删除 5 个 services/ 根目录的 shim 文件
+  - 更新 API、测试、脚本文件的导入路径
+  - 清理 services/__init__.py 兼容层
+  - 修复 ProjectList.tsx 的 ProjectForm 导入
 
 ⏭️ **后续阶段**:
-- Phase 5.3: 文档更新
+- Phase 5.3: 文档更新 (进行中)
 
 ---
 

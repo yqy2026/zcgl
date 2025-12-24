@@ -6,7 +6,7 @@ import { SearchOutlined } from '@ant-design/icons'
 import { unifiedDictionaryService } from '../../services/dictionary'
 import type { EnumFieldType, EnumFieldValue, SystemDictionary } from '../../services/dictionary'
 import EnumValuePreview from '../../components/Dictionary/EnumValuePreview'
-import { handleError, withErrorHandling, createErrorHandler } from '../../utils/errorHandler'
+import { handleApiError as handleError, withErrorHandling, createErrorHandler } from '../../services'
 
 const { Option } = Select
 const { Search } = Input

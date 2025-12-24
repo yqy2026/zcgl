@@ -12,7 +12,7 @@ export { excelService, ExcelService } from './excelService'
 export { backupService, BackupService } from './backupService'
 
 // 导出工具和管理器
-export { errorHandler, handleApiError, ApiErrorHandler } from './errorHandler'
+export { errorHandler, handleApiError, ApiErrorHandler, withErrorHandling, createErrorHandler } from './errorHandler'
 export { cacheManager, ApiCacheManager, cached, invalidateCache } from './cacheManager'
 // API_CONFIG now exported from api/ location
 export { API_CONFIG, HTTP_STATUS, ERROR_CODES } from '../api/config'

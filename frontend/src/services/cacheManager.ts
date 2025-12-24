@@ -1,6 +1,6 @@
 // API缓存管理器
 
-import { CACHE } from './config'
+import { CACHE } from '../api/config'
 
 export interface CacheItem<T = unknown> {
   data: T

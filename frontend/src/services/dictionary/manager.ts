@@ -7,8 +7,8 @@
  */
 
 import { enhancedApiClient } from '@/api/client';
-import { ApiErrorHandler } from '../../utils/responseExtractor';
-import { API_CONFIG } from '../config';
+// Note: ApiErrorHandler removed - using enhancedApiClient's error handling instead
+import { API_CONFIG } from '../../api/config';
 import {
   DictionaryOption,
   DICTIONARY_CONFIGS
