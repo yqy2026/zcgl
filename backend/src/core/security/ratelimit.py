@@ -9,7 +9,7 @@ from collections import defaultdict
 from typing import Dict, Tuple
 from threading import Lock
 
-from ..config_manager import get_config
+from ..config import get_config
 from ..logging_security import security_auditor
 
 logger = logging.getLogger(__name__)

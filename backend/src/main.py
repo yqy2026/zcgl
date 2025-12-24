@@ -47,8 +47,7 @@ except ImportError as e:
         'register_global_dependency': lambda x: None,
         'include_all': lambda app, version: None
     })()
-from .core.config import settings
-from .core.config_manager import get_config, initialize_config
+from .core.config import settings, get_config, initialize_config
 from .core.exception_handler import setup_exception_handlers
 # from .core.jwt_security import validate_current_jwt_config  # 临时禁用
 from .core.logging_security import setup_logging_security

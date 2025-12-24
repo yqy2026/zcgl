@@ -21,7 +21,7 @@ from sqlalchemy.engine.interfaces import DBAPIConnection
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import QueuePool, StaticPool
 
-from .config_manager import get_config
+from .config import get_config
 
 logger = logging.getLogger(__name__)
 

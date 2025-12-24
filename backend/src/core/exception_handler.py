@@ -351,7 +351,7 @@ class ExceptionHandler:
         )
 
         # 根据环境决定是否暴露详细错误信息
-        from .config_manager import get_config
+        from .config import get_config
 
         debug_mode = get_config("debug", True)
 

@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # Database imports
 from .database import create_tables, get_database_status, init_db
 from .core.config import settings
-from .core.config_manager import get_config, initialize_config
+from ..core.config import get_config, initialize_config
 from .core.exception_handler import setup_exception_handlers
 from .core.response_handler import success_response
 

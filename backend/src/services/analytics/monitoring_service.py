@@ -32,7 +32,7 @@ try:
         collect_application_metrics,
         collect_system_metrics,
     )
-    from src.core.config_manager import get_config
+    from src.core.config import get_config
 except ImportError:
     # 独立运行时的回退方案
     def get_config():

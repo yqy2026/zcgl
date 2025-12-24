@@ -13,7 +13,7 @@ import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 
-from .config_manager import get_config
+from .config import get_config
 
 
 class SensitiveDataFilter(logging.Filter):

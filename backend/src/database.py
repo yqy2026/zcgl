@@ -33,7 +33,7 @@ except ImportError:
             pass
 
 try:
-    from .core.config_manager import get_config
+    from .core.config import get_config
 except ImportError:
     def get_config(key: str, default: Any = None) -> Any:
         return default

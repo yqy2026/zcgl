@@ -15,7 +15,7 @@ from functools import wraps
 from sqlalchemy import Index, func
 from sqlalchemy.orm import Session, joinedload
 
-from .config_manager import get_config
+from .config import get_config
 
 logger = logging.getLogger(__name__)
 
