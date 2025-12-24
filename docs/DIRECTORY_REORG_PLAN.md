@@ -168,6 +168,8 @@ backend/src/
 - Phase 1: 快速清理
 - Phase 2: 前端重构（标记废弃组件）
 - Phase 2.3: 统一错误处理 (3→1) - 2025-12-24
+- Phase 2.4: 整合错误边界 (4→1) - 2025-12-24
+- Phase 2.5: 简化布局系统 (3→2) - 2025-12-24
 - Phase 3: 后端重构（删除冗余文件）
 - Phase 3.4: 整合配置系统 (4→1) - 2025-12-24
 - Phase 4: 目录重组（全部完成）
@@ -176,7 +178,7 @@ backend/src/
   - 4.4: 后端目录扁平化
 
 ⏭️ **后续阶段**:
-- Phase 5.3: 文档更新 (进行中)
+- Phase 5.3: 文档更新 (完成)
 
 ---
 
@@ -252,6 +254,45 @@ backend/src/
 | 合并唯一功能 | withErrorHandling, createErrorHandler | ✅ |
 | 更新导入路径 | EnumFieldPage, DictionaryPage, test | ✅ |
 | 修复 config 导入 | cacheManager, errorHandler, dictionary | ✅ |
+
+### Phase 2.4: 整合错误边界 (4→1) - 已完成 ✅
+
+**Git Commit:** `16a3a0c` - refactor: Phase 2.4 - Consolidate error boundaries (4→1)
+
+**完成内容:**
+
+| 操作 | 详情 | 状态 |
+|------|------|------|
+| 替换 `ErrorBoundary.tsx` | 合并 RouterErrorBoundary 功能 | ✅ |
+| 删除 `GlobalErrorBoundary.tsx` | 已废弃 | ✅ |
+| 删除 `UnifiedErrorBoundary.tsx` | 已废弃 | ✅ |
+| 删除 `RouterErrorBoundary.tsx` | 功能已合并 | ✅ |
+| 删除 `System/SystemErrorBoundary.tsx` | 已合并到 ErrorHandling 导出 | ✅ |
+| 新增功能 | 重试机制、错误类型检测、路由导航 | ✅ |
+| 更新导入路径 | UXProvider, ProtectedRoute, LazyRoute | ✅ |
+| 更新测试文件 | UXComponents.test.tsx, GlobalErrorBoundary.test.tsx | ✅ |
+
+**代码减少统计:**
+- 删除文件: 4个
+- 代码行数减少: ~270行
+- 新增功能: retry counter, error type detection, router navigation hooks
+
+### Phase 2.5: 简化布局系统 (3→2) - 已完成 ✅
+
+**Git Commit:** `6700dc7` - refactor: Phase 2.5 - Simplify layout system (3→2)
+
+**完成内容:**
+
+| 操作 | 详情 | 状态 |
+|------|------|------|
+| 删除 `ResponsiveLayout.tsx` | 未使用的包装组件 | ✅ |
+| 更新 `Layout/index.ts` | 移除 ResponsiveLayout 导出 | ✅ |
+| 保留 `AppLayout.tsx` | 主要桌面布局 | ✅ |
+| 保留 `MobileLayout.tsx` | 未来移动端布局使用 | ✅ |
+
+**代码减少统计:**
+- 删除文件: 1个
+- 代码行数减少: ~52行
 
 ### Phase 3.4: 整合配置系统 - 已完成 ✅
 
