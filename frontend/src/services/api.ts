@@ -1,3 +1,14 @@
+/**
+ * @deprecated 此文件已废弃，请使用 enhancedApiClient.ts
+ *
+ * 迁移指南:
+ * - 旧: import { api } from '@/services/api'
+ * - 新: import { enhancedApiClient } from '@/services'
+ *
+ * 注意: enhancedApiClient 的接口略有不同，请查看文档了解详情
+ * 最后更新: 2025-12-24
+ */
+
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 import type { ApiResponse, ErrorResponse } from "@/types/api";
 import { API_CONFIG } from "@/constants/api";
