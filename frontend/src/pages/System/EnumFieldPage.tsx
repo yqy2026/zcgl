@@ -8,8 +8,9 @@ import {
   PlusOutlined, EditOutlined, DeleteOutlined,
   SearchOutlined, ReloadOutlined
 } from '@ant-design/icons'
-import { unifiedDictionaryService } from '../../services/dictionaryService'
-import type { EnumFieldType, EnumFieldValue, SystemDictionary, EnumFieldStatistics } from '../../services/dictionaryService'
+import { unifiedDictionaryService } from '../../services/dictionary'
+import type { EnumFieldType, EnumFieldValue, EnumFieldWithType } from '../../services/dictionary'
+import { SystemDictionary } from '@/types/asset'
 import EnumValuePreview from '../../components/Dictionary/EnumValuePreview'
 import { withErrorHandling, createErrorHandler } from '../../services'
 

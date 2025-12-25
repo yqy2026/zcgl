@@ -193,6 +193,7 @@ export interface SystemDictionary {
   dict_code: string;
   dict_label: string;
   dict_value: string;
+  description?: string;
   sort_order: number;
   is_active: boolean;
   created_at: string;

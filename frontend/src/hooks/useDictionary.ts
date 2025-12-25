@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { unifiedDictionaryService } from '../services/dictionary'
-import type { DictionaryOption } from '../services/dictionary'
+import type { DictionaryOption, DictionaryServiceResult } from '../services/dictionary'
 
 interface UseDictionaryResult {
   options: DictionaryOption[]
@@ -35,7 +35,7 @@ export const useDictionary = (dictType: string, isActive: boolean = true): UseDi
       return result
     },
     staleTime: 10 * 60 * 1000, // 10分钟缓存
-    cacheTime: 30 * 60 * 1000, // 30分钟保留缓存
+    gcTime: 30 * 60 * 1000, // 30分钟保留缓存 (renamed from cacheTime)
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchOnReconnect: false,
@@ -43,14 +43,18 @@ export const useDictionary = (dictType: string, isActive: boolean = true): UseDi
     enabled: !!dictType
   })
 
-  const options = data?.success ? data.data : []
-  const errorMessage = data?.success ? null : (data?.error || error?.message)
+  const options = data?.success ? (data.data ?? []) : []
+  const errorMessage = data?.success ? null : (data?.error || error?.message || null)
+
+  const refresh: () => Promise<void> = async () => {
+    await refetch()
+  }
 
   return {
     options,
     loading: isLoading,
     error: errorMessage,
-    refresh: refetch
+    refresh
   }
 }
 
