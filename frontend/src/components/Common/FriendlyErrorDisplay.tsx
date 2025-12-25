@@ -160,7 +160,7 @@ const FriendlyErrorDisplay: React.FC<FriendlyErrorDisplayProps> = ({
                           <Text strong>错误信息:</Text> {error.message}
                         </div>
                       )}
-                      {error?.details && (
+                      {error?.details != null && (
                         <div>
                           <Text strong>详细信息:</Text>
                           <pre style={{

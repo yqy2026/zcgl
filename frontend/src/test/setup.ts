@@ -7,6 +7,13 @@ global.act = act;
 global.waitFor = waitFor;
 global.fireEvent = fireEvent;
 
+// Type declarations for global test utilities
+declare global {
+  const act: typeof import("@testing-library/react").act;
+  const waitFor: typeof import("@testing-library/react").waitFor;
+  const fireEvent: typeof import("@testing-library/dom").fireEvent;
+}
+
 // Mock IntersectionObserver
 global.IntersectionObserver = jest.fn().mockImplementation(() => ({
   observe: jest.fn(),
