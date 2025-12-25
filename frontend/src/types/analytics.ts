@@ -12,6 +12,9 @@ export interface AreaSummary {
 
 export interface FinancialSummary {
   estimated_annual_income: number
+  total_annual_income: number
+  total_annual_expense: number
+  total_net_income: number
   total_monthly_rent: number
   total_deposit: number
   assets_with_income_data: number
