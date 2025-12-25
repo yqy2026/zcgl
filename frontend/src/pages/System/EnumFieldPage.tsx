@@ -17,9 +17,10 @@ import { withErrorHandling, createErrorHandler } from '../../services'
 
 const { TabPane } = Tabs
 const { TextArea } = Input
+const { Option } = Select
 
 // 错误类型定义
-interface ApiError extends Error {
+interface ApiError {
   response?: {
     data?: {
       message?: string
@@ -27,6 +28,16 @@ interface ApiError extends Error {
     }
   }
   message?: string
+}
+
+// 统计信息类型
+interface EnumFieldStatistics {
+  total_types: number
+  active_types: number
+  total_values: number
+  active_values: number
+  usage_count: number
+  categories: string[]
 }
 
 // 表单数据类型
@@ -99,7 +110,7 @@ const EnumFieldPage: React.FC = () => {
       });
     } catch (error: unknown) {
       const apiError = error as ApiError
-      message.error(error?.message || '加载统计信息失败');
+      message.error(apiError?.message || '加载统计信息失败');
     }
   };
 
@@ -354,7 +365,7 @@ const EnumFieldPage: React.FC = () => {
       }
     } catch (error: unknown) {
       const apiError = error as ApiError
-      message.error(error?.message || '删除失败');
+      message.error(apiError?.message || '删除失败');
     }
   };
 
@@ -387,7 +398,7 @@ const EnumFieldPage: React.FC = () => {
       }
     } catch (error: unknown) {
       const apiError = error as ApiError
-      message.error(error?.message || '删除失败');
+      message.error(apiError?.message || '删除失败');
     }
   };
 
@@ -395,9 +406,9 @@ const EnumFieldPage: React.FC = () => {
     try {
       let success = false
       if (editingType) {
-        success = await unifiedDictionaryService.updateEnumFieldType(editingType.id, values)
+        success = await unifiedDictionaryService.updateEnumFieldType(editingType.id, values as any) !== null
       } else {
-        success = await unifiedDictionaryService.createEnumFieldType(values) !== null
+        success = await unifiedDictionaryService.createEnumFieldType(values as any) !== null
       }
 
       if (success) {
@@ -410,7 +421,7 @@ const EnumFieldPage: React.FC = () => {
       }
     } catch (error: unknown) {
       const apiError = error as ApiError
-      message.error(error?.message || '操作失败');
+      message.error(apiError?.message || '操作失败');
     }
   };
 
@@ -418,9 +429,9 @@ const EnumFieldPage: React.FC = () => {
     try {
       let success = false
       if (editingValue) {
-        success = await unifiedDictionaryService.updateEnumFieldValue(selectedTypeId || editingValue.enum_type_id, editingValue.id, values) !== null
+        success = await unifiedDictionaryService.updateEnumFieldValue(selectedTypeId || editingValue.enum_type_id, editingValue.id, values as any) !== null
       } else {
-        success = await unifiedDictionaryService.addEnumFieldValue(selectedTypeId!, values) !== null
+        success = await unifiedDictionaryService.addEnumFieldValue(selectedTypeId!, values as any) !== null
       }
 
       if (success) {
@@ -435,7 +446,7 @@ const EnumFieldPage: React.FC = () => {
       }
     } catch (error: unknown) {
       const apiError = error as ApiError
-      message.error(error?.message || '操作失败');
+      message.error(apiError?.message || '操作失败');
     }
   };
 
