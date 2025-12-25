@@ -6,16 +6,16 @@
 
 import axios from 'axios';
 import type {
-  EnhancedProcessingOptions,
-  EnhancedFileUploadResponse,
-  EnhancedSessionProgress,
-  EnhancedSystemCapabilities,
-  EnhancedSystemInfoResponse,
+  ProcessingOptions,
+  FileUploadResponse,
+  SessionProgress,
+  SystemCapabilities,
+  SystemInfoResponse,
   EngineType,
   FieldType,
   ValidationLevel,
-  EnhancedCompleteResult,
-  EnhancedConfidenceScores,
+  CompleteResult,
+  ConfidenceScores,
   ContractValidationReport,
   OCRResult,
   SealDetectionResult,
@@ -193,6 +193,26 @@ import { PDF_API } from '../constants/api';
 const API_BASE_URL = PDF_API.INFO.replace('/info', ''); // 获取基础路径
 const ENHANCED_API_BASE = `${API_BASE_URL}/enhanced`;
 
+// 类型守卫：检查是否为Error对象
+function isError(error: unknown): error is Error {
+  return error instanceof Error;
+}
+
+// 类型守卫：检查是否为AxiosError
+function isAxiosError(error: unknown): error is {
+  response?: { data?: { detail?: string }; status?: number; statusText?: string };
+  request?: unknown;
+  code?: string;
+  name?: string;
+  message?: string;
+} {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    ('response' in error || 'request' in error || 'code' in error)
+  );
+}
+
 class PDFImportService {
   /**
    * 上传PDF文件
@@ -227,41 +247,41 @@ class PDFImportService {
     } catch (error: unknown) {
       console.error('PDF上传失败:', error);
 
-      // 更详细的错误处理
-      if (error.name === 'CanceledError' || error.code === 'ERR_CANCELED') {
-        throw new Error('canceled');
-      }
+      // 使用类型守卫处理错误
+      if (isAxiosError(error)) {
+        if (error.name === 'CanceledError' || error.code === 'ERR_CANCELED') {
+          throw new Error('canceled');
+        }
 
-      if (error.code === 'ECONNABORTED') {
-        return {
-          success: false,
-          message: '上传超时，请检查文件大小或网络连接后重试',
-          error: 'Upload timeout'
-        };
-      }
+        if (error.code === 'ECONNABORTED') {
+          return {
+            success: false,
+            message: '上传超时，请检查文件大小或网络连接后重试',
+            error: 'Upload timeout'
+          };
+        }
 
-      if (error.response) {
-        // 服务器返回了错误状态码
-        return {
-          success: false,
-          message: error.response.data?.detail || error.response.statusText || '服务器处理失败',
-          error: error.response.data?.detail || error.response.statusText
-        };
-      }
+        if (error.response) {
+          return {
+            success: false,
+            message: error.response.data?.detail || error.response.statusText || '服务器处理失败',
+            error: error.response.data?.detail || error.response.statusText
+          };
+        }
 
-      if (error.request) {
-        // 请求发出但没有收到响应
-        return {
-          success: false,
-          message: '网络连接失败，请检查网络连接',
-          error: 'Network connection failed'
-        };
+        if (error.request) {
+          return {
+            success: false,
+            message: '网络连接失败，请检查网络连接',
+            error: 'Network connection failed'
+          };
+        }
       }
 
       return {
         success: false,
-        message: error.message || '上传失败',
-        error: error.message
+        message: isError(error) ? error.message : '上传失败',
+        error: isError(error) ? error.message : 'Unknown error'
       };
     }
   }
@@ -281,7 +301,7 @@ class PDFImportService {
       console.error('获取进度失败:', error);
       return {
         success: false,
-        error: error.response?.data?.detail || error.message
+        error: isAxiosError(error) ? (error.response?.data?.detail || error.message) : isError(error) ? error.message : 'Unknown error'
       };
     }
   }
@@ -307,7 +327,7 @@ class PDFImportService {
           const result: CompleteResult = {
             session_id: sessionId,
             file_info: {
-              filename: session.filename || 'unknown.pdf',
+              filename: session.file_name || 'unknown.pdf',
               size: session.file_size || 0,
               content_type: 'application/pdf'
             },
@@ -375,7 +395,7 @@ class PDFImportService {
       console.error('获取结果失败:', error);
       return {
         success: false,
-        error: error.response?.data?.detail || error.message
+        error: isAxiosError(error) ? (error.response?.data?.detail || error.message) : isError(error) ? error.message : 'Unknown error'
       };
     }
   }
@@ -398,8 +418,8 @@ class PDFImportService {
       console.error('确认导入失败:', error);
       return {
         success: false,
-        message: error.response?.data?.detail || error.message || '导入失败',
-        error: error.response?.data?.detail || error.message
+        message: isAxiosError(error) ? (error.response?.data?.detail || error.message || '导入失败') : isError(error) ? error.message : '导入失败',
+        error: isAxiosError(error) ? (error.response?.data?.detail || error.message) : isError(error) ? error.message : 'Unknown error'
       };
     }
   }
@@ -419,8 +439,8 @@ class PDFImportService {
       console.error('取消会话失败:', error);
       return {
         success: false,
-        message: error.response?.data?.detail || error.message || '取消失败',
-        error: error.response?.data?.detail || error.message
+        message: isAxiosError(error) ? (error.response?.data?.detail || error.message || '取消失败') : isError(error) ? error.message : '取消失败',
+        error: isAxiosError(error) ? (error.response?.data?.detail || error.message) : isError(error) ? error.message : 'Unknown error'
       };
     }
   }
@@ -462,7 +482,7 @@ class PDFImportService {
         success: false,
         active_sessions: [],
         total_count: 0,
-        error: error.response?.data?.detail || error.message
+        error: isAxiosError(error) ? (error.response?.data?.detail || error.message) : isError(error) ? error.message : 'Unknown error'
       };
     }
   }
@@ -584,7 +604,7 @@ class PDFImportService {
       };
     } catch (error: unknown) {
       console.error('获取系统信息失败:', error);
-      throw new Error(error.response?.data?.detail || error.message);
+      throw new Error(isAxiosError(error) ? (error.response?.data?.detail || error.message) : isError(error) ? error.message : 'Unknown error');
     }
   }
 
@@ -610,7 +630,7 @@ class PDFImportService {
       console.error('测试转换失败:', error);
       return {
         success: false,
-        message: error.response?.data?.detail || error.message,
+        message: isAxiosError(error) ? (error.response?.data?.detail || error.message) : isError(error) ? error.message : 'Unknown error',
         system_ready: false
       };
     }
@@ -668,7 +688,7 @@ class PDFImportService {
             setTimeout(poll, interval);
           }
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('轮询进度失败:', error);
       }
     };
@@ -728,7 +748,7 @@ class PDFImportService {
   /**
    * 获取增强版系统信息
    */
-  async getEnhancedSystemInfo(): Promise<EnhancedSystemInfoResponse> {
+  async getEnhancedSystemInfo(): Promise<SystemInfoResponse> {
     try {
       const response = await axios.get(`${ENHANCED_API_BASE}/info`);
       return response.data;
@@ -742,15 +762,6 @@ class PDFImportService {
           pymupdf_available: false,
           spacy_available: false,
           ocr_available: false,
-          enhanced_extraction: false,
-          intelligent_matching: false,
-          multi_engine_support: false,
-          chinese_optimized: false,
-          real_time_validation: false,
-          table_detection: false,
-          seal_detection: false,
-          template_learning: false,
-          semantic_validation: false,
           supported_formats: [],
           max_file_size_mb: 0,
           estimated_processing_time: "未知"
@@ -764,11 +775,11 @@ class PDFImportService {
    */
   async uploadPDFFileEnhanced(
     file: File,
-    processingOptions: Partial<EnhancedProcessingOptions> = {},
+    processingOptions: Partial<ProcessingOptions> = {},
     signal?: AbortSignal
-  ): Promise<EnhancedFileUploadResponse> {
+  ): Promise<FileUploadResponse> {
     // 默认处理选项
-    const defaultOptions: EnhancedProcessingOptions = {
+    const defaultOptions: ProcessingOptions = {
       prefer_ocr: true,
       enable_chinese_optimization: true,
       enable_table_detection: true,
@@ -778,14 +789,14 @@ class PDFImportService {
       enable_multi_engine_fusion: true,
       enable_semantic_validation: true,
       ...processingOptions
-    };
+    } as ProcessingOptions;
 
     const formData = new FormData();
     formData.append('file', file);
     formData.append('processing_options', JSON.stringify(defaultOptions));
 
     try {
-      const response = await axios.post<EnhancedFileUploadResponse>(
+      const response = await axios.post<FileUploadResponse>(
         `${ENHANCED_API_BASE}/upload`,
         formData,
         {
@@ -807,30 +818,32 @@ class PDFImportService {
     } catch (error: unknown) {
       console.error('增强版PDF上传失败:', error);
 
-      if (error.name === 'CanceledError' || error.code === 'ERR_CANCELED') {
-        throw new Error('canceled');
-      }
+      if (isAxiosError(error)) {
+        if (error.name === 'CanceledError' || error.code === 'ERR_CANCELED') {
+          throw new Error('canceled');
+        }
 
-      if (error.code === 'ECONNABORTED') {
-        return {
-          success: false,
-          message: '上传超时，请检查文件大小或网络连接后重试',
-          error: 'Upload timeout'
-        };
-      }
+        if (error.code === 'ECONNABORTED') {
+          return {
+            success: false,
+            message: '上传超时，请检查文件大小或网络连接后重试',
+            error: 'Upload timeout'
+          };
+        }
 
-      if (error.response) {
-        return {
-          success: false,
-          message: error.response.data?.detail || error.response.statusText || '服务器处理失败',
-          error: error.response.data?.detail || error.response.statusText
-        };
+        if (error.response) {
+          return {
+            success: false,
+            message: error.response.data?.detail || error.response.statusText || '服务器处理失败',
+            error: error.response.data?.detail || error.response.statusText
+          };
+        }
       }
 
       return {
         success: false,
-        message: error.message || '上传失败',
-        error: error.message
+        message: isError(error) ? error.message : '上传失败',
+        error: isError(error) ? error.message : 'Unknown error'
       };
     }
   }
@@ -840,7 +853,7 @@ class PDFImportService {
    */
   async getEnhancedProgress(sessionId: string): Promise<{
     success: boolean;
-    session_status?: EnhancedSessionProgress;
+    session_status?: SessionProgress;
     error?: string;
   }> {
     try {
@@ -850,7 +863,7 @@ class PDFImportService {
       console.error('获取增强版进度失败:', error);
       return {
         success: false,
-        error: error.response?.data?.detail || error.message
+        error: isAxiosError(error) ? (error.response?.data?.detail || error.message) : isError(error) ? error.message : 'Unknown error'
       };
     }
   }
@@ -875,8 +888,8 @@ class PDFImportService {
       console.error('取消增强版会话失败:', error);
       return {
         success: false,
-        message: error.response?.data?.detail || error.message || '取消失败',
-        error: error.response?.data?.detail || error.message
+        message: isAxiosError(error) ? (error.response?.data?.detail || error.message || '取消失败') : isError(error) ? error.message : '取消失败',
+        error: isAxiosError(error) ? (error.response?.data?.detail || error.message) : isError(error) ? error.message : 'Unknown error'
       };
     }
   }
@@ -886,7 +899,7 @@ class PDFImportService {
    */
   async pollEnhancedProgress(
     sessionId: string,
-    onProgress: (progress: EnhancedSessionProgress) => void,
+    onProgress: (progress: SessionProgress) => void,
     interval: number = 3000  // 增强版处理间隔稍长
   ): Promise<void> {
     const poll = async () => {
@@ -903,7 +916,7 @@ class PDFImportService {
             setTimeout(poll, interval);
           }
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('轮询增强版进度失败:', error);
       }
     };
@@ -916,7 +929,7 @@ class PDFImportService {
    */
   async getEnhancedResult(sessionId: string): Promise<{
     success: boolean;
-    result?: EnhancedCompleteResult;
+    result?: CompleteResult;
     error?: string;
   }> {
     try {
@@ -928,10 +941,10 @@ class PDFImportService {
 
         if (session.status === 'ready_for_review' || session.status === 'completed') {
           // 构建增强版结果对象
-          const result: EnhancedCompleteResult = {
+          const result: CompleteResult = {
             session_id: sessionId,
             file_info: {
-              filename: session.filename || 'unknown.pdf',
+              filename: session.file_name || 'unknown.pdf',
               size: session.file_size || 0,
               content_type: 'application/pdf'
             },
@@ -1036,7 +1049,7 @@ class PDFImportService {
       console.error('获取增强版结果失败:', error);
       return {
         success: false,
-        error: error.response?.data?.detail || error.message
+        error: isAxiosError(error) ? (error.response?.data?.detail || error.message) : isError(error) ? error.message : 'Unknown error'
       };
     }
   }
@@ -1058,7 +1071,7 @@ class PDFImportService {
       console.error('测试增强版功能失败:', error);
       return {
         success: false,
-        message: error.response?.data?.detail || error.message,
+        message: isAxiosError(error) ? (error.response?.data?.detail || error.message) : isError(error) ? error.message : 'Unknown error',
         system_ready: false
       };
     }
@@ -1083,7 +1096,7 @@ class PDFImportService {
         status: 'unhealthy',
         components: {},
         timestamp: new Date().toISOString(),
-        error: error.response?.data?.detail || error.message
+        error: isAxiosError(error) ? (error.response?.data?.detail || error.message) : isError(error) ? error.message : 'Unknown error'
       };
     }
   }
@@ -1103,7 +1116,7 @@ class PDFImportService {
       console.error('获取性能摘要失败:', error);
       return {
         success: false,
-        message: error.response?.data?.detail || error.message,
+        message: isAxiosError(error) ? (error.response?.data?.detail || error.message) : isError(error) ? error.message : 'Unknown error',
         data: null
       };
     }
@@ -1136,15 +1149,10 @@ class PDFImportService {
       const systemInfo = await this.getEnhancedSystemInfo();
 
       const features = {
-        enhanced_extraction: systemInfo.capabilities.enhanced_extraction,
-        intelligent_matching: systemInfo.capabilities.intelligent_matching,
-        multi_engine_support: systemInfo.capabilities.multi_engine_support,
-        chinese_optimized: systemInfo.capabilities.chinese_optimized,
-        real_time_validation: systemInfo.capabilities.real_time_validation,
-        table_detection: systemInfo.capabilities.table_detection,
-        seal_detection: systemInfo.capabilities.seal_detection,
-        template_learning: systemInfo.capabilities.template_learning,
-        semantic_validation: systemInfo.capabilities.semantic_validation
+        pdfplumber_available: systemInfo.capabilities.pdfplumber_available,
+        pymupdf_available: systemInfo.capabilities.pymupdf_available,
+        spacy_available: systemInfo.capabilities.spacy_available,
+        ocr_available: systemInfo.capabilities.ocr_available
       };
 
       const availableCount = Object.values(features).filter(Boolean).length;

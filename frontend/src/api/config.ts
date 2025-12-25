@@ -206,7 +206,7 @@ export const isDevelopment = () => ENV.DEVELOPMENT;
  * 验证文件类型
  */
 export const isValidFileType = (file: File) => {
-  return API_CONFIG.UPLOAD.ALLOWED_TYPES.includes(file.type);
+  return API_CONFIG.UPLOAD.ALLOWED_TYPES.includes(file.type as typeof API_CONFIG.UPLOAD.ALLOWED_TYPES[number]);
 };
 
 /**
@@ -256,18 +256,22 @@ export const apiRequest = async <T>(
 ): Promise<T> => {
   const url = createApiUrl(endpoint);
 
+  // 创建AbortController实现超时
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+
   const config: RequestInit = {
-    timeout: API_CONFIG.TIMEOUT,
-    ...API_CONFIG,
     ...options,
     headers: {
       ...API_CONFIG.headers,
       ...options.headers,
     },
+    signal: controller.signal,
   };
 
   try {
     const response = await fetch(url, config);
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
