@@ -319,7 +319,7 @@ export class AssetService {
         throw new Error(`获取资产列表失败: ${result.error}`);
       }
 
-      return result.data;
+      return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -344,7 +344,7 @@ export class AssetService {
         throw new Error(`获取所有资产失败: ${result.error}`);
       }
 
-      return result.data;
+      return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -363,7 +363,7 @@ export class AssetService {
         throw new Error(`根据ID列表获取资产失败: ${result.error}`);
       }
 
-      return result.data;
+      return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -383,7 +383,7 @@ export class AssetService {
         throw new Error(`获取资产详情失败: ${result.error}`);
       }
 
-      return result.data;
+      return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -402,7 +402,7 @@ export class AssetService {
         throw new Error(`创建资产失败: ${result.error}`);
       }
 
-      return result.data;
+      return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -421,7 +421,7 @@ export class AssetService {
         throw new Error(`更新资产失败: ${result.error}`);
       }
 
-      return result.data;
+      return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -484,7 +484,7 @@ export class AssetService {
         throw new Error(`获取资产历史失败: ${result.error}`);
       }
 
-      return result.data;
+      return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -504,7 +504,7 @@ export class AssetService {
         throw new Error(`获取历史详情失败: ${result.error}`);
       }
 
-      return result.data;
+      return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -527,7 +527,7 @@ export class AssetService {
         throw new Error(`比较历史记录失败: ${result.error}`);
       }
 
-      return result.data;
+      return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -555,7 +555,7 @@ export class AssetService {
         throw new Error(`获取字段历史失败: ${result.error}`);
       }
 
-      return result.data.history || [];
+      return result.data!.history || [];
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -584,7 +584,7 @@ export class AssetService {
         throw new Error(`获取资产统计失败: ${result.error}`);
       }
 
-      return result.data;
+      return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -683,7 +683,7 @@ export class AssetService {
         throw new Error(`导出资产数据失败: ${result.error}`);
       }
 
-      return result.data;
+      return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -707,7 +707,7 @@ export class AssetService {
         throw new Error(`导出选中资产失败: ${result.error}`);
       }
 
-      return result.data;
+      return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -727,7 +727,7 @@ export class AssetService {
         throw new Error(`获取导出状态失败: ${result.error}`);
       }
 
-      return result.data;
+      return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -802,7 +802,7 @@ export class AssetService {
         throw new Error(`上传导入文件失败: ${result.error}`);
       }
 
-      return result.data;
+      return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -827,7 +827,7 @@ export class AssetService {
         throw new Error(`预览导入文件失败: ${result.error}`);
       }
 
-      return result.data;
+      return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -848,7 +848,7 @@ export class AssetService {
       }
 
       // 创建下载链接
-      const blob = result.data;
+      const blob = result.data!;
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -876,7 +876,7 @@ export class AssetService {
         throw new Error(`获取导入状态失败: ${result.error}`);
       }
 
-      return result.data;
+      return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -936,7 +936,7 @@ export class AssetService {
         throw new Error(`获取出租率统计失败: ${result.error}`);
       }
 
-      return result.data;
+      return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -957,7 +957,7 @@ export class AssetService {
         throw new Error(`获取资产分布统计失败: ${result.error}`);
       }
 
-      return result.data;
+      return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -978,7 +978,7 @@ export class AssetService {
         throw new Error(`获取面积统计失败: ${result.error}`);
       }
 
-      return result.data;
+      return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -999,7 +999,7 @@ export class AssetService {
         throw new Error(`获取综合统计失败: ${result.error}`);
       }
 
-      return result.data;
+      return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -1042,7 +1042,7 @@ export class AssetService {
         throw new Error(`获取系统字典详情失败: ${result.error}`);
       }
 
-      return result.data;
+      return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -1063,7 +1063,7 @@ export class AssetService {
         throw new Error(`创建系统字典失败: ${result.error}`);
       }
 
-      return result.data;
+      return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -1085,7 +1085,7 @@ export class AssetService {
         throw new Error(`更新系统字典失败: ${result.error}`);
       }
 
-      return result.data;
+      return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -1186,7 +1186,7 @@ export class AssetService {
         throw new Error(`获取自定义字段配置失败: ${result.error}`);
       }
 
-      return result.data;
+      return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -1207,7 +1207,7 @@ export class AssetService {
         throw new Error(`创建自定义字段配置失败: ${result.error}`);
       }
 
-      return result.data;
+      return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -1229,7 +1229,7 @@ export class AssetService {
         throw new Error(`更新自定义字段配置失败: ${result.error}`);
       }
 
-      return result.data;
+      return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
