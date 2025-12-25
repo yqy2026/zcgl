@@ -2,11 +2,11 @@ import React, { Suspense } from 'react'
 import { SkeletonLoader } from '@/components/Loading'
 
 // 懒加载页面组件
-const DashboardPage = React.lazy(() => import('@/pages/DashboardPage'))
-const AssetListPage = React.lazy(() => import('@/pages/AssetListPage'))
-const AssetDetailPage = React.lazy(() => import('@/pages/AssetDetailPage'))
-const AssetFormPage = React.lazy(() => import('@/pages/AssetFormPage'))
-const ImportExportPage = React.lazy(() => import('@/pages/ImportExportPage'))
+const DashboardPage = React.lazy(() => import('@/pages/Dashboard/DashboardPage'))
+const AssetListPage = React.lazy(() => import('@/pages/Assets/AssetListPage'))
+const AssetDetailPage = React.lazy(() => import('@/pages/Assets/AssetDetailPage'))
+const AssetFormPage = React.lazy(() => import('@/pages/Assets/AssetCreatePage'))
+const ImportExportPage = React.lazy(() => import('@/pages/Assets/AssetImportPage'))
 
 // 懒加载包装器
 const LazyWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -48,11 +48,11 @@ export const LazyImportExportPage = () => (
 
 // 预加载函数
 export const preloadRoutes = {
-  dashboard: () => import('@/pages/DashboardPage'),
-  assetList: () => import('@/pages/AssetListPage'),
-  assetDetail: () => import('@/pages/AssetDetailPage'),
-  assetForm: () => import('@/pages/AssetFormPage'),
-  importExport: () => import('@/pages/ImportExportPage'),
+  dashboard: () => import('@/pages/Dashboard/DashboardPage'),
+  assetList: () => import('@/pages/Assets/AssetListPage'),
+  assetDetail: () => import('@/pages/Assets/AssetDetailPage'),
+  assetForm: () => import('@/pages/Assets/AssetCreatePage'),
+  importExport: () => import('@/pages/Assets/AssetImportPage'),
 }
 
 // 路由预加载钩子
