@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Form, Input, Alert, Typography, Space, Button, Tooltip, Tag, Divider } from 'antd';
 import { InfoCircleOutlined, CheckCircleOutlined, ExclamationCircleOutlined, EditOutlined } from '@ant-design/icons';
-import { validateFilenameAPI } from '../../services/pdfImportService';
 
 const { Text, Title } = Typography;
 
@@ -41,10 +40,10 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
     '）': ')',
     '《': '<',
     '》': '>',
-    '"': '"',
-    '"': '"',
-    "'": "'",
-    "'": "'",
+    '\u201C': '"',  // Left double quotation mark
+    '\u201D': '"',  // Right double quotation mark
+    '\u2018': "'",  // Left single quotation mark
+    '\u2019': "'",  // Right single quotation mark
     '：': ':',
     '，': ',',
     '。': '.',
@@ -125,7 +124,7 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
     suggested = suggested.replace(/_{2,}/g, '_');
 
     // 移除开头和结尾的特殊字符
-    suggested = suggested.trim('._-');
+    suggested = suggested.replace(/^[._-]+|[._-]+$/g, '');
 
     // 确保有PDF扩展名
     if (!suggested.toLowerCase().endsWith('.pdf')) {

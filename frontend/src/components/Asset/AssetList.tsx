@@ -426,7 +426,7 @@ const AssetList: React.FC<AssetListProps> = ({
         pageSizeOptions: ["10", "20", "50", "100"],
         size: "default",
       }}
-      onChange={onTableChange}
+      onChange={onTableChange as any}
       size="middle"
       bordered
       sticky={{ offsetHeader: 64 }}

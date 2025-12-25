@@ -359,7 +359,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
           <Card title="主要权属方资产分布（前10名）">
             <Spin spinning={isLoading}>
               <div style={{ height: height }}>
-                <Bar data={ownershipEntityChartData} options={ownershipEntityChartOptions} />
+                <Bar data={ownershipEntityChartData} options={ownershipEntityChartOptions as any} />
               </div>
             </Spin>
           </Card>

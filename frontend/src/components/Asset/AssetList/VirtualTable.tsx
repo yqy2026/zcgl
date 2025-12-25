@@ -433,7 +433,7 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
   }
 
   // 计算表头宽度
-  const totalWidth = columns.reduce((sum: number, col) => sum + (col.width || 150), 0)
+  const totalWidth = columns.reduce((sum: number, col) => sum + (typeof col.width === 'number' ? col.width : 150), 0)
 
   return (
     <div>

@@ -340,7 +340,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
             style={{ width: '100%' }}
             placeholder={`请输入${config.label}`}
             formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-            parser={value => value!.replace(/\$\s?|(,*)/g, '')}
+            parser={value => Number(value!.replace(/\$\s?|(,*)/g, '')) || 0}
             addonAfter={config.unit}
           />
         );
@@ -415,7 +415,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
       title: '操作',
       key: 'action',
       width: 100,
-      render: (_, record: AssetMatch) => (
+      render: (_: any, record: AssetMatch) => (
         <Button
           type="primary"
           size="small"
@@ -487,14 +487,14 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
       </Row>
 
       {/* 匹配结果 */}
-      {(sessionData.matching_results?.matched_assets?.length > 0 ||
-        sessionData.matching_results?.matched_ownerships?.landlords?.length > 0) && (
+      {((sessionData as any).matching_results?.matched_assets?.length > 0 ||
+        (sessionData as any).matching_results?.matched_ownerships?.landlords?.length > 0) && (
         <Card
           title={
             <Space>
               <SearchOutlined />
               <span>智能匹配结果</span>
-              <Badge count={sessionData.matching_results?.matched_assets?.length || 0} />
+              <Badge count={(sessionData as any).matching_results?.matched_assets?.length || 0} />
             </Space>
           }
           style={{ marginBottom: 24 }}
@@ -503,7 +503,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
             <TabPane tab="资产匹配" key="assets">
               <Table
                 columns={matchingResultsColumns}
-                dataSource={sessionData.matching_results?.matched_assets || []}
+                dataSource={(sessionData as any).matching_results?.matched_assets || []}
                 rowKey="id"
                 pagination={false}
                 size="small"
@@ -512,11 +512,11 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
             <TabPane tab="权属方匹配" key="ownerships">
               <Table
                 columns={[
-                  ...matchingResultsColumns.slice(0, -1),
+                  ...matchingResultsColumns.slice(0, -1) as any,
                   {
                     title: '操作',
                     key: 'action',
-                    render: (_, record: OwnershipMatch) => (
+                    render: (_: any, record: OwnershipMatch) => (
                       <Button
                         type="primary"
                         size="small"
@@ -526,8 +526,8 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
                       </Button>
                     )
                   }
-                ]}
-                dataSource={sessionData.matching_results?.matched_ownerships?.landlords || []}
+                ] as any}
+                dataSource={(sessionData as any).matching_results?.matched_ownerships?.landlords || []}
                 rowKey="id"
                 pagination={false}
                 size="small"
@@ -543,7 +543,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
           <Space>
             <EditOutlined />
             <span>字段审核与编辑</span>
-            <Badge count={statistics.errors} type="error" />
+            <Badge count={statistics.errors} status="error" />
           </Space>
         }
       >
@@ -589,9 +589,14 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
                     renderFieldInput(field)
                   ) : (
                     <div onClick={() => handleFieldEdit(field.fieldName)}>
-                      {field.value || (
-                        <Text type="secondary" italic>未提取</Text>
-                      )}
+                      {(() => {
+                        const val = field.value
+                        if (!val) return <Text type="secondary" italic>未提取</Text>
+                        if (typeof val === 'object' && Object.keys(val).length === 0) {
+                          return <Text type="secondary" italic>未提取</Text>
+                        }
+                        return val as any
+                      })()}
                     </div>
                   )}
                 </Form.Item>

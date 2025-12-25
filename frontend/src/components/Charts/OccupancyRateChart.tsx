@@ -348,7 +348,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
           <Card title="出租率趋势分析" style={{ marginBottom: 16 }}>
             <Spin spinning={isLoading}>
               <div style={{ height: height }}>
-                <Line data={trendChartData} options={trendChartOptions} />
+                <Line data={trendChartData} options={trendChartOptions as any} />
               </div>
             </Spin>
           </Card>
@@ -370,7 +370,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
           <Card title="权属方出租率对比">
             <Spin spinning={isLoading}>
               <div style={{ height: height }}>
-                <Bar data={ownershipChartData} options={ownershipChartOptions} />
+                <Bar data={ownershipChartData} options={ownershipChartOptions as any} />
               </div>
             </Spin>
           </Card>
@@ -399,7 +399,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <Text style={{ color: '#52c41a', fontWeight: 'bold' }}>
-                      {asset.rate.toFixed(2)}%
+                      {(asset.rate ?? 0).toFixed(2)}%
                     </Text>
                   </div>
                 </div>
@@ -428,7 +428,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <Text style={{ color: '#ff4d4f', fontWeight: 'bold' }}>
-                      {asset.rate.toFixed(2)}%
+                      {(asset.rate ?? 0).toFixed(2)}%
                     </Text>
                   </div>
                 </div>

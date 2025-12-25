@@ -46,6 +46,8 @@ interface ProgressTracker {
   status: 'active' | 'completed' | 'paused' | 'error'
   canCancel?: boolean
   canPause?: boolean
+  error?: string
+  onRetry?: () => void
   onStepClick?: (stepId: string) => void
   onCancel?: () => void
   onPause?: () => void
@@ -91,8 +93,8 @@ export const SmartProgressProvider: React.FC<SmartProgressProviderProps> = ({
     const newTracker: ProgressTracker = {
       id: trackerId,
       startTime: new Date(),
-      status: 'active',
-      ...tracker
+      ...tracker,
+      status: tracker.status || 'active'
     }
 
     setTrackers(prev => {
@@ -289,6 +291,8 @@ interface ProgressTrackersListProps {
 }
 
 const ProgressTrackersList: React.FC<ProgressTrackersListProps> = ({ trackers }) => {
+  const { cancelTracker, pauseTracker, resumeTracker } = useSmartProgress()
+
   if (trackers.length === 0) return null
 
   const getProgressTypeIcon = (type: ProgressType) => {
@@ -423,8 +427,8 @@ const ProgressTrackersList: React.FC<ProgressTrackersListProps> = ({ trackers })
                   </div>
                 ),
                 description: step.description,
-                status: step.status
-              }))}
+                status: step.status === 'paused' ? 'wait' : step.status as any
+              })) as any}
             />
 
             {tracker.error && (

@@ -410,7 +410,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
           <Card title="物业性质面积分布" style={{ marginBottom: 16 }}>
             <Spin spinning={isLoading}>
               <div style={{ height: height }}>
-                <Bar data={propertyNatureChartData} options={propertyNatureChartOptions} />
+                <Bar data={propertyNatureChartData} options={propertyNatureChartOptions as any} />
               </div>
             </Spin>
           </Card>
@@ -421,7 +421,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
           <Card title="面积区间分布" style={{ marginBottom: 16 }}>
             <Spin spinning={isLoading}>
               <div style={{ height: height }}>
-                <Bar data={areaRangeChartData} options={areaRangeChartOptions} />
+                <Bar data={areaRangeChartData} options={areaRangeChartOptions as any} />
               </div>
             </Spin>
           </Card>
@@ -432,7 +432,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
           <Card title="权属方面积与出租率对比">
             <Spin spinning={isLoading}>
               <div style={{ height: height }}>
-                <Bar data={ownershipEntityChartData} options={ownershipEntityChartOptions} />
+                <Bar data={ownershipEntityChartData as any} options={ownershipEntityChartOptions as any} />
               </div>
             </Spin>
           </Card>
