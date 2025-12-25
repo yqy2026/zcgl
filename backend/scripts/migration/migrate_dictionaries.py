@@ -35,9 +35,9 @@ def migrate_system_dictionaries():
             print(f"迁移字典类型: {dict_type}")
 
             # 检查是否已存在对应的枚举类型
-            existing_enum_type = db.query(EnumFieldType).filter(
-                EnumFieldType.code == dict_type
-            ).first()
+            existing_enum_type = (
+                db.query(EnumFieldType).filter(EnumFieldType.code == dict_type).first()
+            )
 
             if existing_enum_type:
                 print(f"  枚举类型 {dict_type} 已存在，跳过")
@@ -46,7 +46,7 @@ def migrate_system_dictionaries():
             # 创建枚举类型
             enum_type = EnumFieldType(
                 id=str(uuid.uuid4()),
-                name=dict_type.replace('_', ' ').title(),
+                name=dict_type.replace("_", " ").title(),
                 code=dict_type,
                 category="系统字典迁移",
                 description=f"从系统字典迁移的 {dict_type}",
@@ -55,15 +55,18 @@ def migrate_system_dictionaries():
                 is_multiple=False,
                 status="active",
                 created_by="系统迁移",
-                updated_by="系统迁移"
+                updated_by="系统迁移",
             )
             db.add(enum_type)
             db.flush()
 
             # 获取该类型的所有字典项
-            dict_items = db.query(SystemDictionary).filter(
-                SystemDictionary.dict_type == dict_type
-            ).order_by(SystemDictionary.sort_order).all()
+            dict_items = (
+                db.query(SystemDictionary)
+                .filter(SystemDictionary.dict_type == dict_type)
+                .order_by(SystemDictionary.sort_order)
+                .all()
+            )
 
             # 迁移字典值
             for item in dict_items:
@@ -77,7 +80,7 @@ def migrate_system_dictionaries():
                     is_active=item.is_active,
                     level=1,
                     created_by="系统迁移",
-                    updated_by="系统迁移"
+                    updated_by="系统迁移",
                 )
                 db.add(enum_value)
 
@@ -109,8 +112,12 @@ def initialize_asset_dictionaries():
                 "description": "资产物业性质分类",
                 "values": [
                     {"label": "经营性", "value": "commercial", "code": "commercial"},
-                    {"label": "非经营性", "value": "non_commercial", "code": "non_commercial"}
-                ]
+                    {
+                        "label": "非经营性",
+                        "value": "non_commercial",
+                        "code": "non_commercial",
+                    },
+                ],
             },
             "usage_status": {
                 "name": "使用状态",
@@ -119,11 +126,23 @@ def initialize_asset_dictionaries():
                     {"label": "出租", "value": "rented", "code": "rented"},
                     {"label": "空置", "value": "vacant", "code": "vacant"},
                     {"label": "自用", "value": "self_use", "code": "self_use"},
-                    {"label": "公房", "value": "public_housing", "code": "public_housing"},
-                    {"label": "待移交", "value": "pending_transfer", "code": "pending_transfer"},
-                    {"label": "待处置", "value": "pending_disposal", "code": "pending_disposal"},
-                    {"label": "其他", "value": "other", "code": "other"}
-                ]
+                    {
+                        "label": "公房",
+                        "value": "public_housing",
+                        "code": "public_housing",
+                    },
+                    {
+                        "label": "待移交",
+                        "value": "pending_transfer",
+                        "code": "pending_transfer",
+                    },
+                    {
+                        "label": "待处置",
+                        "value": "pending_disposal",
+                        "code": "pending_disposal",
+                    },
+                    {"label": "其他", "value": "other", "code": "other"},
+                ],
             },
             "ownership_status": {
                 "name": "确权状态",
@@ -131,8 +150,8 @@ def initialize_asset_dictionaries():
                 "values": [
                     {"label": "已确权", "value": "confirmed", "code": "confirmed"},
                     {"label": "未确权", "value": "unconfirmed", "code": "unconfirmed"},
-                    {"label": "部分确权", "value": "partial", "code": "partial"}
-                ]
+                    {"label": "部分确权", "value": "partial", "code": "partial"},
+                ],
             },
             "business_category": {
                 "name": "业态类别",
@@ -143,8 +162,8 @@ def initialize_asset_dictionaries():
                     {"label": "住宅", "value": "residential", "code": "residential"},
                     {"label": "仓储", "value": "warehouse", "code": "warehouse"},
                     {"label": "工业", "value": "industrial", "code": "industrial"},
-                    {"label": "其他", "value": "other", "code": "other"}
-                ]
+                    {"label": "其他", "value": "other", "code": "other"},
+                ],
             },
             "tenant_type": {
                 "name": "租户类型",
@@ -153,8 +172,8 @@ def initialize_asset_dictionaries():
                     {"label": "个人", "value": "individual", "code": "individual"},
                     {"label": "企业", "value": "enterprise", "code": "enterprise"},
                     {"label": "政府机构", "value": "government", "code": "government"},
-                    {"label": "其他", "value": "other", "code": "other"}
-                ]
+                    {"label": "其他", "value": "other", "code": "other"},
+                ],
             },
             "contract_status": {
                 "name": "合同状态",
@@ -163,8 +182,8 @@ def initialize_asset_dictionaries():
                     {"label": "生效中", "value": "active", "code": "active"},
                     {"label": "已到期", "value": "expired", "code": "expired"},
                     {"label": "已终止", "value": "terminated", "code": "terminated"},
-                    {"label": "待签署", "value": "pending", "code": "pending"}
-                ]
+                    {"label": "待签署", "value": "pending", "code": "pending"},
+                ],
             },
             "business_model": {
                 "name": "接收模式",
@@ -172,9 +191,13 @@ def initialize_asset_dictionaries():
                 "values": [
                     {"label": "承租转租", "value": "sublease", "code": "sublease"},
                     {"label": "委托经营", "value": "entrusted", "code": "entrusted"},
-                    {"label": "自营", "value": "self_operated", "code": "self_operated"},
-                    {"label": "其他", "value": "other", "code": "other"}
-                ]
+                    {
+                        "label": "自营",
+                        "value": "self_operated",
+                        "code": "self_operated",
+                    },
+                    {"label": "其他", "value": "other", "code": "other"},
+                ],
             },
             "operation_status": {
                 "name": "经营状态",
@@ -183,18 +206,22 @@ def initialize_asset_dictionaries():
                     {"label": "正常经营", "value": "normal", "code": "normal"},
                     {"label": "停业整顿", "value": "suspended", "code": "suspended"},
                     {"label": "装修中", "value": "renovating", "code": "renovating"},
-                    {"label": "待招租", "value": "vacant_for_rent", "code": "vacant_for_rent"}
-                ]
-            }
+                    {
+                        "label": "待招租",
+                        "value": "vacant_for_rent",
+                        "code": "vacant_for_rent",
+                    },
+                ],
+            },
         }
 
         created_count = 0
 
         for dict_code, dict_config in asset_dictionaries.items():
             # 检查是否已存在
-            existing_type = db.query(EnumFieldType).filter(
-                EnumFieldType.code == dict_code
-            ).first()
+            existing_type = (
+                db.query(EnumFieldType).filter(EnumFieldType.code == dict_code).first()
+            )
 
             if existing_type:
                 print(f"  字典 {dict_code} 已存在，跳过")
@@ -214,7 +241,7 @@ def initialize_asset_dictionaries():
                 is_multiple=False,
                 status="active",
                 created_by="系统初始化",
-                updated_by="系统初始化"
+                updated_by="系统初始化",
             )
             db.add(enum_type)
             db.flush()
@@ -231,7 +258,7 @@ def initialize_asset_dictionaries():
                     is_active=True,
                     level=1,
                     created_by="系统初始化",
-                    updated_by="系统初始化"
+                    updated_by="系统初始化",
                 )
                 db.add(enum_value)
 

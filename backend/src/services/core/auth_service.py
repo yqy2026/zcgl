@@ -42,7 +42,9 @@ REFRESH_TOKEN_EXPIRE_DAYS = settings.REFRESH_TOKEN_EXPIRE_DAYS
 
 # 确保配置一致性：设置最小60分钟的访问令牌有效期
 if ACCESS_TOKEN_EXPIRE_MINUTES < 60:
-    print(f"警告：ACCESS_TOKEN_EXPIRE_MINUTES设置为{ACCESS_TOKEN_EXPIRE_MINUTES}分钟，建议设置为至少60分钟以确保用户体验")
+    print(
+        f"警告：ACCESS_TOKEN_EXPIRE_MINUTES设置为{ACCESS_TOKEN_EXPIRE_MINUTES}分钟，建议设置为至少60分钟以确保用户体验"
+    )
     # 动态调整为60分钟
     ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
@@ -64,6 +66,7 @@ class AuthService:
     def _generate_jti(self) -> str:
         """生成JWT ID"""
         import secrets
+
         return secrets.token_urlsafe(32)
 
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
@@ -260,7 +263,9 @@ class AuthService:
         expire_time = user.password_last_changed + timedelta(days=PASSWORD_EXPIRE_DAYS)
         return datetime.now() > expire_time
 
-    def create_tokens(self, user: User, device_info: dict | None = None) -> TokenResponse:
+    def create_tokens(
+        self, user: User, device_info: dict | None = None
+    ) -> TokenResponse:
         """创建JWT令牌 - 增强安全性"""
         now = datetime.now(UTC)
         jti_access = self._generate_jti()
@@ -271,6 +276,7 @@ class AuthService:
         device_fingerprint = None
         if device_info:
             import hashlib
+
             fingerprint_data = [
                 device_info.get("user_agent", ""),
                 device_info.get("ip_address", ""),
@@ -278,7 +284,9 @@ class AuthService:
                 device_info.get("platform", ""),
             ]
             fingerprint_string = "|".join(filter(None, fingerprint_data))
-            device_fingerprint = hashlib.sha256(fingerprint_string.encode()).hexdigest()[:16]
+            device_fingerprint = hashlib.sha256(
+                fingerprint_string.encode()
+            ).hexdigest()[:16]
 
         # 访问令牌 - 增强安全性
         access_token_data = {
@@ -294,7 +302,7 @@ class AuthService:
                 (now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)).timestamp()
             ),
             "aud": "land-property-system",  # 受众
-            "iss": "land-property-auth",     # 签发者
+            "iss": "land-property-auth",  # 签发者
         }
         access_token = jwt.encode(access_token_data, SECRET_KEY, algorithm=ALGORITHM)
 
@@ -309,7 +317,7 @@ class AuthService:
             "exp": int((now + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)).timestamp()),
             "nbf": int(now.timestamp()),  # 生效时间
             "aud": "land-property-system",  # 受众
-            "iss": "land-property-auth",     # 签发者
+            "iss": "land-property-auth",  # 签发者
         }
         refresh_token = jwt.encode(refresh_token_data, SECRET_KEY, algorithm=ALGORITHM)
 
@@ -350,6 +358,7 @@ class AuthService:
         if device_info:
             # 如果device_info是字符串，尝试解析为JSON
             import json
+
             try:
                 if isinstance(device_info, str):
                     device_data = json.loads(device_info)
@@ -365,7 +374,9 @@ class AuthService:
             user_id=user_id,
             refresh_token=refresh_token,
             session_id=session_id,
-            device_info=device_info if not isinstance(device_info, dict) else json.dumps(device_info),
+            device_info=device_info
+            if not isinstance(device_info, dict)
+            else json.dumps(device_info),
             device_id=device_id,
             platform=platform,
             ip_address=ip_address,
@@ -379,7 +390,12 @@ class AuthService:
 
         return user_session
 
-    def validate_refresh_token(self, refresh_token: str, client_ip: str | None = None, user_agent: str | None = None) -> UserSession | None:
+    def validate_refresh_token(
+        self,
+        refresh_token: str,
+        client_ip: str | None = None,
+        user_agent: str | None = None,
+    ) -> UserSession | None:
         """验证刷新令牌 - 增强安全性"""
         try:
             # 增强JWT验证，添加受众和签发者验证
@@ -388,7 +404,7 @@ class AuthService:
                 SECRET_KEY,
                 algorithms=[ALGORITHM],
                 audience="land-property-system",
-                issuer="land-property-auth"
+                issuer="land-property-auth",
             )
             user_id = payload.get("sub")
             token_type = payload.get("type")
@@ -453,7 +469,7 @@ class AuthService:
             return None
 
         # 检查会话ID匹配
-        if session_id and getattr(session, 'session_id', None) != session_id:
+        if session_id and getattr(session, "session_id", None) != session_id:
             # 会话ID不匹配，可能存在安全问题
             session.is_active = False
             self.db.commit()
@@ -462,33 +478,42 @@ class AuthService:
         # 检查设备指纹（如果提供）
         if device_fingerprint and client_ip and user_agent:
             import hashlib
+
             current_fingerprint_data = [
                 user_agent or "",
                 client_ip or "",
-                getattr(session, 'device_id', ""),
-                getattr(session, 'platform', ""),
+                getattr(session, "device_id", ""),
+                getattr(session, "platform", ""),
             ]
-            current_fingerprint_string = "|".join(filter(None, current_fingerprint_data))
-            current_fingerprint = hashlib.sha256(current_fingerprint_string.encode()).hexdigest()[:16]
+            current_fingerprint_string = "|".join(
+                filter(None, current_fingerprint_data)
+            )
+            current_fingerprint = hashlib.sha256(
+                current_fingerprint_string.encode()
+            ).hexdigest()[:16]
 
             if device_fingerprint != current_fingerprint:
                 # 设备指纹不匹配，记录安全事件但允许继续（可配置）
-                print(f"警告：设备指纹不匹配，用户 {getattr(user, 'username', 'unknown')} 的设备可能发生变化")
+                print(
+                    f"警告：设备指纹不匹配，用户 {getattr(user, 'username', 'unknown')} 的设备可能发生变化"
+                )
 
         # 检查IP变化（可选安全检查）
-        if client_ip and getattr(session, 'ip_address', None):
-            session_ip = str(getattr(session, 'ip_address', ''))
+        if client_ip and getattr(session, "ip_address", None):
+            session_ip = str(getattr(session, "ip_address", ""))
             if session_ip and session_ip != client_ip:
                 # IP地址发生变化，记录警告
-                print(f"警告：用户 {getattr(user, 'username', 'unknown')} 的IP地址发生变化：{session_ip} -> {client_ip}")
+                print(
+                    f"警告：用户 {getattr(user, 'username', 'unknown')} 的IP地址发生变化：{session_ip} -> {client_ip}"
+                )
 
         # 更新最后访问时间
         session.last_accessed_at = datetime.now()
         # 更新IP地址和User-Agent（如果提供）
         if client_ip:
-            setattr(session, 'ip_address', client_ip)
+            setattr(session, "ip_address", client_ip)
         if user_agent:
-            setattr(session, 'user_agent', user_agent)
+            setattr(session, "user_agent", user_agent)
         self.db.commit()
 
         return session

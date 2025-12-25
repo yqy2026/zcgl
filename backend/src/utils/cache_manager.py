@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 
 try:
     import redis.asyncio as redis
+
     REDIS_AVAILABLE = True
 except ImportError:
     REDIS_AVAILABLE = False

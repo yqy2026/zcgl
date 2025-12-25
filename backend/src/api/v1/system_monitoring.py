@@ -65,9 +65,7 @@ class SystemMetrics(BaseModel):
     process_count: int = Field(..., ge=0, description="运行进程数")
     load_average: list[float] | None = Field(None, description="系统负载平均值")
 
-    model_config = ConfigDict(
-        json_encoders={datetime: lambda v: v.isoformat()}
-    )
+    model_config = ConfigDict(json_encoders={datetime: lambda v: v.isoformat()})
 
 
 class ApplicationMetrics(BaseModel):
@@ -81,9 +79,7 @@ class ApplicationMetrics(BaseModel):
     cache_hit_rate: float = Field(..., ge=0, le=100, description="缓存命中率(%)")
     database_connections: int = Field(..., ge=0, description="数据库连接数")
 
-    model_config = ConfigDict(
-        json_encoders={datetime: lambda v: v.isoformat()}
-    )
+    model_config = ConfigDict(json_encoders={datetime: lambda v: v.isoformat()})
 
 
 class HealthStatus(BaseModel):
@@ -96,9 +92,7 @@ class HealthStatus(BaseModel):
     components: dict[str, dict[str, Any]] = Field(..., description="组件状态详情")
     overall_score: float = Field(..., ge=0, le=100, description="总体健康评分")
 
-    model_config = ConfigDict(
-        json_encoders={datetime: lambda v: v.isoformat()}
-    )
+    model_config = ConfigDict(json_encoders={datetime: lambda v: v.isoformat()})
 
 
 class PerformanceAlert(BaseModel):
@@ -113,9 +107,7 @@ class PerformanceAlert(BaseModel):
     timestamp: datetime = Field(..., description="告警时间")
     resolved: bool = Field(False, description="是否已解决")
 
-    model_config = ConfigDict(
-        json_encoders={datetime: lambda v: v.isoformat()}
-    )
+    model_config = ConfigDict(json_encoders={datetime: lambda v: v.isoformat()})
 
 
 class DatabaseHealthMetrics(BaseModel):
@@ -131,9 +123,7 @@ class DatabaseHealthMetrics(BaseModel):
     database_size_mb: float = Field(..., ge=0, description="数据库大小(MB)")
     health_score: float = Field(..., ge=0, le=100, description="数据库健康评分")
 
-    model_config = ConfigDict(
-        json_encoders={datetime: lambda v: v.isoformat()}
-    )
+    model_config = ConfigDict(json_encoders={datetime: lambda v: v.isoformat()})
 
 
 class DatabaseOptimizationReport(BaseModel):
@@ -145,9 +135,7 @@ class DatabaseOptimizationReport(BaseModel):
     performance_improvement: dict[str, float] = Field(..., description="性能改进指标")
     cleanup_results: dict[str, Any] = Field(..., description="清理结果")
 
-    model_config = ConfigDict(
-        json_encoders={datetime: lambda v: v.isoformat()}
-    )
+    model_config = ConfigDict(json_encoders={datetime: lambda v: v.isoformat()})
 
 
 # 全局变量存储指标历史数据

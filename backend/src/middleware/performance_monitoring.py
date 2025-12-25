@@ -31,9 +31,7 @@ class PerformanceMonitoringMiddleware(BaseHTTPMiddleware):
         self._reset_task = asyncio.create_task(self._reset_counters())
 
     async def dispatch(
-        self,
-        request: Request,
-        call_next: RequestResponseEndpoint
+        self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
         """处理请求并收集性能指标"""
 
@@ -45,10 +43,7 @@ class PerformanceMonitoringMiddleware(BaseHTTPMiddleware):
         # 请求频率检查
         if not await self._check_rate_limit(client_ip):
             logger.warning(f"Rate limit exceeded for IP: {client_ip}")
-            raise HTTPException(
-                status_code=429,
-                detail="请求过于频繁，请稍后再试"
-            )
+            raise HTTPException(status_code=429, detail="请求过于频繁，请稍后再试")
 
         # 记录请求
         await self._record_request(path)
@@ -126,14 +121,18 @@ class PerformanceMonitoringMiddleware(BaseHTTPMiddleware):
             if len(times) > 100:
                 times.pop(0)
 
-    async def _record_slow_query(self, path: str, process_time: float, method: str) -> None:
+    async def _record_slow_query(
+        self, path: str, process_time: float, method: str
+    ) -> None:
         """记录慢查询"""
-        self.slow_queries.append({
-            "path": path,
-            "method": method,
-            "process_time": process_time,
-            "timestamp": datetime.now().isoformat()
-        })
+        self.slow_queries.append(
+            {
+                "path": path,
+                "method": method,
+                "process_time": process_time,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
 
         # 保留最近50个慢查询记录
         if len(self.slow_queries) > 50:
@@ -152,7 +151,8 @@ class PerformanceMonitoringMiddleware(BaseHTTPMiddleware):
                 # 清理过期的请求计数
                 current_minute = datetime.now().strftime("%Y-%m-%d %H:%M")
                 expired_keys = [
-                    key for key in self.request_count.keys()
+                    key
+                    for key in self.request_count.keys()
                     if key.split(":")[1] != current_minute
                 ]
                 for key in expired_keys:
@@ -175,7 +175,7 @@ class PerformanceMonitoringMiddleware(BaseHTTPMiddleware):
             memory_percent = memory.percent
 
             # 磁盘使用率
-            disk = psutil.disk_usage('/')
+            disk = psutil.disk_usage("/")
             disk_percent = (disk.used / disk.total) * 100
 
             # 网络IO
@@ -208,7 +208,7 @@ class PerformanceMonitoringMiddleware(BaseHTTPMiddleware):
             "monitored_paths": len(self.response_times),
             "error_count": sum(self.error_counts.values()),
             "slow_queries_count": len(self.slow_queries),
-            "system_info": {}
+            "system_info": {},
         }
 
         # 计算平均响应时间
@@ -219,7 +219,7 @@ class PerformanceMonitoringMiddleware(BaseHTTPMiddleware):
                     "avg_time": sum(times) / len(times),
                     "max_time": max(times),
                     "min_time": min(times),
-                    "request_count": len(times)
+                    "request_count": len(times),
                 }
 
         stats["path_performance"] = path_stats
@@ -229,7 +229,10 @@ class PerformanceMonitoringMiddleware(BaseHTTPMiddleware):
             stats["system_info"] = {
                 "cpu_percent": psutil.cpu_percent(),
                 "memory_percent": psutil.virtual_memory().percent,
-                "disk_percent": (psutil.disk_usage('/').used / psutil.disk_usage('/').total) * 100
+                "disk_percent": (
+                    psutil.disk_usage("/").used / psutil.disk_usage("/").total
+                )
+                * 100,
             }
         except Exception:
             pass
@@ -238,11 +241,9 @@ class PerformanceMonitoringMiddleware(BaseHTTPMiddleware):
 
     def get_slow_queries(self, limit: int = 10) -> list:
         """获取慢查询列表"""
-        return sorted(
-            self.slow_queries,
-            key=lambda x: x["process_time"],
-            reverse=True
-        )[:limit]
+        return sorted(self.slow_queries, key=lambda x: x["process_time"], reverse=True)[
+            :limit
+        ]
 
     async def cleanup(self) -> None:
         """清理资源"""

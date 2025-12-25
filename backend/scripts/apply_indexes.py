@@ -18,6 +18,7 @@ from src.core.config import settings
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 def apply_indexes():
     """应用性能优化索引"""
     try:
@@ -25,15 +26,17 @@ def apply_indexes():
         engine = create_engine(settings.DATABASE_URL)
 
         # 读取索引SQL文件
-        index_file = os.path.join(os.path.dirname(__file__), "..", "migrations", "add_performance_indexes.sql")
+        index_file = os.path.join(
+            os.path.dirname(__file__), "..", "migrations", "add_performance_indexes.sql"
+        )
 
-        with open(index_file, encoding='utf-8') as f:
+        with open(index_file, encoding="utf-8") as f:
             index_sql = f.read()
 
         # 执行索引创建
         with engine.connect() as conn:
             # 分割SQL语句并执行
-            statements = [stmt.strip() for stmt in index_sql.split(';') if stmt.strip()]
+            statements = [stmt.strip() for stmt in index_sql.split(";") if stmt.strip()]
 
             for statement in statements:
                 try:
@@ -54,8 +57,9 @@ def apply_indexes():
         logger.error(f"应用数据库索引失败: {e}")
         return False
     finally:
-        if 'engine' in locals():
+        if "engine" in locals():
             engine.dispose()
+
 
 if __name__ == "__main__":
     success = apply_indexes()

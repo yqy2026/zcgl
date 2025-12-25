@@ -21,18 +21,24 @@ def validate_api_routes():
     pdf_routes = []
 
     for route in app.routes:
-        if hasattr(route, 'path'):
+        if hasattr(route, "path"):
             path = route.path
-            if 'pdf' in path.lower():
-                pdf_routes.append({
-                    'path': path,
-                    'methods': getattr(route, 'methods', ['GET']),
-                    'name': getattr(route, 'name', 'Unknown')
-                })
+            if "pdf" in path.lower():
+                pdf_routes.append(
+                    {
+                        "path": path,
+                        "methods": getattr(route, "methods", ["GET"]),
+                        "name": getattr(route, "name", "Unknown"),
+                    }
+                )
 
     # 分析路由版本
-    v1_routes = [r for r in pdf_routes if '/pdf_import/' in r['path'] and 'pdf_import_v2' not in r['path']]
-    v2_routes = [r for r in pdf_routes if 'pdf_import_v2' in r['path']]
+    v1_routes = [
+        r
+        for r in pdf_routes
+        if "/pdf_import/" in r["path"] and "pdf_import_v2" not in r["path"]
+    ]
+    v2_routes = [r for r in pdf_routes if "pdf_import_v2" in r["path"]]
     other_routes = [r for r in pdf_routes if r not in v1_routes and r not in v2_routes]
 
     print("📊 路由统计:")
@@ -54,6 +60,7 @@ def validate_api_routes():
     else:
         print("   ✅ 未发现V2路由，API版本统一")
         return True
+
 
 if __name__ == "__main__":
     is_valid = validate_api_routes()

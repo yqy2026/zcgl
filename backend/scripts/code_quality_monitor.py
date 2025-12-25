@@ -20,17 +20,19 @@ import matplotlib.pyplot as plt
 # 配置日志
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.FileHandler('logs/code_quality_monitor.log'),
-        logging.StreamHandler()
-    ]
+        logging.FileHandler("logs/code_quality_monitor.log"),
+        logging.StreamHandler(),
+    ],
 )
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class QualityIssue:
     """代码质量问题"""
+
     file: str
     line: int
     column: int
@@ -39,9 +41,11 @@ class QualityIssue:
     severity: str  # error, warning, info
     tool: str  # ruff, mypy, bandit, etc.
 
+
 @dataclass
 class QualityMetrics:
     """代码质量指标"""
+
     total_issues: int
     error_count: int
     warning_count: int
@@ -52,6 +56,7 @@ class QualityMetrics:
     duplication_percentage: float
     security_issues: int
     type_errors: int
+
 
 class CodeQualityMonitor:
     """代码质量监控器"""
@@ -68,10 +73,18 @@ class CodeQualityMonitor:
         logger.info("运行Ruff代码检查...")
         try:
             result = subprocess.run(
-                ["python", "-m", "ruff", "check", "--format", "json", str(self.src_dir)],
+                [
+                    "python",
+                    "-m",
+                    "ruff",
+                    "check",
+                    "--format",
+                    "json",
+                    str(self.src_dir),
+                ],
                 capture_output=True,
                 text=True,
-                cwd=str(self.project_root)
+                cwd=str(self.project_root),
             )
 
             if result.returncode not in [0, 1]:  # 0: 无问题, 1: 发现问题
@@ -89,7 +102,7 @@ class CodeQualityMonitor:
                         error_code=item.get("code", ""),
                         message=item.get("message", ""),
                         severity="error" if item.get("type") == "error" else "warning",
-                        tool="ruff"
+                        tool="ruff",
                     )
                     issues.append(issue)
 
@@ -105,10 +118,18 @@ class CodeQualityMonitor:
         logger.info("运行MyPy类型检查...")
         try:
             result = subprocess.run(
-                ["python", "-m", "mypy", "--config-file", "pyproject.toml", "--json", str(self.src_dir)],
+                [
+                    "python",
+                    "-m",
+                    "mypy",
+                    "--config-file",
+                    "pyproject.toml",
+                    "--json",
+                    str(self.src_dir),
+                ],
                 capture_output=True,
                 text=True,
-                cwd=str(self.project_root)
+                cwd=str(self.project_root),
             )
 
             issues = []
@@ -122,7 +143,7 @@ class CodeQualityMonitor:
                         error_code=item.get("code", ""),
                         message=item.get("message", ""),
                         severity="error",
-                        tool="mypy"
+                        tool="mypy",
                     )
                     issues.append(issue)
 
@@ -139,15 +160,25 @@ class CodeQualityMonitor:
         try:
             report_file = self.reports_dir / "bandit_report.json"
             result = subprocess.run(
-                ["python", "-m", "bandit", "-r", str(self.src_dir), "-f", "json", "-o", str(report_file)],
+                [
+                    "python",
+                    "-m",
+                    "bandit",
+                    "-r",
+                    str(self.src_dir),
+                    "-f",
+                    "json",
+                    "-o",
+                    str(report_file),
+                ],
                 capture_output=True,
                 text=True,
-                cwd=str(self.project_root)
+                cwd=str(self.project_root),
             )
 
             issues = []
             if report_file.exists():
-                with open(report_file, encoding='utf-8') as f:
+                with open(report_file, encoding="utf-8") as f:
                     bandit_results = json.load(f)
 
                 for item in bandit_results.get("results", []):
@@ -158,7 +189,7 @@ class CodeQualityMonitor:
                         error_code=item.get("test_id", ""),
                         message=item.get("issue_text", ""),
                         severity=item.get("issue_severity", "low").lower(),
-                        tool="bandit"
+                        tool="bandit",
                     )
                     issues.append(issue)
 
@@ -174,18 +205,29 @@ class CodeQualityMonitor:
         logger.info("运行代码复杂度分析...")
         try:
             result = subprocess.run(
-                ["python", "-m", "radon", "cc", "--average", "--min", "C", str(self.src_dir)],
+                [
+                    "python",
+                    "-m",
+                    "radon",
+                    "cc",
+                    "--average",
+                    "--min",
+                    "C",
+                    str(self.src_dir),
+                ],
                 capture_output=True,
                 text=True,
-                cwd=str(self.project_root)
+                cwd=str(self.project_root),
             )
 
             if result.returncode == 0 and result.stdout.strip():
                 # 解析平均复杂度
-                lines = result.stdout.strip().split('\n')
+                lines = result.stdout.strip().split("\n")
                 for line in reversed(lines):
-                    if 'Average complexity:' in line:
-                        complexity = float(line.split('Average complexity:')[1].strip().split()[0])
+                    if "Average complexity:" in line:
+                        complexity = float(
+                            line.split("Average complexity:")[1].strip().split()[0]
+                        )
                         logger.info(f"平均代码复杂度: {complexity}")
                         return complexity
 
@@ -200,18 +242,31 @@ class CodeQualityMonitor:
         logger.info("运行代码重复度分析...")
         try:
             result = subprocess.run(
-                ["python", "-m", "jscpd", str(self.src_dir), "--min-lines", "5", "--min-tokens", "50", "--reporters", "json"],
+                [
+                    "python",
+                    "-m",
+                    "jscpd",
+                    str(self.src_dir),
+                    "--min-lines",
+                    "5",
+                    "--min-tokens",
+                    "50",
+                    "--reporters",
+                    "json",
+                ],
                 capture_output=True,
                 text=True,
-                cwd=str(self.project_root)
+                cwd=str(self.project_root),
             )
 
             report_file = self.project_root / "jscpd-report.json"
             if report_file.exists():
-                with open(report_file, encoding='utf-8') as f:
+                with open(report_file, encoding="utf-8") as f:
                     jscpd_results = json.load(f)
 
-                duplication_percentage = jscpd_results.get("statistics", {}).get("percentage", 0.0)
+                duplication_percentage = jscpd_results.get("statistics", {}).get(
+                    "percentage", 0.0
+                )
                 logger.info(f"代码重复度: {duplication_percentage}%")
                 report_file.unlink()  # 清理临时文件
                 return duplication_percentage
@@ -260,10 +315,12 @@ class CodeQualityMonitor:
             complexity_score=complexity_score,
             duplication_percentage=duplication_percentage,
             security_issues=security_issues,
-            type_errors=type_errors
+            type_errors=type_errors,
         )
 
-        logger.info(f"分析完成: {len(all_issues)} 个问题, 复杂度: {complexity_score:.2f}, 重复度: {duplication_percentage:.2f}%")
+        logger.info(
+            f"分析完成: {len(all_issues)} 个问题, 复杂度: {complexity_score:.2f}, 重复度: {duplication_percentage:.2f}%"
+        )
         return all_issues, metrics
 
     def save_report(self, issues: list[QualityIssue], metrics: QualityMetrics) -> Path:
@@ -283,7 +340,7 @@ class CodeQualityMonitor:
                 "complexity_score": metrics.complexity_score,
                 "duplication_percentage": metrics.duplication_percentage,
                 "security_issues": metrics.security_issues,
-                "type_errors": metrics.type_errors
+                "type_errors": metrics.type_errors,
             },
             "issues": [
                 {
@@ -293,13 +350,13 @@ class CodeQualityMonitor:
                     "error_code": issue.error_code,
                     "message": issue.message,
                     "severity": issue.severity,
-                    "tool": issue.tool
+                    "tool": issue.tool,
                 }
                 for issue in issues
-            ]
+            ],
         }
 
-        with open(report_file, 'w', encoding='utf-8') as f:
+        with open(report_file, "w", encoding="utf-8") as f:
             json.dump(report_data, f, ensure_ascii=False, indent=2)
 
         logger.info(f"质量报告已保存: {report_file}")
@@ -309,25 +366,29 @@ class CodeQualityMonitor:
         """更新历史记录"""
         history = []
         if self.history_file.exists():
-            with open(self.history_file, encoding='utf-8') as f:
+            with open(self.history_file, encoding="utf-8") as f:
                 history = json.load(f)
 
-        history.append({
-            "date": datetime.now().isoformat(),
-            "metrics": {
-                "total_issues": metrics.total_issues,
-                "error_count": metrics.error_count,
-                "warning_count": metrics.warning_count,
-                "complexity_score": metrics.complexity_score,
-                "duplication_percentage": metrics.duplication_percentage
+        history.append(
+            {
+                "date": datetime.now().isoformat(),
+                "metrics": {
+                    "total_issues": metrics.total_issues,
+                    "error_count": metrics.error_count,
+                    "warning_count": metrics.warning_count,
+                    "complexity_score": metrics.complexity_score,
+                    "duplication_percentage": metrics.duplication_percentage,
+                },
             }
-        })
+        )
 
         # 只保留最近90天的记录
         cutoff_date = datetime.now() - timedelta(days=90)
-        history = [h for h in history if datetime.fromisoformat(h["date"]) > cutoff_date]
+        history = [
+            h for h in history if datetime.fromisoformat(h["date"]) > cutoff_date
+        ]
 
-        with open(self.history_file, 'w', encoding='utf-8') as f:
+        with open(self.history_file, "w", encoding="utf-8") as f:
             json.dump(history, f, ensure_ascii=False, indent=2)
 
         logger.info("历史记录已更新")
@@ -337,7 +398,7 @@ class CodeQualityMonitor:
         if not self.history_file.exists():
             return None
 
-        with open(self.history_file, encoding='utf-8') as f:
+        with open(self.history_file, encoding="utf-8") as f:
             history = json.load(f)
 
         if len(history) < 2:
@@ -350,29 +411,29 @@ class CodeQualityMonitor:
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
 
         # 问题数量趋势
-        ax1.plot(dates, total_issues, 'b-', marker='o', label='总问题数')
-        ax1.set_ylabel('问题数量')
-        ax1.set_title('代码质量问题趋势')
+        ax1.plot(dates, total_issues, "b-", marker="o", label="总问题数")
+        ax1.set_ylabel("问题数量")
+        ax1.set_title("代码质量问题趋势")
         ax1.grid(True, alpha=0.3)
         ax1.legend()
 
         # 复杂度趋势
-        ax2.plot(dates, complexity_scores, 'r-', marker='s', label='平均复杂度')
-        ax2.set_ylabel('复杂度分数')
-        ax2.set_xlabel('日期')
-        ax2.set_title('代码复杂度趋势')
+        ax2.plot(dates, complexity_scores, "r-", marker="s", label="平均复杂度")
+        ax2.set_ylabel("复杂度分数")
+        ax2.set_xlabel("日期")
+        ax2.set_title("代码复杂度趋势")
         ax2.grid(True, alpha=0.3)
         ax2.legend()
 
         # 格式化日期
         for ax in [ax1, ax2]:
-            ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+            ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
             ax.xaxis.set_major_locator(mdates.DayLocator(interval=7))
             plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
 
         plt.tight_layout()
         chart_file = self.reports_dir / "quality_trends.png"
-        plt.savefig(chart_file, dpi=300, bbox_inches='tight')
+        plt.savefig(chart_file, dpi=300, bbox_inches="tight")
         plt.close()
 
         logger.info(f"趋势图已生成: {chart_file}")
@@ -383,35 +444,41 @@ class CodeQualityMonitor:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         csv_file = self.reports_dir / f"issues_{timestamp}.csv"
 
-        with open(csv_file, 'w', newline='', encoding='utf-8') as f:
+        with open(csv_file, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
-            writer.writerow(['文件', '行号', '列号', '错误代码', '严重程度', '工具', '问题描述'])
+            writer.writerow(
+                ["文件", "行号", "列号", "错误代码", "严重程度", "工具", "问题描述"]
+            )
 
             for issue in sorted(issues, key=lambda x: (x.file, x.line)):
-                writer.writerow([
-                    issue.file,
-                    issue.line,
-                    issue.column,
-                    issue.error_code,
-                    issue.severity,
-                    issue.tool,
-                    issue.message
-                ])
+                writer.writerow(
+                    [
+                        issue.file,
+                        issue.line,
+                        issue.column,
+                        issue.error_code,
+                        issue.severity,
+                        issue.tool,
+                        issue.message,
+                    ]
+                )
 
         logger.info(f"CSV报告已生成: {csv_file}")
         return csv_file
 
     def print_summary(self, issues: list[QualityIssue], metrics: QualityMetrics):
         """打印质量摘要"""
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("代码质量监控报告")
-        print("="*60)
+        print("=" * 60)
         print(f"检查时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         print(f"项目路径: {self.project_root}")
         print()
         print("质量指标:")
         print(f"  总问题数: {metrics.total_issues}")
-        print(f"  错误数: {metrics.error_count} | 警告数: {metrics.warning_count} | 信息数: {metrics.info_count}")
+        print(
+            f"  错误数: {metrics.error_count} | 警告数: {metrics.warning_count} | 信息数: {metrics.info_count}"
+        )
         print(f"  涉及文件: {metrics.files_with_issues}/{metrics.total_files}")
         print(f"  平均复杂度: {metrics.complexity_score:.2f}")
         print(f"  代码重复度: {metrics.duplication_percentage:.2f}%")
@@ -425,7 +492,9 @@ class CodeQualityMonitor:
 
             for issue in issues:
                 tool_counts[issue.tool] = tool_counts.get(issue.tool, 0) + 1
-                severity_counts[issue.severity] = severity_counts.get(issue.severity, 0) + 1
+                severity_counts[issue.severity] = (
+                    severity_counts.get(issue.severity, 0) + 1
+                )
 
             print("按工具分类:")
             for tool, count in sorted(tool_counts.items()):
@@ -436,10 +505,15 @@ class CodeQualityMonitor:
                 print(f"  {severity}: {count}")
 
             print("\n前10个问题:")
-            for i, issue in enumerate(sorted(issues, key=lambda x: (x.severity, x.file, x.line))[:10]):
-                print(f"  {i+1}. {issue.file}:{issue.line} - {issue.error_code}: {issue.message}")
+            for i, issue in enumerate(
+                sorted(issues, key=lambda x: (x.severity, x.file, x.line))[:10]
+            ):
+                print(
+                    f"  {i+1}. {issue.file}:{issue.line} - {issue.error_code}: {issue.message}"
+                )
 
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
+
 
 def main():
     """主函数"""
@@ -475,6 +549,7 @@ def main():
     # 如果问题数量超过阈值，返回非零退出码
     if metrics.error_count > 10 or metrics.security_issues > 0:
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

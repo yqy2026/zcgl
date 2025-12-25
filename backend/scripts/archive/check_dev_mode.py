@@ -14,8 +14,9 @@ def check_dev_mode():
     print(f"当前进程DEV_MODE: {os.getenv('DEV_MODE', 'not set')}")
     print("所有环境变量:")
     for key, value in os.environ.items():
-        if 'DEV' in key or 'MODE' in key:
+        if "DEV" in key or "MODE" in key:
             print(f"  {key} = {value}")
+
 
 def test_simple_api():
     """测试简单API调用"""
@@ -39,6 +40,7 @@ def test_simple_api():
     except Exception as e:
         print(f"API测试失败: {e}")
 
+
 def test_with_headers():
     """测试带不同头部的API调用"""
     print("\n=== 测试不同认证头部 ===")
@@ -46,18 +48,25 @@ def test_with_headers():
     headers_list = [
         {"Authorization": "Bearer mock_token_dev", "Content-Type": "application/json"},
         {"Authorization": "mock_token_dev", "Content-Type": "application/json"},
-        {"X-Dev-Mode": "true", "Authorization": "Bearer mock_token_dev", "Content-Type": "application/json"},
+        {
+            "X-Dev-Mode": "true",
+            "Authorization": "Bearer mock_token_dev",
+            "Content-Type": "application/json",
+        },
     ]
 
     for i, headers in enumerate(headers_list):
         print(f"\n测试头部配置 {i+1}: {headers}")
         try:
-            response = requests.get("http://localhost:8002/api/assets", headers=headers, timeout=5)
+            response = requests.get(
+                "http://localhost:8002/api/assets", headers=headers, timeout=5
+            )
             print(f"状态码: {response.status_code}")
             if response.status_code != 200:
                 print(f"错误响应: {response.text[:200]}...")
         except Exception as e:
             print(f"请求失败: {e}")
+
 
 if __name__ == "__main__":
     check_dev_mode()

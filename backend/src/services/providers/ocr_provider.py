@@ -6,6 +6,7 @@ class OCRProvider:
     def __init__(self):
         self.service = None
 
+
 def get_ocr_service() -> Any | None:
     """获取OCR服务实例"""
     try:
@@ -18,17 +19,21 @@ def get_ocr_service() -> Any | None:
     except Exception:
         return None
 
+
 def set_ocr_service(service: Any) -> None:
     """设置OCR服务实例"""
     pass
 
+
 # 全局OCR服务实例
 _ocr_service_instance: Any | None = None
+
 
 def get_current_ocr_service() -> Any | None:
     """获取当前OCR服务实例"""
     global _ocr_service_instance
     return _ocr_service_instance
+
 
 def set_current_ocr_service(service: Any) -> None:
     """设置当前OCR服务实例"""

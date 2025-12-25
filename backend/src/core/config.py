@@ -84,10 +84,18 @@ class Settings(BaseSettings):
     )
 
     # JWT安全强化配置
-    JWT_ISSUER: str = Field(default="zcgl-system", json_schema_extra={"env": "JWT_ISSUER"})
-    JWT_AUDIENCE: str = Field(default="zcgl-users", json_schema_extra={"env": "JWT_AUDIENCE"})
-    ENABLE_JTI_CLAIM: bool = Field(default=True, json_schema_extra={"env": "ENABLE_JTI_CLAIM"})
-    TOKEN_BLACKLIST_ENABLED: bool = Field(default=True, json_schema_extra={"env": "TOKEN_BLACKLIST_ENABLED"})
+    JWT_ISSUER: str = Field(
+        default="zcgl-system", json_schema_extra={"env": "JWT_ISSUER"}
+    )
+    JWT_AUDIENCE: str = Field(
+        default="zcgl-users", json_schema_extra={"env": "JWT_AUDIENCE"}
+    )
+    ENABLE_JTI_CLAIM: bool = Field(
+        default=True, json_schema_extra={"env": "ENABLE_JTI_CLAIM"}
+    )
+    TOKEN_BLACKLIST_ENABLED: bool = Field(
+        default=True, json_schema_extra={"env": "TOKEN_BLACKLIST_ENABLED"}
+    )
 
     # 文件上传配置
     MAX_FILE_SIZE: int = Field(
@@ -140,7 +148,9 @@ class Settings(BaseSettings):
 
         # 检查数据库是否为SQLite（生产环境推荐PostgreSQL）
         if self.DATABASE_URL.startswith("sqlite:///./land_property.db"):
-            warnings.append("提醒: 使用默认SQLite数据库路径，生产环境建议使用PostgreSQL。")
+            warnings.append(
+                "提醒: 使用默认SQLite数据库路径，生产环境建议使用PostgreSQL。"
+            )
 
         return warnings
 
@@ -257,6 +267,7 @@ __all__ = ["settings", "validate_config", "get_config", "initialize_config"]
 # ============================================================
 # 兼容性函数 (合并自 config_manager.py)
 # ============================================================
+
 
 def get_config(key: str, default: Any = None) -> Any:
     """

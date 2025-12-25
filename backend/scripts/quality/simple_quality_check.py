@@ -32,29 +32,31 @@ class SimpleQualityMonitor:
         # 1. 语法检查
         print("1. Syntax Check...")
         syntax_result = self._check_syntax()
-        results['syntax'] = syntax_result
+        results["syntax"] = syntax_result
         print(f"   Score: {syntax_result['score']:.1f} - {syntax_result['status']}")
-        if syntax_result['issues']:
+        if syntax_result["issues"]:
             print(f"   Issues Found: {len(syntax_result['issues'])}")
 
         # 2. 导入检查
         print("\n2. Import Check...")
         import_result = self._check_imports()
-        results['import'] = import_result
+        results["import"] = import_result
         print(f"   Score: {import_result['score']:.1f} - {import_result['status']}")
-        if import_result['failed_imports']:
+        if import_result["failed_imports"]:
             print(f"   Failed Imports: {len(import_result['failed_imports'])}")
 
         # 3. 基本测试
         print("\n3. Basic Tests...")
         test_result = self._run_basic_tests()
-        results['tests'] = test_result
+        results["tests"] = test_result
         print(f"   Score: {test_result['score']:.1f} - {test_result['status']}")
         print(f"   Passed: {test_result['passed']}, Failed: {test_result['failed']}")
         print(f"   Execution Time: {test_result['execution_time']:.1f}s")
 
         # 4. 计算总分
-        overall_score = (syntax_result['score'] + import_result['score'] + test_result['score']) / 3
+        overall_score = (
+            syntax_result["score"] + import_result["score"] + test_result["score"]
+        ) / 3
         overall_status = self._get_status(overall_score)
 
         print("\n" + "=" * 50)
@@ -74,16 +76,17 @@ class SimpleQualityMonitor:
                 ["ruff", "check", "src/", "--select=E,F", "--output-format=json"],
                 capture_output=True,
                 text=True,
-                cwd=self.base_dir
+                cwd=self.base_dir,
             )
 
             if result.stdout and result.returncode == 0:
                 try:
                     import json
+
                     errors = json.loads(result.stdout)
                     error_count = len(errors)
                 except:
-                    error_count = result.stdout.count('\n')
+                    error_count = result.stdout.count("\n")
             else:
                 error_count = 0
 
@@ -94,28 +97,19 @@ class SimpleQualityMonitor:
             status = self._get_status(score)
 
             return {
-                'score': score,
-                'status': status,
-                'error_count': error_count,
-                'issues': error_count > 0
+                "score": score,
+                "status": status,
+                "error_count": error_count,
+                "issues": error_count > 0,
             }
 
         except Exception as e:
             print(f"   Error running syntax check: {e}")
-            return {
-                'score': 0,
-                'status': 'ERROR',
-                'error_count': -1,
-                'issues': True
-            }
+            return {"score": 0, "status": "ERROR", "error_count": -1, "issues": True}
 
     def _check_imports(self):
         """检查模块导入"""
-        modules_to_test = [
-            "src.main",
-            "src.models.asset",
-            "src.api.v1.assets"
-        ]
+        modules_to_test = ["src.main", "src.models.asset", "src.api.v1.assets"]
 
         successful_imports = 0
         failed_imports = []
@@ -134,19 +128,16 @@ class SimpleQualityMonitor:
         status = self._get_status(score)
 
         return {
-            'score': score,
-            'status': status,
-            'total_modules': total_modules,
-            'successful_imports': successful_imports,
-            'failed_imports': failed_imports
+            "score": score,
+            "status": status,
+            "total_modules": total_modules,
+            "successful_imports": successful_imports,
+            "failed_imports": failed_imports,
         }
 
     def _run_basic_tests(self):
         """运行基本测试"""
-        test_files = [
-            "tests/test_main.py",
-            "tests/test_quick_suite.py"
-        ]
+        test_files = ["tests/test_main.py", "tests/test_quick_suite.py"]
 
         start_time = time.time()
 
@@ -155,7 +146,7 @@ class SimpleQualityMonitor:
                 ["python", "-m", "pytest"] + test_files + ["-v", "--tb=no"],
                 capture_output=True,
                 text=True,
-                cwd=self.base_dir
+                cwd=self.base_dir,
             )
 
             execution_time = time.time() - start_time
@@ -186,28 +177,28 @@ class SimpleQualityMonitor:
             status = self._get_status(final_score)
 
             return {
-                'score': final_score,
-                'status': status,
-                'passed': passed,
-                'failed': failed,
-                'error': error,
-                'total': total,
-                'success_rate': success_rate,
-                'execution_time': execution_time,
-                'performance_score': performance_score
+                "score": final_score,
+                "status": status,
+                "passed": passed,
+                "failed": failed,
+                "error": error,
+                "total": total,
+                "success_rate": success_rate,
+                "execution_time": execution_time,
+                "performance_score": performance_score,
             }
 
         except Exception as e:
             print(f"   Error running tests: {e}")
             return {
-                'score': 0,
-                'status': 'ERROR',
-                'passed': 0,
-                'failed': 0,
-                'error': 1,
-                'total': 0,
-                'execution_time': 0,
-                'performance_score': 0
+                "score": 0,
+                "status": "ERROR",
+                "passed": 0,
+                "failed": 0,
+                "error": 1,
+                "total": 0,
+                "execution_time": 0,
+                "performance_score": 0,
             }
 
     def _get_status(self, score):
@@ -232,7 +223,7 @@ class SimpleQualityMonitor:
         report_file = report_dir / f"simple_quality_{timestamp}.txt"
 
         try:
-            with open(report_file, 'w', encoding='utf-8') as f:
+            with open(report_file, "w", encoding="utf-8") as f:
                 f.write("Quality Monitor Report\n")
                 f.write("=" * 30 + "\n")
                 f.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
@@ -247,13 +238,17 @@ class SimpleQualityMonitor:
                     f.write(f"  Score: {result['score']:.1f}\n")
                     f.write(f"  Status: {result['status']}\n")
 
-                    if check_name == 'syntax':
+                    if check_name == "syntax":
                         f.write(f"  Errors: {result.get('error_count', 0)}\n")
-                    elif check_name == 'import':
-                        f.write(f"  Successful: {result.get('successful_imports', 0)}/{result.get('total_modules', 0)}\n")
-                        if result.get('failed_imports'):
-                            f.write(f"  Failed: {', '.join(result['failed_imports'])}\n")
-                    elif check_name == 'tests':
+                    elif check_name == "import":
+                        f.write(
+                            f"  Successful: {result.get('successful_imports', 0)}/{result.get('total_modules', 0)}\n"
+                        )
+                        if result.get("failed_imports"):
+                            f.write(
+                                f"  Failed: {', '.join(result['failed_imports'])}\n"
+                            )
+                    elif check_name == "tests":
                         f.write(f"  Passed: {result.get('passed', 0)}\n")
                         f.write(f"  Failed: {result.get('failed', 0)}\n")
                         f.write(f"  Time: {result.get('execution_time', 0):.1f}s\n")

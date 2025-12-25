@@ -424,7 +424,10 @@ class RBACService:
         # 管理员拥有所有权限
         if cast(str, user.role) == "admin":
             return PermissionCheckResponse(
-                has_permission=True, granted_by=["admin_role"], conditions=None, reason=None
+                has_permission=True,
+                granted_by=["admin_role"],
+                conditions=None,
+                reason=None,
             )
 
         # 获取用户的有效角色
@@ -443,7 +446,7 @@ class RBACService:
                 has_permission=True,
                 granted_by=["resource_permission"],
                 conditions=resource_permissions.get("conditions"),
-                reason=None
+                reason=None,
             )
 
         # 检查角色权限
@@ -468,7 +471,7 @@ class RBACService:
             has_permission=len(granted_by) > 0,
             granted_by=granted_by,
             conditions=conditions,
-            reason=None
+            reason=None,
         )
 
     def get_user_permissions_summary(self, user_id: str) -> UserPermissionSummary:

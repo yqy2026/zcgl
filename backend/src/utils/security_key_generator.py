@@ -29,7 +29,7 @@ class SecurityKeyGenerator:
             str: 生成的安全密钥
         """
         alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
-        return ''.join(secrets.choice(alphabet) for _ in range(length))
+        return "".join(secrets.choice(alphabet) for _ in range(length))
 
     @staticmethod
     def generate_database_password(length: int = 32) -> str:
@@ -43,7 +43,7 @@ class SecurityKeyGenerator:
             str: 生成的安全密码
         """
         alphabet = string.ascii_letters + string.digits + "!@#$%^&*()_+-=[]{}|;:,.<>?"
-        return ''.join(secrets.choice(alphabet) for _ in range(length))
+        return "".join(secrets.choice(alphabet) for _ in range(length))
 
     @staticmethod
     def generate_api_key(length: int = 32) -> str:
@@ -85,16 +85,13 @@ class SecurityKeyGenerator:
 
         # 使用PBKDF2进行密码哈希
         password_hash = hashlib.pbkdf2_hmac(
-            'sha256',
-            password.encode('utf-8'),
-            salt.encode('utf-8'),
-            100000  # 迭代次数
+            "sha256",
+            password.encode("utf-8"),
+            salt.encode("utf-8"),
+            100000,  # 迭代次数
         )
 
-        return {
-            'hash': password_hash.hex(),
-            'salt': salt
-        }
+        return {"hash": password_hash.hex(), "salt": salt}
 
     @staticmethod
     def verify_password(password: str, stored_hash: str, salt: str) -> bool:
@@ -110,10 +107,7 @@ class SecurityKeyGenerator:
             bool: 密码是否正确
         """
         password_hash = hashlib.pbkdf2_hmac(
-            'sha256',
-            password.encode('utf-8'),
-            salt.encode('utf-8'),
-            100000
+            "sha256", password.encode("utf-8"), salt.encode("utf-8"), 100000
         )
 
         return password_hash.hex() == stored_hash
@@ -148,27 +142,21 @@ class SecurityConfigManager:
             "JWT_AUDIENCE": "zcgl-users",
             "ENABLE_JTI_CLAIM": "true",
             "TOKEN_BLACKLIST_ENABLED": "true",
-
             # 数据库配置（如果需要）
             # "DATABASE_PASSWORD": self.generator.generate_database_password(),
-
             # API安全配置
             "API_KEY": self.generator.generate_api_key(),
-
             # 会话配置
             "SESSION_SECRET": self.generator.generate_jwt_secret_key(32),
-
             # 环境配置
             "ENVIRONMENT": env_type,
             "DEBUG": "false" if env_type == "production" else "true",
-
             # 安全配置
             "MIN_PASSWORD_LENGTH": "8",
             "MAX_FAILED_ATTEMPTS": "5",
             "LOCKOUT_DURATION": "900",
             "MAX_CONCURRENT_SESSIONS": "5",
             "AUDIT_LOG_RETENTION_DAYS": "90",
-
             # 元数据
             "CONFIG_GENERATED_AT": timestamp,
             "CONFIG_VERSION": "1.0.0",
@@ -191,13 +179,13 @@ class SecurityConfigManager:
             self.config_dir.mkdir(exist_ok=True)
             env_file = self.config_dir / filename
 
-            with open(env_file, 'w', encoding='utf-8') as f:
+            with open(env_file, "w", encoding="utf-8") as f:
                 f.write("# 自动生成的安全配置文件\n")
                 f.write(f"# 生成时间: {config.get('CONFIG_GENERATED_AT', 'Unknown')}\n")
                 f.write("# 请妥善保管此文件，不要提交到版本控制系统\n\n")
 
                 for key, value in config.items():
-                    if not key.startswith('CONFIG_'):  # 跳过元数据
+                    if not key.startswith("CONFIG_"):  # 跳过元数据
                         f.write(f"{key}={value}\n")
 
             logger.info(f"安全配置已保存到: {env_file}")
@@ -220,13 +208,13 @@ class SecurityConfigManager:
         credentials = {
             "username": "admin",
             "password": admin_password,
-            "password_hash": password_info['hash'],
-            "password_salt": password_info['salt'],
+            "password_hash": password_info["hash"],
+            "password_salt": password_info["salt"],
             "email": "admin@zcgl.system",
             "full_name": "系统管理员",
             "role": "admin",
             "is_active": True,
-            "created_at": datetime.now(UTC).isoformat()
+            "created_at": datetime.now(UTC).isoformat(),
         }
 
         return credentials
@@ -290,11 +278,7 @@ INSERT OR REPLACE INTO users (
         Returns:
             Dict: 验证结果
         """
-        result = {
-            "is_strong": False,
-            "score": 0,
-            "recommendations": []
-        }
+        result = {"is_strong": False, "score": 0, "recommendations": []}
 
         # 长度检查
         if len(secret_key) >= 64:
@@ -375,14 +359,16 @@ def main():
     print(f"Username: {admin_credentials['username']}")
     print(f"Password: {admin_credentials['password']}")
     print(f"Email: {admin_credentials['email']}")
-    print("\n[WARNING] Please save these credentials immediately and change password after first login!")
+    print(
+        "\n[WARNING] Please save these credentials immediately and change password after first login!"
+    )
 
     # 创建SQL脚本
     sql_script = manager.create_secure_admin_user_script(admin_credentials)
     sql_file = Path("config/create_admin_user.sql")
 
     try:
-        with open(sql_file, 'w', encoding='utf-8') as f:
+        with open(sql_file, "w", encoding="utf-8") as f:
             f.write(sql_script)
         print(f"[OK] SQL script generated: {sql_file}")
     except Exception as e:
@@ -397,9 +383,9 @@ def main():
     print(f"Key strength: {'[STRONG]' if validation['is_strong'] else '[WEAK]'}")
     print(f"Strength score: {validation['score']}/100")
 
-    if validation['recommendations']:
+    if validation["recommendations"]:
         print("Recommendations:")
-        for rec in validation['recommendations']:
+        for rec in validation["recommendations"]:
             print(f"  - {rec}")
 
     print("\n" + "=" * 60)

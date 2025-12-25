@@ -30,7 +30,7 @@ class DatabaseBenchmark:
     def query_asset_list_with_filters(self) -> dict:
         """测试1: 资产列表查询（带筛选）"""
         query = """
-        SELECT COUNT(*) FROM assets 
+        SELECT COUNT(*) FROM assets
         WHERE data_status = 'active'
         LIMIT 100
         """
@@ -48,13 +48,13 @@ class DatabaseBenchmark:
             "avg": statistics.mean(times),
             "min": min(times),
             "max": max(times),
-            "std_dev": statistics.stdev(times) if len(times) > 1 else 0
+            "std_dev": statistics.stdev(times) if len(times) > 1 else 0,
         }
 
     def query_occupancy_rate(self) -> dict:
         """测试2: 出租率统计查询"""
         query = """
-        SELECT 
+        SELECT
             COUNT(*) as total_count,
             SUM(CAST(rented_area AS FLOAT)) as rented_area,
             SUM(CAST(rentable_area AS FLOAT)) as rentable_area
@@ -75,13 +75,13 @@ class DatabaseBenchmark:
             "avg": statistics.mean(times),
             "min": min(times),
             "max": max(times),
-            "std_dev": statistics.stdev(times) if len(times) > 1 else 0
+            "std_dev": statistics.stdev(times) if len(times) > 1 else 0,
         }
 
     def query_financial_summary(self) -> dict:
         """测试3: 财务汇总查询"""
         query = """
-        SELECT 
+        SELECT
             COUNT(*) as asset_count,
             SUM(CAST(monthly_rent AS FLOAT)) as total_rent,
             SUM(CAST(deposit AS FLOAT)) as total_deposit
@@ -102,7 +102,7 @@ class DatabaseBenchmark:
             "avg": statistics.mean(times),
             "min": min(times),
             "max": max(times),
-            "std_dev": statistics.stdev(times) if len(times) > 1 else 0
+            "std_dev": statistics.stdev(times) if len(times) > 1 else 0,
         }
 
     def run_benchmark(self) -> list[dict]:
@@ -135,7 +135,9 @@ class DatabaseBenchmark:
         """打印结果"""
         print("\n📊 性能基准测试结果")
         print("=" * 70)
-        print(f"{'查询名称':<20} {'平均耗时(ms)':<15} {'最小(ms)':<12} {'最大(ms)':<12}")
+        print(
+            f"{'查询名称':<20} {'平均耗时(ms)':<15} {'最小(ms)':<12} {'最大(ms)':<12}"
+        )
         print("-" * 70)
 
         for result in results:
@@ -147,22 +149,24 @@ class DatabaseBenchmark:
             )
 
         # 总体统计
-        total_avg = sum(r['avg'] for r in results) / len(results)
+        total_avg = sum(r["avg"] for r in results) / len(results)
         print("-" * 70)
         print(f"{'总体平均':<20} {total_avg*1000:>14.2f}ms")
         print("=" * 70)
 
-    def save_results(self, results: list[dict], filename: str = "benchmark_results.json"):
+    def save_results(
+        self, results: list[dict], filename: str = "benchmark_results.json"
+    ):
         """保存测试结果"""
         output_path = Path(__file__).parent.parent / filename
 
         data = {
             "timestamp": datetime.now().isoformat(),
             "num_iterations": self.num_iterations,
-            "benchmarks": results
+            "benchmarks": results,
         }
 
-        with open(output_path, 'w') as f:
+        with open(output_path, "w") as f:
             json.dump(data, f, indent=2)
 
         print(f"\n📁 结果已保存到: {output_path}")

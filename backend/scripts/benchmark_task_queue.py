@@ -31,7 +31,7 @@ class TaskQueueBenchmark:
         return {
             "task_id": task_id,
             "completed_at": datetime.now().isoformat(),
-            "status": "success"
+            "status": "success",
         }
 
     def test_submission_performance(self) -> dict:
@@ -48,10 +48,7 @@ class TaskQueueBenchmark:
         for i in range(self.num_tasks):
             start = time.time()
             task_id = submit_task(
-                self.dummy_task,
-                task_id=i,
-                duration=0.01,
-                priority=TaskPriority.NORMAL
+                self.dummy_task, task_id=i, duration=0.01, priority=TaskPriority.NORMAL
             )
             submission_times.append(time.time() - start)
             task_ids.append(task_id)
@@ -65,7 +62,7 @@ class TaskQueueBenchmark:
             "min_submission_ms": min(submission_times) * 1000,
             "max_submission_ms": max(submission_times) * 1000,
             "tasks_per_second": self.num_tasks / total_time if total_time > 0 else 0,
-            "task_ids": task_ids
+            "task_ids": task_ids,
         }
 
     def test_processing_performance(self, task_ids: list[str]) -> dict:
@@ -81,9 +78,10 @@ class TaskQueueBenchmark:
 
         while time.time() - start_wait < max_wait:
             completed = sum(
-                1 for tid in task_ids
-                if (task_status := self.queue.get_task_status(tid)) and
-                   task_status.get('status') == 'completed'
+                1
+                for tid in task_ids
+                if (task_status := self.queue.get_task_status(tid))
+                and task_status.get("status") == "completed"
             )
 
             if completed == len(task_ids):
@@ -97,8 +95,10 @@ class TaskQueueBenchmark:
             "total_tasks": len(task_ids),
             "completed_tasks": completed,
             "wait_time_s": wait_time,
-            "avg_time_per_task_ms": (wait_time / completed * 1000) if completed > 0 else 0,
-            "completion_rate_percent": (completed / len(task_ids)) * 100
+            "avg_time_per_task_ms": (wait_time / completed * 1000)
+            if completed > 0
+            else 0,
+            "completion_rate_percent": (completed / len(task_ids)) * 100,
         }
 
     def test_priority_handling(self) -> dict:
@@ -107,19 +107,13 @@ class TaskQueueBenchmark:
 
         # 提交不同优先级的任务
         low_task = submit_task(
-            self.dummy_task,
-            task_id=100,
-            duration=0.05,
-            priority=TaskPriority.LOW
+            self.dummy_task, task_id=100, duration=0.05, priority=TaskPriority.LOW
         )
 
         time.sleep(0.1)
 
         high_task = submit_task(
-            self.dummy_task,
-            task_id=101,
-            duration=0.05,
-            priority=TaskPriority.HIGH
+            self.dummy_task, task_id=101, duration=0.05, priority=TaskPriority.HIGH
         )
 
         # 等待执行
@@ -129,8 +123,10 @@ class TaskQueueBenchmark:
         low_status = self.queue.get_task_status(low_task)
 
         return {
-            "high_priority_completed": high_status['status'] == 'completed' if high_status else False,
-            "low_priority_status": low_status['status'] if low_status else 'unknown'
+            "high_priority_completed": high_status["status"] == "completed"
+            if high_status
+            else False,
+            "low_priority_status": low_status["status"] if low_status else "unknown",
         }
 
     def test_queue_stats(self) -> dict:
@@ -140,11 +136,11 @@ class TaskQueueBenchmark:
         stats = self.queue.get_stats()
 
         return {
-            "pending": stats['pending'],
-            "processing": stats['processing'],
-            "completed": stats['completed'],
-            "failed": stats['failed'],
-            "total": stats['total']
+            "pending": stats["pending"],
+            "processing": stats["processing"],
+            "completed": stats["completed"],
+            "failed": stats["failed"],
+            "total": stats["total"],
         }
 
     def run_benchmark(self) -> dict:
@@ -158,7 +154,7 @@ class TaskQueueBenchmark:
         results = {
             "timestamp": datetime.now().isoformat(),
             "num_tasks": self.num_tasks,
-            "tests": {}
+            "tests": {},
         }
 
         try:
@@ -168,7 +164,7 @@ class TaskQueueBenchmark:
             print("   ✅ 提交性能测试完成")
 
             # 等待任务ID
-            task_ids = submission['task_ids']
+            task_ids = submission["task_ids"]
 
             # 测试2: 处理性能
             processing = self.test_processing_performance(task_ids)
@@ -188,6 +184,7 @@ class TaskQueueBenchmark:
         except Exception as e:
             print(f"   ❌ 测试失败: {e}")
             import traceback
+
             traceback.print_exc()
             return {}
 
@@ -242,7 +239,7 @@ class TaskQueueBenchmark:
 
         output_path = Path(__file__).parent.parent / "task_queue_benchmark_results.json"
 
-        with open(output_path, 'w') as f:
+        with open(output_path, "w") as f:
             json.dump(results, f, indent=2)
 
         print(f"\n📁 结果已保存到: {output_path}")

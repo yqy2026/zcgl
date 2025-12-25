@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 # magic模块的条件导入
 try:
     import magic
+
     MAGIC_AVAILABLE = True
 except ImportError:
     magic = None
@@ -445,7 +446,10 @@ class FileValidator:
         return hash_sha256.hexdigest()
 
     def validate_upload(
-        self, file: UploadFile, allowed_types: list[str] | None = None, max_size: int | None = None
+        self,
+        file: UploadFile,
+        allowed_types: list[str] | None = None,
+        max_size: int | None = None,
     ) -> dict[str, Any]:
         """
         执行完整的文件上传验证
@@ -528,8 +532,16 @@ class RateLimiter:
             bool: 是否允许请求
         """
         # 设置默认值
-        max_req = max_requests if max_requests is not None else self.config.get("max_requests", 100)
-        time_win = time_window if time_window is not None else self.config.get("time_window", 60)
+        max_req = (
+            max_requests
+            if max_requests is not None
+            else self.config.get("max_requests", 100)
+        )
+        time_win = (
+            time_window
+            if time_window is not None
+            else self.config.get("time_window", 60)
+        )
 
         current_time = time()
         request_queue = self.requests[key]
@@ -611,8 +623,16 @@ class RateLimiter:
             int: 剩余请求数
         """
         # 设置默认值
-        max_req = max_requests if max_requests is not None else self.config.get("max_requests", 100)
-        time_win = time_window if time_window is not None else self.config.get("time_window", 60)
+        max_req = (
+            max_requests
+            if max_requests is not None
+            else self.config.get("max_requests", 100)
+        )
+        time_win = (
+            time_window
+            if time_window is not None
+            else self.config.get("time_window", 60)
+        )
 
         current_time = time()
         request_queue = self.requests[key]
@@ -701,7 +721,10 @@ class SecurityMiddleware:
         return ip in blacklist
 
     async def validate_file_upload(
-        self, file: UploadFile, allowed_types: list[str] | None = None, max_size: int | None = None
+        self,
+        file: UploadFile,
+        allowed_types: list[str] | None = None,
+        max_size: int | None = None,
     ) -> dict[str, Any]:
         """
         验证文件上传
@@ -836,7 +859,9 @@ async def get_current_user(
 
 
 async def validate_file_upload_dependency(
-    file: UploadFile, allowed_types: list[str] | None = None, max_size: int | None = None
+    file: UploadFile,
+    allowed_types: list[str] | None = None,
+    max_size: int | None = None,
 ) -> dict[str, Any]:
     """文件上传验证依赖"""
     return await security_middleware.validate_file_upload(file, allowed_types, max_size)

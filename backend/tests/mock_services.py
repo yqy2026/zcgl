@@ -20,7 +20,7 @@ class MockPDFProcessingService:
         self._processing_stats = {
             "total_processed": 0,
             "total_time": 0.0,
-            "avg_time": 0.0
+            "avg_time": 0.0,
         }
 
     def _create_mock_ocr(self):
@@ -33,28 +33,25 @@ class MockPDFProcessingService:
                 {
                     "text": "权属方：国资集团",
                     "bbox": [100, 100, 300, 150],
-                    "confidence": 0.98
+                    "confidence": 0.98,
                 },
                 {
                     "text": "物业名称：测试物业",
                     "bbox": [100, 200, 350, 250],
-                    "confidence": 0.96
-                }
-            ]
+                    "confidence": 0.96,
+                },
+            ],
         }
         return mock_ocr
 
-    async def process_pdf_async(self, pdf_path: str, method: str = "auto") -> dict[str, Any]:
+    async def process_pdf_async(
+        self, pdf_path: str, method: str = "auto"
+    ) -> dict[str, Any]:
         """异步模拟PDF处理"""
         start_time = time.time()
 
         # 模拟处理时间（根据方法不同）
-        processing_times = {
-            "pdfplumber": 0.1,
-            "pymupdf": 0.05,
-            "ocr": 0.3,
-            "auto": 0.2
-        }
+        processing_times = {"pdfplumber": 0.1, "pymupdf": 0.05, "ocr": 0.3, "auto": 0.2}
 
         # 模拟异步处理延迟
         await asyncio.sleep(processing_times.get(method, 0.2))
@@ -70,7 +67,7 @@ class MockPDFProcessingService:
             "pages": 3,
             "extraction_method": method,
             "processing_time": processing_time,
-            "confidence": 0.95
+            "confidence": 0.95,
         }
 
     def _generate_mock_text_content(self) -> str:
@@ -99,7 +96,7 @@ class MockPDFProcessingService:
             "created_date": "2025-01-01",
             "page_count": 3,
             "file_size": 1024000,
-            "format": "PDF 1.4"
+            "format": "PDF 1.4",
         }
 
     def _update_stats(self, processing_time: float):
@@ -107,8 +104,8 @@ class MockPDFProcessingService:
         self._processing_stats["total_processed"] += 1
         self._processing_stats["total_time"] += processing_time
         self._processing_stats["avg_time"] = (
-            self._processing_stats["total_time"] /
-            self._processing_stats["total_processed"]
+            self._processing_stats["total_time"]
+            / self._processing_stats["total_processed"]
         )
 
     def get_stats(self) -> dict[str, Any]:
@@ -126,12 +123,17 @@ class MockPDFImportService:
         self.import_stats = {
             "total_imports": 0,
             "successful_imports": 0,
-            "failed_imports": 0
+            "failed_imports": 0,
         }
 
-    async def process_pdf_file(self, db, session_id: str, user_id: int,
-                           organization_id: int | None = None,
-                           **kwargs) -> dict[str, Any]:
+    async def process_pdf_file(
+        self,
+        db,
+        session_id: str,
+        user_id: int,
+        organization_id: int | None = None,
+        **kwargs,
+    ) -> dict[str, Any]:
         """模拟PDF文件导入处理"""
         start_time = time.time()
 
@@ -157,7 +159,7 @@ class MockPDFImportService:
                 "session_id": session_id,
                 "processing_time": processing_time,
                 "validation_errors": [],
-                "warnings": []
+                "warnings": [],
             }
 
         except Exception as e:
@@ -170,10 +172,12 @@ class MockPDFImportService:
                 "session_id": session_id,
                 "processing_time": processing_time,
                 "validation_errors": [str(e)],
-                "warnings": ["模拟处理错误"]
+                "warnings": ["模拟处理错误"],
             }
 
-    def _convert_to_asset_data(self, processing_result: dict[str, Any]) -> dict[str, Any]:
+    def _convert_to_asset_data(
+        self, processing_result: dict[str, Any]
+    ) -> dict[str, Any]:
         """将处理结果转换为资产数据"""
         return {
             "ownership_entity": "国资集团",
@@ -194,7 +198,7 @@ class MockPDFImportService:
             "annual_expense": 200000.0,
             "net_income": 300000.0,
             "confidence": processing_result.get("confidence", 0.95),
-            "extraction_method": processing_result.get("extraction_method", "auto")
+            "extraction_method": processing_result.get("extraction_method", "auto"),
         }
 
     def _update_import_stats(self, success: bool):
@@ -218,9 +222,13 @@ class MockPDFSessionService:
         self.sessions = {}
         self.session_counter = 1000
 
-    def create_session(self, db, filename: str = "test.pdf",
-                    file_size: int = 1024000,
-                    file_path: str = "/tmp/test.pdf") -> str:
+    def create_session(
+        self,
+        db,
+        filename: str = "test.pdf",
+        file_size: int = 1024000,
+        file_path: str = "/tmp/test.pdf",
+    ) -> str:
         """创建新的模拟会话"""
         session_id = f"mock_session_{self.session_counter}"
         self.session_counter += 1
@@ -233,7 +241,7 @@ class MockPDFSessionService:
             "status": "created",
             "progress": 0,
             "created_at": time.time(),
-            "updated_at": time.time()
+            "updated_at": time.time(),
         }
 
         return session_id
@@ -272,7 +280,7 @@ class MockDatabaseService:
 
     def add(self, obj) -> None:
         """模拟数据库添加操作"""
-        if hasattr(obj, 'id'):
+        if hasattr(obj, "id"):
             self.assets[obj.id] = obj
         self.operations_count += 1
 
@@ -299,7 +307,7 @@ def create_mock_services():
         "pdf_processing_service": MockPDFProcessingService(),
         "pdf_import_service": MockPDFImportService(),
         "session_service": MockPDFSessionService(),
-        "database_service": MockDatabaseService()
+        "database_service": MockDatabaseService(),
     }
 
 
@@ -307,19 +315,19 @@ def create_optimized_test_environment():
     """创建优化的测试环境"""
     env_config = {
         # PaddleOCR性能优化
-        'PADDLEOCR_USE_CPU': '1',
-        'PADDLEOCR_USE_GPU': '0',
-        'PADDLEOCR_PP_DEBUG': '0',
-        'PADDLEOCR_SHOW_LOG': 'False',
-        'PADDLEOCR_USE_MP': 'False',
-
+        "PADDLEOCR_USE_CPU": "1",
+        "PADDLEOCR_USE_GPU": "0",
+        "PADDLEOCR_PP_DEBUG": "0",
+        "PADDLEOCR_SHOW_LOG": "False",
+        "PADDLEOCR_USE_MP": "False",
         # 其他性能优化
-        'PYTHONPATH': './src',
-        'CUDA_VISIBLE_DEVICES': '',
+        "PYTHONPATH": "./src",
+        "CUDA_VISIBLE_DEVICES": "",
     }
 
     for key, value in env_config.items():
         import os
+
         os.environ[key] = value
 
     return env_config
@@ -328,20 +336,20 @@ def create_optimized_test_environment():
 # 快速测试预设数据
 MOCK_PDF_DATA = {
     "valid_pdf": {
-        "content": b'%PDF-1.4\nTest PDF Content',
+        "content": b"%PDF-1.4\nTest PDF Content",
         "size": 1024,
-        "filename": "test_valid.pdf"
+        "filename": "test_valid.pdf",
     },
     "large_pdf": {
-        "content": b'%PDF-1.4\n' + b'X' * (10 * 1024 * 1024),  # 10MB
+        "content": b"%PDF-1.4\n" + b"X" * (10 * 1024 * 1024),  # 10MB
         "size": 10 * 1024 * 1024,
-        "filename": "test_large.pdf"
+        "filename": "test_large.pdf",
     },
     "malicious_pdf": {
-        "content": b'%PDF-1.4\nmalicious script content alert()',
+        "content": b"%PDF-1.4\nmalicious script content alert()",
         "size": 2048,
-        "filename": "test_malicious.pdf"
-    }
+        "filename": "test_malicious.pdf",
+    },
 }
 
 MOCK_EXTRACTION_RESULTS = {
@@ -357,16 +365,16 @@ MOCK_EXTRACTION_RESULTS = {
             "rented_area": 400.0,
             "ownership_status": "已确权",
             "property_nature": "经营性",
-            "usage_status": "出租"
+            "usage_status": "出租",
         },
         "processing_time": 0.5,
         "validation_errors": [],
-        "warnings": []
+        "warnings": [],
     },
     "error_result": {
         "status": "error",
         "error": "PDF解析失败",
         "validation_errors": ["文件格式不正确"],
-        "warnings": ["检测到潜在问题"]
-    }
+        "warnings": ["检测到潜在问题"],
+    },
 }

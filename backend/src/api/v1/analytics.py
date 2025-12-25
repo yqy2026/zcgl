@@ -1603,7 +1603,7 @@ async def get_comprehensive_analytics(
 
             # 2. 查询data_status分布
             status_distribution = (
-                db.query(Asset.data_status, func.count(Asset.id).label('count'))
+                db.query(Asset.data_status, func.count(Asset.id).label("count"))
                 .group_by(Asset.data_status)
                 .all()
             )
@@ -1616,11 +1616,11 @@ async def get_comprehensive_analytics(
                 .scalar()
             )
             empty_status_count = (
-                db.query(func.count(Asset.id))
-                .filter(Asset.data_status == '')
-                .scalar()
+                db.query(func.count(Asset.id)).filter(Asset.data_status == "").scalar()
             )
-            logger.info(f"NULL状态数: {null_status_count}, 空状态数: {empty_status_count}")
+            logger.info(
+                f"NULL状态数: {null_status_count}, 空状态数: {empty_status_count}"
+            )
 
             # 4. 测试不同的筛选条件
             normal_status_count = (
@@ -1632,7 +1632,9 @@ async def get_comprehensive_analytics(
 
             # 5. 查询最近几条资产记录
             recent_assets = (
-                db.query(Asset.id, Asset.property_name, Asset.data_status, Asset.created_at)
+                db.query(
+                    Asset.id, Asset.property_name, Asset.data_status, Asset.created_at
+                )
                 .order_by(Asset.created_at.desc())
                 .limit(5)
                 .all()
@@ -1891,7 +1893,9 @@ async def debug_cache_status(request: Request):
 
 
 @router.get("/debug/data-status-distribution", summary="数据库状态分布诊断")
-async def debug_data_status_distribution(request: Request, db: Session = Depends(get_db)):
+async def debug_data_status_distribution(
+    request: Request, db: Session = Depends(get_db)
+):
     """
     诊断端点 - 检查资产数据状态分布
     用于排查Analytics API返回空数据的问题
@@ -1910,26 +1914,19 @@ async def debug_data_status_distribution(request: Request, db: Session = Depends
 
         # 2. 查询data_status字段值分布
         status_distribution = (
-            db.query(
-                Asset.data_status,
-                func.count(Asset.id).label('count')
-            )
+            db.query(Asset.data_status, func.count(Asset.id).label("count"))
             .group_by(Asset.data_status)
             .all()
         )
 
         # 3. 查询NULL值记录数量
         null_status_count = (
-            db.query(func.count(Asset.id))
-            .filter(Asset.data_status.is_(None))
-            .scalar()
+            db.query(func.count(Asset.id)).filter(Asset.data_status.is_(None)).scalar()
         )
 
         # 4. 查询空字符串记录数量
         empty_status_count = (
-            db.query(func.count(Asset.id))
-            .filter(Asset.data_status == '')
-            .scalar()
+            db.query(func.count(Asset.id)).filter(Asset.data_status == "").scalar()
         )
 
         # 5. 测试Analytics API的筛选条件
@@ -1940,19 +1937,11 @@ async def debug_data_status_distribution(request: Request, db: Session = Depends
         )
 
         # 6. 测试没有data_status筛选的查询
-        without_status_filter_count = (
-            db.query(func.count(Asset.id))
-            .scalar()
-        )
+        without_status_filter_count = db.query(func.count(Asset.id)).scalar()
 
         # 7. 查询最近添加的几条记录的状态
         recent_assets = (
-            db.query(
-                Asset.id,
-                Asset.property_name,
-                Asset.data_status,
-                Asset.created_at
-            )
+            db.query(Asset.id, Asset.property_name, Asset.data_status, Asset.created_at)
             .order_by(Asset.created_at.desc())
             .limit(10)
             .all()
@@ -1964,7 +1953,7 @@ async def debug_data_status_distribution(request: Request, db: Session = Depends
             "status_distribution": [
                 {
                     "status": status[0] if status[0] is not None else "NULL",
-                    "count": status[1]
+                    "count": status[1],
                 }
                 for status in status_distribution
             ],
@@ -1975,14 +1964,16 @@ async def debug_data_status_distribution(request: Request, db: Session = Depends
             "filter_effect": {
                 "total_records": total_assets,
                 "after_normal_filter": normal_status_count,
-                "filtered_out_count": total_assets - normal_status_count
+                "filtered_out_count": total_assets - normal_status_count,
             },
             "recent_assets": [
                 {
                     "id": asset.id,
                     "property_name": asset.property_name,
                     "data_status": asset.data_status,
-                    "created_at": asset.created_at.isoformat() if asset.created_at else None
+                    "created_at": asset.created_at.isoformat()
+                    if asset.created_at
+                    else None,
                 }
                 for asset in recent_assets
             ],
@@ -1992,8 +1983,9 @@ async def debug_data_status_distribution(request: Request, db: Session = Depends
                 "all_records_normal": normal_status_count == total_assets,
                 "has_null_status": null_status_count > 0,
                 "has_empty_status": empty_status_count > 0,
-                "problem_detected": (normal_status_count != total_assets) or (total_assets == 0)
-            }
+                "problem_detected": (normal_status_count != total_assets)
+                or (total_assets == 0),
+            },
         }
 
         logger.info(

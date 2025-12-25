@@ -56,6 +56,7 @@ async def health_check():
                 )
             except Exception as db_e:
                 import logging
+
                 logger = logging.getLogger(__name__)
                 logger.warning(f"Failed to get detailed database metrics: {db_e}")
                 health_data["database"]["metrics_error"] = str(db_e)
@@ -64,6 +65,7 @@ async def health_check():
 
     except Exception as e:
         import logging
+
         logger = logging.getLogger(__name__)
         logger.error(f"健康检查失败: {e}")
         return {

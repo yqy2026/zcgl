@@ -18,17 +18,19 @@ class TokenBucketRateLimiter:
     """基于令牌桶算法的速率限制器"""
 
     def __init__(self):
-        self.buckets: dict[str, tuple[float, float]] = defaultdict(lambda: (0.0, 0.0))  # (tokens, last_time)
+        self.buckets: dict[str, tuple[float, float]] = defaultdict(
+            lambda: (0.0, 0.0)
+        )  # (tokens, last_time)
         self.lock = Lock()
         self.config = get_config("rate_limit", {})
 
     def _get_bucket_config(self, key: str) -> tuple[float, float]:
         """
         获取桶配置
-        
+
         Args:
             key: 限制键
-            
+
         Returns:
             Tuple[float, float]: (容量, 令牌生成速率)
         """
@@ -49,10 +51,10 @@ class TokenBucketRateLimiter:
     def check_rate_limit(self, key: str) -> bool:
         """
         检查请求是否超过频率限制
-        
+
         Args:
             key: 限制键（如IP地址或用户ID）
-            
+
         Returns:
             bool: 是否允许请求
         """
@@ -90,10 +92,10 @@ class TokenBucketRateLimiter:
     def get_remaining_tokens(self, key: str) -> float:
         """
         获取剩余令牌数
-        
+
         Args:
             key: 限制键
-            
+
         Returns:
             float: 剩余令牌数
         """
@@ -123,11 +125,11 @@ class AdaptiveRateLimiter:
     def check_rate_limit(self, key: str, is_suspicious: bool = False) -> bool:
         """
         检查请求是否超过频率限制（自适应）
-        
+
         Args:
             key: 限制键（如IP地址或用户ID）
             is_suspicious: 是否为可疑请求
-            
+
         Returns:
             bool: 是否允许请求
         """
@@ -139,7 +141,9 @@ class AdaptiveRateLimiter:
         if is_suspicious:
             self.suspicious_ips[key] += 1
             # 如果违规次数过多，临时封禁
-            if self.suspicious_ips[key] >= self.config.get("max_suspicious_requests", 5):
+            if self.suspicious_ips[key] >= self.config.get(
+                "max_suspicious_requests", 5
+            ):
                 self._block_ip(key)
                 return False
 

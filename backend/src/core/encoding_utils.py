@@ -14,18 +14,19 @@ def setup_utf8_encoding():
     """设置UTF-8编码环境"""
     try:
         # 强制设置stdout和stderr为UTF-8编码
-        if hasattr(sys.stdout, 'buffer'):
-            sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer)
-        if hasattr(sys.stderr, 'buffer'):
-            sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer)
+        if hasattr(sys.stdout, "buffer"):
+            sys.stdout = codecs.getwriter("utf-8")(sys.stdout.buffer)
+        if hasattr(sys.stderr, "buffer"):
+            sys.stderr = codecs.getwriter("utf-8")(sys.stderr.buffer)
 
         # 设置默认编码
-        if hasattr(sys, 'setdefaultencoding'):
-            sys.setdefaultencoding('utf-8')
+        if hasattr(sys, "setdefaultencoding"):
+            sys.setdefaultencoding("utf-8")
 
         return True
     except Exception:
         return False
+
 
 def safe_print(message: Any) -> None:
     """安全打印，避免编码错误"""
@@ -33,17 +34,20 @@ def safe_print(message: Any) -> None:
         print(str(message))
     except UnicodeEncodeError:
         # 降级到ASCII编码，替换无法编码的字符
-        print(str(message).encode('ascii', errors='replace').decode('ascii'))
+        print(str(message).encode("ascii", errors="replace").decode("ascii"))
     except Exception:
         print("[Encoding Error: Unable to display message]")
+
 
 def safe_log_format(message: str) -> str:
     """安全的日志格式化，移除可能导致编码问题的字符"""
     # 移除emoji字符和其他可能导致编码问题的Unicode字符
     import re
+
     # 保留中文字符、英文字符、数字和基本标点
-    cleaned = re.sub(r'[^\u4e00-\u9fff\u3400-\u4dbf\w\s.,!?;:()[\]{}"\'-]', '', message)
+    cleaned = re.sub(r'[^\u4e00-\u9fff\u3400-\u4dbf\w\s.,!?;:()[\]{}"\'-]', "", message)
     return cleaned.strip()
+
 
 def safe_error_message(error: Exception) -> str:
     """安全错误消息格式化"""
@@ -54,8 +58,10 @@ def safe_error_message(error: Exception) -> str:
     except Exception:
         return "Error: Unable to display error details due to encoding issues"
 
+
 # 在模块导入时自动设置编码
 setup_utf8_encoding()
+
 
 # 创建编码安全的日志处理器
 class EncodingSafeHandler(logging.Handler):
@@ -71,4 +77,7 @@ class EncodingSafeHandler(logging.Handler):
             # 输出到控制台
             print(safe_msg, file=sys.stderr)
         except Exception:
-            print(f"[Logging Error] Unable to format log record: {record}", file=sys.stderr)
+            print(
+                f"[Logging Error] Unable to format log record: {record}",
+                file=sys.stderr,
+            )

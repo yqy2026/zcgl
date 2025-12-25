@@ -55,6 +55,7 @@ def test_error_handling() -> tuple[bool, dict]:
     except Exception as e:
         print(f"   ❌ 测试失败: {e}")
         import traceback
+
         traceback.print_exc()
         return False, {"error": str(e)}
 
@@ -92,6 +93,7 @@ def test_cache_system() -> tuple[bool, dict]:
     except Exception as e:
         print(f"   ❌ 测试失败: {e}")
         import traceback
+
         traceback.print_exc()
         return False, {"error": str(e)}
 
@@ -123,25 +125,24 @@ def test_task_queue() -> tuple[bool, dict]:
         print("   ✅ 任务回调注册成功")
 
         # 提交任务
-        task_id = queue.submit_task(
-            "dummy_task",
-            args=(5,),
-            priority=TaskPriority.HIGH
-        )
+        task_id = queue.submit_task("dummy_task", args=(5,), priority=TaskPriority.HIGH)
         assert task_id is not None
         print(f"   ✅ 任务提交成功: {task_id}")
 
         # 查询队列统计
         stats = queue.get_stats()
         assert "total" in stats
-        print(f"   ✅ 队列统计: 待处理{stats['pending']}, 处理中{stats['processing']}, "
-              f"已完成{stats['completed']}, 失败{stats['failed']}")
+        print(
+            f"   ✅ 队列统计: 待处理{stats['pending']}, 处理中{stats['processing']}, "
+            f"已完成{stats['completed']}, 失败{stats['failed']}"
+        )
 
         return True, {"tests": 4, "passed": 4}
 
     except Exception as e:
         print(f"   ❌ 测试失败: {e}")
         import traceback
+
         traceback.print_exc()
         return False, {"error": str(e)}
 
@@ -186,6 +187,7 @@ def test_main_integration() -> tuple[bool, dict]:
     except Exception as e:
         print(f"   ❌ 测试失败: {e}")
         import traceback
+
         traceback.print_exc()
         return False, {"error": str(e)}
 

@@ -20,6 +20,7 @@ from ..core.security import RateLimiter
 
 try:
     from ..core.security.ratelimit import adaptive_limiter
+
     ADAPTIVE_LIMITER_AVAILABLE = True
 except ImportError:
     adaptive_limiter = None
@@ -241,7 +242,9 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
             return adaptive_limiter.check_rate_limit(rate_limit_key, is_suspicious)
         else:
             # 如果自适应限流器不可用，使用简单的默认限流器
-            logger.warning("Adaptive rate limiter not available, using default rate limiting")
+            logger.warning(
+                "Adaptive rate limiter not available, using default rate limiting"
+            )
             return True  # 默认允许通过，在生产环境中应该实现更严格的限流
 
     def _is_suspicious_request(self, request: Request) -> bool:
@@ -433,7 +436,7 @@ class CORSExtendedMiddleware(BaseHTTPMiddleware):
         self,
         app,
         allowed_origins: list[Any] | None = None,
-        allowed_methods: list[Any] | None = None
+        allowed_methods: list[Any] | None = None,
     ):
         super().__init__(app)
         self.allowed_origins = allowed_origins or [

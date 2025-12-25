@@ -45,6 +45,7 @@ from ...schemas.rent_contract import (
 
 try:
     from ...services.document.rent_contract_excel import rent_contract_excel_service
+
     EXCEL_SERVICE_AVAILABLE = True
 except (ImportError, SyntaxError):
     rent_contract_excel_service = None

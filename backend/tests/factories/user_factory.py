@@ -22,16 +22,16 @@ class OrganizationFactory(factory.Factory):
 
     name = factory.Sequence(lambda n: f"测试组织_{n}")
     code = factory.Sequence(lambda n: f"ORG_{n:03d}")
-    description = factory.Faker('paragraph', nb_sentences=2)
+    description = factory.Faker("paragraph", nb_sentences=2)
     parent_id = None  # 顶级组织
     level = 1
     sort_order = factory.Sequence(lambda n: n)
     is_active = True
     created_at = factory.LazyFunction(datetime.now)
     updated_at = factory.LazyFunction(datetime.now)
-    created_by = 'test_user'
-    updated_by = 'test_user'
-    tenant_id = 'test_tenant_001'
+    created_by = "test_user"
+    updated_by = "test_user"
+    tenant_id = "test_tenant_001"
 
 
 class ChildOrganizationFactory(OrganizationFactory):
@@ -51,22 +51,42 @@ class PermissionFactory(factory.Factory):
         sqlalchemy_session_persistence = True
 
     name = factory.Sequence(lambda n: f"permission_{n}")
-    display_name = factory.Faker('catch_phrase')
-    description = factory.Faker('sentence', nb_sentences=1)
-    resource = factory.Faker('random_element', elements=[
-        'assets', 'users', 'roles', 'organizations', 'reports',
-        'system_settings', 'audit_logs', 'backups'
-    ])
-    action = factory.Faker('random_element', elements=[
-        'create', 'read', 'update', 'delete', 'admin', 'approve',
-        'export', 'import', 'manage', 'monitor'
-    ])
-    max_level = factory.Faker('random_int', min=1, max=10)
+    display_name = factory.Faker("catch_phrase")
+    description = factory.Faker("sentence", nb_sentences=1)
+    resource = factory.Faker(
+        "random_element",
+        elements=[
+            "assets",
+            "users",
+            "roles",
+            "organizations",
+            "reports",
+            "system_settings",
+            "audit_logs",
+            "backups",
+        ],
+    )
+    action = factory.Faker(
+        "random_element",
+        elements=[
+            "create",
+            "read",
+            "update",
+            "delete",
+            "admin",
+            "approve",
+            "export",
+            "import",
+            "manage",
+            "monitor",
+        ],
+    )
+    max_level = factory.Faker("random_int", min=1, max=10)
     is_system_permission = False
-    requires_approval = factory.Faker('boolean')
+    requires_approval = factory.Faker("boolean")
     created_at = factory.LazyFunction(datetime.now)
     updated_at = factory.LazyFunction(datetime.now)
-    tenant_id = 'test_tenant_001'
+    tenant_id = "test_tenant_001"
 
 
 class RoleFactory(factory.Factory):
@@ -77,24 +97,24 @@ class RoleFactory(factory.Factory):
         sqlalchemy_session_persistence = True
 
     name = factory.Sequence(lambda n: f"role_{n}")
-    display_name = factory.Faker('job')
-    description = factory.Faker('paragraph', nb_sentences=2)
-    level = factory.Faker('random_int', min=1, max=10)
-    category = factory.Faker('random_element', elements=[
-        '业务', '管理', '系统', '审计', '运营'
-    ])
+    display_name = factory.Faker("job")
+    description = factory.Faker("paragraph", nb_sentences=2)
+    level = factory.Faker("random_int", min=1, max=10)
+    category = factory.Faker(
+        "random_element", elements=["业务", "管理", "系统", "审计", "运营"]
+    )
     is_system_role = False
     organization_id = 1
-    scope = factory.Faker('random_element', elements=[
-        'organization', 'department', 'team', 'project'
-    ])
-    scope_id = 'test_scope_001'
+    scope = factory.Faker(
+        "random_element", elements=["organization", "department", "team", "project"]
+    )
+    scope_id = "test_scope_001"
     is_active = True
     created_at = factory.LazyFunction(datetime.now)
     updated_at = factory.LazyFunction(datetime.now)
-    created_by = 'test_user'
-    updated_by = 'test_user'
-    tenant_id = 'test_tenant_001'
+    created_by = "test_user"
+    updated_by = "test_user"
+    tenant_id = "test_tenant_001"
 
 
 class UserFactory(factory.Factory):
@@ -104,12 +124,12 @@ class UserFactory(factory.Factory):
         model = User
         sqlalchemy_session_persistence = True
 
-    username = factory.Faker('user_name')
-    email = factory.Faker('email')
-    full_name = factory.Faker('name')
-    phone = factory.Faker('phone_number')
-    department = factory.Faker('company')
-    position = factory.Faker('job')
+    username = factory.Faker("user_name")
+    email = factory.Faker("email")
+    full_name = factory.Faker("name")
+    phone = factory.Faker("phone_number")
+    department = factory.Faker("company")
+    position = factory.Faker("job")
     employee_id = factory.Sequence(lambda n: f"EMP_{n:06d}")
     is_active = True
     is_superuser = False
@@ -118,20 +138,20 @@ class UserFactory(factory.Factory):
     organization_id = 1
     created_at = factory.LazyFunction(datetime.now)
     updated_at = factory.LazyFunction(datetime.now)
-    created_by = 'test_user'
-    updated_by = 'test_user'
-    tenant_id = 'test_tenant_001'
+    created_by = "test_user"
+    updated_by = "test_user"
+    tenant_id = "test_tenant_001"
 
 
 class AdminUserFactory(UserFactory):
     """管理员用户工厂"""
 
-    username = 'admin'
-    email = 'admin@example.com'
-    full_name = '系统管理员'
+    username = "admin"
+    email = "admin@example.com"
+    full_name = "系统管理员"
     is_active = True
     is_superuser = True
-    employee_id = 'ADMIN_001'
+    employee_id = "ADMIN_001"
 
 
 class InactiveUserFactory(UserFactory):
@@ -150,14 +170,14 @@ class UserRoleAssignmentFactory(factory.Factory):
 
     user_id = 1
     role_id = 1
-    assigned_by = 'admin'
+    assigned_by = "admin"
     assigned_at = factory.LazyFunction(datetime.now)
     expires_at = factory.LazyAttribute(
         lambda obj: obj.assigned_at + timedelta(days=365)
     )
     is_active = True
-    notes = factory.Faker('sentence', nb_sentences=1)
-    tenant_id = 'test_tenant_001'
+    notes = factory.Faker("sentence", nb_sentences=1)
+    tenant_id = "test_tenant_001"
 
 
 # 预定义权限场景
@@ -168,8 +188,8 @@ class AssetPermissionsFactory:
     def create_full_asset_permissions():
         """创建完整的资产管理权限"""
         permissions = []
-        resources = ['assets', 'asset_history', 'asset_categories']
-        actions = ['create', 'read', 'update', 'delete', 'export', 'import']
+        resources = ["assets", "asset_history", "asset_categories"]
+        actions = ["create", "read", "update", "delete", "export", "import"]
 
         for resource in resources:
             for action in actions:
@@ -178,7 +198,7 @@ class AssetPermissionsFactory:
                     display_name=f"{resource}_{action}",
                     resource=resource,
                     action=action,
-                    max_level=5 if action == 'admin' else 3
+                    max_level=5 if action == "admin" else 3,
                 )
                 permissions.append(perm)
 
@@ -189,19 +209,19 @@ class AssetPermissionsFactory:
         """创建只读资产权限"""
         return [
             PermissionFactory.create(
-                name='assets_read',
-                display_name='资产查看',
-                resource='assets',
-                action='read',
-                max_level=1
+                name="assets_read",
+                display_name="资产查看",
+                resource="assets",
+                action="read",
+                max_level=1,
             ),
             PermissionFactory.create(
-                name='asset_export',
-                display_name='资产导出',
-                resource='assets',
-                action='export',
-                max_level=2
-            )
+                name="asset_export",
+                display_name="资产导出",
+                resource="assets",
+                action="export",
+                max_level=2,
+            ),
         ]
 
 
@@ -212,8 +232,8 @@ class SystemPermissionsFactory:
     def create_full_system_permissions():
         """创建完整的系统管理权限"""
         permissions = []
-        resources = ['users', 'roles', 'organizations', 'system_settings']
-        actions = ['create', 'read', 'update', 'delete', 'admin']
+        resources = ["users", "roles", "organizations", "system_settings"]
+        actions = ["create", "read", "update", "delete", "admin"]
 
         for resource in resources:
             for action in actions:
@@ -224,7 +244,7 @@ class SystemPermissionsFactory:
                     action=action,
                     max_level=10,
                     is_system_permission=True,
-                    requires_approval=True
+                    requires_approval=True,
                 )
                 permissions.append(perm)
 
@@ -235,21 +255,21 @@ class SystemPermissionsFactory:
         """创建审计权限"""
         return [
             PermissionFactory.create(
-                name='audit_logs_read',
-                display_name='审计日志查看',
-                resource='audit_logs',
-                action='read',
+                name="audit_logs_read",
+                display_name="审计日志查看",
+                resource="audit_logs",
+                action="read",
                 max_level=8,
-                is_system_permission=True
+                is_system_permission=True,
             ),
             PermissionFactory.create(
-                name='audit_logs_export',
-                display_name='审计日志导出',
-                resource='audit_logs',
-                action='export',
+                name="audit_logs_export",
+                display_name="审计日志导出",
+                resource="audit_logs",
+                action="export",
                 max_level=9,
-                is_system_permission=True
-            )
+                is_system_permission=True,
+            ),
         ]
 
 
@@ -261,12 +281,12 @@ class BusinessRolesFactory:
     def create_asset_manager_role():
         """创建资产管理员角色"""
         role = RoleFactory.create(
-            name='asset_manager',
-            display_name='资产管理员',
-            description='负责资产的增删改查和日常管理',
+            name="asset_manager",
+            display_name="资产管理员",
+            description="负责资产的增删改查和日常管理",
             level=5,
-            category='业务',
-            scope='organization'
+            category="业务",
+            scope="organization",
         )
 
         # 分配资产相关权限
@@ -280,12 +300,12 @@ class BusinessRolesFactory:
     def create_asset_viewer_role():
         """创建资产查看员角色"""
         role = RoleFactory.create(
-            name='asset_viewer',
-            display_name='资产查看员',
-            description='只能查看资产信息，不能修改',
+            name="asset_viewer",
+            display_name="资产查看员",
+            description="只能查看资产信息，不能修改",
             level=2,
-            category='业务',
-            scope='organization'
+            category="业务",
+            scope="organization",
         )
 
         # 分配只读权限
@@ -299,30 +319,30 @@ class BusinessRolesFactory:
     def create_financial_analyst_role():
         """创建财务分析师角色"""
         role = RoleFactory.create(
-            name='financial_analyst',
-            display_name='财务分析师',
-            description='负责财务数据分析和报表生成',
+            name="financial_analyst",
+            display_name="财务分析师",
+            description="负责财务数据分析和报表生成",
             level=4,
-            category='业务',
-            scope='organization'
+            category="业务",
+            scope="organization",
         )
 
         # 分配财务相关权限
         financial_perms = [
             PermissionFactory.create(
-                name='financial_reports_read',
-                display_name='财务报表查看',
-                resource='reports',
-                action='read',
-                max_level=4
+                name="financial_reports_read",
+                display_name="财务报表查看",
+                resource="reports",
+                action="read",
+                max_level=4,
             ),
             PermissionFactory.create(
-                name='financial_reports_export',
-                display_name='财务报表导出',
-                resource='reports',
-                action='export',
-                max_level=4
-            )
+                name="financial_reports_export",
+                display_name="财务报表导出",
+                resource="reports",
+                action="export",
+                max_level=4,
+            ),
         ]
 
         for perm in financial_perms:
@@ -338,13 +358,13 @@ class SystemRolesFactory:
     def create_system_admin_role():
         """创建系统管理员角色"""
         role = RoleFactory.create(
-            name='system_admin',
-            display_name='系统管理员',
-            description='系统最高权限管理员',
+            name="system_admin",
+            display_name="系统管理员",
+            description="系统最高权限管理员",
             level=10,
-            category='系统',
-            scope='organization',
-            is_system_role=True
+            category="系统",
+            scope="organization",
+            is_system_role=True,
         )
 
         # 分配所有系统权限
@@ -358,13 +378,13 @@ class SystemRolesFactory:
     def create_auditor_role():
         """创建审计员角色"""
         role = RoleFactory.create(
-            name='auditor',
-            display_name='审计员',
-            description='负责系统审计和合规检查',
+            name="auditor",
+            display_name="审计员",
+            description="负责系统审计和合规检查",
             level=8,
-            category='审计',
-            scope='organization',
-            is_system_role=True
+            category="审计",
+            scope="organization",
+            is_system_role=True,
         )
 
         # 分配审计权限
@@ -385,22 +405,17 @@ class UserScenariosFactory:
         # 创建组织架构
         parent_org = OrganizationFactory.create(name="总公司")
         child_org1 = ChildOrganizationFactory.create(
-            name="技术部",
-            parent_id=parent_org.id
+            name="技术部", parent_id=parent_org.id
         )
         child_org2 = ChildOrganizationFactory.create(
-            name="财务部",
-            parent_id=parent_org.id
+            name="财务部", parent_id=parent_org.id
         )
 
         # 创建系统管理员
         system_admin_role = SystemRolesFactory.create_system_admin_role()
-        system_admin = AdminUserFactory.create(
-            organization_id=parent_org.id
-        )
+        system_admin = AdminUserFactory.create(organization_id=parent_org.id)
         UserRoleAssignmentFactory.create(
-            user_id=system_admin.id,
-            role_id=system_admin_role.id
+            user_id=system_admin.id, role_id=system_admin_role.id
         )
 
         # 创建资产管理员
@@ -408,11 +423,10 @@ class UserScenariosFactory:
         asset_manager = UserFactory.create(
             username="asset_manager",
             full_name="资产管理员",
-            organization_id=child_org1.id
+            organization_id=child_org1.id,
         )
         UserRoleAssignmentFactory.create(
-            user_id=asset_manager.id,
-            role_id=asset_manager_role.id
+            user_id=asset_manager.id, role_id=asset_manager_role.id
         )
 
         # 创建资产查看员
@@ -420,11 +434,10 @@ class UserScenariosFactory:
         asset_viewer = UserFactory.create(
             username="asset_viewer",
             full_name="资产查看员",
-            organization_id=child_org1.id
+            organization_id=child_org1.id,
         )
         UserRoleAssignmentFactory.create(
-            user_id=asset_viewer.id,
-            role_id=asset_viewer_role.id
+            user_id=asset_viewer.id, role_id=asset_viewer_role.id
         )
 
         # 创建财务分析师
@@ -432,48 +445,41 @@ class UserScenariosFactory:
         financial_analyst = UserFactory.create(
             username="financial_analyst",
             full_name="财务分析师",
-            organization_id=child_org2.id
+            organization_id=child_org2.id,
         )
         UserRoleAssignmentFactory.create(
-            user_id=financial_analyst.id,
-            role_id=financial_role.id
+            user_id=financial_analyst.id, role_id=financial_role.id
         )
 
         # 创建审计员
         auditor_role = SystemRolesFactory.create_auditor_role()
         auditor = UserFactory.create(
-            username="auditor",
-            full_name="审计员",
-            organization_id=parent_org.id
+            username="auditor", full_name="审计员", organization_id=parent_org.id
         )
-        UserRoleAssignmentFactory.create(
-            user_id=auditor.id,
-            role_id=auditor_role.id
-        )
+        UserRoleAssignmentFactory.create(user_id=auditor.id, role_id=auditor_role.id)
 
         # 创建非活跃用户
         inactive_user = InactiveUserFactory.create(
-            username="inactive_user",
-            organization_id=child_org1.id
+            username="inactive_user", organization_id=child_org1.id
         )
 
         return {
-            'organizations': [parent_org, child_org1, child_org2],
-            'users': {
-                'system_admin': system_admin,
-                'asset_manager': asset_manager,
-                'asset_viewer': asset_viewer,
-                'financial_analyst': financial_analyst,
-                'auditor': auditor,
-                'inactive_user': inactive_user
+            "organizations": [parent_org, child_org1, child_org2],
+            "users": {
+                "system_admin": system_admin,
+                "asset_manager": asset_manager,
+                "asset_viewer": asset_viewer,
+                "financial_analyst": financial_analyst,
+                "auditor": auditor,
+                "inactive_user": inactive_user,
             },
-            'roles': {
-                'system_admin': system_admin_role,
-                'asset_manager': asset_manager_role,
-                'asset_viewer': asset_viewer_role,
-                'financial_analyst': financial_role,
-                'auditor': auditor_role
-            }
+            "roles": {
+                "system_admin": system_admin_role,
+                "asset_manager": asset_manager_role,
+                "asset_viewer": asset_viewer_role,
+                "financial_analyst": financial_role,
+                "auditor": auditor_role,
+            },
         }
 
     @staticmethod
@@ -488,7 +494,7 @@ class UserScenariosFactory:
         cross_org_user = UserFactory.create(
             username="cross_org_manager",
             full_name="跨区域经理",
-            organization_id=org1.id
+            organization_id=org1.id,
         )
 
         # 为用户分配多个组织的角色
@@ -496,23 +502,17 @@ class UserScenariosFactory:
         role1.organization_id = org1.id
 
         role2 = BusinessRolesFactory.create_asset_manager_role()
-        role2.name = 'asset_manager_sh'
+        role2.name = "asset_manager_sh"
         role2.organization_id = org2.id
 
         # 分配角色
-        UserRoleAssignmentFactory.create(
-            user_id=cross_org_user.id,
-            role_id=role1.id
-        )
-        UserRoleAssignmentFactory.create(
-            user_id=cross_org_user.id,
-            role_id=role2.id
-        )
+        UserRoleAssignmentFactory.create(user_id=cross_org_user.id, role_id=role1.id)
+        UserRoleAssignmentFactory.create(user_id=cross_org_user.id, role_id=role2.id)
 
         return {
-            'organizations': [org1, org2, org3],
-            'cross_org_user': cross_org_user,
-            'roles': [role1, role2]
+            "organizations": [org1, org2, org3],
+            "cross_org_user": cross_org_user,
+            "roles": [role1, role2],
         }
 
     @staticmethod
@@ -525,7 +525,7 @@ class UserScenariosFactory:
         UserRoleAssignmentFactory.create(
             user_id=user.id,
             role_id=expiring_role.id,
-            expires_at=datetime.now() + timedelta(days=7)
+            expires_at=datetime.now() + timedelta(days=7),
         )
 
         # 已经过期的角色
@@ -534,13 +534,13 @@ class UserScenariosFactory:
             user_id=user.id,
             role_id=expired_role.id,
             expires_at=datetime.now() - timedelta(days=1),
-            is_active=False
+            is_active=False,
         )
 
         return {
-            'user': user,
-            'expiring_role': expiring_role,
-            'expired_role': expired_role
+            "user": user,
+            "expiring_role": expiring_role,
+            "expired_role": expired_role,
         }
 
 
@@ -566,9 +566,9 @@ class UserTestDataCleanup:
         hierarchy = UserScenariosFactory.create_complete_user_hierarchy()
 
         # 保存到数据库
-        session.add_all(hierarchy['organizations'])
-        session.add_all(hierarchy['users'].values())
-        session.add_all(hierarchy['roles'].values())
+        session.add_all(hierarchy["organizations"])
+        session.add_all(hierarchy["users"].values())
+        session.add_all(hierarchy["roles"].values())
 
         # 添加角色关联
         for user_role in session.query(UserRoleAssignment).all():
@@ -605,7 +605,7 @@ class UserTestDataCleanup:
                 name=f"level_{level}_role",
                 display_name=f"Level {level} Role",
                 level=level,
-                category='测试'
+                category="测试",
             )
 
             # 分配对应级别的权限
@@ -618,10 +618,7 @@ class UserTestDataCleanup:
         session.add_all(roles)
         session.commit()
 
-        return {
-            'permissions': permissions,
-            'roles': roles
-        }
+        return {"permissions": permissions, "roles": roles}
 
 
 # 权限验证工具
@@ -644,7 +641,9 @@ class PermissionTestUtils:
         return permissions
 
     @staticmethod
-    def check_user_has_permission(user_id: int, resource: str, action: str, session) -> bool:
+    def check_user_has_permission(
+        user_id: int, resource: str, action: str, session
+    ) -> bool:
         """检查用户是否具有指定权限"""
         permission_name = f"{resource}_{action}"
         user_permissions = PermissionTestUtils.get_user_permissions(user_id, session)
@@ -654,11 +653,11 @@ class PermissionTestUtils:
     def create_permission_hierarchy():
         """创建权限层级结构用于测试"""
         return {
-            'admin': ['*'],  # 所有权限
-            'manager': ['assets_*', 'reports_read', 'reports_export'],
-            'analyst': ['assets_read', 'reports_read'],
-            'viewer': ['assets_read'],
-            'guest': []
+            "admin": ["*"],  # 所有权限
+            "manager": ["assets_*", "reports_read", "reports_export"],
+            "analyst": ["assets_read", "reports_read"],
+            "viewer": ["assets_read"],
+            "guest": [],
         }
 
 
@@ -667,13 +666,16 @@ def create_test_user_hierarchy():
     """创建测试用户层级结构的便捷函数"""
     return UserScenariosFactory.create_complete_user_hierarchy()
 
+
 def create_cross_organization_test_data():
     """创建跨组织测试数据的便捷函数"""
     return UserScenariosFactory.create_cross_organization_users()
 
+
 def create_rbac_test_matrix():
     """创建RBAC测试矩阵的便捷函数"""
     from src.database import SessionLocal
+
     session = SessionLocal()
     try:
         return UserTestDataCleanup.create_permission_test_matrix(session)

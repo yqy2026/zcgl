@@ -27,8 +27,12 @@ async def init_asset_dictionaries():
             "description": "物业性质分类",
             "options": [
                 {"label": "经营性", "value": "commercial", "code": "commercial"},
-                {"label": "非经营性", "value": "non_commercial", "code": "non_commercial"}
-            ]
+                {
+                    "label": "非经营性",
+                    "value": "non_commercial",
+                    "code": "non_commercial",
+                },
+            ],
         },
         "usage_status": {
             "description": "资产使用状态分类",
@@ -37,18 +41,26 @@ async def init_asset_dictionaries():
                 {"label": "空置", "value": "vacant", "code": "vacant"},
                 {"label": "自用", "value": "self_use", "code": "self_use"},
                 {"label": "公房", "value": "public_housing", "code": "public_housing"},
-                {"label": "待移交", "value": "pending_transfer", "code": "pending_transfer"},
-                {"label": "待处置", "value": "pending_disposal", "code": "pending_disposal"},
-                {"label": "其他", "value": "other", "code": "other"}
-            ]
+                {
+                    "label": "待移交",
+                    "value": "pending_transfer",
+                    "code": "pending_transfer",
+                },
+                {
+                    "label": "待处置",
+                    "value": "pending_disposal",
+                    "code": "pending_disposal",
+                },
+                {"label": "其他", "value": "other", "code": "other"},
+            ],
         },
         "ownership_status": {
             "description": "资产确权状态分类",
             "options": [
                 {"label": "已确权", "value": "confirmed", "code": "confirmed"},
                 {"label": "未确权", "value": "unconfirmed", "code": "unconfirmed"},
-                {"label": "部分确权", "value": "partial", "code": "partial"}
-            ]
+                {"label": "部分确权", "value": "partial", "code": "partial"},
+            ],
         },
         "business_category": {
             "description": "资产业态分类",
@@ -58,8 +70,8 @@ async def init_asset_dictionaries():
                 {"label": "住宅", "value": "residential", "code": "residential"},
                 {"label": "仓储", "value": "warehouse", "code": "warehouse"},
                 {"label": "工业", "value": "industrial", "code": "industrial"},
-                {"label": "其他", "value": "other", "code": "other"}
-            ]
+                {"label": "其他", "value": "other", "code": "other"},
+            ],
         },
         "tenant_type": {
             "description": "租户类型分类",
@@ -67,8 +79,8 @@ async def init_asset_dictionaries():
                 {"label": "个人", "value": "individual", "code": "individual"},
                 {"label": "企业", "value": "enterprise", "code": "enterprise"},
                 {"label": "政府机构", "value": "government", "code": "government"},
-                {"label": "其他", "value": "other", "code": "other"}
-            ]
+                {"label": "其他", "value": "other", "code": "other"},
+            ],
         },
         "contract_status": {
             "description": "租赁合同状态分类",
@@ -76,8 +88,8 @@ async def init_asset_dictionaries():
                 {"label": "生效中", "value": "active", "code": "active"},
                 {"label": "已到期", "value": "expired", "code": "expired"},
                 {"label": "已终止", "value": "terminated", "code": "terminated"},
-                {"label": "待签署", "value": "pending", "code": "pending"}
-            ]
+                {"label": "待签署", "value": "pending", "code": "pending"},
+            ],
         },
         "business_model": {
             "description": "资产接收模式分类",
@@ -85,8 +97,8 @@ async def init_asset_dictionaries():
                 {"label": "承租转租", "value": "sublease", "code": "sublease"},
                 {"label": "委托经营", "value": "entrusted", "code": "entrusted"},
                 {"label": "自营", "value": "self_operated", "code": "self_operated"},
-                {"label": "其他", "value": "other", "code": "other"}
-            ]
+                {"label": "其他", "value": "other", "code": "other"},
+            ],
         },
         "operation_status": {
             "description": "资产经营状态分类",
@@ -94,8 +106,12 @@ async def init_asset_dictionaries():
                 {"label": "正常经营", "value": "normal", "code": "normal"},
                 {"label": "停业整顿", "value": "suspended", "code": "suspended"},
                 {"label": "装修中", "value": "renovating", "code": "renovating"},
-                {"label": "待招租", "value": "vacant_for_rent", "code": "vacant_for_rent"}
-            ]
+                {
+                    "label": "待招租",
+                    "value": "vacant_for_rent",
+                    "code": "vacant_for_rent",
+                },
+            ],
         },
         "ownership_category": {
             "description": "权属类别分类",
@@ -104,9 +120,9 @@ async def init_asset_dictionaries():
                 {"label": "集体资产", "value": "collective", "code": "collective"},
                 {"label": "私有资产", "value": "private", "code": "private"},
                 {"label": "混合所有制", "value": "mixed", "code": "mixed"},
-                {"label": "其他", "value": "other", "code": "other"}
-            ]
-        }
+                {"label": "其他", "value": "other", "code": "other"},
+            ],
+        },
     }
 
     db = SessionLocal()
@@ -120,15 +136,12 @@ async def init_asset_dictionaries():
             try:
                 # 创建字典数据
                 dictionary_data = SimpleDictionaryCreate(
-                    options=config["options"],
-                    description=config.get("description")
+                    options=config["options"], description=config.get("description")
                 )
 
                 # 调用API创建字典
                 result = await quick_create_dictionary(
-                    dict_type=dict_type,
-                    dictionary_data=dictionary_data,
-                    db=db
+                    dict_type=dict_type, dictionary_data=dictionary_data, db=db
                 )
 
                 print(f"  ✅ 创建成功: {len(config['options'])} 个选项")

@@ -19,8 +19,9 @@ PROBLEMATIC_TESTS = [
     "tests/test_rbac_complete.py",
     "tests/test_schemas.py",
     "tests/test_statistics.py",
-    "tests/test_ultra_fast.py"
+    "tests/test_ultra_fast.py",
 ]
+
 
 def restore_backend_tests():
     """恢复后端测试"""
@@ -51,6 +52,7 @@ def restore_backend_tests():
 
     return restored_count
 
+
 def main():
     """主函数"""
     print("🔄 开始恢复测试...")
@@ -61,6 +63,7 @@ def main():
     print("\n✅ 测试恢复完成!")
     print(f"   - 恢复测试文件: {restored_count}个")
     print("   - 现在可以运行完整测试套件")
+
 
 if __name__ == "__main__":
     main()

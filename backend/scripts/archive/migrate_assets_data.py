@@ -10,7 +10,8 @@ import sys
 from pathlib import Path
 
 # 添加项目路径
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
+
 
 def migrate_assets_data():
     """将旧数据库的资产数据迁移到新数据库"""
@@ -58,34 +59,34 @@ def migrate_assets_data():
 
         # 字段映射：旧字段 -> 新字段
         field_mapping = {
-            'id': 'id',
-            'property_name': 'property_name',
-            'ownership_entity': 'ownership_entity',
-            'management_entity': 'notes',  # 管理实体存储到备注中
-            'address': 'address',
-            'land_area': 'land_area',
-            'actual_property_area': 'actual_property_area',
-            'rentable_area': 'rentable_area',
-            'rented_area': 'rented_area',
-            'unrented_area': 'unrented_area',
-            'non_commercial_area': 'non_commercial_area',
-            'ownership_status': 'ownership_status',
-            'certificated_usage': 'certificated_usage',
-            'actual_usage': 'actual_usage',
-            'business_category': 'business_category',
-            'usage_status': 'usage_status',
-            'is_litigated': 'is_litigated',
-            'property_nature': 'property_nature',
-            'business_model': 'business_model',
-            'include_in_occupancy_rate': 'include_in_occupancy_rate',
-            'lease_contract': 'lease_contract_number',
-            'current_contract_start_date': 'contract_start_date',
-            'current_contract_end_date': 'contract_end_date',
-            'tenant_name': 'tenant_name',
-            'ownership_category': 'ownership_category',
-            'wuyang_project_name': 'project_name',
-            'created_at': 'created_at',
-            'updated_at': 'updated_at'
+            "id": "id",
+            "property_name": "property_name",
+            "ownership_entity": "ownership_entity",
+            "management_entity": "notes",  # 管理实体存储到备注中
+            "address": "address",
+            "land_area": "land_area",
+            "actual_property_area": "actual_property_area",
+            "rentable_area": "rentable_area",
+            "rented_area": "rented_area",
+            "unrented_area": "unrented_area",
+            "non_commercial_area": "non_commercial_area",
+            "ownership_status": "ownership_status",
+            "certificated_usage": "certificated_usage",
+            "actual_usage": "actual_usage",
+            "business_category": "business_category",
+            "usage_status": "usage_status",
+            "is_litigated": "is_litigated",
+            "property_nature": "property_nature",
+            "business_model": "business_model",
+            "include_in_occupancy_rate": "include_in_occupancy_rate",
+            "lease_contract": "lease_contract_number",
+            "current_contract_start_date": "contract_start_date",
+            "current_contract_end_date": "contract_end_date",
+            "tenant_name": "tenant_name",
+            "ownership_category": "ownership_category",
+            "wuyang_project_name": "project_name",
+            "created_at": "created_at",
+            "updated_at": "updated_at",
         }
 
         # 迁移数据
@@ -101,37 +102,39 @@ def migrate_assets_data():
                     value = old_data_dict[old_field]
 
                     # 数据转换
-                    if old_field == 'is_litigated' and isinstance(value, str):
-                        new_data[new_field] = value == '是'
-                    elif old_field == 'include_in_occupancy_rate' and isinstance(value, str):
-                        new_data[new_field] = value == '是'
-                    elif old_field == 'usage_status' and value == '出租':
-                        new_data[new_field] = '已出租'
-                    elif old_field == 'ownership_status' and value == '已确权':
-                        new_data[new_field] = '正常'
+                    if old_field == "is_litigated" and isinstance(value, str):
+                        new_data[new_field] = value == "是"
+                    elif old_field == "include_in_occupancy_rate" and isinstance(
+                        value, str
+                    ):
+                        new_data[new_field] = value == "是"
+                    elif old_field == "usage_status" and value == "出租":
+                        new_data[new_field] = "已出租"
+                    elif old_field == "ownership_status" and value == "已确权":
+                        new_data[new_field] = "正常"
                     else:
                         new_data[new_field] = value
 
             # 添加必需的字段
-            if 'data_status' not in new_data:
-                new_data['data_status'] = '正常'
-            if 'version' not in new_data:
-                new_data['version'] = 1
-            if 'created_by' not in new_data:
-                new_data['created_by'] = 'system_migration'
-            if 'updated_by' not in new_data:
-                new_data['updated_by'] = 'system_migration'
+            if "data_status" not in new_data:
+                new_data["data_status"] = "正常"
+            if "version" not in new_data:
+                new_data["version"] = 1
+            if "created_by" not in new_data:
+                new_data["created_by"] = "system_migration"
+            if "updated_by" not in new_data:
+                new_data["updated_by"] = "system_migration"
 
             # 设置默认值
             default_fields = {
-                'is_litigated': False,
-                'is_sublease': False,
-                'operation_status': '正常',
-                'tags': None,
-                'audit_notes': None,
-                'tenant_id': None,
-                'project_id': None,
-                'ownership_id': None
+                "is_litigated": False,
+                "is_sublease": False,
+                "operation_status": "正常",
+                "tags": None,
+                "audit_notes": None,
+                "tenant_id": None,
+                "project_id": None,
+                "ownership_id": None,
             }
 
             for field, default_value in default_fields.items():
@@ -140,7 +143,7 @@ def migrate_assets_data():
 
             # 构建插入SQL
             columns = list(new_data.keys())
-            placeholders = ['?' for _ in columns]
+            placeholders = ["?" for _ in columns]
             values = list(new_data.values())
 
             insert_sql = f"""
@@ -167,6 +170,7 @@ def migrate_assets_data():
         print(f"数据迁移失败: {str(e)}")
         return False
 
+
 def verify_migration():
     """验证迁移结果"""
     print("验证迁移结果...")
@@ -190,6 +194,7 @@ def verify_migration():
 
     conn.close()
     return asset_count > 0
+
 
 if __name__ == "__main__":
     print("=" * 60)

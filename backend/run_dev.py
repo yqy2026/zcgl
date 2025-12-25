@@ -16,9 +16,5 @@ os.environ.setdefault("DEV_MODE", "true")
 if __name__ == "__main__":
     print("启动开发服务器 (DEV_MODE=true)")
     uvicorn.run(
-        "src.main:app",
-        host="0.0.0.0",
-        port=8002,
-        reload=True,
-        log_level="info"
+        "src.main:app", host="0.0.0.0", port=8002, reload=True, log_level="info"
     )

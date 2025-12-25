@@ -11,7 +11,7 @@ import sys
 from datetime import datetime
 
 # 添加项目根目录到路径
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
 
 def get_db_path():
@@ -25,7 +25,7 @@ def get_db_path():
         # 如果是相对路径，转换为绝对路径
         if not os.path.isabs(db_path):
             # 相对于backend/src目录
-            backend_src_dir = os.path.join(os.path.dirname(__file__), '..', 'src')
+            backend_src_dir = os.path.join(os.path.dirname(__file__), "..", "src")
             db_path = os.path.join(backend_src_dir, db_path)
         return os.path.abspath(db_path)
     else:
@@ -70,18 +70,22 @@ def check_table_structure():
 
         print("当前 assets 表结构:")
         for col in columns:
-            print(f"  {col[1]} {col[2]} {'NOT NULL' if col[3] else 'NULL'} {'PRIMARY KEY' if col[5] else ''}")
+            print(
+                f"  {col[1]} {col[2]} {'NOT NULL' if col[3] else 'NULL'} {'PRIMARY KEY' if col[5] else ''}"
+            )
 
         # 检查是否存在重复的 project_name 字段
-        project_name_count = sum(1 for col in columns if col[1] == 'project_name')
-        project_short_name_exists = any(col[1] == 'project_short_name' for col in columns)
+        project_name_count = sum(1 for col in columns if col[1] == "project_name")
+        project_short_name_exists = any(
+            col[1] == "project_short_name" for col in columns
+        )
 
         conn.close()
 
         return {
-            'columns': columns,
-            'project_name_count': project_name_count,
-            'project_short_name_exists': project_short_name_exists
+            "columns": columns,
+            "project_name_count": project_name_count,
+            "project_short_name_exists": project_short_name_exists,
         }
 
     except Exception as e:
@@ -116,11 +120,11 @@ def migrate_database():
             pk = col[5]
 
             # 跳过 project_short_name 字段
-            if col_name == 'project_short_name':
+            if col_name == "project_short_name":
                 continue
 
             # 只保留第一个 project_name 字段
-            if col_name == 'project_name':
+            if col_name == "project_name":
                 if project_name_added:
                     continue
                 project_name_added = True
@@ -152,9 +156,9 @@ def migrate_database():
 
         for col in columns:
             col_name = col[1]
-            if col_name == 'project_short_name':
+            if col_name == "project_short_name":
                 continue
-            if col_name == 'project_name':
+            if col_name == "project_name":
                 if project_name_copied:
                     continue
                 project_name_copied = True
@@ -205,13 +209,15 @@ def verify_migration():
         return False
 
     # 检查是否还存在 project_short_name 字段
-    if structure['project_short_name_exists']:
+    if structure["project_short_name_exists"]:
         print("迁移失败: project_short_name 字段仍然存在")
         return False
 
     # 检查 project_name 字段数量
-    if structure['project_name_count'] > 1:
-        print(f"迁移失败: 仍然存在 {structure['project_name_count']} 个 project_name 字段")
+    if structure["project_name_count"] > 1:
+        print(
+            f"迁移失败: 仍然存在 {structure['project_name_count']} 个 project_name 字段"
+        )
         return False
 
     print("迁移验证成功!")
@@ -237,7 +243,10 @@ def main():
     print(f"   - project_short_name 字段存在: {structure['project_short_name_exists']}")
 
     # 如果不需要迁移，直接退出
-    if structure['project_name_count'] <= 1 and not structure['project_short_name_exists']:
+    if (
+        structure["project_name_count"] <= 1
+        and not structure["project_short_name_exists"]
+    ):
         print("数据库结构已经是最新的，无需迁移")
         return True
 

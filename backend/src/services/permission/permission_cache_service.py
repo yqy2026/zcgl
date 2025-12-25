@@ -40,9 +40,7 @@ class PermissionCacheService:
         """获取角色权限缓存键"""
         return f"permission:role:{role_id}:permissions"
 
-    async def get_user_permissions(
-        self, user_id: int | str
-    ) -> list[str] | None:
+    async def get_user_permissions(self, user_id: int | str) -> list[str] | None:
         """
         获取用户权限列表（从缓存）
 
@@ -125,9 +123,7 @@ class PermissionCacheService:
             logger.error(f"Error getting user roles from cache: {e}")
             return None
 
-    async def set_user_roles(
-        self, user_id: int | str, roles: list[dict]
-    ) -> bool:
+    async def set_user_roles(self, user_id: int | str, roles: list[dict]) -> bool:
         """
         设置用户角色缓存
 
@@ -228,7 +224,9 @@ class PermissionCacheService:
                 if cursor == 0:
                     break
 
-            logger.info(f"Invalidated all permission cache, deleted {deleted_count} keys")
+            logger.info(
+                f"Invalidated all permission cache, deleted {deleted_count} keys"
+            )
             return True
 
         except Exception as e:

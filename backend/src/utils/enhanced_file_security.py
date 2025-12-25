@@ -94,9 +94,7 @@ class EnhancedFileSecurityValidator:
         except Exception:
             return False
 
-    def validate_file_size(
-        self, file: UploadFile, max_size: int | None = None
-    ) -> bool:
+    def validate_file_size(self, file: UploadFile, max_size: int | None = None) -> bool:
         """验证文件大小"""
         try:
             file.file.seek(0, 2)  # 移动到文件末尾

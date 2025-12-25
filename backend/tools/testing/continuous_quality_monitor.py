@@ -21,7 +21,7 @@ class ContinuousQualityMonitor:
         self.thresholds = {
             "min_pass_rate": 80.0,
             "max_error_rate": 0.0,
-            "min_coverage": 75.0
+            "min_coverage": 75.0,
         }
         self.load_config()
 
@@ -29,9 +29,9 @@ class ContinuousQualityMonitor:
         """加载配置"""
         if os.path.exists(self.config_file):
             try:
-                with open(self.config_file, encoding='utf-8') as f:
+                with open(self.config_file, encoding="utf-8") as f:
                     config = json.load(f)
-                    self.thresholds.update(config.get('thresholds', {}))
+                    self.thresholds.update(config.get("thresholds", {}))
             except Exception as e:
                 print(f"[WARNING] 配置文件加载失败，使用默认配置: {e}")
 
@@ -39,10 +39,10 @@ class ContinuousQualityMonitor:
         """保存配置"""
         config = {
             "thresholds": self.thresholds,
-            "last_updated": datetime.now().isoformat()
+            "last_updated": datetime.now().isoformat(),
         }
         try:
-            with open(self.config_file, 'w', encoding='utf-8') as f:
+            with open(self.config_file, "w", encoding="utf-8") as f:
                 json.dump(config, f, indent=2, ensure_ascii=False)
         except Exception as e:
             print(f"[ERROR] 配置文件保存失败: {e}")
@@ -67,7 +67,7 @@ class ContinuousQualityMonitor:
             "timestamp": datetime.now().isoformat(),
             "metrics": quality_metrics,
             "suggestions": suggestions,
-            "test_stats": test_stats
+            "test_stats": test_stats,
         }
 
     def get_test_statistics(self) -> dict[str, Any]:
@@ -84,16 +84,24 @@ class ContinuousQualityMonitor:
                 "total_modules": 9,
                 "high_quality_modules": 7,
                 "modules": [
-                    {"name": "frontend_components", "pass_rate": 100.0, "status": "excellent"},
+                    {
+                        "name": "frontend_components",
+                        "pass_rate": 100.0,
+                        "status": "excellent",
+                    },
                     {"name": "asset_crud", "pass_rate": 100.0, "status": "excellent"},
                     {"name": "pdf_import", "pass_rate": 100.0, "status": "excellent"},
-                    {"name": "excel_processing", "pass_rate": 100.0, "status": "excellent"},
+                    {
+                        "name": "excel_processing",
+                        "pass_rate": 100.0,
+                        "status": "excellent",
+                    },
                     {"name": "rent_contract", "pass_rate": 72.0, "status": "good"},
                     {"name": "ownership", "pass_rate": 77.0, "status": "good"},
                     {"name": "analytics", "pass_rate": 77.0, "status": "good"},
                     {"name": "rbac", "pass_rate": 58.0, "status": "acceptable"},
-                    {"name": "dev_api", "pass_rate": 94.0, "status": "excellent"}
-                ]
+                    {"name": "dev_api", "pass_rate": 94.0, "status": "excellent"},
+                ],
             }
             return stats
         except Exception as e:
@@ -118,7 +126,9 @@ class ContinuousQualityMonitor:
         # 模块质量指标
         modules = test_stats.get("modules", [])
         high_quality_modules = len([m for m in modules if m["pass_rate"] >= 90])
-        module_quality_score = (high_quality_modules / len(modules) * 100) if modules else 0
+        module_quality_score = (
+            (high_quality_modules / len(modules) * 100) if modules else 0
+        )
 
         # 整体质量评分
         quality_score = self.calculate_overall_quality_score(
@@ -133,10 +143,12 @@ class ContinuousQualityMonitor:
             "overall_quality_score": quality_score,
             "quality_grade": self.get_quality_grade(quality_score),
             "high_quality_modules": high_quality_modules,
-            "total_modules": len(modules)
+            "total_modules": len(modules),
         }
 
-    def calculate_overall_quality_score(self, pass_rate: float, error_rate: float, module_quality_score: float) -> int:
+    def calculate_overall_quality_score(
+        self, pass_rate: float, error_rate: float, module_quality_score: float
+    ) -> int:
         """计算整体质量评分"""
         # 权重分配
         pass_rate_weight = 0.4
@@ -145,7 +157,9 @@ class ContinuousQualityMonitor:
 
         # 计算加权分数
         pass_score = pass_rate * pass_rate_weight
-        error_score = max(0, 100 - error_rate * 10) * error_rate_weight  # 错误率惩罚性更强
+        error_score = (
+            max(0, 100 - error_rate * 10) * error_rate_weight
+        )  # 错误率惩罚性更强
         module_score = module_quality_score * module_quality_weight
 
         total_score = pass_score + error_score + module_score
@@ -177,17 +191,23 @@ class ContinuousQualityMonitor:
         # 基于通过率的建议
         pass_rate = metrics["pass_rate"]
         if pass_rate < self.thresholds["min_pass_rate"]:
-            suggestions.append(f"通过率{pass_rate}%低于阈值{self.thresholds['min_pass_rate']}%，建议加强测试用例设计")
+            suggestions.append(
+                f"通过率{pass_rate}%低于阈值{self.thresholds['min_pass_rate']}%，建议加强测试用例设计"
+            )
 
         # 基于错误率的建议
         error_rate = metrics["error_rate"]
         if error_rate > self.thresholds["max_error_rate"]:
-            suggestions.append(f"错误率{error_rate}%高于阈值{self.thresholds['max_error_rate']}%，建议重点修复ERROR状态的测试")
+            suggestions.append(
+                f"错误率{error_rate}%高于阈值{self.thresholds['max_error_rate']}%，建议重点修复ERROR状态的测试"
+            )
 
         # 基于模块质量的建议
         module_score = metrics["module_quality_score"]
         if module_score < 80:
-            suggestions.append(f"模块质量评分{module_score}%偏低，建议关注模块化测试质量")
+            suggestions.append(
+                f"模块质量评分{module_score}%偏低，建议关注模块化测试质量"
+            )
 
         # 基于质量等级的建议
         grade = metrics["quality_grade"]
@@ -198,8 +218,12 @@ class ContinuousQualityMonitor:
 
         # 具体改进建议
         if metrics["high_quality_modules"] < metrics["total_modules"]:
-            low_quality_modules = metrics["total_modules"] - metrics["high_quality_modules"]
-            suggestions.append(f"有{low_quality_modules}个模块质量有待提升，建议重点优化")
+            low_quality_modules = (
+                metrics["total_modules"] - metrics["high_quality_modules"]
+            )
+            suggestions.append(
+                f"有{low_quality_modules}个模块质量有待提升，建议重点优化"
+            )
 
         return suggestions if suggestions else ["质量表现良好，继续保持！"]
 
@@ -208,22 +232,19 @@ class ContinuousQualityMonitor:
         history = []
         if os.path.exists(self.history_file):
             try:
-                with open(self.history_file, encoding='utf-8') as f:
+                with open(self.history_file, encoding="utf-8") as f:
                     history = json.load(f)
             except Exception:
                 history = []
 
         # 添加新记录
-        history.append({
-            "timestamp": datetime.now().isoformat(),
-            "metrics": metrics
-        })
+        history.append({"timestamp": datetime.now().isoformat(), "metrics": metrics})
 
         # 保持最近30条记录
         history = history[-30:]
 
         try:
-            with open(self.history_file, 'w', encoding='utf-8') as f:
+            with open(self.history_file, "w", encoding="utf-8") as f:
                 json.dump(history, f, indent=2, ensure_ascii=False)
         except Exception as e:
             print(f"[ERROR] 历史记录保存失败: {e}")
@@ -251,13 +272,19 @@ class ContinuousQualityMonitor:
         report.append(f"   失败率: {metrics['fail_rate']}%")
         report.append(f"   错误率: {metrics['error_rate']}%")
         report.append(f"   模块质量: {metrics['module_quality_score']}%")
-        report.append(f"   高质量模块: {metrics['high_quality_modules']}/{metrics['total_modules']}")
+        report.append(
+            f"   高质量模块: {metrics['high_quality_modules']}/{metrics['total_modules']}"
+        )
         report.append("")
 
         # 与阈值对比
         report.append("📈 阈值检查:")
-        report.append(f"   通过率阈值: {self.thresholds['min_pass_rate']}% {'✅' if metrics['pass_rate'] >= self.thresholds['min_pass_rate'] else '❌'}")
-        report.append(f"   错误率阈值: {self.thresholds['max_error_rate']}% {'✅' if metrics['error_rate'] <= self.thresholds['max_error_rate'] else '❌'}")
+        report.append(
+            f"   通过率阈值: {self.thresholds['min_pass_rate']}% {'✅' if metrics['pass_rate'] >= self.thresholds['min_pass_rate'] else '❌'}"
+        )
+        report.append(
+            f"   错误率阈值: {self.thresholds['max_error_rate']}% {'✅' if metrics['error_rate'] <= self.thresholds['max_error_rate'] else '❌'}"
+        )
         report.append("")
 
         # 改进建议
@@ -283,14 +310,16 @@ class ContinuousQualityMonitor:
             return "数据不足"
 
         try:
-            with open(self.history_file, encoding='utf-8') as f:
+            with open(self.history_file, encoding="utf-8") as f:
                 history = json.load(f)
 
             if len(history) < 2:
                 return "数据不足"
 
             # 获取最近3次的质量评分
-            recent_scores = [item["metrics"]["overall_quality_score"] for item in history[-3:]]
+            recent_scores = [
+                item["metrics"]["overall_quality_score"] for item in history[-3:]
+            ]
 
             if len(recent_scores) < 3:
                 return "数据不足"
@@ -307,7 +336,9 @@ class ContinuousQualityMonitor:
             print(f"[ERROR] 趋势分析失败: {e}")
             return "分析失败"
 
-    def run_continuous_monitoring(self, interval_minutes: int = 60, max_cycles: int = 10):
+    def run_continuous_monitoring(
+        self, interval_minutes: int = 60, max_cycles: int = 10
+    ):
         """运行持续监控"""
         print(f"[INFO] 启动持续监控，间隔{interval_minutes}分钟，最多{max_cycles}次")
 
@@ -324,8 +355,10 @@ class ContinuousQualityMonitor:
             print(report)
 
             # 保存报告
-            report_file = f"quality_monitor_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
-            with open(report_file, 'w', encoding='utf-8') as f:
+            report_file = (
+                f"quality_monitor_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+            )
+            with open(report_file, "w", encoding="utf-8") as f:
                 f.write(report)
 
             print(f"[INFO] 报告已保存: {report_file}")
@@ -340,6 +373,7 @@ class ContinuousQualityMonitor:
             if cycle < max_cycles:
                 print(f"[INFO] 等待{interval_minutes}分钟后进行下次检查...")
                 time.sleep(interval_minutes * 60)
+
 
 def main():
     """主函数"""
@@ -357,7 +391,9 @@ def main():
             monitor = ContinuousQualityMonitor()
             monitor.run_continuous_monitoring(interval, max_cycles)
         else:
-            print("用法: python continuous_quality_monitor.py [--continuous] [interval_minutes] [max_cycles]")
+            print(
+                "用法: python continuous_quality_monitor.py [--continuous] [interval_minutes] [max_cycles]"
+            )
             print("示例: python continuous_quality_monitor.py --continuous 60 10")
     else:
         # 单次检查模式
@@ -367,11 +403,14 @@ def main():
         print(report)
 
         # 保存报告
-        report_file = f"quality_monitor_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
-        with open(report_file, 'w', encoding='utf-8') as f:
+        report_file = (
+            f"quality_monitor_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+        )
+        with open(report_file, "w", encoding="utf-8") as f:
             f.write(report)
 
         print(f"\n[INFO] 报告已保存: {report_file}")
+
 
 if __name__ == "__main__":
     main()

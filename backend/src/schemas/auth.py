@@ -90,7 +90,7 @@ class UserResponse(UserBase):
     id: str
     role: UserRole | str
     is_active: bool | int  # Handle SQLite boolean as int
-    is_locked: bool | int   # Handle SQLite boolean as int
+    is_locked: bool | int  # Handle SQLite boolean as int
     last_login_at: datetime | str | None
     employee_id: str | None
     default_organization_id: str | None
@@ -126,7 +126,7 @@ class UserResponse(UserBase):
         if isinstance(v, str):
             try:
                 # Try to parse ISO format datetime string
-                return datetime.fromisoformat(v.replace('Z', '+00:00'))
+                return datetime.fromisoformat(v.replace("Z", "+00:00"))
             except (ValueError, AttributeError):
                 # If parsing fails, return the original string
                 # This allows the response to work even if datetime parsing fails

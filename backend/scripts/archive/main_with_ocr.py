@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # OCR服务导入 - 使用条件导入避免依赖问题
 try:
     from .services.document.optimized_ocr_service import OptimizedOCRService
+
     OCR_SERVICE_AVAILABLE = True
 except ImportError as e:
     print(f"Warning: OCR服务不可用 - {e}")
@@ -20,6 +21,7 @@ except ImportError as e:
 
 try:
     from .services.providers.ocr_provider import get_ocr_service, set_ocr_service
+
     OCR_PROVIDER_AVAILABLE = True
 except ImportError as e:
     print(f"Warning: OCR提供者不可用 - {e}")
@@ -35,14 +37,19 @@ except Exception:
 # 导入API路由 - 使用条件导入
 try:
     from .core.router_registry import register_api_routes, route_registry
+
     ROUTER_REGISTRY_AVAILABLE = True
 except ImportError as e:
     print(f"Warning: 路由注册器不可用 - {e}")
     register_api_routes = lambda: None
-    route_registry = type('MockRegistry', (), {
-        'register_global_dependency': lambda x: None,
-        'include_all': lambda app, version: None
-    })()
+    route_registry = type(
+        "MockRegistry",
+        (),
+        {
+            "register_global_dependency": lambda x: None,
+            "include_all": lambda app, version: None,
+        },
+    )()
     ROUTER_REGISTRY_AVAILABLE = False
 from .core.config import settings
 from .core.config_manager import get_config, initialize_config
@@ -59,6 +66,7 @@ from .database import (
 # 中间件导入 - 使用条件导入
 try:
     from .middleware.error_recovery_middleware import ErrorRecoveryMiddleware
+
     ERROR_RECOVERY_MIDDLEWARE_AVAILABLE = True
 except ImportError as e:
     print(f"Warning: 错误恢复中间件不可用 - {e}")
@@ -67,6 +75,7 @@ except ImportError as e:
 
 try:
     from .middleware.request_logging import RequestLoggingMiddleware
+
     REQUEST_LOGGING_MIDDLEWARE_AVAILABLE = True
 except ImportError as e:
     print(f"Warning: 请求日志中间件不可用 - {e}")
@@ -75,6 +84,7 @@ except ImportError as e:
 
 try:
     from .middleware.security_middleware import setup_security_middleware
+
     SECURITY_MIDDLEWARE_AVAILABLE = True
 except ImportError as e:
     print(f"Warning: 安全中间件不可用 - {e}")
@@ -186,6 +196,7 @@ else:
 # 设置文件上传安全中间件
 try:
     from .middleware.file_upload_security import create_file_security_middleware
+
     file_security_middleware = create_file_security_middleware(app)
     app.add_middleware(type(file_security_middleware))
 except ImportError as e:
@@ -326,11 +337,13 @@ else:
     # 1. 认证路由
     try:
         from .api.v1.auth import router as auth_router
+
         app.include_router(auth_router, prefix="/api/v1/auth", tags=["认证"])
         routes_added.append("认证")
         logger.info("已手动添加认证路由")
     except ImportError as e:
         logger.warning(f"无法添加认证路由: {e}")
+
         # 添加最基础的登录端点
         @app.post("/api/v1/auth/login")
         async def login(credentials: dict):
@@ -341,8 +354,13 @@ else:
                 return {
                     "success": True,
                     "message": "登录成功",
-                    "user": {"id": 1, "username": "admin", "full_name": "系统管理员", "roles": ["admin"]},
-                    "token": "mock_token_admin"
+                    "user": {
+                        "id": 1,
+                        "username": "admin",
+                        "full_name": "系统管理员",
+                        "roles": ["admin"],
+                    },
+                    "token": "mock_token_admin",
                 }
             else:
                 return {"success": False, "message": "用户名或密码错误"}
@@ -350,6 +368,7 @@ else:
     # 2. 资产管理路由
     try:
         from .api.v1.assets import asset_router
+
         app.include_router(asset_router, prefix="/api/v1/assets", tags=["资产管理"])
         routes_added.append("资产管理")
         logger.info("已手动添加资产管理路由")
@@ -359,7 +378,10 @@ else:
     # 3. 租赁合同路由
     try:
         from .api.v1.rent_contract import rent_contract_router
-        app.include_router(rent_contract_router, prefix="/api/v1/rental-contracts", tags=["租赁合同"])
+
+        app.include_router(
+            rent_contract_router, prefix="/api/v1/rental-contracts", tags=["租赁合同"]
+        )
         routes_added.append("租赁合同")
         logger.info("已手动添加租赁合同路由")
     except ImportError as e:
@@ -368,7 +390,10 @@ else:
     # 4. 统计分析路由
     try:
         from .api.v1.statistics import statistics_router
-        app.include_router(statistics_router, prefix="/api/v1/analytics", tags=["数据分析"])
+
+        app.include_router(
+            statistics_router, prefix="/api/v1/analytics", tags=["数据分析"]
+        )
         routes_added.append("数据分析")
         logger.info("已手动添加统计分析路由")
     except ImportError as e:
@@ -377,6 +402,7 @@ else:
     # 5. 系统管理路由
     try:
         from .api.v1.system import system_router
+
         app.include_router(system_router, prefix="/api/v1/system", tags=["系统管理"])
         routes_added.append("系统管理")
         logger.info("已手动添加系统管理路由")
@@ -386,13 +412,16 @@ else:
     # 6. Excel处理路由
     try:
         from .api.v1.excel import excel_router
+
         app.include_router(excel_router, prefix="/api/v1/excel", tags=["Excel处理"])
         routes_added.append("Excel处理")
         logger.info("已手动添加Excel处理路由")
     except ImportError as e:
         logger.warning(f"无法添加Excel处理路由: {e}")
 
-    logger.info(f"手动路由注册完成，共添加 {len(routes_added)} 个模块: {', '.join(routes_added)}")
+    logger.info(
+        f"手动路由注册完成，共添加 {len(routes_added)} 个模块: {', '.join(routes_added)}"
+    )
 
 # 设置日志安全
 try:

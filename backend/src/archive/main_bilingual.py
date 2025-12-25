@@ -21,10 +21,11 @@ from .core.response_handler import success_response
 # Database imports
 from .database import create_tables, get_database_status, init_db
 
-sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer)
-sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer)
+sys.stdout = codecs.getwriter("utf-8")(sys.stdout.buffer)
+sys.stderr = codecs.getwriter("utf-8")(sys.stderr.buffer)
 
 logger = logging.getLogger(__name__)
+
 
 # ===== Application Lifecycle Management =====
 @asynccontextmanager
@@ -44,6 +45,7 @@ async def lifespan(app: FastAPI):
 
     logger.info("Application shutdown complete")
 
+
 # Create FastAPI application instance
 app = FastAPI(
     title="Land Property Asset Management System",
@@ -58,7 +60,9 @@ app = FastAPI(
 initialize_config()
 
 # Set up CORS middleware
-cors_origins = get_config("cors_origins", ["http://localhost:5173", "http://localhost:5174"])
+cors_origins = get_config(
+    "cors_origins", ["http://localhost:5173", "http://localhost:5174"]
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
@@ -69,6 +73,7 @@ app.add_middleware(
 
 # Set up exception handlers
 setup_exception_handlers(app)
+
 
 # Health check endpoint (must be defined before route registration)
 @app.get("/api/v1/health", tags=["Health Check"])
@@ -101,6 +106,7 @@ async def health_check():
             "database": {"status": "unknown"},
         }
 
+
 # Root endpoint
 @app.get("/", tags=["Root Route"])
 async def root_endpoint():
@@ -114,6 +120,7 @@ async def root_endpoint():
         },
         message="欢迎使用土地物业资产管理系统API",
     )
+
 
 # API v1 root path
 @app.get("/api/v1/", tags=["Root Path"])
@@ -131,6 +138,7 @@ async def api_v1_root():
         },
         message="API v1 根路径",
     )
+
 
 # Application info endpoint
 @app.get("/api/v1/info", tags=["App Info"])
@@ -153,6 +161,7 @@ async def app_info():
         message="应用信息获取成功",
     )
 
+
 # ===== API ROUTE REGISTRATION =====
 # Manual route registration to ensure all business APIs are available
 
@@ -161,11 +170,13 @@ routes_added = []
 # 1. Auth routes
 try:
     from .api.v1.auth import router as auth_router
+
     app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
     routes_added.append("Authentication")
     logger.info("已手动添加认证路由")
 except ImportError as e:
     logger.warning(f"无法添加认证路由: {e}")
+
     # Add basic login endpoint
     @app.post("/api/v1/auth/login")
     async def login(credentials: dict):
@@ -176,15 +187,22 @@ except ImportError as e:
             return {
                 "success": True,
                 "message": "登录成功",
-                "user": {"id": 1, "username": "admin", "full_name": "系统管理员", "roles": ["admin"]},
-                "token": "mock_token_admin"
+                "user": {
+                    "id": 1,
+                    "username": "admin",
+                    "full_name": "系统管理员",
+                    "roles": ["admin"],
+                },
+                "token": "mock_token_admin",
             }
         else:
             return {"success": False, "message": "用户名或密码错误"}
 
+
 # 2. Asset management routes
 try:
     from .api.v1.assets import router as asset_router
+
     app.include_router(asset_router, prefix="/api/v1/assets", tags=["Asset Management"])
     routes_added.append("Asset Management")
     logger.info("已手动添加资产管理路由")
@@ -194,7 +212,10 @@ except ImportError as e:
 # 3. Rent contract routes
 try:
     from .api.v1.rent_contract import router as rent_contract_router
-    app.include_router(rent_contract_router, prefix="/api/v1/rental-contracts", tags=["Rent Contracts"])
+
+    app.include_router(
+        rent_contract_router, prefix="/api/v1/rental-contracts", tags=["Rent Contracts"]
+    )
     routes_added.append("Rent Contracts")
     logger.info("已手动添加租赁合同路由")
 except ImportError as e:
@@ -207,7 +228,9 @@ try:
         from .api.v1.statistics.statistics_router import statistics_router
     except ImportError:
         from .api.v1.statistics import statistics_router
-    app.include_router(statistics_router, prefix="/api/v1/analytics", tags=["Data Analytics"])
+    app.include_router(
+        statistics_router, prefix="/api/v1/analytics", tags=["Data Analytics"]
+    )
     routes_added.append("Data Analytics")
     logger.info("已手动添加统计分析路由")
 except ImportError as e:
@@ -234,7 +257,9 @@ try:
             system_router = None
 
     if system_router:
-        app.include_router(system_router, prefix="/api/v1/system", tags=["System Management"])
+        app.include_router(
+            system_router, prefix="/api/v1/system", tags=["System Management"]
+        )
         routes_added.append("System Management")
         logger.info("已手动添加系统管理路由")
 except ImportError as e:
@@ -252,7 +277,11 @@ try:
             # Create basic Excel endpoints
             @app.get("/api/v1/excel/export")
             async def export_excel():
-                return {"success": True, "data": {"download_url": "#"}, "message": "Excel导出（基础版本）"}
+                return {
+                    "success": True,
+                    "data": {"download_url": "#"},
+                    "message": "Excel导出（基础版本）",
+                }
 
             @app.post("/api/v1/excel/import")
             async def import_excel():
@@ -261,13 +290,17 @@ try:
             excel_router = None
 
     if excel_router:
-        app.include_router(excel_router, prefix="/api/v1/excel", tags=["Excel Processing"])
+        app.include_router(
+            excel_router, prefix="/api/v1/excel", tags=["Excel Processing"]
+        )
         routes_added.append("Excel Processing")
         logger.info("已手动添加Excel处理路由")
 except ImportError as e:
     logger.warning(f"无法添加Excel处理路由: {e}")
 
-logger.info(f"手动路由注册完成。共添加 {len(routes_added)} 个模块: {', '.join(routes_added)}")
+logger.info(
+    f"手动路由注册完成。共添加 {len(routes_added)} 个模块: {', '.join(routes_added)}"
+)
 
 # Final application startup
 logger.info("FastAPI应用启动完成")

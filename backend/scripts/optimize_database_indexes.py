@@ -13,8 +13,7 @@ from sqlalchemy import text
 
 # 配置日志
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -33,15 +32,15 @@ class DatabaseIndexOptimizer:
     INDEXES = [
         (
             "idx_asset_status_timestamp",
-            "CREATE INDEX IF NOT EXISTS idx_asset_status_timestamp ON assets(data_status, created_at DESC)"
+            "CREATE INDEX IF NOT EXISTS idx_asset_status_timestamp ON assets(data_status, created_at DESC)",
         ),
         (
             "idx_occupancy_calculation",
-            "CREATE INDEX IF NOT EXISTS idx_occupancy_calculation ON assets(rentable_area, rented_area, data_status)"
+            "CREATE INDEX IF NOT EXISTS idx_occupancy_calculation ON assets(rentable_area, rented_area, data_status)",
         ),
         (
             "idx_asset_monthly_rent",
-            "CREATE INDEX IF NOT EXISTS idx_asset_monthly_rent ON assets(monthly_rent, data_status)"
+            "CREATE INDEX IF NOT EXISTS idx_asset_monthly_rent ON assets(monthly_rent, data_status)",
         ),
     ]
 
@@ -97,7 +96,7 @@ class DatabaseIndexOptimizer:
                 "created_indexes": self.created_indexes,
                 "failed_indexes": self.failed_indexes,
                 "total": len(self.INDEXES),
-                "success": success_count
+                "success": success_count,
             }
 
         except Exception as e:
@@ -115,14 +114,14 @@ def main():
     print(f"   状态: {result['status']}")
     print(f"   成功: {result['success']}/{result['total']}")
 
-    if result['created_indexes']:
+    if result["created_indexes"]:
         print("\n✅ 已创建的索引:")
-        for idx in result['created_indexes']:
+        for idx in result["created_indexes"]:
             print(f"   - {idx}")
 
-    if result['failed_indexes']:
+    if result["failed_indexes"]:
         print("\n❌ 失败的索引:")
-        for idx, error in result['failed_indexes']:
+        for idx, error in result["failed_indexes"]:
             print(f"   - {idx}: {error}")
 
     print("\n💡 预期性能提升:")

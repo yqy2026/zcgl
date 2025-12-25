@@ -26,6 +26,7 @@ safe_print("Info: OCR service disabled - avoiding encoding issues")
 
 try:
     from .services.providers.ocr_provider import get_ocr_service, set_ocr_service
+
     OCR_PROVIDER_AVAILABLE = True
 except ImportError as e:
     safe_print(f"Warning: OCR provider not available - {safe_error_message(e)}")
@@ -42,14 +43,19 @@ except Exception:
 try:
     # 恢复路由注册器以实现统一路由管理
     from .core.router_registry import register_api_routes, route_registry
+
     ROUTER_REGISTRY_AVAILABLE = True
 except ImportError as e:
     safe_print(f"Warning: Router registry not available - {safe_error_message(e)}")
     register_api_routes = lambda: None
-    route_registry = type('MockRegistry', (), {
-        'register_global_dependency': lambda x: None,
-        'include_all': lambda app, version: None
-    })()
+    route_registry = type(
+        "MockRegistry",
+        (),
+        {
+            "register_global_dependency": lambda x: None,
+            "include_all": lambda app, version: None,
+        },
+    )()
 from .core.config import get_config, initialize_config, settings
 from .core.exception_handler import setup_exception_handlers
 
@@ -65,22 +71,29 @@ from .database import (
 # 中间件导入 - 使用条件导入
 try:
     from .middleware.error_recovery_middleware import ErrorRecoveryMiddleware
+
     ERROR_RECOVERY_MIDDLEWARE_AVAILABLE = True
 except ImportError as e:
-    safe_print(f"Warning: Error recovery middleware not available - {safe_error_message(e)}")
+    safe_print(
+        f"Warning: Error recovery middleware not available - {safe_error_message(e)}"
+    )
     ErrorRecoveryMiddleware = None
     ERROR_RECOVERY_MIDDLEWARE_AVAILABLE = False
 
 try:
     from .middleware.request_logging import RequestLoggingMiddleware
+
     REQUEST_LOGGING_MIDDLEWARE_AVAILABLE = True
 except ImportError as e:
-    safe_print(f"Warning: Request logging middleware not available - {safe_error_message(e)}")
+    safe_print(
+        f"Warning: Request logging middleware not available - {safe_error_message(e)}"
+    )
     RequestLoggingMiddleware = None
     REQUEST_LOGGING_MIDDLEWARE_AVAILABLE = False
 
 try:
     from .middleware.security_middleware import setup_security_middleware
+
     SECURITY_MIDDLEWARE_AVAILABLE = True
 except ImportError as e:
     safe_print(f"Warning: Security middleware not available - {safe_error_message(e)}")
@@ -92,9 +105,12 @@ try:
         V1CompatibilityMiddleware,
         add_v1_compatibility,
     )
+
     V1_COMPATIBILITY_AVAILABLE = True
 except ImportError as e:
-    safe_print(f"Warning: V1 compatibility middleware not available - {safe_error_message(e)}")
+    safe_print(
+        f"Warning: V1 compatibility middleware not available - {safe_error_message(e)}"
+    )
     add_v1_compatibility = lambda app, preserve_endpoints=None: None
     V1CompatibilityMiddleware = None
     V1_COMPATIBILITY_AVAILABLE = False
@@ -210,10 +226,13 @@ safe_print("版本化API架构已配置完成")
 # 设置文件上传安全中间件
 try:
     from .middleware.file_upload_security import create_file_security_middleware
+
     file_security_middleware = create_file_security_middleware(app)
     app.add_middleware(type(file_security_middleware))
 except ImportError as e:
-    safe_print(f"Warning: File upload security middleware not available - {safe_error_message(e)}")
+    safe_print(
+        f"Warning: File upload security middleware not available - {safe_error_message(e)}"
+    )
 
 # 设置统一异常处理器
 setup_exception_handlers(app)
@@ -256,9 +275,9 @@ if ROUTER_REGISTRY_AVAILABLE:
         logger.info("已通过路由注册器统一注册 API 路由（版本化）")
     except Exception as e:
         logger.error(f"路由注册器注册失败: {e}")
-# else:
-#     logger.warning("路由注册器不可用，使用手动路由注册")
-#     # 手动路由注册已被禁用，使用路由注册器统一管理
+    # else:
+    #     logger.warning("路由注册器不可用，使用手动路由注册")
+    #     # 手动路由注册已被禁用，使用路由注册器统一管理
 
     # # 调试端点 - 列出所有路由
     # @app.get("/debug/routes", tags=["调试"])

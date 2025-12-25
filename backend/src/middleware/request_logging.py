@@ -52,7 +52,9 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                 filtered_query_params[key] = "***"
             else:
                 # 对值进行脱敏处理
-                filtered_query_params[key] = self.sensitive_filter._filter_sensitive_data(str(value))
+                filtered_query_params[key] = (
+                    self.sensitive_filter._filter_sensitive_data(str(value))
+                )
 
         # 记录请求日志
         log_request_info(

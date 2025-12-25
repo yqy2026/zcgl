@@ -11,7 +11,7 @@ import pytest
 from sqlalchemy.orm import Session
 
 # 添加backend根目录到Python路径（这样 'from src.xxx' 可以正常工作）
-backend_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+backend_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, backend_root)
 
 try:
@@ -61,7 +61,9 @@ def pdf_import_service():
     service.validate_pdf_file = Mock(return_value=(True, "文件格式正确", None))
     service.check_file_size = Mock(return_value=(True, "文件大小符合要求"))
     service.security_scan = Mock(return_value=(True, "安全扫描通过", []))
-    service.extract_text_from_pdf = Mock(return_value=("提取的文本内容", ["mock_warnings"]))
+    service.extract_text_from_pdf = Mock(
+        return_value=("提取的文本内容", ["mock_warnings"])
+    )
     return service
 
 
@@ -70,12 +72,14 @@ def pdf_session_service():
     """PDF会话服务模拟"""
     service = Mock(spec=PDFSessionService)
     service.create_session = Mock(return_value="mock_session_id_12345")
-    service.get_session = Mock(return_value={
-        "session_id": "mock_session_id_12345",
-        "status": "created",
-        "progress": 0,
-        "created_at": "2025-10-24T01:30:00Z"
-    })
+    service.get_session = Mock(
+        return_value={
+            "session_id": "mock_session_id_12345",
+            "status": "created",
+            "progress": 0,
+            "created_at": "2025-10-24T01:30:00Z",
+        }
+    )
     service.update_session = Mock(return_value=None)
     service.delete_session = Mock(return_value=None)
     return service
@@ -103,7 +107,7 @@ def sample_asset_data():
         "land_area": 1200.0,
         "project_name": "测试项目",
         "contract_start_date": "2023-01-01",
-        "contract_end_date": "2025-12-31"
+        "contract_end_date": "2025-12-31",
     }
 
 
@@ -117,5 +121,5 @@ def sample_pdf_session_data():
         "file_path": "/tmp/test.pdf",
         "status": "created",
         "progress": 0,
-        "created_at": "2025-10-24T01:30:00Z"
+        "created_at": "2025-10-24T01:30:00Z",
     }

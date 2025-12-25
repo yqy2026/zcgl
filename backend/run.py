@@ -21,10 +21,4 @@ if __name__ == "__main__":
     print("   健康检查: http://localhost:8002/health")
     print()
 
-    uvicorn.run(
-        app,
-        host="127.0.0.1",
-        port=8002,
-        reload=False,
-        log_level="info"
-    )
+    uvicorn.run(app, host="127.0.0.1", port=8002, reload=False, log_level="info")

@@ -79,7 +79,7 @@ def get_current_user(
             SECRET_KEY,
             algorithms=[ALGORITHM],
             audience="land-property-system",
-            issuer="land-property-auth"
+            issuer="land-property-auth",
         )
         user_id: str = payload.get("sub")
         username: str = payload.get("username")
@@ -163,8 +163,6 @@ def get_current_user(
     return user
 
 
-
-
 def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
     """获取当前活跃用户"""
     if not current_user.is_active:
@@ -196,7 +194,7 @@ def get_optional_current_user(
             SECRET_KEY,
             algorithms=[ALGORITHM],
             audience="land-property-system",
-            issuer="land-property-auth"
+            issuer="land-property-auth",
         )
         user_id: str = payload.get("sub")
 

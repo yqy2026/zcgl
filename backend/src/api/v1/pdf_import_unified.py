@@ -33,6 +33,7 @@ logger = logging.getLogger(__name__)
 try:
     from ...services.core.enhanced_error_handler import enhanced_error_handler
     from ...services.pdf_import_service import PDFImportService
+
     pdf_import_service = PDFImportService()
     from ...services.document.pdf_processing_service import pdf_processing_service
     from ...services.pdf_session_service import pdf_session_service

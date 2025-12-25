@@ -16,17 +16,17 @@ def update_dictionary_categories():
 
     # Category mapping from frontend config
     category_mapping = {
-        'property_nature': '资产属性',
-        'usage_status': '资产状态',
-        'ownership_status': '资产状态',
-        'business_category': '资产分类',
-        'tenant_type': '租赁信息',
-        'contract_status': '租赁信息',
-        'business_model': '接收信息',
-        'operation_status': '经营信息',
-        'ownership_category': '资产属性',
-        'certificated_usage': '资产用途',
-        'actual_usage': '资产用途'
+        "property_nature": "资产属性",
+        "usage_status": "资产状态",
+        "ownership_status": "资产状态",
+        "business_category": "资产分类",
+        "tenant_type": "租赁信息",
+        "contract_status": "租赁信息",
+        "business_model": "接收信息",
+        "operation_status": "经营信息",
+        "ownership_category": "资产属性",
+        "certificated_usage": "资产用途",
+        "actual_usage": "资产用途",
     }
 
     db = SessionLocal()
@@ -37,9 +37,11 @@ def update_dictionary_categories():
 
         for code, category in category_mapping.items():
             # Update each enum field type category
-            result = db.query(EnumFieldType).filter(
-                EnumFieldType.code == code
-            ).update({'category': category})
+            result = (
+                db.query(EnumFieldType)
+                .filter(EnumFieldType.code == code)
+                .update({"category": category})
+            )
 
             if result > 0:
                 print(f"Updated {code}: {category}")
@@ -57,13 +59,14 @@ def update_dictionary_categories():
             categories.add(et.category)
             print(f'{et.code:20} | {et.name:15} | {et.category or "未分类":10}')
 
-        print(f'\n=== All Categories: {sorted(list(categories))}')
+        print(f"\n=== All Categories: {sorted(list(categories))}")
 
     except Exception as e:
         print(f"Error updating categories: {e}")
         db.rollback()
     finally:
         db.close()
+
 
 if __name__ == "__main__":
     update_dictionary_categories()

@@ -41,7 +41,7 @@ class SensitiveDataFilter(logging.Filter):
             # 银行卡号
             (r"\b[1-9]\d{12,19}\b", "card=***"),
             # IP地址
-            (r'\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b', 'ip=***'),
+            (r"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b", "ip=***"),
             # URL中的敏感参数
             (r"(?i)(token|key|secret)=[^&\s]+", r"\1=***"),
             # 地址信息
@@ -336,7 +336,9 @@ class SecurityAuditor:
             security_event["ip_address"] = self._hash_sensitive_data(ip_address)
         if user_agent:
             # 对用户代理进行脱敏处理
-            filtered_user_agent = self.sensitive_filter._filter_sensitive_data(user_agent)
+            filtered_user_agent = self.sensitive_filter._filter_sensitive_data(
+                user_agent
+            )
             security_event["user_agent"] = filtered_user_agent[:500]  # 限制长度
         if request_id:
             security_event["request_id"] = request_id
@@ -350,7 +352,9 @@ class SecurityAuditor:
                     filtered_kwargs[key] = "***"
                 else:
                     # 对值进行脱敏处理
-                    filtered_kwargs[key] = self.sensitive_filter._filter_sensitive_data(value)
+                    filtered_kwargs[key] = self.sensitive_filter._filter_sensitive_data(
+                        value
+                    )
             else:
                 filtered_kwargs[key] = value
 
@@ -512,7 +516,9 @@ class RequestLogger:
             request_info["ip_address"] = self._hash_sensitive_data(ip_address)
         if user_agent:
             # 对用户代理进行脱敏处理
-            filtered_user_agent = self.sensitive_filter._filter_sensitive_data(user_agent)
+            filtered_user_agent = self.sensitive_filter._filter_sensitive_data(
+                user_agent
+            )
             request_info["user_agent"] = filtered_user_agent[:500]
         if request_id:
             request_info["request_id"] = request_id
@@ -526,7 +532,9 @@ class RequestLogger:
                     filtered_kwargs[key] = "***"
                 else:
                     # 对值进行脱敏处理
-                    filtered_kwargs[key] = self.sensitive_filter._filter_sensitive_data(value)
+                    filtered_kwargs[key] = self.sensitive_filter._filter_sensitive_data(
+                        value
+                    )
             else:
                 filtered_kwargs[key] = value
 

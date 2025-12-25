@@ -29,14 +29,18 @@ except ImportError:
     try:
         from database_security import enhance_database_security
     except ImportError:
+
         def enhance_database_security(engine):
             pass
+
 
 try:
     from .core.config import get_config
 except ImportError:
+
     def get_config(key: str, default: Any = None) -> Any:
         return default
+
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +48,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class DatabaseMetrics:
     """数据库性能指标"""
+
     active_connections: int = 0
     total_queries: int = 0
     slow_queries: int = 0
@@ -58,6 +63,7 @@ class DatabaseMetrics:
 @dataclass
 class ConnectionPoolConfig:
     """连接池配置"""
+
     pool_size: int = 20
     max_overflow: int = 30
     pool_timeout: int = 30
@@ -103,24 +109,28 @@ class DatabaseManager:
 
         # 根据数据库类型配置连接池
         if "sqlite" in database_url.lower():
-            engine_kwargs.update({
-                "poolclass": StaticPool,
-                "connect_args": {
-                    "check_same_thread": False,
-                    "timeout": 20,
-                    "isolation_level": None,
-                },
-            })
+            engine_kwargs.update(
+                {
+                    "poolclass": StaticPool,
+                    "connect_args": {
+                        "check_same_thread": False,
+                        "timeout": 20,
+                        "isolation_level": None,
+                    },
+                }
+            )
         else:
-            engine_kwargs.update({
-                "poolclass": QueuePool,
-                "pool_size": self.config.pool_size,
-                "max_overflow": self.config.max_overflow,
-                "pool_timeout": self.config.pool_timeout,
-                "pool_recycle": self.config.pool_recycle,
-                "pool_pre_ping": self.config.pool_pre_ping,
-                "connect_args": self.config.connect_args,
-            })
+            engine_kwargs.update(
+                {
+                    "poolclass": QueuePool,
+                    "pool_size": self.config.pool_size,
+                    "max_overflow": self.config.max_overflow,
+                    "pool_timeout": self.config.pool_timeout,
+                    "pool_recycle": self.config.pool_recycle,
+                    "pool_pre_ping": self.config.pool_pre_ping,
+                    "connect_args": self.config.connect_args,
+                }
+            )
 
         self.engine = create_engine(database_url, **engine_kwargs)
 
@@ -132,10 +142,7 @@ class DatabaseManager:
 
         # 创建会话工厂
         self.session_factory = sessionmaker(
-            bind=self.engine,
-            autocommit=False,
-            autoflush=False,
-            expire_on_commit=False
+            bind=self.engine, autocommit=False, autoflush=False, expire_on_commit=False
         )
 
         logger.info("数据库引擎初始化完成")
@@ -156,7 +163,9 @@ class DatabaseManager:
                     self._optimize_sqlite_connection(dbapi_connection)
 
         @event.listens_for(self.engine, "checkout")
-        def on_checkout(dbapi_connection: DBAPIConnection, connection_record, connection_proxy):
+        def on_checkout(
+            dbapi_connection: DBAPIConnection, connection_record, connection_proxy
+        ):
             """检出连接事件"""
             with self._metrics_lock:
                 if connection_record and hasattr(connection_record, "info"):
@@ -171,7 +180,9 @@ class DatabaseManager:
             conn.info.setdefault("query_start_time", time.time())
 
         @event.listens_for(self.engine, "after_execute")
-        def after_execute(conn, clauseelement, multiparams, params, execution_options, result):
+        def after_execute(
+            conn, clauseelement, multiparams, params, execution_options, result
+        ):
             """查询执行后事件"""
             try:
                 start_time = conn.info.pop("query_start_time", time.time())
@@ -296,18 +307,22 @@ def _get_database_manager() -> DatabaseManager:
         _database_manager.initialize_engine(DATABASE_URL)
     return _database_manager
 
+
 # 导出引擎和会话工厂（向后兼容，延迟初始化）
 def _get_engine():
     """获取引擎（延迟初始化）"""
     return _get_database_manager().engine
 
+
 def _get_session_local():
     """获取会话工厂（延迟初始化）"""
     return _get_database_manager().session_factory
 
+
 # 为了向后兼容，提供全局变量（但实际使用时通过函数获取）
 engine = None  # 将在首次使用时初始化
 SessionLocal = None  # 将在首次使用时初始化
+
 
 def _init_globals():
     """初始化全局变量"""
@@ -316,6 +331,7 @@ def _init_globals():
         manager = _get_database_manager()
         engine = manager.engine
         SessionLocal = manager.session_factory
+
 
 # 创建基础模型类
 Base = declarative_base()

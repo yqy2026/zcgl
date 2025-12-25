@@ -85,7 +85,7 @@ repos:
 ci:
   autofix_commit_msg: |
     [pre-commit.ci] 自动修复代码质量问题
-    
+
     - 自动修复Ruff检查问题
     - 格式化代码
     - 修复基本的代码质量问题

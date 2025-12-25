@@ -21,9 +21,9 @@ async def get_pdf_import_info():
             "supported_formats": [".pdf"],
             "max_file_size": 50 * 1024 * 1024,  # 50MB
             "ocr_engines": ["paddle", "tesseract"],
-            "processing_status": "available"
+            "processing_status": "available",
         },
-        message="PDF导入系统信息获取成功"
+        message="PDF导入系统信息获取成功",
     )
 
 
@@ -42,7 +42,4 @@ async def upload_pdf_for_import():
     上传PDF进行智能导入
     迁移自 main.py 的PDF上传功能
     """
-    return success_response(
-        data={"task_id": "demo_task_id"},
-        message="PDF上传成功"
-    )
+    return success_response(data={"task_id": "demo_task_id"}, message="PDF上传成功")

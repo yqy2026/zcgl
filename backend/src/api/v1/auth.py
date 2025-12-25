@@ -82,7 +82,7 @@ async def login(
             refresh_token=tokens.refresh_token,
             ip_address=client_ip,
             user_agent=user_agent,
-            session_id=getattr(tokens, 'session_id', None),
+            session_id=getattr(tokens, "session_id", None),
         )
 
         # 记录成功登录
@@ -106,7 +106,9 @@ async def login(
                 "email": user.email,
                 "full_name": user.full_name,
                 "role": user.role,
-                "is_active": bool(user.is_active) if hasattr(user.is_active, '__int__') else user.is_active,
+                "is_active": bool(user.is_active)
+                if hasattr(user.is_active, "__int__")
+                else user.is_active,
             },
             "tokens": {
                 "access_token": tokens.access_token,
@@ -114,7 +116,7 @@ async def login(
                 "token_type": tokens.token_type,
                 "expires_in": tokens.expires_in,
             },
-            "message": "登录成功"
+            "message": "登录成功",
         }
 
     except HTTPException:
@@ -122,13 +124,14 @@ async def login(
     except Exception as e:
         # Log the error for debugging (internal use only)
         import logging
+
         logger = logging.getLogger(__name__)
         logger.error(f"Authentication error: {str(e)}", exc_info=True)
 
         # Return generic error message to client
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="登录服务暂时不可用，请稍后重试"
+            detail="登录服务暂时不可用，请稍后重试",
         )
 
     except BusinessLogicError as e:
@@ -177,9 +180,7 @@ async def logout(
 
 @router.post("/refresh", response_model=TokenResponse, summary="刷新令牌")
 async def refresh_token(
-    request: Request,
-    refresh_data: RefreshTokenRequest,
-    db: Session = Depends(get_db)
+    request: Request, refresh_data: RefreshTokenRequest, db: Session = Depends(get_db)
 ):
     """
     刷新访问令牌接口
@@ -196,13 +197,12 @@ async def refresh_token(
 
     # 验证刷新令牌（增强安全性）
     session = auth_service.validate_refresh_token(
-        refresh_data.refresh_token,
-        client_ip=client_ip,
-        user_agent=user_agent
+        refresh_data.refresh_token, client_ip=client_ip, user_agent=user_agent
     )
     if not session:
         # 记录失败的刷新尝试
         from ...crud.auth import AuditLogCRUD
+
         audit_crud = AuditLogCRUD()
         audit_crud.create(
             db=db,
@@ -222,7 +222,7 @@ async def refresh_token(
 
     # 获取用户
     user = auth_service.get_user_by_id(str(session.user_id))
-    user_active = getattr(user, 'is_active', False) if user else False
+    user_active = getattr(user, "is_active", False) if user else False
     if not user or not user_active:
         # 撤销无效会话
         auth_service.revoke_session(refresh_data.refresh_token)
@@ -231,36 +231,43 @@ async def refresh_token(
         )
 
     # 检查IP变化（可选安全检查）
-    session_ip = str(getattr(session, 'ip_address', '')) if getattr(session, 'ip_address', '') else None
+    session_ip = (
+        str(getattr(session, "ip_address", ""))
+        if getattr(session, "ip_address", "")
+        else None
+    )
     if session_ip and session_ip != client_ip:
         # 可以选择拒绝IP变化的请求，或记录警告
-        print(f"警告：用户 {getattr(user, 'username', 'unknown')} 的IP地址发生变化：{session_ip} -> {client_ip}")
+        print(
+            f"警告：用户 {getattr(user, 'username', 'unknown')} 的IP地址发生变化：{session_ip} -> {client_ip}"
+        )
 
     # 创建新令牌（增强安全性）
     device_info = {
         "user_agent": user_agent,
         "ip_address": client_ip,
-        "device_id": getattr(session, 'device_id', None),
-        "platform": getattr(session, 'platform', None),
+        "device_id": getattr(session, "device_id", None),
+        "platform": getattr(session, "platform", None),
     }
     tokens = auth_service.create_tokens(user, device_info)
 
     # 更新会话
-    setattr(session, 'refresh_token', tokens.refresh_token)
-    setattr(session, 'last_accessed_at', datetime.now())
-    setattr(session, 'ip_address', client_ip)  # 更新IP地址
-    setattr(session, 'user_agent', user_agent)  # 更新User-Agent
+    setattr(session, "refresh_token", tokens.refresh_token)
+    setattr(session, "last_accessed_at", datetime.now())
+    setattr(session, "ip_address", client_ip)  # 更新IP地址
+    setattr(session, "user_agent", user_agent)  # 更新User-Agent
     # 更新会话ID（如果存在）
     if tokens.session_id:
-        setattr(session, 'session_id', tokens.session_id)
+        setattr(session, "session_id", tokens.session_id)
     db.commit()
 
     # 记录成功的刷新操作
     from ...crud.auth import AuditLogCRUD
+
     audit_crud = AuditLogCRUD()
     audit_crud.create(
         db=db,
-        user_id=str(getattr(user, 'id', 'unknown')),
+        user_id=str(getattr(user, "id", "unknown")),
         action="token_refresh_success",
         resource_type="authentication",
         api_endpoint="/api/v1/auth/refresh",
@@ -321,7 +328,9 @@ async def debug_auth(db: Session = Depends(get_db)):
             return {"error": "Admin user not found"}
 
         # 2. 测试密码验证
-        password_valid = auth_service.verify_password("Admin123!@#", admin_user.password_hash)
+        password_valid = auth_service.verify_password(
+            "Admin123!@#", admin_user.password_hash
+        )
 
         # 3. 测试用户认证
         try:
@@ -338,7 +347,9 @@ async def debug_auth(db: Session = Depends(get_db)):
             if authenticated_user:
                 tokens = auth_service.create_tokens(authenticated_user)
                 token_success = True
-                access_token_length = len(tokens.access_token) if tokens.access_token else 0
+                access_token_length = (
+                    len(tokens.access_token) if tokens.access_token else 0
+                )
             else:
                 token_success = False
                 access_token_length = 0
@@ -705,8 +716,8 @@ async def lock_user(
                 status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在"
             )
 
-        setattr(user, 'is_locked', True)
-        setattr(user, 'updated_at', datetime.now(UTC))
+        setattr(user, "is_locked", True)
+        setattr(user, "updated_at", datetime.now(UTC))
         db.commit()
         db.refresh(user)
 
@@ -750,8 +761,8 @@ async def unlock_user_account(
                 status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在"
             )
 
-        setattr(user, 'is_locked', False)
-        setattr(user, 'updated_at', datetime.now(UTC))
+        setattr(user, "is_locked", False)
+        setattr(user, "updated_at", datetime.now(UTC))
         db.commit()
         db.refresh(user)
 
@@ -813,8 +824,12 @@ async def reset_user_password(
             )
 
         # 设置新密码
-        setattr(user, 'hashed_password', auth_service.get_password_hash(reset_request.new_password))
-        setattr(user, 'updated_at', datetime.now(UTC))
+        setattr(
+            user,
+            "hashed_password",
+            auth_service.get_password_hash(reset_request.new_password),
+        )
+        setattr(user, "updated_at", datetime.now(UTC))
         db.commit()
         db.refresh(user)
 

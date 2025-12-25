@@ -22,7 +22,7 @@ class APIDocumentationAnalyzer:
             "endpoints": [],
             "modules": [],
             "statistics": {},
-            "documentation_gaps": []
+            "documentation_gaps": [],
         }
 
     def analyze_api_structure(self) -> dict[str, Any]:
@@ -56,7 +56,7 @@ class APIDocumentationAnalyzer:
     def _analyze_api_file(self, file_path: Path):
         """分析单个API文件"""
         try:
-            with open(file_path, encoding='utf-8') as f:
+            with open(file_path, encoding="utf-8") as f:
                 content = f.read()
 
             # 解析AST
@@ -74,7 +74,7 @@ class APIDocumentationAnalyzer:
                 "imports": [],
                 "decorators": [],
                 "has_docstring": False,
-                "docstring": ""
+                "docstring": "",
             }
 
             # 分析文档字符串
@@ -102,13 +102,17 @@ class APIDocumentationAnalyzer:
         except Exception as e:
             print(f"❌ 分析文件失败 {file_path}: {e}")
 
-    def _analyze_endpoint(self, node: ast.FunctionDef, content: str) -> dict[str, Any] | None:
+    def _analyze_endpoint(
+        self, node: ast.FunctionDef, content: str
+    ) -> dict[str, Any] | None:
         """分析API端点"""
         # 检查是否有路由装饰器
         route_decorator = None
         for decorator in node.decorator_list:
-            if isinstance(decorator, ast.Call) and isinstance(decorator.func, ast.Attribute):
-                if decorator.func.attr in ['get', 'post', 'put', 'delete', 'patch']:
+            if isinstance(decorator, ast.Call) and isinstance(
+                decorator.func, ast.Attribute
+            ):
+                if decorator.func.attr in ["get", "post", "put", "delete", "patch"]:
                     route_decorator = decorator
                     break
 
@@ -126,7 +130,7 @@ class APIDocumentationAnalyzer:
             "responses": {},
             "has_docstring": bool(ast.get_docstring(node)),
             "docstring": ast.get_docstring(node) or "",
-            "line_number": node.lineno
+            "line_number": node.lineno,
         }
 
         # 提取路由路径
@@ -150,31 +154,35 @@ class APIDocumentationAnalyzer:
         docstring = endpoint_info["docstring"]
 
         # 提取描述（第一行）
-        lines = docstring.split('\n')
+        lines = docstring.split("\n")
         if lines:
             endpoint_info["description"] = lines[0].strip()
 
         # 提取参数信息（简单模式）
-        param_pattern = r'@param\s+(\w+):\s*(.+)'
+        param_pattern = r"@param\s+(\w+):\s*(.+)"
         params = re.findall(param_pattern, docstring)
         for param_name, param_desc in params:
-            endpoint_info["parameters"].append({
-                "name": param_name,
-                "description": param_desc.strip()
-            })
+            endpoint_info["parameters"].append(
+                {"name": param_name, "description": param_desc.strip()}
+            )
 
         # 提取返回信息
-        return_pattern = r'@return:\s*(.+)'
+        return_pattern = r"@return:\s*(.+)"
         return_match = re.search(return_pattern, docstring)
         if return_match:
             endpoint_info["return_description"] = return_match.group(1).strip()
 
     def _calculate_statistics(self):
         """计算统计信息"""
-        total_endpoints = sum(len(module["endpoints"]) for module in self.analysis_result["modules"])
-        modules_with_docs = sum(1 for module in self.analysis_result["modules"] if module["has_docstring"])
+        total_endpoints = sum(
+            len(module["endpoints"]) for module in self.analysis_result["modules"]
+        )
+        modules_with_docs = sum(
+            1 for module in self.analysis_result["modules"] if module["has_docstring"]
+        )
         endpoints_with_docs = sum(
-            1 for module in self.analysis_result["modules"]
+            1
+            for module in self.analysis_result["modules"]
             for endpoint in module["endpoints"]
             if endpoint["has_docstring"]
         )
@@ -190,10 +198,22 @@ class APIDocumentationAnalyzer:
             "total_endpoints": total_endpoints,
             "modules_with_documentation": modules_with_docs,
             "endpoints_with_documentation": endpoints_with_docs,
-            "module_documentation_rate": round(modules_with_docs / len(self.analysis_result["modules"]) * 100, 1) if self.analysis_result["modules"] else 0,
-            "endpoint_documentation_rate": round(endpoints_with_docs / total_endpoints * 100, 1) if total_endpoints > 0 else 0,
+            "module_documentation_rate": round(
+                modules_with_docs / len(self.analysis_result["modules"]) * 100, 1
+            )
+            if self.analysis_result["modules"]
+            else 0,
+            "endpoint_documentation_rate": round(
+                endpoints_with_docs / total_endpoints * 100, 1
+            )
+            if total_endpoints > 0
+            else 0,
             "method_distribution": method_counts,
-            "avg_endpoints_per_module": round(total_endpoints / len(self.analysis_result["modules"]), 1) if self.analysis_result["modules"] else 0
+            "avg_endpoints_per_module": round(
+                total_endpoints / len(self.analysis_result["modules"]), 1
+            )
+            if self.analysis_result["modules"]
+            else 0,
         }
 
     def _identify_documentation_gaps(self):
@@ -203,38 +223,46 @@ class APIDocumentationAnalyzer:
         # 检查模块文档缺失
         for module in self.analysis_result["modules"]:
             if not module["has_docstring"]:
-                gaps.append({
-                    "type": "module_documentation",
-                    "file": module["file"],
-                    "module": module["module_name"],
-                    "severity": "medium",
-                    "description": f"模块 {module['module_name']} 缺少文档字符串"
-                })
+                gaps.append(
+                    {
+                        "type": "module_documentation",
+                        "file": module["file"],
+                        "module": module["module_name"],
+                        "severity": "medium",
+                        "description": f"模块 {module['module_name']} 缺少文档字符串",
+                    }
+                )
 
         # 检查端点文档缺失
         for module in self.analysis_result["modules"]:
             for endpoint in module["endpoints"]:
                 if not endpoint["has_docstring"]:
-                    gaps.append({
-                        "type": "endpoint_documentation",
-                        "file": module["file"],
-                        "module": module["module_name"],
-                        "endpoint": f"{endpoint['method']} {endpoint['path']}",
-                        "severity": "high",
-                        "description": f"端点 {endpoint['method']} {endpoint['path']} 缺少文档字符串"
-                    })
+                    gaps.append(
+                        {
+                            "type": "endpoint_documentation",
+                            "file": module["file"],
+                            "module": module["module_name"],
+                            "endpoint": f"{endpoint['method']} {endpoint['path']}",
+                            "severity": "high",
+                            "description": f"端点 {endpoint['method']} {endpoint['path']} 缺少文档字符串",
+                        }
+                    )
 
                 if not endpoint["summary"]:
-                    gaps.append({
-                        "type": "endpoint_summary",
-                        "file": module["file"],
-                        "module": module["module_name"],
-                        "endpoint": f"{endpoint['method']} {endpoint['path']}",
-                        "severity": "medium",
-                        "description": f"端点 {endpoint['method']} {endpoint['path']} 缺少summary描述"
-                    })
+                    gaps.append(
+                        {
+                            "type": "endpoint_summary",
+                            "file": module["file"],
+                            "module": module["module_name"],
+                            "endpoint": f"{endpoint['method']} {endpoint['path']}",
+                            "severity": "medium",
+                            "description": f"端点 {endpoint['method']} {endpoint['path']} 缺少summary描述",
+                        }
+                    )
 
-        self.analysis_result["documentation_gaps"] = sorted(gaps, key=lambda x: (x["severity"], x["file"]))
+        self.analysis_result["documentation_gaps"] = sorted(
+            gaps, key=lambda x: (x["severity"], x["file"])
+        )
 
     def generate_documentation_report(self) -> str:
         """生成文档报告"""
@@ -243,7 +271,9 @@ class APIDocumentationAnalyzer:
 
         report.append("# 📊 API文档分析报告")
         report.append(f"\n**生成时间**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        report.append(f"**分析范围**: {stats['total_modules']} 个模块，{stats['total_endpoints']} 个端点")
+        report.append(
+            f"**分析范围**: {stats['total_modules']} 个模块，{stats['total_endpoints']} 个端点"
+        )
 
         # 概览统计
         report.append("\n## 📈 概览统计")
@@ -255,12 +285,16 @@ class APIDocumentationAnalyzer:
 
         # HTTP方法分布
         report.append("\n## 📋 HTTP方法分布")
-        for method, count in sorted(stats['method_distribution'].items()):
+        for method, count in sorted(stats["method_distribution"].items()):
             report.append(f"- **{method}**: {count} 个端点")
 
         # 模块详情
         report.append("\n## 📁 模块详情")
-        for module in sorted(self.analysis_result["modules"], key=lambda x: len(x["endpoints"]), reverse=True):
+        for module in sorted(
+            self.analysis_result["modules"],
+            key=lambda x: len(x["endpoints"]),
+            reverse=True,
+        ):
             report.append(f"\n### {module['module_name']}")
             report.append(f"**文件**: `{module['file']}`")
             report.append(f"**端点数**: {len(module['endpoints'])}")
@@ -271,14 +305,24 @@ class APIDocumentationAnalyzer:
                 for endpoint in module["endpoints"]:
                     doc_status = "✅" if endpoint["has_docstring"] else "❌"
                     summary = endpoint["summary"] or endpoint["description"] or "无描述"
-                    report.append(f"- `{endpoint['method']} {endpoint['path']}` {doc_status} - {summary}")
+                    report.append(
+                        f"- `{endpoint['method']} {endpoint['path']}` {doc_status} - {summary}"
+                    )
 
         # 文档缺失
         if self.analysis_result["documentation_gaps"]:
             report.append("\n## ⚠️ 文档缺失问题")
 
-            high_priority = [gap for gap in self.analysis_result["documentation_gaps"] if gap["severity"] == "high"]
-            medium_priority = [gap for gap in self.analysis_result["documentation_gaps"] if gap["severity"] == "medium"]
+            high_priority = [
+                gap
+                for gap in self.analysis_result["documentation_gaps"]
+                if gap["severity"] == "high"
+            ]
+            medium_priority = [
+                gap
+                for gap in self.analysis_result["documentation_gaps"]
+                if gap["severity"] == "medium"
+            ]
 
             if high_priority:
                 report.append("\n### 🔴 高优先级问题")
@@ -306,12 +350,12 @@ class APIDocumentationAnalyzer:
 
         # 生成详细报告
         report = self.generate_documentation_report()
-        with open(output_path, 'w', encoding='utf-8') as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             f.write(report)
 
         # 保存JSON数据
-        json_path = output_path.with_suffix('.json')
-        with open(json_path, 'w', encoding='utf-8') as f:
+        json_path = output_path.with_suffix(".json")
+        with open(json_path, "w", encoding="utf-8") as f:
             json.dump(self.analysis_result, f, ensure_ascii=False, indent=2)
 
         print(f"📄 报告已保存到: {output_path}")

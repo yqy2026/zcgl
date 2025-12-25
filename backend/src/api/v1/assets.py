@@ -1491,7 +1491,7 @@ async def get_ownership_entities():
     return [
         {"value": "entity1", "label": "权属方1"},
         {"value": "entity2", "label": "权属方2"},
-        {"value": "entity3", "label": "权属方3"}
+        {"value": "entity3", "label": "权属方3"},
     ]
 
 
@@ -1503,7 +1503,7 @@ async def get_business_categories():
         {"value": "office", "label": "办公业态"},
         {"value": "warehouse", "label": "仓储业态"},
         {"value": "residential", "label": "住宅业态"},
-        {"value": "commercial", "label": "商业业态"}
+        {"value": "commercial", "label": "商业业态"},
     ]
 
 
@@ -1515,7 +1515,7 @@ async def get_usage_statuses():
         {"value": "self_used", "label": "自用"},
         {"value": "vacant", "label": "空置"},
         {"value": "under_maintenance", "label": "维护中"},
-        {"value": "under_decoration", "label": "装修中"}
+        {"value": "under_decoration", "label": "装修中"},
     ]
 
 
@@ -1527,7 +1527,7 @@ async def get_property_natures():
         {"value": "residential", "label": "住宅物业"},
         {"value": "industrial", "label": "工业物业"},
         {"value": "office", "label": "办公物业"},
-        {"value": "mixed", "label": "综合物业"}
+        {"value": "mixed", "label": "综合物业"},
     ]
 
 
@@ -1538,7 +1538,7 @@ async def get_ownership_statuses():
         {"value": "confirmed", "label": "已确权"},
         {"value": "unconfirmed", "label": "未确权"},
         {"value": "partial", "label": "部分确权"},
-        {"value": "in_progress", "label": "确权中"}
+        {"value": "in_progress", "label": "确权中"},
     ]
 
 
@@ -1558,7 +1558,7 @@ async def get_assets_statistics():
             "total_unrented_area": 0.0,
             "total_non_commercial_area": 0.0,
             "assets_with_area_data": 0,
-            "overall_occupancy_rate": 0.0
+            "overall_occupancy_rate": 0.0,
         },
-        "message": "资产统计摘要获取成功"
+        "message": "资产统计摘要获取成功",
     }

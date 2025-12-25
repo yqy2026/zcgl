@@ -14,22 +14,24 @@ from pathlib import Path
 import pandas as pd
 
 # 添加项目路径
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
+
 
 class DataMigrationTool:
     def __init__(self):
         self.migration_history = []
 
-    def backup_database(self, db_path, backup_dir='backups'):
+    def backup_database(self, db_path, backup_dir="backups"):
         """备份数据库"""
         backup_dir = Path(backup_dir)
         backup_dir.mkdir(exist_ok=True)
 
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         backup_file = backup_dir / f"backup_{timestamp}.db"
 
         # 复制数据库文件
         import shutil
+
         shutil.copy2(db_path, backup_file)
 
         print(f"数据库已备份到: {backup_file}")
@@ -44,9 +46,9 @@ class DataMigrationTool:
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
         tables = cursor.fetchall()
 
-        with pd.ExcelWriter(output_file, engine='openpyxl') as writer:
-            for table_name, in tables:
-                if table_name.startswith('sqlite_'):
+        with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
+            for (table_name,) in tables:
+                if table_name.startswith("sqlite_"):
                     continue
 
                 # 读取表数据
@@ -59,7 +61,7 @@ class DataMigrationTool:
         conn.close()
         print(f"数据已导出到: {output_file}")
 
-    def import_from_excel(self, excel_file, db_path, table_name='assets'):
+    def import_from_excel(self, excel_file, db_path, table_name="assets"):
         """从Excel导入数据"""
         # 备份原数据库
         self.backup_database(db_path)
@@ -76,7 +78,7 @@ class DataMigrationTool:
             # conn.execute(f"DELETE FROM {table_name}")
 
             # 插入数据
-            df.to_sql(table_name, conn, if_exists='append', index=False)
+            df.to_sql(table_name, conn, if_exists="append", index=False)
             conn.commit()
 
             print(f"数据已导入到表: {table_name}")
@@ -98,7 +100,7 @@ class DataMigrationTool:
 
         try:
             # 读取迁移脚本
-            with open(migration_script, encoding='utf-8') as f:
+            with open(migration_script, encoding="utf-8") as f:
                 sql_commands = f.read()
 
             # 执行迁移脚本
@@ -108,12 +110,14 @@ class DataMigrationTool:
             print("字段结构迁移完成")
 
             # 记录迁移历史
-            self.migration_history.append({
-                'timestamp': datetime.now().isoformat(),
-                'type': 'field_migration',
-                'script': migration_script,
-                'backup': str(backup_file)
-            })
+            self.migration_history.append(
+                {
+                    "timestamp": datetime.now().isoformat(),
+                    "type": "field_migration",
+                    "script": migration_script,
+                    "backup": str(backup_file),
+                }
+            )
 
         except Exception as e:
             conn.rollback()
@@ -134,12 +138,12 @@ class DataMigrationTool:
             # 检查数据库完整性
             cursor.execute("PRAGMA integrity_check")
             result = cursor.fetchone()
-            if result[0] != 'ok':
+            if result[0] != "ok":
                 issues.append(f"数据库完整性检查失败: {result[0]}")
 
             # 检查必填字段
             cursor.execute("""
-                SELECT COUNT(*) FROM assets 
+                SELECT COUNT(*) FROM assets
                 WHERE property_name IS NULL OR property_name = ''
             """)
             null_names = cursor.fetchone()[0]
@@ -148,7 +152,7 @@ class DataMigrationTool:
 
             # 检查数据一致性
             cursor.execute("""
-                SELECT COUNT(*) FROM assets 
+                SELECT COUNT(*) FROM assets
                 WHERE rented_area > rentable_area AND rented_area IS NOT NULL AND rentable_area IS NOT NULL
             """)
             inconsistent_area = cursor.fetchone()[0]
@@ -157,8 +161,8 @@ class DataMigrationTool:
 
             # 检查出租率计算
             cursor.execute("""
-                SELECT COUNT(*) FROM assets 
-                WHERE rentable_area > 0 AND rented_area IS NOT NULL 
+                SELECT COUNT(*) FROM assets
+                WHERE rentable_area > 0 AND rented_area IS NOT NULL
                 AND ABS(occupancy_rate - (rented_area / rentable_area * 100)) > 0.01
             """)
             wrong_occupancy = cursor.fetchone()[0]
@@ -185,21 +189,21 @@ class DataMigrationTool:
         try:
             # 修复出租率计算
             cursor.execute("""
-                UPDATE assets 
+                UPDATE assets
                 SET occupancy_rate = ROUND((rented_area / rentable_area) * 100, 2)
                 WHERE rentable_area > 0 AND rented_area IS NOT NULL
             """)
 
             # 修复未出租面积
             cursor.execute("""
-                UPDATE assets 
+                UPDATE assets
                 SET unrented_area = rentable_area - COALESCE(rented_area, 0)
                 WHERE rentable_area IS NOT NULL
             """)
 
             # 修复净收益
             cursor.execute("""
-                UPDATE assets 
+                UPDATE assets
                 SET net_income = COALESCE(annual_income, 0) - COALESCE(annual_expense, 0)
                 WHERE annual_income IS NOT NULL OR annual_expense IS NOT NULL
             """)
@@ -219,9 +223,9 @@ class DataMigrationTool:
         conn = sqlite3.connect(db_path)
 
         report = {
-            'timestamp': datetime.now().isoformat(),
-            'database_path': db_path,
-            'migration_history': self.migration_history
+            "timestamp": datetime.now().isoformat(),
+            "database_path": db_path,
+            "migration_history": self.migration_history,
         }
 
         # 获取表结构信息
@@ -229,9 +233,12 @@ class DataMigrationTool:
         cursor.execute("PRAGMA table_info(assets)")
         columns = cursor.fetchall()
 
-        report['table_structure'] = {
-            'column_count': len(columns),
-            'columns': [{'name': col[1], 'type': col[2], 'nullable': not col[3]} for col in columns]
+        report["table_structure"] = {
+            "column_count": len(columns),
+            "columns": [
+                {"name": col[1], "type": col[2], "nullable": not col[3]}
+                for col in columns
+            ],
         }
 
         # 获取数据统计
@@ -241,19 +248,21 @@ class DataMigrationTool:
         cursor.execute("SELECT COUNT(*) FROM assets WHERE rentable_area IS NOT NULL")
         rentable_assets = cursor.fetchone()[0]
 
-        cursor.execute("SELECT AVG(occupancy_rate) FROM assets WHERE occupancy_rate IS NOT NULL")
+        cursor.execute(
+            "SELECT AVG(occupancy_rate) FROM assets WHERE occupancy_rate IS NOT NULL"
+        )
         avg_occupancy = cursor.fetchone()[0]
 
-        report['data_statistics'] = {
-            'total_assets': total_assets,
-            'assets_with_rentable_area': rentable_assets,
-            'average_occupancy_rate': round(avg_occupancy, 2) if avg_occupancy else 0
+        report["data_statistics"] = {
+            "total_assets": total_assets,
+            "assets_with_rentable_area": rentable_assets,
+            "average_occupancy_rate": round(avg_occupancy, 2) if avg_occupancy else 0,
         }
 
         conn.close()
 
         # 保存报告
-        with open(output_file, 'w', encoding='utf-8') as f:
+        with open(output_file, "w", encoding="utf-8") as f:
             json.dump(report, f, indent=2, ensure_ascii=False)
 
         print(f"迁移报告已生成: {output_file}")
@@ -264,37 +273,39 @@ def main():
     """主函数"""
     import argparse
 
-    parser = argparse.ArgumentParser(description='数据迁移工具')
-    parser.add_argument('--db', default='../land_property.db', help='数据库文件路径')
+    parser = argparse.ArgumentParser(description="数据迁移工具")
+    parser.add_argument("--db", default="../land_property.db", help="数据库文件路径")
 
-    subparsers = parser.add_subparsers(dest='command', help='可用命令')
+    subparsers = parser.add_subparsers(dest="command", help="可用命令")
 
     # 备份命令
-    backup_parser = subparsers.add_parser('backup', help='备份数据库')
-    backup_parser.add_argument('--output-dir', default='backups', help='备份目录')
+    backup_parser = subparsers.add_parser("backup", help="备份数据库")
+    backup_parser.add_argument("--output-dir", default="backups", help="备份目录")
 
     # 导出命令
-    export_parser = subparsers.add_parser('export', help='导出到Excel')
-    export_parser.add_argument('--output', required=True, help='输出Excel文件')
+    export_parser = subparsers.add_parser("export", help="导出到Excel")
+    export_parser.add_argument("--output", required=True, help="输出Excel文件")
 
     # 导入命令
-    import_parser = subparsers.add_parser('import', help='从Excel导入')
-    import_parser.add_argument('--input', required=True, help='输入Excel文件')
-    import_parser.add_argument('--table', default='assets', help='目标表名')
+    import_parser = subparsers.add_parser("import", help="从Excel导入")
+    import_parser.add_argument("--input", required=True, help="输入Excel文件")
+    import_parser.add_argument("--table", default="assets", help="目标表名")
 
     # 迁移命令
-    migrate_parser = subparsers.add_parser('migrate', help='执行字段迁移')
-    migrate_parser.add_parameter('--script', required=True, help='迁移脚本文件')
+    migrate_parser = subparsers.add_parser("migrate", help="执行字段迁移")
+    migrate_parser.add_parameter("--script", required=True, help="迁移脚本文件")
 
     # 验证命令
-    validate_parser = subparsers.add_parser('validate', help='验证数据完整性')
+    validate_parser = subparsers.add_parser("validate", help="验证数据完整性")
 
     # 修复命令
-    fix_parser = subparsers.add_parser('fix', help='修复数据问题')
+    fix_parser = subparsers.add_parser("fix", help="修复数据问题")
 
     # 报告命令
-    report_parser = subparsers.add_parser('report', help='生成迁移报告')
-    report_parser.add_argument('--output', default='migration_report.json', help='报告文件')
+    report_parser = subparsers.add_parser("report", help="生成迁移报告")
+    report_parser.add_argument(
+        "--output", default="migration_report.json", help="报告文件"
+    )
 
     args = parser.parse_args()
 
@@ -305,26 +316,26 @@ def main():
     tool = DataMigrationTool()
 
     try:
-        if args.command == 'backup':
+        if args.command == "backup":
             tool.backup_database(args.db, args.output_dir)
 
-        elif args.command == 'export':
+        elif args.command == "export":
             tool.export_to_excel(args.db, args.output)
 
-        elif args.command == 'import':
+        elif args.command == "import":
             tool.import_from_excel(args.input, args.db, args.table)
 
-        elif args.command == 'migrate':
+        elif args.command == "migrate":
             tool.migrate_field_structure(args.db, args.script)
 
-        elif args.command == 'validate':
+        elif args.command == "validate":
             success = tool.validate_data_integrity(args.db)
             sys.exit(0 if success else 1)
 
-        elif args.command == 'fix':
+        elif args.command == "fix":
             tool.fix_data_issues(args.db)
 
-        elif args.command == 'report':
+        elif args.command == "report":
             tool.generate_migration_report(args.db, args.output)
 
     except Exception as e:
@@ -332,5 +343,5 @@ def main():
         sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

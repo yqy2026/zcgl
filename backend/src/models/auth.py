@@ -84,9 +84,7 @@ class User(Base):
         "UserSession", back_populates="user", cascade="all, delete-orphan"
     )
     audit_logs = relationship("AuditLog", back_populates="user")
-    role_assignments = relationship(
-        "UserRoleAssignment", back_populates="user"
-    )
+    role_assignments = relationship("UserRoleAssignment", back_populates="user")
 
     # 动态权限关系 - 暂时注释掉有问题的关系
     # dynamic_permissions = relationship("DynamicPermission", foreign_keys="DynamicPermission.user_id", back_populates="user")
@@ -112,7 +110,7 @@ class User(Base):
             role_value = cast(str, self.role)
             if isinstance(role_value, str):
                 return role_value == UserRole.ADMIN.value
-            elif hasattr(role_value, 'value'):  # 如果是枚举类型
+            elif hasattr(role_value, "value"):  # 如果是枚举类型
                 return role_value.value == UserRole.ADMIN.value
             return False
 

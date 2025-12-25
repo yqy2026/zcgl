@@ -12,7 +12,8 @@ import time
 from datetime import datetime
 
 # 添加项目路径
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
+
 
 class PerformanceOptimizer:
     def __init__(self, db_path):
@@ -25,11 +26,11 @@ class PerformanceOptimizer:
         cursor = conn.cursor()
 
         analysis = {
-            'timestamp': datetime.now().isoformat(),
-            'database_size': os.path.getsize(self.db_path) / (1024 * 1024),  # MB
-            'tables': {},
-            'indexes': {},
-            'recommendations': []
+            "timestamp": datetime.now().isoformat(),
+            "database_size": os.path.getsize(self.db_path) / (1024 * 1024),  # MB
+            "tables": {},
+            "indexes": {},
+            "recommendations": [],
         }
 
         try:
@@ -37,8 +38,8 @@ class PerformanceOptimizer:
             cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
             tables = cursor.fetchall()
 
-            for table_name, in tables:
-                if table_name.startswith('sqlite_'):
+            for (table_name,) in tables:
+                if table_name.startswith("sqlite_"):
                     continue
 
                 # 表大小和行数
@@ -49,33 +50,41 @@ class PerformanceOptimizer:
                 cursor.execute(f"PRAGMA table_info({table_name})")
                 columns = cursor.fetchall()
 
-                analysis['tables'][table_name] = {
-                    'row_count': row_count,
-                    'column_count': len(columns),
-                    'columns': [col[1] for col in columns]
+                analysis["tables"][table_name] = {
+                    "row_count": row_count,
+                    "column_count": len(columns),
+                    "columns": [col[1] for col in columns],
                 }
 
             # 分析索引
-            cursor.execute("SELECT name, tbl_name FROM sqlite_master WHERE type='index'")
+            cursor.execute(
+                "SELECT name, tbl_name FROM sqlite_master WHERE type='index'"
+            )
             indexes = cursor.fetchall()
 
             for index_name, table_name in indexes:
-                if not index_name.startswith('sqlite_'):
-                    analysis['indexes'][index_name] = table_name
+                if not index_name.startswith("sqlite_"):
+                    analysis["indexes"][index_name] = table_name
 
             # 性能建议
-            if len(analysis['indexes']) < 5:
-                analysis['recommendations'].append("建议添加更多索引以提高查询性能")
+            if len(analysis["indexes"]) < 5:
+                analysis["recommendations"].append("建议添加更多索引以提高查询性能")
 
-            if analysis['database_size'] > 100:  # 100MB
-                analysis['recommendations'].append("数据库文件较大，建议定期清理和压缩")
+            if analysis["database_size"] > 100:  # 100MB
+                analysis["recommendations"].append("数据库文件较大，建议定期清理和压缩")
 
             # 检查是否有大表缺少索引
-            for table_name, info in analysis['tables'].items():
-                if info['row_count'] > 1000:
-                    table_indexes = [idx for idx, tbl in analysis['indexes'].items() if tbl == table_name]
+            for table_name, info in analysis["tables"].items():
+                if info["row_count"] > 1000:
+                    table_indexes = [
+                        idx
+                        for idx, tbl in analysis["indexes"].items()
+                        if tbl == table_name
+                    ]
                     if len(table_indexes) < 2:
-                        analysis['recommendations'].append(f"表 {table_name} 数据量大但索引较少，建议添加索引")
+                        analysis["recommendations"].append(
+                            f"表 {table_name} 数据量大但索引较少，建议添加索引"
+                        )
 
         finally:
             conn.close()
@@ -115,10 +124,12 @@ class PerformanceOptimizer:
 
             conn.commit()
 
-            self.optimization_log.append({
-                'timestamp': datetime.now().isoformat(),
-                'optimizations': optimizations
-            })
+            self.optimization_log.append(
+                {
+                    "timestamp": datetime.now().isoformat(),
+                    "optimizations": optimizations,
+                }
+            )
 
             print("数据库优化完成")
             return optimizations
@@ -136,17 +147,47 @@ class PerformanceOptimizer:
         cursor = conn.cursor()
 
         indexes_to_create = [
-            ("idx_assets_property_name", "CREATE INDEX IF NOT EXISTS idx_assets_property_name ON assets(property_name)"),
-            ("idx_assets_usage_status", "CREATE INDEX IF NOT EXISTS idx_assets_usage_status ON assets(usage_status)"),
-            ("idx_assets_manager_name", "CREATE INDEX IF NOT EXISTS idx_assets_manager_name ON assets(manager_name)"),
-            ("idx_assets_project_name", "CREATE INDEX IF NOT EXISTS idx_assets_project_name ON assets(project_name)"),
-            ("idx_assets_business_category", "CREATE INDEX IF NOT EXISTS idx_assets_business_category ON assets(business_category)"),
-            ("idx_assets_created_at", "CREATE INDEX IF NOT EXISTS idx_assets_created_at ON assets(created_at)"),
-            ("idx_assets_occupancy_rate", "CREATE INDEX IF NOT EXISTS idx_assets_occupancy_rate ON assets(occupancy_rate)"),
-            ("idx_assets_monthly_rent", "CREATE INDEX IF NOT EXISTS idx_assets_monthly_rent ON assets(monthly_rent)"),
+            (
+                "idx_assets_property_name",
+                "CREATE INDEX IF NOT EXISTS idx_assets_property_name ON assets(property_name)",
+            ),
+            (
+                "idx_assets_usage_status",
+                "CREATE INDEX IF NOT EXISTS idx_assets_usage_status ON assets(usage_status)",
+            ),
+            (
+                "idx_assets_manager_name",
+                "CREATE INDEX IF NOT EXISTS idx_assets_manager_name ON assets(manager_name)",
+            ),
+            (
+                "idx_assets_project_name",
+                "CREATE INDEX IF NOT EXISTS idx_assets_project_name ON assets(project_name)",
+            ),
+            (
+                "idx_assets_business_category",
+                "CREATE INDEX IF NOT EXISTS idx_assets_business_category ON assets(business_category)",
+            ),
+            (
+                "idx_assets_created_at",
+                "CREATE INDEX IF NOT EXISTS idx_assets_created_at ON assets(created_at)",
+            ),
+            (
+                "idx_assets_occupancy_rate",
+                "CREATE INDEX IF NOT EXISTS idx_assets_occupancy_rate ON assets(occupancy_rate)",
+            ),
+            (
+                "idx_assets_monthly_rent",
+                "CREATE INDEX IF NOT EXISTS idx_assets_monthly_rent ON assets(monthly_rent)",
+            ),
             # 复合索引
-            ("idx_assets_status_nature", "CREATE INDEX IF NOT EXISTS idx_assets_status_nature ON assets(usage_status, property_nature)"),
-            ("idx_assets_manager_project", "CREATE INDEX IF NOT EXISTS idx_assets_manager_project ON assets(manager_name, project_name)"),
+            (
+                "idx_assets_status_nature",
+                "CREATE INDEX IF NOT EXISTS idx_assets_status_nature ON assets(usage_status, property_nature)",
+            ),
+            (
+                "idx_assets_manager_project",
+                "CREATE INDEX IF NOT EXISTS idx_assets_manager_project ON assets(manager_name, project_name)",
+            ),
         ]
 
         created_indexes = []
@@ -181,21 +222,27 @@ class PerformanceOptimizer:
             ("全表扫描", "SELECT COUNT(*) FROM assets"),
             ("按名称查询", "SELECT * FROM assets WHERE property_name LIKE '%大厦%'"),
             ("按状态筛选", "SELECT * FROM assets WHERE usage_status = '出租'"),
-            ("复杂查询", """
-                SELECT usage_status, COUNT(*), AVG(occupancy_rate) 
-                FROM assets 
-                WHERE occupancy_rate IS NOT NULL 
+            (
+                "复杂查询",
+                """
+                SELECT usage_status, COUNT(*), AVG(occupancy_rate)
+                FROM assets
+                WHERE occupancy_rate IS NOT NULL
                 GROUP BY usage_status
-            """),
+            """,
+            ),
             ("排序查询", "SELECT * FROM assets ORDER BY monthly_rent DESC LIMIT 10"),
-            ("统计查询", """
-                SELECT 
+            (
+                "统计查询",
+                """
+                SELECT
                     COUNT(*) as total,
                     AVG(occupancy_rate) as avg_occupancy,
                     SUM(monthly_rent) as total_rent
-                FROM assets 
+                FROM assets
                 WHERE rentable_area > 0
-            """)
+            """,
+            ),
         ]
 
         results = []
@@ -214,11 +261,13 @@ class PerformanceOptimizer:
 
                 execution_time = (end_time - start_time) * 1000  # 毫秒
 
-                results.append({
-                    'query_name': query_name,
-                    'execution_time_ms': round(execution_time, 2),
-                    'result_count': len(result)
-                })
+                results.append(
+                    {
+                        "query_name": query_name,
+                        "execution_time_ms": round(execution_time, 2),
+                        "result_count": len(result),
+                    }
+                )
 
                 print(f"{query_name}: {execution_time:.2f}ms ({len(result)} 行)")
 
@@ -239,22 +288,26 @@ class PerformanceOptimizer:
 
         # 系统信息
         system_info = {
-            'database_file': self.db_path,
-            'file_size_mb': round(os.path.getsize(self.db_path) / (1024 * 1024), 2),
-            'last_modified': datetime.fromtimestamp(os.path.getmtime(self.db_path)).isoformat()
+            "database_file": self.db_path,
+            "file_size_mb": round(os.path.getsize(self.db_path) / (1024 * 1024), 2),
+            "last_modified": datetime.fromtimestamp(
+                os.path.getmtime(self.db_path)
+            ).isoformat(),
         }
 
         report = {
-            'timestamp': datetime.now().isoformat(),
-            'system_info': system_info,
-            'database_analysis': db_analysis,
-            'query_benchmarks': query_benchmarks,
-            'optimization_log': self.optimization_log,
-            'recommendations': self._generate_recommendations(db_analysis, query_benchmarks)
+            "timestamp": datetime.now().isoformat(),
+            "system_info": system_info,
+            "database_analysis": db_analysis,
+            "query_benchmarks": query_benchmarks,
+            "optimization_log": self.optimization_log,
+            "recommendations": self._generate_recommendations(
+                db_analysis, query_benchmarks
+            ),
         }
 
         # 保存报告
-        with open(output_file, 'w', encoding='utf-8') as f:
+        with open(output_file, "w", encoding="utf-8") as f:
             json.dump(report, f, indent=2, ensure_ascii=False)
 
         print(f"性能报告已生成: {output_file}")
@@ -265,20 +318,20 @@ class PerformanceOptimizer:
         recommendations = []
 
         # 基于数据库分析的建议
-        recommendations.extend(db_analysis.get('recommendations', []))
+        recommendations.extend(db_analysis.get("recommendations", []))
 
         # 基于查询性能的建议
-        slow_queries = [q for q in query_benchmarks if q['execution_time_ms'] > 100]
+        slow_queries = [q for q in query_benchmarks if q["execution_time_ms"] > 100]
         if slow_queries:
             recommendations.append(f"发现 {len(slow_queries)} 个慢查询，建议优化")
 
         # 基于数据量的建议
-        total_rows = sum(info['row_count'] for info in db_analysis['tables'].values())
+        total_rows = sum(info["row_count"] for info in db_analysis["tables"].values())
         if total_rows > 10000:
             recommendations.append("数据量较大，建议定期归档历史数据")
 
         # 基于索引的建议
-        if len(db_analysis['indexes']) < 8:
+        if len(db_analysis["indexes"]) < 8:
             recommendations.append("索引数量较少，建议添加更多索引提高查询性能")
 
         return recommendations
@@ -288,26 +341,28 @@ def main():
     """主函数"""
     import argparse
 
-    parser = argparse.ArgumentParser(description='性能优化工具')
-    parser.add_argument('--db', default='../land_property.db', help='数据库文件路径')
+    parser = argparse.ArgumentParser(description="性能优化工具")
+    parser.add_argument("--db", default="../land_property.db", help="数据库文件路径")
 
-    subparsers = parser.add_subparsers(dest='command', help='可用命令')
+    subparsers = parser.add_subparsers(dest="command", help="可用命令")
 
     # 分析命令
-    analyze_parser = subparsers.add_parser('analyze', help='分析数据库性能')
+    analyze_parser = subparsers.add_parser("analyze", help="分析数据库性能")
 
     # 优化命令
-    optimize_parser = subparsers.add_parser('optimize', help='优化数据库')
+    optimize_parser = subparsers.add_parser("optimize", help="优化数据库")
 
     # 创建索引命令
-    index_parser = subparsers.add_parser('create-indexes', help='创建性能索引')
+    index_parser = subparsers.add_parser("create-indexes", help="创建性能索引")
 
     # 基准测试命令
-    benchmark_parser = subparsers.add_parser('benchmark', help='查询性能基准测试')
+    benchmark_parser = subparsers.add_parser("benchmark", help="查询性能基准测试")
 
     # 生成报告命令
-    report_parser = subparsers.add_parser('report', help='生成性能报告')
-    report_parser.add_argument('--output', default='performance_report.json', help='报告文件')
+    report_parser = subparsers.add_parser("report", help="生成性能报告")
+    report_parser.add_argument(
+        "--output", default="performance_report.json", help="报告文件"
+    )
 
     args = parser.parse_args()
 
@@ -322,21 +377,21 @@ def main():
     optimizer = PerformanceOptimizer(args.db)
 
     try:
-        if args.command == 'analyze':
+        if args.command == "analyze":
             analysis = optimizer.analyze_database_performance()
             print(json.dumps(analysis, indent=2, ensure_ascii=False))
 
-        elif args.command == 'optimize':
+        elif args.command == "optimize":
             optimizer.optimize_database()
 
-        elif args.command == 'create-indexes':
+        elif args.command == "create-indexes":
             optimizer.create_performance_indexes()
 
-        elif args.command == 'benchmark':
+        elif args.command == "benchmark":
             results = optimizer.benchmark_queries()
             print(json.dumps(results, indent=2, ensure_ascii=False))
 
-        elif args.command == 'report':
+        elif args.command == "report":
             optimizer.generate_performance_report(args.output)
 
     except Exception as e:
@@ -344,5 +399,5 @@ def main():
         sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

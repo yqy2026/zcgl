@@ -19,6 +19,7 @@ from pathlib import Path
 @dataclass
 class APIEndpoint:
     """API端点信息"""
+
     path: str
     method: str
     response_model: str = None
@@ -33,6 +34,7 @@ class APIEndpoint:
 @dataclass
 class ConsistencyIssue:
     """一致性问题"""
+
     issue_type: str
     severity: str  # critical, warning, info
     message: str
@@ -86,11 +88,13 @@ class APIConsistencyChecker:
 
         for api_file in api_files:
             try:
-                with open(api_file, encoding='utf-8') as f:
+                with open(api_file, encoding="utf-8") as f:
                     content = f.read()
 
                 # 使用正则表达式提取路由定义
-                router_pattern = r'@router\.(get|post|put|delete|patch)\s*\(\s*["\']([^"\']+)["\']'
+                router_pattern = (
+                    r'@router\.(get|post|put|delete|patch)\s*\(\s*["\']([^"\']+)["\']'
+                )
                 matches = re.finditer(router_pattern, content)
 
                 for match in matches:
@@ -99,25 +103,27 @@ class APIConsistencyChecker:
 
                     # 查找响应模型
                     response_model_match = re.search(
-                        rf'@router\.{method.lower()}\s*\([^)]*response_model=([A-Za-z_][A-Za-z0-9_]*)',
-                        content[match.start():match.start()+500]
+                        rf"@router\.{method.lower()}\s*\([^)]*response_model=([A-Za-z_][A-Za-z0-9_]*)",
+                        content[match.start() : match.start() + 500],
                     )
-                    response_model = response_model_match.group(1) if response_model_match else None
+                    response_model = (
+                        response_model_match.group(1) if response_model_match else None
+                    )
 
                     endpoint_key = f"{method}:{path}"
                     endpoints[endpoint_key] = APIEndpoint(
-                        path=path,
-                        method=method,
-                        response_model=response_model
+                        path=path, method=method, response_model=response_model
                     )
 
             except Exception as e:
-                self.issues.append(ConsistencyIssue(
-                    issue_type="extraction_error",
-                    severity="warning",
-                    message=f"无法解析后端API文件 {api_file}: {str(e)}",
-                    backend_file=str(api_file)
-                ))
+                self.issues.append(
+                    ConsistencyIssue(
+                        issue_type="extraction_error",
+                        severity="warning",
+                        message=f"无法解析后端API文件 {api_file}: {str(e)}",
+                        backend_file=str(api_file),
+                    )
+                )
 
         return endpoints
 
@@ -130,11 +136,13 @@ class APIConsistencyChecker:
 
         for service_file in service_files:
             try:
-                with open(service_file, encoding='utf-8') as f:
+                with open(service_file, encoding="utf-8") as f:
                     content = f.read()
 
                 # 使用正则表达式提取API调用
-                api_call_pattern = r'apiClient\.(get|post|put|delete|patch)\s*\(\s*["\']([^"\']+)["\']'
+                api_call_pattern = (
+                    r'apiClient\.(get|post|put|delete|patch)\s*\(\s*["\']([^"\']+)["\']'
+                )
                 matches = re.finditer(api_call_pattern, content)
 
                 for match in matches:
@@ -142,22 +150,25 @@ class APIConsistencyChecker:
                     path = match.group(2)
 
                     endpoint_key = f"{method}:{path}"
-                    calls[endpoint_key] = APIEndpoint(
-                        path=path,
-                        method=method
-                    )
+                    calls[endpoint_key] = APIEndpoint(path=path, method=method)
 
             except Exception as e:
-                self.issues.append(ConsistencyIssue(
-                    issue_type="extraction_error",
-                    severity="warning",
-                    message=f"无法解析前端服务文件 {service_file}: {str(e)}",
-                    frontend_file=str(service_file)
-                ))
+                self.issues.append(
+                    ConsistencyIssue(
+                        issue_type="extraction_error",
+                        severity="warning",
+                        message=f"无法解析前端服务文件 {service_file}: {str(e)}",
+                        frontend_file=str(service_file),
+                    )
+                )
 
         return calls
 
-    def check_path_consistency(self, backend_endpoints: dict[str, APIEndpoint], frontend_calls: dict[str, APIEndpoint]):
+    def check_path_consistency(
+        self,
+        backend_endpoints: dict[str, APIEndpoint],
+        frontend_calls: dict[str, APIEndpoint],
+    ):
         """检查路径一致性"""
         print("\n* 检查API路径一致性...")
 
@@ -166,24 +177,28 @@ class APIConsistencyChecker:
         for key, frontend_call in frontend_calls.items():
             if key not in backend_endpoints:
                 missing_endpoints.append(key)
-                self.issues.append(ConsistencyIssue(
-                    issue_type="missing_endpoint",
-                    severity="critical",
-                    message=f"前端调用但后端不存在的API: {frontend_call.method} {frontend_call.path}",
-                    frontend_file="前端服务文件"
-                ))
+                self.issues.append(
+                    ConsistencyIssue(
+                        issue_type="missing_endpoint",
+                        severity="critical",
+                        message=f"前端调用但后端不存在的API: {frontend_call.method} {frontend_call.path}",
+                        frontend_file="前端服务文件",
+                    )
+                )
 
         # 找出后端存在但前端未使用的API（信息性）
         unused_endpoints = []
         for key, backend_endpoint in backend_endpoints.items():
             if key not in frontend_calls:
                 unused_endpoints.append(key)
-                self.issues.append(ConsistencyIssue(
-                    issue_type="unused_endpoint",
-                    severity="info",
-                    message=f"后端存在但前端未使用的API: {backend_endpoint.method} {backend_endpoint.path}",
-                    backend_file="后端API文件"
-                ))
+                self.issues.append(
+                    ConsistencyIssue(
+                        issue_type="unused_endpoint",
+                        severity="info",
+                        message=f"后端存在但前端未使用的API: {backend_endpoint.method} {backend_endpoint.path}",
+                        backend_file="后端API文件",
+                    )
+                )
 
         print(f"  *  缺失的端点: {len(missing_endpoints)}")
         print(f"  *  未使用的端点: {len(unused_endpoints)}")
@@ -203,27 +218,33 @@ class APIConsistencyChecker:
             # 找出前端有但后端没有的字段
             missing_in_backend = set(frontend_fields) - set(backend_fields)
             for field in missing_in_backend:
-                self.issues.append(ConsistencyIssue(
-                    issue_type="missing_field",
-                    severity="warning",
-                    message=f"前端类型定义中存在但后端模型中缺失的字段: {field}",
-                    frontend_file=str(asset_types_file)
-                ))
+                self.issues.append(
+                    ConsistencyIssue(
+                        issue_type="missing_field",
+                        severity="warning",
+                        message=f"前端类型定义中存在但后端模型中缺失的字段: {field}",
+                        frontend_file=str(asset_types_file),
+                    )
+                )
 
             # 找出后端有但前端没有的字段
             missing_in_frontend = set(backend_fields) - set(frontend_fields)
             for field in missing_in_frontend:
-                self.issues.append(ConsistencyIssue(
-                    issue_type="missing_field",
-                    severity="warning",
-                    message=f"后端模型中存在但前端类型定义中缺失的字段: {field}",
-                    backend_file=str(backend_model_file)
-                ))
+                self.issues.append(
+                    ConsistencyIssue(
+                        issue_type="missing_field",
+                        severity="warning",
+                        message=f"后端模型中存在但前端类型定义中缺失的字段: {field}",
+                        backend_file=str(backend_model_file),
+                    )
+                )
 
             print(f"  *  前端缺失字段: {len(missing_in_frontend)}")
             print(f"  *  后端缺失字段: {len(missing_in_backend)}")
 
-    def check_response_format_consistency(self, backend_endpoints: dict[str, APIEndpoint]):
+    def check_response_format_consistency(
+        self, backend_endpoints: dict[str, APIEndpoint]
+    ):
         """检查响应格式一致性"""
         print("\n* 检查响应格式一致性...")
 
@@ -231,21 +252,29 @@ class APIConsistencyChecker:
         response_models = {}
         for endpoint in backend_endpoints.values():
             if endpoint.response_model:
-                response_models[endpoint.response_model] = response_models.get(endpoint.response_model, 0) + 1
+                response_models[endpoint.response_model] = (
+                    response_models.get(endpoint.response_model, 0) + 1
+                )
 
         # 检查响应模型命名规范
         for model_name in response_models:
-            if not model_name.endswith('Response'):
-                self.issues.append(ConsistencyIssue(
-                    issue_type="response_format",
-                    severity="warning",
-                    message=f"响应模型命名不规范，建议以'Response'结尾: {model_name}",
-                    backend_file="后端API文件"
-                ))
+            if not model_name.endswith("Response"):
+                self.issues.append(
+                    ConsistencyIssue(
+                        issue_type="response_format",
+                        severity="warning",
+                        message=f"响应模型命名不规范，建议以'Response'结尾: {model_name}",
+                        backend_file="后端API文件",
+                    )
+                )
 
         print(f"  * 响应模型数量: {len(response_models)}")
 
-    def check_parameter_consistency(self, backend_endpoints: dict[str, APIEndpoint], frontend_calls: dict[str, APIEndpoint]):
+    def check_parameter_consistency(
+        self,
+        backend_endpoints: dict[str, APIEndpoint],
+        frontend_calls: dict[str, APIEndpoint],
+    ):
         """检查参数一致性"""
         print("\n* 检查参数一致性...")
 
@@ -258,18 +287,20 @@ class APIConsistencyChecker:
             frontend_path = frontend_calls[key].path
 
             # 检查路径参数是否一致
-            backend_params = re.findall(r'\{([^}]+)\}', backend_path)
-            frontend_params = re.findall(r'\{([^}]+)\}', frontend_path) or []
+            backend_params = re.findall(r"\{([^}]+)\}", backend_path)
+            frontend_params = re.findall(r"\{([^}]+)\}", frontend_path) or []
 
             if set(backend_params) != set(frontend_params):
                 inconsistent_params += 1
-                self.issues.append(ConsistencyIssue(
-                    issue_type="parameter_mismatch",
-                    severity="critical",
-                    message=f"路径参数不匹配: 后端={backend_params}, 前端={frontend_params}",
-                    backend_file="后端API文件",
-                    frontend_file="前端服务文件"
-                ))
+                self.issues.append(
+                    ConsistencyIssue(
+                        issue_type="parameter_mismatch",
+                        severity="critical",
+                        message=f"路径参数不匹配: 后端={backend_params}, 前端={frontend_params}",
+                        backend_file="后端API文件",
+                        frontend_file="前端服务文件",
+                    )
+                )
 
         print(f"  *  参数不匹配的端点: {inconsistent_params}")
 
@@ -277,16 +308,16 @@ class APIConsistencyChecker:
         """从类型文件中提取字段名"""
         fields = set()
         try:
-            with open(types_file, encoding='utf-8') as f:
+            with open(types_file, encoding="utf-8") as f:
                 content = f.read()
 
             # 使用正则表达式提取接口字段
-            interface_pattern = r'interface\s+\w+\s*\{([^}]+)\}'
+            interface_pattern = r"interface\s+\w+\s*\{([^}]+)\}"
             matches = re.finditer(interface_pattern, content, re.DOTALL)
 
             for match in matches:
                 interface_content = match.group(1)
-                field_pattern = r'(\w+)(?:\?)?\s*:'
+                field_pattern = r"(\w+)(?:\?)?\s*:"
                 field_matches = re.findall(field_pattern, interface_content)
                 fields.update(field_matches)
 
@@ -299,11 +330,11 @@ class APIConsistencyChecker:
         """从模型文件中提取字段名"""
         fields = set()
         try:
-            with open(model_file, encoding='utf-8') as f:
+            with open(model_file, encoding="utf-8") as f:
                 content = f.read()
 
             # 使用正则表达式提取模型字段
-            field_pattern = r'(\w+)\s*=\s*Column\s*\('
+            field_pattern = r"(\w+)\s*=\s*Column\s*\("
             field_matches = re.findall(field_pattern, content)
             fields.update(field_matches)
 
@@ -353,13 +384,13 @@ class APIConsistencyChecker:
                     "message": issue.message,
                     "frontend_file": issue.frontend_file,
                     "backend_file": issue.backend_file,
-                    "line_number": issue.line_number
+                    "line_number": issue.line_number,
                 }
                 for issue in self.issues
-            ]
+            ],
         }
 
-        with open(output_file, 'w', encoding='utf-8') as f:
+        with open(output_file, "w", encoding="utf-8") as f:
             json.dump(report, f, indent=2, ensure_ascii=False)
 
         print(f"\n📄 详细报告已保存到: {output_file}")

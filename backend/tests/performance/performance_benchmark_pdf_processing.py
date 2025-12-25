@@ -18,6 +18,7 @@ from src.services.parallel_pdf_processor import ParallelPDFProcessor, TaskPriori
 
 logger = logging.getLogger(__name__)
 
+
 class PDFProcessingBenchmark:
     """PDF处理性能基准测试类"""
 
@@ -32,22 +33,21 @@ class PDFProcessingBenchmark:
         for i in range(count):
             # 创建不同大小的测试PDF文件
             content_sizes = [
-                1024,      # 1KB - 小文件
-                10240,     # 10KB - 中等文件
-                102400,    # 100KB - 大文件
-                512000,    # 500KB - 超大文件
+                1024,  # 1KB - 小文件
+                10240,  # 10KB - 中等文件
+                102400,  # 100KB - 大文件
+                512000,  # 500KB - 超大文件
             ]
 
             size = content_sizes[i % len(content_sizes)]
 
             temp_file = tempfile.NamedTemporaryFile(
-                suffix=f'_benchmark_{i}_{size}B.pdf',
-                delete=False
+                suffix=f"_benchmark_{i}_{size}B.pdf", delete=False
             )
 
             # 生成模拟PDF内容
             content = self._generate_pdf_content(size)
-            temp_file.write(content.encode('utf-8'))
+            temp_file.write(content.encode("utf-8"))
             temp_file.close()
 
             files.append(temp_file.name)
@@ -114,7 +114,9 @@ startxref
         """
 
         # 重复内容以达到目标大小
-        target_length = size - len(base_content) + len('{content_length}') + len('{cross_ref}')
+        target_length = (
+            size - len(base_content) + len("{content_length}") + len("{cross_ref}")
+        )
         repeat_count = max(1, target_length // 100)
 
         content = "租赁合同\n" * repeat_count
@@ -124,16 +126,18 @@ startxref
         content += f"地址：测试地址{i}号\n" * (repeat_count // 3)
 
         # 填充到目标大小
-        while len(content.encode('utf-8')) < size:
+        while len(content.encode("utf-8")) < size:
             content += "测试内容\n"
 
         return base_content.format(
             content_length=len(content),
-            content=content[:size-200],  # 保留PDF结构的空间
-            cross_ref=len(content) + 200
+            content=content[: size - 200],  # 保留PDF结构的空间
+            cross_ref=len(content) + 200,
         )
 
-    async def benchmark_enhanced_processor(self, file_paths: list[str]) -> dict[str, Any]:
+    async def benchmark_enhanced_processor(
+        self, file_paths: list[str]
+    ) -> dict[str, Any]:
         """基准测试增强处理器"""
         times = []
         success_count = 0
@@ -152,33 +156,37 @@ startxref
 
                 times.append(processing_time)
 
-                if result.get('success'):
+                if result.get("success"):
                     success_count += 1
                 else:
                     error_count += 1
 
-                logger.info(f"文件 {os.path.basename(file_path)} 处理时间: {processing_time:.2f}秒")
+                logger.info(
+                    f"文件 {os.path.basename(file_path)} 处理时间: {processing_time:.2f}秒"
+                )
 
             except Exception as e:
                 error_count += 1
                 logger.error(f"处理文件失败 {file_path}: {str(e)}")
 
         return {
-            'processor': 'enhanced_pdf_processor',
-            'total_files': len(file_paths),
-            'success_count': success_count,
-            'error_count': error_count,
-            'success_rate': success_count / len(file_paths) if file_paths else 0,
-            'times': times,
-            'avg_time': statistics.mean(times) if times else 0,
-            'min_time': min(times) if times else 0,
-            'max_time': max(times) if times else 0,
-            'median_time': statistics.median(times) if times else 0,
-            'total_time': sum(times),
-            'throughput': len(file_paths) / sum(times) if times else 0
+            "processor": "enhanced_pdf_processor",
+            "total_files": len(file_paths),
+            "success_count": success_count,
+            "error_count": error_count,
+            "success_rate": success_count / len(file_paths) if file_paths else 0,
+            "times": times,
+            "avg_time": statistics.mean(times) if times else 0,
+            "min_time": min(times) if times else 0,
+            "max_time": max(times) if times else 0,
+            "median_time": statistics.median(times) if times else 0,
+            "total_time": sum(times),
+            "throughput": len(file_paths) / sum(times) if times else 0,
         }
 
-    async def benchmark_parallel_processor(self, file_paths: list[str]) -> dict[str, Any]:
+    async def benchmark_parallel_processor(
+        self, file_paths: list[str]
+    ) -> dict[str, Any]:
         """基准测试并行处理器"""
         processor = ParallelPDFProcessor(max_workers=4)
 
@@ -189,9 +197,7 @@ startxref
             task_ids = []
             for file_path in file_paths:
                 task_id = await processor.submit_task(
-                    file_path,
-                    {'prefer_ocr': False},
-                    TaskPriority.NORMAL
+                    file_path, {"prefer_ocr": False}, TaskPriority.NORMAL
                 )
                 task_ids.append(task_id)
 
@@ -200,21 +206,24 @@ startxref
             max_wait_time = 300  # 最大等待5分钟
             wait_start = time.time()
 
-            while len(completed_tasks) < len(task_ids) and (time.time() - wait_start) < max_wait_time:
+            while (
+                len(completed_tasks) < len(task_ids)
+                and (time.time() - wait_start) < max_wait_time
+            ):
                 await asyncio.sleep(1)
 
                 for task_id in task_ids:
                     if task_id not in [t.task_id for t in completed_tasks]:
                         task = processor.get_task_status(task_id)
-                        if task and task.status in ['completed', 'failed']:
+                        if task and task.status in ["completed", "failed"]:
                             completed_tasks.append(task)
 
             end_time = time.time()
             total_time = end_time - start_time
 
             # 统计结果
-            success_count = len([t for t in completed_tasks if t.status == 'completed'])
-            error_count = len([t for t in completed_tasks if t.status == 'failed'])
+            success_count = len([t for t in completed_tasks if t.status == "completed"])
+            error_count = len([t for t in completed_tasks if t.status == "failed"])
 
             # 计算处理时间（简化版本）
             avg_task_time = total_time / len(task_ids) if task_ids else 0
@@ -223,21 +232,23 @@ startxref
             perf_stats = processor.get_performance_stats()
 
             return {
-                'processor': 'parallel_pdf_processor',
-                'total_files': len(file_paths),
-                'success_count': success_count,
-                'error_count': error_count,
-                'success_rate': success_count / len(file_paths) if file_paths else 0,
-                'total_time': total_time,
-                'avg_task_time': avg_task_time,
-                'throughput': len(file_paths) / total_time if total_time > 0 else 0,
-                'performance_stats': perf_stats
+                "processor": "parallel_pdf_processor",
+                "total_files": len(file_paths),
+                "success_count": success_count,
+                "error_count": error_count,
+                "success_rate": success_count / len(file_paths) if file_paths else 0,
+                "total_time": total_time,
+                "avg_task_time": avg_task_time,
+                "throughput": len(file_paths) / total_time if total_time > 0 else 0,
+                "performance_stats": perf_stats,
             }
 
         finally:
             processor.shutdown()
 
-    async def benchmark_ml_extractor(self, test_data: list[dict[str, Any]]) -> dict[str, Any]:
+    async def benchmark_ml_extractor(
+        self, test_data: list[dict[str, Any]]
+    ) -> dict[str, Any]:
         """基准测试机器学习提取器"""
         times = []
         success_count = 0
@@ -254,7 +265,7 @@ startxref
 
                 times.append(processing_time)
 
-                if result and result.get('confidence', 0) > 0.5:
+                if result and result.get("confidence", 0) > 0.5:
                     success_count += 1
                 else:
                     error_count += 1
@@ -264,19 +275,21 @@ startxref
                 logger.error(f"ML提取失败: {str(e)}")
 
         return {
-            'processor': 'ml_enhanced_extractor',
-            'total_tests': len(test_data),
-            'success_count': success_count,
-            'error_count': error_count,
-            'success_rate': success_count / len(test_data) if test_data else 0,
-            'times': times,
-            'avg_time': statistics.mean(times) if times else 0,
-            'min_time': min(times) if times else 0,
-            'max_time': max(times) if times else 0,
-            'median_time': statistics.median(times) if times else 0
+            "processor": "ml_enhanced_extractor",
+            "total_tests": len(test_data),
+            "success_count": success_count,
+            "error_count": error_count,
+            "success_rate": success_count / len(test_data) if test_data else 0,
+            "times": times,
+            "avg_time": statistics.mean(times) if times else 0,
+            "min_time": min(times) if times else 0,
+            "max_time": max(times) if times else 0,
+            "median_time": statistics.median(times) if times else 0,
         }
 
-    async def benchmark_field_mapper(self, test_data: list[dict[str, Any]]) -> dict[str, Any]:
+    async def benchmark_field_mapper(
+        self, test_data: list[dict[str, Any]]
+    ) -> dict[str, Any]:
         """基准测试字段映射器"""
         times = []
         success_count = 0
@@ -293,7 +306,7 @@ startxref
 
                 times.append(processing_time)
 
-                if result and result.get('mapping_confidence', 0) > 0.5:
+                if result and result.get("mapping_confidence", 0) > 0.5:
                     success_count += 1
                 else:
                     error_count += 1
@@ -303,16 +316,16 @@ startxref
                 logger.error(f"字段映射失败: {str(e)}")
 
         return {
-            'processor': 'enhanced_field_mapper',
-            'total_tests': len(test_data),
-            'success_count': success_count,
-            'error_count': error_count,
-            'success_rate': success_count / len(test_data) if test_data else 0,
-            'times': times,
-            'avg_time': statistics.mean(times) if times else 0,
-            'min_time': min(times) if times else 0,
-            'max_time': max(times) if times else 0,
-            'median_time': statistics.median(times) if times else 0
+            "processor": "enhanced_field_mapper",
+            "total_tests": len(test_data),
+            "success_count": success_count,
+            "error_count": error_count,
+            "success_rate": success_count / len(test_data) if test_data else 0,
+            "times": times,
+            "avg_time": statistics.mean(times) if times else 0,
+            "min_time": min(times) if times else 0,
+            "max_time": max(times) if times else 0,
+            "median_time": statistics.median(times) if times else 0,
         }
 
     def create_test_data(self, count: int = 20) -> list[dict[str, Any]]:
@@ -321,7 +334,7 @@ startxref
 
         for i in range(count):
             data = {
-                'raw_text': f"""
+                "raw_text": f"""
                 租赁合同第{i+1}号
 
                 出租方：测试出租方{i+1}
@@ -335,19 +348,19 @@ startxref
 
                 其他条款：标准租赁条款
                 """,
-                'structured_data': {
-                    'landlord': f'测试出租方{i+1}',
-                    'tenant': f'测试承租方{i+1}',
-                    'address': f'测试地址{i+1}号',
-                    'area': 100 + i * 10,
-                    'rent': 5000 + i * 100,
-                    'lease_start': '2024-01-01',
-                    'lease_end': '2024-12-31'
+                "structured_data": {
+                    "landlord": f"测试出租方{i+1}",
+                    "tenant": f"测试承租方{i+1}",
+                    "address": f"测试地址{i+1}号",
+                    "area": 100 + i * 10,
+                    "rent": 5000 + i * 100,
+                    "lease_start": "2024-01-01",
+                    "lease_end": "2024-12-31",
                 },
-                'confidence_scores': {
-                    'text_extraction': 0.9 + (i % 10) * 0.01,
-                    'field_detection': 0.8 + (i % 10) * 0.02
-                }
+                "confidence_scores": {
+                    "text_extraction": 0.9 + (i % 10) * 0.01,
+                    "field_detection": 0.8 + (i % 10) * 0.02,
+                },
             }
             test_data.append(data)
 
@@ -363,37 +376,39 @@ startxref
 
         try:
             results = {
-                'benchmark_info': {
-                    'timestamp': time.time(),
-                    'test_files_count': len(test_files),
-                    'test_data_count': len(test_data),
-                    'system_info': self._get_system_info()
+                "benchmark_info": {
+                    "timestamp": time.time(),
+                    "test_files_count": len(test_files),
+                    "test_data_count": len(test_data),
+                    "system_info": self._get_system_info(),
                 },
-                'results': {}
+                "results": {},
             }
 
             # 测试增强处理器
             logger.info("测试增强PDF处理器...")
-            enhanced_result = await self.benchmark_enhanced_processor(test_files[:5])  # 限制文件数量
-            results['results']['enhanced_processor'] = enhanced_result
+            enhanced_result = await self.benchmark_enhanced_processor(
+                test_files[:5]
+            )  # 限制文件数量
+            results["results"]["enhanced_processor"] = enhanced_result
 
             # 测试并行处理器
             logger.info("测试并行PDF处理器...")
             parallel_result = await self.benchmark_parallel_processor(test_files[:10])
-            results['results']['parallel_processor'] = parallel_result
+            results["results"]["parallel_processor"] = parallel_result
 
             # 测试机器学习提取器
             logger.info("测试机器学习提取器...")
             ml_result = await self.benchmark_ml_extractor(test_data)
-            results['results']['ml_extractor'] = ml_result
+            results["results"]["ml_extractor"] = ml_result
 
             # 测试字段映射器
             logger.info("测试字段映射器...")
             mapper_result = await self.benchmark_field_mapper(test_data)
-            results['results']['field_mapper'] = mapper_result
+            results["results"]["field_mapper"] = mapper_result
 
             # 性能对比分析
-            results['analysis'] = self._analyze_results(results['results'])
+            results["analysis"] = self._analyze_results(results["results"])
 
             return results
 
@@ -412,58 +427,62 @@ startxref
         import psutil
 
         return {
-            'platform': platform.platform(),
-            'python_version': platform.python_version(),
-            'cpu_count': os.cpu_count(),
-            'memory_total': psutil.virtual_memory().total,
-            'memory_available': psutil.virtual_memory().available,
-            'disk_usage': psutil.disk_usage('.').free
+            "platform": platform.platform(),
+            "python_version": platform.python_version(),
+            "cpu_count": os.cpu_count(),
+            "memory_total": psutil.virtual_memory().total,
+            "memory_available": psutil.virtual_memory().available,
+            "disk_usage": psutil.disk_usage(".").free,
         }
 
     def _analyze_results(self, results: dict[str, Any]) -> dict[str, Any]:
         """分析基准测试结果"""
-        analysis = {
-            'performance_ranking': [],
-            'recommendations': [],
-            'bottlenecks': []
-        }
+        analysis = {"performance_ranking": [], "recommendations": [], "bottlenecks": []}
 
         # 性能排序（按吞吐量）
         processors = []
         for name, result in results.items():
-            if 'throughput' in result:
-                processors.append({
-                    'name': name,
-                    'throughput': result['throughput'],
-                    'success_rate': result['success_rate'],
-                    'avg_time': result.get('avg_time', 0)
-                })
+            if "throughput" in result:
+                processors.append(
+                    {
+                        "name": name,
+                        "throughput": result["throughput"],
+                        "success_rate": result["success_rate"],
+                        "avg_time": result.get("avg_time", 0),
+                    }
+                )
 
-        processors.sort(key=lambda x: x['throughput'], reverse=True)
-        analysis['performance_ranking'] = processors
+        processors.sort(key=lambda x: x["throughput"], reverse=True)
+        analysis["performance_ranking"] = processors
 
         # 性能瓶颈分析
         for processor in processors:
-            if processor['success_rate'] < 0.8:
-                analysis['bottlenecks'].append({
-                    'processor': processor['name'],
-                    'issue': '成功率过低',
-                    'success_rate': processor['success_rate']
-                })
+            if processor["success_rate"] < 0.8:
+                analysis["bottlenecks"].append(
+                    {
+                        "processor": processor["name"],
+                        "issue": "成功率过低",
+                        "success_rate": processor["success_rate"],
+                    }
+                )
 
-            if processor['avg_time'] > 10:  # 超过10秒
-                analysis['bottlenecks'].append({
-                    'processor': processor['name'],
-                    'issue': '处理时间过长',
-                    'avg_time': processor['avg_time']
-                })
+            if processor["avg_time"] > 10:  # 超过10秒
+                analysis["bottlenecks"].append(
+                    {
+                        "processor": processor["name"],
+                        "issue": "处理时间过长",
+                        "avg_time": processor["avg_time"],
+                    }
+                )
 
         # 优化建议
-        if analysis['bottlenecks']:
-            analysis['recommendations'].append("存在性能瓶颈，建议优化算法或增加硬件资源")
+        if analysis["bottlenecks"]:
+            analysis["recommendations"].append(
+                "存在性能瓶颈，建议优化算法或增加硬件资源"
+            )
 
-        if any(p['throughput'] < 0.1 for p in processors):
-            analysis['recommendations'].append("吞吐量偏低，建议启用并行处理")
+        if any(p["throughput"] < 0.1 for p in processors):
+            analysis["recommendations"].append("吞吐量偏低，建议启用并行处理")
 
         return analysis
 
@@ -471,9 +490,9 @@ startxref
         """保存基准测试结果"""
         if filename is None:
             timestamp = int(time.time())
-            filename = f'pdf_processing_benchmark_{timestamp}.json'
+            filename = f"pdf_processing_benchmark_{timestamp}.json"
 
-        with open(filename, 'w', encoding='utf-8') as f:
+        with open(filename, "w", encoding="utf-8") as f:
             json.dump(results, f, ensure_ascii=False, indent=2, default=str)
 
         logger.info(f"基准测试结果已保存到: {filename}")
@@ -481,31 +500,33 @@ startxref
 
     def print_summary(self, results: dict[str, Any]):
         """打印基准测试摘要"""
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("PDF处理性能基准测试摘要")
-        print("="*60)
+        print("=" * 60)
 
-        for processor_name, result in results['results'].items():
+        for processor_name, result in results["results"].items():
             print(f"\n{processor_name}:")
             print(f"  成功率: {result['success_rate']:.1%}")
 
-            if 'throughput' in result:
+            if "throughput" in result:
                 print(f"  吞吐量: {result['throughput']:.2f} 文件/秒")
                 print(f"  平均处理时间: {result.get('avg_time', 0):.2f} 秒")
 
-            if 'total_time' in result:
+            if "total_time" in result:
                 print(f"  总处理时间: {result['total_time']:.2f} 秒")
 
         print("\n性能排名:")
-        for i, processor in enumerate(results['analysis']['performance_ranking'], 1):
-            print(f"  {i}. {processor['name']} - 吞吐量: {processor['throughput']:.2f} 文件/秒")
+        for i, processor in enumerate(results["analysis"]["performance_ranking"], 1):
+            print(
+                f"  {i}. {processor['name']} - 吞吐量: {processor['throughput']:.2f} 文件/秒"
+            )
 
-        if results['analysis']['recommendations']:
+        if results["analysis"]["recommendations"]:
             print("\n优化建议:")
-            for rec in results['analysis']['recommendations']:
+            for rec in results["analysis"]["recommendations"]:
                 print(f"  - {rec}")
 
-        print("="*60)
+        print("=" * 60)
 
 
 async def main():
@@ -533,7 +554,7 @@ if __name__ == "__main__":
     # 设置日志
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
     # 运行基准测试

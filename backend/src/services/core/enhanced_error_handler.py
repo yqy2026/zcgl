@@ -184,15 +184,18 @@ async def monitor_processing_health() -> dict[str, Any]:
         ocr_service = get_ocr_service()
         ocr_status = {
             "available": ocr_service is not None,
-            "service_type": type(ocr_service).__name__ if ocr_service else "None"
+            "service_type": type(ocr_service).__name__ if ocr_service else "None",
         }
 
         # 检查文件系统状态
         import os
+
         upload_dir = "uploads"
         upload_status = {
             "exists": os.path.exists(upload_dir),
-            "writable": os.access(upload_dir, os.W_OK) if os.path.exists(upload_dir) else False
+            "writable": os.access(upload_dir, os.W_OK)
+            if os.path.exists(upload_dir)
+            else False,
         }
 
         return {
@@ -201,12 +204,9 @@ async def monitor_processing_health() -> dict[str, Any]:
             "error_handler": {
                 "status": "active",
                 "max_retries": enhanced_error_handler.max_retries,
-                "max_file_size_mb": enhanced_error_handler.max_file_size_mb
-            }
+                "max_file_size_mb": enhanced_error_handler.max_file_size_mb,
+            },
         }
     except Exception as e:
         logger.error(f"健康检查失败: {str(e)}")
-        return {
-            "status": "unhealthy",
-            "error": str(e)
-        }
+        return {"status": "unhealthy", "error": str(e)}
