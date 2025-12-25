@@ -200,17 +200,21 @@ export class ApiErrorHandler {
   
   // 记录错误日志
   private logError(error: ErrorResponse): void {
-    const logData = {
+    const logData: LogData = {
       timestamp: new Date().toISOString(),
-      error: error.error,
+      level: 'error',
       message: error.message,
-      details: error.details,
+      error: {
+        message: error.error,
+        name: error.error,
+      },
+      context: error.details ? { details: error.details } : undefined,
       url: window.location.href,
       userAgent: navigator.userAgent,
     }
-    
+
     console.error('API Error:', logData)
-    
+
     // 在生产环境中，可以将错误发送到日志服务
     if (process.env.NODE_ENV === 'production') {
       this.sendErrorToLogService(logData)
@@ -232,49 +236,51 @@ export class ApiErrorHandler {
     context?: string
   ): ErrorResponse {
     let message = '操作失败，请稍后重试'
-    let error = ERROR_CODES.SERVER_ERROR
-    
-    if (originalError.response) {
-      const status = originalError.response.status
+    let error: string = ERROR_CODES.SERVER_ERROR
+
+    const err = originalError as any
+
+    if (err.response) {
+      const status = err.response.status
       switch (status) {
         case HTTP_STATUS.BAD_REQUEST:
           message = '请求参数错误'
-          error = ERROR_CODES.VALIDATION_ERROR
+          error = ERROR_CODES.VALIDATION_ERROR as any
           break
         case HTTP_STATUS.UNAUTHORIZED:
           message = '未授权访问，请重新登录'
-          error = ERROR_CODES.PERMISSION_ERROR
+          error = ERROR_CODES.PERMISSION_ERROR as any
           break
         case HTTP_STATUS.FORBIDDEN:
           message = '权限不足，无法执行此操作'
-          error = ERROR_CODES.PERMISSION_ERROR
+          error = ERROR_CODES.PERMISSION_ERROR as any
           break
         case HTTP_STATUS.NOT_FOUND:
           message = context ? `${context}不存在` : '请求的资源不存在'
-          error = ERROR_CODES.NOT_FOUND_ERROR
+          error = ERROR_CODES.NOT_FOUND_ERROR as any
           break
         case HTTP_STATUS.UNPROCESSABLE_ENTITY:
           message = '数据验证失败'
-          error = ERROR_CODES.VALIDATION_ERROR
+          error = ERROR_CODES.VALIDATION_ERROR as any
           break
         case HTTP_STATUS.INTERNAL_SERVER_ERROR:
           message = '服务器内部错误'
           error = ERROR_CODES.SERVER_ERROR
           break
       }
-    } else if (originalError.code === 'NETWORK_ERROR') {
+    } else if (err.code === 'NETWORK_ERROR') {
       message = '网络连接失败，请检查网络设置'
-      error = ERROR_CODES.NETWORK_ERROR
-    } else if (originalError.code === 'ECONNABORTED') {
+      error = ERROR_CODES.NETWORK_ERROR as any
+    } else if (err.code === 'ECONNABORTED') {
       message = '请求超时，请稍后重试'
-      error = ERROR_CODES.TIMEOUT_ERROR
+      error = ERROR_CODES.TIMEOUT_ERROR as any
     }
-    
+
     return {
       error,
       message,
       timestamp: new Date().toISOString(),
-      details: originalError.response?.data?.details,
+      details: err.response?.data?.details,
     }
   }
 }
