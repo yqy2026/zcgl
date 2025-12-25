@@ -86,14 +86,14 @@ class UserCRUD:
 
     def create(self, db: Session, obj_in: UserCreate) -> User:
         """创建用户"""
-        from ..services.auth_service import AuthService
+        from ..services import AuthService
 
         auth_service = AuthService(db)
         return auth_service.create_user(obj_in)
 
     def update(self, db: Session, db_obj: User, obj_in: UserUpdate) -> User:
         """更新用户"""
-        from ..services.auth_service import AuthService
+        from ..services import AuthService
 
         auth_service = AuthService(db)
         return auth_service.update_user(db_obj.id, obj_in)
@@ -278,7 +278,7 @@ class AuditLogCRUD:
         session_id: str | None = None,
     ) -> AuditLog:
         """创建审计日志"""
-        from ..services.auth_service import AuthService
+        from ..services import AuthService
 
         auth_service = AuthService(db)
         return auth_service.create_audit_log(

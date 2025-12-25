@@ -4,14 +4,15 @@
 """
 
 import os
-import sys
+
 import requests
+
 
 def check_dev_mode():
     """检查DEV_MODE环境变量"""
     print("=== 检查DEV_MODE环境变量 ===")
     print(f"当前进程DEV_MODE: {os.getenv('DEV_MODE', 'not set')}")
-    print(f"所有环境变量:")
+    print("所有环境变量:")
     for key, value in os.environ.items():
         if 'DEV' in key or 'MODE' in key:
             print(f"  {key} = {value}")

@@ -4,14 +4,14 @@
 生成系统架构、配置、部署和运维文档
 """
 
-import sys
 import json
 import os
-from pathlib import Path
-from datetime import datetime
-from typing import Dict, Any, List
-import subprocess
 import platform
+import subprocess
+import sys
+from datetime import datetime
+from pathlib import Path
+from typing import Any
 
 # 添加项目根目录到Python路径
 project_root = Path(__file__).parent.parent
@@ -28,7 +28,7 @@ class SystemDocumentationGenerator:
         self.output_dir = project_root / "docs" / "generated" / "system"
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-    def get_system_info(self) -> Dict[str, Any]:
+    def get_system_info(self) -> dict[str, Any]:
         """获取系统信息"""
         return {
             "platform": platform.platform(),
@@ -55,7 +55,7 @@ class SystemDocumentationGenerator:
         except (subprocess.CalledProcessError, FileNotFoundError):
             return "Not installed"
 
-    def get_project_structure(self) -> Dict[str, Any]:
+    def get_project_structure(self) -> dict[str, Any]:
         """获取项目结构"""
         structure = {
             "name": "land-property-management",
@@ -81,7 +81,7 @@ class SystemDocumentationGenerator:
 
         return structure
 
-    def _scan_directory(self, directory: Path, exclude_patterns: List[str] = None) -> Dict[str, Any]:
+    def _scan_directory(self, directory: Path, exclude_patterns: list[str] = None) -> dict[str, Any]:
         """扫描目录结构"""
         if exclude_patterns is None:
             exclude_patterns = []
@@ -94,7 +94,7 @@ class SystemDocumentationGenerator:
                     return True
             return False
 
-        def scan_recursive(dir_path: Path) -> Dict[str, Any]:
+        def scan_recursive(dir_path: Path) -> dict[str, Any]:
             result = {
                 "files": [],
                 "subdirectories": {},
@@ -134,12 +134,12 @@ class SystemDocumentationGenerator:
     def _count_lines(self, file_path: Path) -> int:
         """计算文件行数"""
         try:
-            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            with open(file_path, encoding='utf-8', errors='ignore') as f:
                 return sum(1 for _ in f)
         except Exception:
             return 0
 
-    def get_dependencies(self) -> Dict[str, Any]:
+    def get_dependencies(self) -> dict[str, Any]:
         """获取依赖信息"""
         dependencies = {
             "backend": {},
@@ -151,7 +151,7 @@ class SystemDocumentationGenerator:
         if pyproject_path.exists():
             try:
                 import tomllib
-                with open(pyproject_path, 'r', encoding='utf-8') as f:
+                with open(pyproject_path, encoding='utf-8') as f:
                     pyproject_data = tomllib.load(f)
                     dependencies["backend"] = {
                         "dependencies": pyproject_data.get("project", {}).get("dependencies", []),
@@ -165,7 +165,7 @@ class SystemDocumentationGenerator:
         package_json_path = self.frontend_dir / "package.json"
         if package_json_path.exists():
             try:
-                with open(package_json_path, 'r', encoding='utf-8') as f:
+                with open(package_json_path, encoding='utf-8') as f:
                     package_data = json.load(f)
                     dependencies["frontend"] = {
                         "dependencies": dict(package_data.get("dependencies", {})),
@@ -178,7 +178,7 @@ class SystemDocumentationGenerator:
 
         return dependencies
 
-    def get_configuration(self) -> Dict[str, Any]:
+    def get_configuration(self) -> dict[str, Any]:
         """获取配置信息"""
         config = {
             "backend": {},
@@ -198,7 +198,7 @@ class SystemDocumentationGenerator:
             config_path = self.backend_dir / config_file
             if config_path.exists():
                 try:
-                    with open(config_path, 'r', encoding='utf-8') as f:
+                    with open(config_path, encoding='utf-8') as f:
                         content = f.read()
                         # 只读取非敏感配置
                         if not config_file.startswith('.env'):
@@ -221,7 +221,7 @@ class SystemDocumentationGenerator:
             config_path = self.frontend_dir / config_file
             if config_path.exists():
                 try:
-                    with open(config_path, 'r', encoding='utf-8') as f:
+                    with open(config_path, encoding='utf-8') as f:
                         content = f.read()
                         if not config_file.startswith('.env'):
                             config["frontend"][config_file] = content[:1000] + "..." if len(content) > 1000 else content
@@ -244,7 +244,7 @@ class SystemDocumentationGenerator:
 
         return config
 
-    def get_deployment_info(self) -> Dict[str, Any]:
+    def get_deployment_info(self) -> dict[str, Any]:
         """获取部署信息"""
         deployment = {
             "development": {
@@ -293,7 +293,7 @@ class SystemDocumentationGenerator:
 
         return deployment
 
-    def get_monitoring_info(self) -> Dict[str, Any]:
+    def get_monitoring_info(self) -> dict[str, Any]:
         """获取监控信息"""
         monitoring = {
             "logs": {
@@ -474,9 +474,9 @@ class SystemDocumentationGenerator:
         import shutil
         shutil.copy2(self.output_dir / "system.md", docs_dir / "system.md")
 
-        print(f"System documentation generated successfully!")
+        print("System documentation generated successfully!")
         print(f"Output directory: {self.output_dir}")
-        print(f"Files generated:")
+        print("Files generated:")
         print(f"  - System Info: {self.output_dir / 'system_info.json'}")
         print(f"  - Project Structure: {self.output_dir / 'project_structure.json'}")
         print(f"  - Dependencies: {self.output_dir / 'dependencies.json'}")

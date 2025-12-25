@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 """
 FastAPI安全中间件
@@ -17,6 +17,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from ..core.exception_handler import BusinessValidationError
 from ..core.logging_security import security_auditor
 from ..core.security import RateLimiter
+
 try:
     from ..core.security.ratelimit import adaptive_limiter
     ADAPTIVE_LIMITER_AVAILABLE = True
@@ -50,7 +51,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 class RequestValidationMiddleware(BaseHTTPMiddleware):
     """请求验证中间件"""
 
-    def __init__(self, app, rate_limit_config: Union[Dict[str, Any], None] = None):
+    def __init__(self, app, rate_limit_config: dict[str, Any] | None = None):
         super().__init__(app)
         self.rate_limiter = RateLimiter()
         self.config = rate_limit_config or {}
@@ -220,7 +221,7 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
 
         # 检查是否为可疑请求
         is_suspicious = self._is_suspicious_request(request)
-        
+
         # 使用自适应速率限制器
         rate_limit_key = ip
         path = request.url.path or ""
@@ -429,10 +430,10 @@ class CORSExtendedMiddleware(BaseHTTPMiddleware):
     """扩展的CORS中间件"""
 
     def __init__(
-        self, 
-        app, 
-        allowed_origins: Union[List[Any], None] = None, 
-        allowed_methods: Union[List[Any], None] = None
+        self,
+        app,
+        allowed_origins: list[Any] | None = None,
+        allowed_methods: list[Any] | None = None
     ):
         super().__init__(app)
         self.allowed_origins = allowed_origins or [
@@ -477,7 +478,7 @@ class CORSExtendedMiddleware(BaseHTTPMiddleware):
         return response
 
 
-def create_security_middleware(app, config: Optional[Dict[str, Any]] = None):
+def create_security_middleware(app, config: dict[str, Any] | None = None):
     """
     创建安全中间件链
 

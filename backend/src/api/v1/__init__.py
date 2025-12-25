@@ -12,6 +12,7 @@ from .custom_fields import router as custom_fields_router
 from .defect_tracking import router as defect_tracking_router
 from .dictionaries import router as dictionaries_router
 from .enum_field import router as enum_field_router
+
 # 修复Excel模块导入 - 使用正确的router名称
 from .excel import router as excel_router
 from .history import router as history_router
@@ -21,20 +22,21 @@ from .occupancy import router as occupancy_router
 from .operation_logs import router as operation_logs_router
 from .organization import router as organization_router
 from .ownership import router as ownership_router
+from .pdf_import_routes import router as pdf_import_router
 from .project import router as project_router
 from .rent_contract import router as rent_contract_router
 from .roles import router as roles_router
+
 # 修复statistics模块导入 - 使用正确的router名称
 from .statistics import router as statistics_router
-from .system_dictionaries import router as system_dictionaries_router
+
 # 系统设置模块可能不存在，需要检查
 # from .system_settings import router as system_settings_router
 # test_coverage.py and test_performance.py removed - test files should be in tests/ directory
 # missing_apis.py removed - had broken imports and was a temporary placeholder file
-
 # 导入新创建的统一路由模块
 from .system import router as system_router
-from .pdf_import_routes import router as pdf_import_router
+from .system_dictionaries import router as system_dictionaries_router
 
 # 尝试导入系统设置路由，如果不存在则跳过
 try:
@@ -65,7 +67,9 @@ api_router.include_router(auth_router, prefix="/auth", tags=["用户认证"])
 api_router.include_router(roles_router, prefix="/roles", tags=["角色管理"])
 api_router.include_router(operation_logs_router, prefix="/logs", tags=["操作日志"])
 api_router.include_router(assets_router, prefix="/assets", tags=["资产管理"])
-api_router.include_router(excel_router, tags=["Excel导入导出"])  # 移除重复的prefix，excel.py已定义
+api_router.include_router(
+    excel_router, tags=["Excel导入导出"]
+)  # 移除重复的prefix，excel.py已定义
 api_router.include_router(history_router, prefix="/history", tags=["变更历史"])
 api_router.include_router(
     statistics_router, prefix="/statistics", tags=["数据统计和报表"]
@@ -93,7 +97,9 @@ api_router.include_router(
 api_router.include_router(analytics_router, prefix="/analytics", tags=["综合分析"])
 # 条件注册系统设置路由
 if system_settings_router is not None:
-    api_router.include_router(system_settings_router, prefix="/system", tags=["系统设置"])
+    api_router.include_router(
+        system_settings_router, prefix="/system", tags=["系统设置"]
+    )
 api_router.include_router(monitoring_router, prefix="/monitoring", tags=["系统监控"])
 # test_coverage and test_performance routers removed
 api_router.include_router(defect_tracking_router, prefix="/defects", tags=["缺陷跟踪"])

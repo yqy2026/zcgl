@@ -10,7 +10,7 @@ from ..database import get_db
 from ..exceptions import BusinessLogicError
 from ..middleware.auth import get_current_user
 from ..models.auth import User
-from ..services.rbac_service import RBACService
+from ..services import RBACService
 
 
 class AssetNotFoundError(Exception):

@@ -5,15 +5,14 @@
 
 import asyncio
 import time
-from typing import Dict, Any, Optional, List
-from unittest.mock import Mock, AsyncMock
-import io
+from typing import Any
+from unittest.mock import Mock
 
 
 class MockPDFProcessingService:
     """模拟PDF处理服务 - 完全避免真实OCR调用"""
 
-    def __init__(self, config: Optional[Dict] = None):
+    def __init__(self, config: dict | None = None):
         """初始化模拟服务"""
         self.config = config or {}
         self.ocr = self._create_mock_ocr()
@@ -45,7 +44,7 @@ class MockPDFProcessingService:
         }
         return mock_ocr
 
-    async def process_pdf_async(self, pdf_path: str, method: str = "auto") -> Dict[str, Any]:
+    async def process_pdf_async(self, pdf_path: str, method: str = "auto") -> dict[str, Any]:
         """异步模拟PDF处理"""
         start_time = time.time()
 
@@ -92,7 +91,7 @@ class MockPDFProcessingService:
 年支出：200000.0元
 净收入：300000.0元"""
 
-    def _generate_mock_metadata(self) -> Dict[str, Any]:
+    def _generate_mock_metadata(self) -> dict[str, Any]:
         """生成模拟的PDF元数据"""
         return {
             "title": "测试PDF文档",
@@ -112,7 +111,7 @@ class MockPDFProcessingService:
             self._processing_stats["total_processed"]
         )
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """获取处理统计信息"""
         return self._processing_stats.copy()
 
@@ -131,8 +130,8 @@ class MockPDFImportService:
         }
 
     async def process_pdf_file(self, db, session_id: str, user_id: int,
-                           organization_id: Optional[int] = None,
-                           **kwargs) -> Dict[str, Any]:
+                           organization_id: int | None = None,
+                           **kwargs) -> dict[str, Any]:
         """模拟PDF文件导入处理"""
         start_time = time.time()
 
@@ -174,7 +173,7 @@ class MockPDFImportService:
                 "warnings": ["模拟处理错误"]
             }
 
-    def _convert_to_asset_data(self, processing_result: Dict[str, Any]) -> Dict[str, Any]:
+    def _convert_to_asset_data(self, processing_result: dict[str, Any]) -> dict[str, Any]:
         """将处理结果转换为资产数据"""
         return {
             "ownership_entity": "国资集团",
@@ -206,7 +205,7 @@ class MockPDFImportService:
         else:
             self.import_stats["failed_imports"] += 1
 
-    def get_import_stats(self) -> Dict[str, Any]:
+    def get_import_stats(self) -> dict[str, Any]:
         """获取导入统计信息"""
         return self.import_stats.copy()
 
@@ -239,7 +238,7 @@ class MockPDFSessionService:
 
         return session_id
 
-    def get_session(self, session_id: str) -> Optional[Dict[str, Any]]:
+    def get_session(self, session_id: str) -> dict[str, Any] | None:
         """获取会话信息"""
         return self.sessions.get(session_id)
 
@@ -258,7 +257,7 @@ class MockPDFSessionService:
             return True
         return False
 
-    def get_all_sessions(self) -> List[Dict[str, Any]]:
+    def get_all_sessions(self) -> list[dict[str, Any]]:
         """获取所有会话"""
         return list(self.sessions.values())
 

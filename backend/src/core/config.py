@@ -9,9 +9,9 @@
 @lastModified 2025-12-24
 """
 
-import os
 import logging
-from typing import Any, Dict
+import os
+from typing import Any
 
 from pydantic import ConfigDict, Field
 from pydantic_settings import BaseSettings
@@ -338,7 +338,7 @@ def initialize_config() -> None:
     logger.info("Configuration initialized successfully")
 
 
-def get_all_config() -> Dict[str, Any]:
+def get_all_config() -> dict[str, Any]:
     """
     获取所有配置的便捷函数
 

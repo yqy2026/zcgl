@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 基本质量检查工具
 Basic Quality Checker
@@ -7,11 +6,10 @@ Basic Quality Checker
 适用于所有环境的基础质量检查，不依赖外部工具
 """
 
-import os
-import sys
 import ast
-import time
 import subprocess
+import sys
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -140,7 +138,7 @@ class BasicQualityChecker:
 
         for py_file in python_files[:10]:  # 检查前10个文件
             try:
-                with open(py_file, 'r', encoding='utf-8') as f:
+                with open(py_file, encoding='utf-8') as f:
                     content = f.read()
                 ast.parse(content)
             except SyntaxError as e:
@@ -233,7 +231,7 @@ class BasicQualityChecker:
 
         for py_file in python_files[:5]:  # 检查前5个文件
             try:
-                with open(py_file, 'r', encoding='utf-8') as f:
+                with open(py_file, encoding='utf-8') as f:
                     content = f.read()
                     if '"""' in content or "'''" in content:
                         docstring_count += 1

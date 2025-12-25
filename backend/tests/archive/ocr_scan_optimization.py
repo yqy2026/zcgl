@@ -1,16 +1,14 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 OCR扫描件优化测试脚本
 专门处理扫描件PDF的OCR文本提取问题
 """
 
-import os
-import sys
 import asyncio
 import logging
+import sys
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Any
 
 # 添加项目路径
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
@@ -38,7 +36,7 @@ class OCRScanOptimization:
             "recommendations": []
         }
 
-    async def test_ocr_with_different_settings(self, pdf_path: str) -> Dict[str, Any]:
+    async def test_ocr_with_different_settings(self, pdf_path: str) -> dict[str, Any]:
         """测试不同OCR设置的效果"""
         logger.info(f"开始OCR优化测试: {Path(pdf_path).name}")
 
@@ -83,7 +81,7 @@ class OCRScanOptimization:
             results["error"] = str(e)
             return results
 
-    def _analyze_pdf_file(self, pdf_path: str) -> Dict[str, Any]:
+    def _analyze_pdf_file(self, pdf_path: str) -> dict[str, Any]:
         """分析PDF文件特征"""
         try:
             import fitz  # PyMuPDF
@@ -135,10 +133,11 @@ class OCRScanOptimization:
             logger.error(f"PDF文件分析失败: {e}")
             return {"error": str(e)}
 
-    async def _test_new_paddleocr(self, pdf_path: str) -> Dict[str, Any]:
+    async def _test_new_paddleocr(self, pdf_path: str) -> dict[str, Any]:
         """测试新的PaddleOCR参数"""
         try:
             import time
+
             import fitz
             from paddleocr import PaddleOCR
 
@@ -204,14 +203,15 @@ class OCRScanOptimization:
                 "method": "new_paddleocr"
             }
 
-    async def _test_preprocessed_ocr(self, pdf_path: str) -> Dict[str, Any]:
+    async def _test_preprocessed_ocr(self, pdf_path: str) -> dict[str, Any]:
         """测试带图像预处理的OCR"""
         try:
+            import io
             import time
+
             import fitz
             from paddleocr import PaddleOCR
             from PIL import Image
-            import io
 
             start_time = time.time()
 
@@ -293,10 +293,11 @@ class OCRScanOptimization:
                 "method": "preprocessed_ocr"
             }
 
-    async def _test_multi_resolution(self, pdf_path: str) -> Dict[str, Any]:
+    async def _test_multi_resolution(self, pdf_path: str) -> dict[str, Any]:
         """测试多分辨率处理"""
         try:
             import time
+
             import fitz
             from paddleocr import PaddleOCR
 
@@ -364,7 +365,7 @@ class OCRScanOptimization:
                 "text_length": len(best_text),
                 "text_preview": best_text[:200] + "..." if len(best_text) > 200 else best_text,
                 "avg_confidence": best_confidence,
-                "best_resolution": f"Found in resolution tests",
+                "best_resolution": "Found in resolution tests",
                 "method": "multi_resolution"
             }
 
@@ -376,10 +377,11 @@ class OCRScanOptimization:
                 "method": "multi_resolution"
             }
 
-    async def _test_pymupdf_extraction(self, pdf_path: str) -> Dict[str, Any]:
+    async def _test_pymupdf_extraction(self, pdf_path: str) -> dict[str, Any]:
         """测试PyMuPDF文本提取"""
         try:
             import time
+
             import fitz
 
             start_time = time.time()
@@ -453,7 +455,7 @@ class OCRScanOptimization:
                 "method": "pymupdf_extraction"
             }
 
-    async def _test_combined_method(self, pdf_path: str) -> Dict[str, Any]:
+    async def _test_combined_method(self, pdf_path: str) -> dict[str, Any]:
         """测试组合方法"""
         try:
             import time
@@ -511,7 +513,7 @@ class OCRScanOptimization:
                 "method": "combined_method"
             }
 
-    def _find_best_ocr_result(self, ocr_tests: Dict[str, Any]) -> Dict[str, Any]:
+    def _find_best_ocr_result(self, ocr_tests: dict[str, Any]) -> dict[str, Any]:
         """找到最佳的OCR结果"""
         successful_tests = {k: v for k, v in ocr_tests.items() if v.get("success", False)}
 
@@ -536,7 +538,7 @@ class OCRScanOptimization:
             "processing_time": best_result.get("processing_time", 0)
         }
 
-    def _generate_recommendations(self, results: Dict[str, Any]) -> List[str]:
+    def _generate_recommendations(self, results: dict[str, Any]) -> list[str]:
         """生成优化建议"""
         recommendations = []
 
@@ -594,7 +596,7 @@ class OCRScanOptimization:
 
         return recommendations
 
-    def generate_optimization_report(self, results: Dict[str, Any]) -> str:
+    def generate_optimization_report(self, results: dict[str, Any]) -> str:
         """生成优化报告"""
         report = []
         report.append("=" * 80)

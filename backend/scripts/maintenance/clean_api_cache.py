@@ -4,10 +4,10 @@ API缓存清理脚本
 彻底清理API相关的缓存文件和路由信息
 """
 
-import os
-import sys
-import shutil
 import glob
+import os
+import shutil
+
 
 def clean_api_cache():
     """清理API相关的缓存"""
@@ -48,7 +48,7 @@ def clean_api_cache():
         except Exception as e:
             print(f"   [ERROR] 删除失败 {cache_file}: {e}")
 
-    print(f"\n清理统计:")
+    print("\n清理统计:")
     print(f"   - 缓存目录: {len(cache_dirs)}")
     print(f"   - pyc文件: {len(pyc_files)}")
     print(f"   - V2缓存文件: {len(v2_cache_files)}")

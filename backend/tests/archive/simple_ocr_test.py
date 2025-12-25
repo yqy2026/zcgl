@@ -1,14 +1,12 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 简化的OCR兼容性测试
 测试PaddleOCR的最新API兼容性
 """
 
-import os
+import logging
 import sys
 import time
-import logging
 from pathlib import Path
 
 # 添加项目路径
@@ -23,8 +21,8 @@ def test_paddleocr_compatibility():
     print("开始PaddleOCR兼容性测试...")
 
     try:
-        from paddleocr import PaddleOCR
         import fitz
+        from paddleocr import PaddleOCR
 
         # 查找测试样本
         samples_dir = Path(__file__).parent.parent.parent / "tools" / "pdf-samples"
@@ -65,7 +63,7 @@ def test_paddleocr_compatibility():
                 text = result[0][0][0]  # 提取文本
                 confidence = result[0][0][1]  # 提取置信度
 
-                print(f"✅ OCR识别成功")
+                print("✅ OCR识别成功")
                 print(f"   文本长度: {len(text)}字符")
                 print(f"   置信度: {confidence:.3f}")
                 print(f"   文本预览: {text[:100]}...")
@@ -74,11 +72,13 @@ def test_paddleocr_compatibility():
                 if len(text) > 10:
                     print("\n3. 测试中文NLP处理...")
                     try:
-                        from services.chinese_nlp_processor import get_chinese_nlp_processor
+                        from services.chinese_nlp_processor import (
+                            get_chinese_nlp_processor,
+                        )
                         processor = get_chinese_nlp_processor()
                         nlp_result = processor.process_chinese_text(text)
 
-                        print(f"✅ NLP处理成功")
+                        print("✅ NLP处理成功")
                         print(f"   识别姓名: {len(nlp_result['names'])}")
                         print(f"   识别电话: {len(nlp_result['phones'])}")
                         print(f"   识别地址: {len(nlp_result['addresses'])}")
@@ -161,7 +161,7 @@ def test_pdf_text_extraction():
 
         doc = fitz.open(test_file)
 
-        print(f"PDF信息:")
+        print("PDF信息:")
         print(f"  页面数: {doc.page_count}")
 
         total_text = ""
@@ -184,7 +184,7 @@ def test_pdf_text_extraction():
 
         doc.close()
 
-        print(f"\n文本提取总结:")
+        print("\n文本提取总结:")
         print(f"  有文本页面: {text_pages}")
         print(f"  扫描件页面: {image_pages}")
         print(f"  总文本长度: {len(total_text)}字符")

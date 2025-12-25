@@ -4,7 +4,6 @@
 恢复之前禁用的测试文件
 """
 
-import os
 import shutil
 from pathlib import Path
 
@@ -47,7 +46,7 @@ def restore_backend_tests():
         disabled_dir.rmdir()
         print(f"🧹 清理禁用目录: {disabled_dir}")
 
-    print(f"\n📊 恢复结果:")
+    print("\n📊 恢复结果:")
     print(f"   - 恢复测试文件: {restored_count}")
 
     return restored_count
@@ -59,9 +58,9 @@ def main():
     # 恢复后端测试
     restored_count = restore_backend_tests()
 
-    print(f"\n✅ 测试恢复完成!")
+    print("\n✅ 测试恢复完成!")
     print(f"   - 恢复测试文件: {restored_count}个")
-    print(f"   - 现在可以运行完整测试套件")
+    print("   - 现在可以运行完整测试套件")
 
 if __name__ == "__main__":
     main()

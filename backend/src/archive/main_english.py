@@ -6,15 +6,15 @@ import logging
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 
-from fastapi import Depends, FastAPI
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# Database imports
-from .database import create_tables, get_database_status, init_db
-from .core.config import settings
 from ..core.config import get_config, initialize_config
 from .core.exception_handler import setup_exception_handlers
 from .core.response_handler import success_response
+
+# Database imports
+from .database import create_tables, get_database_status, init_db
 
 # Set up logging
 logger = logging.getLogger(__name__)

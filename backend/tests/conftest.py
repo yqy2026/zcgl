@@ -3,20 +3,22 @@ pytest配置文件
 提供测试所需的fixtures和配置
 """
 
-import pytest
-import sys
 import os
-from unittest.mock import Mock, AsyncMock
+import sys
+from unittest.mock import Mock
+
+import pytest
 from sqlalchemy.orm import Session
 
-# 添加src目录到Python路径
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+# 添加backend根目录到Python路径（这样 'from src.xxx' 可以正常工作）
+backend_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, backend_root)
 
 try:
-    from services.pdf_session_service import PDFSessionService
-    from services.pdf_import_service import PDFImportService
-    from models.pdf_import_session import PDFImportSession
-    from models.asset import Asset
+    from src.models.asset import Asset
+    from src.models.pdf_import_session import PDFImportSession
+    from src.services.pdf_import_service import PDFImportService
+    from src.services.pdf_session_service import PDFSessionService
 except ImportError:
     # 如果导入失败，使用Mock
     PDFSessionService = Mock

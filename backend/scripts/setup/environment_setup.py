@@ -4,12 +4,12 @@
 检查和安装PDF导入功能所需的所有依赖
 """
 
-import sys
-import subprocess
 import importlib
-import shutil
 import os
-from typing import List, Dict, Tuple
+import shutil
+import subprocess
+import sys
+
 
 class EnvironmentSetup:
     """环境配置管理器"""
@@ -67,7 +67,7 @@ class EnvironmentSetup:
             }
         }
 
-    def check_package(self, package_name: str) -> Tuple[bool, str]:
+    def check_package(self, package_name: str) -> tuple[bool, str]:
         """检查Python包是否已安装"""
         try:
             if package_name == "opencv-python":
@@ -88,7 +88,7 @@ class EnvironmentSetup:
         except Exception as e:
             return False, str(e)
 
-    def check_system_tool(self, tool_name: str, tool_info: Dict) -> Tuple[bool, str]:
+    def check_system_tool(self, tool_name: str, tool_info: dict) -> tuple[bool, str]:
         """检查系统工具是否可用"""
         # 首先检查PATH
         path = shutil.which(tool_info["executable"])
@@ -102,7 +102,7 @@ class EnvironmentSetup:
 
         return False, "Not found"
 
-    def install_package(self, package_name: str) -> Tuple[bool, str]:
+    def install_package(self, package_name: str) -> tuple[bool, str]:
         """安装Python包"""
         try:
             result = subprocess.run([
@@ -118,7 +118,7 @@ class EnvironmentSetup:
         except Exception as e:
             return False, str(e)
 
-    def run_environment_check(self) -> Dict:
+    def run_environment_check(self) -> dict:
         """运行完整的环境检查"""
         results = {
             "python_version": sys.version,
@@ -195,7 +195,7 @@ class EnvironmentSetup:
 
         return results
 
-    def setup_missing_packages(self, missing_packages: List[str]) -> Dict:
+    def setup_missing_packages(self, missing_packages: list[str]) -> dict:
         """安装缺失的Python包"""
         results = {}
 

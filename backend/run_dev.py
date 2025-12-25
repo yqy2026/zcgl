@@ -2,8 +2,9 @@
 开发服务器启动脚本
 """
 
-import uvicorn
 import os
+
+import uvicorn
 from dotenv import load_dotenv
 
 # 加载环境变量

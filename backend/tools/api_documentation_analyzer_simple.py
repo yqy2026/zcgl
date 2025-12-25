@@ -3,13 +3,12 @@
 API文档分析器 - 全面分析API端点并生成文档
 """
 
-import os
-import re
 import ast
 import json
-from pathlib import Path
-from typing import Dict, List, Any, Optional
+import re
 from datetime import datetime
+from pathlib import Path
+from typing import Any
 
 
 class APIDocumentationAnalyzer:
@@ -26,7 +25,7 @@ class APIDocumentationAnalyzer:
             "documentation_gaps": []
         }
 
-    def analyze_api_structure(self) -> Dict[str, Any]:
+    def analyze_api_structure(self) -> dict[str, Any]:
         """分析API结构"""
         print("开始分析API结构...")
 
@@ -46,7 +45,7 @@ class APIDocumentationAnalyzer:
 
         return self.analysis_result
 
-    def _find_api_files(self) -> List[Path]:
+    def _find_api_files(self) -> list[Path]:
         """查找所有API文件"""
         api_files = []
         for file_path in self.api_dir.rglob("*.py"):
@@ -57,7 +56,7 @@ class APIDocumentationAnalyzer:
     def _analyze_api_file(self, file_path: Path):
         """分析单个API文件"""
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, encoding='utf-8') as f:
                 content = f.read()
 
             # 解析AST
@@ -103,7 +102,7 @@ class APIDocumentationAnalyzer:
         except Exception as e:
             print(f"分析文件失败 {file_path}: {e}")
 
-    def _analyze_endpoint(self, node: ast.FunctionDef, content: str) -> Optional[Dict[str, Any]]:
+    def _analyze_endpoint(self, node: ast.FunctionDef, content: str) -> dict[str, Any] | None:
         """分析API端点"""
         # 检查是否有路由装饰器
         route_decorator = None
@@ -146,7 +145,7 @@ class APIDocumentationAnalyzer:
 
         return endpoint_info
 
-    def _extract_docstring_info(self, endpoint_info: Dict[str, Any]):
+    def _extract_docstring_info(self, endpoint_info: dict[str, Any]):
         """从文档字符串中提取信息"""
         docstring = endpoint_info["docstring"]
 
@@ -329,7 +328,7 @@ def main():
 
     # 输出关键统计
     stats = analysis_result["statistics"]
-    print(f"\n分析完成:")
+    print("\n分析完成:")
     print(f"   总模块数: {stats['total_modules']}")
     print(f"   总端点数: {stats['total_endpoints']}")
     print(f"   模块文档覆盖率: {stats['module_documentation_rate']}%")

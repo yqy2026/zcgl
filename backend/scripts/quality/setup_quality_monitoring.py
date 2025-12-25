@@ -12,12 +12,10 @@ Setup script for Quality Monitoring System
 """
 
 import os
-import sys
-import json
-import subprocess
 import platform
+import subprocess
+import sys
 from pathlib import Path
-from typing import Dict, List
 
 
 class QualityMonitorSetup:
@@ -532,7 +530,7 @@ if (Test-Path $nssmPath) {{
 
         # 快速检查脚本
         quick_check_script = self.base_dir / "quick_quality_check.py"
-        quick_content = f'''#!/usr/bin/env python3
+        quick_content = '''#!/usr/bin/env python3
 """快速质量检查快捷脚本"""
 
 import subprocess
@@ -548,7 +546,7 @@ subprocess.run([sys.executable, str(script_path), "--mode", "quick", "--format",
 
         # 全面检查脚本
         full_check_script = self.base_dir / "full_quality_check.py"
-        full_content = f'''#!/usr/bin/env python3
+        full_content = '''#!/usr/bin/env python3
 """全面质量检查快捷脚本"""
 
 import subprocess

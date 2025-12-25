@@ -33,6 +33,7 @@ module.exports = {
             "@/components/*": ["src/components/*"],
             "@/pages/*": ["src/pages/*"],
             "@/services/*": ["src/services/*"],
+            "@/api/*": ["src/api/*"],
             "@/types/*": ["src/types/*"],
             "@/utils/*": ["src/utils/*"],
             "@/hooks/*": ["src/hooks/*"],
@@ -75,10 +76,10 @@ module.exports = {
   // 降低覆盖率门槛以适应现状
   coverageThreshold: {
     global: {
-      branches: 30,
-      functions: 30,
-      lines: 30,
-      statements: 30,
+      branches: 50,
+      functions: 50,
+      lines: 50,
+      statements: 50,
     },
   },
 

@@ -4,14 +4,13 @@
 支持复杂权限场景和组织层级测试
 """
 
+from datetime import datetime, timedelta
+
 import factory
-from datetime import datetime, date, timedelta
-from typing import Optional, Dict, Any, List
-import uuid
 
 from src.models.auth import User
-from src.models.rbac import Role, Permission, UserRoleAssignment
 from src.models.organization import Organization
+from src.models.rbac import Permission, Role, UserRoleAssignment
 
 
 class OrganizationFactory(factory.Factory):
@@ -630,7 +629,7 @@ class PermissionTestUtils:
     """权限测试工具类"""
 
     @staticmethod
-    def get_user_permissions(user_id: int, session) -> List[str]:
+    def get_user_permissions(user_id: int, session) -> list[str]:
         """获取用户的所有权限"""
         user = session.query(User).filter(User.id == user_id).first()
         if not user:

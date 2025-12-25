@@ -60,7 +60,7 @@ class AuthService:
     def __init__(self, db: Session):
         self.db = db
         self.token_blacklist = blacklist_manager
-        
+
     def _generate_jti(self) -> str:
         """生成JWT ID"""
         import secrets
@@ -266,7 +266,7 @@ class AuthService:
         jti_access = self._generate_jti()
         jti_refresh = self._generate_jti()
         session_id = secrets.token_urlsafe(16)
-        
+
         # 生成设备指纹
         device_fingerprint = None
         if device_info:
@@ -384,8 +384,8 @@ class AuthService:
         try:
             # 增强JWT验证，添加受众和签发者验证
             payload = jwt.decode(
-                refresh_token, 
-                SECRET_KEY, 
+                refresh_token,
+                SECRET_KEY,
                 algorithms=[ALGORITHM],
                 audience="land-property-system",
                 issuer="land-property-auth"
@@ -470,7 +470,7 @@ class AuthService:
             ]
             current_fingerprint_string = "|".join(filter(None, current_fingerprint_data))
             current_fingerprint = hashlib.sha256(current_fingerprint_string.encode()).hexdigest()[:16]
-            
+
             if device_fingerprint != current_fingerprint:
                 # 设备指纹不匹配，记录安全事件但允许继续（可配置）
                 print(f"警告：设备指纹不匹配，用户 {getattr(user, 'username', 'unknown')} 的设备可能发生变化")

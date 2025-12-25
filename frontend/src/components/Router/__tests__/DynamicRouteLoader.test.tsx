@@ -1,6 +1,5 @@
 import React from 'react'
-import { render, screen } from '../../../__tests__/utils/testUtils'
-import { render, screen } from '../../../__tests__/utils/testUtils'
+import { render, screen } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import DynamicRouteLoader from '../DynamicRouteLoader'

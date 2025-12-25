@@ -3,9 +3,10 @@
 为现有的organizations表添加缺失的列
 """
 
-import sqlite3
 import os
+import sqlite3
 from datetime import datetime
+
 
 def add_missing_organization_columns():
     """为organizations表添加缺失的列"""

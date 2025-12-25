@@ -4,14 +4,12 @@
 """
 
 import logging
-import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.responses import JSONResponse
 
 # 导入路由注册器
 from .core.router_registry import register_routes
@@ -21,7 +19,6 @@ from .core.unified_config import get_global_config, load_config
 from .core.unified_error_handler import (
     ErrorCode,
     UnifiedError,
-    UnifiedErrorHandler,
     unified_error_handler,
 )
 from .middleware.unified_error_middleware import (

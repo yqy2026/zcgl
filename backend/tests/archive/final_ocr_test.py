@@ -1,13 +1,12 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 最终OCR测试
 验证修复后的PaddleOCR集成是否正常工作
 """
 
+import logging
 import sys
 import time
-import logging
 from pathlib import Path
 
 # 添加项目路径
@@ -88,7 +87,7 @@ def test_basic_ocr_functionality():
                 combined_text = '\n'.join(texts)
                 avg_confidence = sum(confidences) / len(confidences) if confidences else 0.0
 
-                print(f"   [成功] OCR处理完成")
+                print("   [成功] OCR处理完成")
                 print(f"   处理时间: {processing_time:.3f}秒")
                 print(f"   识别文本长度: {len(combined_text)}字符")
                 print(f"   平均置信度: {avg_confidence:.3f}")
@@ -145,7 +144,7 @@ def test_nlp_integration():
             """
 
             result = processor.process_chinese_text(test_text)
-            print(f"   [成功] NLP处理完成")
+            print("   [成功] NLP处理完成")
             print(f"   提取姓名: {len(result['names'])}个")
             print(f"   提取电话: {len(result['phones'])}个")
             print(f"   提取地址: {len(result['addresses'])}个")

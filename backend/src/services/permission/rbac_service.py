@@ -18,7 +18,7 @@ RBAC服务层
 """
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
@@ -112,7 +112,7 @@ class RBACService:
         for field, value in update_data.items():
             setattr(role, field, value)
 
-        role.updated_at = datetime.now(timezone.utc)  # type: ignore
+        role.updated_at = datetime.now(UTC)  # type: ignore
         role.updated_by = updated_by  # type: ignore
 
         # 更新权限
@@ -374,7 +374,7 @@ class RBACService:
             return False
 
         assignment.is_active = False  # type: ignore
-        assignment.updated_at = datetime.now(timezone.utc)  # type: ignore
+        assignment.updated_at = datetime.now(UTC)  # type: ignore
 
         self.db.commit()
 
@@ -403,7 +403,7 @@ class RBACService:
             query = query.filter(
                 or_(
                     UserRoleAssignment.expires_at.is_(None),
-                    UserRoleAssignment.expires_at > datetime.now(timezone.utc),
+                    UserRoleAssignment.expires_at > datetime.now(UTC),
                 )
             )
 

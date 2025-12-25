@@ -3,10 +3,11 @@
 强制UTF-8编码处理，避免中文显示问题
 """
 
-import sys
 import codecs
 import logging
-from typing import Any, Optional
+import sys
+from typing import Any
+
 
 # 强制设置UTF-8编码输出
 def setup_utf8_encoding():

@@ -353,7 +353,7 @@ class SecurityAuditor:
                     filtered_kwargs[key] = self.sensitive_filter._filter_sensitive_data(value)
             else:
                 filtered_kwargs[key] = value
-                
+
         # 添加额外字段
         security_event.update(filtered_kwargs)
 
@@ -529,7 +529,7 @@ class RequestLogger:
                     filtered_kwargs[key] = self.sensitive_filter._filter_sensitive_data(value)
             else:
                 filtered_kwargs[key] = value
-                
+
         # 添加额外字段
         request_info.update(filtered_kwargs)
 

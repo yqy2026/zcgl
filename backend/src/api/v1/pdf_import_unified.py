@@ -263,7 +263,7 @@ async def upload_pdf_file(
     temp_dir.mkdir(exist_ok=True)
 
     # 安全文件名处理 - 防止路径遍历攻击
-    from ..utils.file_security import generate_safe_filename, secure_filename
+    from ..utils.file_security import generate_safe_filename
 
     file_id = str(uuid.uuid4())
     safe_filename = generate_safe_filename(file.filename, file_id)

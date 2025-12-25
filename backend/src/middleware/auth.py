@@ -5,7 +5,6 @@ from typing import Any
 """
 
 import logging
-import os
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -18,7 +17,7 @@ from ..database import get_db
 from ..models.auth import User, UserRole
 from ..schemas.auth import TokenData
 from ..schemas.rbac import PermissionCheckRequest
-from ..services.rbac_service import RBACService
+from ..services import RBACService
 
 logger = logging.getLogger(__name__)
 

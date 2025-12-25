@@ -3,19 +3,18 @@ PDF处理性能基准测试
 """
 
 import asyncio
-import time
-import tempfile
+import json
+import logging
 import os
 import statistics
-import json
-from typing import List, Dict, Any
-from concurrent.futures import ThreadPoolExecutor
-import logging
+import tempfile
+import time
+from typing import Any
 
-from src.services.enhanced_pdf_processor import enhanced_pdf_processor
-from src.services.parallel_pdf_processor import ParallelPDFProcessor, TaskPriority
-from src.services.ml_enhanced_extractor import ml_enhanced_extractor
 from src.services.enhanced_field_mapper import enhanced_field_mapper
+from src.services.enhanced_pdf_processor import enhanced_pdf_processor
+from src.services.ml_enhanced_extractor import ml_enhanced_extractor
+from src.services.parallel_pdf_processor import ParallelPDFProcessor, TaskPriority
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +25,7 @@ class PDFProcessingBenchmark:
         self.results = {}
         self.test_files = []
 
-    def create_test_files(self, count: int = 10) -> List[str]:
+    def create_test_files(self, count: int = 10) -> list[str]:
         """创建测试文件"""
         files = []
 
@@ -134,7 +133,7 @@ startxref
             cross_ref=len(content) + 200
         )
 
-    async def benchmark_enhanced_processor(self, file_paths: List[str]) -> Dict[str, Any]:
+    async def benchmark_enhanced_processor(self, file_paths: list[str]) -> dict[str, Any]:
         """基准测试增强处理器"""
         times = []
         success_count = 0
@@ -179,7 +178,7 @@ startxref
             'throughput': len(file_paths) / sum(times) if times else 0
         }
 
-    async def benchmark_parallel_processor(self, file_paths: List[str]) -> Dict[str, Any]:
+    async def benchmark_parallel_processor(self, file_paths: list[str]) -> dict[str, Any]:
         """基准测试并行处理器"""
         processor = ParallelPDFProcessor(max_workers=4)
 
@@ -238,7 +237,7 @@ startxref
         finally:
             processor.shutdown()
 
-    async def benchmark_ml_extractor(self, test_data: List[Dict[str, Any]]) -> Dict[str, Any]:
+    async def benchmark_ml_extractor(self, test_data: list[dict[str, Any]]) -> dict[str, Any]:
         """基准测试机器学习提取器"""
         times = []
         success_count = 0
@@ -277,7 +276,7 @@ startxref
             'median_time': statistics.median(times) if times else 0
         }
 
-    async def benchmark_field_mapper(self, test_data: List[Dict[str, Any]]) -> Dict[str, Any]:
+    async def benchmark_field_mapper(self, test_data: list[dict[str, Any]]) -> dict[str, Any]:
         """基准测试字段映射器"""
         times = []
         success_count = 0
@@ -316,7 +315,7 @@ startxref
             'median_time': statistics.median(times) if times else 0
         }
 
-    def create_test_data(self, count: int = 20) -> List[Dict[str, Any]]:
+    def create_test_data(self, count: int = 20) -> list[dict[str, Any]]:
         """创建测试数据"""
         test_data = []
 
@@ -354,7 +353,7 @@ startxref
 
         return test_data
 
-    async def run_full_benchmark(self) -> Dict[str, Any]:
+    async def run_full_benchmark(self) -> dict[str, Any]:
         """运行完整基准测试"""
         logger.info("开始PDF处理性能基准测试")
 
@@ -406,10 +405,11 @@ startxref
                 except:
                     pass
 
-    def _get_system_info(self) -> Dict[str, Any]:
+    def _get_system_info(self) -> dict[str, Any]:
         """获取系统信息"""
-        import psutil
         import platform
+
+        import psutil
 
         return {
             'platform': platform.platform(),
@@ -420,7 +420,7 @@ startxref
             'disk_usage': psutil.disk_usage('.').free
         }
 
-    def _analyze_results(self, results: Dict[str, Any]) -> Dict[str, Any]:
+    def _analyze_results(self, results: dict[str, Any]) -> dict[str, Any]:
         """分析基准测试结果"""
         analysis = {
             'performance_ranking': [],
@@ -467,7 +467,7 @@ startxref
 
         return analysis
 
-    def save_results(self, results: Dict[str, Any], filename: str = None):
+    def save_results(self, results: dict[str, Any], filename: str = None):
         """保存基准测试结果"""
         if filename is None:
             timestamp = int(time.time())
@@ -479,7 +479,7 @@ startxref
         logger.info(f"基准测试结果已保存到: {filename}")
         return filename
 
-    def print_summary(self, results: Dict[str, Any]):
+    def print_summary(self, results: dict[str, Any]):
         """打印基准测试摘要"""
         print("\n" + "="*60)
         print("PDF处理性能基准测试摘要")
@@ -496,12 +496,12 @@ startxref
             if 'total_time' in result:
                 print(f"  总处理时间: {result['total_time']:.2f} 秒")
 
-        print(f"\n性能排名:")
+        print("\n性能排名:")
         for i, processor in enumerate(results['analysis']['performance_ranking'], 1):
             print(f"  {i}. {processor['name']} - 吞吐量: {processor['throughput']:.2f} 文件/秒")
 
         if results['analysis']['recommendations']:
-            print(f"\n优化建议:")
+            print("\n优化建议:")
             for rec in results['analysis']['recommendations']:
                 print(f"  - {rec}")
 

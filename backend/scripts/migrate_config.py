@@ -5,11 +5,9 @@
 """
 
 import json
-import os
 import shutil
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional
 
 import yaml
 
@@ -25,7 +23,7 @@ if not config_file.exists():
     sys.exit(0)
 
 # 现在导入统一配置
-from core.unified_config import ConfigManager, UnifiedConfig
+from core.unified_config import ConfigManager
 
 
 class ConfigMigrator:
@@ -79,7 +77,7 @@ class ConfigMigrator:
         self.backup_dir.mkdir(parents=True, exist_ok=True)
         print(f"📦 备份目录: {self.backup_dir}")
 
-    def identify_config_files(self) -> List[Path]:
+    def identify_config_files(self) -> list[Path]:
         """识别现有配置文件"""
         config_files = []
 
@@ -126,7 +124,7 @@ class ConfigMigrator:
         file_name_lower = file_path.name.lower()
         return any(name in file_name_lower for name in config_names)
 
-    def backup_existing_configs(self, config_files: List[Path]):
+    def backup_existing_configs(self, config_files: list[Path]):
         """备份现有配置文件"""
         print("💾 备份现有配置文件...")
 
@@ -143,7 +141,7 @@ class ConfigMigrator:
             except Exception as e:
                 print(f"⚠️ 备份失败 {config_file}: {e}")
 
-    def migrate_configs(self, config_files: List[Path]) -> Dict[str, Dict]:
+    def migrate_configs(self, config_files: list[Path]) -> dict[str, dict]:
         """迁移配置文件"""
         print("🔄 迁移配置文件...")
 
@@ -180,9 +178,9 @@ class ConfigMigrator:
 
         return migration_results
 
-    def migrate_yaml_config(self, config_file: Path) -> Dict:
+    def migrate_yaml_config(self, config_file: Path) -> dict:
         """迁移YAML配置"""
-        with open(config_file, "r", encoding="utf-8") as f:
+        with open(config_file, encoding="utf-8") as f:
             config_data = yaml.safe_load(f) or {}
 
         # 映射配置到新的结构
@@ -190,20 +188,20 @@ class ConfigMigrator:
 
         return {"original": config_data, "mapped": mapped_config, "type": "yaml"}
 
-    def migrate_json_config(self, config_file: Path) -> Dict:
+    def migrate_json_config(self, config_file: Path) -> dict:
         """迁移JSON配置"""
-        with open(config_file, "r", encoding="utf-8") as f:
+        with open(config_file, encoding="utf-8") as f:
             config_data = json.load(f)
 
         mapped_config = self.map_config_structure(config_data, str(config_file))
 
         return {"original": config_data, "mapped": mapped_config, "type": "json"}
 
-    def migrate_env_config(self, config_file: Path) -> Dict:
+    def migrate_env_config(self, config_file: Path) -> dict:
         """迁移环境变量配置"""
         env_vars = {}
 
-        with open(config_file, "r", encoding="utf-8") as f:
+        with open(config_file, encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if line and not line.startswith("#") and "=" in line:
@@ -218,7 +216,7 @@ class ConfigMigrator:
 
         return env_vars
 
-    def migrate_python_config(self, config_file: Path) -> Dict:
+    def migrate_python_config(self, config_file: Path) -> dict:
         """迁移Python配置文件"""
         # 这里可以添加解析Python配置文件的逻辑
         # 由于Python配置文件格式多样，这里简单返回文件信息
@@ -228,7 +226,7 @@ class ConfigMigrator:
             "note": "Python配置文件需要手动迁移",
         }
 
-    def map_config_structure(self, config_data: Dict, source_file: str) -> Dict:
+    def map_config_structure(self, config_data: dict, source_file: str) -> dict:
         """映射配置到新的统一结构"""
         mapped = {}
 
@@ -275,7 +273,7 @@ class ConfigMigrator:
 
         return mapped
 
-    def generate_unified_config(self, migration_results: Dict) -> bool:
+    def generate_unified_config(self, migration_results: dict) -> bool:
         """生成统一的配置文件"""
         print("📝 生成统一配置文件...")
 
@@ -298,7 +296,7 @@ class ConfigMigrator:
             print(f"❌ 生成统一配置失败: {e}")
             return False
 
-    def merge_configs(self, migration_results: Dict) -> Dict:
+    def merge_configs(self, migration_results: dict) -> dict:
         """合并所有配置数据"""
         unified_config = {
             "environment": "development",
@@ -328,7 +326,7 @@ class ConfigMigrator:
 
         return unified_config
 
-    def generate_env_file(self, config_data: Dict):
+    def generate_env_file(self, config_data: dict):
         """生成环境配置文件"""
         env_file = project_root / ".env"
 
@@ -359,7 +357,7 @@ LOG_FILE_ENABLED={str(config_data.get("logging", {}).get("file_enabled", True)).
 
         self.migration_log.append(f"生成环境配置: {env_file}")
 
-    def generate_yaml_file(self, config_data: Dict):
+    def generate_yaml_file(self, config_data: dict):
         """生成YAML配置文件"""
         yaml_file = project_root / "config.yaml"
 
@@ -368,7 +366,7 @@ LOG_FILE_ENABLED={str(config_data.get("logging", {}).get("file_enabled", True)).
 
         self.migration_log.append(f"生成YAML配置: {yaml_file}")
 
-    def generate_config_documentation(self, config_data: Dict, migration_results: Dict):
+    def generate_config_documentation(self, config_data: dict, migration_results: dict):
         """生成配置文档"""
         doc_file = project_root / "CONFIG_MIGRATION_REPORT.md"
 
@@ -385,7 +383,7 @@ LOG_FILE_ENABLED={str(config_data.get("logging", {}).get("file_enabled", True)).
         for log_entry in self.migration_log:
             doc_content += f"- {log_entry}\n"
 
-        doc_content += f"""
+        doc_content += """
 
 ## 新的配置结构
 

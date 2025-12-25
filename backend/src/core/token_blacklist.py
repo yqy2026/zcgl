@@ -5,8 +5,7 @@ JWT令牌黑名单管理器
 
 import json
 import time
-from datetime import UTC, datetime, timedelta
-from typing import Set
+from datetime import UTC, datetime
 
 from ..core.config import settings
 
@@ -15,7 +14,7 @@ class TokenBlacklistManager:
     """令牌黑名单管理器"""
 
     def __init__(self):
-        self._blacklisted_tokens: Set[str] = set()
+        self._blacklisted_tokens: set[str] = set()
         self._blacklist_expiry: dict[str, float] = {}
         self._cleanup_interval = 3600  # 1小时清理一次过期令牌
         self._last_cleanup = time.time()
@@ -127,7 +126,7 @@ class TokenBlacklistManager:
     def load_from_file(self, filepath: str):
         """从文件加载黑名单"""
         try:
-            with open(filepath, "r", encoding="utf-8") as f:
+            with open(filepath, encoding="utf-8") as f:
                 data = json.load(f)
 
             self._blacklisted_tokens = set(data.get("blacklisted_tokens", []))

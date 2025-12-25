@@ -4,22 +4,21 @@ API文档自动生成脚本
 生成FastAPI接口文档、OpenAPI规范和TypeScript类型定义
 """
 
-import json
-import os
-import sys
-from pathlib import Path
-from typing import Dict, Any, List
 import inspect
-import subprocess
+import json
+import sys
 from datetime import datetime
+from pathlib import Path
+from typing import Any
 
 # 添加项目根目录到Python路径
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
-from main import app
 from fastapi.openapi.utils import get_openapi
 from fastapi.routing import APIRoute
+
+from main import app
 
 
 class APIDocumentationGenerator:
@@ -30,7 +29,7 @@ class APIDocumentationGenerator:
         self.output_dir = project_root / "docs" / "generated"
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-    def generate_openapi_schema(self) -> Dict[str, Any]:
+    def generate_openapi_schema(self) -> dict[str, Any]:
         """生成OpenAPI规范"""
         def custom_openapi():
             if app.openapi_schema:
@@ -64,7 +63,7 @@ class APIDocumentationGenerator:
 
         return custom_openapi()
 
-    def generate_route_documentation(self) -> List[Dict[str, Any]]:
+    def generate_route_documentation(self) -> list[dict[str, Any]]:
         """生成路由文档"""
         routes = []
 
@@ -87,7 +86,7 @@ class APIDocumentationGenerator:
 
         return routes
 
-    def _extract_params(self, params) -> List[Dict[str, Any]]:
+    def _extract_params(self, params) -> list[dict[str, Any]]:
         """提取参数信息"""
         if not params:
             return []
@@ -105,7 +104,7 @@ class APIDocumentationGenerator:
 
         return param_info
 
-    def _extract_request_body(self, body_field) -> Dict[str, Any]:
+    def _extract_request_body(self, body_field) -> dict[str, Any]:
         """提取请求体信息"""
         if not body_field:
             return {}
@@ -116,7 +115,7 @@ class APIDocumentationGenerator:
             "description": body_field.description or ""
         }
 
-    def _extract_responses(self, responses) -> Dict[str, Any]:
+    def _extract_responses(self, responses) -> dict[str, Any]:
         """提取响应信息"""
         if not responses:
             return {}
@@ -130,7 +129,7 @@ class APIDocumentationGenerator:
 
         return response_info
 
-    def _extract_dependencies(self, dependencies) -> List[str]:
+    def _extract_dependencies(self, dependencies) -> list[str]:
         """提取依赖信息"""
         if not dependencies:
             return []
@@ -144,15 +143,15 @@ class APIDocumentationGenerator:
 
         return dep_names
 
-    def generate_type_definitions(self) -> Dict[str, Any]:
+    def generate_type_definitions(self) -> dict[str, Any]:
         """生成类型定义文档"""
         type_definitions = {}
 
         # 扫描schemas模块获取类型定义
         try:
             from models.asset import Asset
-            from models.project import Project
             from models.ownership import Ownership
+            from models.project import Project
             from models.task import AsyncTask
 
             # 模型类型
@@ -172,7 +171,7 @@ class APIDocumentationGenerator:
 
         return type_definitions
 
-    def _get_model_info(self, model_class) -> Dict[str, Any]:
+    def _get_model_info(self, model_class) -> dict[str, Any]:
         """获取模型信息"""
         if hasattr(model_class, '__annotations__'):
             return {
@@ -183,7 +182,7 @@ class APIDocumentationGenerator:
             }
         return {"name": model_class.__name__, "fields": {}}
 
-    def _scan_schemas_directory(self, schemas_dir: Path) -> Dict[str, Any]:
+    def _scan_schemas_directory(self, schemas_dir: Path) -> dict[str, Any]:
         """扫描schemas目录"""
         schemas = {}
 
@@ -327,9 +326,9 @@ class APIDocumentationGenerator:
         import shutil
         shutil.copy2(self.output_dir / "api.md", docs_dir / "api.md")
 
-        print(f"Documentation generated successfully!")
+        print("Documentation generated successfully!")
         print(f"Output directory: {self.output_dir}")
-        print(f"Files generated:")
+        print("Files generated:")
         print(f"  - OpenAPI JSON: {self.output_dir / 'openapi.json'}")
         print(f"  - OpenAPI YAML: {self.output_dir / 'openapi.yaml'}")
         print(f"  - Routes JSON: {self.output_dir / 'routes.json'}")

@@ -10,7 +10,7 @@ from collections.abc import Callable
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from ..core.logging_security import log_request_info, SensitiveDataFilter
+from ..core.logging_security import SensitiveDataFilter, log_request_info
 
 
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
@@ -30,7 +30,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         # 获取客户端信息
         client_ip = self._get_client_ip(request)
         user_agent = request.headers.get("user-agent", "")
-        
+
         # 对用户代理进行脱敏处理
         user_agent = self.sensitive_filter._filter_sensitive_data(user_agent)
 
@@ -42,7 +42,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
         # 获取用户ID（如果有认证）
         user_id = getattr(request.state, "user_id", None)
-        
+
         # 对查询参数进行脱敏处理
         query_params = dict(request.query_params)
         filtered_query_params = {}

@@ -10,9 +10,9 @@ import time
 from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime
 from queue import Empty, Queue
-from typing import TYPE_CHECKING, Any, Callable, Optional
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import create_engine, event, text
 from sqlalchemy.engine import Engine
@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session, declarative_base, sessionmaker
 from sqlalchemy.pool import QueuePool, StaticPool
 
 if TYPE_CHECKING:
-    from sqlalchemy.orm.session import sessionmaker as SessionMaker
+    pass
 
 try:
     from .database_security import enhance_database_security
@@ -123,10 +123,10 @@ class DatabaseManager:
             })
 
         self.engine = create_engine(database_url, **engine_kwargs)
-        
+
         # 增强数据库安全
         enhance_database_security(self.engine)
-        
+
         # 设置事件监听器
         self._setup_event_listeners()
 

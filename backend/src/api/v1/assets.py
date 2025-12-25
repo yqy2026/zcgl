@@ -17,7 +17,6 @@ class NotFoundError(Exception):
 
 import os
 import shutil
-import uuid
 from datetime import datetime
 
 from fastapi import (
@@ -769,8 +768,6 @@ async def upload_asset_attachments(
         # 创建附件目录 - 安全处理
         from ..utils.file_security import (
             create_safe_upload_directory,
-            generate_safe_filename,
-            validate_file_extension,
         )
 
         upload_dir = create_safe_upload_directory("uploads/attachments", asset_id)

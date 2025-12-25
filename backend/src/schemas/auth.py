@@ -4,7 +4,6 @@
 
 import re
 from datetime import datetime
-from typing import Union
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
@@ -89,14 +88,14 @@ class UserResponse(UserBase):
     """用户响应模型"""
 
     id: str
-    role: Union[UserRole, str]
-    is_active: Union[bool, int]  # Handle SQLite boolean as int
-    is_locked: Union[bool, int]   # Handle SQLite boolean as int
-    last_login_at: Union[datetime, str, None]
+    role: UserRole | str
+    is_active: bool | int  # Handle SQLite boolean as int
+    is_locked: bool | int   # Handle SQLite boolean as int
+    last_login_at: datetime | str | None
     employee_id: str | None
     default_organization_id: str | None
-    created_at: Union[datetime, str]
-    updated_at: Union[datetime, str]
+    created_at: datetime | str
+    updated_at: datetime | str
 
     model_config = ConfigDict(from_attributes=True)
 

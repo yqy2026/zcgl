@@ -3,16 +3,15 @@
 监控API响应时间、请求频率和资源使用情况
 """
 
-import time
 import asyncio
-from typing import Dict, Any, Optional
-from datetime import datetime, timedelta
-
-from fastapi import Request, Response, HTTPException
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.middleware.base import RequestResponseEndpoint
-import psutil
 import logging
+import time
+from datetime import datetime
+from typing import Any
+
+import psutil
+from fastapi import HTTPException, Request, Response
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 logger = logging.getLogger(__name__)
 
@@ -23,9 +22,9 @@ class PerformanceMonitoringMiddleware(BaseHTTPMiddleware):
     def __init__(self, app, max_requests_per_minute: int = 1000):
         super().__init__(app)
         self.max_requests_per_minute = max_requests_per_minute
-        self.request_count: Dict[str, int] = {}
-        self.response_times: Dict[str, list] = {}
-        self.error_counts: Dict[str, int] = {}
+        self.request_count: dict[str, int] = {}
+        self.response_times: dict[str, list] = {}
+        self.error_counts: dict[str, int] = {}
         self.slow_queries: list = []
 
         # 每分钟重置计数器
@@ -202,7 +201,7 @@ class PerformanceMonitoringMiddleware(BaseHTTPMiddleware):
         except Exception as e:
             logger.error(f"Failed to log system performance: {e}")
 
-    def get_performance_stats(self) -> Dict[str, Any]:
+    def get_performance_stats(self) -> dict[str, Any]:
         """获取性能统计信息"""
         stats = {
             "request_count": len(self.request_count),

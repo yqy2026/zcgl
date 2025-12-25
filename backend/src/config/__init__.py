@@ -1,4 +1,4 @@
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 """
 应用配置设置
@@ -17,7 +17,7 @@ except ImportError:
     redis = None  # type: ignore
 
 if TYPE_CHECKING and REDIS_AVAILABLE:
-    from redis.asyncio import Redis, ConnectionPool
+    from redis.asyncio import ConnectionPool, Redis
 
 
 class Settings:
@@ -100,11 +100,11 @@ redis_client: "Redis | None" = None
 async def init_redis():
     """初始化Redis连接"""
     global redis_pool, redis_client
-    
+
     if not REDIS_AVAILABLE:
         print("⚠️ Redis库未安装，跳过Redis初始化")
         return
-        
+
     try:
         redis_pool = redis.ConnectionPool.from_url(settings.REDIS_URL)  # type: ignore
         redis_client = redis.Redis(connection_pool=redis_pool)  # type: ignore

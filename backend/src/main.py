@@ -5,13 +5,16 @@
 
 import logging
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 # 导入编码安全工具
-from .core.encoding_utils import setup_utf8_encoding, safe_print, safe_log_format, safe_error_message
+from .core.encoding_utils import (
+    safe_error_message,
+    safe_print,
+    setup_utf8_encoding,
+)
 
 # 立即设置UTF-8编码
 setup_utf8_encoding()
@@ -47,8 +50,9 @@ except ImportError as e:
         'register_global_dependency': lambda x: None,
         'include_all': lambda app, version: None
     })()
-from .core.config import settings, get_config, initialize_config
+from .core.config import get_config, initialize_config, settings
 from .core.exception_handler import setup_exception_handlers
+
 # from .core.jwt_security import validate_current_jwt_config  # 临时禁用
 from .core.logging_security import setup_logging_security
 from .core.response_handler import success_response
@@ -57,6 +61,7 @@ from .database import (
     get_database_status,
     init_db,
 )
+
 # 中间件导入 - 使用条件导入
 try:
     from .middleware.error_recovery_middleware import ErrorRecoveryMiddleware
@@ -83,7 +88,10 @@ except ImportError as e:
     SECURITY_MIDDLEWARE_AVAILABLE = False
 
 try:
-    from .middleware.v1_compatibility import add_v1_compatibility, V1CompatibilityMiddleware
+    from .middleware.v1_compatibility import (
+        V1CompatibilityMiddleware,
+        add_v1_compatibility,
+    )
     V1_COMPATIBILITY_AVAILABLE = True
 except ImportError as e:
     safe_print(f"Warning: V1 compatibility middleware not available - {safe_error_message(e)}")

@@ -13,7 +13,6 @@ from ...exceptions import BusinessLogicError
 from ...middleware.auth import SecurityConfig, get_current_active_user, require_admin
 from ...schemas.auth import (
     LoginRequest,
-    LoginResponse,
     PasswordChangeRequest,
     RefreshTokenRequest,
     TokenResponse,
@@ -24,7 +23,7 @@ from ...schemas.auth import (
     UserUpdate,
 )
 from ...schemas.auth import UserQueryParams as UserQueryParamsSchema
-from ...services.auth_service import AuthService
+from ...services import AuthService
 
 router = APIRouter(tags=["认证管理"])
 
@@ -179,7 +178,7 @@ async def logout(
 @router.post("/refresh", response_model=TokenResponse, summary="刷新令牌")
 async def refresh_token(
     request: Request,
-    refresh_data: RefreshTokenRequest, 
+    refresh_data: RefreshTokenRequest,
     db: Session = Depends(get_db)
 ):
     """
@@ -190,15 +189,15 @@ async def refresh_token(
     - 增强安全性：记录刷新操作、检查IP变化等
     """
     auth_service = AuthService(db)
-    
+
     # 获取客户端信息
     client_ip = request.client.host if request.client else "unknown"
     user_agent = request.headers.get("user-agent", "unknown")
 
     # 验证刷新令牌（增强安全性）
     session = auth_service.validate_refresh_token(
-        refresh_data.refresh_token, 
-        client_ip=client_ip, 
+        refresh_data.refresh_token,
+        client_ip=client_ip,
         user_agent=user_agent
     )
     if not session:

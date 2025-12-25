@@ -5,8 +5,8 @@
 """
 
 import os
-import sys
 import subprocess
+import sys
 from pathlib import Path
 
 # 设置项目根目录
@@ -81,7 +81,7 @@ def fix_pdf_import_service():
 
     # 检查文件内容
     try:
-        with open(pdf_service_path, 'r', encoding='utf-8') as f:
+        with open(pdf_service_path, encoding='utf-8') as f:
             content = f.read()
 
         # 检查是否有PDFImportService类
@@ -107,7 +107,7 @@ def fix_ocr_service():
         return False
 
     try:
-        with open(ocr_service_path, 'r', encoding='utf-8') as f:
+        with open(ocr_service_path, encoding='utf-8') as f:
             content = f.read()
 
         # 检查是否有show_log参数

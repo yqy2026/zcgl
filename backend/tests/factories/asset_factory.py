@@ -4,15 +4,14 @@
 支持各种测试场景的数据需求
 """
 
-import factory
+from datetime import date, datetime, timedelta
 from decimal import Decimal
-from datetime import datetime, date, timedelta
-from typing import Optional, Dict, Any
-import uuid
+
+import factory
 
 from src.models.asset import Asset
 from src.models.auth import User
-from src.models.rbac import Role, Permission
+from src.models.rbac import Permission, Role
 
 
 class AssetFactory(factory.Factory):
@@ -230,8 +229,8 @@ def create_asset_with_contract(contract_length_months: int = 12, **kwargs) -> As
 
 
 def create_asset_with_financial_data(
-    annual_income: Optional[Decimal] = None,
-    annual_expense: Optional[Decimal] = None,
+    annual_income: Decimal | None = None,
+    annual_expense: Decimal | None = None,
     **kwargs
 ) -> Asset:
     """创建带财务数据的资产"""
@@ -265,7 +264,7 @@ def create_asset_portfolio(total_assets: int, **common_kwargs) -> list[Asset]:
     return assets
 
 
-def create_test_scenarios() -> Dict[str, list[Asset]]:
+def create_test_scenarios() -> dict[str, list[Asset]]:
     """创建标准测试场景数据"""
     return {
         'high_occupancy': AssetWithHighOccupancyFactory.create_batch(5),

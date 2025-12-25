@@ -4,16 +4,17 @@ RBAC系统初始化脚本
 创建基础角色、权限和测试数据
 """
 
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from src.database import get_db, engine
-from src.models.rbac import Role, Permission, UserRoleAssignment
-from src.models.auth import User
-from src.services.permission.rbac_service import RBACService
-from datetime import datetime, timedelta
 import uuid
+from datetime import datetime, timedelta
+
+from src.database import get_db
+from src.models.auth import User
+from src.models.rbac import Permission, Role, UserRoleAssignment
 
 
 def create_basic_permissions(db):
@@ -241,7 +242,6 @@ def assign_roles_to_users(db, roles, users):
     """为用户分配角色"""
     role_map = {role.name: role for role in roles}
 
-    from src.models.rbac import UserRoleAssignment
 
     # 为测试用户分配角色
     user_role_assignments = [
@@ -277,7 +277,7 @@ def assign_roles_to_users(db, roles, users):
                 db.add(assignment)
 
     db.commit()
-    print(f"✅ 为测试用户分配了角色")
+    print("✅ 为测试用户分配了角色")
 
 
 def create_dynamic_permission_samples(db):
@@ -364,9 +364,9 @@ def main():
         print("创建内容:")
         print(f"   - {len(permissions)} 个基础权限")
         print(f"   - {len(roles)} 个基础角色")
-        print(f"   - 1 个管理员用户")
-        print(f"   - 4 个测试用户")
-        print(f"   - 动态权限示例")
+        print("   - 1 个管理员用户")
+        print("   - 4 个测试用户")
+        print("   - 动态权限示例")
 
         print("\n默认登录信息:")
         print("   管理员用户名: admin")

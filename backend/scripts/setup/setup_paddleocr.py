@@ -4,11 +4,10 @@ PaddleOCR安装脚本
 为PDF导入系统安装和配置PaddleOCR高精度中文识别
 """
 
-import sys
+import logging
 import os
 import subprocess
-import logging
-import importlib
+import sys
 
 # 设置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

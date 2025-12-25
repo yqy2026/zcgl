@@ -3,11 +3,10 @@
 专注于解决PaddleOCR加载瓶颈问题
 """
 
-import pytest
 import os
-from unittest.mock import Mock, MagicMock
-from typing import Generator
-import tempfile
+from unittest.mock import Mock
+
+import pytest
 
 # 设置PaddleOCR环境变量以减少模型加载时间
 os.environ.setdefault('PADDLEOCR_USE_CPU', '1')

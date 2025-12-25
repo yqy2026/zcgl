@@ -11,22 +11,20 @@ Continuous Quality Monitoring Script
 - 质量趋势分析
 """
 
-import os
-import sys
-import time
-import json
-import yaml
 import asyncio
+import json
 import logging
 import subprocess
-from datetime import datetime, timedelta
-from pathlib import Path
-from typing import Dict, List, Any, Optional
+import sys
+import time
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
+from pathlib import Path
+from typing import Any
 
 import requests
-import psutil
+import yaml
 
 
 class QualityLevel(Enum):
@@ -47,7 +45,7 @@ class QualityMetric:
     threshold: float
     status: QualityLevel
     timestamp: datetime
-    details: Optional[Dict[str, Any]] = None
+    details: dict[str, Any] | None = None
 
 
 @dataclass
@@ -56,9 +54,9 @@ class QualityReport:
     timestamp: datetime
     overall_score: float
     overall_level: QualityLevel
-    metrics: List[QualityMetric]
-    recommendations: List[str]
-    warnings: List[str]
+    metrics: list[QualityMetric]
+    recommendations: list[str]
+    warnings: list[str]
 
 
 class QualityMonitor:
@@ -74,10 +72,10 @@ class QualityMonitor:
         # 创建必要的目录
         self._ensure_directories()
 
-    def _load_config(self) -> Dict[str, Any]:
+    def _load_config(self) -> dict[str, Any]:
         """加载配置文件"""
         try:
-            with open(self.config_path, 'r', encoding='utf-8') as f:
+            with open(self.config_path, encoding='utf-8') as f:
                 return yaml.safe_load(f)
         except FileNotFoundError:
             self.logger.error(f"配置文件不存在: {self.config_path}")
@@ -717,7 +715,7 @@ class QualityMonitor:
                 details={"error": str(e), "note": "radon工具未安装，使用默认分数"}
             )
 
-    def _calculate_overall_score(self, metrics: List[QualityMetric]) -> float:
+    def _calculate_overall_score(self, metrics: list[QualityMetric]) -> float:
         """计算总体质量分数"""
         if not metrics:
             return 0.0
@@ -758,7 +756,7 @@ class QualityMonitor:
         else:
             return QualityLevel.POOR
 
-    def _generate_recommendations(self, metrics: List[QualityMetric]) -> tuple[List[str], List[str]]:
+    def _generate_recommendations(self, metrics: list[QualityMetric]) -> tuple[list[str], list[str]]:
         """生成改进建议和警告"""
         recommendations = []
         warnings = []
@@ -830,7 +828,7 @@ class QualityMonitor:
             details_str = self._format_metric_details(metric)
             content += f"| {metric.name} | {metric.value:.1f} | {metric.threshold:.1f} | {self._get_level_display(metric.status)} | {details_str} |\n"
 
-        content += f"""
+        content += """
 ## 改进建议
 
 """
@@ -966,17 +964,17 @@ async def main():
             print(f"{'='*60}")
             print(f"总体分数: {report.overall_score:.1f}分 ({monitor._get_level_display(report.overall_level)})")
             print(f"检查时间: {report.timestamp.strftime('%Y-%m-%d %H:%M:%S')}")
-            print(f"\n详细指标:")
+            print("\n详细指标:")
             for metric in report.metrics:
                 print(f"  - {metric.name}: {metric.value:.1f}分 (阈值: {metric.threshold:.1f})")
 
             if report.recommendations:
-                print(f"\n改进建议:")
+                print("\n改进建议:")
                 for rec in report.recommendations:
                     print(f"  • {rec}")
 
             if report.warnings:
-                print(f"\n警告信息:")
+                print("\n警告信息:")
                 for warning in report.warnings:
                     print(f"  [警告] {warning}")
         else:
@@ -985,7 +983,7 @@ async def main():
             print(f"质量报告已生成: {report_path}")
 
             # 同时显示简要信息
-            print(f"\n质量检查完成:")
+            print("\n质量检查完成:")
             print(f"- 总体分数: {report.overall_score:.1f}分")
             print(f"- 质量等级: {monitor._get_level_display(report.overall_level)}")
             print(f"- 检查指标: {len(report.metrics)}项")

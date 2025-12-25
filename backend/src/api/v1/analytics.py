@@ -1593,8 +1593,9 @@ async def get_comprehensive_analytics(
             logger.warning("Analytics查询结果为空，开始诊断...")
 
             # 诊断：检查数据库中的实际资产数据
-            from ...models.asset import Asset
             from sqlalchemy import func
+
+            from ...models.asset import Asset
 
             # 1. 查询所有资产总数（无筛选）
             all_assets_count = db.query(func.count(Asset.id)).scalar()
@@ -1897,8 +1898,9 @@ async def debug_data_status_distribution(request: Request, db: Session = Depends
     """
     request_id = get_request_id(request)
     try:
+        from sqlalchemy import func
+
         from ...models.asset import Asset
-        from sqlalchemy import func, and_
 
         logger.info("开始诊断资产数据状态分布")
 

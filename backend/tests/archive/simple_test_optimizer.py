@@ -7,6 +7,7 @@ import os
 import subprocess
 from pathlib import Path
 
+
 def run_test(test_file):
     """运行单个测试文件"""
     print(f"\n运行测试: {test_file}")
@@ -56,7 +57,7 @@ def main():
         else:
             print(f"! 测试文件不存在: {test}")
 
-    print(f"\n=== 测试结果 ===")
+    print("\n=== 测试结果 ===")
     print(f"通过: {passed}/{total}")
     print(f"成功率: {passed/total*100:.1f}%")
 

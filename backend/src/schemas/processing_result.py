@@ -5,9 +5,9 @@
 以及其他服务在不同实现之间共享一致的结构。
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class QualityAssessment(BaseModel):
@@ -22,12 +22,12 @@ class QualityAssessment(BaseModel):
     - recommendations: 建议的处理动作（如提高DPI、启用特定语言等）
     """
 
-    overall_quality: Optional[str] = None
-    confidence_score: Optional[float] = Field(default=None, ge=0.0, le=1.0)
-    page_quality: Optional[Dict[str, Any]] = None
-    ocr_suitability: Optional[Dict[str, Any]] = None
-    issues: Optional[List[Dict[str, Any]]] = None
-    recommendations: Optional[List[str]] = None
+    overall_quality: str | None = None
+    confidence_score: float | None = Field(default=None, ge=0.0, le=1.0)
+    page_quality: dict[str, Any] | None = None
+    ocr_suitability: dict[str, Any] | None = None
+    issues: list[dict[str, Any]] | None = None
+    recommendations: list[str] | None = None
 
 
 class QualityMetrics(BaseModel):
@@ -38,9 +38,9 @@ class QualityMetrics(BaseModel):
     - processing_time_seconds: 处理总时长（秒）
     """
 
-    concurrency_used: Optional[int] = None
-    pages_per_second: Optional[float] = None
-    processing_time_seconds: Optional[float] = None
+    concurrency_used: int | None = None
+    pages_per_second: float | None = None
+    processing_time_seconds: float | None = None
 
 
 class ProcessingResultEnvelope(BaseModel):
@@ -51,23 +51,23 @@ class ProcessingResultEnvelope(BaseModel):
     """
 
     success: bool = True
-    text: Optional[str] = None
-    pages: Optional[List[Dict[str, Any]]] = None
-    total_pages: Optional[int] = None
-    processing_method: Optional[str] = None
-    ocr_used: Optional[bool] = None
-    overall_confidence_score: Optional[float] = None
+    text: str | None = None
+    pages: list[dict[str, Any]] | None = None
+    total_pages: int | None = None
+    processing_method: str | None = None
+    ocr_used: bool | None = None
+    overall_confidence_score: float | None = None
 
-    quality_assessment: Optional[QualityAssessment] = None
-    metrics: Optional[QualityMetrics] = None
-    processing_stats: Optional[Dict[str, Any]] = None
+    quality_assessment: QualityAssessment | None = None
+    metrics: QualityMetrics | None = None
+    processing_stats: dict[str, Any] | None = None
 
-    extraction_metadata: Optional[Dict[str, Any]] = None
-    file_info: Optional[Dict[str, Any]] = None
-    extracted_at: Optional[str] = None
+    extraction_metadata: dict[str, Any] | None = None
+    file_info: dict[str, Any] | None = None
+    extracted_at: str | None = None
 
     # 允许扩展字段以兼容历史或新增数据
-    extra: Dict[str, Any] = Field(default_factory=dict)
+    extra: dict[str, Any] = Field(default_factory=dict)
 
     model_config = ConfigDict(
         arbitrary_types_allowed=True

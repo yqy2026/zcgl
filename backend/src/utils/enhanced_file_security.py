@@ -4,21 +4,19 @@
 """
 
 import hashlib
-import os
 import re
 import uuid
 from pathlib import Path
-from typing import Optional, Set
 
 import magic
-from fastapi import HTTPException, UploadFile
+from fastapi import UploadFile
 
 
 class EnhancedFileSecurityValidator:
     """增强文件安全验证器"""
 
     # 危险文件扩展名黑名单
-    DANGEROUS_EXTENSIONS: Set[str] = {
+    DANGEROUS_EXTENSIONS: set[str] = {
         ".exe",
         ".bat",
         ".cmd",
@@ -48,7 +46,7 @@ class EnhancedFileSecurityValidator:
     }
 
     # 允许的文件类型
-    ALLOWED_MIME_TYPES: Set[str] = {
+    ALLOWED_MIME_TYPES: set[str] = {
         # PDF文件
         "application/pdf",
         # Excel文件
@@ -97,7 +95,7 @@ class EnhancedFileSecurityValidator:
             return False
 
     def validate_file_size(
-        self, file: UploadFile, max_size: Optional[int] = None
+        self, file: UploadFile, max_size: int | None = None
     ) -> bool:
         """验证文件大小"""
         try:
@@ -189,8 +187,8 @@ class EnhancedFileSecurityValidator:
         self,
         file: UploadFile,
         upload_dir: str,
-        max_size: Optional[int] = None,
-        allowed_mime_types: Optional[Set[str]] = None,
+        max_size: int | None = None,
+        allowed_mime_types: set[str] | None = None,
     ) -> dict:
         """综合文件安全验证"""
         result = {
@@ -271,8 +269,8 @@ enhanced_file_validator = EnhancedFileSecurityValidator()
 async def secure_upload_file(
     file: UploadFile,
     upload_dir: str,
-    max_size: Optional[int] = None,
-    allowed_mime_types: Optional[Set[str]] = None,
+    max_size: int | None = None,
+    allowed_mime_types: set[str] | None = None,
 ) -> dict:
     """
     安全上传文件

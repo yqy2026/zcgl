@@ -5,10 +5,9 @@
 
 import time
 import uuid
-from typing import Callable
+from collections.abc import Callable
 
 from fastapi import Request, Response
-from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from .unified_error_handler import ErrorCode, UnifiedError, UnifiedErrorHandler
@@ -296,7 +295,7 @@ class MetricsMiddleware(BaseHTTPMiddleware):
 
             return response
 
-        except Exception as error:
+        except Exception:
             # 记录错误指标
             self._record_metrics(request, None, start_time, True)
 

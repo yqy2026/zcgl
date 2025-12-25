@@ -5,11 +5,11 @@
 import uuid
 from datetime import datetime
 from enum import Enum
+from typing import TYPE_CHECKING, cast
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.sqlite import JSON
 from sqlalchemy.orm import relationship
-from typing import TYPE_CHECKING, cast
 
 from ..database import Base
 

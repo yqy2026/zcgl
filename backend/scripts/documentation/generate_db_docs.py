@@ -4,24 +4,23 @@
 生成数据库模型、表结构和关系文档
 """
 
-import sys
 import json
-from pathlib import Path
+import sys
 from datetime import datetime
-from typing import Dict, Any, List
-from sqlalchemy import create_engine, inspect, MetaData, Table
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import DeclarativeMeta
+from pathlib import Path
+from typing import Any
+
+from sqlalchemy import MetaData, inspect
 
 # 添加项目根目录到Python路径
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
-from database import engine, get_db
+from database import engine
 from models.asset import Asset
-from models.project import Project
 from models.ownership import Ownership
-from models.task import AsyncTask, TaskHistory, ExcelTaskConfig
+from models.project import Project
+from models.task import AsyncTask, ExcelTaskConfig, TaskHistory
 
 
 class DatabaseDocumentationGenerator:
@@ -34,7 +33,7 @@ class DatabaseDocumentationGenerator:
         self.metadata = MetaData()
         self.metadata.reflect(bind=self.engine)
 
-    def get_table_info(self, table_name: str) -> Dict[str, Any]:
+    def get_table_info(self, table_name: str) -> dict[str, Any]:
         """获取表信息"""
         inspector = inspect(self.engine)
 
@@ -58,7 +57,7 @@ class DatabaseDocumentationGenerator:
             "indexes": indexes
         }
 
-    def get_model_info(self, model_class) -> Dict[str, Any]:
+    def get_model_info(self, model_class) -> dict[str, Any]:
         """获取模型信息"""
         if not hasattr(model_class, '__table__'):
             return {}
@@ -95,7 +94,7 @@ class DatabaseDocumentationGenerator:
             "docstring": model_class.__doc__ or ""
         }
 
-    def generate_er_diagram_data(self) -> Dict[str, Any]:
+    def generate_er_diagram_data(self) -> dict[str, Any]:
         """生成ER图数据"""
         models = [Asset, Project, Ownership, AsyncTask, TaskHistory, ExcelTaskConfig]
 
@@ -124,7 +123,7 @@ class DatabaseDocumentationGenerator:
             "relationships": relationships
         }
 
-    def generate_schema_overview(self) -> Dict[str, Any]:
+    def generate_schema_overview(self) -> dict[str, Any]:
         """生成数据库概览"""
         inspector = inspect(self.engine)
         table_names = inspector.get_table_names()
@@ -160,7 +159,7 @@ class DatabaseDocumentationGenerator:
 
         return overview
 
-    def generate_sample_queries(self) -> List[Dict[str, Any]]:
+    def generate_sample_queries(self) -> list[dict[str, Any]]:
         """生成示例查询"""
         queries = [
             {
@@ -315,9 +314,9 @@ class DatabaseDocumentationGenerator:
         import shutil
         shutil.copy2(self.output_dir / "database.md", docs_dir / "database.md")
 
-        print(f"Database documentation generated successfully!")
+        print("Database documentation generated successfully!")
         print(f"Output directory: {self.output_dir}")
-        print(f"Files generated:")
+        print("Files generated:")
         print(f"  - Overview: {self.output_dir / 'overview.json'}")
         print(f"  - ER Diagram: {self.output_dir / 'er_diagram.json'}")
         print(f"  - Sample Queries: {self.output_dir / 'sample_queries.json'}")

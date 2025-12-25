@@ -2,15 +2,14 @@
 Fix dictionary Chinese labels that were corrupted during initialization
 """
 
-import sys
 import os
+import sys
 
 # Add project root directory to Python path
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from sqlalchemy.orm import Session
 from src.database import SessionLocal
-from src.models.enum_field import EnumFieldType, EnumFieldValue
+from src.models.enum_field import EnumFieldValue
 
 
 def fix_dictionary_labels():

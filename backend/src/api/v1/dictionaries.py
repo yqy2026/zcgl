@@ -5,10 +5,11 @@ from typing import Any
 整合系统字典和枚举字段功能，提供简化的使用接口
 """
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-import logging
 
 from ...crud.enum_field import get_enum_field_type_crud, get_enum_field_value_crud
 from ...database import get_db

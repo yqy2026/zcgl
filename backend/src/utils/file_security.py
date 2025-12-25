@@ -7,7 +7,6 @@ import os
 import re
 import uuid
 from pathlib import Path
-from typing import Optional
 
 # 危险的文件名字符
 DANGEROUS_FILENAME_CHARS = r'[<>:"/\\|?*\x00-\x1f]'
@@ -123,7 +122,7 @@ def secure_filename(filename: str) -> str:
 
 
 def validate_file_extension(
-    filename: str, allowed_extensions: Optional[list] = None
+    filename: str, allowed_extensions: list | None = None
 ) -> bool:
     """
     验证文件扩展名是否安全
@@ -307,9 +306,9 @@ def sanitize_file_content(
 
 def validate_upload_file(
     filename: str,
-    content_type: Optional[str],
+    content_type: str | None,
     file_size: int,
-    allowed_extensions: Optional[list] = None,
+    allowed_extensions: list | None = None,
     max_size: int = 50 * 1024 * 1024,
 ) -> dict:
     """

@@ -1,14 +1,13 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 基础OCR测试 - 移除Unicode字符
 测试PaddleOCR的基本功能
 """
 
+import logging
 import os
 import sys
 import time
-import logging
 from pathlib import Path
 
 # 添加项目路径
@@ -23,8 +22,8 @@ def test_basic_paddleocr():
     print("开始基础PaddleOCR测试...")
 
     try:
-        from paddleocr import PaddleOCR
         import fitz
+        from paddleocr import PaddleOCR
 
         # 查找测试样本
         samples_dir = Path(__file__).parent.parent.parent / "tools" / "pdf-samples"
@@ -63,7 +62,7 @@ def test_basic_paddleocr():
             text = result[0][0][0]  # 文本
             confidence = result[0][0][1]  # 置信度
 
-            print(f"[成功] OCR识别完成")
+            print("[成功] OCR识别完成")
             print(f"  文本长度: {len(text)}字符")
             print(f"  置信度: {confidence:.3f}")
             print(f"  文本预览: {text[:100]}...")
@@ -122,7 +121,7 @@ def test_pdf_analysis():
 
         doc = fitz.open(test_file)
 
-        print(f"PDF基本信息:")
+        print("PDF基本信息:")
         print(f"  页面数: {doc.page_count}")
         print(f"  文件大小: {os.path.getsize(test_file) / (1024*1024):.2f} MB")
 
@@ -148,7 +147,7 @@ def test_pdf_analysis():
 
         doc.close()
 
-        print(f"\n分析结果:")
+        print("\n分析结果:")
         print(f"  文本页面: {text_pages}")
         print(f"  扫描页面: {image_pages}")
         print(f"  总文本长度: {total_text_length}字符")
@@ -171,8 +170,8 @@ def test_ocr_methods():
     print("\n开始OCR方法对比测试...")
 
     try:
-        from paddleocr import PaddleOCR
         import fitz
+        from paddleocr import PaddleOCR
 
         # 查找测试样本
         samples_dir = Path(__file__).parent.parent.parent / "tools" / "pdf-samples"

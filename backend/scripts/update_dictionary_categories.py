@@ -2,14 +2,14 @@
 Update dictionary categories to match frontend configuration
 """
 
-import sys
 import os
+import sys
 
 # Add project root directory to Python path
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from sqlalchemy.orm import Session
 from src.database import SessionLocal
+
 
 def update_dictionary_categories():
     """Update dictionary categories to match frontend config"""

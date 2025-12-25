@@ -3,23 +3,24 @@ Main Application Entry Point - Bilingual Version
 Supports Chinese messages without emoji characters to avoid encoding issues
 """
 
+import codecs
 import logging
+
+# Set up logging with safe encoding
+import sys
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 
-from fastapi import Depends, FastAPI
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# Database imports
-from .database import create_tables, get_database_status, init_db
-from .core.config import settings
 from ..core.config import get_config, initialize_config
 from .core.exception_handler import setup_exception_handlers
 from .core.response_handler import success_response
 
-# Set up logging with safe encoding
-import sys
-import codecs
+# Database imports
+from .database import create_tables, get_database_status, init_db
+
 sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer)
 sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer)
 

@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 更新admin用户密码的脚本
 """
 
-import sys
 import os
+import sys
+
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 
 import bcrypt
-from database import get_db
 from sqlalchemy import text
+
+from database import get_db
+
 
 def update_admin_password():
     """更新admin用户的密码"""

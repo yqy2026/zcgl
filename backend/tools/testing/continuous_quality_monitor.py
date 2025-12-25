@@ -4,13 +4,13 @@
 基于企业级测试标准，提供持续的质量监控和改进建议
 """
 
+import json
 import os
 import sys
-import json
 import time
-from datetime import datetime, timedelta
-from typing import Dict, List, Any
-from pathlib import Path
+from datetime import datetime
+from typing import Any
+
 
 class ContinuousQualityMonitor:
     """持续质量监控器"""
@@ -29,7 +29,7 @@ class ContinuousQualityMonitor:
         """加载配置"""
         if os.path.exists(self.config_file):
             try:
-                with open(self.config_file, 'r', encoding='utf-8') as f:
+                with open(self.config_file, encoding='utf-8') as f:
                     config = json.load(f)
                     self.thresholds.update(config.get('thresholds', {}))
             except Exception as e:
@@ -47,7 +47,7 @@ class ContinuousQualityMonitor:
         except Exception as e:
             print(f"[ERROR] 配置文件保存失败: {e}")
 
-    def run_quality_check(self) -> Dict[str, Any]:
+    def run_quality_check(self) -> dict[str, Any]:
         """运行质量检查"""
         print("[INFO] 开始运行质量检查...")
 
@@ -70,7 +70,7 @@ class ContinuousQualityMonitor:
             "test_stats": test_stats
         }
 
-    def get_test_statistics(self) -> Dict[str, Any]:
+    def get_test_statistics(self) -> dict[str, Any]:
         """获取测试统计信息"""
         try:
             # 这里应该调用pytest来获取统计信息
@@ -100,7 +100,7 @@ class ContinuousQualityMonitor:
             print(f"[ERROR] 获取测试统计失败: {e}")
             return {"error": str(e)}
 
-    def calculate_quality_metrics(self, test_stats: Dict[str, Any]) -> Dict[str, Any]:
+    def calculate_quality_metrics(self, test_stats: dict[str, Any]) -> dict[str, Any]:
         """计算质量指标"""
         if "error" in test_stats:
             return {"error": test_stats["error"]}
@@ -167,7 +167,7 @@ class ContinuousQualityMonitor:
         else:
             return "不合格"
 
-    def generate_improvement_suggestions(self, metrics: Dict[str, Any]) -> List[str]:
+    def generate_improvement_suggestions(self, metrics: dict[str, Any]) -> list[str]:
         """生成改进建议"""
         if "error" in metrics:
             return ["无法获取质量指标，请检查测试环境"]
@@ -203,12 +203,12 @@ class ContinuousQualityMonitor:
 
         return suggestions if suggestions else ["质量表现良好，继续保持！"]
 
-    def save_to_history(self, metrics: Dict[str, Any]):
+    def save_to_history(self, metrics: dict[str, Any]):
         """保存到历史记录"""
         history = []
         if os.path.exists(self.history_file):
             try:
-                with open(self.history_file, 'r', encoding='utf-8') as f:
+                with open(self.history_file, encoding='utf-8') as f:
                     history = json.load(f)
             except Exception:
                 history = []
@@ -228,7 +228,7 @@ class ContinuousQualityMonitor:
         except Exception as e:
             print(f"[ERROR] 历史记录保存失败: {e}")
 
-    def generate_quality_report(self, results: Dict[str, Any]) -> str:
+    def generate_quality_report(self, results: dict[str, Any]) -> str:
         """生成质量报告"""
         report = []
         report.append("=" * 60)
@@ -283,7 +283,7 @@ class ContinuousQualityMonitor:
             return "数据不足"
 
         try:
-            with open(self.history_file, 'r', encoding='utf-8') as f:
+            with open(self.history_file, encoding='utf-8') as f:
                 history = json.load(f)
 
             if len(history) < 2:

@@ -3,14 +3,13 @@
 用于生成和验证JWT密钥、数据库密码等安全配置
 """
 
-import secrets
-import string
-from datetime import datetime, UTC
-from pathlib import Path
-from typing import Dict, Any
-
 import hashlib
 import logging
+import secrets
+import string
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +69,7 @@ class SecurityKeyGenerator:
         return secrets.token_urlsafe(32)
 
     @staticmethod
-    def hash_password(password: str, salt: str | None = None) -> Dict[str, str]:
+    def hash_password(password: str, salt: str | None = None) -> dict[str, str]:
         """
         哈希密码
 
@@ -127,7 +126,7 @@ class SecurityConfigManager:
         self.config_dir = Path(config_dir)
         self.generator = SecurityKeyGenerator()
 
-    def generate_secure_env_file(self, env_type: str = "production") -> Dict[str, str]:
+    def generate_secure_env_file(self, env_type: str = "production") -> dict[str, str]:
         """
         生成安全的环境变量配置
 
@@ -177,7 +176,7 @@ class SecurityConfigManager:
 
         return config
 
-    def save_env_file(self, config: Dict[str, str], filename: str) -> bool:
+    def save_env_file(self, config: dict[str, str], filename: str) -> bool:
         """
         保存环境变量配置到文件
 
@@ -208,7 +207,7 @@ class SecurityConfigManager:
             logger.error(f"保存配置文件失败: {e}")
             return False
 
-    def generate_admin_credentials(self) -> Dict[str, Any]:
+    def generate_admin_credentials(self) -> dict[str, Any]:
         """
         生成管理员凭据
 
@@ -232,7 +231,7 @@ class SecurityConfigManager:
 
         return credentials
 
-    def create_secure_admin_user_script(self, credentials: Dict[str, Any]) -> str:
+    def create_secure_admin_user_script(self, credentials: dict[str, Any]) -> str:
         """
         创建创建管理员用户的SQL脚本
 
@@ -281,7 +280,7 @@ INSERT OR REPLACE INTO users (
 
         return script
 
-    def validate_jwt_key_strength(self, secret_key: str) -> Dict[str, Any]:
+    def validate_jwt_key_strength(self, secret_key: str) -> dict[str, Any]:
         """
         验证JWT密钥强度
 

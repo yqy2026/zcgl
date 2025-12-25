@@ -4,10 +4,9 @@
 """
 
 import os
-import sys
 import subprocess
-import json
 from pathlib import Path
+
 
 def run_command(cmd, description):
     """运行命令并返回结果"""

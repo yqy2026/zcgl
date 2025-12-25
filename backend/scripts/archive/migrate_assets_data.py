@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 数据迁移脚本 - 从旧数据库迁移到新数据库
 解决Analytics模块数据缺失问题
 """
 
-import sqlite3
 import os
+import sqlite3
 import sys
-from datetime import datetime
 from pathlib import Path
 
 # 添加项目路径

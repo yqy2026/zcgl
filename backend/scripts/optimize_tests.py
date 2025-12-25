@@ -43,9 +43,9 @@ def optimize_backend_tests():
         else:
             print(f"⚠️  文件不存在: {test_file}")
 
-    print(f"\n📊 优化结果:")
+    print("\n📊 优化结果:")
     print(f"   - 禁用测试文件: {disabled_count}")
-    print(f"   - 保留核心测试: OCR、基础功能等")
+    print("   - 保留核心测试: OCR、基础功能等")
 
     return disabled_count
 
@@ -117,10 +117,10 @@ def main():
     # 创建核心测试脚本
     create_core_test_runner()
 
-    print(f"\n✅ 测试优化完成!")
+    print("\n✅ 测试优化完成!")
     print(f"   - 禁用问题测试: {disabled_count}个")
-    print(f"   - 运行核心测试: python scripts/run_core_tests.py")
-    print(f"   - 恢复所有测试: python scripts/restore_tests.py")
+    print("   - 运行核心测试: python scripts/run_core_tests.py")
+    print("   - 恢复所有测试: python scripts/restore_tests.py")
 
 if __name__ == "__main__":
     main()

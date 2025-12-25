@@ -719,7 +719,7 @@ class SecurityMiddleware:
             allowed_types = []
         if max_size is None:
             max_size = 0
-            
+
         return self.file_validator.validate_upload(file, allowed_types, max_size)
         """
         验证文件上传

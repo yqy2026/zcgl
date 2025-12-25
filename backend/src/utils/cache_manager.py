@@ -1,4 +1,4 @@
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 """
 缓存管理模块
@@ -37,7 +37,7 @@ class CacheManager:
     """缓存管理器 - 支持Redis和内存缓存后备"""
 
     def __init__(self):
-        self.redis_client: "Redis | None" = None
+        self.redis_client: Redis | None = None
         self.memory_cache: dict[str, Any] = {}
         self.memory_cache_expiry: dict[str, Any] = {}
         self.use_memory_fallback = True
@@ -47,7 +47,7 @@ class CacheManager:
         if not REDIS_AVAILABLE:
             logger.warning("Redis库未安装，使用内存缓存")
             return
-            
+
         try:
             self.redis_client = redis.Redis(  # type: ignore
                 host=settings.REDIS_HOST or "localhost",

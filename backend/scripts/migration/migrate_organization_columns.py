@@ -3,9 +3,10 @@
 添加新的组织字段以支持完整的组织管理功能
 """
 
-import sqlite3
 import os
+import sqlite3
 from datetime import datetime
+
 
 def add_organization_columns():
     """为organizations表添加新列"""
@@ -40,7 +41,7 @@ def add_organization_columns():
                 cursor.execute(f"ALTER TABLE organizations ADD COLUMN {column_name} {column_def}")
 
                 # 为SQLite添加列注释（通过表注释）
-                cursor.execute(f"""
+                cursor.execute("""
                     CREATE TABLE IF NOT EXISTS organization_columns (
                         column_name TEXT PRIMARY KEY,
                         comment TEXT,

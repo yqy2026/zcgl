@@ -7,7 +7,7 @@ import logging
 import traceback
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, Optional, Union
+from typing import Any
 
 from fastapi import HTTPException, Request, status
 from fastapi.responses import JSONResponse
@@ -70,18 +70,18 @@ class ErrorSeverity(str, Enum):
 class ErrorDetail(BaseModel):
     """错误详情模型"""
 
-    field: Optional[str] = None
+    field: str | None = None
     message: str
-    code: Optional[str] = None
+    code: str | None = None
 
 
 class UnifiedErrorResponse(BaseModel):
     """统一错误响应模型"""
 
     success: bool = False
-    error: Dict[str, Any]
+    error: dict[str, Any]
     timestamp: datetime
-    request_id: Optional[str] = None
+    request_id: str | None = None
 
 
 class UnifiedError(Exception):
@@ -92,9 +92,9 @@ class UnifiedError(Exception):
         message: str,
         code: ErrorCode = ErrorCode.BUSINESS_ERROR,
         status_code: int = status.HTTP_400_BAD_REQUEST,
-        details: Optional[Union[str, Dict[str, Any], list]] = None,
+        details: str | dict[str, Any] | list | None = None,
         severity: ErrorSeverity = ErrorSeverity.MEDIUM,
-        extra_data: Optional[Dict[str, Any]] = None,
+        extra_data: dict[str, Any] | None = None,
     ):
         self.message = message
         self.code = code
@@ -104,7 +104,7 @@ class UnifiedError(Exception):
         self.extra_data = extra_data or {}
         super().__init__(self.message)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """转换为字典格式"""
         error_data = {
             "code": self.code.value,
@@ -128,7 +128,7 @@ class UnifiedError(Exception):
 class UnifiedErrorHandler:
     """统一错误处理器"""
 
-    def __init__(self, logger: Optional[logging.Logger] = None):
+    def __init__(self, logger: logging.Logger | None = None):
         self.logger = logger or logging.getLogger(__name__)
         self._setup_logger()
 
@@ -144,7 +144,7 @@ class UnifiedErrorHandler:
             self.logger.setLevel(logging.INFO)
 
     def handle_error(
-        self, error: Exception, request: Optional[Request] = None
+        self, error: Exception, request: Request | None = None
     ) -> JSONResponse:
         """处理错误并返回统一响应"""
 
@@ -177,7 +177,7 @@ class UnifiedErrorHandler:
 
         return JSONResponse(status_code=status_code, content=response.dict())
 
-    def _log_error(self, error: Exception, request: Optional[Request] = None):
+    def _log_error(self, error: Exception, request: Request | None = None):
         """记录错误日志"""
         error_info = {
             "error_type": type(error).__name__,
@@ -212,7 +212,7 @@ class UnifiedErrorHandler:
         if isinstance(error, (UnifiedError, HTTPException)) == False:
             self.logger.debug(f"Error traceback: {traceback.format_exc()}")
 
-    def _handle_http_exception(self, error: HTTPException) -> Dict[str, Any]:
+    def _handle_http_exception(self, error: HTTPException) -> dict[str, Any]:
         """处理HTTP异常"""
         return {
             "code": f"E{error.status_code}",
@@ -221,7 +221,7 @@ class UnifiedErrorHandler:
             "timestamp": datetime.utcnow().isoformat(),
         }
 
-    def _handle_validation_error(self, error: ValueError) -> Dict[str, Any]:
+    def _handle_validation_error(self, error: ValueError) -> dict[str, Any]:
         """处理验证错误"""
         return {
             "code": ErrorCode.DATA_VALIDATION_ERROR.value,
@@ -231,7 +231,7 @@ class UnifiedErrorHandler:
             "timestamp": datetime.utcnow().isoformat(),
         }
 
-    def _handle_unknown_error(self, error: Exception) -> Dict[str, Any]:
+    def _handle_unknown_error(self, error: Exception) -> dict[str, Any]:
         """处理未知错误"""
         return {
             "code": ErrorCode.INTERNAL_SERVER_ERROR.value,
@@ -256,7 +256,7 @@ unified_error_handler = UnifiedErrorHandler()
 def create_business_error(
     message: str,
     code: ErrorCode = ErrorCode.BUSINESS_ERROR,
-    details: Optional[Any] = None,
+    details: Any | None = None,
 ) -> UnifiedError:
     """创建业务错误"""
     return UnifiedError(
@@ -269,7 +269,7 @@ def create_business_error(
 
 
 def create_not_found_error(
-    message: str = "资源未找到", resource_type: Optional[str] = None
+    message: str = "资源未找到", resource_type: str | None = None
 ) -> UnifiedError:
     """创建资源未找到错误"""
     extra_data = {}
@@ -286,7 +286,7 @@ def create_not_found_error(
 
 
 def create_validation_error(
-    message: str, field_errors: Optional[list] = None
+    message: str, field_errors: list | None = None
 ) -> UnifiedError:
     """创建验证错误"""
     return UnifiedError(
@@ -319,7 +319,7 @@ def create_authorization_error(message: str = "权限不足") -> UnifiedError:
 
 
 def create_internal_error(
-    message: str = "服务器内部错误", original_error: Optional[Exception] = None
+    message: str = "服务器内部错误", original_error: Exception | None = None
 ) -> UnifiedError:
     """创建内部服务器错误"""
     extra_data = {}
@@ -348,8 +348,8 @@ class ErrorHandler:
         }
 
     def handle_error(
-        self, error: Exception, context: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        self, error: Exception, context: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """处理错误并返回标准化响应"""
         error_type = type(error)
         handler = self.error_handlers.get(error_type, self._handle_unknown_error)
@@ -364,7 +364,7 @@ class ErrorHandler:
 
         return error_response
 
-    def _handle_unified_error(self, error: UnifiedError) -> Dict[str, Any]:
+    def _handle_unified_error(self, error: UnifiedError) -> dict[str, Any]:
         """处理统一错误"""
         return {
             "code": error.code.value,
@@ -375,7 +375,7 @@ class ErrorHandler:
             "extra_data": error.extra_data,
         }
 
-    def _handle_http_exception(self, error: HTTPException) -> Dict[str, Any]:
+    def _handle_http_exception(self, error: HTTPException) -> dict[str, Any]:
         """处理HTTP异常"""
         return {
             "code": f"E{error.status_code}",
@@ -384,7 +384,7 @@ class ErrorHandler:
             "timestamp": datetime.utcnow().isoformat(),
         }
 
-    def _handle_validation_error(self, error: ValueError) -> Dict[str, Any]:
+    def _handle_validation_error(self, error: ValueError) -> dict[str, Any]:
         """处理验证错误"""
         return {
             "code": ErrorCode.DATA_VALIDATION_ERROR.value,
@@ -394,7 +394,7 @@ class ErrorHandler:
             "timestamp": datetime.utcnow().isoformat(),
         }
 
-    def _handle_unknown_error(self, error: Exception) -> Dict[str, Any]:
+    def _handle_unknown_error(self, error: Exception) -> dict[str, Any]:
         """处理未知错误"""
         return {
             "code": ErrorCode.INTERNAL_SERVER_ERROR.value,
@@ -404,7 +404,7 @@ class ErrorHandler:
             "timestamp": datetime.utcnow().isoformat(),
         }
 
-    def _log_error(self, error: Exception, error_response: Dict[str, Any]):
+    def _log_error(self, error: Exception, error_response: dict[str, Any]):
         """记录错误日志"""
         error_info = {
             "error_type": type(error).__name__,

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 简化版质量监控系统
 Simple Quality Monitoring System
@@ -7,10 +6,9 @@ Simple Quality Monitoring System
 针对Windows编码问题优化的版本，确保所有输出都使用标准ASCII字符
 """
 
-import os
+import subprocess
 import sys
 import time
-import subprocess
 from datetime import datetime
 from pathlib import Path
 
@@ -126,7 +124,7 @@ class SimpleQualityMonitor:
             try:
                 __import__(module)
                 successful_imports += 1
-            except ImportError as e:
+            except ImportError:
                 failed_imports.append(module)
             except Exception as e:
                 failed_imports.append(f"{module} ({type(e).__name__})")

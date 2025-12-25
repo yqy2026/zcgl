@@ -5,8 +5,7 @@
 
 import json
 import logging
-from datetime import timedelta
-from typing import Any, Optional, TYPE_CHECKING
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +13,7 @@ logger = logging.getLogger(__name__)
 class PermissionCacheService:
     """权限缓存服务"""
 
-    def __init__(self, redis_client: Optional[Any] = None, ttl_seconds: int = 300):
+    def __init__(self, redis_client: Any | None = None, ttl_seconds: int = 300):
         """
         初始化权限缓存服务
 
@@ -22,7 +21,7 @@ class PermissionCacheService:
             redis_client: Redis客户端实例
             ttl_seconds: 缓存过期时间（秒），默认5分钟
         """
-        self.redis: Optional[Any] = redis_client
+        self.redis: Any | None = redis_client
         self.ttl = ttl_seconds
         self.enabled = redis_client is not None
 
@@ -43,7 +42,7 @@ class PermissionCacheService:
 
     async def get_user_permissions(
         self, user_id: int | str
-    ) -> Optional[list[str]]:
+    ) -> list[str] | None:
         """
         获取用户权限列表（从缓存）
 
@@ -98,7 +97,7 @@ class PermissionCacheService:
             logger.error(f"Error setting user permissions cache: {e}")
             return False
 
-    async def get_user_roles(self, user_id: int | str) -> Optional[list[dict]]:
+    async def get_user_roles(self, user_id: int | str) -> list[dict] | None:
         """
         获取用户角色列表（从缓存）
 
@@ -238,7 +237,7 @@ class PermissionCacheService:
 
     async def has_permission(
         self, user_id: int | str, permission_code: str
-    ) -> Optional[bool]:
+    ) -> bool | None:
         """
         检查用户是否拥有某个权限（从缓存）
 
@@ -310,7 +309,7 @@ class PermissionCacheService:
 
 
 # 全局权限缓存服务实例
-_permission_cache_service: Optional[PermissionCacheService] = None
+_permission_cache_service: PermissionCacheService | None = None
 
 
 def get_permission_cache_service() -> PermissionCacheService:

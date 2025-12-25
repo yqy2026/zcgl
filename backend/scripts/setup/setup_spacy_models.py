@@ -3,13 +3,15 @@
 用于PDF处理的中文NLP支持
 """
 
-import sys
 import os
+import sys
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import subprocess
-import spacy
 import logging
+import subprocess
+
+import spacy
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
@@ -62,7 +64,7 @@ def test_spacy_model(model_name: str = "zh_core_web_sm"):
         tokens = [token.text for token in doc]
         entities = [(ent.text, ent.label_) for ent in doc.ents]
 
-        logger.info(f"spaCy模型测试成功")
+        logger.info("spaCy模型测试成功")
         logger.info(f"分词结果: {tokens[:5]}...")
         logger.info(f"实体识别: {entities}")
 

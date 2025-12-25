@@ -9,13 +9,11 @@ API一致性检查脚本
 4. 参数验证一致性
 """
 
-import ast
 import json
 import re
 import sys
-from pathlib import Path
-from typing import Dict, List, Set, Tuple, Any
 from dataclasses import dataclass
+from pathlib import Path
 
 
 @dataclass
@@ -24,7 +22,7 @@ class APIEndpoint:
     path: str
     method: str
     response_model: str = None
-    parameters: List[str] = None
+    parameters: list[str] = None
     description: str = ""
 
     def __post_init__(self):
@@ -49,9 +47,9 @@ class APIConsistencyChecker:
     def __init__(self, backend_path: str, frontend_path: str):
         self.backend_path = Path(backend_path)
         self.frontend_path = Path(frontend_path)
-        self.issues: List[ConsistencyIssue] = []
+        self.issues: list[ConsistencyIssue] = []
 
-    def run_checks(self) -> List[ConsistencyIssue]:
+    def run_checks(self) -> list[ConsistencyIssue]:
         """运行所有检查"""
         print("开始API一致性检查...")
 
@@ -78,7 +76,7 @@ class APIConsistencyChecker:
         print(f"\n检查完成，发现 {len(self.issues)} 个问题")
         return self.issues
 
-    def extract_backend_endpoints(self) -> Dict[str, APIEndpoint]:
+    def extract_backend_endpoints(self) -> dict[str, APIEndpoint]:
         """提取后端API端点"""
         endpoints = {}
 
@@ -88,7 +86,7 @@ class APIConsistencyChecker:
 
         for api_file in api_files:
             try:
-                with open(api_file, 'r', encoding='utf-8') as f:
+                with open(api_file, encoding='utf-8') as f:
                     content = f.read()
 
                 # 使用正则表达式提取路由定义
@@ -123,7 +121,7 @@ class APIConsistencyChecker:
 
         return endpoints
 
-    def extract_frontend_api_calls(self) -> Dict[str, APIEndpoint]:
+    def extract_frontend_api_calls(self) -> dict[str, APIEndpoint]:
         """提取前端API调用"""
         calls = {}
 
@@ -132,7 +130,7 @@ class APIConsistencyChecker:
 
         for service_file in service_files:
             try:
-                with open(service_file, 'r', encoding='utf-8') as f:
+                with open(service_file, encoding='utf-8') as f:
                     content = f.read()
 
                 # 使用正则表达式提取API调用
@@ -159,7 +157,7 @@ class APIConsistencyChecker:
 
         return calls
 
-    def check_path_consistency(self, backend_endpoints: Dict[str, APIEndpoint], frontend_calls: Dict[str, APIEndpoint]):
+    def check_path_consistency(self, backend_endpoints: dict[str, APIEndpoint], frontend_calls: dict[str, APIEndpoint]):
         """检查路径一致性"""
         print("\n* 检查API路径一致性...")
 
@@ -225,7 +223,7 @@ class APIConsistencyChecker:
             print(f"  *  前端缺失字段: {len(missing_in_frontend)}")
             print(f"  *  后端缺失字段: {len(missing_in_backend)}")
 
-    def check_response_format_consistency(self, backend_endpoints: Dict[str, APIEndpoint]):
+    def check_response_format_consistency(self, backend_endpoints: dict[str, APIEndpoint]):
         """检查响应格式一致性"""
         print("\n* 检查响应格式一致性...")
 
@@ -247,7 +245,7 @@ class APIConsistencyChecker:
 
         print(f"  * 响应模型数量: {len(response_models)}")
 
-    def check_parameter_consistency(self, backend_endpoints: Dict[str, APIEndpoint], frontend_calls: Dict[str, APIEndpoint]):
+    def check_parameter_consistency(self, backend_endpoints: dict[str, APIEndpoint], frontend_calls: dict[str, APIEndpoint]):
         """检查参数一致性"""
         print("\n* 检查参数一致性...")
 
@@ -275,11 +273,11 @@ class APIConsistencyChecker:
 
         print(f"  *  参数不匹配的端点: {inconsistent_params}")
 
-    def extract_type_fields(self, types_file: Path) -> Set[str]:
+    def extract_type_fields(self, types_file: Path) -> set[str]:
         """从类型文件中提取字段名"""
         fields = set()
         try:
-            with open(types_file, 'r', encoding='utf-8') as f:
+            with open(types_file, encoding='utf-8') as f:
                 content = f.read()
 
             # 使用正则表达式提取接口字段
@@ -297,11 +295,11 @@ class APIConsistencyChecker:
 
         return fields
 
-    def extract_model_fields(self, model_file: Path) -> Set[str]:
+    def extract_model_fields(self, model_file: Path) -> set[str]:
         """从模型文件中提取字段名"""
         fields = set()
         try:
-            with open(model_file, 'r', encoding='utf-8') as f:
+            with open(model_file, encoding='utf-8') as f:
                 content = f.read()
 
             # 使用正则表达式提取模型字段

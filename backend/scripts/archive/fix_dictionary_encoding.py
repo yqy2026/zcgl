@@ -2,9 +2,9 @@
 Direct database fix for Chinese labels encoding issue using raw SQLite
 """
 
-import sqlite3
-import sys
 import os
+import sqlite3
+
 
 def fix_dictionary_encoding():
     """Fix Chinese encoding issues directly in SQLite database"""

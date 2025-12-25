@@ -4,11 +4,9 @@ SQL安全检查器
 用于检测和修复潜在的SQL注入风险
 """
 
-import ast
 import os
 import re
 from pathlib import Path
-from typing import List, Tuple
 
 
 class SQLSecurityChecker:
@@ -16,7 +14,7 @@ class SQLSecurityChecker:
 
     def __init__(self, project_root: str):
         self.project_root = Path(project_root)
-        self.issues: List[dict] = []
+        self.issues: list[dict] = []
 
         # 危险的SQL模式
         self.dangerous_patterns = [
@@ -55,12 +53,12 @@ class SQLSecurityChecker:
             "is_locked",
         }
 
-    def check_file(self, file_path: Path) -> List[dict]:
+    def check_file(self, file_path: Path) -> list[dict]:
         """检查单个文件的SQL安全问题"""
         issues = []
 
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 content = f.read()
                 lines = content.split("\n")
 
@@ -129,7 +127,7 @@ class SQLSecurityChecker:
 
         return issues
 
-    def check_directory(self, directory: str) -> List[dict]:
+    def check_directory(self, directory: str) -> list[dict]:
         """检查目录中的所有Python文件"""
         all_issues = []
 
@@ -236,7 +234,7 @@ else:
     def fix_common_issues(self, file_path: str, dry_run: bool = True) -> bool:
         """自动修复常见问题"""
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 content = f.read()
 
             original_content = content
