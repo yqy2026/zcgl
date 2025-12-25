@@ -33,6 +33,7 @@ interface ABTestContextType {
   getVariant: (testId: string) => ABTestVariant | null
   trackConversion: (testId: string, metric: string, value?: unknown) => void
   isTestActive: (testId: string) => boolean
+  getAllActiveTests: () => ABTestConfig[]
   loading: boolean
 }
 
@@ -40,7 +41,7 @@ const ABTestContext = createContext<ABTestContextType | null>(null)
 
 class ABTestManager {
   private tests: Map<string, ABTestConfig>
-  private userVariants: Map<string, string> // userId -> testVariants
+  private userVariants: Map<string, Record<string, string>> // userId -> {testId -> variantId}
   private conversions: Map<string, Map<string, unknown>> // testId -> metric -> value
   private userId: string | null = null
 
@@ -143,7 +144,8 @@ class ABTestManager {
     if (!this.userVariants.has(this.userId)) {
       this.userVariants.set(this.userId, {})
     }
-    this.userVariants.get(this.userId)![testId] = variant.id
+    const variants = this.userVariants.get(this.userId)!
+    variants[testId] = variant.id
 
     // 记录分配事件
     this.trackEvent('variant_assigned', {
@@ -326,6 +328,7 @@ export const ABTestProvider: React.FC<ABTestProviderProps> = ({ children, userId
     trackConversion: (testId: string, metric: string, value?: unknown) =>
       manager.trackConversion(testId, metric, value),
     isTestActive: (testId: string) => manager.isTestActive(testId),
+    getAllActiveTests: () => manager.getAllActiveTests(),
     loading
   }
 
@@ -363,7 +366,7 @@ export const ABTestWrapper: React.FC<ABTestWrapperProps> = ({
   const { getVariant, isTestActive, loading } = useABTest()
 
   if (loading) {
-    return loadingComponent ? <LoadingComponent /> : null
+    return LoadingComponent ? <LoadingComponent /> : null
   }
 
   if (!isTestActive(testId)) {
@@ -373,7 +376,7 @@ export const ABTestWrapper: React.FC<ABTestWrapperProps> = ({
   const variant = getVariant(testId)
 
   if (!variant) {
-    return fallback ? <FallbackComponent /> : <>{children}</>
+    return FallbackComponent ? <FallbackComponent /> : <>{children}</>
   }
 
   // 如果变体有自定义组件，使用它
@@ -391,7 +394,7 @@ export const useRouteABTest = (route: string) => {
   const { getAllActiveTests, getVariant, trackConversion } = useABTest()
 
   // 获取适用于当前路由的测试
-  const routeTests = getAllActiveTests().filter(test => test.route === route)
+  const routeTests = getAllActiveTests().filter((test: ABTestConfig) => test.route === route)
 
   const getRouteVariant = (testId: string) => {
     return getVariant(testId)
