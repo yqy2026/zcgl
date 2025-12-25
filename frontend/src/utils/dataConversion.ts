@@ -22,13 +22,18 @@ const DECIMAL_FIELDS = [
   'unrented_area',
   'non_commercial_area',
   'occupancy_rate',
+  'area', // 通用面积字段
 
   // 金额字段
   'monthly_rent',
   'deposit',
   'annual_income',
   'annual_expense',
-  'net_income'
+  'net_income',
+
+  // 汇总字段
+  'total_area',
+  'total_income'
 ] as const
 
 /**
