@@ -123,6 +123,30 @@ interface OccupancyRateStats {
     period: string;
     occupancyRate: number;
   }>;
+  // 实际API返回的额外属性
+  monthly_trend?: Array<{
+    month: string;
+    rate: number;
+    total_area: number;
+    rented_area: number;
+  }>;
+  by_property_nature?: Array<{
+    property_nature: string;
+    rate: number;
+    total_area: number;
+    rented_area: number;
+  }>;
+  by_ownership_entity?: Array<{
+    ownership_entity: string;
+    rate: number;
+    asset_count: number;
+  }>;
+  total_assets?: number;
+  summary?: {
+    total_area: number;
+    rented_area: number;
+    occupancy_rate: number;
+  };
 }
 
 // 资产分布统计接口
@@ -134,6 +158,46 @@ interface AssetDistributionStats {
     range: string;
     count: number;
   }>;
+  // 实际API返回的额外属性
+  by_property_nature?: Array<{
+    property_nature: string;
+    land_area: number;
+    property_area: number;
+    rentable_area: number;
+    rented_area: number;
+    vacant_area: number;
+    non_commercial_area: number;
+  }>;
+  by_ownership_status?: Array<{
+    ownership_status: string;
+    total_area: number;
+    rentable_area: number;
+    rented_area: number;
+    vacant_area: number;
+    occupancy_rate: number;
+  }>;
+  by_usage_status?: Array<{
+    usage_status: string;
+    total_area: number;
+    rentable_area: number;
+    rented_area: number;
+    vacant_area: number;
+    occupancy_rate: number;
+  }>;
+  by_ownership_entity?: Array<{
+    ownership_entity: string;
+    total_area: number;
+    rentable_area: number;
+    rented_area: number;
+    asset_count: number;
+    occupancy_rate: number;
+  }>;
+  total_assets?: number;
+  summary?: {
+    total_area: number;
+    total_assets: number;
+    by_nature_count: Record<string, number>;
+  };
 }
 
 // 面积统计接口

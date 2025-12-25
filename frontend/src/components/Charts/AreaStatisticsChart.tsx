@@ -20,6 +20,7 @@ import { Bar } from 'react-chartjs-2'
 
 import { assetService } from '@/services/assetService'
 import type { AssetSearchParams } from '@/types/asset'
+import { getChartYValue, getChartDatasetLabel } from '@/types/chart-types'
 
 // Local interface matching the actual API response structure
 interface AreaStatisticsData {
@@ -144,8 +145,10 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
       },
       tooltip: {
         callbacks: {
-          label: (context: { dataset: { label: string }; parsed: { y: number } }) => {
-            return `${context.dataset.label}: ${context.parsed.y.toLocaleString()} ㎡`
+          label: (context: unknown) => {
+            const label = getChartDatasetLabel(context);
+            const value = getChartYValue(context);
+            return `${label}: ${value.toLocaleString()} ㎡`;
           },
         },
       },
@@ -205,11 +208,13 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
       },
       tooltip: {
         callbacks: {
-          label: (context: { dataset: { label: string }; parsed: number; label: string }) => {
-            if (context.dataset.label?.includes('出租率')) {
-              return `${context.dataset.label}: ${context.parsed.y.toFixed(2)}%`
+          label: (context: unknown) => {
+            const label = getChartDatasetLabel(context);
+            const value = getChartYValue(context);
+            if (label?.includes('出租率')) {
+              return `${label}: ${value.toFixed(2)}%`;
             }
-            return `${context.dataset.label}: ${context.parsed.y.toLocaleString()} ㎡`
+            return `${label}: ${value.toLocaleString()} ㎡`;
           },
         },
       },
@@ -277,10 +282,13 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
       },
       tooltip: {
         callbacks: {
-          label: (context: { dataset: { label: string }; parsed: number; label: string }) => {
-            const item = data?.area_ranges?.[context.dataIndex]
+          label: (context: unknown) => {
+            const ctx = context as { dataIndex?: number; parsed?: number | { y: number } };
+            const dataIndex = ctx.dataIndex ?? 0;
+            const item = data?.area_ranges?.[dataIndex];
+            const yValue = typeof ctx.parsed === 'number' ? ctx.parsed : (ctx.parsed as { y: number })?.y ?? 0;
             return [
-              `资产数量: ${context.parsed.y} 个`,
+              `资产数量: ${yValue} 个`,
               `总面积: ${item?.total_area?.toLocaleString()} ㎡`,
               `占比: ${item?.percentage?.toFixed(1)}%`,
             ]
