@@ -48,6 +48,35 @@ import dayjs from 'dayjs';
 const { Title, Text, Paragraph } = Typography;
 const { TabPane } = Tabs;
 
+// 字段配置类型
+interface FieldConfigItem {
+  label: string;
+  type: 'text' | 'number' | 'phone' | 'date' | 'select';
+  required: boolean;
+  unit?: string;
+}
+
+type FieldConfig = Record<string, FieldConfigItem>;
+
+// 验证结果类型
+interface FieldValidation {
+  is_valid: boolean;
+  errors?: string[];
+}
+
+interface ValidationResults {
+  validation_results?: Record<string, FieldValidation>;
+}
+
+// 匹配结果类型
+interface MatchingResults {
+  matched_assets?: AssetMatch[];
+  matched_ownerships?: {
+    landlords?: OwnershipMatch[];
+    tenants?: OwnershipMatch[];
+  };
+}
+
 interface FieldReview {
   fieldName: string;
   label: string;
@@ -95,7 +124,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
   const [selectedOwnership, setSelectedOwnership] = useState<string>('');
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
-  const [validationSummary, setValidationSummary] = useState<Record<string, unknown>>({});
+  const [validationSummary, setValidationSummary] = useState<ValidationResults>({});
 
   useEffect(() => {
     if (sessionData?.extracted_data) {
@@ -114,7 +143,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
     const fieldConfig = getFieldConfig();
 
     Object.entries(sessionData.extracted_data || {}).forEach(([key, value]) => {
-      const config = fieldConfig[key];
+      const config = fieldConfig[key as keyof FieldConfig];
       if (config) {
         fields.push({
           fieldName: key,
@@ -123,7 +152,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
           confidence: calculateFieldConfidence(key, value, sessionData),
           validationStatus: getValidationStatus(key, value, validationSummary),
           validationMessage: getValidationMessage(key, validationSummary),
-          suggestedValue: getSuggestedValue(key, value, sessionData.matching_results),
+          suggestedValue: getSuggestedValue(key, value, sessionData.matching_results as MatchingResults | undefined),
           editMode: false
         });
       }
@@ -134,7 +163,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
 
   const calculateFieldConfidence = (fieldName: string, value: unknown, sessionData: Record<string, unknown>): number => {
     // 基础置信度
-    let confidence = sessionData.confidence_score || 0.8;
+    let confidence = (sessionData.confidence_score as number) || 0.8;
 
     // 根据字段重要性调整
     const importantFields = ['tenant_name', 'landlord_name', 'monthly_rent', 'property_address'];
@@ -150,7 +179,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
     return Math.min(confidence, 1.0);
   };
 
-  const getValidationStatus = (fieldName: string, value: unknown, validation: Record<string, unknown>): 'valid' | 'warning' | 'error' => {
+  const getValidationStatus = (fieldName: string, value: unknown, validation: ValidationResults): 'valid' | 'warning' | 'error' => {
     const fieldValidation = validation?.validation_results?.[fieldName];
     if (!fieldValidation) return 'valid';
 
@@ -163,23 +192,23 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
     }
   };
 
-  const getValidationMessage = (fieldName: string, validation: { validation_results?: Record<string, { errors?: string[] }> }): string | undefined => {
+  const getValidationMessage = (fieldName: string, validation: ValidationResults): string | undefined => {
     const fieldValidation = validation?.validation_results?.[fieldName];
     return fieldValidation?.errors?.[0];
   };
 
-  const getSuggestedValue = (fieldName: string, currentValue: unknown, matching: Record<string, unknown>): unknown => {
+  const getSuggestedValue = (fieldName: string, currentValue: unknown, matching: MatchingResults | undefined): unknown => {
     // 从匹配结果中获取建议值
-    if (fieldName === 'property_address' && matching?.matched_assets?.length > 0) {
+    if (fieldName === 'property_address' && matching?.matched_assets && matching.matched_assets.length > 0) {
       return matching.matched_assets[0].address;
     }
-    if (fieldName === 'landlord_name' && matching?.matched_ownerships?.landlords?.length > 0) {
+    if (fieldName === 'landlord_name' && matching?.matched_ownerships?.landlords && matching.matched_ownerships.landlords.length > 0) {
       return matching.matched_ownerships.landlords[0].ownership_name;
     }
     return currentValue;
   };
 
-  const getFieldConfig = () => ({
+  const getFieldConfig = (): FieldConfig => ({
     contract_number: { label: '合同编号', type: 'text', required: true },
     landlord_name: { label: '出租方', type: 'text', required: true },
     landlord_legal_rep: { label: '出租方法定代表人', type: 'text', required: false },
@@ -234,7 +263,8 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
   const handleAssetSelection = (assetId: string) => {
     setSelectedAsset(assetId);
     // 更新字段值
-    const selectedAssetData = sessionData.matching_results?.matched_assets?.find((asset: AssetMatch) => asset.id === assetId);
+    const matchingResults = sessionData.matching_results as MatchingResults | undefined;
+    const selectedAssetData = matchingResults?.matched_assets?.find((asset: AssetMatch) => asset.id === assetId);
     if (selectedAssetData) {
       handleFieldChange('property_address', selectedAssetData.address);
     }
@@ -243,7 +273,8 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
   const handleOwnershipSelection = (ownershipId: string, type: 'landlord' | 'tenant') => {
     if (type === 'landlord') {
       setSelectedOwnership(ownershipId);
-      const selectedOwnershipData = sessionData.matching_results?.matched_ownerships?.landlords?.find((ownership: OwnershipMatch) => ownership.id === ownershipId);
+      const matchingResults = sessionData.matching_results as MatchingResults | undefined;
+      const selectedOwnershipData = matchingResults?.matched_ownerships?.landlords?.find((ownership: OwnershipMatch) => ownership.id === ownershipId);
       if (selectedOwnershipData) {
         handleFieldChange('landlord_name', selectedOwnershipData.ownership_name);
       }
@@ -252,8 +283,8 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
 
   const handleConfirm = () => {
     // 构建确认的数据
-    const confirmedData = {
-      ...sessionData.extracted_data,
+    const confirmedData: Record<string, unknown> = {
+      ...(sessionData.extracted_data as Record<string, unknown>),
       asset_id: selectedAsset,
       ownership_id: selectedOwnership
     };
@@ -276,7 +307,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
     const validFields = fieldReviews.filter(f => f.validationStatus === 'valid').length;
     const warningFields = fieldReviews.filter(f => f.validationStatus === 'warning').length;
     const errorFields = fieldReviews.filter(f => f.validationStatus === 'error').length;
-    const avgConfidence = fieldReviews.reduce((sum, f) => sum + f.confidence, 0) / totalFields;
+    const avgConfidence = totalFields > 0 ? fieldReviews.reduce((sum, f) => sum + f.confidence, 0) / totalFields : 0;
 
     return {
       total: totalFields,
@@ -284,18 +315,18 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
       warnings: warningFields,
       errors: errorFields,
       avgConfidence: avgConfidence * 100,
-      completionRate: (validFields / totalFields) * 100
+      completionRate: totalFields > 0 ? (validFields / totalFields) * 100 : 0
     };
   }, [fieldReviews]);
 
   const renderFieldInput = (field: FieldReview) => {
-    const config = getFieldConfig()[field.fieldName];
+    const config = getFieldConfig()[field.fieldName as keyof FieldConfig];
 
     switch (config.type) {
       case 'date':
         return (
           <DatePicker
-            value={field.value ? dayjs(field.value) : null}
+            value={field.value && typeof field.value === 'string' ? dayjs(field.value) : null}
             onChange={(date) => handleFieldChange(field.fieldName, date ? date.format('YYYY-MM-DD') : null)}
             style={{ width: '100%' }}
             placeholder={`请选择${config.label}`}
@@ -304,7 +335,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
       case 'number':
         return (
           <InputNumber
-            value={field.value}
+            value={typeof field.value === 'number' ? field.value : undefined}
             onChange={(value) => handleFieldChange(field.fieldName, value)}
             style={{ width: '100%' }}
             placeholder={`请输入${config.label}`}
@@ -316,7 +347,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
       case 'select':
         return (
           <Select
-            value={field.value}
+            value={field.value as string | undefined}
             onChange={(value) => handleFieldChange(field.fieldName, value)}
             style={{ width: '100%' }}
             placeholder={`请选择${config.label}`}
@@ -329,10 +360,10 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
       default:
         return (
           <Input
-            value={field.value}
+            value={typeof field.value === 'string' ? field.value : String(field.value ?? '')}
             onChange={(e) => handleFieldChange(field.fieldName, e.target.value)}
             placeholder={`请输入${config.label}`}
-            suffix={field.suggestedValue && field.suggestedValue !== field.value && (
+            suffix={field.suggestedValue && field.suggestedValue !== field.value ? (
               <Tooltip title="建议使用匹配的值">
                 <Button
                   type="link"
@@ -341,7 +372,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
                   onClick={() => handleFieldChange(field.fieldName, field.suggestedValue)}
                 />
               </Tooltip>
-            )}
+            ) : undefined}
           />
         );
     }
