@@ -7,15 +7,9 @@
 import axios from 'axios';
 import type {
   ProcessingOptions,
-  FileUploadResponse,
-  SessionProgress,
-  SystemCapabilities,
-  SystemInfoResponse,
   EngineType,
   FieldType,
   ValidationLevel,
-  CompleteResult,
-  ConfidenceScores,
   ContractValidationReport,
   OCRResult,
   SealDetectionResult,
@@ -48,6 +42,38 @@ export interface SessionProgress {
   error_message?: string;
   processing_method?: string;
   extracted_data?: Record<string, unknown>;
+  progress_percentage?: number;
+  chinese_char_count?: number;
+  confidence_score?: number;
+  ocr_used?: boolean;
+  validation_results?: Record<string, unknown>;
+}
+
+export interface SystemCapabilities {
+  [key: string]: boolean | string | number;
+}
+
+export interface SystemInfoResponse {
+  system_info: {
+    version: string;
+    ocr_available: boolean;
+    features: string[];
+  };
+  capabilities: SystemCapabilities;
+}
+
+export interface CompleteResult {
+  success: boolean;
+  data?: Record<string, unknown>;
+  error?: string;
+}
+
+export interface ConfidenceScores {
+  overall: number;
+  fields: Record<string, number>;
+}
+
+export interface ExtendedSessionProgress extends SessionProgress {
   validated_data?: Record<string, unknown>;
   matching_results?: {
     matched_assets?: AssetMatch[];
@@ -474,7 +500,6 @@ class PDFImportService {
           success: true,
           active_sessions: [],
           total_count: 0,
-          message: '会话列表（API暂时不可用）'
         };
       }
 
