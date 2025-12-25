@@ -4,7 +4,7 @@
  */
 
 import React, { useMemo, useRef } from 'react'
-import { Table, Tag, Button, Space, Popconfirm, Tooltip } from 'antd'
+import { Table, Tag, Button, Space, Popconfirm, Tooltip, Pagination } from 'antd'
 import {
   EditOutlined,
   DeleteOutlined,
@@ -12,12 +12,18 @@ import {
   HistoryOutlined,
 } from '@ant-design/icons'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import type { ColumnsType } from 'antd/es/table'
+import type { ColumnsType, ColumnType as AntColumnType } from 'antd/es/table'
+import type { ColumnGroupType } from 'antd/es/table'
 import type { TableRowSelection, TablePaginationConfig, SorterResult, TableCurrentDataSource } from 'antd/es/table/interface'
 import type { FilterValue } from 'antd/es/table/interface'
 
 import type { Asset, AssetListResponse } from '@/types/asset'
 import { formatArea, formatPercentage, formatDate, getStatusColor } from '@/utils/format'
+
+// Type guard for ColumnType
+function isColumnType<T>(column: ColumnGroupType<T> | AntColumnType<T>): column is AntColumnType<T> {
+  return 'dataIndex' in column
+}
 
 /**
  * 虚拟滚动表格属性接口
@@ -391,7 +397,19 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
       <div key={item.id} style={style}>
         <div style={{ display: 'flex', width: '100%', padding: '0 16px' }}>
           {columns.map((column, colIndex) => {
-            const value = item[column.dataIndex as keyof Asset]
+            // Type guard to ensure column has dataIndex
+            if (!isColumnType(column)) {
+              return null
+            }
+
+            const dataIndex = column.dataIndex as keyof Asset
+            const value = item[dataIndex]
+
+            // Type-safe render function call
+            const renderValue = column.render
+              ? (column.render as (value: unknown, record: Asset, index: number) => React.ReactNode)(value, item, index)
+              : value as React.ReactNode
+
             return (
               <div
                 key={column.key || colIndex}
@@ -405,7 +423,7 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
                   textAlign: column.align || 'left'
                 }}
               >
-                {column.render ? column.render(value, item, index) : value}
+                {renderValue}
               </div>
             )
           })}
@@ -415,7 +433,7 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
   }
 
   // 计算表头宽度
-  const totalWidth = columns.reduce((sum, col) => sum + (col.width || 150), 0)
+  const totalWidth = columns.reduce((sum: number, col) => sum + (col.width || 150), 0)
 
   return (
     <div>
@@ -436,21 +454,25 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
             <input type="checkbox" />
           </div>
         )}
-        {columns.map((column, index) => (
-          <div
-            key={column.key || index}
-            style={{
-              flex: column.width ? `0 0 ${column.width}px` : 1,
-              minWidth: column.width || 100,
-              padding: '0 8px',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            {column.title}
-          </div>
-        ))}
+        {columns.map((column, index) => {
+          // Type-safe title access
+          const title = isColumnType(column) ? column.title : undefined
+          return (
+            <div
+              key={column.key || index}
+              style={{
+                flex: column.width ? `0 0 ${column.width}px` : 1,
+                minWidth: column.width || 100,
+                padding: '0 8px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {title as React.ReactNode}
+            </div>
+          )
+        })}
       </div>
 
       {/* 虚拟滚动内容 */}
@@ -490,13 +512,13 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
 
       {/* 分页 */}
       <div style={{ padding: '16px 0', textAlign: 'right' }}>
-        <Table.Pagination
+        <Pagination
           current={data?.page || 1}
           pageSize={data?.limit || 20}
           total={data?.total || 0}
           showSizeChanger={true}
           showQuickJumper={true}
-          showTotal={(total, range) =>
+          showTotal={(total: number, range: [number, number]) =>
             `第 ${range[0]}-${range[1]} 条，共 ${total} 条记录`
           }
           pageSizeOptions={['10', '20', '50', '100']}
