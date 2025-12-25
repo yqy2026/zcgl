@@ -85,6 +85,10 @@ export interface AnalyticsData {
   usage_status_distribution: UsageStatusDistribution[]
   business_category_distribution: BusinessCategoryDistribution[]
   occupancy_trend: OccupancyTrend[]
+  property_nature_area_distribution?: PropertyNatureDistribution[]
+  ownership_status_area_distribution?: OwnershipStatusDistribution[]
+  usage_status_area_distribution?: UsageStatusDistribution[]
+  business_category_area_distribution?: BusinessCategoryDistribution[]
   // performance_metrics: PerformanceMetrics  // 暂时注释，等待后端API支持
   // comparison_data?: ComparisonData  // 暂时注释，等待后端API支持
 }
@@ -93,6 +97,19 @@ export interface AnalyticsResponse {
   success: boolean
   message: string
   data: AnalyticsData
+  // Flat structure for direct access (compatible with AnalyticsData)
+  area_summary?: AreaSummary
+  financial_summary?: FinancialSummary
+  occupancy_distribution?: OccupancyDistribution[]
+  property_nature_distribution?: PropertyNatureDistribution[]
+  ownership_status_distribution?: OwnershipStatusDistribution[]
+  usage_status_distribution?: UsageStatusDistribution[]
+  business_category_distribution?: BusinessCategoryDistribution[]
+  occupancy_trend?: OccupancyTrend[]
+  property_nature_area_distribution?: PropertyNatureDistribution[]
+  ownership_status_area_distribution?: OwnershipStatusDistribution[]
+  usage_status_area_distribution?: UsageStatusDistribution[]
+  business_category_area_distribution?: BusinessCategoryDistribution[]
 }
 
 export interface ChartDataPoint {
