@@ -1,5 +1,11 @@
 import "@testing-library/jest-dom";
 import React from "react";
+import { act, waitFor, fireEvent } from "@testing-library/react";
+
+// Global test utilities - make these available in all test files
+global.act = act;
+global.waitFor = waitFor;
+global.fireEvent = fireEvent;
 
 // Mock IntersectionObserver
 global.IntersectionObserver = jest.fn().mockImplementation(() => ({

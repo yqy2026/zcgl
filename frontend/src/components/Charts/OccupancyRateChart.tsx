@@ -2,8 +2,8 @@ import React, { useEffect, useRef } from 'react'
 import { Card, Typography, Space, Statistic, Row, Col, Spin, Alert } from 'antd'
 import {
   PercentageOutlined,
-  TrendingUpOutlined,
-  TrendingDownOutlined,
+  RiseOutlined,
+  FallOutlined,
   MinusOutlined,
 } from '@ant-design/icons'
 import { useQuery } from '@tanstack/react-query'
@@ -258,9 +258,9 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
   // 获取趋势图标
   const getTrendIcon = (trend: string, percentage: number) => {
     if (trend === 'up') {
-      return <TrendingUpOutlined style={{ color: '#52c41a' }} />
+      return <RiseOutlined style={{ color: '#52c41a' }} />
     } else if (trend === 'down') {
-      return <TrendingDownOutlined style={{ color: '#ff4d4f' }} />
+      return <FallOutlined style={{ color: '#ff4d4f' }} />
     } else {
       return <MinusOutlined style={{ color: '#8c8c8c' }} />
     }

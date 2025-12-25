@@ -12,7 +12,7 @@ export { API_CONFIG, API_ENDPOINTS, ERROR_CODES, HTTP_STATUS } from './config';
 
 // Export types
 export type {
-  ApiResponse,
+  StandardApiResponse,
   PaginatedApiResponse,
   EnhancedApiClientConfig,
   EnhancedApiError,
