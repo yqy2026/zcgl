@@ -9,6 +9,6 @@ export { default as AssetBatchActions } from './AssetBatchActions'
 export { AssetForm, AssetFormHelp } from '../Forms'
 // export { default as AssetFormDemo } from './AssetFormDemo' // Module does not exist
 export { default as AssetDetailInfo } from './AssetDetailInfo'
-export { default as AssetHistory } from './AssetHistory'
+export type { default as AssetHistory } from './AssetHistory'
 export { default as AssetImport } from './AssetImport'
 export { default as AssetExport } from './AssetExport'

@@ -147,6 +147,22 @@ interface OccupancyRateStats {
     rented_area: number;
     occupancy_rate: number;
   };
+  // OccupancyRateChart使用的额外属性
+  overall_rate?: number;
+  trend_percentage?: number;
+  trend?: 'up' | 'down' | 'stable';
+  top_performers?: Array<{
+    property_name: string;
+    occupancy_rate: number;
+    total_area: number;
+    rented_area: number;
+  }>;
+  low_performers?: Array<{
+    property_name: string;
+    occupancy_rate: number;
+    total_area: number;
+    rented_area: number;
+  }>;
 }
 
 // 资产分布统计接口
@@ -167,6 +183,10 @@ interface AssetDistributionStats {
     rented_area: number;
     vacant_area: number;
     non_commercial_area: number;
+    // AssetDistributionChart使用的额外属性
+    count?: number;
+    total_area?: number;
+    percentage?: number;
   }>;
   by_ownership_status?: Array<{
     ownership_status: string;
@@ -175,6 +195,9 @@ interface AssetDistributionStats {
     rented_area: number;
     vacant_area: number;
     occupancy_rate: number;
+    // AssetDistributionChart使用的额外属性
+    count?: number;
+    percentage?: number;
   }>;
   by_usage_status?: Array<{
     usage_status: string;
@@ -183,6 +206,9 @@ interface AssetDistributionStats {
     rented_area: number;
     vacant_area: number;
     occupancy_rate: number;
+    // AssetDistributionChart使用的额外属性
+    count?: number;
+    percentage?: number;
   }>;
   by_ownership_entity?: Array<{
     ownership_entity: string;
@@ -191,12 +217,16 @@ interface AssetDistributionStats {
     rented_area: number;
     asset_count: number;
     occupancy_rate: number;
+    // AssetDistributionChart使用的额外属性
+    percentage?: number;
   }>;
   total_assets?: number;
   summary?: {
     total_area: number;
     total_assets: number;
     by_nature_count: Record<string, number>;
+    // AssetDistributionChart使用的额外属性
+    commercial_area?: number;
   };
 }
 

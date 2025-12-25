@@ -45,20 +45,26 @@ const AuthGuard: React.FC<AuthGuardProps> = ({
   }
 
   // 检查单个权限
-  if (requiredPermission && !hasPermission(requiredPermission)) {
-    return (
-      <Result
-        status="403"
-        title="403 - 权限不足"
-        subTitle={`您需要 "${requiredPermission}" 权限才能访问此页面。`}
-        icon={<LockOutlined />}
-        extra={
-          <Button type="primary" onClick={() => window.history.back()}>
-            返回上一页
-          </Button>
-        }
-      />
-    )
+  if (requiredPermission) {
+    // 解析权限字符串，格式通常为 "resource:action" 或 "resource action"
+    const [resource, action] = requiredPermission.includes(':')
+      ? requiredPermission.split(':')
+      : requiredPermission.split(' ');
+    if (!hasPermission(resource, action)) {
+      return (
+        <Result
+          status="403"
+          title="403 - 权限不足"
+          subTitle={`您需要 "${requiredPermission}" 权限才能访问此页面。`}
+          icon={<LockOutlined />}
+          extra={
+            <Button type="primary" onClick={() => window.history.back()}>
+              返回上一页
+            </Button>
+          }
+        />
+      );
+    }
   }
 
   // 检查多个权限（任一满足即可）
