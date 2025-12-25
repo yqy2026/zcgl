@@ -156,12 +156,18 @@ interface OccupancyRateStats {
     occupancy_rate: number;
     total_area: number;
     rented_area: number;
+    // OccupancyRateChart使用的额外属性
+    area?: number;
+    rate?: number;
   }>;
   low_performers?: Array<{
     property_name: string;
     occupancy_rate: number;
     total_area: number;
     rented_area: number;
+    // OccupancyRateChart使用的额外属性
+    area?: number;
+    rate?: number;
   }>;
 }
 
@@ -218,6 +224,7 @@ interface AssetDistributionStats {
     asset_count: number;
     occupancy_rate: number;
     // AssetDistributionChart使用的额外属性
+    count?: number;
     percentage?: number;
   }>;
   total_assets?: number;
