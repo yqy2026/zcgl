@@ -93,8 +93,8 @@ class ErrorBoundaryComponent extends Component<ErrorBoundaryProps, ErrorBoundary
   private reportError = (error: Error, errorInfo: ErrorInfo) => {
     const errorReport: ErrorReport = {
       error: error.message,
-      stack: error.stack || '',
-      componentStack: errorInfo.componentStack,
+      stack: error.stack ?? '',
+      componentStack: errorInfo.componentStack ?? '',
       timestamp: new Date().toISOString(),
       userAgent: navigator.userAgent,
       url: window.location.href,

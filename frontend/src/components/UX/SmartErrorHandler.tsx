@@ -46,6 +46,41 @@ interface ErrorContextType {
 
 const ErrorContext = createContext<ErrorContextType | null>(null)
 
+// Helper functions - defined outside component for shared use
+const getErrorIcon = (type: ErrorType, severity: ErrorSeverity) => {
+  switch (type) {
+    case 'error':
+      return severity === 'critical' ? <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} /> :
+             severity === 'high' ? <ExclamationCircleOutlined style={{ color: '#ff7a45' }} /> :
+             <ExclamationCircleOutlined style={{ color: '#fa8c16' }} />
+    case 'warning':
+      return <WarningOutlined style={{ color: '#faad14' }} />
+    case 'success':
+      return <CheckCircleOutlined style={{ color: '#52c41a' }} />
+    case 'info':
+      return <InfoCircleOutlined style={{ color: '#1890ff' }} />
+    default:
+      return <ExclamationCircleOutlined />
+  }
+}
+
+const getErrorColor = (type: ErrorType, severity: ErrorSeverity) => {
+  switch (type) {
+    case 'error':
+      return severity === 'critical' ? '#ff4d4f' :
+             severity === 'high' ? '#ff7a45' :
+             severity === 'medium' ? '#fa8c16' : '#ffc53d'
+    case 'warning':
+      return '#faad14'
+    case 'success':
+      return '#52c41a'
+    case 'info':
+      return '#1890ff'
+    default:
+      return '#d9d9d9'
+  }
+}
+
 export const useSmartError = () => {
   const context = useContext(ErrorContext)
   if (!context) {
@@ -209,40 +244,6 @@ export const SmartErrorHandler: React.FC<SmartErrorHandlerProps> = ({
     getErrorStats
   }
 
-  const getErrorIcon = (type: ErrorType, severity: ErrorSeverity) => {
-    switch (type) {
-      case 'error':
-        return severity === 'critical' ? <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} /> :
-               severity === 'high' ? <ExclamationCircleOutlined style={{ color: '#ff7a45' }} /> :
-               <ExclamationCircleOutlined style={{ color: '#fa8c16' }} />
-      case 'warning':
-        return <WarningOutlined style={{ color: '#faad14' }} />
-      case 'success':
-        return <CheckCircleOutlined style={{ color: '#52c41a' }} />
-      case 'info':
-        return <InfoCircleOutlined style={{ color: '#1890ff' }} />
-      default:
-        return <ExclamationCircleOutlined />
-    }
-  }
-
-  const getErrorColor = (type: ErrorType, severity: ErrorSeverity) => {
-    switch (type) {
-      case 'error':
-        return severity === 'critical' ? '#ff4d4f' :
-               severity === 'high' ? '#ff7a45' :
-               severity === 'medium' ? '#fa8c16' : '#ffc53d'
-      case 'warning':
-        return '#faad14'
-      case 'success':
-        return '#52c41a'
-      case 'info':
-        return '#1890ff'
-      default:
-        return '#d9d9d9'
-    }
-  }
-
   return (
     <ErrorContext.Provider value={contextValue}>
       {children}
@@ -338,7 +339,8 @@ const ErrorNotificationContainer: React.FC<ErrorNotificationContainerProps> = ({
               >
                 查看详情
               </Button>
-              {enableRetry && error.action && (
+              {/* TODO: Implement retry functionality through context */}
+              {/* {error.action && (
                 <Button
                   type="default"
                   size="small"
@@ -348,7 +350,7 @@ const ErrorNotificationContainer: React.FC<ErrorNotificationContainerProps> = ({
                 >
                   重试
                 </Button>
-              )}
+              )} */}
             </Space>
           </div>
         </div>
@@ -412,7 +414,7 @@ const ErrorModal: React.FC<ErrorModalProps> = ({ error, onClose, onRetry, enable
           {error.message}
         </div>
 
-        {error.details && (
+        {(error.details as any) && (
           <div style={{ marginTop: '16px' }}>
             <Text strong>详细信息：</Text>
             <Collapse ghost style={{ marginTop: '8px' }}>
@@ -426,7 +428,7 @@ const ErrorModal: React.FC<ErrorModalProps> = ({ error, onClose, onRetry, enable
                   fontSize: '12px'
                 }}>
                   {typeof error.details === 'object'
-                    ? JSON.stringify(error.details, null, 2)
+                    ? JSON.stringify(error.details, null, 2) as string
                     : String(error.details)
                   }
                 </pre>

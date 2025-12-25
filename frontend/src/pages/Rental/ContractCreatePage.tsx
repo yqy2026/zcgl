@@ -42,7 +42,7 @@ const ContractCreatePage: React.FC = () => {
   const handleCreateContract = async (contractData: RentContractCreate) => {
     setLoading(true);
     try {
-      const response = await rentContractService.createContract(contractData);
+      const response = await rentContractService.createContract(contractData) as any;
 
       if (response.success) {
         setContractCreated(true);

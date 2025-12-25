@@ -38,7 +38,7 @@ export const useAuth = () => {
     setError(null)
 
     try {
-      const response = await AuthService.login(credentials)
+      const response = await AuthService.login(credentials) as any
 
       if (response.success) {
         setUser(response.data.user)
@@ -46,8 +46,8 @@ export const useAuth = () => {
       } else {
         setError('用户名或密码错误')
       }
-    } catch (err: { message?: string; response?: { status?: number; data?: Record<string, unknown> } }) {
-      const errorMessage = err.message || '登录失败，请稍后重试'
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : '登录失败，请稍后重试'
       setError(errorMessage)
       message.error(errorMessage)
     } finally {
@@ -63,7 +63,7 @@ export const useAuth = () => {
       setUser(null)
       setError(null)
       message.success('已安全登出')
-    } catch (err: { message?: string; response?: { status?: number; data?: Record<string, unknown> } }) {
+    } catch (err: unknown) {
       console.error('登出失败:', err)
       // 即使API失败，也要清除本地状态
       setUser(null)

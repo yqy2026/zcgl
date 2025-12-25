@@ -90,8 +90,8 @@ const SmartInteractionProvider: React.FC<SmartInteractionManagerProps> = ({
 }) => {
   const [userBehavior, setUserBehavior] = useState<UserBehavior>({
     sessionId: `session_${Date.now()}`,
-    actions: []
-  })
+    actions: [] as any
+  } as any)
   const [userPreferences, setUserPreferences] = useState({
     theme: 'light',
     language: 'zh-CN',
@@ -204,7 +204,7 @@ const SmartInteractionProvider: React.FC<SmartInteractionManagerProps> = ({
       { key: 'esc', description: '取消', action: 'cancel' }
     ]
 
-    setShortcuts(shortcuts.reduce((acc, shortcut) => {
+    setShortcuts(shortcuts.reduce((acc: Record<string, string>, shortcut) => {
       acc[shortcut.key] = shortcut.description
       return acc
     }, {}))
@@ -440,11 +440,13 @@ const SmartInteractionExample: React.FC = () => {
     userPreferences,
     setUserPreferences,
     undoStack,
-    redoStack
+    redoStack,
+    undo,
+    redo
   } = useSmartInteraction()
 
   const handleToggleTheme = () => {
-    setUserPreferences(prev => ({
+    setUserPreferences((prev: any) => ({
       ...prev,
       theme: prev.theme === 'light' ? 'dark' : 'light'
     }))

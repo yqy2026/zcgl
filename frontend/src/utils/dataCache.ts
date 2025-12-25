@@ -63,7 +63,7 @@ export class DataCache {
       return null
     }
 
-    return entry.data
+    return entry.data as T
   }
 
   has(key: string, params?: unknown): boolean {
@@ -126,7 +126,7 @@ export class BatchRequestOptimizer {
 
     // 如果有相同的请求正在进行，返回相同的Promise
     if (this.pendingRequests.has(requestKey)) {
-      return this.pendingRequests.get(requestKey)!
+      return this.pendingRequests.get(requestKey)! as T
     }
 
     const promise = (async () => {

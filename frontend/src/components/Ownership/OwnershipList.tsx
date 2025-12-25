@@ -160,7 +160,7 @@ const OwnershipList: React.FC<OwnershipListProps> = ({
           loadOwnerships();
           loadStatistics();
         } catch (error: unknown) {
-          message.error(error.message || '删除失败');
+          message.error(error instanceof Error ? error.message : '删除失败');
         }
       }
     });

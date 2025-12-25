@@ -89,10 +89,10 @@ const SmartFormOptimizer: React.FC<SmartFormOptimizerProps> = ({
             if (rule.required && !values[field.name]) {
               newErrors[field.name] = rule.message
             }
-            if (rule.min !== undefined && values[field.name] < rule.min) {
+            if (rule.min !== undefined && (values[field.name] as any) < rule.min) {
               newErrors[field.name] = rule.message
             }
-            if (rule.max !== undefined && values[field.name] > rule.max) {
+            if (rule.max !== undefined && (values[field.name] as any) > rule.max) {
               newErrors[field.name] = rule.message
             }
             if (rule.custom && !rule.custom(values[field.name])) {
@@ -133,7 +133,7 @@ const SmartFormOptimizer: React.FC<SmartFormOptimizerProps> = ({
             min={0}
             max={field.maxLength}
             formatter={value => `${value}${field.suffix || ''}`}
-            parser={value => value!.replace(new RegExp(`${field.suffix || ''}$`), '')}
+            parser={value => value?.replace(new RegExp(`${field.suffix || ''}$`), '') as any}
           />
         )
 
@@ -168,7 +168,7 @@ const SmartFormOptimizer: React.FC<SmartFormOptimizerProps> = ({
   }
 
   return (
-    <Card style={style} size={size}>
+    <Card style={style} size={size as any}>
       <Form
         form={form}
         layout={layout}

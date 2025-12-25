@@ -214,7 +214,7 @@ class DictionaryCache {
     for (const type of dictTypes) {
       const cached = this.cache.get(type);
       if (cached) {
-        preloaded.set(type, cached);
+        preloaded.set(type, cached.data as any);
       }
     }
 
@@ -426,7 +426,7 @@ class BaseDictionaryService {
           source: 'cache',
           metadata: includeMetadata ? {
             totalItems: cached.length,
-            activeItems: cached.filter(item => item.isActive !== false).length,
+            activeItems: cached.filter((item: any) => item.isActive !== false).length,
             lastUpdated: new Date().toISOString(),
             cacheTimestamp: Date.now()
           } : undefined
@@ -546,7 +546,7 @@ class BaseDictionaryService {
     return Object.values(DICTIONARY_CONFIGS).filter(config =>
       config.name.toLowerCase().includes(lowerKeyword) ||
       config.description.toLowerCase().includes(lowerKeyword) ||
-      config.tags.some(tag => tag.toLowerCase().includes(lowerKeyword))
+      (config.tags?.some((tag: string) => tag.toLowerCase().includes(lowerKeyword)) ?? false)
     );
   }
 

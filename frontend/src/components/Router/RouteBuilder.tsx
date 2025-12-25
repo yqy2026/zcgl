@@ -19,6 +19,9 @@ interface RouteBuilderConfig extends RouteConfig {
     | React.LazyExoticComponent<React.ComponentType<RouteComponentProps>>;
   preload?: () => void;
   children?: RouteBuilderConfig[];
+  errorBoundary?: boolean;
+  fallback?: React.ReactNode;
+  element?: React.ReactNode;
 }
 
 /**

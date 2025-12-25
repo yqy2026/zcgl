@@ -67,7 +67,6 @@ const LazyRoute: React.FC<LazyRouteProps> = ({
     <Route
       {...routeProps}
       element={wrappedElement}
-      onMouseEnter={handleMouseEnter}
     />
   )
 }

@@ -117,7 +117,8 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
       onSuccess();
     } catch (error: unknown) {
       console.error('保存项目失败:', error);
-      message.error(error.response?.data?.detail || '保存项目失败');
+      const errorMsg = (error as any)?.response?.data?.detail || '保存项目失败';
+      message.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -152,7 +153,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
           label="项目名称"
           name="name"
           rules={[
-            { required: true, validator: validateProjectName }
+            { required: true, validator: validateProjectName as any }
           ]}
         >
           <Input placeholder="请输入项目名称" maxLength={200} />

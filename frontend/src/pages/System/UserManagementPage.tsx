@@ -55,7 +55,7 @@ interface UserStatistics {
 }
 
 const UserManagementPage: React.FC = () => {
-  const { message } = useMessage()
+  const message = useMessage()
   const [users, setUsers] = useState<User[]>([])
   const [organizations, setOrganizations] = useState<any[]>([])
   const [roles, setRoles] = useState<any[]>([])

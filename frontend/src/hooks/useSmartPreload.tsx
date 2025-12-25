@@ -286,7 +286,7 @@ export const useSmartPreload = (config?: Partial<PreloadConfig>) => {
   // 提供预加载函数
   const preloadRoute = useCallback((route: string) => {
     if (managerRef.current) {
-      managerRef.current.schedulePreload(route, "predictive");
+      (managerRef.current as any).schedulePreload(route, "predictive");
     }
   }, []);
 

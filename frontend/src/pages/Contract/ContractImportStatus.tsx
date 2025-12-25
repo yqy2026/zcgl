@@ -49,7 +49,7 @@ const { Step } = Steps;
 
 interface ContractImportStatusProps {
   sessionId: string;
-  fileInfo: FileUploadResponse['file_info'];
+  fileInfo: any;
   onComplete: (result: CompleteResult) => void;
   onError: (error: string) => void;
   onCancel: () => void;

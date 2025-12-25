@@ -22,24 +22,24 @@ export const useAssets = (params?: AssetSearchParams) => {
       setLoading(true)
       try {
         const result = await assetService.getAssets(params)
-        setAssets(result.data)
+        setAssets((result as any).items || result)
         setPagination({
           total: result.total,
           page: result.page,
           limit: result.limit,
-          hasNext: result.has_next,
-          hasPrev: result.has_prev,
+          hasNext: (result as any).hasNext || (result as any).has_next,
+          hasPrev: (result as any).hasPrev || (result as any).has_prev,
         })
         setError(null)
         return result
-      } catch (error: { message: string }) {
-        setError(error.message)
+      } catch (error: unknown) {
+        setError(error instanceof Error ? error.message : 'Unknown error')
         throw error
       } finally {
         setLoading(false)
       }
     },
-    keepPreviousData: true,
+    placeholderData: (previousData) => previousData, // React Query v4 syntax
     staleTime: 30 * 1000, // 30秒内不重新请求
   })
 }

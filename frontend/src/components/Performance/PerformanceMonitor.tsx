@@ -12,7 +12,7 @@ import {
   WarningOutlined,
   CheckCircleOutlined 
 } from '@ant-design/icons'
-import { getComponentLoadMetrics, SmartPreloader } from '@/utils/advancedLazyLoad'
+// import { getComponentLoadMetrics, SmartPreloader } from '@/utils/advancedLazyLoad'
 
 interface PerformanceMetrics {
   // Web Vitals
@@ -134,7 +134,7 @@ interface MemoryInfo {
 
   // 收集组件加载指标
   const collectComponentMetrics = useCallback(() => {
-    const report = getComponentLoadMetrics()
+    // const report = getComponentLoadMetrics()
     // 这里需要根据实际的报告格式调整
     const mockComponentMetrics: ComponentMetrics[] = [
       { name: 'DashboardPage', loadTime: 1200, status: 'success', retries: 0 },

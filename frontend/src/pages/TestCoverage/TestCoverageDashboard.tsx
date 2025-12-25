@@ -22,8 +22,8 @@ import {
 import {
   ReloadOutlined,
   SettingOutlined,
-  TrendingUpOutlined,
-  TrendingDownOutlined,
+  RiseOutlined,
+  FallOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
   InfoCircleOutlined
@@ -407,7 +407,7 @@ const TestCoverageDashboard: React.FC = () => {
               valueStyle={{
                 color: (coverageReport?.total_coverage || 0) >= (thresholds?.total_threshold || 75) ? '#3f8600' : '#cf1322',
               }}
-              prefix={(coverageReport?.total_coverage || 0) >= (thresholds?.total_threshold || 75) ? <TrendingUpOutlined /> : <TrendingDownOutlined />}
+              prefix={(coverageReport?.total_coverage || 0) >= (thresholds?.total_threshold || 75) ? <RiseOutlined /> : <FallOutlined />}
             />
             {thresholds && (
               <div style={{ fontSize: 12, color: '#666', marginTop: 8 }}>
@@ -539,7 +539,7 @@ const TestCoverageDashboard: React.FC = () => {
         open={thresholdModalVisible}
         onCancel={() => setThresholdModalVisible(false)}
         onOk={() => form.submit()}
-        confirmLoading={updateThresholdsMutation.isLoading}
+        confirmLoading={updateThresholdsMutation.isPending}
       >
         <Form
           form={form}

@@ -116,14 +116,14 @@ const ProjectList: React.FC<ProjectListProps> = ({
           current: response.page || prev.current,
           pageSize: response.size || prev.pageSize
         }));
-      } else if (response && response.data && response.data.items) {
+      } else if (response && (response as any).data && (response as any).data.items) {
         // 嵌套响应格式：{data: {items: [...], total: number}}
-        setProjects(response.data.items || []);
+        setProjects((response as any).data.items || []);
         setPagination(prev => ({
           ...prev,
-          total: response.data.total || response.data.total_count || 0,
-          current: response.data.page || prev.current,
-          pageSize: response.data.size || prev.pageSize
+          total: (response as any).data.total || (response as any).data.total_count || 0,
+          current: (response as any).data.page || prev.current,
+          pageSize: (response as any).data.size || prev.pageSize
         }));
       } else {
         console.error('Unexpected response format:', response);
@@ -135,7 +135,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
       }
 
       // 在项目数据加载后，基于实际数据计算统计信息
-      const loadedProjects = response?.items || response?.data?.items || [];
+      const loadedProjects = response?.items || (response as any)?.data?.items || [];
       const activeCount = loadedProjects.filter(p => p.is_active).length;
       const inactiveCount = loadedProjects.length - activeCount;
 
@@ -143,17 +143,18 @@ const ProjectList: React.FC<ProjectListProps> = ({
         total_count: loadedProjects.length,
         active_count: activeCount,
         inactive_count: inactiveCount,
-        type_distribution: {}, // 如需要可基于项目数据计算
-        status_distribution: {} // 如需要可基于项目数据计算
-      });
+        type_distribution: {} as any, // 如需要可基于项目数据计算
+        status_distribution: {} as any // 如需要可基于项目数据计算
+      } as any);
     } catch (error) {
       console.error('获取项目列表失败:', error);
+      const err = error as any;
       console.error('Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        data: error.response?.data
+        message: err.message,
+        status: err.response?.status,
+        data: err.response?.data
       });
-      message.error(`获取项目列表失败: ${error.message || '未知错误'}`);
+      message.error(`获取项目列表失败: ${err.message || '未知错误'}`);
     } finally {
       setLoading(false);
     }
@@ -168,9 +169,9 @@ const ProjectList: React.FC<ProjectListProps> = ({
         total_count: 0,
         active_count: 0,
         inactive_count: 0,
-        type_distribution: {},
-        status_distribution: {}
-      });
+        type_distribution: {} as any,
+        status_distribution: {} as any
+      } as any);
     } catch (error) {
       console.error('获取统计信息失败:', error);
       setStatistics(null);
@@ -299,7 +300,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
               <div>
                 {activeRelations.slice(0, 2).map((rel, index) => (
                   <Tag key={rel.id} color="blue" style={{ marginRight: 4 }}>
-                    {rel.ownership_name || record.ownership_entity || '权属方已关联'}
+                    {rel.ownership_name || (record as any).ownership_entity || '权属方已关联'}
                   </Tag>
                 ))}
                 {activeRelations.length > 2 && (
@@ -492,7 +493,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
               loading={ownershipsLoading}
               showSearch
               filterOption={(input, option) =>
-                (option?.children as string)?.toLowerCase().includes(input.toLowerCase())
+                String(option?.children || '').toLowerCase().includes(input.toLowerCase())
               }
             >
               {ownerships.map(ownership => (

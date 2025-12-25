@@ -48,7 +48,7 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
       // Got project options response
 
       // 确保响应数据是数组
-      const projects = Array.isArray(response) ? response : (response?.data || []);
+      const projects = Array.isArray(response) ? response : ((response as any)?.data || []);
       // Processed project options
 
       setProjectOptions(projects);
@@ -119,7 +119,7 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
         // 如果有关联项目数据，则更新关联项目
         if (values.related_projects && Array.isArray(values.related_projects)) {
           try {
-            await ownershipService.updateOwnershipProjects(initialValues.id, values.related_projects);
+            await (ownershipService as any).updateOwnershipProjects(initialValues.id, values.related_projects);
             console.log('关联项目更新成功');
           } catch (projectError) {
             console.error('更新关联项目失败:', projectError);
@@ -132,6 +132,7 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
         // 创建权属方 - 编码将由后端自动生成
         const createData: OwnershipCreate = {
           name: values.name,
+          code: values.code || '',  // 临时设为空字符串，后端会自动生成
           short_name: values.short_name
         };
 
@@ -141,7 +142,8 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
 
       onSuccess();
     } catch (error: unknown) {
-      message.error(error.message || '操作失败');
+      const errorMsg = error instanceof Error ? error.message : '操作失败';
+      message.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -164,7 +166,7 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
               name="name"
               rules={[
                 { required: true, message: '请输入权属方全称' },
-                { validator: validateName }
+                { validator: validateName as any }
               ]}
             >
               <Input placeholder="请输入权属方全称" />

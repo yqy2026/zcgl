@@ -33,9 +33,8 @@ const DictionaryPage: React.FC = () => {
 
   // 创建上下文相关的错误处理器
   const handleDictionaryError = createErrorHandler('字典管理', {
-    showDetails: false,
     duration: 3
-  })
+  } as any)
 
   // 新增状态
   const [searchText, setSearchText] = useState('')
@@ -71,7 +70,8 @@ const DictionaryPage: React.FC = () => {
       setAllEnumData(data)
     } catch (e: unknown) {
       console.error('获取枚举数据失败:', e)
-      message.error(e?.message || '获取枚举数据失败')
+      const errorMessage = e instanceof Error ? e.message : '获取枚举数据失败'
+      message.error(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -91,7 +91,8 @@ const DictionaryPage: React.FC = () => {
       setData(list)
     } catch (e: unknown) {
       console.error('获取枚举值失败:', e)
-      message.error(e?.message || '获取枚举值失败')
+      const errorMessage = e instanceof Error ? e.message : '获取枚举值失败'
+      message.error(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -172,7 +173,8 @@ const DictionaryPage: React.FC = () => {
         message.error('删除失败')
       }
     } catch (e: unknown) {
-      message.error(e?.message || '删除失败')
+      const errorMessage = e instanceof Error ? e.message : '删除失败'
+      message.error(errorMessage)
     }
   }
 
@@ -235,8 +237,10 @@ const DictionaryPage: React.FC = () => {
         fetchList(activeType)
       }
     } catch (e: unknown) {
-      if (e?.errorFields) return
-      message.error(e?.message || '保存失败')
+      const err = e as any
+      if (err?.errorFields) return
+      const errorMessage = e instanceof Error ? e.message : '保存失败'
+      message.error(errorMessage)
     }
   }
 
@@ -255,7 +259,8 @@ const DictionaryPage: React.FC = () => {
         message.error('更新失败')
       }
     } catch (e: unknown) {
-      message.error(e?.message || '更新失败')
+      const errorMessage = e instanceof Error ? e.message : '更新失败'
+      message.error(errorMessage)
     }
   }
 
@@ -321,7 +326,7 @@ const DictionaryPage: React.FC = () => {
         <div>
           <div style={{ fontWeight: 500 }}>{name}</div>
           <div style={{ fontSize: '12px', color: '#666' }}>
-            <Tag color="blue" size="small">{record.type.code}</Tag>
+            <Tag color="blue">{record.type.code}</Tag>
           </div>
         </div>
       ),

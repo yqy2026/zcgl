@@ -49,7 +49,7 @@ export const useProjectOptions = (isActive: boolean = true): UseProjectOptionsRe
       }
     },
     staleTime: 10 * 60 * 1000, // 10分钟缓存
-    cacheTime: 30 * 60 * 1000, // 30分钟保留缓存
+    gcTime: 30 * 60 * 1000, // 30分钟保留缓存
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchOnReconnect: false,
@@ -90,7 +90,7 @@ export const useProjectDetail = (id?: string): UseProjectDetailResult => {
       }
     },
     staleTime: 5 * 60 * 1000, // 5分钟缓存
-    cacheTime: 15 * 60 * 1000, // 15分钟保留缓存
+    gcTime: 15 * 60 * 1000, // 15分钟保留缓存
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchOnReconnect: false,
@@ -137,7 +137,7 @@ export const useProjectList = (params: ProjectQueryParams = {}): UseProjectListR
       }
     },
     staleTime: 2 * 60 * 1000, // 2分钟缓存
-    cacheTime: 10 * 60 * 1000, // 10分钟保留缓存
+    gcTime: 10 * 60 * 1000, // 10分钟保留缓存
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     retry: 1
@@ -187,7 +187,7 @@ export const useProjectStatistics = (): UseProjectStatisticsResult => {
       }
     },
     staleTime: 5 * 60 * 1000, // 5分钟缓存
-    cacheTime: 15 * 60 * 1000, // 15分钟保留缓存
+    gcTime: 15 * 60 * 1000, // 15分钟保留缓存
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     retry: 1
@@ -220,7 +220,8 @@ export const useCreateProject = () => {
     },
     onError: (error: unknown) => {
       console.error('创建项目失败:', error)
-      message.error(error.response?.data?.detail || '创建项目失败')
+      const err = error as any
+      message.error(err.response?.data?.detail || '创建项目失败')
     }
   })
 }
@@ -245,7 +246,8 @@ export const useUpdateProject = () => {
     },
     onError: (error: unknown) => {
       console.error('更新项目失败:', error)
-      message.error(error.response?.data?.detail || '更新项目失败')
+      const err = error as any
+      message.error(err.response?.data?.detail || '更新项目失败')
     }
   })
 }
@@ -269,7 +271,8 @@ export const useDeleteProject = () => {
     },
     onError: (error: unknown) => {
       console.error('删除项目失败:', error)
-      message.error(error.response?.data?.detail || '删除项目失败')
+      const err = error as any
+      message.error(err.response?.data?.detail || '删除项目失败')
     }
   })
 }
@@ -294,7 +297,8 @@ export const useToggleProjectStatus = () => {
     },
     onError: (error: unknown) => {
       console.error('切换项目状态失败:', error)
-      message.error(error.response?.data?.detail || '切换项目状态失败')
+      const err = error as any
+      message.error(err.response?.data?.detail || '切换项目状态失败')
     }
   })
 }

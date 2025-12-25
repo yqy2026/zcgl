@@ -46,7 +46,7 @@ export interface UnifiedDictionaryStats {
   totalTypes: number
   activeTypes: number
   totalValues: number
-  cacheStats: DictionaryStatistics
+  cacheStats: any  // Use any to avoid circular dependency with DictionaryStatistics
   systemStats: {
     systemDictionariesCount: number
     enumFieldTypesCount: number
@@ -142,9 +142,8 @@ class UnifiedDictionaryService {
       const result = await this.createEnumFieldType({
         name: dictType,
         code: dictType,
-        description: `自定义字典类型: ${dictType}`,
-        status: 'active'
-      });
+        description: `自定义字典类型: ${dictType}`
+      } as any);
 
       if (result) {
         return {
@@ -269,7 +268,7 @@ class UnifiedDictionaryService {
       const [types, cacheStats, usageStats] = await Promise.allSettled([
         this.getEnumFieldTypes(),
         Promise.resolve(baseDictionaryService.getStats()),
-        this.getEnumFieldUsageStats()
+        this.getEnumFieldUsageStats('')
       ]);
 
       const enumTypes = types.status === 'fulfilled' ? types.value : [];
@@ -302,7 +301,7 @@ class UnifiedDictionaryService {
         },
         performanceMetrics: {
           averageResponseTime: responseTime,
-          cacheHitRate: cacheStats.cacheHitRate,
+          cacheHitRate: cacheStats.status === 'fulfilled' ? (cacheStats.value as any).cacheHitRate || 0 : 0,
           errorRate: types.status === 'rejected' || usageStats.status === 'rejected' ? 1 : 0
         }
       };
@@ -809,7 +808,12 @@ class UnifiedDictionaryService {
     }>;
     timestamp: string;
   }> {
-    const checks = [];
+    const checks: Array<{
+      name: string;
+      status: 'pass' | 'fail';
+      message?: string;
+      responseTime?: number;
+    }> = [];
     let overallStatus: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
 
     // 检查基础字典服务

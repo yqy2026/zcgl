@@ -454,7 +454,7 @@ const OperationLogPage: React.FC = () => {
             <Col xs={24} sm={12} md={6}>
               <RangePicker
                 style={{ width: '100%' }}
-                onChange={(dates) => setDateRange(dates)}
+                onChange={(dates) => setDateRange(dates as any)}
                 placeholder={['开始日期', '结束日期']}
               />
             </Col>

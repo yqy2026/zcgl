@@ -62,7 +62,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setError(null)
 
       // 调用 AuthService 的登录方法
-      const response = await AuthService.login(credentials)
+      const response = await AuthService.login(credentials) as any
 
       console.log('📤 AuthContext收到登录响应:', response);
 

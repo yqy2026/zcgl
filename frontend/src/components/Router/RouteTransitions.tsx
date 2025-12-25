@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useRef, ReactNode } from "react";
 import { useLocation, useNavigationType } from "react-router-dom";
-import { motion, AnimatePresence, MotionProps } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { ConfigProvider, theme } from "antd";
 
 // 动画类型
@@ -37,9 +37,9 @@ interface RouteTransitionProps {
 }
 
 interface PageTransitionConfig {
-  enter: MotionProps;
-  exit: MotionProps;
-  initial: MotionProps;
+  enter: any;
+  exit: any;
+  initial: any;
 }
 
 class RouteTransitionManager {
@@ -48,6 +48,7 @@ class RouteTransitionManager {
   private reducedMotion: boolean;
 
   constructor() {
+    this.animationTypes = new Map();
     this.defaultDuration = 300;
     this.reducedMotion = this.detectReducedMotion();
     this.initializeAnimations();
@@ -366,7 +367,7 @@ export const useRouteAnimation = (route: string) => {
 export const useSmartTransition = () => {
   const location = useLocation();
   const navigationType = useNavigationType();
-  const [preferredAnimation, setPreferredAnimation] = useState<"fade" | "slide" | "scale" | "flip">(
+  const [preferredAnimation, setPreferredAnimation] = useState<"fade" | "slide" | "scale" | "flip" | "none">(
     "fade",
   );
 

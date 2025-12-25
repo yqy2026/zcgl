@@ -19,23 +19,19 @@ export const useAnalytics = (filters?: AssetSearchParams) => {
           data: {
             area_summary: {
               total_assets: 696,
-              total_land_area: 90466.8,
-              total_actual_property_area: 126447.36,
-              total_area: 149247.36,
-              total_rentable_area: 122246.02,
-              total_rented_area: 119170.36,
-              total_unrented_area: 3075.66,
+              total_area: 90466.8,
+              rentable_area: 122246.02,
+              rented_area: 119170.36,
+              unrented_area: 3075.66,
               assets_with_area_data: 669,
               occupancy_rate: 97.48,
-            },
+            } as any,
             financial_summary: {
-              total_monthly_rent: 0.0,
-              total_deposit: 0.0,
-              estimated_annual_income: 0.0,
-              assets_with_rent_data: 0,
-              assets_with_deposit_data: 0,
-              profit_margin: 0.0,
-            },
+              total_annual_income: 0.0,
+              total_annual_expense: 0.0,
+              total_net_income: 0.0,
+              assets_with_income_data: 0,
+            } as any,
             business_category_distribution: [],
             property_nature_distribution: [],
             ownership_status_distribution: [],
@@ -45,11 +41,11 @@ export const useAnalytics = (filters?: AssetSearchParams) => {
           },
           cache_stats: { cache_size: 0, hits: 0, misses: 0, hit_rate: 0 },
           performance_info: { calculation_time: 0, asset_count: 696, cache_enabled: true },
-        }
+        } as any
       }
     },
     staleTime: 5 * 60 * 1000, // 5分钟缓存
-    cacheTime: 10 * 60 * 1000, // 10分钟缓存
+    gcTime: 10 * 60 * 1000, // 10分钟缓存
     retry: 1, // 减少重试次数避免重复请求
     retryDelay: 1000,
     refetchOnWindowFocus: false, // 禁用自动刷新避免循环请求
@@ -64,7 +60,7 @@ export const useBasicStatistics = (filters?: AssetSearchParams) => {
     queryKey: ['basic-statistics', filters],
     queryFn: () => analyticsService.getBasicStatistics(filters),
     staleTime: 2 * 60 * 1000, // 2分钟缓存
-    cacheTime: 5 * 60 * 1000, // 5分钟缓存
+    gcTime: 5 * 60 * 1000, // 5分钟缓存
   })
 }
 
@@ -73,7 +69,7 @@ export const useAreaSummary = () => {
     queryKey: ['area-summary'],
     queryFn: () => analyticsService.getAreaSummary(),
     staleTime: 3 * 60 * 1000, // 3分钟缓存
-    cacheTime: 6 * 60 * 1000, // 6分钟缓存
+    gcTime: 6 * 60 * 1000, // 6分钟缓存
   })
 }
 
@@ -82,6 +78,6 @@ export const useFinancialSummary = () => {
     queryKey: ['financial-summary'],
     queryFn: () => analyticsService.getFinancialSummary(),
     staleTime: 3 * 60 * 1000, // 3分钟缓存
-    cacheTime: 6 * 60 * 1000, // 6分钟缓存
+    gcTime: 6 * 60 * 1000, // 6分钟缓存
   })
 }

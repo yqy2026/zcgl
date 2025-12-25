@@ -150,7 +150,7 @@ const RentLedgerPage: React.FC = () => {
   }, []);
 
   // 处理分页变化
-  const handleTableChange = (pagination: { current: number; pageSize: number; total?: number }) => {
+  const handleTableChange = ((pagination: { current: number; pageSize: number; total?: number }) => {
     setState(prev => ({
       ...prev,
       pagination: {
@@ -163,7 +163,7 @@ const RentLedgerPage: React.FC = () => {
       page: pagination.current,
       limit: pagination.pageSize,
     });
-  };
+  }) as any;
 
   // 处理搜索
   const handleSearch = (values: Record<string, unknown>) => {
@@ -207,10 +207,10 @@ const RentLedgerPage: React.FC = () => {
     try {
       await rentContractService.batchUpdateRentLedger({
         ledger_ids: state.selectedLedgers.map(ledger => ledger.id),
-        payment_status: values.payment_status,
-        payment_date: values.payment_date,
-        payment_method: values.payment_method,
-        notes: values.notes,
+        payment_status: values.paymentStatus as any,
+        payment_date: values.paymentDate,
+        payment_method: (values as any).payment_method || '',
+        notes: (values as any).notes || '',
       });
       message.success('批量更新成功');
       setState(prev => ({ ...prev, showBatchModal: false, selectedLedgers: [] }));
@@ -224,7 +224,7 @@ const RentLedgerPage: React.FC = () => {
   // 导出Excel
   const handleExport = async () => {
     try {
-      const blob = await rentContractService.exportLedgersToExcel(state.filters);
+      const blob = await rentContractService.exportLedgersToExcel(state.filters as any);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -240,7 +240,7 @@ const RentLedgerPage: React.FC = () => {
   };
 
   // 选择行变化
-  const rowSelection = {
+  const rowSelection: any = {
     selectedRowKeys: state.selectedLedgers.map(ledger => ledger.id),
     onChange: (selectedRowKeys: string[], selectedRows: RentLedger[]) => {
       setState(prev => ({ ...prev, selectedLedgers: selectedRows }));

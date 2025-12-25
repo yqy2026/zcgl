@@ -764,15 +764,3 @@ export class MonitoringService {
 
 // 导出单例实例
 export const monitoringService = new MonitoringService();
-
-// 导出类型
-export type {
-  SystemMetrics,
-  ApplicationMetrics,
-  HealthStatus,
-  PerformanceAlert,
-  DashboardData,
-  MetricsCollectionResult,
-  TrendAnalysis,
-  PerformanceSummary
-};

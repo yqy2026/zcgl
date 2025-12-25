@@ -209,22 +209,22 @@ export const cacheManager = ApiCacheManager.getInstance()
 export function cached(options: CacheOptions = {}) {
   return function (target: unknown, propertyKey: string, descriptor: PropertyDescriptor) {
     const originalMethod = descriptor.value
-    
+
     descriptor.value = async function (...args: unknown[]) {
-      const cacheKey = `${target.constructor.name}.${propertyKey}`
+      const cacheKey = `${(target as any).constructor.name}.${propertyKey}`
       const params = args.length > 0 ? args[0] : undefined
-      
+
       // 如果强制刷新或没有缓存，执行原方法
-      if (options.force || !cacheManager.has(cacheKey, params)) {
+      if (options.force || !cacheManager.has(cacheKey, params as any)) {
         const result = await originalMethod.apply(this, args)
-        cacheManager.set(cacheKey, result, options, params)
+        cacheManager.set(cacheKey, result, options, params as any)
         return result
       }
-      
+
       // 返回缓存结果
-      return cacheManager.get(cacheKey, params)
+      return cacheManager.get(cacheKey, params as any)
     }
-    
+
     return descriptor
   }
 }

@@ -15,7 +15,7 @@ import { AssetForm } from '../../components/Forms'
 import type { AssetCreateRequest, AssetUpdateRequest } from '../../types/asset'
 
 // 错误类型接口
-interface ApiError extends Error {
+interface ApiError {
   response?: {
     data?: {
       message?: string
@@ -131,7 +131,7 @@ const AssetCreatePage: React.FC = () => {
     },
     onError: (error: unknown) => {
       const apiError = error as ApiError
-      message.error(error.message || '创建失败')
+      message.error(apiError.response?.data?.detail || apiError.message || '创建失败')
     },
   })
 
@@ -146,7 +146,7 @@ const AssetCreatePage: React.FC = () => {
     },
     onError: (error: unknown) => {
       const apiError = error as ApiError
-      message.error(error.message || '更新失败')
+      message.error(apiError.response?.data?.detail || apiError.message || '更新失败')
     },
   })
 
@@ -194,8 +194,8 @@ const AssetCreatePage: React.FC = () => {
       </div>
 
       <AssetForm
-        initialData={asset}
-        onSubmit={handleSubmit}
+        initialData={asset as any}
+        onSubmit={handleSubmit as any}
         onCancel={handleCancel}
         loading={createMutation.isPending || updateMutation.isPending}
         mode={isEdit ? 'edit' : 'create'}

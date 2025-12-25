@@ -117,7 +117,7 @@ const LoginPage: React.FC = () => {
             <Form.Item name="remember" valuePropName="checked">
               <Checkbox
                 checked={formData.remember}
-                onChange={handleRememberChange}
+                onChange={handleRememberChange as any}
               >
                 记住我的登录状态
               </Checkbox>

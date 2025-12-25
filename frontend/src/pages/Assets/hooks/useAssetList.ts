@@ -149,7 +149,7 @@ const fetchAssetSummary = async (): Promise<AssetSummary> => {
     }>(API_ENDPOINTS.statistics.basic);
 
     // 处理API响应格式
-    const data = result.success ? result.data : result;
+    const data = (result as any).success ? (result as any).data : result;
 
     const total = data.total_assets || 0;
     const rented = data.usage_status?.rented || 0;

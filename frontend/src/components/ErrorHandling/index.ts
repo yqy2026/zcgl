@@ -2,5 +2,4 @@
 
 export { default as ErrorPage } from './ErrorPage'
 export { ErrorBoundary, SystemErrorBoundary, AssetErrorBoundary, useErrorHandler, useRouterErrorBoundary } from './ErrorBoundary'
-export { default as UXDemo } from './UXDemo'
 export { default as UXProvider } from './UXProvider'

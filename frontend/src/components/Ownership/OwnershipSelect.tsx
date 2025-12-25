@@ -149,7 +149,7 @@ const OwnershipSelect: React.FC<OwnershipSelectProps> = ({
         [{ownership.code}]
       </span>
       {!ownership.is_active && (
-        <Tag color="red" size="small">禁用</Tag>
+        <Tag color="red">禁用</Tag>
       )}
     </Space>
   );
@@ -212,8 +212,8 @@ const OwnershipSelect: React.FC<OwnershipSelectProps> = ({
     <div style={style}>
       <Space.Compact style={{ width: '100%' }}>
         <Select
-          value={value || (mode === 'multiple' ? [] : undefined)}
-          onChange={mode === 'multiple' ? handleMultipleChange : handleSingleChange}
+          value={value || (mode === 'multiple' ? [] : undefined) as any}
+          onChange={mode === 'multiple' ? handleMultipleChange : handleSingleChange as any}
           onClear={handleClear}
           placeholder={placeholder}
           disabled={disabled}

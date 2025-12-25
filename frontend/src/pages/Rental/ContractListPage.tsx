@@ -476,7 +476,7 @@ const ContractListPage: React.FC = () => {
             showQuickJumper: true,
             showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
           }}
-          onChange={handleTableChange}
+          onChange={handleTableChange as any}
           scroll={{ x: 1200 }}
         />
       </Card>

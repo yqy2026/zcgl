@@ -411,7 +411,7 @@ const RentContractForm: React.FC<RentContractFormProps> = ({
                   loading={loadingAssets}
                   optionFilterProp="children"
                   filterOption={(input, option) =>
-                    (option?.children as string)?.toLowerCase().includes(input.toLowerCase())
+                    String(option?.children || '').toLowerCase().includes(input.toLowerCase())
                   }
                 >
                   {(assets || []).map(asset => (
@@ -434,7 +434,7 @@ const RentContractForm: React.FC<RentContractFormProps> = ({
                   loading={loadingOwnerships}
                   optionFilterProp="children"
                   filterOption={(input, option) =>
-                    (option?.children as string)?.toLowerCase().includes(input.toLowerCase())
+                    String(option?.children || '').toLowerCase().includes(input.toLowerCase())
                   }
                 >
                   {(ownerships || []).map(ownership => (
@@ -522,7 +522,7 @@ const RentContractForm: React.FC<RentContractFormProps> = ({
                   min={0}
                   precision={2}
                   formatter={value => `¥ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={value => value!.replace(/\¥\s?|(,*)/g, '')}
+                  parser={(value: any) => value?.replace(/\¥\s?|(,*)/g, '')}
                 />
               </Form.Item>
             </Col>
@@ -569,7 +569,7 @@ const RentContractForm: React.FC<RentContractFormProps> = ({
                   min={0}
                   precision={2}
                   formatter={value => `¥ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={value => value!.replace(/\¥\s?|(,*)/g, '')}
+                  parser={(value: any) => value?.replace(/\¥\s?|(,*)/g, '')}
                 />
               </Form.Item>
             </Col>
@@ -660,7 +660,7 @@ const RentContractForm: React.FC<RentContractFormProps> = ({
                   min={0}
                   precision={2}
                   formatter={value => `¥ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={value => value!.replace(/\¥\s?|(,*)/g, '')}
+                  parser={(value: any) => value?.replace(/\¥\s?|(,*)/g, '')}
                 />
               </Form.Item>
             </Col>
@@ -675,7 +675,7 @@ const RentContractForm: React.FC<RentContractFormProps> = ({
                   min={0}
                   precision={2}
                   formatter={value => `¥ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={value => value!.replace(/\¥\s?|(,*)/g, '')}
+                  parser={(value: any) => value?.replace(/\¥\s?|(,*)/g, '')}
                 />
               </Form.Item>
             </Col>
@@ -690,7 +690,7 @@ const RentContractForm: React.FC<RentContractFormProps> = ({
                   min={0}
                   precision={2}
                   formatter={value => `¥ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={value => value!.replace(/\¥\s?|(,*)/g, '')}
+                  parser={(value: any) => value?.replace(/\¥\s?|(,*)/g, '')}
                 />
               </Form.Item>
             </Col>

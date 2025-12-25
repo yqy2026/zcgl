@@ -195,7 +195,7 @@ class RoutePerformanceMonitor {
     if (this.metrics.length === 0) return
 
     const currentMetric = this.metrics[this.metrics.length - 1]
-    ;(currentMetric as Record<string, unknown>)[key] = value
+    ;(currentMetric as unknown as Record<string, unknown>)[key] = value
   }
 
   startRouteMonitoring(route: string, navigationType: string) {
@@ -426,7 +426,7 @@ export const useRoutePerformanceMonitor = (config?: Partial<RoutePerformanceConf
                      navigationType === 'PUSH' ? 'navigate' : 'replace'
 
     const monitoring = monitor.startRouteMonitoring(route, navType)
-    monitoringRef.current = monitoring
+    monitoringRef.current = monitoring || null
 
     // Record when route becomes interactive
     const timer = setTimeout(() => {

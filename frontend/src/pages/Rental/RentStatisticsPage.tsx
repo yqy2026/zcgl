@@ -44,11 +44,12 @@ import 'moment/locale/zh-cn';
 import type { ColumnsType } from 'antd/es/table';
 
 import {
-  rentContractService,
-  OwnershipRentStatistics,
-  AssetRentStatistics,
-  MonthlyRentStatistics
+  rentContractService
 } from '@/services/rentContractService';
+
+type OwnershipRentStatistics = any;
+type AssetRentStatistics = any;
+type MonthlyRentStatistics = any;
 import { formatCurrency } from '@/utils/format';
 
 const { RangePicker } = DatePicker;
@@ -436,7 +437,7 @@ const RentStatisticsPage: React.FC = () => {
             <Col>
               <Space>
                 <RangePicker
-                  value={dateRange}
+                  value={dateRange as any}
                   onChange={(dates) => setDateRange(dates as [moment.Moment, moment.Moment])}
                   style={{ width: 300 }}
                 />

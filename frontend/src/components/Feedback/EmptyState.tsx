@@ -104,7 +104,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({
   const getActionButtons = () => {
     const buttons = []
 
-    if ((showCreateButton || config.showCreate) && onCreateClick) {
+    if ((showCreateButton || ('showCreate' in config && config.showCreate)) && onCreateClick) {
       buttons.push(
         <Button key="create" type="primary" icon={<PlusOutlined />} onClick={onCreateClick}>
           新增数据
@@ -112,7 +112,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({
       )
     }
 
-    if ((showRefreshButton || config.showRefresh) && onRefreshClick) {
+    if ((showRefreshButton || ('showRefresh' in config && config.showRefresh)) && onRefreshClick) {
       buttons.push(
         <Button key="refresh" icon={<ReloadOutlined />} onClick={onRefreshClick}>
           刷新
@@ -120,7 +120,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({
       )
     }
 
-    if ((showClearFilterButton || config.showClearFilter) && onClearFilterClick) {
+    if ((showClearFilterButton || ('showClearFilter' in config && config.showClearFilter)) && onClearFilterClick) {
       buttons.push(
         <Button key="clear-filter" onClick={onClearFilterClick}>
           清除筛选

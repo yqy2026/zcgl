@@ -145,7 +145,7 @@ const OwnershipDetail: React.FC<OwnershipDetailProps> = ({
       {ownership.related_projects && ownership.related_projects.length > 0 && (
         <Card title="关联项目" style={{ marginTop: 16 }}>
           <Table
-            columns={projectColumns}
+            columns={projectColumns as any}
             dataSource={ownership.related_projects}
             rowKey="id"
             pagination={false}

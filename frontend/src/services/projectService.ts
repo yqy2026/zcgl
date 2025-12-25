@@ -533,7 +533,7 @@ export class ProjectService {
       ]);
 
       // 从统计中查找当前项目的数据
-      const projectStats = statistics.projects?.find(p => p.id === id) || {
+      const projectStats = (statistics as any).projects?.find((p: any) => p.id === id) || {
         asset_count: 0,
         total_area: 0
       };

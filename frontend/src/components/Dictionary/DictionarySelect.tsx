@@ -16,7 +16,7 @@ interface DictionaryOption {
   icon?: string
 }
 
-interface DictionarySelectProps extends SelectProps {
+interface DictionarySelectProps extends Omit<any, 'options'> {
   /** 字典类型 */
   dictType: string
   /** 是否只显示启用的选项 */

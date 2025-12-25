@@ -40,6 +40,7 @@ interface RouteLoaderContextType {
   loadRouteModule: (modulePath: string) => Promise<DynamicRoute[]>
   isRouteLoaded: (routeId: string) => boolean
   getRouteMetrics: () => RouteMetrics
+  getRoutesByPermission: (resource: string, action: string) => DynamicRoute[]
 }
 
 interface RouteMetrics {
@@ -163,7 +164,7 @@ class DynamicRouteLoader {
       this.loadedModules.set(modulePath, module)
 
       // 从模块中提取路由配置
-      const routes = this.extractRoutesFromModule(module)
+      const routes = this.extractRoutesFromModule(module, modulePath)
 
       // 注册路由
       routes.forEach(route => {
@@ -183,7 +184,7 @@ class DynamicRouteLoader {
   private extractRoutesFromModule(module: {
     routes?: DynamicRoute[];
     default?: React.LazyExoticComponent<React.ComponentType<Record<string, unknown>>>;
-  }): DynamicRoute[] {
+  }, modulePath: string): DynamicRoute[] {
     // 模块应该导出 routes 数组
     if (module.routes && Array.isArray(module.routes)) {
       return module.routes
@@ -368,14 +369,19 @@ export const DynamicRouteProvider: React.FC<DynamicRouteProviderProps> = ({
     return loader.getRouteMetrics()
   }
 
+  const getRoutesByPermission = (resource: string, action: string) => {
+    return loader.getRoutesByPermission(resource, action)
+  }
+
   const contextValue: RouteLoaderContextType = {
-    routes: loader.routes,
+    routes: new Map(loader.getRoutes().map(route => [route.id, route])),
     registerRoute,
     unregisterRoute,
     updateRoute,
     loadRouteModule,
     isRouteLoaded,
-    getRouteMetrics
+    getRouteMetrics,
+    getRoutesByPermission
   }
 
   return (
@@ -431,7 +437,6 @@ export const DynamicRouteRenderer: React.FC = () => {
             key={route.id}
             path={route.path}
             element={element}
-            exact={route.exact}
           >
             {renderRoutes(route.children, fullPath)}
           </Route>
@@ -443,7 +448,6 @@ export const DynamicRouteRenderer: React.FC = () => {
           key={route.id}
           path={route.path}
           element={element}
-          exact={route.exact}
         />
       )
     })
@@ -550,7 +554,7 @@ export const usePermissionBasedRoutes = () => {
 }
 
 // 路由模块加载器
-export const RouteModuleLoader: React.FC = () => {
+export const RouteModuleLoader = () => {
   const { loadRouteModule } = useDynamicRoute()
   const [loading, setLoading] = useState(false)
   const [loadedModules, setLoadedModules] = useState<string[]>([])

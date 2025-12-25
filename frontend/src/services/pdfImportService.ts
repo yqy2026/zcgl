@@ -47,30 +47,74 @@ export interface SessionProgress {
   confidence_score?: number;
   ocr_used?: boolean;
   validation_results?: Record<string, unknown>;
+  // Extended properties for enhanced processing
+  file_name?: string;
+  file_size?: number;
+  validated_data?: Record<string, unknown>;
+  matching_results?: {
+    matched_assets?: AssetMatch[];
+    matched_ownerships?: OwnershipMatch[];
+    duplicate_contracts?: DuplicateContract[];
+    recommendations?: Record<string, string>;
+    overall_match_confidence?: number;
+  };
+  enhanced_status?: {
+    final_fields?: Record<string, unknown>;
+    final_results?: {
+      extraction_quality?: { overall_quality?: number };
+      validation_score?: number;
+      match_confidence?: number;
+      processing_summary?: { processing_methods?: unknown[] };
+    };
+    semantic_validation?: {
+      overall_confidence?: number;
+      recommendations?: string[];
+      total_fields?: number;
+      valid_fields?: number;
+      error_fields?: number;
+      warning_fields?: number;
+      field_results?: Record<string, unknown>;
+      semantic_analysis?: Record<string, unknown>;
+      summary?: string;
+    };
+    processing_summary?: {
+      engines_used?: string[];
+      processing_steps?: unknown[];
+      performance_metrics?: {
+        total_processing_time?: number;
+        memory_usage?: number;
+        cpu_usage?: number;
+      };
+      quality_assessment?: {
+        text_quality_score?: number;
+        structure_quality_score?: number;
+        data_completeness_score?: number;
+        semantic_accuracy_score?: number;
+        overall_quality_score?: number;
+        improvement_suggestions?: string[];
+      };
+    };
+    fusion_results?: {
+      confidence?: number;
+    };
+  };
 }
 
 export interface SystemCapabilities {
-  [key: string]: boolean | string | number;
+  [key: string]: boolean | string | number | string[] | undefined;
 }
 
 export interface SystemInfoResponse {
-  system_info: {
+  success: boolean;
+  message: string;
+  capabilities: SystemCapabilities;
+  system_info?: {
     version: string;
     ocr_available: boolean;
     features: string[];
   };
-  capabilities: SystemCapabilities;
-}
-
-export interface CompleteResult {
-  success: boolean;
-  data?: Record<string, unknown>;
-  error?: string;
-}
-
-export interface ConfidenceScores {
-  overall: number;
-  fields: Record<string, number>;
+  extractor_summary?: Record<string, unknown>;
+  validator_summary?: Record<string, unknown>;
 }
 
 export interface ExtendedSessionProgress extends SessionProgress {
@@ -142,9 +186,13 @@ export interface ConfidenceScores {
   validation_score: number;
   match_confidence: number;
   total_confidence: number;
+  semantic_confidence?: number;
+  fusion_confidence?: number;
+  overall_quality?: number;
 }
 
 export interface CompleteResult {
+  success: boolean;
   session_id: string;
   file_info: FileInfo;
   extraction_result: ExtractionResult;
@@ -153,6 +201,9 @@ export interface CompleteResult {
   summary: ConfidenceScores;
   recommendations: string[];
   ready_for_import: boolean;
+  semantic_validation?: any;
+  processing_summary?: any;
+  quality_metrics?: any;
 }
 
 export interface RentTermData {
@@ -194,23 +245,7 @@ export interface ConfirmImportResponse {
   error?: string;
 }
 
-export interface SystemCapabilities {
-  pdfplumber_available: boolean;
-  pymupdf_available: boolean;
-  spacy_available: boolean;
-  ocr_available: boolean;
-  supported_formats: string[];
-  max_file_size_mb: number;
-  estimated_processing_time: string;
-}
-
-export interface SystemInfoResponse {
-  success: boolean;
-  message: string;
-  capabilities: SystemCapabilities;
-  extractor_summary?: Record<string, unknown>;
-  validator_summary?: Record<string, unknown>;
-}
+// SystemCapabilities and SystemInfoResponse defined above
 
 // API基础配置 - 使用相对路径通过代理转发
 import { PDF_API } from '../constants/api';
@@ -351,6 +386,7 @@ class PDFImportService {
         if (session.status === 'ready_for_review' || session.status === 'completed') {
           // 构建结果对象
           const result: CompleteResult = {
+            success: true,
             session_id: sessionId,
             file_info: {
               filename: session.file_name || 'unknown.pdf',
@@ -379,7 +415,7 @@ class PDFImportService {
               matched_assets: session.matching_results?.matched_assets || [],
               matched_ownerships: session.matching_results?.matched_ownerships || [],
               duplicate_contracts: session.matching_results?.duplicate_contracts || [],
-              recommendations: session.matching_results?.recommendations || [],
+              recommendations: (session.matching_results?.recommendations || {}) as Record<string, string>,
               match_confidence: session.matching_results?.overall_match_confidence || 0.7
             },
             summary: {
@@ -388,7 +424,7 @@ class PDFImportService {
               match_confidence: session.matching_results?.overall_match_confidence || 0.7,
               total_confidence: 0.75
             },
-            recommendations: session.matching_results?.recommendations || [],
+            recommendations: Object.values(session.matching_results?.recommendations || {}),
             ready_for_import: true
           };
 
@@ -653,9 +689,14 @@ class PDFImportService {
       };
     } catch (error: unknown) {
       console.error('测试转换失败:', error);
+      const errorMsg = isAxiosError(error)
+        ? (error.response?.data?.detail || error.message || 'Unknown error')
+        : isError(error)
+          ? (error.message || 'Unknown error')
+          : 'Unknown error';
       return {
         success: false,
-        message: isAxiosError(error) ? (error.response?.data?.detail || error.message) : isError(error) ? error.message : 'Unknown error',
+        message: errorMsg,
         system_ready: false
       };
     }
@@ -967,6 +1008,7 @@ class PDFImportService {
         if (session.status === 'ready_for_review' || session.status === 'completed') {
           // 构建增强版结果对象
           const result: CompleteResult = {
+            success: true,
             session_id: sessionId,
             file_info: {
               filename: session.file_name || 'unknown.pdf',
@@ -1094,9 +1136,14 @@ class PDFImportService {
       return response.data;
     } catch (error: unknown) {
       console.error('测试增强版功能失败:', error);
+      const errorMsg = isAxiosError(error)
+        ? (error.response?.data?.detail || error.message || 'Unknown error')
+        : isError(error)
+          ? (error.message || 'Unknown error')
+          : 'Unknown error';
       return {
         success: false,
-        message: isAxiosError(error) ? (error.response?.data?.detail || error.message) : isError(error) ? error.message : 'Unknown error',
+        message: errorMsg,
         system_ready: false
       };
     }
@@ -1139,10 +1186,15 @@ class PDFImportService {
       return response.data;
     } catch (error: unknown) {
       console.error('获取性能摘要失败:', error);
+      const errorMsg = isAxiosError(error)
+        ? (error.response?.data?.detail || error.message || 'Unknown error')
+        : isError(error)
+          ? (error.message || 'Unknown error')
+          : 'Unknown error';
       return {
         success: false,
-        message: isAxiosError(error) ? (error.response?.data?.detail || error.message) : isError(error) ? error.message : 'Unknown error',
-        data: null
+        message: errorMsg,
+        data: undefined
       };
     }
   }
@@ -1173,11 +1225,11 @@ class PDFImportService {
     try {
       const systemInfo = await this.getEnhancedSystemInfo();
 
-      const features = {
-        pdfplumber_available: systemInfo.capabilities.pdfplumber_available,
-        pymupdf_available: systemInfo.capabilities.pymupdf_available,
-        spacy_available: systemInfo.capabilities.spacy_available,
-        ocr_available: systemInfo.capabilities.ocr_available
+      const features: Record<string, boolean> = {
+        pdfplumber_available: Boolean(systemInfo.capabilities.pdfplumber_available),
+        pymupdf_available: Boolean(systemInfo.capabilities.pymupdf_available),
+        spacy_available: Boolean(systemInfo.capabilities.spacy_available),
+        ocr_available: Boolean(systemInfo.capabilities.ocr_available)
       };
 
       const availableCount = Object.values(features).filter(Boolean).length;

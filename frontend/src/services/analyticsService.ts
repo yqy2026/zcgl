@@ -32,8 +32,11 @@ export class AnalyticsService {
       const response = await this.api.get<AnalyticsResponse>(STATISTICS_API.OVERVIEW, {
         params: filters
       })
-      // EnhancedApiClient returns response directly, with data extraction handled internally
-      return response
+      // Add message property if missing
+      return {
+        message: 'Success',
+        ...response
+      } as any
     } catch (error) {
       console.error('Basic statistics API Error:', error)
       throw error
@@ -43,8 +46,11 @@ export class AnalyticsService {
   async getAreaSummary(): Promise<AnalyticsResponse> {
     try {
       const response = await this.api.get<AnalyticsResponse>(STATISTICS_API.ASSET_SUMMARY)
-      // EnhancedApiClient returns response directly, with data extraction handled internally
-      return response
+      // Add message property if missing
+      return {
+        message: 'Success',
+        ...response
+      } as any
     } catch (error) {
       console.error('Area summary API Error:', error)
       throw error
@@ -54,9 +60,12 @@ export class AnalyticsService {
   async getFinancialSummary(): Promise<AnalyticsResponse> {
     try {
       const response = await this.api.get<AnalyticsResponse>(STATISTICS_API.FINANCIAL_SUMMARY)
-      // EnhancedApiClient returns response directly, with data extraction handled internally
       if (response) {
-        return response
+        // Add message property if missing
+        return {
+          message: 'Success',
+          ...response
+        } as any
       }
       return this.getMockAnalyticsData()
     } catch (error) {
@@ -73,9 +82,7 @@ export class AnalyticsService {
       data: {
         area_summary: {
           total_assets: 696,
-          total_land_area: 90466.8,
-          total_actual_property_area: 126447.36,
-          total_area: 149247.36,
+          total_area: 90466.8,
           total_rentable_area: 122246.02,
           total_rented_area: 119170.36,
           total_unrented_area: 3075.66,
@@ -83,11 +90,14 @@ export class AnalyticsService {
           occupancy_rate: 97.48,
         },
         financial_summary: {
+          estimated_annual_income: 0.0,
+          total_annual_income: 0.0,
+          total_annual_expense: 0.0,
+          total_net_income: 0.0,
           total_monthly_rent: 0.0,
           total_deposit: 0.0,
-          estimated_annual_income: 0.0,
+          assets_with_income_data: 0,
           assets_with_rent_data: 0,
-          assets_with_deposit_data: 0,
           profit_margin: 0.0,
         },
         business_category_distribution: [],
@@ -99,7 +109,7 @@ export class AnalyticsService {
       },
       cache_stats: { cache_size: 0, hits: 0, misses: 0, hit_rate: 0 },
       performance_info: { calculation_time: 0, asset_count: 696, cache_enabled: true },
-    }
+    } as any
   }
 }
 

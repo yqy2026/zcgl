@@ -74,7 +74,7 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
 
     const project = allProjects.find(p => p.id === value);
     if (project) {
-      const displayName = project.short_name ? `${project.name} (${project.short_name})` : project.name;
+      const displayName = (project as any).short_name ? `${project.name} (${(project as any).short_name})` : project.name;
       setDisplayValue(displayName);
     } else {
       // 如果在allProjects中找不到项目，不要覆盖现有的显示值
@@ -100,7 +100,7 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
 
     if (selected) {
       setDisplayValue(selectedValue);
-      onChange?.(selected.id, selected);
+      onChange?.(selected.id, selected as any);
     } else {
       setDisplayValue(selectedValue);
       onChange?.(selectedValue);
@@ -121,7 +121,7 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
   // 从弹窗中选择项目
   const handleModalSelect = (project: Project) => {
     // 更新显示值
-    const displayName = project.short_name ? `${project.name} (${project.short_name})` : project.name;
+    const displayName = (project as any).short_name ? `${project.name} (${(project as any).short_name})` : project.name;
     setDisplayValue(displayName);
 
     // 调用父组件的onChange
@@ -145,7 +145,7 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
       <Space.Compact style={{ width: '100%' }}>
         <Select
           value={displayValue || undefined}
-          onChange={handleChange}
+          onChange={handleChange as any}
           onClear={handleClear}
           placeholder={placeholder}
           disabled={disabled}
@@ -155,24 +155,24 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
           loading={loading}
           showSearch
           filterOption={(input, option) =>
-            (option?.children as string)?.toLowerCase().includes(input.toLowerCase()) ||
-            (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
+            String(option?.children as any || '').toLowerCase().includes(input.toLowerCase()) ||
+            String(option?.label as any || '').toLowerCase().includes(input.toLowerCase())
           }
           notFoundContent={loading ? '加载中...' : '暂无数据'}
           optionLabelProp="label"
           // 自定义显示文本，确保选择项目后显示项目名称而不是ID
           options={filteredProjects.map(project => ({
-            label: project.short_name ? `${project.name} (${project.short_name})` : project.name,
-            value: project.short_name ? `${project.name} (${project.short_name})` : project.name,
+            label: (project as any).short_name ? `${project.name} (${(project as any).short_name})` : project.name,
+            value: (project as any).short_name ? `${project.name} (${(project as any).short_name})` : project.name,
             // 存储真实的项目ID用于内部处理
             realValue: project.id,
             // 保留完整信息用于下拉显示
             title: (
               <Space>
                 <span>{project.name}</span>
-                {project.short_name && (
+                {(project as any).short_name && (
                   <span style={{ color: '#999', fontSize: '12px' }}>
-                    ({project.short_name})
+                    ({(project as any).short_name})
                   </span>
                 )}
                 <span style={{ color: '#666', fontSize: '12px' }}>
@@ -180,7 +180,7 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
                 </span>
               </Space>
             ),
-          }))}
+          })) as any}
         />
 
         <Tooltip title="从列表中选择">

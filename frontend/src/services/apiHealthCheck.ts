@@ -4,6 +4,8 @@
  */
 
 import { enhancedApiClient } from '@/api/client'
+
+const api = enhancedApiClient
 import {
   AUTH_API,
   PDF_API,
@@ -70,22 +72,22 @@ export class ApiHealthCheckService {
 
     try {
       // 使用HEAD请求检查端点可用性（如果支持的话）
-      const response = await api.head(endpoint)
+      const response = await (api as any).head(endpoint)
       const responseTime = Date.now() - startTime
 
       const result: HealthCheckResult = {
         endpoint: name,
-        status: response.status >= 200 && response.status < 300 ? 'healthy' : 'unhealthy',
+        status: (response as any).status >= 200 && (response as any).status < 300 ? 'healthy' : 'unhealthy',
         responseTime,
         lastChecked: new Date()
       }
 
       // 如果HEAD请求不支持，尝试GET请求
-      if (response.status === 405) {
+      if ((response as any).status === 405) {
         const getResponse = await api.get(endpoint)
         const getResponseTime = Date.now() - startTime
 
-        result.status = getResponse.status >= 200 && getResponse.status < 300 ? 'healthy' : 'unhealthy'
+        result.status = (getResponse as any).status >= 200 && (getResponse as any).status < 300 ? 'healthy' : 'unhealthy'
         result.responseTime = getResponseTime
       }
 
@@ -289,7 +291,7 @@ export class ApiHealthCheckService {
         unknown,
         healthPercentage: criticalResults.length > 0 ? (healthy / criticalResults.length) * 100 : 0
       },
-      details: criticalResults
+      details: criticalResults as any
     }
   }
 

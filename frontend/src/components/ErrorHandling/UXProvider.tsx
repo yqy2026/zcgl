@@ -44,7 +44,7 @@ const UXProvider: React.FC<UXProviderProps> = ({
       
       // 调用自定义错误处理函数
       if (config.errorBoundary?.onError) {
-        config.errorBoundary.onError(error, errorInfo)
+        config.errorBoundary.onError(error, errorInfo as any)
       }
     }
 

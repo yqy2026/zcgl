@@ -10,6 +10,7 @@ interface LoadingState {
   progress?: number
   type?: 'default' | 'upload' | 'processing' | 'data'
   delay?: number
+  timestamp?: number
 }
 
 interface LoadingContextType {
@@ -435,7 +436,7 @@ export const SmartProgressTracker: React.FC<ProgressTrackerProps> = ({
         }}
         strokeWidth={8}
         size="small"
-        format={(percent) => `${Math.round(percent)}%`}
+        format={(percent) => `${Math.round(percent || 0)}%`}
       />
 
       <div style={{ marginTop: '16px' }}>

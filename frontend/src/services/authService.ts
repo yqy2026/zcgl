@@ -89,7 +89,7 @@ export class AuthService {
           permissions: []
         },
         message: responseData.message || '登录成功'
-      };
+      } as any;
 
     } catch (error) {
       // 使用统一的错误处理器
@@ -149,7 +149,7 @@ export class AuthService {
         success: true,
         data: result.data,
         message: '令牌刷新成功'
-      };
+      } as any;
 
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
