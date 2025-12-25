@@ -101,20 +101,20 @@ const AssetAnalyticsPage: React.FC = () => {
 
       const exportData = {
         summary: {
-          total_assets: analytics.area_summary.total_assets,
-          total_area: analytics.area_summary.total_area,
-          total_rentable_area: analytics.area_summary.total_rentable_area,
-          occupancy_rate: analytics.area_summary.occupancy_rate,
-          total_annual_income: analytics.financial_summary.total_annual_income,
-          total_annual_expense: analytics.financial_summary.total_annual_expense,
-          total_net_income: analytics.financial_summary.total_net_income,
-          total_monthly_rent: analytics.financial_summary.total_monthly_rent,
+          total_assets: analytics.area_summary!.total_assets,
+          total_area: analytics.area_summary!.total_area,
+          total_rentable_area: analytics.area_summary!.total_rentable_area,
+          occupancy_rate: analytics.area_summary!.occupancy_rate,
+          total_annual_income: analytics.financial_summary!.total_annual_income,
+          total_annual_expense: analytics.financial_summary!.total_annual_expense,
+          total_net_income: analytics.financial_summary!.total_net_income,
+          total_monthly_rent: analytics.financial_summary!.total_monthly_rent,
         },
-        property_nature_distribution: analytics.property_nature_distribution,
-        ownership_status_distribution: analytics.ownership_status_distribution,
-        usage_status_distribution: analytics.usage_status_distribution,
-        business_category_distribution: analytics.business_category_distribution,
-        occupancy_trend: analytics.occupancy_trend,
+        property_nature_distribution: analytics.property_nature_distribution!,
+        ownership_status_distribution: analytics.ownership_status_distribution!,
+        usage_status_distribution: analytics.usage_status_distribution!,
+        business_category_distribution: analytics.business_category_distribution!,
+        occupancy_trend: analytics.occupancy_trend!,
         // 面积维度数据
         property_nature_area_distribution: analytics.property_nature_area_distribution,
         ownership_status_area_distribution: analytics.ownership_status_area_distribution,
@@ -189,7 +189,7 @@ const AssetAnalyticsPage: React.FC = () => {
   }
 
   const hasData =
-    analytics && analytics.area_summary && Number(analytics.area_summary.total_assets) > 0;
+    analytics && analytics.area_summary && Number(analytics!.area_summary.total_assets) > 0;
 
   return (
     <div className={styles.analyticsContainer}>
@@ -272,13 +272,13 @@ const AssetAnalyticsPage: React.FC = () => {
           <Card title="概览统计" style={{ marginBottom: "24px" }}>
             <AnalyticsStatsGrid
               data={{
-                total_assets: analytics.area_summary.total_assets,
-                total_area: analytics.area_summary.total_area,
-                total_rentable_area: analytics.area_summary.total_rentable_area,
-                occupancy_rate: analytics.area_summary.occupancy_rate,
-                total_annual_income: analytics.financial_summary.total_annual_income,
-                total_net_income: analytics.financial_summary.total_net_income,
-                total_monthly_rent: analytics.financial_summary.total_monthly_rent,
+                total_assets: analytics!.area_summary!.total_assets,
+                total_area: analytics!.area_summary!.total_area,
+                total_rentable_area: analytics!.area_summary!.total_rentable_area,
+                occupancy_rate: analytics!.area_summary!.occupancy_rate,
+                total_annual_income: analytics!.financial_summary!.total_annual_income,
+                total_net_income: analytics!.financial_summary!.total_net_income,
+                total_monthly_rent: analytics!.financial_summary!.total_monthly_rent,
               }}
               loading={isLoading}
             />
@@ -292,8 +292,8 @@ const AssetAnalyticsPage: React.FC = () => {
                 title={`物业性质分布 (${dimension === "count" ? "数量" : "面积"})`}
                 data={
                   dimension === "count"
-                    ? chartDataUtils.toPieData(analytics.property_nature_distribution)
-                    : chartDataUtils.toAreaData(analytics.property_nature_area_distribution)
+                    ? chartDataUtils.toPieData(analytics!.property_nature_distribution!)
+                    : chartDataUtils.toAreaData(analytics!.property_nature_area_distribution)
                 }
                 loading={isLoading}
                 height={280}
@@ -307,18 +307,18 @@ const AssetAnalyticsPage: React.FC = () => {
                 data={
                   dimension === "count"
                     ? chartDataUtils.toPieData(
-                        analytics.ownership_status_distribution.map((item) => ({
+                        analytics!.ownership_status_distribution!.map((item) => ({
                           name: item.status,
                           count: item.count,
                           percentage: item.percentage,
                         })),
                       )
                     : chartDataUtils.toAreaData(
-                        analytics.ownership_status_area_distribution.map((item) => ({
+                        analytics!.ownership_status_area_distribution!.map((item) => ({
                           name: item.status,
-                          total_area: item.total_area,
-                          area_percentage: item.area_percentage,
-                          average_area: item.average_area,
+                          total_area: item.total_area || 0,
+                          area_percentage: item.area_percentage || item.percentage || 0,
+                          average_area: item.average_area || 0,
                         })),
                       )
                 }
@@ -333,12 +333,12 @@ const AssetAnalyticsPage: React.FC = () => {
                 title={`使用状态分布 (${dimension === "count" ? "数量" : "面积"})`}
                 data={
                   dimension === "count"
-                    ? analytics.usage_status_distribution.map((item) => ({
+                    ? analytics!.usage_status_distribution.map((item) => ({
                         name: item.status,
                         value: item.count,
                       }))
                     : chartDataUtils.toAreaBarData(
-                        analytics.usage_status_area_distribution.map((item) => ({
+                        analytics!.usage_status_area_distribution.map((item) => ({
                           name: item.status,
                           total_area: item.total_area,
                           count: item.count,
@@ -380,7 +380,7 @@ const AssetAnalyticsPage: React.FC = () => {
           </Card>
 
           {/* 出租率趋势 */}
-          {analytics.occupancy_trend && analytics.occupancy_trend.length > 0 && (
+          {analytics.occupancy_trend && analytics!.occupancy_trend.length > 0 && (
             <Card title="出租率趋势" style={{ marginBottom: "24px" }}>
               <AnalyticsLineChart
                 title="出租率趋势"
