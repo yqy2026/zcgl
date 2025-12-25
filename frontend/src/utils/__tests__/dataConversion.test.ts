@@ -16,7 +16,7 @@ describe('dataConversion', () => {
         annual_income: '60000.00'
       }
 
-      const result = convertBackendToFrontend(backendData)
+      const result = convertBackendToFrontend(backendData) as any
 
       expect(result.land_area).toBe(1000.50)
       expect(result.monthly_rent).toBe(5000.25)
@@ -31,7 +31,7 @@ describe('dataConversion', () => {
         rentable_area: '1000'
       }
 
-      const result = convertBackendToFrontend(backendData)
+      const result = convertBackendToFrontend(backendData) as any
 
       expect(result.land_area).toBeNull()
       expect(result.monthly_rent).toBeUndefined()
@@ -49,7 +49,7 @@ describe('dataConversion', () => {
         }
       }
 
-      const result = convertBackendToFrontend(backendData)
+      const result = convertBackendToFrontend(backendData) as any
 
       expect(result.asset.land_area).toBe(1000.50)
       expect(result.asset.details.monthly_rent).toBe(5000.25)
@@ -63,7 +63,7 @@ describe('dataConversion', () => {
         ]
       }
 
-      const result = convertBackendToFrontend(backendData)
+      const result = convertBackendToFrontend(backendData) as any
 
       expect(result.assets[0].land_area).toBe(1000.50)
       expect(result.assets[1].land_area).toBe(2000.75)
@@ -77,7 +77,7 @@ describe('dataConversion', () => {
         is_litigated: true
       }
 
-      const result = convertBackendToFrontend(backendData)
+      const result = convertBackendToFrontend(backendData) as any
 
       expect(result.property_name).toBe('测试物业')
       expect(result.ownership_status).toBe('已确权')
@@ -93,7 +93,7 @@ describe('dataConversion', () => {
         annual_income: 60000.00
       }
 
-      const result = convertFrontendToBackend(frontendData)
+      const result = convertFrontendToBackend(frontendData) as any
 
       expect(result.land_area).toBe('1000.5')
       expect(result.monthly_rent).toBe('5000.25')
@@ -107,7 +107,7 @@ describe('dataConversion', () => {
         rentable_area: 1000
       }
 
-      const result = convertFrontendToBackend(frontendData)
+      const result = convertFrontendToBackend(frontendData) as any
 
       expect(result.land_area).toBeNull()
       expect(result.monthly_rent).toBeUndefined()
@@ -124,7 +124,7 @@ describe('dataConversion', () => {
         }
       }
 
-      const result = convertFrontendToBackend(frontendData)
+      const result = convertFrontendToBackend(frontendData) as any
 
       expect(result.asset.land_area).toBe('1000.5')
       expect(result.asset.details.monthly_rent).toBe('5000.25')
@@ -137,7 +137,7 @@ describe('dataConversion', () => {
         is_litigated: true
       }
 
-      const result = convertFrontendToBackend(frontendData)
+      const result = convertFrontendToBackend(frontendData) as any
 
       expect(result.property_name).toBe('测试物业')
       expect(result.ownership_status).toBe('已确权')
@@ -152,7 +152,7 @@ describe('dataConversion', () => {
         rented_area: 800
       }
 
-      const result = calculateDerivedFields(asset)
+      const result = calculateDerivedFields(asset) as any
 
       expect(result.unrented_area).toBe(200)
     })
@@ -163,7 +163,7 @@ describe('dataConversion', () => {
         rented_area: 800
       }
 
-      const result = calculateDerivedFields(asset)
+      const result = calculateDerivedFields(asset) as any
 
       expect(result.occupancy_rate).toBe(80)
     })
@@ -174,7 +174,7 @@ describe('dataConversion', () => {
         annual_expense: 20000
       }
 
-      const result = calculateDerivedFields(asset)
+      const result = calculateDerivedFields(asset) as any
 
       expect(result.net_income).toBe(80000)
     })
@@ -185,7 +185,7 @@ describe('dataConversion', () => {
         // 缺少rented_area
       }
 
-      const result = calculateDerivedFields(asset)
+      const result = calculateDerivedFields(asset) as any
 
       expect(result.unrented_area).toBeUndefined()
       expect(result.occupancy_rate).toBeUndefined()
@@ -197,7 +197,7 @@ describe('dataConversion', () => {
         rented_area: 800
       }
 
-      const result = calculateDerivedFields(asset)
+      const result = calculateDerivedFields(asset) as any
 
       expect(result.occupancy_rate).toBeUndefined()
     })
@@ -210,7 +210,7 @@ describe('dataConversion', () => {
         annual_expense: 20000
       }
 
-      const result = calculateDerivedFields(asset)
+      const result = calculateDerivedFields(asset) as any
 
       expect(result.unrented_area).toBe(200)
       expect(result.occupancy_rate).toBe(80)
@@ -349,7 +349,7 @@ describe('dataConversion', () => {
       }
 
       // 后端转前端
-      const frontendAsset = convertBackendToFrontend(backendAsset)
+      const frontendAsset = convertBackendToFrontend(backendAsset) as any
 
       expect(frontendAsset.land_area).toBe(1000.50)
       expect(frontendAsset.rentable_area).toBe(800.25)
@@ -359,7 +359,7 @@ describe('dataConversion', () => {
       expect(frontendAsset.annual_expense).toBe(10000.25)
 
       // 计算派生字段
-      const derived = calculateDerivedFields(frontendAsset)
+      const derived = calculateDerivedFields(frontendAsset) as any
       expect(derived.unrented_area).toBe(199.5)
       expect(derived.occupancy_rate).toBe(75.075)
       expect(derived.net_income).toBe(49999.75)
@@ -368,7 +368,7 @@ describe('dataConversion', () => {
       const backToBackend = convertFrontendToBackend({
         ...frontendAsset,
         ...derived
-      })
+      }) as any
 
       expect(backToBackend.land_area).toBe('1000.5')
       expect(backToBackend.rentable_area).toBe('800.25')
@@ -411,7 +411,7 @@ describe('dataConversion', () => {
         }
       }
 
-      const result = convertBackendToFrontend(complexData)
+      const result = convertBackendToFrontend(complexData) as any
 
       expect(result.assets[0].land_area).toBe(1000.50)
       expect(result.assets[0].details.monthly_rent).toBe(5000.25)

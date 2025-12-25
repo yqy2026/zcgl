@@ -7,15 +7,12 @@ import axios, {
   AxiosInstance,
   AxiosRequestConfig,
   AxiosResponse,
-  AxiosError,
   InternalAxiosRequestConfig
 } from 'axios';
 import { ResponseExtractor, ApiErrorHandler } from '../utils/responseExtractor';
 import {
   EnhancedApiClientConfig,
-  EnhancedApiError,
   RetryConfig,
-  CacheConfig,
   ExtractResult
 } from '../types/api-response';
 import { API_CONFIG } from './config';
