@@ -24,8 +24,8 @@ import {
   FullscreenExitOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
-import { analyticsService, type AnalyticsData } from "@/services/analyticsService";
-import { exportAnalyticsData } from "@/services/analyticsExportService";
+import { analytics!ervice, type AnalyticsData } from "@/services/analytics!ervice";
+import { exportAnalyticsData } from "@/services/analytics!xportService";
 import { AnalyticsStatsGrid, FinancialStatsGrid } from "@/components/Analytics/AnalyticsStatsCard";
 import {
   AnalyticsPieChart,
@@ -49,14 +49,14 @@ const AssetAnalyticsPage: React.FC = () => {
 
   // 获取分析数据
   const {
-    data: analyticsResponse,
+    data: analytics!esponse,
     isLoading,
     error,
     refetch,
   } = useQuery({
-    queryKey: ["asset-analytics", filters],
+    queryKey: ["asset-analytics!, filters],
     queryFn: async () => {
-      const result = await analyticsService.getComprehensiveAnalytics(filters);
+      const result = await analytics!ervice.getComprehensiveAnalytics(filters);
       return result;
     },
     staleTime: 5 * 60 * 1000, // 5分钟缓存
@@ -65,16 +65,16 @@ const AssetAnalyticsPage: React.FC = () => {
 
   // React Query 可能直接返回解析后的数据，也可能是包装在响应对象中
   // 我们需要检查两种可能性
-  let analytics;
-  if (analyticsResponse && analyticsResponse.data) {
-    // 标准情况：analyticsResponse 是 AnalyticsResponse 类型
-    analytics = analyticsResponse.data;
-  } else if (analyticsResponse && analyticsResponse.area_summary) {
+  let analytics!
+  if (analytics!esponse && analytics!esponse.data) {
+    // 标准情况：analytics!esponse 是 AnalyticsResponse 类型
+    analytics!= analytics!esponse.data;
+  } else if (analytics!esponse && analytics!esponse.area_summary) {
     // React Query 直接返回了 AnalyticsData
-    analytics = analyticsResponse;
+    analytics!= analytics!esponse;
   } else {
     // 没有数据
-    analytics = null;
+    analytics!= null;
   }
 
   // 处理筛选条件变化
@@ -94,7 +94,7 @@ const AssetAnalyticsPage: React.FC = () => {
 
   // 处理导出数据
   const handleExport = async () => {
-    if (!analytics) return;
+    if (!analytics! return;
 
     try {
       message.loading("正在导出数据...", 0);
@@ -189,10 +189,10 @@ const AssetAnalyticsPage: React.FC = () => {
   }
 
   const hasData =
-    analytics && analytics.area_summary && Number(analytics!.area_summary.total_assets) > 0;
+    analytics!&& analytics.area_summary && Number(analytics!.area_summary.total_assets) > 0;
 
   return (
-    <div className={styles.analyticsContainer}>
+    <div className={styles.analytics!ontainer}>
       {/* 页面标题和操作栏 */}
       <Card style={{ marginBottom: "24px" }}>
         <Row justify="space-between" align={["middle", "stretch"]} gutter={[16, 16]}>
@@ -360,10 +360,10 @@ const AssetAnalyticsPage: React.FC = () => {
                 data={
                   dimension === "count"
                     ? chartDataUtils.toBusinessCategoryData(
-                        analytics.business_category_distribution,
+                        analytics!.business_category_distribution!,
                       )
                     : chartDataUtils.toBusinessCategoryAreaData(
-                        analytics.business_category_area_distribution,
+                        analytics!.business_category_area_distribution!,
                       )
                 }
                 xAxisKey="name"
@@ -376,15 +376,15 @@ const AssetAnalyticsPage: React.FC = () => {
 
           {/* 财务指标 */}
           <Card title="财务指标" style={{ marginBottom: "24px" }}>
-            <FinancialStatsGrid data={analytics.financial_summary} loading={isLoading} />
+            <FinancialStatsGrid data={analytics!.financial_summary!} loading={isLoading} />
           </Card>
 
           {/* 出租率趋势 */}
-          {analytics.occupancy_trend && analytics!.occupancy_trend.length > 0 && (
+          {analytics!.occupancy_trend && analytics!.occupancy_trend!.length > 0 && (
             <Card title="出租率趋势" style={{ marginBottom: "24px" }}>
               <AnalyticsLineChart
                 title="出租率趋势"
-                data={chartDataUtils.toTrendData(analytics.occupancy_trend)}
+                data={chartDataUtils.toTrendData(analytics!.occupancy_trend!)}
                 lines={[
                   {
                     key: "occupancy_rate",
@@ -410,9 +410,9 @@ const AssetAnalyticsPage: React.FC = () => {
                     </Typography.Title>
                     <div className={styles.distributionList}>
                       {(dimension === "count"
-                        ? analytics.property_nature_distribution
-                        : analytics.property_nature_area_distribution
-                      )?.map((item, index) => (
+                        ? analytics!.property_nature_distribution!
+                        : analytics!.property_nature_area_distribution!
+                      )!.map((item, index) => (
                         <div key={index} className={styles.distributionItem}>
                           <span className={styles.itemName}>
                             {dimension === "count" ? item.name : item.name}
@@ -420,7 +420,7 @@ const AssetAnalyticsPage: React.FC = () => {
                           <span className={styles.itemStats}>
                             {dimension === "count"
                               ? `${item.count} (${item.percentage}%)`
-                              : `${item.total_area?.toFixed(0)}㎡ (${item.area_percentage}%)`}
+                              : `${(item as any).total_area?.toFixed(0)}㎡ (${(item as any).area_percentage || item.percentage}%)`}
                           </span>
                         </div>
                       ))}
@@ -433,9 +433,9 @@ const AssetAnalyticsPage: React.FC = () => {
                     </Typography.Title>
                     <div className={styles.distributionList}>
                       {(dimension === "count"
-                        ? analytics.ownership_status_distribution
-                        : analytics.ownership_status_area_distribution
-                      )?.map((item, index) => (
+                        ? analytics!.ownership_status_distribution!
+                        : analytics!.ownership_status_area_distribution!
+                      )!.map((item, index) => (
                         <div key={index} className={styles.distributionItem}>
                           <span className={styles.itemName}>
                             {dimension === "count" ? item.status : item.status}
@@ -443,7 +443,7 @@ const AssetAnalyticsPage: React.FC = () => {
                           <span className={styles.itemStats}>
                             {dimension === "count"
                               ? `${item.count} (${item.percentage}%)`
-                              : `${item.total_area?.toFixed(0)}㎡ (${item.area_percentage}%)`}
+                              : `${(item as any).total_area?.toFixed(0)}㎡ (${(item as any).area_percentage || item.percentage}%)`}
                           </span>
                         </div>
                       ))}
@@ -456,9 +456,9 @@ const AssetAnalyticsPage: React.FC = () => {
                     </Typography.Title>
                     <div className={styles.distributionList}>
                       {(dimension === "count"
-                        ? analytics.usage_status_distribution
-                        : analytics.usage_status_area_distribution
-                      )?.map((item, index) => (
+                        ? analytics!.usage_status_distribution!
+                        : analytics!.usage_status_area_distribution!
+                      )!.map((item, index) => (
                         <div key={index} className={styles.distributionItem}>
                           <span className={styles.itemName}>
                             {dimension === "count" ? item.status : item.status}
@@ -479,9 +479,9 @@ const AssetAnalyticsPage: React.FC = () => {
                     </Typography.Title>
                     <div className={styles.distributionList}>
                       {(dimension === "count"
-                        ? analytics.business_category_distribution
-                        : analytics.business_category_area_distribution
-                      )?.map((item, index) => (
+                        ? analytics!.business_category_distribution!
+                        : analytics!.business_category_area_distribution!
+                      )!.map((item, index) => (
                         <div key={index} className={styles.distributionItem}>
                           <span className={styles.itemName}>
                             {dimension === "count" ? item.category : item.category}
