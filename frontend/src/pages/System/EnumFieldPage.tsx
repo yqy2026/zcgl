@@ -1,18 +1,22 @@
 import React, { useState, useEffect } from 'react'
 import {
   message, Form, Space, Tag, Button, Card, Input,
-  Select, Tooltip, Col, Row, Table, Modal, Popconfirm, Divider
+  Select, Tooltip, Col, Row, Table, Modal, Popconfirm, Divider,
+  Badge, Statistic, Tabs, Switch
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import {
   PlusOutlined, EditOutlined, DeleteOutlined,
-  SearchOutlined, ReloadOutlined
+  SearchOutlined, ReloadOutlined, EyeOutlined
 } from '@ant-design/icons'
 import { unifiedDictionaryService } from '../../services/dictionary'
 import type { EnumFieldType, EnumFieldValue, EnumFieldWithType } from '../../services/dictionary'
 import { SystemDictionary } from '@/types/asset'
 import EnumValuePreview from '../../components/Dictionary/EnumValuePreview'
 import { withErrorHandling, createErrorHandler } from '../../services'
+
+const { TabPane } = Tabs
+const { TextArea } = Input
 
 // 错误类型定义
 interface ApiError extends Error {
