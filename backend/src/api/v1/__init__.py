@@ -16,7 +16,7 @@ from .enum_field import router as enum_field_router
 # 修复Excel模块导入 - 使用正确的router名称
 from .excel import router as excel_router
 from .history import router as history_router
-from .missing_apis import missing_apis_router
+# from .missing_apis import missing_apis_router  # Removed - module doesn't exist
 from .monitoring import router as monitoring_router
 from .occupancy import router as occupancy_router
 from .operation_logs import router as operation_logs_router
