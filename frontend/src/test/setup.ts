@@ -1,158 +1,87 @@
-import "@testing-library/jest-dom";
-import React from "react";
-import { act, waitFor, fireEvent } from "@testing-library/react";
+/**
+ * Vitest全局测试设置文件
+ * 配置测试环境和全局mock
+ */
 
-// Global test utilities - make these available in all test files
-global.act = act;
-global.waitFor = waitFor;
-global.fireEvent = fireEvent;
+import '@testing-library/jest-dom'
+import { vi } from 'vitest'
 
-// Type declarations for global test utilities
-declare global {
-  const act: typeof import("@testing-library/react").act;
-  const waitFor: typeof import("@testing-library/react").waitFor;
-  const fireEvent: typeof import("@testing-library/dom").fireEvent;
-}
+// =============================================================================
+// 环境变量Mock
+// =============================================================================
 
-// Mock IntersectionObserver
-global.IntersectionObserver = jest.fn().mockImplementation(() => ({
-  observe: jest.fn(),
-  unobserve: jest.fn(),
-  disconnect: jest.fn(),
-}));
+vi.stubGlobal('import.meta', {
+  env: {
+    VITE_API_BASE_URL: '/api',
+    VITE_API_TIMEOUT: '30000',
+    NODE_ENV: 'test',
+  },
+})
 
-// Mock ResizeObserver
-global.ResizeObserver = jest.fn().mockImplementation(() => ({
-  observe: jest.fn(),
-  unobserve: jest.fn(),
-  disconnect: jest.fn(),
-}));
+// =============================================================================
+// 浏览器API Mock
+// =============================================================================
 
-// Mock matchMedia
-Object.defineProperty(window, "matchMedia", {
+// Mock window.matchMedia (用于响应式组件测试)
+Object.defineProperty(window, 'matchMedia', {
   writable: true,
-  value: jest.fn().mockImplementation((query) => ({
+  value: vi.fn().mockImplementation(query => ({
     matches: false,
     media: query,
     onchange: null,
-    addListener: jest.fn(), // deprecated
-    removeListener: jest.fn(), // deprecated
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    dispatchEvent: jest.fn(),
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
   })),
-});
+})
 
-// Mock window.location
-Object.defineProperty(window, "location", {
-  value: {
-    href: "http://localhost:3000",
-    origin: "http://localhost:3000",
-    protocol: "http:",
-    host: "localhost:3000",
-    hostname: "localhost",
-    port: "3000",
-    pathname: "/",
-    search: "",
-    hash: "",
-    reload: jest.fn(),
-    assign: jest.fn(),
-    replace: jest.fn(),
-  },
-  writable: true,
-});
+// Mock ResizeObserver (用于图表和布局组件)
+class ResizeObserverMock {
+  observe = vi.fn()
+  unobserve = vi.fn()
+  disconnect = vi.fn()
+}
 
-// Mock navigator
-Object.defineProperty(navigator, "clipboard", {
-  value: {
-    writeText: jest.fn().mockResolvedValue(undefined),
-    readText: jest.fn().mockResolvedValue(""),
-  },
-  writable: true,
-});
+vi.stubGlobal('ResizeObserver', ResizeObserverMock)
 
-// Mock console methods to reduce noise in tests
-global.console = {
-  ...console,
-  log: jest.fn(),
-  debug: jest.fn(),
-  info: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn(),
-};
+// Mock IntersectionObserver (用于懒加载组件)
+class IntersectionObserverMock {
+  observe = vi.fn()
+  unobserve = vi.fn()
+  disconnect = vi.fn()
+}
 
-// Mock Chart.js
-jest.mock("chart.js", () => ({
-  Chart: {
-    register: jest.fn(),
-  },
-  CategoryScale: jest.fn(),
-  LinearScale: jest.fn(),
-  PointElement: jest.fn(),
-  LineElement: jest.fn(),
-  BarElement: jest.fn(),
-  Title: jest.fn(),
-  Tooltip: jest.fn(),
-  Legend: jest.fn(),
-  ArcElement: jest.fn(),
-}));
+vi.stubGlobal('IntersectionObserver', IntersectionObserverMock)
 
-jest.mock("react-chartjs-2", () => ({
-  Line: jest.fn(() => React.createElement("div", { "data-testid": "line-chart" })),
-  Bar: jest.fn(() => React.createElement("div", { "data-testid": "bar-chart" })),
-  Pie: jest.fn(() => React.createElement("div", { "data-testid": "pie-chart" })),
-  Doughnut: jest.fn(() => React.createElement("div", { "data-testid": "doughnut-chart" })),
-}));
+// =============================================================================
+// Ant Design Mock
+// =============================================================================
 
-// Mock recharts
-jest.mock("recharts", () => ({
-  LineChart: jest.fn(() => React.createElement("div", { "data-testid": "line-chart" })),
-  BarChart: jest.fn(() => React.createElement("div", { "data-testid": "bar-chart" })),
-  PieChart: jest.fn(() => React.createElement("div", { "data-testid": "pie-chart" })),
-  AreaChart: jest.fn(() => React.createElement("div", { "data-testid": "area-chart" })),
-  Line: jest.fn(() => React.createElement("div", { "data-testid": "line" })),
-  Bar: jest.fn(() => React.createElement("div", { "data-testid": "bar" })),
-  Area: jest.fn(() => React.createElement("div", { "data-testid": "area" })),
-  XAxis: jest.fn(() => React.createElement("div", { "data-testid": "x-axis" })),
-  YAxis: jest.fn(() => React.createElement("div", { "data-testid": "y-axis" })),
-  CartesianGrid: jest.fn(() => React.createElement("div", { "data-testid": "cartesian-grid" })),
-  Tooltip: jest.fn(() => React.createElement("div", { "data-testid": "tooltip" })),
-  Legend: jest.fn(() => React.createElement("div", { "data-testid": "legend" })),
-  ResponsiveContainer: jest.fn(({ children }) =>
-    React.createElement("div", { "data-testid": "responsive-container" }, children),
-  ),
-}));
-
-// Mock dayjs
-jest.mock("dayjs", () => {
-  const mockDayjs = jest.fn(() => ({
-    format: jest.fn(() => "2024-01-01"),
-    toISOString: jest.fn(() => "2024-01-01T00:00:00.000Z"),
-    valueOf: jest.fn(() => 1704067200000),
-  }));
-
-  (mockDayjs as typeof dayjs).extend = jest.fn();
-
-  return mockDayjs;
-});
-
-// Global test utilities
-export const createMockAsset = (overrides = {}) => ({
-  id: "1",
-  property_name: "测试物业",
-  ownership_entity: "测试权属方",
-  address: "测试地址",
-  ownership_status: "已确权",
-  property_nature: "经营类",
-  usage_status: "出租",
-  created_at: "2024-01-01T00:00:00Z",
-  updated_at: "2024-01-01T00:00:00Z",
-  ...overrides,
-});
-
-export const createMockSearchParams = (overrides = {}) => ({
-  search: "",
-  page: 1,
-  limit: 20,
-  ...overrides,
-});
+// Mock Ant Design message组件
+vi.mock('antd', async () => {
+  const actual = await vi.importActual('antd')
+  return {
+    ...actual,
+    message: {
+      success: vi.fn(),
+      error: vi.fn(),
+      warning: vi.fn(),
+      info: vi.fn(),
+    },
+    notification: {
+      success: vi.fn(),
+      error: vi.fn(),
+      warning: vi.fn(),
+      info: vi.fn(),
+    },
+    modal: {
+      confirm: vi.fn(),
+      info: vi.fn(),
+      success: vi.fn(),
+      error: vi.fn(),
+      warning: vi.fn(),
+    },
+  }
+})
