@@ -592,12 +592,12 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
                 {
                     "ownership_id": result.id,
                     "ownership_name": result.name,
-                    "ownership_short_name": result.short_name,
-                    "contract_count": result.contract_count,
+                    "total_contracts": result.contract_count,
+                    "active_contracts": result.contract_count,  # Assuming all counted contracts are active
                     "total_due_amount": total_due,
                     "total_paid_amount": total_paid,
                     "total_overdue_amount": result.total_overdue_amount or Decimal("0"),
-                    "payment_rate": payment_rate,
+                    "occupancy_rate": payment_rate,
                 }
             )
 

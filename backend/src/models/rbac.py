@@ -146,6 +146,11 @@ class Permission(Base):
         "ConditionalPermission", back_populates="permission"
     )
 
+    @property
+    def is_active(self) -> bool:
+        """权限始终激活（通过角色分配来控制访问）"""
+        return True
+
     def __repr__(self):
         return f"<Permission(id={self.id}, name={self.name}, resource={self.resource}, action={self.action})>"
 

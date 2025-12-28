@@ -331,20 +331,25 @@ try:
 except Exception as e:
     logger.warning(f"日志安全设置失败: {e}")
 
-# 初始化数据库
-init_db()
+# 初始化数据库（跳过测试模式）
+import os
+if not os.getenv("TESTING_MODE"):
+    # 初始化数据库
+    init_db()
 
-# 创建数据库表
-create_tables()
+    # 创建数据库表
+    create_tables()
 
-# 记录数据库状态
-db_status = get_database_status()
-logger.info(f"数据库状态: {db_status}")
+    # 记录数据库状态
+    db_status = get_database_status()
+    logger.info(f"数据库状态: {db_status}")
 
-if db_status.get("enhanced_active"):
-    logger.info("增强数据库管理器已激活 - 性能监控和连接池优化已启用")
+    if db_status.get("enhanced_active"):
+        logger.info("增强数据库管理器已激活 - 性能监控和连接池优化已启用")
+    else:
+        logger.info("使用基础数据库配置")
 else:
-    logger.info("使用基础数据库配置")
+    logger.info("测试模式：跳过数据库自动初始化，使用测试fixture提供的数据库")
 
 logger.info("FastAPI应用启动完成")
 # Trigger reload

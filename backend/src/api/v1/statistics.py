@@ -13,10 +13,13 @@ from sqlalchemy.orm import Session
 
 from ...crud.asset import asset_crud
 from ...database import get_db
+from ...middleware.auth import get_current_active_user
+from ...models.auth import User
 from ...schemas.asset import DataStatus
 from ...schemas.statistics import (
     AreaSummaryResponse,
     BasicStatisticsResponse,
+    CategoryOccupancyRateListResponse,
     CategoryOccupancyRateResponse,
     ChartDataItem,
     DashboardDataResponse,
@@ -86,7 +89,7 @@ def _calculate_occupancy_with_aggregation(
                 "total_rented_area"
             ),
             func.count(Asset.id).label("total_assets"),
-            func.count(case([(Asset.rentable_area > 0, 1)])).label(
+            func.count(case((Asset.rentable_area > 0, 1))).label(
                 "rentable_assets_count"
             ),
         ).first()
@@ -205,7 +208,7 @@ def _calculate_category_occupancy_with_aggregation(
                     func.sum(func.coalesce(Asset.rented_area, 0)), func.Float
                 ).label("total_rented_area"),
                 func.count(Asset.id).label("total_assets"),
-                func.count(case([(Asset.rentable_area > 0, 1)])).label(
+                func.count(case((Asset.rentable_area > 0, 1))).label(
                     "rentable_assets_count"
                 ),
             )
@@ -333,7 +336,7 @@ def _calculate_area_summary_with_aggregation(
             func.cast(
                 func.sum(func.coalesce(Asset.non_commercial_area, 0)), func.Float
             ).label("total_non_commercial_area"),
-            func.count(case([(Asset.land_area.isnot(None), 1)])).label(
+            func.count(case((Asset.land_area.isnot(None), 1))).label(
                 "assets_with_area_data"
             ),
         ).first()
@@ -480,6 +483,7 @@ async def get_basic_statistics(
     usage_status: str | None = Query(None, description="使用状态筛选"),
     ownership_entity: str | None = Query(None, description="权属方筛选"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     获取基础统计数据
@@ -594,7 +598,10 @@ async def get_basic_statistics(
 
 # @cache_statistics(expire=1800)  # 30分钟缓存 - 临时禁用
 @router.get("/summary", response_model=BasicStatisticsResponse, summary="获取统计摘要")
-async def get_statistics_summary(db: Session = Depends(get_db)):
+async def get_statistics_summary(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
     """
     获取统计摘要信息
     """
@@ -667,6 +674,7 @@ def get_overall_occupancy_rate(
     include_deleted: bool = False,
     use_aggregation: bool = True,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     获取整体出租率统计
@@ -714,12 +722,13 @@ def get_overall_occupancy_rate(
 
 
 @cache_statistics(expire=600)  # 10分钟缓存
-@router.get("/occupancy-rate/by-category", response_model=CategoryOccupancyRateResponse)
+@router.get("/occupancy-rate/by-category", response_model=CategoryOccupancyRateListResponse)
 def get_occupancy_rate_by_category(
     category_field: str = "business_category",
     include_deleted: bool = False,
     use_aggregation: bool = True,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     按类别获取出租率统计
@@ -772,8 +781,23 @@ def get_occupancy_rate_by_category(
 
         logger.info(f"分类出租率计算完成: {category_field}, 共{len(stats)}个分类")
 
-        return CategoryOccupancyRateResponse(
-            category_field=category_field, categories=stats, generated_at=datetime.now()
+        # Transform stats dict to list of CategoryOccupancyRateResponse
+        category_items = []
+        for category_name, category_stats in stats.items():
+            category_items.append(
+                CategoryOccupancyRateResponse(
+                    category=category_name,
+                    occupancy_rate=category_stats.get("overall_rate", 0.0),
+                    rentable_area=category_stats.get("total_rentable_area", 0.0),
+                    rented_area=category_stats.get("total_rented_area", 0.0),
+                    asset_count=category_stats.get("asset_count", 0),
+                )
+            )
+
+        return CategoryOccupancyRateListResponse(
+            category_field=category_field,
+            categories=category_items,
+            generated_at=datetime.now(),
         )
 
     except HTTPException:
@@ -792,6 +816,7 @@ def get_area_summary(
     include_deleted: bool = False,
     use_aggregation: bool = True,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     获取面积汇总统计
@@ -843,7 +868,11 @@ def get_area_summary(
 
 @cache_statistics(expire=1800)  # 30分钟缓存
 @router.get("/financial-summary", response_model=FinancialSummaryResponse)
-def get_financial_summary(include_deleted: bool = False, db: Session = Depends(get_db)):
+def get_financial_summary(
+    include_deleted: bool = False,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
     """
     获取财务汇总统计
 
@@ -995,7 +1024,10 @@ async def get_cache_info():
 @router.get(
     "/dashboard", response_model=DashboardDataResponse, summary="获取仪表板数据"
 )
-async def get_dashboard_data(db: Session = Depends(get_db)):
+async def get_dashboard_data(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
     """
     获取仪表板综合数据
     """
@@ -1148,7 +1180,10 @@ async def get_dashboard_data(db: Session = Depends(get_db)):
     response_model=DistributionResponse,
     summary="获取权属分布统计",
 )
-async def get_ownership_distribution(db: Session = Depends(get_db)):
+async def get_ownership_distribution(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
     """
     获取按权属状态的资产分布统计
     """
@@ -1206,7 +1241,10 @@ async def get_ownership_distribution(db: Session = Depends(get_db)):
     response_model=DistributionResponse,
     summary="获取物业性质分布统计",
 )
-async def get_property_nature_distribution(db: Session = Depends(get_db)):
+async def get_property_nature_distribution(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
     """
     获取按物业性质的资产分布统计
     """
@@ -1256,7 +1294,10 @@ async def get_property_nature_distribution(db: Session = Depends(get_db)):
     response_model=DistributionResponse,
     summary="获取使用状态分布统计",
 )
-async def get_usage_status_distribution(db: Session = Depends(get_db)):
+async def get_usage_status_distribution(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
     """
     获取按使用状态的资产分布统计
     """
@@ -1318,6 +1359,7 @@ async def get_trend_data(
         "monthly", pattern="^(daily|weekly|monthly|yearly)$", description="时间周期"
     ),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     获取指标趋势数据
@@ -1372,6 +1414,7 @@ async def get_occupancy_rate_statistics(
     usage_status: str | None = Query(None, description="使用状态筛选"),
     business_category: str | None = Query(None, description="业务分类筛选"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     获取出租率统计数据
@@ -1417,6 +1460,7 @@ async def get_asset_distribution(
     group_by: str = Query("ownership_status", description="分组字段"),
     include_deleted: bool = Query(False, description="是否包含已删除资产"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     获取资产分布统计数据
@@ -1494,6 +1538,7 @@ async def get_area_statistics(
     usage_status: str | None = Query(None, description="使用状态筛选"),
     include_deleted: bool = Query(False, description="是否包含已删除资产"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     获取面积统计数据
@@ -1545,6 +1590,7 @@ async def get_comprehensive_statistics(
     usage_status: str | None = Query(None, description="使用状态筛选"),
     include_deleted: bool = Query(False, description="是否包含已删除资产"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     获取综合统计数据

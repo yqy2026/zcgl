@@ -17,6 +17,7 @@ class EnumFieldTypeBase(BaseModel):
     category: str | None = Field(None, max_length=50, description="枚举类别")
     description: str | None = Field(None, description="枚举类型描述")
 
+    is_system: bool = Field(default=False, description="是否系统内置")
     is_multiple: bool = Field(default=False, description="是否支持多选")
     is_hierarchical: bool = Field(default=False, description="是否层级结构")
     default_value: str | None = Field(None, max_length=100, description="默认值")
@@ -62,6 +63,7 @@ class EnumFieldTypeUpdate(BaseModel):
     category: str | None = Field(None, max_length=50, description="枚举类别")
     description: str | None = Field(None, description="枚举类型描述")
 
+    is_system: bool | None = Field(None, description="是否系统内置")
     is_multiple: bool | None = Field(None, description="是否支持多选")
     is_hierarchical: bool | None = Field(None, description="是否层级结构")
     default_value: str | None = Field(None, max_length=100, description="默认值")

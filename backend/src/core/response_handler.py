@@ -112,7 +112,7 @@ class ResponseHandler:
         return ResponseHandler.error(
             message=message,
             error_code="VALIDATION_ERROR",
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             details={"validation_errors": errors},
             request_id=request_id,
         )
@@ -178,6 +178,36 @@ class ResponseHandler:
             error_code="FORBIDDEN",
             status_code=status.HTTP_403_FORBIDDEN,
             request_id=request_id,
+        )
+
+    @staticmethod
+    def database_error(
+        error: Exception, message: str = "数据库操作失败"
+    ) -> HTTPException:
+        """数据库错误异常 - 用于CRUD操作中抛出
+
+        注意：此方法返回HTTPException而不是JSONResponse，
+        因为它需要在CRUD操作中被抛出，而不是直接返回响应。
+        """
+        logger.error(f"Database error: {message} - {str(error)}", exc_info=True)
+
+        # 在开发环境中包含详细错误信息
+        if settings.DEBUG:
+            details = {
+                "exception_type": type(error).__name__,
+                "exception_message": str(error),
+                "operation": message,
+            }
+        else:
+            details = {"operation": message}
+
+        return HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "message": message,
+                "error_code": "DATABASE_ERROR",
+                "details": details,
+            },
         )
 
     @staticmethod

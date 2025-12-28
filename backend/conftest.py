@@ -20,30 +20,75 @@ from sqlalchemy.orm import sessionmaker, Session
 backend_root = Path(__file__).parent
 sys.path.insert(0, str(backend_root))
 
+# 设置测试模式环境变量（在导入app之前）
+os.environ["TESTING_MODE"] = "true"
+
 # =============================================================================
 # 数据库Fixtures
 # =============================================================================
 
 @pytest.fixture(scope="session")
 def test_engine():
-    """创建测试数据库引擎（内存SQLite）"""
+    """创建测试数据库引擎（共享文件SQLite，确保所有连接访问同一数据库）"""
     from src.database import Base
-    
+    # 导入所有模型以确保它们被注册到Base.metadata
+    from src.models import (
+        Asset,
+        AuditLog,
+        Employee,
+        EnumFieldHistory,
+        EnumFieldType,
+        EnumFieldUsage,
+        EnumFieldValue,
+        Organization,
+        OrganizationHistory,
+        Ownership,
+        Permission,
+        PermissionAuditLog,
+        RentContract,
+        RentContractHistory,
+        RentLedger,
+        RentTerm,
+        Role,
+        User,
+        UserSession,
+        # Task models (previously missing - root cause of "no such table: async_tasks")
+        AsyncTask,
+        ExcelTaskConfig,
+        TaskHistory,
+    )
+
+    # 使用临时文件数据库，而不是:memory:，这样可以跨多个连接共享
+    import tempfile
+    db_file = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+    db_path = db_file.name
+    db_file.close()
+
+    # 更新环境变量，确保database.py使用相同的数据库
+    os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
+
     engine = create_engine(
-        "sqlite:///:memory:",
+        f"sqlite:///{db_path}",
         connect_args={"check_same_thread": False},
         echo=False
     )
+    # 创建所有表
     Base.metadata.create_all(bind=engine)
     yield engine
     Base.metadata.drop_all(bind=engine)
+
+    # 清理临时文件
+    try:
+        os.unlink(db_path)
+    except:
+        pass
 
 
 @pytest.fixture(scope="function")
 def test_db(test_engine) -> Generator[Session, None, None]:
     """创建测试数据库会话"""
-    from src.database import SessionLocal
-    
+    from sqlalchemy.orm import sessionmaker
+
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
     db = TestingSessionLocal()
     try:
@@ -54,23 +99,53 @@ def test_db(test_engine) -> Generator[Session, None, None]:
 
 
 @pytest.fixture(scope="function")
-def test_client(test_db):
+async def test_client(test_db, test_user):
     """创建测试API客户端"""
     from src.main import app
     from src.database import get_db
-    
+    from src.middleware.auth import get_current_user, get_current_active_user
+
     def override_get_db():
         try:
             yield test_db
         finally:
             pass
-    
+
+    async def override_get_auth():
+        """Mock认证依赖，直接返回测试用户"""
+        return test_user
+
+    # Override both dependencies in the chain
     app.dependency_overrides[get_db] = override_get_db
-    
+    app.dependency_overrides[get_current_user] = override_get_auth
+    app.dependency_overrides[get_current_active_user] = override_get_auth
+
     transport = ASGITransport(app=app)
-    with AsyncClient(transport=transport, base_url="http://test") as client:
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
         yield client
-    
+
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture(scope="function")
+async def test_client_no_auth(test_db):
+    """创建测试API客户端（无认证覆盖，用于测试未授权访问）"""
+    from src.main import app
+    from src.database import get_db
+
+    def override_get_db():
+        try:
+            yield test_db
+        finally:
+            pass
+
+    # Only override database, not authentication
+    app.dependency_overrides[get_db] = override_get_db
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        yield client
+
     app.dependency_overrides.clear()
 
 
@@ -82,16 +157,27 @@ def test_client(test_db):
 def test_user(test_db):
     """创建测试用户"""
     from src.models.auth import User
-    
+    from src.services import AuthService
+
+    # Check if user already exists to avoid UNIQUE constraint errors
+    existing_user = test_db.query(User).filter(User.username == "testuser").first()
+    if existing_user:
+        return existing_user
+
+    # Create proper password hash with special character
+    auth_service = AuthService(test_db)
+    password_hash = auth_service.get_password_hash("Admin@123")
+
     user = User(
         username="testuser",
         email="test@example.com",
         full_name="Test User",
-        hashed_password="hashed_password",
+        password_hash=password_hash,
         is_active=True,
+        role="admin",  # 设为管理员以便测试有权限要求的端点
     )
     test_db.add(user)
-    test_db.commit()
+    test_db.flush()  # Use flush instead of commit so test_db rollback can clean up
     test_db.refresh(user)
     return user
 
@@ -100,17 +186,27 @@ def test_user(test_db):
 def test_admin(test_db):
     """创建测试管理员"""
     from src.models.auth import User
-    
+    from src.services import AuthService
+
+    # Check if admin already exists to avoid UNIQUE constraint errors
+    existing_admin = test_db.query(User).filter(User.username == "admin").first()
+    if existing_admin:
+        return existing_admin
+
+    # Create proper password hash with special character
+    auth_service = AuthService(test_db)
+    password_hash = auth_service.get_password_hash("Admin@123")
+
     admin = User(
         username="admin",
         email="admin@example.com",
         full_name="Admin User",
-        hashed_password="hashed_password",
+        password_hash=password_hash,
         is_active=True,
-        is_superuser=True,
+        role="admin",
     )
     test_db.add(admin)
-    test_db.commit()
+    test_db.flush()  # Use flush instead of commit
     test_db.refresh(admin)
     return admin
 
@@ -120,13 +216,23 @@ def auth_headers(test_user):
     """生成认证头"""
     import jwt
     from datetime import datetime, timedelta
-    
+
+    from src.core.config import settings
+
+    now = datetime.utcnow()
     token_data = {
-        "sub": test_user.username,
-        "user_id": str(test_user.id),
-        "exp": datetime.utcnow() + timedelta(hours=1),
+        "sub": str(test_user.id),  # sub should be user_id
+        "user_id": str(test_user.id),  # legacy field
+        "username": test_user.username,
+        "role": test_user.role or "user",
+        "exp": int((now + timedelta(hours=1)).timestamp()),
+        "iat": int(now.timestamp()),
+        "jti": str(test_user.id),  # JWT ID
+        "aud": "land-property-system",  # audience
+        "iss": "land-property-auth",  # issuer
     }
-    token = jwt.encode(token_data, "test-secret", algorithm="HS256")
+    # 使用应用的SECRET_KEY
+    token = jwt.encode(token_data, settings.SECRET_KEY, algorithm="HS256")
     return {"Authorization": f"Bearer {token}"}
 
 
@@ -139,15 +245,14 @@ def sample_asset_data():
     """示例资产数据"""
     return {
         "ownership_entity": "测试权属人",
-        "management_entity": "测试管理人",
         "property_name": "测试物业",
         "address": "测试地址123号",
         "actual_property_area": 1000.0,
         "rentable_area": 800.0,
         "rented_area": 600.0,
-        "ownership_status": "已确权",
-        "property_nature": "商业用途",
-        "usage_status": "使用中",
+        "ownership_status": "已确权",  # OwnershipStatus.CONFIRMED
+        "property_nature": "经营性",  # PropertyNature.COMMERCIAL
+        "usage_status": "出租",  # UsageStatus.RENTED
         "is_litigated": False,
     }
 
@@ -156,10 +261,10 @@ def sample_asset_data():
 def sample_asset(test_db, sample_asset_data):
     """创建示例资产"""
     from src.models.asset import Asset
-    
+
     asset = Asset(**sample_asset_data)
     test_db.add(asset)
-    test_db.commit()
+    test_db.flush()  # Use flush instead of commit
     test_db.refresh(asset)
     return asset
 

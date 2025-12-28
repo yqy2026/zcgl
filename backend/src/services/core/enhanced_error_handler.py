@@ -103,13 +103,15 @@ class EnhancedPDFImportError:
         elif error_type == "processing_timeout":
             status_code = 408
             detail = f"处理超时，请稍后重试。已处理{retry_count}/{self.max_retries}次"
+            # 计算重试延迟时间：基础10秒 * 重试次数，最大60秒
+            retry_delay = min(retry_count * 10, 60)
             return {
                 "success": False,
                 "error": "处理超时",
                 "retry_count": retry_count,
                 "max_retries": self.max_retries,
                 "error_type": error_type,
-                "estimated_retry_time": f"{min(retry_count * 10)}秒",
+                "estimated_retry_time": f"{retry_delay}秒",
                 "suggested_action": "稍后重试或联系技术支持",
             }
 

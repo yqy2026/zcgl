@@ -135,6 +135,9 @@ class RBACService:
         if cast(bool, role.is_system_role):
             raise BusinessLogicError("系统角色不能删除")
 
+        # 保存角色名称用于审计日志（在删除之前）
+        role_name = role.name
+
         # 检查是否有用户使用此角色
         user_count = (
             self.db.query(UserRoleAssignment)
@@ -154,13 +157,13 @@ class RBACService:
         self.db.execute(Role.__table__.delete().where(Role.id == role_id))
         self.db.commit()
 
-        # 记录审计日志
+        # 记录审计日志（使用保存的role_name，因为role已被删除）
         self._create_permission_audit_log(
             action="role_delete",
             resource_type="role",
             resource_id=role_id,
             operator_id=deleted_by,
-            old_permissions={"role_name": role.name},
+            old_permissions={"role_name": role_name},
             reason="角色删除",
         )
 
@@ -686,3 +689,81 @@ class RBACService:
     def _can_manage_role(self, manager_level: int, subordinate_level: int) -> bool:
         """检查是否可以管理指定级别的角色"""
         return manager_level > subordinate_level
+
+    # ==================== Permission Decorator Adapter Methods ====================
+    # These methods provide the interface expected by permission decorators
+    # They adapt the existing check_permission method to the decorator's expected signature
+
+    async def check_user_permission(
+        self, user_id: str, resource: str, action: str
+    ) -> bool:
+        """
+        检查用户权限 - 适配器方法供装饰器使用
+
+        Args:
+            user_id: 用户ID
+            resource: 资源名称 (如: 'asset', 'user', 'role')
+            action: 操作类型 (如: 'view', 'create', 'edit', 'delete')
+
+        Returns:
+            bool: 是否有权限
+        """
+        from ...schemas.rbac import PermissionCheckRequest
+
+        permission_request = PermissionCheckRequest(
+            resource=resource,
+            action=action,
+        )
+
+        response = self.check_permission(user_id, permission_request)
+        return response.has_permission
+
+    async def check_resource_access(
+        self, user_id: str, resource: str, resource_id: str, action: str
+    ) -> bool:
+        """
+        检查资源访问权限 - 适配器方法供装饰器使用
+
+        Args:
+            user_id: 用户ID
+            resource: 资源名称
+            resource_id: 资源ID
+            action: 操作类型
+
+        Returns:
+            bool: 是否有访问权限
+        """
+        from ...schemas.rbac import PermissionCheckRequest
+
+        permission_request = PermissionCheckRequest(
+            resource=resource,
+            action=action,
+            resource_id=resource_id,
+        )
+
+        response = self.check_permission(user_id, permission_request)
+        return response.has_permission
+
+    async def check_organization_access(
+        self, user_id: str, organization_id: str
+    ) -> bool:
+        """
+        检查组织访问权限 - 适配器方法供装饰器使用
+
+        Args:
+            user_id: 用户ID
+            organization_id: 组织ID
+
+        Returns:
+            bool: 是否有组织访问权限
+        """
+        from ...schemas.rbac import PermissionCheckRequest
+
+        permission_request = PermissionCheckRequest(
+            resource="organization",
+            action="view",
+            organization_id=organization_id,
+        )
+
+        response = self.check_permission(user_id, permission_request)
+        return response.has_permission

@@ -16,7 +16,7 @@ the cache.
 import time
 from collections import OrderedDict
 
-from .interfaces.ocr_service import IOCRService
+from ...services.interfaces.ocr_service import IOCRService
 
 
 class CachingOCRService(IOCRService):  # type: ignore[misc]

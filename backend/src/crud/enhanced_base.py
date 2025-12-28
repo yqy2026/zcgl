@@ -166,7 +166,7 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
 
         # 应用删除过滤器
         if not include_deleted and hasattr(self.model, "is_deleted"):
-            query = query.filter(not self.model.is_deleted)
+            query = query.filter(self.model.is_deleted == False)
 
         return query.filter(self.model.id == id).first()
 
@@ -271,7 +271,17 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
         db.commit()
         db.refresh(db_obj)
 
-        logger.info(f"Created {self.model.__name__} with ID: {db_obj.id}")
+        # Safely extract ID for logging (handles SQLAlchemy Columns in tests)
+        obj_id = getattr(db_obj, 'id', None)
+        try:
+            # Try to get the actual value (not the Column object)
+            if hasattr(obj_id, '__clause_element__'):
+                # It's a SQLAlchemy Column, try to get the value from instance
+                obj_id = getattr(db_obj, '_id', getattr(db_obj, 'id', 'N/A'))
+        except Exception:
+            obj_id = 'N/A'
+
+        logger.info(f"Created {self.model.__name__} with ID: {obj_id}")
         return db_obj
 
     def update(
@@ -320,7 +330,17 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
         db.commit()
         db.refresh(db_obj)
 
-        logger.info(f"Updated {self.model.__name__} with ID: {db_obj.id}")
+        # Safely extract ID for logging (handles SQLAlchemy Columns in tests)
+        obj_id = getattr(db_obj, 'id', None)
+        try:
+            # Try to get the actual value (not the Column object)
+            if hasattr(obj_id, '__clause_element__'):
+                # It's a SQLAlchemy Column, try to get the value from instance
+                obj_id = getattr(db_obj, '_id', getattr(db_obj, 'id', 'N/A'))
+        except Exception:
+            obj_id = 'N/A'
+
+        logger.info(f"Updated {self.model.__name__} with ID: {obj_id}")
         return db_obj
 
     def delete(
@@ -426,7 +446,7 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
 
         # 应用删除过滤器
         if not include_deleted and hasattr(self.model, "is_deleted"):
-            query = query.filter(not self.model.is_deleted)
+            query = query.filter(self.model.is_deleted == False)
 
         # 应用过滤器
         if filters:

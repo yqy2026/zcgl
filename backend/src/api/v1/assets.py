@@ -986,8 +986,9 @@ async def batch_update_assets(
                     failed_count += 1
                     continue
 
-                # 更新资产
-                asset_crud.update(db=db, db_obj=asset, obj_in=request.updates)
+                # 更新资产 - 将dict转换为AssetUpdate模型
+                update_schema = AssetUpdate(**request.updates)
+                asset_crud.update(db=db, db_obj=asset, obj_in=update_schema)
 
                 success_count += 1
                 updated_assets.append(asset_id)

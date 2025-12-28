@@ -112,8 +112,17 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
             # 确保异常对象可以被序列化
             try:
                 import json
+                from decimal import Decimal
 
-                json.dumps({"error": str(e)})  # 测试序列化
+                def decimal_default(obj):
+                    if isinstance(obj, Decimal):
+                        return float(obj)
+                    # Handle other non-serializable types
+                    if hasattr(obj, '__dict__'):
+                        return str(obj)
+                    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+
+                # Only log the error message string, not the full exception object
                 logger.error(f"Security middleware error: {error_message}")
             except (TypeError, ValueError):
                 # 如果异常信息不能序列化，使用通用消息

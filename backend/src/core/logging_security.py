@@ -248,6 +248,13 @@ class StructuredFormatter(logging.Formatter):
             }
         elif isinstance(obj, list):
             return [self._ensure_json_serializable(item) for item in obj]
+        elif isinstance(obj, BaseException):
+            # 处理Python内置异常类型
+            return {
+                "type": type(obj).__name__,
+                "message": str(obj)[:500],  # 限制长度
+                "args": [str(arg)[:200] for arg in obj.args if arg]  # 限制每个参数长度
+            }
         elif hasattr(obj, "__dict__"):
             # 处理SQLAlchemy模型对象和其他自定义对象
             try:
@@ -422,6 +429,13 @@ class SecurityAuditor:
             }
         elif isinstance(obj, list):
             return [self._ensure_json_serializable(item) for item in obj]
+        elif isinstance(obj, BaseException):
+            # 处理Python内置异常类型
+            return {
+                "type": type(obj).__name__,
+                "message": str(obj)[:500],  # 限制长度
+                "args": [str(arg)[:200] for arg in obj.args if arg]  # 限制每个参数长度
+            }
         elif hasattr(obj, "__dict__"):
             # 处理SQLAlchemy模型对象和其他自定义对象
             try:
@@ -566,6 +580,13 @@ class RequestLogger:
             }
         elif isinstance(obj, list):
             return [self._ensure_json_serializable(item) for item in obj]
+        elif isinstance(obj, BaseException):
+            # 处理Python内置异常类型
+            return {
+                "type": type(obj).__name__,
+                "message": str(obj)[:500],  # 限制长度
+                "args": [str(arg)[:200] for arg in obj.args if arg]  # 限制每个参数长度
+            }
         elif hasattr(obj, "__dict__"):
             # 处理SQLAlchemy模型对象和其他自定义对象
             try:

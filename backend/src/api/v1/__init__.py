@@ -30,6 +30,7 @@ from .roles import router as roles_router
 
 # 修复statistics模块导入 - 使用正确的router名称
 from .statistics import router as statistics_router
+from .tasks import router as tasks_router
 
 # 系统设置模块可能不存在，需要检查
 # from .system_settings import router as system_settings_router
@@ -75,6 +76,7 @@ api_router.include_router(history_router, prefix="/history", tags=["变更历史
 api_router.include_router(
     statistics_router, prefix="/statistics", tags=["数据统计和报表"]
 )
+api_router.include_router(tasks_router, tags=["任务管理"])  # Remove prefix - router defines its own paths
 api_router.include_router(occupancy_router, prefix="/occupancy", tags=["出租率计算"])
 api_router.include_router(backup_router, prefix="/backup", tags=["数据备份和恢复"])
 api_router.include_router(admin_router, prefix="/admin", tags=["系统管理"])

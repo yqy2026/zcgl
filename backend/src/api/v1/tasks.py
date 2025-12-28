@@ -32,6 +32,8 @@ from sqlalchemy.orm import Session
 from ...crud.task import excel_task_config_crud, task_crud
 from ...database import get_db
 from ...enums.task import TaskStatus
+from ...middleware.auth import get_current_active_user
+from ...models.auth import User
 from ...models.task import AsyncTask
 from ...schemas.task import (
     ExcelTaskConfigCreate,
@@ -49,7 +51,11 @@ router = APIRouter(prefix="/tasks", tags=["任务管理"])
 
 
 @router.post("/", response_model=TaskResponse, summary="创建新任务")
-async def create_task(task_in: TaskCreate, db: Session = Depends(get_db)):
+async def create_task(
+    task_in: TaskCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
     """
     创建新的异步任务
 
@@ -78,6 +84,7 @@ async def get_tasks(
     order_by: str = Query("created_at", description="排序字段"),
     order_dir: str = Query("desc", regex="^(asc|desc)$", description="排序方向"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     获取任务列表，支持分页和筛选
@@ -130,7 +137,9 @@ async def get_tasks(
 
 @router.get("/{task_id}", response_model=TaskResponse, summary="获取任务详情")
 async def get_task(
-    task_id: str = Path(..., description="任务ID"), db: Session = Depends(get_db)
+    task_id: str = Path(..., description="任务ID"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     获取单个任务的详细信息
@@ -148,6 +157,7 @@ async def update_task(
     task_id: str = Path(..., description="任务ID"),
     task_in: TaskUpdate = Body(...),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     更新任务信息
@@ -175,6 +185,7 @@ async def cancel_task(
     task_id: str = Path(..., description="任务ID"),
     cancel_request: TaskCancelRequest = None,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     取消正在运行的任务
@@ -204,7 +215,9 @@ async def cancel_task(
 
 @router.delete("/{task_id}", summary="删除任务")
 async def delete_task(
-    task_id: str = Path(..., description="任务ID"), db: Session = Depends(get_db)
+    task_id: str = Path(..., description="任务ID"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     删除任务（软删除）
@@ -226,7 +239,9 @@ async def delete_task(
     summary="获取任务历史",
 )
 async def get_task_history(
-    task_id: str = Path(..., description="任务ID"), db: Session = Depends(get_db)
+    task_id: str = Path(..., description="任务ID"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     获取任务的历史记录
@@ -248,6 +263,7 @@ async def get_task_history(
 async def get_task_statistics(
     user_id: str | None = Query(None, description="用户ID筛选"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     获取任务统计信息
@@ -262,7 +278,10 @@ async def get_task_statistics(
 
 
 @router.get("/running", response_model=list[TaskResponse], summary="获取正在运行的任务")
-async def get_running_tasks(db: Session = Depends(get_db)):
+async def get_running_tasks(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
     """
     获取当前正在运行的所有任务
     """
@@ -283,6 +302,7 @@ async def get_running_tasks(db: Session = Depends(get_db)):
 async def get_recent_tasks(
     limit: int = Query(10, ge=1, le=50, description="返回数量"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     获取最近的任务
@@ -322,8 +342,11 @@ async def create_excel_config(
     """
     try:
         config = excel_task_config_crud.create(db=db, obj_in=config_in)
+        db.commit()  # Commit at API layer, not CRUD layer
+        db.refresh(config)
         return config
     except Exception as e:
+        db.rollback()
         raise HTTPException(status_code=500, detail=f"创建Excel配置失败: {str(e)}")
 
 
@@ -452,6 +475,7 @@ async def cleanup_old_tasks(
     days: int = Query(30, ge=1, le=365, description="清理多少天前的任务"),
     dry_run: bool = Query(False, description="是否为试运行"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     清理过期的任务记录

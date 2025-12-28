@@ -2,15 +2,17 @@
 认证相关API路由
 """
 
+import jwt
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
+from ...core.config import settings
 from ...crud.auth import AuditLogCRUD, UserCRUD, UserSessionCRUD
 from ...database import get_db
 from ...exceptions import BusinessLogicError
-from ...middleware.auth import SecurityConfig, get_current_active_user, require_admin
+from ...middleware.auth import SecurityConfig, ALGORITHM, SECRET_KEY, get_current_active_user, require_admin
 from ...schemas.auth import (
     LoginRequest,
     PasswordChangeRequest,
@@ -148,6 +150,7 @@ async def logout(
     用户登出接口
 
     - 撤销当前会话
+    - 将当前JWT令牌加入黑名单
     - 清除客户端令牌
     - 记录登出审计日志
     """
@@ -157,6 +160,32 @@ async def logout(
     # 获取客户端信息
     client_ip = request.client.host if request.client else "unknown"
     user_agent = request.headers.get("user-agent", "unknown")
+
+    # 提取并黑名单当前JWT令牌
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+        try:
+            # 解码JWT获取jti和exp
+            payload = jwt.decode(
+                token,
+                SECRET_KEY,
+                algorithms=[ALGORITHM],
+                audience="land-property-system",
+                issuer="land-property-auth",
+                options={"verify_exp": False},  # 允许解码已过期的令牌
+            )
+            jti = payload.get("jti")
+            exp = payload.get("exp")
+
+            if jti and exp:
+                from ...core.token_blacklist import blacklist_manager
+                blacklist_manager.add_token(jti, exp)
+        except Exception as e:
+            # 记录错误但继续登出流程
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to blacklist token during logout: {e}")
 
     # 撤销用户所有会话
     revoked_count = auth_service.revoke_all_user_sessions(current_user.id)
@@ -650,11 +679,13 @@ async def revoke_session(
     auth_service = AuthService(db)
     session_crud = UserSessionCRUD()
 
+    # 获取会话记录
     session = session_crud.get(db, session_id)
     if not session or str(session.user_id) != str(current_user.id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="会话不存在")
 
-    success = auth_service.revoke_session(session_id)
+    # 使用refresh_token撤销会话（API修复：传递refresh_token而非session_id）
+    success = auth_service.revoke_session(session.refresh_token)
     if success:
         return {"message": "会话已撤销"}
     else:

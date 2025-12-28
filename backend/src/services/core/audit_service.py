@@ -155,7 +155,7 @@ class EnhancedAuditLogger:
         """Return the most active resource type."""
         resource_counts = defaultdict(int)
         for event in events:
-            if event["resource_type"]:
+            if event.get("resource_type"):
                 resource_counts[event["resource_type"]] += 1
 
         if resource_counts:
@@ -187,6 +187,8 @@ class EnhancedAuditLogger:
                     "timestamp": datetime.now(),
                 }
             )
+
+        return suspicious_events
 
 
 __all__ = ["EnhancedAuditLogger"]

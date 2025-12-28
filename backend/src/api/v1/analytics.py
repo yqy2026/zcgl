@@ -3,6 +3,7 @@ from typing import Any
 """
 资产分析API路由 - 提供综合的统计分析数据
 Version: 2025-10-30_06-28 - Fixed cache stats issue
+Version: 2025-12-27 - 添加认证依赖，修复安全漏洞
 
 遵循最佳实践：
 - 代码模块化和可重用
@@ -11,6 +12,7 @@ Version: 2025-10-30_06-28 - Fixed cache stats issue
 - 清晰的日志记录
 - 数据验证和一致性检查
 - 统一响应格式
+- 安全认证要求
 
 Version: 1.1 - 修复了get_stats方法调用问题
 """
@@ -27,6 +29,8 @@ from sqlalchemy.orm import Session
 from ...core.cache_manager import analytics_cache, cache_manager
 from ...core.response_handler import ResponseHandler, get_request_id
 from ...database import get_db
+from ...middleware.auth import get_current_active_user
+from ...models.auth import User
 from ...schemas.asset import DataStatus
 
 # 强制重新加载标记 - 2025-10-30 06:30 - VERSION 2
@@ -1522,6 +1526,7 @@ def create_empty_response() -> dict[str, Any]:
 @router.get("/comprehensive", summary="获取综合统计分析数据")
 async def get_comprehensive_analytics(
     request: Request,
+    current_user: User = Depends(get_current_active_user),
     search: str | None = Query(None, description="搜索筛选"),
     ownership_status: str | None = Query(None, description="确权状态筛选"),
     property_nature: str | None = Query(None, description="物业性质筛选"),
@@ -1805,7 +1810,10 @@ async def get_cache_stats(request: Request):
 
 
 @router.post("/cache/clear", summary="清除分析缓存")
-async def clear_cache(request: Request):
+async def clear_cache(
+    request: Request,
+    current_user: User = Depends(get_current_active_user)
+):
     """清除所有分析缓存"""
     request_id = get_request_id(request)
     try:

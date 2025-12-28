@@ -60,7 +60,7 @@ class BusinessValidationError(BaseBusinessError):
             message=message,
             code="VALIDATION_ERROR",
             details={"field_errors": self.field_errors, **(details or {})},
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         )
 
 
@@ -288,6 +288,26 @@ class ExceptionHandler:
         self, request: Request, exc: RequestValidationError
     ) -> JSONResponse:
         """处理请求验证异常"""
+        from decimal import Decimal
+
+        # 清理错误详情，移除不可序列化的对象
+        cleaned_errors = []
+        for error in exc.errors():
+            cleaned_error = {}
+            for key, value in error.items():
+                # 跳过'input'字段，因为它可能包含不可序列化的Decimal对象
+                if key == "input":
+                    continue
+                # 对于其他字段，转换Decimal为float
+                if isinstance(value, Decimal):
+                    cleaned_error[key] = float(value)
+                elif isinstance(value, (list, dict)):
+                    # 递归清理嵌套结构
+                    cleaned_error[key] = self._clean_for_serialization(value)
+                else:
+                    cleaned_error[key] = value
+            cleaned_errors.append(cleaned_error)
+
         field_errors = {}
         for error in exc.errors():
             field_name = ".".join(str(loc) for loc in error["loc"])
@@ -298,10 +318,31 @@ class ExceptionHandler:
         business_exc = BusinessValidationError(
             message="请求参数验证失败",
             field_errors=field_errors,
-            details={"errors": exc.errors()},
+            details={"errors": cleaned_errors},
         )
 
         return self.handle_business_exception(request, business_exc)
+
+    def _clean_for_serialization(self, obj):
+        """递归清理对象以便JSON序列化"""
+        from decimal import Decimal
+
+        if isinstance(obj, Decimal):
+            return float(obj)
+        elif isinstance(obj, dict):
+            return {k: self._clean_for_serialization(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [self._clean_for_serialization(item) for item in obj]
+        elif isinstance(obj, tuple):
+            return tuple(self._clean_for_serialization(item) for item in obj)
+        elif isinstance(obj, BaseException):
+            # Handle exception objects
+            return {
+                "type": type(obj).__name__,
+                "message": str(obj)[:500],
+            }
+        else:
+            return obj
 
     def handle_pydantic_validation_exception(
         self, request: Request, exc: BusinessValidationError

@@ -130,7 +130,7 @@ class JWTSecurityConfig:
 
         # 创建令牌
         token = jwt.encode(
-            full_payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM
+            full_payload, settings.SECRET_KEY, algorithm=getattr(settings, 'ALGORITHM', 'HS256')
         )
 
         logger.debug(f"Created {token_type} token with JTI: {full_payload['jti']}")
@@ -153,7 +153,7 @@ class JWTSecurityConfig:
         try:
             # 解码令牌
             payload = jwt.decode(
-                token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+                token, settings.SECRET_KEY, algorithms=[getattr(settings, 'ALGORITHM', 'HS256')]
             )
 
             # 验证标准声明
@@ -211,8 +211,13 @@ class JWTSecurityConfig:
             令牌安全信息
         """
         try:
-            # 不验证签名，仅解析payload
-            payload = jwt.decode(token, options={"verify_signature": False})
+            # 不验证签名，仅解析payload - 需要提供key参数
+            payload = jwt.decode(
+                token,
+                settings.SECRET_KEY,
+                options={"verify_signature": False, "verify_exp": False},
+                algorithms=[getattr(settings, 'ALGORITHM', 'HS256')]
+            )
 
             now = datetime.now(UTC)
             exp = payload.get("exp")

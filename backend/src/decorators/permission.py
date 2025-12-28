@@ -99,6 +99,9 @@ def permission_required(
                 # 执行原函数
                 return await func(*args, **kwargs)
 
+            except HTTPException:
+                # Re-raise HTTPException directly (e.g., 403 permission denied)
+                raise
             except BusinessLogicError as e:
                 logger.error(f"权限验证业务逻辑错误: {str(e)}")
                 raise HTTPException(

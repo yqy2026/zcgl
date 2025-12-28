@@ -175,7 +175,7 @@ class UnifiedErrorHandler:
             error=error_data, timestamp=datetime.utcnow(), request_id=request_id
         )
 
-        return JSONResponse(status_code=status_code, content=response.dict())
+        return JSONResponse(status_code=status_code, content=response.model_dump(mode='json'))
 
     def _log_error(self, error: Exception, request: Request | None = None):
         """记录错误日志"""

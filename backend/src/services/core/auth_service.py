@@ -50,8 +50,8 @@ if ACCESS_TOKEN_EXPIRE_MINUTES < 60:
 
 # 密码策略
 MIN_PASSWORD_LENGTH = settings.MIN_PASSWORD_LENGTH
-MAX_FAILED_ATTEMPTS = settings.MAX_FAILED_ATTEMPTS
-LOCKOUT_DURATION_MINUTES = settings.LOCKOUT_DURATION
+# Note: MAX_FAILED_ATTEMPTS and LOCKOUT_DURATION_MINUTES are read directly from settings
+# to allow test-time configuration changes
 # 密码过期策略（天数）
 PASSWORD_EXPIRE_DAYS = int(getattr(settings, "PASSWORD_EXPIRE_DAYS", 90))
 
@@ -227,10 +227,10 @@ class AuthService:
             user.failed_login_attempts += 1
 
             # 如果达到最大失败次数，锁定账户
-            if user.failed_login_attempts >= MAX_FAILED_ATTEMPTS:
+            if user.failed_login_attempts >= settings.MAX_FAILED_ATTEMPTS:
                 user.is_locked = True
                 user.locked_until = datetime.now() + timedelta(
-                    minutes=LOCKOUT_DURATION_MINUTES
+                    minutes=settings.LOCKOUT_DURATION
                 )
 
             self.db.commit()
@@ -622,8 +622,10 @@ class AuthService:
             if existing_user:
                 raise BusinessLogicError("邮箱已被其他用户使用")
 
-        if user_data.username and user_data.username != user.username:
-            existing_user = self.get_user_by_username(user_data.username)
+        # Use getattr to safely check for username (UserUpdate may not have username field)
+        username = getattr(user_data, 'username', None)
+        if username and username != user.username:
+            existing_user = self.get_user_by_username(username)
             if existing_user:
                 raise BusinessLogicError("用户名已被其他用户使用")
 

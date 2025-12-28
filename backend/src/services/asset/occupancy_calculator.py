@@ -95,6 +95,8 @@ class OccupancyRateCalculator:
             db = next(get_db())
 
             try:
+                from sqlalchemy import case
+
                 # 使用SQL聚合函数计算总面积
                 occupancy_stats = (
                     db.query(
@@ -106,7 +108,7 @@ class OccupancyRateCalculator:
                         ),
                         func.count(Asset.id).label("total_count"),
                         func.count(
-                            func.case([(Asset.rentable_area > 0, Asset.id)])
+                            case((Asset.rentable_area > 0, Asset.id))
                         ).label("rentable_count"),
                     )
                     .filter(

@@ -60,7 +60,10 @@ _system_settings = SystemSettings()
 
 
 @router.get("/settings", summary="获取系统设置")
-async def get_system_settings(db: Session = Depends(get_db)):
+async def get_system_settings(
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_active_user),
+):
     """
     获取系统设置
 
@@ -124,7 +127,10 @@ async def update_system_settings(
 
 
 @router.get("/info", summary="获取系统信息")
-async def get_system_info(db: Session = Depends(get_db)):
+async def get_system_info(
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_active_user),
+):
     """
     获取系统信息
 

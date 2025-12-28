@@ -284,8 +284,13 @@ class DatabaseManager:
         return health_status
 
 
-# 数据库URL配置
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./data/land_property.db")
+# 数据库URL配置 - 动态读取环境变量，支持测试模式
+def get_database_url() -> str:
+    """获取数据库URL（支持动态环境变量）"""
+    return os.getenv("DATABASE_URL", "sqlite:///./data/land_property.db")
+
+# 向后兼容的模块级变量（现在通过函数获取）
+DATABASE_URL = get_database_url()
 
 # 确保SQLite数据目录存在
 if "sqlite" in DATABASE_URL.lower():
@@ -304,7 +309,8 @@ def _get_database_manager() -> DatabaseManager:
     global _database_manager
     if _database_manager is None:
         _database_manager = DatabaseManager()
-        _database_manager.initialize_engine(DATABASE_URL)
+        # 动态获取数据库URL，支持测试模式
+        _database_manager.initialize_engine(get_database_url())
     return _database_manager
 
 

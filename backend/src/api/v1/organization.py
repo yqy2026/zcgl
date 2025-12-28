@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session
 
 from ...crud.organization import get_organization_crud
 from ...database import get_db
+from ...middleware.auth import get_current_active_user
+from ...models.auth import User
 from ...schemas.organization import (
     OrganizationBatchRequest,
     OrganizationCreate,
@@ -27,6 +29,7 @@ async def get_organizations(
     skip: int = Query(0, ge=0, description="跳过记录数"),
     limit: int = Query(100, ge=1, le=1000, description="返回记录数"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """获取组织列表"""
     crud = get_organization_crud(db)
@@ -38,6 +41,7 @@ async def get_organizations(
 async def get_organization_tree(
     parent_id: str | None = Query(None, description="父组织ID，为空则获取根组织"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """获取组织树形结构"""
     crud = get_organization_crud(db)
@@ -69,6 +73,7 @@ async def search_organizations(
     skip: int = Query(0, ge=0, description="跳过记录数"),
     limit: int = Query(100, ge=1, le=1000, description="返回记录数"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """搜索组织"""
     crud = get_organization_crud(db)
@@ -77,7 +82,10 @@ async def search_organizations(
 
 
 @router.get("/statistics", response_model=OrganizationStatistics)
-async def get_organization_statistics(db: Session = Depends(get_db)):
+async def get_organization_statistics(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
     """获取组织统计信息"""
     crud = get_organization_crud(db)
     stats = crud.get_statistics()
@@ -85,7 +93,11 @@ async def get_organization_statistics(db: Session = Depends(get_db)):
 
 
 @router.get("/{org_id}", response_model=OrganizationResponse)
-async def get_organization(org_id: str, db: Session = Depends(get_db)):
+async def get_organization(
+    org_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
     """根据ID获取组织详情"""
     crud = get_organization_crud(db)
     organization = crud.get(org_id)
@@ -99,6 +111,7 @@ async def get_organization_children(
     org_id: str,
     recursive: bool = Query(False, description="是否递归获取所有子组织"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """获取组织的子组织"""
     crud = get_organization_crud(db)
@@ -113,7 +126,11 @@ async def get_organization_children(
 
 
 @router.get("/{org_id}/path", response_model=list[OrganizationResponse])
-async def get_organization_path(org_id: str, db: Session = Depends(get_db)):
+async def get_organization_path(
+    org_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
     """获取组织到根节点的路径"""
     crud = get_organization_crud(db)
 
@@ -132,6 +149,7 @@ async def get_organization_history(
     skip: int = Query(0, ge=0, description="跳过记录数"),
     limit: int = Query(100, ge=1, le=1000, description="返回记录数"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """获取组织变更历史"""
     crud = get_organization_crud(db)
@@ -147,7 +165,9 @@ async def get_organization_history(
 
 @router.post("/", response_model=OrganizationResponse)
 async def create_organization(
-    organization: OrganizationCreate, db: Session = Depends(get_db)
+    organization: OrganizationCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """创建组织"""
     crud = get_organization_crud(db)
@@ -161,7 +181,10 @@ async def create_organization(
 
 @router.put("/{org_id}", response_model=OrganizationResponse)
 async def update_organization(
-    org_id: str, organization: OrganizationUpdate, db: Session = Depends(get_db)
+    org_id: str,
+    organization: OrganizationUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """更新组织"""
     crud = get_organization_crud(db)
@@ -180,6 +203,7 @@ async def delete_organization(
     org_id: str,
     deleted_by: str | None = Query(None, description="删除人"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """删除组织（软删除）"""
     crud = get_organization_crud(db)
@@ -195,7 +219,10 @@ async def delete_organization(
 
 @router.post("/{org_id}/move")
 async def move_organization(
-    org_id: str, move_request: OrganizationMoveRequest, db: Session = Depends(get_db)
+    org_id: str,
+    move_request: OrganizationMoveRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """移动组织到新的父组织下"""
     crud = get_organization_crud(db)
@@ -216,7 +243,9 @@ async def move_organization(
 
 @router.post("/batch")
 async def batch_organization_operation(
-    batch_request: OrganizationBatchRequest, db: Session = Depends(get_db)
+    batch_request: OrganizationBatchRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """批量操作组织"""
     crud = get_organization_crud(db)
@@ -246,7 +275,9 @@ async def batch_organization_operation(
 
 @router.post("/advanced-search", response_model=list[OrganizationResponse])
 async def advanced_search_organizations(
-    search_request: OrganizationSearchRequest, db: Session = Depends(get_db)
+    search_request: OrganizationSearchRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """高级搜索组织"""
     crud = get_organization_crud(db)

@@ -87,13 +87,23 @@ class OccupancyRateStatsResponse(BaseModel):
 
 
 class CategoryOccupancyRateResponse(BaseModel):
-    """分类出租率响应模型"""
+    """分类出租率响应模型 - 单个分类"""
 
     category: str = Field(..., description="分类名称")
     occupancy_rate: float = Field(..., description="出租率")
     rentable_area: float = Field(..., description="可租面积")
     rented_area: float = Field(..., description="已租面积")
     asset_count: int = Field(..., description="资产数量")
+
+
+class CategoryOccupancyRateListResponse(BaseModel):
+    """分类出租率列表响应模型 - 包含多个分类"""
+
+    category_field: str = Field(..., description="分类字段名")
+    categories: list[CategoryOccupancyRateResponse] = Field(
+        ..., description="各分类的出租率统计"
+    )
+    generated_at: datetime = Field(..., description="生成时间")
 
 
 class AreaSummaryResponse(BaseModel):

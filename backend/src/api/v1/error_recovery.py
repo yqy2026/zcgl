@@ -11,7 +11,7 @@ from datetime import datetime
 from fastapi import APIRouter, Body, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from ...decorators.rbac_decorator import require_permissions
+from ...middleware.auth import require_permissions
 from ...middleware.error_recovery_middleware import api_error_recovery
 from ...services.error_recovery_service import (
     ErrorCategory,
@@ -35,9 +35,9 @@ class RecoveryStrategyUpdate(BaseModel):
     auto_recovery: bool | None = Field(None, description="是否启用自动恢复")
 
 
-class ErrorCategoryEnum(BaseModel):
-    """错误类别枚举"""
-
+# Error category constants (for documentation, actual enum is in error_recovery_service)
+class ErrorCategoryConst:
+    """错误类别常量"""
     NETWORK = "network"
     DATABASE = "database"
     VALIDATION = "validation"
@@ -51,9 +51,9 @@ class ErrorCategoryEnum(BaseModel):
     SYSTEM = "system"
 
 
-class ErrorSeverityEnum(BaseModel):
-    """错误严重程度枚举"""
-
+# Error severity constants (for documentation, actual enum is in error_recovery_service)
+class ErrorSeverityConst:
+    """错误严重程度常量"""
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"

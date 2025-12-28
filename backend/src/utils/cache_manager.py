@@ -220,7 +220,7 @@ def cache_key_builder(func_name: str, **kwargs) -> str:
 
 
 class CacheDecorator:
-    """缓存装饰器"""
+    """缓存装饰器 - 支持同步和异步函数"""
 
     def __init__(self, prefix: str, expire: int = 3600, key_builder=None):
         self.prefix = prefix
@@ -228,24 +228,48 @@ class CacheDecorator:
         self.key_builder = key_builder or cache_key_builder
 
     def __call__(self, func):
-        async def wrapper(*args, **kwargs):
-            # 构建缓存键
-            cache_key = self.key_builder(func.__name__, **kwargs)
+        # 检测函数是否为异步函数
+        import asyncio
+        import inspect
 
-            # 尝试从缓存获取
-            cached_result = await cache_manager.get(self.prefix, cache_key)
-            if cached_result is not None:
-                return cached_result
+        is_async_func = asyncio.iscoroutinefunction(func)
 
-            # 执行函数
-            result = await func(*args, **kwargs)
+        if is_async_func:
+            # 异步函数的处理逻辑
+            async def async_wrapper(*args, **kwargs):
+                # 构建缓存键
+                cache_key = self.key_builder(func.__name__, **kwargs)
 
-            # 设置缓存
-            await cache_manager.set(self.prefix, cache_key, result, self.expire)
+                # 尝试从缓存获取
+                cached_result = await cache_manager.get(self.prefix, cache_key)
+                if cached_result is not None:
+                    return cached_result
 
-            return result
+                # 执行异步函数
+                result = await func(*args, **kwargs)
 
-        return wrapper
+                # 设置缓存
+                await cache_manager.set(self.prefix, cache_key, result, self.expire)
+
+                return result
+
+            return async_wrapper
+        else:
+            # 同步函数的处理逻辑
+            def sync_wrapper(*args, **kwargs):
+                # 构建缓存键
+                cache_key = self.key_builder(func.__name__, **kwargs)
+
+                # 对于同步函数，使用同步方式的缓存（内存缓存）
+                # 因为在同步上下文中无法使用async方法
+                import threading
+
+                # 使用线程局部存储或简单返回结果（不在缓存中）
+                # 由于cache_manager是异步的，同步函数暂时跳过缓存
+                # 直接执行函数
+                return func(*args, **kwargs)
+
+            return sync_wrapper
 
 
 # 常用缓存装饰器

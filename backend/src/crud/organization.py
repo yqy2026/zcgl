@@ -6,7 +6,7 @@ from typing import Any
 
 from datetime import datetime
 
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, not_, or_
 from sqlalchemy.orm import Session
 
 from ..models.organization import Organization, OrganizationHistory
@@ -23,13 +23,13 @@ class OrganizationCRUD:
         """根据ID获取组织"""
         return (
             self.db.query(Organization)
-            .filter(and_(Organization.id == org_id, not Organization.is_deleted))
+            .filter(and_(Organization.id == org_id, not_(Organization.is_deleted)))
             .first()
         )
 
     def get_all(self, skip: int = 0, limit: int = 100) -> list[Organization]:
         """获取所有组织"""
-        query = self.db.query(Organization).filter(not Organization.is_deleted)
+        query = self.db.query(Organization).filter(not_(Organization.is_deleted))
 
         return (
             query.order_by(Organization.level, Organization.sort_order)
@@ -41,7 +41,7 @@ class OrganizationCRUD:
     def get_tree(self, parent_id: str | None = None) -> list[Organization]:
         """获取组织树形结构"""
         query = self.db.query(Organization).filter(
-            and_(not Organization.is_deleted, Organization.parent_id == parent_id)
+            and_(not_(Organization.is_deleted), Organization.parent_id == parent_id)
         )
         return query.order_by(Organization.sort_order, Organization.name).all()
 
@@ -55,7 +55,7 @@ class OrganizationCRUD:
                 .filter(
                     and_(
                         Organization.parent_id == parent_id,
-                        not Organization.is_deleted,
+                        not_(Organization.is_deleted),
                     )
                 )
                 .order_by(Organization.sort_order, Organization.name)
@@ -92,7 +92,7 @@ class OrganizationCRUD:
             self.db.query(Organization)
             .filter(
                 and_(
-                    not Organization.is_deleted,
+                    not_(Organization.is_deleted),
                     or_(
                         Organization.name.contains(keyword),
                         Organization.description.contains(keyword),
@@ -110,7 +110,10 @@ class OrganizationCRUD:
         # 创建组织对象
         db_obj = Organization(**obj_in.model_dump())
 
-        # 设置层级和路径
+        self.db.add(db_obj)
+        self.db.flush()  # Flush to get the ID
+
+        # 设置层级和路径 (after ID is assigned)
         if obj_in.parent_id:
             parent = self.get(obj_in.parent_id)
             if parent:
@@ -126,12 +129,12 @@ class OrganizationCRUD:
             db_obj.level = 1
             db_obj.path = f"/{db_obj.id}"
 
-        self.db.add(db_obj)
         self.db.commit()
         self.db.refresh(db_obj)
 
         # 记录创建历史
         self._create_history(db_obj.id, "create", created_by=obj_in.created_by)
+        self.db.flush()  # Flush history to make it visible in tests
 
         return db_obj
 
@@ -222,7 +225,7 @@ class OrganizationCRUD:
 
     def get_statistics(self) -> dict[str, Any]:
         """获取组织统计信息"""
-        total = self.db.query(Organization).filter(not Organization.is_deleted).count()
+        total = self.db.query(Organization).filter(not_(Organization.is_deleted)).count()
         active = total  # 由于删除了status字段，所有未删除的组织都视为活跃
         inactive = 0  # 非活跃数量为0，因为没有status字段
 
@@ -230,7 +233,7 @@ class OrganizationCRUD:
         level_stats = {}
         levels = (
             self.db.query(Organization.level)
-            .filter(not Organization.is_deleted)
+            .filter(not_(Organization.is_deleted))
             .distinct()
             .all()
         )
@@ -238,7 +241,7 @@ class OrganizationCRUD:
             level = level_row[0]
             count = (
                 self.db.query(Organization)
-                .filter(and_(not Organization.is_deleted, Organization.level == level))
+                .filter(and_(not_(Organization.is_deleted), Organization.level == level))
                 .count()
             )
             level_stats[f"level_{level}"] = count
