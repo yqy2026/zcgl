@@ -11,10 +11,9 @@ Note: analytics/__init__.py:6,12 and asset/__init__.py:15,16 are unreachable
       due to archived services from cleanup.
 """
 
-import pytest
 import sys
 from io import StringIO
-from unittest.mock import patch, Mock
+from unittest.mock import patch
 
 
 class TestSurgicalCoverage75:
@@ -89,7 +88,7 @@ class TestSurgicalCoverage75:
                     "enum_type_id": "type-1",
                     "label": "Test",
                     "value": "test1",
-                    "code": None  # This should hit line 95 in validate_code
+                    "code": None,  # This should hit line 95 in validate_code
                 }
             ]
         }
@@ -104,24 +103,24 @@ class TestSurgicalCoverage75:
 
     def test_api_v1_system_settings_import_error_handled(self):
         """Target api/v1/__init__.py:46-48 - ImportError handler for system_settings"""
-        import importlib
         import sys
 
         # Remove module from cache to trigger re-import
-        modules_to_remove = [k for k in list(sys.modules.keys()) if 'api.v1' in k]
+        modules_to_remove = [k for k in list(sys.modules.keys()) if "api.v1" in k]
         for module in modules_to_remove:
             del sys.modules[module]
 
         # Mock the system_settings import to fail
         import builtins
+
         original_import = builtins.__import__
 
         def mock_import(name, *args, **kwargs):
-            if 'system_settings' in name and 'v1' in name:
+            if "system_settings" in name and "v1" in name:
                 raise ImportError("Mocked import failure")
             return original_import(name, *args, **kwargs)
 
-        with patch('builtins.__import__', side_effect=mock_import):
+        with patch("builtins.__import__", side_effect=mock_import):
             # Re-import the module - ImportError should be caught (lines 46-48)
             from src.api.v1 import api_router
 
@@ -134,7 +133,7 @@ class TestSurgicalCoverage75:
 
         # The module should load successfully because ImportError is handled (lines 46-48)
         assert api_router is not None
-        assert hasattr(api_router, 'routes')
+        assert hasattr(api_router, "routes")
 
 
 class TestAdditionalCoveragePaths:
@@ -142,9 +141,10 @@ class TestAdditionalCoveragePaths:
 
     def test_response_handler_database_error_debug_details(self):
         """Target response_handler.py line 196 - DEBUG mode details dict"""
-        from src.core.response_handler import ResponseHandler
-        from src.core.config import settings
         from sqlalchemy.exc import IntegrityError
+
+        from src.core.config import settings
+        from src.core.response_handler import ResponseHandler
 
         # Save original DEBUG setting
         original_debug = settings.DEBUG
@@ -166,5 +166,5 @@ class TestAdditionalCoveragePaths:
         from src.core.encoding_utils import validate_text
 
         # Test with bytes input
-        result = validate_text("测试".encode('utf-8'))
+        result = validate_text("测试".encode())
         assert result is True

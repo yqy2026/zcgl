@@ -722,7 +722,9 @@ def get_overall_occupancy_rate(
 
 
 @cache_statistics(expire=600)  # 10分钟缓存
-@router.get("/occupancy-rate/by-category", response_model=CategoryOccupancyRateListResponse)
+@router.get(
+    "/occupancy-rate/by-category", response_model=CategoryOccupancyRateListResponse
+)
 def get_occupancy_rate_by_category(
     category_field: str = "business_category",
     include_deleted: bool = False,
@@ -912,7 +914,9 @@ def get_financial_summary(
         for asset in assets:
             # 累计可出租面积
             if getattr(asset, "rentable_area", None):
-                summary["total_rentable_area"] += to_float(getattr(asset, "rentable_area"))
+                summary["total_rentable_area"] += to_float(
+                    getattr(asset, "rentable_area")
+                )
 
             if getattr(asset, "annual_income", None):
                 summary["total_annual_income"] += to_float(

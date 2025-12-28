@@ -38,6 +38,7 @@ class RecoveryStrategyUpdate(BaseModel):
 # Error category constants (for documentation, actual enum is in error_recovery_service)
 class ErrorCategoryConst:
     """错误类别常量"""
+
     NETWORK = "network"
     DATABASE = "database"
     VALIDATION = "validation"
@@ -54,6 +55,7 @@ class ErrorCategoryConst:
 # Error severity constants (for documentation, actual enum is in error_recovery_service)
 class ErrorSeverityConst:
     """错误严重程度常量"""
+
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"

@@ -272,14 +272,14 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
         db.refresh(db_obj)
 
         # Safely extract ID for logging (handles SQLAlchemy Columns in tests)
-        obj_id = getattr(db_obj, 'id', None)
+        obj_id = getattr(db_obj, "id", None)
         try:
             # Try to get the actual value (not the Column object)
-            if hasattr(obj_id, '__clause_element__'):
+            if hasattr(obj_id, "__clause_element__"):
                 # It's a SQLAlchemy Column, try to get the value from instance
-                obj_id = getattr(db_obj, '_id', getattr(db_obj, 'id', 'N/A'))
+                obj_id = getattr(db_obj, "_id", getattr(db_obj, "id", "N/A"))
         except Exception:
-            obj_id = 'N/A'
+            obj_id = "N/A"
 
         logger.info(f"Created {self.model.__name__} with ID: {obj_id}")
         return db_obj
@@ -331,14 +331,14 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
         db.refresh(db_obj)
 
         # Safely extract ID for logging (handles SQLAlchemy Columns in tests)
-        obj_id = getattr(db_obj, 'id', None)
+        obj_id = getattr(db_obj, "id", None)
         try:
             # Try to get the actual value (not the Column object)
-            if hasattr(obj_id, '__clause_element__'):
+            if hasattr(obj_id, "__clause_element__"):
                 # It's a SQLAlchemy Column, try to get the value from instance
-                obj_id = getattr(db_obj, '_id', getattr(db_obj, 'id', 'N/A'))
+                obj_id = getattr(db_obj, "_id", getattr(db_obj, "id", "N/A"))
         except Exception:
-            obj_id = 'N/A'
+            obj_id = "N/A"
 
         logger.info(f"Updated {self.model.__name__} with ID: {obj_id}")
         return db_obj

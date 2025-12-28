@@ -97,7 +97,9 @@ def create_contract(
     summary="获取租金合同详情",
 )
 def get_contract(
-    contract_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
+    contract_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ) -> Any:
     """
     获取租金合同详情，包含租金条款信息
@@ -183,7 +185,9 @@ def update_contract(
 
 @router.delete("/contracts/{contract_id}", summary="删除租金合同")
 def delete_contract(
-    contract_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
+    contract_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ) -> Any:
     """
     删除租金合同（同时删除相关的租金条款和台账记录）
@@ -209,7 +213,9 @@ def delete_contract(
     summary="获取合同租金条款",
 )
 def get_contract_terms(
-    contract_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
+    contract_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ) -> Any:
     """
     获取指定合同的所有租金条款
@@ -318,7 +324,9 @@ def get_rent_ledger(
     "/ledger/{ledger_id}", response_model=RentLedgerResponse, summary="获取租金台账详情"
 )
 def get_rent_ledger_detail(
-    ledger_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
+    ledger_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ) -> Any:
     """
     获取租金台账详情
@@ -342,8 +350,13 @@ def batch_update_rent_ledger(
     try:
         ledgers = rent_ledger.batch_update_payment(db=db, request=request)
         # Convert SQLAlchemy models to Pydantic schemas
-        ledger_responses = [RentLedgerResponse.model_validate(ledger) for ledger in ledgers]
-        return {"message": f"成功更新 {len(ledgers)} 条台账记录", "ledgers": ledger_responses}
+        ledger_responses = [
+            RentLedgerResponse.model_validate(ledger) for ledger in ledgers
+        ]
+        return {
+            "message": f"成功更新 {len(ledgers)} 条台账记录",
+            "ledgers": ledger_responses,
+        }
     except Exception as e:
         # Don't catch HTTPException - let it propagate
         if isinstance(e, HTTPException):
@@ -372,8 +385,7 @@ def update_rent_ledger(
         valid_statuses = ["未支付", "部分支付", "已支付", "逾期"]
         if ledger_in.payment_status not in valid_statuses:
             raise HTTPException(
-                status_code=422,
-                detail=f"支付状态必须是: {', '.join(valid_statuses)}"
+                status_code=422, detail=f"支付状态必须是: {', '.join(valid_statuses)}"
             )
 
     try:
@@ -560,7 +572,9 @@ def export_statistics(
     summary="获取合同台账",
 )
 def get_contract_ledger(
-    contract_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
+    contract_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ) -> Any:
     """
     获取指定合同的所有台账记录
@@ -579,7 +593,9 @@ def get_contract_ledger(
     summary="获取资产合同",
 )
 def get_asset_contracts(
-    asset_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
+    asset_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ) -> Any:
     """
     获取指定资产的所有合同

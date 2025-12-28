@@ -225,7 +225,9 @@ class OrganizationCRUD:
 
     def get_statistics(self) -> dict[str, Any]:
         """获取组织统计信息"""
-        total = self.db.query(Organization).filter(not_(Organization.is_deleted)).count()
+        total = (
+            self.db.query(Organization).filter(not_(Organization.is_deleted)).count()
+        )
         active = total  # 由于删除了status字段，所有未删除的组织都视为活跃
         inactive = 0  # 非活跃数量为0，因为没有status字段
 
@@ -241,7 +243,9 @@ class OrganizationCRUD:
             level = level_row[0]
             count = (
                 self.db.query(Organization)
-                .filter(and_(not_(Organization.is_deleted), Organization.level == level))
+                .filter(
+                    and_(not_(Organization.is_deleted), Organization.level == level)
+                )
                 .count()
             )
             level_stats[f"level_{level}"] = count

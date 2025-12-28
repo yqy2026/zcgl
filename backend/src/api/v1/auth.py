@@ -2,17 +2,22 @@
 认证相关API路由
 """
 
-import jwt
 from datetime import UTC, datetime
 
+import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
-from ...core.config import settings
 from ...crud.auth import AuditLogCRUD, UserCRUD, UserSessionCRUD
 from ...database import get_db
 from ...exceptions import BusinessLogicError
-from ...middleware.auth import SecurityConfig, ALGORITHM, SECRET_KEY, get_current_active_user, require_admin
+from ...middleware.auth import (
+    ALGORITHM,
+    SECRET_KEY,
+    SecurityConfig,
+    get_current_active_user,
+    require_admin,
+)
 from ...schemas.auth import (
     LoginRequest,
     PasswordChangeRequest,
@@ -180,10 +185,12 @@ async def logout(
 
             if jti and exp:
                 from ...core.token_blacklist import blacklist_manager
+
                 blacklist_manager.add_token(jti, exp)
         except Exception as e:
             # 记录错误但继续登出流程
             import logging
+
             logger = logging.getLogger(__name__)
             logger.warning(f"Failed to blacklist token during logout: {e}")
 

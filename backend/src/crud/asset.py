@@ -164,7 +164,13 @@ class AssetCRUD:
                 query = query.filter(and_(*filter_conditions))
 
         # 排序 - 使用索引友好的字段
-        sortable_fields = ["created_at", "updated_at", "property_name", "id", "actual_property_area"]
+        sortable_fields = [
+            "created_at",
+            "updated_at",
+            "property_name",
+            "id",
+            "actual_property_area",
+        ]
         if sort_field in sortable_fields:
             sort_column = getattr(Asset, sort_field)
             if sort_order.lower() == "desc":

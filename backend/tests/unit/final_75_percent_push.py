@@ -5,19 +5,16 @@ This file uses the most direct and aggressive techniques to cover
 the remaining uncovered lines to reach 75% coverage.
 """
 
-import pytest
 import sys
-import os
 import time
-import builtins
-from io import StringIO
-from unittest.mock import patch, Mock, MagicMock, PropertyMock, mock_open
-import importlib
+from unittest.mock import patch
 
+import pytest
 
 # ==============================================================================
 # 1. Test encoding_utils.py:37 - ASCII fallback in safe_print
 # ==============================================================================
+
 
 def test_encoding_utils_safe_print_unicode_fallback_direct():
     """
@@ -40,7 +37,9 @@ def test_encoding_utils_safe_print_unicode_fallback_direct():
             def write(self, s):
                 if self.first_call:
                     self.first_call = False
-                    raise UnicodeEncodeError('ascii', s, 0, len(s), 'test encoding error')
+                    raise UnicodeEncodeError(
+                        "ascii", s, 0, len(s), "test encoding error"
+                    )
                 return len(s)
 
             def flush(self):
@@ -60,6 +59,7 @@ def test_encoding_utils_safe_print_unicode_fallback_direct():
 # ==============================================================================
 # 2. Test enum_field.py:95 - return v when None in validate_code
 # ==============================================================================
+
 
 def test_enum_field_value_update_with_none_code_direct():
     """
@@ -87,6 +87,7 @@ def test_enum_field_type_update_with_none_code_direct():
 # 3. Test file_security.py:218-219 - exception handler in validate_file_path
 # ==============================================================================
 
+
 def test_validate_file_path_with_os_exception_direct():
     """
     Target file_security.py:218-219
@@ -109,7 +110,7 @@ def test_validate_file_path_with_mock_os_error():
     """Use mock to force OSError"""
     from src.utils.file_security import validate_file_path
 
-    with patch('os.path.normpath', side_effect=OSError("Mocked error")):
+    with patch("os.path.normpath", side_effect=OSError("Mocked error")):
         result = validate_file_path("test/path", ["/tmp"])
         assert result is False
 
@@ -117,6 +118,7 @@ def test_validate_file_path_with_mock_os_error():
 # ==============================================================================
 # 4. Test api/v1/__init__.py:46-48 - ImportError handler
 # ==============================================================================
+
 
 def test_api_v1_system_settings_import_error_simulation():
     """
@@ -131,12 +133,13 @@ def test_api_v1_system_settings_import_error_simulation():
 
     assert api_router is not None
     # system_settings_router can be None or a router
-    assert system_settings_router is None or hasattr(system_settings_router, 'routes')
+    assert system_settings_router is None or hasattr(system_settings_router, "routes")
 
 
 # ==============================================================================
 # 5. Test task_queue.py:190, 192, 196 - worker method
 # ==============================================================================
+
 
 def test_task_queue_worker_execution_direct():
     """
@@ -169,6 +172,7 @@ def test_task_queue_worker_execution_direct():
 # 6. Test enhanced_error_handler.py:212-214 - exception handler
 # ==============================================================================
 
+
 @pytest.mark.asyncio
 async def test_enhanced_error_handler_health_check_exception_direct():
     """
@@ -180,8 +184,10 @@ async def test_enhanced_error_handler_health_check_exception_direct():
     from src.services.core.enhanced_error_handler import monitor_processing_health
 
     # Mock to raise exception
-    with patch('src.services.providers.ocr_provider.get_ocr_service',
-               side_effect=Exception("Test error")):
+    with patch(
+        "src.services.providers.ocr_provider.get_ocr_service",
+        side_effect=Exception("Test error"),
+    ):
         result = await monitor_processing_health()
         assert isinstance(result, dict)
         assert "status" in result
@@ -190,6 +196,7 @@ async def test_enhanced_error_handler_health_check_exception_direct():
 # ==============================================================================
 # 7. Module-level comprehensive tests
 # ==============================================================================
+
 
 def test_encoding_comprehensive():
     """Comprehensive encoding tests"""
@@ -209,10 +216,9 @@ def test_encoding_comprehensive():
 def test_enum_field_comprehensive():
     """Comprehensive enum field tests"""
     from src.schemas.enum_field import (
+        EnumFieldTypeUpdate,
         EnumFieldValueCreate,
         EnumFieldValueUpdate,
-        EnumFieldTypeCreate,
-        EnumFieldTypeUpdate
     )
 
     # Test with None code
@@ -224,10 +230,7 @@ def test_enum_field_comprehensive():
 
     # Test with valid code
     value_create = EnumFieldValueCreate(
-        enum_type_id="test-type",
-        label="Test",
-        value="test_value",
-        code="TEST_CODE"
+        enum_type_id="test-type", label="Test", value="test_value", code="TEST_CODE"
     )
 
     assert value_create.code == "TEST_CODE"
@@ -235,10 +238,7 @@ def test_enum_field_comprehensive():
 
 def test_file_security_comprehensive():
     """Comprehensive file security tests"""
-    from src.utils.file_security import (
-        validate_file_path,
-        secure_filename
-    )
+    from src.utils.file_security import secure_filename, validate_file_path
 
     # Test with problematic paths
     assert validate_file_path("test\x00file", ["/tmp"]) is False
@@ -257,7 +257,7 @@ def test_api_module_structure():
     from src.api.v1 import api_router
 
     assert api_router is not None
-    assert hasattr(api_router, 'routes')
+    assert hasattr(api_router, "routes")
     assert len(list(api_router.routes)) > 0
 
 
@@ -295,8 +295,8 @@ def test_task_queue_comprehensive():
 async def test_error_handler_comprehensive():
     """Comprehensive error handler tests"""
     from src.services.core.enhanced_error_handler import (
+        enhanced_error_handler,
         monitor_processing_health,
-        enhanced_error_handler
     )
 
     # Test normal health check
@@ -304,13 +304,14 @@ async def test_error_handler_comprehensive():
     assert isinstance(result, dict)
 
     # Test enhanced_error_handler attributes
-    assert hasattr(enhanced_error_handler, 'max_retries')
-    assert hasattr(enhanced_error_handler, 'max_file_size_mb')
+    assert hasattr(enhanced_error_handler, "max_retries")
+    assert hasattr(enhanced_error_handler, "max_file_size_mb")
 
 
 # ==============================================================================
 # 8. Summary documentation
 # ==============================================================================
+
 
 def test_coverage_target_summary():
     """

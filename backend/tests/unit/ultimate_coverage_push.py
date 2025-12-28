@@ -5,11 +5,8 @@ This file uses direct module imports and execution to ensure
 coverage is collected during pytest's coverage phase.
 """
 
-import pytest
 import sys
 from io import StringIO
-from unittest.mock import patch, Mock, MagicMock
-import os
 
 
 class TestDirectCoverageHits:
@@ -71,10 +68,9 @@ class TestDirectCoverageHits:
 
     def test_direct_api_v1_import_handling(self):
         """Direct execution of api/v1/__init__.py:46-48"""
-        import importlib
 
         # Fresh import to trigger module-level code
-        modules_to_clear = [k for k in sys.modules.keys() if 'src.api.v1' in k]
+        modules_to_clear = [k for k in sys.modules.keys() if "src.api.v1" in k]
         for m in modules_to_clear:
             del sys.modules[m]
 
@@ -82,12 +78,13 @@ class TestDirectCoverageHits:
         import src.api.v1
 
         # Verify module loaded
-        assert hasattr(src.api.v1, 'api_router')
+        assert hasattr(src.api.v1, "api_router")
 
     def test_direct_task_queue_worker(self):
         """Direct execution of task_queue.py:190,192,196"""
-        from src.core.task_queue import TaskQueue
         import time
+
+        from src.core.task_queue import TaskQueue
 
         # Create queue
         queue = TaskQueue(max_workers=1)
@@ -130,7 +127,7 @@ class TestDirectCoverageHits:
 def test_module_level_import_analytics():
     """Module-level test for analytics __init__ import exception handling"""
     # Clear module cache
-    modules_to_clear = [k for k in sys.modules.keys() if 'analytics' in k]
+    modules_to_clear = [k for k in sys.modules.keys() if "analytics" in k]
     for m in modules_to_clear:
         del sys.modules[m]
 
@@ -144,7 +141,9 @@ def test_module_level_import_analytics():
 def test_module_level_import_asset():
     """Module-level test for asset __init__ import exception handling"""
     # Clear module cache
-    modules_to_clear = [k for k in sys.modules.keys() if 'asset' in k and 'services' in k]
+    modules_to_clear = [
+        k for k in sys.modules.keys() if "asset" in k and "services" in k
+    ]
     for m in modules_to_clear:
         del sys.modules[m]
 
@@ -199,5 +198,5 @@ def test_api_router_exists():
     """Test that api_router is properly exported"""
     from src.api import v1 as api_v1
 
-    assert hasattr(api_v1, 'api_router')
+    assert hasattr(api_v1, "api_router")
     assert api_v1.api_router is not None

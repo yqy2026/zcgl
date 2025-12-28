@@ -230,7 +230,6 @@ class CacheDecorator:
     def __call__(self, func):
         # 检测函数是否为异步函数
         import asyncio
-        import inspect
 
         is_async_func = asyncio.iscoroutinefunction(func)
 
@@ -262,7 +261,6 @@ class CacheDecorator:
 
                 # 对于同步函数，使用同步方式的缓存（内存缓存）
                 # 因为在同步上下文中无法使用async方法
-                import threading
 
                 # 使用线程局部存储或简单返回结果（不在缓存中）
                 # 由于cache_manager是异步的，同步函数暂时跳过缓存

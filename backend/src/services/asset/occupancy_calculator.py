@@ -107,9 +107,9 @@ class OccupancyRateCalculator:
                             "total_rented"
                         ),
                         func.count(Asset.id).label("total_count"),
-                        func.count(
-                            case((Asset.rentable_area > 0, Asset.id))
-                        ).label("rentable_count"),
+                        func.count(case((Asset.rentable_area > 0, Asset.id))).label(
+                            "rentable_count"
+                        ),
                     )
                     .filter(
                         Asset.include_in_occupancy_rate,

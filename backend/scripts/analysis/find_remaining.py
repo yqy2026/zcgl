@@ -1,4 +1,5 @@
 """Find remaining uncovered lines after latest tests"""
+
 import json
 
 with open("coverage.json") as f:
@@ -22,11 +23,13 @@ for file_path, file_data in data["files"].items():
         summary = file_data["summary"]
         file_missing = summary["num_statements"] - summary["covered_lines"]
         if file_missing > 0:
-            uncovered.append({
-                "file": file_path,
-                "missing": file_missing,
-                "lines": sorted(file_data["missing_lines"])
-            })
+            uncovered.append(
+                {
+                    "file": file_path,
+                    "missing": file_missing,
+                    "lines": sorted(file_data["missing_lines"]),
+                }
+            )
 
 uncovered.sort(key=lambda x: x["missing"])
 
@@ -34,9 +37,9 @@ print("\n=== Files with uncovered lines (sorted) ===")
 cumulative = 0
 for u in uncovered[:20]:
     print(f"{u['missing']:3} lines | {u['file']}")
-    if u['missing'] <= 5:
+    if u["missing"] <= 5:
         print(f"           Lines: {u['lines']}")
-    cumulative += u['missing']
+    cumulative += u["missing"]
     if cumulative >= 30:
         break
 

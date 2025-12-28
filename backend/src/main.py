@@ -333,6 +333,7 @@ except Exception as e:
 
 # 初始化数据库（跳过测试模式）
 import os
+
 if not os.getenv("TESTING_MODE"):
     # 初始化数据库
     init_db()

@@ -11,11 +11,9 @@ Note: analytics/__init__.py:6,12 and asset/__init__.py:15,16 are unreachable
       due to archived services.
 """
 
-import pytest
 import sys
 from io import StringIO
-from unittest.mock import patch, Mock
-import os
+from unittest.mock import Mock, patch
 
 
 class TestReachableUncoveredLines:
@@ -43,11 +41,11 @@ class TestReachableUncoveredLines:
                 call_count[0] += 1
                 if call_count[0] == 1:
                     # First write attempt fails with UnicodeEncodeError
-                    raise UnicodeEncodeError('ascii', s, 0, len(s), 'test')
+                    raise UnicodeEncodeError("ascii", s, 0, len(s), "test")
                 # Subsequent writes succeed
                 return mock_stdout.write(s)
 
-            with patch.object(StringIO, 'write', mock_write):
+            with patch.object(StringIO, "write", mock_write):
                 sys.stdout = mock_stdout
                 safe_print("test with unicode: \u2014")
                 sys.stdout = original_stdout
@@ -73,6 +71,7 @@ class TestReachableUncoveredLines:
         # Also test the EnumFieldTypeUpdate if it has optional code
         try:
             from src.schemas.enum_field import EnumFieldTypeUpdate
+
             update2 = EnumFieldTypeUpdate(code=None)
             assert update2.code is None
         except:
@@ -109,7 +108,7 @@ class TestReachableUncoveredLines:
         import importlib
 
         # Remove module from cache to force fresh import
-        modules_to_remove = [k for k in list(sys.modules) if 'api.v1' in k]
+        modules_to_remove = [k for k in list(sys.modules) if "api.v1" in k]
         for m in modules_to_remove:
             del sys.modules[m]
 
@@ -117,13 +116,14 @@ class TestReachableUncoveredLines:
         original_import = builtins.__import__
 
         def mock_import(name, *args, **kwargs):
-            if 'system_settings' in name and 'v1' in name:
+            if "system_settings" in name and "v1" in name:
                 raise ImportError("Mocked import failure")
             return original_import(name, *args, **kwargs)
 
-        with patch('builtins.__import__', side_effect=mock_import):
+        with patch("builtins.__import__", side_effect=mock_import):
             # Fresh import should trigger lines 46-48
             import src.api.v1
+
             importlib.reload(src.api.v1)
 
         # Module should load successfully
@@ -135,15 +135,16 @@ class TestReachableUncoveredLines:
 
         # The module should have loaded properly despite missing system_settings
         assert api_router is not None
-        assert hasattr(api_router, 'routes')
+        assert hasattr(api_router, "routes")
 
     def test_task_queue_coverage_lines(self):
         """
         Target task_queue.py:190,192,196 - worker loop processing
         Lines 190,192,196 in the worker method
         """
-        from src.core.task_queue import TaskQueue
         import time
+
+        from src.core.task_queue import TaskQueue
 
         # Create a task queue with one worker
         queue = TaskQueue(max_workers=1)

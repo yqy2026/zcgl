@@ -1811,8 +1811,7 @@ async def get_cache_stats(request: Request):
 
 @router.post("/cache/clear", summary="清除分析缓存")
 async def clear_cache(
-    request: Request,
-    current_user: User = Depends(get_current_active_user)
+    request: Request, current_user: User = Depends(get_current_active_user)
 ):
     """清除所有分析缓存"""
     request_id = get_request_id(request)

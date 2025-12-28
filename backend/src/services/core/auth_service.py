@@ -623,7 +623,7 @@ class AuthService:
                 raise BusinessLogicError("邮箱已被其他用户使用")
 
         # Use getattr to safely check for username (UserUpdate may not have username field)
-        username = getattr(user_data, 'username', None)
+        username = getattr(user_data, "username", None)
         if username and username != user.username:
             existing_user = self.get_user_by_username(username)
             if existing_user:

@@ -10,9 +10,8 @@ Targeting specific uncovered lines:
 - api/v1/__init__.py:46,47,48
 """
 
-import pytest
-from decimal import Decimal
 from datetime import datetime
+from decimal import Decimal
 
 
 class TestMilestoneCoverage75Percent:
@@ -20,9 +19,10 @@ class TestMilestoneCoverage75Percent:
 
     def test_safe_print_unicode_encode_error_fallback(self):
         """Target encoding_utils.py:37 - UnicodeEncodeError fallback in safe_print"""
-        from src.core.encoding_utils import safe_print
         import sys
         from io import StringIO
+
+        from src.core.encoding_utils import safe_print
 
         # Create a message that will cause UnicodeEncodeError on some systems
         original_stdout = sys.stdout
@@ -55,10 +55,11 @@ class TestMilestoneCoverage75Percent:
         """Target analytics/__init__.py:6,12 - Exception handlers in try/except blocks"""
         # Force a fresh import to hit the exception handlers
         import sys
-        import importlib
 
         # Remove from cache to trigger re-import
-        modules_to_remove = [k for k in sys.modules.keys() if 'src.services.analytics' in k]
+        modules_to_remove = [
+            k for k in sys.modules.keys() if "src.services.analytics" in k
+        ]
         for module in modules_to_remove:
             del sys.modules[module]
 
@@ -71,10 +72,9 @@ class TestMilestoneCoverage75Percent:
     def test_asset_import_exception_handler(self):
         """Target asset/__init__.py:15,16 - Exception handler in try/except block"""
         import sys
-        import importlib
 
         # Remove from cache to trigger re-import
-        modules_to_remove = [k for k in sys.modules.keys() if 'src.services.asset' in k]
+        modules_to_remove = [k for k in sys.modules.keys() if "src.services.asset" in k]
         for module in modules_to_remove:
             del sys.modules[module]
 
@@ -96,10 +96,9 @@ class TestMilestoneCoverage75Percent:
     def test_api_v1_import_error_handling(self):
         """Target api/v1/__init__.py:46,47,48 - ImportError handler for system_settings"""
         import sys
-        import importlib
 
         # Remove from cache to trigger re-import
-        modules_to_remove = [k for k in sys.modules.keys() if 'src.api.v1' in k]
+        modules_to_remove = [k for k in sys.modules.keys() if "src.api.v1" in k]
         for module in modules_to_remove:
             del sys.modules[module]
 
@@ -114,7 +113,7 @@ class TestMilestoneCoverage75Percent:
         from src.api.v1 import api_router
 
         # Router should have routes attribute
-        assert hasattr(api_router, 'routes')
+        assert hasattr(api_router, "routes")
         routes = list(api_router.routes)
         assert len(routes) > 0
 
@@ -133,7 +132,7 @@ class TestAssetOccupancyRateEdgeCases:
             rented_area=Decimal("0"),
             include_in_occupancy_rate=True,
             created_at=datetime.now(),
-            updated_at=datetime.now()
+            updated_at=datetime.now(),
         )
 
         # Should return 0, not cause division by zero

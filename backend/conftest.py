@@ -3,18 +3,17 @@ pytest全局配置文件
 提供所有测试共享的fixtures和配置
 """
 
-import asyncio
 import os
 import sys
 import tempfile
+from collections.abc import Generator
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock
-from typing import AsyncGenerator, Generator
+from unittest.mock import AsyncMock
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import Session, sessionmaker
 
 # 添加backend根目录到Python路径
 backend_root = Path(__file__).parent
@@ -27,39 +26,16 @@ os.environ["TESTING_MODE"] = "true"
 # 数据库Fixtures
 # =============================================================================
 
+
 @pytest.fixture(scope="session")
 def test_engine():
     """创建测试数据库引擎（共享文件SQLite，确保所有连接访问同一数据库）"""
-    from src.database import Base
-    # 导入所有模型以确保它们被注册到Base.metadata
-    from src.models import (
-        Asset,
-        AuditLog,
-        Employee,
-        EnumFieldHistory,
-        EnumFieldType,
-        EnumFieldUsage,
-        EnumFieldValue,
-        Organization,
-        OrganizationHistory,
-        Ownership,
-        Permission,
-        PermissionAuditLog,
-        RentContract,
-        RentContractHistory,
-        RentLedger,
-        RentTerm,
-        Role,
-        User,
-        UserSession,
-        # Task models (previously missing - root cause of "no such table: async_tasks")
-        AsyncTask,
-        ExcelTaskConfig,
-        TaskHistory,
-    )
-
     # 使用临时文件数据库，而不是:memory:，这样可以跨多个连接共享
     import tempfile
+
+    from src.database import Base
+
+    # 导入所有模型以确保它们被注册到Base.metadata
     db_file = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
     db_path = db_file.name
     db_file.close()
@@ -68,9 +44,7 @@ def test_engine():
     os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
 
     engine = create_engine(
-        f"sqlite:///{db_path}",
-        connect_args={"check_same_thread": False},
-        echo=False
+        f"sqlite:///{db_path}", connect_args={"check_same_thread": False}, echo=False
     )
     # 创建所有表
     Base.metadata.create_all(bind=engine)
@@ -87,9 +61,10 @@ def test_engine():
 @pytest.fixture(scope="function")
 def test_db(test_engine) -> Generator[Session, None, None]:
     """创建测试数据库会话"""
-    from sqlalchemy.orm import sessionmaker
 
-    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+    TestingSessionLocal = sessionmaker(
+        autocommit=False, autoflush=False, bind=test_engine
+    )
     db = TestingSessionLocal()
     try:
         yield db
@@ -101,9 +76,9 @@ def test_db(test_engine) -> Generator[Session, None, None]:
 @pytest.fixture(scope="function")
 async def test_client(test_db, test_user):
     """创建测试API客户端"""
-    from src.main import app
     from src.database import get_db
-    from src.middleware.auth import get_current_user, get_current_active_user
+    from src.main import app
+    from src.middleware.auth import get_current_active_user, get_current_user
 
     def override_get_db():
         try:
@@ -130,8 +105,8 @@ async def test_client(test_db, test_user):
 @pytest.fixture(scope="function")
 async def test_client_no_auth(test_db):
     """创建测试API客户端（无认证覆盖，用于测试未授权访问）"""
-    from src.main import app
     from src.database import get_db
+    from src.main import app
 
     def override_get_db():
         try:
@@ -152,6 +127,7 @@ async def test_client_no_auth(test_db):
 # =============================================================================
 # 认证Fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def test_user(test_db):
@@ -214,8 +190,9 @@ def test_admin(test_db):
 @pytest.fixture
 def auth_headers(test_user):
     """生成认证头"""
-    import jwt
     from datetime import datetime, timedelta
+
+    import jwt
 
     from src.core.config import settings
 
@@ -239,6 +216,7 @@ def auth_headers(test_user):
 # =============================================================================
 # 测试数据Fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def sample_asset_data():
@@ -273,15 +251,16 @@ def sample_asset(test_db, sample_asset_data):
 # 文件处理Fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def temp_file():
     """创建临时文件"""
     with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".pdf") as f:
         f.write("Mock PDF content")
         temp_path = f.name
-    
+
     yield temp_path
-    
+
     # 清理
     if os.path.exists(temp_path):
         os.unlink(temp_path)
@@ -297,6 +276,7 @@ def temp_upload_dir():
 # =============================================================================
 # Mock Fixtures
 # =============================================================================
+
 
 @pytest.fixture
 def mock_redis():
@@ -322,20 +302,23 @@ def mock_ocr_service():
 # 性能测试Fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def benchmark_logger():
     """性能基准测试日志记录器"""
     results = []
-    
+
     def log_result(test_name: str, duration: float, metadata: dict = None):
-        results.append({
-            "test_name": test_name,
-            "duration": duration,
-            "metadata": metadata or {},
-        })
-    
+        results.append(
+            {
+                "test_name": test_name,
+                "duration": duration,
+                "metadata": metadata or {},
+            }
+        )
+
     yield log_result
-    
+
     # 输出性能报告
     if results:
         print("\n" + "=" * 60)

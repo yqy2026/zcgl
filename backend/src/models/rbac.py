@@ -84,9 +84,7 @@ class Role(Base):
         "Permission", secondary=role_permissions, back_populates="roles"
     )
     # users = relationship("User", secondary="user_role_assignments")  # 完全移除以避免循环依赖
-    user_assignments = relationship(
-        "UserRoleAssignment", back_populates="role"
-    )
+    user_assignments = relationship("UserRoleAssignment", back_populates="role")
 
     def __repr__(self):
         return (

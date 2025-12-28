@@ -3,8 +3,6 @@ Final coverage push tests
 Targeting remaining uncovered lines to reach 75% threshold.
 """
 
-import pytest
-
 
 class TestFinalCoveragePush:
     """Final tests to push coverage over 75%"""
@@ -18,7 +16,7 @@ class TestFinalCoveragePush:
         assert result is True
 
         # Test with bytes that need encoding detection
-        result = validate_text("测试文本".encode('utf-8'))
+        result = validate_text("测试文本".encode())
         assert result is True
 
     def test_enum_field_update_schema_code_validation(self):
@@ -52,7 +50,7 @@ class TestFinalCoveragePush:
         from src.utils import file_security
 
         # Check that key functions exist
-        assert hasattr(file_security, 'secure_filename')
-        assert hasattr(file_security, 'validate_file_path')
+        assert hasattr(file_security, "secure_filename")
+        assert hasattr(file_security, "validate_file_path")
         assert callable(file_security.secure_filename)
         assert callable(file_security.validate_file_path)

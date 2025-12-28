@@ -11,12 +11,12 @@ Note: analytics/__init__.py:6,12 and asset/__init__.py:15,16 are unreachable
       due to archived services during code cleanup.
 """
 
-import pytest
+import builtins
 import sys
 from io import StringIO
-from unittest.mock import patch, Mock, MagicMock, mock_open
-import os
-import builtins
+from unittest.mock import patch
+
+import pytest
 
 
 class TestEncodingUtilsLine37:
@@ -42,9 +42,9 @@ class TestEncodingUtilsLine37:
             class FailingStringIO(StringIO):
                 def write(self, s):
                     # Raise UnicodeEncodeError on first write
-                    if not hasattr(self, '_failed'):
+                    if not hasattr(self, "_failed"):
                         self._failed = True
-                        raise UnicodeEncodeError('ascii', s, 0, len(s), 'test error')
+                        raise UnicodeEncodeError("ascii", s, 0, len(s), "test error")
                     return super().write(s)
 
             sys.stdout = FailingStringIO()
@@ -71,11 +71,11 @@ class TestEncodingUtilsLine37:
         def side_effect_func(*args, **kwargs):
             call_count[0] += 1
             if call_count[0] == 1:
-                raise UnicodeEncodeError('ascii', str(args[0]), 0, 1, 'cannot encode')
+                raise UnicodeEncodeError("ascii", str(args[0]), 0, 1, "cannot encode")
             # Don't call print again, just return
             return None
 
-        with patch('builtins.print', side_effect=side_effect_func):
+        with patch("builtins.print", side_effect=side_effect_func):
             # This should trigger the exception handler
             try:
                 safe_print("test with unicode: \u2014")
@@ -126,7 +126,7 @@ class TestEnumFieldLine95:
         updates = [
             EnumFieldValueUpdate(code=None),
             EnumFieldValueUpdate(code=None),
-            EnumFieldValueUpdate(code=None)
+            EnumFieldValueUpdate(code=None),
         ]
 
         # All should have None code
@@ -198,7 +198,7 @@ class TestFileSecurityLines218_219:
         """
         from src.utils.file_security import validate_file_path
 
-        with patch('os.path.normpath') as mock_normpath:
+        with patch("os.path.normpath") as mock_normpath:
             # Make normpath raise OSError
             mock_normpath.side_effect = OSError("Mocked OS error")
 
@@ -223,7 +223,7 @@ class TestApiV1Lines46_48:
         # Clear api.v1 modules from cache
         modules_to_remove = []
         for module_name in list(sys.modules.keys()):
-            if 'api.v1' in module_name or 'src.api.v1' in module_name:
+            if "api.v1" in module_name or "src.api.v1" in module_name:
                 modules_to_remove.append(module_name)
 
         for module_name in modules_to_remove:
@@ -233,11 +233,11 @@ class TestApiV1Lines46_48:
         original_import = builtins.__import__
 
         def mock_import(name, *args, **kwargs):
-            if 'system_settings' in name and 'v1' in name:
+            if "system_settings" in name and "v1" in name:
                 raise ImportError("Mocked import failure for system_settings")
             return original_import(name, *args, **kwargs)
 
-        with patch('builtins.__import__', side_effect=mock_import):
+        with patch("builtins.__import__", side_effect=mock_import):
             # Capture stdout
             original_stdout = sys.stdout
             sys.stdout = StringIO()
@@ -245,12 +245,13 @@ class TestApiV1Lines46_48:
             try:
                 # Import should trigger lines 46-48
                 import src.api.v1 as api_v1_module
+
                 importlib.reload(api_v1_module)
             finally:
                 sys.stdout = original_stdout
 
         # Module should have loaded successfully
-        assert hasattr(api_v1_module, 'api_router')
+        assert hasattr(api_v1_module, "api_router")
 
     def test_api_v1_system_settings_router_is_none_after_import_error(self):
         """
@@ -260,9 +261,9 @@ class TestApiV1Lines46_48:
 
         # If system_settings_router exists, it's either None or a router
         # Either case is acceptable
-        if hasattr(api_v1, 'system_settings_router'):
+        if hasattr(api_v1, "system_settings_router"):
             assert api_v1.system_settings_router is None or hasattr(
-                api_v1.system_settings_router, 'routes'
+                api_v1.system_settings_router, "routes"
             )
 
 
@@ -291,7 +292,7 @@ class TestDirectCodeExecution:
                 def write(self, s):
                     if not self.attempted:
                         self.attempted = True
-                        raise UnicodeEncodeError('ascii', s, 0, len(s), 'test')
+                        raise UnicodeEncodeError("ascii", s, 0, len(s), "test")
                     self.output.append(s)
                     return len(s)
 
@@ -299,7 +300,7 @@ class TestDirectCodeExecution:
                     pass
 
                 def getvalue(self):
-                    return ''.join(self.output)
+                    return "".join(self.output)
 
             sys.stdout = UnicodeFailingStream()
             sys.stderr = UnicodeFailingStream()
@@ -318,7 +319,7 @@ class TestDirectCodeExecution:
         """
         Direct test to ensure enum_field.py:95 is covered
         """
-        from src.schemas.enum_field import EnumFieldValueUpdate, EnumFieldTypeUpdate
+        from src.schemas.enum_field import EnumFieldTypeUpdate, EnumFieldValueUpdate
 
         # Test both update schemas with None code
         value_update = EnumFieldValueUpdate(code=None)
@@ -354,7 +355,7 @@ def test_api_v1_module_structure():
 
     # The module should have loaded properly
     assert api_router is not None
-    assert hasattr(api_router, 'routes')
+    assert hasattr(api_router, "routes")
 
 
 def test_coverage_summary():
@@ -366,14 +367,11 @@ def test_coverage_summary():
         "encoding_utils.py": [37],
         "enum_field.py": [95],
         "file_security.py": [218, 219],
-        "api/v1/__init__.py": [46, 47, 48]
+        "api/v1/__init__.py": [46, 47, 48],
     }
 
     # Unreachable (archived services):
-    unreachable = {
-        "analytics/__init__.py": [6, 12],
-        "asset/__init__.py": [15, 16]
-    }
+    unreachable = {"analytics/__init__.py": [6, 12], "asset/__init__.py": [15, 16]}
 
     # Total target: 7 lines (4 unreachable, 7 tested)
     total_target = sum(len(lines) for lines in target_lines.values())

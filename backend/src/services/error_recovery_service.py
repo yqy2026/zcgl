@@ -12,6 +12,7 @@ from typing import Any
 
 class ErrorCategory(str, Enum):
     """错误类别枚举"""
+
     NETWORK = "network"
     DATABASE = "database"
     VALIDATION = "validation"
@@ -27,6 +28,7 @@ class ErrorCategory(str, Enum):
 
 class ErrorSeverity(str, Enum):
     """错误严重程度枚举"""
+
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
@@ -169,10 +171,13 @@ class ErrorRecoveryEngine:
 
 def with_error_recovery(error_category: ErrorCategory):
     """错误恢复装饰器"""
+
     def decorator(func):
         async def wrapper(*args, **kwargs):
             return await func(*args, **kwargs)
+
         return wrapper
+
     return decorator
 
 

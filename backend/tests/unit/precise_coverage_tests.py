@@ -5,14 +5,11 @@ This file contains tests that specifically target the remaining uncovered lines
 with techniques designed to actually execute those code paths.
 """
 
-import pytest
 import sys
-import os
 import time
-import asyncio
-from io import StringIO
-from unittest.mock import patch, Mock, MagicMock, PropertyMock
-import importlib
+from unittest.mock import patch
+
+import pytest
 
 
 class TestTaskQueueWorkerLines:
@@ -28,7 +25,7 @@ class TestTaskQueueWorkerLines:
         Line 192: self.queue.task_done()
         Line 196: logger.error(f"工作线程错误: {e}")
         """
-        from src.core.task_queue import TaskQueue, TaskStatus
+        from src.core.task_queue import TaskQueue
 
         # Create a task queue with one worker
         queue = TaskQueue(max_workers=1)
@@ -72,9 +69,10 @@ class TestEnhancedErrorHandlerHealthCheck:
         from src.services.core.enhanced_error_handler import monitor_processing_health
 
         # Mock get_ocr_service to raise an exception
-        with patch('src.services.providers.ocr_provider.get_ocr_service',
-                   side_effect=RuntimeError("Test OCR service error")):
-
+        with patch(
+            "src.services.providers.ocr_provider.get_ocr_service",
+            side_effect=RuntimeError("Test OCR service error"),
+        ):
             # Call monitor_processing_health - should hit exception handler
             result = await monitor_processing_health()
 
@@ -109,7 +107,7 @@ class TestEncodingUtilsLine37:
                     self.calls.append(s)
                     # First write raises UnicodeEncodeError
                     if len(self.calls) == 1:
-                        raise UnicodeEncodeError('ascii', s, 0, len(s), 'test error')
+                        raise UnicodeEncodeError("ascii", s, 0, len(s), "test error")
                     return len(s)
 
                 def flush(self):
@@ -182,7 +180,9 @@ class TestApiV1Lines46_48:
         # The module should have loaded properly
         assert api_router is not None
         # system_settings_router can be None or a router
-        assert system_settings_router is None or hasattr(system_settings_router, 'routes')
+        assert system_settings_router is None or hasattr(
+            system_settings_router, "routes"
+        )
 
 
 # Module-level tests
@@ -229,7 +229,7 @@ def test_encoding_safe_print():
 
 def test_enum_field_none_code():
     """Test enum field with None code"""
-    from src.schemas.enum_field import EnumFieldValueUpdate, EnumFieldTypeUpdate
+    from src.schemas.enum_field import EnumFieldTypeUpdate, EnumFieldValueUpdate
 
     value_update = EnumFieldValueUpdate(code=None)
     type_update = EnumFieldTypeUpdate(code=None)
