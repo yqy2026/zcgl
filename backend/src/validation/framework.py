@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 数据验证框架
 提供统一的验证机制和自定义验证器
@@ -7,9 +9,18 @@ import re
 from collections.abc import Callable
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel
+
+
+# 创建自定义业务验证异常
+class BusinessValidationError(Exception):
+    """业务验证错误"""
+
+    def __init__(self, message: str, code: str = None):
+        self.message = message
+        self.code = code
+        super().__init__(message)
 
 
 class ValidationRule:
@@ -198,7 +209,10 @@ class FileRule(ValidationRule):
 
                 ext = filename.split(".")[-1].lower()
                 if ext not in self.allowed_extensions:
-                    self.error_message = f"文件类型不支持，允许的类型: {', '.join(self.allowed_extensions)}"
+                    self.error_message = (
+                        f"文件类型不支持，允许的类型: "
+                        f"{', '.join(self.allowed_extensions)}"
+                    )
                     return False
 
             # 检查文件大小
@@ -471,7 +485,7 @@ def validate_data(schema_name: str):
                 data = args[0]
                 errors = validation_framework.validate(schema_name, data)
                 if errors:
-                    raise ValidationError(errors)
+                    raise BusinessValidationError(errors)
             return func(*args, **kwargs)
 
         return wrapper

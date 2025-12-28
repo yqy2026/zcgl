@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 安全日志记录器
 提供敏感信息脱敏、结构化日志和安全审计功能
@@ -10,9 +12,8 @@ import re
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
 
-from .config_manager import get_config
+from .config import get_config
 
 
 class SensitiveDataFilter(logging.Filter):
@@ -39,10 +40,21 @@ class SensitiveDataFilter(logging.Filter):
             (r"\b1[3-9]\d{9}\b", "phone=***"),
             # 银行卡号
             (r"\b[1-9]\d{12,19}\b", "card=***"),
-            # IP地址（可选，根据需求）
-            # (r'\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b', 'ip=***'),
+            # IP地址
+            (r"\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b", "ip=***"),
             # URL中的敏感参数
             (r"(?i)(token|key|secret)=[^&\s]+", r"\1=***"),
+            # 地址信息
+            (r"(?i)(address|addr)\s*[:=]\s*[^,}]+", "address=***"),
+            # 银行账户信息
+            (r"(?i)(account|acct)\s*[:=]\s*[^\s,}]+", "account=***"),
+            # 生日信息
+            (r"(?i)(birthday|dob)\s*[:=]\s*[^\s,}]+", "birthday=***"),
+            # 更多敏感信息模式
+            (r"(?i)(username|user)\s*[:=]\s*[^\s,}]+", "username=***"),
+            (r"(?i)(name)\s*[:=]\s*[^\s,}]+", "name=***"),
+            (r"(?i)(realname|real_name)\s*[:=]\s*[^\s,}]+", "realname=***"),
+            (r"(?i)(nickname|nick_name)\s*[:=]\s*[^\s,}]+", "nickname=***"),
         ]
 
         # 敏感字段名称列表
@@ -78,14 +90,31 @@ class SensitiveDataFilter(logging.Filter):
             "user_id_hash",
             "session_id",
             "session_token",
+            "address",
+            "addr",
+            "birthday",
+            "dob",
+            "account",
+            "acct",
+            "ip",
+            "ip_address",
+            "username",
+            "user",
+            "name",
+            "realname",
+            "real_name",
+            "nickname",
+            "nick_name",
+            "full_name",
+            "fullname",
         }
 
     def filter(self, record: logging.LogRecord) -> logging.LogRecord:
         """过滤敏感信息"""
         if hasattr(record, "msg"):
-            record.msg = self._filter_sensitive_data(record.msg)
+            record.msg = self._filter_sensitive_data(str(record.msg))
 
-        if hasattr(record, "args"):
+        if hasattr(record, "args") and record.args is not None:
             record.args = tuple(
                 self._filter_sensitive_data(str(arg)) if isinstance(arg, str) else arg
                 for arg in record.args
@@ -154,7 +183,7 @@ class StructuredFormatter(logging.Formatter):
             "timestamp": datetime.now(UTC).isoformat(),
             "level": record.levelname,
             "logger": record.name,
-            "message": record.getMessage(),
+            "message": self._sanitize_message(record.getMessage()),
             "module": record.module,
             "function": record.funcName,
             "line": record.lineno,
@@ -162,29 +191,92 @@ class StructuredFormatter(logging.Formatter):
 
         # 添加请求ID（如果存在）
         if hasattr(record, "request_id"):
-            log_entry["request_id"] = record.request_id
+            log_entry["request_id"] = str(getattr(record, "request_id", ""))
 
         # 添加用户ID（如果存在）
         if hasattr(record, "user_id"):
-            log_entry["user_id"] = record.user_id
+            log_entry["user_id"] = str(getattr(record, "user_id", ""))
 
         # 添加会话ID（如果存在）
         if hasattr(record, "session_id"):
-            log_entry["session_id"] = record.session_id
+            log_entry["session_id"] = str(getattr(record, "session_id", ""))
 
         # 添加IP地址（如果存在）
         if hasattr(record, "client_ip"):
-            log_entry["client_ip"] = record.client_ip
+            log_entry["client_ip"] = str(getattr(record, "client_ip", ""))
 
         # 添加异常信息
         if record.exc_info:
             log_entry["exception"] = self._format_exception(record.exc_info)
 
         # 添加额外字段
-        if hasattr(record, "extra_fields"):
-            log_entry.update(record.extra_fields)
+        extra_fields = getattr(record, "extra_fields", None)
+        if extra_fields:
+            log_entry.update(extra_fields)
+
+        # 确保所有字段都可以被JSON序列化
+        log_entry = self._ensure_json_serializable(log_entry)
 
         return json.dumps(log_entry, ensure_ascii=False)
+
+    def _sanitize_message(self, message: str) -> str:
+        """清理消息中的不可序列化内容"""
+        if not isinstance(message, str):
+            try:
+                # 尝试转换为字符串
+                message = str(message)
+            except Exception:
+                message = "<无法序列化的消息对象>"
+
+        # 限制消息长度
+        if len(message) > 1000:
+            message = message[:1000] + "...(截断)"
+
+        return message
+
+    def _ensure_json_serializable(self, obj: Any) -> Any:
+        """确保对象可以被JSON序列化"""
+        if obj is None:
+            return None
+        elif isinstance(obj, (str, int, float, bool)):
+            return obj
+        elif isinstance(obj, datetime):
+            return obj.isoformat()
+        elif isinstance(obj, dict):
+            return {
+                key: self._ensure_json_serializable(value) for key, value in obj.items()
+            }
+        elif isinstance(obj, list):
+            return [self._ensure_json_serializable(item) for item in obj]
+        elif isinstance(obj, BaseException):
+            # 处理Python内置异常类型
+            return {
+                "type": type(obj).__name__,
+                "message": str(obj)[:500],  # 限制长度
+                "args": [str(arg)[:200] for arg in obj.args if arg],  # 限制每个参数长度
+            }
+        elif hasattr(obj, "__dict__"):
+            # 处理SQLAlchemy模型对象和其他自定义对象
+            try:
+                # 尝试获取对象的字典表示
+                obj_dict = obj.__dict__.copy()
+                # 移除SQLAlchemy的内部属性
+                obj_dict.pop("_sa_instance_state", None)
+                return {
+                    key: self._ensure_json_serializable(value)
+                    for key, value in obj_dict.items()
+                    if not key.startswith("_")
+                }
+            except Exception:
+                # 如果无法序列化，返回字符串表示
+                return str(obj)[:500]  # 限制长度
+        else:
+            # 对于其他类型，尝试转换为字符串
+            try:
+                json.dumps(obj)  # 测试是否可序列化
+                return obj
+            except (TypeError, ValueError):
+                return str(obj)[:500]  # 限制长度
 
     def _format_exception(self, exc_info) -> str:
         """格式化异常信息"""
@@ -200,6 +292,7 @@ class SecurityAuditor:
         self.security_log_file = get_config("security_log_file", "logs/security.log")
         self.enabled = get_config("security_logging_enabled", True)
         self._setup_security_logger()
+        self.sensitive_filter = SensitiveDataFilter()
 
     def _setup_security_logger(self):
         """设置安全日志记录器"""
@@ -243,20 +336,42 @@ class SecurityAuditor:
             "severity": self._get_event_severity(event_type),
         }
 
-        # 添加可选字段
+        # 添加可选字段并进行脱敏处理
         if user_id:
             security_event["user_id"] = self._hash_sensitive_data(user_id)
         if ip_address:
             security_event["ip_address"] = self._hash_sensitive_data(ip_address)
         if user_agent:
-            security_event["user_agent"] = user_agent[:500]  # 限制长度
+            # 对用户代理进行脱敏处理
+            filtered_user_agent = self.sensitive_filter._filter_sensitive_data(
+                user_agent
+            )
+            security_event["user_agent"] = filtered_user_agent[:500]  # 限制长度
         if request_id:
             security_event["request_id"] = request_id
 
-        # 添加额外字段
-        security_event.update(kwargs)
+        # 对额外字段进行脱敏处理
+        filtered_kwargs = {}
+        for key, value in kwargs.items():
+            if isinstance(value, str):
+                # 检查键是否敏感
+                if self.sensitive_filter._is_sensitive_key(key):
+                    filtered_kwargs[key] = "***"
+                else:
+                    # 对值进行脱敏处理
+                    filtered_kwargs[key] = self.sensitive_filter._filter_sensitive_data(
+                        value
+                    )
+            else:
+                filtered_kwargs[key] = value
 
-        self.security_logger.info(security_event)
+        # 添加额外字段
+        security_event.update(filtered_kwargs)
+
+        # 确保所有数据都可以被JSON序列化
+        serializable_event = self._ensure_json_serializable(security_event)
+
+        self.security_logger.info(serializable_event)
 
     def _get_event_severity(self, event_type: str) -> str:
         """获取事件严重程度"""
@@ -268,6 +383,10 @@ class SecurityAuditor:
             "DATA_BREACH_ATTEMPT",
             "MALICIOUS_REQUEST",
             "BRUTE_FORCE_ATTACK",
+            "FILE_UPLOAD_MALICIOUS",
+            "SQL_INJECTION_ATTEMPT",
+            "XSS_ATTACK",
+            "CSRF_ATTEMPT",
         }
 
         medium_severity_events = {
@@ -275,14 +394,70 @@ class SecurityAuditor:
             "SESSION_EXPIRED",
             "ACCESS_DENIED",
             "RATE_LIMIT_EXCEEDED",
+            "FILE_UPLOAD_REJECTED",
+            "PASSWORD_RESET_REQUEST",
+            "ACCOUNT_LOCKED",
+        }
+
+        low_severity_events = {
+            "AUTHENTICATION_SUCCESS",
+            "PASSWORD_CHANGED",
+            "PROFILE_UPDATED",
+            "FILE_UPLOAD_SUCCESS",
         }
 
         if event_type in high_severity_events:
             return "HIGH"
         elif event_type in medium_severity_events:
             return "MEDIUM"
-        else:
+        elif event_type in low_severity_events:
             return "LOW"
+        else:
+            return "INFO"
+
+    def _ensure_json_serializable(self, obj: Any) -> Any:
+        """确保对象可以被JSON序列化"""
+        if obj is None:
+            return None
+        elif isinstance(obj, (str, int, float, bool)):
+            return obj
+        elif isinstance(obj, datetime):
+            return obj.isoformat()
+        elif isinstance(obj, dict):
+            return {
+                key: self._ensure_json_serializable(value) for key, value in obj.items()
+            }
+        elif isinstance(obj, list):
+            return [self._ensure_json_serializable(item) for item in obj]
+        elif isinstance(obj, BaseException):
+            # 处理Python内置异常类型
+            return {
+                "type": type(obj).__name__,
+                "message": str(obj)[:500],  # 限制长度
+                "args": [str(arg)[:200] for arg in obj.args if arg],  # 限制每个参数长度
+            }
+        elif hasattr(obj, "__dict__"):
+            # 处理SQLAlchemy模型对象和其他自定义对象
+            try:
+                # 尝试获取对象的字典表示
+                obj_dict = obj.__dict__.copy()
+                # 移除SQLAlchemy的内部属性
+                obj_dict.pop("_sa_instance_state", None)
+                return {
+                    key: self._ensure_json_serializable(value)
+                    for key, value in obj_dict.items()
+                    if not key.startswith("_")
+                }
+            except Exception:
+                # 如果无法序列化，返回字符串表示
+                return str(obj)[:500]  # 限制长度
+        else:
+            # 对于其他类型，尝试转换为字符串
+            try:
+                json.dumps(obj)  # 测试是否可序列化
+                return obj
+            except (TypeError, ValueError):
+                return str(obj)[:500]  # 限制长度
 
     def _hash_sensitive_data(self, data: str) -> str:
         """对敏感数据进行哈希处理"""
@@ -301,6 +476,7 @@ class RequestLogger:
         self.request_log_file = get_config("request_log_file", "logs/requests.log")
         self.enabled = get_config("request_logging_enabled", True)
         self._setup_request_logger()
+        self.sensitive_filter = SensitiveDataFilter()
 
     def _setup_request_logger(self):
         """设置请求日志记录器"""
@@ -347,26 +523,92 @@ class RequestLogger:
             "timestamp": datetime.now(UTC).isoformat(),
         }
 
-        # 添加可选字段
+        # 添加可选字段并进行脱敏处理
         if user_id:
             request_info["user_id"] = self._hash_sensitive_data(user_id)
         if ip_address:
             request_info["ip_address"] = self._hash_sensitive_data(ip_address)
         if user_agent:
-            request_info["user_agent"] = user_agent[:500]
+            # 对用户代理进行脱敏处理
+            filtered_user_agent = self.sensitive_filter._filter_sensitive_data(
+                user_agent
+            )
+            request_info["user_agent"] = filtered_user_agent[:500]
         if request_id:
             request_info["request_id"] = request_id
 
+        # 对额外字段进行脱敏处理
+        filtered_kwargs = {}
+        for key, value in kwargs.items():
+            if isinstance(value, str):
+                # 检查键是否敏感
+                if self.sensitive_filter._is_sensitive_key(key):
+                    filtered_kwargs[key] = "***"
+                else:
+                    # 对值进行脱敏处理
+                    filtered_kwargs[key] = self.sensitive_filter._filter_sensitive_data(
+                        value
+                    )
+            else:
+                filtered_kwargs[key] = value
+
         # 添加额外字段
-        request_info.update(kwargs)
+        request_info.update(filtered_kwargs)
+
+        # 确保所有数据都可以被JSON序列化
+        serializable_request = self._ensure_json_serializable(request_info)
 
         # 根据状态码决定日志级别
         if status_code >= 500:
-            self.request_logger.error(request_info)
+            self.request_logger.error(serializable_request)
         elif status_code >= 400:
-            self.request_logger.warning(request_info)
+            self.request_logger.warning(serializable_request)
         else:
-            self.request_logger.info(request_info)
+            self.request_logger.info(serializable_request)
+
+    def _ensure_json_serializable(self, obj: Any) -> Any:
+        """确保对象可以被JSON序列化"""
+        if obj is None:
+            return None
+        elif isinstance(obj, (str, int, float, bool)):
+            return obj
+        elif isinstance(obj, datetime):
+            return obj.isoformat()
+        elif isinstance(obj, dict):
+            return {
+                key: self._ensure_json_serializable(value) for key, value in obj.items()
+            }
+        elif isinstance(obj, list):
+            return [self._ensure_json_serializable(item) for item in obj]
+        elif isinstance(obj, BaseException):
+            # 处理Python内置异常类型
+            return {
+                "type": type(obj).__name__,
+                "message": str(obj)[:500],  # 限制长度
+                "args": [str(arg)[:200] for arg in obj.args if arg],  # 限制每个参数长度
+            }
+        elif hasattr(obj, "__dict__"):
+            # 处理SQLAlchemy模型对象和其他自定义对象
+            try:
+                # 尝试获取对象的字典表示
+                obj_dict = obj.__dict__.copy()
+                # 移除SQLAlchemy的内部属性
+                obj_dict.pop("_sa_instance_state", None)
+                return {
+                    key: self._ensure_json_serializable(value)
+                    for key, value in obj_dict.items()
+                    if not key.startswith("_")
+                }
+            except Exception:
+                # 如果无法序列化，返回字符串表示
+                return str(obj)[:500]  # 限制长度
+        else:
+            # 对于其他类型，尝试转换为字符串
+            try:
+                json.dumps(obj)  # 测试是否可序列化
+                return obj
+            except (TypeError, ValueError):
+                return str(obj)[:500]  # 限制长度
 
     def _hash_sensitive_data(self, data: str) -> str:
         """对敏感数据进行哈希处理"""

@@ -5,53 +5,36 @@ description = "土地物业资产管理系统"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.104.0",
-    "uvicorn[standard]>=0.24.0",
-    "sqlalchemy>=2.0.0",
-    "alembic>=1.12.0",
-    "pydantic>=2.5.0",
-    "pydantic-settings>=2.0.0",
+    "uvicorn[standard]>=0.38.0",
+    "sqlalchemy>=2.0.44",
+    "alembic>=1.17.0",
+    "pydantic>=2.12.0",
+    "pydantic-settings>=2.1.0",
     "polars>=0.20.0",
     "openpyxl>=3.1.0",
     "python-multipart>=0.0.6",
     "email-validator>=2.0.0",
     "pandas>=2.0.0",
-    "redis>=5.0.0",
+    "redis>=7.0.0",
     "aioredis>=2.0.0",
-    # PDF处理和NLP依赖
-    "markitdown>=0.1.0",
-    "pdfplumber==0.11.0",
-    "spacy>=3.6.0",
+    "python-jose[cryptography]>=3.5.0",
+    "passlib[bcrypt]>=1.7.4",
+    "aiofiles>=23.0.0",
+    # 基础NLP工具
     "jieba>=0.42.1",
     "regex>=2023.0.0",
-    "aiofiles>=23.0.0",
     "fuzzywuzzy>=0.18.0",
     "python-Levenshtein>=0.25.1",
-    "pytesseract>=0.3.13",
-    "pdf2image>=1.17.0",
-    "pillow>=11.3.0",
-    "opencv-python>=4.12.0.88",
-    "paddlepaddle>=3.2.0",
-    "paddleocr>=3.2.0",
-    "python-jose[cryptography]>=3.3.0",
-    "passlib[bcrypt]>=1.7.4",
-    "pymupdf==1.24.5",
-    "python-magic>=0.4.27",
-    "mkdocs>=1.6.1",
-    "mkdocs-material>=9.6.22",
-    "mkdocs-macros-plugin>=1.4.0",
-    "mkdocs-minify-plugin>=0.8.0",
-    "mkdocs-git-revision-date-localized-plugin>=1.4.7",
-    "pymdown-extensions>=10.16.1",
-    "pre-commit>=4.3.0",
-    "bandit>=1.8.6",
-    "radon>=6.0.1",
-    "safety>=3.6.2",
+    "psutil>=7.1.3",
+    "python-dotenv>=1.2.1",
+    "pillow>=12.0.0",
+    "paddlepaddle>=3.2.1",
     "python-magic-bin>=0.4.14",
-    "pytest-asyncio>=1.2.0",
-    "pytest-cov>=7.0.0",
-    "ruff>=0.14.0",
-    "mypy>=1.18.2",
-    "factory-boy>=3.3.3",
+    "paddleocr>=2.6.0",
+    "pymupdf>=1.24.14",
+    "pdfplumber>=0.11.7",
+    "pdf2image>=1.17.0",
+    "python-magic>=0.4.27",
 ]
 
 [project.optional-dependencies]
@@ -62,6 +45,58 @@ dev = [
     "mypy>=1.7.0",
     "ruff>=0.1.6",
     "pytest-cov>=4.1.0",
+    "pre-commit>=4.3.0",
+    "bandit>=1.8.6",
+    "radon>=6.0.1",
+    "safety>=3.6.2",
+]
+
+# PDF基础处理功能（轻量级）
+pdf-basic = [
+    "pdfplumber>=0.11.0,<0.12.0",
+    "pymupdf>=1.24.5,<1.25.0",
+    "markitdown>=0.1.0",
+    "python-magic>=0.4.27; sys_platform != 'linux'",
+    "python-magic-bin>=0.4.14; sys_platform != 'linux'",
+]
+
+# PDF OCR功能（重量级，需GPU或大内存）
+pdf-ocr = [
+    "pytesseract>=0.3.13",
+    "pdf2image>=1.17.0",
+    "pillow>=11.3.0",
+    "opencv-python>=4.12.0.88",
+    "paddlepaddle>=3.2.0",
+    "paddleocr>=3.2.0",
+]
+
+# NLP增强功能（中等重量级）
+nlp = [
+    "spacy>=3.6.0",
+]
+
+# 文档生成功能
+docs = [
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.6.22",
+    "mkdocs-macros-plugin>=1.4.0",
+    "mkdocs-minify-plugin>=0.8.0",
+    "mkdocs-git-revision-date-localized-plugin>=1.4.7",
+    "pymdown-extensions>=10.16.1",
+]
+
+# 本地 LLM 推理（ChatGLM3）- 极大内存占用
+llm-local = [
+    "transformers>=4.43.3",
+    "huggingface_hub>=0.23.0",
+    "accelerate>=0.34.0",
+    "safetensors>=0.4.4",
+    "sentencepiece>=0.1.99",
+]
+
+# 完整功能（所有可选依赖）
+all = [
+    "land-property-management[dev,pdf-basic,pdf-ocr,nlp,docs,llm-local]",
 ]
 
 [build-system]
@@ -77,7 +112,7 @@ line-length = 88
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP"]
-ignore = ["E501"]
+ignore = ["E402", "E501"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -93,14 +128,55 @@ disallow_untyped_defs = true
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+addopts = "-v --strict-markers --tb=short --disable-warnings -ra --import-mode=importlib"
+norecursedirs = ["archive", "*.egg-info", ".git", ".tox", "dist", "build"]
+log_cli = true
+log_cli_level = "INFO"
+log_cli_format = "%(asctime)s [%(levelname)8s] %(name)s: %(message)s"
+log_cli_date_format = "%Y-%m-%d %H:%M:%S"
 markers = [
-    "asyncio: marks tests as async",
-    "slow: marks tests as slow running",
-    "integration: marks tests as integration tests"
+    "unit: Unit tests - single function or class",
+    "integration: Integration tests - module collaboration",
+    "e2e: End-to-end tests - complete workflow",
+    "slow: Slow running tests",
+    "database: Database tests - requires database connection",
+    "api: API tests - API endpoint testing",
+    "ocr: OCR tests - OCR functionality",
+    "pdf: PDF processing tests",
+    "rbac: RBAC tests - permission functionality",
+    "performance: Performance tests",
+    "core: Core functionality tests",
+    "asyncio: Async tests"
+]
+
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__pycache__/*",
+    "*/migrations/*",
+    "*/venv/*",
+    "*/env/*"
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod"
 ]
 
 [dependency-groups]
 dev = [
-    "aiohttp>=3.13.0",
-    "pytest",
+    "httpx>=0.28.1",
+    "pytest-cov>=7.0.0",
+    "uvicorn[standard]>=0.38.0",
 ]

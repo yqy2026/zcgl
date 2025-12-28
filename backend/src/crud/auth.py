@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 认证相关CRUD操作
 """
@@ -84,14 +86,14 @@ class UserCRUD:
 
     def create(self, db: Session, obj_in: UserCreate) -> User:
         """创建用户"""
-        from ..services.auth_service import AuthService
+        from ..services import AuthService
 
         auth_service = AuthService(db)
         return auth_service.create_user(obj_in)
 
     def update(self, db: Session, db_obj: User, obj_in: UserUpdate) -> User:
         """更新用户"""
-        from ..services.auth_service import AuthService
+        from ..services import AuthService
 
         auth_service = AuthService(db)
         return auth_service.update_user(db_obj.id, obj_in)
@@ -203,9 +205,7 @@ class UserSessionCRUD:
         """清理过期会话"""
         count = (
             db.query(UserSession)
-            .filter(
-                UserSession.expires_at < datetime.now(), UserSession.is_active
-            )
+            .filter(UserSession.expires_at < datetime.now(), UserSession.is_active)
             .update({"is_active": False})
         )
         db.commit()
@@ -214,9 +214,7 @@ class UserSessionCRUD:
     def count_active_sessions(self, db: Session) -> int:
         """活跃会话总数"""
         return (
-            db.query(func.count(UserSession.id))
-            .filter(UserSession.is_active)
-            .scalar()
+            db.query(func.count(UserSession.id)).filter(UserSession.is_active).scalar()
         )
 
 
@@ -280,7 +278,7 @@ class AuditLogCRUD:
         session_id: str | None = None,
     ) -> AuditLog:
         """创建审计日志"""
-        from ..services.auth_service import AuthService
+        from ..services import AuthService
 
         auth_service = AuthService(db)
         return auth_service.create_audit_log(
@@ -319,7 +317,7 @@ class AuditLogCRUD:
 
         return [action[0] for action in actions]
 
-    def get_login_statistics(self, db: Session, days: int = 30) -> dict:
+    def get_login_statistics(self, db: Session, days: int = 7) -> dict[str, Any]:
         """获取登录统计"""
         from datetime import datetime, timedelta
 

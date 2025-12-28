@@ -1,15 +1,34 @@
+from typing import Any
+
+
+class BusinessLogicError(Exception):
+    """Business logic error"""
+
+    pass
+
+
+class AssetNotFoundError(Exception):
+    """Asset not found error"""
+
+    pass
+
+
+class DuplicateAssetError(Exception):
+    """Duplicate asset error"""
+
+    pass
+
+
 """
 任务管理CRUD操作
 """
 
 from datetime import UTC, datetime
-from typing import Any
 
 from sqlalchemy import and_, asc, desc
 from sqlalchemy.orm import Session
 
 from ..enums.task import TaskStatus, TaskType
-from ..exceptions import BusinessLogicError
 from ..models.task import AsyncTask, ExcelTaskConfig, TaskHistory
 from ..schemas.task import ExcelTaskConfigCreate, TaskCreate, TaskUpdate
 
@@ -33,7 +52,8 @@ class TaskCRUD:
         )
 
         db.add(db_obj)
-        db.commit()
+        # Commit moved to API layer for better test isolation
+        db.flush()  # Use flush instead to avoid breaking test rollback
         db.refresh(db_obj)
 
         # 创建创建历史记录
@@ -126,7 +146,8 @@ class TaskCRUD:
             setattr(db_obj, field, value)
 
         db.add(db_obj)
-        db.commit()
+        # Commit moved to API layer for better test isolation
+        db.flush()  # Use flush instead to avoid breaking test rollback
         db.refresh(db_obj)
 
         # 创建历史记录
@@ -149,7 +170,8 @@ class TaskCRUD:
             raise BusinessLogicError("任务不存在")
 
         db_obj.is_active = False
-        db.commit()
+        # Commit moved to API layer for better test isolation
+        db.flush()  # Use flush instead to avoid breaking test rollback
         db.refresh(db_obj)
 
         # 创建删除历史记录
@@ -183,7 +205,8 @@ class TaskCRUD:
         )
 
         db.add(history)
-        db.commit()
+        # Commit moved to API layer for better test isolation
+        db.flush()  # Use flush instead to avoid breaking test rollback
         db.refresh(history)
 
         return history
@@ -297,7 +320,9 @@ class ExcelTaskConfigCRUD:
         )
 
         db.add(db_obj)
-        db.commit()
+        # Don't commit here - let the service/API layer control transaction boundaries
+        # This ensures proper test isolation with rollback
+        db.flush()  # Flush to get generated IDs without committing
         db.refresh(db_obj)
 
         return db_obj
@@ -359,7 +384,8 @@ class ExcelTaskConfigCRUD:
 
         db_obj.updated_at = datetime.now(UTC)
         db.add(db_obj)
-        db.commit()
+        # Commit moved to API layer for better test isolation
+        db.flush()  # Use flush instead to avoid breaking test rollback
         db.refresh(db_obj)
 
         return db_obj
@@ -371,7 +397,8 @@ class ExcelTaskConfigCRUD:
             raise BusinessLogicError("配置不存在")
 
         db_obj.is_active = False
-        db.commit()
+        # Commit moved to API layer for better test isolation
+        db.flush()  # Use flush instead to avoid breaking test rollback
         db.refresh(db_obj)
 
         return db_obj

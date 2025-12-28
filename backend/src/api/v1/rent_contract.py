@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 租金台账相关API接口
 """
@@ -5,7 +7,6 @@
 import os
 import tempfile
 from datetime import date
-from typing import Any
 
 from fastapi import (
     APIRouter,
@@ -24,6 +25,8 @@ from ...crud.asset import asset_crud
 from ...crud.ownership import ownership
 from ...crud.rent_contract import rent_contract, rent_ledger, rent_term
 from ...database import get_db
+from ...middleware.auth import get_current_active_user
+from ...models.auth import User
 from ...schemas.rent_contract import (
     AssetRentStatistics,
     GenerateLedgerRequest,
@@ -41,7 +44,14 @@ from ...schemas.rent_contract import (
     RentTermCreate,
     RentTermResponse,
 )
-from ...services.rent_contract_excel import rent_contract_excel_service
+
+try:
+    from ...services.document.rent_contract_excel import rent_contract_excel_service
+
+    EXCEL_SERVICE_AVAILABLE = True
+except (ImportError, SyntaxError):
+    rent_contract_excel_service = None
+    EXCEL_SERVICE_AVAILABLE = False
 
 router = APIRouter()
 
@@ -49,26 +59,35 @@ router = APIRouter()
 # 租金合同API
 @router.post("/contracts", response_model=RentContractResponse, summary="创建租金合同")
 def create_contract(
-    *, db: Session = Depends(get_db), contract_in: RentContractCreate
+    *,
+    db: Session = Depends(get_db),
+    contract_in: RentContractCreate,
+    current_user: User = Depends(get_current_active_user),
 ) -> Any:
     """
     创建新的租金合同，包含租金条款信息
     """
+    # HTTPException should propagate through
+    from fastapi import HTTPException
+
+    # 验证关联的资产和权属方是否存在
+    asset = asset_crud.get(db, id=contract_in.asset_id)
+    if not asset:
+        raise HTTPException(status_code=404, detail="关联的资产不存在")
+
+    ownership_obj = ownership.get(db, id=contract_in.ownership_id)
+    if not ownership_obj:
+        raise HTTPException(status_code=404, detail="关联的权属方不存在")
+
     try:
-        # 验证关联的资产和权属方是否存在
-        asset = asset_crud.get(db, id=contract_in.asset_id)
-        if not asset:
-            raise HTTPException(status_code=404, detail="关联的资产不存在")
-
-        ownership_obj = ownership.get(db, id=contract_in.ownership_id)
-        if not ownership_obj:
-            raise HTTPException(status_code=404, detail="关联的权属方不存在")
-
         contract = rent_contract.create_with_terms(db=db, obj_in=contract_in)
         return contract
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        # Don't catch HTTPException - let it propagate
+        if isinstance(e, HTTPException):
+            raise
         raise HTTPException(status_code=500, detail=f"创建合同失败: {str(e)}")
 
 
@@ -77,7 +96,11 @@ def create_contract(
     response_model=RentContractResponse,
     summary="获取租金合同详情",
 )
-def get_contract(contract_id: str, db: Session = Depends(get_db)) -> Any:
+def get_contract(
+    contract_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+) -> Any:
     """
     获取租金合同详情，包含租金条款信息
     """
@@ -92,6 +115,7 @@ def get_contract(contract_id: str, db: Session = Depends(get_db)) -> Any:
 )
 def get_contracts(
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
     page: int = Query(1, ge=1, description="页码"),
     limit: int = Query(10, ge=1, le=100, description="每页数量"),
     contract_number: str | None = Query(None, description="合同编号筛选"),
@@ -132,7 +156,11 @@ def get_contracts(
     summary="更新租金合同",
 )
 def update_contract(
-    contract_id: str, *, db: Session = Depends(get_db), contract_in: RentContractUpdate
+    contract_id: str,
+    *,
+    db: Session = Depends(get_db),
+    contract_in: RentContractUpdate,
+    current_user: User = Depends(get_current_active_user),
 ) -> Any:
     """
     更新租金合同信息
@@ -149,11 +177,18 @@ def update_contract(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        # Don't catch HTTPException - let it propagate
+        if isinstance(e, HTTPException):
+            raise
         raise HTTPException(status_code=500, detail=f"更新合同失败: {str(e)}")
 
 
 @router.delete("/contracts/{contract_id}", summary="删除租金合同")
-def delete_contract(contract_id: str, db: Session = Depends(get_db)) -> Any:
+def delete_contract(
+    contract_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+) -> Any:
     """
     删除租金合同（同时删除相关的租金条款和台账记录）
     """
@@ -165,6 +200,9 @@ def delete_contract(contract_id: str, db: Session = Depends(get_db)) -> Any:
         rent_contract.remove(db, id=contract_id)
         return {"message": "合同删除成功"}
     except Exception as e:
+        # Don't catch HTTPException - let it propagate
+        if isinstance(e, HTTPException):
+            raise
         raise HTTPException(status_code=500, detail=f"删除合同失败: {str(e)}")
 
 
@@ -174,7 +212,11 @@ def delete_contract(contract_id: str, db: Session = Depends(get_db)) -> Any:
     response_model=list[RentTermResponse],
     summary="获取合同租金条款",
 )
-def get_contract_terms(contract_id: str, db: Session = Depends(get_db)) -> Any:
+def get_contract_terms(
+    contract_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+) -> Any:
     """
     获取指定合同的所有租金条款
     """
@@ -188,7 +230,11 @@ def get_contract_terms(contract_id: str, db: Session = Depends(get_db)) -> Any:
     summary="添加租金条款",
 )
 def add_rent_term(
-    contract_id: str, *, db: Session = Depends(get_db), term_in: RentTermCreate
+    contract_id: str,
+    *,
+    db: Session = Depends(get_db),
+    term_in: RentTermCreate,
+    current_user: User = Depends(get_current_active_user),
 ) -> Any:
     """
     为合同添加新的租金条款
@@ -198,7 +244,7 @@ def add_rent_term(
     if not contract:
         raise HTTPException(status_code=404, detail="合同不存在")
 
-    term_data = term_in.dict()
+    term_data = term_in.model_dump()
     term_data["contract_id"] = contract_id
     term = rent_term.create(db=db, obj_in=term_data)
     return term
@@ -207,17 +253,30 @@ def add_rent_term(
 # 租金台账API
 @router.post("/ledger/generate", summary="生成月度台账")
 def generate_monthly_ledger(
-    *, db: Session = Depends(get_db), request: GenerateLedgerRequest
+    request: GenerateLedgerRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ) -> Any:
     """
     根据合同信息生成月度租金台账
     """
     try:
         ledgers = rent_ledger.generate_monthly_ledger(db=db, request=request)
-        return {"message": f"成功生成 {len(ledgers)} 条台账记录", "ledgers": ledgers}
+        # 转换为Pydantic响应模型
+        ledger_responses = []
+        for ledger in ledgers:
+            ledger_responses.append(RentLedgerResponse.model_validate(ledger))
+
+        return {
+            "message": f"成功生成 {len(ledger_responses)} 条台账记录",
+            "ledgers": ledger_responses,
+        }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        # Don't catch HTTPException - let it propagate
+        if isinstance(e, HTTPException):
+            raise
         raise HTTPException(status_code=500, detail=f"生成台账失败: {str(e)}")
 
 
@@ -226,6 +285,7 @@ def generate_monthly_ledger(
 )
 def get_rent_ledger(
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
     page: int = Query(1, ge=1, description="页码"),
     limit: int = Query(10, ge=1, le=100, description="每页数量"),
     contract_id: str | None = Query(None, description="合同ID筛选"),
@@ -263,7 +323,11 @@ def get_rent_ledger(
 @router.get(
     "/ledger/{ledger_id}", response_model=RentLedgerResponse, summary="获取租金台账详情"
 )
-def get_rent_ledger_detail(ledger_id: str, db: Session = Depends(get_db)) -> Any:
+def get_rent_ledger_detail(
+    ledger_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+) -> Any:
     """
     获取租金台账详情
     """
@@ -273,11 +337,41 @@ def get_rent_ledger_detail(ledger_id: str, db: Session = Depends(get_db)) -> Any
     return ledger
 
 
+# 批量更新路由必须在参数路由之前，避免路径匹配冲突
+@router.put("/ledger/batch", summary="批量更新租金台账")
+def batch_update_rent_ledger(
+    request: RentLedgerBatchUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+) -> Any:
+    """
+    批量更新租金台账支付状态
+    """
+    try:
+        ledgers = rent_ledger.batch_update_payment(db=db, request=request)
+        # Convert SQLAlchemy models to Pydantic schemas
+        ledger_responses = [
+            RentLedgerResponse.model_validate(ledger) for ledger in ledgers
+        ]
+        return {
+            "message": f"成功更新 {len(ledgers)} 条台账记录",
+            "ledgers": ledger_responses,
+        }
+    except Exception as e:
+        # Don't catch HTTPException - let it propagate
+        if isinstance(e, HTTPException):
+            raise
+        raise HTTPException(status_code=500, detail=f"批量更新失败: {str(e)}")
+
+
 @router.put(
     "/ledger/{ledger_id}", response_model=RentLedgerResponse, summary="更新租金台账"
 )
 def update_rent_ledger(
-    ledger_id: str, *, db: Session = Depends(get_db), ledger_in: RentLedgerUpdate
+    ledger_id: str,
+    ledger_in: RentLedgerUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ) -> Any:
     """
     更新租金台账信息（支付状态等）
@@ -286,31 +380,29 @@ def update_rent_ledger(
     if not ledger:
         raise HTTPException(status_code=404, detail="台账记录不存在")
 
+    # 验证支付状态
+    if ledger_in.payment_status is not None:
+        valid_statuses = ["未支付", "部分支付", "已支付", "逾期"]
+        if ledger_in.payment_status not in valid_statuses:
+            raise HTTPException(
+                status_code=422, detail=f"支付状态必须是: {', '.join(valid_statuses)}"
+            )
+
     try:
         updated_ledger = rent_ledger.update(db=db, db_obj=ledger, obj_in=ledger_in)
         return updated_ledger
     except Exception as e:
+        # Don't catch HTTPException - let it propagate
+        if isinstance(e, HTTPException):
+            raise
         raise HTTPException(status_code=500, detail=f"更新台账失败: {str(e)}")
-
-
-@router.put("/ledger/batch", summary="批量更新租金台账")
-def batch_update_rent_ledger(
-    *, db: Session = Depends(get_db), request: RentLedgerBatchUpdate
-) -> Any:
-    """
-    批量更新租金台账支付状态
-    """
-    try:
-        ledgers = rent_ledger.batch_update_payment(db=db, request=request)
-        return {"message": f"成功更新 {len(ledgers)} 条台账记录", "ledgers": ledgers}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"批量更新失败: {str(e)}")
 
 
 # 统计报表API
 @router.get("/statistics/overview", summary="获取租金统计概览")
 def get_rent_statistics(
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
     start_date: date | None = Query(None, description="开始日期"),
     end_date: date | None = Query(None, description="结束日期"),
     ownership_ids: list[str] | None = Query(None, description="权属方ID列表"),
@@ -330,6 +422,9 @@ def get_rent_statistics(
         statistics = rent_ledger.get_statistics(db=db, query_params=query_params)
         return statistics
     except Exception as e:
+        # Don't catch HTTPException - let it propagate
+        if isinstance(e, HTTPException):
+            raise
         raise HTTPException(status_code=500, detail=f"获取统计信息失败: {str(e)}")
 
 
@@ -340,6 +435,7 @@ def get_rent_statistics(
 )
 def get_ownership_statistics(
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
     start_date: date | None = Query(None, description="开始日期"),
     end_date: date | None = Query(None, description="结束日期"),
     ownership_ids: list[str] | None = Query(None, description="权属方ID列表"),
@@ -353,6 +449,9 @@ def get_ownership_statistics(
         )
         return statistics
     except Exception as e:
+        # Don't catch HTTPException - let it propagate
+        if isinstance(e, HTTPException):
+            raise
         raise HTTPException(status_code=500, detail=f"获取权属方统计失败: {str(e)}")
 
 
@@ -363,6 +462,7 @@ def get_ownership_statistics(
 )
 def get_asset_statistics(
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
     start_date: date | None = Query(None, description="开始日期"),
     end_date: date | None = Query(None, description="结束日期"),
     asset_ids: list[str] | None = Query(None, description="资产ID列表"),
@@ -376,6 +476,9 @@ def get_asset_statistics(
         )
         return statistics
     except Exception as e:
+        # Don't catch HTTPException - let it propagate
+        if isinstance(e, HTTPException):
+            raise
         raise HTTPException(status_code=500, detail=f"获取资产统计失败: {str(e)}")
 
 
@@ -386,6 +489,7 @@ def get_asset_statistics(
 )
 def get_monthly_statistics(
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
     year: int | None = Query(None, description="年份"),
     start_month: str | None = Query(None, description="开始月份(YYYY-MM)"),
     end_month: str | None = Query(None, description="结束月份(YYYY-MM)"),
@@ -399,12 +503,16 @@ def get_monthly_statistics(
         )
         return statistics
     except Exception as e:
+        # Don't catch HTTPException - let it propagate
+        if isinstance(e, HTTPException):
+            raise
         raise HTTPException(status_code=500, detail=f"获取月度统计失败: {str(e)}")
 
 
 @router.get("/statistics/export", summary="导出统计数据")
 def export_statistics(
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
     start_date: date | None = Query(None, description="开始日期"),
     end_date: date | None = Query(None, description="结束日期"),
     format: str = Query("excel", description="导出格式"),
@@ -451,6 +559,9 @@ def export_statistics(
             headers={"Content-Disposition": f"attachment; filename={filename}"},
         )
     except Exception as e:
+        # Don't catch HTTPException - let it propagate
+        if isinstance(e, HTTPException):
+            raise
         raise HTTPException(status_code=500, detail=f"导出统计数据失败: {str(e)}")
 
 
@@ -460,7 +571,11 @@ def export_statistics(
     response_model=list[RentLedgerResponse],
     summary="获取合同台账",
 )
-def get_contract_ledger(contract_id: str, db: Session = Depends(get_db)) -> Any:
+def get_contract_ledger(
+    contract_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+) -> Any:
     """
     获取指定合同的所有台账记录
     """
@@ -477,7 +592,11 @@ def get_contract_ledger(contract_id: str, db: Session = Depends(get_db)) -> Any:
     response_model=list[RentContractResponse],
     summary="获取资产合同",
 )
-def get_asset_contracts(asset_id: str, db: Session = Depends(get_db)) -> Any:
+def get_asset_contracts(
+    asset_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+) -> Any:
     """
     获取指定资产的所有合同
     """
@@ -491,7 +610,9 @@ def get_asset_contracts(asset_id: str, db: Session = Depends(get_db)) -> Any:
 
 # Excel导入导出API
 @router.get("/excel/template", summary="下载Excel导入模板")
-def download_excel_template():
+def download_excel_template(
+    current_user: User = Depends(get_current_active_user),
+):
     """
     下载租金合同Excel导入模板
     """
@@ -506,12 +627,16 @@ def download_excel_template():
             filename=result["file_name"],
         )
     except Exception as e:
+        # Don't catch HTTPException - let it propagate
+        if isinstance(e, HTTPException):
+            raise
         raise HTTPException(status_code=500, detail=f"下载模板失败: {str(e)}")
 
 
 @router.post("/excel/import", summary="Excel导入合同数据")
 def import_contracts_from_excel(
     file: UploadFile = File(...),
+    current_user: User = Depends(get_current_active_user),
     import_terms: bool = Form(True, description="是否导入租金条款"),
     import_ledger: bool = Form(False, description="是否导入台账数据"),
     overwrite_existing: bool = Form(False, description="是否覆盖已存在的数据"),
@@ -542,12 +667,16 @@ def import_contracts_from_excel(
         return result
 
     except Exception as e:
+        # Don't catch HTTPException - let it propagate
+        if isinstance(e, HTTPException):
+            raise
         raise HTTPException(status_code=500, detail=f"导入失败: {str(e)}")
 
 
 @router.get("/excel/export", summary="Excel导出合同数据")
 def export_contracts_to_excel(
     contract_ids: list[str] | None = Query(None, description="要导出的合同ID列表"),
+    current_user: User = Depends(get_current_active_user),
     include_terms: bool = Query(True, description="是否包含租金条款"),
     include_ledger: bool = Query(True, description="是否包含台账数据"),
     start_date: date | None = Query(None, description="开始日期"),
@@ -575,4 +704,7 @@ def export_contracts_to_excel(
         )
 
     except Exception as e:
+        # Don't catch HTTPException - let it propagate
+        if isinstance(e, HTTPException):
+            raise
         raise HTTPException(status_code=500, detail=f"导出失败: {str(e)}")

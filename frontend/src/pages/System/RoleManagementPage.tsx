@@ -207,7 +207,7 @@ const RoleManagementPage: React.FC = () => {
         title: (
           <Space>
             <span>{permission.name}</span>
-            <Tag size="small" color={
+            <Tag color={
               permission.type === 'menu' ? 'blue' :
               permission.type === 'action' ? 'green' : 'orange'
             }>
@@ -289,7 +289,12 @@ const RoleManagementPage: React.FC = () => {
     setPermissionModalVisible(true)
   }
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: {
+    name: string;
+    description?: string;
+    permissions?: string[];
+    isActive?: boolean;
+  }) => {
     try {
       if (editingRole) {
         // 模拟更新API调用
@@ -338,7 +343,7 @@ const RoleManagementPage: React.FC = () => {
             <div style={{ fontSize: '12px', color: '#666' }}>
               {record.code}
               {record.is_system && (
-                <Tag size="small" color="purple" style={{ marginLeft: 8 }}>
+                <Tag color="purple" style={{ marginLeft: 8 }}>
                   系统角色
                 </Tag>
               )}
@@ -636,24 +641,26 @@ const RoleManagementPage: React.FC = () => {
         </div>
 
         <Transfer
-          dataSource={transferData}
-          targetKeys={targetPermissions}
-          onChange={setTargetPermissions}
-          render={item => (
-            <div>
-              <div style={{ fontWeight: 500 }}>{item.title}</div>
-              <div style={{ fontSize: '12px', color: '#666' }}>
-                {item.description}
+          {...{
+            dataSource: transferData,
+            targetKeys: targetPermissions,
+            onChange: (keys: any) => setTargetPermissions(keys),
+            render: (item: any) => (
+              <div>
+                <div style={{ fontWeight: 500 }}>{item.title}</div>
+                <div style={{ fontSize: '12px', color: '#666' }}>
+                  {item.description}
+                </div>
               </div>
-            </div>
-          )}
-          listStyle={{
-            width: 400,
-            height: 400
-          }}
-          titles={['可选权限', '已选权限']}
-          showSearch
-          searchPlaceholder="搜索权限"
+            ),
+            listStyle: {
+              width: 400,
+              height: 400
+            },
+            titles: ['可选权限', '已选权限'],
+            showSearch: true,
+            searchPlaceholder: '搜索权限'
+          } as any}
         />
 
         <Divider />

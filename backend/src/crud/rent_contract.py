@@ -1,10 +1,11 @@
+from typing import Any
+
 """
 租金台账相关的CRUD操作
 """
 
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any
 
 from sqlalchemy import and_, desc, func
 from sqlalchemy.orm import Session
@@ -110,14 +111,23 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
             obj_in.contract_number = self._generate_contract_number(db)
 
         # 创建合同数据
-        contract_data = obj_in.dict(exclude={"rent_terms"})
+        contract_data = obj_in.model_dump(exclude={"rent_terms"})
         db_contract = RentContract(**contract_data)
         db.add(db_contract)
         db.flush()  # 获取ID
 
         # 创建租金条款
         for term_data in obj_in.rent_terms:
-            term_data_dict = term_data.dict()
+            term_data_dict = term_data.model_dump()
+            # 确保 total_monthly_amount 被正确计算
+            if term_data_dict.get("total_monthly_amount") is None:
+                monthly_rent = term_data_dict.get("monthly_rent", Decimal("0"))
+                management_fee = term_data_dict.get("management_fee", Decimal("0"))
+                other_fees = term_data_dict.get("other_fees", Decimal("0"))
+                term_data_dict["total_monthly_amount"] = (
+                    monthly_rent + management_fee + other_fees
+                )
+
             term_data_dict["contract_id"] = db_contract.id
             db_term = RentTerm(**term_data_dict)
             db.add(db_term)
@@ -143,7 +153,7 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
         old_data = model_to_dict(db_obj)
 
         # 更新合同基本信息
-        update_data = obj_in.dict(exclude_unset=True, exclude={"rent_terms"})
+        update_data = obj_in.model_dump(exclude_unset=True, exclude={"rent_terms"})
         for field, value in update_data.items():
             setattr(db_obj, field, value)
 
@@ -154,7 +164,7 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
 
             # 创建新条款
             for term_data in obj_in.rent_terms:
-                term_data_dict = term_data.dict()
+                term_data_dict = term_data.model_dump()
                 term_data_dict["contract_id"] = db_obj.id
                 db_term = RentTerm(**term_data_dict)
                 db.add(db_term)
@@ -582,12 +592,12 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
                 {
                     "ownership_id": result.id,
                     "ownership_name": result.name,
-                    "ownership_short_name": result.short_name,
-                    "contract_count": result.contract_count,
+                    "total_contracts": result.contract_count,
+                    "active_contracts": result.contract_count,  # Assuming all counted contracts are active
                     "total_due_amount": total_due,
                     "total_paid_amount": total_paid,
                     "total_overdue_amount": result.total_overdue_amount or Decimal("0"),
-                    "payment_rate": payment_rate,
+                    "occupancy_rate": payment_rate,
                 }
             )
 

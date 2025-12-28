@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 基本质量检查工具
 Basic Quality Checker
@@ -7,11 +6,10 @@ Basic Quality Checker
 适用于所有环境的基础质量检查，不依赖外部工具
 """
 
-import os
-import sys
 import ast
-import time
 import subprocess
+import sys
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -79,13 +77,17 @@ class BasicQualityChecker:
         print("=" * 60)
 
         # 保存报告
-        self._save_report(overall_score, grade, {
-            'structure': structure_score,
-            'syntax': syntax_score,
-            'tests': test_score,
-            'documentation': doc_score,
-            'configuration': config_score
-        })
+        self._save_report(
+            overall_score,
+            grade,
+            {
+                "structure": structure_score,
+                "syntax": syntax_score,
+                "tests": test_score,
+                "documentation": doc_score,
+                "configuration": config_score,
+            },
+        )
 
         return overall_score
 
@@ -94,11 +96,7 @@ class BasicQualityChecker:
         print("Checking project structure...")
 
         required_dirs = ["src", "tests", "scripts"]
-        required_files = [
-            "src/main.py",
-            "pyproject.toml",
-            "README.md"
-        ]
+        required_files = ["src/main.py", "pyproject.toml", "README.md"]
 
         score = 100
         missing_items = []
@@ -140,7 +138,7 @@ class BasicQualityChecker:
 
         for py_file in python_files[:10]:  # 检查前10个文件
             try:
-                with open(py_file, 'r', encoding='utf-8') as f:
+                with open(py_file, encoding="utf-8") as f:
                     content = f.read()
                 ast.parse(content)
             except SyntaxError as e:
@@ -155,7 +153,9 @@ class BasicQualityChecker:
         if syntax_errors == 0:
             print(f"  All {min(total_files, 10)} files have valid syntax")
         else:
-            print(f"  Found {syntax_errors} syntax errors in {min(total_files, 10)} files")
+            print(
+                f"  Found {syntax_errors} syntax errors in {min(total_files, 10)} files"
+            )
 
         # 计算分数
         error_rate = syntax_errors / min(total_files, 10)
@@ -170,7 +170,7 @@ class BasicQualityChecker:
         # 查找测试文件
         test_files = [
             self.tests_dir / "test_main.py",
-            self.tests_dir / "test_quick_suite.py"
+            self.tests_dir / "test_quick_suite.py",
         ]
 
         executable_tests = 0
@@ -183,11 +183,18 @@ class BasicQualityChecker:
                 try:
                     start_time = time.time()
                     result = subprocess.run(
-                        [sys.executable, "-m", "pytest", str(test_file), "-q", "--tb=no"],
+                        [
+                            sys.executable,
+                            "-m",
+                            "pytest",
+                            str(test_file),
+                            "-q",
+                            "--tb=no",
+                        ],
                         capture_output=True,
                         text=True,
                         cwd=self.base_dir,
-                        timeout=30
+                        timeout=30,
                     )
                     execution_time = time.time() - start_time
 
@@ -209,7 +216,9 @@ class BasicQualityChecker:
         success_rate = executable_tests / total_tests
         score = success_rate * 100
 
-        print(f"  {executable_tests}/{total_tests} tests executable ({success_rate*100:.1f}%)")
+        print(
+            f"  {executable_tests}/{total_tests} tests executable ({success_rate*100:.1f}%)"
+        )
 
         return score
 
@@ -217,10 +226,7 @@ class BasicQualityChecker:
         """检查文档"""
         print("Checking documentation...")
 
-        doc_files = [
-            "README.md",
-            "CLAUDE.md"
-        ]
+        doc_files = ["README.md", "CLAUDE.md"]
 
         doc_count = 0
         for doc_file in doc_files:
@@ -233,7 +239,7 @@ class BasicQualityChecker:
 
         for py_file in python_files[:5]:  # 检查前5个文件
             try:
-                with open(py_file, 'r', encoding='utf-8') as f:
+                with open(py_file, encoding="utf-8") as f:
                     content = f.read()
                     if '"""' in content or "'''" in content:
                         docstring_count += 1
@@ -262,11 +268,7 @@ class BasicQualityChecker:
         """检查配置文件"""
         print("Checking configuration...")
 
-        config_files = [
-            "pyproject.toml",
-            "alembic.ini",
-            ".env.example"
-        ]
+        config_files = ["pyproject.toml", "alembic.ini", ".env.example"]
 
         score = 100
         missing_configs = []
@@ -296,7 +298,7 @@ class BasicQualityChecker:
         report_file = report_dir / f"quality_check_{timestamp}.txt"
 
         try:
-            with open(report_file, 'w', encoding='utf-8') as f:
+            with open(report_file, "w", encoding="utf-8") as f:
                 f.write("QUALITY CHECK REPORT\n")
                 f.write("=" * 40 + "\n")
                 f.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
@@ -317,15 +319,15 @@ class BasicQualityChecker:
                 f.write("RECOMMENDATIONS:\n")
                 f.write("-" * 40 + "\n")
 
-                if scores['structure'] < 100:
+                if scores["structure"] < 100:
                     f.write("- Ensure all required directories and files exist\n")
-                if scores['syntax'] < 80:
+                if scores["syntax"] < 80:
                     f.write("- Fix syntax errors in Python files\n")
-                if scores['tests'] < 80:
+                if scores["tests"] < 80:
                     f.write("- Ensure tests are executable and passing\n")
-                if scores['documentation'] < 70:
+                if scores["documentation"] < 70:
                     f.write("- Add missing documentation and docstrings\n")
-                if scores['configuration'] < 80:
+                if scores["configuration"] < 80:
                     f.write("- Complete configuration files setup\n")
 
             print(f"\nReport saved: {report_file}")

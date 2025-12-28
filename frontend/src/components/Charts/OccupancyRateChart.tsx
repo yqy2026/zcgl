@@ -2,8 +2,8 @@ import React, { useEffect, useRef } from 'react'
 import { Card, Typography, Space, Statistic, Row, Col, Spin, Alert } from 'antd'
 import {
   PercentageOutlined,
-  TrendingUpOutlined,
-  TrendingDownOutlined,
+  RiseOutlined,
+  FallOutlined,
   MinusOutlined,
 } from '@ant-design/icons'
 import { useQuery } from '@tanstack/react-query'
@@ -121,7 +121,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
       },
       tooltip: {
         callbacks: {
-          label: (context: any) => {
+          label: (context: { dataIndex: number; parsed: { y: number }; label: string }) => {
             const monthData = data?.monthly_trend?.[context.dataIndex]
             return [
               `出租率: ${context.parsed.y.toFixed(2)}%`,
@@ -137,7 +137,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
         beginAtZero: true,
         max: 100,
         ticks: {
-          callback: (value: any) => `${value}%`,
+          callback: (value: number) => `${value}%`,
         },
       },
     },
@@ -180,7 +180,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
       },
       tooltip: {
         callbacks: {
-          label: (context: any) => {
+          label: (context: { dataIndex: number; parsed: number; label: string }) => {
             const item = data?.by_property_nature?.[context.dataIndex]
             return [
               `${context.label}: ${context.parsed.toFixed(2)}%`,
@@ -228,7 +228,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
       },
       tooltip: {
         callbacks: {
-          label: (context: any) => {
+          label: (context: { dataIndex: number; parsed: { y: number } }) => {
             const item = data?.by_ownership_entity?.[context.dataIndex]
             return [
               `出租率: ${context.parsed.y.toFixed(2)}%`,
@@ -243,7 +243,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
         beginAtZero: true,
         max: 100,
         ticks: {
-          callback: (value: any) => `${value}%`,
+          callback: (value: number) => `${value}%`,
         },
       },
       x: {
@@ -258,9 +258,9 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
   // 获取趋势图标
   const getTrendIcon = (trend: string, percentage: number) => {
     if (trend === 'up') {
-      return <TrendingUpOutlined style={{ color: '#52c41a' }} />
+      return <RiseOutlined style={{ color: '#52c41a' }} />
     } else if (trend === 'down') {
-      return <TrendingDownOutlined style={{ color: '#ff4d4f' }} />
+      return <FallOutlined style={{ color: '#ff4d4f' }} />
     } else {
       return <MinusOutlined style={{ color: '#8c8c8c' }} />
     }
@@ -348,7 +348,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
           <Card title="出租率趋势分析" style={{ marginBottom: 16 }}>
             <Spin spinning={isLoading}>
               <div style={{ height: height }}>
-                <Line data={trendChartData} options={trendChartOptions} />
+                <Line data={trendChartData} options={trendChartOptions as any} />
               </div>
             </Spin>
           </Card>
@@ -370,7 +370,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
           <Card title="权属方出租率对比">
             <Spin spinning={isLoading}>
               <div style={{ height: height }}>
-                <Bar data={ownershipChartData} options={ownershipChartOptions} />
+                <Bar data={ownershipChartData} options={ownershipChartOptions as any} />
               </div>
             </Spin>
           </Card>
@@ -399,7 +399,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <Text style={{ color: '#52c41a', fontWeight: 'bold' }}>
-                      {asset.rate.toFixed(2)}%
+                      {(asset.rate ?? 0).toFixed(2)}%
                     </Text>
                   </div>
                 </div>
@@ -428,7 +428,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <Text style={{ color: '#ff4d4f', fontWeight: 'bold' }}>
-                      {asset.rate.toFixed(2)}%
+                      {(asset.rate ?? 0).toFixed(2)}%
                     </Text>
                   </div>
                 </div>

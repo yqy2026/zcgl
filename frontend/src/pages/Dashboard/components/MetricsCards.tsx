@@ -63,7 +63,6 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({ metrics, loading }) => {
           <Statistic
             title="月度收入"
             value={metrics?.monthlyRevenue || 0}
-            prefix="¥"
             prefix={<DollarOutlined />}
             valueStyle={{ color: '#722ed1' }}
           />

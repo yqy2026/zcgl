@@ -10,7 +10,7 @@ from collections.abc import Callable
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from ..core.logging_security import log_request_info
+from ..core.logging_security import SensitiveDataFilter, log_request_info
 
 
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
@@ -18,6 +18,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
     def __init__(self, app):
         super().__init__(app)
+        self.sensitive_filter = SensitiveDataFilter()
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         # 生成请求ID
@@ -30,24 +31,42 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         client_ip = self._get_client_ip(request)
         user_agent = request.headers.get("user-agent", "")
 
+        # 对用户代理进行脱敏处理
+        user_agent = self.sensitive_filter._filter_sensitive_data(user_agent)
+
         # 执行请求
         response = await call_next(request)
 
         # 计算请求持续时间
         duration_ms = (time.time() - start_time) * 1000
 
+        # 获取用户ID（如果有认证）
+        user_id = getattr(request.state, "user_id", None)
+
+        # 对查询参数进行脱敏处理
+        query_params = dict(request.query_params)
+        filtered_query_params = {}
+        for key, value in query_params.items():
+            # 检查键是否敏感
+            if self.sensitive_filter._is_sensitive_key(key):
+                filtered_query_params[key] = "***"
+            else:
+                # 对值进行脱敏处理
+                filtered_query_params[key] = (
+                    self.sensitive_filter._filter_sensitive_data(str(value))
+                )
+
         # 记录请求日志
         log_request_info(
             method=request.method,
             path=str(request.url.path),
-            query_string=str(request.query_params) if request.query_params else None,
+            query_string=str(filtered_query_params) if filtered_query_params else None,
             status_code=response.status_code,
             duration_ms=duration_ms,
             request_id=request_id,
             client_ip=client_ip,
             user_agent=user_agent,
-            # 尝试获取用户ID（如果有认证）
-            user_id=getattr(request.state, "user_id", None),
+            user_id=user_id,
         )
 
         # 添加请求ID到响应头

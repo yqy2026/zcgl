@@ -1,27 +1,28 @@
 import React from 'react'
 import { Card, Tag, Space, Button, Typography, Progress, Tooltip } from 'antd'
-import { 
-  EyeOutlined, 
-  EditOutlined, 
-  DeleteOutlined, 
+import {
+  EyeOutlined,
+  EditOutlined,
+  DeleteOutlined,
   EnvironmentOutlined,
   BuildOutlined,
   UserOutlined
 } from '@ant-design/icons'
+import type { Asset } from '@/types/asset'
 
 const { Text, Title } = Typography
 const { Meta } = Card
 
 interface AssetCardProps {
-  asset: any
+  asset: Asset
   onView: () => void
   onEdit: () => void
   onDelete: () => void
 }
 
 const AssetCard: React.FC<AssetCardProps> = ({ asset, onView, onEdit, onDelete }) => {
-  const occupancyRate = parseFloat(asset.occupancyRate || '0')
-  
+  const occupancyRate = asset.occupancy_rate ?? 0
+
   const getOccupancyColor = (rate: number) => {
     if (rate > 80) return '#52c41a'
     if (rate > 50) return '#faad14'
@@ -67,17 +68,17 @@ const AssetCard: React.FC<AssetCardProps> = ({ asset, onView, onEdit, onDelete }
         title={
           <div>
             <Title level={5} style={{ margin: 0, marginBottom: '8px' }}>
-              {asset.propertyName}
+              {asset.property_name}
             </Title>
             <Space wrap>
-              <Tag color={asset.propertyNature === '经营类' ? 'green' : 'blue'}>
-                {asset.propertyNature}
+              <Tag color={asset.property_nature === '经营类' ? 'green' : 'blue'}>
+                {asset.property_nature}
               </Tag>
-              <Tag color={getStatusColor(asset.usageStatus)}>
-                {asset.usageStatus}
+              <Tag color={getStatusColor(asset.usage_status)}>
+                {asset.usage_status}
               </Tag>
-              <Tag color={getOwnershipColor(asset.ownershipStatus)}>
-                {asset.ownershipStatus}
+              <Tag color={getOwnershipColor(asset.ownership_status)}>
+                {asset.ownership_status}
               </Tag>
             </Space>
           </div>
@@ -99,7 +100,7 @@ const AssetCard: React.FC<AssetCardProps> = ({ asset, onView, onEdit, onDelete }
               <Space>
                 <UserOutlined style={{ color: '#8c8c8c' }} />
                 <Text type="secondary" style={{ fontSize: '12px' }}>
-                  {asset.ownershipEntity}
+                  {asset.ownership_entity}
                 </Text>
               </Space>
             </div>
@@ -109,9 +110,9 @@ const AssetCard: React.FC<AssetCardProps> = ({ asset, onView, onEdit, onDelete }
               <Space>
                 <BuildOutlined style={{ color: '#8c8c8c' }} />
                 <Text type="secondary" style={{ fontSize: '12px' }}>
-                  总面积: {asset.actualPropertyArea}㎡ | 
-                  可租: {asset.rentableArea}㎡ | 
-                  已租: {asset.rentedArea}㎡
+                  总面积: {asset.actual_property_area}㎡ |
+                  可租: {asset.rentable_area}㎡ |
+                  已租: {asset.rented_area}㎡
                 </Text>
               </Space>
             </div>

@@ -9,6 +9,8 @@ from sqlalchemy.orm import Session
 
 from ...crud.project import project
 from ...database import get_db
+from ...middleware.auth import get_current_active_user
+from ...models.auth import User
 from ...schemas.project import (
     ProjectCreate,
     ProjectDeleteResponse,
@@ -26,6 +28,7 @@ router = APIRouter()
 async def get_project_options(
     db: Session = Depends(get_db),
     is_active: bool | None = Query(True, description="是否启用"),
+    current_user: User = Depends(get_current_active_user),
 ):
     """获取项目选项列表（用于下拉选择等）"""
     try:
@@ -36,11 +39,16 @@ async def get_project_options(
 
 
 @router.post("/", response_model=ProjectResponse, summary="创建项目")
-async def create_project(*, db: Session = Depends(get_db), project_in: ProjectCreate):
+async def create_project(
+    *,
+    db: Session = Depends(get_db),
+    project_in: ProjectCreate,
+    current_user: User = Depends(get_current_active_user),
+):
     """创建新项目"""
     try:
         db_project = project.create(db, obj_in=project_in, created_by="system")
-        return ProjectResponse.from_orm(db_project)
+        return ProjectResponse.model_validate(db_project)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -48,7 +56,11 @@ async def create_project(*, db: Session = Depends(get_db), project_in: ProjectCr
 
 
 @router.get("/{project_id}", response_model=ProjectResponse, summary="获取项目详情")
-async def get_project(project_id: str, db: Session = Depends(get_db)):
+async def get_project(
+    project_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
     """获取指定项目的详细信息"""
     db_project = project.get(db, id=project_id)
     if not db_project:
@@ -128,7 +140,11 @@ async def get_project(project_id: str, db: Session = Depends(get_db)):
 
 @router.put("/{project_id}", response_model=ProjectResponse, summary="更新项目")
 async def update_project(
-    *, db: Session = Depends(get_db), project_id: str, project_in: ProjectUpdate
+    *,
+    db: Session = Depends(get_db),
+    project_id: str,
+    project_in: ProjectUpdate,
+    current_user: User = Depends(get_current_active_user),
 ):
     """更新项目信息"""
     db_project = project.get(db, id=project_id)
@@ -139,7 +155,7 @@ async def update_project(
         updated_project = project.update(
             db, db_obj=db_project, obj_in=project_in, updated_by="system"
         )
-        return ProjectResponse.from_orm(updated_project)
+        return ProjectResponse.model_validate(updated_project)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -149,7 +165,12 @@ async def update_project(
 @router.delete(
     "/{project_id}", response_model=ProjectDeleteResponse, summary="删除项目"
 )
-async def delete_project(*, db: Session = Depends(get_db), project_id: str):
+async def delete_project(
+    *,
+    db: Session = Depends(get_db),
+    project_id: str,
+    current_user: User = Depends(get_current_active_user),
+):
     """删除项目"""
     try:
         # 先检查关联资产数量
@@ -179,6 +200,7 @@ async def get_projects(
     city: str | None = Query(None, description="城市"),
     ownership_id: str | None = Query(None, description="权属方ID"),
     ownership_entity: str | None = Query(None, description="权属方名称"),
+    current_user: User = Depends(get_current_active_user),
 ):
     """获取项目列表"""
     search_params = ProjectSearchRequest(
@@ -198,8 +220,8 @@ async def get_projects(
     # 转换为响应格式，使用ownership_relations_data而不是SQLAlchemy关系
     items = []
     for item in result["items"]:
-        # 直接使用from_orm转换，CRUD层已经处理了ownership_relations_data
-        item_dict = ProjectResponse.from_orm(item)
+        # 直接使用model_validate转换，CRUD层已经处理了ownership_relations_data
+        item_dict = ProjectResponse.model_validate(item)
         items.append(item_dict)
 
     return ProjectListResponse(
@@ -213,7 +235,10 @@ async def get_projects(
 
 @router.post("/search", response_model=ProjectListResponse, summary="搜索项目")
 async def search_projects(
-    *, db: Session = Depends(get_db), search_params: ProjectSearchRequest
+    *,
+    db: Session = Depends(get_db),
+    search_params: ProjectSearchRequest,
+    current_user: User = Depends(get_current_active_user),
 ):
     """搜索项目"""
     result = project.search(db, search_params)
@@ -221,8 +246,8 @@ async def search_projects(
     # 转换为响应格式，使用ownership_relations_data而不是SQLAlchemy关系
     items = []
     for item in result["items"]:
-        # 直接使用from_orm转换，CRUD层已经处理了ownership_relations_data
-        item_dict = ProjectResponse.from_orm(item)
+        # 直接使用model_validate转换，CRUD层已经处理了ownership_relations_data
+        item_dict = ProjectResponse.model_validate(item)
         items.append(item_dict)
 
     return ProjectListResponse(
@@ -235,7 +260,10 @@ async def search_projects(
 
 
 @router.get("/statistics/summary", summary="获取项目统计")
-async def get_project_statistics(db: Session = Depends(get_db)):
+async def get_project_statistics(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
     """获取项目统计信息"""
     try:
         stats = project.get_statistics(db)
@@ -258,7 +286,7 @@ async def get_project_statistics(db: Session = Depends(get_db)):
 
         # Convert each recent project to dict and handle datetime serialization
         for item in recent_created:
-            item_dict = item.dict()
+            item_dict = item.model_dump()
             # Handle datetime serialization manually
             for key, value in item_dict.items():
                 if hasattr(value, "isoformat"):
@@ -282,7 +310,12 @@ async def get_project_statistics(db: Session = Depends(get_db)):
     response_model=ProjectResponse,
     summary="切换项目状态",
 )
-async def toggle_project_status(*, db: Session = Depends(get_db), project_id: str):
+async def toggle_project_status(
+    *,
+    db: Session = Depends(get_db),
+    project_id: str,
+    current_user: User = Depends(get_current_active_user),
+):
     """切换项目启用/禁用状态"""
     try:
         db_project = project.toggle_status(db, id=project_id, updated_by="system")

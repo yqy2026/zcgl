@@ -1,8 +1,3 @@
-"""
-权限验证装饰器
-提供统一的权限验证装饰器，简化API端点的权限控制
-"""
-
 import logging
 from collections.abc import Callable
 from functools import wraps
@@ -15,7 +10,25 @@ from ..database import get_db
 from ..exceptions import BusinessLogicError
 from ..middleware.auth import get_current_user
 from ..models.auth import User
-from ..services.rbac_service import RBACService
+from ..services import RBACService
+
+
+class AssetNotFoundError(Exception):
+    """Asset not found error"""
+
+    pass
+
+
+class DuplicateAssetError(Exception):
+    """Duplicate asset error"""
+
+    pass
+
+
+"""
+权限验证装饰器
+提供统一的权限验证装饰器，简化API端点的权限控制
+"""
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +99,9 @@ def permission_required(
                 # 执行原函数
                 return await func(*args, **kwargs)
 
+            except HTTPException:
+                # Re-raise HTTPException directly (e.g., 403 permission denied)
+                raise
             except BusinessLogicError as e:
                 logger.error(f"权限验证业务逻辑错误: {str(e)}")
                 raise HTTPException(

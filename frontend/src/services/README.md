@@ -249,7 +249,7 @@ const createAsset = async (data: AssetCreateRequest): Promise<Asset> => {
 
 ```env
 # API基础URL
-VITE_API_BASE_URL=http://localhost:8002/api/v1
+VITE_API_BASE_URL=http://localhost:8002/api
 
 # 请求超时时间（毫秒）
 VITE_API_TIMEOUT=30000
@@ -332,8 +332,8 @@ const createAsset = async (data: any): Promise<any> => {
 在开发环境中，所有API请求都会在控制台输出详细日志：
 
 ```
-🚀 API Request: GET /api/v1/assets
-✅ API Response [req_1234567890_abc123]: GET /api/v1/assets
+🚀 API Request: GET /api/assets
+✅ API Response [req_1234567890_abc123]: GET /api/assets
 ```
 
 ### 2. 错误监控

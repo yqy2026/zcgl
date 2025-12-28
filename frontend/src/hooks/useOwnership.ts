@@ -32,7 +32,7 @@ export const useOwnershipOptions = (isActive: boolean = true): UseOwnershipOptio
       }
     },
     staleTime: 10 * 60 * 1000, // 10分钟缓存
-    cacheTime: 30 * 60 * 1000, // 30分钟保留缓存
+    gcTime: 30 * 60 * 1000, // 30分钟保留缓存 (React Query v4)
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchOnReconnect: false,
@@ -40,7 +40,7 @@ export const useOwnershipOptions = (isActive: boolean = true): UseOwnershipOptio
   })
 
   return {
-    ownerships: data || [],
+    ownerships: (data || []) as Ownership[],
     loading: isLoading,
     error: error?.message || null,
     refresh: refetch
@@ -73,7 +73,7 @@ export const useOwnershipDetail = (id?: string): UseOwnershipDetailResult => {
       }
     },
     staleTime: 5 * 60 * 1000, // 5分钟缓存
-    cacheTime: 15 * 60 * 1000, // 15分钟保留缓存
+    gcTime: 15 * 60 * 1000, // 15分钟保留缓存 (React Query v4)
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchOnReconnect: false,
@@ -82,7 +82,7 @@ export const useOwnershipDetail = (id?: string): UseOwnershipDetailResult => {
   })
 
   return {
-    ownership: data || null,
+    ownership: (data || null) as Ownership | null,
     loading: isLoading,
     error: error?.message || null,
     refresh: refetch

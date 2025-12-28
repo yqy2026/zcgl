@@ -4,22 +4,21 @@ API文档自动生成脚本
 生成FastAPI接口文档、OpenAPI规范和TypeScript类型定义
 """
 
-import json
-import os
-import sys
-from pathlib import Path
-from typing import Dict, Any, List
 import inspect
-import subprocess
+import json
+import sys
 from datetime import datetime
+from pathlib import Path
+from typing import Any
 
 # 添加项目根目录到Python路径
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
-from main import app
 from fastapi.openapi.utils import get_openapi
 from fastapi.routing import APIRoute
+
+from main import app
 
 
 class APIDocumentationGenerator:
@@ -30,8 +29,9 @@ class APIDocumentationGenerator:
         self.output_dir = project_root / "docs" / "generated"
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-    def generate_openapi_schema(self) -> Dict[str, Any]:
+    def generate_openapi_schema(self) -> dict[str, Any]:
         """生成OpenAPI规范"""
+
         def custom_openapi():
             if app.openapi_schema:
                 return app.openapi_schema
@@ -52,7 +52,7 @@ class APIDocumentationGenerator:
                 "BearerAuth": {
                     "type": "http",
                     "scheme": "bearer",
-                    "bearerFormat": "JWT"
+                    "bearerFormat": "JWT",
                 }
             }
 
@@ -64,7 +64,7 @@ class APIDocumentationGenerator:
 
         return custom_openapi()
 
-    def generate_route_documentation(self) -> List[Dict[str, Any]]:
+    def generate_route_documentation(self) -> list[dict[str, Any]]:
         """生成路由文档"""
         routes = []
 
@@ -81,13 +81,13 @@ class APIDocumentationGenerator:
                     "query_params": self._extract_params(route.query_params),
                     "request_body": self._extract_request_body(route.body_field),
                     "responses": self._extract_responses(route.responses),
-                    "dependencies": self._extract_dependencies(route.dependencies)
+                    "dependencies": self._extract_dependencies(route.dependencies),
                 }
                 routes.append(route_info)
 
         return routes
 
-    def _extract_params(self, params) -> List[Dict[str, Any]]:
+    def _extract_params(self, params) -> list[dict[str, Any]]:
         """提取参数信息"""
         if not params:
             return []
@@ -96,27 +96,31 @@ class APIDocumentationGenerator:
         for param in params:
             info = {
                 "name": param.name,
-                "type": param.type_.__name__ if hasattr(param.type_, '__name__') else str(param.type_),
+                "type": param.type_.__name__
+                if hasattr(param.type_, "__name__")
+                else str(param.type_),
                 "required": param.required,
                 "default": param.default if param.default != ... else None,
-                "description": param.description or ""
+                "description": param.description or "",
             }
             param_info.append(info)
 
         return param_info
 
-    def _extract_request_body(self, body_field) -> Dict[str, Any]:
+    def _extract_request_body(self, body_field) -> dict[str, Any]:
         """提取请求体信息"""
         if not body_field:
             return {}
 
         return {
-            "type": body_field.type_.__name__ if hasattr(body_field.type_, '__name__') else str(body_field.type_),
+            "type": body_field.type_.__name__
+            if hasattr(body_field.type_, "__name__")
+            else str(body_field.type_),
             "required": body_field.required,
-            "description": body_field.description or ""
+            "description": body_field.description or "",
         }
 
-    def _extract_responses(self, responses) -> Dict[str, Any]:
+    def _extract_responses(self, responses) -> dict[str, Any]:
         """提取响应信息"""
         if not responses:
             return {}
@@ -125,34 +129,34 @@ class APIDocumentationGenerator:
         for status_code, response in responses.items():
             response_info[status_code] = {
                 "description": response.description or "",
-                "model": response.model.__name__ if response.model else None
+                "model": response.model.__name__ if response.model else None,
             }
 
         return response_info
 
-    def _extract_dependencies(self, dependencies) -> List[str]:
+    def _extract_dependencies(self, dependencies) -> list[str]:
         """提取依赖信息"""
         if not dependencies:
             return []
 
         dep_names = []
         for dep in dependencies:
-            if hasattr(dep, 'dependency') and hasattr(dep.dependency, '__name__'):
+            if hasattr(dep, "dependency") and hasattr(dep.dependency, "__name__"):
                 dep_names.append(dep.dependency.__name__)
-            elif hasattr(dep, '__name__'):
+            elif hasattr(dep, "__name__"):
                 dep_names.append(dep.__name__)
 
         return dep_names
 
-    def generate_type_definitions(self) -> Dict[str, Any]:
+    def generate_type_definitions(self) -> dict[str, Any]:
         """生成类型定义文档"""
         type_definitions = {}
 
         # 扫描schemas模块获取类型定义
         try:
             from models.asset import Asset
-            from models.project import Project
             from models.ownership import Ownership
+            from models.project import Project
             from models.task import AsyncTask
 
             # 模型类型
@@ -160,7 +164,7 @@ class APIDocumentationGenerator:
                 "Asset": self._get_model_info(Asset),
                 "Project": self._get_model_info(Project),
                 "Ownership": self._get_model_info(Ownership),
-                "AsyncTask": self._get_model_info(AsyncTask)
+                "AsyncTask": self._get_model_info(AsyncTask),
             }
         except ImportError as e:
             print(f"Warning: Could not import models: {e}")
@@ -172,18 +176,19 @@ class APIDocumentationGenerator:
 
         return type_definitions
 
-    def _get_model_info(self, model_class) -> Dict[str, Any]:
+    def _get_model_info(self, model_class) -> dict[str, Any]:
         """获取模型信息"""
-        if hasattr(model_class, '__annotations__'):
+        if hasattr(model_class, "__annotations__"):
             return {
                 "name": model_class.__name__,
                 "fields": {
-                    name: str(field_type) for name, field_type in model_class.__annotations__.items()
-                }
+                    name: str(field_type)
+                    for name, field_type in model_class.__annotations__.items()
+                },
             }
         return {"name": model_class.__name__, "fields": {}}
 
-    def _scan_schemas_directory(self, schemas_dir: Path) -> Dict[str, Any]:
+    def _scan_schemas_directory(self, schemas_dir: Path) -> dict[str, Any]:
         """扫描schemas目录"""
         schemas = {}
 
@@ -196,10 +201,11 @@ class APIDocumentationGenerator:
                 module = __import__(module_name, fromlist=[schema_file.stem])
 
                 for name, obj in inspect.getmembers(module):
-                    if (inspect.isclass(obj) and
-                        hasattr(obj, '__module__') and
-                        obj.__module__ == module_name):
-
+                    if (
+                        inspect.isclass(obj)
+                        and hasattr(obj, "__module__")
+                        and obj.__module__ == module_name
+                    ):
                         schemas[name] = self._get_model_info(obj)
             except Exception as e:
                 print(f"Warning: Could not process schema file {schema_file}: {e}")
@@ -222,7 +228,7 @@ class APIDocumentationGenerator:
             "```\n",
             "Authorization: Bearer <your-jwt-token>\n",
             "```\n",
-            "## API Endpoints\n"
+            "## API Endpoints\n",
         ]
 
         # 按标签分组路由
@@ -252,15 +258,23 @@ class APIDocumentationGenerator:
                     markdown.append("**Path Parameters**:\n")
                     for param in route["path_params"]:
                         required = " (required)" if param["required"] else ""
-                        markdown.append(f"- `{param['name']}` ({param['type']}){required}: {param['description']}\n")
+                        markdown.append(
+                            f"- `{param['name']}` ({param['type']}){required}: {param['description']}\n"
+                        )
                     markdown.append("")
 
                 if route["query_params"]:
                     markdown.append("**Query Parameters**:\n")
                     for param in route["query_params"]:
                         required = " (required)" if param["required"] else ""
-                        default = f" (default: {param['default']})" if param['default'] is not None else ""
-                        markdown.append(f"- `{param['name']}` ({param['type']}){required}{default}: {param['description']}\n")
+                        default = (
+                            f" (default: {param['default']})"
+                            if param["default"] is not None
+                            else ""
+                        )
+                        markdown.append(
+                            f"- `{param['name']}` ({param['type']}){required}{default}: {param['description']}\n"
+                        )
                     markdown.append("")
 
                 # 请求体文档
@@ -276,13 +290,19 @@ class APIDocumentationGenerator:
                 if route["responses"]:
                     markdown.append("**Responses**:\n")
                     for status, response in route["responses"].items():
-                        model_info = f" ({response['model']})" if response['model'] else ""
-                        markdown.append(f"- `{status}`: {response['description']}{model_info}\n")
+                        model_info = (
+                            f" ({response['model']})" if response["model"] else ""
+                        )
+                        markdown.append(
+                            f"- `{status}`: {response['description']}{model_info}\n"
+                        )
                     markdown.append("")
 
                 # 依赖文档
                 if route["dependencies"]:
-                    markdown.append(f"**Dependencies**: {', '.join(route['dependencies'])}\n")
+                    markdown.append(
+                        f"**Dependencies**: {', '.join(route['dependencies'])}\n"
+                    )
 
                 markdown.append("---\n")
 
@@ -300,8 +320,11 @@ class APIDocumentationGenerator:
         # 保存OpenAPI YAML
         try:
             import yaml
+
             with open(self.output_dir / "openapi.yaml", "w", encoding="utf-8") as f:
-                yaml.dump(openapi_schema, f, default_flow_style=False, allow_unicode=True)
+                yaml.dump(
+                    openapi_schema, f, default_flow_style=False, allow_unicode=True
+                )
         except ImportError:
             print("Warning: PyYAML not installed, skipping YAML export")
 
@@ -325,11 +348,12 @@ class APIDocumentationGenerator:
         docs_dir.mkdir(exist_ok=True)
 
         import shutil
+
         shutil.copy2(self.output_dir / "api.md", docs_dir / "api.md")
 
-        print(f"Documentation generated successfully!")
+        print("Documentation generated successfully!")
         print(f"Output directory: {self.output_dir}")
-        print(f"Files generated:")
+        print("Files generated:")
         print(f"  - OpenAPI JSON: {self.output_dir / 'openapi.json'}")
         print(f"  - OpenAPI YAML: {self.output_dir / 'openapi.yaml'}")
         print(f"  - Routes JSON: {self.output_dir / 'routes.json'}")

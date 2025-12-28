@@ -22,24 +22,24 @@ export const useAssets = (params?: AssetSearchParams) => {
       setLoading(true)
       try {
         const result = await assetService.getAssets(params)
-        setAssets(result.data)
+        setAssets((result as any).items || result)
         setPagination({
           total: result.total,
           page: result.page,
           limit: result.limit,
-          hasNext: result.has_next,
-          hasPrev: result.has_prev,
+          hasNext: (result as any).hasNext || (result as any).has_next,
+          hasPrev: (result as any).hasPrev || (result as any).has_prev,
         })
         setError(null)
         return result
-      } catch (error: any) {
-        setError(error.message)
+      } catch (error: unknown) {
+        setError(error instanceof Error ? error.message : 'Unknown error')
         throw error
       } finally {
         setLoading(false)
       }
     },
-    keepPreviousData: true,
+    placeholderData: (previousData) => previousData, // React Query v4 syntax
     staleTime: 30 * 1000, // 30秒内不重新请求
   })
 }
@@ -79,7 +79,7 @@ export const useCreateAsset = () => {
       
       message.success('资产创建成功')
     },
-    onError: (error: any) => {
+    onError: (error: { message: string }) => {
       message.error(`创建失败: ${error.message}`)
     },
   })
@@ -105,7 +105,7 @@ export const useUpdateAsset = () => {
       
       message.success('资产更新成功')
     },
-    onError: (error: any) => {
+    onError: (error: { message: string }) => {
       message.error(`更新失败: ${error.message}`)
     },
   })
@@ -129,7 +129,7 @@ export const useDeleteAsset = () => {
       
       message.success('资产删除成功')
     },
-    onError: (error: any) => {
+    onError: (error: { message: string }) => {
       message.error(`删除失败: ${error.message}`)
     },
   })
@@ -149,7 +149,7 @@ export const useBatchDeleteAssets = () => {
       
       message.success(`成功删除 ${ids.length} 个资产`)
     },
-    onError: (error: any) => {
+    onError: (error: { message: string }) => {
       message.error(`批量删除失败: ${error.message}`)
     },
   })

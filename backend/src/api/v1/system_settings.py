@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 系统设置API路由
 """
@@ -5,12 +7,20 @@
 import json
 import os
 from datetime import datetime
-from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    HTTPException,
+    Request,
+    UploadFile,
+)
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from ...crud.auth import AuditLogCRUD
 from ...database import get_db
 from ...middleware.auth import get_current_active_user
 from ...schemas.auth import UserResponse
@@ -50,7 +60,10 @@ _system_settings = SystemSettings()
 
 
 @router.get("/settings", summary="获取系统设置")
-async def get_system_settings(db: Session = Depends(get_db)):
+async def get_system_settings(
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_active_user),
+):
     """
     获取系统设置
 
@@ -59,7 +72,7 @@ async def get_system_settings(db: Session = Depends(get_db)):
     try:
         return {
             "success": True,
-            "data": _system_settings.dict(),
+            "data": _system_settings.model_dump(),
             "timestamp": datetime.now().isoformat(),
         }
     except Exception as e:
@@ -68,7 +81,10 @@ async def get_system_settings(db: Session = Depends(get_db)):
 
 @router.put("/settings", summary="更新系统设置")
 async def update_system_settings(
-    settings: SystemSettings, db: Session = Depends(get_db)
+    settings: SystemSettings,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_active_user),
+    request: Request = None,
 ):
     """
     更新系统设置
@@ -79,19 +95,31 @@ async def update_system_settings(
         global _system_settings
         _system_settings = settings
 
-        # TODO: 记录审计日志（需要用户认证）
-        # audit_action(
-        #     db=db,
-        #     user_id=current_user.id,
-        #     action="UPDATE_SYSTEM_SETTINGS",
-        #     resource_type="system_settings",
-        #     details={"updated_settings": settings.dict()}
-        # )
+        # 记录审计日志
+        try:
+            audit_data = {
+                "user_id": current_user.id,
+                "username": current_user.username,
+                "action": "UPDATE_SYSTEM_SETTINGS",
+                "resource": "system_settings",
+                "details": {"updated_settings": settings.model_dump()},
+                "ip_address": request.client.host if request else None,
+                "user_agent": str(request.headers.get("user-agent", ""))
+                if request
+                else "",
+            }
+            AuditLogCRUD.create_log(db, audit_data)
+        except Exception as e:
+            # 审计日志失败不应该影响系统设置更新
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.warning(f"记录系统设置审计日志失败: {e}")
 
         return {
             "success": True,
             "message": "系统设置更新成功",
-            "data": _system_settings.dict(),
+            "data": _system_settings.model_dump(),
             "timestamp": datetime.now().isoformat(),
         }
     except Exception as e:
@@ -99,7 +127,10 @@ async def update_system_settings(
 
 
 @router.get("/info", summary="获取系统信息")
-async def get_system_info(db: Session = Depends(get_db)):
+async def get_system_info(
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_active_user),
+):
     """
     获取系统信息
 
@@ -127,7 +158,7 @@ async def get_system_info(db: Session = Depends(get_db)):
 
         return {
             "success": True,
-            "data": system_info.dict(),
+            "data": system_info.model_dump(),
             "timestamp": datetime.now().isoformat(),
         }
     except Exception as e:
@@ -139,6 +170,7 @@ async def backup_system(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(get_current_active_user),
+    request: Request = None,
 ):
     """
     备份系统数据
@@ -152,19 +184,31 @@ async def backup_system(
         backup_data = {
             "backup_time": datetime.now().isoformat(),
             "backup_user": current_user.username,
-            "system_settings": _system_settings.dict(),
+            "system_settings": _system_settings.model_dump(),
             "backup_type": "full",
             "version": "2.0.0",
         }
 
-        # TODO: 记录审计日志（需要用户认证）
-        # audit_action(
-        #     db=db,
-        #     user_id=current_user.id,
-        #     action="SYSTEM_BACKUP",
-        #     resource_type="system",
-        #     details={"backup_time": backup_data["backup_time"]}
-        # )
+        # 记录审计日志
+        try:
+            audit_data = {
+                "user_id": current_user.id,
+                "username": current_user.username,
+                "action": "SYSTEM_BACKUP",
+                "resource": "system",
+                "details": {"backup_time": backup_data["backup_time"]},
+                "ip_address": request.client.host if request else None,
+                "user_agent": str(request.headers.get("user-agent", ""))
+                if request
+                else "",
+            }
+            AuditLogCRUD.create_log(db, audit_data)
+        except Exception as e:
+            # 审计日志失败不应该影响备份流程
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.warning(f"记录备份审计日志失败: {e}")
 
         return {
             "success": True,
@@ -178,7 +222,10 @@ async def backup_system(
 
 @router.post("/restore", summary="恢复系统数据")
 async def restore_system(
-    backup_file: UploadFile = File(...), db: Session = Depends(get_db)
+    backup_file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(get_current_active_user),
+    request: Request = None,
 ):
     """
     恢复系统数据
@@ -210,18 +257,30 @@ async def restore_system(
         if "system_settings" in backup_data:
             _system_settings = SystemSettings(**backup_data["system_settings"])
 
-        # TODO: 记录审计日志（需要用户认证）
-        # audit_action(
-        #     db=db,
-        #     user_id=current_user.id,
-        #     action="SYSTEM_RESTORE",
-        #     resource_type="system",
-        #     details={
-        #         "backup_time": backup_data.get("backup_time"),
-        #         "backup_file": backup_file.filename,
-        #         "restored_settings": backup_data.get("system_settings", {})
-        #     }
-        # )
+        # 记录审计日志
+        try:
+            audit_data = {
+                "user_id": current_user.id,
+                "username": current_user.username,
+                "action": "SYSTEM_RESTORE",
+                "resource": "system",
+                "details": {
+                    "backup_time": backup_data.get("backup_time"),
+                    "backup_file": backup_file.filename,
+                    "restored_settings": backup_data.get("system_settings", {}),
+                },
+                "ip_address": request.client.host if request else None,
+                "user_agent": str(request.headers.get("user-agent", ""))
+                if request
+                else "",
+            }
+            AuditLogCRUD.create_log(db, audit_data)
+        except Exception as e:
+            # 审计日志失败不应该影响恢复流程
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.warning(f"记录恢复审计日志失败: {e}")
 
         return {
             "success": True,

@@ -2,7 +2,9 @@
  * 租金合同Excel导入导出服务
  */
 
-import { api } from './api';
+import { enhancedApiClient } from '@/api/client';
+
+const api = enhancedApiClient;
 
 export interface ExcelImportResult {
   success: boolean;
@@ -36,7 +38,7 @@ export interface ExcelTemplateResult {
 }
 
 class RentContractExcelService {
-  private baseUrl = '/api/v1/rental';
+  private baseUrl = '/api/rental';
 
   /**
    * 下载Excel导入模板
@@ -82,7 +84,7 @@ class RentContractExcelService {
         }
       );
 
-      return response.data;
+      return response.data as any;
     } catch (error) {
       console.error('导入Excel失败:', error);
       throw new Error('导入Excel失败');

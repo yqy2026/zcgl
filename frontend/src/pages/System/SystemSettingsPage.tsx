@@ -41,9 +41,10 @@ const SystemSettingsPage: React.FC = () => {
       setLoading(true)
       const response = await systemService.getSystemInfo()
       setSystemInfo(response.data)
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('获取系统信息失败:', error)
-      message.error('获取系统信息失败: ' + (error.message || '未知错误'))
+      const errorMsg = error instanceof Error ? error.message : '未知错误'
+      message.error('获取系统信息失败: ' + errorMsg)
     } finally {
       setLoading(false)
     }
@@ -56,9 +57,10 @@ const SystemSettingsPage: React.FC = () => {
       const response = await systemService.getSettings()
       setSettings(response.data)
       form.setFieldsValue(response.data)
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('获取系统设置失败:', error)
-      message.error('获取系统设置失败: ' + (error.message || '未知错误'))
+      const errorMsg = error instanceof Error ? error.message : '未知错误'
+      message.error('获取系统设置失败: ' + errorMsg)
     } finally {
       setLoading(false)
     }
@@ -71,9 +73,10 @@ const SystemSettingsPage: React.FC = () => {
       await systemService.updateSettings(values)
       message.success('设置保存成功')
       fetchSettings()
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('保存设置失败:', error)
-      message.error('保存设置失败: ' + (error.message || '未知错误'))
+      const errorMsg = error instanceof Error ? error.message : '未知错误'
+      message.error('保存设置失败: ' + errorMsg)
     } finally {
       setLoading(false)
     }
@@ -93,9 +96,10 @@ const SystemSettingsPage: React.FC = () => {
       a.download = `backup_${new Date().toISOString().split('T')[0]}.json`
       a.click()
       window.URL.revokeObjectURL(url)
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('数据备份失败:', error)
-      message.error('数据备份失败: ' + (error.message || '未知错误'))
+      const errorMsg = error instanceof Error ? error.message : '未知错误'
+      message.error('数据备份失败: ' + errorMsg)
     } finally {
       setLoading(false)
     }
@@ -113,9 +117,10 @@ const SystemSettingsPage: React.FC = () => {
       setTimeout(() => {
         window.location.reload()
       }, 2000)
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('数据恢复失败:', error)
-      message.error('数据恢复失败: ' + (error.message || '未知错误'))
+      const errorMsg = error instanceof Error ? error.message : '未知错误'
+      message.error('数据恢复失败: ' + errorMsg)
     } finally {
       setLoading(false)
     }
@@ -142,7 +147,7 @@ const SystemSettingsPage: React.FC = () => {
               form={form}
               layout="vertical"
               onFinish={handleSaveSettings}
-              initialValues={settings}
+              initialValues={settings || undefined}
             >
               <Form.Item
                 label="站点名称"

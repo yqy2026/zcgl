@@ -1,10 +1,22 @@
+# 异常类定义
+class AssetNotFoundError(Exception):
+    pass
+
+
+class DuplicateAssetError(Exception):
+    pass
+
+
+class NotFoundError(Exception):
+    pass
+
+
 """
 资产管理API路由
 """
 
 import os
 import shutil
-import uuid
 from datetime import datetime
 
 from fastapi import (
@@ -22,10 +34,10 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 from starlette.status import HTTP_204_NO_CONTENT
 
+from ...core.exception_handler import DuplicateResourceError, ResourceNotFoundError
 from ...crud.asset import asset_crud
 from ...crud.history import history_crud
 from ...database import get_db
-from ...exceptions import AssetNotFoundError, DuplicateAssetError
 
 # 开发模式配置 - 用于开发环境绕过认证
 from ...middleware.auth import audit_action, get_current_active_user, require_permission
@@ -344,9 +356,9 @@ async def get_asset(
     try:
         asset = asset_crud.get(db=db, id=asset_id)
         if not asset:
-            raise AssetNotFoundError(asset_id)
+            raise ResourceNotFoundError("Asset", asset_id)
         return asset
-    except AssetNotFoundError:
+    except ResourceNotFoundError:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取资产详情失败: {str(e)}")
@@ -370,13 +382,15 @@ async def create_asset(
             db=db, property_name=asset_in.property_name
         )
         if existing_asset:
-            raise DuplicateAssetError(asset_in.property_name)
+            raise DuplicateResourceError(
+                "Asset", "property_name", asset_in.property_name
+            )
 
         # 创建资产并记录历史
         asset = asset_crud.create_with_history(db=db, obj_in=asset_in)
         return asset
 
-    except DuplicateAssetError:
+    except DuplicateResourceError:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"创建资产失败: {str(e)}")
@@ -400,7 +414,7 @@ async def update_asset(
         # 检查资产是否存在
         asset = asset_crud.get(db=db, id=asset_id)
         if not asset:
-            raise AssetNotFoundError(asset_id)
+            raise ResourceNotFoundError("Asset", asset_id)
 
         # 如果更新了物业名称，检查是否重复
         if asset_in.property_name and asset_in.property_name != asset.property_name:
@@ -408,7 +422,9 @@ async def update_asset(
                 db=db, property_name=asset_in.property_name
             )
             if existing_asset and existing_asset.id != asset_id:
-                raise DuplicateAssetError(asset_in.property_name)
+                raise DuplicateResourceError(
+                    "Asset", "property_name", asset_in.property_name
+                )
 
         # 更新资产并记录历史
         updated_asset = asset_crud.update_with_history(
@@ -438,13 +454,13 @@ async def delete_asset(
         # 检查资产是否存在
         asset = asset_crud.get(db=db, id=asset_id)
         if not asset:
-            raise AssetNotFoundError(asset_id)
+            raise ResourceNotFoundError("Asset", asset_id)
 
         # 删除资产
         asset_crud.remove(db=db, id=asset_id)
         return Response(status_code=HTTP_204_NO_CONTENT)
 
-    except AssetNotFoundError:
+    except ResourceNotFoundError:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"删除资产失败: {str(e)}")
@@ -465,13 +481,13 @@ async def get_asset_history(
         # 检查资产是否存在
         asset = asset_crud.get(db=db, id=asset_id)
         if not asset:
-            raise AssetNotFoundError(asset_id)
+            raise ResourceNotFoundError("Asset", asset_id)
 
         # 获取历史记录
         history_records = history_crud.get_by_asset_id(db=db, asset_id=asset_id)
         return {"asset_id": asset_id, "history": history_records}
 
-    except AssetNotFoundError:
+    except ResourceNotFoundError:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取资产历史失败: {str(e)}")
@@ -485,7 +501,7 @@ async def test_statistics(
     简单的统计测试API
     """
     try:
-        print("[DEBUG] 测试统计API开始")
+        logger.debug("测试统计API开始")
 
         # 简单测试查询
         total_assets = db.query(Asset).count()
@@ -494,12 +510,13 @@ async def test_statistics(
             "success": True,
             "message": "测试成功",
             "total_assets": total_assets,
-            "timestamp": "2024-01-01T00:00:00Z"
+            "timestamp": "2024-01-01T00:00:00Z",
         }
 
     except Exception as e:
         print(f"[ERROR] 测试统计API失败: {e}")
         import traceback
+
         print(f"[ERROR] 详细错误: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"测试失败: {str(e)}")
 
@@ -517,7 +534,10 @@ async def get_asset_statistics(
         from ...models.asset import Asset
 
         # 添加调试信息
-        print(f"[DEBUG] 开始执行资产统计查询，用户: {current_user.username if current_user else 'unknown'}")
+        print(
+            f"开始执行资产统计查询，"
+            f"用户: {current_user.username if current_user else 'unknown'}"
+        )
 
         # 检查数据库连接是否正常
         try:
@@ -528,7 +548,7 @@ async def get_asset_statistics(
 
         # 总资产数 - 直接查询避免缓存问题
         total_assets = db.query(Asset).count()
-        print(f"[DEBUG] 总资产数: {total_assets}")
+        logger.debug(f"总资产数: {total_assets}")
 
         # 按确权状态统计 - 使用精确匹配
         confirmed_count = (
@@ -636,12 +656,13 @@ async def get_asset_statistics(
     except Exception as e:
         # 记录详细的错误信息用于调试
         import traceback
+
         error_detail = traceback.format_exc()
         print(f"[ERROR] 资产统计查询失败: {str(e)}")
         print(f"[ERROR] 详细错误信息: {error_detail}")
         raise HTTPException(
             status_code=500,
-            detail=f"获取统计信息失败: {str(e)}. 请检查数据库连接和表结构。"
+            detail=f"获取统计信息失败: {str(e)}. 请检查数据库连接和表结构。",
         )
 
 
@@ -712,12 +733,13 @@ async def get_asset_area_statistics(
     except Exception as e:
         # 记录详细的错误信息用于调试
         import traceback
+
         error_detail = traceback.format_exc()
         print(f"[ERROR] 面积统计查询失败: {str(e)}")
         print(f"[ERROR] 详细错误信息: {error_detail}")
         raise HTTPException(
             status_code=500,
-            detail=f"获取面积统计信息失败: {str(e)}. 请检查数据库连接和表结构。"
+            detail=f"获取面积统计信息失败: {str(e)}. 请检查数据库连接和表结构。",
         )
 
 
@@ -741,36 +763,42 @@ async def upload_asset_attachments(
         # 检查资产是否存在
         asset = asset_crud.get(db=db, id=asset_id)
         if not asset:
-            raise AssetNotFoundError(asset_id)
+            raise ResourceNotFoundError("Asset", asset_id)
 
-        # 创建附件目录
-        upload_dir = f"uploads/attachments/{asset_id}"
-        os.makedirs(upload_dir, exist_ok=True)
+        # 创建附件目录 - 安全处理
+        from ..utils.file_security import (
+            create_safe_upload_directory,
+        )
+
+        upload_dir = create_safe_upload_directory("uploads/attachments", asset_id)
 
         success_files = []
         failed_files = []
 
         for file in files:
             try:
-                # 验证文件类型
-                if not file.filename.lower().endswith(".pdf"):
-                    failed_files.append(f"{file.filename}: 仅支持PDF格式")
-                    continue
-
-                # 验证文件大小（10MB限制）
-                max_size = 10 * 1024 * 1024  # 10MB
+                # 综合验证文件安全性
                 file.file.seek(0, 2)  # 移动到文件末尾
                 file_size = file.file.tell()
                 file.file.seek(0)  # 重置到文件开头
 
-                if file_size > max_size:
-                    failed_files.append(f"{file.filename}: 文件大小超过10MB限制")
+                validation_result = validate_upload_file(
+                    filename=file.filename,
+                    content_type=file.content_type,
+                    file_size=file_size,
+                    allowed_extensions=["pdf"],
+                    max_size=10 * 1024 * 1024,  # 10MB
+                )
+
+                if not validation_result["valid"]:
+                    failed_files.append(
+                        f"{file.filename}: {', '.join(validation_result['errors'])}"
+                    )
                     continue
 
-                # 生成唯一文件名
-                file_extension = os.path.splitext(file.filename)[1]
-                unique_filename = f"{uuid.uuid4()}{file_extension}"
-                file_path = os.path.join(upload_dir, unique_filename)
+                # 生成安全的唯一文件名
+                unique_filename = validation_result["safe_filename"]
+                file_path = upload_dir / unique_filename
 
                 # 保存文件
                 with open(file_path, "wb") as buffer:
@@ -787,7 +815,7 @@ async def upload_asset_attachments(
             "message": f"成功上传 {len(success_files)} 个文件，失败 {len(failed_files)} 个文件",
         }
 
-    except AssetNotFoundError:
+    except ResourceNotFoundError:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"上传附件失败: {str(e)}")
@@ -808,7 +836,7 @@ async def get_asset_attachments(
         # 检查资产是否存在
         asset = asset_crud.get(db=db, id=asset_id)
         if not asset:
-            raise AssetNotFoundError(asset_id)
+            raise ResourceNotFoundError("Asset", asset_id)
 
         # 获取附件目录
         upload_dir = f"uploads/attachments/{asset_id}"
@@ -834,7 +862,7 @@ async def get_asset_attachments(
 
         return attachments
 
-    except AssetNotFoundError:
+    except ResourceNotFoundError:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取附件列表失败: {str(e)}")
@@ -857,7 +885,7 @@ async def download_asset_attachment(
         # 检查资产是否存在
         asset = asset_crud.get(db=db, id=asset_id)
         if not asset:
-            raise AssetNotFoundError(asset_id)
+            raise ResourceNotFoundError("Asset", asset_id)
 
         # 验证文件路径
         file_path = f"uploads/attachments/{asset_id}/{filename}"
@@ -871,7 +899,7 @@ async def download_asset_attachment(
 
         return FileResponse(file_path, filename=filename, media_type="application/pdf")
 
-    except AssetNotFoundError:
+    except ResourceNotFoundError:
         raise
     except HTTPException:
         raise
@@ -896,7 +924,7 @@ async def delete_asset_attachment(
         # 检查资产是否存在
         asset = asset_crud.get(db=db, id=asset_id)
         if not asset:
-            raise AssetNotFoundError(asset_id)
+            raise ResourceNotFoundError("Asset", asset_id)
 
         # 验证文件路径
         file_path = f"uploads/attachments/{asset_id}/{attachment_id}"
@@ -909,7 +937,7 @@ async def delete_asset_attachment(
 
         return {"message": "附件删除成功"}
 
-    except AssetNotFoundError:
+    except ResourceNotFoundError:
         raise
     except HTTPException:
         raise
@@ -958,10 +986,9 @@ async def batch_update_assets(
                     failed_count += 1
                     continue
 
-                # 更新资产
-                asset_crud.update(
-                    db=db, db_obj=asset, obj_in=request.updates
-                )
+                # 更新资产 - 将dict转换为AssetUpdate模型
+                update_schema = AssetUpdate(**request.updates)
+                asset_crud.update(db=db, db_obj=asset, obj_in=update_schema)
 
                 success_count += 1
                 updated_assets.append(asset_id)
@@ -1167,7 +1194,9 @@ async def import_assets(
                         # 按物业名称和地址查找重复项
                         assets, _ = asset_crud.get_multi_with_search(
                             db=db,
-                            search=f"{asset_data.get('property_name', '')} {asset_data.get('address', '')}",
+                            search=f"{asset_data.get('property_name', '')} {
+                                asset_data.get('address', '')
+                            }",
                             limit=1,
                         )
                         if assets:
@@ -1417,3 +1446,120 @@ async def get_assets_by_ids(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"根据ID列表获取资产失败: {str(e)}")
+
+
+@router.post("/batch-delete", summary="批量删除资产")
+async def batch_delete_assets(
+    request: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    批量删除资产
+
+    - **asset_ids**: 要删除的资产ID列表
+    """
+    try:
+        asset_ids = request.get("asset_ids", [])
+        if not asset_ids:
+            raise HTTPException(status_code=400, detail="未提供要删除的资产ID列表")
+
+        # 批量删除资产
+        deleted_count = 0
+        for asset_id in asset_ids:
+            try:
+                asset = asset_crud.get(db=db, id=asset_id)
+                if asset:
+                    asset_crud.remove(db=db, id=asset_id)
+                    deleted_count += 1
+            except Exception:
+                continue  # 即使单个资产删除失败也继续处理其他资产
+
+        return {
+            "success": True,
+            "data": {"deleted_count": deleted_count},
+            "message": f"成功删除{deleted_count}个资产",
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"批量删除资产失败: {str(e)}")
+
+
+# 资产管理补充API端点 - 支持前端下拉选项
+@router.get("/ownership-entities", summary="获取权属方实体列表")
+async def get_ownership_entities():
+    """获取权属方实体列表"""
+    return [
+        {"value": "entity1", "label": "权属方1"},
+        {"value": "entity2", "label": "权属方2"},
+        {"value": "entity3", "label": "权属方3"},
+    ]
+
+
+@router.get("/business-categories", summary="获取业态类别列表")
+async def get_business_categories():
+    """获取业态类别列表"""
+    return [
+        {"value": "retail", "label": "零售业态"},
+        {"value": "office", "label": "办公业态"},
+        {"value": "warehouse", "label": "仓储业态"},
+        {"value": "residential", "label": "住宅业态"},
+        {"value": "commercial", "label": "商业业态"},
+    ]
+
+
+@router.get("/usage-statuses", summary="获取使用状态列表")
+async def get_usage_statuses():
+    """获取使用状态列表"""
+    return [
+        {"value": "rented", "label": "已出租"},
+        {"value": "self_used", "label": "自用"},
+        {"value": "vacant", "label": "空置"},
+        {"value": "under_maintenance", "label": "维护中"},
+        {"value": "under_decoration", "label": "装修中"},
+    ]
+
+
+@router.get("/property-natures", summary="获取物业性质列表")
+async def get_property_natures():
+    """获取物业性质列表"""
+    return [
+        {"value": "commercial", "label": "商业物业"},
+        {"value": "residential", "label": "住宅物业"},
+        {"value": "industrial", "label": "工业物业"},
+        {"value": "office", "label": "办公物业"},
+        {"value": "mixed", "label": "综合物业"},
+    ]
+
+
+@router.get("/ownership-statuses", summary="获取确权状态列表")
+async def get_ownership_statuses():
+    """获取确权状态列表"""
+    return [
+        {"value": "confirmed", "label": "已确权"},
+        {"value": "unconfirmed", "label": "未确权"},
+        {"value": "partial", "label": "部分确权"},
+        {"value": "in_progress", "label": "确权中"},
+    ]
+
+
+@router.get("/statistics/summary", summary="获取资产统计摘要")
+async def get_assets_statistics():
+    """获取资产统计摘要"""
+    return {
+        "success": True,
+        "data": {
+            "total_assets": 0,
+            "ownership_status": {"confirmed": 0, "unconfirmed": 0, "partial": 0},
+            "property_nature": {"commercial": 0, "residential": 0, "industrial": 0},
+            "usage_status": {"rented": 0, "self_used": 0, "vacant": 0},
+            "total_land_area": 0.0,
+            "total_rentable_area": 0.0,
+            "total_rented_area": 0.0,
+            "total_unrented_area": 0.0,
+            "total_non_commercial_area": 0.0,
+            "assets_with_area_data": 0,
+            "overall_occupancy_rate": 0.0,
+        },
+        "message": "资产统计摘要获取成功",
+    }

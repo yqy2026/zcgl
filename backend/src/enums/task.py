@@ -16,17 +16,17 @@ class TaskStatus(str, Enum):
     CANCELLED = "cancelled"
 
     @classmethod
-    def get_active_statuses(cls):
+    def get_active_statuses(cls) -> list["TaskStatus"]:
         """获取活跃状态（未完成）"""
         return [cls.PENDING, cls.RUNNING]
 
     @classmethod
-    def get_finished_statuses(cls):
+    def get_finished_statuses(cls) -> list["TaskStatus"]:
         """获取完成状态"""
         return [cls.COMPLETED, cls.FAILED, cls.CANCELLED]
 
     @classmethod
-    def get_all_values(cls):
+    def get_all_values(cls) -> list[str]:
         """获取所有状态值"""
         return [status.value for status in cls]
 
@@ -41,12 +41,12 @@ class TaskType(str, Enum):
     PDF_PROCESSING = "pdf_processing"
 
     @classmethod
-    def get_file_related_types(cls):
+    def get_file_related_types(cls) -> list["TaskType"]:
         """获取文件处理相关类型"""
         return [cls.EXCEL_EXPORT, cls.EXCEL_IMPORT, cls.PDF_PROCESSING]
 
     @classmethod
-    def get_data_processing_types(cls):
+    def get_data_processing_types(cls) -> list["TaskType"]:
         """获取数据处理相关类型"""
         return [cls.DATA_VALIDATION, cls.BATCH_UPDATE]
 
@@ -60,7 +60,7 @@ class ExcelConfigType(str, Enum):
     FIELD_MAPPING = "field_mapping"
 
     @classmethod
-    def get_all_types(cls):
+    def get_all_types(cls) -> list[str]:
         """获取所有配置类型"""
         return [config_type.value for config_type in cls]
 
@@ -74,6 +74,6 @@ class TaskPriority(str, Enum):
     URGENT = "urgent"
 
     @classmethod
-    def get_priority_order(cls):
+    def get_priority_order(cls) -> list["TaskPriority"]:
         """获取优先级顺序（从高到低）"""
         return [cls.URGENT, cls.HIGH, cls.NORMAL, cls.LOW]

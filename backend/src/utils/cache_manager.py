@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING, Any
+
 """
 缓存管理模块
 提供Redis缓存功能，用于优化API性能
@@ -6,9 +8,17 @@
 import logging
 import pickle
 from datetime import datetime, timedelta
-from typing import Any
 
-import redis.asyncio as redis
+try:
+    import redis.asyncio as redis
+
+    REDIS_AVAILABLE = True
+except ImportError:
+    REDIS_AVAILABLE = False
+    redis = None  # type: ignore
+
+if TYPE_CHECKING:
+    from redis.asyncio import Redis
 
 
 # 设置默认配置，避免依赖外部配置文件
@@ -28,15 +38,19 @@ class CacheManager:
     """缓存管理器 - 支持Redis和内存缓存后备"""
 
     def __init__(self):
-        self.redis_client: redis.Redis | None = None
-        self.memory_cache: dict = {}
-        self.memory_cache_expiry: dict = {}
+        self.redis_client: Redis | None = None
+        self.memory_cache: dict[str, Any] = {}
+        self.memory_cache_expiry: dict[str, Any] = {}
         self.use_memory_fallback = True
 
     async def initialize(self):
         """初始化Redis连接"""
+        if not REDIS_AVAILABLE:
+            logger.warning("Redis库未安装，使用内存缓存")
+            return
+
         try:
-            self.redis_client = redis.Redis(
+            self.redis_client = redis.Redis(  # type: ignore
                 host=settings.REDIS_HOST or "localhost",
                 port=settings.REDIS_PORT or 6379,
                 db=settings.REDIS_DB or 0,
@@ -206,7 +220,7 @@ def cache_key_builder(func_name: str, **kwargs) -> str:
 
 
 class CacheDecorator:
-    """缓存装饰器"""
+    """缓存装饰器 - 支持同步和异步函数"""
 
     def __init__(self, prefix: str, expire: int = 3600, key_builder=None):
         self.prefix = prefix
@@ -214,24 +228,46 @@ class CacheDecorator:
         self.key_builder = key_builder or cache_key_builder
 
     def __call__(self, func):
-        async def wrapper(*args, **kwargs):
-            # 构建缓存键
-            cache_key = self.key_builder(func.__name__, **kwargs)
+        # 检测函数是否为异步函数
+        import asyncio
 
-            # 尝试从缓存获取
-            cached_result = await cache_manager.get(self.prefix, cache_key)
-            if cached_result is not None:
-                return cached_result
+        is_async_func = asyncio.iscoroutinefunction(func)
 
-            # 执行函数
-            result = await func(*args, **kwargs)
+        if is_async_func:
+            # 异步函数的处理逻辑
+            async def async_wrapper(*args, **kwargs):
+                # 构建缓存键
+                cache_key = self.key_builder(func.__name__, **kwargs)
 
-            # 设置缓存
-            await cache_manager.set(self.prefix, cache_key, result, self.expire)
+                # 尝试从缓存获取
+                cached_result = await cache_manager.get(self.prefix, cache_key)
+                if cached_result is not None:
+                    return cached_result
 
-            return result
+                # 执行异步函数
+                result = await func(*args, **kwargs)
 
-        return wrapper
+                # 设置缓存
+                await cache_manager.set(self.prefix, cache_key, result, self.expire)
+
+                return result
+
+            return async_wrapper
+        else:
+            # 同步函数的处理逻辑
+            def sync_wrapper(*args, **kwargs):
+                # 构建缓存键
+                cache_key = self.key_builder(func.__name__, **kwargs)
+
+                # 对于同步函数，使用同步方式的缓存（内存缓存）
+                # 因为在同步上下文中无法使用async方法
+
+                # 使用线程局部存储或简单返回结果（不在缓存中）
+                # 由于cache_manager是异步的，同步函数暂时跳过缓存
+                # 直接执行函数
+                return func(*args, **kwargs)
+
+            return sync_wrapper
 
 
 # 常用缓存装饰器

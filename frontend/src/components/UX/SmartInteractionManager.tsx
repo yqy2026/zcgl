@@ -18,6 +18,14 @@ const { Text, Title } = Typography
 
 export type InteractionType = 'click' | 'hover' | 'focus' | 'input' | 'scroll' | 'drag' | 'resize'
 export type FeedbackType = 'success' | 'info' | 'warning' | 'error'
+
+// 撤销/重做操作接口
+interface UndoRedoAction {
+  type: string
+  data: unknown
+  timestamp: Date
+  description?: string
+}
 export type ActionType = 'confirm' | 'cancel' | 'retry' | 'help' | 'undo' | 'save'
 
 interface UserBehavior {
@@ -27,7 +35,7 @@ interface UserBehavior {
     type: InteractionType
     element: string
     timestamp: Date
-    data?: any
+    data?: unknown
     duration?: number
   }>
   preferences: {
@@ -82,8 +90,8 @@ const SmartInteractionProvider: React.FC<SmartInteractionManagerProps> = ({
 }) => {
   const [userBehavior, setUserBehavior] = useState<UserBehavior>({
     sessionId: `session_${Date.now()}`,
-    actions: []
-  })
+    actions: [] as any
+  } as any)
   const [userPreferences, setUserPreferences] = useState({
     theme: 'light',
     language: 'zh-CN',
@@ -92,13 +100,13 @@ const SmartInteractionProvider: React.FC<SmartInteractionManagerProps> = ({
     animations: true,
     compactMode: false
   })
-  const [undoStack, setUndoStack] = useState<any[]>([])
-  const [redoStack, setRedoStack] = useState<any[]>([])
+  const [undoStack, setUndoStack] = useState<UndoRedoAction[]>([])
+  const [redoStack, setRedoStack] = useState<UndoRedoAction[]>([])
   const [helpDrawer, setHelpDrawer] = useState(false)
   const [shortcuts, setShortcuts] = useState<Record<string, string>>({})
 
   // 跟踪用户行为
-  const trackInteraction = useCallback((type: InteractionType, element: string, data?: any, duration?: number) => {
+  const trackInteraction = useCallback((type: InteractionType, element: string, data?: unknown, duration?: number) => {
     if (!enableBehaviorTracking) return
 
     const action = {
@@ -196,7 +204,7 @@ const SmartInteractionProvider: React.FC<SmartInteractionManagerProps> = ({
       { key: 'esc', description: '取消', action: 'cancel' }
     ]
 
-    setShortcuts(shortcuts.reduce((acc, shortcut) => {
+    setShortcuts(shortcuts.reduce((acc: Record<string, string>, shortcut) => {
       acc[shortcut.key] = shortcut.description
       return acc
     }, {}))
@@ -432,11 +440,13 @@ const SmartInteractionExample: React.FC = () => {
     userPreferences,
     setUserPreferences,
     undoStack,
-    redoStack
+    redoStack,
+    undo,
+    redo
   } = useSmartInteraction()
 
   const handleToggleTheme = () => {
-    setUserPreferences(prev => ({
+    setUserPreferences((prev: any) => ({
       ...prev,
       theme: prev.theme === 'light' ? 'dark' : 'light'
     }))
@@ -464,7 +474,7 @@ const SmartInteractionExample: React.FC = () => {
 
   const handleTrackClick = () => {
     // 模拟点击行为追踪
-    console.log('用户点击了按钮')
+    // User clicked button
   }
 
   return (

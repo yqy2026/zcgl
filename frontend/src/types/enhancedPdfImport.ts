@@ -46,7 +46,7 @@ export interface EngineResult {
   confidence: number;
   bbox?: [number, number, number, number];
   processing_time: number;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   quality_score: number;
 }
 
@@ -57,7 +57,7 @@ export interface FusionResult {
   contributing_engines: EngineType[];
   fusion_method: string;
   quality_indicators: Record<string, number>;
-  processing_stats: Record<string, any>;
+  processing_stats: Record<string, unknown>;
 }
 
 // 语义分析结果接口
@@ -67,7 +67,7 @@ export interface SemanticAnalysisResult {
   semantic_meaning: string;
   context_relevance: number;
   confidence: number;
-  extracted_entities: Record<string, any>;
+  extracted_entities: Record<string, unknown>;
   relationships: Record<string, string>;
   validation_result?: ValidationResult;
 }
@@ -76,14 +76,14 @@ export interface SemanticAnalysisResult {
 export interface ValidationResult {
   field_name: string;
   original_value: string;
-  normalized_value: any;
+  normalized_value: unknown;
   validation_level: ValidationLevel;
   confidence: number;
   error_messages: string[];
   warning_messages: string[];
   info_messages: string[];
   suggestions: string[];
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 }
 
 // 合同验证报告接口
@@ -104,11 +104,11 @@ export interface ContractValidationReport {
 export interface TableAnalysisResult {
   table_count: number;
   tables: TableInfo[];
-  structured_data: Record<string, any>;
+  structured_data: Record<string, unknown>;
 }
 
 export interface TableInfo {
-  data: any[][];
+  data: unknown[][];
   metadata: {
     rows: number;
     columns: number;
@@ -172,7 +172,7 @@ export interface TemplateLearningResult {
   template_id?: string;
   template_name?: string;
   confidence: number;
-  extracted_fields: Record<string, any>;
+  extracted_fields: Record<string, unknown>;
   pattern_matches: PatternMatch[];
   learning_updates: {
     new_templates_created: number;
@@ -254,7 +254,7 @@ export interface EnhancedSessionProgress {
       validation_score: number;
       match_confidence: number;
     };
-    final_fields?: Record<string, any>;
+    final_fields?: Record<string, unknown>;
   };
 }
 
@@ -286,7 +286,7 @@ export interface EnhancedCompleteResult {
 // 增强版提取结果接口
 export interface EnhancedExtractionResult {
   success: boolean;
-  data: Record<string, any>;
+  data: Record<string, unknown>;
   confidence_score: number;
   extraction_method: string;
   processed_fields: number;
@@ -309,7 +309,7 @@ export interface EnhancedValidationResult {
   success: boolean;
   errors: string[];
   warnings: string[];
-  validated_data: Record<string, any>;
+  validated_data: Record<string, unknown>;
   validation_score: number;
   processed_fields: number;
   required_fields_count: number;
@@ -324,7 +324,7 @@ export interface BusinessRuleResult {
   status: 'pass' | 'warning' | 'error';
   message: string;
   fields?: string[];
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
 }
 
 // 增强版置信度分数接口
@@ -354,7 +354,7 @@ export interface ProcessingStepResult {
   status: 'pending' | 'processing' | 'completed' | 'failed';
   duration: number;
   confidence?: number;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
 }
 
 // 性能指标接口
@@ -437,7 +437,7 @@ export interface EnhancedSystemInfoResponse {
 export interface EnhancedErrorInfo {
   code: string;
   message: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
   suggestions?: string[];
   recovery_options?: RecoveryOption[];
 }

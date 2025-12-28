@@ -1,3 +1,5 @@
+from typing import Any, TypeVar
+
 """
 依赖注入容器
 提供统一的服务注册和管理
@@ -6,13 +8,13 @@
 import inspect
 from abc import ABC
 from collections.abc import Callable
-from typing import Any, TypeVar
 
 T = TypeVar("T")
 
 
 class ServiceLifetime:
     """服务生命周期"""
+
     SINGLETON = "singleton"
     TRANSIENT = "transient"
     SCOPED = "scoped"
@@ -27,7 +29,7 @@ class ServiceDescriptor:
         implementation: type | Callable,
         lifetime: str = ServiceLifetime.TRANSIENT,
         factory: Callable | None = None,
-        dependencies: list[type] | None = None
+        dependencies: list[type] | None = None,
     ):
         self.service_type = service_type
         self.implementation = implementation
@@ -49,7 +51,7 @@ class DIContainer:
         self,
         service_type: type[T],
         implementation: type[T] | Callable[[], T] = None,
-        factory: Callable[[], T] | None = None
+        factory: Callable[[], T] | None = None,
     ) -> "DIContainer":
         """
         注册单例服务
@@ -69,7 +71,7 @@ class DIContainer:
             service_type=service_type,
             implementation=implementation,
             lifetime=ServiceLifetime.SINGLETON,
-            factory=factory
+            factory=factory,
         )
 
         self._services[service_type] = descriptor
@@ -79,7 +81,7 @@ class DIContainer:
         self,
         service_type: type[T],
         implementation: type[T] | Callable[[], T] = None,
-        factory: Callable[[], T] | None = None
+        factory: Callable[[], T] | None = None,
     ) -> "DIContainer":
         """
         注册瞬态服务
@@ -99,7 +101,7 @@ class DIContainer:
             service_type=service_type,
             implementation=implementation,
             lifetime=ServiceLifetime.TRANSIENT,
-            factory=factory
+            factory=factory,
         )
 
         self._services[service_type] = descriptor
@@ -109,7 +111,7 @@ class DIContainer:
         self,
         service_type: type[T],
         implementation: type[T] | Callable[[], T] = None,
-        factory: Callable[[], T] | None = None
+        factory: Callable[[], T] | None = None,
     ) -> "DIContainer":
         """
         注册作用域服务
@@ -129,7 +131,7 @@ class DIContainer:
             service_type=service_type,
             implementation=implementation,
             lifetime=ServiceLifetime.SCOPED,
-            factory=factory
+            factory=factory,
         )
 
         self._services[service_type] = descriptor
@@ -208,7 +210,7 @@ class DIContainer:
             kwargs = {}
 
             for param_name, param in sig.parameters.items():
-                if param_name != 'self' and param.annotation != inspect.Parameter.empty:
+                if param_name != "self" and param.annotation != inspect.Parameter.empty:
                     try:
                         dependency = self.resolve(param.annotation)
                         kwargs[param_name] = dependency
@@ -216,7 +218,9 @@ class DIContainer:
                         # 依赖未注册，跳过
                         if param.default == inspect.Parameter.empty:
                             # 必需参数缺失，抛出异常
-                            raise ValueError(f"无法解析依赖: {param.annotation.__name__}")
+                            raise ValueError(
+                                f"无法解析依赖: {param.annotation.__name__}"
+                            )
                         # 使用默认值
 
             return descriptor.implementation(**kwargs)
@@ -284,6 +288,7 @@ def injectable[T](service_type: type[T], lifetime: str = ServiceLifetime.TRANSIE
         service_type: 服务类型
         lifetime: 生命周期
     """
+
     def decorator(cls):
         if lifetime == ServiceLifetime.SINGLETON:
             di_container.register_singleton(service_type, cls)
@@ -294,6 +299,7 @@ def injectable[T](service_type: type[T], lifetime: str = ServiceLifetime.TRANSIE
         else:
             raise ValueError(f"不支持的生命周期: {lifetime}")
         return cls
+
     return decorator
 
 
@@ -340,7 +346,7 @@ class BaseService(ABC):
 def register_service(
     service_type: type[T],
     implementation: type[T] | Callable[[], T] = None,
-    lifetime: str = ServiceLifetime.TRANSIENT
+    lifetime: str = ServiceLifetime.TRANSIENT,
 ) -> None:
     """注册服务便捷函数"""
     if lifetime == ServiceLifetime.SINGLETON:

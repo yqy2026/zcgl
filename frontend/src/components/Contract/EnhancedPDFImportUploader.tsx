@@ -44,8 +44,7 @@ import { pdfImportService } from '../../services/pdfImportService';
 import type {
   FileUploadResponse,
   SessionProgress,
-  EnhancedFileUploadResponse,
-  EnhancedSystemInfoResponse
+  SystemInfoResponse
 } from '../../services/pdfImportService';
 
 const { Dragger } = Upload;
@@ -62,7 +61,7 @@ interface EnhancedPDFImportUploaderProps {
 interface ProcessingStep {
   title: string;
   description: string;
-  status: 'wait' | 'process' | 'finish' | 'error';
+  status: 'wait' | 'process' | 'finish' | 'error' | 'uploading' | 'completed' | 'failed';
   progress?: number;
   duration?: number;
 }
@@ -88,7 +87,7 @@ const EnhancedPDFImportUploader: React.FC<EnhancedPDFImportUploaderProps> = ({
   const [currentSession, setCurrentSession] = useState<string | null>(null);
   const [processingProgress, setProcessingProgress] = useState<SessionProgress | null>(null);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
-  const [systemInfo, setSystemInfo] = useState<EnhancedSystemInfoResponse | null>(null);
+  const [systemInfo, setSystemInfo] = useState<SystemInfoResponse | null>(null);
   const [uploadStats, setUploadStats] = useState<UploadStats | null>(null);
   const [processingSteps, setProcessingSteps] = useState<ProcessingStep[]>([]);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
@@ -127,7 +126,7 @@ const EnhancedPDFImportUploader: React.FC<EnhancedPDFImportUploaderProps> = ({
       const info = await pdfImportService.getEnhancedSystemInfo();
       setSystemInfo(info);
     } catch (error) {
-      console.warn('获取系统信息失败:', error);
+      // Failed to get system info
     }
   };
 
@@ -243,7 +242,7 @@ const EnhancedPDFImportUploader: React.FC<EnhancedPDFImportUploaderProps> = ({
 
         // 使用增强上传
         const response = await pdfImportService.uploadPDFFileEnhanced(
-          file,
+          file as File,
           processingOptions,
           abortControllerRef.current.signal
         );
@@ -258,25 +257,25 @@ const EnhancedPDFImportUploader: React.FC<EnhancedPDFImportUploaderProps> = ({
           startProgressPolling(response.session_id!);
 
           // 获取文件分析信息
-          if (response.enhanced_status) {
+          if ((response as any).enhanced_status) {
             setUploadStats({
-              uploadSpeed: file.size / 1024 / (Date.now() / 1000),
+              uploadSpeed: (file as any).size / 1024 / (Date.now() / 1000),
               estimatedTime: 30,
               fileAnalysis: {
                 type: 'mixed',
                 quality: 'good',
-                recommendedMethod: response.enhanced_status.final_results?.extraction_quality?.processing_methods?.[0] || 'hybrid'
+                recommendedMethod: (response as any).enhanced_status?.final_results?.extraction_quality?.processing_methods?.[0] || 'hybrid'
               }
             });
           }
 
           onSuccess?.(response);
           onUploadSuccess(response.session_id!, {
-            uid: file.uid,
-            name: file.name,
+            uid: (file as any).uid,
+            name: (file as any).name,
             status: 'done',
-            size: file.size,
-            type: file.type
+            size: (file as any).size,
+            type: (file as any).type
           });
 
           message.success('文件上传成功，开始智能处理...');
@@ -284,12 +283,12 @@ const EnhancedPDFImportUploader: React.FC<EnhancedPDFImportUploaderProps> = ({
           throw new Error(response.error || '上传失败');
         }
 
-      } catch (error: any) {
-        clearInterval(progressInterval);
+      } catch (error: unknown) {
+        // Note: progressInterval is out of scope here, declared in try block
         setUploading(false);
         setUploadProgress(0);
 
-        const errorMessage = error.message || '上传失败';
+        const errorMessage = error instanceof Error ? error.message : '上传失败';
         onError?.(new Error(errorMessage));
         onUploadError(errorMessage);
         message.error(errorMessage);
@@ -444,7 +443,23 @@ const EnhancedPDFImportUploader: React.FC<EnhancedPDFImportUploaderProps> = ({
               items={processingSteps.map(step => ({
                 title: step.title,
                 description: step.description,
-                status: step.status as any,
+                status: ((): 'wait' | 'process' | 'finish' | 'error' => {
+                  switch (step.status) {
+                    case 'wait':
+                      return 'wait'
+                    case 'process':
+                    case 'uploading':
+                      return 'process'
+                    case 'finish':
+                    case 'completed':
+                      return 'finish'
+                    case 'error':
+                    case 'failed':
+                      return 'error'
+                    default:
+                      return 'process'
+                  }
+                })(),
                 icon: getStepIcon(step)
               }))}
             />
@@ -634,25 +649,25 @@ const EnhancedPDFImportUploader: React.FC<EnhancedPDFImportUploaderProps> = ({
                 </Tag>
               </Paragraph>
 
-              {processingProgress.enhanced_status && (
+              {(processingProgress as any).enhanced_status && (
                 <div>
                   <Divider />
                   <Paragraph>
                     <Text strong>文档分析结果：</Text>
                   </Paragraph>
                   <ul>
-                    <li>文档类型：{processingProgress.enhanced_status.document_analysis?.document_type || '未知'}</li>
-                    <li>质量评分：{processingProgress.enhanced_status.document_analysis?.quality_score || 0}/10</li>
-                    <li>建议：{processingProgress.enhanced_status.document_analysis?.recommendations?.join('；') || '无'}</li>
+                    <li>文档类型：{(processingProgress as any).enhanced_status.document_analysis?.document_type || '未知'}</li>
+                    <li>质量评分：{(processingProgress as any).enhanced_status.document_analysis?.quality_score || 0}/10</li>
+                    <li>建议：{(processingProgress as any).enhanced_status.document_analysis?.recommendations?.join('；') || '无'}</li>
                   </ul>
 
                   <Paragraph>
                     <Text strong>提取质量：</Text>
                   </Paragraph>
                   <ul>
-                    <li>总体质量：{processingProgress.enhanced_status.final_results?.extraction_quality?.overall_quality || 0}/10</li>
-                    <li>验证分数：{processingProgress.enhanced_status.final_results?.validation_score || 0}/10</li>
-                    <li>处理方法：{processingProgress.enhanced_status.final_results?.extraction_quality?.processing_methods?.join('、') || '未知'}</li>
+                    <li>总体质量：{(processingProgress as any).enhanced_status.final_results?.extraction_quality?.overall_quality || 0}/10</li>
+                    <li>验证分数：{(processingProgress as any).enhanced_status.final_results?.validation_score || 0}/10</li>
+                    <li>处理方法：{(processingProgress as any).enhanced_status.final_results?.extraction_quality?.processing_methods?.join('、') || '未知'}</li>
                   </ul>
                 </div>
               )}

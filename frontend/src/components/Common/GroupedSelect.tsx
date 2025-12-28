@@ -100,9 +100,10 @@ const GroupedSelect: React.FC<GroupedSelectProps> = ({
     return filteredGroups.map((group, groupIndex) => {
       if (group.options.length === 0) return null
 
-      return (
-        <React.Fragment key={groupIndex}>
-          {showGroupLabel && (
+      if (showGroupLabel) {
+        // 显示分组标签
+        return (
+          <React.Fragment key={groupIndex}>
             <Select.OptGroup label={
               <Space>
                 <Text strong>{group.label}</Text>
@@ -134,9 +135,35 @@ const GroupedSelect: React.FC<GroupedSelectProps> = ({
                 </Option>
               ))}
             </Select.OptGroup>
-          )}
-        </React.Fragment>
-      )
+          </React.Fragment>
+        )
+      } else {
+        // 不显示分组标签，直接渲染选项
+        return group.options.map((option) => (
+          <Option key={option.value} value={option.value}>
+            <Space>
+              {option.color && (
+                <span
+                  style={{
+                    display: 'inline-block',
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    backgroundColor: getColorValue(option.color),
+                    marginRight: '4px'
+                  }}
+                />
+              )}
+              <span>{option.label}</span>
+              {option.description && (
+                <Text type="secondary" style={{ fontSize: '12px' }}>
+                  - {option.description}
+                </Text>
+              )}
+            </Space>
+          </Option>
+        ))
+      }
     })
   }
 
@@ -155,7 +182,7 @@ const GroupedSelect: React.FC<GroupedSelectProps> = ({
   }
 
   // 自定义标签显示
-  const tagRender = (props: any) => {
+  const tagRender = (props: { label: string; value: string; closable: boolean; onClose: () => void }) => {
     const { label, value, closable, onClose } = props
     const optionInfo = getSelectedOptionInfo(value)
 
@@ -182,7 +209,7 @@ const GroupedSelect: React.FC<GroupedSelectProps> = ({
       filterOption={false} // 禁用默认过滤，使用自定义搜索
       onSearch={handleSearch}
       popupRender={dropdownRender}
-      tagRender={tagRender}
+      tagRender={tagRender as any}
     >
       {renderOptions()}
     </Select>

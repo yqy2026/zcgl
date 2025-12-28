@@ -4,35 +4,37 @@ PaddleOCR安装脚本
 为PDF导入系统安装和配置PaddleOCR高精度中文识别
 """
 
-import sys
+import logging
 import os
 import subprocess
-import logging
-import importlib
+import sys
 
 # 设置日志
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
+
 
 def check_system_requirements():
     """检查系统要求"""
     logger.info("检查系统要求...")
 
-    requirements = {
-        "python_version": (3, 8),
-        "platform": ["win32", "linux", "darwin"]
-    }
+    requirements = {"python_version": (3, 8), "platform": ["win32", "linux", "darwin"]}
 
     # 检查Python版本
     python_version = sys.version_info[:2]
     if python_version < requirements["python_version"]:
-        logger.error(f"Python版本过低: {python_version}, 需要: {requirements['python_version']}")
+        logger.error(
+            f"Python版本过低: {python_version}, 需要: {requirements['python_version']}"
+        )
         return False
 
     logger.info(f"✓ Python版本: {python_version}")
 
     # 检查平台
     import platform
+
     current_platform = platform.system().lower()
     if current_platform == "windows":
         platform_code = "win32"
@@ -48,23 +50,19 @@ def check_system_requirements():
 
     return True
 
+
 def install_paddleocr():
     """安装PaddleOCR"""
     logger.info("开始安装PaddleOCR...")
 
     # 基础包列表
-    base_packages = [
-        "paddlepaddle",
-        "paddleocr",
-        "pillow",
-        "opencv-python"
-    ]
+    base_packages = ["paddlepaddle", "paddleocr", "pillow", "opencv-python"]
 
     # 可选包列表
     optional_packages = [
         "shapely",  # 几何计算
-        "imgaug",   # 图像增强
-        "pyclipper" # 裁剪算法
+        "imgaug",  # 图像增强
+        "pyclipper",  # 裁剪算法
     ]
 
     success_count = 0
@@ -74,9 +72,12 @@ def install_paddleocr():
     for package in base_packages:
         logger.info(f"安装基础包: {package}")
         try:
-            result = subprocess.run([
-                sys.executable, "-m", "uv", "pip", "install", package
-            ], capture_output=True, text=True, timeout=600)
+            result = subprocess.run(
+                [sys.executable, "-m", "uv", "pip", "install", package],
+                capture_output=True,
+                text=True,
+                timeout=600,
+            )
 
             if result.returncode == 0:
                 logger.info(f"✓ {package} 安装成功")
@@ -85,9 +86,12 @@ def install_paddleocr():
                 logger.error(f"✗ {package} 安装失败: {result.stderr}")
                 # 尝试使用pip
                 try:
-                    result = subprocess.run([
-                        sys.executable, "-m", "pip", "install", package
-                    ], capture_output=True, text=True, timeout=600)
+                    result = subprocess.run(
+                        [sys.executable, "-m", "pip", "install", package],
+                        capture_output=True,
+                        text=True,
+                        timeout=600,
+                    )
                     if result.returncode == 0:
                         logger.info(f"✓ {package} (通过pip) 安装成功")
                         success_count += 1
@@ -103,9 +107,12 @@ def install_paddleocr():
     for package in optional_packages:
         logger.info(f"安装可选包: {package}")
         try:
-            result = subprocess.run([
-                sys.executable, "-m", "uv", "pip", "install", package
-            ], capture_output=True, text=True, timeout=300)
+            result = subprocess.run(
+                [sys.executable, "-m", "uv", "pip", "install", package],
+                capture_output=True,
+                text=True,
+                timeout=300,
+            )
 
             if result.returncode == 0:
                 logger.info(f"✓ {package} 安装成功")
@@ -120,6 +127,7 @@ def install_paddleocr():
     logger.info(f"安装完成: {success_count}/{total_packages} 个包安装成功")
     return success_count >= len(base_packages)  # 至少基础包都安装成功
 
+
 def test_paddleocr_installation():
     """测试PaddleOCR安装"""
     logger.info("测试PaddleOCR安装...")
@@ -127,10 +135,39 @@ def test_paddleocr_installation():
     try:
         # 测试导入
         import paddleocr
+
         logger.info("✓ PaddleOCR导入成功")
 
         # 测试OCR功能
-        ocr = paddleocr.PaddleOCR(use_angle_cls=True, lang='ch', show_log=False)
+        # 初始化引擎（默认启用 MKLDNN 加速，CPU 模式）
+        # 兼容不同版本：优先使用 use_textline_orientation，失败回退到 use_angle_cls；移除不兼容的 show_log
+        base_args = {
+            "lang": "ch",
+            "use_gpu": False,
+            "enable_mkldnn": True,
+        }
+        try:
+            ocr = paddleocr.PaddleOCR(
+                **base_args,
+                use_textline_orientation=True,
+            )
+        except Exception as e:
+            msg = str(e)
+            if "Unknown argument" in msg and "use_textline_orientation" in msg:
+                # 回退到旧参数名
+                ocr = paddleocr.PaddleOCR(
+                    **base_args,
+                    use_angle_cls=True,
+                )
+            elif "Unknown argument" in msg and "enable_mkldnn" in msg:
+                # 某些版本不支持 enable_mkldnn 参数，移除后重试
+                base_args.pop("enable_mkldnn", None)
+                ocr = paddleocr.PaddleOCR(
+                    **base_args,
+                    use_textline_orientation=True,
+                )
+            else:
+                raise
         logger.info("✓ PaddleOCR引擎初始化成功")
 
         # 创建简单测试图像
@@ -138,9 +175,9 @@ def test_paddleocr_installation():
         from PIL import Image, ImageDraw
 
         # 创建测试图像
-        img = Image.new('RGB', (300, 100), color='white')
+        img = Image.new("RGB", (300, 100), color="white")
         draw = ImageDraw.Draw(img)
-        draw.text((10, 30), "测试OCR识别", fill='black')
+        draw.text((10, 30), "测试OCR识别", fill="black")
 
         # 转换为numpy数组
         img_array = np.array(img)
@@ -163,15 +200,16 @@ def test_paddleocr_installation():
         logger.error(f"✗ PaddleOCR测试失败: {e}")
         return False
 
+
 def update_configuration():
     """更新配置文件"""
     logger.info("更新PaddleOCR配置...")
 
     try:
-        config_dir = os.path.join(os.path.dirname(__file__), '..', 'src', 'config')
+        config_dir = os.path.join(os.path.dirname(__file__), "..", "src", "config")
         os.makedirs(config_dir, exist_ok=True)
 
-        config_file = os.path.join(config_dir, 'paddleocr_config.py')
+        config_file = os.path.join(config_dir, "paddleocr_config.py")
 
         config_content = '''"""
 PaddleOCR配置文件
@@ -181,10 +219,13 @@ PaddleOCR配置文件
 # PaddleOCR基础配置
 PADDLEOCR_BASE_CONFIG = {
     # 模型设置
-    "use_angle_cls": True,        # 启用文字方向分类
+    # 文字方向分类（兼容新旧版本参数名）
+    "use_textline_orientation": True,  # 新版参数，推荐
+    "use_angle_cls": True,             # 旧版参数，作为回退
     "lang": "ch",                 # 中文模式
     "use_gpu": False,             # CPU模式（可设置为True启用GPU）
     "gpu_mem": 8000,              # GPU内存限制（MB）
+    "enable_mkldnn": True,        # 在CPU上启用MKLDNN加速
 
     # 检测参数
     "det_db_thresh": 0.3,        # 检测阈值
@@ -197,7 +238,7 @@ PADDLEOCR_BASE_CONFIG = {
     "drop_score": 0.5,           # 识别置信度阈值
 
     # 性能设置
-    "show_log": False,           # 关闭详细日志
+    # "show_log": False,           # 某些版本不支持该参数，避免在初始化中使用
     "use_mp": True,              # 启用多进程
     "total_process_num": 1,      # 进程数
 
@@ -243,7 +284,7 @@ def get_config_for_document_type(doc_type: str) -> dict:
         return PADDLEOCR_BASE_CONFIG
 '''
 
-        with open(config_file, 'w', encoding='utf-8') as f:
+        with open(config_file, "w", encoding="utf-8") as f:
             f.write(config_content)
 
         logger.info(f"✓ 配置文件已创建: {config_file}")
@@ -253,12 +294,13 @@ def get_config_for_document_type(doc_type: str) -> dict:
         logger.error(f"✗ 配置文件创建失败: {e}")
         return False
 
+
 def create_test_script():
     """创建测试脚本"""
     logger.info("创建PaddleOCR测试脚本...")
 
     try:
-        test_script = os.path.join(os.path.dirname(__file__), 'test_paddleocr.py')
+        test_script = os.path.join(os.path.dirname(__file__), "test_paddleocr.py")
 
         test_content = '''#!/usr/bin/env python3
 """
@@ -361,7 +403,7 @@ if __name__ == "__main__":
     sys.exit(main())
 '''
 
-        with open(test_script, 'w', encoding='utf-8') as f:
+        with open(test_script, "w", encoding="utf-8") as f:
             f.write(test_content)
 
         logger.info(f"✓ 测试脚本已创建: {test_script}")
@@ -370,6 +412,7 @@ if __name__ == "__main__":
     except Exception as e:
         logger.error(f"✗ 测试脚本创建失败: {e}")
         return False
+
 
 def main():
     """主安装函数"""
@@ -420,6 +463,7 @@ def main():
     print("=" * 60)
 
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())

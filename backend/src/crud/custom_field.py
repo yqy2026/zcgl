@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 自定义字段CRUD操作
 """
@@ -5,7 +7,6 @@
 import json
 from datetime import datetime
 from decimal import Decimal
-from typing import Any
 
 from sqlalchemy.orm import Session
 

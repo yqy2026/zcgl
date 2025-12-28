@@ -162,9 +162,9 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
 
   const handleNotificationClick = ({ key }: { key: string }) => {
     if (key === 'viewAll') {
-      console.log('查看全部通知')
+      // View all notifications
     } else {
-      console.log('查看通知详情:', key)
+      // View notification details
     }
   }
 

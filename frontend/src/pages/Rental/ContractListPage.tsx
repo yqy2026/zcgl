@@ -2,7 +2,8 @@
  * 租金合同列表页面
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Table,
   Card,
@@ -19,8 +20,8 @@ import {
   Row,
   Col,
   Statistic,
-  Typography
-} from 'antd';
+  Typography,
+} from "antd";
 import {
   PlusOutlined,
   SearchOutlined,
@@ -29,19 +30,23 @@ import {
   EyeOutlined,
   FileTextOutlined,
   CalendarOutlined,
-  DollarOutlined
-} from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
-import dayjs from 'dayjs';
+  DollarOutlined,
+} from "@ant-design/icons";
+import type { ColumnsType } from "antd/es/table";
+import dayjs from "dayjs";
 
-import { RentContract, RentContractQueryParams, RentContractPageState } from '../../types/rentContract';
-import { Asset } from '../../types/asset';
-import { Ownership } from '../../types/ownership';
-import { rentContractService } from '../../services/rentContractService';
-import { assetService } from '../../services/assetService';
-import { ownershipService } from '../../services/ownershipService';
-import { useFormat } from '../../utils/format';
-import RentContractExcelImport from '../../components/Rental/RentContractExcelImport';
+import {
+  RentContract,
+  RentContractQueryParams,
+  RentContractPageState,
+} from "../../types/rentContract";
+import { Asset } from "../../types/asset";
+import { Ownership } from "../../types/ownership";
+import { rentContractService } from "../../services/rentContractService";
+import { assetService } from "../../services/assetService";
+import { ownershipService } from "../../services/ownershipService";
+import { useFormat } from "../../utils/format";
+import RentContractExcelImport from "../../components/Rental/RentContractExcelImport";
 
 const { Title } = Typography;
 const { Search } = Input;
@@ -59,18 +64,19 @@ const ContractListPage: React.FC = () => {
     },
     filters: {},
     showModal: false,
-    modalMode: 'create',
+    modalMode: "create",
   });
 
   const [assets, setAssets] = useState<Asset[]>([]);
   const [ownerships, setOwnerships] = useState<Ownership[]>([]);
   const [statistics, setStatistics] = useState<any>(null);
+  const navigate = useNavigate();
 
   const format = useFormat();
 
   // 加载合同列表
   const loadContracts = async (params?: RentContractQueryParams) => {
-    setState(prev => ({ ...prev, loading: true }));
+    setState((prev) => ({ ...prev, loading: true }));
     try {
       const response = await rentContractService.getContracts({
         page: state.pagination.current,
@@ -81,16 +87,16 @@ const ContractListPage: React.FC = () => {
 
       // 安全检查：确保response和response.items存在
       if (!response) {
-        console.error('合同API响应为空');
-        message.error('加载合同列表失败：响应为空');
-        setState(prev => ({ ...prev, loading: false }));
+        console.error("合同API响应为空");
+        message.error("加载合同列表失败：响应为空");
+        setState((prev) => ({ ...prev, loading: false }));
         return;
       }
 
       // 确保items是一个数组
       const contracts = Array.isArray(response.items) ? response.items : [];
 
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         loading: false,
         contracts: contracts,
@@ -101,9 +107,9 @@ const ContractListPage: React.FC = () => {
         },
       }));
     } catch (error) {
-      console.error('加载合同列表失败:', error);
-      message.error(`加载合同列表失败: ${error instanceof Error ? error.message : '未知错误'}`);
-      setState(prev => ({ ...prev, loading: false, contracts: [] }));
+      console.error("加载合同列表失败:", error);
+      message.error(`加载合同列表失败: ${error instanceof Error ? error.message : "未知错误"}`);
+      setState((prev) => ({ ...prev, loading: false, contracts: [] }));
     }
   };
 
@@ -113,7 +119,7 @@ const ContractListPage: React.FC = () => {
       const stats = await rentContractService.getRentStatistics();
       setStatistics(stats);
     } catch (error) {
-      console.error('加载统计数据失败:', error);
+      console.error("加载统计数据失败:", error);
     }
   };
 
@@ -127,7 +133,7 @@ const ContractListPage: React.FC = () => {
       setAssets(assetsResponse.items);
       setOwnerships(ownershipsData);
     } catch (error) {
-      message.error('加载参考数据失败');
+      message.error("加载参考数据失败");
     }
   };
 
@@ -138,8 +144,8 @@ const ContractListPage: React.FC = () => {
   }, []);
 
   // 处理分页变化
-  const handleTableChange = (pagination: any) => {
-    setState(prev => ({
+  const handleTableChange = (pagination: { current: number; pageSize: number; total?: number }) => {
+    setState((prev) => ({
       ...prev,
       pagination: {
         ...prev.pagination,
@@ -154,8 +160,8 @@ const ContractListPage: React.FC = () => {
   };
 
   // 处理搜索
-  const handleSearch = (values: any) => {
-    setState(prev => ({
+  const handleSearch = (values: Record<string, unknown>) => {
+    setState((prev) => ({
       ...prev,
       filters: values,
       pagination: { ...prev.pagination, current: 1 },
@@ -165,7 +171,7 @@ const ContractListPage: React.FC = () => {
 
   // 重置搜索
   const handleReset = () => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       filters: {},
       pagination: { ...prev.pagination, current: 1 },
@@ -176,18 +182,18 @@ const ContractListPage: React.FC = () => {
   // 删除合同
   const handleDelete = async (id: string) => {
     Modal.confirm({
-      title: '确认删除',
-      content: '确定要删除这个合同吗？删除后将无法恢复。',
-      okText: '确认',
-      cancelText: '取消',
+      title: "确认删除",
+      content: "确定要删除这个合同吗？删除后将无法恢复。",
+      okText: "确认",
+      cancelText: "取消",
       onOk: async () => {
         try {
           await rentContractService.deleteContract(id);
-          message.success('删除成功');
+          message.success("删除成功");
           loadContracts();
           loadStatistics();
         } catch (error) {
-          message.error('删除失败');
+          message.error("删除失败");
         }
       },
     });
@@ -197,28 +203,25 @@ const ContractListPage: React.FC = () => {
   const handleGenerateLedger = async (contractId: string) => {
     try {
       await rentContractService.generateMonthlyLedger({ contract_id: contractId });
-      message.success('生成台账成功');
+      message.success("生成台账成功");
     } catch (error) {
-      message.error('生成台账失败');
+      message.error("生成台账失败");
     }
   };
 
   // 查看合同详情
   const handleViewDetail = (contract: RentContract) => {
-    // TODO: 实现查看详情逻辑
-    console.log('查看合同详情:', contract);
+    navigate(`/rental/contracts/${contract.id}`);
   };
 
   // 编辑合同
   const handleEdit = (contract: RentContract) => {
-    // TODO: 实现编辑逻辑
-    console.log('编辑合同:', contract);
+    navigate(`/rental/contracts/${contract.id}/edit`);
   };
 
   // 创建新合同
   const handleCreate = () => {
-    // TODO: 实现创建逻辑
-    console.log('创建新合同');
+    navigate("/rental/contracts/create");
   };
 
   // 导入成功的回调
@@ -230,9 +233,9 @@ const ContractListPage: React.FC = () => {
   // 表格列定义
   const columns: ColumnsType<RentContract> = [
     {
-      title: '合同编号',
-      dataIndex: 'contract_number',
-      key: 'contract_number',
+      title: "合同编号",
+      dataIndex: "contract_number",
+      key: "contract_number",
       render: (text: string) => (
         <Tooltip title={text}>
           <Button type="link" size="small">
@@ -242,9 +245,9 @@ const ContractListPage: React.FC = () => {
       ),
     },
     {
-      title: '承租方',
-      dataIndex: 'tenant_name',
-      key: 'tenant_name',
+      title: "承租方",
+      dataIndex: "tenant_name",
+      key: "tenant_name",
       render: (text: string) => (
         <Space>
           <span>{text}</span>
@@ -252,78 +255,71 @@ const ContractListPage: React.FC = () => {
       ),
     },
     {
-      title: '物业名称',
-      dataIndex: ['asset', 'property_name'],
-      key: 'property_name',
+      title: "物业名称",
+      dataIndex: ["asset", "property_name"],
+      key: "property_name",
       render: (text: string, record: RentContract) => (
-        <Tooltip title={record.asset?.address}>
-          {text || '未知'}
-        </Tooltip>
+        <Tooltip title={record.asset?.address}>{text || "未知"}</Tooltip>
       ),
     },
     {
-      title: '权属方',
-      dataIndex: ['ownership', 'name'],
-      key: 'ownership_name',
-      render: (text: string) => text || '未知',
+      title: "权属方",
+      dataIndex: ["ownership", "name"],
+      key: "ownership_name",
+      render: (text: string) => text || "未知",
     },
     {
-      title: '租期',
-      key: 'lease_period',
+      title: "租期",
+      key: "lease_period",
       render: (record: RentContract) => (
         <Space direction="vertical" size="small">
-          <div>{dayjs(record.start_date).format('YYYY-MM-DD')}</div>
+          <div>{dayjs(record.start_date).format("YYYY-MM-DD")}</div>
           <div>至</div>
-          <div>{dayjs(record.end_date).format('YYYY-MM-DD')}</div>
+          <div>{dayjs(record.end_date).format("YYYY-MM-DD")}</div>
         </Space>
       ),
     },
     {
-      title: '月租金',
-      dataIndex: 'monthly_rent_base',
-      key: 'monthly_rent_base',
+      title: "月租金",
+      dataIndex: "monthly_rent_base",
+      key: "monthly_rent_base",
       render: (amount: number) => format.currency(amount),
-      align: 'right' as const,
+      align: "right" as const,
     },
     {
-      title: '合同状态',
-      dataIndex: 'contract_status',
-      key: 'contract_status',
+      title: "合同状态",
+      dataIndex: "contract_status",
+      key: "contract_status",
       render: (status: string) => {
         const statusConfig = {
-          '有效': { color: 'green', text: '有效' },
-          '到期': { color: 'orange', text: '到期' },
-          '终止': { color: 'red', text: '终止' },
+          有效: { color: "green", text: "有效" },
+          到期: { color: "orange", text: "到期" },
+          终止: { color: "red", text: "终止" },
         };
-        const config = statusConfig[status as keyof typeof statusConfig] || { color: 'default', text: status };
+        const config = statusConfig[status as keyof typeof statusConfig] || {
+          color: "default",
+          text: status,
+        };
         return <Tag color={config.color}>{config.text}</Tag>;
       },
     },
     {
-      title: '签订日期',
-      dataIndex: 'sign_date',
-      key: 'sign_date',
-      render: (date: string) => dayjs(date).format('YYYY-MM-DD'),
+      title: "签订日期",
+      dataIndex: "sign_date",
+      key: "sign_date",
+      render: (date: string) => dayjs(date).format("YYYY-MM-DD"),
     },
     {
-      title: '操作',
-      key: 'actions',
+      title: "操作",
+      key: "actions",
       width: 200,
       render: (record: RentContract) => (
         <Space size="small">
           <Tooltip title="查看详情">
-            <Button
-              type="text"
-              icon={<EyeOutlined />}
-              onClick={() => handleViewDetail(record)}
-            />
+            <Button type="text" icon={<EyeOutlined />} onClick={() => handleViewDetail(record)} />
           </Tooltip>
           <Tooltip title="编辑">
-            <Button
-              type="text"
-              icon={<EditOutlined />}
-              onClick={() => handleEdit(record)}
-            />
+            <Button type="text" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
           </Tooltip>
           <Tooltip title="生成台账">
             <Button
@@ -346,16 +342,16 @@ const ContractListPage: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: '24px' }}>
+    <div style={{ padding: "24px" }}>
       {/* 页面标题 */}
-      <div style={{ marginBottom: '24px' }}>
+      <div style={{ marginBottom: "24px" }}>
         <Title level={2}>租金合同管理</Title>
-        <p style={{ color: '#666' }}>管理物业租赁合同，支持租金条款设置和台账生成</p>
+        <p style={{ color: "#666" }}>管理物业租赁合同，支持租金条款设置和台账生成</p>
       </div>
 
       {/* 统计卡片 */}
       {statistics && (
-        <Row gutter={16} style={{ marginBottom: '24px' }}>
+        <Row gutter={16} style={{ marginBottom: "24px" }}>
           <Col span={6}>
             <Card>
               <Statistic
@@ -394,7 +390,7 @@ const ContractListPage: React.FC = () => {
                 value={statistics.payment_rate}
                 precision={2}
                 suffix="%"
-                valueStyle={{ color: statistics.payment_rate > 80 ? '#3f8600' : '#cf1322' }}
+                valueStyle={{ color: statistics.payment_rate > 80 ? "#3f8600" : "#cf1322" }}
               />
             </Card>
           </Col>
@@ -402,7 +398,7 @@ const ContractListPage: React.FC = () => {
       )}
 
       {/* 搜索区域 */}
-      <Card style={{ marginBottom: '24px' }}>
+      <Card style={{ marginBottom: "24px" }}>
         <Row gutter={16}>
           <Col span={6}>
             <Search
@@ -414,11 +410,11 @@ const ContractListPage: React.FC = () => {
           <Col span={4}>
             <Select
               placeholder="选择物业"
-              style={{ width: '100%' }}
+              style={{ width: "100%" }}
               allowClear
               onChange={(value) => handleSearch({ asset_id: value })}
             >
-              {assets.map(asset => (
+              {assets.map((asset) => (
                 <Option key={asset.id} value={asset.id}>
                   {asset.property_name}
                 </Option>
@@ -428,11 +424,11 @@ const ContractListPage: React.FC = () => {
           <Col span={4}>
             <Select
               placeholder="选择权属方"
-              style={{ width: '100%' }}
+              style={{ width: "100%" }}
               allowClear
               onChange={(value) => handleSearch({ ownership_id: value })}
             >
-              {ownerships.map(ownership => (
+              {ownerships.map((ownership) => (
                 <Option key={ownership.id} value={ownership.id}>
                   {ownership.name}
                 </Option>
@@ -442,7 +438,7 @@ const ContractListPage: React.FC = () => {
           <Col span={4}>
             <Select
               placeholder="合同状态"
-              style={{ width: '100%' }}
+              style={{ width: "100%" }}
               allowClear
               onChange={(value) => handleSearch({ contract_status: value })}
             >
@@ -455,11 +451,7 @@ const ContractListPage: React.FC = () => {
             <Button onClick={handleReset}>重置</Button>
           </Col>
           <Col span={2}>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={handleCreate}
-            >
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
               新建合同
             </Button>
           </Col>
@@ -484,7 +476,7 @@ const ContractListPage: React.FC = () => {
             showQuickJumper: true,
             showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
           }}
-          onChange={handleTableChange}
+          onChange={handleTableChange as any}
           scroll={{ x: 1200 }}
         />
       </Card>

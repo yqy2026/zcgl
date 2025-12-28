@@ -1,10 +1,10 @@
+from typing import Any
+
 """
 枚举字段管理CRUD操作
 """
 
-from typing import Any
-
-from sqlalchemy import and_, func, or_
+from sqlalchemy import and_, func, not_, or_
 from sqlalchemy.orm import Session
 
 from ..models.enum_field import (
@@ -34,9 +34,7 @@ class EnumFieldTypeCRUD:
         enum_type = (
             self.db.query(EnumFieldType)
             .filter(
-                and_(
-                    EnumFieldType.id == enum_type_id, not EnumFieldType.is_deleted
-                )
+                and_(EnumFieldType.id == enum_type_id, not_(EnumFieldType.is_deleted))
             )
             .first()
         )
@@ -48,7 +46,7 @@ class EnumFieldTypeCRUD:
                 .filter(
                     and_(
                         EnumFieldValue.enum_type_id == enum_type.id,
-                        not EnumFieldValue.is_deleted,
+                        not_(EnumFieldValue.is_deleted),
                         EnumFieldValue.is_active,
                     )
                 )
@@ -63,7 +61,7 @@ class EnumFieldTypeCRUD:
         """根据编码获取枚举类型"""
         return (
             self.db.query(EnumFieldType)
-            .filter(and_(EnumFieldType.code == code, not EnumFieldType.is_deleted))
+            .filter(and_(EnumFieldType.code == code, not_(EnumFieldType.is_deleted)))
             .first()
         )
 
@@ -77,7 +75,7 @@ class EnumFieldTypeCRUD:
         keyword: str | None = None,
     ) -> list[EnumFieldType]:
         """获取枚举类型列表"""
-        query = self.db.query(EnumFieldType).filter(not EnumFieldType.is_deleted)
+        query = self.db.query(EnumFieldType).filter(not_(EnumFieldType.is_deleted))
 
         if category:
             query = query.filter(EnumFieldType.category == category)
@@ -111,7 +109,7 @@ class EnumFieldTypeCRUD:
                 .filter(
                     and_(
                         EnumFieldValue.enum_type_id == enum_type.id,
-                        not EnumFieldValue.is_deleted,
+                        not_(EnumFieldValue.is_deleted),
                         EnumFieldValue.is_active,
                     )
                 )
@@ -124,7 +122,7 @@ class EnumFieldTypeCRUD:
 
     def create(self, obj_in: EnumFieldTypeCreate) -> EnumFieldType:
         """创建枚举类型"""
-        db_obj = EnumFieldType(**obj_in.dict())
+        db_obj = EnumFieldType(**obj_in.model_dump())
         self.db.add(db_obj)
         self.db.commit()
         self.db.refresh(db_obj)
@@ -137,6 +135,7 @@ class EnumFieldTypeCRUD:
             new_value=f"创建枚举类型: {db_obj.name}",
             created_by=obj_in.created_by,
         )
+        self.db.flush()  # Flush history to make it visible in tests
 
         return db_obj
 
@@ -144,7 +143,7 @@ class EnumFieldTypeCRUD:
         self, db_obj: EnumFieldType, obj_in: EnumFieldTypeUpdate
     ) -> EnumFieldType:
         """更新枚举类型"""
-        update_data = obj_in.dict(exclude_unset=True)
+        update_data = obj_in.model_dump(exclude_unset=True)
 
         # 记录变更历史
         for field, new_value in update_data.items():
@@ -181,7 +180,7 @@ class EnumFieldTypeCRUD:
             .filter(
                 and_(
                     EnumFieldValue.enum_type_id == enum_type_id,
-                    not EnumFieldValue.is_deleted,
+                    not_(EnumFieldValue.is_deleted),
                 )
             )
             .count()
@@ -227,7 +226,7 @@ class EnumFieldTypeCRUD:
             .filter(
                 and_(
                     EnumFieldType.category.isnot(None),
-                    not EnumFieldType.is_deleted,
+                    not_(EnumFieldType.is_deleted),
                 )
             )
             .distinct()
@@ -238,16 +237,12 @@ class EnumFieldTypeCRUD:
     def get_statistics(self) -> dict[str, Any]:
         """获取枚举类型统计信息"""
         total_types = (
-            self.db.query(EnumFieldType)
-            .filter(not EnumFieldType.is_deleted)
-            .count()
+            self.db.query(EnumFieldType).filter(not_(EnumFieldType.is_deleted)).count()
         )
         active_types = (
             self.db.query(EnumFieldType)
             .filter(
-                and_(
-                    not EnumFieldType.is_deleted, EnumFieldType.status == "active"
-                )
+                and_(not_(EnumFieldType.is_deleted), EnumFieldType.status == "active")
             )
             .count()
         )
@@ -257,7 +252,7 @@ class EnumFieldTypeCRUD:
             self.db.query(
                 EnumFieldType.category, func.count(EnumFieldType.id).label("count")
             )
-            .filter(not EnumFieldType.is_deleted)
+            .filter(not_(EnumFieldType.is_deleted))
             .group_by(EnumFieldType.category)
             .all()
         )
@@ -306,7 +301,7 @@ class EnumFieldValueCRUD:
             .filter(
                 and_(
                     EnumFieldValue.id == enum_value_id,
-                    not EnumFieldValue.is_deleted,
+                    not_(EnumFieldValue.is_deleted),
                 )
             )
             .first()
@@ -322,7 +317,7 @@ class EnumFieldValueCRUD:
                 and_(
                     EnumFieldValue.enum_type_id == enum_type_id,
                     EnumFieldValue.value == value,
-                    not EnumFieldValue.is_deleted,
+                    not_(EnumFieldValue.is_deleted),
                 )
             )
             .first()
@@ -338,11 +333,14 @@ class EnumFieldValueCRUD:
         query = self.db.query(EnumFieldValue).filter(
             and_(
                 EnumFieldValue.enum_type_id == enum_type_id,
-                not EnumFieldValue.is_deleted,
+                not_(EnumFieldValue.is_deleted),
             )
         )
 
-        if parent_id is not None:
+        if parent_id is None:
+            # Get top-level items (parent_id is NULL)
+            query = query.filter(EnumFieldValue.parent_id == None)
+        else:
             query = query.filter(EnumFieldValue.parent_id == parent_id)
 
         if is_active is not None:
@@ -375,7 +373,7 @@ class EnumFieldValueCRUD:
                 level = parent.level + 1
                 path = f"{parent.path}/{parent.id}" if parent.path else parent.id
 
-        db_obj = EnumFieldValue(**obj_in.dict())
+        db_obj = EnumFieldValue(**obj_in.model_dump())
         db_obj.level = level
         db_obj.path = path
 
@@ -392,6 +390,7 @@ class EnumFieldValueCRUD:
             new_value=f"创建枚举值: {db_obj.label}",
             created_by=obj_in.created_by,
         )
+        self.db.flush()  # Flush history to make it visible in tests
 
         return db_obj
 
@@ -399,7 +398,7 @@ class EnumFieldValueCRUD:
         self, db_obj: EnumFieldValue, obj_in: EnumFieldValueUpdate
     ) -> EnumFieldValue:
         """更新枚举值"""
-        update_data = obj_in.dict(exclude_unset=True)
+        update_data = obj_in.model_dump(exclude_unset=True)
 
         # 记录变更历史
         for field, new_value in update_data.items():
@@ -451,7 +450,7 @@ class EnumFieldValueCRUD:
             .filter(
                 and_(
                     EnumFieldValue.parent_id == enum_value_id,
-                    not EnumFieldValue.is_deleted,
+                    not_(EnumFieldValue.is_deleted),
                 )
             )
             .count()
@@ -554,7 +553,7 @@ class EnumFieldUsageCRUD:
 
     def create(self, obj_in: EnumFieldUsageCreate) -> EnumFieldUsage:
         """创建使用记录"""
-        db_obj = EnumFieldUsage(**obj_in.dict())
+        db_obj = EnumFieldUsage(**obj_in.model_dump())
         self.db.add(db_obj)
         self.db.commit()
         self.db.refresh(db_obj)
@@ -564,7 +563,7 @@ class EnumFieldUsageCRUD:
         self, db_obj: EnumFieldUsage, obj_in: EnumFieldUsageUpdate
     ) -> EnumFieldUsage:
         """更新使用记录"""
-        update_data = obj_in.dict(exclude_unset=True)
+        update_data = obj_in.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(db_obj, field, value)
 

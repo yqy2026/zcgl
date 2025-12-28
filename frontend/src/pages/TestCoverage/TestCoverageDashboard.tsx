@@ -22,8 +22,8 @@ import {
 import {
   ReloadOutlined,
   SettingOutlined,
-  TrendingUpOutlined,
-  TrendingDownOutlined,
+  RiseOutlined,
+  FallOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
   InfoCircleOutlined
@@ -74,6 +74,19 @@ interface CoverageThreshold {
   total_threshold: number;
 }
 
+// 图表数据类型定义
+interface ChartDatum {
+  覆盖率: number
+  [key: string]: number | string
+}
+
+interface CoverageTrendDatum {
+  date: string
+  total_coverage: number
+  backend_coverage?: number
+  frontend_coverage?: number
+}
+
 interface QualityGateResult {
   passed: boolean;
   thresholds: {
@@ -91,7 +104,7 @@ interface QualityGateResult {
 
 // API服务函数
 const fetchCoverageReport = async (): Promise<CoverageReport> => {
-  const response = await fetch('/api/v1/test-coverage/report');
+  const response = await fetch('/api/test-coverage/report');
   if (!response.ok) {
     throw new Error('获取覆盖率报告失败');
   }
@@ -99,7 +112,7 @@ const fetchCoverageReport = async (): Promise<CoverageReport> => {
 };
 
 const fetchCoverageTrend = async (days: number = 30): Promise<CoverageTrend[]> => {
-  const response = await fetch(`/api/v1/test-coverage/trend?days=${days}`);
+  const response = await fetch(`/api/test-coverage/trend?days=${days}`);
   if (!response.ok) {
     throw new Error('获取覆盖率趋势失败');
   }
@@ -111,7 +124,7 @@ const fetchModuleCoverage = async (
   maxCoverage: number = 100
 ): Promise<CoverageMetrics[]> => {
   const response = await fetch(
-    `/api/v1/test-coverage/modules?min_coverage=${minCoverage}&max_coverage=${maxCoverage}`
+    `/api/test-coverage/modules?min_coverage=${minCoverage}&max_coverage=${maxCoverage}`
   );
   if (!response.ok) {
     throw new Error('获取模块覆盖率失败');
@@ -120,7 +133,7 @@ const fetchModuleCoverage = async (
 };
 
 const fetchCoverageThresholds = async (): Promise<CoverageThreshold> => {
-  const response = await fetch('/api/v1/test-coverage/thresholds');
+  const response = await fetch('/api/test-coverage/thresholds');
   if (!response.ok) {
     throw new Error('获取覆盖率阈值失败');
   }
@@ -128,7 +141,7 @@ const fetchCoverageThresholds = async (): Promise<CoverageThreshold> => {
 };
 
 const updateCoverageThresholds = async (thresholds: CoverageThreshold): Promise<CoverageThreshold> => {
-  const response = await fetch('/api/v1/test-coverage/thresholds', {
+  const response = await fetch('/api/test-coverage/thresholds', {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -142,7 +155,7 @@ const updateCoverageThresholds = async (thresholds: CoverageThreshold): Promise<
 };
 
 const fetchQualityGate = async (): Promise<QualityGateResult> => {
-  const response = await fetch('/api/v1/test-coverage/quality-gate');
+  const response = await fetch('/api/test-coverage/quality-gate');
   if (!response.ok) {
     throw new Error('获取质量门禁状态失败');
   }
@@ -303,7 +316,7 @@ const TestCoverageDashboard: React.FC = () => {
       shape: 'circle',
     },
     tooltip: {
-      formatter: (datum: any) => ({
+      formatter: (datum: ChartDatum & { type?: string; value?: number }) => ({
         name: datum.type,
         value: `${datum.value?.toFixed(1)}%`,
       }),
@@ -318,12 +331,12 @@ const TestCoverageDashboard: React.FC = () => {
     })) || [],
     xField: 'module',
     yField: '覆盖率',
-    color: (datum: any) => {
+    color: (datum: ChartDatum) => {
       return datum.覆盖率 >= 80 ? '#52c41a' : datum.覆盖率 >= 60 ? '#faad14' : '#ff4d4f';
     },
     label: {
       position: 'middle',
-      formatter: (datum: any) => `${datum.覆盖率.toFixed(1)}%`,
+      formatter: (datum: ChartDatum) => `${datum.覆盖率.toFixed(1)}%`,
     },
     meta: {
       覆盖率: {
@@ -394,7 +407,7 @@ const TestCoverageDashboard: React.FC = () => {
               valueStyle={{
                 color: (coverageReport?.total_coverage || 0) >= (thresholds?.total_threshold || 75) ? '#3f8600' : '#cf1322',
               }}
-              prefix={(coverageReport?.total_coverage || 0) >= (thresholds?.total_threshold || 75) ? <TrendingUpOutlined /> : <TrendingDownOutlined />}
+              prefix={(coverageReport?.total_coverage || 0) >= (thresholds?.total_threshold || 75) ? <RiseOutlined /> : <FallOutlined />}
             />
             {thresholds && (
               <div style={{ fontSize: 12, color: '#666', marginTop: 8 }}>
@@ -526,7 +539,7 @@ const TestCoverageDashboard: React.FC = () => {
         open={thresholdModalVisible}
         onCancel={() => setThresholdModalVisible(false)}
         onOk={() => form.submit()}
-        confirmLoading={updateThresholdsMutation.isLoading}
+        confirmLoading={updateThresholdsMutation.isPending}
       >
         <Form
           form={form}

@@ -1,8 +1,8 @@
+from typing import Any
+
 """
 资产CRUD操作 - 优化版本
 """
-
-from typing import Any
 
 from sqlalchemy import and_, asc, desc, or_
 from sqlalchemy.orm import Session
@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from ..core.performance import cache_manager, cached, monitor_query
 from ..models.asset import Asset, AssetHistory
 from ..schemas.asset import AssetCreate, AssetUpdate
-from ..services.asset_calculator import AssetCalculator
+from ..services.asset.asset_calculator import AssetCalculator
 
 
 class SensitiveDataHandler:
@@ -146,10 +146,10 @@ class AssetCRUD:
                 if value is None:
                     continue
 
-                if key == "min_area" and hasattr(Asset, "total_area"):
-                    filter_conditions.append(Asset.total_area >= float(value))
-                elif key == "max_area" and hasattr(Asset, "total_area"):
-                    filter_conditions.append(Asset.total_area <= float(value))
+                if key == "min_area" and hasattr(Asset, "actual_property_area"):
+                    filter_conditions.append(Asset.actual_property_area >= float(value))
+                elif key == "max_area" and hasattr(Asset, "actual_property_area"):
+                    filter_conditions.append(Asset.actual_property_area <= float(value))
                 elif key == "ids" and isinstance(value, list):
                     # 使用IN查询，性能更好
                     if value:
@@ -164,7 +164,13 @@ class AssetCRUD:
                 query = query.filter(and_(*filter_conditions))
 
         # 排序 - 使用索引友好的字段
-        sortable_fields = ["created_at", "updated_at", "property_name", "id"]
+        sortable_fields = [
+            "created_at",
+            "updated_at",
+            "property_name",
+            "id",
+            "actual_property_area",
+        ]
         if sort_field in sortable_fields:
             sort_column = getattr(Asset, sort_field)
             if sort_order.lower() == "desc":
@@ -206,10 +212,10 @@ class AssetCRUD:
                 if value is None:
                     continue
 
-                if key == "min_area" and hasattr(Asset, "total_area"):
-                    filter_conditions.append(Asset.total_area >= value)
-                elif key == "max_area" and hasattr(Asset, "total_area"):
-                    filter_conditions.append(Asset.total_area <= value)
+                if key == "min_area" and hasattr(Asset, "actual_property_area"):
+                    filter_conditions.append(Asset.actual_property_area >= float(value))
+                elif key == "max_area" and hasattr(Asset, "actual_property_area"):
+                    filter_conditions.append(Asset.actual_property_area <= float(value))
                 elif key == "ids" and isinstance(value, list):
                     # 支持按多个资产ID筛选
                     filter_conditions.append(Asset.id.in_(value))
@@ -270,10 +276,10 @@ class AssetCRUD:
                 if value is None:
                     continue
 
-                if key == "min_area" and hasattr(Asset, "total_area"):
-                    filter_conditions.append(Asset.total_area >= value)
-                elif key == "max_area" and hasattr(Asset, "total_area"):
-                    filter_conditions.append(Asset.total_area <= value)
+                if key == "min_area" and hasattr(Asset, "actual_property_area"):
+                    filter_conditions.append(Asset.actual_property_area >= float(value))
+                elif key == "max_area" and hasattr(Asset, "actual_property_area"):
+                    filter_conditions.append(Asset.actual_property_area <= float(value))
                 elif key == "ids" and isinstance(value, list):
                     # 支持按多个资产ID筛选
                     filter_conditions.append(Asset.id.in_(value))

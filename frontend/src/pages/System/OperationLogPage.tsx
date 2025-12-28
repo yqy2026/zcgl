@@ -59,7 +59,7 @@ interface OperationLog {
   response_status: number
   response_time: number
   error_message: string | null
-  details: any
+  details: Record<string, unknown> | null
   created_at: string
 }
 
@@ -142,7 +142,7 @@ const OperationLogPage: React.FC = () => {
           ip_address: '192.168.1.100',
           user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
           request_method: 'POST',
-          request_url: '/api/v1/auth/login',
+          request_url: '/api/auth/login',
           response_status: 200,
           response_time: 120,
           error_message: null,
@@ -164,7 +164,7 @@ const OperationLogPage: React.FC = () => {
           ip_address: '192.168.1.101',
           user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
           request_method: 'POST',
-          request_url: '/api/v1/assets',
+          request_url: '/api/assets',
           response_status: 201,
           response_time: 250,
           error_message: null,
@@ -186,7 +186,7 @@ const OperationLogPage: React.FC = () => {
           ip_address: '192.168.1.102',
           user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
           request_method: 'GET',
-          request_url: '/api/v1/assets/asset456',
+          request_url: '/api/assets/asset456',
           response_status: 200,
           response_time: 80,
           error_message: null,
@@ -454,7 +454,7 @@ const OperationLogPage: React.FC = () => {
             <Col xs={24} sm={12} md={6}>
               <RangePicker
                 style={{ width: '100%' }}
-                onChange={(dates) => setDateRange(dates)}
+                onChange={(dates) => setDateRange(dates as any)}
                 placeholder={['开始日期', '结束日期']}
               />
             </Col>

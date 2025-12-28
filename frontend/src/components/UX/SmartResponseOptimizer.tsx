@@ -11,8 +11,8 @@ import {
   CompressOutlined,
   FullscreenOutlined,
   InfoCircleOutlined,
-  TrendingUpOutlined,
-  TrendingDownOutlined
+  RiseOutlined,
+  FallOutlined
 } from '@ant-design/icons'
 
 const { Text, Title } = Typography
@@ -49,14 +49,14 @@ interface ResponseOptimizationContextType {
   generateReport: () => {
     summary: {
       total: number
-      average: number
-      byType: Record<OptimizationType, number>
-      byLevel: Record<ResponseLevel, number>
+      average: any
+      byType: any
+      byLevel: any
     }
-    clearMetrics: () => void
-    toggleOptimization: (type: OptimizationType) => void
-    resetConfig: () => void
   }
+  clearMetrics: () => void
+  toggleOptimization: (type: OptimizationType) => void
+  resetConfig: () => void
 }
 
 const OptimizationContext = createContext<ResponseOptimizationContextType | null>(null)
@@ -104,11 +104,20 @@ const SmartResponseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // 优化响应
   const optimizeResponse = useCallback((newConfig: SmartResponseConfig) => {
     setConfig(prev => ({ ...prev, ...newConfig }))
+    message.info('响应优化配置已更新')
+  }, [])
 
-    message.info({
-      message: '响应优化配置已更新',
-      duration: 3000
-    })
+  // 获取响应类型
+  const getResponseType = useCallback((metric: PerformanceMetrics): OptimizationType => {
+    const totalTime = metric.responseTime + metric.renderTime + metric.networkTime
+
+    // 根据时间分配类型
+    if (metric.responseTime < 100) return 'loading'
+    if (metric.renderTime > metric.responseTime * 2) return 'rendering'
+    if (metric.compressionRatio > 0.8) return 'compression'
+    if (metric.cacheHit) return 'caching'
+    if (metric.networkTime > metric.responseTime * 0.5) return 'network'
+    return 'database'
   }, [])
 
   // 生成性能报告
@@ -158,20 +167,7 @@ const SmartResponseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         byLevel
       }
     }
-  }, [metrics])
-
-  // 获取响应类型
-  const getResponseType = useCallback((metric: PerformanceMetrics): OptimizationType => {
-    const totalTime = metric.responseTime + metric.renderTime + metric.networkTime
-
-    // 根据时间分配类型
-    if (metric.responseTime < 100) return 'loading'
-    if (metric.renderTime > metric.responseTime * 2) return 'rendering'
-    if (metric.compressionRatio > 0.8) return 'compression'
-    if (metric.cacheHit) return 'caching'
-    if (metric.networkTime > metric.responseTime * 0.5) return 'network'
-    return 'database'
-  }, [])
+  }, [metrics, getResponseType, getPerformanceLevel])
 
   // 清除指标
   const clearMetrics = useCallback(() => {
@@ -201,12 +197,8 @@ const SmartResponseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       ...prev,
       [type]: !prev[type]
     }))
-
-    message.info({
-      message: `${type}优化已${optimizationStates[type] ? '启用' : '禁用'}`,
-      duration: 2000
-    })
-  }, [])
+    message.info(`${type}优化已${optimizationStates[type] ? '启用' : '禁用'}`)
+  }, [optimizationStates])
 
   // 重置配置
   const resetConfig = useCallback(() => {
@@ -243,6 +235,17 @@ const SmartResponseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 // 响应优化仪表板组件
 const ResponseOptimizationDashboard: React.FC<{ config: SmartResponseConfig; metrics: PerformanceMetrics[] }> = ({ config, metrics }) => {
   const [showDetails, setShowDetails] = useState(false)
+  const { generateReport, optimizeResponse, resetConfig, getPerformanceLevel } = useSmartResponse()
+
+  // 获取响应类型（本地定义，因为不在context中）
+  const getResponseType = (metric: PerformanceMetrics): OptimizationType => {
+    if (metric.responseTime < 100) return 'loading'
+    if (metric.renderTime > metric.responseTime * 2) return 'rendering'
+    if (metric.compressionRatio > 0.8) return 'compression'
+    if (metric.cacheHit) return 'caching'
+    if (metric.networkTime > metric.responseTime * 0.5) return 'network'
+    return 'database'
+  }
 
   if (metrics.length === 0) {
     return (
@@ -255,7 +258,7 @@ const ResponseOptimizationDashboard: React.FC<{ config: SmartResponseConfig; met
   }
 
   const summary = generateReport()
-  const { byType, byLevel } = summary
+  const { byType, byLevel } = summary.summary
 
   return (
     <Card title="智能响应优化" style={{ margin: '24px' }}>
@@ -267,7 +270,7 @@ const ResponseOptimizationDashboard: React.FC<{ config: SmartResponseConfig; met
                 <Text>智能优化:</Text>
                 <Switch
                   checked={config.enableOptimization}
-                  onChange={(checked) => optimizeResponse({ enableOptimization: checked })}
+                  onChange={(checked) => optimizeResponse({ ...config, enableOptimization: checked } as SmartResponseConfig)}
                 />
               </div>
               <div>
@@ -368,7 +371,7 @@ const ResponseOptimizationDashboard: React.FC<{ config: SmartResponseConfig; met
                     </Text>
                   </div>
                   <div style={{ marginTop: '8px', fontSize: '18px', fontWeight: 'bold' }}>
-                    {count}
+                    {(count as number)}
                   </div>
                   <div style={{ marginTop: '4px', fontSize: '12px' }}>
                       {level === 'excellent' ? '优秀性能' :
@@ -402,7 +405,7 @@ const ResponseOptimizationDashboard: React.FC<{ config: SmartResponseConfig; met
                     </Text>
                   </div>
                   <div style={{ marginTop: '4px', fontSize: '20px' }}>
-                    {count}
+                    {(count as number)}
                   </div>
                 </Col>
               ))}

@@ -39,13 +39,13 @@ interface PieData {
 interface BarData {
   name: string
   value: number
-  [key: string]: any
+  [key: string]: unknown
 }
 
 // 折线图数据接口
 interface LineData {
   date: string
-  [key: string]: any
+  [key: string]: unknown
 }
 
 // 饼图组件
@@ -75,7 +75,14 @@ export const AnalyticsPieChart: React.FC<PieChartProps> = ({
     innerRadius,
     outerRadius,
     percent
-  }: any) => {
+  }: {
+    cx: number
+    cy: number
+    midAngle: number
+    innerRadius: number
+    outerRadius: number
+    percent: number
+  }) => {
     if (percent < 0.05) return null // 小于5%不显示标签
 
     const RADIAN = Math.PI / 180
@@ -172,7 +179,7 @@ export const AnalyticsBarChart: React.FC<BarChartProps> = ({
   className
 }) => {
   // 添加调试信息
-  // console.log(`=== AnalyticsBarChart 调试 [${title}] ===`, { data, xAxisKey, barKey });
+  // Debug information for chart rendering
 
   if (loading) {
     return (

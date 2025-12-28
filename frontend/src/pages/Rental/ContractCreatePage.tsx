@@ -24,7 +24,7 @@ import {
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 
-import RentContractForm from '../../components/Rental/RentContractForm';
+import { RentContractForm } from '../../components/Forms';
 import { RentContractCreate } from '../../types/rentContract';
 import { rentContractService } from '../../services/rentContractService';
 import { useFormat } from '../../utils/format';
@@ -42,7 +42,7 @@ const ContractCreatePage: React.FC = () => {
   const handleCreateContract = async (contractData: RentContractCreate) => {
     setLoading(true);
     try {
-      const response = await rentContractService.createContract(contractData);
+      const response = await rentContractService.createContract(contractData) as any;
 
       if (response.success) {
         setContractCreated(true);

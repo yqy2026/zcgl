@@ -5,7 +5,7 @@ import SuccessNotification from '@/components/Feedback/SuccessNotification'
 interface ErrorInfo {
   code?: string | number
   message: string
-  details?: any
+  details?: Record<string, unknown>
   timestamp?: string
 }
 
@@ -13,6 +13,12 @@ interface UseErrorHandlerOptions {
   showNotification?: boolean
   redirectOnError?: boolean
   logErrors?: boolean
+}
+
+interface ApiError {
+  response?: { status: number; data?: Record<string, unknown> }
+  request?: unknown
+  message?: string
 }
 
 export const useErrorHandler = (options: UseErrorHandlerOptions = {}) => {
@@ -25,7 +31,7 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}) => {
   const navigate = useNavigate()
 
   // 处理API错误
-  const handleApiError = useCallback((error: any) => {
+  const handleApiError = useCallback((error: ApiError) => {
     let errorInfo: ErrorInfo = {
       message: '未知错误',
       timestamp: new Date().toISOString(),
@@ -37,7 +43,7 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}) => {
       const { status, data } = error.response
       errorInfo = {
         code: status,
-        message: data?.message || data?.error || `HTTP ${status} 错误`,
+        message: (data?.message as string) || (data?.error as string) || `HTTP ${status} 错误`,
         details: data,
         timestamp: new Date().toISOString(),
       }
@@ -45,7 +51,7 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}) => {
       // 根据状态码处理
       switch (status) {
         case 400:
-          errorInfo.message = data?.message || '请求参数错误'
+          errorInfo.message = (data?.message as string) || '请求参数错误'
           break
         case 401:
           errorInfo.message = '登录已过期，请重新登录'
@@ -60,7 +66,7 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}) => {
           errorInfo.message = '请求的资源不存在'
           break
         case 422:
-          errorInfo.message = data?.message || '数据验证失败'
+          errorInfo.message = (data?.message as string) || '数据验证失败'
           break
         case 429:
           errorInfo.message = '请求过于频繁，请稍后重试'
@@ -78,14 +84,14 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}) => {
           errorInfo.message = '请求超时'
           break
         default:
-          errorInfo.message = data?.message || `服务器错误 (${status})`
+          errorInfo.message = (data?.message as string) || `服务器错误 (${status})`
       }
-    } else if (error?.request) {
+    } else if ((error as any)?.request) {
       // 网络错误
       errorInfo = {
         code: 'NETWORK_ERROR',
         message: '网络连接失败，请检查网络设置',
-        details: error.request,
+        details: error as any,
         timestamp: new Date().toISOString(),
       }
     } else if (error?.message) {
@@ -93,7 +99,7 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}) => {
       errorInfo = {
         code: 'CLIENT_ERROR',
         message: error.message,
-        details: error,
+        details: error as any,
         timestamp: new Date().toISOString(),
       }
     }
@@ -101,7 +107,7 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}) => {
     // 记录错误日志
     if (logErrors) {
       console.error('Error handled:', errorInfo)
-      
+
       // 发送错误报告到监控服务
       reportError(errorInfo)
     }
@@ -167,7 +173,7 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}) => {
   }, [showNotification, logErrors])
 
   // 处理文件上传错误
-  const handleUploadError = useCallback((error: any) => {
+  const handleUploadError = useCallback((error: { response?: { status: number }; message?: string }) => {
     let message = '文件上传失败'
 
     if (error?.response?.status === 413) {
@@ -190,7 +196,11 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}) => {
     }
 
     if (showNotification) {
-      SuccessNotification.error.upload()
+      SuccessNotification.notify({
+        type: 'error',
+        title: '上传失败',
+        description: message,
+      })
     }
 
     return errorInfo
@@ -202,14 +212,14 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}) => {
     maxRetries: number = 3,
     delay: number = 1000
   ): Promise<T> => {
-    let lastError: any
+    let lastError: unknown
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         return await operation()
       } catch (error) {
         lastError = error
-        
+
         if (attempt === maxRetries) {
           break
         }

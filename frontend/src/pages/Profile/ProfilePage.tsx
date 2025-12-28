@@ -41,23 +41,23 @@ const ProfilePage: React.FC = () => {
       message.success('个人资料更新成功')
       setEditModalVisible(false)
       await refreshUser() // 刷新用户信息
-    } catch (error: any) {
-      message.error(error.message || '更新失败，请稍后重试')
+    } catch (error: unknown) {
+      message.error((error as Error).message || '更新失败，请稍后重试')
     } finally {
       setLoading(false)
     }
   }
 
   // 处理密码修改
-  const handleChangePassword = async (values: any) => {
+  const handleChangePassword = async (values: { oldPassword: string; newPassword: string }) => {
     setLoading(true)
     try {
       await AuthService.changePassword(values.oldPassword, values.newPassword)
       message.success('密码修改成功')
       setPasswordModalVisible(false)
       passwordForm.resetFields()
-    } catch (error: any) {
-      message.error(error.message || '密码修改失败')
+    } catch (error: unknown) {
+      message.error((error as Error).message || '密码修改失败')
     } finally {
       setLoading(false)
     }

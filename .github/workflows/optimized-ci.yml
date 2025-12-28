@@ -45,7 +45,7 @@ jobs:
         python-version: ${{ env.PYTHON_VERSION }}
 
     - name: Cache Python dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/.cache/uv
         key: ${{ runner.os }}-uv-${{ hashFiles('backend/pyproject.toml') }}
@@ -67,7 +67,7 @@ jobs:
       run: |
         cd backend
         echo "🐍 Python语法检查..."
-        uv run python -m py_compile src/
+        find src/ -name "*.py" -exec uv run python -m py_compile {} \;
         echo "✅ Python语法检查通过"
 
     - name: Run Ruff linting
@@ -96,7 +96,7 @@ jobs:
         echo "✅ 安全检查完成"
 
     - name: Upload security report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: security-report
@@ -134,6 +134,18 @@ jobs:
         echo "🔎 TypeScript类型检查..."
         npm run type-check || echo "⚠️ TypeScript检查发现问题，继续执行"
 
+    - name: Run type coverage check
+      run: |
+        cd frontend
+        echo "📊 类型覆盖率检查..."
+        npm run type-coverage:check || (echo "❌ 类型覆盖率低于阈值" && exit 1)
+
+    - name: Run tsd type tests
+      run: |
+        cd frontend
+        echo "🧪 运行类型测试 (tsd)..."
+        npm run tsd
+
     - name: Run tests
       run: |
         cd frontend
@@ -141,11 +153,12 @@ jobs:
         npm test -- --coverage --watchAll=false || echo "⚠️ 测试失败，继续执行"
 
     - name: Upload test coverage
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: test-coverage
         path: frontend/coverage/
+        retention-days: 30
 
   # Integration Tests
   integration-tests:
@@ -262,10 +275,11 @@ jobs:
         echo "✅ 构建验证通过"
 
     - name: Archive build artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: frontend-build
         path: frontend/dist/
+        retention-days: 7
 
   # Summary Report
   summary:

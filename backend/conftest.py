@@ -1,0 +1,329 @@
+"""
+pytest全局配置文件
+提供所有测试共享的fixtures和配置
+"""
+
+import os
+import sys
+import tempfile
+from collections.abc import Generator
+from pathlib import Path
+from unittest.mock import AsyncMock
+
+import pytest
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
+
+# 添加backend根目录到Python路径
+backend_root = Path(__file__).parent
+sys.path.insert(0, str(backend_root))
+
+# 设置测试模式环境变量（在导入app之前）
+os.environ["TESTING_MODE"] = "true"
+
+# =============================================================================
+# 数据库Fixtures
+# =============================================================================
+
+
+@pytest.fixture(scope="session")
+def test_engine():
+    """创建测试数据库引擎（共享文件SQLite，确保所有连接访问同一数据库）"""
+    # 使用临时文件数据库，而不是:memory:，这样可以跨多个连接共享
+    import tempfile
+
+    from src.database import Base
+
+    # 导入所有模型以确保它们被注册到Base.metadata
+    db_file = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+    db_path = db_file.name
+    db_file.close()
+
+    # 更新环境变量，确保database.py使用相同的数据库
+    os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
+
+    engine = create_engine(
+        f"sqlite:///{db_path}", connect_args={"check_same_thread": False}, echo=False
+    )
+    # 创建所有表
+    Base.metadata.create_all(bind=engine)
+    yield engine
+    Base.metadata.drop_all(bind=engine)
+
+    # 清理临时文件
+    try:
+        os.unlink(db_path)
+    except:
+        pass
+
+
+@pytest.fixture(scope="function")
+def test_db(test_engine) -> Generator[Session, None, None]:
+    """创建测试数据库会话"""
+
+    TestingSessionLocal = sessionmaker(
+        autocommit=False, autoflush=False, bind=test_engine
+    )
+    db = TestingSessionLocal()
+    try:
+        yield db
+    finally:
+        db.rollback()
+        db.close()
+
+
+@pytest.fixture(scope="function")
+async def test_client(test_db, test_user):
+    """创建测试API客户端"""
+    from src.database import get_db
+    from src.main import app
+    from src.middleware.auth import get_current_active_user, get_current_user
+
+    def override_get_db():
+        try:
+            yield test_db
+        finally:
+            pass
+
+    async def override_get_auth():
+        """Mock认证依赖，直接返回测试用户"""
+        return test_user
+
+    # Override both dependencies in the chain
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = override_get_auth
+    app.dependency_overrides[get_current_active_user] = override_get_auth
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        yield client
+
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture(scope="function")
+async def test_client_no_auth(test_db):
+    """创建测试API客户端（无认证覆盖，用于测试未授权访问）"""
+    from src.database import get_db
+    from src.main import app
+
+    def override_get_db():
+        try:
+            yield test_db
+        finally:
+            pass
+
+    # Only override database, not authentication
+    app.dependency_overrides[get_db] = override_get_db
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        yield client
+
+    app.dependency_overrides.clear()
+
+
+# =============================================================================
+# 认证Fixtures
+# =============================================================================
+
+
+@pytest.fixture
+def test_user(test_db):
+    """创建测试用户"""
+    from src.models.auth import User
+    from src.services import AuthService
+
+    # Check if user already exists to avoid UNIQUE constraint errors
+    existing_user = test_db.query(User).filter(User.username == "testuser").first()
+    if existing_user:
+        return existing_user
+
+    # Create proper password hash with special character
+    auth_service = AuthService(test_db)
+    password_hash = auth_service.get_password_hash("Admin@123")
+
+    user = User(
+        username="testuser",
+        email="test@example.com",
+        full_name="Test User",
+        password_hash=password_hash,
+        is_active=True,
+        role="admin",  # 设为管理员以便测试有权限要求的端点
+    )
+    test_db.add(user)
+    test_db.flush()  # Use flush instead of commit so test_db rollback can clean up
+    test_db.refresh(user)
+    return user
+
+
+@pytest.fixture
+def test_admin(test_db):
+    """创建测试管理员"""
+    from src.models.auth import User
+    from src.services import AuthService
+
+    # Check if admin already exists to avoid UNIQUE constraint errors
+    existing_admin = test_db.query(User).filter(User.username == "admin").first()
+    if existing_admin:
+        return existing_admin
+
+    # Create proper password hash with special character
+    auth_service = AuthService(test_db)
+    password_hash = auth_service.get_password_hash("Admin@123")
+
+    admin = User(
+        username="admin",
+        email="admin@example.com",
+        full_name="Admin User",
+        password_hash=password_hash,
+        is_active=True,
+        role="admin",
+    )
+    test_db.add(admin)
+    test_db.flush()  # Use flush instead of commit
+    test_db.refresh(admin)
+    return admin
+
+
+@pytest.fixture
+def auth_headers(test_user):
+    """生成认证头"""
+    from datetime import datetime, timedelta
+
+    import jwt
+
+    from src.core.config import settings
+
+    now = datetime.utcnow()
+    token_data = {
+        "sub": str(test_user.id),  # sub should be user_id
+        "user_id": str(test_user.id),  # legacy field
+        "username": test_user.username,
+        "role": test_user.role or "user",
+        "exp": int((now + timedelta(hours=1)).timestamp()),
+        "iat": int(now.timestamp()),
+        "jti": str(test_user.id),  # JWT ID
+        "aud": "land-property-system",  # audience
+        "iss": "land-property-auth",  # issuer
+    }
+    # 使用应用的SECRET_KEY
+    token = jwt.encode(token_data, settings.SECRET_KEY, algorithm="HS256")
+    return {"Authorization": f"Bearer {token}"}
+
+
+# =============================================================================
+# 测试数据Fixtures
+# =============================================================================
+
+
+@pytest.fixture
+def sample_asset_data():
+    """示例资产数据"""
+    return {
+        "ownership_entity": "测试权属人",
+        "property_name": "测试物业",
+        "address": "测试地址123号",
+        "actual_property_area": 1000.0,
+        "rentable_area": 800.0,
+        "rented_area": 600.0,
+        "ownership_status": "已确权",  # OwnershipStatus.CONFIRMED
+        "property_nature": "经营性",  # PropertyNature.COMMERCIAL
+        "usage_status": "出租",  # UsageStatus.RENTED
+        "is_litigated": False,
+    }
+
+
+@pytest.fixture
+def sample_asset(test_db, sample_asset_data):
+    """创建示例资产"""
+    from src.models.asset import Asset
+
+    asset = Asset(**sample_asset_data)
+    test_db.add(asset)
+    test_db.flush()  # Use flush instead of commit
+    test_db.refresh(asset)
+    return asset
+
+
+# =============================================================================
+# 文件处理Fixtures
+# =============================================================================
+
+
+@pytest.fixture
+def temp_file():
+    """创建临时文件"""
+    with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".pdf") as f:
+        f.write("Mock PDF content")
+        temp_path = f.name
+
+    yield temp_path
+
+    # 清理
+    if os.path.exists(temp_path):
+        os.unlink(temp_path)
+
+
+@pytest.fixture
+def temp_upload_dir():
+    """创建临时上传目录"""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        yield tmpdir
+
+
+# =============================================================================
+# Mock Fixtures
+# =============================================================================
+
+
+@pytest.fixture
+def mock_redis():
+    """Mock Redis客户端"""
+    redis_mock = AsyncMock()
+    redis_mock.get = AsyncMock(return_value=None)
+    redis_mock.set = AsyncMock(return_value=True)
+    redis_mock.delete = AsyncMock(return_value=True)
+    redis_mock.exists = AsyncMock(return_value=False)
+    return redis_mock
+
+
+@pytest.fixture
+def mock_ocr_service():
+    """Mock OCR服务"""
+    ocr_mock = AsyncMock()
+    ocr_mock.extract_text = AsyncMock(return_value="提取的文本内容")
+    ocr_mock.extract_structure = AsyncMock(return_value={})
+    return ocr_mock
+
+
+# =============================================================================
+# 性能测试Fixtures
+# =============================================================================
+
+
+@pytest.fixture
+def benchmark_logger():
+    """性能基准测试日志记录器"""
+    results = []
+
+    def log_result(test_name: str, duration: float, metadata: dict = None):
+        results.append(
+            {
+                "test_name": test_name,
+                "duration": duration,
+                "metadata": metadata or {},
+            }
+        )
+
+    yield log_result
+
+    # 输出性能报告
+    if results:
+        print("\n" + "=" * 60)
+        print("性能测试报告")
+        print("=" * 60)
+        for result in results:
+            print(f"{result['test_name']}: {result['duration']:.4f}s")
+        print("=" * 60)

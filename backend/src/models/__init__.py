@@ -30,6 +30,7 @@ from .rbac import (
     UserRoleAssignment,
 )
 from .rent_contract import RentContract, RentContractHistory, RentLedger, RentTerm
+from .task import AsyncTask, ExcelTaskConfig, TaskHistory
 
 __all__ = [
     "Asset",
@@ -65,4 +66,8 @@ __all__ = [
     "DynamicPermissionAudit",
     "PermissionRequest",
     "PermissionDelegation",
+    # Task models
+    "AsyncTask",
+    "ExcelTaskConfig",
+    "TaskHistory",
 ]

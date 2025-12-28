@@ -1,0 +1,8 @@
+{
+  "success": true,
+  "samples": 20,
+  "avg_latency_ms": 41.96,
+  "p95_latency_ms": 79.72,
+  "pages_per_second": 96.26,
+  "concurrency_used": 4
+}

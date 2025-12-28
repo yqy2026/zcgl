@@ -24,7 +24,6 @@ import {
   CopyOutlined,
   EditOutlined
 } from '@ant-design/icons';
-import { validateFilenameAPI } from '../../services/pdfImportService';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -81,10 +80,10 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
     '）': ')',
     '《': '<',
     '》': '>',
-    '"': '"',
-    '"': '"',
-    "'": "'",
-    "'": "'",
+    '\u201C': '"',  // Left double quotation mark
+    '\u201D': '"',  // Right double quotation mark
+    '\u2018': "'",  // Left single quotation mark
+    '\u2019': "'",  // Right single quotation mark
     '：': ':',
     '，': ',',
     '。': '.',
@@ -151,7 +150,7 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
 
     // 步骤5: 移除开头和结尾的特殊字符
     const beforeTrim = tempFixed;
-    tempFixed = tempFixed.trim('._-');
+    tempFixed = tempFixed.replace(/^[._-]+|[._-]+$/g, '');
     if (beforeTrim !== tempFixed) {
       changes.push({
         original: beforeTrim + (beforeTrim !== tempFixed ? '...' : ''),
@@ -389,7 +388,7 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
           确认使用
         </Button>
       ]}
-      destroyOnClose
+      destroyOnHidden
     >
       <Spin spinning={loading}>
         <Space direction="vertical" size="large" style={{ width: '100%' }}>

@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 Excel导入导出API路由 - 增强版，支持任务管理和状态跟踪
 """
@@ -8,7 +10,6 @@ import logging
 import os
 import tempfile
 from datetime import UTC, datetime
-from typing import Any
 
 # 第三方库导入
 import pandas as pd
@@ -26,7 +27,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from ...config.excel_config import STANDARD_SHEET_NAME
-from ...core.exception_handler import ValidationException
+from ...core.exception_handler import BusinessValidationError
 from ...core.logging_security import security_auditor
 from ...core.security import security_middleware
 from ...crud.asset import asset_crud
@@ -35,6 +36,8 @@ from ...crud.task import task_crud
 # 本地导入
 from ...database import get_db
 from ...enums.task import TaskStatus, TaskType
+from ...middleware.auth import get_current_active_user
+from ...models.auth import User
 from ...schemas.excel_advanced import (
     ExcelConfigCreate,
     ExcelExportRequest,
@@ -52,7 +55,9 @@ router = APIRouter(prefix="/excel", tags=["Excel导入导出"])
 
 
 @router.get("/template", summary="下载Excel导入模板")
-async def download_template():
+async def download_template(
+    current_user: User = Depends(get_current_active_user),
+):
     """
     下载Excel导入模板文件 - 已优化与新增资产表单字段保持一致
     """
@@ -124,7 +129,9 @@ async def test_endpoint():
 
 @router.post("/configs", summary="创建Excel配置")
 async def create_excel_config(
-    config_in: ExcelConfigCreate, db: Session = Depends(get_db)
+    config_in: ExcelConfigCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     创建Excel导入导出配置
@@ -149,6 +156,7 @@ async def get_excel_configs(
     config_type: str | None = Query(None, description="配置类型"),
     task_type: str | None = Query(None, description="任务类型"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     获取Excel配置列表
@@ -372,7 +380,7 @@ async def preview_excel_advanced(
             detected_field_mapping=detected_mapping,
         )
 
-    except ValidationException as e:
+    except BusinessValidationError as e:
         logger.error(f"Excel preview validation failed: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -384,6 +392,7 @@ async def preview_excel_advanced(
 async def preview_excel(
     file: UploadFile = File(...),
     max_rows: int = Query(10, ge=1, le=100, description="预览行数"),
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     预览Excel文件内容，用于导入前确认
@@ -401,7 +410,7 @@ async def preview_excel(
 
         # 验证文件类型（额外检查）
         if not file.filename or not file.filename.endswith((".xlsx", ".xls")):
-            raise ValidationException("文件格式不支持，请上传Excel文件(.xlsx/.xls)")
+            raise BusinessValidationError("文件格式不支持，请上传Excel文件(.xlsx/.xls)")
 
         # 读取文件内容
         content = await file.read()
@@ -443,7 +452,7 @@ async def preview_excel(
             "data": preview_data,
         }
 
-    except ValidationException as e:
+    except BusinessValidationError as e:
         logger.error(f"Excel preview validation failed: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -457,6 +466,7 @@ async def import_excel(
     skip_errors: bool = Query(False, description="是否跳过错误行"),
     sheet_name: str = Query(STANDARD_SHEET_NAME, description="Excel工作表名称"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     从Excel文件导入资产数据（同步版本）
@@ -478,7 +488,7 @@ async def import_excel(
 
         # 验证文件类型（额外检查）
         if not file.filename or not file.filename.endswith((".xlsx", ".xls")):
-            raise ValidationException("文件格式不支持，请上传Excel文件(.xlsx/.xls)")
+            raise BusinessValidationError("文件格式不支持，请上传Excel文件(.xlsx/.xls)")
 
         # 记录导入操作开始
         security_auditor.log_security_event(
@@ -524,7 +534,7 @@ async def import_excel(
             if os.path.exists(tmp_file_path):
                 os.unlink(tmp_file_path)
 
-    except ValidationException as e:
+    except BusinessValidationError as e:
         logger.error(f"Excel import validation failed: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
@@ -544,6 +554,7 @@ async def import_excel_async(
     file: UploadFile = File(...),
     request: ExcelImportRequest = Body(...),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     异步导入Excel文件，返回任务ID用于跟踪进度
@@ -564,7 +575,7 @@ async def import_excel_async(
 
         # 验证文件类型（额外检查）
         if not file.filename or not file.filename.endswith((".xlsx", ".xls")):
-            raise ValidationException("文件格式不支持，请上传Excel文件(.xlsx/.xls)")
+            raise BusinessValidationError("文件格式不支持，请上传Excel文件(.xlsx/.xls)")
 
         # 记录异步导入操作开始
         security_auditor.log_security_event(
@@ -573,7 +584,7 @@ async def import_excel_async(
             details={
                 "filename": file.filename,
                 "size": file.size,
-                "request_config": request.dict(),
+                "request_config": request.model_dump(),
                 "validation_hash": validation_result.get("hash"),
             },
         )
@@ -703,6 +714,7 @@ async def export_excel(
     property_nature: str | None = Query(None, description="物业性质筛选"),
     usage_status: str | None = Query(None, description="使用状态筛选"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     导出资产数据为Excel文件
@@ -804,6 +816,7 @@ async def export_excel_async(
     background_tasks: BackgroundTasks,
     request: ExcelExportRequest = Body(...),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     异步导出Excel文件，返回任务ID用于跟踪进度
@@ -1116,6 +1129,7 @@ async def export_selected_assets(
     property_nature: str | None = Query(None, description="物业性质筛选"),
     usage_status: str | None = Query(None, description="使用状态筛选"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     导出选中资产数据为Excel文件

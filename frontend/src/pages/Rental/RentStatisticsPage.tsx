@@ -44,16 +44,16 @@ import 'moment/locale/zh-cn';
 import type { ColumnsType } from 'antd/es/table';
 
 import {
-  rentContractService,
-  OwnershipRentStatistics,
-  AssetRentStatistics,
-  MonthlyRentStatistics
+  rentContractService
 } from '@/services/rentContractService';
+
+type OwnershipRentStatistics = any;
+type AssetRentStatistics = any;
+type MonthlyRentStatistics = any;
 import { formatCurrency } from '@/utils/format';
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
-const { TabPane } = Tabs;
 const { Title } = Typography;
 
 moment.locale('zh-cn');
@@ -308,6 +308,122 @@ const RentStatisticsPage: React.FC = () => {
     rate: Number(item.payment_rate)
   }));
 
+  // 标签页配置
+  const tabItems = [
+    {
+      key: 'ownership',
+      label: '权属方统计',
+      children: (
+        <Row gutter={[16, 16]}>
+          <Col xs={24} lg={12}>
+            <Card title="权属方租金分布" loading={loading}>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={ownershipChartData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {ownershipChartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip formatter={(value) => formatCurrency(Number(value))} />
+                </PieChart>
+              </ResponsiveContainer>
+            </Card>
+          </Col>
+          <Col xs={24} lg={12}>
+            <Card title="权属方收缴情况" loading={loading}>
+              <Table
+                columns={ownershipColumns}
+                dataSource={ownershipStats}
+                rowKey="ownership_id"
+                pagination={false}
+                loading={loading}
+                scroll={{ x: 800 }}
+              />
+            </Card>
+          </Col>
+        </Row>
+      )
+    },
+    {
+      key: 'asset',
+      label: '资产统计',
+      children: (
+        <Row gutter={[16, 16]}>
+          <Col xs={24}>
+            <Card title="资产租金统计" loading={loading}>
+              <Table
+                columns={assetColumns}
+                dataSource={assetStats}
+                rowKey="asset_id"
+                pagination={{
+                  pageSize: 10,
+                  showSizeChanger: true,
+                  showQuickJumper: true
+                }}
+                loading={loading}
+                scroll={{ x: 1000 }}
+              />
+            </Card>
+          </Col>
+        </Row>
+      )
+    },
+    {
+      key: 'monthly',
+      label: '月度趋势',
+      children: (
+        <Row gutter={[16, 16]}>
+          <Col xs={24} lg={16}>
+            <Card title="月度租金趋势" loading={loading}>
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart data={monthlyChartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <RechartsTooltip formatter={(value) => formatCurrency(Number(value))} />
+                  <Legend />
+                  <Bar dataKey="due" name="应收金额" fill="#1890ff" />
+                  <Bar dataKey="paid" name="已收金额" fill="#52c41a" />
+                  <Bar dataKey="overdue" name="欠款金额" fill="#f5222d" />
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
+          </Col>
+          <Col xs={24} lg={8}>
+            <Card title="收缴率趋势" loading={loading}>
+              <ResponsiveContainer width="100%" height={400}>
+                <LineChart data={monthlyChartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis domain={[0, 100]} />
+                  <RechartsTooltip formatter={(value) => `${value}%`} />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="rate"
+                    name="收缴率"
+                    stroke="#52c41a"
+                    strokeWidth={2}
+                    dot={{ fill: '#52c41a' }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </Card>
+          </Col>
+        </Row>
+      )
+    }
+  ];
+
   return (
     <div style={{ padding: '24px', background: '#f0f2f5', minHeight: '100vh' }}>
       <Card>
@@ -321,7 +437,7 @@ const RentStatisticsPage: React.FC = () => {
             <Col>
               <Space>
                 <RangePicker
-                  value={dateRange}
+                  value={dateRange as any}
                   onChange={(dates) => setDateRange(dates as [moment.Moment, moment.Moment])}
                   style={{ width: 300 }}
                 />
@@ -407,110 +523,7 @@ const RentStatisticsPage: React.FC = () => {
           </Row>
         )}
 
-        <Tabs defaultActiveKey="ownership" type="card">
-          <TabPane tab="权属方统计" key="ownership">
-            <Row gutter={[16, 16]}>
-              <Col xs={24} lg={12}>
-                <Card title="权属方租金分布" loading={loading}>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={ownershipChartData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {ownershipChartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <RechartsTooltip formatter={(value) => formatCurrency(Number(value))} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </Card>
-              </Col>
-              <Col xs={24} lg={12}>
-                <Card title="权属方收缴情况" loading={loading}>
-                  <Table
-                    columns={ownershipColumns}
-                    dataSource={ownershipStats}
-                    rowKey="ownership_id"
-                    pagination={false}
-                    loading={loading}
-                    scroll={{ x: 800 }}
-                  />
-                </Card>
-              </Col>
-            </Row>
-          </TabPane>
-
-          <TabPane tab="资产统计" key="asset">
-            <Row gutter={[16, 16]}>
-              <Col xs={24}>
-                <Card title="资产租金统计" loading={loading}>
-                  <Table
-                    columns={assetColumns}
-                    dataSource={assetStats}
-                    rowKey="asset_id"
-                    pagination={{
-                      pageSize: 10,
-                      showSizeChanger: true,
-                      showQuickJumper: true
-                    }}
-                    loading={loading}
-                    scroll={{ x: 1000 }}
-                  />
-                </Card>
-              </Col>
-            </Row>
-          </TabPane>
-
-          <TabPane tab="月度趋势" key="monthly">
-            <Row gutter={[16, 16]}>
-              <Col xs={24} lg={16}>
-                <Card title="月度租金趋势" loading={loading}>
-                  <ResponsiveContainer width="100%" height={400}>
-                    <BarChart data={monthlyChartData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="month" />
-                      <YAxis />
-                      <RechartsTooltip formatter={(value) => formatCurrency(Number(value))} />
-                      <Legend />
-                      <Bar dataKey="due" name="应收金额" fill="#1890ff" />
-                      <Bar dataKey="paid" name="已收金额" fill="#52c41a" />
-                      <Bar dataKey="overdue" name="欠款金额" fill="#f5222d" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </Card>
-              </Col>
-              <Col xs={24} lg={8}>
-                <Card title="收缴率趋势" loading={loading}>
-                  <ResponsiveContainer width="100%" height={400}>
-                    <LineChart data={monthlyChartData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="month" />
-                      <YAxis domain={[0, 100]} />
-                      <RechartsTooltip formatter={(value) => `${value}%`} />
-                      <Legend />
-                      <Line
-                        type="monotone"
-                        dataKey="rate"
-                        name="收缴率"
-                        stroke="#52c41a"
-                        strokeWidth={2}
-                        dot={{ fill: '#52c41a' }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </Card>
-              </Col>
-            </Row>
-          </TabPane>
-        </Tabs>
+        <Tabs defaultActiveKey="ownership" type="card" items={tabItems} />
       </Card>
     </div>
   );

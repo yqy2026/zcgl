@@ -4,6 +4,13 @@
 
 import { lazy, ComponentType } from 'react'
 
+// 内存信息接口
+export interface MemoryInfo {
+  usedJSHeapSize: number
+  totalJSHeapSize: number
+  jsHeapSizeLimit: number
+}
+
 // 性能监控配置
 export interface PerformanceConfig {
   enableMetrics: boolean
@@ -32,7 +39,7 @@ export const defaultPerformanceConfig: PerformanceConfig = {
 }
 
 // 懒加载组件工厂
-export function createLazyComponent<T extends ComponentType<any>>(
+export function createLazyComponent<T extends ComponentType<Record<string, unknown>>>(
   importFn: () => Promise<{ default: T }>,
   chunkName?: string
 ) {
@@ -59,7 +66,7 @@ export function createLazyComponent<T extends ComponentType<any>>(
 // 预加载管理器
 class PreloadManager {
   private preloadedModules = new Set<string>()
-  private preloadPromises = new Map<string, Promise<any>>()
+  private preloadPromises = new Map<string, Promise<unknown>>()
 
   preload<T>(
     importFn: () => Promise<T>,
@@ -67,7 +74,7 @@ class PreloadManager {
     priority: 'high' | 'low' = 'low'
   ): Promise<T> {
     if (this.preloadPromises.has(key)) {
-      return this.preloadPromises.get(key)!
+      return this.preloadPromises.get(key)! as Promise<T>
     }
 
     const promise = this.schedulePreload(importFn, priority)
@@ -174,7 +181,8 @@ class PerformanceMonitor {
 
     // First Input Delay
     this.observeMetric('first-input', (entry) => {
-      const fid = (entry as any).processingStart - entry.startTime
+      const entryRecord = entry as unknown as Record<string, unknown>
+      const fid = (entryRecord.processingStart as number) - entry.startTime
       this.metrics.set('fid', fid)
 
       if (fid > this.config.thresholds.fid) {
@@ -184,9 +192,10 @@ class PerformanceMonitor {
 
     // Cumulative Layout Shift
     this.observeMetric('layout-shift', (entry) => {
-      if (!(entry as any).hadRecentInput) {
+      const entryRecord = entry as unknown as Record<string, unknown>
+      if (!entryRecord.hadRecentInput) {
         const currentCLS = this.metrics.get('cls') || 0
-        const newCLS = currentCLS + (entry as any).value
+        const newCLS = currentCLS + (entryRecord.value as number)
         this.metrics.set('cls', newCLS)
 
         if (newCLS > this.config.thresholds.cls) {
@@ -198,7 +207,8 @@ class PerformanceMonitor {
 
   private observeResourceTiming() {
     this.observeMetric('resource', (entry) => {
-      const duration = (entry as any).responseEnd - entry.startTime
+      const entryRecord = entry as unknown as Record<string, unknown>
+      const duration = (entryRecord.responseEnd as number) - entry.startTime
 
       // 记录慢资源
       if (duration > 1000) { // 超过1秒
@@ -283,11 +293,11 @@ class PerformanceMonitor {
     metrics: Record<string, number>
     navigation: PerformanceNavigationTiming | null
     resources: PerformanceResourceTiming[]
-    memory?: any
+    memory?: MemoryInfo
   } {
     const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming
     const resources = performance.getEntriesByType('resource') as PerformanceResourceTiming[]
-    const memory = (performance as any).memory
+    const memory = (performance as { memory?: MemoryInfo }).memory
 
     return {
       metrics: this.getMetrics(),
@@ -405,8 +415,8 @@ export class MemoryManager {
     this.cleanupTasks = []
   }
 
-  getMemoryUsage(): any {
-    const memory = (performance as any).memory
+  getMemoryUsage(): { used: number; total: number; limit: number; usagePercentage: number } | null {
+    const memory = (performance as { memory?: MemoryInfo }).memory
     if (memory) {
       return {
         used: memory.usedJSHeapSize,

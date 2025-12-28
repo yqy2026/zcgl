@@ -2,7 +2,22 @@
 
 import { message, notification } from 'antd'
 import type { ErrorResponse } from '@/types/api'
-import { HTTP_STATUS, ERROR_CODES } from './config'
+import { HTTP_STATUS, ERROR_CODES } from '../api/config'
+
+// 日志数据接口
+export interface LogData {
+  timestamp: string
+  level: 'error' | 'warning' | 'info'
+  message: string
+  error?: {
+    message?: string
+    stack?: string
+    name?: string
+  }
+  context?: Record<string, unknown>
+  userAgent?: string
+  url?: string
+}
 
 export interface ErrorHandlerOptions {
   showMessage?: boolean
@@ -178,32 +193,36 @@ export class ApiErrorHandler {
     console.error('Server Error:', error)
     
     // 如果是开发环境，显示详细错误信息
-    if (import.meta.env.DEV && error.details) {
+    if (process.env.NODE_ENV === 'development' && error.details) {
       console.error('Error Details:', error.details)
     }
   }
   
   // 记录错误日志
   private logError(error: ErrorResponse): void {
-    const logData = {
+    const logData: LogData = {
       timestamp: new Date().toISOString(),
-      error: error.error,
+      level: 'error',
       message: error.message,
-      details: error.details,
+      error: {
+        message: error.error,
+        name: error.error,
+      },
+      context: error.details ? { details: error.details } : undefined,
       url: window.location.href,
       userAgent: navigator.userAgent,
     }
-    
+
     console.error('API Error:', logData)
-    
+
     // 在生产环境中，可以将错误发送到日志服务
-    if (import.meta.env.PROD) {
+    if (process.env.NODE_ENV === 'production') {
       this.sendErrorToLogService(logData)
     }
   }
   
   // 发送错误到日志服务
-  private sendErrorToLogService(_logData: any): void {
+  private sendErrorToLogService(_logData: LogData): void {
     // 这里可以集成第三方日志服务，如 Sentry、LogRocket 等
     // 示例：
     // Sentry.captureException(new Error(logData.message), {
@@ -213,53 +232,55 @@ export class ApiErrorHandler {
   
   // 创建用户友好的错误消息
   static createUserFriendlyError(
-    originalError: any,
+    originalError: unknown,
     context?: string
   ): ErrorResponse {
     let message = '操作失败，请稍后重试'
-    let error = ERROR_CODES.SERVER_ERROR
-    
-    if (originalError.response) {
-      const status = originalError.response.status
+    let error: string = ERROR_CODES.SERVER_ERROR
+
+    const err = originalError as any
+
+    if (err.response) {
+      const status = err.response.status
       switch (status) {
         case HTTP_STATUS.BAD_REQUEST:
           message = '请求参数错误'
-          error = ERROR_CODES.VALIDATION_ERROR
+          error = ERROR_CODES.VALIDATION_ERROR as any
           break
         case HTTP_STATUS.UNAUTHORIZED:
           message = '未授权访问，请重新登录'
-          error = ERROR_CODES.PERMISSION_ERROR
+          error = ERROR_CODES.PERMISSION_ERROR as any
           break
         case HTTP_STATUS.FORBIDDEN:
           message = '权限不足，无法执行此操作'
-          error = ERROR_CODES.PERMISSION_ERROR
+          error = ERROR_CODES.PERMISSION_ERROR as any
           break
         case HTTP_STATUS.NOT_FOUND:
           message = context ? `${context}不存在` : '请求的资源不存在'
-          error = ERROR_CODES.NOT_FOUND_ERROR
+          error = ERROR_CODES.NOT_FOUND_ERROR as any
           break
         case HTTP_STATUS.UNPROCESSABLE_ENTITY:
           message = '数据验证失败'
-          error = ERROR_CODES.VALIDATION_ERROR
+          error = ERROR_CODES.VALIDATION_ERROR as any
           break
         case HTTP_STATUS.INTERNAL_SERVER_ERROR:
           message = '服务器内部错误'
           error = ERROR_CODES.SERVER_ERROR
           break
       }
-    } else if (originalError.code === 'NETWORK_ERROR') {
+    } else if (err.code === 'NETWORK_ERROR') {
       message = '网络连接失败，请检查网络设置'
-      error = ERROR_CODES.NETWORK_ERROR
-    } else if (originalError.code === 'ECONNABORTED') {
+      error = ERROR_CODES.NETWORK_ERROR as any
+    } else if (err.code === 'ECONNABORTED') {
       message = '请求超时，请稍后重试'
-      error = ERROR_CODES.TIMEOUT_ERROR
+      error = ERROR_CODES.TIMEOUT_ERROR as any
     }
-    
+
     return {
       error,
       message,
       timestamp: new Date().toISOString(),
-      details: originalError.response?.data?.details,
+      details: err.response?.data?.details,
     }
   }
 }
@@ -269,10 +290,75 @@ export const errorHandler = ApiErrorHandler.getInstance()
 
 // 导出便捷方法
 export const handleApiError = (
-  error: any,
+  error: unknown,
   options?: ErrorHandlerOptions,
   context?: string
 ) => {
   const errorResponse = ApiErrorHandler.createUserFriendlyError(error, context)
   errorHandler.handle(errorResponse, options)
+}
+
+// ============================================================
+// 增强工具函数 (从 utils/errorHandler.ts 合并)
+// ============================================================
+
+/**
+ * 异步操作包装器
+ * 自动处理错误并返回标准化结果
+ */
+export async function withErrorHandling<T>(
+  operation: () => Promise<T>,
+  options: ErrorHandlerOptions & {
+    errorMessage?: string
+    successMessage?: string
+  } = {}
+): Promise<{ success: boolean; data?: T; error?: ErrorResponse }> {
+  try {
+    const data = await operation()
+
+    // 显示成功消息（如果配置）
+    if (options.successMessage) {
+      message.success({
+        content: options.successMessage,
+        duration: 2
+      })
+    }
+
+    return { success: true, data }
+  } catch (error: unknown) {
+    const errorResponse = ApiErrorHandler.createUserFriendlyError(error, options.errorMessage)
+
+    // 记录错误日志
+    if (options.logError !== false) {
+      (errorHandler as any).logError(errorResponse)
+    }
+
+    // 显示错误消息
+    if (options.showMessage !== false) {
+      message.error(errorResponse.message || '操作失败')
+    }
+
+    return { success: false, error: errorResponse }
+  }
+}
+
+/**
+ * 创建上下文错误处理器
+ * 为特定上下文创建带上下文信息的错误处理器
+ */
+export function createErrorHandler(
+  context: string,
+  baseOptions: ErrorHandlerOptions = {}
+) {
+  return (error: unknown, options?: ErrorHandlerOptions) => {
+    const errorResponse = ApiErrorHandler.createUserFriendlyError(error, `${context}操作失败`)
+
+    errorHandler.handle(errorResponse, {
+      ...baseOptions,
+      ...options,
+      logError: baseOptions.logError !== false && options?.logError !== false
+    })
+
+    return errorResponse
+  }
 }

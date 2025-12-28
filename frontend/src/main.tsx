@@ -7,18 +7,23 @@ import dayjs from 'dayjs'
 import 'dayjs/locale/zh-cn'
 
 import App from './App.tsx'
-import './index.css'
+import './styles/index.css'
 
 // 配置dayjs中文
 dayjs.locale('zh-cn')
 
-// 创建React Query客户端
+// 创建React Query客户端 - 优化配置
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
-      staleTime: 5 * 60 * 1000, // 5分钟
+      refetchOnMount: false,          // 避免重复请求
+      staleTime: 5 * 60 * 1000,       // 5分钟缓存
+      gcTime: 10 * 60 * 1000,         // 10分钟缓存时间 (v5语法)
+    },
+    mutations: {
+      retry: 1,
     },
   },
 })

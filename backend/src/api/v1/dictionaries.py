@@ -1,9 +1,11 @@
+from typing import Any
+
 """
 统一的字典管理API
 整合系统字典和枚举字段功能，提供简化的使用接口
 """
 
-from typing import Any
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel
@@ -14,6 +16,9 @@ from ...database import get_db
 from ...models.asset import SystemDictionary
 from ...models.enum_field import EnumFieldType
 from ...schemas.enum_field import EnumFieldTypeCreate, EnumFieldValueCreate
+
+# 创建logger
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/dictionaries", tags=["统一字典管理"])
 
@@ -281,21 +286,34 @@ async def quick_create_dictionary(
 async def get_dictionary_types(db: Session = Depends(get_db)):
     """获取所有字典类型列表"""
     try:
+        # 调试日志
+        logger.debug("get_dictionary_types called")
+        logger.debug(f"Database session: {db}")
+
         # 从枚举字段获取
         enum_types = (
             db.query(EnumFieldType.code).filter(not EnumFieldType.is_deleted).all()
         )
+        logger.debug(f"Enum types query result: {enum_types}")
+        logger.debug(f"Enum types count: {len(enum_types)}")
 
         # 从系统字典获取（向后兼容）
         system_types = db.query(SystemDictionary.dict_type).distinct().all()
+        logger.debug(f"System types query result: {system_types}")
+        print(f"[DEBUG] System types count: {len(system_types)}")
 
         all_types = set()
         all_types.update([t[0] for t in enum_types if t[0]])
         all_types.update([t[0] for t in system_types if t[0]])
 
-        return sorted(list(all_types))
+        result = sorted(list(all_types))
+        print(f"[DEBUG] Final result: {result}")
+        print(f"[DEBUG] Final result count: {len(result)}")
+
+        return result
 
     except Exception as e:
+        print(f"[ERROR] Exception in get_dictionary_types: {e}")
         raise HTTPException(status_code=500, detail=f"获取字典类型失败: {str(e)}")
 
 

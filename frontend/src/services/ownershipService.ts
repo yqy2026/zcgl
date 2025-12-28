@@ -15,7 +15,7 @@ import type {
 } from '@/types/ownership';
 
 export class OwnershipService {
-  private baseUrl = `/ownerships`;
+  private baseUrl = 'v1/ownerships';
 
   /**
    * 获取权属方列表

@@ -10,7 +10,7 @@ import {
 } from '@ant-design/icons'
 
 import type { Asset } from '@/types/asset'
-import { formatArea, formatDate, getStatusColor, calculateOccupancyRate } from '@/utils/format'
+import { formatDate, getStatusColor, calculateOccupancyRate } from '@/utils/format'
 
 interface AssetDetailInfoProps {
   asset: Asset
@@ -44,8 +44,10 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
         <Descriptions
           bordered
           column={{ xs: 1, sm: 2, md: 3 }}
-          labelStyle={{ width: '120px', fontWeight: 'bold' }}
-          contentStyle={{ minWidth: '200px' }}
+          styles={{
+            label: { width: '120px', fontWeight: 'bold' },
+            content: { minWidth: '200px' }
+          }}
         >
           <Descriptions.Item 
             label={
@@ -262,7 +264,9 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
         <Descriptions
           bordered
           column={{ xs: 1, sm: 2 }}
-          labelStyle={{ width: '120px' }}
+          styles={{
+            label: { width: '120px' }
+          }}
         >
           <Descriptions.Item label="接收模式">
             {asset.business_model || '-'}
@@ -286,7 +290,9 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
           <Descriptions
             bordered
             column={{ xs: 1, sm: 2 }}
-            labelStyle={{ width: '150px' }}
+            styles={{
+              label: { width: '150px' }
+            }}
           >
             <Descriptions.Item label="(当前)接收协议开始日期">
               {asset.operation_agreement_start_date ? formatDate(asset.operation_agreement_start_date) : '-'}
@@ -320,7 +326,9 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
           <Descriptions
             bordered
             column={{ xs: 1, sm: 2 }}
-            labelStyle={{ width: '150px' }}
+            styles={{
+              label: { width: '150px' }
+            }}
           >
             <Descriptions.Item label="租户名称">
               {asset.tenant_name || '-'}

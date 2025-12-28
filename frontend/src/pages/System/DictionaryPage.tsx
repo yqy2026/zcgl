@@ -4,9 +4,10 @@ import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 import { SearchOutlined } from '@ant-design/icons'
 import { unifiedDictionaryService } from '../../services/dictionary'
-import type { EnumFieldType, EnumFieldValue, SystemDictionary } from '../../services/dictionary'
+import type { EnumFieldType, EnumFieldValue } from '../../services/dictionary'
+import type { SystemDictionary } from '@/types/dictionary'
 import EnumValuePreview from '../../components/Dictionary/EnumValuePreview'
-import { handleError, withErrorHandling, createErrorHandler } from '../../utils/errorHandler'
+import { handleApiError as handleError, withErrorHandling, createErrorHandler } from '../../services'
 
 const { Option } = Select
 const { Search } = Input
@@ -32,9 +33,8 @@ const DictionaryPage: React.FC = () => {
 
   // 创建上下文相关的错误处理器
   const handleDictionaryError = createErrorHandler('字典管理', {
-    showDetails: false,
     duration: 3
-  })
+  } as any)
 
   // 新增状态
   const [searchText, setSearchText] = useState('')
@@ -66,11 +66,12 @@ const DictionaryPage: React.FC = () => {
     setLoading(true)
     try {
       const data = await unifiedDictionaryService.getEnumFieldData()
-      console.log('获取到的枚举数据:', data)
+      // Got enum data
       setAllEnumData(data)
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('获取枚举数据失败:', e)
-      message.error(e?.message || '获取枚举数据失败')
+      const errorMessage = e instanceof Error ? e.message : '获取枚举数据失败'
+      message.error(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -88,9 +89,10 @@ const DictionaryPage: React.FC = () => {
       // 使用新的方法通过类型代码获取枚举值
       const list = await unifiedDictionaryService.getEnumFieldValuesByTypeCode(type)
       setData(list)
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('获取枚举值失败:', e)
-      message.error(e?.message || '获取枚举值失败')
+      const errorMessage = e instanceof Error ? e.message : '获取枚举值失败'
+      message.error(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -170,8 +172,9 @@ const DictionaryPage: React.FC = () => {
       } else {
         message.error('删除失败')
       }
-    } catch (e: any) {
-      message.error(e?.message || '删除失败')
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : '删除失败'
+      message.error(errorMessage)
     }
   }
 
@@ -233,9 +236,11 @@ const DictionaryPage: React.FC = () => {
       if (detailModalVisible) {
         fetchList(activeType)
       }
-    } catch (e: any) {
-      if (e?.errorFields) return
-      message.error(e?.message || '保存失败')
+    } catch (e: unknown) {
+      const err = e as any
+      if (err?.errorFields) return
+      const errorMessage = e instanceof Error ? e.message : '保存失败'
+      message.error(errorMessage)
     }
   }
 
@@ -253,8 +258,9 @@ const DictionaryPage: React.FC = () => {
       } else {
         message.error('更新失败')
       }
-    } catch (e: any) {
-      message.error(e?.message || '更新失败')
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : '更新失败'
+      message.error(errorMessage)
     }
   }
 
@@ -320,7 +326,7 @@ const DictionaryPage: React.FC = () => {
         <div>
           <div style={{ fontWeight: 500 }}>{name}</div>
           <div style={{ fontSize: '12px', color: '#666' }}>
-            <Tag color="blue" size="small">{record.type.code}</Tag>
+            <Tag color="blue">{record.type.code}</Tag>
           </div>
         </div>
       ),
@@ -385,9 +391,9 @@ const DictionaryPage: React.FC = () => {
         )
       },
     },
-    { 
-      title: '编码', 
-      dataIndex: 'dict_code', 
+    {
+      title: '编码',
+      dataIndex: 'dict_code',
       width: 160,
       render: (code: string) => code || '-'
     },
@@ -545,36 +551,36 @@ const DictionaryPage: React.FC = () => {
           <Form.Item name="dict_type" label="字典类型">
             <Input disabled placeholder="自动填充" />
           </Form.Item>
-          
-          <Form.Item 
-            name="dict_label" 
-            label="显示标签" 
+
+          <Form.Item
+            name="dict_label"
+            label="显示标签"
             rules={[{ required: true, message: '请输入显示标签' }]}
           >
             <Input placeholder="如：已确权、经营性等" />
           </Form.Item>
-          
-          <Form.Item 
-            name="dict_value" 
-            label="枚举值" 
+
+          <Form.Item
+            name="dict_value"
+            label="枚举值"
             rules={[{ required: true, message: '请输入枚举值' }]}
           >
             <Input placeholder="如：CONFIRMED、COMMERCIAL等" />
           </Form.Item>
-          
+
           <Form.Item name="dict_code" label="编码">
             <Input placeholder="可选，如：confirmed、commercial等" />
           </Form.Item>
-          
+
           <Form.Item name="description" label="描述">
             <Input.TextArea rows={2} placeholder="可选描述信息" />
           </Form.Item>
-          
+
           <Form.Item name="sort_order" label="排序">
             <Input type="number" placeholder="排序，数值越小越靠前" />
           </Form.Item>
-          
-          
+
+
           {enumTypes.find(t => t.code === activeType) && (
             <div style={{
               padding: '12px',
@@ -617,7 +623,7 @@ const DictionaryPage: React.FC = () => {
           </Button>
         ]}
         width={1200}
-        destroyOnClose
+        destroyOnHidden
       >
         <Table
           rowKey="id"

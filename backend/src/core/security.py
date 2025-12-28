@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 文件验证和安全模块
 提供文件上传验证、请求限制和安全防护功能
@@ -10,14 +12,23 @@ from collections import defaultdict, deque
 from datetime import UTC, datetime
 from pathlib import Path
 from time import time
-from typing import Any
 
-import magic
+logger = logging.getLogger(__name__)
+
+# magic模块的条件导入
+try:
+    import magic
+
+    MAGIC_AVAILABLE = True
+except ImportError:
+    magic = None
+    MAGIC_AVAILABLE = False
+    logger.warning("python-magic模块不可用，文件类型检测功能将受限")
 from fastapi import Depends, HTTPException, Request, UploadFile, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from ..core.config_manager import get_config
-from ..core.exception_handler import ValidationException
+from ..core.config import get_config
+from ..core.exception_handler import BusinessValidationError
 from ..core.logging_security import security_auditor
 
 logger = logging.getLogger(__name__)
@@ -36,6 +47,10 @@ class FileValidationConfig:
         "image/jpeg": ".jpg,.jpeg",
         "image/png": ".png",
         "image/tiff": ".tiff,.tif",
+        "image/gif": ".gif",
+        "application/zip": ".zip",
+        "application/x-7z-compressed": ".7z",
+        "application/x-rar-compressed": ".rar",
     }
 
     # 文件大小限制（字节）
@@ -44,6 +59,7 @@ class FileValidationConfig:
         "excel": 100 * 1024 * 1024,  # 100MB
         "image": 20 * 1024 * 1024,  # 20MB
         "default": 10 * 1024 * 1024,  # 10MB
+        "zip": 200 * 1024 * 1024,  # 200MB
     }
 
     # 危险文件特征
@@ -59,6 +75,12 @@ class FileValidationConfig:
         b"document.",
         b"window.",
         b"alert(",
+        b"<iframe",
+        b"<object",
+        b"<embed",
+        b"data:text/html",
+        b"vbs:",
+        b".hta",
     ]
 
     # 文件名黑名单
@@ -83,6 +105,12 @@ class FileValidationConfig:
         r"\.scr$",
         r"\.com$",
         r"\.pif$",
+        r"\.dll$",
+        r"\.sys$",
+        r"\.lnk$",
+        r"\.msi$",
+        r"\.jar$",
+        r"\.swf$",
     ]
 
 
@@ -94,7 +122,7 @@ class FileValidator:
         self.logger = logging.getLogger(__name__)
 
     def validate_file_type(
-        self, file: UploadFile, allowed_types: list[str] = None
+        self, file: UploadFile, allowed_types: list[str] | None = None
     ) -> bool:
         """
         验证文件类型
@@ -119,7 +147,90 @@ class FileValidator:
             for exts in self.config.ALLOWED_MIME_TYPES.values()
             for ext in exts.split(",")
         ]:
-            raise ValidationException(
+            raise BusinessValidationError(
+                f"不支持的文件扩展名: {file_ext}",
+                details={
+                    "allowed_extensions": list(self.config.ALLOWED_MIME_TYPES.values())
+                },
+            )
+
+        # 检查MIME类型 - 使用流式读取避免内存耗尽攻击
+        try:
+            # 保存当前位置
+            original_position = file.file.tell()
+
+            # 读取文件前4096字节用于MIME类型检测（增加读取大小以提高准确性）
+            file_content = file.file.read(4096)
+            file.file.seek(original_position)  # 重置文件指针到原始位置
+
+            detected_mime = magic.from_buffer(file_content, mime=True)
+
+            # 检查是否为可疑的MIME类型
+            suspicious_mimes = [
+                "text/x-php",
+                "application/x-php",
+                "application/x-executable",
+                "application/x-sharedlib",
+                "application/x-mach-binary",
+            ]
+            if detected_mime in suspicious_mimes:
+                raise BusinessValidationError(
+                    f"可疑的文件类型: {detected_mime}",
+                    details={"detected_mime": detected_mime},
+                )
+
+            if detected_mime not in allowed_types:
+                raise BusinessValidationError(
+                    f"不支持的文件类型: {detected_mime}",
+                    details={"allowed_types": allowed_types},
+                )
+
+            # 验证扩展名与MIME类型匹配
+            expected_ext = self.config.ALLOWED_MIME_TYPES.get(detected_mime, "")
+            if expected_ext and file_ext not in expected_ext.split(","):
+                raise BusinessValidationError(
+                    f"文件扩展名与实际类型不匹配: {file_ext} != {expected_ext}",
+                    details={
+                        "detected_mime": detected_mime,
+                        "expected_ext": expected_ext,
+                    },
+                )
+
+            # 检查文件头签名
+            self._validate_file_signature(file_content, detected_mime)
+
+        except Exception as e:
+            if isinstance(e, BusinessValidationError):
+                raise
+            raise BusinessValidationError(
+                f"文件类型验证失败: {str(e)}", details={"filename": file.filename}
+            )
+
+        return True
+        """
+        验证文件类型
+
+        Args:
+            file: 上传的文件
+            allowed_types: 允许的文件类型列表
+
+        Returns:
+            bool: 验证是否通过
+        """
+        if not allowed_types:
+            allowed_types = [
+                "application/pdf",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ]
+
+        # 检查文件扩展名
+        file_ext = Path(file.filename or "").suffix.lower()
+        if file_ext not in [
+            ext
+            for exts in self.config.ALLOWED_MIME_TYPES.values()
+            for ext in exts.split(",")
+        ]:
+            raise BusinessValidationError(
                 f"不支持的文件扩展名: {file_ext}",
                 details={
                     "allowed_extensions": list(self.config.ALLOWED_MIME_TYPES.values())
@@ -138,7 +249,7 @@ class FileValidator:
             detected_mime = magic.from_buffer(file_content, mime=True)
 
             if detected_mime not in allowed_types:
-                raise ValidationException(
+                raise BusinessValidationError(
                     f"不支持的文件类型: {detected_mime}",
                     details={"allowed_types": allowed_types},
                 )
@@ -146,7 +257,7 @@ class FileValidator:
             # 验证扩展名与MIME类型匹配
             expected_ext = self.config.ALLOWED_MIME_TYPES.get(detected_mime, "")
             if expected_ext and file_ext not in expected_ext.split(","):
-                raise ValidationException(
+                raise BusinessValidationError(
                     f"文件扩展名与实际类型不匹配: {file_ext} != {expected_ext}",
                     details={
                         "detected_mime": detected_mime,
@@ -155,15 +266,15 @@ class FileValidator:
                 )
 
         except Exception as e:
-            if isinstance(e, ValidationException):
+            if isinstance(e, BusinessValidationError):
                 raise
-            raise ValidationException(
+            raise BusinessValidationError(
                 f"文件类型验证失败: {str(e)}", details={"filename": file.filename}
             )
 
         return True
 
-    def validate_file_size(self, file: UploadFile, max_size: int = None) -> bool:
+    def validate_file_size(self, file: UploadFile, max_size: int | None = None) -> bool:
         """
         验证文件大小
 
@@ -181,17 +292,58 @@ class FileValidator:
                 max_size = self.config.MAX_FILE_SIZES["pdf"]
             elif file_ext in [".xlsx", ".xls", ".csv"]:
                 max_size = self.config.MAX_FILE_SIZES["excel"]
-            elif file_ext in [".jpg", ".jpeg", ".png", ".tiff", ".tif"]:
+            elif file_ext in [".jpg", ".jpeg", ".png", ".tiff", ".tif", ".gif"]:
                 max_size = self.config.MAX_FILE_SIZES["image"]
+            elif file_ext in [".zip", ".rar", ".7z"]:
+                max_size = self.config.MAX_FILE_SIZES["zip"]
             else:
                 max_size = self.config.MAX_FILE_SIZES["default"]
 
         # 检查文件大小
         if file.size and file.size > max_size:
             max_size_mb = max_size / (1024 * 1024)
-            raise ValidationException(
+            raise BusinessValidationError(
                 f"文件过大: {file.size / (1024 * 1024):.2f}MB > {max_size_mb}MB",
                 details={"max_size_bytes": max_size, "file_size_bytes": file.size},
+            )
+
+        return True
+
+    def _validate_file_signature(self, file_content: bytes, mime_type: str) -> bool:
+        """
+        验证文件头签名
+
+        Args:
+            file_content: 文件内容
+            mime_type: MIME类型
+
+        Returns:
+            bool: 验证是否通过
+        """
+        # 常见文件类型的文件头签名
+        signatures = {
+            "application/pdf": [b"%PDF-"],
+            "image/jpeg": [b"\xff\xd8\xff"],
+            "image/png": [b"\x89PNG\r\n\x1a\n"],
+            "image/gif": [b"GIF87a", b"GIF89a"],
+            "application/zip": [b"PK\x03\x04", b"PK\x05\x06", b"PK\x07\x08"],
+        }
+
+        # 检查特定MIME类型的文件头签名
+        expected_signatures = signatures.get(mime_type, [])
+        if expected_signatures:
+            # 检查文件内容是否以期望的签名开始
+            for signature in expected_signatures:
+                if file_content.startswith(signature):
+                    return True
+            # 如果没有匹配的签名，抛出异常
+            raise BusinessValidationError(
+                f"文件头签名不匹配: {mime_type}",
+                details={
+                    "mime_type": mime_type,
+                    "expected_signatures": [s.hex() for s in expected_signatures],
+                    "actual_header": file_content[:16].hex(),
+                },
             )
 
         return True
@@ -207,16 +359,16 @@ class FileValidator:
             bool: 验证是否通过
         """
         if not filename:
-            raise ValidationException("文件名不能为空")
+            raise BusinessValidationError("文件名不能为空")
 
         # 检查文件名长度
         if len(filename) > 255:
-            raise ValidationException("文件名过长")
+            raise BusinessValidationError("文件名过长")
 
         # 检查黑名单模式
         for pattern in self.config.BLACKLISTED_PATTERNS:
             if re.search(pattern, filename, re.IGNORECASE):
-                raise ValidationException(
+                raise BusinessValidationError(
                     f"文件名包含非法字符或模式: {pattern}",
                     details={"blacklisted_pattern": pattern},
                 )
@@ -254,7 +406,7 @@ class FileValidator:
                 # 检查恶意签名（只扫描小签名）
                 for signature in self.config.MALICIOUS_SIGNATURES:
                     if signature in chunk.lower():
-                        raise ValidationException(
+                        raise BusinessValidationError(
                             "检测到可能的恶意内容",
                             details={
                                 "malicious_signature": signature.decode(
@@ -269,9 +421,9 @@ class FileValidator:
             return True
 
         except Exception as e:
-            if isinstance(e, ValidationException):
+            if isinstance(e, BusinessValidationError):
                 raise
-            raise ValidationException(f"恶意内容扫描失败: {str(e)}")
+            raise BusinessValidationError(f"恶意内容扫描失败: {str(e)}")
 
     def calculate_file_hash(self, file: UploadFile) -> str:
         """
@@ -294,7 +446,10 @@ class FileValidator:
         return hash_sha256.hexdigest()
 
     def validate_upload(
-        self, file: UploadFile, allowed_types: list[str] = None, max_size: int = None
+        self,
+        file: UploadFile,
+        allowed_types: list[str] | None = None,
+        max_size: int | None = None,
     ) -> dict[str, Any]:
         """
         执行完整的文件上传验证
@@ -340,7 +495,7 @@ class FileValidator:
 
             return validation_result
 
-        except ValidationException as e:
+        except BusinessValidationError as e:
             # 记录验证失败
             security_auditor.log_security_event(
                 event_type="FILE_VALIDATION_FAILED",
@@ -363,8 +518,55 @@ class RateLimiter:
         self.logger = logging.getLogger(__name__)
 
     def check_rate_limit(
-        self, key: str, max_requests: int = None, time_window: int = None
+        self, key: str, max_requests: int | None = None, time_window: int | None = None
     ) -> bool:
+        """
+        检查请求频率限制
+
+        Args:
+            key: 限制键（如IP地址或用户ID）
+            max_requests: 最大请求数
+            time_window: 时间窗口（秒）
+
+        Returns:
+            bool: 是否允许请求
+        """
+        # 设置默认值
+        max_req = (
+            max_requests
+            if max_requests is not None
+            else self.config.get("max_requests", 100)
+        )
+        time_win = (
+            time_window
+            if time_window is not None
+            else self.config.get("time_window", 60)
+        )
+
+        current_time = time()
+        request_queue = self.requests[key]
+
+        # 清理过期的请求记录
+        while request_queue and request_queue[0] <= current_time - time_win:
+            request_queue.popleft()
+
+        # 检查是否超过限制
+        if len(request_queue) >= max_req:
+            security_auditor.log_security_event(
+                event_type="RATE_LIMIT_EXCEEDED",
+                message=f"Rate limit exceeded for {key}: {len(request_queue)}/{max_req}",
+                details={
+                    "key": key,
+                    "request_count": len(request_queue),
+                    "max_requests": max_req,
+                    "time_window": time_win,
+                },
+            )
+            return False
+
+        # 记录新请求
+        request_queue.append(current_time)
+        return True
         """
         检查请求频率限制
 
@@ -407,8 +609,39 @@ class RateLimiter:
         return True
 
     def get_remaining_requests(
-        self, key: str, max_requests: int = None, time_window: int = None
+        self, key: str, max_requests: int | None = None, time_window: int | None = None
     ) -> int:
+        """
+        获取剩余请求数
+
+        Args:
+            key: 限制键
+            max_requests: 最大请求数
+            time_window: 时间窗口（秒）
+
+        Returns:
+            int: 剩余请求数
+        """
+        # 设置默认值
+        max_req = (
+            max_requests
+            if max_requests is not None
+            else self.config.get("max_requests", 100)
+        )
+        time_win = (
+            time_window
+            if time_window is not None
+            else self.config.get("time_window", 60)
+        )
+
+        current_time = time()
+        request_queue = self.requests[key]
+
+        # 清理过期的请求记录
+        while request_queue and request_queue[0] <= current_time - time_win:
+            request_queue.popleft()
+
+        return max(0, max_req - len(request_queue))
         """
         获取剩余请求数
 
@@ -455,7 +688,7 @@ class SecurityMiddleware:
             bool: 验证是否通过
         """
         # 获取客户端IP
-        client_ip = request.client.host
+        client_ip = request.client.host if request.client else "unknown"
 
         # 检查IP黑名单
         if self._is_ip_blacklisted(client_ip):
@@ -488,7 +721,10 @@ class SecurityMiddleware:
         return ip in blacklist
 
     async def validate_file_upload(
-        self, file: UploadFile, allowed_types: list[str] = None, max_size: int = None
+        self,
+        file: UploadFile,
+        allowed_types: list[str] | None = None,
+        max_size: int | None = None,
     ) -> dict[str, Any]:
         """
         验证文件上传
@@ -501,7 +737,25 @@ class SecurityMiddleware:
         Returns:
             Dict: 验证结果
         """
+        # 确保参数有默认值
+        if allowed_types is None:
+            allowed_types = []
+        if max_size is None:
+            max_size = 0
+
         return self.file_validator.validate_upload(file, allowed_types, max_size)
+        """
+        验证文件上传
+
+        Args:
+            file: 上传的文件
+            allowed_types: 允许的文件类型
+            max_size: 最大文件大小
+
+        Returns:
+            Dict: 验证结果
+        """
+        return self.file_validator.validate_upload(file, allowed_types or [], max_size)
 
 
 class RequestSecurity:
@@ -605,7 +859,9 @@ async def get_current_user(
 
 
 async def validate_file_upload_dependency(
-    file: UploadFile, allowed_types: list[str] = None, max_size: int = None
+    file: UploadFile,
+    allowed_types: list[str] | None = None,
+    max_size: int | None = None,
 ) -> dict[str, Any]:
     """文件上传验证依赖"""
     return await security_middleware.validate_file_upload(file, allowed_types, max_size)

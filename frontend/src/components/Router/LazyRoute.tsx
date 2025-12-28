@@ -2,7 +2,7 @@ import React, { Suspense } from 'react'
 import { Route } from 'react-router-dom'
 import { SkeletonLoader } from '../Loading'
 import { RouteConfig } from '@/constants/routes'
-import SystemErrorBoundary from '../System/SystemErrorBoundary'
+import { SystemErrorBoundary } from '@/components/ErrorHandling'
 import { PermissionGuard } from '../System/PermissionGuard'
 
 interface LazyRouteProps extends Omit<RouteConfig, 'children'> {
@@ -67,7 +67,6 @@ const LazyRoute: React.FC<LazyRouteProps> = ({
     <Route
       {...routeProps}
       element={wrappedElement}
-      onMouseEnter={handleMouseEnter}
     />
   )
 }

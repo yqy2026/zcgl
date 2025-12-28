@@ -58,11 +58,11 @@ RUN mkdir -p uploads logs && \
 USER appuser
 
 # 暴露端口
-EXPOSE 8001
+EXPOSE 8002
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8001/health || exit 1
+    CMD curl -f http://localhost:8002/api/v1/health || exit 1
 
 # 启动命令
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001", "--workers", "4"]
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8002", "--workers", "4"]

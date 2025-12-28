@@ -1,40 +1,24 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm run type-check:*)",
-      "Bash(npm run build:*)",
-      "Bash(python:*)",
-      "Bash(./stop.bat)",
-      "Bash(curl:*)",
-      "mcp__playwright__browser_navigate",
-      "mcp__playwright__browser_snapshot",
-      "mcp__playwright__browser_press_key",
-      "mcp__playwright__browser_wait_for",
-      "mcp__playwright__browser_click",
-      "mcp__playwright__browser_evaluate",
-      "Bash(tasklist:*)",
       "Bash(findstr:*)",
-      "Bash(dir:*)",
+      "Bash(tasklist:*)",
+      "Bash(curl:*)",
+      "mcp__chrome-devtools__list_console_messages",
+      "mcp__chrome-devtools__navigate_page",
+      "mcp__chrome-devtools__take_snapshot",
+      "Bash(python:*)",
+      "WebSearch",
+      "mcp__chrome-devtools__list_pages",
+      "mcp__chrome-devtools__list_network_requests",
+      "mcp__chrome-devtools__click",
+      "mcp__chrome-devtools__evaluate_script",
+      "Bash(npm run dev)",
       "Bash(netstat:*)",
-      "Bash(taskkill:*)",
-      "Bash(sqlite3:*)",
-      "Bash(stop.bat)",
-      "Bash(./:*)",
-      "Bash(timeout:*)",
-      "Bash(pkill:*)",
-      "Bash(npm cache clean:*)",
-      "Bash(rm:*)",
-      "Bash(npm install:*)",
-      "Bash(uv run python:*)",
-      "Bash(npm run lint)",
-      "Bash(npx tsc:*)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(find:*)",
-      "Bash(git checkout:*)",
-      "Bash(npx:*)"
-    ],
-    "deny": [],
-    "ask": []
-  }
+      "mcp__chrome-devtools__new_page",
+      "mcp__chrome-devtools__get_network_request",
+      "mcp__chrome-devtools__wait_for"
+    ]
+  },
+  "outputStyle": "Explanatory"
 }

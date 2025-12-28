@@ -1,5 +1,22 @@
 import { message, notification, Modal } from 'antd'
 
+// 用户操作记录接口
+export interface UserAction {
+  action: string
+  timestamp: number
+  data?: Record<string, unknown>
+}
+
+// 错误上下文接口
+export interface ErrorContext {
+  component?: string
+  action?: string
+  url?: string
+  userAgent?: string
+  userId?: string
+  [key: string]: unknown
+}
+
 export interface UXConfig {
   // 全局设置
   enableErrorReporting?: boolean
@@ -29,7 +46,7 @@ class UXManager {
   private config: UXConfig
   private errorQueue: Error[] = []
   private performanceMetrics: Map<string, number> = new Map()
-  private userActions: Array<{ action: string; timestamp: number; data?: any }> = []
+  private userActions: UserAction[] = []
 
   constructor(config: UXConfig = {}) {
     this.config = {
@@ -127,8 +144,8 @@ class UXManager {
     // 监听内存使用
     if ('memory' in performance) {
       setInterval(() => {
-        const memory = (performance as any).memory
-        if (memory.usedJSHeapSize > this.config.memoryThreshold!) {
+        const memory = (performance as Performance & { memory?: { usedJSHeapSize: number } }).memory
+        if (memory && memory.usedJSHeapSize > this.config.memoryThreshold!) {
           this.recordPerformanceMetric('highMemoryUsage', memory.usedJSHeapSize)
         }
       }, 10000) // 每10秒检查一次
@@ -158,7 +175,7 @@ class UXManager {
   }
 
   // 错误处理
-  public handleError(error: Error, context?: any) {
+  public handleError(error: Error, context?: ErrorContext) {
     console.error('UXManager caught error:', error, context)
 
     // 添加到错误队列
@@ -176,9 +193,9 @@ class UXManager {
     }
   }
 
-  private showErrorFeedbackInternal(error: Error, context?: any) {
+  private showErrorFeedbackInternal(error: Error, context?: ErrorContext) {
     // 根据错误类型显示不同的反馈
-    console.log('Error context:', context) // 使用context参数避免未使用警告
+    // Error context
     if (error.message.includes('Network')) {
       notification.error({
         message: '网络错误',
@@ -202,7 +219,7 @@ class UXManager {
     }
   }
 
-  private async sendErrorReport(error: Error, context?: any) {
+  private async sendErrorReport(error: Error, context?: ErrorContext) {
     try {
       const report = {
         message: error.message,
@@ -254,7 +271,7 @@ class UXManager {
   }
 
   // 用户行为跟踪
-  public recordUserAction(action: string, data?: any) {
+  public recordUserAction(action: string, data?: Record<string, unknown>) {
     this.userActions.push({
       action,
       timestamp: Date.now(),
@@ -411,7 +428,7 @@ export const showInfo = (message: string, description?: string) =>
 export const showConfirm = (options: Parameters<typeof uxManager.showConfirmDialog>[0]) => 
   uxManager.showConfirmDialog(options)
 
-export const recordAction = (action: string, data?: any) => 
+export const recordAction = (action: string, data?: Record<string, unknown>) =>
   uxManager.recordUserAction(action, data)
 
 export const startMeasure = (name: string) => 

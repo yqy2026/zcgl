@@ -1,0 +1,111 @@
+# 代码质量监控 - Pre-commit 配置文件
+# 此配置文件用于在代码提交前进行自动化质量检查
+
+repos:
+  # Ruff - 快速Python代码检查和格式化
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.8  # 使用最新稳定版本
+    hooks:
+      - id: ruff
+        name: ruff-check
+        description: "运行Ruff代码检查"
+        args: [--fix, --exit-non-zero-on-fix]
+        files: ^backend/.*\.py$
+      - id: ruff-format
+        name: ruff-format
+        description: "运行Ruff代码格式化"
+        files: ^backend/.*\.py$
+
+  # MyPy - 静态类型检查
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.11.2  # 使用最新稳定版本
+    hooks:
+      - id: mypy
+        name: mypy-check
+        description: "运行MyPy类型检查"
+        args: [--config-file=backend/pyproject.toml]
+        files: ^backend/src/.*\.py$
+        additional_dependencies: [types-requests, types-PyYAML]
+
+  # Bandit - 安全漏洞扫描
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.9
+    hooks:
+      - id: bandit
+        name: bandit-security
+        description: "运行Bandit安全扫描"
+        args: [-r, backend/src, -f, json, -o, backend/reports/bandit_report.json]
+        files: ^backend/.*\.py$
+
+  # 检查大型文件
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: check-added-large-files
+        name: check-large-files
+        description: "检查大型文件"
+        args: [--maxkb=1000]
+      - id: check-merge-conflict
+        name: check-merge-conflict
+        description: "检查合并冲突标记"
+      - id: check-yaml
+        name: check-yaml
+        description: "检查YAML文件格式"
+      - id: check-json
+        name: check-json
+        description: "检查JSON文件格式"
+      - id: trailing-whitespace
+        name: trailing-whitespace
+        description: "去除行尾空白字符"
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+        name: end-of-file-fixer
+        description: "确保文件以换行符结尾"
+
+  # 代码复杂度检查
+  - repo: local
+    hooks:
+      - id: radon-complexity
+        name: radon-complexity
+        description: "检查代码复杂度"
+        entry: python -m radon cc --min C backend/src
+        language: system
+        pass_filenames: false
+        files: ^backend/.*\.py$
+
+  # 代码重复度检查
+      - id: jscpd-check
+        name: jscpd-check
+        description: "检查代码重复度"
+        entry: python -m jscpd backend/src --min-lines 5 --min-tokens 50
+        language: system
+        pass_filenames: false
+
+# 配置说明
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] 自动修复代码质量问题
+
+    - 自动修复Ruff检查问题
+    - 格式化代码
+    - 修复基本的代码质量问题
+  autofix_prs: true
+  skip: [mypy-check]  # CI环境中跳过mypy，因为需要完整依赖
+
+# 执行顺序配置
+minimum_pre_commit_version: "3.0.0"
+
+# 排除文件
+exclude: |
+  (?x)^(
+      backend/\.venv/.*|
+      backend/venv/.*|
+      backend/__pycache__/.*|
+      backend/\.pytest_cache/.*|
+      backend/\.mypy_cache/.*|
+      backend/migrations/.*|
+      backend/alembic/.*|
+      .*\.egg-info/.*|
+      backend/data/.*|
+      backend/logs/.*
+  )$

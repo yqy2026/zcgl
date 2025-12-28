@@ -5,14 +5,14 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: ../deployment/docker/Dockerfile.frontend
+      dockerfile: Dockerfile
       target: production
     container_name: zcgl-frontend
     restart: unless-stopped
     ports:
       - "3000:80"
     environment:
-      - VITE_API_BASE_URL=http://backend:8000
+      - VITE_API_BASE_URL=http://backend:8002/api/v1
     depends_on:
       - backend
     networks:
@@ -22,39 +22,29 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: ../deployment/docker/Dockerfile.backend
+      dockerfile: Dockerfile
     container_name: zcgl-backend
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "8002:8002"
     environment:
-      - DATABASE_URL=postgresql://zcgl_user:zcgl_password@postgres:5432/zcgl_db
+      - DATABASE_URL=sqlite:///./database/data/zcgl.db
       - REDIS_URL=redis://redis:6379/0
       - CORS_ORIGINS=http://localhost:3000,http://frontend:80
+      - API_PORT=8002
     depends_on:
-      - postgres
-      - redis
+      redis:
+        condition: service_healthy
     volumes:
       - ./database/data:/app/database/data
       - ./logs:/app/logs
       - ./config:/app/config
-    networks:
-      - zcgl-network
-
-  # 数据库服务
-  postgres:
-    image: postgres:15-alpine
-    container_name: zcgl-postgres
-    restart: unless-stopped
-    ports:
-      - "5432:5432"
-    environment:
-      - POSTGRES_DB=zcgl_db
-      - POSTGRES_USER=zcgl_user
-      - POSTGRES_PASSWORD=zcgl_password
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./database/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/api/v1/monitoring/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     networks:
       - zcgl-network
 
@@ -67,6 +57,12 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
     networks:
       - zcgl-network
 
@@ -88,8 +84,6 @@ services:
       - zcgl-network
 
 volumes:
-  postgres_data:
-    driver: local
   redis_data:
     driver: local
 

@@ -1,10 +1,11 @@
+from typing import Any, TypeVar
+
 """
 增强的基础CRUD操作类 - 支持缓存、性能监控和错误处理
 """
 
 import logging
 import time
-from typing import Any, TypeVar
 
 from pydantic import BaseModel
 from sqlalchemy import or_
@@ -21,7 +22,11 @@ UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
 logger = logging.getLogger(__name__)
 
 
-class CRUDBase[ModelType: DeclarativeMeta, CreateSchemaType: BaseModel, UpdateSchemaType: BaseModel]:
+class CRUDBase[
+    ModelType: DeclarativeMeta,
+    CreateSchemaType: BaseModel,
+    UpdateSchemaType: BaseModel,
+]:
     """增强的基础CRUD操作类"""
 
     def __init__(self, model: type[ModelType]):
@@ -58,10 +63,7 @@ class CRUDBase[ModelType: DeclarativeMeta, CreateSchemaType: BaseModel, UpdateSc
         self._cache[cache_key] = (data, time.time())
         # 限制缓存大小
         if len(self._cache) > 100:
-            oldest_key = min(
-                self._cache.keys(),
-                key=lambda k: self._cache[k][1]
-            )
+            oldest_key = min(self._cache.keys(), key=lambda k: self._cache[k][1])
             del self._cache[oldest_key]
 
     def _handle_database_error(self, error: Exception, operation: str) -> Exception:
@@ -112,8 +114,8 @@ class CRUDBase[ModelType: DeclarativeMeta, CreateSchemaType: BaseModel, UpdateSc
     def create(self, db: Session, *, obj_in: CreateSchemaType) -> ModelType:
         """创建新记录（支持事务回滚和错误处理）"""
         try:
-            if hasattr(obj_in, "dict"):
-                obj_in_data = obj_in.dict()
+            if hasattr(obj_in, "model_dump"):
+                obj_in_data = obj_in.model_dump()
             else:
                 obj_in_data = obj_in
 
@@ -125,7 +127,9 @@ class CRUDBase[ModelType: DeclarativeMeta, CreateSchemaType: BaseModel, UpdateSc
             # 清除相关缓存
             self._clear_cache_pattern("get_multi")
 
-            logger.info(f"Successfully created {self.model.__tablename__} record with id: {db_obj.id}")
+            logger.info(
+                f"Successfully created {self.model.__tablename__} record with id: {db_obj.id}"
+            )
             return db_obj
         except Exception as e:
             db.rollback()
@@ -160,7 +164,9 @@ class CRUDBase[ModelType: DeclarativeMeta, CreateSchemaType: BaseModel, UpdateSc
                 del self._cache[cache_key]
             self._clear_cache_pattern("get_multi")
 
-            logger.info(f"Successfully updated {self.model.__tablename__} record with id: {db_obj.id}")
+            logger.info(
+                f"Successfully updated {self.model.__tablename__} record with id: {db_obj.id}"
+            )
             return db_obj
         except Exception as e:
             db.rollback()
@@ -182,7 +188,9 @@ class CRUDBase[ModelType: DeclarativeMeta, CreateSchemaType: BaseModel, UpdateSc
                 del self._cache[cache_key]
             self._clear_cache_pattern("get_multi")
 
-            logger.info(f"Successfully deleted {self.model.__tablename__} record with id: {id}")
+            logger.info(
+                f"Successfully deleted {self.model.__tablename__} record with id: {id}"
+            )
             return obj
         except ValueError:
             raise
@@ -232,7 +240,9 @@ class CRUDBase[ModelType: DeclarativeMeta, CreateSchemaType: BaseModel, UpdateSc
                 search_conditions = []
                 for field in search_fields:
                     if hasattr(self.model, field):
-                        search_conditions.append(getattr(self.model, field).contains(search))
+                        search_conditions.append(
+                            getattr(self.model, field).contains(search)
+                        )
                 if search_conditions:
                     query = query.filter(or_(*search_conditions))
 
@@ -249,13 +259,15 @@ class CRUDBase[ModelType: DeclarativeMeta, CreateSchemaType: BaseModel, UpdateSc
         except Exception as e:
             raise self._handle_database_error(e, "高级查询")
 
-    def bulk_create(self, db: Session, *, objects_in: list[CreateSchemaType]) -> list[ModelType]:
+    def bulk_create(
+        self, db: Session, *, objects_in: list[CreateSchemaType]
+    ) -> list[ModelType]:
         """批量创建记录"""
         try:
             db_objects = []
             for obj_in in objects_in:
-                if hasattr(obj_in, "dict"):
-                    obj_in_data = obj_in.dict()
+                if hasattr(obj_in, "model_dump"):
+                    obj_in_data = obj_in.model_dump()
                 else:
                     obj_in_data = obj_in
                 db_objects.append(self.model(**obj_in_data))
@@ -270,7 +282,9 @@ class CRUDBase[ModelType: DeclarativeMeta, CreateSchemaType: BaseModel, UpdateSc
             # 清除缓存
             self._clear_cache_pattern("get_multi")
 
-            logger.info(f"Successfully bulk created {len(db_objects)} {self.model.__tablename__} records")
+            logger.info(
+                f"Successfully bulk created {len(db_objects)} {self.model.__tablename__} records"
+            )
             return db_objects
         except Exception as e:
             db.rollback()

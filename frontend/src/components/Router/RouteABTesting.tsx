@@ -11,8 +11,8 @@ interface ABTestVariant {
   name: string
   description?: string
   weight: number // 权重 (0-100)
-  component?: React.ComponentType<any>
-  props?: Record<string, any>
+  component?: React.ComponentType<Record<string, unknown>>
+  props?: Record<string, unknown>
   enabled: boolean
 }
 
@@ -31,8 +31,9 @@ interface ABTestConfig {
 interface ABTestContextType {
   currentTests: Map<string, string> // testId -> variantId
   getVariant: (testId: string) => ABTestVariant | null
-  trackConversion: (testId: string, metric: string, value?: any) => void
+  trackConversion: (testId: string, metric: string, value?: unknown) => void
   isTestActive: (testId: string) => boolean
+  getAllActiveTests: () => ABTestConfig[]
   loading: boolean
 }
 
@@ -40,8 +41,8 @@ const ABTestContext = createContext<ABTestContextType | null>(null)
 
 class ABTestManager {
   private tests: Map<string, ABTestConfig>
-  private userVariants: Map<string, string> // userId -> testVariants
-  private conversions: Map<string, Map<string, any>> // testId -> metric -> value
+  private userVariants: Map<string, Record<string, string>> // userId -> {testId -> variantId}
+  private conversions: Map<string, Map<string, unknown>> // testId -> metric -> value
   private userId: string | null = null
 
   constructor() {
@@ -143,7 +144,8 @@ class ABTestManager {
     if (!this.userVariants.has(this.userId)) {
       this.userVariants.set(this.userId, {})
     }
-    this.userVariants.get(this.userId)![testId] = variant.id
+    const variants = this.userVariants.get(this.userId)!
+    variants[testId] = variant.id
 
     // 记录分配事件
     this.trackEvent('variant_assigned', {
@@ -215,7 +217,7 @@ class ABTestManager {
     return this.getAssignedVariant(testId)
   }
 
-  public trackConversion(testId: string, metric: string, value?: any) {
+  public trackConversion(testId: string, metric: string, value?: unknown) {
     if (!this.conversions.has(testId)) {
       this.conversions.set(testId, new Map())
     }
@@ -235,13 +237,13 @@ class ABTestManager {
     this.reportConversion(testId, metric, value)
   }
 
-  private trackEvent(eventType: string, data: any) {
-    console.log('A/B Test Event:', eventType, data)
+  private trackEvent(eventType: string, data: Record<string, unknown>) {
+    // A/B Test Event
 
     // 这里可以发送到分析服务
     if (process.env.NODE_ENV === 'production') {
       // 实际项目中发送到分析服务
-      fetch('/api/v1/analytics/abtest-events', {
+      fetch('/api/analytics/abtest-events', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -257,9 +259,9 @@ class ABTestManager {
     }
   }
 
-  private async reportConversion(testId: string, metric: string, value?: any) {
+  private async reportConversion(testId: string, metric: string, value?: unknown) {
     try {
-      await fetch('/api/v1/analytics/abtest-conversions', {
+      await fetch('/api/analytics/abtest-conversions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -323,9 +325,10 @@ export const ABTestProvider: React.FC<ABTestProviderProps> = ({ children, userId
   const contextValue: ABTestContextType = {
     currentTests,
     getVariant: (testId: string) => manager.getVariant(testId),
-    trackConversion: (testId: string, metric: string, value?: any) =>
+    trackConversion: (testId: string, metric: string, value?: unknown) =>
       manager.trackConversion(testId, metric, value),
     isTestActive: (testId: string) => manager.isTestActive(testId),
+    getAllActiveTests: () => manager.getAllActiveTests(),
     loading
   }
 
@@ -363,7 +366,7 @@ export const ABTestWrapper: React.FC<ABTestWrapperProps> = ({
   const { getVariant, isTestActive, loading } = useABTest()
 
   if (loading) {
-    return loadingComponent ? <LoadingComponent /> : null
+    return LoadingComponent ? <LoadingComponent /> : null
   }
 
   if (!isTestActive(testId)) {
@@ -373,7 +376,7 @@ export const ABTestWrapper: React.FC<ABTestWrapperProps> = ({
   const variant = getVariant(testId)
 
   if (!variant) {
-    return fallback ? <FallbackComponent /> : <>{children}</>
+    return FallbackComponent ? <FallbackComponent /> : <>{children}</>
   }
 
   // 如果变体有自定义组件，使用它
@@ -391,13 +394,13 @@ export const useRouteABTest = (route: string) => {
   const { getAllActiveTests, getVariant, trackConversion } = useABTest()
 
   // 获取适用于当前路由的测试
-  const routeTests = getAllActiveTests().filter(test => test.route === route)
+  const routeTests = getAllActiveTests().filter((test: ABTestConfig) => test.route === route)
 
   const getRouteVariant = (testId: string) => {
     return getVariant(testId)
   }
 
-  const trackRouteConversion = (testId: string, metric: string, value?: any) => {
+  const trackRouteConversion = (testId: string, metric: string, value?: unknown) => {
     trackConversion(testId, metric, value)
   }
 
@@ -434,7 +437,7 @@ export const useABTestAnalytics = (testId: string) => {
     }
   }
 
-  const trackClick = (element: string, data?: any) => {
+  const trackClick = (element: string, data?: unknown) => {
     if (currentVariant) {
       trackConversion(testId, 'click', {
         variant: currentVariant.id,
@@ -512,7 +515,7 @@ export const AssetListABTest: React.FC<{ children: ReactNode }> = ({ children })
     }
   }
 
-  const handleClick = (element: string, data?: any) => {
+  const handleClick = (element: string, data?: unknown) => {
     trackClick(element, data)
   }
 

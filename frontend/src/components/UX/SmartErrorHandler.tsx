@@ -21,7 +21,7 @@ interface ErrorInfo {
   severity: ErrorSeverity
   title: string
   message: string
-  details?: any
+  details?: unknown
   timestamp: Date
   stack?: string
   action?: {
@@ -34,9 +34,9 @@ interface ErrorInfo {
 
 interface ErrorContextType {
   showError: (error: Omit<ErrorInfo, 'id' | 'timestamp'>) => void
-  showWarning: (message: string, details?: any) => void
-  showSuccess: (message: string, details?: any) => void
-  showInfo: (message: string, details?: any) => void
+  showWarning: (message: string, details?: unknown) => void
+  showSuccess: (message: string, details?: unknown) => void
+  showInfo: (message: string, details?: unknown) => void
   clearError: (id: string) => void
   clearAllErrors: () => void
   retryError: (id: string) => void
@@ -45,6 +45,41 @@ interface ErrorContextType {
 }
 
 const ErrorContext = createContext<ErrorContextType | null>(null)
+
+// Helper functions - defined outside component for shared use
+const getErrorIcon = (type: ErrorType, severity: ErrorSeverity) => {
+  switch (type) {
+    case 'error':
+      return severity === 'critical' ? <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} /> :
+             severity === 'high' ? <ExclamationCircleOutlined style={{ color: '#ff7a45' }} /> :
+             <ExclamationCircleOutlined style={{ color: '#fa8c16' }} />
+    case 'warning':
+      return <WarningOutlined style={{ color: '#faad14' }} />
+    case 'success':
+      return <CheckCircleOutlined style={{ color: '#52c41a' }} />
+    case 'info':
+      return <InfoCircleOutlined style={{ color: '#1890ff' }} />
+    default:
+      return <ExclamationCircleOutlined />
+  }
+}
+
+const getErrorColor = (type: ErrorType, severity: ErrorSeverity) => {
+  switch (type) {
+    case 'error':
+      return severity === 'critical' ? '#ff4d4f' :
+             severity === 'high' ? '#ff7a45' :
+             severity === 'medium' ? '#fa8c16' : '#ffc53d'
+    case 'warning':
+      return '#faad14'
+    case 'success':
+      return '#52c41a'
+    case 'info':
+      return '#1890ff'
+    default:
+      return '#d9d9d9'
+  }
+}
 
 export const useSmartError = () => {
   const context = useContext(ErrorContext)
@@ -103,7 +138,7 @@ export const SmartErrorHandler: React.FC<SmartErrorHandlerProps> = ({
     return errorInfo.id
   }, [maxErrors, autoHideDuration])
 
-  const showWarning = useCallback((message: string, details?: any) => {
+  const showWarning = useCallback((message: string, details?: unknown) => {
     showError({
       type: 'warning',
       severity: 'medium',
@@ -113,7 +148,7 @@ export const SmartErrorHandler: React.FC<SmartErrorHandlerProps> = ({
     })
   }, [showError])
 
-  const showSuccess = useCallback((message: string, details?: any) => {
+  const showSuccess = useCallback((message: string, details?: unknown) => {
     showError({
       type: 'success',
       severity: 'low',
@@ -123,7 +158,7 @@ export const SmartErrorHandler: React.FC<SmartErrorHandlerProps> = ({
     })
   }, [showError])
 
-  const showInfo = useCallback((message: string, details?: any) => {
+  const showInfo = useCallback((message: string, details?: unknown) => {
     showError({
       type: 'info',
       severity: 'low',
@@ -207,40 +242,6 @@ export const SmartErrorHandler: React.FC<SmartErrorHandlerProps> = ({
     retryError,
     getErrors,
     getErrorStats
-  }
-
-  const getErrorIcon = (type: ErrorType, severity: ErrorSeverity) => {
-    switch (type) {
-      case 'error':
-        return severity === 'critical' ? <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} /> :
-               severity === 'high' ? <ExclamationCircleOutlined style={{ color: '#ff7a45' }} /> :
-               <ExclamationCircleOutlined style={{ color: '#fa8c16' }} />
-      case 'warning':
-        return <WarningOutlined style={{ color: '#faad14' }} />
-      case 'success':
-        return <CheckCircleOutlined style={{ color: '#52c41a' }} />
-      case 'info':
-        return <InfoCircleOutlined style={{ color: '#1890ff' }} />
-      default:
-        return <ExclamationCircleOutlined />
-    }
-  }
-
-  const getErrorColor = (type: ErrorType, severity: ErrorSeverity) => {
-    switch (type) {
-      case 'error':
-        return severity === 'critical' ? '#ff4d4f' :
-               severity === 'high' ? '#ff7a45' :
-               severity === 'medium' ? '#fa8c16' : '#ffc53d'
-      case 'warning':
-        return '#faad14'
-      case 'success':
-        return '#52c41a'
-      case 'info':
-        return '#1890ff'
-      default:
-        return '#d9d9d9'
-    }
   }
 
   return (
@@ -338,7 +339,8 @@ const ErrorNotificationContainer: React.FC<ErrorNotificationContainerProps> = ({
               >
                 查看详情
               </Button>
-              {enableRetry && error.action && (
+              {/* TODO: Implement retry functionality through context */}
+              {/* {error.action && (
                 <Button
                   type="default"
                   size="small"
@@ -348,7 +350,7 @@ const ErrorNotificationContainer: React.FC<ErrorNotificationContainerProps> = ({
                 >
                   重试
                 </Button>
-              )}
+              )} */}
             </Space>
           </div>
         </div>
@@ -412,7 +414,7 @@ const ErrorModal: React.FC<ErrorModalProps> = ({ error, onClose, onRetry, enable
           {error.message}
         </div>
 
-        {error.details && (
+        {(error.details as any) && (
           <div style={{ marginTop: '16px' }}>
             <Text strong>详细信息：</Text>
             <Collapse ghost style={{ marginTop: '8px' }}>
@@ -426,7 +428,7 @@ const ErrorModal: React.FC<ErrorModalProps> = ({ error, onClose, onRetry, enable
                   fontSize: '12px'
                 }}>
                   {typeof error.details === 'object'
-                    ? JSON.stringify(error.details, null, 2)
+                    ? JSON.stringify(error.details, null, 2) as string
                     : String(error.details)
                   }
                 </pre>

@@ -42,7 +42,7 @@ const TodoList: React.FC<TodoListProps> = ({ items, loading }) => {
   }
 
   const handleComplete = (id: string) => {
-    console.log('完成任务:', id)
+    // Task completed
   }
 
   if (!loading && items.length === 0) {
@@ -85,7 +85,7 @@ const TodoList: React.FC<TodoListProps> = ({ items, loading }) => {
             title={
               <Space>
                 <span>{item.title}</span>
-                <Tag color={getPriorityColor(item.priority)} size="small">
+                <Tag color={getPriorityColor(item.priority)}>
                   {getPriorityText(item.priority)}优先级
                 </Tag>
               </Space>

@@ -18,7 +18,7 @@ interface ActionResult {
   status: ActionStatus
   message?: string
   details?: string[]
-  data?: any
+  data?: unknown
   error?: Error
 }
 

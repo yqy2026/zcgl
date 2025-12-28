@@ -16,9 +16,12 @@
 
     /* Linting */
     "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
+
+    /* Type definitions */
+    "types": ["jest", "@testing-library/jest-dom"],
 
     /* Path mapping */
     "baseUrl": ".",

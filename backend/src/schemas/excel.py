@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 Excel导入导出相关的Pydantic数据模型
 """
@@ -119,8 +121,8 @@ class ImportPreviewResponse(BaseModel):
 
     total_rows: int = Field(..., description="总行数")
     preview_data: list[dict] = Field(..., description="预览数据（前10行）")
-    column_mapping: dict = Field(..., description="列映射关系")
-    validation_summary: dict = Field(..., description="验证摘要")
+    column_mapping: dict[str, Any] = Field(..., description="列映射关系")
+    validation_summary: dict[str, Any] = Field(..., description="验证摘要")
     estimated_import_time: int = Field(..., description="预估导入时间（秒）")
     warnings: list[str] = Field(default_factory=list, description="警告信息")
     recommendations: list[str] = Field(default_factory=list, description="建议信息")

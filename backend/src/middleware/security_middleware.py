@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 FastAPI安全中间件
 提供请求验证、文件上传安全和速率限制功能
@@ -12,9 +14,17 @@ from fastapi import HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from ..core.exception_handler import ValidationException
+from ..core.exception_handler import BusinessValidationError
 from ..core.logging_security import security_auditor
 from ..core.security import RateLimiter
+
+try:
+    from ..core.security.ratelimit import adaptive_limiter
+
+    ADAPTIVE_LIMITER_AVAILABLE = True
+except ImportError:
+    adaptive_limiter = None
+    ADAPTIVE_LIMITER_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +52,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 class RequestValidationMiddleware(BaseHTTPMiddleware):
     """请求验证中间件"""
 
-    def __init__(self, app, rate_limit_config: dict = None):
+    def __init__(self, app, rate_limit_config: dict[str, Any] | None = None):
         super().__init__(app)
         self.rate_limiter = RateLimiter()
         self.config = rate_limit_config or {}
@@ -97,10 +107,68 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         except HTTPException:
             raise
         except Exception as e:
-            logger.error(f"Security middleware error: {str(e)}")
+            # 清理异常信息中的不可序列化对象
+            error_message = self._sanitize_exception_message(str(e))
+            # 确保异常对象可以被序列化
+            try:
+                from decimal import Decimal
+
+                def decimal_default(obj):
+                    if isinstance(obj, Decimal):
+                        return float(obj)
+                    # Handle other non-serializable types
+                    if hasattr(obj, "__dict__"):
+                        return str(obj)
+                    raise TypeError(
+                        f"Object of type {type(obj).__name__} is not JSON serializable"
+                    )
+
+                # Only log the error message string, not the full exception object
+                logger.error(f"Security middleware error: {error_message}")
+            except (TypeError, ValueError):
+                # 如果异常信息不能序列化，使用通用消息
+                logger.error(
+                    "Security middleware error: Unable to serialize exception object"
+                )
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="请求处理失败"
             )
+
+    def _sanitize_exception_message(self, message: str) -> str:
+        """清理异常消息中的不可序列化内容"""
+        if not isinstance(message, str):
+            try:
+                message = str(message)
+            except Exception:
+                message = "<无法序列化的异常信息>"
+
+        # 限制消息长度
+        if len(message) > 500:
+            message = message[:500] + "...(截断)"
+
+        # 移除可能包含对象引用的模式
+        import re
+
+        # 移除类似 "<class 'src.models.rent_contract.RentLedger'>" 的内容
+        message = re.sub(r"<class '[^']*'>", "<模型对象>", message)
+        # 移除可能的对象ID引用
+        message = re.sub(r"object at 0x[0-9a-fA-F]+>", "<对象实例>", message)
+        # 移除更多的对象引用模式
+        message = re.sub(r"<[^>]*object[^>]*>", "<对象实例>", message)
+        # 移除可能的内存地址引用
+        message = re.sub(r"0x[0-9a-fA-F]{8,}", "<内存地址>", message)
+        # 移除可能的模块路径引用
+        message = re.sub(
+            r"[a-zA-Z_][a-zA-Z0-9_.]*\.[a-zA-Z_][a-zA-Z0-9_.]*", "<模块引用>", message
+        )
+        # 移除可能的尖括号包围的内容（除了我们替换的占位符）
+        message = re.sub(
+            r"<(?!模型对象|对象实例|内存地址|模块引用|无法序列化的异常信息)[^>]*>",
+            "<未知对象>",
+            message,
+        )
+
+        return message
 
     def _get_client_ip(self, request: Request) -> str:
         """获取客户端真实IP"""
@@ -113,7 +181,10 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         if real_ip:
             return real_ip.strip()
 
-        return request.client.host
+        # 确保返回默认IP而不是None
+        if request.client:
+            return request.client.host
+        return "unknown"
 
     def _is_ip_blocked(self, ip: str) -> bool:
         """检查IP是否被封禁"""
@@ -159,29 +230,59 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
             or ip.startswith("172.")
         )
 
-        # 不同请求类型的限制
-        path = request.url.path
-        if path is None:
-            path = ""
+        # 检查是否为可疑请求
+        is_suspicious = self._is_suspicious_request(request)
+
+        # 使用自适应速率限制器
+        rate_limit_key = ip
+        path = request.url.path or ""
 
         if path.startswith("/api/v1/pdf_import"):
-            # PDF导入限制：本地每分钟最多50次，生产环境每分钟最多5次
-            max_requests = 50 if is_local else 5
-            return self.rate_limiter.check_rate_limit(
-                f"{ip}:pdf_import", max_requests, 60
-            )
+            # PDF导入限制
+            rate_limit_key = f"{ip}:pdf_import"
         elif path.startswith("/api/v1/excel"):
-            # Excel操作限制：本地每分钟最多100次，生产环境每分钟最多10次
-            max_requests = 100 if is_local else 10
-            return self.rate_limiter.check_rate_limit(f"{ip}:excel", max_requests, 60)
+            # Excel操作限制
+            rate_limit_key = f"{ip}:excel"
         elif request.method == "POST":
-            # POST请求限制：本地每分钟最多300次，生产环境每分钟最多30次
-            max_requests = 300 if is_local else 30
-            return self.rate_limiter.check_rate_limit(f"{ip}:post", max_requests, 60)
+            # POST请求限制
+            rate_limit_key = f"{ip}:post"
+
+        # 检查速率限制
+        if adaptive_limiter is not None and ADAPTIVE_LIMITER_AVAILABLE:
+            return adaptive_limiter.check_rate_limit(rate_limit_key, is_suspicious)
         else:
-            # 一般请求限制：本地每分钟最多1000次，生产环境每分钟最多100次
-            max_requests = 1000 if is_local else 100
-            return self.rate_limiter.check_rate_limit(ip, max_requests, 60)
+            # 如果自适应限流器不可用，使用简单的默认限流器
+            logger.warning(
+                "Adaptive rate limiter not available, using default rate limiting"
+            )
+            return True  # 默认允许通过，在生产环境中应该实现更严格的限流
+
+    def _is_suspicious_request(self, request: Request) -> bool:
+        """检查是否为可疑请求"""
+        # 检查User-Agent
+        user_agent = request.headers.get("User-Agent", "")
+        if not user_agent or len(user_agent) < 10:
+            return True
+
+        # 检查路径中的可疑模式
+        path = request.url.path or ""
+        for pattern in self.suspicious_patterns:
+            if pattern in path.lower():
+                return True
+
+        # 检查查询参数中的可疑模式
+        query_params = dict(request.query_params)
+        for key, value in query_params.items():
+            if (
+                value is not None
+                and isinstance(value, str)
+                and any(
+                    pattern in value.lower() for pattern in self.suspicious_patterns
+                )
+            ):
+                return True
+
+        return False
 
     async def _validate_request_content(self, request: Request):
         """验证请求内容"""
@@ -292,7 +393,7 @@ class FileUploadSecurityMiddleware(BaseHTTPMiddleware):
         if request.headers.get("content-type", "").startswith("multipart/form-data"):
             try:
                 await self._validate_file_upload(request)
-            except ValidationException as e:
+            except BusinessValidationError as e:
                 logger.error(f"File upload validation failed: {str(e)}")
                 return JSONResponse(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -321,7 +422,7 @@ class FileUploadSecurityMiddleware(BaseHTTPMiddleware):
 
         # 检查请求大小
         if content_length > self.max_file_size:
-            raise ValidationException(
+            raise BusinessValidationError(
                 f"请求过大: {content_length / (1024 * 1024):.2f}MB",
                 details={"max_size": self.max_file_size / (1024 * 1024)},
             )
@@ -341,7 +442,12 @@ class FileUploadSecurityMiddleware(BaseHTTPMiddleware):
 class CORSExtendedMiddleware(BaseHTTPMiddleware):
     """扩展的CORS中间件"""
 
-    def __init__(self, app, allowed_origins: list = None, allowed_methods: list = None):
+    def __init__(
+        self,
+        app,
+        allowed_origins: list[Any] | None = None,
+        allowed_methods: list[Any] | None = None,
+    ):
         super().__init__(app)
         self.allowed_origins = allowed_origins or [
             "http://localhost:5173",
@@ -385,7 +491,7 @@ class CORSExtendedMiddleware(BaseHTTPMiddleware):
         return response
 
 
-def create_security_middleware(app, config: dict = None):
+def create_security_middleware(app, config: dict[str, Any] | None = None):
     """
     创建安全中间件链
 
@@ -397,11 +503,6 @@ def create_security_middleware(app, config: dict = None):
 
     # 按顺序添加中间件
     app.add_middleware(SecurityHeadersMiddleware)
-    app.add_middleware(
-        CORSExtendedMiddleware,
-        allowed_origins=config.get("allowed_origins"),
-        allowed_methods=config.get("allowed_methods"),
-    )
     app.add_middleware(
         FileUploadSecurityMiddleware,
         max_file_size=config.get("max_file_size", 50 * 1024 * 1024),

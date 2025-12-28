@@ -4,7 +4,18 @@
  */
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import './PDFImportPage.css';
+import styles from './PDFImportPage.module.css';
+
+// API 错误接口
+interface ApiError {
+  response?: {
+    data?: {
+      message?: string
+      detail?: string
+    }
+  }
+  message?: string
+}
 import {
   Card,
   Tabs,
@@ -43,18 +54,18 @@ import ContractImportStatus from './ContractImportStatus';
 import ContractImportReview from './ContractImportReview';
 import PDFImportHelp from './PDFImportHelp';
 import { pdfImportService } from '../../services/pdfImportService';
+import type { SystemInfoResponse } from '../../services/pdfImportService';
 import type {
   FileUploadResponse,
   SessionProgress,
   CompleteResult,
   ConfirmedContractData,
-  ConfirmImportResponse,
-  ActiveSession
+  ConfirmImportResponse
 } from '../../services/pdfImportService';
 
 const { Title, Text, Paragraph } = Typography;
 
-interface UploadFile {
+interface CustomUploadFile {
   uid: string;
   name: string;
   status: 'done' | 'error' | 'uploading';
@@ -65,7 +76,7 @@ interface UploadFile {
 
 interface ProcessingSession {
   sessionId: string;
-  fileInfo: UploadFile;
+  fileInfo: CustomUploadFile;
   status: 'uploading' | 'processing' | 'ready' | 'completed' | 'failed';
   progress: number;
   result?: CompleteResult;
@@ -76,7 +87,7 @@ const PDFImportPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'upload' | 'history'>('upload');
   const [currentSession, setCurrentSession] = useState<ProcessingSession | null>(null);
   const [sessionHistory, setSessionHistory] = useState<ProcessingSession[]>([]);
-  const [systemInfo, setSystemInfo] = useState<any>(null);
+  const [systemInfo, setSystemInfo] = useState<SystemInfoResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [showSystemInfo, setShowSystemInfo] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
@@ -180,11 +191,24 @@ const PDFImportPage: React.FC = () => {
             fileInfo: {
               uid: session.session_id,
               name: session.file_name,
-              status: 'done',
+              status: 'done' as const,
               size: 0,
               type: 'application/pdf'
-            },
-            status: session.status === 'ready_for_review' ? 'ready' : session.status as any,
+            } as CustomUploadFile,
+            status: ((): 'ready' | 'completed' | 'failed' | 'processing' => {
+              switch (session.status) {
+                case 'ready_for_review':
+                  return 'ready'
+                case 'completed':
+                  return 'completed'
+                case 'failed':
+                  return 'failed'
+                case 'cancelled':
+                  return 'failed'
+                default:
+                  return 'processing'
+              }
+            })(),
             progress: session.progress
           }));
         setSessionHistory(history);
@@ -195,12 +219,12 @@ const PDFImportPage: React.FC = () => {
   };
 
   // 文件上传成功处理
-  const handleUploadSuccess = (sessionId: string, fileInfo: UploadFile) => {
-    console.log('Upload success, session:', sessionId, 'file:', fileInfo.name);
+  const handleUploadSuccess = (sessionId: string, fileInfo: any) => {
+    // Upload success
 
     const newSession: ProcessingSession = {
       sessionId,
-      fileInfo,
+      fileInfo: fileInfo as CustomUploadFile,
       status: 'processing',
       progress: 0
     };
@@ -215,14 +239,14 @@ const PDFImportPage: React.FC = () => {
   };
 
   // 文件上传失败处理
-  const handleUploadError = (error: string) => {
-    message.error(error);
+  const handleUploadError = (error: any) => {
+    message.error(typeof error === 'string' ? error : '上传失败');
     setCurrentSession(null);
   };
 
   // 处理完成处理
   const handleProcessingComplete = (result: CompleteResult) => {
-    console.log('Processing complete, result:', result);
+    // Processing complete
 
     if (currentSession) {
       setCurrentSession({
@@ -263,14 +287,14 @@ const PDFImportPage: React.FC = () => {
 
         // 添加到历史记录
         if (currentSession) {
-          setSessionHistory(prev => [currentSession, ...prev]);
+          setSessionHistory(prev => [currentSession!, ...prev]);
         }
 
         // 显示成功通知
         if (userPreferences.enableNotifications) {
           notification.success({
             message: '合同导入成功！',
-            description: `已成功导入合同 ${currentSession.fileInfo.name}`,
+            description: `已成功导入合同 ${currentSession!.fileInfo.name}`,
             duration: 4.5,
             placement: 'topRight'
           });
@@ -280,16 +304,17 @@ const PDFImportPage: React.FC = () => {
       }
 
       return response;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError
       if (userPreferences.enableNotifications) {
         notification.error({
           message: '导入失败',
-          description: error.message || '合同导入过程中发生错误',
+          description: apiError.message || '合同导入过程中发生错误',
           duration: 6,
           placement: 'topRight'
         });
       } else {
-        message.error(error.message || '导入失败');
+        message.error(apiError.message || '导入失败');
       }
       throw error;
     }
@@ -304,8 +329,9 @@ const PDFImportPage: React.FC = () => {
           message.info('已取消导入');
           setCurrentSession(null);
         }
-      } catch (error: any) {
-        message.error(error.message || '取消失败');
+      } catch (error: unknown) {
+      const apiError = error as ApiError
+        message.error(apiError.message || '取消失败');
       }
     }
   };
@@ -342,7 +368,8 @@ const PDFImportPage: React.FC = () => {
       } else {
         message.warning('系统可能存在问题');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as ApiError
       message.error('测试失败');
     } finally {
       setLoading(false);
@@ -479,7 +506,7 @@ const PDFImportPage: React.FC = () => {
   }
 
   return (
-    <div className="pdf-import-page" style={{
+    <div className={styles['pdf-import-page']} style={{
       animation: 'fadeIn 0.3s ease-in-out',
       minHeight: '100vh'
     }}>
@@ -488,7 +515,7 @@ const PDFImportPage: React.FC = () => {
         <Row justify="space-between" align="middle">
           <Col>
             <Space size="large">
-              <div className="status-icon">
+              <div className={styles['status-icon']}>
                 <UploadOutlined style={{ fontSize: 24, color: '#1890ff' }} />
               </div>
               <div>
@@ -566,7 +593,7 @@ const PDFImportPage: React.FC = () => {
                 <div style={{ marginTop: 8 }}>
                   <Text type="secondary">
                     处理时间: {systemInfo.capabilities.estimated_processing_time} |
-                    支持格式: {systemInfo.capabilities.supported_formats.join(', ')}
+                    支持格式: {(systemInfo.capabilities.supported_formats as any)?.join(', ') || 'N/A'}
                   </Text>
                 </div>
               </div>
@@ -610,7 +637,7 @@ const PDFImportPage: React.FC = () => {
             <Card size="small">
               <Statistic
                 title="文件大小限制"
-                value={systemInfo?.capabilities.max_file_size_mb || 50}
+                value={systemInfo?.capabilities.max_file_size_mb || 50 as any}
                 suffix="MB"
                 prefix={<FileTextOutlined />}
               />
@@ -620,7 +647,7 @@ const PDFImportPage: React.FC = () => {
             <Card size="small">
               <Statistic
                 title="预估处理时间"
-                value={systemInfo?.capabilities.estimated_processing_time || '30-60秒'}
+                value={systemInfo?.capabilities.estimated_processing_time || '30-60秒' as any}
                 prefix={<SettingOutlined />}
               />
             </Card>

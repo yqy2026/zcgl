@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react'
 import { ConfigProvider, App } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
-import { GlobalErrorBoundary } from '@/components/ErrorHandling'
+import { ErrorBoundary } from '@/components/ErrorHandling'
 import { uxManager } from '@/utils/uxManager'
 
 interface UXProviderProps {
@@ -39,12 +39,12 @@ const UXProvider: React.FC<UXProviderProps> = ({
     }
 
     // 设置全局错误处理
-    const handleError = (error: Error, errorInfo?: any) => {
+    const handleError = (error: Error, errorInfo?: Record<string, unknown>) => {
       uxManager.handleError(error, errorInfo)
       
       // 调用自定义错误处理函数
       if (config.errorBoundary?.onError) {
-        config.errorBoundary.onError(error, errorInfo)
+        config.errorBoundary.onError(error, errorInfo as any)
       }
     }
 
@@ -90,12 +90,12 @@ const UXProvider: React.FC<UXProviderProps> = ({
       theme={themeConfig}
     >
       <App>
-        <GlobalErrorBoundary
+        <ErrorBoundary
           fallback={config.errorBoundary?.fallback}
           onError={config.errorBoundary?.onError}
         >
           {children}
-        </GlobalErrorBoundary>
+        </ErrorBoundary>
       </App>
     </ConfigProvider>
   )

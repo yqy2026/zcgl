@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING, Any
+
 """
 应用配置设置
 """
@@ -7,7 +9,16 @@ import os
 from contextlib import asynccontextmanager
 
 # typing imports removed - not used in this file
-import redis.asyncio as redis
+try:
+    import redis.asyncio as redis
+
+    REDIS_AVAILABLE = True
+except ImportError:
+    REDIS_AVAILABLE = False
+    redis = None  # type: ignore
+
+if TYPE_CHECKING and REDIS_AVAILABLE:
+    from redis.asyncio import ConnectionPool, Redis
 
 
 class Settings:
@@ -23,7 +34,16 @@ class Settings:
     REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
     # 应用配置
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
+    SECRET_KEY: str = os.getenv(
+        "SECRET_KEY",
+        "emergency-test-secret-key-for-development-only-change-in-production",
+    )
+    if not SECRET_KEY or SECRET_KEY in [
+        "EMERGENCY-ONLY-REPLACE-WITH-ENV-SECRET-KEY-NOW"
+    ]:
+        print(
+            "Warning: Using default or missing SECRET_KEY. Please set a proper environment variable in production."
+        )
     DATA_ENCRYPTION_KEY: str = os.getenv("DATA_ENCRYPTION_KEY", "")
     DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"
 
@@ -81,16 +101,21 @@ class Settings:
 settings = Settings()
 
 # Redis连接池
-redis_pool: redis.ConnectionPool | None = None
-redis_client: redis.Redis | None = None
+redis_pool: "ConnectionPool | None" = None
+redis_client: "Redis | None" = None
 
 
 async def init_redis():
     """初始化Redis连接"""
     global redis_pool, redis_client
+
+    if not REDIS_AVAILABLE:
+        print("⚠️ Redis库未安装，跳过Redis初始化")
+        return
+
     try:
-        redis_pool = redis.ConnectionPool.from_url(settings.REDIS_URL)
-        redis_client = redis.Redis(connection_pool=redis_pool)
+        redis_pool = redis.ConnectionPool.from_url(settings.REDIS_URL)  # type: ignore
+        redis_client = redis.Redis(connection_pool=redis_pool)  # type: ignore
         # 测试连接
         await redis_client.ping()
         print(f"✅ Redis连接成功: {settings.REDIS_URL}")
@@ -122,7 +147,7 @@ class RedisTaskStore:
             except Exception as e:
                 print(f"设置任务状态失败: {e}")
 
-    async def get_task_status(self, task_id: str) -> dict | None:
+    async def get_task_status(self, task_id: str) -> dict[str, Any] | None:
         """获取任务状态"""
         if redis_client:
             try:

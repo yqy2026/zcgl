@@ -78,6 +78,8 @@ class PDFImportSession(Base):
     # 处理结果数据
     extracted_text = Column(Text)  # 原始提取的文本
     extracted_data = Column(JSON)  # 提取的结构化数据
+    # 完整处理结果（包含质量评估与性能指标，如并发和吞吐量）
+    processing_result = Column(JSON)
     validation_results = Column(JSON)  # 验证结果
     matching_results = Column(JSON)  # 匹配结果
     confidence_score = Column(Float, default=0.0)  # 整体置信度

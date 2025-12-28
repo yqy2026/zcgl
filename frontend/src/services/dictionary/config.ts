@@ -3,6 +3,11 @@
  * 集中管理所有字典类型的配置和备用数据
  */
 
+import type { DictionaryOption } from '@/types/dictionary'
+
+// Re-export DictionaryOption for backward compatibility
+export type { DictionaryOption } from '@/types/dictionary'
+
 export interface DictionaryConfig {
   code: string
   name: string
@@ -10,15 +15,8 @@ export interface DictionaryConfig {
   description: string
   apiEndpoint: string
   fallbackOptions: DictionaryOption[]
-}
-
-export interface DictionaryOption {
-  label: string
-  value: string
-  code?: string
-  sort_order?: number
-  color?: string
-  icon?: string
+  tags?: string[]
+  requiredFields?: string[]
 }
 
 /**

@@ -461,7 +461,7 @@ for file_path in data.measured_files():
         sleep 10
 
         # 健康检查
-        curl -f http://localhost:8002/api/v1/health || exit 1
+        curl -f http://localhost:8002/api/v1/monitoring/health || exit 1
 
     - name: 启动前端服务
       run: |
@@ -490,7 +490,7 @@ import pytest
 import requests
 import time
 
-API_BASE = "http://localhost:8002/api/v1"
+API_BASE = "http://localhost:8002/api"
 
 class TestAPIIntegration:
     def test_health_check(self):
@@ -515,12 +515,12 @@ EOF
         echo "⚡ 运行性能基准测试..."
 
         # 使用Apache Bench进行简单的性能测试
-        ab -n 100 -c 10 http://localhost:8002/api/v1/health > ab-results.txt 2>&1 || true
+        ab -n 100 -c 10 http://localhost:8002/api/v1/monitoring/health > ab-results.txt 2>&1 || true
 
         # 使用curl测试响应时间
         echo "测量API响应时间..."
         for i in {1..10}; do
-          response_time=$(curl -o /dev/null -s -w "%{time_total}" http://localhost:8002/api/v1/health)
+          response_time=$(curl -o /dev/null -s -w "%{time_total}" http://localhost:8002/api/v1/monitoring/health)
           echo "请求 $i: ${response_time}s"
         done
 

@@ -4,7 +4,7 @@ import { UserOutlined, LockOutlined, SafetyCertificateOutlined, LoginOutlined } 
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import type { LoginFormData } from '../types/auth'
-import './LoginPage.css'
+import styles from './LoginPage.module.css'
 
 const { Title, Text } = Typography
 
@@ -18,13 +18,13 @@ const LoginPage: React.FC = () => {
     remember: false
   })
 
-  const handleFormChange = (changedFields: any, allFields: LoginFormData) => {
+  const handleFormChange = (changedFields: { [key: string]: unknown }, allFields: LoginFormData) => {
     setFormData(allFields)
   }
 
   const handleSubmit = async (values: LoginFormData) => {
     try {
-      await login(values.username, values.password)
+      await login({ username: values.username, password: values.password })
 
       // 登录成功，跳转到目标页面或默认工作台
       const from = location.state?.from?.pathname || '/dashboard'
@@ -47,19 +47,19 @@ const LoginPage: React.FC = () => {
   }
 
   return (
-    <div className="login-page">
-      <div className="login-container">
-        <Card className="login-card" bordered={false}>
+    <div className={styles['login-page']}>
+      <div className={styles['login-container']}>
+        <Card className={styles['login-card']} variant="borderless">
           {/* 登录头部 */}
-          <div className="login-header">
+          <div className={styles['login-header']}>
             <Space direction="vertical" size="middle" align="center">
-              <div className="login-logo">
-                <SafetyCertificateOutlined className="login-icon" />
+              <div className={styles['login-logo']}>
+                <SafetyCertificateOutlined className={styles['login-icon']} />
               </div>
-              <Title level={2} className="login-title">
+              <Title level={2} className={styles['login-title']}>
                 土地房产资产管理系统
               </Title>
-              <Text type="secondary" className="login-subtitle">
+              <Text type="secondary" className={styles['login-subtitle']}>
                 请输入您的用户名和密码进行登录
               </Text>
             </Space>
@@ -70,7 +70,7 @@ const LoginPage: React.FC = () => {
           {/* 登录表单 */}
           <Form
             name="login"
-            className="login-form"
+            className={styles['login-form']}
             initialValues={formData}
             onFinish={handleSubmit}
             size="large"
@@ -87,7 +87,7 @@ const LoginPage: React.FC = () => {
               ]}
             >
               <Input
-                prefix={<UserOutlined className="input-icon" />}
+                prefix={<UserOutlined className={styles['input-icon']} />}
                 placeholder="请输入用户名"
                 value={formData.username}
                 onChange={handleUsernameChange}
@@ -105,7 +105,7 @@ const LoginPage: React.FC = () => {
               ]}
             >
               <Input.Password
-                prefix={<LockOutlined className="input-icon" />}
+                prefix={<LockOutlined className={styles['input-icon']} />}
                 placeholder="请输入密码"
                 value={formData.password}
                 onChange={handlePasswordChange}
@@ -117,7 +117,7 @@ const LoginPage: React.FC = () => {
             <Form.Item name="remember" valuePropName="checked">
               <Checkbox
                 checked={formData.remember}
-                onChange={handleRememberChange}
+                onChange={handleRememberChange as any}
               >
                 记住我的登录状态
               </Checkbox>
@@ -129,7 +129,7 @@ const LoginPage: React.FC = () => {
                 description={error}
                 type="error"
                 showIcon
-                className="login-error"
+                className={styles['login-error']}
                 closable
               />
             )}
@@ -138,7 +138,7 @@ const LoginPage: React.FC = () => {
               <Button
                 type="primary"
                 htmlType="submit"
-                className="login-button"
+                className={styles['login-button']}
                 loading={loading}
                 block
                 size="large"
@@ -152,12 +152,12 @@ const LoginPage: React.FC = () => {
           <Divider />
 
           {/* 登录底部 */}
-          <div className="login-footer">
+          <div className={styles['login-footer']}>
             <Space direction="vertical" size="small" align="center">
-              <Text type="secondary" className="login-help">
+              <Text type="secondary" className={styles['login-help']}>
                 <SafetyCertificateOutlined /> 如遇登录问题，请联系系统管理员
               </Text>
-              <Text type="secondary" className="login-tips">
+              <Text type="secondary" className={styles['login-tips']}>
                 为保护账户安全，请定期更换密码
               </Text>
             </Space>

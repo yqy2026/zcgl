@@ -1,0 +1,797 @@
+# Testing Standards
+# Land Property Asset Management System
+
+**Version**: 1.0
+**Date**: 2025-12-25
+**Status**: Active
+
+---
+
+## Table of Contents
+
+1. [Overview](#overview)
+2. [Test File Naming Conventions](#test-file-naming-conventions)
+3. [Test Directory Structure](#test-directory-structure)
+4. [Backend Testing Standards (pytest)](#backend-testing-standards-pytest)
+5. [Frontend Testing Standards (Jest/React Testing Library)](#frontend-testing-standards-jestreact-testing-library)
+6. [Coverage Targets](#coverage-targets)
+7. [Test Execution Standards](#test-execution-standards)
+8. [CI/CD Integration](#cicd-integration)
+
+---
+
+## Overview
+
+This document defines the testing standards and best practices for the Land Property Asset Management System (土地物业资产管理系统). All team members must follow these guidelines when writing, organizing, and maintaining tests.
+
+### Goals
+
+- **Comprehensive Coverage**: Ensure all critical business logic is tested
+- **Clear Organization**: Tests organized by type and purpose
+- **Maintainability**: Tests that are easy to understand and modify
+- **Fast Feedback**: Tests that run quickly and provide clear results
+
+---
+
+## Test File Naming Conventions
+
+### Backend (Python/pytest)
+
+| Test Type | Naming Pattern | Example | Location |
+|-----------|---------------|---------|----------|
+| Unit Tests | `test_<module>_<component>.py` | `test_asset_model.py` | `tests/unit/models/` |
+| Integration Tests | `test_<module>_api.py` | `test_asset_api.py` | `tests/integration/api/` |
+| E2E Tests | `test_<workflow>_lifecycle.py` | `test_asset_lifecycle.py` | `tests/e2e/` |
+| Security Tests | `test_<security_feature>.py` | `test_rbac_core.py` | `tests/security/` |
+| Performance Tests | `test_<component>_performance.py` | `test_api_performance.py` | `tests/performance/` |
+
+### Frontend (Jest/React)
+
+| Test Type | Naming Pattern | Example | Location |
+|-----------|---------------|---------|----------|
+| Component Tests | `<Component>.test.tsx` | `AssetForm.test.tsx` | `<component-dir>/__tests__/` |
+| Hook Tests | `use<hook-name>.test.ts` | `useAssets.test.ts` | `hooks/__tests__/` |
+| Service Tests | `<service-name>.test.ts` | `assetService.test.ts` | `services/__tests__/` |
+| Utils Tests | `<util-name>.test.ts` | `dataConversion.test.ts` | `utils/__tests__/` |
+| Page Tests | `<PageName>.test.tsx` | `AssetListPage.test.tsx` | `pages/__tests__/` |
+
+---
+
+## Test Directory Structure
+
+### Backend Structure
+
+```
+backend/tests/
+├── conftest.py                      # Enhanced fixtures (keep existing)
+├── conftest_performance.py          # Performance fixtures (keep existing)
+│
+├── unit/                            # Unit Tests - Fast, isolated
+│   ├── models/                      # Model layer tests
+│   │   ├── test_asset_model.py      # Asset model validation
+│   │   ├── test_rent_contract_model.py
+│   │   └── test_user_model.py
+│   │
+│   ├── services/                    # Service layer tests
+│   │   ├── permission/
+│   │   │   └── test_rbac_service.py # RBAC service tests
+│   │   ├── document/
+│   │   │   ├── test_pdf_import_service.py
+│   │   │   └── test_pdf_processing_service.py
+│   │   └── test_analytics_service.py
+│   │
+│   ├── crud/                        # CRUD layer tests
+│   │   ├── test_asset_crud.py
+│   │   └── test_rent_contract_crud.py
+│   │
+│   └── utils/                       # Utility tests
+│       ├── test_validation.py
+│       └── test_enums.py
+│
+├── integration/                     # Integration Tests - Module collaboration
+│   ├── api/                         # API endpoint tests
+│   │   ├── test_asset_api.py
+│   │   ├── test_rent_api.py
+│   │   └── test_auth_api.py
+│   │
+│   ├── database/                    # Database integration tests
+│   │   ├── test_asset_repository.py
+│   │   └── test_database_migrations.py
+│   │
+│   └── pdf/                         # PDF processing integration
+│       └── test_pdf_workflow.py
+│
+├── e2e/                             # End-to-End Tests - Complete workflows
+│   ├── test_asset_lifecycle.py      # Create → Read → Update → Delete
+│   ├── test_contract_workflow.py    # Upload → Process → Approve
+│   └── test_user_permissions.py     # Login → Access → Logout
+│
+├── security/                        # Security Tests - Critical
+│   ├── test_rbac_core.py
+│   ├── test_rbac_critical_security.py
+│   └── test_authentication.py
+│
+├── performance/                     # Performance Tests - Separate, slower
+│   ├── test_api_performance.py
+│   └── test_pdf_performance.py
+│
+└── archive/                         # Archived legacy tests (ignored by pytest)
+    └── *.py                         # Old tests with known issues
+```
+
+### Frontend Structure
+
+```
+frontend/src/
+├── __tests__/                      # Root test configuration
+│   ├── setup.ts                    # Global test setup
+│   └── test-utils.tsx              # Custom test utilities
+│
+├── components/
+│   ├── Asset/
+│   │   └── __tests__/
+│   │       ├── AssetForm.test.tsx
+│   │       ├── AssetList.test.tsx
+│   │       └── AssetCard.test.tsx
+│   │
+│   ├── Forms/                      # Unified form tests
+│   │   └── __tests__/
+│   │       ├── AssetForm.test.tsx
+│   │       ├── OwnershipForm.test.tsx
+│   │       └── RentContractForm.test.tsx
+│   │
+│   └── Router/
+│       └── __tests__/
+│           ├── DynamicRouteLoader.test.tsx
+│           └── RouteBuilder.test.tsx
+│
+├── services/
+│   └── __tests__/
+│       ├── enhancedApiClient.test.ts
+│       └── assetService.test.ts
+│
+├── hooks/
+│   └── __tests__/
+│       ├── useAssets.test.ts
+│       └── useAuth.test.ts
+│
+├── pages/
+│   └── __tests__/
+│       ├── AssetListPage.test.tsx
+│       └── DashboardPage.test.tsx
+│
+└── utils/
+    └── __tests__/
+        └── dataConversion.test.ts
+```
+
+---
+
+## Backend Testing Standards (pytest)
+
+### Test Structure Template
+
+```python
+"""
+Asset CRUD operations tests
+"""
+
+import pytest
+from sqlalchemy.orm import Session
+
+from src.models.asset import Asset
+from src.schemas.asset import AssetCreate
+from src.crud.asset import asset_crud
+
+
+class TestAssetCRUD:
+    """Test Asset CRUD operations"""
+
+    @pytest.mark.unit
+    def test_create_asset_success(self, db_session: Session) -> None:
+        """Test successful asset creation with valid data"""
+        # Arrange
+        asset_data = AssetCreate(
+            ownership_entity="测试权属人",
+            property_name="测试物业",
+            address="测试地址123号",
+            actual_property_area=1000.0,
+            ownership_status="已确权",
+        )
+
+        # Act
+        result = asset_crud.create(db_session, asset_data)
+
+        # Assert
+        assert result is not None
+        assert result.ownership_entity == "测试权属人"
+        assert result.property_name == "测试物业"
+        assert result.id is not None
+
+    @pytest.mark.unit
+    def test_create_asset_duplicate_fails(self, db_session: Session) -> None:
+        """Test that duplicate assets are rejected"""
+        # Arrange
+        asset_data = AssetCreate(
+            ownership_entity="测试权属人",
+            property_name="唯一物业",
+            address="测试地址",
+        )
+
+        # Act - Create first asset
+        asset_crud.create(db_session, asset_data)
+
+        # Assert - Attempting to create duplicate should raise error
+        with pytest.raises(ValueError, match="already exists"):
+            asset_crud.create(db_session, asset_data)
+
+    @pytest.mark.integration
+    def test_get_asset_by_id_from_db(self, db_session: Session) -> None:
+        """Test retrieving asset from database by ID"""
+        # Arrange
+        asset_data = AssetCreate(
+            ownership_entity="测试权属人",
+            property_name="测试物业",
+            address="测试地址",
+        )
+        created = asset_crud.create(db_session, asset_data)
+
+        # Act
+        retrieved = asset_crud.get(db_session, created.id)
+
+        # Assert
+        assert retrieved is not None
+        assert retrieved.id == created.id
+        assert retrieved.property_name == "测试物业"
+```
+
+### Fixture Usage
+
+```python
+# conftest.py
+import pytest
+from sqlalchemy.orm import Session
+from src.models.asset import Asset
+from src.factories.asset_factory import AssetFactory
+
+
+@pytest.fixture(scope="function")
+def db_session():
+    """Real database session for integration tests"""
+    from src.core.database import get_db
+    session = next(get_db())
+    yield session
+    session.rollback()
+    session.close()
+
+
+@pytest.fixture(scope="function")
+def authenticated_client(db_session: Session):
+    """API client with authentication token"""
+    from fastapi.testclient import TestClient
+    from src.main import app
+
+    # Create test user and get token
+    token = create_test_user_and_get_token(db_session)
+
+    return TestClient(app, headers={"Authorization": f"Bearer {token}"})
+
+
+@pytest.fixture(scope="session")
+def sample_asset_data():
+    """Sample asset data for testing"""
+    return {
+        "ownership_entity": "测试权属人",
+        "management_entity": "测试管理人",
+        "property_name": "测试物业",
+        "address": "测试地址123号",
+        "actual_property_area": 1000.0,
+        "rentable_area": 800.0,
+        "ownership_status": "已确权",
+    }
+```
+
+### Test Markers
+
+```python
+# Run specific test types
+pytest -m unit                    # Only unit tests
+pytest -m integration             # Only integration tests
+pytest -m slow                    # Only slow tests
+pytest -m "not slow"              # Exclude slow tests
+
+# Combined markers
+pytest -m "integration and database"  # Integration tests that use database
+pytest -m "unit and not slow"         # Fast unit tests only
+```
+
+### Async Tests
+
+```python
+import pytest
+
+
+@pytest.mark.asyncio
+async def test_async_pdf_processing():
+    """Test async PDF processing"""
+    from src.services.document.pdf_processing_service import PDFProcessingService
+
+    service = PDFProcessingService()
+    result = await service.process_pdf_async("test.pdf")
+
+    assert result.status == "completed"
+    assert result.extracted_text is not None
+```
+
+---
+
+## Frontend Testing Standards (Jest/React Testing Library)
+
+### Component Test Template
+
+```typescript
+/**
+ * AssetForm component tests
+ */
+
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { AssetForm } from './AssetForm'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+
+// Mock dependencies
+jest.mock('@/api/client', () => ({
+  enhancedApiClient: {
+    post: vi.fn(),
+  },
+}))
+
+const mockOnSubmit = vi.fn()
+
+const renderWithQueryClient = (component: React.ReactElement) => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  })
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      {component}
+    </QueryClientProvider>
+  )
+}
+
+describe('AssetForm', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('renders all required fields correctly', () => {
+    renderWithQueryClient(
+      <AssetForm mode="create" onSubmit={mockOnSubmit} />
+    )
+
+    expect(screen.getByLabelText(/权属单位/)).toBeInTheDocument()
+    expect(screen.getByLabelText(/物业名称/)).toBeInTheDocument()
+    expect(screen.getByLabelText(/地址/)).toBeInTheDocument()
+  })
+
+  it('submits form with valid data', async () => {
+    const user = userEvent.setup()
+
+    renderWithQueryClient(
+      <AssetForm mode="create" onSubmit={mockOnSubmit} />
+    )
+
+    // Fill in form fields
+    await user.type(screen.getByLabelText(/权属单位/), '测试权属人')
+    await user.type(screen.getByLabelText(/物业名称/), '测试物业')
+    await user.type(screen.getByLabelText(/地址/), '测试地址123号')
+    await user.type(screen.getByLabelText(/建筑面积/), '1000')
+
+    // Submit form
+    await user.click(screen.getByRole('button', { name: /提交/ }))
+
+    // Verify submission
+    await waitFor(() => {
+      expect(mockOnSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ownership_entity: '测试权属人',
+          property_name: '测试物业',
+          address: '测试地址123号',
+          actual_property_area: 1000,
+        })
+      )
+    })
+  })
+
+  it('shows validation errors for required fields', async () => {
+    const user = userEvent.setup()
+
+    renderWithQueryClient(
+      <AssetForm mode="create" onSubmit={mockOnSubmit} />
+    )
+
+    // Submit without filling required fields
+    await user.click(screen.getByRole('button', { name: /提交/ }))
+
+    // Verify error messages
+    await waitFor(() => {
+      expect(screen.getByText(/权属单位是必填项/)).toBeInTheDocument()
+      expect(screen.getByText(/物业名称是必填项/)).toBeInTheDocument()
+    })
+
+    // Verify form was not submitted
+    expect(mockOnSubmit).not.toHaveBeenCalled()
+  })
+
+  it('displays loading state during submission', async () => {
+    const user = userEvent.setup()
+    mockOnSubmit.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 1000)))
+
+    renderWithQueryClient(
+      <AssetForm mode="create" onSubmit={mockOnSubmit} />
+    )
+
+    // Fill and submit
+    await user.type(screen.getByLabelText(/权属单位/), '测试权属人')
+    await user.click(screen.getByRole('button', { name: /提交/ }))
+
+    // Verify loading state
+    expect(screen.getByRole('button', { name: /提交中/ })).toBeDisabled()
+  })
+})
+```
+
+### Hook Test Template
+
+```typescript
+/**
+ * useAssets hook tests
+ */
+
+import { renderHook, act, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { useAssets } from './useAssets'
+
+const wrapper = ({ children }: { children: React.ReactNode }) => {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+    },
+  })
+  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+}
+
+describe('useAssets', () => {
+  it('fetches assets successfully', async () => {
+    const { result } = renderHook(() => useAssets(), { wrapper })
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+    })
+
+    expect(result.current.data).toBeDefined()
+    expect(result.current.data.length).toBeGreaterThan(0)
+  })
+
+  it('handles error state correctly', async () => {
+    // Mock error response
+    vi.mock('@/api/client', () => ({
+      enhancedApiClient: {
+        get: vi.fn().mockRejectedValue(new Error('API Error')),
+      },
+    }))
+
+    const { result } = renderHook(() => useAssets(), { wrapper })
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true)
+    })
+
+    expect(result.current.error).toBeDefined()
+  })
+})
+```
+
+### Service Test Template
+
+```typescript
+/**
+ * Asset service tests
+ */
+
+import { enhancedApiClient } from '@/api/client'
+import { assetService } from './assetService'
+
+// Mock the API client
+vi.mock('@/api/client', () => ({
+  enhancedApiClient: {
+    get: vi.fn(),
+    post: vi.fn(),
+    put: vi.fn(),
+    delete: vi.fn(),
+  },
+}))
+
+describe('assetService', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  describe('getAssets', () => {
+    it('fetches assets with default parameters', async () => {
+      const mockAssets = [
+        { id: '1', property_name: '测试物业1' },
+        { id: '2', property_name: '测试物业2' },
+      ]
+      vi.mocked(enhancedApiClient.get).mockResolvedValue({ data: mockAssets })
+
+      const result = await assetService.getAssets()
+
+      expect(enhancedApiClient.get).toHaveBeenCalledWith('/api/v1/assets', {
+        params: { page: 1, pageSize: 20 },
+      })
+      expect(result).toEqual(mockAssets)
+    })
+
+    it('handles API errors gracefully', async () => {
+      vi.mocked(enhancedApiClient.get).mockRejectedValue(new Error('Network Error'))
+
+      await expect(assetService.getAssets()).rejects.toThrow('Network Error')
+    })
+  })
+
+  describe('createAsset', () => {
+    it('creates a new asset successfully', async () => {
+      const newAsset = {
+        ownership_entity: '测试权属人',
+        property_name: '新物业',
+        address: '测试地址',
+      }
+      const createdAsset = { id: '123', ...newAsset }
+      vi.mocked(enhancedApiClient.post).mockResolvedValue({ data: createdAsset })
+
+      const result = await assetService.createAsset(newAsset)
+
+      expect(enhancedApiClient.post).toHaveBeenCalledWith(
+        '/api/v1/assets',
+        newAsset
+      )
+      expect(result).toEqual(createdAsset)
+    })
+  })
+})
+```
+
+---
+
+## Coverage Targets
+
+### Backend Coverage Goals
+
+| Category | Target | Notes |
+|----------|--------|-------|
+| **Overall** | 85% | Project-wide coverage |
+| **Unit Tests** | 95% | Isolated functions and classes |
+| **Integration Tests** | 80% | API and database integration |
+| **Critical Paths** | 95%+ | Authentication, authorization, payment processing |
+| **Utility Functions** | 90% | Helper functions and validators |
+
+### Frontend Coverage Goals
+
+| Category | Target | Notes |
+|----------|--------|-------|
+| **Overall** | 75% | Project-wide coverage |
+| **Components** | 80% | UI components |
+| **Hooks** | 85% | Custom React hooks |
+| **Services** | 80% | API service layer |
+| **Utils** | 90% | Helper functions |
+| **Critical Paths** | 90%+ | Authentication, asset creation, form validation |
+
+---
+
+## Test Execution Standards
+
+### Backend Test Execution
+
+```bash
+# Run all tests
+cd backend
+pytest
+
+# Run with coverage
+pytest --cov=src --cov-report=html --cov-report=term
+
+# Run specific test types
+pytest -m unit                    # Fast unit tests only
+pytest -m integration             # Integration tests
+pytest -m "not slow"              # Exclude slow tests
+
+# Run specific file
+pytest tests/unit/models/test_asset_model.py
+
+# Run with verbose output
+pytest -v --tb=short
+
+# Run failed tests only
+pytest --lf
+
+# Stop on first failure
+pytest -x
+```
+
+### Frontend Test Execution
+
+```bash
+# Run all tests
+cd frontend
+npm test
+
+# Run with coverage
+npm run test:coverage
+
+# Run in watch mode
+npm test -- --watch
+
+# Run specific test file
+npm test -- AssetForm.test.tsx
+
+# Run tests matching pattern
+npm test -- --testNamePattern="AssetForm"
+
+# Run tests for specific directory
+npm test -- components/Asset
+
+# Update snapshots
+npm test -- -u
+```
+
+### Test Execution Time Targets
+
+| Test Type | Maximum Time | Notes |
+|-----------|--------------|-------|
+| Unit Tests | < 5 minutes | Fast, isolated tests |
+| Integration Tests | < 15 minutes | Database/API integration |
+| Full Suite | < 30 minutes | All tests combined |
+
+---
+
+## CI/CD Integration
+
+### Backend CI Pipeline
+
+```yaml
+name: Backend Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        test-type: [unit, integration, security]
+        python-version: ['3.12']
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          pip install -e ".[dev]"
+
+      - name: Run ${{ matrix.test-type }} tests
+        run: |
+          pytest -m ${{ matrix.test-type }} --cov=src --cov-report=xml
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+```
+
+### Frontend CI Pipeline
+
+```yaml
+name: Frontend Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: cd frontend && npm ci
+
+      - name: Run tests
+        run: cd frontend && npm run test:coverage
+
+      - name: Type check
+        run: cd frontend && npm run type-check
+
+      - name: Lint
+        run: cd frontend && npm run lint
+```
+
+---
+
+## Best Practices
+
+### DO's ✅
+
+1. **Write descriptive test names** that clearly state what is being tested
+2. **Follow Arrange-Act-Assert pattern** for clear test structure
+3. **Use fixtures** for common test data and setup
+4. **Test behavior, not implementation** - focus on what the code does, not how
+5. **Keep tests independent** - each test should be able to run in isolation
+6. **Mock external dependencies** - databases, APIs, file systems
+7. **Use appropriate assertions** - most specific to least specific
+8. **Clean up resources** - use `finally` blocks or fixture teardown
+
+### DON'Ts ❌
+
+1. **Don't test third-party libraries** - trust that they work
+2. **Don't write tests that depend on execution order**
+3. **Don't use random data in tests** - use deterministic fixtures
+4. **Don't ignore test failures** - fix them immediately
+5. **Don't test trivial code** - getters/setters, simple pass-through functions
+6. **Don't hardcode values** that should come from configuration
+7. **Don't catch all exceptions** - catch only expected exceptions
+8. **Don't sleep in tests** - use proper async/await or mocks
+
+---
+
+## Quick Reference
+
+### Common Backend Commands
+
+```bash
+# Quick test run
+pytest tests/unit/models/ -v
+
+# Coverage report
+pytest --cov=src --cov-report=html
+
+# Find failing tests
+pytest -v --tb=short | grep FAILED
+
+# Run specific marker
+pytest -m "api and not slow"
+```
+
+### Common Frontend Commands
+
+```bash
+# Quick test run
+npm test -- --testPathPattern=AssetForm
+
+# Coverage report
+npm run test:coverage
+
+# Find failing tests
+npm test 2>&1 | grep "FAIL"
+
+# Run specific file
+npm test -- AssetForm.test.tsx
+```
+
+---
+
+**Document Owner**: Development Team
+**Last Updated**: 2025-12-25
+**Next Review**: 2026-01-01

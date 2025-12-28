@@ -3,17 +3,20 @@
 用于PDF处理的中文NLP支持
 """
 
-import sys
 import os
+import sys
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import subprocess
-import spacy
 import logging
+import subprocess
+
+import spacy
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 def check_spacy_model(model_name: str = "zh_core_web_sm"):
     """检查spaCy模型是否已安装"""
@@ -25,15 +28,19 @@ def check_spacy_model(model_name: str = "zh_core_web_sm"):
         logger.warning(f"spaCy模型 {model_name} 未安装")
         return False
 
+
 def install_spacy_model(model_name: str = "zh_core_web_sm"):
     """安装spaCy模型"""
     try:
         logger.info(f"正在安装spaCy模型: {model_name}")
 
         # 使用python -m spacy download命令
-        result = subprocess.run([
-            sys.executable, "-m", "spacy", "download", model_name
-        ], capture_output=True, text=True, timeout=300)
+        result = subprocess.run(
+            [sys.executable, "-m", "spacy", "download", model_name],
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
 
         if result.returncode == 0:
             logger.info(f"spaCy模型 {model_name} 安装成功")
@@ -49,6 +56,7 @@ def install_spacy_model(model_name: str = "zh_core_web_sm"):
         logger.error(f"spaCy模型安装失败: {e}")
         return False
 
+
 def test_spacy_model(model_name: str = "zh_core_web_sm"):
     """测试spaCy模型是否正常工作"""
     try:
@@ -62,7 +70,7 @@ def test_spacy_model(model_name: str = "zh_core_web_sm"):
         tokens = [token.text for token in doc]
         entities = [(ent.text, ent.label_) for ent in doc.ents]
 
-        logger.info(f"spaCy模型测试成功")
+        logger.info("spaCy模型测试成功")
         logger.info(f"分词结果: {tokens[:5]}...")
         logger.info(f"实体识别: {entities}")
 
@@ -71,6 +79,7 @@ def test_spacy_model(model_name: str = "zh_core_web_sm"):
     except Exception as e:
         logger.error(f"spaCy模型测试失败: {e}")
         return False
+
 
 def setup_spacy_fallback():
     """设置spaCy回退机制"""
@@ -88,6 +97,7 @@ def setup_spacy_fallback():
     except Exception as e:
         logger.error(f"设置spaCy回退机制失败: {e}")
         return None
+
 
 def main():
     """主函数"""
@@ -126,6 +136,7 @@ def main():
         logger.info("请手动运行以下命令安装中文模型:")
         logger.info(f"python -m spacy download {model_name}")
         return False
+
 
 if __name__ == "__main__":
     success = main()

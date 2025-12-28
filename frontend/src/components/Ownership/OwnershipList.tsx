@@ -34,7 +34,7 @@ import type { ColumnsType } from 'antd/es/table';
 
 import { ownershipService } from '@/services/ownershipService';
 import type { Ownership, OwnershipListResponse, OwnershipStatisticsResponse } from '@/types/ownership';
-import OwnershipForm from './OwnershipForm';
+import { OwnershipForm } from '../Forms';
 import OwnershipDetail from './OwnershipDetail';
 
 const { Search } = Input;
@@ -159,8 +159,8 @@ const OwnershipList: React.FC<OwnershipListProps> = ({
           message.success('删除成功');
           loadOwnerships();
           loadStatistics();
-        } catch (error: any) {
-          message.error(error.message || '删除失败');
+        } catch (error: unknown) {
+          message.error(error instanceof Error ? error.message : '删除失败');
         }
       }
     });
@@ -430,7 +430,7 @@ const OwnershipList: React.FC<OwnershipListProps> = ({
         }}
         footer={null}
         width={600}
-        destroyOnClose
+        destroyOnHidden
       >
         <OwnershipForm
           initialValues={editingOwnership}
@@ -452,7 +452,7 @@ const OwnershipList: React.FC<OwnershipListProps> = ({
         }}
         footer={null}
         width={800}
-        destroyOnClose
+        destroyOnHidden
       >
         {viewingOwnership && (
           <OwnershipDetail

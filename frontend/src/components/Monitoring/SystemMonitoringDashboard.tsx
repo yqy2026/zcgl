@@ -21,8 +21,8 @@ import {
   AlertOutlined,
   ReloadOutlined,
   SettingOutlined,
-  TrendingUpOutlined,
-  TrendingDownOutlined,
+  RiseOutlined,
+  FallOutlined,
   MinusOutlined
 } from '@ant-design/icons'
 import { Line, Column, Gauge } from '@ant-design/plots'
@@ -56,7 +56,7 @@ interface ApplicationMetrics {
 interface HealthStatus {
   status: 'healthy' | 'degraded' | 'unhealthy'
   timestamp: string
-  components: Record<string, any>
+  components: Record<string, unknown>
   overall_score: number
 }
 
@@ -69,6 +69,13 @@ interface PerformanceAlert {
   threshold: number
   timestamp: string
   resolved: boolean
+}
+
+// 图表数据点接口
+interface ChartDataPoint {
+  time: string
+  value: number
+  category?: string
 }
 
 interface DashboardData {
@@ -119,7 +126,7 @@ const SystemMonitoringDashboard: React.FC = () => {
   const resolveAlertMutation = useMutation({
     mutationFn: (alertId: string) => monitoringService.resolveAlert(alertId),
     onSuccess: () => {
-      queryClient.invalidateQueries(['monitoring-dashboard'])
+      queryClient.invalidateQueries({ queryKey: ['monitoring-dashboard'] })
     }
   })
 
@@ -148,8 +155,8 @@ const SystemMonitoringDashboard: React.FC = () => {
 
   // 获取趋势图标
   const getTrendIcon = (trend: number) => {
-    if (trend > 5) return <TrendingUpOutlined style={{ color: '#ff4d4f' }} />
-    if (trend < -5) return <TrendingDownOutlined style={{ color: '#52c41a' }} />
+    if (trend > 5) return <RiseOutlined style={{ color: '#ff4d4f' }} />
+    if (trend < -5) return <FallOutlined style={{ color: '#52c41a' }} />
     return <MinusOutlined style={{ color: '#d9d9d9' }} />
   }
 
@@ -185,7 +192,7 @@ const SystemMonitoringDashboard: React.FC = () => {
       }
     ],
     tooltip: {
-      formatter: (datum: any) => ({
+      formatter: (datum: ChartDataPoint) => ({
         name: 'CPU使用率',
         value: `${datum.value}%`
       })
@@ -216,7 +223,7 @@ const SystemMonitoringDashboard: React.FC = () => {
       }
     ],
     tooltip: {
-      formatter: (datum: any) => ({
+      formatter: (datum: ChartDataPoint) => ({
         name: '内存使用率',
         value: `${datum.value}%`
       })
@@ -247,7 +254,7 @@ const SystemMonitoringDashboard: React.FC = () => {
       }
     ],
     tooltip: {
-      formatter: (datum: any) => ({
+      formatter: (datum: ChartDataPoint) => ({
         name: '响应时间',
         value: `${datum.value}ms`
       })
@@ -256,7 +263,7 @@ const SystemMonitoringDashboard: React.FC = () => {
 
   // 健康评分仪表盘配置
   const healthGaugeConfig = useMemo(() => ({
-    percent: dashboardData?.health_status?.overall_score / 100 || 0,
+    percent: (dashboardData?.health_status?.overall_score || 0) / 100,
     color: getStatusColor(dashboardData?.health_status?.status || 'unknown'),
     indicator: {
       pointer: { style: { stroke: '#D0D0D0' } },
@@ -340,14 +347,14 @@ const SystemMonitoringDashboard: React.FC = () => {
               value={dashboardData?.current_system?.cpu_percent || 0}
               suffix="%"
               valueStyle={{ color: getStatusColor(
-                dashboardData?.current_system?.cpu_percent > 80 ? 'critical' : 'normal'
+                (dashboardData?.current_system?.cpu_percent || 0) > 80 ? 'critical' : 'normal'
               )}}
             />
             <Progress
               percent={dashboardData?.current_system?.cpu_percent || 0}
               showInfo={false}
               strokeColor={getStatusColor(
-                dashboardData?.current_system?.cpu_percent > 80 ? 'critical' : 'normal'
+                (dashboardData?.current_system?.cpu_percent || 0) > 80 ? 'critical' : 'normal'
               )}
             />
           </Card>
@@ -359,14 +366,14 @@ const SystemMonitoringDashboard: React.FC = () => {
               value={dashboardData?.current_system?.memory_percent || 0}
               suffix="%"
               valueStyle={{ color: getStatusColor(
-                dashboardData?.current_system?.memory_percent > 85 ? 'critical' : 'normal'
+                (dashboardData?.current_system?.memory_percent || 0) > 85 ? 'critical' : 'normal'
               )}}
             />
             <Progress
               percent={dashboardData?.current_system?.memory_percent || 0}
               showInfo={false}
               strokeColor={getStatusColor(
-                dashboardData?.current_system?.memory_percent > 85 ? 'critical' : 'normal'
+                (dashboardData?.current_system?.memory_percent || 0) > 85 ? 'critical' : 'normal'
               )}
             />
           </Card>
@@ -378,14 +385,14 @@ const SystemMonitoringDashboard: React.FC = () => {
               value={dashboardData?.current_system?.disk_usage_percent || 0}
               suffix="%"
               valueStyle={{ color: getStatusColor(
-                dashboardData?.current_system?.disk_usage_percent > 90 ? 'critical' : 'normal'
+                (dashboardData?.current_system?.disk_usage_percent || 0) > 90 ? 'critical' : 'normal'
               )}}
             />
             <Progress
               percent={dashboardData?.current_system?.disk_usage_percent || 0}
               showInfo={false}
               strokeColor={getStatusColor(
-                dashboardData?.current_system?.disk_usage_percent > 90 ? 'critical' : 'normal'
+                (dashboardData?.current_system?.disk_usage_percent || 0) > 90 ? 'critical' : 'normal'
               )}
             />
           </Card>
@@ -437,7 +444,7 @@ const SystemMonitoringDashboard: React.FC = () => {
                         size="small"
                         type="text"
                         onClick={() => resolveAlertMutation.mutate(alert.id)}
-                        loading={resolveAlertMutation.isLoading}
+                        loading={resolveAlertMutation.isPending}
                       >
                         解决
                       </Button>
@@ -550,7 +557,7 @@ const SystemMonitoringDashboard: React.FC = () => {
                   precision={2}
                   valueStyle={{
                     color: getStatusColor(
-                      dashboardData?.current_application?.error_rate > 5 ? 'critical' : 'normal'
+                      (dashboardData?.current_application?.error_rate || 0) > 5 ? 'critical' : 'normal'
                     )
                   }}
                 />

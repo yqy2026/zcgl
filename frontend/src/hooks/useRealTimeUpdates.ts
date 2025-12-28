@@ -5,8 +5,8 @@ import { message } from 'antd'
 interface UseRealTimeUpdatesOptions {
   enabled?: boolean
   interval?: number
-  onUpdate?: (data: any) => void
-  onError?: (error: any) => void
+  onUpdate?: (data: unknown) => void
+  onError?: (error: unknown) => void
 }
 
 /**
@@ -116,8 +116,8 @@ export const useWebSocketUpdates = (
   queryKey: string[],
   options: {
     enabled?: boolean
-    onMessage?: (data: any) => void
-    onError?: (error: any) => void
+    onMessage?: (data: unknown) => void
+    onError?: (error: unknown) => void
     onConnect?: () => void
     onDisconnect?: () => void
   } = {}
@@ -146,7 +146,7 @@ export const useWebSocketUpdates = (
         wsRef.current = new WebSocket(url)
 
         wsRef.current.onopen = () => {
-          console.log('WebSocket connected')
+          // WebSocket connected
           reconnectAttempts.current = 0
           onConnect?.()
         }
@@ -170,7 +170,7 @@ export const useWebSocketUpdates = (
                 message.success(data.message || '批量操作完成')
                 break
               default:
-                console.log('Unknown message type:', data.type)
+                // Unknown message type
             }
 
             onMessage?.(data)
@@ -185,7 +185,7 @@ export const useWebSocketUpdates = (
         }
 
         wsRef.current.onclose = (event) => {
-          console.log('WebSocket disconnected:', event.code, event.reason)
+          // WebSocket disconnected
           onDisconnect?.()
 
           // 自动重连
@@ -193,7 +193,7 @@ export const useWebSocketUpdates = (
             const delay = Math.pow(2, reconnectAttempts.current) * 1000 // 指数退避
             reconnectTimeoutRef.current = setTimeout(() => {
               reconnectAttempts.current++
-              console.log(`Attempting to reconnect (${reconnectAttempts.current}/${maxReconnectAttempts})`)
+              // Attempting to reconnect
               connect()
             }, delay)
           } else {
@@ -219,7 +219,7 @@ export const useWebSocketUpdates = (
   }, [enabled, url, queryClient, queryKey, onMessage, onError, onConnect, onDisconnect])
 
   // 发送消息
-  const sendMessage = (message: any) => {
+  const sendMessage = (message: unknown) => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify(message))
     } else {

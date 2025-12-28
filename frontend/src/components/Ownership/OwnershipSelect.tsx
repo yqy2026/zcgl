@@ -106,7 +106,7 @@ const OwnershipSelect: React.FC<OwnershipSelectProps> = ({
   }, []);
 
   // 处理单选
-  const handleSingleChange = (selectedValue: any) => {
+  const handleSingleChange = (selectedValue: string | { value: string; label: React.ReactNode }) => {
     // 处理labelInValue模式
     let valueStr: string;
     if (typeof selectedValue === 'object' && selectedValue !== null) {
@@ -149,13 +149,18 @@ const OwnershipSelect: React.FC<OwnershipSelectProps> = ({
         [{ownership.code}]
       </span>
       {!ownership.is_active && (
-        <Tag color="red" size="small">禁用</Tag>
+        <Tag color="red">禁用</Tag>
       )}
     </Space>
   );
 
   // 多选模式下已选权属方的标签渲染
-  const tagRender = (props: any) => {
+  const tagRender = (props: {
+    label: React.ReactNode;
+    value: string;
+    closable: boolean;
+    onClose: () => void;
+  }) => {
     const { label, value, closable, onClose } = props;
     const ownership = allOwnerships.find(o => o.id === value);
 
@@ -207,8 +212,8 @@ const OwnershipSelect: React.FC<OwnershipSelectProps> = ({
     <div style={style}>
       <Space.Compact style={{ width: '100%' }}>
         <Select
-          value={value || (mode === 'multiple' ? [] : undefined)}
-          onChange={mode === 'multiple' ? handleMultipleChange : handleSingleChange}
+          value={value || (mode === 'multiple' ? [] : undefined) as any}
+          onChange={mode === 'multiple' ? handleMultipleChange : handleSingleChange as any}
           onClear={handleClear}
           placeholder={placeholder}
           disabled={disabled}
@@ -281,7 +286,7 @@ const OwnershipSelect: React.FC<OwnershipSelectProps> = ({
         onCancel={() => setSelectModalVisible(false)}
         footer={null}
         width={1200}
-        destroyOnClose
+        destroyOnHidden
       >
         <OwnershipList
           mode="select"

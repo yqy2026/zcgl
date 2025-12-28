@@ -136,7 +136,7 @@ npm run preview
 
 ```env
 # API基础URL
-VITE_API_BASE_URL=http://localhost:8002/api/v1
+VITE_API_BASE_URL=http://localhost:8002/api
 
 # 应用标题
 VITE_APP_TITLE=土地物业资产管理系统

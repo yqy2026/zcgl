@@ -11,54 +11,55 @@ Continuous Quality Monitoring Script
 - 质量趋势分析
 """
 
-import os
-import sys
-import time
-import json
-import yaml
 import asyncio
+import json
 import logging
 import subprocess
-from datetime import datetime, timedelta
-from pathlib import Path
-from typing import Dict, List, Any, Optional
+import sys
+import time
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
+from pathlib import Path
+from typing import Any
 
 import requests
-import psutil
+import yaml
 
 
 class QualityLevel(Enum):
     """质量等级枚举"""
-    EXCELLENT = "excellent"      # 优秀 (90-100分)
-    GOOD = "good"                # 良好 (80-89分)
-    SATISFACTORY = "satisfactory" # 合格 (70-79分)
+
+    EXCELLENT = "excellent"  # 优秀 (90-100分)
+    GOOD = "good"  # 良好 (80-89分)
+    SATISFACTORY = "satisfactory"  # 合格 (70-79分)
     NEEDS_IMPROVEMENT = "needs_improvement"  # 需要改进 (60-69分)
-    POOR = "poor"               # 较差 (0-59分)
+    POOR = "poor"  # 较差 (0-59分)
 
 
 @dataclass
 class QualityMetric:
     """质量指标数据类"""
+
     name: str
     value: float
     unit: str
     threshold: float
     status: QualityLevel
     timestamp: datetime
-    details: Optional[Dict[str, Any]] = None
+    details: dict[str, Any] | None = None
 
 
 @dataclass
 class QualityReport:
     """质量报告数据类"""
+
     timestamp: datetime
     overall_score: float
     overall_level: QualityLevel
-    metrics: List[QualityMetric]
-    recommendations: List[str]
-    warnings: List[str]
+    metrics: list[QualityMetric]
+    recommendations: list[str]
+    warnings: list[str]
 
 
 class QualityMonitor:
@@ -74,10 +75,10 @@ class QualityMonitor:
         # 创建必要的目录
         self._ensure_directories()
 
-    def _load_config(self) -> Dict[str, Any]:
+    def _load_config(self) -> dict[str, Any]:
         """加载配置文件"""
         try:
-            with open(self.config_path, 'r', encoding='utf-8') as f:
+            with open(self.config_path, encoding="utf-8") as f:
                 return yaml.safe_load(f)
         except FileNotFoundError:
             self.logger.error(f"配置文件不存在: {self.config_path}")
@@ -95,7 +96,7 @@ class QualityMonitor:
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.INFO)
         console_formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
         console_handler.setFormatter(console_formatter)
         logger.addHandler(console_handler)
@@ -104,8 +105,7 @@ class QualityMonitor:
         log_dir = Path("logs")
         log_dir.mkdir(exist_ok=True)
         file_handler = logging.FileHandler(
-            log_dir / "quality_monitor.log",
-            encoding='utf-8'
+            log_dir / "quality_monitor.log", encoding="utf-8"
         )
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(console_formatter)
@@ -154,10 +154,12 @@ class QualityMonitor:
             overall_level=overall_level,
             metrics=metrics,
             recommendations=recommendations,
-            warnings=warnings
+            warnings=warnings,
         )
 
-        self.logger.info(f"快速健康检查完成 - 总分: {overall_score:.1f} ({overall_level.value})")
+        self.logger.info(
+            f"快速健康检查完成 - 总分: {overall_score:.1f} ({overall_level.value})"
+        )
         return report
 
     async def run_comprehensive_check(self) -> QualityReport:
@@ -199,10 +201,12 @@ class QualityMonitor:
             overall_level=overall_level,
             metrics=metrics,
             recommendations=recommendations,
-            warnings=warnings
+            warnings=warnings,
         )
 
-        self.logger.info(f"全面质量检查完成 - 总分: {overall_score:.1f} ({overall_level.value})")
+        self.logger.info(
+            f"全面质量检查完成 - 总分: {overall_score:.1f} ({overall_level.value})"
+        )
         return report
 
     async def _check_syntax(self) -> QualityMetric:
@@ -213,7 +217,7 @@ class QualityMonitor:
                 ["ruff", "check", "src/", "--select=E,F", "--output-format=json"],
                 capture_output=True,
                 text=True,
-                cwd=self.base_dir
+                cwd=self.base_dir,
             )
 
             if result.stdout:
@@ -234,7 +238,10 @@ class QualityMonitor:
                 threshold=90.0,
                 status=status,
                 timestamp=datetime.now(),
-                details={"error_count": error_count, "errors": errors[:5]}  # 只保留前5个错误
+                details={
+                    "error_count": error_count,
+                    "errors": errors[:5],
+                },  # 只保留前5个错误
             )
 
         except Exception as e:
@@ -246,7 +253,7 @@ class QualityMonitor:
                 threshold=90.0,
                 status=QualityLevel.POOR,
                 timestamp=datetime.now(),
-                details={"error": str(e)}
+                details={"error": str(e)},
             )
 
     async def _check_imports(self) -> QualityMetric:
@@ -257,7 +264,7 @@ class QualityMonitor:
                 "src.main",
                 "src.models.asset",
                 "src.services.pdf_import_service",
-                "src.api.v1.assets"
+                "src.api.v1.assets",
             ]
 
             failed_imports = []
@@ -282,8 +289,8 @@ class QualityMonitor:
                 details={
                     "total_modules": len(import_modules),
                     "successful_imports": success_count,
-                    "failed_imports": failed_imports
-                }
+                    "failed_imports": failed_imports,
+                },
             )
 
         except Exception as e:
@@ -295,18 +302,14 @@ class QualityMonitor:
                 threshold=95.0,
                 status=QualityLevel.POOR,
                 timestamp=datetime.now(),
-                details={"error": str(e)}
+                details={"error": str(e)},
             )
 
     async def _check_api_health(self) -> QualityMetric:
         """检查API健康状态"""
         try:
             base_url = "http://localhost:8002"
-            endpoints = [
-                "/api/v1/health",
-                "/api/v1/",
-                "/docs"
-            ]
+            endpoints = ["/api/v1/health", "/api/v1/", "/docs"]
 
             response_times = []
             successful_endpoints = 0
@@ -325,7 +328,9 @@ class QualityMonitor:
 
             if response_times:
                 avg_response_time = sum(response_times) / len(response_times)
-                score = min(100, max(0, 100 - (avg_response_time - 100) / 10))  # 100ms为满分
+                score = min(
+                    100, max(0, 100 - (avg_response_time - 100) / 10)
+                )  # 100ms为满分
             else:
                 avg_response_time = 0
                 score = 0
@@ -345,8 +350,8 @@ class QualityMonitor:
                     "success_rate": success_rate,
                     "avg_response_time": avg_response_time,
                     "successful_endpoints": successful_endpoints,
-                    "total_endpoints": len(endpoints)
-                }
+                    "total_endpoints": len(endpoints),
+                },
             )
 
         except Exception as e:
@@ -358,16 +363,13 @@ class QualityMonitor:
                 threshold=80.0,
                 status=QualityLevel.POOR,
                 timestamp=datetime.now(),
-                details={"error": str(e)}
+                details={"error": str(e)},
             )
 
     async def _run_basic_tests(self) -> QualityMetric:
         """运行基本测试"""
         try:
-            test_files = [
-                "tests/test_main.py",
-                "tests/test_quick_suite.py"
-            ]
+            test_files = ["tests/test_main.py", "tests/test_quick_suite.py"]
 
             start_time = time.time()
 
@@ -376,7 +378,7 @@ class QualityMonitor:
                 ["python", "-m", "pytest"] + test_files + ["-v", "--tb=no"],
                 capture_output=True,
                 text=True,
-                cwd=self.base_dir
+                cwd=self.base_dir,
             )
 
             execution_time = time.time() - start_time
@@ -418,8 +420,8 @@ class QualityMonitor:
                     "error_tests": error_tests,
                     "success_rate": success_rate,
                     "execution_time": execution_time,
-                    "performance_score": performance_score
-                }
+                    "performance_score": performance_score,
+                },
             )
 
         except Exception as e:
@@ -431,7 +433,7 @@ class QualityMonitor:
                 threshold=80.0,
                 status=QualityLevel.POOR,
                 timestamp=datetime.now(),
-                details={"error": str(e)}
+                details={"error": str(e)},
             )
 
     async def _check_test_coverage(self) -> QualityMetric:
@@ -441,10 +443,17 @@ class QualityMonitor:
 
             # 运行覆盖率测试
             result = subprocess.run(
-                ["python", "-m", "pytest", "tests/", "--cov=src", "--cov-report=term-missing"],
+                [
+                    "python",
+                    "-m",
+                    "pytest",
+                    "tests/",
+                    "--cov=src",
+                    "--cov-report=term-missing",
+                ],
                 capture_output=True,
                 text=True,
-                cwd=self.base_dir
+                cwd=self.base_dir,
             )
 
             execution_time = time.time() - start_time
@@ -453,14 +462,14 @@ class QualityMonitor:
             output = result.stdout
             coverage_line = None
 
-            for line in output.split('\n'):
-                if 'TOTAL' in line and '%' in line:
+            for line in output.split("\n"):
+                if "TOTAL" in line and "%" in line:
                     coverage_line = line.strip()
                     break
 
             if coverage_line:
                 # 提取覆盖率百分比
-                coverage_str = coverage_line.split()[1].replace('%', '')
+                coverage_str = coverage_line.split()[1].replace("%", "")
                 coverage = float(coverage_str)
             else:
                 coverage = 0
@@ -483,8 +492,8 @@ class QualityMonitor:
                 details={
                     "coverage_percentage": coverage,
                     "execution_time": execution_time,
-                    "target_threshold": 50
-                }
+                    "target_threshold": 50,
+                },
             )
 
         except Exception as e:
@@ -496,7 +505,7 @@ class QualityMonitor:
                 threshold=70.0,
                 status=QualityLevel.POOR,
                 timestamp=datetime.now(),
-                details={"error": str(e)}
+                details={"error": str(e)},
             )
 
     async def _check_code_quality(self) -> QualityMetric:
@@ -507,7 +516,7 @@ class QualityMonitor:
                 ["ruff", "check", "src/", "--output-format=json"],
                 capture_output=True,
                 text=True,
-                cwd=self.base_dir
+                cwd=self.base_dir,
             )
 
             if result.stdout:
@@ -530,8 +539,8 @@ class QualityMonitor:
                 timestamp=datetime.now(),
                 details={
                     "issue_count": issue_count,
-                    "issues": issues[:5]  # 只保留前5个问题
-                }
+                    "issues": issues[:5],  # 只保留前5个问题
+                },
             )
 
         except Exception as e:
@@ -543,7 +552,7 @@ class QualityMonitor:
                 threshold=85.0,
                 status=QualityLevel.POOR,
                 timestamp=datetime.now(),
-                details={"error": str(e)}
+                details={"error": str(e)},
             )
 
     async def _check_test_performance(self) -> QualityMetric:
@@ -558,7 +567,7 @@ class QualityMonitor:
                 ["python", "-m", "pytest"] + test_files + ["--tb=no"],
                 capture_output=True,
                 text=True,
-                cwd=self.base_dir
+                cwd=self.base_dir,
             )
 
             execution_time = time.time() - start_time
@@ -581,8 +590,8 @@ class QualityMonitor:
                 details={
                     "execution_time": execution_time,
                     "target_time": 30,
-                    "files_tested": len(test_files)
-                }
+                    "files_tested": len(test_files),
+                },
             )
 
         except Exception as e:
@@ -594,7 +603,7 @@ class QualityMonitor:
                 threshold=80.0,
                 status=QualityLevel.POOR,
                 timestamp=datetime.now(),
-                details={"error": str(e)}
+                details={"error": str(e)},
             )
 
     async def _check_security(self) -> QualityMetric:
@@ -605,17 +614,32 @@ class QualityMonitor:
                 ["bandit", "-r", "src/", "-f", "json"],
                 capture_output=True,
                 text=True,
-                cwd=self.base_dir
+                cwd=self.base_dir,
             )
 
             if result.stdout:
                 security_report = json.loads(result.stdout)
-                high_issues = len([i for i in security_report.get('results', [])
-                               if i.get('issue_severity') == 'HIGH'])
-                medium_issues = len([i for i in security_report.get('results', [])
-                                 if i.get('issue_severity') == 'MEDIUM'])
-                low_issues = len([i for i in security_report.get('results', [])
-                              if i.get('issue_severity') == 'LOW'])
+                high_issues = len(
+                    [
+                        i
+                        for i in security_report.get("results", [])
+                        if i.get("issue_severity") == "HIGH"
+                    ]
+                )
+                medium_issues = len(
+                    [
+                        i
+                        for i in security_report.get("results", [])
+                        if i.get("issue_severity") == "MEDIUM"
+                    ]
+                )
+                low_issues = len(
+                    [
+                        i
+                        for i in security_report.get("results", [])
+                        if i.get("issue_severity") == "LOW"
+                    ]
+                )
             else:
                 high_issues = medium_issues = low_issues = 0
 
@@ -635,8 +659,8 @@ class QualityMonitor:
                     "high_issues": high_issues,
                     "medium_issues": medium_issues,
                     "low_issues": low_issues,
-                    "total_issues": high_issues + medium_issues + low_issues
-                }
+                    "total_issues": high_issues + medium_issues + low_issues,
+                },
             )
 
         except Exception as e:
@@ -648,7 +672,7 @@ class QualityMonitor:
                 threshold=90.0,
                 status=QualityLevel.POOR,
                 timestamp=datetime.now(),
-                details={"error": str(e)}
+                details={"error": str(e)},
             )
 
     async def _check_complexity(self) -> QualityMetric:
@@ -659,7 +683,7 @@ class QualityMonitor:
                 ["radon", "cc", "src/", "--json"],
                 capture_output=True,
                 text=True,
-                cwd=self.base_dir
+                cwd=self.base_dir,
             )
 
             if result.stdout and result.returncode == 0:
@@ -671,8 +695,8 @@ class QualityMonitor:
 
                 for filename, file_data in complexity_data.items():
                     for item in file_data:
-                        if isinstance(item, dict) and 'complexity' in item:
-                            total_complexity += item['complexity']
+                        if isinstance(item, dict) and "complexity" in item:
+                            total_complexity += item["complexity"]
                             function_count += 1
 
                 if function_count > 0:
@@ -701,8 +725,8 @@ class QualityMonitor:
                 details={
                     "avg_complexity": avg_complexity,
                     "function_count": function_count,
-                    "total_complexity": total_complexity
-                }
+                    "total_complexity": total_complexity,
+                },
             )
 
         except Exception as e:
@@ -714,10 +738,10 @@ class QualityMonitor:
                 threshold=80.0,
                 status=QualityLevel.SATISFACTORY,
                 timestamp=datetime.now(),
-                details={"error": str(e), "note": "radon工具未安装，使用默认分数"}
+                details={"error": str(e), "note": "radon工具未安装，使用默认分数"},
             )
 
-    def _calculate_overall_score(self, metrics: List[QualityMetric]) -> float:
+    def _calculate_overall_score(self, metrics: list[QualityMetric]) -> float:
         """计算总体质量分数"""
         if not metrics:
             return 0.0
@@ -732,7 +756,7 @@ class QualityMonitor:
             "代码质量": 0.15,
             "测试性能": 0.10,
             "安全性检查": 0.10,
-            "代码复杂度": 0.05
+            "代码复杂度": 0.05,
         }
 
         weighted_score = 0.0
@@ -758,24 +782,32 @@ class QualityMonitor:
         else:
             return QualityLevel.POOR
 
-    def _generate_recommendations(self, metrics: List[QualityMetric]) -> tuple[List[str], List[str]]:
+    def _generate_recommendations(
+        self, metrics: list[QualityMetric]
+    ) -> tuple[list[str], list[str]]:
         """生成改进建议和警告"""
         recommendations = []
         warnings = []
 
         for metric in metrics:
             if metric.value < metric.threshold:
-                warnings.append(f"{metric.name}: 分数 {metric.value:.1f} 低于阈值 {metric.threshold}")
+                warnings.append(
+                    f"{metric.name}: 分数 {metric.value:.1f} 低于阈值 {metric.threshold}"
+                )
 
                 # 根据指标类型生成具体建议
                 if metric.name == "测试覆盖率":
-                    recommendations.append("建议增加测试用例，特别是API端点和错误处理的测试")
+                    recommendations.append(
+                        "建议增加测试用例，特别是API端点和错误处理的测试"
+                    )
                 elif metric.name == "代码质量":
                     recommendations.append("建议使用ruff修复代码质量问题，提升代码规范")
                 elif metric.name == "测试性能":
                     recommendations.append("建议优化测试执行效率，使用mock减少外部依赖")
                 elif metric.name == "安全性检查":
-                    recommendations.append("建议修复安全漏洞，特别是输入验证和SQL注入防护")
+                    recommendations.append(
+                        "建议修复安全漏洞，特别是输入验证和SQL注入防护"
+                    )
                 elif metric.name == "API健康":
                     recommendations.append("建议检查API服务状态，确保所有端点正常响应")
                 else:
@@ -799,7 +831,7 @@ class QualityMonitor:
 
         report_path = self.base_dir / filename
 
-        with open(report_path, 'w', encoding='utf-8') as f:
+        with open(report_path, "w", encoding="utf-8") as f:
             f.write(content)
 
         self.logger.info(f"质量报告已保存: {report_path}")
@@ -830,7 +862,7 @@ class QualityMonitor:
             details_str = self._format_metric_details(metric)
             content += f"| {metric.name} | {metric.value:.1f} | {metric.threshold:.1f} | {self._get_level_display(metric.status)} | {details_str} |\n"
 
-        content += f"""
+        content += """
 ## 改进建议
 
 """
@@ -877,12 +909,12 @@ class QualityMonitor:
                     "threshold": m.threshold,
                     "status": m.status.value,
                     "timestamp": m.timestamp.isoformat(),
-                    "details": m.details
+                    "details": m.details,
                 }
                 for m in report.metrics
             ],
             "recommendations": report.recommendations,
-            "warnings": report.warnings
+            "warnings": report.warnings,
         }
 
         return json.dumps(report_dict, ensure_ascii=False, indent=2)
@@ -894,7 +926,7 @@ class QualityMonitor:
             QualityLevel.GOOD: "[良好] 良好",
             QualityLevel.SATISFACTORY: "[合格] 合格",
             QualityLevel.NEEDS_IMPROVEMENT: "[需改进] 需改进",
-            QualityLevel.POOR: "[较差] 较差"
+            QualityLevel.POOR: "[较差] 较差",
         }
         return displays.get(level, "未知")
 
@@ -905,7 +937,7 @@ class QualityMonitor:
             QualityLevel.GOOD: "系统质量良好，大部分指标达到标准，适合生产环境部署。",
             QualityLevel.SATISFACTORY: "系统质量合格，基本满足要求，建议修复部分问题后部署。",
             QualityLevel.NEEDS_IMPROVEMENT: "系统质量需要改进，存在一些问题需要修复，不建议生产部署。",
-            QualityLevel.POOR: "系统质量较差，存在严重问题，必须修复后才能部署。"
+            QualityLevel.POOR: "系统质量较差，存在严重问题，必须修复后才能部署。",
         }
         return descriptions.get(level, "未知质量等级")
 
@@ -935,18 +967,16 @@ async def main():
         "--mode",
         choices=["quick", "comprehensive"],
         default="quick",
-        help="检查模式: quick(快速检查) 或 comprehensive(全面检查)"
+        help="检查模式: quick(快速检查) 或 comprehensive(全面检查)",
     )
     parser.add_argument(
         "--format",
         choices=["markdown", "json", "console"],
         default="markdown",
-        help="报告格式"
+        help="报告格式",
     )
     parser.add_argument(
-        "--config",
-        default="quality_monitor_config.yaml",
-        help="配置文件路径"
+        "--config", default="quality_monitor_config.yaml", help="配置文件路径"
     )
 
     args = parser.parse_args()
@@ -964,19 +994,23 @@ async def main():
             print(f"\n{'='*60}")
             print(f"质量监控报告 - {args.mode.upper()} 模式")
             print(f"{'='*60}")
-            print(f"总体分数: {report.overall_score:.1f}分 ({monitor._get_level_display(report.overall_level)})")
+            print(
+                f"总体分数: {report.overall_score:.1f}分 ({monitor._get_level_display(report.overall_level)})"
+            )
             print(f"检查时间: {report.timestamp.strftime('%Y-%m-%d %H:%M:%S')}")
-            print(f"\n详细指标:")
+            print("\n详细指标:")
             for metric in report.metrics:
-                print(f"  - {metric.name}: {metric.value:.1f}分 (阈值: {metric.threshold:.1f})")
+                print(
+                    f"  - {metric.name}: {metric.value:.1f}分 (阈值: {metric.threshold:.1f})"
+                )
 
             if report.recommendations:
-                print(f"\n改进建议:")
+                print("\n改进建议:")
                 for rec in report.recommendations:
                     print(f"  • {rec}")
 
             if report.warnings:
-                print(f"\n警告信息:")
+                print("\n警告信息:")
                 for warning in report.warnings:
                     print(f"  [警告] {warning}")
         else:
@@ -985,7 +1019,7 @@ async def main():
             print(f"质量报告已生成: {report_path}")
 
             # 同时显示简要信息
-            print(f"\n质量检查完成:")
+            print("\n质量检查完成:")
             print(f"- 总体分数: {report.overall_score:.1f}分")
             print(f"- 质量等级: {monitor._get_level_display(report.overall_level)}")
             print(f"- 检查指标: {len(report.metrics)}项")
@@ -995,7 +1029,10 @@ async def main():
         # 根据质量等级设置退出代码
         if report.overall_level == QualityLevel.POOR:
             sys.exit(2)  # 严重问题
-        elif report.overall_level in [QualityLevel.NEEDS_IMPROVEMENT, QualityLevel.SATISFACTORY]:
+        elif report.overall_level in [
+            QualityLevel.NEEDS_IMPROVEMENT,
+            QualityLevel.SATISFACTORY,
+        ]:
             sys.exit(1)  # 需要改进
         else:
             sys.exit(0)  # 质量良好

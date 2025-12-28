@@ -165,11 +165,11 @@ export const UX_CONFIG = {
 // 获取配置值的辅助函数
 export const getUXConfig = <T>(path: string, defaultValue?: T): T => {
   const keys = path.split('.')
-  let value: any = UX_CONFIG
+  let value: unknown = UX_CONFIG
 
   for (const key of keys) {
     if (value && typeof value === 'object' && key in value) {
-      value = value[key]
+      value = (value as Record<string, unknown>)[key]
     } else {
       return defaultValue as T
     }
@@ -179,16 +179,16 @@ export const getUXConfig = <T>(path: string, defaultValue?: T): T => {
 }
 
 // 更新配置的辅助函数
-export const updateUXConfig = (path: string, value: any) => {
+export const updateUXConfig = (path: string, value: unknown) => {
   const keys = path.split('.')
-  let target: any = UX_CONFIG
+  let target: Record<string, unknown> = UX_CONFIG as Record<string, unknown>
 
   for (let i = 0; i < keys.length - 1; i++) {
     const key = keys[i]
     if (!(key in target) || typeof target[key] !== 'object') {
       target[key] = {}
     }
-    target = target[key]
+    target = target[key] as Record<string, unknown>
   }
 
   target[keys[keys.length - 1]] = value

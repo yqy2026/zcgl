@@ -12,12 +12,10 @@ Setup script for Quality Monitoring System
 """
 
 import os
-import sys
-import json
-import subprocess
 import platform
+import subprocess
+import sys
 from pathlib import Path
-from typing import Dict, List
 
 
 class QualityMonitorSetup:
@@ -61,7 +59,9 @@ class QualityMonitorSetup:
             print("✅ 持续质量监控系统安装完成!")
             print("\n📋 下一步操作:")
             print("1. 运行快速检查: python scripts/quality_monitor.py --mode quick")
-            print("2. 运行全面检查: python scripts/quality_monitor.py --mode comprehensive")
+            print(
+                "2. 运行全面检查: python scripts/quality_monitor.py --mode comprehensive"
+            )
             print("3. 查看监控配置: cat quality_monitor_config.yaml")
             print("4. 设置持续监控: 参考 scripts/schedule_monitoring.py")
 
@@ -77,7 +77,9 @@ class QualityMonitorSetup:
         python_version = sys.version_info
         if python_version.major < 3 or python_version.minor < 8:
             raise Exception(f"需要Python 3.8+，当前版本: {python_version}")
-        print(f"  ✅ Python版本: {python_version.major}.{python_version.minor}.{python_version.micro}")
+        print(
+            f"  ✅ Python版本: {python_version.major}.{python_version.minor}.{python_version.micro}"
+        )
 
         # 检查是否在项目根目录
         if not (self.base_dir / "pyproject.toml").exists():
@@ -88,8 +90,7 @@ class QualityMonitorSetup:
         required_tools = ["git"]
         for tool in required_tools:
             try:
-                subprocess.run([tool, "--version"],
-                           capture_output=True, check=True)
+                subprocess.run([tool, "--version"], capture_output=True, check=True)
                 print(f"  ✅ {tool} 可用")
             except (subprocess.CalledProcessError, FileNotFoundError):
                 raise Exception(f"需要安装 {tool} 工具")
@@ -100,14 +101,14 @@ class QualityMonitorSetup:
 
         # 质量监控相关依赖
         quality_dependencies = [
-            "requests>=2.31.0",      # HTTP请求
-            "psutil>=5.9.0",         # 系统监控
-            "pyyaml>=6.0.1",         # YAML配置
-            "radon>=6.0.1",          # 代码复杂度分析
-            "bandit>=1.7.5",         # 安全检查
-            "pytest>=7.4.0",          # 测试框架
-            "pytest-cov>=4.1.0",      # 测试覆盖率
-            "pytest-asyncio>=0.21.0", # 异步测试
+            "requests>=2.31.0",  # HTTP请求
+            "psutil>=5.9.0",  # 系统监控
+            "pyyaml>=6.0.1",  # YAML配置
+            "radon>=6.0.1",  # 代码复杂度分析
+            "bandit>=1.7.5",  # 安全检查
+            "pytest>=7.4.0",  # 测试框架
+            "pytest-cov>=4.1.0",  # 测试覆盖率
+            "pytest-asyncio>=0.21.0",  # 异步测试
         ]
 
         # 检查是否使用uv
@@ -122,11 +123,7 @@ class QualityMonitorSetup:
 
         try:
             result = subprocess.run(
-                cmd,
-                cwd=working_dir,
-                capture_output=True,
-                text=True,
-                check=True
+                cmd, cwd=working_dir, capture_output=True, text=True, check=True
             )
             print("  ✅ 依赖安装完成")
         except subprocess.CalledProcessError as e:
@@ -137,15 +134,15 @@ class QualityMonitorSetup:
         # 安装开发工具（如果使用uv）
         if self._check_uv_available():
             dev_dependencies = [
-                "ruff>=0.1.6",              # 代码检查和格式化
-                "mypy>=1.7.0",              # 类型检查
+                "ruff>=0.1.6",  # 代码检查和格式化
+                "mypy>=1.7.0",  # 类型检查
             ]
             try:
                 subprocess.run(
                     ["uv", "add", "--dev"] + dev_dependencies,
                     cwd=self.base_dir,
                     capture_output=True,
-                    check=True
+                    check=True,
                 )
                 print("  ✅ 开发工具安装完成")
             except subprocess.CalledProcessError as e:
@@ -154,11 +151,7 @@ class QualityMonitorSetup:
     def _check_uv_available(self) -> bool:
         """检查uv是否可用"""
         try:
-            subprocess.run(
-                ["uv", "--version"],
-                capture_output=True,
-                check=True
-            )
+            subprocess.run(["uv", "--version"], capture_output=True, check=True)
             return True
         except (subprocess.CalledProcessError, FileNotFoundError):
             return False
@@ -174,7 +167,7 @@ class QualityMonitorSetup:
             "reports/metadata",
             "data/metrics",
             ".git/hooks",
-            "scripts/monitoring"
+            "scripts/monitoring",
         ]
 
         for dir_path in directories:
@@ -183,7 +176,12 @@ class QualityMonitorSetup:
             print(f"  ✅ {dir_path}")
 
         # 创建.gitkeep文件保持空目录
-        gitkeep_dirs = ["logs/quality", "reports/daily", "reports/weekly", "data/metrics"]
+        gitkeep_dirs = [
+            "logs/quality",
+            "reports/daily",
+            "reports/weekly",
+            "data/metrics",
+        ]
         for dir_path in gitkeep_dirs:
             (self.base_dir / dir_path / ".gitkeep").touch()
 
@@ -268,14 +266,11 @@ exit 0
 """
 
         # 写入hook文件
-        hooks = {
-            "pre-commit": pre_commit_content,
-            "pre-push": pre_push_content
-        }
+        hooks = {"pre-commit": pre_commit_content, "pre-push": pre_push_content}
 
         for hook_name, content in hooks.items():
             hook_file = hooks_dir / hook_name
-            with open(hook_file, 'w', encoding='utf-8') as f:
+            with open(hook_file, "w", encoding="utf-8") as f:
                 f.write(content)
 
             # 设置执行权限（Unix/Linux/macOS）
@@ -370,7 +365,7 @@ if __name__ == "__main__":
     main()
 '''
 
-        with open(schedule_script, 'w', encoding='utf-8') as f:
+        with open(schedule_script, "w", encoding="utf-8") as f:
             f.write(schedule_content)
 
         # 创建服务脚本
@@ -402,7 +397,7 @@ WantedBy=multi-user.target
 """
 
         service_file = self.base_dir / "quality-monitor.service"
-        with open(service_file, 'w', encoding='utf-8') as f:
+        with open(service_file, "w", encoding="utf-8") as f:
             f.write(service_content)
 
         print(f"  📄 Systemd服务文件: {service_file}")
@@ -444,12 +439,14 @@ WantedBy=multi-user.target
 """
 
         service_file = self.base_dir / "com.qualitymonitor.plist"
-        with open(service_file, 'w', encoding='utf-8') as f:
+        with open(service_file, "w", encoding="utf-8") as f:
             f.write(service_content)
 
         print(f"  📄 LaunchAgent文件: {service_file}")
         print("  💡 安装服务: cp com.qualitymonitor.plist ~/Library/LaunchAgents/")
-        print("  💡 加载服务: launchctl load ~/Library/LaunchAgents/com.qualitymonitor.plist")
+        print(
+            "  💡 加载服务: launchctl load ~/Library/LaunchAgents/com.qualitymonitor.plist"
+        )
 
     def _create_windows_service(self):
         """创建Windows服务配置"""
@@ -461,7 +458,7 @@ pause
 """
 
         batch_file = self.base_dir / "start_quality_monitor.bat"
-        with open(batch_file, 'w', encoding='utf-8') as f:
+        with open(batch_file, "w", encoding="utf-8") as f:
             f.write(batch_content)
 
         # 创建PowerShell服务脚本
@@ -494,7 +491,7 @@ if (Test-Path $nssmPath) {{
 """
 
         ps_file = self.base_dir / "install_service.ps1"
-        with open(ps_file, 'w', encoding='utf-8') as f:
+        with open(ps_file, "w", encoding="utf-8") as f:
             f.write(ps_content)
 
         print(f"  📄 批处理文件: {batch_file}")
@@ -513,7 +510,7 @@ if (Test-Path $nssmPath) {{
                 ["python", str(script_path), "--mode", "quick", "--format", "console"],
                 capture_output=True,
                 text=True,
-                cwd=self.base_dir
+                cwd=self.base_dir,
             )
 
             if result.returncode == 0:
@@ -532,7 +529,7 @@ if (Test-Path $nssmPath) {{
 
         # 快速检查脚本
         quick_check_script = self.base_dir / "quick_quality_check.py"
-        quick_content = f'''#!/usr/bin/env python3
+        quick_content = '''#!/usr/bin/env python3
 """快速质量检查快捷脚本"""
 
 import subprocess
@@ -543,12 +540,12 @@ script_path = Path(__file__).parent / "scripts" / "quality_monitor.py"
 subprocess.run([sys.executable, str(script_path), "--mode", "quick", "--format", "console"])
 '''
 
-        with open(quick_check_script, 'w', encoding='utf-8') as f:
+        with open(quick_check_script, "w", encoding="utf-8") as f:
             f.write(quick_content)
 
         # 全面检查脚本
         full_check_script = self.base_dir / "full_quality_check.py"
-        full_content = f'''#!/usr/bin/env python3
+        full_content = '''#!/usr/bin/env python3
 """全面质量检查快捷脚本"""
 
 import subprocess
@@ -559,7 +556,7 @@ script_path = Path(__file__).parent / "scripts" / "quality_monitor.py"
 subprocess.run([sys.executable, str(script_path), "--mode", "comprehensive", "--format", "console"])
 '''
 
-        with open(full_check_script, 'w', encoding='utf-8') as f:
+        with open(full_check_script, "w", encoding="utf-8") as f:
             f.write(full_content)
 
         print("  ✅ 快速检查脚本: quick_quality_check.py")

@@ -1,6 +1,9 @@
+from typing import Any
+
 """
 资产分析API路由 - 提供综合的统计分析数据
 Version: 2025-10-30_06-28 - Fixed cache stats issue
+Version: 2025-12-27 - 添加认证依赖，修复安全漏洞
 
 遵循最佳实践：
 - 代码模块化和可重用
@@ -9,6 +12,7 @@ Version: 2025-10-30_06-28 - Fixed cache stats issue
 - 清晰的日志记录
 - 数据验证和一致性检查
 - 统一响应格式
+- 安全认证要求
 
 Version: 1.1 - 修复了get_stats方法调用问题
 """
@@ -18,7 +22,6 @@ import logging
 import time
 from collections import defaultdict
 from datetime import datetime, timedelta
-from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
@@ -26,10 +29,15 @@ from sqlalchemy.orm import Session
 from ...core.cache_manager import analytics_cache, cache_manager
 from ...core.response_handler import ResponseHandler, get_request_id
 from ...database import get_db
+from ...middleware.auth import get_current_active_user
+from ...models.auth import User
 from ...schemas.asset import DataStatus
 
 # 强制重新加载标记 - 2025-10-30 06:30 - VERSION 2
-print("[ANALYTICS] Analytics module loaded - CacheManager has get_stats:", hasattr(analytics_cache, 'get_stats'))
+print(
+    "[ANALYTICS] Analytics module loaded - CacheManager has get_stats:",
+    hasattr(analytics_cache, "get_stats"),
+)
 print("[ANALYTICS] VERSION 2 - RELOAD TRIGGERED")
 
 logger = logging.getLogger(__name__)
@@ -74,7 +82,8 @@ class PerformanceMonitor:
                 except Exception as e:
                     execution_time = time.time() - start_time
                     logger.error(
-                        f"性能监控: {func_name} 执行失败，时间 {execution_time:.2f}s，错误: {str(e)}"
+                        f"性能监控: {func_name} 执行失败，时间 {execution_time:.2f}s，"
+                        f"错误: {str(e)}"
                     )
                     raise
 
@@ -747,7 +756,9 @@ class OccupancyTrendGenerator:
 
             # 检查缓存
             # 生成缓存键 - 简化版本
-            filter_str = "_".join([f"{k}_{v}" for k, v in sorted(cache_filters.items())])
+            filter_str = "_".join(
+                [f"{k}_{v}" for k, v in sorted(cache_filters.items())]
+            )
             cache_key = f"occupancy_trend_{filter_str}"
             cached_result = analytics_cache.get(cache_key)
             if cached_result:
@@ -1515,6 +1526,7 @@ def create_empty_response() -> dict[str, Any]:
 @router.get("/comprehensive", summary="获取综合统计分析数据")
 async def get_comprehensive_analytics(
     request: Request,
+    current_user: User = Depends(get_current_active_user),
     search: str | None = Query(None, description="搜索筛选"),
     ownership_status: str | None = Query(None, description="确权状态筛选"),
     property_nature: str | None = Query(None, description="物业性质筛选"),
@@ -1562,7 +1574,7 @@ async def get_comprehensive_analytics(
                 "backend_type": "MemoryCache",
                 "status": "active",
                 "message": "缓存命中",
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
             }
             return ResponseHandler.success(
                 data={
@@ -1570,7 +1582,7 @@ async def get_comprehensive_analytics(
                     "cache_stats": cache_stats,
                 },
                 message="成功获取缓存的综合分析数据（缓存命中）",
-                request_id=request_id
+                request_id=request_id,
             )
 
         start_time = time.time()
@@ -1581,7 +1593,60 @@ async def get_comprehensive_analytics(
             db, filters, search
         )
 
+        # 临时诊断：当查询结果为空时，添加详细的诊断信息
         if total_count == 0:
+            logger.warning("Analytics查询结果为空，开始诊断...")
+
+            # 诊断：检查数据库中的实际资产数据
+            from sqlalchemy import func
+
+            from ...models.asset import Asset
+
+            # 1. 查询所有资产总数（无筛选）
+            all_assets_count = db.query(func.count(Asset.id)).scalar()
+            logger.info(f"数据库中总资产数: {all_assets_count}")
+
+            # 2. 查询data_status分布
+            status_distribution = (
+                db.query(Asset.data_status, func.count(Asset.id).label("count"))
+                .group_by(Asset.data_status)
+                .all()
+            )
+            logger.info(f"data_status分布: {status_distribution}")
+
+            # 3. 查询NULL和空值数量
+            null_status_count = (
+                db.query(func.count(Asset.id))
+                .filter(Asset.data_status.is_(None))
+                .scalar()
+            )
+            empty_status_count = (
+                db.query(func.count(Asset.id)).filter(Asset.data_status == "").scalar()
+            )
+            logger.info(
+                f"NULL状态数: {null_status_count}, 空状态数: {empty_status_count}"
+            )
+
+            # 4. 测试不同的筛选条件
+            normal_status_count = (
+                db.query(func.count(Asset.id))
+                .filter(Asset.data_status == DataStatus.NORMAL.value)
+                .scalar()
+            )
+            logger.info(f"正常状态资产数: {normal_status_count}")
+
+            # 5. 查询最近几条资产记录
+            recent_assets = (
+                db.query(
+                    Asset.id, Asset.property_name, Asset.data_status, Asset.created_at
+                )
+                .order_by(Asset.created_at.desc())
+                .limit(5)
+                .all()
+            )
+            logger.info(f"最近5条资产记录: {recent_assets}")
+
+            logger.info("诊断完成")
             logger.info("未找到符合条件的资产数据")
             return create_empty_response()
 
@@ -1699,7 +1764,7 @@ async def get_comprehensive_analytics(
                     "backend_type": "MemoryCache",
                     "status": "active",
                     "message": "新数据计算完成",
-                    "timestamp": datetime.now().isoformat()
+                    "timestamp": datetime.now().isoformat(),
                 },
                 "performance_info": {
                     "calculation_time": round(calculation_time, 3),
@@ -1708,7 +1773,7 @@ async def get_comprehensive_analytics(
                 },
             },
             message=f"成功获取 {total_count} 条资产的综合分析数据",
-            request_id=request_id
+            request_id=request_id,
         )
 
     except HTTPException:
@@ -1730,39 +1795,45 @@ async def get_cache_stats(request: Request):
             "status": "active",
             "message": "缓存统计信息",
             "timestamp": datetime.now().isoformat(),
-            "note": "临时实现，未使用get_stats方法"
+            "note": "临时实现，未使用get_stats方法",
         }
         return ResponseHandler.success(
-            data=stats,
-            message="成功获取缓存统计信息",
-            request_id=request_id
+            data=stats, message="成功获取缓存统计信息", request_id=request_id
         )
     except Exception as e:
         logger.error(f"获取缓存统计信息失败: {str(e)}")
         raise ResponseHandler.internal_error(
             message="获取缓存统计信息失败",
             error_details={"error": str(e)},
-            request_id=request_id
+            request_id=request_id,
         )
 
 
 @router.post("/cache/clear", summary="清除分析缓存")
-async def clear_cache(request: Request):
+async def clear_cache(
+    request: Request, current_user: User = Depends(get_current_active_user)
+):
     """清除所有分析缓存"""
     request_id = get_request_id(request)
     try:
         # 获取清除前的缓存统计信息
-        old_stats = analytics_cache.get_stats() if hasattr(analytics_cache, 'get_stats') else {
-            "cache_size": 0,
-            "backend_type": "MemoryCache",
-            "status": "active",
-            "message": "缓存统计信息",
-            "timestamp": datetime.now().isoformat(),
-            "note": "使用get_stats方法获取"
-        }
+        old_stats = (
+            analytics_cache.get_stats()
+            if hasattr(analytics_cache, "get_stats")
+            else {
+                "cache_size": 0,
+                "backend_type": "MemoryCache",
+                "status": "active",
+                "message": "缓存统计信息",
+                "timestamp": datetime.now().isoformat(),
+                "note": "使用get_stats方法获取",
+            }
+        )
 
         analytics_cache.clear()
-        logger.info(f"用户请求清除分析缓存，清除前缓存大小: {old_stats.get('cache_size', 0)}")
+        logger.info(
+            f"用户请求清除分析缓存，清除前缓存大小: {old_stats.get('cache_size', 0)}"
+        )
 
         return ResponseHandler.success(
             data={
@@ -1770,14 +1841,14 @@ async def clear_cache(request: Request):
                 "cache_stats_before_clear": old_stats,
             },
             message="分析缓存已成功清除",
-            request_id=request_id
+            request_id=request_id,
         )
     except Exception as e:
         logger.error(f"清除分析缓存失败: {str(e)}")
         raise ResponseHandler.internal_error(
             message="清除分析缓存失败",
             error_details={"error": str(e)},
-            request_id=request_id
+            request_id=request_id,
         )
 
 
@@ -1790,35 +1861,157 @@ async def debug_cache_status(request: Request):
         debug_info = {
             "analytics_cache_type": str(type(analytics_cache)),
             "cache_manager_type": str(type(cache_manager)),
-            "analytics_cache_has_get_stats": hasattr(analytics_cache, 'get_stats'),
-            "cache_manager_has_get_stats": hasattr(cache_manager, 'get_stats'),
-            "analytics_cache_methods": [m for m in dir(analytics_cache) if not m.startswith('_') and callable(getattr(analytics_cache, m))],
+            "analytics_cache_has_get_stats": hasattr(analytics_cache, "get_stats"),
+            "cache_manager_has_get_stats": hasattr(cache_manager, "get_stats"),
+            "analytics_cache_methods": [
+                m
+                for m in dir(analytics_cache)
+                if not m.startswith("_") and callable(getattr(analytics_cache, m))
+            ],
             "memory_usage": "N/A",  # 可以添加内存使用检查
             "request_id": request_id,
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
 
         # 尝试调用get_stats方法
         try:
-            if hasattr(analytics_cache, 'get_stats'):
+            if hasattr(analytics_cache, "get_stats"):
                 debug_info["get_stats_result"] = analytics_cache.get_stats()
                 debug_info["get_stats_success"] = True
             else:
                 debug_info["get_stats_success"] = False
-                debug_info["get_stats_error"] = "analytics_cache does not have get_stats method"
+                debug_info["get_stats_error"] = (
+                    "analytics_cache does not have get_stats method"
+                )
         except Exception as e:
             debug_info["get_stats_success"] = False
             debug_info["get_stats_error"] = str(e)
 
         return ResponseHandler.success(
-            data=debug_info,
-            message="缓存状态调试信息",
-            request_id=request_id
+            data=debug_info, message="缓存状态调试信息", request_id=request_id
         )
     except Exception as e:
         logger.error(f"调试缓存状态失败: {str(e)}")
         raise ResponseHandler.internal_error(
             message="调试缓存状态失败",
             error_details={"error": str(e)},
-            request_id=request_id
+            request_id=request_id,
+        )
+
+
+@router.get("/debug/data-status-distribution", summary="数据库状态分布诊断")
+async def debug_data_status_distribution(
+    request: Request, db: Session = Depends(get_db)
+):
+    """
+    诊断端点 - 检查资产数据状态分布
+    用于排查Analytics API返回空数据的问题
+    """
+    request_id = get_request_id(request)
+    try:
+        from sqlalchemy import func
+
+        from ...models.asset import Asset
+
+        logger.info("开始诊断资产数据状态分布")
+
+        # 1. 查询所有资产记录总数
+        total_assets_query = db.query(func.count(Asset.id))
+        total_assets = total_assets_query.scalar()
+
+        # 2. 查询data_status字段值分布
+        status_distribution = (
+            db.query(Asset.data_status, func.count(Asset.id).label("count"))
+            .group_by(Asset.data_status)
+            .all()
+        )
+
+        # 3. 查询NULL值记录数量
+        null_status_count = (
+            db.query(func.count(Asset.id)).filter(Asset.data_status.is_(None)).scalar()
+        )
+
+        # 4. 查询空字符串记录数量
+        empty_status_count = (
+            db.query(func.count(Asset.id)).filter(Asset.data_status == "").scalar()
+        )
+
+        # 5. 测试Analytics API的筛选条件
+        normal_status_count = (
+            db.query(func.count(Asset.id))
+            .filter(Asset.data_status == DataStatus.NORMAL.value)
+            .scalar()
+        )
+
+        # 6. 测试没有data_status筛选的查询
+        without_status_filter_count = db.query(func.count(Asset.id)).scalar()
+
+        # 7. 查询最近添加的几条记录的状态
+        recent_assets = (
+            db.query(Asset.id, Asset.property_name, Asset.data_status, Asset.created_at)
+            .order_by(Asset.created_at.desc())
+            .limit(10)
+            .all()
+        )
+
+        # 构建诊断数据
+        diagnostic_data = {
+            "total_assets": total_assets,
+            "status_distribution": [
+                {
+                    "status": status[0] if status[0] is not None else "NULL",
+                    "count": status[1],
+                }
+                for status in status_distribution
+            ],
+            "null_status_count": null_status_count,
+            "empty_status_count": empty_status_count,
+            "normal_status_count": normal_status_count,
+            "without_status_filter_count": without_status_filter_count,
+            "filter_effect": {
+                "total_records": total_assets,
+                "after_normal_filter": normal_status_count,
+                "filtered_out_count": total_assets - normal_status_count,
+            },
+            "recent_assets": [
+                {
+                    "id": asset.id,
+                    "property_name": asset.property_name,
+                    "data_status": asset.data_status,
+                    "created_at": asset.created_at.isoformat()
+                    if asset.created_at
+                    else None,
+                }
+                for asset in recent_assets
+            ],
+            "data_status_expected": DataStatus.NORMAL.value,
+            "diagnosis_summary": {
+                "has_data": total_assets > 0,
+                "all_records_normal": normal_status_count == total_assets,
+                "has_null_status": null_status_count > 0,
+                "has_empty_status": empty_status_count > 0,
+                "problem_detected": (normal_status_count != total_assets)
+                or (total_assets == 0),
+            },
+        }
+
+        logger.info(
+            f"诊断完成 - 总资产数: {total_assets}, "
+            f"正常状态数: {normal_status_count}, "
+            f"NULL状态数: {null_status_count}, "
+            f"空状态数: {empty_status_count}"
+        )
+
+        return ResponseHandler.success(
+            data=diagnostic_data,
+            message="资产数据状态分布诊断完成",
+            request_id=request_id,
+        )
+
+    except Exception as e:
+        logger.error(f"资产数据状态诊断失败: {str(e)}", exc_info=True)
+        raise ResponseHandler.internal_error(
+            message="资产数据状态诊断失败",
+            error_details={"error": str(e)},
+            request_id=request_id,
         )

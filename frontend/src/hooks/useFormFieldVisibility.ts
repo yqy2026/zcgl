@@ -80,17 +80,17 @@ const fieldVisibilityRules: FieldVisibilityRule[] = [
 
   // 有五羊项目名称时显示接收协议日期
   {
-    field: 'operation_agreement_start_date',
+    field: 'operation_agreement_start_date' as any,
     condition: (values) => Boolean(values.wuyang_project_name && values.wuyang_project_name.trim()),
     dependsOn: ['wuyang_project_name'],
   },
   {
-    field: 'operation_agreement_end_date',
+    field: 'operation_agreement_end_date' as any,
     condition: (values) => Boolean(values.wuyang_project_name && values.wuyang_project_name.trim()),
     dependsOn: ['wuyang_project_name'],
   },
   {
-    field: 'operation_agreement_attachments',
+    field: 'operation_agreement_attachments' as any,
     condition: (values) => Boolean(values.wuyang_project_name && values.wuyang_project_name.trim()),
     dependsOn: ['wuyang_project_name'],
   },

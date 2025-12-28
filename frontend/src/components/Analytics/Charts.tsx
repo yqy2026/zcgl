@@ -81,9 +81,9 @@ export const AnalyticsPieChart: React.FC<PieChartProps> = ({
           </Pie>
           {showLegend && <Legend />}
           <Tooltip
-            formatter={(value: number, name: string, props: any) => [
+            formatter={(value: number, name: string, props: { payload?: Record<string, string> }) => [
               `${value.toLocaleString()}`,
-              props.payload[labelKey] || name
+              props?.payload?.[labelKey] || name
             ]}
           />
         </PieChart>
@@ -93,7 +93,7 @@ export const AnalyticsPieChart: React.FC<PieChartProps> = ({
 }
 
 interface BarChartProps {
-  data: Array<Record<string, any>>
+  data: Array<Record<string, unknown>>
   xDataKey: string
   yDataKey: string
   barName?: string
@@ -171,7 +171,7 @@ export const AnalyticsBarChart: React.FC<BarChartProps> = ({
 }
 
 interface LineChartProps {
-  data: Array<Record<string, any>>
+  data: Array<Record<string, unknown>>
   xDataKey: string
   yDataKey: string
   lineName?: string
@@ -256,7 +256,7 @@ export const AnalyticsLineChart: React.FC<LineChartProps> = ({
 }
 
 interface MultiBarChartProps {
-  data: Array<Record<string, any>>
+  data: Array<Record<string, unknown>>
   xDataKey: string
   bars: Array<{
     dataKey: string
@@ -328,7 +328,7 @@ export const AnalyticsMultiBarChart: React.FC<MultiBarChartProps> = ({
 }
 
 interface AreaChartProps {
-  data: Array<Record<string, any>>
+  data: Array<Record<string, unknown>>
   xDataKey: string
   yDataKey: string
   areaName?: string

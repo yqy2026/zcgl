@@ -80,8 +80,8 @@ export interface RentContractHistory {
   contract_id: string;
   change_type: string;
   change_description?: string;
-  old_data?: any;
-  new_data?: any;
+  old_data?: Record<string, unknown>;
+  new_data?: Record<string, unknown>;
   operator?: string;
   operator_id?: string;
   created_at: string;
@@ -362,7 +362,7 @@ export interface ExportOptions {
   format: 'excel' | 'csv';
   includeHeaders: boolean;
   dateRange?: [string, string];
-  filters?: Record<string, any>;
+  filters?: Record<string, unknown>;
 }
 
 export interface RentLedgerExportData {

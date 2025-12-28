@@ -1,8 +1,11 @@
 /**
- * 组织架构管理服务
+ * 组织架构管理服务 - 统一响应处理版本
+ *
+ * @description 组织架构管理核心服务，提供组织树、搜索、批量操作等完整功能
+ * @author Claude Code
+ * @updated 2025-11-10
  */
 
-import { apiClient } from './api';
 import {
   Organization,
   OrganizationCreate,
@@ -17,9 +20,21 @@ import {
   OrganizationPath,
   OrganizationAdvancedSearch
 } from '../types/organization';
+import { enhancedApiClient } from '@/api/client';
+import { ApiErrorHandler } from '../utils/responseExtractor';
+
+// 树节点接口
+interface TreeNode {
+  key: string;
+  value: string;
+  title: string;
+  children?: TreeNode[];
+}
 
 class OrganizationService {
   private baseUrl = '/organizations';
+
+  // ==================== 基础CRUD操作 ====================
 
   /**
    * 获取组织列表
@@ -29,21 +44,124 @@ class OrganizationService {
     limit?: number;
   }): Promise<Organization[]> {
     try {
-      const response = await apiClient.get(this.baseUrl, { params });
+      const result = await enhancedApiClient.get<Organization[]>(this.baseUrl, {
+        params: { ...params, skip: params?.skip || 0, limit: params?.limit || 100 },
+        cache: true,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true
+      });
 
-      // 确保响应数据存在
-      if (!response.data) {
-        console.warn('组织API响应为空，返回空数组');
-        return [];
+      if (!result.success) {
+        throw new Error(`获取组织列表失败: ${result.error}`);
       }
 
-      // 如果响应是数组，直接返回；如果是对象，提取data字段
-      return Array.isArray(response.data) ? response.data : response.data.data || [];
+      return result.data!;
     } catch (error) {
-      console.error('获取组织列表失败:', error);
+      const enhancedError = ApiErrorHandler.handleError(error);
+      console.error('获取组织列表失败:', enhancedError.message);
       return [];
     }
   }
+
+  /**
+   * 根据ID获取组织详情
+   */
+  async getOrganization(id: string): Promise<Organization> {
+    try {
+      const result = await enhancedApiClient.get<Organization>(
+        `${this.baseUrl}/${id}`,
+        {
+          cache: true,
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`获取组织详情失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  /**
+   * 创建组织
+   */
+  async createOrganization(organization: OrganizationCreate): Promise<Organization> {
+    try {
+      const result = await enhancedApiClient.post<Organization>(
+        this.baseUrl,
+        organization,
+        {
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`创建组织失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  /**
+   * 更新组织
+   */
+  async updateOrganization(id: string, organization: OrganizationUpdate): Promise<Organization> {
+    try {
+      const result = await enhancedApiClient.put<Organization>(
+        `${this.baseUrl}/${id}`,
+        organization,
+        {
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`更新组织失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  /**
+   * 删除组织
+   */
+  async deleteOrganization(id: string, deletedBy?: string): Promise<void> {
+    try {
+      const params = deletedBy ? { deleted_by: deletedBy } : {};
+      const result = await enhancedApiClient.delete<void>(
+        `${this.baseUrl}/${id}`,
+        {
+          params,
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 }
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`删除组织失败: ${result.error}`);
+      }
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  // ==================== 组织树形结构 ====================
 
   /**
    * 获取组织树形结构
@@ -51,59 +169,26 @@ class OrganizationService {
   async getOrganizationTree(parentId?: string): Promise<OrganizationTree[]> {
     try {
       const params = parentId ? { parent_id: parentId } : {};
-      const response = await apiClient.get(`${this.baseUrl}/tree`, { params });
+      const result = await enhancedApiClient.get<OrganizationTree[]>(
+        `${this.baseUrl}/tree`,
+        {
+          params,
+          cache: true,
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true
+        }
+      );
 
-      // 确保响应数据存在
-      if (!response.data) {
-        console.warn('组织树API响应为空，返回空数组');
-        return [];
+      if (!result.success) {
+        throw new Error(`获取组织树失败: ${result.error}`);
       }
 
-      // 如果响应是数组，直接返回；如果是对象，提取data字段
-      return Array.isArray(response.data) ? response.data : response.data.data || [];
+      return result.data!;
     } catch (error) {
-      console.error('获取组织树失败:', error);
+      const enhancedError = ApiErrorHandler.handleError(error);
+      console.error('获取组织树失败:', enhancedError.message);
       return [];
     }
-  }
-
-  /**
-   * 搜索组织
-   */
-  async searchOrganizations(
-    keyword: string,
-    params?: { skip?: number; limit?: number }
-  ): Promise<Organization[]> {
-    const response = await apiClient.get(`${this.baseUrl}/search`, {
-      params: { keyword, ...params }
-    });
-    return response.data;
-  }
-
-  /**
-   * 高级搜索组织
-   */
-  async advancedSearchOrganizations(
-    searchRequest: OrganizationAdvancedSearch
-  ): Promise<Organization[]> {
-    const response = await apiClient.post(`${this.baseUrl}/advanced-search`, searchRequest);
-    return response.data;
-  }
-
-  /**
-   * 获取组织统计信息
-   */
-  async getStatistics(): Promise<OrganizationStatistics> {
-    const response = await apiClient.get(`${this.baseUrl}/statistics`);
-    return response.data;
-  }
-
-  /**
-   * 根据ID获取组织详情
-   */
-  async getOrganization(id: string): Promise<Organization> {
-    const response = await apiClient.get(`${this.baseUrl}/${id}`);
-    return response.data;
   }
 
   /**
@@ -113,20 +198,138 @@ class OrganizationService {
     id: string,
     recursive: boolean = false
   ): Promise<Organization[]> {
-    const response = await apiClient.get(`${this.baseUrl}/${id}/children`, {
-      params: { recursive }
-    });
-    return response.data;
+    try {
+      const result = await enhancedApiClient.get<Organization[]>(
+        `${this.baseUrl}/${id}/children`,
+        {
+          params: { recursive },
+          cache: true,
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`获取子组织失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   /**
    * 获取组织到根节点的路径
    */
   async getOrganizationPath(id: string): Promise<OrganizationPath> {
-    const response = await apiClient.get(`${this.baseUrl}/${id}/path`);
-    const organizations = response.data;
-    const pathString = organizations.map((org: Organization) => org.name).join(' > ');
-    return { organizations, path_string: pathString };
+    try {
+      const result = await enhancedApiClient.get<Organization[]>(
+        `${this.baseUrl}/${id}/path`,
+        {
+          cache: true,
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`获取组织路径失败: ${result.error}`);
+      }
+
+      const organizations = result.data!;
+      const pathString = organizations.map((org: Organization) => org.name).join(' > ');
+      return { organizations, path_string: pathString };
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  // ==================== 搜索功能 ====================
+
+  /**
+   * 搜索组织
+   */
+  async searchOrganizations(
+    keyword: string,
+    params?: { skip?: number; limit?: number }
+  ): Promise<Organization[]> {
+    try {
+      const result = await enhancedApiClient.get<Organization[]>(
+        `${this.baseUrl}/search`,
+        {
+          params: { keyword, ...params, skip: params?.skip || 0, limit: params?.limit || 20 },
+          cache: true,
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`搜索组织失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  /**
+   * 高级搜索组织
+   */
+  async advancedSearchOrganizations(
+    searchRequest: OrganizationAdvancedSearch
+  ): Promise<Organization[]> {
+    try {
+      const result = await enhancedApiClient.post<Organization[]>(
+        `${this.baseUrl}/advanced-search`,
+        searchRequest,
+        {
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`高级搜索组织失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  // ==================== 统计和分析 ====================
+
+  /**
+   * 获取组织统计信息
+   */
+  async getStatistics(): Promise<OrganizationStatistics> {
+    try {
+      const result = await enhancedApiClient.get<OrganizationStatistics>(
+        `${this.baseUrl}/statistics`,
+        {
+          cache: true,
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`获取组织统计失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   /**
@@ -136,33 +339,29 @@ class OrganizationService {
     id: string,
     params?: { skip?: number; limit?: number }
   ): Promise<OrganizationHistory[]> {
-    const response = await apiClient.get(`${this.baseUrl}/${id}/history`, { params });
-    return response.data;
+    try {
+      const result = await enhancedApiClient.get<OrganizationHistory[]>(
+        `${this.baseUrl}/${id}/history`,
+        {
+          params: { ...params, skip: params?.skip || 0, limit: params?.limit || 20 },
+          cache: true,
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`获取组织历史失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
-  /**
-   * 创建组织
-   */
-  async createOrganization(organization: OrganizationCreate): Promise<Organization> {
-    const response = await apiClient.post(this.baseUrl, organization);
-    return response.data;
-  }
-
-  /**
-   * 更新组织
-   */
-  async updateOrganization(id: string, organization: OrganizationUpdate): Promise<Organization> {
-    const response = await apiClient.put(`${this.baseUrl}/${id}`, organization);
-    return response.data;
-  }
-
-  /**
-   * 删除组织
-   */
-  async deleteOrganization(id: string, deletedBy?: string): Promise<void> {
-    const params = deletedBy ? { deleted_by: deletedBy } : {};
-    await apiClient.delete(`${this.baseUrl}/${id}`, { params });
-  }
+  // ==================== 组织操作 ====================
 
   /**
    * 移动组织
@@ -171,8 +370,25 @@ class OrganizationService {
     id: string,
     moveRequest: OrganizationMoveRequest
   ): Promise<OrganizationMoveResult> {
-    const response = await apiClient.post(`${this.baseUrl}/${id}/move`, moveRequest);
-    return response.data;
+    try {
+      const result = await enhancedApiClient.post<OrganizationMoveResult>(
+        `${this.baseUrl}/${id}/move`,
+        moveRequest,
+        {
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`移动组织失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   /**
@@ -181,11 +397,26 @@ class OrganizationService {
   async batchOrganizationOperation(
     batchRequest: OrganizationBatchRequest
   ): Promise<OrganizationBatchResult> {
-    const response = await apiClient.post(`${this.baseUrl}/batch`, batchRequest);
-    return response.data;
+    try {
+      const result = await enhancedApiClient.post<OrganizationBatchResult>(
+        `${this.baseUrl}/batch`,
+        batchRequest,
+        {
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`批量操作组织失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
-
-
 
   /**
    * 批量删除组织
@@ -194,24 +425,93 @@ class OrganizationService {
     organizationIds: string[],
     deletedBy?: string
   ): Promise<OrganizationBatchResult> {
-    return this.batchOrganizationOperation({
-      organization_ids: organizationIds,
-      action: 'delete',
-      updated_by: deletedBy
-    });
+    try {
+      return await this.batchOrganizationOperation({
+        organization_ids: organizationIds,
+        action: 'delete',
+        updated_by: deletedBy
+      });
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
+  // ==================== 导入导出功能 ====================
 
+  /**
+   * 导出组织数据
+   */
+  async exportOrganizations(format: 'excel' | 'csv' = 'excel'): Promise<Blob> {
+    try {
+      const result = await enhancedApiClient.get<Blob>(
+        `${this.baseUrl}/export`,
+        {
+          params: { format },
+          responseType: 'blob',
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 }
+        }
+      );
 
+      if (!result.success) {
+        throw new Error(`导出组织数据失败: ${result.error}`);
+      }
 
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  /**
+   * 导入组织数据
+   */
+  async importOrganizations(file: File): Promise<{
+    success: boolean;
+    message: string;
+    data?: unknown;
+  }> {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const result = await enhancedApiClient.post<{
+        success: boolean;
+        message: string;
+        data?: unknown;
+      }>(
+        `${this.baseUrl}/import`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          },
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`导入组织数据失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  // ==================== 工具方法 ====================
 
   /**
    * 构建组织树形数据
    */
-  buildOrganizationTreeData(organizations: Organization[]) {
-    const treeData: any[] = [];
+  buildOrganizationTreeData(organizations: Organization[]): TreeNode[] {
+    const treeData: TreeNode[] = [];
     const organizationMap = new Map<string, Organization>();
-    
+
     // 创建组织映射
     organizations.forEach(org => {
       organizationMap.set(org.id, org);
@@ -223,7 +523,7 @@ class OrganizationService {
         key: org.id,
         value: org.id,
         title: org.name,
-        children: []
+        children: [] as TreeNode[]
       };
 
       if (!org.parent_id) {
@@ -243,7 +543,7 @@ class OrganizationService {
   /**
    * 向树节点添加子节点
    */
-  private addChildToTreeNode(treeData: any[], parentId: string, childNode: any) {
+  private addChildToTreeNode(treeData: TreeNode[], parentId: string, childNode: TreeNode): boolean {
     for (const node of treeData) {
       if (node.key === parentId) {
         node.children = node.children || [];
@@ -311,29 +611,80 @@ class OrganizationService {
   }
 
   /**
-   * 导出组织数据
+   * 获取组织层级深度
    */
-  async exportOrganizations(format: 'excel' | 'csv' = 'excel'): Promise<Blob> {
-    const response = await apiClient.get(`${this.baseUrl}/export`, {
-      params: { format },
-      responseType: 'blob'
-    });
-    return response.data;
+  getOrganizationDepth(organization: Organization, allOrganizations: Organization[]): number {
+    let depth = 1;
+    let current: Organization | null = organization;
+
+    while (current && current.parent_id) {
+      depth++;
+      const parentOrg = allOrganizations.find(org => org.id === current!.parent_id);
+      current = parentOrg || null;
+    }
+
+    return depth;
   }
 
   /**
-   * 导入组织数据
+   * 获取组织的所有子组织ID（递归）
    */
-  async importOrganizations(file: File): Promise<any> {
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    const response = await apiClient.post(`${this.baseUrl}/import`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
-    return response.data;
+  getAllChildOrganizationIds(organizationId: string, allOrganizations: Organization[]): string[] {
+    const childIds: string[] = [];
+    const children = allOrganizations.filter(org => org.parent_id === organizationId);
+
+    for (const child of children) {
+      childIds.push(child.id);
+      const grandChildren = this.getAllChildOrganizationIds(child.id, allOrganizations);
+      childIds.push(...grandChildren);
+    }
+
+    return childIds;
+  }
+
+  /**
+   * 验证组织编码唯一性
+   */
+  async validateOrganizationCode(code: string, excludeId?: string): Promise<{ exists: boolean }> {
+    try {
+      const organizations = await this.getOrganizations({ limit: 1000 });
+      const existingOrg = organizations.find(org =>
+        org.code === code && org.id !== excludeId
+      );
+      return { exists: !!existingOrg };
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      console.warn('验证组织编码失败:', enhancedError.message);
+      return { exists: false };
+    }
+  }
+
+  /**
+   * 获取根级组织列表
+   */
+  async getRootOrganizations(): Promise<Organization[]> {
+    try {
+      const organizations = await this.getOrganizations();
+      return organizations.filter(org => !org.parent_id);
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      console.warn('获取根级组织失败:', enhancedError.message);
+      return [];
+    }
+  }
+
+  /**
+   * 根据名称查找组织
+   */
+  async findOrganizationByName(name: string): Promise<Organization | null> {
+    try {
+      const organizations = await this.getOrganizations({ limit: 1000 });
+      return organizations.find(org => org.name === name) || null;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      console.warn('根据名称查找组织失败:', enhancedError.message);
+      return null;
+    }
   }
 }
 

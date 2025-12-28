@@ -4,14 +4,14 @@
 生成系统架构、配置、部署和运维文档
 """
 
-import sys
 import json
 import os
-from pathlib import Path
-from datetime import datetime
-from typing import Dict, Any, List
-import subprocess
 import platform
+import subprocess
+import sys
+from datetime import datetime
+from pathlib import Path
+from typing import Any
 
 # 添加项目根目录到Python路径
 project_root = Path(__file__).parent.parent
@@ -28,7 +28,7 @@ class SystemDocumentationGenerator:
         self.output_dir = project_root / "docs" / "generated" / "system"
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-    def get_system_info(self) -> Dict[str, Any]:
+    def get_system_info(self) -> dict[str, Any]:
         """获取系统信息"""
         return {
             "platform": platform.platform(),
@@ -36,13 +36,15 @@ class SystemDocumentationGenerator:
             "architecture": platform.architecture(),
             "processor": platform.processor(),
             "node": self._get_node_version(),
-            "npm": self._get_npm_version()
+            "npm": self._get_npm_version(),
         }
 
     def _get_node_version(self) -> str:
         """获取Node.js版本"""
         try:
-            result = subprocess.run(['node', '--version'], capture_output=True, text=True)
+            result = subprocess.run(
+                ["node", "--version"], capture_output=True, text=True
+            )
             return result.stdout.strip()
         except (subprocess.CalledProcessError, FileNotFoundError):
             return "Not installed"
@@ -50,38 +52,47 @@ class SystemDocumentationGenerator:
     def _get_npm_version(self) -> str:
         """获取npm版本"""
         try:
-            result = subprocess.run(['npm', '--version'], capture_output=True, text=True)
+            result = subprocess.run(
+                ["npm", "--version"], capture_output=True, text=True
+            )
             return result.stdout.strip()
         except (subprocess.CalledProcessError, FileNotFoundError):
             return "Not installed"
 
-    def get_project_structure(self) -> Dict[str, Any]:
+    def get_project_structure(self) -> dict[str, Any]:
         """获取项目结构"""
         structure = {
             "name": "land-property-management",
             "description": "土地物业资产管理系统",
             "directories": {},
             "total_files": 0,
-            "total_lines": 0
+            "total_lines": 0,
         }
 
         # 扫描后端目录
         if self.backend_dir.exists():
             structure["directories"]["backend"] = self._scan_directory(
                 self.backend_dir,
-                exclude_patterns=["__pycache__", "*.pyc", ".pytest_cache", "site-packages"]
+                exclude_patterns=[
+                    "__pycache__",
+                    "*.pyc",
+                    ".pytest_cache",
+                    "site-packages",
+                ],
             )
 
         # 扫描前端目录
         if self.frontend_dir.exists():
             structure["directories"]["frontend"] = self._scan_directory(
                 self.frontend_dir,
-                exclude_patterns=["node_modules", "dist", ".next", ".nuxt"]
+                exclude_patterns=["node_modules", "dist", ".next", ".nuxt"],
             )
 
         return structure
 
-    def _scan_directory(self, directory: Path, exclude_patterns: List[str] = None) -> Dict[str, Any]:
+    def _scan_directory(
+        self, directory: Path, exclude_patterns: list[str] = None
+    ) -> dict[str, Any]:
         """扫描目录结构"""
         if exclude_patterns is None:
             exclude_patterns = []
@@ -94,12 +105,12 @@ class SystemDocumentationGenerator:
                     return True
             return False
 
-        def scan_recursive(dir_path: Path) -> Dict[str, Any]:
+        def scan_recursive(dir_path: Path) -> dict[str, Any]:
             result = {
                 "files": [],
                 "subdirectories": {},
                 "file_count": 0,
-                "total_lines": 0
+                "total_lines": 0,
             }
 
             try:
@@ -112,7 +123,7 @@ class SystemDocumentationGenerator:
                             "name": item.name,
                             "size": item.stat().st_size,
                             "extension": item.suffix,
-                            "lines": self._count_lines(item)
+                            "lines": self._count_lines(item),
                         }
                         result["files"].append(file_info)
                         result["file_count"] += 1
@@ -134,29 +145,33 @@ class SystemDocumentationGenerator:
     def _count_lines(self, file_path: Path) -> int:
         """计算文件行数"""
         try:
-            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            with open(file_path, encoding="utf-8", errors="ignore") as f:
                 return sum(1 for _ in f)
         except Exception:
             return 0
 
-    def get_dependencies(self) -> Dict[str, Any]:
+    def get_dependencies(self) -> dict[str, Any]:
         """获取依赖信息"""
-        dependencies = {
-            "backend": {},
-            "frontend": {}
-        }
+        dependencies = {"backend": {}, "frontend": {}}
 
         # 后端依赖
         pyproject_path = self.backend_dir / "pyproject.toml"
         if pyproject_path.exists():
             try:
                 import tomllib
-                with open(pyproject_path, 'r', encoding='utf-8') as f:
+
+                with open(pyproject_path, encoding="utf-8") as f:
                     pyproject_data = tomllib.load(f)
                     dependencies["backend"] = {
-                        "dependencies": pyproject_data.get("project", {}).get("dependencies", []),
-                        "dev_dependencies": pyproject_data.get("project", {}).get("optional-dependencies", {}).get("dev", []),
-                        "python_requires": pyproject_data.get("project", {}).get("requires-python", "Unknown")
+                        "dependencies": pyproject_data.get("project", {}).get(
+                            "dependencies", []
+                        ),
+                        "dev_dependencies": pyproject_data.get("project", {})
+                        .get("optional-dependencies", {})
+                        .get("dev", []),
+                        "python_requires": pyproject_data.get("project", {}).get(
+                            "requires-python", "Unknown"
+                        ),
                     }
             except Exception as e:
                 dependencies["backend"]["error"] = str(e)
@@ -165,46 +180,54 @@ class SystemDocumentationGenerator:
         package_json_path = self.frontend_dir / "package.json"
         if package_json_path.exists():
             try:
-                with open(package_json_path, 'r', encoding='utf-8') as f:
+                with open(package_json_path, encoding="utf-8") as f:
                     package_data = json.load(f)
                     dependencies["frontend"] = {
                         "dependencies": dict(package_data.get("dependencies", {})),
-                        "dev_dependencies": dict(package_data.get("devDependencies", {})),
-                        "node_version": package_data.get("engines", {}).get("node", "Unknown"),
-                        "npm_version": package_data.get("engines", {}).get("npm", "Unknown")
+                        "dev_dependencies": dict(
+                            package_data.get("devDependencies", {})
+                        ),
+                        "node_version": package_data.get("engines", {}).get(
+                            "node", "Unknown"
+                        ),
+                        "npm_version": package_data.get("engines", {}).get(
+                            "npm", "Unknown"
+                        ),
                     }
             except Exception as e:
                 dependencies["frontend"]["error"] = str(e)
 
         return dependencies
 
-    def get_configuration(self) -> Dict[str, Any]:
+    def get_configuration(self) -> dict[str, Any]:
         """获取配置信息"""
-        config = {
-            "backend": {},
-            "frontend": {},
-            "environment": {}
-        }
+        config = {"backend": {}, "frontend": {}, "environment": {}}
 
         # 后端配置
         config_files = [
             ".env",
             ".env.example",
             "config/settings.py",
-            "config/config.py"
+            "config/config.py",
         ]
 
         for config_file in config_files:
             config_path = self.backend_dir / config_file
             if config_path.exists():
                 try:
-                    with open(config_path, 'r', encoding='utf-8') as f:
+                    with open(config_path, encoding="utf-8") as f:
                         content = f.read()
                         # 只读取非敏感配置
-                        if not config_file.startswith('.env'):
-                            config["backend"][config_file] = content[:1000] + "..." if len(content) > 1000 else content
+                        if not config_file.startswith(".env"):
+                            config["backend"][config_file] = (
+                                content[:1000] + "..."
+                                if len(content) > 1000
+                                else content
+                            )
                         else:
-                            config["backend"][config_file] = "[Environment file - content hidden]"
+                            config["backend"][config_file] = (
+                                "[Environment file - content hidden]"
+                            )
                 except Exception as e:
                     config["backend"][config_file] = f"Error reading: {e}"
 
@@ -214,19 +237,25 @@ class SystemDocumentationGenerator:
             ".env.example",
             "vite.config.ts",
             "tsconfig.json",
-            "package.json"
+            "package.json",
         ]
 
         for config_file in frontend_config_files:
             config_path = self.frontend_dir / config_file
             if config_path.exists():
                 try:
-                    with open(config_path, 'r', encoding='utf-8') as f:
+                    with open(config_path, encoding="utf-8") as f:
                         content = f.read()
-                        if not config_file.startswith('.env'):
-                            config["frontend"][config_file] = content[:1000] + "..." if len(content) > 1000 else content
+                        if not config_file.startswith(".env"):
+                            config["frontend"][config_file] = (
+                                content[:1000] + "..."
+                                if len(content) > 1000
+                                else content
+                            )
                         else:
-                            config["frontend"][config_file] = "[Environment file - content hidden]"
+                            config["frontend"][config_file] = (
+                                "[Environment file - content hidden]"
+                            )
                 except Exception as e:
                     config["frontend"][config_file] = f"Error reading: {e}"
 
@@ -237,14 +266,14 @@ class SystemDocumentationGenerator:
             "API_HOST",
             "API_PORT",
             "CORS_ORIGINS",
-            "LOG_LEVEL"
+            "LOG_LEVEL",
         ]
 
         config["environment"] = {var: os.getenv(var, "Not set") for var in env_vars}
 
         return config
 
-    def get_deployment_info(self) -> Dict[str, Any]:
+    def get_deployment_info(self) -> dict[str, Any]:
         """获取部署信息"""
         deployment = {
             "development": {
@@ -252,13 +281,13 @@ class SystemDocumentationGenerator:
                     "command": "uv run python run_dev.py",
                     "port": 8002,
                     "health_check": "http://localhost:8002/health",
-                    "docs": "http://localhost:8002/docs"
+                    "docs": "http://localhost:8002/docs",
                 },
                 "frontend": {
                     "command": "npm run dev",
                     "port": 5173,
-                    "health_check": "http://localhost:5173"
-                }
+                    "health_check": "http://localhost:5173",
+                },
             },
             "production": {
                 "backend": {
@@ -266,7 +295,7 @@ class SystemDocumentationGenerator:
                         "Production database (MySQL/PostgreSQL)",
                         "Redis for caching",
                         "Load balancer",
-                        "SSL certificate"
+                        "SSL certificate",
                     ],
                     "deployment_steps": [
                         "Configure environment variables",
@@ -274,8 +303,8 @@ class SystemDocumentationGenerator:
                         "Run database migrations",
                         "Build frontend assets",
                         "Start application with Gunicorn",
-                        "Configure reverse proxy (Nginx)"
-                    ]
+                        "Configure reverse proxy (Nginx)",
+                    ],
                 },
                 "frontend": {
                     "build_command": "npm run build",
@@ -285,49 +314,49 @@ class SystemDocumentationGenerator:
                         "Build application: npm run build",
                         "Configure web server",
                         "Enable gzip compression",
-                        "Set up caching headers"
-                    ]
-                }
-            }
+                        "Set up caching headers",
+                    ],
+                },
+            },
         }
 
         return deployment
 
-    def get_monitoring_info(self) -> Dict[str, Any]:
+    def get_monitoring_info(self) -> dict[str, Any]:
         """获取监控信息"""
         monitoring = {
             "logs": {
                 "backend": {
                     "location": "logs/",
                     "format": "JSON structured logging",
-                    "rotation": "Daily with 30-day retention"
+                    "rotation": "Daily with 30-day retention",
                 },
                 "frontend": {
                     "location": "Browser console",
-                    "format": "Console and Error tracking"
-                }
+                    "format": "Console and Error tracking",
+                },
             },
             "metrics": {
                 "application": {
                     "response_time": "API response times",
                     "error_rate": "Failed request percentage",
                     "request_count": "Total API requests",
-                    "active_users": "Concurrent users"
+                    "active_users": "Concurrent users",
                 },
                 "infrastructure": {
                     "cpu_usage": "CPU utilization",
                     "memory_usage": "Memory consumption",
                     "disk_usage": "Storage utilization",
-                    "network_io": "Network traffic"
-                }
+                    "network_io": "Network traffic",
+                },
             },
             "alerts": [
                 "High error rate (>5%)",
                 "Slow response time (>2s)",
                 "High memory usage (>80%)",
                 "Database connection failures",
-                "File upload failures"
-            ]
+                "File upload failures",
+            ],
         }
 
         return monitoring
@@ -351,7 +380,7 @@ class SystemDocumentationGenerator:
             f"- **NPM Version**: {system_info['npm']}\n",
             "## Project Structure\n",
             f"**Total Files**: {project_structure['total_files']}\n",
-            f"**Total Lines**: {project_structure['total_lines']}\n"
+            f"**Total Lines**: {project_structure['total_lines']}\n",
         ]
 
         # 项目结构详情
@@ -373,7 +402,9 @@ class SystemDocumentationGenerator:
         markdown.append("### Frontend\n")
         if dependencies.get("frontend", {}).get("dependencies"):
             markdown.append("**Main Dependencies**:\n")
-            for dep in list(dependencies["frontend"]["dependencies"].keys())[:10]:  # 只显示前10个
+            for dep in list(dependencies["frontend"]["dependencies"].keys())[
+                :10
+            ]:  # 只显示前10个
                 markdown.append(f"- {dep}\n")
             markdown.append("")
 
@@ -413,7 +444,9 @@ class SystemDocumentationGenerator:
         for category, metrics in monitoring["metrics"].items():
             markdown.append(f"**{category.title()}**:\n")
             for metric, description in metrics.items():
-                markdown.append(f"- {metric.replace('_', ' ').title()}: {description}\n")
+                markdown.append(
+                    f"- {metric.replace('_', ' ').title()}: {description}\n"
+                )
             markdown.append("")
 
         # 故障排除
@@ -450,7 +483,9 @@ class SystemDocumentationGenerator:
         with open(self.output_dir / "system_info.json", "w", encoding="utf-8") as f:
             json.dump(system_info, f, indent=2, ensure_ascii=False)
 
-        with open(self.output_dir / "project_structure.json", "w", encoding="utf-8") as f:
+        with open(
+            self.output_dir / "project_structure.json", "w", encoding="utf-8"
+        ) as f:
             json.dump(project_structure, f, indent=2, ensure_ascii=False)
 
         with open(self.output_dir / "dependencies.json", "w", encoding="utf-8") as f:
@@ -472,11 +507,12 @@ class SystemDocumentationGenerator:
         docs_dir.mkdir(exist_ok=True)
 
         import shutil
+
         shutil.copy2(self.output_dir / "system.md", docs_dir / "system.md")
 
-        print(f"System documentation generated successfully!")
+        print("System documentation generated successfully!")
         print(f"Output directory: {self.output_dir}")
-        print(f"Files generated:")
+        print("Files generated:")
         print(f"  - System Info: {self.output_dir / 'system_info.json'}")
         print(f"  - Project Structure: {self.output_dir / 'project_structure.json'}")
         print(f"  - Dependencies: {self.output_dir / 'dependencies.json'}")

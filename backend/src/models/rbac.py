@@ -84,9 +84,7 @@ class Role(Base):
         "Permission", secondary=role_permissions, back_populates="roles"
     )
     # users = relationship("User", secondary="user_role_assignments")  # 完全移除以避免循环依赖
-    user_assignments = relationship(
-        "UserRoleAssignment", back_populates="role", overlaps="roles"
-    )
+    user_assignments = relationship("UserRoleAssignment", back_populates="role")
 
     def __repr__(self):
         return (
@@ -145,6 +143,11 @@ class Permission(Base):
     conditional_permissions = relationship(
         "ConditionalPermission", back_populates="permission"
     )
+
+    @property
+    def is_active(self) -> bool:
+        """权限始终激活（通过角色分配来控制访问）"""
+        return True
 
     def __repr__(self):
         return f"<Permission(id={self.id}, name={self.name}, resource={self.resource}, action={self.action})>"
@@ -288,7 +291,7 @@ class PermissionAuditLog(Base):
     )
 
     # 关系
-    user = relationship("User", foreign_keys=[user_id], overlaps="roles")
+    user = relationship("User", foreign_keys=[user_id])
     operator = relationship("User", foreign_keys=[operator_id])
 
     def __repr__(self):

@@ -20,12 +20,9 @@ import { Bar } from 'react-chartjs-2'
 
 import { assetService } from '@/services/assetService'
 import type { AssetSearchParams } from '@/types/asset'
+import { getChartYValue, getChartDatasetLabel } from '@/types/chart-types'
 
-// 注册Chart.js组件
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
-
-const { Title: AntTitle, Text } = Typography
-
+// Local interface matching the actual API response structure
 interface AreaStatisticsData {
   total_statistics: {
     total_land_area: number
@@ -72,6 +69,11 @@ interface AreaStatisticsData {
   }>
 }
 
+// 注册Chart.js组件
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
+
+const { Title: AntTitle, Text } = Typography
+
 interface AreaStatisticsChartProps {
   filters?: AssetSearchParams
   height?: number
@@ -82,9 +84,12 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
   height = 400,
 }) => {
   // 获取面积统计数据
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error } = useQuery<AreaStatisticsData>({
     queryKey: ['area-statistics', filters],
-    queryFn: () => assetService.getAreaStatistics(filters),
+    queryFn: async (): Promise<AreaStatisticsData> => {
+      const result = await assetService.getAreaStatistics(filters);
+      return result as unknown as AreaStatisticsData;
+    },
     refetchInterval: 5 * 60 * 1000, // 5分钟刷新一次
   })
 
@@ -140,8 +145,10 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
       },
       tooltip: {
         callbacks: {
-          label: (context: any) => {
-            return `${context.dataset.label}: ${context.parsed.y.toLocaleString()} ㎡`
+          label: (context: unknown) => {
+            const label = getChartDatasetLabel(context);
+            const value = getChartYValue(context);
+            return `${label}: ${value.toLocaleString()} ㎡`;
           },
         },
       },
@@ -150,7 +157,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
       y: {
         beginAtZero: true,
         ticks: {
-          callback: (value: any) => `${Number(value).toLocaleString()} ㎡`,
+          callback: (value: number) => `${Number(value).toLocaleString()} ㎡`,
         },
       },
     },
@@ -201,11 +208,13 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
       },
       tooltip: {
         callbacks: {
-          label: (context: any) => {
-            if (context.dataset.label?.includes('出租率')) {
-              return `${context.dataset.label}: ${context.parsed.y.toFixed(2)}%`
+          label: (context: unknown) => {
+            const label = getChartDatasetLabel(context);
+            const value = getChartYValue(context);
+            if (label?.includes('出租率')) {
+              return `${label}: ${value.toFixed(2)}%`;
             }
-            return `${context.dataset.label}: ${context.parsed.y.toLocaleString()} ㎡`
+            return `${label}: ${value.toLocaleString()} ㎡`;
           },
         },
       },
@@ -223,7 +232,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
         position: 'left' as const,
         beginAtZero: true,
         ticks: {
-          callback: (value: any) => `${Number(value).toLocaleString()} ㎡`,
+          callback: (value: number) => `${Number(value).toLocaleString()} ㎡`,
         },
       },
       y1: {
@@ -233,7 +242,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
         beginAtZero: true,
         max: 100,
         ticks: {
-          callback: (value: any) => `${value}%`,
+          callback: (value: number) => `${value}%`,
         },
         grid: {
           drawOnChartArea: false,
@@ -273,10 +282,13 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
       },
       tooltip: {
         callbacks: {
-          label: (context: any) => {
-            const item = data?.area_ranges?.[context.dataIndex]
+          label: (context: unknown) => {
+            const ctx = context as { dataIndex?: number; parsed?: number | { y: number } };
+            const dataIndex = ctx.dataIndex ?? 0;
+            const item = data?.area_ranges?.[dataIndex];
+            const yValue = typeof ctx.parsed === 'number' ? ctx.parsed : (ctx.parsed as { y: number })?.y ?? 0;
             return [
-              `资产数量: ${context.parsed.y} 个`,
+              `资产数量: ${yValue} 个`,
               `总面积: ${item?.total_area?.toLocaleString()} ㎡`,
               `占比: ${item?.percentage?.toFixed(1)}%`,
             ]
@@ -398,7 +410,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
           <Card title="物业性质面积分布" style={{ marginBottom: 16 }}>
             <Spin spinning={isLoading}>
               <div style={{ height: height }}>
-                <Bar data={propertyNatureChartData} options={propertyNatureChartOptions} />
+                <Bar data={propertyNatureChartData} options={propertyNatureChartOptions as any} />
               </div>
             </Spin>
           </Card>
@@ -409,7 +421,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
           <Card title="面积区间分布" style={{ marginBottom: 16 }}>
             <Spin spinning={isLoading}>
               <div style={{ height: height }}>
-                <Bar data={areaRangeChartData} options={areaRangeChartOptions} />
+                <Bar data={areaRangeChartData} options={areaRangeChartOptions as any} />
               </div>
             </Spin>
           </Card>
@@ -420,7 +432,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
           <Card title="权属方面积与出租率对比">
             <Spin spinning={isLoading}>
               <div style={{ height: height }}>
-                <Bar data={ownershipEntityChartData} options={ownershipEntityChartOptions} />
+                <Bar data={ownershipEntityChartData as any} options={ownershipEntityChartOptions as any} />
               </div>
             </Spin>
           </Card>

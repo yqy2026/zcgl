@@ -18,7 +18,7 @@ import {
   SearchOutlined,
   PlusOutlined,
   ReloadOutlined,
-  ListOutlined
+  UnorderedListOutlined
 } from '@ant-design/icons';
 import { useProjectOptions } from '@/hooks/useProject';
 import type { Project } from '@/types/project';
@@ -26,6 +26,14 @@ import ProjectList from '@/components/Project/ProjectList';
 
 const { Option } = Select;
 const { Search } = Input;
+
+// Select组件标签渲染属性接口
+interface CustomTagProps {
+  label: React.ReactNode;
+  value: string | number;
+  closable: boolean;
+  onClose: () => void;
+}
 
 interface UnifiedProjectSelectProps {
   /** 选中的项目ID(s) */
@@ -95,13 +103,13 @@ const UnifiedProjectSelect: React.FC<UnifiedProjectSelectProps> = ({
   // 处理单选
   const handleSingleChange = (selectedValue: string) => {
     const selected = allProjects.find(p => p.id === selectedValue);
-    onChange?.(selectedValue, selected);
+    onChange?.(selectedValue, selected as any);
   };
 
   // 处理多选
   const handleMultipleChange = (selectedValues: string[]) => {
     const selectedProjects = allProjects.filter(p => selectedValues.includes(p.id));
-    onChange?.(selectedValues, selectedProjects);
+    onChange?.(selectedValues, selectedProjects as any);
   };
 
   // 处理清除
@@ -117,14 +125,14 @@ const UnifiedProjectSelect: React.FC<UnifiedProjectSelectProps> = ({
   // 从弹窗中选择项目
   const handleModalSelect = (project: Project) => {
     if (mode === 'single') {
-      onChange?.(project.id, project);
+      onChange?.(project.id, project as any);
     } else {
       // 多选模式下，添加到已选列表
       const currentValues = Array.isArray(value) ? value : value ? [value] : [];
       if (!currentValues.includes(project.id)) {
         const newValues = maxCount ? [...currentValues.slice(-maxCount + 1), project.id] : [...currentValues, project.id];
         const selectedProjects = allProjects.filter(p => newValues.includes(p.id));
-        onChange?.(newValues, selectedProjects);
+        onChange?.(newValues, selectedProjects as any);
       }
     }
     setSelectModalVisible(false);
@@ -148,13 +156,13 @@ const UnifiedProjectSelect: React.FC<UnifiedProjectSelectProps> = ({
         [{project.code}]
       </span>
       {!project.is_active && (
-        <Tag color="red" size="small">禁用</Tag>
+        <Tag color="red">禁用</Tag>
       )}
     </Space>
   );
 
   // 多选模式下已选项目的标签渲染
-  const tagRender = (props: any) => {
+  const tagRender = (props: CustomTagProps) => {
     const { label, value, closable, onClose } = props;
     const project = allProjects.find(p => p.id === value);
 
@@ -174,8 +182,8 @@ const UnifiedProjectSelect: React.FC<UnifiedProjectSelectProps> = ({
     <div style={style}>
       <Space.Compact style={{ width: '100%' }}>
         <Select
-          value={value || (mode === 'multiple' ? [] : undefined)}
-          onChange={mode === 'multiple' ? handleMultipleChange : handleSingleChange}
+          value={value as any || (mode === 'multiple' ? [] : undefined)}
+          onChange={mode === 'multiple' ? (handleMultipleChange as any) : (handleSingleChange as any)}
           onClear={handleClear}
           placeholder={placeholder}
           disabled={disabled}
@@ -194,7 +202,7 @@ const UnifiedProjectSelect: React.FC<UnifiedProjectSelectProps> = ({
         >
           {filteredProjects.map(project => (
             <Option key={project.id} value={project.id}>
-              {getOptionLabel(project)}
+              {project.name}
             </Option>
           ))}
         </Select>
@@ -202,7 +210,7 @@ const UnifiedProjectSelect: React.FC<UnifiedProjectSelectProps> = ({
         {showAdvancedSelect && (
           <Tooltip title="高级选择">
             <Button
-              icon={<ListOutlined />}
+              icon={<UnorderedListOutlined />}
               onClick={openAdvancedSelect}
               disabled={disabled}
               size={size}
@@ -239,7 +247,7 @@ const UnifiedProjectSelect: React.FC<UnifiedProjectSelectProps> = ({
         onCancel={() => setSelectModalVisible(false)}
         footer={null}
         width={1200}
-        destroyOnClose
+        destroyOnHidden
       >
         <ProjectList
           mode="select"

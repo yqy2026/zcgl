@@ -1,9 +1,10 @@
+from typing import Any
+
 """
 项目管理相关CRUD操作
 """
 
 from datetime import UTC, datetime
-from typing import Any
 
 from sqlalchemy import desc, or_
 from sqlalchemy.orm import Session
@@ -380,7 +381,7 @@ class CRUDProject:
         code = self.generate_project_code(db, obj_in.name)
 
         # 创建数据对象
-        create_data = obj_in.dict()
+        create_data = obj_in.model_dump()
         create_data["code"] = code
 
         # 提取权属方关系数据
@@ -657,10 +658,7 @@ class CRUDProject:
     def get_dropdown_options(self, db: Session) -> list[dict[str, Any]]:
         """获取下拉选项"""
         projects = (
-            db.query(Project)
-            .filter(Project.is_active)
-            .order_by(Project.name)
-            .all()
+            db.query(Project).filter(Project.is_active).order_by(Project.name).all()
         )
         return [
             {"id": project.id, "name": project.name, "code": project.code}

@@ -1,3 +1,5 @@
+from typing import Any
+
 """
 PDF智能导入API (统一版本)
 整合了完整的PDF处理流程和V1兼容功能的统一API
@@ -7,7 +9,6 @@ import logging
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 
 from fastapi import (
     APIRouter,
@@ -23,14 +24,18 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ...database import get_db
+from ...middleware.auth import get_current_active_user
+from ...services.providers.ocr_provider import get_ocr_service
 
 logger = logging.getLogger(__name__)
 
 # 导入新的PDF处理服务 - 安全导入
 try:
-    from ...services.enhanced_error_handler import enhanced_error_handler
-    from ...services.pdf_import_service import pdf_import_service
-    from ...services.pdf_processing_service import pdf_processing_service
+    from ...services.core.enhanced_error_handler import enhanced_error_handler
+    from ...services.pdf_import_service import PDFImportService
+
+    pdf_import_service = PDFImportService()
+    from ...services.document.pdf_processing_service import pdf_processing_service
     from ...services.pdf_session_service import pdf_session_service
     from ...services.pdf_validation_matching_service import PDFValidationMatchingService
     from ...services.performance_monitor import performance_monitor
@@ -258,8 +263,12 @@ async def upload_pdf_file(
     temp_dir = Path("temp_uploads")
     temp_dir.mkdir(exist_ok=True)
 
+    # 安全文件名处理 - 防止路径遍历攻击
+    from ..utils.file_security import generate_safe_filename
+
     file_id = str(uuid.uuid4())
-    temp_file_path = temp_dir / f"{file_id}_{file.filename}"
+    safe_filename = generate_safe_filename(file.filename, file_id)
+    temp_file_path = temp_dir / safe_filename
 
     # 使用流式保存，同时验证文件大小
     total_size = 0
@@ -539,7 +548,11 @@ async def get_session_history(
 
 
 @router.post("/confirm_import", response_model=ConfirmImportResponse)
-async def confirm_import(request: ConfirmImportRequest, db: Session = Depends(get_db)):
+async def confirm_import(
+    request: ConfirmImportRequest,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_active_user),
+):
     """确认导入合同数据"""
     start_time = datetime.now()
 
@@ -554,7 +567,7 @@ async def confirm_import(request: ConfirmImportRequest, db: Session = Depends(ge
             db=db,
             session_id=request.session_id,
             confirmed_data=request.confirmed_data,
-            user_id=None,  # TODO: 从认证中获取用户ID
+            user_id=current_user.id,
         )
 
         processing_time = (datetime.now() - start_time).total_seconds()
@@ -726,6 +739,7 @@ async def get_quality_assessment(session_id: str, db: Session = Depends(get_db))
 async def analyze_pdf_quality(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
+    ocr_service=Depends(get_ocr_service),
 ):
     """分析PDF文件质量"""
     try:
@@ -750,7 +764,11 @@ async def analyze_pdf_quality(
 
         temp_dir = Path(tempfile.gettempdir())
         file_id = str(uuid.uuid4())
-        temp_file_path = temp_dir / f"{file_id}_{file.filename}"
+        # 安全文件名处理 - 防止路径遍历攻击
+        from ..utils.file_security import generate_safe_filename
+
+        safe_filename = generate_safe_filename(file.filename, file_id)
+        temp_file_path = temp_dir / safe_filename
 
         try:
             # 保存上传的文件
@@ -764,6 +782,7 @@ async def analyze_pdf_quality(
             result = await pdf_processing_service.extract_text_from_pdf(
                 str(temp_file_path),
                 prefer_ocr=False,  # 默认不使用OCR进行质量评估
+                ocr_service=ocr_service,
             )
 
             if not result.get("success"):
@@ -793,6 +812,9 @@ async def analyze_pdf_quality(
                     "file_size_bytes": result.get("file_size_bytes"),
                     "text_length": len(result.get("text", "")),
                     "page_count": result.get("page_count", 1),
+                    # 并发与吞吐量指标（如OCR路径产生）
+                    "concurrency_used": result.get("concurrency_used"),
+                    "pages_per_second": result.get("pages_per_second"),
                 },
             }
 
@@ -883,6 +905,7 @@ async def upload_and_extract_pdf_v1_compatible(
     include_raw_text: bool = Form(default=False),
     validate_fields: bool = Form(default=True),
     background_tasks: BackgroundTasks = BackgroundTasks(),
+    ocr_service=Depends(get_ocr_service),
 ):
     """上传PDF文件并提取信息 (V1兼容版本)"""
     start_time = datetime.now()
@@ -905,7 +928,8 @@ async def upload_and_extract_pdf_v1_compatible(
 
         # 使用V2的处理服务提取文本
         text_result = await pdf_processing_service.extract_text_from_pdf(
-            file_info["file_path"]
+            file_info["file_path"],
+            ocr_service=ocr_service,
         )
 
         if not text_result.get("success"):
@@ -1059,7 +1083,7 @@ async def get_performance_report(hours: int = Query(default=24, ge=1, le=168)):
 async def get_system_health():
     """获取系统健康状态"""
     try:
-        from ...services.enhanced_error_handler import monitor_processing_health
+        from ...services.core.enhanced_error_handler import monitor_processing_health
 
         health_data = await monitor_processing_health()
         return {"success": True, "data": health_data, "message": "系统健康状态获取成功"}

@@ -7,11 +7,16 @@ import React from 'react'
 import { Select, Spin } from 'antd'
 import { SelectProps } from 'antd/es/select'
 import { useDictionary } from '../../hooks/useDictionary'
-import { dictionaryService } from '../../services/dictionary'
+import { unifiedDictionaryService } from '../../services/dictionary'
 
-const { Option } = Select
+interface DictionaryOption {
+  value: string
+  label: string
+  color?: string
+  icon?: string
+}
 
-interface DictionarySelectProps extends Omit<SelectProps, 'options' | 'loading'> {
+interface DictionarySelectProps extends Omit<any, 'options'> {
   /** 字典类型 */
   dictType: string
   /** 是否只显示启用的选项 */
@@ -21,7 +26,7 @@ interface DictionarySelectProps extends Omit<SelectProps, 'options' | 'loading'>
   /** 是否显示图标 */
   showIcon?: boolean
   /** 自定义选项渲染 */
-  optionRender?: (option: any) => React.ReactNode
+  optionRender?: (option: DictionaryOption) => React.ReactNode
 }
 
 const DictionarySelect: React.FC<DictionarySelectProps> = ({
@@ -35,21 +40,17 @@ const DictionarySelect: React.FC<DictionarySelectProps> = ({
 }) => {
   const { options, loading, error } = useDictionary(dictType, isActive)
 
+  // Track data flow for debugging
+
   // 检查字典类型是否可用
-  const isAvailable = dictionaryService.isTypeAvailable(dictType)
+  const isAvailable = unifiedDictionaryService.isTypeAvailable(dictType)
 
-  // 如果字典类型不可用，显示警告
-  if (!isAvailable) {
-    console.warn(`字典类型不存在 [${dictType}]`)
-  }
+  // If dictionary type is not available, show warning
 
-  // 如果有错误，显示错误信息
-  if (error) {
-    console.error(`字典加载失败 [${dictType}]:`, error)
-  }
+  // If there's an error, show error message
 
   // 默认选项渲染
-  const renderOption = (option: any) => {
+  const renderOption = (option: DictionaryOption) => {
     if (optionRender) {
       return optionRender(option)
     }
@@ -75,27 +76,28 @@ const DictionarySelect: React.FC<DictionarySelectProps> = ({
     )
   }
 
+  // Prepare options data format - Ant Design 5.x best practice
+
   return (
     <Select
       {...props}
       loading={loading}
       placeholder={placeholder || `请选择${dictType.replace('_', '')}`}
       notFoundContent={loading ? <Spin size="small" /> : '暂无数据'}
+      options={options}
       filterOption={(input, option) => {
-        const label = option?.children?.toString() || ''
+        // 处理React元素类型的label
+        const label = typeof option?.label === 'string' ? option.label :
+                     (React.isValidElement(option?.label) ?
+                       (option?.label as React.ReactElement)?.props?.children?.toString() || '' :
+                       String(option?.label || ''))
         return label.toLowerCase().includes(input.toLowerCase())
       }}
-    >
-      {options.map(option => (
-        <Option 
-          key={option.value} 
-          value={option.value}
-          title={option.label}
-        >
-          {renderOption(option)}
-        </Option>
-      ))}
-    </Select>
+      virtual
+      listHeight={256}
+      // 使用label作为显示标签，确保选择后显示用户友好的文本而不是值
+      showSearch
+    />
   )
 }
 

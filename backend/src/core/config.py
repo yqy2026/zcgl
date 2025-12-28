@@ -1,12 +1,22 @@
 """
 配置管理模块
 集中管理所有配置项
+
+整合说明:
+- 保留原有 Pydantic Settings 配置
+- 添加 get_config() 和 initialize_config() 兼容函数
+- 合并自 config_manager.py, unified_config.py, enhanced_config.py 的功能
+@lastModified 2025-12-24
 """
 
+import logging
 import os
+from typing import Any
 
 from pydantic import ConfigDict, Field
 from pydantic_settings import BaseSettings
+
+logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
@@ -59,17 +69,32 @@ class Settings(BaseSettings):
         json_schema_extra={"env": "CORS_ORIGINS"},
     )
 
-    # JWT配置
+    # JWT配置 - 生产环境必须设置环境变量
     SECRET_KEY: str = Field(
-        default="your-secret-key-change-in-production",
+        default="EMERGENCY-ONLY-REPLACE-WITH-ENV-SECRET-KEY-NOW",
+        description="JWT密钥 - 生产环境必须通过环境变量设置强密钥",
         json_schema_extra={"env": "SECRET_KEY"},
     )
     ALGORITHM: str = Field(default="HS256", json_schema_extra={"env": "ALGORITHM"})
     ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(
-        default=30, json_schema_extra={"env": "ACCESS_TOKEN_EXPIRE_MINUTES"}
-    )
+        default=15, json_schema_extra={"env": "ACCESS_TOKEN_EXPIRE_MINUTES"}
+    )  # 缩短为15分钟以提高安全性
     REFRESH_TOKEN_EXPIRE_DAYS: int = Field(
         default=7, json_schema_extra={"env": "REFRESH_TOKEN_EXPIRE_DAYS"}
+    )
+
+    # JWT安全强化配置
+    JWT_ISSUER: str = Field(
+        default="zcgl-system", json_schema_extra={"env": "JWT_ISSUER"}
+    )
+    JWT_AUDIENCE: str = Field(
+        default="zcgl-users", json_schema_extra={"env": "JWT_AUDIENCE"}
+    )
+    ENABLE_JTI_CLAIM: bool = Field(
+        default=True, json_schema_extra={"env": "ENABLE_JTI_CLAIM"}
+    )
+    TOKEN_BLACKLIST_ENABLED: bool = Field(
+        default=True, json_schema_extra={"env": "TOKEN_BLACKLIST_ENABLED"}
     )
 
     # 文件上传配置
@@ -95,6 +120,55 @@ class Settings(BaseSettings):
     # 日志配置
     LOG_LEVEL: str = Field(default="INFO", json_schema_extra={"env": "LOG_LEVEL"})
     LOG_FILE: str | None = Field(default=None, json_schema_extra={"env": "LOG_FILE"})
+
+    def validate_security_config(self) -> list[str]:
+        """
+        验证安全配置
+        返回安全警告列表
+        """
+        warnings = []
+
+        # 检查JWT密钥安全性
+        if self.SECRET_KEY in [
+            "EMERGENCY-ONLY-REPLACE-WITH-ENV-SECRET-KEY-NOW",
+            "dev-secret-key-DO-NOT-USE-IN-PRODUCTION-REPLACE-WITH-ENV-VAR",
+            "dev-secret-key-change-in-production",
+        ]:
+            warnings.append(
+                "严重安全风险: 使用了默认或不安全的JWT密钥！"
+                "请立即设置环境变量SECRET_KEY为强随机密钥。"
+            )
+
+        if len(self.SECRET_KEY) < 32:
+            warnings.append("警告: JWT密钥长度不足32字符，建议使用更长的密钥。")
+
+        # 检查是否在调试模式运行
+        if self.DEBUG:
+            warnings.append("警告: 当前在调试模式运行，生产环境必须设置DEBUG=false。")
+
+        # 检查数据库是否为SQLite（生产环境推荐PostgreSQL）
+        if self.DATABASE_URL.startswith("sqlite:///./land_property.db"):
+            warnings.append(
+                "提醒: 使用默认SQLite数据库路径，生产环境建议使用PostgreSQL。"
+            )
+
+        return warnings
+
+    def log_security_status(self) -> None:
+        """记录安全配置状态"""
+        import logging
+
+        logger = logging.getLogger(__name__)
+        warnings = self.validate_security_config()
+
+        if warnings:
+            logger.warning("=" * 60)
+            logger.warning("安全配置检查发现以下问题:")
+            for warning in warnings:
+                logger.warning(f"  {warning}")
+            logger.warning("=" * 60)
+        else:
+            logger.info("安全配置检查通过")
 
     # 性能监控
     ENABLE_METRICS: bool = Field(
@@ -122,6 +196,29 @@ class Settings(BaseSettings):
     )
     AUDIT_LOG_RETENTION_DAYS: int = Field(
         default=90, json_schema_extra={"env": "AUDIT_LOG_RETENTION_DAYS"}
+    )
+
+    # LLM/ChatGLM3 配置（可选）
+    CHATGLM3_API_URL: str | None = Field(
+        default=None, json_schema_extra={"env": "CHATGLM3_API_URL"}
+    )
+    CHATGLM3_MAX_TOKENS: int = Field(
+        default=1500, json_schema_extra={"env": "CHATGLM3_MAX_TOKENS"}
+    )
+    CHATGLM3_TEMPERATURE: float = Field(
+        default=0.2, json_schema_extra={"env": "CHATGLM3_TEMPERATURE"}
+    )
+    CHATGLM3_TIMEOUT: int = Field(
+        default=30, json_schema_extra={"env": "CHATGLM3_TIMEOUT"}
+    )
+    CHATGLM3_MODEL_ID: str = Field(
+        default="THUDM/chatglm3-6b", json_schema_extra={"env": "CHATGLM3_MODEL_ID"}
+    )
+    CHATGLM3_DEVICE: str = Field(
+        default="cpu", json_schema_extra={"env": "CHATGLM3_DEVICE"}
+    )
+    LLM_TRIGGER_THRESHOLD: float = Field(
+        default=0.65, json_schema_extra={"env": "LLM_TRIGGER_THRESHOLD"}
     )
 
     # 创建全局配置实例
@@ -164,4 +261,110 @@ def validate_config():
 
 
 # 导出配置实例
-__all__ = ["settings", "validate_config"]
+__all__ = ["settings", "validate_config", "get_config", "initialize_config"]
+
+
+# ============================================================
+# 兼容性函数 (合并自 config_manager.py)
+# ============================================================
+
+
+def get_config(key: str, default: Any = None) -> Any:
+    """
+    获取配置值的便捷函数
+
+    支持点号分隔的配置键，如:
+    - "cors_origins" -> settings.CORS_ORIGINS
+    - "database.pool_size" -> settings.DATABASE_POOL_SIZE (需要添加)
+
+    Args:
+        key: 配置键名
+        default: 默认值
+
+    Returns:
+        配置值或默认值
+    """
+    # 首先尝试直接从 settings 获取
+    if hasattr(settings, key.upper()):
+        return getattr(settings, key.upper())
+
+    # 尝试带下划线的键名
+    upper_key = key.upper().replace(".", "_")
+    if hasattr(settings, upper_key):
+        return getattr(settings, upper_key)
+
+    # 特殊配置映射
+    config_mappings = {
+        "cors_origins": settings.CORS_ORIGINS,
+        "database.url": settings.DATABASE_URL,
+        "database.echo": settings.DATABASE_ECHO,
+        "database.pool_size": 20,
+        "database.max_overflow": 30,
+        "database.pool_timeout": 30,
+        "database.pool_recycle": 3600,
+        "database.enable_query_logging": False,
+        "rate_limit": {},
+        "security": {},
+        "slow_query_threshold_ms": int(settings.SLOW_QUERY_THRESHOLD * 1000),
+        "performance_monitoring_enabled": settings.ENABLE_METRICS,
+        "cache_enabled": settings.REDIS_ENABLED,
+        "cache_ttl_seconds": settings.CACHE_TTL,
+        "cache_max_size": 1000,
+        "permission_cache_ttl": 300,
+        "debug": settings.DEBUG,
+        "log_level": settings.LOG_LEVEL,
+        "log_file": settings.LOG_FILE,
+        "security_log_file": "logs/security.log",
+        "security_logging_enabled": True,
+        "request_log_file": "logs/requests.log",
+        "request_logging_enabled": True,
+    }
+
+    if key in config_mappings:
+        return config_mappings[key]
+
+    # 返回默认值
+    logger.debug(f"Config key '{key}' not found, using default: {default}")
+    return default
+
+
+def initialize_config() -> None:
+    """
+    初始化配置的便捷函数
+
+    验证配置并记录安全状态
+    """
+    logger.info("Initializing configuration...")
+
+    # 验证必要配置
+    try:
+        validate_config()
+    except ValueError as e:
+        logger.error(f"Configuration validation failed: {e}")
+        raise
+
+    # 记录安全状态
+    settings.log_security_status()
+
+    logger.info("Configuration initialized successfully")
+
+
+def get_all_config() -> dict[str, Any]:
+    """
+    获取所有配置的便捷函数
+
+    Returns:
+        包含所有配置的字典
+    """
+    return {
+        "app_name": settings.APP_NAME,
+        "app_version": settings.APP_VERSION,
+        "debug": settings.DEBUG,
+        "api_v1_str": settings.API_V1_STR,
+        "host": settings.HOST,
+        "port": settings.PORT,
+        "database_url": settings.DATABASE_URL,
+        "redis_enabled": settings.REDIS_ENABLED,
+        "cors_origins": settings.CORS_ORIGINS,
+        "log_level": settings.LOG_LEVEL,
+    }

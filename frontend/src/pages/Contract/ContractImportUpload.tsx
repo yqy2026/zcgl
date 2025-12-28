@@ -94,7 +94,12 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
   }, [abortController]);
 
   // 自定义上传请求
-  const customRequest = useCallback(async (options: any) => {
+  const customRequest = useCallback(async (options: {
+    file: File;
+    onProgress: (percent: number) => void;
+    onSuccess: (response?: unknown) => void;
+    onError: (error: Error) => void;
+  }) => {
     const { file, onProgress, onSuccess, onError } = options;
 
     // 设置上传状态
@@ -119,7 +124,7 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
       if (response.success) {
         // 完成进度
         setUploadProgress(100);
-        onProgress({ percent: 100 });
+        onProgress(100);
 
         const uploadFile: UploadFile = {
           uid: response.session_id || Date.now().toString(),
@@ -127,7 +132,7 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
           status: 'done',
           size: file.size,
           type: file.type,
-          originFileObj: file
+          originFileObj: file as any
         };
 
         setUploadedFile(uploadFile);
@@ -145,20 +150,21 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
       } else {
         throw new Error(response.error || response.message || '上传失败');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       // 清理controller
       setAbortController(null);
 
       // 如果是手动取消，不显示错误消息
-      if (error.name === 'AbortError' || error.message === 'canceled') {
+      const err = error as any;
+      if (err.name === 'AbortError' || err.message === 'canceled') {
         return;
       }
 
       setUploadStatus('error');
       setUploadProgress(0);
-      onError(error);
-      onUploadError(error.message || '上传失败');
-      message.error(error.message || '文件上传失败');
+      onError(error as Error);
+      onUploadError(err.message || '上传失败');
+      message.error(err.message || '文件上传失败');
     }
   }, [onUploadSuccess, onUploadError]);
 
@@ -181,7 +187,7 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
     multiple: false,
     accept: '.pdf',
     beforeUpload,
-    customRequest,
+    customRequest: customRequest as any,
     showUploadList: false,
     disabled: uploadStatus === 'uploading'
   };

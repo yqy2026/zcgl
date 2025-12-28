@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session
 
 from ...crud.ownership import ownership
 from ...database import get_db
+from ...middleware.auth import get_current_active_user
+from ...models.auth import User
 from ...schemas.ownership import (
     OwnershipCreate,
     OwnershipDeleteResponse,
@@ -24,6 +26,7 @@ router = APIRouter()
 async def get_ownership_dropdown_options(
     db: Session = Depends(get_db),
     is_active: bool | None = Query(True, description="是否启用"),
+    current_user: User = Depends(get_current_active_user),
 ):
     """获取权属方选项列表（用于下拉选择等）"""
     try:
@@ -44,7 +47,10 @@ async def get_ownership_dropdown_options(
 
 @router.post("/", response_model=OwnershipResponse, summary="创建权属方")
 async def create_ownership(
-    *, db: Session = Depends(get_db), ownership_in: OwnershipCreate
+    *,
+    db: Session = Depends(get_db),
+    ownership_in: OwnershipCreate,
+    current_user: User = Depends(get_current_active_user),
 ):
     """创建新权属方"""
     try:
@@ -58,7 +64,11 @@ async def create_ownership(
 
 @router.put("/{ownership_id}", response_model=OwnershipResponse, summary="更新权属方")
 async def update_ownership(
-    *, db: Session = Depends(get_db), ownership_id: str, ownership_in: OwnershipUpdate
+    *,
+    db: Session = Depends(get_db),
+    ownership_id: str,
+    ownership_in: OwnershipUpdate,
+    current_user: User = Depends(get_current_active_user),
 ):
     """更新权属方信息"""
     db_ownership = ownership.get(db, id=ownership_id)
@@ -82,6 +92,7 @@ async def update_ownership_projects(
     db: Session = Depends(get_db),
     ownership_id: str,
     project_ids: list[str] = Body(..., description="关联项目ID列表"),
+    current_user: User = Depends(get_current_active_user),
 ):
     """更新权属方的关联项目"""
     db_ownership = ownership.get(db, id=ownership_id)
@@ -109,7 +120,12 @@ async def update_ownership_projects(
 @router.delete(
     "/{ownership_id}", response_model=OwnershipDeleteResponse, summary="删除权属方"
 )
-async def delete_ownership(*, db: Session = Depends(get_db), ownership_id: str):
+async def delete_ownership(
+    *,
+    db: Session = Depends(get_db),
+    ownership_id: str,
+    current_user: User = Depends(get_current_active_user),
+):
     """删除权属方"""
     try:
         # 先检查关联资产数量
@@ -134,6 +150,7 @@ async def get_ownerships(
     size: int = Query(10, ge=1, le=100, description="每页数量"),
     keyword: str | None = Query(None, description="搜索关键词"),
     is_active: bool | None = Query(None, description="是否启用"),
+    current_user: User = Depends(get_current_active_user),
 ):
     """获取权属方列表"""
     search_params = OwnershipSearchRequest(
@@ -163,7 +180,10 @@ async def get_ownerships(
 
 @router.post("/search", response_model=OwnershipListResponse, summary="搜索权属方")
 async def search_ownerships(
-    *, db: Session = Depends(get_db), search_params: OwnershipSearchRequest
+    *,
+    db: Session = Depends(get_db),
+    search_params: OwnershipSearchRequest,
+    current_user: User = Depends(get_current_active_user),
 ):
     """搜索权属方"""
     result = ownership.search(db, search_params)
@@ -192,7 +212,10 @@ async def search_ownerships(
     response_model=OwnershipStatisticsResponse,
     summary="获取权属方统计",
 )
-async def get_ownership_statistics(db: Session = Depends(get_db)):
+async def get_ownership_statistics(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
     """获取权属方统计信息"""
     stats = ownership.get_statistics(db)
 
@@ -214,7 +237,12 @@ async def get_ownership_statistics(db: Session = Depends(get_db)):
     response_model=OwnershipResponse,
     summary="切换权属方状态",
 )
-async def toggle_ownership_status(*, db: Session = Depends(get_db), ownership_id: str):
+async def toggle_ownership_status(
+    *,
+    db: Session = Depends(get_db),
+    ownership_id: str,
+    current_user: User = Depends(get_current_active_user),
+):
     """切换权属方启用/禁用状态"""
     try:
         db_ownership = ownership.toggle_status(db, id=ownership_id)

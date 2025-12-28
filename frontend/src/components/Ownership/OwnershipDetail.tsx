@@ -20,6 +20,7 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 
 import type { Ownership } from '@/types/ownership';
+import type { Project } from '@/types/project';
 
 const { Text } = Typography;
 
@@ -38,12 +39,12 @@ const OwnershipDetail: React.FC<OwnershipDetailProps> = ({
   };
 
   // 关联项目表格列定义
-  const projectColumns: ColumnsType<any> = [
+  const projectColumns: ColumnsType<Project> = [
     {
       title: '项目名称',
       dataIndex: 'name',
       key: 'name',
-      render: (text: string, record: any) => (
+      render: (text: string, record: Project) => (
         <Space>
           <ProjectOutlined />
           {text}
@@ -144,7 +145,7 @@ const OwnershipDetail: React.FC<OwnershipDetailProps> = ({
       {ownership.related_projects && ownership.related_projects.length > 0 && (
         <Card title="关联项目" style={{ marginTop: 16 }}>
           <Table
-            columns={projectColumns}
+            columns={projectColumns as any}
             dataSource={ownership.related_projects}
             rowKey="id"
             pagination={false}
