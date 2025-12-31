@@ -1,22 +1,28 @@
 import { create } from 'zustand'
 import { devtools, persist } from 'zustand/middleware'
 
+// 通知ID计数器，确保唯一性
+let notificationIdCounter = 0
+const generateNotificationId = (): string => {
+  return `${Date.now()}-${++notificationIdCounter}`
+}
+
 interface AppState {
   // 应用全局状态
   sidebarCollapsed: boolean
   theme: 'light' | 'dark'
   language: 'zh-CN' | 'en-US'
-  
+
   // 用户偏好设置
   preferences: {
     pageSize: number
     autoRefresh: boolean
     showAdvancedSearch: boolean
   }
-  
+
   // 通知状态
   notifications: Notification[]
-  
+
   // Actions
   setSidebarCollapsed: (collapsed: boolean) => void
   setTheme: (theme: 'light' | 'dark') => void
@@ -53,33 +59,33 @@ export const useAppStore = create<AppState>()(
     persist(
       (set, get) => ({
         ...initialState,
-        
-        setSidebarCollapsed: (collapsed) => 
+
+        setSidebarCollapsed: (collapsed) =>
           set({ sidebarCollapsed: collapsed }),
-        
-        setTheme: (theme) => 
+
+        setTheme: (theme) =>
           set({ theme }),
-        
-        setLanguage: (language) => 
+
+        setLanguage: (language) =>
           set({ language }),
-        
+
         setPreferences: (preferences) =>
           set((state) => ({
             preferences: { ...state.preferences, ...preferences }
           })),
-        
+
         addNotification: (notification) => {
-          const id = Date.now().toString()
+          const id = generateNotificationId()
           const newNotification: Notification = {
             ...notification,
             id,
             timestamp: Date.now(),
           }
-          
+
           set((state) => ({
             notifications: [...state.notifications, newNotification]
           }))
-          
+
           // 自动移除通知
           if (notification.duration !== 0) {
             setTimeout(() => {
@@ -87,12 +93,12 @@ export const useAppStore = create<AppState>()(
             }, notification.duration || 4500)
           }
         },
-        
+
         removeNotification: (id) =>
           set((state) => ({
             notifications: state.notifications.filter(n => n.id !== id)
           })),
-        
+
         clearNotifications: () =>
           set({ notifications: [] }),
       }),

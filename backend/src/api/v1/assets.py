@@ -35,6 +35,7 @@ from sqlalchemy.orm import Session
 from starlette.status import HTTP_204_NO_CONTENT
 
 from ...core.exception_handler import DuplicateResourceError, ResourceNotFoundError
+from ...core.route_guards import debug_only
 from ...crud.asset import asset_crud
 from ...crud.history import history_crud
 from ...database import get_db
@@ -57,6 +58,7 @@ from ...schemas.asset import (
     BatchCustomFieldUpdateRequest,
     BatchCustomFieldUpdateResponse,
 )
+from ...services.enum_validation_service import get_enum_validation_service
 
 # 获取开发模式配置，但不完全绕过认证
 DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
@@ -377,6 +379,16 @@ async def create_asset(
     - **asset_in**: 资产创建数据
     """
     try:
+        # 动态验证枚举值
+        from ...services.enum_validation_service import get_enum_validation_service
+
+        validation_service = get_enum_validation_service(db)
+        is_valid, errors = validation_service.validate_asset_data(asset_in.model_dump())
+        if not is_valid:
+            raise HTTPException(
+                status_code=422, detail=f"枚举值验证失败: {'; '.join(errors)}"
+            )
+
         # 检查是否存在同名资产
         existing_asset = asset_crud.get_by_name(
             db=db, property_name=asset_in.property_name
@@ -411,6 +423,18 @@ async def update_asset(
     - **asset_in**: 资产更新数据
     """
     try:
+        # 动态验证枚举值
+        from ...services.enum_validation_service import get_enum_validation_service
+
+        validation_service = get_enum_validation_service(db)
+        is_valid, errors = validation_service.validate_asset_data(
+            asset_in.model_dump(exclude_unset=True)
+        )
+        if not is_valid:
+            raise HTTPException(
+                status_code=422, detail=f"枚举值验证失败: {'; '.join(errors)}"
+            )
+
         # 检查资产是否存在
         asset = asset_crud.get(db=db, id=asset_id)
         if not asset:
@@ -494,6 +518,7 @@ async def get_asset_history(
 
 
 @router.get("/statistics/test", summary="测试统计API")
+@debug_only
 async def test_statistics(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
 ):
@@ -1060,14 +1085,29 @@ async def validate_asset_data(
 
         # 验证数据格式
         if "data_format" in validate_rules:
-            # 验证枚举值
+            # 验证枚举值 - 使用 EnumValidationService
             if "ownership_status" in data:
-                valid_statuses = ["已确权", "未确权", "部分确权", "无法确认业权"]
-                if data["ownership_status"] not in valid_statuses:
+                enum_service = get_enum_validation_service(db)
+
+                # 构建上下文信息，用于追踪验证失败
+                validation_context = {
+                    "api_endpoint": "/assets/validate",
+                    "user_id": current_user.id if current_user else "anonymous",
+                    "user_name": current_user.username if current_user else "anonymous",
+                    "action": "validate_asset_data",
+                }
+
+                is_valid, error_msg = enum_service.validate_value(
+                    "ownership_status",
+                    data["ownership_status"],
+                    allow_empty=False,
+                    context=validation_context,
+                )
+                if not is_valid:
                     errors.append(
                         {
                             "field": "ownership_status",
-                            "error": f"权属状态必须是: {', '.join(valid_statuses)}",
+                            "error": error_msg,
                         }
                     )
                 else:

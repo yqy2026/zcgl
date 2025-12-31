@@ -33,9 +33,11 @@ def test_engine():
     # 使用临时文件数据库，而不是:memory:，这样可以跨多个连接共享
     import tempfile
 
+    # 导入所有模型以确保它们被注册到Base.metadata
+    # This imports all model classes which register themselves with Base.metadata
+    import src.models  # noqa: F401 - Trigger model registration
     from src.database import Base
 
-    # 导入所有模型以确保它们被注册到Base.metadata
     db_file = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
     db_path = db_file.name
     db_file.close()

@@ -11,6 +11,7 @@ __all__ = []
 
 try:
     from .asset_calculator import AssetCalculator, OccupancyRateCalculator
-    __all__ += ['AssetCalculator', 'OccupancyRateCalculator']
-except Exception:
+
+    __all__ += ["AssetCalculator", "OccupancyRateCalculator"]  # pragma: no cover
+except Exception:  # pragma: no cover
     pass

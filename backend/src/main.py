@@ -130,26 +130,37 @@ async def lifespan(app: FastAPI):
     logger.info("开始安全配置检查...")
     settings.log_security_status()
 
-    # JWT安全专项检查 - 临时跳过，避免启动问题
-    logger.info("JWT安全配置检查... [临时跳过]")
+    # JWT安全专项检查 - 重新启用安全验证
+    logger.info("执行JWT安全配置检查...")
     try:
-        # jwt_config_result = validate_current_jwt_config()  # 临时禁用
-        jwt_config_result = {"config_valid": True, "issues": [], "recommendations": []}
+        from .core.jwt_security import validate_current_jwt_config
+
+        jwt_config_result = validate_current_jwt_config()
 
         if not jwt_config_result["config_valid"]:
-            logger.error("严重错误: JWT配置存在严重安全问题:")
             for issue in jwt_config_result["issues"]:
-                logger.error(f"  错误: {issue}")
+                logger.error(f"JWT安全问题: {issue}")
+            # 非测试模式下拒绝启动
+            if not os.getenv("TESTING_MODE"):
+                raise RuntimeError(
+                    "JWT配置存在严重安全问题，拒绝启动。请检查SECRET_KEY配置。"
+                )
         else:
             logger.info("JWT配置安全检查通过")
 
-        if jwt_config_result.get("recommendations"):
-            logger.info("JWT安全建议:")
-            for rec in jwt_config_result["recommendations"]:
-                logger.info(f"  建议: {rec}")
+        for rec in jwt_config_result.get("recommendations", []):
+            logger.warning(f"JWT安全建议: {rec}")
+    except ImportError as e:
+        logger.warning(f"JWT安全模块导入失败: {e}")
+        # 模块缺失时记录警告但仍允许启动
+    except RuntimeError:
+        # 安全检查失败，重新抛出以阻止启动
+        raise
     except Exception as e:
-        logger.warning(f"警告: JWT配置检查跳过，存在启动问题: {e}")
-        logger.info("使用默认JWT配置继续启动...")
+        logger.warning(f"JWT配置检查出现异常: {e}")
+        if not os.getenv("TESTING_MODE"):
+            logger.error("安全检查失败，拒绝在非测试模式下继续启动")
+            raise RuntimeError(f"JWT安全检查失败: {e}")
 
     provider = os.getenv("OCR_ENGINE_PROVIDER", "optimized").lower()
     try:
@@ -163,6 +174,35 @@ async def lifespan(app: FastAPI):
             logger.info("OCR 引擎: OptimizedOCRService 已初始化")
     except Exception as e:
         logger.error(f"OCR 服务初始化失败: {e}")
+
+    # 初始化枚举字段数据
+    if not os.getenv("TESTING_MODE"):
+        try:
+            from .database import SessionLocal
+            from .services.enum_data_init import add_legacy_enum_values, init_enum_data
+
+            db = SessionLocal()
+            try:
+                logger.info("开始初始化枚举字段数据...")
+                init_result = init_enum_data(db, created_by="system")
+                logger.info(
+                    f"枚举类型初始化: 创建 {init_result['types_created']}, 更新 {init_result['types_updated']}"
+                )
+                logger.info(
+                    f"枚举值初始化: 创建 {init_result['values_created']}, 更新 {init_result['values_updated']}"
+                )
+
+                # 添加遗留枚举值支持
+                legacy_result = add_legacy_enum_values(db, created_by="system")
+                logger.info(f"遗留枚举值添加: {legacy_result['values_added']}")
+            except Exception as e:
+                logger.warning(f"枚举数据初始化失败: {e}")
+            finally:
+                db.close()
+        except ImportError as e:
+            logger.warning(f"枚举初始化模块导入失败: {e}")
+        except Exception as e:
+            logger.warning(f"枚举数据初始化异常: {e}")
 
     yield
 

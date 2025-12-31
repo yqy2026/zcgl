@@ -8,6 +8,7 @@ import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
+from ...core.route_guards import debug_only
 from ...crud.auth import AuditLogCRUD, UserCRUD, UserSessionCRUD
 from ...database import get_db
 from ...exceptions import BusinessLogicError
@@ -343,6 +344,7 @@ async def get_current_user_info(
 
 
 @router.get("/test-enhanced", summary="测试增强端点")
+@debug_only
 async def test_enhanced():
     """测试端点，验证增强功能"""
     return {
@@ -353,6 +355,7 @@ async def test_enhanced():
 
 
 @router.get("/debug-auth", summary="调试认证流程")
+@debug_only
 async def debug_auth(db: Session = Depends(get_db)):
     """调试认证流程，测试各个步骤"""
     try:
@@ -413,6 +416,7 @@ async def debug_auth(db: Session = Depends(get_db)):
 
 
 @router.get("/test-me-debug", summary="调试ME端点")
+@debug_only
 async def test_me_debug(current_user: UserResponse = Depends(get_current_active_user)):
     """调试ME端点，检查UserResponse内容"""
     from datetime import datetime

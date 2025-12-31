@@ -15,7 +15,6 @@ from ...crud.asset import asset_crud
 from ...database import get_db
 from ...middleware.auth import get_current_active_user
 from ...models.auth import User
-from ...schemas.asset import DataStatus
 from ...schemas.statistics import (
     AreaSummaryResponse,
     BasicStatisticsResponse,
@@ -695,7 +694,7 @@ def get_overall_occupancy_rate(
         # 构建筛选条件
         filters = {}
         if not include_deleted:
-            filters["data_status"] = DataStatus.NORMAL.value
+            filters["data_status"] = "正常"
 
         if use_aggregation:
             # 使用数据库聚合查询 - 性能更好
@@ -770,7 +769,7 @@ def get_occupancy_rate_by_category(
         # 构建筛选条件
         filters = {}
         if not include_deleted:
-            filters["data_status"] = DataStatus.NORMAL.value
+            filters["data_status"] = "正常"
 
         if use_aggregation:
             # 使用数据库聚合查询
@@ -837,7 +836,7 @@ def get_area_summary(
         # 构建筛选条件
         filters = {}
         if not include_deleted:
-            filters["data_status"] = DataStatus.NORMAL.value
+            filters["data_status"] = "正常"
 
         if use_aggregation:
             # 使用数据库聚合查询
@@ -889,7 +888,7 @@ def get_financial_summary(
         # 获取所有资产
         filters = {}
         if not include_deleted:
-            filters["data_status"] = DataStatus.NORMAL.value
+            filters["data_status"] = "正常"
 
         assets, _ = asset_crud.get_multi_with_search(
             db=db,
@@ -1489,7 +1488,7 @@ async def get_asset_distribution(
         # 构建筛选条件
         filters = {}
         if not include_deleted:
-            filters["data_status"] = DataStatus.NORMAL.value
+            filters["data_status"] = "正常"
 
         # 获取资产数据
         assets, _ = asset_crud.get_multi_with_search(
@@ -1557,7 +1556,7 @@ async def get_area_statistics(
         if usage_status:
             filters["usage_status"] = usage_status
         if not include_deleted:
-            filters["data_status"] = DataStatus.NORMAL.value
+            filters["data_status"] = "正常"
 
         # 计算面积汇总
         summary = _calculate_area_summary_with_aggregation(db, filters)
@@ -1609,7 +1608,7 @@ async def get_comprehensive_statistics(
         if usage_status:
             filters["usage_status"] = usage_status
         if not include_deleted:
-            filters["data_status"] = DataStatus.NORMAL.value
+            filters["data_status"] = "正常"
 
         # 基础统计
         total_assets = asset_crud.count_with_search(db=db, filters=filters)

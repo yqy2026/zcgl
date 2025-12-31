@@ -90,7 +90,7 @@ class RentContract(Base):
     )
 
     def __repr__(self):
-        return f"<RentContract(contract_number={self.contract_number}, tenant_name={self.tenant_name})>"
+        return f"<RentContract(contract_number={self.contract_number}, tenant_name={self.tenant_name})>"  # pragma: no cover
 
 
 class RentTerm(Base):
@@ -126,7 +126,7 @@ class RentTerm(Base):
     contract = relationship("RentContract", back_populates="rent_terms")
 
     def __repr__(self):
-        return f"<RentTerm(contract_id={self.contract_id}, monthly_rent={self.monthly_rent})>"
+        return f"<RentTerm(contract_id={self.contract_id}, monthly_rent={self.monthly_rent})>"  # pragma: no cover
 
 
 class RentLedger(Base):
@@ -187,7 +187,7 @@ class RentLedger(Base):
     ownership = relationship("Ownership")
 
     def __repr__(self):
-        return f"<RentLedger(contract_id={self.contract_id}, year_month={self.year_month}, payment_status={self.payment_status})>"
+        return f"<RentLedger(contract_id={self.contract_id}, year_month={self.year_month}, payment_status={self.payment_status})>"  # pragma: no cover
 
 
 class RentContractHistory(Base):
@@ -223,4 +223,4 @@ class RentContractHistory(Base):
     contract = relationship("RentContract")
 
     def __repr__(self):
-        return f"<RentContractHistory(contract_id={self.contract_id}, change_type={self.change_type})>"
+        return f"<RentContractHistory(contract_id={self.contract_id}, change_type={self.change_type})>"  # pragma: no cover

@@ -21,7 +21,7 @@
     "noFallthroughCasesInSwitch": true,
 
     /* Type definitions */
-    "types": ["jest", "@testing-library/jest-dom"],
+    "types": ["vitest/globals", "@testing-library/jest-dom", "node"],
 
     /* Path mapping */
     "baseUrl": ".",
@@ -37,5 +37,14 @@
     }
   },
   "include": ["src"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "src/test/**",
+    "src/**/__tests__/**",
+    "src/test-response-extraction.ts"
+  ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

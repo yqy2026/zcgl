@@ -109,6 +109,7 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         except Exception as e:
             # 清理异常信息中的不可序列化对象
             error_message = self._sanitize_exception_message(str(e))
+
             # 确保异常对象可以被序列化
             try:
                 from decimal import Decimal
@@ -358,25 +359,29 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         self, request: Request, response: Response, start_time: float, ip: str
     ):
         """记录请求统计信息"""
-        processing_time = time.time() - start_time
+        try:
+            processing_time = time.time() - start_time
 
-        # 记录慢请求
-        if processing_time > 5.0:  # 5秒以上为慢请求
-            security_auditor.log_security_event(
-                event_type="SLOW_REQUEST",
-                message=f"Slow request from {ip}: {processing_time:.2f}s",
-                user_id=None,
-                ip_address=ip,
-                details={
-                    "path": request.url.path,
-                    "method": request.method,
-                    "processing_time": processing_time,
-                    "status_code": response.status_code,
-                },
-            )
+            # 记录慢请求
+            if processing_time > 5.0:  # 5秒以上为慢请求
+                security_auditor.log_security_event(
+                    event_type="SLOW_REQUEST",
+                    message=f"Slow request from {ip}: {processing_time:.2f}s",
+                    user_id=None,
+                    ip_address=ip,
+                    details={
+                        "path": request.url.path,
+                        "method": request.method,
+                        "processing_time": processing_time,
+                        "status_code": response.status_code,
+                    },
+                )
 
-        # 更新请求计数
-        self.request_count[ip] += 1
+            # 更新请求计数
+            self.request_count[ip] += 1
+        except Exception as e:
+            # Don't re-raise, just log the error
+            logger.error(f"Error logging request stats: {e}")
 
 
 class FileUploadSecurityMiddleware(BaseHTTPMiddleware):

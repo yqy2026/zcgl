@@ -5,6 +5,28 @@
 
 import '@testing-library/jest-dom'
 import { vi } from 'vitest'
+import { mswServer } from '@/mocks/server'
+
+// =============================================================================
+// MSW 服务器设置
+// =============================================================================
+
+// 在所有测试之前启动MSW服务器
+beforeAll(() => {
+  mswServer.listen({
+    onUnhandledRequest: 'warn', // 对未处理的请求警告（不阻止测试）
+  })
+})
+
+// 在每个测试之后重置handlers，确保测试隔离
+afterEach(() => {
+  mswServer.resetHandlers()
+})
+
+// 在所有测试之后关闭MSW服务器
+afterAll(() => {
+  mswServer.close()
+})
 
 // =============================================================================
 // 环境变量Mock
@@ -12,7 +34,7 @@ import { vi } from 'vitest'
 
 vi.stubGlobal('import.meta', {
   env: {
-    VITE_API_BASE_URL: '/api',
+    VITE_API_BASE_URL: '/api/v1',
     VITE_API_TIMEOUT: '30000',
     NODE_ENV: 'test',
   },

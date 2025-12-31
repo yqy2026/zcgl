@@ -28,10 +28,10 @@ from sqlalchemy.orm import Session
 
 from ...core.cache_manager import analytics_cache, cache_manager
 from ...core.response_handler import ResponseHandler, get_request_id
+from ...core.route_guards import debug_only
 from ...database import get_db
 from ...middleware.auth import get_current_active_user
 from ...models.auth import User
-from ...schemas.asset import DataStatus
 
 # 强制重新加载标记 - 2025-10-30 06:30 - VERSION 2
 print(
@@ -109,7 +109,7 @@ class DatabaseQueryOptimizer:
             from ...models.asset import Asset
 
             # 构建基础查询
-            query = db.query(Asset).filter(Asset.data_status == DataStatus.NORMAL.value)
+            query = db.query(Asset).filter(Asset.data_status == "正常")
 
             # 添加筛选条件
             if filters:
@@ -1484,7 +1484,7 @@ def validate_filters(filters: dict[str, Any]) -> dict[str, Any]:
             validated_filters[key] = str(value).strip()
 
     # 添加数据状态筛选
-    validated_filters["data_status"] = DataStatus.NORMAL.value
+    validated_filters["data_status"] = "正常"
 
     logger.info(f"筛选条件验证完成: {validated_filters}")
     return validated_filters
@@ -1630,7 +1630,7 @@ async def get_comprehensive_analytics(
             # 4. 测试不同的筛选条件
             normal_status_count = (
                 db.query(func.count(Asset.id))
-                .filter(Asset.data_status == DataStatus.NORMAL.value)
+                .filter(Asset.data_status == "正常")
                 .scalar()
             )
             logger.info(f"正常状态资产数: {normal_status_count}")
@@ -1853,6 +1853,7 @@ async def clear_cache(
 
 
 @router.get("/debug/cache", summary="调试缓存状态")
+@debug_only
 async def debug_cache_status(request: Request):
     """调试端点 - 检查缓存状态"""
     request_id = get_request_id(request)
@@ -1900,6 +1901,7 @@ async def debug_cache_status(request: Request):
 
 
 @router.get("/debug/data-status-distribution", summary="数据库状态分布诊断")
+@debug_only
 async def debug_data_status_distribution(
     request: Request, db: Session = Depends(get_db)
 ):
@@ -1938,9 +1940,7 @@ async def debug_data_status_distribution(
 
         # 5. 测试Analytics API的筛选条件
         normal_status_count = (
-            db.query(func.count(Asset.id))
-            .filter(Asset.data_status == DataStatus.NORMAL.value)
-            .scalar()
+            db.query(func.count(Asset.id)).filter(Asset.data_status == "正常").scalar()
         )
 
         # 6. 测试没有data_status筛选的查询
@@ -1984,7 +1984,7 @@ async def debug_data_status_distribution(
                 }
                 for asset in recent_assets
             ],
-            "data_status_expected": DataStatus.NORMAL.value,
+            "data_status_expected": "正常",
             "diagnosis_summary": {
                 "has_data": total_assets > 0,
                 "all_records_normal": normal_status_count == total_assets,

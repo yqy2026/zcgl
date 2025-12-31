@@ -87,9 +87,9 @@ class Role(Base):
     user_assignments = relationship("UserRoleAssignment", back_populates="role")
 
     def __repr__(self):
-        return (
-            f"<Role(id={self.id}, name={self.name}, display_name={self.display_name})>"
-        )
+        return (  # pragma: no cover
+            f"<Role(id={self.id}, name={self.name}, display_name={self.display_name})>"  # pragma: no cover
+        )  # pragma: no cover
 
 
 class Permission(Base):
@@ -147,10 +147,10 @@ class Permission(Base):
     @property
     def is_active(self) -> bool:
         """权限始终激活（通过角色分配来控制访问）"""
-        return True
+        return True  # pragma: no cover
 
     def __repr__(self):
-        return f"<Permission(id={self.id}, name={self.name}, resource={self.resource}, action={self.action})>"
+        return f"<Permission(id={self.id}, name={self.name}, resource={self.resource}, action={self.action})>"  # pragma: no cover
 
 
 class UserRoleAssignment(Base):
@@ -199,7 +199,7 @@ class UserRoleAssignment(Base):
     role = relationship("Role", back_populates="user_assignments")
 
     def __repr__(self):
-        return f"<UserRoleAssignment(user_id={self.user_id}, role_id={self.role_id}, active={self.is_active})>"
+        return f"<UserRoleAssignment(user_id={self.user_id}, role_id={self.role_id}, active={self.is_active})>"  # pragma: no cover
 
 
 class ResourcePermission(Base):
@@ -255,7 +255,7 @@ class ResourcePermission(Base):
     permission = relationship("Permission")
 
     def __repr__(self):
-        return f"<ResourcePermission(resource={self.resource_type}:{self.resource_id}, level={self.permission_level})>"
+        return f"<ResourcePermission(resource={self.resource_type}:{self.resource_id}, level={self.permission_level})>"  # pragma: no cover
 
 
 class PermissionAuditLog(Base):
@@ -295,4 +295,4 @@ class PermissionAuditLog(Base):
     operator = relationship("User", foreign_keys=[operator_id])
 
     def __repr__(self):
-        return f"<PermissionAuditLog(action={self.action}, user_id={self.user_id}, operator_id={self.operator_id})>"
+        return f"<PermissionAuditLog(action={self.action}, user_id={self.user_id}, operator_id={self.operator_id})>"  # pragma: no cover

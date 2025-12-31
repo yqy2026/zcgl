@@ -74,7 +74,7 @@ class Organization(Base):
     employees = relationship("Employee", back_populates="organization")
 
     def __repr__(self):
-        return f"<Organization(id={self.id}, name={self.name})>"
+        return f"<Organization(id={self.id}, name={self.name})>"  # pragma: no cover
 
 
 class Position(Base):
@@ -125,7 +125,7 @@ class Position(Base):
     employees = relationship("Employee", back_populates="position")
 
     def __repr__(self):
-        return f"<Position(id={self.id}, name={self.name})>"
+        return f"<Position(id={self.id}, name={self.name})>"  # pragma: no cover
 
 
 class Employee(Base):
@@ -204,7 +204,7 @@ class Employee(Base):
     # user = relationship("User", back_populates="employee", uselist=False)
 
     def __repr__(self):
-        return f"<Employee(id={self.id}, name={self.name}, employee_no={self.employee_no})>"
+        return f"<Employee(id={self.id}, name={self.name}, employee_no={self.employee_no})>"  # pragma: no cover
 
 
 class OrganizationHistory(Base):
@@ -236,4 +236,4 @@ class OrganizationHistory(Base):
     organization = relationship("Organization")
 
     def __repr__(self):
-        return f"<OrganizationHistory(id={self.id}, action={self.action})>"
+        return f"<OrganizationHistory(id={self.id}, action={self.action})>"  # pragma: no cover

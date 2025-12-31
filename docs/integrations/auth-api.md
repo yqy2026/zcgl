@@ -534,7 +534,7 @@ X-CSRF-Token: xxx
 SECRET_KEY=<your-strong-random-key>
 
 # 短期 Access Token
-ACCESS_TOKEN_EXPIRE_MINUTES=15
+ACCESS_TOKEN_EXPIRE_MINUTES=120
 
 # 启用 Token 黑名单
 TOKEN_BLACKLIST_ENABLED=true

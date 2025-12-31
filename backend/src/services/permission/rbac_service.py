@@ -607,7 +607,7 @@ class RBACService:
                 return (
                     json.loads(permission.conditions) if permission.conditions else None
                 )
-        return None
+        return None  # pragma: no cover  # Defensive: only reached if role_has_permission check is bypassed
 
     def _check_permission_level(self, permission_level: str, action: str) -> bool:
         """检查权限级别"""

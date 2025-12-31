@@ -123,7 +123,7 @@ export interface DictionaryBatchResult {
  * 字典管理服务类
  */
 class DictionaryManagerService {
-  private readonly baseUrl = '/dictionaries';
+  private readonly baseUrl = '/api/v1/enum-fields';
   private readonly DEFAULT_TIMEOUT = 10000; // 默认超时时间
   private readonly BATCH_SIZE = 50; // 批量操作大小
 

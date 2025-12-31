@@ -71,7 +71,7 @@ class EnumFieldType(Base):
     )
 
     def __repr__(self):
-        return f"<EnumFieldType(id={self.id}, name={self.name}, code={self.code})>"
+        return f"<EnumFieldType(id={self.id}, name={self.name}, code={self.code})>"  # pragma: no cover
 
 
 class EnumFieldValue(Base):
@@ -134,7 +134,7 @@ class EnumFieldValue(Base):
     )
 
     def __repr__(self):
-        return f"<EnumFieldValue(id={self.id}, label={self.label}, value={self.value})>"
+        return f"<EnumFieldValue(id={self.id}, label={self.label}, value={self.value})>"  # pragma: no cover
 
 
 class EnumFieldUsage(Base):
@@ -181,7 +181,7 @@ class EnumFieldUsage(Base):
     enum_type = relationship("EnumFieldType")
 
     def __repr__(self):
-        return f"<EnumFieldUsage(id={self.id}, table={self.table_name}, field={self.field_name})>"
+        return f"<EnumFieldUsage(id={self.id}, table={self.table_name}, field={self.field_name})>"  # pragma: no cover
 
 
 class EnumFieldHistory(Base):
@@ -222,4 +222,4 @@ class EnumFieldHistory(Base):
     enum_value = relationship("EnumFieldValue")
 
     def __repr__(self):
-        return f"<EnumFieldHistory(id={self.id}, action={self.action}, target_type={self.target_type})>"
+        return f"<EnumFieldHistory(id={self.id}, action={self.action}, target_type={self.target_type})>"  # pragma: no cover

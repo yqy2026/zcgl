@@ -52,6 +52,7 @@ junit-report.xml
 *.cover
 *.py,cover
 htmlcov/
+backend/htmlcov/
 
 # Python 环境
 .env
@@ -71,13 +72,24 @@ dmypy.json
 logs/
 *.log
 backend/logs/
+# 确保所有日志文件都被忽略
+*.log.*
+*.log.[0-9]*
+app.log
+requests.log
+security.log
 
 # 测试覆盖率报告
 htmlcov/
+backend/htmlcov/
 .coverage
+.coverage.*
+coverage.json
 coverage.xml
+junit-report.xml
 *.cover
 .pytest_cache/
+.coverage_html/
 
 # 缓存文件
 .cache/
@@ -88,6 +100,13 @@ __pycache__/
 # 质量监控报告
 backend/reports/quality_check_*.txt
 backend/quality_monitor_*.json
+ruff-report.json
+*.report.json
+
+# 静态检查报告
+ruff-report.json
+mypy-report.txt
+pylint-report.txt
 
 # ----------
 # Node.js / Frontend
@@ -142,6 +161,7 @@ next-env.d.ts
 # ----------
 .vscode/
 .idea/
+.cursor/
 *.swp
 *.swo
 *~
@@ -211,6 +231,10 @@ desktop.ini
 *.sql.backup
 *_dump.sql
 *.sql.gz
+backup_*.db
+*_backup_*.db
+# 缺陷跟踪临时数据库
+backend/src/data/defect_tracking.db
 
 # ----------
 # 日志文件
@@ -239,6 +263,10 @@ temp/
 .cache/
 .parcel-cache/
 
+# Windows 特殊文件
+nul
+*.nul
+
 # 测试快照和临时测试文件（在test-reports目录中）
 test-reports/
 /reports/
@@ -264,11 +292,14 @@ local.properties
 # 备份文件
 # ----------
 backups/
+backend/backups/
 *.backup
 *.bak
 *.old
 *.orig
 *.rej
+backup_*.db
+*_backup.db
 
 # ----------
 # 上传文件
@@ -458,6 +489,15 @@ demo_*
 sample_*
 *_debug.*
 
+# 临时分析脚本（一次性使用）
+backend/find_quick_wins.py
+backend/find_quickest_wins.py
+backend/find_all_quick_wins.py
+backend/check_cache_coverage.py
+backend/check_*_coverage.py
+backend/find_*_wins.py
+backend/analyze_*.py
+
 # Prevent backup and archive files from being committed
 *_backup.*
 *_archive.*
@@ -529,3 +569,23 @@ test-reports/
 
 # 权限控制测试目录（临时测试文件）
 权限控制测试/
+
+
+# 自动添加的清理规则
+# 测试输出
+# 前端构建产物
+# 后端测试产物
+backend/database.sqlite
+backend/test_*.db-journal
+# 调试产物
+
+
+# 智能清理脚本建议的规则
+# 测试和覆盖率文件
+# 临时数据库文件
+test*.db
+# 缓存目录
+.ruff_cache/
+# 构建产物
+*-report.json
+*-report.xml

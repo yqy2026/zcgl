@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
+from ...core.route_guards import debug_only
 from ...crud.enum_field import (
     get_enum_field_type_crud,
     get_enum_field_usage_crud,
@@ -34,6 +35,7 @@ router = APIRouter(prefix="/enum-fields", tags=["枚举字段管理"])
 
 # Debug endpoint for testing
 @router.get("/debug")
+@debug_only
 async def debug_endpoint():
     """Debug endpoint to test basic API functionality"""
     return {"message": "Debug endpoint working", "timestamp": "2025-10-17T22:07:00Z"}

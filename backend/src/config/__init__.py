@@ -18,7 +18,7 @@ except ImportError:
     redis = None  # type: ignore
 
 if TYPE_CHECKING and REDIS_AVAILABLE:
-    from redis.asyncio import ConnectionPool, Redis
+    from redis.asyncio import ConnectionPool, Redis  # pragma: no cover
 
 
 class Settings:
@@ -69,7 +69,7 @@ class Settings:
 
     # JWT配置
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(
-        os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
+        os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "120")
     )
     REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
 

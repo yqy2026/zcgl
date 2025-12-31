@@ -23,6 +23,7 @@ from fastapi import (
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from ...core.route_guards import debug_only
 from ...database import get_db
 from ...middleware.auth import get_current_active_user
 from ...services.providers.ocr_provider import get_ocr_service
@@ -218,6 +219,7 @@ async def get_system_info():
 
 
 @router.get("/test_system")
+@debug_only
 async def test_system():
     """测试系统功能"""
     return {"system_status": "normal", "message": "PDF处理系统正常"}
@@ -621,6 +623,7 @@ async def cancel_session(
 
 
 @router.get("/test_detailed")
+@debug_only
 async def test_system_detailed():
     """测试系统功能"""
     try:

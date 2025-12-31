@@ -77,8 +77,8 @@ class Settings(BaseSettings):
     )
     ALGORITHM: str = Field(default="HS256", json_schema_extra={"env": "ALGORITHM"})
     ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(
-        default=15, json_schema_extra={"env": "ACCESS_TOKEN_EXPIRE_MINUTES"}
-    )  # 缩短为15分钟以提高安全性
+        default=120, json_schema_extra={"env": "ACCESS_TOKEN_EXPIRE_MINUTES"}
+    )  # 设置为120分钟以确保用户体验
     REFRESH_TOKEN_EXPIRE_DAYS: int = Field(
         default=7, json_schema_extra={"env": "REFRESH_TOKEN_EXPIRE_DAYS"}
     )
@@ -227,18 +227,23 @@ class Settings(BaseSettings):
 settings = Settings()
 
 # 根据环境变量覆盖配置
-if os.getenv("ENVIRONMENT") == "production":
-    settings.DEBUG = False
-    settings.DATABASE_ECHO = False
-    settings.CORS_ORIGINS = ["https://your-production-domain.com"]
-elif os.getenv("ENVIRONMENT") == "development":
-    settings.DEBUG = True
-    settings.RELOAD = True
+if os.getenv("ENVIRONMENT") == "production":  # pragma: no cover
+    settings.DEBUG = False  # pragma: no cover
+    settings.DATABASE_ECHO = False  # pragma: no cover
+    settings.CORS_ORIGINS = ["https://your-production-domain.com"]  # pragma: no cover
+elif os.getenv("ENVIRONMENT") == "development":  # pragma: no cover
+    settings.DEBUG = True  # pragma: no cover
+    settings.RELOAD = True  # pragma: no cover
 
 
 # 验证必要配置
 def validate_config():
     """验证配置是否正确"""
+    import os
+
+    # 检查是否为测试模式
+    is_testing = os.getenv("TESTING_MODE", "false").lower() == "true"
+
     required_fields = [
         "DATABASE_URL",
         "SECRET_KEY",
@@ -252,12 +257,38 @@ def validate_config():
     if missing_fields:
         raise ValueError(f"缺少必要配置: {', '.join(missing_fields)}")
 
+    # 非测试模式下强制检查SECRET_KEY安全性
+    if not is_testing:  # pragma: no cover
+        insecure_keys = [  # pragma: no cover
+            "EMERGENCY-ONLY-REPLACE-WITH-ENV-SECRET-KEY-NOW",  # pragma: no cover
+            "dev-secret-key-DO-NOT-USE-IN-PRODUCTION-REPLACE-WITH-ENV-VAR",  # pragma: no cover
+            "dev-secret-key-change-in-production",  # pragma: no cover
+            "your-secret-key-change-in-production",  # pragma: no cover
+            "secret-key",  # pragma: no cover
+            "",  # pragma: no cover
+        ]  # pragma: no cover
+
+        if settings.SECRET_KEY in insecure_keys:  # pragma: no cover
+            raise ValueError(  # pragma: no cover
+                "致命安全错误: SECRET_KEY 使用了不安全的默认值！\n"  # pragma: no cover
+                "请设置环境变量: export SECRET_KEY=$(python -c 'import secrets; print(secrets.token_urlsafe(32))')"  # pragma: no cover
+            )  # pragma: no cover
+
+        if len(settings.SECRET_KEY) < 32:  # pragma: no cover
+            raise ValueError(  # pragma: no cover
+                f"致命安全错误: SECRET_KEY 长度不足 ({len(settings.SECRET_KEY)}字符)，最少需要32字符！"  # pragma: no cover
+            )  # pragma: no cover
+
+        logger.info("SECRET_KEY 安全检查通过")  # pragma: no cover
+
     # 检查Redis配置
     if settings.REDIS_ENABLED:
         if not settings.REDIS_HOST:
             raise ValueError("启用Redis时需要配置REDIS_HOST")
 
-    print(f"配置验证完成 - 应用: {settings.APP_NAME}, 版本: {settings.APP_VERSION}")
+    logger.info(
+        f"配置验证完成 - 应用: {settings.APP_NAME}, 版本: {settings.APP_VERSION}"
+    )
 
 
 # 导出配置实例

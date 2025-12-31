@@ -9,9 +9,6 @@ from .asset import (
     AssetHistoryResponse,
     AssetResponse,
     AssetUpdate,
-    OwnershipStatus,
-    PropertyNature,
-    UsageStatus,
 )
 from .project import (
     ProjectBase,
@@ -53,9 +50,6 @@ __all__ = [
     "AssetResponse",
     "AssetHistoryResponse",
     "AssetDocumentResponse",
-    "OwnershipStatus",
-    "UsageStatus",
-    "PropertyNature",
     "ProjectBase",
     "ProjectCreate",
     "ProjectUpdate",

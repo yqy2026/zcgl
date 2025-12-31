@@ -29,6 +29,7 @@ from sqlalchemy.orm import Session
 from ...config.excel_config import STANDARD_SHEET_NAME
 from ...core.exception_handler import BusinessValidationError
 from ...core.logging_security import security_auditor
+from ...core.route_guards import debug_only
 from ...core.security import security_middleware
 from ...crud.asset import asset_crud
 from ...crud.task import task_crud
@@ -119,6 +120,7 @@ async def download_template(
 
 
 @router.get("/test", summary="测试端点")
+@debug_only
 async def test_endpoint():
     """测试端点"""
     return {"message": "Excel API 测试成功", "timestamp": "2025-08-27"}

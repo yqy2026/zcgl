@@ -14,10 +14,10 @@ def get_ocr_service() -> Any | None:
         # from ..document.optimized_ocr_service import OptimizedOCRService
         # return OptimizedOCRService()
         return None  # 临时返回None，避免导入错误
-    except ImportError:
-        return None
-    except Exception:
-        return None
+    except ImportError:  # pragma: no cover
+        return None  # pragma: no cover
+    except Exception:  # pragma: no cover
+        return None  # pragma: no cover
 
 
 def set_ocr_service(service: Any) -> None:

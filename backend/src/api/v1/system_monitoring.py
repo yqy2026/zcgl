@@ -14,6 +14,7 @@ from typing import Any
 创建时间: 2025-11-01
 """
 
+import os
 from datetime import datetime, timedelta
 
 import psutil
@@ -155,8 +156,15 @@ def collect_system_metrics() -> SystemMetrics:
         memory_percent = memory.percent
         memory_available_gb = memory.available / (1024**3)
 
-        # 磁盘信息
-        disk = psutil.disk_usage("/")
+        # 磁盘信息 (跨平台兼容)
+        if os.name == "nt":
+            # Windows: 使用当前工作目录的驱动器根目录
+            disk_path = os.getcwd()[:2]  # 获取驱动器盘符 (如 "C:")
+        else:
+            # Unix/Linux/macOS: 使用根目录
+            disk_path = "/"
+
+        disk = psutil.disk_usage(disk_path)
         disk_usage_percent = disk.percent
         disk_free_gb = disk.free / (1024**3)
 

@@ -17,7 +17,8 @@
       "Bash(netstat:*)",
       "mcp__chrome-devtools__new_page",
       "mcp__chrome-devtools__get_network_request",
-      "mcp__chrome-devtools__wait_for"
+      "mcp__chrome-devtools__wait_for",
+      "Bash(git config:*)"
     ]
   },
   "outputStyle": "Explanatory"

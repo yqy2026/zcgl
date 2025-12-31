@@ -72,9 +72,25 @@ class CRUDSystemDictionary(
         ).all()
 
     def get_types(self, db: Session) -> list[str]:
-        """获取所有字典类型"""
-        result = db.query(SystemDictionary.dict_type).distinct().all()
-        return [row[0] for row in result if row[0]]
+        """
+        获取所有字典类型
+
+        注意：已废弃旧的system_dictionaries表，统一使用enum_field表
+        """
+        # 从枚举字段表获取类型
+        try:
+            from ..models.enum_field import EnumFieldType
+
+            enum_types = (
+                db.query(EnumFieldType.code)
+                .filter(EnumFieldType.is_deleted == False)
+                .distinct()
+                .all()
+            )
+            return sorted([row[0] for row in enum_types if row[0]])
+        except ImportError:
+            # 如果枚举字段模型不存在（向后兼容）
+            return []
 
     def get_active_by_type(
         self, db: Session, *, dict_type: str

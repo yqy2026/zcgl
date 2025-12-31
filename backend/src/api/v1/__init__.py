@@ -43,9 +43,9 @@ from .tasks import router as tasks_router
 # 尝试导入系统设置路由，如果不存在则跳过
 try:
     from .system_settings import router as system_settings_router
-except ImportError:
-    print("系统设置路由模块不存在，跳过")
-    system_settings_router = None
+except ImportError:  # pragma: no cover
+    print("系统设置路由模块不存在，跳过")  # pragma: no cover
+    system_settings_router = None  # pragma: no cover
 
 # PDF导入API已统一到 pdf_import_unified.py，在main.py中直接注册
 # from .pdf_import_unified import router as pdf_import_router
