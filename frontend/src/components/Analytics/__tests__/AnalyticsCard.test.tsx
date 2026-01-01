@@ -6,15 +6,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import React from 'react'
 
-// Mock recharts
-vi.mock('recharts', () => ({
-  ResponsiveContainer: ({ children, width, height }: any) => (
-    <div data-testid="responsive-container" data-width={width} data-height={height}>
-      {children}
-    </div>
-  ),
-}))
-
 // Mock Ant Design components
 vi.mock('antd', () => ({
   Card: ({ children, title, size, className, loading }: any) => (
@@ -218,40 +209,6 @@ describe('ChartCard - 基础属性测试', () => {
     const element = React.createElement(ChartCard, {
       title: '测试',
       children: React.createElement('div', {}, '图表内容'),
-    })
-    expect(element).toBeTruthy()
-  })
-})
-
-describe('ChartCard - ResponsiveContainer测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it('应该使用ResponsiveContainer包装children', async () => {
-    const { ChartCard } = await import('../AnalyticsCard')
-    const element = React.createElement(ChartCard, {
-      title: '测试',
-      children: React.createElement('div', {}, '图表内容'),
-    })
-    expect(element).toBeTruthy()
-  })
-
-  it('ResponsiveContainer应该有默认width', async () => {
-    const { ChartCard } = await import('../AnalyticsCard')
-    const element = React.createElement(ChartCard, {
-      title: '测试',
-      children: React.createElement('div', {}, '图表内容'),
-    })
-    expect(element).toBeTruthy()
-  })
-
-  it('ResponsiveContainer应该使用height属性', async () => {
-    const { ChartCard } = await import('../AnalyticsCard')
-    const element = React.createElement(ChartCard, {
-      title: '测试',
-      children: React.createElement('div', {}, '图表内容'),
-      height: 400,
     })
     expect(element).toBeTruthy()
   })

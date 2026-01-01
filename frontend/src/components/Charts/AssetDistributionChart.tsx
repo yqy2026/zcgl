@@ -7,22 +7,10 @@ import {
   UserOutlined,
 } from '@ant-design/icons'
 import { useQuery } from '@tanstack/react-query'
-import {
-  Chart as ChartJS,
-  ArcElement,
-  Tooltip,
-  Legend,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-} from 'chart.js'
-import { Pie, Doughnut, Bar } from 'react-chartjs-2'
+import { Pie, Column } from '@ant-design/plots'
 
 import { assetService } from '@/services/assetService'
 import type { AssetSearchParams } from '@/types/asset'
-
-// 注册Chart.js组件
-ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement)
 
 const { Title, Text } = Typography
 
@@ -81,176 +69,168 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
   })
 
   // 物业性质分布图表配置
-  const propertyNatureChartData = {
-    labels: data?.by_property_nature?.map(item => item.property_nature) || [],
-    datasets: [
-      {
-        data: data?.by_property_nature?.map(item => item.count) || [],
-        backgroundColor: [
-          '#1890ff',
-          '#52c41a',
-          '#faad14',
-          '#f5222d',
-          '#722ed1',
-          '#fa8c16',
-        ],
-        borderWidth: 2,
-        borderColor: '#ffffff',
-      },
-    ],
-  }
-
-  const propertyNatureChartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'bottom' as const,
-      },
-      tooltip: {
-        callbacks: {
-          label: (context: { dataIndex: number; parsed: number; label: string }) => {
-            const item = data?.by_property_nature?.[context.dataIndex]
-            return [
-              `${context.label}: ${context.parsed} 个`,
-              `占比: ${item?.percentage?.toFixed(1)}%`,
-              `总面积: ${item?.total_area?.toLocaleString()} ㎡`,
-            ]
-          },
-        },
+  const propertyNatureChartConfig = {
+    data: data?.by_property_nature?.map(item => ({
+      type: item.property_nature,
+      value: item.count,
+      percentage: item.percentage,
+      total_area: item.total_area,
+    })) || [],
+    angleField: 'value',
+    colorField: 'type',
+    color: ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#fa8c16'],
+    radius: 0.8,
+    innerRadius: 0.4,
+    label: {
+      type: 'outer',
+      content: '{percentage}%',
+    },
+    legend: {
+      layout: 'horizontal',
+      position: 'bottom',
+    },
+    tooltip: {
+      formatter: (datum: any) => ({
+        name: datum.type,
+        value: `${datum.value} 个`,
+      }),
+      customContent: (title: any, data: any) => {
+        const datum = data?.[0]?.data
+        if (!datum) return null
+        return (
+          <div style={{ padding: '8px' }}>
+            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{datum.type}</div>
+            <div>数量: {datum.value} 个</div>
+            <div>占比: {datum.percentage?.toFixed(1)}%</div>
+            <div>总面积: {datum.total_area?.toLocaleString()} ㎡</div>
+          </div>
+        )
       },
     },
   }
 
   // 确权状态分布图表配置
-  const ownershipStatusChartData = {
-    labels: data?.by_ownership_status?.map(item => item.ownership_status) || [],
-    datasets: [
-      {
-        data: data?.by_ownership_status?.map(item => item.count) || [],
-        backgroundColor: [
-          '#52c41a',
-          '#ff4d4f',
-          '#faad14',
-          '#1890ff',
-        ],
-        borderWidth: 2,
-        borderColor: '#ffffff',
+  const ownershipStatusChartConfig = {
+    data: data?.by_ownership_status?.map(item => ({
+      type: item.ownership_status,
+      value: item.count,
+      percentage: item.percentage,
+    })) || [],
+    angleField: 'value',
+    colorField: 'type',
+    color: ['#52c41a', '#ff4d4f', '#faad14', '#1890ff'],
+    radius: 0.8,
+    innerRadius: 0.6,
+    label: {
+      type: 'inner',
+      offset: '-50%',
+      content: '{percentage}%',
+      style: {
+        textAlign: 'center',
+        fontSize: 14,
+        fill: '#fff',
       },
-    ],
-  }
-
-  const ownershipStatusChartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'bottom' as const,
-      },
-      tooltip: {
-        callbacks: {
-          label: (context: { dataIndex: number; parsed: number; label: string }) => {
-            const item = data?.by_ownership_status?.[context.dataIndex]
-            return [
-              `${context.label}: ${context.parsed} 个`,
-              `占比: ${item?.percentage?.toFixed(1)}%`,
-            ]
-          },
-        },
-      },
+    },
+    legend: {
+      layout: 'horizontal',
+      position: 'bottom',
+    },
+    tooltip: {
+      formatter: (datum: any) => ({
+        name: datum.type,
+        value: `${datum.value} 个 (${datum.percentage?.toFixed(1)}%)`,
+      }),
     },
   }
 
   // 使用状态分布图表配置
-  const usageStatusChartData = {
-    labels: data?.by_usage_status?.map(item => item.usage_status) || [],
-    datasets: [
-      {
-        data: data?.by_usage_status?.map(item => item.count) || [],
-        backgroundColor: [
-          '#52c41a',
-          '#ff4d4f',
-          '#1890ff',
-          '#722ed1',
-          '#faad14',
-        ],
-        borderWidth: 2,
-        borderColor: '#ffffff',
-      },
-    ],
-  }
-
-  const usageStatusChartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'bottom' as const,
-      },
-      tooltip: {
-        callbacks: {
-          label: (context: { dataIndex: number; parsed: number; label: string }) => {
-            const item = data?.by_usage_status?.[context.dataIndex]
-            return [
-              `${context.label}: ${context.parsed} 个`,
-              `占比: ${item?.percentage?.toFixed(1)}%`,
-            ]
-          },
-        },
-      },
+  const usageStatusChartConfig = {
+    data: data?.by_usage_status?.map(item => ({
+      type: item.usage_status,
+      value: item.count,
+      percentage: item.percentage,
+    })) || [],
+    angleField: 'value',
+    colorField: 'type',
+    color: ['#52c41a', '#ff4d4f', '#1890ff', '#722ed1', '#faad14'],
+    radius: 0.8,
+    innerRadius: 0.4,
+    label: {
+      type: 'outer',
+      content: '{percentage}%',
+    },
+    legend: {
+      layout: 'horizontal',
+      position: 'bottom',
+    },
+    tooltip: {
+      formatter: (datum: any) => ({
+        name: datum.type,
+        value: `${datum.value} 个 (${datum.percentage?.toFixed(1)}%)`,
+      }),
     },
   }
 
   // 权属方分布柱状图配置
-  const ownershipEntityChartData = {
-    labels: data?.by_ownership_entity?.slice(0, 10).map(item => 
-      item.ownership_entity.length > 8 
+  const ownershipEntityChartConfig = {
+    data: data?.by_ownership_entity?.slice(0, 10).map(item => ({
+      entity: item.ownership_entity.length > 8
         ? item.ownership_entity.substring(0, 8) + '...'
-        : item.ownership_entity
-    ) || [],
-    datasets: [
-      {
-        label: '资产数量',
-        data: data?.by_ownership_entity?.slice(0, 10).map(item => item.count) || [],
-        backgroundColor: 'rgba(24, 144, 255, 0.6)',
-        borderColor: '#1890ff',
-        borderWidth: 1,
-      },
-    ],
-  }
-
-  const ownershipEntityChartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: false,
-      },
-      tooltip: {
-        callbacks: {
-          label: (context: { dataIndex: number; parsed: { y: number } }) => {
-            const item = data?.by_ownership_entity?.[context.dataIndex]
-            return [
-              `资产数量: ${context.parsed.y} 个`,
-              `占比: ${item?.percentage?.toFixed(1)}%`,
-              `总面积: ${item?.total_area?.toLocaleString()} ㎡`,
-            ]
-          },
-        },
+        : item.ownership_entity,
+      count: item.count,
+      percentage: item.percentage,
+      total_area: item.total_area,
+      full_name: item.ownership_entity,
+    })) || [],
+    xField: 'entity',
+    yField: 'count',
+    color: '#1890ff',
+    columnStyle: {
+      fillOpacity: 0.6,
+      stroke: '#1890ff',
+      lineWidth: 1,
+    },
+    label: {
+      position: 'top' as const,
+      formatter: (datum: any) => `${datum.count} 个`,
+      style: {
+        fill: '#333',
+        fontSize: 12,
       },
     },
-    scales: {
-      y: {
-        beginAtZero: true,
-        ticks: {
-          stepSize: 1,
-        },
+    tooltip: {
+      formatter: (datum: any) => ({
+        name: datum.full_name || datum.entity,
+        value: `${datum.count} 个`,
+      }),
+      customContent: (title: any, data: any) => {
+        const datum = data?.[0]?.data
+        if (!datum) return null
+        return (
+          <div style={{ padding: '8px' }}>
+            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{datum.full_name || datum.entity}</div>
+            <div>资产数量: {datum.count} 个</div>
+            <div>占比: {datum.percentage?.toFixed(1)}%</div>
+            <div>总面积: {datum.total_area?.toLocaleString()} ㎡</div>
+          </div>
+        )
       },
-      x: {
-        ticks: {
-          maxRotation: 45,
-          minRotation: 0,
-        },
+    },
+    yAxis: {
+      min: 0,
+    },
+    xAxis: {
+      label: {
+        autoRotate: true,
+        autoHide: true,
+        maxRotation: 45,
+        minRotation: 0,
+      },
+    },
+    animation: {
+      appear: {
+        animation: 'scale-in-y',
+        duration: 1000,
       },
     },
   }
@@ -325,9 +305,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
         <Col xs={24} md={12} lg={8}>
           <Card title="物业性质分布" style={{ marginBottom: 16 }}>
             <Spin spinning={isLoading}>
-              <div style={{ height: height }}>
-                <Pie data={propertyNatureChartData} options={propertyNatureChartOptions} />
-              </div>
+              <Pie {...propertyNatureChartConfig} height={height} />
             </Spin>
           </Card>
         </Col>
@@ -336,9 +314,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
         <Col xs={24} md={12} lg={8}>
           <Card title="确权状态分布" style={{ marginBottom: 16 }}>
             <Spin spinning={isLoading}>
-              <div style={{ height: height }}>
-                <Doughnut data={ownershipStatusChartData} options={ownershipStatusChartOptions} />
-              </div>
+              <Pie {...ownershipStatusChartConfig} height={height} />
             </Spin>
           </Card>
         </Col>
@@ -347,9 +323,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
         <Col xs={24} md={12} lg={8}>
           <Card title="使用状态分布" style={{ marginBottom: 16 }}>
             <Spin spinning={isLoading}>
-              <div style={{ height: height }}>
-                <Pie data={usageStatusChartData} options={usageStatusChartOptions} />
-              </div>
+              <Pie {...usageStatusChartConfig} height={height} />
             </Spin>
           </Card>
         </Col>
@@ -358,9 +332,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
         <Col xs={24}>
           <Card title="主要权属方资产分布（前10名）">
             <Spin spinning={isLoading}>
-              <div style={{ height: height }}>
-                <Bar data={ownershipEntityChartData} options={ownershipEntityChartOptions as any} />
-              </div>
+              <Column {...ownershipEntityChartConfig} height={height} />
             </Spin>
           </Card>
         </Col>

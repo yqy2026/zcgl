@@ -28,10 +28,13 @@ const queryClient = new QueryClient({
   },
 })
 
-// Ant Design 主题配置
+// Ant Design 主题配置（统一配置，合并自 App.tsx）
 const theme = {
   token: {
     colorPrimary: '#1890ff',
+    colorSuccess: '#52c41a',
+    colorWarning: '#faad14',
+    colorError: '#f5222d',
     borderRadius: 6,
     fontSize: 14,
   },

@@ -1,65 +1,35 @@
 """
 土地物业资产管理系统 - 主应用入口
-整合UTF-8编码安全处理
+使用环境感知的依赖管理
 """
 
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# 导入编码安全工具
+# 核心依赖 - 严格导入（开发/生产环境必须存在）
+from .core.config import get_config, initialize_config, settings
 from .core.encoding_utils import (
     safe_error_message,
     safe_print,
     setup_utf8_encoding,
 )
-
-# 立即设置UTF-8编码
-setup_utf8_encoding()
-
-# OCR服务导入 - 完全禁用以避免编码问题
-OCR_SERVICE_AVAILABLE = False
-OptimizedOCRService = None
-safe_print("Info: OCR service disabled - avoiding encoding issues")
-
-try:
-    from .services.providers.ocr_provider import get_ocr_service, set_ocr_service
-
-    OCR_PROVIDER_AVAILABLE = True
-except ImportError as e:
-    safe_print(f"Warning: OCR provider not available - {safe_error_message(e)}")
-    get_ocr_service = lambda: None
-    set_ocr_service = lambda x: None
-    OCR_PROVIDER_AVAILABLE = False
-
-try:
-    from .services.adapters.paddle_ocr_engine_adapter import PaddleOCREngineAdapter
-except Exception:
-    PaddleOCREngineAdapter = None  # type: ignore
-
-# 导入API路由 - 使用条件导入
-try:
-    # 恢复路由注册器以实现统一路由管理
-    from .core.router_registry import register_api_routes, route_registry
-
-    ROUTER_REGISTRY_AVAILABLE = True
-except ImportError as e:
-    safe_print(f"Warning: Router registry not available - {safe_error_message(e)}")
-    register_api_routes = lambda: None
-    route_registry = type(
-        "MockRegistry",
-        (),
-        {
-            "register_global_dependency": lambda x: None,
-            "include_all": lambda app, version: None,
-        },
-    )()
-from .core.config import get_config, initialize_config, settings
+from .core.environment import (
+    get_dependency_policy,
+    get_environment,
+    is_production,
+    is_testing,
+)
 from .core.exception_handler import setup_exception_handlers
-
-# from .core.jwt_security import validate_current_jwt_config  # 临时禁用
+from .core.import_utils import (
+    create_lambda_none,
+    create_mock_registry,
+    safe_import,
+    safe_import_from,
+)
 from .core.logging_security import setup_logging_security
 from .core.response_handler import success_response
 from .database import (
@@ -68,55 +38,89 @@ from .database import (
     init_db,
 )
 
-# 中间件导入 - 使用条件导入
-try:
-    from .middleware.error_recovery_middleware import ErrorRecoveryMiddleware
-
-    ERROR_RECOVERY_MIDDLEWARE_AVAILABLE = True
-except ImportError as e:
-    safe_print(
-        f"Warning: Error recovery middleware not available - {safe_error_message(e)}"
-    )
-    ErrorRecoveryMiddleware = None
-    ERROR_RECOVERY_MIDDLEWARE_AVAILABLE = False
-
-try:
-    from .middleware.request_logging import RequestLoggingMiddleware
-
-    REQUEST_LOGGING_MIDDLEWARE_AVAILABLE = True
-except ImportError as e:
-    safe_print(
-        f"Warning: Request logging middleware not available - {safe_error_message(e)}"
-    )
-    RequestLoggingMiddleware = None
-    REQUEST_LOGGING_MIDDLEWARE_AVAILABLE = False
-
-try:
-    from .middleware.security_middleware import setup_security_middleware
-
-    SECURITY_MIDDLEWARE_AVAILABLE = True
-except ImportError as e:
-    safe_print(f"Warning: Security middleware not available - {safe_error_message(e)}")
-    setup_security_middleware = lambda app: None
-    SECURITY_MIDDLEWARE_AVAILABLE = False
-
-try:
-    from .middleware.v1_compatibility import (
-        V1CompatibilityMiddleware,
-        add_v1_compatibility,
-    )
-
-    V1_COMPATIBILITY_AVAILABLE = True
-except ImportError as e:
-    safe_print(
-        f"Warning: V1 compatibility middleware not available - {safe_error_message(e)}"
-    )
-    add_v1_compatibility = lambda app, preserve_endpoints=None: None
-    V1CompatibilityMiddleware = None
-    V1_COMPATIBILITY_AVAILABLE = False
+# 立即设置 UTF-8 编码
+setup_utf8_encoding()
 
 # 设置日志
 logger = logging.getLogger(__name__)
+
+# 记录启动环境
+env = get_environment()
+logger.info(f"当前环境: {env.value}")
+logger.info(f"依赖策略: {get_dependency_policy().value}")
+
+# ===== 关键依赖（生产环境必须存在）=====
+# 路由注册器 - 关键依赖
+router_registry_module = safe_import(
+    ".core.router_registry",
+    critical=True,
+    mock_factory=create_mock_registry,
+)
+if hasattr(router_registry_module, 'route_registry'):
+    route_registry = router_registry_module.route_registry
+else:
+    route_registry = create_mock_registry()
+
+if hasattr(router_registry_module, 'register_api_routes'):
+    register_api_routes = router_registry_module.register_api_routes
+else:
+    register_api_routes = create_lambda_none
+
+# 安全中间件 - 关键依赖
+setup_security_middleware = safe_import_from(
+    ".middleware.security_middleware",
+    "setup_security_middleware",
+    critical=True,
+    fallback=lambda app: None,
+)
+
+# ===== 重要功能（推荐存在，允许降级）=====
+ErrorRecoveryMiddleware = safe_import(
+    ".middleware.error_recovery_middleware:ErrorRecoveryMiddleware",
+    fallback=None,
+)
+
+RequestLoggingMiddleware = safe_import(
+    ".middleware.request_logging:RequestLoggingMiddleware",
+    fallback=None,
+)
+
+# ===== 可选功能（允许降级）=====
+# OCR 服务 - 完全禁用以避免编码问题
+OCR_SERVICE_AVAILABLE = False
+OptimizedOCRService = None
+safe_print("Info: OCR service disabled - avoiding encoding issues")
+
+# OCR Provider
+get_ocr_service = safe_import_from(
+    ".services.providers.ocr_provider",
+    "get_ocr_service",
+    fallback=lambda: None,
+)
+set_ocr_service = safe_import_from(
+    ".services.providers.ocr_provider",
+    "set_ocr_service",
+    fallback=lambda x: None,
+)
+
+# PaddleOCR 引擎
+PaddleOCREngineAdapter = safe_import(
+    ".services.adapters.paddle_ocr_engine_adapter:PaddleOCREngineAdapter",
+    fallback=None,
+)
+
+# V1 兼容中间件（可选，迁移完成后可移除）
+V1CompatibilityMiddleware = safe_import(
+    ".middleware.v1_compatibility:V1CompatibilityMiddleware",
+    fallback=None,
+)
+add_v1_compatibility = safe_import_from(
+    ".middleware.v1_compatibility",
+    "add_v1_compatibility",
+    fallback=lambda app, preserve_endpoints=None: None,
+)
+
+logger.info("依赖导入完成")
 
 
 # ===== 应用生命周期管理 =====
@@ -141,7 +145,7 @@ async def lifespan(app: FastAPI):
             for issue in jwt_config_result["issues"]:
                 logger.error(f"JWT安全问题: {issue}")
             # 非测试模式下拒绝启动
-            if not os.getenv("TESTING_MODE"):
+            if not is_testing():
                 raise RuntimeError(
                     "JWT配置存在严重安全问题，拒绝启动。请检查SECRET_KEY配置。"
                 )
@@ -158,7 +162,7 @@ async def lifespan(app: FastAPI):
         raise
     except Exception as e:
         logger.warning(f"JWT配置检查出现异常: {e}")
-        if not os.getenv("TESTING_MODE"):
+        if not is_testing():
             logger.error("安全检查失败，拒绝在非测试模式下继续启动")
             raise RuntimeError(f"JWT安全检查失败: {e}")
 
@@ -176,7 +180,7 @@ async def lifespan(app: FastAPI):
         logger.error(f"OCR 服务初始化失败: {e}")
 
     # 初始化枚举字段数据
-    if not os.getenv("TESTING_MODE"):
+    if not is_testing():
         try:
             from .database import SessionLocal
             from .services.enum_data_init import add_legacy_enum_values, init_enum_data
@@ -236,24 +240,39 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=[
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE",
+        "OPTIONS",
+    ],
+    allow_headers=[
+        "Content-Type",
+        "Authorization",
+        "X-Requested-With",
+        "Accept",
+        "Origin",
+        "Access-Control-Request-Method",
+        "Access-Control-Request-Headers",
+    ],
 )
 
 # 设置安全中间件
-if SECURITY_MIDDLEWARE_AVAILABLE:
+if setup_security_middleware:
     setup_security_middleware(app)
 else:
     safe_print("Warning: Skipping security middleware setup")
 
 # 设置请求日志中间件
-if REQUEST_LOGGING_MIDDLEWARE_AVAILABLE and RequestLoggingMiddleware:
+if RequestLoggingMiddleware:
     app.add_middleware(RequestLoggingMiddleware)
 else:
     safe_print("Warning: Skipping request logging middleware")
 
 # 设置错误恢复中间件
-if ERROR_RECOVERY_MIDDLEWARE_AVAILABLE and ErrorRecoveryMiddleware:
+if ErrorRecoveryMiddleware:
     app.add_middleware(ErrorRecoveryMiddleware)
 else:
     safe_print("Warning: Skipping error recovery middleware")
@@ -305,7 +324,7 @@ async def root_endpoint():
 
 
 # 统一通过路由注册器注册路由与全局依赖
-if ROUTER_REGISTRY_AVAILABLE:
+if route_registry and register_api_routes:
     try:
         register_api_routes()
         # 全局依赖：OCR 服务（确保每个请求上下文可用）
@@ -372,9 +391,7 @@ except Exception as e:
     logger.warning(f"日志安全设置失败: {e}")
 
 # 初始化数据库（跳过测试模式）
-import os
-
-if not os.getenv("TESTING_MODE"):
+if not is_testing():
     # 初始化数据库
     init_db()
 

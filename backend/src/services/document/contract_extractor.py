@@ -7,6 +7,7 @@ from typing import Any
 包含防虚假数据验证和字段验证功能
 """
 
+import json
 import logging
 import re
 from dataclasses import dataclass

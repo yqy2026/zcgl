@@ -31,6 +31,7 @@ npm run lint:fix      # Auto-fix ESLint issues
 npm test              # Run tests (Vitest)
 npm run test:coverage # Coverage report
 npm run test:ui       # UI mode for tests
+npm run test:single   # Run single test file
 ```
 
 ### Backend (in `backend/` directory)
@@ -42,6 +43,9 @@ uvicorn src.main:app --reload --port 8002  # Alternative start
 
 # Testing
 pytest                          # Run all tests
+pytest tests/path/to/test.py    # Run single test file
+pytest tests/test_file.py::test_function  # Run specific test function
+pytest -k "keyword"             # Run tests matching keyword
 pytest -m unit                  # Unit tests only
 pytest -m integration           # Integration tests only
 pytest -m api                   # API endpoint tests
@@ -92,7 +96,11 @@ zcgl/
 ├── backend/            # FastAPI + Python backend
 │   └── src/
 │       ├── api/v1/     # API endpoints (versioned: /api/v1/*)
-│       ├── core/       # Config, security, router_registry.py
+│       ├── core/       # Config, security, environment, import_utils
+│       │               # - router_registry.py: Unified route registration
+│       │               # - environment.py: Environment management
+│       │               # - import_utils.py: Safe conditional imports
+│       │               # - dependency_checker.py: Startup dependency validation
 │       ├── crud/       # Database operations (base CRUD classes)
 │       ├── models/     # SQLAlchemy ORM models
 │       ├── schemas/    # Pydantic request/response models
@@ -134,20 +142,6 @@ core/            → Configuration and utilities
 
 ---
 
-## OpenSpec Workflow
-
-This project uses OpenSpec for spec-driven development. Before implementing features:
-
-1. **Review existing work**: `openspec list`, `openspec list --specs`
-2. **Create proposals for**: New features, breaking changes, architecture changes
-3. **Skip proposals for**: Bug fixes, typos, non-breaking dependency updates
-4. **Validate**: `openspec validate <change-id> --strict`
-5. **Archive after deployment**: `openspec archive <change-id> --yes`
-
-See `openspec/AGENTS.md` for complete workflow details.
-
----
-
 ## Testing
 
 ### Backend Test Categories (pytest markers)
@@ -171,6 +165,11 @@ npm test                # Run tests with Vitest
 npm run test:coverage   # Coverage report
 npm run test:ui         # UI mode
 npm run test:watch      # Watch mode
+npm run test:single     # Run tests once without watch
+npm run test:debug      # Debug mode for tests
+npm run test:update     # Update test snapshots
+npm run test:related    # Run tests related to changed files
+npm run test:ci         # CI mode - run tests with coverage
 ```
 
 ---
@@ -257,6 +256,101 @@ See `docs/` for detailed guides:
 - `docs/guides/deployment.md` - Docker deployment
 - `docs/integrations/api-overview.md` - API architecture
 - `docs/integrations/auth-api.md` - Authentication endpoints
+
+---
+
+## Environment Configuration
+
+### Environment Types
+
+The system uses a unified environment management system (`backend/src/core/environment.py`):
+
+- **production**: Production environment with strict dependency checking
+- **development**: Development environment with strict dependency checking
+- **testing**: Testing environment with graceful dependency degradation
+- **staging**: Staging environment similar to production
+
+### Setting the Environment
+
+**Via `.env` file** (recommended):
+```bash
+# backend/.env
+ENVIRONMENT=development  # or production, testing, staging
+```
+
+**Via environment variable**:
+```bash
+export ENVIRONMENT=production
+python run_dev.py
+```
+
+### Dependency Policy
+
+Control how missing dependencies are handled:
+
+```bash
+# backend/.env
+DEPENDENCY_POLICY=strict  # or graceful, optional
+```
+
+- **strict**: Fail fast on missing critical dependencies (recommended for production & development)
+- **graceful**: Log warnings and use fallbacks (recommended for testing)
+- **optional**: Silent fallback for missing dependencies
+
+### Environment Detection Priority
+
+The system checks environment variables in this order:
+1. `ENVIRONMENT` (preferred)
+2. `TESTING_MODE` (legacy)
+3. `DEBUG` (legacy)
+4. `DEV_MODE` (legacy)
+
+### Usage in Code
+
+```python
+from src.core.environment import (
+    get_environment,
+    is_production,
+    is_testing,
+    get_dependency_policy,
+)
+
+# Check environment
+if is_production():
+    # Production-specific logic
+    pass
+
+# Get dependency policy
+policy = get_dependency_policy()
+```
+
+### Safe Conditional Imports
+
+Use the unified import utilities:
+
+```python
+from src.core.import_utils import safe_import, safe_import_from
+
+# Import critical dependency (fails in production if missing)
+router_registry = safe_import(
+    "core.router_registry",
+    critical=True,
+    mock_factory=create_mock_registry,
+)
+
+# Import optional dependency (graceful fallback)
+ocr_service = safe_import(
+    "services.ocr",
+    fallback=None,
+)
+
+# Import specific function
+get_ocr_service = safe_import_from(
+    "services.providers.ocr_provider",
+    "get_ocr_service",
+    fallback=lambda: None,
+)
+```
 
 ---
 

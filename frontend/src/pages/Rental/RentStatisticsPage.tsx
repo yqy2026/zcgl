@@ -16,21 +16,7 @@ import {
   message,
   Tooltip
 } from 'antd';
-import {
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  Legend,
-  ResponsiveContainer,
-  LineChart,
-  Line
-} from 'recharts';
+import { Pie, Column, Line } from '@ant-design/plots';
 import {
   DollarOutlined,
   FileTextOutlined,
@@ -59,7 +45,7 @@ const { Title } = Typography;
 moment.locale('zh-cn');
 
 // 颜色配置
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
+const COLORS = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2'];
 
 const RentStatisticsPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -294,11 +280,34 @@ const RentStatisticsPage: React.FC = () => {
 
   // 准备图表数据
   const ownershipChartData = (ownershipStats || []).map(item => ({
-    name: item.ownership_name,
+    type: item.ownership_name,
     value: Number(item.total_due_amount),
     paid: Number(item.total_paid_amount),
     overdue: Number(item.total_overdue_amount)
   }));
+
+  const ownershipPieConfig = {
+    data: ownershipChartData,
+    angleField: 'value',
+    colorField: 'type',
+    color: COLORS,
+    radius: 0.8,
+    innerRadius: 0.4,
+    label: {
+      type: 'outer' as const,
+      content: '{name} {percentage}',
+    },
+    legend: {
+      layout: 'horizontal' as const,
+      position: 'bottom' as const,
+    },
+    tooltip: {
+      formatter: (datum: any) => ({
+        name: datum.type,
+        value: formatCurrency(datum.value),
+      }),
+    },
+  }
 
   const monthlyChartData = (monthlyStats || []).map(item => ({
     month: item.year_month,
@@ -307,6 +316,72 @@ const RentStatisticsPage: React.FC = () => {
     overdue: Number(item.total_overdue_amount),
     rate: Number(item.payment_rate)
   }));
+
+  // Prepare monthly bar chart data - transform to stacked format
+  const monthlyBarData = (monthlyStats || []).flatMap(item => [
+    { month: item.year_month, type: '应收金额', value: Number(item.total_due_amount) },
+    { month: item.year_month, type: '已收金额', value: Number(item.total_paid_amount) },
+    { month: item.year_month, type: '欠款金额', value: Number(item.total_overdue_amount) },
+  ])
+
+  const monthlyBarConfig = {
+    data: monthlyBarData,
+    xField: 'month',
+    yField: 'value',
+    seriesField: 'type',
+    color: ({ type }: any) => {
+      if (type === '应收金额') return '#1890ff'
+      if (type === '已收金额') return '#52c41a'
+      if (type === '欠款金额') return '#f5222d'
+      return '#1890ff'
+    },
+    isGroup: true,
+    columnStyle: {
+      fillOpacity: 0.8,
+    },
+    legend: {
+      position: 'top' as const,
+    },
+    tooltip: {
+      formatter: (datum: any) => ({
+        name: datum.type,
+        value: formatCurrency(datum.value),
+      }),
+    },
+    yAxis: {
+      label: {
+        formatter: (value: number) => formatCurrency(value),
+      },
+    },
+  }
+
+  const monthlyLineConfig = {
+    data: monthlyChartData,
+    xField: 'month',
+    yField: 'rate',
+    smooth: true,
+    color: '#52c41a',
+    lineStyle: {
+      lineWidth: 2,
+    },
+    point: {
+      size: 4,
+      shape: 'circle',
+    },
+    tooltip: {
+      formatter: (datum: any) => ({
+        name: '收缴率',
+        value: `${datum.rate.toFixed(2)}%`,
+      }),
+    },
+    yAxis: {
+      min: 0,
+      max: 100,
+      label: {
+        formatter: (value: number) => `${value}%`,
+      },
+    },
+  }
 
   // 标签页配置
   const tabItems = [
@@ -317,25 +392,7 @@ const RentStatisticsPage: React.FC = () => {
         <Row gutter={[16, 16]}>
           <Col xs={24} lg={12}>
             <Card title="权属方租金分布" loading={loading}>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={ownershipChartData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {ownershipChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <RechartsTooltip formatter={(value) => formatCurrency(Number(value))} />
-                </PieChart>
-              </ResponsiveContainer>
+              <Pie {...ownershipPieConfig} height={300} />
             </Card>
           </Col>
           <Col xs={24} lg={12}>
@@ -384,39 +441,12 @@ const RentStatisticsPage: React.FC = () => {
         <Row gutter={[16, 16]}>
           <Col xs={24} lg={16}>
             <Card title="月度租金趋势" loading={loading}>
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={monthlyChartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <RechartsTooltip formatter={(value) => formatCurrency(Number(value))} />
-                  <Legend />
-                  <Bar dataKey="due" name="应收金额" fill="#1890ff" />
-                  <Bar dataKey="paid" name="已收金额" fill="#52c41a" />
-                  <Bar dataKey="overdue" name="欠款金额" fill="#f5222d" />
-                </BarChart>
-              </ResponsiveContainer>
+              <Column {...monthlyBarConfig} height={400} />
             </Card>
           </Col>
           <Col xs={24} lg={8}>
             <Card title="收缴率趋势" loading={loading}>
-              <ResponsiveContainer width="100%" height={400}>
-                <LineChart data={monthlyChartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis domain={[0, 100]} />
-                  <RechartsTooltip formatter={(value) => `${value}%`} />
-                  <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="rate"
-                    name="收缴率"
-                    stroke="#52c41a"
-                    strokeWidth={2}
-                    dot={{ fill: '#52c41a' }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+              <Line {...monthlyLineConfig} height={400} />
             </Card>
           </Col>
         </Row>

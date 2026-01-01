@@ -15,43 +15,22 @@ vi.mock('@tanstack/react-query', () => ({
   })),
 }))
 
-// Mock Chart.js
-vi.mock('chart.js', () => ({
-  Chart: {
-    register: vi.fn(),
-  },
-  CategoryScale: vi.fn(),
-  LinearScale: vi.fn(),
-  BarElement: vi.fn(),
-  Title: vi.fn(),
-  Tooltip: vi.fn(),
-  Legend: vi.fn(),
-}))
-
-// Mock react-chartjs-2
-vi.mock('react-chartjs-2', () => ({
-  Bar: ({ data, options, type }: any) => (
-    <div data-testid="bar-chart" data-chart-type={type || 'bar'} data-bar-type="standard">
-      {JSON.stringify({ data, options })}
+// Mock @ant-design/plots
+vi.mock('@ant-design/plots', () => ({
+  Column: ({ data, height }: any) => (
+    <div data-testid="column-chart" data-height={height}>
+      {data?.map((d: any, i: number) => (
+        <div key={i} />
+      ))}
     </div>
   ),
-}))
-
-// Mock chart utility functions
-vi.mock('@/types/chart-types', () => ({
-  getChartYValue: vi.fn((context) => {
-    if (typeof context === 'object' && context !== null && 'parsed' in context) {
-      const parsed = context.parsed as { y?: number } | number
-      return typeof parsed === 'number' ? parsed : (parsed.y ?? 0)
-    }
-    return 0
-  }),
-  getChartDatasetLabel: vi.fn((context) => {
-    if (typeof context === 'object' && context !== null && 'dataset' in context) {
-      return (context.dataset as { label?: string }).label ?? ''
-    }
-    return ''
-  }),
+  DualAxes: ({ data, height }: any) => (
+    <div data-testid="dual-axes-chart" data-height={height}>
+      {data?.map((d: any, i: number) => (
+        <div key={i} />
+      ))}
+    </div>
+  ),
 }))
 
 // Mock Ant Design components

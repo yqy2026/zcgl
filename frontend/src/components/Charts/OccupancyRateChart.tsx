@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react'
-import { Card, Typography, Space, Statistic, Row, Col, Spin, Alert } from 'antd'
+import React from 'react'
+import { Card, Typography, Statistic, Row, Col, Spin, Alert } from 'antd'
 import {
   PercentageOutlined,
   RiseOutlined,
@@ -7,35 +7,10 @@ import {
   MinusOutlined,
 } from '@ant-design/icons'
 import { useQuery } from '@tanstack/react-query'
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  ArcElement,
-} from 'chart.js'
-import { Line, Bar, Doughnut } from 'react-chartjs-2'
+import { Line, Column, Pie } from '@ant-design/plots'
 
 import { assetService } from '@/services/assetService'
 import type { AssetSearchParams } from '@/types/asset'
-
-// 注册Chart.js组件
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  ArcElement
-)
 
 const { Title: AntTitle, Text } = Typography
 
@@ -89,168 +64,183 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
   })
 
   // 趋势图表配置
-  const trendChartData = {
-    labels: data?.monthly_trend?.map(item => item.month) || [],
-    datasets: [
-      {
-        label: '出租率 (%)',
-        data: data?.monthly_trend?.map(item => item.rate) || [],
-        borderColor: '#1890ff',
-        backgroundColor: 'rgba(24, 144, 255, 0.1)',
-        borderWidth: 2,
-        fill: true,
-        tension: 0.4,
-      },
-    ],
-  }
-
-  const trendChartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'top' as const,
-      },
-      title: {
-        display: true,
-        text: '出租率月度趋势',
-        font: {
-          size: 16,
-          weight: 'bold' as const,
-        },
-      },
-      tooltip: {
-        callbacks: {
-          label: (context: { dataIndex: number; parsed: { y: number }; label: string }) => {
-            const monthData = data?.monthly_trend?.[context.dataIndex]
-            return [
-              `出租率: ${context.parsed.y.toFixed(2)}%`,
-              `总面积: ${monthData?.total_area?.toLocaleString() || 0} ㎡`,
-              `已租面积: ${monthData?.rented_area?.toLocaleString() || 0} ㎡`,
-            ]
-          },
-        },
+  const trendChartConfig = {
+    data: data?.monthly_trend?.map(item => ({
+      month: item.month,
+      rate: item.rate,
+      total_area: item.total_area,
+      rented_area: item.rented_area,
+    })) || [],
+    xField: 'month',
+    yField: 'rate',
+    smooth: true,
+    color: '#1890ff',
+    areaStyle: {
+      fillOpacity: 0.1,
+    },
+    point: {
+      size: 4,
+      shape: 'circle',
+    },
+    tooltip: {
+      formatter: (datum: any) => ({
+        name: '出租率',
+        value: `${datum.rate.toFixed(2)}%`,
+      }),
+      customContent: (title: any, data: any) => {
+        const datum = data?.[0]?.data
+        if (!datum) return null
+        return (
+          <div style={{ padding: '8px' }}>
+            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{datum.month}</div>
+            <div>出租率: {datum.rate.toFixed(2)}%</div>
+            <div>总面积: {datum.total_area?.toLocaleString()} ㎡</div>
+            <div>已租面积: {datum.rented_area?.toLocaleString()} ㎡</div>
+          </div>
+        )
       },
     },
-    scales: {
-      y: {
-        beginAtZero: true,
-        max: 100,
-        ticks: {
-          callback: (value: number) => `${value}%`,
-        },
+    yAxis: {
+      min: 0,
+      max: 100,
+      label: {
+        formatter: (value: number) => `${value}%`,
+      },
+    },
+    animation: {
+      appear: {
+        animation: 'path-in',
+        duration: 1000,
       },
     },
   }
 
   // 物业性质分布图表配置
-  const propertyNatureChartData = {
-    labels: data?.by_property_nature?.map(item => item.property_nature) || [],
-    datasets: [
-      {
-        data: data?.by_property_nature?.map(item => item.rate) || [],
-        backgroundColor: [
-          '#1890ff',
-          '#52c41a',
-          '#faad14',
-          '#f5222d',
-          '#722ed1',
-          '#fa8c16',
-        ],
-        borderWidth: 2,
-        borderColor: '#ffffff',
+  const propertyNatureChartConfig = {
+    data: data?.by_property_nature?.map(item => ({
+      type: item.property_nature,
+      value: item.rate,
+      total_area: item.total_area,
+      rented_area: item.rented_area,
+    })) || [],
+    angleField: 'value',
+    colorField: 'type',
+    color: ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#fa8c16'],
+    radius: 0.8,
+    innerRadius: 0.6,
+    label: {
+      type: 'inner',
+      offset: '-50%',
+      content: '{value}%',
+      style: {
+        textAlign: 'center',
+        fontSize: 14,
+        fill: '#fff',
       },
-    ],
-  }
-
-  const propertyNatureChartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'right' as const,
+    },
+    legend: {
+      layout: 'vertical',
+      position: 'right',
+    },
+    tooltip: {
+      formatter: (datum: any) => ({
+        name: datum.type,
+        value: `${datum.value.toFixed(2)}%`,
+      }),
+      customContent: (title: any, data: any) => {
+        const datum = data?.[0]?.data
+        if (!datum) return null
+        return (
+          <div style={{ padding: '8px' }}>
+            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{datum.type}</div>
+            <div>出租率: {datum.value.toFixed(2)}%</div>
+            <div>总面积: {datum.total_area?.toLocaleString()} ㎡</div>
+            <div>已租面积: {datum.rented_area?.toLocaleString()} ㎡</div>
+          </div>
+        )
       },
+    },
+    statistic: {
       title: {
-        display: true,
-        text: '按物业性质分布',
-        font: {
-          size: 16,
-          weight: 'bold' as const,
+        offsetY: -8,
+        content: '总体出租率',
+        style: {
+          fontSize: '14px',
         },
       },
-      tooltip: {
-        callbacks: {
-          label: (context: { dataIndex: number; parsed: number; label: string }) => {
-            const item = data?.by_property_nature?.[context.dataIndex]
-            return [
-              `${context.label}: ${context.parsed.toFixed(2)}%`,
-              `总面积: ${item?.total_area?.toLocaleString() || 0} ㎡`,
-              `已租面积: ${item?.rented_area?.toLocaleString() || 0} ㎡`,
-            ]
-          },
+      content: {
+        offsetY: 4,
+        style: {
+          fontSize: '20px',
+          fontWeight: 'bold',
         },
+        content: `${data?.overall_rate?.toFixed(2) || 0}%`,
       },
     },
   }
 
   // 权属方出租率柱状图配置
-  const ownershipChartData = {
-    labels: data?.by_ownership_entity?.map(item => 
-      item.ownership_entity.length > 10 
+  const ownershipChartConfig = {
+    data: data?.by_ownership_entity?.map(item => ({
+      ownership: item.ownership_entity.length > 10
         ? item.ownership_entity.substring(0, 10) + '...'
-        : item.ownership_entity
-    ) || [],
-    datasets: [
-      {
-        label: '出租率 (%)',
-        data: data?.by_ownership_entity?.map(item => item.rate) || [],
-        backgroundColor: 'rgba(24, 144, 255, 0.6)',
-        borderColor: '#1890ff',
-        borderWidth: 1,
-      },
-    ],
-  }
-
-  const ownershipChartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: false,
-      },
-      title: {
-        display: true,
-        text: '各权属方出租率对比',
-        font: {
-          size: 16,
-          weight: 'bold' as const,
-        },
-      },
-      tooltip: {
-        callbacks: {
-          label: (context: { dataIndex: number; parsed: { y: number } }) => {
-            const item = data?.by_ownership_entity?.[context.dataIndex]
-            return [
-              `出租率: ${context.parsed.y.toFixed(2)}%`,
-              `资产数量: ${item?.asset_count || 0} 个`,
-            ]
-          },
-        },
+        : item.ownership_entity,
+      rate: item.rate,
+      asset_count: item.asset_count,
+      full_name: item.ownership_entity,
+    })) || [],
+    xField: 'ownership',
+    yField: 'rate',
+    color: '#1890ff',
+    columnStyle: {
+      fillOpacity: 0.6,
+      stroke: '#1890ff',
+      lineWidth: 1,
+    },
+    label: {
+      position: 'top' as const,
+      formatter: (datum: any) => `${datum.rate.toFixed(1)}%`,
+      style: {
+        fill: '#333',
+        fontSize: 12,
       },
     },
-    scales: {
-      y: {
-        beginAtZero: true,
-        max: 100,
-        ticks: {
-          callback: (value: number) => `${value}%`,
-        },
+    tooltip: {
+      formatter: (datum: any) => ({
+        name: datum.full_name || datum.ownership,
+        value: `${datum.rate.toFixed(2)}%`,
+      }),
+      customContent: (title: any, data: any) => {
+        const datum = data?.[0]?.data
+        if (!datum) return null
+        return (
+          <div style={{ padding: '8px' }}>
+            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{datum.full_name || datum.ownership}</div>
+            <div>出租率: {datum.rate.toFixed(2)}%</div>
+            <div>资产数量: {datum.asset_count} 个</div>
+          </div>
+        )
       },
-      x: {
-        ticks: {
-          maxRotation: 45,
-          minRotation: 0,
-        },
+    },
+    yAxis: {
+      min: 0,
+      max: 100,
+      label: {
+        formatter: (value: number) => `${value}%`,
+      },
+    },
+    xAxis: {
+      label: {
+        autoRotate: true,
+        autoHide: true,
+        maxRotation: 45,
+        minRotation: 0,
+      },
+    },
+    animation: {
+      appear: {
+        animation: 'scale-in-y',
+        duration: 1000,
       },
     },
   }
@@ -347,9 +337,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
         <Col xs={24} lg={12}>
           <Card title="出租率趋势分析" style={{ marginBottom: 16 }}>
             <Spin spinning={isLoading}>
-              <div style={{ height: height }}>
-                <Line data={trendChartData} options={trendChartOptions as any} />
-              </div>
+              <Line {...trendChartConfig} height={height} />
             </Spin>
           </Card>
         </Col>
@@ -358,9 +346,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
         <Col xs={24} lg={12}>
           <Card title="物业性质出租率分布" style={{ marginBottom: 16 }}>
             <Spin spinning={isLoading}>
-              <div style={{ height: height }}>
-                <Doughnut data={propertyNatureChartData} options={propertyNatureChartOptions} />
-              </div>
+              <Pie {...propertyNatureChartConfig} height={height} />
             </Spin>
           </Card>
         </Col>
@@ -369,9 +355,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
         <Col xs={24}>
           <Card title="权属方出租率对比">
             <Spin spinning={isLoading}>
-              <div style={{ height: height }}>
-                <Bar data={ownershipChartData} options={ownershipChartOptions as any} />
-              </div>
+              <Column {...ownershipChartConfig} height={height} />
             </Spin>
           </Card>
         </Col>

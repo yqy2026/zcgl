@@ -6,65 +6,27 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import React from 'react'
 
-// Mock recharts
-vi.mock('recharts', () => ({
-  PieChart: ({ children }: any) => <div data-testid="pie-chart">{children}</div>,
-  Pie: ({ children, data, cx, cy, dataKey, label, labelLine, paddingAngle, innerRadius, outerRadius, fill }: any) => (
-    <div data-testid="pie" data-data-key={dataKey} data-cx={cx} data-cy={cy} data-label={label}>
-      {children}
+// Mock @ant-design/plots
+vi.mock('@ant-design/plots', () => ({
+  Pie: ({ data, height }: any) => (
+    <div data-testid="pie-chart" data-height={height}>
+      {data?.map((d: any, i: number) => (
+        <div key={i} data-type={d.type} data-value={d.value} />
+      ))}
     </div>
   ),
-  Cell: ({ fill, key }: any) => <div data-testid="cell" data-fill={fill} key={key} />,
-  BarChart: ({ children, data, margin }: any) => (
-    <div data-testid="bar-chart" data-margin={JSON.stringify(margin)}>
-      {children}
+  Column: ({ data, height }: any) => (
+    <div data-testid="column-chart" data-height={height}>
+      {data?.map((d: any, i: number) => (
+        <div key={i} data-x={d.x} data-y={d.y} />
+      ))}
     </div>
   ),
-  Bar: ({ dataKey, fill, radius, barSize, label }: any) => (
-    <div data-testid="bar" data-data-key={dataKey} data-fill={fill} data-radius={JSON.stringify(radius)} data-bar-size={barSize}>
-      {label}
-    </div>
-  ),
-  LineChart: ({ children, data, margin }: any) => (
-    <div data-testid="line-chart" data-margin={JSON.stringify(margin)}>
-      {children}
-    </div>
-  ),
-  Line: ({ dataKey, type, stroke, strokeWidth, dot, activeDot }: any) => (
-    <div
-      data-testid="line"
-      data-data-key={dataKey}
-      data-type={type}
-      data-stroke={stroke}
-      data-stroke-width={strokeWidth}
-      data-dot={JSON.stringify(dot)}
-      data-active-dot={JSON.stringify(activeDot)}
-    />
-  ),
-  XAxis: ({ dataKey, tick, angle, textAnchor, height, interval }: any) => (
-    <div
-      data-testid="x-axis"
-      data-data-key={dataKey}
-      data-angle={angle}
-      data-text-anchor={textAnchor}
-      data-height={height}
-      data-interval={interval}
-      data-tick={JSON.stringify(tick)}
-    />
-  ),
-  YAxis: ({ tick, tickFormatter }: any) => (
-    <div data-testid="y-axis" data-tick={JSON.stringify(tick)} data-formatter={tickFormatter ? tickFormatter.toString() : ''}>
-      Y轴
-    </div>
-  ),
-  CartesianGrid: ({ strokeDasharray }: any) => (
-    <div data-testid="cartesian-grid" data-stroke-dasharray={strokeDasharray} />
-  ),
-  Tooltip: ({ formatter }: any) => <div data-testid="tooltip" />,
-  Legend: () => <div data-testid="legend" />,
-  ResponsiveContainer: ({ width, height, children }: any) => (
-    <div data-testid="responsive-container" data-width={width} data-height={height}>
-      {children}
+  Line: ({ data, height }: any) => (
+    <div data-testid="line-chart" data-height={height}>
+      {data?.map((d: any, i: number) => (
+        <div key={i} data-x={d.x} data-y={d.y} />
+      ))}
     </div>
   ),
 }))
@@ -709,44 +671,6 @@ describe('AnalyticsChart - 图表组件边界情况测试', () => {
       data,
       xAxisKey: 'name',
       barKey: 'value',
-    })
-    expect(element).toBeTruthy()
-  })
-})
-
-describe('AnalyticsChart - ResponsiveContainer测试', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it('AnalyticsPieChart应该使用ResponsiveContainer包装', async () => {
-    const { AnalyticsPieChart } = await import('../AnalyticsChart')
-    const data = [{ name: '选项1', value: 100 }]
-    const element = React.createElement(AnalyticsPieChart, {
-      data,
-      dataKey: 'value',
-    })
-    expect(element).toBeTruthy()
-  })
-
-  it('AnalyticsBarChart应该使用ResponsiveContainer包装', async () => {
-    const { AnalyticsBarChart } = await import('../AnalyticsChart')
-    const data = [{ name: '选项1', value: 100 }]
-    const element = React.createElement(AnalyticsBarChart, {
-      data,
-      xAxisKey: 'name',
-      barKey: 'value',
-    })
-    expect(element).toBeTruthy()
-  })
-
-  it('AnalyticsLineChart应该使用ResponsiveContainer包装', async () => {
-    const { AnalyticsLineChart } = await import('../AnalyticsChart')
-    const data = [{ date: '2024-01-01', value: 100 }]
-    const element = React.createElement(AnalyticsLineChart, {
-      data,
-      xAxisKey: 'date',
-      lines: [{ key: 'value', name: '趋势', color: '#0088E' }],
     })
     expect(element).toBeTruthy()
   })

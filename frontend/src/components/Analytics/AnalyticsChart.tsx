@@ -1,23 +1,9 @@
 import React from 'react'
-import {
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer
-} from 'recharts'
+import { Pie, Column, Line } from '@ant-design/plots'
 import { Card, Empty, Spin } from 'antd'
 
-// 图表颜色主题
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#ff7300']
+// 图表颜色主题 - 使用 Ant Design 颜色
+const COLORS = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2', '#fa8c16', '#eb2f96']
 
 // 基础图表组件属性
 interface BaseChartProps {
@@ -29,7 +15,7 @@ interface BaseChartProps {
 
 // 饼图数据接口
 interface PieData {
-  name: string
+  type: string
   value: number
   count?: number
   percentage?: number
@@ -68,41 +54,38 @@ export const AnalyticsPieChart: React.FC<PieChartProps> = ({
   outerRadius = 80,
   className
 }) => {
-  const renderCustomizedLabel = ({
-    cx,
-    cy,
-    midAngle,
-    innerRadius,
-    outerRadius,
-    percent
-  }: {
-    cx: number
-    cy: number
-    midAngle: number
-    innerRadius: number
-    outerRadius: number
-    percent: number
-  }) => {
-    if (percent < 0.05) return null // 小于5%不显示标签
+  // Transform data from {name, value} to {type, value} for @ant-design/plots
+  const chartData = data.map(item => ({
+    type: (item as any).name || item.type,
+    value: item.value,
+  }))
 
-    const RADIAN = Math.PI / 180
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.5
-    const x = cx + radius * Math.cos(-midAngle * RADIAN)
-    const y = cy + radius * Math.sin(-midAngle * RADIAN)
-
-    return (
-      <text
-        x={x}
-        y={y}
-        fill="white"
-        textAnchor={x > cx ? 'start' : 'end'}
-        dominantBaseline="central"
-        fontSize={12}
-        fontWeight="bold"
-      >
-        {`${(percent * 100).toFixed(0)}%`}
-      </text>
-    )
+  const config = {
+    data: chartData,
+    angleField: 'value',
+    colorField: 'type',
+    color: COLORS,
+    radius: outerRadius / 100,
+    innerRadius: innerRadius / 100,
+    label: {
+      type: (innerRadius > 0 ? 'inner' : 'outer') as const,
+      offset: innerRadius > 0 ? '-50%' : undefined,
+      content: innerRadius > 0 ? '{percentage}%' : '{name} {percentage}',
+      style: {
+        fontSize: 12,
+        fill: '#fff',
+      },
+    },
+    legend: showLegend ? {
+      layout: 'horizontal' as const,
+      position: 'bottom' as const,
+    } : false,
+    tooltip: showTooltip ? {
+      formatter: (datum: any) => ({
+        name: datum.type,
+        value: formatAreaValue(datum.value),
+      }),
+    } : false,
   }
 
   if (loading) {
@@ -127,27 +110,7 @@ export const AnalyticsPieChart: React.FC<PieChartProps> = ({
 
   return (
     <Card title={title} className={className}>
-      <ResponsiveContainer width="100%" height={height}>
-        <PieChart>
-          <Pie
-            data={data}
-            cx="50%"
-            cy="50%"
-            innerRadius={innerRadius}
-            outerRadius={outerRadius}
-            paddingAngle={2}
-            dataKey="value"
-            label={renderCustomizedLabel}
-            labelLine={false}
-          >
-            {data.map((_, index) => (
-              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-            ))}
-          </Pie>
-          {showTooltip && <Tooltip formatter={(value: number, name: string) => [formatAreaValue(value), name]} />}
-          {showLegend && <Legend />}
-        </PieChart>
-      </ResponsiveContainer>
+      <Pie {...config} height={height} />
     </Card>
   )
 }
@@ -175,11 +138,53 @@ export const AnalyticsBarChart: React.FC<BarChartProps> = ({
   showLegend = false,
   showTooltip = true,
   showGrid = true,
-  color = '#0088FE',
+  color = '#1890ff',
   className
 }) => {
-  // 添加调试信息
-  // Debug information for chart rendering
+  const config = {
+    data: data,
+    xField: xAxisKey,
+    yField: barKey,
+    color: color,
+    columnStyle: {
+      fillOpacity: 0.8,
+      radius: [4, 4, 0, 0],
+    },
+    label: {
+      position: 'top' as const,
+      formatter: (datum: any) => formatAggressive(datum[barKey]),
+      style: {
+        fill: '#666',
+        fontSize: 12,
+      },
+    },
+    legend: showLegend ? {
+      position: 'top' as const,
+    } : false,
+    tooltip: showTooltip ? {
+      formatter: (datum: any) => ({
+        name: datum[xAxisKey],
+        value: formatAreaValue(datum[barKey]),
+      }),
+    } : false,
+    yAxis: {
+      min: 0,
+      label: {
+        formatter: (value: number) => formatAggressive(value),
+      },
+    },
+    xAxis: {
+      label: {
+        autoRotate: true,
+        autoHide: true,
+        rotate: -45,
+        offset: 30,
+        style: {
+          fontSize: 12,
+        },
+      },
+    },
+  }
 
   if (loading) {
     return (
@@ -203,43 +208,7 @@ export const AnalyticsBarChart: React.FC<BarChartProps> = ({
 
   return (
     <Card title={title} className={className}>
-      <ResponsiveContainer width="100%" height={height}>
-        <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-          {showGrid && <CartesianGrid strokeDasharray="3 3" />}
-          <XAxis
-            dataKey={xAxisKey}
-            tick={{ fontSize: 12 }}
-            interval={0}
-            angle={-45}
-            textAnchor="end"
-            height={60}
-          />
-          <YAxis
-            tick={{ fontSize: 12 }}
-            tickFormatter={(value: number) => {
-              // Y轴数值格式化 - 使用激进的格式化逻辑但不显示单位
-              return formatAggressive(value);
-            }}
-          />
-          {showTooltip && <Tooltip formatter={(value: number, name: string) => [formatAreaValue(value), name]} />}
-          {showLegend && <Legend />}
-          <Bar
-            dataKey={barKey}
-            fill={color}
-            radius={[4, 4, 0, 0]}
-            barSize={barSize}
-            label={{
-              position: 'top',
-              formatter: (value: number) => {
-                // 格式化数据标签显示 - 使用激进的格式化去除尾随零
-                return formatAggressive(value);
-              },
-              fontSize: 12,
-              fill: '#666'
-            }}
-          />
-        </BarChart>
-      </ResponsiveContainer>
+      <Column {...config} height={height} />
     </Card>
   )
 }
@@ -273,6 +242,42 @@ export const AnalyticsLineChart: React.FC<LineChartProps> = ({
   showDots = true,
   className
 }) => {
+  // Transform data for multi-line chart
+  const chartData = data.flatMap(item =>
+    lines.map(line => ({
+      [xAxisKey]: item[xAxisKey],
+      type: line.name,
+      value: item[line.key],
+    }))
+  )
+
+  const config = {
+    data: chartData,
+    xField: xAxisKey,
+    yField: 'value',
+    seriesField: 'type',
+    color: ({ type }: any) => {
+      const line = lines.find(l => l.name === type)
+      return line?.color || '#1890ff'
+    },
+    smooth: true,
+    lineStyle: {
+      lineWidth: lines[0]?.strokeWidth || 2,
+    },
+    point: showDots ? {
+      size: 4,
+    } : false,
+    legend: showLegend ? {
+      position: 'top' as const,
+    } : false,
+    tooltip: showTooltip ? {
+      formatter: (datum: any) => ({
+        name: datum.type,
+        value: datum.value,
+      }),
+    } : false,
+  }
+
   if (loading) {
     return (
       <Card title={title} className={className}>
@@ -295,30 +300,7 @@ export const AnalyticsLineChart: React.FC<LineChartProps> = ({
 
   return (
     <Card title={title} className={className}>
-      <ResponsiveContainer width="100%" height={height}>
-        <LineChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-          {showGrid && <CartesianGrid strokeDasharray="3 3" />}
-          <XAxis
-            dataKey={xAxisKey}
-            tick={{ fontSize: 12 }}
-          />
-          <YAxis tick={{ fontSize: 12 }} />
-          {showTooltip && <Tooltip />}
-          {showLegend && <Legend />}
-          {lines.map((line) => (
-            <Line
-              key={line.key}
-              type="monotone"
-              dataKey={line.key}
-              name={line.name}
-              stroke={line.color}
-              strokeWidth={line.strokeWidth || 2}
-              dot={showDots}
-              activeDot={{ r: 6 }}
-            />
-          ))}
-        </LineChart>
-      </ResponsiveContainer>
+      <Line {...config} height={height} />
     </Card>
   )
 }
@@ -360,7 +342,7 @@ export const chartDataUtils = {
   // 转换饼图数据
   toPieData: (data: Array<{ name: string; count: number; percentage?: number }>): PieData[] => {
     return data.map(item => ({
-      name: item.name,
+      type: item.name,  // Changed from 'name' to 'type' for @ant-design/plots
       value: item.count,
       count: item.count,
       percentage: item.percentage
@@ -400,8 +382,8 @@ export const chartDataUtils = {
   // 转换面积维度数据
   toAreaData: (data: Array<{ name: string; total_area: number; area_percentage: number; average_area?: number }>): PieData[] => {
     return data.map(item => ({
-      name: item.name,
-      value: Math.round(item.total_area * 100) / 100, // 使用round方法避免浮点精度问题
+      type: item.name,  // Changed from 'name' to 'type' for @ant-design/plots
+      value: Math.round(item.total_area * 100) / 100,
       total_area: Math.round(item.total_area * 100) / 100,
       percentage: item.area_percentage,
       average_area: item.average_area || 0
@@ -412,7 +394,7 @@ export const chartDataUtils = {
   toAreaBarData: (data: Array<{ name: string; total_area: number; count?: number; average_area?: number }>): BarData[] => {
     return data.map(item => ({
       name: item.name,
-      value: Math.round(item.total_area * 100) / 100, // 使用round方法避免浮点精度问题
+      value: Math.round(item.total_area * 100) / 100,
       total_area: Math.round(item.total_area * 100) / 100,
       count: item.count || 0,
       average_area: item.average_area || 0
@@ -423,7 +405,7 @@ export const chartDataUtils = {
   toBusinessCategoryAreaData: (data: Array<{ category: string; total_area: number; area_percentage: number; occupancy_rate?: number }>): BarData[] => {
     return data.map(item => ({
       name: item.category,
-      value: Math.round(item.total_area * 100) / 100, // 使用round方法避免浮点精度问题
+      value: Math.round(item.total_area * 100) / 100,
       total_area: Math.round(item.total_area * 100) / 100,
       area_percentage: item.area_percentage,
       occupancy_rate: item.occupancy_rate || 0

@@ -1,25 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(findstr:*)",
-      "Bash(tasklist:*)",
-      "Bash(curl:*)",
-      "mcp__chrome-devtools__list_console_messages",
-      "mcp__chrome-devtools__navigate_page",
-      "mcp__chrome-devtools__take_snapshot",
-      "Bash(python:*)",
-      "WebSearch",
-      "mcp__chrome-devtools__list_pages",
-      "mcp__chrome-devtools__list_network_requests",
-      "mcp__chrome-devtools__click",
-      "mcp__chrome-devtools__evaluate_script",
-      "Bash(npm run dev)",
-      "Bash(netstat:*)",
-      "mcp__chrome-devtools__new_page",
-      "mcp__chrome-devtools__get_network_request",
-      "mcp__chrome-devtools__wait_for",
-      "Bash(git config:*)"
+      "Bash(git:*)",
+      "Bash(cd:*)",
+      "Edit",
+      "Bash(rm:*)"
     ]
-  },
-  "outputStyle": "Explanatory"
+  }
 }

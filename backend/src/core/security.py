@@ -31,8 +31,6 @@ from ..core.config import get_config
 from ..core.exception_handler import BusinessValidationError
 from ..core.logging_security import security_auditor
 
-logger = logging.getLogger(__name__)
-
 
 class FileValidationConfig:
     """文件验证配置"""

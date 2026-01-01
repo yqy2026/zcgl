@@ -29,29 +29,13 @@ from ...schemas.statistics import (
 )
 from ...services.asset.occupancy_calculator import OccupancyRateCalculator
 from ...utils.cache_manager import cache_statistics, get_cache_manager
+from ...utils.numeric import to_float
 
 # 配置日志
 logger = logging.getLogger(__name__)
 
 # 创建统计路由器
 router = APIRouter(tags=["统计分析"])
-
-
-# 将可能为 None/Decimal/str 的值安全转换为 float
-def to_float(value: Any) -> float:
-    try:
-        if value is None:
-            return 0.0
-        # 避免 Decimal 与 float 混算
-        if hasattr(value, "__float__"):
-            return float(value)
-        # 处理字符串
-        if isinstance(value, str):
-            return float(value) if value.strip() else 0.0
-        # 直接数字类型
-        return float(value)
-    except Exception:
-        return 0.0
 
 
 def _calculate_occupancy_with_aggregation(
