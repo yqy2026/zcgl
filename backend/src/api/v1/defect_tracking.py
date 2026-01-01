@@ -688,7 +688,8 @@ async def get_defect_trends(
 
     # 获取每日趋势数据
     cursor.execute(
-        f"""  # nosec - B608: date_select set from validated group_by values above
+        # nosec - B608: date_select set from validated group_by values above
+        f"""
         SELECT
             {date_select},
             COUNT(*) as open_count,
