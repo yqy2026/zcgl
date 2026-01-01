@@ -41,7 +41,7 @@ async def upload_asset_attachments(
             raise ResourceNotFoundError("Asset", asset_id)
 
         # 创建附件目录 - 安全处理
-        from ..utils.file_security import (
+        from ...utils.file_security import (
             create_safe_upload_directory,
             validate_upload_file,
         )
