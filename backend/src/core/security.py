@@ -207,72 +207,6 @@ class FileValidator:
             )
 
         return True
-        """
-        验证文件类型
-
-        Args:
-            file: 上传的文件
-            allowed_types: 允许的文件类型列表
-
-        Returns:
-            bool: 验证是否通过
-        """
-        if not allowed_types:
-            allowed_types = [
-                "application/pdf",
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            ]
-
-        # 检查文件扩展名
-        file_ext = Path(file.filename or "").suffix.lower()
-        if file_ext not in [
-            ext
-            for exts in self.config.ALLOWED_MIME_TYPES.values()
-            for ext in exts.split(",")
-        ]:
-            raise BusinessValidationError(
-                f"不支持的文件扩展名: {file_ext}",
-                details={
-                    "allowed_extensions": list(self.config.ALLOWED_MIME_TYPES.values())
-                },
-            )
-
-        # 检查MIME类型 - 使用流式读取避免内存耗尽攻击
-        try:
-            # 保存当前位置
-            original_position = file.file.tell()
-
-            # 读取文件前1024字节用于MIME类型检测（限制读取大小）
-            file_content = file.file.read(1024)
-            file.file.seek(original_position)  # 重置文件指针到原始位置
-
-            detected_mime = magic.from_buffer(file_content, mime=True)
-
-            if detected_mime not in allowed_types:
-                raise BusinessValidationError(
-                    f"不支持的文件类型: {detected_mime}",
-                    details={"allowed_types": allowed_types},
-                )
-
-            # 验证扩展名与MIME类型匹配
-            expected_ext = self.config.ALLOWED_MIME_TYPES.get(detected_mime, "")
-            if expected_ext and file_ext not in expected_ext.split(","):
-                raise BusinessValidationError(
-                    f"文件扩展名与实际类型不匹配: {file_ext} != {expected_ext}",
-                    details={
-                        "detected_mime": detected_mime,
-                        "expected_ext": expected_ext,
-                    },
-                )
-
-        except Exception as e:
-            if isinstance(e, BusinessValidationError):
-                raise
-            raise BusinessValidationError(
-                f"文件类型验证失败: {str(e)}", details={"filename": file.filename}
-            )
-
-        return True
 
     def validate_file_size(self, file: UploadFile, max_size: int | None = None) -> bool:
         """
@@ -567,46 +501,6 @@ class RateLimiter:
         # 记录新请求
         request_queue.append(current_time)
         return True
-        """
-        检查请求频率限制
-
-        Args:
-            key: 限制键（如IP地址或用户ID）
-            max_requests: 最大请求数
-            time_window: 时间窗口（秒）
-
-        Returns:
-            bool: 是否允许请求
-        """
-        if max_requests is None:
-            max_requests = self.config.get("max_requests", 100)
-        if time_window is None:
-            time_window = self.config.get("time_window", 60)
-
-        current_time = time()
-        request_queue = self.requests[key]
-
-        # 清理过期的请求记录
-        while request_queue and request_queue[0] <= current_time - time_window:
-            request_queue.popleft()
-
-        # 检查是否超过限制
-        if len(request_queue) >= max_requests:
-            security_auditor.log_security_event(
-                event_type="RATE_LIMIT_EXCEEDED",
-                message=f"Rate limit exceeded for {key}: {len(request_queue)}/{max_requests}",
-                details={
-                    "key": key,
-                    "request_count": len(request_queue),
-                    "max_requests": max_requests,
-                    "time_window": time_window,
-                },
-            )
-            return False
-
-        # 记录新请求
-        request_queue.append(current_time)
-        return True
 
     def get_remaining_requests(
         self, key: str, max_requests: int | None = None, time_window: int | None = None
@@ -642,30 +536,6 @@ class RateLimiter:
             request_queue.popleft()
 
         return max(0, max_req - len(request_queue))
-        """
-        获取剩余请求数
-
-        Args:
-            key: 限制键
-            max_requests: 最大请求数
-            time_window: 时间窗口（秒）
-
-        Returns:
-            int: 剩余请求数
-        """
-        if max_requests is None:
-            max_requests = self.config.get("max_requests", 100)
-        if time_window is None:
-            time_window = self.config.get("time_window", 60)
-
-        current_time = time()
-        request_queue = self.requests[key]
-
-        # 清理过期的请求记录
-        while request_queue and request_queue[0] <= current_time - time_window:
-            request_queue.popleft()
-
-        return max(0, max_requests - len(request_queue))
 
 
 class SecurityMiddleware:
@@ -744,18 +614,6 @@ class SecurityMiddleware:
             max_size = 0
 
         return self.file_validator.validate_upload(file, allowed_types, max_size)
-        """
-        验证文件上传
-
-        Args:
-            file: 上传的文件
-            allowed_types: 允许的文件类型
-            max_size: 最大文件大小
-
-        Returns:
-            Dict: 验证结果
-        """
-        return self.file_validator.validate_upload(file, allowed_types or [], max_size)
 
 
 class RequestSecurity:
