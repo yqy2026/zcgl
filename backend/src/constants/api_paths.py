@@ -53,9 +53,9 @@ class AuthPaths:
     REFRESH = "/auth/refresh"
     ME = "/auth/me"
     VERIFY = "/auth/verify"
-    PASSWORD_CHANGE = "/auth/password/change"
-    PASSWORD_RESET = "/auth/password/reset"
-    PASSWORD_CONFIRM = "/auth/password/confirm"
+    PASSWORD_CHANGE = "/auth/password/change"  # nosec - B105: API path, not password
+    PASSWORD_RESET = "/auth/password/reset"  # nosec - B105: API path, not password
+    PASSWORD_CONFIRM = "/auth/password/confirm"  # nosec - B105: API path, not password
 
 
 # 用户管理API路径

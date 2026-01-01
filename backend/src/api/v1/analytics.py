@@ -749,7 +749,7 @@ class OccupancyTrendGenerator:
             # 生成缓存键
             cache_filters = {
                 "asset_count": len(assets),
-                "asset_ids_hash": hashlib.md5(
+                "asset_ids_hash": hashlib.md5(  # nosec - B324: Used for cache key, not security
                     ",".join(sorted(asset_ids)).encode()
                 ).hexdigest()[:8],
             }
@@ -1020,7 +1020,7 @@ class TimeDimensionTrendGenerator:
             asset_ids = [asset.id for asset in assets]
             cache_filters = {
                 "asset_count": len(assets),
-                "asset_ids_hash": hashlib.md5(
+                "asset_ids_hash": hashlib.md5(  # nosec - B324: Used for cache key, not security
                     ",".join(sorted(asset_ids)).encode()
                 ).hexdigest()[:8],
                 "trend_type": "quarterly",
@@ -1095,7 +1095,7 @@ class TimeDimensionTrendGenerator:
             asset_ids = [asset.id for asset in assets]
             cache_filters = {
                 "asset_count": len(assets),
-                "asset_ids_hash": hashlib.md5(
+                "asset_ids_hash": hashlib.md5(  # nosec - B324: Used for cache key, not security
                     ",".join(sorted(asset_ids)).encode()
                 ).hexdigest()[:8],
                 "trend_type": "yearly",
@@ -1283,7 +1283,7 @@ class CategoryTrendGenerator:
             asset_ids = [asset.id for asset in assets]
             cache_filters = {
                 "asset_count": len(assets),
-                "asset_ids_hash": hashlib.md5(
+                "asset_ids_hash": hashlib.md5(  # nosec - B324: Used for cache key, not security
                     ",".join(sorted(asset_ids)).encode()
                 ).hexdigest()[:8],
                 "trend_type": "category",

@@ -110,9 +110,9 @@ class JWTSecurityConfig:
         now = datetime.now(UTC)
 
         # 根据令牌类型设置过期时间
-        if token_type == "access":
+        if token_type == "access":  # nosec - B105: Token type name, not password
             expire_time = now + cls.DEFAULT_ACCESS_TOKEN_LIFETIME
-        elif token_type == "refresh":
+        elif token_type == "refresh":  # nosec - B105: Token type name, not password
             expire_time = now + cls.DEFAULT_REFRESH_TOKEN_LIFETIME
         else:
             expire_time = now + cls.DEFAULT_ACCESS_TOKEN_LIFETIME

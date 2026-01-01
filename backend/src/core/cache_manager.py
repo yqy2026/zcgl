@@ -447,7 +447,7 @@ class CacheManager:
 
         # 生成参数的哈希值
         params_str = json.dumps(sorted_kwargs, sort_keys=True, separators=(",", ":"))
-        params_hash = hashlib.md5(params_str.encode()).hexdigest()[:8]
+        params_hash = hashlib.md5(params_str.encode()).hexdigest()[:8]  # nosec - B324: Cache key, not security
 
         return f"{prefix}_{params_hash}"
 
