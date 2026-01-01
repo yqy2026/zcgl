@@ -40,7 +40,7 @@ export class AssetImportExportService {
             }
 
             return result.data!;
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -66,7 +66,7 @@ export class AssetImportExportService {
             }
 
             return result.data!;
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -88,7 +88,7 @@ export class AssetImportExportService {
             }
 
             return result.data!;
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -110,7 +110,7 @@ export class AssetImportExportService {
             }
 
             return result.data || [];
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -129,7 +129,7 @@ export class AssetImportExportService {
             if (!result.success) {
                 throw new Error(`删除导出记录失败: ${result.error}`);
             }
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -170,7 +170,7 @@ export class AssetImportExportService {
             }
 
             return result.data!;
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -197,7 +197,7 @@ export class AssetImportExportService {
             }
 
             return result.data!;
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -227,7 +227,7 @@ export class AssetImportExportService {
             link.click();
             document.body.removeChild(link);
             window.URL.revokeObjectURL(url);
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -249,7 +249,7 @@ export class AssetImportExportService {
             }
 
             return result.data!;
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -271,7 +271,7 @@ export class AssetImportExportService {
             }
 
             return result.data || [];
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -290,7 +290,7 @@ export class AssetImportExportService {
             if (!result.success) {
                 throw new Error(`删除导入记录失败: ${result.error}`);
             }
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }

@@ -151,7 +151,7 @@ export interface DashboardWidget {
   type: 'statistic' | 'chart' | 'table'
   size: 'small' | 'medium' | 'large'
   position: { x: number; y: number; width: number; height: number }
-  config: Record<string, any>
+  config: Record<string, unknown>
 }
 
 export interface AnalyticsSettings {

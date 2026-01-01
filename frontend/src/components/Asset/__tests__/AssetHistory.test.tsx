@@ -181,10 +181,10 @@ vi.mock('@tanstack/react-query', () => ({
 
 // Mock format utilities
 vi.mock('@/utils/format', () => ({
-  formatDateTime: (date: string) => '2024-01-01 12:00:00',
-  formatDate: (date: string, format?: string) => '2024-01-01',
-  getChangeTypeLabel: (type: string) => type,
-  getChangeTypeColor: (type: string) => 'blue',
+  formatDateTime: (_date: string) => '2024-01-01 12:00:00',
+  formatDate: (_date: string, _format?: string) => '2024-01-01',
+  getChangeTypeLabel: (_type: string) => 'type',
+  getChangeTypeColor: (_type: string) => 'blue',
 }))
 
 // Mock services
@@ -198,7 +198,7 @@ describe('AssetHistory 组件测试', () => {
     vi.clearAllMocks()
   })
 
-  const mockHistoryData = [
+  const _mockHistoryData = [
     {
       id: '1',
       asset_id: 'asset-1',
@@ -227,7 +227,7 @@ describe('AssetHistory 组件测试', () => {
     },
   ]
 
-  const mockDetailData = {
+  const _mockDetailData = {
     id: '1',
     asset_id: 'asset-1',
     change_type: 'create',

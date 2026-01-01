@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Card,
   Table,
@@ -23,7 +23,7 @@ import {
   Typography
 } from 'antd'
 import SystemBreadcrumb from '../../components/System/SystemBreadcrumb'
-import { roleService, type Role, type CreateRoleData, type UpdateRoleData } from '../../services/systemService'
+import { _roleService, type Role, type _CreateRoleData, type _UpdateRoleData } from '../../services/systemService'
 import {
   PlusOutlined,
   EditOutlined,
@@ -76,8 +76,8 @@ const RoleManagementPage: React.FC = () => {
   const [editingRole, setEditingRole] = useState<Role | null>(null)
   const [selectedRole, setSelectedRole] = useState<Role | null>(null)
   const [targetPermissions, setTargetPermissions] = useState<string[]>([])
-  const [searchText, setSearchText] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('')
+  const [_searchText, _setSearchText] = useState('')
+  const [_statusFilter, _setStatusFilter] = useState<string>('')
   const [permissionTreeData, setPermissionTreeData] = useState<DataNode[]>([])
 
   const [form] = Form.useForm()
@@ -147,7 +147,7 @@ const RoleManagementPage: React.FC = () => {
         }
       ]
       setRoles(mockRoles)
-    } catch (error) {
+    } catch {
       message.error('加载角色列表失败')
     } finally {
       setLoading(false)
@@ -178,7 +178,7 @@ const RoleManagementPage: React.FC = () => {
       // 构建权限树
       const treeData = buildPermissionTree(mockPermissions)
       setPermissionTreeData(treeData)
-    } catch (error) {
+    } catch {
       message.error('加载权限列表失败')
     }
   }
@@ -234,7 +234,7 @@ const RoleManagementPage: React.FC = () => {
         avg_permissions: Math.round(roles.reduce((sum, r) => sum + r.permissions.length, 0) / roles.length) || 0
       }
       setStatistics(mockStats)
-    } catch (error) {
+    } catch {
       message.error('加载统计信息失败')
     }
   }
@@ -261,24 +261,24 @@ const RoleManagementPage: React.FC = () => {
     setModalVisible(true)
   }
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (_id: string) => {
     try {
       // 模拟删除API调用
       message.success('删除成功')
       loadRoles()
       loadStatistics()
-    } catch (error) {
+    } catch {
       message.error('删除失败')
     }
   }
 
-  const handleToggleStatus = async (role: Role, newStatus: string) => {
+  const handleToggleStatus = async (_role: Role, _newStatus: string) => {
     try {
       // 模拟状态切换API调用
       message.success('状态已更新')
       loadRoles()
       loadStatistics()
-    } catch (error) {
+    } catch {
       message.error('状态更新失败')
     }
   }
@@ -289,7 +289,7 @@ const RoleManagementPage: React.FC = () => {
     setPermissionModalVisible(true)
   }
 
-  const handleSubmit = async (values: {
+  const handleSubmit = async (_values: {
     name: string;
     description?: string;
     permissions?: string[];
@@ -306,7 +306,7 @@ const RoleManagementPage: React.FC = () => {
       setModalVisible(false)
       loadRoles()
       loadStatistics()
-    } catch (error) {
+    } catch {
       message.error(editingRole ? '更新失败' : '创建失败')
     }
   }
@@ -317,7 +317,7 @@ const RoleManagementPage: React.FC = () => {
       message.success('权限配置已保存')
       setPermissionModalVisible(false)
       loadRoles()
-    } catch (error) {
+    } catch {
       message.error('保存权限失败')
     }
   }

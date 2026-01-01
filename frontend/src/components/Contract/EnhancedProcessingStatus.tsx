@@ -13,7 +13,6 @@ import {
   Statistic,
   Alert,
   Space,
-  Divider,
   Button,
   Timeline,
   Badge,
@@ -35,7 +34,7 @@ import type {
   ProcessingOptions
 } from '../../types/enhancedPdfImport';
 
-const { Text, Paragraph } = Typography;
+const { Text } = Typography;
 
 interface ProcessingStep {
   step: string;
@@ -71,18 +70,6 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
 }) => {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [_autoRefresh, _setAutoRefresh] = useState(true);
-
-  // 增强版处理步骤映射
-  const enhancedStepMap: Record<string, string> = {
-    'pdf_conversion': 'PDF转换',
-    'enhanced_text_extraction': '增强版文本提取',
-    'table_analysis': '表格分析',
-    'enhanced_info_extraction': '增强版信息提取',
-    'multi_engine_fusion': '多引擎融合',
-    'semantic_validation': '语义验证',
-    'final_validation': '最终验证',
-    'ready_for_review': '等待审核'
-  };
 
   // 兼容旧版步骤映射
   const stepMap: Record<string, string> = {

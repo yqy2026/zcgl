@@ -1,5 +1,5 @@
 import React from 'react'
-import { Card, Row, Col, Progress, Typography, Space } from 'antd'
+import { Row, Col, Progress, Typography, Space } from 'antd'
 
 const { Text, Title } = Typography
 

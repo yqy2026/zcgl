@@ -180,7 +180,7 @@ export class DataPreloader {
           }, 1000)
         }
       }
-    } catch (error) {
+    } catch {
       console.warn('Data preloading failed:', error)
     } finally {
       this.isPreloading = false

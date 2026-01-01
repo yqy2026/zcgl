@@ -10,7 +10,6 @@ type DataValue = string | number | boolean | null | undefined | DataObject | Dat
 interface DataObject {
   [key: string]: DataValue;
 }
-interface DataArray extends Array<DataValue> {}
 
 // 需要Decimal转换的字段列表
 const DECIMAL_FIELDS = [

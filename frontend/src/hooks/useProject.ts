@@ -9,7 +9,6 @@ import type {
   Project,
   ProjectCreate,
   ProjectUpdate,
-  ProjectListResponse,
   ProjectStatisticsResponse,
   ProjectDropdownOption
 } from '@/types/project'
@@ -43,7 +42,7 @@ export const useProjectOptions = (isActive: boolean = true): UseProjectOptionsRe
       try {
         const response = await projectService.getProjectOptions(isActive)
         return response
-      } catch (err) {
+      } catch {
         console.error('获取项目选项失败:', err)
         throw err
       }
@@ -84,7 +83,7 @@ export const useProjectDetail = (id?: string): UseProjectDetailResult => {
       try {
         const response = await projectService.getProject(id)
         return response
-      } catch (err) {
+      } catch {
         console.error('获取项目详情失败:', err)
         throw err
       }
@@ -131,7 +130,7 @@ export const useProjectList = (params: ProjectQueryParams = {}): UseProjectListR
       try {
         const response = await projectService.getProjects(params)
         return response
-      } catch (err) {
+      } catch {
         console.error('获取项目列表失败:', err)
         throw err
       }
@@ -147,7 +146,7 @@ export const useProjectList = (params: ProjectQueryParams = {}): UseProjectListR
     current: data?.page || 1,
     pageSize: data?.size || 10,
     total: data?.total || 0,
-    onChange: (page: number, size: number) => {
+    onChange: (_page: number, _size: number) => {
       // 这里可以触发重新查询
       refetch()
     }
@@ -181,7 +180,7 @@ export const useProjectStatistics = (): UseProjectStatisticsResult => {
       try {
         const response = await projectService.getProjectStatistics()
         return response
-      } catch (err) {
+      } catch {
         console.error('获取项目统计失败:', err)
         throw err
       }

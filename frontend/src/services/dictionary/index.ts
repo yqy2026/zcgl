@@ -37,7 +37,6 @@ import { baseDictionaryService } from './base'
 import { dictionaryManagerService } from './manager'
 import { enhancedApiClient } from '@/api/client'
 import { ApiErrorHandler } from '../../utils/responseExtractor'
-import type { DictionaryConfig } from './config'
 
 /**
  * 字典统计信息接口
@@ -115,7 +114,7 @@ class UnifiedDictionaryService {
     try {
       const types = baseDictionaryService.getAvailableTypes();
       return types.map(config => config.code);
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('获取字典类型失败:', enhancedError.message);
       return [];
@@ -161,7 +160,7 @@ class UnifiedDictionaryService {
           timestamp: new Date().toISOString()
         };
       }
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       return {
         success: false,
@@ -198,7 +197,7 @@ class UnifiedDictionaryService {
         operationType: 'deleteType',
         timestamp: new Date().toISOString()
       };
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       return {
         success: false,
@@ -245,7 +244,7 @@ class UnifiedDictionaryService {
         operationType: 'addValue',
         timestamp: new Date().toISOString()
       };
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       return {
         success: false,
@@ -282,7 +281,7 @@ class UnifiedDictionaryService {
           const values = await this.getEnumFieldValues(type.code);
           totalValues += values.length;
         }
-      } catch (error) {
+      } catch {
         console.warn('计算总数值时出错:', error);
       }
 
@@ -305,7 +304,7 @@ class UnifiedDictionaryService {
           errorRate: types.status === 'rejected' || usageStats.status === 'rejected' ? 1 : 0
         }
       };
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('获取字典统计失败:', enhancedError.message);
 
@@ -349,7 +348,7 @@ class UnifiedDictionaryService {
       }
 
       throw new Error(result.error || '获取系统字典失败');
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error(`获取系统字典失败 [${dictType}]:`, enhancedError.message);
 
@@ -388,7 +387,7 @@ class UnifiedDictionaryService {
       }
 
       return [];
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error(`通过类型代码获取枚举值失败 [${typeCode}]:`, enhancedError.message);
       return [];
@@ -423,7 +422,7 @@ class UnifiedDictionaryService {
         operationType: 'createEnumValue',
         timestamp: new Date().toISOString()
       };
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       return {
         success: false,
@@ -471,7 +470,7 @@ class UnifiedDictionaryService {
         operationType: 'updateEnumValue',
         timestamp: new Date().toISOString()
       };
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       return {
         success: false,
@@ -508,7 +507,7 @@ class UnifiedDictionaryService {
         operationType: 'deleteEnumValue',
         timestamp: new Date().toISOString()
       };
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       return {
         success: false,
@@ -559,7 +558,7 @@ class UnifiedDictionaryService {
       });
 
       return result;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       return {
         success: false,
@@ -646,7 +645,7 @@ class UnifiedDictionaryService {
         } else {
           failedCount++;
         }
-      } catch (error) {
+      } catch {
         const enhancedError = ApiErrorHandler.handleError(error);
         results.push({
           success: false,
@@ -733,14 +732,14 @@ class UnifiedDictionaryService {
                 }))
               });
             }
-          } catch (error) {
+          } catch {
             console.warn(`搜索字典类型 ${type.code} 时出错:`, error);
           }
         }
       }
 
       return results;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('搜索字典值失败:', enhancedError.message);
       return [];
@@ -753,7 +752,6 @@ class UnifiedDictionaryService {
   async exportDictionaryData(dictType?: string, format: 'json' | 'excel' = 'json'): Promise<Blob> {
     try {
       let data: any;
-      let filename: string;
 
       if (dictType) {
         // 导出特定类型的字典数据
@@ -763,7 +761,7 @@ class UnifiedDictionaryService {
           values: values,
           exportTime: new Date().toISOString()
         };
-        filename = `dictionary_${dictType}_${new Date().toISOString().split('T')[0]}.${format === 'excel' ? 'xlsx' : 'json'}`;
+        const _filename = `dictionary_${dictType}_${new Date().toISOString().split('T')[0]}.${format === 'excel' ? 'xlsx' : 'json'}`;
       } else {
         // 导出所有字典数据
         const types = await this.getEnumFieldTypes();
@@ -780,7 +778,7 @@ class UnifiedDictionaryService {
         }
 
         data = allData;
-        filename = `dictionary_all_${new Date().toISOString().split('T')[0]}.${format === 'excel' ? 'xlsx' : 'json'}`;
+        const _filename = `dictionary_all_${new Date().toISOString().split('T')[0]}.${format === 'excel' ? 'xlsx' : 'json'}`;
       }
 
       if (format === 'json') {
@@ -789,7 +787,7 @@ class UnifiedDictionaryService {
         // 使用内置的Excel导出功能
         return await this.exportEnumFieldData(dictType || 'all');
       }
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(`导出字典数据失败: ${enhancedError.message}`);
     }
@@ -828,7 +826,7 @@ class UnifiedDictionaryService {
         message: `缓存命中: ${(baseStats.cacheHitRate * 100).toFixed(1)}%`,
         responseTime
       });
-    } catch (error) {
+    } catch {
       checks.push({
         name: 'base_dictionary_service',
         status: 'fail',
@@ -849,7 +847,7 @@ class UnifiedDictionaryService {
         message: `已加载${types.length}个枚举类型`,
         responseTime
       });
-    } catch (error) {
+    } catch {
       checks.push({
         name: 'enum_field_manager',
         status: 'fail',

@@ -22,6 +22,9 @@ import {
 } from '../types/organization';
 import { enhancedApiClient } from '@/api/client';
 import { ApiErrorHandler } from '../utils/responseExtractor';
+import { createLogger } from '../utils/logger';
+
+const logger = createLogger('OrganizationService');
 
 // 树节点接口
 interface TreeNode {
@@ -180,13 +183,13 @@ class OrganizationService {
       );
 
       if (!result.success) {
-        throw new Error(`获取组织树失败: ${result.error}`);
+        throw new Error(`获取组织树失�? ${result.error}`);
       }
 
       return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.error('获取组织树失败:', enhancedError.message);
+      console.error('获取组织树失�?', enhancedError.message);
       return [];
     }
   }
@@ -210,7 +213,7 @@ class OrganizationService {
       );
 
       if (!result.success) {
-        throw new Error(`获取子组织失败: ${result.error}`);
+        throw new Error(`获取子组织失�? ${result.error}`);
       }
 
       return result.data!;
@@ -221,8 +224,7 @@ class OrganizationService {
   }
 
   /**
-   * 获取组织到根节点的路径
-   */
+   * 获取组织到根节点的路�?   */
   async getOrganizationPath(id: string): Promise<OrganizationPath> {
     try {
       const result = await enhancedApiClient.get<Organization[]>(
@@ -305,7 +307,7 @@ class OrganizationService {
     }
   }
 
-  // ==================== 统计和分析 ====================
+  // ==================== 统计和分�?====================
 
   /**
    * 获取组织统计信息
@@ -531,8 +533,7 @@ class OrganizationService {
       } else {
         const parent = organizationMap.get(org.parent_id);
         if (parent) {
-          // 找到父节点并添加子节点
-          this.addChildToTreeNode(treeData, org.parent_id, treeNode);
+          // 找到父节点并添加子节�?          this.addChildToTreeNode(treeData, org.parent_id, treeNode);
         }
       }
     });
@@ -541,8 +542,7 @@ class OrganizationService {
   }
 
   /**
-   * 向树节点添加子节点
-   */
+   * 向树节点添加子节�?   */
   private addChildToTreeNode(treeData: TreeNode[], parentId: string, childNode: TreeNode): boolean {
     for (const node of treeData) {
       if (node.key === parentId) {
@@ -578,8 +578,7 @@ class OrganizationService {
   }
 
   /**
-   * 检查是否可以移动组织（避免循环引用）
-   */
+   * 检查是否可以移动组织（避免循环引用�?   */
   canMoveOrganization(
     organizationId: string,
     targetParentId: string,
@@ -627,8 +626,7 @@ class OrganizationService {
   }
 
   /**
-   * 获取组织的所有子组织ID（递归）
-   */
+   * 获取组织的所有子组织ID（递归�?   */
   getAllChildOrganizationIds(organizationId: string, allOrganizations: Organization[]): string[] {
     const childIds: string[] = [];
     const children = allOrganizations.filter(org => org.parent_id === organizationId);
@@ -643,8 +641,7 @@ class OrganizationService {
   }
 
   /**
-   * 验证组织编码唯一性
-   */
+   * 验证组织编码唯一�?   */
   async validateOrganizationCode(code: string, excludeId?: string): Promise<{ exists: boolean }> {
     try {
       const organizations = await this.getOrganizations({ limit: 1000 });
@@ -654,7 +651,7 @@ class OrganizationService {
       return { exists: !!existingOrg };
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.warn('验证组织编码失败:', enhancedError.message);
+      logger.warn('验证组织编码失败', { error: enhancedError.message });
       return { exists: false };
     }
   }
@@ -668,7 +665,7 @@ class OrganizationService {
       return organizations.filter(org => !org.parent_id);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.warn('获取根级组织失败:', enhancedError.message);
+      logger.warn('获取根级组织失败', { error: enhancedError.message });
       return [];
     }
   }
@@ -682,7 +679,7 @@ class OrganizationService {
       return organizations.find(org => org.name === name) || null;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.warn('根据名称查找组织失败:', enhancedError.message);
+      logger.warn('根据名称查找组织失败', { error: enhancedError.message });
       return null;
     }
   }

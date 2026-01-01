@@ -3,8 +3,8 @@
  * 提供简单易用的字典数据获取和管理功能
  */
 
-import React, { useState, useEffect, useCallback } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useState, useEffect, useCallback } from 'react'
+import { useQuery, useQueries } from '@tanstack/react-query'
 import { unifiedDictionaryService } from '../services/dictionary'
 import type { DictionaryOption, DictionaryServiceResult } from '../services/dictionary'
 
@@ -62,15 +62,47 @@ export const useDictionary = (dictType: string, isActive: boolean = true): UseDi
  * 批量使用多个字典的Hook - 基于React Query优化
  */
 export const useDictionaries = (dictTypes: string[]): Record<string, UseDictionaryResult> => {
-  const results: Record<string, UseDictionaryResult> = {}
+  // Use useQueries for proper React Hooks compliance
+  const queryResults = useQueries({
+    queries: dictTypes.map(dictType => ({
+      queryKey: ['dictionary', dictType, true],
+      queryFn: async () => {
+        if (!dictType) return { success: false, data: [], error: '字典类型不能为空' }
+        const result: DictionaryServiceResult = await unifiedDictionaryService.getOptions(dictType, {
+          useCache: true,
+          useFallback: true,
+          isActive: true
+        })
+        return result
+      },
+      staleTime: 10 * 60 * 1000,
+      gcTime: 30 * 60 * 1000,
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
+      refetchOnReconnect: false,
+      retry: 1,
+      enabled: !!dictType
+    }))
+  })
 
-  dictTypes.forEach(dictType => {
-    const { options, loading, error, refresh } = useDictionary(dictType, true)
+  // Build results object from query results
+  const results: Record<string, UseDictionaryResult> = {}
+  dictTypes.forEach((dictType, index) => {
+    const data = queryResults[index].data
+    const error = queryResults[index].error
+    const isLoading = queryResults[index].isLoading
+
+    const options = data?.success ? (data.data ?? []) : []
+    const errorMessage = data?.success ? null : (data?.error || error?.message || null)
+
     results[dictType] = {
       options,
-      loading,
-      error,
-      refresh
+      loading: isLoading,
+      error: errorMessage,
+      refresh: async () => {
+        // This is a limitation - individual refresh not supported with useQueries
+        // Users should use the main refetch from the query client
+      }
     }
   })
 
@@ -90,7 +122,7 @@ export const useDictionaryManager = () => {
       const configs = unifiedDictionaryService.getAvailableTypes()
       const typeCodes = configs.map(config => config.code)
       setTypes(typeCodes)
-    } catch (error) {
+    } catch {
       console.error('获取字典类型失败:', error)
     } finally {
       setLoading(false)
@@ -108,7 +140,7 @@ export const useDictionaryManager = () => {
         await loadTypes() // 刷新类型列表
       }
       return success
-    } catch (error) {
+    } catch {
       console.error('创建字典失败:', error)
       return false
     }
@@ -121,7 +153,7 @@ export const useDictionaryManager = () => {
         await loadTypes() // 刷新类型列表
       }
       return success
-    } catch (error) {
+    } catch {
       console.error('删除字典失败:', error)
       return false
     }

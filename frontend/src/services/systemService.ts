@@ -241,7 +241,7 @@ export const logService = {
   },
 
   // 获取操作日志统计
-  async getLogStatistics(params?: {
+  async getLogStatistics(_params?: {
     start_date?: string
     end_date?: string
   }) {

@@ -3,7 +3,7 @@
  */
 
 import React, { Suspense } from 'react';
-import { Card, Spin, Row, Col, Typography } from 'antd';
+import { Spin, Row, Col, Typography } from 'antd';
 
 // 动态导入项目列表组件
 const ProjectList = React.lazy(() => import('@/components/Project/ProjectList'));

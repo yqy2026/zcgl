@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { message } from 'antd'
 import { AuthService } from '../services/authService'
-import type { User, Permission, LoginCredentials } from '../types/auth'
+import type { User, LoginCredentials } from '../types/auth'
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(AuthService.getLocalUser())
@@ -14,7 +14,7 @@ export const useAuth = () => {
       try {
         if (AuthService.isAuthenticated()) {
           const currentUser = AuthService.getLocalUser()
-          const permissions = AuthService.getLocalPermissions()
+          const _permissions = AuthService.getLocalPermissions()
 
           setUser(currentUser)
           // 设置API请求头
@@ -23,7 +23,7 @@ export const useAuth = () => {
             // 这里可以设置API默认的Authorization header
           }
         }
-      } catch (error) {
+      } catch {
         console.error('初始化认证状态失败:', error)
         // 清除可能损坏的本地存储
         AuthService.logout()
@@ -79,7 +79,7 @@ export const useAuth = () => {
         const currentUser = await AuthService.getCurrentUser()
         setUser(currentUser)
       }
-    } catch (error) {
+    } catch {
       console.error('刷新用户信息失败:', error)
       // 如果刷新失败，尝试刷新token
       try {

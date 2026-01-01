@@ -88,7 +88,7 @@ const OptimizedAssetImport: React.FC = () => {
       window.URL.revokeObjectURL(url);
 
       message.success("模板下载成功");
-    } catch (_error) {
+    } catch {
       message.error("模板下载失败");
     }
   };

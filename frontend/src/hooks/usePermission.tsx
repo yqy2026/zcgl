@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
 import { message } from 'antd'
-import { userService } from '../services/systemService'
 
 export interface Permission {
   resource: string
@@ -59,7 +58,7 @@ const usePermission = () => {
       }
 
       setUserPermissions(userPermissionsData)
-    } catch (error) {
+    } catch {
       console.error('加载用户权限失败:', error)
       message.error('加载权限信息失败')
     } finally {

@@ -41,7 +41,6 @@ import {
   BusinessModelOptions,
   TenantTypeOptions,
 } from "../../utils/enumHelpers";
-import { assetService } from "../../services/assetService";
 import { rentContractService } from "../../services/rentContractService";
 import type { RentContract } from "../../types/rentContract";
 import type { UploadFile } from "antd/es/upload/interface";
@@ -71,7 +70,7 @@ const AssetForm: React.FC<AssetFormProps> = ({
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [terminalContractFileList, setTerminalContractFileList] = useState<UploadFile[]>([]);
   const [rentContracts, setRentContracts] = useState<RentContract[]>([]);
-  const [selectedContractId, setSelectedContractId] = useState<string>("");
+  const [_selectedContractId, _setSelectedContractId] = useState<string>("");
   const [loadingContracts, setLoadingContracts] = useState(false);
 
   // 批量加载所需的字典数据
@@ -179,7 +178,7 @@ const AssetForm: React.FC<AssetFormProps> = ({
     try {
       const response = await rentContractService.getAssetContracts(assetId);
       setRentContracts(response);
-    } catch (error) {
+    } catch {
       message.error("加载租赁合同数据失败");
       console.error("加载租赁合同数据失败:", error);
     } finally {

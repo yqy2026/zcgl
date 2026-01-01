@@ -152,7 +152,7 @@ export const useRouteCacheState = () => {
       const component = await loader()
       cache.set(key, component)
       return component
-    } catch (error) {
+    } catch {
       console.error(`Failed to preload route: ${key}`, error)
       throw error
     }

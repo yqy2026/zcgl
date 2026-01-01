@@ -42,7 +42,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
       try {
         const response = await ownershipService.getOwnershipOptions(true);
         setOwnerships(response);
-      } catch (error) {
+      } catch {
         console.error('获取权属方列表失败:', error);
         message.error('获取权属方列表失败');
       }

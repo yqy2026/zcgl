@@ -7,7 +7,6 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   Upload,
   Button,
-  Progress,
   Card,
   Space,
   Typography,
@@ -25,7 +24,6 @@ import {
   Badge
 } from 'antd';
 import {
-  UploadOutlined,
   CloudUploadOutlined,
   CheckCircleOutlined,
   ExclamationCircleOutlined,
@@ -44,7 +42,7 @@ import type {
 } from '../../services/pdfImportService';
 
 const { Dragger } = Upload;
-const { Title, Paragraph } = Typography;
+const { Paragraph } = Typography;
 
 interface EnhancedPDFImportUploaderProps {
   onUploadSuccess: (sessionId: string, fileInfo: UploadFile) => void;
@@ -120,7 +118,7 @@ const EnhancedPDFImportUploader: React.FC<EnhancedPDFImportUploaderProps> = ({
     try {
       const info = await pdfImportService.getEnhancedSystemInfo();
       setSystemInfo(info);
-    } catch (_error) {
+    } catch {
       // Failed to get system info
     }
   };
@@ -324,7 +322,7 @@ const EnhancedPDFImportUploader: React.FC<EnhancedPDFImportUploaderProps> = ({
             }
           }
         }
-      } catch (error) {
+      } catch {
         console.error('获取进度失败:', error);
       }
     }, 2000);

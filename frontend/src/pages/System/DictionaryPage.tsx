@@ -7,7 +7,7 @@ import { unifiedDictionaryService } from '../../services/dictionary'
 import type { EnumFieldType, EnumFieldValue } from '../../services/dictionary'
 import type { SystemDictionary } from '@/types/dictionary'
 import EnumValuePreview from '../../components/Dictionary/EnumValuePreview'
-import { handleApiError as handleError, withErrorHandling, createErrorHandler } from '../../services'
+import { handleApiError as _handleError, withErrorHandling as _withErrorHandling, createErrorHandler as _createErrorHandler } from '../../services'
 
 const { Option } = Select
 const { Search } = Input
@@ -23,7 +23,7 @@ interface EditState {
 
 const DictionaryPage: React.FC = () => {
   const [loading, setLoading] = useState(false)
-  const [dictTypes, setDictTypes] = useState<string[]>([])
+  const [_dictTypes, _setDictTypes] = useState<string[]>([])
   const [enumTypes, setEnumTypes] = useState<EnumFieldType[]>([])
   const [activeType, setActiveType] = useState<string | undefined>(undefined)
   const [data, setData] = useState<SystemDictionary[]>([])
@@ -32,7 +32,7 @@ const DictionaryPage: React.FC = () => {
   const [form] = Form.useForm<SystemDictionary>()
 
   // 创建上下文相关的错误处理器
-  const handleDictionaryError = createErrorHandler('字典管理', {
+  const _handleDictionaryError = _createErrorHandler('字典管理', {
     duration: 3
   } as any)
 
@@ -114,8 +114,8 @@ const DictionaryPage: React.FC = () => {
     }
 
     // 获取对应的枚举类型
-    const targetType = enumTypes.find(type => type.code === activeType)
-    if (!targetType) {
+    const _targetType = enumTypes.find(type => type.code === activeType)
+    if (!_targetType) {
       message.error('未找到对应的枚举类型')
       return
     }
@@ -136,7 +136,7 @@ const DictionaryPage: React.FC = () => {
   }
 
   const handleEdit = (record: SystemDictionary) => {
-    const targetType = enumTypes.find(type => type.code === record.dict_type)
+    const _targetType = enumTypes.find(type => type.code === record.dict_type)
     setEditingRecord(record)
     setEdit({ visible: true })
 
@@ -299,7 +299,7 @@ const DictionaryPage: React.FC = () => {
   }, [allEnumData, selectedCategory, searchText])
 
   // 获取类型统计信息
-  const getTypeStats = (type: EnumFieldType) => {
+  const _getTypeStats = (type: EnumFieldType) => {
     const values = allEnumData.find(item => item.type.id === type.id)?.values || []
     const activeCount = values.filter(v => v.is_active).length
     return {

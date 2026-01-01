@@ -3,7 +3,7 @@
  */
 
 import React, { Suspense } from 'react';
-import { Card, Spin, Row, Col, Typography } from 'antd';
+import { Spin, Row, Col, Typography } from 'antd';
 
 // 动态导入权属方列表组件
 const OwnershipList = React.lazy(() => import('@/components/Ownership/OwnershipList'));

@@ -3,10 +3,9 @@
  * 支持运行时动态注册路由、模块化路由和权限路由
  */
 
-import React, { createContext, useContext, useEffect, useState, ReactNode, Suspense } from 'react'
+import React, { createContext, useContext, useState, ReactNode, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { PermissionGuard } from '../System/PermissionGuard'
-import { PERMISSIONS } from '../../hooks/usePermission'
 
 interface DynamicRoute {
   id: string
@@ -175,7 +174,7 @@ class DynamicRouteLoader {
       })
 
       return routes
-    } catch (error) {
+    } catch {
       console.error(`Failed to load route module: ${modulePath}`, error)
       throw error
     }
@@ -222,7 +221,7 @@ class DynamicRouteLoader {
       // 预加载组件
       await route.component
       // Route preloaded
-    } catch (error) {
+    } catch {
       console.warn(`Failed to preload route: ${route.id}`, error)
     }
   }
@@ -288,7 +287,7 @@ class DynamicRouteLoader {
     try {
       await route.component
       return route
-    } catch (error) {
+    } catch {
       console.error(`Failed to load route component: ${routeId}`, error)
       throw error
     }
@@ -328,7 +327,7 @@ export const DynamicRouteProvider: React.FC<DynamicRouteProviderProps> = ({
   onRouteError
 }) => {
   const [loader] = useState(() => new DynamicRouteLoader(config))
-  const [loadingRoutes, setLoadingRoutes] = useState<Set<string>>(new Set())
+  const [_loadingRoutes, _setLoadingRoutes] = useState<Set<string>>(new Set())
 
   const registerRoute = (route: DynamicRoute) => {
     loader.registerRoute(route)
@@ -349,7 +348,7 @@ export const DynamicRouteProvider: React.FC<DynamicRouteProviderProps> = ({
     try {
       const routes = await loader.loadRouteModule(modulePath)
       return routes
-    } catch (error) {
+    } catch {
       onRouteError?.(error as Error, modulePath)
       throw error
     } finally {
@@ -565,7 +564,7 @@ export const RouteModuleLoader = () => {
       const routes = await loadRouteModule(modulePath)
       setLoadedModules(prev => [...prev, modulePath])
       return routes
-    } catch (error) {
+    } catch {
       console.error('Failed to load route module:', error)
       throw error
     } finally {

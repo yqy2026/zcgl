@@ -1,15 +1,13 @@
 import React, { createContext, useCallback, useContext, useState, useRef } from 'react'
-import { Alert, Button, Modal, Typography, Space, Card, Collapse } from 'antd'
+import { Alert, Button, Modal, Typography, Space, Collapse } from 'antd'
 import {
-  ExclamationCircleOutlined,
-  ReloadOutlined,
   CloseOutlined,
   InfoCircleOutlined,
   WarningOutlined,
   CheckCircleOutlined
 } from '@ant-design/icons'
 
-const { Text, Title } = Typography
+const { Text } = Typography
 const { Panel } = Collapse
 
 export type ErrorType = 'error' | 'warning' | 'info' | 'success'

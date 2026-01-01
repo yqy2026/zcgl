@@ -15,7 +15,6 @@ import {
   message,
   Modal,
   Tooltip,
-  Badge,
   Row,
   Col,
   Statistic,
@@ -30,9 +29,7 @@ import {
   ClockCircleOutlined,
   ExclamationCircleOutlined,
   DollarOutlined,
-  FileExcelOutlined,
-  SyncOutlined,
-  CalendarOutlined
+  FileExcelOutlined
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
@@ -48,7 +45,6 @@ import { useFormat } from '../../utils/format';
 const { Title } = Typography;
 const { Search } = Input;
 const { Option } = Select;
-const { RangePicker } = DatePicker;
 const { Text } = Typography;
 
 const RentLedgerPage: React.FC = () => {
@@ -106,7 +102,7 @@ const RentLedgerPage: React.FC = () => {
           pages: response.pages || 0,
         },
       }));
-    } catch (error) {
+    } catch {
       console.error('加载台账列表失败:', error);
       message.error(`加载台账列表失败: ${error instanceof Error ? error.message : '未知错误'}`);
       setState(prev => ({ ...prev, loading: false, ledgers: [] }));
@@ -118,7 +114,7 @@ const RentLedgerPage: React.FC = () => {
     try {
       const stats = await rentContractService.getRentStatistics();
       setStatistics(stats);
-    } catch (error) {
+    } catch {
       console.error('加载统计数据失败:', error);
     }
   };
@@ -137,7 +133,7 @@ const RentLedgerPage: React.FC = () => {
 
       setAssets(assets);
       setOwnerships(ownerships);
-    } catch (error) {
+    } catch {
       console.error('加载参考数据失败:', error);
       message.error(`加载参考数据失败: ${error instanceof Error ? error.message : '未知错误'}`);
     }
@@ -192,7 +188,7 @@ const RentLedgerPage: React.FC = () => {
       message.success('更新成功');
       loadLedgers();
       loadStatistics();
-    } catch (error) {
+    } catch {
       message.error('更新失败');
     }
   };
@@ -216,7 +212,7 @@ const RentLedgerPage: React.FC = () => {
       setState(prev => ({ ...prev, showBatchModal: false, selectedLedgers: [] }));
       loadLedgers();
       loadStatistics();
-    } catch (error) {
+    } catch {
       message.error('批量更新失败');
     }
   };
@@ -234,7 +230,7 @@ const RentLedgerPage: React.FC = () => {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
       message.success('导出成功');
-    } catch (error) {
+    } catch {
       message.error('导出失败');
     }
   };

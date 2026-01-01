@@ -12,8 +12,8 @@ export interface EnumFieldType {
   is_multiple: boolean;
   is_hierarchical: boolean;
   default_value?: string;
-  validation_rules?: Record<string, any>;
-  display_config?: Record<string, any>;
+  validation_rules?: Record<string, unknown>;
+  display_config?: Record<string, unknown>;
   status: 'active' | 'inactive';
   is_deleted: boolean;
   created_at: string;
@@ -36,7 +36,7 @@ export interface EnumFieldValue {
   sort_order: number;
   color?: string;
   icon?: string;
-  extra_properties?: Record<string, any>;
+  extra_properties?: Record<string, unknown>;
   is_active: boolean;
   is_default: boolean;
   is_deleted: boolean;
@@ -56,7 +56,7 @@ export interface EnumFieldUsage {
   module_name?: string;
   is_required: boolean;
   default_value?: string;
-  validation_config?: Record<string, any>;
+  validation_config?: Record<string, unknown>;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -113,8 +113,8 @@ export interface EnumFieldTypeFormData {
   is_multiple?: boolean;
   is_hierarchical?: boolean;
   default_value?: string;
-  validation_rules?: Record<string, any>;
-  display_config?: Record<string, any>;
+  validation_rules?: Record<string, unknown>;
+  display_config?: Record<string, unknown>;
   status?: 'active' | 'inactive';
   created_by?: string;
   updated_by?: string;
@@ -130,7 +130,7 @@ export interface EnumFieldValueFormData {
   sort_order?: number;
   color?: string;
   icon?: string;
-  extra_properties?: Record<string, any>;
+  extra_properties?: Record<string, unknown>;
   is_active?: boolean;
   is_default?: boolean;
   created_by?: string;
@@ -145,7 +145,7 @@ export interface EnumFieldUsageFormData {
   module_name?: string;
   is_required?: boolean;
   default_value?: string;
-  validation_config?: Record<string, any>;
+  validation_config?: Record<string, unknown>;
   is_active?: boolean;
   created_by?: string;
   updated_by?: string;

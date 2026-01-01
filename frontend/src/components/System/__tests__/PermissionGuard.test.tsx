@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { } from '@testing-library/react'
 import {
   PermissionGuard,
   UserManagementGuard,

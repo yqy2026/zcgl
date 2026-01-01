@@ -11,7 +11,6 @@ import {
   Button,
   Space,
   Alert,
-  Spin,
   Typography,
   Row,
   Col,
@@ -26,9 +25,7 @@ import {
 import {
   CheckCircleOutlined,
   LoadingOutlined,
-  ExclamationCircleOutlined,
   CloseCircleOutlined,
-  SyncOutlined,
   FileTextOutlined,
   RobotOutlined,
   DatabaseOutlined,
@@ -40,11 +37,10 @@ import {
 import {
   pdfImportService,
   type SessionProgress,
-  type CompleteResult,
-  type FileUploadResponse
+  type CompleteResult
 } from '../../services/pdfImportService';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 const { Step } = Steps;
 
 interface ContractImportStatusProps {

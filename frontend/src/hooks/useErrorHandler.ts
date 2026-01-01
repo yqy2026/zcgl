@@ -217,7 +217,7 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}) => {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         return await operation()
-      } catch (error) {
+      } catch {
         lastError = error
 
         if (attempt === maxRetries) {
@@ -243,7 +243,7 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}) => {
 }
 
 // 错误报告函数
-const reportError = (errorInfo: ErrorInfo) => {
+const reportError = (_errorInfo: ErrorInfo) => {
   // 这里可以集成错误监控服务
   try {
     // 示例：发送到后端API
@@ -264,7 +264,7 @@ const reportError = (errorInfo: ErrorInfo) => {
     //     extra: errorInfo,
     //   })
     // }
-  } catch (error) {
+  } catch {
     console.error('Failed to report error:', error)
   }
 }

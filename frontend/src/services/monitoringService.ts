@@ -10,6 +10,9 @@
 
 import { enhancedApiClient } from '@/api/client';
 import { ApiErrorHandler } from '../utils/responseExtractor';
+import { createLogger } from '../utils/logger';
+
+const logger = createLogger('MonitoringService');
 
 // 类型定义
 export interface SystemMetrics {
@@ -152,7 +155,7 @@ export class MonitoringService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -177,7 +180,7 @@ export class MonitoringService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -202,7 +205,7 @@ export class MonitoringService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -230,7 +233,7 @@ export class MonitoringService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -261,7 +264,7 @@ export class MonitoringService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -286,7 +289,7 @@ export class MonitoringService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -320,7 +323,7 @@ export class MonitoringService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -367,7 +370,7 @@ export class MonitoringService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -391,7 +394,7 @@ export class MonitoringService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -418,7 +421,7 @@ export class MonitoringService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -445,7 +448,7 @@ export class MonitoringService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -512,7 +515,7 @@ export class MonitoringService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -546,7 +549,7 @@ export class MonitoringService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -580,7 +583,7 @@ export class MonitoringService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -630,7 +633,7 @@ export class MonitoringService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -689,7 +692,7 @@ export class MonitoringService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -726,7 +729,7 @@ export class MonitoringService {
         health_score: healthStatus.overall_score,
         active_alerts: alerts.length
       };
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(`获取实时系统状态失败: ${enhancedError.message}`);
     }
@@ -739,8 +742,8 @@ export class MonitoringService {
     try {
       const healthStatus = await this.getHealthStatus();
       return healthStatus.status === 'healthy' && healthStatus.overall_score >= 80;
-    } catch (error) {
-      console.warn('检查系统健康状态失败:', error);
+    } catch {
+      logger.warn('检查系统健康状态失败', { error });
       return false;
     }
   }
@@ -755,8 +758,8 @@ export class MonitoringService {
         resolved: false
       });
       return alerts.length;
-    } catch (error) {
-      console.warn('获取关键告警数量失败:', error);
+    } catch {
+      logger.warn('获取关键告警数量失败', { error });
       return 0;
     }
   }

@@ -6,30 +6,22 @@ import React, { useState, useEffect } from 'react';
 import {
   Form,
   Input,
-  Select,
-  InputNumber,
-  DatePicker,
   Button,
-  Space,
-  Card,
+  Select,
+  DatePicker,
+  InputNumber,
   Row,
   Col,
-  Divider,
-  Typography,
-  message,
-  Modal,
+  Space,
   Table,
-  Tooltip,
-  Tag,
-  Popconfirm
-} from 'antd';
+  Card,
+  Popconfirm,
+  message,
+} from 'antd'
 import {
   SaveOutlined,
   PlusOutlined,
-  DeleteOutlined,
-  InfoCircleOutlined,
-  CalendarOutlined,
-  DollarOutlined
+  DeleteOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
@@ -73,7 +65,6 @@ interface RentContractInitialData {
 
 const { Option } = Select;
 const { TextArea } = Input;
-const { Title, Text } = Typography;
 
 interface RentContractFormProps {
   initialData?: RentContractInitialData;
@@ -147,7 +138,7 @@ const RentContractForm: React.FC<RentContractFormProps> = ({
     try {
       const response = await assetService.getAssets({ limit: 100 });
       setAssets(response.items);
-    } catch (error) {
+    } catch {
       message.error('加载资产列表失败');
     } finally {
       setLoadingAssets(false);
@@ -159,7 +150,7 @@ const RentContractForm: React.FC<RentContractFormProps> = ({
     try {
       const response = await ownershipService.getOwnerships({ size: 100 });
       setOwnerships(response.items);
-    } catch (error) {
+    } catch {
       message.error('加载权属方列表失败');
     } finally {
       setLoadingOwnerships(false);
@@ -207,7 +198,7 @@ const RentContractForm: React.FC<RentContractFormProps> = ({
       };
 
       await onSubmit(contractData);
-    } catch (error) {
+    } catch {
       console.error('表单验证失败:', error);
     }
   };
@@ -257,7 +248,7 @@ const RentContractForm: React.FC<RentContractFormProps> = ({
 
       setShowRentTermModal(false);
       termForm.resetFields();
-    } catch (error) {
+    } catch {
       console.error('租金条款验证失败:', error);
     }
   };
@@ -522,7 +513,7 @@ const RentContractForm: React.FC<RentContractFormProps> = ({
                   min={0}
                   precision={2}
                   formatter={value => `¥ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={(value: any) => value?.replace(/\¥\s?|(,*)/g, '')}
+                  parser={(value: any) => value?.replace(/¥\s?|(,*)/g, '')}
                 />
               </Form.Item>
             </Col>
@@ -569,7 +560,7 @@ const RentContractForm: React.FC<RentContractFormProps> = ({
                   min={0}
                   precision={2}
                   formatter={value => `¥ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={(value: any) => value?.replace(/\¥\s?|(,*)/g, '')}
+                  parser={(value: any) => value?.replace(/¥\s?|(,*)/g, '')}
                 />
               </Form.Item>
             </Col>
@@ -660,7 +651,7 @@ const RentContractForm: React.FC<RentContractFormProps> = ({
                   min={0}
                   precision={2}
                   formatter={value => `¥ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={(value: any) => value?.replace(/\¥\s?|(,*)/g, '')}
+                  parser={(value: any) => value?.replace(/¥\s?|(,*)/g, '')}
                 />
               </Form.Item>
             </Col>
@@ -675,7 +666,7 @@ const RentContractForm: React.FC<RentContractFormProps> = ({
                   min={0}
                   precision={2}
                   formatter={value => `¥ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={(value: any) => value?.replace(/\¥\s?|(,*)/g, '')}
+                  parser={(value: any) => value?.replace(/¥\s?|(,*)/g, '')}
                 />
               </Form.Item>
             </Col>
@@ -690,7 +681,7 @@ const RentContractForm: React.FC<RentContractFormProps> = ({
                   min={0}
                   precision={2}
                   formatter={value => `¥ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={(value: any) => value?.replace(/\¥\s?|(,*)/g, '')}
+                  parser={(value: any) => value?.replace(/¥\s?|(,*)/g, '')}
                 />
               </Form.Item>
             </Col>

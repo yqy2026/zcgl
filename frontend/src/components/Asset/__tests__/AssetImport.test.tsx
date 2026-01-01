@@ -3,9 +3,8 @@
  * 测试资产导入功能（Excel文件上传和处理）
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@/test/utils/test-helpers'
 
 // Mock enhancedApiClient before importing
 vi.mock('@/api/client', () => ({

@@ -3,8 +3,7 @@
  * 测试动态路由加载器的核心功能
  */
 
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@/test/utils/test-helpers'
+import { describe, it, expect } from 'vitest'
 import React from 'react'
 import { BrowserRouter } from 'react-router-dom'
 
@@ -75,7 +74,7 @@ describe('路由Hook测试', () => {
       try {
         useDynamicRoute()
         return <div>No Error</div>
-      } catch (error) {
+      } catch {
         return <div data-testid="error-message">{(error as Error).message}</div>
       }
     }

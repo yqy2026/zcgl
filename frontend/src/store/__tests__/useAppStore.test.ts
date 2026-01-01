@@ -377,7 +377,7 @@ describe('useAppStore - 通知管理', () => {
 
 describe('useAppStore - 选择器', () => {
   it('应该支持选择器获取状态', () => {
-    const { result } = renderHook(() => useAppStore())
+    const { result: _result } = renderHook(() => useAppStore())
 
     const theme = useAppStore.getState().theme
     expect(theme).toBe('light')
@@ -387,10 +387,10 @@ describe('useAppStore - 选择器', () => {
   })
 
   it('选择器不应该触发重新渲染', () => {
-    let renderCount = 0
+    const _renderCount = 0
 
     const { result } = renderHook(() => useAppStore())
-    const { rerender } = result
+    const { rerender: _rerender } = result
 
     // 仅获取一个值，不订阅
     const value = useAppStore.getState().theme

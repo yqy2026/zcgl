@@ -12,8 +12,6 @@ import {
   Row,
   Col,
   Statistic,
-  Badge,
-  Modal,
   Descriptions,
   Drawer,
   message
@@ -80,11 +78,11 @@ const OperationLogPage: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [detailDrawerVisible, setDetailDrawerVisible] = useState(false)
   const [selectedLog, setSelectedLog] = useState<OperationLog | null>(null)
-  const [searchText, setSearchText] = useState('')
-  const [moduleFilter, setModuleFilter] = useState<string>('')
-  const [actionFilter, setActionFilter] = useState<string>('')
-  const [statusFilter, setStatusFilter] = useState<string>('')
-  const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null)
+  const [_searchText, _setSearchText] = useState('')
+  const [_moduleFilter, _setModuleFilter] = useState<string>('')
+  const [_actionFilter, _setActionFilter] = useState<string>('')
+  const [_statusFilter, _setStatusFilter] = useState<string>('')
+  const [_dateRange, _setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null)
 
   // 操作类型选项
   const actionOptions = [
@@ -195,7 +193,7 @@ const OperationLogPage: React.FC = () => {
         }
       ]
       setLogs(mockLogs)
-    } catch (error) {
+    } catch {
       message.error('加载操作日志失败')
     } finally {
       setLoading(false)
@@ -216,7 +214,7 @@ const OperationLogPage: React.FC = () => {
         avg_response_time: Math.round(logs.reduce((sum, log) => sum + log.response_time, 0) / logs.length) || 0
       }
       setStatistics(mockStats)
-    } catch (error) {
+    } catch {
       message.error('加载统计信息失败')
     }
   }

@@ -38,7 +38,7 @@ vi.mock('antd', () => ({
       {children}
     </div>
   ),
-  Empty: ({ description, imageStyle }: any) => (
+  Empty: ({ description, imageStyle: _imageStyle }: any) => (
     <div data-testid="empty" data-description={description}>
       Empty
     </div>

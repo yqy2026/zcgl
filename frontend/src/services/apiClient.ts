@@ -4,7 +4,7 @@
  */
 
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
-import { API_CONFIG, buildApiPath, buildLegacyApiPath } from '../constants/api'
+import { API_CONFIG } from '../constants/api'
 
 // API响应类型定义
 export interface ApiResponse<T = any> {
@@ -144,7 +144,7 @@ export class ApiClient {
 
       const { access_token } = response.data
       localStorage.setItem('token', access_token)
-    } catch (error) {
+    } catch {
       throw new Error('Token refresh failed')
     }
   }
@@ -267,7 +267,7 @@ export class ApiClient {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         return await requestFn()
-      } catch (error) {
+      } catch {
         lastError = error
 
         // 如果是最后一次尝试，直接抛出错误

@@ -28,7 +28,10 @@ import {
 } from '../types/rentContract';
 import { enhancedApiClient } from '@/api/client';
 import { ApiErrorHandler } from '../utils/responseExtractor';
+import { createLogger } from '../utils/logger';
 import { API_ENDPOINTS } from '@/constants/api';
+
+const logger = createLogger('RentContractService');
 
 class RentContractService {
   private baseUrl = API_ENDPOINTS.RENT_CONTRACT.LIST;
@@ -388,8 +391,7 @@ class RentContractService {
   }
 
   /**
-   * 获取权属方租金统计
-   */
+   * 获取权属方租金统�?   */
   async getOwnershipStatistics(params?: RentStatisticsQuery): Promise<OwnershipRentStatistics[]> {
     try {
       const result = await enhancedApiClient.get<OwnershipRentStatistics[]>(
@@ -403,7 +405,7 @@ class RentContractService {
       );
 
       if (!result.success) {
-        throw new Error(`获取权属方租金统计失败: ${result.error}`);
+        throw new Error(`获取权属方租金统计失�? ${result.error}`);
       }
 
       return result.data!;
@@ -545,8 +547,7 @@ class RentContractService {
   // ==================== 辅助API ====================
 
   /**
-   * 获取合同对应的租金台账
-   */
+   * 获取合同对应的租金台�?   */
   async getContractLedger(contractId: string): Promise<RentLedger[]> {
     try {
       const result = await enhancedApiClient.get<RentLedger[]>(
@@ -570,8 +571,7 @@ class RentContractService {
   }
 
   /**
-   * 获取资产对应的租赁合同
-   */
+   * 获取资产对应的租赁合�?   */
   async getAssetContracts(assetId: string): Promise<RentContract[]> {
     try {
       const result = await enhancedApiClient.get<RentContract[]>(
@@ -639,15 +639,14 @@ class RentContractService {
   // ==================== 验证相关方法 ====================
 
   /**
-   * 验证合同编号唯一性
-   */
+   * 验证合同编号唯一�?   */
   async validateContractNumber(contractNumber: string): Promise<{ exists: boolean }> {
     try {
       const contracts = await this.getContracts({ contract_number: contractNumber, limit: 1 });
       return { exists: contracts.items.length > 0 };
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.warn('验证合同编号失败:', enhancedError.message);
+      logger.warn('验证合同编号失败', { error: enhancedError.message });
       return { exists: false };
     }
   }
@@ -703,7 +702,7 @@ class RentContractService {
     return diffDays;
   }
 
-  // ==================== 搜索和筛选 ====================
+  // ==================== 搜索和筛�?====================
 
   /**
    * 搜索合同
@@ -718,7 +717,7 @@ class RentContractService {
       return response.items;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.warn('搜索合同失败:', enhancedError.message);
+      logger.warn('搜索合同失败', { error: enhancedError.message });
       return [];
     }
   }
@@ -735,12 +734,12 @@ class RentContractService {
       return response.items;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.warn('搜索台账失败:', enhancedError.message);
+      logger.warn('搜索台账失败', { error: enhancedError.message });
       return [];
     }
   }
 
-  // ==================== 通知和提醒 ====================
+  // ==================== 通知和提�?====================
 
   /**
    * 获取逾期台账记录
@@ -754,14 +753,13 @@ class RentContractService {
       return response.items;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.warn('获取逾期台账失败:', enhancedError.message);
+      logger.warn('获取逾期台账失败', { error: enhancedError.message });
       return [];
     }
   }
 
   /**
-   * 获取即将到期的付款记录
-   */
+   * 获取即将到期的付款记�?   */
   async getUpcomingPayments(days: number = 7): Promise<RentLedger[]> {
     try {
       const today = new Date();
@@ -776,7 +774,7 @@ class RentContractService {
       return response.items;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.warn('获取即将到期付款失败:', enhancedError.message);
+      logger.warn('获取即将到期付款失败', { error: enhancedError.message });
       return [];
     }
   }
@@ -785,5 +783,4 @@ class RentContractService {
 // 创建单例实例
 export const rentContractService = new RentContractService();
 
-// 为了向后兼容，也导出类
-export { RentContractService };
+// 为了向后兼容，也导出�?export { RentContractService };

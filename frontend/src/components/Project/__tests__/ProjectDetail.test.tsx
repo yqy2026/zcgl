@@ -83,7 +83,7 @@ vi.mock('antd', () => ({
   Divider: ({ children }: any) => (
     <div data-testid="divider">{children}</div>
   ),
-  Table: ({ dataSource, columns, pagination }: any) => (
+  Table: ({ dataSource, columns: _columns, pagination }: any) => (
     <div data-testid="table" data-pagination={pagination}>
       {dataSource?.map((item: any, index: number) => (
         <div key={index} data-row={index}>{JSON.stringify(item)}</div>
@@ -202,7 +202,7 @@ describe('ProjectDetail 组件测试', () => {
     vi.clearAllMocks()
   })
 
-  const mockProjectData: any = {
+  const _mockProjectData: any = {
     id: '1',
     name: '测试项目',
     code: 'PROJ-001',

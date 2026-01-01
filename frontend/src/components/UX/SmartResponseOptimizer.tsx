@@ -1,21 +1,10 @@
-import React, { createContext, useCallback, useContext, useState, useRef, useEffect } from 'react'
-import { message, notification, Statistic, Card, Row, Col, Progress, Switch, Button, Space, Typography } from 'antd'
+import React, { createContext, useCallback, useContext, useState, useRef } from 'react'
+import { message, Statistic, Card, Row, Col, Switch, Button, Space, Typography } from 'antd'
 import {
-  ThunderboltOutlined,
-  ClockCircleOutlined,
-  CheckCircleOutlined,
-  ExclamationCircleOutlined,
-  SyncOutlined,
-  EyeOutlined,
-  EyeInvisibleOutlined,
-  CompressOutlined,
-  FullscreenOutlined,
-  InfoCircleOutlined,
-  RiseOutlined,
-  FallOutlined
+  ThunderboltOutlined
 } from '@ant-design/icons'
 
-const { Text, Title } = Typography
+const { Text } = Typography
 
 export type OptimizationType = 'loading' | 'rendering' | 'compression' | 'caching' | 'network' | 'database'
 export type ResponseLevel = 'excellent' | 'good' | 'acceptable' | 'poor'
@@ -109,8 +98,6 @@ const SmartResponseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // 获取响应类型
   const getResponseType = useCallback((metric: PerformanceMetrics): OptimizationType => {
-    const totalTime = metric.responseTime + metric.renderTime + metric.networkTime
-
     // 根据时间分配类型
     if (metric.responseTime < 100) return 'loading'
     if (metric.renderTime > metric.responseTime * 2) return 'rendering'
@@ -185,7 +172,7 @@ const SmartResponseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [])
 
   // 添加性能指标
-  const addMetrics = useCallback((metric: PerformanceMetrics) => {
+  const _addMetrics = useCallback((metric: PerformanceMetrics) => {
     const newMetrics = [metric, ...metricsRef.current.slice(0, 49)] // 只保留最近50个
     metricsRef.current = newMetrics
     setMetrics(newMetrics)
@@ -235,10 +222,10 @@ const SmartResponseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 // 响应优化仪表板组件
 const ResponseOptimizationDashboard: React.FC<{ config: SmartResponseConfig; metrics: PerformanceMetrics[] }> = ({ config, metrics }) => {
   const [showDetails, setShowDetails] = useState(false)
-  const { generateReport, optimizeResponse, resetConfig, getPerformanceLevel } = useSmartResponse()
+  const { generateReport, optimizeResponse, resetConfig } = useSmartResponse()
 
   // 获取响应类型（本地定义，因为不在context中）
-  const getResponseType = (metric: PerformanceMetrics): OptimizationType => {
+  const _getResponseType = (metric: PerformanceMetrics): OptimizationType => {
     if (metric.responseTime < 100) return 'loading'
     if (metric.renderTime > metric.responseTime * 2) return 'rendering'
     if (metric.compressionRatio > 0.8) return 'compression'

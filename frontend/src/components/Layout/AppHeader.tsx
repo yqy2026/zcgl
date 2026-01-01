@@ -1,5 +1,5 @@
 import React from 'react'
-import { Layout, Button, Avatar, Dropdown, Badge, Typography, message } from 'antd'
+import { Layout, Button, Avatar, Dropdown, Badge, message } from 'antd'
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -24,7 +24,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
     try {
       await AuthService.logout()
       navigate('/login')
-    } catch (error) {
+    } catch {
       console.error('退出登录失败:', error)
       // 即使API失败，也要跳转到登录页面
       navigate('/login')

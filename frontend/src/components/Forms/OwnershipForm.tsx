@@ -14,8 +14,7 @@ import {
   message,
   Divider,
   Switch,
-  Select,
-  InputNumber
+  Select
 } from 'antd';
 
 const { Option } = Select;
@@ -52,8 +51,7 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
       // Processed project options
 
       setProjectOptions(projects);
-    } catch (error) {
-      console.error('加载项目选项失败:', error);
+    } catch {
       message.error('加载项目选项失败');
       setProjectOptions([]); // 设置为空数组避免 undefined 错误
     }
@@ -69,7 +67,7 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
     loadProjectOptions();
   }, [initialValues, form]);
 
-  
+
   // 表单验证规则接口
   interface FormValidationRule {
     field?: string
@@ -93,7 +91,7 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
     return Promise.resolve();
   };
 
-  
+
   // 提交表单
   const handleSubmit = async () => {
     try {
@@ -120,9 +118,7 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
         if (values.related_projects && Array.isArray(values.related_projects)) {
           try {
             await (ownershipService as any).updateOwnershipProjects(initialValues.id, values.related_projects);
-            console.log('关联项目更新成功');
-          } catch (projectError) {
-            console.error('更新关联项目失败:', projectError);
+          } catch {
             message.warning('基本信息更新成功，但关联项目更新失败');
           }
         }

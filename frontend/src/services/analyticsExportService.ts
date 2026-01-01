@@ -151,7 +151,7 @@ class AnalyticsExportService {
       // 导出文件
       XLSX.writeFile(workbook, finalFilename)
 
-    } catch (error) {
+    } catch {
       console.error('导出Excel失败:', error)
       throw new Error('导出失败，请重试')
     }
@@ -233,7 +233,7 @@ class AnalyticsExportService {
       link.click()
       document.body.removeChild(link)
 
-    } catch (error) {
+    } catch {
       console.error('导出CSV失败:', error)
       throw new Error('导出失败，请重试')
     }
@@ -263,7 +263,7 @@ class AnalyticsExportService {
       link.click()
       document.body.removeChild(link)
 
-    } catch (error) {
+    } catch {
       console.error('导出PDF失败:', error)
       throw new Error('导出失败，请重试')
     }

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react'
-import { Card, Row, Col, Statistic, Alert, Table, Tag, Progress, Button, Space } from 'antd'
+import { Card, Row, Col, Statistic, Alert, Table, Tag, Progress, Button } from 'antd'
 import { CloudServerOutlined, CheckCircleOutlined, ExclamationCircleOutlined, ReloadOutlined } from '@ant-design/icons'
 // TODO: Create apiHealthCheck service or remove this component
 // import { apiHealthCheck } from '../services/apiHealthCheck'
@@ -47,7 +47,7 @@ const ApiMonitor: React.FC = () => {
         unknown: results.filter((r: ApiStatus) => r.status === 'unknown').length,
         healthPercentage: results.length > 0 ? (results.filter((r: ApiStatus) => r.status === 'healthy').length / results.length) * 100 : 0
       })
-    } catch (error) {
+    } catch {
       console.error('Failed to load API status:', error)
     } finally {
       setLoading(false)

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Card, List, Typography, Tag, Space, Button, Tooltip } from 'antd'
+import { List, Typography, Tag, Space, Button, Tooltip } from 'antd'
 import {
   EyeOutlined,
   EditOutlined,

@@ -10,7 +10,6 @@ import {
   Button,
   Space,
   Typography,
-  Divider,
   Row,
   Col,
   Progress,
@@ -18,31 +17,19 @@ import {
   Tag,
   Alert,
   Form,
-  Select,
   Switch,
   InputNumber,
-  Tooltip,
-  Badge,
-  Spin,
-  Statistic,
   message,
-  Modal,
-  Checkbox
 } from 'antd';
 import {
   InboxOutlined,
-  UploadOutlined,
   SettingOutlined,
   FileTextOutlined,
   RobotOutlined,
-  EyeOutlined,
-  ThunderboltOutlined,
-  SafetyCertificateOutlined,
-  TableOutlined,
   FireOutlined,
   QuestionCircleOutlined
 } from '@ant-design/icons';
-import type { UploadFile, UploadProps } from 'antd/es/upload';
+import type { UploadProps } from 'antd/es/upload';
 import type { RcFile } from 'antd/es/upload/interface';
 import { pdfImportService } from '../../services/pdfImportService';
 import EnhancedProcessingStatus from '../../components/Contract/EnhancedProcessingStatus';
@@ -53,8 +40,8 @@ import type {
   EnhancedSystemCapabilities
 } from '../../types/enhancedPdfImport';
 
-const { Title, Text, Paragraph } = Typography;
-const { Step } = Steps;
+const { Title, Text } = Typography;
+const { _Step } = Steps;
 const { Dragger } = Upload;
 
 const EnhancedPDFImportPage: React.FC = () => {
@@ -103,14 +90,14 @@ const EnhancedPDFImportPage: React.FC = () => {
           }));
         }
       }
-    } catch (error) {
+    } catch {
       console.error('检查系统能力失败:', error);
       message.error('无法检查系统能力');
     }
   }, []);
 
   // 文件上传前检查
-  const beforeUpload = (file: File, fileList: File[]) => {
+  const beforeUpload = (file: File, _fileList: File[]) => {
     const isValidType = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
     if (!isValidType) {
       message.error('只支持PDF文件上传！');
@@ -150,7 +137,7 @@ const EnhancedPDFImportPage: React.FC = () => {
         setUploadProgress(progress);
       }
     },
-    customRequest: async ({ file, onSuccess, onError }) => {
+    customRequest: async ({ file, _onSuccess, onError }) => {
       try {
         setProcessing(true);
         setShowResults(false);
@@ -172,7 +159,7 @@ const EnhancedPDFImportPage: React.FC = () => {
           setProcessing(false);
           onError?.(new Error(result.error || '上传失败'));
         }
-      } catch (error) {
+      } catch {
         console.error('上传失败:', error);
         message.error('上传过程中发生错误');
         setProcessing(false);
@@ -220,7 +207,7 @@ const EnhancedPDFImportPage: React.FC = () => {
         } else {
           message.error(result.error || '取消失败');
         }
-      } catch (error) {
+      } catch {
         console.error('取消失败:', error);
         message.error('取消过程中发生错误');
       }
@@ -560,7 +547,7 @@ const EnhancedPDFImportPage: React.FC = () => {
 
             {(EnhancedContractReview as any)({
               sessionData: currentStatus as any,
-              onConfirm: (confirmedData: any) => {
+              onConfirm: (_confirmedData: any) => {
                 // Confirm import data
                 message.success('功能开发中，数据提交功能将在下个版本实现');
               },

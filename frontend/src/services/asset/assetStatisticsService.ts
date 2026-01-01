@@ -36,7 +36,7 @@ export class AssetStatisticsService {
             }
 
             return result.data!;
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -59,7 +59,7 @@ export class AssetStatisticsService {
             }
 
             return result.data!;
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -82,7 +82,7 @@ export class AssetStatisticsService {
             }
 
             return result.data!;
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -105,7 +105,7 @@ export class AssetStatisticsService {
             }
 
             return result.data!;
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -128,7 +128,7 @@ export class AssetStatisticsService {
             }
 
             return result.data!;
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }

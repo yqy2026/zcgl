@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Input, Alert, Typography, Space, Button, Tooltip, Tag, Divider } from 'antd';
+import { Input, Alert, Typography, Space, Button, Tag, Divider } from 'antd';
 import { InfoCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 
 const { Text } = Typography;
@@ -157,12 +157,12 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
         try {
           // const response = await validateFilenameAPI(fname);
           // setSuggestedFilename(response.suggested_filename || localSuggested);
-        } catch (error) {
+        } catch {
           console.warn('服务器验证失败，使用本地验证结果:', error);
         }
       }
 
-    } catch (error) {
+    } catch {
       console.error('文件名验证失败:', error);
       setValidationResult({
         valid: false,

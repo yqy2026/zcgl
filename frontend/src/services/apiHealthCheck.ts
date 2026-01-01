@@ -4,7 +4,9 @@
  */
 
 import { enhancedApiClient } from '@/api/client'
+import { createLogger } from '@/utils/logger'
 
+const logger = createLogger('ApiHealthCheck');
 const api = enhancedApiClient
 import {
   AUTH_API,
@@ -121,8 +123,8 @@ export class ApiHealthCheckService {
       try {
         const result = await this.checkEndpoint(endpoint)
         results.push(result)
-      } catch (error) {
-        console.error(`Health check failed for ${endpoint}:`, error)
+      } catch {
+        logger.error(`Health check failed for ${endpoint}`, error instanceof Error ? error : new Error(String(error)))
         results.push({
           endpoint,
           status: 'unknown',
@@ -183,8 +185,8 @@ export class ApiHealthCheckService {
         else if (result.status === 'unhealthy') unhealthy++
         else unknown++
 
-      } catch (error) {
-        console.error(`Health check failed for ${name}:`, error)
+      } catch {
+        logger.error(`Health check failed for ${name}`, error instanceof Error ? error : new Error(String(error)))
         results.push({
           endpoint: name,
           status: 'unknown',
@@ -209,22 +211,22 @@ export class ApiHealthCheckService {
    */
   startPeriodicCheck(): void {
     if (this.isRunning) {
-      console.warn('Health check service is already running')
+      logger.warn('Health check service is already running')
       return
     }
 
     this.isRunning = true
-    console.log('🏥 Starting periodic API health checks...')
+    logger.debug('Starting periodic API health checks...')
 
     // 立即执行一次检查
     this.checkCriticalEndpoints().catch(error => {
-      console.error('Initial health check failed:', error)
+      logger.error('Initial health check failed', error instanceof Error ? error : new Error(String(error)))
     })
 
     // 设置定期检查
     this.intervalId = setInterval(() => {
       this.checkCriticalEndpoints().catch(error => {
-        console.error('Periodic health check failed:', error)
+        logger.error('Periodic health check failed', error instanceof Error ? error : new Error(String(error)))
       })
     }, this.config.interval)
   }
@@ -239,7 +241,7 @@ export class ApiHealthCheckService {
     }
 
     this.isRunning = false
-    console.log('⏹️ Stopped periodic API health checks')
+    logger.debug('Stopped periodic API health checks')
   }
 
   /**
@@ -303,7 +305,7 @@ export class ApiHealthCheckService {
     criticalIssues: string[]
     report: any
   }> {
-    const results = await this.checkAllEndpoints()
+    await this.checkAllEndpoints()
     const report = this.generateReport()
     const issues: string[] = []
 
@@ -347,9 +349,9 @@ if (process.env.NODE_ENV === 'development') {
   setTimeout(() => {
     try {
       apiHealthCheck.startPeriodicCheck()
-      console.log('✅ API Health Check Service started')
-    } catch (error) {
-      console.error('❌ Failed to start API Health Check Service:', error)
+      logger.info('API Health Check Service started')
+    } catch {
+      logger.error('Failed to start API Health Check Service', error instanceof Error ? error : new Error(String(error)))
     }
   }, 2000)
 }

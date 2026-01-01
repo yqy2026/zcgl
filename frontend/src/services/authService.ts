@@ -1,9 +1,12 @@
 // import { api } from './index' // 已迁移到enhancedApiClient
 import { AUTH_API } from '@/constants/api'
 import { enhancedApiClient } from '@/api/client'
-import { ResponseExtractor, ApiErrorHandler } from '../utils/responseExtractor'
+import { ApiErrorHandler } from '../utils/responseExtractor'
 import { AuthResponse } from '../types/api-response'
 import type { LoginCredentials, User } from '../types/auth'
+import { createLogger } from '../utils/logger'
+
+const logger = createLogger('AuthService')
 
 // 权限接口
 interface Permission {
@@ -18,7 +21,7 @@ export class AuthService {
   // 用户登录
   static async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
-      console.log('🚀 AuthService.login 开始登录流程', { username: credentials.username });
+      logger.debug('开始登录流程', { username: credentials.username });
 
       // 使用增强型API客户端，自动处理响应提取和错误
       const result = await enhancedApiClient.post(AUTH_API.LOGIN, credentials, {
@@ -26,9 +29,10 @@ export class AuthService {
           maxAttempts: 3,
           delay: 1000,
           backoffMultiplier: 2,
-          retryCondition: (error) => {
+          retryCondition: (error: unknown) => {
             // 只对网络错误和5xx错误重试
-            return !error.response || (error.response.status >= 500 && error.response.status < 600)
+            const axiosError = error as { response?: { status: number } };
+            return !axiosError.response || (axiosError.response.status >= 500 && axiosError.response.status < 600)
           }
         }
       });
@@ -39,17 +43,17 @@ export class AuthService {
 
       const responseData = result.data;
 
-      console.log('📥 API响应数据:', { responseData });
+      logger.debug('API响应数据', { responseData });
 
       // 验证响应数据结构
       if (!responseData.user || (!responseData.tokens && !responseData.token)) {
-        console.error('❌ 登录响应数据格式不正确:', responseData);
+        logger.error('登录响应数据格式不正确', undefined, { responseData });
         throw new Error('登录响应数据格式不正确');
       }
 
       const { user } = responseData;
 
-      console.log('✅ 用户数据解析成功:', { user });
+      logger.debug('用户数据解析成功', { user });
 
       // 处理tokens（新格式）或token（旧格式）
       let accessToken: string;
@@ -91,7 +95,7 @@ export class AuthService {
         message: responseData.message || '登录成功'
       } as any;
 
-    } catch (error) {
+    } catch {
       // 使用统一的错误处理器
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -105,9 +109,9 @@ export class AuthService {
       await enhancedApiClient.post(AUTH_API.LOGOUT, undefined, {
         retry: false // 登出不重试
       });
-    } catch (error) {
+    } catch {
       // 即使登出API调用失败，也要清除本地存储
-      console.warn('登出API调用失败:', ApiErrorHandler.handleError(error).message);
+      logger.warn('登出API调用失败', { error: ApiErrorHandler.handleError(error).message });
     } finally {
       // 清除本地存储的认证信息
       this.clearAuthData();
@@ -129,9 +133,10 @@ export class AuthService {
           maxAttempts: 2,
           delay: 500,
           backoffMultiplier: 1.5,
-          retryCondition: (error) => {
+          retryCondition: (error: unknown) => {
             // 刷新令牌失败一般不重试，除非是网络问题
-            return !error.response;
+            const axiosError = error as { response?: unknown };
+            return !axiosError.response;
           }
         }
       });
@@ -151,7 +156,7 @@ export class AuthService {
         message: '令牌刷新成功'
       } as any;
 
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -176,13 +181,13 @@ export class AuthService {
       // me端点直接返回用户数据，不是嵌套在user字段中
       return result.data;
 
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
   }
 
-  
+
   // 检查本地认证状态
   static isAuthenticated(): boolean {
     const token = localStorage.getItem('auth_token')
@@ -211,8 +216,8 @@ export class AuthService {
       }
 
       return true
-    } catch (error) {
-      console.error('Token验证失败:', error)
+    } catch {
+      logger.error('Token验证失败', error instanceof Error ? error : new Error(String(error)))
       return false
     }
   }
@@ -281,7 +286,7 @@ export class AuthService {
         throw new Error(`密码修改失败: ${result.error}`);
       }
 
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -312,7 +317,7 @@ export class AuthService {
       localStorage.setItem('user', JSON.stringify(updatedUser));
       return updatedUser;
 
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -332,7 +337,7 @@ export class AuthService {
 
       return result.data;
 
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import {
   Card,
   Table,
@@ -16,10 +16,8 @@ import {
   Statistic,
   Avatar,
   Switch,
-  Badge,
   Drawer,
-  Descriptions,
-  Skeleton
+  Descriptions
 } from 'antd'
 import SystemBreadcrumb from '../../components/System/SystemBreadcrumb'
 import { userService, type User, type CreateUserData, type UpdateUserData } from '../../services/systemService'
@@ -65,10 +63,10 @@ const UserManagementPage: React.FC = () => {
   const [detailDrawerVisible, setDetailDrawerVisible] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
-  const [searchText, setSearchText] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('')
-  const [roleFilter, setRoleFilter] = useState<string>('')
-  const [organizationFilter, setOrganizationFilter] = useState<string>('')
+  const [_searchText, _setSearchText] = useState('')
+  const [_statusFilter, _setStatusFilter] = useState<string>('')
+  const [_roleFilter, _setRoleFilter] = useState<string>('')
+  const [_organizationFilter, _setOrganizationFilter] = useState<string>('')
 
   const [form] = Form.useForm()
 
@@ -91,7 +89,7 @@ const UserManagementPage: React.FC = () => {
     try {
       const data = await userService.getUsers()
       setUsers(data.items || [])
-    } catch (error) {
+    } catch {
       console.error('加载用户列表失败:', error)
       message.error('加载用户列表失败')
       // 如果API失败，使用模拟数据作为后备
@@ -129,7 +127,7 @@ const UserManagementPage: React.FC = () => {
         { id: '3', name: '财务部' }
       ]
       setOrganizations(mockOrgs)
-    } catch (error) {
+    } catch {
       message.error('加载组织列表失败')
     }
   }
@@ -143,7 +141,7 @@ const UserManagementPage: React.FC = () => {
         { id: 'user', name: '普通用户' }
       ]
       setRoles(mockRoles)
-    } catch (error) {
+    } catch {
       message.error('加载角色列表失败')
     }
   }
@@ -160,7 +158,7 @@ const UserManagementPage: React.FC = () => {
         by_organization: {}
       }
       setStatistics(mockStats)
-    } catch (error) {
+    } catch {
       message.error('加载统计信息失败')
     }
   }
@@ -190,24 +188,24 @@ const UserManagementPage: React.FC = () => {
     setModalVisible(true)
   }
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (_id: string) => {
     try {
       // 模拟删除API调用
       message.success('删除成功')
       loadUsers()
       loadStatistics()
-    } catch (error) {
+    } catch {
       message.error('删除失败')
     }
   }
 
-  const handleToggleStatus = async (user: User, newStatus: string) => {
+  const handleToggleStatus = async (_user: User, _newStatus: string) => {
     try {
       // 模拟状态切换API调用
       message.success('状态已更新')
       loadUsers()
       loadStatistics()
-    } catch (error) {
+    } catch {
       message.error('状态更新失败')
     }
   }
@@ -218,7 +216,7 @@ const UserManagementPage: React.FC = () => {
       message.success(user.is_locked ? '用户已解锁' : '用户已锁定')
       loadUsers()
       loadStatistics()
-    } catch (error) {
+    } catch {
       message.error('操作失败')
     }
   }
@@ -228,7 +226,7 @@ const UserManagementPage: React.FC = () => {
     setDetailDrawerVisible(true)
   }
 
-  const handleSubmit = async (values: CreateUserData | UpdateUserData) => {
+  const handleSubmit = async (_values: CreateUserData | UpdateUserData) => {
     try {
       if (editingUser) {
         // 模拟更新API调用
@@ -240,7 +238,7 @@ const UserManagementPage: React.FC = () => {
       setModalVisible(false)
       loadUsers()
       loadStatistics()
-    } catch (error) {
+    } catch {
       message.error(editingUser ? '更新失败' : '创建失败')
     }
   }

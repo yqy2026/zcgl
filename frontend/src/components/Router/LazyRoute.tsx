@@ -26,7 +26,7 @@ const LazyRoute: React.FC<LazyRouteProps> = ({
   ...routeProps
 }) => {
   // 如果提供了预加载函数，在组件加载时执行
-  const handleMouseEnter = () => {
+  const _handleMouseEnter = () => {
     if (preload) {
       preload()
     }

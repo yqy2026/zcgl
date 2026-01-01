@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { message } from 'antd'
-import { uxManager, recordAction, setLoading, isLoading } from '@/utils/uxManager'
+import { uxManager, recordAction, isLoading } from '@/utils/uxManager'
 
 // 错误处理Hook
 export const useErrorHandler = () => {
@@ -11,7 +10,7 @@ export const useErrorHandler = () => {
   const handleAsyncError = useCallback(async <T>(asyncFn: () => Promise<T>, context?: unknown) => {
     try {
       return await asyncFn()
-    } catch (error) {
+    } catch {
       handleError(error as Error, context)
       throw error
     }
@@ -182,7 +181,7 @@ export const useOperationState = <T = unknown>() => {
       }
 
       return result
-    } catch (error) {
+    } catch {
       const err = error as Error
       setState(prev => ({
         ...prev,
@@ -291,12 +290,14 @@ export const useFormEnhancement = () => {
 }
 
 // 网络状态Hook
-export const useNetworkStatus = () => {
+export const useNetworkStatus = (enabled = true) => {
   const [isOnline, setIsOnline] = useState(navigator.onLine)
   const [connectionType, setConnectionType] = useState<string>('unknown')
   const { showWarning, showInfo } = useUserFeedback()
 
   useEffect(() => {
+    if (!enabled) return
+
     const handleOnline = () => {
       setIsOnline(true)
       showInfo('网络已连接', '网络连接已恢复')
@@ -334,7 +335,7 @@ export const useNetworkStatus = () => {
         connection.removeEventListener?.('change', handleConnectionChange)
       }
     }
-  }, [showWarning, showInfo])
+  }, [showWarning, showInfo, enabled])
 
   return { isOnline, connectionType }
 }
@@ -350,7 +351,7 @@ export const useUXEnhancement = (options?: {
   const actionTracking = useActionTracking()
   const performanceMonitoring = usePerformanceMonitoring()
   const userFeedback = useUserFeedback()
-  const networkStatus = options?.enableNetworkMonitoring ? useNetworkStatus() : null
+  const networkStatus = useNetworkStatus(options?.enableNetworkMonitoring)
 
   // 页面加载时跟踪页面访问
   useEffect(() => {
@@ -373,7 +374,7 @@ export const useUXEnhancement = (options?: {
     ...userFeedback,
     
     // 网络状态
-    ...(networkStatus || {}),
+    ...(options?.enableNetworkMonitoring ? networkStatus : {}),
   }
 }
 

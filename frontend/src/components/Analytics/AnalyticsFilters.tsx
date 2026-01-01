@@ -130,7 +130,7 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
           ownershipEntities,
           businessCategories
         }
-      } catch (error) {
+      } catch {
         console.warn('获取筛选选项失败:', error)
         return {
           ownershipEntities: [],

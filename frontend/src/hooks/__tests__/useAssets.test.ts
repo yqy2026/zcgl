@@ -3,13 +3,13 @@
  * 测试资产管理相关的自定义Hooks（简化版本）
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 
 // =============================================================================
 // 类型定义
 // =============================================================================
 
-interface Asset {
+interface _Asset {
   id: string
   ownershipEntity: string
   propertyName: string

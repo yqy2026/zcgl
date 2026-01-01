@@ -1,17 +1,15 @@
 import React, { createContext, useCallback, useContext, useState, useRef, useEffect } from 'react'
-import { Progress, Steps, Card, Typography, Space, Tag, Button, Tooltip } from 'antd'
+import { Progress, Steps, Card, Typography, Tag, Button } from 'antd'
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   LoadingOutlined,
-  PlayCircleOutlined,
   PauseCircleOutlined,
   ExclamationCircleOutlined,
   SyncOutlined
 } from '@ant-design/icons'
 
 const { Text, Title } = Typography
-const { Step } = Steps
 
 export type StepStatus = 'wait' | 'process' | 'finish' | 'error' | 'paused'
 export type ProgressType = 'upload' | 'processing' | 'download' | 'api_call' | 'data_sync'

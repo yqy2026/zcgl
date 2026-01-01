@@ -218,11 +218,10 @@ export interface CustomFieldValue {
 }
 
 // 表单数据接口
-export interface AssetFormData
-  extends Omit<
-    Asset,
-    "id" | "created_at" | "updated_at" | "unrented_area" | "occupancy_rate" | "net_income"
-  > { }
+export type AssetFormData = Omit<
+  Asset,
+  "id" | "created_at" | "updated_at" | "unrented_area" | "occupancy_rate" | "net_income"
+>;
 
 // API响应接口
 export interface AssetListResponse {
@@ -278,14 +277,13 @@ export interface AssetSearchParams {
 }
 
 // 创建资产请求
-export interface AssetCreateRequest
-  extends Omit<
-    Asset,
-    "id" | "created_at" | "updated_at" | "unrented_area" | "occupancy_rate" | "net_income"
-  > { }
+export type AssetCreateRequest = Omit<
+  Asset,
+  "id" | "created_at" | "updated_at" | "unrented_area" | "occupancy_rate" | "net_income"
+>;
 
 // 更新资产请求
-export interface AssetUpdateRequest extends Partial<AssetCreateRequest> { }
+export type AssetUpdateRequest = Partial<AssetCreateRequest>;
 
 // 资产历史记录 - 增强版
 export interface AssetHistory {

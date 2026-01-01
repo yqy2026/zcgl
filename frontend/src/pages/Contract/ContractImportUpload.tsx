@@ -27,7 +27,7 @@ import {
 } from '@ant-design/icons';
 import type { UploadFile, UploadProps } from 'antd/es/upload/interface';
 
-import { pdfImportService, type FileUploadResponse, type SessionProgress } from '../../services/pdfImportService';
+import { pdfImportService, type FileUploadResponse } from '../../services/pdfImportService';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -59,7 +59,7 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
     try {
       const info = await pdfImportService.getSystemInfo();
       setSystemInfo(info);
-    } catch (error) {
+    } catch {
       console.error('加载系统信息失败:', error);
     }
   };

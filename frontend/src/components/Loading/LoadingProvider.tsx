@@ -4,7 +4,7 @@
  */
 
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react'
-import { Spin, message } from 'antd'
+import { Spin } from 'antd'
 
 // Loading状态接口
 interface LoadingState {
@@ -88,7 +88,7 @@ export const LoadingProvider: React.FC<{ children: ReactNode }> = ({ children })
       showLocalLoading(key, loadingState || {})
       const result = await asyncFn()
       return result
-    } catch (error) {
+    } catch {
       console.error(`Error in withLoading (${key}):`, error)
       throw error
     } finally {
@@ -237,7 +237,7 @@ export const LoadingButton: React.FC<LoadingButtonProps> = ({
     if (onClick && !loading) {
       try {
         await onClick()
-      } catch (error) {
+      } catch {
         console.error('LoadingButton onClick error:', error)
       }
     }

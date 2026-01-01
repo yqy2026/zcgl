@@ -10,9 +10,9 @@ import { Pie, Column } from '@ant-design/plots'
 import { assetService } from '@/services/assetService'
 import type { AssetSearchParams } from '@/types/asset'
 
-const { Title, Text } = Typography
+const { Text } = Typography
 
-interface AssetDistributionData {
+interface _AssetDistributionData {
   total_assets: number
   by_property_nature: Array<{
     property_nature: string

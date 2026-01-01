@@ -4,6 +4,9 @@
 
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 import { message } from "antd";
+import { createLogger } from "./logger";
+
+const logger = createLogger('Request');
 
 // 创建axios实例
 const createApiInstance = (): AxiosInstance => {
@@ -33,23 +36,19 @@ const createApiInstance = (): AxiosInstance => {
   // 响应拦截器
   instance.interceptors.response.use(
     (response: AxiosResponse) => {
-      // API response success
-      console.log("API Response Success:", {
+      logger.debug("API响应成功", {
         url: response.config.url,
         method: response.config.method,
         status: response.status,
-        data: response.data,
       });
       return response;
     },
     (error) => {
-      // API response error
-      console.log("API Response Error:", {
+      logger.debug("API响应错误", {
         url: error.config?.url,
         method: error.config?.method,
         status: error.response?.status,
         message: error.message,
-        data: error.response?.data,
       });
 
       // 统一错误处理
@@ -180,7 +179,7 @@ export const downloadFile = async (url: string, filename?: string): Promise<void
     link.click();
     document.body.removeChild(link);
     window.URL.revokeObjectURL(downloadUrl);
-  } catch (error) {
+  } catch {
     message.error("文件下载失败");
     throw error;
   }

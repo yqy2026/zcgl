@@ -3,6 +3,9 @@ import { message } from 'antd'
 import { User, LoginCredentials } from '../types/auth'
 import { AuthService } from '../services/authService'
 import { AUTH_API } from '../constants/api'
+import { createLogger } from '../utils/logger'
+
+const logger = createLogger('AuthContext');
 
 interface AuthContextType {
   user: User | null
@@ -43,9 +46,9 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       try {
         const parsedUser = JSON.parse(storedUser)
         setUser(parsedUser)
-        console.log('认证状态已从本地存储恢复')
+        logger.debug('认证状态已从本地存储恢复')
       } catch (e) {
-        console.error('Failed to parse stored user:', e)
+        logger.error('解析存储的用户信息失败', e instanceof Error ? e : new Error(String(e)))
         // 清除所有可能的认证相关存储
         localStorage.removeItem('user')
         localStorage.removeItem('user_info')
@@ -57,23 +60,23 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (credentials: LoginCredentials) => {
     try {
-      console.log('🔐 AuthContext.login 开始登录', credentials);
+      logger.debug('开始登录', credentials);
       setLoading(true)
       setError(null)
 
       // 调用 AuthService 的登录方法
       const response = await AuthService.login(credentials) as any
 
-      console.log('📤 AuthContext收到登录响应:', response);
+      logger.debug('AuthContext收到登录响应', response);
 
       if (response.success && response.data) {
         setUser(response.data.user)
-        console.log('✅ 用户状态已更新:', response.data.user);
+        logger.debug('用户状态已更新', { user: response.data.user });
         message.success(response.message || '登录成功')
       } else {
         throw new Error('登录响应格式错误')
       }
-    } catch (err) {
+    } catch {
       const errorMessage = err instanceof Error ? err.message : '登录失败'
       setError(errorMessage)
       message.error(errorMessage)
@@ -98,8 +101,8 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       setUser(null)
       message.success('已退出登录')
-    } catch (err) {
-      console.error('Logout error:', err)
+    } catch {
+      logger.error('登出错误', err instanceof Error ? err : new Error(String(err)))
       // 即使出错也要确保清除状态
       localStorage.removeItem('user')
       localStorage.removeItem('user_info')
@@ -120,7 +123,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const token = localStorage.getItem('token') || localStorage.getItem('auth_token')
     if (!token) {
-      console.log('没有访问令牌，需要重新登录')
+      logger.debug('没有访问令牌，需要重新登录')
       return
     }
 
@@ -128,7 +131,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       try {
         const refresh_token = localStorage.getItem('refresh_token') || localStorage.getItem('refreshToken')
         if (!refresh_token) {
-          console.log('没有刷新令牌，需要重新登录')
+          logger.debug('没有刷新令牌，需要重新登录')
           await logout()
           return
         }
@@ -149,14 +152,14 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             if (data.refresh_token) {
               localStorage.setItem('refresh_token', data.refresh_token)
             }
-            console.log('令牌已自动刷新')
+            logger.debug('令牌已自动刷新')
           }
         } else {
-          console.log('刷新令牌失败，需要重新登录')
+          logger.debug('刷新令牌失败，需要重新登录')
           await logout()
         }
-      } catch (error) {
-        console.error('自动刷新令牌失败:', error)
+      } catch {
+        logger.error('自动刷新令牌失败', error instanceof Error ? error : new Error(String(error)))
         await logout()
       }
     }
@@ -173,7 +176,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // 健壮的JWT token解析
         const tokenParts = currentToken.split('.')
         if (tokenParts.length !== 3) {
-          console.warn('Token格式不正确，清理无效token')
+          logger.warn('Token格式不正确，清理无效token')
           localStorage.removeItem('token')
           localStorage.removeItem('auth_token')
           return
@@ -183,14 +186,14 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         try {
           payload = JSON.parse(atob(tokenParts[1]))
         } catch (parseError) {
-          console.warn('Token payload解析失败，清理无效token:', parseError)
+          logger.warn('Token payload解析失败，清理无效token', { error: parseError })
           localStorage.removeItem('token')
           localStorage.removeItem('auth_token')
           return
         }
 
         if (!payload.exp) {
-          console.warn('Token缺少过期时间，清理无效token')
+          logger.warn('Token缺少过期时间，清理无效token')
           localStorage.removeItem('token')
           localStorage.removeItem('auth_token')
           return
@@ -201,7 +204,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         // 检查token是否已过期
         if (exp <= now) {
-          console.log('Token已过期，清理无效token')
+          logger.debug('Token已过期，清理无效token')
           localStorage.removeItem('token')
           localStorage.removeItem('auth_token')
           return
@@ -212,12 +215,12 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // 在过期前5分钟刷新
         const refreshTime = Math.max(timeUntilExpiry - 5 * 60 * 1000, 60000) // 最少1分钟后刷新
 
-        console.log(`令牌将在${Math.round(refreshTime/1000/60)}分钟后自动刷新`)
+        logger.debug(`令牌将在${Math.round(refreshTime / 1000 / 60)}分钟后自动刷新`)
 
         const timer = setTimeout(refreshToken, refreshTime)
         return () => clearTimeout(timer)
-      } catch (error) {
-        console.error('解析token失败:', error)
+      } catch {
+        logger.error('解析token失败', error instanceof Error ? error : new Error(String(error)))
         return
       }
     }

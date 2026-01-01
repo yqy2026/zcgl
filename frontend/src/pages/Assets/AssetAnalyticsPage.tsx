@@ -8,11 +8,8 @@ import {
   Empty,
   Typography,
   Space,
-  Tag,
   Button,
-  Statistic,
   message,
-  Switch,
   Radio,
 } from "antd";
 import styles from "./AssetAnalyticsPage.module.css";
@@ -22,9 +19,8 @@ import {
   DownloadOutlined,
   FullscreenOutlined,
   FullscreenExitOutlined,
-  SettingOutlined,
 } from "@ant-design/icons";
-import { analyticsService, type AnalyticsData } from "@/services/analyticsService";
+import { analyticsService } from "@/services/analyticsService";
 import { exportAnalyticsData } from "@/services/analyticsExportService";
 import { AnalyticsStatsGrid, FinancialStatsGrid } from "@/components/Analytics/AnalyticsStatsCard";
 import {
@@ -36,14 +32,13 @@ import {
 import AnalyticsFilters from "@/components/Analytics/AnalyticsFilters";
 import type { AssetSearchParams } from "@/types/asset";
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 // 分析维度类型
 type AnalysisDimension = "count" | "area";
 
 const AssetAnalyticsPage: React.FC = () => {
   const [filters, setFilters] = useState<AssetSearchParams>({});
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [dimension, setDimension] = useState<AnalysisDimension>("area");
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -124,7 +119,7 @@ const AssetAnalyticsPage: React.FC = () => {
 
       await exportAnalyticsData(exportData, "excel");
       message.success("数据导出成功！");
-    } catch (error) {
+    } catch {
       console.error("导出失败:", error);
       message.error("导出失败，请重试");
     } finally {
@@ -146,7 +141,7 @@ const AssetAnalyticsPage: React.FC = () => {
         setIsFullscreen(false);
         message.success("已退出全屏模式");
       }
-    } catch (error) {
+    } catch {
       console.error("全屏切换失败:", error);
       message.error("全屏切换失败，请检查浏览器权限设置");
     }

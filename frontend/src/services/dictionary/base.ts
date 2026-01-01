@@ -340,7 +340,7 @@ class BaseDictionaryService {
       }
 
       return response;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
 
       // 如果启用备用数据，返回备用数据
@@ -451,7 +451,7 @@ class BaseDictionaryService {
               includeMetadata
             });
             return { dictType, result };
-          } catch (error) {
+          } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             return {
               dictType,
@@ -499,7 +499,7 @@ class BaseDictionaryService {
       timeout?: number;
     } = {}
   ): Promise<Record<string, DictionaryServiceResult>> {
-    const { useCache = true, useFallback = true, isActive = true, timeout = 5000 } = options;
+    const { useCache = true, useFallback = true, isActive = true } = options;
 
     const promises = dictTypes.map(async (dictType) => {
       const result = await this.getOptions(dictType, { useCache, useFallback, isActive });
@@ -579,7 +579,6 @@ class BaseDictionaryService {
    * 清除过期缓存
    */
   cleanupExpiredCache(): void {
-    const now = Date.now();
     const detailedInfo = cache.getDetailedInfo();
 
     detailedInfo.forEach(info => {
@@ -625,7 +624,7 @@ class BaseDictionaryService {
           }
 
           onProgress?.(loadedTypes.length + failedTypes.length, dictTypes.length, dictType);
-        } catch (error) {
+        } catch {
           const enhancedError = ApiErrorHandler.handleError(error);
           failedTypes.push({ type: dictType, error: enhancedError.message });
           onProgress?.(loadedTypes.length + failedTypes.length, dictTypes.length, dictType);
@@ -769,7 +768,7 @@ class BaseDictionaryService {
         } else {
           failed.push({ type: dictType, error: result.error || 'Unknown error' });
         }
-      } catch (error) {
+      } catch {
         const enhancedError = ApiErrorHandler.handleError(error);
         failed.push({ type: dictType, error: enhancedError.message });
       }

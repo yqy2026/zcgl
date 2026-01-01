@@ -8,8 +8,11 @@
 
 import { enhancedApiClient } from '@/api/client';
 import { ApiErrorHandler } from '../utils/responseExtractor';
+import { createLogger } from '../utils/logger';
 import type { ExcelImportResponse, ExcelExportRequest, ExcelExportResponse } from '@/types/api';
 import type { ImportExportHistory, TaskStatusResponse, Filters } from '@/types/common';
+
+const logger = createLogger('ExcelService');
 
 // Excel文件验证结果接口
 export interface ExcelValidationResult {
@@ -134,7 +137,7 @@ export class ExcelService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -159,7 +162,7 @@ export class ExcelService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -184,7 +187,7 @@ export class ExcelService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -209,7 +212,7 @@ export class ExcelService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -234,7 +237,7 @@ export class ExcelService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -261,7 +264,7 @@ export class ExcelService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -286,7 +289,7 @@ export class ExcelService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -311,7 +314,7 @@ export class ExcelService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -336,7 +339,7 @@ export class ExcelService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -369,7 +372,7 @@ export class ExcelService {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(downloadUrl);
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -405,7 +408,7 @@ export class ExcelService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       // 对于验证错误，返回默认错误结果而不是抛出异常
       return {
@@ -443,7 +446,7 @@ export class ExcelService {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(downloadUrl);
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -468,9 +471,9 @@ export class ExcelService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.warn('获取Excel模板列表失败:', enhancedError.message);
+      logger.warn('获取Excel模板列表失败', { error: enhancedError.message });
       return [];
     }
   }
@@ -498,9 +501,9 @@ export class ExcelService {
 
       // 处理嵌套数据结构
       return (result.data as any)?.data || [];
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.warn('获取导入历史失败:', enhancedError.message);
+      logger.warn('获取导入历史失败', { error: enhancedError.message });
       return [];
     }
   }
@@ -526,9 +529,9 @@ export class ExcelService {
 
       // 处理嵌套数据结构
       return (result.data as any)?.data || [];
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.warn('获取导出历史失败:', enhancedError.message);
+      logger.warn('获取导出历史失败', { error: enhancedError.message });
       return [];
     }
   }
@@ -563,7 +566,7 @@ export class ExcelService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -590,9 +593,9 @@ export class ExcelService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.warn('获取字段映射失败:', enhancedError.message);
+      logger.warn('获取字段映射失败', { error: enhancedError.message });
       return {};
     }
   }
@@ -616,7 +619,7 @@ export class ExcelService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -641,7 +644,7 @@ export class ExcelService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -668,9 +671,9 @@ export class ExcelService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.warn('获取支持格式失败:', enhancedError.message);
+      logger.warn('获取支持格式失败', { error: enhancedError.message });
       // 返回默认格式
       return {
         formats: ['xlsx', 'xls', 'csv'],
@@ -712,8 +715,7 @@ export class ExcelService {
       }
 
       return result.data!;
-    } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
+    } catch {
       // 本地进行基本检查
       const extension = filename.split('.').pop()?.toLowerCase();
       const supportedExtensions = ['xlsx', 'xls', 'csv'];
@@ -760,7 +762,7 @@ export class ExcelService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -802,7 +804,7 @@ export class ExcelService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -829,7 +831,7 @@ export class ExcelService {
         } else {
           failed.push({ taskId, error: result.message });
         }
-      } catch (error) {
+      } catch {
         const enhancedError = ApiErrorHandler.handleError(error);
         failed.push({ taskId, error: enhancedError.message });
       }
@@ -864,7 +866,7 @@ export class ExcelService {
         } else {
           failed.push({ taskId, error: result.message });
         }
-      } catch (error) {
+      } catch {
         const enhancedError = ApiErrorHandler.handleError(error);
         failed.push({ taskId, error: enhancedError.message });
       }
@@ -895,7 +897,7 @@ export class ExcelService {
       try {
         await this.downloadExportFile(fileInfo.filename, fileInfo.taskId);
         downloaded.push(fileInfo.filename);
-      } catch (error) {
+      } catch {
         const enhancedError = ApiErrorHandler.handleError(error);
         failed.push({ filename: fileInfo.filename, error: enhancedError.message });
       }
@@ -949,7 +951,7 @@ export class ExcelService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -984,7 +986,7 @@ export class ExcelService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -1023,7 +1025,7 @@ export class ExcelService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }

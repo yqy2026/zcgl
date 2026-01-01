@@ -41,7 +41,7 @@ const TodoList: React.FC<TodoListProps> = ({ items, loading }) => {
     return textMap[priority] || priority
   }
 
-  const handleComplete = (id: string) => {
+  const handleComplete = (_id: string) => {
     // Task completed
   }
 

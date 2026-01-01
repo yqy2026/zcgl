@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   Row,
@@ -9,15 +9,13 @@ import {
   Button,
   DatePicker,
   Space,
-  Tag,
   Tooltip,
   Alert,
   Modal,
   Form,
   InputNumber,
   message,
-  Tabs,
-  Divider
+  Tabs
 } from 'antd';
 import {
   ReloadOutlined,
@@ -80,7 +78,7 @@ interface ChartDatum {
   [key: string]: number | string
 }
 
-interface CoverageTrendDatum {
+interface _CoverageTrendDatum {
   date: string
   total_coverage: number
   backend_coverage?: number
@@ -177,7 +175,7 @@ const TestCoverageDashboard: React.FC = () => {
   });
 
   // 获取覆盖率趋势
-  const { data: coverageTrend, isLoading: trendLoading } = useQuery({
+  const { data: coverageTrend, isLoading: _trendLoading } = useQuery({
     queryKey: ['coverage-trend', trendDays],
     queryFn: () => fetchCoverageTrend(trendDays),
   });

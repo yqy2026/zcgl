@@ -130,7 +130,7 @@ interface FormFieldChange {
       }
     } catch (error: unknown) {
       console.error('表单验证失败:', error);
-      const errorMessage = error instanceof Error ? error.message : '表单验证失败';
+      const _errorMessage = error instanceof Error ? error.message : '表单验证失败';
       message.error('请检查表单填写是否正确');
     } finally {
       setLoading(false);

@@ -4,7 +4,6 @@ import { message } from 'antd'
 import { assetService } from '@/services/assetService'
 import { useAssetStore } from '@/store/useAssetStore'
 import type {
-  Asset,
   AssetSearchParams,
   AssetCreateRequest,
   AssetUpdateRequest,

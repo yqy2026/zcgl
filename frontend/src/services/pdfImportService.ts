@@ -6,16 +6,11 @@
 
 import axios from 'axios';
 import type {
-  ProcessingOptions,
-  EngineType,
-  FieldType,
-  ValidationLevel,
-  ContractValidationReport,
-  OCRResult,
-  SealDetectionResult,
-  TemplateLearningResult,
-  BusinessRuleResult
+  ProcessingOptions
 } from '../types/enhancedPdfImport';
+import { createLogger } from '../utils/logger';
+
+const logger = createLogger('PDFImportService');
 
 // 类型定义
 export interface FileInfo {
@@ -295,7 +290,7 @@ class PDFImportService {
           timeout: 300000, // 增加到5分钟，支持大文件OCR处理
           onUploadProgress: (progressEvent) => {
             if (progressEvent.total) {
-              const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+              const _percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
               // Upload progress
             }
           },
@@ -531,7 +526,7 @@ class PDFImportService {
 
       // 如果是404错误，提供空的会话列表
       if (axios.isAxiosError(error) && error.response?.status === 404) {
-        console.warn('PDF sessions API端点不存在，返回空会话列表');
+        logger.warn('PDF sessions API端点不存在，返回空会话列表');
         return {
           success: true,
           active_sessions: [],
@@ -599,7 +594,7 @@ class PDFImportService {
 
       // 如果是404错误，提供备用数据
       if (axios.isAxiosError(error) && error.response?.status === 404) {
-        console.warn('PDF API端点不存在，使用备用系统信息');
+        logger.warn('PDF API端点不存在，使用备用系统信息');
         return {
           success: true,
           message: 'PDF智能导入系统（备用模式）',
@@ -749,8 +744,8 @@ class PDFImportService {
 
           // 如果还在处理中，继续轮询
           if (result.session_status.status !== 'ready_for_review' &&
-              result.session_status.status !== 'failed' &&
-              result.session_status.status !== 'cancelled') {
+            result.session_status.status !== 'failed' &&
+            result.session_status.status !== 'cancelled') {
             setTimeout(poll, interval);
           }
         }
@@ -783,7 +778,7 @@ class PDFImportService {
     const allowedExtensions = ['.pdf'];
 
     return allowedTypes.includes(file.type) ||
-           allowedExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+      allowedExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
   }
 
   /**
@@ -872,7 +867,7 @@ class PDFImportService {
           timeout: 600000, // 10分钟，支持增强版处理
           onUploadProgress: (progressEvent) => {
             if (progressEvent.total) {
-              const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+              const _percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
               // Enhanced upload progress
             }
           },
@@ -977,8 +972,8 @@ class PDFImportService {
 
           // 如果还在处理中，继续轮询
           if (result.session_status.status !== 'ready_for_review' &&
-              result.session_status.status !== 'failed' &&
-              result.session_status.status !== 'cancelled') {
+            result.session_status.status !== 'failed' &&
+            result.session_status.status !== 'cancelled') {
             setTimeout(poll, interval);
           }
         }
@@ -1127,7 +1122,7 @@ class PDFImportService {
   async testEnhancedFeatures(): Promise<{
     success: boolean;
     message: string;
-    test_results?: Array<{ name: string; status: string; message?: string; [key: string]: unknown }>;
+    test_results?: Array<{ name: string; status: string; message?: string;[key: string]: unknown }>;
     availability_rate?: number;
     system_ready?: boolean;
   }> {

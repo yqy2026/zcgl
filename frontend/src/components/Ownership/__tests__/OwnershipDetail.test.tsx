@@ -84,7 +84,7 @@ vi.mock('antd', () => ({
   Divider: ({ children }: any) => (
     <div data-testid="divider">{children}</div>
   ),
-  Table: ({ dataSource, columns, pagination }: any) => (
+  Table: ({ dataSource, columns: _columns, pagination }: any) => (
     <div data-testid="table" data-pagination={pagination}>
       {dataSource?.map((item: any, index: number) => (
         <div key={index} data-row={index}>{JSON.stringify(item)}</div>
@@ -186,7 +186,7 @@ describe('OwnershipDetail 组件测试', () => {
     vi.clearAllMocks()
   })
 
-  const mockOwnershipData: any = {
+  const _mockOwnershipData: any = {
     id: '1',
     name: '测试权属方',
     type: 'enterprise',

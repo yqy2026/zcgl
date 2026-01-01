@@ -57,7 +57,7 @@ vi.mock('antd', () => ({
       {children}
     </div>
   ),
-  Statistic: ({ title, value, precision, suffix, prefix, valueStyle, formatter }: any) => (
+  Statistic: ({ title, value, precision: _precision, suffix, prefix, valueStyle, formatter }: any) => (
     <div data-testid="statistic" data-title={title} data-value={value} style={valueStyle}>
       {prefix && <span data-testid="statistic-prefix">{prefix}</span>}
       <span>{formatter ? formatter(value) : value}</span>
@@ -69,7 +69,7 @@ vi.mock('antd', () => ({
       {children}
     </div>
   ),
-  Alert: ({ message, description, type, showIcon }: any) => (
+  Alert: ({ message, description, type, showIcon: _showIcon }: any) => (
     <div data-testid="alert" data-type={type} data-message={message}>
       {description}
     </div>

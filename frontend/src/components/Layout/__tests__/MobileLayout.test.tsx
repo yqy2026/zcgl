@@ -4,7 +4,7 @@
  * 增强版本 - 添加更全面的测试用例
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import React from 'react'
 
 // Mock Ant Design components
@@ -304,7 +304,7 @@ describe('MobileLayout - 边界情况测试', () => {
   it('应该处理undefined children', async () => {
     const MobileLayout = (await import('../MobileLayout')).default
     const element = React.createElement(MobileLayout, {
-      children: undefined,
+      children: _children, undefined,
     })
     expect(element).toBeTruthy()
   })

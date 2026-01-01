@@ -110,7 +110,7 @@ const AssetCreatePage: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const [form] = Form.useForm()
+  const _form = Form.useForm()
 
   const isEdit = !!id
 
@@ -158,7 +158,7 @@ const AssetCreatePage: React.FC = () => {
       } else {
         createMutation.mutate(data as AssetCreateRequest)
       }
-    } catch (error) {
+    } catch {
       console.error('Submit error:', error)
     }
   }

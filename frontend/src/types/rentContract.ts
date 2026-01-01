@@ -264,8 +264,8 @@ export interface PaginatedResponse<T> {
   pages: number;
 }
 
-export interface RentContractListResponse extends PaginatedResponse<RentContract> {}
-export interface RentLedgerListResponse extends PaginatedResponse<RentLedger> {}
+export type RentContractListResponse = PaginatedResponse<RentContract>;
+export type RentLedgerListResponse = PaginatedResponse<RentLedger>;
 
 // 统计响应类型
 export interface RentStatisticsOverview {

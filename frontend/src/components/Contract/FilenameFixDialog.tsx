@@ -11,18 +11,13 @@ import {
   Col,
   Table,
   Tag,
-  Tooltip,
   message,
-  Spin,
-  Divider
+  Spin
 } from 'antd';
 import {
-  CheckCircleOutlined,
-  ExclamationCircleOutlined,
   InfoCircleOutlined,
   ReloadOutlined,
-  CopyOutlined,
-  EditOutlined
+  CopyOutlined
 } from '@ant-design/icons';
 
 const { Title, Text, Paragraph } = Typography;
@@ -62,10 +57,10 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
   onFilenameFixed
 }) => {
   const [loading, setLoading] = useState(false);
-  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
+  const [_validationResult, _setValidationResult] = useState<ValidationResult | null>(null);
   const [suggestedFilename, setSuggestedFilename] = useState<string>('');
   const [currentStep, setCurrentStep] = useState<number>(0);
-  const [filenameChanges, setFilenameChanges] = useState<FilenameChange[]>([]);
+  const [_filenameChanges, _setFilenameChanges] = useState<FilenameChange[]>([]);
   const [customFilename, setCustomFilename] = useState<string>('');
   const [copySuccess, setCopySuccess] = useState<boolean>(false);
 
@@ -311,7 +306,7 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
       setSteps(newSteps);
       setCurrentStep(newSteps.length - 1);
 
-    } catch (error) {
+    } catch {
       console.error('文件名修复失败:', error);
       setSteps([
         {

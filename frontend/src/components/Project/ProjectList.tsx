@@ -18,8 +18,7 @@ import {
   Badge,
   Input,
   Select,
-  Switch,
-  Pagination
+  Switch
 } from 'antd';
 import {
   PlusOutlined,
@@ -34,7 +33,7 @@ import type { ColumnsType } from 'antd/es/table';
 
 import { projectService } from '@/services/projectService';
 import { ownershipService } from '@/services/ownershipService';
-import type { Project, ProjectListResponse, ProjectStatisticsResponse } from '@/types/project';
+import type { Project, ProjectStatisticsResponse } from '@/types/project';
 import type { Ownership } from '@/types/ownership';
 import { ProjectForm } from '@/components/Forms';
 import ProjectDetail from './ProjectDetail';
@@ -146,7 +145,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
         type_distribution: {} as any, // 如需要可基于项目数据计算
         status_distribution: {} as any // 如需要可基于项目数据计算
       } as any);
-    } catch (error) {
+    } catch {
       console.error('获取项目列表失败:', error);
       const err = error as any;
       console.error('Error details:', {
@@ -161,7 +160,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
   };
 
   // 获取统计信息 - 基于本地项目数据计算
-  const fetchStatistics = async () => {
+  const _fetchStatistics = async () => {
     try {
       // 由于后端没有提供统计API，我们基于当前项目数据计算统计信息
       // 这里使用空数组，实际统计会在项目数据加载后计算
@@ -172,7 +171,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
         type_distribution: {} as any,
         status_distribution: {} as any
       } as any);
-    } catch (error) {
+    } catch {
       console.error('获取统计信息失败:', error);
       setStatistics(null);
     }
@@ -184,7 +183,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
     try {
       const response = await ownershipService.getOwnershipOptions(true);
       setOwnerships(response);
-    } catch (error) {
+    } catch {
       console.error('获取权属方列表失败:', error);
     } finally {
       setOwnershipsLoading(false);
@@ -214,7 +213,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
           await projectService.deleteProject(project.id);
           message.success('项目删除成功');
           fetchProjects();
-        } catch (error) {
+        } catch {
           console.error('删除项目失败:', error);
           message.error('删除项目失败');
         }
@@ -228,7 +227,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
       await projectService.toggleProjectStatus(project.id);
       message.success('项目状态切换成功');
       fetchProjects();
-    } catch (error) {
+    } catch {
       console.error('切换项目状态失败:', error);
       message.error('切换项目状态失败');
     }
@@ -298,7 +297,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
           if (activeRelations.length > 0) {
             return (
               <div>
-                {activeRelations.slice(0, 2).map((rel, index) => (
+                {activeRelations.slice(0, 2).map((rel, _index) => (
                   <Tag key={rel.id} color="blue" style={{ marginRight: 4 }}>
                     {rel.ownership_name || (record as any).ownership_entity || '权属方已关联'}
                   </Tag>
@@ -333,7 +332,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
       dataIndex: 'is_active',
       key: 'is_active',
       width: 80,
-      render: (isActive: boolean, record: Project) => (
+      render: (isActive: boolean, _record: Project) => (
         <Badge
           status={isActive ? 'success' : 'error'}
           text={isActive ? '启用' : '禁用'}

@@ -31,14 +31,14 @@ vi.mock('antd', () => ({
       {children}
     </div>
   ),
-  Form: ({ children, onFinish, initialValues, layout, colon }: any) => (
+  Form: ({ children, onFinish, initialValues: _initialValues, layout, colon }: any) => (
     <form
       data-testid="form"
       data-layout={layout}
       data-colon={colon}
       onSubmit={(e) => {
-        e.preventDefault()
-        onFinish && onFinish({})
+        e.preventDefault();
+        onFinish?.({});
       }}
     >
       {children}
@@ -112,7 +112,7 @@ vi.mock('antd', () => ({
       {children}
     </div>
   ),
-  Slider: ({ value, onChange, range, min, max, marks }: any) => (
+  Slider: ({ value, onChange, range, min, max, marks: _marks }: any) => (
     <div data-testid="slider" data-range={range} data-min={min} data-max={max}>
       <input
         type="range"
@@ -299,7 +299,7 @@ describe('AssetSearch 组件测试', () => {
     })
 
     it('应该接受 initialValues 属性', async () => {
-      const element = await createElement({ initialValues: defaultInitialValues })
+      const element = await createElement({ initialValues: _initialValues, defaultInitialValues })
       expect(element).toBeTruthy()
     })
 
@@ -439,7 +439,7 @@ describe('AssetSearch 组件测试', () => {
     })
 
     it('重置后表单应该恢复初始值', async () => {
-      const element = await createElement({ initialValues: defaultInitialValues })
+      const element = await createElement({ initialValues: _initialValues, defaultInitialValues })
       expect(element).toBeTruthy()
     })
   })

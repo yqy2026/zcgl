@@ -22,7 +22,6 @@ import {
 import {
   QuestionCircleOutlined,
   CheckCircleOutlined,
-  ExclamationCircleOutlined,
   InfoCircleOutlined,
   BookOutlined,
   VideoCameraOutlined,
@@ -32,7 +31,7 @@ import {
   SettingOutlined
 } from '@ant-design/icons';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 const { Panel } = Collapse;
 const { Step } = Steps;
 

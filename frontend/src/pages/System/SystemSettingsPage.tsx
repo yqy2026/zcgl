@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Card, Form, Input, Switch, Button, message, Divider, Typography, Space, Tabs, Alert } from 'antd'
-import { SettingOutlined, InfoCircleOutlined, DatabaseOutlined, CloudDownloadOutlined, CloudUploadOutlined } from '@ant-design/icons'
+import { SettingOutlined, DatabaseOutlined, CloudDownloadOutlined, CloudUploadOutlined } from '@ant-design/icons'
 import { systemService } from '../../services/systemService'
 
 const { Title, Text } = Typography

@@ -9,7 +9,6 @@ import {
   Space,
   Breadcrumb,
   Typography,
-  message,
   Row,
   Col,
   Statistic,
@@ -33,10 +32,10 @@ const { Title, Text } = Typography;
 
 const ContractCreatePage: React.FC = () => {
   const navigate = useNavigate();
-  const format = useFormat();
+  const _format = useFormat();
   const [loading, setLoading] = useState(false);
   const [contractCreated, setContractCreated] = useState(false);
-  const [createdContractId, setCreatedContractId] = useState<string | null>(null);
+  const [_createdContractId, _setCreatedContractId] = useState<string | null>(null);
 
   // 处理合同创建
   const handleCreateContract = async (contractData: RentContractCreate) => {
@@ -46,7 +45,7 @@ const ContractCreatePage: React.FC = () => {
 
       if (response.success) {
         setContractCreated(true);
-        setCreatedContractId(response.data.id);
+        _setCreatedContractId(response.data.id);
         message.success('合同创建成功！');
 
         // 3秒后跳转到合同列表页面
@@ -56,7 +55,7 @@ const ContractCreatePage: React.FC = () => {
       } else {
         message.error(response.message || '合同创建失败');
       }
-    } catch (error) {
+    } catch {
       console.error('创建合同失败:', error);
       message.error('创建合同失败，请检查网络连接');
     } finally {

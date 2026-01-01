@@ -5,19 +5,11 @@
 
 import { AxiosResponse, AxiosError } from 'axios';
 import {
-  StandardApiResponse,
-  PaginatedApiResponse,
-  DirectResponse,
-  ErrorResponse,
   ExtractResult,
   SmartExtractOptions,
   ResponseDetectionConfig,
   EnhancedApiError,
   ApiErrorType,
-  isStandardApiResponse,
-  isPaginatedResponse,
-  isErrorResponse,
-  isDirectResponse
 } from '../types/api-response';
 
 // ==================== 响应检测器 ====================
@@ -147,7 +139,7 @@ export class ResponseExtractor {
             rawResponse: response
           };
       }
-    } catch (error) {
+    } catch {
       return {
         success: false,
         error: `数据提取失败: ${error instanceof Error ? error.message : '未知错误'}`,
@@ -272,7 +264,7 @@ export class ResponseExtractor {
 
       // 尝试构造新实例（适用于简单对象）
       return new options.expectedType(data) as T;
-    } catch (error) {
+    } catch {
       console.warn(`类型验证失败: ${error instanceof Error ? error.message : '未知错误'}`);
 
       // 返回默认值或原数据
@@ -317,7 +309,7 @@ export class ResponseExtractor {
       }
 
       return '操作成功';
-    } catch (error) {
+    } catch {
       return '操作完成';
     }
   }
@@ -366,7 +358,7 @@ export class ResponseExtractor {
         data: transformedData,
         rawResponse: originalResult.rawResponse
       };
-    } catch (error) {
+    } catch {
       return {
         success: false,
         error: `数据转换失败: ${error instanceof Error ? error.message : '未知错误'}`,

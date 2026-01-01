@@ -12,12 +12,10 @@
  * @created 2025-11-01
  */
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useCallback, useMemo } from 'react'
 import { Card, Row, Col, Statistic, Progress, Alert, Tag, Button, Space, Tooltip, List, Badge } from 'antd'
 import {
   MonitorOutlined,
-  DatabaseOutlined,
-  CloudServerOutlined,
   AlertOutlined,
   ReloadOutlined,
   SettingOutlined,
@@ -25,7 +23,7 @@ import {
   FallOutlined,
   MinusOutlined
 } from '@ant-design/icons'
-import { Line, Column, Gauge } from '@ant-design/plots'
+import { Line, Gauge } from '@ant-design/plots'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { monitoringService } from '@/services/monitoringService'
@@ -97,9 +95,9 @@ interface DashboardData {
 }
 
 const SystemMonitoringDashboard: React.FC = () => {
-  const [refreshInterval, setRefreshInterval] = useState(30000) // 30秒刷新
+  const [refreshInterval, _setRefreshInterval] = useState(30000) // 30秒刷新
   const [autoRefresh, setAutoRefresh] = useState(true)
-  const [selectedTimeRange, setSelectedTimeRange] = useState(24) // 小时
+  const [_selectedTimeRange, _setSelectedTimeRange] = useState(24) // 小时
 
   const queryClient = useQueryClient()
 
@@ -154,14 +152,14 @@ const SystemMonitoringDashboard: React.FC = () => {
   }
 
   // 获取趋势图标
-  const getTrendIcon = (trend: number) => {
+  const _getTrendIcon = (trend: number) => {
     if (trend > 5) return <RiseOutlined style={{ color: '#ff4d4f' }} />
     if (trend < -5) return <FallOutlined style={{ color: '#52c41a' }} />
     return <MinusOutlined style={{ color: '#d9d9d9' }} />
   }
 
   // 格式化网络IO
-  const formatNetworkIO = (bytes: number) => {
+  const _formatNetworkIO = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
     if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`

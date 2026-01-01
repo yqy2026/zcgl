@@ -43,7 +43,7 @@ export class AssetHistoryService {
             }
 
             return result.data!;
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -65,7 +65,7 @@ export class AssetHistoryService {
             }
 
             return result.data!;
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -90,7 +90,7 @@ export class AssetHistoryService {
             }
 
             return result.data!;
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -120,7 +120,7 @@ export class AssetHistoryService {
             }
 
             return result.data!.history || [];
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }

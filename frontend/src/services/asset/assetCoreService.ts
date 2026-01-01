@@ -41,7 +41,7 @@ export class AssetCoreService {
             }
 
             return result.data!;
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -67,7 +67,7 @@ export class AssetCoreService {
             }
 
             return result.data!;
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -88,7 +88,7 @@ export class AssetCoreService {
             }
 
             return result.data!;
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -110,7 +110,7 @@ export class AssetCoreService {
             }
 
             return result.data!;
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -131,7 +131,7 @@ export class AssetCoreService {
             }
 
             return result.data!;
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -152,7 +152,7 @@ export class AssetCoreService {
             }
 
             return result.data!;
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -171,7 +171,7 @@ export class AssetCoreService {
             if (!result.success) {
                 throw new Error(`删除资产失败: ${result.error}`);
             }
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -190,7 +190,7 @@ export class AssetCoreService {
             if (!result.success) {
                 throw new Error(`批量删除资产失败: ${result.error}`);
             }
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -230,7 +230,7 @@ export class AssetCoreService {
                 valid: true,
                 errors: [],
             };
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             return {
                 valid: false,
@@ -256,7 +256,7 @@ export class AssetCoreService {
             }
 
             return result.data || [];
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -279,7 +279,7 @@ export class AssetCoreService {
             }
 
             return result.data || [];
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -302,7 +302,7 @@ export class AssetCoreService {
             }
 
             return result.data || [];
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }

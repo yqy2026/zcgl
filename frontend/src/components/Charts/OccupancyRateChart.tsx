@@ -14,7 +14,7 @@ import type { AssetSearchParams } from '@/types/asset'
 
 const { Text } = Typography
 
-interface OccupancyRateData {
+interface _OccupancyRateData {
   overall_rate: number
   trend: 'up' | 'down' | 'stable'
   trend_percentage: number

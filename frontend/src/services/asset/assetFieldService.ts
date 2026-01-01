@@ -34,7 +34,7 @@ export class AssetFieldService {
             }
 
             return result.data || [];
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -56,7 +56,7 @@ export class AssetFieldService {
             }
 
             return result.data!;
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -79,7 +79,7 @@ export class AssetFieldService {
             }
 
             return result.data!;
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -103,7 +103,7 @@ export class AssetFieldService {
             }
 
             return result.data!;
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -122,7 +122,7 @@ export class AssetFieldService {
             if (!result.success) {
                 throw new Error(`删除自定义字段配置失败: ${result.error}`);
             }
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -144,7 +144,7 @@ export class AssetFieldService {
             }
 
             return result.data?.values || [];
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -168,7 +168,7 @@ export class AssetFieldService {
             }
 
             return result.data?.values || [];
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -189,7 +189,7 @@ export class AssetFieldService {
             if (!result.success) {
                 throw new Error(`批量设置自定义字段值失败: ${result.error}`);
             }
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -213,7 +213,7 @@ export class AssetFieldService {
             }
 
             return result.data || { valid: true };
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             return {
                 valid: false,
@@ -239,7 +239,7 @@ export class AssetFieldService {
             }
 
             return result.data || [];
-        } catch (error) {
+        } catch {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }

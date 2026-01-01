@@ -86,7 +86,7 @@ const RentStatisticsPage: React.FC = () => {
       setOwnershipStats(ownershipData);
       setAssetStats(assetData);
       setMonthlyStats(monthlyData);
-    } catch (error) {
+    } catch {
       message.error('获取统计数据失败');
       console.error('Statistics fetch error:', error);
       // 设置默认值以防止undefined错误

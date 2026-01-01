@@ -2,7 +2,7 @@
  * 租金合同Excel导入导出组件
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   Button,
   Upload,
@@ -13,7 +13,6 @@ import {
   DatePicker,
   Space,
   Alert,
-  Progress,
   Card,
   Row,
   Col,
@@ -21,24 +20,19 @@ import {
   Typography,
   Divider,
   List,
-  Tag,
   message,
-  Spin,
 } from 'antd';
 import {
-  UploadOutlined,
   DownloadOutlined,
   ExportOutlined,
   FileExcelOutlined,
   CheckCircleOutlined,
   ExclamationCircleOutlined,
-  InfoCircleOutlined,
 } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';
-import dayjs from 'dayjs';
 import { rentContractExcelService, ExcelImportResult } from '../../services/rentContractExcelService';
 
-const { Title, Text, Paragraph } = Typography;
+const { Text, Paragraph } = Typography;
 const { RangePicker } = DatePicker;
 
 interface RentContractExcelImportProps {
@@ -62,8 +56,6 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
     import_ledger: false,
     overwrite_existing: false,
   });
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 处理文件上传
   const handleFileUpload = async (file: File) => {
@@ -90,7 +82,7 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
       });
 
       return result;
-    } catch (error) {
+    } catch {
       console.error('导入失败:', error);
       message.error('导入失败，请重试');
       return null;
@@ -116,7 +108,7 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
       message.success('导出成功');
       setExportModalVisible(false);
       form.resetFields();
-    } catch (error) {
+    } catch {
       console.error('导出失败:', error);
       message.error('导出失败，请重试');
     } finally {
@@ -129,7 +121,7 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
     try {
       await rentContractExcelService.downloadTemplateFile();
       message.success('模板下载成功');
-    } catch (error) {
+    } catch {
       message.error('模板下载失败，请重试');
     }
   };

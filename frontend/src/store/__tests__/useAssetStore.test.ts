@@ -475,7 +475,7 @@ describe('useAssetStore - 资产操作', () => {
     it('删除不存在的资产不应该改变列表', () => {
       const { result } = renderHook(() => useAssetStore())
 
-      const initialCount = result.current.assets.length
+      const _initialCount = result.current.assets.length
 
       act(() => {
         result.current.removeAsset('non-existent-id')
@@ -662,7 +662,7 @@ describe('useAssetStore - 边界情况', () => {
       result.current.setAssets(mockAssets)
     })
 
-    const initialCount = result.current.assets.length
+    const _initialCount = result.current.assets.length
 
     // 逐个删除
     result.current.assets.forEach(asset => {

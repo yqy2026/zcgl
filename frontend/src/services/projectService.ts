@@ -8,7 +8,7 @@
 
 import { enhancedApiClient } from '@/api/client';
 import { ApiErrorHandler } from '../utils/responseExtractor';
-import { API_CONFIG, API_ENDPOINTS } from '@/constants/api';
+import { API_ENDPOINTS } from '@/constants/api';
 import type {
   Project,
   ProjectCreate,
@@ -45,7 +45,7 @@ export class ProjectService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -70,7 +70,7 @@ export class ProjectService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -105,7 +105,7 @@ export class ProjectService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -130,7 +130,7 @@ export class ProjectService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -155,7 +155,7 @@ export class ProjectService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -179,7 +179,7 @@ export class ProjectService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -206,7 +206,7 @@ export class ProjectService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -231,7 +231,7 @@ export class ProjectService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -258,7 +258,7 @@ export class ProjectService {
       // 确保返回数组格式
       const data = result.data!;
       return Array.isArray(data) ? data : (data as any)?.data || [];
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -274,7 +274,7 @@ export class ProjectService {
       const promises = ids.map(id => this.getProject(id));
       const projects = await Promise.all(promises);
       return projects.filter(project => project && project.is_active);
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('批量获取项目信息失败:', enhancedError.message);
       return [];
@@ -292,7 +292,7 @@ export class ProjectService {
       try {
         await this.deleteProject(id);
         deleted++;
-      } catch (error) {
+      } catch {
         const enhancedError = ApiErrorHandler.handleError(error);
         errors.push(`项目 ${id}: ${enhancedError.message}`);
       }
@@ -312,7 +312,7 @@ export class ProjectService {
       return !result.items.some(item =>
         item.code === code && item.id !== excludeId
       );
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('验证项目编码失败:', enhancedError.message);
       return false;
@@ -328,7 +328,7 @@ export class ProjectService {
       return !result.items.some(item =>
         item.name === name && item.id !== excludeId
       );
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('验证项目名称失败:', enhancedError.message);
       return false;
@@ -344,7 +344,7 @@ export class ProjectService {
     try {
       const result = await this.getProjects({ ...params, size: 1 });
       return result.total;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('获取项目数量失败:', enhancedError.message);
       return 0;
@@ -369,7 +369,7 @@ export class ProjectService {
       }
 
       return { canDelete: true };
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('检查项目删除条件失败:', enhancedError.message);
       return { canDelete: false, reason: '检查失败，请稍后重试' };
@@ -386,7 +386,7 @@ export class ProjectService {
         value: option.id,
         label: `${option.name} (${option.code})`
       }));
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('获取项目选择选项失败:', enhancedError.message);
       return [];
@@ -400,7 +400,7 @@ export class ProjectService {
     try {
       const result = await this.searchProjects({ keyword });
       return result.items;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('关键词搜索项目失败:', enhancedError.message);
       return [];
@@ -414,7 +414,7 @@ export class ProjectService {
     try {
       const result = await this.getProjects({ ownership_id: ownershipId });
       return result.items;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('根据权属方获取项目失败:', enhancedError.message);
       return [];
@@ -428,7 +428,7 @@ export class ProjectService {
     try {
       const result = await this.getProjects({ is_active: true });
       return result.items;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('获取活跃项目失败:', enhancedError.message);
       return [];
@@ -442,7 +442,7 @@ export class ProjectService {
     try {
       const result = await this.getProjects({ is_active: false });
       return result.items;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('获取非活跃项目失败:', enhancedError.message);
       return [];
@@ -470,7 +470,7 @@ export class ProjectService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -511,7 +511,7 @@ export class ProjectService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -544,7 +544,7 @@ export class ProjectService {
         totalArea: projectStats.total_area || 0,
         lastUpdated: project.updated_at
       };
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(`获取项目完整信息失败: ${enhancedError.message}`);
     }

@@ -408,8 +408,8 @@ interface ProgressTrackerProps {
 export const SmartProgressTracker: React.FC<ProgressTrackerProps> = ({
   steps,
   current,
-  size = 'default',
-  direction = 'horizontal',
+  _size = 'default',
+  _direction = 'horizontal',
   showDetails = true
 }) => {
   return (

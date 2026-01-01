@@ -3,7 +3,7 @@
  * 测试项目管理相关的自定义Hooks（简化版本）
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 
 // =============================================================================
 // Mock projectService

@@ -75,7 +75,7 @@ const AppBreadcrumb: React.FC = () => {
     // 处理资产详情页面
     const assetDetailMatch = pathname.match(/^\/assets\/(\d+)$/)
     if (assetDetailMatch) {
-      const assetId = assetDetailMatch[1]
+      const _assetId = assetDetailMatch[1]
       return [
         ...breadcrumbItems,
         {

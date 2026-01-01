@@ -40,7 +40,7 @@ vi.mock('antd', () => ({
       {children}
     </div>
   ),
-  Table: ({ dataSource, columns, pagination, loading, rowSelection, onChange }: any) => (
+  Table: ({ dataSource, columns: _columns, pagination, loading, rowSelection, onChange: _onChange }: any) => (
     <div data-testid="table" data-pagination={pagination} data-loading={loading} data-row-selection={!!rowSelection}>
       {dataSource?.map((item: any, index: number) => (
         <div key={index} data-row={index}>{JSON.stringify(item)}</div>

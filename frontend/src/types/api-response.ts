@@ -3,7 +3,7 @@
  * 为整个前端应用提供类型安全的API响应处理基础
  */
 
-import { AxiosResponse } from 'axios';
+import { AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 
 // ==================== 基础响应类型 ====================
 
@@ -53,7 +53,7 @@ export interface ErrorResponse {
   error: {
     code: string;
     message: string;
-    details?: any;
+    details?: Record<string, unknown>;
     timestamp?: string;
   };
 }
@@ -123,7 +123,7 @@ export interface ResponseDetectionConfig {
  */
 export interface SmartExtractOptions<T = any> {
   // 期望的数据类型
-  expectedType?: new (...args: any[]) => T;
+  expectedType?: new (...args: unknown[]) => T;
   // 自定义检测配置
   detection?: ResponseDetectionConfig;
   // 是否启用类型验证
@@ -154,11 +154,11 @@ export interface EnhancedApiError {
   type: ApiErrorType;
   code: string;
   message: string;
-  details?: any;
+  details?: Record<string, unknown>;
   timestamp: string;
   requestId?: string;
   statusCode?: number;
-  originalError?: any;
+  originalError?: Error | unknown;
 }
 
 // ==================== 重试和缓存类型 ====================
@@ -170,7 +170,7 @@ export interface RetryConfig {
   maxAttempts: number;
   delay: number;
   backoffMultiplier: number;
-  retryCondition?: (error: any) => boolean;
+  retryCondition?: (error: Error | unknown) => boolean;
 }
 
 /**
@@ -179,7 +179,7 @@ export interface RetryConfig {
 export interface CacheConfig {
   enabled: boolean;
   ttl: number; // 生存时间（毫秒）
-  keyGenerator?: (config: any) => string;
+  keyGenerator?: (config: Record<string, unknown>) => string;
   maxSize?: number;
 }
 
@@ -208,7 +208,7 @@ export interface EnhancedApiClientConfig {
   globalErrorHandler?: (error: EnhancedApiError) => void;
 
   // 拦截器
-  requestInterceptors?: Array<(config: any) => any>;
+  requestInterceptors?: Array<(config: InternalAxiosRequestConfig) => InternalAxiosRequestConfig>;
   responseInterceptors?: Array<(response: AxiosResponse) => AxiosResponse>;
 }
 
@@ -217,41 +217,40 @@ export interface EnhancedApiClientConfig {
 /**
  * 检查是否为标准API响应
  */
-export function isStandardApiResponse(response: any): response is StandardApiResponse {
-  return response &&
-    typeof response === 'object' &&
-    'success' in response &&
-    typeof response.success === 'boolean';
+export function isStandardApiResponse(response: unknown): response is StandardApiResponse {
+  if (response === null || response === undefined) return false;
+  if (typeof response !== 'object') return false;
+  const obj = response as Record<string, unknown>;
+  return 'success' in obj && typeof obj.success === 'boolean';
 }
 
 /**
  * 检查是否为分页响应
  */
-export function isPaginatedResponse(response: any): response is PaginatedApiResponse {
-  return isStandardApiResponse(response) &&
-    response.data &&
-    typeof response.data === 'object' &&
-    'items' in response.data &&
-    'pagination' in response.data;
+export function isPaginatedResponse(response: unknown): response is PaginatedApiResponse {
+  if (!isStandardApiResponse(response)) return false;
+  const data = response.data;
+  if (data === null || data === undefined || typeof data !== 'object') return false;
+  return 'items' in data && 'pagination' in data;
 }
 
 /**
  * 检查是否为错误响应
  */
-export function isErrorResponse(response: any): response is ErrorResponse {
-  return response &&
-    typeof response === 'object' &&
-    response.success === false &&
-    'error' in response;
+export function isErrorResponse(response: unknown): response is ErrorResponse {
+  if (response === null || response === undefined) return false;
+  if (typeof response !== 'object') return false;
+  const obj = response as Record<string, unknown>;
+  return obj.success === false && 'error' in obj;
 }
 
 /**
  * 检查是否为直接数据响应
  */
-export function isDirectResponse<T>(response: any): response is DirectResponse<T> {
-  return response &&
-    typeof response === 'object' &&
-    !('success' in response);
+export function isDirectResponse<T>(response: unknown): response is DirectResponse<T> {
+  if (response === null || response === undefined) return false;
+  if (typeof response !== 'object') return false;
+  return !('success' in response);
 }
 
 // ==================== 导出外部类型 ====================

@@ -196,7 +196,7 @@ export class ApiCacheManager {
   }
   
   // 预热缓存
-  async warmup(urls: Array<{ url: string; params?: Record<string, unknown> }>): Promise<void> {
+  async warmup(_urls: Array<{ url: string; params?: Record<string, unknown> }>): Promise<void> {
     // 这里可以实现缓存预热逻辑
     // Cache warmup
   }

@@ -56,7 +56,7 @@ class RouteBuilder {
     if (!Component && children && children.length > 0) {
       return (
         <Route key={path} path={path} {...props}>
-          {children.map((child, index) => RouteBuilder.buildRoute(child))}
+          {children.map((child, _index) => RouteBuilder.buildRoute(child))}
         </Route>
       );
     }

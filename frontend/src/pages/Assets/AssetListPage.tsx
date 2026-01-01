@@ -10,15 +10,6 @@ import AssetList from "../../components/Asset/AssetList";
 import AssetSearch from "../../components/Asset/AssetSearch";
 import AssetAreaSummary from "../../components/Asset/AssetAreaSummary";
 import type { AssetSearchParams } from "../../types/asset";
-import type { AnalyticsData } from "../../services/analyticsService";
-import type {
-  TablePaginationConfig,
-  SorterResult,
-  TableCurrentDataSource,
-} from "antd/es/table/interface";
-import type { FilterValue } from "antd/es/table/interface";
-import type { Asset } from "@/types/asset";
-import type { PaginationConfig, FilterConfig, SorterConfig } from "../../types/common";
 
 const { Title } = Typography;
 
@@ -37,7 +28,6 @@ const AssetListPage: React.FC = () => {
   const {
     data: analyticsData,
     isLoading: analyticsLoading,
-    error: analyticsError,
   } = useQuery({
     queryKey: ["analytics", searchParams],
     queryFn: () => analyticsService.getComprehensiveAnalytics(searchParams),
@@ -86,7 +76,7 @@ const AssetListPage: React.FC = () => {
       message.success("删除成功");
       // 重新加载数据
       window.location.reload();
-    } catch (error) {
+    } catch {
       const errorMessage = error instanceof Error ? error.message : "删除失败";
       message.error(errorMessage);
     }
@@ -127,7 +117,7 @@ const AssetListPage: React.FC = () => {
       window.URL.revokeObjectURL(url);
 
       message.success("资产数据导出成功");
-    } catch (error) {
+    } catch {
       console.error("导出失败:", error);
       const errorMessage = error instanceof Error ? error.message : "导出失败，请稍后重试";
       message.error(errorMessage);
@@ -161,7 +151,7 @@ const AssetListPage: React.FC = () => {
       window.URL.revokeObjectURL(url);
 
       message.success("选中资产数据导出成功");
-    } catch (error) {
+    } catch {
       console.error("导出失败:", error);
       const errorMessage = error instanceof Error ? error.message : "导出失败，请稍后重试";
       message.error(errorMessage);

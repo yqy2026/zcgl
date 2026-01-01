@@ -8,9 +8,7 @@
 
 import { enhancedApiClient } from '@/api/client';
 import { ApiErrorHandler } from '../../utils/responseExtractor';
-import { API_CONFIG } from '../../api/config';
 import {
-  DictionaryOption,
   DICTIONARY_CONFIGS
 } from './config';
 
@@ -175,7 +173,7 @@ class DictionaryManagerService {
 
       // 如果不是字符串数组，直接返回
       return Array.isArray(data) ? data : [];
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('获取枚举类型失败:', enhancedError.message);
 
@@ -247,7 +245,7 @@ class DictionaryManagerService {
       }));
 
       return mappedData;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error(`获取枚举值失败 [${typeId}]:`, enhancedError.message);
 
@@ -339,7 +337,7 @@ class DictionaryManagerService {
       });
 
       return data;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('获取枚举字段数据失败:', enhancedError.message);
       return [];
@@ -379,7 +377,7 @@ class DictionaryManagerService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('创建枚举类型失败:', enhancedError.message);
       return null;
@@ -425,7 +423,7 @@ class DictionaryManagerService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('更新枚举类型失败:', enhancedError.message);
       return null;
@@ -450,7 +448,7 @@ class DictionaryManagerService {
       }
 
       return result.data!.success;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('删除枚举类型失败:', enhancedError.message);
       return false;
@@ -488,7 +486,7 @@ class DictionaryManagerService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('添加枚举值失败:', enhancedError.message);
       return null;
@@ -528,7 +526,7 @@ class DictionaryManagerService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('更新枚举值失败:', enhancedError.message);
       return null;
@@ -553,7 +551,7 @@ class DictionaryManagerService {
       }
 
       return result.data!.success;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('删除枚举值失败:', enhancedError.message);
       return false;
@@ -588,7 +586,7 @@ class DictionaryManagerService {
         last_updated: new Date().toISOString(),
         popular_values: data.popular_values || []
       };
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('获取枚举字段使用统计失败:', enhancedError.message);
 
@@ -651,7 +649,7 @@ class DictionaryManagerService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('导出枚举字段数据失败:', enhancedError.message);
       throw new Error(`导出失败: ${enhancedError.message}`);
@@ -686,7 +684,7 @@ class DictionaryManagerService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('导入枚举字段数据失败:', enhancedError.message);
       throw new Error(`导入失败: ${enhancedError.message}`);
@@ -717,7 +715,7 @@ class DictionaryManagerService {
     const batches = this.chunkArray(values, this.BATCH_SIZE);
 
     for (const batch of batches) {
-      const batchPromises = batch.map(async (valueData, index) => {
+      const batchPromises = batch.map(async (valueData, _index) => {
         try {
           const result = await this.addEnumFieldValue(typeId, valueData);
           return {
@@ -727,7 +725,7 @@ class DictionaryManagerService {
             operationType: 'batchAddEnumValue',
             timestamp: new Date().toISOString()
           };
-        } catch (error) {
+        } catch {
           const enhancedError = ApiErrorHandler.handleError(error);
           return {
             success: false,
@@ -812,7 +810,7 @@ class DictionaryManagerService {
             operationType: 'batchUpdateEnumValues',
             timestamp: new Date().toISOString()
           };
-        } catch (error) {
+        } catch {
           const enhancedError = ApiErrorHandler.handleError(error);
           return {
             success: false,
@@ -883,7 +881,7 @@ class DictionaryManagerService {
             operationType: 'batchDeleteEnumValues',
             timestamp: new Date().toISOString()
           };
-        } catch (error) {
+        } catch {
           const enhancedError = ApiErrorHandler.handleError(error);
           return {
             success: false,
@@ -958,7 +956,7 @@ class DictionaryManagerService {
       }
 
       return result.data!;
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('搜索枚举类型失败:', enhancedError.message);
 
@@ -1066,7 +1064,7 @@ class DictionaryManagerService {
         suggestions,
         warnings
       };
-    } catch (error) {
+    } catch {
       const enhancedError = ApiErrorHandler.handleError(error);
       return {
         isValid: false,

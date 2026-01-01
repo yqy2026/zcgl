@@ -88,7 +88,6 @@ const fetchAssets = async (params: {
 
     // 检查响应格式
     if (!result || !result.items) {
-      console.error("Invalid API response format:", result);
       throw new Error("Invalid API response format");
     }
 
@@ -131,8 +130,7 @@ const fetchAssets = async (params: {
       page: result.page,
       pageSize: result.limit,
     };
-  } catch (error) {
-    console.error("Error fetching assets:", error);
+  } catch {
     // 提供更详细的错误信息
     if (error instanceof Error) {
       throw new Error(`获取资产列表失败: ${error.message}`);
@@ -154,7 +152,7 @@ const fetchAssetSummary = async (): Promise<AssetSummary> => {
     const total = data.total_assets || 0;
     const rented = data.usage_status?.rented || 0;
     const vacant = data.usage_status?.vacant || 0;
-    const selfUsed = data.usage_status?.self_used || 0;
+    const _selfUsed = data.usage_status?.self_used || 0;
 
     // 计算平均出租率
     const rentableAssets = rented + vacant;
@@ -166,8 +164,7 @@ const fetchAssetSummary = async (): Promise<AssetSummary> => {
       vacant,
       avgOccupancyRate: Math.round(avgOccupancyRate * 100) / 100, // 保留两位小数
     };
-  } catch (error) {
-    console.error("Error fetching asset summary:", error);
+  } catch {
     if (error instanceof ApiError) {
       message.error(`获取统计数据失败: ${error.message}`);
     }
@@ -333,16 +330,7 @@ export const useAssetList = () => {
     exportMutation.mutate(filters);
   };
 
-  // 调试信息
-  // Debug information
-  console.log("useAssetList Debug Info:", {
-    isLoading: assetsQuery.isLoading,
-    isError: assetsQuery.isError,
-    error: assetsQuery.error,
-    data: assetsQuery.data,
-    assets: assetsQuery.data?.data,
-    assetsLength: assetsQuery.data?.data?.length,
-  });
+
 
   return {
     assets: assetsQuery.data?.data || [],

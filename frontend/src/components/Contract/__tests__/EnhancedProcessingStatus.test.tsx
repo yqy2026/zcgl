@@ -194,7 +194,7 @@ describe('EnhancedProcessingStatus 组件测试', () => {
     })
   }
 
-  const mockProgressData: any = {
+  const _mockProgressData: any = {
     sessionId: 'test-session',
     status: 'processing',
     progress: 50,

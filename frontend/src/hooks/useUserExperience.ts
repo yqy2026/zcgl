@@ -93,7 +93,7 @@ export const useUserExperience = (options: UseUserExperienceOptions = {}) => {
       try {
         await saveFunction()
         message.success('数据已自动保存', 1)
-      } catch (error) {
+      } catch {
         console.error('Auto save failed:', error)
       }
     }, autoSaveInterval)
@@ -180,34 +180,6 @@ export const useUserExperience = (options: UseUserExperienceOptions = {}) => {
     }
   }, [])
 
-  // 键盘快捷键支持
-  const useKeyboardShortcut = useCallback((
-    key: string,
-    callback: () => void,
-    modifiers: { ctrl?: boolean; alt?: boolean; shift?: boolean } = {}
-  ) => {
-    useEffect(() => {
-      const handleKeyDown = (event: KeyboardEvent) => {
-        const { ctrl = false, alt = false, shift = false } = modifiers
-
-        if (
-          event.key.toLowerCase() === key.toLowerCase() &&
-          event.ctrlKey === ctrl &&
-          event.altKey === alt &&
-          event.shiftKey === shift
-        ) {
-          event.preventDefault()
-          callback()
-        }
-      }
-
-      document.addEventListener('keydown', handleKeyDown)
-      return () => {
-        document.removeEventListener('keydown', handleKeyDown)
-      }
-    }, [key, callback, modifiers])
-  }, [])
-
   // 清理函数
   useEffect(() => {
     return () => {
@@ -242,14 +214,39 @@ export const useUserExperience = (options: UseUserExperienceOptions = {}) => {
     
     // 页面状态
     isPageVisible,
-    
-    // 快捷键
-    useKeyboardShortcut,
   }
 }
 
+// 键盘快捷键 Hook
+export const useKeyboardShortcut = (
+  key: string,
+  callback: () => void,
+  modifiers: { ctrl?: boolean; alt?: boolean; shift?: boolean } = {}
+) => {
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const { ctrl = false, alt = false, shift = false } = modifiers
+
+      if (
+        event.key.toLowerCase() === key.toLowerCase() &&
+        event.ctrlKey === ctrl &&
+        event.altKey === alt &&
+        event.shiftKey === shift
+      ) {
+        event.preventDefault()
+        callback()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [key, callback, modifiers])
+}
+
 // 性能数据报告
-const reportPerformance = (operation: string, duration: number) => {
+const reportPerformance = (_operation: string, _duration: number) => {
   // 这里可以发送性能数据到监控服务
   try {
     // 示例：发送到后端API
@@ -264,7 +261,7 @@ const reportPerformance = (operation: string, duration: number) => {
     //     url: window.location.href,
     //   }),
     // }).catch(console.error)
-  } catch (error) {
+  } catch {
     console.error('Failed to report performance:', error)
   }
 }

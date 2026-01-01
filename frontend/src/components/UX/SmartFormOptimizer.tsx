@@ -112,7 +112,7 @@ const SmartFormOptimizer: React.FC<SmartFormOptimizerProps> = ({
       form.resetFields()
       setErrors({})
       message.success('表单提交成功')
-    } catch (error) {
+    } catch {
       message.error('表单提交失败')
     }
   }, [fields, onSubmit, form])

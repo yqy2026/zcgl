@@ -24,7 +24,7 @@ import React from 'react'
 
 // Mock antd 组件
 vi.mock('antd', () => ({
-  Upload: ({ children, fileList, onChange, customRequest }: any) => (
+  Upload: ({ children, fileList, onChange, customRequest: _customRequest }: any) => (
     <div data-testid="upload" data-file-count={fileList?.length || 0}>
       {children}
       <input

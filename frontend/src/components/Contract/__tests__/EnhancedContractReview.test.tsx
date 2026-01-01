@@ -35,7 +35,7 @@ vi.mock('antd', () => ({
       data-layout={layout}
       onSubmit={(e) => {
         e.preventDefault()
-        onFinish && onFinish({})
+        onFinish?.({})
       }}
     >
       {children}
@@ -276,7 +276,7 @@ describe('EnhancedContractReview 组件测试', () => {
 
     it('应该接收 onCancel 回调', async () => {
       const handleCancel = vi.fn()
-      const element = await createElement({ onCancel: handleCancel })
+      const element = await createElement({ onCancel: _onCancel, handleCancel })
       expect(element).toBeTruthy()
     })
 

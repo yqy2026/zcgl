@@ -62,7 +62,7 @@ vi.mock('antd', () => ({
       {children}
     </div>
   ),
-  Alert: ({ message, description, type, showIcon }: any) => (
+  Alert: ({ message, description, type, showIcon: _showIcon }: any) => (
     <div data-testid="alert" data-type={type} data-message={message}>
       {description}
     </div>
