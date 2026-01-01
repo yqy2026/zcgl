@@ -185,7 +185,7 @@ async def get_dictionary_types(db: Session = Depends(get_db)):
     """
     # 从枚举字段表获取
     enum_types = (
-        db.query(EnumFieldType.code).filter(EnumFieldType.is_deleted == False).all()
+        db.query(EnumFieldType.code).filter(EnumFieldType.is_deleted.is_(False)).all()
     )
 
     # 直接返回枚举类型代码列表

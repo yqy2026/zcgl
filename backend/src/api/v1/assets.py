@@ -15,9 +15,12 @@ class NotFoundError(Exception):
 资产管理API路由
 """
 
+import logging
 import os
 import shutil
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 from fastapi import (
     APIRouter,
@@ -59,103 +62,13 @@ from ...schemas.asset import (
     BatchCustomFieldUpdateResponse,
 )
 from ...services.enum_validation_service import get_enum_validation_service
+from ...utils.numeric import to_float
 
 # 获取开发模式配置，但不完全绕过认证
 DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
 
 # 创建资产路由器
 router = APIRouter()
-
-
-# @router.get("/dev-test", summary="开发模式测试端点")
-# async def dev_test(db: Session = Depends(get_db)):
-#     """开发模式测试端点（无认证）"""
-#     try:
-#         # 测试数据库连接
-#         asset_count = db.query(Asset).count()
-#         return {
-#             "success": True,
-#             "message": "开发模式API测试成功",
-#             "database_status": "正常",
-#             "asset_count": asset_count,
-#             "timestamp": datetime.now().isoformat()
-#         }
-#     except Exception as e:
-#         return {
-#             "success": False,
-#             "message": f"开发模式API测试失败: {str(e)}",
-#             "timestamp": datetime.now().isoformat()
-#         }
-
-
-# @router.get("/temp-test", summary="临时API测试")
-# async def temp_test(db: Session = Depends(get_db)):
-#     """临时API测试端点（无认证）"""
-#     try:
-#         # 测试数据库连接
-#         asset_count = db.query(Asset).count()
-#         return {
-#             "success": True,
-#             "message": "临时API测试成功",
-#             "database_status": "正常",
-#             "asset_count": asset_count,
-#             "timestamp": datetime.now().isoformat()
-#         }
-#     except Exception as e:
-#         return {
-#             "success": False,
-#             "message": f"临时API测试失败: {str(e)}",
-#             "timestamp": datetime.now().isoformat()
-#         }
-
-
-# @router.get("/test-api", summary="API测试")
-# async def api_test(db: Session = Depends(get_db)):
-#     """简单的API测试端点"""
-#     try:
-#         # 测试数据库连接
-#         asset_count = db.query(Asset).count()
-#     return {
-#         "success": True,
-#         "message": "API测试成功",
-#         "database_status": "正常",
-#         "asset_count": asset_count,
-#         "timestamp": datetime.now().isoformat()
-#     }
-#     except Exception as e:
-#         return {
-#             "success": False,
-#             "message": f"API测试失败: {str(e)}",
-#             "timestamp": datetime.now().isoformat()
-#         }
-
-
-# @router.get("/list-test", summary="资产列表测试")
-# async def list_test(page: int = Query(1, ge=1), limit: int = Query(5, ge=1, le=20), db: Session = Depends(get_db)):
-#     """资产列表测试端点（无认证）"""
-#     try:
-#         # 获取资产列表
-#         query = asset_crud.get_filtered_query(db, None, {}, "created_at", "desc")
-#         assets, total = asset_crud.execute_paginated_query(query, skip=(page - 1) * limit, limit=limit)
-
-#         return {
-#             "success": True,
-#             "data": {
-#                 "items": assets,
-#                 "total": total,
-#                 "page": page,
-#                 "limit": limit,
-#                 "pages": (total + limit - 1) // limit
-#             },
-#             "message": "资产列表测试成功",
-#             "timestamp": datetime.now().isoformat()
-#         }
-#     except Exception as e:
-#         return {
-#             "success": False,
-#             "message": f"资产列表测试失败: {str(e)}",
-#             "timestamp": datetime.now().isoformat()
-#         }
 
 
 @router.get("", response_model=AssetListResponse, summary="获取资产列表")
@@ -620,16 +533,7 @@ async def get_asset_statistics(
             .first()
         )
 
-        # 转换为float并处理None值
-        def to_float(value):
-            if value is None:
-                return 0.0
-            try:
-                return float(value)
-            except (ValueError, TypeError) as e:
-                print(f"[WARNING] 转换数值失败: {value} -> {e}")
-                return 0.0
-
+        # 使用共享的 to_float 函数进行数值转换
         total_land_area = to_float(area_result.total_land_area)
         total_rentable_area = to_float(area_result.total_rentable_area)
         total_rented_area = to_float(area_result.total_rented_area)
@@ -715,16 +619,7 @@ async def get_asset_area_statistics(
             func.count(Asset.id).label("total_assets"),
         ).first()
 
-        # 转换为float并处理None值
-        def to_float(value):
-            if value is None:
-                return 0.0
-            try:
-                return float(value)
-            except (ValueError, TypeError) as e:
-                print(f"[WARNING] 转换数值失败: {value} -> {e}")
-                return 0.0
-
+        # 使用共享的 to_float 函数进行数值转换
         total_land_area = to_float(total_result.total_land_area)
         total_rentable_area = to_float(total_result.total_rentable_area)
         total_rented_area = to_float(total_result.total_rented_area)
@@ -793,6 +688,7 @@ async def upload_asset_attachments(
         # 创建附件目录 - 安全处理
         from ..utils.file_security import (
             create_safe_upload_directory,
+            validate_upload_file,
         )
 
         upload_dir = create_safe_upload_directory("uploads/attachments", asset_id)
@@ -1523,83 +1419,3 @@ async def batch_delete_assets(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"批量删除资产失败: {str(e)}")
-
-
-# 资产管理补充API端点 - 支持前端下拉选项
-@router.get("/ownership-entities", summary="获取权属方实体列表")
-async def get_ownership_entities():
-    """获取权属方实体列表"""
-    return [
-        {"value": "entity1", "label": "权属方1"},
-        {"value": "entity2", "label": "权属方2"},
-        {"value": "entity3", "label": "权属方3"},
-    ]
-
-
-@router.get("/business-categories", summary="获取业态类别列表")
-async def get_business_categories():
-    """获取业态类别列表"""
-    return [
-        {"value": "retail", "label": "零售业态"},
-        {"value": "office", "label": "办公业态"},
-        {"value": "warehouse", "label": "仓储业态"},
-        {"value": "residential", "label": "住宅业态"},
-        {"value": "commercial", "label": "商业业态"},
-    ]
-
-
-@router.get("/usage-statuses", summary="获取使用状态列表")
-async def get_usage_statuses():
-    """获取使用状态列表"""
-    return [
-        {"value": "rented", "label": "已出租"},
-        {"value": "self_used", "label": "自用"},
-        {"value": "vacant", "label": "空置"},
-        {"value": "under_maintenance", "label": "维护中"},
-        {"value": "under_decoration", "label": "装修中"},
-    ]
-
-
-@router.get("/property-natures", summary="获取物业性质列表")
-async def get_property_natures():
-    """获取物业性质列表"""
-    return [
-        {"value": "commercial", "label": "商业物业"},
-        {"value": "residential", "label": "住宅物业"},
-        {"value": "industrial", "label": "工业物业"},
-        {"value": "office", "label": "办公物业"},
-        {"value": "mixed", "label": "综合物业"},
-    ]
-
-
-@router.get("/ownership-statuses", summary="获取确权状态列表")
-async def get_ownership_statuses():
-    """获取确权状态列表"""
-    return [
-        {"value": "confirmed", "label": "已确权"},
-        {"value": "unconfirmed", "label": "未确权"},
-        {"value": "partial", "label": "部分确权"},
-        {"value": "in_progress", "label": "确权中"},
-    ]
-
-
-@router.get("/statistics/summary", summary="获取资产统计摘要")
-async def get_assets_statistics():
-    """获取资产统计摘要"""
-    return {
-        "success": True,
-        "data": {
-            "total_assets": 0,
-            "ownership_status": {"confirmed": 0, "unconfirmed": 0, "partial": 0},
-            "property_nature": {"commercial": 0, "residential": 0, "industrial": 0},
-            "usage_status": {"rented": 0, "self_used": 0, "vacant": 0},
-            "total_land_area": 0.0,
-            "total_rentable_area": 0.0,
-            "total_rented_area": 0.0,
-            "total_unrented_area": 0.0,
-            "total_non_commercial_area": 0.0,
-            "assets_with_area_data": 0,
-            "overall_occupancy_rate": 0.0,
-        },
-        "message": "资产统计摘要获取成功",
-    }

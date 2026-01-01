@@ -166,7 +166,7 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
 
         # 应用删除过滤器
         if not include_deleted and hasattr(self.model, "is_deleted"):
-            query = query.filter(self.model.is_deleted == False)
+            query = query.filter(self.model.is_deleted.is_(False))
 
         return query.filter(self.model.id == id).first()
 
@@ -446,7 +446,7 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
 
         # 应用删除过滤器
         if not include_deleted and hasattr(self.model, "is_deleted"):
-            query = query.filter(self.model.is_deleted == False)
+            query = query.filter(self.model.is_deleted.is_(False))
 
         # 应用过滤器
         if filters:

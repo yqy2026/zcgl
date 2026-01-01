@@ -83,7 +83,7 @@ class CRUDSystemDictionary(
 
             enum_types = (
                 db.query(EnumFieldType.code)
-                .filter(EnumFieldType.is_deleted == False)
+                .filter(EnumFieldType.is_deleted.is_(False))
                 .distinct()
                 .all()
             )

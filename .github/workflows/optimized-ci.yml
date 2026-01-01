@@ -74,20 +74,20 @@ jobs:
       run: |
         cd backend
         echo "🔍 Ruff代码检查..."
-        uv run ruff check src/ --output-format=github --no-fix --ignore=E402,E501,E712,E711,E731,F401,F811,F821,F841 || true
-        echo "::warning :: 部分代码质量问题暂时允许"
+        # 移除 F821, F811 忽略（已修复）
+        uv run ruff check src/ --output-format=github --no-fix --ignore=E402,E501,E712,E711,E731,F401,F841
 
     - name: Run Ruff formatting check
       run: |
         cd backend
         echo "📝 Ruff格式检查..."
-        uv run ruff format --check src/ || echo "::warning :: 格式问题暂时允许"
+        uv run ruff format --check src/
 
     - name: Run MyPy type checking
       run: |
         cd backend
         echo "🔎 MyPy类型检查..."
-        uv run mypy src/ --ignore-missing-imports --no-error-summary || echo "::warning :: 类型检查问题暂时允许"
+        uv run mypy src/ --ignore-missing-imports --no-error-summary
 
     - name: Run security check
       run: |

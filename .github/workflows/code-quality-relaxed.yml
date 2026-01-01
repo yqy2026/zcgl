@@ -42,14 +42,14 @@ jobs:
     - name: Run Ruff linting (with warnings allowed)
       run: |
         cd backend
-        # 允许常见的非关键问题，但修复严重错误
-        uv run ruff check src/ --select=E,F,W --ignore=E402,E501,E712,E711,E731,F401,F811,F821,F841 --output-format=github || true
-        echo "::warning :: 部分代码质量问题暂时允许，后续会逐步修复"
+        # 移除 F821, F811 忽略（已修复未定义变量和重复定义）
+        # 保留 E402, E501 忽略（导入顺序和行长度风格问题）
+        uv run ruff check src/ --select=E,F,W --ignore=E402,E501,E712,E711,E731,F401,F841 --output-format=github
 
     - name: Run Ruff formatting check
       run: |
         cd backend
-        uv run ruff format --check src/ || echo "::warning :: 格式问题暂时允许"
+        uv run ruff format --check src/
 
     - name: Run MyPy type checking (relaxed)
       run: |
@@ -60,13 +60,13 @@ jobs:
       run: |
         cd backend
         uv run bandit -r src/ -f json -o bandit-report.json || true
-        uv run bandit -r src/ -f txt || echo "::warning :: 安全检查问题暂时允许"
+        uv run bandit -r src/ -f txt
 
     - name: Run Safety dependency check
       run: |
         cd backend
         uv run safety check --json --output safety-report.json || true
-        uv run safety check || echo "::warning :: 依赖安全检查问题暂时允许"
+        uv run safety check
 
     - name: Run basic functionality tests
       run: |

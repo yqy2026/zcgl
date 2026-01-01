@@ -211,7 +211,7 @@ class UnifiedErrorHandler:
             self.logger.error("Unexpected error occurred", extra=error_info)
 
         # 记录详细的堆栈跟踪
-        if isinstance(error, (UnifiedError, HTTPException)) == False:
+        if not isinstance(error, (UnifiedError, HTTPException)):
             self.logger.debug(f"Error traceback: {traceback.format_exc()}")
 
     def _handle_http_exception(self, error: HTTPException) -> dict[str, Any]:
