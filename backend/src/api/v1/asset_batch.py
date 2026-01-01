@@ -439,7 +439,7 @@ async def batch_delete_assets(
                 if asset:
                     asset_crud.remove(db=db, id=asset_id)
                     deleted_count += 1
-            except Exception:
+            except Exception:  # nosec - B112: Continue on individual failures during batch operations
                 continue  # 即使单个资产删除失败也继续处理其他资产
 
         return {
