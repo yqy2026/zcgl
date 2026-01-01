@@ -137,7 +137,7 @@ export const AnalyticsBarChart: React.FC<BarChartProps> = ({
   barSize = 30,
   showLegend = false,
   showTooltip = true,
-  showGrid = true,
+  showGrid: _showGrid = true,  // TODO: Implement grid control
   color = '#1890ff',
   className
 }) => {
@@ -237,7 +237,7 @@ export const AnalyticsLineChart: React.FC<LineChartProps> = ({
   xAxisKey,
   loading = false,
   height = 300,
-  showGrid = true,
+  showGrid: _showGrid = true,  // TODO: Implement grid control
   showLegend = true,
   showTooltip = true,
   showDots = true,
