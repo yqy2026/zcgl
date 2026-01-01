@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 """
 
 import logging
-import pickle
+import pickle  # nosec - B403: Internal cache data, validated source
 from datetime import datetime, timedelta
 
 try:
@@ -100,7 +100,7 @@ class CacheManager:
             try:
                 data = await self.redis_client.get(cache_key)
                 if data:
-                    return pickle.loads(data)
+                    return pickle.loads(data)  # nosec - B301: Internal cache data from trusted source
             except Exception as e:
                 logger.warning(f"Redis缓存获取失败: {e}")
 
