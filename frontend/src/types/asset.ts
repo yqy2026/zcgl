@@ -222,7 +222,7 @@ export interface AssetFormData
   extends Omit<
     Asset,
     "id" | "created_at" | "updated_at" | "unrented_area" | "occupancy_rate" | "net_income"
-  > {}
+  > { }
 
 // API响应接口
 export interface AssetListResponse {
@@ -282,10 +282,10 @@ export interface AssetCreateRequest
   extends Omit<
     Asset,
     "id" | "created_at" | "updated_at" | "unrented_area" | "occupancy_rate" | "net_income"
-  > {}
+  > { }
 
 // 更新资产请求
-export interface AssetUpdateRequest extends Partial<AssetCreateRequest> {}
+export interface AssetUpdateRequest extends Partial<AssetCreateRequest> { }
 
 // 资产历史记录 - 增强版
 export interface AssetHistory {
@@ -296,8 +296,8 @@ export interface AssetHistory {
   field_name?: string;
   old_value?: string;
   new_value?: string;
-  old_values?: Record<string, any>; // 批量变更时的旧值
-  new_values?: Record<string, any>; // 批量变更时的新值
+  old_values?: Record<string, unknown>; // 批量变更时的旧值
+  new_values?: Record<string, unknown>; // 批量变更时的新值
   operator?: string;
   changed_by?: string; // 变更操作人
   operation_time: string;

@@ -10,16 +10,11 @@ import {
   Space,
   Row,
   Col,
-  Collapse,
-  Switch,
-  Slider,
-  Dropdown,
   Modal,
   List,
   Typography,
   Popconfirm,
   message,
-  Tooltip,
   Tag,
 } from 'antd'
 import {
@@ -27,25 +22,18 @@ import {
   ReloadOutlined,
   DownOutlined,
   UpOutlined,
-  FilterOutlined,
   SaveOutlined,
   HistoryOutlined,
-  DeleteOutlined,
-  EditOutlined,
-  StarOutlined,
-  StarFilled,
 } from '@ant-design/icons'
 import { useQueries } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 
-import type { AssetSearchParams, OwnershipStatus, PropertyNature, UsageStatus } from '@/types/asset'
+import type { AssetSearchParams } from '@/types/asset'
 import { assetService } from '@/services/assetService'
 import { useSearchHistory } from '@/hooks/useSearchHistory'
-import styles from './AssetSearch.module.css'
 
 const { Option } = Select
 const { RangePicker } = DatePicker
-const { Panel } = Collapse
 const { Text } = Typography
 
 interface AssetSearchProps {

@@ -58,7 +58,7 @@ interface AreaStatisticsData {
   }>
 }
 
-const { Title: AntTitle, Text } = Typography
+const { Text } = Typography
 
 interface AreaStatisticsChartProps {
   filters?: AssetSearchParams

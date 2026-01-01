@@ -78,14 +78,14 @@ export interface AuthResponse {
     token_type: string;
     expires_in: number;
   };
-  permissions: any[];
+  permissions: string[];
 }
 
 /**
  * 资产列表响应
  */
 export interface AssetListResponse {
-  items: any[];
+  items: unknown[];
   total: number;
   page: number;
   limit: number;
@@ -219,9 +219,9 @@ export interface EnhancedApiClientConfig {
  */
 export function isStandardApiResponse(response: any): response is StandardApiResponse {
   return response &&
-         typeof response === 'object' &&
-         'success' in response &&
-         typeof response.success === 'boolean';
+    typeof response === 'object' &&
+    'success' in response &&
+    typeof response.success === 'boolean';
 }
 
 /**
@@ -229,10 +229,10 @@ export function isStandardApiResponse(response: any): response is StandardApiRes
  */
 export function isPaginatedResponse(response: any): response is PaginatedApiResponse {
   return isStandardApiResponse(response) &&
-         response.data &&
-         typeof response.data === 'object' &&
-         'items' in response.data &&
-         'pagination' in response.data;
+    response.data &&
+    typeof response.data === 'object' &&
+    'items' in response.data &&
+    'pagination' in response.data;
 }
 
 /**
@@ -240,9 +240,9 @@ export function isPaginatedResponse(response: any): response is PaginatedApiResp
  */
 export function isErrorResponse(response: any): response is ErrorResponse {
   return response &&
-         typeof response === 'object' &&
-         response.success === false &&
-         'error' in response;
+    typeof response === 'object' &&
+    response.success === false &&
+    'error' in response;
 }
 
 /**
@@ -250,8 +250,8 @@ export function isErrorResponse(response: any): response is ErrorResponse {
  */
 export function isDirectResponse<T>(response: any): response is DirectResponse<T> {
   return response &&
-         typeof response === 'object' &&
-         !('success' in response);
+    typeof response === 'object' &&
+    !('success' in response);
 }
 
 // ==================== 导出外部类型 ====================

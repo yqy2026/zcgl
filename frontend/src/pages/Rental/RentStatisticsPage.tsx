@@ -121,7 +121,7 @@ const RentStatisticsPage: React.FC = () => {
       window.URL.revokeObjectURL(url);
 
       message.success('导出成功');
-    } catch (error) {
+    } catch (_error) {
       message.error('导出失败');
     }
   };
