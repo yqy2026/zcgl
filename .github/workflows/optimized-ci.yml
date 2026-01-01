@@ -61,7 +61,7 @@ jobs:
       run: |
         cd backend
         pip install uv --upgrade
-        uv sync --dev
+        uv sync --all-extras
 
     - name: Validate Python syntax
       run: |
@@ -183,7 +183,7 @@ jobs:
       run: |
         cd backend
         pip install uv
-        uv sync --dev
+        uv sync --all-extras
         cd ../frontend
         npm ci
 
@@ -217,7 +217,7 @@ jobs:
       run: |
         cd backend
         pip install uv
-        uv sync --dev
+        uv sync --all-extras
         echo "📚 生成API文档..."
         uv run python -c "
         import sys
@@ -256,7 +256,7 @@ jobs:
       run: |
         cd backend
         pip install uv
-        uv sync --dev
+        uv sync --all-extras
         cd ../frontend
         npm ci
 

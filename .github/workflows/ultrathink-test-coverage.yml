@@ -106,7 +106,7 @@ jobs:
       run: |
         cd backend
         pip install uv
-        uv sync --dev
+        uv sync --all-extras
         # 安装额外的测试依赖
         uv add --group dev \
           pytest-xdist \
@@ -288,6 +288,7 @@ for file_path in data.measured_files():
       with:
         node-version: ${{ env.NODE_VERSION }}
         cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
 
     - name: 安装依赖
       run: |
@@ -440,7 +441,7 @@ for file_path in data.measured_files():
       run: |
         cd backend
         pip install uv
-        uv sync --dev
+        uv sync --all-extras
 
         # 设置环境变量
         cat << EOF > .env
