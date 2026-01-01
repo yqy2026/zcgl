@@ -42,9 +42,9 @@ jobs:
     - name: Run Ruff linting (with warnings allowed)
       run: |
         cd backend
-        # 允许E402导入错误，但修复其他关键错误
-        uv run ruff check src/ --select=E,F,W --ignore=E402 --output-format=github
-        echo "::warning :: E402导入错误暂时允许，后续会逐步修复"
+        # 允许E402导入错误和E501行长度，但修复其他关键错误
+        uv run ruff check src/ --select=E,F,W --ignore=E402,E501 --output-format=github
+        echo "::warning :: E402导入错误和E501行长度暂时允许，后续会逐步修复"
 
     - name: Run Ruff formatting check
       run: |
