@@ -574,7 +574,7 @@ async def update_defect(defect_id: str, updates: dict[str, Any]):
 
         update_query = (
             f"UPDATE defect_reports SET {', '.join(update_fields)} WHERE defect_id = ?"
-        )
+        )  # nosec - B608: update_fields validated against allowlist above
         cursor.execute(update_query, update_params)
 
         # 记录变更历史
@@ -687,7 +687,7 @@ async def get_defect_trends(
         date_select = "date(created_at) as period"
 
     # 获取每日趋势数据
-    cursor.execute(
+    cursor.execute(  # nosec - B608: date_select set from validated group_by values above
         f"""
         SELECT
             {date_select},

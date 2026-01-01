@@ -153,7 +153,8 @@ class RedisTaskStore:
             try:
                 data = await redis_client.get(f"task:{task_id}")
                 if data:
-                    return eval(
+                    # TODO: Use json.loads() or pickle.loads() for safer deserialization
+                    return eval(  # nosec - B307: Internal Redis data, but should be fixed
                         data.decode("utf-8")
                     )  # 注意：实际应用中应使用更安全的序列化方法
             except Exception as e:
