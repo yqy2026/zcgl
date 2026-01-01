@@ -12,6 +12,7 @@ from pathlib import Path
 # magic模块的条件导入
 try:
     import magic
+
     MAGIC_AVAILABLE = True
 except ImportError:
     magic = None

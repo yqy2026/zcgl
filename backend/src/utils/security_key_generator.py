@@ -231,7 +231,7 @@ class SecurityConfigManager:
         """
         script = f"""
 -- 创建管理员用户的SQL脚本
--- 生成时间: {credentials['created_at']}
+-- 生成时间: {credentials["created_at"]}
 
 -- 注意: 此脚本包含敏感信息，使用后请立即删除
 
@@ -248,20 +248,20 @@ INSERT OR REPLACE INTO users (
     updated_at
 ) VALUES (
     'admin-{datetime.now(UTC).strftime("%Y%m%d%H%M%S")}',
-    '{credentials['username']}',
-    '{credentials['email']}',
-    '{credentials['full_name']}',
-    '{credentials['password_hash']}',
-    '{credentials['password_salt']}',
-    '{credentials['role']}',
-    {1 if credentials['is_active'] else 0},
-    '{credentials['created_at']}',
-    '{credentials['created_at']}'
+    '{credentials["username"]}',
+    '{credentials["email"]}',
+    '{credentials["full_name"]}',
+    '{credentials["password_hash"]}',
+    '{credentials["password_salt"]}',
+    '{credentials["role"]}',
+    {1 if credentials["is_active"] else 0},
+    '{credentials["created_at"]}',
+    '{credentials["created_at"]}'
 );
 
 -- 管理员登录信息:
--- 用户名: {credentials['username']}
--- 密码: {credentials['password']}
+-- 用户名: {credentials["username"]}
+-- 密码: {credentials["password"]}
 --
 -- 请登录后立即修改密码！
 """

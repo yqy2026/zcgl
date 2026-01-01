@@ -19,6 +19,7 @@ class Environment(str, Enum):
 
 class DependencyPolicy(str, Enum):
     """依赖策略枚举"""
+
     STRICT = "strict"  # 严格模式：缺少依赖时报错
     GRACEFUL = "graceful"  # 优雅降级：缺少依赖时警告
     OPTIONAL = "optional"  # 可选：缺少依赖时静默

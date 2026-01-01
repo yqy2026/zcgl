@@ -56,12 +56,12 @@ router_registry_module = safe_import(
     critical=True,
     mock_factory=create_mock_registry,
 )
-if hasattr(router_registry_module, 'route_registry'):
+if hasattr(router_registry_module, "route_registry"):
     route_registry = router_registry_module.route_registry
 else:
     route_registry = create_mock_registry()
 
-if hasattr(router_registry_module, 'register_api_routes'):
+if hasattr(router_registry_module, "register_api_routes"):
     register_api_routes = router_registry_module.register_api_routes
 else:
     register_api_routes = create_lambda_none
