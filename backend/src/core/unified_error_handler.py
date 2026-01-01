@@ -44,8 +44,8 @@ class ErrorCode(str, Enum):
 
     # 权限和认证错误 (4000-4999)
     AUTHENTICATION_FAILED = "E4000"
-    TOKEN_EXPIRED = "E4001"
-    TOKEN_INVALID = "E4002"
+    TOKEN_EXPIRED = "E4001"  # nosec - B105: Error code, not password
+    TOKEN_INVALID = "E4002"  # nosec - B105: Error code, not password
     INSUFFICIENT_PERMISSIONS = "E4003"
     ACCOUNT_LOCKED = "E4004"
     ACCOUNT_DISABLED = "E4005"
