@@ -146,6 +146,7 @@ export const AnalyticsBarChart: React.FC<BarChartProps> = ({
     xField: xAxisKey,
     yField: barKey,
     color: color,
+    maxColumnWidth: barSize,
     columnStyle: {
       fillOpacity: 0.8,
       radius: [4, 4, 0, 0],
