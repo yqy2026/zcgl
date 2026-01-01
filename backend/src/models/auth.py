@@ -148,7 +148,7 @@ class User(Base):
                 self.is_locked = False  # pragma: no cover
                 self.locked_until = None  # pragma: no cover
                 self.failed_login_attempts = 0  # pragma: no cover
-            except Exception:  # pragma: no cover
+            except Exception:  # pragma: no cover  # nosec - B110: Intentional graceful degradation for optional field updates
                 # 如果无法设置字段，忽略错误，只返回结果
                 pass  # pragma: no cover
 

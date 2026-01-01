@@ -234,7 +234,7 @@ class PerformanceMonitoringMiddleware(BaseHTTPMiddleware):
                 )
                 * 100,
             }
-        except Exception:
+        except Exception:  # nosec - B110: Intentional graceful degradation for optional system metrics
             pass
 
         return stats
