@@ -327,10 +327,10 @@ class AuthService:
         }
         refresh_token = jwt.encode(refresh_token_data, SECRET_KEY, algorithm=ALGORITHM)
 
-        return TokenResponse(
+        return TokenResponse(  # nosec - B106: OAuth2 token_type parameter, not password
             access_token=access_token,
             refresh_token=refresh_token,
-            token_type="bearer",  # nosec - B105: Standard OAuth2 token type
+            token_type="bearer",
             expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
             session_id=session_id,
         )
