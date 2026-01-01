@@ -698,7 +698,7 @@ async def get_defect_trends(
         WHERE created_at >= ?
         GROUP BY period
         ORDER BY period
-    """.format(date_select=date_select)
+    """.format(date_select=date_select)  # nosec B608: validated input
     cursor.execute(
         sql_query,
         (start_date,),
