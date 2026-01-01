@@ -17,8 +17,8 @@ interface PieChartProps {
 
 export const AnalyticsPieChart: React.FC<PieChartProps> = ({
   data,
-  dataKey,
-  labelKey = 'name',
+  dataKey: _dataKey,  // Unused in current implementation
+  labelKey: _labelKey = 'name',  // Unused in current implementation
   outerRadius = 80,
   height = 300,
   showLegend = true,
@@ -303,6 +303,18 @@ export const AnalyticsMultiBarChart: React.FC<MultiBarChartProps> = ({
     return data
   }, [data])
 
+  // Transform data for multi-series column chart
+  const multiBarData = useMemo(() => {
+    if (!chartData || chartData.length === 0) return []
+    return chartData.flatMap(item =>
+      bars.map(bar => ({
+        [xDataKey]: item[xDataKey],
+        type: bar.name,
+        value: item[bar.dataKey],
+      }))
+    )
+  }, [chartData, bars, xDataKey])
+
   if (loading) {
     return (
       <div style={{ height: `${height}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -318,18 +330,6 @@ export const AnalyticsMultiBarChart: React.FC<MultiBarChartProps> = ({
       </div>
     )
   }
-
-  // Transform data for multi-series column chart
-  const multiBarData = useMemo(() => {
-    if (!chartData || chartData.length === 0) return []
-    return chartData.flatMap(item =>
-      bars.map(bar => ({
-        [xDataKey]: item[xDataKey],
-        type: bar.name,
-        value: item[bar.dataKey],
-      }))
-    )
-  }, [chartData, bars, xDataKey])
 
   const config = {
     data: multiBarData,
