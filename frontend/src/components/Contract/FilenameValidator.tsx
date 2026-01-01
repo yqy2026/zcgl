@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Input, Alert, Typography, Space, Button, Tooltip, Tag, Divider } from 'antd';
-import { InfoCircleOutlined, CheckCircleOutlined, ExclamationCircleOutlined, EditOutlined } from '@ant-design/icons';
+import { Input, Alert, Typography, Space, Button, Tooltip, Tag, Divider } from 'antd';
+import { InfoCircleOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 interface FilenameValidationResult {
   valid: boolean;
@@ -28,7 +28,7 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
 }) => {
   const [validationResult, setValidationResult] = useState<FilenameValidationResult | null>(null);
   const [suggestedFilename, setSuggestedFilename] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(false);
+  const [_loading, setLoading] = useState<boolean>(false);
   const [editing, setEditing] = useState<boolean>(false);
   const [customFilename, setCustomFilename] = useState<string>(filename);
 

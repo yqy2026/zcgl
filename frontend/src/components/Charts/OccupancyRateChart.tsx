@@ -12,7 +12,7 @@ import { Line, Column, Pie } from '@ant-design/plots'
 import { assetService } from '@/services/assetService'
 import type { AssetSearchParams } from '@/types/asset'
 
-const { Title: AntTitle, Text } = Typography
+const { Text } = Typography
 
 interface OccupancyRateData {
   overall_rate: number
@@ -246,7 +246,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
   }
 
   // 获取趋势图标
-  const getTrendIcon = (trend: string, percentage: number) => {
+  const getTrendIcon = (trend: string, _percentage: number) => {
     if (trend === 'up') {
       return <RiseOutlined style={{ color: '#52c41a' }} />
     } else if (trend === 'down') {

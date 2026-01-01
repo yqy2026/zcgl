@@ -1,7 +1,5 @@
 import React, { useState, useMemo } from 'react'
 import { Select, Input, Tag, Space, Typography } from 'antd'
-import type { SelectProps } from 'antd'
-import { SearchOutlined } from '@ant-design/icons'
 import { EnumGroup, EnumOption, EnumSearchHelper } from '@/utils/enumHelpers'
 
 const { Option } = Select
@@ -46,7 +44,7 @@ const GroupedSelect: React.FC<GroupedSelectProps> = ({
       let count = 0
       return filtered.map(group => ({
         ...group,
-        options: group.options.filter(option => {
+        options: group.options.filter(_option => {
           count++
           return count <= maxDisplayCount
         })

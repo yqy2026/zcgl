@@ -17,7 +17,7 @@ interface EnumValuePreviewProps {
 const EnumValuePreview: React.FC<EnumValuePreviewProps> = ({
   values,
   maxDisplay = 5,
-  showInactiveCount = true,
+  _showInactiveCount = true,
   size = 'small',
   className = ''
 }) => {
@@ -96,7 +96,7 @@ const EnumValuePreview: React.FC<EnumValuePreviewProps> = ({
       </Space>
 
       {/* 显示非活跃数量 */}
-      {showInactiveCount && inactiveCount > 0 && (
+      {_showInactiveCount && inactiveCount > 0 && (
         <div
           style={{
             fontSize: '11px',

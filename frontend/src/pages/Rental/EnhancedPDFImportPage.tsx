@@ -264,7 +264,7 @@ const EnhancedPDFImportPage: React.FC = () => {
                 ...prev,
                 enable_chinese_optimization: checked
               }))}
-              disabled={!!!systemCapabilities?.chinese_optimized}
+              disabled={!systemCapabilities?.chinese_optimized}
             />
             <Text type="secondary" style={{ marginLeft: 8 }}>
               启用中文OCR优化，提高中文识别准确度
@@ -278,7 +278,7 @@ const EnhancedPDFImportPage: React.FC = () => {
                 ...prev,
                 enable_table_detection: checked
               }))}
-              disabled={!!!systemCapabilities?.table_detection}
+              disabled={!systemCapabilities?.table_detection}
             />
             <Text type="secondary" style={{ marginLeft: 8 }}>
               启用表格结构识别和分析
@@ -292,7 +292,7 @@ const EnhancedPDFImportPage: React.FC = () => {
                 ...prev,
                 enable_seal_detection: checked
               }))}
-              disabled={!!!systemCapabilities?.seal_detection}
+              disabled={!systemCapabilities?.seal_detection}
             />
             <Text type="secondary" style={{ marginLeft: 8 }}>
               启用印章和签名检测
@@ -306,7 +306,7 @@ const EnhancedPDFImportPage: React.FC = () => {
                 ...prev,
                 use_template_learning: checked
               }))}
-              disabled={!!!systemCapabilities?.template_learning}
+              disabled={!systemCapabilities?.template_learning}
             />
             <Text type="secondary" style={{ marginLeft: 8 }}>
               启用合同模板学习和模式识别
@@ -320,7 +320,7 @@ const EnhancedPDFImportPage: React.FC = () => {
                 ...prev,
                 enable_multi_engine_fusion: checked
               }))}
-              disabled={!!!systemCapabilities?.multi_engine_support}
+              disabled={!systemCapabilities?.multi_engine_support}
             />
             <Text type="secondary" style={{ marginLeft: 8 }}>
               启用多引擎结果融合和质量评估
@@ -334,7 +334,7 @@ const EnhancedPDFImportPage: React.FC = () => {
                 ...prev,
                 enable_semantic_validation: checked
               }))}
-              disabled={!!!systemCapabilities?.semantic_validation}
+              disabled={!systemCapabilities?.semantic_validation}
             />
             <Text type="secondary" style={{ marginLeft: 8 }}>
               启用58字段语义理解和业务规则验证

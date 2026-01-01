@@ -14,7 +14,6 @@ import {
   Tag
 } from 'antd';
 
-import { projectService } from '@/services/projectService';
 import { ownershipService } from '@/services/ownershipService';
 import type { Project, ProjectCreate, ProjectUpdate } from '@/types/project';
 import type { Ownership } from '@/types/ownership';
@@ -34,7 +33,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
 }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const [selectedOwnerships, setSelectedOwnerships] = useState<Ownership[]>([]);
+  const [_selectedOwnerships, setSelectedOwnerships] = useState<Ownership[]>([]);
 
 
   // 获取权属方列表

@@ -193,7 +193,7 @@ class UXManager {
     }
   }
 
-  private showErrorFeedbackInternal(error: Error, context?: ErrorContext) {
+  private showErrorFeedbackInternal(error: Error, _context?: ErrorContext) {
     // 根据错误类型显示不同的反馈
     // Error context
     if (error.message.includes('Network')) {

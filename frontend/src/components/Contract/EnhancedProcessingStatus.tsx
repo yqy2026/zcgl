@@ -3,56 +3,39 @@
  * 支持中文合同识别的详细处理进度和状态显示
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Card,
-  Steps,
   Progress,
   Tag,
   Row,
   Col,
   Statistic,
   Alert,
-  Tooltip,
   Space,
   Divider,
   Button,
   Timeline,
   Badge,
   Typography,
-  Spin,
-  Descriptions,
-  List
+  Spin
 } from 'antd';
 import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   ClockCircleOutlined,
-  InfoCircleOutlined,
-  WarningOutlined,
   LoadingOutlined,
   RocketOutlined,
   ExperimentOutlined,
   EyeOutlined,
-  SyncOutlined,
-  FireOutlined,
-  ThunderboltOutlined,
-  RobotOutlined,
-  SafetyCertificateOutlined,
-  FileTextOutlined,
-  TableOutlined,
-  ScanOutlined,
-  EditOutlined
+  SyncOutlined
 } from '@ant-design/icons';
 import type {
   EnhancedSessionProgress,
-  ValidationLevel,
-  EngineType,
-  ProcessingOptions,
-  QualityMetrics
+  ProcessingOptions
 } from '../../types/enhancedPdfImport';
 
-const { Title, Text, Paragraph } = Typography;
+const { Text, Paragraph } = Typography;
 
 interface ProcessingStep {
   step: string;
@@ -77,17 +60,17 @@ interface EnhancedProcessingStatusProps {
 }
 
 const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
-  sessionId,
+  _sessionId,
   currentStatus,
-  processingOptions,
-  onRefresh,
-  onCancel,
+  _processingOptions,
+  _onRefresh,
+  _onCancel,
   showDetails = true,
-  compact = false,
-  onError
+  _compact = false,
+  _onError
 }) => {
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [_autoRefresh, _setAutoRefresh] = useState(true);
 
   // 增强版处理步骤映射
   const enhancedStepMap: Record<string, string> = {
@@ -316,7 +299,7 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
       {showDetails && (
         <Card title="处理详情" style={{ marginTop: 16 }}>
           <Timeline>
-            {processingSteps.map((step, index) => (
+            {processingSteps.map((step, _index) => (
               <Timeline.Item
                 key={step.step}
                 dot={getStatusIcon(step.status)}

@@ -3,7 +3,7 @@
  * 测试资产卡片组件
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import React from 'react'
 
 // Mock format utilities

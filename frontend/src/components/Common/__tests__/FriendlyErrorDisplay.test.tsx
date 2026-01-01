@@ -36,11 +36,6 @@ vi.mock('antd', () => ({
         {children}
       </div>
     ),
-    Title: ({ children, level, style }: any) => (
-      <div data-testid="title" data-level={level} style={style}>
-        {children}
-      </div>
-    ),
   },
 }))
 

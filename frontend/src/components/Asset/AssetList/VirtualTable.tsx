@@ -3,8 +3,8 @@
  * 使用@tanstack/react-virtual实现高性能表格
  */
 
-import React, { useMemo, useRef } from 'react'
-import { Table, Tag, Button, Space, Popconfirm, Tooltip, Pagination } from 'antd'
+import React, { useRef } from 'react'
+import { Tag, Button, Space, Popconfirm, Tooltip, Pagination } from 'antd'
 import {
   EditOutlined,
   DeleteOutlined,
@@ -345,12 +345,12 @@ const getColumns = (
  */
 const VirtualTable: React.FC<VirtualTableProps> = ({
   data,
-  loading = false,
+  _loading = false,
   onEdit,
   onDelete,
   onView,
   onViewHistory,
-  onTableChange,
+  _onTableChange,
   selectedRowKeys = [],
   onSelectChange,
   summary,

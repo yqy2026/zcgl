@@ -6,9 +6,6 @@ interface FormValidationRule {
   validator?: (rule: FormValidationRule, value: unknown) => Promise<void>
 }
 
-// 导入API常量
-import { SYSTEM_API } from '../constants/api'
-
 // 通用验证规则
 export const validationRules = {
   // 必填验证
@@ -291,7 +288,7 @@ export const asyncValidators = {
         return Promise.reject(new Error('用户名已存在'))
       }
       return Promise.resolve()
-    } catch (error) {
+    } catch {
       // 验证失败时默认通过
       return Promise.resolve()
     }
@@ -309,7 +306,7 @@ export const asyncValidators = {
         return Promise.reject(new Error('邮箱已被使用'))
       }
       return Promise.resolve()
-    } catch (error) {
+    } catch {
       return Promise.resolve()
     }
   }

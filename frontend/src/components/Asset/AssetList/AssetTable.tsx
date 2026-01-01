@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React from "react";
 import { Table, Tag, Button, Space, Popconfirm, Tooltip } from "antd";
 import { EditOutlined, DeleteOutlined, EyeOutlined, HistoryOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
@@ -128,7 +128,7 @@ const getColumns = (
       { text: "民政托管企业", value: "2" },
       { text: "其他", value: "3" },
     ],
-    render: (text, record) => {
+    render: (text, _record) => {
       // 权属类别映射
       let displayText = text;
       if (typeof text === "string") {

@@ -158,7 +158,7 @@ interface FormFieldChange {
             label={
               <Space>
                 <span>合同编号</span>
-                {!!!!result.extraction_result.data.contract_number && (
+                {!!result.extraction_result.data.contract_number && (
                   <Tag color="blue">自动提取</Tag>
                 )}
               </Space>
@@ -174,7 +174,7 @@ interface FormFieldChange {
             label={
               <Space>
                 <span>承租方名称</span>
-                {!!!!result.extraction_result.data.tenant_name && (
+                {!!result.extraction_result.data.tenant_name && (
                   <Tag color="blue">自动提取</Tag>
                 )}
               </Space>
@@ -193,7 +193,7 @@ interface FormFieldChange {
             label={
               <Space>
                 <span>承租方联系方式</span>
-                {!!!!result.extraction_result.data.tenant_contact && (
+                {!!result.extraction_result.data.tenant_contact && (
                   <Tag color="blue">自动提取</Tag>
                 )}
               </Space>

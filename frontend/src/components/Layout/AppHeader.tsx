@@ -1,22 +1,14 @@
 import React from 'react'
-import { Layout, Button, Space, Avatar, Dropdown, Badge, Typography, Tooltip, Modal, message } from 'antd'
+import { Layout, Button, Avatar, Dropdown, Badge, Typography, message } from 'antd'
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
-  BellOutlined,
-  UserOutlined,
-  SettingOutlined,
   LogoutOutlined,
-  QuestionCircleOutlined,
-  GlobalOutlined,
-  ExclamationCircleOutlined,
 } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { AuthService } from '../../services/authService'
-import type { MenuProps } from 'antd'
 
 const { Header } = Layout
-const { Text } = Typography
 
 interface AppHeaderProps {
   collapsed: boolean

@@ -1,13 +1,8 @@
 import React from 'react'
-import { Card, Row, Col, Typography, Button, Space, Tooltip } from 'antd'
+import { Card, Row, Col, Typography, Button, Space } from 'antd'
 import {
   ReloadOutlined,
   DownloadOutlined,
-  FullscreenOutlined,
-  HomeOutlined,
-  PieChartOutlined,
-  AreaChartOutlined,
-  BarChartOutlined
 } from '@ant-design/icons'
 import { useAnalytics } from '../../hooks/useAnalytics'
 import DataTrendCard from '../../components/Dashboard/DataTrendCard'
@@ -17,7 +12,7 @@ import styles from './DashboardPage.module.css'
 const { Title, Text } = Typography
 
 const DashboardPage: React.FC = () => {
-  const [isFullscreen, setIsFullscreen] = React.useState(false)
+  const [_isFullscreen, setIsFullscreen] = React.useState(false)
 
   // 使用统一的Analytics hook，避免重复请求
   const { data: analyticsData, isLoading, error, refetch } = useAnalytics()

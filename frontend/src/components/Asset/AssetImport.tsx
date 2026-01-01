@@ -9,7 +9,6 @@ import {
   Alert,
   Steps,
   Table,
-  Tag,
   message,
   Row,
   Col,
@@ -27,8 +26,6 @@ import {
   CheckCircleOutlined,
   ExclamationCircleOutlined,
   SettingOutlined,
-  ThunderboltOutlined,
-  ClockCircleOutlined,
 } from "@ant-design/icons";
 import type { UploadProps, UploadFile } from "antd";
 import { enhancedApiClient } from "@/api/client";
@@ -91,7 +88,7 @@ const OptimizedAssetImport: React.FC = () => {
       window.URL.revokeObjectURL(url);
 
       message.success("模板下载成功");
-    } catch (error) {
+    } catch (_error) {
       message.error("模板下载失败");
     }
   };

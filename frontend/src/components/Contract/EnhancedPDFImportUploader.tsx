@@ -19,10 +19,8 @@ import {
   Tag,
   Tooltip,
   Steps,
-  Result,
   Modal,
   message,
-  Spin,
   Switch,
   Badge
 } from 'antd';
@@ -33,7 +31,6 @@ import {
   ExclamationCircleOutlined,
   LoadingOutlined,
   SettingOutlined,
-  InfoCircleOutlined,
   RocketOutlined,
   EyeOutlined,
   FileTextOutlined
@@ -42,14 +39,12 @@ import type { UploadFile, UploadProps } from 'antd';
 
 import { pdfImportService } from '../../services/pdfImportService';
 import type {
-  FileUploadResponse,
   SessionProgress,
   SystemInfoResponse
 } from '../../services/pdfImportService';
 
 const { Dragger } = Upload;
-const { Step } = Steps;
-const { Title, Text, Paragraph } = Typography;
+const { Title, Paragraph } = Typography;
 
 interface EnhancedPDFImportUploaderProps {
   onUploadSuccess: (sessionId: string, fileInfo: UploadFile) => void;
@@ -125,7 +120,7 @@ const EnhancedPDFImportUploader: React.FC<EnhancedPDFImportUploaderProps> = ({
     try {
       const info = await pdfImportService.getEnhancedSystemInfo();
       setSystemInfo(info);
-    } catch (error) {
+    } catch (_error) {
       // Failed to get system info
     }
   };
@@ -224,7 +219,7 @@ const EnhancedPDFImportUploader: React.FC<EnhancedPDFImportUploaderProps> = ({
     accept: '.pdf,application/pdf',
     beforeUpload,
     showUploadList: false,
-    customRequest: async ({ file, onSuccess, onError, onProgress }) => {
+    customRequest: async ({ file, onSuccess, onError, onProgress: _onProgress }) => {
       try {
         setUploading(true);
         setUploadProgress(0);
@@ -385,17 +380,6 @@ const EnhancedPDFImportUploader: React.FC<EnhancedPDFImportUploaderProps> = ({
       default:
         return <FileTextOutlined />;
     }
-  };
-
-  // 获取处理方法标签颜色
-  const getMethodTagColor = (method: string) => {
-    const colorMap: Record<string, string> = {
-      'enhanced': 'blue',
-      'multi_engine': 'green',
-      'ocr': 'orange',
-      'hybrid': 'purple'
-    };
-    return colorMap[method] || 'default';
   };
 
   return (
