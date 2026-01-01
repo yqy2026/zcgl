@@ -330,7 +330,7 @@ class AuthService:
         return TokenResponse(
             access_token=access_token,
             refresh_token=refresh_token,
-            token_type="bearer",
+            token_type="bearer",  # nosec - B105: Standard OAuth2 token type
             expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
             session_id=session_id,
         )
@@ -428,7 +428,7 @@ class AuthService:
             device_fingerprint = payload.get("device_fingerprint")
 
             # 严格验证令牌字段
-            if user_id is None or token_type != "refresh":
+            if user_id is None or token_type != "refresh":  # nosec - B105: Token type comparison
                 return None
 
             if jti is None or iat is None:

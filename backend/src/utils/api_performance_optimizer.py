@@ -164,13 +164,13 @@ class PerformanceOptimizer:
         # 添加关键参数
         if "file" in kwargs:
             key_parts.append(
-                f"file_{hashlib.md5(kwargs['file'].filename.encode('utf-8')).hexdigest()}"
+                f"file_{hashlib.md5(kwargs['file'].filename.encode('utf-8')).hexdigest()}"  # nosec - B324: Cache key
             )
 
         if "options" in kwargs:
             options_str = str(sorted(kwargs["options"].items()))
             key_parts.append(
-                f"options_{hashlib.md5(options_str.encode('utf-8')).hexdigest()}"
+                f"options_{hashlib.md5(options_str.encode('utf-8')).hexdigest()}"  # nosec - B324: Cache key
             )
 
         return "_".join(key_parts)
