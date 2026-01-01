@@ -165,7 +165,9 @@ async def get_ownership_entities(
         raise HTTPException(status_code=500, detail=f"获取权属方列表失败: {str(e)}")
 
 
-@router.get("/business-categories", response_model=list[str], summary="获取业态类别列表")
+@router.get(
+    "/business-categories", response_model=list[str], summary="获取业态类别列表"
+)
 async def get_business_categories(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
 ):
