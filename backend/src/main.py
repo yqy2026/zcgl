@@ -128,8 +128,6 @@ logger.info("依赖导入完成")
 async def lifespan(app: FastAPI):
     """应用生命周期管理器"""
     # 启动时执行
-    import os
-
     # 安全配置检查
     logger.info("开始安全配置检查...")
     settings.log_security_status()
