@@ -554,9 +554,7 @@ def _hash_function_call(args: tuple, kwargs: dict) -> str:
     except Exception:  # pragma: no cover
         # 如果序列化失败，使用字符串表示
         content = f"{args}{kwargs}"  # pragma: no cover
-        return md5(content.encode()).hexdigest()[
-            :16
-        ]  # pragma: no cover  # nosec - B324: Cache key generation
+        return md5(content.encode()).hexdigest()[:16]  # pragma: no cover  # nosec - B324: Cache key generation
 
 
 # 全局缓存管理器实例

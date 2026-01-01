@@ -95,7 +95,7 @@ class JWTSecurityConfig:
 
     @classmethod
     def create_token_with_claims(
-        cls, payload: dict[str, Any], token_type: str = "access"
+        cls, payload: dict[str, Any], token_type: str = "access"  # nosec - B107: Token type name, not password
     ) -> str:
         """
         创建包含标准声明和自定义声明的JWT令牌

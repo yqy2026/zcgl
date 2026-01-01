@@ -143,7 +143,7 @@ async def get_assets(
 # ===== 搜索筛选辅助接口 ===== (必须在 /{asset_id} 路由之前)
 
 
-@router.get("/ownership-entities", summary="获取权属方列表")
+@router.get("/ownership-entities", response_model=list[str], summary="获取权属方列表")
 async def get_ownership_entities(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
 ):
@@ -165,7 +165,7 @@ async def get_ownership_entities(
         raise HTTPException(status_code=500, detail=f"获取权属方列表失败: {str(e)}")
 
 
-@router.get("/business-categories", summary="获取业态类别列表")
+@router.get("/business-categories", response_model=list[str], summary="获取业态类别列表")
 async def get_business_categories(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
 ):
@@ -187,7 +187,7 @@ async def get_business_categories(
         raise HTTPException(status_code=500, detail=f"获取业态类别列表失败: {str(e)}")
 
 
-@router.get("/usage-statuses", summary="获取使用情况列表")
+@router.get("/usage-statuses", response_model=list[str], summary="获取使用情况列表")
 async def get_usage_statuses(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
 ):
@@ -207,7 +207,7 @@ async def get_usage_statuses(
         raise HTTPException(status_code=500, detail=f"获取使用情况列表失败: {str(e)}")
 
 
-@router.get("/property-natures", summary="获取物业性质列表")
+@router.get("/property-natures", response_model=list[str], summary="获取物业性质列表")
 async def get_property_natures(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
 ):
@@ -227,7 +227,7 @@ async def get_property_natures(
         raise HTTPException(status_code=500, detail=f"获取物业性质列表失败: {str(e)}")
 
 
-@router.get("/ownership-statuses", summary="获取确权状态列表")
+@router.get("/ownership-statuses", response_model=list[str], summary="获取确权状态列表")
 async def get_ownership_statuses(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
 ):
