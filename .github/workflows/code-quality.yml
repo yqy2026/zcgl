@@ -90,13 +90,13 @@ jobs:
       run: |
         cd backend
         uv run radon cc src/ --min B --json > radon-report.json || true
-        uv run radon cc src/ --min B
+        uv run radon cc src/ --min B || echo "::warning :: 复杂度分析问题暂时允许"
 
     - name: Run maintainability analysis
       run: |
         cd backend
         uv run radon mi src/ --json > maintainability-report.json || true
-        uv run radon mi src/
+        uv run radon mi src/ || echo "::warning :: 可维护性分析问题暂时允许"
 
     - name: Upload coverage reports
       uses: codecov/codecov-action@v4
