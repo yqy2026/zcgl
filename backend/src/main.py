@@ -6,6 +6,7 @@
 import logging
 import os
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,6 +24,7 @@ from .core.environment import (
     is_production,
     is_testing,
 )
+from .core.config import get_config, initialize_config, settings
 from .core.exception_handler import setup_exception_handlers
 from .core.import_utils import (
     create_lambda_none,
@@ -48,6 +50,27 @@ logger = logging.getLogger(__name__)
 env = get_environment()
 logger.info(f"当前环境: {env.value}")
 logger.info(f"依赖策略: {get_dependency_policy().value}")
+
+# OCR服务已完全禁用 - 功能已移除
+# OCR functionality has been completely removed due to encoding issues
+# The system will run without PDF OCR text extraction capabilities
+OCR_SERVICE_AVAILABLE = False
+OCR_PROVIDER_AVAILABLE = False
+PaddleOCREngineAdapter = None  # type: ignore
+OptimizedOCRService = None  # type: ignore
+
+
+def get_ocr_service() -> None:  # type: ignore
+    """OCR服务占位函数 - 返回None"""
+    return None
+
+
+def set_ocr_service(service: Any) -> None:  # type: ignore
+    """OCR服务占位函数 - 不执行任何操作"""
+    pass
+
+
+safe_print("Info: OCR service disabled - PDF intelligent import unavailable")
 
 # ===== 关键依赖（生产环境必须存在）=====
 # 路由注册器 - 关键依赖
@@ -82,30 +105,6 @@ ErrorRecoveryMiddleware = safe_import(
 
 RequestLoggingMiddleware = safe_import(
     ".middleware.request_logging:RequestLoggingMiddleware",
-    fallback=None,
-)
-
-# ===== 可选功能（允许降级）=====
-# OCR 服务 - 完全禁用以避免编码问题
-OCR_SERVICE_AVAILABLE = False
-OptimizedOCRService = None
-safe_print("Info: OCR service disabled - avoiding encoding issues")
-
-# OCR Provider
-get_ocr_service = safe_import_from(
-    ".services.providers.ocr_provider",
-    "get_ocr_service",
-    fallback=lambda: None,
-)
-set_ocr_service = safe_import_from(
-    ".services.providers.ocr_provider",
-    "set_ocr_service",
-    fallback=lambda x: None,
-)
-
-# PaddleOCR 引擎
-PaddleOCREngineAdapter = safe_import(
-    ".services.adapters.paddle_ocr_engine_adapter:PaddleOCREngineAdapter",
     fallback=None,
 )
 
@@ -164,19 +163,6 @@ async def lifespan(app: FastAPI):
             logger.error("安全检查失败，拒绝在非测试模式下继续启动")
             raise RuntimeError(f"JWT安全检查失败: {e}")
 
-    provider = os.getenv("OCR_ENGINE_PROVIDER", "optimized").lower()
-    try:
-        if provider == "paddle" and PaddleOCREngineAdapter is not None:
-            ocr = PaddleOCREngineAdapter()
-            set_ocr_service(ocr)
-            logger.info("OCR 引擎: PaddleOCREngineAdapter 已初始化")
-        else:
-            ocr = OptimizedOCRService()
-            set_ocr_service(ocr)
-            logger.info("OCR 引擎: OptimizedOCRService 已初始化")
-    except Exception as e:
-        logger.error(f"OCR 服务初始化失败: {e}")
-
     # 初始化枚举字段数据
     if not is_testing():
         try:
@@ -207,14 +193,6 @@ async def lifespan(app: FastAPI):
             logger.warning(f"枚举数据初始化异常: {e}")
 
     yield
-
-    # 关闭时执行
-    try:
-        # 重置 Provider，以避免悬挂实例
-        set_ocr_service(None)
-        logger.info("OCR 服务已释放并清理 Provider")
-    except Exception as e:
-        logger.warning(f"OCR 服务释放失败: {e}")
 
 
 # 创建FastAPI应用实例
@@ -332,51 +310,9 @@ if route_registry and register_api_routes:
         logger.info("已通过路由注册器统一注册 API 路由（版本化）")
     except Exception as e:
         logger.error(f"路由注册器注册失败: {e}")
-    # else:
-    #     logger.warning("路由注册器不可用，使用手动路由注册")
-    #     # 手动路由注册已被禁用，使用路由注册器统一管理
 
-    # # 调试端点 - 列出所有路由
-    # @app.get("/debug/routes", tags=["调试"])
-    # async def debug_routes():
-    #     """调试端点 - 列出所有注册的路由"""
-    #     routes_info = []
-    #     for route in app.routes:
-    #         if hasattr(route, 'path') and hasattr(route, 'methods'):
-    #             route_info = {
-    #                 "path": route.path,
-    #                 "methods": list(route.methods) if hasattr(route, 'methods') else [],
-    #                 "name": getattr(route, 'name', 'unknown')
-    #             }
-    #             routes_info.append(route_info)
-    #
-    #     return {
-    #         "success": True,
-    #         "total_routes": len(routes_info),
-    #         "routes": routes_info
-    #     }
-
-    # 调试路由已移除 - 统一使用路由注册器管理
-    # 资产调试功能请使用 /api/v1/assets 端点
-
-    # 移除手动路由注册 - 统一使用路由注册器
+    # 手动路由注册已移除，统一使用路由注册器管理所有API路由
     logger.info("手动路由注册已移除，统一使用路由注册器管理所有API路由")
-
-    # 注释掉重复的/assets路由 - 使用最高优先级版本
-    # @app.get("/api/assets", tags=["资产管理-最终兼容"])
-    # async def final_assets_compatibility():
-    #     """最终兼容性API - 获取资产列表（无认证）"""
-    #     safe_print("DEBUG: 最终兼容性API被调用 - 这应该是唯一被调用的/api/assets路由")
-    #     logger.info("最终兼容性API被调用")
-    #     return {
-    #         "success": True,
-    #         "data": [],
-    #         "total": 0,
-    #         "page": 1,
-    #         "limit": 20,
-    #         "pages": 0,
-    #         "message": "最终兼容性API成功 - 无需认证"
-    #     }
 
 # PDF智能导入API端点已迁移到路由注册器
 # /api/pdf-import/* → /api/v1/pdf-import/*
@@ -408,4 +344,3 @@ else:
     logger.info("测试模式：跳过数据库自动初始化，使用测试fixture提供的数据库")
 
 logger.info("FastAPI应用启动完成")
-# Trigger reload
