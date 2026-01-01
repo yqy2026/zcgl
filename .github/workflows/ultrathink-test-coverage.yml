@@ -288,7 +288,6 @@ for file_path in data.measured_files():
       with:
         node-version: ${{ env.NODE_VERSION }}
         cache: 'npm'
-        cache-dependency-path: frontend/package-lock.json
 
     - name: 安装依赖
       run: |

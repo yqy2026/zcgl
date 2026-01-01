@@ -4,11 +4,22 @@
 """
 
 import hashlib
+import logging
 import re
 import uuid
 from pathlib import Path
 
-import magic
+# magic模块的条件导入
+try:
+    import magic
+    MAGIC_AVAILABLE = True
+except ImportError:
+    magic = None
+    MAGIC_AVAILABLE = False
+    logging.getLogger(__name__).warning(
+        "python-magic模块不可用，MIME类型检测功能将使用备用方案"
+    )
+
 from fastapi import UploadFile
 
 
@@ -70,7 +81,10 @@ class EnhancedFileSecurityValidator:
     MAX_FILE_SIZE = 100 * 1024 * 1024
 
     def __init__(self):
-        self.magic_mime = magic.Magic(mime=True)
+        if MAGIC_AVAILABLE:
+            self.magic_mime = magic.Magic(mime=True)
+        else:
+            self.magic_mime = None
 
     def validate_file_extension(self, filename: str) -> bool:
         """验证文件扩展名"""
@@ -82,6 +96,9 @@ class EnhancedFileSecurityValidator:
 
     def validate_mime_type(self, file: UploadFile) -> bool:
         """验证MIME类型"""
+        if not MAGIC_AVAILABLE:
+            # 降级方案：跳过MIME检测
+            return True
         try:
             # 读取文件前几个字节来检测真实MIME类型
             content = file.file.read(1024)
@@ -219,16 +236,19 @@ class EnhancedFileSecurityValidator:
                 result["errors"].append("文件类型验证失败")
                 return result
 
-            # 检测真实MIME类型
-            file.file.seek(0)
-            content = file.file.read(1024)
-            file.file.seek(0)
-            detected_mime = self.magic_mime.from_buffer(content)
-            result["detected_mime"] = detected_mime
+            # 检测真实MIME类型（如果可用）
+            if MAGIC_AVAILABLE:
+                file.file.seek(0)
+                content = file.file.read(1024)
+                file.file.seek(0)
+                detected_mime = self.magic_mime.from_buffer(content)
+                result["detected_mime"] = detected_mime
 
-            if detected_mime not in allowed_types:
-                result["errors"].append(f"不支持的MIME类型: {detected_mime}")
-                return result
+                if detected_mime not in allowed_types:
+                    result["errors"].append(f"不支持的MIME类型: {detected_mime}")
+                    return result
+            else:
+                result["detected_mime"] = None
 
             # 4. 验证文件大小
             if not self.validate_file_size(file, max_size):
