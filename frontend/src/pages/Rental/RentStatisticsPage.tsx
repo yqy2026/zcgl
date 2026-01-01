@@ -13,13 +13,11 @@ import {
   Progress,
   Space,
   Typography,
-  message,
-  Tooltip
+  message
 } from 'antd';
 import { Pie, Column, Line } from '@ant-design/plots';
 import {
   DollarOutlined,
-  FileTextOutlined,
   AccountBookOutlined,
   RiseOutlined,
   DownloadOutlined,

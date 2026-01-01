@@ -1,9 +1,7 @@
 import React from 'react'
 import { Card, Row, Col, Statistic, Spin, Alert, Typography, Space, Tag } from 'antd'
 import {
-  PieChartOutlined,
   HomeOutlined,
-  EnvironmentOutlined,
   UserOutlined,
 } from '@ant-design/icons'
 import { useQuery } from '@tanstack/react-query'

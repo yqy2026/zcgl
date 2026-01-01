@@ -405,7 +405,10 @@ interface AreaChartProps {
 export const AnalyticsAreaChart: React.FC<AreaChartProps> = ({
   data,
   xDataKey,
+  yDataKey,
   areaName = '数值',
+  _fill,
+  _stroke,
   height = 300,
   showLegend = true,
   loading = false,
@@ -441,12 +444,12 @@ export const AnalyticsAreaChart: React.FC<AreaChartProps> = ({
       fillOpacity: 0.3,
     },
     line: {
-      color: stroke || '#1890ff',
+      color: '#1890ff',
       style: {
         lineWidth: 2,
       },
     },
-    color: stroke || '#1890ff',
+    color: '#1890ff',
     legend: showLegend ? {
       position: 'top' as const,
     } : false,

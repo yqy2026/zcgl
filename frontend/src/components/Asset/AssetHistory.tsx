@@ -62,7 +62,7 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
   });
 
   // 获取历史详情
-  const { data: historyDetail, isLoading: detailLoading } = useQuery({
+  const { isLoading: detailLoading } = useQuery({
     queryKey: ["history-detail", selectedHistory?.id],
     queryFn: () => assetService.getHistoryDetail(selectedHistory!.id),
     enabled: !!selectedHistory,

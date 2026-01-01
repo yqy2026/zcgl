@@ -1,7 +1,6 @@
 import React from 'react'
 import { Card, Row, Col, Statistic, Spin, Alert, Typography, Space, Progress, Tag } from 'antd'
 import {
-  AreaChartOutlined,
   BuildOutlined,
   HomeOutlined,
   ShopOutlined,

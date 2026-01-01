@@ -484,7 +484,10 @@ site/
 # Prevent temporary debug files from being committed
 debug_*
 temp_*
-test_*
+# Note: test_*.py files in tests/ directories should be tracked
+# Only ignore test files in root or unexpected locations
+/test_*.py
+/test_*.db
 demo_*
 sample_*
 *_debug.*
