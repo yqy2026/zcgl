@@ -37,6 +37,31 @@ const { Text } = Typography;
 // 分析维度类型
 type AnalysisDimension = "count" | "area";
 
+// AnalyticsData 类型定义
+interface AnalyticsData {
+  area_summary: {
+    total_assets: number;
+    total_area: number;
+    total_rentable_area: number;
+    occupancy_rate: number;
+  };
+  financial_summary: {
+    total_annual_income: number;
+    total_annual_expense: number;
+    total_net_income: number;
+    total_monthly_rent: number;
+  };
+  property_nature_distribution?: Array<{ name: string; count: number; percentage: string }>;
+  ownership_status_distribution?: Array<{ status: string; count: number; percentage: string }>;
+  usage_status_distribution?: Array<{ status: string; count: number; percentage: string }>;
+  business_category_distribution?: Array<{ category: string; count: number; percentage: string; occupancy_rate?: string }>;
+  occupancy_trend?: Array<{ date: string; occupancy_rate: number }>;
+  property_nature_area_distribution?: Array<{ name: string; total_area?: number; area_percentage?: number }>;
+  ownership_status_area_distribution?: Array<{ status: string; total_area?: number; area_percentage?: number; average_area?: number }>;
+  usage_status_area_distribution?: Array<{ status: string; total_area?: number; area_percentage?: number; average_area?: number }>;
+  business_category_area_distribution?: Array<{ category: string; total_area?: number; area_percentage?: number }>;
+}
+
 const AssetAnalyticsPage: React.FC = () => {
   const [filters, setFilters] = useState<AssetSearchParams>({});
   const [dimension, setDimension] = useState<AnalysisDimension>("area");
@@ -407,7 +432,7 @@ const AssetAnalyticsPage: React.FC = () => {
                       {(dimension === "count"
                         ? analyticsData!.property_nature_distribution!
                         : analyticsData!.property_nature_area_distribution!
-                      )!.map((item, index) => (
+                      )!.map((item: any, index: number) => (
                         <div key={index} className={styles.distributionItem}>
                           <span className={styles.itemName}>
                             {dimension === "count" ? item.name : item.name}
@@ -430,7 +455,7 @@ const AssetAnalyticsPage: React.FC = () => {
                       {(dimension === "count"
                         ? analyticsData!.ownership_status_distribution!
                         : analyticsData!.ownership_status_area_distribution!
-                      )!.map((item, index) => (
+                      )!.map((item: any, index: number) => (
                         <div key={index} className={styles.distributionItem}>
                           <span className={styles.itemName}>
                             {dimension === "count" ? item.status : item.status}
@@ -453,7 +478,7 @@ const AssetAnalyticsPage: React.FC = () => {
                       {(dimension === "count"
                         ? analyticsData!.usage_status_distribution!
                         : analyticsData!.usage_status_area_distribution!
-                      )!.map((item, index) => (
+                      )!.map((item: any, index: number) => (
                         <div key={index} className={styles.distributionItem}>
                           <span className={styles.itemName}>
                             {dimension === "count" ? item.status : item.status}
@@ -476,7 +501,7 @@ const AssetAnalyticsPage: React.FC = () => {
                       {(dimension === "count"
                         ? analyticsData!.business_category_distribution!
                         : analyticsData!.business_category_area_distribution!
-                      )!.map((item, index) => (
+                      )!.map((item: any, index: number) => (
                         <div key={index} className={styles.distributionItem}>
                           <span className={styles.itemName}>
                             {dimension === "count" ? item.category : item.category}

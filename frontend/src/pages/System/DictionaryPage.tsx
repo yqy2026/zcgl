@@ -9,6 +9,10 @@ import type { SystemDictionary } from '@/types/dictionary'
 import EnumValuePreview from '../../components/Dictionary/EnumValuePreview'
 import { handleApiError as _handleError, withErrorHandling as _withErrorHandling, createErrorHandler as _createErrorHandler } from '../../services'
 
+// Utility functions
+const withErrorHandling = _withErrorHandling
+const setDictTypes = (types: string[]) => types
+
 const { Option } = Select
 const { Search } = Input
 

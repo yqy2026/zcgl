@@ -3,7 +3,7 @@
  * 提供标准化的API调用方法，包含错误处理、重试机制等
  */
 
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios'
 import { API_CONFIG } from '../constants/api'
 
 // API响应类型定义

@@ -164,7 +164,7 @@ const UserManagementPage: React.FC = () => {
   }
 
   const handleSearch = (value: string) => {
-    setSearchText(value)
+    _setSearchText(value)
     // 这里可以添加搜索逻辑
   }
 
@@ -434,7 +434,7 @@ const UserManagementPage: React.FC = () => {
                   placeholder="状态筛选"
                   allowClear
                   style={{ width: 120 }}
-                  onChange={setStatusFilter}
+                  onChange={_setStatusFilter}
                 >
                   {statusOptions.map(status => (
                     <Option key={status.value} value={status.value}>
@@ -446,7 +446,7 @@ const UserManagementPage: React.FC = () => {
                   placeholder="角色筛选"
                   allowClear
                   style={{ width: 120 }}
-                  onChange={setRoleFilter}
+                  onChange={_setRoleFilter}
                 >
                   {roles.map(role => (
                     <Option key={role.id} value={role.id}>
@@ -458,7 +458,7 @@ const UserManagementPage: React.FC = () => {
                   placeholder="组织筛选"
                   allowClear
                   style={{ width: 120 }}
-                  onChange={setOrganizationFilter}
+                  onChange={_setOrganizationFilter}
                 >
                   {organizations.map(org => (
                     <Option key={org.id} value={org.id}>

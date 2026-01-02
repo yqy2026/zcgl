@@ -220,7 +220,7 @@ const OperationLogPage: React.FC = () => {
   }
 
   const handleSearch = (value: string) => {
-    setSearchText(value)
+    _setSearchText(value)
     // 这里可以添加搜索逻辑
   }
 
@@ -412,7 +412,7 @@ const OperationLogPage: React.FC = () => {
                 placeholder="模块筛选"
                 allowClear
                 style={{ width: '100%' }}
-                onChange={setModuleFilter}
+                onChange={_setModuleFilter}
               >
                 {moduleOptions.map(module => (
                   <Option key={module.value} value={module.value}>
@@ -426,7 +426,7 @@ const OperationLogPage: React.FC = () => {
                 placeholder="操作筛选"
                 allowClear
                 style={{ width: '100%' }}
-                onChange={setActionFilter}
+                onChange={_setActionFilter}
               >
                 {actionOptions.map(action => (
                   <Option key={action.value} value={action.value}>
@@ -440,7 +440,7 @@ const OperationLogPage: React.FC = () => {
                 placeholder="状态筛选"
                 allowClear
                 style={{ width: '100%' }}
-                onChange={setStatusFilter}
+                onChange={_setStatusFilter}
               >
                 {statusOptions.map(status => (
                   <Option key={status.value} value={status.value}>
@@ -452,7 +452,7 @@ const OperationLogPage: React.FC = () => {
             <Col xs={24} sm={12} md={6}>
               <RangePicker
                 style={{ width: '100%' }}
-                onChange={(dates) => setDateRange(dates as any)}
+                onChange={(dates) => _setDateRange(dates as any)}
                 placeholder={['开始日期', '结束日期']}
               />
             </Col>

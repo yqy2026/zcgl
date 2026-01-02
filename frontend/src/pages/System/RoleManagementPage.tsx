@@ -23,7 +23,7 @@ import {
   Typography
 } from 'antd'
 import SystemBreadcrumb from '../../components/System/SystemBreadcrumb'
-import { _roleService, type Role, type _CreateRoleData, type _UpdateRoleData } from '../../services/systemService'
+import { roleService as _roleService, type Role, type CreateRoleData as _CreateRoleData, type UpdateRoleData as _UpdateRoleData } from '../../services/systemService'
 import {
   PlusOutlined,
   EditOutlined,
@@ -240,7 +240,7 @@ const RoleManagementPage: React.FC = () => {
   }
 
   const handleSearch = (value: string) => {
-    setSearchText(value)
+    _setSearchText(value)
     // 这里可以添加搜索逻辑
   }
 
@@ -509,7 +509,7 @@ const RoleManagementPage: React.FC = () => {
                   placeholder="状态筛选"
                   allowClear
                   style={{ width: 120 }}
-                  onChange={setStatusFilter}
+                  onChange={_setStatusFilter}
                 >
                   {statusOptions.map(status => (
                     <Option key={status.value} value={status.value}>

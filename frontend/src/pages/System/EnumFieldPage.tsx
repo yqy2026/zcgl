@@ -10,8 +10,8 @@ import {
   EyeOutlined
 } from '@ant-design/icons'
 import { unifiedDictionaryService } from '../../services/dictionary'
-import type { EnumFieldType, EnumFieldValue, _EnumFieldWithType } from '../../services/dictionary'
-import { _SystemDictionary } from '@/types/asset'
+import type { EnumFieldType, EnumFieldValue, EnumFieldWithType } from '../../services/dictionary'
+import { SystemDictionary } from '@/types/asset'
 import EnumValuePreview from '../../components/Dictionary/EnumValuePreview'
 import { withErrorHandling as _withErrorHandling, createErrorHandler as _createErrorHandler } from '../../services'
 

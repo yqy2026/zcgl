@@ -3,6 +3,7 @@ import { Typography, Button, Space, Row, Col, Spin, Alert, message } from "antd"
 import { PlusOutlined, ExportOutlined, ImportOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import type { PaginationConfig, FilterConfig, SorterConfig } from 'antd/es/table';
 import { assetService } from "../../services/assetService";
 import { analyticsService } from "../../services/analyticsService";
 import { useAssets } from "../../hooks/useAssets";
