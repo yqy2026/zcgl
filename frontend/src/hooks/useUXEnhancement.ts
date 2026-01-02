@@ -10,7 +10,7 @@ export const useErrorHandler = () => {
   const handleAsyncError = useCallback(async <T>(asyncFn: () => Promise<T>, context?: unknown) => {
     try {
       return await asyncFn()
-    } catch {
+    } catch (error) {
       handleError(error as Error, context)
       throw error
     }
@@ -181,7 +181,7 @@ export const useOperationState = <T = unknown>() => {
       }
 
       return result
-    } catch {
+    } catch (error) {
       const err = error as Error
       setState(prev => ({
         ...prev,

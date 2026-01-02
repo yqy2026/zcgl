@@ -119,7 +119,7 @@ const AssetAnalyticsPage: React.FC = () => {
 
       await exportAnalyticsData(exportData, "excel");
       message.success("数据导出成功！");
-    } catch {
+    } catch (error) {
       console.error("导出失败:", error);
       message.error("导出失败，请重试");
     } finally {
@@ -141,7 +141,7 @@ const AssetAnalyticsPage: React.FC = () => {
         setIsFullscreen(false);
         message.success("已退出全屏模式");
       }
-    } catch {
+    } catch (error) {
       console.error("全屏切换失败:", error);
       message.error("全屏切换失败，请检查浏览器权限设置");
     }

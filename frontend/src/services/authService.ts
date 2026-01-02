@@ -227,7 +227,7 @@ export class AuthService {
     const userStr = localStorage.getItem('user')
     try {
       return userStr ? JSON.parse(userStr) : null
-    } catch {
+    } catch (error) {
       return null
     }
   }
@@ -237,7 +237,7 @@ export class AuthService {
     const permissionsStr = localStorage.getItem('permissions')
     try {
       return permissionsStr ? JSON.parse(permissionsStr) : []
-    } catch {
+    } catch (error) {
       return []
     }
   }

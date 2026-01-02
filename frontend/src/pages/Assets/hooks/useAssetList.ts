@@ -130,7 +130,7 @@ const fetchAssets = async (params: {
       page: result.page,
       pageSize: result.limit,
     };
-  } catch {
+  } catch (error) {
     // 提供更详细的错误信息
     if (error instanceof Error) {
       throw new Error(`获取资产列表失败: ${error.message}`);
@@ -164,7 +164,7 @@ const fetchAssetSummary = async (): Promise<AssetSummary> => {
       vacant,
       avgOccupancyRate: Math.round(avgOccupancyRate * 100) / 100, // 保留两位小数
     };
-  } catch {
+  } catch (error) {
     if (error instanceof ApiError) {
       message.error(`获取统计数据失败: ${error.message}`);
     }

@@ -50,7 +50,7 @@ class RentContractExcelService {
       });
 
       return response.data;
-    } catch {
+    } catch (error) {
       console.error('下载模板失败:', error);
       throw new Error('下载模板失败');
     }
@@ -85,7 +85,7 @@ class RentContractExcelService {
       );
 
       return response.data as any;
-    } catch {
+    } catch (error) {
       console.error('导入Excel失败:', error);
       throw new Error('导入Excel失败');
     }
@@ -127,7 +127,7 @@ class RentContractExcelService {
       });
 
       return response.data;
-    } catch {
+    } catch (error) {
       console.error('导出Excel失败:', error);
       throw new Error('导出Excel失败');
     }
@@ -147,7 +147,7 @@ class RentContractExcelService {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-    } catch {
+    } catch (error) {
       console.error('下载模板文件失败:', error);
       throw error;
     }
@@ -181,7 +181,7 @@ class RentContractExcelService {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-    } catch {
+    } catch (error) {
       console.error('导出并下载文件失败:', error);
       throw error;
     }
@@ -219,7 +219,7 @@ class RentContractExcelService {
       }
 
       return result;
-    } catch {
+    } catch (error) {
       if (options.onError) {
         options.onError(error as Error);
       }

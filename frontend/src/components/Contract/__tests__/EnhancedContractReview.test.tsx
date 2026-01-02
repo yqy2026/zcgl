@@ -210,7 +210,7 @@ vi.mock('dayjs', () => ({
     format: (fmt: string) => '2024-01-01',
     valueOf: () => 1704067200000,
   }),
-  extend: () => {},
+  extend: () => { },
 }))
 
 // Mock services
@@ -276,7 +276,7 @@ describe('EnhancedContractReview 组件测试', () => {
 
     it('应该接收 onCancel 回调', async () => {
       const handleCancel = vi.fn()
-      const element = await createElement({ onCancel: _onCancel, handleCancel })
+      const element = await createElement({ onCancel: handleCancel })
       expect(element).toBeTruthy()
     })
 

@@ -402,6 +402,8 @@ interface ProgressTrackerProps {
   current: number
   size?: 'small' | 'default'
   direction?: 'horizontal' | 'vertical'
+  _size?: 'small' | 'default'
+  _direction?: 'horizontal' | 'vertical'
   showDetails?: boolean
 }
 

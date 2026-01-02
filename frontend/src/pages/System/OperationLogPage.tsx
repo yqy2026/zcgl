@@ -193,7 +193,7 @@ const OperationLogPage: React.FC = () => {
         }
       ]
       setLogs(mockLogs)
-    } catch {
+    } catch (error) {
       message.error('加载操作日志失败')
     } finally {
       setLoading(false)
@@ -214,7 +214,7 @@ const OperationLogPage: React.FC = () => {
         avg_response_time: Math.round(logs.reduce((sum, log) => sum + log.response_time, 0) / logs.length) || 0
       }
       setStatistics(mockStats)
-    } catch {
+    } catch (error) {
       message.error('加载统计信息失败')
     }
   }

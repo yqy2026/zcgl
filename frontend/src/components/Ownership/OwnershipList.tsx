@@ -77,7 +77,7 @@ const OwnershipList: React.FC<OwnershipListProps> = ({
       });
       setOwnerships(response.items);
       setTotal(response.total);
-    } catch {
+    } catch (error) {
       message.error('加载权属方列表失败');
     } finally {
       setLoading(false);
@@ -89,7 +89,7 @@ const OwnershipList: React.FC<OwnershipListProps> = ({
     try {
       const stats = await ownershipService.getOwnershipStatistics();
       setStatistics(stats);
-    } catch {
+    } catch (error) {
       console.error('加载统计信息失败');
     }
   };
@@ -171,7 +171,7 @@ const OwnershipList: React.FC<OwnershipListProps> = ({
       message.success(`${record.is_active ? '禁用' : '启用'}成功`);
       loadOwnerships();
       loadStatistics();
-    } catch {
+    } catch (error) {
       message.error('操作失败');
     }
   };

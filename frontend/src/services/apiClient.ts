@@ -144,7 +144,7 @@ export class ApiClient {
 
       const { access_token } = response.data
       localStorage.setItem('token', access_token)
-    } catch {
+    } catch (error) {
       throw new Error('Token refresh failed')
     }
   }
@@ -267,7 +267,7 @@ export class ApiClient {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         return await requestFn()
-      } catch {
+      } catch (error) {
         lastError = error
 
         // 如果是最后一次尝试，直接抛出错误

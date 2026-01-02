@@ -11,53 +11,52 @@ import { Asset } from '@/types/asset'
 
 export const mockAsset: Asset = {
   id: 'asset-001',
-  ownershipEntity: '测试权属方',
-  ownershipCategory: '企业',
-  projectName: '测试项目',
-  propertyName: '测试物业A',
+  ownership_entity: '测试权属方',
+  ownership_category: '企业',
+  project_name: '测试项目',
+  property_name: '测试物业A',
   address: '北京市朝阳区测试路123号',
-  ownershipStatus: '自有',
-  propertyNature: '商业',
-  usageStatus: '使用中',
+  ownership_status: '自有',
+  property_nature: '商业',
+  usage_status: '使用中',
 
   // 面积字段
-  landArea: 5000,
-  actualPropertyArea: 4500,
-  rentableArea: 4000,
-  rentedArea: 3200,
-  unrentedArea: 800,
-  occupancyRate: 80,
-
-  // 财务字段
-  annualIncome: 480000,
-  annualExpense: 96000,
-  netIncome: 384000,
+  land_area: 5000,
+  actual_property_area: 4500,
+  rentable_area: 4000,
+  rented_area: 3200,
+  unrented_area: 800,
+  occupancy_rate: 80,
+  include_in_occupancy_rate: true,
 
   // 合同字段
-  leaseContractNumber: 'CT-2024-001',
-  contractStartDate: '2024-01-01',
-  contractEndDate: '2026-12-31',
+  lease_contract_number: 'CT-2024-001',
+  contract_start_date: '2024-01-01',
+  contract_end_date: '2026-12-31',
+
+  // 其他必需字段
+  is_sublease: false,
 
   // 自动计算字段
-  createdAt: '2024-01-01T00:00:00Z',
-  updatedAt: '2024-12-28T00:00:00Z',
-}
+  created_at: '2024-01-01T00:00:00Z',
+  updated_at: '2024-12-28T00:00:00Z',
+} as unknown as Asset
 
 export const mockAssetList: Asset[] = [
   mockAsset,
   {
     ...mockAsset,
     id: 'asset-002',
-    propertyName: '测试物业B',
+    property_name: '测试物业B',
     address: '北京市海淀区测试路456号',
-    occupancyRate: 60,
+    occupancy_rate: 60,
   },
   {
     ...mockAsset,
     id: 'asset-003',
-    propertyName: '测试物业C',
+    property_name: '测试物业C',
     address: '北京市西城区测试路789号',
-    occupancyRate: 90,
+    occupancy_rate: 90,
   },
 ]
 

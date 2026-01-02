@@ -20,6 +20,8 @@ import {
   Switch,
   InputNumber,
   message,
+  Badge,
+  Statistic,
 } from 'antd';
 import {
   InboxOutlined,
@@ -41,7 +43,7 @@ import type {
 } from '../../types/enhancedPdfImport';
 
 const { Title, Text } = Typography;
-const { _Step } = Steps;
+const { Step } = Steps;
 const { Dragger } = Upload;
 
 const EnhancedPDFImportPage: React.FC = () => {
@@ -90,7 +92,7 @@ const EnhancedPDFImportPage: React.FC = () => {
           }));
         }
       }
-    } catch {
+    } catch (error) {
       console.error('检查系统能力失败:', error);
       message.error('无法检查系统能力');
     }
@@ -137,7 +139,7 @@ const EnhancedPDFImportPage: React.FC = () => {
         setUploadProgress(progress);
       }
     },
-    customRequest: async ({ file, _onSuccess, onError }) => {
+    customRequest: async ({ file, onSuccess, onError }) => {
       try {
         setProcessing(true);
         setShowResults(false);
@@ -159,7 +161,7 @@ const EnhancedPDFImportPage: React.FC = () => {
           setProcessing(false);
           onError?.(new Error(result.error || '上传失败'));
         }
-      } catch {
+      } catch (error) {
         console.error('上传失败:', error);
         message.error('上传过程中发生错误');
         setProcessing(false);
@@ -207,7 +209,7 @@ const EnhancedPDFImportPage: React.FC = () => {
         } else {
           message.error(result.error || '取消失败');
         }
-      } catch {
+      } catch (error) {
         console.error('取消失败:', error);
         message.error('取消过程中发生错误');
       }

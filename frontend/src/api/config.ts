@@ -279,7 +279,7 @@ export const apiRequest = async <T>(
       try {
         const errorData = await response.json();
         errorMessage = errorData.message || errorData.detail || errorMessage;
-      } catch {
+      } catch (error) {
         // 如果无法解析错误响应，使用默认错误消息
       }
 

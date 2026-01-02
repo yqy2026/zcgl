@@ -152,7 +152,7 @@ class RoutePerformanceMonitor {
       })
       clsObserver.observe({ entryTypes: ['layout-shift'] })
       this.observers.push(clsObserver)
-    } catch {
+    } catch (error) {
       console.warn('Web Vitals observer initialization failed:', error)
     }
   }
@@ -170,7 +170,7 @@ class RoutePerformanceMonitor {
       })
       resourceObserver.observe({ entryTypes: ['resource'] })
       this.observers.push(resourceObserver)
-    } catch {
+    } catch (error) {
       console.warn('Resource timing observer initialization failed:', error)
     }
   }
@@ -186,7 +186,7 @@ class RoutePerformanceMonitor {
       })
       memoryObserver.observe({ entryTypes: ['measure'] })
       this.observers.push(memoryObserver)
-    } catch {
+    } catch (error) {
       console.warn('Memory observer initialization failed:', error)
     }
   }
@@ -257,7 +257,7 @@ class RoutePerformanceMonitor {
             `route-start-${route}`,
             `route-interactive-${route}`
           )
-        } catch {
+        } catch (error) {
           // 忽略测量错误
         }
       }
@@ -373,7 +373,7 @@ class RoutePerformanceMonitor {
       })
 
       // Route metrics reported
-    } catch {
+    } catch (error) {
       console.warn('性能指标上报失败:', error)
     }
   }

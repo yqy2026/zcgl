@@ -27,6 +27,7 @@ import {
   EyeOutlined,
   FileTextOutlined,
   DollarOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
@@ -101,7 +102,7 @@ const ContractListPage: React.FC = () => {
           pages: response.pages || 0,
         },
       }));
-    } catch {
+    } catch (error) {
       console.error("加载合同列表失败:", error);
       message.error(`加载合同列表失败: ${error instanceof Error ? error.message : "未知错误"}`);
       setState((prev) => ({ ...prev, loading: false, contracts: [] }));
@@ -113,7 +114,7 @@ const ContractListPage: React.FC = () => {
     try {
       const stats = await rentContractService.getRentStatistics();
       setStatistics(stats);
-    } catch {
+    } catch (error) {
       console.error("加载统计数据失败:", error);
     }
   };
@@ -127,7 +128,7 @@ const ContractListPage: React.FC = () => {
       ]);
       setAssets(assetsResponse.items);
       setOwnerships(ownershipsData);
-    } catch {
+    } catch (error) {
       message.error("加载参考数据失败");
     }
   };
@@ -187,7 +188,7 @@ const ContractListPage: React.FC = () => {
           message.success("删除成功");
           loadContracts();
           loadStatistics();
-        } catch {
+        } catch (error) {
           message.error("删除失败");
         }
       },
@@ -199,7 +200,7 @@ const ContractListPage: React.FC = () => {
     try {
       await rentContractService.generateMonthlyLedger({ contract_id: contractId });
       message.success("生成台账成功");
-    } catch {
+    } catch (error) {
       message.error("生成台账失败");
     }
   };

@@ -23,7 +23,7 @@ export const useAuth = () => {
             // 这里可以设置API默认的Authorization header
           }
         }
-      } catch {
+      } catch (error) {
         console.error('初始化认证状态失败:', error)
         // 清除可能损坏的本地存储
         AuthService.logout()
@@ -79,7 +79,7 @@ export const useAuth = () => {
         const currentUser = await AuthService.getCurrentUser()
         setUser(currentUser)
       }
-    } catch {
+    } catch (error) {
       console.error('刷新用户信息失败:', error)
       // 如果刷新失败，尝试刷新token
       try {

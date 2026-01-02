@@ -96,7 +96,7 @@ const OrganizationPage: React.FC = () => {
     try {
       const data = await organizationService.getOrganizations();
       setOrganizations(data);
-    } catch {
+    } catch (error) {
       message.error('加载组织列表失败');
     } finally {
       setLoading(false);
@@ -107,7 +107,7 @@ const OrganizationPage: React.FC = () => {
     try {
       const data = await organizationService.getOrganizationTree();
       setOrganizationTree(convertTreeToDataNodes(data));
-    } catch {
+    } catch (error) {
       message.error('加载组织树失败');
     }
   };
@@ -116,7 +116,7 @@ const OrganizationPage: React.FC = () => {
     try {
       const data = await organizationService.getStatistics();
       setStatistics(data);
-    } catch {
+    } catch (error) {
       message.error('加载统计信息失败');
     }
   };
@@ -176,7 +176,7 @@ const OrganizationPage: React.FC = () => {
     try {
       const data = await organizationService.searchOrganizations(keyword);
       setOrganizations(data);
-    } catch {
+    } catch (error) {
       message.error('搜索失败');
     } finally {
       setLoading(false);
@@ -205,7 +205,7 @@ const OrganizationPage: React.FC = () => {
       loadOrganizations();
       loadOrganizationTree();
       loadStatistics();
-    } catch {
+    } catch (error) {
       message.error('删除失败');
     }
   };
@@ -216,7 +216,7 @@ const OrganizationPage: React.FC = () => {
       const history = await organizationService.getOrganizationHistory(organization.id);
       setOrganizationHistory(history);
       setHistoryModalVisible(true);
-    } catch {
+    } catch (error) {
       message.error('加载历史记录失败');
     }
   };
@@ -234,7 +234,7 @@ const OrganizationPage: React.FC = () => {
       loadOrganizations();
       loadOrganizationTree();
       loadStatistics();
-    } catch {
+    } catch (error) {
       message.error(editingOrganization ? '更新失败' : '创建失败');
     }
   };

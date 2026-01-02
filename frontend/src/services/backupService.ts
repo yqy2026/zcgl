@@ -677,7 +677,7 @@ export class BackupService {
       }
 
       return result.data!;
-    } catch {
+    } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -710,7 +710,7 @@ export class BackupService {
       }
 
       return result.data!;
-    } catch {
+    } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }

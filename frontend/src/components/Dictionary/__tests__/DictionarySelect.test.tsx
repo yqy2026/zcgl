@@ -8,7 +8,7 @@ import React from 'react'
 
 // Mock hooks
 vi.mock('../../hooks/useDictionary', () => ({
-  useDictionary: vi.fn((dictType: _dictType, string, isActive?: boolean) => ({
+  useDictionary: vi.fn((_dictType: string, _isActive?: boolean) => ({
     options: [
       { label: '选项1', value: 'opt1' },
       { label: '选项2', value: 'opt2' },
@@ -312,7 +312,7 @@ describe('DictionarySelect - SelectProps传递测试', () => {
     const handleChange = vi.fn()
     const element = React.createElement(DictionarySelect, {
       dictType: 'test_type',
-      onChange: _onChange, handleChange,
+      onChange: handleChange,
     })
     expect(element).toBeTruthy()
   })

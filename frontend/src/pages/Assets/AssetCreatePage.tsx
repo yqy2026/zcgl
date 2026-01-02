@@ -158,7 +158,7 @@ const AssetCreatePage: React.FC = () => {
       } else {
         createMutation.mutate(data as AssetCreateRequest)
       }
-    } catch {
+    } catch (error) {
       console.error('Submit error:', error)
     }
   }

@@ -1,7 +1,8 @@
 import React, { createContext, useCallback, useContext, useState, useRef } from 'react'
 import { message, Statistic, Card, Row, Col, Switch, Button, Space, Typography } from 'antd'
 import {
-  ThunderboltOutlined
+  ThunderboltOutlined,
+  EyeOutlined
 } from '@ant-design/icons'
 
 const { Text } = Typography
@@ -427,10 +428,10 @@ const ResponseOptimizationDashboard: React.FC<{ config: SmartResponseConfig; met
                     </Col>
                     <Col span={4}>
                       <Text>
-                        状态: {getResponseType(metric) === 'loading' ? '⏳' :
-                             getResponseType(metric) === 'rendering' ? '🎨' :
-                             getResponseType(metric) === 'compression' ? '📦' :
-                             getResponseType(metric) === 'caching' ? '💾' :
+                        状态: {_getResponseType(metric) === 'loading' ? '⏳' :
+                             _getResponseType(metric) === 'rendering' ? '🎨' :
+                             _getResponseType(metric) === 'compression' ? '📦' :
+                             _getResponseType(metric) === 'caching' ? '💾' :
                              '🌐'} {metric.cacheHit ? '✅' : '❌'}
                       </Text>
                     </Col>

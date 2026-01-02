@@ -190,7 +190,7 @@ const AssetExport: React.FC<AssetExportProps> = ({
             message.error(task.errorMessage || "导出失败");
           }
         }
-      } catch {
+      } catch (error) {
         clearInterval(interval);
         message.error("获取导出状态失败");
       }

@@ -109,7 +109,7 @@ export class OwnershipService {
       return !result.items.some(item =>
         item.code === code && item.id !== excludeId
       );
-    } catch {
+    } catch (error) {
       console.error('验证权属方编码失败:', error);
       throw new Error('Network error during ownership code validation');
     }
@@ -124,7 +124,7 @@ export class OwnershipService {
       return !result.items.some(item =>
         item.name === name && item.id !== excludeId
       );
-    } catch {
+    } catch (error) {
       console.error('验证权属方名称失败:', error);
       throw new Error('Network error during ownership name validation');
     }

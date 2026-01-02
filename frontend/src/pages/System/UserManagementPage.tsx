@@ -89,7 +89,7 @@ const UserManagementPage: React.FC = () => {
     try {
       const data = await userService.getUsers()
       setUsers(data.items || [])
-    } catch {
+    } catch (error) {
       console.error('加载用户列表失败:', error)
       message.error('加载用户列表失败')
       // 如果API失败，使用模拟数据作为后备
@@ -127,7 +127,7 @@ const UserManagementPage: React.FC = () => {
         { id: '3', name: '财务部' }
       ]
       setOrganizations(mockOrgs)
-    } catch {
+    } catch (error) {
       message.error('加载组织列表失败')
     }
   }
@@ -141,7 +141,7 @@ const UserManagementPage: React.FC = () => {
         { id: 'user', name: '普通用户' }
       ]
       setRoles(mockRoles)
-    } catch {
+    } catch (error) {
       message.error('加载角色列表失败')
     }
   }
@@ -158,7 +158,7 @@ const UserManagementPage: React.FC = () => {
         by_organization: {}
       }
       setStatistics(mockStats)
-    } catch {
+    } catch (error) {
       message.error('加载统计信息失败')
     }
   }
@@ -194,7 +194,7 @@ const UserManagementPage: React.FC = () => {
       message.success('删除成功')
       loadUsers()
       loadStatistics()
-    } catch {
+    } catch (error) {
       message.error('删除失败')
     }
   }
@@ -205,7 +205,7 @@ const UserManagementPage: React.FC = () => {
       message.success('状态已更新')
       loadUsers()
       loadStatistics()
-    } catch {
+    } catch (error) {
       message.error('状态更新失败')
     }
   }
@@ -216,7 +216,7 @@ const UserManagementPage: React.FC = () => {
       message.success(user.is_locked ? '用户已解锁' : '用户已锁定')
       loadUsers()
       loadStatistics()
-    } catch {
+    } catch (error) {
       message.error('操作失败')
     }
   }
@@ -238,7 +238,7 @@ const UserManagementPage: React.FC = () => {
       setModalVisible(false)
       loadUsers()
       loadStatistics()
-    } catch {
+    } catch (error) {
       message.error(editingUser ? '更新失败' : '创建失败')
     }
   }

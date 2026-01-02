@@ -57,9 +57,9 @@ class ResponseDetector {
   private static isStandardResponse(response: unknown, config: ResponseDetectionConfig): boolean {
     return response !== null &&
       typeof response === 'object' &&
-      config.successField && config.successField in response &&
+      !!config.successField && config.successField in response &&
       typeof (response as Record<string, unknown>)[config.successField] === 'boolean' &&
-      config.dataField && config.dataField in response;
+      !!config.dataField && config.dataField in response;
   }
 
   /**
@@ -83,8 +83,8 @@ class ResponseDetector {
   private static isErrorResponse(response: unknown, config: ResponseDetectionConfig): boolean {
     return response !== null &&
       typeof response === 'object' &&
-      config.successField && (response as Record<string, unknown>)[config.successField] === false &&
-      config.errorFields && config.errorFields.some(field => field in (response as Record<string, unknown>));
+      !!config.successField && (response as Record<string, unknown>)[config.successField] === false &&
+      !!config.errorFields && config.errorFields.some(field => field in (response as Record<string, unknown>));
   }
 }
 
@@ -183,6 +183,7 @@ export class ResponseExtractor {
     options: SmartExtractOptions<T>
   ): ExtractResult<T> {
     const responseData = response.data;
+    const dataField = options.detection?.dataField || 'data';
     const dataContainer = (responseData as Record<string, unknown>)[dataField] as Record<string, unknown>;
 
     if (!dataContainer || !dataContainer.items) {
@@ -224,6 +225,8 @@ export class ResponseExtractor {
     options: SmartExtractOptions<T>
   ): ExtractResult<T> {
     const responseData = response.data;
+    const errorFields = options.detection?.errorFields || ['error', 'message'];
+    let errorMessage = '未知错误';
 
     // 尝试从常见字段提取错误信息
     for (const field of errorFields) {
@@ -306,7 +309,7 @@ export class ResponseExtractor {
       }
 
       return '操作成功';
-    } catch {
+    } catch (error) {
       return '操作完成';
     }
   }
@@ -385,10 +388,11 @@ export class ApiErrorHandler {
     }
 
     // 未知错误
+    const message = (error instanceof Error) ? error.message : '未知错误';
     return {
       type: ApiErrorType.UNKNOWN_ERROR,
       code: 'UNKNOWN_ERROR',
-      message: error.message || '未知错误',
+      message,
       timestamp: new Date().toISOString(),
       originalError: error
     };
@@ -435,7 +439,7 @@ export class ApiErrorHandler {
         type: ApiErrorType.SERVER_ERROR,
         code: (data?.code as string) || `HTTP_${statusCode}`,
         message: (data?.message as string) || '服务器内部错误',
-        details: data?.details,
+        details: data?.details as Record<string, unknown> | undefined,
         statusCode,
         timestamp: new Date().toISOString(),
         requestId: data?.requestId as string,

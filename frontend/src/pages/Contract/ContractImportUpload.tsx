@@ -59,7 +59,7 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
     try {
       const info = await pdfImportService.getSystemInfo();
       setSystemInfo(info);
-    } catch {
+    } catch (error) {
       console.error('加载系统信息失败:', error);
     }
   };

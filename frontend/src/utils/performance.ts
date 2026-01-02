@@ -257,7 +257,7 @@ class PerformanceMonitor {
       })
 
       observer.observe({ entryTypes: [entryType] })
-    } catch {
+    } catch (error) {
       console.warn(`Failed to observe ${entryType}:`, error)
     }
   }
@@ -408,7 +408,7 @@ export class MemoryManager {
     this.cleanupTasks.forEach(task => {
       try {
         task()
-      } catch {
+      } catch (error) {
         console.warn('Cleanup task failed:', error)
       }
     })

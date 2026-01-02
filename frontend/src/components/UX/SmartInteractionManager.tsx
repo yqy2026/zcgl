@@ -52,6 +52,7 @@ interface SmartInteractionManagerProps {
   children: React.ReactNode
   enableBehaviorTracking?: boolean
   enableUserPreferences?: boolean
+  _enableUserPreferences?: boolean
   enableSmartNotifications?: boolean
   enableKeyboardShortcuts?: boolean
   enableUndoRedo?: boolean
@@ -275,7 +276,7 @@ const SmartInteractionProvider: React.FC<SmartInteractionManagerProps> = ({
         message: '自动保存成功',
         duration: 3000
       })
-    } catch {
+    } catch (error) {
       showNotification({
         type: 'error',
         message: '自动保存失败',

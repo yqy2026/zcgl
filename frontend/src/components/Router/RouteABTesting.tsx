@@ -298,6 +298,7 @@ class ABTestManager {
 interface ABTestProviderProps {
   children: ReactNode
   userId?: string
+  _userId?: string
 }
 
 export const ABTestProvider: React.FC<ABTestProviderProps> = ({ children, _userId }) => {

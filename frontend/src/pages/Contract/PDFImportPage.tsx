@@ -151,7 +151,7 @@ const PDFImportPage: React.FC = () => {
       if (saved) {
         setUserPreferences(JSON.parse(saved));
       }
-    } catch {
+    } catch (error) {
       console.warn('加载用户偏好设置失败:', error);
     }
   }, []);
@@ -161,7 +161,7 @@ const PDFImportPage: React.FC = () => {
     try {
       localStorage.setItem('pdf-import-preferences', JSON.stringify(prefs));
       setUserPreferences(prefs);
-    } catch {
+    } catch (error) {
       console.warn('保存用户偏好设置失败:', error);
     }
   }, []);
@@ -170,7 +170,7 @@ const PDFImportPage: React.FC = () => {
     try {
       const info = await pdfImportService.getSystemInfo();
       setSystemInfo(info);
-    } catch {
+    } catch (error) {
       console.error('加载系统信息失败:', error);
     }
   };
@@ -209,7 +209,7 @@ const PDFImportPage: React.FC = () => {
           }));
         setSessionHistory(history);
       }
-    } catch {
+    } catch (error) {
       console.error('加载会话历史失败:', error);
     }
   };
@@ -345,7 +345,7 @@ const PDFImportPage: React.FC = () => {
         loadSessionHistory()
       ]);
       message.success('数据已刷新');
-    } catch {
+    } catch (error) {
       message.error('刷新失败');
     } finally {
       setLoading(false);
@@ -362,7 +362,7 @@ const PDFImportPage: React.FC = () => {
       } else {
         message.warning('系统可能存在问题');
       }
-    } catch {
+    } catch (error) {
       message.error('测试失败');
     } finally {
       setLoading(false);

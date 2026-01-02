@@ -12,6 +12,7 @@ import {
   Row,
   Col,
   Statistic,
+  message,
 } from 'antd';
 import {
   HomeOutlined,
@@ -55,7 +56,7 @@ const ContractCreatePage: React.FC = () => {
       } else {
         message.error(response.message || '合同创建失败');
       }
-    } catch {
+    } catch (error) {
       console.error('创建合同失败:', error);
       message.error('创建合同失败，请检查网络连接');
     } finally {

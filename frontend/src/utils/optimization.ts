@@ -278,7 +278,7 @@ export const useWebWorker = (workerScript: string) => {
       return () => {
         workerRef.current?.terminate()
       }
-    } catch {
+    } catch (error) {
       setError(err as Error)
     }
   }, [workerScript])

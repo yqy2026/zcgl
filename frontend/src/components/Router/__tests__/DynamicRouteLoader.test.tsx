@@ -74,7 +74,7 @@ describe('路由Hook测试', () => {
       try {
         useDynamicRoute()
         return <div>No Error</div>
-      } catch {
+      } catch (error) {
         return <div data-testid="error-message">{(error as Error).message}</div>
       }
     }

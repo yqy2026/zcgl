@@ -20,7 +20,7 @@ export class AnalyticsService {
       }
       // 如果response.data为空，返回模拟数据
       return this.getMockAnalyticsData()
-    } catch {
+    } catch (error) {
       console.error('Analytics API Error:', error)
       // 返回模拟数据而不是抛出错误
       return this.getMockAnalyticsData()
@@ -37,7 +37,7 @@ export class AnalyticsService {
         message: 'Success',
         ...response
       } as any
-    } catch {
+    } catch (error) {
       console.error('Basic statistics API Error:', error)
       throw error
     }
@@ -51,7 +51,7 @@ export class AnalyticsService {
         message: 'Success',
         ...response
       } as any
-    } catch {
+    } catch (error) {
       console.error('Area summary API Error:', error)
       throw error
     }
@@ -68,7 +68,7 @@ export class AnalyticsService {
         } as any
       }
       return this.getMockAnalyticsData()
-    } catch {
+    } catch (error) {
       console.error('Financial summary API Error:', error)
       return this.getMockAnalyticsData()
     }

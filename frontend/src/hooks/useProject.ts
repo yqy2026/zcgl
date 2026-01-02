@@ -44,7 +44,7 @@ export const useProjectOptions = (isActive: boolean = true): UseProjectOptionsRe
         return response
       } catch (error) {
         console.error(error)
-        throw err
+        throw error
       }
     },
     staleTime: 10 * 60 * 1000, // 10分钟缓存
@@ -85,7 +85,7 @@ export const useProjectDetail = (id?: string): UseProjectDetailResult => {
         return response
       } catch (error) {
         console.error(error)
-        throw err
+        throw error
       }
     },
     staleTime: 5 * 60 * 1000, // 5分钟缓存
@@ -132,7 +132,7 @@ export const useProjectList = (params: ProjectQueryParams = {}): UseProjectListR
         return response
       } catch (error) {
         console.error(error)
-        throw err
+        throw error
       }
     },
     staleTime: 2 * 60 * 1000, // 2分钟缓存
@@ -182,7 +182,7 @@ export const useProjectStatistics = (): UseProjectStatisticsResult => {
         return response
       } catch (error) {
         console.error(error)
-        throw err
+        throw error
       }
     },
     staleTime: 5 * 60 * 1000, // 5分钟缓存

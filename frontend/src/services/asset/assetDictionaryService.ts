@@ -29,7 +29,7 @@ export class AssetDictionaryService {
             }
 
             return result.data || [];
-        } catch {
+        } catch (error) {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -51,7 +51,7 @@ export class AssetDictionaryService {
             }
 
             return result.data!;
-        } catch {
+        } catch (error) {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -74,7 +74,7 @@ export class AssetDictionaryService {
             }
 
             return result.data!;
-        } catch {
+        } catch (error) {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -98,7 +98,7 @@ export class AssetDictionaryService {
             }
 
             return result.data!;
-        } catch {
+        } catch (error) {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -117,7 +117,7 @@ export class AssetDictionaryService {
             if (!result.success) {
                 throw new Error(`删除系统字典失败: ${result.error}`);
             }
-        } catch {
+        } catch (error) {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -140,7 +140,7 @@ export class AssetDictionaryService {
             }
 
             return result.data || [];
-        } catch {
+        } catch (error) {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }
@@ -162,7 +162,7 @@ export class AssetDictionaryService {
             }
 
             return result.data || { types: [] };
-        } catch {
+        } catch (error) {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
         }

@@ -259,7 +259,7 @@ if (process.env.NODE_ENV === 'development') {
   setTimeout(() => {
     try {
       runApiPathTests()
-    } catch {
+    } catch (error) {
       console.error('❌ API Path Tests failed:', error)
     }
   }, 1000)

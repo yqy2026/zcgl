@@ -60,7 +60,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (credentials: LoginCredentials) => {
     try {
-      logger.debug('开始登录', credentials);
+      logger.debug('开始登录', credentials as unknown as Record<string, unknown>);
       setLoading(true)
       setError(null)
 

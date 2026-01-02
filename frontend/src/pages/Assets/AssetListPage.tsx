@@ -76,7 +76,7 @@ const AssetListPage: React.FC = () => {
       message.success("删除成功");
       // 重新加载数据
       window.location.reload();
-    } catch {
+    } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "删除失败";
       message.error(errorMessage);
     }
@@ -117,7 +117,7 @@ const AssetListPage: React.FC = () => {
       window.URL.revokeObjectURL(url);
 
       message.success("资产数据导出成功");
-    } catch {
+    } catch (error) {
       console.error("导出失败:", error);
       const errorMessage = error instanceof Error ? error.message : "导出失败，请稍后重试";
       message.error(errorMessage);
@@ -151,7 +151,7 @@ const AssetListPage: React.FC = () => {
       window.URL.revokeObjectURL(url);
 
       message.success("选中资产数据导出成功");
-    } catch {
+    } catch (error) {
       console.error("导出失败:", error);
       const errorMessage = error instanceof Error ? error.message : "导出失败，请稍后重试";
       message.error(errorMessage);

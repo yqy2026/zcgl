@@ -29,7 +29,7 @@ const LoginPage: React.FC = () => {
       // 登录成功，跳转到目标页面或默认工作台
       const from = location.state?.from?.pathname || '/dashboard'
       navigate(from, { replace: true })
-    } catch {
+    } catch (error) {
       // 错误处理已在useAuth中完成，这里不需要额外处理
     }
   }

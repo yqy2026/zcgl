@@ -343,7 +343,7 @@ export const DynamicRouteProvider: React.FC<DynamicRouteProviderProps> = ({
   }
 
   const loadRouteModule = async (modulePath: string) => {
-    setLoadingRoutes(prev => new Set(prev).add(modulePath))
+    _setLoadingRoutes((prev: Set<string>) => new Set(prev).add(modulePath))
 
     try {
       const routes = await loader.loadRouteModule(modulePath)
@@ -352,7 +352,7 @@ export const DynamicRouteProvider: React.FC<DynamicRouteProviderProps> = ({
       onRouteError?.(error as Error, modulePath)
       throw error
     } finally {
-      setLoadingRoutes(prev => {
+      _setLoadingRoutes((prev: Set<string>) => {
         const newSet = new Set(prev)
         newSet.delete(modulePath)
         return newSet

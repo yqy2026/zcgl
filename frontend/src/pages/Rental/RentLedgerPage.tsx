@@ -102,7 +102,7 @@ const RentLedgerPage: React.FC = () => {
           pages: response.pages || 0,
         },
       }));
-    } catch {
+    } catch (error) {
       console.error('加载台账列表失败:', error);
       message.error(`加载台账列表失败: ${error instanceof Error ? error.message : '未知错误'}`);
       setState(prev => ({ ...prev, loading: false, ledgers: [] }));
@@ -114,7 +114,7 @@ const RentLedgerPage: React.FC = () => {
     try {
       const stats = await rentContractService.getRentStatistics();
       setStatistics(stats);
-    } catch {
+    } catch (error) {
       console.error('加载统计数据失败:', error);
     }
   };
@@ -133,7 +133,7 @@ const RentLedgerPage: React.FC = () => {
 
       setAssets(assets);
       setOwnerships(ownerships);
-    } catch {
+    } catch (error) {
       console.error('加载参考数据失败:', error);
       message.error(`加载参考数据失败: ${error instanceof Error ? error.message : '未知错误'}`);
     }
@@ -188,7 +188,7 @@ const RentLedgerPage: React.FC = () => {
       message.success('更新成功');
       loadLedgers();
       loadStatistics();
-    } catch {
+    } catch (error) {
       message.error('更新失败');
     }
   };
@@ -212,7 +212,7 @@ const RentLedgerPage: React.FC = () => {
       setState(prev => ({ ...prev, showBatchModal: false, selectedLedgers: [] }));
       loadLedgers();
       loadStatistics();
-    } catch {
+    } catch (error) {
       message.error('批量更新失败');
     }
   };
@@ -230,7 +230,7 @@ const RentLedgerPage: React.FC = () => {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
       message.success('导出成功');
-    } catch {
+    } catch (error) {
       message.error('导出失败');
     }
   };

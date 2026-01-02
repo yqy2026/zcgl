@@ -147,7 +147,7 @@ const RoleManagementPage: React.FC = () => {
         }
       ]
       setRoles(mockRoles)
-    } catch {
+    } catch (error) {
       message.error('加载角色列表失败')
     } finally {
       setLoading(false)
@@ -178,7 +178,7 @@ const RoleManagementPage: React.FC = () => {
       // 构建权限树
       const treeData = buildPermissionTree(mockPermissions)
       setPermissionTreeData(treeData)
-    } catch {
+    } catch (error) {
       message.error('加载权限列表失败')
     }
   }
@@ -234,7 +234,7 @@ const RoleManagementPage: React.FC = () => {
         avg_permissions: Math.round(roles.reduce((sum, r) => sum + r.permissions.length, 0) / roles.length) || 0
       }
       setStatistics(mockStats)
-    } catch {
+    } catch (error) {
       message.error('加载统计信息失败')
     }
   }
@@ -267,7 +267,7 @@ const RoleManagementPage: React.FC = () => {
       message.success('删除成功')
       loadRoles()
       loadStatistics()
-    } catch {
+    } catch (error) {
       message.error('删除失败')
     }
   }
@@ -278,7 +278,7 @@ const RoleManagementPage: React.FC = () => {
       message.success('状态已更新')
       loadRoles()
       loadStatistics()
-    } catch {
+    } catch (error) {
       message.error('状态更新失败')
     }
   }
@@ -306,7 +306,7 @@ const RoleManagementPage: React.FC = () => {
       setModalVisible(false)
       loadRoles()
       loadStatistics()
-    } catch {
+    } catch (error) {
       message.error(editingRole ? '更新失败' : '创建失败')
     }
   }
@@ -317,7 +317,7 @@ const RoleManagementPage: React.FC = () => {
       message.success('权限配置已保存')
       setPermissionModalVisible(false)
       loadRoles()
-    } catch {
+    } catch (error) {
       message.error('保存权限失败')
     }
   }

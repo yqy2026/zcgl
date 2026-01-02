@@ -119,7 +119,7 @@ const EnhancedPDFImportUploader: React.FC<EnhancedPDFImportUploaderProps> = ({
     try {
       const info = await pdfImportService.getEnhancedSystemInfo();
       setSystemInfo(info);
-    } catch {
+    } catch (error) {
       // Failed to get system info
     }
   };

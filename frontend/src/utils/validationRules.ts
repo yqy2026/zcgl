@@ -288,7 +288,7 @@ export const asyncValidators = {
         return Promise.reject(new Error('用户名已存在'))
       }
       return Promise.resolve()
-    } catch {
+    } catch (error) {
       // 验证失败时默认通过
       return Promise.resolve()
     }
@@ -306,7 +306,7 @@ export const asyncValidators = {
         return Promise.reject(new Error('邮箱已被使用'))
       }
       return Promise.resolve()
-    } catch {
+    } catch (error) {
       return Promise.resolve()
     }
   }

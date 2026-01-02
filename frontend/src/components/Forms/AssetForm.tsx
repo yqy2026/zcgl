@@ -328,12 +328,12 @@ const AssetForm: React.FC<AssetFormProps> = ({
       //         filesToUpload.map((file) => file.originFileObj as File),
       //       );
       //       message.success("附件上传成功");
-      //     } catch {
+      //     } catch (error) {
       //       message.error("附件上传失败，请重试");
       //     }
       //   }
       // }
-    } catch {
+    } catch (error) {
       message.error("提交失败，请重试");
     }
   };

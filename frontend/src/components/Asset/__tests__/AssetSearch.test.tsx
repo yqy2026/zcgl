@@ -262,6 +262,8 @@ describe('AssetSearch 组件测试', () => {
     actual_usage: undefined,
   }
 
+  const _initialValues = { ...defaultInitialValues }
+
   // Helper function to create component element
   const createElement = async (props: any = {}) => {
     const module = await import('../AssetSearch')
