@@ -24,7 +24,6 @@ from .core.environment import (
     is_production,
     is_testing,
 )
-from .core.config import get_config, initialize_config, settings
 from .core.exception_handler import setup_exception_handlers
 from .core.import_utils import (
     create_lambda_none,
