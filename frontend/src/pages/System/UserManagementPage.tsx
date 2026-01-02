@@ -87,7 +87,7 @@ const UserManagementPage: React.FC = () => {
   const loadUsers = useCallback(async () => {
     setLoading(true)
     try {
-      const data = await userService.getUsers()
+      const data = await userService.getUsers() as any
       setUsers(data.items || [])
     } catch (error) {
       console.error('加载用户列表失败:', error)

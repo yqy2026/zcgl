@@ -23,8 +23,8 @@ import {
   DownloadOutlined,
   ReloadOutlined
 } from '@ant-design/icons';
-import moment from 'moment';
-import 'moment/locale/zh-cn';
+import dayjs from 'dayjs';
+import 'dayjs/locale/zh-cn';
 import type { ColumnsType } from 'antd/es/table';
 
 import {
@@ -40,22 +40,22 @@ const { RangePicker } = DatePicker;
 const { Option } = Select;
 const { Title } = Typography;
 
-moment.locale('zh-cn');
+dayjs.locale('zh-cn');
 
 // 颜色配置
 const COLORS = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2'];
 
 const RentStatisticsPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
-  const [dateRange, setDateRange] = useState<[moment.Moment, moment.Moment]>([
-    moment().startOf('year'),
-    moment().endOf('year')
+  const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs]>([
+    dayjs().startOf('year'),
+    dayjs().endOf('year')
   ]);
   const [overviewData, setOverviewData] = useState<any>(null);
   const [ownershipStats, setOwnershipStats] = useState<OwnershipRentStatistics[]>([]);
   const [assetStats, setAssetStats] = useState<AssetRentStatistics[]>([]);
   const [monthlyStats, setMonthlyStats] = useState<MonthlyRentStatistics[]>([]);
-  const [selectedYear, setSelectedYear] = useState<number>(moment().year());
+  const [selectedYear, setSelectedYear] = useState<number>(dayjs().year());
 
   // 获取统计数据
   const fetchStatistics = async () => {
@@ -466,7 +466,7 @@ const RentStatisticsPage: React.FC = () => {
               <Space>
                 <RangePicker
                   value={dateRange as any}
-                  onChange={(dates) => setDateRange(dates as [moment.Moment, moment.Moment])}
+                  onChange={(dates) => setDateRange(dates as [dayjs.Dayjs, dayjs.Dayjs])}
                   style={{ width: 300 }}
                 />
                 <Select
@@ -474,7 +474,7 @@ const RentStatisticsPage: React.FC = () => {
                   onChange={setSelectedYear}
                   style={{ width: 120 }}
                 >
-                  {Array.from({ length: 5 }, (_, i) => moment().year() - i).map(year => (
+                  {Array.from({ length: 5 }, (_, i) => dayjs().year() - i).map(year => (
                     <Option key={year} value={year}>{year}年</Option>
                   ))}
                 </Select>

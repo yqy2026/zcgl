@@ -2,7 +2,7 @@
 import { AUTH_API } from '@/constants/api'
 import { enhancedApiClient } from '@/api/client'
 import { ApiErrorHandler } from '../utils/responseExtractor'
-import { AuthResponse } from '../types/api-response'
+import type { AuthResponse } from '../types/api-response'
 import type { LoginCredentials, User } from '../types/auth'
 import { createLogger } from '../utils/logger'
 
@@ -41,7 +41,7 @@ export class AuthService {
         throw new Error(`登录失败: ${result.error}`);
       }
 
-      const responseData = result.data;
+      const responseData = result.data as any;
 
       logger.debug('API响应数据', { responseData });
 
@@ -145,7 +145,7 @@ export class AuthService {
         throw new Error(`令牌刷新失败: ${result.error}`);
       }
 
-      const { token, permissions } = result.data;
+      const { token, permissions } = result.data as any;
 
       localStorage.setItem('auth_token', token);
       localStorage.setItem('permissions', JSON.stringify(permissions));
@@ -179,7 +179,7 @@ export class AuthService {
       }
 
       // me端点直接返回用户数据，不是嵌套在user字段中
-      return result.data;
+      return result.data as User;
 
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
@@ -313,7 +313,7 @@ export class AuthService {
       }
 
       // 更新本地存储的用户信息
-      const updatedUser = result.data;
+      const updatedUser = result.data as User;
       localStorage.setItem('user', JSON.stringify(updatedUser));
       return updatedUser;
 
@@ -335,7 +335,7 @@ export class AuthService {
         throw new Error(`获取活动记录失败: ${result.error}`);
       }
 
-      return result.data;
+      return result.data as any;
 
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);

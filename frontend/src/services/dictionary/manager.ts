@@ -148,7 +148,8 @@ class DictionaryManagerService {
       // 处理后端返回的字符串数组，转换为完整的枚举类型对象数组
       if (Array.isArray(data) && data.length > 0 && typeof data[0] === 'string') {
         // 如果是字符串数组，转换为完整的枚举类型对象
-        const enumTypes: EnumFieldType[] = (data as string[]).map((typeCode: string, index: number) => {
+        const enumTypes: EnumFieldType[] = (data as unknown[]).map((item: unknown, index: number) => {
+          const typeCode = String(item);
           // 从DICTIONARY_CONFIGS中查找配置
           const config = Object.values(DICTIONARY_CONFIGS).find(c => c.code === typeCode);
 

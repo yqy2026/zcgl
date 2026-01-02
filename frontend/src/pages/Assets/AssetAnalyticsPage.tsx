@@ -51,14 +51,14 @@ interface AnalyticsData {
     total_net_income: number;
     total_monthly_rent: number;
   };
-  property_nature_distribution?: Array<{ name: string; count: number; percentage: string }>;
-  ownership_status_distribution?: Array<{ status: string; count: number; percentage: string }>;
-  usage_status_distribution?: Array<{ status: string; count: number; percentage: string }>;
-  business_category_distribution?: Array<{ category: string; count: number; percentage: string; occupancy_rate?: string }>;
+  property_nature_distribution?: Array<{ name: string; count: number; percentage: number }>;
+  ownership_status_distribution?: Array<{ status: string; count: number; percentage: number }>;
+  usage_status_distribution?: Array<{ status: string; count: number; percentage: number }>;
+  business_category_distribution?: Array<{ category: string; count: number; percentage: number; occupancy_rate?: number }>;
   occupancy_trend?: Array<{ date: string; occupancy_rate: number }>;
   property_nature_area_distribution?: Array<{ name: string; total_area?: number; area_percentage?: number }>;
-  ownership_status_area_distribution?: Array<{ status: string; total_area?: number; area_percentage?: number; average_area?: number }>;
-  usage_status_area_distribution?: Array<{ status: string; total_area?: number; area_percentage?: number; average_area?: number }>;
+  ownership_status_area_distribution?: Array<{ status: string; total_area?: number; area_percentage?: number; percentage?: number; average_area?: number }>;
+  usage_status_area_distribution?: Array<{ status: string; total_area?: number; area_percentage?: number; count?: number; average_area?: number }>;
   business_category_area_distribution?: Array<{ category: string; total_area?: number; area_percentage?: number }>;
 }
 

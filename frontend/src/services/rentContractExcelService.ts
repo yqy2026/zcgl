@@ -49,7 +49,7 @@ class RentContractExcelService {
         responseType: 'blob',
       });
 
-      return response.data;
+      return response.data as Blob;
     } catch (error) {
       console.error('下载模板失败:', error);
       throw new Error('下载模板失败');
@@ -74,7 +74,7 @@ class RentContractExcelService {
       formData.append('import_ledger', String(options.import_ledger ?? false));
       formData.append('overwrite_existing', String(options.overwrite_existing ?? false));
 
-      const response = await api.post<ExcelImportResult>(
+      const response = await api.post<any>(
         `${this.baseUrl}/excel/import`,
         formData,
         {
@@ -84,7 +84,7 @@ class RentContractExcelService {
         }
       );
 
-      return response.data as any;
+      return response.data as ExcelImportResult;
     } catch (error) {
       console.error('导入Excel失败:', error);
       throw new Error('导入Excel失败');
@@ -126,7 +126,7 @@ class RentContractExcelService {
         responseType: 'blob',
       });
 
-      return response.data;
+      return response.data as Blob;
     } catch (error) {
       console.error('导出Excel失败:', error);
       throw new Error('导出Excel失败');

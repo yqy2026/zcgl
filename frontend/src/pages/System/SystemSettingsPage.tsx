@@ -39,7 +39,7 @@ const SystemSettingsPage: React.FC = () => {
   const fetchSystemInfo = async () => {
     try {
       setLoading(true)
-      const response = await systemService.getSystemInfo()
+      const response = await systemService.getSystemInfo() as any
       setSystemInfo(response.data)
     } catch (error: unknown) {
       console.error('获取系统信息失败:', error)
@@ -54,7 +54,7 @@ const SystemSettingsPage: React.FC = () => {
   const fetchSettings = async () => {
     try {
       setLoading(true)
-      const response = await systemService.getSettings()
+      const response = await systemService.getSettings() as any
       setSettings(response.data)
       form.setFieldsValue(response.data)
     } catch (error: unknown) {
@@ -86,7 +86,7 @@ const SystemSettingsPage: React.FC = () => {
   const handleBackup = async () => {
     try {
       setLoading(true)
-      const response = await systemService.backupSystem()
+      const response = await systemService.backupSystem() as any
       message.success('数据备份成功')
       // 创建下载链接
       const blob = new Blob([JSON.stringify(response.data, null, 2)], { type: 'application/json' })

@@ -125,13 +125,13 @@ export class ResponseExtractor {
       // 根据类型提取数据
       switch (responseType) {
         case 'standard':
-          return this.extractStandardResponse<T>(response, finalOptions);
+          return this.extractStandardResponse<T>(response, finalOptions as any);
         case 'paginated':
-          return this.extractPaginatedResponse<T>(response, finalOptions);
+          return this.extractPaginatedResponse<T>(response, finalOptions as any);
         case 'direct':
-          return this.extractDirectResponse<T>(response, finalOptions);
+          return this.extractDirectResponse<T>(response, finalOptions as any);
         case 'error':
-          return this.extractErrorResponse<T>(response, finalOptions);
+          return this.extractErrorResponse<T>(response, finalOptions as any);
         default:
           return {
             success: false,
@@ -258,12 +258,13 @@ export class ResponseExtractor {
 
     try {
       // 如果数据已经是期望的类型，直接返回
-      if (data instanceof (options.expectedType as any)) {
+      const expectedType = options.expectedType as any;
+      if (data instanceof expectedType) {
         return data as unknown as T;
       }
 
       // 尝试构造新实例（适用于简单对象）
-      return new (options.expectedType as any)(data) as T;
+      return new expectedType(data) as T;
     } catch (err) {
       console.warn(`类型验证失败: ${err instanceof Error ? err.message : '未知错误'}`);
 
@@ -424,7 +425,7 @@ export class ApiErrorHandler {
         type: this.getClientErrorType(statusCode),
         code: (data?.code as string) || `HTTP_${statusCode}`,
         message: (data?.message as string) || (data?.error as string) || this.getDefaultErrorMessage(statusCode),
-        details: data?.details,
+        details: data?.details as Record<string, unknown> | undefined,
         statusCode,
         timestamp: new Date().toISOString(),
         requestId: data?.requestId as string,

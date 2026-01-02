@@ -142,7 +142,7 @@ class UnifiedDictionaryService {
         name: dictType,
         code: dictType,
         description: `自定义字典类型: ${dictType}`
-      } as unknown as EnumFieldType);
+      } as any);
 
       if (result) {
         return {
@@ -593,7 +593,7 @@ class UnifiedDictionaryService {
         switch (operation) {
           case 'create':
             if (op.typeId) {
-              result = await this.createEnumValue(op.typeId, op.data);
+              result = await this.createEnumValue(op.typeId, op.data as any);
             } else {
               result = {
                 success: false,
@@ -606,7 +606,7 @@ class UnifiedDictionaryService {
 
           case 'update':
             if (op.valueId) {
-              result = await this.updateEnumValue(op.valueId, op.data);
+              result = await this.updateEnumValue(op.valueId, op.data as any);
             } else {
               result = {
                 success: false,
