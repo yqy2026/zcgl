@@ -621,3 +621,4 @@ test*.db
 !**/*.example.*
 !**/*.template
 !**/*.template.*
+lint-results.txt
