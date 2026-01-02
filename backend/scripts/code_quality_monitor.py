@@ -509,7 +509,7 @@ class CodeQualityMonitor:
                 sorted(issues, key=lambda x: (x.severity, x.file, x.line))[:10]
             ):
                 print(
-                    f"  {i+1}. {issue.file}:{issue.line} - {issue.error_code}: {issue.message}"
+                    f"  {i + 1}. {issue.file}:{issue.line} - {issue.error_code}: {issue.message}"
                 )
 
         print("\n" + "=" * 60)

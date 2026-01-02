@@ -82,7 +82,7 @@ export interface EnumFieldWithType {
 }
 
 // 字典管理操作结果接口
-export interface DictionaryManagerResult<T = any> {
+export interface DictionaryManagerResult<T = unknown> {
   success: boolean;
   data?: T;
   message: string;
@@ -148,7 +148,7 @@ class DictionaryManagerService {
       // 处理后端返回的字符串数组，转换为完整的枚举类型对象数组
       if (Array.isArray(data) && data.length > 0 && typeof data[0] === 'string') {
         // 如果是字符串数组，转换为完整的枚举类型对象
-        const enumTypes: EnumFieldType[] = (data as any).map((typeCode: string, index: number) => {
+        const enumTypes: EnumFieldType[] = (data as string[]).map((typeCode: string, index: number) => {
           // 从DICTIONARY_CONFIGS中查找配置
           const config = Object.values(DICTIONARY_CONFIGS).find(c => c.code === typeCode);
 
@@ -173,7 +173,7 @@ class DictionaryManagerService {
 
       // 如果不是字符串数组，直接返回
       return Array.isArray(data) ? data : [];
-    } catch {
+    } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('获取枚举类型失败:', enhancedError.message);
 
@@ -227,7 +227,7 @@ class DictionaryManagerService {
       const dataArray = Array.isArray(data) ? data : [];
 
       // 映射数据到标准格式
-      const mappedData = dataArray.map((option: any, index: number) => ({
+      const mappedData = dataArray.map((option: Record<string, any>, index: number) => ({
         id: option.id || `dict-${typeId}-${index}`,
         enum_type_id: typeId,
         label: option.label || option.name || option.code || option.id || index.toString(),
@@ -245,7 +245,7 @@ class DictionaryManagerService {
       }));
 
       return mappedData;
-    } catch {
+    } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error(`获取枚举值失败 [${typeId}]:`, enhancedError.message);
 
@@ -337,7 +337,7 @@ class DictionaryManagerService {
       });
 
       return data;
-    } catch {
+    } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('获取枚举字段数据失败:', enhancedError.message);
       return [];
@@ -377,7 +377,7 @@ class DictionaryManagerService {
       }
 
       return result.data!;
-    } catch {
+    } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('创建枚举类型失败:', enhancedError.message);
       return null;
@@ -423,7 +423,7 @@ class DictionaryManagerService {
       }
 
       return result.data!;
-    } catch {
+    } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('更新枚举类型失败:', enhancedError.message);
       return null;
@@ -448,7 +448,7 @@ class DictionaryManagerService {
       }
 
       return result.data!.success;
-    } catch {
+    } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('删除枚举类型失败:', enhancedError.message);
       return false;
@@ -486,7 +486,7 @@ class DictionaryManagerService {
       }
 
       return result.data!;
-    } catch {
+    } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('添加枚举值失败:', enhancedError.message);
       return null;
@@ -526,7 +526,7 @@ class DictionaryManagerService {
       }
 
       return result.data!;
-    } catch {
+    } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('更新枚举值失败:', enhancedError.message);
       return null;
@@ -551,7 +551,7 @@ class DictionaryManagerService {
       }
 
       return result.data!.success;
-    } catch {
+    } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('删除枚举值失败:', enhancedError.message);
       return false;
@@ -586,7 +586,7 @@ class DictionaryManagerService {
         last_updated: new Date().toISOString(),
         popular_values: data.popular_values || []
       };
-    } catch {
+    } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('获取枚举字段使用统计失败:', enhancedError.message);
 
@@ -649,7 +649,7 @@ class DictionaryManagerService {
       }
 
       return result.data!;
-    } catch {
+    } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('导出枚举字段数据失败:', enhancedError.message);
       throw new Error(`导出失败: ${enhancedError.message}`);
@@ -684,7 +684,7 @@ class DictionaryManagerService {
       }
 
       return result.data!;
-    } catch {
+    } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('导入枚举字段数据失败:', enhancedError.message);
       throw new Error(`导入失败: ${enhancedError.message}`);
@@ -725,7 +725,7 @@ class DictionaryManagerService {
             operationType: 'batchAddEnumValue',
             timestamp: new Date().toISOString()
           };
-        } catch {
+        } catch (error) {
           const enhancedError = ApiErrorHandler.handleError(error);
           return {
             success: false,
@@ -810,7 +810,7 @@ class DictionaryManagerService {
             operationType: 'batchUpdateEnumValues',
             timestamp: new Date().toISOString()
           };
-        } catch {
+        } catch (error) {
           const enhancedError = ApiErrorHandler.handleError(error);
           return {
             success: false,
@@ -881,7 +881,7 @@ class DictionaryManagerService {
             operationType: 'batchDeleteEnumValues',
             timestamp: new Date().toISOString()
           };
-        } catch {
+        } catch (error) {
           const enhancedError = ApiErrorHandler.handleError(error);
           return {
             success: false,
@@ -936,7 +936,7 @@ class DictionaryManagerService {
     is_system?: boolean;
   }): Promise<EnumFieldType[]> {
     try {
-      const params: any = { keyword };
+      const params: Record<string, unknown> = { keyword };
       if (filters) {
         Object.assign(params, filters);
       }
@@ -956,7 +956,7 @@ class DictionaryManagerService {
       }
 
       return result.data!;
-    } catch {
+    } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('搜索枚举类型失败:', enhancedError.message);
 
@@ -966,8 +966,8 @@ class DictionaryManagerService {
 
       return allTypes.filter(type => {
         let matches = type.name.toLowerCase().includes(lowerKeyword) ||
-                     type.code.toLowerCase().includes(lowerKeyword) ||
-                     (type.description && type.description.toLowerCase().includes(lowerKeyword));
+          type.code.toLowerCase().includes(lowerKeyword) ||
+          (type.description && type.description.toLowerCase().includes(lowerKeyword));
 
         if (filters) {
           if (filters.category && type.category !== filters.category) {
@@ -1064,7 +1064,7 @@ class DictionaryManagerService {
         suggestions,
         warnings
       };
-    } catch {
+    } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       return {
         isValid: false,

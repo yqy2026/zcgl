@@ -107,7 +107,6 @@ zcgl/
 │       ├── services/   # Business logic layer
 │       └── middleware/ # Auth, CORS, request processing
 ├── database/           # Database schemas and migrations
-├── openspec/           # Spec-driven development framework
 └── docs/               # Comprehensive documentation
 ```
 

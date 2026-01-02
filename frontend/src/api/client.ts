@@ -22,14 +22,14 @@ import {
  * 简单的内存缓存实现
  */
 class MemoryCache {
-  private cache = new Map<string, { data: any; timestamp: number; ttl: number }>();
+  private cache = new Map<string, { data: unknown; timestamp: number; ttl: number }>();
   private maxSize: number;
 
   constructor(maxSize: number = 100) {
     this.maxSize = maxSize;
   }
 
-  set(key: string, data: any, ttl: number): void {
+  set(key: string, data: unknown, ttl: number): void {
     // 如果缓存已满，删除最旧的条目
     if (this.cache.size >= this.maxSize) {
       const firstKey = this.cache.keys().next().value;
@@ -45,7 +45,7 @@ class MemoryCache {
     });
   }
 
-  get(key: string): any | null {
+  get(key: string): unknown | null {
     const item = this.cache.get(key);
     if (!item) {
       return null;
@@ -256,7 +256,7 @@ export class EnhancedApiClient {
   /**
    * GET请求
    */
-  async get<T = any>(
+  async get<T = unknown>(
     url: string,
     config?: AxiosRequestConfig & {
       cache?: boolean;
@@ -328,9 +328,9 @@ export class EnhancedApiClient {
   /**
    * POST请求
    */
-  async post<T = any>(
+  async post<T = unknown>(
     url: string,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig & {
       retry?: boolean | RetryConfig;
       smartExtract?: boolean;
@@ -374,9 +374,9 @@ export class EnhancedApiClient {
   /**
    * PUT请求
    */
-  async put<T = any>(
+  async put<T = unknown>(
     url: string,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig & {
       retry?: boolean | RetryConfig;
       smartExtract?: boolean;
@@ -420,7 +420,7 @@ export class EnhancedApiClient {
   /**
    * DELETE请求
    */
-  async delete<T = any>(
+  async delete<T = unknown>(
     url: string,
     config?: AxiosRequestConfig & {
       retry?: boolean | RetryConfig;
@@ -467,7 +467,7 @@ export class EnhancedApiClient {
   /**
    * 快速获取数据（忽略提取结果检查）
    */
-  async getData<T = any>(
+  async getData<T = unknown>(
     url: string,
     defaultValue?: T,
     config?: AxiosRequestConfig
@@ -485,11 +485,11 @@ export class EnhancedApiClient {
   /**
    * 批量请求
    */
-  async batch<T = any>(
+  async batch<T = unknown>(
     requests: Array<{
       method: 'GET' | 'POST' | 'PUT' | 'DELETE';
       url: string;
-      data?: any;
+      data?: unknown;
       config?: AxiosRequestConfig;
     }>
   ): Promise<ExtractResult<T>[]> {
@@ -523,7 +523,7 @@ export class EnhancedApiClient {
   /**
    * 生成缓存键
    */
-  private generateCacheKey(method: string, url: string, params?: any): string {
+  private generateCacheKey(method: string, url: string, params?: Record<string, unknown>): string {
     const paramsStr = params ? JSON.stringify(params) : '';
     return `${method}:${url}:${paramsStr}`;
   }

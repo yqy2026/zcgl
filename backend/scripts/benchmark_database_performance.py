@@ -124,7 +124,7 @@ class DatabaseBenchmark:
                 print(f"\n({i}/{len(benchmarks)}) 运行: {bench_func.__doc__}")
                 result = bench_func()
                 results.append(result)
-                print(f"   ✅ 完成 - 平均耗时: {result['avg']*1000:.2f}ms")
+                print(f"   ✅ 完成 - 平均耗时: {result['avg'] * 1000:.2f}ms")
             except Exception as e:
                 print(f"   ❌ 失败: {str(e)}")
 
@@ -143,15 +143,15 @@ class DatabaseBenchmark:
         for result in results:
             print(
                 f"{result['query_name']:<20} "
-                f"{result['avg']*1000:>14.2f} "
-                f"{result['min']*1000:>11.2f} "
-                f"{result['max']*1000:>11.2f}"
+                f"{result['avg'] * 1000:>14.2f} "
+                f"{result['min'] * 1000:>11.2f} "
+                f"{result['max'] * 1000:>11.2f}"
             )
 
         # 总体统计
         total_avg = sum(r["avg"] for r in results) / len(results)
         print("-" * 70)
-        print(f"{'总体平均':<20} {total_avg*1000:>14.2f}ms")
+        print(f"{'总体平均':<20} {total_avg * 1000:>14.2f}ms")
         print("=" * 70)
 
     def save_results(

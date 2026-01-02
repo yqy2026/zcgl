@@ -56,7 +56,7 @@ def test_with_headers():
     ]
 
     for i, headers in enumerate(headers_list):
-        print(f"\n测试头部配置 {i+1}: {headers}")
+        print(f"\n测试头部配置 {i + 1}: {headers}")
         try:
             response = requests.get(
                 "http://localhost:8002/api/assets", headers=headers, timeout=5

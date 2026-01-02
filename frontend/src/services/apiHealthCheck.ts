@@ -79,7 +79,7 @@ export class ApiHealthCheckService {
 
       const result: HealthCheckResult = {
         endpoint: name,
-        status: (response as any).status >= 200 && (response as any).status < 300 ? 'healthy' : 'unhealthy',
+        status: (response as any)?.status >= 200 && (response as any)?.status < 300 ? 'healthy' : 'unhealthy',
         responseTime,
         lastChecked: new Date()
       }
@@ -89,16 +89,17 @@ export class ApiHealthCheckService {
         const getResponse = await api.get(endpoint)
         const getResponseTime = Date.now() - startTime
 
-        result.status = (getResponse as any).status >= 200 && (getResponse as any).status < 300 ? 'healthy' : 'unhealthy'
+        result.status = (getResponse as any)?.status >= 200 && (getResponse as any)?.status < 300 ? 'healthy' : 'unhealthy'
         result.responseTime = getResponseTime
       }
 
       this.results.set(name, result)
       return result
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as any;
       const responseTime = Date.now() - startTime
-      lastError = error.message || 'Unknown error'
+      lastError = err.message || 'Unknown error'
 
       const result: HealthCheckResult = {
         endpoint: name,
@@ -123,7 +124,7 @@ export class ApiHealthCheckService {
       try {
         const result = await this.checkEndpoint(endpoint)
         results.push(result)
-      } catch {
+      } catch (error) {
         logger.error(`Health check failed for ${endpoint}`, error instanceof Error ? error : new Error(String(error)))
         results.push({
           endpoint,
@@ -185,7 +186,7 @@ export class ApiHealthCheckService {
         else if (result.status === 'unhealthy') unhealthy++
         else unknown++
 
-      } catch {
+      } catch (error) {
         logger.error(`Health check failed for ${name}`, error instanceof Error ? error : new Error(String(error)))
         results.push({
           endpoint: name,
@@ -293,7 +294,7 @@ export class ApiHealthCheckService {
         unknown,
         healthPercentage: criticalResults.length > 0 ? (healthy / criticalResults.length) * 100 : 0
       },
-      details: criticalResults as any
+      details: criticalResults as HealthCheckResult[]
     }
   }
 
@@ -350,7 +351,7 @@ if (process.env.NODE_ENV === 'development') {
     try {
       apiHealthCheck.startPeriodicCheck()
       logger.info('API Health Check Service started')
-    } catch {
+    } catch (error) {
       logger.error('Failed to start API Health Check Service', error instanceof Error ? error : new Error(String(error)))
     }
   }, 2000)

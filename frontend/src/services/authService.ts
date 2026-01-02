@@ -95,7 +95,7 @@ export class AuthService {
         message: responseData.message || '登录成功'
       } as any;
 
-    } catch {
+    } catch (error) {
       // 使用统一的错误处理器
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -109,7 +109,7 @@ export class AuthService {
       await enhancedApiClient.post(AUTH_API.LOGOUT, undefined, {
         retry: false // 登出不重试
       });
-    } catch {
+    } catch (error) {
       // 即使登出API调用失败，也要清除本地存储
       logger.warn('登出API调用失败', { error: ApiErrorHandler.handleError(error).message });
     } finally {
@@ -156,7 +156,7 @@ export class AuthService {
         message: '令牌刷新成功'
       } as any;
 
-    } catch {
+    } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -181,7 +181,7 @@ export class AuthService {
       // me端点直接返回用户数据，不是嵌套在user字段中
       return result.data;
 
-    } catch {
+    } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -216,7 +216,7 @@ export class AuthService {
       }
 
       return true
-    } catch {
+    } catch (error) {
       logger.error('Token验证失败', error instanceof Error ? error : new Error(String(error)))
       return false
     }
@@ -286,7 +286,7 @@ export class AuthService {
         throw new Error(`密码修改失败: ${result.error}`);
       }
 
-    } catch {
+    } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -317,7 +317,7 @@ export class AuthService {
       localStorage.setItem('user', JSON.stringify(updatedUser));
       return updatedUser;
 
-    } catch {
+    } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }
@@ -337,7 +337,7 @@ export class AuthService {
 
       return result.data;
 
-    } catch {
+    } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
     }

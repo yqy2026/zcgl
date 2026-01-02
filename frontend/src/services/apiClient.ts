@@ -7,7 +7,7 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
 import { API_CONFIG } from '../constants/api'
 
 // API响应类型定义
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean
   data: T
   message?: string
@@ -15,7 +15,7 @@ export interface ApiResponse<T = any> {
   timestamp?: string
 }
 
-export interface PaginatedResponse<T = any> {
+export interface PaginatedResponse<T = unknown> {
   success: boolean
   data: T[]
   pagination: {
@@ -32,7 +32,7 @@ export interface ApiError {
   error: {
     code: string
     message: string
-    details?: any
+    details?: unknown
     timestamp?: string
   }
 }
@@ -161,7 +161,7 @@ export class ApiClient {
   /**
    * 通用GET请求
    */
-  async get<T = any>(
+  async get<T = unknown>(
     url: string,
     config?: AxiosRequestConfig
   ): Promise<ApiResponse<T>> {
@@ -172,9 +172,9 @@ export class ApiClient {
   /**
    * 通用POST请求
    */
-  async post<T = any>(
+  async post<T = unknown>(
     url: string,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig
   ): Promise<ApiResponse<T>> {
     const response = await this.instance.post<ApiResponse<T>>(url, data, config)
@@ -184,9 +184,9 @@ export class ApiClient {
   /**
    * 通用PUT请求
    */
-  async put<T = any>(
+  async put<T = unknown>(
     url: string,
-    data?: any,
+    data?: unknown,
     config?: AxiosRequestConfig
   ): Promise<ApiResponse<T>> {
     const response = await this.instance.put<ApiResponse<T>>(url, data, config)
@@ -196,7 +196,7 @@ export class ApiClient {
   /**
    * 通用DELETE请求
    */
-  async delete<T = any>(
+  async delete<T = unknown>(
     url: string,
     config?: AxiosRequestConfig
   ): Promise<ApiResponse<T>> {
@@ -207,7 +207,7 @@ export class ApiClient {
   /**
    * 文件上传
    */
-  async upload<T = any>(
+  async upload<T = unknown>(
     url: string,
     formData: FormData,
     onProgress?: (progress: number) => void,
@@ -258,11 +258,11 @@ export class ApiClient {
   /**
    * 带重试的请求方法
    */
-  async requestWithRetry<T = any>(
+  async requestWithRetry<T = unknown>(
     requestFn: () => Promise<ApiResponse<T>>,
     maxRetries: number = API_CONFIG.RETRY.ATTEMPTS
   ): Promise<ApiResponse<T>> {
-    let lastError: any
+    let lastError: Error | AxiosError | unknown
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -290,11 +290,11 @@ export const apiClient = new ApiClient()
 
 // 便捷的API调用方法
 export const api = {
-  get: <T = any>(url: string, config?: AxiosRequestConfig) => apiClient.get<T>(url, config),
-  post: <T = any>(url: string, data?: any, config?: AxiosRequestConfig) => apiClient.post<T>(url, data, config),
-  put: <T = any>(url: string, data?: any, config?: AxiosRequestConfig) => apiClient.put<T>(url, data, config),
-  delete: <T = any>(url: string, config?: AxiosRequestConfig) => apiClient.delete<T>(url, config),
-  upload: <T = any>(
+  get: <T = unknown>(url: string, config?: AxiosRequestConfig) => apiClient.get<T>(url, config),
+  post: <T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig) => apiClient.post<T>(url, data, config),
+  put: <T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig) => apiClient.put<T>(url, data, config),
+  delete: <T = unknown>(url: string, config?: AxiosRequestConfig) => apiClient.delete<T>(url, config),
+  upload: <T = unknown>(
     url: string,
     formData: FormData,
     onProgress?: (progress: number) => void,
@@ -302,7 +302,7 @@ export const api = {
   ) => apiClient.upload<T>(url, formData, onProgress, config),
   download: (url: string, filename?: string, config?: AxiosRequestConfig) =>
     apiClient.download(url, filename, config),
-  withRetry: <T = any>(requestFn: () => Promise<ApiResponse<T>>, maxRetries?: number) =>
+  withRetry: <T = unknown>(requestFn: () => Promise<ApiResponse<T>>, maxRetries?: number) =>
     apiClient.requestWithRetry<T>(requestFn, maxRetries),
 }
 

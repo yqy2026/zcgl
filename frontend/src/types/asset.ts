@@ -20,7 +20,7 @@ export interface Asset {
   unrented_area?: number; // 后端纯计算字段，不存储
   non_commercial_area?: number;
   occupancy_rate?: number; // 后端纯计算字段，0-100，不存储
-  include_in_occupancy_rate?: boolean;
+  include_in_occupancy_rate: boolean;
 
   // 用途相关字段
   certificated_usage?: string;
@@ -37,7 +37,7 @@ export interface Asset {
   contract_end_date?: string;
   monthly_rent?: number; // 金额字段，使用高精度number
   deposit?: number; // 金额字段，使用高精度number
-  is_sublease?: boolean;
+  is_sublease: boolean;
   sublease_notes?: string;
 
   // 管理相关字段
@@ -78,13 +78,13 @@ export interface Asset {
   audit_notes?: string;
 
   // 其他字段
-  is_litigated?: boolean; // 优化为boolean类型
+  is_litigated: boolean; // 优化为boolean类型
   notes?: string;
   description?: string; // 资产描述
 
   // 时间戳
-  created_at?: string;
-  updated_at?: string;
+  created_at: string;
+  updated_at: string;
 
   // 多租户支持
   tenant_id?: string;

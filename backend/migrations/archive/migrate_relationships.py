@@ -7,10 +7,11 @@ import sqlite3
 import uuid
 from datetime import datetime
 
+
 def migrate_relationships():
     """执行关系迁移"""
 
-    conn = sqlite3.connect('./land_property.db')
+    conn = sqlite3.connect("./land_property.db")
     cursor = conn.cursor()
 
     print("开始执行关系迁移...")
@@ -20,16 +21,18 @@ def migrate_relationships():
         cursor.execute("PRAGMA table_info(assets)")
         columns = [column[1] for column in cursor.fetchall()]
 
-        if 'ownership_id' not in columns:
+        if "ownership_id" not in columns:
             print("添加ownership_id列到assets表...")
             cursor.execute("ALTER TABLE assets ADD COLUMN ownership_id VARCHAR(36)")
 
         # 2. 为ownership_id列创建索引
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_assets_ownership_id ON assets(ownership_id)")
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_assets_ownership_id ON assets(ownership_id)"
+        )
 
         # 3. 迁移现有数据：根据ownership_entity匹配ownerships表
         print("迁移现有权属方数据...")
-        cursor.execute('''
+        cursor.execute("""
             UPDATE assets
             SET ownership_id = (
                 SELECT id FROM ownerships
@@ -38,11 +41,11 @@ def migrate_relationships():
             )
             WHERE ownership_entity IS NOT NULL
             AND ownership_entity != ''
-        ''')
+        """)
 
         # 4. 创建项目-权属方关系数据（使用现有表结构）
         print("创建项目-权属方关系数据...")
-        cursor.execute('''
+        cursor.execute("""
             INSERT OR IGNORE INTO project_ownership_relations (id, project_id, ownership_id, is_active, created_at, updated_at)
             SELECT
                 lower(hex(randomblob(4))) || '-' || lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(2))) || '-' || lower(hex(randomblob(6))),
@@ -55,7 +58,7 @@ def migrate_relationships():
             JOIN ownerships o ON p.ownership_entity = o.name
             WHERE p.ownership_entity IS NOT NULL
             AND p.ownership_entity != ''
-        ''')
+        """)
 
         conn.commit()
         print("关系迁移完成！")
@@ -74,7 +77,9 @@ def migrate_relationships():
         print(f"- 项目-权属方关系数量: {project_relations}")
 
         # 显示还未关联的资产
-        cursor.execute("SELECT COUNT(*) FROM assets WHERE ownership_id IS NULL AND ownership_entity IS NOT NULL")
+        cursor.execute(
+            "SELECT COUNT(*) FROM assets WHERE ownership_id IS NULL AND ownership_entity IS NOT NULL"
+        )
         unmigrated_assets = cursor.fetchone()[0]
         if unmigrated_assets > 0:
             print(f"- 未匹配到权属方的资产数量: {unmigrated_assets} (需要手动处理)")
@@ -85,6 +90,7 @@ def migrate_relationships():
         raise
     finally:
         conn.close()
+
 
 if __name__ == "__main__":
     migrate_relationships()

@@ -386,7 +386,7 @@ After=network.target
 
 [Service]
 Type=simple
-User={os.getenv('USER', 'root')}
+User={os.getenv("USER", "root")}
 WorkingDirectory={self.base_dir}
 ExecStart={sys.executable} {self.base_dir}/scripts/schedule_monitoring.py
 Restart=always

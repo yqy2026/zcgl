@@ -11,7 +11,7 @@ import { AxiosResponse, InternalAxiosRequestConfig } from 'axios';
  * 标准API响应格式
  * 适用于大部分后端API接口
  */
-export interface StandardApiResponse<T = any> {
+export interface StandardApiResponse<T = unknown> {
   success: boolean;
   data: T;
   message?: string;
@@ -23,7 +23,7 @@ export interface StandardApiResponse<T = any> {
  * 分页响应格式
  * 适用于列表类API接口
  */
-export interface PaginatedApiResponse<T = any> {
+export interface PaginatedApiResponse<T = unknown> {
   success: boolean;
   data: {
     items: T[];
@@ -41,7 +41,7 @@ export interface PaginatedApiResponse<T = any> {
  * 简化响应格式
  * 直接返回数据，无包装结构
  */
-export interface DirectResponse<T = any> {
+export interface DirectResponse<T = unknown> {
   [key: string]: T;
 }
 
@@ -121,7 +121,7 @@ export interface ResponseDetectionConfig {
 /**
  * 智能响应提取选项
  */
-export interface SmartExtractOptions<T = any> {
+export interface SmartExtractOptions<T = unknown> {
   // 期望的数据类型
   expectedType?: new (...args: unknown[]) => T;
   // 自定义检测配置

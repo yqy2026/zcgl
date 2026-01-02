@@ -143,7 +143,7 @@ def migrate_database():
         # 创建新表
         create_table_sql = f"""
         CREATE TABLE assets_new (
-            {', '.join(new_columns)}
+            {", ".join(new_columns)}
         )
         """
 
@@ -166,8 +166,8 @@ def migrate_database():
 
         # 复制数据
         copy_sql = f"""
-        INSERT INTO assets_new ({', '.join(copy_columns)})
-        SELECT {', '.join(copy_columns)}
+        INSERT INTO assets_new ({", ".join(copy_columns)})
+        SELECT {", ".join(copy_columns)}
         FROM assets
         """
 

@@ -81,6 +81,13 @@ class DictionaryCache {
   private missCount = 0;
   private lastCleanup = Date.now();
 
+  /**
+   * 获取最后一次清理时间
+   */
+  public getLastCleanup(): number {
+    return this.lastCleanup;
+  }
+
   get(dictType: string): DictionaryOption[] | null {
     const cached = this.cache.get(dictType);
     if (!cached) {
@@ -214,7 +221,7 @@ class DictionaryCache {
     for (const type of dictTypes) {
       const cached = this.cache.get(type);
       if (cached) {
-        preloaded.set(type, cached.data as any);
+        preloaded.set(type, cached.data);
       }
     }
 
@@ -340,7 +347,7 @@ class BaseDictionaryService {
       }
 
       return response;
-    } catch {
+    } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
 
       // 如果启用备用数据，返回备用数据
@@ -426,7 +433,7 @@ class BaseDictionaryService {
           source: 'cache',
           metadata: includeMetadata ? {
             totalItems: cached.length,
-            activeItems: cached.filter((item: any) => item.isActive !== false).length,
+            activeItems: cached.filter((item: DictionaryOption) => item.isActive !== false).length,
             lastUpdated: new Date().toISOString(),
             cacheTimestamp: Date.now()
           } : undefined
@@ -451,7 +458,7 @@ class BaseDictionaryService {
               includeMetadata
             });
             return { dictType, result };
-          } catch {
+          } catch (error) {
             const enhancedError = ApiErrorHandler.handleError(error);
             return {
               dictType,
@@ -624,7 +631,7 @@ class BaseDictionaryService {
           }
 
           onProgress?.(loadedTypes.length + failedTypes.length, dictTypes.length, dictType);
-        } catch {
+        } catch (error) {
           const enhancedError = ApiErrorHandler.handleError(error);
           failedTypes.push({ type: dictType, error: enhancedError.message });
           onProgress?.(loadedTypes.length + failedTypes.length, dictTypes.length, dictType);
@@ -694,7 +701,7 @@ class BaseDictionaryService {
       totalItems,
       activeItems,
       cacheSize: cacheInfo.size,
-      lastCacheCleanup: cache['lastCleanup'] || Date.now(),
+      lastCacheCleanup: cache.getLastCleanup(),
       cacheHitRate: cacheInfo.hitRate,
       mostUsedTypes
     };
@@ -768,7 +775,7 @@ class BaseDictionaryService {
         } else {
           failed.push({ type: dictType, error: result.error || 'Unknown error' });
         }
-      } catch {
+      } catch (error) {
         const enhancedError = ApiErrorHandler.handleError(error);
         failed.push({ type: dictType, error: enhancedError.message });
       }

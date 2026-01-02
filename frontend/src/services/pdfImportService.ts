@@ -196,9 +196,9 @@ export interface CompleteResult {
   summary: ConfidenceScores;
   recommendations: string[];
   ready_for_import: boolean;
-  semantic_validation?: any;
-  processing_summary?: any;
-  quality_metrics?: any;
+  semantic_validation?: unknown;
+  processing_summary?: unknown;
+  quality_metrics?: unknown;
 }
 
 export interface RentTermData {

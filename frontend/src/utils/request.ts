@@ -179,7 +179,7 @@ export const downloadFile = async (url: string, filename?: string): Promise<void
     link.click();
     document.body.removeChild(link);
     window.URL.revokeObjectURL(downloadUrl);
-  } catch {
+  } catch (error) {
     message.error("文件下载失败");
     throw error;
   }
