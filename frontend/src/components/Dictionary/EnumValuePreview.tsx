@@ -6,6 +6,7 @@ interface EnumValuePreviewProps {
   values: EnumFieldValue[]
   maxDisplay?: number
   showInactiveCount?: boolean
+  _showInactiveCount?: boolean
   size?: 'small' | 'middle' | 'large'
   className?: string
 }

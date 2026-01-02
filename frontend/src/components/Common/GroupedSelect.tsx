@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import { Select, Input, Tag, Space, Typography } from 'antd'
+import type { SelectProps } from 'antd'
 import { EnumGroup, EnumOption, EnumSearchHelper } from '@/utils/enumHelpers'
 
 const { Option } = Select

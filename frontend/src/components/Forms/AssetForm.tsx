@@ -178,7 +178,7 @@ const AssetForm: React.FC<AssetFormProps> = ({
     try {
       const response = await rentContractService.getAssetContracts(assetId);
       setRentContracts(response);
-    } catch {
+    } catch (error) {
       message.error("加载租赁合同数据失败");
       console.error("加载租赁合同数据失败:", error);
     } finally {
@@ -188,7 +188,7 @@ const AssetForm: React.FC<AssetFormProps> = ({
 
   // 处理合同选择变化
   const handleContractChange = (contractId: string) => {
-    setSelectedContractId(contractId);
+    _setSelectedContractId(contractId);
     const selectedContract = rentContracts.find((contract) => contract.id === contractId);
 
     if (selectedContract) {

@@ -288,7 +288,7 @@ export const apiRequest = async <T>(
 
     const data = await response.json();
     return data;
-  } catch {
+  } catch (error) {
     if (error instanceof ApiError) {
       throw error;
     }

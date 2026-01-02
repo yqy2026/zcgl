@@ -11,7 +11,8 @@ import {
   Tag,
   Input,
   message,
-  Empty
+  Empty,
+  Tooltip
 } from 'antd'
 import {
   FilterOutlined,
@@ -130,7 +131,7 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
           ownershipEntities,
           businessCategories
         }
-      } catch {
+      } catch (error) {
         console.warn('获取筛选选项失败:', error)
         return {
           ownershipEntities: [],

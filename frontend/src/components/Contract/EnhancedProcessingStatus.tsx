@@ -56,6 +56,13 @@ interface EnhancedProcessingStatusProps {
   showDetails?: boolean;
   compact?: boolean;
   onError?: (error: string) => void;
+  // Internal properties for compatibility
+  _sessionId?: string;
+  _processingOptions?: ProcessingOptions;
+  _onRefresh?: () => void;
+  _onCancel?: () => void;
+  _compact?: boolean;
+  _onError?: (error: string) => void;
 }
 
 const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
@@ -206,8 +213,8 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
 
   // 错误处理和重试逻辑
   const handleRetry = async () => {
-    if (onRefresh) {
-      onRefresh();
+    if (_onRefresh) {
+      _onRefresh();
     }
   };
 

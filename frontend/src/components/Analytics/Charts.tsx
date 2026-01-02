@@ -400,6 +400,9 @@ interface AreaChartProps {
   showLegend?: boolean
   loading?: boolean
   isPercentage?: boolean
+  // Internal properties for compatibility
+  _fill?: string
+  _stroke?: string
 }
 
 export const AnalyticsAreaChart: React.FC<AreaChartProps> = ({

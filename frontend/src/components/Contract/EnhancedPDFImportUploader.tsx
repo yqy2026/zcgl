@@ -21,7 +21,8 @@ import {
   Modal,
   message,
   Switch,
-  Badge
+  Badge,
+  Progress
 } from 'antd';
 import {
   CloudUploadOutlined,
@@ -322,7 +323,7 @@ const EnhancedPDFImportUploader: React.FC<EnhancedPDFImportUploaderProps> = ({
             }
           }
         }
-      } catch {
+      } catch (error) {
         console.error('获取进度失败:', error);
       }
     }, 2000);
@@ -459,12 +460,12 @@ const EnhancedPDFImportUploader: React.FC<EnhancedPDFImportUploaderProps> = ({
 
                 {processingProgress && (
                   <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between' }}>
-                    <Text type="secondary">
+                    <Typography.Text type="secondary">
                       {processingProgress.current_step || '准备中...'}
-                    </Text>
-                    <Text type="secondary">
+                    </Typography.Text>
+                    <Typography.Text type="secondary">
                       {processingProgress.progress || 0}%
-                    </Text>
+                    </Typography.Text>
                   </div>
                 )}
               </div>
@@ -513,7 +514,7 @@ const EnhancedPDFImportUploader: React.FC<EnhancedPDFImportUploaderProps> = ({
               <Col span={12}>
                 <Space direction="vertical" style={{ width: '100%' }}>
                   <div>
-                    <Text strong>置信度阈值</Text>
+                    <Typography.Text strong>置信度阈值</Typography.Text>
                     <input
                       type="range"
                       min="0.1"
@@ -523,7 +524,7 @@ const EnhancedPDFImportUploader: React.FC<EnhancedPDFImportUploaderProps> = ({
                       onChange={(e) => setProcessingOptions(prev => ({ ...prev, confidence_threshold: parseFloat(e.target.value) }))}
                       style={{ width: '100%' }}
                     />
-                    <Text type="secondary">{processingOptions.confidence_threshold}</Text>
+                    <Typography.Text type="secondary">{processingOptions.confidence_threshold}</Typography.Text>
                   </div>
                 </Space>
               </Col>
@@ -625,7 +626,7 @@ const EnhancedPDFImportUploader: React.FC<EnhancedPDFImportUploaderProps> = ({
           {processingProgress && (
             <div>
               <Paragraph>
-                <Text strong>处理状态：</Text>
+                <Typography.Text strong>处理状态：</Typography.Text>
                 <Tag color={processingProgress.status === 'ready_for_review' ? 'green' : 'blue'}>
                   {processingProgress.status}
                 </Tag>
@@ -635,7 +636,7 @@ const EnhancedPDFImportUploader: React.FC<EnhancedPDFImportUploaderProps> = ({
                 <div>
                   <Divider />
                   <Paragraph>
-                    <Text strong>文档分析结果：</Text>
+                    <Typography.Text strong>文档分析结果：</Typography.Text>
                   </Paragraph>
                   <ul>
                     <li>文档类型：{(processingProgress as any).enhanced_status.document_analysis?.document_type || '未知'}</li>
@@ -644,7 +645,7 @@ const EnhancedPDFImportUploader: React.FC<EnhancedPDFImportUploaderProps> = ({
                   </ul>
 
                   <Paragraph>
-                    <Text strong>提取质量：</Text>
+                    <Typography.Text strong>提取质量：</Typography.Text>
                   </Paragraph>
                   <ul>
                     <li>总体质量：{(processingProgress as any).enhanced_status.final_results?.extraction_quality?.overall_quality || 0}/10</li>

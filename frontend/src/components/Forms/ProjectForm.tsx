@@ -15,6 +15,7 @@ import {
 } from 'antd';
 
 import { ownershipService } from '@/services/ownershipService';
+import { projectService } from '@/services/projectService';
 import type { Project, ProjectCreate, ProjectUpdate } from '@/types/project';
 import type { Ownership } from '@/types/ownership';
 
@@ -33,7 +34,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
 }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const [_selectedOwnerships, setSelectedOwnerships] = useState<Ownership[]>([]);
+  const [selectedOwnerships, setSelectedOwnerships] = useState<Ownership[]>([]);
 
 
   // 获取权属方列表
@@ -42,7 +43,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
       try {
         const response = await ownershipService.getOwnershipOptions(true);
         setOwnerships(response);
-      } catch {
+      } catch (error) {
         console.error('获取权属方列表失败:', error);
         message.error('获取权属方列表失败');
       }

@@ -202,7 +202,7 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
       // 本地分析和修复
       const { fixed, changes } = analyzeAndFixFilename(originalFilename);
       setSuggestedFilename(fixed);
-      setFilenameChanges(changes);
+      _setFilenameChanges(changes);
       setCustomFilename(fixed);
 
       // 构建步骤信息
@@ -306,7 +306,7 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
       setSteps(newSteps);
       setCurrentStep(newSteps.length - 1);
 
-    } catch {
+    } catch (error) {
       console.error('文件名修复失败:', error);
       setSteps([
         {
@@ -331,7 +331,7 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
     setCustomFilename(value);
     const { fixed, changes } = analyzeAndFixFilename(value);
     setSuggestedFilename(fixed);
-    setFilenameChanges(changes);
+    _setFilenameChanges(changes);
   };
 
   const handleConfirm = () => {
