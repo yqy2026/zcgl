@@ -14,7 +14,7 @@
 *   **Validation:** Pydantic v2
 *   **Task Queue/Cache:** Redis
 *   **Specialized:** PaddleOCR (Chinese text recognition), PyMuPDF (PDF processing)
-*   **Package Manager:** uv (implied by `uv.lock`) / pip
+*   **Package Manager:** uv
 
 ### Frontend
 *   **Language:** TypeScript
@@ -64,7 +64,8 @@ D:\ccode\zcgl\
 
 ### Backend (`backend/`)
 
-*   **Install Dependencies:** `pip install -e .` (or `uv sync` if applicable)
+*   **Install Dependencies:** `uv sync` (use `uv sync --all-extras` for full dev environment)
+*   **Add Dependency:** `uv add <package>` (or `uv add --group dev <package>` for dev dependencies)
 *   **Start Dev Server:** `python run_dev.py` or `uvicorn src.main:app --reload --port 8002`
 *   **Run Tests:** `pytest` (Supports markers: `-m unit`, `-m api`, etc.)
 *   **Lint/Format:** `ruff check .`, `ruff format .`

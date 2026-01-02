@@ -51,6 +51,7 @@
     "jsdom": "^27.3.0",
     "msw": "^2.12.4",
     "rollup-plugin-visualizer": "^6.0.5",
+    "terser": "^5.44.1",
     "tsd": "^0.28.1",
     "type-coverage": "^2.29.7",
     "typescript": "^5.9.3",
