@@ -14,8 +14,9 @@ module.exports = {
     ecmaFeatures: {
       jsx: true,
     },
-    project: ['./tsconfig.json', './tsconfig.node.json'],
+    project: ['./tsconfig.eslint.json'],
     tsconfigRootDir: __dirname,
+
   },
   plugins: ['@typescript-eslint', 'react-hooks'],
   settings: {
