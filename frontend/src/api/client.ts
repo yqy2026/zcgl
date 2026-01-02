@@ -281,7 +281,7 @@ export class EnhancedApiClient {
         }
         return {
           success: true,
-          data: cachedData,
+          data: cachedData as T,
           rawResponse: {} as AxiosResponse
         };
       }

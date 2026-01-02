@@ -145,7 +145,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
         type_distribution: {} as any, // 如需要可基于项目数据计算
         status_distribution: {} as any // 如需要可基于项目数据计算
       } as any);
-    } catch {
+    } catch (error) {
       console.error('获取项目列表失败:', error);
       const err = error as any;
       console.error('Error details:', {
@@ -171,7 +171,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
         type_distribution: {} as any,
         status_distribution: {} as any
       } as any);
-    } catch {
+    } catch (error) {
       console.error('获取统计信息失败:', error);
       setStatistics(null);
     }
@@ -183,7 +183,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
     try {
       const response = await ownershipService.getOwnershipOptions(true);
       setOwnerships(response);
-    } catch {
+    } catch (error) {
       console.error('获取权属方列表失败:', error);
     } finally {
       setOwnershipsLoading(false);
@@ -213,7 +213,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
           await projectService.deleteProject(project.id);
           message.success('项目删除成功');
           fetchProjects();
-        } catch {
+        } catch (error) {
           console.error('删除项目失败:', error);
           message.error('删除项目失败');
         }
@@ -227,7 +227,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
       await projectService.toggleProjectStatus(project.id);
       message.success('项目状态切换成功');
       fetchProjects();
-    } catch {
+    } catch (error) {
       console.error('切换项目状态失败:', error);
       message.error('切换项目状态失败');
     }

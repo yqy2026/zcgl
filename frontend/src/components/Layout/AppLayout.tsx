@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Layout } from 'antd'
+import { Layout, Typography } from 'antd'
 
 import AppHeader from './AppHeader'
 import AppSidebar from './AppSidebar'
@@ -59,9 +59,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           borderTop: '1px solid #f0f0f0',
           padding: '12px 24px'
         }}>
-          <Text type="secondary">
+          <Typography.Text type="secondary">
             土地房产资产管理系统 ©2024 Created by Asset Management Team
-          </Text>
+          </Typography.Text>
         </Footer>
       </Layout>
     </Layout>

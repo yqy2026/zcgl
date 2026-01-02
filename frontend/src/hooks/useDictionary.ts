@@ -122,7 +122,7 @@ export const useDictionaryManager = () => {
       const configs = unifiedDictionaryService.getAvailableTypes()
       const typeCodes = configs.map(config => config.code)
       setTypes(typeCodes)
-    } catch {
+    } catch (error) {
       console.error('获取字典类型失败:', error)
     } finally {
       setLoading(false)
@@ -140,7 +140,7 @@ export const useDictionaryManager = () => {
         await loadTypes() // 刷新类型列表
       }
       return success
-    } catch {
+    } catch (error) {
       console.error('创建字典失败:', error)
       return false
     }
@@ -153,7 +153,7 @@ export const useDictionaryManager = () => {
         await loadTypes() // 刷新类型列表
       }
       return success
-    } catch {
+    } catch (error) {
       console.error('删除字典失败:', error)
       return false
     }

@@ -28,6 +28,7 @@ import {
   FileExcelOutlined,
   CheckCircleOutlined,
   ExclamationCircleOutlined,
+  UploadOutlined,
 } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { rentContractExcelService, ExcelImportResult } from '../../services/rentContractExcelService';
@@ -82,7 +83,7 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
       });
 
       return result;
-    } catch {
+    } catch (error) {
       console.error('导入失败:', error);
       message.error('导入失败，请重试');
       return null;
@@ -108,7 +109,7 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
       message.success('导出成功');
       setExportModalVisible(false);
       form.resetFields();
-    } catch {
+    } catch (error) {
       console.error('导出失败:', error);
       message.error('导出失败，请重试');
     } finally {
@@ -121,7 +122,7 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
     try {
       await rentContractExcelService.downloadTemplateFile();
       message.success('模板下载成功');
-    } catch {
+    } catch (error) {
       message.error('模板下载失败，请重试');
     }
   };

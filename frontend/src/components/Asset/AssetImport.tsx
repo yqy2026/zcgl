@@ -19,6 +19,7 @@ import {
   InputNumber,
   Select,
 } from "antd";
+import type { ColumnsType } from "antd/es/table";
 import {
   UploadOutlined,
   DownloadOutlined,
@@ -77,7 +78,7 @@ const OptimizedAssetImport: React.FC = () => {
         responseType: "blob",
       });
 
-      const blob = new Blob([response.data]);
+      const blob = new Blob([response.data as BlobPart]);
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -173,7 +174,7 @@ const OptimizedAssetImport: React.FC = () => {
       clearInterval(progressInterval);
       setProgress(100);
 
-      const result = response.data;
+      const result = response.data as ImportResult;
       // Import completed successfully
       // console.log('=== 导入结果 ===')
       // console.log('响应数据:', result)
@@ -220,7 +221,7 @@ const OptimizedAssetImport: React.FC = () => {
   };
 
   // 错误信息表格列
-  const errorColumns = [
+  const errorColumns: ColumnsType<Record<string, unknown>> = [
     {
       title: "序号",
       dataIndex: "index",

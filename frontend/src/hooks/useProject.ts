@@ -42,8 +42,8 @@ export const useProjectOptions = (isActive: boolean = true): UseProjectOptionsRe
       try {
         const response = await projectService.getProjectOptions(isActive)
         return response
-      } catch {
-        console.error('获取项目选项失败:', err)
+      } catch (error) {
+        console.error(error)
         throw err
       }
     },
@@ -83,8 +83,8 @@ export const useProjectDetail = (id?: string): UseProjectDetailResult => {
       try {
         const response = await projectService.getProject(id)
         return response
-      } catch {
-        console.error('获取项目详情失败:', err)
+      } catch (error) {
+        console.error(error)
         throw err
       }
     },
@@ -130,8 +130,8 @@ export const useProjectList = (params: ProjectQueryParams = {}): UseProjectListR
       try {
         const response = await projectService.getProjects(params)
         return response
-      } catch {
-        console.error('获取项目列表失败:', err)
+      } catch (error) {
+        console.error(error)
         throw err
       }
     },
@@ -180,8 +180,8 @@ export const useProjectStatistics = (): UseProjectStatisticsResult => {
       try {
         const response = await projectService.getProjectStatistics()
         return response
-      } catch {
-        console.error('获取项目统计失败:', err)
+      } catch (error) {
+        console.error(error)
         throw err
       }
     },

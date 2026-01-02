@@ -10,7 +10,7 @@ export const useAnalytics = (filters?: AssetSearchParams) => {
       try {
         const result = await analyticsService.getComprehensiveAnalytics(filters)
         return result
-      } catch {
+      } catch (error) {
         console.error('Analytics query error:', error)
         // 返回模拟数据以避免页面崩溃
         return {

@@ -58,7 +58,7 @@ const usePermission = () => {
       }
 
       setUserPermissions(userPermissionsData)
-    } catch {
+    } catch (error) {
       console.error('加载用户权限失败:', error)
       message.error('加载权限信息失败')
     } finally {

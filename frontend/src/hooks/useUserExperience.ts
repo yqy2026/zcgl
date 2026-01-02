@@ -93,7 +93,7 @@ export const useUserExperience = (options: UseUserExperienceOptions = {}) => {
       try {
         await saveFunction()
         message.success('数据已自动保存', 1)
-      } catch {
+      } catch (error) {
         console.error('Auto save failed:', error)
       }
     }, autoSaveInterval)
@@ -261,7 +261,7 @@ const reportPerformance = (_operation: string, _duration: number) => {
     //     url: window.location.href,
     //   }),
     // }).catch(console.error)
-  } catch {
+  } catch (error) {
     console.error('Failed to report performance:', error)
   }
 }

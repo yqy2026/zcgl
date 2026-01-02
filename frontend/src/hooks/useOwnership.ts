@@ -26,8 +26,8 @@ export const useOwnershipOptions = (isActive: boolean = true): UseOwnershipOptio
       try {
         const response = await ownershipService.getOwnershipOptions(isActive)
         return response
-      } catch {
-        console.error('获取权属方选项失败:', err)
+      } catch (error) {
+        console.error(error)
         throw err
       }
     },
@@ -67,8 +67,8 @@ export const useOwnershipDetail = (id?: string): UseOwnershipDetailResult => {
       try {
         const response = await ownershipService.getOwnership(id)
         return response
-      } catch {
-        console.error('获取权属方详情失败:', err)
+      } catch (error) {
+        console.error(error)
         throw err
       }
     },

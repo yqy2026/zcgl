@@ -4,7 +4,8 @@ import {
   CloseOutlined,
   InfoCircleOutlined,
   WarningOutlined,
-  CheckCircleOutlined
+  CheckCircleOutlined,
+  ExclamationCircleOutlined
 } from '@ant-design/icons'
 
 const { Text } = Typography

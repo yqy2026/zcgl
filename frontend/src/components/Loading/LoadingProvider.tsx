@@ -88,7 +88,7 @@ export const LoadingProvider: React.FC<{ children: ReactNode }> = ({ children })
       showLocalLoading(key, loadingState || {})
       const result = await asyncFn()
       return result
-    } catch {
+    } catch (error) {
       console.error(`Error in withLoading (${key}):`, error)
       throw error
     } finally {
@@ -237,7 +237,7 @@ export const LoadingButton: React.FC<LoadingButtonProps> = ({
     if (onClick && !loading) {
       try {
         await onClick()
-      } catch {
+      } catch (error) {
         console.error('LoadingButton onClick error:', error)
       }
     }

@@ -162,7 +162,7 @@ class SmartPreloadManager {
 
         // Preload completed
       }
-    } catch {
+    } catch (error) {
       console.warn(`预加载失败: ${route}`, error);
     } finally {
       this.activePreloads.delete(route);

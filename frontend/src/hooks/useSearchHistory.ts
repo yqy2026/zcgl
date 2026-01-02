@@ -23,7 +23,7 @@ export const useSearchHistory = () => {
         const history = JSON.parse(stored)
         setSearchHistory(history)
       }
-    } catch {
+    } catch (error) {
       console.error('Failed to load search history:', error)
     }
   }, [])
@@ -32,7 +32,7 @@ export const useSearchHistory = () => {
   const saveToStorage = useCallback((history: SearchHistoryItem[]) => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(history))
-    } catch {
+    } catch (error) {
       console.error('Failed to save search history:', error)
     }
   }, [])

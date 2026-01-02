@@ -217,7 +217,7 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}) => {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         return await operation()
-      } catch {
+      } catch (error) {
         lastError = error
 
         if (attempt === maxRetries) {
@@ -264,7 +264,7 @@ const reportError = (_errorInfo: ErrorInfo) => {
     //     extra: errorInfo,
     //   })
     // }
-  } catch {
+  } catch (error) {
     console.error('Failed to report error:', error)
   }
 }

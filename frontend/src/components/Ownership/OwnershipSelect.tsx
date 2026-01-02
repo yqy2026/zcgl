@@ -11,7 +11,8 @@ import {
 import {
   PlusOutlined,
   ReloadOutlined,
-  UnorderedListOutlined
+  UnorderedListOutlined,
+  SearchOutlined
 } from '@ant-design/icons';
 import { useOwnershipOptions } from '@/hooks/useOwnership';
 import type { Ownership } from '@/types/ownership';

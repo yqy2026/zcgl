@@ -76,11 +76,11 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       } else {
         throw new Error('登录响应格式错误')
       }
-    } catch {
-      const errorMessage = err instanceof Error ? err.message : '登录失败'
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '登录失败'
       setError(errorMessage)
       message.error(errorMessage)
-      throw err
+      throw error
     } finally {
       setLoading(false)
     }
@@ -101,8 +101,8 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       setUser(null)
       message.success('已退出登录')
-    } catch {
-      logger.error('登出错误', err instanceof Error ? err : new Error(String(err)))
+    } catch (error) {
+      logger.error('登出错误', error instanceof Error ? error : new Error(String(error)))
       // 即使出错也要确保清除状态
       localStorage.removeItem('user')
       localStorage.removeItem('user_info')
@@ -158,7 +158,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           logger.debug('刷新令牌失败，需要重新登录')
           await logout()
         }
-      } catch {
+      } catch (error) {
         logger.error('自动刷新令牌失败', error instanceof Error ? error : new Error(String(error)))
         await logout()
       }
@@ -219,7 +219,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         const timer = setTimeout(refreshToken, refreshTime)
         return () => clearTimeout(timer)
-      } catch {
+      } catch (error) {
         logger.error('解析token失败', error instanceof Error ? error : new Error(String(error)))
         return
       }

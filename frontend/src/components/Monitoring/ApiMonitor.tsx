@@ -47,7 +47,7 @@ const ApiMonitor: React.FC = () => {
         unknown: results.filter((r: ApiStatus) => r.status === 'unknown').length,
         healthPercentage: results.length > 0 ? (results.filter((r: ApiStatus) => r.status === 'healthy').length / results.length) * 100 : 0
       })
-    } catch {
+    } catch (error) {
       console.error('Failed to load API status:', error)
     } finally {
       setLoading(false)

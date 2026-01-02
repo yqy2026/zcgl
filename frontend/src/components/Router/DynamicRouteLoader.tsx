@@ -174,7 +174,7 @@ class DynamicRouteLoader {
       })
 
       return routes
-    } catch {
+    } catch (error) {
       console.error(`Failed to load route module: ${modulePath}`, error)
       throw error
     }
@@ -221,7 +221,7 @@ class DynamicRouteLoader {
       // 预加载组件
       await route.component
       // Route preloaded
-    } catch {
+    } catch (error) {
       console.warn(`Failed to preload route: ${route.id}`, error)
     }
   }
@@ -287,7 +287,7 @@ class DynamicRouteLoader {
     try {
       await route.component
       return route
-    } catch {
+    } catch (error) {
       console.error(`Failed to load route component: ${routeId}`, error)
       throw error
     }
@@ -348,7 +348,7 @@ export const DynamicRouteProvider: React.FC<DynamicRouteProviderProps> = ({
     try {
       const routes = await loader.loadRouteModule(modulePath)
       return routes
-    } catch {
+    } catch (error) {
       onRouteError?.(error as Error, modulePath)
       throw error
     } finally {
@@ -564,7 +564,7 @@ export const RouteModuleLoader = () => {
       const routes = await loadRouteModule(modulePath)
       setLoadedModules(prev => [...prev, modulePath])
       return routes
-    } catch {
+    } catch (error) {
       console.error('Failed to load route module:', error)
       throw error
     } finally {

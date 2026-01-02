@@ -273,7 +273,7 @@ class ABTestManager {
           timestamp: new Date().toISOString()
         })
       })
-    } catch {
+    } catch (error) {
       console.warn('A/B Test conversion reporting failed:', error)
     }
   }

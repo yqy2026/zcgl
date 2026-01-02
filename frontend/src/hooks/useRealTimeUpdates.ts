@@ -47,7 +47,7 @@ export const useRealTimeUpdates = (
           onUpdate?.('Data updated')
           lastUpdateRef.current = currentTime
         }
-      } catch {
+      } catch (error) {
         console.error('Real-time update error:', error)
         onError?.(error)
       }
@@ -91,7 +91,7 @@ export const useRealTimeUpdates = (
             queryKey,
             type: 'active',
           })
-        } catch {
+        } catch (error) {
           console.error('Real-time update error:', error)
           onError?.(error)
         }
@@ -174,7 +174,7 @@ export const useWebSocketUpdates = (
             }
 
             onMessage?.(data)
-          } catch {
+          } catch (error) {
             console.error('Error parsing WebSocket message:', error)
           }
         }
@@ -200,7 +200,7 @@ export const useWebSocketUpdates = (
             message.error('WebSocket连接失败，请刷新页面重试')
           }
         }
-      } catch {
+      } catch (error) {
         console.error('Error creating WebSocket connection:', error)
         onError?.(error)
       }

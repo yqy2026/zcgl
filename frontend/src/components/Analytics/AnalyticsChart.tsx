@@ -68,14 +68,14 @@ export const AnalyticsPieChart: React.FC<PieChartProps> = ({
     radius: outerRadius / 100,
     innerRadius: innerRadius / 100,
     label: {
-      type: (innerRadius > 0 ? 'inner' : 'outer') as const,
+      type: (innerRadius > 0 ? 'inner' : 'outer'),
       offset: innerRadius > 0 ? '-50%' : undefined,
       content: innerRadius > 0 ? '{percentage}%' : '{name} {percentage}',
       style: {
         fontSize: 12,
         fill: '#fff',
       },
-    },
+    } as any,
     legend: showLegend ? {
       layout: 'horizontal' as const,
       position: 'bottom' as const,

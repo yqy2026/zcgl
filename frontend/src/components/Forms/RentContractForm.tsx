@@ -17,6 +17,7 @@ import {
   Card,
   Popconfirm,
   message,
+  Modal,
 } from 'antd'
 import {
   SaveOutlined,
@@ -138,7 +139,8 @@ const RentContractForm: React.FC<RentContractFormProps> = ({
     try {
       const response = await assetService.getAssets({ limit: 100 });
       setAssets(response.items);
-    } catch {
+    } catch (error) {
+      console.error('加载资产列表失败:', error);
       message.error('加载资产列表失败');
     } finally {
       setLoadingAssets(false);
@@ -150,7 +152,8 @@ const RentContractForm: React.FC<RentContractFormProps> = ({
     try {
       const response = await ownershipService.getOwnerships({ size: 100 });
       setOwnerships(response.items);
-    } catch {
+    } catch (error) {
+      console.error('加载权属方列表失败:', error);
       message.error('加载权属方列表失败');
     } finally {
       setLoadingOwnerships(false);
@@ -198,7 +201,7 @@ const RentContractForm: React.FC<RentContractFormProps> = ({
       };
 
       await onSubmit(contractData);
-    } catch {
+    } catch (error) {
       console.error('表单验证失败:', error);
     }
   };
@@ -248,7 +251,7 @@ const RentContractForm: React.FC<RentContractFormProps> = ({
 
       setShowRentTermModal(false);
       termForm.resetFields();
-    } catch {
+    } catch (error) {
       console.error('租金条款验证失败:', error);
     }
   };
