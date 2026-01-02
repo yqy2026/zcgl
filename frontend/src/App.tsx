@@ -10,8 +10,18 @@ import { AuthProvider } from './contexts/AuthContext'
 // App.css removed - classes were unused default React template styles
 
 /**
+ * 路由状态接口
+ */
+interface LocationState {
+  from?: {
+    pathname: string;
+  };
+}
+
+/**
  * 受保护的路由组件 - 需要认证才能访问
  */
+
 const ProtectedRoutes: React.FC = () => {
   const isAuthenticated = AuthService.isAuthenticated()
   const location = useLocation()
@@ -58,7 +68,8 @@ const AppContent: React.FC = () => {
         element={
           isAuthenticated ? (
             // 已登录用户访问登录页面,重定向到之前访问的页面或仪表板
-            <Navigate to={location.state?.from?.pathname || '/dashboard'} replace />
+            <Navigate to={(location.state as LocationState)?.from?.pathname || '/dashboard'} replace />
+
           ) : (
             // 未登录用户显示登录页面
             <LoginPage />

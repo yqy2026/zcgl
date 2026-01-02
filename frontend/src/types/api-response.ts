@@ -60,18 +60,13 @@ export interface ErrorResponse {
 
 // ==================== 业务响应类型 ====================
 
+import { User } from './auth';
+
 /**
  * 用户认证响应
  */
 export interface AuthResponse {
-  user: {
-    id: string;
-    username: string;
-    email?: string;
-    full_name: string;
-    role: string;
-    is_active: boolean;
-  };
+  user: User;
   tokens: {
     access_token: string;
     refresh_token: string;
@@ -80,6 +75,7 @@ export interface AuthResponse {
   };
   permissions: string[];
 }
+
 
 /**
  * 资产列表响应

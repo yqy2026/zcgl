@@ -25,7 +25,9 @@ import {
 } from '@ant-design/icons'
 import { debounce } from 'lodash'
 import { useQuery } from '@tanstack/react-query'
+import { createLogger } from '@/utils/logger'
 import { assetService } from '@/services/assetService'
+
 import { useSearchHistory } from '@/hooks/useSearchHistory'
 import type { AssetSearchParams } from '../../types/asset'
 import { UsageStatus, PropertyNature, OwnershipStatus } from '../../types/asset'
@@ -35,6 +37,9 @@ const { Text } = Typography
 const { RangePicker } = DatePicker
 const { Option } = Select
 const { Search } = Input
+
+const logger = createLogger('AnalyticsFilters')
+
 
 interface AnalyticsFiltersProps {
   filters: AssetSearchParams
@@ -132,12 +137,13 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
           businessCategories
         }
       } catch (error) {
-        console.warn('获取筛选选项失败:', error)
+        logger.warn('获取筛选选项失败:', { error: error instanceof Error ? error.message : String(error) })
         return {
           ownershipEntities: [],
           businessCategories: []
         }
       }
+
     },
     staleTime: 30 * 60 * 1000 // 30分钟缓存
   })
@@ -149,12 +155,11 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
       if (defaultPreset) {
         setLocalFilters(defaultPreset.filters)
         setSelectedPreset('all')
-        if (onFiltersChange) {
-          onFiltersChange(defaultPreset.filters)
-        }
+        onFiltersChange(defaultPreset.filters)
       }
     }
   }, [filters, onFiltersChange])
+
 
   // 同步localFilters和selectedPreset状态与外部filters
   useEffect(() => {
@@ -175,11 +180,10 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
   // 防抖处理筛选器变化
   const debouncedFilterChange = useCallback(
     (newFilters: AssetSearchParams) => {
-      if (onFiltersChange) {
-        onFiltersChange(newFilters)
-      }
+      onFiltersChange(newFilters)
     },
     [onFiltersChange]
+
   )
 
   // 创建防抖函数
@@ -195,7 +199,8 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
     debouncedFilterChangeRef.current(newFilters)
   }
 
-  const handleDateRangeChange = (_dates: [unknown, unknown] | null, dateStrings: [string, string]) => {
+  const handleDateRangeChange = (_dates: unknown, dateStrings: [string, string]) => {
+
     const newFilters = {
       ...localFilters,
       start_date: dateStrings[0] || undefined,
@@ -212,7 +217,7 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
     debouncedFilterChange(newFilters)
   }
 
-  
+
   // const handleOccupancyRangeChange = (values: [number, number] | null) => {
   //   const newFilters = {
   //     ...localFilters,
@@ -244,14 +249,18 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
       return
     }
 
-    const activeFiltersCount = Object.keys(localFilters).filter(key =>
-      localFilters[key] !== undefined && localFilters[key] !== ''
-    ).length
+    const activeFiltersCountValue = (Object.keys(localFilters) as (keyof AssetSearchParams)[]).filter(key => {
+      const val = localFilters[key];
+      return val !== undefined && val !== null && val !== '';
+    }).length
 
-    if (activeFiltersCount === 0) {
+
+
+    if (activeFiltersCountValue === 0) {
       message.warning('请先设置筛选条件')
       return
     }
+
 
     addSearchHistory({
       id: Date.now().toString(),
@@ -269,9 +278,8 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
     const history = searchHistory.find(h => h.id === historyId)
     if (history) {
       setLocalFilters(history.conditions)
-      if (onFiltersChange) {
-        onFiltersChange(history.conditions)
-      }
+      onFiltersChange(history.conditions)
+
 
       // 找到匹配的预设
       const matchingPreset = FILTER_PRESETS.find(preset =>
@@ -293,9 +301,8 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
     if (preset) {
       setLocalFilters(preset.filters)
       setSelectedPreset(presetKey)
-      if (onFiltersChange) {
-        onFiltersChange(preset.filters)
-      }
+      onFiltersChange(preset.filters)
+
       if (onPresetSelect) {
         onPresetSelect(presetKey)
       }
@@ -303,9 +310,12 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
   }
 
   // 获取当前激活的筛选条件数量
-  const activeFiltersCount = Object.keys(localFilters).filter(key =>
-    localFilters[key] !== undefined && localFilters[key] !== ''
-  ).length
+  const activeFiltersCountValue = (Object.keys(localFilters) as (keyof AssetSearchParams)[]).filter(key => {
+    const val = localFilters[key];
+    return val !== undefined && val !== null && val !== '';
+  }).length
+
+
 
   return (
     <Card
@@ -314,9 +324,9 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
         <Space>
           <FilterOutlined />
           <span>数据筛选</span>
-          {activeFiltersCount > 0 && (
+          {activeFiltersCountValue > 0 && (
             <Tag color="blue">
-              {activeFiltersCount} 个筛选条件
+              {activeFiltersCountValue} 个筛选条件
             </Tag>
           )}
         </Space>
@@ -328,7 +338,8 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
               type="text"
               icon={<SaveOutlined />}
               onClick={() => setSaveName('')}
-              disabled={activeFiltersCount === 0}
+              disabled={activeFiltersCountValue === 0}
+
               size="small"
             />
           </Tooltip>
@@ -347,7 +358,8 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
               type="text"
               icon={<ClearOutlined />}
               onClick={handleReset}
-              disabled={activeFiltersCount === 0}
+              disabled={activeFiltersCountValue === 0}
+
               size="small"
             />
           </Tooltip>
@@ -729,7 +741,8 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
         </Col>
         <Col xs={24} md={12} style={{ textAlign: 'right' }}>
           <Text type="secondary">
-            当前条件: {Object.keys(localFilters).filter(key => localFilters[key] !== undefined && localFilters[key] !== '').length} 个
+            当前条件: {activeFiltersCountValue} 个
+
           </Text>
         </Col>
       </Row>

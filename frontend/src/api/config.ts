@@ -11,13 +11,21 @@
 // ==================== 环境配置 ====================
 
 // 获取环境变量的辅助函数，兼容Vite环境
-const getEnvVar = (key: string, defaultValue: string) => {
+const getEnvVar = (key: string, defaultValue: string): string => {
   const envKey = key.replace('VITE_', '');
-  return import.meta.env[key] || import.meta.env[`VITE_${envKey}`] || defaultValue;
+  const rawValue = import.meta.env[key] as unknown;
+  const rawViteValue = import.meta.env[`VITE_${envKey}`] as unknown;
+
+  if (typeof rawValue === 'string' && rawValue !== '') return rawValue;
+  if (typeof rawViteValue === 'string' && rawViteValue !== '') return rawViteValue;
+  return defaultValue;
 };
 
+
 // API基础URL配置 - 统一使用版本化路径
-export const API_BASE_URL = process.env.VITE_API_BASE_URL || '/api/v1';
+export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string) || '/api/v1';
+
+
 
 // ==================== API配置 ====================
 
@@ -182,7 +190,8 @@ export const getApiUrl = (endpoint: string) => {
  * 生成请求ID
  */
 export const generateRequestId = (): string => {
-  return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return `req_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+
 };
 
 /**
@@ -277,17 +286,30 @@ export const apiRequest = async <T>(
       let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
 
       try {
-        const errorData = await response.json();
-        errorMessage = errorData.message || errorData.detail || errorMessage;
-      } catch (error) {
+        const errorData = (await response.json() as unknown) as Record<string, unknown>;
+
+
+        const rawMessage = errorData.message as unknown;
+        const rawDetail = errorData.detail as unknown;
+
+        if (typeof rawMessage === 'string' && rawMessage !== '') {
+          errorMessage = rawMessage;
+        } else if (typeof rawDetail === 'string' && rawDetail !== '') {
+          errorMessage = rawDetail;
+        }
+      } catch {
         // 如果无法解析错误响应，使用默认错误消息
       }
+
+
+
 
       throw new ApiError(errorMessage, response.status, response);
     }
 
-    const data = await response.json();
+    const data = (await response.json() as unknown) as T;
     return data;
+
   } catch (error) {
     if (error instanceof ApiError) {
       throw error;

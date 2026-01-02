@@ -56,9 +56,11 @@ export const AnalyticsPieChart: React.FC<PieChartProps> = ({
 }) => {
   // Transform data from {name, value} to {type, value} for @ant-design/plots
   const chartData = data.map(item => ({
-    type: (item as any).name || item.type,
+    type: (item as unknown as Record<string, unknown>).name as string || item.type,
+
     value: item.value,
   }))
+
 
   const config = {
     data: chartData,
@@ -75,17 +77,19 @@ export const AnalyticsPieChart: React.FC<PieChartProps> = ({
         fontSize: 12,
         fill: '#fff',
       },
-    } as any,
+    },
+
     legend: showLegend ? {
       layout: 'horizontal' as const,
       position: 'bottom' as const,
     } : false,
     tooltip: showTooltip ? {
-      formatter: (datum: any) => ({
-        name: datum.type,
-        value: formatAreaValue(datum.value),
+      formatter: (datum: Record<string, unknown>) => ({
+        name: datum.type as string,
+        value: formatAreaValue(datum.value as number),
       }),
     } : false,
+
   }
 
   if (loading) {
@@ -98,7 +102,8 @@ export const AnalyticsPieChart: React.FC<PieChartProps> = ({
     )
   }
 
-  if (!data || data.length === 0) {
+  if (data.length === 0) {
+
     return (
       <Card title={title} className={className}>
         <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -153,7 +158,8 @@ export const AnalyticsBarChart: React.FC<BarChartProps> = ({
     },
     label: {
       position: 'top' as const,
-      formatter: (datum: any) => formatAggressive(datum[barKey]),
+      formatter: (datum: Record<string, unknown>) => formatAggressive(datum[barKey] as number),
+
       style: {
         fill: '#666',
         fontSize: 12,
@@ -163,11 +169,12 @@ export const AnalyticsBarChart: React.FC<BarChartProps> = ({
       position: 'top' as const,
     } : false,
     tooltip: showTooltip ? {
-      formatter: (datum: any) => ({
-        name: datum[xAxisKey],
-        value: formatAreaValue(datum[barKey]),
+      formatter: (datum: Record<string, unknown>) => ({
+        name: datum[xAxisKey] as string,
+        value: formatAreaValue(datum[barKey] as number),
       }),
     } : false,
+
     yAxis: {
       min: 0,
       label: {
@@ -197,7 +204,8 @@ export const AnalyticsBarChart: React.FC<BarChartProps> = ({
     )
   }
 
-  if (!data || data.length === 0) {
+  if (data.length === 0) {
+
     return (
       <Card title={title} className={className}>
         <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -257,14 +265,17 @@ export const AnalyticsLineChart: React.FC<LineChartProps> = ({
     xField: xAxisKey,
     yField: 'value',
     seriesField: 'type',
-    color: ({ type }: any) => {
+    color: ({ type }: { type: string }) => {
       const line = lines.find(l => l.name === type)
-      return line?.color || '#1890ff'
+      return (line !== undefined && typeof line.color === 'string' && line.color !== '') ? line.color : '#1890ff'
     },
+
+
     smooth: true,
     lineStyle: {
-      lineWidth: lines[0]?.strokeWidth || 2,
+      lineWidth: (lines[0] !== undefined && typeof lines[0].strokeWidth === 'number') ? lines[0].strokeWidth : 2,
     },
+
     point: showDots ? {
       size: 4,
     } : false,
@@ -272,11 +283,12 @@ export const AnalyticsLineChart: React.FC<LineChartProps> = ({
       position: 'top' as const,
     } : false,
     tooltip: showTooltip ? {
-      formatter: (datum: any) => ({
-        name: datum.type,
-        value: datum.value,
+      formatter: (datum: Record<string, unknown>) => ({
+        name: datum.type as string,
+        value: datum.value as number,
       }),
     } : false,
+
   }
 
   if (loading) {
@@ -289,7 +301,8 @@ export const AnalyticsLineChart: React.FC<LineChartProps> = ({
     )
   }
 
-  if (!data || data.length === 0) {
+  if (data.length === 0) {
+
     return (
       <Card title={title} className={className}>
         <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -366,9 +379,10 @@ export const chartDataUtils = {
       name: item.range,
       value: item.count,
       count: item.count,
-      percentage: item.percentage
+      percentage: typeof item.percentage === 'number' ? item.percentage : 0
     }))
   },
+
 
   // 转换趋势数据
   toTrendData: (data: Array<{ date: string; occupancy_rate: number; total_rented_area?: number; total_rentable_area?: number }>): LineData[] => {
@@ -384,32 +398,35 @@ export const chartDataUtils = {
   toAreaData: (data: Array<{ name: string; total_area: number; area_percentage: number; average_area?: number }>): PieData[] => {
     return data.map(item => ({
       type: item.name,  // Changed from 'name' to 'type' for @ant-design/plots
-      value: Math.round(item.total_area * 100) / 100,
-      total_area: Math.round(item.total_area * 100) / 100,
-      percentage: item.area_percentage,
-      average_area: item.average_area || 0
+      value: Math.round((typeof item.total_area === 'number' ? item.total_area : 0) * 100) / 100,
+      total_area: Math.round((typeof item.total_area === 'number' ? item.total_area : 0) * 100) / 100,
+      percentage: typeof item.area_percentage === 'number' ? item.area_percentage : 0,
+      average_area: typeof item.average_area === 'number' ? item.average_area : 0
     }))
   },
+
 
   // 转换面积维度柱状图数据
   toAreaBarData: (data: Array<{ name: string; total_area: number; count?: number; average_area?: number }>): BarData[] => {
     return data.map(item => ({
       name: item.name,
-      value: Math.round(item.total_area * 100) / 100,
-      total_area: Math.round(item.total_area * 100) / 100,
-      count: item.count || 0,
-      average_area: item.average_area || 0
+      value: Math.round((typeof item.total_area === 'number' ? item.total_area : 0) * 100) / 100,
+      total_area: Math.round((typeof item.total_area === 'number' ? item.total_area : 0) * 100) / 100,
+      count: typeof item.count === 'number' ? item.count : 0,
+      average_area: typeof item.average_area === 'number' ? item.average_area : 0
     }))
   },
+
 
   // 转换业态类别面积数据
   toBusinessCategoryAreaData: (data: Array<{ category: string; total_area: number; area_percentage: number; occupancy_rate?: number }>): BarData[] => {
     return data.map(item => ({
       name: item.category,
-      value: Math.round(item.total_area * 100) / 100,
-      total_area: Math.round(item.total_area * 100) / 100,
-      area_percentage: item.area_percentage,
-      occupancy_rate: item.occupancy_rate || 0
+      value: Math.round((typeof item.total_area === 'number' ? item.total_area : 0) * 100) / 100,
+      total_area: Math.round((typeof item.total_area === 'number' ? item.total_area : 0) * 100) / 100,
+      area_percentage: typeof item.area_percentage === 'number' ? item.area_percentage : 0,
+      occupancy_rate: typeof item.occupancy_rate === 'number' ? item.occupancy_rate : 0
     }))
   }
+
 }

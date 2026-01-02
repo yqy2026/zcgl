@@ -2,7 +2,8 @@
 import { AUTH_API } from '@/constants/api'
 import { enhancedApiClient } from '@/api/client'
 import { ApiErrorHandler } from '../utils/responseExtractor'
-import type { AuthResponse } from '../types/api-response'
+import type { AuthResponse, StandardApiResponse } from '../types/api-response'
+
 import type { LoginCredentials, User } from '../types/auth'
 import { createLogger } from '../utils/logger'
 
@@ -19,7 +20,8 @@ interface Permission {
 
 export class AuthService {
   // 用户登录
-  static async login(credentials: LoginCredentials): Promise<AuthResponse> {
+  static async login(credentials: LoginCredentials): Promise<StandardApiResponse<AuthResponse>> {
+
     try {
       logger.debug('开始登录流程', { username: credentials.username });
 
@@ -41,25 +43,38 @@ export class AuthService {
         throw new Error(`登录失败: ${result.error}`);
       }
 
-      const responseData = result.data as any;
+      const responseData = result.data as Record<string, unknown> & {
+        user?: User;
+        tokens?: AuthResponse['tokens'];
+        token?: string;
+        message?: string;
+      };
 
       logger.debug('API响应数据', { responseData });
 
       // 验证响应数据结构
-      if (!responseData.user || (!responseData.tokens && !responseData.token)) {
+      if (responseData.user === undefined || (responseData.tokens === undefined && (responseData.token === undefined || responseData.token === ''))) {
         logger.error('登录响应数据格式不正确', undefined, { responseData });
         throw new Error('登录响应数据格式不正确');
       }
 
+
+
       const { user } = responseData;
 
+      if (user === undefined) {
+        throw new Error('未找到用户信息');
+      }
+
       logger.debug('用户数据解析成功', { user });
+
 
       // 处理tokens（新格式）或token（旧格式）
       let accessToken: string;
       let refreshToken: string;
 
       if (responseData.tokens) {
+
         // 新格式：嵌套的tokens对象
         accessToken = responseData.tokens.access_token;
         refreshToken = responseData.tokens.refresh_token;
@@ -68,7 +83,7 @@ export class AuthService {
         localStorage.setItem('auth_token', accessToken);
         localStorage.setItem('token', accessToken); // 前端常用的键
         localStorage.setItem('refreshToken', refreshToken);
-      } else if (responseData.token) {
+      } else if (typeof responseData.token === 'string' && responseData.token !== '') {
         // 旧格式：单个token字段
         accessToken = responseData.token;
         refreshToken = responseData.token;
@@ -77,6 +92,7 @@ export class AuthService {
         localStorage.setItem('token', accessToken);
         localStorage.setItem('refreshToken', refreshToken);
       } else {
+
         throw new Error('未找到访问令牌');
       }
 
@@ -88,12 +104,17 @@ export class AuthService {
         success: true,
         data: {
           user,
-          token: accessToken,
-          refreshToken: refreshToken,
+          tokens: {
+            access_token: accessToken,
+            refresh_token: refreshToken,
+            token_type: 'Bearer',
+            expires_in: 3600 // 默认1小时
+          },
           permissions: []
         },
-        message: responseData.message || '登录成功'
-      } as any;
+        message: responseData.message as string || '登录成功'
+      };
+
 
     } catch (error) {
       // 使用统一的错误处理器
@@ -119,16 +140,18 @@ export class AuthService {
   }
 
   // 刷新令牌
-  static async refreshToken(): Promise<AuthResponse> {
+  static async refreshToken(): Promise<StandardApiResponse<AuthResponse['tokens']>> {
+
     try {
-      const refreshToken = localStorage.getItem('refreshToken');
-      if (!refreshToken) {
+      const refreshTokenValue = localStorage.getItem('refreshToken') ?? ''
+      if (refreshTokenValue === '') {
         throw new Error('没有刷新令牌');
       }
 
       const result = await enhancedApiClient.post(AUTH_API.REFRESH, {
-        refreshToken
+        refreshToken: refreshTokenValue
       }, {
+
         retry: {
           maxAttempts: 2,
           delay: 500,
@@ -136,8 +159,9 @@ export class AuthService {
           retryCondition: (error: unknown) => {
             // 刷新令牌失败一般不重试，除非是网络问题
             const axiosError = error as { response?: unknown };
-            return !axiosError.response;
+            return axiosError.response === undefined;
           }
+
         }
       });
 
@@ -145,16 +169,21 @@ export class AuthService {
         throw new Error(`令牌刷新失败: ${result.error}`);
       }
 
-      const { token, permissions } = result.data as any;
+      const responseData = result.data as AuthResponse['tokens'];
 
-      localStorage.setItem('auth_token', token);
-      localStorage.setItem('permissions', JSON.stringify(permissions));
+      if (typeof responseData?.access_token === 'string' && responseData.access_token !== '') {
+        localStorage.setItem('auth_token', responseData.access_token);
+      }
+
 
       return {
         success: true,
-        data: result.data,
+        data: responseData, // 这里responseData已经转换过类型了
         message: '令牌刷新成功'
-      } as any;
+      };
+
+
+
 
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
@@ -190,13 +219,14 @@ export class AuthService {
 
   // 检查本地认证状态
   static isAuthenticated(): boolean {
-    const token = localStorage.getItem('auth_token')
-    const user = localStorage.getItem('user')
+    const token = localStorage.getItem('auth_token') ?? ''
+    const user = localStorage.getItem('user') ?? ''
 
     // 必须同时存在token和user信息
-    if (!token || !user) {
+    if (token === '' || user === '') {
       return false
     }
+
 
     try {
       // 验证JWT Token
@@ -205,41 +235,49 @@ export class AuthService {
         return false
       }
 
-      const tokenData = JSON.parse(atob(tokenParts[1]))
+      const tokenData = JSON.parse(atob(tokenParts[1])) as { exp?: number };
       const currentTime = Date.now() / 1000
 
       // 检查token是否过期
-      if (!tokenData.exp || tokenData.exp <= currentTime) {
+      // 检查token是否过期
+      if (typeof tokenData.exp !== 'number' || tokenData.exp <= currentTime) {
         // Token已过期,清除本地存储
         this.logout()
         return false
       }
 
+
+
       return true
-    } catch (error) {
-      logger.error('Token验证失败', error instanceof Error ? error : new Error(String(error)))
+    } catch {
+
       return false
     }
+
   }
 
   // 获取本地存储的用户信息
   static getLocalUser(): User | null {
-    const userStr = localStorage.getItem('user')
+    const userStr = localStorage.getItem('user') ?? ''
     try {
-      return userStr ? JSON.parse(userStr) : null
-    } catch (error) {
+      return userStr !== '' ? (JSON.parse(userStr) as User) : null
+    } catch {
       return null
     }
+
+
   }
 
   // 获取本地存储的权限信息
   static getLocalPermissions(): Permission[] {
-    const permissionsStr = localStorage.getItem('permissions')
+    const permissionsStr = localStorage.getItem('permissions') ?? ''
     try {
-      return permissionsStr ? JSON.parse(permissionsStr) : []
-    } catch (error) {
+      return permissionsStr !== '' ? (JSON.parse(permissionsStr) as Permission[]) : []
+    } catch {
       return []
     }
+
+
   }
 
   // 检查用户是否有特定权限
@@ -325,6 +363,7 @@ export class AuthService {
 
   // 获取用户活动记录
   static async getUserActivity(limit: number = 20): Promise<any[]> {
+
     try {
       const result = await enhancedApiClient.get(AUTH_API.SESSIONS, {
         params: { limit },
@@ -335,7 +374,8 @@ export class AuthService {
         throw new Error(`获取活动记录失败: ${result.error}`);
       }
 
-      return result.data as any;
+      return (result.data as any[]) ?? [];
+
 
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
