@@ -371,7 +371,8 @@ export class StatisticsService {
         this.getTrendData(metric, "monthly", { ...filters, period: previousPeriod })
       ]);
 
-      // 计算增长�?      const currentSum = currentResult.reduce((sum, item) => sum + item.value, 0);
+      // 计算增长率
+      const currentSum = currentResult.reduce((sum, item) => sum + item.value, 0);
       const previousSum = previousResult.reduce((sum, item) => sum + item.value, 0);
       const growth = previousSum === 0 ? 0 : ((currentSum - previousSum) / previousSum) * 100;
 

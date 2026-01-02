@@ -3,8 +3,7 @@ import { Typography, Button, Space, Row, Col, Spin, Alert, message } from "antd"
 import { PlusOutlined, ExportOutlined, ImportOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import type { TablePaginationConfig } from 'antd/es/table';
-import type { SorterResult } from 'antd/es/table';
+import type { PaginationConfig, FilterConfig, SorterConfig } from "@/types/common";
 import { assetService } from "../../services/assetService";
 import { analyticsService } from "../../services/analyticsService";
 import { useAssets } from "../../hooks/useAssets";
@@ -53,9 +52,9 @@ const AssetListPage: React.FC = () => {
 
   // 处理表格变化
   const handleTableChange = (
-    pagination: TablePaginationConfig,
-    filters: Record<string, any[] | null>,
-    sorter: SorterResult<any>,
+    pagination: PaginationConfig,
+    _filters: FilterConfig,
+    sorter: SorterConfig,
   ) => {
     setSearchParams((prev) => ({
       ...prev,
