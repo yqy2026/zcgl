@@ -18,7 +18,7 @@ interface AssetDetailInfoProps {
 
 const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
   // 计算出租率
-  const occupancyRate = asset.occupancy_rate
+  const occupancyRate = asset.occupancy_rate !== undefined && asset.occupancy_rate !== null
     ? asset.occupancy_rate
     : calculateOccupancyRate(asset.rented_area, asset.rentable_area)
 
@@ -32,7 +32,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
   return (
     <div>
       {/* 基本信息卡片 */}
-      <Card 
+      <Card
         title={
           <span>
             <InfoCircleOutlined style={{ marginRight: 8 }} />
@@ -49,7 +49,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
             content: { minWidth: '200px' }
           }}
         >
-          <Descriptions.Item 
+          <Descriptions.Item
             label={
               <span>
                 <HomeOutlined style={{ marginRight: 4 }} />
@@ -57,10 +57,10 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
               </span>
             }
           >
-            {asset.project_name || '-'}
+            {asset.project_name ?? '-'}
           </Descriptions.Item>
-          
-          <Descriptions.Item 
+
+          <Descriptions.Item
             label={
               <span>
                 <HomeOutlined style={{ marginRight: 4 }} />
@@ -72,8 +72,8 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
               {asset.property_name}
             </span>
           </Descriptions.Item>
-          
-          <Descriptions.Item 
+
+          <Descriptions.Item
             label={
               <span>
                 <UserOutlined style={{ marginRight: 4 }} />
@@ -83,8 +83,8 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
           >
             {asset.ownership_entity}
           </Descriptions.Item>
-          
-          <Descriptions.Item 
+
+          <Descriptions.Item
             label={
               <span>
                 <EnvironmentOutlined style={{ marginRight: 4 }} />
@@ -95,7 +95,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
           >
             {asset.address}
           </Descriptions.Item>
-          
+
           <Descriptions.Item label="确权状态">
             <Tag color={getStatusColor(asset.ownership_status, 'ownership')}>
               {asset.ownership_status}
@@ -103,15 +103,15 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
           </Descriptions.Item>
 
           <Descriptions.Item label="证载用途">
-            {asset.certificated_usage || '-'}
+            {asset.certificated_usage ?? '-'}
           </Descriptions.Item>
 
           <Descriptions.Item label="实际用途">
-            {asset.actual_usage || '-'}
+            {asset.actual_usage ?? '-'}
           </Descriptions.Item>
 
           <Descriptions.Item label="业态类别">
-            {asset.business_category || '-'}
+            {asset.business_category ?? '-'}
           </Descriptions.Item>
 
           <Descriptions.Item label="使用状态">
@@ -131,8 +131,8 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
               {asset.property_nature}
             </Tag>
           </Descriptions.Item>
-          
-          <Descriptions.Item 
+
+          <Descriptions.Item
             label={
               <span>
                 <CalendarOutlined style={{ marginRight: 4 }} />
@@ -142,8 +142,8 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
           >
             {formatDate(asset.created_at, 'datetime')}
           </Descriptions.Item>
-          
-          <Descriptions.Item 
+
+          <Descriptions.Item
             label={
               <span>
                 <CalendarOutlined style={{ marginRight: 4 }} />
@@ -157,8 +157,8 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
       </Card>
 
       {/* 面积信息卡片 */}
-      <Card 
-        title="面积信息" 
+      <Card
+        title="面积信息"
         style={{ marginBottom: 16 }}
         extra={
           asset.property_nature === '经营性' && (
@@ -173,49 +173,49 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
           <Col xs={24} sm={12} md={8} lg={6}>
             <Statistic
               title="土地面积"
-              value={asset.land_area || 0}
+              value={asset.land_area ?? 0}
               suffix="㎡"
               precision={2}
               valueStyle={{ color: '#1890ff' }}
             />
           </Col>
-          
+
           <Col xs={24} sm={12} md={8} lg={6}>
             <Statistic
               title="实际房产面积"
-              value={asset.actual_property_area || 0}
+              value={asset.actual_property_area ?? 0}
               suffix="㎡"
               precision={2}
               valueStyle={{ color: '#52c41a' }}
             />
           </Col>
-          
+
           {asset.property_nature === '经营类' && (
             <>
               <Col xs={24} sm={12} md={8} lg={6}>
                 <Statistic
                   title="可出租面积"
-                  value={asset.rentable_area || 0}
+                  value={asset.rentable_area ?? 0}
                   suffix="㎡"
                   precision={2}
                   valueStyle={{ color: '#faad14' }}
                 />
               </Col>
-              
+
               <Col xs={24} sm={12} md={8} lg={6}>
                 <Statistic
                   title="已出租面积"
-                  value={asset.rented_area || 0}
+                  value={asset.rented_area ?? 0}
                   suffix="㎡"
                   precision={2}
                   valueStyle={{ color: '#52c41a' }}
                 />
               </Col>
-              
+
               <Col xs={24} sm={12} md={8} lg={6}>
                 <Statistic
                   title="未出租面积"
-                  value={asset.unrented_area || 0}
+                  value={asset.unrented_area ?? 0}
                   suffix="㎡"
                   precision={2}
                   valueStyle={{ color: '#ff4d4f' }}
@@ -223,8 +223,8 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
               </Col>
             </>
           )}
-          
-          {asset.property_nature === '非经营性' && asset.non_commercial_area && (
+
+          {asset.property_nature === '非经营性' && asset.non_commercial_area !== undefined && asset.non_commercial_area !== null && (
             <Col xs={24} sm={12} md={8} lg={6}>
               <Statistic
                 title="非经营物业面积"
@@ -238,7 +238,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
         </Row>
 
         {/* 出租率进度条 */}
-        {asset.property_nature === '经营性' && asset.rentable_area && asset.rentable_area > 0 && (
+        {asset.property_nature === '经营性' && asset.rentable_area !== undefined && asset.rentable_area !== null && asset.rentable_area > 0 && (
           <div style={{ marginTop: 24 }}>
             <Divider orientation="left">出租率分析</Divider>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -251,7 +251,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
               </div>
               <div style={{ minWidth: 120, textAlign: 'right' }}>
                 <div style={{ fontSize: '12px', color: '#8c8c8c' }}>
-                  {asset.rented_area?.toLocaleString() || 0} / {asset.rentable_area?.toLocaleString() || 0} ㎡
+                  {asset.rented_area?.toLocaleString() ?? 0} / {asset.rentable_area?.toLocaleString() ?? 0} ㎡
                 </div>
               </div>
             </div>
@@ -269,7 +269,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
           }}
         >
           <Descriptions.Item label="接收模式">
-            {asset.business_model || '-'}
+            {asset.business_model ?? '-'}
           </Descriptions.Item>
 
           <Descriptions.Item label="是否计入出租率">
@@ -279,13 +279,13 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
           </Descriptions.Item>
 
           <Descriptions.Item label="权属类别">
-            {asset.ownership_category || '-'}
+            {asset.ownership_category ?? '-'}
           </Descriptions.Item>
         </Descriptions>
       </Card>
 
       {/* 接收协议详情 */}
-      {(asset.operation_agreement_start_date || asset.operation_agreement_end_date || asset.operation_agreement_attachments) && (
+      {((asset.operation_agreement_start_date !== undefined && asset.operation_agreement_start_date !== '') || (asset.operation_agreement_end_date !== undefined && asset.operation_agreement_end_date !== '') || (asset.operation_agreement_attachments !== undefined && asset.operation_agreement_attachments !== '')) && (
         <Card title="接收协议详情" style={{ marginBottom: 16 }}>
           <Descriptions
             bordered
@@ -295,15 +295,15 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
             }}
           >
             <Descriptions.Item label="(当前)接收协议开始日期">
-              {asset.operation_agreement_start_date ? formatDate(asset.operation_agreement_start_date) : '-'}
+              {asset.operation_agreement_start_date !== undefined && asset.operation_agreement_start_date !== '' ? formatDate(asset.operation_agreement_start_date) : '-'}
             </Descriptions.Item>
 
             <Descriptions.Item label="(当前)接收协议结束日期">
-              {asset.operation_agreement_end_date ? formatDate(asset.operation_agreement_end_date) : '-'}
+              {asset.operation_agreement_end_date !== undefined && asset.operation_agreement_end_date !== '' ? formatDate(asset.operation_agreement_end_date) : '-'}
             </Descriptions.Item>
 
             <Descriptions.Item label="接收协议文件" span={2}>
-              {asset.operation_agreement_attachments ? (
+              {asset.operation_agreement_attachments !== undefined && asset.operation_agreement_attachments !== '' ? (
                 <div>
                   {asset.operation_agreement_attachments.split(',').map((fileName, index) => (
                     <div key={index} style={{ marginBottom: 4 }}>
@@ -331,27 +331,27 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
             }}
           >
             <Descriptions.Item label="租户名称">
-              {asset.tenant_name || '-'}
+              {asset.tenant_name ?? '-'}
             </Descriptions.Item>
-            
+
             <Descriptions.Item label="租赁合同编号">
-              {asset.lease_contract_number || '-'}
+              {asset.lease_contract_number ?? '-'}
             </Descriptions.Item>
-            
+
             <Descriptions.Item label="合同开始日期">
-              {asset.contract_start_date ? formatDate(asset.contract_start_date) : '-'}
+              {asset.contract_start_date !== undefined && asset.contract_start_date !== '' ? formatDate(asset.contract_start_date) : '-'}
             </Descriptions.Item>
-            
+
             <Descriptions.Item label="合同结束日期">
-              {asset.contract_end_date ? formatDate(asset.contract_end_date) : '-'}
+              {asset.contract_end_date !== undefined && asset.contract_end_date !== '' ? formatDate(asset.contract_end_date) : '-'}
             </Descriptions.Item>
-            
+
             <Descriptions.Item label="合同状态">
-              {asset.contract_status || '-'}
+              {asset.contract_status ?? '-'}
             </Descriptions.Item>
-            
+
             <Descriptions.Item label="月租金">
-              {asset.monthly_rent ? `¥${asset.monthly_rent.toLocaleString()}` : '-'}
+              {asset.monthly_rent !== undefined && asset.monthly_rent !== null ? `¥${asset.monthly_rent.toLocaleString()}` : '-'}
             </Descriptions.Item>
           </Descriptions>
         </Card>
@@ -359,7 +359,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
 
 
       {/* 备注信息 */}
-      {asset.notes && (
+      {asset.notes !== undefined && asset.notes !== '' && (
         <Card title="备注信息">
           <Descriptions bordered column={1}>
             <Descriptions.Item label="备注">

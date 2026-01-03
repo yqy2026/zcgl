@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback } from 'react'
 import { message } from 'antd'
 import { AuthService } from '../services/authService'
 import type { User, LoginCredentials } from '../types/auth'
+import { createLogger } from '../utils/logger'
+
+const authLogger = createLogger('Auth')
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(AuthService.getLocalUser())
@@ -24,7 +27,7 @@ export const useAuth = () => {
           }
         }
       } catch (error) {
-        console.error('初始化认证状态失败:', error)
+        authLogger.error('初始化认证状态失败:', error as Error)
         // 清除可能损坏的本地存储
         AuthService.logout()
       }
@@ -64,7 +67,7 @@ export const useAuth = () => {
       setError(null)
       message.success('已安全登出')
     } catch (err: unknown) {
-      console.error('登出失败:', err)
+      authLogger.error('登出失败:', err as Error)
       // 即使API失败，也要清除本地状态
       setUser(null)
       setError(null)
@@ -80,14 +83,14 @@ export const useAuth = () => {
         setUser(currentUser)
       }
     } catch (error) {
-      console.error('刷新用户信息失败:', error)
+      authLogger.error('刷新用户信息失败:', error as Error)
       // 如果刷新失败，尝试刷新token
       try {
         await AuthService.refreshToken()
         const currentUser = await AuthService.getCurrentUser()
         setUser(currentUser)
       } catch (refreshError) {
-        console.error('刷新token失败:', refreshError)
+        authLogger.error('刷新token失败:', refreshError as Error)
         // 彻底登出
         await logout()
       }

@@ -276,7 +276,7 @@ const SmartInteractionProvider: React.FC<SmartInteractionManagerProps> = ({
         message: '自动保存成功',
         duration: 3000
       })
-    } catch (error) {
+    } catch {
       showNotification({
         type: 'error',
         message: '自动保存失败',

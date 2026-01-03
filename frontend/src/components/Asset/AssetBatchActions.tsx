@@ -110,7 +110,8 @@ const AssetBatchActions: React.FC<AssetBatchActionsProps> = ({
       const updates = Object.entries(values).reduce<Partial<AssetUpdateRequest>>(
         (acc, [key, value]) => {
           if (value !== undefined && value !== null && value !== "") {
-            (acc as any)[key] = value;
+            const typedKey = key as keyof AssetUpdateRequest;
+            (acc[typedKey] as unknown) = value;
           }
           return acc;
         },

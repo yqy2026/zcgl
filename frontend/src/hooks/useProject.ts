@@ -13,6 +13,9 @@ import type {
   ProjectDropdownOption
 } from '@/types/project'
 import { message } from 'antd'
+import { createLogger } from '@/utils/logger'
+
+const projectLogger = createLogger('useProject')
 
 // 项目查询参数接口
 interface ProjectQueryParams {
@@ -43,7 +46,7 @@ export const useProjectOptions = (isActive: boolean = true): UseProjectOptionsRe
         const response = await projectService.getProjectOptions(isActive)
         return response
       } catch (error) {
-        console.error(error)
+        projectLogger.error('Error fetching projects:', error as Error)
         throw error
       }
     },
@@ -84,7 +87,7 @@ export const useProjectDetail = (id?: string): UseProjectDetailResult => {
         const response = await projectService.getProject(id)
         return response
       } catch (error) {
-        console.error(error)
+        projectLogger.error('Error fetching project:', error as Error)
         throw error
       }
     },
@@ -131,7 +134,7 @@ export const useProjectList = (params: ProjectQueryParams = {}): UseProjectListR
         const response = await projectService.getProjects(params)
         return response
       } catch (error) {
-        console.error(error)
+        projectLogger.error('Error searching projects:', error as Error)
         throw error
       }
     },
@@ -181,7 +184,7 @@ export const useProjectStatistics = (): UseProjectStatisticsResult => {
         const response = await projectService.getProjectStatistics()
         return response
       } catch (error) {
-        console.error(error)
+        projectLogger.error('Error fetching project options:', error as Error)
         throw error
       }
     },
@@ -218,7 +221,7 @@ export const useCreateProject = () => {
       message.success('项目创建成功')
     },
     onError: (error: unknown) => {
-      console.error('创建项目失败:', error)
+      projectLogger.error('创建项目失败:', error as Error)
       const err = error as any
       message.error(err.response?.data?.detail || '创建项目失败')
     }
@@ -244,7 +247,7 @@ export const useUpdateProject = () => {
       message.success('项目更新成功')
     },
     onError: (error: unknown) => {
-      console.error('更新项目失败:', error)
+      projectLogger.error('更新项目失败:', error as Error)
       const err = error as any
       message.error(err.response?.data?.detail || '更新项目失败')
     }
@@ -269,7 +272,7 @@ export const useDeleteProject = () => {
       message.success('项目删除成功')
     },
     onError: (error: unknown) => {
-      console.error('删除项目失败:', error)
+      projectLogger.error('删除项目失败:', error as Error)
       const err = error as any
       message.error(err.response?.data?.detail || '删除项目失败')
     }
@@ -295,7 +298,7 @@ export const useToggleProjectStatus = () => {
       message.success('项目状态切换成功')
     },
     onError: (error: unknown) => {
-      console.error('切换项目状态失败:', error)
+      projectLogger.error('切换项目状态失败:', error as Error)
       const err = error as any
       message.error(err.response?.data?.detail || '切换项目状态失败')
     }

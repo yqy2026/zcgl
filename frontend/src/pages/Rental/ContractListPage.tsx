@@ -19,6 +19,7 @@ import {
   Col,
   Statistic,
   Typography,
+  type TableProps,
 } from "antd";
 import {
   PlusOutlined,
@@ -36,6 +37,7 @@ import {
   RentContract,
   RentContractQueryParams,
   RentContractPageState,
+  RentStatisticsOverview,
 } from "../../types/rentContract";
 import { Asset } from "../../types/asset";
 import { Ownership } from "../../types/ownership";
@@ -44,6 +46,9 @@ import { assetService } from "../../services/assetService";
 import { ownershipService } from "../../services/ownershipService";
 import { useFormat } from "../../utils/format";
 import RentContractExcelImport from "../../components/Rental/RentContractExcelImport";
+import { createLogger } from "../../utils/logger";
+
+const pageLogger = createLogger('ContractList');
 
 const { Title } = Typography;
 const { Search } = Input;
@@ -65,13 +70,15 @@ const ContractListPage: React.FC = () => {
 
   const [assets, setAssets] = useState<Asset[]>([]);
   const [ownerships, setOwnerships] = useState<Ownership[]>([]);
-  const [statistics, setStatistics] = useState<any>(null);
+  const [statistics, setStatistics] = useState<RentStatisticsOverview | null>(null);
   const navigate = useNavigate();
 
   const format = useFormat();
 
+
+
   // 加载合同列表
-  const loadContracts = async (params?: RentContractQueryParams) => {
+  const loadContracts = React.useCallback(async (params?: RentContractQueryParams) => {
     setState((prev) => ({ ...prev, loading: true }));
     try {
       const response = await rentContractService.getContracts({
@@ -80,14 +87,6 @@ const ContractListPage: React.FC = () => {
         ...state.filters,
         ...params,
       });
-
-      // 安全检查：确保response和response.items存在
-      if (!response) {
-        console.error("合同API响应为空");
-        message.error("加载合同列表失败：响应为空");
-        setState((prev) => ({ ...prev, loading: false }));
-        return;
-      }
 
       // 确保items是一个数组
       const contracts = Array.isArray(response.items) ? response.items : [];
@@ -103,24 +102,24 @@ const ContractListPage: React.FC = () => {
         },
       }));
     } catch (error) {
-      console.error("加载合同列表失败:", error);
+      pageLogger.error("加载合同列表失败:", error as Error);
       message.error(`加载合同列表失败: ${error instanceof Error ? error.message : "未知错误"}`);
       setState((prev) => ({ ...prev, loading: false, contracts: [] }));
     }
-  };
+  }, [state.pagination.current, state.pagination.pageSize, state.filters]);
 
   // 加载统计数据
-  const loadStatistics = async () => {
+  const loadStatistics = React.useCallback(async () => {
     try {
       const stats = await rentContractService.getRentStatistics();
       setStatistics(stats);
     } catch (error) {
-      console.error("加载统计数据失败:", error);
+      pageLogger.error("加载统计数据失败:", error as Error);
     }
-  };
+  }, []);
 
   // 加载资产和权属方数据
-  const loadReferenceData = async () => {
+  const loadReferenceData = React.useCallback(async () => {
     try {
       const [assetsResponse, ownershipsData] = await Promise.all([
         assetService.getAssets({ limit: 100 }),
@@ -128,30 +127,30 @@ const ContractListPage: React.FC = () => {
       ]);
       setAssets(assetsResponse.items);
       setOwnerships(ownershipsData);
-    } catch (error) {
+    } catch {
       message.error("加载参考数据失败");
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadContracts();
     loadStatistics();
     loadReferenceData();
-  }, []);
+  }, [loadContracts, loadStatistics, loadReferenceData]);
 
   // 处理分页变化
-  const handleTableChange = (pagination: { current: number; pageSize: number; total?: number }) => {
+  const handleTableChange: TableProps<RentContract>['onChange'] = (pagination) => {
     setState((prev) => ({
       ...prev,
       pagination: {
         ...prev.pagination,
-        current: pagination.current,
-        pageSize: pagination.pageSize,
+        current: pagination.current ?? 1,
+        pageSize: pagination.pageSize ?? 10,
       },
     }));
     loadContracts({
-      page: pagination.current,
-      limit: pagination.pageSize,
+      page: pagination.current ?? 1,
+      limit: pagination.pageSize ?? 10,
     });
   };
 
@@ -186,9 +185,8 @@ const ContractListPage: React.FC = () => {
         try {
           await rentContractService.deleteContract(id);
           message.success("删除成功");
-          loadContracts();
-          loadStatistics();
-        } catch (error) {
+
+        } catch {
           message.error("删除失败");
         }
       },
@@ -200,7 +198,7 @@ const ContractListPage: React.FC = () => {
     try {
       await rentContractService.generateMonthlyLedger({ contract_id: contractId });
       message.success("生成台账成功");
-    } catch (error) {
+    } catch {
       message.error("生成台账失败");
     }
   };
@@ -254,15 +252,15 @@ const ContractListPage: React.FC = () => {
       title: "物业名称",
       dataIndex: ["asset", "property_name"],
       key: "property_name",
-      render: (text: string, record: RentContract) => (
-        <Tooltip title={record.asset?.address}>{text || "未知"}</Tooltip>
+      render: (text: string | undefined, record: RentContract) => (
+        <Tooltip title={record.asset?.address}>{text ?? "未知"}</Tooltip>
       ),
     },
     {
       title: "权属方",
       dataIndex: ["ownership", "name"],
       key: "ownership_name",
-      render: (text: string) => text || "未知",
+      render: (text: string | undefined) => text ?? "未知",
     },
     {
       title: "租期",
@@ -472,7 +470,7 @@ const ContractListPage: React.FC = () => {
             showQuickJumper: true,
             showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
           }}
-          onChange={handleTableChange as any}
+          onChange={handleTableChange}
           scroll={{ x: 1200 }}
         />
       </Card>

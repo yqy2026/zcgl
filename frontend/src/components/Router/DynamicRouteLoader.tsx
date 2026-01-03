@@ -6,6 +6,9 @@
 import React, { createContext, useContext, useState, ReactNode, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { PermissionGuard } from '../System/PermissionGuard'
+import { createLogger } from '../../utils/logger'
+
+const componentLogger = createLogger('DynamicRouteLoader')
 
 interface DynamicRoute {
   id: string
@@ -102,7 +105,7 @@ class DynamicRouteLoader {
   public registerRoute(route: DynamicRoute) {
     // 检查路由是否已存在
     if (this.routes.has(route.id)) {
-      console.warn(`Route ${route.id} already exists, updating instead`)
+      componentLogger.warn(`Route ${route.id} already exists, updating instead`)
       this.updateRoute(route.id, route)
       return
     }
@@ -175,7 +178,7 @@ class DynamicRouteLoader {
 
       return routes
     } catch (error) {
-      console.error(`Failed to load route module: ${modulePath}`, error)
+      componentLogger.error(`Failed to load route module: ${modulePath}`, error as Error)
       throw error
     }
   }
@@ -222,7 +225,7 @@ class DynamicRouteLoader {
       await route.component
       // Route preloaded
     } catch (error) {
-      console.warn(`Failed to preload route: ${route.id}`, error)
+      componentLogger.warn(`Failed to preload route: ${route.id} - ${String(error)}`)
     }
   }
 
@@ -288,7 +291,7 @@ class DynamicRouteLoader {
       await route.component
       return route
     } catch (error) {
-      console.error(`Failed to load route component: ${routeId}`, error)
+      componentLogger.error(`Failed to load route component: ${routeId}`, error as Error)
       throw error
     }
   }
@@ -414,7 +417,7 @@ export const DynamicRouteRenderer: React.FC = () => {
         <Suspense fallback={<div>Loading {route.meta?.title || route.id}...</div>}>
           <ErrorBoundary
             onError={(error) => {
-              console.error(`Route ${route.id} error:`, error)
+              componentLogger.error(`Route ${route.id} error:`, error)
               setError(`Failed to load ${route.meta?.title || route.id}`)
             }}
             fallback={<div>Error loading {route.meta?.title || route.id}</div>}
@@ -502,8 +505,8 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
     return { hasError: true, error }
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('Route Error Boundary caught an error:', error, errorInfo)
+  componentDidCatch(error: Error, _errorInfo: React.ErrorInfo) {
+    componentLogger.error('Route Error Boundary caught an error:', error)
     this.props.onError?.(error)
   }
 
@@ -565,7 +568,7 @@ export const RouteModuleLoader = () => {
       setLoadedModules(prev => [...prev, modulePath])
       return routes
     } catch (error) {
-      console.error('Failed to load route module:', error)
+      componentLogger.error('Failed to load route module:', error as Error)
       throw error
     } finally {
       setLoading(false)

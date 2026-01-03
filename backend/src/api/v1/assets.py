@@ -35,7 +35,6 @@ from sqlalchemy.orm import Session
 from starlette.status import HTTP_204_NO_CONTENT
 
 from ...core.exception_handler import DuplicateResourceError, ResourceNotFoundError
-from ...crud.asset import asset_crud
 from ...crud.history import history_crud
 from ...database import get_db
 from ...middleware.auth import audit_action, get_current_active_user, require_permission
@@ -47,6 +46,7 @@ from ...schemas.asset import (
     AssetResponse,
     AssetUpdate,
 )
+from ...services.asset.asset_service import AssetService
 
 # 导入子路由模块
 from . import asset_attachments, asset_batch, asset_import, asset_statistics
@@ -118,14 +118,14 @@ async def get_assets(
         if is_litigated:
             filters["is_litigated"] = is_litigated
 
-        # 获取资产列表
-        query = asset_crud.get_filtered_query(
-            db, search, filters, sort_field, sort_order
-        )
-
-        # 执行分页查询
-        assets, total = asset_crud.execute_paginated_query(
-            query, skip=(page - 1) * limit, limit=limit
+        asset_service = AssetService(db)
+        assets, total = asset_service.get_assets(
+            skip=(page - 1) * limit,
+            limit=limit,
+            search=search,
+            filters=filters,
+            sort_field=sort_field,
+            sort_order=sort_order,
         )
 
         return AssetListResponse(
@@ -264,10 +264,8 @@ async def get_asset(
     - **asset_id**: 资产ID
     """
     try:
-        asset = asset_crud.get(db=db, id=asset_id)
-        if not asset:
-            raise ResourceNotFoundError("Asset", asset_id)
-        return asset
+        asset_service = AssetService(db)
+        return asset_service.get_asset(asset_id)
     except ResourceNotFoundError:
         raise
     except Exception as e:
@@ -287,30 +285,12 @@ async def create_asset(
     - **asset_in**: 资产创建数据
     """
     try:
-        # 动态验证枚举值
-        from ...services.enum_validation_service import get_enum_validation_service
-
-        validation_service = get_enum_validation_service(db)
-        is_valid, errors = validation_service.validate_asset_data(asset_in.model_dump())
-        if not is_valid:
-            raise HTTPException(
-                status_code=422, detail=f"枚举值验证失败: {'; '.join(errors)}"
-            )
-
-        # 检查是否存在同名资产
-        existing_asset = asset_crud.get_by_name(
-            db=db, property_name=asset_in.property_name
-        )
-        if existing_asset:
-            raise DuplicateResourceError(
-                "Asset", "property_name", asset_in.property_name
-            )
-
-        # 创建资产并记录历史
-        asset = asset_crud.create_with_history(db=db, obj_in=asset_in)
-        return asset
+        asset_service = AssetService(db)
+        return asset_service.create_asset(asset_in, current_user)
 
     except DuplicateResourceError:
+        raise
+    except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"创建资产失败: {str(e)}")
@@ -331,40 +311,12 @@ async def update_asset(
     - **asset_in**: 资产更新数据
     """
     try:
-        # 动态验证枚举值
-        from ...services.enum_validation_service import get_enum_validation_service
+        asset_service = AssetService(db)
+        return asset_service.update_asset(asset_id, asset_in, current_user)
 
-        validation_service = get_enum_validation_service(db)
-        is_valid, errors = validation_service.validate_asset_data(
-            asset_in.model_dump(exclude_unset=True)
-        )
-        if not is_valid:
-            raise HTTPException(
-                status_code=422, detail=f"枚举值验证失败: {'; '.join(errors)}"
-            )
-
-        # 检查资产是否存在
-        asset = asset_crud.get(db=db, id=asset_id)
-        if not asset:
-            raise ResourceNotFoundError("Asset", asset_id)
-
-        # 如果更新了物业名称，检查是否重复
-        if asset_in.property_name and asset_in.property_name != asset.property_name:
-            existing_asset = asset_crud.get_by_name(
-                db=db, property_name=asset_in.property_name
-            )
-            if existing_asset and existing_asset.id != asset_id:
-                raise DuplicateResourceError(
-                    "Asset", "property_name", asset_in.property_name
-                )
-
-        # 更新资产并记录历史
-        updated_asset = asset_crud.update_with_history(
-            db=db, db_obj=asset, obj_in=asset_in
-        )
-        return updated_asset
-
-    except (AssetNotFoundError, DuplicateAssetError):
+    except (AssetNotFoundError, DuplicateAssetError, ResourceNotFoundError):
+        raise
+    except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"更新资产失败: {str(e)}")
@@ -383,13 +335,8 @@ async def delete_asset(
     - **asset_id**: 资产ID
     """
     try:
-        # 检查资产是否存在
-        asset = asset_crud.get(db=db, id=asset_id)
-        if not asset:
-            raise ResourceNotFoundError("Asset", asset_id)
-
-        # 删除资产
-        asset_crud.remove(db=db, id=asset_id)
+        asset_service = AssetService(db)
+        asset_service.delete_asset(asset_id, current_user)
         return Response(status_code=HTTP_204_NO_CONTENT)
 
     except ResourceNotFoundError:
@@ -411,9 +358,12 @@ async def get_asset_history(
     """
     try:
         # 检查资产是否存在
-        asset = asset_crud.get(db=db, id=asset_id)
-        if not asset:
-            raise ResourceNotFoundError("Asset", asset_id)
+        # 这里的检查可以交给 service，History 获取也可以封装进 Service
+        # 但鉴于 get_asset_history 单独存在，这里暂时简单调用 existing crud
+        # 更好的做法是 AssetService.get_asset_history(asset_id)
+
+        asset_service = AssetService(db)
+        asset_service.get_asset(asset_id)  # Validate existence
 
         # 获取历史记录
         history_records = history_crud.get_by_asset_id(db=db, asset_id=asset_id)

@@ -37,6 +37,18 @@ export interface HealthCheckConfig {
   criticalEndpoints: string[]
 }
 
+export interface HealthReport {
+  timestamp: Date
+  critical: {
+    total: number
+    healthy: number
+    unhealthy: number
+    unknown: number
+    healthPercentage: number
+  }
+  details: HealthCheckResult[]
+}
+
 // 默认配置
 const DEFAULT_CONFIG: HealthCheckConfig = {
   timeout: 5000,
@@ -74,7 +86,7 @@ export class ApiHealthCheckService {
 
     try {
       // 使用HEAD请求检查端点可用性（如果支持的话）
-      const response = await (api as any).head(endpoint)
+      const response = await api.getAxiosInstance().head(endpoint)
       const responseTime = Date.now() - startTime
 
       const result: HealthCheckResult = {
@@ -97,7 +109,7 @@ export class ApiHealthCheckService {
       return result
 
     } catch (error: unknown) {
-      const err = error as any;
+      const err = error instanceof Error ? error : new Error(String(error));
       const responseTime = Date.now() - startTime
       lastError = err.message || 'Unknown error'
 
@@ -262,21 +274,11 @@ export class ApiHealthCheckService {
   /**
    * 生成健康检查报告
    */
-  generateReport(): {
-    timestamp: Date
-    critical: {
-      total: number
-      healthy: number
-      unhealthy: number
-      unknown: number
-      healthPercentage: number
-    }
-    details: HealthCheckResult[]
-  } {
+  generateReport(): HealthReport {
     const criticalResults = this.config.criticalEndpoints.map(endpoint =>
       this.results.get(endpoint) || {
         endpoint,
-        status: 'unknown',
+        status: 'unknown' as const,
         lastChecked: new Date()
       }
     )
@@ -304,7 +306,7 @@ export class ApiHealthCheckService {
   async checkSystemHealth(): Promise<{
     isHealthy: boolean
     criticalIssues: string[]
-    report: any
+    report: HealthReport
   }> {
     await this.checkAllEndpoints()
     const report = this.generateReport()
@@ -339,7 +341,7 @@ export const apiHealthCheck = new ApiHealthCheckService()
 export const checkApiHealth = async (): Promise<{
   isHealthy: boolean
   criticalIssues: string[]
-  report: any
+  report: HealthReport
 }> => {
   return apiHealthCheck.checkSystemHealth()
 }

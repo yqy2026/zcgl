@@ -25,8 +25,8 @@ export type {
 
 export type {
   EnumFieldType,
-  EnumFieldValue,
-  EnumFieldWithType
+  CreateEnumFieldValueRequest,
+  UpdateEnumFieldValueRequest
 } from './manager'
 
 // 系统字典类型定义（向后兼容）
@@ -34,9 +34,18 @@ import type { SystemDictionary } from '@/types/asset'
 
 // 导入服务实例
 import { baseDictionaryService } from './base'
-import { dictionaryManagerService } from './manager'
+import {
+  dictionaryManagerService,
+  type EnumFieldType,
+  type EnumFieldValue,
+  type CreateEnumFieldValueRequest,
+  type UpdateEnumFieldValueRequest
+} from './manager'
 import { enhancedApiClient } from '@/api/client'
 import { ApiErrorHandler } from '../../utils/responseExtractor'
+import { createLogger } from '@/utils/logger'
+
+const serviceLogger = createLogger('dictionaryService')
 
 /**
  * 字典统计信息接口
@@ -116,7 +125,7 @@ class UnifiedDictionaryService {
       return types.map(config => config.code);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.error('获取字典类型失败:', enhancedError.message);
+      serviceLogger.error(`获取字典类型失败: ${enhancedError.message}`);
       return [];
     }
   }
@@ -128,7 +137,7 @@ class UnifiedDictionaryService {
     try {
       // 检查是否为系统字典类型
       const config = baseDictionaryService.getAvailableTypes().find(c => c.code === dictType);
-      if (config) {
+      if (config !== undefined) {
         return {
           success: true,
           message: `字典类型已存在: ${dictType}`,
@@ -142,7 +151,7 @@ class UnifiedDictionaryService {
         name: dictType,
         code: dictType,
         description: `自定义字典类型: ${dictType}`
-      } as any);
+      });
 
       if (result) {
         return {
@@ -181,7 +190,7 @@ class UnifiedDictionaryService {
       const types = await this.getEnumFieldTypes();
       const targetType = types.find(t => t.code === dictType);
 
-      if (targetType) {
+      if (targetType !== undefined) {
         const success = await this.deleteEnumFieldType(targetType.id);
         return {
           success,
@@ -225,7 +234,7 @@ class UnifiedDictionaryService {
       const types = await this.getEnumFieldTypes();
       const targetType = types.find(t => t.code === dictType);
 
-      if (targetType) {
+      if (targetType !== undefined) {
         const result = await this.addEnumFieldValue(targetType.id, valueData);
         if (result) {
           return {
@@ -282,7 +291,7 @@ class UnifiedDictionaryService {
           totalValues += values.length;
         }
       } catch (error) {
-        console.warn('计算总数值时出错:', error);
+        serviceLogger.warn(`计算总数值时出错: ${String(error)}`);
       }
 
       const responseTime = Date.now() - startTime;
@@ -300,13 +309,13 @@ class UnifiedDictionaryService {
         },
         performanceMetrics: {
           averageResponseTime: responseTime,
-          cacheHitRate: cacheStats.status === 'fulfilled' ? (cacheStats.value as Record<string, any>).cacheHitRate || 0 : 0,
+          cacheHitRate: cacheStats.status === 'fulfilled' ? ((cacheStats.value as unknown as Record<string, number>)?.cacheHitRate ?? 0) : 0,
           errorRate: types.status === 'rejected' || usageStats.status === 'rejected' ? 1 : 0
         }
       };
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.error('获取字典统计失败:', enhancedError.message);
+      serviceLogger.error(`获取字典统计失败: ${enhancedError.message}`);
 
       // 返回默认统计信息
       return {
@@ -347,16 +356,16 @@ class UnifiedDictionaryService {
         return result.data!;
       }
 
-      throw new Error(result.error || '获取系统字典失败');
+      throw new Error(result.error ?? '获取系统字典失败');
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.error(`获取系统字典失败 [${dictType}]:`, enhancedError.message);
+      serviceLogger.error(`获取系统字典失败 [${dictType}]: ${enhancedError.message}`);
 
       // 如果系统字典API失败，尝试从枚举字段获取
       try {
         return await this.getEnumFieldValuesByTypeCode(dictType);
       } catch (fallbackError) {
-        console.error('备用方案也失败:', fallbackError);
+        serviceLogger.error(`备用方案也失败: ${String(fallbackError)}`);
         return [];
       }
     }
@@ -370,7 +379,7 @@ class UnifiedDictionaryService {
       const enumTypes = await this.getEnumFieldTypes();
       const targetType = enumTypes.find(t => t.code === typeCode);
 
-      if (targetType) {
+      if (targetType !== undefined) {
         const values = await this.getEnumFieldValues(targetType.code);
         return values.map(value => ({
           id: value.id,
@@ -389,7 +398,7 @@ class UnifiedDictionaryService {
       return [];
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.error(`通过类型代码获取枚举值失败 [${typeCode}]:`, enhancedError.message);
+      serviceLogger.error(`通过类型代码获取枚举值失败 [${typeCode}]: ${enhancedError.message}`);
       return [];
     }
   }
@@ -397,13 +406,7 @@ class UnifiedDictionaryService {
   /**
    * 创建枚举值（简化接口）
    */
-  async createEnumValue(typeId: string, data: {
-    label: string
-    value: string
-    code?: string
-    description?: string
-    sort_order?: number
-  }): Promise<DictionaryOperationResult> {
+  async createEnumValue(typeId: string, data: CreateEnumFieldValueRequest): Promise<DictionaryOperationResult> {
     try {
       const result = await this.addEnumFieldValue(typeId, data);
       if (result) {
@@ -437,20 +440,13 @@ class UnifiedDictionaryService {
   /**
    * 更新枚举值（简化接口）
    */
-  async updateEnumValue(valueId: string, data: {
-    label: string
-    value: string
-    code?: string
-    description?: string
-    sort_order?: number
-    is_active?: boolean
-  }): Promise<DictionaryOperationResult> {
+  async updateEnumValue(valueId: string, data: UpdateEnumFieldValueRequest): Promise<DictionaryOperationResult> {
     try {
       // 需要先获取值所属的类型ID
       const enumData = await this.getEnumFieldData();
       for (const item of enumData) {
         const value = item.values.find(v => v.id === valueId);
-        if (value) {
+        if (value !== undefined) {
           const result = await this.updateEnumFieldValue(item.type.id, valueId, data);
           if (result) {
             return {
@@ -490,7 +486,7 @@ class UnifiedDictionaryService {
       const enumData = await this.getEnumFieldData();
       for (const item of enumData) {
         const value = item.values.find(v => v.id === valueId);
-        if (value) {
+        if (value !== undefined) {
           const success = await this.deleteEnumFieldValue(item.type.id, valueId);
           return {
             success,
@@ -527,18 +523,18 @@ class UnifiedDictionaryService {
       // 首先获取当前的枚举值信息
       const enumData = await this.getEnumFieldData();
       let currentValue = null;
-      let typeId = null;
+
 
       for (const item of enumData) {
         const value = item.values.find(v => v.id === valueId);
-        if (value) {
+        if (value !== undefined) {
           currentValue = value;
-          typeId = item.type.id;
+
           break;
         }
       }
 
-      if (!currentValue || !typeId) {
+      if (currentValue === undefined || currentValue === null) {
         return {
           success: false,
           message: '未找到指定的枚举值',
@@ -592,8 +588,8 @@ class UnifiedDictionaryService {
 
         switch (operation) {
           case 'create':
-            if (op.typeId) {
-              result = await this.createEnumValue(op.typeId, op.data as any);
+            if (op.typeId !== undefined) {
+              result = await this.createEnumValue(op.typeId, op.data as CreateEnumFieldValueRequest);
             } else {
               result = {
                 success: false,
@@ -605,8 +601,8 @@ class UnifiedDictionaryService {
             break;
 
           case 'update':
-            if (op.valueId) {
-              result = await this.updateEnumValue(op.valueId, op.data as any);
+            if (op.valueId !== undefined) {
+              result = await this.updateEnumValue(op.valueId, op.data as UpdateEnumFieldValueRequest);
             } else {
               result = {
                 success: false,
@@ -618,7 +614,7 @@ class UnifiedDictionaryService {
             break;
 
           case 'delete':
-            if (op.valueId) {
+            if (op.valueId !== undefined) {
               result = await this.deleteEnumValue(op.valueId);
             } else {
               result = {
@@ -688,13 +684,13 @@ class UnifiedDictionaryService {
         }>;
       }> = [];
 
-      if (dictType) {
+      if (dictType !== undefined) {
         // 搜索特定类型的字典值
         const values = await this.getEnumFieldValuesByTypeCode(dictType);
         const filteredValues = values.filter(item =>
           item.dict_label.toLowerCase().includes(keyword.toLowerCase()) ||
           item.dict_value.toLowerCase().includes(keyword.toLowerCase()) ||
-          (item.description && item.description.toLowerCase().includes(keyword.toLowerCase()))
+          (item.description !== undefined && item.description !== null && item.description.toLowerCase().includes(keyword.toLowerCase()))
         );
 
         if (filteredValues.length > 0) {
@@ -718,7 +714,7 @@ class UnifiedDictionaryService {
             const filteredValues = values.filter(item =>
               item.label.toLowerCase().includes(keyword.toLowerCase()) ||
               item.value.toLowerCase().includes(keyword.toLowerCase()) ||
-              (item.description && item.description.toLowerCase().includes(keyword.toLowerCase()))
+              (item.description !== undefined && item.description !== null && item.description.toLowerCase().includes(keyword.toLowerCase()))
             );
 
             if (filteredValues.length > 0) {
@@ -733,7 +729,7 @@ class UnifiedDictionaryService {
               });
             }
           } catch (error) {
-            console.warn(`搜索字典类型 ${type.code} 时出错:`, error);
+            serviceLogger.warn(`搜索字典类型 ${type.code} 时出错: ${String(error)}`);
           }
         }
       }
@@ -741,7 +737,7 @@ class UnifiedDictionaryService {
       return results;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.error('搜索字典值失败:', enhancedError.message);
+      serviceLogger.error(`搜索字典值失败: ${enhancedError.message}`);
       return [];
     }
   }
@@ -753,7 +749,7 @@ class UnifiedDictionaryService {
     try {
       let data: unknown;
 
-      if (dictType) {
+      if (dictType !== undefined) {
         // 导出特定类型的字典数据
         const values = await this.getEnumFieldValuesByTypeCode(dictType);
         data = {
@@ -773,8 +769,8 @@ class UnifiedDictionaryService {
 
         for (const type of types) {
           const values = await this.getEnumFieldValues(type.code);
-          (allData.types as any[]).push(type);
-          (allData.values as any[]).push(...values.map(v => ({ ...v, type_code: type.code })));
+          (allData.types as EnumFieldType[]).push(type);
+          (allData.values as EnumFieldValue[]).push(...values.map(v => ({ ...v, type_code: type.code })));
         }
 
         data = allData;
@@ -785,7 +781,7 @@ class UnifiedDictionaryService {
         return new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       } else {
         // 使用内置的Excel导出功能
-        return await this.exportEnumFieldData(dictType || 'all');
+        return await this.exportEnumFieldData(dictType ?? 'all');
       }
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
@@ -826,7 +822,7 @@ class UnifiedDictionaryService {
         message: `缓存命中: ${(baseStats.cacheHitRate * 100).toFixed(1)}%`,
         responseTime
       });
-    } catch (error) {
+    } catch {
       checks.push({
         name: 'base_dictionary_service',
         status: 'fail',
@@ -847,7 +843,7 @@ class UnifiedDictionaryService {
         message: `已加载${types.length}个枚举类型`,
         responseTime
       });
-    } catch (error) {
+    } catch {
       checks.push({
         name: 'enum_field_manager',
         status: 'fail',

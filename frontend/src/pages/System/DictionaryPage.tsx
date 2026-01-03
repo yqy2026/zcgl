@@ -7,10 +7,12 @@ import { unifiedDictionaryService } from '../../services/dictionary'
 import type { EnumFieldType, EnumFieldValue } from '../../services/dictionary'
 import type { SystemDictionary } from '@/types/dictionary'
 import EnumValuePreview from '../../components/Dictionary/EnumValuePreview'
-import { handleApiError as _handleError, withErrorHandling as _withErrorHandling, createErrorHandler as _createErrorHandler } from '../../services'
+import { handleApiError as _handleError, withErrorHandling as _withErrorHandling_unused, createErrorHandler as _createErrorHandler } from '../../services'
+import { createLogger } from '../../utils/logger'
+
+const pageLogger = createLogger('DictionaryPage')
 
 // Utility functions
-const withErrorHandling = _withErrorHandling
 const setDictTypes = (types: string[]) => types
 
 const { Option } = Select
@@ -35,10 +37,7 @@ const DictionaryPage: React.FC = () => {
   const [editingRecord, setEditingRecord] = useState<SystemDictionary | null>(null)
   const [form] = Form.useForm<SystemDictionary>()
 
-  // 创建上下文相关的错误处理器
-  const _handleDictionaryError = _createErrorHandler('字典管理', {
-    duration: 3
-  } as any)
+
 
   // 新增状态
   const [searchText, setSearchText] = useState('')
@@ -48,20 +47,15 @@ const DictionaryPage: React.FC = () => {
 
   // 获取字典类型列表
   const fetchTypes = async () => {
-    const result = await withErrorHandling(async () => {
+    try {
       const types = await unifiedDictionaryService.getTypes()
       setDictTypes(types || [])
 
       // 同时获取枚举类型详细信息
       const typesData = await unifiedDictionaryService.getEnumFieldTypes()
       setEnumTypes(typesData || [])
-    }, {
-      errorMessage: '获取字典类型失败',
-      successMessage: undefined
-    })
-
-    if (!result.success) {
-      // 错误已由 withErrorHandling 处理
+    } catch (error) {
+      pageLogger.error('获取字典类型失败:', error as Error)
     }
   }
 
@@ -73,7 +67,7 @@ const DictionaryPage: React.FC = () => {
       // Got enum data
       setAllEnumData(data)
     } catch (e: unknown) {
-      console.error('获取枚举数据失败:', e)
+      pageLogger.error('获取枚举数据失败:', e as Error)
       const errorMessage = e instanceof Error ? e.message : '获取枚举数据失败'
       message.error(errorMessage)
     } finally {
@@ -94,7 +88,7 @@ const DictionaryPage: React.FC = () => {
       const list = await unifiedDictionaryService.getEnumFieldValuesByTypeCode(type)
       setData(list)
     } catch (e: unknown) {
-      console.error('获取枚举值失败:', e)
+      pageLogger.error('获取枚举值失败:', e as Error)
       const errorMessage = e instanceof Error ? e.message : '获取枚举值失败'
       message.error(errorMessage)
     } finally {
@@ -127,7 +121,7 @@ const DictionaryPage: React.FC = () => {
     setEditingRecord(null)
     setEdit({ visible: true })
     form.resetFields()
-    const initialValues = {
+    const initialValues: Partial<SystemDictionary> = {
       dict_type: activeType,
       sort_order: data.length > 0 ? Math.max(...data.map(d => d.sort_order)) + 1 : 0,
       is_active: true
@@ -135,7 +129,7 @@ const DictionaryPage: React.FC = () => {
 
     // 使用 setTimeout 确保模态框完全打开后再设置表单值
     setTimeout(() => {
-      form.setFieldsValue(initialValues as any)
+      form.setFieldsValue(initialValues)
     }, 0)
   }
 
@@ -145,7 +139,7 @@ const DictionaryPage: React.FC = () => {
     setEdit({ visible: true })
 
     // 设置表单初始值
-    const formData = {
+    const formData: Partial<SystemDictionary> = {
       ...record,
       dict_type: record.dict_type,
       dict_label: record.dict_label,
@@ -158,7 +152,7 @@ const DictionaryPage: React.FC = () => {
 
     // 使用 setTimeout 确保模态框完全打开后再设置表单值
     setTimeout(() => {
-      form.setFieldsValue(formData as any)
+      form.setFieldsValue(formData)
     }, 0)
   }
 
@@ -241,9 +235,11 @@ const DictionaryPage: React.FC = () => {
         fetchList(activeType)
       }
     } catch (e: unknown) {
-      const err = e as any
-      if (err?.errorFields) return
+      // Handle form validation errors
+      if (typeof e === 'object' && e !== null && 'errorFields' in e) return
+
       const errorMessage = e instanceof Error ? e.message : '保存失败'
+      pageLogger.error('保存字典失败:', e as Error)
       message.error(errorMessage)
     }
   }
@@ -289,7 +285,7 @@ const DictionaryPage: React.FC = () => {
       if (searchText) {
         const searchLower = searchText.toLowerCase()
         const typeMatch = item.type.name.toLowerCase().includes(searchLower) ||
-                         item.type.code.toLowerCase().includes(searchLower)
+          item.type.code.toLowerCase().includes(searchLower)
         const valueMatch = item.values.some(value =>
           value.label.toLowerCase().includes(searchLower) ||
           value.value.toLowerCase().includes(searchLower) ||

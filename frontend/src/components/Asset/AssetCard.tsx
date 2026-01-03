@@ -30,7 +30,7 @@ const AssetCard: React.FC<AssetCardProps> = ({
   onSelect,
 }) => {
   // 计算出租率
-  const occupancyRate = asset.occupancy_rate
+  const occupancyRate = asset.occupancy_rate !== undefined && asset.occupancy_rate !== null
     ? asset.occupancy_rate
     : calculateOccupancyRate(asset.rented_area, asset.rentable_area)
 
@@ -132,7 +132,7 @@ const AssetCard: React.FC<AssetCardProps> = ({
           <Col span={6}>
             <Statistic
               title="土地面积"
-              value={asset.land_area || 0}
+              value={asset.land_area ?? 0}
               suffix="㎡"
               precision={2}
               valueStyle={{ fontSize: '14px' }}
@@ -141,7 +141,7 @@ const AssetCard: React.FC<AssetCardProps> = ({
           <Col span={6}>
             <Statistic
               title="实际面积"
-              value={asset.actual_property_area || 0}
+              value={asset.actual_property_area ?? 0}
               suffix="㎡"
               precision={2}
               valueStyle={{ fontSize: '14px' }}
@@ -150,7 +150,7 @@ const AssetCard: React.FC<AssetCardProps> = ({
           <Col span={6}>
             <Statistic
               title="可出租面积"
-              value={asset.rentable_area || 0}
+              value={asset.rentable_area ?? 0}
               suffix="㎡"
               precision={2}
               valueStyle={{ fontSize: '14px' }}
@@ -159,7 +159,7 @@ const AssetCard: React.FC<AssetCardProps> = ({
           <Col span={6}>
             <Statistic
               title="已出租面积"
-              value={asset.rented_area || 0}
+              value={asset.rented_area ?? 0}
               suffix="㎡"
               precision={2}
               valueStyle={{ fontSize: '14px' }}
@@ -168,7 +168,7 @@ const AssetCard: React.FC<AssetCardProps> = ({
         </Row>
 
         {/* 出租率进度条 */}
-        {asset.rentable_area && asset.rentable_area > 0 && (
+        {asset.rentable_area !== undefined && asset.rentable_area !== null && asset.rentable_area > 0 && (
           <div style={{ marginBottom: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
               <span style={{ fontSize: '12px', color: '#8c8c8c' }}>出租率</span>
@@ -194,10 +194,10 @@ const AssetCard: React.FC<AssetCardProps> = ({
             {asset.is_litigated && (
               <Tag color="red">涉诉</Tag>
             )}
-            {asset.certificated_usage && (
+            {asset.certificated_usage !== undefined && asset.certificated_usage !== '' && (
               <Tag color="blue">证载：{asset.certificated_usage}</Tag>
             )}
-            {asset.actual_usage && asset.actual_usage !== asset.certificated_usage && (
+            {asset.actual_usage !== undefined && asset.actual_usage !== '' && asset.actual_usage !== asset.certificated_usage && (
               <Tag color="orange">实际：{asset.actual_usage}</Tag>
             )}
           </Space>

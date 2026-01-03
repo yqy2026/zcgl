@@ -3,6 +3,10 @@
  * 提供路由组件缓存、性能监控和内存管理功能
  */
 
+import { createLogger } from './logger'
+
+const routeLogger = createLogger('RouteCache')
+
 // 缓存接口定义
 export interface RouteCacheItem {
   component: React.ComponentType<any>
@@ -153,7 +157,7 @@ export const useRouteCacheState = () => {
       cache.set(key, component)
       return component
     } catch (error) {
-      console.error(`Failed to preload route: ${key}`, error)
+      routeLogger.error(`Failed to preload route: ${key}`, error as Error)
       throw error
     }
   }

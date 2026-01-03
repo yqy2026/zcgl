@@ -16,7 +16,7 @@ export type {
     CustomFieldValue,
 } from "../../types/asset";
 
-export type { StandardApiResponse, PaginatedApiResponse } from "../../types/api-response";
+export type { StandardApiResponse, PaginatedApiResponse } from "../../types/apiResponse";
 
 // ==================== 字段相关接口 ====================
 

@@ -9,6 +9,9 @@
 import { enhancedApiClient } from '@/api/client';
 import { ApiErrorHandler } from '../utils/responseExtractor';
 import { API_ENDPOINTS } from '@/constants/api';
+import { createLogger } from '../utils/logger';
+
+const projectLogger = createLogger('Project');
 import type {
   Project,
   ProjectCreate,
@@ -278,7 +281,7 @@ export class ProjectService {
       return projects.filter(project => project && project.is_active);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.error('批量获取项目信息失败:', enhancedError.message);
+      projectLogger.error('批量获取项目信息失败:', undefined, { error: enhancedError.message });
       return [];
     }
   }
@@ -316,7 +319,7 @@ export class ProjectService {
       );
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.error('验证项目编码失败:', enhancedError.message);
+      projectLogger.error('验证项目编码失败:', undefined, { error: enhancedError.message });
       return false;
     }
   }
@@ -332,7 +335,7 @@ export class ProjectService {
       );
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.error('验证项目名称失败:', enhancedError.message);
+      projectLogger.error('验证项目名称失败:', undefined, { error: enhancedError.message });
       return false;
     }
   }
@@ -348,7 +351,7 @@ export class ProjectService {
       return result.total;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.error('获取项目数量失败:', enhancedError.message);
+      projectLogger.error('获取项目数量失败:', undefined, { error: enhancedError.message });
       return 0;
     }
   }
@@ -373,7 +376,7 @@ export class ProjectService {
       return { canDelete: true };
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.error('检查项目删除条件失败:', enhancedError.message);
+      projectLogger.error('检查项目删除条件失败:', undefined, { error: enhancedError.message });
       return { canDelete: false, reason: '检查失败，请稍后重试' };
     }
   }
@@ -390,7 +393,7 @@ export class ProjectService {
       }));
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.error('获取项目选择选项失败:', enhancedError.message);
+      projectLogger.error('获取项目选择选项失败:', undefined, { error: enhancedError.message });
       return [];
     }
   }
@@ -404,7 +407,7 @@ export class ProjectService {
       return result.items;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.error('关键词搜索项目失败:', enhancedError.message);
+      projectLogger.error('关键词搜索项目失败:', undefined, { error: enhancedError.message });
       return [];
     }
   }
@@ -418,7 +421,7 @@ export class ProjectService {
       return result.items;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.error('根据权属方获取项目失败:', enhancedError.message);
+      projectLogger.error('根据权属方获取项目失败:', undefined, { error: enhancedError.message });
       return [];
     }
   }
@@ -432,7 +435,7 @@ export class ProjectService {
       return result.items;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.error('获取活跃项目失败:', enhancedError.message);
+      projectLogger.error('获取活跃项目失败:', undefined, { error: enhancedError.message });
       return [];
     }
   }
@@ -446,7 +449,7 @@ export class ProjectService {
       return result.items;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.error('获取非活跃项目失败:', enhancedError.message);
+      projectLogger.error('获取非活跃项目失败:', undefined, { error: enhancedError.message });
       return [];
     }
   }

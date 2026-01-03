@@ -6,6 +6,11 @@ interface FormValidationRule {
   validator?: (rule: FormValidationRule, value: unknown) => Promise<void>
 }
 
+// Response type for existence check APIs
+interface ExistsCheckResponse {
+  exists: boolean
+}
+
 // 通用验证规则
 export const validationRules = {
   // 必填验证
@@ -282,13 +287,13 @@ export const asyncValidators = {
     try {
       // 模拟API调用
       const response = await fetch(`/api/system/users/check-username?username=${value}`)
-      const data = await response.json()
+      const data: ExistsCheckResponse = await response.json() as ExistsCheckResponse
 
       if (data.exists) {
         return Promise.reject(new Error('用户名已存在'))
       }
       return Promise.resolve()
-    } catch (error) {
+    } catch {
       // 验证失败时默认通过
       return Promise.resolve()
     }
@@ -300,13 +305,13 @@ export const asyncValidators = {
 
     try {
       const response = await fetch(`/api/system/users/check-email?email=${value}`)
-      const data = await response.json()
+      const data: ExistsCheckResponse = await response.json() as ExistsCheckResponse
 
       if (data.exists) {
         return Promise.reject(new Error('邮箱已被使用'))
       }
       return Promise.resolve()
-    } catch (error) {
+    } catch {
       return Promise.resolve()
     }
   }

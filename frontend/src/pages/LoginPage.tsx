@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { Form, Input, Button, Card, Checkbox, Space, Typography, Divider, Alert } from 'antd'
+import type { CheckboxChangeEvent } from 'antd/es/checkbox'
 import { UserOutlined, LockOutlined, SafetyCertificateOutlined, LoginOutlined } from '@ant-design/icons'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
@@ -29,7 +30,7 @@ const LoginPage: React.FC = () => {
       // 登录成功，跳转到目标页面或默认工作台
       const from = location.state?.from?.pathname || '/dashboard'
       navigate(from, { replace: true })
-    } catch (error) {
+    } catch {
       // 错误处理已在useAuth中完成，这里不需要额外处理
     }
   }
@@ -42,7 +43,7 @@ const LoginPage: React.FC = () => {
     setFormData(prev => ({ ...prev, password: e.target.value }))
   }
 
-  const handleRememberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleRememberChange = (e: CheckboxChangeEvent) => {
     setFormData(prev => ({ ...prev, remember: e.target.checked }))
   }
 
@@ -117,7 +118,7 @@ const LoginPage: React.FC = () => {
             <Form.Item name="remember" valuePropName="checked">
               <Checkbox
                 checked={formData.remember}
-                onChange={handleRememberChange as any}
+                onChange={handleRememberChange}
               >
                 记住我的登录状态
               </Checkbox>

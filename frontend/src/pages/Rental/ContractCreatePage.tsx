@@ -28,6 +28,9 @@ import { RentContractForm } from '../../components/Forms';
 import { RentContractCreate } from '../../types/rentContract';
 import { rentContractService } from '../../services/rentContractService';
 import { useFormat } from '../../utils/format';
+import { createLogger } from '../../utils/logger';
+
+const pageLogger = createLogger('ContractCreate');
 
 const { Title, Text } = Typography;
 
@@ -42,22 +45,18 @@ const ContractCreatePage: React.FC = () => {
   const handleCreateContract = async (contractData: RentContractCreate) => {
     setLoading(true);
     try {
-      const response = await rentContractService.createContract(contractData) as any;
+      const contract = await rentContractService.createContract(contractData);
 
-      if (response.success) {
-        setContractCreated(true);
-        _setCreatedContractId(response.data.id);
-        message.success('合同创建成功！');
+      setContractCreated(true);
+      _setCreatedContractId(contract.id);
+      message.success('合同创建成功！');
 
-        // 3秒后跳转到合同列表页面
-        setTimeout(() => {
-          navigate('/rental/contracts');
-        }, 3000);
-      } else {
-        message.error(response.message || '合同创建失败');
-      }
+      // 3秒后跳转到合同列表页面
+      setTimeout(() => {
+        navigate('/rental/contracts');
+      }, 3000);
     } catch (error) {
-      console.error('创建合同失败:', error);
+      pageLogger.error('创建合同失败:', error as Error);
       message.error('创建合同失败，请检查网络连接');
     } finally {
       setLoading(false);
@@ -180,8 +179,8 @@ const ContractCreatePage: React.FC = () => {
           </Row>
           <div style={{ marginTop: '12px' }}>
             <Text type="secondary">
-              • 请确保所有必填字段都已填写完整<br/>
-              • 租金条款可以设置多个时间段的租金<br/>
+              • 请确保所有必填字段都已填写完整<br />
+              • 租金条款可以设置多个时间段的租金<br />
               • 合同创建后将自动生成租金台账
             </Text>
           </div>

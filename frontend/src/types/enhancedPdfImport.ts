@@ -210,13 +210,29 @@ export interface EnhancedSessionProgress {
   updated_at: string;
   error_message?: string;
 
+  // Flattened properties used in EnhancedProcessingStatus
+  processing_method?: string;
+  chinese_char_count?: number;
+  extracted_data?: Record<string, unknown>;
+  validation_results?: Record<string, unknown> | boolean;
+  progress_percentage?: number;
+  confidence_score?: number;
+  ocr_used?: boolean;
+  warnings?: string[];
+
   // 增强版状态信息
   enhanced_status?: {
     extraction_results?: {
       methods_used: string[];
       has_chinese_ocr: boolean;
       has_tables: boolean;
+
       has_seals: boolean;
+    };
+    document_analysis?: {
+      document_type?: string;
+      quality_score?: number;
+      recommendations?: string[];
     };
     table_analysis?: TableAnalysisResult;
     fusion_results?: {
@@ -241,7 +257,9 @@ export interface EnhancedSessionProgress {
         semantic_confidence: number;
         error_rate: number;
         completeness: number;
+
         overall_quality: number;
+        processing_methods?: string[];
       };
       processing_summary: {
         processing_methods: string[];
@@ -266,6 +284,7 @@ export interface EnhancedFileUploadResponse {
   estimated_time?: string;
   processing_options?: ProcessingOptions;
   error?: string;
+  enhanced_status?: EnhancedSessionProgress['enhanced_status'];
 }
 
 // 增强版完整结果接口

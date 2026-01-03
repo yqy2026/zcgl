@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { message } from "antd";
 import { apiRequest, API_ENDPOINTS, ApiError, API_BASE_URL } from "@/api/config";
+import type { StandardApiResponse } from "@/types/apiResponse";
 
 // API返回的资产数据格式
 interface AssetApiResponse {
@@ -56,23 +57,23 @@ const fetchAssets = async (params: {
       limit: params.pageSize.toString(),
     });
 
-    if (params.search) {
+    if (params.search !== undefined && params.search !== '') {
       searchParams.append("search", params.search);
     }
 
     if (params.filters) {
       const { propertyNature, usageStatus, ownershipStatus, ownershipEntity } = params.filters;
 
-      if (propertyNature) {
+      if (propertyNature !== undefined && propertyNature !== '') {
         searchParams.append("property_nature", propertyNature);
       }
-      if (usageStatus) {
+      if (usageStatus !== undefined && usageStatus !== '') {
         searchParams.append("usage_status", usageStatus);
       }
-      if (ownershipStatus) {
+      if (ownershipStatus !== undefined && ownershipStatus !== '') {
         searchParams.append("ownership_status", ownershipStatus);
       }
-      if (ownershipEntity) {
+      if (ownershipEntity !== undefined && ownershipEntity !== '') {
         searchParams.append("ownership_entity", ownershipEntity);
       }
     }
@@ -84,10 +85,10 @@ const fetchAssets = async (params: {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
-    const result = await response.json();
+    const result = await response.json() as { items: AssetApiResponse[]; total: number; page: number; limit: number };
 
     // 检查响应格式
-    if (!result || !result.items) {
+    if (!result || !Array.isArray(result.items)) {
       throw new Error("Invalid API response format");
     }
 
@@ -109,14 +110,14 @@ const fetchAssets = async (params: {
           occupancyRate: item.usage_status === "出租" ? "100" : "0", // 移除%符号，只保留数字
           ownershipStatus: item.ownership_status || "",
           businessCategory: item.business_category || "",
-          isLitigated: item.is_litigated || "否",
-          notes: item.notes || "",
-          createdAt: item.created_at || "",
-          updatedAt: item.updated_at || "",
+          isLitigated: (item.is_litigated === true || item.is_litigated === "true" || item.is_litigated === "是") ? "是" : "否",
+          notes: item.notes ?? "",
+          createdAt: item.created_at ?? "",
+          updatedAt: item.updated_at ?? "",
         };
 
         // 验证关键字段
-        if (!transformed.id || !transformed.propertyName) {
+        if ((transformed.id === undefined || transformed.id === '') || (transformed.propertyName === undefined || transformed.propertyName === '')) {
           return null;
         }
 
@@ -141,13 +142,13 @@ const fetchAssets = async (params: {
 
 const fetchAssetSummary = async (): Promise<AssetSummary> => {
   try {
-    const result = await apiRequest<{
+    const result = await apiRequest<StandardApiResponse<{
       total_assets: number;
       usage_status: { rented: number; vacant: number; self_used: number };
-    }>(API_ENDPOINTS.statistics.basic);
+    }>>(API_ENDPOINTS.statistics.basic);
 
     // 处理API响应格式
-    const data = (result as any).success ? (result as any).data : result;
+    const data = result.data;
 
     const total = data.total_assets || 0;
     const rented = data.usage_status?.rented || 0;
@@ -198,16 +199,16 @@ const exportAssets = async (filters?: AssetFilters) => {
   if (filters) {
     const { propertyNature, usageStatus, ownershipStatus, ownershipEntity } = filters;
 
-    if (propertyNature) {
+    if (propertyNature !== undefined && propertyNature !== '') {
       searchParams.append("property_nature", propertyNature);
     }
-    if (usageStatus) {
+    if (usageStatus !== undefined && usageStatus !== '') {
       searchParams.append("usage_status", usageStatus);
     }
-    if (ownershipStatus) {
+    if (ownershipStatus !== undefined && ownershipStatus !== '') {
       searchParams.append("ownership_status", ownershipStatus);
     }
-    if (ownershipEntity) {
+    if (ownershipEntity !== undefined && ownershipEntity !== '') {
       searchParams.append("ownership_entity", ownershipEntity);
     }
   }

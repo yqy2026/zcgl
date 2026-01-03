@@ -50,7 +50,7 @@ import { StatisticCard, FinancialStatisticCard } from "./StatisticCard";
 import { ChartCard } from "./AnalyticsCard";
 import { AnalyticsPieChart, AnalyticsBarChart, AnalyticsLineChart } from "./Charts";
 // import AdvancedAnalyticsCard from './AdvancedAnalyticsCard'  // 暂时注释，等待后端API支持
-import { PerformanceMonitor } from "./PerformanceMonitor";
+import PerformanceMonitor from "../Performance/PerformanceMonitor";
 
 const { Title } = Typography;
 
@@ -232,7 +232,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
       }}
     >
       {/* 性能监控 */}
-      <PerformanceMonitor enabled={process.env.NODE_ENV === "development"} />
+      {process.env.NODE_ENV === "development" && <PerformanceMonitor />}
 
       {/* 头部操作栏 */}
       <Row gutter={[16, 16]} style={{ marginBottom: "24px" }}>

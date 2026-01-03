@@ -31,10 +31,16 @@ import {
   rentContractService
 } from '@/services/rentContractService';
 
-type OwnershipRentStatistics = any;
-type AssetRentStatistics = any;
-type MonthlyRentStatistics = any;
+import {
+  OwnershipRentStatistics,
+  AssetRentStatistics,
+  MonthlyRentStatistics,
+  RentStatisticsOverview
+} from '@/types/rentContract';
 import { formatCurrency } from '@/utils/format';
+import { createLogger } from '@/utils/logger';
+
+const pageLogger = createLogger('RentStatistics');
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
@@ -45,13 +51,37 @@ dayjs.locale('zh-cn');
 // 颜色配置
 const COLORS = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2'];
 
+interface ChartDatum {
+  type: string;
+  value: number;
+  [key: string]: unknown;
+}
+
+interface PieChartDatum {
+  type: string;
+  value: number;
+  paid: number;
+  overdue: number;
+}
+
+interface LineChartDatum {
+  month: string;
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  due: number;
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  paid: number;
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  overdue: number;
+  rate: number;
+}
+
 const RentStatisticsPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs]>([
     dayjs().startOf('year'),
     dayjs().endOf('year')
   ]);
-  const [overviewData, setOverviewData] = useState<any>(null);
+  const [overviewData, setOverviewData] = useState<RentStatisticsOverview | null>(null);
   const [ownershipStats, setOwnershipStats] = useState<OwnershipRentStatistics[]>([]);
   const [assetStats, setAssetStats] = useState<AssetRentStatistics[]>([]);
   const [monthlyStats, setMonthlyStats] = useState<MonthlyRentStatistics[]>([]);
@@ -62,20 +92,22 @@ const RentStatisticsPage: React.FC = () => {
     setLoading(true);
     try {
       const [startDate, endDate] = dateRange;
+      const startStr = startDate.format('YYYY-MM-DD');
+      const endStr = endDate.format('YYYY-MM-DD');
 
       // 并行获取所有统计数据
       const [overview, ownershipData, assetData, monthlyData] = await Promise.all([
         rentContractService.getStatisticsOverview({
-          start_date: startDate.format('YYYY-MM-DD'),
-          end_date: endDate.format('YYYY-MM-DD')
+          start_date: startStr,
+          end_date: endStr
         }),
         rentContractService.getOwnershipStatistics({
-          start_date: startDate.format('YYYY-MM-DD'),
-          end_date: endDate.format('YYYY-MM-DD')
+          start_date: startStr,
+          end_date: endStr
         }),
         rentContractService.getAssetStatistics({
-          start_date: startDate.format('YYYY-MM-DD'),
-          end_date: endDate.format('YYYY-MM-DD')
+          start_date: startStr,
+          end_date: endStr
         }),
         rentContractService.getMonthlyStatistics({
           year: selectedYear
@@ -88,7 +120,7 @@ const RentStatisticsPage: React.FC = () => {
       setMonthlyStats(monthlyData);
     } catch (error) {
       message.error('获取统计数据失败');
-      console.error('Statistics fetch error:', error);
+      pageLogger.error('Statistics fetch error:', error as Error);
       // 设置默认值以防止undefined错误
       setOverviewData(null);
       setOwnershipStats([]);
@@ -100,7 +132,7 @@ const RentStatisticsPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchStatistics();
+    void fetchStatistics();
   }, [dateRange, selectedYear]);
 
   // 导出统计数据
@@ -122,6 +154,7 @@ const RentStatisticsPage: React.FC = () => {
 
       message.success('导出成功');
     } catch (error) {
+      pageLogger.error('Export failed:', error as Error);
       message.error('导出失败');
     }
   };
@@ -132,7 +165,7 @@ const RentStatisticsPage: React.FC = () => {
       title: '权属方名称',
       dataIndex: 'ownership_name',
       key: 'ownership_name',
-      render: (text, record) => (
+      render: (text: string, record) => (
         <div>
           <div style={{ fontWeight: 'bold' }}>{text}</div>
           <div style={{ fontSize: '12px', color: '#666' }}>
@@ -146,21 +179,21 @@ const RentStatisticsPage: React.FC = () => {
       dataIndex: 'contract_count',
       key: 'contract_count',
       align: 'center',
-      render: (count) => <Tag color="blue">{count} 个</Tag>
+      render: (count: number) => <Tag color="blue">{count} 个</Tag>
     },
     {
       title: '应收总额',
       dataIndex: 'total_due_amount',
       key: 'total_due_amount',
       align: 'right',
-      render: (amount) => formatCurrency(amount)
+      render: (amount: number) => formatCurrency(amount)
     },
     {
       title: '已收总额',
       dataIndex: 'total_paid_amount',
       key: 'total_paid_amount',
       align: 'right',
-      render: (amount) => (
+      render: (amount: number) => (
         <span style={{ color: '#52c41a' }}>
           {formatCurrency(amount)}
         </span>
@@ -171,7 +204,7 @@ const RentStatisticsPage: React.FC = () => {
       dataIndex: 'total_overdue_amount',
       key: 'total_overdue_amount',
       align: 'right',
-      render: (amount) => (
+      render: (amount: number) => (
         <span style={{ color: amount > 0 ? '#f5222d' : '#52c41a' }}>
           {formatCurrency(amount)}
         </span>
@@ -182,7 +215,7 @@ const RentStatisticsPage: React.FC = () => {
       dataIndex: 'payment_rate',
       key: 'payment_rate',
       align: 'center',
-      render: (rate) => {
+      render: (rate: number | string) => {
         const percentage = Number(rate);
         let color = '#f5222d';
         if (percentage >= 90) color = '#52c41a';
@@ -207,7 +240,7 @@ const RentStatisticsPage: React.FC = () => {
       title: '资产名称',
       dataIndex: 'asset_name',
       key: 'asset_name',
-      render: (text, record) => (
+      render: (text: string, record) => (
         <div>
           <div style={{ fontWeight: 'bold' }}>{text}</div>
           <div style={{ fontSize: '12px', color: '#666' }}>
@@ -221,21 +254,21 @@ const RentStatisticsPage: React.FC = () => {
       dataIndex: 'contract_count',
       key: 'contract_count',
       align: 'center',
-      render: (count) => <Tag color="blue">{count} 个</Tag>
+      render: (count: number) => <Tag color="blue">{count} 个</Tag>
     },
     {
       title: '应收总额',
       dataIndex: 'total_due_amount',
       key: 'total_due_amount',
       align: 'right',
-      render: (amount) => formatCurrency(amount)
+      render: (amount: number) => formatCurrency(amount)
     },
     {
       title: '已收总额',
       dataIndex: 'total_paid_amount',
       key: 'total_paid_amount',
       align: 'right',
-      render: (amount) => (
+      render: (amount: number) => (
         <span style={{ color: '#52c41a' }}>
           {formatCurrency(amount)}
         </span>
@@ -246,7 +279,7 @@ const RentStatisticsPage: React.FC = () => {
       dataIndex: 'total_overdue_amount',
       key: 'total_overdue_amount',
       align: 'right',
-      render: (amount) => (
+      render: (amount: number) => (
         <span style={{ color: amount > 0 ? '#f5222d' : '#52c41a' }}>
           {formatCurrency(amount)}
         </span>
@@ -257,7 +290,7 @@ const RentStatisticsPage: React.FC = () => {
       dataIndex: 'payment_rate',
       key: 'payment_rate',
       align: 'center',
-      render: (rate) => {
+      render: (rate: number | string) => {
         const percentage = Number(rate);
         let color = '#f5222d';
         if (percentage >= 90) color = '#52c41a';
@@ -277,7 +310,7 @@ const RentStatisticsPage: React.FC = () => {
   ];
 
   // 准备图表数据
-  const ownershipChartData = (ownershipStats || []).map(item => ({
+  const ownershipChartData: PieChartDatum[] = (ownershipStats || []).map(item => ({
     type: item.ownership_name,
     value: Number(item.total_due_amount),
     paid: Number(item.total_paid_amount),
@@ -300,14 +333,14 @@ const RentStatisticsPage: React.FC = () => {
       position: 'bottom' as const,
     },
     tooltip: {
-      formatter: (datum: any) => ({
+      formatter: (datum: PieChartDatum) => ({
         name: datum.type,
         value: formatCurrency(datum.value),
       }),
     },
-  }
+  };
 
-  const monthlyChartData = (monthlyStats || []).map(item => ({
+  const monthlyChartData: LineChartDatum[] = (monthlyStats || []).map(item => ({
     month: item.year_month,
     due: Number(item.total_due_amount),
     paid: Number(item.total_paid_amount),
@@ -320,18 +353,18 @@ const RentStatisticsPage: React.FC = () => {
     { month: item.year_month, type: '应收金额', value: Number(item.total_due_amount) },
     { month: item.year_month, type: '已收金额', value: Number(item.total_paid_amount) },
     { month: item.year_month, type: '欠款金额', value: Number(item.total_overdue_amount) },
-  ])
+  ]);
 
   const monthlyBarConfig = {
     data: monthlyBarData,
     xField: 'month',
     yField: 'value',
     seriesField: 'type',
-    color: ({ type }: any) => {
-      if (type === '应收金额') return '#1890ff'
-      if (type === '已收金额') return '#52c41a'
-      if (type === '欠款金额') return '#f5222d'
-      return '#1890ff'
+    color: ({ type }: { type: string }) => {
+      if (type === '应收金额') return '#1890ff';
+      if (type === '已收金额') return '#52c41a';
+      if (type === '欠款金额') return '#f5222d';
+      return '#1890ff';
     },
     isGroup: true,
     columnStyle: {
@@ -341,7 +374,7 @@ const RentStatisticsPage: React.FC = () => {
       position: 'top' as const,
     },
     tooltip: {
-      formatter: (datum: any) => ({
+      formatter: (datum: ChartDatum) => ({
         name: datum.type,
         value: formatCurrency(datum.value),
       }),
@@ -351,7 +384,7 @@ const RentStatisticsPage: React.FC = () => {
         formatter: (value: number) => formatCurrency(value),
       },
     },
-  }
+  };
 
   const monthlyLineConfig = {
     data: monthlyChartData,
@@ -367,7 +400,7 @@ const RentStatisticsPage: React.FC = () => {
       shape: 'circle',
     },
     tooltip: {
-      formatter: (datum: any) => ({
+      formatter: (datum: LineChartDatum) => ({
         name: '收缴率',
         value: `${datum.rate.toFixed(2)}%`,
       }),
@@ -379,7 +412,7 @@ const RentStatisticsPage: React.FC = () => {
         formatter: (value: number) => `${value}%`,
       },
     },
-  }
+  };
 
   // 标签页配置
   const tabItems = [
@@ -465,8 +498,10 @@ const RentStatisticsPage: React.FC = () => {
             <Col>
               <Space>
                 <RangePicker
-                  value={dateRange as any}
-                  onChange={(dates) => setDateRange(dates as [dayjs.Dayjs, dayjs.Dayjs])}
+                  value={dateRange}
+                  onChange={(dates) => {
+                    if (dates) setDateRange(dates as [dayjs.Dayjs, dayjs.Dayjs]);
+                  }}
                   style={{ width: 300 }}
                 />
                 <Select
@@ -504,7 +539,7 @@ const RentStatisticsPage: React.FC = () => {
               <Card>
                 <Statistic
                   title="应收总额"
-                  value={Number(overviewData.total_due_amount || 0)}
+                  value={Number(overviewData.total_due || 0)}
                   precision={2}
                   prefix={<DollarOutlined />}
                   suffix="元"
@@ -516,7 +551,7 @@ const RentStatisticsPage: React.FC = () => {
               <Card>
                 <Statistic
                   title="已收总额"
-                  value={Number(overviewData.total_paid_amount || 0)}
+                  value={Number(overviewData.total_paid || 0)}
                   precision={2}
                   prefix={<DollarOutlined />}
                   suffix="元"
@@ -528,11 +563,11 @@ const RentStatisticsPage: React.FC = () => {
               <Card>
                 <Statistic
                   title="欠款总额"
-                  value={Number(overviewData.total_overdue_amount || 0)}
+                  value={Number(overviewData.total_overdue || 0)}
                   precision={2}
                   prefix={<DollarOutlined />}
                   suffix="元"
-                  valueStyle={{ color: Number(overviewData.total_overdue_amount || 0) > 0 ? '#f5222d' : '#52c41a' }}
+                  valueStyle={{ color: Number(overviewData.total_overdue || 0) > 0 ? '#f5222d' : '#52c41a' }}
                 />
               </Card>
             </Col>

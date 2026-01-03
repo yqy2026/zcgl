@@ -10,7 +10,7 @@ import {
   ResponseDetectionConfig,
   EnhancedApiError,
   ApiErrorType,
-} from '../types/api-response';
+} from '../types/apiResponse';
 
 // ==================== 响应检测器 ====================
 
@@ -310,7 +310,7 @@ export class ResponseExtractor {
       }
 
       return '操作成功';
-    } catch (error) {
+    } catch {
       return '操作完成';
     }
   }

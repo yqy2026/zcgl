@@ -16,7 +16,6 @@ import { useNavigate } from 'react-router-dom'
 import { AuthService } from '../../services/authService'
 
 const { Header } = Layout
-const { Text } = Typography
 
 interface AppHeaderProps {
   collapsed: boolean

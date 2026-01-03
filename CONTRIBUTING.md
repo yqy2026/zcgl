@@ -321,6 +321,88 @@ This document provides guidelines and standards for contributing to the project.
 
 ---
 
+## Automated File Naming Checks
+
+The project uses pre-commit hooks to automatically enforce file naming conventions.
+
+### Installation
+
+```bash
+# Install pre-commit (if not already installed)
+pip install pre-commit
+
+# Install the git hooks
+pre-commit install
+```
+
+### Usage
+
+The file naming check runs automatically before each commit. If you add files with incorrect naming, the commit will be blocked with helpful error messages.
+
+#### Manually Run Checks
+
+To check all files manually:
+
+```bash
+# Check all files
+pre-commit run check-file-naming --all-files
+
+# Check only staged files
+pre-commit run check-file-naming
+```
+
+#### Example Output
+
+**Valid files:**
+```
+✅ 所有文件命名符合规范！
+```
+
+**Invalid files:**
+```
+❌ 发现 2 个文件命名问题：
+
+❌ frontend/src/hooks/UseAuth.ts
+   Hook 文件应使用 use 前缀 + PascalCase
+   当前: UseAuth.ts
+   期望: use{FeatureName}.ts
+
+❌ frontend/src/components/Asset/assetCard.tsx
+   组件文件应使用 PascalCase
+   当前: assetCard.tsx
+   期望: {ComponentName}.tsx 或 {ComponentName}.ts
+```
+
+### How It Works
+
+The `scripts/check_file_naming.py` script validates:
+
+- **Frontend files** (TypeScript/TSX):
+  - Component files: PascalCase
+  - Hook files: `use` prefix + PascalCase
+  - Test files: `.test.` suffix in `__tests__/` directories
+  - Service/Util/Type files: camelCase
+
+- **Backend files** (Python):
+  - Python source files: snake_case
+  - Test files: `test_` prefix or `_test.py` suffix
+
+### Skipping the Check
+
+If you need to bypass the check (not recommended):
+
+```bash
+# Skip all pre-commit hooks
+git commit --no-verify -m "Your message"
+
+# Skip only the file naming check
+SKIP=check-file-naming git commit
+```
+
+---
+
+---
+
 ## Code Style Guidelines
 
 ### Frontend (TypeScript + React)

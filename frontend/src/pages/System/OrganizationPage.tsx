@@ -64,7 +64,7 @@ const OrganizationPage: React.FC = () => {
   const [selectedOrganization, setSelectedOrganization] = useState<Organization | null>(null);
   const [organizationHistory, setOrganizationHistory] = useState<OrganizationHistory[]>([]);
   const [activeTab, setActiveTab] = useState('list');
-  
+
   const [form] = Form.useForm();
 
   // 组织类型选项
@@ -96,7 +96,7 @@ const OrganizationPage: React.FC = () => {
     try {
       const data = await organizationService.getOrganizations();
       setOrganizations(data);
-    } catch (error) {
+    } catch {
       message.error('加载组织列表失败');
     } finally {
       setLoading(false);
@@ -107,7 +107,7 @@ const OrganizationPage: React.FC = () => {
     try {
       const data = await organizationService.getOrganizationTree();
       setOrganizationTree(convertTreeToDataNodes(data));
-    } catch (error) {
+    } catch {
       message.error('加载组织树失败');
     }
   };
@@ -116,7 +116,7 @@ const OrganizationPage: React.FC = () => {
     try {
       const data = await organizationService.getStatistics();
       setStatistics(data);
-    } catch (error) {
+    } catch {
       message.error('加载统计信息失败');
     }
   };
@@ -171,12 +171,12 @@ const OrganizationPage: React.FC = () => {
       loadOrganizations();
       return;
     }
-    
+
     setLoading(true);
     try {
       const data = await organizationService.searchOrganizations(keyword);
       setOrganizations(data);
-    } catch (error) {
+    } catch {
       message.error('搜索失败');
     } finally {
       setLoading(false);
@@ -205,7 +205,7 @@ const OrganizationPage: React.FC = () => {
       loadOrganizations();
       loadOrganizationTree();
       loadStatistics();
-    } catch (error) {
+    } catch {
       message.error('删除失败');
     }
   };
@@ -216,7 +216,7 @@ const OrganizationPage: React.FC = () => {
       const history = await organizationService.getOrganizationHistory(organization.id);
       setOrganizationHistory(history);
       setHistoryModalVisible(true);
-    } catch (error) {
+    } catch {
       message.error('加载历史记录失败');
     }
   };
@@ -234,7 +234,7 @@ const OrganizationPage: React.FC = () => {
       loadOrganizations();
       loadOrganizationTree();
       loadStatistics();
-    } catch (error) {
+    } catch {
       message.error(editingOrganization ? '更新失败' : '创建失败');
     }
   };
@@ -483,7 +483,7 @@ const OrganizationPage: React.FC = () => {
                 刷新树形结构
               </Button>
             </div>
-            
+
             <Tree
               treeData={organizationTree}
               showLine={{ showLeafIcon: false }}
@@ -586,7 +586,7 @@ const OrganizationPage: React.FC = () => {
           </Form.Item>
 
           <Divider orientation="left">负责人信息</Divider>
-          
+
           <Row gutter={16}>
             <Col span={8}>
               <Form.Item
@@ -616,7 +616,7 @@ const OrganizationPage: React.FC = () => {
           </Row>
 
           <Divider orientation="left">联系信息</Divider>
-          
+
           <Row gutter={16}>
             <Col span={8}>
               <Form.Item

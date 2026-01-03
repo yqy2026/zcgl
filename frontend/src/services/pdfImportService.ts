@@ -6,7 +6,9 @@
 
 import axios from 'axios';
 import type {
-  ProcessingOptions
+  ProcessingOptions,
+  EnhancedFileUploadResponse,
+  EnhancedSessionProgress
 } from '../types/enhancedPdfImport';
 import { createLogger } from '../utils/logger';
 
@@ -53,46 +55,7 @@ export interface SessionProgress {
     recommendations?: Record<string, string>;
     overall_match_confidence?: number;
   };
-  enhanced_status?: {
-    final_fields?: Record<string, unknown>;
-    final_results?: {
-      extraction_quality?: { overall_quality?: number };
-      validation_score?: number;
-      match_confidence?: number;
-      processing_summary?: { processing_methods?: unknown[] };
-    };
-    semantic_validation?: {
-      overall_confidence?: number;
-      recommendations?: string[];
-      total_fields?: number;
-      valid_fields?: number;
-      error_fields?: number;
-      warning_fields?: number;
-      field_results?: Record<string, unknown>;
-      semantic_analysis?: Record<string, unknown>;
-      summary?: string;
-    };
-    processing_summary?: {
-      engines_used?: string[];
-      processing_steps?: unknown[];
-      performance_metrics?: {
-        total_processing_time?: number;
-        memory_usage?: number;
-        cpu_usage?: number;
-      };
-      quality_assessment?: {
-        text_quality_score?: number;
-        structure_quality_score?: number;
-        data_completeness_score?: number;
-        semantic_accuracy_score?: number;
-        overall_quality_score?: number;
-        improvement_suggestions?: string[];
-      };
-    };
-    fusion_results?: {
-      confidence?: number;
-    };
-  };
+  enhanced_status?: EnhancedSessionProgress['enhanced_status'];
 }
 
 export interface SystemCapabilities {
@@ -301,7 +264,7 @@ class PDFImportService {
       // 直接返回后端API响应
       return response.data;
     } catch (error: unknown) {
-      console.error('PDF上传失败:', error);
+      logger.error('PDF上传失败:', error as Error);
 
       // 使用类型守卫处理错误
       if (isAxiosError(error)) {
@@ -354,7 +317,7 @@ class PDFImportService {
       const response = await axios.get(`${API_BASE_URL}/progress/${sessionId}`);
       return response.data;
     } catch (error: unknown) {
-      console.error('获取进度失败:', error);
+      logger.error('获取进度失败:', error as Error);
       return {
         success: false,
         error: isAxiosError(error) ? (error.response?.data?.detail || error.message) : isError(error) ? error.message : 'Unknown error'
@@ -449,7 +412,7 @@ class PDFImportService {
         };
       }
     } catch (error: unknown) {
-      console.error('获取结果失败:', error);
+      logger.error('获取结果失败:', error as Error);
       return {
         success: false,
         error: isAxiosError(error) ? (error.response?.data?.detail || error.message) : isError(error) ? error.message : 'Unknown error'
@@ -472,7 +435,7 @@ class PDFImportService {
 
       return response.data;
     } catch (error: unknown) {
-      console.error('确认导入失败:', error);
+      logger.error('确认导入失败:', error as Error);
       return {
         success: false,
         message: isAxiosError(error) ? (error.response?.data?.detail || error.message || '导入失败') : isError(error) ? error.message : '导入失败',
@@ -493,7 +456,7 @@ class PDFImportService {
       const response = await axios.delete(`${API_BASE_URL}/session/${sessionId}`);
       return response.data;
     } catch (error: unknown) {
-      console.error('取消会话失败:', error);
+      logger.error('取消会话失败:', error as Error);
       return {
         success: false,
         message: isAxiosError(error) ? (error.response?.data?.detail || error.message || '取消失败') : isError(error) ? error.message : '取消失败',
@@ -522,7 +485,7 @@ class PDFImportService {
       const response = await axios.get(PDF_API.SESSIONS);
       return response.data;
     } catch (error: unknown) {
-      console.error('获取会话列表失败:', error);
+      logger.error('获取会话列表失败:', error as Error);
 
       // 如果是404错误，提供空的会话列表
       if (axios.isAxiosError(error) && error.response?.status === 404) {
@@ -590,7 +553,7 @@ class PDFImportService {
         }
       };
     } catch (error: unknown) {
-      console.error('获取系统信息失败:', error);
+      logger.error('获取系统信息失败:', error as Error);
 
       // 如果是404错误，提供备用数据
       if (axios.isAxiosError(error) && error.response?.status === 404) {
@@ -659,7 +622,7 @@ class PDFImportService {
         validator_summary: response.data.validator_summary,
       };
     } catch (error: unknown) {
-      console.error('获取系统信息失败:', error);
+      logger.error('获取系统信息失败:', error as Error);
       throw new Error(isAxiosError(error) ? (error.response?.data?.detail || error.message) : isError(error) ? error.message : 'Unknown error');
     }
   }
@@ -683,7 +646,7 @@ class PDFImportService {
         system_ready: true
       };
     } catch (error: unknown) {
-      console.error('测试转换失败:', error);
+      logger.error('测试转换失败:', error as Error);
       const errorMsg = isAxiosError(error)
         ? (error.response?.data?.detail || error.message || 'Unknown error')
         : isError(error)
@@ -718,7 +681,7 @@ class PDFImportService {
         timestamp: new Date().toISOString()
       };
     } catch (error: unknown) {
-      console.error('健康检查失败:', error);
+      logger.error('健康检查失败:', error as Error);
       return {
         status: 'unhealthy',
         components: {},
@@ -750,7 +713,7 @@ class PDFImportService {
           }
         }
       } catch (error: unknown) {
-        console.error('轮询进度失败:', error);
+        logger.error('轮询进度失败:', error as Error);
       }
     };
 
@@ -814,7 +777,7 @@ class PDFImportService {
       const response = await axios.get(`${ENHANCED_API_BASE}/info`);
       return response.data;
     } catch (error: unknown) {
-      console.error('获取增强版系统信息失败:', error);
+      logger.error('获取增强版系统信息失败:', error as Error);
       return {
         success: false,
         message: '获取系统信息失败',
@@ -838,7 +801,7 @@ class PDFImportService {
     file: File,
     processingOptions: Partial<ProcessingOptions> = {},
     signal?: AbortSignal
-  ): Promise<FileUploadResponse> {
+  ): Promise<EnhancedFileUploadResponse> {
     // 默认处理选项
     const defaultOptions: ProcessingOptions = {
       prefer_ocr: true,
@@ -857,7 +820,7 @@ class PDFImportService {
     formData.append('processing_options', JSON.stringify(defaultOptions));
 
     try {
-      const response = await axios.post<FileUploadResponse>(
+      const response = await axios.post<EnhancedFileUploadResponse>(
         `${ENHANCED_API_BASE}/upload`,
         formData,
         {
@@ -877,7 +840,7 @@ class PDFImportService {
 
       return response.data;
     } catch (error: unknown) {
-      console.error('增强版PDF上传失败:', error);
+      logger.error('增强版PDF上传失败:', error as Error);
 
       if (isAxiosError(error)) {
         if (error.name === 'CanceledError' || error.code === 'ERR_CANCELED') {
@@ -921,7 +884,7 @@ class PDFImportService {
       const response = await axios.get(`${ENHANCED_API_BASE}/progress/${sessionId}`);
       return response.data;
     } catch (error: unknown) {
-      console.error('获取增强版进度失败:', error);
+      logger.error('获取增强版进度失败:', error as Error);
       return {
         success: false,
         error: isAxiosError(error) ? (error.response?.data?.detail || error.message) : isError(error) ? error.message : 'Unknown error'
@@ -946,7 +909,7 @@ class PDFImportService {
       });
       return response.data;
     } catch (error: unknown) {
-      console.error('取消增强版会话失败:', error);
+      logger.error('取消增强版会话失败:', error as Error);
       return {
         success: false,
         message: isAxiosError(error) ? (error.response?.data?.detail || error.message || '取消失败') : isError(error) ? error.message : '取消失败',
@@ -978,7 +941,7 @@ class PDFImportService {
           }
         }
       } catch (error: unknown) {
-        console.error('轮询增强版进度失败:', error);
+        logger.error('轮询增强版进度失败:', error as Error);
       }
     };
 
@@ -1047,9 +1010,9 @@ class PDFImportService {
               recommendations: []
             },
             processing_summary: {
-              total_processing_time: session.enhanced_status?.final_results?.processing_summary?.processing_methods?.length ? '60-90秒' : '未知',
+              total_processing_time: '60-90秒',
               extraction_method: 'enhanced_multi_engine',
-              engines_used: session.enhanced_status?.processing_summary?.engines_used || [],
+              engines_used: session.enhanced_status?.final_results?.processing_summary?.engines_used || [],
               processing_steps: [],
               performance_metrics: {
                 total_processing_time: 0,
