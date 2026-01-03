@@ -7,6 +7,9 @@ import { useState, useEffect, useCallback } from 'react'
 import { useQuery, useQueries } from '@tanstack/react-query'
 import { unifiedDictionaryService } from '../services/dictionary'
 import type { DictionaryOption, DictionaryServiceResult } from '../services/dictionary'
+import { createLogger } from '../utils/logger'
+
+const dictLogger = createLogger('useDictionary')
 
 interface UseDictionaryResult {
   options: DictionaryOption[]
@@ -123,7 +126,7 @@ export const useDictionaryManager = () => {
       const typeCodes = configs.map(config => config.code)
       setTypes(typeCodes)
     } catch (error) {
-      console.error('获取字典类型失败:', error)
+      dictLogger.error('获取字典类型失败:', error as Error)
     } finally {
       setLoading(false)
     }
@@ -141,7 +144,7 @@ export const useDictionaryManager = () => {
       }
       return success
     } catch (error) {
-      console.error('创建字典失败:', error)
+      dictLogger.error('创建字典失败:', error as Error)
       return false
     }
   }, [loadTypes])
@@ -154,7 +157,7 @@ export const useDictionaryManager = () => {
       }
       return success
     } catch (error) {
-      console.error('删除字典失败:', error)
+      dictLogger.error('删除字典失败:', error as Error)
       return false
     }
   }, [loadTypes])

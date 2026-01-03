@@ -144,7 +144,7 @@ export class ApiClient {
 
       const { access_token } = response.data
       localStorage.setItem('token', access_token)
-    } catch (error) {
+    } catch {
       throw new Error('Token refresh failed')
     }
   }

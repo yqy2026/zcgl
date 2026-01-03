@@ -11,6 +11,9 @@ import AssetList from "../../components/Asset/AssetList";
 import AssetSearch from "../../components/Asset/AssetSearch";
 import AssetAreaSummary from "../../components/Asset/AssetAreaSummary";
 import type { AssetSearchParams } from "../../types/asset";
+import { createLogger } from "../../utils/logger";
+
+const pageLogger = createLogger('AssetList');
 
 const { Title } = Typography;
 
@@ -119,7 +122,7 @@ const AssetListPage: React.FC = () => {
 
       message.success("资产数据导出成功");
     } catch (error) {
-      console.error("导出失败:", error);
+      pageLogger.error("导出失败:", error as Error);
       const errorMessage = error instanceof Error ? error.message : "导出失败，请稍后重试";
       message.error(errorMessage);
     }
@@ -153,7 +156,7 @@ const AssetListPage: React.FC = () => {
 
       message.success("选中资产数据导出成功");
     } catch (error) {
-      console.error("导出失败:", error);
+      pageLogger.error("导出失败:", error as Error);
       const errorMessage = error instanceof Error ? error.message : "导出失败，请稍后重试";
       message.error(errorMessage);
     }

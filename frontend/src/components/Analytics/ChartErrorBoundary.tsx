@@ -1,5 +1,8 @@
 import { Component, ErrorInfo, ReactNode } from 'react'
 import { Alert, Button } from 'antd'
+import { createLogger } from '../../utils/logger'
+
+const componentLogger = createLogger('ChartErrorBoundary')
 
 interface Props {
   children: ReactNode
@@ -25,7 +28,7 @@ export class ChartErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Chart Error Boundary caught an error:', error, errorInfo)
+    componentLogger.error('Chart Error Boundary caught an error:', error)
     this.setState({
       error,
       errorInfo

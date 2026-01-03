@@ -3,8 +3,10 @@
  */
 
 import { enhancedApiClient } from '@/api/client';
+import { createLogger } from '@/utils/logger';
 
 const api = enhancedApiClient;
+const serviceLogger = createLogger('rentContractExcelService');
 
 export interface ExcelImportResult {
   success: boolean;
@@ -51,7 +53,7 @@ class RentContractExcelService {
 
       return response.data as Blob;
     } catch (error) {
-      console.error('下载模板失败:', error);
+      serviceLogger.error('下载模板失败:', error as Error);
       throw new Error('下载模板失败');
     }
   }
@@ -74,7 +76,7 @@ class RentContractExcelService {
       formData.append('import_ledger', String(options.import_ledger ?? false));
       formData.append('overwrite_existing', String(options.overwrite_existing ?? false));
 
-      const response = await api.post<any>(
+      const response = await api.post<ExcelImportResult>(
         `${this.baseUrl}/excel/import`,
         formData,
         {
@@ -86,7 +88,7 @@ class RentContractExcelService {
 
       return response.data as ExcelImportResult;
     } catch (error) {
-      console.error('导入Excel失败:', error);
+      serviceLogger.error('导入Excel失败:', error as Error);
       throw new Error('导入Excel失败');
     }
   }
@@ -128,7 +130,7 @@ class RentContractExcelService {
 
       return response.data as Blob;
     } catch (error) {
-      console.error('导出Excel失败:', error);
+      serviceLogger.error('导出Excel失败:', error as Error);
       throw new Error('导出Excel失败');
     }
   }
@@ -148,7 +150,7 @@ class RentContractExcelService {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('下载模板文件失败:', error);
+      serviceLogger.error('下载模板文件失败:', error as Error);
       throw error;
     }
   }
@@ -182,7 +184,7 @@ class RentContractExcelService {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('导出并下载文件失败:', error);
+      serviceLogger.error('导出并下载文件失败:', error as Error);
       throw error;
     }
   }

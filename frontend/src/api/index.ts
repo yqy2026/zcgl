@@ -18,4 +18,4 @@ export type {
   EnhancedApiError,
   RetryConfig,
   CacheConfig
-} from '../types/api-response';
+} from '../types/apiResponse';

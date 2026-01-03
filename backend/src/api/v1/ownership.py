@@ -18,6 +18,7 @@ from ...schemas.ownership import (
     OwnershipStatisticsResponse,
     OwnershipUpdate,
 )
+from ...services.ownership import ownership_service
 
 router = APIRouter()
 
@@ -36,9 +37,9 @@ async def get_ownership_dropdown_options(
         for item in ownerships:
             response = OwnershipResponse.model_validate(item)
             # 获取关联资产数量
-            response.asset_count = ownership.get_asset_count(db, item.id)
+            response.asset_count = ownership_service.get_asset_count(db, item.id)
             # 获取关联项目数量
-            response.project_count = ownership.get_project_count(db, item.id)
+            response.project_count = ownership_service.get_project_count(db, item.id)
             responses.append(response)
         return responses
     except Exception as e:
@@ -54,7 +55,7 @@ async def create_ownership(
 ):
     """创建新权属方"""
     try:
-        db_ownership = ownership.create(db, obj_in=ownership_in)
+        db_ownership = ownership_service.create_ownership(db, obj_in=ownership_in)
         return OwnershipResponse.model_validate(db_ownership)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -76,7 +77,7 @@ async def update_ownership(
         raise HTTPException(status_code=404, detail="权属方不存在")
 
     try:
-        updated_ownership = ownership.update(
+        updated_ownership = ownership_service.update_ownership(
             db, db_obj=db_ownership, obj_in=ownership_in
         )
         return OwnershipResponse.model_validate(updated_ownership)
@@ -101,7 +102,7 @@ async def update_ownership_projects(
 
     try:
         # 更新关联项目
-        ownership.update_related_projects(
+        ownership_service.update_related_projects(
             db, ownership_id=ownership_id, project_ids=project_ids
         )
 
@@ -110,7 +111,7 @@ async def update_ownership_projects(
         response = OwnershipResponse.model_validate(updated_ownership)
 
         # 获取实际的项目计数
-        actual_project_count = ownership.get_project_count(db, ownership_id)
+        actual_project_count = ownership_service.get_project_count(db, ownership_id)
         response.project_count = actual_project_count
         return response
     except Exception as e:
@@ -129,9 +130,9 @@ async def delete_ownership(
     """删除权属方"""
     try:
         # 先检查关联资产数量
-        asset_count = ownership.get_asset_count(db, ownership_id)
+        asset_count = ownership_service.get_asset_count(db, ownership_id)
 
-        deleted_ownership = ownership.delete(db, id=ownership_id)
+        deleted_ownership = ownership_service.delete_ownership(db, id=ownership_id)
         return OwnershipDeleteResponse(
             message="权属方删除成功",
             id=deleted_ownership.id,
@@ -164,9 +165,9 @@ async def get_ownerships(
     for item in result["items"]:
         response = OwnershipResponse.model_validate(item)
         # 获取关联资产数量
-        response.asset_count = ownership.get_asset_count(db, item.id)
+        response.asset_count = ownership_service.get_asset_count(db, item.id)
         # 获取关联项目数量
-        response.project_count = ownership.get_project_count(db, item.id)
+        response.project_count = ownership_service.get_project_count(db, item.id)
         items.append(response)
 
     return OwnershipListResponse(
@@ -193,9 +194,9 @@ async def search_ownerships(
     for item in result["items"]:
         response = OwnershipResponse.model_validate(item)
         # 获取关联资产数量
-        response.asset_count = ownership.get_asset_count(db, item.id)
+        response.asset_count = ownership_service.get_asset_count(db, item.id)
         # 获取关联项目数量
-        response.project_count = ownership.get_project_count(db, item.id)
+        response.project_count = ownership_service.get_project_count(db, item.id)
         items.append(response)
 
     return OwnershipListResponse(
@@ -217,7 +218,7 @@ async def get_ownership_statistics(
     current_user: User = Depends(get_current_active_user),
 ):
     """获取权属方统计信息"""
-    stats = ownership.get_statistics(db)
+    stats = ownership_service.get_statistics(db)
 
     # 转换最近创建的权属方
     recent_created = [
@@ -245,7 +246,7 @@ async def toggle_ownership_status(
 ):
     """切换权属方启用/禁用状态"""
     try:
-        db_ownership = ownership.toggle_status(db, id=ownership_id)
+        db_ownership = ownership_service.toggle_status(db, id=ownership_id)
         return OwnershipResponse.model_validate(db_ownership)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

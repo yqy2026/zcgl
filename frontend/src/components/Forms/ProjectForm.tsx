@@ -18,7 +18,9 @@ import { ownershipService } from '@/services/ownershipService';
 import { projectService } from '@/services/projectService';
 import type { Project, ProjectCreate, ProjectUpdate } from '@/types/project';
 import type { Ownership } from '@/types/ownership';
+import { createLogger } from '@/utils/logger';
 
+const componentLogger = createLogger('ProjectForm');
 const { TextArea } = Input;
 
 interface ProjectFormProps {
@@ -44,7 +46,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
         const response = await ownershipService.getOwnershipOptions(true);
         setOwnerships(response);
       } catch (error) {
-        console.error('获取权属方列表失败:', error);
+        componentLogger.error('获取权属方列表失败:', error as Error);
         message.error('获取权属方列表失败');
       }
     };
@@ -91,7 +93,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
     setSelectedOwnerships(newSelected);
   };
 
-  
+
   // 表单提交
   const handleSubmit = async (values: Record<string, unknown>) => {
     setLoading(true);
@@ -116,7 +118,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
       }
       onSuccess();
     } catch (error: unknown) {
-      console.error('保存项目失败:', error);
+      componentLogger.error('保存项目失败:', error as Error);
       const errorMsg = (error as any)?.response?.data?.detail || '保存项目失败';
       message.error(errorMsg);
     } finally {
@@ -124,7 +126,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
     }
   };
 
-  
+
   // 表单验证规则接口
   interface FormValidationRule {
     field?: string

@@ -12,6 +12,7 @@ from ...schemas.asset import (
     SystemDictionaryResponse,
     SystemDictionaryUpdate,
 )
+from ...services.system_dictionary import system_dictionary_service
 
 # 创建系统字典路由器
 router = APIRouter()
@@ -87,19 +88,13 @@ async def create_system_dictionary(
     - **dictionary_in**: 字典创建数据
     """
     try:
-        # 检查是否存在相同的类型和代码
-        existing = system_dictionary_crud.get_by_type_and_code(
-            db=db, dict_type=dictionary_in.dict_type, dict_code=dictionary_in.dict_code
+        dictionary = system_dictionary_service.create_dictionary(
+            db=db, obj_in=dictionary_in
         )
-        if existing:
-            raise HTTPException(
-                status_code=400,
-                detail=f"类型 {dictionary_in.dict_type} 中已存在代码 {dictionary_in.dict_code}",
-            )
-
-        dictionary = system_dictionary_crud.create(db=db, obj_in=dictionary_in)
         return dictionary
 
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:
@@ -121,32 +116,15 @@ async def update_system_dictionary(
     - **dictionary_in**: 字典更新数据
     """
     try:
-        # 检查字典是否存在
-        dictionary = system_dictionary_crud.get(db=db, id=dictionary_id)
-        if not dictionary:
-            raise HTTPException(status_code=404, detail=f"字典 {dictionary_id} 不存在")
-
-        # 如果更新了类型或代码，检查是否重复
-        if (
-            dictionary_in.dict_type and dictionary_in.dict_type != dictionary.dict_type
-        ) or (
-            dictionary_in.dict_code and dictionary_in.dict_code != dictionary.dict_code
-        ):
-            dict_type = dictionary_in.dict_type or dictionary.dict_type
-            dict_code = dictionary_in.dict_code or dictionary.dict_code
-            existing = system_dictionary_crud.get_by_type_and_code(
-                db=db, dict_type=dict_type, dict_code=dict_code
-            )
-            if existing and existing.id != dictionary_id:
-                raise HTTPException(
-                    status_code=400, detail=f"类型 {dict_type} 中已存在代码 {dict_code}"
-                )
-
-        updated_dictionary = system_dictionary_crud.update(
-            db=db, db_obj=dictionary, obj_in=dictionary_in
+        updated_dictionary = system_dictionary_service.update_dictionary(
+            db=db, id=dictionary_id, obj_in=dictionary_in
         )
         return updated_dictionary
 
+    except ValueError as e:
+        if "不存在" in str(e):
+            raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:
@@ -163,15 +141,11 @@ async def delete_system_dictionary(
     - **dictionary_id**: 字典ID
     """
     try:
-        # 检查字典是否存在
-        dictionary = system_dictionary_crud.get(db=db, id=dictionary_id)
-        if not dictionary:
-            raise HTTPException(status_code=404, detail=f"字典 {dictionary_id} 不存在")
-
-        # 删除字典
-        system_dictionary_crud.remove(db=db, id=dictionary_id)
+        system_dictionary_service.delete_dictionary(db=db, id=dictionary_id)
         return {"message": f"字典 {dictionary_id} 已成功删除"}
 
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:
@@ -190,6 +164,13 @@ async def batch_update_system_dictionaries(
     批量更新系统字典
 
     - **updates**: 更新数据列表，格式: [{"id": "xxx", "data": {...}}]
+    - 注意：此端点原逻辑是混合更新，现在主要用于排序。
+    - 如果需要通用批量更新，应该拆分或明确用途。
+    - 原有系统似乎用于排序：`update_sort_orders` in CRUD was specific.
+    - 但 `system_dictionaries.py` line 186-213 was generic update.
+    - Let's keep it generic using service loop or specific batch method if needed.
+    - If strictly existing logic: it was looping and updating.
+    - I can forward to a loop in Service or keep loop here calling update.
     """
     try:
         updated_dictionaries = []
@@ -201,14 +182,16 @@ async def batch_update_system_dictionaries(
             if not dictionary_id:
                 continue
 
-            dictionary = system_dictionary_crud.get(db=db, id=dictionary_id)
-            if not dictionary:
+            # Calling service update for each
+            try:
+                updated = system_dictionary_service.update_dictionary(
+                    db=db,
+                    id=dictionary_id,
+                    obj_in=SystemDictionaryUpdate(**update_data),
+                )
+                updated_dictionaries.append(updated)
+            except ValueError:
                 continue
-
-            updated_dictionary = system_dictionary_crud.update(
-                db=db, db_obj=dictionary, obj_in=SystemDictionaryUpdate(**update_data)
-            )
-            updated_dictionaries.append(updated_dictionary)
 
         return updated_dictionaries
 

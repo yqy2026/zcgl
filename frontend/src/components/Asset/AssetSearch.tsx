@@ -31,6 +31,9 @@ import dayjs from 'dayjs'
 import type { AssetSearchParams } from '@/types/asset'
 import { assetService } from '@/services/assetService'
 import { useSearchHistory } from '@/hooks/useSearchHistory'
+import { createLogger } from '@/utils/logger'
+
+const componentLogger = createLogger('AssetSearch')
 
 const { Option } = Select
 const { RangePicker } = DatePicker
@@ -81,7 +84,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
             // 直接从专门的API获取
             return await assetService.getOwnershipEntities()
           } catch (error) {
-            console.warn('获取权属方失败，使用默认选项:', error)
+            componentLogger.warn(`获取权属方失败，使用默认选项: ${String(error)}`)
             return ['政府', '企业', '事业单位', '社会团体', '其他']
           }
         },
@@ -95,7 +98,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
             // 直接从专门的API获取
             return await assetService.getBusinessCategories()
           } catch (error) {
-            console.warn('获取业态类别失败，使用默认选项:', error)
+            componentLogger.warn(`获取业态类别失败，使用默认选项: ${String(error)}`)
             return ['办公', '商业', '工业', '仓储', '住宅', '酒店', '餐饮', '其他']
           }
         },

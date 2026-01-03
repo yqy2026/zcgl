@@ -3,6 +3,9 @@
  */
 
 import { lazy, ComponentType } from 'react'
+import { createLogger } from './logger'
+
+const perfLogger = createLogger('Performance')
 
 // 内存信息接口
 export interface MemoryInfo {
@@ -83,7 +86,7 @@ class PreloadManager {
     promise.then(() => {
       this.preloadedModules.add(key)
     }).catch(error => {
-      console.warn(`Failed to preload module ${key}:`, error)
+      perfLogger.warn(`Failed to preload module ${key}:`, { error })
       this.preloadPromises.delete(key)
     })
 
@@ -163,9 +166,9 @@ class PerformanceMonitor {
     this.observeMetric('first-contentful-paint', (entry) => {
       const fcp = entry.startTime
       this.metrics.set('fcp', fcp)
-      
+
       if (fcp > this.config.thresholds.fcp) {
-        console.warn(`FCP is slow: ${fcp}ms (threshold: ${this.config.thresholds.fcp}ms)`)
+        perfLogger.warn(`FCP is slow: ${fcp}ms (threshold: ${this.config.thresholds.fcp}ms)`)
       }
     })
 
@@ -173,9 +176,9 @@ class PerformanceMonitor {
     this.observeMetric('largest-contentful-paint', (entry) => {
       const lcp = entry.startTime
       this.metrics.set('lcp', lcp)
-      
+
       if (lcp > this.config.thresholds.lcp) {
-        console.warn(`LCP is slow: ${lcp}ms (threshold: ${this.config.thresholds.lcp}ms)`)
+        perfLogger.warn(`LCP is slow: ${lcp}ms (threshold: ${this.config.thresholds.lcp}ms)`)
       }
     })
 
@@ -186,7 +189,7 @@ class PerformanceMonitor {
       this.metrics.set('fid', fid)
 
       if (fid > this.config.thresholds.fid) {
-        console.warn(`FID is slow: ${fid}ms (threshold: ${this.config.thresholds.fid}ms)`)
+        perfLogger.warn(`FID is slow: ${fid}ms (threshold: ${this.config.thresholds.fid}ms)`)
       }
     })
 
@@ -199,7 +202,7 @@ class PerformanceMonitor {
         this.metrics.set('cls', newCLS)
 
         if (newCLS > this.config.thresholds.cls) {
-          console.warn(`CLS is high: ${newCLS} (threshold: ${this.config.thresholds.cls})`)
+          perfLogger.warn(`CLS is high: ${newCLS} (threshold: ${this.config.thresholds.cls})`)
         }
       }
     })
@@ -212,7 +215,7 @@ class PerformanceMonitor {
 
       // 记录慢资源
       if (duration > 1000) { // 超过1秒
-        console.warn(`Slow resource: ${entry.name} took ${duration}ms`)
+        perfLogger.warn(`Slow resource: ${entry.name} took ${duration}ms`)
       }
 
       // 按资源类型分类
@@ -225,8 +228,8 @@ class PerformanceMonitor {
   private observeLongTasks() {
     this.observeMetric('longtask', (entry) => {
       const duration = entry.duration
-      console.warn(`Long task detected: ${duration}ms`)
-      
+      perfLogger.warn(`Long task detected: ${duration}ms`)
+
       const longTasks = this.metrics.get('long-tasks') || 0
       this.metrics.set('long-tasks', longTasks + 1)
     })
@@ -235,10 +238,10 @@ class PerformanceMonitor {
   private observeUserTiming() {
     this.observeMetric('measure', (entry) => {
       this.metrics.set(`user-timing-${entry.name}`, entry.duration)
-      
+
       // 记录慢操作
       if (entry.duration > 100) {
-        console.warn(`Slow operation: ${entry.name} took ${entry.duration}ms`)
+        perfLogger.warn(`Slow operation: ${entry.name} took ${entry.duration}ms`)
       }
     })
   }
@@ -258,7 +261,7 @@ class PerformanceMonitor {
 
       observer.observe({ entryTypes: [entryType] })
     } catch (error) {
-      console.warn(`Failed to observe ${entryType}:`, error)
+      perfLogger.warn(`Failed to observe ${entryType}:`, { error })
     }
   }
 
@@ -409,7 +412,7 @@ export class MemoryManager {
       try {
         task()
       } catch (error) {
-        console.warn('Cleanup task failed:', error)
+        perfLogger.warn('Cleanup task failed:', { error })
       }
     })
     this.cleanupTasks = []
@@ -439,6 +442,6 @@ export const resourcePreloader = ResourcePreloader.getInstance()
 
 // 导出便捷函数
 export const markPerformance = (name: string) => performanceMonitor.mark(name)
-export const measurePerformance = (name: string, startMark: string, endMark?: string) => 
+export const measurePerformance = (name: string, startMark: string, endMark?: string) =>
   performanceMonitor.measure(name, startMark, endMark)
 export const getPerformanceReport = () => performanceMonitor.getPerformanceReport()

@@ -2,10 +2,14 @@ from typing import Any
 
 """
 认证相关CRUD操作
+
+注意: CRUD层只负责数据库操作，不应依赖Service层。
+如需业务逻辑（如密码验证、用户校验等），请使用Service层。
 """
 
 from datetime import datetime, timedelta
 
+import bcrypt
 from sqlalchemy import and_, desc, func, or_
 from sqlalchemy.orm import Session
 
@@ -85,18 +89,52 @@ class UserCRUD:
         return users, total
 
     def create(self, db: Session, obj_in: UserCreate) -> User:
-        """创建用户"""
-        from ..services import AuthService
+        """
+        创建用户 (纯CRUD操作)
 
-        auth_service = AuthService(db)
-        return auth_service.create_user(obj_in)
+        注意: 此方法仅执行数据库操作。
+        如需完整的用户创建逻辑（包括密码验证、重复检查等），
+        请使用 UserManagementService.create_user()
+        """
+        # 密码哈希
+        salt = bcrypt.gensalt()
+        hashed_password = bcrypt.hashpw(obj_in.password.encode("utf-8"), salt).decode(
+            "utf-8"
+        )
+
+        # 创建用户对象
+        db_user = User(
+            username=obj_in.username,
+            email=obj_in.email,
+            full_name=obj_in.full_name,
+            password_hash=hashed_password,
+            role=obj_in.role,
+            employee_id=obj_in.employee_id,
+            default_organization_id=obj_in.default_organization_id,
+        )
+
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+        return db_user
 
     def update(self, db: Session, db_obj: User, obj_in: UserUpdate) -> User:
-        """更新用户"""
-        from ..services import AuthService
+        """
+        更新用户 (纯CRUD操作)
 
-        auth_service = AuthService(db)
-        return auth_service.update_user(db_obj.id, obj_in)
+        注意: 此方法仅执行数据库操作。
+        如需完整的用户更新逻辑（包括唯一性检查等），
+        请使用 UserManagementService.update_user()
+        """
+        # 更新字段
+        update_data = obj_in.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(db_obj, field, value)
+
+        db_obj.updated_at = datetime.now()
+        db.commit()
+        db.refresh(db_obj)
+        return db_obj
 
     def delete(self, db: Session, user_id: str) -> bool:
         """删除用户（软删除）"""
@@ -276,13 +314,22 @@ class AuditLogCRUD:
         ip_address: str | None = None,
         user_agent: str | None = None,
         session_id: str | None = None,
-    ) -> AuditLog:
-        """创建审计日志"""
-        from ..services import AuthService
+    ) -> AuditLog | None:
+        """
+        创建审计日志 (纯CRUD操作)
 
-        auth_service = AuthService(db)
-        return auth_service.create_audit_log(
+        注意: 此方法仅执行数据库操作。
+        如需完整的审计日志逻辑，请使用 AuditService.create_audit_log()
+        """
+        # 获取用户信息以记录用户名和角色
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            return None
+
+        audit_log = AuditLog(
             user_id=user_id,
+            username=user.username,
+            user_role=user.role.value if hasattr(user.role, "value") else user.role,
             action=action,
             resource_type=resource_type,
             resource_id=resource_id,
@@ -297,6 +344,11 @@ class AuditLogCRUD:
             user_agent=user_agent,
             session_id=session_id,
         )
+
+        db.add(audit_log)
+        db.commit()
+        db.refresh(audit_log)
+        return audit_log
 
     def count(self, db: Session) -> int:
         """审计日志总数"""

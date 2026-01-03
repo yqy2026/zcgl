@@ -5,6 +5,13 @@ import { Empty, Spin } from 'antd'
 
 const COLORS = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2', '#fa8c16', '#eb2f96', '#13c2c2', '#52c41a']
 
+// Type for chart tooltip/formatter datum with dynamic field access
+interface ChartDatum {
+  type?: string
+  value?: number
+  [key: string]: unknown
+}
+
 interface PieChartProps {
   data: Array<{ name: string; value: number; percentage?: number }>
   dataKey: string
@@ -47,9 +54,9 @@ export const AnalyticsPieChart: React.FC<PieChartProps> = ({
       position: 'bottom' as const,
     } : false,
     tooltip: {
-      formatter: (datum: any) => ({
-        name: datum.type,
-        value: datum.value.toLocaleString(),
+      formatter: (datum: ChartDatum) => ({
+        name: datum.type ?? '',
+        value: typeof datum.value === 'number' ? datum.value.toLocaleString() : String(datum.value ?? ''),
       }),
     },
   }
@@ -116,20 +123,26 @@ export const AnalyticsBarChart: React.FC<BarChartProps> = ({
     },
     label: {
       position: 'top' as const,
-      formatter: (datum: any) => isPercentage
-        ? `${datum[yDataKey].toFixed(1)}%`
-        : datum[yDataKey].toLocaleString(),
+      formatter: (datum: ChartDatum) => {
+        const val = datum[yDataKey] as number | undefined
+        return isPercentage
+          ? `${val?.toFixed(1) ?? '0'}%`
+          : val?.toLocaleString() ?? '0'
+      },
     },
     legend: showLegend ? {
       position: 'top' as const,
     } : false,
     tooltip: {
-      formatter: (datum: any) => ({
-        name: barName,
-        value: isPercentage
-          ? `${datum[yDataKey].toFixed(1)}%`
-          : datum[yDataKey].toLocaleString(),
-      }),
+      formatter: (datum: ChartDatum) => {
+        const val = datum[yDataKey] as number | undefined
+        return {
+          name: barName,
+          value: isPercentage
+            ? `${val?.toFixed(1) ?? '0'}%`
+            : val?.toLocaleString() ?? '0',
+        }
+      },
     },
     yAxis: {
       min: 0,
@@ -233,12 +246,15 @@ export const AnalyticsLineChart: React.FC<LineChartProps> = ({
       position: 'top' as const,
     } : false,
     tooltip: {
-      formatter: (datum: any) => ({
-        name: lineName,
-        value: isPercentage
-          ? `${datum[yDataKey].toFixed(1)}%`
-          : datum[yDataKey].toLocaleString(),
-      }),
+      formatter: (datum: ChartDatum) => {
+        const val = datum[yDataKey] as number | undefined
+        return {
+          name: lineName,
+          value: isPercentage
+            ? `${val?.toFixed(1) ?? '0'}%`
+            : val?.toLocaleString() ?? '0',
+        }
+      },
     },
     yAxis: {
       label: {
@@ -336,9 +352,9 @@ export const AnalyticsMultiBarChart: React.FC<MultiBarChartProps> = ({
     xField: xDataKey,
     yField: 'value',
     seriesField: 'type',
-    color: ({ type }: any) => {
+    color: ({ type }: ChartDatum) => {
       const bar = bars.find(b => b.name === type)
-      return bar?.fill || '#1890ff'
+      return bar?.fill ?? '#1890ff'
     },
     isGroup: true,
     columnStyle: {
@@ -349,9 +365,9 @@ export const AnalyticsMultiBarChart: React.FC<MultiBarChartProps> = ({
       position: 'top' as const,
     } : false,
     tooltip: {
-      formatter: (datum: any) => ({
-        name: datum.type,
-        value: datum.value?.toLocaleString(),
+      formatter: (datum: ChartDatum) => ({
+        name: datum.type ?? '',
+        value: typeof datum.value === 'number' ? datum.value.toLocaleString() : String(datum.value ?? ''),
       }),
     },
     yAxis: {
@@ -457,12 +473,15 @@ export const AnalyticsAreaChart: React.FC<AreaChartProps> = ({
       position: 'top' as const,
     } : false,
     tooltip: {
-      formatter: (datum: any) => ({
-        name: areaName,
-        value: isPercentage
-          ? `${datum[yDataKey].toFixed(1)}%`
-          : datum[yDataKey].toLocaleString(),
-      }),
+      formatter: (datum: ChartDatum) => {
+        const val = datum[yDataKey] as number | undefined
+        return {
+          name: areaName,
+          value: isPercentage
+            ? `${val?.toFixed(1) ?? '0'}%`
+            : val?.toLocaleString() ?? '0',
+        }
+      },
     },
     yAxis: {
       label: {

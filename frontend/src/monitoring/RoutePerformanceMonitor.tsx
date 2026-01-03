@@ -257,7 +257,7 @@ class RoutePerformanceMonitor {
             `route-start-${route}`,
             `route-interactive-${route}`
           )
-        } catch (error) {
+        } catch {
           // 忽略测量错误
         }
       }

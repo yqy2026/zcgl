@@ -1,5 +1,8 @@
 import { useEffect, useRef, useCallback } from "react";
 import { useLocation } from "react-router-dom";
+import { createLogger } from "@/utils/logger";
+
+const preloadLogger = createLogger('SmartPreload');
 
 // 预加载模块类型定义
 interface PreloadModule {
@@ -163,7 +166,7 @@ class SmartPreloadManager {
         // Preload completed
       }
     } catch (error) {
-      console.warn(`预加载失败: ${route}`, error);
+      preloadLogger.warn(`预加载失败: ${route}, ${String(error)}`);
     } finally {
       this.activePreloads.delete(route);
     }

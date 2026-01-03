@@ -109,3 +109,13 @@ export interface ErrorResponse {
     timestamp: string
   }
 }
+
+export interface UserActivity {
+  id: string
+  user_id: string
+  action: string
+  ip_address: string
+  user_agent: string
+  created_at: string
+  details?: Record<string, unknown>
+}

@@ -2,9 +2,9 @@
 import { AUTH_API } from '@/constants/api'
 import { enhancedApiClient } from '@/api/client'
 import { ApiErrorHandler } from '../utils/responseExtractor'
-import type { AuthResponse, StandardApiResponse } from '../types/api-response'
+import type { AuthResponse, StandardApiResponse } from '../types/apiResponse'
 
-import type { LoginCredentials, User } from '../types/auth'
+import type { LoginCredentials, User, UserActivity } from '../types/auth'
 import { createLogger } from '../utils/logger'
 
 const logger = createLogger('AuthService')
@@ -362,7 +362,7 @@ export class AuthService {
   }
 
   // 获取用户活动记录
-  static async getUserActivity(limit: number = 20): Promise<any[]> {
+  static async getUserActivity(limit: number = 20): Promise<UserActivity[]> {
 
     try {
       const result = await enhancedApiClient.get(AUTH_API.SESSIONS, {
@@ -374,7 +374,7 @@ export class AuthService {
         throw new Error(`获取活动记录失败: ${result.error}`);
       }
 
-      return (result.data as any[]) ?? [];
+      return (result.data as UserActivity[]) ?? [];
 
 
     } catch (error) {

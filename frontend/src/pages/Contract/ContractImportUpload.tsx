@@ -25,9 +25,12 @@ import {
   SettingOutlined,
   CloseOutlined
 } from '@ant-design/icons';
-import type { UploadFile, UploadProps } from 'antd/es/upload/interface';
+import type { UploadFile, UploadProps, RcFile } from 'antd/es/upload/interface';
 
-import { pdfImportService, type FileUploadResponse } from '../../services/pdfImportService';
+import { pdfImportService, type FileUploadResponse, type SystemInfoResponse } from '../../services/pdfImportService';
+import { createLogger } from '../../utils/logger';
+
+const pageLogger = createLogger('ContractImportUpload');
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -46,13 +49,13 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [sessionId, setSessionId] = useState<string>('');
   const [uploadedFile, setUploadedFile] = useState<UploadFile | null>(null);
-  const [systemInfo, setSystemInfo] = useState<any>(null);
+  const [systemInfo, setSystemInfo] = useState<SystemInfoResponse | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [abortController, setAbortController] = useState<AbortController | null>(null);
 
   // 加载系统信息
   React.useEffect(() => {
-    loadSystemInfo();
+    void loadSystemInfo();
   }, []);
 
   const loadSystemInfo = async () => {
@@ -60,12 +63,12 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
       const info = await pdfImportService.getSystemInfo();
       setSystemInfo(info);
     } catch (error) {
-      console.error('加载系统信息失败:', error);
+      pageLogger.error('加载系统信息失败:', error as Error);
     }
   };
 
   // 文件上传前的验证
-  const beforeUpload = useCallback((file: File) => {
+  const beforeUpload = useCallback((file: RcFile) => {
     // 验证文件类型
     if (!pdfImportService.validateFileType(file)) {
       message.error('只支持PDF文件格式！');
@@ -94,13 +97,9 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
   }, [abortController]);
 
   // 自定义上传请求
-  const customRequest = useCallback(async (options: {
-    file: File;
-    onProgress: (percent: number) => void;
-    onSuccess: (response?: unknown) => void;
-    onError: (error: Error) => void;
-  }) => {
+  const customRequest = useCallback(async (options: Parameters<Required<UploadProps>['customRequest']>[0]) => {
     const { file, onProgress, onSuccess, onError } = options;
+    const pdfFile = file as RcFile;
 
     // 设置上传状态
     setUploadStatus('uploading');
@@ -113,7 +112,7 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
     try {
 
       const response: FileUploadResponse = await pdfImportService.uploadPDFFile(
-        file,
+        pdfFile,
         false, // 不再使用markitdown
         controller.signal
       );
@@ -124,21 +123,25 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
       if (response.success) {
         // 完成进度
         setUploadProgress(100);
-        onProgress(100);
+        if (onProgress) {
+          onProgress({ percent: 100 });
+        }
 
         const uploadFile: UploadFile = {
           uid: response.session_id || Date.now().toString(),
-          name: file.name,
+          name: pdfFile.name,
           status: 'done',
-          size: file.size,
-          type: file.type,
-          originFileObj: file as any
+          size: pdfFile.size,
+          type: pdfFile.type,
+          originFileObj: pdfFile
         };
 
         setUploadedFile(uploadFile);
         setSessionId(response.session_id || '');
         setUploadStatus('success');
-        onSuccess(response);
+        if (onSuccess) {
+          onSuccess(response);
+        }
 
         // 重要：立即调用父组件的成功回调，让父组件接管后续处理
         if (response.session_id) {
@@ -155,14 +158,16 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
       setAbortController(null);
 
       // 如果是手动取消，不显示错误消息
-      const err = error as any;
+      const err = error as Error;
       if (err.name === 'AbortError' || err.message === 'canceled') {
         return;
       }
 
       setUploadStatus('error');
       setUploadProgress(0);
-      onError(error as Error);
+      if (onError) {
+        onError(err);
+      }
       onUploadError(err.message || '上传失败');
       message.error(err.message || '文件上传失败');
     }
@@ -187,7 +192,7 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
     multiple: false,
     accept: '.pdf',
     beforeUpload,
-    customRequest: customRequest as any,
+    customRequest,
     showUploadList: false,
     disabled: uploadStatus === 'uploading'
   };
@@ -199,14 +204,14 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
     const { capabilities } = systemInfo;
     const tags = [];
 
-    
-    if (capabilities.pdfplumber_available) {
+
+    if (capabilities.pdfplumber_available === true) {
       tags.push(<Tag color="green" key="pdfplumber">PDFPlumber可用</Tag>);
     } else {
       tags.push(<Tag color="orange" key="pdfplumber">PDFPlumber不可用</Tag>);
     }
 
-    if (capabilities.spacy_available) {
+    if (capabilities.spacy_available === true) {
       tags.push(<Tag color="green" key="spacy">NLP增强可用</Tag>);
     } else {
       tags.push(<Tag color="default" key="spacy">NLP增强不可用</Tag>);
@@ -246,7 +251,7 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
               </Col>
               <Col flex="auto" style={{ textAlign: 'right' }}>
                 <Text type="secondary">
-                  支持格式：{systemInfo.capabilities.supported_formats.join(', ')} |
+                  支持格式：{Array.isArray(systemInfo.capabilities.supported_formats) ? systemInfo.capabilities.supported_formats.join(', ') : 'PDF'} |
                   最大文件：{systemInfo.capabilities.max_file_size_mb}MB |
                   预计时间：{systemInfo.capabilities.estimated_processing_time}
                 </Text>

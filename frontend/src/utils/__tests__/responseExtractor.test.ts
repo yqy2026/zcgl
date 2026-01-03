@@ -6,7 +6,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { ResponseExtractor, ApiErrorHandler } from '../responseExtractor'
 import { AxiosResponse, AxiosError } from 'axios'
-import type { EnhancedApiError, ApiErrorType } from '@/types/api-response'
+import type { EnhancedApiError, ApiErrorType } from '@/types/apiResponse'
 
 // =============================================================================
 // Mock数据

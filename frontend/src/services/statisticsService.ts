@@ -129,7 +129,7 @@ export class StatisticsService {
    */
   async getAreaStatistics(filters?: Filters): Promise<AreaStatistics> {
     try {
-      const result = await enhancedApiClient.get<{ data: AreaStatistics }>(
+      const result = await enhancedApiClient.get<AreaStatistics>(
         "/assets/statistics/summary",
         {
           params: filters,
@@ -143,8 +143,7 @@ export class StatisticsService {
         throw new Error(`获取面积统计信息失败: ${result.error}`);
       }
 
-      // 处理嵌套数据结构
-      return (result.data as any)?.data || result.data!;
+      return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -237,7 +236,7 @@ export class StatisticsService {
    */
   async getOccupancyRateDistribution(filters?: Filters): Promise<ChartDataItem[]> {
     try {
-      const result = await enhancedApiClient.get<{ data: { categories: ChartDataItem[] } }>(
+      const result = await enhancedApiClient.get<{ categories: ChartDataItem[] }>(
         "/statistics/occupancy-rate/by-category",
         {
           params: { category_field: "business_category", ...filters },
@@ -251,8 +250,7 @@ export class StatisticsService {
         throw new Error(`获取出租率分布数据失败: ${result.error}`);
       }
 
-      // 处理嵌套数据结构
-      return (result.data as any)?.data?.categories || [];
+      return result.data?.categories ?? [];
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       logger.warn('获取出租率分布数据失败', { error: enhancedError.message });

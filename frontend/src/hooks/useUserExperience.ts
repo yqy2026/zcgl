@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { message } from 'antd'
 import SuccessNotification from '@/components/Feedback/SuccessNotification'
+import { createLogger } from '@/utils/logger'
+
+const uxLogger = createLogger('UserExperience')
 
 interface UseUserExperienceOptions {
   enableAutoSave?: boolean
@@ -72,8 +75,8 @@ export const useUserExperience = (options: UseUserExperienceOptions = {}) => {
 
     // 如果操作时间超过阈值，记录性能问题
     if (duration > threshold) {
-      console.warn(`Performance warning: ${key} took ${duration.toFixed(2)}ms`)
-      
+      uxLogger.warn(`Performance warning: ${key} took ${duration.toFixed(2)}ms`)
+
       // 可以发送性能数据到监控服务
       reportPerformance(key, duration)
     }
@@ -94,7 +97,7 @@ export const useUserExperience = (options: UseUserExperienceOptions = {}) => {
         await saveFunction()
         message.success('数据已自动保存', 1)
       } catch (error) {
-        console.error('Auto save failed:', error)
+        uxLogger.error('Auto save failed:', error as Error)
       }
     }, autoSaveInterval)
   }, [enableAutoSave, autoSaveInterval])
@@ -190,7 +193,7 @@ export const useUserExperience = (options: UseUserExperienceOptions = {}) => {
   return {
     // 网络状态
     isOnline,
-    
+
     // 加载状态
     isLoading,
     loadingText,
@@ -198,20 +201,20 @@ export const useUserExperience = (options: UseUserExperienceOptions = {}) => {
     showLoading,
     hideLoading,
     updateProgress,
-    
+
     // 性能监控
     startPerformanceTimer,
     endPerformanceTimer,
-    
+
     // 自动保存
     startAutoSave,
     stopAutoSave,
-    
+
     // 工具函数
     debounce,
     throttle,
     withLoadingState,
-    
+
     // 页面状态
     isPageVisible,
   }
@@ -262,7 +265,7 @@ const reportPerformance = (_operation: string, _duration: number) => {
     //   }),
     // }).catch(console.error)
   } catch (error) {
-    console.error('Failed to report performance:', error)
+    uxLogger.error('Failed to report performance:', error as Error)
   }
 }
 

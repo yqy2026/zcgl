@@ -51,7 +51,7 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
       // Processed project options
 
       setProjectOptions(projects);
-    } catch (error) {
+    } catch {
       message.error('加载项目选项失败');
       setProjectOptions([]); // 设置为空数组避免 undefined 错误
     }
@@ -118,7 +118,7 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
         if (values.related_projects && Array.isArray(values.related_projects)) {
           try {
             await (ownershipService as any).updateOwnershipProjects(initialValues.id, values.related_projects);
-          } catch (error) {
+          } catch {
             message.warning('基本信息更新成功，但关联项目更新失败');
           }
         }

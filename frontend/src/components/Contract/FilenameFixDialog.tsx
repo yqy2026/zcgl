@@ -19,7 +19,9 @@ import {
   ReloadOutlined,
   CopyOutlined
 } from '@ant-design/icons';
+import { createLogger } from '../../utils/logger';
 
+const componentLogger = createLogger('FilenameFixDialog');
 const { Title, Text, Paragraph } = Typography;
 
 interface FilenameFixDialogProps {
@@ -307,7 +309,7 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
       setCurrentStep(newSteps.length - 1);
 
     } catch (error) {
-      console.error('文件名修复失败:', error);
+      componentLogger.error('文件名修复失败:', error as Error);
       setSteps([
         {
           title: '修复失败',

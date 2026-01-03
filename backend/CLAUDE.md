@@ -1,0 +1,143 @@
+# Backend CLAUDE.md
+
+后端开发专用指南。通用信息请参阅根目录 `CLAUDE.md`。
+
+---
+
+## 快速开始
+
+```bash
+cd backend
+python run_dev.py       # 启动开发服务器 (port 8002)
+pytest                  # 运行测试
+ruff check . && ruff format .  # Lint + 格式化
+```
+
+---
+
+## 分层架构
+
+```
+请求 → api/v1/ → services/ → crud/ → models/
+              ↑ 业务逻辑    ↑ 数据库操作
+```
+
+**核心原则**: 业务逻辑 **必须** 放在 `services/`，不要放在 API 端点中。
+
+---
+
+## 添加新功能
+
+### 1. 创建 Schema (`schemas/my_feature.py`)
+
+```python
+from pydantic import BaseModel
+
+class MyFeatureCreate(BaseModel):
+    name: str
+
+class MyFeatureResponse(BaseModel):
+    id: int
+    name: str
+
+    class Config:
+        from_attributes = True
+```
+
+### 2. 创建 Model (`models/my_feature.py`)
+
+```python
+from src.models.base import Base
+from sqlalchemy import Column, Integer, String
+
+class MyFeature(Base):
+    __tablename__ = "my_features"
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), nullable=False)
+```
+
+### 3. 创建 CRUD (`crud/my_feature.py`)
+
+```python
+from src.crud.base import CRUDBase
+from src.models.my_feature import MyFeature
+from src.schemas.my_feature import MyFeatureCreate
+
+class CRUDMyFeature(CRUDBase[MyFeature, MyFeatureCreate, MyFeatureCreate]):
+    pass
+
+my_feature_crud = CRUDMyFeature(MyFeature)
+```
+
+### 4. 创建 Service (`services/my_feature/my_feature_service.py`)
+
+```python
+from sqlalchemy.orm import Session
+from src.crud.my_feature import my_feature_crud
+
+class MyFeatureService:
+    def __init__(self, db: Session):
+        self.db = db
+
+    def create(self, data: dict):
+        return my_feature_crud.create(self.db, obj_in=data)
+```
+
+### 5. 创建 API 端点 (`api/v1/my_feature.py`)
+
+```python
+from fastapi import APIRouter, Depends
+from src.core.router_registry import route_registry
+from src.services.my_feature.my_feature_service import MyFeatureService
+
+router = APIRouter(prefix="/my-feature", tags=["My Feature"])
+
+@router.get("/")
+async def get_all(service: MyFeatureService = Depends(get_service)):
+    return service.get_all()
+
+# 自动注册路由
+route_registry.register_router(router, prefix="/api/v1", tags=["My Feature"], version="v1")
+```
+
+---
+
+## 可选依赖处理
+
+```python
+from src.core.import_utils import safe_import
+
+# 关键依赖 - 缺失时生产环境会失败
+router_registry = safe_import("core.router_registry", critical=True)
+
+# 可选依赖 - 优雅降级
+ocr = safe_import("services.ocr", fallback=None)
+if ocr:
+    # 使用 OCR
+else:
+    # 提供回退方案
+```
+
+---
+
+## 测试
+
+```bash
+pytest -m unit              # 单元测试 (快速)
+pytest -m integration       # 集成测试 (含数据库)
+pytest -m api               # API 端点测试
+pytest -m "not slow"        # 排除慢测试
+pytest --cov=src --cov-report=html  # 覆盖率
+```
+
+测试文件位置: `tests/unit/`, `tests/integration/`
+
+---
+
+## 常见问题
+
+| 问题 | 解决方案 |
+|------|---------|
+| Import 错误 | `pip install -e .` |
+| 数据库连接失败 | 确保 `database/data/` 存在 |
+| Alembic 失败 | `alembic stamp head && alembic upgrade head` |

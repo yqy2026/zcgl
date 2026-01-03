@@ -36,6 +36,9 @@ import { rentContractExcelService, ExcelImportResult } from '../../services/rent
 const { Text, Paragraph } = Typography;
 const { RangePicker } = DatePicker;
 
+import { createLogger } from '../../utils/logger';
+const componentLogger = createLogger('RentContractExcelImport');
+
 interface RentContractExcelImportProps {
   onImportSuccess?: () => void;
   className?: string;
@@ -84,7 +87,7 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
 
       return result;
     } catch (error) {
-      console.error('导入失败:', error);
+      componentLogger.error('导入失败:', error as Error);
       message.error('导入失败，请重试');
       return null;
     } finally {
@@ -110,7 +113,7 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
       setExportModalVisible(false);
       form.resetFields();
     } catch (error) {
-      console.error('导出失败:', error);
+      componentLogger.error('导出失败:', error as Error);
       message.error('导出失败，请重试');
     } finally {
       setExporting(false);
@@ -122,7 +125,7 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
     try {
       await rentContractExcelService.downloadTemplateFile();
       message.success('模板下载成功');
-    } catch (error) {
+    } catch {
       message.error('模板下载失败，请重试');
     }
   };

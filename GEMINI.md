@@ -35,12 +35,13 @@
 D:\ccode\zcgl\
 ├── backend/                # Python/FastAPI Backend
 │   ├── src/
-│   │   ├── api/v1/         # API Endpoints (Versioned)
-│   │   ├── core/           # Core config, security, router registry
-│   │   ├── crud/           # Database operations
-│   │   ├── models/         # SQLAlchemy ORM models
-│   │   ├── schemas/        # Pydantic models
-│   │   ├── services/       # Business logic (OCR, Assets, etc.)
+│   │   ├── api/v1/         # API Endpoints (33 endpoint files)
+│   │   ├── core/           # Core config, security, router registry, environment
+│   │   ├── crud/           # Database operations (16 files)
+│   │   ├── models/         # SQLAlchemy ORM models (11 files)
+│   │   ├── schemas/        # Pydantic models (16 files)
+│   │   ├── services/       # Business logic (7 subdirectories)
+│   │   ├── middleware/     # Auth, CORS, request processing
 │   │   └── main.py         # Application entry point
 │   ├── tests/              # Pytest suite
 │   ├── alembic/            # Database migrations
@@ -49,15 +50,19 @@ D:\ccode\zcgl\
 ├── frontend/               # React/TypeScript Frontend
 │   ├── src/
 │   │   ├── api/            # API client & configuration
-│   │   ├── components/     # Reusable UI components
-│   │   ├── pages/          # Application pages/routes
+│   │   ├── components/     # Reusable UI components (159 files)
+│   │   ├── pages/          # Application pages/routes (42 files)
+│   │   ├── services/       # API services (35 files)
+│   │   ├── hooks/          # Custom React hooks (19 files)
 │   │   ├── store/          # Zustand stores
-│   │   └── types/          # TypeScript definitions
+│   │   ├── types/          # TypeScript definitions (14 files)
+│   │   └── utils/          # Utility functions (15 files)
 │   ├── package.json        # Frontend dependencies & scripts
 │   └── vite.config.ts      # Vite configuration
 ├── docs/                   # Comprehensive documentation
 ├── docker-compose.yml      # Service orchestration
-└── CLAUDE.md               # Existing AI assistant guide (Reference)
+├── CLAUDE.md               # AI assistant guide (Claude)
+└── GEMINI.md               # AI assistant guide (Gemini)
 ```
 
 ## Setup & Development Commands

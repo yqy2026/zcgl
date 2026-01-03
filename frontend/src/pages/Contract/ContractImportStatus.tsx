@@ -37,7 +37,8 @@ import {
 import {
   pdfImportService,
   type SessionProgress,
-  type CompleteResult
+  type CompleteResult,
+  type FileInfo
 } from '../../services/pdfImportService';
 
 const { Title, Text } = Typography;
@@ -45,7 +46,7 @@ const { Step } = Steps;
 
 interface ContractImportStatusProps {
   sessionId: string;
-  fileInfo: any;
+  fileInfo: FileInfo;
   onComplete: (result: CompleteResult) => void;
   onError: (error: string) => void;
   onCancel: () => void;

@@ -1,6 +1,9 @@
 import { useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { message } from 'antd'
+import { createLogger } from '@/utils/logger'
+
+const rtLogger = createLogger('RealTimeUpdates')
 
 interface UseRealTimeUpdatesOptions {
   enabled?: boolean
@@ -48,7 +51,7 @@ export const useRealTimeUpdates = (
           lastUpdateRef.current = currentTime
         }
       } catch (error) {
-        console.error('Real-time update error:', error)
+        rtLogger.error('Real-time update error:', error as Error)
         onError?.(error)
       }
     }
@@ -92,7 +95,7 @@ export const useRealTimeUpdates = (
             type: 'active',
           })
         } catch (error) {
-          console.error('Real-time update error:', error)
+          rtLogger.error('Real-time update error:', error as Error)
           onError?.(error)
         }
       }, interval)
@@ -154,7 +157,7 @@ export const useWebSocketUpdates = (
         wsRef.current.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data)
-            
+
             // 处理不同类型的消息
             switch (data.type) {
               case 'asset_updated':
@@ -170,17 +173,17 @@ export const useWebSocketUpdates = (
                 message.success(data.message || '批量操作完成')
                 break
               default:
-                // Unknown message type
+              // Unknown message type
             }
 
             onMessage?.(data)
           } catch (error) {
-            console.error('Error parsing WebSocket message:', error)
+            rtLogger.error('Error parsing WebSocket message:', error as Error)
           }
         }
 
         wsRef.current.onerror = (error) => {
-          console.error('WebSocket error:', error)
+          rtLogger.error('WebSocket error:', error as unknown as Error)
           onError?.(error)
         }
 
@@ -201,7 +204,7 @@ export const useWebSocketUpdates = (
           }
         }
       } catch (error) {
-        console.error('Error creating WebSocket connection:', error)
+        rtLogger.error('Error creating WebSocket connection:', error as Error)
         onError?.(error)
       }
     }
@@ -223,7 +226,7 @@ export const useWebSocketUpdates = (
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify(message))
     } else {
-      console.warn('WebSocket is not connected')
+      rtLogger.warn('WebSocket is not connected')
     }
   }
 

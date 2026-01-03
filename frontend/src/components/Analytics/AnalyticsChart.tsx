@@ -395,7 +395,7 @@ export const chartDataUtils = {
   },
 
   // 转换面积维度数据
-  toAreaData: (data: Array<{ name: string; total_area: number; area_percentage: number; average_area?: number }>): PieData[] => {
+  toAreaData: (data: Array<{ name: string; total_area?: number; area_percentage?: number; average_area?: number }>): PieData[] => {
     return data.map(item => ({
       type: item.name,  // Changed from 'name' to 'type' for @ant-design/plots
       value: Math.round((typeof item.total_area === 'number' ? item.total_area : 0) * 100) / 100,
@@ -407,7 +407,7 @@ export const chartDataUtils = {
 
 
   // 转换面积维度柱状图数据
-  toAreaBarData: (data: Array<{ name: string; total_area: number; count?: number; average_area?: number }>): BarData[] => {
+  toAreaBarData: (data: Array<{ name: string; total_area?: number; count?: number; average_area?: number }>): BarData[] => {
     return data.map(item => ({
       name: item.name,
       value: Math.round((typeof item.total_area === 'number' ? item.total_area : 0) * 100) / 100,
@@ -419,7 +419,7 @@ export const chartDataUtils = {
 
 
   // 转换业态类别面积数据
-  toBusinessCategoryAreaData: (data: Array<{ category: string; total_area: number; area_percentage: number; occupancy_rate?: number }>): BarData[] => {
+  toBusinessCategoryAreaData: (data: Array<{ category: string; total_area?: number; area_percentage?: number; occupancy_rate?: number }>): BarData[] => {
     return data.map(item => ({
       name: item.category,
       value: Math.round((typeof item.total_area === 'number' ? item.total_area : 0) * 100) / 100,

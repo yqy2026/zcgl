@@ -1,32 +1,7 @@
+from datetime import datetime
 from typing import Any
 
-
-class BusinessLogicError(Exception):
-    """Business logic error"""
-
-    pass
-
-
-class AssetNotFoundError(Exception):
-    """Asset not found error"""
-
-    pass
-
-
-class DuplicateAssetError(Exception):
-    """Duplicate asset error"""
-
-    pass
-
-
-"""
-任务管理API路由
-"""
-
-from datetime import UTC, datetime, timedelta
-
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query
-from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
 from ...crud.task import excel_task_config_crud, task_crud
@@ -34,7 +9,6 @@ from ...database import get_db
 from ...enums.task import TaskStatus
 from ...middleware.auth import get_current_active_user
 from ...models.auth import User
-from ...models.task import AsyncTask
 from ...schemas.task import (
     ExcelTaskConfigCreate,
     ExcelTaskConfigResponse,
@@ -46,6 +20,12 @@ from ...schemas.task import (
     TaskStatistics,
     TaskUpdate,
 )
+from ...services.task import task_service
+
+
+class BusinessLogicError(Exception):
+    pass
+
 
 router = APIRouter(prefix="/tasks", tags=["任务管理"])
 
@@ -58,15 +38,9 @@ async def create_task(
 ):
     """
     创建新的异步任务
-
-    - **task_type**: 任务类型
-    - **title**: 任务标题
-    - **description**: 任务描述
-    - **parameters**: 任务参数
-    - **config**: 任务配置
     """
     try:
-        task = task_crud.create(db=db, obj_in=task_in)
+        task = task_service.create_task(db=db, obj_in=task_in, user_id=current_user.id)
         return task
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"创建任务失败: {str(e)}")
@@ -88,16 +62,6 @@ async def get_tasks(
 ):
     """
     获取任务列表，支持分页和筛选
-
-    - **skip**: 跳过记录数
-    - **limit**: 每页记录数
-    - **task_type**: 按任务类型筛选
-    - **status**: 按状态筛选
-    - **user_id**: 按用户ID筛选
-    - **created_after**: 创建时间起始
-    - **created_before**: 创建时间结束
-    - **order_by**: 排序字段
-    - **order_dir**: 排序方向
     """
     try:
         # 处理时间筛选
@@ -131,10 +95,8 @@ async def get_tasks(
             limit=limit,
             pages=(total + limit - 1) // limit,
         )
-    except Exception as e:  # pragma: no cover
-        raise HTTPException(
-            status_code=500, detail=f"获取任务列表失败: {str(e)}"
-        )  # pragma: no cover
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取任务列表失败: {str(e)}")
 
 
 @router.get("/{task_id}", response_model=TaskResponse, summary="获取任务详情")
@@ -145,8 +107,6 @@ async def get_task(
 ):
     """
     获取单个任务的详细信息
-
-    - **task_id**: 任务ID
     """
     task = task_crud.get(db=db, id=task_id)
     if not task:
@@ -163,25 +123,14 @@ async def update_task(
 ):
     """
     更新任务信息
-
-    - **task_id**: 任务ID
-    - **task_in**: 更新数据
     """
-    task = task_crud.get(db=db, id=task_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="任务不存在")
-
-    # 检查任务是否可以更新
-    if task.status in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]:
-        raise HTTPException(status_code=400, detail="已完成的任务无法更新")
-
     try:
-        updated_task = task_crud.update(db=db, db_obj=task, obj_in=task_in)
+        updated_task = task_service.update_task(db=db, task_id=task_id, obj_in=task_in)
         return updated_task
-    except Exception as e:  # pragma: no cover
-        raise HTTPException(
-            status_code=500, detail=f"更新任务失败: {str(e)}"
-        )  # pragma: no cover
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"更新任务失败: {str(e)}")
 
 
 @router.post("/{task_id}/cancel", response_model=TaskResponse, summary="取消任务")
@@ -193,30 +142,20 @@ async def cancel_task(
 ):
     """
     取消正在运行的任务
-
-    - **task_id**: 任务ID
-    - **reason**: 取消原因
     """
-    task = task_crud.get(db=db, id=task_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="任务不存在")
-
-    # 检查任务是否可以取消
-    if task.status not in [TaskStatus.PENDING, TaskStatus.RUNNING]:
-        raise HTTPException(status_code=400, detail="任务无法取消")
-
     try:
-        # 更新任务状态为已取消
-        update_data = TaskUpdate(
-            status=TaskStatus.CANCELLED,
-            error_message=f"任务被取消: {cancel_request.reason if cancel_request and cancel_request.reason else '无原因'}",
+        updated_task = task_service.cancel_task(
+            db=db,
+            task_id=task_id,
+            reason=cancel_request.reason if cancel_request else None,
         )
-        updated_task = task_crud.update(db=db, db_obj=task, obj_in=update_data)
         return updated_task
-    except Exception as e:  # pragma: no cover
-        raise HTTPException(
-            status_code=500, detail=f"取消任务失败: {str(e)}"
-        )  # pragma: no cover
+    except ValueError as e:
+        if "任务不存在" in str(e):
+            raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"取消任务失败: {str(e)}")
 
 
 @router.delete("/{task_id}", summary="删除任务")
@@ -227,18 +166,14 @@ async def delete_task(
 ):
     """
     删除任务（软删除）
-
-    - **task_id**: 任务ID
     """
     try:
-        task_crud.delete(db=db, id=task_id)
+        task_service.delete_task(db=db, task_id=task_id)
         return {"message": "任务删除成功"}
-    except BusinessLogicError as e:  # pragma: no cover
-        raise HTTPException(status_code=400, detail=str(e))  # pragma: no cover
-    except Exception as e:  # pragma: no cover
-        raise HTTPException(
-            status_code=500, detail=f"删除任务失败: {str(e)}"
-        )  # pragma: no cover
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"删除任务失败: {str(e)}")
 
 
 @router.get(
@@ -253,8 +188,6 @@ async def get_task_history(
 ):
     """
     获取任务的历史记录
-
-    - **task_id**: 任务ID
     """
     task = task_crud.get(db=db, id=task_id)
     if not task:
@@ -263,10 +196,8 @@ async def get_task_history(
     try:
         history = task_crud.get_history(db=db, task_id=task_id)
         return history
-    except Exception as e:  # pragma: no cover
-        raise HTTPException(
-            status_code=500, detail=f"获取任务历史失败: {str(e)}"
-        )  # pragma: no cover
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取任务历史失败: {str(e)}")
 
 
 @router.get("/statistics", response_model=TaskStatistics, summary="获取任务统计")
@@ -277,16 +208,12 @@ async def get_task_statistics(
 ):
     """
     获取任务统计信息
-
-    - **user_id**: 按用户ID筛选
     """
     try:
-        stats = task_crud.get_statistics(db=db, user_id=user_id)
+        stats = task_service.get_statistics(db=db, user_id=user_id)
         return stats
-    except Exception as e:  # pragma: no cover
-        raise HTTPException(
-            status_code=500, detail=f"获取任务统计失败: {str(e)}"
-        )  # pragma: no cover
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取任务统计失败: {str(e)}")
 
 
 @router.get("/running", response_model=list[TaskResponse], summary="获取正在运行的任务")
@@ -306,10 +233,8 @@ async def get_running_tasks(
             order_dir="asc",
         )
         return tasks
-    except Exception as e:  # pragma: no cover
-        raise HTTPException(
-            status_code=500, detail=f"获取运行任务失败: {str(e)}"
-        )  # pragma: no cover
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取运行任务失败: {str(e)}")
 
 
 @router.get("/recent", response_model=list[TaskResponse], summary="获取最近任务")
@@ -320,18 +245,14 @@ async def get_recent_tasks(
 ):
     """
     获取最近的任务
-
-    - **limit**: 返回数量
     """
     try:
         tasks = task_crud.get_multi(
             db=db, limit=limit, order_by="created_at", order_dir="desc"
         )
         return tasks
-    except Exception as e:  # pragma: no cover
-        raise HTTPException(
-            status_code=500, detail=f"获取最近任务失败: {str(e)}"
-        )  # pragma: no cover
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取最近任务失败: {str(e)}")
 
 
 # ===== Excel任务配置管理 =====
@@ -343,29 +264,20 @@ async def get_recent_tasks(
     summary="创建Excel任务配置",
 )
 async def create_excel_config(
-    config_in: ExcelTaskConfigCreate, db: Session = Depends(get_db)
+    config_in: ExcelTaskConfigCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
 ):
     """
     创建Excel任务配置
-
-    - **config_name**: 配置名称
-    - **config_type**: 配置类型
-    - **task_type**: 任务类型
-    - **field_mapping**: 字段映射配置
-    - **validation_rules**: 验证规则配置
-    - **format_config**: 格式配置
-    - **is_default**: 是否默认配置
     """
     try:
-        config = excel_task_config_crud.create(db=db, obj_in=config_in)
-        db.commit()  # Commit at API layer, not CRUD layer
-        db.refresh(config)
+        config = task_service.create_excel_config(
+            db=db, obj_in=config_in, user_id=current_user.id
+        )
         return config
-    except Exception as e:  # pragma: no cover
-        db.rollback()  # pragma: no cover
-        raise HTTPException(
-            status_code=500, detail=f"创建Excel配置失败: {str(e)}"
-        )  # pragma: no cover
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"创建Excel配置失败: {str(e)}")
 
 
 @router.get(
@@ -380,19 +292,14 @@ async def get_excel_configs(
 ):
     """
     获取Excel任务配置列表
-
-    - **config_type**: 按配置类型筛选
-    - **task_type**: 按任务类型筛选
     """
     try:
         configs = excel_task_config_crud.get_multi(
             db=db, limit=50, config_type=config_type, task_type=task_type
         )
         return configs
-    except Exception as e:  # pragma: no cover
-        raise HTTPException(
-            status_code=500, detail=f"获取Excel配置失败: {str(e)}"
-        )  # pragma: no cover
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取Excel配置失败: {str(e)}")
 
 
 @router.get(
@@ -407,9 +314,6 @@ async def get_default_excel_config(
 ):
     """
     获取默认的Excel任务配置
-
-    - **config_type**: 配置类型
-    - **task_type**: 任务类型
     """
     try:
         config = excel_task_config_crud.get_default(
@@ -420,10 +324,8 @@ async def get_default_excel_config(
         return config
     except HTTPException:
         raise
-    except Exception as e:  # pragma: no cover
-        raise HTTPException(
-            status_code=500, detail=f"获取默认Excel配置失败: {str(e)}"
-        )  # pragma: no cover
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取默认Excel配置失败: {str(e)}")
 
 
 @router.get(
@@ -436,13 +338,11 @@ async def get_excel_config(
 ):
     """
     获取单个Excel配置的详细信息
-
-    - **config_id**: 配置ID
     """
-    config = excel_task_config_crud.get(db=db, id=config_id)  # pragma: no cover
-    if not config:  # pragma: no cover
-        raise HTTPException(status_code=404, detail="配置不存在")  # pragma: no cover
-    return config  # pragma: no cover
+    config = excel_task_config_crud.get(db=db, id=config_id)
+    if not config:
+        raise HTTPException(status_code=404, detail="配置不存在")
+    return config
 
 
 @router.put(
@@ -457,9 +357,6 @@ async def update_excel_config(
 ):
     """
     更新Excel任务配置
-
-    - **config_id**: 配置ID
-    - **config_in**: 更新数据
     """
     config = excel_task_config_crud.get(db=db, id=config_id)
     if not config:
@@ -470,10 +367,8 @@ async def update_excel_config(
             db=db, db_obj=config, obj_in=config_in
         )
         return updated_config
-    except Exception as e:  # pragma: no cover
-        raise HTTPException(
-            status_code=500, detail=f"更新Excel配置失败: {str(e)}"
-        )  # pragma: no cover
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"更新Excel配置失败: {str(e)}")
 
 
 @router.delete("/configs/excel/{config_id}", summary="删除Excel配置")
@@ -482,18 +377,12 @@ async def delete_excel_config(
 ):
     """
     删除Excel配置（软删除）
-
-    - **config_id**: 配置ID
     """
     try:
         excel_task_config_crud.delete(db=db, id=config_id)
         return {"message": "Excel配置删除成功"}
-    except BusinessLogicError as e:  # pragma: no cover
-        raise HTTPException(status_code=400, detail=str(e))  # pragma: no cover
-    except Exception as e:  # pragma: no cover
-        raise HTTPException(
-            status_code=500, detail=f"删除Excel配置失败: {str(e)}"
-        )  # pragma: no cover
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"删除Excel配置失败: {str(e)}")
 
 
 @router.get("/cleanup", summary="清理过期任务")
@@ -505,49 +394,8 @@ async def cleanup_old_tasks(
 ):
     """
     清理过期的任务记录
-
-    - **days**: 清理多少天前的任务
-    - **dry_run**: 是否为试运行
     """
     try:
-        cutoff_date = datetime.now(UTC) - timedelta(days=days)
-
-        # 查找过期的任务
-        old_tasks = (
-            db.query(AsyncTask)
-            .filter(
-                and_(
-                    AsyncTask.created_at < cutoff_date,
-                    AsyncTask.status.in_(
-                        [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]
-                    ),
-                    AsyncTask.is_active,
-                )
-            )
-            .all()
-        )
-
-        if dry_run:
-            return {
-                "message": f"试运行模式，发现 {len(old_tasks)} 个可清理的任务",
-                "cleanup_date": cutoff_date.isoformat(),
-                "task_count": len(old_tasks),
-            }
-        else:
-            # 执行清理
-            count = 0
-            for task in old_tasks:
-                task.is_active = False
-                count += 1
-
-            db.commit()
-
-            return {
-                "message": f"成功清理 {count} 个过期任务",
-                "cleanup_date": cutoff_date.isoformat(),
-                "cleaned_count": count,
-            }
-    except Exception as e:  # pragma: no cover
-        raise HTTPException(
-            status_code=500, detail=f"清理任务失败: {str(e)}"
-        )  # pragma: no cover
+        return task_service.cleanup_old_tasks(db=db, days=days, dry_run=dry_run)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"清理任务失败: {str(e)}")

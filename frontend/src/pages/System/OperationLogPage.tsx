@@ -37,40 +37,7 @@ import dayjs from 'dayjs'
 const { RangePicker } = DatePicker
 const { Search } = Input
 const { Option } = Select
-
-interface OperationLog {
-  id: string
-  user_id: string
-  username: string
-  user_name: string
-  action: string
-  action_name: string
-  module: string
-  module_name: string
-  resource_type: string
-  resource_id: string | null
-  resource_name: string | null
-  ip_address: string
-  user_agent: string
-  request_method: string
-  request_url: string
-  response_status: number
-  response_time: number
-  error_message: string | null
-  details: Record<string, unknown> | null
-  created_at: string
-}
-
-interface LogStatistics {
-  total: number
-  today: number
-  this_week: number
-  this_month: number
-  by_action: Record<string, number>
-  by_module: Record<string, number>
-  error_count: number
-  avg_response_time: number
-}
+import { type OperationLog, type LogStatistics } from '../../services/systemService'
 
 const OperationLogPage: React.FC = () => {
   const [logs, setLogs] = useState<OperationLog[]>([])
@@ -193,7 +160,7 @@ const OperationLogPage: React.FC = () => {
         }
       ]
       setLogs(mockLogs)
-    } catch (error) {
+    } catch {
       message.error('加载操作日志失败')
     } finally {
       setLoading(false)
@@ -214,7 +181,7 @@ const OperationLogPage: React.FC = () => {
         avg_response_time: Math.round(logs.reduce((sum, log) => sum + log.response_time, 0) / logs.length) || 0
       }
       setStatistics(mockStats)
-    } catch (error) {
+    } catch {
       message.error('加载统计信息失败')
     }
   }
@@ -388,7 +355,7 @@ const OperationLogPage: React.FC = () => {
                 prefix={<SettingOutlined />}
                 valueStyle={{
                   color: statistics.avg_response_time > 1000 ? '#cf1322' :
-                         statistics.avg_response_time > 500 ? '#fa8c16' : '#3f8600'
+                    statistics.avg_response_time > 500 ? '#fa8c16' : '#3f8600'
                 }}
               />
             </Card>
@@ -452,7 +419,13 @@ const OperationLogPage: React.FC = () => {
             <Col xs={24} sm={12} md={6}>
               <RangePicker
                 style={{ width: '100%' }}
-                onChange={(dates) => _setDateRange(dates as any)}
+                onChange={(dates) => {
+                  if (dates && dates[0] && dates[1]) {
+                    _setDateRange([dates[0], dates[1]])
+                  } else {
+                    _setDateRange(null)
+                  }
+                }}
                 placeholder={['开始日期', '结束日期']}
               />
             </Col>
@@ -540,7 +513,7 @@ const OperationLogPage: React.FC = () => {
                   <div>状态: {getStatusTag(selectedLog.response_status)}</div>
                   <div>耗时: <span style={{
                     color: selectedLog.response_time > 1000 ? '#ff4d4f' :
-                           selectedLog.response_time > 500 ? '#fa8c16' : '#52c41a'
+                      selectedLog.response_time > 500 ? '#fa8c16' : '#52c41a'
                   }}>
                     {selectedLog.response_time}ms
                   </span></div>
