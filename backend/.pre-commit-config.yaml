@@ -62,6 +62,16 @@ repos:
         name: end-of-file-fixer
         description: "确保文件以换行符结尾"
 
+  # 文件命名检查
+  - repo: local
+    hooks:
+      - id: check-file-naming
+        name: check-file-naming
+        description: "检查文件命名是否符合项目规范"
+        entry: python ../scripts/check_file_naming.py
+        language: system
+        pass_filenames: true
+
   # 代码复杂度检查
   - repo: local
     hooks:
