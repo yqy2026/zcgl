@@ -152,7 +152,7 @@ const DashboardPage: React.FC = () => {
           <Col xs={24} sm={12} lg={6}>
             <DataTrendCard
               title="资产总数"
-              value={areaSummary?.total_assets || 0}
+              value={(areaSummary?.total_assets !== null && areaSummary?.total_assets !== undefined) ? areaSummary?.total_assets : 0}
               suffix="个"
               precision={0}
               trend={mockTrends?.assets}
@@ -164,7 +164,7 @@ const DashboardPage: React.FC = () => {
           <Col xs={24} sm={12} lg={6}>
             <DataTrendCard
               title="管理总面积"
-              value={areaSummary?.total_area || 0}
+              value={(areaSummary?.total_area !== null && areaSummary?.total_area !== undefined) ? areaSummary?.total_area : 0}
               suffix="㎡"
               precision={2}
               trend={mockTrends?.area}
@@ -176,7 +176,7 @@ const DashboardPage: React.FC = () => {
           <Col xs={24} sm={12} lg={6}>
             <DataTrendCard
               title="可租面积"
-              value={areaSummary?.total_rentable_area || 0}
+              value={(areaSummary?.total_rentable_area !== null && areaSummary?.total_rentable_area !== undefined) ? areaSummary?.total_rentable_area : 0}
               suffix="㎡"
               precision={2}
               trend={mockTrends?.area}
@@ -188,7 +188,7 @@ const DashboardPage: React.FC = () => {
           <Col xs={24} sm={12} lg={6}>
             <DataTrendCard
               title="整体出租率"
-              value={areaSummary?.occupancy_rate || 0}
+              value={(areaSummary?.occupancy_rate !== null && areaSummary?.occupancy_rate !== undefined) ? areaSummary?.occupancy_rate : 0}
               suffix="%"
               precision={1}
               trend={mockTrends?.occupancy}
