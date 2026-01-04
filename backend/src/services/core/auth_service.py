@@ -1,5 +1,5 @@
 """
-[DEPRECATED] This module is deprecated. 
+[DEPRECATED] This module is deprecated.
 Please use specialized services in this directory:
 - authentication_service.py
 - user_management_service.py
@@ -49,25 +49,25 @@ class AuthService:
     # --- User Management Delegate ---
     def create_user(self, user_data):
         return self.user_service.create_user(user_data)
-    
+
     def get_user_by_id(self, user_id):
         return self.user_service.get_user_by_id(user_id)
-        
+
     def get_user_by_username(self, username):
         return self.user_service.get_user_by_username(username)
-        
+
     def get_user_by_email(self, email):
         return self.user_service.get_user_by_email(email)
-        
+
     def update_user(self, user_id, user_data):
         return self.user_service.update_user(user_id, user_data)
-        
+
     def deactivate_user(self, user_id):
         return self.user_service.deactivate_user(user_id)
-        
+
     def activate_user(self, user_id):
         return self.user_service.activate_user(user_id)
-        
+
     def unlock_user(self, user_id):
         return self.user_service.unlock_user(user_id)
 
@@ -104,20 +104,20 @@ class AuthService:
 
     def is_password_in_history(self, user, password):
         return self.password_service.is_password_in_history(user, password)
-    
+
     def add_password_to_history(self, user, password_hash):
         return self.password_service.add_password_to_history(user, password_hash)
-        
+
     def is_password_expired(self, user):
         return self.password_service.is_password_expired(user)
 
     # --- Audit Delegate ---
     def create_audit_log(self, *args, **kwargs):
         return self.audit_service.create_audit_log(*args, **kwargs)
-    
+
     # Internal helpers expose if needed
     def _generate_jti(self):
         return self.auth_service._generate_jti()
-    
+
     def _is_token_revoked(self, jti):
         return self.auth_service._is_token_revoked(jti)

@@ -3,7 +3,7 @@ from ...models.auth import AuditLog, User
 
 class AuditService:
     """审计日志服务"""
-    
+
     def __init__(self, db: Session):
         self.db = db
 

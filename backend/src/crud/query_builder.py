@@ -25,13 +25,13 @@ class QueryBuilder(Generic[ModelType]):
         """
         from sqlalchemy import func
         query = select(func.count()).select_from(self.model)
-        
+
         if filters:
             query = self._apply_filters(query, filters)
-        
+
         if search_query and search_fields:
             query = self._apply_search(query, search_query, search_fields)
-            
+
         return query
 
     def build_query(
@@ -47,9 +47,9 @@ class QueryBuilder(Generic[ModelType]):
     ) -> Select:
         """
         Builds a SQLAlchemy query with the given parameters.
-        
+
         Args:
-            filters: Dictionary of filters. 
+            filters: Dictionary of filters.
                      Simple key-value pairs are treated as equality defaults.
                      Can also support more complex structures if needed (future extension).
                      Special keys:
@@ -126,9 +126,9 @@ class QueryBuilder(Generic[ModelType]):
                     elif op == "le":
                         conditions.append(column <= value)
                     else:
-                        # Fallback to equality if op is unknown but potentially part of name? 
+                        # Fallback to equality if op is unknown but potentially part of name?
                         # Ideally shouldn't happen with this convention.
-                        pass 
+                        pass
             else:
                 # Direct equality
                 if hasattr(self.model, key):
@@ -136,7 +136,7 @@ class QueryBuilder(Generic[ModelType]):
 
         if conditions:
             query = query.where(and_(*conditions))
-        
+
         return query
 
     def _apply_search(self, query: Select, search_term: str, search_fields: list[str]) -> Select:
@@ -148,10 +148,10 @@ class QueryBuilder(Generic[ModelType]):
                 # For simplicity, assuming these are string types or casting might be needed for others.
                 # In generic implementation, we usually rely on the caller to provide valid string fields.
                 search_conditions.append(column.ilike(f"%{search_term}%"))
-        
+
         if search_conditions:
             query = query.where(or_(*search_conditions))
-        
+
         return query
 
     def _apply_sorting(self, query: Select, sort_by: str, sort_desc: bool) -> Select:

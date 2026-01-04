@@ -38,7 +38,7 @@ class SystemDictionaryService:
         db_obj = system_dictionary_crud.get(db, id)
         if not db_obj:
             raise ValueError("字典项不存在")
-        
+
         # Soft delete logic if model supports it, otherwise hard delete
         # SystemDictionary usually hard delete or soft?
         # CRUDBase remove is hard delete unless overridden.
@@ -50,7 +50,7 @@ class SystemDictionaryService:
         dictionary = system_dictionary_crud.get(db, id)
         if not dictionary:
             raise ValueError("字典项不存在")
-            
+
         dictionary.is_active = not dictionary.is_active
         db.add(dictionary)
         db.commit()
@@ -79,7 +79,7 @@ class SystemDictionaryService:
         # Refresh all?
         for item in updated_items:
             db.refresh(item)
-            
+
         return updated_items
 
 

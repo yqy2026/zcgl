@@ -24,7 +24,7 @@ if ACCESS_TOKEN_EXPIRE_MINUTES < 120:
 
 class AuthenticationService:
     """认证服务 - 协调者"""
-    
+
     def __init__(self, db: Session):
         self.db = db
         self.password_service = PasswordService()
@@ -35,7 +35,7 @@ class AuthenticationService:
     def _generate_jti(self) -> str:
         """生成JWT ID"""
         return secrets.token_urlsafe(32)
-    
+
     def _is_token_revoked(self, jti: str) -> bool:
         """检查令牌是否已被撤销"""
         return self.token_blacklist.is_blacklisted(jti)
@@ -166,10 +166,10 @@ class AuthenticationService:
             token_type = payload.get("type")
             jti = payload.get("jti")
             session_id = payload.get("session_id")
-            
+
             if user_id is None or token_type != "refresh":
                 return None
-            
+
             if self._is_token_revoked(jti):
                 return None
 

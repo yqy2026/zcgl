@@ -74,13 +74,13 @@ class AssetService:
         asset_data = asset_in.model_dump()
         calculated_fields = AssetCalculator.auto_calculate_fields(asset_data)
         final_data = {**asset_data, **calculated_fields}
-        
+
         errors = AssetCalculator.validate_area_consistency(final_data)
         if errors:
             raise HTTPException(
                 status_code=422, detail=f"数据验证失败: {'; '.join(errors)}"
             )
-        
+
         enhanced_asset_in = AssetCreate(**final_data)
 
         # 4. 创建并记录历史
@@ -126,16 +126,16 @@ class AssetService:
         for field in ["rentable_area", "rented_area", "annual_income", "annual_expense"]:
             if hasattr(asset, field):
                 current_data[field] = getattr(asset, field)
-        
+
         merged_data = {**current_data, **update_data_raw}
         calculated_data = AssetCalculator.auto_calculate_fields(merged_data)
-        
+
         errors = AssetCalculator.validate_area_consistency(calculated_data)
         if errors:
             raise HTTPException(
                 status_code=422, detail=f"数据验证失败: {'; '.join(errors)}"
             )
-        
+
         # 合并计算字段到更新数据
         final_update = {**update_data_raw, **{k: v for k, v in calculated_data.items() if k not in update_data_raw}}
         enhanced_asset_in = AssetUpdate(**final_update)

@@ -12,7 +12,7 @@ ALGORITHM = "HS256"
 
 class SessionService:
     """会话管理服务"""
-    
+
     def __init__(self, db: Session):
         self.db = db
 

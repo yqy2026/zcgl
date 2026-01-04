@@ -23,7 +23,7 @@ class CustomFieldService:
         )
         if existing:
             raise ValueError(f"字段名 {obj_in.field_name} 已存在")
-        
+
         return custom_field_crud.create(db, obj_in=obj_in)
 
     def update_custom_field(
@@ -33,14 +33,14 @@ class CustomFieldService:
         field = custom_field_crud.get(db, id)
         if not field:
             raise ValueError(f"字段 {id} 不存在")
-            
+
         if obj_in.field_name and obj_in.field_name != field.field_name:
             existing = custom_field_crud.get_by_field_name(
                 db, field_name=obj_in.field_name
             )
             if existing and existing.id != id:
                 raise ValueError(f"字段名 {obj_in.field_name} 已存在")
-        
+
         return custom_field_crud.update(db, db_obj=field, obj_in=obj_in)
 
     def delete_custom_field(self, db: Session, *, id: str) -> AssetCustomField:
@@ -151,7 +151,7 @@ class CustomFieldService:
 
             elif field.field_type == "boolean":
                 if not isinstance(value, bool):
-                     # Allow string 'true'/'false' for APIs sometimes? 
+                     # Allow string 'true'/'false' for APIs sometimes?
                      # Strict check as per original code
                     return False, f"字段 {field.display_name} 必须为布尔类型"
 
@@ -261,7 +261,7 @@ class CustomFieldService:
         self, db: Session, *, asset_id: str
     ) -> list[dict[str, Any]]:
         """获取资产的自定义字段值"""
-        # Delegating to CRUD or implementing logic. 
+        # Delegating to CRUD or implementing logic.
         # Original CRUD logic was empty stub.
         return custom_field_crud.get_asset_field_values(db, asset_id=asset_id)
 
@@ -270,7 +270,7 @@ class CustomFieldService:
         field = custom_field_crud.get(db, id)
         if not field:
             raise ValueError(f"字段 {id} 不存在")
-            
+
         field.is_active = not field.is_active
         db.add(field)
         db.commit()
@@ -297,7 +297,7 @@ class CustomFieldService:
         db.commit()
         for field in updated_fields:
             db.refresh(field)
-            
+
         return updated_fields
 
 

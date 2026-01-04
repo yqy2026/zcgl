@@ -13,7 +13,7 @@ PASSWORD_EXPIRE_DAYS = int(getattr(settings, "PASSWORD_EXPIRE_DAYS", 90))
 
 class PasswordService:
     """密码相关服务"""
-    
+
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         """验证密码"""
         try:

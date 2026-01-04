@@ -34,7 +34,7 @@ class ProjectService:
             # 3. 创建项目
             project_data = obj_in.model_dump()
             project_data["created_by"] = created_by
-            
+
             project = project_crud.create(db, obj_in=obj_in, created_by=created_by)
             return project
 
@@ -48,7 +48,7 @@ class ProjectService:
         project = project_crud.get(db, project_id)
         if not project:
             raise ValueError(f"项目 {project_id} 不存在")
-            
+
         return project_crud.update(db, db_obj=project, obj_in=obj_in, updated_by=updated_by)
 
     def toggle_status(
@@ -58,7 +58,7 @@ class ProjectService:
         project = project_crud.get(db, project_id)
         if not project:
             raise ValueError(f"项目 {project_id} 不存在")
-            
+
         # Toggle logic: 规划中/进行中 <-> 暂停
         if project.project_status in ["规划中", "进行中"]:
             project.project_status = "暂停"
@@ -67,7 +67,7 @@ class ProjectService:
         else:
              # Default to active if unknown
              project.project_status = "进行中"
-             
+
         project.updated_by = updated_by
         project.updated_at = datetime.now()
         db.add(project)
@@ -80,7 +80,7 @@ class ProjectService:
         count = project_crud.get_asset_count(db, project_id)
         if count > 0:
             raise ValueError(f"项目包含 {count} 个资产，无法删除")
-            
+
         project_crud.delete(db, id=project_id)
 
     def generate_project_code(self, db: Session, name: str | None = None) -> str:
@@ -93,7 +93,7 @@ class ProjectService:
 
         # 2. 生成顺序编码 PJ + YYMM + NNN
         prefix = f"PJ{datetime.now().strftime('%y%m')}"
-        
+
         last_project = (
             db.query(Project)
             .filter(Project.code.like(f"{prefix}%"))
@@ -114,7 +114,7 @@ class ProjectService:
                 next_seq = 1
         else:
             next_seq = 1
-            
+
         return f"{prefix}{next_seq:03d}"
 
     def _generate_name_code(self, name: str) -> str:
@@ -122,14 +122,14 @@ class ProjectService:
         try:
             if get_pinyin:
                 initials = "".join([c[0] for c in get_pinyin(name, format="strip", delimiter=" ").split()])
-                # Need to match Schema validation: PJ + 2509 + 001 ? 
+                # Need to match Schema validation: PJ + 2509 + 001 ?
                 # Wait, schema validation says: 2字母前缀 + 4位年月 + 3位序号
                 # If Validation is strict, then pinyin initials won't work unless they follow that format!
                 # Schema: pattern = r"^[A-Z]{2}\d{7,8}$"
                 # My pinyin logic produces "TEST" (e.g. 4 chars) which fails regex.
                 # So I CANNOT use pinyin initials as is. logic must produce compatible code.
                 # Actually I should disable pinyin name logic if schema enforces specific format.
-                # I will fallback to standard generation logic inside `generate_project_code` and drop `_generate_name_code` logic 
+                # I will fallback to standard generation logic inside `generate_project_code` and drop `_generate_name_code` logic
                 # OR adapt it to use initials as prefix? PJ is hardcoded in example.
                 # Let's just use the standard format PJ+YYMM+NNN to be safe and consistent.
                 return None # Disabled
@@ -137,7 +137,7 @@ class ProjectService:
                  return None
         except Exception:
              return None
-             
+
     def search_projects(self, db: Session, search_params: ProjectSearchRequest) -> dict[str, Any]:
          items, total = project_crud.search(db, search_params)
          return {

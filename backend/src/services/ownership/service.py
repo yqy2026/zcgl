@@ -17,20 +17,20 @@ class OwnershipService:
 
     def generate_ownership_code(self, db: Session) -> str:
         """生成权属方编码
-        
+
         编码规则：[前缀][年月][序号]
         示例：OW2501001（2025年1月第001个权属方）
         """
         # 固定前缀
         prefix = "OW"
-        
+
         # 获取当前年月
         current_date = datetime.now()
         year_month = current_date.strftime("%y%m")  # 如：2501
-        
+
         # 构建基础编码格式
         base_format = f"{prefix}{year_month}"
-        
+
         # 查询所有已存在的编码（包括新格式和旧格式）
         existing_codes = (
             db.query(Ownership.code)
@@ -38,7 +38,7 @@ class OwnershipService:
             .order_by(Ownership.code.desc())
             .all()
         )
-        
+
         # 找到新格式的最大序列号
         max_sequence = 0
         for existing_code in existing_codes:
@@ -58,22 +58,22 @@ class OwnershipService:
 
         # 生成下一个序列号
         next_sequence = max_sequence + 1
-        
+
         # 尝试生成唯一编码（通常不需要循环，但为了安全保留逻辑）
         attempts = 0
         max_attempts = 100
-        
+
         while attempts < max_attempts:
             sequence_str = f"{next_sequence:03d}"
             code = f"{base_format}{sequence_str}"
-            
+
             # 检查编码是否已存在
             if not ownership_crud.get_by_code(db, code):
                 return code
-                
+
             next_sequence += 1
             attempts += 1
-            
+
         # 兜底：使用时间戳
         return f"{base_format}{int(datetime.now().timestamp() % 1000):03d}"
 
@@ -89,7 +89,7 @@ class OwnershipService:
         # 创建数据对象
         create_data = obj_in.model_dump()
         create_data["code"] = code
-        
+
         db_obj = Ownership(**create_data)
         db.add(db_obj)
         db.commit()
@@ -164,7 +164,7 @@ class OwnershipService:
             db.add(relation)
 
         db.commit()
-    
+
     def get_project_count(self, db: Session, ownership_id: str) -> int:
         """获取权属方关联的项目数量"""
         return (

@@ -51,36 +51,36 @@ class TaskService:
         task = task_crud.get(db, task_id)
         if not task:
             raise ValueError(f"任务 {task_id} 不存在")
-            
+
         old_status = task.status
-        
+
         update_data = {"status": status}
-        
+
         # Logic moved from CRUD.update
         # Start time
         if old_status == TaskStatus.PENDING and status == TaskStatus.RUNNING:
             update_data["started_at"] = datetime.now(UTC)
-        
+
         # End time
         if status in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]:
             update_data["completed_at"] = datetime.now(UTC)
             if status == TaskStatus.COMPLETED:
                 update_data["progress"] = 100
-        
+
         if progress is not None:
              update_data["progress"] = progress
-             
+
         if error_message is not None:
             update_data["error_message"] = error_message
-            
+
         # Apply updates
         for field, value in update_data.items():
             setattr(task, field, value)
-            
+
         db.add(task)
         db.commit()
         db.refresh(task)
-        
+
         # Log history
         if status != old_status:
             self.create_history(
@@ -91,7 +91,7 @@ class TaskService:
                 user_id=task.user_id,
                 details={"old_status": old_status, "new_status": status},
             )
-            
+
         return task
 
     def update_task(self, db: Session, *, task_id: str, obj_in: TaskUpdate) -> AsyncTask:
@@ -99,7 +99,7 @@ class TaskService:
         task = task_crud.get(db, task_id)
         if not task:
             raise ValueError(f"任务 {task_id} 不存在")
-            
+
         # Check permissions/state logic if any (from API)
         if task.status in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]:
              # Only allow updating active tasks generally, unless specific fields?
@@ -107,16 +107,16 @@ class TaskService:
              raise ValueError("已完成的任务无法更新")
 
         # Reuse update_task_status logic if status changes, OR just generic update?
-        # If status is in obj_in, we should be careful. 
+        # If status is in obj_in, we should be careful.
         # API logic was just CRUD update with status hooks in CRUD.
         # Let's handle generic update here but delegate status specific logic blocks if needed.
-        
+
         update_data = obj_in.dict(exclude_unset=True)
         if "status" in update_data:
              # Calling specific status update logic would be cleaner, but let's replicate logic locally to support single commit
              new_status = update_data["status"]
              old_status = task.status
-             
+
              if old_status == TaskStatus.PENDING and new_status == TaskStatus.RUNNING:
                 update_data["started_at"] = datetime.now(UTC)
 
@@ -124,16 +124,16 @@ class TaskService:
                 update_data["completed_at"] = datetime.now(UTC)
                 if new_status == TaskStatus.COMPLETED:
                     update_data["progress"] = 100
-             
+
              # Log history later
-        
+
         for field, value in update_data.items():
             setattr(task, field, value)
-            
+
         db.add(task)
         db.commit()
         db.refresh(task)
-        
+
         if "status" in update_data and update_data["status"] != old_status:
              self.create_history(
                 db=db,
@@ -143,7 +143,7 @@ class TaskService:
                 user_id=task.user_id,
                 details={"old_status": old_status, "new_status": new_status},
             )
-            
+
         return task
 
     def cancel_task(self, db: Session, *, task_id: str, reason: str = None) -> AsyncTask:
@@ -151,10 +151,10 @@ class TaskService:
         task = task_crud.get(db, task_id)
         if not task:
              raise ValueError("任务不存在")
-        
+
         if task.status not in [TaskStatus.PENDING, TaskStatus.RUNNING]:
              raise ValueError("任务无法取消")
-             
+
         error_msg = f"任务被取消: {reason if reason else '无原因'}"
         return self.update_task_status(db, task_id=task_id, status=TaskStatus.CANCELLED, error_message=error_msg)
 
@@ -163,11 +163,11 @@ class TaskService:
         task = task_crud.get(db, task_id)
         if not task:
             raise ValueError("任务不存在")
-            
+
         task.is_active = False
         db.add(task)
         db.commit()
-        
+
         self.create_history(
             db=db,
             task_id=task_id,
@@ -203,7 +203,7 @@ class TaskService:
         """获取统计信息 (Proxy to CRUD or implement here?) - Logic is reading DB, so keep in CRUD or move here? moving to service is fine for consistency"""
         # Kept in CRUD for now as it's read-only aggregation.
         return task_crud.get_statistics(db, user_id=user_id)
-        
+
     def cleanup_old_tasks(self, db: Session, *, days: int, dry_run: bool) -> dict[str, Any]:
         """清理过期任务"""
         # Moving logic from API
@@ -230,12 +230,12 @@ class TaskService:
                 "cleanup_date": cutoff_date.isoformat(),
                 "task_count": len(old_tasks),
             }
-            
+
         count = 0
         for task in old_tasks:
             task.is_active = False
             count += 1
-            
+
         db.commit()
         return {
             "message": f"成功清理 {count} 个过期任务",
