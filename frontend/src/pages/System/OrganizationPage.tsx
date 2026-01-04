@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Card,
   Table,
@@ -68,7 +68,7 @@ const OrganizationPage: React.FC = () => {
   const [form] = Form.useForm();
 
   // 组织类型选项
-  const organizationTypes = [
+  const organizationTypes = useMemo(() => [
     { value: 'company', label: '公司', icon: <BankOutlined /> },
     { value: 'department', label: '部门', icon: <TeamOutlined /> },
     { value: 'group', label: '集团', icon: <ApartmentOutlined /> },
@@ -76,22 +76,22 @@ const OrganizationPage: React.FC = () => {
     { value: 'team', label: '团队', icon: <TeamOutlined /> },
     { value: 'branch', label: '分公司', icon: <BankOutlined /> },
     { value: 'office', label: '办事处', icon: <SettingOutlined /> }
-  ];
+  ], []);
 
   // 状态选项
-  const statusOptions = [
+  const statusOptions = useMemo(() => [
     { value: 'active', label: '活跃', color: 'green' },
     { value: 'inactive', label: '停用', color: 'red' },
     { value: 'suspended', label: '暂停', color: 'orange' }
-  ];
+  ], []);
 
   useEffect(() => {
     loadOrganizations();
     loadOrganizationTree();
     loadStatistics();
-  }, []);
+  }, [loadOrganizations, loadOrganizationTree, loadStatistics]);
 
-  const loadOrganizations = async () => {
+  const loadOrganizations = useCallback(async () => {
     setLoading(true);
     try {
       const data = await organizationService.getOrganizations();
@@ -101,25 +101,25 @@ const OrganizationPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const loadOrganizationTree = async () => {
+  const loadOrganizationTree = useCallback(async () => {
     try {
       const data = await organizationService.getOrganizationTree();
       setOrganizationTree(convertTreeToDataNodes(data));
     } catch {
       message.error('加载组织树失败');
     }
-  };
+  }, [convertTreeToDataNodes]);
 
-  const loadStatistics = async () => {
+  const loadStatistics = useCallback(async () => {
     try {
       const data = await organizationService.getStatistics();
       setStatistics(data);
     } catch {
       message.error('加载统计信息失败');
     }
-  };
+  }, []);
 
   const _convertToTreeData = (organizations: Organization[]): DataNode[] => {
     return organizations.map(org => ({
@@ -136,7 +136,7 @@ const OrganizationPage: React.FC = () => {
     }));
   };
 
-  const convertTreeToDataNodes = (treeNodes: OrganizationTree[]): DataNode[] => {
+  const convertTreeToDataNodes = useCallback((treeNodes: OrganizationTree[]): DataNode[] => {
     return treeNodes.map(node => ({
       key: node.id,
       title: (
@@ -147,27 +147,27 @@ const OrganizationPage: React.FC = () => {
           </Tag>
         </span>
       ),
-      children: node.children ? convertTreeToDataNodes(node.children) : []
+      children: (node.children !== null && node.children !== undefined) ? convertTreeToDataNodes(node.children) : []
     }));
-  };
+  }, [getTypeIcon, getStatusColor, getStatusLabel]);
 
-  const getTypeIcon = (type: string) => {
+  const getTypeIcon = useCallback((type: string) => {
     const typeConfig = organizationTypes.find(t => t.value === type);
-    return typeConfig?.icon || <TeamOutlined />;
-  };
+    return (typeConfig !== null && typeConfig !== undefined && typeConfig.icon !== null && typeConfig.icon !== undefined) ? typeConfig.icon : <TeamOutlined />;
+  }, [organizationTypes]);
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = useCallback((status: string) => {
     const statusConfig = statusOptions.find(s => s.value === status);
-    return statusConfig?.color || 'default';
-  };
+    return (statusConfig !== null && statusConfig !== undefined && statusConfig.color !== null && statusConfig.color !== undefined && statusConfig.color !== '') ? statusConfig.color : 'default';
+  }, [statusOptions]);
 
-  const getStatusLabel = (status: string) => {
+  const getStatusLabel = useCallback((status: string) => {
     const statusConfig = statusOptions.find(s => s.value === status);
-    return statusConfig?.label || status;
-  };
+    return (statusConfig !== null && statusConfig !== undefined && statusConfig.label !== null && statusConfig.label !== undefined && statusConfig.label !== '') ? statusConfig.label : status;
+  }, [statusOptions]);
 
   const handleSearch = async (keyword: string) => {
-    if (!keyword.trim()) {
+    if (keyword === null || keyword === undefined || keyword.trim() === '') {
       loadOrganizations();
       return;
     }
@@ -193,7 +193,7 @@ const OrganizationPage: React.FC = () => {
     setEditingOrganization(organization);
     form.setFieldsValue({
       ...organization,
-      parent_id: organization.parent_id || undefined
+      parent_id: (organization.parent_id !== null && organization.parent_id !== undefined && organization.parent_id !== '') ? organization.parent_id : undefined
     });
     setModalVisible(true);
   };
@@ -256,24 +256,24 @@ const OrganizationPage: React.FC = () => {
       title: '类型',
       dataIndex: 'type',
       key: 'type',
-      render: (type) => {
+      render: (type: string) => {
         const typeConfig = organizationTypes.find(t => t.value === type);
-        return typeConfig?.label || type;
+        return (typeConfig !== null && typeConfig !== undefined && typeConfig.label !== null && typeConfig.label !== undefined && typeConfig.label !== '') ? typeConfig.label : type;
       }
     },
     {
       title: '层级',
       dataIndex: 'level',
       key: 'level',
-      render: (level) => <Badge count={level} color="blue" />
+      render: (level: number) => <Badge count={level} color="blue" />
     },
     {
       title: '负责人',
       dataIndex: 'leader_name',
       key: 'leader_name',
-      render: (name, record) => (
-        name ? (
-          <Tooltip title={`电话: ${record.leader_phone || '未设置'} | 邮箱: ${record.leader_email || '未设置'}`}>
+      render: (name: string, record: Organization) => (
+        (name !== null && name !== undefined && name !== '') ? (
+          <Tooltip title={`电话: ${(record.leader_phone !== null && record.leader_phone !== undefined && record.leader_phone !== '') ? record.leader_phone : '未设置'} | 邮箱: ${(record.leader_email !== null && record.leader_email !== undefined && record.leader_email !== '') ? record.leader_email : '未设置'}`}>
             <span>{name}</span>
           </Tooltip>
         ) : '-'
@@ -293,7 +293,7 @@ const OrganizationPage: React.FC = () => {
       title: '创建时间',
       dataIndex: 'created_at',
       key: 'created_at',
-      render: (date) => new Date(date).toLocaleString()
+      render: (date: string) => new Date(date).toLocaleString()
     },
     {
       title: '操作',
@@ -338,13 +338,13 @@ const OrganizationPage: React.FC = () => {
       title: '操作类型',
       dataIndex: 'action',
       key: 'action',
-      render: (action) => {
+      render: (action: string) => {
         const actionMap: { [key: string]: { label: string; color: string } } = {
           create: { label: '创建', color: 'green' },
           update: { label: '更新', color: 'blue' },
           delete: { label: '删除', color: 'red' }
         };
-        const config = actionMap[action] || { label: action, color: 'default' };
+        const config = (actionMap[action] !== null && actionMap[action] !== undefined) ? actionMap[action] : { label: action, color: 'default' };
         return <Tag color={config.color}>{config.label}</Tag>;
       }
     },
@@ -352,38 +352,38 @@ const OrganizationPage: React.FC = () => {
       title: '字段名称',
       dataIndex: 'field_name',
       key: 'field_name',
-      render: (field) => field || '-'
+      render: (field: string) => (field !== null && field !== undefined && field !== '') ? field : '-'
     },
     {
       title: '原值',
       dataIndex: 'old_value',
       key: 'old_value',
-      render: (value) => value || '-'
+      render: (value: string) => (value !== null && value !== undefined && value !== '') ? value : '-'
     },
     {
       title: '新值',
       dataIndex: 'new_value',
       key: 'new_value',
-      render: (value) => value || '-'
+      render: (value: string) => (value !== null && value !== undefined && value !== '') ? value : '-'
     },
     {
       title: '操作人',
       dataIndex: 'created_by',
       key: 'created_by',
-      render: (user) => user || '系统'
+      render: (user: string) => (user !== null && user !== undefined && user !== '') ? user : '系统'
     },
     {
       title: '操作时间',
       dataIndex: 'created_at',
       key: 'created_at',
-      render: (date) => new Date(date).toLocaleString()
+      render: (date: string) => new Date(date).toLocaleString()
     }
   ];
 
   return (
     <div style={{ padding: '24px' }}>
       {/* 统计卡片 */}
-      {statistics && (
+      {statistics !== null && statistics !== undefined && (
         <Row gutter={16} style={{ marginBottom: 24 }}>
           <Col span={6}>
             <Card>
