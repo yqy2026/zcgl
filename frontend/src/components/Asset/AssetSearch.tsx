@@ -219,7 +219,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
 
   // 保存编辑的名称
   const handleSaveEdit = () => {
-    if (editingHistoryId && editingName.trim()) {
+    if (editingHistoryId !== null && editingHistoryId !== undefined && editingHistoryId !== '' && editingName.trim()) {
       updateSearchHistoryName(editingHistoryId, editingName.trim())
       setEditingHistoryId(null)
       setEditingName('')
@@ -433,7 +433,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
                       placeholder="最小面积"
                       value={areaRange[0]}
                       onChange={(value) =>
-                        setAreaRange([value || 0, areaRange[1]])
+                        setAreaRange([(value !== null && value !== undefined) ? value : 0, areaRange[1]])
                       }
                     />
                     <Input
@@ -446,7 +446,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
                       placeholder="最大面积"
                       value={areaRange[1]}
                       onChange={(value) =>
-                        setAreaRange([areaRange[0], value || 100000])
+                        setAreaRange([areaRange[0], (value !== null && value !== undefined) ? value : 100000])
                       }
                     />
                   </Space.Compact>
