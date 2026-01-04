@@ -60,9 +60,9 @@ class ResponseDetector {
   private static isStandardResponse(response: unknown, config: ResponseDetectionConfig): boolean {
     return response !== null &&
       typeof response === 'object' &&
-      !!config.successField && config.successField in response &&
+      (config.successField !== null && config.successField !== undefined && config.successField !== '') && config.successField in response &&
       typeof (response as Record<string, unknown>)[config.successField] === 'boolean' &&
-      !!config.dataField && config.dataField in response;
+      (config.dataField !== null && config.dataField !== undefined && config.dataField !== '') && config.dataField in response;
   }
 
   /**
@@ -73,8 +73,9 @@ class ResponseDetector {
       return false;
     }
 
-    const data = config.dataField && (response as Record<string, unknown>)[config.dataField];
+    const data = (config.dataField !== null && config.dataField !== undefined && config.dataField !== '') ? (response as Record<string, unknown>)[config.dataField] : undefined;
     return data !== null &&
+      data !== undefined &&
       typeof data === 'object' &&
       'items' in (data as Record<string, unknown>) &&
       'pagination' in (data as Record<string, unknown>);
@@ -86,8 +87,8 @@ class ResponseDetector {
   private static isErrorResponse(response: unknown, config: ResponseDetectionConfig): boolean {
     return response !== null &&
       typeof response === 'object' &&
-      !!config.successField && (response as Record<string, unknown>)[config.successField] === false &&
-      !!config.errorFields && config.errorFields.some(field => field in (response as Record<string, unknown>));
+      (config.successField !== null && config.successField !== undefined && config.successField !== '') && (response as Record<string, unknown>)[config.successField] === false &&
+      (config.errorFields !== null && config.errorFields !== undefined) && config.errorFields.some(field => field in (response as Record<string, unknown>));
   }
 }
 
@@ -159,9 +160,9 @@ export class ResponseExtractor {
     options: SmartExtractOptions<T>
   ): ExtractResult<T> {
     const responseData = response.data;
-    const dataField = (isPresent(options.detection?.dataField) ? options.detection?.dataField : 'data')
+    const dataField = (options.detection?.dataField !== null && options.detection?.dataField !== undefined && options.detection?.dataField !== '') ? options.detection.dataField : 'data';
 
-    if (!responseData[dataField]) {
+    if ((responseData as Record<string, unknown>)[dataField] === null || (responseData as Record<string, unknown>)[dataField] === undefined) {
       return {
         success: false,
         error: '标准响应中缺少数据字段',
@@ -186,10 +187,10 @@ export class ResponseExtractor {
     options: SmartExtractOptions<T>
   ): ExtractResult<T> {
     const responseData = response.data;
-    const dataField = (isPresent(options.detection?.dataField) ? options.detection?.dataField : 'data')
+    const dataField = (options.detection?.dataField !== null && options.detection?.dataField !== undefined && options.detection?.dataField !== '') ? options.detection.dataField : 'data';
     const dataContainer = (responseData as Record<string, unknown>)[dataField] as Record<string, unknown>;
 
-    if (!dataContainer || !dataContainer.items) {
+    if (dataContainer === null || dataContainer === undefined || dataContainer.items === null || dataContainer.items === undefined) {
       return {
         success: false,
         error: '分页响应中缺少items字段',
