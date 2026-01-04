@@ -62,12 +62,12 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       getContent: () => (
         <div>
           <Paragraph>
-            {itemCount && itemCount > 1 
-              ? `确定要删除这 ${itemCount} 个${itemName || '项目'}吗？`
-              : `确定要删除${itemName ? `"${itemName}"` : '此项目'}吗？`
+            {(itemCount !== null && itemCount !== undefined && itemCount > 0) 
+              ? `确定要删除这 ${itemCount} 个${(itemName !== null && itemName !== undefined && itemName !== '') ? itemName : '项目'}吗？`
+              : `确定要删除${(itemName !== null && itemName !== undefined && itemName !== '') ? `"${itemName}"` : '此项目'}吗？`
             }
           </Paragraph>
-          {details && details.length > 0 && (
+          {(details !== null && details !== undefined && details.length > 0) && (
             <div style={{ marginTop: 16 }}>
               <Text type="secondary">将要删除的内容：</Text>
               <ul style={{ marginTop: 8, paddingLeft: 20 }}>
@@ -111,7 +111,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           <Paragraph>
             确定要保存当前的更改吗？
           </Paragraph>
-          {details && details.length > 0 && (
+          {(details !== null && details !== undefined && details.length > 0) && (
             <div style={{ marginTop: 16 }}>
               <Text type="secondary">将要保存的更改：</Text>
               <ul style={{ marginTop: 8, paddingLeft: 20 }}>
@@ -189,13 +189,13 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       title={
         <Space>
           {config.icon}
-          <span>{title || config.title}</span>
+          <span>{(title !== null && title !== undefined && title !== '') ? title : config.title}</span>
         </Space>
       }
       open={visible}
       onOk={onConfirm}
       onCancel={onCancel}
-      okText={confirmText || config.confirmText}
+      okText={(confirmText !== null && confirmText !== undefined && confirmText !== '') ? confirmText : config.confirmText}
       cancelText={cancelText}
       confirmLoading={confirmLoading}
       width={width}
@@ -206,7 +206,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       }}
       destroyOnHidden
     >
-      {content || config.getContent()}
+      {(content !== null && content !== undefined) ? content : config.getContent()}
     </Modal>
   )
 }
@@ -239,15 +239,15 @@ export const showDeleteConfirm = (options: Omit<ConfirmDialogProps, 'type' | 'vi
       title: (
         <Space>
           <DeleteOutlined style={{ color: '#ff4d4f' }} />
-          <span>{options.title || '确认删除'}</span>
+          <span>{(options.title !== null && options.title !== undefined && options.title !== '') ? options.title : '确认删除'}</span>
         </Space>
       ),
-      content: options.content || (
+      content: (options.content !== null && options.content !== undefined) ? options.content : (
         <div>
           <Paragraph>
-            {options.itemCount && options.itemCount > 1 
-              ? `确定要删除这 ${options.itemCount} 个${options.itemName || '项目'}吗？`
-              : `确定要删除${options.itemName ? `"${options.itemName}"` : '此项目'}吗？`
+            {(options.itemCount !== null && options.itemCount !== undefined && options.itemCount > 1)
+              ? `确定要删除这 ${options.itemCount} 个${(options.itemName !== null && options.itemName !== undefined && options.itemName !== '') ? options.itemName : '项目'}吗？`
+              : `确定要删除${(options.itemName !== null && options.itemName !== undefined && options.itemName !== '') ? `"${options.itemName}"` : '此项目'}吗？`
             }
           </Paragraph>
           <Paragraph type="danger">
@@ -255,8 +255,8 @@ export const showDeleteConfirm = (options: Omit<ConfirmDialogProps, 'type' | 'vi
           </Paragraph>
         </div>
       ),
-      okText: options.confirmText || '删除',
-      cancelText: options.cancelText || '取消',
+      okText: (options.confirmText !== null && options.confirmText !== undefined && options.confirmText !== '') ? options.confirmText : '删除',
+      cancelText: (options.cancelText !== null && options.cancelText !== undefined && options.cancelText !== '') ? options.cancelText : '取消',
       okButtonProps: { danger: true },
       onOk: () => {
         if (options.onConfirm) {
@@ -280,12 +280,12 @@ export const showSaveConfirm = (options: Omit<ConfirmDialogProps, 'type' | 'visi
       title: (
         <Space>
           <QuestionCircleOutlined style={{ color: '#faad14' }} />
-          <span>{options.title || '确认保存'}</span>
+          <span>{(options.title !== null && options.title !== undefined && options.title !== '') ? options.title : '确认保存'}</span>
         </Space>
       ),
-      content: options.content || '确定要保存当前的更改吗？',
-      okText: options.confirmText || '保存',
-      cancelText: options.cancelText || '取消',
+      content: (options.content !== null && options.content !== undefined) ? options.content : '确定要保存当前的更改吗？',
+      okText: (options.confirmText !== null && options.confirmText !== undefined && options.confirmText !== '') ? options.confirmText : '保存',
+      cancelText: (options.cancelText !== null && options.cancelText !== undefined && options.cancelText !== '') ? options.cancelText : '取消',
       onOk: () => {
         if (options.onConfirm) {
           options.onConfirm()
