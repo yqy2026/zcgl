@@ -48,6 +48,28 @@ interface FeedbackConfig {
   }
 }
 
+interface SmartInteractionContextValue {
+  userBehavior: UserBehavior
+  userPreferences: {
+    theme: 'light' | 'dark'
+    language: 'zh-CN' | 'en-US'
+    autoSave: boolean
+    notifications: boolean
+    animations: boolean
+    compactMode: boolean
+  }
+  undoStack: UndoRedoAction[]
+  redoStack: UndoRedoAction[]
+  trackInteraction: (type: InteractionType, element: string, data?: unknown) => void
+  showNotification: (config: FeedbackConfig) => void
+  showConfirmation: (config: { title: string; content: string; onConfirm: () => void }) => void
+  undo: () => void
+  redo: () => void
+  canUndo: () => boolean
+  canRedo: () => boolean
+  clearHistory: () => void
+}
+
 interface SmartInteractionManagerProps {
   children: React.ReactNode
   enableBehaviorTracking?: boolean
@@ -58,11 +80,11 @@ interface SmartInteractionManagerProps {
   enableUndoRedo?: boolean
 }
 
-const InteractionContext = createContext<any>(null)
+const InteractionContext = createContext<SmartInteractionContextValue | null>(null)
 
-export const useSmartInteraction = () => {
+export const useSmartInteraction = (): SmartInteractionContextValue => {
   const context = useContext(InteractionContext)
-  if (!context) {
+  if (context === null || context === undefined) {
     throw new Error('useSmartInteraction must be used within SmartInteractionProvider')
   }
   return context
@@ -78,8 +100,8 @@ const SmartInteractionProvider: React.FC<SmartInteractionManagerProps> = ({
 }) => {
   const [userBehavior, setUserBehavior] = useState<UserBehavior>({
     sessionId: `session_${Date.now()}`,
-    actions: [] as any
-  } as any)
+    actions: []
+  })
   const [userPreferences, setUserPreferences] = useState({
     theme: 'light',
     language: 'zh-CN',
