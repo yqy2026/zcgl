@@ -289,7 +289,7 @@ class PDFImportService {
           };
         }
 
-        if (error.request) {
+        if (error.request !== null && error.request !== undefined) {
           return {
             success: false,
             message: '网络连接失败，请检查网络连接',
@@ -808,10 +808,10 @@ class PDFImportService {
     // 基于文件大小的简单估算
     const sizeMB = fileSize / (1024 * 1024);
 
-    if (sizeMB < 1) return '10-20秒';
-    if (sizeMB < 5) return '20-40秒';
-    if (sizeMB < 10) return '30-60秒';
-    if (sizeMB < 20) return '45-90秒';
+    if (sizeMB !== null && sizeMB !== undefined && sizeMB < 1) return '10-20秒';
+    if (sizeMB !== null && sizeMB !== undefined && sizeMB < 5) return '20-40秒';
+    if (sizeMB !== null && sizeMB !== undefined && sizeMB < 10) return '30-60秒';
+    if (sizeMB !== null && sizeMB !== undefined && sizeMB < 20) return '45-90秒';
 
     return '60-120秒';
   }
@@ -1213,10 +1213,10 @@ class PDFImportService {
     // 增强版处理时间较长，但更准确
     const sizeMB = fileSize / (1024 * 1024);
 
-    if (sizeMB < 1) return '30-45秒';
-    if (sizeMB < 5) return '45-75秒';
-    if (sizeMB < 10) return '60-90秒';
-    if (sizeMB < 20) return '90-150秒';
+    if (sizeMB !== null && sizeMB !== undefined && sizeMB < 1) return '30-45秒';
+    if (sizeMB !== null && sizeMB !== undefined && sizeMB < 5) return '45-75秒';
+    if (sizeMB !== null && sizeMB !== undefined && sizeMB < 10) return '60-90秒';
+    if (sizeMB !== null && sizeMB !== undefined && sizeMB < 20) return '90-150秒';
 
     return '120-240秒';
   }
