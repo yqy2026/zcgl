@@ -3,6 +3,8 @@
  * 监控路由加载时间、交互性能和用户体验指标
  */
 
+/* eslint-disable no-console */
+
 import { useEffect, useRef, useCallback } from 'react'
 import { useLocation, useNavigationType } from 'react-router-dom'
 
@@ -84,7 +86,7 @@ class RoutePerformanceMonitor {
   }
 
   private checkSupport(): boolean {
-    return !!(window.performance && window.PerformanceObserver)
+    return ((window.performance !== null && window.performance !== undefined) && (window.PerformanceObserver !== null && window.PerformanceObserver !== undefined))
   }
 
   private initializeObservers() {
@@ -144,7 +146,7 @@ class RoutePerformanceMonitor {
       const clsObserver = new PerformanceObserver((list) => {
         for (const entry of list.getEntries()) {
           const layoutShiftEntry = entry as PerformanceEntry & { hadRecentInput?: boolean; value?: number }
-          if (!layoutShiftEntry.hadRecentInput && layoutShiftEntry.value) {
+          if ((layoutShiftEntry.hadRecentInput === null || layoutShiftEntry.hadRecentInput === false) && (layoutShiftEntry.value !== null && layoutShiftEntry.value !== undefined)) {
             clsValue += layoutShiftEntry.value
           }
         }
@@ -309,10 +311,10 @@ class RoutePerformanceMonitor {
       acc.componentLoadTime += metric.componentLoadTime
       acc.renderTime += metric.renderTime
       acc.interactiveTime += metric.interactiveTime
-      acc.FCP += metric.FCP || 0
-      acc.LCP += metric.LCP || 0
-      acc.FID += metric.FID || 0
-      acc.CLS += metric.CLS || 0
+      acc.FCP += (metric.FCP !== null && metric.FCP !== undefined) ? metric.FCP : 0
+      acc.LCP += (metric.LCP !== null && metric.LCP !== undefined) ? metric.LCP : 0
+      acc.FID += (metric.FID !== null && metric.FID !== undefined) ? metric.FID : 0
+      acc.CLS += (metric.CLS !== null && metric.CLS !== undefined) ? metric.CLS : 0
       acc.errorCount += metric.errorCount
       acc.retryCount += metric.retryCount
       return acc
@@ -419,14 +421,14 @@ export const useRoutePerformanceMonitor = (config?: Partial<RoutePerformanceConf
 
   // Start monitoring when route changes
   useEffect(() => {
-    if (!monitor) return
+    if ((monitor !== null && monitor !== undefined)) {
+      const route = location.pathname
+      const navType = navigationType === 'POP' ? 'back' :
+                       navigationType === 'PUSH' ? 'navigate' : 'replace'
 
-    const route = location.pathname
-    const navType = navigationType === 'POP' ? 'back' :
-                     navigationType === 'PUSH' ? 'navigate' : 'replace'
-
-    const monitoring = monitor.startRouteMonitoring(route, navType)
-    monitoringRef.current = monitoring || null
+      const monitoring = monitor.startRouteMonitoring(route, navType)
+      monitoringRef.current = (monitoring !== null && monitoring !== undefined) ? monitoring : null
+    }
 
     // Record when route becomes interactive
     const timer = setTimeout(() => {
@@ -462,11 +464,11 @@ export const useRoutePerformanceMonitor = (config?: Partial<RoutePerformanceConf
   }, [monitor, location.pathname])
 
   const getMetrics = useCallback((route?: string) => {
-    return monitor ? monitor.getMetrics(route) : []
+    return (monitor !== null && monitor !== undefined) ? monitor.getMetrics(route) : []
   }, [monitor])
 
   const getAggregatedMetrics = useCallback((route?: string) => {
-    return monitor ? monitor.getAggregatedMetrics(route) : null
+    return (monitor !== null && monitor !== undefined) ? monitor.getAggregatedMetrics(route) : null
   }, [monitor])
 
   return {
