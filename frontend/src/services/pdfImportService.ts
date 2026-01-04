@@ -1071,7 +1071,7 @@ class PDFImportService {
         };
       }
     } catch (error: unknown) {
-      console.error('获取增强版结果失败:', error);
+      logger.error('获取增强版结果失败:', error);
       return {
         success: false,
         error: isAxiosError(error) ? (error.response?.data?.detail || error.message) : isError(error) ? error.message : 'Unknown error'
@@ -1093,7 +1093,7 @@ class PDFImportService {
       const response = await axios.get(`${ENHANCED_API_BASE}/test/all`);
       return response.data;
     } catch (error: unknown) {
-      console.error('测试增强版功能失败:', error);
+      logger.error('测试增强版功能失败:', error);
       const errorMsg = isAxiosError(error)
         ? (error.response?.data?.detail || error.message || 'Unknown error')
         : isError(error)
@@ -1121,7 +1121,7 @@ class PDFImportService {
       const response = await axios.get(`${ENHANCED_API_BASE}/health`);
       return response.data;
     } catch (error: unknown) {
-      console.error('增强版健康检查失败:', error);
+      logger.error('增强版健康检查失败:', error);
       return {
         status: 'unhealthy',
         components: {},
@@ -1143,7 +1143,7 @@ class PDFImportService {
       const response = await axios.get(`${ENHANCED_API_BASE}/performance/summary`);
       return response.data;
     } catch (error: unknown) {
-      console.error('获取性能摘要失败:', error);
+      logger.error('获取性能摘要失败:', error);
       const errorMsg = isAxiosError(error)
         ? (error.response?.data?.detail || error.message || 'Unknown error')
         : isError(error)
@@ -1200,7 +1200,7 @@ class PDFImportService {
         message: available ? '增强版功能可用' : '部分增强版功能不可用'
       };
     } catch (error: unknown) {
-      console.error('检查增强版功能可用性失败:', error);
+      logger.error('检查增强版功能可用性失败:', error);
       return {
         available: false,
         features: {},

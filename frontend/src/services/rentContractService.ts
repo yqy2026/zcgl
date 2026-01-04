@@ -57,7 +57,7 @@ class RentContractService {
       return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.error('获取租金合同列表失败:', enhancedError.message);
+      logger.error('获取租金合同列表失败:', enhancedError.message);
 
       // 返回默认空结果，避免UI崩溃
       return {
@@ -242,7 +242,7 @@ class RentContractService {
       return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.error('获取租金台账列表失败:', enhancedError.message);
+      logger.error('获取租金台账列表失败:', enhancedError.message);
 
       // 返回默认空结果，避免UI崩溃
       return {

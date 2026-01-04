@@ -149,7 +149,7 @@ export class ApiErrorHandler {
 
     // 在开发环境下打印详细错误
     if (process.env.NODE_ENV === 'development') {
-      // console.error('API Error Details:', error)
+      // logger.error('API Error Details:', error)
     }
   }
 
