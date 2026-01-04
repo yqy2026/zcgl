@@ -122,7 +122,7 @@ export const isVersionCompatible = (
     return false
   }
 
-  if (maxVersion && versionCompare(currentVersion, maxVersion) > 0) {
+  if ((maxVersion !== null && maxVersion !== undefined && maxVersion !== '') && versionCompare(currentVersion, maxVersion) > 0) {
     return false
   }
 
@@ -131,7 +131,8 @@ export const isVersionCompatible = (
 
 // 获取当前环境
 export const getCurrentEnvironment = (): string => {
-  return process.env.NODE_ENV || VERSION_CONFIG.ENVIRONMENT.DEVELOPMENT
+  const nodeEnv = process.env.NODE_ENV;
+  return (nodeEnv !== null && nodeEnv !== undefined && nodeEnv !== '') ? nodeEnv : VERSION_CONFIG.ENVIRONMENT.DEVELOPMENT
 }
 
 // 检查是否为开发环境
@@ -160,18 +161,21 @@ export const renderIf = (
 // 调试日志
 export const debugLog = (...args: any[]): void => {
   if (VERSION_CONFIG.FEATURES.DEBUG_MODE) {
+    // eslint-disable-next-line no-console
     console.log('[DEBUG]', ...args)
   }
 }
 
 // 错误日志（始终显示）
 export const errorLog = (...args: any[]): void => {
+  // eslint-disable-next-line no-console
   console.error('[ERROR]', ...args)
 }
 
 // 警告日志
 export const warnLog = (...args: any[]): void => {
   if (VERSION_CONFIG.FEATURES.DEBUG_MODE || VERSION_CONFIG.DEPRECATION_WARNINGS.BREAKING_CHANGES) {
+    // eslint-disable-next-line no-console
     console.warn('[WARN]', ...args)
   }
 }

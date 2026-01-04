@@ -432,8 +432,9 @@ export const useRoutePerformanceMonitor = (config?: Partial<RoutePerformanceConf
 
     // Record when route becomes interactive
     const timer = setTimeout(() => {
-      if (monitoring) {
-        monitoring.endInteractive()
+      const monitoring = monitoringRef.current
+      if ((monitoring !== null && monitoring !== undefined)) {
+        (monitoring as { endInteractive: () => void }).endInteractive()
       }
     }, 100)
 

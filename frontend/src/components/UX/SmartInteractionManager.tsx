@@ -60,14 +60,14 @@ interface SmartInteractionContextValue {
   }
   undoStack: UndoRedoAction[]
   redoStack: UndoRedoAction[]
+  shortcuts: Record<string, string>
   trackInteraction: (type: InteractionType, element: string, data?: unknown) => void
   showNotification: (config: FeedbackConfig) => void
-  showConfirmation: (config: { title: string; content: string; onConfirm: () => void }) => void
+  confirmAction: (config: { title: string; content: string; onConfirm: () => void; onCancel?: () => void; type: 'warning' | 'error' | 'info' }) => void
   undo: () => void
   redo: () => void
-  canUndo: () => boolean
-  canRedo: () => boolean
-  clearHistory: () => void
+  autoSave: () => void
+  setUserPreferences: (updater: (prev: UserBehavior['preferences']) => UserBehavior['preferences']) => void
 }
 
 interface SmartInteractionManagerProps {
@@ -100,9 +100,24 @@ const SmartInteractionProvider: React.FC<SmartInteractionManagerProps> = ({
 }) => {
   const [userBehavior, setUserBehavior] = useState<UserBehavior>({
     sessionId: `session_${Date.now()}`,
-    actions: []
+    actions: [] as Array<{ type: InteractionType; element: string; timestamp: Date; data?: unknown; duration?: number }>,
+    preferences: {
+      theme: 'light',
+      language: 'zh-CN',
+      autoSave: true,
+      notifications: true,
+      animations: true,
+      compactMode: false
+    }
   })
-  const [userPreferences, setUserPreferences] = useState({
+  const [userPreferences, setUserPreferences] = useState<{
+    theme: 'light' | 'dark'
+    language: 'zh-CN' | 'en-US'
+    autoSave: boolean
+    notifications: boolean
+    animations: boolean
+    compactMode: boolean
+  }>({
     theme: 'light',
     language: 'zh-CN',
     autoSave: true,
@@ -158,7 +173,7 @@ const SmartInteractionProvider: React.FC<SmartInteractionManagerProps> = ({
         notification.success({
           message,
           description,
-          btn: action?.text ? (
+          btn: (action?.text !== null && action?.text !== undefined && action?.text !== '') ? (
             <Button type="primary" size="small" onClick={action?.onClick}>
               {action.text}
             </Button>
@@ -169,7 +184,7 @@ const SmartInteractionProvider: React.FC<SmartInteractionManagerProps> = ({
         notification.error({
           message,
           description,
-          btn: action?.text ? (
+          btn: (action?.text !== null && action?.text !== undefined && action?.text !== '') ? (
             <Button type="primary" size="small" onClick={action?.onClick}>
               {action.text}
             </Button>
@@ -180,7 +195,7 @@ const SmartInteractionProvider: React.FC<SmartInteractionManagerProps> = ({
         notification.warning({
           message,
           description,
-          btn: action?.text ? (
+          btn: (action?.text !== null && action?.text !== undefined && action?.text !== '') ? (
             <Button type="primary" size="small" onClick={action?.onClick}>
               {action.text}
             </Button>
@@ -191,7 +206,7 @@ const SmartInteractionProvider: React.FC<SmartInteractionManagerProps> = ({
         notification.info({
           message,
           description,
-          btn: action?.text ? (
+          btn: (action?.text !== null && action?.text !== undefined && action?.text !== '') ? (
             <Button type="primary" size="small" onClick={action?.onClick}>
               {action.text}
             </Button>
@@ -278,6 +293,7 @@ const SmartInteractionProvider: React.FC<SmartInteractionManagerProps> = ({
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enableKeyboardShortcuts, enableUndoRedo])
 
   // 自动保存
@@ -305,6 +321,7 @@ const SmartInteractionProvider: React.FC<SmartInteractionManagerProps> = ({
         duration: 4500
       })
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userPreferences.autoSave])
 
   // 防抖操作
@@ -456,14 +473,16 @@ const SmartInteractionExample: React.FC = () => {
   } = useSmartInteraction()
 
   const handleToggleTheme = () => {
-    setUserPreferences((prev: any) => ({
-      ...prev,
-      theme: prev.theme === 'light' ? 'dark' : 'light'
-    }))
+    (setUserPreferences as ( updater: (prev: UserBehavior['preferences']) => UserBehavior['preferences']) => void)(
+      (prev: UserBehavior['preferences']) => ({
+        ...prev,
+        theme: (prev.theme !== null && prev.theme !== undefined && prev.theme === 'light') ? 'dark' : 'light'
+      })
+    )
   }
 
   const handleConfirmDelete = () => {
-    confirmAction({
+    (confirmAction as (config: { title: string; content: string; onConfirm: () => void; onCancel?: () => void; type: 'warning' | 'error' | 'info' }) => void)({
       title: '确认删除',
       content: '此操作不可撤销，确定要删除吗？',
       type: 'warning',

@@ -32,6 +32,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
       await AuthService.logout()
       navigate('/login')
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('退出登录失败:', error)
       // 即使API失败，也要跳转到登录页面
       navigate('/login')
@@ -252,7 +253,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
               icon={<UserOutlined />}
               style={{ backgroundColor: '#1890ff' }}
             />
-            <Typography.Text>{user?.full_name || user?.username || '用户'}</Typography.Text>
+            <Typography.Text>{(user?.full_name !== null && user?.full_name !== undefined && user?.full_name !== '') ? user.full_name : (user?.username !== null && user?.username !== undefined && user?.username !== '') ? user.username : '用户'}</Typography.Text>
           </Space>
         </Dropdown>
       </Space>

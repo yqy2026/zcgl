@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import { Select, Input, Tag, Space, Typography } from 'antd'
-import type { SelectProps, CustomTagProps } from 'antd/es/select'
+import type { SelectProps } from 'antd/es/select'
 import { EnumGroup, EnumOption, EnumSearchHelper } from '@/utils/enumHelpers'
 
 const { Option } = Select
@@ -181,13 +181,13 @@ const GroupedSelect: React.FC<GroupedSelectProps> = ({
   }
 
   // 自定义标签显示
-  const tagRender = (props: CustomTagProps) => {
-    const { label, value, closable, onClose } = props
+  const tagRender = (props: { label: React.ReactNode; value: string | string[]; closable: boolean; onClose: () => void }) => {
+    const { label, value, closable, onClose } = props;
     const optionInfo = getSelectedOptionInfo(value as string)
 
     return (
       <Tag
-        color={optionInfo?.color}
+        color={(optionInfo !== null && optionInfo !== undefined) ? optionInfo.color : undefined}
         closable={closable}
         onClose={onClose}
         style={{ marginRight: 3 }}
@@ -200,7 +200,7 @@ const GroupedSelect: React.FC<GroupedSelectProps> = ({
   return (
     <Select
       {...selectProps}
-      value={value}
+      value={value as unknown}
       onChange={onChange}
       placeholder={placeholder}
       allowClear={allowClear}

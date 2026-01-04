@@ -122,14 +122,14 @@ const UnifiedProjectSelect: React.FC<UnifiedProjectSelectProps> = ({
   // 从弹窗中选择项目
   const handleModalSelect = (project: Project) => {
     if (mode === 'single') {
-      onChange?.(project.id, project as any);
+      onChange?.(project.id, project as Project);
     } else {
       // 多选模式下，添加到已选列表
-      const currentValues = Array.isArray(value) ? value : value ? [value] : [];
+      const currentValues = Array.isArray(value) ? value : (value !== null && value !== undefined) ? [value] : [];
       if (!currentValues.includes(project.id)) {
-        const newValues = maxCount ? [...currentValues.slice(-maxCount + 1), project.id] : [...currentValues, project.id];
+        const newValues = (maxCount !== null && maxCount !== undefined) ? [...currentValues.slice(-maxCount + 1), project.id] : [...currentValues, project.id];
         const selectedProjects = allProjects.filter(p => newValues.includes(p.id));
-        onChange?.(newValues, selectedProjects as any);
+        onChange?.(newValues, selectedProjects as Project[]);
       }
     }
     setSelectModalVisible(false);
@@ -152,12 +152,12 @@ const UnifiedProjectSelect: React.FC<UnifiedProjectSelectProps> = ({
 
     return (
       <Tag
-        color={project?.is_active ? 'blue' : 'red'}
+        color={(project?.is_active === true) ? 'blue' : 'red'}
         closable={closable}
         onClose={onClose}
         style={{ marginRight: 3 }}
       >
-        {project?.name || value}
+        {(project?.name !== null && project?.name !== undefined && project?.name !== '') ? project.name : String(value)}
       </Tag>
     );
   };
@@ -166,8 +166,10 @@ const UnifiedProjectSelect: React.FC<UnifiedProjectSelectProps> = ({
     <div style={style}>
       <Space.Compact style={{ width: '100%' }}>
         <Select
-          value={value as any || (mode === 'multiple' ? [] : undefined)}
-          onChange={mode === 'multiple' ? (handleMultipleChange as any) : (handleSingleChange as any)}
+          value={(value !== null && value !== undefined) ? (value as string | string[] | undefined) : (mode === 'multiple' ? [] : undefined)}
+          onChange={mode === 'multiple'
+            ? (handleMultipleChange as (...args: unknown[]) => void)
+            : (handleSingleChange as (...args: unknown[]) => void)}
           onClear={handleClear}
           placeholder={placeholder}
           disabled={disabled}

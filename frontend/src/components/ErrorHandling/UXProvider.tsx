@@ -63,23 +63,23 @@ const UXProvider: React.FC<UXProviderProps> = ({
   // 主题配置
   const themeConfig = {
     token: {
-      colorPrimary: config.theme?.primaryColor || '#1890ff',
-      borderRadius: config.theme?.borderRadius || 6,
-      fontSize: config.theme?.fontSize || 14,
+      colorPrimary: (config.theme?.primaryColor !== null && config.theme?.primaryColor !== undefined && config.theme?.primaryColor !== '') ? config.theme?.primaryColor : '#1890ff',
+      borderRadius: (config.theme?.borderRadius !== null && config.theme?.borderRadius !== undefined) ? config.theme?.borderRadius : 6,
+      fontSize: (config.theme?.fontSize !== null && config.theme?.fontSize !== undefined) ? config.theme?.fontSize : 14,
     },
     components: {
       // 自定义组件样式
       Button: {
-        borderRadius: config.theme?.borderRadius || 6,
+        borderRadius: (config.theme?.borderRadius !== null && config.theme?.borderRadius !== undefined) ? config.theme?.borderRadius : 6,
       },
       Card: {
-        borderRadius: config.theme?.borderRadius || 8,
+        borderRadius: (config.theme?.borderRadius !== null && config.theme?.borderRadius !== undefined) ? config.theme?.borderRadius : 8,
       },
       Modal: {
-        borderRadius: config.theme?.borderRadius || 8,
+        borderRadius: (config.theme?.borderRadius !== null && config.theme?.borderRadius !== undefined) ? config.theme?.borderRadius : 8,
       },
       Notification: {
-        borderRadius: config.theme?.borderRadius || 8,
+        borderRadius: (config.theme?.borderRadius !== null && config.theme?.borderRadius !== undefined) ? config.theme?.borderRadius : 8,
       },
     },
   }

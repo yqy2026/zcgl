@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import AppLayout from '../AppLayout'
 
 // =============================================================================

@@ -128,16 +128,16 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
     if (initialData) {
       const formData = {
         ...initialData,
-        contract_start_date: initialData.contract_start_date
+        contract_start_date: (initialData.contract_start_date !== null && initialData.contract_start_date !== undefined)
           ? dayjs(String(initialData.contract_start_date))
           : undefined,
-        contract_end_date: initialData.contract_end_date
+        contract_end_date: (initialData.contract_end_date !== null && initialData.contract_end_date !== undefined)
           ? dayjs(String(initialData.contract_end_date))
           : undefined,
-        operation_agreement_start_date: initialData.operation_agreement_start_date
+        operation_agreement_start_date: (initialData.operation_agreement_start_date !== null && initialData.operation_agreement_start_date !== undefined)
           ? dayjs(String(initialData.operation_agreement_start_date))
           : undefined,
-        operation_agreement_end_date: initialData.operation_agreement_end_date
+        operation_agreement_end_date: (initialData.operation_agreement_end_date !== null && initialData.operation_agreement_end_date !== undefined)
           ? dayjs(String(initialData.operation_agreement_end_date))
           : undefined,
       };
@@ -174,7 +174,9 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
 
   // Load rent contracts when asset ID changes
   useEffect(() => {
-    const assetId = String(initialData?.id || form.getFieldValue('id'));
+    const initialId = initialData?.id;
+    const formId: string | undefined = form.getFieldValue('id') as string | undefined;
+    const assetId = String((initialId !== null && initialId !== undefined) ? initialId : formId);
     if (assetId && assetId !== 'undefined') {
       loadRentContracts(assetId);
     }
@@ -194,7 +196,7 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
       'usage_status',
     ];
 
-    const filledFields = requiredFields.filter((field) => allValues[field]);
+    const filledFields = requiredFields.filter((field) => (allValues[field] !== null && allValues[field] !== undefined && allValues[field] !== ''));
     const rate = (filledFields.length / requiredFields.length) * 100;
     setCompletionRate(rate);
 
@@ -216,7 +218,7 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
   const handleSubmit = async (values: Record<string, unknown>) => {
     try {
       const formatDate = (val: unknown): string | undefined => {
-        if (!val) return undefined;
+        if ((val === null || val === undefined || val === '')) return undefined;
         if (dayjs.isDayjs(val)) return (val as dayjs.Dayjs).format('YYYY-MM-DD');
         const parsed = dayjs(String(val));
         return parsed.isValid() ? parsed.format('YYYY-MM-DD') : undefined;

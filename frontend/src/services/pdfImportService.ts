@@ -284,7 +284,7 @@ class PDFImportService {
         if (error.response) {
           return {
             success: false,
-            message: (isPresent(error.response.data?.detail) ? error.response.data?.detail : error.response.statusText || '服务器处理失败'),
+            message: (isPresent(error.response.data?.detail) ? error.response.data?.detail : (error.response.statusText !== null && error.response.statusText !== undefined && error.response.statusText !== '') ? error.response.statusText : '服务器处理失败'),
             error: (isPresent(error.response.data?.detail) ? error.response.data?.detail : error.response.statusText)
           };
         }
@@ -468,7 +468,10 @@ class PDFImportService {
         confirmed_data: confirmedData
       } as ConfirmImportRequest);
 
-      return response.data;
+      return {
+        ...response.data,
+        message: (response.data.message !== null && response.data.message !== undefined && response.data.message !== '') ? response.data.message : '导入成功'
+      };
     } catch (error: unknown) {
       logger.error('确认导入失败:', error as Error);
       let message: string;
@@ -502,12 +505,12 @@ class PDFImportService {
   }> {
     try {
       const response = await axios.delete(`${API_BASE_URL}/session/${sessionId}`);
-      return response.data;
+      return response.data as { success: boolean; message: string; error?: string };
     } catch (error: unknown) {
       logger.error('取消会话失败:', error as Error);
       return {
         success: false,
-        message: isAxiosError(error) ? ((isPresent(error.response?.data?.detail) ? error.response?.data?.detail : error.message || '取消失败')) : isError(error) ? error.message : '取消失败',
+        message: isAxiosError(error) ? ((isPresent(error.response?.data?.detail) ? error.response?.data?.detail : (error.message !== null && error.message !== undefined && error.message !== '') ? error.message : '取消失败')) : isError(error) ? ((error.message !== null && error.message !== undefined && error.message !== '') ? error.message : '取消失败') : '取消失败',
         error: isAxiosError(error) ? ((isPresent(error.response?.data?.detail) ? error.response?.data?.detail : error.message)) : isError(error) ? error.message : 'Unknown error'
       };
     }
@@ -531,7 +534,19 @@ class PDFImportService {
   }> {
     try {
       const response = await axios.get(PDF_API.SESSIONS);
-      return response.data;
+      return response.data as {
+        success: boolean;
+        active_sessions: Array<{
+          session_id: string;
+          status: string;
+          progress: number;
+          current_step: string;
+          created_at: string;
+          file_name: string;
+        }>;
+        total_count: number;
+        error?: string;
+      };
     } catch (error: unknown) {
       logger.error('获取会话列表失败:', error as Error);
 
@@ -691,13 +706,13 @@ class PDFImportService {
       return {
         success: true,
         message: (response.data.message !== null && response.data.message !== undefined && response.data.message !== '') ? response.data.message : 'System OK',
-        test_result: response.data.features as Record<string, unknown> | undefined,
+        test_result: response.data.system_info?.features as Record<string, unknown> | undefined,
         system_ready: true
       };
     } catch (error: unknown) {
       logger.error('测试转换失败:', error as Error);
       const errorMsg = isAxiosError(error)
-        ? ((isPresent(error.response?.data?.detail) ? error.response?.data?.detail : error.message || 'Unknown error'))
+        ? ((isPresent(error.response?.data?.detail) ? error.response?.data?.detail : (error.message !== null && error.message !== undefined && error.message !== '') ? error.message : 'Unknown error'))
         : isError(error)
           ? ((error.message !== null && error.message !== undefined && error.message !== '') ? error.message : 'Unknown error')
           : 'Unknown error';
@@ -824,7 +839,7 @@ class PDFImportService {
   async getEnhancedSystemInfo(): Promise<SystemInfoResponse> {
     try {
       const response = await axios.get(`${ENHANCED_API_BASE}/info`);
-      return response.data;
+      return response.data as SystemInfoResponse;
     } catch (error: unknown) {
       logger.error('获取增强版系统信息失败:', error as Error);
       return {
@@ -907,7 +922,7 @@ class PDFImportService {
         if (error.response) {
           return {
             success: false,
-            message: (isPresent(error.response.data?.detail) ? error.response.data?.detail : error.response.statusText || '服务器处理失败'),
+            message: (isPresent(error.response.data?.detail) ? error.response.data?.detail : (error.response.statusText !== null && error.response.statusText !== undefined && error.response.statusText !== '') ? error.response.statusText : '服务器处理失败'),
             error: (isPresent(error.response.data?.detail) ? error.response.data?.detail : error.response.statusText)
           };
         }
@@ -931,7 +946,11 @@ class PDFImportService {
   }> {
     try {
       const response = await axios.get(`${ENHANCED_API_BASE}/progress/${sessionId}`);
-      return response.data;
+      return response.data as {
+        success: boolean;
+        session_status?: SessionProgress;
+        error?: string;
+      };
     } catch (error: unknown) {
       logger.error('获取增强版进度失败:', error as Error);
       return {
@@ -956,12 +975,16 @@ class PDFImportService {
       const response = await axios.delete(`${ENHANCED_API_BASE}/session/${sessionId}`, {
         params: { reason }
       });
-      return response.data;
+      return response.data as {
+        success: boolean;
+        message: string;
+        session_id?: string;
+      };
     } catch (error: unknown) {
       logger.error('取消增强版会话失败:', error as Error);
       return {
         success: false,
-        message: isAxiosError(error) ? ((isPresent(error.response?.data?.detail) ? error.response?.data?.detail : error.message || '取消失败')) : isError(error) ? error.message : '取消失败',
+        message: isAxiosError(error) ? ((isPresent(error.response?.data?.detail) ? error.response?.data?.detail : (error.message !== null && error.message !== undefined && error.message !== '') ? error.message : '取消失败')) : isError(error) ? ((error.message !== null && error.message !== undefined && error.message !== '') ? error.message : '取消失败') : '取消失败',
         error: isAxiosError(error) ? ((isPresent(error.response?.data?.detail) ? error.response?.data?.detail : error.message)) : isError(error) ? error.message : 'Unknown error'
       };
     }
@@ -1140,11 +1163,17 @@ class PDFImportService {
   }> {
     try {
       const response = await axios.get(`${ENHANCED_API_BASE}/test/all`);
-      return response.data;
+      return response.data as {
+        success: boolean;
+        message: string;
+        test_results?: Array<{ name: string; status: string; message?: string;[key: string]: unknown }>;
+        availability_rate?: number;
+        system_ready?: boolean;
+      };
     } catch (error: unknown) {
       logger.error('测试增强版功能失败:', error);
       const errorMsg = isAxiosError(error)
-        ? ((isPresent(error.response?.data?.detail) ? error.response?.data?.detail : error.message || 'Unknown error'))
+        ? ((isPresent(error.response?.data?.detail) ? error.response?.data?.detail : (error.message !== null && error.message !== undefined && error.message !== '') ? error.message : 'Unknown error'))
         : isError(error)
           ? ((error.message !== null && error.message !== undefined && error.message !== '') ? error.message : 'Unknown error')
           : 'Unknown error';
@@ -1168,7 +1197,13 @@ class PDFImportService {
   }> {
     try {
       const response = await axios.get(`${ENHANCED_API_BASE}/health`);
-      return response.data;
+      return response.data as {
+        status: string;
+        components: Record<string, boolean>;
+        health_score?: number;
+        timestamp: string;
+        error?: string;
+      };
     } catch (error: unknown) {
       logger.error('增强版健康检查失败:', error);
       return {
@@ -1190,11 +1225,15 @@ class PDFImportService {
   }> {
     try {
       const response = await axios.get(`${ENHANCED_API_BASE}/performance/summary`);
-      return response.data;
+      return response.data as {
+        success: boolean;
+        message: string;
+        data?: Record<string, unknown>;
+      };
     } catch (error: unknown) {
       logger.error('获取性能摘要失败:', error);
       const errorMsg = isAxiosError(error)
-        ? ((isPresent(error.response?.data?.detail) ? error.response?.data?.detail : error.message || 'Unknown error'))
+        ? ((isPresent(error.response?.data?.detail) ? error.response?.data?.detail : (error.message !== null && error.message !== undefined && error.message !== '') ? error.message : 'Unknown error'))
         : isError(error)
           ? ((error.message !== null && error.message !== undefined && error.message !== '') ? error.message : 'Unknown error')
           : 'Unknown error';

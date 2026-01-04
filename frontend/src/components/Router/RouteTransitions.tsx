@@ -256,9 +256,9 @@ export const RouteTransition: React.FC<RouteTransitionProps> = ({
     <AnimatePresence mode="wait">
       <motion.div
         key={location.pathname}
-        initial={animationConfig.initial}
-        animate={animationConfig.enter}
-        exit={animationConfig.exit}
+        initial={animationConfig.initial as import('framer-motion').TargetAndTransition}
+        animate={animationConfig.enter as import('framer-motion').TargetAndTransition}
+        exit={animationConfig.exit as import('framer-motion').TargetAndTransition}
         style={{
           position: "absolute",
           width: "100%",
@@ -305,8 +305,8 @@ export const LayoutTransition: React.FC<{
 
   return (
     <motion.div
-      initial={config.initial}
-      animate={config.enter}
+      initial={config.initial as import('framer-motion').TargetAndTransition}
+      animate={config.enter as import('framer-motion').TargetAndTransition}
       transition={{
         duration,
         ease: "easeInOut",
@@ -452,9 +452,9 @@ export const OptimizedTransition: React.FC<{
 
   return (
     <motion.div
-      initial={config.initial}
-      animate={config.enter}
-      exit={config.exit}
+      initial={config.initial as import('framer-motion').TargetAndTransition}
+      animate={config.enter as import('framer-motion').TargetAndTransition}
+      exit={config.exit as import('framer-motion').TargetAndTransition}
       style={{
         willChange: "opacity, transform", // 提示浏览器优化
       }}

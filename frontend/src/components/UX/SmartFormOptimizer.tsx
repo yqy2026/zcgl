@@ -77,7 +77,7 @@ const SmartFormOptimizer: React.FC<SmartFormOptimizerProps> = ({
 
       // 验证必填字段
       fields.forEach(field => {
-        if (field.required && !values[field.name]) {
+        if ((field.required === true) && (values[field.name] === null || values[field.name] === undefined || values[field.name] === '')) {
           newErrors[field.name] = `${field.label}为必填项`
         }
       })
@@ -86,7 +86,7 @@ const SmartFormOptimizer: React.FC<SmartFormOptimizerProps> = ({
       fields.forEach(field => {
         if (field.validation && values[field.name] !== undefined && values[field.name] !== null) {
           field.validation.forEach(rule => {
-            if (rule.required && !values[field.name]) {
+            if ((rule.required === true) && ((values[field.name] === null || values[field.name] === undefined || values[field.name] === ''))) {
               newErrors[field.name] = rule.message
             }
             if (rule.min !== undefined && (values[field.name] as any) < rule.min) {
@@ -132,8 +132,11 @@ const SmartFormOptimizer: React.FC<SmartFormOptimizerProps> = ({
             style={{ width: '100%' }}
             min={0}
             max={field.maxLength}
-            formatter={value => `${value}${field.suffix || ''}`}
-            parser={value => value?.replace(new RegExp(`${field.suffix || ''}$`), '') as any}
+            formatter={value => `${value}${(field.suffix !== null && field.suffix !== undefined && field.suffix !== '') ? field.suffix : ''}`}
+            parser={value => {
+              const numStr = (value !== null && value !== undefined) ? value.replace(new RegExp(`${(field.suffix !== null && field.suffix !== undefined && field.suffix !== '') ? field.suffix : ''}$`), '') : '0'
+              return parseInt(numStr, 10) || 0
+            }}
           />
         )
 
@@ -168,7 +171,7 @@ const SmartFormOptimizer: React.FC<SmartFormOptimizerProps> = ({
   }
 
   return (
-    <Card style={style} size={size as any}>
+    <Card style={style} size={(size === 'large' ? 'default' : size) as 'small' | 'default' | undefined}>
       <Form
         form={form}
         layout={layout}

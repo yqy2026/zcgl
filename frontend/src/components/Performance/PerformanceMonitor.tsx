@@ -313,7 +313,7 @@ interface MemoryInfo {
                 <div>
                   <div style={{ marginBottom: 8 }}>内存使用率</div>
                   <Progress
-                    percent={metrics.memoryUsage || 0}
+                    percent={(metrics.memoryUsage !== null && metrics.memoryUsage !== undefined) ? metrics.memoryUsage : 0}
                     status={((metrics.memoryUsage !== null && metrics.memoryUsage !== undefined) && metrics.memoryUsage > 80) ? 'exception' : 'normal'}
                     format={(percent) => `${percent?.toFixed(1)}%`}
                   />

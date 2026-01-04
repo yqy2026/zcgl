@@ -49,11 +49,11 @@ const DictionaryPage: React.FC = () => {
   const fetchTypes = async () => {
     try {
       const types = await unifiedDictionaryService.getTypes()
-      setDictTypes(types || [])
+      setDictTypes((types !== null && types !== undefined) ? types : [])
 
       // 同时获取枚举类型详细信息
       const typesData = await unifiedDictionaryService.getEnumFieldTypes()
-      setEnumTypes(typesData || [])
+      setEnumTypes((typesData !== null && typesData !== undefined) ? typesData : [])
     } catch (error) {
       pageLogger.error('获取字典类型失败:', error as Error)
     }
@@ -77,7 +77,7 @@ const DictionaryPage: React.FC = () => {
 
   // 获取指定类型的字典数据
   const fetchList = async (type?: string) => {
-    if (!type) {
+    if ((type === null || type === undefined || type === '')) {
       setData([])
       return
     }
@@ -106,7 +106,7 @@ const DictionaryPage: React.FC = () => {
   }, [activeType])
 
   const handleCreate = async () => {
-    if (!activeType) {
+    if ((activeType === null || activeType === undefined || activeType === '')) {
       message.warning('请先选择字典类型')
       return
     }
@@ -145,7 +145,7 @@ const DictionaryPage: React.FC = () => {
       dict_label: record.dict_label,
       dict_value: record.dict_value,
       dict_code: record.dict_code,
-      description: record.description || '',
+      description: (record.description !== null && record.description !== undefined) ? record.description : '',
       sort_order: record.sort_order || 0,
       is_active: record.is_active
     }
@@ -180,7 +180,7 @@ const DictionaryPage: React.FC = () => {
     try {
       const values = await form.validateFields()
 
-      if (!activeType) {
+      if ((activeType === null || activeType === undefined || activeType === '')) {
         message.error('未找到对应的枚举类型')
         return
       }
@@ -266,10 +266,10 @@ const DictionaryPage: React.FC = () => {
 
   // 获取所有分类
   const categories = useMemo(() => {
-    if (!enumTypes || enumTypes.length === 0) {
+    if ((enumTypes === null || enumTypes === undefined) || enumTypes.length === 0) {
       return ['all']
     }
-    const cats = enumTypes.map(type => type.category || '未分类')
+    const cats = enumTypes.map(type => (type.category !== null && type.category !== undefined && type.category !== '') ? type.category : '未分类')
     return ['all', ...Array.from(new Set(cats))]
   }, [enumTypes])
 
@@ -282,14 +282,14 @@ const DictionaryPage: React.FC = () => {
       }
 
       // 搜索筛选
-      if (searchText) {
+      if ((searchText !== null && searchText !== undefined && searchText !== '')) {
         const searchLower = searchText.toLowerCase()
         const typeMatch = item.type.name.toLowerCase().includes(searchLower) ||
           item.type.code.toLowerCase().includes(searchLower)
         const valueMatch = item.values.some(value =>
-          value.label.toLowerCase().includes(searchLower) ||
-          value.value.toLowerCase().includes(searchLower) ||
-          (value.code && value.code.toLowerCase().includes(searchLower))
+          (value.label !== null && value.label !== undefined && value.label !== '') && value.label.toLowerCase().includes(searchLower) ||
+          (value.value !== null && value.value !== undefined && value.value !== '') && value.value.toLowerCase().includes(searchLower) ||
+          (value.code !== null && value.code !== undefined && value.code !== '' && value.code.toLowerCase().includes(searchLower))
         )
         return typeMatch || valueMatch
       }
@@ -370,7 +370,7 @@ const DictionaryPage: React.FC = () => {
         </Button>
       ),
     },
-  ], [allEnumData])
+  ], [allEnumData]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const columns: ColumnsType<SystemDictionary> = useMemo(() => [
     {
@@ -447,7 +447,7 @@ const DictionaryPage: React.FC = () => {
         </Space>
       ),
     },
-  ], [activeType, enumTypes])
+  ], [activeType, enumTypes]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div style={{ padding: '24px' }}>
@@ -591,8 +591,8 @@ const DictionaryPage: React.FC = () => {
             }}>
               <div><strong>枚举类型：</strong>{enumTypes.find(t => t.code === activeType)?.name}</div>
               <div><strong>类型编码：</strong>{activeType}</div>
-              <div><strong>分类：</strong>{enumTypes.find(t => t.code === activeType)?.category || '未分类'}</div>
-              {enumTypes.find(t => t.code === activeType)?.description && (
+              <div><strong>分类：</strong>{(enumTypes.find(t => t.code === activeType)?.category !== null && enumTypes.find(t => t.code === activeType)?.category !== undefined && enumTypes.find(t => t.code === activeType)?.category !== '') ? enumTypes.find(t => t.code === activeType)?.category : '未分类'}</div>
+              {(enumTypes.find(t => t.code === activeType)?.description !== null && enumTypes.find(t => t.code === activeType)?.description !== undefined && enumTypes.find(t => t.code === activeType)?.description !== '') && (
                 <div><strong>描述：</strong>{enumTypes.find(t => t.code === activeType)?.description}</div>
               )}
             </div>
@@ -604,7 +604,7 @@ const DictionaryPage: React.FC = () => {
       <Modal
         open={detailModalVisible}
         title={
-          activeType ? `${enumTypes.find(t => t.code === activeType)?.name} (${activeType})` : '枚举值详情'
+          (activeType !== null && activeType !== undefined && activeType !== '') ? `${enumTypes.find(t => t.code === activeType)?.name} (${activeType})` : '枚举值详情'
         }
         onCancel={() => setDetailModalVisible(false)}
         footer={[

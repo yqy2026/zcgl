@@ -259,7 +259,7 @@ const AssetAdvancedSection: React.FC = () => {
                                                     <List.Item.Meta
                                                         avatar={<Tag color="green">PDF</Tag>}
                                                         title={file.name}
-                                                        description={`文件大小: ${file.size ? (file.size / 1024 / 1024).toFixed(2) + 'MB' : '未知'}`}
+                                                        description={`文件大小: ${(file.size !== null && file.size !== undefined && file.size > 0) ? (file.size / 1024 / 1024).toFixed(2) + 'MB' : '未知'}`}
                                                     />
                                                 </List.Item>
                                             )}

@@ -23,7 +23,7 @@ export const useSearchHistory = () => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY)
       if (stored !== null && stored !== undefined && stored !== '') {
-        const history = JSON.parse(stored)
+        const history = JSON.parse(stored) as SearchHistoryItem[]
         setSearchHistory(history)
       }
     } catch (error) {

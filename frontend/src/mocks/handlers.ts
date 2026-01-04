@@ -67,8 +67,8 @@ export const getAssetsHandler = http.get(
     if (params.search) {
       return HttpResponse.json({
         ...assetListResponse,
-        data: assetListResponse.data.filter((asset: any) =>
-          asset.propertyName.includes(params.search)
+        data: assetListResponse.data.filter((asset: { property_name: string }) =>
+          (asset.property_name !== null && asset.property_name !== undefined && asset.property_name !== '') && asset.property_name.includes(params.search)
         ),
       })
     }
@@ -107,7 +107,7 @@ export const createAssetHandler = http.post(
     const body = await request.json()
 
     // 模拟验证错误
-    if (!body || !(body as any).propertyName) {
+    if ((body === null || body === undefined) || !((body as { propertyName?: string }).propertyName !== null && (body as { propertyName?: string }).propertyName !== undefined && (body as { propertyName?: string }).propertyName !== '')) {
       return HttpResponse.json({
         success: false,
         message: '物业名称不能为空',

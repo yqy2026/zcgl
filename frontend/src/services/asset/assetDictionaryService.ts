@@ -18,7 +18,9 @@ export class AssetDictionaryService {
     async getSystemDictionaries(dict_type?: string): Promise<SystemDictionary[]> {
         try {
             const result = await enhancedApiClient.get<SystemDictionary[]>("/system-dictionaries", {
-                params: dict_type ? { dict_type } : undefined,
+                params: (dict_type !== null && dict_type !== undefined && dict_type !== '')
+                        ? { dict_type }
+                        : undefined,
                 cache: true,
                 retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
                 smartExtract: true

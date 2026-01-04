@@ -91,17 +91,17 @@ export class ApiHealthCheckService {
 
       const result: HealthCheckResult = {
         endpoint: name,
-        status: (response as any)?.status >= 200 && (response as any)?.status < 300 ? 'healthy' : 'unhealthy',
+        status: ((response as unknown as { status?: number }).status !== null && (response as unknown as { status?: number }).status !== undefined && (response as unknown as { status: number }).status >= 200 && (response as unknown as { status: number }).status < 300) ? 'healthy' : 'unhealthy',
         responseTime,
         lastChecked: new Date()
       }
 
       // 如果HEAD请求不支持，尝试GET请求
-      if ((response as any).status === 405) {
+      if ((response as unknown as { status?: number }).status === 405) {
         const getResponse = await api.get(endpoint)
         const getResponseTime = Date.now() - startTime
 
-        result.status = (getResponse as any)?.status >= 200 && (getResponse as any)?.status < 300 ? 'healthy' : 'unhealthy'
+        result.status = ((getResponse as unknown as { status?: number }).status !== null && (getResponse as unknown as { status?: number }).status !== undefined && (getResponse as unknown as { status: number }).status >= 200 && (getResponse as unknown as { status: number }).status < 300) ? 'healthy' : 'unhealthy'
         result.responseTime = getResponseTime
       }
 
@@ -319,7 +319,7 @@ export class ApiHealthCheckService {
 
     // 检查响应时间
     const slowEndpoints = report.details.filter(r =>
-      r.responseTime && r.responseTime > 3000
+      (r.responseTime !== null && r.responseTime !== undefined) && r.responseTime > 3000
     )
 
     if (slowEndpoints.length > 0) {

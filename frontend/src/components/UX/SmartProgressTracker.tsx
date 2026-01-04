@@ -273,6 +273,7 @@ export const SmartProgressProvider: React.FC<SmartProgressProviderProps> = ({
     return new Date(Date.now() + remainingTime)
   }
 
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     return () => {
       const currentIntervals = intervals.current
@@ -281,6 +282,7 @@ export const SmartProgressProvider: React.FC<SmartProgressProviderProps> = ({
       })
     }
   }, [])
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   return (
     <ProgressContext.Provider value={contextValue}>

@@ -168,7 +168,7 @@ export const getUXConfig = <T>(path: string, defaultValue?: T): T => {
   let value: unknown = UX_CONFIG
 
   for (const key of keys) {
-    if (value && typeof value === 'object' && key in value) {
+    if ((value !== null && value !== undefined) && typeof value === 'object' && key in value) {
       value = (value as Record<string, unknown>)[key]
     } else {
       return defaultValue as T

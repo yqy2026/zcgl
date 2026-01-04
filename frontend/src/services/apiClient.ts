@@ -3,7 +3,7 @@
  * 提供标准化的API调用方法，包含错误处理、重试机制等
  */
 
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios'
+import axios, { AxiosInstance, AxiosRequestConfig, InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios'
 import { API_CONFIG } from '../constants/api'
 
 // API响应类型定义
@@ -91,15 +91,18 @@ export class ApiClient {
       (response: AxiosResponse) => {
         return response
       },
-      async (error) => {
-        const originalRequest = error.config
+      async (error: unknown) => {
+        const originalRequest = (error as { config?: { _retry?: boolean } }).config
 
         // 处理401未授权错误
-        if (error.response?.status === 401 && !originalRequest._retry) {
-          originalRequest._retry = true
+        if ((error as { response?: { status?: number } }).response?.status === 401 && (originalRequest?._retry === false || originalRequest?._retry === undefined)) {
+          if (originalRequest) {
+            originalRequest._retry = true
+          }
 
           // 开发模式处理
           if (API_CONFIG.ENVIRONMENT === 'development') {
+            // eslint-disable-next-line no-console
             console.warn('开发模式：收到401响应，但使用mock token，跳过重定向')
             return Promise.reject(error)
           }
@@ -108,7 +111,7 @@ export class ApiClient {
           try {
             await this.refreshToken()
             // 重新发送原请求
-            return this.instance(originalRequest)
+            return this.instance(originalRequest as InternalAxiosRequestConfig)
           } catch (refreshError) {
             // 刷新失败，重定向到登录页
             this.handleAuthFailure()
@@ -133,7 +136,7 @@ export class ApiClient {
    */
   private async refreshToken(): Promise<void> {
     const refreshToken = localStorage.getItem('refresh_token')
-    if (!refreshToken) {
+    if ((refreshToken === null || refreshToken === undefined || refreshToken === '')) {
       throw new Error('No refresh token available')
     }
 
@@ -142,7 +145,7 @@ export class ApiClient {
         refresh_token: refreshToken,
       })
 
-      const { access_token } = response.data
+      const { access_token } = response.data as { access_token: string }
       localStorage.setItem('token', access_token)
     } catch {
       throw new Error('Token refresh failed')
@@ -220,7 +223,7 @@ export class ApiClient {
       },
       timeout: API_CONFIG.TIMEOUTS.UPLOAD,
       onUploadProgress: (progressEvent) => {
-        if (onProgress && progressEvent.total) {
+        if ((onProgress !== null && onProgress !== undefined) && (progressEvent.total !== null && progressEvent.total !== undefined)) {
           const progress = (progressEvent.loaded / progressEvent.total) * 100
           onProgress(Math.round(progress))
         }
@@ -248,7 +251,7 @@ export class ApiClient {
     const downloadUrl = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = downloadUrl
-    link.download = filename || 'download'
+    link.download = (filename !== null && filename !== undefined && filename !== '') ? filename : 'download'
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)

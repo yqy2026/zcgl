@@ -133,6 +133,7 @@ const RentStatisticsPage: React.FC = () => {
 
   useEffect(() => {
     void fetchStatistics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateRange, selectedYear]);
 
   // 导出统计数据
@@ -310,7 +311,7 @@ const RentStatisticsPage: React.FC = () => {
   ];
 
   // 准备图表数据
-  const ownershipChartData: PieChartDatum[] = (ownershipStats || []).map(item => ({
+  const ownershipChartData: PieChartDatum[] = ((ownershipStats !== null && ownershipStats !== undefined) ? ownershipStats : []).map(item => ({
     type: item.ownership_name,
     value: Number(item.total_due_amount),
     paid: Number(item.total_paid_amount),
@@ -340,7 +341,7 @@ const RentStatisticsPage: React.FC = () => {
     },
   };
 
-  const monthlyChartData: LineChartDatum[] = (monthlyStats || []).map(item => ({
+  const monthlyChartData: LineChartDatum[] = ((monthlyStats !== null && monthlyStats !== undefined) ? monthlyStats : []).map(item => ({
     month: item.year_month,
     due: Number(item.total_due_amount),
     paid: Number(item.total_paid_amount),
@@ -349,7 +350,7 @@ const RentStatisticsPage: React.FC = () => {
   }));
 
   // Prepare monthly bar chart data - transform to stacked format
-  const monthlyBarData = (monthlyStats || []).flatMap(item => [
+  const monthlyBarData = ((monthlyStats !== null && monthlyStats !== undefined) ? monthlyStats : []).flatMap(item => [
     { month: item.year_month, type: '应收金额', value: Number(item.total_due_amount) },
     { month: item.year_month, type: '已收金额', value: Number(item.total_paid_amount) },
     { month: item.year_month, type: '欠款金额', value: Number(item.total_overdue_amount) },

@@ -35,7 +35,13 @@ export class OwnershipService {
     }
 
     const response = await apiRequest.get(`${this.baseUrl}?${searchParams.toString()}`);
-    return response.data;
+    return {
+      items: response.data as Ownership[],
+      total: (response.data as Ownership[]).length,
+      page: 1,
+      size: (response.data as Ownership[]).length,
+      pages: 1
+    } as OwnershipListResponse;
   }
 
   /**
@@ -43,7 +49,7 @@ export class OwnershipService {
    */
   async searchOwnerships(searchParams: OwnershipSearchRequest): Promise<OwnershipListResponse> {
     const response = await apiRequest.post(`${this.baseUrl}/search`, searchParams);
-    return response.data;
+    return response.data as OwnershipListResponse;
   }
 
   /**
@@ -51,7 +57,7 @@ export class OwnershipService {
    */
   async getOwnership(id: string): Promise<Ownership> {
     const response = await apiRequest.get(`${this.baseUrl}/${id}`);
-    return response.data;
+    return response.data as Ownership;
   }
 
   /**
@@ -59,7 +65,7 @@ export class OwnershipService {
    */
   async createOwnership(data: OwnershipCreate): Promise<Ownership> {
     const response = await apiRequest.post(this.baseUrl, data);
-    return response.data;
+    return response.data as Ownership;
   }
 
   /**
@@ -67,7 +73,7 @@ export class OwnershipService {
    */
   async updateOwnership(id: string, data: OwnershipUpdate): Promise<Ownership> {
     const response = await apiRequest.put(`${this.baseUrl}/${id}`, data);
-    return response.data;
+    return response.data as Ownership;
   }
 
   /**
@@ -75,7 +81,7 @@ export class OwnershipService {
    */
   async deleteOwnership(id: string): Promise<OwnershipDeleteResponse> {
     const response = await apiRequest.delete(`${this.baseUrl}/${id}`);
-    return response.data;
+    return response.data as OwnershipDeleteResponse;
   }
 
   /**
@@ -83,7 +89,7 @@ export class OwnershipService {
    */
   async toggleOwnershipStatus(id: string): Promise<Ownership> {
     const response = await apiRequest.post(`${this.baseUrl}/${id}/toggle-status`);
-    return response.data;
+    return response.data as Ownership;
   }
 
   /**
@@ -91,16 +97,16 @@ export class OwnershipService {
    */
   async getOwnershipStatistics(): Promise<OwnershipStatisticsResponse> {
     const response = await apiRequest.get(`${this.baseUrl}/statistics/summary`);
-    return response.data;
+    return response.data as OwnershipStatisticsResponse;
   }
 
-  
+
   /**
    * 获取权属方选项列表
    */
   async getOwnershipOptions(isActive: boolean = true): Promise<Ownership[]> {
     const response = await apiRequest.get(`${this.baseUrl}/dropdown-options?is_active=${isActive}`);
-    return response.data;
+    return response.data as Ownership[];
   }
 
   /**

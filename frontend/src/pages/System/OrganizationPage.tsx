@@ -85,11 +85,35 @@ const OrganizationPage: React.FC = () => {
     { value: 'suspended', label: '暂停', color: 'orange' }
   ], []);
 
-  useEffect(() => {
-    loadOrganizations();
-    loadOrganizationTree();
-    loadStatistics();
-  }, [loadOrganizations, loadOrganizationTree, loadStatistics]);
+  const getTypeIcon = useCallback((type: string) => {
+    const typeConfig = organizationTypes.find(t => t.value === type);
+    return (typeConfig !== null && typeConfig !== undefined && typeConfig.icon !== null && typeConfig.icon !== undefined) ? typeConfig.icon : <TeamOutlined />;
+  }, [organizationTypes]);
+
+  const getStatusColor = useCallback((status: string) => {
+    const statusConfig = statusOptions.find(s => s.value === status);
+    return (statusConfig !== null && statusConfig !== undefined && statusConfig.color !== null && statusConfig.color !== undefined && statusConfig.color !== '') ? statusConfig.color : 'default';
+  }, [statusOptions]);
+
+  const getStatusLabel = useCallback((status: string) => {
+    const statusConfig = statusOptions.find(s => s.value === status);
+    return (statusConfig !== null && statusConfig !== undefined && statusConfig.label !== null && statusConfig.label !== undefined && statusConfig.label !== '') ? statusConfig.label : status;
+  }, [statusOptions]);
+
+  const convertTreeToDataNodes = useCallback((treeNodes: OrganizationTree[]): DataNode[] => {
+    return treeNodes.map(node => ({
+      key: node.id,
+      title: (
+        <span>
+          {getTypeIcon(node.type)} {node.name} ({node.code})
+          <Tag color={getStatusColor(node.status)} style={{ marginLeft: 8 }}>
+            {getStatusLabel(node.status)}
+          </Tag>
+        </span>
+      ),
+      children: (node.children !== null && node.children !== undefined) ? convertTreeToDataNodes(node.children) : []
+    }));
+  }, [getTypeIcon, getStatusColor, getStatusLabel]);
 
   const loadOrganizations = useCallback(async () => {
     setLoading(true);
@@ -136,35 +160,15 @@ const OrganizationPage: React.FC = () => {
     }));
   };
 
-  const convertTreeToDataNodes = useCallback((treeNodes: OrganizationTree[]): DataNode[] => {
-    return treeNodes.map(node => ({
-      key: node.id,
-      title: (
-        <span>
-          {getTypeIcon(node.type)} {node.name} ({node.code})
-          <Tag color={getStatusColor(node.status)} style={{ marginLeft: 8 }}>
-            {getStatusLabel(node.status)}
-          </Tag>
-        </span>
-      ),
-      children: (node.children !== null && node.children !== undefined) ? convertTreeToDataNodes(node.children) : []
-    }));
-  }, [getTypeIcon, getStatusColor, getStatusLabel]);
-
-  const getTypeIcon = useCallback((type: string) => {
-    const typeConfig = organizationTypes.find(t => t.value === type);
-    return (typeConfig !== null && typeConfig !== undefined && typeConfig.icon !== null && typeConfig.icon !== undefined) ? typeConfig.icon : <TeamOutlined />;
-  }, [organizationTypes]);
-
-  const getStatusColor = useCallback((status: string) => {
-    const statusConfig = statusOptions.find(s => s.value === status);
-    return (statusConfig !== null && statusConfig !== undefined && statusConfig.color !== null && statusConfig.color !== undefined && statusConfig.color !== '') ? statusConfig.color : 'default';
-  }, [statusOptions]);
-
-  const getStatusLabel = useCallback((status: string) => {
-    const statusConfig = statusOptions.find(s => s.value === status);
-    return (statusConfig !== null && statusConfig !== undefined && statusConfig.label !== null && statusConfig.label !== undefined && statusConfig.label !== '') ? statusConfig.label : status;
-  }, [statusOptions]);
+  /* eslint-disable react-hooks/exhaustive-deps */
+  useEffect(() => {
+    void (async () => {
+      await loadOrganizations();
+      await loadOrganizationTree();
+      await loadStatistics();
+    })();
+  }, []);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   const handleSearch = async (keyword: string) => {
     if (keyword === null || keyword === undefined || keyword.trim() === '') {

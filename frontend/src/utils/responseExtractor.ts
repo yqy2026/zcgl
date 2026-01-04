@@ -129,13 +129,13 @@ export class ResponseExtractor {
       // 根据类型提取数据
       switch (responseType) {
         case 'standard':
-          return this.extractStandardResponse<T>(response, finalOptions);
+          return this.extractStandardResponse<T>(response, finalOptions as unknown as SmartExtractOptions<T>);
         case 'paginated':
-          return this.extractPaginatedResponse<T>(response, finalOptions);
+          return this.extractPaginatedResponse<T>(response, finalOptions as unknown as SmartExtractOptions<T>);
         case 'direct':
-          return this.extractDirectResponse<T>(response, finalOptions);
+          return this.extractDirectResponse<T>(response, finalOptions as unknown as SmartExtractOptions<T>);
         case 'error':
-          return this.extractErrorResponse<T>(response, finalOptions);
+          return this.extractErrorResponse<T>(response, finalOptions as unknown as SmartExtractOptions<T>);
         default:
           return {
             success: false,

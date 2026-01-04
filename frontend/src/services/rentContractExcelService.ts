@@ -107,7 +107,8 @@ class RentContractExcelService {
   ): Promise<Blob> {
     try {
       const params = new URLSearchParams();
-      if (options.contract_ids?.length) {
+      if ((options.contract_ids !== null && options.contract_ids !== undefined) &&
+          (options.contract_ids.length !== null && options.contract_ids.length !== undefined && options.contract_ids.length > 0)) {
         options.contract_ids.forEach(id => params.append('contract_ids', id));
       }
       if (options.include_terms !== undefined) {
@@ -176,7 +177,9 @@ class RentContractExcelService {
 
       // 生成文件名
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-      const filename = options.filename || `租金合同导出_${timestamp}.xlsx`;
+      const filename = (options.filename !== null && options.filename !== undefined && options.filename !== '')
+                      ? options.filename
+                      : `租金合同导出_${timestamp}.xlsx`;
       link.download = filename;
 
       document.body.appendChild(link);

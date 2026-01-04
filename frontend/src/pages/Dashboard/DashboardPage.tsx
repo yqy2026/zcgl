@@ -60,7 +60,8 @@ const DashboardPage: React.FC = () => {
     setIsFullscreen(!isFullscreen)
     if (!isFullscreen) {
       // 进入全屏
-      if (document.documentElement.requestFullscreen) {
+      if ((document.documentElement.requestFullscreen !== null &&
+           document.documentElement.requestFullscreen !== undefined)) {
         document.documentElement.requestFullscreen()
       }
     } else {
@@ -193,7 +194,11 @@ const DashboardPage: React.FC = () => {
               precision={1}
               trend={mockTrends?.occupancy}
               icon={<PieChartOutlined />}
-              color={(areaSummary?.occupancy_rate || 0) >= 95 ? 'success' : (areaSummary?.occupancy_rate || 0) >= 85 ? 'warning' : 'error'}
+              color={(areaSummary?.occupancy_rate !== null && areaSummary?.occupancy_rate !== undefined && areaSummary?.occupancy_rate >= 95)
+                    ? 'success'
+                    : (areaSummary?.occupancy_rate !== null && areaSummary?.occupancy_rate !== undefined && areaSummary?.occupancy_rate >= 85)
+                      ? 'warning'
+                      : 'error'}
               loading={isLoading}
             />
           </Col>
@@ -220,7 +225,7 @@ const DashboardPage: React.FC = () => {
                   <Col span={12}>
                     <div className={styles.statItem}>
                       <div className={styles.statValue}>
-                        {(areaSummary?.total_rented_area || 0).toFixed(2)}
+                        {((areaSummary?.total_rented_area !== null && areaSummary?.total_rented_area !== undefined) ? areaSummary.total_rented_area : 0).toFixed(2)}
                       </div>
                       <div className={styles.statLabel}>已租面积 (㎡)</div>
                     </div>
@@ -228,7 +233,7 @@ const DashboardPage: React.FC = () => {
                   <Col span={12}>
                     <div className={styles.statItem}>
                       <div className={styles.statValue}>
-                        {(areaSummary?.total_unrented_area || 0).toFixed(2)}
+                        {((areaSummary?.total_unrented_area !== null && areaSummary?.total_unrented_area !== undefined) ? areaSummary.total_unrented_area : 0).toFixed(2)}
                       </div>
                       <div className={styles.statLabel}>空置面积 (㎡)</div>
                     </div>
@@ -236,7 +241,7 @@ const DashboardPage: React.FC = () => {
                   <Col span={12}>
                     <div className={styles.statItem}>
                       <div className={styles.statValue}>
-                        {(areaSummary?.total_non_commercial_area || 0).toFixed(2)}
+                        {((areaSummary?.total_non_commercial_area !== null && areaSummary?.total_non_commercial_area !== undefined) ? areaSummary.total_non_commercial_area : 0).toFixed(2)}
                       </div>
                       <div className={styles.statLabel}>非商业面积 (㎡)</div>
                     </div>
@@ -244,7 +249,7 @@ const DashboardPage: React.FC = () => {
                   <Col span={12}>
                     <div className={styles.statItem}>
                       <div className={styles.statValue}>
-                        {areaSummary?.assets_with_area_data || 0}
+                        {(areaSummary?.assets_with_area_data !== null && areaSummary?.assets_with_area_data !== undefined) ? areaSummary.assets_with_area_data : 0}
                       </div>
                       <div className={styles.statLabel}>有数据资产 (个)</div>
                     </div>
@@ -266,7 +271,7 @@ const DashboardPage: React.FC = () => {
                   <Col span={12}>
                     <div className={styles.statItem}>
                       <div className={styles.statValue}>
-                        {areaSummary?.total_assets || 0}
+                        {(areaSummary?.total_assets !== null && areaSummary?.total_assets !== undefined) ? areaSummary.total_assets : 0}
                       </div>
                       <div className={styles.statLabel}>管理资产总数</div>
                     </div>
@@ -274,7 +279,7 @@ const DashboardPage: React.FC = () => {
                   <Col span={12}>
                     <div className={styles.statItem}>
                       <div className={styles.statValue}>
-                        {areaSummary?.total_area?.toFixed(2) || '0.00'}
+                        {(areaSummary?.total_area !== null && areaSummary?.total_area !== undefined) ? areaSummary.total_area.toFixed(2) : '0.00'}
                       </div>
                       <div className={styles.statLabel}>土地面积 (㎡)</div>
                     </div>
@@ -282,7 +287,7 @@ const DashboardPage: React.FC = () => {
                   <Col span={12}>
                     <div className={styles.statItem}>
                       <div className={styles.statValue}>
-                        {(areaSummary?.total_rentable_area || 0).toFixed(2)}
+                        {((areaSummary?.total_rentable_area !== null && areaSummary?.total_rentable_area !== undefined) ? areaSummary.total_rentable_area : 0).toFixed(2)}
                       </div>
                       <div className={styles.statLabel}>可租面积 (㎡)</div>
                     </div>
@@ -290,7 +295,7 @@ const DashboardPage: React.FC = () => {
                   <Col span={12}>
                     <div className={styles.statItem}>
                       <div className={styles.statValue}>
-                        {areaSummary?.occupancy_rate?.toFixed(1) || '0.0'}%
+                        {(areaSummary?.occupancy_rate !== null && areaSummary?.occupancy_rate !== undefined) ? areaSummary.occupancy_rate.toFixed(1) : '0.0'}%
                       </div>
                       <div className={styles.statLabel}>整体出租率</div>
                     </div>

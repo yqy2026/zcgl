@@ -97,7 +97,7 @@ export const useProjectDetail = (id?: string): UseProjectDetailResult => {
     refetchOnMount: false,
     refetchOnReconnect: false,
     retry: 1,
-    enabled: !!id
+    enabled: (id !== null && id !== undefined && id !== '')
   })
 
   return {
@@ -146,9 +146,9 @@ export const useProjectList = (params: ProjectQueryParams = {}): UseProjectListR
   })
 
   const pagination = {
-    current: data?.page || 1,
-    pageSize: data?.size || 10,
-    total: data?.total || 0,
+    current: (data?.page !== null && data?.page !== undefined) ? data.page : 1,
+    pageSize: (data?.size !== null && data?.size !== undefined) ? data.size : 10,
+    total: (data?.total !== null && data?.total !== undefined) ? data.total : 0,
     onChange: (_page: number, _size: number) => {
       // 这里可以触发重新查询
       refetch()
@@ -299,8 +299,8 @@ export const useToggleProjectStatus = () => {
     },
     onError: (error: unknown) => {
       projectLogger.error('切换项目状态失败:', error as Error)
-      const err = error as any
-      message.error(err.response?.data?.detail || '切换项目状态失败')
+      const err = error as { response?: { data?: { detail?: string } } }
+      message.error((err.response !== null && err.response !== undefined && err.response.data !== null && err.response.data !== undefined && err.response.data.detail !== null && err.response.data.detail !== undefined && err.response.data.detail !== '') ? err.response.data.detail : '切换项目状态失败')
     }
   })
 }

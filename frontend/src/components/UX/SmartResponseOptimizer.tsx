@@ -246,7 +246,7 @@ const ResponseOptimizationDashboard: React.FC<{ config: SmartResponseConfig; met
   }
 
   const summary = generateReport()
-  const { byType, byLevel } = summary.summary
+  const { byType, byLevel } = summary.summary as { byType: Record<string, number>; byLevel: Record<string, number> }
 
   return (
     <Card title="智能响应优化" style={{ margin: '24px' }}>
@@ -301,11 +301,11 @@ const ResponseOptimizationDashboard: React.FC<{ config: SmartResponseConfig; met
               <Col span={12}>
                 <Statistic
                   title="平均响应时间"
-                  value={`${summary.summary.average.responseTime.toFixed(0)}ms`}
+                  value={`${((summary.summary.average as { responseTime?: number }).responseTime !== null && (summary.summary.average as { responseTime?: number }).responseTime !== undefined) ? (summary.summary.average as { responseTime: number }).responseTime.toFixed(0) : '0'}ms`}
                   precision={0}
                   suffix="ms"
                   valueStyle={{
-                    color: summary.summary.average.responseTime < 300 ? '#3f8600' : '#cf1322'
+                    color: ((summary.summary.average as { responseTime?: number }).responseTime !== null && (summary.summary.average as { responseTime?: number }).responseTime !== undefined && (summary.summary.average as { responseTime: number }).responseTime < 300) ? '#3f8600' : '#cf1322'
                   }}
                 />
               </Col>
@@ -315,23 +315,23 @@ const ResponseOptimizationDashboard: React.FC<{ config: SmartResponseConfig; met
               <Col span={8}>
                 <Statistic
                   title="缓存命中率"
-                  value={summary.summary.average.cacheHitRate}
+                  value={(summary.summary.average as { cacheHitRate?: number }).cacheHitRate !== null && (summary.summary.average as { cacheHitRate?: number }).cacheHitRate !== undefined ? (summary.summary.average as { cacheHitRate: number }).cacheHitRate : 0}
                   precision={1}
                   suffix="%"
                   valueStyle={{
-                    color: summary.summary.average.cacheHitRate > 80 ? '#52c41a' : '#faad14'
+                    color: ((summary.summary.average as { cacheHitRate?: number }).cacheHitRate !== null && (summary.summary.average as { cacheHitRate?: number }).cacheHitRate !== undefined && (summary.summary.average as { cacheHitRate: number }).cacheHitRate > 80) ? '#52c41a' : '#faad14'
                   }}
                 />
               </Col>
               <Col span={8}>
                 <Statistic
                   title="压缩比"
-                  value={summary.summary.average.compressionRatio}
+                  value={(summary.summary.average as { compressionRatio?: number }).compressionRatio !== null && (summary.summary.average as { compressionRatio?: number }).compressionRatio !== undefined ? (summary.summary.average as { compressionRatio: number }).compressionRatio : 0}
                   precision={2}
                   suffix=""
                   formatter={(value) => `${value}%`}
                   valueStyle={{
-                    color: summary.summary.average.compressionRatio > 30 ? '#52c41a' : '#fa8c16'
+                    color: ((summary.summary.average as { compressionRatio?: number }).compressionRatio !== null && (summary.summary.average as { compressionRatio?: number }).compressionRatio !== undefined && (summary.summary.average as { compressionRatio: number }).compressionRatio > 30) ? '#52c41a' : '#fa8c16'
                   }}
                 />
               </Col>

@@ -82,24 +82,24 @@ const assetFieldVisibilityRules: FieldVisibilityRule<AssetFormData>[] = [
   // 有业态类别时显示接收模式
   {
     field: 'business_model',
-    condition: (values) => Boolean(values.business_category && values.business_category.trim() !== ''),
+    condition: (values) => Boolean((values.business_category !== null && values.business_category !== undefined) && values.business_category.trim() !== ''),
     dependsOn: ['business_category'],
   },
 
   // 有五羊项目名称时显示接收协议日期
   {
     field: 'operation_agreement_start_date' as keyof AssetFormData,
-    condition: (values) => Boolean(values.wuyang_project_name && values.wuyang_project_name.trim() !== ''),
+    condition: (values) => Boolean((values.wuyang_project_name !== null && values.wuyang_project_name !== undefined) && values.wuyang_project_name.trim() !== ''),
     dependsOn: ['wuyang_project_name'],
   },
   {
     field: 'operation_agreement_end_date' as keyof AssetFormData,
-    condition: (values) => Boolean(values.wuyang_project_name && values.wuyang_project_name.trim() !== ''),
+    condition: (values) => Boolean((values.wuyang_project_name !== null && values.wuyang_project_name !== undefined) && values.wuyang_project_name.trim() !== ''),
     dependsOn: ['wuyang_project_name'],
   },
   {
     field: 'operation_agreement_attachments' as keyof AssetFormData,
-    condition: (values) => Boolean(values.wuyang_project_name && values.wuyang_project_name.trim() !== ''),
+    condition: (values) => Boolean((values.wuyang_project_name !== null && values.wuyang_project_name !== undefined) && values.wuyang_project_name.trim() !== ''),
     dependsOn: ['wuyang_project_name'],
   },
 ]

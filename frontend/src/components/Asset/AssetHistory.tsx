@@ -258,7 +258,7 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
                         </div>
 
                         {/* 变更原因 */}
-                        {history.reason && (
+                        {(history.reason !== null && history.reason !== undefined && history.reason !== '') && (
                           <div style={{ marginBottom: 8, color: "#595959" }}>
                             原因：{history.reason}
                           </div>

@@ -25,9 +25,6 @@ import {
 } from '../types/organization';
 import { enhancedApiClient } from '@/api/client';
 import { ApiErrorHandler } from '../utils/responseExtractor';
-import { createLogger } from '../utils/logger';
-
-const logger = createLogger('OrganizationService');
 
 // 树节点接口
 interface TreeNode {
@@ -51,7 +48,11 @@ class OrganizationService {
   }): Promise<Organization[]> {
     try {
       const result = await enhancedApiClient.get<Organization[]>(this.baseUrl, {
-        params: { ...params, skip: params?.skip || 0, limit: params?.limit || 100 },
+        params: {
+          ...params,
+          skip: (params?.skip !== null && params?.skip !== undefined) ? params?.skip : 0,
+          limit: (params?.limit !== null && params?.limit !== undefined) ? params?.limit : 100
+        },
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true
@@ -149,7 +150,9 @@ class OrganizationService {
    */
   async deleteOrganization(id: string, deletedBy?: string): Promise<void> {
     try {
-      const params = deletedBy ? { deleted_by: deletedBy } : {};
+      const params = (deletedBy !== null && deletedBy !== undefined && deletedBy !== '')
+                    ? { deleted_by: deletedBy }
+                    : {};
       const result = await enhancedApiClient.delete<void>(
         `${this.baseUrl}/${id}`,
         {
@@ -174,7 +177,9 @@ class OrganizationService {
    */
   async getOrganizationTree(parentId?: string): Promise<OrganizationTree[]> {
     try {
-      const params = parentId ? { parent_id: parentId } : {};
+      const params = (parentId !== null && parentId !== undefined && parentId !== '')
+                    ? { parent_id: parentId }
+                    : {};
       const result = await enhancedApiClient.get<OrganizationTree[]>(
         `${this.baseUrl}/tree`,
         {
@@ -265,7 +270,12 @@ class OrganizationService {
       const result = await enhancedApiClient.get<Organization[]>(
         `${this.baseUrl}/search`,
         {
-          params: { keyword, ...params, skip: params?.skip || 0, limit: params?.limit || 20 },
+          params: {
+            keyword,
+            ...params,
+            skip: (params?.skip !== null && params?.skip !== undefined) ? params.skip : 0,
+            limit: (params?.limit !== null && params?.limit !== undefined) ? params.limit : 20
+          },
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
           smartExtract: true
@@ -348,7 +358,11 @@ class OrganizationService {
       const result = await enhancedApiClient.get<OrganizationHistory[]>(
         `${this.baseUrl}/${id}/history`,
         {
-          params: { ...params, skip: params?.skip || 0, limit: params?.limit || 20 },
+          params: {
+            ...params,
+            skip: (params?.skip !== null && params?.skip !== undefined) ? params.skip : 0,
+            limit: (params?.limit !== null && params?.limit !== undefined) ? params.limit : 20
+          },
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
           smartExtract: true
@@ -531,7 +545,7 @@ class OrganizationService {
         children: [] as TreeNode[]
       };
 
-      if (!org.parent_id) {
+      if ((org.parent_id === null || org.parent_id === undefined)) {
         treeData.push(treeNode);
       } else {
         const parent = organizationMap.get(org.parent_id);
@@ -609,7 +623,7 @@ class OrganizationService {
    * 格式化组织显示名称
    */
   formatOrganizationDisplayName(organization: Organization): string {
-    return organization.name;
+    return (organization.name !== null && organization.name !== undefined && organization.name !== '') ? organization.name : 'Unknown';
   }
 
   /**
@@ -619,7 +633,7 @@ class OrganizationService {
     let depth = 1;
     let current: Organization | null = organization;
 
-    while (current && current.parent_id) {
+    while ((current !== null && current !== undefined) && (current.parent_id !== null && current.parent_id !== undefined && current.parent_id !== '')) {
       depth++;
       const parentOrg = allOrganizations.find(org => org.id === current!.parent_id);
       current = parentOrg || null;
@@ -665,7 +679,7 @@ class OrganizationService {
   async getRootOrganizations(): Promise<Organization[]> {
     try {
       const organizations = await this.getOrganizations();
-      return organizations.filter(org => !org.parent_id);
+      return organizations.filter(org => (org.parent_id === null || org.parent_id === undefined));
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       logger.warn('获取根级组织失败', { error: enhancedError.message });

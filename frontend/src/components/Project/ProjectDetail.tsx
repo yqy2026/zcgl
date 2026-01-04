@@ -30,7 +30,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
   onEdit
 }) => {
   const formatDate = (dateStr?: string) => {
-    if (!dateStr) return '-';
+    if ((dateStr === null || dateStr === undefined || dateStr === '')) return '-';
     return new Date(dateStr).toLocaleDateString('zh-CN');
   };
 
@@ -81,10 +81,10 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
             </Tag>
           </Descriptions.Item>
           <Descriptions.Item label="项目描述">
-            <Text>{project.description || '-'}</Text>
+            <Text>{(project.description !== null && project.description !== undefined && project.description !== '') ? project.description : '-'}</Text>
           </Descriptions.Item>
           <Descriptions.Item label="关联资产数量">
-            <Badge count={project.asset_count || 0} />
+            <Badge count={(project.asset_count !== null && project.asset_count !== undefined) ? project.asset_count : 0} />
           </Descriptions.Item>
         </Descriptions>
       </Card>
@@ -99,10 +99,10 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
             {formatDate(project.updated_at)}
           </Descriptions.Item>
           <Descriptions.Item label="创建人">
-            {project.created_by || '-'}
+            {(project.created_by !== null && project.created_by !== undefined && project.created_by !== '') ? project.created_by : '-'}
           </Descriptions.Item>
           <Descriptions.Item label="更新人">
-            {project.updated_by || '-'}
+            {(project.updated_by !== null && project.updated_by !== undefined && project.updated_by !== '') ? project.updated_by : '-'}
           </Descriptions.Item>
         </Descriptions>
       </Card>

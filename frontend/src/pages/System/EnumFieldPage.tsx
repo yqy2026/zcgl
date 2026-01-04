@@ -126,11 +126,11 @@ const EnumFieldPage: React.FC = () => {
         const formData = {
           label: String(editingValue.label || ''),
           value: String(editingValue.value || ''),
-          code: String(editingValue.code || ''),
-          description: String(editingValue.description || ''),
+          code: String((editingValue.code !== null && editingValue.code !== undefined) ? editingValue.code : ''),
+          description: String((editingValue.description !== null && editingValue.description !== undefined) ? editingValue.description : ''),
           sort_order: Number(editingValue.sort_order || 0),
-          color: String(editingValue.color || ''),
-          icon: String(editingValue.icon || ''),
+          color: String((editingValue.color !== null && editingValue.color !== undefined) ? editingValue.color : ''),
+          icon: String((editingValue.icon !== null && editingValue.icon !== undefined) ? editingValue.icon : ''),
           is_active: Boolean(editingValue.is_active),
           is_default: Boolean(editingValue.is_default),
           enum_type_id: String(editingValue.enum_type_id || selectedTypeId)
@@ -358,12 +358,12 @@ const EnumFieldPage: React.FC = () => {
       }
     } catch (error: unknown) {
       const apiError = error as ApiError
-      message.error(apiError?.message || '删除失败');
+      message.error((apiError?.message !== null && apiError?.message !== undefined && apiError?.message !== '') ? apiError.message : '删除失败');
     }
   };
 
   const handleCreateValue = () => {
-    if (!selectedTypeId) {
+    if ((selectedTypeId === null || selectedTypeId === undefined || selectedTypeId === '')) {
       message.warning('请先选择枚举类型');
       return;
     }
@@ -391,7 +391,7 @@ const EnumFieldPage: React.FC = () => {
       }
     } catch (error: unknown) {
       const apiError = error as ApiError
-      message.error(apiError?.message || '删除失败');
+      message.error((apiError?.message !== null && apiError?.message !== undefined && apiError?.message !== '') ? apiError.message : '删除失败');
     }
   };
 
@@ -425,7 +425,7 @@ const EnumFieldPage: React.FC = () => {
   const handleValueSubmit = async (values: EnumValueFormValues) => {
     try {
       let success = false
-      if (editingValue && selectedTypeId) {
+      if ((editingValue !== null && editingValue !== undefined) && (selectedTypeId !== null && selectedTypeId !== undefined && selectedTypeId !== '')) {
         // For update, we need to cast values to UpdateEnumFieldValueRequest as it might contain extra fields or we just pick what we need
         // But UpdateEnumFieldValueRequest is subset/compatible mostly.
         const updateData: UpdateEnumFieldValueRequest = {
@@ -441,7 +441,8 @@ const EnumFieldPage: React.FC = () => {
         }
         success = await unifiedDictionaryService.updateEnumFieldValue(selectedTypeId, editingValue.id, updateData) !== null
       } else {
-        success = await unifiedDictionaryService.addEnumFieldValue(editingValue?.enum_type_id || selectedTypeId!, values) !== null
+        const targetTypeId = (editingValue?.enum_type_id !== null && editingValue?.enum_type_id !== undefined && editingValue?.enum_type_id !== '') ? editingValue.enum_type_id : (selectedTypeId !== null && selectedTypeId !== undefined && selectedTypeId !== '') ? selectedTypeId : ''
+        success = await unifiedDictionaryService.addEnumFieldValue(targetTypeId, values) !== null
       }
 
       if (success) {
@@ -467,7 +468,7 @@ const EnumFieldPage: React.FC = () => {
           <Card>
             <Statistic
               title="枚举类型总数"
-              value={statistics?.total_types || 0}
+              value={(statistics?.total_types !== null && statistics?.total_types !== undefined) ? statistics.total_types : 0}
               valueStyle={{ color: '#1890ff' }}
             />
           </Card>
@@ -476,7 +477,7 @@ const EnumFieldPage: React.FC = () => {
           <Card>
             <Statistic
               title="启用类型"
-              value={statistics?.active_types || 0}
+              value={(statistics?.active_types !== null && statistics?.active_types !== undefined) ? statistics.active_types : 0}
               valueStyle={{ color: '#52c41a' }}
             />
           </Card>
@@ -485,7 +486,7 @@ const EnumFieldPage: React.FC = () => {
           <Card>
             <Statistic
               title="枚举值总数"
-              value={statistics?.total_values || 0}
+              value={(statistics?.total_values !== null && statistics?.total_values !== undefined) ? statistics.total_values : 0}
               valueStyle={{ color: '#722ed1' }}
             />
           </Card>
@@ -494,7 +495,7 @@ const EnumFieldPage: React.FC = () => {
           <Card>
             <Statistic
               title="使用次数"
-              value={statistics?.usage_count || 0}
+              value={(statistics?.usage_count !== null && statistics?.usage_count !== undefined) ? statistics.usage_count : 0}
               valueStyle={{ color: '#fa8c16' }}
             />
           </Card>
@@ -546,7 +547,7 @@ const EnumFieldPage: React.FC = () => {
                   type="primary"
                   icon={<PlusOutlined />}
                   onClick={handleCreateValue}
-                  disabled={!selectedTypeId}
+                  disabled={(selectedTypeId === null || selectedTypeId === undefined || selectedTypeId === '')}
                 >
                   新建枚举值
                 </Button>

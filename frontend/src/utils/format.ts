@@ -55,7 +55,7 @@ export const formatDate = (
   date: string | Date | undefined | null,
   format: 'date' | 'datetime' | 'time' = 'date'
 ): string => {
-  if (!date) {
+  if ((date === null || date === undefined)) {
     return '-'
   }
   
@@ -153,7 +153,10 @@ export const calculateOccupancyRate = (
   rentedArea: number | string | undefined | null,
   rentableArea: number | string | undefined | null
 ): number => {
-  if (!rentedArea || !rentableArea || rentableArea === 0 || rentableArea === '') {
+  if ((rentedArea === null || rentedArea === undefined) ||
+      (rentableArea === null || rentableArea === undefined) ||
+      rentedArea === 0 ||
+      rentedArea === '') {
     return 0
   }
 

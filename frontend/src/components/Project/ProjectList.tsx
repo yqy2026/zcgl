@@ -129,7 +129,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
           pageSize: nestedResponse.data.size ?? prev.pageSize
         }));
       } else {
-        componentLogger.error('Unexpected response format:', response as Error);
+        componentLogger.error('Unexpected response format:', response as unknown as Error);
         setProjects([]);
         setPagination(prev => ({
           ...prev,
@@ -188,12 +188,14 @@ const ProjectList: React.FC<ProjectListProps> = ({
       const response = await ownershipService.getOwnershipOptions(true);
       setOwnerships(response);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('获取权属方列表失败:', error);
     } finally {
       setOwnershipsLoading(false);
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const loadData = async () => {
       await Promise.all([
@@ -202,6 +204,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
       ]);
     };
     loadData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pagination.current, pagination.pageSize, searchKeyword, isActiveFilter, ownershipFilter]);
 
   // 删除项目
@@ -218,6 +221,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
           message.success('项目删除成功');
           fetchProjects();
         } catch (error) {
+          // eslint-disable-next-line no-console
           console.error('删除项目失败:', error);
           message.error('删除项目失败');
         }
@@ -232,6 +236,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
       message.success('项目状态切换成功');
       fetchProjects();
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('切换项目状态失败:', error);
       message.error('切换项目状态失败');
     }
@@ -303,7 +308,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
               <div>
                 {activeRelations.slice(0, 2).map((rel, _index) => (
                   <Tag key={rel.id} color="blue" style={{ marginRight: 4 }}>
-                    {rel.ownership_name || (record as any).ownership_entity ?? '权属方已关联'}
+                    {(rel.ownership_name !== null && rel.ownership_name !== undefined && rel.ownership_name !== '') ? rel.ownership_name : '权属方已关联'}
                   </Tag>
                 ))}
                 {activeRelations.length > 2 && (
@@ -425,7 +430,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
           <Card>
             <Statistic
               title="总项目数"
-              value={(isPresent(statistics?.total_count) ? statistics?.total_count : 0)}
+              value={(statistics?.total_count !== null && statistics?.total_count !== undefined) ? statistics.total_count : 0}
               prefix={<span style={{ color: '#1890ff' }}>📊</span>}
             />
           </Card>
@@ -434,7 +439,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
           <Card>
             <Statistic
               title="启用项目"
-              value={(isPresent(statistics?.active_count) ? statistics?.active_count : 0)}
+              value={(statistics?.active_count !== null && statistics?.active_count !== undefined) ? statistics.active_count : 0}
               valueStyle={{ color: '#3f8600' }}
               prefix={<span style={{ color: '#52c41a' }}>✅</span>}
             />
@@ -444,7 +449,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
           <Card>
             <Statistic
               title="禁用项目"
-              value={(isPresent(statistics?.inactive_count) ? statistics?.inactive_count : 0)}
+              value={(statistics?.inactive_count !== null && statistics?.inactive_count !== undefined) ? statistics.inactive_count : 0}
               valueStyle={{ color: '#cf1322' }}
               prefix={<span style={{ color: '#ff4d4f' }}>❌</span>}
             />
@@ -496,7 +501,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
               loading={ownershipsLoading}
               showSearch
               filterOption={(input, option) =>
-                String((isPresent(option?.children) ? option?.children : '')).toLowerCase().includes(input.toLowerCase())
+                String((option?.children !== null && option?.children !== undefined) ? option?.children : '').toLowerCase().includes(input.toLowerCase())
               }
             >
               {ownerships.map(ownership => (

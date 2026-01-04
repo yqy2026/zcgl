@@ -129,7 +129,7 @@ export class ConfigManager {
   }
 
   static getInstance(): ConfigManager {
-    if (!ConfigManager.instance) {
+    if ((ConfigManager.instance === null || ConfigManager.instance === undefined)) {
       ConfigManager.instance = new ConfigManager();
     }
     return ConfigManager.instance;
@@ -148,7 +148,7 @@ export class ConfigManager {
       ...envConfig,
       environment,
       debug: environment === Environment.DEVELOPMENT,
-      version: baseConfig.version || "1.0.0",
+      version: (baseConfig.version !== null && baseConfig.version !== undefined && baseConfig.version !== '') ? baseConfig.version : "1.0.0",
     } as UnifiedConfig;
 
     // 验证配置
@@ -219,7 +219,7 @@ export class ConfigManager {
    */
   private getBaseConfig(): Partial<UnifiedConfig> {
     return {
-      version: process.env.REACT_APP_VERSION || "1.0.0",
+      version: (process.env.REACT_APP_VERSION !== null && process.env.REACT_APP_VERSION !== undefined && process.env.REACT_APP_VERSION !== '') ? process.env.REACT_APP_VERSION : "1.0.0",
 
       api: {
         baseURL: this.getApiBaseURL(),

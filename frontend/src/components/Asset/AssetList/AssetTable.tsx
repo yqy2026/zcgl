@@ -366,7 +366,8 @@ const AssetTable: React.FC<AssetTableProps> = ({
   // 如需要虚拟滚动，可使用Antd内置的scroll属性或考虑其他方案
 
   // 根据数据量选择是否使用虚拟滚动
-  const itemCount = data?.items?.length || 0;
+  const itemsLength = data?.items?.length;
+  const itemCount = (itemsLength !== null && itemsLength !== undefined) ? itemsLength : 0;
   const shouldUseVirtualScroll = itemCount > 100; // 超过100条记录时使用虚拟滚动
 
   if (shouldUseVirtualScroll) {

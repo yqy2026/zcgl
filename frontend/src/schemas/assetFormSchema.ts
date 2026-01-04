@@ -35,7 +35,8 @@ export const assetFormSchema = z.object({
   notes: z.string().optional(),
 }).refine((data) => {
   // 验证已出租面积不能大于可出租面积
-  if (data.rented_area && data.rentable_area) {
+  if ((data.rented_area !== null && data.rented_area !== undefined) &&
+      (data.rentable_area !== null && data.rentable_area !== undefined)) {
     return data.rented_area <= data.rentable_area
   }
   return true
@@ -44,7 +45,8 @@ export const assetFormSchema = z.object({
   path: ['rented_area']
 }).refine((data) => {
   // 验证合同结束日期必须晚于开始日期
-  if (data.current_contract_start_date && data.current_contract_end_date) {
+  if ((data.current_contract_start_date !== null && data.current_contract_start_date !== undefined && data.current_contract_start_date !== '') &&
+      (data.current_contract_end_date !== null && data.current_contract_end_date !== undefined && data.current_contract_end_date !== '')) {
     return new Date(data.current_contract_end_date) > new Date(data.current_contract_start_date)
   }
   return true

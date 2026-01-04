@@ -217,12 +217,12 @@ export const customValidators = {
 
   // 验证开始日期小于结束日期
   dateRange: (startDateField: string, _endDateField: string): ValidationRuleResult => ({
-    validator: (_rule: FormValidationRule, value: string): Promise<void> => {
+    validator: (_rule: FormValidationRule, value: unknown): Promise<void> => {
       const form = document.querySelector('form')
       if (!form) return Promise.resolve()
 
       const startDate = (form.querySelector(`[name="${startDateField}"]`) as HTMLInputElement)?.value
-      const endDate = value
+      const endDate = typeof value === 'string' ? value : ''
 
       if (startDate && endDate && new Date(startDate) >= new Date(endDate)) {
         return Promise.reject(new Error('结束日期必须大于开始日期'))
@@ -244,9 +244,10 @@ export const customValidators = {
 
   // 验证字符串长度
   stringLength: (min: number, max: number, message?: string): ValidationRuleResult => ({
-    validator: (_rule: FormValidationRule, value: string): Promise<void> => {
-      if (!value) return Promise.resolve()
-      if (value.length < min || value.length > max) {
+    validator: (_rule: FormValidationRule, value: unknown): Promise<void> => {
+      const strValue = typeof value === 'string' ? value : String(value ?? '')
+      if (!strValue) return Promise.resolve()
+      if (strValue.length < min || strValue.length > max) {
         return Promise.reject(new Error((message !== null && message !== undefined && message !== '') ? message : `长度应在${min}-${max}个字符之间`))
       }
       return Promise.resolve()

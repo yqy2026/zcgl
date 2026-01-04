@@ -36,7 +36,7 @@ export class ApiCacheManager {
 
   // 生成缓存键
   private generateKey(url: string, params?: unknown): string {
-    const paramStr = params ? JSON.stringify(params) : ''
+    const paramStr = (params !== null && params !== undefined) ? JSON.stringify(params) : ''
     return `${url}:${paramStr}`
   }
 
@@ -48,7 +48,7 @@ export class ApiCacheManager {
     params?: unknown
   ): void {
     const key = this.generateKey(url, params)
-    const ttl = options.ttl || CACHE.DEFAULT_TTL
+    const ttl = (options.ttl !== null && options.ttl !== undefined) ? options.ttl : CACHE.DEFAULT_TTL
 
     const cacheItem: CacheItem<T> = {
       data,
@@ -208,7 +208,7 @@ export const cacheManager = ApiCacheManager.getInstance()
 // 缓存装饰器
 export function cached(options: CacheOptions = {}) {
   return function (target: unknown, propertyKey: string, descriptor: PropertyDescriptor) {
-    const originalMethod = descriptor.value
+    const originalMethod = descriptor.value as (...args: unknown[]) => Promise<unknown>
 
     descriptor.value = async function (...args: unknown[]) {
       const className = (target as { constructor: { name: string } }).constructor.name || 'UnknownClass';
@@ -216,14 +216,14 @@ export function cached(options: CacheOptions = {}) {
       const params = args.length > 0 ? args[0] : undefined
 
       // 如果强制刷新或没有缓存，执行原方法
-      if (options.force || !cacheManager.has(cacheKey, params)) {
-        const result = await (originalMethod as Function).apply(this, args)
+      if ((options.force === true) || !cacheManager.has(cacheKey, params)) {
+        const result = await originalMethod.apply(this, args) as Promise<unknown>
         cacheManager.set(cacheKey, result, options, params)
-        return result
+        return result as unknown
       }
 
       // 返回缓存结果
-      return cacheManager.get(cacheKey, params)
+      return cacheManager.get(cacheKey, params) as unknown
     }
 
     return descriptor
@@ -233,17 +233,17 @@ export function cached(options: CacheOptions = {}) {
 // 缓存失效装饰器
 export function invalidateCache(tags: string[]) {
   return function (target: unknown, propertyKey: string, descriptor: PropertyDescriptor) {
-    const originalMethod = descriptor.value
+    const originalMethod = descriptor.value as (...args: unknown[]) => Promise<unknown>
 
     descriptor.value = async function (...args: unknown[]) {
-      const result = await (originalMethod as Function).apply(this, args)
+      const result = await originalMethod.apply(this, args) as Promise<unknown>
 
       // 执行成功后失效相关缓存
       tags.forEach(tag => {
         cacheManager.deleteByTag(tag)
       })
 
-      return result
+      return result as unknown
     }
 
     return descriptor

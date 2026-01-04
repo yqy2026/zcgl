@@ -25,11 +25,11 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
 }) => {
   const antIcon = <LoadingOutlined style={{ fontSize: size === 'large' ? 24 : size === 'small' ? 14 : 18 }} spin />
 
-  if (children) {
+  if ((children !== null && children !== undefined)) {
     return (
-      <Spin 
-        spinning={spinning} 
-        tip={tip} 
+      <Spin
+        spinning={spinning}
+        tip={tip}
         size={size}
         indicator={antIcon}
         style={style}
@@ -59,12 +59,12 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
         indicator={antIcon}
         delay={delay}
       />
-      {tip && (
-        <Text 
-          type="secondary" 
-          style={{ 
-            marginTop: 16, 
-            fontSize: size === 'large' ? 16 : size === 'small' ? 12 : 14 
+      {(tip !== null && tip !== undefined && tip !== '') && (
+        <Text
+          type="secondary"
+          style={{
+            marginTop: 16,
+            fontSize: size === 'large' ? 16 : size === 'small' ? 12 : 14
           }}
         >
           {tip}

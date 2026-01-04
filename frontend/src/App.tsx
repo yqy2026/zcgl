@@ -68,7 +68,7 @@ const AppContent: React.FC = () => {
         element={
           isAuthenticated ? (
             // 已登录用户访问登录页面,重定向到之前访问的页面或仪表板
-            <Navigate to={((location.state as LocationState)?.from?.pathname !== null && (location.state as LocationState)?.from?.pathname !== undefined && (location.state as LocationState)?.from?.pathname !== '') ? (location.state as LocationState)?.from?.pathname : '/dashboard'} replace />
+            <Navigate to={(((location.state as LocationState)?.from?.pathname !== null && (location.state as LocationState)?.from?.pathname !== undefined && (location.state as LocationState)?.from?.pathname !== '') ? (location.state as LocationState)?.from?.pathname : '/dashboard') as string} replace />
 
           ) : (
             // 未登录用户显示登录页面

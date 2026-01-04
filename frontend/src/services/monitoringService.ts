@@ -660,7 +660,7 @@ export class MonitoringService {
     }>
   }> {
     try {
-      const params = componentName ? { component: componentName } : {};
+      const params = (componentName !== null && componentName !== undefined && componentName !== '') ? { component: componentName } : {};
       const result = await enhancedApiClient.get<{
         component: string
         status: string

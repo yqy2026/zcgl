@@ -45,7 +45,7 @@ export class ApiErrorHandler {
   private constructor() { }
 
   static getInstance(): ApiErrorHandler {
-    if (!ApiErrorHandler.instance) {
+    if ((ApiErrorHandler.instance === null || ApiErrorHandler.instance === undefined)) {
       ApiErrorHandler.instance = new ApiErrorHandler()
     }
     return ApiErrorHandler.instance

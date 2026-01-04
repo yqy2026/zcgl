@@ -135,6 +135,7 @@ export const SmartErrorHandler: React.FC<SmartErrorHandlerProps> = ({
     }
 
     return errorInfo.id
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [maxErrors, autoHideDuration])
 
   const showWarning = useCallback((message: string, details?: unknown) => {
@@ -169,20 +170,24 @@ export const SmartErrorHandler: React.FC<SmartErrorHandlerProps> = ({
 
   const clearError = useCallback((id: string) => {
     setErrors(prev => prev.filter(e => e.id !== id))
-    if (autoHideTimeouts.current[id]) {
+    if ((autoHideTimeouts.current[id] !== null && autoHideTimeouts.current[id] !== undefined)) {
       clearTimeout(autoHideTimeouts.current[id])
       delete autoHideTimeouts.current[id]
     }
-    if (selectedError?.id === id) {
+    if ((selectedError !== null && selectedError !== undefined) && selectedError.id === id) {
       setSelectedError(null)
     }
-  }, [])
+  }, [selectedError])
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const clearAllErrors = useCallback(() => {
     setErrors([])
     setSelectedError(null)
     Object.keys(autoHideTimeouts.current).forEach(id => {
-      clearTimeout(autoHideTimeouts.current[id])
+      const timeoutId = autoHideTimeouts.current[id]
+      if ((timeoutId !== null && timeoutId !== undefined)) {
+        clearTimeout(timeoutId)
+      }
     })
     autoHideTimeouts.current = {}
   }, [])
@@ -212,7 +217,7 @@ export const SmartErrorHandler: React.FC<SmartErrorHandlerProps> = ({
     if (error.action) {
       error.action.onClick()
     }
-  }, [errors, enableRetry, maxRetryAttempts])
+  }, [errors, enableRetry, maxRetryAttempts, showError])
 
   const getErrors = useCallback(() => errors, [errors])
 
@@ -301,7 +306,7 @@ const ErrorNotificationContainer: React.FC<ErrorNotificationContainerProps> = ({
                 }}>
                   {error.title}
                 </div>
-                {error.retryCount && error.retryCount > 1 && (
+                {(error.retryCount !== null && error.retryCount !== undefined && error.retryCount > 1) && (
                   <div style={{
                     fontSize: '12px',
                     color: '#666',
@@ -385,7 +390,7 @@ const ErrorModal: React.FC<ErrorModalProps> = ({ error, onClose, onRetry, enable
           <Button onClick={onClose}>关闭</Button>
           {enableRetry && error.action && (
             <Button type="primary" onClick={() => onRetry(error.id)}>
-              重试 ({Math.min((error.retryCount || 0) + 1, maxRetryAttempts)}/{maxRetryAttempts})
+              重试 ({Math.min(((error.retryCount !== null && error.retryCount !== undefined) ? error.retryCount : 0) + 1, maxRetryAttempts)}/{maxRetryAttempts})
             </Button>
           )}
         </Space>
@@ -413,7 +418,7 @@ const ErrorModal: React.FC<ErrorModalProps> = ({ error, onClose, onRetry, enable
           {error.message}
         </div>
 
-        {(error.details as any) && (
+        {(error.details !== null && error.details !== undefined) && (
           <div style={{ marginTop: '16px' }}>
             <Text strong>详细信息：</Text>
             <Collapse ghost style={{ marginTop: '8px' }}>
@@ -427,7 +432,7 @@ const ErrorModal: React.FC<ErrorModalProps> = ({ error, onClose, onRetry, enable
                   fontSize: '12px'
                 }}>
                   {typeof error.details === 'object'
-                    ? JSON.stringify(error.details, null, 2) as string
+                    ? JSON.stringify(error.details, null, 2)
                     : String(error.details)
                   }
                 </pre>
@@ -436,7 +441,7 @@ const ErrorModal: React.FC<ErrorModalProps> = ({ error, onClose, onRetry, enable
           </div>
         )}
 
-        {error.stack && (
+        {(error.stack !== null && error.stack !== undefined && error.stack !== '') && (
           <div style={{ marginTop: '16px' }}>
             <Text strong>堆栈信息：</Text>
             <Collapse ghost style={{ marginTop: '8px' }}>

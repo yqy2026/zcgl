@@ -134,12 +134,22 @@ interface FormFieldChange {
 
       // 转换日期格式
       const confirmedData: ConfirmedContractData = {
-        ...values,
+        contract_number: (values.contract_number !== null && values.contract_number !== undefined && values.contract_number !== '') ? values.contract_number : '',
+        asset_id: values.asset_id,
+        ownership_id: values.ownership_id,
+        tenant_name: (values.tenant_name !== null && values.tenant_name !== undefined && values.tenant_name !== '') ? values.tenant_name : '',
+        tenant_contact: values.tenant_contact,
+        tenant_phone: values.tenant_phone,
+        tenant_address: values.tenant_address,
         sign_date: (values.sign_date !== null && values.sign_date !== undefined) ? values.sign_date.format('YYYY-MM-DD') : undefined,
         start_date: (values.start_date !== null && values.start_date !== undefined) ? values.start_date.format('YYYY-MM-DD') : '',
         end_date: (values.end_date !== null && values.end_date !== undefined) ? values.end_date.format('YYYY-MM-DD') : '',
-        monthly_rent: values.monthly_rent?.toString() ?? '',
-        total_deposit: values.total_deposit?.toString() ?? '0'
+        monthly_rent_base: (values.monthly_rent !== null && values.monthly_rent !== undefined) ? String(values.monthly_rent) : '0',
+        total_deposit: values.total_deposit?.toString() ?? '0',
+        contract_status: values.contract_status,
+        payment_terms: values.payment_terms,
+        contract_notes: values.contract_notes,
+        rent_terms: []
       };
 
       setLoading(true);
@@ -231,7 +241,9 @@ interface FormFieldChange {
             label={
               <Space>
                 <span>合同状态</span>
-                {!!result.extraction_result.data.contract_status && (
+                {(result.extraction_result.data.contract_status !== null &&
+                 result.extraction_result.data.contract_status !== undefined &&
+                 result.extraction_result.data.contract_status !== '') && (
                   <Tag color="blue">自动提取</Tag>
                 )}
               </Space>
@@ -264,7 +276,9 @@ interface FormFieldChange {
             label={
               <Space>
                 <span>签订日期</span>
-                {!!result.extraction_result.data.sign_date && (
+                {(result.extraction_result.data.sign_date !== null &&
+                 result.extraction_result.data.sign_date !== undefined &&
+                 result.extraction_result.data.sign_date !== '') && (
                   <Tag color="blue">自动提取</Tag>
                 )}
               </Space>
@@ -279,7 +293,7 @@ interface FormFieldChange {
             label={
               <Space>
                 <span>开始日期</span>
-                {!!result.extraction_result.data.start_date && (
+                {((result.extraction_result.data.start_date !== null && result.extraction_result.data.start_date !== undefined && result.extraction_result.data.start_date !== '') === true) && (
                   <Tag color="blue">自动提取</Tag>
                 )}
               </Space>
@@ -295,7 +309,7 @@ interface FormFieldChange {
             label={
               <Space>
                 <span>结束日期</span>
-                {!!result.extraction_result.data.end_date && (
+                {((result.extraction_result.data.end_date !== null && result.extraction_result.data.end_date !== undefined && result.extraction_result.data.end_date !== '') === true) && (
                   <Tag color="blue">自动提取</Tag>
                 )}
               </Space>
@@ -314,7 +328,7 @@ interface FormFieldChange {
             label={
               <Space>
                 <span>租赁面积(㎡)</span>
-                {!!result.extraction_result.data.rentable_area && (
+                {((result.extraction_result.data.rentable_area !== null && result.extraction_result.data.rentable_area !== undefined) === true) && (
                   <Tag color="blue">自动提取</Tag>
                 )}
               </Space>
@@ -335,7 +349,7 @@ interface FormFieldChange {
             label={
               <Space>
                 <span>月租金(元)</span>
-                {!!result.extraction_result.data.monthly_rent && (
+                {((result.extraction_result.data.monthly_rent !== null && result.extraction_result.data.monthly_rent !== undefined) === true) && (
                   <Tag color="blue">自动提取</Tag>
                 )}
               </Space>
@@ -357,7 +371,7 @@ interface FormFieldChange {
             label={
               <Space>
                 <span>押金(元)</span>
-                {!!result.extraction_result.data.total_deposit && (
+                {((result.extraction_result.data.total_deposit !== null && result.extraction_result.data.total_deposit !== undefined) === true) && (
                   <Tag color="blue">自动提取</Tag>
                 )}
               </Space>
@@ -401,9 +415,11 @@ interface FormFieldChange {
             <Select
               placeholder="请选择匹配的资产"
               showSearch
-              filterOption={(input, option) =>
-                String((isPresent(option?.children) ? option?.children : '')).toLowerCase().includes(input.toLowerCase())
-              }
+              filterOption={(input, option) => {
+                const children = option?.children;
+                const childrenStr = (children !== null && children !== undefined && typeof children === 'string') ? children : String(children || '');
+                return childrenStr.toLowerCase().includes(input.toLowerCase());
+              }}
             >
               {result.matching_result.matched_assets.map((asset: AssetMatch) => (
                 <Select.Option key={asset.id} value={asset.id}>
@@ -452,9 +468,11 @@ interface FormFieldChange {
             <Select
               placeholder="请选择匹配的权属方"
               showSearch
-              filterOption={(input, option) =>
-                String((isPresent(option?.children) ? option?.children : '')).toLowerCase().includes(input.toLowerCase())
-              }
+              filterOption={(input, option) => {
+                const children = option?.children;
+                const childrenStr = (children !== null && children !== undefined && typeof children === 'string') ? children : String(children || '');
+                return childrenStr.toLowerCase().includes(input.toLowerCase());
+              }}
             >
               {result.matching_result.matched_ownerships.map((ownership: OwnershipMatch) => (
                 <Select.Option key={ownership.id} value={ownership.id}>
@@ -491,7 +509,7 @@ interface FormFieldChange {
         label={
           <Space>
             <span>支付条款</span>
-            {!!result.extraction_result.data.payment_terms && (
+            {((result.extraction_result.data as { payment_terms?: unknown }).payment_terms !== null && (result.extraction_result.data as { payment_terms?: unknown }).payment_terms !== undefined) && (
               <Tag color="blue">自动提取</Tag>
             )}
           </Space>
@@ -505,7 +523,7 @@ interface FormFieldChange {
         label={
           <Space>
             <span>合同备注</span>
-            {!!result.extraction_result.data.contract_notes && (
+            {((result.extraction_result.data as { contract_notes?: unknown }).contract_notes !== null && (result.extraction_result.data as { contract_notes?: unknown }).contract_notes !== undefined) && (
               <Tag color="blue">自动提取</Tag>
             )}
           </Space>

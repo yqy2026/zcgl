@@ -146,7 +146,7 @@ const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
               >
                 <div>
                   <Text strong>{step.title}</Text>
-                  {step.description && (
+                  {(step.description !== null && step.description !== undefined && step.description !== '') && (
                     <div>
                       <Text type="secondary">{step.description}</Text>
                     </div>
@@ -164,9 +164,9 @@ const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
 
   return (
     <div style={style} className={className}>
-      {(title || description) && (
+      {((title !== null && title !== undefined && title !== '') || (description !== null && description !== undefined && description !== '')) && (
         <div style={{ marginBottom: 16 }}>
-          {title && (
+          {(title !== null && title !== undefined && title !== '') && (
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
               {getStatusIcon()}
               <Title level={5} style={{ margin: '0 0 0 8px' }}>
@@ -174,7 +174,7 @@ const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
               </Title>
             </div>
           )}
-          {description && (
+          {(description !== null && description !== undefined && description !== '') && (
             <Text type="secondary">{description}</Text>
           )}
         </div>
@@ -209,7 +209,7 @@ export const UploadProgress: React.FC<{
     percent={percent}
     status={percent === 100 ? 'success' : 'active'}
     title="文件上传"
-    description={fileName ? `正在上传: ${fileName}` : '正在上传文件...'}
+    description={(fileName !== null && fileName !== undefined && fileName !== '') ? `正在上传: ${fileName}` : '正在上传文件...'}
   />
 )
 
@@ -258,7 +258,7 @@ export const ProgressCard: React.FC<{
     extra={extra}
     actions={actions}
   >
-    {description && (
+    {(description !== null && description !== undefined && description !== '') && (
       <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
         {description}
       </Text>

@@ -150,7 +150,7 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
       <Space.Compact style={{ width: '100%' }}>
         <Select
           value={displayValue || undefined}
-          onChange={handleChange}
+          onChange={handleChange as unknown as ((value: string, option?: { label: string; value: string; realValue: string } | { label: string; value: string; realValue: string }[]) => void)}
           onClear={handleClear}
           placeholder={placeholder}
           disabled={disabled}
@@ -160,10 +160,8 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
           loading={loading}
           showSearch
           filterOption={(input, option) => {
-            const children = option?.children !== null && option?.children !== undefined ? String(option.children) : '';
             const label = option?.label !== null && option?.label !== undefined ? String(option.label) : '';
-            return children.toLowerCase().includes(input.toLowerCase()) ||
-                   label.toLowerCase().includes(input.toLowerCase());
+            return label.toLowerCase().includes(input.toLowerCase());
           }}
           notFoundContent={loading ? '加载中...' : '暂无数据'}
           optionLabelProp="label"

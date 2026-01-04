@@ -89,20 +89,20 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}) => {
         default:
           errorInfo.message = (data?.message as string) || `服务器错误 (${status})`
       }
-    } else if ((error as any)?.request) {
+    } else if ((error as { request?: unknown }).request !== null && (error as { request?: unknown }).request !== undefined) {
       // 网络错误
       errorInfo = {
         code: 'NETWORK_ERROR',
         message: '网络连接失败，请检查网络设置',
-        details: error as any,
+        details: error as Record<string, unknown>,
         timestamp: new Date().toISOString(),
       }
-    } else if (error?.message) {
+    } else if ((error?.message !== null && error?.message !== undefined && error?.message !== '')) {
       // JavaScript错误
       errorInfo = {
         code: 'CLIENT_ERROR',
         message: error.message,
-        details: error as any,
+        details: error as unknown as Record<string, unknown>,
         timestamp: new Date().toISOString(),
       }
     }
@@ -155,7 +155,7 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}) => {
   // 处理业务逻辑错误
   const handleBusinessError = useCallback((message: string, code?: string) => {
     const errorInfo: ErrorInfo = {
-      code: code || 'BUSINESS_ERROR',
+      code: (code !== null && code !== undefined && code !== '') ? code : 'BUSINESS_ERROR',
       message,
       timestamp: new Date().toISOString(),
     }
@@ -183,7 +183,7 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}) => {
       message = '文件大小超出限制'
     } else if (error?.response?.status === 415) {
       message = '不支持的文件格式'
-    } else if (error?.message?.includes('timeout')) {
+    } else if ((error?.message !== null && error?.message !== undefined && error?.message !== '' && error.message.includes('timeout'))) {
       message = '上传超时，请重试'
     }
 

@@ -416,10 +416,10 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
 
             return (
               <div
-                key={column.key || colIndex}
+                key={(column.key !== null && column.key !== undefined && column.key !== '') ? column.key : colIndex}
                 style={{
-                  flex: column.width ? `0 0 ${column.width}px` : 1,
-                  minWidth: column.width || 100,
+                  flex: (column.width !== null && column.width !== undefined) ? `0 0 ${column.width}px` : '1',
+                  minWidth: (column.width !== null && column.width !== undefined) ? column.width : 100,
                   padding: '0 8px',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
@@ -463,10 +463,10 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
           const title = isColumnType(column) ? column.title : undefined
           return (
             <div
-              key={column.key || index}
+              key={(column.key !== null && column.key !== undefined && column.key !== '') ? column.key : index}
               style={{
-                flex: column.width ? `0 0 ${column.width}px` : 1,
-                minWidth: column.width || 100,
+                flex: (column.width !== null && column.width !== undefined) ? `0 0 ${column.width}px` : '1',
+                minWidth: (column.width !== null && column.width !== undefined) ? column.width : 100,
                 padding: '0 8px',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
@@ -517,9 +517,9 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
       {/* 分页 */}
       <div style={{ padding: '16px 0', textAlign: 'right' }}>
         <Pagination
-          current={data?.page || 1}
-          pageSize={data?.limit || 20}
-          total={data?.total || 0}
+          current={(data?.page !== null && data?.page !== undefined) ? data.page : 1}
+          pageSize={(data?.limit !== null && data?.limit !== undefined) ? data.limit : 20}
+          total={(data?.total !== null && data?.total !== undefined) ? data.total : 0}
           showSizeChanger={true}
           showQuickJumper={true}
           showTotal={(total: number, range: [number, number]) =>

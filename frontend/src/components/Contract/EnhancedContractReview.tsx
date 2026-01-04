@@ -129,7 +129,8 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
     if (sessionData?.extracted_data !== null && sessionData?.extracted_data !== undefined) {
       initializeFieldReviews();
     }
-  }, [sessionData, initializeFieldReviews]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionData]);
 
   useEffect(() => {
     if (sessionData?.validation_results !== null && sessionData?.validation_results !== undefined) {
@@ -489,7 +490,10 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
       {(sessionData.matching_results !== null && sessionData.matching_results !== undefined &&
         sessionData.matching_results.matched_assets !== null && sessionData.matching_results.matched_assets !== undefined &&
         sessionData.matching_results.matched_assets.length > 0 ||
-        sessionData.matching_results?.matched_ownerships?.landlords !== null &&
+        (sessionData.matching_results !== null && sessionData.matching_results !== undefined) &&
+        sessionData.matching_results?.matched_ownerships !== null &&
+        sessionData.matching_results.matched_ownerships !== undefined &&
+        sessionData.matching_results.matched_ownerships?.landlords !== null &&
         sessionData.matching_results.matched_ownerships?.landlords !== undefined &&
         sessionData.matching_results.matched_ownerships.landlords.length > 0) && (
         <Card
@@ -515,7 +519,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
             <TabPane tab="权属方匹配" key="ownerships">
               <Table
                 columns={[
-                  ...matchingResultsColumns.slice(0, -1),
+                  ...matchingResultsColumns.slice(0, -1) as import('antd/es/table').ColumnType<OwnershipMatch>[],
                   {
                     title: '操作',
                     key: 'action',
@@ -528,7 +532,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
                         选择
                       </Button>
                     )
-                  }
+                  } as import('antd/es/table').ColumnType<OwnershipMatch>
                 ]}
                 dataSource={sessionData.matching_results?.matched_ownerships?.landlords ?? []}
                 rowKey="id"

@@ -86,7 +86,7 @@ const AssetList: React.FC<AssetListProps> = ({
       ellipsis: {
         showTitle: false,
       },
-      render: (text) => <Tooltip title={text}>{text}</Tooltip>,
+      render: (text: string) => <Tooltip title={text}>{text}</Tooltip>,
     },
     {
       title: "权属类别",
@@ -417,16 +417,16 @@ const AssetList: React.FC<AssetListProps> = ({
       rowSelection={rowSelection}
       summary={renderSummary}
       pagination={{
-        current: data?.page || 1,
-        pageSize: data?.limit || 20,
-        total: data?.total || 0,
+        current: (data?.page !== null && data?.page !== undefined) ? data.page : 1,
+        pageSize: (data?.limit !== null && data?.limit !== undefined) ? data.limit : 20,
+        total: (data?.total !== null && data?.total !== undefined) ? data.total : 0,
         showSizeChanger: true,
         showQuickJumper: true,
         showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条记录`,
         pageSizeOptions: ["10", "20", "50", "100"],
         size: "default",
       }}
-      onChange={onTableChange as any}
+      onChange={onTableChange as unknown as (pagination: unknown, filters: unknown, sorter: unknown, extra?: unknown) => void}
       size="middle"
       bordered
       sticky={{ offsetHeader: 64 }}

@@ -11,35 +11,35 @@ export const useMessage = () => {
     success: (content: string, duration?: number) => {
       return message.success({
         content,
-        duration: duration || 3,
+        duration: (duration !== null && duration !== undefined) ? duration : 3,
         key: `success-${Date.now()}`,
       })
     },
     error: (content: string, duration?: number) => {
       return message.error({
         content,
-        duration: duration || 4,
+        duration: (duration !== null && duration !== undefined) ? duration : 4,
         key: `error-${Date.now()}`,
       })
     },
     warning: (content: string, duration?: number) => {
       return message.warning({
         content,
-        duration: duration || 3,
+        duration: (duration !== null && duration !== undefined) ? duration : 3,
         key: `warning-${Date.now()}`,
       })
     },
     info: (content: string, duration?: number) => {
       return message.info({
         content,
-        duration: duration || 3,
+        duration: (duration !== null && duration !== undefined) ? duration : 3,
         key: `info-${Date.now()}`,
       })
     },
     loading: (content: string, duration?: number) => {
       return message.loading({
         content,
-        duration: duration || 0,
+        duration: (duration !== null && duration !== undefined) ? duration : 0,
         key: `loading-${Date.now()}`,
       })
     },
@@ -53,7 +53,7 @@ export const useMessage = () => {
     open: (config: Parameters<typeof globalMessage.open>[0]) => {
       return message.open({
         ...config,
-        key: config.key || `message-${Date.now()}`,
+        key: (config.key !== null && config.key !== undefined && config.key !== '') ? config.key : `message-${Date.now()}`,
       })
     },
     config: (config: Parameters<typeof globalMessage.config>[0]) => {

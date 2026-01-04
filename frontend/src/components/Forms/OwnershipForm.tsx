@@ -50,7 +50,7 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
       const projects = Array.isArray(response) ? response : (response && typeof response === 'object' && 'data' in response ? (response as { data?: unknown }).data : []);
       // Processed project options
 
-      setProjectOptions(projects);
+      setProjectOptions(projects as ProjectDropdownOption[]);
     } catch {
       message.error('加载项目选项失败');
       setProjectOptions([]); // 设置为空数组避免 undefined 错误
@@ -124,7 +124,7 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
         if (values.related_projects !== null && values.related_projects !== undefined && Array.isArray(values.related_projects)) {
           try {
             // TODO: Add updateOwnershipProjects to ownershipService and remove this cast
-            await (ownershipService as { updateOwnershipProjects: (id: string, projects: unknown[]) => Promise<void> }).updateOwnershipProjects(initialValues.id, values.related_projects);
+            await (ownershipService as unknown as { updateOwnershipProjects: (id: string, projects: unknown[]) => Promise<void> }).updateOwnershipProjects(initialValues.id, values.related_projects);
           } catch {
             message.warning('基本信息更新成功，但关联项目更新失败');
           }

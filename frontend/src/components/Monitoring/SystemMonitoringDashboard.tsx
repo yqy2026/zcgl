@@ -262,7 +262,7 @@ const SystemMonitoringDashboard: React.FC = () => {
   // 健康评分仪表盘配置
   const healthGaugeConfig = useMemo(() => ({
     percent: ((dashboardData?.health_status?.overall_score !== null && dashboardData?.health_status?.overall_score !== undefined) ? dashboardData.health_status.overall_score : 0) / 100,
-    color: getStatusColor((dashboardData?.health_status?.status !== null && dashboardData?.health_status?.status !== undefined && dashboardData?.health_status?.status !== '') ? dashboardData.health_status.status : unknown),
+    color: getStatusColor((dashboardData?.health_status?.status !== null && dashboardData?.health_status?.status !== undefined) ? dashboardData.health_status.status : 'degraded'),
     indicator: {
       pointer: { style: { stroke: '#D0D0D0' } },
       pin: { style: { stroke: '#D0D0D0' } }
@@ -413,8 +413,8 @@ const SystemMonitoringDashboard: React.FC = () => {
             <div style={{ textAlign: 'center', padding: '20px 0' }}>
               <Gauge {...healthGaugeConfig} height={200} />
               <div style={{ marginTop: 16 }}>
-                <Tag color={getStatusColor((dashboardData?.health_status?.status !== null && dashboardData?.health_status?.status !== undefined && dashboardData?.health_status?.status !== '') ? dashboardData.health_status.status : unknown)}>
-                  {dashboardData?.health_status?.status?.toUpperCase() || 'UNKNOWN'}
+                <Tag color={getStatusColor((dashboardData?.health_status?.status !== null && dashboardData?.health_status?.status !== undefined) ? dashboardData.health_status.status : 'degraded')}>
+                  {(dashboardData?.health_status?.status !== null && dashboardData?.health_status?.status !== undefined) ? dashboardData.health_status.status.toUpperCase() : 'UNKNOWN'}
                 </Tag>
               </div>
             </div>
@@ -523,7 +523,7 @@ const SystemMonitoringDashboard: React.FC = () => {
               <Col span={12}>
                 <Statistic
                   title="系统负载"
-                  value={dashboardData?.current_system?.load_average?.[0] || 0}
+                  value={(dashboardData?.current_system?.load_average !== null && dashboardData?.current_system?.load_average !== undefined && dashboardData.current_system.load_average[0] !== null && dashboardData.current_system.load_average[0] !== undefined) ? dashboardData.current_system.load_average[0] : 0}
                   precision={2}
                 />
               </Col>

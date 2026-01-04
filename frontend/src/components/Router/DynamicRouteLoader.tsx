@@ -117,7 +117,7 @@ class DynamicRouteLoader {
     this.routes.set(route.id, route)
 
     // 预加载路由（如果配置了）
-    if (route.meta?.preload) {
+    if (route.meta?.preload === true) {
       this.preloadRoute(route)
     }
 
@@ -162,11 +162,11 @@ class DynamicRouteLoader {
   private async performModuleLoad(modulePath: string, startTime: number): Promise<DynamicRoute[]> {
     try {
       // 动态导入模块
-      const module = await import(modulePath)
+      const module = await import(modulePath) as { default?: unknown; [key: string]: unknown }
       this.loadedModules.set(modulePath, module)
 
       // 从模块中提取路由配置
-      const routes = this.extractRoutesFromModule(module, modulePath)
+      const routes = this.extractRoutesFromModule(module as { routes?: DynamicRoute[] | undefined; default?: React.LazyExoticComponent<React.ComponentType<Record<string, unknown>>> | undefined }, modulePath)
 
       // 注册路由
       routes.forEach(route => {
@@ -193,8 +193,11 @@ class DynamicRouteLoader {
     }
 
     // 如果模块是单个组件，创建包装路由
-    if (module.default) {
-      const componentName = modulePath.split('/').pop()?.replace(/\.(tsx?|jsx?)$/, '') || 'DynamicComponent'
+    if ((module.default !== null && module.default !== undefined)) {
+      const popped = modulePath.split('/').pop();
+      const componentName = (popped !== null && popped !== undefined && popped !== '')
+        ? popped.replace(/\.(tsx?|jsx?)$/, '')
+        : 'DynamicComponent';
       return [{
         id: componentName.toLowerCase(),
         path: `/dynamic/${componentName.toLowerCase()}`,
@@ -210,11 +213,11 @@ class DynamicRouteLoader {
       throw new Error('Route must have an id')
     }
 
-    if (!route.path) {
+    if ((route.path === null || route.path === undefined || route.path === '')) {
       throw new Error('Route must have a path')
     }
 
-    if (!route.component) {
+    if ((route.component === null || route.component === undefined)) {
       throw new Error('Route must have a component')
     }
   }
@@ -298,17 +301,22 @@ class DynamicRouteLoader {
 
   public searchRoutes(query: string): DynamicRoute[] {
     const lowerQuery = query.toLowerCase()
-    return Array.from(this.routes.values()).filter(route =>
-      route.id.toLowerCase().includes(lowerQuery) ||
-      route.path.toLowerCase().includes(lowerQuery) ||
-      route.meta?.title?.toLowerCase().includes(lowerQuery)
-    )
+    return Array.from(this.routes.values()).filter(route => {
+      const titleMatch = route.meta?.title?.toLowerCase().includes(lowerQuery);
+      return Boolean(
+        route.id.toLowerCase().includes(lowerQuery) ||
+        route.path.toLowerCase().includes(lowerQuery) ||
+        (titleMatch === true)
+      );
+    })
   }
 
   public getRoutesByPermission(resource: string, action: string): DynamicRoute[] {
-    return Array.from(this.routes.values()).filter(route =>
-      route.permissions?.some(p => p.resource === resource && p.action === action)
-    )
+    return Array.from(this.routes.values()).filter(route => {
+      const perms = route.permissions;
+      if ((perms === null || perms === undefined)) return false;
+      return perms.some(p => p.resource === resource && p.action === action);
+    })
   }
 }
 
@@ -414,13 +422,13 @@ export const DynamicRouteRenderer: React.FC = () => {
       const fullPath = parentPath + route.path
 
       const element = (
-        <Suspense fallback={<div>Loading {route.meta?.title || route.id}...</div>}>
+        <Suspense fallback={<div>Loading {(route.meta?.title !== null && route.meta?.title !== undefined && route.meta?.title !== '') ? route.meta.title : route.id}...</div>}>
           <ErrorBoundary
             onError={(error) => {
               componentLogger.error(`Route ${route.id} error:`, error)
-              setError(`Failed to load ${route.meta?.title || route.id}`)
+              setError(`Failed to load ${(route.meta?.title !== null && route.meta?.title !== undefined && route.meta?.title !== '') ? route.meta.title : route.id}`)
             }}
-            fallback={<div>Error loading {route.meta?.title || route.id}</div>}
+            fallback={<div>Error loading {(route.meta?.title !== null && route.meta?.title !== undefined && route.meta?.title !== '') ? route.meta.title : route.id}</div>}
           >
             {route.permissions && route.permissions.length > 0 ? (
               <PermissionGuard permissions={route.permissions}>
@@ -512,7 +520,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
   render() {
     if (this.state.hasError) {
-      return this.props.fallback || (
+      return (this.props.fallback !== null && this.props.fallback !== undefined) ? this.props.fallback : (
         <div style={{
           padding: '20px',
           textAlign: 'center',

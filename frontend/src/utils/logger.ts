@@ -66,11 +66,11 @@ class Logger {
 
         // 构建前缀
         const prefixParts: string[] = [];
-        if (this.config.useTimestamp) {
+        if ((this.config.useTimestamp === true)) {
             prefixParts.push(this.getTimestamp());
         }
         prefixParts.push(`[${level.toUpperCase()}]`);
-        if (this.config.prefix) {
+        if ((this.config.prefix !== null && this.config.prefix !== undefined && this.config.prefix !== '')) {
             prefixParts.push(`[${this.config.prefix}]`);
         }
 
@@ -123,7 +123,9 @@ class Logger {
     child(prefix: string): Logger {
         return new Logger({
             ...this.config,
-            prefix: this.config.prefix ? `${this.config.prefix}:${prefix}` : prefix,
+            prefix: (this.config.prefix !== null && this.config.prefix !== undefined && this.config.prefix !== '') ?
+                `${this.config.prefix}:${prefix}` :
+                prefix,
         });
     }
 

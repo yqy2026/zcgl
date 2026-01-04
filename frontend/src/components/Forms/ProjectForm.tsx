@@ -60,7 +60,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
       // 设置基本信息
       form.setFieldsValue({
         name: project.name,
-        description: project.description || ''
+        description: (project.description !== null && project.description !== undefined) ? project.description : ''
       });
 
       // 设置权属方关联
@@ -119,7 +119,13 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
       onSuccess();
     } catch (error: unknown) {
       componentLogger.error('保存项目失败:', error as Error);
-      const errorMsg = (error as any)?.response?.data?.detail || '保存项目失败';
+      const errorObj = error as { response?: { data?: { detail?: string } } };
+      const errorMsg = (errorObj.response !== null && errorObj.response !== undefined &&
+                        errorObj.response.data !== null && errorObj.response.data !== undefined &&
+                        errorObj.response.data.detail !== null && errorObj.response.data.detail !== undefined &&
+                        errorObj.response.data.detail !== '')
+                      ? errorObj.response.data.detail
+                      : '保存项目失败';
       message.error(errorMsg);
     } finally {
       setLoading(false);
@@ -155,7 +161,10 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
           label="项目名称"
           name="name"
           rules={[
-            { required: true, validator: validateProjectName as any }
+            {
+              required: true,
+              validator: validateProjectName as (rule: unknown, value: unknown) => Promise<void>
+            }
           ]}
         >
           <Input placeholder="请输入项目名称" maxLength={200} />

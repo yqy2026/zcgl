@@ -21,7 +21,9 @@ export const useErrorHandler = () => {
 
 // 加载状态Hook
 export const useLoadingState = (key?: string) => {
-  const loadingKey = key || `loading_${Math.random().toString(36).substr(2, 9)}`
+  const loadingKey = (key !== null && key !== undefined && key !== '')
+    ? key
+    : `loading_${Math.random().toString(36).substr(2, 9)}`
   const [loading, setLoadingState] = useState(false)
 
   const setLoading = useCallback((loading: boolean) => {
@@ -159,7 +161,8 @@ export const useOperationState = <T = unknown>() => {
     setState(prev => ({ ...prev, loading: true, error: null, success: false }))
 
     try {
-      if (options?.trackAction) {
+      if ((options !== null && options !== undefined) &&
+          (options.trackAction !== null && options.trackAction !== undefined && options.trackAction !== '')) {
         recordAction(`start_${options.trackAction}`)
       }
 
@@ -172,11 +175,11 @@ export const useOperationState = <T = unknown>() => {
         success: true,
       })
 
-      if (options?.showFeedback !== false && options?.successMessage) {
+      if ((options?.showFeedback !== false && options?.showFeedback !== undefined) && (options?.successMessage !== null && options?.successMessage !== undefined && options?.successMessage !== '')) {
         showSuccess(options.successMessage)
       }
 
-      if (options?.trackAction) {
+      if ((options?.trackAction !== null && options?.trackAction !== undefined && options?.trackAction !== '')) {
         recordAction(`success_${options.trackAction}`, { data: result })
       }
 
@@ -192,11 +195,11 @@ export const useOperationState = <T = unknown>() => {
 
       handleError(err, { operation: options?.trackAction })
 
-      if (options?.showFeedback !== false && options?.errorMessage) {
+      if ((options?.showFeedback !== false && options?.showFeedback !== undefined) && (options?.errorMessage !== null && options?.errorMessage !== undefined && options?.errorMessage !== '')) {
         showError(options.errorMessage)
       }
 
-      if (options?.trackAction) {
+      if ((options?.trackAction !== null && options?.trackAction !== undefined && options?.trackAction !== '')) {
         recordAction(`error_${options.trackAction}`, { error: err.message })
       }
 
@@ -269,8 +272,9 @@ export const useFormEnhancement = () => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (isDirty) {
         e.preventDefault()
-        e.returnValue = '您有未保存的更改，确定要离开吗？'
-        return e.returnValue
+        const returnValue = '您有未保存的更改，确定要离开吗？'
+        e.returnValue = returnValue
+        return returnValue as unknown
       }
     }
 
@@ -313,8 +317,9 @@ export const useNetworkStatus = (enabled = true) => {
     const handleConnectionChange = () => {
       const connection = (navigator as unknown as { connection?: { effectiveType?: string } }).connection
       if (connection) {
-        setConnectionType(connection.effectiveType || 'unknown')
-        recordAction('connectionChange', { type: connection.effectiveType })
+        const effectiveType = (connection.effectiveType !== null && connection.effectiveType !== undefined && connection.effectiveType !== '') ? connection.effectiveType : 'unknown'
+        setConnectionType(effectiveType)
+        recordAction('connectionChange', { type: effectiveType })
       }
     }
 
@@ -325,7 +330,8 @@ export const useNetworkStatus = (enabled = true) => {
     const connection = (navigator as unknown as { connection?: { effectiveType?: string; addEventListener?: (type: string, handler: () => void) => void; removeEventListener?: (type: string, handler: () => void) => void } }).connection
     if (connection) {
       connection.addEventListener?.('change', handleConnectionChange)
-      setConnectionType(connection.effectiveType || 'unknown')
+      const initialType = (connection.effectiveType !== null && connection.effectiveType !== undefined && connection.effectiveType !== '') ? connection.effectiveType : 'unknown'
+      setConnectionType(initialType)
     }
 
     return () => {
@@ -355,7 +361,7 @@ export const useUXEnhancement = (options?: {
 
   // 页面加载时跟踪页面访问
   useEffect(() => {
-    if (options?.trackPageView) {
+    if ((options?.trackPageView !== null && options?.trackPageView !== undefined && options?.trackPageView !== '')) {
       actionTracking.trackPageView(options.trackPageView)
     }
   }, [options?.trackPageView, actionTracking])
@@ -374,7 +380,7 @@ export const useUXEnhancement = (options?: {
     ...userFeedback,
     
     // 网络状态
-    ...(options?.enableNetworkMonitoring ? networkStatus : {}),
+    ...((options?.enableNetworkMonitoring === true) ? networkStatus : {}),
   }
 }
 

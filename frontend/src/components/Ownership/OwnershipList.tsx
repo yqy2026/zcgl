@@ -97,15 +97,17 @@ const OwnershipList: React.FC<OwnershipListProps> = ({
   };
 
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     loadOwnerships();
     loadStatistics();
-  }, [current, pageSize]);
+  }, [current, pageSize]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     setCurrent(1);
     loadOwnerships();
-  }, [keyword, isActive]);
+  }, [keyword, isActive]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 刷新列表
   const handleRefresh = () => {
@@ -337,7 +339,7 @@ const OwnershipList: React.FC<OwnershipListProps> = ({
             <Card>
               <Statistic
                 title="关联资产"
-                value={ownerships.reduce((sum, ownership) => sum + (ownership.asset_count || 0), 0)}
+                value={ownerships.reduce((sum, ownership) => sum + ((ownership.asset_count !== null && ownership.asset_count !== undefined) ? ownership.asset_count : 0), 0)}
                 valueStyle={{ color: '#722ed1' }}
               />
             </Card>

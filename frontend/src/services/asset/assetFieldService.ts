@@ -23,7 +23,9 @@ export class AssetFieldService {
     async getAssetCustomFields(assetId?: string): Promise<AssetCustomField[]> {
         try {
             const result = await enhancedApiClient.get<AssetCustomField[]>("/asset-custom-fields", {
-                params: assetId ? { asset_id: assetId } : undefined,
+                params: (assetId !== null && assetId !== undefined && assetId !== '')
+                        ? { asset_id: assetId }
+                        : undefined,
                 cache: true,
                 retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
                 smartExtract: true

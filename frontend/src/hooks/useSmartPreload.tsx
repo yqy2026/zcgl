@@ -96,7 +96,7 @@ class SmartPreloadManager {
     const routeElement = target.closest("[data-route]");
     if (routeElement) {
       const route = routeElement.getAttribute("data-route");
-      if (route && this.config.enabledRoutes.includes(route)) {
+      if ((route !== null && route !== undefined && route !== '') && this.config.enabledRoutes.includes(route)) {
         this.schedulePreload(route, "hover");
       }
     }
@@ -109,7 +109,7 @@ class SmartPreloadManager {
     const linkElement = target.closest("a[href]");
     if (linkElement) {
       const href = linkElement.getAttribute("href");
-      if (href && this.config.enabledRoutes.includes(href)) {
+      if ((href !== null && href !== undefined && href !== '') && this.config.enabledRoutes.includes(href)) {
         this.schedulePreload(href, "click");
       }
     }
@@ -183,7 +183,7 @@ class SmartPreloadManager {
       "/system/roles": () => import("../pages/System/RoleManagementPage"),
     };
 
-    return preloadFunctions[route] || null;
+    return (preloadFunctions[route] !== null && preloadFunctions[route] !== undefined) ? preloadFunctions[route] : null;
   }
 
   private pausePreloading() {
@@ -288,8 +288,9 @@ export const useSmartPreload = (config?: Partial<PreloadConfig>) => {
 
   // 提供预加载函数
   const preloadRoute = useCallback((route: string) => {
-    if (managerRef.current) {
-      (managerRef.current as any).schedulePreload(route, "predictive");
+    if ((managerRef.current !== null && managerRef.current !== undefined)) {
+      const manager = managerRef.current as unknown as { schedulePreload: (route: string, type: string) => void };
+      manager.schedulePreload(route, "predictive");
     }
   }, []);
 
@@ -305,7 +306,7 @@ export const useSmartPreload = (config?: Partial<PreloadConfig>) => {
     preloadRoute,
     getStats,
     clearCache,
-    config: managerRef.current ? { ...DEFAULT_CONFIG, ...config } : DEFAULT_CONFIG,
+    config: (managerRef.current !== null && managerRef.current !== undefined) ? { ...DEFAULT_CONFIG, ...config } : DEFAULT_CONFIG,
   };
 };
 
@@ -319,7 +320,7 @@ export const withPreload = <T extends Record<string, unknown> = Record<string, u
 
     useEffect(() => {
       preloadRoute(route);
-    }, [preloadRoute, route]);
+    }, [preloadRoute, route]); // eslint-disable-line react-hooks/exhaustive-deps
 
     return <Component {...props} />;
   };

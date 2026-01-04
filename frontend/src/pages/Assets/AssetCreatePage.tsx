@@ -35,7 +35,7 @@ const AssetCreatePage: React.FC = () => {
   const queryClient = useQueryClient()
   const _form = Form.useForm()
 
-  const isEdit = !!id
+  const isEdit = (id !== null && id !== undefined && id !== '')
 
   // 获取资产详情（编辑模式）
   const { data: asset, isLoading } = useQuery({
@@ -54,7 +54,9 @@ const AssetCreatePage: React.FC = () => {
     },
     onError: (error: unknown) => {
       const apiError = error as ApiError
-      message.error(apiError.response?.data?.detail || apiError.message || '创建失败')
+      const detail = (apiError.response !== null && apiError.response !== undefined && apiError.response.data !== null && apiError.response.data !== undefined) ? (apiError.response.data as { detail?: string }).detail : undefined;
+      const errorMsg = (detail !== null && detail !== undefined && detail !== '') ? detail : apiError.message;
+      message.error((errorMsg !== null && errorMsg !== undefined && errorMsg !== '') ? errorMsg : '创建失败')
     },
   })
 
@@ -69,7 +71,9 @@ const AssetCreatePage: React.FC = () => {
     },
     onError: (error: unknown) => {
       const apiError = error as ApiError
-      message.error(apiError.response?.data?.detail || apiError.message || '更新失败')
+      const detail = (apiError.response !== null && apiError.response !== undefined && apiError.response.data !== null && apiError.response.data !== undefined) ? (apiError.response.data as { detail?: string }).detail : undefined;
+      const errorMsg = (detail !== null && detail !== undefined && detail !== '') ? detail : apiError.message;
+      message.error((errorMsg !== null && errorMsg !== undefined && errorMsg !== '') ? errorMsg : '更新失败')
     },
   })
 

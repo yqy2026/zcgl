@@ -244,15 +244,15 @@ const ErrorPage: React.FC<ErrorPageProps> = ({
         <Result
           status={config.status}
           icon={config.icon}
-          title={title || config.title}
+          title={(title !== null && title !== undefined && title !== '') ? title : config.title}
           subTitle={
             <div>
-              <div>{subTitle || config.subTitle}</div>
+              <div>{(subTitle !== null && subTitle !== undefined && subTitle !== '') ? subTitle : config.subTitle}</div>
               {getSuggestions()}
             </div>
           }
           extra={
-            extra || (
+            (extra !== null && extra !== undefined) ? extra : (
               <Space wrap>
                 {getActionButtons()}
               </Space>

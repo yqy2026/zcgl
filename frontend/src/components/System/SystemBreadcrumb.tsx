@@ -58,8 +58,8 @@ const SystemBreadcrumb: React.FC = () => {
     const pathname = location.pathname
 
     // 精确匹配系统管理路由
-    if (systemRoutes[pathname]) {
-      return systemRoutes[pathname]
+    if (systemRoutes[pathname as keyof typeof systemRoutes] !== null && systemRoutes[pathname as keyof typeof systemRoutes] !== undefined) {
+      return systemRoutes[pathname as keyof typeof systemRoutes]
     }
 
     // 默认面包屑（用于非系统管理页面）
@@ -87,8 +87,8 @@ const SystemBreadcrumb: React.FC = () => {
             key: index,
             title: (
               <span>
-                {item.icon && <span style={{ marginRight: 8 }}>{item.icon}</span>}
-                {item.path ? (
+                {(item.icon !== null && item.icon !== undefined) && <span style={{ marginRight: 8 }}>{item.icon}</span>}
+                {(item.path !== null && item.path !== undefined && item.path !== '') ? (
                   <Link to={item.path} style={{ color: '#1890ff' }}>
                     {item.title}
                   </Link>

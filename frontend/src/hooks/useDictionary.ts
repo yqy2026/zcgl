@@ -46,8 +46,8 @@ export const useDictionary = (dictType: string, isActive: boolean = true): UseDi
     enabled: !!dictType
   })
 
-  const options = data?.success ? (data.data ?? []) : []
-  const errorMessage = data?.success ? null : (data?.error || error?.message || null)
+  const options = (data?.success === true) ? (data.data ?? []) : []
+  const errorMessage = (data?.success === true) ? null : ((data?.error !== null && data?.error !== undefined && data?.error !== '') ? data?.error : ((error?.message !== null && error?.message !== undefined && error?.message !== '') ? error?.message : null))
 
   const refresh: () => Promise<void> = async () => {
     await refetch()
@@ -95,8 +95,8 @@ export const useDictionaries = (dictTypes: string[]): Record<string, UseDictiona
     const error = queryResults[index].error
     const isLoading = queryResults[index].isLoading
 
-    const options = data?.success ? (data.data ?? []) : []
-    const errorMessage = data?.success ? null : (data?.error || error?.message || null)
+    const options = (data?.success === true) ? (data.data ?? []) : []
+    const errorMessage = (data?.success === true) ? null : ((data?.error !== null && data?.error !== undefined && data?.error !== '') ? data?.error : ((error?.message !== null && error?.message !== undefined && error?.message !== '') ? error?.message : null))
 
     results[dictType] = {
       options,

@@ -106,7 +106,7 @@ const fetchCoverageReport = async (): Promise<CoverageReport> => {
   if (!response.ok) {
     throw new Error('获取覆盖率报告失败');
   }
-  return response.json() as CoverageReport;
+  return response.json() as unknown as CoverageReport;
 };
 
 const fetchCoverageTrend = async (days: number = 30): Promise<CoverageTrend[]> => {
@@ -114,7 +114,7 @@ const fetchCoverageTrend = async (days: number = 30): Promise<CoverageTrend[]> =
   if (!response.ok) {
     throw new Error('获取覆盖率趋势失败');
   }
-  return response.json() as CoverageTrend[];
+  return response.json() as unknown as CoverageTrend[];
 };
 
 const fetchModuleCoverage = async (
@@ -127,7 +127,7 @@ const fetchModuleCoverage = async (
   if (!response.ok) {
     throw new Error('获取模块覆盖率失败');
   }
-  return response.json() as CoverageMetrics[];
+  return response.json() as unknown as CoverageMetrics[];
 };
 
 const fetchCoverageThresholds = async (): Promise<CoverageThreshold> => {
@@ -135,7 +135,7 @@ const fetchCoverageThresholds = async (): Promise<CoverageThreshold> => {
   if (!response.ok) {
     throw new Error('获取覆盖率阈值失败');
   }
-  return response.json() as CoverageThreshold;
+  return response.json() as unknown as CoverageThreshold;
 };
 
 const updateCoverageThresholds = async (thresholds: CoverageThreshold): Promise<CoverageThreshold> => {
@@ -149,7 +149,7 @@ const updateCoverageThresholds = async (thresholds: CoverageThreshold): Promise<
   if (!response.ok) {
     throw new Error('更新覆盖率阈值失败');
   }
-  return response.json() as CoverageThreshold;
+  return response.json() as unknown as CoverageThreshold;
 };
 
 const fetchQualityGate = async (): Promise<QualityGateResult> => {
@@ -157,7 +157,7 @@ const fetchQualityGate = async (): Promise<QualityGateResult> => {
   if (!response.ok) {
     throw new Error('获取质量门禁状态失败');
   }
-  return response.json();
+  return response.json() as Promise<QualityGateResult>;
 };
 
 // 主组件
@@ -240,7 +240,7 @@ const TestCoverageDashboard: React.FC = () => {
         const color = value >= 80 ? '#52c41a' : value >= 60 ? '#faad14' : '#ff4d4f';
         return (
           <Progress
-            percent={value}
+            percent={value as number}
             size="small"
             strokeColor={color}
             format={(percent) => `${percent?.toFixed(1)}%`}

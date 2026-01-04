@@ -139,19 +139,20 @@ class AnalyticsExportService {
       workbook.Sheets['使用状态分布']['!cols'] = columnWidths
       workbook.Sheets['业态类别分布']['!cols'] = columnWidths
 
-      if (workbook.Sheets['出租率趋势']) {
+      if ((workbook.Sheets['出租率趋势'] !== null && workbook.Sheets['出租率趋势'] !== undefined)) {
         workbook.Sheets['出租率趋势']['!cols'] = [{ wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 15 }]
       }
 
       // 生成文件名
       const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-')
       const defaultFilename = `资产分析报告_${timestamp}.xlsx`
-      const finalFilename = filename || defaultFilename
+      const finalFilename = (filename !== null && filename !== undefined && filename !== '') ? filename : defaultFilename
 
       // 导出文件
       XLSX.writeFile(workbook, finalFilename)
 
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('导出Excel失败:', error)
       throw new Error('导出失败，请重试')
     }
@@ -221,7 +222,7 @@ class AnalyticsExportService {
       // 生成文件名
       const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-')
       const defaultFilename = `资产分析报告_${timestamp}.csv`
-      const finalFilename = filename || defaultFilename
+      const finalFilename = (filename !== null && filename !== undefined && filename !== '') ? filename : defaultFilename
 
       // 下载文件
       const link = document.createElement('a')
@@ -234,6 +235,7 @@ class AnalyticsExportService {
       document.body.removeChild(link)
 
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('导出CSV失败:', error)
       throw new Error('导出失败，请重试')
     }
@@ -253,7 +255,7 @@ class AnalyticsExportService {
       // 生成文件名
       const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-')
       const defaultFilename = `资产分析报告_${timestamp}.html`
-      const finalFilename = filename || defaultFilename
+      const finalFilename = (filename !== null && filename !== undefined && filename !== '') ? filename : defaultFilename
 
       const link = document.createElement('a')
       link.setAttribute('href', url)
@@ -264,6 +266,7 @@ class AnalyticsExportService {
       document.body.removeChild(link)
 
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('导出PDF失败:', error)
       throw new Error('导出失败，请重试')
     }

@@ -68,11 +68,6 @@ const EnhancedPDFImportPage: React.FC = () => {
   const [showResults, setShowResults] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
-  // 组件挂载时检查系统能力
-  useEffect(() => {
-    checkSystemCapabilities();
-  }, [checkSystemCapabilities]);
-
   // 检查系统增强功能能力
   const checkSystemCapabilities = useCallback(async () => {
     try {
@@ -101,6 +96,13 @@ const EnhancedPDFImportPage: React.FC = () => {
       message.error('无法检查系统能力');
     }
   }, []);
+
+  // 组件挂载时检查系统能力
+  /* eslint-disable react-hooks/exhaustive-deps */
+  useEffect(() => {
+    void checkSystemCapabilities();
+  }, []);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   // 文件上传前检查
   const beforeUpload = (file: File, _fileList: File[]) => {

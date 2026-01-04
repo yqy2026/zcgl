@@ -194,7 +194,7 @@ export const getDictionaryConfigs = (): DictionaryConfig[] => {
  * 获取特定字典类型的配置
  */
 export const getDictionaryConfig = (code: string): DictionaryConfig | null => {
-  return DICTIONARY_CONFIGS[code] || null
+  return (DICTIONARY_CONFIGS[code] !== null && DICTIONARY_CONFIGS[code] !== undefined) ? DICTIONARY_CONFIGS[code] : null
 }
 
 /**

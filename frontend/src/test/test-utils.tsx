@@ -3,6 +3,8 @@
  * 提供React Testing Library的增强功能和自定义工具
  */
 
+/* eslint-disable no-console */
+
 import React, { ReactElement, ReactNode } from 'react'
 import {
   render,

@@ -28,13 +28,13 @@ export const useAnalytics = (filters?: AssetSearchParams) => {
               unrented_area: 3075.66,
               assets_with_area_data: 669,
               occupancy_rate: 97.48,
-            } as any,
+            },
             financial_summary: {
               total_annual_income: 0.0,
               total_annual_expense: 0.0,
               total_net_income: 0.0,
               assets_with_income_data: 0,
-            } as any,
+            },
             business_category_distribution: [],
             property_nature_distribution: [],
             ownership_status_distribution: [],
@@ -44,7 +44,7 @@ export const useAnalytics = (filters?: AssetSearchParams) => {
           },
           cache_stats: { cache_size: 0, hits: 0, misses: 0, hit_rate: 0 },
           performance_info: { calculation_time: 0, asset_count: 696, cache_enabled: true },
-        } as any
+        } as unknown as AnalyticsResponse
       }
     },
     staleTime: 5 * 60 * 1000, // 5分钟缓存

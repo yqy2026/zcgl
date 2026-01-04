@@ -28,7 +28,10 @@ const LoginPage: React.FC = () => {
       await login({ username: values.username, password: values.password })
 
       // 登录成功，跳转到目标页面或默认工作台
-      const from = location.state?.from?.pathname || '/dashboard'
+      const state = location.state as { from?: { pathname?: string } } | null;
+      const from = (state !== null && state !== undefined && state.from !== null && state.from !== undefined && state.from.pathname !== null && state.from.pathname !== undefined && state.from.pathname !== '')
+        ? state.from.pathname
+        : '/dashboard';
       navigate(from, { replace: true })
     } catch {
       // 错误处理已在useAuth中完成，这里不需要额外处理
@@ -124,7 +127,7 @@ const LoginPage: React.FC = () => {
               </Checkbox>
             </Form.Item>
 
-            {error && (
+            {(error !== null && error !== undefined && error !== '') && (
               <Alert
                 message="登录失败"
                 description={error}

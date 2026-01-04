@@ -34,7 +34,7 @@ const OwnershipDetail: React.FC<OwnershipDetailProps> = ({
   onEdit
 }) => {
   const formatDate = (dateStr?: string) => {
-    if (!dateStr) return '-';
+    if ((dateStr === null || dateStr === undefined || dateStr === '')) return '-';
     return new Date(dateStr).toLocaleDateString('zh-CN');
   };
 
@@ -93,7 +93,7 @@ const OwnershipDetail: React.FC<OwnershipDetailProps> = ({
             <Text strong style={{ fontSize: 20 }}>
               {ownership.name}
             </Text>
-            {ownership.short_name && (
+            {(ownership.short_name !== null && ownership.short_name !== undefined && ownership.short_name !== '') && (
               <div style={{ marginTop: 8, color: '#666' }}>
                 简称：{ownership.short_name}
               </div>
@@ -120,7 +120,7 @@ const OwnershipDetail: React.FC<OwnershipDetailProps> = ({
             {ownership.name}
           </Descriptions.Item>
           <Descriptions.Item label="权属方简称">
-            {ownership.short_name || '-'}
+            {(ownership.short_name !== null && ownership.short_name !== undefined && ownership.short_name !== '') ? ownership.short_name : '-'}
           </Descriptions.Item>
           <Descriptions.Item label="状态">
             <Badge
@@ -130,12 +130,12 @@ const OwnershipDetail: React.FC<OwnershipDetailProps> = ({
           </Descriptions.Item>
           <Descriptions.Item label="关联资产数量">
             <Tag color="blue">
-              {ownership.asset_count || 0} 个
+              {(ownership.asset_count !== null && ownership.asset_count !== undefined) ? ownership.asset_count : 0} 个
             </Tag>
           </Descriptions.Item>
           <Descriptions.Item label="关联项目数量">
             <Tag color="green">
-              {ownership.project_count || 0} 个
+              {(ownership.project_count !== null && ownership.project_count !== undefined) ? ownership.project_count : 0} 个
             </Tag>
           </Descriptions.Item>
         </Descriptions>
@@ -145,7 +145,7 @@ const OwnershipDetail: React.FC<OwnershipDetailProps> = ({
       {ownership.related_projects && ownership.related_projects.length > 0 && (
         <Card title="关联项目" style={{ marginTop: 16 }}>
           <Table
-            columns={projectColumns as any}
+            columns={projectColumns as Array<{ title: string; dataIndex: string; key: string; render?: (text: unknown, record: unknown) => React.ReactNode }>}
             dataSource={ownership.related_projects}
             rowKey="id"
             pagination={false}
