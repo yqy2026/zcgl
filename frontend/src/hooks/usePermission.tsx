@@ -44,19 +44,25 @@ const usePermission = () => {
     try {
       // 从localStorage或API获取当前用户信息
       const storedUser = localStorage.getItem('currentUser')
-      if (!storedUser) {
+      if ((storedUser !== null && storedUser !== undefined && storedUser !== '')) {
         setUserPermissions(null)
         return
       }
 
-      const currentUser = JSON.parse(storedUser)
+      const currentUser = JSON.parse(storedUser!) as {
+        id: string
+        username: string
+        roles?: unknown[]
+        permissions?: unknown[]
+        organization_id: string
+      }
 
       // 获取用户详细权限信息
       const userPermissionsData: UserPermissions = {
         userId: currentUser.id,
         username: currentUser.username,
-        roles: currentUser.roles || [],
-        permissions: currentUser.permissions || [],
+        roles: ((currentUser.roles !== null && currentUser.roles !== undefined) ? currentUser.roles : []) as UserRole[],
+        permissions: ((currentUser.permissions !== null && currentUser.permissions !== undefined) ? currentUser.permissions : []) as string[],
         organizationId: currentUser.organization_id
       }
 
@@ -123,13 +129,13 @@ const usePermission = () => {
     if (hasPermission(resource, action)) {
       return null
     }
-    return fallback || <div>Access Denied</div>
+    return (fallback !== null && fallback !== undefined) ? fallback : <div>Access Denied</div>
   }, [hasPermission])
 
   // 页面权限检查
   const checkPageAccess = useCallback((pagePermissions: Array<{ resource: string; action: string }>): boolean => {
     // 如果没有配置权限要求，则允许访问
-    if (!pagePermissions || pagePermissions.length === 0) {
+    if ((pagePermissions !== null && pagePermissions !== undefined) && pagePermissions.length === 0) {
       return true
     }
 
