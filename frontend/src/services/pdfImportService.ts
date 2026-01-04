@@ -453,18 +453,40 @@ class PDFImportService {
     confirmedData: ConfirmedContractData
   ): Promise<ConfirmImportResponse> {
     try {
-      const response = await axios.post(`${API_BASE_URL}/confirm_import`, {
+      interface ConfirmImportRequest {
+        session_id: string;
+        confirmed_data: ConfirmedContractData;
+      }
+      interface ConfirmImportAPIResponse {
+        success: boolean;
+        message?: string;
+        error?: string;
+      }
+      const response = await axios.post<ConfirmImportAPIResponse>(`${API_BASE_URL}/confirm_import`, {
         session_id: sessionId,
         confirmed_data: confirmedData
-      });
+      } as ConfirmImportRequest);
 
       return response.data;
     } catch (error: unknown) {
       logger.error('确认导入失败:', error as Error);
+      let message: string;
+      let errorMessage: string;
+      if (isAxiosError(error)) {
+        const detailMessage = error.response?.data?.detail;
+        message = isStringPresent(detailMessage) ? detailMessage : isStringPresent(error.message) ? error.message : '导入失败';
+        errorMessage = isStringPresent(detailMessage) ? detailMessage : isStringPresent(error.message) ? error.message : 'Unknown error';
+      } else if (isError(error)) {
+        message = error.message;
+        errorMessage = error.message;
+      } else {
+        message = '导入失败';
+        errorMessage = 'Unknown error';
+      }
       return {
         success: false,
-        message: isAxiosError(error) ? (error.response?.data?.detail || error.message || '导入失败') : isError(error) ? error.message : '导入失败',
-        error: isAxiosError(error) ? (error.response?.data?.detail || error.message) : isError(error) ? error.message : 'Unknown error'
+        message,
+        error: errorMessage
       };
     }
   }
