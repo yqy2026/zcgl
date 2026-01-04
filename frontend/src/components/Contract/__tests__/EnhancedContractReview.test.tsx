@@ -206,8 +206,8 @@ vi.mock('@ant-design/icons', () => ({
 
 // Mock dayjs
 vi.mock('dayjs', () => ({
-  default: (date?: string) => ({
-    format: (fmt: string) => '2024-01-01',
+  default: (_date?: string) => ({
+    format: (_fmt: string) => '2024-01-01',
     valueOf: () => 1704067200000,
   }),
   extend: () => { },

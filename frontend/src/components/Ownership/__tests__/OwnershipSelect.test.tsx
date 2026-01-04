@@ -73,7 +73,7 @@ vi.mock('antd', () => ({
     ),
   },
   Modal: {
-    confirm: ({ _onOk, onCancel }: any) => ({
+    confirm: ({ _onOk, _onCancel }: any) => ({
       then: (callback: any) => callback && callback({ result: 'ok' }),
     }),
   },

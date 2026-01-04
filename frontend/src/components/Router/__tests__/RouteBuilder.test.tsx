@@ -11,7 +11,7 @@ import { MemoryRouter, Routes } from 'react-router-dom'
 
 // Mock all dependencies before importing
 vi.mock('../ProtectedRoute', () => ({
-  default: vi.fn(({ path, component, permissions, errorBoundary, fallback, ...props }) => {
+  default: vi.fn(({ path, component, permissions, errorBoundary, fallback, ..._props }) => {
     return React.createElement('div', {
       'data-testid': 'protected-route',
       'data-path': path,
@@ -22,7 +22,7 @@ vi.mock('../ProtectedRoute', () => ({
 }))
 
 vi.mock('../LazyRoute', () => ({
-  default: vi.fn(({ path, component, preload, permissions, ...props }) => {
+  default: vi.fn(({ path, component, preload, permissions, ..._props }) => {
     return React.createElement('div', {
       'data-testid': 'lazy-route',
       'data-path': path,
