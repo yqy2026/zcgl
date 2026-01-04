@@ -167,7 +167,7 @@ class TestCoverageService {
     if (!response.ok) {
       throw new Error(`获取模块覆盖率失败: ${response.statusText}`);
     }
-    const data = await response.json();
+    const data = await response.json() as CoverageMetrics[];
     return {
       success: true,
       data,
@@ -182,7 +182,7 @@ class TestCoverageService {
     if (!response.ok) {
       throw new Error(`获取覆盖率阈值失败: ${response.statusText}`);
     }
-    const data = await response.json();
+    const data = await response.json() as CoverageThreshold;
     return {
       success: true,
       data,
@@ -220,7 +220,7 @@ class TestCoverageService {
     if (!response.ok) {
       throw new Error(`检查质量门禁失败: ${response.statusText}`);
     }
-    const data = await response.json();
+    const data = await response.json() as QualityGateResult;
     return {
       success: true,
       data,
@@ -277,7 +277,7 @@ class TestCoverageService {
     if (!response.ok) {
       throw new Error(`获取测试执行报告失败: ${response.statusText}`);
     }
-    const data = await response.json();
+    const data = await response.json() as TestExecutionReport[];
     return {
       success: true,
       data,
