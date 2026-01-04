@@ -1,0 +1,30 @@
+name: Minimal CI Test
+
+on:
+  push:
+    branches: [ hotfix/ci-failures ]
+  pull_request:
+    branches: [ hotfix/ci-failures ]
+
+jobs:
+  test-job:
+    name: Simple Test
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Echo message
+      run: |
+        echo "✅ CI is working!"
+        echo "Branch: ${{ github.ref_name }}"
+        echo "Event: ${{ github.event_name }}"
+
+    - name: Verify structure
+      run: |
+        echo "Checking backend/src:"
+        [ -d "backend/src" ] && echo "✅ backend/src exists" || echo "❌ backend/src missing"
+        echo ""
+        echo "Checking frontend/src:"
+        [ -d "frontend/src" ] && echo "✅ frontend/src exists" || echo "❌ frontend/src missing"
