@@ -37,6 +37,9 @@ import type { Project, ProjectStatisticsResponse } from '@/types/project';
 import type { Ownership } from '@/types/ownership';
 import { ProjectForm } from '@/components/Forms';
 import ProjectDetail from './ProjectDetail';
+import { createLogger } from '@/utils/logger';
+
+const componentLogger = createLogger('ProjectList');
 // import OwnershipSelect from '@/components/Ownership/OwnershipSelect';
 
 // 项目查询参数接口
@@ -106,7 +109,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
       // API response received
 
       // 处理后端响应格式: {items: [...], total: 58, page: 1, size: 10, pages: 6}
-      if (response && response.items) {
+      if (response !== null && response !== undefined && 'items' in response && response.items !== null && response.items !== undefined) {
         // 标准响应格式：{items: [...], total: number, page: number, size: number}
         setProjects((response.items !== null && response.items !== undefined) ? response.items : []);
         setPagination(prev => ({
@@ -115,17 +118,18 @@ const ProjectList: React.FC<ProjectListProps> = ({
           current: (response.page !== null && response.page !== undefined) ? response.page : prev.current,
           pageSize: (response.size !== null && response.size !== undefined) ? response.size : prev.pageSize
         }));
-      } else if (response && (response as any).data && (response as any).data.items) {
+      } else if (response !== null && response !== undefined && 'data' in response) {
+        const nestedResponse = response as { data: { items?: Project[]; total?: number; total_count?: number; page?: number; size?: number } };
         // 嵌套响应格式：{data: {items: [...], total: number}}
-        setProjects((response as any).data.items ?? []);
+        setProjects(nestedResponse.data.items ?? []);
         setPagination(prev => ({
           ...prev,
-          total: (response as any).data.total ?? (response as any).data.total_count ?? 0,
-          current: (response as any).data.page ?? prev.current,
-          pageSize: (response as any).data.size ?? prev.pageSize
+          total: nestedResponse.data.total ?? nestedResponse.data.total_count ?? 0,
+          current: nestedResponse.data.page ?? prev.current,
+          pageSize: nestedResponse.data.size ?? prev.pageSize
         }));
       } else {
-        console.error('Unexpected response format:', response);
+        componentLogger.error('Unexpected response format:', response as Error);
         setProjects([]);
         setPagination(prev => ({
           ...prev,
@@ -134,7 +138,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
       }
 
       // 在项目数据加载后，基于实际数据计算统计信息
-      const loadedProjects = response?.items ?? (response as any).data?.items ?? []
+      const loadedProjects = response?.items ?? ('data' in (response as object) ? (response as { data?: { items?: Project[] } }).data?.items ?? [] : [])
       const activeCount = loadedProjects.filter(p => p.is_active).length;
       const inactiveCount = loadedProjects.length - activeCount;
 
@@ -142,17 +146,17 @@ const ProjectList: React.FC<ProjectListProps> = ({
         total_count: loadedProjects.length,
         active_count: activeCount,
         inactive_count: inactiveCount,
-        type_distribution: {} as any, // 如需要可基于项目数据计算
-        status_distribution: {} as any // 如需要可基于项目数据计算
-      } as any);
+        type_distribution: {},
+        status_distribution: {}
+      } as ProjectStatisticsResponse);
     } catch (error) {
-      console.error('获取项目列表失败:', error);
-      const err = error as any;
-      console.error('Error details:', {
+      componentLogger.error('获取项目列表失败:', error as Error);
+      const err = error as { message?: string; response?: { status?: number; data?: unknown } };
+      componentLogger.error('Error details:', {
         message: err.message,
         status: err.response?.status,
         data: err.response?.data
-      });
+      } as never);
       message.error(`获取项目列表失败: ${(err.message !== null && err.message !== undefined && err.message !== '') ? err.message : '未知错误'}`);
     } finally {
       setLoading(false);
@@ -168,11 +172,11 @@ const ProjectList: React.FC<ProjectListProps> = ({
         total_count: 0,
         active_count: 0,
         inactive_count: 0,
-        type_distribution: {} as any,
-        status_distribution: {} as any
-      } as any);
+        type_distribution: {},
+        status_distribution: {}
+      } as ProjectStatisticsResponse);
     } catch (error) {
-      console.error('获取统计信息失败:', error);
+      componentLogger.error('获取统计信息失败:', error as Error);
       setStatistics(null);
     }
   };
