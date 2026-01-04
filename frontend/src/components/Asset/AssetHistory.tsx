@@ -106,7 +106,7 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
         return {
           icon: <EditOutlined />,
           color: "default",
-          text: type || "未知",
+          text: (type !== null && type !== undefined && type !== '') ? type : "未知",
         };
     }
   };
@@ -119,7 +119,9 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
     const changes = [];
 
     // 合并所有变更的字段
-    const allFields = new Set([...Object.keys(oldValues || {}), ...Object.keys(newValues || {})]);
+    const oldKeys = (oldValues !== null && oldValues !== undefined) ? Object.keys(oldValues) : [];
+    const newKeys = (newValues !== null && newValues !== undefined) ? Object.keys(newValues) : [];
+    const allFields = new Set([...oldKeys, ...newKeys]);
 
     for (const field of allFields) {
       const oldValue = oldValues?.[field];
@@ -128,8 +130,8 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
       if (oldValue !== newValue) {
         changes.push({
           field,
-          oldValue: oldValue || "-",
-          newValue: newValue || "-",
+          oldValue: (oldValue !== null && oldValue !== undefined && oldValue !== '') ? oldValue : "-",
+          newValue: (newValue !== null && newValue !== undefined && newValue !== '') ? newValue : "-",
         });
       }
     }
@@ -206,7 +208,7 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
 
           <Col xs={24} sm={24} md={6} style={{ textAlign: "right" }}>
             <span style={{ color: "#8c8c8c", fontSize: "14px" }}>
-              共 {historyData?.data?.pagination?.total || 0} 条记录
+              共 {(historyData?.data?.pagination?.total !== null && historyData?.data?.pagination?.total !== undefined) ? historyData.data.pagination.total : 0} 条记录
             </span>
           </Col>
         </Row>
@@ -236,7 +238,7 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
                           <Space>
                             <Tag color={config.color}>{config.text}</Tag>
                             <span style={{ fontWeight: "bold" }}>
-                              {history.changed_fields?.join(", ") || "无字段变更"}
+                              {(history.changed_fields !== null && history.changed_fields !== undefined && history.changed_fields.length > 0) ? history.changed_fields.join(", ") : "无字段变更"}
                             </span>
                           </Space>
                         </div>
@@ -246,11 +248,11 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
                           <Space split={<span>•</span>}>
                             <span>
                               <UserOutlined style={{ marginRight: 4 }} />
-                              {history.changed_by || history.operator || "未知用户"}
+                              {(history.changed_by !== null && history.changed_by !== undefined && history.changed_by !== '') ? history.changed_by : (history.operator !== null && history.operator !== undefined && history.operator !== '') ? history.operator : "未知用户"}
                             </span>
                             <span>
                               <CalendarOutlined style={{ marginRight: 4 }} />
-                              {formatDate(history.changed_at || history.operation_time, "datetime")}
+                              {formatDate((history.changed_at !== null && history.changed_at !== undefined && history.changed_at !== '') ? history.changed_at : (history.operation_time !== null && history.operation_time !== undefined && history.operation_time !== '') ? history.operation_time : new Date().toISOString(), "datetime")}
                             </span>
                           </Space>
                         </div>
@@ -333,23 +335,23 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
               </Descriptions.Item>
 
               <Descriptions.Item label="变更字段">
-                {selectedHistory.changed_fields?.join(", ") || "无字段变更"}
+                {(selectedHistory.changed_fields !== null && selectedHistory.changed_fields !== undefined && selectedHistory.changed_fields.length > 0) ? selectedHistory.changed_fields.join(", ") : "无字段变更"}
               </Descriptions.Item>
 
               <Descriptions.Item label="操作人">
-                {selectedHistory.changed_by || selectedHistory.operator || "未知用户"}
+                {(selectedHistory.changed_by !== null && selectedHistory.changed_by !== undefined && selectedHistory.changed_by !== '') ? selectedHistory.changed_by : (selectedHistory.operator !== null && selectedHistory.operator !== undefined && selectedHistory.operator !== '') ? selectedHistory.operator : "未知用户"}
               </Descriptions.Item>
 
               <Descriptions.Item label="变更时间">
                 {formatDate(
-                  selectedHistory.changed_at || selectedHistory.operation_time,
+                  (selectedHistory.changed_at !== null && selectedHistory.changed_at !== undefined && selectedHistory.changed_at !== '') ? selectedHistory.changed_at : (selectedHistory.operation_time !== null && selectedHistory.operation_time !== undefined && selectedHistory.operation_time !== '') ? selectedHistory.operation_time : new Date().toISOString(),
                   "datetime",
                 )}
               </Descriptions.Item>
 
-              {(selectedHistory.reason || selectedHistory.description) && (
+              {((selectedHistory.reason !== null && selectedHistory.reason !== undefined && selectedHistory.reason !== '') || (selectedHistory.description !== null && selectedHistory.description !== undefined && selectedHistory.description !== '')) && (
                 <Descriptions.Item label="变更原因">
-                  {selectedHistory.reason || selectedHistory.description}
+                  {(selectedHistory.reason !== null && selectedHistory.reason !== undefined && selectedHistory.reason !== '') ? selectedHistory.reason : (selectedHistory.description !== null && selectedHistory.description !== undefined && selectedHistory.description !== '') ? selectedHistory.description : ""}
                 </Descriptions.Item>
               )}
             </Descriptions>
