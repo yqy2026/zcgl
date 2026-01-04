@@ -52,6 +52,28 @@ interface OccupancyRateChartProps {
   height?: number
 }
 
+// Chart tooltip data types
+interface TrendChartData {
+  month: string
+  rate: number
+  total_area: number
+  rented_area: number
+}
+
+interface PropertyNatureChartData {
+  type: string
+  value: number
+  total_area: number
+  rented_area: number
+}
+
+interface OwnershipChartData {
+  ownership: string
+  rate: number
+  asset_count: number
+  full_name: string
+}
+
 const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
   filters,
   height = 400,
@@ -83,12 +105,13 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
       shape: 'circle',
     },
     tooltip: {
-      formatter: (datum: any) => ({
+      formatter: (datum: TrendChartData) => ({
         name: '出租率',
         value: `${datum.rate.toFixed(2)}%`,
       }),
-      customContent: (title: any, data: any) => {
-        const datum = data?.[0]?.data
+      customContent: (_title: unknown, data: any) => {
+        const dataArray = data as Array<{ data: TrendChartData }> | undefined
+        const datum = dataArray?.[0]?.data
         if (!datum) return null
         return (
           <div style={{ padding: '8px' }}>
@@ -143,12 +166,13 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
       position: 'right',
     },
     tooltip: {
-      formatter: (datum: any) => ({
+      formatter: (datum: PropertyNatureChartData) => ({
         name: datum.type,
         value: `${datum.value.toFixed(2)}%`,
       }),
-      customContent: (title: any, data: any) => {
-        const datum = data?.[0]?.data
+      customContent: (_title: unknown, data: any) => {
+        const dataArray = data as Array<{ data: PropertyNatureChartData }> | undefined
+        const datum = dataArray?.[0]?.data
         if (!datum) return null
         return (
           <div style={{ padding: '8px' }}>
@@ -174,7 +198,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
           fontSize: '20px',
           fontWeight: 'bold',
         },
-        content: `${data?.overall_rate?.toFixed(2) || 0}%`,
+        content: `${(data?.overall_rate !== null && data?.overall_rate !== undefined) ? data.overall_rate.toFixed(2) : '0.00'}%`,
       },
     },
   }
@@ -199,19 +223,20 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
     },
     label: {
       position: 'top' as const,
-      formatter: (datum: any) => `${datum.rate.toFixed(1)}%`,
+      formatter: (datum: OwnershipChartData) => `${datum.rate.toFixed(1)}%`,
       style: {
         fill: '#333',
         fontSize: 12,
       },
     },
     tooltip: {
-      formatter: (datum: any) => ({
+      formatter: (datum: OwnershipChartData) => ({
         name: (datum.full_name !== null && datum.full_name !== undefined) ? datum.full_name : datum.ownership,
         value: `${datum.rate.toFixed(2)}%`,
       }),
-      customContent: (title: any, data: any) => {
-        const datum = data?.[0]?.data
+      customContent: (_title: unknown, data: any) => {
+        const dataArray = data as Array<{ data: OwnershipChartData }> | undefined
+        const datum = dataArray?.[0]?.data
         if (!datum) return null
         return (
           <div style={{ padding: '8px' }}>
