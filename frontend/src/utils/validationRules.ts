@@ -23,7 +23,7 @@ export const validationRules = {
   // 必填验证
   required: (message?: string) => ({
     required: true,
-    message: message || '此字段为必填项'
+    message: (message !== null && message !== undefined && message !== '') ? message : '此字段为必填项'
   }),
 
   // 邮箱验证
@@ -236,7 +236,7 @@ export const customValidators = {
     validator: (_: FormValidationRule, value: number) => {
       if (value === undefined || value === null) return Promise.resolve()
       if (value < min || value > max) {
-        return Promise.reject(new Error(message || `数值应在${min}-${max}之间`))
+        return Promise.reject(new Error((message !== null && message !== undefined && message !== '') ? message : `数值应在${min}-${max}之间`))
       }
       return Promise.resolve()
     }
@@ -247,7 +247,7 @@ export const customValidators = {
     validator: (_rule: FormValidationRule, value: string): Promise<void> => {
       if (!value) return Promise.resolve()
       if (value.length < min || value.length > max) {
-        return Promise.reject(new Error(message || `长度应在${min}-${max}个字符之间`))
+        return Promise.reject(new Error((message !== null && message !== undefined && message !== '') ? message : `长度应在${min}-${max}个字符之间`))
       }
       return Promise.resolve()
     }

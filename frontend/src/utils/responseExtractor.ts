@@ -121,7 +121,7 @@ export class ResponseExtractor {
 
     try {
       // 获取响应数据
-      const responseData = response.data;
+      const responseData: unknown = response.data;
 
       // 检测响应类型
       const responseType = ResponseDetector.detectResponseType(responseData, finalOptions.detection);
@@ -129,13 +129,13 @@ export class ResponseExtractor {
       // 根据类型提取数据
       switch (responseType) {
         case 'standard':
-          return this.extractStandardResponse<T>(response, finalOptions as any);
+          return this.extractStandardResponse<T>(response, finalOptions);
         case 'paginated':
-          return this.extractPaginatedResponse<T>(response, finalOptions as any);
+          return this.extractPaginatedResponse<T>(response, finalOptions);
         case 'direct':
-          return this.extractDirectResponse<T>(response, finalOptions as any);
+          return this.extractDirectResponse<T>(response, finalOptions);
         case 'error':
-          return this.extractErrorResponse<T>(response, finalOptions as any);
+          return this.extractErrorResponse<T>(response, finalOptions);
         default:
           return {
             success: false,
@@ -159,7 +159,7 @@ export class ResponseExtractor {
     response: AxiosResponse,
     options: SmartExtractOptions<T>
   ): ExtractResult<T> {
-    const responseData = response.data;
+    const responseData: unknown = response.data;
     const dataField = (options.detection?.dataField !== null && options.detection?.dataField !== undefined && options.detection?.dataField !== '') ? options.detection.dataField : 'data';
 
     if ((responseData as Record<string, unknown>)[dataField] === null || (responseData as Record<string, unknown>)[dataField] === undefined) {
@@ -186,11 +186,12 @@ export class ResponseExtractor {
     response: AxiosResponse,
     options: SmartExtractOptions<T>
   ): ExtractResult<T> {
-    const responseData = response.data;
+    const responseData: unknown = response.data;
     const dataField = (options.detection?.dataField !== null && options.detection?.dataField !== undefined && options.detection?.dataField !== '') ? options.detection.dataField : 'data';
     const dataContainer = (responseData as Record<string, unknown>)[dataField] as Record<string, unknown>;
 
-    if (dataContainer === null || dataContainer === undefined || dataContainer.items === null || dataContainer.items === undefined) {
+    if (dataContainer === null || dataContainer === undefined ||
+        dataContainer.items === null || dataContainer.items === undefined) {
       return {
         success: false,
         error: '分页响应中缺少items字段',
@@ -212,7 +213,7 @@ export class ResponseExtractor {
     response: AxiosResponse,
     options: SmartExtractOptions<T>
   ): ExtractResult<T> {
-    const data = response.data;
+    const data: unknown = response.data;
 
     return {
       success: true,
@@ -228,13 +229,14 @@ export class ResponseExtractor {
     response: AxiosResponse,
     options: SmartExtractOptions<T>
   ): ExtractResult<T> {
-    const responseData = response.data;
-    const errorFields = (isPresent(options.detection?.errorFields) ? options.detection?.errorFields : ['error', 'message']);
+    const responseData: unknown = response.data;
+    const errorFields = (options.detection?.errorFields !== null && options.detection?.errorFields !== undefined) ? options.detection.errorFields : ['error', 'message'];
     let errorMessage = '未知错误';
 
     // 尝试从常见字段提取错误信息
     for (const field of errorFields) {
-      if ((responseData as Record<string, unknown>)[field]) {
+      const fieldValue = (responseData as Record<string, unknown>)[field];
+      if (fieldValue !== null && fieldValue !== undefined) {
         const value = (responseData as Record<string, unknown>)[field];
         if (typeof value === 'string') {
           errorMessage = value;
