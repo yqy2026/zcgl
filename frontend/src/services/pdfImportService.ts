@@ -314,13 +314,27 @@ class PDFImportService {
     error?: string;
   }> {
     try {
-      const response = await axios.get(`${API_BASE_URL}/progress/${sessionId}`);
+      interface GetProgressResponse {
+        success: boolean;
+        session_status?: SessionProgress;
+        error?: string;
+      }
+      const response = await axios.get<GetProgressResponse>(`${API_BASE_URL}/progress/${sessionId}`);
       return response.data;
     } catch (error: unknown) {
       logger.error('获取进度失败:', error as Error);
+      let errorMessage: string;
+      if (isAxiosError(error)) {
+        const detailMessage = error.response?.data?.detail;
+        errorMessage = isStringPresent(detailMessage) ? detailMessage : isStringPresent(error.message) ? error.message : 'Unknown error';
+      } else if (isError(error)) {
+        errorMessage = error.message;
+      } else {
+        errorMessage = 'Unknown error';
+      }
       return {
         success: false,
-        error: isAxiosError(error) ? (error.response?.data?.detail || error.message) : isError(error) ? error.message : 'Unknown error'
+        error: errorMessage
       };
     }
   }
