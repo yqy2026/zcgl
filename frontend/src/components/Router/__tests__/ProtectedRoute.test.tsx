@@ -6,7 +6,6 @@
 
 import { describe, it, expect } from 'vitest'
 import React from 'react'
-import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Routes } from 'react-router-dom'
 
 // Mock dependencies
