@@ -109,6 +109,7 @@ const EnumFieldPage: React.FC = () => {
   useEffect(() => {
     loadEnumTypes();
     loadStatistics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -151,7 +152,7 @@ const EnumFieldPage: React.FC = () => {
           icon: '',
           is_active: true,
           is_default: false,
-          enum_type_id: String(selectedTypeId || '')
+          enum_type_id: (selectedTypeId !== null && selectedTypeId !== undefined && selectedTypeId !== '') ? String(selectedTypeId) : ''
         };
 
         // 使用 setTimeout 确保 modal 完全打开后再设置表单值
@@ -185,7 +186,7 @@ const EnumFieldPage: React.FC = () => {
       title: '类别',
       dataIndex: 'category',
       key: 'category',
-      render: (text) => text || '-',
+      render: (text: string | undefined) => (text !== null && text !== undefined && text !== '') ? text : '-',
     },
     {
       title: '配置',
@@ -201,7 +202,7 @@ const EnumFieldPage: React.FC = () => {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      render: (status) => (
+      render: (status: string) => (
         <Badge
           status={status === 'active' ? 'success' : 'default'}
           text={status === 'active' ? '启用' : '禁用'}
@@ -272,19 +273,19 @@ const EnumFieldPage: React.FC = () => {
       title: '编码',
       dataIndex: 'code',
       key: 'code',
-      render: (text) => text ? <code>{text}</code> : '-',
+      render: (text: string | undefined) => (text !== null && text !== undefined && text !== '') ? <code>{text}</code> : '-',
     },
     {
       title: '颜色',
       dataIndex: 'color',
       key: 'color',
-      render: (color) => color ? (
+      render: (color: string | undefined) => (color !== null && color !== undefined && color !== '') ? (
         <Space>
           <div
             style={{
               width: 16,
               height: 16,
-              backgroundColor: color,
+              backgroundColor: (color !== null && color !== undefined) ? color : '',
               border: '1px solid #d9d9d9',
               borderRadius: 2,
             }}
