@@ -106,6 +106,7 @@ export const SmartProgressProvider: React.FC<SmartProgressProviderProps> = ({
     }, 1000)
 
     return trackerId
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [maxActiveTrackers])
 
   const updateStep = useCallback((trackerId: string, stepId: string, updates: Partial<ProgressStep>) => {
@@ -114,7 +115,7 @@ export const SmartProgressProvider: React.FC<SmartProgressProviderProps> = ({
         const updatedSteps = tracker.steps.map(step => {
           if (step.id === stepId) {
             const now = new Date()
-            const startTime = step.startTime || now
+            const startTime = (step.startTime !== null && step.startTime !== undefined) ? step.startTime : now
 
             // 如果状态改为完成，记录结束时间
             if (updates.status === 'finish' && step.status !== 'finish') {
@@ -152,7 +153,7 @@ export const SmartProgressProvider: React.FC<SmartProgressProviderProps> = ({
       if (tracker.id === trackerId) {
         if (updates.status === 'completed') {
           // 清除定时器
-          if (intervals.current[trackerId]) {
+          if (intervals.current[trackerId] !== null && intervals.current[trackerId] !== undefined) {
             clearInterval(intervals.current[trackerId])
             delete intervals.current[trackerId]
           }
@@ -170,7 +171,7 @@ export const SmartProgressProvider: React.FC<SmartProgressProviderProps> = ({
       estimatedEndTime: new Date()
     })
 
-    if (intervals.current[trackerId]) {
+    if (intervals.current[trackerId] !== null && intervals.current[trackerId] !== undefined) {
       clearInterval(intervals.current[trackerId])
       delete intervals.current[trackerId]
     }
@@ -214,7 +215,7 @@ export const SmartProgressProvider: React.FC<SmartProgressProviderProps> = ({
 
     // 重新启动定时器
     const tracker = getTracker(trackerId)
-    if (tracker) {
+    if (tracker !== null && tracker !== undefined) {
       intervals.current[trackerId] = setInterval(() => {
         updateTracker(trackerId, { estimatedEndTime: calculateEstimatedEndTime(tracker) })
       }, 1000)
