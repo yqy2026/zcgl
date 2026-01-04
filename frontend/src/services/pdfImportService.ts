@@ -1043,9 +1043,9 @@ class PDFImportService {
               matched_ownerships: [],
               duplicate_contracts: [],
               recommendations: {},
-              match_confidence: (isPresent(session.enhanced_status?.final_results?.match_confidence) ? session.enhanced_status?.final_results?.match_confidence : 0.7)
+              match_confidence: (isPresent(session.enhanced_status?.final_results?.match_confidence) ? session.enhanced_status?.final_results?.match_confidence : 0.7),
             },
-            semantic_validation: (isPresent(session.enhanced_status?.semantic_validation) ? session.enhanced_status?.semantic_validation : {}),
+            semantic_validation: (isPresent(session.enhanced_status?.semantic_validation) ? session.enhanced_status?.semantic_validation : {
               total_fields: 0,
               valid_fields: 0,
               error_fields: 0,
@@ -1055,7 +1055,7 @@ class PDFImportService {
               semantic_analysis: {},
               summary: '',
               recommendations: []
-            },
+            }),
             processing_summary: {
               total_processing_time: '60-90秒',
               extraction_method: 'enhanced_multi_engine',
