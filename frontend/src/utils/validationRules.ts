@@ -6,6 +6,13 @@ interface FormValidationRule {
   validator?: (rule: FormValidationRule, value: unknown) => Promise<void>
 }
 
+// 验证规则返回类型
+interface ValidationRuleResult {
+  validator?: (rule: FormValidationRule, value: unknown) => Promise<void>
+  message?: string
+  [key: string]: unknown
+}
+
 // Response type for existence check APIs
 interface ExistsCheckResponse {
   exists: boolean
@@ -209,8 +216,8 @@ export const customValidators = {
   }),
 
   // 验证开始日期小于结束日期
-  dateRange: (startDateField: string, _endDateField: string) => ({
-    validator: (_: FormValidationRule, value: string) => {
+  dateRange: (startDateField: string, _endDateField: string): ValidationRuleResult => ({
+    validator: (_rule: FormValidationRule, value: string): Promise<void> => {
       const form = document.querySelector('form')
       if (!form) return Promise.resolve()
 
@@ -236,8 +243,8 @@ export const customValidators = {
   }),
 
   // 验证字符串长度
-  stringLength: (min: number, max: number, message?: string) => ({
-    validator: (_: FormValidationRule, value: string) => {
+  stringLength: (min: number, max: number, message?: string): ValidationRuleResult => ({
+    validator: (_rule: FormValidationRule, value: string): Promise<void> => {
       if (!value) return Promise.resolve()
       if (value.length < min || value.length > max) {
         return Promise.reject(new Error(message || `长度应在${min}-${max}个字符之间`))

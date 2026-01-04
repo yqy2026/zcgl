@@ -221,8 +221,8 @@ const EnhancedPDFImportPage: React.FC = () => {
     }
   }, [sessionId, currentStatus]);
 
-  // 下载结果
-  const handleDownloadResults = useCallback(() => {
+  // 下载结果 (保留供未来使用)
+  const _handleDownloadResults = useCallback(() => {
     if (currentStatus?.enhanced_status?.final_fields) {
       const dataStr = JSON.stringify(currentStatus.enhanced_status.final_fields, null, 2);
       const blob = new Blob([dataStr], { type: 'application/json' });

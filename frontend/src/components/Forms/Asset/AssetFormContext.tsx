@@ -5,6 +5,7 @@ import type { RentContract } from '../../../types/rentContract';
 import { rentContractService } from '../../../services/rentContractService';
 import { message } from 'antd';
 import { createLogger } from '../../../utils/logger';
+import dayjs from 'dayjs';
 
 const componentLogger = createLogger('AssetFormContext');
 
@@ -81,7 +82,6 @@ export const AssetFormProvider: React.FC<AssetFormProviderProps> = ({
 
         if (selectedContract) {
             // Auto-fill tenant and contract info
-            const dayjs = require('dayjs');
             form.setFieldsValue({
                 tenant_name: selectedContract.tenant_name,
                 tenant_contact: selectedContract.tenant_contact,
