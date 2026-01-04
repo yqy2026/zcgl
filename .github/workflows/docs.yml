@@ -61,12 +61,12 @@ jobs:
     - name: Generate database documentation
       run: |
         cd backend
-        uv run python scripts/generate_db_docs.py
+        uv run python scripts/documentation/generate_db_docs.py
 
     - name: Generate system documentation
       run: |
         cd backend
-        uv run python scripts/generate_system_docs.py
+        uv run python scripts/documentation/generate_system_docs.py
 
     - name: Build documentation site
       run: |
