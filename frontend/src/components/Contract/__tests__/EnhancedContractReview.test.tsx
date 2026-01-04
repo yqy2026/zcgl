@@ -29,7 +29,7 @@ vi.mock('antd', () => ({
       {children}
     </div>
   ),
-  Form: ({ children, onFinish, initialValues, layout }: any) => (
+  Form: ({ children, onFinish, _initialValues, layout }: any) => (
     <form
       data-testid="form"
       data-layout={layout}
@@ -88,7 +88,7 @@ vi.mock('antd', () => ({
       {children}
     </span>
   ),
-  Table: ({ dataSource, columns, pagination }: any) => (
+  Table: ({ dataSource, _columns, pagination }: any) => (
     <div data-testid="table" data-pagination={pagination}>
       {dataSource?.map((item: any, index: number) => (
         <div key={index} data-row={index}>{JSON.stringify(item)}</div>

@@ -9,7 +9,7 @@ import React from 'react'
 
 // Mock Ant Design components
 vi.mock('antd', () => ({
-  Progress: ({ percent, status, showInfo, strokeWidth, strokeColor, type, width }: any) => (
+  Progress: ({ percent, status, showInfo, _strokeWidth, strokeColor, type, width }: any) => (
     <div
       data-testid="progress"
       data-percent={percent}

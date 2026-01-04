@@ -27,7 +27,7 @@ vi.mock('../../services/dictionary', () => ({
 
 // Mock Ant Design components
 vi.mock('antd', () => ({
-  Select: ({ children, loading, placeholder, notFoundContent, options, filterOption, virtual, listHeight, showSearch }: any) => (
+  Select: ({ _children, loading, placeholder, notFoundContent, options, _filterOption, virtual, listHeight, showSearch }: any) => (
     <div
       data-testid="select"
       data-loading={loading}

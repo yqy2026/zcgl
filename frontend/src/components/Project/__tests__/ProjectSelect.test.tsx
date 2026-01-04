@@ -79,7 +79,7 @@ vi.mock('antd', () => ({
     </div>
   ),
   Input: {
-    Search: ({ children, value, onChange, placeholder, onSearch }: any) => (
+    Search: ({ _children, value, onChange, placeholder, onSearch }: any) => (
       <input
         data-testid="input-search"
         data-placeholder={placeholder}
@@ -94,7 +94,7 @@ vi.mock('antd', () => ({
     ),
   },
   Modal: {
-    confirm: ({ onOk, onCancel }: any) => ({
+    confirm: ({ _onOk, onCancel }: any) => ({
       then: (callback: any) => callback && callback({ result: 'ok' }),
     }),
   },
