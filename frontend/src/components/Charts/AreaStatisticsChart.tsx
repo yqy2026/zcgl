@@ -11,7 +11,25 @@ import { Column, DualAxes } from '@ant-design/plots'
 import { assetService } from '@/services/assetService'
 import type { AssetSearchParams } from '@/types/asset'
 
-// Local interface matching the actual API response structure
+// Chart tooltip data types
+interface PropertyTypeChartData {
+  type: string
+  value: number
+}
+
+interface AreaComparisonChartData {
+  property_nature: string
+  total_area: number
+  occupancy_rate: number
+}
+
+interface AreaRangeChartData {
+  range: string
+  count: number
+  total_area: number
+  percentage: number
+}
+
 interface AreaStatisticsData {
   total_statistics: {
     total_land_area: number
@@ -107,7 +125,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
       position: 'top' as const,
     },
     tooltip: {
-      formatter: (datum: any) => ({
+      formatter: (datum: PropertyTypeChartData) => ({
         name: datum.type,
         value: `${datum.value?.toLocaleString()} ㎡`,
       }),
@@ -175,8 +193,8 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
       },
     },
     tooltip: {
-      formatter: (datum: any, type: string) => {
-        if (type === 'total_area') {
+      formatter: (datum: AreaComparisonChartData, _type: string) => {
+        if (_type === 'total_area') {
           return {
             name: '总面积',
             value: `${datum.total_area?.toLocaleString()} ㎡`,
@@ -187,12 +205,13 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
           value: `${datum.occupancy_rate?.toFixed(2)}%`,
         }
       },
-      customContent: (title: any, data: any) => {
-        const datum = data?.[0]?.data
+      customContent: (_title: unknown, data: any) => {
+        const dataArray = data as Array<{ data: AreaComparisonChartData }> | undefined
+        const datum = dataArray?.[0]?.data
         if (!datum) return null
         return (
           <div style={{ padding: '8px' }}>
-            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{(datum.full_name !== null && datum.full_name !== undefined) ? datum.full_name : datum.entity}</div>
+            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{datum.property_nature}</div>
             <div>总面积: {datum.total_area?.toLocaleString()} ㎡</div>
             <div>出租率: {datum.occupancy_rate?.toFixed(2)}%</div>
           </div>
@@ -227,19 +246,20 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
     },
     label: {
       position: 'top' as const,
-      formatter: (datum: any) => `${datum.count} 个`,
+      formatter: (datum: AreaRangeChartData) => `${datum.count} 个`,
       style: {
         fill: '#333',
         fontSize: 12,
       },
     },
     tooltip: {
-      formatter: (datum: any) => ({
+      formatter: (datum: AreaRangeChartData) => ({
         name: datum.range,
         value: `${datum.count} 个`,
       }),
-      customContent: (title: any, data: any) => {
-        const datum = data?.[0]?.data
+      customContent: (_title: unknown, data: any) => {
+        const dataArray = data as Array<{ data: AreaRangeChartData }> | undefined
+        const datum = dataArray?.[0]?.data
         if (!datum) return null
         return (
           <div style={{ padding: '8px' }}>
