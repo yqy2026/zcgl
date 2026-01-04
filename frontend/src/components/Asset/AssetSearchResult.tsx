@@ -30,12 +30,12 @@ const AssetSearchResult: React.FC<AssetSearchResultProps> = ({
   onEdit,
 }) => {
   // 提取搜索关键词
-  const searchTerms = extractSearchTerms(searchParams.search || '')
+  const searchTerms = extractSearchTerms((searchParams.search !== null && searchParams.search !== undefined && searchParams.search !== '') ? searchParams.search : '')
 
   // 高亮文本的辅助函数
   const highlightSearchText = (text: string) => {
-    if (!searchTerms.length) return text
-    return highlightText(text, searchParams.search || '')
+    if (searchTerms.length === 0) return text
+    return highlightText(text, (searchParams.search !== null && searchParams.search !== undefined && searchParams.search !== '') ? searchParams.search : '')
   }
 
   return (
@@ -99,7 +99,7 @@ const AssetSearchResult: React.FC<AssetSearchResultProps> = ({
                     <Text type="secondary">
                       权属方: {highlightSearchText(asset.ownership_entity)}
                     </Text>
-                    {asset.management_entity && (
+                    {(asset.management_entity !== null && asset.management_entity !== undefined && asset.management_entity !== '') && (
                       <>
                         <Text type="secondary">|</Text>
                         <Text type="secondary">
@@ -113,22 +113,22 @@ const AssetSearchResult: React.FC<AssetSearchResultProps> = ({
                 {/* 面积信息 */}
                 <div style={{ marginBottom: 8 }}>
                   <Space wrap>
-                    {asset.actual_property_area && (
+                    {(asset.actual_property_area !== null && asset.actual_property_area !== undefined) && (
                       <Text type="secondary">
                         实际面积: {formatArea(asset.actual_property_area)}
                       </Text>
                     )}
-                    {asset.rentable_area && (
+                    {(asset.rentable_area !== null && asset.rentable_area !== undefined) && (
                       <Text type="secondary">
                         可租面积: {formatArea(asset.rentable_area)}
                       </Text>
                     )}
-                    {asset.rented_area && (
+                    {(asset.rented_area !== null && asset.rented_area !== undefined) && (
                       <Text type="secondary">
                         已租面积: {formatArea(asset.rented_area)}
                       </Text>
                     )}
-                    {asset.occupancy_rate && (
+                    {(asset.occupancy_rate !== null && asset.occupancy_rate !== undefined) && (
                       <Text type="secondary">
                         出租率: {asset.occupancy_rate}
                       </Text>
@@ -137,20 +137,20 @@ const AssetSearchResult: React.FC<AssetSearchResultProps> = ({
                 </div>
 
                 {/* 用途信息 */}
-                {(asset.certificated_usage || asset.actual_usage || asset.business_category) && (
+                {((asset.certificated_usage !== null && asset.certificated_usage !== undefined && asset.certificated_usage !== '') || (asset.actual_usage !== null && asset.actual_usage !== undefined && asset.actual_usage !== '') || (asset.business_category !== null && asset.business_category !== undefined && asset.business_category !== '')) && (
                   <div style={{ marginBottom: 8 }}>
                     <Space wrap>
-                      {asset.certificated_usage && (
+                      {(asset.certificated_usage !== null && asset.certificated_usage !== undefined && asset.certificated_usage !== '') && (
                         <Text type="secondary">
                           证载用途: {highlightSearchText(asset.certificated_usage)}
                         </Text>
                       )}
-                      {asset.actual_usage && (
+                      {(asset.actual_usage !== null && asset.actual_usage !== undefined && asset.actual_usage !== '') && (
                         <Text type="secondary">
                           实际用途: {highlightSearchText(asset.actual_usage)}
                         </Text>
                       )}
-                      {asset.business_category && (
+                      {(asset.business_category !== null && asset.business_category !== undefined && asset.business_category !== '') && (
                         <Text type="secondary">
                           业态: {highlightSearchText(asset.business_category)}
                         </Text>
@@ -160,7 +160,7 @@ const AssetSearchResult: React.FC<AssetSearchResultProps> = ({
                 )}
 
                 {/* 租户信息 */}
-                {asset.tenant_name && (
+                {(asset.tenant_name !== null && asset.tenant_name !== undefined && asset.tenant_name !== '') && (
                   <div style={{ marginBottom: 8 }}>
                     <Text type="secondary">
                       租户: {highlightSearchText(asset.tenant_name)}
@@ -171,20 +171,20 @@ const AssetSearchResult: React.FC<AssetSearchResultProps> = ({
                 {/* 特殊标记 */}
                 <div>
                   <Space>
-                    {asset.is_litigated && (
+                    {(asset.is_litigated === true) && (
                       <Tag color="red">涉诉</Tag>
                     )}
-                    {asset.include_in_occupancy_rate && (
+                    {(asset.include_in_occupancy_rate === true) && (
                       <Tag color="green">计入出租率</Tag>
                     )}
-                    {asset.wuyang_project_name && (
+                    {(asset.wuyang_project_name !== null && asset.wuyang_project_name !== undefined && asset.wuyang_project_name !== '') && (
                       <Tag color="blue">五羊项目</Tag>
                     )}
                   </Space>
                 </div>
 
                 {/* 描述信息 */}
-                {asset.description && (
+                {(asset.description !== null && asset.description !== undefined && asset.description !== '') && (
                   <div style={{ marginTop: 8 }}>
                     <Paragraph
                       ellipsis={{ rows: 2, expandable: true, symbol: '展开' }}
