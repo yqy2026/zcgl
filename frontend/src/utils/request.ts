@@ -23,7 +23,7 @@ const createApiInstance = (): AxiosInstance => {
     (config) => {
       // 可以在这里添加token等认证信息
       const token = localStorage.getItem("token");
-      if (token) {
+      if (token !== null && token !== undefined && token !== '') {
         config.headers.Authorization = `Bearer ${token}`;
       }
       return config;

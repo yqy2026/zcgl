@@ -153,7 +153,7 @@ const PDFImportPage: React.FC = () => {
   const loadUserPreferences = useCallback(() => {
     try {
       const saved = localStorage.getItem('pdf-import-preferences');
-      if (saved) {
+      if (saved !== null && saved !== undefined && saved !== '') {
         setUserPreferences(JSON.parse(saved));
       }
     } catch (error) {

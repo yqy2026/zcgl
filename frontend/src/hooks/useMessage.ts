@@ -44,7 +44,7 @@ export const useMessage = () => {
       })
     },
     destroy: (key?: string) => {
-      if (key) {
+      if (key !== null && key !== undefined && key !== '') {
         message.destroy(key)
       } else {
         message.destroy()

@@ -455,7 +455,7 @@ export const DynamicRouteRenderer: React.FC = () => {
     })
   }
 
-  if (error) {
+  if (error !== null && error !== undefined && error !== '') {
     return (
       <div style={{
         padding: '50px',

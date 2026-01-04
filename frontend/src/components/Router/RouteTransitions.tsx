@@ -226,7 +226,7 @@ export const RouteTransition: React.FC<RouteTransitionProps> = ({
   const animationConfig = globalTransitionManager.getAnimationConfig(getAnimationType());
 
   // 应用自定义持续时间
-  if (duration) {
+  if (duration !== null && duration !== undefined && !Number.isNaN(duration)) {
     animationConfig.enter.transition = {
       ...animationConfig.enter.transition,
       duration,

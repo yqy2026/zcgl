@@ -123,7 +123,7 @@ class RoutePerformanceMonitor {
       const lcpObserver = new PerformanceObserver((list) => {
         const entries = list.getEntries()
         const lastEntry = entries[entries.length - 1]
-        if (lastEntry) {
+        if (lastEntry !== null && lastEntry !== undefined) {
           this.updateCurrentMetric('LCP', lastEntry.startTime)
         }
       })
@@ -279,7 +279,7 @@ class RoutePerformanceMonitor {
   }
 
   getMetrics(route?: string): RoutePerformanceMetrics[] {
-    if (route) {
+    if (route !== null && route !== undefined && route !== '') {
       return this.metrics.filter(m => m.route === route)
     }
     return [...this.metrics]
@@ -443,20 +443,20 @@ export const useRoutePerformanceMonitor = (config?: Partial<RoutePerformanceConf
   // Cleanup
   useEffect(() => {
     return () => {
-      if (monitor) {
+      if (monitor !== null && monitor !== undefined) {
         monitor.destroy()
       }
     }
   }, [monitor])
 
   const recordError = useCallback((error: Error) => {
-    if (monitor) {
+    if (monitor !== null && monitor !== undefined) {
       monitor.recordError(location.pathname, error)
     }
   }, [monitor, location.pathname])
 
   const recordRetry = useCallback(() => {
-    if (monitor) {
+    if (monitor !== null && monitor !== undefined) {
       monitor.recordRetry(location.pathname)
     }
   }, [monitor, location.pathname])

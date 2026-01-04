@@ -74,7 +74,7 @@ export const usePerformanceMonitoring = () => {
 
   const endMeasure = useCallback((name: string) => {
     const startTime = measureRef.current.get(name)
-    if (startTime) {
+    if (startTime !== null && startTime !== undefined && !Number.isNaN(startTime)) {
       const duration = performance.now() - startTime
       uxManager.recordPerformanceMetric(name, duration)
       measureRef.current.delete(name)

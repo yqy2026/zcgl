@@ -195,7 +195,7 @@ const EnhancedPDFImportPage: React.FC = () => {
 
   // 重新开始处理
   const handleRetry = useCallback(() => {
-    if (sessionId) {
+    if (sessionId !== null && sessionId !== undefined && sessionId !== '') {
       setProcessing(true);
       startProgressPolling(sessionId);
     }

@@ -159,7 +159,7 @@ const DictionaryPage: React.FC = () => {
   const handleDelete = async (record: SystemDictionary) => {
     try {
       const success = await unifiedDictionaryService.deleteEnumValue(record.id)
-      if (success) {
+      if (success !== null && success !== undefined) {
         message.success('删除成功')
         fetchList(activeType)
         fetchAllEnumData()
@@ -202,7 +202,7 @@ const DictionaryPage: React.FC = () => {
           is_active: values.is_active
         })
 
-        if (success) {
+        if (success !== null && success !== undefined) {
           message.success('更新成功')
         } else {
           message.error('更新失败')
@@ -218,7 +218,7 @@ const DictionaryPage: React.FC = () => {
           sort_order: values.sort_order
         })
 
-        if (success) {
+        if (success !== null && success !== undefined) {
           message.success('创建成功')
         } else {
           message.error('创建失败')
@@ -247,7 +247,7 @@ const DictionaryPage: React.FC = () => {
   const handleToggleActive = async (record: SystemDictionary, checked: boolean) => {
     try {
       const success = await unifiedDictionaryService.toggleEnumValueActive(record.id, checked)
-      if (success) {
+      if (success !== null && success !== undefined) {
         message.success('状态已更新')
         fetchList(activeType)
         fetchAllEnumData()

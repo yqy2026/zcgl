@@ -227,7 +227,7 @@ export const useCache = <T>(key: string, factory: () => T, deps: unknown[] = [])
     // 限制缓存大小
     if (cache.current.size > 100) {
       const firstKey = cache.current.keys().next().value
-      if (firstKey) {
+      if (firstKey !== null && firstKey !== undefined && firstKey !== '') {
         cache.current.delete(firstKey)
       }
     }

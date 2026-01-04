@@ -104,7 +104,7 @@ const SmartInteractionProvider: React.FC<SmartInteractionManagerProps> = ({
       data
     }
 
-    if (duration) {
+    if (duration !== null && duration !== undefined && !Number.isNaN(duration)) {
       setTimeout(() => {
         setUserBehavior(prev => ({
           ...prev,
@@ -202,7 +202,7 @@ const SmartInteractionProvider: React.FC<SmartInteractionManagerProps> = ({
       const combo = `${ctrlKey ? 'ctrl+' : ''}${altKey ? 'alt+' : ''}${shiftKey ? 'shift+' : ''}${key}`
 
       const action = shortcuts.find(s => s.key === combo)?.action
-      if (action) {
+      if (action !== null && action !== undefined && action !== '') {
         e.preventDefault()
 
         switch (action) {

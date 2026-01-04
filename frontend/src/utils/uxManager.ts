@@ -125,7 +125,7 @@ class UXManager {
       window.addEventListener('load', () => {
         setTimeout(() => {
           const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming
-          if (navigation) {
+          if (navigation !== null && navigation !== undefined) {
             this.recordPerformanceMetric('pageLoad', navigation.loadEventEnd - navigation.loadEventStart)
             this.recordPerformanceMetric('domContentLoaded', navigation.domContentLoadedEventEnd - navigation.domContentLoadedEventStart)
           }
@@ -268,7 +268,7 @@ class UXManager {
     performance.measure(name, `${name}-start`, `${name}-end`)
 
     const measure = performance.getEntriesByName(name, 'measure')[0]
-    if (measure) {
+    if (measure !== null && measure !== undefined) {
       this.recordPerformanceMetric(name, measure.duration)
     }
   }

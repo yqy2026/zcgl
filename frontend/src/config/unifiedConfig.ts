@@ -440,7 +440,7 @@ export class ConfigManager {
   private getApiBaseURL(): string {
     // 优先使用环境变量
     const envApiURL = process.env.REACT_APP_API_URL;
-    if (envApiURL) {
+    if (envApiURL !== null && envApiURL !== undefined && envApiURL !== '') {
       return envApiURL;
     }
 

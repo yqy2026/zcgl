@@ -112,7 +112,7 @@ const EnumFieldPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (selectedTypeId) {
+    if (selectedTypeId !== null && selectedTypeId !== undefined && selectedTypeId !== '') {
       loadEnumValues(selectedTypeId);
     }
   }, [selectedTypeId]);
@@ -380,9 +380,9 @@ const EnumFieldPage: React.FC = () => {
   const handleDeleteValue = async (id: string) => {
     try {
       const success = await unifiedDictionaryService.deleteEnumValue(id)
-      if (success) {
+      if (success !== null && success !== undefined) {
         message.success('删除成功');
-        if (selectedTypeId) {
+        if (selectedTypeId !== null && selectedTypeId !== undefined && selectedTypeId !== '') {
           loadEnumValues(selectedTypeId);
         }
       } else {
@@ -447,7 +447,7 @@ const EnumFieldPage: React.FC = () => {
         message.success(editingValue ? '更新成功' : '创建成功');
         setValueModalVisible(false);
         setEditingValue(null);
-        if (selectedTypeId) {
+        if (selectedTypeId !== null && selectedTypeId !== undefined && selectedTypeId !== '') {
           loadEnumValues(selectedTypeId);
         }
       } else {

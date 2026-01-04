@@ -41,7 +41,7 @@ export class DataCache {
     // 如果缓存已满，清理最旧的条目
     if (this.cache.size >= this.config.maxSize) {
       const oldestKey = this.cache.keys().next().value
-      if (oldestKey) {
+      if (oldestKey !== null && oldestKey !== undefined && oldestKey !== '') {
         this.cache.delete(oldestKey)
       }
     }

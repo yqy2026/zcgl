@@ -139,7 +139,7 @@ export const useDictionaryManager = () => {
   }>) => {
     try {
       const success = await unifiedDictionaryService.quickCreate(dictType, { options })
-      if (success) {
+      if (success !== null && success !== undefined) {
         await loadTypes() // 刷新类型列表
       }
       return success
@@ -152,7 +152,7 @@ export const useDictionaryManager = () => {
   const deleteDictionary = useCallback(async (dictType: string) => {
     try {
       const success = await unifiedDictionaryService.deleteType(dictType)
-      if (success) {
+      if (success !== null && success !== undefined) {
         await loadTypes() // 刷新类型列表
       }
       return success

@@ -64,14 +64,14 @@ export class ApiClient {
       (config) => {
         // 添加认证token
         const token = localStorage.getItem('token')
-        if (token) {
+        if (token !== null && token !== undefined && token !== '') {
           config.headers.Authorization = `Bearer ${token}`
         }
 
         // 开发模式特殊处理
         if (API_CONFIG.ENVIRONMENT === 'development') {
           const mockToken = localStorage.getItem('mock_token')
-          if (mockToken) {
+          if (mockToken !== null && mockToken !== undefined && mockToken !== '') {
             config.headers['X-Development-Auth'] = 'mock-token'
           }
         }

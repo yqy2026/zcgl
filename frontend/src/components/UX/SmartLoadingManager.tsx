@@ -62,7 +62,7 @@ export const SmartLoadingManager: React.FC<SmartLoadingManagerProps> = ({
     const showLoadingState = () => {
       // 只显示最新状态
       const latestState = loadingQueue.current[loadingQueue.current.length - 1]
-      if (latestState) {
+      if (latestState !== null && latestState !== undefined) {
         setLoadingState(latestState)
       }
     }

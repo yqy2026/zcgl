@@ -302,7 +302,7 @@ export class BackupService {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      if (description) {
+      if (description !== null && description !== undefined && description !== '') {
         formData.append('description', description);
       }
 

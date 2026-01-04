@@ -154,7 +154,7 @@ const AppBreadcrumb: React.FC = () => {
       const isLast = index === pathSnippets.length - 1
       const breadcrumbConfig = breadcrumbNameMap[currentPath]
       
-      if (breadcrumbConfig) {
+      if (breadcrumbConfig !== null && breadcrumbConfig !== undefined) {
         if (isLast) {
           // 最后一项不添加链接
           breadcrumbItems.push({

@@ -22,7 +22,7 @@ export const useAuth = () => {
           setUser(currentUser)
           // 设置API请求头
           const token = localStorage.getItem('auth_token')
-          if (token) {
+          if (token !== null && token !== undefined && token !== '') {
             // 这里可以设置API默认的Authorization header
           }
         }

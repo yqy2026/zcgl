@@ -50,7 +50,7 @@ const PerformanceMonitor: React.FC = () => {
   const collectWebVitals = useCallback(() => {
     // FCP - First Contentful Paint
     const fcpEntry = performance.getEntriesByName('first-contentful-paint')[0] as PerformanceEntry
-    if (fcpEntry) {
+    if (fcpEntry !== null && fcpEntry !== undefined) {
       setMetrics(prev => ({ ...prev, fcp: fcpEntry.startTime }))
     }
 

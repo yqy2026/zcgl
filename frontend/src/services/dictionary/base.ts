@@ -578,7 +578,7 @@ class BaseDictionaryService {
    * 清除缓存
    */
   clearCache(dictType?: string): void {
-    if (dictType) {
+    if (dictType !== null && dictType !== undefined && dictType !== '') {
       cache.clearForType(dictType);
     } else {
       cache.clear();
