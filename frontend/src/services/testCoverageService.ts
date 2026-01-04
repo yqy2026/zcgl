@@ -130,7 +130,7 @@ class TestCoverageService {
     if (!response.ok) {
       throw new Error(`获取覆盖率报告失败: ${response.statusText}`);
     }
-    const data = await response.json();
+    const data = await response.json() as CoverageReport;
     return {
       success: true,
       data,
@@ -145,7 +145,7 @@ class TestCoverageService {
     if (!response.ok) {
       throw new Error(`获取覆盖率趋势失败: ${response.statusText}`);
     }
-    const data = await response.json();
+    const data = await response.json() as CoverageTrend[];
     return {
       success: true,
       data,
@@ -270,7 +270,7 @@ class TestCoverageService {
    * 获取测试执行报告
    */
   async getTestExecutionReport(executionId?: string): Promise<ApiResponse<TestExecutionReport[]>> {
-    const url = executionId
+    const url = (executionId !== null && executionId !== undefined && executionId !== '')
       ? `${this.baseUrl}/test-execution/${executionId}`
       : `${this.baseUrl}/test-execution`;
     const response = await fetch(url);
