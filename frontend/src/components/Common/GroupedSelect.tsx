@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import { Select, Input, Tag, Space, Typography } from 'antd'
-import type { SelectProps } from 'antd'
+import type { SelectProps, CustomTagProps } from 'antd/es/select'
 import { EnumGroup, EnumOption, EnumSearchHelper } from '@/utils/enumHelpers'
 
 const { Option } = Select
@@ -112,7 +112,7 @@ const GroupedSelect: React.FC<GroupedSelectProps> = ({
               {group.options.map((option) => (
                 <Option key={option.value} value={option.value}>
                   <Space>
-                    {option.color && (
+                    {(option.color !== null && option.color !== undefined && option.color !== '') && (
                       <span
                         style={{
                           display: 'inline-block',
@@ -125,7 +125,7 @@ const GroupedSelect: React.FC<GroupedSelectProps> = ({
                       />
                     )}
                     <span>{option.label}</span>
-                    {option.description && (
+                    {(option.description !== null && option.description !== undefined && option.description !== '') && (
                       <Text type="secondary" style={{ fontSize: '12px' }}>
                         - {option.description}
                       </Text>
@@ -141,7 +141,7 @@ const GroupedSelect: React.FC<GroupedSelectProps> = ({
         return group.options.map((option) => (
           <Option key={option.value} value={option.value}>
             <Space>
-              {option.color && (
+              {(option.color !== null && option.color !== undefined && option.color !== '') && (
                 <span
                   style={{
                     display: 'inline-block',
@@ -154,7 +154,7 @@ const GroupedSelect: React.FC<GroupedSelectProps> = ({
                 />
               )}
               <span>{option.label}</span>
-              {option.description && (
+              {(option.description !== null && option.description !== undefined && option.description !== '') && (
                 <Text type="secondary" style={{ fontSize: '12px' }}>
                   - {option.description}
                 </Text>
@@ -181,9 +181,9 @@ const GroupedSelect: React.FC<GroupedSelectProps> = ({
   }
 
   // 自定义标签显示
-  const tagRender = (props: { label: string; value: string; closable: boolean; onClose: () => void }) => {
+  const tagRender = (props: CustomTagProps) => {
     const { label, value, closable, onClose } = props
-    const optionInfo = getSelectedOptionInfo(value)
+    const optionInfo = getSelectedOptionInfo(value as string)
 
     return (
       <Tag
@@ -192,7 +192,7 @@ const GroupedSelect: React.FC<GroupedSelectProps> = ({
         onClose={onClose}
         style={{ marginRight: 3 }}
       >
-        {optionInfo?.label || label}
+        {(optionInfo?.label !== null && optionInfo?.label !== undefined && optionInfo?.label !== '') ? optionInfo.label : label as string}
       </Tag>
     )
   }
@@ -208,7 +208,7 @@ const GroupedSelect: React.FC<GroupedSelectProps> = ({
       filterOption={false} // 禁用默认过滤，使用自定义搜索
       onSearch={handleSearch}
       popupRender={dropdownRender}
-      tagRender={tagRender as any}
+      tagRender={tagRender}
     >
       {renderOptions()}
     </Select>
