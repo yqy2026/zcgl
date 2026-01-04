@@ -2,9 +2,9 @@ name: Minimal CI Test
 
 on:
   push:
-    branches: [ hotfix/ci-failures ]
+    branches: [ hotfix/ci-failures, develop ]
   pull_request:
-    branches: [ hotfix/ci-failures ]
+    branches: [ develop, hotfix/ci-failures ]
 
 jobs:
   test-job:
