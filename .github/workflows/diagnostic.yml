@@ -1,0 +1,65 @@
+name: Diagnostic CI
+
+on:
+  pull_request:
+    branches: [ develop, "hotfix/*" ]
+  push:
+    branches: [ hotfix/ci-failures ]
+
+jobs:
+  diagnostic:
+    name: Diagnostic Check
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Check environment
+      run: |
+        echo "=== Environment Info ==="
+        echo "Runner OS: ${{ runner.os }}"
+        python3 --version || echo "Python not found"
+        node --version || echo "Node not found"
+        echo ""
+
+    - name: Verify structure
+      run: |
+        echo "=== Checking Project Structure ==="
+        echo "Current directory: $(pwd)"
+        echo ""
+        echo "Root contents:"
+        ls -la
+        echo ""
+        if [ -d "backend/src" ]; then echo "✅ backend/src exists"; else echo "❌ backend/src missing"; fi
+        if [ -d "frontend/src" ]; then echo "✅ frontend/src exists"; else echo "❌ frontend/src missing"; fi
+        if [ -f "backend/pyproject.toml" ]; then echo "✅ pyproject.toml exists"; else echo "❌ pyproject.toml missing"; fi
+        if [ -f "frontend/package.json" ]; then echo "✅ package.json exists"; else echo "❌ package.json missing"; fi
+        echo ""
+
+    - name: Test Python syntax
+      run: |
+        echo "=== Testing Python Syntax ==="
+        cd backend
+        error_count=0
+        for file in $(find src/ -name "*.py" -type f); do
+          if ! python3 -m py_compile "$file" 2>/dev/null; then
+            echo "❌ Syntax error in: $file"
+            error_count=$((error_count + 1))
+          fi
+        done
+        if [ $error_count -eq 0 ]; then
+          echo "✅ All Python files have valid syntax"
+        else
+          echo "⚠️ Found $error_count files with syntax errors"
+        fi
+      continue-on-error: true
+
+    - name: Count potential issues
+      run: |
+        echo "=== Code Statistics ==="
+        echo "Python files: $(find backend/src -name '*.py' 2>/dev/null | wc -l)"
+        echo "TypeScript files: $(find frontend/src -name '*.ts' -o -name '*.tsx' 2>/dev/null | wc -l)"
+        echo "Total lines of Python code: $(find backend/src -name '*.py' -exec wc -l {} + 2>/dev/null | tail -1 || echo '0')"
+        echo ""
+      continue-on-error: true
