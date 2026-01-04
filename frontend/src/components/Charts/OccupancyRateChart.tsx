@@ -207,7 +207,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
     },
     tooltip: {
       formatter: (datum: any) => ({
-        name: datum.full_name || datum.ownership,
+        name: (datum.full_name !== null && datum.full_name !== undefined) ? datum.full_name : datum.ownership,
         value: `${datum.rate.toFixed(2)}%`,
       }),
       customContent: (title: any, data: any) => {
@@ -215,7 +215,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
         if (!datum) return null
         return (
           <div style={{ padding: '8px' }}>
-            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{datum.full_name || datum.ownership}</div>
+            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{(datum.full_name !== null && datum.full_name !== undefined) ? datum.full_name : datum.ownership}</div>
             <div>出租率: {datum.rate.toFixed(2)}%</div>
             <div>资产数量: {datum.asset_count} 个</div>
           </div>
@@ -282,7 +282,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
           <Card>
             <Statistic
               title="总体出租率"
-              value={data?.overall_rate || 0}
+              value={(isPresent(data?.overall_rate) ? data?.overall_rate : 0)}
               precision={2}
               suffix="%"
               prefix={<PercentageOutlined />}
@@ -298,11 +298,11 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
           <Card>
             <Statistic
               title="趋势变化"
-              value={data?.trend_percentage || 0}
+              value={(isPresent(data?.trend_percentage) ? data?.trend_percentage : 0)}
               precision={2}
               suffix="%"
-              prefix={getTrendIcon(data?.trend || 'stable', data?.trend_percentage || 0)}
-              valueStyle={{ color: getTrendColor(data?.trend || 'stable') }}
+              prefix={getTrendIcon((isPresent(data?.trend) ? data?.trend : 'stable'), (isPresent(data?.trend_percentage) ? data?.trend_percentage : 0))}
+              valueStyle={{ color: getTrendColor((isPresent(data?.trend) ? data?.trend : 'stable')) }}
             />
           </Card>
         </Col>
@@ -311,7 +311,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
           <Card>
             <Statistic
               title="经营类物业出租率"
-              value={data?.by_property_nature?.find(item => item.property_nature === '经营类')?.rate || 0}
+              value={data?.by_property_nature?.find(item => item.property_nature === '经营类')?.rate ?? 0}
               precision={2}
               suffix="%"
               valueStyle={{ color: '#1890ff' }}
@@ -323,7 +323,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
           <Card>
             <Statistic
               title="权属方数量"
-              value={data?.by_ownership_entity?.length || 0}
+              value={(isPresent(data?.by_ownership_entity?.length) ? data?.by_ownership_entity?.length : 0)}
               suffix="个"
               valueStyle={{ color: '#722ed1' }}
             />
@@ -372,7 +372,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
                   justifyContent: 'space-between', 
                   alignItems: 'center',
                   padding: '8px 0',
-                  borderBottom: index < (data.top_performers?.length || 0) - 1 ? '1px solid #f0f0f0' : 'none'
+                  borderBottom: index < ((isPresent(data.top_performers?.length) ? data.top_performers?.length : 0)) - 1 ? '1px solid #f0f0f0' : 'none'
                 }}>
                   <div>
                     <Text strong>{asset.property_name}</Text>
@@ -401,7 +401,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
                   justifyContent: 'space-between', 
                   alignItems: 'center',
                   padding: '8px 0',
-                  borderBottom: index < (data.low_performers?.length || 0) - 1 ? '1px solid #f0f0f0' : 'none'
+                  borderBottom: index < ((isPresent(data.low_performers?.length) ? data.low_performers?.length : 0)) - 1 ? '1px solid #f0f0f0' : 'none'
                 }}>
                   <div>
                     <Text strong>{asset.property_name}</Text>

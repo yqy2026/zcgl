@@ -167,8 +167,8 @@ export const RentContractFormProvider: React.FC<RentContractFormProviderProps> =
                     end_date: dayjs(term.end_date),
                     monthly_rent: term.monthly_rent,
                     rent_description: term.rent_description,
-                    management_fee: term.management_fee || 0,
-                    other_fees: term.other_fees || 0,
+                    management_fee: (term.management_fee !== null && term.management_fee !== undefined) ? term.management_fee : 0,
+                    other_fees: (term.other_fees !== null && term.other_fees !== undefined) ? term.other_fees : 0,
                 }));
                 setRentTerms(terms);
             }
@@ -189,9 +189,9 @@ export const RentContractFormProvider: React.FC<RentContractFormProviderProps> =
                 end_date: term.end_date.format('YYYY-MM-DD'),
                 monthly_rent: term.monthly_rent,
                 rent_description: term.rent_description,
-                management_fee: term.management_fee || 0,
-                other_fees: term.other_fees || 0,
-                total_monthly_amount: term.monthly_rent + (term.management_fee || 0) + (term.other_fees || 0),
+                management_fee: (term.management_fee !== null && term.management_fee !== undefined) ? term.management_fee : 0,
+                other_fees: (term.other_fees !== null && term.other_fees !== undefined) ? term.other_fees : 0,
+                total_monthly_amount: term.monthly_rent + (term.management_fee || 0) + ((term.other_fees !== null && term.other_fees !== undefined) ? term.other_fees : 0),
             }));
 
             const contractData: RentContractCreate = {
@@ -205,9 +205,9 @@ export const RentContractFormProvider: React.FC<RentContractFormProviderProps> =
                 sign_date: values.sign_date.format('YYYY-MM-DD'),
                 start_date: values.start_date.format('YYYY-MM-DD'),
                 end_date: values.end_date.format('YYYY-MM-DD'),
-                total_deposit: values.total_deposit || 0,
+                total_deposit: (values.total_deposit !== null && values.total_deposit !== undefined) ? values.total_deposit : 0,
                 monthly_rent_base: values.monthly_rent_base,
-                contract_status: values.contract_status || '有效',
+                contract_status: (values.contract_status !== null && values.contract_status !== undefined && values.contract_status !== '') ? values.contract_status : '有效',
                 payment_terms: values.payment_terms,
                 contract_notes: values.contract_notes,
                 rent_terms,
@@ -244,8 +244,8 @@ export const RentContractFormProvider: React.FC<RentContractFormProviderProps> =
                 end_date: values.end_date,
                 monthly_rent: values.monthly_rent,
                 rent_description: values.rent_description,
-                management_fee: values.management_fee || 0,
-                other_fees: values.other_fees || 0,
+                management_fee: (values.management_fee !== null && values.management_fee !== undefined) ? values.management_fee : 0,
+                other_fees: (values.other_fees !== null && values.other_fees !== undefined) ? values.other_fees : 0,
             };
 
             if (editingTerm) {

@@ -108,21 +108,21 @@ const ProjectList: React.FC<ProjectListProps> = ({
       // 处理后端响应格式: {items: [...], total: 58, page: 1, size: 10, pages: 6}
       if (response && response.items) {
         // 标准响应格式：{items: [...], total: number, page: number, size: number}
-        setProjects(response.items || []);
+        setProjects((response.items !== null && response.items !== undefined) ? response.items : []);
         setPagination(prev => ({
           ...prev,
-          total: response.total || 0,
-          current: response.page || prev.current,
-          pageSize: response.size || prev.pageSize
+          total: (response.total !== null && response.total !== undefined) ? response.total : 0,
+          current: (response.page !== null && response.page !== undefined) ? response.page : prev.current,
+          pageSize: (response.size !== null && response.size !== undefined) ? response.size : prev.pageSize
         }));
       } else if (response && (response as any).data && (response as any).data.items) {
         // 嵌套响应格式：{data: {items: [...], total: number}}
-        setProjects((response as any).data.items || []);
+        setProjects((response as any).data.items ?? []);
         setPagination(prev => ({
           ...prev,
-          total: (response as any).data.total || (response as any).data.total_count || 0,
-          current: (response as any).data.page || prev.current,
-          pageSize: (response as any).data.size || prev.pageSize
+          total: (response as any).data.total ?? (response as any).data.total_count ?? 0,
+          current: (response as any).data.page ?? prev.current,
+          pageSize: (response as any).data.size ?? prev.pageSize
         }));
       } else {
         console.error('Unexpected response format:', response);
@@ -134,7 +134,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
       }
 
       // 在项目数据加载后，基于实际数据计算统计信息
-      const loadedProjects = response?.items || (response as any)?.data?.items || [];
+      const loadedProjects = response?.items ?? (response as any).data?.items ?? []
       const activeCount = loadedProjects.filter(p => p.is_active).length;
       const inactiveCount = loadedProjects.length - activeCount;
 
@@ -153,7 +153,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
         status: err.response?.status,
         data: err.response?.data
       });
-      message.error(`获取项目列表失败: ${err.message || '未知错误'}`);
+      message.error(`获取项目列表失败: ${(err.message !== null && err.message !== undefined && err.message !== '') ? err.message : '未知错误'}`);
     } finally {
       setLoading(false);
     }
@@ -299,7 +299,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
               <div>
                 {activeRelations.slice(0, 2).map((rel, _index) => (
                   <Tag key={rel.id} color="blue" style={{ marginRight: 4 }}>
-                    {rel.ownership_name || (record as any).ownership_entity || '权属方已关联'}
+                    {rel.ownership_name || (record as any).ownership_entity ?? '权属方已关联'}
                   </Tag>
                 ))}
                 {activeRelations.length > 2 && (
@@ -421,7 +421,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
           <Card>
             <Statistic
               title="总项目数"
-              value={statistics?.total_count || 0}
+              value={(isPresent(statistics?.total_count) ? statistics?.total_count : 0)}
               prefix={<span style={{ color: '#1890ff' }}>📊</span>}
             />
           </Card>
@@ -430,7 +430,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
           <Card>
             <Statistic
               title="启用项目"
-              value={statistics?.active_count || 0}
+              value={(isPresent(statistics?.active_count) ? statistics?.active_count : 0)}
               valueStyle={{ color: '#3f8600' }}
               prefix={<span style={{ color: '#52c41a' }}>✅</span>}
             />
@@ -440,7 +440,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
           <Card>
             <Statistic
               title="禁用项目"
-              value={statistics?.inactive_count || 0}
+              value={(isPresent(statistics?.inactive_count) ? statistics?.inactive_count : 0)}
               valueStyle={{ color: '#cf1322' }}
               prefix={<span style={{ color: '#ff4d4f' }}>❌</span>}
             />
@@ -450,7 +450,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
           <Card>
             <Statistic
               title="总关联资产"
-              value={projects.reduce((sum, project) => sum + (project.asset_count || 0), 0)}
+              value={projects.reduce((sum, project) => sum + ((project.asset_count !== null && project.asset_count !== undefined) ? project.asset_count : 0), 0)}
               prefix={<span style={{ color: '#722ed1' }}>🏢</span>}
             />
           </Card>
@@ -492,7 +492,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
               loading={ownershipsLoading}
               showSearch
               filterOption={(input, option) =>
-                String(option?.children || '').toLowerCase().includes(input.toLowerCase())
+                String((isPresent(option?.children) ? option?.children : '')).toLowerCase().includes(input.toLowerCase())
               }
             >
               {ownerships.map(ownership => (

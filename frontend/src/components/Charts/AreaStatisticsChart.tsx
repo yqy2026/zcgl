@@ -192,7 +192,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
         if (!datum) return null
         return (
           <div style={{ padding: '8px' }}>
-            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{datum.full_name || datum.entity}</div>
+            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{(datum.full_name !== null && datum.full_name !== undefined) ? datum.full_name : datum.entity}</div>
             <div>总面积: {datum.total_area?.toLocaleString()} ㎡</div>
             <div>出租率: {datum.occupancy_rate?.toFixed(2)}%</div>
           </div>
@@ -289,7 +289,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
           <Card>
             <Statistic
               title="总土地面积"
-              value={data?.total_statistics?.total_land_area || 0}
+              value={(isPresent(data?.total_statistics?.total_land_area) ? data?.total_statistics?.total_land_area : 0)}
               suffix="㎡"
               formatter={(value) => `${Number(value).toLocaleString()}`}
               prefix={<BuildOutlined />}
@@ -302,7 +302,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
           <Card>
             <Statistic
               title="总房产面积"
-              value={data?.total_statistics?.total_property_area || 0}
+              value={(isPresent(data?.total_statistics?.total_property_area) ? data?.total_statistics?.total_property_area : 0)}
               suffix="㎡"
               formatter={(value) => `${Number(value).toLocaleString()}`}
               prefix={<HomeOutlined />}
@@ -315,7 +315,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
           <Card>
             <Statistic
               title="可租面积"
-              value={data?.total_statistics?.total_rentable_area || 0}
+              value={(isPresent(data?.total_statistics?.total_rentable_area) ? data?.total_statistics?.total_rentable_area : 0)}
               suffix="㎡"
               formatter={(value) => `${Number(value).toLocaleString()}`}
               prefix={<ShopOutlined />}
@@ -328,7 +328,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
           <Card>
             <Statistic
               title="已租面积"
-              value={data?.total_statistics?.total_rented_area || 0}
+              value={(isPresent(data?.total_statistics?.total_rented_area) ? data?.total_statistics?.total_rented_area : 0)}
               suffix="㎡"
               formatter={(value) => `${Number(value).toLocaleString()}`}
               valueStyle={{ color: '#722ed1' }}
@@ -340,7 +340,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
           <Card>
             <Statistic
               title="空置面积"
-              value={data?.total_statistics?.total_vacant_area || 0}
+              value={(isPresent(data?.total_statistics?.total_vacant_area) ? data?.total_statistics?.total_vacant_area : 0)}
               suffix="㎡"
               formatter={(value) => `${Number(value).toLocaleString()}`}
               valueStyle={{ color: '#ff4d4f' }}
@@ -352,7 +352,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
           <Card>
             <Statistic
               title="非经营面积"
-              value={data?.total_statistics?.total_non_commercial_area || 0}
+              value={(isPresent(data?.total_statistics?.total_non_commercial_area) ? data?.total_statistics?.total_non_commercial_area : 0)}
               suffix="㎡"
               formatter={(value) => `${Number(value).toLocaleString()}`}
               valueStyle={{ color: '#8c8c8c' }}
@@ -399,7 +399,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
               {data?.by_usage_status?.map((item, index) => (
                 <div key={index} style={{ 
                   padding: '12px 0',
-                  borderBottom: index < (data.by_usage_status?.length || 0) - 1 ? '1px solid #f0f0f0' : 'none'
+                  borderBottom: index < ((isPresent(data.by_usage_status?.length) ? data.by_usage_status?.length : 0)) - 1 ? '1px solid #f0f0f0' : 'none'
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                     <Space>
@@ -433,7 +433,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
               {data?.top_assets_by_area?.map((asset, index) => (
                 <div key={index} style={{ 
                   padding: '12px 0',
-                  borderBottom: index < (data.top_assets_by_area?.length || 0) - 1 ? '1px solid #f0f0f0' : 'none'
+                  borderBottom: index < ((isPresent(data.top_assets_by_area?.length) ? data.top_assets_by_area?.length : 0)) - 1 ? '1px solid #f0f0f0' : 'none'
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                     <div style={{ flex: 1 }}>
@@ -456,11 +456,11 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
                   
                   {asset.rentable_area && asset.rentable_area > 0 && (
                     <Progress
-                      percent={asset.occupancy_rate || 0}
+                      percent={(asset.occupancy_rate !== null && asset.occupancy_rate !== undefined) ? asset.occupancy_rate : 0}
                       size="small"
                       strokeColor={
-                        (asset.occupancy_rate || 0) >= 80 ? '#52c41a' :
-                        (asset.occupancy_rate || 0) >= 60 ? '#faad14' : '#ff4d4f'
+                        ((asset.occupancy_rate !== null && asset.occupancy_rate !== undefined) ? asset.occupancy_rate : 0) >= 80 ? '#52c41a' :
+                        ((asset.occupancy_rate !== null && asset.occupancy_rate !== undefined) ? asset.occupancy_rate : 0) >= 60 ? '#faad14' : '#ff4d4f'
                       }
                       format={(percent) => `${percent?.toFixed(1)}%`}
                     />

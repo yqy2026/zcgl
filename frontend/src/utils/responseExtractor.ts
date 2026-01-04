@@ -159,7 +159,7 @@ export class ResponseExtractor {
     options: SmartExtractOptions<T>
   ): ExtractResult<T> {
     const responseData = response.data;
-    const dataField = options.detection?.dataField || 'data';
+    const dataField = (isPresent(options.detection?.dataField) ? options.detection?.dataField : 'data')
 
     if (!responseData[dataField]) {
       return {
@@ -186,7 +186,7 @@ export class ResponseExtractor {
     options: SmartExtractOptions<T>
   ): ExtractResult<T> {
     const responseData = response.data;
-    const dataField = options.detection?.dataField || 'data';
+    const dataField = (isPresent(options.detection?.dataField) ? options.detection?.dataField : 'data')
     const dataContainer = (responseData as Record<string, unknown>)[dataField] as Record<string, unknown>;
 
     if (!dataContainer || !dataContainer.items) {
@@ -228,7 +228,7 @@ export class ResponseExtractor {
     options: SmartExtractOptions<T>
   ): ExtractResult<T> {
     const responseData = response.data;
-    const errorFields = options.detection?.errorFields || ['error', 'message'];
+    const errorFields = (isPresent(options.detection?.errorFields) ? options.detection?.errorFields : ['error']), 'message';
     let errorMessage = '未知错误';
 
     // 尝试从常见字段提取错误信息
@@ -255,7 +255,7 @@ export class ResponseExtractor {
    * 类型验证
    */
   private static validateType<T>(data: unknown, options: SmartExtractOptions<T>): T {
-    if (!options.enableTypeValidation || !options.expectedType) {
+    if (!(options.enableTypeValidation !== null && options.enableTypeValidation !== undefined) ? options.enableTypeValidation : !options.expectedType) {
       return data as T;
     }
 
@@ -456,7 +456,7 @@ export class ApiErrorHandler {
     return {
       type: ApiErrorType.UNKNOWN_ERROR,
       code: 'UNKNOWN_ERROR',
-      message: (data?.message as string) || (error as Error)?.message || '未知错误',
+      message: (data?.message as string) || (error as Error)(isPresent(?.message) ? ?.message : '未知错误'),
       statusCode,
       timestamp: new Date().toISOString(),
       originalError: error

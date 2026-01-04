@@ -198,7 +198,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
     },
     tooltip: {
       formatter: (datum: any) => ({
-        name: datum.full_name || datum.entity,
+        name: (datum.full_name !== null && datum.full_name !== undefined) ? datum.full_name : datum.entity,
         value: `${datum.count} 个`,
       }),
       customContent: (title: any, data: any) => {
@@ -206,7 +206,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
         if (!datum) return null
         return (
           <div style={{ padding: '8px' }}>
-            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{datum.full_name || datum.entity}</div>
+            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{(datum.full_name !== null && datum.full_name !== undefined) ? datum.full_name : datum.entity}</div>
             <div>资产数量: {datum.count} 个</div>
             <div>占比: {datum.percentage?.toFixed(1)}%</div>
             <div>总面积: {datum.total_area?.toLocaleString()} ㎡</div>
@@ -252,7 +252,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
           <Card>
             <Statistic
               title="资产总数"
-              value={data?.total_assets || 0}
+              value={(isPresent(data?.total_assets) ? data?.total_assets : 0)}
               suffix="个"
               prefix={<HomeOutlined />}
               valueStyle={{ color: '#1890ff' }}
@@ -264,7 +264,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
           <Card>
             <Statistic
               title="总面积"
-              value={data?.summary?.total_area || 0}
+              value={(isPresent(data?.summary?.total_area) ? data?.summary?.total_area : 0)}
               suffix="㎡"
               formatter={(value) => `${Number(value).toLocaleString()}`}
               valueStyle={{ color: '#52c41a' }}
@@ -276,7 +276,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
           <Card>
             <Statistic
               title="权属方数量"
-              value={data?.by_ownership_entity?.length || 0}
+              value={(isPresent(data?.by_ownership_entity?.length) ? data?.by_ownership_entity?.length : 0)}
               suffix="个"
               prefix={<UserOutlined />}
               valueStyle={{ color: '#722ed1' }}
@@ -288,7 +288,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
           <Card>
             <Statistic
               title="经营类面积"
-              value={data?.summary?.commercial_area || 0}
+              value={(isPresent(data?.summary?.commercial_area) ? data?.summary?.commercial_area : 0)}
               suffix="㎡"
               formatter={(value) => `${Number(value).toLocaleString()}`}
               valueStyle={{ color: '#faad14' }}
@@ -347,7 +347,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
                   justifyContent: 'space-between', 
                   alignItems: 'center',
                   padding: '8px 0',
-                  borderBottom: index < (data.by_property_nature?.length || 0) - 1 ? '1px solid #f0f0f0' : 'none'
+                  borderBottom: index < ((isPresent(data.by_property_nature?.length) ? data.by_property_nature?.length : 0)) - 1 ? '1px solid #f0f0f0' : 'none'
                 }}>
                   <div>
                     <Space>
@@ -381,7 +381,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
                   justifyContent: 'space-between', 
                   alignItems: 'center',
                   padding: '8px 0',
-                  borderBottom: index < (data.by_usage_status?.length || 0) - 1 ? '1px solid #f0f0f0' : 'none'
+                  borderBottom: index < ((isPresent(data.by_usage_status?.length) ? data.by_usage_status?.length : 0)) - 1 ? '1px solid #f0f0f0' : 'none'
                 }}>
                   <div>
                     <Space>

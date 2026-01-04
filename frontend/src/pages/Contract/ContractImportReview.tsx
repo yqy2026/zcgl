@@ -65,21 +65,21 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
 
     // 设置表单初始值 - 确保数字字段正确转换
     form.setFieldsValue({
-      contract_number: validatedData.contract_number || '',
-      asset_id: recommendations.asset_id || '',
-      ownership_id: recommendations.ownership_id || '',
-      tenant_name: validatedData.tenant_name || '',
-      tenant_contact: validatedData.tenant_contact || '',
+      contract_number: (validatedData.contract_number !== null && validatedData.contract_number !== undefined && validatedData.contract_number !== '') ? validatedData.contract_number : '',
+      asset_id: (recommendations.asset_id !== null && recommendations.asset_id !== undefined && recommendations.asset_id !== '') ? recommendations.asset_id : '',
+      ownership_id: (recommendations.ownership_id !== null && recommendations.ownership_id !== undefined && recommendations.ownership_id !== '') ? recommendations.ownership_id : '',
+      tenant_name: (validatedData.tenant_name !== null && validatedData.tenant_name !== undefined && validatedData.tenant_name !== '') ? validatedData.tenant_name : '',
+      tenant_contact: (validatedData.tenant_contact !== null && validatedData.tenant_contact !== undefined && validatedData.tenant_contact !== '') ? validatedData.tenant_contact : '',
       sign_date: validatedData.sign_date ? dayjs(String(validatedData.sign_date)) : null,
       start_date: validatedData.start_date ? dayjs(String(validatedData.start_date)) : null,
       end_date: validatedData.end_date ? dayjs(String(validatedData.end_date)) : null,
       rentable_area: validatedData.rentable_area ? parseFloat(String(validatedData.rentable_area)) : undefined,
       monthly_rent: validatedData.monthly_rent ? parseFloat(String(validatedData.monthly_rent)) : undefined,
       total_deposit: validatedData.total_deposit ? parseFloat(String(validatedData.total_deposit)) : 0,
-      contract_status: validatedData.contract_status || '有效',
-      payment_terms: validatedData.payment_terms || '',
-      contract_notes: validatedData.contract_notes || '',
-      rent_terms: validatedData.rent_terms || []
+      contract_status: (validatedData.contract_status !== null && validatedData.contract_status !== undefined && validatedData.contract_status !== '') ? validatedData.contract_status : '有效',
+      payment_terms: (validatedData.payment_terms !== null && validatedData.payment_terms !== undefined && validatedData.payment_terms !== '') ? validatedData.payment_terms : '',
+      contract_notes: (validatedData.contract_notes !== null && validatedData.contract_notes !== undefined && validatedData.contract_notes !== '') ? validatedData.contract_notes : '',
+      rent_terms: (validatedData.rent_terms !== null && validatedData.rent_terms !== undefined) ? validatedData.rent_terms : []
     });
 
   }, [result, form]);
@@ -126,7 +126,7 @@ interface FormFieldChange {
         message.success('合同导入成功！');
         // 可以在这里添加跳转逻辑
       } else {
-        message.error(response.error || '导入失败');
+        message.error((response.error !== null && response.error !== undefined && response.error !== '') ? response.error : '导入失败');
       }
     } catch (error: unknown) {
       console.error('表单验证失败:', error);
@@ -379,7 +379,7 @@ interface FormFieldChange {
               placeholder="请选择匹配的资产"
               showSearch
               filterOption={(input, option) =>
-                String(option?.children || '').toLowerCase().includes(input.toLowerCase())
+                String((isPresent(option?.children) ? option?.children : '')).toLowerCase().includes(input.toLowerCase())
               }
             >
               {result.matching_result.matched_assets.map((asset: AssetMatch) => (
@@ -430,7 +430,7 @@ interface FormFieldChange {
               placeholder="请选择匹配的权属方"
               showSearch
               filterOption={(input, option) =>
-                String(option?.children || '').toLowerCase().includes(input.toLowerCase())
+                String((isPresent(option?.children) ? option?.children : '')).toLowerCase().includes(input.toLowerCase())
               }
             >
               {result.matching_result.matched_ownerships.map((ownership: OwnershipMatch) => (
