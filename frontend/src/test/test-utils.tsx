@@ -294,7 +294,7 @@ export const waitForLoadingToFinish = () =>
  * ```
  */
 export const mockConsole = (method: 'log' | 'error' | 'warn' = 'log') => {
-  const original = console[method]
+  const _original = console[method]
   const spy = vi.spyOn(console, method).mockImplementation(() => {})
 
   return () => {

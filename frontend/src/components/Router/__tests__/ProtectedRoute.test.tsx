@@ -34,7 +34,7 @@ vi.mock('../System/PermissionGuard', () => ({
 }))
 
 // Test wrapper
-const TestWrapper = ({ children }: { children: React.ReactNode }) => (
+const _TestWrapper = ({ children }: { children: React.ReactNode }) => (
   <MemoryRouter>
     <Routes>{children}</Routes>
   </MemoryRouter>
