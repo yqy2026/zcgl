@@ -403,7 +403,12 @@ export class ApiErrorHandler {
     }
 
     // 未知错误
-    const message = (error instanceof Error) ? error.message : '未知错误';
+    let message = '未知错误';
+    if (error instanceof Error) {
+      message = error.message;
+    } else if (error !== null && error !== undefined && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
+      message = error.message;
+    }
     return {
       type: ApiErrorType.UNKNOWN_ERROR,
       code: 'UNKNOWN_ERROR',

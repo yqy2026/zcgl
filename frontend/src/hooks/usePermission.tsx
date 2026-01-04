@@ -44,12 +44,12 @@ const usePermission = () => {
     try {
       // 从localStorage或API获取当前用户信息
       const storedUser = localStorage.getItem('currentUser')
-      if ((storedUser !== null && storedUser !== undefined && storedUser !== '')) {
+      if (storedUser === null || storedUser === undefined || storedUser === '') {
         setUserPermissions(null)
         return
       }
 
-      const currentUser = JSON.parse(storedUser!) as {
+      const currentUser = JSON.parse(storedUser) as {
         id: string
         username: string
         roles?: unknown[]
