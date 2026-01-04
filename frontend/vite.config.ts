@@ -248,7 +248,7 @@ export default defineConfig(({ command, mode }) => {
       cssCodeSplit: true,
       manifest: isProduction,
       reportCompressedSize: isProduction,
-      chunkSizeWarningLimit: 1000,
+      chunkSizeWarningLimit: 2000,
     },
 
     // 预构建优化
