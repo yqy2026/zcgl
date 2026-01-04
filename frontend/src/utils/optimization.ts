@@ -131,7 +131,7 @@ export const useMemoryLeakDetection = (componentName: string) => {
     
     return () => {
       const unmountTime = Date.now()
-      const _lifeTime = unmountTime - (mountTimeRef.current || 0)
+      const _lifeTime = unmountTime - (mountTimeRef.current !== null && mountTimeRef.current !== undefined ? mountTimeRef.current : 0)
       
       // 清理定时器
       timersRef.current.forEach(timer => clearTimeout(timer))

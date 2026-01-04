@@ -330,8 +330,8 @@ class UXManager {
       content: options.content,
       onOk: options.onOk,
       onCancel: options.onCancel,
-      okText: options.okText || '确定',
-      cancelText: options.cancelText || '取消',
+      okText: (options.okText !== null && options.okText !== undefined && options.okText !== '') ? options.okText : '确定',
+      cancelText: (options.cancelText !== null && options.cancelText !== undefined && options.cancelText !== '') ? options.cancelText : '取消',
       okButtonProps: options.danger ? { danger: true } : undefined,
     })
   }
