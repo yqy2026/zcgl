@@ -154,7 +154,7 @@ export class EnumSearchHelper {
       options: group.options.filter(option =>
         option.label.toLowerCase().includes(lowercaseKeyword) ||
         option.value.toLowerCase().includes(lowercaseKeyword) ||
-        (option.description && option.description.toLowerCase().includes(lowercaseKeyword))
+        ((option.description !== null && option.description !== undefined) && option.description.toLowerCase().includes(lowercaseKeyword))
       )
     })).filter(group => group.options.length > 0)
   }
@@ -179,7 +179,7 @@ export class EnumSearchHelper {
    */
   static getLabelByValue(groups: EnumGroup[], value: string): string {
     const option = this.findByValue(groups, value)
-    return option?.label || value
+    return (option !== null && option !== undefined && option.label !== null && option.label !== undefined) ? option.label : value
   }
 
   /**
@@ -216,22 +216,22 @@ export class EnumFormatter {
 
   static formatOwnershipStatus(value: string): string {
     const option = OwnershipStatusOptions.find(opt => opt.value === value)
-    return option?.label || value
+    return (option !== null && option !== undefined && option.label !== null && option.label !== undefined) ? option.label : value
   }
 
   static formatBusinessModel(value: string): string {
     const option = BusinessModelOptions.find(opt => opt.value === value)
-    return option?.label || value
+    return (option !== null && option !== undefined && option.label !== null && option.label !== undefined) ? option.label : value
   }
 
   static formatTenantType(value: string): string {
     const option = TenantTypeOptions.find(opt => opt.value === value)
-    return option?.label || value
+    return (option !== null && option !== undefined && option.label !== null && option.label !== undefined) ? option.label : value
   }
 
   static formatOperationStatus(value: string): string {
     const option = OperationStatusOptions.find(opt => opt.value === value)
-    return option?.label || value
+    return (option !== null && option !== undefined && option.label !== null && option.label !== undefined) ? option.label : value
   }
 
   /**
@@ -364,27 +364,27 @@ export class EnumValidator {
   static getInvalidEnumValues(data: EnumValidationData): EnumValidationError[] {
     const errors: EnumValidationError[] = []
 
-    if (data.property_nature && !this.isValidPropertyNature(data.property_nature)) {
+    if ((data.property_nature !== null && data.property_nature !== undefined && data.property_nature !== '') && !this.isValidPropertyNature(data.property_nature)) {
       errors.push({ field: 'property_nature', value: data.property_nature, expectedType: 'PropertyNature' })
     }
 
-    if (data.usage_status && !this.isValidUsageStatus(data.usage_status)) {
+    if ((data.usage_status !== null && data.usage_status !== undefined && data.usage_status !== '') && !this.isValidUsageStatus(data.usage_status)) {
       errors.push({ field: 'usage_status', value: data.usage_status, expectedType: 'UsageStatus' })
     }
 
-    if (data.ownership_status && !this.isValidOwnershipStatus(data.ownership_status)) {
+    if ((data.ownership_status !== null && data.ownership_status !== undefined && data.ownership_status !== '') && !this.isValidOwnershipStatus(data.ownership_status)) {
       errors.push({ field: 'ownership_status', value: data.ownership_status, expectedType: 'OwnershipStatus' })
     }
 
-    if (data.business_model && !this.isValidBusinessModel(data.business_model)) {
+    if ((data.business_model !== null && data.business_model !== undefined && data.business_model !== '') && !this.isValidBusinessModel(data.business_model)) {
       errors.push({ field: 'business_model', value: data.business_model, expectedType: 'BusinessModel' })
     }
 
-    if (data.tenant_type && !this.isValidTenantType(data.tenant_type)) {
+    if ((data.tenant_type !== null && data.tenant_type !== undefined && data.tenant_type !== '') && !this.isValidTenantType(data.tenant_type)) {
       errors.push({ field: 'tenant_type', value: data.tenant_type, expectedType: 'TenantType' })
     }
 
-    if (data.operation_status && !this.isValidOperationStatus(data.operation_status)) {
+    if ((data.operation_status !== null && data.operation_status !== undefined && data.operation_status !== '') && !this.isValidOperationStatus(data.operation_status)) {
       errors.push({ field: 'operation_status', value: data.operation_status, expectedType: 'OperationStatus' })
     }
 
