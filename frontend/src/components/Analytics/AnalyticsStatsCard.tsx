@@ -53,7 +53,7 @@ const StatCard: React.FC<StatCardProps> = ({
   loading = false
 }) => {
   const getTrendIcon = () => {
-    if (!trend && trend !== 0) return null
+    if ((trend === null || trend === undefined) && trend !== 0) return null
 
     const isPositive = trend > 0
     const color = trendType === 'up' ? (isPositive ? '#52c41a' : '#ff4d4f') : (isPositive ? '#ff4d4f' : '#52c41a')
@@ -84,7 +84,7 @@ const StatCard: React.FC<StatCardProps> = ({
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-        {icon && (
+        {(icon !== null && icon !== undefined) && (
           <div
             style={{
               width: 40,
