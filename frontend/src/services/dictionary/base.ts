@@ -8,6 +8,9 @@
 
 import { enhancedApiClient } from '@/api/client';
 import { ApiErrorHandler } from '../../utils/responseExtractor';
+import { createLogger } from '@/utils/logger';
+const logger = createLogger('Base');
+
 import {
   DictionaryConfig,
   DictionaryOption,
@@ -485,7 +488,7 @@ class BaseDictionaryService {
             results[dictType] = result;
           } else {
             // 处理Promise拒绝的情况
-            console.error('批量获取字典数据失败:', promiseResult.reason);
+            logger.error('批量获取字典数据失败:', promiseResult.reason);
           }
         });
       }

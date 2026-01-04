@@ -3,6 +3,9 @@
  */
 
 import { apiRequest } from '@/utils/request';
+import { createLogger } from '@/utils/logger';
+const logger = createLogger('Ownership');
+
 import type {
   Ownership,
   OwnershipCreate,
@@ -110,7 +113,7 @@ export class OwnershipService {
         item.code === code && item.id !== excludeId
       );
     } catch (error) {
-      console.error('验证权属方编码失败:', error);
+      logger.error('验证权属方编码失败:', error);
       throw new Error('Network error during ownership code validation');
     }
   }
@@ -125,7 +128,7 @@ export class OwnershipService {
         item.name === name && item.id !== excludeId
       );
     } catch (error) {
-      console.error('验证权属方名称失败:', error);
+      logger.error('验证权属方名称失败:', error);
       throw new Error('Network error during ownership name validation');
     }
   }

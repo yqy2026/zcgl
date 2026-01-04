@@ -6,6 +6,9 @@
  * @updated 2025-11-10
  */
 
+import { createLogger } from '@/utils/logger';
+const logger = createLogger('OrganizationService');
+
 import {
   Organization,
   OrganizationCreate,
@@ -61,7 +64,7 @@ class OrganizationService {
       return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.error('获取组织列表失败:', enhancedError.message);
+      logger.error('获取组织列表失败:', enhancedError.message);
       return [];
     }
   }
@@ -189,7 +192,7 @@ class OrganizationService {
       return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.error('获取组织树失�?', enhancedError.message);
+      logger.error('获取组织树失�?', enhancedError.message);
       return [];
     }
   }

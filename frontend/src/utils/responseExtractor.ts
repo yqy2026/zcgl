@@ -4,6 +4,9 @@
  */
 
 import { AxiosResponse, AxiosError } from 'axios';
+import { createLogger } from '@/utils/logger';
+const logger = createLogger('ResponseExtractor');
+
 import {
   ExtractResult,
   SmartExtractOptions,
@@ -266,7 +269,7 @@ export class ResponseExtractor {
       // 尝试构造新实例（适用于简单对象）
       return new expectedType(data) as T;
     } catch (err) {
-      console.warn(`类型验证失败: ${err instanceof Error ? err.message : '未知错误'}`);
+      logger.warn(`类型验证失败: ${err instanceof Error ? err.message : '未知错误'}`);
 
       // 返回默认值或原数据
       return options.defaultValue !== undefined ? options.defaultValue : (data as T);
@@ -286,7 +289,7 @@ export class ResponseExtractor {
     const result = this.smartExtract<T>(response);
 
     if (!result.success) {
-      console.warn(`响应数据提取失败: ${result.error}`);
+      logger.warn(`响应数据提取失败: ${result.error}`);
       return defaultValue as T;
     }
 
