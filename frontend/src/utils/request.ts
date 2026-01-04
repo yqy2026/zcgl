@@ -2,7 +2,7 @@
  * API请求工具
  */
 
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
+import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 import { message } from "antd";
 import { createLogger } from "./logger";
 
@@ -11,7 +11,7 @@ const logger = createLogger('Request');
 // 创建axios实例
 const createApiInstance = (): AxiosInstance => {
   const instance = axios.create({
-    baseURL: process.env.VITE_API_BASE_URL || "/api",
+    baseURL: (process.env.VITE_API_BASE_URL !== null && process.env.VITE_API_BASE_URL !== undefined && process.env.VITE_API_BASE_URL !== '') ? process.env.VITE_API_BASE_URL : "/api",
     timeout: 30000,
     headers: {
       "Content-Type": "application/json",
@@ -43,21 +43,24 @@ const createApiInstance = (): AxiosInstance => {
       });
       return response;
     },
-    (error) => {
+    (error: unknown) => {
+      const axiosError = error as AxiosError;
+
       logger.debug("API响应错误", {
-        url: error.config?.url,
-        method: error.config?.method,
-        status: error.response?.status,
-        message: error.message,
+        url: axiosError.config?.url,
+        method: axiosError.config?.method,
+        status: axiosError.response?.status,
+        message: axiosError.message,
       });
 
       // 统一错误处理
-      if (error.response) {
-        const { status, data } = error.response;
+      if (axiosError.response !== null && axiosError.response !== undefined) {
+        const { status, data } = axiosError.response;
+        const responseData = data as { detail?: string | Array<{ msg: string }> };
 
         switch (status) {
           case 400:
-            message.error(data.detail || "请求参数错误");
+            message.error((responseData.detail !== null && responseData.detail !== undefined && typeof responseData.detail === 'string' && responseData.detail !== '') ? responseData.detail : "请求参数错误");
             break;
           case 401:
             message.error("未授权，请重新登录");
@@ -67,24 +70,24 @@ const createApiInstance = (): AxiosInstance => {
             message.error("权限不足");
             break;
           case 404:
-            message.error(data.detail || "资源不存在");
+            message.error((responseData.detail !== null && responseData.detail !== undefined && typeof responseData.detail === 'string' && responseData.detail !== '') ? responseData.detail : "资源不存在");
             break;
           case 422:
             // 处理验证错误
-            if (data.detail && Array.isArray(data.detail)) {
-              const errorMsg = data.detail.map((err: { msg: string }) => err.msg).join(", ");
+            if ((responseData.detail !== null && responseData.detail !== undefined) && Array.isArray(responseData.detail)) {
+              const errorMsg = responseData.detail.map((err: { msg: string }) => err.msg).join(", ");
               message.error(errorMsg);
             } else {
-              message.error(data.detail || "数据验证失败");
+              message.error((responseData.detail !== null && responseData.detail !== undefined && typeof responseData.detail === 'string' && responseData.detail !== '') ? responseData.detail : "数据验证失败");
             }
             break;
           case 500:
             message.error("服务器内部错误");
             break;
           default:
-            message.error(data.detail || "请求失败");
+            message.error((responseData.detail !== null && responseData.detail !== undefined && typeof responseData.detail === 'string' && responseData.detail !== '') ? responseData.detail : "请求失败");
         }
-      } else if (error.request) {
+      } else if (axiosError.request !== null && axiosError.request !== undefined) {
         message.error("网络连接失败，请检查网络");
       } else {
         message.error("请求配置错误");
@@ -155,7 +158,7 @@ export const uploadFile = async (
       "Content-Type": "multipart/form-data",
     },
     onUploadProgress: (progressEvent) => {
-      if (onProgress && progressEvent.total) {
+      if (onProgress && (progressEvent.total !== null && progressEvent.total !== undefined && progressEvent.total !== 0)) {
         const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
         onProgress(progress);
       }
@@ -174,7 +177,7 @@ export const downloadFile = async (url: string, filename?: string): Promise<void
     const downloadUrl = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = downloadUrl;
-    link.download = filename || "download";
+    link.download = (filename !== null && filename !== undefined && filename !== '') ? filename : "download";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
