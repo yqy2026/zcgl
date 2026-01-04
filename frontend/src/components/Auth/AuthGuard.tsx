@@ -46,7 +46,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({
   }
 
   // 检查单个权限
-  if (requiredPermission) {
+  if (requiredPermission !== null && requiredPermission !== undefined && requiredPermission !== '') {
     // 解析权限字符串，格式通常为 "resource:action" 或 "resource action"
     const [resource, action] = requiredPermission.includes(':')
       ? requiredPermission.split(':')

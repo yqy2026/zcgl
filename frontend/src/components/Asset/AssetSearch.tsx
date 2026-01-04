@@ -120,7 +120,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
 
   // 设置初始值
   useEffect(() => {
-    if (initialValues) {
+    if (initialValues !== null && initialValues !== undefined) {
       form.setFieldsValue(initialValues)
     }
   }, [initialValues, form])

@@ -135,7 +135,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
 
     Object.entries(sessionData.extracted_data || {}).forEach(([key, value]) => {
       const config = fieldConfig[key as keyof FieldConfig];
-      if (config) {
+      if (config !== null && config !== undefined) {
         fields.push({
           fieldName: key,
           label: config.label,
