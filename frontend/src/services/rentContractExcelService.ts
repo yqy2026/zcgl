@@ -116,10 +116,10 @@ class RentContractExcelService {
       if (options.include_ledger !== undefined) {
         params.append('include_ledger', String(options.include_ledger));
       }
-      if (options.start_date) {
+      if (options.start_date !== null && options.start_date !== undefined && options.start_date !== '') {
         params.append('start_date', options.start_date);
       }
-      if (options.end_date) {
+      if (options.end_date !== null && options.end_date !== undefined && options.end_date !== '') {
         params.append('end_date', options.end_date);
       }
 

@@ -233,7 +233,7 @@ const AssetAdvancedSection: React.FC = () => {
                                                             size="small"
                                                             icon={<EyeOutlined />}
                                                             onClick={() => {
-                                                                if (file.url) {
+                                                                if (file.url !== null && file.url !== undefined && file.url !== '') {
                                                                     window.open(file.url, '_blank');
                                                                 }
                                                             }}

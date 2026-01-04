@@ -97,7 +97,7 @@ interface FormFieldChange {
     // 标记已修改的字段
     const newModifiedFields = new Set(modifiedFields);
     changedFields.forEach((field: FormFieldChange) => {
-      if (field.name) {
+      if (field.name !== null && field.name !== undefined) {
         newModifiedFields.add(field.name[0]);
       }
     });

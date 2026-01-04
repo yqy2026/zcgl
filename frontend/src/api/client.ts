@@ -184,7 +184,7 @@ export class EnhancedApiClient {
         }
 
         // 添加请求ID
-        if (config.headers) {
+        if (config.headers !== null && config.headers !== undefined) {
           config.headers.set('X-Request-ID', this.generateRequestId())
         }
 

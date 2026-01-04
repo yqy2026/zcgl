@@ -144,7 +144,7 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
       form.setFieldsValue(formData);
 
       // Initialize attachment lists
-      if (initialData.operation_agreement_attachments) {
+      if (initialData.operation_agreement_attachments !== null && initialData.operation_agreement_attachments !== undefined && initialData.operation_agreement_attachments !== '') {
         const fileNames = String(initialData.operation_agreement_attachments)
           .split(',')
           .filter(Boolean);
@@ -158,7 +158,7 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
         setFileList(initialFileList);
       }
 
-      if (initialData.terminal_contract_files) {
+      if (initialData.terminal_contract_files !== null && initialData.terminal_contract_files !== undefined && initialData.terminal_contract_files !== '') {
         const fileNames = String(initialData.terminal_contract_files).split(',').filter(Boolean);
         const initialTerminalFileList: UploadFile[] = fileNames.map((name: string, index: number) => ({
           uid: `terminal-${index}`,

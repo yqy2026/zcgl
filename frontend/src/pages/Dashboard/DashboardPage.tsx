@@ -65,7 +65,7 @@ const DashboardPage: React.FC = () => {
       }
     } else {
       // 退出全屏
-      if (document.exitFullscreen) {
+      if (document.exitFullscreen !== null && document.exitFullscreen !== undefined) {
         document.exitFullscreen()
       }
     }

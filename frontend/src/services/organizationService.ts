@@ -569,7 +569,7 @@ class OrganizationService {
 
     while (current) {
       path.unshift(current.name);
-      if (current.parent_id) {
+      if (current.parent_id !== null && current.parent_id !== undefined && current.parent_id !== '') {
         const parentOrg = allOrganizations.find(org => org.id === current!.parent_id);
         current = parentOrg || null;
       } else {

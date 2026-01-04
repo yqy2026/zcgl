@@ -252,7 +252,7 @@ class PDFImportService {
           },
           timeout: 300000, // 增加到5分钟，支持大文件OCR处理
           onUploadProgress: (progressEvent) => {
-            if (progressEvent.total) {
+            if (progressEvent.total !== null && progressEvent.total !== undefined && !Number.isNaN(progressEvent.total)) {
               const _percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
               // Upload progress
             }
@@ -829,7 +829,7 @@ class PDFImportService {
           },
           timeout: 600000, // 10分钟，支持增强版处理
           onUploadProgress: (progressEvent) => {
-            if (progressEvent.total) {
+            if (progressEvent.total !== null && progressEvent.total !== undefined && !Number.isNaN(progressEvent.total)) {
               const _percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
               // Enhanced upload progress
             }

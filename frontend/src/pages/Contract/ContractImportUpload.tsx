@@ -144,7 +144,7 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
         }
 
         // 重要：立即调用父组件的成功回调，让父组件接管后续处理
-        if (response.session_id) {
+        if (response.session_id !== null && response.session_id !== undefined && response.session_id !== '') {
           onUploadSuccess(response.session_id, uploadFile);
           message.success('文件上传成功！正在处理中...');
         } else {

@@ -53,7 +53,7 @@ export function createLazyComponent<T extends ComponentType<Record<string, unkno
     }
 
     return importFn().then(module => {
-      if (chunkName && performance.mark && performance.measure) {
+      if (chunkName && performance.mark !== null && performance.mark !== undefined && performance.mark !== '' && performance.measure) {
         performance.mark(`lazy-load-end-${chunkName}`)
         performance.measure(
           `lazy-load-${chunkName}`,
@@ -275,13 +275,13 @@ class PerformanceMonitor {
 
   // 手动记录性能指标
   mark(name: string) {
-    if (performance.mark) {
+    if (performance.mark !== null && performance.mark !== undefined) {
       performance.mark(name)
     }
   }
 
   measure(name: string, startMark: string, endMark?: string) {
-    if (performance.measure) {
+    if (performance.measure !== null && performance.measure !== undefined) {
       performance.measure(name, startMark, endMark)
     }
   }

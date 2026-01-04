@@ -188,7 +188,7 @@ export const useRenderPerformance = (componentName: string) => {
     renderCountRef.current++
     const now = performance.now()
     
-    if (lastRenderTimeRef.current) {
+    if (lastRenderTimeRef.current !== null && lastRenderTimeRef.current !== undefined && !Number.isNaN(lastRenderTimeRef.current)) {
       const renderTime = now - lastRenderTimeRef.current
       
       if (process.env.NODE_ENV === 'development' && renderTime > 16) {

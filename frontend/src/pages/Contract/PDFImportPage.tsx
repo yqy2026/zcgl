@@ -364,7 +364,7 @@ const PDFImportPage: React.FC = () => {
     try {
       setLoading(true);
       const response = await pdfImportService.testConversion();
-      if (response.system_ready) {
+      if (response.system_ready !== null && response.system_ready !== undefined) {
         message.success('系统功能正常');
       } else {
         message.warning('系统可能存在问题');
