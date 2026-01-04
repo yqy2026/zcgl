@@ -12,6 +12,33 @@ import type { AssetSearchParams } from '@/types/asset'
 
 const { Text } = Typography
 
+// Chart tooltip data types
+interface PropertyNatureChartData {
+  type: string
+  value: number
+  percentage: number
+  total_area: number
+}
+
+interface OwnershipStatusChartData {
+  type: string
+  value: number
+  percentage: number
+}
+
+interface UsageStatusChartData {
+  type: string
+  value: number
+  percentage: number
+}
+
+interface OwnershipEntityChartData {
+  ownership: string
+  count: number
+  percentage: number
+  full_name: string
+}
+
 interface _AssetDistributionData {
   total_assets: number
   by_property_nature: Array<{
@@ -88,12 +115,13 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
       position: 'bottom',
     },
     tooltip: {
-      formatter: (datum: any) => ({
+      formatter: (datum: PropertyNatureChartData) => ({
         name: datum.type,
         value: `${datum.value} 个`,
       }),
-      customContent: (title: any, data: any) => {
-        const datum = data?.[0]?.data
+      customContent: (_title: unknown, data: any) => {
+        const dataArray = data as Array<{ data: PropertyNatureChartData }> | undefined
+        const datum = dataArray?.[0]?.data
         if (!datum) return null
         return (
           <div style={{ padding: '8px' }}>
@@ -134,7 +162,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
       position: 'bottom',
     },
     tooltip: {
-      formatter: (datum: any) => ({
+      formatter: (datum: OwnershipStatusChartData | UsageStatusChartData) => ({
         name: datum.type,
         value: `${datum.value} 个 (${datum.percentage?.toFixed(1)}%)`,
       }),
@@ -162,7 +190,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
       position: 'bottom',
     },
     tooltip: {
-      formatter: (datum: any) => ({
+      formatter: (datum: OwnershipStatusChartData | UsageStatusChartData) => ({
         name: datum.type,
         value: `${datum.value} 个 (${datum.percentage?.toFixed(1)}%)`,
       }),
@@ -190,23 +218,24 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
     },
     label: {
       position: 'top' as const,
-      formatter: (datum: any) => `${datum.count} 个`,
+      formatter: (datum: OwnershipEntityChartData) => `${datum.count} 个`,
       style: {
         fill: '#333',
         fontSize: 12,
       },
     },
     tooltip: {
-      formatter: (datum: any) => ({
-        name: (datum.full_name !== null && datum.full_name !== undefined) ? datum.full_name : datum.entity,
+      formatter: (datum: OwnershipEntityChartData) => ({
+        name: (datum.full_name !== null && datum.full_name !== undefined) ? datum.full_name : datum.ownership,
         value: `${datum.count} 个`,
       }),
-      customContent: (title: any, data: any) => {
-        const datum = data?.[0]?.data
+      customContent: (_title: unknown, data: any) => {
+        const dataArray = data as Array<{ data: OwnershipEntityChartData }> | undefined
+        const datum = dataArray?.[0]?.data
         if (!datum) return null
         return (
           <div style={{ padding: '8px' }}>
-            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{(datum.full_name !== null && datum.full_name !== undefined) ? datum.full_name : datum.entity}</div>
+            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{(datum.full_name !== null && datum.full_name !== undefined) ? datum.full_name : datum.ownership}</div>
             <div>资产数量: {datum.count} 个</div>
             <div>占比: {datum.percentage?.toFixed(1)}%</div>
             <div>总面积: {datum.total_area?.toLocaleString()} ㎡</div>
