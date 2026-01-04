@@ -47,7 +47,7 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
       // Got project options response
 
       // 确保响应数据是数组
-      const projects = Array.isArray(response) ? response : ((response as any)?.data || []);
+      const projects = Array.isArray(response) ? response : (response && typeof response === 'object' && 'data' in response ? (response as { data?: unknown }).data : []);
       // Processed project options
 
       setProjectOptions(projects);
@@ -95,7 +95,13 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
   // 提交表单
   const handleSubmit = async () => {
     try {
-      const values = await form.validateFields();
+      const values = await form.validateFields() as {
+        name: string
+        code: string
+        short_name: string
+        is_active: boolean
+        related_projects?: unknown[]
+      };
       setLoading(true);
 
       if (initialValues) {
@@ -115,9 +121,10 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
         await ownershipService.updateOwnership(initialValues.id, updateData);
 
         // 如果有关联项目数据，则更新关联项目
-        if (values.related_projects && Array.isArray(values.related_projects)) {
+        if (values.related_projects !== null && values.related_projects !== undefined && Array.isArray(values.related_projects)) {
           try {
-            await (ownershipService as any).updateOwnershipProjects(initialValues.id, values.related_projects);
+            // TODO: Add updateOwnershipProjects to ownershipService and remove this cast
+            await (ownershipService as { updateOwnershipProjects: (id: string, projects: unknown[]) => Promise<void> }).updateOwnershipProjects(initialValues.id, values.related_projects);
           } catch {
             message.warning('基本信息更新成功，但关联项目更新失败');
           }
@@ -162,7 +169,7 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
               name="name"
               rules={[
                 { required: true, message: '请输入权属方全称' },
-                { validator: validateName as any }
+                { validator: validateName as (rule: unknown, value: string) => Promise<void> }
               ]}
             >
               <Input placeholder="请输入权属方全称" />
@@ -191,12 +198,12 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
                 style={{ width: '100%' }}
                 showSearch
                 filterOption={(input, option) => {
-                  if (!option?.children) return false;
+                  if (option?.children === null || option?.children === undefined) return false;
                   const optionText = String(option.children).toLowerCase();
                   return optionText.includes(input.toLowerCase());
                 }}
               >
-                {(projectOptions || []).map(project => (
+                {(projectOptions !== null && projectOptions !== undefined ? projectOptions : []).map(project => (
                   <Option key={project.id} value={project.id}>
                     {project.name} ({project.code})
                   </Option>

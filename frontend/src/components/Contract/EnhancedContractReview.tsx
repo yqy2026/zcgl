@@ -3,7 +3,7 @@
  * 提供智能化的数据审核和编辑功能
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Card,
   Form,
@@ -95,8 +95,16 @@ interface OwnershipMatch {
   match_reason: string;
 }
 
+interface SessionData {
+  extracted_data?: Record<string, unknown>;
+  validation_results?: ValidationResults;
+  matching_results?: MatchingResults;
+  confidence_score?: number;
+  [key: string]: unknown;
+}
+
 interface EnhancedContractReviewProps {
-  sessionData: Record<string, unknown>;
+  sessionData: SessionData;
   onConfirm: (confirmedData: Record<string, unknown>) => void;
   onCancel: () => void;
   onFieldChange?: (fieldName: string, value: unknown) => void;
@@ -118,18 +126,18 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
   const [validationSummary, setValidationSummary] = useState<ValidationResults>({});
 
   useEffect(() => {
-    if (sessionData?.extracted_data) {
+    if (sessionData?.extracted_data !== null && sessionData?.extracted_data !== undefined) {
       initializeFieldReviews();
     }
-  }, [sessionData]);
+  }, [sessionData, initializeFieldReviews]);
 
   useEffect(() => {
-    if (sessionData?.validation_results) {
+    if (sessionData?.validation_results !== null && sessionData?.validation_results !== undefined) {
       setValidationSummary(sessionData.validation_results);
     }
   }, [sessionData?.validation_results]);
 
-  const initializeFieldReviews = () => {
+  const initializeFieldReviews = useCallback(() => {
     const fields: FieldReview[] = [];
     const fieldConfig = getFieldConfig();
 
@@ -150,7 +158,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
     });
 
     setFieldReviews(fields);
-  };
+  }, [sessionData, validationSummary]);
 
   const calculateFieldConfidence = (fieldName: string, value: unknown, sessionData: Record<string, unknown>): number => {
     // 基础置信度
@@ -163,7 +171,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
     }
 
     // 根据值的质量调整
-    if (value && typeof value === 'string' && value.length > 5) {
+    if (value !== null && value !== undefined && typeof value === 'string' && value.length > 5) {
       confidence += 0.05;
     }
 
@@ -282,7 +290,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
 
     // 验证必填字段
     const requiredFields = ['tenant_name', 'landlord_name', 'monthly_rent', 'property_address'];
-    const missingFields = requiredFields.filter(field => !confirmedData[field]);
+    const missingFields = requiredFields.filter(field => confirmedData[field] === null || confirmedData[field] === undefined || confirmedData[field] === '');
 
     if (missingFields.length > 0) {
       message.error(`请填写必填字段：${missingFields.join(', ')}`);
@@ -317,8 +325,8 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
       case 'date':
         return (
           <DatePicker
-            value={field.value && typeof field.value === 'string' ? dayjs(field.value) : null}
-            onChange={(date) => handleFieldChange(field.fieldName, date ? date.format('YYYY-MM-DD') : null)}
+            value={field.value !== null && field.value !== undefined && typeof field.value === 'string' ? dayjs(field.value) : null}
+            onChange={(date) => handleFieldChange(field.fieldName, date !== null && date !== undefined ? date.format('YYYY-MM-DD') : null)}
             style={{ width: '100%' }}
             placeholder={`请选择${config.label}`}
           />
@@ -354,7 +362,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
             value={typeof field.value === 'string' ? field.value : String(field.value ?? '')}
             onChange={(e) => handleFieldChange(field.fieldName, e.target.value)}
             placeholder={`请输入${config.label}`}
-            suffix={field.suggestedValue && field.suggestedValue !== field.value ? (
+            suffix={field.suggestedValue !== null && field.suggestedValue !== undefined && field.suggestedValue !== field.value ? (
               <Tooltip title="建议使用匹配的值">
                 <Button
                   type="link"
@@ -478,14 +486,18 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
       </Row>
 
       {/* 匹配结果 */}
-      {((sessionData as any).matching_results?.matched_assets?.length > 0 ||
-        (sessionData as any).matching_results?.matched_ownerships?.landlords?.length > 0) && (
+      {(sessionData.matching_results !== null && sessionData.matching_results !== undefined &&
+        sessionData.matching_results.matched_assets !== null && sessionData.matching_results.matched_assets !== undefined &&
+        sessionData.matching_results.matched_assets.length > 0 ||
+        sessionData.matching_results?.matched_ownerships?.landlords !== null &&
+        sessionData.matching_results.matched_ownerships?.landlords !== undefined &&
+        sessionData.matching_results.matched_ownerships.landlords.length > 0) && (
         <Card
           title={
             <Space>
               <SearchOutlined />
               <span>智能匹配结果</span>
-              <Badge count={(sessionData as any).matching_results?.matched_assets?.length || 0} />
+              <Badge count={sessionData.matching_results?.matched_assets?.length ?? 0} />
             </Space>
           }
           style={{ marginBottom: 24 }}
@@ -494,7 +506,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
             <TabPane tab="资产匹配" key="assets">
               <Table
                 columns={matchingResultsColumns}
-                dataSource={(sessionData as any).matching_results?.matched_assets || []}
+                dataSource={sessionData.matching_results?.matched_assets ?? []}
                 rowKey="id"
                 pagination={false}
                 size="small"
@@ -503,11 +515,11 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
             <TabPane tab="权属方匹配" key="ownerships">
               <Table
                 columns={[
-                  ...matchingResultsColumns.slice(0, -1) as any,
+                  ...matchingResultsColumns.slice(0, -1),
                   {
                     title: '操作',
                     key: 'action',
-                    render: (_: any, record: OwnershipMatch) => (
+                    render: (_: unknown, record: OwnershipMatch) => (
                       <Button
                         type="primary"
                         size="small"
@@ -517,8 +529,8 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
                       </Button>
                     )
                   }
-                ] as any}
-                dataSource={(sessionData as any).matching_results?.matched_ownerships?.landlords || []}
+                ]}
+                dataSource={sessionData.matching_results?.matched_ownerships?.landlords ?? []}
                 rowKey="id"
                 pagination={false}
                 size="small"
@@ -582,11 +594,11 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
                     <div onClick={() => handleFieldEdit(field.fieldName)}>
                       {(() => {
                         const val = field.value
-                        if (!val) return <Text type="secondary" italic>未提取</Text>
+                        if (val === null || val === undefined) return <Text type="secondary" italic>未提取</Text>
                         if (typeof val === 'object' && Object.keys(val).length === 0) {
                           return <Text type="secondary" italic>未提取</Text>
                         }
-                        return val as any
+                        return String(val)
                       })()}
                     </div>
                   )}
