@@ -11,6 +11,7 @@ import type {
   EnhancedSessionProgress
 } from '../types/enhancedPdfImport';
 import { createLogger } from '../utils/logger';
+import { isPresent } from '../utils/nullSafety';
 
 const logger = createLogger('PDFImportService');
 
@@ -326,7 +327,7 @@ class PDFImportService {
       let errorMessage: string;
       if (isAxiosError(error)) {
         const detailMessage = error.response?.data?.detail;
-        errorMessage = isStringPresent(detailMessage) ? detailMessage : isStringPresent(error.message) ? error.message : 'Unknown error';
+        errorMessage = (detailMessage !== null && detailMessage !== undefined && detailMessage !== "") ? detailMessage : (error.message !== null && error.message !== undefined && error.message !== "") ? error.message : 'Unknown error';
       } else if (isError(error)) {
         errorMessage = error.message;
       } else {
@@ -432,7 +433,7 @@ class PDFImportService {
       let errorMessage: string;
       if (isAxiosError(error)) {
         const detailMessage = error.response?.data?.detail;
-        errorMessage = isStringPresent(detailMessage) ? detailMessage : isStringPresent(error.message) ? error.message : 'Unknown error';
+        errorMessage = (detailMessage !== null && detailMessage !== undefined && detailMessage !== "") ? detailMessage : (error.message !== null && error.message !== undefined && error.message !== "") ? error.message : 'Unknown error';
       } else if (isError(error)) {
         errorMessage = error.message;
       } else {
@@ -474,8 +475,8 @@ class PDFImportService {
       let errorMessage: string;
       if (isAxiosError(error)) {
         const detailMessage = error.response?.data?.detail;
-        message = isStringPresent(detailMessage) ? detailMessage : isStringPresent(error.message) ? error.message : '导入失败';
-        errorMessage = isStringPresent(detailMessage) ? detailMessage : isStringPresent(error.message) ? error.message : 'Unknown error';
+        message = (detailMessage !== null && detailMessage !== undefined && detailMessage !== "") ? detailMessage : (error.message !== null && error.message !== undefined && error.message !== "") ? error.message : '导入失败';
+        errorMessage = (detailMessage !== null && detailMessage !== undefined && detailMessage !== "") ? detailMessage : (error.message !== null && error.message !== undefined && error.message !== "") ? error.message : 'Unknown error';
       } else if (isError(error)) {
         message = error.message;
         errorMessage = error.message;
@@ -559,7 +560,7 @@ class PDFImportService {
   async getSystemInfo(): Promise<SystemInfoResponse> {
     try {
       // 使用PDF_API.INFO，如果404则使用备用方案
-      const response = await axios.get(PDF_API.INFO);
+      const response = await axios.get<SystemInfoResponse>(PDF_API.INFO);
 
       // 直接使用后端返回的能力信息，并添加增强功能检测
       const capabilities = (response.data.capabilities !== null && response.data.capabilities !== undefined) ? response.data.capabilities : {
@@ -658,7 +659,7 @@ class PDFImportService {
   // 获取系统能力信息
   static async getSystemCapabilities() {
     try {
-      const response = await axios.get(`${API_BASE_URL}/capabilities`);
+      const response = await axios.get<SystemInfoResponse>(`${API_BASE_URL}/capabilities`);
       return {
         spacy_available: true,
         ocr_available: true,
@@ -670,7 +671,8 @@ class PDFImportService {
       };
     } catch (error: unknown) {
       logger.error('获取系统信息失败:', error as Error);
-      throw new Error(isAxiosError(error) ? ((isPresent(error.response?.data?.detail) ? error.response?.data?.detail : error.message)) : isError(error) ? error.message : 'Unknown error');
+      const errorMsg = isAxiosError(error) ? ((isPresent(error.response?.data?.detail) ? error.response?.data?.detail : (error.message !== null && error.message !== undefined && error.message !== '') ? error.message : 'Unknown error')) : isError(error) ? error.message : 'Unknown error';
+      throw new Error(errorMsg);
     }
   }
 
@@ -685,11 +687,11 @@ class PDFImportService {
   }> {
     try {
       // 简单API使用 /info 端点来测试系统状态
-      const response = await axios.get(`${API_BASE_URL}/info`);
+      const response = await axios.get<SystemInfoResponse>(`${API_BASE_URL}/info`);
       return {
         success: true,
-        message: response.data.message,
-        test_result: response.data.features,
+        message: (response.data.message !== null && response.data.message !== undefined && response.data.message !== '') ? response.data.message : 'System OK',
+        test_result: response.data.features as Record<string, unknown> | undefined,
         system_ready: true
       };
     } catch (error: unknown) {
