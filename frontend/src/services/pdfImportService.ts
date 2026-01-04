@@ -347,42 +347,42 @@ class PDFImportService {
             success: true,
             session_id: sessionId,
             file_info: {
-              filename: session.file_name || 'unknown.pdf',
-              size: session.file_size || 0,
+              filename: (session.file_name !== null && session.file_name !== undefined && session.file_name !== '') ? session.file_name : 'unknown.pdf',
+              size: (session.file_size !== null && session.file_size !== undefined && !Number.isNaN(session.file_size)) ? session.file_size : 0,
               content_type: 'application/pdf'
             },
             extraction_result: {
               success: true,
-              data: session.extracted_data || {},
-              confidence_score: session.confidence_score || 0.8,
-              extraction_method: session.processing_method || 'multi_engine',
-              processed_fields: Object.keys(session.extracted_data || {}).length,
+              data: (session.extracted_data !== null && session.extracted_data !== undefined) ? session.extracted_data : {},
+              confidence_score: (session.confidence_score !== null && session.confidence_score !== undefined && !Number.isNaN(session.confidence_score)) ? session.confidence_score : 0.8,
+              extraction_method: (session.processing_method !== null && session.processing_method !== undefined && session.processing_method !== '') ? session.processing_method : 'multi_engine',
+              processed_fields: Object.keys((session.extracted_data !== null && session.extracted_data !== undefined) ? session.extracted_data : {}).length,
               total_fields: 15
             },
             validation_result: {
               success: true,
               errors: [],
               warnings: [],
-              validated_data: session.validated_data || {},
+              validated_data: (session.validated_data !== null && session.validated_data !== undefined) ? session.validated_data : {},
               validation_score: 0.8,
-              processed_fields: Object.keys(session.validated_data || {}).length,
+              processed_fields: Object.keys((session.validated_data !== null && session.validated_data !== undefined) ? session.validated_data : {}).length,
               required_fields_count: 5,
               missing_required_fields: []
             },
             matching_result: {
-              matched_assets: session.matching_results?.matched_assets || [],
-              matched_ownerships: session.matching_results?.matched_ownerships || [],
-              duplicate_contracts: session.matching_results?.duplicate_contracts || [],
-              recommendations: (session.matching_results?.recommendations || {}) as Record<string, string>,
-              match_confidence: session.matching_results?.overall_match_confidence || 0.7
+              matched_assets: session.matching_results?.matched_assets ?? [],
+              matched_ownerships: session.matching_results?.matched_ownerships ?? [],
+              duplicate_contracts: session.matching_results?.duplicate_contracts ?? [],
+              recommendations: (session.matching_results?.recommendations ?? {}) as Record<string, string>,
+              match_confidence: session.matching_results?.overall_match_confidence ?? 0.7
             },
             summary: {
-              extraction_confidence: session.confidence_score || 0.8,
+              extraction_confidence: (session.confidence_score !== null && session.confidence_score !== undefined && !Number.isNaN(session.confidence_score)) ? session.confidence_score : 0.8,
               validation_score: 0.8,
-              match_confidence: session.matching_results?.overall_match_confidence || 0.7,
+              match_confidence: session.matching_results?.overall_match_confidence ?? 0.7,
               total_confidence: 0.75
             },
-            recommendations: Object.values(session.matching_results?.recommendations || {}),
+            recommendations: Object.values(session.matching_results?.recommendations ?? {}),
             ready_for_import: true
           };
 
@@ -391,13 +391,14 @@ class PDFImportService {
             result: result,
             processing_summary: {
               total_processing_time: '30-60秒',
-              extraction_method: session.processing_method || 'multi_engine'
+              extraction_method: (session.processing_method !== null && session.processing_method !== undefined && session.processing_method !== '') ? session.processing_method : 'multi_engine'
             }
           };
         } else if (session.status === 'failed') {
+          const errorMessage = (session.error_message !== null && session.error_message !== undefined && session.error_message !== '') ? session.error_message : '处理失败';
           return {
             success: false,
-            error: session.error_message || '处理失败'
+            error: errorMessage
           };
         } else {
           return {
@@ -406,16 +407,26 @@ class PDFImportService {
           };
         }
       } else {
+        const errorResponse = (progressResponse.error !== null && progressResponse.error !== undefined && progressResponse.error !== '') ? progressResponse.error : '获取进度失败';
         return {
           success: false,
-          error: progressResponse.error || '获取进度失败'
+          error: errorResponse
         };
       }
     } catch (error: unknown) {
       logger.error('获取结果失败:', error as Error);
+      let errorMessage: string;
+      if (isAxiosError(error)) {
+        const detailMessage = error.response?.data?.detail;
+        errorMessage = isStringPresent(detailMessage) ? detailMessage : isStringPresent(error.message) ? error.message : 'Unknown error';
+      } else if (isError(error)) {
+        errorMessage = error.message;
+      } else {
+        errorMessage = 'Unknown error';
+      }
       return {
         success: false,
-        error: isAxiosError(error) ? (error.response?.data?.detail || error.message) : isError(error) ? error.message : 'Unknown error'
+        error: errorMessage
       };
     }
   }
