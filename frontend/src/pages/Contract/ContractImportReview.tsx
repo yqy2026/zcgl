@@ -3,6 +3,9 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { createLogger } from '../../utils/logger';
+
+const componentLogger = createLogger('ContractImportReview');
 import {
   Card,
   Form,
@@ -26,6 +29,7 @@ import {
   SaveOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import type { Dayjs } from 'dayjs';
 
 import {
   type CompleteResult,
@@ -34,6 +38,25 @@ import {
   type AssetMatch,
   type OwnershipMatch
 } from '../../services/pdfImportService';
+
+// Form values interface with Dayjs date objects
+interface ContractImportFormValues {
+  contract_number?: string;
+  asset_id?: string;
+  ownership_id?: string;
+  tenant_name?: string;
+  tenant_contact?: string;
+  tenant_phone?: string;
+  tenant_address?: string;
+  sign_date?: Dayjs;
+  start_date?: Dayjs;
+  end_date?: Dayjs;
+  monthly_rent?: number | string;
+  total_deposit?: number | string;
+  contract_status?: string;
+  payment_terms?: string;
+  contract_notes?: string;
+}
 
 const { Title } = Typography;
 const { TabPane } = Tabs;
@@ -70,12 +93,12 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
       ownership_id: (recommendations.ownership_id !== null && recommendations.ownership_id !== undefined && recommendations.ownership_id !== '') ? recommendations.ownership_id : '',
       tenant_name: (validatedData.tenant_name !== null && validatedData.tenant_name !== undefined && validatedData.tenant_name !== '') ? validatedData.tenant_name : '',
       tenant_contact: (validatedData.tenant_contact !== null && validatedData.tenant_contact !== undefined && validatedData.tenant_contact !== '') ? validatedData.tenant_contact : '',
-      sign_date: validatedData.sign_date ? dayjs(String(validatedData.sign_date)) : null,
-      start_date: validatedData.start_date ? dayjs(String(validatedData.start_date)) : null,
-      end_date: validatedData.end_date ? dayjs(String(validatedData.end_date)) : null,
-      rentable_area: validatedData.rentable_area ? parseFloat(String(validatedData.rentable_area)) : undefined,
-      monthly_rent: validatedData.monthly_rent ? parseFloat(String(validatedData.monthly_rent)) : undefined,
-      total_deposit: validatedData.total_deposit ? parseFloat(String(validatedData.total_deposit)) : 0,
+      sign_date: (validatedData.sign_date !== null && validatedData.sign_date !== undefined && validatedData.sign_date !== '') ? dayjs(String(validatedData.sign_date)) : null,
+      start_date: (validatedData.start_date !== null && validatedData.start_date !== undefined && validatedData.start_date !== '') ? dayjs(String(validatedData.start_date)) : null,
+      end_date: (validatedData.end_date !== null && validatedData.end_date !== undefined && validatedData.end_date !== '') ? dayjs(String(validatedData.end_date)) : null,
+      rentable_area: (validatedData.rentable_area !== null && validatedData.rentable_area !== undefined) ? parseFloat(String(validatedData.rentable_area)) : undefined,
+      monthly_rent: (validatedData.monthly_rent !== null && validatedData.monthly_rent !== undefined) ? parseFloat(String(validatedData.monthly_rent)) : undefined,
+      total_deposit: (validatedData.total_deposit !== null && validatedData.total_deposit !== undefined) ? parseFloat(String(validatedData.total_deposit)) : 0,
       contract_status: (validatedData.contract_status !== null && validatedData.contract_status !== undefined && validatedData.contract_status !== '') ? validatedData.contract_status : '有效',
       payment_terms: (validatedData.payment_terms !== null && validatedData.payment_terms !== undefined && validatedData.payment_terms !== '') ? validatedData.payment_terms : '',
       contract_notes: (validatedData.contract_notes !== null && validatedData.contract_notes !== undefined && validatedData.contract_notes !== '') ? validatedData.contract_notes : '',
@@ -107,16 +130,16 @@ interface FormFieldChange {
   // 确认导入
   const handleConfirm = async () => {
     try {
-      const values = await form.validateFields();
+      const values = await form.validateFields() as ContractImportFormValues;
 
       // 转换日期格式
       const confirmedData: ConfirmedContractData = {
         ...values,
-        sign_date: values.sign_date ? values.sign_date.format('YYYY-MM-DD') : undefined,
-        start_date: values.start_date ? values.start_date.format('YYYY-MM-DD') : '',
-        end_date: values.end_date ? values.end_date.format('YYYY-MM-DD') : '',
-        monthly_rent: values.monthly_rent?.toString() || '',
-        total_deposit: values.total_deposit?.toString() || '0'
+        sign_date: (values.sign_date !== null && values.sign_date !== undefined) ? values.sign_date.format('YYYY-MM-DD') : undefined,
+        start_date: (values.start_date !== null && values.start_date !== undefined) ? values.start_date.format('YYYY-MM-DD') : '',
+        end_date: (values.end_date !== null && values.end_date !== undefined) ? values.end_date.format('YYYY-MM-DD') : '',
+        monthly_rent: values.monthly_rent?.toString() ?? '',
+        total_deposit: values.total_deposit?.toString() ?? '0'
       };
 
       setLoading(true);
@@ -129,7 +152,7 @@ interface FormFieldChange {
         message.error((response.error !== null && response.error !== undefined && response.error !== '') ? response.error : '导入失败');
       }
     } catch (error: unknown) {
-      console.error('表单验证失败:', error);
+      componentLogger.error('表单验证失败:', error as Error);
       const _errorMessage = error instanceof Error ? error.message : '表单验证失败';
       message.error('请检查表单填写是否正确');
     } finally {
@@ -158,7 +181,7 @@ interface FormFieldChange {
             label={
               <Space>
                 <span>合同编号</span>
-                {!!result.extraction_result.data.contract_number && (
+                {(result.extraction_result.data.contract_number !== null && result.extraction_result.data.contract_number !== undefined && result.extraction_result.data.contract_number !== '') && (
                   <Tag color="blue">自动提取</Tag>
                 )}
               </Space>
@@ -174,7 +197,7 @@ interface FormFieldChange {
             label={
               <Space>
                 <span>承租方名称</span>
-                {!!result.extraction_result.data.tenant_name && (
+                {(result.extraction_result.data.tenant_name !== null && result.extraction_result.data.tenant_name !== undefined && result.extraction_result.data.tenant_name !== '') && (
                   <Tag color="blue">自动提取</Tag>
                 )}
               </Space>
@@ -193,7 +216,7 @@ interface FormFieldChange {
             label={
               <Space>
                 <span>承租方联系方式</span>
-                {!!result.extraction_result.data.tenant_contact && (
+                {(result.extraction_result.data.tenant_contact !== null && result.extraction_result.data.tenant_contact !== undefined && result.extraction_result.data.tenant_contact !== '') && (
                   <Tag color="blue">自动提取</Tag>
                 )}
               </Space>
