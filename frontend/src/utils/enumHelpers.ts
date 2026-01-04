@@ -187,7 +187,7 @@ export class EnumSearchHelper {
    */
   static getColorByValue(groups: EnumGroup[], value: string): string {
     const option = this.findByValue(groups, value)
-    return option?.color || 'default'
+    return (option?.color !== null && option?.color !== undefined && option?.color !== '') ? option?.color : 'default'
   }
 
   /**
@@ -247,22 +247,22 @@ export class EnumFormatter {
 
   static getOwnershipStatusColor(value: string): string {
     const option = OwnershipStatusOptions.find(opt => opt.value === value)
-    return option?.color || 'default'
+    return (option?.color !== null && option?.color !== undefined && option?.color !== '') ? option?.color : 'default'
   }
 
   static getBusinessModelColor(value: string): string {
     const option = BusinessModelOptions.find(opt => opt.value === value)
-    return option?.color || 'default'
+    return (option?.color !== null && option?.color !== undefined && option?.color !== '') ? option?.color : 'default'
   }
 
   static getTenantTypeColor(value: string): string {
     const option = TenantTypeOptions.find(opt => opt.value === value)
-    return option?.color || 'default'
+    return (option?.color !== null && option?.color !== undefined && option?.color !== '') ? option?.color : 'default'
   }
 
   static getOperationStatusColor(value: string): string {
     const option = OperationStatusOptions.find(opt => opt.value === value)
-    return option?.color || 'default'
+    return (option?.color !== null && option?.color !== undefined && option?.color !== '') ? option?.color : 'default'
   }
 
   /**
