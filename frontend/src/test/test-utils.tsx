@@ -3,6 +3,8 @@
  * 提供React Testing Library的增强功能和自定义工具
  */
 
+/* eslint-disable no-console */
+
 import React, { ReactElement, ReactNode } from 'react'
 import {
   render,
@@ -294,7 +296,7 @@ export const waitForLoadingToFinish = () =>
  * ```
  */
 export const mockConsole = (method: 'log' | 'error' | 'warn' = 'log') => {
-  const original = console[method]
+  const _original = console[method]
   const spy = vi.spyOn(console, method).mockImplementation(() => {})
 
   return () => {

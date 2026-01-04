@@ -24,16 +24,16 @@ const ProfilePage: React.FC = () => {
   useEffect(() => {
     if (user) {
       form.setFieldsValue({
-        full_name: user.full_name || '',
-        email: user.email || '',
-        phone: user.phone || ''
+        full_name: (user.full_name !== null && user.full_name !== undefined) ? user.full_name : '',
+        email: (user.email !== null && user.email !== undefined) ? user.email : '',
+        phone: (user.phone !== null && user.phone !== undefined) ? user.phone : ''
       })
     }
   }, [user, form])
 
   // 处理个人资料更新
   const handleUpdateProfile = async (values: ProfileFormData) => {
-    if (!user) return
+    if ((user === null || user === undefined)) return
 
     setLoading(true)
     try {
@@ -42,7 +42,8 @@ const ProfilePage: React.FC = () => {
       setEditModalVisible(false)
       await refreshUser() // 刷新用户信息
     } catch (error: unknown) {
-      message.error((error as Error).message || '更新失败，请稍后重试')
+      const errorMessage = (error as Error).message;
+      message.error((errorMessage !== null && errorMessage !== undefined && errorMessage !== '') ? errorMessage : '更新失败，请稍后重试')
     } finally {
       setLoading(false)
     }
@@ -70,7 +71,7 @@ const ProfilePage: React.FC = () => {
       user: { text: '普通用户', color: 'blue' },
       manager: { text: '管理员', color: 'orange' }
     }
-    const roleInfo = roleMap[role] || { text: role, color: 'default' }
+    const roleInfo = (roleMap[role as keyof typeof roleMap] !== null && roleMap[role as keyof typeof roleMap] !== undefined) ? roleMap[role as keyof typeof roleMap] : { text: role, color: 'default' }
     return <Tag color={roleInfo.color}>{roleInfo.text}</Tag>
   }
 
@@ -147,13 +148,13 @@ const ProfilePage: React.FC = () => {
                     <Text strong>{user.username}</Text>
                   </Descriptions.Item>
                   <Descriptions.Item label="姓名">
-                    <Text strong>{user.full_name || '-'}</Text>
+                    <Text strong>{(user.full_name !== null && user.full_name !== undefined && user.full_name !== '') ? user.full_name : '-'}</Text>
                   </Descriptions.Item>
                   <Descriptions.Item label="邮箱">
-                    {user.email || '-'}
+                    {(user.email !== null && user.email !== undefined && user.email !== '') ? user.email : '-'}
                   </Descriptions.Item>
                   <Descriptions.Item label="电话">
-                    {user.phone || '-'}
+                    {(user.phone !== null && user.phone !== undefined && user.phone !== '') ? user.phone : '-'}
                   </Descriptions.Item>
                   <Descriptions.Item label="角色">
                     {getRoleDisplay(user.role)}
@@ -162,13 +163,13 @@ const ProfilePage: React.FC = () => {
                     {getStatusDisplay(user.is_active)}
                   </Descriptions.Item>
                   <Descriptions.Item label="最后登录时间">
-                    {user.last_login_at ?
+                    {(user.last_login_at !== null && user.last_login_at !== undefined && user.last_login_at !== '') ?
                       new Date(user.last_login_at).toLocaleString() :
                       '从未登录'
                     }
                   </Descriptions.Item>
                   <Descriptions.Item label="密码最后修改时间">
-                    {user.password_last_changed ?
+                    {(user.password_last_changed !== null && user.password_last_changed !== undefined && user.password_last_changed !== '') ?
                       new Date(user.password_last_changed).toLocaleString() :
                       '未修改'
                     }
@@ -345,7 +346,7 @@ const ProfilePage: React.FC = () => {
               { required: true, message: '请确认新密码' },
               ({ getFieldValue }) => ({
                 validator(_, value) {
-                  if (!value || getFieldValue('newPassword') === value) {
+                  if ((value === null || value === undefined || value === '') || getFieldValue('newPassword') === value) {
                     return Promise.resolve()
                   }
                   return Promise.reject(new Error('两次输入的密码不一致'))

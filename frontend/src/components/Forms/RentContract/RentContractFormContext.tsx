@@ -52,6 +52,35 @@ export interface RentTermFormData {
     other_fees?: number;
 }
 
+// Form values interface (with Dayjs objects)
+interface RentContractFormValues {
+    contract_number?: string;
+    asset_id: string;
+    ownership_id: string;
+    tenant_name: string;
+    tenant_contact?: string;
+    tenant_phone?: string;
+    tenant_address?: string;
+    sign_date?: Dayjs;
+    start_date: Dayjs;
+    end_date: Dayjs;
+    total_deposit?: number;
+    monthly_rent_base?: number;
+    contract_status?: string;
+    payment_terms?: string;
+    contract_notes?: string;
+}
+
+// Term form values interface
+interface RentTermFormValues {
+    start_date: Dayjs;
+    end_date: Dayjs;
+    monthly_rent: number;
+    rent_description?: string;
+    management_fee?: number;
+    other_fees?: number;
+}
+
 export interface RentContractFormContextValue {
     form: FormInstance;
     termForm: FormInstance;
@@ -154,9 +183,9 @@ export const RentContractFormProvider: React.FC<RentContractFormProviderProps> =
         if (initialData && mode === 'edit') {
             const formData = {
                 ...initialData,
-                sign_date: initialData.sign_date ? dayjs(initialData.sign_date) : undefined,
-                start_date: initialData.start_date ? dayjs(initialData.start_date) : undefined,
-                end_date: initialData.end_date ? dayjs(initialData.end_date) : undefined,
+                sign_date: (initialData.sign_date !== null && initialData.sign_date !== undefined && initialData.sign_date !== '') ? dayjs(initialData.sign_date) : undefined,
+                start_date: (initialData.start_date !== null && initialData.start_date !== undefined && initialData.start_date !== '') ? dayjs(initialData.start_date) : undefined,
+                end_date: (initialData.end_date !== null && initialData.end_date !== undefined && initialData.end_date !== '') ? dayjs(initialData.end_date) : undefined,
             };
             form.setFieldsValue(formData);
 
@@ -167,8 +196,8 @@ export const RentContractFormProvider: React.FC<RentContractFormProviderProps> =
                     end_date: dayjs(term.end_date),
                     monthly_rent: term.monthly_rent,
                     rent_description: term.rent_description,
-                    management_fee: term.management_fee || 0,
-                    other_fees: term.other_fees || 0,
+                    management_fee: (term.management_fee !== null && term.management_fee !== undefined) ? term.management_fee : 0,
+                    other_fees: (term.other_fees !== null && term.other_fees !== undefined) ? term.other_fees : 0,
                 }));
                 setRentTerms(terms);
             }
@@ -177,7 +206,7 @@ export const RentContractFormProvider: React.FC<RentContractFormProviderProps> =
 
     const handleSubmit = async () => {
         try {
-            const values = await form.validateFields();
+            const values = await form.validateFields() as RentContractFormValues;
 
             if (rentTerms.length === 0) {
                 message.error('请至少添加一个租金条款');
@@ -189,9 +218,9 @@ export const RentContractFormProvider: React.FC<RentContractFormProviderProps> =
                 end_date: term.end_date.format('YYYY-MM-DD'),
                 monthly_rent: term.monthly_rent,
                 rent_description: term.rent_description,
-                management_fee: term.management_fee || 0,
-                other_fees: term.other_fees || 0,
-                total_monthly_amount: term.monthly_rent + (term.management_fee || 0) + (term.other_fees || 0),
+                management_fee: (term.management_fee !== null && term.management_fee !== undefined) ? term.management_fee : 0,
+                other_fees: (term.other_fees !== null && term.other_fees !== undefined) ? term.other_fees : 0,
+                total_monthly_amount: (term.monthly_rent ?? 0) + ((term.management_fee !== null && term.management_fee !== undefined) ? term.management_fee : 0) + ((term.other_fees !== null && term.other_fees !== undefined) ? term.other_fees : 0),
             }));
 
             const contractData: RentContractCreate = {
@@ -202,12 +231,12 @@ export const RentContractFormProvider: React.FC<RentContractFormProviderProps> =
                 tenant_contact: values.tenant_contact,
                 tenant_phone: values.tenant_phone,
                 tenant_address: values.tenant_address,
-                sign_date: values.sign_date.format('YYYY-MM-DD'),
+                sign_date: values.sign_date?.format('YYYY-MM-DD') ?? '',
                 start_date: values.start_date.format('YYYY-MM-DD'),
                 end_date: values.end_date.format('YYYY-MM-DD'),
-                total_deposit: values.total_deposit || 0,
+                total_deposit: (values.total_deposit !== null && values.total_deposit !== undefined) ? values.total_deposit : 0,
                 monthly_rent_base: values.monthly_rent_base,
-                contract_status: values.contract_status || '有效',
+                contract_status: (values.contract_status !== null && values.contract_status !== undefined && values.contract_status !== '') ? values.contract_status : '有效',
                 payment_terms: values.payment_terms,
                 contract_notes: values.contract_notes,
                 rent_terms,
@@ -237,15 +266,15 @@ export const RentContractFormProvider: React.FC<RentContractFormProviderProps> =
 
     const handleSaveRentTerm = async () => {
         try {
-            const values = await termForm.validateFields();
+            const values = await termForm.validateFields() as RentTermFormValues;
             const termData: RentTermFormData = {
                 key: editingTerm ? editingTerm.key : `term-${Date.now()}`,
                 start_date: values.start_date,
                 end_date: values.end_date,
                 monthly_rent: values.monthly_rent,
                 rent_description: values.rent_description,
-                management_fee: values.management_fee || 0,
-                other_fees: values.other_fees || 0,
+                management_fee: (values.management_fee !== null && values.management_fee !== undefined) ? values.management_fee : 0,
+                other_fees: (values.other_fees !== null && values.other_fees !== undefined) ? values.other_fees : 0,
             };
 
             if (editingTerm) {

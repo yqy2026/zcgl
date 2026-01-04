@@ -45,7 +45,7 @@ export const useOwnershipOptions = (isActive: boolean = true): UseOwnershipOptio
   return {
     ownerships: (data || []) as Ownership[],
     loading: isLoading,
-    error: error?.message || null,
+    error: (error?.message !== null && error?.message !== undefined && error?.message !== '') ? error?.message : null,
     refresh: refetch
   }
 }
@@ -66,7 +66,7 @@ export const useOwnershipDetail = (id?: string): UseOwnershipDetailResult => {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey,
     queryFn: async () => {
-      if (!id) return null
+      if ((id === null || id === undefined || id === '')) return null
       try {
         const response = await ownershipService.getOwnership(id)
         return response
@@ -81,13 +81,13 @@ export const useOwnershipDetail = (id?: string): UseOwnershipDetailResult => {
     refetchOnMount: false,
     refetchOnReconnect: false,
     retry: 1,
-    enabled: !!id
+    enabled: (id !== null && id !== undefined && id !== '')
   })
 
   return {
     ownership: (data || null) as Ownership | null,
     loading: isLoading,
-    error: error?.message || null,
+    error: (error?.message !== null && error?.message !== undefined && error?.message !== '') ? error?.message : null,
     refresh: refetch
   }
 }

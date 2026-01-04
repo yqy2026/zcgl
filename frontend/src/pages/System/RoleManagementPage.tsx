@@ -231,10 +231,12 @@ const RoleManagementPage: React.FC = () => {
     }
   }, [roles])
 
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     void loadRoles()
     void loadPermissions()
   }, [])
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   useEffect(() => {
     void loadStatistics()

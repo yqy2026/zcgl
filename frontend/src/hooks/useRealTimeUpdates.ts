@@ -156,7 +156,7 @@ export const useWebSocketUpdates = (
 
         wsRef.current.onmessage = (event) => {
           try {
-            const data = JSON.parse(event.data)
+            const data = JSON.parse(event.data) as { type: string; payload?: unknown }
 
             // 处理不同类型的消息
             switch (data.type) {
@@ -167,11 +167,13 @@ export const useWebSocketUpdates = (
                 queryClient.invalidateQueries({ queryKey })
                 message.info('数据已更新')
                 break
-              case 'bulk_operation':
+              case 'bulk_operation': {
                 // 批量操作完成
                 queryClient.invalidateQueries({ queryKey })
-                message.success(data.message || '批量操作完成')
+                const bulkOpData = data as { type: string; payload?: { message?: string }; message?: string }
+                message.success((bulkOpData.message !== null && bulkOpData.message !== undefined && bulkOpData.message !== '') ? bulkOpData.message : '批量操作完成')
                 break
+              }
               default:
               // Unknown message type
             }

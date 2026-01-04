@@ -179,8 +179,8 @@ const OptimizedAssetImport: React.FC = () => {
 
       const result = response.data as ImportResult;
       // Import completed successfully
-      // console.log('=== 导入结果 ===')
-      // console.log('响应数据:', result)
+      // logger.debug('=== 导入结果 ===')
+      // logger.debug('响应数据:', result)
 
       setImportResult(result);
       setCurrentStep(2);

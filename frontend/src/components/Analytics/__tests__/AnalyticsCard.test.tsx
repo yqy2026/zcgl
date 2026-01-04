@@ -40,10 +40,13 @@ describe('AnalyticsCard - 基础属性测试', () => {
 
   it('应该支持title属性', async () => {
     const { AnalyticsCard } = await import('../AnalyticsCard')
-    const element = React.createElement(AnalyticsCard, {
-      title: '测试标题',
-      children: React.createElement('div', {}, '内容'),
-    })
+    const element = React.createElement(
+      AnalyticsCard,
+      {
+        title: '测试标题',
+        children: React.createElement('div', null, '内容'),
+      }
+    )
     expect(element).toBeTruthy()
   })
 

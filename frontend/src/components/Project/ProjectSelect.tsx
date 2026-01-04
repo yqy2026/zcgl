@@ -54,7 +54,7 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
 
   // 当前选中的项目
   const _selectedProject = useMemo(() => {
-    if (!value) return null;
+    if (value === null || value === undefined || value === '') return null;
     return allProjects.find(p => p.id === value) ||
            allProjects.find(p => p.name === value) ||
            null;
@@ -62,20 +62,25 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
 
   // 监听value变化，更新显示值
   useEffect(() => {
-    if (!value) {
+    if (value === null || value === undefined || value === '') {
       setDisplayValue('');
       return;
     }
 
     const project = allProjects.find(p => p.id === value);
     if (project) {
-      const displayName = (project as any).short_name ? `${project.name} (${(project as any).short_name})` : project.name;
+      const hasShortName = 'short_name' in project &&
+        project.short_name !== null &&
+        project.short_name !== undefined &&
+        typeof project.short_name === 'string' &&
+        project.short_name !== '';
+      const displayName = hasShortName ? `${project.name} (${project.short_name})` : project.name;
       setDisplayValue(displayName);
     } else {
       // 如果在allProjects中找不到项目，不要覆盖现有的显示值
       // 这可能发生在项目数据还在加载中的情况
       // 只有当displayValue为空时才设置为原始value
-      if (!displayValue) {
+      if (displayValue === null || displayValue === undefined || displayValue === '') {
         setDisplayValue(value);
       }
     }
@@ -90,12 +95,12 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
     title?: React.ReactNode;
   }) => {
     // 从option中获取真实的项目ID
-    const realValue = option?.realValue || option?.value;
+    const realValue = (option?.realValue !== null && option?.realValue !== undefined && option?.realValue !== '') ? option?.realValue : option?.value;
     const selected = filteredProjects.find(p => p.id === realValue);
 
     if (selected) {
       setDisplayValue(selectedValue);
-      onChange?.(selected.id, selected as any);
+      onChange?.(selected.id, selected as Project);
     } else {
       setDisplayValue(selectedValue);
       onChange?.(selectedValue);
@@ -116,7 +121,12 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
   // 从弹窗中选择项目
   const handleModalSelect = (project: Project) => {
     // 更新显示值
-    const displayName = (project as any).short_name ? `${project.name} (${(project as any).short_name})` : project.name;
+    const hasShortName = 'short_name' in project &&
+      project.short_name !== null &&
+      project.short_name !== undefined &&
+      typeof project.short_name === 'string' &&
+      project.short_name !== '';
+    const displayName = hasShortName ? `${project.name} (${project.short_name})` : project.name;
     setDisplayValue(displayName);
 
     // 调用父组件的onChange
@@ -140,7 +150,7 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
       <Space.Compact style={{ width: '100%' }}>
         <Select
           value={displayValue || undefined}
-          onChange={handleChange as any}
+          onChange={handleChange as unknown as ((value: string, option?: { label: string; value: string; realValue: string } | { label: string; value: string; realValue: string }[]) => void)}
           onClear={handleClear}
           placeholder={placeholder}
           disabled={disabled}
@@ -149,33 +159,26 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
           style={{ flex: 1 }}
           loading={loading}
           showSearch
-          filterOption={(input, option) =>
-            String(option?.children as any || '').toLowerCase().includes(input.toLowerCase()) ||
-            String(option?.label as any || '').toLowerCase().includes(input.toLowerCase())
-          }
+          filterOption={(input, option) => {
+            const label = option?.label !== null && option?.label !== undefined ? String(option.label) : '';
+            return label.toLowerCase().includes(input.toLowerCase());
+          }}
           notFoundContent={loading ? '加载中...' : '暂无数据'}
           optionLabelProp="label"
           // 自定义显示文本，确保选择项目后显示项目名称而不是ID
-          options={filteredProjects.map(project => ({
-            label: (project as any).short_name ? `${project.name} (${(project as any).short_name})` : project.name,
-            value: (project as any).short_name ? `${project.name} (${(project as any).short_name})` : project.name,
-            // 存储真实的项目ID用于内部处理
-            realValue: project.id,
-            // 保留完整信息用于下拉显示
-            title: (
-              <Space>
-                <span>{project.name}</span>
-                {(project as any).short_name && (
-                  <span style={{ color: '#999', fontSize: '12px' }}>
-                    ({(project as any).short_name})
-                  </span>
-                )}
-                <span style={{ color: '#666', fontSize: '12px' }}>
-                  [{project.code}]
-                </span>
-              </Space>
-            ),
-          })) as any}
+          options={filteredProjects.map(project => {
+            const hasShortName = 'short_name' in project &&
+              project.short_name !== null &&
+              project.short_name !== undefined &&
+              typeof project.short_name === 'string' &&
+              project.short_name !== '';
+            const displayName = hasShortName ? `${project.name} (${project.short_name})` : project.name;
+            return {
+              label: displayName,
+              value: displayName,
+              realValue: project.id
+            };
+          })}
         />
 
         <Tooltip title="从列表中选择">

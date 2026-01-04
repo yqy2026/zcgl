@@ -119,7 +119,9 @@ export class AssetHistoryService {
                 throw new Error(`获取字段历史失败: ${result.error}`);
             }
 
-            return result.data!.history || [];
+            return ((result.data !== null && result.data !== undefined) && (result.data.history !== null && result.data.history !== undefined))
+                    ? result.data.history
+                    : [];
         } catch (error) {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);

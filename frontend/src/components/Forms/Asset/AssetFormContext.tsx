@@ -5,6 +5,7 @@ import type { RentContract } from '../../../types/rentContract';
 import { rentContractService } from '../../../services/rentContractService';
 import { message } from 'antd';
 import { createLogger } from '../../../utils/logger';
+import dayjs from 'dayjs';
 
 const componentLogger = createLogger('AssetFormContext');
 
@@ -59,7 +60,7 @@ export const AssetFormProvider: React.FC<AssetFormProviderProps> = ({
     const [loadingContracts, setLoadingContracts] = useState(false);
 
     const loadRentContracts = useCallback(async (assetId?: string) => {
-        if (!assetId) {
+        if ((assetId === null || assetId === undefined || assetId === '')) {
             setRentContracts([]);
             return;
         }
@@ -81,11 +82,10 @@ export const AssetFormProvider: React.FC<AssetFormProviderProps> = ({
 
         if (selectedContract) {
             // Auto-fill tenant and contract info
-            const dayjs = require('dayjs');
             form.setFieldsValue({
                 tenant_name: selectedContract.tenant_name,
                 tenant_contact: selectedContract.tenant_contact,
-                tenant_type: selectedContract.tenant_id ? 'enterprise' : 'individual',
+                tenant_type: (selectedContract.tenant_id !== null && selectedContract.tenant_id !== undefined && selectedContract.tenant_id !== '') ? 'enterprise' : 'individual',
                 lease_contract_number: selectedContract.contract_number,
                 contract_start_date: selectedContract.start_date
                     ? dayjs(selectedContract.start_date)

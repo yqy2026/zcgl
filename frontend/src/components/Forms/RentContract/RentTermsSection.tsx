@@ -52,7 +52,9 @@ const RentTermsSection: React.FC = () => {
             title: '月应收总额',
             key: 'total_amount',
             render: (record: RentTermFormData) => {
-                const total = record.monthly_rent + (record.management_fee || 0) + (record.other_fees || 0);
+                const managementFee = (record.management_fee !== null && record.management_fee !== undefined) ? record.management_fee : 0;
+                const otherFees = (record.other_fees !== null && record.other_fees !== undefined) ? record.other_fees : 0;
+                const total = record.monthly_rent + managementFee + otherFees;
                 return `¥${total.toLocaleString()}`;
             },
             width: 120,

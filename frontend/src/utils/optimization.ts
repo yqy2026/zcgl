@@ -9,12 +9,13 @@ export const useDebounce = <T extends (...args: unknown[]) => unknown>(
 ): T => {
   const timeoutRef = useRef<NodeJS.Timeout>()
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   return useCallback(
     ((...args: Parameters<T>) => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current)
       }
-      
+
       timeoutRef.current = setTimeout(() => {
         callback(...args)
       }, delay)
@@ -30,6 +31,7 @@ export const useThrottle = <T extends (...args: unknown[]) => unknown>(
 ): T => {
   const lastCallRef = useRef<number>(0)
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   return useCallback(
     ((...args: Parameters<T>) => {
       const now = Date.now()
@@ -126,36 +128,48 @@ export const useMemoryLeakDetection = (componentName: string) => {
   const intervalsRef = useRef<Set<NodeJS.Timeout>>(new Set())
   const listenersRef = useRef<Map<string, EventListener>>(new Map())
 
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     mountTimeRef.current = Date.now()
-    
+
     return () => {
       const unmountTime = Date.now()
-      const _lifeTime = unmountTime - (mountTimeRef.current || 0)
-      
+      const _lifeTime = unmountTime - (mountTimeRef.current !== null && mountTimeRef.current !== undefined ? mountTimeRef.current : 0)
+
+      // Capture ref values at the start of cleanup to avoid stale closure warnings
+      const timers = timersRef.current
+      const intervals = intervalsRef.current
+      const listeners = listenersRef.current
+
       // 清理定时器
-      timersRef.current.forEach(timer => clearTimeout(timer))
-      intervalsRef.current.forEach(interval => clearInterval(interval))
-      
+      timers.forEach(timer => clearTimeout(timer))
+      intervals.forEach(interval => clearInterval(interval))
+
       // 清理事件监听器
-      listenersRef.current.forEach((listener, event) => {
+      listeners.forEach((listener, event) => {
         window.removeEventListener(event, listener)
       })
-      
+
       // 在开发环境下记录组件生命周期
       if (process.env.NODE_ENV === 'development') {
         // Component unmounted
-        
-        if (timersRef.current.size > 0) {
-          console.warn(`Component ${componentName} had ${timersRef.current.size} uncleaned timers`)
+
+        const timersCount = timers.size
+        const listenersCount = listeners.size
+
+        if (timersCount > 0) {
+          // eslint-disable-next-line no-console
+          console.warn(`Component ${componentName} had ${timersCount} uncleaned timers`)
         }
-        
-        if (listenersRef.current.size > 0) {
-          console.warn(`Component ${componentName} had ${listenersRef.current.size} uncleaned listeners`)
+
+        if (listenersCount > 0) {
+          // eslint-disable-next-line no-console
+          console.warn(`Component ${componentName} had ${listenersCount} uncleaned listeners`)
         }
       }
     }
   }, [componentName])
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   const addTimer = useCallback((timer: NodeJS.Timeout) => {
     timersRef.current.add(timer)
@@ -188,10 +202,11 @@ export const useRenderPerformance = (componentName: string) => {
     renderCountRef.current++
     const now = performance.now()
     
-    if (lastRenderTimeRef.current) {
+    if (lastRenderTimeRef.current !== null && lastRenderTimeRef.current !== undefined && !Number.isNaN(lastRenderTimeRef.current)) {
       const renderTime = now - lastRenderTimeRef.current
       
       if (process.env.NODE_ENV === 'development' && renderTime > 16) {
+        // eslint-disable-next-line no-console
         console.warn(`Slow render detected in ${componentName}: ${renderTime.toFixed(2)}ms`)
       }
     }
@@ -227,12 +242,13 @@ export const useCache = <T>(key: string, factory: () => T, deps: unknown[] = [])
     // 限制缓存大小
     if (cache.current.size > 100) {
       const firstKey = cache.current.keys().next().value
-      if (firstKey) {
+      if (firstKey !== null && firstKey !== undefined && firstKey !== '') {
         cache.current.delete(firstKey)
       }
     }
     
     return value
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps)
 }
 

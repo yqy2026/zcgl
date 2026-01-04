@@ -11,6 +11,21 @@ import { ConfigProvider, theme } from "antd";
 // 动画类型
 type AnimationType = "fade" | "slide" | "scale" | "flip" | "none";
 
+// 动画过渡配置接口
+interface TransitionConfig {
+  transition?: {
+    duration?: number;
+    ease?: string | number[];
+  };
+}
+
+// 动画配置接口
+interface AnimationVariants {
+  initial: string | Record<string, unknown>;
+  enter: TransitionConfig & Record<string, unknown>;
+  exit: TransitionConfig & Record<string, unknown>;
+}
+
 // 网络连接接口
 interface NetworkConnection {
   effectiveType: "slow-2g" | "2g" | "3g" | "4g";
@@ -209,7 +224,7 @@ export const RouteTransition: React.FC<RouteTransitionProps> = ({
 
   // 根据导航类型选择动画
   const getAnimationType = () => {
-    if (custom) return "fade";
+    if (custom !== null && custom !== undefined && custom === true) return "fade";
 
     switch (navigationType) {
       case "POP":
@@ -223,16 +238,16 @@ export const RouteTransition: React.FC<RouteTransitionProps> = ({
     }
   };
 
-  const animationConfig = globalTransitionManager.getAnimationConfig(getAnimationType());
+  const animationConfig = globalTransitionManager.getAnimationConfig(getAnimationType()) as AnimationVariants;
 
   // 应用自定义持续时间
-  if (duration) {
+  if (duration !== null && duration !== undefined && !Number.isNaN(duration)) {
     animationConfig.enter.transition = {
-      ...animationConfig.enter.transition,
+      ...(animationConfig.enter.transition !== null && animationConfig.enter.transition !== undefined ? animationConfig.enter.transition : {}),
       duration,
     };
     animationConfig.exit.transition = {
-      ...animationConfig.exit.transition,
+      ...(animationConfig.exit.transition !== null && animationConfig.exit.transition !== undefined ? animationConfig.exit.transition : {}),
       duration,
     };
   }
@@ -241,9 +256,9 @@ export const RouteTransition: React.FC<RouteTransitionProps> = ({
     <AnimatePresence mode="wait">
       <motion.div
         key={location.pathname}
-        initial={animationConfig.initial}
-        animate={animationConfig.enter}
-        exit={animationConfig.exit}
+        initial={animationConfig.initial as import('framer-motion').TargetAndTransition}
+        animate={animationConfig.enter as import('framer-motion').TargetAndTransition}
+        exit={animationConfig.exit as import('framer-motion').TargetAndTransition}
         style={{
           position: "absolute",
           width: "100%",
@@ -286,12 +301,12 @@ export const LayoutTransition: React.FC<{
   animation?: "fade" | "slide" | "scale";
   duration?: number;
 }> = ({ children, animation = "fade", duration = 200 }) => {
-  const config = globalTransitionManager.getAnimationConfig(animation);
+  const config = globalTransitionManager.getAnimationConfig(animation) as AnimationVariants;
 
   return (
     <motion.div
-      initial={config.initial}
-      animate={config.enter}
+      initial={config.initial as import('framer-motion').TargetAndTransition}
+      animate={config.enter as import('framer-motion').TargetAndTransition}
       transition={{
         duration,
         ease: "easeInOut",
@@ -357,7 +372,7 @@ export const useRouteAnimation = (route: string) => {
     };
 
     const defaultAnimation = Object.keys(routeAnimations).find((r) => route.startsWith(r));
-    setAnimationType(defaultAnimation ? routeAnimations[defaultAnimation] : "fade");
+    setAnimationType((defaultAnimation !== null && defaultAnimation !== undefined && defaultAnimation !== '') ? routeAnimations[defaultAnimation] : "fade");
   }, [route]);
 
   return { animationType };
@@ -374,7 +389,7 @@ export const useSmartTransition = () => {
   useEffect(() => {
     // 根据用户行为学习偏好
     const userPreferences = localStorage.getItem("preferred_route_animation");
-    if (userPreferences && ["fade", "slide", "scale", "flip", "none"].includes(userPreferences)) {
+    if (userPreferences !== null && userPreferences !== undefined && userPreferences !== '' && ["fade", "slide", "scale", "flip", "none"].includes(userPreferences)) {
       setPreferredAnimation(userPreferences as AnimationType);
     }
   }, []);
@@ -437,9 +452,9 @@ export const OptimizedTransition: React.FC<{
 
   return (
     <motion.div
-      initial={config.initial}
-      animate={config.enter}
-      exit={config.exit}
+      initial={config.initial as import('framer-motion').TargetAndTransition}
+      animate={config.enter as import('framer-motion').TargetAndTransition}
+      exit={config.exit as import('framer-motion').TargetAndTransition}
       style={{
         willChange: "opacity, transform", // 提示浏览器优化
       }}

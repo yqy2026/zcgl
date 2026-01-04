@@ -63,7 +63,7 @@ class ErrorBoundaryComponent extends Component<ErrorBoundaryProps, ErrorBoundary
       retryCount: 0
     }
 
-    this.maxRetries = props.maxRetries || 3
+    this.maxRetries = (props.maxRetries !== null && props.maxRetries !== undefined) ? props.maxRetries : 3
   }
 
   static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
@@ -87,6 +87,7 @@ class ErrorBoundaryComponent extends Component<ErrorBoundaryProps, ErrorBoundary
       this.props.onError(error, errorInfo)
     }
 
+    // eslint-disable-next-line no-console
     console.error('错误边界捕获到错误:', error, errorInfo)
   }
 
@@ -103,7 +104,7 @@ class ErrorBoundaryComponent extends Component<ErrorBoundaryProps, ErrorBoundary
 
     // 存储错误到 window 对象用于调试
     if (process.env.NODE_ENV === 'development') {
-      (window as any).__lastError = errorReport
+      (window as unknown as { __lastError?: ErrorReport }).__lastError = errorReport
     }
 
     // 发送错误报告到监控服务
@@ -123,11 +124,15 @@ class ErrorBoundaryComponent extends Component<ErrorBoundaryProps, ErrorBoundary
         })
       } else {
         // 开发环境打印到控制台
+        // eslint-disable-next-line no-console
         console.group('错误报告')
+        // eslint-disable-next-line no-console
         console.error('错误:', errorReport)
+        // eslint-disable-next-line no-console
         console.groupEnd()
       }
     } catch (reportingError) {
+      // eslint-disable-next-line no-console
       console.warn('错误报告发送失败:', reportingError)
     }
   }
@@ -161,7 +166,7 @@ class ErrorBoundaryComponent extends Component<ErrorBoundaryProps, ErrorBoundary
   render() {
     if (this.state.hasError) {
       // 如果提供了自定义fallback，使用它
-      if (this.props.fallback) {
+      if ((this.props.fallback !== null && this.props.fallback !== undefined)) {
         return this.props.fallback
       }
 
@@ -298,7 +303,7 @@ const ErrorHandler: React.FC<RouterErrorHandlerProps> = ({
             <Text strong>重试次数:</Text> {retryCount}/{maxRetries}
           </Paragraph>
 
-          {error.stack && (
+          {(error.stack !== null && error.stack !== undefined && error.stack !== '') && (
             <details style={{ marginTop: '10px' }}>
               <summary>错误堆栈</summary>
               <pre style={{
@@ -312,7 +317,7 @@ const ErrorHandler: React.FC<RouterErrorHandlerProps> = ({
             </details>
           )}
 
-          {errorInfo?.componentStack && (
+          {(errorInfo?.componentStack !== null && errorInfo?.componentStack !== undefined && errorInfo?.componentStack !== '') && (
             <details style={{ marginTop: '10px' }}>
               <summary>组件堆栈</summary>
               <pre style={{
@@ -344,12 +349,13 @@ export const useErrorHandler = () => {
   }, [])
 
   const captureError = React.useCallback((error: Error) => {
+    // eslint-disable-next-line no-console
     console.error('Error captured by useErrorHandler:', error)
     setError(error)
 
     // 存储错误到 window 对象用于调试
     if (process.env.NODE_ENV === 'development') {
-      (window as any).__lastError = {
+      (window as unknown as { __lastError?: { message: string; stack?: string; timestamp: string } }).__lastError = {
         message: error.message,
         stack: error.stack,
         timestamp: new Date().toISOString()
@@ -377,6 +383,7 @@ export const useRouterErrorBoundary = () => {
   const navigate = useNavigate()
 
   const handleError = useCallback((error: Error, fallbackPath: string = '/dashboard') => {
+    // eslint-disable-next-line no-console
     console.error('路由错误:', error)
 
     // 根据错误类型决定处理方式
@@ -402,6 +409,7 @@ export const AssetErrorBoundary: React.FC<{ children: ReactNode }> = ({ children
     <ErrorBoundary
       maxRetries={2}
       onError={(error) => {
+        // eslint-disable-next-line no-console
         console.error('资产管理模块错误:', error)
       }}
     >
@@ -415,6 +423,7 @@ export const SystemErrorBoundary: React.FC<{ children: ReactNode }> = ({ childre
     <ErrorBoundary
       maxRetries={1}
       onError={(error) => {
+        // eslint-disable-next-line no-console
         console.error('系统管理模块错误:', error)
       }}
     >

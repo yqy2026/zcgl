@@ -41,9 +41,9 @@ export const LoadingProvider: React.FC<{ children: ReactNode }> = ({ children })
   const showGlobalLoading = useCallback((state: Partial<LoadingState>) => {
     setGlobalLoading(prev => ({
       loading: true,
-      text: state.text || prev.text,
-      tip: state.tip || prev.tip,
-      delay: state.delay || prev.delay,
+      text: (state.text !== null && state.text !== undefined && state.text !== '') ? state.text : prev.text,
+      tip: (state.tip !== null && state.tip !== undefined && state.tip !== '') ? state.tip : prev.tip,
+      delay: (state.delay !== null && state.delay !== undefined) ? state.delay : prev.delay,
     }))
   }, [])
 
@@ -89,6 +89,7 @@ export const LoadingProvider: React.FC<{ children: ReactNode }> = ({ children })
       const result = await asyncFn()
       return result
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error(`Error in withLoading (${key}):`, error)
       throw error
     } finally {
@@ -136,7 +137,7 @@ export const useGlobalLoading = () => {
 export const useLocalLoading = (key: string) => {
   const { showLocalLoading, hideLocalLoading, localLoadings } = useLoading()
 
-  const loading = localLoadings.get(key)?.loading || false
+  const loading = (localLoadings.get(key)?.loading === true) ? true : false
   const loadingState = localLoadings.get(key) || { loading: false }
 
   return {
@@ -172,7 +173,7 @@ export const GlobalLoadingOverlay: React.FC = () => {
     >
       <Spin
         size="large"
-        tip={globalLoading.tip || globalLoading.text || '加载中...'}
+        tip={(globalLoading.tip !== null && globalLoading.tip !== undefined && globalLoading.tip !== '') ? globalLoading.tip : (globalLoading.text !== null && globalLoading.text !== undefined && globalLoading.text !== '') ? globalLoading.text : '加载中...'}
         delay={globalLoading.delay}
       />
     </div>
@@ -204,7 +205,7 @@ export const LocalLoading: React.FC<LocalLoadingProps> = ({
   return (
     <Spin
       spinning={loading}
-      tip={tip || text}
+      tip={(tip !== null && tip !== undefined && tip !== '') ? tip : text}
       delay={delay}
       size={size}
       className={className}
@@ -238,6 +239,7 @@ export const LoadingButton: React.FC<LoadingButtonProps> = ({
       try {
         await onClick()
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.error('LoadingButton onClick error:', error)
       }
     }
@@ -248,10 +250,10 @@ export const LoadingButton: React.FC<LoadingButtonProps> = ({
       className={className}
       style={{
         ...style,
-        opacity: loading ? 0.6 : 1,
-        cursor: loading ? 'not-allowed' : disabled ? 'not-allowed' : 'pointer',
+        opacity: (loading === true) ? 0.6 : 1,
+        cursor: (loading === true) ? 'not-allowed' : (disabled === true) ? 'not-allowed' : 'pointer',
       }}
-      disabled={disabled || loading}
+      disabled={(disabled === true || loading === true)}
       onClick={handleClick}
     >
       {loading && (

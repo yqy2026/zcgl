@@ -304,7 +304,7 @@ describe('MobileLayout - 边界情况测试', () => {
   it('应该处理undefined children', async () => {
     const MobileLayout = (await import('../MobileLayout')).default
     const element = React.createElement(MobileLayout, {
-      children: _children, undefined,
+      children: undefined,
     })
     expect(element).toBeTruthy()
   })

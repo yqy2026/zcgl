@@ -154,13 +154,13 @@ const AppBreadcrumb: React.FC = () => {
       const isLast = index === pathSnippets.length - 1
       const breadcrumbConfig = breadcrumbNameMap[currentPath]
       
-      if (breadcrumbConfig) {
+      if (breadcrumbConfig !== null && breadcrumbConfig !== undefined) {
         if (isLast) {
           // 最后一项不添加链接
           breadcrumbItems.push({
             title: (
               <span>
-                {breadcrumbConfig.icon && (
+                {(breadcrumbConfig.icon !== null && breadcrumbConfig.icon !== undefined) && (
                   <span style={{ marginRight: 4 }}>{breadcrumbConfig.icon}</span>
                 )}
                 {breadcrumbConfig.name}
@@ -172,7 +172,7 @@ const AppBreadcrumb: React.FC = () => {
           breadcrumbItems.push({
             title: (
               <Link to={currentPath}>
-                {breadcrumbConfig.icon && (
+                {(breadcrumbConfig.icon !== null && breadcrumbConfig.icon !== undefined) && (
                   <span style={{ marginRight: 4 }}>{breadcrumbConfig.icon}</span>
                 )}
                 {breadcrumbConfig.name}
@@ -184,10 +184,12 @@ const AppBreadcrumb: React.FC = () => {
     })
 
     // 添加分类面包屑
-    if (pathname.startsWith('/assets') && !breadcrumbItems.some(item =>
+    if (pathname !== null && pathname !== undefined && pathname !== '' && pathname.startsWith('/assets') && !breadcrumbItems.some((item: { title: string | React.ReactNode }) =>
       typeof item.title === 'object' &&
       React.isValidElement(item.title) &&
-      (item.title as React.ReactElement).props?.children?.includes?.('资产管理')
+      ((item.title as React.ReactElement<{ children?: React.ReactNode }>).props?.children !== null && (item.title as React.ReactElement<{ children?: React.ReactNode }>).props?.children !== undefined) &&
+      typeof (item.title as React.ReactElement<{ children?: React.ReactNode }>).props?.children === 'string' &&
+      ((item.title as React.ReactElement<{ children?: React.ReactNode }>).props?.children as string).includes('资产管理')
     )) {
       breadcrumbItems.splice(1, 0, {
         title: (
@@ -199,10 +201,12 @@ const AppBreadcrumb: React.FC = () => {
       })
     }
 
-    if (pathname.startsWith('/data') && !breadcrumbItems.some(item =>
+    if (pathname !== null && pathname !== undefined && pathname !== '' && pathname.startsWith('/data') && !breadcrumbItems.some((item: { title: string | React.ReactNode }) =>
       typeof item.title === 'object' &&
       React.isValidElement(item.title) &&
-      (item.title as React.ReactElement).props?.children?.includes?.('数据管理')
+      ((item.title as React.ReactElement<{ children?: React.ReactNode }>).props?.children !== null && (item.title as React.ReactElement<{ children?: React.ReactNode }>).props?.children !== undefined) &&
+      typeof (item.title as React.ReactElement<{ children?: React.ReactNode }>).props?.children === 'string' &&
+      ((item.title as React.ReactElement<{ children?: React.ReactNode }>).props?.children as string).includes('数据管理')
     )) {
       breadcrumbItems.splice(1, 0, {
         title: (
@@ -214,10 +218,12 @@ const AppBreadcrumb: React.FC = () => {
       })
     }
 
-    if (pathname.startsWith('/analytics') && !breadcrumbItems.some(item =>
+    if (pathname !== null && pathname !== undefined && pathname !== '' && pathname.startsWith('/analytics') && !breadcrumbItems.some((item: { title: string | React.ReactNode }) =>
       typeof item.title === 'object' &&
       React.isValidElement(item.title) &&
-      (item.title as React.ReactElement).props?.children?.includes?.('数据分析')
+      ((item.title as React.ReactElement<{ children?: React.ReactNode }>).props?.children !== null && (item.title as React.ReactElement<{ children?: React.ReactNode }>).props?.children !== undefined) &&
+      typeof (item.title as React.ReactElement<{ children?: React.ReactNode }>).props?.children === 'string' &&
+      ((item.title as React.ReactElement<{ children?: React.ReactNode }>).props?.children as string).includes('数据分析')
     )) {
       breadcrumbItems.splice(1, 0, {
         title: (
@@ -229,10 +235,12 @@ const AppBreadcrumb: React.FC = () => {
       })
     }
 
-    if (pathname.startsWith('/system') && !breadcrumbItems.some(item =>
+    if (pathname !== null && pathname !== undefined && pathname !== '' && pathname.startsWith('/system') && !breadcrumbItems.some((item: { title: string | React.ReactNode }) =>
       typeof item.title === 'object' &&
       React.isValidElement(item.title) &&
-      (item.title as React.ReactElement).props?.children?.includes?.('系统管理')
+      ((item.title as React.ReactElement<{ children?: React.ReactNode }>).props?.children !== null && (item.title as React.ReactElement<{ children?: React.ReactNode }>).props?.children !== undefined) &&
+      typeof (item.title as React.ReactElement<{ children?: React.ReactNode }>).props?.children === 'string' &&
+      ((item.title as React.ReactElement<{ children?: React.ReactNode }>).props?.children as string).includes('系统管理')
     )) {
       breadcrumbItems.splice(1, 0, {
         title: (
@@ -244,10 +252,12 @@ const AppBreadcrumb: React.FC = () => {
       })
     }
 
-    if (pathname.startsWith('/ownership') && !breadcrumbItems.some(item =>
+    if (pathname !== null && pathname !== undefined && pathname !== '' && pathname.startsWith('/ownership') && !breadcrumbItems.some((item: { title: string | React.ReactNode }) =>
       typeof item.title === 'object' &&
       React.isValidElement(item.title) &&
-      (item.title as React.ReactElement).props?.children?.includes?.('资产管理')
+      ((item.title as React.ReactElement<{ children?: React.ReactNode }>).props?.children !== null && (item.title as React.ReactElement<{ children?: React.ReactNode }>).props?.children !== undefined) &&
+      typeof (item.title as React.ReactElement<{ children?: React.ReactNode }>).props?.children === 'string' &&
+      ((item.title as React.ReactElement<{ children?: React.ReactNode }>).props?.children as string).includes('资产管理')
     )) {
       breadcrumbItems.splice(1, 0, {
         title: (

@@ -20,14 +20,14 @@ export class DataCache {
 
   constructor(config: CacheConfig = {}) {
     this.config = {
-      ttl: config.ttl || 5 * 60 * 1000, // 5 minutes default
-      maxSize: config.maxSize || 100,
-      enableCompression: config.enableCompression || false
+      ttl: (config.ttl !== null && config.ttl !== undefined) ? config.ttl : 5 * 60 * 1000, // 5 minutes default
+      maxSize: (config.maxSize !== null && config.maxSize !== undefined) ? config.maxSize : 100,
+      enableCompression: (config.enableCompression === true) ? true : false
     }
   }
 
   private generateKey(key: string, params?: unknown): string {
-    if (!params) return key
+    if ((params === null || params === undefined)) return key
     return `${key}_${JSON.stringify(params)}`
   }
 
@@ -41,7 +41,7 @@ export class DataCache {
     // 如果缓存已满，清理最旧的条目
     if (this.cache.size >= this.config.maxSize) {
       const oldestKey = this.cache.keys().next().value
-      if (oldestKey) {
+      if (oldestKey !== null && oldestKey !== undefined && oldestKey !== '') {
         this.cache.delete(oldestKey)
       }
     }
@@ -49,7 +49,7 @@ export class DataCache {
     this.cache.set(fullKey, {
       data,
       timestamp: Date.now(),
-      ttl: customTTL || this.config.ttl
+      ttl: (customTTL !== null && customTTL !== undefined) ? customTTL : this.config.ttl
     })
   }
 
@@ -122,7 +122,7 @@ export class BatchRequestOptimizer {
     } = {}
   ): Promise<T> {
     const { batchKey, delay = this.batchDelay } = options
-    const requestKey = batchKey || key
+    const requestKey = (batchKey !== null && batchKey !== undefined && batchKey !== '') ? batchKey : key
 
     // 如果有相同的请求正在进行，返回相同的Promise
     if (this.pendingRequests.has(requestKey)) {
@@ -181,6 +181,7 @@ export class DataPreloader {
         }
       }
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.warn('Data preloading failed:', error)
     } finally {
       this.isPreloading = false
@@ -212,7 +213,7 @@ export const createCachedRequest = <T>(
   return async (params?: unknown): Promise<T> => {
     // 尝试从缓存获取
     const cached = cache.get<T>(cacheKey, params)
-    if (cached) {
+    if ((cached !== null && cached !== undefined)) {
       return cached
     }
 
@@ -220,7 +221,7 @@ export const createCachedRequest = <T>(
     const result = await batchOptimizer.batchRequest(
       cacheKey,
       requestFn,
-      { batchKey: params ? `${cacheKey}_${JSON.stringify(params)}` : cacheKey }
+      { batchKey: (params !== null && params !== undefined) ? `${cacheKey}_${JSON.stringify(params)}` : cacheKey }
     )
 
     // 缓存结果

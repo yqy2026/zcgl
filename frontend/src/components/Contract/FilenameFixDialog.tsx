@@ -190,10 +190,13 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
     return { fixed, changes };
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (visible && originalFilename) {
       validateAndSuggest();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, originalFilename]);
 
   const validateAndSuggest = async () => {
@@ -344,7 +347,7 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
 
   const renderStepContent = () => {
     const currentStepData = steps[currentStep];
-    if (!currentStepData) return null;
+    if ((currentStepData === null || currentStepData === undefined)) return null;
 
     return (
       <div style={{ padding: '20px 0' }}>

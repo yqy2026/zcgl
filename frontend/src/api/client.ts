@@ -121,8 +121,8 @@ export class EnhancedApiClient {
   constructor(config: EnhancedApiClientConfig = {}) {
     this.config = {
       // 默认配置
-      baseURL: config.baseURL || '/api/v1',
-      timeout: config.timeout || 30000,
+      baseURL: (config.baseURL !== null && config.baseURL !== undefined && config.baseURL !== '') ? config.baseURL : '/api/v1',
+      timeout: (config.timeout !== null && config.timeout !== undefined) ? config.timeout : 30000,
       responseDetection: {
         successField: 'success',
         dataField: 'data',
@@ -179,12 +179,12 @@ export class EnhancedApiClient {
       (config: InternalAxiosRequestConfig) => {
         // 添加认证token
         const token = localStorage.getItem('auth_token')
-        if (token && config.headers) {
+        if ((token !== null && token !== undefined && token !== '') && (config.headers !== null && config.headers !== undefined)) {
           config.headers.set('Authorization', `Bearer ${token}`)
         }
 
         // 添加请求ID
-        if (config.headers) {
+        if (config.headers !== null && config.headers !== undefined) {
           config.headers.set('X-Request-ID', this.generateRequestId())
         }
 

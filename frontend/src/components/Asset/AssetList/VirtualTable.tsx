@@ -78,18 +78,18 @@ const getColumns = (
     ellipsis: {
       showTitle: false,
     },
-    render: (text, record) => {
-      const projectName = record.project_name || text
+    render: (text: string, record: Asset) => {
+      const projectName = (record.project_name !== null && record.project_name !== undefined && record.project_name !== '') ? record.project_name : text
       const isId = typeof projectName === 'string' && projectName.length === 36
 
-      let displayText = projectName
+      let displayText: string = projectName
       if (isId) {
         displayText = '未配置项目'
       }
 
       return (
-        <Tooltip title={displayText || '未设置'}>
-          {displayText || '-'}
+        <Tooltip title={(displayText !== null && displayText !== undefined && displayText !== '') ? displayText : '未设置'}>
+          {(displayText !== null && displayText !== undefined && displayText !== '') ? displayText : '-'}
         </Tooltip>
       )
     },
@@ -101,7 +101,7 @@ const getColumns = (
     width: 200,
     fixed: 'left',
     sorter: true,
-    render: (text, record) => (
+    render: (text: string, record: Asset) => (
       <Button
         type="link"
         onClick={() => onView(record)}
@@ -122,7 +122,7 @@ const getColumns = (
     ellipsis: {
       showTitle: false,
     },
-    render: (text) => (
+    render: (text: string) => (
       <Tooltip title={text}>
         {text}
       </Tooltip>
@@ -136,7 +136,7 @@ const getColumns = (
     ellipsis: {
       showTitle: false,
     },
-    render: (text) => (
+    render: (text: string) => (
       <Tooltip title={text}>
         {text}
       </Tooltip>
@@ -149,7 +149,7 @@ const getColumns = (
     width: 120,
     align: 'right',
     sorter: true,
-    render: (value) => formatArea(value),
+    render: (value: number) => formatArea(value),
   },
   {
     title: '实际面积',
@@ -158,7 +158,7 @@ const getColumns = (
     width: 120,
     align: 'right',
     sorter: true,
-    render: (value) => formatArea(value),
+    render: (value: number) => formatArea(value),
   },
   {
     title: '可出租面积',
@@ -167,7 +167,7 @@ const getColumns = (
     width: 130,
     align: 'right',
     sorter: true,
-    render: (value) => formatArea(value),
+    render: (value: number) => formatArea(value),
   },
   {
     title: '已出租面积',
@@ -176,7 +176,7 @@ const getColumns = (
     width: 130,
     align: 'right',
     sorter: true,
-    render: (value) => formatArea(value),
+    render: (value: number) => formatArea(value),
   },
   {
     title: '确权状态',
@@ -188,7 +188,7 @@ const getColumns = (
       { text: '未确权', value: '未确权' },
       { text: '部分确权', value: '部分确权' },
     ],
-    render: (status) => (
+    render: (status: string) => (
       <Tag color={getStatusColor(status, 'ownership')}>
         {status}
       </Tag>
@@ -203,7 +203,7 @@ const getColumns = (
       { text: '经营性', value: '经营性' },
       { text: '非经营性', value: '非经营性' },
     ],
-    render: (nature) => (
+    render: (nature: string) => (
       <Tag color={getStatusColor(nature, 'property')}>
         {nature}
       </Tag>
@@ -223,7 +223,7 @@ const getColumns = (
       { text: '待处置', value: '待处置' },
       { text: '其他', value: '其他' },
     ],
-    render: (status) => (
+    render: (status: string) => (
       <Tag color={getStatusColor(status, 'usage')}>
         {status}
       </Tag>
@@ -236,12 +236,12 @@ const getColumns = (
     width: 100,
     align: 'right',
     sorter: true,
-    render: (rate, record) => {
-      if (rate) {
+    render: (rate: number, record: Asset) => {
+      if (rate !== null && rate !== undefined) {
         return formatPercentage(rate)
       }
 
-      if (record.rentable_area && record.rented_area) {
+      if ((record.rentable_area !== null && record.rentable_area !== undefined) && (record.rented_area !== null && record.rented_area !== undefined)) {
         const calculatedRate = (record.rented_area / record.rentable_area) * 100
         return (
           <span style={{
@@ -265,9 +265,9 @@ const getColumns = (
       { text: '是', value: true },
       { text: '否', value: false },
     ],
-    render: (isLitigated) => (
-      <Tag color={isLitigated ? 'red' : 'green'}>
-        {isLitigated ? '是' : '否'}
+    render: (isLitigated: boolean) => (
+      <Tag color={isLitigated === true ? 'red' : 'green'}>
+        {isLitigated === true ? '是' : '否'}
       </Tag>
     ),
   },
@@ -277,7 +277,7 @@ const getColumns = (
     key: 'created_at',
     width: 120,
     sorter: true,
-    render: (date) => formatDate(date),
+    render: (date: string) => formatDate(date),
   },
   {
     title: '更新时间',
@@ -285,14 +285,14 @@ const getColumns = (
     key: 'updated_at',
     width: 120,
     sorter: true,
-    render: (date) => formatDate(date),
+    render: (date: string) => formatDate(date),
   },
   {
     title: '操作',
     key: 'actions',
     width: 150,
     fixed: 'right',
-    render: (_, record) => (
+    render: (_: unknown, record: Asset) => (
       <Space size="small">
         <Tooltip title="查看详情">
           <Button
@@ -416,10 +416,10 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
 
             return (
               <div
-                key={column.key || colIndex}
+                key={(column.key !== null && column.key !== undefined && column.key !== '') ? column.key : colIndex}
                 style={{
-                  flex: column.width ? `0 0 ${column.width}px` : 1,
-                  minWidth: column.width || 100,
+                  flex: (column.width !== null && column.width !== undefined) ? `0 0 ${column.width}px` : '1',
+                  minWidth: (column.width !== null && column.width !== undefined) ? column.width : 100,
                   padding: '0 8px',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
@@ -463,10 +463,10 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
           const title = isColumnType(column) ? column.title : undefined
           return (
             <div
-              key={column.key || index}
+              key={(column.key !== null && column.key !== undefined && column.key !== '') ? column.key : index}
               style={{
-                flex: column.width ? `0 0 ${column.width}px` : 1,
-                minWidth: column.width || 100,
+                flex: (column.width !== null && column.width !== undefined) ? `0 0 ${column.width}px` : '1',
+                minWidth: (column.width !== null && column.width !== undefined) ? column.width : 100,
                 padding: '0 8px',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
@@ -517,9 +517,9 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
       {/* 分页 */}
       <div style={{ padding: '16px 0', textAlign: 'right' }}>
         <Pagination
-          current={data?.page || 1}
-          pageSize={data?.limit || 20}
-          total={data?.total || 0}
+          current={(data?.page !== null && data?.page !== undefined) ? data.page : 1}
+          pageSize={(data?.limit !== null && data?.limit !== undefined) ? data.limit : 20}
+          total={(data?.total !== null && data?.total !== undefined) ? data.total : 0}
           showSizeChanger={true}
           showQuickJumper={true}
           showTotal={(total: number, range: [number, number]) =>

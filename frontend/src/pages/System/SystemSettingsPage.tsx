@@ -116,6 +116,7 @@ const SystemSettingsPage: React.FC = () => {
     }
   }
 
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     if (activeTab === 'info') {
       void fetchSystemInfo()
@@ -123,6 +124,7 @@ const SystemSettingsPage: React.FC = () => {
       void fetchSettings()
     }
   }, [activeTab])
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   return (
     <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>

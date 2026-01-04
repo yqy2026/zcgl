@@ -14,7 +14,7 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
   loading = true,
   children,
 }) => {
-  if (!loading && children) {
+  if (loading === false && (children !== null && children !== undefined)) {
     return <>{children}</>
   }
 

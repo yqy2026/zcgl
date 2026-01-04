@@ -88,7 +88,7 @@ const fetchAssets = async (params: {
     const result = await response.json() as { items: AssetApiResponse[]; total: number; page: number; limit: number };
 
     // 检查响应格式
-    if (!result || !Array.isArray(result.items)) {
+    if ((result === null || result === undefined) || !Array.isArray(result.items)) {
       throw new Error("Invalid API response format");
     }
 
@@ -99,17 +99,17 @@ const fetchAssets = async (params: {
         const transformed = {
           id: item.id || "",
           propertyName: item.property_name || "",
-          address: item.address || "",
-          ownershipEntity: item.ownership_entity || "",
-          managementEntity: item.management_entity || "",
-          propertyNature: item.property_nature || "",
-          usageStatus: item.usage_status || "",
+          address: (item.address !== null && item.address !== undefined) ? item.address : "",
+          ownershipEntity: (item.ownership_entity !== null && item.ownership_entity !== undefined) ? item.ownership_entity : "",
+          managementEntity: (item.management_entity !== null && item.management_entity !== undefined) ? item.management_entity : "",
+          propertyNature: (item.property_nature !== null && item.property_nature !== undefined) ? item.property_nature : "",
+          usageStatus: (item.usage_status !== null && item.usage_status !== undefined) ? item.usage_status : "",
           actualPropertyArea: Number(item.total_area) || 0,
           rentableArea: Number(item.usable_area) || 0,
           rentedArea: Number(item.usable_area) || 0,
           occupancyRate: item.usage_status === "出租" ? "100" : "0", // 移除%符号，只保留数字
-          ownershipStatus: item.ownership_status || "",
-          businessCategory: item.business_category || "",
+          ownershipStatus: (item.ownership_status !== null && item.ownership_status !== undefined) ? item.ownership_status : "",
+          businessCategory: (item.business_category !== null && item.business_category !== undefined) ? item.business_category : "",
           isLitigated: (item.is_litigated === true || item.is_litigated === "true" || item.is_litigated === "是") ? "是" : "否",
           notes: item.notes ?? "",
           createdAt: item.created_at ?? "",

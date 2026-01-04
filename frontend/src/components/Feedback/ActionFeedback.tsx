@@ -223,7 +223,7 @@ const ActionFeedback: React.FC<ActionFeedbackProps> = ({
         icon={config.icon}
         message={
           <Space>
-            <Text strong>{title || config.title}</Text>
+            <Text strong>{(title !== null && title !== undefined && title !== '') ? title : config.title}</Text>
             {result.status === 'loading' && (
               <Text type="secondary">(请稍候...)</Text>
             )}
@@ -231,7 +231,7 @@ const ActionFeedback: React.FC<ActionFeedbackProps> = ({
         }
         description={
           <div>
-            {result.message && (
+            {(result.message !== null && result.message !== undefined && result.message !== '') && (
               <Text>{result.message}</Text>
             )}
             {renderDetails()}
@@ -343,13 +343,13 @@ export const ActionFeedbackCard: React.FC<{
       title={
         <Space>
           <IconComponent style={{ color: statusConfig.color }} />
-          <span>{title || '操作状态'}</span>
+          <span>{(title !== null && title !== undefined && title !== '') ? title : '操作状态'}</span>
         </Space>
       }
       extra={extra}
       size="small"
     >
-      {result.message && (
+      {(result.message !== null && result.message !== undefined && result.message !== '') && (
         <Paragraph>{result.message}</Paragraph>
       )}
       

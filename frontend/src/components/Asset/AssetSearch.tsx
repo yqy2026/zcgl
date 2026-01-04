@@ -120,36 +120,39 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
 
   // 设置初始值
   useEffect(() => {
-    if (initialValues) {
+    if (initialValues !== null && initialValues !== undefined) {
       form.setFieldsValue(initialValues)
     }
   }, [initialValues, form])
 
   // 处理搜索
   const handleSearch = () => {
-    const values = form.getFieldsValue()
+    const values = form.getFieldsValue() as Partial<AssetSearchParams & {
+      dateRange?: [dayjs.Dayjs, dayjs.Dayjs]
+      areaRange?: [number, number]
+    }>
 
     // 处理日期范围
-    if (values.dateRange) {
+    if (values.dateRange !== null && values.dateRange !== undefined) {
       values.created_start = values.dateRange[0]?.format('YYYY-MM-DD')
       values.created_end = values.dateRange[1]?.format('YYYY-MM-DD')
       delete values.dateRange
     }
 
     // 处理面积范围
-    if (values.areaRange) {
+    if (values.areaRange !== null && values.areaRange !== undefined) {
       values.area_min = values.areaRange[0]
       values.area_max = values.areaRange[1]
       delete values.areaRange
     }
 
     // 过滤空值
-    const searchParams = Object.entries(values).reduce((acc, [key, value]) => {
+    const searchParams: AssetSearchParams = Object.entries(values).reduce((acc, [key, value]) => {
       if (value !== undefined && value !== null && value !== '') {
-        acc[key] = value
+        (acc as Record<string, unknown>)[key] = value
       }
       return acc
-    }, {} as any)
+    }, {} as AssetSearchParams)
 
     onSearch(searchParams)
   }
@@ -163,7 +166,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
 
   // 处理保存搜索条件
   const handleSaveSearch = () => {
-    const values = form.getFieldsValue()
+    const values = form.getFieldsValue() as Record<string, unknown>
 
     // 检查是否有搜索条件
     const hasConditions = Object.values(values).some(value =>
@@ -175,14 +178,14 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
       return
     }
 
-    if (!saveName.trim()) {
+    if (saveName !== null && saveName !== undefined && saveName.trim() === '') {
       message.warning('请输入保存名称')
       return
     }
 
     addSearchHistory({
       id: Date.now().toString(),
-      name: saveName,
+      name: saveName ?? '',
       conditions: values,
       createdAt: new Date().toISOString(),
     })
@@ -216,7 +219,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
 
   // 保存编辑的名称
   const handleSaveEdit = () => {
-    if (editingHistoryId && editingName.trim()) {
+    if (editingHistoryId !== null && editingHistoryId !== undefined && editingHistoryId !== '' && editingName.trim()) {
       updateSearchHistoryName(editingHistoryId, editingName.trim())
       setEditingHistoryId(null)
       setEditingName('')
@@ -430,7 +433,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
                       placeholder="最小面积"
                       value={areaRange[0]}
                       onChange={(value) =>
-                        setAreaRange([value || 0, areaRange[1]])
+                        setAreaRange([(value !== null && value !== undefined) ? value : 0, areaRange[1]])
                       }
                     />
                     <Input
@@ -443,7 +446,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
                       placeholder="最大面积"
                       value={areaRange[1]}
                       onChange={(value) =>
-                        setAreaRange([areaRange[0], value || 100000])
+                        setAreaRange([areaRange[0], (value !== null && value !== undefined) ? value : 100000])
                       }
                     />
                   </Space.Compact>

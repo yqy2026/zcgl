@@ -22,8 +22,8 @@ export const useSearchHistory = () => {
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY)
-      if (stored) {
-        const history = JSON.parse(stored)
+      if (stored !== null && stored !== undefined && stored !== '') {
+        const history = JSON.parse(stored) as SearchHistoryItem[]
         setSearchHistory(history)
       }
     } catch (error) {

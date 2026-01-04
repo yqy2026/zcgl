@@ -6,12 +6,11 @@
 
 import { describe, it, expect } from 'vitest'
 import React from 'react'
-import { } from '@testing-library/react'
 import { MemoryRouter, Routes } from 'react-router-dom'
 
 // Mock all dependencies before importing
 vi.mock('../ProtectedRoute', () => ({
-  default: vi.fn(({ path, component, permissions, errorBoundary, fallback, ...props }) => {
+  default: vi.fn(({ path, component, permissions, errorBoundary, fallback, ..._props }) => {
     return React.createElement('div', {
       'data-testid': 'protected-route',
       'data-path': path,
@@ -22,7 +21,7 @@ vi.mock('../ProtectedRoute', () => ({
 }))
 
 vi.mock('../LazyRoute', () => ({
-  default: vi.fn(({ path, component, preload, permissions, ...props }) => {
+  default: vi.fn(({ path, component, preload, permissions, ..._props }) => {
     return React.createElement('div', {
       'data-testid': 'lazy-route',
       'data-path': path,
@@ -49,7 +48,7 @@ vi.mock('react-router-dom', async () => {
 })
 
 // Test wrapper
-const TestWrapper = ({ children }: { children: React.ReactNode }) => (
+const _TestWrapper = ({ children }: { children: React.ReactNode }) => (
   <MemoryRouter>
     <Routes>{children}</Routes>
   </MemoryRouter>

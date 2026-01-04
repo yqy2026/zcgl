@@ -48,7 +48,7 @@ class RouteBuilder {
     } = config;
 
     // 如果有明确的 element 属性（如重定向），使用 Route
-    if (element) {
+    if (element !== null && element !== undefined) {
       return <Route key={path} path={path} element={element} {...props} />;
     }
 
@@ -124,7 +124,7 @@ class RouteBuilder {
       path,
       component,
       permissions: [PERMISSIONS[permissionKey]],
-      title: title || path.split("/").pop() || "",
+      title: (title !== null && title !== undefined && title !== '') ? title : (path.split("/").pop() !== null && path.split("/").pop() !== undefined && path.split("/").pop() !== '') ? path.split("/").pop()! : '',
     });
   }
 
@@ -145,7 +145,7 @@ class RouteBuilder {
       path,
       component,
       lazy: true,
-      title: options?.title || path.split("/").pop() || "",
+      title: (options?.title !== null && options?.title !== undefined && options?.title !== '') ? options.title : (path.split("/").pop() !== null && path.split("/").pop() !== undefined && path.split("/").pop() !== '') ? path.split("/").pop()! : '',
       permissions: options?.permissions,
       preload: options?.preload,
       fallback: options?.fallback,

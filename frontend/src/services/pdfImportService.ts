@@ -11,6 +11,7 @@ import type {
   EnhancedSessionProgress
 } from '../types/enhancedPdfImport';
 import { createLogger } from '../utils/logger';
+import { isPresent } from '../utils/nullSafety';
 
 const logger = createLogger('PDFImportService');
 
@@ -252,7 +253,7 @@ class PDFImportService {
           },
           timeout: 300000, // 增加到5分钟，支持大文件OCR处理
           onUploadProgress: (progressEvent) => {
-            if (progressEvent.total) {
+            if (progressEvent.total !== null && progressEvent.total !== undefined && !Number.isNaN(progressEvent.total)) {
               const _percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
               // Upload progress
             }
@@ -283,12 +284,12 @@ class PDFImportService {
         if (error.response) {
           return {
             success: false,
-            message: error.response.data?.detail || error.response.statusText || '服务器处理失败',
-            error: error.response.data?.detail || error.response.statusText
+            message: (isPresent(error.response.data?.detail) ? error.response.data?.detail : (error.response.statusText !== null && error.response.statusText !== undefined && error.response.statusText !== '') ? error.response.statusText : '服务器处理失败'),
+            error: (isPresent(error.response.data?.detail) ? error.response.data?.detail : error.response.statusText)
           };
         }
 
-        if (error.request) {
+        if (error.request !== null && error.request !== undefined) {
           return {
             success: false,
             message: '网络连接失败，请检查网络连接',
@@ -314,13 +315,27 @@ class PDFImportService {
     error?: string;
   }> {
     try {
-      const response = await axios.get(`${API_BASE_URL}/progress/${sessionId}`);
+      interface GetProgressResponse {
+        success: boolean;
+        session_status?: SessionProgress;
+        error?: string;
+      }
+      const response = await axios.get<GetProgressResponse>(`${API_BASE_URL}/progress/${sessionId}`);
       return response.data;
     } catch (error: unknown) {
       logger.error('获取进度失败:', error as Error);
+      let errorMessage: string;
+      if (isAxiosError(error)) {
+        const detailMessage = error.response?.data?.detail;
+        errorMessage = (detailMessage !== null && detailMessage !== undefined && detailMessage !== "") ? detailMessage : (error.message !== null && error.message !== undefined && error.message !== "") ? error.message : 'Unknown error';
+      } else if (isError(error)) {
+        errorMessage = error.message;
+      } else {
+        errorMessage = 'Unknown error';
+      }
       return {
         success: false,
-        error: isAxiosError(error) ? (error.response?.data?.detail || error.message) : isError(error) ? error.message : 'Unknown error'
+        error: errorMessage
       };
     }
   }
@@ -347,42 +362,42 @@ class PDFImportService {
             success: true,
             session_id: sessionId,
             file_info: {
-              filename: session.file_name || 'unknown.pdf',
-              size: session.file_size || 0,
+              filename: (session.file_name !== null && session.file_name !== undefined && session.file_name !== '') ? session.file_name : 'unknown.pdf',
+              size: (session.file_size !== null && session.file_size !== undefined && !Number.isNaN(session.file_size)) ? session.file_size : 0,
               content_type: 'application/pdf'
             },
             extraction_result: {
               success: true,
-              data: session.extracted_data || {},
-              confidence_score: session.confidence_score || 0.8,
-              extraction_method: session.processing_method || 'multi_engine',
-              processed_fields: Object.keys(session.extracted_data || {}).length,
+              data: (session.extracted_data !== null && session.extracted_data !== undefined) ? session.extracted_data : {},
+              confidence_score: (session.confidence_score !== null && session.confidence_score !== undefined && !Number.isNaN(session.confidence_score)) ? session.confidence_score : 0.8,
+              extraction_method: (session.processing_method !== null && session.processing_method !== undefined && session.processing_method !== '') ? session.processing_method : 'multi_engine',
+              processed_fields: Object.keys((session.extracted_data !== null && session.extracted_data !== undefined) ? session.extracted_data : {}).length,
               total_fields: 15
             },
             validation_result: {
               success: true,
               errors: [],
               warnings: [],
-              validated_data: session.validated_data || {},
+              validated_data: (session.validated_data !== null && session.validated_data !== undefined) ? session.validated_data : {},
               validation_score: 0.8,
-              processed_fields: Object.keys(session.validated_data || {}).length,
+              processed_fields: Object.keys((session.validated_data !== null && session.validated_data !== undefined) ? session.validated_data : {}).length,
               required_fields_count: 5,
               missing_required_fields: []
             },
             matching_result: {
-              matched_assets: session.matching_results?.matched_assets || [],
-              matched_ownerships: session.matching_results?.matched_ownerships || [],
-              duplicate_contracts: session.matching_results?.duplicate_contracts || [],
-              recommendations: (session.matching_results?.recommendations || {}) as Record<string, string>,
-              match_confidence: session.matching_results?.overall_match_confidence || 0.7
+              matched_assets: session.matching_results?.matched_assets ?? [],
+              matched_ownerships: session.matching_results?.matched_ownerships ?? [],
+              duplicate_contracts: session.matching_results?.duplicate_contracts ?? [],
+              recommendations: (session.matching_results?.recommendations ?? {}) as Record<string, string>,
+              match_confidence: session.matching_results?.overall_match_confidence ?? 0.7
             },
             summary: {
-              extraction_confidence: session.confidence_score || 0.8,
+              extraction_confidence: (session.confidence_score !== null && session.confidence_score !== undefined && !Number.isNaN(session.confidence_score)) ? session.confidence_score : 0.8,
               validation_score: 0.8,
-              match_confidence: session.matching_results?.overall_match_confidence || 0.7,
+              match_confidence: session.matching_results?.overall_match_confidence ?? 0.7,
               total_confidence: 0.75
             },
-            recommendations: Object.values(session.matching_results?.recommendations || {}),
+            recommendations: Object.values(session.matching_results?.recommendations ?? {}),
             ready_for_import: true
           };
 
@@ -391,13 +406,14 @@ class PDFImportService {
             result: result,
             processing_summary: {
               total_processing_time: '30-60秒',
-              extraction_method: session.processing_method || 'multi_engine'
+              extraction_method: (session.processing_method !== null && session.processing_method !== undefined && session.processing_method !== '') ? session.processing_method : 'multi_engine'
             }
           };
         } else if (session.status === 'failed') {
+          const errorMessage = (session.error_message !== null && session.error_message !== undefined && session.error_message !== '') ? session.error_message : '处理失败';
           return {
             success: false,
-            error: session.error_message || '处理失败'
+            error: errorMessage
           };
         } else {
           return {
@@ -406,16 +422,26 @@ class PDFImportService {
           };
         }
       } else {
+        const errorResponse = (progressResponse.error !== null && progressResponse.error !== undefined && progressResponse.error !== '') ? progressResponse.error : '获取进度失败';
         return {
           success: false,
-          error: progressResponse.error || '获取进度失败'
+          error: errorResponse
         };
       }
     } catch (error: unknown) {
       logger.error('获取结果失败:', error as Error);
+      let errorMessage: string;
+      if (isAxiosError(error)) {
+        const detailMessage = error.response?.data?.detail;
+        errorMessage = (detailMessage !== null && detailMessage !== undefined && detailMessage !== "") ? detailMessage : (error.message !== null && error.message !== undefined && error.message !== "") ? error.message : 'Unknown error';
+      } else if (isError(error)) {
+        errorMessage = error.message;
+      } else {
+        errorMessage = 'Unknown error';
+      }
       return {
         success: false,
-        error: isAxiosError(error) ? (error.response?.data?.detail || error.message) : isError(error) ? error.message : 'Unknown error'
+        error: errorMessage
       };
     }
   }
@@ -428,18 +454,43 @@ class PDFImportService {
     confirmedData: ConfirmedContractData
   ): Promise<ConfirmImportResponse> {
     try {
-      const response = await axios.post(`${API_BASE_URL}/confirm_import`, {
+      interface ConfirmImportRequest {
+        session_id: string;
+        confirmed_data: ConfirmedContractData;
+      }
+      interface ConfirmImportAPIResponse {
+        success: boolean;
+        message?: string;
+        error?: string;
+      }
+      const response = await axios.post<ConfirmImportAPIResponse>(`${API_BASE_URL}/confirm_import`, {
         session_id: sessionId,
         confirmed_data: confirmedData
-      });
+      } as ConfirmImportRequest);
 
-      return response.data;
+      return {
+        ...response.data,
+        message: (response.data.message !== null && response.data.message !== undefined && response.data.message !== '') ? response.data.message : '导入成功'
+      };
     } catch (error: unknown) {
       logger.error('确认导入失败:', error as Error);
+      let message: string;
+      let errorMessage: string;
+      if (isAxiosError(error)) {
+        const detailMessage = error.response?.data?.detail;
+        message = (detailMessage !== null && detailMessage !== undefined && detailMessage !== "") ? detailMessage : (error.message !== null && error.message !== undefined && error.message !== "") ? error.message : '导入失败';
+        errorMessage = (detailMessage !== null && detailMessage !== undefined && detailMessage !== "") ? detailMessage : (error.message !== null && error.message !== undefined && error.message !== "") ? error.message : 'Unknown error';
+      } else if (isError(error)) {
+        message = error.message;
+        errorMessage = error.message;
+      } else {
+        message = '导入失败';
+        errorMessage = 'Unknown error';
+      }
       return {
         success: false,
-        message: isAxiosError(error) ? (error.response?.data?.detail || error.message || '导入失败') : isError(error) ? error.message : '导入失败',
-        error: isAxiosError(error) ? (error.response?.data?.detail || error.message) : isError(error) ? error.message : 'Unknown error'
+        message,
+        error: errorMessage
       };
     }
   }
@@ -454,13 +505,13 @@ class PDFImportService {
   }> {
     try {
       const response = await axios.delete(`${API_BASE_URL}/session/${sessionId}`);
-      return response.data;
+      return response.data as { success: boolean; message: string; error?: string };
     } catch (error: unknown) {
       logger.error('取消会话失败:', error as Error);
       return {
         success: false,
-        message: isAxiosError(error) ? (error.response?.data?.detail || error.message || '取消失败') : isError(error) ? error.message : '取消失败',
-        error: isAxiosError(error) ? (error.response?.data?.detail || error.message) : isError(error) ? error.message : 'Unknown error'
+        message: isAxiosError(error) ? ((isPresent(error.response?.data?.detail) ? error.response?.data?.detail : (error.message !== null && error.message !== undefined && error.message !== '') ? error.message : '取消失败')) : isError(error) ? ((error.message !== null && error.message !== undefined && error.message !== '') ? error.message : '取消失败') : '取消失败',
+        error: isAxiosError(error) ? ((isPresent(error.response?.data?.detail) ? error.response?.data?.detail : error.message)) : isError(error) ? error.message : 'Unknown error'
       };
     }
   }
@@ -483,7 +534,19 @@ class PDFImportService {
   }> {
     try {
       const response = await axios.get(PDF_API.SESSIONS);
-      return response.data;
+      return response.data as {
+        success: boolean;
+        active_sessions: Array<{
+          session_id: string;
+          status: string;
+          progress: number;
+          current_step: string;
+          created_at: string;
+          file_name: string;
+        }>;
+        total_count: number;
+        error?: string;
+      };
     } catch (error: unknown) {
       logger.error('获取会话列表失败:', error as Error);
 
@@ -501,7 +564,7 @@ class PDFImportService {
         success: false,
         active_sessions: [],
         total_count: 0,
-        error: isAxiosError(error) ? (error.response?.data?.detail || error.message) : isError(error) ? error.message : 'Unknown error'
+        error: isAxiosError(error) ? ((isPresent(error.response?.data?.detail) ? error.response?.data?.detail : error.message)) : isError(error) ? error.message : 'Unknown error'
       };
     }
   }
@@ -512,10 +575,10 @@ class PDFImportService {
   async getSystemInfo(): Promise<SystemInfoResponse> {
     try {
       // 使用PDF_API.INFO，如果404则使用备用方案
-      const response = await axios.get(PDF_API.INFO);
+      const response = await axios.get<SystemInfoResponse>(PDF_API.INFO);
 
       // 直接使用后端返回的能力信息，并添加增强功能检测
-      const capabilities = response.data.capabilities || {
+      const capabilities = (response.data.capabilities !== null && response.data.capabilities !== undefined) ? response.data.capabilities : {
         pdfplumber_available: true,
         pymupdf_available: true,
         spacy_available: true,
@@ -537,7 +600,7 @@ class PDFImportService {
 
       return {
         success: true,
-        message: response.data.message || '增强版PDF智能导入系统运行正常',
+        message: (response.data.message !== null && response.data.message !== undefined && response.data.message !== '') ? response.data.message : '增强版PDF智能导入系统运行正常',
         capabilities: enhancedCapabilities,
         extractor_summary: {
           method: "enhanced_multi_engine",
@@ -611,7 +674,7 @@ class PDFImportService {
   // 获取系统能力信息
   static async getSystemCapabilities() {
     try {
-      const response = await axios.get(`${API_BASE_URL}/capabilities`);
+      const response = await axios.get<SystemInfoResponse>(`${API_BASE_URL}/capabilities`);
       return {
         spacy_available: true,
         ocr_available: true,
@@ -623,7 +686,8 @@ class PDFImportService {
       };
     } catch (error: unknown) {
       logger.error('获取系统信息失败:', error as Error);
-      throw new Error(isAxiosError(error) ? (error.response?.data?.detail || error.message) : isError(error) ? error.message : 'Unknown error');
+      const errorMsg = isAxiosError(error) ? ((isPresent(error.response?.data?.detail) ? error.response?.data?.detail : (error.message !== null && error.message !== undefined && error.message !== '') ? error.message : 'Unknown error')) : isError(error) ? error.message : 'Unknown error';
+      throw new Error(errorMsg);
     }
   }
 
@@ -638,19 +702,19 @@ class PDFImportService {
   }> {
     try {
       // 简单API使用 /info 端点来测试系统状态
-      const response = await axios.get(`${API_BASE_URL}/info`);
+      const response = await axios.get<SystemInfoResponse>(`${API_BASE_URL}/info`);
       return {
         success: true,
-        message: response.data.message,
-        test_result: response.data.features,
+        message: (response.data.message !== null && response.data.message !== undefined && response.data.message !== '') ? response.data.message : 'System OK',
+        test_result: response.data.system_info?.features as Record<string, unknown> | undefined,
         system_ready: true
       };
     } catch (error: unknown) {
       logger.error('测试转换失败:', error as Error);
       const errorMsg = isAxiosError(error)
-        ? (error.response?.data?.detail || error.message || 'Unknown error')
+        ? ((isPresent(error.response?.data?.detail) ? error.response?.data?.detail : (error.message !== null && error.message !== undefined && error.message !== '') ? error.message : 'Unknown error'))
         : isError(error)
-          ? (error.message || 'Unknown error')
+          ? ((error.message !== null && error.message !== undefined && error.message !== '') ? error.message : 'Unknown error')
           : 'Unknown error';
       return {
         success: false,
@@ -759,10 +823,10 @@ class PDFImportService {
     // 基于文件大小的简单估算
     const sizeMB = fileSize / (1024 * 1024);
 
-    if (sizeMB < 1) return '10-20秒';
-    if (sizeMB < 5) return '20-40秒';
-    if (sizeMB < 10) return '30-60秒';
-    if (sizeMB < 20) return '45-90秒';
+    if (sizeMB !== null && sizeMB !== undefined && sizeMB < 1) return '10-20秒';
+    if (sizeMB !== null && sizeMB !== undefined && sizeMB < 5) return '20-40秒';
+    if (sizeMB !== null && sizeMB !== undefined && sizeMB < 10) return '30-60秒';
+    if (sizeMB !== null && sizeMB !== undefined && sizeMB < 20) return '45-90秒';
 
     return '60-120秒';
   }
@@ -775,7 +839,7 @@ class PDFImportService {
   async getEnhancedSystemInfo(): Promise<SystemInfoResponse> {
     try {
       const response = await axios.get(`${ENHANCED_API_BASE}/info`);
-      return response.data;
+      return response.data as SystemInfoResponse;
     } catch (error: unknown) {
       logger.error('获取增强版系统信息失败:', error as Error);
       return {
@@ -829,7 +893,7 @@ class PDFImportService {
           },
           timeout: 600000, // 10分钟，支持增强版处理
           onUploadProgress: (progressEvent) => {
-            if (progressEvent.total) {
+            if (progressEvent.total !== null && progressEvent.total !== undefined && !Number.isNaN(progressEvent.total)) {
               const _percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
               // Enhanced upload progress
             }
@@ -858,8 +922,8 @@ class PDFImportService {
         if (error.response) {
           return {
             success: false,
-            message: error.response.data?.detail || error.response.statusText || '服务器处理失败',
-            error: error.response.data?.detail || error.response.statusText
+            message: (isPresent(error.response.data?.detail) ? error.response.data?.detail : (error.response.statusText !== null && error.response.statusText !== undefined && error.response.statusText !== '') ? error.response.statusText : '服务器处理失败'),
+            error: (isPresent(error.response.data?.detail) ? error.response.data?.detail : error.response.statusText)
           };
         }
       }
@@ -882,12 +946,16 @@ class PDFImportService {
   }> {
     try {
       const response = await axios.get(`${ENHANCED_API_BASE}/progress/${sessionId}`);
-      return response.data;
+      return response.data as {
+        success: boolean;
+        session_status?: SessionProgress;
+        error?: string;
+      };
     } catch (error: unknown) {
       logger.error('获取增强版进度失败:', error as Error);
       return {
         success: false,
-        error: isAxiosError(error) ? (error.response?.data?.detail || error.message) : isError(error) ? error.message : 'Unknown error'
+        error: isAxiosError(error) ? ((isPresent(error.response?.data?.detail) ? error.response?.data?.detail : error.message)) : isError(error) ? error.message : 'Unknown error'
       };
     }
   }
@@ -907,13 +975,17 @@ class PDFImportService {
       const response = await axios.delete(`${ENHANCED_API_BASE}/session/${sessionId}`, {
         params: { reason }
       });
-      return response.data;
+      return response.data as {
+        success: boolean;
+        message: string;
+        session_id?: string;
+      };
     } catch (error: unknown) {
       logger.error('取消增强版会话失败:', error as Error);
       return {
         success: false,
-        message: isAxiosError(error) ? (error.response?.data?.detail || error.message || '取消失败') : isError(error) ? error.message : '取消失败',
-        error: isAxiosError(error) ? (error.response?.data?.detail || error.message) : isError(error) ? error.message : 'Unknown error'
+        message: isAxiosError(error) ? ((isPresent(error.response?.data?.detail) ? error.response?.data?.detail : (error.message !== null && error.message !== undefined && error.message !== '') ? error.message : '取消失败')) : isError(error) ? ((error.message !== null && error.message !== undefined && error.message !== '') ? error.message : '取消失败') : '取消失败',
+        error: isAxiosError(error) ? ((isPresent(error.response?.data?.detail) ? error.response?.data?.detail : error.message)) : isError(error) ? error.message : 'Unknown error'
       };
     }
   }
@@ -969,25 +1041,25 @@ class PDFImportService {
             success: true,
             session_id: sessionId,
             file_info: {
-              filename: session.file_name || 'unknown.pdf',
-              size: session.file_size || 0,
+              filename: (session.file_name !== null && session.file_name !== undefined && session.file_name !== '') ? session.file_name : 'unknown.pdf',
+              size: (session.file_size !== null && session.file_size !== undefined) ? session.file_size : 0,
               content_type: 'application/pdf'
             },
             extraction_result: {
               success: true,
-              data: session.enhanced_status?.final_fields || {},
-              confidence_score: session.enhanced_status?.final_results?.extraction_quality?.overall_quality || 0.8,
+              data: (isPresent(session.enhanced_status?.final_fields) ? session.enhanced_status?.final_fields : {}),
+              confidence_score: (isPresent(session.enhanced_status?.final_results?.extraction_quality?.overall_quality) ? session.enhanced_status?.final_results?.extraction_quality?.overall_quality : 0.8),
               extraction_method: 'enhanced_multi_engine',
-              processed_fields: Object.keys(session.enhanced_status?.final_fields || {}).length,
+              processed_fields: Object.keys((isPresent(session.enhanced_status?.final_fields) ? session.enhanced_status?.final_fields : {})).length,
               total_fields: 58
             },
             validation_result: {
               success: true,
               errors: [],
               warnings: [],
-              validated_data: session.enhanced_status?.final_fields || {},
-              validation_score: session.enhanced_status?.final_results?.validation_score || 0.8,
-              processed_fields: Object.keys(session.enhanced_status?.final_fields || {}).length,
+              validated_data: (isPresent(session.enhanced_status?.final_fields) ? session.enhanced_status?.final_fields : {}),
+              validation_score: (isPresent(session.enhanced_status?.final_results?.validation_score) ? session.enhanced_status?.final_results?.validation_score : 0.8),
+              processed_fields: Object.keys((isPresent(session.enhanced_status?.final_fields) ? session.enhanced_status?.final_fields : {})).length,
               required_fields_count: 10,
               missing_required_fields: []
             },
@@ -996,9 +1068,9 @@ class PDFImportService {
               matched_ownerships: [],
               duplicate_contracts: [],
               recommendations: {},
-              match_confidence: session.enhanced_status?.final_results?.match_confidence || 0.7
+              match_confidence: (isPresent(session.enhanced_status?.final_results?.match_confidence) ? session.enhanced_status?.final_results?.match_confidence : 0.7),
             },
-            semantic_validation: session.enhanced_status?.semantic_validation || {
+            semantic_validation: (isPresent(session.enhanced_status?.semantic_validation) ? session.enhanced_status?.semantic_validation : {
               total_fields: 0,
               valid_fields: 0,
               error_fields: 0,
@@ -1008,11 +1080,11 @@ class PDFImportService {
               semantic_analysis: {},
               summary: '',
               recommendations: []
-            },
+            }),
             processing_summary: {
               total_processing_time: '60-90秒',
               extraction_method: 'enhanced_multi_engine',
-              engines_used: session.enhanced_status?.final_results?.processing_summary?.engines_used || [],
+              engines_used: (isPresent(session.enhanced_status?.final_results?.processing_summary?.engines_used) ? session.enhanced_status?.final_results?.processing_summary?.engines_used : []),
               processing_steps: [],
               performance_metrics: {
                 total_processing_time: 0,
@@ -1029,21 +1101,21 @@ class PDFImportService {
               }
             },
             summary: {
-              extraction_confidence: session.enhanced_status?.final_results?.extraction_quality?.overall_quality || 0.8,
-              validation_score: session.enhanced_status?.final_results?.validation_score || 0.8,
-              match_confidence: session.enhanced_status?.final_results?.match_confidence || 0.7,
-              semantic_confidence: session.enhanced_status?.semantic_validation?.overall_confidence || 0.8,
-              fusion_confidence: session.enhanced_status?.fusion_results?.confidence || 0.8,
-              overall_quality: session.enhanced_status?.final_results?.extraction_quality?.overall_quality || 0.8,
+              extraction_confidence: (isPresent(session.enhanced_status?.final_results?.extraction_quality?.overall_quality) ? session.enhanced_status?.final_results?.extraction_quality?.overall_quality : 0.8),
+              validation_score: (isPresent(session.enhanced_status?.final_results?.validation_score) ? session.enhanced_status?.final_results?.validation_score : 0.8),
+              match_confidence: (isPresent(session.enhanced_status?.final_results?.match_confidence) ? session.enhanced_status?.final_results?.match_confidence : 0.7),
+              semantic_confidence: (isPresent(session.enhanced_status?.semantic_validation?.overall_confidence) ? session.enhanced_status?.semantic_validation?.overall_confidence : 0.8),
+              fusion_confidence: (isPresent(session.enhanced_status?.fusion_results?.confidence) ? session.enhanced_status?.fusion_results?.confidence : 0.8),
+              overall_quality: (isPresent(session.enhanced_status?.final_results?.extraction_quality?.overall_quality) ? session.enhanced_status?.final_results?.extraction_quality?.overall_quality : 0.8),
               total_confidence: 0.8
             },
-            recommendations: session.enhanced_status?.semantic_validation?.recommendations || [],
+            recommendations: (isPresent(session.enhanced_status?.semantic_validation?.recommendations) ? session.enhanced_status?.semantic_validation?.recommendations : []),
             ready_for_import: true,
             quality_metrics: {
-              extraction_quality: session.enhanced_status?.final_results?.extraction_quality?.overall_quality || 0.8,
-              validation_quality: session.enhanced_status?.final_results?.validation_score || 0.8,
-              matching_quality: session.enhanced_status?.final_results?.match_confidence || 0.7,
-              semantic_quality: session.enhanced_status?.semantic_validation?.overall_confidence || 0.8,
+              extraction_quality: (isPresent(session.enhanced_status?.final_results?.extraction_quality?.overall_quality) ? session.enhanced_status?.final_results?.extraction_quality?.overall_quality : 0.8),
+              validation_quality: (isPresent(session.enhanced_status?.final_results?.validation_score) ? session.enhanced_status?.final_results?.validation_score : 0.8),
+              matching_quality: (isPresent(session.enhanced_status?.final_results?.match_confidence) ? session.enhanced_status?.final_results?.match_confidence : 0.7),
+              semantic_quality: (isPresent(session.enhanced_status?.semantic_validation?.overall_confidence) ? session.enhanced_status?.semantic_validation?.overall_confidence : 0.8),
               processing_efficiency: 0.8,
               overall_score: 0.8
             }
@@ -1056,7 +1128,7 @@ class PDFImportService {
         } else if (session.status === 'failed') {
           return {
             success: false,
-            error: session.error_message || '处理失败'
+            error: (session.error_message !== null && session.error_message !== undefined && session.error_message !== '') ? session.error_message : '处理失败'
           };
         } else {
           return {
@@ -1067,14 +1139,14 @@ class PDFImportService {
       } else {
         return {
           success: false,
-          error: progressResponse.error || '获取进度失败'
+          error: (progressResponse.error !== null && progressResponse.error !== undefined && progressResponse.error !== '') ? progressResponse.error : '获取进度失败'
         };
       }
     } catch (error: unknown) {
-      console.error('获取增强版结果失败:', error);
+      logger.error('获取增强版结果失败:', error);
       return {
         success: false,
-        error: isAxiosError(error) ? (error.response?.data?.detail || error.message) : isError(error) ? error.message : 'Unknown error'
+        error: isAxiosError(error) ? ((isPresent(error.response?.data?.detail) ? error.response?.data?.detail : error.message)) : isError(error) ? error.message : 'Unknown error'
       };
     }
   }
@@ -1091,13 +1163,19 @@ class PDFImportService {
   }> {
     try {
       const response = await axios.get(`${ENHANCED_API_BASE}/test/all`);
-      return response.data;
+      return response.data as {
+        success: boolean;
+        message: string;
+        test_results?: Array<{ name: string; status: string; message?: string;[key: string]: unknown }>;
+        availability_rate?: number;
+        system_ready?: boolean;
+      };
     } catch (error: unknown) {
-      console.error('测试增强版功能失败:', error);
+      logger.error('测试增强版功能失败:', error);
       const errorMsg = isAxiosError(error)
-        ? (error.response?.data?.detail || error.message || 'Unknown error')
+        ? ((isPresent(error.response?.data?.detail) ? error.response?.data?.detail : (error.message !== null && error.message !== undefined && error.message !== '') ? error.message : 'Unknown error'))
         : isError(error)
-          ? (error.message || 'Unknown error')
+          ? ((error.message !== null && error.message !== undefined && error.message !== '') ? error.message : 'Unknown error')
           : 'Unknown error';
       return {
         success: false,
@@ -1119,14 +1197,20 @@ class PDFImportService {
   }> {
     try {
       const response = await axios.get(`${ENHANCED_API_BASE}/health`);
-      return response.data;
+      return response.data as {
+        status: string;
+        components: Record<string, boolean>;
+        health_score?: number;
+        timestamp: string;
+        error?: string;
+      };
     } catch (error: unknown) {
-      console.error('增强版健康检查失败:', error);
+      logger.error('增强版健康检查失败:', error);
       return {
         status: 'unhealthy',
         components: {},
         timestamp: new Date().toISOString(),
-        error: isAxiosError(error) ? (error.response?.data?.detail || error.message) : isError(error) ? error.message : 'Unknown error'
+        error: isAxiosError(error) ? ((isPresent(error.response?.data?.detail) ? error.response?.data?.detail : error.message)) : isError(error) ? error.message : 'Unknown error'
       };
     }
   }
@@ -1141,13 +1225,17 @@ class PDFImportService {
   }> {
     try {
       const response = await axios.get(`${ENHANCED_API_BASE}/performance/summary`);
-      return response.data;
+      return response.data as {
+        success: boolean;
+        message: string;
+        data?: Record<string, unknown>;
+      };
     } catch (error: unknown) {
-      console.error('获取性能摘要失败:', error);
+      logger.error('获取性能摘要失败:', error);
       const errorMsg = isAxiosError(error)
-        ? (error.response?.data?.detail || error.message || 'Unknown error')
+        ? ((isPresent(error.response?.data?.detail) ? error.response?.data?.detail : (error.message !== null && error.message !== undefined && error.message !== '') ? error.message : 'Unknown error'))
         : isError(error)
-          ? (error.message || 'Unknown error')
+          ? ((error.message !== null && error.message !== undefined && error.message !== '') ? error.message : 'Unknown error')
           : 'Unknown error';
       return {
         success: false,
@@ -1164,10 +1252,10 @@ class PDFImportService {
     // 增强版处理时间较长，但更准确
     const sizeMB = fileSize / (1024 * 1024);
 
-    if (sizeMB < 1) return '30-45秒';
-    if (sizeMB < 5) return '45-75秒';
-    if (sizeMB < 10) return '60-90秒';
-    if (sizeMB < 20) return '90-150秒';
+    if (sizeMB !== null && sizeMB !== undefined && sizeMB < 1) return '30-45秒';
+    if (sizeMB !== null && sizeMB !== undefined && sizeMB < 5) return '45-75秒';
+    if (sizeMB !== null && sizeMB !== undefined && sizeMB < 10) return '60-90秒';
+    if (sizeMB !== null && sizeMB !== undefined && sizeMB < 20) return '90-150秒';
 
     return '120-240秒';
   }
@@ -1200,7 +1288,7 @@ class PDFImportService {
         message: available ? '增强版功能可用' : '部分增强版功能不可用'
       };
     } catch (error: unknown) {
-      console.error('检查增强版功能可用性失败:', error);
+      logger.error('检查增强版功能可用性失败:', error);
       return {
         available: false,
         features: {},

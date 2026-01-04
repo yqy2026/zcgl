@@ -8,6 +8,9 @@
 
 import { enhancedApiClient } from '@/api/client';
 import { ApiErrorHandler } from '../../utils/responseExtractor';
+import { createLogger } from '@/utils/logger';
+const logger = createLogger('Base');
+
 import {
   DictionaryConfig,
   DictionaryOption,
@@ -351,7 +354,7 @@ class BaseDictionaryService {
       const enhancedError = ApiErrorHandler.handleError(error);
 
       // 如果启用备用数据，返回备用数据
-      if (useFallback && config.fallbackOptions) {
+      if (useFallback && (config.fallbackOptions !== null && config.fallbackOptions !== undefined)) {
         const fallbackData = config.fallbackOptions.filter(option =>
           isActive ? option.isActive !== false : true
         );
@@ -425,8 +428,8 @@ class BaseDictionaryService {
 
     // 首先处理已缓存的数据
     for (const dictType of dictTypes) {
-      const cached = preloaded.get(dictType);
-      if (cached && !forceRefresh) {
+      const cached = preloaded.get(dictType) as DictionaryOption[] | undefined;
+      if ((cached !== null && cached !== undefined) && !forceRefresh) {
         results[dictType] = {
           success: true,
           data: cached,
@@ -485,7 +488,7 @@ class BaseDictionaryService {
             results[dictType] = result;
           } else {
             // 处理Promise拒绝的情况
-            console.error('批量获取字典数据失败:', promiseResult.reason);
+            logger.error('批量获取字典数据失败:', promiseResult.reason);
           }
         });
       }
@@ -575,7 +578,7 @@ class BaseDictionaryService {
    * 清除缓存
    */
   clearCache(dictType?: string): void {
-    if (dictType) {
+    if (dictType !== null && dictType !== undefined && dictType !== '') {
       cache.clearForType(dictType);
     } else {
       cache.clear();
@@ -627,7 +630,7 @@ class BaseDictionaryService {
             loadedTypes.push(dictType);
             totalItems += result.data.length;
           } else {
-            failedTypes.push({ type: dictType, error: result.error || 'Unknown error' });
+            failedTypes.push({ type: dictType, error: (result.error !== null && result.error !== undefined && result.error !== '') ? result.error : 'Unknown error' });
           }
 
           onProgress?.(loadedTypes.length + failedTypes.length, dictTypes.length, dictType);
@@ -773,7 +776,7 @@ class BaseDictionaryService {
         if (result.success) {
           success.push(dictType);
         } else {
-          failed.push({ type: dictType, error: result.error || 'Unknown error' });
+          failed.push({ type: dictType, error: (result.error !== null && result.error !== undefined && result.error !== '') ? result.error : 'Unknown error' });
         }
       } catch (error) {
         const enhancedError = ApiErrorHandler.handleError(error);

@@ -106,6 +106,7 @@ const ContractListPage: React.FC = () => {
       message.error(`加载合同列表失败: ${error instanceof Error ? error.message : "未知错误"}`);
       setState((prev) => ({ ...prev, loading: false, contracts: [] }));
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.pagination.current, state.pagination.pageSize, state.filters]);
 
   // 加载统计数据
@@ -290,10 +291,12 @@ const ContractListPage: React.FC = () => {
           到期: { color: "orange", text: "到期" },
           终止: { color: "red", text: "终止" },
         };
-        const config = statusConfig[status as keyof typeof statusConfig] || {
-          color: "default",
-          text: status,
-        };
+        const config = (statusConfig[status as keyof typeof statusConfig] !== null && statusConfig[status as keyof typeof statusConfig] !== undefined)
+                       ? statusConfig[status as keyof typeof statusConfig]
+                       : {
+                          color: "default",
+                          text: status,
+                        };
         return <Tag color={config.color}>{config.text}</Tag>;
       },
     },

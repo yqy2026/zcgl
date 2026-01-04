@@ -6,6 +6,13 @@ interface FormValidationRule {
   validator?: (rule: FormValidationRule, value: unknown) => Promise<void>
 }
 
+// 验证规则返回类型
+interface ValidationRuleResult {
+  validator?: (rule: FormValidationRule, value: unknown) => Promise<void>
+  message?: string
+  [key: string]: unknown
+}
+
 // Response type for existence check APIs
 interface ExistsCheckResponse {
   exists: boolean
@@ -16,7 +23,7 @@ export const validationRules = {
   // 必填验证
   required: (message?: string) => ({
     required: true,
-    message: message || '此字段为必填项'
+    message: (message !== null && message !== undefined && message !== '') ? message : '此字段为必填项'
   }),
 
   // 邮箱验证
@@ -209,13 +216,13 @@ export const customValidators = {
   }),
 
   // 验证开始日期小于结束日期
-  dateRange: (startDateField: string, _endDateField: string) => ({
-    validator: (_: FormValidationRule, value: string) => {
+  dateRange: (startDateField: string, _endDateField: string): ValidationRuleResult => ({
+    validator: (_rule: FormValidationRule, value: unknown): Promise<void> => {
       const form = document.querySelector('form')
       if (!form) return Promise.resolve()
 
       const startDate = (form.querySelector(`[name="${startDateField}"]`) as HTMLInputElement)?.value
-      const endDate = value
+      const endDate = typeof value === 'string' ? value : ''
 
       if (startDate && endDate && new Date(startDate) >= new Date(endDate)) {
         return Promise.reject(new Error('结束日期必须大于开始日期'))
@@ -229,18 +236,19 @@ export const customValidators = {
     validator: (_: FormValidationRule, value: number) => {
       if (value === undefined || value === null) return Promise.resolve()
       if (value < min || value > max) {
-        return Promise.reject(new Error(message || `数值应在${min}-${max}之间`))
+        return Promise.reject(new Error((message !== null && message !== undefined && message !== '') ? message : `数值应在${min}-${max}之间`))
       }
       return Promise.resolve()
     }
   }),
 
   // 验证字符串长度
-  stringLength: (min: number, max: number, message?: string) => ({
-    validator: (_: FormValidationRule, value: string) => {
-      if (!value) return Promise.resolve()
-      if (value.length < min || value.length > max) {
-        return Promise.reject(new Error(message || `长度应在${min}-${max}个字符之间`))
+  stringLength: (min: number, max: number, message?: string): ValidationRuleResult => ({
+    validator: (_rule: FormValidationRule, value: unknown): Promise<void> => {
+      const strValue = typeof value === 'string' ? value : String(value ?? '')
+      if (!strValue) return Promise.resolve()
+      if (strValue.length < min || strValue.length > max) {
+        return Promise.reject(new Error((message !== null && message !== undefined && message !== '') ? message : `长度应在${min}-${max}个字符之间`))
       }
       return Promise.resolve()
     }

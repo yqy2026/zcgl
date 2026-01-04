@@ -368,7 +368,7 @@ const Statistic: React.FC<{
       ...valueStyle
     }}>
       {value}
-      {suffix && <span style={{ fontSize: '14px', marginLeft: '4px' }}>{suffix}</span>}
+      {(suffix !== null && suffix !== undefined && suffix !== '') && <span style={{ fontSize: '14px', marginLeft: '4px' }}>{suffix}</span>}
     </div>
   </div>
 )

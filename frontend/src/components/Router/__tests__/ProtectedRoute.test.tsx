@@ -6,7 +6,6 @@
 
 import { describe, it, expect } from 'vitest'
 import React from 'react'
-import { } from '@testing-library/react'
 import { MemoryRouter, Routes } from 'react-router-dom'
 
 // Mock dependencies
@@ -34,7 +33,7 @@ vi.mock('../System/PermissionGuard', () => ({
 }))
 
 // Test wrapper
-const TestWrapper = ({ children }: { children: React.ReactNode }) => (
+const _TestWrapper = ({ children }: { children: React.ReactNode }) => (
   <MemoryRouter>
     <Routes>{children}</Routes>
   </MemoryRouter>

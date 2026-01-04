@@ -45,7 +45,7 @@ const TodoList: React.FC<TodoListProps> = ({ items, loading }) => {
     // Task completed
   }
 
-  if (!loading && items.length === 0) {
+  if ((loading === false || loading === null || loading === undefined) && items.length === 0) {
     return (
       <Empty 
         description="暂无待办事项"

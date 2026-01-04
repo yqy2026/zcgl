@@ -369,7 +369,7 @@ export const chartDataUtils = {
       name: item.category,
       value: item.count,
       count: item.count,
-      occupancy_rate: item.occupancy_rate || 0
+      occupancy_rate: (item.occupancy_rate !== null && item.occupancy_rate !== undefined) ? item.occupancy_rate : 0
     }))
   },
 
@@ -379,7 +379,7 @@ export const chartDataUtils = {
       name: item.range,
       value: item.count,
       count: item.count,
-      percentage: typeof item.percentage === 'number' ? item.percentage : 0
+      percentage: (item.percentage !== null && item.percentage !== undefined && typeof item.percentage === 'number') ? item.percentage : 0
     }))
   },
 
@@ -389,8 +389,8 @@ export const chartDataUtils = {
     return data.map(item => ({
       date: item.date,
       occupancy_rate: item.occupancy_rate,
-      total_rented_area: item.total_rented_area || 0,
-      total_rentable_area: item.total_rentable_area || 0
+      total_rented_area: (item.total_rented_area !== null && item.total_rented_area !== undefined) ? item.total_rented_area : 0,
+      total_rentable_area: (item.total_rentable_area !== null && item.total_rentable_area !== undefined) ? item.total_rentable_area : 0
     }))
   },
 

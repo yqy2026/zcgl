@@ -59,9 +59,9 @@ export const useProjectOptions = (isActive: boolean = true): UseProjectOptionsRe
   })
 
   return {
-    projects: data || [],
+    projects: (data !== null && data !== undefined) ? data : [],
     loading: isLoading,
-    error: error?.message || null,
+    error: (error?.message !== null && error?.message !== undefined) ? error.message : null,
     refresh: refetch
   }
 }
@@ -82,7 +82,7 @@ export const useProjectDetail = (id?: string): UseProjectDetailResult => {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey,
     queryFn: async () => {
-      if (!id) return null
+      if (id === null || id === undefined || id === '') return null
       try {
         const response = await projectService.getProject(id)
         return response
@@ -97,13 +97,13 @@ export const useProjectDetail = (id?: string): UseProjectDetailResult => {
     refetchOnMount: false,
     refetchOnReconnect: false,
     retry: 1,
-    enabled: !!id
+    enabled: (id !== null && id !== undefined && id !== '')
   })
 
   return {
     project: data || null,
     loading: isLoading,
-    error: error?.message || null,
+    error: (error?.message !== null && error?.message !== undefined) ? error.message : null,
     refresh: refetch
   }
 }
@@ -146,9 +146,9 @@ export const useProjectList = (params: ProjectQueryParams = {}): UseProjectListR
   })
 
   const pagination = {
-    current: data?.page || 1,
-    pageSize: data?.size || 10,
-    total: data?.total || 0,
+    current: (data?.page !== null && data?.page !== undefined) ? data.page : 1,
+    pageSize: (data?.size !== null && data?.size !== undefined) ? data.size : 10,
+    total: (data?.total !== null && data?.total !== undefined) ? data.total : 0,
     onChange: (_page: number, _size: number) => {
       // 这里可以触发重新查询
       refetch()
@@ -158,7 +158,7 @@ export const useProjectList = (params: ProjectQueryParams = {}): UseProjectListR
   return {
     projects: data?.items || [],
     loading: isLoading,
-    error: error?.message || null,
+    error: (error?.message !== null && error?.message !== undefined) ? error.message : null,
     pagination,
     refresh: refetch
   }
@@ -198,7 +198,7 @@ export const useProjectStatistics = (): UseProjectStatisticsResult => {
   return {
     statistics: data || null,
     loading: isLoading,
-    error: error?.message || null,
+    error: (error?.message !== null && error?.message !== undefined) ? error.message : null,
     refresh: refetch
   }
 }
@@ -222,8 +222,8 @@ export const useCreateProject = () => {
     },
     onError: (error: unknown) => {
       projectLogger.error('创建项目失败:', error as Error)
-      const err = error as any
-      message.error(err.response?.data?.detail || '创建项目失败')
+      const err = error as { response?: { data?: { detail?: string } } }
+      message.error((err.response?.data?.detail !== null && err.response?.data?.detail !== undefined && err.response?.data?.detail !== '') ? err.response.data.detail : '创建项目失败')
     }
   })
 }
@@ -248,8 +248,8 @@ export const useUpdateProject = () => {
     },
     onError: (error: unknown) => {
       projectLogger.error('更新项目失败:', error as Error)
-      const err = error as any
-      message.error(err.response?.data?.detail || '更新项目失败')
+      const err = error as { response?: { data?: { detail?: string } } }
+      message.error((err.response?.data?.detail !== null && err.response?.data?.detail !== undefined && err.response?.data?.detail !== '') ? err.response.data.detail : '更新项目失败')
     }
   })
 }
@@ -273,8 +273,8 @@ export const useDeleteProject = () => {
     },
     onError: (error: unknown) => {
       projectLogger.error('删除项目失败:', error as Error)
-      const err = error as any
-      message.error(err.response?.data?.detail || '删除项目失败')
+      const err = error as { response?: { data?: { detail?: string } } }
+      message.error((err.response?.data?.detail !== null && err.response?.data?.detail !== undefined && err.response?.data?.detail !== '') ? err.response.data.detail : '删除项目失败')
     }
   })
 }
@@ -299,8 +299,8 @@ export const useToggleProjectStatus = () => {
     },
     onError: (error: unknown) => {
       projectLogger.error('切换项目状态失败:', error as Error)
-      const err = error as any
-      message.error(err.response?.data?.detail || '切换项目状态失败')
+      const err = error as { response?: { data?: { detail?: string } } }
+      message.error((err.response !== null && err.response !== undefined && err.response.data !== null && err.response.data !== undefined && err.response.data.detail !== null && err.response.data.detail !== undefined && err.response.data.detail !== '') ? err.response.data.detail : '切换项目状态失败')
     }
   })
 }

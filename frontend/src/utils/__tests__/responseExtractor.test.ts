@@ -14,7 +14,7 @@ import type { EnhancedApiError, ApiErrorType } from '@/types/apiResponse'
 
 const createMockResponse = (_data: any, status = 200): AxiosResponse => {
   return {
-    data,
+    data: _data,
     status,
     statusText: 'OK',
     headers: {},
@@ -71,7 +71,7 @@ const networkErrorResponse = {
 describe('ResponseExtractor - 核心功能', () => {
   describe('smartExtract - 标准响应', () => {
     it('应该提取标准响应数据', () => {
-      const _result = ResponseExtractor.smartExtract(standardResponse)
+      const result = ResponseExtractor.smartExtract(standardResponse)
 
       expect(result.success).toBe(true)
       expect(result.data).toEqual({ id: 1, name: '测试数据' })
@@ -84,7 +84,7 @@ describe('ResponseExtractor - 核心功能', () => {
         name: string
       }
 
-      const _result = ResponseExtractor.smartExtract<DataType>(standardResponse, {
+      const result = ResponseExtractor.smartExtract<DataType>(standardResponse, {
         enableTypeValidation: false
       })
 
@@ -100,7 +100,7 @@ describe('ResponseExtractor - 核心功能', () => {
         // 缺少data字段
       })
 
-      const _result = ResponseExtractor.smartExtract(invalidResponse)
+      const result = ResponseExtractor.smartExtract(invalidResponse)
 
       // 当没有data字段时，会被识别为直接响应
       expect(result.success).toBe(true)
@@ -110,7 +110,7 @@ describe('ResponseExtractor - 核心功能', () => {
 
   describe('smartExtract - 分页响应', () => {
     it('应该提取分页响应数据', () => {
-      const _result = ResponseExtractor.smartExtract(paginatedResponse)
+      const result = ResponseExtractor.smartExtract(paginatedResponse)
 
       expect(result.success).toBe(true)
       expect(result.data).toEqual([
@@ -130,7 +130,7 @@ describe('ResponseExtractor - 核心功能', () => {
         }
       })
 
-      const _result = ResponseExtractor.smartExtract(invalidPaginatedResponse)
+      const result = ResponseExtractor.smartExtract(invalidPaginatedResponse)
 
       // 会被识别为标准响应，返回data对象本身
       expect(result.success).toBe(true)
@@ -140,7 +140,7 @@ describe('ResponseExtractor - 核心功能', () => {
 
   describe('smartExtract - 错误响应', () => {
     it('应该提取错误响应信息', () => {
-      const _result = ResponseExtractor.smartExtract(errorResponse)
+      const result = ResponseExtractor.smartExtract(errorResponse)
 
       expect(result.success).toBe(false)
       expect(result.error).toBe('请求失败')
@@ -153,7 +153,7 @@ describe('ResponseExtractor - 核心功能', () => {
         message: '次要错误'
       })
 
-      const _result = ResponseExtractor.smartExtract(response)
+      const result = ResponseExtractor.smartExtract(response)
 
       expect(result.error).toBe('主要错误')
     })
@@ -167,7 +167,7 @@ describe('ResponseExtractor - 核心功能', () => {
         }
       })
 
-      const _result = ResponseExtractor.smartExtract(response)
+      const result = ResponseExtractor.smartExtract(response)
 
       expect(result.error).toBe('嵌套错误信息')
     })
@@ -175,7 +175,7 @@ describe('ResponseExtractor - 核心功能', () => {
 
   describe('smartExtract - 直接响应', () => {
     it('应该识别并提取直接响应', () => {
-      const _result = ResponseExtractor.smartExtract(directResponse)
+      const result = ResponseExtractor.smartExtract(directResponse)
 
       expect(result.success).toBe(true)
       expect(result.data).toEqual({ id: 1, name: '直接数据' })
@@ -183,7 +183,7 @@ describe('ResponseExtractor - 核心功能', () => {
 
     it('应该处理数组直接响应', () => {
       const arrayResponse = createMockResponse([1, 2, 3])
-      const _result = ResponseExtractor.smartExtract(arrayResponse)
+      const result = ResponseExtractor.smartExtract(arrayResponse)
 
       expect(result.success).toBe(true)
       expect(result.data).toEqual([1, 2, 3])
@@ -191,7 +191,7 @@ describe('ResponseExtractor - 核心功能', () => {
 
     it('应该处理字符串直接响应', () => {
       const stringResponse = createMockResponse('success')
-      const _result = ResponseExtractor.smartExtract(stringResponse)
+      const result = ResponseExtractor.smartExtract(stringResponse)
 
       expect(result.success).toBe(true)
       expect(result.data).toBe('success')
@@ -206,7 +206,7 @@ describe('ResponseExtractor - 核心功能', () => {
         error: 'error message'
       })
 
-      const _result = ResponseExtractor.smartExtract(customResponse, {
+      const result = ResponseExtractor.smartExtract(customResponse, {
         detection: {
           successField: 'ok',
           dataField: 'result',
@@ -333,12 +333,12 @@ describe('ResponseExtractor - 便捷方法', () => {
 
   describe('extractAndTransform', () => {
     it('应该提取并转换数据', () => {
-      const transformer = (_data: any) => ({
+      const transformer = (data: any) => ({
         ...data,
         transformed: true
       })
 
-      const _result = ResponseExtractor.extractAndTransform(
+      const result = ResponseExtractor.extractAndTransform(
         standardResponse,
         transformer
       )
@@ -353,7 +353,7 @@ describe('ResponseExtractor - 便捷方法', () => {
 
     it('应该在原始提取失败时返回错误', () => {
       const transformer = (_data: any) => ({ transformed: true })
-      const _result = ResponseExtractor.extractAndTransform(
+      const result = ResponseExtractor.extractAndTransform(
         errorResponse,
         transformer
       )
@@ -367,7 +367,7 @@ describe('ResponseExtractor - 便捷方法', () => {
         throw new Error('转换失败')
       }
 
-      const _result = ResponseExtractor.extractAndTransform(
+      const result = ResponseExtractor.extractAndTransform(
         standardResponse,
         transformer
       )
@@ -397,7 +397,7 @@ describe('ResponseExtractor - 便捷方法', () => {
         data: { id: 123, value: 'test' }
       })
 
-      const _result = ResponseExtractor.extractAndTransform<SourceType, TargetType>(
+      const result = ResponseExtractor.extractAndTransform<SourceType, TargetType>(
         sourceResponse,
         transformer
       )
@@ -562,21 +562,21 @@ describe('ApiErrorHandler - 错误处理', () => {
 
 describe('ResponseExtractor - 边界情况', () => {
   it('应该处理null响应', () => {
-    const _result = ResponseExtractor.smartExtract(null as any)
+    const result = ResponseExtractor.smartExtract(null as any)
 
     expect(result.success).toBe(false)
     expect(result.error).toBeDefined()
   })
 
   it('应该处理undefined响应', () => {
-    const _result = ResponseExtractor.smartExtract(undefined as any)
+    const result = ResponseExtractor.smartExtract(undefined as any)
 
     expect(result.success).toBe(false)
     expect(result.error).toBeDefined()
   })
 
   it('应该处理空对象响应', () => {
-    const _result = ResponseExtractor.smartExtract(createMockResponse({}))
+    const result = ResponseExtractor.smartExtract(createMockResponse({}))
 
     expect(result.success).toBe(true) // 直接响应
     expect(result.data).toEqual({})
@@ -590,7 +590,7 @@ describe('ResponseExtractor - 边界情况', () => {
       }
     } as any
 
-    const _result = ResponseExtractor.smartExtract(problematicResponse)
+    const result = ResponseExtractor.smartExtract(problematicResponse)
 
     expect(result.success).toBe(false)
     expect(result.error).toContain('数据提取失败')

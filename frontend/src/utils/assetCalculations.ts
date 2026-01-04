@@ -172,9 +172,12 @@ export const getAssetSummary = (assets: Partial<Asset>[]) => {
   let vacantAssets = 0
 
   assets.forEach(asset => {
-    const rentableArea = DecimalUtils.parseDecimal(asset.rentable_area) || 0
-    const rentedArea = DecimalUtils.parseDecimal(asset.rented_area) || 0
-    const nonCommercialArea = DecimalUtils.parseDecimal(asset.non_commercial_area) || 0
+    const parsedRentable = DecimalUtils.parseDecimal(asset.rentable_area)
+    const rentableArea = (parsedRentable !== null && parsedRentable !== undefined) ? parsedRentable : 0
+    const parsedRented = DecimalUtils.parseDecimal(asset.rented_area)
+    const rentedArea = (parsedRented !== null && parsedRented !== undefined) ? parsedRented : 0
+    const parsedNonCommercial = DecimalUtils.parseDecimal(asset.non_commercial_area)
+    const nonCommercialArea = (parsedNonCommercial !== null && parsedNonCommercial !== undefined) ? parsedNonCommercial : 0
     const usageStatus = asset.usage_status
 
     totalRentableArea = DecimalUtils.safeAdd(totalRentableArea, rentableArea)
@@ -267,8 +270,9 @@ export const checkAssetDataCompleteness = (asset: Partial<Asset>): {
 
   // 检查必填字段
   requiredFields.forEach(field => {
-    if (!asset[field as keyof Asset] ||
-        (typeof asset[field as keyof Asset] === 'string' && !(asset[field as keyof Asset] as string).trim())) {
+    const value = asset[field as keyof Asset]
+    if ((value === null || value === undefined || value === '') ||
+        (typeof value === 'string' && !value.trim())) {
       missingRequired.push(field)
     }
   })

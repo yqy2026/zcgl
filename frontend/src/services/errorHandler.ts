@@ -45,7 +45,7 @@ export class ApiErrorHandler {
   private constructor() { }
 
   static getInstance(): ApiErrorHandler {
-    if (!ApiErrorHandler.instance) {
+    if ((ApiErrorHandler.instance === null || ApiErrorHandler.instance === undefined)) {
       ApiErrorHandler.instance = new ApiErrorHandler()
     }
     return ApiErrorHandler.instance
@@ -108,7 +108,7 @@ export class ApiErrorHandler {
 
   // 获取错误消息
   private getErrorMessage(error: ExtendedError): string {
-    if (error.message) {
+    if (error.message !== null && error.message !== undefined && error.message !== '') {
       return error.message
     }
 
@@ -149,7 +149,7 @@ export class ApiErrorHandler {
 
     // 在开发环境下打印详细错误
     if (process.env.NODE_ENV === 'development') {
-      // console.error('API Error Details:', error)
+      // logger.error('API Error Details:', error)
     }
   }
 

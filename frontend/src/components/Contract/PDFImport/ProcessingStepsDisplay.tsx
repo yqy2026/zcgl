@@ -51,7 +51,7 @@ const ProcessingStepsDisplay: React.FC = () => {
             {(uploading || processingProgress) && (
                 <div style={{ marginTop: 16 }}>
                     <Progress
-                        percent={uploading ? uploadProgress : (processingProgress?.progress || 0)}
+                        percent={uploading ? uploadProgress : (processingProgress?.progress !== null && processingProgress?.progress !== undefined) ? processingProgress.progress : 0}
                         status={processingProgress?.status === 'failed' ? 'exception' : undefined}
                         strokeColor={{
                             '0%': '#108ee9',

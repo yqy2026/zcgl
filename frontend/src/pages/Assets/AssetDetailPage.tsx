@@ -24,7 +24,7 @@ const AssetDetailPage: React.FC = () => {
   const { data: asset, isLoading, error } = useQuery({
     queryKey: ['asset', id],
     queryFn: () => assetService.getAsset(id!),
-    enabled: !!id,
+    enabled: (id !== null && id !== undefined && id !== ''),
   })
 
   if (isLoading) {

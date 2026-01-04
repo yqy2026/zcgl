@@ -71,7 +71,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   const { data: analyticsResponse, isLoading, error, refetch } = useAnalytics(filters);
   const analytics = (analyticsResponse as AnalyticsResponse | undefined)?.data;
 
-  const hasData = analytics?.area_summary?.total_assets
+  const hasData = (analytics?.area_summary?.total_assets !== null && analytics?.area_summary?.total_assets !== undefined)
     ? analytics.area_summary.total_assets > 0
     : false;
 

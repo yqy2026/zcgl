@@ -46,18 +46,18 @@ const AssetList: React.FC<AssetListProps> = ({
       ellipsis: {
         showTitle: false,
       },
-      render: (text, record) => {
+      render: (text: string, record: Asset) => {
         // 如果是项目ID格式，尝试显示关联的项目名称
-        const projectName = record.project_name || text;
+        const projectName = (record.project_name !== null && record.project_name !== undefined && record.project_name !== '') ? record.project_name : text;
         const isId = typeof projectName === "string" && projectName.length === 36; // UUID格式
 
-        let displayText = projectName;
+        let displayText: string = projectName;
         if (isId) {
           // 如果是ID格式，显示"未配置项目"
           displayText = "未配置项目";
         }
 
-        return <Tooltip title={displayText || "未设置"}>{displayText || "-"}</Tooltip>;
+        return <Tooltip title={(displayText !== null && displayText !== undefined && displayText !== '') ? displayText : "未设置"}>{(displayText !== null && displayText !== undefined && displayText !== '') ? displayText : "-"}</Tooltip>;
       },
     },
     {
@@ -86,7 +86,7 @@ const AssetList: React.FC<AssetListProps> = ({
       ellipsis: {
         showTitle: false,
       },
-      render: (text) => <Tooltip title={text}>{text}</Tooltip>,
+      render: (text: string) => <Tooltip title={text}>{text}</Tooltip>,
     },
     {
       title: "权属类别",
@@ -102,9 +102,9 @@ const AssetList: React.FC<AssetListProps> = ({
         { text: "民政托管企业", value: "2" },
         { text: "其他", value: "3" },
       ],
-      render: (text, _record) => {
+      render: (text: string, _record: Asset) => {
         // 权属类别映射
-        let displayText = text;
+        let displayText: string = text;
         if (typeof text === "string") {
           // 权属类别字典映射
           const categoryMap: Record<string, string> = {
@@ -118,7 +118,7 @@ const AssetList: React.FC<AssetListProps> = ({
           }
         }
 
-        return <Tooltip title={displayText || "未设置"}>{displayText || "-"}</Tooltip>;
+        return <Tooltip title={(displayText !== null && displayText !== undefined && displayText !== '') ? displayText : "未设置"}>{(displayText !== null && displayText !== undefined && displayText !== '') ? displayText : "-"}</Tooltip>;
       },
     },
     {
@@ -129,7 +129,7 @@ const AssetList: React.FC<AssetListProps> = ({
       ellipsis: {
         showTitle: false,
       },
-      render: (text) => <Tooltip title={text}>{text}</Tooltip>,
+      render: (text: string) => <Tooltip title={text}>{text}</Tooltip>,
     },
     {
       title: "土地面积",
@@ -138,7 +138,7 @@ const AssetList: React.FC<AssetListProps> = ({
       width: 120,
       align: "right",
       sorter: true,
-      render: (value) => formatArea(value),
+      render: (value: number) => formatArea(value),
     },
     {
       title: "实际面积",
@@ -147,7 +147,7 @@ const AssetList: React.FC<AssetListProps> = ({
       width: 120,
       align: "right",
       sorter: true,
-      render: (value) => formatArea(value),
+      render: (value: number) => formatArea(value),
     },
     {
       title: "可出租面积",
@@ -156,7 +156,7 @@ const AssetList: React.FC<AssetListProps> = ({
       width: 130,
       align: "right",
       sorter: true,
-      render: (value) => formatArea(value),
+      render: (value: number) => formatArea(value),
     },
     {
       title: "已出租面积",
@@ -165,7 +165,7 @@ const AssetList: React.FC<AssetListProps> = ({
       width: 130,
       align: "right",
       sorter: true,
-      render: (value) => formatArea(value),
+      render: (value: number) => formatArea(value),
     },
     {
       title: "确权状态",
@@ -177,7 +177,7 @@ const AssetList: React.FC<AssetListProps> = ({
         { text: "未确权", value: "未确权" },
         { text: "部分确权", value: "部分确权" },
       ],
-      render: (status) => <Tag color={getStatusColor(status, "ownership")}>{status}</Tag>,
+      render: (status: string) => <Tag color={getStatusColor(status, "ownership")}>{status}</Tag>,
     },
     {
       title: "物业性质",
@@ -188,7 +188,7 @@ const AssetList: React.FC<AssetListProps> = ({
         { text: "经营性", value: "经营性" },
         { text: "非经营性", value: "非经营性" },
       ],
-      render: (nature) => <Tag color={getStatusColor(nature, "property")}>{nature}</Tag>,
+      render: (nature: string) => <Tag color={getStatusColor(nature, "property")}>{nature}</Tag>,
     },
     {
       title: "使用状态",
@@ -204,7 +204,7 @@ const AssetList: React.FC<AssetListProps> = ({
         { text: "待处置", value: "待处置" },
         { text: "其他", value: "其他" },
       ],
-      render: (status) => <Tag color={getStatusColor(status, "usage")}>{status}</Tag>,
+      render: (status: string) => <Tag color={getStatusColor(status, "usage")}>{status}</Tag>,
     },
     {
       title: "出租率",
@@ -213,14 +213,14 @@ const AssetList: React.FC<AssetListProps> = ({
       width: 100,
       align: "right",
       sorter: true,
-      render: (rate, record) => {
+      render: (rate: number, record: Asset) => {
         // 如果有出租率字段直接显示，否则计算
-        if (rate) {
+        if (rate !== null && rate !== undefined) {
           return formatPercentage(rate);
         }
 
         // 计算出租率
-        if (record.rentable_area && record.rented_area) {
+        if ((record.rentable_area !== null && record.rentable_area !== undefined) && (record.rented_area !== null && record.rented_area !== undefined)) {
           const calculatedRate = (record.rented_area / record.rentable_area) * 100;
           return (
             <span
@@ -246,8 +246,8 @@ const AssetList: React.FC<AssetListProps> = ({
         { text: "是", value: true },
         { text: "否", value: false },
       ],
-      render: (isLitigated) => (
-        <Tag color={isLitigated ? "red" : "green"}>{isLitigated ? "是" : "否"}</Tag>
+      render: (isLitigated: boolean) => (
+        <Tag color={isLitigated === true ? "red" : "green"}>{isLitigated === true ? "是" : "否"}</Tag>
       ),
     },
     {
@@ -256,7 +256,7 @@ const AssetList: React.FC<AssetListProps> = ({
       key: "created_at",
       width: 120,
       sorter: true,
-      render: (date) => formatDate(date),
+      render: (date: string) => formatDate(date),
     },
     {
       title: "更新时间",
@@ -264,14 +264,14 @@ const AssetList: React.FC<AssetListProps> = ({
       key: "updated_at",
       width: 120,
       sorter: true,
-      render: (date) => formatDate(date),
+      render: (date: string) => formatDate(date),
     },
     {
       title: "操作",
       key: "actions",
       width: 150,
       fixed: "right",
-      render: (_, record) => (
+      render: (_: unknown, record: Asset) => (
         <Space size="small">
           <Tooltip title="查看详情">
             <Button
@@ -417,16 +417,16 @@ const AssetList: React.FC<AssetListProps> = ({
       rowSelection={rowSelection}
       summary={renderSummary}
       pagination={{
-        current: data?.page || 1,
-        pageSize: data?.limit || 20,
-        total: data?.total || 0,
+        current: (data?.page !== null && data?.page !== undefined) ? data.page : 1,
+        pageSize: (data?.limit !== null && data?.limit !== undefined) ? data.limit : 20,
+        total: (data?.total !== null && data?.total !== undefined) ? data.total : 0,
         showSizeChanger: true,
         showQuickJumper: true,
         showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条记录`,
         pageSizeOptions: ["10", "20", "50", "100"],
         size: "default",
       }}
-      onChange={onTableChange as any}
+      onChange={onTableChange as unknown as (pagination: unknown, filters: unknown, sorter: unknown, extra?: unknown) => void}
       size="middle"
       bordered
       sticky={{ offsetHeader: 64 }}

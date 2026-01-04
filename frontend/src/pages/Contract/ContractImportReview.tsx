@@ -3,6 +3,9 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { createLogger } from '../../utils/logger';
+
+const componentLogger = createLogger('ContractImportReview');
 import {
   Card,
   Form,
@@ -26,6 +29,7 @@ import {
   SaveOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import type { Dayjs } from 'dayjs';
 
 import {
   type CompleteResult,
@@ -34,6 +38,25 @@ import {
   type AssetMatch,
   type OwnershipMatch
 } from '../../services/pdfImportService';
+
+// Form values interface with Dayjs date objects
+interface ContractImportFormValues {
+  contract_number?: string;
+  asset_id?: string;
+  ownership_id?: string;
+  tenant_name?: string;
+  tenant_contact?: string;
+  tenant_phone?: string;
+  tenant_address?: string;
+  sign_date?: Dayjs;
+  start_date?: Dayjs;
+  end_date?: Dayjs;
+  monthly_rent?: number | string;
+  total_deposit?: number | string;
+  contract_status?: string;
+  payment_terms?: string;
+  contract_notes?: string;
+}
 
 const { Title } = Typography;
 const { TabPane } = Tabs;
@@ -65,21 +88,21 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
 
     // 设置表单初始值 - 确保数字字段正确转换
     form.setFieldsValue({
-      contract_number: validatedData.contract_number || '',
-      asset_id: recommendations.asset_id || '',
-      ownership_id: recommendations.ownership_id || '',
-      tenant_name: validatedData.tenant_name || '',
-      tenant_contact: validatedData.tenant_contact || '',
-      sign_date: validatedData.sign_date ? dayjs(String(validatedData.sign_date)) : null,
-      start_date: validatedData.start_date ? dayjs(String(validatedData.start_date)) : null,
-      end_date: validatedData.end_date ? dayjs(String(validatedData.end_date)) : null,
-      rentable_area: validatedData.rentable_area ? parseFloat(String(validatedData.rentable_area)) : undefined,
-      monthly_rent: validatedData.monthly_rent ? parseFloat(String(validatedData.monthly_rent)) : undefined,
-      total_deposit: validatedData.total_deposit ? parseFloat(String(validatedData.total_deposit)) : 0,
-      contract_status: validatedData.contract_status || '有效',
-      payment_terms: validatedData.payment_terms || '',
-      contract_notes: validatedData.contract_notes || '',
-      rent_terms: validatedData.rent_terms || []
+      contract_number: (validatedData.contract_number !== null && validatedData.contract_number !== undefined && validatedData.contract_number !== '') ? validatedData.contract_number : '',
+      asset_id: (recommendations.asset_id !== null && recommendations.asset_id !== undefined && recommendations.asset_id !== '') ? recommendations.asset_id : '',
+      ownership_id: (recommendations.ownership_id !== null && recommendations.ownership_id !== undefined && recommendations.ownership_id !== '') ? recommendations.ownership_id : '',
+      tenant_name: (validatedData.tenant_name !== null && validatedData.tenant_name !== undefined && validatedData.tenant_name !== '') ? validatedData.tenant_name : '',
+      tenant_contact: (validatedData.tenant_contact !== null && validatedData.tenant_contact !== undefined && validatedData.tenant_contact !== '') ? validatedData.tenant_contact : '',
+      sign_date: (validatedData.sign_date !== null && validatedData.sign_date !== undefined && validatedData.sign_date !== '') ? dayjs(String(validatedData.sign_date)) : null,
+      start_date: (validatedData.start_date !== null && validatedData.start_date !== undefined && validatedData.start_date !== '') ? dayjs(String(validatedData.start_date)) : null,
+      end_date: (validatedData.end_date !== null && validatedData.end_date !== undefined && validatedData.end_date !== '') ? dayjs(String(validatedData.end_date)) : null,
+      rentable_area: (validatedData.rentable_area !== null && validatedData.rentable_area !== undefined) ? parseFloat(String(validatedData.rentable_area)) : undefined,
+      monthly_rent: (validatedData.monthly_rent !== null && validatedData.monthly_rent !== undefined) ? parseFloat(String(validatedData.monthly_rent)) : undefined,
+      total_deposit: (validatedData.total_deposit !== null && validatedData.total_deposit !== undefined) ? parseFloat(String(validatedData.total_deposit)) : 0,
+      contract_status: (validatedData.contract_status !== null && validatedData.contract_status !== undefined && validatedData.contract_status !== '') ? validatedData.contract_status : '有效',
+      payment_terms: (validatedData.payment_terms !== null && validatedData.payment_terms !== undefined && validatedData.payment_terms !== '') ? validatedData.payment_terms : '',
+      contract_notes: (validatedData.contract_notes !== null && validatedData.contract_notes !== undefined && validatedData.contract_notes !== '') ? validatedData.contract_notes : '',
+      rent_terms: (validatedData.rent_terms !== null && validatedData.rent_terms !== undefined) ? validatedData.rent_terms : []
     });
 
   }, [result, form]);
@@ -97,7 +120,7 @@ interface FormFieldChange {
     // 标记已修改的字段
     const newModifiedFields = new Set(modifiedFields);
     changedFields.forEach((field: FormFieldChange) => {
-      if (field.name) {
+      if (field.name !== null && field.name !== undefined) {
         newModifiedFields.add(field.name[0]);
       }
     });
@@ -107,16 +130,26 @@ interface FormFieldChange {
   // 确认导入
   const handleConfirm = async () => {
     try {
-      const values = await form.validateFields();
+      const values = await form.validateFields() as ContractImportFormValues;
 
       // 转换日期格式
       const confirmedData: ConfirmedContractData = {
-        ...values,
-        sign_date: values.sign_date ? values.sign_date.format('YYYY-MM-DD') : undefined,
-        start_date: values.start_date ? values.start_date.format('YYYY-MM-DD') : '',
-        end_date: values.end_date ? values.end_date.format('YYYY-MM-DD') : '',
-        monthly_rent: values.monthly_rent?.toString() || '',
-        total_deposit: values.total_deposit?.toString() || '0'
+        contract_number: (values.contract_number !== null && values.contract_number !== undefined && values.contract_number !== '') ? values.contract_number : '',
+        asset_id: values.asset_id,
+        ownership_id: values.ownership_id,
+        tenant_name: (values.tenant_name !== null && values.tenant_name !== undefined && values.tenant_name !== '') ? values.tenant_name : '',
+        tenant_contact: values.tenant_contact,
+        tenant_phone: values.tenant_phone,
+        tenant_address: values.tenant_address,
+        sign_date: (values.sign_date !== null && values.sign_date !== undefined) ? values.sign_date.format('YYYY-MM-DD') : undefined,
+        start_date: (values.start_date !== null && values.start_date !== undefined) ? values.start_date.format('YYYY-MM-DD') : '',
+        end_date: (values.end_date !== null && values.end_date !== undefined) ? values.end_date.format('YYYY-MM-DD') : '',
+        monthly_rent_base: (values.monthly_rent !== null && values.monthly_rent !== undefined) ? String(values.monthly_rent) : '0',
+        total_deposit: values.total_deposit?.toString() ?? '0',
+        contract_status: values.contract_status,
+        payment_terms: values.payment_terms,
+        contract_notes: values.contract_notes,
+        rent_terms: []
       };
 
       setLoading(true);
@@ -126,10 +159,10 @@ interface FormFieldChange {
         message.success('合同导入成功！');
         // 可以在这里添加跳转逻辑
       } else {
-        message.error(response.error || '导入失败');
+        message.error((response.error !== null && response.error !== undefined && response.error !== '') ? response.error : '导入失败');
       }
     } catch (error: unknown) {
-      console.error('表单验证失败:', error);
+      componentLogger.error('表单验证失败:', error as Error);
       const _errorMessage = error instanceof Error ? error.message : '表单验证失败';
       message.error('请检查表单填写是否正确');
     } finally {
@@ -158,7 +191,7 @@ interface FormFieldChange {
             label={
               <Space>
                 <span>合同编号</span>
-                {!!result.extraction_result.data.contract_number && (
+                {(result.extraction_result.data.contract_number !== null && result.extraction_result.data.contract_number !== undefined && result.extraction_result.data.contract_number !== '') && (
                   <Tag color="blue">自动提取</Tag>
                 )}
               </Space>
@@ -174,7 +207,7 @@ interface FormFieldChange {
             label={
               <Space>
                 <span>承租方名称</span>
-                {!!result.extraction_result.data.tenant_name && (
+                {(result.extraction_result.data.tenant_name !== null && result.extraction_result.data.tenant_name !== undefined && result.extraction_result.data.tenant_name !== '') && (
                   <Tag color="blue">自动提取</Tag>
                 )}
               </Space>
@@ -193,7 +226,7 @@ interface FormFieldChange {
             label={
               <Space>
                 <span>承租方联系方式</span>
-                {!!result.extraction_result.data.tenant_contact && (
+                {(result.extraction_result.data.tenant_contact !== null && result.extraction_result.data.tenant_contact !== undefined && result.extraction_result.data.tenant_contact !== '') && (
                   <Tag color="blue">自动提取</Tag>
                 )}
               </Space>
@@ -208,7 +241,9 @@ interface FormFieldChange {
             label={
               <Space>
                 <span>合同状态</span>
-                {!!result.extraction_result.data.contract_status && (
+                {(result.extraction_result.data.contract_status !== null &&
+                 result.extraction_result.data.contract_status !== undefined &&
+                 result.extraction_result.data.contract_status !== '') && (
                   <Tag color="blue">自动提取</Tag>
                 )}
               </Space>
@@ -241,7 +276,9 @@ interface FormFieldChange {
             label={
               <Space>
                 <span>签订日期</span>
-                {!!result.extraction_result.data.sign_date && (
+                {(result.extraction_result.data.sign_date !== null &&
+                 result.extraction_result.data.sign_date !== undefined &&
+                 result.extraction_result.data.sign_date !== '') && (
                   <Tag color="blue">自动提取</Tag>
                 )}
               </Space>
@@ -256,7 +293,7 @@ interface FormFieldChange {
             label={
               <Space>
                 <span>开始日期</span>
-                {!!result.extraction_result.data.start_date && (
+                {((result.extraction_result.data.start_date !== null && result.extraction_result.data.start_date !== undefined && result.extraction_result.data.start_date !== '') === true) && (
                   <Tag color="blue">自动提取</Tag>
                 )}
               </Space>
@@ -272,7 +309,7 @@ interface FormFieldChange {
             label={
               <Space>
                 <span>结束日期</span>
-                {!!result.extraction_result.data.end_date && (
+                {((result.extraction_result.data.end_date !== null && result.extraction_result.data.end_date !== undefined && result.extraction_result.data.end_date !== '') === true) && (
                   <Tag color="blue">自动提取</Tag>
                 )}
               </Space>
@@ -291,7 +328,7 @@ interface FormFieldChange {
             label={
               <Space>
                 <span>租赁面积(㎡)</span>
-                {!!result.extraction_result.data.rentable_area && (
+                {((result.extraction_result.data.rentable_area !== null && result.extraction_result.data.rentable_area !== undefined) === true) && (
                   <Tag color="blue">自动提取</Tag>
                 )}
               </Space>
@@ -312,7 +349,7 @@ interface FormFieldChange {
             label={
               <Space>
                 <span>月租金(元)</span>
-                {!!result.extraction_result.data.monthly_rent && (
+                {((result.extraction_result.data.monthly_rent !== null && result.extraction_result.data.monthly_rent !== undefined) === true) && (
                   <Tag color="blue">自动提取</Tag>
                 )}
               </Space>
@@ -334,7 +371,7 @@ interface FormFieldChange {
             label={
               <Space>
                 <span>押金(元)</span>
-                {!!result.extraction_result.data.total_deposit && (
+                {((result.extraction_result.data.total_deposit !== null && result.extraction_result.data.total_deposit !== undefined) === true) && (
                   <Tag color="blue">自动提取</Tag>
                 )}
               </Space>
@@ -378,9 +415,11 @@ interface FormFieldChange {
             <Select
               placeholder="请选择匹配的资产"
               showSearch
-              filterOption={(input, option) =>
-                String(option?.children || '').toLowerCase().includes(input.toLowerCase())
-              }
+              filterOption={(input, option) => {
+                const children = option?.children;
+                const childrenStr = (children !== null && children !== undefined && typeof children === 'string') ? children : String(children || '');
+                return childrenStr.toLowerCase().includes(input.toLowerCase());
+              }}
             >
               {result.matching_result.matched_assets.map((asset: AssetMatch) => (
                 <Select.Option key={asset.id} value={asset.id}>
@@ -429,9 +468,11 @@ interface FormFieldChange {
             <Select
               placeholder="请选择匹配的权属方"
               showSearch
-              filterOption={(input, option) =>
-                String(option?.children || '').toLowerCase().includes(input.toLowerCase())
-              }
+              filterOption={(input, option) => {
+                const children = option?.children;
+                const childrenStr = (children !== null && children !== undefined && typeof children === 'string') ? children : String(children || '');
+                return childrenStr.toLowerCase().includes(input.toLowerCase());
+              }}
             >
               {result.matching_result.matched_ownerships.map((ownership: OwnershipMatch) => (
                 <Select.Option key={ownership.id} value={ownership.id}>
@@ -468,7 +509,7 @@ interface FormFieldChange {
         label={
           <Space>
             <span>支付条款</span>
-            {!!result.extraction_result.data.payment_terms && (
+            {((result.extraction_result.data as { payment_terms?: unknown }).payment_terms !== null && (result.extraction_result.data as { payment_terms?: unknown }).payment_terms !== undefined) && (
               <Tag color="blue">自动提取</Tag>
             )}
           </Space>
@@ -482,7 +523,7 @@ interface FormFieldChange {
         label={
           <Space>
             <span>合同备注</span>
-            {!!result.extraction_result.data.contract_notes && (
+            {((result.extraction_result.data as { contract_notes?: unknown }).contract_notes !== null && (result.extraction_result.data as { contract_notes?: unknown }).contract_notes !== undefined) && (
               <Tag color="blue">自动提取</Tag>
             )}
           </Space>

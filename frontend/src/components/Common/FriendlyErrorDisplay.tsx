@@ -65,7 +65,8 @@ const FriendlyErrorDisplay: React.FC<FriendlyErrorDisplayProps> = ({
       }
     };
 
-    return configs[type] || configs.network;
+    const config = configs[type];
+    return (config !== null && config !== undefined) ? config : configs.network;
   };
 
   const config = getErrorConfig();
@@ -104,7 +105,8 @@ const FriendlyErrorDisplay: React.FC<FriendlyErrorDisplayProps> = ({
       ]
     };
 
-    return suggestions[type] || suggestions.network;
+    const suggestion = suggestions[type];
+    return (suggestion !== null && suggestion !== undefined) ? suggestion : suggestions.network;
   };
 
   if (!error && !showDetails) {
@@ -145,17 +147,17 @@ const FriendlyErrorDisplay: React.FC<FriendlyErrorDisplayProps> = ({
                 description={
                   <div style={{ textAlign: 'left', marginTop: '16px' }}>
                     <Space direction="vertical" size="small" style={{ width: '100%' }}>
-                      {error?.status && (
+                      {(error?.status !== null && error?.status !== undefined) && (
                         <div>
                           <Text strong>状态码:</Text> {error.status}
                         </div>
                       )}
-                      {error?.code && (
+                      {(error?.code !== null && error?.code !== undefined && error?.code !== '') && (
                         <div>
                           <Text strong>错误代码:</Text> {error.code}
                         </div>
                       )}
-                      {error?.message && (
+                      {(error?.message !== null && error?.message !== undefined && error?.message !== '') && (
                         <div>
                           <Text strong>错误信息:</Text> {error.message}
                         </div>

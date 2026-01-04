@@ -32,7 +32,7 @@ vi.mock('antd', () => ({
       {children}
     </div>
   ),
-  Select: ({ children, value, onChange, placeholder, mode, allowClear, loading, disabled, showSearch, onSearch, filterOption, options }: any) => (
+  Select: ({ children, value, onChange, placeholder, mode, allowClear, loading, disabled, showSearch, _onSearch, _filterOption, options }: any) => (
     <div
       data-testid="select"
       data-value={value}
@@ -58,7 +58,7 @@ vi.mock('antd', () => ({
     </div>
   ),
   Input: {
-    Search: ({ children, value, onChange, placeholder, onSearch }: any) => (
+    Search: ({ _children, value, onChange, placeholder, onSearch }: any) => (
       <input
         data-testid="input-search"
         data-placeholder={placeholder}
@@ -73,7 +73,7 @@ vi.mock('antd', () => ({
     ),
   },
   Modal: {
-    confirm: ({ onOk, onCancel }: any) => ({
+    confirm: ({ _onOk, _onCancel }: any) => ({
       then: (callback: any) => callback && callback({ result: 'ok' }),
     }),
   },
@@ -161,7 +161,7 @@ describe('OwnershipSelect 组件测试', () => {
 
     it('应该接收 onChange 回调', async () => {
       const handleChange = vi.fn()
-      const element = await createElement({ onChange: _onChange, handleChange })
+      const element = await createElement({ onChange: handleChange, handleChange })
       expect(element).toBeTruthy()
     })
 
@@ -321,7 +321,7 @@ describe('OwnershipSelect 组件测试', () => {
 
     it('点击清除应该触发 onChange', async () => {
       const handleChange = vi.fn()
-      const element = await createElement({ allowClear: true, onChange: _onChange, handleChange })
+      const element = await createElement({ allowClear: true, onChange: handleChange, handleChange })
       expect(element).toBeTruthy()
     })
 

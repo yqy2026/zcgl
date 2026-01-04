@@ -29,7 +29,7 @@ vi.mock('antd', () => ({
       {children}
     </div>
   ),
-  Form: ({ children, onFinish, initialValues, layout }: any) => (
+  Form: ({ children, onFinish, _initialValues, layout }: any) => (
     <form
       data-testid="form"
       data-layout={layout}
@@ -88,7 +88,7 @@ vi.mock('antd', () => ({
       {children}
     </span>
   ),
-  Table: ({ dataSource, columns, pagination }: any) => (
+  Table: ({ dataSource, _columns, pagination }: any) => (
     <div data-testid="table" data-pagination={pagination}>
       {dataSource?.map((item: any, index: number) => (
         <div key={index} data-row={index}>{JSON.stringify(item)}</div>
@@ -206,8 +206,8 @@ vi.mock('@ant-design/icons', () => ({
 
 // Mock dayjs
 vi.mock('dayjs', () => ({
-  default: (date?: string) => ({
-    format: (fmt: string) => '2024-01-01',
+  default: (_date?: string) => ({
+    format: (_fmt: string) => '2024-01-01',
     valueOf: () => 1704067200000,
   }),
   extend: () => { },

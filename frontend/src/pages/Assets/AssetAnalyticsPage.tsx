@@ -89,10 +89,12 @@ const AssetAnalyticsPage: React.FC = () => {
   // React Query 可能直接返回解析后的数据，也可能是包装在响应对象中
   // 我们需要检查两种可能性
   let analyticsData: AnalyticsData | null;
-  if (analyticsResponse && analyticsResponse.data) {
+  if ((analyticsResponse !== null && analyticsResponse !== undefined) &&
+      (analyticsResponse.data !== null && analyticsResponse.data !== undefined)) {
     // 标准情况：analyticsResponse 是 AnalyticsResponse 类型
     analyticsData = analyticsResponse.data as unknown as AnalyticsData;
-  } else if (analyticsResponse && analyticsResponse.area_summary) {
+  } else if ((analyticsResponse !== null && analyticsResponse !== undefined) &&
+             (analyticsResponse.area_summary !== null && analyticsResponse.area_summary !== undefined)) {
     // React Query 直接返回了 AnalyticsData (使用 flat structure)
     analyticsData = analyticsResponse as unknown as AnalyticsData;
   } else {
@@ -221,7 +223,9 @@ const AssetAnalyticsPage: React.FC = () => {
   }
 
   const hasData =
-    analyticsData && analyticsData.area_summary && Number(analyticsData.area_summary.total_assets) > 0;
+    (analyticsData !== null && analyticsData !== undefined) &&
+    (analyticsData.area_summary !== null && analyticsData.area_summary !== undefined) &&
+    Number(analyticsData.area_summary.total_assets) > 0;
 
   return (
     <div className={styles.analyticsContainer}>
@@ -475,7 +479,18 @@ const AssetAnalyticsPage: React.FC = () => {
                           <span className={styles.itemStats}>
                             {dimension === "count"
                               ? `${(item as { count: number }).count} (${(item as { percentage: number }).percentage}%)`
-                              : `${(item as { total_area?: number }).total_area?.toFixed(0)}㎡ (${(item as { area_percentage?: number; percentage?: number }).area_percentage || (item as { area_percentage?: number; percentage?: number }).percentage}%)`}
+                              : (() => {
+                                  const totalArea = (item as { total_area?: number }).total_area
+                                  const areaValue = (totalArea !== null && totalArea !== undefined && !Number.isNaN(totalArea)) ? totalArea : 0
+                                  const areaPercentItem = (item as { area_percentage?: number; percentage?: number })
+                                  const areaPercent = (areaPercentItem.area_percentage !== null && areaPercentItem.area_percentage !== undefined && !Number.isNaN(areaPercentItem.area_percentage))
+                                    ? areaPercentItem.area_percentage
+                                    : (areaPercentItem.percentage !== null && areaPercentItem.percentage !== undefined && !Number.isNaN(areaPercentItem.percentage))
+                                      ? areaPercentItem.percentage
+                                      : 0
+                                  return `${areaValue.toFixed(0)}㎡ (${areaPercent}%)`
+                                })()
+                              }
                           </span>
                         </div>
                       ))}
@@ -528,7 +543,7 @@ const AssetAnalyticsPage: React.FC = () => {
                               </span>
                             )}
                             {dimension === "area" &&
-                              (item as { occupancy_rate?: number }).occupancy_rate &&
+                              ((item as { occupancy_rate?: number }).occupancy_rate !== null && (item as { occupancy_rate?: number }).occupancy_rate !== undefined) &&
                               Number((item as { occupancy_rate?: number }).occupancy_rate) > 0 && (
                                 <span className={styles.occupancyRate}>
                                   ，出租率{Number((item as { occupancy_rate?: number }).occupancy_rate).toFixed(2)}%

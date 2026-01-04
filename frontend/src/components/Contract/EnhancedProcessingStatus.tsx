@@ -137,24 +137,24 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
         step: 'text_extraction',
         status: 'completed',
         title: '文本提取',
-        description: `成功提取${currentStatus.chinese_char_count || 0}个中文字符`,
+        description: `成功提取${(currentStatus.chinese_char_count !== null && currentStatus.chinese_char_count !== undefined) ? currentStatus.chinese_char_count : 0}个中文字符`,
         progress: 100
       },
       {
         step: 'info_extraction',
         status: 'completed',
         title: '信息提取',
-        description: `提取了${Object.keys(currentStatus.extracted_data || {}).length}个字段`,
+        description: `提取了${Object.keys((currentStatus.extracted_data !== null && currentStatus.extracted_data !== undefined) ? currentStatus.extracted_data : {}).length}个字段`,
         progress: 100
       },
       {
         step: 'data_validation',
-        status: currentStatus.validation_results ? 'completed' : 'processing',
+        status: (currentStatus.validation_results !== null && currentStatus.validation_results !== undefined) ? 'completed' : 'processing',
         title: '数据验证',
-        description: currentStatus.validation_results
+        description: (currentStatus.validation_results !== null && currentStatus.validation_results !== undefined)
           ? '数据验证完成，置信度优秀'
           : '正在进行智能数据验证',
-        progress: currentStatus.validation_results ? 100 : 70
+        progress: (currentStatus.validation_results !== null && currentStatus.validation_results !== undefined) ? 100 : 70
       },
       {
         step: 'matching',
@@ -184,7 +184,7 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
             step.progress = 100;
           } else if (index === stepIndex) {
             step.status = 'processing';
-            step.progress = currentStatus.progress_percentage || 0;
+            step.progress = (currentStatus.progress_percentage !== null && currentStatus.progress_percentage !== undefined) ? currentStatus.progress_percentage : 0;
           } else {
             step.status = 'waiting';
             step.progress = 0;
@@ -202,8 +202,8 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
 
     return {
       processingMethod: currentStatus.processing_method,
-      textQuality: currentStatus.chinese_char_count ? '优秀' : '良好',
-      extractionConfidence: currentStatus.confidence_score
+      textQuality: (currentStatus.chinese_char_count !== null && currentStatus.chinese_char_count !== undefined && currentStatus.chinese_char_count > 0) ? '优秀' : '良好',
+      extractionConfidence: (currentStatus.confidence_score !== null && currentStatus.confidence_score !== undefined)
         ? `${((currentStatus.confidence_score) * 100).toFixed(1)}%`
         : '计算中',
       ocrUsed: currentStatus.ocr_used,
@@ -254,7 +254,7 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
         <Row gutter={16}>
           <Col span={16}>
             <Progress
-              percent={currentStatus.progress_percentage || 0}
+              percent={(currentStatus.progress_percentage !== null && currentStatus.progress_percentage !== undefined) ? currentStatus.progress_percentage : 0}
               status={currentStatus.progress_percentage === 100 ? 'success' : 'active'}
               strokeColor={{
                 '0%': '#108ee9',
@@ -278,10 +278,10 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
               />
               <Statistic
                 title="置信度"
-                value={performanceMetrics?.extractionConfidence || '计算中'}
+                value={(performanceMetrics?.extractionConfidence !== null && performanceMetrics?.extractionConfidence !== undefined && performanceMetrics?.extractionConfidence !== '') ? performanceMetrics.extractionConfidence : '计算中'}
                 suffix="%"
                 valueStyle={{
-                  color: parseFloat(performanceMetrics?.extractionConfidence || '0') > 80 ? '#3f8600' : '#cf1322'
+                  color: parseFloat((performanceMetrics?.extractionConfidence !== null && performanceMetrics?.extractionConfidence !== undefined && performanceMetrics?.extractionConfidence !== '') ? performanceMetrics.extractionConfidence : '0') > 80 ? '#3f8600' : '#cf1322'
                 }}
               />
             </Space>
@@ -323,7 +323,7 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
                       />
                     </Space>
 
-                    {step.description && (
+                    {(step.description !== null && step.description !== undefined && step.description !== '') && (
                       <Text type="secondary" style={{ fontSize: '12px' }}>
                         {step.description}
                       </Text>
@@ -338,7 +338,7 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
                       />
                     )}
 
-                    {step.error && (
+                    {(step.error !== null && step.error !== undefined && step.error !== '') && (
                       <Alert
                         message={step.error}
                         type="error"
@@ -397,7 +397,7 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
           <Tag color="purple">
             多引擎支持
           </Tag>
-          {performanceMetrics?.ocrUsed && (
+          {(performanceMetrics?.ocrUsed === true) && (
             <Tag color="orange">
               OCR增强
             </Tag>

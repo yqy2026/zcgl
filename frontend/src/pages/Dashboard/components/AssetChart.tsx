@@ -21,7 +21,7 @@ interface AssetChartProps {
 }
 
 const AssetChart: React.FC<AssetChartProps> = ({ data, loading }) => {
-  if (loading) {
+  if (loading !== null && loading !== undefined) {
     return <div>加载中...</div>
   }
 

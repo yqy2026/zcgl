@@ -26,7 +26,7 @@ const PermissionGuard: React.FC<PermissionGuardProps> = ({
     : hasAllPermissions(permissions)
 
   if (!hasRequiredPermissions) {
-    return fallback || (
+    return (fallback !== null && fallback !== undefined) ? fallback : (
       <Result
         status="403"
         title="访问被拒绝"

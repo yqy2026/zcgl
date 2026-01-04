@@ -143,21 +143,21 @@ const EmptyState: React.FC<EmptyStateProps> = ({
       className={className}
     >
       <Empty
-        image={image || config.image}
+        image={(image !== null && image !== undefined) ? image : config.image}
         description={
           <div>
             <Text strong style={{ fontSize: 16, display: 'block', marginBottom: 8 }}>
-              {title || config.title}
+              {(title !== null && title !== undefined && title !== '') ? title : config.title}
             </Text>
             <Text type="secondary">
-              {description || config.description}
+              {(description !== null && description !== undefined && description !== '') ? description : config.description}
             </Text>
           </div>
         }
       >
-        {(actions || actionButtons.length > 0) && (
+        {((actions !== null && actions !== undefined) || actionButtons.length > 0) && (
           <Space wrap style={{ marginTop: 16 }}>
-            {actions || actionButtons}
+            {(actions !== null && actions !== undefined) ? actions : actionButtons}
           </Space>
         )}
       </Empty>

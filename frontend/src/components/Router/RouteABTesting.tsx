@@ -55,7 +55,7 @@ class ABTestManager {
   private getUserId(): string {
     // 获取或生成用户ID用于A/B测试分组
     let userId = localStorage.getItem('abtest_user_id')
-    if (!userId) {
+    if ((userId === null || userId === undefined || userId === '')) {
       userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       localStorage.setItem('abtest_user_id', userId)
     }
@@ -123,7 +123,7 @@ class ABTestManager {
 
   private getAssignedVariant(testId: string): ABTestVariant | null {
     const test = this.tests.get(testId)
-    if (!test || !this.userId) return null
+    if ((test === null || test === undefined) || (this.userId === null || this.userId === undefined || this.userId === '')) return null
 
     // 检查是否已经分配过变体
     const savedVariants = this.userVariants.get(this.userId)
@@ -253,6 +253,7 @@ class ABTestManager {
           timestamp: new Date().toISOString()
         })
       }).catch(error => {
+        // eslint-disable-next-line no-console
         console.warn('A/B Test event reporting failed:', error)
       })
     }
@@ -274,12 +275,13 @@ class ABTestManager {
         })
       })
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.warn('A/B Test conversion reporting failed:', error)
     }
   }
 
   public getTestResults(testId: string) {
-    const conversions = this.conversions.get(testId) || new Map()
+    const conversions = this.conversions.get(testId) as Map<string, unknown> | undefined || new Map<string, unknown>()
     return {
       conversions: Object.fromEntries(conversions),
       testId,

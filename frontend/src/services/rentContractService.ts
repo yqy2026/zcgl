@@ -44,7 +44,11 @@ class RentContractService {
   async getContracts(params?: RentContractQueryParams): Promise<RentContractListResponse> {
     try {
       const result = await enhancedApiClient.get<RentContractListResponse>(this.baseUrl, {
-        params: { ...params, page: params?.page || 1, limit: params?.limit || 10 },
+        params: {
+          ...params,
+          page: (params?.page !== null && params?.page !== undefined) ? params?.page : 1,
+          limit: (params?.limit !== null && params?.limit !== undefined) ? params?.limit : 10
+        },
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         smartExtract: true
@@ -57,7 +61,7 @@ class RentContractService {
       return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.error('获取租金合同列表失败:', enhancedError.message);
+      logger.error('获取租金合同列表失败:', enhancedError.message);
 
       // 返回默认空结果，避免UI崩溃
       return {
@@ -228,7 +232,11 @@ class RentContractService {
       const result = await enhancedApiClient.get<RentLedgerListResponse>(
         API_ENDPOINTS.RENT_CONTRACT.LEDGER_LIST,
         {
-          params: { ...params, page: params?.page || 1, limit: params?.limit || 10 },
+          params: {
+            ...params,
+            page: (params?.page !== null && params?.page !== undefined) ? params.page : 1,
+            limit: (params?.limit !== null && params?.limit !== undefined) ? params.limit : 10
+          },
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
           smartExtract: true
@@ -242,7 +250,7 @@ class RentContractService {
       return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.error('获取租金台账列表失败:', enhancedError.message);
+      logger.error('获取租金台账列表失败:', enhancedError.message);
 
       // 返回默认空结果，避免UI崩溃
       return {

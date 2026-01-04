@@ -49,7 +49,7 @@ class MemoryRouteCache implements RouteCache {
     }
 
     // 检查TTL
-    if (item.ttl && Date.now() - item.lastAccess > item.ttl) {
+    if ((item.ttl !== null && item.ttl !== undefined) && Date.now() - item.lastAccess > item.ttl) {
       this.cache.delete(key)
       this.misses++
       return null
@@ -69,7 +69,7 @@ class MemoryRouteCache implements RouteCache {
       loadTime: Date.now(),
       hitCount: 0,
       lastAccess: Date.now(),
-      ttl: ttl || this.defaultTTL
+      ttl: (ttl !== null && ttl !== undefined) ? ttl : this.defaultTTL
     }
 
     this.cache.set(key, item)
@@ -109,7 +109,7 @@ class MemoryRouteCache implements RouteCache {
     let cleaned = 0
 
     for (const [key, item] of this.cache.entries()) {
-      if (item.ttl && now - item.lastAccess > item.ttl) {
+      if ((item.ttl !== null && item.ttl !== undefined) && now - item.lastAccess > item.ttl) {
         this.cache.delete(key)
         cleaned++
       }

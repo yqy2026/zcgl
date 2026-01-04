@@ -29,11 +29,11 @@ const RelationInfoSection: React.FC = () => {
                                 String(option?.children || '').toLowerCase().includes(input.toLowerCase())
                             }
                         >
-                            {(assets || []).map(asset => (
+                            {(assets !== null && assets !== undefined) ? assets.map(asset => (
                                 <Option key={asset.id} value={asset.id}>
                                     {asset.property_name} - {asset.address}
                                 </Option>
-                            ))}
+                            )) : []}
                         </Select>
                     </Form.Item>
                 </Col>
@@ -52,11 +52,11 @@ const RelationInfoSection: React.FC = () => {
                                 String(option?.children || '').toLowerCase().includes(input.toLowerCase())
                             }
                         >
-                            {(ownerships || []).map(ownership => (
+                            {(ownerships !== null && ownerships !== undefined) ? ownerships.map(ownership => (
                                 <Option key={ownership.id} value={ownership.id}>
                                     {ownership.name}
                                 </Option>
-                            ))}
+                            )) : []}
                         </Select>
                     </Form.Item>
                 </Col>

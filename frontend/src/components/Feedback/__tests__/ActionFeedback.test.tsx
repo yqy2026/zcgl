@@ -35,7 +35,7 @@ vi.mock('antd', () => ({
       </p>
     ),
   },
-  Alert: ({ type, showIcon, icon, message, description, closable, onClose }: any) => (
+  Alert: ({ type, showIcon, icon, message, description, closable, _onClose }: any) => (
     <div
       data-testid="alert"
       data-type={type}

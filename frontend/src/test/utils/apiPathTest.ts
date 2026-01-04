@@ -3,6 +3,8 @@
  * 验证API路径的正确性，防止配置错误和回归问题
  */
 
+/* eslint-disable no-console */
+
 import {
   AUTH_API,
   PDF_API,

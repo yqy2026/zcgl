@@ -106,7 +106,7 @@ const fetchCoverageReport = async (): Promise<CoverageReport> => {
   if (!response.ok) {
     throw new Error('获取覆盖率报告失败');
   }
-  return response.json();
+  return response.json() as unknown as CoverageReport;
 };
 
 const fetchCoverageTrend = async (days: number = 30): Promise<CoverageTrend[]> => {
@@ -114,7 +114,7 @@ const fetchCoverageTrend = async (days: number = 30): Promise<CoverageTrend[]> =
   if (!response.ok) {
     throw new Error('获取覆盖率趋势失败');
   }
-  return response.json();
+  return response.json() as unknown as CoverageTrend[];
 };
 
 const fetchModuleCoverage = async (
@@ -127,7 +127,7 @@ const fetchModuleCoverage = async (
   if (!response.ok) {
     throw new Error('获取模块覆盖率失败');
   }
-  return response.json();
+  return response.json() as unknown as CoverageMetrics[];
 };
 
 const fetchCoverageThresholds = async (): Promise<CoverageThreshold> => {
@@ -135,7 +135,7 @@ const fetchCoverageThresholds = async (): Promise<CoverageThreshold> => {
   if (!response.ok) {
     throw new Error('获取覆盖率阈值失败');
   }
-  return response.json();
+  return response.json() as unknown as CoverageThreshold;
 };
 
 const updateCoverageThresholds = async (thresholds: CoverageThreshold): Promise<CoverageThreshold> => {
@@ -149,7 +149,7 @@ const updateCoverageThresholds = async (thresholds: CoverageThreshold): Promise<
   if (!response.ok) {
     throw new Error('更新覆盖率阈值失败');
   }
-  return response.json();
+  return response.json() as unknown as CoverageThreshold;
 };
 
 const fetchQualityGate = async (): Promise<QualityGateResult> => {
@@ -157,7 +157,7 @@ const fetchQualityGate = async (): Promise<QualityGateResult> => {
   if (!response.ok) {
     throw new Error('获取质量门禁状态失败');
   }
-  return response.json();
+  return response.json() as Promise<QualityGateResult>;
 };
 
 // 主组件
@@ -240,7 +240,7 @@ const TestCoverageDashboard: React.FC = () => {
         const color = value >= 80 ? '#52c41a' : value >= 60 ? '#faad14' : '#ff4d4f';
         return (
           <Progress
-            percent={value}
+            percent={value as number}
             size="small"
             strokeColor={color}
             format={(percent) => `${percent?.toFixed(1)}%`}
@@ -399,13 +399,13 @@ const TestCoverageDashboard: React.FC = () => {
           <Card>
             <Statistic
               title="总体覆盖率"
-              value={coverageReport?.total_coverage || 0}
+              value={(coverageReport?.total_coverage !== null && coverageReport?.total_coverage !== undefined) ? coverageReport.total_coverage : 0}
               precision={1}
               suffix="%"
               valueStyle={{
-                color: (coverageReport?.total_coverage || 0) >= (thresholds?.total_threshold || 75) ? '#3f8600' : '#cf1322',
+                color: ((coverageReport?.total_coverage !== null && coverageReport?.total_coverage !== undefined) ? coverageReport.total_coverage : 0) >= ((thresholds?.total_threshold !== null && thresholds?.total_threshold !== undefined) ? thresholds.total_threshold : 75) ? '#3f8600' : '#cf1322',
               }}
-              prefix={(coverageReport?.total_coverage || 0) >= (thresholds?.total_threshold || 75) ? <RiseOutlined /> : <FallOutlined />}
+              prefix={((coverageReport?.total_coverage !== null && coverageReport?.total_coverage !== undefined) ? coverageReport.total_coverage : 0) >= ((thresholds?.total_threshold !== null && thresholds?.total_threshold !== undefined) ? thresholds.total_threshold : 75) ? <RiseOutlined /> : <FallOutlined />}
             />
             {thresholds && (
               <div style={{ fontSize: 12, color: '#666', marginTop: 8 }}>
@@ -418,13 +418,13 @@ const TestCoverageDashboard: React.FC = () => {
           <Card>
             <Statistic
               title="后端覆盖率"
-              value={coverageReport?.backend_coverage || 0}
+              value={(coverageReport?.backend_coverage !== null && coverageReport?.backend_coverage !== undefined) ? coverageReport.backend_coverage : 0}
               precision={1}
               suffix="%"
               valueStyle={{
-                color: (coverageReport?.backend_coverage || 0) >= (thresholds?.backend_threshold || 80) ? '#3f8600' : '#cf1322',
+                color: ((coverageReport?.backend_coverage !== null && coverageReport?.backend_coverage !== undefined) ? coverageReport.backend_coverage : 0) >= ((thresholds?.backend_threshold !== null && thresholds?.backend_threshold !== undefined) ? thresholds.backend_threshold : 80) ? '#3f8600' : '#cf1322',
               }}
-              prefix={(coverageReport?.backend_coverage || 0) >= (thresholds?.backend_threshold || 80) ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
+              prefix={((coverageReport?.backend_coverage !== null && coverageReport?.backend_coverage !== undefined) ? coverageReport.backend_coverage : 0) >= ((thresholds?.backend_threshold !== null && thresholds?.backend_threshold !== undefined) ? thresholds.backend_threshold : 80) ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
             />
             {thresholds && (
               <div style={{ fontSize: 12, color: '#666', marginTop: 8 }}>
@@ -437,13 +437,13 @@ const TestCoverageDashboard: React.FC = () => {
           <Card>
             <Statistic
               title="前端覆盖率"
-              value={coverageReport?.frontend_coverage || 0}
+              value={(coverageReport?.frontend_coverage !== null && coverageReport?.frontend_coverage !== undefined) ? coverageReport.frontend_coverage : 0}
               precision={1}
               suffix="%"
               valueStyle={{
-                color: (coverageReport?.frontend_coverage || 0) >= (thresholds?.frontend_threshold || 70) ? '#3f8600' : '#cf1322',
+                color: ((coverageReport?.frontend_coverage !== null && coverageReport?.frontend_coverage !== undefined) ? coverageReport.frontend_coverage : 0) >= ((thresholds?.frontend_threshold !== null && thresholds?.frontend_threshold !== undefined) ? thresholds.frontend_threshold : 70) ? '#3f8600' : '#cf1322',
               }}
-              prefix={(coverageReport?.frontend_coverage || 0) >= (thresholds?.frontend_threshold || 70) ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
+              prefix={((coverageReport?.frontend_coverage !== null && coverageReport?.frontend_coverage !== undefined) ? coverageReport.frontend_coverage : 0) >= ((thresholds?.frontend_threshold !== null && thresholds?.frontend_threshold !== undefined) ? thresholds.frontend_threshold : 70) ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
             />
             {thresholds && (
               <div style={{ fontSize: 12, color: '#666', marginTop: 8 }}>
@@ -456,13 +456,13 @@ const TestCoverageDashboard: React.FC = () => {
           <Card>
             <Statistic
               title="测试执行时间"
-              value={coverageReport?.test_execution_time || 0}
+              value={(coverageReport?.test_execution_time !== null && coverageReport?.test_execution_time !== undefined) ? coverageReport.test_execution_time : 0}
               precision={1}
               suffix="秒"
               prefix={<InfoCircleOutlined />}
             />
             <div style={{ fontSize: 12, color: '#666', marginTop: 8 }}>
-              总测试数: {coverageReport?.total_tests || 0}
+              总测试数: {(coverageReport?.total_tests !== null && coverageReport?.total_tests !== undefined) ? coverageReport.total_tests : 0}
             </div>
           </Card>
         </Col>

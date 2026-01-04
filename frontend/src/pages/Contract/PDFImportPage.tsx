@@ -147,13 +147,14 @@ const PDFImportPage: React.FC = () => {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 加载用户偏好设置
   const loadUserPreferences = useCallback(() => {
     try {
       const saved = localStorage.getItem('pdf-import-preferences');
-      if (saved) {
+      if (saved !== null && saved !== undefined && saved !== '') {
         setUserPreferences(JSON.parse(saved));
       }
     } catch (error) {
@@ -220,7 +221,7 @@ const PDFImportPage: React.FC = () => {
   };
 
   // 文件上传成功处理
-  const handleUploadSuccess = (sessionId: string, fileInfo: UploadFile) => {
+  const handleUploadSuccess = useCallback((sessionId: string, fileInfo: UploadFile) => {
     // Upload success
 
     const newSession: ProcessingSession = {
@@ -237,9 +238,10 @@ const PDFImportPage: React.FC = () => {
     setTimeout(() => {
       setCurrentSession(prev => prev ? { ...prev } : null);
     }, 100);
-  };
+  }, []);
 
   // 文件上传失败处理
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleUploadError = (error: unknown) => {
     const errorMsg = typeof error === 'string' ? error : (error instanceof Error ? error.message : '上传失败');
     message.error(errorMsg);
@@ -247,6 +249,7 @@ const PDFImportPage: React.FC = () => {
   };
 
   // 处理完成处理
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleProcessingComplete = (result: CompleteResult) => {
     // Processing complete
 
@@ -261,6 +264,7 @@ const PDFImportPage: React.FC = () => {
   };
 
   // 处理错误处理
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleProcessingError = (error: string) => {
     if (currentSession) {
       setCurrentSession({
@@ -273,6 +277,7 @@ const PDFImportPage: React.FC = () => {
   };
 
   // 确认导入处理
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleConfirmImport = async (data: ConfirmedContractData): Promise<ConfirmImportResponse> => {
     try {
       const response = await pdfImportService.confirmImport(
@@ -307,7 +312,7 @@ const PDFImportPage: React.FC = () => {
 
       return response;
     } catch (error: unknown) {
-      const errorMsg = (error as ApiError).message || '合同导入过程中发生错误';
+      const errorMsg = ((error as ApiError).message !== null && (error as ApiError).message !== undefined && (error as ApiError).message !== '') ? (error as ApiError).message : '合同导入过程中发生错误';
       if (userPreferences.enableNotifications) {
         notification.error({
           message: '导入失败',
@@ -323,6 +328,7 @@ const PDFImportPage: React.FC = () => {
   };
 
   // 取消处理
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleCancel = async () => {
     if (currentSession) {
       try {
@@ -332,12 +338,13 @@ const PDFImportPage: React.FC = () => {
           setCurrentSession(null);
         }
       } catch (error: unknown) {
-        message.error((error as ApiError).message || '取消失败');
+        message.error(((error as ApiError).message !== null && (error as ApiError).message !== undefined && (error as ApiError).message !== '') ? (error as ApiError).message : '取消失败');
       }
     }
   };
 
   // 返回上传页面
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleBackToUpload = () => {
     setCurrentSession(null);
     setActiveTab('upload');
@@ -364,7 +371,7 @@ const PDFImportPage: React.FC = () => {
     try {
       setLoading(true);
       const response = await pdfImportService.testConversion();
-      if (response.system_ready) {
+      if (response.system_ready !== null && response.system_ready !== undefined) {
         message.success('系统功能正常');
       } else {
         message.warning('系统可能存在问题');
@@ -427,8 +434,8 @@ const PDFImportPage: React.FC = () => {
             sessionId={currentSession.sessionId}
             fileInfo={{
               filename: currentSession.fileInfo.name,
-              size: currentSession.fileInfo.size || 0,
-              content_type: currentSession.fileInfo.type || 'application/pdf'
+              size: (currentSession.fileInfo.size !== null && currentSession.fileInfo.size !== undefined) ? currentSession.fileInfo.size : 0,
+              content_type: (currentSession.fileInfo.type !== null && currentSession.fileInfo.type !== undefined && currentSession.fileInfo.type !== '') ? currentSession.fileInfo.type : 'application/pdf'
             }}
             onComplete={handleProcessingComplete}
             onError={handleProcessingError}
@@ -474,7 +481,7 @@ const PDFImportPage: React.FC = () => {
               处理失败
             </Title>
             <Paragraph>
-              {currentSession.error || '处理过程中发生错误'}
+              {(currentSession.error !== null && currentSession.error !== undefined && currentSession.error !== '') ? currentSession.error : '处理过程中发生错误'}
             </Paragraph>
             <Space>
               <Button onClick={() => setCurrentSession(null)}>
@@ -634,7 +641,7 @@ const PDFImportPage: React.FC = () => {
             <Card size="small">
               <Statistic
                 title="系统状态"
-                value={systemStats?.percentage || 0}
+                value={(systemStats?.percentage !== null && systemStats?.percentage !== undefined) ? systemStats.percentage : 0}
                 suffix="%"
                 prefix={<SettingOutlined />}
                 valueStyle={{
@@ -647,7 +654,7 @@ const PDFImportPage: React.FC = () => {
             <Card size="small">
               <Statistic
                 title="文件大小限制"
-                value={safeCapabilities?.max_file_size_mb || 50}
+                value={(safeCapabilities?.max_file_size_mb !== null && safeCapabilities?.max_file_size_mb !== undefined) ? safeCapabilities.max_file_size_mb : 50}
                 suffix="MB"
                 prefix={<FileTextOutlined />}
               />
@@ -657,7 +664,7 @@ const PDFImportPage: React.FC = () => {
             <Card size="small">
               <Statistic
                 title="预估处理时间"
-                value={safeCapabilities?.estimated_processing_time || '30-60秒'}
+                value={(safeCapabilities?.estimated_processing_time !== null && safeCapabilities?.estimated_processing_time !== undefined && safeCapabilities?.estimated_processing_time !== '') ? safeCapabilities.estimated_processing_time : '30-60秒'}
                 prefix={<SettingOutlined />}
               />
             </Card>

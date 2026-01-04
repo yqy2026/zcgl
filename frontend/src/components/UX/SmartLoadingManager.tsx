@@ -56,13 +56,13 @@ export const SmartLoadingManager: React.FC<SmartLoadingManagerProps> = ({
 
     // 延迟显示，避免闪烁
     const delay = state.delay !== undefined ? state.delay : defaultDelay
-    const timestamp = state.timestamp || Date.now()
+    const timestamp = (state.timestamp !== null && state.timestamp !== undefined) ? state.timestamp : Date.now()
     const timeSinceRequest = Date.now() - timestamp
 
     const showLoadingState = () => {
       // 只显示最新状态
       const latestState = loadingQueue.current[loadingQueue.current.length - 1]
-      if (latestState) {
+      if (latestState !== null && latestState !== undefined) {
         setLoadingState(latestState)
       }
     }
@@ -146,7 +146,7 @@ const SmartLoadingOverlay: React.FC<SmartLoadingOverlayProps> = ({ state }) => {
             />
             <div style={{ marginTop: 16 }}>
               <Progress
-                percent={state.progress || 0}
+                percent={(state.progress !== null && state.progress !== undefined) ? state.progress : 0}
                 status="active"
                 strokeColor={{
                   '0%': '#108ee9',
@@ -168,7 +168,7 @@ const SmartLoadingOverlay: React.FC<SmartLoadingOverlayProps> = ({ state }) => {
             <Spin size="large" tip={state.message} />
             <div style={{ marginTop: 16 }}>
               <Progress
-                percent={state.progress || 0}
+                percent={(state.progress !== null && state.progress !== undefined) ? state.progress : 0}
                 status="active"
                 strokeColor={{
                   '0%': '#1890ff',
@@ -199,7 +199,7 @@ const SmartLoadingOverlay: React.FC<SmartLoadingOverlayProps> = ({ state }) => {
               <Spin indicator={<LoadingOutlined style={{ fontSize: 20 }} />} tip="数据处理中" />
               <div style={{ marginTop: 12 }}>
                 <Progress
-                  percent={state.progress || 0}
+                  percent={(state.progress !== null && state.progress !== undefined) ? state.progress : 0}
                   status="active"
                   size="small"
                   strokeWidth={4}
@@ -230,7 +230,7 @@ const SmartLoadingOverlay: React.FC<SmartLoadingOverlayProps> = ({ state }) => {
             />
             <div style={{ marginTop: 16, marginLeft: 16 }}>
               <Text style={{ color: 'white', fontSize: 16 }}>
-                {state.message || '加载中...'}
+                {(state.message !== null && state.message !== undefined && state.message !== '') ? state.message : '加载中...'}
               </Text>
             </div>
           </div>
@@ -357,6 +357,7 @@ export const SmartPreloader: React.FC<PreloaderProps> = ({
   const [isPreloaded, setIsPreloaded] = useState(false)
   const [isPreloading, setIsPreloading] = useState(false)
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   React.useEffect(() => {
     if (resource && !isPreloaded && !isPreloading) {
       setIsPreloading(true)
@@ -376,15 +377,16 @@ export const SmartPreloader: React.FC<PreloaderProps> = ({
 
       link.onerror = () => {
         setIsPreloading(false)
+        // eslint-disable-next-line no-console
         console.warn(`预加载失败: ${resource}`)
         document.head.removeChild(link)
       }
 
       document.head.appendChild(link)
     }
-  }, [resource, isPreloaded, isPreloading])
+  }, [resource, isPreloaded, isPreloading]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (fallback && !isPreloaded) {
+  if ((fallback !== null && fallback !== undefined) && !isPreloaded) {
     return <>{fallback}</>
   }
 
@@ -438,7 +440,7 @@ export const SmartProgressTracker: React.FC<ProgressTrackerProps> = ({
         }}
         strokeWidth={8}
         size="small"
-        format={(percent) => `${Math.round(percent || 0)}%`}
+        format={(percent) => `${Math.round((percent !== null && percent !== undefined) ? percent : 0)}%`}
       />
 
       <div style={{ marginTop: '16px' }}>
@@ -471,7 +473,7 @@ export const SmartProgressTracker: React.FC<ProgressTrackerProps> = ({
               <div style={{ fontWeight: index === current ? 'bold' : 'normal' }}>
                 {step.title}
               </div>
-              {showDetails && step.description && (
+              {(showDetails === true && step.description !== null && step.description !== undefined && step.description !== '') && (
                 <div style={{
                   fontSize: '12px',
                   color: '#666',

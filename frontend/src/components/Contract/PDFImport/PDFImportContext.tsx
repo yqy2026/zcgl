@@ -227,7 +227,11 @@ export const PDFImportProvider: React.FC<PDFImportProviderProps> = ({
                         fileAnalysis: {
                             type: 'mixed',
                             quality: 'good',
-                            recommendedMethod: enhancedStatus.final_results?.extraction_quality?.processing_methods?.[0] || 'hybrid'
+                            recommendedMethod: (enhancedStatus.final_results?.extraction_quality?.processing_methods?.[0] !== null &&
+                                                  enhancedStatus.final_results?.extraction_quality?.processing_methods?.[0] !== undefined &&
+                                                  enhancedStatus.final_results?.extraction_quality?.processing_methods?.[0] !== '')
+                                                 ? enhancedStatus.final_results.extraction_quality.processing_methods[0]
+                                                 : 'hybrid'
                         }
                     });
                 }
@@ -340,7 +344,7 @@ export const PDFImportProvider: React.FC<PDFImportProviderProps> = ({
 // 扩展 context 以包含 handleUpload
 export const usePDFImportUpload = () => {
     const context = useContext(PDFImportContext) as PDFImportContextType & { handleUpload: (file: File, onSuccess?: (response: unknown) => void, onError?: (error: Error) => void) => Promise<void> };
-    if (!context) {
+    if ((context === null || context === undefined)) {
         throw new Error('usePDFImportUpload must be used within PDFImportProvider');
     }
     return context.handleUpload;

@@ -82,10 +82,12 @@ const OperationLogPage: React.FC = () => {
     { value: 'warning', label: '警告', color: 'orange' }
   ]
 
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     loadLogs()
     loadStatistics()
   }, [])
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   const loadLogs = async () => {
     setLoading(true)
@@ -199,8 +201,8 @@ const OperationLogPage: React.FC = () => {
   const getActionTag = (action: string) => {
     const actionConfig = actionOptions.find(a => a.value === action)
     return (
-      <Tag color={actionConfig?.color || 'default'} icon={actionConfig?.icon}>
-        {actionConfig?.label || action}
+      <Tag color={(actionConfig?.color !== null && actionConfig?.color !== undefined && actionConfig?.color !== '') ? actionConfig.color : 'default'} icon={actionConfig?.icon}>
+        {(actionConfig?.label !== null && actionConfig?.label !== undefined && actionConfig?.label !== '') ? actionConfig.label : action}
       </Tag>
     )
   }
@@ -257,9 +259,9 @@ const OperationLogPage: React.FC = () => {
       width: 150,
       render: (_, record) => (
         <div>
-          <div style={{ fontWeight: 500 }}>{record.resource_name || '-'}</div>
+          <div style={{ fontWeight: 500 }}>{(record.resource_name !== null && record.resource_name !== undefined && record.resource_name !== '') ? record.resource_name : '-'}</div>
           <div style={{ fontSize: '12px', color: '#666' }}>
-            {record.resource_type || '-'}
+            {(record.resource_type !== null && record.resource_type !== undefined && record.resource_type !== '') ? record.resource_type : '-'}
           </div>
         </div>
       )
@@ -270,7 +272,7 @@ const OperationLogPage: React.FC = () => {
       key: 'ip_address',
       width: 120,
       render: (ip) => (
-        <Tooltip title={ip}>
+        <Tooltip title={ip as string | undefined}>
           <span>{ip}</span>
         </Tooltip>
       )
@@ -484,7 +486,7 @@ const OperationLogPage: React.FC = () => {
                 <Tag color="blue">{selectedLog.module_name}</Tag>
               </Descriptions.Item>
               <Descriptions.Item label="资源信息">
-                {selectedLog.resource_name ? (
+                {(selectedLog.resource_name !== null && selectedLog.resource_name !== undefined && selectedLog.resource_name !== '') ? (
                   <div>
                     <div>{selectedLog.resource_name}</div>
                     <div style={{ fontSize: '12px', color: '#666' }}>
@@ -519,7 +521,7 @@ const OperationLogPage: React.FC = () => {
                   </span></div>
                 </div>
               </Descriptions.Item>
-              {selectedLog.error_message && (
+              {(selectedLog.error_message !== null && selectedLog.error_message !== undefined && selectedLog.error_message !== '') && (
                 <Descriptions.Item label="错误信息">
                   <div style={{ color: '#ff4d4f', background: '#fff2f0', padding: '8px', borderRadius: '4px' }}>
                     {selectedLog.error_message}

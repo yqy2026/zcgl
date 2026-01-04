@@ -52,6 +52,28 @@ interface OccupancyRateChartProps {
   height?: number
 }
 
+// Chart tooltip data types
+interface TrendChartData {
+  month: string
+  rate: number
+  total_area: number
+  rented_area: number
+}
+
+interface PropertyNatureChartData {
+  type: string
+  value: number
+  total_area: number
+  rented_area: number
+}
+
+interface OwnershipChartData {
+  ownership: string
+  rate: number
+  asset_count: number
+  full_name: string
+}
+
 const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
   filters,
   height = 400,
@@ -83,12 +105,13 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
       shape: 'circle',
     },
     tooltip: {
-      formatter: (datum: any) => ({
+      formatter: (datum: TrendChartData) => ({
         name: '出租率',
         value: `${datum.rate.toFixed(2)}%`,
       }),
-      customContent: (title: any, data: any) => {
-        const datum = data?.[0]?.data
+      customContent: (_title: unknown, data: any) => {
+        const dataArray = data as Array<{ data: TrendChartData }> | undefined
+        const datum = dataArray?.[0]?.data
         if (!datum) return null
         return (
           <div style={{ padding: '8px' }}>
@@ -143,12 +166,13 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
       position: 'right',
     },
     tooltip: {
-      formatter: (datum: any) => ({
+      formatter: (datum: PropertyNatureChartData) => ({
         name: datum.type,
         value: `${datum.value.toFixed(2)}%`,
       }),
-      customContent: (title: any, data: any) => {
-        const datum = data?.[0]?.data
+      customContent: (_title: unknown, data: any) => {
+        const dataArray = data as Array<{ data: PropertyNatureChartData }> | undefined
+        const datum = dataArray?.[0]?.data
         if (!datum) return null
         return (
           <div style={{ padding: '8px' }}>
@@ -174,7 +198,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
           fontSize: '20px',
           fontWeight: 'bold',
         },
-        content: `${data?.overall_rate?.toFixed(2) || 0}%`,
+        content: `${(data?.overall_rate !== null && data?.overall_rate !== undefined) ? data.overall_rate.toFixed(2) : '0.00'}%`,
       },
     },
   }
@@ -199,23 +223,24 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
     },
     label: {
       position: 'top' as const,
-      formatter: (datum: any) => `${datum.rate.toFixed(1)}%`,
+      formatter: (datum: OwnershipChartData) => `${datum.rate.toFixed(1)}%`,
       style: {
         fill: '#333',
         fontSize: 12,
       },
     },
     tooltip: {
-      formatter: (datum: any) => ({
-        name: datum.full_name || datum.ownership,
+      formatter: (datum: OwnershipChartData) => ({
+        name: (datum.full_name !== null && datum.full_name !== undefined) ? datum.full_name : datum.ownership,
         value: `${datum.rate.toFixed(2)}%`,
       }),
-      customContent: (title: any, data: any) => {
-        const datum = data?.[0]?.data
+      customContent: (_title: unknown, data: any) => {
+        const dataArray = data as Array<{ data: OwnershipChartData }> | undefined
+        const datum = dataArray?.[0]?.data
         if (!datum) return null
         return (
           <div style={{ padding: '8px' }}>
-            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{datum.full_name || datum.ownership}</div>
+            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{(datum.full_name !== null && datum.full_name !== undefined) ? datum.full_name : datum.ownership}</div>
             <div>出租率: {datum.rate.toFixed(2)}%</div>
             <div>资产数量: {datum.asset_count} 个</div>
           </div>
@@ -282,13 +307,13 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
           <Card>
             <Statistic
               title="总体出租率"
-              value={data?.overall_rate || 0}
+              value={(data?.overall_rate !== null && data?.overall_rate !== undefined) ? data?.overall_rate : 0}
               precision={2}
               suffix="%"
               prefix={<PercentageOutlined />}
-              valueStyle={{ 
-                color: data?.overall_rate && data.overall_rate >= 80 ? '#52c41a' : 
-                       data?.overall_rate && data.overall_rate >= 60 ? '#faad14' : '#ff4d4f'
+              valueStyle={{
+                color: (data?.overall_rate !== null && data?.overall_rate !== undefined && data.overall_rate >= 80) ? '#52c41a' :
+                       (data?.overall_rate !== null && data?.overall_rate !== undefined && data.overall_rate >= 60) ? '#faad14' : '#ff4d4f'
               }}
             />
           </Card>
@@ -298,11 +323,11 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
           <Card>
             <Statistic
               title="趋势变化"
-              value={data?.trend_percentage || 0}
+              value={(data?.trend_percentage !== null && data?.trend_percentage !== undefined) ? data?.trend_percentage : 0}
               precision={2}
               suffix="%"
-              prefix={getTrendIcon(data?.trend || 'stable', data?.trend_percentage || 0)}
-              valueStyle={{ color: getTrendColor(data?.trend || 'stable') }}
+              prefix={getTrendIcon((data?.trend !== null && data?.trend !== undefined) ? data?.trend : 'stable', (data?.trend_percentage !== null && data?.trend_percentage !== undefined) ? data?.trend_percentage : 0)}
+              valueStyle={{ color: getTrendColor((data?.trend !== null && data?.trend !== undefined) ? data?.trend : 'stable') }}
             />
           </Card>
         </Col>
@@ -311,7 +336,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
           <Card>
             <Statistic
               title="经营类物业出租率"
-              value={data?.by_property_nature?.find(item => item.property_nature === '经营类')?.rate || 0}
+              value={data?.by_property_nature?.find(item => item.property_nature === '经营类')?.rate ?? 0}
               precision={2}
               suffix="%"
               valueStyle={{ color: '#1890ff' }}
@@ -323,7 +348,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
           <Card>
             <Statistic
               title="权属方数量"
-              value={data?.by_ownership_entity?.length || 0}
+              value={(data?.by_ownership_entity?.length !== null && data?.by_ownership_entity?.length !== undefined) ? data?.by_ownership_entity?.length : 0}
               suffix="个"
               valueStyle={{ color: '#722ed1' }}
             />
@@ -372,7 +397,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
                   justifyContent: 'space-between', 
                   alignItems: 'center',
                   padding: '8px 0',
-                  borderBottom: index < (data.top_performers?.length || 0) - 1 ? '1px solid #f0f0f0' : 'none'
+                  borderBottom: index < ((data.top_performers?.length !== null && data.top_performers?.length !== undefined) ? data.top_performers?.length : 0) - 1 ? '1px solid #f0f0f0' : 'none'
                 }}>
                   <div>
                     <Text strong>{asset.property_name}</Text>
@@ -401,7 +426,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
                   justifyContent: 'space-between', 
                   alignItems: 'center',
                   padding: '8px 0',
-                  borderBottom: index < (data.low_performers?.length || 0) - 1 ? '1px solid #f0f0f0' : 'none'
+                  borderBottom: index < ((data.low_performers?.length !== null && data.low_performers?.length !== undefined) ? data.low_performers?.length : 0) - 1 ? '1px solid #f0f0f0' : 'none'
                 }}>
                   <div>
                     <Text strong>{asset.property_name}</Text>

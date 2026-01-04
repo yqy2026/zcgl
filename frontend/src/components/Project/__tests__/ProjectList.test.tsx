@@ -41,7 +41,7 @@ vi.mock('antd', () => ({
       {children}
     </div>
   ),
-  Table: ({ dataSource, columns, pagination, loading, rowSelection, onChange, expandable, defaultExpandAllRows }: any) => (
+  Table: ({ dataSource, _columns, pagination, loading, rowSelection, _onChange, expandable, defaultExpandAllRows }: any) => (
     <div data-testid="table" data-pagination={pagination} data-loading={loading} data-row-selection={!!rowSelection} data-expandable={!!expandable} data-default-expand-all={defaultExpandAllRows}>
       {dataSource?.map((item: any, index: number) => (
         <div key={index} data-row={index} data-key={item.id}>{JSON.stringify(item)}</div>

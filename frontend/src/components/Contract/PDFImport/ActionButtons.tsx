@@ -9,7 +9,7 @@ import { usePDFImportContext } from './PDFImportContext';
 const ActionButtons: React.FC = () => {
     const { uploading, currentSession, handleCancel, handleReset } = usePDFImportContext();
 
-    if (!uploading && !currentSession) {
+    if (uploading === false && (currentSession === null || currentSession === undefined)) {
         return null;
     }
 

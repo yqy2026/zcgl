@@ -48,8 +48,8 @@ export class ChartErrorBoundary extends Component<Props, State> {
   }
 
   public render() {
-    if (this.state.hasError) {
-      if (this.props.fallback) {
+    if (this.state.hasError === true) {
+      if (this.props.fallback !== null && this.props.fallback !== undefined) {
         return this.props.fallback
       }
 

@@ -30,6 +30,7 @@ import {
   ExclamationCircleOutlined,
   UploadOutlined,
 } from '@ant-design/icons';
+import type { Dayjs } from 'dayjs';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { rentContractExcelService, ExcelImportResult } from '../../services/rentContractExcelService';
 
@@ -99,12 +100,34 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
   // 处理导出
   const handleExport = async () => {
     try {
-      const values = await form.validateFields();
+      const values: {
+        date_range?: Dayjs[];
+        include_terms?: boolean;
+        include_ledger?: boolean;
+      } = await form.validateFields() as {
+        date_range?: Dayjs[];
+        include_terms?: boolean;
+        include_ledger?: boolean;
+      };
       setExporting(true);
 
+      // Extract dates safely
+      const dateRange = values.date_range;
+      let startDate: string | undefined = undefined;
+      let endDate: string | undefined = undefined;
+
+      if ((dateRange !== null && dateRange !== undefined)) {
+        if ((dateRange[0] !== null && dateRange[0] !== undefined)) {
+          startDate = (dateRange[0] as unknown as { format: (fmt: string) => string }).format('YYYY-MM-DD');
+        }
+        if ((dateRange[1] !== null && dateRange[1] !== undefined)) {
+          endDate = (dateRange[1] as unknown as { format: (fmt: string) => string }).format('YYYY-MM-DD');
+        }
+      }
+
       await rentContractExcelService.exportAndDownload({
-        start_date: values.date_range?.[0]?.format('YYYY-MM-DD'),
-        end_date: values.date_range?.[1]?.format('YYYY-MM-DD'),
+        start_date: startDate,
+        end_date: endDate,
         include_terms: values.include_terms,
         include_ledger: values.include_ledger,
       });

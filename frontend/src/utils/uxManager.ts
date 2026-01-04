@@ -85,17 +85,17 @@ class UXManager {
     })
 
     // 监听全局错误
-    if (this.config.enableErrorReporting) {
+    if ((this.config.enableErrorReporting === true)) {
       this.setupErrorHandling()
     }
 
     // 监听性能指标
-    if (this.config.enablePerformanceMonitoring) {
+    if ((this.config.enablePerformanceMonitoring === true)) {
       this.setupPerformanceMonitoring()
     }
 
     // 监听用户交互
-    if (this.config.enableUserFeedback) {
+    if ((this.config.enableUserFeedback === true)) {
       this.setupUserInteractionTracking()
     }
   }
@@ -125,7 +125,7 @@ class UXManager {
       window.addEventListener('load', () => {
         setTimeout(() => {
           const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming
-          if (navigation) {
+          if (navigation !== null && navigation !== undefined) {
             this.recordPerformanceMetric('pageLoad', navigation.loadEventEnd - navigation.loadEventStart)
             this.recordPerformanceMetric('domContentLoaded', navigation.domContentLoadedEventEnd - navigation.domContentLoadedEventStart)
           }
@@ -191,7 +191,7 @@ class UXManager {
     this.showErrorFeedbackInternal(error, context)
 
     // 发送错误报告
-    if (this.config.errorReportingEndpoint) {
+    if ((this.config.errorReportingEndpoint !== null && this.config.errorReportingEndpoint !== undefined && this.config.errorReportingEndpoint !== '')) {
       this.sendErrorReport(error, context)
     }
   }
@@ -268,7 +268,7 @@ class UXManager {
     performance.measure(name, `${name}-start`, `${name}-end`)
 
     const measure = performance.getEntriesByName(name, 'measure')[0]
-    if (measure) {
+    if (measure !== null && measure !== undefined) {
       this.recordPerformanceMetric(name, measure.duration)
     }
   }
@@ -330,9 +330,9 @@ class UXManager {
       content: options.content,
       onOk: options.onOk,
       onCancel: options.onCancel,
-      okText: options.okText || '确定',
-      cancelText: options.cancelText || '取消',
-      okButtonProps: options.danger ? { danger: true } : undefined,
+      okText: (options.okText !== null && options.okText !== undefined && options.okText !== '') ? options.okText : '确定',
+      cancelText: (options.cancelText !== null && options.cancelText !== undefined && options.cancelText !== '') ? options.cancelText : '取消',
+      okButtonProps: (options.danger === true) ? { danger: true } : undefined,
     })
   }
 
@@ -350,7 +350,8 @@ class UXManager {
   }
 
   public isLoading(key: string): boolean {
-    return this.loadingStates.get(key) || false
+    const value = this.loadingStates.get(key)
+    return (value !== null && value !== undefined) ? value : false
   }
 
   public clearAllLoading() {
@@ -360,13 +361,14 @@ class UXManager {
   // 工具方法
   private getUserId(): string {
     // 从本地存储或认证状态获取用户ID
-    return localStorage.getItem('userId') || 'anonymous'
+    const userId = localStorage.getItem('userId')
+    return (userId !== null && userId !== undefined && userId !== '') ? userId : 'anonymous'
   }
 
   private getSessionId(): string {
     // 从会话存储获取会话ID
     let sessionId = sessionStorage.getItem('sessionId')
-    if (!sessionId) {
+    if ((sessionId === null || sessionId === undefined || sessionId === '')) {
       sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       sessionStorage.setItem('sessionId', sessionId)
     }

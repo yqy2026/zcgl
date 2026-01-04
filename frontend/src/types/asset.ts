@@ -363,26 +363,26 @@ export const DecimalUtils = {
 
   // 安全的数值运算，避免浮点精度问题
   safeAdd: (a: number | undefined, b: number | undefined): number => {
-    const numA = a || 0;
-    const numB = b || 0;
+    const numA = (a !== null && a !== undefined) ? a : 0;
+    const numB = (b !== null && b !== undefined) ? b : 0;
     return Math.round((numA + numB) * 100) / 100;
   },
 
   safeSubtract: (a: number | undefined, b: number | undefined): number => {
-    const numA = a || 0;
-    const numB = b || 0;
+    const numA = (a !== null && a !== undefined) ? a : 0;
+    const numB = (b !== null && b !== undefined) ? b : 0;
     return Math.round((numA - numB) * 100) / 100;
   },
 
   safeMultiply: (a: number | undefined, b: number | undefined): number => {
-    const numA = a || 0;
-    const numB = b || 0;
+    const numA = (a !== null && a !== undefined) ? a : 0;
+    const numB = (b !== null && b !== undefined) ? b : 0;
     return Math.round(numA * numB * 100) / 100;
   },
 
   safeDivide: (a: number | undefined, b: number | undefined): number => {
-    const numA = a || 0;
-    const numB = b || 0;
+    const numA = (a !== null && a !== undefined) ? a : 0;
+    const numB = (b !== null && b !== undefined) ? b : 0;
     if (numB === 0) return 0;
     return Math.round((numA / numB) * 100) / 100;
   },
