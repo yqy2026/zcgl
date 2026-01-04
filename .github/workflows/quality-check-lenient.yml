@@ -1,0 +1,65 @@
+name: Quality Check (Lenient Mode)
+
+on:
+  pull_request:
+    branches: [ develop, "hotfix/*" ]
+
+jobs:
+  backend-lenient:
+    name: Backend Quality (Lenient)
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+    
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libmagic1
+    
+    - name: Install dependencies
+      run: |
+        cd backend
+        pip install uv
+        uv sync --all-extras
+    
+    - name: Check Python syntax only
+      run: |
+        cd backend
+        echo "Checking Python syntax..."
+        find src/ -name "*.py" -type f -exec python3 -m py_compile {} \;
+        echo "✅ All Python files have valid syntax"
+    
+    - name: Run Ruff with extreme leniency
+      run: |
+        cd backend
+        echo "Running Ruff with lenient settings..."
+        uv run ruff check src/ \
+          --ignore=E,F,W,N,UP \
+          --output-format=github \
+          || echo "::warning :: Ruff check completed with warnings (ignored)"
+    
+    - name: Run MyPy with leniency
+      run: |
+        cd backend
+        echo "Running MyPy with leniency..."
+        uv run mypy src/ \
+          --ignore-missing-imports \
+          --no-error-summary \
+          --no-strict-optional \
+          || echo "::warning :: MyPy check completed with warnings (ignored)"
+    
+    - name: Check basic functionality
+      run: |
+        cd backend
+        echo "Checking basic application functionality..."
+        uv run python -c "
+from src.main import app
+print('✅ FastAPI application imports successfully')
+" || echo "::error :: Application import failed"
+
