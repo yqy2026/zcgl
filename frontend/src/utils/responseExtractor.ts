@@ -240,7 +240,7 @@ export class ResponseExtractor {
         const value = (responseData as Record<string, unknown>)[field];
         if (typeof value === 'string') {
           errorMessage = value;
-        } else if (value && typeof value === 'object' && 'message' in (value as Record<string, unknown>)) {
+        } else if (value !== null && value !== undefined && typeof value === 'object' && 'message' in (value as Record<string, unknown>)) {
           errorMessage = (value as Record<string, unknown>).message as string;
         }
         break;
@@ -258,19 +258,26 @@ export class ResponseExtractor {
    * 类型验证
    */
   private static validateType<T>(data: unknown, options: SmartExtractOptions<T>): T {
-    if (!(options.enableTypeValidation !== null && options.enableTypeValidation !== undefined) ? options.enableTypeValidation : !options.expectedType) {
+    const enableValidation = options.enableTypeValidation !== null && options.enableTypeValidation !== undefined ? options.enableTypeValidation : !options.expectedType;
+    if (!enableValidation) {
       return data as T;
     }
 
     try {
       // 如果数据已经是期望的类型，直接返回
-      const expectedType = options.expectedType as any;
-      if (data instanceof expectedType) {
+      // 注意：由于 TypeScript 类型系统的限制，这里无法完全避免类型断言
+      // 但通过 try-catch 提供了运行时安全
+      if (options.expectedType && data instanceof (options.expectedType as { new (...args: unknown[]): unknown })) {
         return data as unknown as T;
       }
 
       // 尝试构造新实例（适用于简单对象）
-      return new expectedType(data) as T;
+      if (options.expectedType) {
+        const ExpectedTypeClass = options.expectedType as { new (...args: unknown[]): unknown };
+        return new ExpectedTypeClass(data) as T;
+      }
+
+      return data as T;
     } catch (err) {
       logger.warn(`类型验证失败: ${err instanceof Error ? err.message : '未知错误'}`);
 
@@ -304,15 +311,16 @@ export class ResponseExtractor {
    */
   static extractMessage(response: AxiosResponse): string {
     try {
-      const responseData = response.data;
+      const responseData = response.data as Record<string, unknown>;
 
       // 尝试从常见字段提取消息
-      if (responseData.message) {
+      if (responseData.message !== null && responseData.message !== undefined && typeof responseData.message === 'string') {
         return responseData.message;
       }
 
-      if (responseData.data?.message) {
-        return responseData.data.message;
+      const dataField = responseData.data as Record<string, unknown> | undefined;
+      if (dataField !== null && dataField !== undefined && dataField.message !== null && dataField.message !== undefined && typeof dataField.message === 'string') {
+        return dataField.message;
       }
 
       return '操作成功';
@@ -390,7 +398,7 @@ export class ApiErrorHandler {
     }
 
     // 检查是否已经是增强型错误对象
-    if (error && typeof error === 'object' && 'type' in error && 'code' in error && 'message' in error) {
+    if (error !== null && error !== undefined && typeof error === 'object' && 'type' in error && 'code' in error && 'message' in error) {
       return error as EnhancedApiError;
     }
 
@@ -413,7 +421,7 @@ export class ApiErrorHandler {
     const responseData = error.response?.data;
 
     // 网络错误
-    if (!error.response) {
+    if (error.response === null || error.response === undefined) {
       return {
         type: ApiErrorType.NETWORK_ERROR,
         code: 'NETWORK_ERROR',
@@ -425,7 +433,7 @@ export class ApiErrorHandler {
     }
 
     // 4xx 客户端错误
-    if (statusCode && statusCode >= 400 && statusCode < 500) {
+    if (statusCode !== null && statusCode !== undefined && statusCode >= 400 && statusCode < 500) {
       const data = responseData as Record<string, unknown> | undefined;
       return {
         type: this.getClientErrorType(statusCode),
@@ -440,7 +448,7 @@ export class ApiErrorHandler {
     }
 
     // 5xx 服务器错误
-    if (statusCode && statusCode >= 500) {
+    if (statusCode !== null && statusCode !== undefined && statusCode >= 500) {
       const data = responseData as Record<string, unknown> | undefined;
       return {
         type: ApiErrorType.SERVER_ERROR,
