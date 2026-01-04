@@ -205,7 +205,7 @@ class TestCoverageService {
     if (!response.ok) {
       throw new Error(`更新覆盖率阈值失败: ${response.statusText}`);
     }
-    const data = await response.json();
+    const data = await response.json() as CoverageThreshold;
     return {
       success: true,
       data,
@@ -243,7 +243,7 @@ class TestCoverageService {
     if (!response.ok) {
       throw new Error(`创建覆盖率报告失败: ${response.statusText}`);
     }
-    const data = await response.json();
+    const data = await response.json() as { report_id: number };
     return {
       success: true,
       data,
@@ -308,7 +308,7 @@ class TestCoverageService {
     if (!response.ok) {
       throw new Error(`获取缺陷报告失败: ${response.statusText}`);
     }
-    const data = await response.json();
+    const data = await response.json() as { defects: DefectReport[]; total: number };
     return {
       success: true,
       data,
@@ -331,7 +331,7 @@ class TestCoverageService {
     if (!response.ok) {
       throw new Error(`创建缺陷报告失败: ${response.statusText}`);
     }
-    const data = await response.json();
+    const data = await response.json() as DefectReport;
     return {
       success: true,
       data,
@@ -355,7 +355,7 @@ class TestCoverageService {
     if (!response.ok) {
       throw new Error(`更新缺陷报告失败: ${response.statusText}`);
     }
-    const data = await response.json();
+    const data = await response.json() as DefectReport;
     return {
       success: true,
       data,
@@ -381,7 +381,7 @@ class TestCoverageService {
     if (!response.ok) {
       throw new Error(`获取覆盖率摘要失败: ${response.statusText}`);
     }
-    const data = await response.json();
+    const data = await response.json() as { overall_coverage: number; backend_coverage: number; frontend_coverage: number; total_modules: number; modules_above_threshold: number; modules_below_threshold: number; total_tests: number; pass_rate: number; average_execution_time: number; trend_direction: 'improving' | 'declining' | 'stable'; };
     return {
       success: true,
       data,
@@ -419,7 +419,7 @@ class TestCoverageService {
     if (!response.ok) {
       throw new Error(`获取测试性能分析失败: ${response.statusText}`);
     }
-    const data = await response.json();
+    const data = await response.json() as { slow_tests: TestPerformanceMetrics[]; memory_intensive_tests: TestPerformanceMetrics[]; cpu_intensive_tests: TestPerformanceMetrics[]; performance_trends: Array<{ date: string; avg_execution_time: number; avg_memory_usage: number; }>; recommendations: string[]; };
     return {
       success: true,
       data,
@@ -449,7 +449,7 @@ class TestCoverageService {
     if (!response.ok) {
       throw new Error(`触发覆盖率扫描失败: ${response.statusText}`);
     }
-    const data = await response.json();
+    const data = await response.json() as { scan_id: string; status: 'started' | 'queued'; estimated_duration: number; };
     return {
       success: true,
       data,
@@ -472,7 +472,7 @@ class TestCoverageService {
     if (!response.ok) {
       throw new Error(`获取扫描状态失败: ${response.statusText}`);
     }
-    const data = await response.json();
+    const data = await response.json() as { scan_id: string; status: 'running' | 'completed' | 'failed' | 'cancelled'; progress: number; current_step: string; estimated_remaining_time?: number; result?: CoverageReport; error_message?: string; };
     return {
       success: true,
       data,
