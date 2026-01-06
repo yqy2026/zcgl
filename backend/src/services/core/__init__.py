@@ -1,7 +1,7 @@
 """
 核心服务模块
 
-包含系统核心服务�?
+包含系统核心服务：
 - 认证服务
 - 审计服务
 - 安全服务
@@ -12,60 +12,64 @@
 """
 
 # Core Services
-__all__ = []
+__all__: list[str] = []
 
 try:
-    from .auth_service import AuthService
+    from .auth_service import AuthService as AuthService
 
-    __all__.append("AuthService")  # pragma: no cover
-except Exception:  # nosec - B110: Intentional graceful degradation  # pragma: no cover
+    __all__.append("AuthService")
+except Exception:  # nosec - B110: Intentional graceful degradation
     # Fallback to legacy shim
     try:
-        from ..auth_service import AuthService  # type: ignore
+        from ..auth_service import AuthService as AuthService  # type: ignore
 
-        __all__.append("AuthService")  # pragma: no cover
-    except Exception:  # nosec - B110: Intentional graceful degradation  # pragma: no cover
+        __all__.append("AuthService")
+    except Exception:  # nosec - B110: Intentional graceful degradation
         pass
 
 try:
-    from .audit_service import EnhancedAuditLogger
+    from .audit_service import EnhancedAuditLogger as EnhancedAuditLogger
 
-    __all__.append("EnhancedAuditLogger")  # pragma: no cover
-except Exception:  # nosec - B110: Intentional graceful degradation  # pragma: no cover
+    __all__.append("EnhancedAuditLogger")
+except Exception:  # nosec - B110: Intentional graceful degradation
     # Fallback shim that exposes AuditService alias
     try:
-        from ..audit_service import EnhancedAuditLogger  # type: ignore
+        from ..audit_service import (
+            EnhancedAuditLogger as EnhancedAuditLogger,  # type: ignore
+        )
 
-        __all__.append("EnhancedAuditLogger")  # pragma: no cover
-    except Exception:  # nosec - B110: Intentional graceful degradation  # pragma: no cover
+        __all__.append("EnhancedAuditLogger")
+    except Exception:  # nosec - B110: Intentional graceful degradation
         pass
 
 try:
-    from .security_service import SecurityService
+    from .security_service import SecurityService as SecurityService
 
-    __all__.append("SecurityService")  # pragma: no cover
-except Exception:  # nosec - B110: Intentional graceful degradation  # pragma: no cover
+    __all__.append("SecurityService")
+except Exception:  # nosec - B110: Intentional graceful degradation
     # Provide a minimal stub to ensure import success
-    class SecurityService:  # type: ignore  # pragma: no cover
-        def __init__(self, *args, **kwargs):  # pragma: no cover
+    class SecurityService:  # type: ignore
+        def __init__(self, *args, **kwargs):  # type: ignore
             pass
 
-    __all__.append("SecurityService")  # pragma: no cover
+    __all__.append("SecurityService")
 
 try:
-    from .error_recovery_service import ErrorRecoveryEngine
+    from .error_recovery_service import ErrorRecoveryEngine as ErrorRecoveryEngine
 
-    __all__.append("ErrorRecoveryEngine")  # pragma: no cover
-except Exception:  # nosec - B110: Intentional graceful degradation  # pragma: no cover
+    __all__.append("ErrorRecoveryEngine")
+except Exception:  # nosec - B110: Intentional graceful degradation
     # Fallback to legacy shim
     try:
-        from ..error_recovery_service import ErrorRecoveryEngine  # type: ignore
+        from ..error_recovery_service import (
+            ErrorRecoveryEngine as ErrorRecoveryEngine,  # type: ignore
+        )
 
-        __all__.append("ErrorRecoveryEngine")  # pragma: no cover
-    except Exception:  # nosec - B110: Intentional graceful degradation  # pragma: no cover
+        __all__.append("ErrorRecoveryEngine")
+    except Exception:  # nosec - B110: Intentional graceful degradation
         # Provide a minimal stub to ensure import success
-        class ErrorRecoveryEngine:  # type: ignore  # pragma: no cover
-            def __init__(self, *args, **kwargs):  # pragma: no cover
+        class ErrorRecoveryEngine:  # type: ignore
+            def __init__(self, *args, **kwargs):  # type: ignore
                 pass
 
-        __all__.append("ErrorRecoveryEngine")  # pragma: no cover
+        __all__.append("ErrorRecoveryEngine")

@@ -224,7 +224,7 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
     def _check_rate_limit(self, ip: str, request: Request) -> bool:
         """检查请求频率限制"""
         # 本地开发环境更宽松的限制
-        is_local = (
+        (
             ip in ["127.0.0.1", "localhost", "::1", "0.0.0.0"]  # nosec - B104: Local IP check, not binding
             or ip.startswith("192.168.")
             or ip.startswith("10.")

@@ -4,7 +4,6 @@
 """
 
 import logging
-import os
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -21,7 +20,6 @@ from .core.encoding_utils import (
 from .core.environment import (
     get_dependency_policy,
     get_environment,
-    is_production,
     is_testing,
 )
 from .core.exception_handler import setup_exception_handlers
@@ -74,7 +72,7 @@ safe_print("Info: OCR service disabled - PDF intelligent import unavailable")
 # ===== 关键依赖（生产环境必须存在）=====
 # 路由注册器 - 关键依赖
 router_registry_module = safe_import(
-    ".core.router_registry",
+    "src.core.router_registry",
     critical=True,
     mock_factory=create_mock_registry,
 )
@@ -90,7 +88,7 @@ else:
 
 # 安全中间件 - 关键依赖
 setup_security_middleware = safe_import_from(
-    ".middleware.security_middleware",
+    "src.middleware.security_middleware",
     "setup_security_middleware",
     critical=True,
     fallback=lambda app: None,
@@ -98,22 +96,22 @@ setup_security_middleware = safe_import_from(
 
 # ===== 重要功能（推荐存在，允许降级）=====
 ErrorRecoveryMiddleware = safe_import(
-    ".middleware.error_recovery_middleware:ErrorRecoveryMiddleware",
+    "src.middleware.error_recovery_middleware:ErrorRecoveryMiddleware",
     fallback=None,
 )
 
 RequestLoggingMiddleware = safe_import(
-    ".middleware.request_logging:RequestLoggingMiddleware",
+    "src.middleware.request_logging:RequestLoggingMiddleware",
     fallback=None,
 )
 
 # V1 兼容中间件（可选，迁移完成后可移除）
 V1CompatibilityMiddleware = safe_import(
-    ".middleware.v1_compatibility:V1CompatibilityMiddleware",
+    "src.middleware.v1_compatibility:V1CompatibilityMiddleware",
     fallback=None,
 )
 add_v1_compatibility = safe_import_from(
-    ".middleware.v1_compatibility",
+    "src.middleware.v1_compatibility",
     "add_v1_compatibility",
     fallback=lambda app, preserve_endpoints=None: None,
 )

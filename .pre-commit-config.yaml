@@ -34,8 +34,8 @@ repos:
       - id: bandit
         name: bandit-security
         description: "运行Bandit安全扫描"
-        args: [-r, backend/src, -f, json, -o, backend/reports/bandit_report.json]
-        files: ^backend/.*\.py$
+        args: [-c, pyproject.toml, -r]
+        files: ^backend/src/.*\.py$
 
   # 检查大型文件
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -87,7 +87,7 @@ repos:
       - id: jscpd-check
         name: jscpd-check
         description: "检查代码重复度"
-        entry: python -m jscpd backend/src --min-lines 5 --min-tokens 50
+        entry: npx jscpd backend/src --min-lines 5 --min-tokens 50 --silent
         language: system
         pass_filenames: false
 

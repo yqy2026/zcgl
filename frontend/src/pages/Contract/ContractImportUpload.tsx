@@ -204,6 +204,15 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
     const { capabilities } = systemInfo;
     const tags = [];
 
+    // PaddleOCR PP-StructureV3 状态 (最重要的能力)
+    if (capabilities.paddleocr_available === true) {
+      const version = capabilities.paddleocr_version as string | undefined;
+      tags.push(
+        <Tag color="blue" key="paddleocr">
+          PaddleOCR {version || '3.3+'} ✓
+        </Tag>
+      );
+    }
 
     if (capabilities.pdfplumber_available === true) {
       tags.push(<Tag color="green" key="pdfplumber">PDFPlumber可用</Tag>);

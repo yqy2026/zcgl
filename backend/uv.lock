@@ -1238,8 +1238,8 @@ requires-dist = [
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.7.0" },
     { name = "opencv-python", marker = "extra == 'pdf-ocr'", specifier = ">=4.12.0.88" },
     { name = "openpyxl", specifier = ">=3.1.0" },
-    { name = "paddleocr", specifier = ">=3.2.0" },
-    { name = "paddleocr", marker = "extra == 'pdf-ocr'", specifier = ">=3.2.0" },
+    { name = "paddleocr", specifier = ">=3.3.0" },
+    { name = "paddleocr", marker = "extra == 'pdf-ocr'", specifier = ">=3.3.0" },
     { name = "paddlepaddle", specifier = ">=3.2.1" },
     { name = "paddlepaddle", marker = "extra == 'pdf-ocr'", specifier = ">=3.2.0" },
     { name = "pandas", specifier = ">=2.0.0" },
@@ -2120,7 +2120,7 @@ wheels = [
 
 [[package]]
 name = "paddleocr"
-version = "3.3.1"
+version = "3.3.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "paddlex", extra = ["ocr-core"] },
@@ -2128,9 +2128,9 @@ dependencies = [
     { name = "requests" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/bb/a2/adc09b0eee58a6c1f297b95fe4b38476533508dd7b28de4e60520202ea54/paddleocr-3.3.1.tar.gz", hash = "sha256:27f65a3ca1249186965a6583b3e20d069fa129218cc8f407d99422f94be0e029", size = 2501511, upload-time = "2025-10-29T11:50:00.737Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/eb/8c/b610e1796e1279b7a1e314495ed169a6bdcc1b48b62b9fc7603f25489f3e/paddleocr-3.3.2.tar.gz", hash = "sha256:2d14af4d12d9f85953645325ce4a2c6ea0d45aca4bb5f5fcd2400b19d2fd2838", size = 2502499, upload-time = "2025-11-13T14:46:38.722Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/49/f9/a558a2c506674c0fed9a6ecd03717e88148398fdde9b7c7fa94e1ef4784f/paddleocr-3.3.1-py3-none-any.whl", hash = "sha256:b9401ad605cc29840458b63173ea91c01bab548323f96f0b8f0d09a5aad4f9cb", size = 86703, upload-time = "2025-10-29T11:49:59.226Z" },
+    { url = "https://files.pythonhosted.org/packages/3d/85/6ddc745473e1f586db1e0b27c395b1e59b2b49b5a5dc76bba19487692468/paddleocr-3.3.2-py3-none-any.whl", hash = "sha256:b7536b7e8ee531ec8f6073555986c7eaa9ed2b50e00605b796b167635fd799ac", size = 86991, upload-time = "2025-11-13T14:46:37.252Z" },
 ]
 
 [[package]]

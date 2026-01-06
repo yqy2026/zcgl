@@ -1,5 +1,3 @@
-from typing import Any
-
 """
 统计分析API路由
 """
@@ -8,7 +6,6 @@ import logging
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
-from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
 from ...crud.asset import asset_crud
@@ -27,7 +24,7 @@ from ...schemas.statistics import (
     OccupancyRateStatsResponse,
     TrendDataResponse,
 )
-from ...services.asset.occupancy_calculator import OccupancyRateCalculator
+from ...services.analytics import AreaService, OccupancyService
 from ...utils.cache_manager import cache_statistics, get_cache_manager
 from ...utils.numeric import to_float
 
@@ -38,423 +35,13 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["统计分析"])
 
 
-def _calculate_occupancy_with_aggregation(
-    db: Session, filters: dict[str, Any]
-) -> dict[str, float]:
-    """
-    使用数据库聚合查询计算出租率 - 推荐方法
-
-    Args:
-        db: 数据库会话
-        filters: 筛选条件
-
-    Returns:
-        出租率统计结果
-    """
-    try:
-        from ...models.asset import Asset
-
-        # 构建基础查询
-        query = db.query(Asset)
-
-        # 应用筛选条件
-        if filters:
-            for key, value in filters.items():
-                if hasattr(Asset, key) and value is not None:
-                    query = query.filter(getattr(Asset, key) == value)
-
-        # 使用数据库聚合函数计算 - 避免加载所有数据到内存
-        result = query.with_entities(
-            func.cast(
-                func.sum(func.coalesce(Asset.rentable_area, 0)), func.Float
-            ).label("total_rentable_area"),
-            func.cast(func.sum(func.coalesce(Asset.rented_area, 0)), func.Float).label(
-                "total_rented_area"
-            ),
-            func.count(Asset.id).label("total_assets"),
-            func.count(case((Asset.rentable_area > 0, 1))).label(
-                "rentable_assets_count"
-            ),
-        ).first()
-
-        # 提取结果并转换为float
-        total_rentable_area = to_float(result.total_rentable_area)
-        total_rented_area = to_float(result.total_rented_area)
-        total_assets = int(result.total_assets or 0)
-        rentable_assets_count = int(result.rentable_assets_count or 0)
-
-        # 计算出租率
-        overall_rate = (
-            (total_rented_area / total_rentable_area * 100)
-            if total_rentable_area > 0
-            else 0.0
-        )
-
-        logger.info(
-            f"数据库聚合查询完成: 总资产={total_assets}, 可出租资产={rentable_assets_count}"
-        )
-
-        return {
-            "overall_rate": round(overall_rate, 2),
-            "total_rentable_area": round(total_rentable_area, 2),
-            "total_rented_area": round(total_rented_area, 2),
-            "total_assets": total_assets,
-            "rentable_assets_count": rentable_assets_count,
-        }
-
-    except Exception as e:
-        logger.error(f"数据库聚合查询失败: {str(e)}")
-        # 降级到内存计算
-        return _calculate_occupancy_in_memory(db, filters)
-
-
-def _calculate_occupancy_in_memory(
-    db: Session, filters: dict[str, Any]
-) -> dict[str, float]:
-    """
-    在内存中计算出租率 - 兼容性方法
-
-    Args:
-        db: 数据库会话
-        filters: 筛选条件
-
-    Returns:
-        出租率统计结果
-    """
-    try:
-        # 分批获取数据以避免内存问题
-        batch_size = 1000
-        offset = 0
-        all_assets = []
-
-        while True:
-            assets_batch, _ = asset_crud.get_multi_with_search(
-                db=db, skip=offset, limit=batch_size, filters=filters
-            )
-
-            if not assets_batch:
-                break
-
-            all_assets.extend(assets_batch)
-            offset += batch_size
-
-            # 防止无限循环
-            if len(assets_batch) < batch_size:
-                break
-
-        logger.info(f"内存计算模式：获取到 {len(all_assets)} 个资产")
-
-        # 使用现有的计算器
-        stats = OccupancyRateCalculator.calculate_overall_occupancy_rate(all_assets)
-
-        return stats
-
-    except Exception as e:
-        logger.error(f"内存计算失败: {str(e)}")
-        raise
-
-
-def _calculate_category_occupancy_with_aggregation(
-    db: Session, category_field: str, filters: dict[str, Any]
-) -> dict[str, dict[str, Any]]:
-    """
-    使用数据库聚合查询计算分类出租率
-
-    Args:
-        db: 数据库会话
-        category_field: 分类字段
-        filters: 筛选条件
-
-    Returns:
-        分类出租率统计结果
-    """
-    try:
-        from ...models.asset import Asset
-
-        # 构建基础查询
-        query = db.query(Asset)
-
-        # 应用筛选条件
-        if filters:
-            for key, value in filters.items():
-                if hasattr(Asset, key) and value is not None:
-                    query = query.filter(getattr(Asset, key) == value)
-
-        # 按分类字段聚合查询
-        results = (
-            query.with_entities(
-                getattr(Asset, category_field).label("category"),
-                func.cast(
-                    func.sum(func.coalesce(Asset.rentable_area, 0)), func.Float
-                ).label("total_rentable_area"),
-                func.cast(
-                    func.sum(func.coalesce(Asset.rented_area, 0)), func.Float
-                ).label("total_rented_area"),
-                func.count(Asset.id).label("total_assets"),
-                func.count(case((Asset.rentable_area > 0, 1))).label(
-                    "rentable_assets_count"
-                ),
-            )
-            .group_by(getattr(Asset, category_field))
-            .all()
-        )
-
-        # 处理结果
-        categories = {}
-        for result in results:
-            category = result.category or "未知"
-            total_rentable = to_float(result.total_rentable_area)
-            total_rented = to_float(result.total_rented_area)
-            total_assets = int(result.total_assets or 0)
-            rentable_assets = int(result.rentable_assets_count or 0)
-
-            # 计算出租率
-            overall_rate = (
-                (total_rented / total_rentable * 100) if total_rentable > 0 else 0.0
-            )
-
-            categories[category] = {
-                "overall_rate": round(overall_rate, 2),
-                "total_rentable_area": round(total_rentable, 2),
-                "total_rented_area": round(total_rented, 2),
-                "total_unrented_area": round(total_rentable - total_rented, 2),
-                "asset_count": total_assets,
-                "rentable_asset_count": rentable_assets,
-            }
-
-        return categories
-
-    except Exception as e:
-        logger.error(f"分类数据库聚合查询失败: {str(e)}")
-        # 降级到内存计算
-        return _calculate_category_occupancy_in_memory(db, category_field, filters)
-
-
-def _calculate_category_occupancy_in_memory(
-    db: Session, category_field: str, filters: dict[str, Any]
-) -> dict[str, dict[str, Any]]:
-    """
-    在内存中计算分类出租率
-
-    Args:
-        db: 数据库会话
-        category_field: 分类字段
-        filters: 筛选条件
-
-    Returns:
-        分类出租率统计结果
-    """
-    try:
-        # 分批获取数据以避免内存问题
-        batch_size = 1000
-        offset = 0
-        all_assets = []
-
-        while True:
-            assets_batch, _ = asset_crud.get_multi_with_search(
-                db=db, skip=offset, limit=batch_size, filters=filters
-            )
-
-            if not assets_batch:
-                break
-
-            all_assets.extend(assets_batch)
-            offset += batch_size
-
-            # 防止无限循环
-            if len(assets_batch) < batch_size:
-                break
-
-        logger.info(f"分类内存计算模式：获取到 {len(all_assets)} 个资产")
-
-        # 使用现有的计算器
-        stats = OccupancyRateCalculator.calculate_occupancy_by_category(
-            all_assets, category_field
-        )
-
-        return stats
-
-    except Exception as e:
-        logger.error(f"分类内存计算失败: {str(e)}")
-        raise
-
-
-def _calculate_area_summary_with_aggregation(
-    db: Session, filters: dict[str, Any]
-) -> dict[str, float]:
-    """
-    使用数据库聚合查询计算面积汇总
-
-    Args:
-        db: 数据库会话
-        filters: 筛选条件
-
-    Returns:
-        面积汇总统计结果
-    """
-    try:
-        from ...models.asset import Asset
-
-        # 构建基础查询
-        query = db.query(Asset)
-
-        # 应用筛选条件
-        if filters:
-            for key, value in filters.items():
-                if hasattr(Asset, key) and value is not None:
-                    query = query.filter(getattr(Asset, key) == value)
-
-        # 使用数据库聚合函数计算
-        result = query.with_entities(
-            func.count(Asset.id).label("total_assets"),
-            func.cast(func.sum(func.coalesce(Asset.land_area, 0)), func.Float).label(
-                "total_land_area"
-            ),
-            func.cast(
-                func.sum(func.coalesce(Asset.rentable_area, 0)), func.Float
-            ).label("total_rentable_area"),
-            func.cast(func.sum(func.coalesce(Asset.rented_area, 0)), func.Float).label(
-                "total_rented_area"
-            ),
-            func.cast(
-                func.sum(func.coalesce(Asset.non_commercial_area, 0)), func.Float
-            ).label("total_non_commercial_area"),
-            func.count(case((Asset.land_area.isnot(None), 1))).label(
-                "assets_with_area_data"
-            ),
-        ).first()
-
-        # 提取并转换结果
-        total_assets = int(result.total_assets or 0)
-        total_land_area = to_float(result.total_land_area)
-        total_rentable_area = to_float(result.total_rentable_area)
-        total_rented_area = to_float(result.total_rented_area)
-        # 计算未出租面积（可出租面积 - 已出租面积）
-        total_unrented_area = max(total_rentable_area - total_rented_area, 0.0)
-        total_non_commercial_area = to_float(result.total_non_commercial_area)
-        assets_with_area_data = int(result.assets_with_area_data or 0)
-
-        # 计算整体出租率
-        overall_occupancy_rate = (
-            (total_rented_area / total_rentable_area * 100)
-            if total_rentable_area > 0
-            else 0.0
-        )
-
-        logger.info(
-            f"数据库聚合查询完成面积汇总: 总资产={total_assets}, 有面积数据={assets_with_area_data}"
-        )
-
-        return {
-            "total_assets": total_assets,
-            "total_land_area": round(total_land_area, 2),
-            "total_rentable_area": round(total_rentable_area, 2),
-            "total_rented_area": round(total_rented_area, 2),
-            "total_unrented_area": round(total_unrented_area, 2),
-            "total_non_commercial_area": round(total_non_commercial_area, 2),
-            "assets_with_area_data": assets_with_area_data,
-            "overall_occupancy_rate": round(overall_occupancy_rate, 2),
-        }
-
-    except Exception as e:
-        logger.error(f"面积汇总数据库聚合查询失败: {str(e)}")
-        # 降级到内存计算
-        return _calculate_area_summary_in_memory(db, filters)
-
-
-def _calculate_area_summary_in_memory(
-    db: Session, filters: dict[str, Any]
-) -> dict[str, float]:
-    """
-    在内存中计算面积汇总
-
-    Args:
-        db: 数据库会话
-        filters: 筛选条件
-
-    Returns:
-        面积汇总统计结果
-    """
-    try:
-        # 分批获取数据
-        batch_size = 1000
-        offset = 0
-        all_assets = []
-
-        while True:
-            assets_batch, _ = asset_crud.get_multi_with_search(
-                db=db, skip=offset, limit=batch_size, filters=filters
-            )
-
-            if not assets_batch:
-                break
-
-            all_assets.extend(assets_batch)
-            offset += batch_size
-
-            if len(assets_batch) < batch_size:
-                break
-
-        logger.info(f"面积汇总内存计算模式：获取到 {len(all_assets)} 个资产")
-
-        # 计算面积汇总
-        summary = {
-            "total_assets": len(all_assets),
-            "total_land_area": 0.0,
-            "total_rentable_area": 0.0,
-            "total_rented_area": 0.0,
-            "total_unrented_area": 0.0,
-            "total_non_commercial_area": 0.0,
-            "assets_with_area_data": 0,
-        }
-
-        for asset in all_assets:
-            if getattr(asset, "land_area", None):
-                summary["total_land_area"] += to_float(getattr(asset, "land_area"))
-                summary["assets_with_area_data"] += 1
-
-            if getattr(asset, "rentable_area", None):
-                summary["total_rentable_area"] += to_float(
-                    getattr(asset, "rentable_area")
-                )
-
-            if getattr(asset, "rented_area", None):
-                summary["total_rented_area"] += to_float(getattr(asset, "rented_area"))
-
-            if getattr(asset, "unrented_area", None):
-                summary["total_unrented_area"] += to_float(
-                    getattr(asset, "unrented_area")
-                )
-
-            if getattr(asset, "non_commercial_area", None):
-                summary["total_non_commercial_area"] += to_float(
-                    getattr(asset, "non_commercial_area")
-                )
-
-        # 计算整体出租率
-        if summary["total_rentable_area"] > 0:
-            overall_occupancy_rate = (
-                summary["total_rented_area"] / summary["total_rentable_area"]
-            ) * 100
-            summary["overall_occupancy_rate"] = round(overall_occupancy_rate, 2)
-        else:
-            summary["overall_occupancy_rate"] = 0.0
-
-        # 格式化数据
-        for key in [
-            "total_land_area",
-            "total_rentable_area",
-            "total_rented_area",
-            "total_unrented_area",
-            "total_non_commercial_area",
-        ]:
-            summary[key] = round(summary[key], 2)
-
-        return summary
-
-    except Exception as e:
-        logger.error(f"面积汇总内存计算失败: {str(e)}")
-        raise
+# 私有函数已迁移到 Service 层:
+# - _calculate_occupancy_with_aggregation -> OccupancyService.calculate_with_aggregation
+# - _calculate_occupancy_in_memory -> OccupancyService._calculate_in_memory
+# - _calculate_category_occupancy_with_aggregation -> OccupancyService.calculate_category_with_aggregation
+# - _calculate_category_occupancy_in_memory -> OccupancyService._calculate_category_in_memory
+# - _calculate_area_summary_with_aggregation -> AreaService.calculate_summary_with_aggregation
+# - _calculate_area_summary_in_memory -> AreaService._calculate_summary_in_memory
 
 
 @router.get(
@@ -680,12 +267,9 @@ def get_overall_occupancy_rate(
         if not include_deleted:
             filters["data_status"] = "正常"
 
-        if use_aggregation:
-            # 使用数据库聚合查询 - 性能更好
-            stats = _calculate_occupancy_with_aggregation(db, filters)
-        else:
-            # 使用内存计算 - 兼容性更好
-            stats = _calculate_occupancy_in_memory(db, filters)
+        # 使用新的Service层
+        service = OccupancyService(db)
+        stats = service.calculate_with_aggregation(filters)
 
         logger.info(f"出租率计算完成: {stats}")
 
@@ -755,14 +339,9 @@ def get_occupancy_rate_by_category(
         if not include_deleted:
             filters["data_status"] = "正常"
 
-        if use_aggregation:
-            # 使用数据库聚合查询
-            stats = _calculate_category_occupancy_with_aggregation(
-                db, category_field, filters
-            )
-        else:
-            # 使用内存计算
-            stats = _calculate_category_occupancy_in_memory(db, category_field, filters)
+        # 使用新的Service层
+        service = OccupancyService(db)
+        stats = service.calculate_category_with_aggregation(category_field, filters)
 
         logger.info(f"分类出租率计算完成: {category_field}, 共{len(stats)}个分类")
 
@@ -822,12 +401,9 @@ def get_area_summary(
         if not include_deleted:
             filters["data_status"] = "正常"
 
-        if use_aggregation:
-            # 使用数据库聚合查询
-            summary = _calculate_area_summary_with_aggregation(db, filters)
-        else:
-            # 使用内存计算
-            summary = _calculate_area_summary_in_memory(db, filters)
+        # 使用新的Service层
+        service = AreaService(db)
+        summary = service.calculate_summary_with_aggregation(filters)
 
         logger.info(f"面积汇总计算完成: {summary}")
 
@@ -1419,7 +995,8 @@ async def get_occupancy_rate_statistics(
             filters["business_category"] = business_category
 
         # 计算出租率
-        stats = _calculate_occupancy_with_aggregation(db, filters)
+        occupancy_service = OccupancyService(db)
+        stats = occupancy_service.calculate_with_aggregation(filters)
 
         return {
             "success": True,
@@ -1543,7 +1120,8 @@ async def get_area_statistics(
             filters["data_status"] = "正常"
 
         # 计算面积汇总
-        summary = _calculate_area_summary_with_aggregation(db, filters)
+        area_service = AreaService(db)
+        summary = area_service.calculate_summary_with_aggregation(filters)
 
         return {
             "success": True,
@@ -1605,10 +1183,12 @@ async def get_comprehensive_statistics(
             }
 
         # 获取面积统计
-        area_stats = _calculate_area_summary_with_aggregation(db, filters)
+        area_service = AreaService(db)
+        area_stats = area_service.calculate_summary_with_aggregation(filters)
 
         # 获取出租率统计
-        occupancy_stats = _calculate_occupancy_with_aggregation(db, filters)
+        occupancy_service = OccupancyService(db)
+        occupancy_stats = occupancy_service.calculate_with_aggregation(filters)
 
         # 获取财务统计
         assets, _ = asset_crud.get_multi_with_search(

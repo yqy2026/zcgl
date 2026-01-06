@@ -257,7 +257,7 @@ class CacheDecorator:
             # 同步函数的处理逻辑
             def sync_wrapper(*args, **kwargs):
                 # 构建缓存键
-                cache_key = self.key_builder(func.__name__, **kwargs)
+                self.key_builder(func.__name__, **kwargs)
 
                 # 对于同步函数，使用同步方式的缓存（内存缓存）
                 # 因为在同步上下文中无法使用async方法

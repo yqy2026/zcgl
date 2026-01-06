@@ -12,11 +12,12 @@ from ...schemas.organization import OrganizationCreate, OrganizationUpdate
 class OrganizationService:
     """组织架构服务层"""
 
-    def create_organization(self, db: Session, *, obj_in: OrganizationCreate) -> Organization:
+    def create_organization(
+        self, db: Session, *, obj_in: OrganizationCreate
+    ) -> Organization:
         """创建组织"""
         # 计算层级和路径
         level = 1
-        path = ""
         parent = None
 
         if obj_in.parent_id:
@@ -28,16 +29,16 @@ class OrganizationService:
             # Organization model ID is UUID default.
             # We can let DB generate or generate here?
             # Existing CRUD used: db.add(db_obj); db.flush() -> got ID -> set path.
-            
+
         # Create object
         db_obj = Organization(**obj_in.model_dump())
         db_obj.level = level
         # Temporary path until flush
-        db_obj.path = "/" # Placeholder
-        
+        db_obj.path = "/"  # Placeholder
+
         db.add(db_obj)
-        db.flush() # Get ID
-        
+        db.flush()  # Get ID
+
         # Now set path
         if parent:
             db_obj.path = (
@@ -47,13 +48,13 @@ class OrganizationService:
             )
         else:
             db_obj.path = f"/{db_obj.id}"
-            
+
         db.commit()
         db.refresh(db_obj)
 
         # 记录创建历史
         self._create_history(db, db_obj.id, "create", created_by=obj_in.created_by)
-        
+
         return db_obj
 
     def update_organization(
@@ -124,7 +125,9 @@ class OrganizationService:
 
         return db_obj
 
-    def delete_organization(self, db: Session, *, org_id: str, deleted_by: str | None = None) -> bool:
+    def delete_organization(
+        self, db: Session, *, org_id: str, deleted_by: str | None = None
+    ) -> bool:
         """软删除组织"""
         db_obj = organization_crud.get(db, org_id)
         if not db_obj:
@@ -146,9 +149,7 @@ class OrganizationService:
 
     def get_statistics(self, db: Session) -> dict[str, Any]:
         """获取组织统计信息"""
-        total = (
-            db.query(Organization).filter(not_(Organization.is_deleted)).count()
-        )
+        total = db.query(Organization).filter(not_(Organization.is_deleted)).count()
         active = total  # 由于删除了status字段，所有未删除的组织都视为活跃
         inactive = 0
 

@@ -1,18 +1,20 @@
 import json
-from datetime import datetime, timedelta, UTC
+from datetime import datetime, timedelta
+
+from jose import jwt
 from sqlalchemy.orm import Session
-from jose import jwt, JWTError
 
 from ...core.config import settings
-from ...models.auth import UserSession, User
 from ...core.token_blacklist import blacklist_manager
+from ...models.auth import UserSession
 
 SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = "HS256"
 
+
 class SessionService:
     """会话管理服务"""
-    
+
     def __init__(self, db: Session):
         self.db = db
 

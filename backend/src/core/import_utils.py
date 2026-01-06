@@ -5,7 +5,8 @@
 
 import importlib
 import logging
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from .environment import DependencyPolicy, get_dependency_policy, is_production
 

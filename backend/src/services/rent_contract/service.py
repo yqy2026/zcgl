@@ -2,7 +2,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import and_, desc, func, or_
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ...crud.rent_contract import rent_contract, rent_ledger, rent_term
@@ -26,7 +26,9 @@ from ...utils.model_utils import model_to_dict
 class RentContractService:
     """租金合同业务服务"""
 
-    def create_contract(self, db: Session, *, obj_in: RentContractCreate) -> RentContract:
+    def create_contract(
+        self, db: Session, *, obj_in: RentContractCreate
+    ) -> RentContract:
         """创建合同（包含租金条款）"""
         # 生成合同编号
         if not obj_in.contract_number:
@@ -197,9 +199,7 @@ class RentContractService:
             # 计算逾期金额
             if ledger.payment_status in ["已支付", "部分支付"]:
                 if ledger.paid_amount < ledger.due_amount:
-                    ledger.overdue_amount = (
-                        ledger.due_amount - ledger.paid_amount
-                    )
+                    ledger.overdue_amount = ledger.due_amount - ledger.paid_amount
                 else:
                     ledger.overdue_amount = Decimal("0")
 
@@ -220,9 +220,7 @@ class RentContractService:
                 RentLedger.due_date >= query_params.start_date
             )
         if query_params.end_date:
-            base_query = base_query.filter(
-                RentLedger.due_date <= query_params.end_date
-            )
+            base_query = base_query.filter(RentLedger.due_date <= query_params.end_date)
         if query_params.ownership_ids:
             base_query = base_query.filter(
                 RentLedger.ownership_id.in_(query_params.ownership_ids)

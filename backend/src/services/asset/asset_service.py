@@ -1,11 +1,8 @@
-from typing import Any, List, Optional, Tuple
-
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from ...core.exception_handler import DuplicateResourceError, ResourceNotFoundError
 from ...crud.asset import asset_crud
-from ...crud.history import history_crud
 from ...models.asset import Asset
 from ...models.auth import User
 from ...schemas.asset import AssetCreate, AssetUpdate
@@ -21,11 +18,11 @@ class AssetService:
         self,
         skip: int = 0,
         limit: int = 100,
-        search: Optional[str] = None,
-        filters: Optional[dict] = None,
+        search: str | None = None,
+        filters: dict | None = None,
         sort_field: str = "created_at",
         sort_order: str = "desc",
-    ) -> Tuple[List[Asset], int]:
+    ) -> tuple[list[Asset], int]:
         """
         获取资产列表，支持分页、搜索和筛选
         """
@@ -48,7 +45,9 @@ class AssetService:
             raise ResourceNotFoundError("Asset", asset_id)
         return asset
 
-    def create_asset(self, asset_in: AssetCreate, current_user: Optional[User] = None) -> Asset:
+    def create_asset(
+        self, asset_in: AssetCreate, current_user: User | None = None
+    ) -> Asset:
         """
         创建新资产
         包含逻辑: 枚举验证, 名称查重, 自动计算, 面积一致性验证, 历史记录
@@ -74,13 +73,13 @@ class AssetService:
         asset_data = asset_in.model_dump()
         calculated_fields = AssetCalculator.auto_calculate_fields(asset_data)
         final_data = {**asset_data, **calculated_fields}
-        
+
         errors = AssetCalculator.validate_area_consistency(final_data)
         if errors:
             raise HTTPException(
                 status_code=422, detail=f"数据验证失败: {'; '.join(errors)}"
             )
-        
+
         enhanced_asset_in = AssetCreate(**final_data)
 
         # 4. 创建并记录历史
@@ -90,7 +89,7 @@ class AssetService:
         return asset_crud.create_with_history(db=self.db, obj_in=enhanced_asset_in)
 
     def update_asset(
-        self, asset_id: str, asset_in: AssetUpdate, current_user: Optional[User] = None
+        self, asset_id: str, asset_in: AssetUpdate, current_user: User | None = None
     ) -> Asset:
         """
         更新资产
@@ -123,21 +122,29 @@ class AssetService:
         # 需要合并当前数据和更新数据
         current_data = {}
         # 提取关键计算字段
-        for field in ["rentable_area", "rented_area", "annual_income", "annual_expense"]:
+        for field in [
+            "rentable_area",
+            "rented_area",
+            "annual_income",
+            "annual_expense",
+        ]:
             if hasattr(asset, field):
                 current_data[field] = getattr(asset, field)
-        
+
         merged_data = {**current_data, **update_data_raw}
         calculated_data = AssetCalculator.auto_calculate_fields(merged_data)
-        
+
         errors = AssetCalculator.validate_area_consistency(calculated_data)
         if errors:
             raise HTTPException(
                 status_code=422, detail=f"数据验证失败: {'; '.join(errors)}"
             )
-        
+
         # 合并计算字段到更新数据
-        final_update = {**update_data_raw, **{k: v for k, v in calculated_data.items() if k not in update_data_raw}}
+        final_update = {
+            **update_data_raw,
+            **{k: v for k, v in calculated_data.items() if k not in update_data_raw},
+        }
         enhanced_asset_in = AssetUpdate(**final_update)
 
         # 5. 更新并记录历史
@@ -145,7 +152,7 @@ class AssetService:
             db=self.db, db_obj=asset, obj_in=enhanced_asset_in
         )
 
-    def delete_asset(self, asset_id: str, current_user: Optional[User] = None) -> None:
+    def delete_asset(self, asset_id: str, current_user: User | None = None) -> None:
         """
         删除资产
         """

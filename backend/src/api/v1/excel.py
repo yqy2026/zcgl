@@ -31,10 +31,7 @@ from ...core.exception_handler import BusinessValidationError
 from ...core.logging_security import security_auditor
 from ...core.route_guards import debug_only
 from ...core.security import security_middleware
-from ...crud.asset import asset_crud
 from ...crud.task import task_crud
-
-# 本地导入
 from ...database import get_db
 from ...enums.task import TaskStatus, TaskType
 from ...middleware.auth import get_current_active_user
@@ -48,6 +45,11 @@ from ...schemas.excel_advanced import (
     ExcelStatusResponse,
 )
 from ...schemas.task import TaskCreate, TaskUpdate
+from ...services.excel import (
+    ExcelExportService,
+    ExcelImportService,
+    ExcelTemplateService,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -57,49 +59,16 @@ router = APIRouter(prefix="/excel", tags=["Excel导入导出"])
 
 @router.get("/template", summary="下载Excel导入模板")
 async def download_template(
+    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
     """
     下载Excel导入模板文件 - 已优化与新增资产表单字段保持一致
     """
     try:
-        # 创建示例数据 - 按照新增资产表单字段顺序排列，删除自动计算、高级选项和文件上传字段
-        template_data = {
-            # 基本信息
-            "权属方": ["示例权属方1", "示例权属方2"],
-            "权属类别": ["国有", "集体"],
-            "项目名称": ["示例项目1", "示例项目2"],
-            "物业名称": ["示例物业1", "示例物业2"],
-            "物业地址": ["示例地址1", "示例地址2"],
-            # 面积信息
-            "土地面积(平方米)": [1000.0, 2000.0],
-            "实际房产面积(平方米)": [800.0, 1800.0],
-            "非经营物业面积(平方米)": [200.0, 300.0],
-            "可出租面积(平方米)": [600.0, 1500.0],
-            "已出租面积(平方米)": [400.0, 1200.0],
-            # 状态信息
-            "确权状态（已确权、未确权、部分确权）": ["已确权", "未确权"],
-            "证载用途（商业、住宅、办公、厂房、车库等）": ["商业", "办公"],
-            "实际用途（商业、住宅、办公、厂房、车库等）": ["商业", "办公"],
-            "业态类别": ["零售", "餐饮"],
-            "使用状态（出租、闲置、自用、公房、其他）": ["出租", "闲置"],
-            "是否涉诉": ["否", "否"],
-            "物业性质（经营类、非经营类）": ["经营类", "非经营类"],
-            "是否计入出租率": ["是", "是"],
-            # 接收信息
-            "接收模式": ["自营", "合作"],
-            "(当前)接收协议开始日期": ["2024-01-01", "2024-02-01"],
-            "(当前)接收协议结束日期": ["2024-12-31", "2024-12-31"],
-        }
-
-        # 创建DataFrame
-        df = pd.DataFrame(template_data)
-
-        # 写入Excel文件
-        buffer = io.BytesIO()
-        with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-            df.to_excel(writer, sheet_name=STANDARD_SHEET_NAME, index=False)
-        buffer.seek(0)
+        # 使用ExcelTemplateService生成模板
+        service = ExcelTemplateService(db)
+        buffer = service.generate_template()
 
         # 返回文件流（避免重复读取buffer）
         async def file_generator():
@@ -513,13 +482,13 @@ async def import_excel(
 
         try:
             # 使用ExcelImportService进行导入
-            from ...services.excel_import import ExcelImportService
-
-            import_service = ExcelImportService()
+            import_service = ExcelImportService(db)
 
             # 执行导入
             result = await import_service.import_assets_from_excel(
-                file_path=tmp_file_path, sheet_name=sheet_name, db=db
+                file_path=tmp_file_path,
+                sheet_name=sheet_name,
+                skip_errors=skip_errors,
             )
 
             # 转换结果格式以匹配前端期望
@@ -653,15 +622,12 @@ async def _process_excel_import_async(
         db_session.commit()
 
         # 使用ExcelImportService进行导入
-        from ...services.excel_import import ExcelImportService
-
-        import_service = ExcelImportService()
+        import_service = ExcelImportService(db_session)
 
         # 执行导入
         result = await import_service.import_assets_from_excel(
             file_path=file_path,
             sheet_name=request.sheet_name or STANDARD_SHEET_NAME,
-            db=db_session,
             validate_data=request.validate_data,
             create_assets=request.create_assets,
             update_existing=request.update_existing,
@@ -733,67 +699,13 @@ async def export_excel(
         if usage_status:
             filters["usage_status"] = usage_status
 
-        # 从数据库获取资产数据
-        assets, total = asset_crud.get_multi_with_search(
-            db=db,
-            search=search,
+        # 使用ExcelExportService进行导出
+        service = ExcelExportService(db)
+        buffer = service.export_assets_to_excel(
             filters=filters,
-            limit=1000,  # 导出时获取更多数据
+            search=search,
+            limit=1000,
         )
-
-        # 转换为导出格式
-        export_data = []
-        for asset in assets:
-            export_data.append(
-                {
-                    "物业名称": getattr(asset, "property_name", ""),
-                    "地址": getattr(asset, "address", ""),
-                    "确权状态": getattr(asset, "ownership_status", ""),
-                    "物业性质": getattr(asset, "property_nature", ""),
-                    "使用状态": getattr(asset, "usage_status", ""),
-                    "权属方": getattr(asset, "ownership_entity", ""),
-                    "经营管理方": getattr(asset, "management_entity", ""),
-                    "业态类别": getattr(asset, "business_category", ""),
-                    "是否涉诉": "是" if getattr(asset, "is_litigated", False) else "否",
-                    "备注": getattr(asset, "notes", ""),
-                    "创建时间": asset.created_at.strftime("%Y-%m-%d %H:%M:%S")
-                    if asset.created_at
-                    else "",
-                    "更新时间": asset.updated_at.strftime("%Y-%m-%d %H:%M:%S")
-                    if asset.updated_at
-                    else "",
-                }
-            )
-
-        # 如果没有数据，提供示例数据
-        if not export_data:
-            export_data = [
-                {
-                    "物业名称": "暂无数据",
-                    "地址": "请先导入资产数据",
-                    "确权状态": "",
-                    "物业性质": "",
-                    "使用状态": "",
-                    "权属方": "",
-                    "经营管理方": "",
-                    "业态类别": "",
-                    "总面积": 0.0,
-                    "可使用面积": 0.0,
-                    "是否涉诉": "",
-                    "备注": "",
-                    "创建时间": "",
-                    "更新时间": "",
-                }
-            ]
-
-        # 创建DataFrame
-        df = pd.DataFrame(export_data)
-
-        # 写入Excel文件
-        buffer = io.BytesIO()
-        with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-            df.to_excel(writer, sheet_name=STANDARD_SHEET_NAME, index=False)
-        buffer.seek(0)
 
         # 返回文件流（避免重复读取buffer）
         async def file_generator():
@@ -866,6 +778,8 @@ async def _process_excel_export_async(
     """
     后台处理Excel导出任务
     """
+    import os
+
     try:
         # 更新任务状态为运行中
         task_crud.update(
@@ -875,83 +789,29 @@ async def _process_excel_export_async(
         )
         db_session.commit()
 
+        # 使用ExcelExportService进行导出
+        service = ExcelExportService(db_session)
+
         # 构建筛选条件
         filters = request.filters or {}
-
-        # 从数据库获取资产数据
-        assets, total = asset_crud.get_multi_with_search(
-            db=db_session,
-            search=filters.get("search"),
-            filters=filters,
-            limit=5000,  # 导出时获取更多数据
-        )
-
-        # 更新进度
-        task_crud.update(
-            db=db_session,
-            db_obj=task_crud.get(db=db_session, id=task_id),
-            obj_in=TaskUpdate(progress=30, total_items=total, processed_items=0),
-        )
-        db_session.commit()
-
-        # 转换为导出格式
-        export_data = []
-        for i, asset in enumerate(assets):
-            export_data.append(
-                {
-                    "物业名称": getattr(asset, "property_name", ""),
-                    "地址": getattr(asset, "address", ""),
-                    "确权状态": getattr(asset, "ownership_status", ""),
-                    "物业性质": getattr(asset, "property_nature", ""),
-                    "使用状态": getattr(asset, "usage_status", ""),
-                    "权属方": getattr(asset, "ownership_entity", ""),
-                    "业态类别": getattr(asset, "business_category", ""),
-                    "是否涉诉": "是" if getattr(asset, "is_litigated", False) else "否",
-                    "备注": getattr(asset, "notes", ""),
-                    "创建时间": asset.created_at.strftime(request.date_format)
-                    if asset.created_at
-                    else "",
-                    "更新时间": asset.updated_at.strftime(request.date_format)
-                    if asset.updated_at
-                    else "",
-                }
-            )
-
-            # 更新进度
-            if i % 100 == 0:
-                progress = 30 + int((i / total) * 60)
-                task_crud.update(
-                    db=db_session,
-                    db_obj=task_crud.get(db=db_session, id=task_id),
-                    obj_in=TaskUpdate(progress=progress, processed_items=i),
-                )
-                db_session.commit()
-
-        # 创建DataFrame
-        df = pd.DataFrame(export_data)
 
         # 生成文件名
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"assets_export_{timestamp}.{request.export_format}"
 
-        # 创建导出文件
-        buffer = io.BytesIO()
-        with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-            df.to_excel(
-                writer,
-                sheet_name=request.sheet_name or STANDARD_SHEET_NAME,
-                index=request.include_headers,
-            )
-        buffer.seek(0)
-
-        # 保存文件到临时位置
-        import os
-
+        # 保存到临时文件
         temp_dir = tempfile.gettempdir()
         file_path = os.path.join(temp_dir, filename)
 
-        with open(file_path, "wb") as f:
-            f.write(buffer.read())
+        # 执行导出到文件
+        result_info = service.export_assets_to_file(
+            file_path=file_path,
+            filters=filters,
+            fields=request.fields,
+            sheet_name=request.sheet_name or STANDARD_SHEET_NAME,
+            date_format=request.date_format,
+            limit=5000,
+        )
 
         # 更新任务完成状态
         task_crud.update(
@@ -961,15 +821,8 @@ async def _process_excel_export_async(
                 status=TaskStatus.COMPLETED,
                 completed_at=datetime.now(UTC),
                 progress=100,
-                total_items=total,
-                processed_items=total,
                 result_data={
-                    "file_path": file_path,
-                    "file_name": filename,
-                    "file_size": os.path.getsize(file_path),
-                    "record_count": len(export_data),
-                    "columns": list(df.columns),
-                    "export_time": datetime.now(UTC).isoformat(),
+                    **result_info,
                     "download_url": f"/api/v1/excel/download/{task_id}",
                 },
             ),
@@ -1148,69 +1001,14 @@ async def export_selected_assets(
         if usage_status:
             filters["usage_status"] = usage_status
 
-        # 如果指定了资产ID，添加到筛选条件中
-        if asset_ids:
-            filters["ids"] = asset_ids
-
-        # 从数据库获取资产数据
-        assets, total = asset_crud.get_multi_with_search(
-            db=db,
-            search=search,
+        # 使用ExcelExportService进行导出
+        service = ExcelExportService(db)
+        buffer = service.export_assets_to_excel(
             filters=filters,
-            limit=1000,  # 导出时获取更多数据
+            search=search,
+            asset_ids=asset_ids,
+            limit=1000,
         )
-
-        # 转换为导出格式 - 使用与GET端点相同的字段映射
-        export_data = []
-        for asset in assets:
-            export_data.append(
-                {
-                    "物业名称": getattr(asset, "property_name", ""),
-                    "地址": getattr(asset, "address", ""),
-                    "确权状态": getattr(asset, "ownership_status", ""),
-                    "物业性质": getattr(asset, "property_nature", ""),
-                    "使用状态": getattr(asset, "usage_status", ""),
-                    "权属方": getattr(asset, "ownership_entity", ""),
-                    "经营管理方": getattr(asset, "management_entity", ""),
-                    "业态类别": getattr(asset, "business_category", ""),
-                    "是否涉诉": "是" if getattr(asset, "is_litigated", False) else "否",
-                    "备注": getattr(asset, "notes", ""),
-                    "创建时间": asset.created_at.strftime("%Y-%m-%d %H:%M:%S")
-                    if asset.created_at
-                    else "",
-                    "更新时间": asset.updated_at.strftime("%Y-%m-%d %H:%M:%S")
-                    if asset.updated_at
-                    else "",
-                }
-            )
-
-        # 如果没有数据，提供示例数据
-        if not export_data:
-            export_data = [
-                {
-                    "物业名称": "暂无数据",
-                    "地址": "请先导入资产数据",
-                    "确权状态": "",
-                    "物业性质": "",
-                    "使用状态": "",
-                    "权属方": "",
-                    "经营管理方": "",
-                    "业态类别": "",
-                    "是否涉诉": "",
-                    "备注": "",
-                    "创建时间": "",
-                    "更新时间": "",
-                }
-            ]
-
-        # 创建DataFrame
-        df = pd.DataFrame(export_data)
-
-        # 写入Excel文件
-        buffer = io.BytesIO()
-        with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
-            df.to_excel(writer, sheet_name=STANDARD_SHEET_NAME, index=False)
-        buffer.seek(0)
 
         # 根据导出类型确定文件名
         filename = (

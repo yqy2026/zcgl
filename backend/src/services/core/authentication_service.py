@@ -1,16 +1,17 @@
 import secrets
-from datetime import datetime, timedelta, UTC
-from jose import jwt, JWTError
+from datetime import UTC, datetime, timedelta
+
+from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
 from ...core.config import settings
+from ...core.token_blacklist import blacklist_manager
 from ...exceptions import BusinessLogicError
 from ...models.auth import User, UserSession
 from ...schemas.auth import TokenResponse
-from ...core.token_blacklist import blacklist_manager
 from .password_service import PasswordService
-from .user_management_service import UserManagementService
 from .session_service import SessionService
+from .user_management_service import UserManagementService
 
 # JWT配置
 SECRET_KEY = settings.SECRET_KEY
@@ -22,9 +23,10 @@ REFRESH_TOKEN_EXPIRE_DAYS = settings.REFRESH_TOKEN_EXPIRE_DAYS
 if ACCESS_TOKEN_EXPIRE_MINUTES < 120:
     ACCESS_TOKEN_EXPIRE_MINUTES = 120
 
+
 class AuthenticationService:
     """认证服务 - 协调者"""
-    
+
     def __init__(self, db: Session):
         self.db = db
         self.password_service = PasswordService()
@@ -35,7 +37,7 @@ class AuthenticationService:
     def _generate_jti(self) -> str:
         """生成JWT ID"""
         return secrets.token_urlsafe(32)
-    
+
     def _is_token_revoked(self, jti: str) -> bool:
         """检查令牌是否已被撤销"""
         return self.token_blacklist.is_blacklisted(jti)
@@ -88,7 +90,9 @@ class AuthenticationService:
         self.db.commit()
         return user
 
-    def create_tokens(self, user: User, device_info: dict | None = None) -> TokenResponse:
+    def create_tokens(
+        self, user: User, device_info: dict | None = None
+    ) -> TokenResponse:
         """创建JWT令牌"""
         now = datetime.now(UTC)
         jti_access = self._generate_jti()
@@ -99,6 +103,7 @@ class AuthenticationService:
         device_fingerprint = None
         if device_info:
             import hashlib
+
             fingerprint_data = [
                 device_info.get("user_agent", ""),
                 device_info.get("ip_address", ""),
@@ -106,7 +111,9 @@ class AuthenticationService:
                 device_info.get("platform", ""),
             ]
             fingerprint_string = "|".join(filter(None, fingerprint_data))
-            device_fingerprint = hashlib.sha256(fingerprint_string.encode()).hexdigest()[:16]
+            device_fingerprint = hashlib.sha256(
+                fingerprint_string.encode()
+            ).hexdigest()[:16]
 
         # 访问令牌
         access_token_data = {
@@ -118,7 +125,9 @@ class AuthenticationService:
             "session_id": session_id,
             "device_fingerprint": device_fingerprint,
             "iat": int(now.timestamp()),
-            "exp": int((now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)).timestamp()),
+            "exp": int(
+                (now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)).timestamp()
+            ),
             "aud": "land-property-system",
             "iss": "land-property-auth",
         }
@@ -166,10 +175,10 @@ class AuthenticationService:
             token_type = payload.get("type")
             jti = payload.get("jti")
             session_id = payload.get("session_id")
-            
+
             if user_id is None or token_type != "refresh":
                 return None
-            
+
             if self._is_token_revoked(jti):
                 return None
 
