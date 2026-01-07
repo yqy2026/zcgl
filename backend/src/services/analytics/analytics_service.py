@@ -153,15 +153,19 @@ class AnalyticsService:
         # CacheManager 使用 clear() 方法，支持 pattern 参数
         try:
             cleared = self.cache.clear(pattern="analytics:*")
-            cleared_count = 1 if cleared else 0
-        except Exception:
-            cleared_count = 0
-
-        return {
-            "status": "success",
-            "cleared_keys": cleared_count,
-            "timestamp": datetime.now().isoformat(),
-        }
+            return {
+                "status": "success",
+                "cleared_keys": 1 if cleared else 0,
+                "timestamp": datetime.now().isoformat(),
+            }
+        except Exception as e:
+            logger.error(f"缓存清理失败: {str(e)}")
+            return {
+                "status": "failed",
+                "error": str(e),
+                "cleared_keys": 0,
+                "timestamp": datetime.now().isoformat(),
+            }
 
     def get_cache_stats(self) -> dict[str, Any]:
         """获取缓存统计信息"""

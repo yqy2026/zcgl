@@ -287,8 +287,11 @@ class TestAnalyticsService:
 
         result = analytics_service.clear_cache()
 
-        assert result["status"] == "success"
-        assert result["cleared_keys"] == 0  # 异常时cleared_count为0
+        # 异常时应返回 status='failed' 和 error 信息
+        assert result["status"] == "failed"
+        assert result["cleared_keys"] == 0
+        assert "error" in result
+        assert "Cache error" in result["error"]
         assert "timestamp" in result
 
     def test_generate_occupancy_trend_directly(self, analytics_service):

@@ -83,8 +83,8 @@ class ExcelImportService:
             validate_data: 是否验证数据
             create_assets: 是否创建资产
             update_existing: 是否更新已存在的资产
-            skip_errors: 是否跳过错误行
-            batch_size: 批处理大小
+            skip_errors: 是否跳过错误行（启用时使用批量提交策略）
+            batch_size: 批处理大小（每N行提交一次）
 
         Returns:
             导入结果字典
@@ -113,13 +113,25 @@ class ExcelImportService:
                 "updated_assets": 0,
                 "errors": [],
                 "warnings": [],
+                "committed_batches": 0,
             }
+
+            # 批次计数器
+            current_batch_count = 0
 
             # 处理每一行数据
             for idx, row in df.iterrows():
                 try:
-                    # 转换Excel列为数据库字段
-                    asset_data = self._map_excel_row_to_asset_data(row, idx + 1)
+                    # 转换Excel列为数据库字段（返回数据和解析警告）
+                    asset_data, parse_warnings = self._map_excel_row_to_asset_data(row, idx + 1)
+
+                    # 收集解析警告
+                    for pw in parse_warnings:
+                        results["warnings"].append({
+                            "row": idx + 2,
+                            "field": pw["field"],
+                            "warning": pw["warning"],
+                        })
 
                     # 验证数据
                     if validate_data:
@@ -179,6 +191,18 @@ class ExcelImportService:
                                 }
                             )
 
+                        current_batch_count += 1
+
+                        # 批量提交策略：每batch_size行提交一次（仅在skip_errors模式下）
+                        if skip_errors and current_batch_count >= batch_size:
+                            self.db.commit()
+                            results["committed_batches"] += 1
+                            current_batch_count = 0
+                            logger.debug(
+                                f"已提交批次 {results['committed_batches']}, "
+                                f"已处理 {idx + 1}/{total_rows} 行"
+                            )
+
                     results["success"] += 1
 
                 except Exception as e:
@@ -186,16 +210,22 @@ class ExcelImportService:
                     results["failed"] += 1
 
                     if not skip_errors:
+                        # 严格模式：回滚并抛出异常
+                        if self.db:
+                            self.db.rollback()
                         raise
 
-            # 提交事务
+            # 提交剩余事务
             if create_assets and self.db:
                 self.db.commit()
+                if current_batch_count > 0:
+                    results["committed_batches"] += 1
 
             logger.info(
                 f"Excel导入完成: 总行数={total_rows}, "
                 f"成功={results['success']}, 失败={results['failed']}, "
-                f"创建={results['created_assets']}, 更新={results['updated_assets']}"
+                f"创建={results['created_assets']}, 更新={results['updated_assets']}, "
+                f"已提交批次={results['committed_batches']}"
             )
 
             return results
@@ -217,9 +247,10 @@ class ExcelImportService:
             row_num: 行号（用于错误报告）
 
         Returns:
-            资产数据字典
+            元组 (资产数据字典, 解析警告列表)
         """
         asset_data = {}
+        parse_warnings = []
 
         for excel_col, db_field in FIELD_MAPPING.items():
             if excel_col in row and pd.notna(row[excel_col]):
@@ -241,6 +272,11 @@ class ExcelImportService:
                     try:
                         value = float(value)
                     except (ValueError, TypeError):
+                        parse_warnings.append({
+                            "field": db_field,
+                            "value": str(value)[:50],
+                            "warning": f"无法解析为数值，已忽略",
+                        })
                         value = None
                 # 处理日期字段
                 elif db_field in [
@@ -253,11 +289,16 @@ class ExcelImportService:
                         try:
                             value = datetime.strptime(value, "%Y-%m-%d").date()
                         except ValueError:
+                            parse_warnings.append({
+                                "field": db_field,
+                                "value": str(value)[:50],
+                                "warning": f"日期格式无效(应为YYYY-MM-DD)，已忽略",
+                            })
                             value = None
 
                 asset_data[db_field] = value
 
-        return asset_data
+        return asset_data, parse_warnings
 
     def _find_existing_asset(self, asset_data: dict[str, Any]) -> Any | None:
         """

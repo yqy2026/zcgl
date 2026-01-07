@@ -204,19 +204,11 @@ async def get_all_assets(
             limit=limit,
         )
 
-        # 转换为响应格式
+        # 转换为响应格式 - 使用Pydantic的from_attributes模式
         asset_responses = []
         for asset in assets:
-            asset_dict = asset.__dict__.copy()
-            asset_dict["_sa_instance_state"] = None  # 移除SQLAlchemy实例状态
-
-            # 确保计算字段包含在响应中
-            if hasattr(asset, "unrented_area"):
-                asset_dict["unrented_area"] = float(asset.unrented_area)
-            if hasattr(asset, "occupancy_rate"):
-                asset_dict["occupancy_rate"] = float(asset.occupancy_rate)
-
-            asset_responses.append(AssetResponse.model_validate(asset_dict))
+            # 直接使用 model_validate 处理 ORM 对象
+            asset_responses.append(AssetResponse.model_validate(asset))
 
         # 返回统一格式，符合前端期望
         return {
@@ -248,19 +240,11 @@ async def get_assets_by_ids(
         # 批量查询资产
         assets = asset_crud.get_multi_by_ids(db=db, ids=asset_ids)
 
-        # 转换为响应格式
+        # 转换为响应格式 - 使用Pydantic的from_attributes模式
         asset_responses = []
         for asset in assets:
-            asset_dict = asset.__dict__.copy()
-            asset_dict["_sa_instance_state"] = None  # 移除SQLAlchemy实例状态
-
-            # 确保计算字段包含在响应中
-            if hasattr(asset, "unrented_area"):
-                asset_dict["unrented_area"] = float(asset.unrented_area)
-            if hasattr(asset, "occupancy_rate"):
-                asset_dict["occupancy_rate"] = float(asset.occupancy_rate)
-
-            asset_responses.append(AssetResponse.model_validate(asset_dict))
+            # 直接使用 model_validate 处理 ORM 对象
+            asset_responses.append(AssetResponse.model_validate(asset))
 
         # 返回统一格式，符合前端期望
         return {

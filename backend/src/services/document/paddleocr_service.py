@@ -320,6 +320,9 @@ class PaddleOCRService:
         # 转换为 Markdown
         markdown_lines = []
         structure = structure_result["structure"]
+        warnings = []
+        table_count = 0
+        failed_table_count = 0
 
         for element in structure.get("elements", []):
             elem_type = element.get("type", "")
@@ -333,20 +336,37 @@ class PaddleOCRService:
                 markdown_lines.append("")
 
             elif elem_type == "table":
+                table_count += 1
                 # 转换表格为 Markdown
                 cells = element.get("cells", [])
                 if cells:
                     table_md = self._cells_to_markdown_table(cells)
                     markdown_lines.append(table_md)
                     markdown_lines.append("")
+                else:
+                    # 表格解析失败（cells为空）
+                    failed_table_count += 1
+                    markdown_lines.append("<!-- 表格解析失败 -->")
+                    markdown_lines.append("")
 
         markdown_content = "\n".join(markdown_lines)
 
-        return {
+        # 添加表格解析警告
+        if failed_table_count > 0:
+            warnings.append(
+                f"共 {table_count} 个表格，{failed_table_count} 个解析失败"
+            )
+
+        result = {
             "success": True,
             "markdown": markdown_content,
             "structure": structure,
         }
+
+        if warnings:
+            result["warnings"] = warnings
+
+        return result
 
     def _cells_to_markdown_table(self, cells: list[list[str]]) -> str:
         """将单元格数据转换为 Markdown 表格"""
@@ -370,13 +390,23 @@ class PaddleOCRService:
         return "\n".join(lines)
 
 
-# 单例实例
+# 单例实例和线程锁
 _paddleocr_service = None
+_paddleocr_lock = None
+
+
+def _get_lock():
+    """延迟初始化锁（避免模块导入时创建）"""
+    global _paddleocr_lock
+    if _paddleocr_lock is None:
+        import threading
+        _paddleocr_lock = threading.Lock()
+    return _paddleocr_lock
 
 
 def get_paddleocr_service(use_gpu: bool = False) -> PaddleOCRService:
     """
-    获取 PaddleOCR 服务单例
+    获取 PaddleOCR 服务单例（线程安全）
 
     Args:
         use_gpu: 是否使用 GPU
@@ -386,8 +416,11 @@ def get_paddleocr_service(use_gpu: bool = False) -> PaddleOCRService:
     """
     global _paddleocr_service
 
+    # 双重检查锁定模式
     if _paddleocr_service is None:
-        _paddleocr_service = PaddleOCRService(use_gpu=use_gpu)
+        with _get_lock():
+            if _paddleocr_service is None:
+                _paddleocr_service = PaddleOCRService(use_gpu=use_gpu)
 
     return _paddleocr_service
 

@@ -150,14 +150,15 @@ route_registry.register_router(router, prefix="/api/v1", tags=["My Feature"], ve
 
 ## ⚠️ 关键陷阱警告
 
-> [!CAUTION]
-> **OCR 服务已禁用** - PaddleOCR 存在编码问题，请勿尝试使用
+> [!NOTE]
+> **OCR 服务已升级** - PaddleOCR 3.3 已可用，使用 `paddleocr_service.py` 进行文档处理。
+> 安装 OCR 依赖：`uv sync --extra pdf-ocr`
 
 ```python
-from src.core.import_utils import safe_import
-ocr = safe_import("services.ocr", fallback=None)
-if ocr is None:
-    # 必须提供回退方案
+from src.services.document.paddleocr_service import get_paddleocr_service
+service = get_paddleocr_service()
+if service.is_available:
+    result = service.to_markdown("contract.pdf")
 ```
 
 > [!WARNING]

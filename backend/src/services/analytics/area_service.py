@@ -122,12 +122,15 @@ class AreaService:
                 "total_non_commercial_area": round(total_non_commercial_area, 2),
                 "assets_with_area_data": assets_with_area_data,
                 "overall_occupancy_rate": round(overall_occupancy_rate, 2),
+                "calculation_method": "aggregation",
             }
 
         except Exception as e:
-            logger.error(f"面积汇总数据库聚合查询失败: {str(e)}")
+            logger.error(f"面积汇总数据库聚合查询失败: {str(e)}，降级到内存计算")
             # 降级到内存计算
-            return self._calculate_summary_in_memory(filters)
+            result = self._calculate_summary_in_memory(filters)
+            result["calculation_method"] = "memory_fallback"
+            return result
 
     def _calculate_summary_in_memory(
         self, filters: dict[str, Any] | None = None

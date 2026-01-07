@@ -110,12 +110,15 @@ class OccupancyService:
                 "total_rented_area": round(total_rented_area, 2),
                 "total_assets": total_assets,
                 "rentable_assets_count": rentable_assets_count,
+                "calculation_method": "aggregation",
             }
 
         except Exception as e:
-            logger.error(f"数据库聚合查询失败: {str(e)}")
+            logger.error(f"数据库聚合查询失败: {str(e)}，降级到内存计算")
             # 降级到内存计算
-            return self._calculate_in_memory(filters)
+            result = self._calculate_in_memory(filters)
+            result["calculation_method"] = "memory_fallback"
+            return result
 
     def _calculate_in_memory(
         self, filters: dict[str, Any] | None = None
