@@ -1,5 +1,5 @@
-import React from 'react'
-import { Row, Col, Card, Space } from 'antd'
+import React from 'react';
+import { Row, Col, Card, Space } from 'antd';
 import {
   PlusOutlined,
   ImportOutlined,
@@ -7,11 +7,11 @@ import {
   BarChartOutlined,
   FileTextOutlined,
   SettingOutlined,
-} from '@ant-design/icons'
-import { useNavigate } from 'react-router-dom'
+} from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 
 const QuickActions: React.FC = () => {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
   const actions = [
     {
@@ -50,7 +50,7 @@ const QuickActions: React.FC = () => {
       icon: <SettingOutlined style={{ fontSize: '24px', color: '#8c8c8c' }} />,
       onClick: () => navigate('/settings'),
     },
-  ]
+  ];
 
   return (
     <Row gutter={[16, 16]}>
@@ -65,19 +65,15 @@ const QuickActions: React.FC = () => {
             <Space direction="vertical" size="small">
               {action.icon}
               <div>
-                <div style={{ fontWeight: 'bold', fontSize: '14px' }}>
-                  {action.title}
-                </div>
-                <div style={{ fontSize: '12px', color: '#8c8c8c' }}>
-                  {action.description}
-                </div>
+                <div style={{ fontWeight: 'bold', fontSize: '14px' }}>{action.title}</div>
+                <div style={{ fontSize: '12px', color: '#8c8c8c' }}>{action.description}</div>
               </div>
             </Space>
           </Card>
         </Col>
       ))}
     </Row>
-  )
-}
+  );
+};
 
-export default QuickActions
+export default QuickActions;

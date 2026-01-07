@@ -1,63 +1,72 @@
-import React, { createContext, useCallback, useContext, useState, useRef } from 'react'
-import { message, Statistic, Card, Row, Col, Switch, Button, Space, Typography } from 'antd'
-import {
-  ThunderboltOutlined,
-  EyeOutlined
-} from '@ant-design/icons'
+import React, { createContext, useCallback, useContext, useState, useRef } from 'react';
+import { message, Statistic, Card, Row, Col, Switch, Button, Space, Typography } from 'antd';
+import { ThunderboltOutlined, EyeOutlined } from '@ant-design/icons';
 
-const { Text } = Typography
+const { Text } = Typography;
 
-export type OptimizationType = 'loading' | 'rendering' | 'compression' | 'caching' | 'network' | 'database'
-export type ResponseLevel = 'excellent' | 'good' | 'acceptable' | 'poor'
+export type OptimizationType =
+  | 'loading'
+  | 'rendering'
+  | 'compression'
+  | 'caching'
+  | 'network'
+  | 'database';
+export type ResponseLevel = 'excellent' | 'good' | 'acceptable' | 'poor';
 
 interface PerformanceMetrics {
-  responseTime: number
-  renderTime: number
-  networkTime: number
-  cacheHit: boolean
-  compressionRatio: number
-  requestSize: number
-  responseSize: number
-  timestamp: Date
+  responseTime: number;
+  renderTime: number;
+  networkTime: number;
+  cacheHit: boolean;
+  compressionRatio: number;
+  requestSize: number;
+  responseSize: number;
+  timestamp: Date;
 }
 
 interface SmartResponseConfig {
-  enableOptimization: boolean
-  autoCompression: boolean
-  smartCaching: boolean
-  prefetchResources: boolean
-  lazyLoading: boolean
-  imageOptimization: boolean
-  minResponseTime: number
-  maxResponseTime: number
+  enableOptimization: boolean;
+  autoCompression: boolean;
+  smartCaching: boolean;
+  prefetchResources: boolean;
+  lazyLoading: boolean;
+  imageOptimization: boolean;
+  minResponseTime: number;
+  maxResponseTime: number;
 }
 
 interface ResponseOptimizationContextType {
-  getMetrics: () => PerformanceMetrics[]
-  optimizeResponse: (config: SmartResponseConfig) => void
-  getPerformanceLevel: (responseTime: number) => ResponseLevel
+  getMetrics: () => PerformanceMetrics[];
+  optimizeResponse: (config: SmartResponseConfig) => void;
+  getPerformanceLevel: (responseTime: number) => ResponseLevel;
   generateReport: () => {
     summary: {
-      total: number
-      average: any
-      byType: any
-      byLevel: any
-    }
-  }
-  clearMetrics: () => void
-  toggleOptimization: (type: OptimizationType) => void
-  resetConfig: () => void
+      total: number;
+      average: {
+        responseTime: number;
+        renderTime: number;
+        networkTime: number;
+        cacheHitRate: number;
+        compressionRatio: number;
+      };
+      byType: Record<string, number>;
+      byLevel: Record<string, number>;
+    };
+  };
+  clearMetrics: () => void;
+  toggleOptimization: (type: OptimizationType) => void;
+  resetConfig: () => void;
 }
 
-const OptimizationContext = createContext<ResponseOptimizationContextType | null>(null)
+const OptimizationContext = createContext<ResponseOptimizationContextType | null>(null);
 
 export const useSmartResponse = () => {
-  const context = useContext(OptimizationContext)
+  const context = useContext(OptimizationContext);
   if (!context) {
-    throw new Error('useSmartResponse must be used within SmartResponseProvider')
+    throw new Error('useSmartResponse must be used within SmartResponseProvider');
   }
-  return context
-}
+  return context;
+};
 
 const SmartResponseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [config, setConfig] = useState<SmartResponseConfig>({
@@ -68,45 +77,61 @@ const SmartResponseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     lazyLoading: true,
     imageOptimization: true,
     minResponseTime: 100,
-    maxResponseTime: 5000
-  })
+    maxResponseTime: 5000,
+  });
 
-  const [metrics, setMetrics] = useState<PerformanceMetrics[]>([])
+  const [metrics, setMetrics] = useState<PerformanceMetrics[]>([]);
   const [optimizationStates, setOptimizationStates] = useState<Record<OptimizationType, boolean>>({
     loading: true,
     rendering: true,
     compression: true,
     caching: true,
     network: true,
-    database: false
-  })
+    database: false,
+  });
 
-  const metricsRef = useRef<PerformanceMetrics[]>([])
+  const metricsRef = useRef<PerformanceMetrics[]>([]);
 
   // 获取性能等级
   const getPerformanceLevel = useCallback((responseTime: number): ResponseLevel => {
-    if (responseTime < 200) return 'excellent'
-    if (responseTime < 500) return 'good'
-    if (responseTime < 1000) return 'acceptable'
-    return 'poor'
-  }, [])
+    if (responseTime < 200) {
+      return 'excellent';
+    }
+    if (responseTime < 500) {
+      return 'good';
+    }
+    if (responseTime < 1000) {
+      return 'acceptable';
+    }
+    return 'poor';
+  }, []);
 
   // 优化响应
   const optimizeResponse = useCallback((newConfig: SmartResponseConfig) => {
-    setConfig(prev => ({ ...prev, ...newConfig }))
-    message.info('响应优化配置已更新')
-  }, [])
+    setConfig(prev => ({ ...prev, ...newConfig }));
+    message.info('响应优化配置已更新');
+  }, []);
 
   // 获取响应类型
   const getResponseType = useCallback((metric: PerformanceMetrics): OptimizationType => {
     // 根据时间分配类型
-    if (metric.responseTime < 100) return 'loading'
-    if (metric.renderTime > metric.responseTime * 2) return 'rendering'
-    if (metric.compressionRatio > 0.8) return 'compression'
-    if (metric.cacheHit) return 'caching'
-    if (metric.networkTime > metric.responseTime * 0.5) return 'network'
-    return 'database'
-  }, [])
+    if (metric.responseTime < 100) {
+      return 'loading';
+    }
+    if (metric.renderTime > metric.responseTime * 2) {
+      return 'rendering';
+    }
+    if (metric.compressionRatio > 0.8) {
+      return 'compression';
+    }
+    if (metric.cacheHit) {
+      return 'caching';
+    }
+    if (metric.networkTime > metric.responseTime * 0.5) {
+      return 'network';
+    }
+    return 'database';
+  }, []);
 
   // 生成性能报告
   const generateReport = useCallback(() => {
@@ -116,30 +141,39 @@ const SmartResponseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           total: 0,
           average: 0,
           byType: {},
-          byLevel: {}
-        }
-      }
+          byLevel: {},
+        },
+      };
     }
 
-    const totalMetrics = metrics
-    const averageResponseTime = totalMetrics.reduce((sum, m) => sum + m.responseTime, 0) / totalMetrics.length
-    const averageRenderTime = totalMetrics.reduce((sum, m) => sum + m.renderTime, 0) / totalMetrics.length
-    const averageNetworkTime = totalMetrics.reduce((sum, m) => sum + m.networkTime, 0) / totalMetrics.length
-    const cacheHitRate = totalMetrics.filter(m => m.cacheHit).length / totalMetrics.length * 100
-    const averageCompressionRatio = totalMetrics.reduce((sum, m) => sum + m.compressionRatio, 0) / totalMetrics.length
+    const totalMetrics = metrics;
+    const averageResponseTime =
+      totalMetrics.reduce((sum, m) => sum + m.responseTime, 0) / totalMetrics.length;
+    const averageRenderTime =
+      totalMetrics.reduce((sum, m) => sum + m.renderTime, 0) / totalMetrics.length;
+    const averageNetworkTime =
+      totalMetrics.reduce((sum, m) => sum + m.networkTime, 0) / totalMetrics.length;
+    const cacheHitRate = (totalMetrics.filter(m => m.cacheHit).length / totalMetrics.length) * 100;
+    const averageCompressionRatio =
+      totalMetrics.reduce((sum, m) => sum + m.compressionRatio, 0) / totalMetrics.length;
 
-    const byType = totalMetrics.reduce((acc, m) => {
-      const type = getResponseType(m)
-      acc[type] = (acc[type] || 0) + 1
-      return acc
-    }, {} as Record<string, number>)
+    const byType = totalMetrics.reduce(
+      (acc, m) => {
+        const type = getResponseType(m);
+        acc[type] = (acc[type] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    );
 
     const byLevel = {
-      excellent: totalMetrics.filter(m => getPerformanceLevel(m.responseTime) === 'excellent').length,
+      excellent: totalMetrics.filter(m => getPerformanceLevel(m.responseTime) === 'excellent')
+        .length,
       good: totalMetrics.filter(m => getPerformanceLevel(m.responseTime) === 'good').length,
-      acceptable: totalMetrics.filter(m => getPerformanceLevel(m.responseTime) === 'acceptable').length,
-      poor: totalMetrics.filter(m => getPerformanceLevel(m.responseTime) === 'poor').length
-    }
+      acceptable: totalMetrics.filter(m => getPerformanceLevel(m.responseTime) === 'acceptable')
+        .length,
+      poor: totalMetrics.filter(m => getPerformanceLevel(m.responseTime) === 'poor').length,
+    };
 
     return {
       summary: {
@@ -149,18 +183,18 @@ const SmartResponseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           renderTime: averageRenderTime,
           networkTime: averageNetworkTime,
           cacheHitRate: cacheHitRate,
-          compressionRatio: averageCompressionRatio
+          compressionRatio: averageCompressionRatio,
         },
         byType,
-        byLevel
-      }
-    }
-  }, [metrics, getResponseType, getPerformanceLevel])
+        byLevel,
+      },
+    };
+  }, [metrics, getResponseType, getPerformanceLevel]);
 
   // 清除指标
   const clearMetrics = useCallback(() => {
-    setMetrics([])
-    metricsRef.current = []
+    setMetrics([]);
+    metricsRef.current = [];
 
     setOptimizationStates({
       loading: true,
@@ -168,25 +202,28 @@ const SmartResponseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       compression: true,
       caching: true,
       network: true,
-      database: true
-    })
-  }, [])
+      database: true,
+    });
+  }, []);
 
   // 添加性能指标
   const _addMetrics = useCallback((metric: PerformanceMetrics) => {
-    const newMetrics = [metric, ...metricsRef.current.slice(0, 49)] // 只保留最近50个
-    metricsRef.current = newMetrics
-    setMetrics(newMetrics)
-  }, [])
+    const newMetrics = [metric, ...metricsRef.current.slice(0, 49)]; // 只保留最近50个
+    metricsRef.current = newMetrics;
+    setMetrics(newMetrics);
+  }, []);
 
   // 切换优化状态
-  const toggleOptimization = useCallback((type: OptimizationType) => {
-    setOptimizationStates(prev => ({
-      ...prev,
-      [type]: !prev[type]
-    }))
-    message.info(`${type}优化已${optimizationStates[type] ? '启用' : '禁用'}`)
-  }, [optimizationStates])
+  const toggleOptimization = useCallback(
+    (type: OptimizationType) => {
+      setOptimizationStates(prev => ({
+        ...prev,
+        [type]: !prev[type],
+      }));
+      message.info(`${type}优化已${optimizationStates[type] ? '启用' : '禁用'}`);
+    },
+    [optimizationStates]
+  );
 
   // 重置配置
   const resetConfig = useCallback(() => {
@@ -198,9 +235,9 @@ const SmartResponseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       lazyLoading: true,
       imageOptimization: true,
       minResponseTime: 100,
-      maxResponseTime: 5000
-    })
-  }, [])
+      maxResponseTime: 5000,
+    });
+  }, []);
 
   const contextValue: ResponseOptimizationContextType = {
     getMetrics: () => metrics,
@@ -209,31 +246,44 @@ const SmartResponseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     generateReport,
     clearMetrics,
     toggleOptimization,
-    resetConfig
-  }
+    resetConfig,
+  };
 
   return (
     <OptimizationContext.Provider value={contextValue}>
       {children}
       <ResponseOptimizationDashboard config={config} metrics={metrics} />
     </OptimizationContext.Provider>
-  )
-}
+  );
+};
 
 // 响应优化仪表板组件
-const ResponseOptimizationDashboard: React.FC<{ config: SmartResponseConfig; metrics: PerformanceMetrics[] }> = ({ config, metrics }) => {
-  const [showDetails, setShowDetails] = useState(false)
-  const { generateReport, optimizeResponse, resetConfig } = useSmartResponse()
+const ResponseOptimizationDashboard: React.FC<{
+  config: SmartResponseConfig;
+  metrics: PerformanceMetrics[];
+}> = ({ config, metrics }) => {
+  const [showDetails, setShowDetails] = useState(false);
+  const { generateReport, optimizeResponse, resetConfig } = useSmartResponse();
 
   // 获取响应类型（本地定义，因为不在context中）
   const _getResponseType = (metric: PerformanceMetrics): OptimizationType => {
-    if (metric.responseTime < 100) return 'loading'
-    if (metric.renderTime > metric.responseTime * 2) return 'rendering'
-    if (metric.compressionRatio > 0.8) return 'compression'
-    if (metric.cacheHit) return 'caching'
-    if (metric.networkTime > metric.responseTime * 0.5) return 'network'
-    return 'database'
-  }
+    if (metric.responseTime < 100) {
+      return 'loading';
+    }
+    if (metric.renderTime > metric.responseTime * 2) {
+      return 'rendering';
+    }
+    if (metric.compressionRatio > 0.8) {
+      return 'compression';
+    }
+    if (metric.cacheHit) {
+      return 'caching';
+    }
+    if (metric.networkTime > metric.responseTime * 0.5) {
+      return 'network';
+    }
+    return 'database';
+  };
 
   if (metrics.length === 0) {
     return (
@@ -242,11 +292,11 @@ const ResponseOptimizationDashboard: React.FC<{ config: SmartResponseConfig; met
           <Text type="secondary">暂无性能数据</Text>
         </div>
       </Card>
-    )
+    );
   }
 
-  const summary = generateReport()
-  const { byType, byLevel } = summary.summary
+  const summary = generateReport();
+  const { byType, byLevel } = summary.summary;
 
   return (
     <Card title="智能响应优化" style={{ margin: '24px' }}>
@@ -258,22 +308,21 @@ const ResponseOptimizationDashboard: React.FC<{ config: SmartResponseConfig; met
                 <Text>智能优化:</Text>
                 <Switch
                   checked={config.enableOptimization}
-                  onChange={(checked) => optimizeResponse({ ...config, enableOptimization: checked } as SmartResponseConfig)}
+                  onChange={checked =>
+                    optimizeResponse({
+                      ...config,
+                      enableOptimization: checked,
+                    } as SmartResponseConfig)
+                  }
                 />
               </div>
               <div>
                 <Text>自动压缩:</Text>
-                <Switch
-                  checked={config.autoCompression}
-                  disabled={!config.enableOptimization}
-                />
+                <Switch checked={config.autoCompression} disabled={!config.enableOptimization} />
               </div>
               <div>
                 <Text>智能缓存:</Text>
-                <Switch
-                  checked={config.smartCaching}
-                  disabled={!config.enableOptimization}
-                />
+                <Switch checked={config.smartCaching} disabled={!config.enableOptimization} />
               </div>
             </Space>
 
@@ -305,7 +354,7 @@ const ResponseOptimizationDashboard: React.FC<{ config: SmartResponseConfig; met
                   precision={0}
                   suffix="ms"
                   valueStyle={{
-                    color: summary.summary.average.responseTime < 300 ? '#3f8600' : '#cf1322'
+                    color: summary.summary.average.responseTime < 300 ? '#3f8600' : '#cf1322',
                   }}
                 />
               </Col>
@@ -319,7 +368,7 @@ const ResponseOptimizationDashboard: React.FC<{ config: SmartResponseConfig; met
                   precision={1}
                   suffix="%"
                   valueStyle={{
-                    color: summary.summary.average.cacheHitRate > 80 ? '#52c41a' : '#faad14'
+                    color: summary.summary.average.cacheHitRate > 80 ? '#52c41a' : '#faad14',
                   }}
                 />
               </Col>
@@ -329,9 +378,9 @@ const ResponseOptimizationDashboard: React.FC<{ config: SmartResponseConfig; met
                   value={summary.summary.average.compressionRatio}
                   precision={2}
                   suffix=""
-                  formatter={(value) => `${value}%`}
+                  formatter={value => `${value}%`}
                   valueStyle={{
-                    color: summary.summary.average.compressionRatio > 30 ? '#52c41a' : '#fa8c16'
+                    color: summary.summary.average.compressionRatio > 30 ? '#52c41a' : '#fa8c16',
                   }}
                 />
               </Col>
@@ -346,25 +395,44 @@ const ResponseOptimizationDashboard: React.FC<{ config: SmartResponseConfig; met
             <Row gutter={[8, 8]}>
               {Object.entries(byLevel).map(([level, count]) => (
                 <Col span={6} key={level}>
-                  <div style={{
-                    textAlign: 'center',
-                    padding: '12px',
-                    borderRadius: '4px',
-                    backgroundColor: level === 'excellent' ? '#f6ffed' :
-                                 level === 'good' ? '#b7eb8c' :
-                                 level === 'acceptable' ? '#fff7e6' : '#ffcccc'
-                  }}>
-                    <Text style={{ color: level === 'excellent' || level === 'good' ? '#fff' : '#000' }}>
-                      {level === 'excellent' ? '优秀' : level === 'good' ? '良好' : level === 'acceptable' ? '可接受' : '较差'}
+                  <div
+                    style={{
+                      textAlign: 'center',
+                      padding: '12px',
+                      borderRadius: '4px',
+                      backgroundColor:
+                        level === 'excellent'
+                          ? '#f6ffed'
+                          : level === 'good'
+                            ? '#b7eb8c'
+                            : level === 'acceptable'
+                              ? '#fff7e6'
+                              : '#ffcccc',
+                    }}
+                  >
+                    <Text
+                      style={{ color: level === 'excellent' || level === 'good' ? '#fff' : '#000' }}
+                    >
+                      {level === 'excellent'
+                        ? '优秀'
+                        : level === 'good'
+                          ? '良好'
+                          : level === 'acceptable'
+                            ? '可接受'
+                            : '较差'}
                     </Text>
                   </div>
                   <div style={{ marginTop: '8px', fontSize: '18px', fontWeight: 'bold' }}>
-                    {(count as number)}
+                    {count}
                   </div>
                   <div style={{ marginTop: '4px', fontSize: '12px' }}>
-                      {level === 'excellent' ? '优秀性能' :
-                       level === 'good' ? '良好性能' :
-                       level === 'acceptable' ? '可接受性能' : '需要优化'}
+                    {level === 'excellent'
+                      ? '优秀性能'
+                      : level === 'good'
+                        ? '良好性能'
+                        : level === 'acceptable'
+                          ? '可接受性能'
+                          : '需要优化'}
                   </div>
                 </Col>
               ))}
@@ -377,32 +445,36 @@ const ResponseOptimizationDashboard: React.FC<{ config: SmartResponseConfig; met
             <Row gutter={[8, 8]}>
               {Object.entries(byType).map(([type, count]) => (
                 <Col span={6} key={type}>
-                  <div style={{
-                    textAlign: 'center',
-                    padding: '8px',
-                    border: '1px solid #d9d9d9',
-                    borderRadius: '4px',
-                    cursor: 'pointer'
-                  }}>
+                  <div
+                    style={{
+                      textAlign: 'center',
+                      padding: '8px',
+                      border: '1px solid #d9d9d9',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                    }}
+                  >
                     <Text style={{ fontWeight: 'bold' }}>
-                      {type === 'loading' ? '加载' :
-                       type === 'rendering' ? '渲染' :
-                       type === 'compression' ? '压缩' :
-                       type === 'caching' ? '缓存' :
-                       type === 'network' ? '网络' : '数据库'}
+                      {type === 'loading'
+                        ? '加载'
+                        : type === 'rendering'
+                          ? '渲染'
+                          : type === 'compression'
+                            ? '压缩'
+                            : type === 'caching'
+                              ? '缓存'
+                              : type === 'network'
+                                ? '网络'
+                                : '数据库'}
                     </Text>
                   </div>
-                  <div style={{ marginTop: '4px', fontSize: '20px' }}>
-                    {(count as number)}
-                  </div>
+                  <div style={{ marginTop: '4px', fontSize: '20px' }}>{count}</div>
                 </Col>
               ))}
             </Row>
 
             <div style={{ marginTop: '16px' }}>
-              <Text type="secondary">
-                点击性能类型可以查看详细优化建议
-              </Text>
+              <Text type="secondary">点击性能类型可以查看详细优化建议</Text>
             </div>
           </Card>
         </Col>
@@ -413,12 +485,15 @@ const ResponseOptimizationDashboard: React.FC<{ config: SmartResponseConfig; met
           <Card title="详细性能数据" size="small">
             <Space direction="vertical" style={{ width: '100%' }}>
               {metrics.slice(0, 10).map((metric, index) => (
-                <div key={index} style={{
-                  padding: '8px',
-                  border: '1px solid #f0f0f0',
-                  borderRadius: '4px',
-                  marginBottom: '8px'
-                }}>
+                <div
+                  key={index}
+                  style={{
+                    padding: '8px',
+                    border: '1px solid #f0f0f0',
+                    borderRadius: '4px',
+                    marginBottom: '8px',
+                  }}
+                >
                   <Row>
                     <Col span={8}>
                       <Text strong>请求时间:</Text>
@@ -428,11 +503,17 @@ const ResponseOptimizationDashboard: React.FC<{ config: SmartResponseConfig; met
                     </Col>
                     <Col span={4}>
                       <Text>
-                        状态: {_getResponseType(metric) === 'loading' ? '⏳' :
-                             _getResponseType(metric) === 'rendering' ? '🎨' :
-                             _getResponseType(metric) === 'compression' ? '📦' :
-                             _getResponseType(metric) === 'caching' ? '💾' :
-                             '🌐'} {metric.cacheHit ? '✅' : '❌'}
+                        状态:{' '}
+                        {_getResponseType(metric) === 'loading'
+                          ? '⏳'
+                          : _getResponseType(metric) === 'rendering'
+                            ? '🎨'
+                            : _getResponseType(metric) === 'compression'
+                              ? '📦'
+                              : _getResponseType(metric) === 'caching'
+                                ? '💾'
+                                : '🌐'}{' '}
+                        {metric.cacheHit ? '✅' : '❌'}
                       </Text>
                     </Col>
                     <Col span={4}>
@@ -448,8 +529,8 @@ const ResponseOptimizationDashboard: React.FC<{ config: SmartResponseConfig; met
         </div>
       )}
     </Card>
-  )
-}
+  );
+};
 
-export default SmartResponseProvider
-export { ResponseOptimizationDashboard }
+export default SmartResponseProvider;
+export { ResponseOptimizationDashboard };

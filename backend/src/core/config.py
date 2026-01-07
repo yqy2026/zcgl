@@ -282,9 +282,8 @@ def validate_config():
         logger.info("SECRET_KEY 安全检查通过")  # pragma: no cover
 
     # 检查Redis配置
-    if settings.REDIS_ENABLED:
-        if not settings.REDIS_HOST:
-            raise ValueError("启用Redis时需要配置REDIS_HOST")
+    if settings.REDIS_ENABLED and not settings.REDIS_HOST:
+        raise ValueError("启用Redis时需要配置REDIS_HOST")
 
     logger.info(
         f"配置验证完成 - 应用: {settings.APP_NAME}, 版本: {settings.APP_VERSION}"

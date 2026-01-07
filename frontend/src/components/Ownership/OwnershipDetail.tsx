@@ -3,20 +3,8 @@
  */
 
 import React from 'react';
-import {
-  Descriptions,
-  Card,
-  Tag,
-  Space,
-  Button,
-  Badge,
-  Typography,
-  Table
-} from 'antd';
-import {
-  EditOutlined,
-  ProjectOutlined
-} from '@ant-design/icons';
+import { Descriptions, Card, Tag, Space, Button, Badge, Typography, Table } from 'antd';
+import { EditOutlined, ProjectOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 
 import type { Ownership } from '@/types/ownership';
@@ -29,12 +17,11 @@ interface OwnershipDetailProps {
   onEdit: () => void;
 }
 
-const OwnershipDetail: React.FC<OwnershipDetailProps> = ({
-  ownership,
-  onEdit
-}) => {
+const OwnershipDetail: React.FC<OwnershipDetailProps> = ({ ownership, onEdit }) => {
   const formatDate = (dateStr?: string) => {
-    if (!dateStr) return '-';
+    if (dateStr === null || dateStr === undefined || dateStr === '') {
+      return '-';
+    }
     return new Date(dateStr).toLocaleDateString('zh-CN');
   };
 
@@ -49,13 +36,13 @@ const OwnershipDetail: React.FC<OwnershipDetailProps> = ({
           <ProjectOutlined />
           {text}
         </Space>
-      )
+      ),
     },
     {
       title: '项目编码',
       dataIndex: 'code',
       key: 'code',
-      width: 120
+      width: 120,
     },
     {
       title: '关系类型',
@@ -63,25 +50,23 @@ const OwnershipDetail: React.FC<OwnershipDetailProps> = ({
       key: 'relation_type',
       width: 100,
       render: (type: string) => (
-        <Tag color={type === '合作' ? 'blue' : type === '投资' ? 'green' : 'orange'}>
-          {type}
-        </Tag>
-      )
+        <Tag color={type === '合作' ? 'blue' : type === '投资' ? 'green' : 'orange'}>{type}</Tag>
+      ),
     },
     {
       title: '开始日期',
       dataIndex: 'start_date',
       key: 'start_date',
       width: 120,
-      render: (date: string) => formatDate(date)
+      render: (date: string) => formatDate(date),
     },
     {
       title: '结束日期',
       dataIndex: 'end_date',
       key: 'end_date',
       width: 120,
-      render: (date: string) => formatDate(date)
-    }
+      render: (date: string) => formatDate(date),
+    },
   ];
 
   return (
@@ -93,21 +78,17 @@ const OwnershipDetail: React.FC<OwnershipDetailProps> = ({
             <Text strong style={{ fontSize: 20 }}>
               {ownership.name}
             </Text>
-            {ownership.short_name && (
-              <div style={{ marginTop: 8, color: '#666' }}>
-                简称：{ownership.short_name}
-              </div>
-            )}
+            {ownership.short_name !== null &&
+              ownership.short_name !== undefined &&
+              ownership.short_name !== '' && (
+                <div style={{ marginTop: 8, color: '#666' }}>简称：{ownership.short_name}</div>
+              )}
           </div>
           <Badge
             status={ownership.is_active ? 'success' : 'error'}
             text={ownership.is_active ? '启用' : '禁用'}
           />
-          <Button
-            type="primary"
-            icon={<EditOutlined />}
-            onClick={onEdit}
-          >
+          <Button type="primary" icon={<EditOutlined />} onClick={onEdit}>
             编辑
           </Button>
         </Space>
@@ -116,11 +97,13 @@ const OwnershipDetail: React.FC<OwnershipDetailProps> = ({
       {/* 基本信息 */}
       <Card title="基本信息" style={{ marginTop: 16 }}>
         <Descriptions column={2} bordered>
-          <Descriptions.Item label="权属方全称">
-            {ownership.name}
-          </Descriptions.Item>
+          <Descriptions.Item label="权属方全称">{ownership.name}</Descriptions.Item>
           <Descriptions.Item label="权属方简称">
-            {ownership.short_name || '-'}
+            {ownership.short_name !== null &&
+            ownership.short_name !== undefined &&
+            ownership.short_name !== ''
+              ? ownership.short_name
+              : '-'}
           </Descriptions.Item>
           <Descriptions.Item label="状态">
             <Badge
@@ -129,14 +112,10 @@ const OwnershipDetail: React.FC<OwnershipDetailProps> = ({
             />
           </Descriptions.Item>
           <Descriptions.Item label="关联资产数量">
-            <Tag color="blue">
-              {ownership.asset_count || 0} 个
-            </Tag>
+            <Tag color="blue">{ownership.asset_count ?? 0} 个</Tag>
           </Descriptions.Item>
           <Descriptions.Item label="关联项目数量">
-            <Tag color="green">
-              {ownership.project_count || 0} 个
-            </Tag>
+            <Tag color="green">{ownership.project_count ?? 0} 个</Tag>
           </Descriptions.Item>
         </Descriptions>
       </Card>
@@ -145,7 +124,7 @@ const OwnershipDetail: React.FC<OwnershipDetailProps> = ({
       {ownership.related_projects && ownership.related_projects.length > 0 && (
         <Card title="关联项目" style={{ marginTop: 16 }}>
           <Table
-            columns={projectColumns as any}
+            columns={projectColumns}
             dataSource={ownership.related_projects}
             rowKey="id"
             pagination={false}
@@ -157,12 +136,8 @@ const OwnershipDetail: React.FC<OwnershipDetailProps> = ({
       {/* 系统信息 */}
       <Card title="系统信息" style={{ marginTop: 16 }}>
         <Descriptions column={2} bordered>
-          <Descriptions.Item label="创建时间">
-            {formatDate(ownership.created_at)}
-          </Descriptions.Item>
-          <Descriptions.Item label="更新时间">
-            {formatDate(ownership.updated_at)}
-          </Descriptions.Item>
+          <Descriptions.Item label="创建时间">{formatDate(ownership.created_at)}</Descriptions.Item>
+          <Descriptions.Item label="更新时间">{formatDate(ownership.updated_at)}</Descriptions.Item>
         </Descriptions>
       </Card>
     </div>

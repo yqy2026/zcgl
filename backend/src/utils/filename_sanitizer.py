@@ -234,10 +234,7 @@ class FilenameSanitizer:
             }
 
             name_without_ext = os.path.splitext(filename)[0].upper()
-            if name_without_ext in reserved_names:
-                return False
-
-            return True
+            return name_without_ext not in reserved_names
 
         except Exception as e:
             logger.error(f"文件名安全检查失败: {e}")

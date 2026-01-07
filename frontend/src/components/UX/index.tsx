@@ -1,14 +1,19 @@
 // UX智能组件集合导出文件
 // 包含所有用户体验优化组件
 
-export { useSmartLoading, SmartLoadingManager, SmartSkeleton, SmartPreloader } from './SmartLoadingManager'
-export { SmartErrorHandler, useSmartError } from './SmartErrorHandler'
-export { SmartProgressProvider, useSmartProgress } from './SmartProgressTracker'
-export { default as SmartFormOptimizer } from './SmartFormOptimizer'
-export { useSmartInteraction, SmartInteractionExample } from './SmartInteractionManager'
-export { default as SmartInteractionProvider } from './SmartInteractionManager'
-export { useSmartResponse } from './SmartResponseOptimizer'
-export { default as SmartResponseProvider } from './SmartResponseOptimizer'
+export {
+  useSmartLoading,
+  SmartLoadingManager,
+  SmartSkeleton,
+  SmartPreloader,
+} from './SmartLoadingManager';
+export { SmartErrorHandler, useSmartError } from './SmartErrorHandler';
+export { SmartProgressProvider, useSmartProgress } from './SmartProgressTracker';
+export { default as SmartFormOptimizer } from './SmartFormOptimizer';
+export { useSmartInteraction, SmartInteractionExample } from './SmartInteractionManager';
+export { default as SmartInteractionProvider } from './SmartInteractionManager';
+export { useSmartResponse } from './SmartResponseOptimizer';
+export { default as SmartResponseProvider } from './SmartResponseOptimizer';
 
 // 主要UX组件包
 export const UXComponents = {
@@ -28,7 +33,7 @@ export const UXComponents = {
   InteractionManager: 'SmartInteractionManager',
 
   // 智能响应优化器
-  ResponseOptimizer: 'SmartResponseOptimizer'
-}
+  ResponseOptimizer: 'SmartResponseOptimizer',
+};
 
-export default UXComponents
+export default UXComponents;

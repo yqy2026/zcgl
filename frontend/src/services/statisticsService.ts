@@ -9,8 +9,8 @@
 import { enhancedApiClient } from '@/api/client';
 import { ApiErrorHandler } from '../utils/responseExtractor';
 import { createLogger } from '../utils/logger';
-import type { DashboardData, ChartDataItem } from "@/types/api";
-import type { Filters } from "@/types/common";
+import type { DashboardData, ChartDataItem } from '@/types/api';
+import type { Filters } from '@/types/common';
 
 const logger = createLogger('StatisticsService');
 
@@ -54,7 +54,7 @@ export interface TrendDataItem {
 // 报表生成响应接口
 export interface ReportGenerationResponse {
   reportId: string;
-  status: "queued" | "processing" | "completed" | "failed";
+  status: 'queued' | 'processing' | 'completed' | 'failed';
   downloadUrl?: string;
   message?: string;
 }
@@ -76,14 +76,11 @@ export class StatisticsService {
    * 获取仪表板数�?   */
   async getDashboardData(): Promise<DashboardData> {
     try {
-      const result = await enhancedApiClient.get<DashboardData>(
-        "/statistics/dashboard",
-        {
-          cache: true,
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
-        }
-      );
+      const result = await enhancedApiClient.get<DashboardData>('/statistics/dashboard', {
+        cache: true,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`获取仪表板数据失�? ${result.error}`);
@@ -103,15 +100,12 @@ export class StatisticsService {
    */
   async getBasicStatistics(filters?: Filters): Promise<BasicStatistics> {
     try {
-      const result = await enhancedApiClient.get<BasicStatistics>(
-        "/statistics/basic",
-        {
-          params: filters,
-          cache: true,
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
-        }
-      );
+      const result = await enhancedApiClient.get<BasicStatistics>('/statistics/basic', {
+        params: filters,
+        cache: true,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`获取基础统计信息失败: ${result.error}`);
@@ -129,15 +123,12 @@ export class StatisticsService {
    */
   async getAreaStatistics(filters?: Filters): Promise<AreaStatistics> {
     try {
-      const result = await enhancedApiClient.get<AreaStatistics>(
-        "/assets/statistics/summary",
-        {
-          params: filters,
-          cache: true,
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
-        }
-      );
+      const result = await enhancedApiClient.get<AreaStatistics>('/assets/statistics/summary', {
+        params: filters,
+        cache: true,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`获取面积统计信息失败: ${result.error}`);
@@ -157,12 +148,12 @@ export class StatisticsService {
   async getOwnershipDistribution(filters?: Filters): Promise<ChartDataItem[]> {
     try {
       const result = await enhancedApiClient.get<ChartDataItem[]>(
-        "/statistics/ownership-distribution",
+        '/statistics/ownership-distribution',
         {
           params: filters,
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -184,12 +175,12 @@ export class StatisticsService {
   async getPropertyNatureDistribution(filters?: Filters): Promise<ChartDataItem[]> {
     try {
       const result = await enhancedApiClient.get<ChartDataItem[]>(
-        "/statistics/property-nature-distribution",
+        '/statistics/property-nature-distribution',
         {
           params: filters,
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -210,12 +201,12 @@ export class StatisticsService {
   async getUsageStatusDistribution(filters?: Filters): Promise<ChartDataItem[]> {
     try {
       const result = await enhancedApiClient.get<ChartDataItem[]>(
-        "/statistics/usage-status-distribution",
+        '/statistics/usage-status-distribution',
         {
           params: filters,
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -237,12 +228,12 @@ export class StatisticsService {
   async getOccupancyRateDistribution(filters?: Filters): Promise<ChartDataItem[]> {
     try {
       const result = await enhancedApiClient.get<{ categories: ChartDataItem[] }>(
-        "/statistics/occupancy-rate/by-category",
+        '/statistics/occupancy-rate/by-category',
         {
-          params: { category_field: "business_category", ...filters },
+          params: { category_field: 'business_category', ...filters },
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -265,19 +256,16 @@ export class StatisticsService {
    */
   async getTrendData(
     metric: string,
-    period: "daily" | "weekly" | "monthly" | "yearly" = "monthly",
-    filters?: Filters,
+    period: 'daily' | 'weekly' | 'monthly' | 'yearly' = 'monthly',
+    filters?: Filters
   ): Promise<TrendDataItem[]> {
     try {
-      const result = await enhancedApiClient.get<TrendDataItem[]>(
-        `/statistics/trend/${metric}`,
-        {
-          params: { period, ...filters },
-          cache: true,
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
-        }
-      );
+      const result = await enhancedApiClient.get<TrendDataItem[]>(`/statistics/trend/${metric}`, {
+        params: { period, ...filters },
+        cache: true,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`获取趋势数据失败: ${result.error}`);
@@ -295,8 +283,8 @@ export class StatisticsService {
    * 获取多个指标的趋势数�?   */
   async getMultipleTrends(
     metrics: string[],
-    period: "daily" | "weekly" | "monthly" | "yearly" = "monthly",
-    filters?: Filters,
+    period: 'daily' | 'weekly' | 'monthly' | 'yearly' = 'monthly',
+    filters?: Filters
   ): Promise<Record<string, TrendDataItem[]>> {
     const results: Record<string, TrendDataItem[]> = {};
     const errors: string[] = [];
@@ -325,8 +313,8 @@ export class StatisticsService {
    */
   async getComparisonData(
     metric: string,
-    compareType: "period" | "category",
-    filters?: Filters,
+    compareType: 'period' | 'category',
+    filters?: Filters
   ): Promise<ComparisonData> {
     try {
       const result = await enhancedApiClient.get<ComparisonData>(
@@ -335,7 +323,7 @@ export class StatisticsService {
           params: { compare_type: compareType, ...filters },
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -357,7 +345,7 @@ export class StatisticsService {
     metric: string,
     currentPeriod: string,
     previousPeriod: string,
-    filters?: Filters,
+    filters?: Filters
   ): Promise<{
     current: TrendDataItem[];
     previous: TrendDataItem[];
@@ -365,8 +353,8 @@ export class StatisticsService {
   }> {
     try {
       const [currentResult, previousResult] = await Promise.all([
-        this.getTrendData(metric, "monthly", { ...filters, period: currentPeriod }),
-        this.getTrendData(metric, "monthly", { ...filters, period: previousPeriod })
+        this.getTrendData(metric, 'monthly', { ...filters, period: currentPeriod }),
+        this.getTrendData(metric, 'monthly', { ...filters, period: previousPeriod }),
       ]);
 
       // 计算增长率
@@ -377,7 +365,7 @@ export class StatisticsService {
       return {
         current: currentResult,
         previous: previousResult,
-        growth
+        growth,
       };
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
@@ -393,7 +381,7 @@ export class StatisticsService {
   async generateReport(
     reportType: string,
     filters?: Filters,
-    format: "json" | "excel" | "pdf" = "json",
+    format: 'json' | 'excel' | 'pdf' = 'json'
   ): Promise<ReportGenerationResponse> {
     try {
       const result = await enhancedApiClient.post<ReportGenerationResponse>(
@@ -404,7 +392,7 @@ export class StatisticsService {
         },
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -427,7 +415,7 @@ export class StatisticsService {
         `/statistics/report/status/${reportId}`,
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -447,13 +435,10 @@ export class StatisticsService {
    */
   async downloadReport(reportId: string): Promise<Blob> {
     try {
-      const result = await enhancedApiClient.get<Blob>(
-        `/statistics/report/download/${reportId}`,
-        {
-          responseType: 'blob',
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 }
-        }
-      );
+      const result = await enhancedApiClient.get<Blob>(`/statistics/report/download/${reportId}`, {
+        responseType: 'blob',
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+      });
 
       if (!result.success) {
         throw new Error(`下载报表失败: ${result.error}`);
@@ -472,20 +457,19 @@ export class StatisticsService {
    * 获取资产排名统计
    */
   async getAssetRankings(
-    metric: "area" | "rent" | "occupancy_rate",
+    metric: 'area' | 'rent' | 'occupancy_rate',
     limit: number = 10,
-    filters?: Filters,
+    filters?: Filters
   ): Promise<Array<{ name: string; value: number; rank: number }>> {
     try {
-      const result = await enhancedApiClient.get<Array<{ name: string; value: number; rank: number }>>(
-        `/statistics/rankings/asset/${metric}`,
-        {
-          params: { limit, ...filters },
-          cache: true,
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
-        }
-      );
+      const result = await enhancedApiClient.get<
+        Array<{ name: string; value: number; rank: number }>
+      >(`/statistics/rankings/asset/${metric}`, {
+        params: { limit, ...filters },
+        cache: true,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`获取资产排名失败: ${result.error}`);
@@ -510,15 +494,12 @@ export class StatisticsService {
       const result = await enhancedApiClient.get<{
         regions: string[];
         metrics: Record<string, number[]>;
-      }>(
-        "/statistics/regional-comparison",
-        {
-          params: filters,
-          cache: true,
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
-        }
-      );
+      }>('/statistics/regional-comparison', {
+        params: filters,
+        cache: true,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`获取区域对比数据失败: ${result.error}`);
@@ -550,15 +531,12 @@ export class StatisticsService {
         averageRent: number;
         revenueGrowth: number;
         efficiency: number;
-      }>(
-        "/statistics/performance-summary",
-        {
-          params: filters,
-          cache: true,
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
-        }
-      );
+      }>('/statistics/performance-summary', {
+        params: filters,
+        cache: true,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`获取性能指标摘要失败: ${result.error}`);
@@ -586,34 +564,27 @@ export class StatisticsService {
     };
   }> {
     try {
-      const [
-        dashboard,
-        basic,
-        area,
-        ownership,
-        propertyNature,
-        usageStatus,
-        occupancyRate
-      ] = await Promise.allSettled([
-        this.getDashboardData(),
-        this.getBasicStatistics(filters),
-        this.getAreaStatistics(filters),
-        this.getOwnershipDistribution(filters),
-        this.getPropertyNatureDistribution(filters),
-        this.getUsageStatusDistribution(filters),
-        this.getOccupancyRateDistribution(filters)
-      ]);
+      const [dashboard, basic, area, ownership, propertyNature, usageStatus, occupancyRate] =
+        await Promise.allSettled([
+          this.getDashboardData(),
+          this.getBasicStatistics(filters),
+          this.getAreaStatistics(filters),
+          this.getOwnershipDistribution(filters),
+          this.getPropertyNatureDistribution(filters),
+          this.getUsageStatusDistribution(filters),
+          this.getOccupancyRateDistribution(filters),
+        ]);
 
       return {
-        dashboard: dashboard.status === 'fulfilled' ? dashboard.value : {} as DashboardData,
-        basic: basic.status === 'fulfilled' ? basic.value : {} as BasicStatistics,
-        area: area.status === 'fulfilled' ? area.value : {} as AreaStatistics,
+        dashboard: dashboard.status === 'fulfilled' ? dashboard.value : ({} as DashboardData),
+        basic: basic.status === 'fulfilled' ? basic.value : ({} as BasicStatistics),
+        area: area.status === 'fulfilled' ? area.value : ({} as AreaStatistics),
         distributions: {
           ownership: ownership.status === 'fulfilled' ? ownership.value : [],
           propertyNature: propertyNature.status === 'fulfilled' ? propertyNature.value : [],
           usageStatus: usageStatus.status === 'fulfilled' ? usageStatus.value : [],
-          occupancyRate: occupancyRate.status === 'fulfilled' ? occupancyRate.value : []
-        }
+          occupancyRate: occupancyRate.status === 'fulfilled' ? occupancyRate.value : [],
+        },
       };
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);

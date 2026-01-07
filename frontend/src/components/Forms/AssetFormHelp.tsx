@@ -1,24 +1,21 @@
-import React, { useState } from 'react'
-import { Collapse, Typography, Tag, Space, Button, Modal } from 'antd'
+import React, { useState } from 'react';
+import { Collapse, Typography, Tag, Space, Button, Modal } from 'antd';
 import {
   QuestionCircleOutlined,
   InfoCircleOutlined,
   BulbOutlined,
   CheckCircleOutlined,
-} from '@ant-design/icons'
+} from '@ant-design/icons';
 
-const { Panel } = Collapse
-const { Text, Paragraph } = Typography
+const { Panel } = Collapse;
+const { Text, Paragraph } = Typography;
 
 interface AssetFormHelpProps {
-  visible?: boolean
-  onClose?: () => void
+  visible?: boolean;
+  onClose?: () => void;
 }
 
-const AssetFormHelp: React.FC<AssetFormHelpProps> = ({
-  visible = false,
-  onClose,
-}) => {
+const AssetFormHelp: React.FC<AssetFormHelpProps> = ({ visible = false, onClose }) => {
   const helpSections = [
     {
       key: 'basic',
@@ -80,26 +77,46 @@ const AssetFormHelp: React.FC<AssetFormHelpProps> = ({
           <Paragraph>
             <Text strong>确权状态：</Text>
             <ul>
-              <li><Tag color="green">已确权</Tag>：已完成产权登记</li>
-              <li><Tag color="red">未确权</Tag>：尚未完成产权登记</li>
-              <li><Tag color="orange">部分确权</Tag>：部分完成产权登记</li>
+              <li>
+                <Tag color="green">已确权</Tag>：已完成产权登记
+              </li>
+              <li>
+                <Tag color="red">未确权</Tag>：尚未完成产权登记
+              </li>
+              <li>
+                <Tag color="orange">部分确权</Tag>：部分完成产权登记
+              </li>
             </ul>
           </Paragraph>
           <Paragraph>
             <Text strong>物业性质：</Text>
             <ul>
-              <li><Tag color="blue">经营类</Tag>：用于商业经营的物业</li>
-              <li><Tag color="default">非经营类</Tag>：非商业用途的物业</li>
+              <li>
+                <Tag color="blue">经营类</Tag>：用于商业经营的物业
+              </li>
+              <li>
+                <Tag color="default">非经营类</Tag>：非商业用途的物业
+              </li>
             </ul>
           </Paragraph>
           <Paragraph>
             <Text strong>使用状态：</Text>
             <ul>
-              <li><Tag color="green">出租</Tag>：已出租给第三方使用</li>
-              <li><Tag color="red">闲置</Tag>：暂时未使用</li>
-              <li><Tag color="blue">自用</Tag>：自己使用</li>
-              <li><Tag color="purple">公房</Tag>：公共用房</li>
-              <li><Tag color="default">其他</Tag>：其他特殊情况</li>
+              <li>
+                <Tag color="green">出租</Tag>：已出租给第三方使用
+              </li>
+              <li>
+                <Tag color="red">闲置</Tag>：暂时未使用
+              </li>
+              <li>
+                <Tag color="blue">自用</Tag>：自己使用
+              </li>
+              <li>
+                <Tag color="purple">公房</Tag>：公共用房
+              </li>
+              <li>
+                <Tag color="default">其他</Tag>：其他特殊情况
+              </li>
             </ul>
           </Paragraph>
         </div>
@@ -111,9 +128,7 @@ const AssetFormHelp: React.FC<AssetFormHelpProps> = ({
       icon: <QuestionCircleOutlined />,
       content: (
         <div>
-          <Paragraph>
-            系统会根据您的选择自动显示或隐藏相关字段：
-          </Paragraph>
+          <Paragraph>系统会根据您的选择自动显示或隐藏相关字段：</Paragraph>
           <Paragraph>
             <Text strong>经营类物业：</Text>
             显示可出租面积、已出租面积、未出租面积、出租率等字段。
@@ -196,7 +211,7 @@ const AssetFormHelp: React.FC<AssetFormHelpProps> = ({
         </div>
       ),
     },
-  ]
+  ];
 
   return (
     <Modal
@@ -211,12 +226,8 @@ const AssetFormHelp: React.FC<AssetFormHelpProps> = ({
       width={800}
       style={{ top: 20 }}
     >
-      <Collapse
-        defaultActiveKey={['basic']}
-        ghost
-        expandIconPosition="start"
-      >
-        {helpSections.map((section) => (
+      <Collapse defaultActiveKey={['basic']} ghost expandIconPosition="start">
+        {helpSections.map(section => (
           <Panel
             header={
               <Space>
@@ -231,12 +242,12 @@ const AssetFormHelp: React.FC<AssetFormHelpProps> = ({
         ))}
       </Collapse>
     </Modal>
-  )
-}
+  );
+};
 
 // 帮助按钮组件
 export const AssetFormHelpButton: React.FC = () => {
-  const [helpVisible, setHelpVisible] = useState(false)
+  const [helpVisible, setHelpVisible] = useState(false);
 
   return (
     <>
@@ -248,13 +259,10 @@ export const AssetFormHelpButton: React.FC = () => {
       >
         填写帮助
       </Button>
-      
-      <AssetFormHelp
-        visible={helpVisible}
-        onClose={() => setHelpVisible(false)}
-      />
-    </>
-  )
-}
 
-export default AssetFormHelp
+      <AssetFormHelp visible={helpVisible} onClose={() => setHelpVisible(false)} />
+    </>
+  );
+};
+
+export default AssetFormHelp;

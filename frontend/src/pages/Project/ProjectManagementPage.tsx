@@ -15,7 +15,9 @@ const ProjectManagementPage: React.FC = () => {
       <div style={{ marginBottom: '24px' }}>
         <Row justify="space-between" align="middle">
           <Col>
-            <Title level={2} style={{ margin: 0 }}>项目管理</Title>
+            <Title level={2} style={{ margin: 0 }}>
+              项目管理
+            </Title>
           </Col>
         </Row>
       </div>
@@ -23,11 +25,13 @@ const ProjectManagementPage: React.FC = () => {
       {/* 项目列表 */}
       <Suspense
         fallback={
-          <div style={{
-            padding: '60px',
-            textAlign: 'center',
-            backgroundColor: '#fafafa'
-          }}>
+          <div
+            style={{
+              padding: '60px',
+              textAlign: 'center',
+              backgroundColor: '#fafafa',
+            }}
+          >
             <Spin size="large" />
             <div style={{ marginTop: '16' }}>正在加载项目管理功能...</div>
           </div>

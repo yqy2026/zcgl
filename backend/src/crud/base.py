@@ -115,10 +115,7 @@ class CRUDBase[
     def create(self, db: Session, *, obj_in: CreateSchemaType, **kwargs) -> ModelType:
         """创建新记录（支持事务回滚和错误处理）"""
         try:
-            if hasattr(obj_in, "model_dump"):
-                obj_in_data = obj_in.model_dump()
-            else:
-                obj_in_data = obj_in
+            obj_in_data = obj_in.model_dump() if hasattr(obj_in, "model_dump") else obj_in
 
             obj_in_data.update(kwargs)
             db_obj = self.model(**obj_in_data)
@@ -147,10 +144,7 @@ class CRUDBase[
         """更新记录（支持事务回滚和缓存清理）"""
         try:
             obj_data = db_obj.__dict__
-            if isinstance(obj_in, dict):
-                update_data = obj_in
-            else:
-                update_data = obj_in.dict(exclude_unset=True)
+            update_data = obj_in if isinstance(obj_in, dict) else obj_in.dict(exclude_unset=True)
 
             for field in obj_data:
                 if field in update_data:
@@ -249,10 +243,7 @@ class CRUDBase[
         try:
             db_objects = []
             for obj_in in objects_in:
-                if hasattr(obj_in, "model_dump"):
-                    obj_in_data = obj_in.model_dump()
-                else:  # pragma: no cover
-                    obj_in_data = obj_in  # pragma: no cover
+                obj_in_data = obj_in.model_dump() if hasattr(obj_in, "model_dump") else obj_in  # pragma: no cover
                 db_objects.append(self.model(**obj_in_data))
 
             db.add_all(db_objects)
@@ -276,7 +267,7 @@ class CRUDBase[
     def _clear_cache_pattern(self, pattern: str) -> None:
         """清除匹配模式的缓存"""
         keys_to_remove = []
-        for key in self._cache.keys():
+        for key in self._cache:
             if pattern in key:
                 keys_to_remove.append(key)
 

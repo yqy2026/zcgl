@@ -327,20 +327,20 @@
     padding: 0 16px;
     height: 56px;
   }
-  
+
   .headerTitle {
     font-size: 16px;
     margin-left: 12px;
   }
-  
+
   .headerRight {
     gap: 8px;
   }
-  
+
   .breadcrumb {
     padding: 8px 16px;
   }
-  
+
   .footer {
     padding: 8px 16px;
     font-size: 12px;
@@ -351,11 +351,11 @@
   .headerTitle {
     display: none;
   }
-  
+
   .headerRight .ant-typography {
     display: none;
   }
-  
+
   .notificationDropdown {
     width: 280px;
   }

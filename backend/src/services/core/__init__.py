@@ -15,33 +15,33 @@
 __all__ = []
 
 try:
-    from .auth_service import AuthService
+    from .auth_service import AuthService  # noqa: F401
 
     __all__.append("AuthService")  # pragma: no cover
 except Exception:  # nosec - B110: Intentional graceful degradation  # pragma: no cover
     # Fallback to legacy shim
     try:
-        from ..auth_service import AuthService  # type: ignore
+        from ..auth_service import AuthService  # type: ignore  # noqa: F401
 
         __all__.append("AuthService")  # pragma: no cover
     except Exception:  # nosec - B110: Intentional graceful degradation  # pragma: no cover
         pass
 
 try:
-    from .audit_service import EnhancedAuditLogger
+    from .audit_service import EnhancedAuditLogger  # noqa: F401
 
     __all__.append("EnhancedAuditLogger")  # pragma: no cover
 except Exception:  # nosec - B110: Intentional graceful degradation  # pragma: no cover
     # Fallback shim that exposes AuditService alias
     try:
-        from ..audit_service import EnhancedAuditLogger  # type: ignore
+        from ..audit_service import EnhancedAuditLogger  # type: ignore  # noqa: F401
 
         __all__.append("EnhancedAuditLogger")  # pragma: no cover
     except Exception:  # nosec - B110: Intentional graceful degradation  # pragma: no cover
         pass
 
 try:
-    from .security_service import SecurityService
+    from .security_service import SecurityService  # noqa: F401
 
     __all__.append("SecurityService")  # pragma: no cover
 except Exception:  # nosec - B110: Intentional graceful degradation  # pragma: no cover
@@ -53,13 +53,13 @@ except Exception:  # nosec - B110: Intentional graceful degradation  # pragma: n
     __all__.append("SecurityService")  # pragma: no cover
 
 try:
-    from .error_recovery_service import ErrorRecoveryEngine
+    from .error_recovery_service import ErrorRecoveryEngine  # noqa: F401
 
     __all__.append("ErrorRecoveryEngine")  # pragma: no cover
 except Exception:  # nosec - B110: Intentional graceful degradation  # pragma: no cover
     # Fallback to legacy shim
     try:
-        from ..error_recovery_service import ErrorRecoveryEngine  # type: ignore
+        from ..error_recovery_service import ErrorRecoveryEngine  # type: ignore  # noqa: F401
 
         __all__.append("ErrorRecoveryEngine")  # pragma: no cover
     except Exception:  # nosec - B110: Intentional graceful degradation  # pragma: no cover

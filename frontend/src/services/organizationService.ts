@@ -18,7 +18,7 @@ import {
   OrganizationBatchResult,
   OrganizationMoveResult,
   OrganizationPath,
-  OrganizationAdvancedSearch
+  OrganizationAdvancedSearch,
 } from '../types/organization';
 import { enhancedApiClient } from '@/api/client';
 import { ApiErrorHandler } from '../utils/responseExtractor';
@@ -42,23 +42,20 @@ class OrganizationService {
   /**
    * 获取组织列表
    */
-  async getOrganizations(params?: {
-    skip?: number;
-    limit?: number;
-  }): Promise<Organization[]> {
+  async getOrganizations(params?: { skip?: number; limit?: number }): Promise<Organization[]> {
     try {
       const result = await enhancedApiClient.get<Organization[]>(this.baseUrl, {
-        params: { ...params, skip: params?.skip || 0, limit: params?.limit || 100 },
+        params: { ...params, skip: params?.skip ?? 0, limit: params?.limit ?? 100 },
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-        smartExtract: true
+        smartExtract: true,
       });
 
       if (!result.success) {
         throw new Error(`获取组织列表失败: ${result.error}`);
       }
 
-      return result.data!;
+      return result.data ?? [];
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       console.error('获取组织列表失败:', enhancedError.message);
@@ -71,14 +68,11 @@ class OrganizationService {
    */
   async getOrganization(id: string): Promise<Organization> {
     try {
-      const result = await enhancedApiClient.get<Organization>(
-        `${this.baseUrl}/${id}`,
-        {
-          cache: true,
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
-        }
-      );
+      const result = await enhancedApiClient.get<Organization>(`${this.baseUrl}/${id}`, {
+        cache: true,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`获取组织详情失败: ${result.error}`);
@@ -96,14 +90,10 @@ class OrganizationService {
    */
   async createOrganization(organization: OrganizationCreate): Promise<Organization> {
     try {
-      const result = await enhancedApiClient.post<Organization>(
-        this.baseUrl,
-        organization,
-        {
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
-        }
-      );
+      const result = await enhancedApiClient.post<Organization>(this.baseUrl, organization, {
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`创建组织失败: ${result.error}`);
@@ -126,7 +116,7 @@ class OrganizationService {
         organization,
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -146,14 +136,14 @@ class OrganizationService {
    */
   async deleteOrganization(id: string, deletedBy?: string): Promise<void> {
     try {
-      const params = deletedBy ? { deleted_by: deletedBy } : {};
-      const result = await enhancedApiClient.delete<void>(
-        `${this.baseUrl}/${id}`,
-        {
-          params,
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 }
-        }
-      );
+      const params =
+        deletedBy !== null && deletedBy !== undefined && deletedBy !== ''
+          ? { deleted_by: deletedBy }
+          : {};
+      const result = await enhancedApiClient.delete<void>(`${this.baseUrl}/${id}`, {
+        params,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+      });
 
       if (!result.success) {
         throw new Error(`删除组织失败: ${result.error}`);
@@ -171,16 +161,16 @@ class OrganizationService {
    */
   async getOrganizationTree(parentId?: string): Promise<OrganizationTree[]> {
     try {
-      const params = parentId ? { parent_id: parentId } : {};
-      const result = await enhancedApiClient.get<OrganizationTree[]>(
-        `${this.baseUrl}/tree`,
-        {
-          params,
-          cache: true,
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
-        }
-      );
+      const params =
+        parentId !== null && parentId !== undefined && parentId !== ''
+          ? { parent_id: parentId }
+          : {};
+      const result = await enhancedApiClient.get<OrganizationTree[]>(`${this.baseUrl}/tree`, {
+        params,
+        cache: true,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`获取组织树失�? ${result.error}`);
@@ -197,20 +187,14 @@ class OrganizationService {
   /**
    * 获取组织的子组织
    */
-  async getOrganizationChildren(
-    id: string,
-    recursive: boolean = false
-  ): Promise<Organization[]> {
+  async getOrganizationChildren(id: string, recursive: boolean = false): Promise<Organization[]> {
     try {
-      const result = await enhancedApiClient.get<Organization[]>(
-        `${this.baseUrl}/${id}/children`,
-        {
-          params: { recursive },
-          cache: true,
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
-        }
-      );
+      const result = await enhancedApiClient.get<Organization[]>(`${this.baseUrl}/${id}/children`, {
+        params: { recursive },
+        cache: true,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`获取子组织失�? ${result.error}`);
@@ -227,14 +211,11 @@ class OrganizationService {
    * 获取组织到根节点的路�?   */
   async getOrganizationPath(id: string): Promise<OrganizationPath> {
     try {
-      const result = await enhancedApiClient.get<Organization[]>(
-        `${this.baseUrl}/${id}/path`,
-        {
-          cache: true,
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
-        }
-      );
+      const result = await enhancedApiClient.get<Organization[]>(`${this.baseUrl}/${id}/path`, {
+        cache: true,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`获取组织路径失败: ${result.error}`);
@@ -259,15 +240,12 @@ class OrganizationService {
     params?: { skip?: number; limit?: number }
   ): Promise<Organization[]> {
     try {
-      const result = await enhancedApiClient.get<Organization[]>(
-        `${this.baseUrl}/search`,
-        {
-          params: { keyword, ...params, skip: params?.skip || 0, limit: params?.limit || 20 },
-          cache: true,
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
-        }
-      );
+      const result = await enhancedApiClient.get<Organization[]>(`${this.baseUrl}/search`, {
+        params: { keyword, ...params, skip: params?.skip ?? 0, limit: params?.limit ?? 20 },
+        cache: true,
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`搜索组织失败: ${result.error}`);
@@ -292,7 +270,7 @@ class OrganizationService {
         searchRequest,
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -319,7 +297,7 @@ class OrganizationService {
         {
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -345,10 +323,10 @@ class OrganizationService {
       const result = await enhancedApiClient.get<OrganizationHistory[]>(
         `${this.baseUrl}/${id}/history`,
         {
-          params: { ...params, skip: params?.skip || 0, limit: params?.limit || 20 },
+          params: { ...params, skip: params?.skip ?? 0, limit: params?.limit ?? 20 },
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -378,7 +356,7 @@ class OrganizationService {
         moveRequest,
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -405,7 +383,7 @@ class OrganizationService {
         batchRequest,
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -431,7 +409,7 @@ class OrganizationService {
       return await this.batchOrganizationOperation({
         organization_ids: organizationIds,
         action: 'delete',
-        updated_by: deletedBy
+        updated_by: deletedBy,
       });
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
@@ -446,14 +424,11 @@ class OrganizationService {
    */
   async exportOrganizations(format: 'excel' | 'csv' = 'excel'): Promise<Blob> {
     try {
-      const result = await enhancedApiClient.get<Blob>(
-        `${this.baseUrl}/export`,
-        {
-          params: { format },
-          responseType: 'blob',
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 }
-        }
-      );
+      const result = await enhancedApiClient.get<Blob>(`${this.baseUrl}/export`, {
+        params: { format },
+        responseType: 'blob',
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+      });
 
       if (!result.success) {
         throw new Error(`导出组织数据失败: ${result.error}`);
@@ -482,17 +457,13 @@ class OrganizationService {
         success: boolean;
         message: string;
         data?: unknown;
-      }>(
-        `${this.baseUrl}/import`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          },
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
-        }
-      );
+      }>(`${this.baseUrl}/import`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`导入组织数据失败: ${result.error}`);
@@ -525,10 +496,10 @@ class OrganizationService {
         key: org.id,
         value: org.id,
         title: org.name,
-        children: [] as TreeNode[]
+        children: [] as TreeNode[],
       };
 
-      if (!org.parent_id) {
+      if (org.parent_id === null || org.parent_id === undefined || org.parent_id === '') {
         treeData.push(treeNode);
       } else {
         const parent = organizationMap.get(org.parent_id);
@@ -546,7 +517,7 @@ class OrganizationService {
   private addChildToTreeNode(treeData: TreeNode[], parentId: string, childNode: TreeNode): boolean {
     for (const node of treeData) {
       if (node.key === parentId) {
-        node.children = node.children || [];
+        node.children = node.children ?? [];
         node.children.push(childNode);
         return true;
       }
@@ -566,7 +537,11 @@ class OrganizationService {
 
     while (current) {
       path.unshift(current.name);
-      if (current.parent_id) {
+      if (
+        current.parent_id !== null &&
+        current.parent_id !== undefined &&
+        current.parent_id !== ''
+      ) {
         const parentOrg = allOrganizations.find(org => org.id === current!.parent_id);
         current = parentOrg || null;
       } else {
@@ -616,7 +591,13 @@ class OrganizationService {
     let depth = 1;
     let current: Organization | null = organization;
 
-    while (current && current.parent_id) {
+    while (
+      current !== null &&
+      current !== undefined &&
+      current.parent_id !== null &&
+      current.parent_id !== undefined &&
+      current.parent_id !== ''
+    ) {
       depth++;
       const parentOrg = allOrganizations.find(org => org.id === current!.parent_id);
       current = parentOrg || null;
@@ -645,9 +626,7 @@ class OrganizationService {
   async validateOrganizationCode(code: string, excludeId?: string): Promise<{ exists: boolean }> {
     try {
       const organizations = await this.getOrganizations({ limit: 1000 });
-      const existingOrg = organizations.find(org =>
-        org.code === code && org.id !== excludeId
-      );
+      const existingOrg = organizations.find(org => org.code === code && org.id !== excludeId);
       return { exists: !!existingOrg };
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
@@ -662,7 +641,9 @@ class OrganizationService {
   async getRootOrganizations(): Promise<Organization[]> {
     try {
       const organizations = await this.getOrganizations();
-      return organizations.filter(org => !org.parent_id);
+      return organizations.filter(
+        org => org.parent_id === null || org.parent_id === undefined || org.parent_id === ''
+      );
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       logger.warn('获取根级组织失败', { error: enhancedError.message });

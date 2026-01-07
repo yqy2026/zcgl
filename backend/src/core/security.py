@@ -691,10 +691,7 @@ class RequestSecurity:
                 return False
 
             # 检查JavaScript协议
-            if "javascript:" in url.lower():
-                return False
-
-            return True
+            return "javascript:" not in url.lower()
 
         except Exception:
             return False

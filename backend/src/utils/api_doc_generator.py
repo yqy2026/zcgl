@@ -64,7 +64,7 @@ class APIDocGenerator:
         # 获取路由信息
         endpoint = route.endpoint
         path_params = route.path_params
-        query_params = [param for param in route.dependant.call_params.values()]
+        query_params = list(route.dependant.call_params.values())
 
         # 解析端点函数
         inspect.signature(endpoint)  # 预留字段，当前未使用

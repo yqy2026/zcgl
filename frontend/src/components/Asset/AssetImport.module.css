@@ -190,29 +190,29 @@
     padding: 16px;
     margin: 12px 0;
   }
-  
+
   .processingContainer {
     padding: 24px 16px;
   }
-  
+
   .resultStats {
     grid-template-columns: 1fr;
     gap: 12px;
   }
-  
+
   .resultStat {
     padding: 8px 12px;
   }
-  
+
   .historyItem {
     padding: 12px;
   }
-  
+
   .historyMeta {
     flex-direction: column;
     gap: 8px;
   }
-  
+
   .historyActions {
     justify-content: flex-start;
   }

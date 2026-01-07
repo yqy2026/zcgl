@@ -1,18 +1,10 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import {
-  Select,
-  Button,
-  Modal,
-  message,
-  Space,
-  Tooltip,
-  Tag
-} from 'antd';
+import { Select, Button, Modal, message, Space, Tooltip, Tag } from 'antd';
 import {
   PlusOutlined,
   ReloadOutlined,
   UnorderedListOutlined,
-  SearchOutlined
+  SearchOutlined,
 } from '@ant-design/icons';
 import { useOwnershipOptions } from '@/hooks/useOwnership';
 import type { Ownership } from '@/types/ownership';
@@ -62,7 +54,7 @@ const OwnershipSelect: React.FC<OwnershipSelectProps> = ({
   onlyActive = true,
   showAdvancedSelect = true,
   showSearch = true,
-  maxCount
+  maxCount,
 }) => {
   const [searchText, setSearchText] = useState('');
   const [selectModalVisible, setSelectModalVisible] = useState(false);
@@ -72,30 +64,49 @@ const OwnershipSelect: React.FC<OwnershipSelectProps> = ({
 
   // 根据搜索文本过滤权属方
   const filteredOwnerships = useMemo(() => {
-    if (!searchText) return allOwnerships;
+    if (searchText === null || searchText === undefined || searchText === '') {
+      return allOwnerships;
+    }
 
-    return allOwnerships.filter(ownership =>
-      ownership.name.toLowerCase().includes(searchText.toLowerCase()) ||
-      ownership.code.toLowerCase().includes(searchText.toLowerCase()) ||
-      ownership.short_name?.toLowerCase().includes(searchText.toLowerCase())
+    return allOwnerships.filter(
+      ownership =>
+        ownership.name.toLowerCase().includes(searchText.toLowerCase()) ||
+        ownership.code.toLowerCase().includes(searchText.toLowerCase()) ||
+        (ownership.short_name !== null &&
+          ownership.short_name !== undefined &&
+          ownership.short_name !== '' &&
+          ownership.short_name.toLowerCase().includes(searchText.toLowerCase()))
     );
   }, [allOwnerships, searchText]);
 
   // 当前选中的权属方（单选模式）
   const _selectedOwnership = useMemo(() => {
-    if (mode === 'multiple' || !value) return null;
+    if (mode === 'multiple' || value === null || value === undefined) {
+      return null;
+    }
     const singleValue = Array.isArray(value) ? value[0] : value;
-    return allOwnerships.find(o => o.id === singleValue) ||
-           filteredOwnerships.find(o => o.name === singleValue) ||
-           null;
+    return (
+      allOwnerships.find(o => o.id === singleValue) ||
+      filteredOwnerships.find(o => o.name === singleValue) ||
+      null
+    );
   }, [value, filteredOwnerships, allOwnerships, mode]);
 
   // 当前选中的权属方（多选模式）
   const _selectedOwnerships = useMemo(() => {
-    if (mode === 'single' || !value) return [];
-    const values = Array.isArray(value) ? value : value ? [value] : [];
-    return allOwnerships.filter(o => values.includes(o.id)) ||
-           filteredOwnerships.filter(o => values.includes(o.id));
+    if (mode === 'single' || value === null || value === undefined) {
+      return [];
+    }
+    const values = Array.isArray(value)
+      ? value
+      : value !== null && value !== undefined
+        ? [value]
+        : [];
+    const allFiltered = allOwnerships.filter(o => values.includes(o.id));
+    if (allFiltered.length > 0) {
+      return allFiltered;
+    }
+    return filteredOwnerships.filter(o => values.includes(o.id));
   }, [value, filteredOwnerships, allOwnerships, mode]);
 
   // 处理搜索 - 防抖处理
@@ -104,7 +115,9 @@ const OwnershipSelect: React.FC<OwnershipSelectProps> = ({
   }, []);
 
   // 处理单选
-  const handleSingleChange = (selectedValue: string | { value: string; label: React.ReactNode }) => {
+  const handleSingleChange = (
+    selectedValue: string | { value: string; label: React.ReactNode }
+  ) => {
     // 处理labelInValue模式
     let valueStr: string;
     if (typeof selectedValue === 'object' && selectedValue !== null) {
@@ -113,8 +126,9 @@ const OwnershipSelect: React.FC<OwnershipSelectProps> = ({
       valueStr = selectedValue;
     }
 
-    const selected = filteredOwnerships.find(o => o.id === valueStr) ||
-                    filteredOwnerships.find(o => o.name === valueStr);
+    const selected =
+      filteredOwnerships.find(o => o.id === valueStr) ||
+      filteredOwnerships.find(o => o.name === valueStr);
 
     if (selected) {
       onChange?.(selected.id, selected);
@@ -138,17 +152,13 @@ const OwnershipSelect: React.FC<OwnershipSelectProps> = ({
   const getOptionLabel = (ownership: Ownership) => (
     <Space>
       <span>{ownership.name}</span>
-      {ownership.short_name && (
-        <span style={{ color: '#999', fontSize: '12px' }}>
-          ({ownership.short_name})
-        </span>
-      )}
-      <span style={{ color: '#666', fontSize: '12px' }}>
-        [{ownership.code}]
-      </span>
-      {!ownership.is_active && (
-        <Tag color="red">禁用</Tag>
-      )}
+      {ownership.short_name !== null &&
+        ownership.short_name !== undefined &&
+        ownership.short_name !== '' && (
+          <span style={{ color: '#999', fontSize: '12px' }}>({ownership.short_name})</span>
+        )}
+      <span style={{ color: '#666', fontSize: '12px' }}>[{ownership.code}]</span>
+      {ownership.is_active === false && <Tag color="red">禁用</Tag>}
     </Space>
   );
 
@@ -164,12 +174,14 @@ const OwnershipSelect: React.FC<OwnershipSelectProps> = ({
 
     return (
       <Tag
-        color={ownership?.is_active ? 'blue' : 'red'}
+        color={ownership?.is_active === true ? 'blue' : 'red'}
         closable={closable}
         onClose={onClose}
         style={{ marginRight: 3 }}
       >
-        {ownership?.name || value}
+        {ownership?.name !== null && ownership?.name !== undefined && ownership?.name !== ''
+          ? ownership.name
+          : value}
       </Tag>
     );
   };
@@ -185,9 +197,13 @@ const OwnershipSelect: React.FC<OwnershipSelectProps> = ({
       onChange?.(ownership.id, ownership);
     } else {
       // 多选模式下，添加到已选列表
-      const currentValues = Array.isArray(value) ? value : value ? [value] : [];
+      const currentValues =
+        value !== null && value !== undefined ? (Array.isArray(value) ? value : [value]) : [];
       if (!currentValues.includes(ownership.id)) {
-        const newValues = maxCount ? [...currentValues.slice(-maxCount + 1), ownership.id] : [...currentValues, ownership.id];
+        const newValues =
+          maxCount !== null && maxCount !== undefined && !isNaN(maxCount)
+            ? [...currentValues.slice(-maxCount + 1), ownership.id]
+            : [...currentValues, ownership.id];
         const selectedOwners = allOwnerships.filter(o => newValues.includes(o.id));
         onChange?.(newValues, selectedOwners);
       }
@@ -210,8 +226,8 @@ const OwnershipSelect: React.FC<OwnershipSelectProps> = ({
     <div style={style}>
       <Space.Compact style={{ width: '100%' }}>
         <Select
-          value={value || (mode === 'multiple' ? [] : undefined) as any}
-          onChange={mode === 'multiple' ? handleMultipleChange : handleSingleChange as any}
+          value={value ?? (mode === 'multiple' ? [] : undefined)}
+          onChange={mode === 'multiple' ? handleMultipleChange : handleSingleChange}
           onClear={handleClear}
           placeholder={placeholder}
           disabled={disabled}
@@ -286,10 +302,7 @@ const OwnershipSelect: React.FC<OwnershipSelectProps> = ({
         width={1200}
         destroyOnHidden
       >
-        <OwnershipList
-          mode="select"
-          onSelectOwnership={handleModalSelect}
-        />
+        <OwnershipList mode="select" onSelectOwnership={handleModalSelect} />
       </Modal>
     </div>
   );

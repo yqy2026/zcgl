@@ -410,25 +410,25 @@ def _calculate_area_summary_in_memory(
 
         for asset in all_assets:
             if getattr(asset, "land_area", None):
-                summary["total_land_area"] += to_float(getattr(asset, "land_area"))
+                summary["total_land_area"] += to_float(asset.land_area)
                 summary["assets_with_area_data"] += 1
 
             if getattr(asset, "rentable_area", None):
                 summary["total_rentable_area"] += to_float(
-                    getattr(asset, "rentable_area")
+                    asset.rentable_area
                 )
 
             if getattr(asset, "rented_area", None):
-                summary["total_rented_area"] += to_float(getattr(asset, "rented_area"))
+                summary["total_rented_area"] += to_float(asset.rented_area)
 
             if getattr(asset, "unrented_area", None):
                 summary["total_unrented_area"] += to_float(
-                    getattr(asset, "unrented_area")
+                    asset.unrented_area
                 )
 
             if getattr(asset, "non_commercial_area", None):
                 summary["total_non_commercial_area"] += to_float(
-                    getattr(asset, "non_commercial_area")
+                    asset.non_commercial_area
                 )
 
         # 计算整体出租率
@@ -898,31 +898,31 @@ def get_financial_summary(
             # 累计可出租面积
             if getattr(asset, "rentable_area", None):
                 summary["total_rentable_area"] += to_float(
-                    getattr(asset, "rentable_area")
+                    asset.rentable_area
                 )
 
             if getattr(asset, "annual_income", None):
                 summary["total_annual_income"] += to_float(
-                    getattr(asset, "annual_income")
+                    asset.annual_income
                 )
                 summary["assets_with_income_data"] += 1
 
             if getattr(asset, "annual_expense", None):
                 summary["total_annual_expense"] += to_float(
-                    getattr(asset, "annual_expense")
+                    asset.annual_expense
                 )
 
             if getattr(asset, "net_income", None):
-                summary["total_net_income"] += to_float(getattr(asset, "net_income"))
+                summary["total_net_income"] += to_float(asset.net_income)
 
             if getattr(asset, "monthly_rent", None):
                 summary["total_monthly_rent"] += to_float(
-                    getattr(asset, "monthly_rent")
+                    asset.monthly_rent
                 )
                 summary["assets_with_rent_data"] += 1
 
             if getattr(asset, "deposit", None):
-                summary["total_deposit"] += to_float(getattr(asset, "deposit"))
+                summary["total_deposit"] += to_float(asset.deposit)
 
         # 格式化数据，保留2位小数
         for key in [
@@ -1061,15 +1061,15 @@ async def get_dashboard_data(
 
         for asset in assets:
             if getattr(asset, "land_area", None):
-                total_area += to_float(getattr(asset, "land_area"))
+                total_area += to_float(asset.land_area)
             if getattr(asset, "annual_income", None):
-                total_income += to_float(getattr(asset, "annual_income"))
+                total_income += to_float(asset.annual_income)
             if getattr(asset, "annual_expense", None):
-                total_expense += to_float(getattr(asset, "annual_expense"))
+                total_expense += to_float(asset.annual_expense)
             if getattr(asset, "rentable_area", None):
-                total_rentable_area += to_float(getattr(asset, "rentable_area"))
+                total_rentable_area += to_float(asset.rentable_area)
             if getattr(asset, "rented_area", None):
-                total_rented_area += to_float(getattr(asset, "rented_area"))
+                total_rented_area += to_float(asset.rented_area)
 
         net_income = total_income - total_expense
         occupancy_rate = (
@@ -1626,23 +1626,23 @@ async def get_comprehensive_statistics(
         for asset in assets:
             if getattr(asset, "annual_income", None):
                 financial_stats["total_annual_income"] += to_float(
-                    getattr(asset, "annual_income")
+                    asset.annual_income
                 )
                 financial_stats["assets_with_financial_data"] += 1
 
             if getattr(asset, "annual_expense", None):
                 financial_stats["total_annual_expense"] += to_float(
-                    getattr(asset, "annual_expense")
+                    asset.annual_expense
                 )
 
             if getattr(asset, "net_income", None):
                 financial_stats["total_net_income"] += to_float(
-                    getattr(asset, "net_income")
+                    asset.net_income
                 )
 
             if getattr(asset, "monthly_rent", None):
                 financial_stats["total_monthly_rent"] += to_float(
-                    getattr(asset, "monthly_rent")
+                    asset.monthly_rent
                 )
 
         # 按状态统计

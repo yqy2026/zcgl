@@ -92,98 +92,98 @@ export interface Asset {
 
 // 枚举定义
 export enum OwnershipStatus {
-  CONFIRMED = "已确权",
-  UNCONFIRMED = "未确权",
-  PARTIAL = "部分确权",
-  CANNOT_CONFIRM = "无法确认业权",
+  CONFIRMED = '已确权',
+  UNCONFIRMED = '未确权',
+  PARTIAL = '部分确权',
+  CANNOT_CONFIRM = '无法确认业权',
 }
 
 export enum PropertyNature {
-  COMMERCIAL = "经营性",
-  NON_COMMERCIAL = "非经营性",
-  COMMERCIAL_EXTERNAL = "经营-外部",
-  COMMERCIAL_INTERNAL = "经营-内部",
-  COMMERCIAL_LEASE = "经营-租赁",
-  NON_COMMERCIAL_PUBLIC = "非经营类-公配",
-  NON_COMMERCIAL_OTHER = "非经营类-其他",
-  COMMERCIAL_CLASS = "经营类",
-  NON_COMMERCIAL_CLASS = "非经营类",
-  COMMERCIAL_SUPPORTING = "经营-配套",
-  NON_COMMERCIAL_SUPPORTING = "非经营-配套",
-  COMMERCIAL_SUPPORTING_TOWN = "经营-配套镇",
-  NON_COMMERCIAL_SUPPORTING_TOWN = "非经营-配套镇",
-  COMMERCIAL_DISPOSAL = "经营-处置类",
-  NON_COMMERCIAL_DISPOSAL = "非经营-处置类",
-  NON_COMMERCIAL_PUBLIC_HOUSING = "非经营-公配房",
-  NON_COMMERCIAL_SUPPORTING_HOUSING = "非经营类-配套",
+  COMMERCIAL = '经营性',
+  NON_COMMERCIAL = '非经营性',
+  COMMERCIAL_EXTERNAL = '经营-外部',
+  COMMERCIAL_INTERNAL = '经营-内部',
+  COMMERCIAL_LEASE = '经营-租赁',
+  NON_COMMERCIAL_PUBLIC = '非经营类-公配',
+  NON_COMMERCIAL_OTHER = '非经营类-其他',
+  COMMERCIAL_CLASS = '经营类',
+  NON_COMMERCIAL_CLASS = '非经营类',
+  COMMERCIAL_SUPPORTING = '经营-配套',
+  NON_COMMERCIAL_SUPPORTING = '非经营-配套',
+  COMMERCIAL_SUPPORTING_TOWN = '经营-配套镇',
+  NON_COMMERCIAL_SUPPORTING_TOWN = '非经营-配套镇',
+  COMMERCIAL_DISPOSAL = '经营-处置类',
+  NON_COMMERCIAL_DISPOSAL = '非经营-处置类',
+  NON_COMMERCIAL_PUBLIC_HOUSING = '非经营-公配房',
+  NON_COMMERCIAL_SUPPORTING_HOUSING = '非经营类-配套',
 }
 
 export enum UsageStatus {
-  RENTED = "出租",
-  VACANT = "空置",
-  SELF_USED = "自用",
-  PUBLIC_HOUSING = "公房",
-  OTHER = "其他",
-  SUBLEASE = "转租",
-  PUBLIC_FACILITY = "公配",
-  VACANT_PLANNING = "空置规划",
-  VACANT_RESERVED = "空置预留",
-  SUPPORTING_FACILITY = "配套",
-  VACANT_SUPPORTING = "空置配套",
-  VACANT_SUPPORTING_SHORT = "空置配",
-  PENDING_DISPOSAL = "待处置",
-  PENDING_HANDOVER = "待移交",
-  VACANT_DISPOSAL = "闲置",
+  RENTED = '出租',
+  VACANT = '空置',
+  SELF_USED = '自用',
+  PUBLIC_HOUSING = '公房',
+  OTHER = '其他',
+  SUBLEASE = '转租',
+  PUBLIC_FACILITY = '公配',
+  VACANT_PLANNING = '空置规划',
+  VACANT_RESERVED = '空置预留',
+  SUPPORTING_FACILITY = '配套',
+  VACANT_SUPPORTING = '空置配套',
+  VACANT_SUPPORTING_SHORT = '空置配',
+  PENDING_DISPOSAL = '待处置',
+  PENDING_HANDOVER = '待移交',
+  VACANT_DISPOSAL = '闲置',
 }
 
 export enum TenantType {
-  INDIVIDUAL = "个人",
-  ENTERPRISE = "企业",
-  GOVERNMENT = "政府机构",
-  OTHER = "其他",
+  INDIVIDUAL = '个人',
+  ENTERPRISE = '企业',
+  GOVERNMENT = '政府机构',
+  OTHER = '其他',
 }
 
 export enum BusinessModel {
-  LEASE_SUBLEASE = "承租转租",
-  ENTRUSTED_OPERATION = "委托经营",
-  SELF_OPERATION = "自营",
-  OTHER = "其他",
+  LEASE_SUBLEASE = '承租转租',
+  ENTRUSTED_OPERATION = '委托经营',
+  SELF_OPERATION = '自营',
+  OTHER = '其他',
 } // 接收模式枚举
 
 export enum OperationStatus {
-  NORMAL = "正常经营",
-  SUSPENDED = "停业整顿",
-  RENOVATING = "装修中",
-  SEEKING_TENANT = "待招租",
+  NORMAL = '正常经营',
+  SUSPENDED = '停业整顿',
+  RENOVATING = '装修中',
+  SEEKING_TENANT = '待招租',
 }
 
 export enum DataStatus {
-  NORMAL = "正常",
-  DELETED = "已删除",
-  ARCHIVED = "已归档",
+  NORMAL = '正常',
+  DELETED = '已删除',
+  ARCHIVED = '已归档',
 }
 
 export enum AuditStatus {
-  PENDING = "待审核",
-  APPROVED = "已审核",
-  REJECTED = "审核不通过",
+  PENDING = '待审核',
+  APPROVED = '已审核',
+  REJECTED = '审核不通过',
 }
 
 export enum ContractStatus {
-  ACTIVE = "生效中",
-  EXPIRED = "已过期",
-  TERMINATED = "已终止",
-  PENDING = "待生效",
-  SUSPENDED = "暂停",
+  ACTIVE = '生效中',
+  EXPIRED = '已过期',
+  TERMINATED = '已终止',
+  PENDING = '待生效',
+  SUSPENDED = '暂停',
 }
 
 export enum BusinessCategory {
-  COMMERCIAL = "商业",
-  OFFICE = "办公",
-  RESIDENTIAL = "住宅",
-  WAREHOUSE = "仓储",
-  INDUSTRIAL = "工业",
-  OTHER = "其他",
+  COMMERCIAL = '商业',
+  OFFICE = '办公',
+  RESIDENTIAL = '住宅',
+  WAREHOUSE = '仓储',
+  INDUSTRIAL = '工业',
+  OTHER = '其他',
 }
 
 // 系统数据字典接口
@@ -205,7 +205,7 @@ export interface AssetCustomField {
   id: string;
   asset_id: string;
   field_name: string;
-  field_type: "text" | "number" | "date" | "boolean";
+  field_type: 'text' | 'number' | 'date' | 'boolean';
   field_value?: string;
   created_at: string;
   updated_at: string;
@@ -214,13 +214,13 @@ export interface AssetCustomField {
 export interface CustomFieldValue {
   field_name: string;
   field_value: string | number | boolean | null;
-  field_type?: "text" | "number" | "date" | "boolean";
+  field_type?: 'text' | 'number' | 'date' | 'boolean';
 }
 
 // 表单数据接口
 export type AssetFormData = Omit<
   Asset,
-  "id" | "created_at" | "updated_at" | "unrented_area" | "occupancy_rate" | "net_income"
+  'id' | 'created_at' | 'updated_at' | 'unrented_area' | 'occupancy_rate' | 'net_income'
 >;
 
 // API响应接口
@@ -259,7 +259,7 @@ export interface AssetSearchParams {
   contract_status?: ContractStatus;
   audit_status?: AuditStatus;
   sort_by?: string;
-  sort_order?: "asc" | "desc";
+  sort_order?: 'asc' | 'desc';
   // 面积范围筛选
   min_area?: number;
   max_area?: number;
@@ -279,7 +279,7 @@ export interface AssetSearchParams {
 // 创建资产请求
 export type AssetCreateRequest = Omit<
   Asset,
-  "id" | "created_at" | "updated_at" | "unrented_area" | "occupancy_rate" | "net_income"
+  'id' | 'created_at' | 'updated_at' | 'unrented_area' | 'occupancy_rate' | 'net_income'
 >;
 
 // 更新资产请求
@@ -337,12 +337,12 @@ export interface FieldValidationRule {
 export const DecimalUtils = {
   // 将后端Decimal字符串转换为前端number，处理精度
   parseDecimal: (decimalStr: string | number | null | undefined): number | undefined => {
-    if (decimalStr === null || decimalStr === undefined || decimalStr === "") {
+    if (decimalStr === null || decimalStr === undefined || decimalStr === '') {
       return undefined;
     }
 
     // 如果已经是number，直接返回
-    if (typeof decimalStr === "number") {
+    if (typeof decimalStr === 'number') {
       return decimalStr;
     }
 
@@ -363,27 +363,29 @@ export const DecimalUtils = {
 
   // 安全的数值运算，避免浮点精度问题
   safeAdd: (a: number | undefined, b: number | undefined): number => {
-    const numA = a || 0;
-    const numB = b || 0;
+    const numA = a ?? 0;
+    const numB = b ?? 0;
     return Math.round((numA + numB) * 100) / 100;
   },
 
   safeSubtract: (a: number | undefined, b: number | undefined): number => {
-    const numA = a || 0;
-    const numB = b || 0;
+    const numA = a ?? 0;
+    const numB = b ?? 0;
     return Math.round((numA - numB) * 100) / 100;
   },
 
   safeMultiply: (a: number | undefined, b: number | undefined): number => {
-    const numA = a || 0;
-    const numB = b || 0;
+    const numA = a ?? 0;
+    const numB = b ?? 0;
     return Math.round(numA * numB * 100) / 100;
   },
 
   safeDivide: (a: number | undefined, b: number | undefined): number => {
-    const numA = a || 0;
-    const numB = b || 0;
-    if (numB === 0) return 0;
+    const numA = a ?? 0;
+    const numB = b ?? 0;
+    if (numB === 0) {
+      return 0;
+    }
     return Math.round((numA / numB) * 100) / 100;
   },
 };
@@ -435,7 +437,7 @@ export interface TotalStatistics {
 // 字段配置
 export interface FieldConfig {
   label: string;
-  type: "input" | "textarea" | "select" | "number" | "date" | "switch" | "upload" | "tags";
+  type: 'input' | 'textarea' | 'select' | 'number' | 'date' | 'switch' | 'upload' | 'tags';
   required?: boolean;
   readonly?: boolean;
   placeholder?: string;
@@ -457,7 +459,7 @@ export interface AssetFieldGroups {
 
 // 导出/导入相关
 export interface ExportOptions {
-  format: "excel" | "csv" | "pdf";
+  format: 'excel' | 'csv' | 'pdf';
   fields?: string[];
   filters?: AssetSearchParams;
   includeHistory?: boolean;
@@ -495,7 +497,7 @@ export interface AssetStatistics {
 
 // 批量操作
 export interface BatchOperation {
-  action: "update" | "delete" | "export" | "audit";
+  action: 'update' | 'delete' | 'export' | 'audit';
   assetIds: string[];
   data?: Partial<Asset>;
   reason?: string;

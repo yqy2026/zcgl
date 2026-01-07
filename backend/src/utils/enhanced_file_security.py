@@ -179,11 +179,7 @@ class EnhancedFileSecurityValidator:
             ]
 
             content_lower = content.lower()
-            for pattern in malicious_patterns:
-                if pattern in content_lower:
-                    return False
-
-            return True
+            return all(pattern not in content_lower for pattern in malicious_patterns)
         except Exception:
             return False
 

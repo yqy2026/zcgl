@@ -224,7 +224,7 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
     def _check_rate_limit(self, ip: str, request: Request) -> bool:
         """检查请求频率限制"""
         # 本地开发环境更宽松的限制
-        is_local = (
+        (
             ip in ["127.0.0.1", "localhost", "::1", "0.0.0.0"]  # nosec - B104: Local IP check, not binding
             or ip.startswith("192.168.")
             or ip.startswith("10.")
@@ -273,7 +273,7 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
 
         # 检查查询参数中的可疑模式
         query_params = dict(request.query_params)
-        for key, value in query_params.items():
+        for _key, value in query_params.items():
             if (
                 value is not None
                 and isinstance(value, str)
@@ -294,10 +294,7 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
 
         # 检查请求路径中的可疑模式
         path = request.url.path
-        if path is None:
-            path = ""
-        else:
-            path = path.lower()
+        path = "" if path is None else path.lower()
         for pattern in self.suspicious_patterns:
             if pattern in path:
                 await self._log_suspicious_request(request, "SUSPICIOUS_PATH")
@@ -305,7 +302,7 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
 
         # 检查查询参数
         query_params = dict(request.query_params)
-        for key, value in query_params.items():
+        for _key, value in query_params.items():
             if (
                 value is not None
                 and isinstance(value, str)

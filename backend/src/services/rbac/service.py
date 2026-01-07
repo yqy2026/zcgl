@@ -1,25 +1,17 @@
-import json
 from datetime import datetime
-from typing import Any
 
-from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 
 from ...crud.rbac import (
     permission_crud,
     role_crud,
     user_role_assignment_crud,
-    resource_permission_crud,
-    permission_audit_log_crud,
 )
-from ...models.rbac import Role, Permission, UserRoleAssignment, ResourcePermission
+from ...models.rbac import Permission, Role, UserRoleAssignment
 from ...schemas.rbac import (
     RoleCreate,
     RoleUpdate,
     UserRoleAssignmentCreate,
-    UserRoleAssignmentUpdate,
-    ResourcePermissionCreate,
-    ResourcePermissionUpdate,
 )
 
 
@@ -27,7 +19,7 @@ class RBACService:
     """RBAC服务层，封装业务逻辑"""
 
     # ================= Role Management =================
-    
+
     def create_role(self, db: Session, *, obj_in: RoleCreate, created_by: str) -> Role:
         """创建角色"""
         # 业务规则：名称唯一
@@ -37,11 +29,11 @@ class RBACService:
 
         # Create role
         role = role_crud.create(db, obj_in=obj_in, created_by=created_by)
-        
+
         # Handle initial permissions
         if obj_in.permission_ids:
             self.update_role_permissions(db, role_id=role.id, permission_ids=obj_in.permission_ids, updated_by=created_by)
-            
+
         return role
 
     def update_role(
@@ -51,11 +43,11 @@ class RBACService:
         role = role_crud.get(db, id=role_id)
         if not role:
             raise ValueError("角色不存在")
-            
+
         if role.is_system_role:
              # System roles typically have restrictions, but let's allow updating non-critical fields if needed.
              # Current logic restricts modification of system roles.
-             pass 
+             pass
 
         # Update basic fields
         role = role_crud.update(db, db_obj=role, obj_in=obj_in, updated_by=updated_by)
@@ -89,20 +81,20 @@ class RBACService:
         role = role_crud.get(db, id=role_id)
         if not role:
             raise ValueError("角色不存在")
-            
+
         if role.is_system_role:
              # Depends on policy. Let's assume system roles' permissions are fixed in code/migration.
              raise ValueError("系统角色权限无法修改")
 
         # Clear existing
         role.permissions.clear()
-        
+
         # Add new
         for perm_id in permission_ids:
             perm = permission_crud.get(db, id=perm_id)
             if perm:
                 role.permissions.append(perm)
-        
+
         role.updated_by = updated_by
         role.updated_at = datetime.now()
         db.commit()
@@ -139,7 +131,7 @@ class RBACService:
         )
         if not assignment or not assignment.is_active:
             return False
-            
+
         assignment.is_active = False
         assignment.updated_at = datetime.now()
         db.commit()
@@ -152,16 +144,16 @@ class RBACService:
     ) -> bool:
         """检查用户是否有特定权限"""
         # 1. Check Super Admin (if implied, distinct from RBAC)
-        
+
         # 2. Check Role Permissions
         user_roles = user_role_assignment_crud.get_user_active_assignments(db, user_id=user_id)
         role_ids = [ur.role_id for ur in user_roles]
-        
+
         # This query implies: find a permission that matches resource/action and is assigned to one of the user's roles
         # Optimization: Use SQL Join
         # Permission -> RolePermission -> Role -> UserRoleAssignment
         # But for now, iterate or use existing check logic if simple.
-        
+
         # Let's create a query for efficiency
         has_perm = (
              db.query(Permission)
@@ -174,11 +166,8 @@ class RBACService:
              )
              .first()
         )
-        
-        if has_perm:
-            return True
-            
-        return False
+
+        return bool(has_perm)
 
 
 rbac_service = RBACService()

@@ -33,7 +33,7 @@ export interface PaginationConfig {
 
 export interface SorterConfig {
   field: string;
-  order: "ascend" | "descend";
+  order: 'ascend' | 'descend';
 }
 
 export interface FilterConfig {
@@ -108,7 +108,7 @@ export interface FileInfo {
 }
 
 // 加载状态类型
-export type LoadingState = "idle" | "loading" | "success" | "error";
+export type LoadingState = 'idle' | 'loading' | 'success' | 'error';
 
 // 操作结果类型
 export interface OperationResult<T = void> {
@@ -126,7 +126,7 @@ export interface ValidationResult {
 }
 
 // 排序类型
-export type SortDirection = "asc" | "desc" | "ascend" | "descend";
+export type SortDirection = 'asc' | 'desc' | 'ascend' | 'descend';
 
 // 查询参数类型
 export interface QueryParams {
@@ -151,7 +151,7 @@ export interface PaginatedResponse<T> {
 }
 
 // 任务状态类型
-export type TaskStatus = "pending" | "processing" | "completed" | "failed" | "cancelled";
+export type TaskStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
 
 // 导入/导出历史记录类型
 export interface ImportExportHistory {
@@ -183,19 +183,19 @@ export interface TaskStatusResponse {
 }
 
 // CRUD操作类型
-export type CrudOperation = "create" | "read" | "update" | "delete";
+export type CrudOperation = 'create' | 'read' | 'update' | 'delete';
 
 // 权限类型
 export type Permission = string | string[];
 
 // 主题类型
-export type Theme = "light" | "dark" | "auto";
+export type Theme = 'light' | 'dark' | 'auto';
 
 // 语言类型
-export type Language = "zh-CN" | "en-US";
+export type Language = 'zh-CN' | 'en-US';
 
 // 单位类型
-export type Unit = "px" | "%" | "em" | "rem" | "vh" | "vw";
+export type Unit = 'px' | '%' | 'em' | 'rem' | 'vh' | 'vw';
 
 // 尺寸类型
 export interface Size {
@@ -213,7 +213,7 @@ export interface Position {
 export type Color = string;
 
 // 图标类型
-export type IconType = string | React.ComponentType<any>;
+export type IconType = string | React.ComponentType<Record<string, unknown>>;
 
 // Express类型已在前端中不使用，注释掉以避免导入错误
 // export type { Response } from "express";
@@ -267,10 +267,10 @@ export type Dictionary<T> = Record<string, T>;
 
 // 日志级别类型
 export enum LogLevel {
-  TRACE = "trace",
-  DEBUG = "debug",
-  INFO = "info",
-  WARN = "warn",
-  ERROR = "error",
-  FATAL = "fatal",
+  TRACE = 'trace',
+  DEBUG = 'debug',
+  INFO = 'info',
+  WARN = 'warn',
+  ERROR = 'error',
+  FATAL = 'fatal',
 }

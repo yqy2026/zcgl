@@ -203,7 +203,7 @@ class TaskQueue:
         self.is_running = True
 
         # 启动工作线程
-        for i in range(self.max_workers):
+        for _i in range(self.max_workers):
             thread = threading.Thread(target=self.worker, daemon=True)
             thread.start()
             self.worker_threads.append(thread)

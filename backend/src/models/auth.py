@@ -107,7 +107,7 @@ class User(Base):
             return False
         else:
             # 在运行时，self.role是具体的值
-            role_value = cast(str, self.role)  # pragma: no cover
+            role_value = cast("str", self.role)  # pragma: no cover
             if isinstance(role_value, str):  # pragma: no cover
                 return role_value == UserRole.ADMIN.value  # pragma: no cover
             elif hasattr(role_value, "value"):  # 如果是枚举类型  # pragma: no cover
@@ -121,7 +121,7 @@ class User(Base):
             return False
         else:
             # 安全地检查 is_locked 字段
-            is_locked = cast(bool, self.is_locked)  # pragma: no cover
+            is_locked = cast("bool", self.is_locked)  # pragma: no cover
             if isinstance(is_locked, str):  # pragma: no cover
                 is_locked = is_locked.lower() in (
                     "true",
@@ -137,7 +137,7 @@ class User(Base):
                 return False  # pragma: no cover
 
             # 检查锁定时间
-            locked_until_value = cast(datetime, self.locked_until)  # pragma: no cover
+            locked_until_value = cast("datetime", self.locked_until)  # pragma: no cover
             if (
                 locked_until_value is not None and locked_until_value > datetime.now()
             ):  # pragma: no cover
@@ -198,7 +198,7 @@ class UserSession(Base):
             # 在类型检查时，返回明确的bool值
             return False
         else:
-            expires_at_value = cast(datetime, self.expires_at)  # pragma: no cover
+            expires_at_value = cast("datetime", self.expires_at)  # pragma: no cover
             if expires_at_value is None:  # pragma: no cover
                 return True  # pragma: no cover
             return datetime.now() > expires_at_value  # pragma: no cover

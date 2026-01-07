@@ -1,48 +1,60 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react';
 import {
-  message, Form, Space, Tag, Button, Card, Input,
-  Select, Tooltip, Col, Row, Table, Modal, Popconfirm,
-  Badge, Statistic, Tabs, Switch
-} from 'antd'
-import type { ColumnsType } from 'antd/es/table'
-import {
-  PlusOutlined, EditOutlined, DeleteOutlined,
-  EyeOutlined
-} from '@ant-design/icons'
-import { unifiedDictionaryService } from '../../services/dictionary'
+  message,
+  Form,
+  Space,
+  Tag,
+  Button,
+  Card,
+  Input,
+  Select,
+  Tooltip,
+  Col,
+  Row,
+  Table,
+  Modal,
+  Popconfirm,
+  Badge,
+  Statistic,
+  Tabs,
+  Switch,
+} from 'antd';
+import type { ColumnsType } from 'antd/es/table';
+import { PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
+import { unifiedDictionaryService } from '../../services/dictionary';
 import type {
   EnumFieldType,
   EnumFieldValue,
   CreateEnumFieldTypeRequest,
   UpdateEnumFieldTypeRequest,
   CreateEnumFieldValueRequest,
-  UpdateEnumFieldValueRequest
-} from '../../services/dictionary'
-import EnumValuePreview from '../../components/Dictionary/EnumValuePreview'
+  UpdateEnumFieldValueRequest,
+} from '../../services/dictionary';
+import EnumValuePreview from '../../components/Dictionary/EnumValuePreview';
 
-const { TabPane } = Tabs
-const { TextArea } = Input
-const { Option } = Select
+const { TabPane } = Tabs;
+const { TextArea } = Input;
+const { Option } = Select;
 
 // 错误类型定义
 interface ApiError {
   response?: {
     data?: {
-      message?: string
-      detail?: string
-    }
-  }
-  message?: string
+      message?: string;
+      detail?: string;
+    };
+  };
+  message?: string;
 }
 
 // 统计信息类型
 interface EnumFieldStatistics {
-  total_types: number
-  active_types: number
-  total_values: number
-  active_values: number
-  usage_count: number
-  categories: string[]
+  total_types: number;
+  active_types: number;
+  total_values: number;
+  active_values: number;
+  usage_count: number;
+  categories: string[];
 }
 
 // Local interfaces removed, using types from services/dictionary
@@ -69,10 +81,10 @@ const EnumFieldPage: React.FC = () => {
   const loadEnumTypes = async () => {
     setLoading(true);
     try {
-      const data = await unifiedDictionaryService.getEnumFieldTypes()
+      const data = await unifiedDictionaryService.getEnumFieldTypes();
       setEnumTypes(data);
     } catch (error: unknown) {
-      const apiError = error as ApiError
+      const apiError = error as ApiError;
       message.error(apiError?.response?.data?.detail ?? apiError?.message ?? '加载枚举类型失败');
     } finally {
       setLoading(false);
@@ -81,39 +93,40 @@ const EnumFieldPage: React.FC = () => {
 
   const loadEnumValues = async (typeId: string) => {
     try {
-      const data = await unifiedDictionaryService.getEnumFieldValues(typeId)
+      const data = await unifiedDictionaryService.getEnumFieldValues(typeId);
       setEnumValues(data);
     } catch (error: unknown) {
-      const apiError = error as ApiError
+      const apiError = error as ApiError;
       message.error(apiError?.response?.data?.detail ?? apiError?.message ?? '加载枚举值失败');
     }
   };
 
   const loadStatistics = async () => {
     try {
-      const stats = await unifiedDictionaryService.getDictionaryStats()
+      const stats = await unifiedDictionaryService.getDictionaryStats();
       setStatistics({
         total_types: stats.totalTypes,
         active_types: stats.activeTypes,
         total_values: stats.totalValues,
         active_values: stats.activeTypes,
         usage_count: 0,
-        categories: []
+        categories: [],
       });
     } catch (error: unknown) {
-      const apiError = error as ApiError
+      const apiError = error as ApiError;
       message.error(apiError?.message ?? '加载统计信息失败');
     }
   };
 
   useEffect(() => {
-    loadEnumTypes();
-    loadStatistics();
+    void loadEnumTypes();
+    void loadStatistics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    if (selectedTypeId) {
-      loadEnumValues(selectedTypeId);
+    if (selectedTypeId != null) {
+      void loadEnumValues(selectedTypeId);
     }
   }, [selectedTypeId]);
 
@@ -123,16 +136,16 @@ const EnumFieldPage: React.FC = () => {
       if (editingValue) {
         // 编辑模式 - 设置表单字段值
         const formData = {
-          label: String(editingValue.label || ''),
-          value: String(editingValue.value || ''),
-          code: String(editingValue.code || ''),
-          description: String(editingValue.description || ''),
-          sort_order: Number(editingValue.sort_order || 0),
-          color: String(editingValue.color || ''),
-          icon: String(editingValue.icon || ''),
+          label: String(editingValue.label ?? ''),
+          value: String(editingValue.value ?? ''),
+          code: String(editingValue.code ?? ''),
+          description: String(editingValue.description ?? ''),
+          sort_order: Number(editingValue.sort_order ?? 0),
+          color: String(editingValue.color ?? ''),
+          icon: String(editingValue.icon ?? ''),
           is_active: Boolean(editingValue.is_active),
           is_default: Boolean(editingValue.is_default),
-          enum_type_id: String(editingValue.enum_type_id || selectedTypeId)
+          enum_type_id: String(editingValue.enum_type_id || selectedTypeId),
         };
 
         // 使用 setTimeout 确保 modal 完全打开后再设置表单值
@@ -151,7 +164,7 @@ const EnumFieldPage: React.FC = () => {
           icon: '',
           is_active: true,
           is_default: false,
-          enum_type_id: String(selectedTypeId || '')
+          enum_type_id: String(selectedTypeId ?? ''),
         };
 
         // 使用 setTimeout 确保 modal 完全打开后再设置表单值
@@ -179,13 +192,15 @@ const EnumFieldPage: React.FC = () => {
       title: '编码',
       dataIndex: 'code',
       key: 'code',
-      render: (text) => <code>{text}</code>,
+      render: (text: string | null | undefined) =>
+        text !== null && text !== undefined && text !== '' ? <code>{text}</code> : '-',
     },
     {
       title: '类别',
       dataIndex: 'category',
       key: 'category',
-      render: (text) => text || '-',
+      render: (text: string | null | undefined) =>
+        text !== null && text !== undefined ? text : '-',
     },
     {
       title: '配置',
@@ -201,7 +216,7 @@ const EnumFieldPage: React.FC = () => {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      render: (status) => (
+      render: status => (
         <Badge
           status={status === 'active' ? 'success' : 'default'}
           text={status === 'active' ? '启用' : '禁用'}
@@ -213,7 +228,7 @@ const EnumFieldPage: React.FC = () => {
       key: 'enum_values_preview',
       render: (_, record) => (
         <EnumValuePreview
-          values={record.enum_values || []}
+          values={record.enum_values ?? []}
           maxDisplay={5}
           size="small"
           showInactiveCount={false}
@@ -236,16 +251,12 @@ const EnumFieldPage: React.FC = () => {
             />
           </Tooltip>
           <Tooltip title="编辑">
-            <Button
-              type="link"
-              icon={<EditOutlined />}
-              onClick={() => handleEditType(record)}
-            />
+            <Button type="link" icon={<EditOutlined />} onClick={() => handleEditType(record)} />
           </Tooltip>
           {!record.is_system && (
             <Popconfirm
               title="确定删除此枚举类型吗？"
-              onConfirm={() => handleDeleteType(record.id)}
+              onConfirm={() => void handleDeleteType(record.id)}
             >
               <Button type="link" danger icon={<DeleteOutlined />} />
             </Popconfirm>
@@ -266,32 +277,36 @@ const EnumFieldPage: React.FC = () => {
       title: '值',
       dataIndex: 'value',
       key: 'value',
-      render: (text) => <code>{text}</code>,
+      render: text => <code>{text}</code>,
     },
     {
       title: '编码',
       dataIndex: 'code',
       key: 'code',
-      render: (text) => text ? <code>{text}</code> : '-',
+      render: text =>
+        text !== null && text !== undefined && text !== '' ? <code>{text}</code> : '-',
     },
     {
       title: '颜色',
       dataIndex: 'color',
       key: 'color',
-      render: (color) => color ? (
-        <Space>
-          <div
-            style={{
-              width: 16,
-              height: 16,
-              backgroundColor: color,
-              border: '1px solid #d9d9d9',
-              borderRadius: 2,
-            }}
-          />
-          <span>{color}</span>
-        </Space>
-      ) : '-',
+      render: (color: string | null) =>
+        color !== null && color !== undefined && color !== '' ? (
+          <Space>
+            <div
+              style={{
+                width: 16,
+                height: 16,
+                backgroundColor: color,
+                border: '1px solid #d9d9d9',
+                borderRadius: 2,
+              }}
+            />
+            <span>{color}</span>
+          </Space>
+        ) : (
+          '-'
+        ),
     },
     {
       title: '排序',
@@ -316,14 +331,10 @@ const EnumFieldPage: React.FC = () => {
       key: 'action',
       render: (_, record) => (
         <Space>
-          <Button
-            type="link"
-            icon={<EditOutlined />}
-            onClick={() => handleEditValue(record)}
-          />
+          <Button type="link" icon={<EditOutlined />} onClick={() => handleEditValue(record)} />
           <Popconfirm
             title="确定删除此枚举值吗？"
-            onConfirm={() => handleDeleteValue(record.id)}
+            onConfirm={() => void handleDeleteValue(record.id)}
           >
             <Button type="link" danger icon={<DeleteOutlined />} />
           </Popconfirm>
@@ -347,22 +358,30 @@ const EnumFieldPage: React.FC = () => {
 
   const handleDeleteType = async (id: string) => {
     try {
-      const success = await unifiedDictionaryService.deleteEnumFieldType(id)
+      const success = await unifiedDictionaryService.deleteEnumFieldType(id);
       if (success) {
         message.success('删除成功');
-        loadEnumTypes();
-        loadStatistics();
+        void loadEnumTypes();
+        void loadStatistics();
       } else {
         message.error('删除失败');
       }
     } catch (error: unknown) {
-      const apiError = error as ApiError
-      message.error(apiError?.message || '删除失败');
+      const apiError = error as ApiError;
+      message.error(
+        apiError !== null &&
+          apiError !== undefined &&
+          apiError.message !== null &&
+          apiError.message !== undefined &&
+          apiError.message !== ''
+          ? apiError.message
+          : '删除失败'
+      );
     }
   };
 
   const handleCreateValue = () => {
-    if (!selectedTypeId) {
+    if (selectedTypeId === null || selectedTypeId === undefined || selectedTypeId === '') {
       message.warning('请先选择枚举类型');
       return;
     }
@@ -379,52 +398,79 @@ const EnumFieldPage: React.FC = () => {
 
   const handleDeleteValue = async (id: string) => {
     try {
-      const success = await unifiedDictionaryService.deleteEnumValue(id)
-      if (success) {
+      const success = await unifiedDictionaryService.deleteEnumValue(id);
+      if (success === true) {
         message.success('删除成功');
-        if (selectedTypeId) {
-          loadEnumValues(selectedTypeId);
+        if (selectedTypeId !== null && selectedTypeId !== undefined && selectedTypeId !== '') {
+          void loadEnumValues(selectedTypeId);
         }
       } else {
         message.error('删除失败');
       }
     } catch (error: unknown) {
-      const apiError = error as ApiError
-      message.error(apiError?.message || '删除失败');
+      const apiError = error as ApiError;
+      message.error(
+        apiError !== null &&
+          apiError !== undefined &&
+          apiError.message !== null &&
+          apiError.message !== undefined &&
+          apiError.message !== ''
+          ? apiError.message
+          : '删除失败'
+      );
     }
   };
 
   // Define form types that include all potential fields
-  type EnumTypeFormValues = CreateEnumFieldTypeRequest & { is_active?: boolean }
-  type EnumValueFormValues = CreateEnumFieldValueRequest & { is_active?: boolean }
+  type EnumTypeFormValues = CreateEnumFieldTypeRequest & { is_active?: boolean };
+  type EnumValueFormValues = CreateEnumFieldValueRequest & { is_active?: boolean };
 
   const handleTypeSubmit = async (values: EnumTypeFormValues) => {
     try {
-      let success = false
-      if (editingType) {
-        success = await unifiedDictionaryService.updateEnumFieldType(editingType.id, values as UpdateEnumFieldTypeRequest) !== null
+      let success = false;
+      if (editingType !== null && editingType !== undefined) {
+        success =
+          (await unifiedDictionaryService.updateEnumFieldType(
+            editingType.id,
+            values as UpdateEnumFieldTypeRequest
+          )) !== null;
       } else {
-        success = await unifiedDictionaryService.createEnumFieldType(values) !== null
+        success = (await unifiedDictionaryService.createEnumFieldType(values)) !== null;
       }
 
       if (success) {
-        message.success(editingType ? '更新成功' : '创建成功');
+        message.success(
+          editingType !== null && editingType !== undefined ? '更新成功' : '创建成功'
+        );
         setTypeModalVisible(false);
-        loadEnumTypes();
-        loadStatistics();
+        void loadEnumTypes();
+        void loadStatistics();
       } else {
         message.error('操作失败');
       }
     } catch (error: unknown) {
-      const apiError = error as ApiError
-      message.error(apiError?.message ?? '操作失败');
+      const apiError = error as ApiError;
+      message.error(
+        apiError !== null &&
+          apiError !== undefined &&
+          apiError.message !== null &&
+          apiError.message !== undefined &&
+          apiError.message !== ''
+          ? apiError.message
+          : '操作失败'
+      );
     }
   };
 
   const handleValueSubmit = async (values: EnumValueFormValues) => {
     try {
-      let success = false
-      if (editingValue && selectedTypeId) {
+      let success = false;
+      if (
+        editingValue !== null &&
+        editingValue !== undefined &&
+        selectedTypeId !== null &&
+        selectedTypeId !== undefined
+      ) {
         // For update, we need to cast values to UpdateEnumFieldValueRequest as it might contain extra fields or we just pick what we need
         // But UpdateEnumFieldValueRequest is subset/compatible mostly.
         const updateData: UpdateEnumFieldValueRequest = {
@@ -436,26 +482,45 @@ const EnumFieldPage: React.FC = () => {
           color: values.color,
           icon: values.icon,
           is_active: values.is_active,
-          is_default: values.is_default
-        }
-        success = await unifiedDictionaryService.updateEnumFieldValue(selectedTypeId, editingValue.id, updateData) !== null
+          is_default: values.is_default,
+        };
+        success =
+          (await unifiedDictionaryService.updateEnumFieldValue(
+            selectedTypeId,
+            editingValue.id,
+            updateData
+          )) !== null;
       } else {
-        success = await unifiedDictionaryService.addEnumFieldValue(editingValue?.enum_type_id || selectedTypeId!, values) !== null
+        success =
+          (await unifiedDictionaryService.addEnumFieldValue(
+            editingValue?.enum_type_id ?? selectedTypeId ?? '',
+            values
+          )) !== null;
       }
 
       if (success) {
-        message.success(editingValue ? '更新成功' : '创建成功');
+        message.success(
+          editingValue !== null && editingValue !== undefined ? '更新成功' : '创建成功'
+        );
         setValueModalVisible(false);
         setEditingValue(null);
-        if (selectedTypeId) {
-          loadEnumValues(selectedTypeId);
+        if (selectedTypeId !== null && selectedTypeId !== undefined && selectedTypeId !== '') {
+          void loadEnumValues(selectedTypeId);
         }
       } else {
         message.error('操作失败');
       }
     } catch (error: unknown) {
-      const apiError = error as ApiError
-      message.error(apiError?.message ?? '操作失败');
+      const apiError = error as ApiError;
+      message.error(
+        apiError !== null &&
+          apiError !== undefined &&
+          apiError.message !== null &&
+          apiError.message !== undefined &&
+          apiError.message !== ''
+          ? apiError.message
+          : '操作失败'
+      );
     }
   };
 
@@ -466,7 +531,7 @@ const EnumFieldPage: React.FC = () => {
           <Card>
             <Statistic
               title="枚举类型总数"
-              value={statistics?.total_types || 0}
+              value={statistics?.total_types ?? 0}
               valueStyle={{ color: '#1890ff' }}
             />
           </Card>
@@ -475,7 +540,7 @@ const EnumFieldPage: React.FC = () => {
           <Card>
             <Statistic
               title="启用类型"
-              value={statistics?.active_types || 0}
+              value={statistics?.active_types ?? 0}
               valueStyle={{ color: '#52c41a' }}
             />
           </Card>
@@ -484,7 +549,7 @@ const EnumFieldPage: React.FC = () => {
           <Card>
             <Statistic
               title="枚举值总数"
-              value={statistics?.total_values || 0}
+              value={statistics?.total_values ?? 0}
               valueStyle={{ color: '#722ed1' }}
             />
           </Card>
@@ -493,7 +558,7 @@ const EnumFieldPage: React.FC = () => {
           <Card>
             <Statistic
               title="使用次数"
-              value={statistics?.usage_count || 0}
+              value={statistics?.usage_count ?? 0}
               valueStyle={{ color: '#fa8c16' }}
             />
           </Card>
@@ -504,11 +569,7 @@ const EnumFieldPage: React.FC = () => {
         <Tabs activeKey={activeTab} onChange={setActiveTab}>
           <TabPane tab="枚举类型" key="types">
             <div style={{ marginBottom: 16 }}>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={handleCreateType}
-              >
+              <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateType}>
                 新建枚举类型
               </Button>
             </div>
@@ -520,7 +581,7 @@ const EnumFieldPage: React.FC = () => {
               pagination={{
                 showSizeChanger: true,
                 showQuickJumper: true,
-                showTotal: (total) => `共 ${total} 条记录`,
+                showTotal: total => `共 ${total} 条记录`,
               }}
             />
           </TabPane>
@@ -535,7 +596,7 @@ const EnumFieldPage: React.FC = () => {
                   onChange={setSelectedTypeId}
                   allowClear
                 >
-                  {enumTypes.map((type) => (
+                  {enumTypes.map(type => (
                     <Option key={type.id} value={type.id}>
                       {type.name}
                     </Option>
@@ -545,7 +606,9 @@ const EnumFieldPage: React.FC = () => {
                   type="primary"
                   icon={<PlusOutlined />}
                   onClick={handleCreateValue}
-                  disabled={!selectedTypeId}
+                  disabled={
+                    selectedTypeId === null || selectedTypeId === undefined || selectedTypeId === ''
+                  }
                 >
                   新建枚举值
                 </Button>
@@ -559,7 +622,7 @@ const EnumFieldPage: React.FC = () => {
               pagination={{
                 showSizeChanger: true,
                 showQuickJumper: true,
-                showTotal: (total) => `共 ${total} 条记录`,
+                showTotal: total => `共 ${total} 条记录`,
               }}
             />
           </TabPane>
@@ -577,7 +640,10 @@ const EnumFieldPage: React.FC = () => {
         <Form
           form={typeForm}
           layout="vertical"
-          onFinish={handleTypeSubmit}
+          onFinish={values => {
+            const typedValues = values as EnumTypeFormValues;
+            void handleTypeSubmit(typedValues);
+          }}
         >
           <Row gutter={16}>
             <Col span={12}>
@@ -595,7 +661,7 @@ const EnumFieldPage: React.FC = () => {
                 label="类型编码"
                 rules={[
                   { required: true, message: '请输入类型编码' },
-                  { pattern: /^[a-zA-Z0-9_]+$/, message: '编码只能包含字母、数字和下划线' }
+                  { pattern: /^[a-zA-Z0-9_]+$/, message: '编码只能包含字母、数字和下划线' },
                 ]}
               >
                 <Input placeholder="请输入类型编码" />
@@ -660,7 +726,10 @@ const EnumFieldPage: React.FC = () => {
         <Form
           form={valueForm}
           layout="vertical"
-          onFinish={handleValueSubmit}
+          onFinish={values => {
+            const typedValues = values as EnumValueFormValues;
+            void handleValueSubmit(typedValues);
+          }}
         >
           <Form.Item name="enum_type_id" hidden>
             <Input />

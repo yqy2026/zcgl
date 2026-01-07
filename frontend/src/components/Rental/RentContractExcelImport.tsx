@@ -31,7 +31,10 @@ import {
   UploadOutlined,
 } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';
-import { rentContractExcelService, ExcelImportResult } from '../../services/rentContractExcelService';
+import {
+  rentContractExcelService,
+  ExcelImportResult,
+} from '../../services/rentContractExcelService';
 
 const { Text, Paragraph } = Typography;
 const { RangePicker } = DatePicker;
@@ -69,7 +72,7 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
 
       const result = await rentContractExcelService.handleFileUpload(file, {
         ...importOptions,
-        onSuccess: (result) => {
+        onSuccess: result => {
           setImportResult(result);
           if (result.success) {
             message.success(rentContractExcelService.getImportSuccessSummary(result));
@@ -80,7 +83,7 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
             message.error(result.message);
           }
         },
-        onError: (error) => {
+        onError: error => {
           message.error(error.message);
         },
       });
@@ -99,14 +102,36 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
   // 处理导出
   const handleExport = async () => {
     try {
-      const values = await form.validateFields();
+      const values = (await form.validateFields()) as Record<string, unknown>;
       setExporting(true);
 
+      const dateRangeValues = values.date_range as unknown[] | undefined;
+      const startDateValue =
+        dateRangeValues !== null &&
+        dateRangeValues !== undefined &&
+        dateRangeValues[0] !== null &&
+        dateRangeValues[0] !== undefined
+          ? (dateRangeValues[0] as { format: (fmt: string) => string }).format('YYYY-MM-DD')
+          : undefined;
+      const endDateValue =
+        dateRangeValues !== null &&
+        dateRangeValues !== undefined &&
+        dateRangeValues[1] !== null &&
+        dateRangeValues[1] !== undefined
+          ? (dateRangeValues[1] as { format: (fmt: string) => string }).format('YYYY-MM-DD')
+          : undefined;
+
       await rentContractExcelService.exportAndDownload({
-        start_date: values.date_range?.[0]?.format('YYYY-MM-DD'),
-        end_date: values.date_range?.[1]?.format('YYYY-MM-DD'),
-        include_terms: values.include_terms,
-        include_ledger: values.include_ledger,
+        start_date: startDateValue,
+        end_date: endDateValue,
+        include_terms:
+          values.include_terms === null || values.include_terms === undefined
+            ? undefined
+            : Boolean(values.include_terms),
+        include_ledger:
+          values.include_ledger === null || values.include_ledger === undefined
+            ? undefined
+            : Boolean(values.include_ledger),
       });
 
       message.success('导出成功');
@@ -141,7 +166,7 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
       }
 
       // 开始上传
-      handleFileUpload(file);
+      void handleFileUpload(file);
       return Upload.LIST_IGNORE; // 阻止自动上传
     },
     fileList,
@@ -161,7 +186,7 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
                 key="template"
                 type="link"
                 icon={<DownloadOutlined />}
-                onClick={handleDownloadTemplate}
+                onClick={() => void handleDownloadTemplate()}
               >
                 下载模板
               </Button>,
@@ -251,7 +276,7 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
             <Space direction="vertical" size="small" style={{ width: '100%' }}>
               <Checkbox
                 checked={importOptions.import_terms}
-                onChange={(e) =>
+                onChange={e =>
                   setImportOptions({
                     ...importOptions,
                     import_terms: e.target.checked,
@@ -262,7 +287,7 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
               </Checkbox>
               <Checkbox
                 checked={importOptions.import_ledger}
-                onChange={(e) =>
+                onChange={e =>
                   setImportOptions({
                     ...importOptions,
                     import_ledger: e.target.checked,
@@ -273,7 +298,7 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
               </Checkbox>
               <Checkbox
                 checked={importOptions.overwrite_existing}
-                onChange={(e) =>
+                onChange={e =>
                   setImportOptions({
                     ...importOptions,
                     overwrite_existing: e.target.checked,
@@ -287,12 +312,7 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
 
           {/* 文件上传 */}
           <Upload {...uploadProps}>
-            <Button
-              icon={<UploadOutlined />}
-              loading={importing}
-              disabled={importing}
-              block
-            >
+            <Button icon={<UploadOutlined />} loading={importing} disabled={importing} block>
               {importing ? '正在导入...' : '选择Excel文件'}
             </Button>
           </Upload>
@@ -315,25 +335,13 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
               <Space direction="vertical" size="small" style={{ width: '100%' }}>
                 <Row gutter={16}>
                   <Col span={8}>
-                    <Statistic
-                      title="合同"
-                      value={importResult.imported_contracts}
-                      suffix="个"
-                    />
+                    <Statistic title="合同" value={importResult.imported_contracts} suffix="个" />
                   </Col>
                   <Col span={8}>
-                    <Statistic
-                      title="条款"
-                      value={importResult.imported_terms}
-                      suffix="个"
-                    />
+                    <Statistic title="条款" value={importResult.imported_terms} suffix="个" />
                   </Col>
                   <Col span={8}>
-                    <Statistic
-                      title="台账"
-                      value={importResult.imported_ledgers}
-                      suffix="个"
-                    />
+                    <Statistic title="台账" value={importResult.imported_ledgers} suffix="个" />
                   </Col>
                 </Row>
 
@@ -343,7 +351,7 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
                     <List
                       size="small"
                       dataSource={importResult.warnings.slice(0, 3)}
-                      renderItem={(item) => (
+                      renderItem={item => (
                         <List.Item>
                           <Text type="warning">{item}</Text>
                         </List.Item>
@@ -363,16 +371,14 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
                     <List
                       size="small"
                       dataSource={importResult.errors.slice(0, 3)}
-                      renderItem={(item) => (
+                      renderItem={item => (
                         <List.Item>
                           <Text type="danger">{item}</Text>
                         </List.Item>
                       )}
                     />
                     {importResult.errors.length > 3 && (
-                      <Text type="secondary">
-                        还有 {importResult.errors.length - 3} 个错误...
-                      </Text>
+                      <Text type="secondary">还有 {importResult.errors.length - 3} 个错误...</Text>
                     )}
                   </>
                 )}
@@ -386,7 +392,7 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
       <Modal
         title="导出Excel文件"
         open={exportModalVisible}
-        onOk={handleExport}
+        onOk={() => void handleExport()}
         onCancel={() => {
           setExportModalVisible(false);
           form.resetFields();

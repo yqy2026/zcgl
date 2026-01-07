@@ -15,7 +15,9 @@ const OwnershipManagementPage: React.FC = () => {
       <div style={{ marginBottom: '24px' }}>
         <Row justify="space-between" align="middle">
           <Col>
-            <Title level={2} style={{ margin: 0 }}>权属方管理</Title>
+            <Title level={2} style={{ margin: 0 }}>
+              权属方管理
+            </Title>
           </Col>
         </Row>
       </div>
@@ -23,11 +25,13 @@ const OwnershipManagementPage: React.FC = () => {
       {/* 权属方列表 */}
       <Suspense
         fallback={
-          <div style={{
-            padding: '60px',
-            textAlign: 'center',
-            backgroundColor: '#fafafa'
-          }}>
+          <div
+            style={{
+              padding: '60px',
+              textAlign: 'center',
+              backgroundColor: '#fafafa',
+            }}
+          >
             <Spin size="large" />
             <div style={{ marginTop: '16' }}>正在加载权属方管理功能...</div>
           </div>

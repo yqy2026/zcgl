@@ -1,87 +1,102 @@
-import React, { useState, useEffect } from 'react'
-import { Card, Row, Col, Descriptions, Tag, Button, Space, Modal, Form, Input, message, Skeleton, Typography } from 'antd'
-import { UserOutlined, EditOutlined, LockOutlined, HistoryOutlined } from '@ant-design/icons'
-import { useAuth } from '../../hooks/useAuth'
-import { AuthService } from '../../services/authService'
+import React, { useState, useEffect } from 'react';
+import {
+  Card,
+  Row,
+  Col,
+  Descriptions,
+  Tag,
+  Button,
+  Space,
+  Modal,
+  Form,
+  Input,
+  message,
+  Skeleton,
+  Typography,
+} from 'antd';
+import { UserOutlined, EditOutlined, LockOutlined, HistoryOutlined } from '@ant-design/icons';
+import { useAuth } from '../../hooks/useAuth';
+import { AuthService } from '../../services/authService';
 
-const { Title, Text } = Typography
+const { Title, Text } = Typography;
 
 interface ProfileFormData {
-  full_name: string
-  email?: string
-  phone?: string
+  full_name: string;
+  email?: string;
+  phone?: string;
 }
 
 const ProfilePage: React.FC = () => {
-  const { user, refreshUser } = useAuth()
-  const [loading, setLoading] = useState(false)
-  const [editModalVisible, setEditModalVisible] = useState(false)
-  const [passwordModalVisible, setPasswordModalVisible] = useState(false)
-  const [form] = Form.useForm()
-  const [passwordForm] = Form.useForm()
+  const { user, refreshUser } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
+  const [form] = Form.useForm();
+  const [passwordForm] = Form.useForm();
 
   // 初始化数据
   useEffect(() => {
     if (user) {
       form.setFieldsValue({
-        full_name: user.full_name || '',
-        email: user.email || '',
-        phone: user.phone || ''
-      })
+        full_name: user.full_name ?? '',
+        email: user.email ?? '',
+        phone: user.phone ?? '',
+      });
     }
-  }, [user, form])
+  }, [user, form]);
 
   // 处理个人资料更新
   const handleUpdateProfile = async (values: ProfileFormData) => {
-    if (!user) return
-
-    setLoading(true)
-    try {
-      await AuthService.updateProfile(values)
-      message.success('个人资料更新成功')
-      setEditModalVisible(false)
-      await refreshUser() // 刷新用户信息
-    } catch (error: unknown) {
-      message.error((error as Error).message || '更新失败，请稍后重试')
-    } finally {
-      setLoading(false)
+    if (!user) {
+      return;
     }
-  }
+
+    setLoading(true);
+    try {
+      await AuthService.updateProfile(values);
+      message.success('个人资料更新成功');
+      setEditModalVisible(false);
+      await refreshUser(); // 刷新用户信息
+    } catch (error: unknown) {
+      message.error((error as Error).message || '更新失败，请稍后重试');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // 处理密码修改
   const handleChangePassword = async (values: { oldPassword: string; newPassword: string }) => {
-    setLoading(true)
+    setLoading(true);
     try {
-      await AuthService.changePassword(values.oldPassword, values.newPassword)
-      message.success('密码修改成功')
-      setPasswordModalVisible(false)
-      passwordForm.resetFields()
+      await AuthService.changePassword(values.oldPassword, values.newPassword);
+      message.success('密码修改成功');
+      setPasswordModalVisible(false);
+      passwordForm.resetFields();
     } catch (error: unknown) {
-      message.error((error as Error).message || '密码修改失败')
+      message.error((error as Error).message || '密码修改失败');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   // 获取角色显示名称
   const getRoleDisplay = (role: string) => {
     const roleMap: Record<string, { text: string; color: string }> = {
       admin: { text: '系统管理员', color: 'red' },
       user: { text: '普通用户', color: 'blue' },
-      manager: { text: '管理员', color: 'orange' }
-    }
-    const roleInfo = roleMap[role] || { text: role, color: 'default' }
-    return <Tag color={roleInfo.color}>{roleInfo.text}</Tag>
-  }
+      manager: { text: '管理员', color: 'orange' },
+    };
+    const roleInfo =
+      roleMap[role] !== null && roleMap[role] !== undefined
+        ? roleMap[role]
+        : { text: role, color: 'default' };
+    return <Tag color={roleInfo.color}>{roleInfo.text}</Tag>;
+  };
 
   // 获取状态显示
   const getStatusDisplay = (isActive: boolean) => {
-    return (
-      <Tag color={isActive ? 'green' : 'red'}>
-        {isActive ? '活跃' : '停用'}
-      </Tag>
-    )
-  }
+    return <Tag color={isActive ? 'green' : 'red'}>{isActive ? '活跃' : '停用'}</Tag>;
+  };
 
   if (!user) {
     return (
@@ -92,7 +107,7 @@ const ProfilePage: React.FC = () => {
           </Card>
         </Skeleton>
       </div>
-    )
+    );
   }
 
   return (
@@ -125,16 +140,18 @@ const ProfilePage: React.FC = () => {
             <Row gutter={[24, 24]}>
               <Col xs={24} md={8}>
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{
-                    width: '80px',
-                    height: '80px',
-                    margin: '0 auto 16px',
-                    borderRadius: '50%',
-                    background: '#f0f0f0',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}>
+                  <div
+                    style={{
+                      width: '80px',
+                      height: '80px',
+                      margin: '0 auto 16px',
+                      borderRadius: '50%',
+                      background: '#f0f0f0',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
                     <UserOutlined style={{ fontSize: '32px', color: '#1890ff' }} />
                   </div>
                   <Text type="secondary">用户头像</Text>
@@ -147,31 +164,41 @@ const ProfilePage: React.FC = () => {
                     <Text strong>{user.username}</Text>
                   </Descriptions.Item>
                   <Descriptions.Item label="姓名">
-                    <Text strong>{user.full_name || '-'}</Text>
+                    <Text strong>
+                      {user.full_name !== null &&
+                      user.full_name !== undefined &&
+                      user.full_name !== ''
+                        ? user.full_name
+                        : '-'}
+                    </Text>
                   </Descriptions.Item>
                   <Descriptions.Item label="邮箱">
-                    {user.email || '-'}
+                    {user.email !== null && user.email !== undefined && user.email !== ''
+                      ? user.email
+                      : '-'}
                   </Descriptions.Item>
                   <Descriptions.Item label="电话">
-                    {user.phone || '-'}
+                    {user.phone !== null && user.phone !== undefined && user.phone !== ''
+                      ? user.phone
+                      : '-'}
                   </Descriptions.Item>
-                  <Descriptions.Item label="角色">
-                    {getRoleDisplay(user.role)}
-                  </Descriptions.Item>
+                  <Descriptions.Item label="角色">{getRoleDisplay(user.role)}</Descriptions.Item>
                   <Descriptions.Item label="状态">
                     {getStatusDisplay(user.is_active)}
                   </Descriptions.Item>
                   <Descriptions.Item label="最后登录时间">
-                    {user.last_login_at ?
-                      new Date(user.last_login_at).toLocaleString() :
-                      '从未登录'
-                    }
+                    {user.last_login_at !== null &&
+                    user.last_login_at !== undefined &&
+                    user.last_login_at !== ''
+                      ? new Date(user.last_login_at).toLocaleString()
+                      : '从未登录'}
                   </Descriptions.Item>
                   <Descriptions.Item label="密码最后修改时间">
-                    {user.password_last_changed ?
-                      new Date(user.password_last_changed).toLocaleString() :
-                      '未修改'
-                    }
+                    {user.password_last_changed !== null &&
+                    user.password_last_changed !== undefined &&
+                    user.password_last_changed !== ''
+                      ? new Date(user.password_last_changed).toLocaleString()
+                      : '未修改'}
                   </Descriptions.Item>
                 </Descriptions>
               </Col>
@@ -190,35 +217,36 @@ const ProfilePage: React.FC = () => {
             }
           >
             <Space direction="vertical" size="large" style={{ width: '100%' }}>
-              <div style={{
-                padding: '16px',
-                background: '#fafafa',
-                borderRadius: '6px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}>
+              <div
+                style={{
+                  padding: '16px',
+                  background: '#fafafa',
+                  borderRadius: '6px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
                 <div>
                   <Text strong>登录密码</Text>
                   <br />
                   <Text type="secondary">建议定期修改密码，确保账户安全</Text>
                 </div>
-                <Button
-                  icon={<LockOutlined />}
-                  onClick={() => setPasswordModalVisible(true)}
-                >
+                <Button icon={<LockOutlined />} onClick={() => setPasswordModalVisible(true)}>
                   修改密码
                 </Button>
               </div>
 
-              <div style={{
-                padding: '16px',
-                background: '#fafafa',
-                borderRadius: '6px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}>
+              <div
+                style={{
+                  padding: '16px',
+                  background: '#fafafa',
+                  borderRadius: '6px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
                 <div>
                   <Text strong>登录历史</Text>
                   <br />
@@ -227,7 +255,7 @@ const ProfilePage: React.FC = () => {
                 <Button
                   icon={<HistoryOutlined />}
                   onClick={() => {
-                    message.info('登录历史功能开发中')
+                    void message.info('登录历史功能开发中');
                   }}
                 >
                   查看历史
@@ -249,7 +277,7 @@ const ProfilePage: React.FC = () => {
         <Form
           form={form}
           layout="vertical"
-          onFinish={handleUpdateProfile}
+          onFinish={() => void handleUpdateProfile()}
           style={{ marginTop: '16px' }}
         >
           <Form.Item
@@ -271,9 +299,7 @@ const ProfilePage: React.FC = () => {
           <Form.Item
             label="邮箱"
             name="email"
-            rules={[
-              { type: 'email', message: '请输入正确的邮箱格式' }
-            ]}
+            rules={[{ type: 'email', message: '请输入正确的邮箱格式' }]}
           >
             <Input placeholder="请输入邮箱" />
           </Form.Item>
@@ -281,18 +307,14 @@ const ProfilePage: React.FC = () => {
           <Form.Item
             label="电话"
             name="phone"
-            rules={[
-              { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号格式' }
-            ]}
+            rules={[{ pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号格式' }]}
           >
             <Input placeholder="请输入手机号" />
           </Form.Item>
 
           <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
             <Space>
-              <Button onClick={() => setEditModalVisible(false)}>
-                取消
-              </Button>
+              <Button onClick={() => setEditModalVisible(false)}>取消</Button>
               <Button type="primary" htmlType="submit" loading={loading}>
                 保存更改
               </Button>
@@ -306,8 +328,8 @@ const ProfilePage: React.FC = () => {
         title="修改密码"
         open={passwordModalVisible}
         onCancel={() => {
-          setPasswordModalVisible(false)
-          passwordForm.resetFields()
+          setPasswordModalVisible(false);
+          passwordForm.resetFields();
         }}
         footer={null}
         width={500}
@@ -315,7 +337,7 @@ const ProfilePage: React.FC = () => {
         <Form
           form={passwordForm}
           layout="vertical"
-          onFinish={handleChangePassword}
+          onFinish={() => void handleChangePassword()}
           style={{ marginTop: '16px' }}
         >
           <Form.Item
@@ -331,7 +353,7 @@ const ProfilePage: React.FC = () => {
             name="newPassword"
             rules={[
               { required: true, message: '请输入新密码' },
-              { min: 6, message: '密码长度至少6位' }
+              { min: 6, message: '密码长度至少6位' },
             ]}
           >
             <Input.Password placeholder="请输入新密码" />
@@ -345,10 +367,15 @@ const ProfilePage: React.FC = () => {
               { required: true, message: '请确认新密码' },
               ({ getFieldValue }) => ({
                 validator(_, value) {
-                  if (!value || getFieldValue('newPassword') === value) {
-                    return Promise.resolve()
+                  if (
+                    value === null ||
+                    value === undefined ||
+                    value === '' ||
+                    getFieldValue('newPassword') === value
+                  ) {
+                    return Promise.resolve();
                   }
-                  return Promise.reject(new Error('两次输入的密码不一致'))
+                  return Promise.reject(new Error('两次输入的密码不一致'));
                 },
               }),
             ]}
@@ -358,10 +385,12 @@ const ProfilePage: React.FC = () => {
 
           <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
             <Space>
-              <Button onClick={() => {
-                setPasswordModalVisible(false)
-                passwordForm.resetFields()
-              }}>
+              <Button
+                onClick={() => {
+                  setPasswordModalVisible(false);
+                  passwordForm.resetFields();
+                }}
+              >
                 取消
               </Button>
               <Button type="primary" htmlType="submit" loading={loading}>
@@ -372,7 +401,7 @@ const ProfilePage: React.FC = () => {
         </Form>
       </Modal>
     </div>
-  )
-}
+  );
+};
 
-export default ProfilePage
+export default ProfilePage;

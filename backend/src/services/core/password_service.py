@@ -1,10 +1,11 @@
-from datetime import datetime, timedelta
-import json
 import base64
+import json
+from datetime import datetime, timedelta
+
 import bcrypt
 
-from ...models.auth import User
 from ...core.config import settings
+from ...models.auth import User
 
 # 密码策略
 MIN_PASSWORD_LENGTH = settings.MIN_PASSWORD_LENGTH
@@ -13,7 +14,7 @@ PASSWORD_EXPIRE_DAYS = int(getattr(settings, "PASSWORD_EXPIRE_DAYS", 90))
 
 class PasswordService:
     """密码相关服务"""
-    
+
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         """验证密码"""
         try:

@@ -3,8 +3,8 @@
  * 配置Mock Service Worker服务器用于测试
  */
 
-import { setupServer } from 'msw/node'
-import { handlers } from './handlers'
+import { setupServer } from 'msw/node';
+import { handlers } from './handlers';
 
 /**
  * 创建MSW服务器实例
@@ -15,7 +15,7 @@ import { handlers } from './handlers'
  * 3. 在afterAll中关闭: mswServer.close()
  * 4. 在afterEach中重置: mswServer.resetHandlers()
  */
-export const mswServer = setupServer(...handlers)
+export const mswServer = setupServer(...handlers);
 
 // 默认导出
-export default mswServer
+export default mswServer;

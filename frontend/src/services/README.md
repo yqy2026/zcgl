@@ -34,21 +34,21 @@ services/
 - **文件下载**: 自动处理文件下载
 
 ```typescript
-import { apiClient } from '@/services'
+import { apiClient } from '@/services';
 
 // GET请求
-const data = await apiClient.get('/assets')
+const data = await apiClient.get('/assets');
 
 // POST请求
-const result = await apiClient.post('/assets', assetData)
+const result = await apiClient.post('/assets', assetData);
 
 // 文件上传
-const uploadResult = await apiClient.upload('/excel/import', file, (progress) => {
-  console.log(`上传进度: ${progress}%`)
-})
+const uploadResult = await apiClient.upload('/excel/import', file, progress => {
+  console.log(`上传进度: ${progress}%`);
+});
 
 // 文件下载
-await apiClient.download('/excel/export/file.xlsx', '资产数据.xlsx')
+await apiClient.download('/excel/export/file.xlsx', '资产数据.xlsx');
 ```
 
 ### 2. 资产服务 (assetService.ts)
@@ -56,24 +56,24 @@ await apiClient.download('/excel/export/file.xlsx', '资产数据.xlsx')
 提供完整的资产管理API：
 
 ```typescript
-import { assetService } from '@/services'
+import { assetService } from '@/services';
 
 // 获取资产列表
 const assets = await assetService.getAssets({
   page: 1,
   limit: 20,
   search: '写字楼',
-})
+});
 
 // 创建资产
 const newAsset = await assetService.createAsset({
   property_name: '新写字楼',
   ownership_entity: '某公司',
   // ... 其他字段
-})
+});
 
 // 获取变更历史
-const history = await assetService.getAssetHistory(assetId)
+const history = await assetService.getAssetHistory(assetId);
 ```
 
 ### 3. 统计服务 (statisticsService.ts)
@@ -81,16 +81,16 @@ const history = await assetService.getAssetHistory(assetId)
 提供数据统计和分析功能：
 
 ```typescript
-import { statisticsService } from '@/services'
+import { statisticsService } from '@/services';
 
 // 获取仪表板数据
-const dashboard = await statisticsService.getDashboardData()
+const dashboard = await statisticsService.getDashboardData();
 
 // 获取权属分布
-const distribution = await statisticsService.getOwnershipDistribution()
+const distribution = await statisticsService.getOwnershipDistribution();
 
 // 生成报表
-const report = await statisticsService.generateReport('monthly', filters)
+const report = await statisticsService.generateReport('monthly', filters);
 ```
 
 ### 4. Excel服务 (excelService.ts)
@@ -98,21 +98,21 @@ const report = await statisticsService.generateReport('monthly', filters)
 处理Excel文件的导入导出：
 
 ```typescript
-import { excelService } from '@/services'
+import { excelService } from '@/services';
 
 // 导入Excel
-const importResult = await excelService.importExcel(file, '物业总表', (progress) => {
-  console.log(`导入进度: ${progress}%`)
-})
+const importResult = await excelService.importExcel(file, '物业总表', progress => {
+  console.log(`导入进度: ${progress}%`);
+});
 
 // 导出Excel
 const exportResult = await excelService.exportExcel({
   filters: { property_nature: '经营类' },
   format: 'xlsx',
-})
+});
 
 // 下载模板
-await excelService.downloadTemplate()
+await excelService.downloadTemplate();
 ```
 
 ### 5. PDF服务 (pdfService.ts)
@@ -120,16 +120,16 @@ await excelService.downloadTemplate()
 处理PDF文件的导入和信息提取：
 
 ```typescript
-import { pdfService } from '@/services'
+import { pdfService } from '@/services';
 
 // 上传PDF文件
-const uploadResult = await pdfService.uploadPdf(file)
+const uploadResult = await pdfService.uploadPdf(file);
 
 // 提取合同信息
-const contractData = await pdfService.extractContract(sessionId)
+const contractData = await pdfService.extractContract(sessionId);
 
 // 验证合同数据
-const validation = await pdfService.validateContract(contractData)
+const validation = await pdfService.validateContract(contractData);
 ```
 
 ### 6. 权限管理服务 (rbacService.ts)
@@ -137,16 +137,16 @@ const validation = await pdfService.validateContract(contractData)
 处理用户认证和权限管理：
 
 ```typescript
-import { rbacService } from '@/services'
+import { rbacService } from '@/services';
 
 // 用户登录
-const loginResult = await rbacService.login(username, password)
+const loginResult = await rbacService.login(username, password);
 
 // 获取用户权限
-const permissions = await rbacService.getUserPermissions(userId)
+const permissions = await rbacService.getUserPermissions(userId);
 
 // 创建角色
-const role = await rbacService.createRole(roleData)
+const role = await rbacService.createRole(roleData);
 ```
 
 ### 7. 组织架构服务 (organizationService.ts)
@@ -154,13 +154,13 @@ const role = await rbacService.createRole(roleData)
 处理组织架构管理：
 
 ```typescript
-import { organizationService } from '@/services'
+import { organizationService } from '@/services';
 
 // 获取组织架构
-const orgTree = await organizationService.getOrganizationTree()
+const orgTree = await organizationService.getOrganizationTree();
 
 // 创建组织
-const org = await organizationService.createOrganization(orgData)
+const org = await organizationService.createOrganization(orgData);
 ```
 
 ## 字典服务 (dictionary/)
@@ -174,16 +174,20 @@ const org = await organizationService.createOrganization(orgData)
 自动处理API错误并显示用户友好的提示：
 
 ```typescript
-import { handleApiError } from '@/services'
+import { handleApiError } from '@/services';
 
 try {
-  const result = await assetService.createAsset(data)
+  const result = await assetService.createAsset(data);
 } catch (error) {
   // 自动显示错误消息
-  handleApiError(error, {
-    showMessage: true,
-    showNotification: false,
-  }, '创建资产')
+  handleApiError(
+    error,
+    {
+      showMessage: true,
+      showNotification: false,
+    },
+    '创建资产'
+  );
 }
 ```
 
@@ -192,19 +196,19 @@ try {
 智能缓存API响应以提高性能：
 
 ```typescript
-import { cacheManager, cached } from '@/services'
+import { cacheManager, cached } from '@/services';
 
 // 使用装饰器缓存方法结果
 class MyService {
   @cached({ ttl: 5 * 60 * 1000, tags: ['assets'] })
   async getAssets() {
-    return await apiClient.get('/assets')
+    return await apiClient.get('/assets');
   }
 }
 
 // 手动管理缓存
-cacheManager.set('/assets', data, { ttl: 300000 })
-const cachedData = cacheManager.get('/assets')
+cacheManager.set('/assets', data, { ttl: 300000 });
+const cachedData = cacheManager.get('/assets');
 ```
 
 ### 3. 请求配置
@@ -212,18 +216,18 @@ const cachedData = cacheManager.get('/assets')
 灵活的配置选项：
 
 ```typescript
-import { API_CONFIG, ENDPOINTS } from '@/services'
+import { API_CONFIG, ENDPOINTS } from '@/services';
 
 // 使用预定义的端点
-const url = ENDPOINTS.ASSET_DETAIL('123')
+const url = ENDPOINTS.ASSET_DETAIL('123');
 
 // 检查环境
 if (API_CONFIG.ENV.DEVELOPMENT) {
-  console.log('开发环境')
+  console.log('开发环境');
 }
 
 // 验证文件
-const isValid = API_CONFIG.isValidFileType(file)
+const isValid = API_CONFIG.isValidFileType(file);
 ```
 
 ## 类型安全
@@ -231,14 +235,14 @@ const isValid = API_CONFIG.isValidFileType(file)
 所有服务都提供完整的TypeScript类型支持：
 
 ```typescript
-import type { Asset, AssetCreateRequest, AssetListResponse } from '@/types/asset'
-import type { ApiResponse, ErrorResponse } from '@/types/api'
+import type { Asset, AssetCreateRequest, AssetListResponse } from '@/types/asset';
+import type { ApiResponse, ErrorResponse } from '@/types/api';
 
 // 类型安全的API调用
 const createAsset = async (data: AssetCreateRequest): Promise<Asset> => {
-  const response = await assetService.createAsset(data)
-  return response
-}
+  const response = await assetService.createAsset(data);
+  return response;
+};
 ```
 
 ## 配置选项
@@ -261,11 +265,11 @@ VITE_APP_VERSION=1.0.0
 ### 运行时配置
 
 ```typescript
-import { API_CONFIG } from '@/services'
+import { API_CONFIG } from '@/services';
 
 // 修改配置
-API_CONFIG.TIMEOUT = 60000
-API_CONFIG.RETRY.ATTEMPTS = 5
+API_CONFIG.TIMEOUT = 60000;
+API_CONFIG.RETRY.ATTEMPTS = 5;
 ```
 
 ## 最佳实践
@@ -275,22 +279,22 @@ API_CONFIG.RETRY.ATTEMPTS = 5
 ```typescript
 // ✅ 推荐：使用统一的错误处理
 try {
-  const result = await assetService.createAsset(data)
-  message.success('创建成功')
-  return result
+  const result = await assetService.createAsset(data);
+  message.success('创建成功');
+  return result;
 } catch (error) {
-  handleApiError(error, { showMessage: true }, '创建资产')
-  throw error
+  handleApiError(error, { showMessage: true }, '创建资产');
+  throw error;
 }
 
 // ❌ 不推荐：手动处理每个错误
 try {
-  const result = await assetService.createAsset(data)
+  const result = await assetService.createAsset(data);
 } catch (error) {
   if (error.status === 400) {
-    message.error('参数错误')
+    message.error('参数错误');
   } else if (error.status === 500) {
-    message.error('服务器错误')
+    message.error('服务器错误');
   }
 }
 ```
@@ -316,13 +320,13 @@ async getAssetList() {
 ```typescript
 // ✅ 推荐：使用具体的类型
 const createAsset = async (data: AssetCreateRequest): Promise<Asset> => {
-  return await assetService.createAsset(data)
-}
+  return await assetService.createAsset(data);
+};
 
 // ❌ 不推荐：使用any类型
 const createAsset = async (data: any): Promise<any> => {
-  return await assetService.createAsset(data)
-}
+  return await assetService.createAsset(data);
+};
 ```
 
 ## 调试和监控
@@ -354,10 +358,10 @@ private sendErrorToLogService(logData: any): void {
 
 ```typescript
 // 监控API响应时间
-const startTime = performance.now()
-const result = await assetService.getAssets()
-const endTime = performance.now()
-console.log(`API调用耗时: ${endTime - startTime}ms`)
+const startTime = performance.now();
+const result = await assetService.getAssets();
+const endTime = performance.now();
+console.log(`API调用耗时: ${endTime - startTime}ms`);
 ```
 
 ## 扩展指南
@@ -368,15 +372,15 @@ console.log(`API调用耗时: ${endTime - startTime}ms`)
 // 1. 创建服务类
 export class NewService {
   async getData(): Promise<any> {
-    return await apiClient.get('/new-endpoint')
+    return await apiClient.get('/new-endpoint');
   }
 }
 
 // 2. 导出服务实例
-export const newService = new NewService()
+export const newService = new NewService();
 
 // 3. 在index.ts中导出
-export { newService, NewService } from './newService'
+export { newService, NewService } from './newService';
 ```
 
 ### 2. 添加新的错误类型
@@ -405,7 +409,7 @@ private getErrorMessage(error: ErrorResponse): string {
 export function customCached(strategy: 'memory' | 'localStorage') {
   return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
     // 实现自定义缓存逻辑
-  }
+  };
 }
 ```
 

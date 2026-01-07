@@ -11,7 +11,7 @@ export enum EngineType {
   PYMUPDF = 'pymupdf',
   PDFPLUMBER = 'pdfplumber',
   CUSTOM_NLP = 'custom_nlp',
-  VISION_AI = 'vision_ai'
+  VISION_AI = 'vision_ai',
 }
 
 // 字段类型枚举
@@ -28,7 +28,7 @@ export enum FieldType {
   EMAIL = 'email',
   URL = 'url',
   BOOLEAN = 'boolean',
-  ENUM = 'enum'
+  ENUM = 'enum',
 }
 
 // 验证级别枚举
@@ -36,7 +36,7 @@ export enum ValidationLevel {
   ERROR = 'error',
   WARNING = 'warning',
   INFO = 'info',
-  SUCCESS = 'success'
+  SUCCESS = 'success',
 }
 
 // 引擎结果接口

@@ -4,12 +4,20 @@
  * 增强版本 - 添加更全面的测试用例
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import React from 'react'
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import React from 'react';
 
 // Mock Ant Design components
 vi.mock('antd', () => ({
-  Progress: ({ percent, status, showInfo, strokeWidth, strokeColor, type, width }: any) => (
+  Progress: ({
+    percent,
+    status,
+    showInfo,
+    strokeWidth: _strokeWidth,
+    strokeColor,
+    type,
+    width,
+  }: any) => (
     <div
       data-testid="progress"
       data-percent={percent}
@@ -42,7 +50,13 @@ vi.mock('antd', () => ({
     </div>
   ),
   Steps: ({ children, current, status, direction, size }: any) => (
-    <div data-testid="steps" data-current={current} data-status={status} data-direction={direction} data-size={size}>
+    <div
+      data-testid="steps"
+      data-current={current}
+      data-status={status}
+      data-direction={direction}
+      data-size={size}
+    >
       {children}
     </div>
   ),
@@ -53,313 +67,313 @@ vi.mock('antd', () => ({
       {icon && <div data-testid="step-icon">{icon}</div>}
     </div>
   ),
-  Timeline: ({ children }: any) => (
-    <div data-testid="timeline">{children}</div>
-  ),
+  Timeline: ({ children }: any) => <div data-testid="timeline">{children}</div>,
   'Timeline.Item': ({ children, color, dot }: any) => (
     <div data-testid="timeline-item" data-color={color}>
       {dot && <div data-testid="timeline-dot">{dot}</div>}
       {children}
     </div>
   ),
-}))
+}));
 
 vi.mock('@ant-design/icons', () => ({
   CheckCircleOutlined: ({ style }: any) => <div data-testid="icon-check" style={style} />,
   LoadingOutlined: ({ style }: any) => <div data-testid="icon-loading" style={style} />,
   ClockCircleOutlined: ({ style }: any) => <div data-testid="icon-clock" style={style} />,
-  ExclamationCircleOutlined: ({ style }: any) => <div data-testid="icon-exclamation" style={style} />,
-}))
+  ExclamationCircleOutlined: ({ style }: any) => (
+    <div data-testid="icon-exclamation" style={style} />
+  ),
+}));
 
 describe('ProgressIndicator - 组件导入测试', () => {
   it('应该能够导入ProgressIndicator组件', async () => {
-    const module = await import('../ProgressIndicator')
-    expect(module).toBeDefined()
-    expect(module.default).toBeDefined()
-  })
+    const module = await import('../ProgressIndicator');
+    expect(module).toBeDefined();
+    expect(module.default).toBeDefined();
+  });
 
   it('应该导出预设组件', async () => {
-    const module = await import('../ProgressIndicator')
-    expect(module.LoadingProgress).toBeDefined()
-    expect(module.UploadProgress).toBeDefined()
-    expect(module.ProcessSteps).toBeDefined()
-    expect(module.ProcessTimeline).toBeDefined()
-    expect(module.ProgressCard).toBeDefined()
-  })
-})
+    const module = await import('../ProgressIndicator');
+    expect(module.LoadingProgress).toBeDefined();
+    expect(module.UploadProgress).toBeDefined();
+    expect(module.ProcessSteps).toBeDefined();
+    expect(module.ProcessTimeline).toBeDefined();
+    expect(module.ProgressCard).toBeDefined();
+  });
+});
 
 describe('ProgressIndicator - 基础属性测试', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-  })
+    vi.clearAllMocks();
+  });
 
   it('应该支持type属性', async () => {
-    const ProgressIndicator = (await import('../ProgressIndicator')).default
-    const element = React.createElement(ProgressIndicator, { type: 'line' })
-    expect(element).toBeTruthy()
-  })
+    const ProgressIndicator = (await import('../ProgressIndicator')).default;
+    const element = React.createElement(ProgressIndicator, { type: 'line' });
+    expect(element).toBeTruthy();
+  });
 
   it('应该支持percent属性', async () => {
-    const ProgressIndicator = (await import('../ProgressIndicator')).default
-    const element = React.createElement(ProgressIndicator, { type: 'line', percent: 50 })
-    expect(element).toBeTruthy()
-  })
+    const ProgressIndicator = (await import('../ProgressIndicator')).default;
+    const element = React.createElement(ProgressIndicator, { type: 'line', percent: 50 });
+    expect(element).toBeTruthy();
+  });
 
   it('应该支持status属性', async () => {
-    const ProgressIndicator = (await import('../ProgressIndicator')).default
-    const element = React.createElement(ProgressIndicator, { type: 'line', status: 'success' })
-    expect(element).toBeTruthy()
-  })
+    const ProgressIndicator = (await import('../ProgressIndicator')).default;
+    const element = React.createElement(ProgressIndicator, { type: 'line', status: 'success' });
+    expect(element).toBeTruthy();
+  });
 
   it('应该支持title属性', async () => {
-    const ProgressIndicator = (await import('../ProgressIndicator')).default
-    const element = React.createElement(ProgressIndicator, { type: 'line', title: '进度' })
-    expect(element).toBeTruthy()
-  })
+    const ProgressIndicator = (await import('../ProgressIndicator')).default;
+    const element = React.createElement(ProgressIndicator, { type: 'line', title: '进度' });
+    expect(element).toBeTruthy();
+  });
 
   it('应该支持description属性', async () => {
-    const ProgressIndicator = (await import('../ProgressIndicator')).default
-    const element = React.createElement(ProgressIndicator, { type: 'line', description: '描述' })
-    expect(element).toBeTruthy()
-  })
-})
+    const ProgressIndicator = (await import('../ProgressIndicator')).default;
+    const element = React.createElement(ProgressIndicator, { type: 'line', description: '描述' });
+    expect(element).toBeTruthy();
+  });
+});
 
 describe('ProgressIndicator - 进度类型测试', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-  })
+    vi.clearAllMocks();
+  });
 
   it('应该支持line类型', async () => {
-    const ProgressIndicator = (await import('../ProgressIndicator')).default
-    const element = React.createElement(ProgressIndicator, { type: 'line', percent: 30 })
-    expect(element).toBeTruthy()
-  })
+    const ProgressIndicator = (await import('../ProgressIndicator')).default;
+    const element = React.createElement(ProgressIndicator, { type: 'line', percent: 30 });
+    expect(element).toBeTruthy();
+  });
 
   it('应该支持circle类型', async () => {
-    const ProgressIndicator = (await import('../ProgressIndicator')).default
-    const element = React.createElement(ProgressIndicator, { type: 'circle', percent: 50 })
-    expect(element).toBeTruthy()
-  })
+    const ProgressIndicator = (await import('../ProgressIndicator')).default;
+    const element = React.createElement(ProgressIndicator, { type: 'circle', percent: 50 });
+    expect(element).toBeTruthy();
+  });
 
   it('应该支持dashboard类型', async () => {
-    const ProgressIndicator = (await import('../ProgressIndicator')).default
-    const element = React.createElement(ProgressIndicator, { type: 'dashboard', percent: 75 })
-    expect(element).toBeTruthy()
-  })
+    const ProgressIndicator = (await import('../ProgressIndicator')).default;
+    const element = React.createElement(ProgressIndicator, { type: 'dashboard', percent: 75 });
+    expect(element).toBeTruthy();
+  });
 
   it('应该支持steps类型', async () => {
-    const ProgressIndicator = (await import('../ProgressIndicator')).default
+    const ProgressIndicator = (await import('../ProgressIndicator')).default;
     const steps = [
       { title: '步骤1', status: 'finish' },
       { title: '步骤2', status: 'process' },
       { title: '步骤3', status: 'wait' },
-    ]
+    ];
     const element = React.createElement(ProgressIndicator, {
       type: 'steps',
       steps,
       current: 1,
-    })
-    expect(element).toBeTruthy()
-  })
+    });
+    expect(element).toBeTruthy();
+  });
 
   it('应该支持timeline类型', async () => {
-    const ProgressIndicator = (await import('../ProgressIndicator')).default
+    const ProgressIndicator = (await import('../ProgressIndicator')).default;
     const steps = [
       { title: '事件1', status: 'finish' },
       { title: '事件2', status: 'process' },
-    ]
+    ];
     const element = React.createElement(ProgressIndicator, {
       type: 'timeline',
       steps,
-    })
-    expect(element).toBeTruthy()
-  })
-})
+    });
+    expect(element).toBeTruthy();
+  });
+});
 
 describe('ProgressIndicator - 进度状态测试', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-  })
+    vi.clearAllMocks();
+  });
 
   it('应该支持normal状态', async () => {
-    const ProgressIndicator = (await import('../ProgressIndicator')).default
-    const element = React.createElement(ProgressIndicator, { type: 'line', status: 'normal' })
-    expect(element).toBeTruthy()
-  })
+    const ProgressIndicator = (await import('../ProgressIndicator')).default;
+    const element = React.createElement(ProgressIndicator, { type: 'line', status: 'normal' });
+    expect(element).toBeTruthy();
+  });
 
   it('应该支持success状态', async () => {
-    const ProgressIndicator = (await import('../ProgressIndicator')).default
-    const element = React.createElement(ProgressIndicator, { type: 'line', status: 'success' })
-    expect(element).toBeTruthy()
-  })
+    const ProgressIndicator = (await import('../ProgressIndicator')).default;
+    const element = React.createElement(ProgressIndicator, { type: 'line', status: 'success' });
+    expect(element).toBeTruthy();
+  });
 
   it('应该支持exception状态', async () => {
-    const ProgressIndicator = (await import('../ProgressIndicator')).default
-    const element = React.createElement(ProgressIndicator, { type: 'line', status: 'exception' })
-    expect(element).toBeTruthy()
-  })
+    const ProgressIndicator = (await import('../ProgressIndicator')).default;
+    const element = React.createElement(ProgressIndicator, { type: 'line', status: 'exception' });
+    expect(element).toBeTruthy();
+  });
 
   it('应该支持active状态', async () => {
-    const ProgressIndicator = (await import('../ProgressIndicator')).default
-    const element = React.createElement(ProgressIndicator, { type: 'line', status: 'active' })
-    expect(element).toBeTruthy()
-  })
-})
+    const ProgressIndicator = (await import('../ProgressIndicator')).default;
+    const element = React.createElement(ProgressIndicator, { type: 'line', status: 'active' });
+    expect(element).toBeTruthy();
+  });
+});
 
 describe('ProgressIndicator - 配置属性测试', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-  })
+    vi.clearAllMocks();
+  });
 
   it('应该支持showInfo属性', async () => {
-    const ProgressIndicator = (await import('../ProgressIndicator')).default
+    const ProgressIndicator = (await import('../ProgressIndicator')).default;
     const element = React.createElement(ProgressIndicator, {
       type: 'line',
       showInfo: false,
-    })
-    expect(element).toBeTruthy()
-  })
+    });
+    expect(element).toBeTruthy();
+  });
 
   it('应该支持strokeWidth属性', async () => {
-    const ProgressIndicator = (await import('../ProgressIndicator')).default
+    const ProgressIndicator = (await import('../ProgressIndicator')).default;
     const element = React.createElement(ProgressIndicator, {
       type: 'line',
       strokeWidth: 10,
-    })
-    expect(element).toBeTruthy()
-  })
+    });
+    expect(element).toBeTruthy();
+  });
 
   it('应该支持size属性 - small', async () => {
-    const ProgressIndicator = (await import('../ProgressIndicator')).default
+    const ProgressIndicator = (await import('../ProgressIndicator')).default;
     const element = React.createElement(ProgressIndicator, {
       type: 'circle',
       size: 'small',
-    })
-    expect(element).toBeTruthy()
-  })
+    });
+    expect(element).toBeTruthy();
+  });
 
   it('应该支持size属性 - large', async () => {
-    const ProgressIndicator = (await import('../ProgressIndicator')).default
+    const ProgressIndicator = (await import('../ProgressIndicator')).default;
     const element = React.createElement(ProgressIndicator, {
       type: 'circle',
       size: 'large',
-    })
-    expect(element).toBeTruthy()
-  })
+    });
+    expect(element).toBeTruthy();
+  });
 
   it('应该支持current属性', async () => {
-    const ProgressIndicator = (await import('../ProgressIndicator')).default
-    const steps = [{ title: 'Step 1' }]
+    const ProgressIndicator = (await import('../ProgressIndicator')).default;
+    const steps = [{ title: 'Step 1' }];
     const element = React.createElement(ProgressIndicator, {
       type: 'steps',
       steps,
       current: 0,
-    })
-    expect(element).toBeTruthy()
-  })
+    });
+    expect(element).toBeTruthy();
+  });
 
   it('应该支持direction属性', async () => {
-    const ProgressIndicator = (await import('../ProgressIndicator')).default
-    const steps = [{ title: 'Step 1' }]
+    const ProgressIndicator = (await import('../ProgressIndicator')).default;
+    const steps = [{ title: 'Step 1' }];
     const element = React.createElement(ProgressIndicator, {
       type: 'steps',
       steps,
       direction: 'vertical',
-    })
-    expect(element).toBeTruthy()
-  })
-})
+    });
+    expect(element).toBeTruthy();
+  });
+});
 
 describe('ProgressIndicator - 预设组件测试', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-  })
+    vi.clearAllMocks();
+  });
 
   it('LoadingProgress应该正确渲染', async () => {
-    const { LoadingProgress } = await import('../ProgressIndicator')
-    const element = React.createElement(LoadingProgress, {})
-    expect(element).toBeTruthy()
-  })
+    const { LoadingProgress } = await import('../ProgressIndicator');
+    const element = React.createElement(LoadingProgress, {});
+    expect(element).toBeTruthy();
+  });
 
   it('UploadProgress应该正确渲染', async () => {
-    const { UploadProgress } = await import('../ProgressIndicator')
-    const element = React.createElement(UploadProgress, { percent: 50 })
-    expect(element).toBeTruthy()
-  })
+    const { UploadProgress } = await import('../ProgressIndicator');
+    const element = React.createElement(UploadProgress, { percent: 50 });
+    expect(element).toBeTruthy();
+  });
 
   it('ProcessSteps应该正确渲染', async () => {
-    const { ProcessSteps } = await import('../ProgressIndicator')
-    const steps = [{ title: 'Step 1' }]
-    const element = React.createElement(ProcessSteps, { steps, current: 0 })
-    expect(element).toBeTruthy()
-  })
+    const { ProcessSteps } = await import('../ProgressIndicator');
+    const steps = [{ title: 'Step 1' }];
+    const element = React.createElement(ProcessSteps, { steps, current: 0 });
+    expect(element).toBeTruthy();
+  });
 
   it('ProcessTimeline应该正确渲染', async () => {
-    const { ProcessTimeline } = await import('../ProgressIndicator')
-    const steps = [{ title: 'Event 1' }]
-    const element = React.createElement(ProcessTimeline, { steps })
-    expect(element).toBeTruthy()
-  })
+    const { ProcessTimeline } = await import('../ProgressIndicator');
+    const steps = [{ title: 'Event 1' }];
+    const element = React.createElement(ProcessTimeline, { steps });
+    expect(element).toBeTruthy();
+  });
 
   it('ProgressCard应该正确渲染', async () => {
-    const { ProgressCard } = await import('../ProgressIndicator')
+    const { ProgressCard } = await import('../ProgressIndicator');
     const element = React.createElement(ProgressCard, {
       title: '进度',
       percent: 50,
-    })
-    expect(element).toBeTruthy()
-  })
-})
+    });
+    expect(element).toBeTruthy();
+  });
+});
 
 describe('ProgressIndicator - 边界情况测试', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-  })
+    vi.clearAllMocks();
+  });
 
   it('应该处理percent为0', async () => {
-    const ProgressIndicator = (await import('../ProgressIndicator')).default
-    const element = React.createElement(ProgressIndicator, { type: 'line', percent: 0 })
-    expect(element).toBeTruthy()
-  })
+    const ProgressIndicator = (await import('../ProgressIndicator')).default;
+    const element = React.createElement(ProgressIndicator, { type: 'line', percent: 0 });
+    expect(element).toBeTruthy();
+  });
 
   it('应该处理percent为100', async () => {
-    const ProgressIndicator = (await import('../ProgressIndicator')).default
-    const element = React.createElement(ProgressIndicator, { type: 'line', percent: 100 })
-    expect(element).toBeTruthy()
-  })
+    const ProgressIndicator = (await import('../ProgressIndicator')).default;
+    const element = React.createElement(ProgressIndicator, { type: 'line', percent: 100 });
+    expect(element).toBeTruthy();
+  });
 
   it('应该处理空steps数组', async () => {
-    const ProgressIndicator = (await import('../ProgressIndicator')).default
+    const ProgressIndicator = (await import('../ProgressIndicator')).default;
     const element = React.createElement(ProgressIndicator, {
       type: 'steps',
       steps: [],
-    })
-    expect(element).toBeTruthy()
-  })
+    });
+    expect(element).toBeTruthy();
+  });
 
   it('应该处理空字符串title', async () => {
-    const ProgressIndicator = (await import('../ProgressIndicator')).default
-    const element = React.createElement(ProgressIndicator, { type: 'line', title: '' })
-    expect(element).toBeTruthy()
-  })
+    const ProgressIndicator = (await import('../ProgressIndicator')).default;
+    const element = React.createElement(ProgressIndicator, { type: 'line', title: '' });
+    expect(element).toBeTruthy();
+  });
 
   it('应该处理undefined description', async () => {
-    const ProgressIndicator = (await import('../ProgressIndicator')).default
+    const ProgressIndicator = (await import('../ProgressIndicator')).default;
     const element = React.createElement(ProgressIndicator, {
       type: 'line',
       description: undefined,
-    })
-    expect(element).toBeTruthy()
-  })
-})
+    });
+    expect(element).toBeTruthy();
+  });
+});
 
 describe('ProgressIndicator - 组合属性测试', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-  })
+    vi.clearAllMocks();
+  });
 
   it('line类型应该支持所有属性组合', async () => {
-    const ProgressIndicator = (await import('../ProgressIndicator')).default
+    const ProgressIndicator = (await import('../ProgressIndicator')).default;
     const element = React.createElement(ProgressIndicator, {
       type: 'line',
       percent: 75,
@@ -370,17 +384,17 @@ describe('ProgressIndicator - 组合属性测试', () => {
       strokeWidth: 8,
       className: 'custom-progress',
       style: { margin: 20 },
-    })
-    expect(element).toBeTruthy()
-  })
+    });
+    expect(element).toBeTruthy();
+  });
 
   it('steps类型应该支持复杂配置', async () => {
-    const ProgressIndicator = (await import('../ProgressIndicator')).default
+    const ProgressIndicator = (await import('../ProgressIndicator')).default;
     const steps = [
       { title: '步骤1', description: '描述1', status: 'finish' },
       { title: '步骤2', description: '描述2', status: 'process' },
       { title: '步骤3', description: '描述3', status: 'wait' },
-    ]
+    ];
     const element = React.createElement(ProgressIndicator, {
       type: 'steps',
       steps,
@@ -388,13 +402,13 @@ describe('ProgressIndicator - 组合属性测试', () => {
       title: '流程进度',
       direction: 'horizontal',
       size: 'default',
-    })
-    expect(element).toBeTruthy()
-  })
+    });
+    expect(element).toBeTruthy();
+  });
 
   it('ProgressCard应该支持所有属性', async () => {
-    const { ProgressCard } = await import('../ProgressIndicator')
-    const handleAction = vi.fn()
+    const { ProgressCard } = await import('../ProgressIndicator');
+    const handleAction = vi.fn();
     const element = React.createElement(ProgressCard, {
       title: '上传进度',
       description: '正在上传文件',
@@ -402,7 +416,7 @@ describe('ProgressIndicator - 组合属性测试', () => {
       status: 'active',
       extra: React.createElement('button', {}, '操作'),
       actions: [React.createElement('button', { key: '1', onClick: handleAction }, '暂停')],
-    })
-    expect(element).toBeTruthy()
-  })
-})
+    });
+    expect(element).toBeTruthy();
+  });
+});

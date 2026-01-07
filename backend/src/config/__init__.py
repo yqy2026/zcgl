@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any  # noqa: F401
 
 """
 应用配置设置
@@ -6,7 +6,10 @@ from typing import TYPE_CHECKING, Any
 
 import asyncio
 import os
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager  # noqa: F401
+
+if TYPE_CHECKING:
+    from redis.asyncio import ConnectionPool, Redis  # noqa: F401
 
 # typing imports removed - not used in this file
 try:
@@ -18,7 +21,7 @@ except ImportError:
     redis = None  # type: ignore
 
 if TYPE_CHECKING and REDIS_AVAILABLE:
-    from redis.asyncio import ConnectionPool, Redis  # pragma: no cover
+    pass  # pragma: no cover
 
 
 class Settings:

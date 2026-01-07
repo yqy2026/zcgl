@@ -4,7 +4,6 @@
 """
 
 import logging
-import os
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -21,7 +20,6 @@ from .core.encoding_utils import (
 from .core.environment import (
     get_dependency_policy,
     get_environment,
-    is_production,
     is_testing,
 )
 from .core.exception_handler import setup_exception_handlers

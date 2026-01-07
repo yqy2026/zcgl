@@ -160,38 +160,38 @@ export const UX_CONFIG = {
     // 静态资源缓存时间（毫秒）
     staticCacheTime: 24 * 60 * 60 * 1000, // 24小时
   },
-}
+};
 
 // 获取配置值的辅助函数
 export const getUXConfig = <T>(path: string, defaultValue?: T): T => {
-  const keys = path.split('.')
-  let value: unknown = UX_CONFIG
+  const keys = path.split('.');
+  let value: unknown = UX_CONFIG;
 
   for (const key of keys) {
-    if (value && typeof value === 'object' && key in value) {
-      value = (value as Record<string, unknown>)[key]
+    if (value !== null && value !== undefined && typeof value === 'object' && key in value) {
+      value = (value as Record<string, unknown>)[key];
     } else {
-      return defaultValue as T
+      return defaultValue as T;
     }
   }
 
-  return value as T
-}
+  return value as T;
+};
 
 // 更新配置的辅助函数
 export const updateUXConfig = (path: string, value: unknown) => {
-  const keys = path.split('.')
-  let target: Record<string, unknown> = UX_CONFIG as Record<string, unknown>
+  const keys = path.split('.');
+  let target: Record<string, unknown> = UX_CONFIG as Record<string, unknown>;
 
   for (let i = 0; i < keys.length - 1; i++) {
-    const key = keys[i]
+    const key = keys[i];
     if (!(key in target) || typeof target[key] !== 'object') {
-      target[key] = {}
+      target[key] = {};
     }
-    target = target[key] as Record<string, unknown>
+    target = target[key] as Record<string, unknown>;
   }
 
-  target[keys[keys.length - 1]] = value
-}
+  target[keys[keys.length - 1]] = value;
+};
 
-export default UX_CONFIG
+export default UX_CONFIG;

@@ -6,7 +6,8 @@
       "Edit",
       "Bash(rm:*)",
       "mcp__plugin_serena_serena__get_symbols_overview",
-      "mcp__plugin_serena_serena__list_dir"
+      "mcp__plugin_serena_serena__list_dir",
+      "Bash(uv run ruff check:*)"
     ]
   },
   "outputStyle": "Structural Thinking"

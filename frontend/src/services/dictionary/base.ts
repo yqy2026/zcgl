@@ -12,7 +12,7 @@ import {
   DictionaryConfig,
   DictionaryOption,
   DICTIONARY_CONFIGS,
-  getDictionaryConfig
+  getDictionaryConfig,
 } from './config';
 
 // 字典服务结果接口
@@ -120,8 +120,8 @@ class DictionaryCache {
         totalItems: data.length,
         activeItems: data.filter(item => item.isActive !== false).length,
         source: 'api',
-        ...metadata
-      }
+        ...metadata,
+      },
     };
 
     this.cache.set(dictType, item);
@@ -163,14 +163,13 @@ class DictionaryCache {
 
     // 2. 如果缓存过多，清理最少使用的项
     if (this.cache.size > this.MAX_CACHE_SIZE) {
-      const sortedItems = Array.from(this.cache.entries())
-        .sort(([, a], [, b]) => {
-          // 优先删除命中次数少的，其次是最后访问时间早的
-          if (a.hitCount !== b.hitCount) {
-            return a.hitCount - b.hitCount;
-          }
-          return a.lastAccessed - b.lastAccessed;
-        });
+      const sortedItems = Array.from(this.cache.entries()).sort(([, a], [, b]) => {
+        // 优先删除命中次数少的，其次是最后访问时间早的
+        if (a.hitCount !== b.hitCount) {
+          return a.hitCount - b.hitCount;
+        }
+        return a.lastAccessed - b.lastAccessed;
+      });
 
       const itemsToDelete = sortedItems.slice(0, this.cache.size - this.MAX_CACHE_SIZE);
       itemsToDelete.forEach(([key]) => this.cache.delete(key));
@@ -192,7 +191,7 @@ class DictionaryCache {
       size: this.cache.size,
       hitRate: total > 0 ? this.hitCount / total : 0,
       totalHits: this.hitCount,
-      totalMisses: this.missCount
+      totalMisses: this.missCount,
     };
   }
 
@@ -211,7 +210,7 @@ class DictionaryCache {
       hitCount: item.hitCount,
       lastAccessed: new Date(item.lastAccessed).toISOString(),
       age: now - item.timestamp,
-      isExpired: now - item.timestamp > this.CACHE_TTL
+      isExpired: now - item.timestamp > this.CACHE_TTL,
     }));
   }
 
@@ -256,7 +255,7 @@ class BaseDictionaryService {
       useFallback = true,
       isActive = true,
       forceRefresh = false,
-      includeMetadata = false
+      includeMetadata = false,
     } = options;
 
     // 检查字典类型是否存在
@@ -267,11 +266,13 @@ class BaseDictionaryService {
         data: [],
         error: `字典类型不存在: ${dictType}`,
         source: 'fallback',
-        metadata: includeMetadata ? {
-          totalItems: 0,
-          activeItems: 0,
-          lastUpdated: new Date().toISOString()
-        } : undefined
+        metadata: includeMetadata
+          ? {
+              totalItems: 0,
+              activeItems: 0,
+              lastUpdated: new Date().toISOString(),
+            }
+          : undefined,
       };
     }
 
@@ -287,7 +288,7 @@ class BaseDictionaryService {
         const result: DictionaryServiceResult = {
           success: true,
           data: cached,
-          source: 'cache'
+          source: 'cache',
         };
 
         if (includeMetadata) {
@@ -295,8 +296,10 @@ class BaseDictionaryService {
           result.metadata = {
             totalItems: cached.length,
             activeItems: cached.filter(item => item.isActive !== false).length,
-            lastUpdated: cacheInfo ? new Date(cacheInfo.lastAccessed).toISOString() : new Date().toISOString(),
-            cacheTimestamp: Date.now()
+            lastUpdated: cacheInfo
+              ? new Date(cacheInfo.lastAccessed).toISOString()
+              : new Date().toISOString(),
+            cacheTimestamp: Date.now(),
           };
         }
 
@@ -306,16 +309,13 @@ class BaseDictionaryService {
 
     // 尝试从API获取
     try {
-      const result = await enhancedApiClient.get<DictionaryOption[]>(
-        config.apiEndpoint,
-        {
-          params: { is_active: isActive },
-          timeout: this.REQUEST_TIMEOUT,
-          cache: false, // 使用自定义缓存
-          retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
-          smartExtract: true
-        }
-      );
+      const result = await enhancedApiClient.get<DictionaryOption[]>(config.apiEndpoint, {
+        params: { is_active: isActive },
+        timeout: this.REQUEST_TIMEOUT,
+        cache: false, // 使用自定义缓存
+        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (!result.success) {
         throw new Error(`获取字典数据失败: ${result.error}`);
@@ -328,21 +328,21 @@ class BaseDictionaryService {
         cache.set(dictType, data, {
           source: 'api',
           totalItems: data.length,
-          activeItems: data.filter(item => item.isActive !== false).length
+          activeItems: data.filter(item => item.isActive !== false).length,
         });
       }
 
       const response: DictionaryServiceResult = {
         success: true,
         data,
-        source: 'api'
+        source: 'api',
       };
 
       if (includeMetadata) {
         response.metadata = {
           totalItems: data.length,
           activeItems: data.filter(item => item.isActive !== false).length,
-          lastUpdated: new Date().toISOString()
+          lastUpdated: new Date().toISOString(),
         };
       }
 
@@ -351,16 +351,20 @@ class BaseDictionaryService {
       const enhancedError = ApiErrorHandler.handleError(error);
 
       // 如果启用备用数据，返回备用数据
-      if (useFallback && config.fallbackOptions) {
+      if (
+        useFallback !== false &&
+        config.fallbackOptions !== null &&
+        config.fallbackOptions !== undefined
+      ) {
         const fallbackData = config.fallbackOptions.filter(option =>
-          isActive ? option.isActive !== false : true
+          isActive !== false ? option.isActive !== false : true
         );
 
         if (useCache) {
           cache.set(dictType, fallbackData, {
             source: 'fallback',
             totalItems: fallbackData.length,
-            activeItems: fallbackData.filter(item => item.isActive !== false).length
+            activeItems: fallbackData.filter(item => item.isActive !== false).length,
           });
         }
 
@@ -368,14 +372,14 @@ class BaseDictionaryService {
           success: true,
           data: fallbackData,
           source: 'fallback',
-          error: enhancedError.message
+          error: enhancedError.message,
         };
 
         if (includeMetadata) {
           response.metadata = {
             totalItems: fallbackData.length,
             activeItems: fallbackData.filter(item => item.isActive !== false).length,
-            lastUpdated: new Date().toISOString()
+            lastUpdated: new Date().toISOString(),
           };
         }
 
@@ -387,11 +391,13 @@ class BaseDictionaryService {
         data: [],
         error: enhancedError.message,
         source: 'fallback',
-        metadata: includeMetadata ? {
-          totalItems: 0,
-          activeItems: 0,
-          lastUpdated: new Date().toISOString()
-        } : undefined
+        metadata: includeMetadata
+          ? {
+              totalItems: 0,
+              activeItems: 0,
+              lastUpdated: new Date().toISOString(),
+            }
+          : undefined,
       };
     }
   }
@@ -414,7 +420,7 @@ class BaseDictionaryService {
       useFallback = true,
       isActive = true,
       forceRefresh = false,
-      includeMetadata = false
+      includeMetadata = false,
     } = options;
 
     // 预加载缓存数据
@@ -425,18 +431,21 @@ class BaseDictionaryService {
 
     // 首先处理已缓存的数据
     for (const dictType of dictTypes) {
-      const cached = preloaded.get(dictType);
+      const cached = preloaded.get(dictType) as DictionaryOption[] | undefined;
       if (cached && !forceRefresh) {
         results[dictType] = {
           success: true,
           data: cached,
           source: 'cache',
-          metadata: includeMetadata ? {
-            totalItems: cached.length,
-            activeItems: cached.filter((item: DictionaryOption) => item.isActive !== false).length,
-            lastUpdated: new Date().toISOString(),
-            cacheTimestamp: Date.now()
-          } : undefined
+          metadata: includeMetadata
+            ? {
+                totalItems: cached.length,
+                activeItems: cached.filter((item: DictionaryOption) => item.isActive !== false)
+                  .length,
+                lastUpdated: new Date().toISOString(),
+                cacheTimestamp: Date.now(),
+              }
+            : undefined,
         };
       } else {
         typesToFetch.push(dictType);
@@ -448,14 +457,14 @@ class BaseDictionaryService {
       const batches = this.chunkArray(typesToFetch, this.BATCH_SIZE);
 
       for (const batch of batches) {
-        const batchPromises = batch.map(async (dictType) => {
+        const batchPromises = batch.map(async dictType => {
           try {
             const result = await this.getOptions(dictType, {
               useCache,
               useFallback,
               isActive,
               forceRefresh,
-              includeMetadata
+              includeMetadata,
             });
             return { dictType, result };
           } catch (error) {
@@ -467,19 +476,21 @@ class BaseDictionaryService {
                 data: [],
                 error: enhancedError.message,
                 source: 'fallback' as const,
-                metadata: includeMetadata ? {
-                  totalItems: 0,
-                  activeItems: 0,
-                  lastUpdated: new Date().toISOString()
-                } : undefined
-              }
+                metadata: includeMetadata
+                  ? {
+                      totalItems: 0,
+                      activeItems: 0,
+                      lastUpdated: new Date().toISOString(),
+                    }
+                  : undefined,
+              },
             };
           }
         });
 
         const batchResults = await Promise.allSettled(batchPromises);
 
-        batchResults.forEach((promiseResult) => {
+        batchResults.forEach(promiseResult => {
           if (promiseResult.status === 'fulfilled') {
             const { dictType, result } = promiseResult.value;
             results[dictType] = result;
@@ -508,7 +519,7 @@ class BaseDictionaryService {
   ): Promise<Record<string, DictionaryServiceResult>> {
     const { useCache = true, useFallback = true, isActive = true } = options;
 
-    const promises = dictTypes.map(async (dictType) => {
+    const promises = dictTypes.map(async dictType => {
       const result = await this.getOptions(dictType, { useCache, useFallback, isActive });
       return [dictType, result] as [string, DictionaryServiceResult];
     });
@@ -530,7 +541,7 @@ class BaseDictionaryService {
           success: false,
           data: [],
           error: enhancedError.message,
-          source: 'fallback'
+          source: 'fallback',
         };
       }
     });
@@ -550,10 +561,11 @@ class BaseDictionaryService {
    */
   searchTypes(keyword: string): DictionaryConfig[] {
     const lowerKeyword = keyword.toLowerCase();
-    return Object.values(DICTIONARY_CONFIGS).filter(config =>
-      config.name.toLowerCase().includes(lowerKeyword) ||
-      config.description.toLowerCase().includes(lowerKeyword) ||
-      (config.tags?.some((tag: string) => tag.toLowerCase().includes(lowerKeyword)) ?? false)
+    return Object.values(DICTIONARY_CONFIGS).filter(
+      config =>
+        config.name.toLowerCase().includes(lowerKeyword) ||
+        config.description.toLowerCase().includes(lowerKeyword) ||
+        (config.tags?.some((tag: string) => tag.toLowerCase().includes(lowerKeyword)) ?? false)
     );
   }
 
@@ -575,7 +587,7 @@ class BaseDictionaryService {
    * 清除缓存
    */
   clearCache(dictType?: string): void {
-    if (dictType) {
+    if (dictType !== null && dictType !== undefined && dictType !== '') {
       cache.clearForType(dictType);
     } else {
       cache.clear();
@@ -598,11 +610,14 @@ class BaseDictionaryService {
   /**
    * 预加载字典数据
    */
-  async preload(dictTypes: string[], options: {
-    useFallback?: boolean;
-    batchSize?: number;
-    onProgress?: (loaded: number, total: number, currentType: string) => void;
-  } = {}): Promise<PreloadResult> {
+  async preload(
+    dictTypes: string[],
+    options: {
+      useFallback?: boolean;
+      batchSize?: number;
+      onProgress?: (loaded: number, total: number, currentType: string) => void;
+    } = {}
+  ): Promise<PreloadResult> {
     const { useFallback = false, batchSize = 5, onProgress } = options;
     const startTime = Date.now();
     const loadedTypes: string[] = [];
@@ -615,19 +630,25 @@ class BaseDictionaryService {
     for (let i = 0; i < batches.length; i++) {
       const batch = batches[i];
 
-      const batchPromises = batch.map(async (dictType) => {
+      const batchPromises = batch.map(async dictType => {
         try {
           const result = await this.getOptions(dictType, {
             useCache: true,
             useFallback,
-            forceRefresh: true
+            forceRefresh: true,
           });
 
           if (result.success) {
             loadedTypes.push(dictType);
             totalItems += result.data.length;
           } else {
-            failedTypes.push({ type: dictType, error: result.error || 'Unknown error' });
+            failedTypes.push({
+              type: dictType,
+              error:
+                result.error !== null && result.error !== undefined && result.error !== ''
+                  ? result.error
+                  : 'Unknown error',
+            });
           }
 
           onProgress?.(loadedTypes.length + failedTypes.length, dictTypes.length, dictType);
@@ -648,7 +669,7 @@ class BaseDictionaryService {
       loadedTypes,
       failedTypes,
       totalItems,
-      loadTime
+      loadTime,
     };
   }
 
@@ -666,7 +687,7 @@ class BaseDictionaryService {
     if (mostUsedTypes.length > 0) {
       await this.preload(mostUsedTypes, {
         useFallback: true,
-        batchSize: 3 // 小批次以避免阻塞
+        batchSize: 3, // 小批次以避免阻塞
       });
     }
   }
@@ -683,7 +704,7 @@ class BaseDictionaryService {
       .map(info => ({
         type: info.type,
         hitCount: info.hitCount,
-        lastAccessed: info.lastAccessed
+        lastAccessed: info.lastAccessed,
       }));
 
     const totalItems = detailedInfo.reduce((sum, info) => sum + info.itemCount, 0);
@@ -703,7 +724,7 @@ class BaseDictionaryService {
       cacheSize: cacheInfo.size,
       lastCacheCleanup: cache.getLastCleanup(),
       cacheHitRate: cacheInfo.hitRate,
-      mostUsedTypes
+      mostUsedTypes,
     };
   }
 
@@ -748,7 +769,7 @@ class BaseDictionaryService {
     return {
       summary,
       details,
-      recommendations
+      recommendations,
     };
   }
 
@@ -767,13 +788,19 @@ class BaseDictionaryService {
         const result = await this.getOptions(dictType, {
           useCache: true,
           forceRefresh: true,
-          useFallback: false
+          useFallback: false,
         });
 
         if (result.success) {
           success.push(dictType);
         } else {
-          failed.push({ type: dictType, error: result.error || 'Unknown error' });
+          failed.push({
+            type: dictType,
+            error:
+              result.error !== null && result.error !== undefined && result.error !== ''
+                ? result.error
+                : 'Unknown error',
+          });
         }
       } catch (error) {
         const enhancedError = ApiErrorHandler.handleError(error);
@@ -810,7 +837,7 @@ class BaseDictionaryService {
       return {
         isValid: false,
         issues: [`字典类型不存在: ${dictType}`],
-        suggestions: ['检查字典类型是否正确配置']
+        suggestions: ['检查字典类型是否正确配置'],
       };
     }
 
@@ -822,8 +849,12 @@ class BaseDictionaryService {
       suggestions.push('尝试从API重新加载数据或使用备用数据');
     } else {
       // 检查数据结构
-      const invalidItems = cached.filter(item =>
-        !item.value || !item.label || typeof item.value !== 'string' || typeof item.label !== 'string'
+      const invalidItems = cached.filter(
+        item =>
+          !item.value ||
+          !item.label ||
+          typeof item.value !== 'string' ||
+          typeof item.label !== 'string'
       );
 
       if (invalidItems.length > 0) {
@@ -856,7 +887,7 @@ class BaseDictionaryService {
     return {
       isValid: issues.length === 0,
       issues,
-      suggestions
+      suggestions,
     };
   }
 }

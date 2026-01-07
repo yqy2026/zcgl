@@ -1,85 +1,84 @@
-import React from 'react'
-import { List, Tag, Space, Button, Typography, Empty } from 'antd'
-import { 
-  ClockCircleOutlined, 
+import React from 'react';
+import { List, Tag, Space, Button, Typography, Empty } from 'antd';
+import {
+  ClockCircleOutlined,
   ExclamationCircleOutlined,
-  CheckCircleOutlined 
-} from '@ant-design/icons'
+  CheckCircleOutlined,
+} from '@ant-design/icons';
 
-const { Text } = Typography
+const { Text } = Typography;
 
 interface TodoItem {
-  id: string
-  title: string
-  description: string
-  priority: 'high' | 'medium' | 'low'
-  dueDate: string
-  status: 'pending' | 'completed'
+  id: string;
+  title: string;
+  description: string;
+  priority: 'high' | 'medium' | 'low';
+  dueDate: string;
+  status: 'pending' | 'completed';
 }
 
 interface TodoListProps {
-  items: TodoItem[]
-  loading?: boolean
+  items: TodoItem[];
+  loading?: boolean;
 }
 
 const TodoList: React.FC<TodoListProps> = ({ items, loading }) => {
   const getPriorityColor = (priority: string) => {
     const colorMap: Record<string, string> = {
-      'high': 'error',
-      'medium': 'warning',
-      'low': 'default',
-    }
-    return colorMap[priority] || 'default'
-  }
+      high: 'error',
+      medium: 'warning',
+      low: 'default',
+    };
+    return colorMap[priority] || 'default';
+  };
 
   const getPriorityText = (priority: string) => {
     const textMap: Record<string, string> = {
-      'high': '高',
-      'medium': '中',
-      'low': '低',
-    }
-    return textMap[priority] || priority
-  }
+      high: '高',
+      medium: '中',
+      low: '低',
+    };
+    return textMap[priority] || priority;
+  };
 
   const handleComplete = (_id: string) => {
     // Task completed
-  }
+  };
 
-  if (!loading && items.length === 0) {
-    return (
-      <Empty 
-        description="暂无待办事项"
-        image={Empty.PRESENTED_IMAGE_SIMPLE}
-      />
-    )
+  if (loading === false && items.length === 0) {
+    return <Empty description="暂无待办事项" image={Empty.PRESENTED_IMAGE_SIMPLE} />;
   }
 
   return (
     <List
       loading={loading}
       dataSource={items}
-      renderItem={(item) => (
+      renderItem={item => (
         <List.Item
           actions={[
-            <Button 
+            <Button
               key="complete"
-              type="link" 
+              type="link"
               size="small"
               icon={<CheckCircleOutlined />}
               onClick={() => handleComplete(item.id)}
             >
               完成
-            </Button>
+            </Button>,
           ]}
         >
           <List.Item.Meta
             avatar={
-              <ExclamationCircleOutlined 
-                style={{ 
-                  color: item.priority === 'high' ? '#ff4d4f' : 
-                         item.priority === 'medium' ? '#faad14' : '#8c8c8c',
-                  fontSize: '16px'
-                }} 
+              <ExclamationCircleOutlined
+                style={{
+                  color:
+                    item.priority === 'high'
+                      ? '#ff4d4f'
+                      : item.priority === 'medium'
+                        ? '#faad14'
+                        : '#8c8c8c',
+                  fontSize: '16px',
+                }}
               />
             }
             title={
@@ -108,7 +107,7 @@ const TodoList: React.FC<TodoListProps> = ({ items, loading }) => {
         </List.Item>
       )}
     />
-  )
-}
+  );
+};
 
-export default TodoList
+export default TodoList;

@@ -180,8 +180,8 @@ def _analyze_api_quality(api_data: dict[str, Any]) -> dict[str, Any]:
     documented_endpoints = 0
     tagged_endpoints = 0
 
-    for path, methods in paths.items():
-        for method, operation in methods.items():
+    for _path, methods in paths.items():
+        for _method, operation in methods.items():
             # 检查是否有文档
             if operation.get("summary") or operation.get("description"):
                 documented_endpoints += 1

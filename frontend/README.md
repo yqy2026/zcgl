@@ -17,6 +17,7 @@
 ## 核心功能模块
 
 ### 1. 资产管理
+
 - 资产增删改查操作
 - 58个字段的详细资产信息展示
 - 批量操作支持
@@ -25,6 +26,7 @@
 - 资产财务数据汇总
 
 ### 2. 统计分析
+
 - 整体出租率统计
 - 按分类的出租率分析
 - 面积汇总统计
@@ -32,16 +34,19 @@
 - 多维度数据可视化
 
 ### 3. 智能PDF导入
+
 - PDF文件上传
 - 合同信息预览
 - 数据确认导入
 
 ### 4. 权限管理
+
 - 用户登录/登出
 - 角色权限控制
 - 组织架构展示
 
 ### 5. 数据导入导出
+
 - Excel导入导出
 - 模板下载
 
@@ -85,6 +90,7 @@ frontend/
 ## 功能特性
 
 ### 核心功能
+
 - ✅ **资产管理** - 完整的CRUD操作
 - ✅ **搜索筛选** - 多条件搜索和筛选
 - ✅ **数据导入导出** - Excel文件处理
@@ -93,6 +99,7 @@ frontend/
 - ✅ **权限控制** - 基于角色的访问控制
 
 ### 技术特性
+
 - ✅ **响应式设计** - 适配各种屏幕尺寸
 - ✅ **类型安全** - 完整的TypeScript支持
 - ✅ **状态管理** - Zustand轻量级状态管理
@@ -103,16 +110,19 @@ frontend/
 ## 开发环境设置
 
 ### 前置要求
+
 - Node.js >= 18.0.0
 - npm >= 8.0.0
 
 ### 安装依赖
+
 ```bash
 cd frontend
 npm install
 ```
 
 ### 启动开发服务器
+
 ```bash
 npm run dev
 ```
@@ -120,11 +130,13 @@ npm run dev
 应用将在 http://localhost:5173 启动
 
 ### 构建生产版本
+
 ```bash
 npm run build
 ```
 
 ### 预览生产版本
+
 ```bash
 npm run preview
 ```
@@ -132,6 +144,7 @@ npm run preview
 ## 配置说明
 
 ### 环境变量
+
 创建 `.env.local` 文件配置环境变量：
 
 ```env
@@ -143,6 +156,7 @@ VITE_APP_TITLE=土地物业资产管理系统
 ```
 
 ### 代理配置
+
 开发环境下，Vite会自动代理API请求到后端服务器：
 
 ```typescript
@@ -161,32 +175,38 @@ server: {
 ## 主要页面说明
 
 ### 1. 登录页面 (LoginPage)
+
 - 用户身份验证
 - JWT Token获取
 
 ### 2. 仪表板页面 (DashboardPage)
+
 - 关键指标展示
 - 统计图表
 - 快速操作入口
 
 ### 3. 资产列表页面 (AssetListPage)
+
 - 数据表格展示
 - 搜索和筛选功能
 - 分页处理
 - 批量操作
 
 ### 4. 资产详情页面 (AssetDetailPage)
+
 - 详细信息展示
 - 变更历史记录
 - 编辑操作入口
 
 ### 5. 统计分析页面 (StatisticsPage)
+
 - 整体出租率统计
 - 分类出租率分析
 - 面积汇总统计
 - 财务数据汇总
 
 ### 6. PDF导入页面 (PdfImportPage)
+
 - PDF文件上传
 - 合同信息预览
 - 数据确认导入
@@ -194,14 +214,18 @@ server: {
 ## 状态管理
 
 ### Asset Store (useAssetStore)
+
 管理资产相关状态：
+
 - 资产列表数据
 - 搜索参数
 - 分页信息
 - 选中的资产
 
 ### App Store (useAppStore)
+
 管理应用全局状态：
+
 - 侧边栏折叠状态
 - 主题设置
 - 用户偏好
@@ -210,30 +234,35 @@ server: {
 ## API服务层
 
 ### API Client (api.ts)
+
 - Axios实例配置
 - 请求/响应拦截器
 - 错误处理
 - 文件上传/下载
 
 ### Asset Service (assetService.ts)
+
 - 资产CRUD操作
 - 搜索和筛选
 - 历史记录查询
 - 数据导入导出
 
 ### Dictionary Service (dictionary/)
+
 - 统一字典服务
 - 字典数据获取和管理
 
 ## 自定义Hooks
 
 ### useAssets
+
 - 资产列表查询
 - 创建、更新、删除操作
 - 批量操作
 - 状态同步
 
 ### 其他Hooks
+
 - useAssetHistory - 变更历史
 - useAssetStats - 统计数据
 - useValidateAsset - 数据验证
@@ -242,11 +271,13 @@ server: {
 ## 样式和主题
 
 ### 全局样式
+
 - 基础重置样式
 - 工具类样式
 - 响应式断点
 
 ### Ant Design主题
+
 - 自定义主题色彩
 - 组件样式覆盖
 - 中文字体优化
@@ -254,18 +285,21 @@ server: {
 ## 开发规范
 
 ### 代码规范
+
 - 使用 ESLint 进行代码检查
 - 使用 TypeScript 严格模式
 - 组件使用函数式组件 + Hooks
 - 遵循 React 最佳实践
 
 ### 命名规范
+
 - 组件使用 PascalCase
 - 文件名使用 PascalCase
 - 变量和函数使用 camelCase
 - 常量使用 UPPER_SNAKE_CASE
 
 ### 目录规范
+
 - 按功能模块组织代码
 - 组件就近放置相关文件
 - 公共组件放在 components 目录
@@ -274,16 +308,19 @@ server: {
 ## 性能优化
 
 ### 代码分割
+
 - 路由级别的代码分割
 - 组件懒加载
 - 第三方库按需加载
 
 ### 缓存策略
+
 - React Query 智能缓存
 - 静态资源缓存
 - API响应缓存
 
 ### 打包优化
+
 - Vite 快速构建
 - Tree Shaking
 - 资源压缩
@@ -291,11 +328,13 @@ server: {
 ## 测试
 
 ### 单元测试
+
 ```bash
 npm run test
 ```
 
 ### 端到端测试
+
 ```bash
 npm run test:e2e
 ```
@@ -303,14 +342,17 @@ npm run test:e2e
 ## 部署
 
 ### 构建生产版本
+
 ```bash
 npm run build
 ```
 
 ### 部署到静态服务器
+
 构建后的文件在 `dist` 目录，可以部署到任何静态文件服务器。
 
 ### Docker部署
+
 ```dockerfile
 FROM nginx:alpine
 COPY dist /usr/share/nginx/html
@@ -334,6 +376,7 @@ CMD ["nginx", "-g", "daemon off;"]
    - 重新安装依赖
 
 ### 调试技巧
+
 - 使用浏览器开发者工具
 - 查看 Network 面板的API请求
 - 使用 React Developer Tools
@@ -342,6 +385,7 @@ CMD ["nginx", "-g", "daemon off;"]
 ## 开发约定
 
 ### 前端开发
+
 - 使用React 18和TypeScript
 - Ant Design 5组件库
 - Vite构建工具

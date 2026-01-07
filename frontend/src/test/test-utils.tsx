@@ -3,34 +3,34 @@
  * 提供React Testing Library的增强功能和自定义工具
  */
 
-import React, { ReactElement, ReactNode } from 'react'
+import React, { ReactElement, ReactNode } from 'react';
 import {
   render,
   RenderOptions,
   renderHook,
   waitFor,
   waitForElementToBeRemoved,
-} from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { BrowserRouter } from 'react-router-dom'
-import { ConfigProvider, theme as antdTheme } from 'antd'
-import zhCN from 'antd/locale/zh_CN'
-import userEvent from '@testing-library/user-event'
+} from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { BrowserRouter } from 'react-router-dom';
+import { ConfigProvider, theme as antdTheme } from 'antd';
+import zhCN from 'antd/locale/zh_CN';
+import userEvent from '@testing-library/user-event';
 
 // =============================================================================
 // 类型定义
 // =============================================================================
 
 interface ProvidersProps {
-  children: ReactNode
-  queryClient?: QueryClient
-  theme?: 'light' | 'dark'
+  children: ReactNode;
+  queryClient?: QueryClient;
+  theme?: 'light' | 'dark';
 }
 
 interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
-  queryClient?: QueryClient
-  theme?: 'light' | 'dark'
-  route?: string
+  queryClient?: QueryClient;
+  theme?: 'light' | 'dark';
+  route?: string;
 }
 
 // =============================================================================
@@ -60,12 +60,12 @@ export const createTestQueryClient = (): QueryClient => {
       },
     },
     logger: {
-      log: console.log,
-      warn: console.warn,
-      error: () => {}, // 静默错误日志，避免测试输出混乱
+      log: (): void => {}, // 静默日志，避免测试输出混乱
+      warn: (): void => {}, // 静默警告，避免测试输出混乱
+      error: (): void => {}, // 静默错误日志，避免测试输出混乱
     },
-  })
-}
+  });
+};
 
 // =============================================================================
 // Provider包装器
@@ -80,7 +80,7 @@ export const createTestQueryClient = (): QueryClient => {
  * - ConfigProvider (Ant Design主题和国际化)
  */
 const AllInOneProvider = ({ children, queryClient, theme = 'light' }: ProvidersProps) => {
-  const testQueryClient = queryClient || createTestQueryClient()
+  const testQueryClient = queryClient || createTestQueryClient();
 
   return (
     <QueryClientProvider client={testQueryClient}>
@@ -98,8 +98,8 @@ const AllInOneProvider = ({ children, queryClient, theme = 'light' }: ProvidersP
         </ConfigProvider>
       </BrowserRouter>
     </QueryClientProvider>
-  )
-}
+  );
+};
 
 // =============================================================================
 // 自定义render函数
@@ -128,16 +128,11 @@ const AllInOneProvider = ({ children, queryClient, theme = 'light' }: ProvidersP
  */
 export const renderWithProviders = (
   ui: ReactElement,
-  {
-    queryClient,
-    theme = 'light',
-    route,
-    ...renderOptions
-  }: CustomRenderOptions = {}
+  { queryClient, theme = 'light', route, ...renderOptions }: CustomRenderOptions = {}
 ) => {
   // 如果指定了路由，设置window.location
   if (route) {
-    window.history.pushState({}, 'Test page', route)
+    window.history.pushState({}, 'Test page', route);
   }
 
   function Wrapper({ children }: { children: ReactNode }) {
@@ -145,17 +140,17 @@ export const renderWithProviders = (
       <AllInOneProvider queryClient={queryClient} theme={theme}>
         {children}
       </AllInOneProvider>
-    )
+    );
   }
 
   return {
     user: userEvent.setup(),
     ...render(ui, { wrapper: Wrapper, ...renderOptions }),
-  }
-}
+  };
+};
 
 // 重新导出所有RTL工具，方便使用
-export { render, waitFor, waitForElementToBeRemoved }
+export { render, waitFor, waitForElementToBeRemoved };
 
 // =============================================================================
 // 自定义renderHook函数
@@ -176,21 +171,21 @@ export const renderHookWithProviders = <TProps, TResult>(
   callback: (props: TProps) => TResult,
   options?: Omit<CustomRenderOptions, 'wrapper'>
 ) => {
-  const { queryClient, theme = 'light', ...renderOptions } = options || {}
+  const { queryClient, theme = 'light', ...renderOptions } = options || {};
 
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <AllInOneProvider queryClient={queryClient} theme={theme}>
         {children}
       </AllInOneProvider>
-    )
+    );
   }
 
-  return renderHook(callback, { wrapper: Wrapper, ...renderOptions })
-}
+  return renderHook(callback, { wrapper: Wrapper, ...renderOptions });
+};
 
 // 重新导出renderHook
-export { renderHook }
+export { renderHook };
 
 // =============================================================================
 // 自定义匹配器
@@ -216,17 +211,15 @@ expect.extend({
       received !== null &&
       'success' in received &&
       typeof received.success === 'boolean' &&
-      'data' in received
+      'data' in received;
 
     return {
       pass,
       message: () =>
-        pass
-          ? '期望不是有效API响应'
-          : `期望是有效API响应，但收到 ${JSON.stringify(received)}`,
-    }
+        pass ? '期望不是有效API响应' : `期望是有效API响应，但收到 ${JSON.stringify(received)}`,
+    };
   },
-})
+});
 
 /**
  * toBeValidAsset - 验证资产对象格式
@@ -243,17 +236,14 @@ expect.extend({
       received !== null &&
       'id' in received &&
       'propertyName' in received &&
-      'ownershipStatus' in received
+      'ownershipStatus' in received;
 
     return {
       pass,
-      message: () =>
-        pass
-          ? '期望不是有效资产对象'
-          : `期望是有效资产对象，但缺少必需字段`,
-    }
+      message: () => (pass ? '期望不是有效资产对象' : `期望是有效资产对象，但缺少必需字段`),
+    };
   },
-})
+});
 
 // =============================================================================
 // 测试辅助函数
@@ -271,13 +261,13 @@ expect.extend({
  */
 export const waitForLoadingToFinish = () =>
   waitFor(() => {
-    const loaders = document.querySelectorAll('[role="status"]')
+    const loaders = document.querySelectorAll('[role="status"]');
     loaders.forEach(loader => {
       if (loader.textContent === '加载中...' || loader.textContent === 'Loading...') {
-        throw new Error('Still loading')
+        throw new Error('Still loading');
       }
-    })
-  })
+    });
+  });
 
 /**
  * mockConsole - 临时mock console方法
@@ -294,13 +284,12 @@ export const waitForLoadingToFinish = () =>
  * ```
  */
 export const mockConsole = (method: 'log' | 'error' | 'warn' = 'log') => {
-  const original = console[method]
-  const spy = vi.spyOn(console, method).mockImplementation(() => {})
+  const spy = vi.spyOn(console, method).mockImplementation(() => {});
 
   return () => {
-    spy.mockRestore()
-  }
-}
+    spy.mockRestore();
+  };
+};
 
 /**
  * createMockRouter - 创建mock路由对象
@@ -322,7 +311,7 @@ export const createMockRouter = () => ({
   go: vi.fn(),
   goBack: vi.fn(),
   goForward: vi.fn(),
-})
+});
 
 /**
  * createMockUser - 创建mock用户对象
@@ -344,15 +333,15 @@ export const createMockUser = (overrides: Partial<API.User> = {}) => ({
     name: '测试组织',
   },
   ...overrides,
-})
+});
 
 // =============================================================================
 // 导出所有工具
 // =============================================================================
 
 // 重新导出React Testing Library核心功能
-export * from '@testing-library/react'
-export { default as userEvent } from '@testing-library/user-event'
+export * from '@testing-library/react';
+export { default as userEvent } from '@testing-library/user-event';
 
 // 默认导出
 export default {
@@ -363,4 +352,4 @@ export default {
   mockConsole,
   createMockRouter,
   createMockUser,
-}
+};

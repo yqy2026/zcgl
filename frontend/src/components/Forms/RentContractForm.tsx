@@ -57,7 +57,7 @@ const RentContractForm: React.FC<RentContractFormProps> = ({
   onSubmit,
   onCancel,
   loading = false,
-  mode = 'create'
+  mode = 'create',
 }) => {
   const [form] = Form.useForm();
   const [termForm] = Form.useForm();

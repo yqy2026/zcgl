@@ -17,6 +17,7 @@ Version: 2025-12-27 - 添加认证依赖，修复安全漏洞
 Version: 1.1 - 修复了get_stats方法调用问题
 """
 
+import contextlib
 import hashlib
 import logging
 import time
@@ -393,12 +394,10 @@ class DistributionCalculator:
 
                 # 累计面积 - 优先使用实际物业面积，其次使用土地面积
                 area = 0.0
-                if hasattr(asset, "actual_property_area") and getattr(
-                    asset, "actual_property_area"
-                ):
-                    area = to_float(getattr(asset, "actual_property_area"))
-                elif hasattr(asset, "land_area") and getattr(asset, "land_area"):
-                    area = to_float(getattr(asset, "land_area"))
+                if hasattr(asset, "actual_property_area") and asset.actual_property_area:
+                    area = to_float(asset.actual_property_area)
+                elif hasattr(asset, "land_area") and asset.land_area:
+                    area = to_float(asset.land_area)
 
                 distribution_stats[field_value]["total_area"] += area
 
@@ -489,12 +488,10 @@ class DistributionCalculator:
 
             # 累计面积
             area = 0.0
-            if hasattr(asset, "actual_property_area") and getattr(
-                asset, "actual_property_area"
-            ):
-                area = to_float(getattr(asset, "actual_property_area"))
-            elif hasattr(asset, "land_area") and getattr(asset, "land_area"):
-                area = to_float(getattr(asset, "land_area"))
+            if hasattr(asset, "actual_property_area") and asset.actual_property_area:
+                area = to_float(asset.actual_property_area)
+            elif hasattr(asset, "land_area") and asset.land_area:
+                area = to_float(asset.land_area)
 
             category_stats[category]["total_area"] += area
 
@@ -600,13 +597,13 @@ class AreaSummaryCalculator:
             # 可租面积
             if getattr(asset, "rentable_area", None):
                 summary["total_rentable_area"] += to_float(
-                    getattr(asset, "rentable_area")
+                    asset.rentable_area
                 )
                 has_area_data = True
 
             # 已租面积
             if getattr(asset, "rented_area", None):
-                summary["total_rented_area"] += to_float(getattr(asset, "rented_area"))
+                summary["total_rented_area"] += to_float(asset.rented_area)
 
             if has_area_data:
                 summary["assets_with_area_data"] += 1
@@ -666,13 +663,13 @@ class FinancialSummaryCalculator:
         for asset in assets:
             # 月租金数据
             if getattr(asset, "monthly_rent", None):
-                monthly_rent = to_float(getattr(asset, "monthly_rent"))
+                monthly_rent = to_float(asset.monthly_rent)
                 summary["total_monthly_rent"] += monthly_rent
                 summary["assets_with_rent_data"] += 1
 
             # 押金数据
             if getattr(asset, "deposit", None):
-                summary["total_deposit"] += to_float(getattr(asset, "deposit"))
+                summary["total_deposit"] += to_float(asset.deposit)
                 summary["assets_with_deposit_data"] += 1
 
         # 估算年收入（基于月租金）
@@ -946,20 +943,14 @@ class OccupancyTrendGenerator:
 
             # 应用历史变更
             if record.field_name == "rented_area" and record.new_value:
-                try:
+                with contextlib.suppress(ValueError, TypeError):
                     asset_states[asset_id]["rented_area"] = float(record.new_value)
-                except (ValueError, TypeError):
-                    pass
             elif record.field_name == "rentable_area" and record.new_value:
-                try:
+                with contextlib.suppress(ValueError, TypeError):
                     asset_states[asset_id]["rentable_area"] = float(record.new_value)
-                except (ValueError, TypeError):
-                    pass
             elif record.field_name == "occupancy_rate" and record.new_value:
-                try:
+                with contextlib.suppress(ValueError, TypeError):
                     asset_states[asset_id]["occupancy_rate"] = float(record.new_value)
-                except (ValueError, TypeError):
-                    pass
 
         # 汇总所有资产的数据
         total_rentable = sum(state["rentable_area"] for state in asset_states.values())

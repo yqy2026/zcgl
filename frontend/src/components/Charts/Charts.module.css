@@ -216,26 +216,26 @@
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
   }
-  
+
   .statisticCard {
     padding: 12px;
   }
-  
+
   .statisticCard .ant-statistic-content {
     font-size: 20px;
   }
-  
+
   .performanceItem {
     padding: 8px 12px;
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
   }
-  
+
   .performanceValue {
     text-align: left;
   }
-  
+
   .chartContainer {
     padding: 8px;
   }
@@ -245,15 +245,15 @@
   .statisticsGrid {
     grid-template-columns: 1fr;
   }
-  
+
   .statisticCard .ant-statistic-content {
     font-size: 18px;
   }
-  
+
   .performanceName {
     font-size: 14px;
   }
-  
+
   .performanceDetails {
     font-size: 11px;
   }
@@ -284,12 +284,24 @@
 }
 
 /* 图表颜色主题 */
-.chart-color-primary { color: #1890ff; }
-.chart-color-success { color: #52c41a; }
-.chart-color-warning { color: #faad14; }
-.chart-color-error { color: #ff4d4f; }
-.chart-color-purple { color: #722ed1; }
-.chart-color-orange { color: #fa8c16; }
+.chart-color-primary {
+  color: #1890ff;
+}
+.chart-color-success {
+  color: #52c41a;
+}
+.chart-color-warning {
+  color: #faad14;
+}
+.chart-color-error {
+  color: #ff4d4f;
+}
+.chart-color-purple {
+  color: #722ed1;
+}
+.chart-color-orange {
+  color: #fa8c16;
+}
 
 /* 加载状态样式 */
 .chartLoading .ant-spin {

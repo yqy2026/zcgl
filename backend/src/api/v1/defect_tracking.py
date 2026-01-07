@@ -688,7 +688,7 @@ async def get_defect_trends(
 
     # 获取每日趋势数据
     # date_select is validated above - only set to safe values
-    sql_query = """
+    sql_query = f"""
         SELECT
             {date_select},
             COUNT(*) as open_count,
@@ -698,7 +698,7 @@ async def get_defect_trends(
         WHERE created_at >= ?
         GROUP BY period
         ORDER BY period
-    """.format(date_select=date_select)  # nosec B608: validated input
+    """  # nosec B608: validated input
     cursor.execute(
         sql_query,
         (start_date,),

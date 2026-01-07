@@ -4,11 +4,11 @@
  */
 
 // 服务器配置
-export { mswServer } from './server'
+export { mswServer } from './server';
 
 // Handlers
-export { handlers } from './handlers'
-export type { HttpHandler } from 'msw'
+export { handlers } from './handlers';
+export type { HttpHandler } from 'msw';
 
 // Fixtures
 export {
@@ -38,7 +38,7 @@ export {
   serverErrorResponse,
   authErrorResponse,
   validationErrorResponse,
-} from './fixtures'
+} from './fixtures';
 
 // 默认导出服务器
-export { mswServer as default } from './server'
+export { mswServer as default } from './server';

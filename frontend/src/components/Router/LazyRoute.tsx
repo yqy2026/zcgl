@@ -1,16 +1,16 @@
-import React, { Suspense } from 'react'
-import { Route } from 'react-router-dom'
-import { SkeletonLoader } from '../Loading'
-import { RouteConfig } from '@/constants/routes'
-import { SystemErrorBoundary } from '@/components/ErrorHandling'
-import { PermissionGuard } from '../System/PermissionGuard'
+import React, { Suspense } from 'react';
+import { Route } from 'react-router-dom';
+import { SkeletonLoader } from '../Loading';
+import { RouteConfig } from '@/constants/routes';
+import { SystemErrorBoundary } from '@/components/ErrorHandling';
+import { PermissionGuard } from '../System/PermissionGuard';
 
 interface LazyRouteProps extends Omit<RouteConfig, 'children'> {
-  component: React.LazyExoticComponent<React.ComponentType<any>>
-  fallback?: React.ReactNode
-  preload?: () => void
-  exact?: boolean
-  errorBoundary?: boolean
+  component: React.LazyExoticComponent<React.ComponentType<Record<string, unknown>>>;
+  fallback?: React.ReactNode;
+  preload?: () => void;
+  exact?: boolean;
+  errorBoundary?: boolean;
 }
 
 /**
@@ -28,47 +28,37 @@ const LazyRoute: React.FC<LazyRouteProps> = ({
   // 如果提供了预加载函数，在组件加载时执行
   const _handleMouseEnter = () => {
     if (preload) {
-      preload()
+      preload();
     }
-  }
+  };
 
   const renderElement = () => {
     const WrappedComponent = (
       <Suspense fallback={fallback}>
         <Component />
       </Suspense>
-    )
+    );
 
     // 如果没有权限要求，直接渲染懒加载组件
     if (!permissions || permissions.length === 0) {
-      return WrappedComponent
+      return WrappedComponent;
     }
 
     // 有权限要求，使用权限守卫包装
     return (
-      <PermissionGuard
-        permissions={permissions}
-        mode="any"
-      >
+      <PermissionGuard permissions={permissions} mode="any">
         {WrappedComponent}
       </PermissionGuard>
-    )
-  }
+    );
+  };
 
   const wrappedElement = errorBoundary ? (
-    <SystemErrorBoundary>
-      {renderElement()}
-    </SystemErrorBoundary>
+    <SystemErrorBoundary>{renderElement()}</SystemErrorBoundary>
   ) : (
     renderElement()
-  )
+  );
 
-  return (
-    <Route
-      {...routeProps}
-      element={wrappedElement}
-    />
-  )
-}
+  return <Route {...routeProps} element={wrappedElement} />;
+};
 
-export default LazyRoute
+export default LazyRoute;

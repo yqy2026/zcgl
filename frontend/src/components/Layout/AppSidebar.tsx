@@ -1,5 +1,5 @@
-import React from 'react'
-import { Layout, Menu, Typography } from 'antd'
+import React from 'react';
+import { Layout, Menu, Typography } from 'antd';
 import {
   DashboardOutlined,
   HomeOutlined,
@@ -18,20 +18,20 @@ import {
   FileTextOutlined,
   AppstoreOutlined,
   FileAddOutlined,
-} from '@ant-design/icons'
-import { useLocation, useNavigate } from 'react-router-dom'
-import type { MenuProps } from 'antd'
+} from '@ant-design/icons';
+import { useLocation, useNavigate } from 'react-router-dom';
+import type { MenuProps } from 'antd';
 
-const { Sider } = Layout
-const { Text } = Typography
+const { Sider } = Layout;
+const { Text } = Typography;
 
 interface AppSidebarProps {
-  collapsed: boolean
+  collapsed: boolean;
 }
 
 const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed }) => {
-  const location = useLocation()
-  const navigate = useNavigate()
+  const location = useLocation();
+  const navigate = useNavigate();
 
   // 菜单项配置
   const menuItems: MenuProps['items'] = [
@@ -146,40 +146,54 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed }) => {
         },
       ],
     },
-  ]
+  ];
 
   // 获取当前选中的菜单项
   const getSelectedKeys = () => {
-    const pathname = location.pathname
+    const pathname = location.pathname;
 
     // 精确匹配
-    if (pathname === '/') return ['/dashboard']
+    if (pathname === '/') {
+      return ['/dashboard'];
+    }
 
     // 资产详情页面特殊处理
-    if (pathname.match(/^\/assets\/\d+$/)) return ['/assets']
-    if (pathname.match(/^\/assets\/\d+\/edit$/)) return ['/assets']
+    if (pathname.match(/^\/assets\/\d+$/)) {
+      return ['/assets'];
+    }
+    if (pathname.match(/^\/assets\/\d+\/edit$/)) {
+      return ['/assets'];
+    }
 
     // 权属方管理页面
-    if (pathname === '/ownership') return ['/ownership']
+    if (pathname === '/ownership') {
+      return ['/ownership'];
+    }
 
-    return [pathname]
-  }
+    return [pathname];
+  };
 
   // 获取展开的菜单项
   const getOpenKeys = () => {
-    const pathname = location.pathname
+    const pathname = location.pathname;
 
-    if (pathname.startsWith('/assets') && !pathname.startsWith('/assets/list')) return ['assets']
-    if (pathname.startsWith('/rental')) return ['rental']
-    if (pathname.startsWith('/system')) return ['system']
+    if (pathname.startsWith('/assets') && !pathname.startsWith('/assets/list')) {
+      return ['assets'];
+    }
+    if (pathname.startsWith('/rental')) {
+      return ['rental'];
+    }
+    if (pathname.startsWith('/system')) {
+      return ['system'];
+    }
 
-    return []
-  }
+    return [];
+  };
 
   // 处理菜单点击
   const handleMenuClick = ({ key }: { key: string }) => {
-    navigate(key)
-  }
+    navigate(key);
+  };
 
   return (
     <Sider
@@ -230,7 +244,7 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed }) => {
         }}
       />
     </Sider>
-  )
-}
+  );
+};
 
-export default AppSidebar
+export default AppSidebar;

@@ -55,10 +55,7 @@ class QueryFilter:
 
     def apply(self, query, model_class):
         """应用过滤器到查询"""
-        if self.model_class:
-            actual_model = self.model_class
-        else:
-            actual_model = model_class
+        actual_model = self.model_class or model_class
 
         field_attr = getattr(actual_model, self.field)
 
@@ -109,10 +106,7 @@ class QuerySort:
 
     def apply(self, query, model_class):
         """应用排序到查询"""
-        if self.model_class:
-            actual_model = self.model_class
-        else:
-            actual_model = model_class
+        actual_model = self.model_class or model_class
 
         field_attr = getattr(actual_model, self.field)
 
@@ -250,10 +244,7 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
         Returns:
             创建的模型实例
         """
-        if hasattr(obj_in, "dict"):
-            obj_in_data = obj_in.dict(exclude_unset=True)
-        else:
-            obj_in_data = obj_in
+        obj_in_data = obj_in.dict(exclude_unset=True) if hasattr(obj_in, "dict") else obj_in
 
         # 添加创建者信息
         if created_by and hasattr(self.model, "created_by"):
@@ -306,10 +297,7 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
         Returns:
             更新后的模型实例
         """
-        if isinstance(obj_in, dict):
-            update_data = obj_in
-        else:
-            update_data = obj_in.dict(exclude_unset=True)
+        update_data = obj_in if isinstance(obj_in, dict) else obj_in.dict(exclude_unset=True)
 
         # 添加更新者信息
         if updated_by and hasattr(self.model, "updated_by"):
@@ -529,10 +517,7 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
         """
         db_objects = []
         for obj_in in objects_in:
-            if hasattr(obj_in, "dict"):
-                obj_in_data = obj_in.dict(exclude_unset=True)
-            else:
-                obj_in_data = obj_in
+            obj_in_data = obj_in.dict(exclude_unset=True) if hasattr(obj_in, "dict") else obj_in
 
             if created_by and hasattr(self.model, "created_by"):
                 obj_in_data["created_by"] = created_by

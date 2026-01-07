@@ -289,13 +289,13 @@ async def refresh_token(
     tokens = auth_service.create_tokens(user, device_info)
 
     # 更新会话
-    setattr(session, "refresh_token", tokens.refresh_token)
-    setattr(session, "last_accessed_at", datetime.now())
-    setattr(session, "ip_address", client_ip)  # 更新IP地址
-    setattr(session, "user_agent", user_agent)  # 更新User-Agent
+    session.refresh_token = tokens.refresh_token
+    session.last_accessed_at = datetime.now()
+    session.ip_address = client_ip  # 更新IP地址
+    session.user_agent = user_agent  # 更新User-Agent
     # 更新会话ID（如果存在）
     if tokens.session_id:
-        setattr(session, "session_id", tokens.session_id)
+        session.session_id = tokens.session_id
     db.commit()
 
     # 记录成功的刷新操作
@@ -615,10 +615,7 @@ async def deactivate_user(
     user_crud = UserCRUD()
 
     user = user_crud.get(db, str(user_id))
-    if user:
-        success = user_crud.delete(db, str(user_id))
-    else:
-        success = False
+    success = user_crud.delete(db, str(user_id)) if user else False
     if not success:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在")
 
@@ -758,8 +755,8 @@ async def lock_user(
                 status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在"
             )
 
-        setattr(user, "is_locked", True)
-        setattr(user, "updated_at", datetime.now(UTC))
+        user.is_locked = True
+        user.updated_at = datetime.now(UTC)
         db.commit()
         db.refresh(user)
 
@@ -803,8 +800,8 @@ async def unlock_user_account(
                 status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在"
             )
 
-        setattr(user, "is_locked", False)
-        setattr(user, "updated_at", datetime.now(UTC))
+        user.is_locked = False
+        user.updated_at = datetime.now(UTC)
         db.commit()
         db.refresh(user)
 
@@ -831,7 +828,7 @@ async def unlock_user_account(
 @router.post("/users/{user_id}/reset-password", summary="重置用户密码")
 async def reset_user_password(
     user_id: str,
-    password_data: dict = {"new_password": ..., "reason": None},
+    password_data: dict = None,
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(require_admin),
 ):
@@ -843,6 +840,8 @@ async def reset_user_password(
     """
     from pydantic import BaseModel
 
+    if password_data is None:
+        password_data = {"new_password": ..., "reason": None}
     class PasswordResetRequest(BaseModel):
         new_password: str
         reason: str | None = None
@@ -866,12 +865,8 @@ async def reset_user_password(
             )
 
         # 设置新密码
-        setattr(
-            user,
-            "hashed_password",
-            auth_service.get_password_hash(reset_request.new_password),
-        )
-        setattr(user, "updated_at", datetime.now(UTC))
+        user.hashed_password = auth_service.get_password_hash(reset_request.new_password)
+        user.updated_at = datetime.now(UTC)
         db.commit()
         db.refresh(user)
 

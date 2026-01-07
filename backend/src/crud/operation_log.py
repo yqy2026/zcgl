@@ -169,7 +169,7 @@ class OperationLogCRUD:
             "user_id": user_id,
             "days": days,
             "total_operations": total_operations,
-            "action_breakdown": {action: count for action, count in action_stats},
+            "action_breakdown": dict(action_stats),
         }
 
     def get_module_statistics(self, db: Session, module: str, days: int = 30) -> dict:
@@ -204,7 +204,7 @@ class OperationLogCRUD:
             "module": module,
             "days": days,
             "total_operations": total_operations,
-            "action_breakdown": {action: count for action, count in action_stats},
+            "action_breakdown": dict(action_stats),
         }
 
     def get_daily_statistics(self, db: Session, days: int = 30) -> dict:
@@ -261,7 +261,7 @@ class OperationLogCRUD:
         return {
             "days": days,
             "total_errors": total_errors,
-            "error_breakdown": {action: count for action, count in error_types},
+            "error_breakdown": dict(error_types),
         }
 
     def count(self, db: Session) -> int:

@@ -1,9 +1,9 @@
-import React from "react";
-import { Navigate, Route } from "react-router-dom";
-import ProtectedRoute from "./ProtectedRoute";
-import LazyRoute from "./LazyRoute";
-import { RouteConfig } from "@/constants/routes";
-import { PERMISSIONS } from "@/hooks/usePermission";
+import React from 'react';
+import { Navigate, Route } from 'react-router-dom';
+import ProtectedRoute from './ProtectedRoute';
+import LazyRoute from './LazyRoute';
+import { RouteConfig } from '@/constants/routes';
+import { PERMISSIONS } from '@/hooks/usePermission';
 
 // 路由组件属性类型
 export interface RouteComponentProps {
@@ -48,7 +48,7 @@ class RouteBuilder {
     } = config;
 
     // 如果有明确的 element 属性（如重定向），使用 Route
-    if (element) {
+    if (element !== null && element !== undefined) {
       return <Route key={path} path={path} element={element} {...props} />;
     }
 
@@ -101,7 +101,7 @@ class RouteBuilder {
    * 构建路由树
    */
   static buildRoutes(configs: RouteBuilderConfig[]): JSX.Element[] {
-    return configs.map((config) => RouteBuilder.buildRoute(config));
+    return configs.map(config => RouteBuilder.buildRoute(config));
   }
 
   /**
@@ -118,13 +118,15 @@ class RouteBuilder {
     path: string,
     component: React.ComponentType<RouteComponentProps>,
     permissionKey: keyof typeof PERMISSIONS,
-    title?: string,
+    title?: string
   ): JSX.Element {
+    const pathParts = path.split('/');
+    const lastPart = pathParts[pathParts.length - 1];
     return RouteBuilder.buildRoute({
       path,
       component,
       permissions: [PERMISSIONS[permissionKey]],
-      title: title || path.split("/").pop() || "",
+      title: title !== null && title !== undefined && title !== '' ? title : (lastPart ?? ''),
     });
   }
 
@@ -139,13 +141,20 @@ class RouteBuilder {
       permissions?: Array<{ resource: string; action: string }>;
       preload?: () => void;
       fallback?: React.ReactNode;
-    },
+    }
   ): JSX.Element {
+    const pathParts = path.split('/');
+    const lastPart = pathParts[pathParts.length - 1];
+    const optionsTitle = options?.title;
+    const defaultTitle =
+      optionsTitle !== null && optionsTitle !== undefined && optionsTitle !== ''
+        ? optionsTitle
+        : (lastPart ?? '');
     return RouteBuilder.buildRoute({
       path,
       component,
       lazy: true,
-      title: options?.title || path.split("/").pop() || "",
+      title: defaultTitle,
       permissions: options?.permissions,
       preload: options?.preload,
       fallback: options?.fallback,
@@ -156,35 +165,35 @@ class RouteBuilder {
 // 预定义的路由构建函数
 export const AssetRoutes = {
   list: (Component: React.ComponentType<RouteComponentProps>) =>
-    RouteBuilder.createProtectedRoute("/assets/list", Component, "ASSET_VIEW", "资产列表"),
+    RouteBuilder.createProtectedRoute('/assets/list', Component, 'ASSET_VIEW', '资产列表'),
 
   new: (Component: React.ComponentType<RouteComponentProps>) =>
-    RouteBuilder.createProtectedRoute("/assets/new", Component, "ASSET_CREATE", "创建资产"),
+    RouteBuilder.createProtectedRoute('/assets/new', Component, 'ASSET_CREATE', '创建资产'),
 
   import: (Component: React.ComponentType<RouteComponentProps>) =>
-    RouteBuilder.createProtectedRoute("/assets/import", Component, "ASSET_IMPORT", "资产导入"),
+    RouteBuilder.createProtectedRoute('/assets/import', Component, 'ASSET_IMPORT', '资产导入'),
 
   analytics: (Component: React.ComponentType<RouteComponentProps>) =>
-    RouteBuilder.createProtectedRoute("/assets/analytics", Component, "ASSET_VIEW", "资产分析"),
+    RouteBuilder.createProtectedRoute('/assets/analytics', Component, 'ASSET_VIEW', '资产分析'),
 };
 
 export const SystemRoutes = {
   users: (Component: React.ComponentType<RouteComponentProps>) =>
-    RouteBuilder.createProtectedRoute("/system/users", Component, "USER_VIEW", "用户管理"),
+    RouteBuilder.createProtectedRoute('/system/users', Component, 'USER_VIEW', '用户管理'),
 
   roles: (Component: React.ComponentType<RouteComponentProps>) =>
-    RouteBuilder.createProtectedRoute("/system/roles", Component, "ROLE_VIEW", "角色管理"),
+    RouteBuilder.createProtectedRoute('/system/roles', Component, 'ROLE_VIEW', '角色管理'),
 
   organizations: (Component: React.ComponentType<RouteComponentProps>) =>
     RouteBuilder.createProtectedRoute(
-      "/system/organizations",
+      '/system/organizations',
       Component,
-      "ORGANIZATION_VIEW",
-      "组织架构",
+      'ORGANIZATION_VIEW',
+      '组织架构'
     ),
 
-  logs: (Component: React.ComponentType<any>) =>
-    RouteBuilder.createProtectedRoute("/system/logs", Component, "SYSTEM_LOGS", "操作日志"),
+  logs: (Component: React.ComponentType<Record<string, unknown>>) =>
+    RouteBuilder.createProtectedRoute('/system/logs', Component, 'SYSTEM_LOGS', '操作日志'),
 };
 
 export default RouteBuilder;

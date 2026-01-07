@@ -242,7 +242,7 @@ def add_legacy_enum_values(db: Session, created_by: str = "system") -> dict:
 
     stats = {"values_added": 0, "errors": []}
 
-    for enum_code, values in legacy_values.items():
+    for enum_code, _values in legacy_values.items():
         try:
             enum_type = (
                 db.query(EnumFieldType).filter(EnumFieldType.code == enum_code).first()

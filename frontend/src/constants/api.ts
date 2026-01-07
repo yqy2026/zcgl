@@ -12,23 +12,27 @@
 // ==================== API环境配置 ====================
 
 // 环境类型定义
-export type EnvironmentType = 'development' | 'production' | 'test'
+export type EnvironmentType = 'development' | 'production' | 'test';
 
 // API版本配置
 export const API_VERSIONS = {
   V1: 'v1',
   V2: 'v2',
-} as const
+} as const;
 
 // 当前使用的版本
-export const CURRENT_API_VERSION = API_VERSIONS.V1 // 版本化API
+export const CURRENT_API_VERSION = API_VERSIONS.V1; // 版本化API
 
 // 获取当前环境
 const getCurrentEnvironment = (): EnvironmentType => {
-  if (process.env.NODE_ENV === 'production') return 'production'
-  if (process.env.NODE_ENV === 'test') return 'test'
-  return 'development'
-}
+  if (process.env.NODE_ENV === 'production') {
+    return 'production';
+  }
+  if (process.env.NODE_ENV === 'test') {
+    return 'test';
+  }
+  return 'development';
+};
 
 // API基础路径配置
 export const API_CONFIG = {
@@ -56,18 +60,18 @@ export const API_CONFIG = {
     DELAY: 1000,
     BACKOFF_FACTOR: 2,
   },
-} as const
+} as const;
 
 // 构建完整API路径的工具函数
 export const buildApiPath = (path: string): string => {
   // 统一使用版本化路径，与后端 /api/v1/{module}/{action} 模式匹配
-  return `${API_CONFIG.BASE_URL}${path}`
-}
+  return `${API_CONFIG.BASE_URL}${path}`;
+};
 
 // 构建不带版本的API路径（用于兼容旧API）
 export const buildLegacyApiPath = (path: string): string => {
-  return `${API_CONFIG.BASE_URL}${path}`
-}
+  return `${API_CONFIG.BASE_URL}${path}`;
+};
 
 // ==================== API模块路径 ====================
 
@@ -98,7 +102,7 @@ export const AUTH_API = {
   USER_LOCK: (id: string) => `/auth/users/${id}/lock`,
   USER_UNLOCK: (id: string) => `/auth/users/${id}/unlock`,
   USER_RESET_PASSWORD: (id: string) => `/auth/users/${id}/reset-password`,
-} as const
+} as const;
 
 // 资产管理API
 export const ASSET_API = {
@@ -133,7 +137,7 @@ export const ASSET_API = {
   USAGE_STATUSES: '/assets/usage-statuses',
   PROPERTY_NATURES: '/assets/property-natures',
   OWNERSHIP_STATUSES: '/assets/ownership-statuses',
-} as const
+} as const;
 
 // 组织架构API
 export const ORGANIZATION_API = {
@@ -151,7 +155,7 @@ export const ORGANIZATION_API = {
   // 权限管理
   PERMISSIONS: '/organizations/permissions',
   ROLES: '/roles',
-} as const
+} as const;
 
 // 权属方管理API
 export const OWNERSHIP_API = {
@@ -161,7 +165,7 @@ export const OWNERSHIP_API = {
   UPDATE: (id: string) => `/ownerships/${id}`,
   DELETE: (id: string) => `/ownerships/${id}`,
   SEARCH: '/ownerships/search',
-} as const
+} as const;
 
 // 项目管理API
 export const PROJECT_API = {
@@ -172,7 +176,7 @@ export const PROJECT_API = {
   DELETE: (id: string) => `/projects/${id}`,
   SEARCH: '/projects/search',
   DROPDOWN_OPTIONS: '/projects/dropdown-options',
-} as const
+} as const;
 
 // 租赁合同API
 export const RENT_CONTRACT_API = {
@@ -211,7 +215,7 @@ export const RENT_CONTRACT_API = {
   STATISTICS_ASSET: '/rental-contracts/statistics/asset',
   STATISTICS_MONTHLY: '/rental-contracts/statistics/monthly',
   STATISTICS_EXPORT: '/rental-contracts/statistics/export',
-} as const
+} as const;
 
 // 数据统计API
 export const STATISTICS_API = {
@@ -229,7 +233,7 @@ export const STATISTICS_API = {
   MONTHLY_REPORT: '/statistics/reports/monthly',
   ANNUAL_REPORT: '/statistics/reports/annual',
   CUSTOM_REPORT: '/statistics/reports/custom',
-} as const
+} as const;
 
 // Excel导入导出API
 export const EXCEL_API = {
@@ -247,7 +251,7 @@ export const EXCEL_API = {
   ASSET_TEMPLATE: '/excel/templates/asset',
   CONTRACT_TEMPLATE: '/excel/templates/contract',
   OWNERSHIP_TEMPLATE: '/excel/templates/ownership',
-} as const
+} as const;
 
 // PDF导入API
 export const PDF_API = {
@@ -270,7 +274,8 @@ export const PDF_API = {
   RESULT: (taskId: string) => buildApiPath(`/pdf-import/result/${taskId}`),
 
   // 质量评估
-  QUALITY_ASSESSMENT: (sessionId: string) => buildApiPath(`/pdf-import/quality/assessment/${sessionId}`),
+  QUALITY_ASSESSMENT: (sessionId: string) =>
+    buildApiPath(`/pdf-import/quality/assessment/${sessionId}`),
   QUALITY_ANALYZE: buildApiPath('/pdf-import/quality/analyze'),
 
   // 导入确认
@@ -290,7 +295,7 @@ export const PDF_API = {
   TEST_SYSTEM: buildApiPath('/pdf-import/test_system'),
   TEST_DETAILED: buildApiPath('/pdf-import/test_detailed'),
   HEALTH_CHECK: buildApiPath('/pdf-import/health'),
-} as const
+} as const;
 
 // 系统管理API
 export const SYSTEM_API = {
@@ -331,7 +336,7 @@ export const SYSTEM_API = {
   // 审计日志
   AUDIT_LOGS: buildApiPath('/logs'),
   AUDIT_LOG_DETAIL: (id: string) => buildApiPath(`/logs/${id}`),
-} as const
+} as const;
 
 // 数据备份API
 export const BACKUP_API = {
@@ -348,7 +353,7 @@ export const BACKUP_API = {
   // 备份配置
   CONFIG: '/backup/config',
   SCHEDULE: '/backup/schedule',
-} as const
+} as const;
 
 // 测试覆盖率API
 export const TEST_COVERAGE_API = {
@@ -357,28 +362,28 @@ export const TEST_COVERAGE_API = {
   THRESHOLDS: buildApiPath('/test-coverage/thresholds'),
   THRESHOLDS_UPDATE: buildApiPath('/test-coverage/thresholds'),
   QUALITY_GATE: buildApiPath('/test-coverage/quality-gate'),
-} as const
+} as const;
 
 // 监控API
 export const MONITORING_API = {
   ROUTE_PERFORMANCE: buildApiPath('/monitoring/route-performance'),
   SYSTEM_HEALTH: buildApiPath('/monitoring/health'), // 迁移到 /api/v1/monitoring/health
   PERFORMANCE_METRICS: buildApiPath('/monitoring/performance'),
-} as const
+} as const;
 
 // 错误报告API
 export const ERROR_REPORTING_API = {
   REPORT: buildApiPath('/errors/report'),
   LIST: buildApiPath('/errors'),
   ANALYTICS: buildApiPath('/errors/analytics'),
-} as const
+} as const;
 
 // A/B测试API
 export const AB_TESTING_API = {
   EVENTS: buildApiPath('/analytics/abtest-events'),
   CONVERSIONS: buildApiPath('/analytics/abtest-conversions'),
   CONFIGURATIONS: buildApiPath('/analytics/abtest-config'),
-} as const
+} as const;
 
 // ==================== API路径构建工具 ====================
 
@@ -388,22 +393,19 @@ export const AB_TESTING_API = {
  * @param params 路径参数对象
  * @returns 完整的API URL
  */
-export const buildApiUrl = (
-  path: string,
-  params?: Record<string, string | number>
-): string => {
-  let url = `${API_CONFIG.BASE_PATH}${path}`
+export const buildApiUrl = (path: string, params?: Record<string, string | number>): string => {
+  let url = `${API_CONFIG.BASE_PATH}${path}`;
 
   if (params) {
-    const searchParams = new URLSearchParams()
+    const searchParams = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => {
-      searchParams.append(key, String(value))
-    })
-    url += `?${searchParams.toString()}`
+      searchParams.append(key, String(value));
+    });
+    url += `?${searchParams.toString()}`;
   }
 
-  return url
-}
+  return url;
+};
 
 /**
  * 构建带路径参数的API URL
@@ -417,24 +419,24 @@ export const buildApiUrlWithPathParams = (
   pathParams: Record<string, string | number>,
   queryParams?: Record<string, string | number>
 ): string => {
-  let url = `${API_CONFIG.BASE_PATH}${pathTemplate}`
+  let url = `${API_CONFIG.BASE_PATH}${pathTemplate}`;
 
   // 替换路径参数
   Object.entries(pathParams).forEach(([key, value]) => {
-    url = url.replace(`{${key}}`, String(value))
-  })
+    url = url.replace(`{${key}}`, String(value));
+  });
 
   // 添加查询参数
   if (queryParams) {
-    const searchParams = new URLSearchParams()
+    const searchParams = new URLSearchParams();
     Object.entries(queryParams).forEach(([key, value]) => {
-      searchParams.append(key, String(value))
-    })
-    url += `?${searchParams.toString()}`
+      searchParams.append(key, String(value));
+    });
+    url += `?${searchParams.toString()}`;
   }
 
-  return url
-}
+  return url;
+};
 
 // ==================== API路径常量导出 ====================
 
@@ -454,4 +456,4 @@ export const API_ENDPOINTS = {
   MONITORING: MONITORING_API,
   ERROR_REPORTING: ERROR_REPORTING_API,
   AB_TESTING: AB_TESTING_API,
-} as const
+} as const;

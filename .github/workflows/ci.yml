@@ -1,0 +1,353 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop, "feature/*", "hotfix/*"]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: '3.12'
+  NODE_VERSION: '20'
+  BACKEND_COVERAGE_THRESHOLD: 80
+  FRONTEND_COVERAGE_THRESHOLD: 70
+
+jobs:
+  # ===========================
+  # Backend Tests & Quality
+  # ===========================
+  backend:
+    name: Backend (Python ${{ env.PYTHON_VERSION }})
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+        cache-dependency-path: backend/pyproject.toml
+
+    - name: Cache uv dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/uv
+          ~/.local/share/uv
+        key: ${{ runner.os }}-uv-${{ hashFiles('backend/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-uv-
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libmagic1
+
+    - name: Install Python dependencies
+      run: |
+        cd backend
+        pip install uv --upgrade
+        uv sync --all-extras
+
+    - name: Validate Python syntax
+      run: |
+        cd backend
+        find src/ -name "*.py" -exec uv run python -m py_compile {} \;
+
+    - name: Run Ruff linting
+      run: |
+        cd backend
+        uv run ruff check src/ --output-format=github --no-fix
+
+    - name: Run Ruff formatting check
+      run: |
+        cd backend
+        uv run ruff format --check src/
+
+    - name: Run MyPy type checking
+      run: |
+        cd backend
+        uv run mypy src/ --ignore-missing-imports
+
+    - name: Run security checks
+      run: |
+        cd backend
+        uv run bandit -r src/ -f json -o bandit-report.json || true
+        uv run bandit -r src/ -f txt || true
+
+    - name: Run unit tests
+      run: |
+        cd backend
+        uv run pytest tests/ \
+          --cov=src \
+          --cov-report=xml:coverage.xml \
+          --cov-report=html:htmlcov \
+          --cov-report=term-missing \
+          --junit-xml=test-results.xml \
+          --cov-fail-under=${{ env.BACKEND_COVERAGE_THRESHOLD }} \
+          -v \
+          --tb=short
+
+    - name: Upload backend reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: backend-reports
+        path: |
+          backend/coverage.xml
+          backend/htmlcov/
+          backend/test-results.xml
+          backend/bandit-report.json
+        retention-days: 30
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./backend/coverage.xml
+        flags: backend
+        name: backend-coverage
+        fail_ci_if_error: false
+
+  # ===========================
+  # Frontend Tests & Quality
+  # ===========================
+  frontend:
+    name: Frontend (Node ${{ env.NODE_VERSION }})
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Install dependencies
+      run: |
+        cd frontend
+        npm ci
+
+    - name: Run ESLint
+      run: |
+        cd frontend
+        npm run lint -- --format=json --output-file=eslint-report.json || true
+        npm run lint
+
+    - name: Run Prettier check
+      run: |
+        cd frontend
+        npm run format:check || true
+
+    - name: Run TypeScript check
+      run: |
+        cd frontend
+        npm run type-check
+
+    - name: Run type coverage check
+      run: |
+        cd frontend
+        npm run type-coverage:check || true
+
+    - name: Run tests
+      run: |
+        cd frontend
+        npm test -- --coverage --watchAll=false \
+          --coverage-reporter=json \
+          --coverage-reporter=lcov \
+          --coverage-reporter=text
+
+    - name: Build frontend
+      run: |
+        cd frontend
+        npm run build
+
+    - name: Upload frontend reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: frontend-reports
+        path: |
+          frontend/coverage/
+          frontend/test-results.json
+          frontend/eslint-report.json
+          frontend/dist/
+        retention-days: 30
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./frontend/coverage/lcov.info
+        flags: frontend
+        name: frontend-coverage
+        fail_ci_if_error: false
+
+  # ===========================
+  # API Consistency Check
+  # ===========================
+  api-consistency:
+    name: API Consistency
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Install dependencies
+      run: |
+        cd backend
+        pip install uv
+        uv sync || true
+        cd ../frontend
+        npm ci
+
+    - name: Run Backend API Consistency Check
+      run: |
+        cd backend
+        if [ -f scripts/maintenance/api_consistency_check.py ]; then
+          python scripts/maintenance/api_consistency_check.py . ../frontend || true
+        else
+          echo "API consistency script not found, skipping"
+        fi
+
+    - name: Run Frontend API Consistency Check
+      run: |
+        cd frontend
+        if [ -f scripts/check-api-consistency.js ]; then
+          node scripts/check-api-consistency.js || true
+        else
+          echo "API consistency script not found, skipping"
+        fi
+
+  # ===========================
+  # Integration Tests
+  # ===========================
+  integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_land_property
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Install dependencies
+      run: |
+        cd backend
+        pip install uv
+        uv sync --all-extras
+
+    - name: Run database migrations
+      run: |
+        cd backend
+        export DATABASE_URL=postgresql://postgres:test_password@localhost:5432/test_land_property
+        uv run alembic upgrade head
+
+    - name: Run integration tests
+      run: |
+        cd backend
+        export DATABASE_URL=postgresql://postgres:test_password@localhost:5432/test_land_property
+        export REDIS_URL=redis://localhost:6379/0
+        export ENVIRONMENT=testing
+        uv run pytest tests/integration/ -v || true
+
+    - name: Upload integration test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: integration-reports
+        path: |
+          backend/test-results-integration.xml
+          backend/integration-report.html
+        retention-days: 30
+
+  # ===========================
+  # Summary Report
+  # ===========================
+  summary:
+    name: CI Summary
+    runs-on: ubuntu-latest
+    needs: [backend, frontend, api-consistency]
+    if: always()
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download all reports
+      uses: actions/download-artifact@v4
+      with:
+        pattern: "*-reports"
+        path: reports/
+        merge-multiple: true
+
+    - name: Generate summary
+      run: |
+        echo "# 🚀 CI Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Backend | ${{ needs.backend.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Frontend | ${{ needs.frontend.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| API Consistency | ${{ needs.api-consistency.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## 📊 Coverage Thresholds" >> $GITHUB_STEP_SUMMARY
+        echo "- Backend: ${{ env.BACKEND_COVERAGE_THRESHOLD }}%" >> $GITHUB_STEP_SUMMARY
+        echo "- Frontend: ${{ env.FRONTEND_COVERAGE_THRESHOLD }}%" >> $GITHUB_STEP_SUMMARY

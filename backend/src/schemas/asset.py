@@ -133,17 +133,23 @@ class AssetBase(BaseModel):
     @field_validator("contract_end_date")
     @classmethod
     def validate_contract_dates(cls, v, info):
-        if v and info.data.get("contract_start_date"):  # pragma: no cover
-            if v < info.data["contract_start_date"]:  # pragma: no cover
-                raise ValueError("合同结束日期不能早于开始日期")  # pragma: no cover
+        if (
+            v  # pragma: no cover
+            and info.data.get("contract_start_date")  # pragma: no cover
+            and v < info.data["contract_start_date"]  # pragma: no cover
+        ):
+            raise ValueError("合同结束日期不能早于开始日期")  # pragma: no cover
         return v  # pragma: no cover
 
     @field_validator("operation_agreement_end_date")
     @classmethod
     def validate_agreement_dates(cls, v, info):
-        if v and info.data.get("operation_agreement_start_date"):  # pragma: no cover
-            if v < info.data["operation_agreement_start_date"]:  # pragma: no cover
-                raise ValueError("接收协议结束日期不能早于开始日期")  # pragma: no cover
+        if (
+            v  # pragma: no cover
+            and info.data.get("operation_agreement_start_date")  # pragma: no cover
+            and v < info.data["operation_agreement_start_date"]  # pragma: no cover
+        ):
+            raise ValueError("接收协议结束日期不能早于开始日期")  # pragma: no cover
         return v  # pragma: no cover
 
 

@@ -11,7 +11,7 @@ import type {
   OwnershipSearchRequest,
   OwnershipStatisticsResponse,
   OwnershipDeleteResponse,
-  OwnershipSearchParams
+  OwnershipSearchParams,
 } from '@/types/ownership';
 
 export class OwnershipService {
@@ -32,7 +32,7 @@ export class OwnershipService {
     }
 
     const response = await apiRequest.get(`${this.baseUrl}?${searchParams.toString()}`);
-    return response.data;
+    return response.data as OwnershipListResponse;
   }
 
   /**
@@ -40,7 +40,7 @@ export class OwnershipService {
    */
   async searchOwnerships(searchParams: OwnershipSearchRequest): Promise<OwnershipListResponse> {
     const response = await apiRequest.post(`${this.baseUrl}/search`, searchParams);
-    return response.data;
+    return response.data as OwnershipListResponse;
   }
 
   /**
@@ -48,7 +48,7 @@ export class OwnershipService {
    */
   async getOwnership(id: string): Promise<Ownership> {
     const response = await apiRequest.get(`${this.baseUrl}/${id}`);
-    return response.data;
+    return response.data as Ownership;
   }
 
   /**
@@ -56,7 +56,7 @@ export class OwnershipService {
    */
   async createOwnership(data: OwnershipCreate): Promise<Ownership> {
     const response = await apiRequest.post(this.baseUrl, data);
-    return response.data;
+    return response.data as Ownership;
   }
 
   /**
@@ -64,7 +64,7 @@ export class OwnershipService {
    */
   async updateOwnership(id: string, data: OwnershipUpdate): Promise<Ownership> {
     const response = await apiRequest.put(`${this.baseUrl}/${id}`, data);
-    return response.data;
+    return response.data as Ownership;
   }
 
   /**
@@ -72,7 +72,7 @@ export class OwnershipService {
    */
   async deleteOwnership(id: string): Promise<OwnershipDeleteResponse> {
     const response = await apiRequest.delete(`${this.baseUrl}/${id}`);
-    return response.data;
+    return response.data as OwnershipDeleteResponse;
   }
 
   /**
@@ -80,7 +80,7 @@ export class OwnershipService {
    */
   async toggleOwnershipStatus(id: string): Promise<Ownership> {
     const response = await apiRequest.post(`${this.baseUrl}/${id}/toggle-status`);
-    return response.data;
+    return response.data as Ownership;
   }
 
   /**
@@ -88,16 +88,15 @@ export class OwnershipService {
    */
   async getOwnershipStatistics(): Promise<OwnershipStatisticsResponse> {
     const response = await apiRequest.get(`${this.baseUrl}/statistics/summary`);
-    return response.data;
+    return response.data as OwnershipStatisticsResponse;
   }
 
-  
   /**
    * 获取权属方选项列表
    */
   async getOwnershipOptions(isActive: boolean = true): Promise<Ownership[]> {
     const response = await apiRequest.get(`${this.baseUrl}/dropdown-options?is_active=${isActive}`);
-    return response.data;
+    return response.data as Ownership[];
   }
 
   /**
@@ -106,9 +105,7 @@ export class OwnershipService {
   async validateOwnershipCode(code: string, excludeId?: string): Promise<boolean> {
     try {
       const result = await this.getOwnerships({ keyword: code });
-      return !result.items.some(item =>
-        item.code === code && item.id !== excludeId
-      );
+      return !result.items.some(item => item.code === code && item.id !== excludeId);
     } catch (error) {
       console.error('验证权属方编码失败:', error);
       throw new Error('Network error during ownership code validation');
@@ -121,9 +118,7 @@ export class OwnershipService {
   async validateOwnershipName(name: string, excludeId?: string): Promise<boolean> {
     try {
       const result = await this.getOwnerships({ keyword: name });
-      return !result.items.some(item =>
-        item.name === name && item.id !== excludeId
-      );
+      return !result.items.some(item => item.name === name && item.id !== excludeId);
     } catch (error) {
       console.error('验证权属方名称失败:', error);
       throw new Error('Network error during ownership name validation');

@@ -14,7 +14,7 @@
  */
 
 // Re-export all types for backward compatibility
-export * from "./asset/types";
+export * from './asset/types';
 
 // Re-export individual services
 export {
@@ -30,15 +30,15 @@ export {
   assetDictionaryService,
   AssetFieldService,
   assetFieldService,
-} from "./asset";
+} from './asset';
 
 // Import services for delegation
-import { assetCoreService } from "./asset/assetCoreService";
-import { assetHistoryService } from "./asset/assetHistoryService";
-import { assetStatisticsService } from "./asset/assetStatisticsService";
-import { assetImportExportService } from "./asset/assetImportExportService";
-import { assetDictionaryService } from "./asset/assetDictionaryService";
-import { assetFieldService } from "./asset/assetFieldService";
+import { assetCoreService } from './asset/assetCoreService';
+import { assetHistoryService } from './asset/assetHistoryService';
+import { assetStatisticsService } from './asset/assetStatisticsService';
+import { assetImportExportService } from './asset/assetImportExportService';
+import { assetDictionaryService } from './asset/assetDictionaryService';
+import { assetFieldService } from './asset/assetFieldService';
 
 import type {
   Asset,
@@ -65,7 +65,7 @@ import type {
   AssetSearchFilters,
   FieldOption,
   FieldValidationResult,
-} from "./asset/types";
+} from './asset/types';
 
 /**
  * 资产服务类 - Legacy Facade
@@ -82,7 +82,7 @@ export class AssetService {
     return assetCoreService.getAssets(params);
   }
 
-  async getAllAssets(params?: Omit<AssetSearchParams, "page" | "limit">): Promise<Asset[]> {
+  async getAllAssets(params?: Omit<AssetSearchParams, 'page' | 'limit'>): Promise<Asset[]> {
     return assetCoreService.getAllAssets(params);
   }
 
@@ -114,7 +114,9 @@ export class AssetService {
     return assetCoreService.searchAssets(query, filters);
   }
 
-  async validateAsset(data: AssetCreateRequest | AssetUpdateRequest): Promise<{ valid: boolean; errors: string[] }> {
+  async validateAsset(
+    data: AssetCreateRequest | AssetUpdateRequest
+  ): Promise<{ valid: boolean; errors: string[] }> {
     return assetCoreService.validateAsset(data);
   }
 
@@ -136,7 +138,7 @@ export class AssetService {
     assetId: string,
     page?: number,
     limit?: number,
-    changeType?: string,
+    changeType?: string
   ): Promise<PaginatedApiResponse<AssetHistory>> {
     return assetHistoryService.getAssetHistory(assetId, page, limit, changeType);
   }
@@ -149,7 +151,11 @@ export class AssetService {
     return assetHistoryService.compareHistory(historyId1, historyId2);
   }
 
-  async getFieldHistory(assetId: string, fieldName: string, limit?: number): Promise<FieldHistoryRecord[]> {
+  async getFieldHistory(
+    assetId: string,
+    fieldName: string,
+    limit?: number
+  ): Promise<FieldHistoryRecord[]> {
     return assetHistoryService.getFieldHistory(assetId, fieldName, limit);
   }
 
@@ -236,12 +242,15 @@ export class AssetService {
   }
 
   async createSystemDictionary(
-    data: Omit<SystemDictionary, "id" | "created_at" | "updated_at">,
+    data: Omit<SystemDictionary, 'id' | 'created_at' | 'updated_at'>
   ): Promise<SystemDictionary> {
     return assetDictionaryService.createSystemDictionary(data);
   }
 
-  async updateSystemDictionary(id: string, data: Partial<SystemDictionary>): Promise<SystemDictionary> {
+  async updateSystemDictionary(
+    id: string,
+    data: Partial<SystemDictionary>
+  ): Promise<SystemDictionary> {
     return assetDictionaryService.updateSystemDictionary(id, data);
   }
 
@@ -250,7 +259,7 @@ export class AssetService {
   }
 
   async batchUpdateSystemDictionaries(
-    updates: Array<{ id: string; data: Partial<SystemDictionary> }>,
+    updates: Array<{ id: string; data: Partial<SystemDictionary> }>
   ): Promise<SystemDictionary[]> {
     return assetDictionaryService.batchUpdateSystemDictionaries(updates);
   }
@@ -294,12 +303,15 @@ export class AssetService {
   }
 
   async createAssetCustomField(
-    data: Omit<AssetCustomField, "id" | "created_at" | "updated_at">,
+    data: Omit<AssetCustomField, 'id' | 'created_at' | 'updated_at'>
   ): Promise<AssetCustomField> {
     return assetFieldService.createAssetCustomField(data);
   }
 
-  async updateAssetCustomField(id: string, data: Partial<AssetCustomField>): Promise<AssetCustomField> {
+  async updateAssetCustomField(
+    id: string,
+    data: Partial<AssetCustomField>
+  ): Promise<AssetCustomField> {
     return assetFieldService.updateAssetCustomField(id, data);
   }
 
@@ -311,12 +323,15 @@ export class AssetService {
     return assetFieldService.getAssetCustomFieldValues(assetId);
   }
 
-  async updateAssetCustomFieldValues(assetId: string, values: CustomFieldValue[]): Promise<CustomFieldValue[]> {
+  async updateAssetCustomFieldValues(
+    assetId: string,
+    values: CustomFieldValue[]
+  ): Promise<CustomFieldValue[]> {
     return assetFieldService.updateAssetCustomFieldValues(assetId, values);
   }
 
   async batchSetCustomFieldValues(
-    updates: Array<{ assetId: string; values: CustomFieldValue[] }>,
+    updates: Array<{ assetId: string; values: CustomFieldValue[] }>
   ): Promise<void> {
     return assetFieldService.batchSetCustomFieldValues(updates);
   }

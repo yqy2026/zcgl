@@ -254,7 +254,6 @@ export interface RentLedgerQueryParams {
   end_date?: string;
 }
 
-
 // 分页响应类型
 export interface PaginatedResponse<T> {
   items: T[];

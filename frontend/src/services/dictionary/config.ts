@@ -3,20 +3,20 @@
  * 集中管理所有字典类型的配置和备用数据
  */
 
-import type { DictionaryOption } from '@/types/dictionary'
+import type { DictionaryOption } from '@/types/dictionary';
 
 // Re-export DictionaryOption for backward compatibility
-export type { DictionaryOption } from '@/types/dictionary'
+export type { DictionaryOption } from '@/types/dictionary';
 
 export interface DictionaryConfig {
-  code: string
-  name: string
-  category: string
-  description: string
-  apiEndpoint: string
-  fallbackOptions: DictionaryOption[]
-  tags?: string[]
-  requiredFields?: string[]
+  code: string;
+  name: string;
+  category: string;
+  description: string;
+  apiEndpoint: string;
+  fallbackOptions: DictionaryOption[];
+  tags?: string[];
+  requiredFields?: string[];
 }
 
 /**
@@ -34,8 +34,8 @@ export const DICTIONARY_CONFIGS: Record<string, DictionaryConfig> = {
       { label: '集体资产', value: 'collective', code: 'collective', sort_order: 2 },
       { label: '私有资产', value: 'private', code: 'private', sort_order: 3 },
       { label: '混合所有制', value: 'mixed', code: 'mixed', sort_order: 4 },
-      { label: '其他', value: 'other', code: 'other', sort_order: 5 }
-    ]
+      { label: '其他', value: 'other', code: 'other', sort_order: 5 },
+    ],
   },
 
   property_nature: {
@@ -46,8 +46,8 @@ export const DICTIONARY_CONFIGS: Record<string, DictionaryConfig> = {
     apiEndpoint: '/dictionaries/property_nature/options',
     fallbackOptions: [
       { label: '经营性', value: 'commercial', code: 'commercial', sort_order: 1 },
-      { label: '非经营性', value: 'non_commercial', code: 'non_commercial', sort_order: 2 }
-    ]
+      { label: '非经营性', value: 'non_commercial', code: 'non_commercial', sort_order: 2 },
+    ],
   },
 
   usage_status: {
@@ -63,8 +63,8 @@ export const DICTIONARY_CONFIGS: Record<string, DictionaryConfig> = {
       { label: '公房', value: 'public_housing', code: 'public_housing', sort_order: 4 },
       { label: '待移交', value: 'pending_transfer', code: 'pending_transfer', sort_order: 5 },
       { label: '待处置', value: 'pending_disposal', code: 'pending_disposal', sort_order: 6 },
-      { label: '其他', value: 'other', code: 'other', sort_order: 7 }
-    ]
+      { label: '其他', value: 'other', code: 'other', sort_order: 7 },
+    ],
   },
 
   ownership_status: {
@@ -76,8 +76,8 @@ export const DICTIONARY_CONFIGS: Record<string, DictionaryConfig> = {
     fallbackOptions: [
       { label: '已确权', value: 'confirmed', code: 'confirmed', sort_order: 1 },
       { label: '未确权', value: 'unconfirmed', code: 'unconfirmed', sort_order: 2 },
-      { label: '部分确权', value: 'partial', code: 'partial', sort_order: 3 }
-    ]
+      { label: '部分确权', value: 'partial', code: 'partial', sort_order: 3 },
+    ],
   },
 
   business_category: {
@@ -92,8 +92,8 @@ export const DICTIONARY_CONFIGS: Record<string, DictionaryConfig> = {
       { label: '住宅', value: 'residential', code: 'residential', sort_order: 3 },
       { label: '仓储', value: 'warehouse', code: 'warehouse', sort_order: 4 },
       { label: '工业', value: 'industrial', code: 'industrial', sort_order: 5 },
-      { label: '其他', value: 'other', code: 'other', sort_order: 6 }
-    ]
+      { label: '其他', value: 'other', code: 'other', sort_order: 6 },
+    ],
   },
 
   certificated_usage: {
@@ -107,8 +107,8 @@ export const DICTIONARY_CONFIGS: Record<string, DictionaryConfig> = {
       { label: '办公', value: 'office', code: 'office', sort_order: 2 },
       { label: '住宅', value: 'residential', code: 'residential', sort_order: 3 },
       { label: '工业', value: 'industrial', code: 'industrial', sort_order: 4 },
-      { label: '其他', value: 'other', code: 'other', sort_order: 5 }
-    ]
+      { label: '其他', value: 'other', code: 'other', sort_order: 5 },
+    ],
   },
 
   actual_usage: {
@@ -122,8 +122,8 @@ export const DICTIONARY_CONFIGS: Record<string, DictionaryConfig> = {
       { label: '办公', value: 'office', code: 'office', sort_order: 2 },
       { label: '住宅', value: 'residential', code: 'residential', sort_order: 3 },
       { label: '工业', value: 'industrial', code: 'industrial', sort_order: 4 },
-      { label: '其他', value: 'other', code: 'other', sort_order: 5 }
-    ]
+      { label: '其他', value: 'other', code: 'other', sort_order: 5 },
+    ],
   },
 
   tenant_type: {
@@ -136,8 +136,8 @@ export const DICTIONARY_CONFIGS: Record<string, DictionaryConfig> = {
       { label: '个人', value: 'individual', code: 'individual', sort_order: 1 },
       { label: '企业', value: 'enterprise', code: 'enterprise', sort_order: 2 },
       { label: '政府机构', value: 'government', code: 'government', sort_order: 3 },
-      { label: '其他', value: 'other', code: 'other', sort_order: 4 }
-    ]
+      { label: '其他', value: 'other', code: 'other', sort_order: 4 },
+    ],
   },
 
   contract_status: {
@@ -150,8 +150,8 @@ export const DICTIONARY_CONFIGS: Record<string, DictionaryConfig> = {
       { label: '生效中', value: 'active', code: 'active', sort_order: 1 },
       { label: '已到期', value: 'expired', code: 'expired', sort_order: 2 },
       { label: '已终止', value: 'terminated', code: 'terminated', sort_order: 3 },
-      { label: '待签署', value: 'pending', code: 'pending', sort_order: 4 }
-    ]
+      { label: '待签署', value: 'pending', code: 'pending', sort_order: 4 },
+    ],
   },
 
   business_model: {
@@ -164,8 +164,8 @@ export const DICTIONARY_CONFIGS: Record<string, DictionaryConfig> = {
       { label: '承租转租', value: 'sublease', code: 'sublease', sort_order: 1 },
       { label: '委托经营', value: 'entrusted', code: 'entrusted', sort_order: 2 },
       { label: '自营', value: 'self_operated', code: 'self_operated', sort_order: 3 },
-      { label: '其他', value: 'other', code: 'other', sort_order: 4 }
-    ]
+      { label: '其他', value: 'other', code: 'other', sort_order: 4 },
+    ],
   },
 
   operation_status: {
@@ -178,35 +178,37 @@ export const DICTIONARY_CONFIGS: Record<string, DictionaryConfig> = {
       { label: '正常经营', value: 'normal', code: 'normal', sort_order: 1 },
       { label: '停业整顿', value: 'suspended', code: 'suspended', sort_order: 2 },
       { label: '装修中', value: 'renovating', code: 'renovating', sort_order: 3 },
-      { label: '待招租', value: 'vacant_for_rent', code: 'vacant_for_rent', sort_order: 4 }
-    ]
-  }
-}
+      { label: '待招租', value: 'vacant_for_rent', code: 'vacant_for_rent', sort_order: 4 },
+    ],
+  },
+};
 
 /**
  * 获取所有字典类型的配置
  */
 export const getDictionaryConfigs = (): DictionaryConfig[] => {
-  return Object.values(DICTIONARY_CONFIGS)
-}
+  return Object.values(DICTIONARY_CONFIGS);
+};
 
 /**
  * 获取特定字典类型的配置
  */
 export const getDictionaryConfig = (code: string): DictionaryConfig | null => {
-  return DICTIONARY_CONFIGS[code] || null
-}
+  return DICTIONARY_CONFIGS[code] !== null && DICTIONARY_CONFIGS[code] !== undefined
+    ? DICTIONARY_CONFIGS[code]
+    : null;
+};
 
 /**
  * 获取所有字典类型的代码
  */
 export const getDictionaryCodes = (): string[] => {
-  return Object.keys(DICTIONARY_CONFIGS)
-}
+  return Object.keys(DICTIONARY_CONFIGS);
+};
 
 /**
  * 检查字典类型是否存在
  */
 export const isDictionaryTypeExists = (code: string): boolean => {
-  return code in DICTIONARY_CONFIGS
-}
+  return code in DICTIONARY_CONFIGS;
+};

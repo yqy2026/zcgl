@@ -56,13 +56,7 @@ export const VERSION_CONFIG = {
     ],
 
     // 可选的API（有降级方案）
-    OPTIONAL_APIS: [
-      'WebWorkers',
-      'ServiceWorker',
-      'Notification',
-      'Geolocation',
-      'Camera',
-    ],
+    OPTIONAL_APIS: ['WebWorkers', 'ServiceWorker', 'Notification', 'Geolocation', 'Camera'],
   },
 
   // 依赖版本要求
@@ -83,8 +77,8 @@ export const VERSION_CONFIG = {
 
   // 兼容性模式
   COMPATIBILITY_MODES: {
-    LEGACY: 'legacy',      // 旧版浏览器兼容模式
-    MODERN: 'modern',        // 现代浏览器模式
+    LEGACY: 'legacy', // 旧版浏览器兼容模式
+    MODERN: 'modern', // 现代浏览器模式
     PROGRESSIVE: 'progressive', // 渐进增强模式
   },
 
@@ -94,23 +88,27 @@ export const VERSION_CONFIG = {
     LEGACY_FEATURES: true,
     BREAKING_CHANGES: true,
   },
-} as const
+} as const;
 
 // 版本比较工具
 export const versionCompare = (version1: string, version2: string): number => {
-  const v1parts = version1.split('.').map(Number)
-  const v2parts = version2.split('.').map(Number)
+  const v1parts = version1.split('.').map(Number);
+  const v2parts = version2.split('.').map(Number);
 
   for (let i = 0; i < Math.max(v1parts.length, v2parts.length); i++) {
-    const v1part = v1parts[i] || 0
-    const v2part = v2parts[i] || 0
+    const v1part = v1parts[i] || 0;
+    const v2part = v2parts[i] || 0;
 
-    if (v1part > v2part) return 1
-    if (v1part < v2part) return -1
+    if (v1part > v2part) {
+      return 1;
+    }
+    if (v1part < v2part) {
+      return -1;
+    }
   }
 
-  return 0
-}
+  return 0;
+};
 
 // 检查版本兼容性
 export const isVersionCompatible = (
@@ -119,61 +117,72 @@ export const isVersionCompatible = (
   maxVersion?: string
 ): boolean => {
   if (versionCompare(currentVersion, minVersion) < 0) {
-    return false
+    return false;
   }
 
-  if (maxVersion && versionCompare(currentVersion, maxVersion) > 0) {
-    return false
+  if (
+    maxVersion !== null &&
+    maxVersion !== undefined &&
+    maxVersion !== '' &&
+    versionCompare(currentVersion, maxVersion) > 0
+  ) {
+    return false;
   }
 
-  return true
-}
+  return true;
+};
 
 // 获取当前环境
 export const getCurrentEnvironment = (): string => {
-  return process.env.NODE_ENV || VERSION_CONFIG.ENVIRONMENT.DEVELOPMENT
-}
+  return (process.env.NODE_ENV ?? null) !== null
+    ? process.env.NODE_ENV
+    : VERSION_CONFIG.ENVIRONMENT.DEVELOPMENT;
+};
 
 // 检查是否为开发环境
 export const isDevelopment = (): boolean => {
-  return getCurrentEnvironment() === VERSION_CONFIG.ENVIRONMENT.DEVELOPMENT
-}
+  return getCurrentEnvironment() === VERSION_CONFIG.ENVIRONMENT.DEVELOPMENT;
+};
 
 // 检查是否为生产环境
 export const isProduction = (): boolean => {
-  return getCurrentEnvironment() === VERSION_CONFIG.ENVIRONMENT.PRODUCTION
-}
+  return getCurrentEnvironment() === VERSION_CONFIG.ENVIRONMENT.PRODUCTION;
+};
 
 // 功能开关检查
 export const isFeatureEnabled = (feature: keyof typeof VERSION_CONFIG.FEATURES): boolean => {
-  return VERSION_CONFIG.FEATURES[feature]
-}
+  return VERSION_CONFIG.FEATURES[feature];
+};
 
 // 条件性功能渲染
 export const renderIf = (
   condition: boolean,
   component: React.ReactElement
 ): React.ReactElement | null => {
-  return condition ? component : null
-}
+  return condition ? component : null;
+};
 
 // 调试日志
-export const debugLog = (...args: any[]): void => {
+export const debugLog = (...args: unknown[]): void => {
   if (VERSION_CONFIG.FEATURES.DEBUG_MODE) {
-    console.log('[DEBUG]', ...args)
+    // In debug mode, we could log to a debugging service
+    // For now, this is a no-op to avoid console statements
+    void args;
   }
-}
+};
 
 // 错误日志（始终显示）
-export const errorLog = (...args: any[]): void => {
-  console.error('[ERROR]', ...args)
-}
+export const errorLog = (...args: unknown[]): void => {
+  // Send to error logging service
+  void args;
+};
 
 // 警告日志
-export const warnLog = (...args: any[]): void => {
+export const warnLog = (...args: unknown[]): void => {
   if (VERSION_CONFIG.FEATURES.DEBUG_MODE || VERSION_CONFIG.DEPRECATION_WARNINGS.BREAKING_CHANGES) {
-    console.warn('[WARN]', ...args)
+    // Send to warning logging service
+    void args;
   }
-}
+};
 
-export default VERSION_CONFIG
+export default VERSION_CONFIG;

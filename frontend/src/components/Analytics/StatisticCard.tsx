@@ -1,14 +1,14 @@
-import React from 'react'
-import { Card, Statistic } from 'antd'
+import React from 'react';
+import { Card, Statistic } from 'antd';
 
 interface StatisticCardProps {
-  title: string
-  value: number
-  precision?: number
-  suffix?: string
-  prefix?: string
-  valueStyle?: React.CSSProperties
-  loading?: boolean
+  title: string;
+  value: number;
+  precision?: number;
+  suffix?: string;
+  prefix?: string;
+  valueStyle?: React.CSSProperties;
+  loading?: boolean;
 }
 
 export const StatisticCard: React.FC<StatisticCardProps> = ({
@@ -18,7 +18,7 @@ export const StatisticCard: React.FC<StatisticCardProps> = ({
   suffix = '',
   prefix = '',
   valueStyle,
-  loading = false
+  loading = false,
 }) => {
   return (
     <Card loading={loading}>
@@ -31,11 +31,11 @@ export const StatisticCard: React.FC<StatisticCardProps> = ({
         valueStyle={valueStyle}
       />
     </Card>
-  )
-}
+  );
+};
 
 interface FinancialStatisticCardProps extends Omit<StatisticCardProps, 'valueStyle'> {
-  isPositive?: boolean
+  isPositive?: boolean;
 }
 
 export const FinancialStatisticCard: React.FC<FinancialStatisticCardProps> = ({
@@ -45,15 +45,8 @@ export const FinancialStatisticCard: React.FC<FinancialStatisticCardProps> = ({
   ...props
 }) => {
   const valueStyle = {
-    color: value >= 0 ? (isPositive ? '#3f8600' : '#cf1322') : '#cf1322'
-  }
+    color: value >= 0 ? (isPositive ? '#3f8600' : '#cf1322') : '#cf1322',
+  };
 
-  return (
-    <StatisticCard
-      title={title}
-      value={value}
-      valueStyle={valueStyle}
-      {...props}
-    />
-  )
-}
+  return <StatisticCard title={title} value={value} valueStyle={valueStyle} {...props} />;
+};

@@ -144,27 +144,27 @@
   .quickFilters {
     padding: 8px;
   }
-  
+
   .quickFilters .ant-btn {
     margin: 2px;
     font-size: 11px;
     height: 26px;
     padding: 0 8px;
   }
-  
+
   .actionButtons {
     flex-direction: column;
     gap: 8px;
   }
-  
+
   .actionButtons .ant-btn {
     width: 100%;
   }
-  
+
   .historyModal .ant-list-item {
     padding: 12px;
   }
-  
+
   .historyModal .ant-list-item-action {
     margin-left: 8px;
   }

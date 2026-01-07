@@ -3,8 +3,8 @@
  * 测试58字段资产表单的所有核心功能
  */
 
-import { describe, it, expect, vi } from 'vitest'
-import React from 'react'
+import { describe, it, expect, vi } from 'vitest';
+import React from 'react';
 
 // Mock all dependencies before importing
 vi.mock('@/api/client', () => ({
@@ -12,19 +12,19 @@ vi.mock('@/api/client', () => ({
     get: vi.fn(),
     post: vi.fn(),
   },
-}))
+}));
 
 vi.mock('@/services/assetService', () => ({
   assetService: {
     uploadAssetAttachments: vi.fn(),
   },
-}))
+}));
 
 vi.mock('@/services/rentContractService', () => ({
   rentContractService: {
     getAssetContracts: vi.fn(),
   },
-}))
+}));
 
 vi.mock('@/hooks/useDictionaries', () => ({
   useDictionaries: vi.fn(() => ({
@@ -33,7 +33,7 @@ vi.mock('@/hooks/useDictionaries', () => ({
     actual_usage: [],
     business_category: [],
   })),
-}))
+}));
 
 // Mock dayjs completely
 vi.mock('dayjs', () => ({
@@ -43,47 +43,44 @@ vi.mock('dayjs', () => ({
     valueOf: () => new Date(input || '2024-01-01').getTime(),
   })),
   isDayjs: vi.fn(() => false),
-}))
+}));
 
 // Mock custom components
 vi.mock('@/components/Dictionary/DictionarySelect', () => ({
   DictionarySelect: vi.fn(() => null),
-}))
+}));
 
 vi.mock('@/components/Ownership/OwnershipSelect', () => ({
   OwnershipSelect: vi.fn(() => null),
-}))
+}));
 
 vi.mock('@/components/Project/ProjectSelect', () => ({
   ProjectSelect: vi.fn(() => null),
-}))
+}));
 
 vi.mock('@/components/Asset/GroupedSelectSingle', () => ({
   GroupedSelectSingle: vi.fn(() => null),
-}))
+}));
 
 // Mock Ant Design completely
 vi.mock('antd', () => {
-  const mockForm = vi.fn(() => null)
+  const mockForm = vi.fn(() => null);
 
   return {
     Card: vi.fn(() => null),
-    Form: Object.assign(
-      mockForm,
-      {
-        Item: vi.fn(() => null),
-        useForm: vi.fn(() => [
-          {
-            getFieldsValue: vi.fn(() => ({})),
-            setFieldsValue: vi.fn(),
-            validateFields: vi.fn(() => Promise.resolve({})),
-            resetFields: vi.fn(),
-            getFieldValue: vi.fn(() => undefined),
-            setFieldValue: vi.fn(),
-          }
-        ]),
-      }
-    ),
+    Form: Object.assign(mockForm, {
+      Item: vi.fn(() => null),
+      useForm: vi.fn(() => [
+        {
+          getFieldsValue: vi.fn(() => ({})),
+          setFieldsValue: vi.fn(),
+          validateFields: vi.fn(() => Promise.resolve({})),
+          resetFields: vi.fn(),
+          getFieldValue: vi.fn(() => undefined),
+          setFieldValue: vi.fn(),
+        },
+      ]),
+    }),
     Input: vi.fn(() => null),
     InputNumber: vi.fn(() => null),
     Select: vi.fn(() => null),
@@ -109,8 +106,8 @@ vi.mock('antd', () => {
       warning: vi.fn(),
       info: vi.fn(),
     },
-  }
-})
+  };
+});
 
 // Mock icons
 vi.mock('@ant-design/icons', () => ({
@@ -120,7 +117,7 @@ vi.mock('@ant-design/icons', () => ({
   EyeOutlined: () => null,
   DeleteOutlined: () => null,
   InfoCircleOutlined: () => null,
-}))
+}));
 
 // Mock constants
 vi.mock('@/constants/assetForm', () => ({
@@ -132,7 +129,7 @@ vi.mock('@/constants/assetForm', () => ({
     'usage_status',
     'property_nature',
   ],
-}))
+}));
 
 vi.mock('@/constants/asset', () => ({
   OwnershipStatusOptions: [
@@ -165,149 +162,149 @@ vi.mock('@/constants/asset', () => ({
     { label: '自营', value: '自营' },
     { label: '租赁', value: '租赁' },
   ],
-}))
+}));
 
 describe('AssetForm - 组件导入测试', () => {
   it('应该能够导入组件', async () => {
-    const module = await import('../AssetForm')
-    expect(module).toBeDefined()
-    expect(module.default).toBeDefined()
-  })
+    const module = await import('../AssetForm');
+    expect(module).toBeDefined();
+    expect(module.default).toBeDefined();
+  });
 
   it('组件应该是React函数组件', async () => {
-    const AssetForm = (await import('../AssetForm')).default
-    expect(typeof AssetForm).toBe('function')
-  })
-})
+    const AssetForm = (await import('../AssetForm')).default;
+    expect(typeof AssetForm).toBe('function');
+  });
+});
 
 describe('AssetForm - 基础属性测试', () => {
   it('应该接受initialData属性', async () => {
-    const AssetForm = (await import('../AssetForm')).default
+    const AssetForm = (await import('../AssetForm')).default;
 
     const initialData = {
       ownership_entity: '测试权属方',
       property_name: '测试物业',
       address: '测试地址',
-    }
+    };
 
-    const element = React.createElement(AssetForm, { initialData })
-    expect(element).toBeTruthy()
-    expect(element.props.initialData).toEqual(initialData)
-  })
+    const element = React.createElement(AssetForm, { initialData });
+    expect(element).toBeTruthy();
+    expect(element.props.initialData).toEqual(initialData);
+  });
 
   it('应该接受onSubmit回调', async () => {
-    const AssetForm = (await import('../AssetForm')).default
+    const AssetForm = (await import('../AssetForm')).default;
 
-    const onSubmit = vi.fn()
-    const element = React.createElement(AssetForm, { onSubmit })
-    expect(element).toBeTruthy()
-    expect(element.props.onSubmit).toEqual(onSubmit)
-  })
+    const onSubmit = vi.fn();
+    const element = React.createElement(AssetForm, { onSubmit });
+    expect(element).toBeTruthy();
+    expect(element.props.onSubmit).toEqual(onSubmit);
+  });
 
   it('应该接受onCancel回调', async () => {
-    const AssetForm = (await import('../AssetForm')).default
+    const AssetForm = (await import('../AssetForm')).default;
 
-    const onCancel = vi.fn()
-    const element = React.createElement(AssetForm, { onCancel })
-    expect(element).toBeTruthy()
-    expect(element.props.onCancel).toEqual(onCancel)
-  })
+    const onCancel = vi.fn();
+    const element = React.createElement(AssetForm, { onCancel });
+    expect(element).toBeTruthy();
+    expect(element.props.onCancel).toEqual(onCancel);
+  });
 
   it('应该接受loading属性', async () => {
-    const AssetForm = (await import('../AssetForm')).default
+    const AssetForm = (await import('../AssetForm')).default;
 
-    const element = React.createElement(AssetForm, { loading: true })
-    expect(element).toBeTruthy()
-    expect(element.props.loading).toBe(true)
-  })
+    const element = React.createElement(AssetForm, { loading: true });
+    expect(element).toBeTruthy();
+    expect(element.props.loading).toBe(true);
+  });
 
   it('应该接受mode属性', async () => {
-    const AssetForm = (await import('../AssetForm')).default
+    const AssetForm = (await import('../AssetForm')).default;
 
-    const createElement = React.createElement(AssetForm, { mode: 'create' })
-    const editElement = React.createElement(AssetForm, { mode: 'edit' })
+    const createElement = React.createElement(AssetForm, { mode: 'create' });
+    const editElement = React.createElement(AssetForm, { mode: 'edit' });
 
-    expect(createElement).toBeTruthy()
-    expect(createElement.props.mode).toBe('create')
-    expect(editElement).toBeTruthy()
-    expect(editElement.props.mode).toBe('edit')
-  })
-})
+    expect(createElement).toBeTruthy();
+    expect(createElement.props.mode).toBe('create');
+    expect(editElement).toBeTruthy();
+    expect(editElement.props.mode).toBe('edit');
+  });
+});
 
 describe('AssetForm - 组件结构测试', () => {
   it('应该有正确的默认导出', async () => {
-    const AssetForm = (await import('../AssetForm')).default
+    const AssetForm = (await import('../AssetForm')).default;
 
-    expect(AssetForm).toBeDefined()
-    expect(typeof AssetForm).toBe('function')
-  })
+    expect(AssetForm).toBeDefined();
+    expect(typeof AssetForm).toBe('function');
+  });
 
   it('应该可以创建组件实例', async () => {
-    const AssetForm = (await import('../AssetForm')).default
+    const AssetForm = (await import('../AssetForm')).default;
 
-    const element = React.createElement(AssetForm, {})
-    expect(element).toBeTruthy()
-    expect(element.type).toBe(AssetForm)
-  })
+    const element = React.createElement(AssetForm, {});
+    expect(element).toBeTruthy();
+    expect(element.type).toBe(AssetForm);
+  });
 
   it('所有属性都应该是可选的', async () => {
-    const AssetForm = (await import('../AssetForm')).default
+    const AssetForm = (await import('../AssetForm')).default;
 
-    const element = React.createElement(AssetForm, {})
-    expect(element).toBeTruthy()
-  })
-})
+    const element = React.createElement(AssetForm, {});
+    expect(element).toBeTruthy();
+  });
+});
 
 describe('AssetForm - Props类型测试', () => {
   it('应该正确处理create模式', async () => {
-    const AssetForm = (await import('../AssetForm')).default
+    const AssetForm = (await import('../AssetForm')).default;
 
     const props = {
       mode: 'create' as const,
       onSubmit: vi.fn(),
       onCancel: vi.fn(),
       loading: false,
-    }
+    };
 
-    const element = React.createElement(AssetForm, props)
-    expect(element.props.mode).toBe('create')
-  })
+    const element = React.createElement(AssetForm, props);
+    expect(element.props.mode).toBe('create');
+  });
 
   it('应该正确处理edit模式', async () => {
-    const AssetForm = (await import('../AssetForm')).default
+    const AssetForm = (await import('../AssetForm')).default;
 
     const initialData = {
       id: 'asset-123',
       ownership_entity: '权属方A',
       property_name: '物业A',
-    }
+    };
 
     const props = {
       mode: 'edit' as const,
       initialData,
       onSubmit: vi.fn(),
       onCancel: vi.fn(),
-    }
+    };
 
-    const element = React.createElement(AssetForm, props)
-    expect(element.props.mode).toBe('edit')
-    expect(element.props.initialData).toEqual(initialData)
-  })
+    const element = React.createElement(AssetForm, props);
+    expect(element.props.mode).toBe('edit');
+    expect(element.props.initialData).toEqual(initialData);
+  });
 
   it('应该支持loading状态变化', async () => {
-    const AssetForm = (await import('../AssetForm')).default
+    const AssetForm = (await import('../AssetForm')).default;
 
-    const loadingElement = React.createElement(AssetForm, { loading: true })
-    const notLoadingElement = React.createElement(AssetForm, { loading: false })
+    const loadingElement = React.createElement(AssetForm, { loading: true });
+    const notLoadingElement = React.createElement(AssetForm, { loading: false });
 
-    expect(loadingElement.props.loading).toBe(true)
-    expect(notLoadingElement.props.loading).toBe(false)
-  })
-})
+    expect(loadingElement.props.loading).toBe(true);
+    expect(notLoadingElement.props.loading).toBe(false);
+  });
+});
 
 describe('AssetForm - 表单字段组测试', () => {
   it('应该支持基本信息字段', async () => {
-    const AssetForm = (await import('../AssetForm')).default
+    const AssetForm = (await import('../AssetForm')).default;
 
     const initialData = {
       ownership_entity: '测试权属方',
@@ -315,14 +312,14 @@ describe('AssetForm - 表单字段组测试', () => {
       project_name: '测试项目',
       property_name: '测试物业',
       address: '测试地址123号',
-    }
+    };
 
-    const element = React.createElement(AssetForm, { initialData })
-    expect(element.props.initialData).toMatchObject(initialData)
-  })
+    const element = React.createElement(AssetForm, { initialData });
+    expect(element.props.initialData).toMatchObject(initialData);
+  });
 
   it('应该支持面积信息字段', async () => {
-    const AssetForm = (await import('../AssetForm')).default
+    const AssetForm = (await import('../AssetForm')).default;
 
     const initialData = {
       land_area: 1000,
@@ -331,14 +328,14 @@ describe('AssetForm - 表单字段组测试', () => {
       rentable_area: 700,
       rented_area: 600,
       unrented_area: 100,
-    }
+    };
 
-    const element = React.createElement(AssetForm, { initialData })
-    expect(element.props.initialData).toMatchObject(initialData)
-  })
+    const element = React.createElement(AssetForm, { initialData });
+    expect(element.props.initialData).toMatchObject(initialData);
+  });
 
   it('应该支持状态信息字段', async () => {
-    const AssetForm = (await import('../AssetForm')).default
+    const AssetForm = (await import('../AssetForm')).default;
 
     const initialData = {
       ownership_status: '已确权',
@@ -350,41 +347,41 @@ describe('AssetForm - 表单字段组测试', () => {
       property_nature: '经营性',
       include_in_occupancy_rate: true,
       occupancy_rate: 85.5,
-    }
+    };
 
-    const element = React.createElement(AssetForm, { initialData })
-    expect(element.props.initialData).toMatchObject(initialData)
-  })
+    const element = React.createElement(AssetForm, { initialData });
+    expect(element.props.initialData).toMatchObject(initialData);
+  });
 
   it('应该支持接收信息字段', async () => {
-    const AssetForm = (await import('../AssetForm')).default
+    const AssetForm = (await import('../AssetForm')).default;
 
     const initialData = {
       business_model: '自营',
       operation_agreement_start_date: '2024-01-01',
       operation_agreement_end_date: '2024-12-31',
       operation_agreement_attachments: 'file1.pdf,file2.pdf',
-    }
+    };
 
-    const element = React.createElement(AssetForm, { initialData })
-    expect(element.props.initialData).toMatchObject(initialData)
-  })
+    const element = React.createElement(AssetForm, { initialData });
+    expect(element.props.initialData).toMatchObject(initialData);
+  });
 
   it('应该支持租户信息字段（高级）', async () => {
-    const AssetForm = (await import('../AssetForm')).default
+    const AssetForm = (await import('../AssetForm')).default;
 
     const initialData = {
       tenant_name: '测试租户',
       tenant_contact: '13800138000',
       tenant_type: 'enterprise',
-    }
+    };
 
-    const element = React.createElement(AssetForm, { initialData })
-    expect(element.props.initialData).toMatchObject(initialData)
-  })
+    const element = React.createElement(AssetForm, { initialData });
+    expect(element.props.initialData).toMatchObject(initialData);
+  });
 
   it('应该支持合同信息字段（高级）', async () => {
-    const AssetForm = (await import('../AssetForm')).default
+    const AssetForm = (await import('../AssetForm')).default;
 
     const initialData = {
       lease_contract_number: 'HT2024001',
@@ -394,81 +391,83 @@ describe('AssetForm - 表单字段组测试', () => {
       deposit: 10000,
       is_sublease: false,
       sublease_notes: '无分租',
-    }
+    };
 
-    const element = React.createElement(AssetForm, { initialData })
-    expect(element.props.initialData).toMatchObject(initialData)
-  })
+    const element = React.createElement(AssetForm, { initialData });
+    expect(element.props.initialData).toMatchObject(initialData);
+  });
 
   it('应该支持备注信息字段（高级）', async () => {
-    const AssetForm = (await import('../AssetForm')).default
+    const AssetForm = (await import('../AssetForm')).default;
 
     const initialData = {
       manager_name: '张三',
       notes: '这是测试备注信息',
-    }
+    };
 
-    const element = React.createElement(AssetForm, { initialData })
-    expect(element.props.initialData).toMatchObject(initialData)
-  })
-})
+    const element = React.createElement(AssetForm, { initialData });
+    expect(element.props.initialData).toMatchObject(initialData);
+  });
+});
 
 describe('AssetForm - 文件上传测试', () => {
   it('应该支持接收协议文件上传', async () => {
-    const AssetForm = (await import('../AssetForm')).default
+    const AssetForm = (await import('../AssetForm')).default;
 
     const initialData = {
       operation_agreement_attachments: 'agreement1.pdf,agreement2.pdf',
-    }
+    };
 
-    const element = React.createElement(AssetForm, { initialData })
-    expect(element.props.initialData?.operation_agreement_attachments).toBe('agreement1.pdf,agreement2.pdf')
-  })
+    const element = React.createElement(AssetForm, { initialData });
+    expect(element.props.initialData?.operation_agreement_attachments).toBe(
+      'agreement1.pdf,agreement2.pdf'
+    );
+  });
 
   it('应该支持终端合同文件上传', async () => {
-    const AssetForm = (await import('../AssetForm')).default
+    const AssetForm = (await import('../AssetForm')).default;
 
     const initialData = {
       terminal_contract_files: 'terminal1.pdf,terminal2.pdf',
-    }
+    };
 
-    const element = React.createElement(AssetForm, { initialData })
-    expect(element.props.initialData?.terminal_contract_files).toBe('terminal1.pdf,terminal2.pdf')
-  })
+    const element = React.createElement(AssetForm, { initialData });
+    expect(element.props.initialData?.terminal_contract_files).toBe('terminal1.pdf,terminal2.pdf');
+  });
 
   it('应该支持同时上传多种文件类型', async () => {
-    const AssetForm = (await import('../AssetForm')).default
+    const AssetForm = (await import('../AssetForm')).default;
 
     const initialData = {
       operation_agreement_attachments: 'agreement.pdf',
       terminal_contract_files: 'terminal.pdf',
-    }
+    };
 
-    const element = React.createElement(AssetForm, { initialData })
-    expect(element.props.initialData?.operation_agreement_attachments).toBeDefined()
-    expect(element.props.initialData?.terminal_contract_files).toBeDefined()
-  })
-})
+    const element = React.createElement(AssetForm, { initialData });
+    expect(element.props.initialData?.operation_agreement_attachments).toBeDefined();
+    expect(element.props.initialData?.terminal_contract_files).toBeDefined();
+  });
+});
 
 describe('AssetForm - 完整场景测试', () => {
   it('应该支持创建新资产的完整场景', async () => {
-    const AssetForm = (await import('../AssetForm')).default
+    const AssetForm = (await import('../AssetForm')).default;
 
     const props = {
       mode: 'create' as const,
       onSubmit: vi.fn(),
       onCancel: vi.fn(),
       loading: false,
-    }
+    };
 
-    const element = React.createElement(AssetForm, props)
-    expect(element.props.mode).toBe('create')
-    expect(element.props.onSubmit).toBeDefined()
-    expect(element.props.onCancel).toBeDefined()
-  })
+    const element = React.createElement(AssetForm, props);
+    expect(element.props.mode).toBe('create');
+    expect(element.props.onSubmit).toBeDefined();
+    expect(element.props.onCancel).toBeDefined();
+  });
 
   it('应该支持编辑现有资产的完整场景', async () => {
-    const AssetForm = (await import('../AssetForm')).default
+    const AssetForm = (await import('../AssetForm')).default;
 
     const initialData = {
       id: 'asset-123',
@@ -479,7 +478,7 @@ describe('AssetForm - 完整场景测试', () => {
       usage_status: '出租',
       property_nature: '经营性',
       operation_agreement_attachments: 'agreement.pdf',
-    }
+    };
 
     const props = {
       mode: 'edit' as const,
@@ -487,31 +486,31 @@ describe('AssetForm - 完整场景测试', () => {
       onSubmit: vi.fn(),
       onCancel: vi.fn(),
       loading: false,
-    }
+    };
 
-    const element = React.createElement(AssetForm, props)
-    expect(element.props.mode).toBe('edit')
-    expect(element.props.initialData?.id).toBe('asset-123')
-  })
+    const element = React.createElement(AssetForm, props);
+    expect(element.props.mode).toBe('edit');
+    expect(element.props.initialData?.id).toBe('asset-123');
+  });
 
   it('应该支持提交中状态', async () => {
-    const AssetForm = (await import('../AssetForm')).default
+    const AssetForm = (await import('../AssetForm')).default;
 
     const props = {
       mode: 'create' as const,
       onSubmit: vi.fn(),
       onCancel: vi.fn(),
       loading: true,
-    }
+    };
 
-    const element = React.createElement(AssetForm, props)
-    expect(element.props.loading).toBe(true)
-  })
-})
+    const element = React.createElement(AssetForm, props);
+    expect(element.props.loading).toBe(true);
+  });
+});
 
 describe('AssetForm - 必填字段测试', () => {
   it('应该包含所有必填字段', async () => {
-    const AssetForm = (await import('../AssetForm')).default
+    const AssetForm = (await import('../AssetForm')).default;
 
     // 必填字段列表
     const requiredFields = [
@@ -521,40 +520,40 @@ describe('AssetForm - 必填字段测试', () => {
       'ownership_status',
       'usage_status',
       'property_nature',
-    ]
+    ];
 
-    const initialData: Record<string, string | boolean> = {}
+    const initialData: Record<string, string | boolean> = {};
     requiredFields.forEach(field => {
-      initialData[field] = 'test_value'
-    })
+      initialData[field] = 'test_value';
+    });
 
-    const element = React.createElement(AssetForm, { initialData })
-    expect(element).toBeTruthy()
+    const element = React.createElement(AssetForm, { initialData });
+    expect(element).toBeTruthy();
 
     requiredFields.forEach(field => {
-      expect(element.props.initialData?.[field]).toBeDefined()
-    })
-  })
+      expect(element.props.initialData?.[field]).toBeDefined();
+    });
+  });
 
   it('应该支持部分必填字段为空', async () => {
-    const AssetForm = (await import('../AssetForm')).default
+    const AssetForm = (await import('../AssetForm')).default;
 
     const initialData = {
       ownership_entity: '权属方A',
       property_name: '物业A',
       // 其他必填字段为空
-    }
+    };
 
-    const element = React.createElement(AssetForm, { initialData })
-    expect(element).toBeTruthy()
-    expect(element.props.initialData?.ownership_entity).toBe('权属方A')
-    expect(element.props.initialData?.property_name).toBe('物业A')
-  })
-})
+    const element = React.createElement(AssetForm, { initialData });
+    expect(element).toBeTruthy();
+    expect(element.props.initialData?.ownership_entity).toBe('权属方A');
+    expect(element.props.initialData?.property_name).toBe('物业A');
+  });
+});
 
 describe('AssetForm - 字段数量测试', () => {
   it('应该支持58字段的完整数据', async () => {
-    const AssetForm = (await import('../AssetForm')).default
+    const AssetForm = (await import('../AssetForm')).default;
 
     // 完整的58字段数据
     const fullData = {
@@ -618,11 +617,11 @@ describe('AssetForm - 字段数量测试', () => {
       // 其他字段 (剩余16个)
       selected_contract_id: 'contract-123',
       // ... 可以继续添加更多字段
-    }
+    };
 
-    const element = React.createElement(AssetForm, { initialData: fullData })
-    expect(element).toBeTruthy()
+    const element = React.createElement(AssetForm, { initialData: fullData });
+    expect(element).toBeTruthy();
     // 验证包含核心字段（不是所有58个字段都在测试数据中）
-    expect(Object.keys(element.props.initialData || {}).length).toBeGreaterThanOrEqual(30)
-  })
-})
+    expect(Object.keys(element.props.initialData || {}).length).toBeGreaterThanOrEqual(30);
+  });
+});

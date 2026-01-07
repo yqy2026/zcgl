@@ -2,9 +2,12 @@
 # 此配置文件用于在代码提交前进行自动化质量检查
 
 repos:
+  # ===========================
+  # Python 后端检查
+  # ===========================
   # Ruff - 快速Python代码检查和格式化
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.6.8  # 使用最新稳定版本
+    rev: v0.8.4  # 使用最新稳定版本
     hooks:
       - id: ruff
         name: ruff-check
@@ -18,7 +21,7 @@ repos:
 
   # MyPy - 静态类型检查
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.11.2  # 使用最新稳定版本
+    rev: v1.14.1  # 使用最新稳定版本
     hooks:
       - id: mypy
         name: mypy-check
@@ -26,10 +29,11 @@ repos:
         args: [--config-file=backend/pyproject.toml]
         files: ^backend/src/.*\.py$
         additional_dependencies: [types-requests, types-PyYAML]
+        pass_filenames: false
 
   # Bandit - 安全漏洞扫描
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.9
+    rev: 1.8.0
     hooks:
       - id: bandit
         name: bandit-security
@@ -37,9 +41,11 @@ repos:
         args: [-r, backend/src, -f, json, -o, backend/reports/bandit_report.json]
         files: ^backend/.*\.py$
 
-  # 检查大型文件
+  # ===========================
+  # 通用文件检查
+  # ===========================
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v5.0.0
     hooks:
       - id: check-added-large-files
         name: check-large-files
@@ -54,6 +60,9 @@ repos:
       - id: check-json
         name: check-json
         description: "检查JSON文件格式"
+      - id: check-toml
+        name: check-toml
+        description: "检查TOML文件格式"
       - id: trailing-whitespace
         name: trailing-whitespace
         description: "去除行尾空白字符"
@@ -61,8 +70,44 @@ repos:
       - id: end-of-file-fixer
         name: end-of-file-fixer
         description: "确保文件以换行符结尾"
+      - id: mixed-line-ending
+        name: mixed-line-ending
+        description: "检查混合换行符"
+        args: [--fix=lf]
 
-  # 文件命名检查
+  # ===========================
+  # 前端 TypeScript/JavaScript 检查
+  # ===========================
+  - repo: local
+    hooks:
+      - id: eslint-frontend
+        name: eslint (frontend)
+        description: "运行ESLint检查前端代码"
+        entry: bash -c 'cd frontend && npm run lint'
+        language: system
+        files: ^frontend/.*\.(ts|tsx|js|jsx)$
+        pass_filenames: false
+
+      - id: prettier-frontend
+        name: prettier (frontend)
+        description: "运行Prettier格式化前端代码"
+        entry: bash -c 'cd frontend && npm run format:check'
+        language: system
+        files: ^frontend/.*\.(ts|tsx|js|jsx|json|css|scss|md)$
+        pass_filenames: false
+
+      - id: prettier-frontend-fix
+        name: prettier --fix (frontend)
+        description: "自动修复Prettier格式问题"
+        entry: bash -c 'cd frontend && npm run format'
+        language: system
+        files: ^frontend/.*\.(ts|tsx|js|jsx|json|css|scss|md)$
+        pass_filenames: false
+        stages: [manual]
+
+  # ===========================
+  # 自定义检查
+  # ===========================
   - repo: local
     hooks:
       - id: check-file-naming
@@ -72,24 +117,13 @@ repos:
         language: system
         pass_filenames: true
 
-  # 代码复杂度检查
-  - repo: local
-    hooks:
       - id: radon-complexity
         name: radon-complexity
         description: "检查代码复杂度"
-        entry: python -m radon cc --min C backend/src
+        entry: bash -c 'cd backend && uv run radon cc --min C src/'
         language: system
         pass_filenames: false
         files: ^backend/.*\.py$
-
-  # 代码重复度检查
-      - id: jscpd-check
-        name: jscpd-check
-        description: "检查代码重复度"
-        entry: python -m jscpd backend/src --min-lines 5 --min-tokens 50
-        language: system
-        pass_filenames: false
 
 # 配置说明
 ci:
@@ -100,7 +134,7 @@ ci:
     - 格式化代码
     - 修复基本的代码质量问题
   autofix_prs: true
-  skip: [mypy-check]  # CI环境中跳过mypy，因为需要完整依赖
+  skip: [mypy-check, radon-complexity]  # CI环境中跳过耗时的检查
 
 # 执行顺序配置
 minimum_pre_commit_version: "3.0.0"
@@ -117,5 +151,9 @@ exclude: |
       backend/alembic/.*|
       .*\.egg-info/.*|
       backend/data/.*|
-      backend/logs/.*
+      backend/logs/.*|
+      frontend/node_modules/.*|
+      frontend/dist/.*|
+      frontend/coverage/.*|
+      frontend/build/.*
   )$

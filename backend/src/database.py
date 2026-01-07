@@ -12,16 +12,13 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
 from queue import Empty, Queue
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from sqlalchemy import create_engine, event, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.engine.interfaces import DBAPIConnection
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 from sqlalchemy.pool import QueuePool, StaticPool
-
-if TYPE_CHECKING:
-    pass
 
 try:
     from .database_security import enhance_database_security

@@ -24,7 +24,7 @@ import {
   AssetRentStatistics,
   MonthlyRentStatistics,
   RentContractQueryParams,
-  RentLedgerQueryParams
+  RentLedgerQueryParams,
 } from '../types/rentContract';
 import { enhancedApiClient } from '@/api/client';
 import { ApiErrorHandler } from '../utils/responseExtractor';
@@ -44,10 +44,10 @@ class RentContractService {
   async getContracts(params?: RentContractQueryParams): Promise<RentContractListResponse> {
     try {
       const result = await enhancedApiClient.get<RentContractListResponse>(this.baseUrl, {
-        params: { ...params, page: params?.page || 1, limit: params?.limit || 10 },
+        params: { ...params, page: params?.page ?? 1, limit: params?.limit ?? 10 },
         cache: true,
         retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-        smartExtract: true
+        smartExtract: true,
       });
 
       if (!result.success) {
@@ -80,7 +80,7 @@ class RentContractService {
         {
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -105,7 +105,7 @@ class RentContractService {
         data,
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -130,7 +130,7 @@ class RentContractService {
         data,
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -150,12 +150,9 @@ class RentContractService {
    */
   async deleteContract(id: string): Promise<void> {
     try {
-      const result = await enhancedApiClient.delete<void>(
-        API_ENDPOINTS.RENT_CONTRACT.DELETE(id),
-        {
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 }
-        }
-      );
+      const result = await enhancedApiClient.delete<void>(API_ENDPOINTS.RENT_CONTRACT.DELETE(id), {
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+      });
 
       if (!result.success) {
         throw new Error(`删除租金合同失败: ${result.error}`);
@@ -178,7 +175,7 @@ class RentContractService {
         {
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -203,7 +200,7 @@ class RentContractService {
         data,
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -228,10 +225,10 @@ class RentContractService {
       const result = await enhancedApiClient.get<RentLedgerListResponse>(
         API_ENDPOINTS.RENT_CONTRACT.LEDGER_LIST,
         {
-          params: { ...params, page: params?.page || 1, limit: params?.limit || 10 },
+          params: { ...params, page: params?.page ?? 1, limit: params?.limit ?? 10 },
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -265,7 +262,7 @@ class RentContractService {
         {
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -290,7 +287,7 @@ class RentContractService {
         data,
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -308,14 +305,16 @@ class RentContractService {
   /**
    * 批量更新租金台账
    */
-  async batchUpdateRentLedger(data: RentLedgerBatchUpdate): Promise<{ message: string; ledgers: RentLedger[] }> {
+  async batchUpdateRentLedger(
+    data: RentLedgerBatchUpdate
+  ): Promise<{ message: string; ledgers: RentLedger[] }> {
     try {
       const result = await enhancedApiClient.put<{ message: string; ledgers: RentLedger[] }>(
         API_ENDPOINTS.RENT_CONTRACT.LEDGER_BATCH_UPDATE,
         data,
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -333,14 +332,16 @@ class RentContractService {
   /**
    * 生成月度租金台账
    */
-  async generateMonthlyLedger(data: GenerateLedgerRequest): Promise<{ message: string; ledgers: RentLedger[] }> {
+  async generateMonthlyLedger(
+    data: GenerateLedgerRequest
+  ): Promise<{ message: string; ledgers: RentLedger[] }> {
     try {
       const result = await enhancedApiClient.post<{ message: string; ledgers: RentLedger[] }>(
         API_ENDPOINTS.RENT_CONTRACT.LEDGER_GENERATE,
         data,
         {
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -368,7 +369,7 @@ class RentContractService {
           params,
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -400,7 +401,7 @@ class RentContractService {
           params,
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -426,7 +427,7 @@ class RentContractService {
           params,
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -444,7 +445,11 @@ class RentContractService {
   /**
    * 获取月度租金统计
    */
-  async getMonthlyStatistics(params?: { year?: number; start_month?: string; end_month?: string }): Promise<MonthlyRentStatistics[]> {
+  async getMonthlyStatistics(params?: {
+    year?: number;
+    start_month?: string;
+    end_month?: string;
+  }): Promise<MonthlyRentStatistics[]> {
     try {
       const result = await enhancedApiClient.get<MonthlyRentStatistics[]>(
         API_ENDPOINTS.RENT_CONTRACT.STATISTICS_MONTHLY,
@@ -452,7 +457,7 @@ class RentContractService {
           params,
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -479,7 +484,7 @@ class RentContractService {
         {
           params,
           responseType: 'blob',
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 }
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         }
       );
 
@@ -504,7 +509,7 @@ class RentContractService {
         {
           params: filters,
           responseType: 'blob',
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 }
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
         }
       );
 
@@ -524,14 +529,11 @@ class RentContractService {
    */
   async exportLedgersToExcel(filters?: Record<string, unknown>): Promise<Blob> {
     try {
-      const result = await enhancedApiClient.get<Blob>(
-        API_ENDPOINTS.RENT_CONTRACT.LEDGER_EXPORT,
-        {
-          params: filters,
-          responseType: 'blob',
-          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 }
-        }
-      );
+      const result = await enhancedApiClient.get<Blob>(API_ENDPOINTS.RENT_CONTRACT.LEDGER_EXPORT, {
+        params: filters,
+        responseType: 'blob',
+        retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+      });
 
       if (!result.success) {
         throw new Error(`导出台账Excel失败: ${result.error}`);
@@ -555,7 +557,7 @@ class RentContractService {
         {
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -579,7 +581,7 @@ class RentContractService {
         {
           cache: true,
           retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
-          smartExtract: true
+          smartExtract: true,
         }
       );
 
@@ -599,7 +601,9 @@ class RentContractService {
   /**
    * 批量删除合同
    */
-  async batchDeleteContracts(contractIds: string[]): Promise<{ deleted: number; errors: string[] }> {
+  async batchDeleteContracts(
+    contractIds: string[]
+  ): Promise<{ deleted: number; errors: string[] }> {
     const errors: string[] = [];
     let deleted = 0;
 
@@ -619,7 +623,9 @@ class RentContractService {
   /**
    * 批量生成月度台账
    */
-  async batchGenerateLedger(contractIds: string[]): Promise<{ generated: number; errors: string[] }> {
+  async batchGenerateLedger(
+    contractIds: string[]
+  ): Promise<{ generated: number; errors: string[] }> {
     const errors: string[] = [];
     let generated = 0;
 
@@ -654,12 +660,15 @@ class RentContractService {
   /**
    * 验证租金条款时间连续性
    */
-  async validateRentTerms(_contractId: string, terms: RentTermCreate[]): Promise<{ valid: boolean; errors: string[] }> {
+  async validateRentTerms(
+    _contractId: string,
+    terms: RentTermCreate[]
+  ): Promise<{ valid: boolean; errors: string[] }> {
     const errors: string[] = [];
 
     // 验证时间范围连续性
-    const sortedTerms = [...terms].sort((a, b) =>
-      new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
+    const sortedTerms = [...terms].sort(
+      (a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime()
     );
 
     for (let i = 0; i < sortedTerms.length - 1; i++) {
@@ -671,7 +680,7 @@ class RentContractService {
       }
     }
 
-    return { valid: errors.length === 0, errors };
+    return Promise.resolve({ valid: errors.length === 0, errors });
   }
 
   // ==================== 计算相关方法 ====================
@@ -687,7 +696,9 @@ class RentContractService {
    * 计算平均租金
    */
   calculateAverageRent(terms: RentTerm[]): number {
-    if (terms.length === 0) return 0;
+    if (terms.length === 0) {
+      return 0;
+    }
     return this.calculateTotalRentAmount(terms) / terms.length;
   }
 
@@ -712,7 +723,7 @@ class RentContractService {
       const response = await this.getContracts({
         tenant_name: query,
         contract_number: query,
-        limit: 10
+        limit: 10,
       });
       return response.items;
     } catch (error) {
@@ -748,7 +759,7 @@ class RentContractService {
     try {
       const response = await this.getRentLedgers({
         payment_status: '逾期',
-        limit: 100
+        limit: 100,
       });
       return response.items;
     } catch (error) {
@@ -769,7 +780,7 @@ class RentContractService {
         start_date: today.toISOString().split('T')[0],
         end_date: futureDate.toISOString().split('T')[0],
         payment_status: '未支付',
-        limit: 100
+        limit: 100,
       });
       return response.items;
     } catch (error) {

@@ -5,6 +5,7 @@ from typing import Any
 收集和分析系统性能指标
 """
 
+import contextlib
 import logging
 from datetime import datetime
 
@@ -260,11 +261,9 @@ def collect_system_metrics() -> SystemMetrics:
 
         # 系统负载 (Linux/Mac)
         load_average = None
-        try:
-            load_average = list(psutil.getloadavg())
-        except (AttributeError, OSError):
+        with contextlib.suppress(AttributeError, OSError):
             # Windows不支持getloadavg
-            pass
+            load_average = list(psutil.getloadavg())
 
         metrics = SystemMetrics(
             timestamp=datetime.now(),

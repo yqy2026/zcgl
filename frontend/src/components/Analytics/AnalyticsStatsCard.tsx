@@ -1,5 +1,5 @@
-import React from 'react'
-import { Card, Statistic, Row, Col } from 'antd'
+import React from 'react';
+import { Card, Statistic, Row, Col } from 'antd';
 import {
   ArrowUpOutlined,
   ArrowDownOutlined,
@@ -8,34 +8,34 @@ import {
   PieChartOutlined,
   MoneyCollectOutlined,
   TransactionOutlined,
-  AreaChartOutlined
-} from '@ant-design/icons'
+  AreaChartOutlined,
+} from '@ant-design/icons';
 
 interface StatCardProps {
-  title: string
-  value: number | string
-  precision?: number
-  suffix?: string
-  prefix?: React.ReactNode
-  valueStyle?: React.CSSProperties
-  trend?: number
-  trendType?: 'up' | 'down'
-  icon?: React.ReactNode
-  color?: string
-  loading?: boolean
+  title: string;
+  value: number | string;
+  precision?: number;
+  suffix?: string;
+  prefix?: React.ReactNode;
+  valueStyle?: React.CSSProperties;
+  trend?: number;
+  trendType?: 'up' | 'down';
+  icon?: React.ReactNode;
+  color?: string;
+  loading?: boolean;
 }
 
 interface StatsGridProps {
   data: {
-    total_assets: number
-    total_area: number
-    total_rentable_area: number
-    occupancy_rate: number
-    total_annual_income?: number
-    total_net_income?: number
-    total_monthly_rent?: number
-  }
-  loading?: boolean
+    total_assets: number;
+    total_area: number;
+    total_rentable_area: number;
+    occupancy_rate: number;
+    total_annual_income?: number;
+    total_net_income?: number;
+    total_monthly_rent?: number;
+  };
+  loading?: boolean;
 }
 
 // 单个统计卡片组件
@@ -50,29 +50,40 @@ const StatCard: React.FC<StatCardProps> = ({
   trendType,
   icon,
   color = '#1890ff',
-  loading = false
+  loading = false,
 }) => {
   const getTrendIcon = () => {
-    if (!trend && trend !== 0) return null
+    if (trend === null || trend === undefined) {
+      return null;
+    }
 
-    const isPositive = trend > 0
-    const color = trendType === 'up' ? (isPositive ? '#52c41a' : '#ff4d4f') : (isPositive ? '#ff4d4f' : '#52c41a')
-    const Icon = isPositive ? ArrowUpOutlined : ArrowDownOutlined
+    const isPositive = trend > 0;
+    const color =
+      trendType === 'up'
+        ? isPositive
+          ? '#52c41a'
+          : '#ff4d4f'
+        : isPositive
+          ? '#ff4d4f'
+          : '#52c41a';
+    const Icon = isPositive ? ArrowUpOutlined : ArrowDownOutlined;
 
     return (
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '2px',
-        color,
-        fontSize: 12,
-        fontWeight: 500
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '2px',
+          color,
+          fontSize: 12,
+          fontWeight: 500,
+        }}
+      >
         <Icon />
         <span>{Math.abs(trend)}%</span>
       </div>
-    )
-  }
+    );
+  };
 
   return (
     <Card
@@ -80,11 +91,11 @@ const StatCard: React.FC<StatCardProps> = ({
       size="small"
       styles={{
         body: { padding: '20px 24px' },
-        header: { padding: '12px 24px', borderBottom: '1px solid #f0f0f0' }
+        header: { padding: '12px 24px', borderBottom: '1px solid #f0f0f0' },
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-        {icon && (
+        {icon != null && (
           <div
             style={{
               width: 40,
@@ -96,7 +107,7 @@ const StatCard: React.FC<StatCardProps> = ({
               justifyContent: 'center',
               marginRight: 16,
               color: 'white',
-              fontSize: 18
+              fontSize: 18,
             }}
           >
             {icon}
@@ -113,15 +124,15 @@ const StatCard: React.FC<StatCardProps> = ({
               fontSize: 24,
               fontWeight: 'bold',
               margin: 0,
-              ...valueStyle
+              ...valueStyle,
             }}
           />
         </div>
       </div>
       {getTrendIcon()}
     </Card>
-  )
-}
+  );
+};
 
 // 统计网格组件
 export const AnalyticsStatsGrid: React.FC<StatsGridProps> = ({ data, loading = false }) => {
@@ -174,8 +185,12 @@ export const AnalyticsStatsGrid: React.FC<StatsGridProps> = ({ data, loading = f
           icon={<PieChartOutlined />}
           color="#fa8c16"
           valueStyle={{
-            color: data.occupancy_rate >= 80 ? '#52c41a' :
-                   data.occupancy_rate >= 60 ? '#faad14' : '#ff4d4f'
+            color:
+              data.occupancy_rate >= 80
+                ? '#52c41a'
+                : data.occupancy_rate >= 60
+                  ? '#faad14'
+                  : '#ff4d4f',
           }}
           loading={loading}
         />
@@ -225,22 +240,25 @@ export const AnalyticsStatsGrid: React.FC<StatsGridProps> = ({ data, loading = f
         </Col>
       )}
     </Row>
-  )
-}
+  );
+};
 
 // 财务指标网格组件
 interface FinancialStatsGridProps {
   data: {
-    total_annual_income: number
-    total_annual_expense: number
-    total_net_income: number
-    total_monthly_rent: number
-    total_deposit?: number
-  }
-  loading?: boolean
+    total_annual_income: number;
+    total_annual_expense: number;
+    total_net_income: number;
+    total_monthly_rent: number;
+    total_deposit?: number;
+  };
+  loading?: boolean;
 }
 
-export const FinancialStatsGrid: React.FC<FinancialStatsGridProps> = ({ data, loading = false }) => {
+export const FinancialStatsGrid: React.FC<FinancialStatsGridProps> = ({
+  data,
+  loading = false,
+}) => {
   return (
     <Row gutter={[16, 16]}>
       <Col xs={24} sm={6}>
@@ -275,7 +293,7 @@ export const FinancialStatsGrid: React.FC<FinancialStatsGridProps> = ({ data, lo
             precision={2}
             suffix="元"
             valueStyle={{
-              color: data.total_net_income >= 0 ? '#3f8600' : '#cf1322'
+              color: data.total_net_income >= 0 ? '#3f8600' : '#cf1322',
             }}
           />
         </Card>
@@ -293,5 +311,5 @@ export const FinancialStatsGrid: React.FC<FinancialStatsGridProps> = ({ data, lo
         </Card>
       </Col>
     </Row>
-  )
-}
+  );
+};

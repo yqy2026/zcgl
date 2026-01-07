@@ -76,15 +76,11 @@ class RentContractExcelService {
       formData.append('import_ledger', String(options.import_ledger ?? false));
       formData.append('overwrite_existing', String(options.overwrite_existing ?? false));
 
-      const response = await api.post<ExcelImportResult>(
-        `${this.baseUrl}/excel/import`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
-      );
+      const response = await api.post<ExcelImportResult>(`${this.baseUrl}/excel/import`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
 
       return response.data as ExcelImportResult;
     } catch (error) {
@@ -107,7 +103,14 @@ class RentContractExcelService {
   ): Promise<Blob> {
     try {
       const params = new URLSearchParams();
-      if (options.contract_ids?.length) {
+      if (
+        startDate !== null &&
+        startDate !== undefined &&
+        startDate !== 0 &&
+        endDate !== null &&
+        endDate !== undefined &&
+        endDate !== 0
+      ) {
         options.contract_ids.forEach(id => params.append('contract_ids', id));
       }
       if (options.include_terms !== undefined) {
@@ -116,10 +119,14 @@ class RentContractExcelService {
       if (options.include_ledger !== undefined) {
         params.append('include_ledger', String(options.include_ledger));
       }
-      if (options.start_date) {
+      if (
+        options.start_date !== null &&
+        options.start_date !== undefined &&
+        options.start_date !== ''
+      ) {
         params.append('start_date', options.start_date);
       }
-      if (options.end_date) {
+      if (options.end_date !== null && options.end_date !== undefined && options.end_date !== '') {
         params.append('end_date', options.end_date);
       }
 
@@ -176,7 +183,10 @@ class RentContractExcelService {
 
       // 生成文件名
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-      const filename = options.filename || `租金合同导出_${timestamp}.xlsx`;
+      const filename =
+        options.filename !== null && options.filename !== undefined && options.filename !== ''
+          ? options.filename
+          : `租金合同导出_${timestamp}.xlsx`;
       link.download = filename;
 
       document.body.appendChild(link);
@@ -291,7 +301,9 @@ class RentContractExcelService {
    * 格式化文件大小
    */
   formatFileSize(bytes: number): string {
-    if (bytes === 0) return '0 B';
+    if (bytes === 0) {
+      return '0 B';
+    }
 
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB'];
@@ -311,7 +323,7 @@ class RentContractExcelService {
     if (!validExtensions.includes(fileExtension)) {
       return {
         isValid: false,
-        error: '请选择Excel文件（.xlsx或.xls格式）'
+        error: '请选择Excel文件（.xlsx或.xls格式）',
       };
     }
 
@@ -320,7 +332,7 @@ class RentContractExcelService {
     if (file.size > maxSize) {
       return {
         isValid: false,
-        error: '文件大小不能超过10MB'
+        error: '文件大小不能超过10MB',
       };
     }
 
@@ -328,7 +340,7 @@ class RentContractExcelService {
     if (file.type && !file.type.includes('sheet') && !file.type.includes('excel')) {
       return {
         isValid: false,
-        error: '请选择有效的Excel文件'
+        error: '请选择有效的Excel文件',
       };
     }
 

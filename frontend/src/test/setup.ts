@@ -3,9 +3,9 @@
  * 配置测试环境和全局mock
  */
 
-import '@testing-library/jest-dom'
-import { vi } from 'vitest'
-import { mswServer } from '@/mocks/server'
+import '@testing-library/jest-dom';
+import { vi } from 'vitest';
+import { mswServer } from '@/mocks/server';
 
 // =============================================================================
 // MSW 服务器设置
@@ -15,18 +15,18 @@ import { mswServer } from '@/mocks/server'
 beforeAll(() => {
   mswServer.listen({
     onUnhandledRequest: 'warn', // 对未处理的请求警告（不阻止测试）
-  })
-})
+  });
+});
 
 // 在每个测试之后重置handlers，确保测试隔离
 afterEach(() => {
-  mswServer.resetHandlers()
-})
+  mswServer.resetHandlers();
+});
 
 // 在所有测试之后关闭MSW服务器
 afterAll(() => {
-  mswServer.close()
-})
+  mswServer.close();
+});
 
 // =============================================================================
 // 环境变量Mock
@@ -38,7 +38,7 @@ vi.stubGlobal('import.meta', {
     VITE_API_TIMEOUT: '30000',
     NODE_ENV: 'test',
   },
-})
+});
 
 // =============================================================================
 // 浏览器API Mock
@@ -57,25 +57,25 @@ Object.defineProperty(window, 'matchMedia', {
     removeEventListener: vi.fn(),
     dispatchEvent: vi.fn(),
   })),
-})
+});
 
 // Mock ResizeObserver (用于图表和布局组件)
 class ResizeObserverMock {
-  observe = vi.fn()
-  unobserve = vi.fn()
-  disconnect = vi.fn()
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
 }
 
-vi.stubGlobal('ResizeObserver', ResizeObserverMock)
+vi.stubGlobal('ResizeObserver', ResizeObserverMock);
 
 // Mock IntersectionObserver (用于懒加载组件)
 class IntersectionObserverMock {
-  observe = vi.fn()
-  unobserve = vi.fn()
-  disconnect = vi.fn()
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
 }
 
-vi.stubGlobal('IntersectionObserver', IntersectionObserverMock)
+vi.stubGlobal('IntersectionObserver', IntersectionObserverMock);
 
 // =============================================================================
 // Ant Design Mock
@@ -83,7 +83,7 @@ vi.stubGlobal('IntersectionObserver', IntersectionObserverMock)
 
 // Mock Ant Design message组件
 vi.mock('antd', async () => {
-  const actual = await vi.importActual('antd')
+  const actual = await vi.importActual('antd');
   return {
     ...actual,
     message: {
@@ -105,5 +105,5 @@ vi.mock('antd', async () => {
       error: vi.fn(),
       warning: vi.fn(),
     },
-  }
-})
+  };
+});

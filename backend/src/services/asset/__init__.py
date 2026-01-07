@@ -10,7 +10,7 @@
 __all__ = []
 
 try:
-    from .asset_calculator import AssetCalculator, OccupancyRateCalculator
+    from .asset_calculator import AssetCalculator, OccupancyRateCalculator  # noqa: F401
 
     __all__ += ["AssetCalculator", "OccupancyRateCalculator"]  # pragma: no cover
 except Exception:  # nosec - B110: Intentional graceful degradation  # pragma: no cover

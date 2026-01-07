@@ -234,10 +234,7 @@ def create_safe_upload_directory(base_path: str, subfolder: str = "") -> Path:
     safe_subfolder = secure_filename(subfolder) if subfolder else ""
 
     # 构建完整路径
-    if safe_subfolder:
-        full_path = Path(base_path) / safe_subfolder
-    else:
-        full_path = Path(base_path)
+    full_path = Path(base_path) / safe_subfolder if safe_subfolder else Path(base_path)
 
     # 创建目录
     full_path.mkdir(parents=True, exist_ok=True)

@@ -16,7 +16,6 @@ class OrganizationService:
         """创建组织"""
         # 计算层级和路径
         level = 1
-        path = ""
         parent = None
 
         if obj_in.parent_id:
@@ -28,16 +27,16 @@ class OrganizationService:
             # Organization model ID is UUID default.
             # We can let DB generate or generate here?
             # Existing CRUD used: db.add(db_obj); db.flush() -> got ID -> set path.
-            
+
         # Create object
         db_obj = Organization(**obj_in.model_dump())
         db_obj.level = level
         # Temporary path until flush
         db_obj.path = "/" # Placeholder
-        
+
         db.add(db_obj)
         db.flush() # Get ID
-        
+
         # Now set path
         if parent:
             db_obj.path = (
@@ -47,13 +46,13 @@ class OrganizationService:
             )
         else:
             db_obj.path = f"/{db_obj.id}"
-            
+
         db.commit()
         db.refresh(db_obj)
 
         # 记录创建历史
         self._create_history(db, db_obj.id, "create", created_by=obj_in.created_by)
-        
+
         return db_obj
 
     def update_organization(

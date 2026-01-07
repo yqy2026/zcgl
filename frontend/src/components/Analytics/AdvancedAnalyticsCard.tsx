@@ -1,38 +1,50 @@
-import React, { useMemo } from 'react'
-import { Card, Row, Col, Statistic, Progress, Tag, Tooltip } from 'antd'
-import {
-  ArrowUpOutlined,
-  ArrowDownOutlined,
-  InfoCircleOutlined
-} from '@ant-design/icons'
-import type { PerformanceMetrics, ComparisonData } from '../../types/analytics'
-import { FinancialStatisticCard } from './StatisticCard'
+import React, { useMemo } from 'react';
+import { Card, Row, Col, Statistic, Progress, Tag, Tooltip } from 'antd';
+import { ArrowUpOutlined, ArrowDownOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import type { PerformanceMetrics, ComparisonData } from '../../types/analytics';
+import { FinancialStatisticCard } from './StatisticCard';
 
 interface AdvancedAnalyticsCardProps {
-  performanceMetrics: PerformanceMetrics
-  comparisonData?: ComparisonData
-  loading?: boolean
+  performanceMetrics: PerformanceMetrics;
+  comparisonData?: ComparisonData;
+  loading?: boolean;
 }
 
 const AdvancedAnalyticsCard: React.FC<AdvancedAnalyticsCardProps> = ({
   performanceMetrics,
   comparisonData,
-  loading = false
+  loading = false,
 }) => {
   // Helper functions removed (unused)
 
   const getPerformanceStatus = (value: number, thresholds: { good: number; average: number }) => {
-    if (value >= thresholds.good) return { color: 'success', text: '优秀' }
-    if (value >= thresholds.average) return { color: 'processing', text: '良好' }
-    return { color: 'warning', text: '待改进' }
-  }
+    if (value >= thresholds.good) {
+      return { color: 'success', text: '优秀' };
+    }
+    if (value >= thresholds.average) {
+      return { color: 'processing', text: '良好' };
+    }
+    return { color: 'warning', text: '待改进' };
+  };
 
-  const performanceStatus = useMemo(() => ({
-    utilization: getPerformanceStatus(performanceMetrics.asset_utilization * 100, { good: 80, average: 60 }),
-    efficiency: getPerformanceStatus(performanceMetrics.income_efficiency * 100, { good: 70, average: 50 }),
-    variance: getPerformanceStatus(100 - performanceMetrics.occupancy_variance * 100, { good: 90, average: 80 }),
-    growth: getPerformanceStatus(performanceMetrics.growth_rate * 100, { good: 10, average: 5 })
-  }), [performanceMetrics])
+  const performanceStatus = useMemo(
+    () => ({
+      utilization: getPerformanceStatus(performanceMetrics.asset_utilization * 100, {
+        good: 80,
+        average: 60,
+      }),
+      efficiency: getPerformanceStatus(performanceMetrics.income_efficiency * 100, {
+        good: 70,
+        average: 50,
+      }),
+      variance: getPerformanceStatus(100 - performanceMetrics.occupancy_variance * 100, {
+        good: 90,
+        average: 80,
+      }),
+      growth: getPerformanceStatus(performanceMetrics.growth_rate * 100, { good: 10, average: 5 }),
+    }),
+    [performanceMetrics]
+  );
 
   return (
     <Card loading={loading} title="高级分析指标">
@@ -45,14 +57,25 @@ const AdvancedAnalyticsCard: React.FC<AdvancedAnalyticsCardProps> = ({
               value={performanceMetrics.asset_utilization * 100}
               precision={1}
               suffix="%"
-              valueStyle={{ color: performanceStatus.utilization.color === 'success' ? '#3f8600' :
-                           performanceStatus.utilization.color === 'processing' ? '#1890ff' : '#fa8c16' }}
+              valueStyle={{
+                color:
+                  performanceStatus.utilization.color === 'success'
+                    ? '#3f8600'
+                    : performanceStatus.utilization.color === 'processing'
+                      ? '#1890ff'
+                      : '#fa8c16',
+              }}
             />
             <Progress
               percent={performanceMetrics.asset_utilization * 100}
               size="small"
-              strokeColor={performanceStatus.utilization.color === 'success' ? '#3f8600' :
-                          performanceStatus.utilization.color === 'processing' ? '#1890ff' : '#fa8c16'}
+              strokeColor={
+                performanceStatus.utilization.color === 'success'
+                  ? '#3f8600'
+                  : performanceStatus.utilization.color === 'processing'
+                    ? '#1890ff'
+                    : '#fa8c16'
+              }
               style={{ marginTop: 8 }}
             />
             <Tag color={performanceStatus.utilization.color} style={{ marginTop: 8 }}>
@@ -69,14 +92,25 @@ const AdvancedAnalyticsCard: React.FC<AdvancedAnalyticsCardProps> = ({
               value={performanceMetrics.income_efficiency * 100}
               precision={1}
               suffix="%"
-              valueStyle={{ color: performanceStatus.efficiency.color === 'success' ? '#3f8600' :
-                           performanceStatus.efficiency.color === 'processing' ? '#1890ff' : '#fa8c16' }}
+              valueStyle={{
+                color:
+                  performanceStatus.efficiency.color === 'success'
+                    ? '#3f8600'
+                    : performanceStatus.efficiency.color === 'processing'
+                      ? '#1890ff'
+                      : '#fa8c16',
+              }}
             />
             <Progress
               percent={performanceMetrics.income_efficiency * 100}
               size="small"
-              strokeColor={performanceStatus.efficiency.color === 'success' ? '#3f8600' :
-                          performanceStatus.efficiency.color === 'processing' ? '#1890ff' : '#fa8c16'}
+              strokeColor={
+                performanceStatus.efficiency.color === 'success'
+                  ? '#3f8600'
+                  : performanceStatus.efficiency.color === 'processing'
+                    ? '#1890ff'
+                    : '#fa8c16'
+              }
               style={{ marginTop: 8 }}
             />
             <Tag color={performanceStatus.efficiency.color} style={{ marginTop: 8 }}>
@@ -93,14 +127,25 @@ const AdvancedAnalyticsCard: React.FC<AdvancedAnalyticsCardProps> = ({
               value={(1 - performanceMetrics.occupancy_variance) * 100}
               precision={1}
               suffix="%"
-              valueStyle={{ color: performanceStatus.variance.color === 'success' ? '#3f8600' :
-                           performanceStatus.variance.color === 'processing' ? '#1890ff' : '#fa8c16' }}
+              valueStyle={{
+                color:
+                  performanceStatus.variance.color === 'success'
+                    ? '#3f8600'
+                    : performanceStatus.variance.color === 'processing'
+                      ? '#1890ff'
+                      : '#fa8c16',
+              }}
             />
             <Progress
               percent={(1 - performanceMetrics.occupancy_variance) * 100}
               size="small"
-              strokeColor={performanceStatus.variance.color === 'success' ? '#3f8600' :
-                          performanceStatus.variance.color === 'processing' ? '#1890ff' : '#fa8c16'}
+              strokeColor={
+                performanceStatus.variance.color === 'success'
+                  ? '#3f8600'
+                  : performanceStatus.variance.color === 'processing'
+                    ? '#1890ff'
+                    : '#fa8c16'
+              }
               style={{ marginTop: 8 }}
             />
             <Tag color={performanceStatus.variance.color} style={{ marginTop: 8 }}>
@@ -117,16 +162,32 @@ const AdvancedAnalyticsCard: React.FC<AdvancedAnalyticsCardProps> = ({
               value={performanceMetrics.growth_rate * 100}
               precision={1}
               suffix="%"
-              prefix={performanceMetrics.growth_rate > 0 ? <ArrowUpOutlined /> :
-                      performanceMetrics.growth_rate < 0 ? <ArrowDownOutlined /> : null}
-              valueStyle={{ color: performanceStatus.growth.color === 'success' ? '#3f8600' :
-                           performanceStatus.growth.color === 'processing' ? '#1890ff' : '#fa8c16' }}
+              prefix={
+                performanceMetrics.growth_rate > 0 ? (
+                  <ArrowUpOutlined />
+                ) : performanceMetrics.growth_rate < 0 ? (
+                  <ArrowDownOutlined />
+                ) : null
+              }
+              valueStyle={{
+                color:
+                  performanceStatus.growth.color === 'success'
+                    ? '#3f8600'
+                    : performanceStatus.growth.color === 'processing'
+                      ? '#1890ff'
+                      : '#fa8c16',
+              }}
             />
             <Progress
               percent={Math.abs(performanceMetrics.growth_rate * 100)}
               size="small"
-              strokeColor={performanceStatus.growth.color === 'success' ? '#3f8600' :
-                          performanceStatus.growth.color === 'processing' ? '#1890ff' : '#fa8c16'}
+              strokeColor={
+                performanceStatus.growth.color === 'success'
+                  ? '#3f8600'
+                  : performanceStatus.growth.color === 'processing'
+                    ? '#1890ff'
+                    : '#fa8c16'
+              }
               style={{ marginTop: 8 }}
             />
             <Tag color={performanceStatus.growth.color} style={{ marginTop: 8 }}>
@@ -188,7 +249,7 @@ const AdvancedAnalyticsCard: React.FC<AdvancedAnalyticsCardProps> = ({
         </>
       )}
     </Card>
-  )
-}
+  );
+};
 
-export default AdvancedAnalyticsCard
+export default AdvancedAnalyticsCard;

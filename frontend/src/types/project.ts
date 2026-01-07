@@ -71,7 +71,6 @@ export interface ProjectStatisticsResponse {
   inactive_count: number;
 }
 
-
 // 项目搜索参数类型
 export interface ProjectSearchParams {
   keyword?: string;

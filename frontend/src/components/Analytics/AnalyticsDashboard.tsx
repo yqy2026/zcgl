@@ -1,15 +1,14 @@
-import React, { useState, useMemo } from "react";
-import { Row, Col, Card, Typography, Button, Space, Dropdown, Menu } from "antd";
+import React, { useState, useMemo } from 'react';
+import { Row, Col, Card, Typography, Button, Space, Dropdown, Menu } from 'antd';
 import {
   ReloadOutlined,
   DownloadOutlined,
   SettingOutlined,
   FullscreenOutlined,
   FullscreenExitOutlined,
-} from "@ant-design/icons";
-import { useAnalytics } from "../../hooks/useAnalytics";
-import type { AssetSearchParams } from "../../types/asset";
-import type { AnalyticsResponse } from "../../types/analytics";
+} from '@ant-design/icons';
+import { useAnalytics } from '../../hooks/useAnalytics';
+import type { AssetSearchParams } from '../../types/asset';
 
 // Analytics数据类型定义
 interface DistributionItem {
@@ -45,12 +44,12 @@ interface BusinessCategoryItem {
   avg_annual_income?: number;
 }
 
-import { AnalyticsFilters } from "./AnalyticsFilters";
-import { StatisticCard, FinancialStatisticCard } from "./StatisticCard";
-import { ChartCard } from "./AnalyticsCard";
-import { AnalyticsPieChart, AnalyticsBarChart, AnalyticsLineChart } from "./Charts";
+import { AnalyticsFilters } from './AnalyticsFilters';
+import { StatisticCard, FinancialStatisticCard } from './StatisticCard';
+import { ChartCard } from './AnalyticsCard';
+import { AnalyticsPieChart, AnalyticsBarChart, AnalyticsLineChart } from './Charts';
 // import AdvancedAnalyticsCard from './AdvancedAnalyticsCard'  // 暂时注释，等待后端API支持
-import PerformanceMonitor from "../Performance/PerformanceMonitor";
+import PerformanceMonitor from '../Performance/PerformanceMonitor';
 
 const { Title } = Typography;
 
@@ -61,7 +60,7 @@ interface AnalyticsDashboardProps {
 
 export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   initialFilters = {},
-  className = "",
+  className = '',
 }) => {
   const [filters, setFilters] = useState<AssetSearchParams>(initialFilters);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -69,20 +68,19 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   const [autoRefresh, setAutoRefresh] = useState(false);
 
   const { data: analyticsResponse, isLoading, error, refetch } = useAnalytics(filters);
-  const analytics = (analyticsResponse as AnalyticsResponse | undefined)?.data;
+  const analytics = analyticsResponse?.data;
 
-  const hasData = analytics?.area_summary?.total_assets
-    ? analytics.area_summary.total_assets > 0
-    : false;
+  const hasData =
+    analytics?.area_summary?.total_assets != null ? analytics.area_summary.total_assets > 0 : false;
 
   // 导出选项 - removed unused variable
 
-  const handleExport = (_format: "excel" | "pdf" | "csv") => {
+  const handleExport = (_format: 'excel' | 'pdf' | 'csv') => {
     // TODO: Implement export functionality
   };
 
   const handleRefresh = () => {
-    refetch();
+    void refetch();
   };
 
   const handleFullscreenToggle = () => {
@@ -98,12 +96,12 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   };
 
   const handleApplyFilters = () => {
-    refetch();
+    void refetch();
   };
 
   const handleResetFilters = () => {
     setFilters({});
-    refetch();
+    void refetch();
   };
 
   const toggleAdvancedFilters = () => {
@@ -115,19 +113,19 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
     <Menu
       items={[
         {
-          key: "excel",
-          label: "导出为 Excel",
-          onClick: () => handleExport("excel"),
+          key: 'excel',
+          label: '导出为 Excel',
+          onClick: () => handleExport('excel'),
         },
         {
-          key: "pdf",
-          label: "导出为 PDF",
-          onClick: () => handleExport("pdf"),
+          key: 'pdf',
+          label: '导出为 PDF',
+          onClick: () => handleExport('pdf'),
         },
         {
-          key: "csv",
-          label: "导出为 CSV",
-          onClick: () => handleExport("csv"),
+          key: 'csv',
+          label: '导出为 CSV',
+          onClick: () => handleExport('csv'),
         },
       ]}
     />
@@ -135,31 +133,33 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
 
   // 关键指标数据
   const keyMetrics = useMemo(() => {
-    if (!analytics) return [];
+    if (!analytics) {
+      return [];
+    }
 
     return [
       {
-        title: "资产总数",
+        title: '资产总数',
         value: analytics.area_summary.total_assets,
-        suffix: "个",
+        suffix: '个',
         precision: 0,
       },
       {
-        title: "总面积",
+        title: '总面积',
         value: analytics.area_summary.total_area,
-        suffix: "㎡",
+        suffix: '㎡',
         precision: 2,
       },
       {
-        title: "可租面积",
+        title: '可租面积',
         value: analytics.area_summary.total_rentable_area,
-        suffix: "㎡",
+        suffix: '㎡',
         precision: 2,
       },
       {
-        title: "整体出租率",
+        title: '整体出租率',
         value: analytics.area_summary.occupancy_rate,
-        suffix: "%",
+        suffix: '%',
         precision: 2,
       },
     ];
@@ -167,40 +167,42 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
 
   // 财务指标数据
   const financialMetrics = useMemo(() => {
-    if (!analytics) return [];
+    if (!analytics) {
+      return [];
+    }
 
     return [
       {
-        title: "预估年收入",
+        title: '预估年收入',
         value: analytics.financial_summary.estimated_annual_income,
-        suffix: "元",
+        suffix: '元',
         precision: 2,
         isPositive: true,
       },
       {
-        title: "月租金",
+        title: '月租金',
         value: analytics.financial_summary.total_monthly_rent,
-        suffix: "元",
+        suffix: '元',
         precision: 2,
         isPositive: true,
       },
       {
-        title: "押金总额",
+        title: '押金总额',
         value: analytics.financial_summary.total_deposit,
-        suffix: "元",
+        suffix: '元',
         precision: 2,
         isPositive: true,
       },
       {
-        title: "资产收益率",
+        title: '资产收益率',
         value:
           analytics.financial_summary.estimated_annual_income > 0 &&
-            analytics.area_summary.total_area > 0
+          analytics.area_summary.total_area > 0
             ? (analytics.financial_summary.estimated_annual_income /
-              analytics.area_summary.total_area) *
-            100
+                analytics.area_summary.total_area) *
+              100
             : 0,
-        suffix: "%",
+        suffix: '%',
         precision: 2,
         isPositive: true,
       },
@@ -210,7 +212,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   if (error) {
     return (
       <Card className={className}>
-        <div style={{ textAlign: "center", padding: "60px 0" }}>
+        <div style={{ textAlign: 'center', padding: '60px 0' }}>
           <Title level={4} type="danger">
             数据加载失败
           </Title>
@@ -227,19 +229,19 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
     <div
       className={className}
       style={{
-        padding: fullscreen ? "0" : "24px",
-        background: fullscreen ? "#f0f2f5" : "transparent",
+        padding: fullscreen ? '0' : '24px',
+        background: fullscreen ? '#f0f2f5' : 'transparent',
       }}
     >
       {/* 性能监控 */}
-      {process.env.NODE_ENV === "development" && <PerformanceMonitor />}
+      {process.env.NODE_ENV === 'development' && <PerformanceMonitor />}
 
       {/* 头部操作栏 */}
-      <Row gutter={[16, 16]} style={{ marginBottom: "24px" }}>
+      <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
         <Col xs={24} md={12}>
           <Title level={2}>资产分析</Title>
         </Col>
-        <Col xs={24} md={12} style={{ textAlign: "right" }}>
+        <Col xs={24} md={12} style={{ textAlign: 'right' }}>
           <Space>
             <Button icon={<ReloadOutlined />} onClick={handleRefresh} loading={isLoading}>
               刷新
@@ -251,12 +253,12 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
               icon={fullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
               onClick={handleFullscreenToggle}
             >
-              {fullscreen ? "退出全屏" : "全屏"}
+              {fullscreen ? '退出全屏' : '全屏'}
             </Button>
             <Button
               icon={<SettingOutlined />}
               onClick={toggleAutoRefresh}
-              type={autoRefresh ? "primary" : "default"}
+              type={autoRefresh ? 'primary' : 'default'}
             >
               自动刷新
             </Button>
@@ -277,7 +279,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
 
       {!hasData ? (
         <Card>
-          <div style={{ textAlign: "center", padding: "60px 0" }}>
+          <div style={{ textAlign: 'center', padding: '60px 0' }}>
             <Title level={4}>暂无数据</Title>
             <p>数据库中还没有资产数据，请先录入资产信息</p>
           </div>
@@ -285,7 +287,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
       ) : (
         <>
           {/* 关键指标概览 */}
-          <Row gutter={[16, 16]} style={{ marginBottom: "24px" }}>
+          <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
             {keyMetrics.map((metric, index) => (
               <Col xs={24} sm={6} key={index}>
                 <StatisticCard
@@ -313,7 +315,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
           )} */}
 
           {/* 财务指标 */}
-          <Row gutter={[16, 16]} style={{ marginBottom: "24px" }}>
+          <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
             {financialMetrics.map((metric, index) => (
               <Col xs={24} sm={6} key={index}>
                 <FinancialStatisticCard
@@ -359,12 +361,12 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                 loading={isLoading}
               >
                 <AnalyticsBarChart
-                  data={(analytics?.ownership_status_distribution || []).map(
+                  data={(analytics?.ownership_status_distribution ?? []).map(
                     (item: StatusDistributionItem) => ({
                       status: item.status,
                       count: item.count,
                       percentage: item.percentage,
-                    }),
+                    })
                   )}
                   xDataKey="status"
                   yDataKey="count"
@@ -402,12 +404,12 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                 loading={isLoading}
               >
                 <AnalyticsBarChart
-                  data={(analytics?.occupancy_distribution || []).map(
+                  data={(analytics?.occupancy_distribution ?? []).map(
                     (item: OccupancyDistributionItem) => ({
                       range: item.range,
                       count: item.count,
                       percentage: item.percentage,
-                    }),
+                    })
                   )}
                   xDataKey="range"
                   yDataKey="count"
@@ -425,13 +427,13 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                 loading={isLoading}
               >
                 <AnalyticsBarChart
-                  data={(analytics?.business_category_distribution || []).map(
+                  data={(analytics?.business_category_distribution ?? []).map(
                     (item: BusinessCategoryItem) => ({
                       category: item.category,
                       occupancy_rate: item.occupancy_rate,
                       count: item.count,
                       avg_annual_income: item.avg_annual_income,
-                    }),
+                    })
                   )}
                   xDataKey="category"
                   yDataKey="occupancy_rate"
@@ -449,7 +451,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                 loading={isLoading}
               >
                 <AnalyticsLineChart
-                  data={(analytics?.occupancy_trend || []).map((item: TrendItem) => ({
+                  data={(analytics?.occupancy_trend ?? []).map((item: TrendItem) => ({
                     date: item.date,
                     occupancy_rate: item.occupancy_rate,
                     total_rented_area: item.total_rented_area,

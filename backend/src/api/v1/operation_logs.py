@@ -295,7 +295,7 @@ async def get_operation_log_summary(
 
 @router.post("/export", summary="导出操作日志")
 async def export_operation_logs(
-    filters: dict = {},
+    filters: dict = None,
     format: str = Query("excel", description="导出格式: excel 或 csv"),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
@@ -305,6 +305,8 @@ async def export_operation_logs(
 
     - **format**: excel 或 csv
     """
+    if filters is None:
+        filters = {}
     try:
         log_crud = OperationLogCRUD()
 

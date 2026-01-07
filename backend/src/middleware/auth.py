@@ -274,11 +274,8 @@ class OrganizationPermissionChecker:
             return True
 
         # 用户可以访问自己所属员工对应的组织
-        if user.employee_id:
-            # 这里需要查询Employee表，暂时简化处理
-            return True
-
-        return False
+        # 这里需要查询Employee表，暂时简化处理
+        return bool(user.employee_id)
 
 
 def require_organization_access(organization_id: str | None = None):
@@ -552,8 +549,5 @@ def get_user_rbac_permissions(
     return {
         "is_admin": False,
         "roles": [role.name for role in permissions_summary.roles],
-        "permissions": {
-            resource: actions
-            for resource, actions in permissions_summary.effective_permissions.items()
-        },
+        "permissions": dict(permissions_summary.effective_permissions.items()),
     }

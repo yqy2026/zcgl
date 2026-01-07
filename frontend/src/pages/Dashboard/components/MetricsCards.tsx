@@ -1,5 +1,5 @@
-import React from 'react'
-import { Row, Col, Card, Statistic } from 'antd'
+import React from 'react';
+import { Row, Col, Card, Statistic } from 'antd';
 import {
   BuildOutlined,
   AreaChartOutlined,
@@ -7,18 +7,18 @@ import {
   DollarOutlined,
   HomeOutlined,
   ShopOutlined,
-} from '@ant-design/icons'
+} from '@ant-design/icons';
 
 interface MetricsCardsProps {
   metrics?: {
-    totalAssets: number
-    totalArea: number
-    occupancyRate: number
-    monthlyRevenue: number
-    rentedAssets: number
-    vacantAssets: number
-  }
-  loading?: boolean
+    totalAssets: number;
+    totalArea: number;
+    occupancyRate: number;
+    monthlyRevenue: number;
+    rentedAssets: number;
+    vacantAssets: number;
+  };
+  loading?: boolean;
 }
 
 const MetricsCards: React.FC<MetricsCardsProps> = ({ metrics, loading }) => {
@@ -28,7 +28,7 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({ metrics, loading }) => {
         <Card loading={loading}>
           <Statistic
             title="资产总数"
-            value={metrics?.totalAssets || 0}
+            value={metrics?.totalAssets ?? 0}
             suffix="个"
             prefix={<BuildOutlined />}
             valueStyle={{ color: '#1890ff' }}
@@ -39,7 +39,7 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({ metrics, loading }) => {
         <Card loading={loading}>
           <Statistic
             title="总面积"
-            value={metrics?.totalArea || 0}
+            value={metrics?.totalArea ?? 0}
             suffix="㎡"
             prefix={<AreaChartOutlined />}
             valueStyle={{ color: '#52c41a' }}
@@ -50,7 +50,7 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({ metrics, loading }) => {
         <Card loading={loading}>
           <Statistic
             title="平均出租率"
-            value={metrics?.occupancyRate || 0}
+            value={metrics?.occupancyRate ?? 0}
             suffix="%"
             prefix={<PercentageOutlined />}
             precision={1}
@@ -62,7 +62,7 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({ metrics, loading }) => {
         <Card loading={loading}>
           <Statistic
             title="月度收入"
-            value={metrics?.monthlyRevenue || 0}
+            value={metrics?.monthlyRevenue ?? 0}
             prefix={<DollarOutlined />}
             valueStyle={{ color: '#722ed1' }}
           />
@@ -72,7 +72,7 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({ metrics, loading }) => {
         <Card loading={loading}>
           <Statistic
             title="出租中"
-            value={metrics?.rentedAssets || 0}
+            value={metrics?.rentedAssets ?? 0}
             suffix="个"
             prefix={<HomeOutlined />}
             valueStyle={{ color: '#52c41a' }}
@@ -83,7 +83,7 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({ metrics, loading }) => {
         <Card loading={loading}>
           <Statistic
             title="空置"
-            value={metrics?.vacantAssets || 0}
+            value={metrics?.vacantAssets ?? 0}
             suffix="个"
             prefix={<ShopOutlined />}
             valueStyle={{ color: '#ff4d4f' }}
@@ -91,7 +91,7 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({ metrics, loading }) => {
         </Card>
       </Col>
     </Row>
-  )
-}
+  );
+};
 
-export default MetricsCards
+export default MetricsCards;

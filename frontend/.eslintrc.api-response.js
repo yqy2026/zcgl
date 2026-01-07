@@ -25,7 +25,7 @@ module.exports = {
 
     // 强制错误处理
     '@typescript-eslint/prefer-nullish-coalescing': 'error',
-    '@typescript-eslint/prefer-optional-chain': 'error'
+    '@typescript-eslint/prefer-optional-chain': 'error',
   },
 
   // 自定义规则定义
@@ -38,8 +38,8 @@ module.exports = {
         // 检测缺少统一错误处理的情况
         'custom/require-unified-error-handling': 'warn',
         // 检测重复的响应处理逻辑
-        'custom/no-duplicate-response-handling': 'error'
-      }
-    }
-  ]
+        'custom/no-duplicate-response-handling': 'error',
+      },
+    },
+  ],
 };

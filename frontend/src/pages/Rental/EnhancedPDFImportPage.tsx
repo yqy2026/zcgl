@@ -28,7 +28,7 @@ import {
   FileTextOutlined,
   RobotOutlined,
   FireOutlined,
-  QuestionCircleOutlined
+  QuestionCircleOutlined,
 } from '@ant-design/icons';
 import type { UploadProps } from 'antd/es/upload';
 import type { RcFile } from 'antd/es/upload/interface';
@@ -38,7 +38,7 @@ import EnhancedContractReview from '../../components/Contract/EnhancedContractRe
 import type {
   ProcessingOptions,
   EnhancedSessionProgress,
-  EnhancedSystemCapabilities
+  EnhancedSystemCapabilities,
 } from '../../types/enhancedPdfImport';
 import { createLogger } from '../../utils/logger';
 
@@ -52,7 +52,9 @@ const EnhancedPDFImportPage: React.FC = () => {
   const [processing, setProcessing] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [currentStatus, setCurrentStatus] = useState<EnhancedSessionProgress | null>(null);
-  const [systemCapabilities, setSystemCapabilities] = useState<EnhancedSystemCapabilities | null>(null);
+  const [systemCapabilities, setSystemCapabilities] = useState<EnhancedSystemCapabilities | null>(
+    null
+  );
   const [fileList, setFileList] = useState<RcFile[]>([]);
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const [processingOptions, setProcessingOptions] = useState<ProcessingOptions>({
@@ -63,18 +65,19 @@ const EnhancedPDFImportPage: React.FC = () => {
     confidence_threshold: 0.7,
     use_template_learning: true,
     enable_multi_engine_fusion: true,
-    enable_semantic_validation: true
+    enable_semantic_validation: true,
   });
   const [showResults, setShowResults] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
   // 组件挂载时检查系统能力
   useEffect(() => {
-    checkSystemCapabilities();
-  }, []);
+    void checkSystemCapabilities();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkSystemCapabilities]);
 
   // 检查系统增强功能能力
-  const checkSystemCapabilities = useCallback(async () => {
+  const checkSystemCapabilities = useCallback(async (): Promise<void> => {
     try {
       const capabilities = await pdfImportService.getEnhancedSystemInfo();
       if (capabilities.success) {
@@ -85,14 +88,14 @@ const EnhancedPDFImportPage: React.FC = () => {
         // Use type assertion for loose property access if needed, or better, access safely
         const caps = capabilities.capabilities as unknown as EnhancedSystemCapabilities;
         if (!caps.enhanced_extraction) {
-          setProcessingOptions((prev) => ({
+          setProcessingOptions(prev => ({
             ...prev,
             enable_chinese_optimization: false,
             enable_table_detection: false,
             enable_seal_detection: false,
             use_template_learning: false,
             enable_multi_engine_fusion: false,
-            enable_semantic_validation: false
+            enable_semantic_validation: false,
           }));
         }
       }
@@ -135,67 +138,70 @@ const EnhancedPDFImportPage: React.FC = () => {
     },
     onChange(info) {
       const { fileList: newFileList } = info;
-      setFileList(newFileList.map(f => f.originFileObj as RcFile).filter(Boolean) as RcFile[]);
+      setFileList(newFileList.map(f => f.originFileObj as RcFile).filter(Boolean));
 
       // 计算上传进度
       if (newFileList.length > 0 && info.file.status === 'uploading') {
-        const progress = Math.round(info.file.percent || 0);
+        const progress = Math.round(info.file.percent ?? 0);
         setUploadProgress(progress);
       }
     },
-    customRequest: async ({ file, onSuccess: _onSuccess, onError }) => {
-      try {
-        setProcessing(true);
-        setShowResults(false);
+    customRequest: ({ file, onSuccess: _onSuccess, onError }) => {
+      void (async () => {
+        try {
+          setProcessing(true);
+          setShowResults(false);
 
-        // 使用增强版上传
-        const result = await pdfImportService.uploadPDFFileEnhanced(
-          file as File,
-          processingOptions
-        );
+          // 使用增强版上传
+          const result = await pdfImportService.uploadPDFFileEnhanced(
+            file as File,
+            processingOptions
+          );
 
-        if (result.success && result.session_id) {
-          setSessionId(result.session_id);
-          message.success('文件上传成功，开始智能处理...');
+          if (
+            result.success === true &&
+            result.session_id !== null &&
+            result.session_id !== undefined
+          ) {
+            setSessionId(result.session_id);
+            message.success('文件上传成功，开始智能处理...');
 
-          // 开始轮询进度
-          startProgressPolling(result.session_id);
-        } else {
-          message.error(result.error || '文件上传失败');
+            // 开始轮询进度
+            startProgressPolling(result.session_id);
+          } else {
+            message.error(result.error ?? '文件上传失败');
+            setProcessing(false);
+            onError?.(new Error(result.error ?? '上传失败'));
+          }
+        } catch (error) {
+          pageLogger.error('上传失败:', error as Error);
+          message.error('上传过程中发生错误');
           setProcessing(false);
-          onError?.(new Error(result.error || '上传失败'));
+          onError?.(error instanceof Error ? error : new Error(String(error)));
         }
-      } catch (error) {
-        pageLogger.error('上传失败:', error as Error);
-        message.error('上传过程中发生错误');
-        setProcessing(false);
-        onError?.(error instanceof Error ? error : new Error(String(error)));
-      }
-    }
+      })();
+    },
   };
 
   // 轮询处理进度
   const startProgressPolling = useCallback((sessionId: string) => {
-    pdfImportService.pollEnhancedProgress(
-      sessionId,
-      (status) => {
-        // Cast to EnhancedSessionProgress as pollEnhancedProgress might return a slightly different type
-        setCurrentStatus(status as unknown as EnhancedSessionProgress);
+    void pdfImportService.pollEnhancedProgress(sessionId, status => {
+      // Cast to EnhancedSessionProgress as pollEnhancedProgress might return a slightly different type
+      setCurrentStatus(status as unknown as EnhancedSessionProgress);
 
-        if (status.status === 'ready_for_review' || status.status === 'completed') {
-          setProcessing(false);
-          setShowResults(true);
-        } else if (status.status === 'failed') {
-          setProcessing(false);
-          message.error('处理失败: ' + (status.error_message || '未知错误'));
-        }
+      if (status.status === 'ready_for_review' || status.status === 'completed') {
+        setProcessing(false);
+        setShowResults(true);
+      } else if (status.status === 'failed') {
+        setProcessing(false);
+        message.error('处理失败: ' + (status.error_message ?? '未知错误'));
       }
-    );
+    });
   }, []);
 
   // 重新开始处理
   const handleRetry = useCallback(() => {
-    if (sessionId) {
+    if (sessionId !== null && sessionId !== undefined && sessionId !== '') {
       setProcessing(true);
       startProgressPolling(sessionId);
     }
@@ -203,7 +209,13 @@ const EnhancedPDFImportPage: React.FC = () => {
 
   // 取消处理
   const handleCancel = useCallback(async () => {
-    if (sessionId && currentStatus) {
+    if (
+      sessionId !== null &&
+      sessionId !== undefined &&
+      sessionId !== '' &&
+      currentStatus !== null &&
+      currentStatus !== undefined
+    ) {
       try {
         const result = await pdfImportService.cancelEnhancedSession(sessionId);
         if (result.success) {
@@ -212,7 +224,7 @@ const EnhancedPDFImportPage: React.FC = () => {
           setCurrentStatus(null);
           setSessionId(null);
         } else {
-          message.error(result.error || '取消失败');
+          message.error(result.error ?? '取消失败');
         }
       } catch (error) {
         pageLogger.error('取消失败:', error as Error);
@@ -222,7 +234,7 @@ const EnhancedPDFImportPage: React.FC = () => {
   }, [sessionId, currentStatus]);
 
   // 下载结果
-  const handleDownloadResults = useCallback(() => {
+  const _handleDownloadResults = useCallback(() => {
     if (currentStatus?.enhanced_status?.final_fields) {
       const dataStr = JSON.stringify(currentStatus.enhanced_status.final_fields, null, 2);
       const blob = new Blob([dataStr], { type: 'application/json' });
@@ -246,7 +258,9 @@ const EnhancedPDFImportPage: React.FC = () => {
 
   // 渲染处理选项
   const renderProcessingOptions = () => {
-    if (!showAdvancedSettings) return null;
+    if (!showAdvancedSettings) {
+      return null;
+    }
 
     return (
       <Card title="高级处理设置" size="small">
@@ -254,11 +268,17 @@ const EnhancedPDFImportPage: React.FC = () => {
           <Form.Item label="中文优化">
             <Switch
               checked={processingOptions.enable_chinese_optimization}
-              onChange={(checked) => setProcessingOptions((prev) => ({
-                ...prev,
-                enable_chinese_optimization: checked
-              }))}
-              disabled={!systemCapabilities?.chinese_optimized}
+              onChange={checked =>
+                setProcessingOptions(prev => ({
+                  ...prev,
+                  enable_chinese_optimization: checked,
+                }))
+              }
+              disabled={
+                systemCapabilities === null ||
+                systemCapabilities === undefined ||
+                systemCapabilities.chinese_optimized !== true
+              }
             />
             <Text type="secondary" style={{ marginLeft: 8 }}>
               启用中文OCR优化，提高中文识别准确度
@@ -268,11 +288,17 @@ const EnhancedPDFImportPage: React.FC = () => {
           <Form.Item label="表格检测">
             <Switch
               checked={processingOptions.enable_table_detection}
-              onChange={(checked) => setProcessingOptions((prev) => ({
-                ...prev,
-                enable_table_detection: checked
-              }))}
-              disabled={!systemCapabilities?.table_detection}
+              onChange={checked =>
+                setProcessingOptions(prev => ({
+                  ...prev,
+                  enable_table_detection: checked,
+                }))
+              }
+              disabled={
+                systemCapabilities === null ||
+                systemCapabilities === undefined ||
+                systemCapabilities.table_detection !== true
+              }
             />
             <Text type="secondary" style={{ marginLeft: 8 }}>
               启用表格结构识别和分析
@@ -282,11 +308,17 @@ const EnhancedPDFImportPage: React.FC = () => {
           <Form.Item label="印章检测">
             <Switch
               checked={processingOptions.enable_seal_detection}
-              onChange={(checked) => setProcessingOptions((prev) => ({
-                ...prev,
-                enable_seal_detection: checked
-              }))}
-              disabled={!systemCapabilities?.seal_detection}
+              onChange={checked =>
+                setProcessingOptions(prev => ({
+                  ...prev,
+                  enable_seal_detection: checked,
+                }))
+              }
+              disabled={
+                systemCapabilities === null ||
+                systemCapabilities === undefined ||
+                systemCapabilities.seal_detection !== true
+              }
             />
             <Text type="secondary" style={{ marginLeft: 8 }}>
               启用印章和签名检测
@@ -296,11 +328,17 @@ const EnhancedPDFImportPage: React.FC = () => {
           <Form.Item label="模板学习">
             <Switch
               checked={processingOptions.use_template_learning}
-              onChange={(checked) => setProcessingOptions((prev) => ({
-                ...prev,
-                use_template_learning: checked
-              }))}
-              disabled={!systemCapabilities?.template_learning}
+              onChange={checked =>
+                setProcessingOptions(prev => ({
+                  ...prev,
+                  use_template_learning: checked,
+                }))
+              }
+              disabled={
+                systemCapabilities === null ||
+                systemCapabilities === undefined ||
+                systemCapabilities.template_learning !== true
+              }
             />
             <Text type="secondary" style={{ marginLeft: 8 }}>
               启用合同模板学习和模式识别
@@ -310,11 +348,17 @@ const EnhancedPDFImportPage: React.FC = () => {
           <Form.Item label="多引擎融合">
             <Switch
               checked={processingOptions.enable_multi_engine_fusion}
-              onChange={(checked) => setProcessingOptions((prev) => ({
-                ...prev,
-                enable_multi_engine_fusion: checked
-              }))}
-              disabled={!systemCapabilities?.multi_engine_support}
+              onChange={checked =>
+                setProcessingOptions(prev => ({
+                  ...prev,
+                  enable_multi_engine_fusion: checked,
+                }))
+              }
+              disabled={
+                systemCapabilities === null ||
+                systemCapabilities === undefined ||
+                systemCapabilities.multi_engine_support !== true
+              }
             />
             <Text type="secondary" style={{ marginLeft: 8 }}>
               启用多引擎结果融合和质量评估
@@ -324,11 +368,17 @@ const EnhancedPDFImportPage: React.FC = () => {
           <Form.Item label="语义验证">
             <Switch
               checked={processingOptions.enable_semantic_validation}
-              onChange={(checked) => setProcessingOptions((prev) => ({
-                ...prev,
-                enable_semantic_validation: checked
-              }))}
-              disabled={!systemCapabilities?.semantic_validation}
+              onChange={checked =>
+                setProcessingOptions(prev => ({
+                  ...prev,
+                  enable_semantic_validation: checked,
+                }))
+              }
+              disabled={
+                systemCapabilities === null ||
+                systemCapabilities === undefined ||
+                systemCapabilities.semantic_validation !== true
+              }
             />
             <Text type="secondary" style={{ marginLeft: 8 }}>
               启用58字段语义理解和业务规则验证
@@ -341,12 +391,14 @@ const EnhancedPDFImportPage: React.FC = () => {
               max={1.0}
               step={0.1}
               value={processingOptions.confidence_threshold}
-              onChange={(value) => setProcessingOptions((prev) => ({
-                ...prev,
-                confidence_threshold: value ?? 0.7
-              }))}
-              formatter={(value) => `${((value || 0) * 100).toFixed(0)}%`}
-              parser={(value) => parseFloat(value as string) as unknown as number}
+              onChange={value =>
+                setProcessingOptions(prev => ({
+                  ...prev,
+                  confidence_threshold: value ?? 0.7,
+                }))
+              }
+              formatter={value => `${((value ?? 0) * 100).toFixed(0)}%`}
+              parser={value => parseFloat(value as string) as unknown as number}
               style={{ width: 100 }}
             />
             <Text type="secondary" style={{ marginLeft: 8 }}>
@@ -363,7 +415,9 @@ const EnhancedPDFImportPage: React.FC = () => {
       <Title level={2} style={{ textAlign: 'center', marginBottom: 32 }}>
         <FireOutlined style={{ color: '#ff4d4f', marginRight: 8 }} />
         增强版PDF智能导入
-        <Tag color="blue" style={{ marginLeft: 8 }}>中文合同专用</Tag>
+        <Tag color="blue" style={{ marginLeft: 8 }}>
+          中文合同专用
+        </Tag>
       </Title>
 
       {/* 系统能力状态 */}
@@ -374,15 +428,9 @@ const EnhancedPDFImportPage: React.FC = () => {
               <Text>增强功能状态: </Text>
               <Badge
                 status={systemCapabilities.enhanced_extraction ? 'success' : 'warning'}
-                text={
-                  systemCapabilities.enhanced_extraction
-                    ? '完全可用'
-                    : '部分功能受限'
-                }
+                text={systemCapabilities.enhanced_extraction ? '完全可用' : '部分功能受限'}
               />
-              <Text style={{ marginLeft: 8 }}>
-                共7个优化模块可用
-              </Text>
+              <Text style={{ marginLeft: 8 }}>共7个优化模块可用</Text>
             </Space>
           }
           type={systemCapabilities.enhanced_extraction ? 'success' : 'warning'}
@@ -398,28 +446,76 @@ const EnhancedPDFImportPage: React.FC = () => {
             <Row gutter={[16, 16]}>
               <Col span={6}>
                 <Space direction="vertical" size="small">
-                  {renderFeatureTag(!!systemCapabilities?.chinese_optimized, '中文OCR优化', 'blue')}
-                  {renderFeatureTag(!!systemCapabilities?.table_detection, '表格分析', 'green')}
-                  {renderFeatureTag(!!systemCapabilities?.seal_detection, '印章检测', 'purple')}
+                  {renderFeatureTag(
+                    systemCapabilities !== null &&
+                      systemCapabilities !== undefined &&
+                      systemCapabilities.chinese_optimized === true,
+                    '中文OCR优化',
+                    'blue'
+                  )}
+                  {renderFeatureTag(
+                    systemCapabilities !== null &&
+                      systemCapabilities !== undefined &&
+                      systemCapabilities.table_detection === true,
+                    '表格分析',
+                    'green'
+                  )}
+                  {renderFeatureTag(
+                    systemCapabilities !== null &&
+                      systemCapabilities !== undefined &&
+                      systemCapabilities.seal_detection === true,
+                    '印章检测',
+                    'purple'
+                  )}
                 </Space>
               </Col>
               <Col span={6}>
                 <Space direction="vertical" size="small">
-                  {renderFeatureTag(!!systemCapabilities?.multi_engine_support, '多引擎融合', 'orange')}
-                  {renderFeatureTag(!!systemCapabilities?.semantic_validation, '语义验证', 'red')}
-                  {renderFeatureTag(!!systemCapabilities?.template_learning, '模板学习', 'cyan')}
+                  {renderFeatureTag(
+                    systemCapabilities !== null &&
+                      systemCapabilities !== undefined &&
+                      systemCapabilities.multi_engine_support === true,
+                    '多引擎融合',
+                    'orange'
+                  )}
+                  {renderFeatureTag(
+                    systemCapabilities !== null &&
+                      systemCapabilities !== undefined &&
+                      systemCapabilities.semantic_validation === true,
+                    '语义验证',
+                    'red'
+                  )}
+                  {renderFeatureTag(
+                    systemCapabilities !== null &&
+                      systemCapabilities !== undefined &&
+                      systemCapabilities.template_learning === true,
+                    '模板学习',
+                    'cyan'
+                  )}
                 </Space>
               </Col>
               <Col span={6}>
                 <Space direction="vertical" size="small">
-                  {renderFeatureTag(!!systemCapabilities?.real_time_validation, '实时验证', 'magenta')}
+                  {renderFeatureTag(
+                    systemCapabilities !== null &&
+                      systemCapabilities !== undefined &&
+                      systemCapabilities.real_time_validation === true,
+                    '实时验证',
+                    'magenta'
+                  )}
                   {renderFeatureTag(true, '智能匹配', 'default')}
                   {renderFeatureTag(true, '质量评估', 'default')}
                 </Space>
               </Col>
               <Col span={6}>
                 <Space direction="vertical" size="small">
-                  {renderFeatureTag(!!systemCapabilities?.chinese_optimized, '深度学习', 'geekblue')}
+                  {renderFeatureTag(
+                    systemCapabilities !== null &&
+                      systemCapabilities !== undefined &&
+                      systemCapabilities.chinese_optimized === true,
+                    '深度学习',
+                    'geekblue'
+                  )}
                   {renderFeatureTag(true, '自适应算法', 'purple')}
                   {renderFeatureTag(true, '用户体验优化', 'gold')}
                 </Space>
@@ -438,9 +534,7 @@ const EnhancedPDFImportPage: React.FC = () => {
                 <InboxOutlined />
               </p>
               <p className="ant-upload-text">点击或拖拽PDF文件到此处上传</p>
-              <p className="ant-upload-hint">
-                支持中文合同扫描件，推荐使用高质量扫描
-              </p>
+              <p className="ant-upload-hint">支持中文合同扫描件，推荐使用高质量扫描</p>
             </Dragger>
 
             {fileList.length > 0 && (
@@ -471,9 +565,18 @@ const EnhancedPDFImportPage: React.FC = () => {
                 <div style={{ marginTop: 16 }}>
                   <Text strong>当前配置:</Text>
                   <div style={{ marginTop: 8 }}>
-                    <div>中文优化: {processingOptions.enable_chinese_optimization ? '启用' : '禁用'}</div>
-                    <div>多引擎: {processingOptions.enable_multi_engine_fusion ? '启用' : '禁用'}</div>
-                    <div>语义验证: {processingOptions.enable_semantic_validation ? '启用' : '禁用'}</div>
+                    <div>
+                      中文优化:{' '}
+                      {processingOptions.enable_chinese_optimization === true ? '启用' : '禁用'}
+                    </div>
+                    <div>
+                      多引擎:{' '}
+                      {processingOptions.enable_multi_engine_fusion === true ? '启用' : '禁用'}
+                    </div>
+                    <div>
+                      语义验证:{' '}
+                      {processingOptions.enable_semantic_validation === true ? '启用' : '禁用'}
+                    </div>
                   </div>
                 </div>
               </Space>
@@ -483,7 +586,7 @@ const EnhancedPDFImportPage: React.FC = () => {
               <Button
                 type="primary"
                 icon={<RobotOutlined />}
-                onClick={() => pdfImportService.testEnhancedFeatures()}
+                onClick={() => void pdfImportService.testEnhancedFeatures()}
               >
                 测试增强功能
               </Button>
@@ -496,19 +599,21 @@ const EnhancedPDFImportPage: React.FC = () => {
       {renderProcessingOptions()}
 
       {/* 处理状态 */}
-      {processing && sessionId && (
+      {processing === true && sessionId !== null && sessionId !== undefined && (
         <Card title="处理状态" style={{ marginTop: 24 }}>
           <EnhancedProcessingStatus
             sessionId={sessionId}
             currentStatus={currentStatus || undefined}
-            onError={(error) => message.error('处理状态错误: ' + error)}
+            onError={error => {
+              void message.error('处理状态错误: ' + error);
+            }}
             showDetails={true}
           />
         </Card>
       )}
 
       {/* 处理结果 */}
-      {showResults && currentStatus && (
+      {showResults === true && currentStatus !== null && currentStatus !== undefined && (
         <Card title="智能处理结果" style={{ marginTop: 24 }}>
           <Space direction="vertical" style={{ width: '100%' }}>
             <div style={{ marginBottom: 16 }}>
@@ -528,24 +633,30 @@ const EnhancedPDFImportPage: React.FC = () => {
                 <Col span={6}>
                   <Statistic
                     title="总体置信度"
-                    value={currentStatus.enhanced_status?.semantic_validation?.overall_confidence ?
-                      (currentStatus.enhanced_status.semantic_validation.overall_confidence * 100).toFixed(1) : 0}
+                    value={
+                      currentStatus.enhanced_status?.semantic_validation?.overall_confidence !==
+                        null &&
+                      currentStatus.enhanced_status?.semantic_validation?.overall_confidence !==
+                        undefined
+                        ? (
+                            currentStatus.enhanced_status.semantic_validation.overall_confidence *
+                            100
+                          ).toFixed(1)
+                        : 0
+                    }
                     suffix="%"
                     precision={1}
                   />
                 </Col>
                 <Col span={6}>
-                  <Statistic
-                    title="处理时间"
-                    value={'60-90秒'}
-                  />
+                  <Statistic title="处理时间" value={'60-90秒'} />
                 </Col>
                 <Col span={6}>
                   <Statistic
                     title="状态"
                     value={currentStatus.status === 'ready_for_review' ? '完成' : '处理中'}
                     valueStyle={{
-                      color: currentStatus.status === 'ready_for_review' ? '#3f8600' : '#1890ff'
+                      color: currentStatus.status === 'ready_for_review' ? '#3f8600' : '#1890ff',
                     }}
                   />
                 </Col>
@@ -556,23 +667,30 @@ const EnhancedPDFImportPage: React.FC = () => {
               sessionData={currentStatus as unknown as Record<string, unknown>}
               onConfirm={(_confirmedData: Record<string, unknown>) => {
                 // Confirm import data
-                message.success('功能开发中，数据提交功能将在下个版本实现');
+                void message.success('功能开发中，数据提交功能将在下个版本实现');
               }}
-              onCancel={handleCancel}
+              onCancel={() => {
+                void handleCancel();
+              }}
             />
           </Space>
         </Card>
       )}
 
       {/* 底部操作按钮 */}
-      {processing && (
+      {processing === true && (
         <div style={{ textAlign: 'center', marginTop: 24 }}>
           <Space>
-            <Button onClick={handleRetry} disabled={!sessionId}>
+            <Button onClick={handleRetry} disabled={sessionId === null || sessionId === undefined}>
               <RobotOutlined />
               刷新状态
             </Button>
-            <Button onClick={handleCancel} danger>
+            <Button
+              onClick={() => {
+                void handleCancel();
+              }}
+              danger
+            >
               取消处理
             </Button>
           </Space>

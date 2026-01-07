@@ -79,7 +79,7 @@ class RBACService:
         # 添加权限
         if role_data.permission_ids:
             self._assign_permissions_to_role(
-                cast(str, role.id), role_data.permission_ids, created_by
+                cast("str", role.id), role_data.permission_ids, created_by
             )
 
         return role
@@ -90,7 +90,7 @@ class RBACService:
         if not role:
             raise BusinessLogicError("角色不存在")
 
-        if cast(bool, role.is_system_role):
+        if cast("bool", role.is_system_role):
             raise BusinessLogicError("系统角色不能修改")
 
         # 检查名称唯一性
@@ -118,7 +118,7 @@ class RBACService:
         # 更新权限
         if role_data.permission_ids is not None:
             self._assign_permissions_to_role(
-                cast(str, role.id), role_data.permission_ids, updated_by
+                cast("str", role.id), role_data.permission_ids, updated_by
             )
 
         self.db.commit()
@@ -132,7 +132,7 @@ class RBACService:
         if not role:
             return False
 
-        if cast(bool, role.is_system_role):
+        if cast("bool", role.is_system_role):
             raise BusinessLogicError("系统角色不能删除")
 
         # 保存角色名称用于审计日志（在删除之前）
@@ -419,13 +419,13 @@ class RBACService:
     ) -> PermissionCheckResponse:
         """检查用户权限"""
         user = self.db.query(User).filter(User.id == user_id).first()
-        if not user or not cast(bool, user.is_active):
+        if not user or not cast("bool", user.is_active):
             return PermissionCheckResponse(
                 has_permission=False, reason="用户不存在或已禁用", conditions=None
             )
 
         # 管理员拥有所有权限
-        if cast(str, user.role) == "admin":
+        if cast("str", user.role) == "admin":
             return PermissionCheckResponse(
                 has_permission=True,
                 granted_by=["admin_role"],
@@ -515,7 +515,7 @@ class RBACService:
 
         return UserPermissionSummary(
             user_id=user_id,
-            username=cast(str, user.username),
+            username=cast("str", user.username),
             roles=roles,  # type: ignore
             permissions=list(role_permissions),
             resource_permissions=resource_permissions,  # type: ignore
@@ -572,14 +572,14 @@ class RBACService:
 
         # 检查权限级别
         if not self._check_permission_level(
-            cast(str, permission.permission_level), permission_request.action
+            cast("str", permission.permission_level), permission_request.action
         ):
             return None
 
         return {
             "permission_level": permission.permission_level,
-            "conditions": json.loads(cast(str, permission.conditions))
-            if cast(str, permission.conditions)
+            "conditions": json.loads(cast("str", permission.conditions))
+            if cast("str", permission.conditions)
             else None,
         }
 

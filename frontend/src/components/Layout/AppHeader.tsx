@@ -1,6 +1,17 @@
-import React from 'react'
-import { Layout, Button, Avatar, Dropdown, Badge, message, Modal, Space, Tooltip, Typography } from 'antd'
-import type { MenuProps } from 'antd'
+import React from 'react';
+import {
+  Layout,
+  Button,
+  Avatar,
+  Dropdown,
+  Badge,
+  message,
+  Modal,
+  Space,
+  Tooltip,
+  Typography,
+} from 'antd';
+import type { MenuProps } from 'antd';
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -11,32 +22,32 @@ import {
   ExclamationCircleOutlined,
   GlobalOutlined,
   BellOutlined,
-} from '@ant-design/icons'
-import { useNavigate } from 'react-router-dom'
-import { AuthService } from '../../services/authService'
+} from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
+import { AuthService } from '../../services/authService';
 
-const { Header } = Layout
+const { Header } = Layout;
 
 interface AppHeaderProps {
-  collapsed: boolean
-  onToggleCollapsed: () => void
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
 }
 
 const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) => {
-  const navigate = useNavigate()
-  const user = AuthService.getLocalUser()
+  const navigate = useNavigate();
+  const user = AuthService.getLocalUser();
 
   // 处理退出登录
   const handleLogout = async () => {
     try {
-      await AuthService.logout()
-      navigate('/login')
+      await AuthService.logout();
+      navigate('/login');
     } catch (error) {
-      console.error('退出登录失败:', error)
+      console.error('退出登录失败:', error);
       // 即使API失败，也要跳转到登录页面
-      navigate('/login')
+      navigate('/login');
     }
-  }
+  };
 
   // 处理退出登录确认对话框
   const handleLogoutConfirm = () => {
@@ -47,9 +58,9 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
       okText: '确认退出',
       cancelText: '取消',
       okType: 'danger',
-      onOk: handleLogout
-    })
-  }
+      onOk: handleLogout,
+    });
+  };
 
   // 用户菜单
   const userMenuItems: MenuProps['items'] = [
@@ -77,7 +88,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
       label: '退出登录',
       danger: true,
     },
-  ]
+  ];
 
   // 通知菜单
   const notificationItems: MenuProps['items'] = [
@@ -85,15 +96,11 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
       key: 'notification1',
       label: (
         <div style={{ width: 300 }}>
-          <div style={{ fontWeight: 'bold', marginBottom: 4 }}>
-            新增资产审核通知
-          </div>
+          <div style={{ fontWeight: 'bold', marginBottom: 4 }}>新增资产审核通知</div>
           <div style={{ fontSize: '12px', color: '#8c8c8c' }}>
             有3个新增资产等待审核，请及时处理
           </div>
-          <div style={{ fontSize: '11px', color: '#bfbfbf', marginTop: 4 }}>
-            2分钟前
-          </div>
+          <div style={{ fontSize: '11px', color: '#bfbfbf', marginTop: 4 }}>2分钟前</div>
         </div>
       ),
     },
@@ -101,15 +108,11 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
       key: 'notification2',
       label: (
         <div style={{ width: 300 }}>
-          <div style={{ fontWeight: 'bold', marginBottom: 4 }}>
-            数据导入完成
-          </div>
+          <div style={{ fontWeight: 'bold', marginBottom: 4 }}>数据导入完成</div>
           <div style={{ fontSize: '12px', color: '#8c8c8c' }}>
             Excel数据导入已完成，成功导入156条记录
           </div>
-          <div style={{ fontSize: '11px', color: '#bfbfbf', marginTop: 4 }}>
-            10分钟前
-          </div>
+          <div style={{ fontSize: '11px', color: '#bfbfbf', marginTop: 4 }}>10分钟前</div>
         </div>
       ),
     },
@@ -117,15 +120,11 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
       key: 'notification3',
       label: (
         <div style={{ width: 300 }}>
-          <div style={{ fontWeight: 'bold', marginBottom: 4 }}>
-            系统维护通知
-          </div>
+          <div style={{ fontWeight: 'bold', marginBottom: 4 }}>系统维护通知</div>
           <div style={{ fontSize: '12px', color: '#8c8c8c' }}>
             系统将于今晚22:00-24:00进行维护升级
           </div>
-          <div style={{ fontSize: '11px', color: '#bfbfbf', marginTop: 4 }}>
-            1小时前
-          </div>
+          <div style={{ fontSize: '11px', color: '#bfbfbf', marginTop: 4 }}>1小时前</div>
         </div>
       ),
     },
@@ -134,30 +133,26 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
     },
     {
       key: 'viewAll',
-      label: (
-        <div style={{ textAlign: 'center', color: '#1890ff' }}>
-          查看全部通知
-        </div>
-      ),
+      label: <div style={{ textAlign: 'center', color: '#1890ff' }}>查看全部通知</div>,
     },
-  ]
+  ];
 
   const handleUserMenuClick = ({ key }: { key: string }) => {
     switch (key) {
       case 'profile':
-        navigate('/profile')
-        break
+        navigate('/profile');
+        break;
       case 'settings':
-        message.info('系统设置功能开发中')
-        break
+        message.info('系统设置功能开发中');
+        break;
       case 'help':
-        message.info('帮助中心功能开发中')
-        break
+        message.info('帮助中心功能开发中');
+        break;
       case 'logout':
-        handleLogoutConfirm()
-        break
+        handleLogoutConfirm();
+        break;
     }
-  }
+  };
 
   const handleNotificationClick = ({ key }: { key: string }) => {
     if (key === 'viewAll') {
@@ -165,7 +160,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
     } else {
       // View notification details
     }
-  }
+  };
 
   return (
     <Header
@@ -203,20 +198,12 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
       <Space size="middle">
         {/* 语言切换 */}
         <Tooltip title="语言切换">
-          <Button
-            type="text"
-            icon={<GlobalOutlined />}
-            style={{ fontSize: '16px' }}
-          />
+          <Button type="text" icon={<GlobalOutlined />} style={{ fontSize: '16px' }} />
         </Tooltip>
 
         {/* 帮助 */}
         <Tooltip title="帮助文档">
-          <Button
-            type="text"
-            icon={<QuestionCircleOutlined />}
-            style={{ fontSize: '16px' }}
-          />
+          <Button type="text" icon={<QuestionCircleOutlined />} style={{ fontSize: '16px' }} />
         </Tooltip>
 
         {/* 通知 */}
@@ -229,11 +216,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
           trigger={['click']}
         >
           <Badge count={3} size="small">
-            <Button
-              type="text"
-              icon={<BellOutlined />}
-              style={{ fontSize: '16px' }}
-            />
+            <Button type="text" icon={<BellOutlined />} style={{ fontSize: '16px' }} />
           </Badge>
         </Dropdown>
 
@@ -247,17 +230,13 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
           trigger={['click']}
         >
           <Space style={{ cursor: 'pointer', padding: '4px 8px', borderRadius: '6px' }}>
-            <Avatar
-              size="small"
-              icon={<UserOutlined />}
-              style={{ backgroundColor: '#1890ff' }}
-            />
-            <Typography.Text>{user?.full_name || user?.username || '用户'}</Typography.Text>
+            <Avatar size="small" icon={<UserOutlined />} style={{ backgroundColor: '#1890ff' }} />
+            <Typography.Text>{user?.full_name ?? user?.username ?? '用户'}</Typography.Text>
           </Space>
         </Dropdown>
       </Space>
     </Header>
-  )
-}
+  );
+};
 
-export default AppHeader
+export default AppHeader;

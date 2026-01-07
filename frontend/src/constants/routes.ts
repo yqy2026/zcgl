@@ -211,4 +211,4 @@ export const ROUTES = {
 } as const;
 
 // 类型导出
-export type RoutePath = typeof ROUTES[keyof typeof ROUTES];
+export type RoutePath = (typeof ROUTES)[keyof typeof ROUTES];

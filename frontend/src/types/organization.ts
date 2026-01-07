@@ -39,8 +39,6 @@ export interface Organization {
   children?: Organization[];
 }
 
-
-
 export interface OrganizationCreate {
   name: string;
   code: string;
@@ -156,8 +154,6 @@ export interface OrganizationBatchResult {
     error: string;
   }>;
 }
-
-
 
 // API响应类型
 export interface OrganizationListResponse {

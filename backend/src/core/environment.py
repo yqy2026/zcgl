@@ -5,7 +5,6 @@
 
 import os
 from enum import Enum
-from typing import Literal
 
 
 class Environment(str, Enum):

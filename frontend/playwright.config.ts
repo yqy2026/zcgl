@@ -30,36 +30,36 @@ const config = defineConfig({
 
   // 报告配置
   reporter: [
-    ['html', {
-      outputFolder: './tests/e2e/reports/html',
-      open: process.env.CI ? 'never' : 'on-failure'
-    }],
-    ['json', {
-      outputFile: './tests/e2e/reports/test-results.json'
-    }],
-    ['junit', {
-      outputFile: './tests/e2e/reports/junit.xml'
-    }],
-    process.env.CI ? ['github'] : ['list']
+    [
+      'html',
+      {
+        outputFolder: './tests/e2e/reports/html',
+        open: process.env.CI ? 'never' : 'on-failure',
+      },
+    ],
+    [
+      'json',
+      {
+        outputFile: './tests/e2e/reports/test-results.json',
+      },
+    ],
+    [
+      'junit',
+      {
+        outputFile: './tests/e2e/reports/junit.xml',
+      },
+    ],
+    process.env.CI ? ['github'] : ['list'],
   ],
 
   // 输出目录
   outputDir: './tests/e2e/test-results',
 
   // 测试文件匹配模式
-  testMatch: [
-    '**/*.spec.ts',
-    '**/*.e2e.ts',
-    '**/*.test.ts'
-  ],
+  testMatch: ['**/*.spec.ts', '**/*.e2e.ts', '**/*.test.ts'],
 
   // 忽略模式
-  testIgnore: [
-    '**/node_modules/**',
-    '**/dist/**',
-    '**/.next/**',
-    '**/coverage/**'
-  ],
+  testIgnore: ['**/node_modules/**', '**/dist/**', '**/.next/**', '**/coverage/**'],
 
   // 测试环境
   use: {
@@ -86,7 +86,8 @@ const config = defineConfig({
     timezoneId: 'Asia/Shanghai',
 
     // 用户代理
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Playwright',
+    userAgent:
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Playwright',
 
     // 忽略HTTPS错误
     ignoreHTTPSErrors: !process.env.CI,
@@ -131,7 +132,7 @@ const config = defineConfig({
       name: 'admin-user',
       use: {
         storageState: './tests/e2e/storage/admin-state.json',
-        ...devices['Desktop Chrome']
+        ...devices['Desktop Chrome'],
       },
       testMatch: '**/admin/**/*.spec.ts',
     },
@@ -140,7 +141,7 @@ const config = defineConfig({
       name: 'asset-manager',
       use: {
         storageState: './tests/e2e/storage/asset-manager-state.json',
-        ...devices['Desktop Chrome']
+        ...devices['Desktop Chrome'],
       },
       testMatch: '**/asset-manager/**/*.spec.ts',
     },
@@ -149,7 +150,7 @@ const config = defineConfig({
       name: 'asset-viewer',
       use: {
         storageState: './tests/e2e/storage/asset-viewer-state.json',
-        ...devices['Desktop Chrome']
+        ...devices['Desktop Chrome'],
       },
       testMatch: '**/asset-viewer/**/*.spec.ts',
     },
@@ -160,8 +161,8 @@ const config = defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         launchOptions: {
-          args: ['--disable-web-security', '--disable-features=IsolateOrigins,site-per-process']
-        }
+          args: ['--disable-web-security', '--disable-features=IsolateOrigins,site-per-process'],
+        },
       },
       testMatch: '**/performance/**/*.spec.ts',
       retries: 0,
@@ -173,11 +174,11 @@ const config = defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         launchOptions: {
-          args: ['--force-prefers-reduced-motion', '--high-contrast-mode']
-        }
+          args: ['--force-prefers-reduced-motion', '--high-contrast-mode'],
+        },
       },
       testMatch: '**/accessibility/**/*.spec.ts',
-    }
+    },
   ],
 
   // 测试环境配置
@@ -192,9 +193,9 @@ const config = defineConfig({
   metadata: {
     'Test Environment': process.env.NODE_ENV || 'test',
     'Base URL': process.env.BASE_URL || 'http://localhost:5173',
-    'Browser': 'Playwright',
-    'Test Suite': 'Asset Management E2E Tests'
-  }
+    Browser: 'Playwright',
+    'Test Suite': 'Asset Management E2E Tests',
+  },
 });
 
 export default config;

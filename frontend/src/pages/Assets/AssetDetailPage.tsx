@@ -1,31 +1,26 @@
-import React from 'react'
-import { 
-  Typography, 
-  Button, 
-  Space, 
-  Row, 
-  Col,
-  Spin,
-  Alert
-} from 'antd'
-import { EditOutlined, ArrowLeftOutlined } from '@ant-design/icons'
-import { useParams, useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { assetService } from '@/services/assetService'
-import AssetDetailInfo from '@/components/Asset/AssetDetailInfo'
+import React from 'react';
+import { Typography, Button, Space, Row, Col, Spin, Alert } from 'antd';
+import { EditOutlined, ArrowLeftOutlined } from '@ant-design/icons';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { assetService } from '@/services/assetService';
+import AssetDetailInfo from '@/components/Asset/AssetDetailInfo';
 
-const { Title } = Typography
-
+const { Title } = Typography;
 
 const AssetDetailPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
 
-  const { data: asset, isLoading, error } = useQuery({
+  const {
+    data: asset,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['asset', id],
-    queryFn: () => assetService.getAsset(id!),
-    enabled: !!id,
-  })
+    queryFn: () => assetService.getAsset(id as string),
+    enabled: id !== null && id !== undefined && id !== '',
+  });
 
   if (isLoading) {
     return (
@@ -33,7 +28,7 @@ const AssetDetailPage: React.FC = () => {
         <Spin size="large" />
         <div style={{ marginTop: '16' }}>加载资产详情中...</div>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -46,20 +41,15 @@ const AssetDetailPage: React.FC = () => {
           showIcon
         />
       </div>
-    )
+    );
   }
 
   if (!asset) {
     return (
       <div style={{ padding: '24px' }}>
-        <Alert
-          message="资产不存在"
-          description="未找到指定的资产信息"
-          type="warning"
-          showIcon
-        />
+        <Alert message="资产不存在" description="未找到指定的资产信息" type="warning" showIcon />
       </div>
-    )
+    );
   }
 
   return (
@@ -68,10 +58,7 @@ const AssetDetailPage: React.FC = () => {
         <Row justify="space-between" align="middle">
           <Col>
             <Space>
-              <Button 
-                icon={<ArrowLeftOutlined />} 
-                onClick={() => navigate('/assets')}
-              >
+              <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/assets')}>
                 返回列表
               </Button>
               <Title level={2} style={{ margin: 0 }}>
@@ -80,8 +67,8 @@ const AssetDetailPage: React.FC = () => {
             </Space>
           </Col>
           <Col>
-            <Button 
-              type="primary" 
+            <Button
+              type="primary"
               icon={<EditOutlined />}
               onClick={() => navigate(`/assets/${id}/edit`)}
             >
@@ -93,7 +80,7 @@ const AssetDetailPage: React.FC = () => {
 
       <AssetDetailInfo asset={asset} />
     </div>
-  )
-}
+  );
+};
 
-export default AssetDetailPage
+export default AssetDetailPage;

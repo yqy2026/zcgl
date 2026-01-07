@@ -238,7 +238,7 @@ async def upload_pdf_file(
 
     # 验证文件类型
     if (
-        not file.content_type == "application/pdf"
+        file.content_type != "application/pdf"
         and not file.filename.lower().endswith(".pdf")
     ):
         if enhanced_error_handler:

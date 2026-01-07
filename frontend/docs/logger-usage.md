@@ -27,7 +27,7 @@ logger.debug('用户登录成功', { userId: 123, username: 'john' });
 // 普通信息
 logger.info('API 请求完成');
 
-// 警告信息  
+// 警告信息
 logger.warn('缓存未命中', { key: 'user:123' });
 
 // 错误信息（开发和生产环境都显示）
@@ -54,7 +54,7 @@ logger.error('数据库连接失败', error);
 
 ```typescript
 const logger = createLogger('AuthService');
-logger.debug('开始登录流程'); 
+logger.debug('开始登录流程');
 // 输出: 19:30:45 [DEBUG] [AuthService] 开始登录流程
 ```
 
@@ -160,7 +160,7 @@ import { createLogger } from '@/utils/logger';
 const logger = createLogger('useAuth');
 
 export function useAuth() {
-  const login = async (credentials) => {
+  const login = async credentials => {
     logger.debug('开始登录', { username: credentials.username });
     try {
       const result = await authService.login(credentials);
@@ -260,7 +260,7 @@ logger.debug(`创建订单 ID=${123} User=${456}`);
 // ✅ 好
 logger.error('数据库查询失败', error, { query: 'SELECT ...' });
 
-// ❌ 不好  
+// ❌ 不好
 logger.error('数据库查询失败', undefined, { error, query: 'SELECT ...' });
 ```
 
@@ -284,11 +284,11 @@ logger.info('加载成功');
 
 Logger 会根据环境自动配置：
 
-| 环境 | enabled | level | useTimestamp |
-|------|---------|-------|--------------|
-| Development | true | debug | true |
-| Production | true | error | false |
-| Test | false | error | false |
+| 环境        | enabled | level | useTimestamp |
+| ----------- | ------- | ----- | ------------ |
+| Development | true    | debug | true         |
+| Production  | true    | error | false        |
+| Test        | false   | error | false        |
 
 ## 注意事项
 
@@ -314,6 +314,7 @@ console.log('message');
 ### Q: 开发环境看不到日志？
 
 A: 检查logger是否被禁用：
+
 ```typescript
 logger.setEnabled(true);
 ```
@@ -321,6 +322,7 @@ logger.setEnabled(true);
 ### Q: 想在生产环境也看到 debug 日志？
 
 A: 临时设置日志级别：
+
 ```typescript
 logger.setLevel('debug');
 ```
@@ -328,6 +330,7 @@ logger.setLevel('debug');
 ### Q: 如何在浏览器控制台过滤日志？
 
 A: 使用模块名作为过滤条件：
+
 ```
 // 只看 AuthService 的日志
 [AuthService]

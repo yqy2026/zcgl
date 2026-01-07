@@ -72,16 +72,19 @@ async def import_assets(
 
                 # 检查重复项（仅在merge和update模式下）
                 existing_asset = None
-                if request.import_mode in ["merge", "update"]:
-                    if "property_name" in asset_data and "address" in asset_data:
-                        # 按物业名称和地址查找重复项
-                        assets, _ = asset_crud.get_multi_with_search(
-                            db=db,
-                            search=f"{asset_data.get('property_name', '')} {asset_data.get('address', '')}",
-                            limit=1,
-                        )
-                        if assets:
-                            existing_asset = assets[0]
+                if (
+                    request.import_mode in ["merge", "update"]
+                    and "property_name" in asset_data
+                    and "address" in asset_data
+                ):
+                    # 按物业名称和地址查找重复项
+                    assets, _ = asset_crud.get_multi_with_search(
+                        db=db,
+                        search=f"{asset_data.get('property_name', '')} {asset_data.get('address', '')}",
+                        limit=1,
+                    )
+                    if assets:
+                        existing_asset = assets[0]
 
                 if request.dry_run:
                     # 仅验证，不实际导入

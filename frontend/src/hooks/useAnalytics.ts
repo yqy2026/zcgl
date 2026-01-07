@@ -1,20 +1,20 @@
-import { useQuery } from '@tanstack/react-query'
-import { analyticsService } from '../services/analyticsService'
-import type { AssetSearchParams } from '../types/asset'
-import type { AnalyticsResponse } from '../types/analytics'
-import { createLogger } from '../utils/logger'
+import { useQuery } from '@tanstack/react-query';
+import { analyticsService } from '../services/analyticsService';
+import type { AssetSearchParams } from '../types/asset';
+import type { AnalyticsResponse } from '../types/analytics';
+import { createLogger } from '../utils/logger';
 
-const analyticsLogger = createLogger('useAnalytics')
+const analyticsLogger = createLogger('useAnalytics');
 
 export const useAnalytics = (filters?: AssetSearchParams) => {
   return useQuery<AnalyticsResponse>({
     queryKey: ['analytics', 'comprehensive', filters],
     queryFn: async (): Promise<AnalyticsResponse> => {
       try {
-        const result = await analyticsService.getComprehensiveAnalytics(filters)
-        return result
+        const result = await analyticsService.getComprehensiveAnalytics(filters);
+        return result;
       } catch (error) {
-        analyticsLogger.error('Analytics query error:', error as Error)
+        analyticsLogger.error('Analytics query error:', error as Error);
         // 返回模拟数据以避免页面崩溃
         return {
           success: true,
@@ -28,13 +28,13 @@ export const useAnalytics = (filters?: AssetSearchParams) => {
               unrented_area: 3075.66,
               assets_with_area_data: 669,
               occupancy_rate: 97.48,
-            } as any,
+            },
             financial_summary: {
               total_annual_income: 0.0,
               total_annual_expense: 0.0,
               total_net_income: 0.0,
               assets_with_income_data: 0,
-            } as any,
+            },
             business_category_distribution: [],
             property_nature_distribution: [],
             ownership_status_distribution: [],
@@ -44,7 +44,7 @@ export const useAnalytics = (filters?: AssetSearchParams) => {
           },
           cache_stats: { cache_size: 0, hits: 0, misses: 0, hit_rate: 0 },
           performance_info: { calculation_time: 0, asset_count: 696, cache_enabled: true },
-        } as any
+        };
       }
     },
     staleTime: 5 * 60 * 1000, // 5分钟缓存
@@ -55,8 +55,8 @@ export const useAnalytics = (filters?: AssetSearchParams) => {
     refetchOnMount: true,
     // 添加依赖项数组，确保filters变化时重新请求
     enabled: true,
-  })
-}
+  });
+};
 
 export const useBasicStatistics = (filters?: AssetSearchParams) => {
   return useQuery<AnalyticsResponse>({
@@ -64,8 +64,8 @@ export const useBasicStatistics = (filters?: AssetSearchParams) => {
     queryFn: () => analyticsService.getBasicStatistics(filters),
     staleTime: 2 * 60 * 1000, // 2分钟缓存
     gcTime: 5 * 60 * 1000, // 5分钟缓存
-  })
-}
+  });
+};
 
 export const useAreaSummary = () => {
   return useQuery<AnalyticsResponse>({
@@ -73,8 +73,8 @@ export const useAreaSummary = () => {
     queryFn: () => analyticsService.getAreaSummary(),
     staleTime: 3 * 60 * 1000, // 3分钟缓存
     gcTime: 6 * 60 * 1000, // 6分钟缓存
-  })
-}
+  });
+};
 
 export const useFinancialSummary = () => {
   return useQuery<AnalyticsResponse>({
@@ -82,5 +82,5 @@ export const useFinancialSummary = () => {
     queryFn: () => analyticsService.getFinancialSummary(),
     staleTime: 3 * 60 * 1000, // 3分钟缓存
     gcTime: 6 * 60 * 1000, // 6分钟缓存
-  })
-}
+  });
+};

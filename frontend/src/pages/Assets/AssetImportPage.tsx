@@ -1,8 +1,8 @@
-import React from 'react'
-import AssetImport from '../../components/Asset/AssetImport'
+import React from 'react';
+import AssetImport from '../../components/Asset/AssetImport';
 
 const AssetImportPage: React.FC = () => {
-  return <AssetImport />
-}
+  return <AssetImport />;
+};
 
-export default AssetImportPage
+export default AssetImportPage;

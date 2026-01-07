@@ -443,9 +443,12 @@ def create_asset_validation_schema() -> ValidationSchema:
 
     # 自定义验证器：出租面积不能大于可出租面积
     def validate_rented_area(value, data):
-        if value is not None and data.get("rentable_area") is not None:
-            if float(value) > float(data["rentable_area"]):
-                raise ValueError("已出租面积不能大于可出租面积")
+        if (
+            value is not None
+            and data.get("rentable_area") is not None
+            and float(value) > float(data["rentable_area"])
+        ):
+            raise ValueError("已出租面积不能大于可出租面积")
 
     schema.add_validator("rented_area", validate_rented_area)
 

@@ -49,25 +49,25 @@
     background: white;
     padding: 0;
   }
-  
+
   .pageHeader {
     box-shadow: none;
     border: 1px solid #d9d9d9;
   }
-  
+
   .actionButtons {
     display: none;
   }
-  
+
   .tabsContainer {
     box-shadow: none;
     border: 1px solid #d9d9d9;
   }
-  
+
   .ant-tabs-tab {
     display: none;
   }
-  
+
   .ant-tabs-content-holder {
     padding: 16px !important;
   }
@@ -78,24 +78,24 @@
   .assetDetailPage {
     padding: 16px;
   }
-  
+
   .pageHeader {
     padding: 16px;
   }
-  
+
   .pageTitle {
     font-size: 20px !important;
   }
-  
+
   .actionButtons {
     flex-direction: column;
     gap: 8px;
   }
-  
+
   .actionButtons .ant-btn {
     width: 100%;
   }
-  
+
   .tabsContainer .ant-tabs-content-holder {
     padding: 16px;
   }

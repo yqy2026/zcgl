@@ -1,11 +1,11 @@
-import React from 'react'
-import { Skeleton, Card, Row, Col } from 'antd'
+import React from 'react';
+import { Skeleton, Card, Row, Col } from 'antd';
 
 interface SkeletonLoaderProps {
-  type?: 'list' | 'card' | 'form' | 'table' | 'chart' | 'detail'
-  rows?: number
-  loading?: boolean
-  children?: React.ReactNode
+  type?: 'list' | 'card' | 'form' | 'table' | 'chart' | 'detail';
+  rows?: number;
+  loading?: boolean;
+  children?: React.ReactNode;
 }
 
 const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
@@ -14,8 +14,8 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
   loading = true,
   children,
 }) => {
-  if (!loading && children) {
-    return <>{children}</>
+  if (loading === false && children !== null && children !== undefined) {
+    return <>{children}</>;
   }
 
   const renderSkeleton = () => {
@@ -25,15 +25,11 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
           <div>
             {Array.from({ length: rows }).map((_, index) => (
               <Card key={index} style={{ marginBottom: 16 }}>
-                <Skeleton
-                  avatar
-                  paragraph={{ rows: 2 }}
-                  active
-                />
+                <Skeleton avatar paragraph={{ rows: 2 }} active />
               </Card>
             ))}
           </div>
-        )
+        );
 
       case 'card':
         return (
@@ -41,15 +37,12 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
             {Array.from({ length: rows }).map((_, index) => (
               <Col xs={24} sm={12} md={8} lg={6} key={index}>
                 <Card style={{ marginBottom: 16 }}>
-                  <Skeleton
-                    paragraph={{ rows: 3 }}
-                    active
-                  />
+                  <Skeleton paragraph={{ rows: 3 }} active />
                 </Card>
               </Col>
             ))}
           </Row>
-        )
+        );
 
       case 'form':
         return (
@@ -78,7 +71,7 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
               <Skeleton.Button style={{ width: 80, height: 32, marginLeft: 16 }} active />
             </div>
           </Card>
-        )
+        );
 
       case 'table':
         return (
@@ -99,7 +92,7 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
                 </Col>
               </Row>
             </div>
-            
+
             {/* 表头 */}
             <Row gutter={16} style={{ marginBottom: 16, padding: '12px 0', background: '#fafafa' }}>
               {Array.from({ length: 6 }).map((_, index) => (
@@ -108,30 +101,30 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
                 </Col>
               ))}
             </Row>
-            
+
             {/* 表格行 */}
             {Array.from({ length: rows }).map((_, rowIndex) => (
               <Row key={rowIndex} gutter={16} style={{ marginBottom: 12, padding: '8px 0' }}>
                 {Array.from({ length: 6 }).map((_, colIndex) => (
                   <Col span={4} key={colIndex}>
-                    <Skeleton.Input 
-                      style={{ 
-                        width: colIndex === 0 ? '60%' : '80%', 
-                        height: 16 
-                      }} 
-                      active 
+                    <Skeleton.Input
+                      style={{
+                        width: colIndex === 0 ? '60%' : '80%',
+                        height: 16,
+                      }}
+                      active
                     />
                   </Col>
                 ))}
               </Row>
             ))}
-            
+
             {/* 分页 */}
             <div style={{ marginTop: 24, textAlign: 'right' }}>
               <Skeleton.Button style={{ width: 200, height: 32 }} active />
             </div>
           </Card>
-        )
+        );
 
       case 'chart':
         return (
@@ -139,42 +132,42 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
             <div style={{ marginBottom: 16 }}>
               <Skeleton.Input style={{ width: 200, height: 24 }} active />
             </div>
-            
+
             {/* 统计卡片 */}
             <Row gutter={16} style={{ marginBottom: 24 }}>
               {Array.from({ length: 4 }).map((_, index) => (
                 <Col span={6} key={index}>
                   <Card size="small">
-                    <Skeleton
-                      paragraph={{ rows: 1 }}
-                      title={{ width: '60%' }}
-                      active
-                    />
+                    <Skeleton paragraph={{ rows: 1 }} title={{ width: '60%' }} active />
                   </Card>
                 </Col>
               ))}
             </Row>
-            
+
             {/* 图表区域 */}
-            <div style={{ 
-              height: 300, 
-              background: '#fafafa', 
-              borderRadius: 6,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
+            <div
+              style={{
+                height: 300,
+                background: '#fafafa',
+                borderRadius: 6,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
               <Skeleton.Node style={{ width: 200, height: 200 }} active>
-                <div style={{ 
-                  width: 200, 
-                  height: 200, 
-                  background: '#f0f0f0',
-                  borderRadius: '50%'
-                }} />
+                <div
+                  style={{
+                    width: 200,
+                    height: 200,
+                    background: '#f0f0f0',
+                    borderRadius: '50%',
+                  }}
+                />
               </Skeleton.Node>
             </div>
           </Card>
-        )
+        );
 
       case 'detail':
         return (
@@ -193,7 +186,7 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
                 </div>
               </div>
             </Card>
-            
+
             {/* 详细信息 */}
             <Row gutter={16}>
               <Col span={16}>
@@ -210,35 +203,26 @@ const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
                   ))}
                 </Card>
               </Col>
-              
+
               <Col span={8}>
                 <Card title={<Skeleton.Input style={{ width: 100, height: 20 }} active />}>
                   {Array.from({ length: 3 }).map((_, index) => (
                     <div key={index} style={{ marginBottom: 16 }}>
-                      <Skeleton
-                        paragraph={{ rows: 1 }}
-                        title={{ width: '70%' }}
-                        active
-                      />
+                      <Skeleton paragraph={{ rows: 1 }} title={{ width: '70%' }} active />
                     </div>
                   ))}
                 </Card>
               </Col>
             </Row>
           </div>
-        )
+        );
 
       default:
-        return (
-          <Skeleton
-            paragraph={{ rows }}
-            active
-          />
-        )
+        return <Skeleton paragraph={{ rows }} active />;
     }
-  }
+  };
 
-  return <div>{renderSkeleton()}</div>
-}
+  return <div>{renderSkeleton()}</div>;
+};
 
-export default SkeletonLoader
+export default SkeletonLoader;

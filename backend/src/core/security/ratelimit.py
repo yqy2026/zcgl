@@ -197,7 +197,7 @@ if __name__ == "__main__":
     # 测试基本功能
     test_key = "127.0.0.1:test"
     allowed_count = 0
-    for i in range(20):
+    for _i in range(20):
         if limiter.check_rate_limit(test_key):
             allowed_count += 1
         time.sleep(0.1)  # 100ms间隔

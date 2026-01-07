@@ -4,6 +4,7 @@
 """
 
 import asyncio
+import contextlib
 import logging
 import time
 from datetime import datetime
@@ -152,7 +153,7 @@ class PerformanceMonitoringMiddleware(BaseHTTPMiddleware):
                 current_minute = datetime.now().strftime("%Y-%m-%d %H:%M")
                 expired_keys = [
                     key
-                    for key in self.request_count.keys()
+                    for key in self.request_count
                     if key.split(":")[1] != current_minute
                 ]
                 for key in expired_keys:
@@ -225,7 +226,7 @@ class PerformanceMonitoringMiddleware(BaseHTTPMiddleware):
         stats["path_performance"] = path_stats
 
         # 系统信息
-        try:
+        with contextlib.suppress(Exception):  # nosec - B110: Intentional graceful degradation for optional system metrics
             stats["system_info"] = {
                 "cpu_percent": psutil.cpu_percent(),
                 "memory_percent": psutil.virtual_memory().percent,
@@ -234,8 +235,6 @@ class PerformanceMonitoringMiddleware(BaseHTTPMiddleware):
                 )
                 * 100,
             }
-        except Exception:  # nosec - B110: Intentional graceful degradation for optional system metrics
-            pass
 
         return stats
 
@@ -249,7 +248,5 @@ class PerformanceMonitoringMiddleware(BaseHTTPMiddleware):
         """清理资源"""
         if self._reset_task:
             self._reset_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._reset_task
-            except asyncio.CancelledError:
-                pass

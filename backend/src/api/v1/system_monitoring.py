@@ -14,6 +14,7 @@ from typing import Any
 创建时间: 2025-11-01
 """
 
+import contextlib
 import os
 from datetime import datetime, timedelta
 
@@ -157,12 +158,7 @@ def collect_system_metrics() -> SystemMetrics:
         memory_available_gb = memory.available / (1024**3)
 
         # 磁盘信息 (跨平台兼容)
-        if os.name == "nt":
-            # Windows: 使用当前工作目录的驱动器根目录
-            disk_path = os.getcwd()[:2]  # 获取驱动器盘符 (如 "C:")
-        else:
-            # Unix/Linux/macOS: 使用根目录
-            disk_path = "/"
+        disk_path = os.getcwd()[:2] if os.name == "nt" else "/"
 
         disk = psutil.disk_usage(disk_path)
         disk_usage_percent = disk.percent
@@ -181,11 +177,9 @@ def collect_system_metrics() -> SystemMetrics:
 
         # 系统负载 (Linux/Mac)
         load_average = None
-        try:
-            load_average = list(psutil.getloadavg())
-        except (AttributeError, OSError):
+        with contextlib.suppress(AttributeError, OSError):
             # Windows不支持getloadavg
-            pass
+            load_average = list(psutil.getloadavg())
 
         metrics = SystemMetrics(
             timestamp=datetime.now(),

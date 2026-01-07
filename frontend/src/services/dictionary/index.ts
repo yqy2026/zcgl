@@ -7,76 +7,69 @@
  */
 
 // 导入核心功能
-export * from './config'
-export * from './base'
-export * from './manager'
+export * from './config';
+export * from './base';
+export * from './manager';
 
 // 重新导出常用类型和接口
-export type {
-  DictionaryConfig,
-  DictionaryOption
-} from './config'
+export type { DictionaryConfig, DictionaryOption } from './config';
 
-export type {
-  DictionaryServiceResult,
-  DictionaryStatistics,
-  PreloadResult
-} from './base'
+export type { DictionaryServiceResult, DictionaryStatistics, PreloadResult } from './base';
 
 export type {
   EnumFieldType,
   CreateEnumFieldValueRequest,
-  UpdateEnumFieldValueRequest
-} from './manager'
+  UpdateEnumFieldValueRequest,
+} from './manager';
 
 // 系统字典类型定义（向后兼容）
-import type { SystemDictionary } from '@/types/asset'
+import type { SystemDictionary } from '@/types/asset';
 
 // 导入服务实例
-import { baseDictionaryService } from './base'
+import { baseDictionaryService } from './base';
 import {
   dictionaryManagerService,
   type EnumFieldType,
   type EnumFieldValue,
   type CreateEnumFieldValueRequest,
-  type UpdateEnumFieldValueRequest
-} from './manager'
-import { enhancedApiClient } from '@/api/client'
-import { ApiErrorHandler } from '../../utils/responseExtractor'
-import { createLogger } from '@/utils/logger'
+  type UpdateEnumFieldValueRequest,
+} from './manager';
+import { enhancedApiClient } from '@/api/client';
+import { ApiErrorHandler } from '../../utils/responseExtractor';
+import { createLogger } from '@/utils/logger';
 
-const serviceLogger = createLogger('dictionaryService')
+const serviceLogger = createLogger('dictionaryService');
 
 /**
  * 字典统计信息接口
  */
 export interface UnifiedDictionaryStats {
-  totalTypes: number
-  activeTypes: number
-  totalValues: number
-  cacheStats: unknown  // Use unknown to avoid circular dependency with DictionaryStatistics
+  totalTypes: number;
+  activeTypes: number;
+  totalValues: number;
+  cacheStats: unknown; // Use unknown to avoid circular dependency with DictionaryStatistics
   systemStats: {
-    systemDictionariesCount: number
-    enumFieldTypesCount: number
-    lastUpdated: string
-  }
+    systemDictionariesCount: number;
+    enumFieldTypesCount: number;
+    lastUpdated: string;
+  };
   performanceMetrics: {
-    averageResponseTime: number
-    cacheHitRate: number
-    errorRate: number
-  }
+    averageResponseTime: number;
+    cacheHitRate: number;
+    errorRate: number;
+  };
 }
 
 /**
  * 字典操作结果接口
  */
 export interface DictionaryOperationResult {
-  success: boolean
-  message: string
-  data?: unknown
-  error?: string
-  operationType: string
-  timestamp: string
+  success: boolean;
+  message: string;
+  data?: unknown;
+  error?: string;
+  operationType: string;
+  timestamp: string;
 }
 
 /**
@@ -85,55 +78,62 @@ export interface DictionaryOperationResult {
  */
 class UnifiedDictionaryService {
   // 基础功能 - 直接绑定到基础服务方法
-  getOptions = baseDictionaryService.getOptions.bind(baseDictionaryService)
-  getBatchOptions = baseDictionaryService.getBatchOptions.bind(baseDictionaryService)
-  getParallelOptions = baseDictionaryService.getParallelOptions.bind(baseDictionaryService)
-  getAvailableTypes = baseDictionaryService.getAvailableTypes.bind(baseDictionaryService)
-  searchTypes = baseDictionaryService.searchTypes.bind(baseDictionaryService)
-  isTypeAvailable = baseDictionaryService.isTypeAvailable.bind(baseDictionaryService)
-  getTypeConfig = baseDictionaryService.getTypeConfig.bind(baseDictionaryService)
-  clearCache = baseDictionaryService.clearCache.bind(baseDictionaryService)
-  cleanupExpiredCache = baseDictionaryService.cleanupExpiredCache.bind(baseDictionaryService)
-  preload = baseDictionaryService.preload.bind(baseDictionaryService)
-  smartPreload = baseDictionaryService.smartPreload.bind(baseDictionaryService)
-  getStats = baseDictionaryService.getStats.bind(baseDictionaryService)
-  getCacheReport = baseDictionaryService.getCacheReport.bind(baseDictionaryService)
-  refreshTypes = baseDictionaryService.refreshTypes.bind(baseDictionaryService)
-  validateDictionaryData = baseDictionaryService.validateDictionaryData.bind(baseDictionaryService)
+  getOptions = baseDictionaryService.getOptions.bind(baseDictionaryService);
+  getBatchOptions = baseDictionaryService.getBatchOptions.bind(baseDictionaryService);
+  getParallelOptions = baseDictionaryService.getParallelOptions.bind(baseDictionaryService);
+  getAvailableTypes = baseDictionaryService.getAvailableTypes.bind(baseDictionaryService);
+  searchTypes = baseDictionaryService.searchTypes.bind(baseDictionaryService);
+  isTypeAvailable = baseDictionaryService.isTypeAvailable.bind(baseDictionaryService);
+  getTypeConfig = baseDictionaryService.getTypeConfig.bind(baseDictionaryService);
+  clearCache = baseDictionaryService.clearCache.bind(baseDictionaryService);
+  cleanupExpiredCache = baseDictionaryService.cleanupExpiredCache.bind(baseDictionaryService);
+  preload = baseDictionaryService.preload.bind(baseDictionaryService);
+  smartPreload = baseDictionaryService.smartPreload.bind(baseDictionaryService);
+  getStats = baseDictionaryService.getStats.bind(baseDictionaryService);
+  getCacheReport = baseDictionaryService.getCacheReport.bind(baseDictionaryService);
+  refreshTypes = baseDictionaryService.refreshTypes.bind(baseDictionaryService);
+  validateDictionaryData = baseDictionaryService.validateDictionaryData.bind(baseDictionaryService);
 
   // 管理功能 - 直接绑定到管理服务方法
-  getEnumFieldTypes = dictionaryManagerService.getEnumFieldTypes.bind(dictionaryManagerService)
-  getEnumFieldValues = dictionaryManagerService.getEnumFieldValues.bind(dictionaryManagerService)
-  getEnumFieldData = dictionaryManagerService.getEnumFieldData.bind(dictionaryManagerService)
-  createEnumFieldType = dictionaryManagerService.createEnumFieldType.bind(dictionaryManagerService)
-  updateEnumFieldType = dictionaryManagerService.updateEnumFieldType.bind(dictionaryManagerService)
-  deleteEnumFieldType = dictionaryManagerService.deleteEnumFieldType.bind(dictionaryManagerService)
-  addEnumFieldValue = dictionaryManagerService.addEnumFieldValue.bind(dictionaryManagerService)
-  updateEnumFieldValue = dictionaryManagerService.updateEnumFieldValue.bind(dictionaryManagerService)
-  deleteEnumFieldValue = dictionaryManagerService.deleteEnumFieldValue.bind(dictionaryManagerService)
-  getEnumFieldUsageStats = dictionaryManagerService.getEnumFieldUsageStats.bind(dictionaryManagerService)
-  validateEnumTypeCode = dictionaryManagerService.validateEnumTypeCode.bind(dictionaryManagerService)
-  exportEnumFieldData = dictionaryManagerService.exportEnumFieldData.bind(dictionaryManagerService)
-  importEnumFieldData = dictionaryManagerService.importEnumFieldData.bind(dictionaryManagerService)
+  getEnumFieldTypes = dictionaryManagerService.getEnumFieldTypes.bind(dictionaryManagerService);
+  getEnumFieldValues = dictionaryManagerService.getEnumFieldValues.bind(dictionaryManagerService);
+  getEnumFieldData = dictionaryManagerService.getEnumFieldData.bind(dictionaryManagerService);
+  createEnumFieldType = dictionaryManagerService.createEnumFieldType.bind(dictionaryManagerService);
+  updateEnumFieldType = dictionaryManagerService.updateEnumFieldType.bind(dictionaryManagerService);
+  deleteEnumFieldType = dictionaryManagerService.deleteEnumFieldType.bind(dictionaryManagerService);
+  addEnumFieldValue = dictionaryManagerService.addEnumFieldValue.bind(dictionaryManagerService);
+  updateEnumFieldValue =
+    dictionaryManagerService.updateEnumFieldValue.bind(dictionaryManagerService);
+  deleteEnumFieldValue =
+    dictionaryManagerService.deleteEnumFieldValue.bind(dictionaryManagerService);
+  getEnumFieldUsageStats =
+    dictionaryManagerService.getEnumFieldUsageStats.bind(dictionaryManagerService);
+  validateEnumTypeCode =
+    dictionaryManagerService.validateEnumTypeCode.bind(dictionaryManagerService);
+  exportEnumFieldData = dictionaryManagerService.exportEnumFieldData.bind(dictionaryManagerService);
+  importEnumFieldData = dictionaryManagerService.importEnumFieldData.bind(dictionaryManagerService);
 
   /**
    * 向后兼容的方法 - 获取字典类型列表
    */
-  async getTypes(): Promise<string[]> {
+  getTypes(): Promise<string[]> {
     try {
       const types = baseDictionaryService.getAvailableTypes();
-      return types.map(config => config.code);
+      return Promise.resolve(types.map(config => config.code));
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       serviceLogger.error(`获取字典类型失败: ${enhancedError.message}`);
-      return [];
+      return Promise.resolve([]);
     }
   }
 
   /**
    * 快速创建字典（向后兼容）
    */
-  async quickCreate(dictType: string, _data: { options: Array<{ label: string; value: string }> }): Promise<DictionaryOperationResult> {
+  async quickCreate(
+    dictType: string,
+    _data: { options: Array<{ label: string; value: string }> }
+  ): Promise<DictionaryOperationResult> {
     try {
       // 检查是否为系统字典类型
       const config = baseDictionaryService.getAvailableTypes().find(c => c.code === dictType);
@@ -142,7 +142,7 @@ class UnifiedDictionaryService {
           success: true,
           message: `字典类型已存在: ${dictType}`,
           operationType: 'quickCreate',
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         };
       }
 
@@ -150,7 +150,7 @@ class UnifiedDictionaryService {
       const result = await this.createEnumFieldType({
         name: dictType,
         code: dictType,
-        description: `自定义字典类型: ${dictType}`
+        description: `自定义字典类型: ${dictType}`,
       });
 
       if (result) {
@@ -159,14 +159,14 @@ class UnifiedDictionaryService {
           message: `字典类型创建成功: ${dictType}`,
           data: result,
           operationType: 'quickCreate',
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         };
       } else {
         return {
           success: false,
           message: `字典类型创建失败: ${dictType}`,
           operationType: 'quickCreate',
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         };
       }
     } catch (error) {
@@ -176,7 +176,7 @@ class UnifiedDictionaryService {
         message: `快速创建字典失败 [${dictType}]: ${enhancedError.message}`,
         error: enhancedError.message,
         operationType: 'quickCreate',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
     }
   }
@@ -196,7 +196,7 @@ class UnifiedDictionaryService {
           success,
           message: success ? `字典类型删除成功: ${dictType}` : `字典类型删除失败: ${dictType}`,
           operationType: 'deleteType',
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         };
       }
 
@@ -204,7 +204,7 @@ class UnifiedDictionaryService {
         success: false,
         message: `字典类型不存在: ${dictType}`,
         operationType: 'deleteType',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
@@ -213,7 +213,7 @@ class UnifiedDictionaryService {
         message: `删除字典类型失败 [${dictType}]: ${enhancedError.message}`,
         error: enhancedError.message,
         operationType: 'deleteType',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
     }
   }
@@ -221,15 +221,18 @@ class UnifiedDictionaryService {
   /**
    * 添加字典值（向后兼容）
    */
-  async addValue(dictType: string, valueData: {
-    label: string
-    value: string
-    code?: string
-    description?: string
-    sort_order?: number
-    color?: string
-    icon?: string
-  }): Promise<DictionaryOperationResult> {
+  async addValue(
+    dictType: string,
+    valueData: {
+      label: string;
+      value: string;
+      code?: string;
+      description?: string;
+      sort_order?: number;
+      color?: string;
+      icon?: string;
+    }
+  ): Promise<DictionaryOperationResult> {
     try {
       const types = await this.getEnumFieldTypes();
       const targetType = types.find(t => t.code === dictType);
@@ -242,7 +245,7 @@ class UnifiedDictionaryService {
             message: `字典值添加成功: ${valueData.label}`,
             data: result,
             operationType: 'addValue',
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
           };
         }
       }
@@ -251,7 +254,7 @@ class UnifiedDictionaryService {
         success: false,
         message: `字典类型不存在: ${dictType}`,
         operationType: 'addValue',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
@@ -260,7 +263,7 @@ class UnifiedDictionaryService {
         message: `添加字典值失败 [${dictType}]: ${enhancedError.message}`,
         error: enhancedError.message,
         operationType: 'addValue',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
     }
   }
@@ -276,7 +279,7 @@ class UnifiedDictionaryService {
       const [types, cacheStats, usageStats] = await Promise.allSettled([
         this.getEnumFieldTypes(),
         Promise.resolve(baseDictionaryService.getStats()),
-        this.getEnumFieldUsageStats('')
+        this.getEnumFieldUsageStats(''),
       ]);
 
       const enumTypes = types.status === 'fulfilled' ? types.value : [];
@@ -305,13 +308,16 @@ class UnifiedDictionaryService {
           systemDictionariesCount: enumTypes.length,
           enumFieldTypesCount: enumTypes.length,
           lastUpdated: new Date().toISOString(),
-          ...systemStatsValue
+          ...systemStatsValue,
         },
         performanceMetrics: {
           averageResponseTime: responseTime,
-          cacheHitRate: cacheStats.status === 'fulfilled' ? ((cacheStats.value as unknown as Record<string, number>)?.cacheHitRate ?? 0) : 0,
-          errorRate: types.status === 'rejected' || usageStats.status === 'rejected' ? 1 : 0
-        }
+          cacheHitRate:
+            cacheStats.status === 'fulfilled'
+              ? ((cacheStats.value as unknown as Record<string, number>)?.cacheHitRate ?? 0)
+              : 0,
+          errorRate: types.status === 'rejected' || usageStats.status === 'rejected' ? 1 : 0,
+        },
       };
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
@@ -326,13 +332,13 @@ class UnifiedDictionaryService {
         systemStats: {
           systemDictionariesCount: 0,
           enumFieldTypesCount: 0,
-          lastUpdated: new Date().toISOString()
+          lastUpdated: new Date().toISOString(),
         },
         performanceMetrics: {
           averageResponseTime: 0,
           cacheHitRate: 0,
-          errorRate: 1
-        }
+          errorRate: 1,
+        },
       };
     }
   }
@@ -342,15 +348,12 @@ class UnifiedDictionaryService {
    */
   async getSystemDictionaries(dictType: string): Promise<SystemDictionary[]> {
     try {
-      const result = await enhancedApiClient.get<SystemDictionary[]>(
-        '/system/dictionaries',
-        {
-          params: { dict_type: dictType },
-          cache: true,
-          retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
-          smartExtract: true
-        }
-      );
+      const result = await enhancedApiClient.get<SystemDictionary[]>('/system/dictionaries', {
+        params: { dict_type: dictType },
+        cache: true,
+        retry: { maxAttempts: 2, delay: 500, backoffMultiplier: 2 },
+        smartExtract: true,
+      });
 
       if (result.success) {
         return result.data!;
@@ -391,7 +394,7 @@ class UnifiedDictionaryService {
           sort_order: value.sort_order,
           is_active: value.is_active,
           created_at: value.created_at,
-          updated_at: value.updated_at
+          updated_at: value.updated_at,
         }));
       }
 
@@ -406,7 +409,10 @@ class UnifiedDictionaryService {
   /**
    * 创建枚举值（简化接口）
    */
-  async createEnumValue(typeId: string, data: CreateEnumFieldValueRequest): Promise<DictionaryOperationResult> {
+  async createEnumValue(
+    typeId: string,
+    data: CreateEnumFieldValueRequest
+  ): Promise<DictionaryOperationResult> {
     try {
       const result = await this.addEnumFieldValue(typeId, data);
       if (result) {
@@ -415,7 +421,7 @@ class UnifiedDictionaryService {
           message: '枚举值创建成功',
           data: result,
           operationType: 'createEnumValue',
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         };
       }
 
@@ -423,7 +429,7 @@ class UnifiedDictionaryService {
         success: false,
         message: '枚举值创建失败',
         operationType: 'createEnumValue',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
@@ -432,7 +438,7 @@ class UnifiedDictionaryService {
         message: `创建枚举值失败: ${enhancedError.message}`,
         error: enhancedError.message,
         operationType: 'createEnumValue',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
     }
   }
@@ -440,7 +446,10 @@ class UnifiedDictionaryService {
   /**
    * 更新枚举值（简化接口）
    */
-  async updateEnumValue(valueId: string, data: UpdateEnumFieldValueRequest): Promise<DictionaryOperationResult> {
+  async updateEnumValue(
+    valueId: string,
+    data: UpdateEnumFieldValueRequest
+  ): Promise<DictionaryOperationResult> {
     try {
       // 需要先获取值所属的类型ID
       const enumData = await this.getEnumFieldData();
@@ -454,7 +463,7 @@ class UnifiedDictionaryService {
               message: '枚举值更新成功',
               data: result,
               operationType: 'updateEnumValue',
-              timestamp: new Date().toISOString()
+              timestamp: new Date().toISOString(),
             };
           }
         }
@@ -464,7 +473,7 @@ class UnifiedDictionaryService {
         success: false,
         message: '未找到指定的枚举值',
         operationType: 'updateEnumValue',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
@@ -473,7 +482,7 @@ class UnifiedDictionaryService {
         message: `更新枚举值失败: ${enhancedError.message}`,
         error: enhancedError.message,
         operationType: 'updateEnumValue',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
     }
   }
@@ -492,7 +501,7 @@ class UnifiedDictionaryService {
             success,
             message: success ? '枚举值删除成功' : '枚举值删除失败',
             operationType: 'deleteEnumValue',
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
           };
         }
       }
@@ -501,7 +510,7 @@ class UnifiedDictionaryService {
         success: false,
         message: '未找到指定的枚举值',
         operationType: 'deleteEnumValue',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
@@ -510,7 +519,7 @@ class UnifiedDictionaryService {
         message: `删除枚举值失败: ${enhancedError.message}`,
         error: enhancedError.message,
         operationType: 'deleteEnumValue',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
     }
   }
@@ -518,12 +527,14 @@ class UnifiedDictionaryService {
   /**
    * 切换枚举值激活状态
    */
-  async toggleEnumValueActive(valueId: string, isActive: boolean): Promise<DictionaryOperationResult> {
+  async toggleEnumValueActive(
+    valueId: string,
+    isActive: boolean
+  ): Promise<DictionaryOperationResult> {
     try {
       // 首先获取当前的枚举值信息
       const enumData = await this.getEnumFieldData();
       let currentValue = null;
-
 
       for (const item of enumData) {
         const value = item.values.find(v => v.id === valueId);
@@ -539,7 +550,7 @@ class UnifiedDictionaryService {
           success: false,
           message: '未找到指定的枚举值',
           operationType: 'toggleEnumValueActive',
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         };
       }
 
@@ -550,7 +561,7 @@ class UnifiedDictionaryService {
         code: currentValue.code,
         description: currentValue.description,
         sort_order: currentValue.sort_order,
-        is_active: isActive
+        is_active: isActive,
       });
 
       return result;
@@ -561,7 +572,7 @@ class UnifiedDictionaryService {
         message: `切换枚举值状态失败: ${enhancedError.message}`,
         error: enhancedError.message,
         operationType: 'toggleEnumValueActive',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
     }
   }
@@ -569,11 +580,14 @@ class UnifiedDictionaryService {
   /**
    * 批量操作字典值
    */
-  async batchOperation(operation: 'create' | 'update' | 'delete', operations: Array<{
-    typeId?: string;
-    valueId?: string;
-    data: unknown;
-  }>): Promise<{
+  async batchOperation(
+    operation: 'create' | 'update' | 'delete',
+    operations: Array<{
+      typeId?: string;
+      valueId?: string;
+      data: unknown;
+    }>
+  ): Promise<{
     success: number;
     failed: number;
     results: DictionaryOperationResult[];
@@ -589,26 +603,32 @@ class UnifiedDictionaryService {
         switch (operation) {
           case 'create':
             if (op.typeId !== undefined) {
-              result = await this.createEnumValue(op.typeId, op.data as CreateEnumFieldValueRequest);
+              result = await this.createEnumValue(
+                op.typeId,
+                op.data as CreateEnumFieldValueRequest
+              );
             } else {
               result = {
                 success: false,
                 message: '批量创建操作缺少typeId',
                 operationType: 'batchCreate',
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
               };
             }
             break;
 
           case 'update':
             if (op.valueId !== undefined) {
-              result = await this.updateEnumValue(op.valueId, op.data as UpdateEnumFieldValueRequest);
+              result = await this.updateEnumValue(
+                op.valueId,
+                op.data as UpdateEnumFieldValueRequest
+              );
             } else {
               result = {
                 success: false,
                 message: '批量更新操作缺少valueId',
                 operationType: 'batchUpdate',
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
               };
             }
             break;
@@ -621,7 +641,7 @@ class UnifiedDictionaryService {
                 success: false,
                 message: '批量删除操作缺少valueId',
                 operationType: 'batchDelete',
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
               };
             }
             break;
@@ -629,10 +649,10 @@ class UnifiedDictionaryService {
           default:
             result = {
               success: false,
-              message: `不支持的批量操作: ${operation}`,
+              message: `不支持的批量操作: ${String(operation)}`,
               operationType: 'batchOperation',
-              timestamp: new Date().toISOString()
-            };
+              timestamp: new Date().toISOString(),
+            } as never;
         }
 
         results.push(result);
@@ -648,7 +668,7 @@ class UnifiedDictionaryService {
           message: `批量操作失败: ${enhancedError.message}`,
           error: enhancedError.message,
           operationType: `batch${operation}`,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
         failedCount++;
       }
@@ -657,22 +677,27 @@ class UnifiedDictionaryService {
     return {
       success: successCount,
       failed: failedCount,
-      results
+      results,
     };
   }
 
   /**
    * 搜索字典值
    */
-  async searchDictionaryValues(keyword: string, dictType?: string): Promise<{
-    type: string;
-    values: Array<{
-      id: string;
-      label: string;
-      value: string;
-      description?: string;
-    }>;
-  }[]> {
+  async searchDictionaryValues(
+    keyword: string,
+    dictType?: string
+  ): Promise<
+    {
+      type: string;
+      values: Array<{
+        id: string;
+        label: string;
+        value: string;
+        description?: string;
+      }>;
+    }[]
+  > {
     try {
       const results: Array<{
         type: string;
@@ -687,10 +712,13 @@ class UnifiedDictionaryService {
       if (dictType !== undefined) {
         // 搜索特定类型的字典值
         const values = await this.getEnumFieldValuesByTypeCode(dictType);
-        const filteredValues = values.filter(item =>
-          item.dict_label.toLowerCase().includes(keyword.toLowerCase()) ||
-          item.dict_value.toLowerCase().includes(keyword.toLowerCase()) ||
-          (item.description !== undefined && item.description !== null && item.description.toLowerCase().includes(keyword.toLowerCase()))
+        const filteredValues = values.filter(
+          item =>
+            item.dict_label.toLowerCase().includes(keyword.toLowerCase()) ||
+            item.dict_value.toLowerCase().includes(keyword.toLowerCase()) ||
+            (item.description !== undefined &&
+              item.description !== null &&
+              item.description.toLowerCase().includes(keyword.toLowerCase()))
         );
 
         if (filteredValues.length > 0) {
@@ -700,21 +728,25 @@ class UnifiedDictionaryService {
               id: item.id,
               label: item.dict_label,
               value: item.dict_value,
-              description: item.description
-            }))
+              description: item.description,
+            })),
           });
         }
       } else {
         // 搜索所有类型的字典值
         const types = await this.getEnumFieldTypes();
 
-        for (const type of types.slice(0, 10)) { // 限制搜索的类型数量以避免性能问题
+        for (const type of types.slice(0, 10)) {
+          // 限制搜索的类型数量以避免性能问题
           try {
             const values = await this.getEnumFieldValues(type.code);
-            const filteredValues = values.filter(item =>
-              item.label.toLowerCase().includes(keyword.toLowerCase()) ||
-              item.value.toLowerCase().includes(keyword.toLowerCase()) ||
-              (item.description !== undefined && item.description !== null && item.description.toLowerCase().includes(keyword.toLowerCase()))
+            const filteredValues = values.filter(
+              item =>
+                item.label.toLowerCase().includes(keyword.toLowerCase()) ||
+                item.value.toLowerCase().includes(keyword.toLowerCase()) ||
+                (item.description !== undefined &&
+                  item.description !== null &&
+                  item.description.toLowerCase().includes(keyword.toLowerCase()))
             );
 
             if (filteredValues.length > 0) {
@@ -724,8 +756,8 @@ class UnifiedDictionaryService {
                   id: item.id,
                   label: item.label,
                   value: item.value,
-                  description: item.description
-                }))
+                  description: item.description,
+                })),
               });
             }
           } catch (error) {
@@ -755,7 +787,7 @@ class UnifiedDictionaryService {
         data = {
           type: dictType,
           values: values,
-          exportTime: new Date().toISOString()
+          exportTime: new Date().toISOString(),
         };
         const _filename = `dictionary_${dictType}_${new Date().toISOString().split('T')[0]}.${format === 'excel' ? 'xlsx' : 'json'}`;
       } else {
@@ -764,13 +796,15 @@ class UnifiedDictionaryService {
         const allData: Record<string, unknown> = {
           types: [],
           values: [],
-          exportTime: new Date().toISOString()
+          exportTime: new Date().toISOString(),
         };
 
         for (const type of types) {
           const values = await this.getEnumFieldValues(type.code);
           (allData.types as EnumFieldType[]).push(type);
-          (allData.values as EnumFieldValue[]).push(...values.map(v => ({ ...v, type_code: type.code })));
+          (allData.values as EnumFieldValue[]).push(
+            ...values.map(v => ({ ...v, type_code: type.code }))
+          );
         }
 
         data = allData;
@@ -820,13 +854,13 @@ class UnifiedDictionaryService {
         name: 'base_dictionary_service',
         status: 'pass',
         message: `缓存命中: ${(baseStats.cacheHitRate * 100).toFixed(1)}%`,
-        responseTime
+        responseTime,
       });
     } catch {
       checks.push({
         name: 'base_dictionary_service',
         status: 'fail',
-        message: '基础字典服务异常'
+        message: '基础字典服务异常',
       });
       overallStatus = 'unhealthy';
     }
@@ -841,13 +875,13 @@ class UnifiedDictionaryService {
         name: 'enum_field_manager',
         status: 'pass',
         message: `已加载${types.length}个枚举类型`,
-        responseTime
+        responseTime,
       });
     } catch {
       checks.push({
         name: 'enum_field_manager',
         status: 'fail',
-        message: '枚举字段管理服务异常'
+        message: '枚举字段管理服务异常',
       });
       if (overallStatus === 'healthy') {
         overallStatus = 'degraded';
@@ -857,17 +891,17 @@ class UnifiedDictionaryService {
     return {
       status: overallStatus,
       checks,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
   }
 }
 
 // 创建统一服务实例
-export const dictionaryService = new UnifiedDictionaryService()
+export const dictionaryService = new UnifiedDictionaryService();
 
 // 向后兼容：导出默认实例
-export default dictionaryService
+export default dictionaryService;
 
 // 向后兼容：导出旧的接口名称
-export const unifiedDictionaryService = dictionaryService
-export const enumFieldService = dictionaryManagerService
+export const unifiedDictionaryService = dictionaryService;
+export const enumFieldService = dictionaryManagerService;

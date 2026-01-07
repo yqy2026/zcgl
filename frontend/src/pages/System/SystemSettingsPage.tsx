@@ -1,128 +1,147 @@
-import React, { useState, useEffect } from 'react'
-import { Card, Form, Input, Switch, Button, message, Divider, Typography, Space, Tabs, Alert } from 'antd'
-import { SettingOutlined, DatabaseOutlined, CloudDownloadOutlined, CloudUploadOutlined } from '@ant-design/icons'
-import { systemService } from '../../services/systemService'
-import type { SystemSettings } from '../../services/systemService'
-import { createLogger } from '../../utils/logger'
+import React, { useState, useEffect } from 'react';
+import {
+  Card,
+  Form,
+  Input,
+  Switch,
+  Button,
+  message,
+  Divider,
+  Typography,
+  Space,
+  Tabs,
+  Alert,
+} from 'antd';
+import {
+  SettingOutlined,
+  DatabaseOutlined,
+  CloudDownloadOutlined,
+  CloudUploadOutlined,
+} from '@ant-design/icons';
+import { systemService } from '../../services/systemService';
+import type { SystemSettings } from '../../services/systemService';
+import { createLogger } from '../../utils/logger';
 
-const pageLogger = createLogger('SystemSettings')
+const pageLogger = createLogger('SystemSettings');
 
-const { Title, Text } = Typography
-const { TabPane } = Tabs
+const { Title, Text } = Typography;
+const { TabPane } = Tabs;
 
 interface SystemInfo {
-  version: string
-  build_time: string
-  database_status: string
-  api_version: string
-  environment: string
+  version: string;
+  build_time: string;
+  database_status: string;
+  api_version: string;
+  environment: string;
 }
 
 const SystemSettingsPage: React.FC = () => {
-  const [form] = Form.useForm()
-  const [loading, setLoading] = useState(false)
-  const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null)
-  const [settings, setSettings] = useState<SystemSettings | null>(null)
-  const [activeTab, setActiveTab] = useState('settings')
+  const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
+  const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
+  const [settings, setSettings] = useState<SystemSettings | null>(null);
+  const [activeTab, setActiveTab] = useState('settings');
 
   // 获取系统信息
   const fetchSystemInfo = React.useCallback(async () => {
     try {
-      setLoading(true)
-      const response = await systemService.getSystemInfo()
-      setSystemInfo(response as unknown as SystemInfo)
+      setLoading(true);
+      const response = await systemService.getSystemInfo();
+      setSystemInfo(response as SystemInfo);
     } catch (error: unknown) {
-      pageLogger.error('获取系统信息失败:', error as Error)
-      const errorMsg = error instanceof Error ? error.message : '未知错误'
-      message.error('获取系统信息失败: ' + errorMsg)
+      pageLogger.error('获取系统信息失败:', error as Error);
+      const errorMsg = error instanceof Error ? error.message : '未知错误';
+      message.error('获取系统信息失败: ' + errorMsg);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [])
+  }, []);
 
   // 获取系统设置
   const fetchSettings = React.useCallback(async () => {
     try {
-      setLoading(true)
-      const response = await systemService.getSettings()
-      setSettings(response as unknown as SystemSettings)
-      form.setFieldsValue(response)
+      setLoading(true);
+      const response = await systemService.getSettings();
+      setSettings(response as SystemSettings);
+      form.setFieldsValue(response);
     } catch (error: unknown) {
-      pageLogger.error('获取系统设置失败:', error as Error)
-      const errorMsg = error instanceof Error ? error.message : '未知错误'
-      message.error('获取系统设置失败: ' + errorMsg)
+      pageLogger.error('获取系统设置失败:', error as Error);
+      const errorMsg = error instanceof Error ? error.message : '未知错误';
+      message.error('获取系统设置失败: ' + errorMsg);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [form])
+  }, [form]);
 
   // 保存设置
   const handleSaveSettings = async (values: Partial<SystemSettings>) => {
     try {
-      setLoading(true)
-      await systemService.updateSettings(values)
-      message.success('设置保存成功')
-      void fetchSettings()
+      setLoading(true);
+      await systemService.updateSettings(values);
+      message.success('设置保存成功');
+      void fetchSettings();
     } catch (error: unknown) {
-      pageLogger.error('保存设置失败:', error as Error)
-      const errorMsg = error instanceof Error ? error.message : '未知错误'
-      message.error('保存设置失败: ' + errorMsg)
+      pageLogger.error('保存设置失败:', error as Error);
+      const errorMsg = error instanceof Error ? error.message : '未知错误';
+      message.error('保存设置失败: ' + errorMsg);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   // 备份数据
   const handleBackup = async () => {
     try {
-      setLoading(true)
-      const response = await systemService.backupSystem()
-      message.success('数据备份成功')
+      setLoading(true);
+      const response = await systemService.backupSystem();
+      message.success('数据备份成功');
       // 创建下载链接
-      const blob = new Blob([JSON.stringify(response, null, 2)], { type: 'application/json' })
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `backup_${new Date().toISOString().split('T')[0]}.json`
-      a.click()
-      window.URL.revokeObjectURL(url)
+      const blob = new Blob([JSON.stringify(response, null, 2)], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `backup_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      window.URL.revokeObjectURL(url);
     } catch (error: unknown) {
-      pageLogger.error('数据备份失败:', error as Error)
-      const errorMsg = error instanceof Error ? error.message : '未知错误'
-      message.error('数据备份失败: ' + errorMsg)
+      pageLogger.error('数据备份失败:', error as Error);
+      const errorMsg = error instanceof Error ? error.message : '未知错误';
+      message.error('数据备份失败: ' + errorMsg);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   // 恢复数据
   const handleRestore = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
 
     try {
-      setLoading(true)
-      await systemService.restoreSystem(file)
-      message.success('数据恢复成功，请刷新页面查看最新数据')
+      setLoading(true);
+      await systemService.restoreSystem(file);
+      message.success('数据恢复成功，请刷新页面查看最新数据');
       setTimeout(() => {
-        window.location.reload()
-      }, 2000)
+        window.location.reload();
+      }, 2000);
     } catch (error: unknown) {
-      pageLogger.error('数据恢复失败:', error as Error)
-      const errorMsg = error instanceof Error ? error.message : '未知错误'
-      message.error('数据恢复失败: ' + errorMsg)
+      pageLogger.error('数据恢复失败:', error as Error);
+      const errorMsg = error instanceof Error ? error.message : '未知错误';
+      message.error('数据恢复失败: ' + errorMsg);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
     if (activeTab === 'info') {
-      void fetchSystemInfo()
+      void fetchSystemInfo();
     } else if (activeTab === 'settings') {
-      void fetchSettings()
+      void fetchSettings();
     }
-  }, [activeTab])
+  }, [activeTab, fetchSettings, fetchSystemInfo]);
 
   return (
     <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
@@ -136,7 +155,9 @@ const SystemSettingsPage: React.FC = () => {
             <Form
               form={form}
               layout="vertical"
-              onFinish={handleSaveSettings}
+              onFinish={values => {
+                void handleSaveSettings(values as Partial<SystemSettings>);
+              }}
               initialValues={settings || undefined}
             >
               <Form.Item
@@ -147,18 +168,11 @@ const SystemSettingsPage: React.FC = () => {
                 <Input placeholder="请输入站点名称" />
               </Form.Item>
 
-              <Form.Item
-                label="站点描述"
-                name="site_description"
-              >
+              <Form.Item label="站点描述" name="site_description">
                 <Input.TextArea rows={3} placeholder="请输入站点描述" />
               </Form.Item>
 
-              <Form.Item
-                label="允许用户注册"
-                name="allow_registration"
-                valuePropName="checked"
-              >
+              <Form.Item label="允许用户注册" name="allow_registration" valuePropName="checked">
                 <Switch />
               </Form.Item>
 
@@ -226,15 +240,28 @@ const SystemSettingsPage: React.FC = () => {
             {systemInfo ? (
               <div>
                 <Space direction="vertical" style={{ width: '100%' }}>
-                  <div><strong>版本号：</strong>{systemInfo.version}</div>
-                  <div><strong>构建时间：</strong>{systemInfo.build_time}</div>
-                  <div><strong>数据库状态：</strong>
+                  <div>
+                    <strong>版本号：</strong>
+                    {systemInfo.version}
+                  </div>
+                  <div>
+                    <strong>构建时间：</strong>
+                    {systemInfo.build_time}
+                  </div>
+                  <div>
+                    <strong>数据库状态：</strong>
                     <Text type={systemInfo.database_status === 'connected' ? 'success' : 'danger'}>
                       {systemInfo.database_status === 'connected' ? '已连接' : '未连接'}
                     </Text>
                   </div>
-                  <div><strong>API版本：</strong>{systemInfo.api_version}</div>
-                  <div><strong>运行环境：</strong>{systemInfo.environment}</div>
+                  <div>
+                    <strong>API版本：</strong>
+                    {systemInfo.api_version}
+                  </div>
+                  <div>
+                    <strong>运行环境：</strong>
+                    {systemInfo.environment}
+                  </div>
                 </Space>
               </div>
             ) : (
@@ -265,7 +292,7 @@ const SystemSettingsPage: React.FC = () => {
                 <Button
                   type="primary"
                   icon={<CloudDownloadOutlined />}
-                  onClick={handleBackup}
+                  onClick={() => void handleBackup()}
                   loading={loading}
                 >
                   立即备份
@@ -284,7 +311,7 @@ const SystemSettingsPage: React.FC = () => {
                 <input
                   type="file"
                   accept=".json"
-                  onChange={handleRestore}
+                  onChange={e => void handleRestore(e)}
                   style={{ display: 'none' }}
                   id="restore-file-input"
                 />
@@ -305,7 +332,7 @@ const SystemSettingsPage: React.FC = () => {
         </TabPane>
       </Tabs>
     </div>
-  )
-}
+  );
+};
 
-export default SystemSettingsPage
+export default SystemSettingsPage;

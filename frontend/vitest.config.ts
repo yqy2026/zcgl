@@ -8,9 +8,9 @@
  * - 并行执行和性能优化
  */
 
-import { defineConfig } from 'vitest/config'
-import react from '@vitejs/plugin-react'
-import path from 'path'
+import { defineConfig } from 'vitest/config';
+import react from '@vitejs/plugin-react';
+import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
@@ -59,24 +59,24 @@ export default defineConfig({
 
       // 报告格式
       reporter: [
-        'text',           // 终端文本输出
-        'text-summary',   // 终端摘要
-        'json',           // JSON格式
-        'json-summary',   // JSON摘要（CI友好）
-        'html',           // HTML可视化报告
-        'lcov',           // LCOV格式
-        'lcovonly',       // 仅LCOV文件
+        'text', // 终端文本输出
+        'text-summary', // 终端摘要
+        'json', // JSON格式
+        'json-summary', // JSON摘要（CI友好）
+        'html', // HTML可视化报告
+        'lcov', // LCOV格式
+        'lcovonly', // 仅LCOV文件
       ],
 
       // 排除文件（不统计覆盖率）
       exclude: [
         'node_modules/',
         'src/test/',
-        'src/mocks/',          // Mock数据
+        'src/mocks/', // Mock数据
         '**/*.d.ts',
         '**/*.config.*',
         '**/mockData',
-        'src/main.tsx',        // 应用入口
+        'src/main.tsx', // 应用入口
         'src/vite-env.d.ts',
         '**/__tests__/**',
         '**/*.test.{ts,tsx}',
@@ -94,8 +94,8 @@ export default defineConfig({
         branches: 45,
         statements: 50,
 
-        perFile: false,      // 不对单个文件强制要求
-        autoUpdate: true,    // 自动更新配置
+        perFile: false, // 不对单个文件强制要求
+        autoUpdate: true, // 自动更新配置
       },
 
       // 收集选项
@@ -131,4 +131,4 @@ export default defineConfig({
       '@/monitoring': path.resolve(__dirname, './src/monitoring'),
     },
   },
-})
+});

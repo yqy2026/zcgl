@@ -17,8 +17,8 @@
  * - 卡片标题
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import React from 'react'
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import React from 'react';
 
 // Mock antd 组件
 vi.mock('antd', () => ({
@@ -62,10 +62,8 @@ vi.mock('antd', () => ({
       {children}
     </div>
   ),
-  Empty: ({ description }: any) => (
-    <div data-testid="empty">{description}</div>
-  ),
-}))
+  Empty: ({ description }: any) => <div data-testid="empty">{description}</div>,
+}));
 
 // Mock icons
 vi.mock('@ant-design/icons', () => ({
@@ -77,7 +75,7 @@ vi.mock('@ant-design/icons', () => ({
   DollarOutlined: () => <span data-testid="icon-dollar" />,
   InfoCircleOutlined: () => <span data-testid="icon-infocircle" />,
   PhoneOutlined: () => <span data-testid="icon-phone" />,
-}))
+}));
 
 // Mock format utilities
 vi.mock('@/utils/format', () => ({
@@ -86,19 +84,19 @@ vi.mock('@/utils/format', () => ({
   formatDate: (_date: string, _format?: string) => '2024-01-01',
   formatCurrency: (value: number) => `¥${value.toLocaleString()}`,
   getStatusColor: (_status: string, _type: string) => 'blue',
-}))
+}));
 
 // Mock services
 vi.mock('@/services', () => ({
   getAssetStatusLabel: (_status: string) => 'status',
   getPropertyNatureLabel: (_nature: string) => 'nature',
   getUsageStatusCategory: (_status: string) => 'operating',
-}))
+}));
 
 describe('AssetDetailInfo 组件测试', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-  })
+    vi.clearAllMocks();
+  });
 
   const mockAsset: any = {
     id: '1',
@@ -144,457 +142,463 @@ describe('AssetDetailInfo 组件测试', () => {
     notes: '这是资产备注信息\n多行备注内容',
     created_at: '2024-01-01T00:00:00.000Z',
     updated_at: '2024-01-15T00:00:00.000Z',
-  }
+  };
 
   // Helper function to create component element
   const createElement = async (props: any = {}) => {
-    const module = await import('../AssetDetailInfo')
-    const Component = module.default
-    return React.createElement(Component, { asset: mockAsset, ...props })
-  }
+    const module = await import('../AssetDetailInfo');
+    const Component = module.default;
+    return React.createElement(Component, { asset: mockAsset, ...props });
+  };
 
   describe('组件导入与导出', () => {
     it('应该成功导入默认导出', async () => {
-      const module = await import('../AssetDetailInfo')
-      expect(module.default).toBeDefined()
-    })
+      const module = await import('../AssetDetailInfo');
+      expect(module.default).toBeDefined();
+    });
 
     it('应该是React组件', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
-  })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
+  });
 
   describe('基本属性测试', () => {
     it('应该接收 asset 属性', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该接受 className 属性', async () => {
-      const element = await createElement({ className: 'custom-class' })
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement({ className: 'custom-class' });
+      expect(element).toBeTruthy();
+    });
 
     it('应该接受 style 属性', async () => {
-      const element = await createElement({ style: { marginTop: 16 } })
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement({ style: { marginTop: 16 } });
+      expect(element).toBeTruthy();
+    });
 
     it('应该处理空 asset', async () => {
-      const module = await import('../AssetDetailInfo')
-      const Component = module.default
-      const element = React.createElement(Component, { asset: {} })
-      expect(element).toBeTruthy()
-    })
+      const module = await import('../AssetDetailInfo');
+      const Component = module.default;
+      const element = React.createElement(Component, { asset: {} });
+      expect(element).toBeTruthy();
+    });
 
     it('应该处理 null asset', async () => {
-      const module = await import('../AssetDetailInfo')
-      const Component = module.default
-      const element = React.createElement(Component, { asset: null })
-      expect(element).toBeTruthy()
-    })
-  })
+      const module = await import('../AssetDetailInfo');
+      const Component = module.default;
+      const element = React.createElement(Component, { asset: null });
+      expect(element).toBeTruthy();
+    });
+  });
 
   describe('基本信息卡片', () => {
     it('应该显示物业名称', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示权属状态', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示物业性质', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示使用状态', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示地址', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示权属单位', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示图标', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
-  })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
+  });
 
   describe('面积信息卡片', () => {
     it('应该显示土地面积', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示实际面积', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示可出租面积', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示已出租面积', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示出租率', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该使用面积格式化', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该使用百分比格式化', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
-  })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
+  });
 
   describe('接收信息卡片', () => {
     it('应该显示接收单位', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示接收人', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示联系电话', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示接收日期', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示接收备注', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
-  })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
+  });
 
   describe('协议详情卡片', () => {
     it('应该显示协议编号', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示协议日期', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示协议金额', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示供应商名称', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示供应商联系人', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示供应商电话', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该使用货币格式化', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该使用日期格式化', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
-  })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
+  });
 
   describe('合同信息卡片', () => {
     it('应该显示合同编号', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示合同类型', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示合同开始日期', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示合同结束日期', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示合同金额', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示年租金', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示付款周期', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示保证金金额', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
-  })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
+  });
 
   describe('备注信息卡片', () => {
     it('应该显示备注内容', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该处理多行备注', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该处理空备注', async () => {
-      const element = await createElement({ asset: { ...mockAsset, notes: '' } })
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement({ asset: { ...mockAsset, notes: '' } });
+      expect(element).toBeTruthy();
+    });
 
     it('应该处理 undefined 备注', async () => {
-      const element = await createElement({ asset: { ...mockAsset, notes: undefined } })
-      expect(element).toBeTruthy()
-    })
-  })
+      const element = await createElement({ asset: { ...mockAsset, notes: undefined } });
+      expect(element).toBeTruthy();
+    });
+  });
 
   describe('经营性 vs 非经营性差异', () => {
     it('经营性资产应该显示合同信息', async () => {
-      const element = await createElement({ asset: { ...mockAsset, usage_status_category: 'operating' } })
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement({
+        asset: { ...mockAsset, usage_status_category: 'operating' },
+      });
+      expect(element).toBeTruthy();
+    });
 
     it('非经营性资产应该显示协议信息', async () => {
-      const element = await createElement({ asset: { ...mockAsset, usage_status_category: 'non-operating' } })
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement({
+        asset: { ...mockAsset, usage_status_category: 'non-operating' },
+      });
+      expect(element).toBeTruthy();
+    });
 
     it('应该根据 usage_status_category 判断经营性', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
-  })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
+  });
 
   describe('Descriptions 组件布局', () => {
     it('应该使用 column=3 布局', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该使用 bordered 属性', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该使用 small 尺寸', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
-  })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
+  });
 
   describe('空值处理', () => {
     it('应该处理缺失的土地面积', async () => {
-      const element = await createElement({ asset: { ...mockAsset, land_area: undefined } })
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement({ asset: { ...mockAsset, land_area: undefined } });
+      expect(element).toBeTruthy();
+    });
 
     it('应该处理缺失的合同信息', async () => {
-      const element = await createElement({ asset: { ...mockAsset, contract_id: null } })
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement({ asset: { ...mockAsset, contract_id: null } });
+      expect(element).toBeTruthy();
+    });
 
     it('应该处理缺失的协议信息', async () => {
-      const element = await createElement({ asset: { ...mockAsset, agreement_number: '' } })
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement({ asset: { ...mockAsset, agreement_number: '' } });
+      expect(element).toBeTruthy();
+    });
 
     it('应该处理 0 值面积', async () => {
-      const element = await createElement({ asset: { ...mockAsset, land_area: 0, actual_area: 0 } })
-      expect(element).toBeTruthy()
-    })
-  })
+      const element = await createElement({
+        asset: { ...mockAsset, land_area: 0, actual_area: 0 },
+      });
+      expect(element).toBeTruthy();
+    });
+  });
 
   describe('图标显示', () => {
     it('基本信息应该显示 EnvironmentOutlined 图标', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('面积信息应该显示 HomeOutlined 图标', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('接收信息应该显示 UserOutlined 图标', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('协议详情应该显示 FileTextOutlined 图标', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('合同信息应该显示 FileProtectOutlined 图标', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('备注信息应该显示 InfoCircleOutlined 图标', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
-  })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
+  });
 
   describe('卡片标题', () => {
     it('基本信息标题应该包含 Icon 和文本', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('面积信息标题应该正确显示', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('接收信息标题应该正确显示', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('协议详情标题应该正确显示', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('合同信息标题应该正确显示', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('备注信息标题应该正确显示', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
-  })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
+  });
 
   describe('权属证书信息', () => {
     it('应该显示权属证书编号', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示土地证号', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示登记日期', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
-  })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
+  });
 
   describe('土地信息', () => {
     it('应该显示土地性质', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示土地使用年限', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示土地到期日期', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
-  })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
+  });
 
   describe('经营性质信息', () => {
     it('应该显示证载用途', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示实际用途', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
-  })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
+  });
 
   describe('供应商信息', () => {
     it('应该显示供应商名称', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示供应商联系人', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示供应商电话', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
-  })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
+  });
 
   describe('时间信息', () => {
     it('应该显示创建时间', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
 
     it('应该显示更新时间', async () => {
-      const element = await createElement()
-      expect(element).toBeTruthy()
-    })
-  })
-})
+      const element = await createElement();
+      expect(element).toBeTruthy();
+    });
+  });
+});

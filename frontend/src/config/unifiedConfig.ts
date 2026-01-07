@@ -3,14 +3,14 @@
  * 整合所有配置文件，提供统一的配置管理体验
  */
 
-import { LogLevel } from "../types/common";
+import { LogLevel } from '../types/common';
 
 // 环境枚举
 export enum Environment {
-  DEVELOPMENT = "development",
-  TESTING = "testing",
-  STAGING = "staging",
-  PRODUCTION = "production",
+  DEVELOPMENT = 'development',
+  TESTING = 'testing',
+  STAGING = 'staging',
+  PRODUCTION = 'production',
 }
 
 // API配置接口
@@ -45,7 +45,7 @@ export interface CacheConfig {
   enabled: boolean;
   defaultTTL: number; // 秒
   maxSize: number; // MB
-  storage: "localStorage" | "sessionStorage" | "memory";
+  storage: 'localStorage' | 'sessionStorage' | 'memory';
 }
 
 // 日志配置接口
@@ -61,7 +61,7 @@ export interface LoggingConfig {
 
 // 主题配置接口
 export interface ThemeConfig {
-  mode: "light" | "dark" | "auto";
+  mode: 'light' | 'dark' | 'auto';
   primaryColor: string;
   compactMode: boolean;
   animationEnabled: boolean;
@@ -129,7 +129,7 @@ export class ConfigManager {
   }
 
   static getInstance(): ConfigManager {
-    if (!ConfigManager.instance) {
+    if (ConfigManager.instance === null || ConfigManager.instance === undefined) {
       ConfigManager.instance = new ConfigManager();
     }
     return ConfigManager.instance;
@@ -148,7 +148,7 @@ export class ConfigManager {
       ...envConfig,
       environment,
       debug: environment === Environment.DEVELOPMENT,
-      version: baseConfig.version || "1.0.0",
+      version: (baseConfig.version ?? null) !== null ? baseConfig.version : '1.0.0',
     } as UnifiedConfig;
 
     // 验证配置
@@ -160,7 +160,7 @@ export class ConfigManager {
    */
   getConfig(): UnifiedConfig {
     if (!this.config) {
-      throw new Error("Configuration not loaded");
+      throw new Error('Configuration not loaded');
     }
     return this.config;
   }
@@ -170,7 +170,7 @@ export class ConfigManager {
    */
   updateConfig(updates: Partial<UnifiedConfig>): void {
     if (!this.config) {
-      throw new Error("Configuration not loaded");
+      throw new Error('Configuration not loaded');
     }
 
     this.config = { ...this.config, ...updates };
@@ -199,15 +199,15 @@ export class ConfigManager {
   private detectEnvironment(): Environment {
     const hostname = window.location.hostname;
 
-    if (hostname === "localhost" || hostname === "127.0.0.1") {
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
       return Environment.DEVELOPMENT;
     }
 
-    if (hostname.includes("staging") || hostname.includes("test")) {
+    if (hostname.includes('staging') || hostname.includes('test')) {
       return Environment.STAGING;
     }
 
-    if (hostname.includes("prod") || hostname.includes("app")) {
+    if (hostname.includes('prod') || hostname.includes('app')) {
       return Environment.PRODUCTION;
     }
 
@@ -219,20 +219,25 @@ export class ConfigManager {
    */
   private getBaseConfig(): Partial<UnifiedConfig> {
     return {
-      version: process.env.REACT_APP_VERSION || "1.0.0",
+      version:
+        (process.env.REACT_APP_VERSION ?? null) !== null &&
+        process.env.REACT_APP_VERSION !== undefined &&
+        process.env.REACT_APP_VERSION !== ''
+          ? process.env.REACT_APP_VERSION
+          : '1.0.0',
 
       api: {
         baseURL: this.getApiBaseURL(),
         timeout: 30000,
         retryCount: 3,
         retryDelay: 1000,
-        version: "v1",
+        version: 'v1',
       },
 
       auth: {
-        tokenKey: "access_token",
-        refreshTokenKey: "refresh_token",
-        userKey: "user_info",
+        tokenKey: 'access_token',
+        refreshTokenKey: 'refresh_token',
+        userKey: 'user_info',
         tokenRefreshThreshold: 5, // 5分钟
         autoRefresh: true,
       },
@@ -240,14 +245,14 @@ export class ConfigManager {
       fileUpload: {
         maxFileSize: 100 * 1024 * 1024, // 100MB
         allowedTypes: [
-          "application/pdf",
-          "application/vnd.ms-excel",
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          "text/csv",
-          "image/jpeg",
-          "image/png",
+          'application/pdf',
+          'application/vnd.ms-excel',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'text/csv',
+          'image/jpeg',
+          'image/png',
         ],
-        uploadURL: "/api/v1/upload",
+        uploadURL: '/api/v1/upload',
         chunkSize: 1024 * 1024, // 1MB
         maxConcurrentUploads: 3,
       },
@@ -256,7 +261,7 @@ export class ConfigManager {
         enabled: true,
         defaultTTL: 3600, // 1小时
         maxSize: 50, // 50MB
-        storage: "localStorage",
+        storage: 'localStorage',
       },
 
       logging: {
@@ -265,12 +270,12 @@ export class ConfigManager {
         maxFiles: 5,
         enableConsole: true,
         enableFile: false,
-        dateFormat: "YYYY-MM-DD HH:mm:ss",
+        dateFormat: 'YYYY-MM-DD HH:mm:ss',
       },
 
       theme: {
-        mode: "light",
-        primaryColor: "#1890ff",
+        mode: 'light',
+        primaryColor: '#1890ff',
         compactMode: false,
         animationEnabled: true,
       },
@@ -300,11 +305,11 @@ export class ConfigManager {
       case Environment.DEVELOPMENT:
         return {
           api: {
-            baseURL: "http://localhost:8002/api",
+            baseURL: 'http://localhost:8002/api',
             timeout: 60000,
             retryCount: 1,
             retryDelay: 500,
-            version: "v1",
+            version: 'v1',
           },
           logging: {
             level: LogLevel.DEBUG,
@@ -312,8 +317,8 @@ export class ConfigManager {
             maxFiles: 10,
             enableConsole: true,
             enableFile: true,
-            filePath: "/tmp/app-debug.log",
-            dateFormat: "YYYY-MM-DD HH:mm:ss.SSS",
+            filePath: '/tmp/app-debug.log',
+            dateFormat: 'YYYY-MM-DD HH:mm:ss.SSS',
           },
           monitoring: {
             enabled: true,
@@ -333,11 +338,11 @@ export class ConfigManager {
       case Environment.TESTING:
         return {
           api: {
-            baseURL: "http://test-api.example.com/api/v1",
+            baseURL: 'http://test-api.example.com/api/v1',
             timeout: 30000,
             retryCount: 2,
             retryDelay: 1000,
-            version: "v1",
+            version: 'v1',
           },
           logging: {
             level: LogLevel.WARN,
@@ -345,8 +350,8 @@ export class ConfigManager {
             maxFiles: 3,
             enableConsole: false,
             enableFile: true,
-            filePath: "/tmp/app-test.log",
-            dateFormat: "YYYY-MM-DD HH:mm:ss",
+            filePath: '/tmp/app-test.log',
+            dateFormat: 'YYYY-MM-DD HH:mm:ss',
           },
           monitoring: {
             enabled: false,
@@ -366,11 +371,11 @@ export class ConfigManager {
       case Environment.STAGING:
         return {
           api: {
-            baseURL: "https://staging-api.example.com/api/v1",
+            baseURL: 'https://staging-api.example.com/api/v1',
             timeout: 30000,
             retryCount: 3,
             retryDelay: 1000,
-            version: "v1",
+            version: 'v1',
           },
           logging: {
             level: LogLevel.INFO,
@@ -378,8 +383,8 @@ export class ConfigManager {
             maxFiles: 2,
             enableConsole: false,
             enableFile: true,
-            filePath: "/var/log/app-staging.log",
-            dateFormat: "YYYY-MM-DD HH:mm:ss",
+            filePath: '/var/log/app-staging.log',
+            dateFormat: 'YYYY-MM-DD HH:mm:ss',
           },
           monitoring: {
             enabled: true,
@@ -399,11 +404,11 @@ export class ConfigManager {
       case Environment.PRODUCTION:
         return {
           api: {
-            baseURL: "https://api.example.com/api/v1",
+            baseURL: 'https://api.example.com/api/v1',
             timeout: 30000,
             retryCount: 3,
             retryDelay: 1000,
-            version: "v1",
+            version: 'v1',
           },
           logging: {
             level: LogLevel.ERROR,
@@ -411,8 +416,8 @@ export class ConfigManager {
             maxFiles: 1,
             enableConsole: false,
             enableFile: true,
-            filePath: "/var/log/app-production.log",
-            dateFormat: "YYYY-MM-DD HH:mm:ss",
+            filePath: '/var/log/app-production.log',
+            dateFormat: 'YYYY-MM-DD HH:mm:ss',
           },
           monitoring: {
             enabled: true,
@@ -440,19 +445,19 @@ export class ConfigManager {
   private getApiBaseURL(): string {
     // 优先使用环境变量
     const envApiURL = process.env.REACT_APP_API_URL;
-    if (envApiURL) {
+    if (envApiURL !== null && envApiURL !== undefined && envApiURL !== '') {
       return envApiURL;
     }
 
     // 根据当前域名推断API URL
     const currentHost = window.location.hostname;
 
-    if (currentHost === "localhost" || currentHost === "127.0.0.1") {
-      return "http://localhost:8002/api";
+    if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
+      return 'http://localhost:8002/api';
     }
 
     // 生产环境使用相对路径
-    return "/api";
+    return '/api';
   }
 
   /**
@@ -460,27 +465,27 @@ export class ConfigManager {
    */
   private validateConfig(): void {
     if (!this.config) {
-      throw new Error("Configuration not loaded");
+      throw new Error('Configuration not loaded');
     }
 
     // 验证API配置
     if (!this.config.api.baseURL) {
-      throw new Error("API baseURL is required");
+      throw new Error('API baseURL is required');
     }
 
     // 验证文件上传配置
     if (this.config.fileUpload.maxFileSize <= 0) {
-      throw new Error("File upload max size must be greater than 0");
+      throw new Error('File upload max size must be greater than 0');
     }
 
     // 验证缓存配置
     if (this.config.cache.maxSize <= 0) {
-      throw new Error("Cache max size must be greater than 0");
+      throw new Error('Cache max size must be greater than 0');
     }
 
     // 验证监控配置
     if (this.config.monitoring.sampleRate < 0 || this.config.monitoring.sampleRate > 1) {
-      throw new Error("Monitoring sample rate must be between 0 and 1");
+      throw new Error('Monitoring sample rate must be between 0 and 1');
     }
   }
 
@@ -489,7 +494,7 @@ export class ConfigManager {
    */
   private notifyListeners(): void {
     if (this.config) {
-      this.configListeners.forEach((listener) => listener(this.config!));
+      this.configListeners.forEach(listener => listener(this.config!));
     }
   }
 

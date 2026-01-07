@@ -1,9 +1,9 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query';
 
 // 模拟获取仪表板数据
 const fetchDashboardData = async () => {
-  await new Promise(resolve => setTimeout(resolve, 1000))
-  
+  await new Promise(resolve => setTimeout(resolve, 1000));
+
   return {
     metrics: {
       totalAssets: 156,
@@ -86,21 +86,21 @@ const fetchDashboardData = async () => {
         icon: '📊',
       },
     ],
-  }
-}
+  };
+};
 
 export const useDashboardData = () => {
   const { data, isLoading, error } = useQuery({
     queryKey: ['dashboard'],
     queryFn: fetchDashboardData,
-  })
+  });
 
   return {
     metrics: data?.metrics,
-    todoItems: data?.todoItems || [],
+    todoItems: data?.todoItems ?? [],
     chartData: data?.chartData,
-    recentActivities: data?.recentActivities || [],
+    recentActivities: data?.recentActivities ?? [],
     isLoading,
     error,
-  }
-}
+  };
+};

@@ -17,7 +17,7 @@ import {
   Button,
   Modal,
   Table,
-  Divider
+  Divider,
 } from 'antd';
 import {
   QuestionCircleOutlined,
@@ -28,7 +28,7 @@ import {
   FileTextOutlined,
   DatabaseOutlined,
   EyeOutlined,
-  SettingOutlined
+  SettingOutlined,
 } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
@@ -48,43 +48,46 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
     {
       key: '1',
       question: '支持哪些PDF格式？',
-      answer: '支持标准PDF格式（.pdf），包括文本型PDF和扫描型PDF。文本型PDF提取效果更好，扫描型PDF会使用OCR技术进行识别。'
+      answer:
+        '支持标准PDF格式（.pdf），包括文本型PDF和扫描型PDF。文本型PDF提取效果更好，扫描型PDF会使用OCR技术进行识别。',
     },
     {
       key: '2',
       question: '文件大小有限制吗？',
-      answer: '单个PDF文件大小不能超过50MB。如果文件过大，建议压缩分割后再上传。'
+      answer: '单个PDF文件大小不能超过50MB。如果文件过大，建议压缩分割后再上传。',
     },
     {
       key: '3',
       question: '能提取哪些信息？',
-      answer: '系统可以提取58个关键字段，包括合同编号、承租方、出租方、物业地址、租赁面积、租金、租期等完整的合同信息。'
+      answer:
+        '系统可以提取58个关键字段，包括合同编号、承租方、出租方、物业地址、租赁面积、租金、租期等完整的合同信息。',
     },
     {
       key: '4',
       question: '提取准确率如何？',
-      answer: '对于标准格式的文本型PDF，准确率可达95%以上。扫描型PDF的准确率取决于扫描质量，通常在80-90%之间。'
+      answer:
+        '对于标准格式的文本型PDF，准确率可达95%以上。扫描型PDF的准确率取决于扫描质量，通常在80-90%之间。',
     },
     {
       key: '5',
       question: '处理需要多长时间？',
-      answer: '一般情况下，处理时间为30-60秒，具体取决于文件大小和复杂度。'
+      answer: '一般情况下，处理时间为30-60秒，具体取决于文件大小和复杂度。',
     },
     {
       key: '6',
       question: '可以修改提取的信息吗？',
-      answer: '当然可以！在确认阶段，您可以查看和编辑所有提取的字段，确保数据准确性。'
+      answer: '当然可以！在确认阶段，您可以查看和编辑所有提取的字段，确保数据准确性。',
     },
     {
       key: '7',
       question: '如何处理重复合同？',
-      answer: '系统会自动检测重复合同，并在确认阶段提醒您。您可以选择跳过重复合同或创建新记录。'
+      answer: '系统会自动检测重复合同，并在确认阶段提醒您。您可以选择跳过重复合同或创建新记录。',
     },
     {
       key: '8',
       question: '如果处理失败了怎么办？',
-      answer: '系统会显示具体的错误信息。您可以根据提示修改文件或调整参数后重试。'
-    }
+      answer: '系统会显示具体的错误信息。您可以根据提示修改文件或调整参数后重试。',
+    },
   ];
 
   // 最佳实践数据
@@ -97,8 +100,8 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
         '使用清晰扫描的PDF文件',
         '确保文字没有被遮挡或裁切',
         '避免水印干扰关键信息',
-        '检查文件完整性'
-      ]
+        '检查文件完整性',
+      ],
     },
     {
       icon: <DatabaseOutlined />,
@@ -109,8 +112,8 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
         '承租方和出租方信息完整',
         '物业地址准确详细',
         '租赁面积和租金明确',
-        '租期起止日期清楚'
-      ]
+        '租期起止日期清楚',
+      ],
     },
     {
       icon: <EyeOutlined />,
@@ -121,8 +124,8 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
         '特别注意金额和日期',
         '验证匹配的资产信息',
         '确认权属关系正确',
-        '保存前再次审核'
-      ]
+        '保存前再次审核',
+      ],
     },
     {
       icon: <SettingOutlined />,
@@ -133,18 +136,24 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
         '关注系统状态提示',
         '及时更新资产信息',
         '维护标准合同模板',
-        '反馈处理问题'
-      ]
-    }
+        '反馈处理问题',
+      ],
+    },
   ];
 
   // 关键字段列表
   const keyFields = [
     { category: '基本信息', fields: ['合同编号', '物业名称', '物业地址', '权属状态', '物业性质'] },
-    { category: '面积信息', fields: ['土地面积', '实际面积', '可出租面积', '已出租面积', '未出租面积'] },
-    { category: '租赁信息', fields: ['承租方', '承租方类型', '租赁合同号', '合同开始日期', '合同结束日期'] },
+    {
+      category: '面积信息',
+      fields: ['土地面积', '实际面积', '可出租面积', '已出租面积', '未出租面积'],
+    },
+    {
+      category: '租赁信息',
+      fields: ['承租方', '承租方类型', '租赁合同号', '合同开始日期', '合同结束日期'],
+    },
     { category: '财务信息', fields: ['月租金', '押金', '年收入', '年支出', '净收入'] },
-    { category: '管理信息', fields: ['商业模式', '运营状态', '管理人', '数据状态', '版本'] }
+    { category: '管理信息', fields: ['商业模式', '运营状态', '管理人', '数据状态', '版本'] },
   ];
 
   // 使用步骤
@@ -152,28 +161,28 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
     {
       title: '准备文件',
       description: '确保PDF合同文件完整清晰',
-      icon: <FileTextOutlined />
+      icon: <FileTextOutlined />,
     },
     {
       title: '上传文件',
       description: '拖拽或点击上传PDF文件',
-      icon: <DatabaseOutlined />
+      icon: <DatabaseOutlined />,
     },
     {
       title: '等待处理',
       description: '系统自动转换和提取信息',
-      icon: <VideoCameraOutlined />
+      icon: <VideoCameraOutlined />,
     },
     {
       title: '确认信息',
       description: '核对并编辑提取的字段',
-      icon: <EyeOutlined />
+      icon: <EyeOutlined />,
     },
     {
       title: '完成导入',
       description: '确认后导入系统',
-      icon: <CheckCircleOutlined />
-    }
+      icon: <CheckCircleOutlined />,
+    },
   ];
 
   return (
@@ -184,7 +193,7 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
       footer={[
         <Button key="close" type="primary" onClick={onClose}>
           我知道了
-        </Button>
+        </Button>,
       ]}
       width={1000}
       style={{ top: 20 }}
@@ -402,15 +411,11 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
                   <Card style={{ height: '100%', marginBottom: 16 }}>
                     <Space direction="vertical" size="middle" style={{ width: '100%' }}>
                       <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: 32, color: '#1890ff' }}>
-                          {practice.icon}
-                        </div>
+                        <div style={{ fontSize: 32, color: '#1890ff' }}>{practice.icon}</div>
                         <Title level={4} style={{ margin: 0 }}>
                           {practice.title}
                         </Title>
-                        <Text type="secondary">
-                          {practice.description}
-                        </Text>
+                        <Text type="secondary">{practice.description}</Text>
                       </div>
                       <div>
                         <Text strong>建议要点：</Text>
@@ -499,21 +504,51 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
             <Card title="字段详情">
               <Table
                 dataSource={[
-                  { field: '合同编号', type: '文本', required: true, description: '租赁合同的唯一标识编号' },
-                  { field: '物业名称', type: '文本', required: true, description: '租赁物业的名称' },
-                  { field: '物业地址', type: '文本', required: true, description: '租赁物业的详细地址' },
+                  {
+                    field: '合同编号',
+                    type: '文本',
+                    required: true,
+                    description: '租赁合同的唯一标识编号',
+                  },
+                  {
+                    field: '物业名称',
+                    type: '文本',
+                    required: true,
+                    description: '租赁物业的名称',
+                  },
+                  {
+                    field: '物业地址',
+                    type: '文本',
+                    required: true,
+                    description: '租赁物业的详细地址',
+                  },
                   { field: '承租方', type: '文本', required: true, description: '租赁方的名称' },
                   { field: '月租金', type: '数字', required: true, description: '每月租金金额' },
-                  { field: '租赁面积', type: '数字', required: false, description: '租赁的实际面积' },
-                  { field: '合同开始日期', type: '日期', required: true, description: '租赁期开始日期' },
-                  { field: '合同结束日期', type: '日期', required: true, description: '租赁期结束日期' }
+                  {
+                    field: '租赁面积',
+                    type: '数字',
+                    required: false,
+                    description: '租赁的实际面积',
+                  },
+                  {
+                    field: '合同开始日期',
+                    type: '日期',
+                    required: true,
+                    description: '租赁期开始日期',
+                  },
+                  {
+                    field: '合同结束日期',
+                    type: '日期',
+                    required: true,
+                    description: '租赁期结束日期',
+                  },
                 ]}
                 columns={[
                   {
                     title: '字段名称',
                     dataIndex: 'field',
                     key: 'field',
-                    width: 120
+                    width: 120,
                   },
                   {
                     title: '数据类型',
@@ -524,7 +559,7 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
                       <Tag color={type === '文本' ? 'blue' : type === '数字' ? 'green' : 'orange'}>
                         {type}
                       </Tag>
-                    )
+                    ),
                   },
                   {
                     title: '必填',
@@ -532,16 +567,14 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
                     key: 'required',
                     width: 60,
                     render: (required: boolean) => (
-                      <Tag color={required ? 'red' : 'default'}>
-                        {required ? '是' : '否'}
-                      </Tag>
-                    )
+                      <Tag color={required ? 'red' : 'default'}>{required ? '是' : '否'}</Tag>
+                    ),
                   },
                   {
                     title: '说明',
                     dataIndex: 'description',
-                    key: 'description'
-                  }
+                    key: 'description',
+                  },
                 ]}
                 pagination={false}
                 size="small"
@@ -555,15 +588,11 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
         <Card>
           <Row justify="space-between" align="middle">
             <Col>
-              <Text type="secondary">
-                如果您需要更多帮助或有其他问题，请联系技术支持。
-              </Text>
+              <Text type="secondary">如果您需要更多帮助或有其他问题，请联系技术支持。</Text>
             </Col>
             <Col>
               <Space>
-                <Button icon={<InfoCircleOutlined />}>
-                  查看更多文档
-                </Button>
+                <Button icon={<InfoCircleOutlined />}>查看更多文档</Button>
                 <Button type="primary" icon={<VideoCameraOutlined />}>
                   观看操作视频
                 </Button>

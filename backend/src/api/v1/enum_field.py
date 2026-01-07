@@ -357,11 +357,7 @@ async def get_enum_field_usage(
     """获取枚举字段使用记录"""
     crud = get_enum_field_usage_crud(db)
 
-    if enum_type_id:
-        usage_records = crud.get_by_enum_type(enum_type_id)
-    else:
-        # 这里可以根据需要添加更多筛选条件
-        usage_records = []
+    usage_records = crud.get_by_enum_type(enum_type_id) if enum_type_id else []
 
     return usage_records
 

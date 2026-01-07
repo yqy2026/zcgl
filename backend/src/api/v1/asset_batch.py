@@ -336,10 +336,7 @@ async def get_all_assets(
         # 排序
         order_by = None
         if sort_by and sort_order:
-            if sort_order.lower() == "desc":
-                order_by = f"{sort_by} desc"
-            else:
-                order_by = f"{sort_by} asc"
+            order_by = f"{sort_by} desc" if sort_order.lower() == "desc" else f"{sort_by} asc"
 
         # 获取所有资产（不分页）
         assets = asset_crud.get_multi(

@@ -3,10 +3,10 @@
  * 提供自定义渲染函数和测试数据生成器
  */
 
-import { ReactElement } from 'react'
-import { render, RenderOptions } from '@testing-library/react'
-import { ConfigProvider } from 'antd'
-import zhCN from 'antd/locale/zh_CN'
+import { ReactElement } from 'react';
+import { render, RenderOptions } from '@testing-library/react';
+import { ConfigProvider } from 'antd';
+import zhCN from 'antd/locale/zh_CN';
 
 // =============================================================================
 // 自定义渲染函数
@@ -18,24 +18,17 @@ import zhCN from 'antd/locale/zh_CN'
  * @param options - 渲染选项
  * @returns 渲染结果
  */
-export function renderWithProviders(
-  ui: ReactElement,
-  options?: Omit<RenderOptions, 'wrapper'>
-) {
-  function AllProviders({ children }: { children: React.ReactNode }) {
-    return (
-      <ConfigProvider locale={zhCN}>
-        {children}
-      </ConfigProvider>
-    )
+export function renderWithProviders(ui: ReactElement, options?: Omit<RenderOptions, 'wrapper'>) {
+  function AllProviders({ children }: { children: React.ReactNode }): JSX.Element {
+    return <ConfigProvider locale={zhCN}>{children}</ConfigProvider>;
   }
 
-  return render(ui, { wrapper: AllProviders, ...options })
+  return render(ui, { wrapper: AllProviders, ...options });
 }
 
 // 重新导出所有testing-library工具
-export * from '@testing-library/react'
-export { default as userEvent } from '@testing-library/user-event'
+export * from '@testing-library/react';
+export { default as userEvent } from '@testing-library/user-event';
 
 // =============================================================================
 // 测试数据Mock
@@ -70,7 +63,7 @@ export const mockAsset = {
   managerName: '张三',
   isLitigated: false,
   isSublease: false,
-}
+};
 
 /**
  * Mock用户数据
@@ -83,7 +76,7 @@ export const mockUser = {
   roles: ['admin'],
   organizationId: '1',
   isActive: true,
-}
+};
 
 /**
  * Mock API响应
@@ -97,7 +90,7 @@ export const mockApiResponse = {
     pageSize: 20,
   },
   message: '操作成功',
-}
+};
 
 // =============================================================================
 // 异步测试辅助函数
@@ -106,13 +99,13 @@ export const mockApiResponse = {
 /**
  * 等待异步操作完成（用于微任务队列）
  */
-export const waitForAsync = () => new Promise(resolve => setTimeout(resolve, 0))
+export const waitForAsync = () => new Promise(resolve => setTimeout(resolve, 0));
 
 /**
  * 等待指定时间
  * @param ms - 等待毫秒数
  */
-export const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+export const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
  * 等待元素出现
@@ -120,10 +113,10 @@ export const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, m
  */
 export const waitForElement = async (fn: () => HTMLElement | null) => {
   while (fn() === null) {
-    await wait(50)
+    await wait(50);
   }
-  return fn()
-}
+  return fn();
+};
 
 // =============================================================================
 // 表单测试辅助函数
@@ -139,11 +132,11 @@ export async function fillForm(
   fieldData: Record<string, string>
 ) {
   for (const [field, value] of Object.entries(fieldData)) {
-    const input = getByLabelText(field) as HTMLInputElement
+    const input = getByLabelText(field) as HTMLInputElement;
     if (input) {
-      input.value = value
-      input.dispatchEvent(new Event('input', { bubbles: true }))
-      input.dispatchEvent(new Event('change', { bubbles: true }))
+      input.value = value;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
     }
   }
 }
@@ -161,10 +154,10 @@ export const mockLocalStorage = {
   removeItem: vi.fn(),
   clear: vi.fn(),
   get length() {
-    return 0
+    return 0;
   },
   key: vi.fn(),
-}
+};
 
 /**
  * Mock sessionStorage
@@ -175,7 +168,7 @@ export const mockSessionStorage = {
   removeItem: vi.fn(),
   clear: vi.fn(),
   get length() {
-    return 0
+    return 0;
   },
   key: vi.fn(),
-}
+};

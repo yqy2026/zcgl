@@ -1,5 +1,5 @@
-import React from 'react'
-import { Empty, Button, Typography, Space } from 'antd'
+import React from 'react';
+import { Empty, Button, Typography, Space } from 'antd';
 import {
   FileTextOutlined,
   SearchOutlined,
@@ -8,33 +8,33 @@ import {
   InboxOutlined,
   DisconnectOutlined,
   FilterOutlined,
-} from '@ant-design/icons'
+} from '@ant-design/icons';
 
-const { Text } = Typography
+const { Text } = Typography;
 
-export type EmptyStateType = 
-  | 'no-data' 
-  | 'no-search-results' 
+export type EmptyStateType =
+  | 'no-data'
+  | 'no-search-results'
   | 'no-filter-results'
   | 'network-error'
   | 'loading-error'
   | 'permission-denied'
-  | 'maintenance'
+  | 'maintenance';
 
 interface EmptyStateProps {
-  type?: EmptyStateType
-  title?: string
-  description?: string
-  image?: React.ReactNode
-  actions?: React.ReactNode
-  showCreateButton?: boolean
-  showRefreshButton?: boolean
-  showClearFilterButton?: boolean
-  onCreateClick?: () => void
-  onRefreshClick?: () => void
-  onClearFilterClick?: () => void
-  style?: React.CSSProperties
-  className?: string
+  type?: EmptyStateType;
+  title?: string;
+  description?: string;
+  image?: React.ReactNode;
+  actions?: React.ReactNode;
+  showCreateButton?: boolean;
+  showRefreshButton?: boolean;
+  showClearFilterButton?: boolean;
+  onCreateClick?: () => void;
+  onRefreshClick?: () => void;
+  onClearFilterClick?: () => void;
+  style?: React.CSSProperties;
+  className?: string;
 }
 
 const EmptyState: React.FC<EmptyStateProps> = ({
@@ -90,26 +90,26 @@ const EmptyState: React.FC<EmptyStateProps> = ({
       description: '您没有权限查看此内容',
       showCreate: false,
     },
-    'maintenance': {
+    maintenance: {
       image: <InboxOutlined style={{ fontSize: 64, color: '#1890ff' }} />,
       title: '系统维护中',
       description: '系统正在维护，请稍后再试',
       showRefresh: true,
     },
-  }
+  };
 
-  const config = presetConfigs[type]
+  const config = presetConfigs[type];
 
   // 生成操作按钮
   const getActionButtons = () => {
-    const buttons = []
+    const buttons = [];
 
     if ((showCreateButton || ('showCreate' in config && config.showCreate)) && onCreateClick) {
       buttons.push(
         <Button key="create" type="primary" icon={<PlusOutlined />} onClick={onCreateClick}>
           新增数据
         </Button>
-      )
+      );
     }
 
     if ((showRefreshButton || ('showRefresh' in config && config.showRefresh)) && onRefreshClick) {
@@ -117,81 +117,82 @@ const EmptyState: React.FC<EmptyStateProps> = ({
         <Button key="refresh" icon={<ReloadOutlined />} onClick={onRefreshClick}>
           刷新
         </Button>
-      )
+      );
     }
 
-    if ((showClearFilterButton || ('showClearFilter' in config && config.showClearFilter)) && onClearFilterClick) {
+    if (
+      (showClearFilterButton || ('showClearFilter' in config && config.showClearFilter)) &&
+      onClearFilterClick
+    ) {
       buttons.push(
         <Button key="clear-filter" onClick={onClearFilterClick}>
           清除筛选
         </Button>
-      )
+      );
     }
 
-    return buttons
-  }
+    return buttons;
+  };
 
-  const actionButtons = getActionButtons()
+  const actionButtons = getActionButtons();
 
   return (
-    <div 
-      style={{ 
+    <div
+      style={{
         padding: '50px 20px',
         textAlign: 'center',
-        ...style 
+        ...style,
       }}
       className={className}
     >
       <Empty
-        image={image || config.image}
+        image={image ?? config.image}
         description={
           <div>
             <Text strong style={{ fontSize: 16, display: 'block', marginBottom: 8 }}>
-              {title || config.title}
+              {title ?? config.title}
             </Text>
-            <Text type="secondary">
-              {description || config.description}
-            </Text>
+            <Text type="secondary">{description ?? config.description}</Text>
           </div>
         }
       >
-        {(actions || actionButtons.length > 0) && (
+        {(actions != null || actionButtons.length > 0) && (
           <Space wrap style={{ marginTop: 16 }}>
-            {actions || actionButtons}
+            {actions ?? actionButtons}
           </Space>
         )}
       </Empty>
     </div>
-  )
-}
+  );
+};
 
 // 预设的空状态组件
-export const NoDataState: React.FC<Omit<EmptyStateProps, 'type'>> = (props) => (
+export const NoDataState: React.FC<Omit<EmptyStateProps, 'type'>> = props => (
   <EmptyState type="no-data" {...props} />
-)
+);
 
-export const NoSearchResultsState: React.FC<Omit<EmptyStateProps, 'type'>> = (props) => (
+export const NoSearchResultsState: React.FC<Omit<EmptyStateProps, 'type'>> = props => (
   <EmptyState type="no-search-results" {...props} />
-)
+);
 
-export const NoFilterResultsState: React.FC<Omit<EmptyStateProps, 'type'>> = (props) => (
+export const NoFilterResultsState: React.FC<Omit<EmptyStateProps, 'type'>> = props => (
   <EmptyState type="no-filter-results" {...props} />
-)
+);
 
-export const NetworkErrorState: React.FC<Omit<EmptyStateProps, 'type'>> = (props) => (
+export const NetworkErrorState: React.FC<Omit<EmptyStateProps, 'type'>> = props => (
   <EmptyState type="network-error" {...props} />
-)
+);
 
-export const LoadingErrorState: React.FC<Omit<EmptyStateProps, 'type'>> = (props) => (
+export const LoadingErrorState: React.FC<Omit<EmptyStateProps, 'type'>> = props => (
   <EmptyState type="loading-error" {...props} />
-)
+);
 
-export const PermissionDeniedState: React.FC<Omit<EmptyStateProps, 'type'>> = (props) => (
+export const PermissionDeniedState: React.FC<Omit<EmptyStateProps, 'type'>> = props => (
   <EmptyState type="permission-denied" {...props} />
-)
+);
 
-export const MaintenanceState: React.FC<Omit<EmptyStateProps, 'type'>> = (props) => (
+export const MaintenanceState: React.FC<Omit<EmptyStateProps, 'type'>> = props => (
   <EmptyState type="maintenance" {...props} />
-)
+);
 
-export default EmptyState
+export default EmptyState;

@@ -2,7 +2,7 @@
 数据库模型模块
 """
 
-from .asset import (
+from .asset import (  # noqa: F401
     Asset,
     AssetDocument,
     AssetHistory,
@@ -10,8 +10,8 @@ from .asset import (
     Project,
     ProjectOwnershipRelation,
 )
-from .auth import AuditLog, User, UserSession
-from .dynamic_permission import (
+from .auth import AuditLog, User, UserSession  # noqa: F401
+from .dynamic_permission import (  # noqa: F401
     ConditionalPermission,
     DynamicPermission,
     DynamicPermissionAudit,
@@ -20,17 +20,22 @@ from .dynamic_permission import (
     PermissionTemplate,
     TemporaryPermission,
 )
-from .enum_field import EnumFieldHistory, EnumFieldType, EnumFieldUsage, EnumFieldValue
-from .organization import Employee, Organization, OrganizationHistory, Position
-from .rbac import (
+from .enum_field import (  # noqa: F401
+    EnumFieldHistory,
+    EnumFieldType,
+    EnumFieldUsage,
+    EnumFieldValue,
+)
+from .organization import Employee, Organization, OrganizationHistory, Position  # noqa: F401
+from .rbac import (  # noqa: F401
     Permission,
     PermissionAuditLog,
     ResourcePermission,
     Role,
     UserRoleAssignment,
 )
-from .rent_contract import RentContract, RentContractHistory, RentLedger, RentTerm
-from .task import AsyncTask, ExcelTaskConfig, TaskHistory
+from .rent_contract import RentContract, RentContractHistory, RentLedger, RentTerm  # noqa: F401
+from .task import AsyncTask, ExcelTaskConfig, TaskHistory  # noqa: F401
 
 __all__ = [
     "Asset",

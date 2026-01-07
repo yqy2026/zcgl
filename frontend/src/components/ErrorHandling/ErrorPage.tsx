@@ -1,5 +1,5 @@
-import React from 'react'
-import { Result, Button, Typography, Space } from 'antd'
+import React from 'react';
+import { Result, Button, Typography, Space } from 'antd';
 import {
   ExclamationCircleOutlined,
   FileSearchOutlined,
@@ -9,24 +9,24 @@ import {
   HomeOutlined,
   ReloadOutlined,
   ArrowLeftOutlined,
-} from '@ant-design/icons'
-import { useNavigate } from 'react-router-dom'
+} from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 
-const { Paragraph, Text } = Typography
+const { Paragraph, Text } = Typography;
 
-export type ErrorType = '404' | '403' | '500' | 'network' | 'timeout' | 'maintenance'
+export type ErrorType = '404' | '403' | '500' | 'network' | 'timeout' | 'maintenance';
 
 interface ErrorPageProps {
-  type?: ErrorType
-  title?: string
-  subTitle?: string
-  extra?: React.ReactNode
-  showBackButton?: boolean
-  showHomeButton?: boolean
-  showReloadButton?: boolean
-  onBack?: () => void
-  onHome?: () => void
-  onReload?: () => void
+  type?: ErrorType;
+  title?: string;
+  subTitle?: string;
+  extra?: React.ReactNode;
+  showBackButton?: boolean;
+  showHomeButton?: boolean;
+  showReloadButton?: boolean;
+  onBack?: () => void;
+  onHome?: () => void;
+  onReload?: () => void;
 }
 
 const ErrorPage: React.FC<ErrorPageProps> = ({
@@ -41,7 +41,7 @@ const ErrorPage: React.FC<ErrorPageProps> = ({
   onHome,
   onReload,
 }) => {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
   // 默认配置
   const errorConfigs = {
@@ -63,51 +63,51 @@ const ErrorPage: React.FC<ErrorPageProps> = ({
       title: '服务器错误',
       subTitle: '抱歉，服务器出现了一些问题，请稍后重试。',
     },
-    'network': {
+    network: {
       status: 'error' as const,
       icon: <DisconnectOutlined style={{ color: '#ff4d4f' }} />,
       title: '网络连接失败',
       subTitle: '请检查您的网络连接，然后重试。',
     },
-    'timeout': {
+    timeout: {
       status: 'error' as const,
       icon: <ClockCircleOutlined style={{ color: '#faad14' }} />,
       title: '请求超时',
       subTitle: '服务器响应时间过长，请稍后重试。',
     },
-    'maintenance': {
+    maintenance: {
       status: 'info' as const,
       icon: <ExclamationCircleOutlined style={{ color: '#1890ff' }} />,
       title: '系统维护中',
       subTitle: '系统正在进行维护升级，预计很快恢复正常。',
     },
-  }
+  };
 
-  const config = errorConfigs[type]
+  const config = errorConfigs[type];
 
   const handleBack = () => {
     if (onBack) {
-      onBack()
+      onBack();
     } else {
-      navigate(-1)
+      navigate(-1);
     }
-  }
+  };
 
   const handleHome = () => {
     if (onHome) {
-      onHome()
+      onHome();
     } else {
-      navigate('/')
+      navigate('/');
     }
-  }
+  };
 
   const handleReload = () => {
     if (onReload) {
-      onReload()
+      onReload();
     } else {
-      window.location.reload()
+      window.location.reload();
     }
-  }
+  };
 
   // 根据错误类型生成建议操作
   const getSuggestions = () => {
@@ -124,8 +124,8 @@ const ErrorPage: React.FC<ErrorPageProps> = ({
               <li>链接已过期</li>
             </ul>
           </div>
-        )
-      
+        );
+
       case '403':
         return (
           <div style={{ marginTop: 16 }}>
@@ -138,8 +138,8 @@ const ErrorPage: React.FC<ErrorPageProps> = ({
               <li>检查您的账户状态</li>
             </ul>
           </div>
-        )
-      
+        );
+
       case '500':
         return (
           <div style={{ marginTop: 16 }}>
@@ -152,8 +152,8 @@ const ErrorPage: React.FC<ErrorPageProps> = ({
               <li>联系技术支持</li>
             </ul>
           </div>
-        )
-      
+        );
+
       case 'network':
         return (
           <div style={{ marginTop: 16 }}>
@@ -166,8 +166,8 @@ const ErrorPage: React.FC<ErrorPageProps> = ({
               <li>代理服务器配置</li>
             </ul>
           </div>
-        )
-      
+        );
+
       case 'timeout':
         return (
           <div style={{ marginTop: 16 }}>
@@ -180,8 +180,8 @@ const ErrorPage: React.FC<ErrorPageProps> = ({
               <li>联系网络管理员</li>
             </ul>
           </div>
-        )
-      
+        );
+
       case 'maintenance':
         return (
           <div style={{ marginTop: 16 }}>
@@ -194,23 +194,23 @@ const ErrorPage: React.FC<ErrorPageProps> = ({
               <li>请耐心等待维护完成</li>
             </ul>
           </div>
-        )
-      
+        );
+
       default:
-        return null
+        return null;
     }
-  }
+  };
 
   // 生成操作按钮
   const getActionButtons = () => {
-    const buttons = []
+    const buttons = [];
 
     if (showBackButton) {
       buttons.push(
         <Button key="back" icon={<ArrowLeftOutlined />} onClick={handleBack}>
           返回上页
         </Button>
-      )
+      );
     }
 
     if (showHomeButton) {
@@ -218,7 +218,7 @@ const ErrorPage: React.FC<ErrorPageProps> = ({
         <Button key="home" icon={<HomeOutlined />} onClick={handleHome}>
           返回首页
         </Button>
-      )
+      );
     }
 
     if (showReloadButton || type === '500' || type === 'network' || type === 'timeout') {
@@ -226,42 +226,38 @@ const ErrorPage: React.FC<ErrorPageProps> = ({
         <Button key="reload" type="primary" icon={<ReloadOutlined />} onClick={handleReload}>
           重新加载
         </Button>
-      )
+      );
     }
 
-    return buttons
-  }
+    return buttons;
+  };
 
   return (
-    <div style={{ 
-      padding: '50px 20px', 
-      minHeight: '60vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center'
-    }}>
+    <div
+      style={{
+        padding: '50px 20px',
+        minHeight: '60vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
       <div style={{ maxWidth: 500, width: '100%', textAlign: 'center' }}>
         <Result
           status={config.status}
           icon={config.icon}
-          title={title || config.title}
+          title={title ?? config.title}
           subTitle={
             <div>
-              <div>{subTitle || config.subTitle}</div>
+              <div>{subTitle ?? config.subTitle}</div>
               {getSuggestions()}
             </div>
           }
-          extra={
-            extra || (
-              <Space wrap>
-                {getActionButtons()}
-              </Space>
-            )
-          }
+          extra={extra ?? <Space wrap>{getActionButtons()}</Space>}
         />
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default ErrorPage
+export default ErrorPage;

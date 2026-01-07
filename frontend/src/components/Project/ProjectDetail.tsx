@@ -3,18 +3,8 @@
  */
 
 import React from 'react';
-import {
-  Descriptions,
-  Card,
-  Tag,
-  Space,
-  Button,
-  Badge,
-  Typography
-} from 'antd';
-import {
-  EditOutlined
-} from '@ant-design/icons';
+import { Descriptions, Card, Tag, Space, Button, Badge, Typography } from 'antd';
+import { EditOutlined } from '@ant-design/icons';
 
 import type { Project } from '@/types/project';
 
@@ -25,12 +15,11 @@ interface ProjectDetailProps {
   onEdit: () => void;
 }
 
-const ProjectDetail: React.FC<ProjectDetailProps> = ({
-  project,
-  onEdit
-}) => {
-  const formatDate = (dateStr?: string) => {
-    if (!dateStr) return '-';
+const ProjectDetail: React.FC<ProjectDetailProps> = ({ project, onEdit }) => {
+  const formatDate = (dateStr?: string | null) => {
+    if (dateStr === null || dateStr === undefined || dateStr === '') {
+      return '-';
+    }
     return new Date(dateStr).toLocaleDateString('zh-CN');
   };
 
@@ -76,15 +65,19 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
             <Text code>{project.code}</Text>
           </Descriptions.Item>
           <Descriptions.Item label="项目状态">
-            <Tag color={getStatusColor(project.data_status)}>
-              {project.data_status}
-            </Tag>
+            <Tag color={getStatusColor(project.data_status)}>{project.data_status}</Tag>
           </Descriptions.Item>
           <Descriptions.Item label="项目描述">
-            <Text>{project.description || '-'}</Text>
+            <Text>
+              {project.description !== null &&
+              project.description !== undefined &&
+              project.description !== ''
+                ? project.description
+                : '-'}
+            </Text>
           </Descriptions.Item>
           <Descriptions.Item label="关联资产数量">
-            <Badge count={project.asset_count || 0} />
+            <Badge count={project.asset_count ?? 0} />
           </Descriptions.Item>
         </Descriptions>
       </Card>
@@ -92,17 +85,21 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({
       {/* 系统信息 */}
       <Card title="系统信息" size="small" style={{ marginTop: 16 }}>
         <Descriptions column={2} size="small">
-          <Descriptions.Item label="创建时间">
-            {formatDate(project.created_at)}
-          </Descriptions.Item>
-          <Descriptions.Item label="更新时间">
-            {formatDate(project.updated_at)}
-          </Descriptions.Item>
+          <Descriptions.Item label="创建时间">{formatDate(project.created_at)}</Descriptions.Item>
+          <Descriptions.Item label="更新时间">{formatDate(project.updated_at)}</Descriptions.Item>
           <Descriptions.Item label="创建人">
-            {project.created_by || '-'}
+            {project.created_by !== null &&
+            project.created_by !== undefined &&
+            project.created_by !== ''
+              ? project.created_by
+              : '-'}
           </Descriptions.Item>
           <Descriptions.Item label="更新人">
-            {project.updated_by || '-'}
+            {project.updated_by !== null &&
+            project.updated_by !== undefined &&
+            project.updated_by !== ''
+              ? project.updated_by
+              : '-'}
           </Descriptions.Item>
         </Descriptions>
       </Card>

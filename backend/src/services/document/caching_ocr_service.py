@@ -13,6 +13,7 @@ page objects; most consumers use process_pdf_document which benefits from
 the cache.
 """
 
+import contextlib
 import time
 from collections import OrderedDict
 
@@ -98,16 +99,14 @@ class CachingOCRService(IOCRService):  # type: ignore[misc]
 
     def get_performance_report(self) -> dict[str, Any]:
         report = self._delegate.get_performance_report()
-        try:
+        with contextlib.suppress(Exception):  # nosec - B110: Intentional graceful degradation for optional metrics
+            # metrics enrichment is optional; ignore failures
             report["cache_stats"] = {
                 "doc_entries": len(self._doc_cache),
                 "page_entries": len(self._page_cache),
                 "ttl_seconds": self._ttl_seconds,
                 "max_entries": self._max_entries,
             }
-        except Exception:  # nosec - B110: Intentional graceful degradation for optional metrics
-            # metrics enrichment is optional; ignore failures
-            pass
         return report
 
     def clear_cache(self) -> None:

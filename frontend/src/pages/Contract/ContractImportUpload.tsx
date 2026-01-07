@@ -15,7 +15,7 @@ import {
   Tag,
   Row,
   Col,
-  message
+  message,
 } from 'antd';
 import {
   InboxOutlined,
@@ -23,11 +23,15 @@ import {
   DeleteOutlined,
   EyeOutlined,
   SettingOutlined,
-  CloseOutlined
+  CloseOutlined,
 } from '@ant-design/icons';
 import type { UploadFile, UploadProps, RcFile } from 'antd/es/upload/interface';
 
-import { pdfImportService, type FileUploadResponse, type SystemInfoResponse } from '../../services/pdfImportService';
+import {
+  pdfImportService,
+  type FileUploadResponse,
+  type SystemInfoResponse,
+} from '../../services/pdfImportService';
 import { createLogger } from '../../utils/logger';
 
 const pageLogger = createLogger('ContractImportUpload');
@@ -43,9 +47,11 @@ interface ContractImportUploadProps {
 const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
   onUploadSuccess,
   onUploadError,
-  maxFileSize = 50
+  maxFileSize = 50,
 }) => {
-  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>(
+    'idle'
+  );
   const [uploadProgress, setUploadProgress] = useState(0);
   const [sessionId, setSessionId] = useState<string>('');
   const [uploadedFile, setUploadedFile] = useState<UploadFile | null>(null);
@@ -68,22 +74,27 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
   };
 
   // 文件上传前的验证
-  const beforeUpload = useCallback((file: RcFile) => {
-    // 验证文件类型
-    if (!pdfImportService.validateFileType(file)) {
-      message.error('只支持PDF文件格式！');
-      return false;
-    }
+  const beforeUpload = useCallback(
+    (file: RcFile) => {
+      // 验证文件类型
+      if (!pdfImportService.validateFileType(file)) {
+        message.error('只支持PDF文件格式！');
+        return false;
+      }
 
-    // 验证文件大小
-    if (!pdfImportService.validateFileSize(file, maxFileSize)) {
-      message.error(`文件大小不能超过 ${maxFileSize}MB！当前文件大小：${pdfImportService.formatFileSize(file.size)}`);
-      return false;
-    }
+      // 验证文件大小
+      if (!pdfImportService.validateFileSize(file, maxFileSize)) {
+        message.error(
+          `文件大小不能超过 ${maxFileSize}MB！当前文件大小：${pdfImportService.formatFileSize(file.size)}`
+        );
+        return false;
+      }
 
-    // 不在这里设置状态，让customRequest处理
-    return true;
-  }, [maxFileSize]);
+      // 不在这里设置状态，让customRequest处理
+      return true;
+    },
+    [maxFileSize]
+  );
 
   // 取消上传
   const handleCancelUpload = useCallback(() => {
@@ -97,81 +108,91 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
   }, [abortController]);
 
   // 自定义上传请求
-  const customRequest = useCallback(async (options: Parameters<Required<UploadProps>['customRequest']>[0]) => {
-    const { file, onProgress, onSuccess, onError } = options;
-    const pdfFile = file as RcFile;
+  const customRequest = useCallback(
+    async (options: Parameters<Required<UploadProps>['customRequest']>[0]) => {
+      const { file, onProgress, onSuccess, onError } = options;
+      const pdfFile = file as RcFile;
 
-    // 设置上传状态
-    setUploadStatus('uploading');
-    setUploadProgress(0);
-
-    // 创建新的AbortController
-    const controller = new AbortController();
-    setAbortController(controller);
-
-    try {
-
-      const response: FileUploadResponse = await pdfImportService.uploadPDFFile(
-        pdfFile,
-        false, // 不再使用markitdown
-        controller.signal
-      );
-
-      // 清理controller
-      setAbortController(null);
-
-      if (response.success) {
-        // 完成进度
-        setUploadProgress(100);
-        if (onProgress) {
-          onProgress({ percent: 100 });
-        }
-
-        const uploadFile: UploadFile = {
-          uid: response.session_id || Date.now().toString(),
-          name: pdfFile.name,
-          status: 'done',
-          size: pdfFile.size,
-          type: pdfFile.type,
-          originFileObj: pdfFile
-        };
-
-        setUploadedFile(uploadFile);
-        setSessionId(response.session_id || '');
-        setUploadStatus('success');
-        if (onSuccess) {
-          onSuccess(response);
-        }
-
-        // 重要：立即调用父组件的成功回调，让父组件接管后续处理
-        if (response.session_id) {
-          onUploadSuccess(response.session_id, uploadFile);
-          message.success('文件上传成功！正在处理中...');
-        } else {
-          throw new Error('未收到有效的会话ID');
-        }
-      } else {
-        throw new Error(response.error || response.message || '上传失败');
-      }
-    } catch (error: unknown) {
-      // 清理controller
-      setAbortController(null);
-
-      // 如果是手动取消，不显示错误消息
-      const err = error as Error;
-      if (err.name === 'AbortError' || err.message === 'canceled') {
-        return;
-      }
-
-      setUploadStatus('error');
+      // 设置上传状态
+      setUploadStatus('uploading');
       setUploadProgress(0);
-      if (onError) {
-        onError(err);
+
+      // 创建新的AbortController
+      const controller = new AbortController();
+      setAbortController(controller);
+
+      try {
+        const response: FileUploadResponse = await pdfImportService.uploadPDFFile(
+          pdfFile,
+          false, // 不再使用markitdown
+          controller.signal
+        );
+
+        // 清理controller
+        setAbortController(null);
+
+        if (response.success) {
+          // 完成进度
+          setUploadProgress(100);
+          if (onProgress) {
+            onProgress({ percent: 100 });
+          }
+
+          const uploadFile: UploadFile = {
+            uid: response.session_id ?? Date.now().toString(),
+            name: pdfFile.name,
+            status: 'done',
+            size: pdfFile.size,
+            type: pdfFile.type,
+            originFileObj: pdfFile,
+          };
+
+          setUploadedFile(uploadFile);
+          setSessionId(response.session_id ?? '');
+          setUploadStatus('success');
+          if (onSuccess) {
+            onSuccess(response);
+          }
+
+          // 重要：立即调用父组件的成功回调，让父组件接管后续处理
+          if (response.session_id != null) {
+            onUploadSuccess(response.session_id, uploadFile);
+            message.success('文件上传成功！正在处理中...');
+          } else {
+            throw new Error('未收到有效的会话ID');
+          }
+        } else {
+          throw new Error(
+            response.error !== null && response.error !== undefined && response.error !== ''
+              ? response.error
+              : response.message !== null &&
+                  response.message !== undefined &&
+                  response.message !== ''
+                ? response.message
+                : '上传失败'
+          );
+        }
+      } catch (error: unknown) {
+        // 清理controller
+        setAbortController(null);
+
+        // 如果是手动取消，不显示错误消息
+        const err = error as Error;
+        if (err.name === 'AbortError' || err.message === 'canceled') {
+          return;
+        }
+
+        setUploadStatus('error');
+        setUploadProgress(0);
+        if (onError) {
+          onError(err);
+        }
+        onUploadError(err.message || '上传失败');
+        message.error(err.message || '文件上传失败');
       }
-      onUploadError(err.message || '上传失败');
-      message.error(err.message || '文件上传失败');
-    }
-  }, [onUploadSuccess, onUploadError]);
+    },
+    [onUploadSuccess, onUploadError]
+  );
 
   // 移除文件
   const handleRemove = useCallback(() => {
@@ -192,29 +213,46 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
     multiple: false,
     accept: '.pdf',
     beforeUpload,
-    customRequest,
+    customRequest: options => void customRequest(options),
     showUploadList: false,
-    disabled: uploadStatus === 'uploading'
+    disabled: uploadStatus === 'uploading',
   };
 
   // 获取系统状态标签
   const getSystemStatusTags = () => {
-    if (!systemInfo) return null;
+    if (!systemInfo) {
+      return null;
+    }
 
     const { capabilities } = systemInfo;
     const tags = [];
 
-
     if (capabilities.pdfplumber_available === true) {
-      tags.push(<Tag color="green" key="pdfplumber">PDFPlumber可用</Tag>);
+      tags.push(
+        <Tag color="green" key="pdfplumber">
+          PDFPlumber可用
+        </Tag>
+      );
     } else {
-      tags.push(<Tag color="orange" key="pdfplumber">PDFPlumber不可用</Tag>);
+      tags.push(
+        <Tag color="orange" key="pdfplumber">
+          PDFPlumber不可用
+        </Tag>
+      );
     }
 
     if (capabilities.spacy_available === true) {
-      tags.push(<Tag color="green" key="spacy">NLP增强可用</Tag>);
+      tags.push(
+        <Tag color="green" key="spacy">
+          NLP增强可用
+        </Tag>
+      );
     } else {
-      tags.push(<Tag color="default" key="spacy">NLP增强不可用</Tag>);
+      tags.push(
+        <Tag color="default" key="spacy">
+          NLP增强不可用
+        </Tag>
+      );
     }
 
     return tags;
@@ -251,9 +289,12 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
               </Col>
               <Col flex="auto" style={{ textAlign: 'right' }}>
                 <Text type="secondary">
-                  支持格式：{Array.isArray(systemInfo.capabilities.supported_formats) ? systemInfo.capabilities.supported_formats.join(', ') : 'PDF'} |
-                  最大文件：{systemInfo.capabilities.max_file_size_mb}MB |
-                  预计时间：{systemInfo.capabilities.estimated_processing_time}
+                  支持格式：
+                  {Array.isArray(systemInfo.capabilities.supported_formats)
+                    ? systemInfo.capabilities.supported_formats.join(', ')
+                    : 'PDF'}{' '}
+                  | 最大文件：{systemInfo.capabilities.max_file_size_mb}MB | 预计时间：
+                  {systemInfo.capabilities.estimated_processing_time}
                 </Text>
               </Col>
             </Row>
@@ -288,7 +329,7 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
             </Title>
             <Progress
               percent={uploadProgress}
-              status={uploadProgress < 100 ? "active" : "success"}
+              status={uploadProgress < 100 ? 'active' : 'success'}
               strokeColor={{
                 '0%': '#108ee9',
                 '100%': '#87d068',
@@ -308,11 +349,7 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
 
             {uploadProgress < 100 && (
               <div style={{ marginTop: 16 }}>
-                <Button
-                  danger
-                  icon={<CloseOutlined />}
-                  onClick={handleCancelUpload}
-                >
+                <Button danger icon={<CloseOutlined />} onClick={handleCancelUpload}>
                   取消上传
                 </Button>
               </div>
@@ -323,16 +360,18 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
         {/* 上传成功 */}
         {uploadStatus === 'success' && uploadedFile && (
           <div style={{ textAlign: 'center', padding: '20px 0' }}>
-            <div style={{
-              width: 80,
-              height: 80,
-              margin: '0 auto 16px',
-              borderRadius: '50%',
-              backgroundColor: '#f6ffed',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
+            <div
+              style={{
+                width: 80,
+                height: 80,
+                margin: '0 auto 16px',
+                borderRadius: '50%',
+                backgroundColor: '#f6ffed',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
               <EyeOutlined style={{ fontSize: 32, color: '#52c41a' }} />
             </div>
 
@@ -340,24 +379,40 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
               文件上传成功！
             </Title>
 
-            <div style={{
-              backgroundColor: '#f5f5f5',
-              padding: '12px 16px',
-              borderRadius: '6px',
-              marginBottom: 16
-            }}>
+            <div
+              style={{
+                backgroundColor: '#f5f5f5',
+                padding: '12px 16px',
+                borderRadius: '6px',
+                marginBottom: 16,
+              }}
+            >
               <Space direction="vertical" size="small" style={{ width: '100%' }}>
                 <Row justify="space-between">
-                  <Col><Text type="secondary">文件名：</Text></Col>
-                  <Col><Text strong>{uploadedFile.name}</Text></Col>
+                  <Col>
+                    <Text type="secondary">文件名：</Text>
+                  </Col>
+                  <Col>
+                    <Text strong>{uploadedFile.name}</Text>
+                  </Col>
                 </Row>
                 <Row justify="space-between">
-                  <Col><Text type="secondary">文件大小：</Text></Col>
-                  <Col><Text>{pdfImportService.formatFileSize(uploadedFile.size || 0)}</Text></Col>
+                  <Col>
+                    <Text type="secondary">文件大小：</Text>
+                  </Col>
+                  <Col>
+                    <Text>{pdfImportService.formatFileSize(uploadedFile.size ?? 0)}</Text>
+                  </Col>
                 </Row>
                 <Row justify="space-between">
-                  <Col><Text type="secondary">会话ID：</Text></Col>
-                  <Col><Text code style={{ fontSize: 12 }}>{sessionId}</Text></Col>
+                  <Col>
+                    <Text type="secondary">会话ID：</Text>
+                  </Col>
+                  <Col>
+                    <Text code style={{ fontSize: 12 }}>
+                      {sessionId}
+                    </Text>
+                  </Col>
                 </Row>
               </Space>
             </div>
@@ -381,10 +436,7 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
               >
                 查看处理进度
               </Button>
-              <Button
-                icon={<UploadOutlined />}
-                onClick={handleReupload}
-              >
+              <Button icon={<UploadOutlined />} onClick={handleReupload}>
                 重新上传
               </Button>
             </Space>
@@ -394,16 +446,18 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
         {/* 上传失败 */}
         {uploadStatus === 'error' && (
           <div style={{ textAlign: 'center', padding: '20px 0' }}>
-            <div style={{
-              width: 80,
-              height: 80,
-              margin: '0 auto 16px',
-              borderRadius: '50%',
-              backgroundColor: '#fff2f0',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
+            <div
+              style={{
+                width: 80,
+                height: 80,
+                margin: '0 auto 16px',
+                borderRadius: '50%',
+                backgroundColor: '#fff2f0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
               <DeleteOutlined style={{ fontSize: 32, color: '#ff4d4f' }} />
             </div>
 
@@ -416,17 +470,10 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
             </Paragraph>
 
             <Space>
-              <Button
-                type="primary"
-                icon={<UploadOutlined />}
-                onClick={handleReupload}
-              >
+              <Button type="primary" icon={<UploadOutlined />} onClick={handleReupload}>
                 重新上传
               </Button>
-              <Button
-                icon={<SettingOutlined />}
-                onClick={() => setShowAdvanced(true)}
-              >
+              <Button icon={<SettingOutlined />} onClick={() => setShowAdvanced(true)}>
                 查看系统状态
               </Button>
             </Space>

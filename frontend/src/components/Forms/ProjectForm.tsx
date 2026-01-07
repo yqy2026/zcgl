@@ -3,16 +3,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import {
-  Form,
-  Input,
-  Button,
-  Space,
-  Card,
-  message,
-  Select,
-  Tag
-} from 'antd';
+import { Form, Input, Button, Space, Card, message, Select, Tag } from 'antd';
 
 import { ownershipService } from '@/services/ownershipService';
 import { projectService } from '@/services/projectService';
@@ -29,15 +20,10 @@ interface ProjectFormProps {
   onCancel: () => void;
 }
 
-const ProjectForm: React.FC<ProjectFormProps> = ({
-  project,
-  onSuccess,
-  onCancel
-}) => {
+const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSuccess, onCancel }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [selectedOwnerships, setSelectedOwnerships] = useState<Ownership[]>([]);
-
 
   // 获取权属方列表
   useEffect(() => {
@@ -50,7 +36,8 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
         message.error('获取权属方列表失败');
       }
     };
-    loadOwnerships();
+    void loadOwnerships();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const [ownerships, setOwnerships] = useState<Ownership[]>([]);
@@ -60,15 +47,13 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
       // 设置基本信息
       form.setFieldsValue({
         name: project.name,
-        description: project.description || ''
+        description: project.description ?? '',
       });
 
       // 设置权属方关联
       if (project.ownership_relations && project.ownership_relations.length > 0) {
         const ownershipIds = project.ownership_relations.map(rel => rel.ownership_id);
-        const selected = ownerships.filter(ownership =>
-          ownershipIds.includes(ownership.id)
-        );
+        const selected = ownerships.filter(ownership => ownershipIds.includes(ownership.id));
         setSelectedOwnerships(selected);
       } else {
         setSelectedOwnerships([]);
@@ -93,7 +78,6 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
     setSelectedOwnerships(newSelected);
   };
 
-
   // 表单提交
   const handleSubmit = async (values: Record<string, unknown>) => {
     setLoading(true);
@@ -101,12 +85,12 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
       // 构建简化的ownership_relations数据
       const ownership_relations = selectedOwnerships.map(ownership => ({
         ownership_id: ownership.id,
-        relation_type: '关联'
+        relation_type: '关联',
       }));
 
       const submitData = {
         ...values,
-        ownership_relations
+        ownership_relations,
       };
 
       if (project) {
@@ -119,27 +103,34 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
       onSuccess();
     } catch (error: unknown) {
       componentLogger.error('保存项目失败:', error as Error);
-      const errorMsg = (error as any)?.response?.data?.detail || '保存项目失败';
+      const errorMsg =
+        (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
+        '保存项目失败';
       message.error(errorMsg);
     } finally {
       setLoading(false);
     }
   };
 
-
   // 表单验证规则接口
   interface FormValidationRule {
-    field?: string
-    fullField?: string
-    type?: string
-    validator?: (rule: FormValidationRule, value: unknown) => Promise<void>
+    field?: string;
+    fullField?: string;
+    type?: string;
+    validator?: (rule: FormValidationRule, value: unknown) => Promise<void>;
   }
 
   // 验证项目名称
   const validateProjectName = async (rule: FormValidationRule, value: string) => {
-    if (!value) return Promise.reject('请输入项目名称');
-    if (value.length < 1) return Promise.reject('项目名称至少1个字符');
-    if (value.length > 200) return Promise.reject('项目名称不能超过200个字符');
+    if (!value) {
+      return Promise.reject(new Error('请输入项目名称'));
+    }
+    if (value.length < 1) {
+      return Promise.reject(new Error('项目名称至少1个字符'));
+    }
+    if (value.length > 200) {
+      return Promise.reject(new Error('项目名称不能超过200个字符'));
+    }
     return Promise.resolve();
   };
 
@@ -147,7 +138,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
     <Form
       form={form}
       layout="vertical"
-      onFinish={handleSubmit}
+      onFinish={(values: Record<string, unknown>) => void handleSubmit(values)}
       autoComplete="off"
     >
       <Card title="项目信息" size="small">
@@ -155,22 +146,18 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
           label="项目名称"
           name="name"
           rules={[
-            { required: true, validator: validateProjectName as any }
+            {
+              required: true,
+              validator: (_rule: unknown, value: string) =>
+                validateProjectName(_rule as FormValidationRule, value),
+            },
           ]}
         >
           <Input placeholder="请输入项目名称" maxLength={200} />
         </Form.Item>
 
-
-        <Form.Item
-          label="项目描述"
-          name="description"
-        >
-          <TextArea
-            placeholder="请输入项目描述"
-            rows={3}
-            maxLength={1000}
-          />
+        <Form.Item label="项目描述" name="description">
+          <TextArea placeholder="请输入项目描述" rows={3} maxLength={1000} />
         </Form.Item>
       </Card>
 
@@ -184,7 +171,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
             filterOption={(input, option) =>
               (option?.children as unknown as string)?.toLowerCase().includes(input.toLowerCase())
             }
-            onSelect={(value) => {
+            onSelect={value => {
               const ownership = ownerships.find(o => o.id === value);
               if (ownership) {
                 addOwnership(ownership);
@@ -220,14 +207,11 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
             </div>
           </div>
         )}
-
       </Card>
 
       <div style={{ marginTop: 16 }}>
         <Space style={{ float: 'right' }}>
-          <Button onClick={onCancel}>
-            取消
-          </Button>
+          <Button onClick={onCancel}>取消</Button>
           <Button type="primary" htmlType="submit" loading={loading}>
             {project ? '更新' : '创建'}
           </Button>

@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { Drawer, Menu, Button, Space, Typography } from 'antd'
+import React, { useState } from 'react';
+import { Drawer, Menu, Button, Space, Typography } from 'antd';
 import {
   MenuOutlined,
   CloseOutlined,
@@ -15,16 +15,16 @@ import {
   DownloadOutlined,
   LineChartOutlined,
   PieChartOutlined,
-} from '@ant-design/icons'
-import { useLocation, useNavigate } from 'react-router-dom'
-import type { MenuProps } from 'antd'
+} from '@ant-design/icons';
+import { useLocation, useNavigate } from 'react-router-dom';
+import type { MenuProps } from 'antd';
 
-const { Text } = Typography
+const { Text } = Typography;
 
 const MobileMenu: React.FC = () => {
-  const [visible, setVisible] = useState(false)
-  const location = useLocation()
-  const navigate = useNavigate()
+  const [visible, setVisible] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   // 菜单项配置（与侧边栏相同）
   const menuItems: MenuProps['items'] = [
@@ -121,46 +121,60 @@ const MobileMenu: React.FC = () => {
         },
       ],
     },
-  ]
+  ];
 
   // 获取当前选中的菜单项
   const getSelectedKeys = () => {
-    const pathname = location.pathname
-    
-    if (pathname === '/') return ['/dashboard']
-    if (pathname.match(/^\/assets\/\d+$/)) return ['/assets']
-    if (pathname.match(/^\/assets\/\d+\/edit$/)) return ['/assets']
-    
-    return [pathname]
-  }
+    const pathname = location.pathname;
+
+    if (pathname === '/') {
+      return ['/dashboard'];
+    }
+    if (pathname.match(/^\/assets\/\d+$/)) {
+      return ['/assets'];
+    }
+    if (pathname.match(/^\/assets\/\d+\/edit$/)) {
+      return ['/assets'];
+    }
+
+    return [pathname];
+  };
 
   // 获取展开的菜单项
   const getOpenKeys = () => {
-    const pathname = location.pathname
-    
-    if (pathname.startsWith('/assets')) return ['assets']
-    if (pathname.startsWith('/data')) return ['data']
-    if (pathname.startsWith('/analytics')) return ['analytics']
-    if (pathname.startsWith('/system')) return ['system']
-    
-    return []
-  }
+    const pathname = location.pathname;
+
+    if (pathname.startsWith('/assets')) {
+      return ['assets'];
+    }
+    if (pathname.startsWith('/data')) {
+      return ['data'];
+    }
+    if (pathname.startsWith('/analytics')) {
+      return ['analytics'];
+    }
+    if (pathname.startsWith('/system')) {
+      return ['system'];
+    }
+
+    return [];
+  };
 
   // 处理菜单点击
   const handleMenuClick = ({ key }: { key: string }) => {
-    navigate(key)
-    setVisible(false) // 点击后关闭菜单
-  }
+    navigate(key);
+    setVisible(false); // 点击后关闭菜单
+  };
 
   // 显示菜单
   const showMenu = () => {
-    setVisible(true)
-  }
+    setVisible(true);
+  };
 
   // 隐藏菜单
   const hideMenu = () => {
-    setVisible(false)
-  }
+    setVisible(false);
+  };
 
   return (
     <>
@@ -191,13 +205,7 @@ const MobileMenu: React.FC = () => {
         styles={{
           body: { padding: 0 },
         }}
-        extra={
-          <Button
-            type="text"
-            icon={<CloseOutlined />}
-            onClick={hideMenu}
-          />
-        }
+        extra={<Button type="text" icon={<CloseOutlined />} onClick={hideMenu} />}
       >
         <Menu
           mode="inline"
@@ -212,7 +220,7 @@ const MobileMenu: React.FC = () => {
         />
       </Drawer>
     </>
-  )
-}
+  );
+};
 
-export default MobileMenu
+export default MobileMenu;

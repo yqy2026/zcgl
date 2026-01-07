@@ -289,7 +289,7 @@ class PerformanceOptimizer:
         now = datetime.now()
         keys_to_remove = []
 
-        for key, (result, timestamp) in self.response_cache.items():
+        for key, (_result, timestamp) in self.response_cache.items():
             age = (now - timestamp).total_seconds()
             if age > max_age_minutes * 60:
                 keys_to_remove.append(key)

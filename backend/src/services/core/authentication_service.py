@@ -1,16 +1,17 @@
 import secrets
-from datetime import datetime, timedelta, UTC
-from jose import jwt, JWTError
+from datetime import UTC, datetime, timedelta
+
+from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 
 from ...core.config import settings
+from ...core.token_blacklist import blacklist_manager
 from ...exceptions import BusinessLogicError
 from ...models.auth import User, UserSession
 from ...schemas.auth import TokenResponse
-from ...core.token_blacklist import blacklist_manager
 from .password_service import PasswordService
-from .user_management_service import UserManagementService
 from .session_service import SessionService
+from .user_management_service import UserManagementService
 
 # JWT配置
 SECRET_KEY = settings.SECRET_KEY
@@ -24,7 +25,7 @@ if ACCESS_TOKEN_EXPIRE_MINUTES < 120:
 
 class AuthenticationService:
     """认证服务 - 协调者"""
-    
+
     def __init__(self, db: Session):
         self.db = db
         self.password_service = PasswordService()
@@ -35,7 +36,7 @@ class AuthenticationService:
     def _generate_jti(self) -> str:
         """生成JWT ID"""
         return secrets.token_urlsafe(32)
-    
+
     def _is_token_revoked(self, jti: str) -> bool:
         """检查令牌是否已被撤销"""
         return self.token_blacklist.is_blacklisted(jti)
@@ -166,10 +167,10 @@ class AuthenticationService:
             token_type = payload.get("type")
             jti = payload.get("jti")
             session_id = payload.get("session_id")
-            
+
             if user_id is None or token_type != "refresh":
                 return None
-            
+
             if self._is_token_revoked(jti):
                 return None
 
@@ -207,9 +208,9 @@ class AuthenticationService:
         # 更新最后访问时间等
         session.last_accessed_at = datetime.now()
         if client_ip:
-            setattr(session, "ip_address", client_ip)
+            session.ip_address = client_ip
         if user_agent:
-            setattr(session, "user_agent", user_agent)
+            session.user_agent = user_agent
         self.db.commit()
 
         return session

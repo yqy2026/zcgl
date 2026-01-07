@@ -1,50 +1,48 @@
-import React from 'react'
-import { Form, Select, DatePicker, Button, Space, Row, Col, Slider } from 'antd'
-import { ReloadOutlined } from '@ant-design/icons'
-import dayjs from 'dayjs'
+import React from 'react';
+import { Form, Select, DatePicker, Button, Space, Row, Col, Slider } from 'antd';
+import { ReloadOutlined } from '@ant-design/icons';
+import dayjs from 'dayjs';
 
-const { RangePicker } = DatePicker
-const { Option } = Select
+const { RangePicker } = DatePicker;
+const { Option } = Select;
 
 // 资产筛选条件接口
 export interface AssetFilterConditions {
-  keyword?: string
-  ownership_status?: string
-  property_nature?: string
-  usage_status?: string
-  business_category?: string
-  area_range?: [number, number]
-  rent_range?: [number, number]
-  date_range?: [dayjs.Dayjs, dayjs.Dayjs]
-  tenant_type?: string
-  [key: string]: unknown
+  keyword?: string;
+  ownership_status?: string;
+  property_nature?: string;
+  usage_status?: string;
+  business_category?: string;
+  area_range?: [number, number];
+  rent_range?: [number, number];
+  date_range?: [dayjs.Dayjs, dayjs.Dayjs];
+  tenant_type?: string;
+  [key: string]: unknown;
 }
 
 interface AssetFiltersProps {
-  filters: AssetFilterConditions
-  onChange: (filters: AssetFilterConditions) => void
-  onReset: () => void
+  filters: AssetFilterConditions;
+  onChange: (filters: AssetFilterConditions) => void;
+  onReset: () => void;
 }
 
 const AssetFilters: React.FC<AssetFiltersProps> = ({ filters, onChange, onReset }) => {
-  const [form] = Form.useForm()
+  const [form] = Form.useForm();
 
-  const handleValuesChange = (changedValues: AssetFilterConditions, allValues: AssetFilterConditions) => {
-    onChange(allValues)
-  }
+  const handleValuesChange = (
+    changedValues: AssetFilterConditions,
+    allValues: AssetFilterConditions
+  ) => {
+    onChange(allValues);
+  };
 
   const handleReset = () => {
-    form.resetFields()
-    onReset()
-  }
+    form.resetFields();
+    onReset();
+  };
 
   return (
-    <Form
-      form={form}
-      layout="vertical"
-      initialValues={filters}
-      onValuesChange={handleValuesChange}
-    >
+    <Form form={form} layout="vertical" initialValues={filters} onValuesChange={handleValuesChange}>
       <Row gutter={16}>
         <Col span={6}>
           <Form.Item label="物业性质" name="propertyNature">
@@ -85,7 +83,7 @@ const AssetFilters: React.FC<AssetFiltersProps> = ({ filters, onChange, onReset 
           </Form.Item>
         </Col>
       </Row>
-      
+
       <Row gutter={16}>
         <Col span={8}>
           <Form.Item label="出租率范围" name="occupancyRateRange">
@@ -117,7 +115,7 @@ const AssetFilters: React.FC<AssetFiltersProps> = ({ filters, onChange, onReset 
         </Col>
       </Row>
     </Form>
-  )
-}
+  );
+};
 
-export default AssetFilters
+export default AssetFilters;

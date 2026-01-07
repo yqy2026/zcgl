@@ -14,7 +14,7 @@ charset = utf-8
 [*.py]
 indent_style = space
 indent_size = 4
-max_line_length = 88
+max_line_length = 100
 
 # JavaScript/TypeScript files
 [*.{js,ts,tsx,jsx}]
@@ -35,8 +35,13 @@ indent_size = 2
 # Markdown files
 [*.md]
 trim_trailing_whitespace = false
+max_line_length = 80
 
 # Shell scripts
 [*.sh]
 indent_style = space
 indent_size = 2
+
+# Makefiles
+[Makefile]
+indent_style = tab

@@ -4,188 +4,185 @@
  * 增强版本 - 添加更全面的测试用例
  */
 
-import { describe, it, expect } from 'vitest'
-import { } from '@testing-library/react'
-import React from 'react'
-import { MemoryRouter, Routes } from 'react-router-dom'
+import { describe, it, expect } from 'vitest';
+import {} from '@testing-library/react';
+import React from 'react';
+import { MemoryRouter, Routes } from 'react-router-dom';
 
 // Mock dependencies
 vi.mock('@/components/Loading', () => ({
   SkeletonLoader: ({ type, rows }: { type: string; rows: number }) => (
-    <div data-testid="skeleton" data-type={type} data-rows={rows}>Loading...</div>
+    <div data-testid="skeleton" data-type={type} data-rows={rows}>
+      Loading...
+    </div>
   ),
-}))
+}));
 
 vi.mock('@/components/ErrorHandling', () => ({
   SystemErrorBoundary: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="error-boundary">{children}</div>
   ),
-}))
+}));
 
 vi.mock('../System/PermissionGuard', () => ({
-  PermissionGuard: ({ children, permissions }: { children: React.ReactNode; permissions?: any[] }) => (
-    <div data-testid="permission-guard" data-permissions={permissions ? JSON.stringify(permissions) : 'none'}>
+  PermissionGuard: ({
+    children,
+    permissions,
+  }: {
+    children: React.ReactNode;
+    permissions?: any[];
+  }) => (
+    <div
+      data-testid="permission-guard"
+      data-permissions={permissions ? JSON.stringify(permissions) : 'none'}
+    >
       {children}
     </div>
   ),
-}))
+}));
 
 // Test wrapper
-const TestWrapper = ({ children }: { children: React.ReactNode }) => (
+const _TestWrapper = ({ children }: { children: React.ReactNode }) => (
   <MemoryRouter>
     <Routes>{children}</Routes>
   </MemoryRouter>
-)
+);
 
 describe('LazyRoute - 组件导入测试', () => {
   it('应该能够导入组件', async () => {
-    const module = await import('../LazyRoute')
-    expect(module).toBeDefined()
-    expect(module.default).toBeDefined()
-  })
+    const module = await import('../LazyRoute');
+    expect(module).toBeDefined();
+    expect(module.default).toBeDefined();
+  });
 
   it('组件应该是React函数组件', async () => {
-    const LazyRoute = (await import('../LazyRoute')).default
-    expect(typeof LazyRoute).toBe('function')
-  })
-})
+    const LazyRoute = (await import('../LazyRoute')).default;
+    expect(typeof LazyRoute).toBe('function');
+  });
+});
 
 describe('LazyRoute - 属性测试', () => {
   it('应该支持component属性', async () => {
-    const LazyRoute = (await import('../LazyRoute')).default
+    const LazyRoute = (await import('../LazyRoute')).default;
 
-    const TestComponent = React.lazy(() =>
-      Promise.resolve({ default: () => <div>Test</div> })
-    )
+    const TestComponent = React.lazy(() => Promise.resolve({ default: () => <div>Test</div> }));
 
     // 验证组件可以接收必要属性
     const element = React.createElement(LazyRoute, {
       path: '/test',
       title: '测试路由',
       component: TestComponent,
-    })
+    });
 
-    expect(element).toBeTruthy()
-  })
+    expect(element).toBeTruthy();
+  });
 
   it('应该支持fallback属性', async () => {
-    const LazyRoute = (await import('../LazyRoute')).default
+    const LazyRoute = (await import('../LazyRoute')).default;
 
-    const TestComponent = React.lazy(() =>
-      Promise.resolve({ default: () => <div>Test</div> })
-    )
+    const TestComponent = React.lazy(() => Promise.resolve({ default: () => <div>Test</div> }));
 
-    const customFallback = <div>Custom Loading</div>
+    const customFallback = <div>Custom Loading</div>;
 
     const element = React.createElement(LazyRoute, {
       path: '/test',
       title: '测试路由',
       component: TestComponent,
       fallback: customFallback,
-    })
+    });
 
-    expect(element).toBeTruthy()
-  })
+    expect(element).toBeTruthy();
+  });
 
   it('应该支持preload属性', async () => {
-    const LazyRoute = (await import('../LazyRoute')).default
+    const LazyRoute = (await import('../LazyRoute')).default;
 
-    const TestComponent = React.lazy(() =>
-      Promise.resolve({ default: () => <div>Test</div> })
-    )
+    const TestComponent = React.lazy(() => Promise.resolve({ default: () => <div>Test</div> }));
 
-    const preloadFn = vi.fn()
+    const preloadFn = vi.fn();
 
     const element = React.createElement(LazyRoute, {
       path: '/test',
       title: '测试路由',
       component: TestComponent,
       preload: preloadFn,
-    })
+    });
 
-    expect(element).toBeTruthy()
-  })
+    expect(element).toBeTruthy();
+  });
 
   it('应该支持permissions属性', async () => {
-    const LazyRoute = (await import('../LazyRoute')).default
+    const LazyRoute = (await import('../LazyRoute')).default;
 
-    const TestComponent = React.lazy(() =>
-      Promise.resolve({ default: () => <div>Test</div> })
-    )
+    const TestComponent = React.lazy(() => Promise.resolve({ default: () => <div>Test</div> }));
 
-    const permissions = [{ resource: 'asset', action: 'view' }]
+    const permissions = [{ resource: 'asset', action: 'view' }];
 
     const element = React.createElement(LazyRoute, {
       path: '/test',
       title: '测试路由',
       component: TestComponent,
       permissions: permissions,
-    })
+    });
 
-    expect(element).toBeTruthy()
-  })
+    expect(element).toBeTruthy();
+  });
 
   it('应该支持errorBoundary属性', async () => {
-    const LazyRoute = (await import('../LazyRoute')).default
+    const LazyRoute = (await import('../LazyRoute')).default;
 
-    const TestComponent = React.lazy(() =>
-      Promise.resolve({ default: () => <div>Test</div> })
-    )
+    const TestComponent = React.lazy(() => Promise.resolve({ default: () => <div>Test</div> }));
 
     const elementWithBoundary = React.createElement(LazyRoute, {
       path: '/test',
       title: '测试路由',
       component: TestComponent,
       errorBoundary: true,
-    })
+    });
 
     const elementWithoutBoundary = React.createElement(LazyRoute, {
       path: '/test',
       title: '测试路由',
       component: TestComponent,
       errorBoundary: false,
-    })
+    });
 
-    expect(elementWithBoundary).toBeTruthy()
-    expect(elementWithoutBoundary).toBeTruthy()
-  })
-})
+    expect(elementWithBoundary).toBeTruthy();
+    expect(elementWithoutBoundary).toBeTruthy();
+  });
+});
 
 describe('LazyRoute - 默认值测试', () => {
   it('应该有默认的fallback', async () => {
-    const LazyRoute = (await import('../LazyRoute')).default
+    const LazyRoute = (await import('../LazyRoute')).default;
 
-    const TestComponent = React.lazy(() =>
-      Promise.resolve({ default: () => <div>Test</div> })
-    )
+    const TestComponent = React.lazy(() => Promise.resolve({ default: () => <div>Test</div> }));
 
     // 不提供fallback，应该使用默认值
     const element = React.createElement(LazyRoute, {
       path: '/test',
       title: '测试路由',
       component: TestComponent,
-    })
+    });
 
-    expect(element).toBeTruthy()
-  })
+    expect(element).toBeTruthy();
+  });
 
   it('errorBoundary默认应该为true', async () => {
-    const LazyRoute = (await import('../LazyRoute')).default
+    const LazyRoute = (await import('../LazyRoute')).default;
 
-    const TestComponent = React.lazy(() =>
-      Promise.resolve({ default: () => <div>Test</div> })
-    )
+    const TestComponent = React.lazy(() => Promise.resolve({ default: () => <div>Test</div> }));
 
     // 不提供errorBoundary，应该默认为true
     const element = React.createElement(LazyRoute, {
       path: '/test',
       title: '测试路由',
       component: TestComponent,
-    })
+    });
 
-    expect(element).toBeTruthy()
-  })
-})
+    expect(element).toBeTruthy();
+  });
+});
 
 // =============================================================================
 // 增强测试 - 属性验证测试
@@ -193,56 +190,50 @@ describe('LazyRoute - 默认值测试', () => {
 
 describe('LazyRoute - 属性验证', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-  })
+    vi.clearAllMocks();
+  });
 
   it('应该传递lazy属性给组件', async () => {
-    const LazyRoute = (await import('../LazyRoute')).default
-    const TestComponent = React.lazy(() =>
-      Promise.resolve({ default: () => <div>Lazy</div> })
-    )
+    const LazyRoute = (await import('../LazyRoute')).default;
+    const TestComponent = React.lazy(() => Promise.resolve({ default: () => <div>Lazy</div> }));
 
     const element = React.createElement(LazyRoute, {
       path: '/test',
       component: TestComponent,
       lazy: true,
-    })
+    });
 
-    expect(element).toBeTruthy()
-  })
+    expect(element).toBeTruthy();
+  });
 
   it('应该传递preload函数', async () => {
-    const LazyRoute = (await import('../LazyRoute')).default
-    const TestComponent = React.lazy(() =>
-      Promise.resolve({ default: () => <div>Lazy</div> })
-    )
-    const preloadFn = vi.fn()
+    const LazyRoute = (await import('../LazyRoute')).default;
+    const TestComponent = React.lazy(() => Promise.resolve({ default: () => <div>Lazy</div> }));
+    const preloadFn = vi.fn();
 
     const element = React.createElement(LazyRoute, {
       path: '/test',
       component: TestComponent,
       preload: preloadFn,
-    })
+    });
 
-    expect(element).toBeTruthy()
-  })
+    expect(element).toBeTruthy();
+  });
 
   it('应该传递自定义fallback', async () => {
-    const LazyRoute = (await import('../LazyRoute')).default
-    const TestComponent = React.lazy(() =>
-      Promise.resolve({ default: () => <div>Lazy</div> })
-    )
-    const customFallback = <div>Custom Loading</div>
+    const LazyRoute = (await import('../LazyRoute')).default;
+    const TestComponent = React.lazy(() => Promise.resolve({ default: () => <div>Lazy</div> }));
+    const customFallback = <div>Custom Loading</div>;
 
     const element = React.createElement(LazyRoute, {
       path: '/test',
       component: TestComponent,
       fallback: customFallback,
-    })
+    });
 
-    expect(element).toBeTruthy()
-  })
-})
+    expect(element).toBeTruthy();
+  });
+});
 
 // =============================================================================
 // 边界情况测试
@@ -250,44 +241,38 @@ describe('LazyRoute - 属性验证', () => {
 
 describe('LazyRoute - 边界情况', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-  })
+    vi.clearAllMocks();
+  });
 
   it('应该处理undefined权限', async () => {
-    const LazyRoute = (await import('../LazyRoute')).default
-    const TestComponent = React.lazy(() =>
-      Promise.resolve({ default: () => <div>Test</div> })
-    )
+    const LazyRoute = (await import('../LazyRoute')).default;
+    const TestComponent = React.lazy(() => Promise.resolve({ default: () => <div>Test</div> }));
 
     const element = React.createElement(LazyRoute, {
       path: '/test',
       component: TestComponent,
       permissions: undefined,
-    })
+    });
 
-    expect(element).toBeTruthy()
-  })
+    expect(element).toBeTruthy();
+  });
 
   it('应该处理空权限数组', async () => {
-    const LazyRoute = (await import('../LazyRoute')).default
-    const TestComponent = React.lazy(() =>
-      Promise.resolve({ default: () => <div>Test</div> })
-    )
+    const LazyRoute = (await import('../LazyRoute')).default;
+    const TestComponent = React.lazy(() => Promise.resolve({ default: () => <div>Test</div> }));
 
     const element = React.createElement(LazyRoute, {
       path: '/test',
       component: TestComponent,
       permissions: [],
-    })
+    });
 
-    expect(element).toBeTruthy()
-  })
+    expect(element).toBeTruthy();
+  });
 
   it('应该处理多个权限', async () => {
-    const LazyRoute = (await import('../LazyRoute')).default
-    const TestComponent = React.lazy(() =>
-      Promise.resolve({ default: () => <div>Multi</div> })
-    )
+    const LazyRoute = (await import('../LazyRoute')).default;
+    const TestComponent = React.lazy(() => Promise.resolve({ default: () => <div>Multi</div> }));
 
     const element = React.createElement(LazyRoute, {
       path: '/test',
@@ -296,22 +281,20 @@ describe('LazyRoute - 边界情况', () => {
         { resource: 'assets', action: 'view' },
         { resource: 'assets', action: 'edit' },
       ],
-    })
+    });
 
-    expect(element).toBeTruthy()
-  })
+    expect(element).toBeTruthy();
+  });
 
   it('应该处理空路径', async () => {
-    const LazyRoute = (await import('../LazyRoute')).default
-    const TestComponent = React.lazy(() =>
-      Promise.resolve({ default: () => <div>Test</div> })
-    )
+    const LazyRoute = (await import('../LazyRoute')).default;
+    const TestComponent = React.lazy(() => Promise.resolve({ default: () => <div>Test</div> }));
 
     const element = React.createElement(LazyRoute, {
       path: '',
       component: TestComponent,
-    })
+    });
 
-    expect(element).toBeTruthy()
-  })
-})
+    expect(element).toBeTruthy();
+  });
+});

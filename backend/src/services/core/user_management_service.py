@@ -1,4 +1,5 @@
 from datetime import datetime
+
 from sqlalchemy.orm import Session
 
 from ...exceptions import BusinessLogicError
@@ -7,9 +8,10 @@ from ...schemas.auth import UserCreate, UserUpdate
 from .password_service import PasswordService
 from .session_service import SessionService
 
+
 class UserManagementService:
     """用户管理服务"""
-    
+
     def __init__(self, db: Session):
         self.db = db
         self.password_service = PasswordService()
@@ -128,7 +130,7 @@ class UserManagementService:
 
         self.db.commit()
         return True
-    
+
     def unlock_user(self, user_id: str) -> bool:
         """解锁用户"""
         user = self.get_user_by_id(user_id)
