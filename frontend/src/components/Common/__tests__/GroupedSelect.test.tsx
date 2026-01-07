@@ -32,7 +32,7 @@ vi.mock('@/utils/enumHelpers', () => ({
 
 // Mock Ant Design components
 vi.mock('antd', () => ({
-  Select: ({ children, value, onChange, placeholder, allowClear, showSearch, onSearch, tagRender }: any) => (
+  Select: ({ children, value, onChange: _onChange, placeholder, allowClear, showSearch, onSearch: _onSearch, tagRender: _tagRender }: any) => (
     <div
       data-testid="select"
       data-value={value}
@@ -45,13 +45,13 @@ vi.mock('antd', () => ({
     </div>
   ),
   Input: {
-    Search: ({ value, onChange, placeholder, allowClear }: any) => (
+    Search: ({ value, onChange: _onChange, placeholder, allowClear }: any) => (
       <div data-testid="search" data-value={value} data-placeholder={placeholder} data-allow-clear={allowClear}>
-        <input value={value} onChange={onChange} placeholder={placeholder} />
+        <input value={value} onChange={_onChange} placeholder={placeholder} />
       </div>
     ),
   },
-  Tag: ({ children, color, closable, onClose }: any) => (
+  Tag: ({ children, color, closable, onClose: _onClose }: any) => (
     <div data-testid="tag" data-color={color} data-closable={closable}>
       {children}
     </div>

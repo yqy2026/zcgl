@@ -44,8 +44,8 @@ class ErrorCode(str, Enum):
 
     # 权限和认证错误 (4000-4999)
     AUTHENTICATION_FAILED = "E4000"
-    TOKEN_EXPIRED = "E4001"
-    TOKEN_INVALID = "E4002"
+    TOKEN_EXPIRED = "E4001"  # nosec - B105: Error code, not password
+    TOKEN_INVALID = "E4002"  # nosec - B105: Error code, not password
     INSUFFICIENT_PERMISSIONS = "E4003"
     ACCOUNT_LOCKED = "E4004"
     ACCOUNT_DISABLED = "E4005"
@@ -211,7 +211,7 @@ class UnifiedErrorHandler:
             self.logger.error("Unexpected error occurred", extra=error_info)
 
         # 记录详细的堆栈跟踪
-        if isinstance(error, (UnifiedError, HTTPException)) == False:
+        if not isinstance(error, (UnifiedError, HTTPException)):
             self.logger.debug(f"Error traceback: {traceback.format_exc()}")
 
     def _handle_http_exception(self, error: HTTPException) -> dict[str, Any]:

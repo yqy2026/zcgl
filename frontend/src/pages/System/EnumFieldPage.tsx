@@ -1,19 +1,24 @@
 import React, { useState, useEffect } from 'react'
 import {
   message, Form, Space, Tag, Button, Card, Input,
-  Select, Tooltip, Col, Row, Table, Modal, Popconfirm, Divider,
+  Select, Tooltip, Col, Row, Table, Modal, Popconfirm,
   Badge, Statistic, Tabs, Switch
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import {
   PlusOutlined, EditOutlined, DeleteOutlined,
-  SearchOutlined, ReloadOutlined, EyeOutlined
+  EyeOutlined
 } from '@ant-design/icons'
 import { unifiedDictionaryService } from '../../services/dictionary'
-import type { EnumFieldType, EnumFieldValue, EnumFieldWithType } from '../../services/dictionary'
-import { SystemDictionary } from '@/types/asset'
+import type {
+  EnumFieldType,
+  EnumFieldValue,
+  CreateEnumFieldTypeRequest,
+  UpdateEnumFieldTypeRequest,
+  CreateEnumFieldValueRequest,
+  UpdateEnumFieldValueRequest
+} from '../../services/dictionary'
 import EnumValuePreview from '../../components/Dictionary/EnumValuePreview'
-import { withErrorHandling, createErrorHandler } from '../../services'
 
 const { TabPane } = Tabs
 const { TextArea } = Input
@@ -40,20 +45,7 @@ interface EnumFieldStatistics {
   categories: string[]
 }
 
-// 表单数据类型
-interface EnumTypeFormData {
-  type_name: string
-  type_description?: string
-  is_active: boolean
-}
-
-interface EnumValueFormData {
-  value_key: string
-  value_label: string
-  value_description?: string
-  is_active: boolean
-  sort_order?: number
-}
+// Local interfaces removed, using types from services/dictionary
 
 const EnumFieldPage: React.FC = () => {
   const [enumTypes, setEnumTypes] = useState<EnumFieldType[]>([]);
@@ -81,7 +73,7 @@ const EnumFieldPage: React.FC = () => {
       setEnumTypes(data);
     } catch (error: unknown) {
       const apiError = error as ApiError
-      message.error(apiError?.response?.data?.detail || apiError?.message || '加载枚举类型失败');
+      message.error(apiError?.response?.data?.detail ?? apiError?.message ?? '加载枚举类型失败');
     } finally {
       setLoading(false);
     }
@@ -93,7 +85,7 @@ const EnumFieldPage: React.FC = () => {
       setEnumValues(data);
     } catch (error: unknown) {
       const apiError = error as ApiError
-      message.error(apiError?.response?.data?.detail || apiError?.message || '加载枚举值失败');
+      message.error(apiError?.response?.data?.detail ?? apiError?.message ?? '加载枚举值失败');
     }
   };
 
@@ -110,7 +102,7 @@ const EnumFieldPage: React.FC = () => {
       });
     } catch (error: unknown) {
       const apiError = error as ApiError
-      message.error(apiError?.message || '加载统计信息失败');
+      message.error(apiError?.message ?? '加载统计信息失败');
     }
   };
 
@@ -402,13 +394,17 @@ const EnumFieldPage: React.FC = () => {
     }
   };
 
-  const handleTypeSubmit = async (values: EnumTypeFormData) => {
+  // Define form types that include all potential fields
+  type EnumTypeFormValues = CreateEnumFieldTypeRequest & { is_active?: boolean }
+  type EnumValueFormValues = CreateEnumFieldValueRequest & { is_active?: boolean }
+
+  const handleTypeSubmit = async (values: EnumTypeFormValues) => {
     try {
       let success = false
       if (editingType) {
-        success = await unifiedDictionaryService.updateEnumFieldType(editingType.id, values as any) !== null
+        success = await unifiedDictionaryService.updateEnumFieldType(editingType.id, values as UpdateEnumFieldTypeRequest) !== null
       } else {
-        success = await unifiedDictionaryService.createEnumFieldType(values as any) !== null
+        success = await unifiedDictionaryService.createEnumFieldType(values) !== null
       }
 
       if (success) {
@@ -421,17 +417,30 @@ const EnumFieldPage: React.FC = () => {
       }
     } catch (error: unknown) {
       const apiError = error as ApiError
-      message.error(apiError?.message || '操作失败');
+      message.error(apiError?.message ?? '操作失败');
     }
   };
 
-  const handleValueSubmit = async (values: EnumValueFormData) => {
+  const handleValueSubmit = async (values: EnumValueFormValues) => {
     try {
       let success = false
-      if (editingValue) {
-        success = await unifiedDictionaryService.updateEnumFieldValue(selectedTypeId || editingValue.enum_type_id, editingValue.id, values as any) !== null
+      if (editingValue && selectedTypeId) {
+        // For update, we need to cast values to UpdateEnumFieldValueRequest as it might contain extra fields or we just pick what we need
+        // But UpdateEnumFieldValueRequest is subset/compatible mostly.
+        const updateData: UpdateEnumFieldValueRequest = {
+          label: values.label,
+          value: values.value,
+          code: values.code,
+          description: values.description,
+          sort_order: values.sort_order,
+          color: values.color,
+          icon: values.icon,
+          is_active: values.is_active,
+          is_default: values.is_default
+        }
+        success = await unifiedDictionaryService.updateEnumFieldValue(selectedTypeId, editingValue.id, updateData) !== null
       } else {
-        success = await unifiedDictionaryService.addEnumFieldValue(selectedTypeId!, values as any) !== null
+        success = await unifiedDictionaryService.addEnumFieldValue(editingValue?.enum_type_id || selectedTypeId!, values) !== null
       }
 
       if (success) {
@@ -446,7 +455,7 @@ const EnumFieldPage: React.FC = () => {
       }
     } catch (error: unknown) {
       const apiError = error as ApiError
-      message.error(apiError?.message || '操作失败');
+      message.error(apiError?.message ?? '操作失败');
     }
   };
 

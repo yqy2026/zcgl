@@ -8,7 +8,7 @@ import React from 'react'
 
 // Mock hooks
 vi.mock('../../hooks/useDictionary', () => ({
-  useDictionary: vi.fn((dictType: string, isActive?: boolean) => ({
+  useDictionary: vi.fn((_dictType: string, _isActive?: boolean) => ({
     options: [
       { label: '选项1', value: 'opt1' },
       { label: '选项2', value: 'opt2' },

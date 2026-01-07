@@ -12,8 +12,6 @@ import {
   Space,
   Row,
   Col,
-  Divider,
-  Alert,
   Tag,
   Table,
   Select,
@@ -21,7 +19,6 @@ import {
   InputNumber,
   Switch,
   Tooltip,
-  Modal,
   Badge,
   Progress,
   Statistic,
@@ -32,20 +29,14 @@ import {
 import {
   EditOutlined,
   SaveOutlined,
-  CloseCircleOutlined,
   CheckCircleOutlined,
-  WarningOutlined,
-  EyeOutlined,
-  RobotOutlined,
-  UserOutlined,
   SearchOutlined,
   SyncOutlined,
-  DiffOutlined,
   StarFilled
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
-const { Title, Text, Paragraph } = Typography;
+const { Text } = Typography;
 const { TabPane } = Tabs;
 
 // 字段配置类型
@@ -122,7 +113,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
   const [fieldReviews, setFieldReviews] = useState<FieldReview[]>([]);
   const [selectedAsset, setSelectedAsset] = useState<string>('');
   const [selectedOwnership, setSelectedOwnership] = useState<string>('');
-  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
+  const [_showAdvancedOptions, _setShowAdvancedOptions] = useState(false);
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   const [validationSummary, setValidationSummary] = useState<ValidationResults>({});
 

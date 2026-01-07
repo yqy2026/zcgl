@@ -10,12 +10,10 @@ import {
   Modal,
   message,
   Space,
-  Input,
   Tooltip,
   Tag
 } from 'antd';
 import {
-  SearchOutlined,
   PlusOutlined,
   ReloadOutlined,
   UnorderedListOutlined
@@ -25,7 +23,6 @@ import type { Project } from '@/types/project';
 import ProjectList from '@/components/Project/ProjectList';
 
 const { Option } = Select;
-const { Search } = Input;
 
 // Select组件标签渲染属性接口
 interface CustomTagProps {
@@ -148,22 +145,9 @@ const UnifiedProjectSelect: React.FC<UnifiedProjectSelectProps> = ({
     message.info('创建新项目功能开发中');
   };
 
-  // 获取选项标签
-  const getOptionLabel = (project: Project) => (
-    <Space>
-      <span>{project.name}</span>
-      <span style={{ color: '#666', fontSize: '12px' }}>
-        [{project.code}]
-      </span>
-      {!project.is_active && (
-        <Tag color="red">禁用</Tag>
-      )}
-    </Space>
-  );
-
   // 多选模式下已选项目的标签渲染
   const tagRender = (props: CustomTagProps) => {
-    const { label, value, closable, onClose } = props;
+    const { value, closable, onClose } = props;
     const project = allProjects.find(p => p.id === value);
 
     return (

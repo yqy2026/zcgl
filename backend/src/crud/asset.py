@@ -2,15 +2,16 @@ from typing import Any
 
 """
 资产CRUD操作 - 优化版本
+
+注意: 此层为纯数据访问层，不包含业务逻辑。
+资产计算逻辑（AssetCalculator）应在 API 或 Service 层调用。
 """
 
-from sqlalchemy import and_, asc, desc, or_
 from sqlalchemy.orm import Session
 
-from ..core.performance import cache_manager, cached, monitor_query
+from ..core.performance import cached, monitor_query
 from ..models.asset import Asset, AssetHistory
 from ..schemas.asset import AssetCreate, AssetUpdate
-from ..services.asset.asset_calculator import AssetCalculator
 
 
 class SensitiveDataHandler:
@@ -26,17 +27,15 @@ class SensitiveDataHandler:
         return data
 
 
-class AssetCRUD:
+from .base import CRUDBase
+
+
+class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
     """资产CRUD操作类 - 优化版本"""
 
     def __init__(self):
+        super().__init__(Asset)
         self.sensitive_data_handler = SensitiveDataHandler()
-
-    @monitor_query("asset_get_by_id")
-    @cached(ttl=300)  # 5分钟缓存
-    def get(self, db: Session, id: str) -> Asset | None:
-        """根据ID获取资产"""
-        return db.query(Asset).filter(Asset.id == id).first()
 
     def get_by_name(self, db: Session, property_name: str) -> Asset | None:
         """根据物业名称获取资产"""
@@ -45,10 +44,6 @@ class AssetCRUD:
     def get_by_property_name(self, db: Session, property_name: str) -> Asset | None:
         """根据物业名称获取资产（别名方法）"""
         return self.get_by_name(db, property_name)
-
-    def get_multi(self, db: Session, skip: int = 0, limit: int = 100) -> list[Asset]:
-        """获取多个资产"""
-        return db.query(Asset).offset(skip).limit(limit).all()
 
     @monitor_query("asset_get_multi_with_search")
     @cached(ttl=600)  # 10分钟缓存
@@ -64,282 +59,53 @@ class AssetCRUD:
     ) -> tuple[list[Asset], int]:
         """
         获取资产列表，支持搜索、筛选和排序 - 优化版本
-
-        Args:
-            db: 数据库会话
-            skip: 跳过记录数
-            limit: 限制记录数
-            search: 搜索关键词
-            filters: 筛选条件
-            sort_field: 排序字段
-            sort_order: 排序方向
-
-        Returns:
-            (资产列表, 总记录数)
         """
-        # 构建缓存键  # pragma: no cover
-        cache_key = f"asset_list:{skip}:{limit}:{search}:{hash(str(filters))}:{sort_field}:{sort_order}"  # pragma: no cover
-
-        # 尝试从缓存获取总数  # pragma: no cover
-        cache_key_total = f"{cache_key}:total"  # pragma: no cover
-        cached_total = cache_manager.get(cache_key_total)  # pragma: no cover
-        if cached_total is not None:  # pragma: no cover
-            # 如果总数已缓存，直接查询数据  # pragma: no cover
-            query = self._build_optimized_search_query(  # pragma: no cover
-                db,
-                search,
-                filters,
-                sort_field,
-                sort_order,  # pragma: no cover
-            )  # pragma: no cover
-            assets = query.offset(skip).limit(limit).all()  # pragma: no cover
-            return assets, cached_total  # pragma: no cover
-
-        # 构建查询  # pragma: no cover
-        query = self._build_optimized_search_query(  # pragma: no cover
-            db,
-            search,
-            filters,
-            sort_field,
-            sort_order,  # pragma: no cover
-        )  # pragma: no cover
-
-        # 获取总数  # pragma: no cover
-        total = query.count()  # pragma: no cover
-
-        # 缓存总数  # pragma: no cover
-        cache_manager.set(cache_key_total, total, ttl=300)  # pragma: no cover
-
-        # 分页获取数据  # pragma: no cover
-        assets = query.offset(skip).limit(limit).all()  # pragma: no cover
-
-        return assets, total  # pragma: no cover
-
-    def _build_optimized_search_query(
-        self,
-        db: Session,
-        search: str | None,
-        filters: dict | None,
-        sort_field: str,
-        sort_order: str,
-    ):
-        """构建优化的搜索查询"""
-        from ..models.asset import Asset
-
-        query = db.query(Asset)
-
-        # 搜索条件 - 使用索引友好的查询
-        if search:
-            search_terms = search.split()
-            search_conditions = []
-
-            for term in search_terms:
-                search_filter = or_(
-                    Asset.property_name.ilike(f"%{term}%"),
-                    Asset.address.ilike(f"%{term}%"),
-                    Asset.ownership_entity.ilike(f"%{term}%"),
-                    Asset.business_category.ilike(f"%{term}%"),
-                )
-                search_conditions.append(search_filter)
-
-            # 所有搜索条件用OR连接，提高性能
-            if search_conditions:
-                query = query.filter(or_(*search_conditions))
-
-        # 筛选条件 - 批量处理
+        # 映射特定过滤器到 QueryBuilder 格式
+        qb_filters = {}
         if filters:
-            filter_conditions = []
-
             for key, value in filters.items():
-                if value is None:
-                    continue  # pragma: no cover
+                if key == "min_area":
+                    qb_filters["min_actual_property_area"] = value
+                elif key == "max_area":
+                    qb_filters["max_actual_property_area"] = value
+                elif key == "ids":
+                    qb_filters["id__in"] = value
+                else:
+                    qb_filters[key] = value
 
-                if key == "min_area" and hasattr(Asset, "actual_property_area"):
-                    filter_conditions.append(Asset.actual_property_area >= float(value))
-                elif key == "max_area" and hasattr(Asset, "actual_property_area"):
-                    filter_conditions.append(Asset.actual_property_area <= float(value))
-                elif key == "ids" and isinstance(value, list):
-                    # 使用IN查询，性能更好
-                    if value:
-                        filter_conditions.append(Asset.id.in_(value))
-                elif hasattr(Asset, key):
-                    if isinstance(value, list):  # pragma: no cover
-                        filter_conditions.append(
-                            getattr(Asset, key).in_(value)
-                        )  # pragma: no cover
-                    else:
-                        filter_conditions.append(getattr(Asset, key) == value)
-
-            if filter_conditions:
-                query = query.filter(and_(*filter_conditions))
-
-        # 排序 - 使用索引友好的字段
-        sortable_fields = [
-            "created_at",
-            "updated_at",
+        # 定义搜索字段
+        search_fields = [
             "property_name",
-            "id",
-            "actual_property_area",
+            "address",
+            "ownership_entity",
+            "business_category",
         ]
-        if sort_field in sortable_fields:
-            sort_column = getattr(Asset, sort_field)
-            if sort_order.lower() == "desc":
-                query = query.order_by(desc(sort_column))
-            else:
-                query = query.order_by(asc(sort_column))
 
-        return query
+        # 使用 CRUDBase (QueryBuilder) 获取数据
+        # 注意：QueryBuilder 默认处理 skip/limit
+        assets = self.get_with_filters(
+            db,
+            filters=qb_filters,
+            search=search,
+            search_fields=search_fields,
+            skip=skip,
+            limit=limit,
+            order_by=sort_field,
+            order_desc=(sort_order.lower() == "desc"),
+        )
 
-    def get_filtered_query(
-        self,
-        db: Session,
-        search: str | None = None,
-        filters: dict[str, Any] | None = None,
-        sort_field: str = "created_at",
-        sort_order: str = "desc",
-    ):
-        """
-        获取过滤后的查询对象（不执行查询）
-        用于组织权限过滤
-        """
-        query = db.query(Asset)
+        # 获取总数 (用于分页)
+        cnt_query = self.query_builder.build_count_query(
+            filters=qb_filters, search_query=search, search_fields=search_fields
+        )
+        total = db.execute(cnt_query).scalar() or 0
 
-        # 搜索条件
-        if search:
-            search_filter = or_(
-                Asset.property_name.contains(search),
-                Asset.address.contains(search),
-                Asset.ownership_entity.contains(search),
-                Asset.business_category.contains(search),
-            )
-            query = query.filter(search_filter)
-
-        # 筛选条件
-        if filters:
-            filter_conditions = []
-
-            for key, value in filters.items():
-                if value is None:
-                    continue  # pragma: no cover
-
-                if key == "min_area" and hasattr(Asset, "actual_property_area"):
-                    filter_conditions.append(
-                        Asset.actual_property_area >= float(value)
-                    )  # pragma: no cover
-                elif key == "max_area" and hasattr(Asset, "actual_property_area"):
-                    filter_conditions.append(
-                        Asset.actual_property_area <= float(value)
-                    )  # pragma: no cover
-                elif key == "ids" and isinstance(value, list):
-                    # 支持按多个资产ID筛选
-                    filter_conditions.append(Asset.id.in_(value))  # pragma: no cover
-                elif hasattr(Asset, key):
-                    filter_conditions.append(getattr(Asset, key) == value)
-
-            if filter_conditions:
-                query = query.filter(and_(*filter_conditions))
-
-        # 排序
-        if hasattr(Asset, sort_field):
-            sort_column = getattr(Asset, sort_field)
-            if sort_order.lower() == "desc":
-                query = query.order_by(desc(sort_column))
-            else:  # pragma: no cover
-                query = query.order_by(asc(sort_column))  # pragma: no cover
-
-        return query
-
-    def execute_paginated_query(
-        self, query, skip: int = 0, limit: int = 100
-    ) -> tuple[list[Asset], int]:
-        """
-        执行分页查询
-        """
-        total = query.count()
-        assets = query.offset(skip).limit(limit).all()
         return assets, total
-
-    def count(self, db: Session) -> int:
-        """获取资产总数"""
-        return db.query(Asset).count()
-
-    def count_with_search(
-        self,
-        db: Session,
-        search: str | None = None,
-        filters: dict[str, Any] | None = None,
-    ) -> int:
-        """获取符合条件的资产数量"""
-        query = db.query(Asset)
-
-        # 搜索条件
-        if search:
-            search_filter = or_(
-                Asset.property_name.contains(search),
-                Asset.address.contains(search),
-                Asset.ownership_entity.contains(search),
-                Asset.business_category.contains(search),
-            )
-            query = query.filter(search_filter)
-
-        # 筛选条件
-        if filters:
-            filter_conditions = []
-
-            for key, value in filters.items():
-                if value is None:
-                    continue  # pragma: no cover
-
-                if key == "min_area" and hasattr(Asset, "actual_property_area"):
-                    filter_conditions.append(
-                        Asset.actual_property_area >= float(value)
-                    )  # pragma: no cover
-                elif key == "max_area" and hasattr(Asset, "actual_property_area"):
-                    filter_conditions.append(
-                        Asset.actual_property_area <= float(value)
-                    )  # pragma: no cover
-                elif key == "ids" and isinstance(value, list):
-                    # 支持按多个资产ID筛选
-                    filter_conditions.append(Asset.id.in_(value))  # pragma: no cover
-                elif hasattr(Asset, key):
-                    filter_conditions.append(getattr(Asset, key) == value)
-
-            if filter_conditions:
-                query = query.filter(and_(*filter_conditions))
-
-        return query.count()
-
-    def create(self, db: Session, obj_in: AssetCreate) -> Asset:
-        """创建资产"""
-        # 获取数据
-        asset_data = obj_in.model_dump()  # 修复：使用model_dump而不是dict()
-
-        # 敏感数据加密暂时跳过，避免复杂化
-        # asset_data = self.sensitive_data_handler.encrypt_sensitive_data(asset_data)
-
-        # 获取计算字段但不覆盖原始数据
-        calculated_fields = AssetCalculator.auto_calculate_fields(asset_data)
-
-        # 合并原始数据和计算字段，但保持原始数据优先
-        final_data = {**asset_data, **calculated_fields}
-
-        # 验证数据一致性
-        errors = AssetCalculator.validate_area_consistency(final_data)
-        if errors:
-            raise ValueError(f"数据验证失败: {'; '.join(errors)}")
-
-        db_obj = Asset(**final_data)
-        db.add(db_obj)
-        db.commit()
-        db.refresh(db_obj)
-        return db_obj
 
     def create_with_history(self, db: Session, obj_in: AssetCreate) -> Asset:
         """创建资产并记录历史"""
-        # 创建资产
         db_obj = self.create(db=db, obj_in=obj_in)
 
-        # 记录创建历史
         history = AssetHistory(
             asset_id=db_obj.id,
             operation_type="CREATE",
@@ -348,64 +114,39 @@ class AssetCRUD:
         )
         db.add(history)
         db.commit()
-
         return db_obj
 
-    def update(self, db: Session, db_obj: Asset, obj_in: AssetUpdate) -> Asset:
-        """更新资产"""
-        update_data = obj_in.dict(exclude_unset=True)
+    def update(
+        self, db: Session, db_obj: Asset, obj_in: AssetUpdate | dict[str, Any]
+    ) -> Asset:
+        """更新资产，增加版本号"""
+        # CRUDBase.update returns db_obj
+        # We need to hook in before commit?
+        # CRUDBase.update does commit.
+        # So we should prepare data before calling super().update?
 
-        # 加密敏感数据
-        update_data = self.sensitive_data_handler.encrypt_sensitive_data(update_data)
+        # If we use super().update, we can't easily increment version inside the same atomic block unless we modify obj_in.
+        if hasattr(db_obj, "version"):
+            # Update version on the object before passing to super?
+            # super().update updates from obj_in.
+            # We can add version to obj_in?
+            pass
 
-        # 合并当前数据和更新数据进行计算
-        current_data = {}
-        for field in [
-            "rentable_area",
-            "rented_area",
-            "annual_income",
-            "annual_expense",
-        ]:
-            if hasattr(db_obj, field):
-                current_data[field] = getattr(db_obj, field)
+        # To strictly follow "AssetCRUD" logic (version++), we might need to override completely
+        # or rely on model events or adjust obj_in.
 
-        # 合并更新数据
-        current_data.update(update_data)
-
-        # 自动计算相关字段
-        calculated_data = AssetCalculator.auto_calculate_fields(current_data)
-
-        # 验证数据一致性
-        errors = AssetCalculator.validate_area_consistency(calculated_data)
-        if errors:
-            raise ValueError(f"数据验证失败: {'; '.join(errors)}")
-
-        # 首先更新原始数据中的字段
-        for field, value in update_data.items():
-            if hasattr(db_obj, field):
-                setattr(db_obj, field, value)
-
-        # 然后更新计算得出的字段
-        for field, value in calculated_data.items():  # pragma: no cover
-            if hasattr(db_obj, field):  # pragma: no cover
-                setattr(db_obj, field, value)  # pragma: no cover
-
-        # 更新版本号
+        # Let's use the explicit implementation for update to ensure version increment works
         if hasattr(db_obj, "version"):
             db_obj.version = (db_obj.version or 0) + 1
 
-        db.add(db_obj)
-        db.commit()
-        db.refresh(db_obj)
-        return db_obj
+        # Call super().update (which handles mapping obj_in to db_obj and commit)
+        return super().update(db=db, db_obj=db_obj, obj_in=obj_in)
 
     def update_with_history(
         self, db: Session, db_obj: Asset, obj_in: AssetUpdate
     ) -> Asset:
         """更新资产并记录历史"""
         update_data = obj_in.dict(exclude_unset=True)
-
-        # 记录变更历史
         for field, new_value in update_data.items():
             if hasattr(db_obj, field):
                 old_value = getattr(db_obj, field)
@@ -421,25 +162,16 @@ class AssetCRUD:
                     )
                     db.add(history)
 
-        # 更新资产
-        updated_asset = self.update(db=db, db_obj=db_obj, obj_in=obj_in)
-        db.commit()
-
-        return updated_asset
+        return self.update(db=db, db_obj=db_obj, obj_in=obj_in)
 
     def get_multi_by_ids(self, db: Session, ids: list[str]) -> list[Asset]:
         """根据ID列表批量获取资产"""
-        if not ids:
-            return []
-        return db.query(Asset).filter(Asset.id.in_(ids)).all()
+        return self.get_with_filters(
+            db, filters={"id__in": ids}, limit=len(ids) if ids else 100
+        )
 
-    def remove(self, db: Session, id: str) -> Asset:
-        """删除资产"""
-        obj = db.query(Asset).get(id)
-        if obj:
-            db.delete(obj)
-            db.commit()
-        return obj
+    # remove is inherited
+    # create is inherited (check notes about calculation)
 
 
 # 创建全局实例

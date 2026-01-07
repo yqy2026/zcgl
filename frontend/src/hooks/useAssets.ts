@@ -2,9 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { message } from 'antd'
 
 import { assetService } from '@/services/assetService'
-import { useAssetStore } from '@/store/useAssetStore'
 import type {
-  Asset,
   AssetSearchParams,
   AssetCreateRequest,
   AssetUpdateRequest,
@@ -12,34 +10,15 @@ import type {
 
 /**
  * 资产列表查询 Hook
+ *
+ * 注意: 服务器数据由 React Query 管理缓存，不再复制到 Zustand。
+ * Zustand 仅用于 UI 状态（selectedAsset、searchParams 等）。
  */
 export const useAssets = (params?: AssetSearchParams) => {
-  const { setAssets, setPagination, setLoading, setError } = useAssetStore()
-
   return useQuery({
     queryKey: ['assets', params],
-    queryFn: async () => {
-      setLoading(true)
-      try {
-        const result = await assetService.getAssets(params)
-        setAssets((result as any).items || result)
-        setPagination({
-          total: result.total,
-          page: result.page,
-          limit: result.limit,
-          hasNext: (result as any).hasNext || (result as any).has_next,
-          hasPrev: (result as any).hasPrev || (result as any).has_prev,
-        })
-        setError(null)
-        return result
-      } catch (error: unknown) {
-        setError(error instanceof Error ? error.message : 'Unknown error')
-        throw error
-      } finally {
-        setLoading(false)
-      }
-    },
-    placeholderData: (previousData) => previousData, // React Query v4 syntax
+    queryFn: () => assetService.getAssets(params),
+    placeholderData: (previousData) => previousData,
     staleTime: 30 * 1000, // 30秒内不重新请求
   })
 }
@@ -48,15 +27,9 @@ export const useAssets = (params?: AssetSearchParams) => {
  * 单个资产查询 Hook
  */
 export const useAsset = (id: string) => {
-  const { setSelectedAsset } = useAssetStore()
-
   return useQuery({
     queryKey: ['asset', id],
-    queryFn: async () => {
-      const asset = await assetService.getAsset(id)
-      setSelectedAsset(asset)
-      return asset
-    },
+    queryFn: () => assetService.getAsset(id),
     enabled: !!id,
   })
 }
@@ -66,17 +39,12 @@ export const useAsset = (id: string) => {
  */
 export const useCreateAsset = () => {
   const queryClient = useQueryClient()
-  const { addAsset } = useAssetStore()
 
   return useMutation({
     mutationFn: (data: AssetCreateRequest) => assetService.createAsset(data),
-    onSuccess: (asset) => {
-      // 更新缓存
+    onSuccess: () => {
+      // 使响应缓存失效，触发重新查询
       queryClient.invalidateQueries({ queryKey: ['assets'] })
-      
-      // 更新状态
-      addAsset(asset)
-      
       message.success('资产创建成功')
     },
     onError: (error: { message: string }) => {
@@ -90,19 +58,14 @@ export const useCreateAsset = () => {
  */
 export const useUpdateAsset = () => {
   const queryClient = useQueryClient()
-  const { updateAsset } = useAssetStore()
 
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: AssetUpdateRequest }) =>
       assetService.updateAsset(id, data),
     onSuccess: (asset) => {
-      // 更新缓存
+      // 使响应缓存失效，触发重新查询
       queryClient.invalidateQueries({ queryKey: ['assets'] })
       queryClient.invalidateQueries({ queryKey: ['asset', asset.id] })
-      
-      // 更新状态
-      updateAsset(asset.id, asset)
-      
       message.success('资产更新成功')
     },
     onError: (error: { message: string }) => {
@@ -116,17 +79,12 @@ export const useUpdateAsset = () => {
  */
 export const useDeleteAsset = () => {
   const queryClient = useQueryClient()
-  const { removeAsset } = useAssetStore()
 
   return useMutation({
     mutationFn: (id: string) => assetService.deleteAsset(id),
-    onSuccess: (_, id) => {
-      // 更新缓存
+    onSuccess: () => {
+      // 使响应缓存失效，触发重新查询
       queryClient.invalidateQueries({ queryKey: ['assets'] })
-      
-      // 更新状态
-      removeAsset(id)
-      
       message.success('资产删除成功')
     },
     onError: (error: { message: string }) => {
@@ -146,7 +104,7 @@ export const useBatchDeleteAssets = () => {
     onSuccess: (_, ids) => {
       // 更新缓存
       queryClient.invalidateQueries({ queryKey: ['assets'] })
-      
+
       message.success(`成功删除 ${ids.length} 个资产`)
     },
     onError: (error: { message: string }) => {

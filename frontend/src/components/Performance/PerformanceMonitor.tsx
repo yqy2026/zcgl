@@ -5,12 +5,11 @@
 
 import React, { useEffect, useState, useCallback } from 'react'
 import { Card, Statistic, Progress, Alert, Button, Modal, Table, Tag } from 'antd'
-import { 
-  DashboardOutlined, 
-  ThunderboltOutlined, 
+import {
+  DashboardOutlined,
+  ThunderboltOutlined,
   ClockCircleOutlined,
-  WarningOutlined,
-  CheckCircleOutlined 
+  WarningOutlined
 } from '@ant-design/icons'
 // import { getComponentLoadMetrics, SmartPreloader } from '@/utils/advancedLazyLoad'
 

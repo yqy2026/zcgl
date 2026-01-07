@@ -1,6 +1,5 @@
 import React from 'react'
 import { Card, Empty } from 'antd'
-import { ResponsiveContainer } from 'recharts'
 
 interface AnalyticsCardProps {
   title: string
@@ -35,24 +34,6 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
   )
 }
 
-interface ChartCardProps extends AnalyticsCardProps {
-  height?: number
-}
-
-export const ChartCard: React.FC<ChartCardProps> = ({
-  title,
-  children,
-  height = 300,
-  ...props
-}) => {
-  // Convert ReactNode to ReactElement for ResponsiveContainer
-  const childElement = React.isValidElement(children) ? children : <div>{children}</div>
-
-  return (
-    <AnalyticsCard title={title} {...props}>
-      <ResponsiveContainer width="100%" height={height}>
-        {childElement}
-      </ResponsiveContainer>
-    </AnalyticsCard>
-  )
-}
+// Note: ChartCard is simplified since @ant-design/plots has built-in responsive support
+// Just use AnalyticsCard directly with chart components that have height prop
+export { AnalyticsCard as ChartCard }

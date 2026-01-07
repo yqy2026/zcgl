@@ -102,7 +102,7 @@ const AssetList: React.FC<AssetListProps> = ({
         { text: "民政托管企业", value: "2" },
         { text: "其他", value: "3" },
       ],
-      render: (text, record) => {
+      render: (text, _record) => {
         // 权属类别映射
         let displayText = text;
         if (typeof text === "string") {
@@ -354,7 +354,7 @@ const AssetList: React.FC<AssetListProps> = ({
   const summary = calculateSummary();
 
   // 汇总行渲染函数
-  const renderSummary = (pageData: readonly Asset[]) => {
+  const renderSummary = (_pageData: readonly Asset[]) => {
     if (!summary) return null;
 
     return (

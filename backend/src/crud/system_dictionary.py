@@ -1,9 +1,5 @@
 from typing import Any
 
-"""
-系统字典CRUD操作
-"""
-
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
@@ -43,32 +39,45 @@ class CRUDSystemDictionary(
         """根据筛选条件获取字典列表"""
         query = db.query(self.model)
 
+        # Use simple filter dict mapping for consistency if possible, or QueryBuilder
+        # Given existing logic was simple, let's keep it but enhance with QueryBuilder if complex features needed
+        # Or just stick to manual filtering for this specific case if simple enough.
+        # But standardize means using QueryBuilder is better.
+
+        qb_filters = {}
         if filters:
             if "dict_type" in filters:
-                query = query.filter(SystemDictionary.dict_type == filters["dict_type"])
+                qb_filters["dict_type"] = filters["dict_type"]
             if "is_active" in filters:
-                query = query.filter(SystemDictionary.is_active == filters["is_active"])
+                qb_filters["is_active"] = filters["is_active"]
 
-        return (
-            query.order_by(SystemDictionary.sort_order, SystemDictionary.created_at)
-            .offset(skip)
-            .limit(limit)
-            .all()
-        )
+        return self.query_builder.build_query(
+            db_session=db,
+            model=self.model,
+            filters=qb_filters,
+            base_query=query,
+            sort_by="sort_order",
+            sort_desc=False,
+            skip=skip,
+            limit=limit,
+        ).all()
 
     def get_by_type(
         self, db: Session, *, dict_type: str, is_active: bool = True
     ) -> list[SystemDictionary]:
         """根据类型获取字典列表"""
-        query = db.query(SystemDictionary).filter(
-            SystemDictionary.dict_type == dict_type
-        )
-
+        filters = {"dict_type": dict_type}
         if is_active is not None:
-            query = query.filter(SystemDictionary.is_active == is_active)
+            filters["is_active"] = is_active
 
-        return query.order_by(
-            SystemDictionary.sort_order, SystemDictionary.created_at
+        return self.query_builder.build_query(
+            db_session=db,
+            model=self.model,
+            filters=filters,
+            sort_by="sort_order",
+            sort_desc=False,
+            # No pagination usually for get_by_type usage (dropdowns), but safer to limit?
+            # Existing code didn't limit.
         ).all()
 
     def get_types(self, db: Session) -> list[str]:
@@ -83,7 +92,7 @@ class CRUDSystemDictionary(
 
             enum_types = (
                 db.query(EnumFieldType.code)
-                .filter(EnumFieldType.is_deleted == False)
+                .filter(EnumFieldType.is_deleted.is_(False))
                 .distinct()
                 .all()
             )
@@ -91,42 +100,6 @@ class CRUDSystemDictionary(
         except ImportError:
             # 如果枚举字段模型不存在（向后兼容）
             return []
-
-    def get_active_by_type(
-        self, db: Session, *, dict_type: str
-    ) -> list[SystemDictionary]:
-        """获取指定类型的启用字典项"""
-        return self.get_by_type(db=db, dict_type=dict_type, is_active=True)
-
-    def update_sort_orders(
-        self, db: Session, *, dict_type: str, sort_data: list[dict[str, Any]]
-    ) -> list[SystemDictionary]:
-        """批量更新排序"""
-        updated_items = []
-
-        for item in sort_data:
-            dictionary_id = item.get("id")
-            sort_order = item.get("sort_order")
-
-            if dictionary_id and sort_order is not None:
-                dictionary = self.get(db=db, id=dictionary_id)
-                if dictionary and dictionary.dict_type == dict_type:
-                    dictionary.sort_order = sort_order
-                    db.add(dictionary)
-                    updated_items.append(dictionary)
-
-        db.commit()
-        return updated_items
-
-    def toggle_active_status(self, db: Session, *, id: str) -> SystemDictionary | None:
-        """切换启用状态"""
-        dictionary = self.get(db=db, id=id)
-        if dictionary:
-            dictionary.is_active = not dictionary.is_active
-            db.add(dictionary)
-            db.commit()
-            db.refresh(dictionary)
-        return dictionary
 
 
 # 创建系统字典CRUD实例

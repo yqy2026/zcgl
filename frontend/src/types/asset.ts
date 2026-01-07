@@ -20,7 +20,7 @@ export interface Asset {
   unrented_area?: number; // 后端纯计算字段，不存储
   non_commercial_area?: number;
   occupancy_rate?: number; // 后端纯计算字段，0-100，不存储
-  include_in_occupancy_rate?: boolean;
+  include_in_occupancy_rate: boolean;
 
   // 用途相关字段
   certificated_usage?: string;
@@ -37,7 +37,7 @@ export interface Asset {
   contract_end_date?: string;
   monthly_rent?: number; // 金额字段，使用高精度number
   deposit?: number; // 金额字段，使用高精度number
-  is_sublease?: boolean;
+  is_sublease: boolean;
   sublease_notes?: string;
 
   // 管理相关字段
@@ -78,13 +78,13 @@ export interface Asset {
   audit_notes?: string;
 
   // 其他字段
-  is_litigated?: boolean; // 优化为boolean类型
+  is_litigated: boolean; // 优化为boolean类型
   notes?: string;
   description?: string; // 资产描述
 
   // 时间戳
-  created_at?: string;
-  updated_at?: string;
+  created_at: string;
+  updated_at: string;
 
   // 多租户支持
   tenant_id?: string;
@@ -218,11 +218,10 @@ export interface CustomFieldValue {
 }
 
 // 表单数据接口
-export interface AssetFormData
-  extends Omit<
-    Asset,
-    "id" | "created_at" | "updated_at" | "unrented_area" | "occupancy_rate" | "net_income"
-  > {}
+export type AssetFormData = Omit<
+  Asset,
+  "id" | "created_at" | "updated_at" | "unrented_area" | "occupancy_rate" | "net_income"
+>;
 
 // API响应接口
 export interface AssetListResponse {
@@ -278,14 +277,13 @@ export interface AssetSearchParams {
 }
 
 // 创建资产请求
-export interface AssetCreateRequest
-  extends Omit<
-    Asset,
-    "id" | "created_at" | "updated_at" | "unrented_area" | "occupancy_rate" | "net_income"
-  > {}
+export type AssetCreateRequest = Omit<
+  Asset,
+  "id" | "created_at" | "updated_at" | "unrented_area" | "occupancy_rate" | "net_income"
+>;
 
 // 更新资产请求
-export interface AssetUpdateRequest extends Partial<AssetCreateRequest> {}
+export type AssetUpdateRequest = Partial<AssetCreateRequest>;
 
 // 资产历史记录 - 增强版
 export interface AssetHistory {
@@ -296,8 +294,8 @@ export interface AssetHistory {
   field_name?: string;
   old_value?: string;
   new_value?: string;
-  old_values?: Record<string, any>; // 批量变更时的旧值
-  new_values?: Record<string, any>; // 批量变更时的新值
+  old_values?: Record<string, unknown>; // 批量变更时的旧值
+  new_values?: Record<string, unknown>; // 批量变更时的新值
   operator?: string;
   changed_by?: string; // 变更操作人
   operation_time: string;

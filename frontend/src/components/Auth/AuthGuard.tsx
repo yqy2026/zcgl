@@ -1,7 +1,7 @@
 import React from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
-import { Spin, Result, Button } from 'antd'
-import { UserOutlined, LockOutlined } from '@ant-design/icons'
+import { Result, Button } from 'antd'
+import { LockOutlined, UserOutlined } from '@ant-design/icons'
 import { useAuth } from '../../hooks/useAuth'
 
 interface AuthGuardProps {
@@ -9,13 +9,14 @@ interface AuthGuardProps {
   requiredPermission?: string
   requiredPermissions?: Array<{ resource: string; action: string }>
   fallback?: React.ComponentType
+  _fallback?: React.ComponentType
 }
 
 const AuthGuard: React.FC<AuthGuardProps> = ({
   children,
   requiredPermission,
   requiredPermissions,
-  fallback = () => (
+  _fallback = () => (
     <Result
       status="403"
       title="403"

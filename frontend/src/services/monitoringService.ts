@@ -10,6 +10,9 @@
 
 import { enhancedApiClient } from '@/api/client';
 import { ApiErrorHandler } from '../utils/responseExtractor';
+import { createLogger } from '../utils/logger';
+
+const logger = createLogger('MonitoringService');
 
 // 类型定义
 export interface SystemMetrics {
@@ -740,7 +743,7 @@ export class MonitoringService {
       const healthStatus = await this.getHealthStatus();
       return healthStatus.status === 'healthy' && healthStatus.overall_score >= 80;
     } catch (error) {
-      console.warn('检查系统健康状态失败:', error);
+      logger.warn('检查系统健康状态失败', { error });
       return false;
     }
   }
@@ -756,7 +759,7 @@ export class MonitoringService {
       });
       return alerts.length;
     } catch (error) {
-      console.warn('获取关键告警数量失败:', error);
+      logger.warn('获取关键告警数量失败', { error });
       return 0;
     }
   }

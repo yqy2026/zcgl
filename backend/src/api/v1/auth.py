@@ -916,7 +916,7 @@ async def get_user_statistics(
         active_users = db.query(func.count(User.id)).filter(User.is_active).scalar()
         locked_users = db.query(func.count(User.id)).filter(User.is_locked).scalar()
         inactive_users = (
-            db.query(func.count(User.id)).filter(User.is_active == False).scalar()
+            db.query(func.count(User.id)).filter(User.is_active.is_(False)).scalar()
         )
 
         return {

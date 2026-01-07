@@ -15,34 +15,20 @@ vi.mock('@tanstack/react-query', () => ({
   })),
 }))
 
-// Mock Chart.js
-vi.mock('chart.js', () => ({
-  Chart: {
-    register: vi.fn(),
-  },
-  ArcElement: vi.fn(),
-  Tooltip: vi.fn(),
-  Legend: vi.fn(),
-  CategoryScale: vi.fn(),
-  LinearScale: vi.fn(),
-  BarElement: vi.fn(),
-}))
-
-// Mock react-chartjs-2
-vi.mock('react-chartjs-2', () => ({
-  Pie: ({ data, options }: any) => (
-    <div data-testid="pie-chart" data-chart-type="pie">
-      {JSON.stringify({ data, options })}
+// Mock @ant-design/plots
+vi.mock('@ant-design/plots', () => ({
+  Pie: ({ data, height }: any) => (
+    <div data-testid="pie-chart" data-height={height}>
+      {data?.map((d: any, i: number) => (
+        <div key={i} />
+      ))}
     </div>
   ),
-  Doughnut: ({ data, options }: any) => (
-    <div data-testid="doughnut-chart" data-chart-type="doughnut">
-      {JSON.stringify({ data, options })}
-    </div>
-  ),
-  Bar: ({ data, options }: any) => (
-    <div data-testid="bar-chart" data-chart-type="bar">
-      {JSON.stringify({ data, options })}
+  Column: ({ data, height }: any) => (
+    <div data-testid="column-chart" data-height={height}>
+      {data?.map((d: any, i: number) => (
+        <div key={i} />
+      ))}
     </div>
   ),
 }))
@@ -76,7 +62,7 @@ vi.mock('antd', () => ({
       {children}
     </div>
   ),
-  Alert: ({ message, description, type, showIcon }: any) => (
+  Alert: ({ message, description, type, showIcon: _showIcon }: any) => (
     <div data-testid="alert" data-type={type} data-message={message}>
       {description}
     </div>

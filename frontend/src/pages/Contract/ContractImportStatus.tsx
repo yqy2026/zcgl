@@ -11,7 +11,6 @@ import {
   Button,
   Space,
   Alert,
-  Spin,
   Typography,
   Row,
   Col,
@@ -26,9 +25,7 @@ import {
 import {
   CheckCircleOutlined,
   LoadingOutlined,
-  ExclamationCircleOutlined,
   CloseCircleOutlined,
-  SyncOutlined,
   FileTextOutlined,
   RobotOutlined,
   DatabaseOutlined,
@@ -41,15 +38,15 @@ import {
   pdfImportService,
   type SessionProgress,
   type CompleteResult,
-  type FileUploadResponse
+  type FileInfo
 } from '../../services/pdfImportService';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 const { Step } = Steps;
 
 interface ContractImportStatusProps {
   sessionId: string;
-  fileInfo: any;
+  fileInfo: FileInfo;
   onComplete: (result: CompleteResult) => void;
   onError: (error: string) => void;
   onCancel: () => void;

@@ -10,9 +10,11 @@ from typing import Dict
 
 class AuthFixture:
     """认证fixture类"""
-    
+
     @staticmethod
-    def create_token(user_id: str, secret: str = "test-secret", expires_hours: int = 1) -> str:
+    def create_token(
+        user_id: str, secret: str = "test-secret", expires_hours: int = 1
+    ) -> str:
         """创建JWT token"""
         token_data = {
             "sub": "testuser",
@@ -20,7 +22,7 @@ class AuthFixture:
             "exp": datetime.utcnow() + timedelta(hours=expires_hours),
         }
         return jwt.encode(token_data, secret, algorithm="HS256")
-    
+
     @staticmethod
     def create_auth_headers(token: str) -> Dict[str, str]:
         """创建认证头"""

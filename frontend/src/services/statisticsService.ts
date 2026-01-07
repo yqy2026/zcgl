@@ -8,8 +8,11 @@
 
 import { enhancedApiClient } from '@/api/client';
 import { ApiErrorHandler } from '../utils/responseExtractor';
+import { createLogger } from '../utils/logger';
 import type { DashboardData, ChartDataItem } from "@/types/api";
 import type { Filters } from "@/types/common";
+
+const logger = createLogger('StatisticsService');
 
 // 基础统计信息接口
 export interface BasicStatistics {
@@ -67,11 +70,10 @@ export interface ComparisonData {
 }
 
 export class StatisticsService {
-  // ==================== 仪表板数据 ====================
+  // ==================== 仪表板数�?====================
 
   /**
-   * 获取仪表板数据
-   */
+   * 获取仪表板数�?   */
   async getDashboardData(): Promise<DashboardData> {
     try {
       const result = await enhancedApiClient.get<DashboardData>(
@@ -84,7 +86,7 @@ export class StatisticsService {
       );
 
       if (!result.success) {
-        throw new Error(`获取仪表板数据失败: ${result.error}`);
+        throw new Error(`获取仪表板数据失�? ${result.error}`);
       }
 
       return result.data!;
@@ -127,7 +129,7 @@ export class StatisticsService {
    */
   async getAreaStatistics(filters?: Filters): Promise<AreaStatistics> {
     try {
-      const result = await enhancedApiClient.get<{ data: AreaStatistics }>(
+      const result = await enhancedApiClient.get<AreaStatistics>(
         "/assets/statistics/summary",
         {
           params: filters,
@@ -141,8 +143,7 @@ export class StatisticsService {
         throw new Error(`获取面积统计信息失败: ${result.error}`);
       }
 
-      // 处理嵌套数据结构
-      return (result.data as any)?.data || result.data!;
+      return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
@@ -152,8 +153,7 @@ export class StatisticsService {
   // ==================== 分布数据 ====================
 
   /**
-   * 获取权属方分布数据
-   */
+   * 获取权属方分布数�?   */
   async getOwnershipDistribution(filters?: Filters): Promise<ChartDataItem[]> {
     try {
       const result = await enhancedApiClient.get<ChartDataItem[]>(
@@ -173,7 +173,7 @@ export class StatisticsService {
       return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.warn('获取权属方分布数据失败:', enhancedError.message);
+      logger.warn('获取权属方分布数据失败', { error: enhancedError.message });
       return [];
     }
   }
@@ -200,14 +200,13 @@ export class StatisticsService {
       return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.warn('获取物业性质分布数据失败:', enhancedError.message);
+      logger.warn('获取物业性质分布数据失败', { error: enhancedError.message });
       return [];
     }
   }
 
   /**
-   * 获取使用状态分布数据
-   */
+   * 获取使用状态分布数�?   */
   async getUsageStatusDistribution(filters?: Filters): Promise<ChartDataItem[]> {
     try {
       const result = await enhancedApiClient.get<ChartDataItem[]>(
@@ -227,7 +226,7 @@ export class StatisticsService {
       return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.warn('获取使用状态分布数据失败:', enhancedError.message);
+      logger.warn('获取使用状态分布数据失败', { error: enhancedError.message });
       return [];
     }
   }
@@ -237,7 +236,7 @@ export class StatisticsService {
    */
   async getOccupancyRateDistribution(filters?: Filters): Promise<ChartDataItem[]> {
     try {
-      const result = await enhancedApiClient.get<{ data: { categories: ChartDataItem[] } }>(
+      const result = await enhancedApiClient.get<{ categories: ChartDataItem[] }>(
         "/statistics/occupancy-rate/by-category",
         {
           params: { category_field: "business_category", ...filters },
@@ -251,11 +250,10 @@ export class StatisticsService {
         throw new Error(`获取出租率分布数据失败: ${result.error}`);
       }
 
-      // 处理嵌套数据结构
-      return (result.data as any)?.data?.categories || [];
+      return result.data?.categories ?? [];
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.warn('获取出租率分布数据失败:', enhancedError.message);
+      logger.warn('获取出租率分布数据失败', { error: enhancedError.message });
       return [];
     }
   }
@@ -288,14 +286,13 @@ export class StatisticsService {
       return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.warn(`获取趋势数据失败 (${metric}):`, enhancedError.message);
+      logger.warn(`获取趋势数据失败 (${metric})`, { error: enhancedError.message });
       return [];
     }
   }
 
   /**
-   * 获取多个指标的趋势数据
-   */
+   * 获取多个指标的趋势数�?   */
   async getMultipleTrends(
     metrics: string[],
     period: "daily" | "weekly" | "monthly" | "yearly" = "monthly",
@@ -315,7 +312,7 @@ export class StatisticsService {
     }
 
     if (errors.length > 0) {
-      console.warn('部分趋势数据获取失败:', errors);
+      logger.warn('部分趋势数据获取失败', { errors });
     }
 
     return results;
@@ -423,8 +420,7 @@ export class StatisticsService {
   }
 
   /**
-   * 获取报表状态
-   */
+   * 获取报表状�?   */
   async getReportStatus(reportId: string): Promise<ReportGenerationResponse> {
     try {
       const result = await enhancedApiClient.get<ReportGenerationResponse>(
@@ -436,7 +432,7 @@ export class StatisticsService {
       );
 
       if (!result.success) {
-        throw new Error(`获取报表状态失败: ${result.error}`);
+        throw new Error(`获取报表状态失�? ${result.error}`);
       }
 
       return result.data!;
@@ -498,7 +494,7 @@ export class StatisticsService {
       return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.warn(`获取资产排名失败 (${metric}):`, enhancedError.message);
+      logger.warn(`获取资产排名失败 (${metric})`, { error: enhancedError.message });
       return [];
     }
   }

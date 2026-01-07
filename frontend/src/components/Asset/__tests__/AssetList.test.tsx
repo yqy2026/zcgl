@@ -3,16 +3,15 @@
  * 测试资产列表展示功能
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import React from 'react'
-import { render, screen } from '@/test/utils/test-helpers'
 
 // Mock Ant Design components before importing
 vi.mock('antd', async () => {
   const actual = await vi.importActual('antd')
   return {
     ...actual,
-    Table: vi.fn(({ dataSource, columns, pagination, loading, rowSelection, summary }: any) => {
+    Table: vi.fn(({ dataSource, columns: _columns, pagination, loading, rowSelection, summary }: any) => {
       const data = dataSource || []
       return React.createElement('div', {
         'data-testid': 'table',
@@ -57,7 +56,7 @@ vi.mock('@/utils/format', () => ({
   formatArea: vi.fn((value: number | undefined) => value ? `${value} m²` : '-'),
   formatPercentage: vi.fn((value: number) => `${value.toFixed(1)}%`),
   formatDate: vi.fn((date: string) => date ? new Date(date).toLocaleDateString() : '-'),
-  getStatusColor: vi.fn((status: string, type: string) => {
+  getStatusColor: vi.fn((_status: string, _type: string) => {
     const colors: Record<string, string> = {
       '已确权': 'green',
       '未确权': 'red',

@@ -9,7 +9,6 @@ import {
   Alert,
   Steps,
   Table,
-  Tag,
   message,
   Row,
   Col,
@@ -20,6 +19,7 @@ import {
   InputNumber,
   Select,
 } from "antd";
+import type { ColumnsType } from "antd/es/table";
 import {
   UploadOutlined,
   DownloadOutlined,
@@ -27,12 +27,13 @@ import {
   CheckCircleOutlined,
   ExclamationCircleOutlined,
   SettingOutlined,
-  ThunderboltOutlined,
-  ClockCircleOutlined,
 } from "@ant-design/icons";
 import type { UploadProps, UploadFile } from "antd";
 import { enhancedApiClient } from "@/api/client";
 import { STANDARD_SHEET_NAME, IMPORT_INSTRUCTIONS } from "../../config/excelConfig";
+import { createLogger } from "@/utils/logger";
+
+const importLogger = createLogger('AssetImport');
 
 const { Title, Text } = Typography;
 const { Step } = Steps;
@@ -80,7 +81,7 @@ const OptimizedAssetImport: React.FC = () => {
         responseType: "blob",
       });
 
-      const blob = new Blob([response.data]);
+      const blob = new Blob([response.data as BlobPart]);
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -91,7 +92,7 @@ const OptimizedAssetImport: React.FC = () => {
       window.URL.revokeObjectURL(url);
 
       message.success("模板下载成功");
-    } catch (error) {
+    } catch {
       message.error("模板下载失败");
     }
   };
@@ -176,7 +177,7 @@ const OptimizedAssetImport: React.FC = () => {
       clearInterval(progressInterval);
       setProgress(100);
 
-      const result = response.data;
+      const result = response.data as ImportResult;
       // Import completed successfully
       // console.log('=== 导入结果 ===')
       // console.log('响应数据:', result)
@@ -185,30 +186,35 @@ const OptimizedAssetImport: React.FC = () => {
       setCurrentStep(2);
 
       // 显示性能信息
-      if (result.processing_time) {
+      if (result.processing_time !== undefined && result.processing_time !== null) {
         message.success(`🎉 导入完成！用时 ${result.processing_time} 秒`);
       } else {
         message.success(`🎉 导入完成！成功导入 ${result.success} 条记录`);
       }
     } catch (err: unknown) {
       clearInterval(progressInterval);
-      console.error("导入错误:", err);
+      importLogger.error('导入错误', err instanceof Error ? err : new Error(String(err)));
 
-      const error = err as { response?: { data?: any }; message?: string };
-      console.error("错误响应:", error.response?.data);
+      interface ErrorResponse {
+        response?: { data?: Partial<ImportResult> };
+        message?: string;
+      }
+      const error = err as ErrorResponse;
+      importLogger.error('错误响应', error.response?.data ? new Error(JSON.stringify(error.response.data)) : new Error('Unknown error'));
 
-      const errorResult = error.response?.data || {
+      const errorResult: ImportResult = {
         success: 0,
         failed: 0,
         total: 0,
-        errors: [error.message || "网络错误"],
+        errors: [error.message ?? '网络错误'],
+        message: '导入失败',
         processing_time: 0,
         filename: fileList[0]?.name,
       };
 
       setImportResult(errorResult);
       setCurrentStep(2);
-      message.error(`❌ 导入失败: ${errorResult.errors?.[0] || "未知错误"}`);
+      message.error(`❌ 导入失败: ${errorResult.errors[0] ?? '未知错误'}`);
     } finally {
       setUploading(false);
     }
@@ -223,7 +229,7 @@ const OptimizedAssetImport: React.FC = () => {
   };
 
   // 错误信息表格列
-  const errorColumns = [
+  const errorColumns: ColumnsType<Record<string, unknown>> = [
     {
       title: "序号",
       dataIndex: "index",
@@ -281,7 +287,7 @@ const OptimizedAssetImport: React.FC = () => {
                   min={60}
                   max={1800}
                   value={config.timeout}
-                  onChange={(value) => setConfig((prev) => ({ ...prev, timeout: value || 600 }))}
+                  onChange={(value) => setConfig((prev) => ({ ...prev, timeout: value ?? 600 }))}
                 />
               </Form.Item>
             </Col>
@@ -387,7 +393,7 @@ const OptimizedAssetImport: React.FC = () => {
             <Text>文件名：{fileList[0]?.name}</Text>
             <br />
             <Text type="secondary">
-              文件大小：{((fileList[0]?.size || 0) / 1024 / 1024).toFixed(2)} MB
+              文件大小：{(((fileList[0]?.size ?? 0)) / 1024 / 1024).toFixed(2)} MB
             </Text>
 
             {uploading && (
@@ -456,7 +462,7 @@ const OptimizedAssetImport: React.FC = () => {
                 </Title>
 
                 <Text type="secondary" style={{ fontSize: "16px" }}>
-                  {importResult.processing_time && (
+                  {importResult.processing_time !== undefined && importResult.processing_time !== null && (
                     <span>处理时间: {importResult.processing_time}秒 | </span>
                   )}
                   {importResult.success > 0 && importResult.failed === 0

@@ -3,8 +3,8 @@
  * 使用@tanstack/react-virtual实现高性能表格
  */
 
-import React, { useMemo, useRef } from 'react'
-import { Table, Tag, Button, Space, Popconfirm, Tooltip, Pagination } from 'antd'
+import React, { useRef } from 'react'
+import { Tag, Button, Space, Popconfirm, Tooltip, Pagination } from 'antd'
 import {
   EditOutlined,
   DeleteOutlined,
@@ -42,7 +42,7 @@ interface VirtualTableProps {
   /** 查看资产历史回调函数 */
   onViewHistory: (asset: Asset) => void
   /** 表格变化回调函数 */
-  onTableChange: (pagination: TablePaginationConfig, filters: Record<string, FilterValue | null>, sorter: SorterResult<Asset> | SorterResult<Asset>[], extra: TableCurrentDataSource<Asset>) => void
+  onTableChange?: (pagination: TablePaginationConfig, filters: Record<string, FilterValue | null>, sorter: SorterResult<Asset> | SorterResult<Asset>[], extra: TableCurrentDataSource<Asset>) => void
   /** 选中的行键值 */
   selectedRowKeys?: React.Key[]
   /** 行选择变化回调函数 */
@@ -53,6 +53,10 @@ interface VirtualTableProps {
   rowHeight?: number
   /** 表格高度 */
   height?: number
+  /** 内部使用的加载状态（用于兼容） */
+  _loading?: boolean
+  /** 内部使用的表格变化回调（用于兼容） */
+  _onTableChange?: (pagination: TablePaginationConfig, filters: Record<string, FilterValue | null>, sorter: SorterResult<Asset> | SorterResult<Asset>[], extra: TableCurrentDataSource<Asset>) => void
 }
 
 /**
@@ -345,12 +349,12 @@ const getColumns = (
  */
 const VirtualTable: React.FC<VirtualTableProps> = ({
   data,
-  loading = false,
+  _loading = false,
   onEdit,
   onDelete,
   onView,
   onViewHistory,
-  onTableChange,
+  _onTableChange,
   selectedRowKeys = [],
   onSelectChange,
   summary,

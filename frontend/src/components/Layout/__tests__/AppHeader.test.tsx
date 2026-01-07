@@ -56,7 +56,7 @@ vi.mock('antd', () => ({
       {children}
     </div>
   ),
-  Dropdown: ({ children, menu, placement, trigger }: any) => (
+  Dropdown: ({ children, menu: _menu, placement, trigger: _trigger }: any) => (
     <div data-testid="dropdown" data-placement={placement}>
       {children}
     </div>

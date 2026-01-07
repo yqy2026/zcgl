@@ -11,6 +11,9 @@ import {
 import { assetService } from '@/services/assetService'
 import { rentContractExcelService } from '@/services/rentContractExcelService'
 import type { ColumnsType } from 'antd/es/table'
+import { createLogger } from '@/utils/logger'
+
+const pageLogger = createLogger('TemplateManagement')
 
 const { Title, Text } = Typography
 
@@ -69,7 +72,7 @@ const TemplateManagementPage: React.FC = () => {
         message.success('租赁合同导入模板下载成功')
       }
     } catch (error: unknown) {
-      console.error('下载模板失败:', error)
+      pageLogger.error('下载模板失败:', error as Error)
       message.error(`下载模板失败: ${(error as Error).message || '网络错误'}`)
     } finally {
       setLoading(false)

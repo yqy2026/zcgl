@@ -18,8 +18,7 @@ import {
   Badge,
   Input,
   Select,
-  Switch,
-  Pagination
+  Switch
 } from 'antd';
 import {
   PlusOutlined,
@@ -34,7 +33,7 @@ import type { ColumnsType } from 'antd/es/table';
 
 import { projectService } from '@/services/projectService';
 import { ownershipService } from '@/services/ownershipService';
-import type { Project, ProjectListResponse, ProjectStatisticsResponse } from '@/types/project';
+import type { Project, ProjectStatisticsResponse } from '@/types/project';
 import type { Ownership } from '@/types/ownership';
 import { ProjectForm } from '@/components/Forms';
 import ProjectDetail from './ProjectDetail';
@@ -161,7 +160,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
   };
 
   // 获取统计信息 - 基于本地项目数据计算
-  const fetchStatistics = async () => {
+  const _fetchStatistics = async () => {
     try {
       // 由于后端没有提供统计API，我们基于当前项目数据计算统计信息
       // 这里使用空数组，实际统计会在项目数据加载后计算
@@ -298,7 +297,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
           if (activeRelations.length > 0) {
             return (
               <div>
-                {activeRelations.slice(0, 2).map((rel, index) => (
+                {activeRelations.slice(0, 2).map((rel, _index) => (
                   <Tag key={rel.id} color="blue" style={{ marginRight: 4 }}>
                     {rel.ownership_name || (record as any).ownership_entity || '权属方已关联'}
                   </Tag>
@@ -333,7 +332,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
       dataIndex: 'is_active',
       key: 'is_active',
       width: 80,
-      render: (isActive: boolean, record: Project) => (
+      render: (isActive: boolean, _record: Project) => (
         <Badge
           status={isActive ? 'success' : 'error'}
           text={isActive ? '启用' : '禁用'}

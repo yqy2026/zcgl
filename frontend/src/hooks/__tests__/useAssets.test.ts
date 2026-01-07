@@ -3,13 +3,13 @@
  * 测试资产管理相关的自定义Hooks（简化版本）
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 
 // =============================================================================
 // 类型定义
 // =============================================================================
 
-interface Asset {
+interface _Asset {
   id: string
   ownershipEntity: string
   propertyName: string
@@ -47,36 +47,6 @@ vi.mock('@/services/assetService', () => ({
     searchAssets: vi.fn(() => Promise.resolve({ items: [], total: 0 })),
     validateAsset: vi.fn(() => Promise.resolve({ valid: true })),
   },
-}))
-
-vi.mock('@/store/useAssetStore', () => ({
-  useAssetStore: () => ({
-    assets: [],
-    selectedAsset: null,
-    loading: false,
-    error: null,
-    total: 0,
-    page: 1,
-    limit: 20,
-    hasNext: false,
-    hasPrev: false,
-    searchParams: {
-      page: 1,
-      limit: 20,
-      sort_field: 'created_at',
-      sort_order: 'desc',
-    },
-    setAssets: vi.fn(),
-    setSelectedAsset: vi.fn(),
-    setLoading: vi.fn(),
-    setError: vi.fn(),
-    setPagination: vi.fn(),
-    addAsset: vi.fn(),
-    updateAsset: vi.fn(),
-    removeAsset: vi.fn(),
-    setSearchParams: vi.fn(),
-    reset: vi.fn(),
-  }),
 }))
 
 // =============================================================================

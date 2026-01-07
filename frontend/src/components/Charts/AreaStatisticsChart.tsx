@@ -1,26 +1,15 @@
 import React from 'react'
 import { Card, Row, Col, Statistic, Spin, Alert, Typography, Space, Progress, Tag } from 'antd'
 import {
-  AreaChartOutlined,
   BuildOutlined,
   HomeOutlined,
   ShopOutlined,
 } from '@ant-design/icons'
 import { useQuery } from '@tanstack/react-query'
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-} from 'chart.js'
-import { Bar } from 'react-chartjs-2'
+import { Column, DualAxes } from '@ant-design/plots'
 
 import { assetService } from '@/services/assetService'
 import type { AssetSearchParams } from '@/types/asset'
-import { getChartYValue, getChartDatasetLabel } from '@/types/chart-types'
 
 // Local interface matching the actual API response structure
 interface AreaStatisticsData {
@@ -69,10 +58,7 @@ interface AreaStatisticsData {
   }>
 }
 
-// 注册Chart.js组件
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
-
-const { Title: AntTitle, Text } = Typography
+const { Text } = Typography
 
 interface AreaStatisticsChartProps {
   filters?: AssetSearchParams
@@ -93,221 +79,193 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
     refetchInterval: 5 * 60 * 1000, // 5分钟刷新一次
   })
 
-  // 物业性质面积对比图表配置
-  const propertyNatureChartData = {
-    labels: data?.by_property_nature?.map(item => item.property_nature) || [],
-    datasets: [
+  // 物业性质面积对比图表配置 - 为@ant-design/plots转换数据格式
+  const propertyNatureChartData = data?.by_property_nature?.flatMap(item => [
+    { property_nature: item.property_nature, type: '土地面积', value: item.land_area },
+    { property_nature: item.property_nature, type: '房产面积', value: item.property_area },
+    { property_nature: item.property_nature, type: '可租面积', value: item.rentable_area },
+    { property_nature: item.property_nature, type: '已租面积', value: item.rented_area },
+  ]) || []
+
+  const propertyNatureChartConfig = {
+    data: propertyNatureChartData,
+    xField: 'property_nature',
+    yField: 'value',
+    seriesField: 'type',
+    color: ({ type }: any) => {
+      if (type === '土地面积') return '#1890ff'
+      if (type === '房产面积') return '#52c41a'
+      if (type === '可租面积') return '#faad14'
+      if (type === '已租面积') return '#722ed1'
+      return '#1890ff'
+    },
+    columnStyle: {
+      fillOpacity: 0.6,
+      lineWidth: 1,
+    },
+    legend: {
+      position: 'top' as const,
+    },
+    tooltip: {
+      formatter: (datum: any) => ({
+        name: datum.type,
+        value: `${datum.value?.toLocaleString()} ㎡`,
+      }),
+    },
+    yAxis: {
+      min: 0,
+      label: {
+        formatter: (value: number) => `${Number(value).toLocaleString()} ㎡`,
+      },
+    },
+    animation: {
+      appear: {
+        animation: 'scale-in-y',
+        duration: 1000,
+      },
+    },
+  }
+
+  // 权属方面积对比图表配置 - DualAxes for area + occupancy rate
+  const ownershipEntityData = data?.by_ownership_entity?.slice(0, 10).map(item => ({
+    entity: item.ownership_entity.length > 8
+      ? item.ownership_entity.substring(0, 8) + '...'
+      : item.ownership_entity,
+    total_area: item.total_area,
+    occupancy_rate: item.occupancy_rate,
+    full_name: item.ownership_entity,
+  })) || []
+
+  const ownershipEntityChartConfig = {
+    data: [ownershipEntityData, ownershipEntityData],
+    xField: 'entity',
+    yField: ['total_area', 'occupancy_rate'],
+    geometryOptions: [
       {
-        label: '土地面积 (㎡)',
-        data: data?.by_property_nature?.map(item => item.land_area) || [],
-        backgroundColor: 'rgba(24, 144, 255, 0.6)',
-        borderColor: '#1890ff',
-        borderWidth: 1,
+        geometry: 'column',
+        color: '#1890ff',
+        columnStyle: {
+          fillOpacity: 0.6,
+        },
       },
       {
-        label: '房产面积 (㎡)',
-        data: data?.by_property_nature?.map(item => item.property_area) || [],
-        backgroundColor: 'rgba(82, 196, 26, 0.6)',
-        borderColor: '#52c41a',
-        borderWidth: 1,
-      },
-      {
-        label: '可租面积 (㎡)',
-        data: data?.by_property_nature?.map(item => item.rentable_area) || [],
-        backgroundColor: 'rgba(250, 173, 20, 0.6)',
-        borderColor: '#faad14',
-        borderWidth: 1,
-      },
-      {
-        label: '已租面积 (㎡)',
-        data: data?.by_property_nature?.map(item => item.rented_area) || [],
-        backgroundColor: 'rgba(114, 46, 209, 0.6)',
-        borderColor: '#722ed1',
-        borderWidth: 1,
+        geometry: 'line',
+        color: '#f5222d',
+        lineStyle: {
+          lineWidth: 2,
+        },
+        point: {
+          size: 4,
+        },
       },
     ],
-  }
-
-  const propertyNatureChartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'top' as const,
-      },
-      title: {
-        display: true,
-        text: '按物业性质面积分布',
-        font: {
-          size: 16,
-          weight: 'bold' as const,
+    yAxis: {
+      total_area: {
+        min: 0,
+        label: {
+          formatter: (value: number) => `${Number(value).toLocaleString()} ㎡`,
         },
       },
-      tooltip: {
-        callbacks: {
-          label: (context: unknown) => {
-            const label = getChartDatasetLabel(context);
-            const value = getChartYValue(context);
-            return `${label}: ${value.toLocaleString()} ㎡`;
-          },
-        },
-      },
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        ticks: {
-          callback: (value: number) => `${Number(value).toLocaleString()} ㎡`,
-        },
-      },
-    },
-  }
-
-  // 权属方面积对比图表配置
-  const ownershipEntityChartData = {
-    labels: data?.by_ownership_entity?.slice(0, 10).map(item => 
-      item.ownership_entity.length > 8 
-        ? item.ownership_entity.substring(0, 8) + '...'
-        : item.ownership_entity
-    ) || [],
-    datasets: [
-      {
-        label: '总面积 (㎡)',
-        data: data?.by_ownership_entity?.slice(0, 10).map(item => item.total_area) || [],
-        backgroundColor: 'rgba(24, 144, 255, 0.6)',
-        borderColor: '#1890ff',
-        borderWidth: 1,
-        yAxisID: 'y',
-      },
-      {
-        label: '出租率 (%)',
-        data: data?.by_ownership_entity?.slice(0, 10).map(item => item.occupancy_rate) || [],
-        backgroundColor: 'rgba(245, 34, 45, 0.6)',
-        borderColor: '#f5222d',
-        borderWidth: 1,
-        yAxisID: 'y1',
-        type: 'line' as const,
-      },
-    ],
-  }
-
-  const ownershipEntityChartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'top' as const,
-      },
-      title: {
-        display: true,
-        text: '主要权属方面积与出租率对比',
-        font: {
-          size: 16,
-          weight: 'bold' as const,
-        },
-      },
-      tooltip: {
-        callbacks: {
-          label: (context: unknown) => {
-            const label = getChartDatasetLabel(context);
-            const value = getChartYValue(context);
-            if (label?.includes('出租率')) {
-              return `${label}: ${value.toFixed(2)}%`;
-            }
-            return `${label}: ${value.toLocaleString()} ㎡`;
-          },
-        },
-      },
-    },
-    scales: {
-      x: {
-        ticks: {
-          maxRotation: 45,
-          minRotation: 0,
-        },
-      },
-      y: {
-        type: 'linear' as const,
-        display: true,
-        position: 'left' as const,
-        beginAtZero: true,
-        ticks: {
-          callback: (value: number) => `${Number(value).toLocaleString()} ㎡`,
-        },
-      },
-      y1: {
-        type: 'linear' as const,
-        display: true,
-        position: 'right' as const,
-        beginAtZero: true,
+      occupancy_rate: {
+        min: 0,
         max: 100,
-        ticks: {
-          callback: (value: number) => `${value}%`,
+        label: {
+          formatter: (value: number) => `${value}%`,
         },
-        grid: {
-          drawOnChartArea: false,
-        },
+      },
+    },
+    tooltip: {
+      formatter: (datum: any, type: string) => {
+        if (type === 'total_area') {
+          return {
+            name: '总面积',
+            value: `${datum.total_area?.toLocaleString()} ㎡`,
+          }
+        }
+        return {
+          name: '出租率',
+          value: `${datum.occupancy_rate?.toFixed(2)}%`,
+        }
+      },
+      customContent: (title: any, data: any) => {
+        const datum = data?.[0]?.data
+        if (!datum) return null
+        return (
+          <div style={{ padding: '8px' }}>
+            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{datum.full_name || datum.entity}</div>
+            <div>总面积: {datum.total_area?.toLocaleString()} ㎡</div>
+            <div>出租率: {datum.occupancy_rate?.toFixed(2)}%</div>
+          </div>
+        )
+      },
+    },
+    xAxis: {
+      label: {
+        autoRotate: true,
+        autoHide: true,
+        maxRotation: 45,
+        minRotation: 0,
       },
     },
   }
 
   // 面积区间分布图表配置
-  const areaRangeChartData = {
-    labels: data?.area_ranges?.map(item => item.range) || [],
-    datasets: [
-      {
-        label: '资产数量',
-        data: data?.area_ranges?.map(item => item.count) || [],
-        backgroundColor: 'rgba(82, 196, 26, 0.6)',
-        borderColor: '#52c41a',
-        borderWidth: 1,
-      },
-    ],
-  }
-
-  const areaRangeChartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: false,
-      },
-      title: {
-        display: true,
-        text: '资产面积区间分布',
-        font: {
-          size: 16,
-          weight: 'bold' as const,
-        },
-      },
-      tooltip: {
-        callbacks: {
-          label: (context: unknown) => {
-            const ctx = context as { dataIndex?: number; parsed?: number | { y: number } };
-            const dataIndex = ctx.dataIndex ?? 0;
-            const item = data?.area_ranges?.[dataIndex];
-            const yValue = typeof ctx.parsed === 'number' ? ctx.parsed : (ctx.parsed as { y: number })?.y ?? 0;
-            return [
-              `资产数量: ${yValue} 个`,
-              `总面积: ${item?.total_area?.toLocaleString()} ㎡`,
-              `占比: ${item?.percentage?.toFixed(1)}%`,
-            ]
-          },
-        },
+  const areaRangeChartConfig = {
+    data: data?.area_ranges?.map(item => ({
+      range: item.range,
+      count: item.count,
+      total_area: item.total_area,
+      percentage: item.percentage,
+    })) || [],
+    xField: 'range',
+    yField: 'count',
+    color: '#52c41a',
+    columnStyle: {
+      fillOpacity: 0.6,
+      stroke: '#52c41a',
+      lineWidth: 1,
+    },
+    label: {
+      position: 'top' as const,
+      formatter: (datum: any) => `${datum.count} 个`,
+      style: {
+        fill: '#333',
+        fontSize: 12,
       },
     },
-    scales: {
-      y: {
-        beginAtZero: true,
-        ticks: {
-          stepSize: 1,
-        },
+    tooltip: {
+      formatter: (datum: any) => ({
+        name: datum.range,
+        value: `${datum.count} 个`,
+      }),
+      customContent: (title: any, data: any) => {
+        const datum = data?.[0]?.data
+        if (!datum) return null
+        return (
+          <div style={{ padding: '8px' }}>
+            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{datum.range}</div>
+            <div>资产数量: {datum.count} 个</div>
+            <div>总面积: {datum.total_area?.toLocaleString()} ㎡</div>
+            <div>占比: {datum.percentage?.toFixed(1)}%</div>
+          </div>
+        )
       },
-      x: {
-        ticks: {
-          maxRotation: 45,
-          minRotation: 0,
-        },
+    },
+    yAxis: {
+      min: 0,
+    },
+    xAxis: {
+      label: {
+        autoRotate: true,
+        autoHide: true,
+        maxRotation: 45,
+        minRotation: 0,
+      },
+    },
+    animation: {
+      appear: {
+        animation: 'scale-in-y',
+        duration: 1000,
       },
     },
   }
@@ -409,9 +367,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
         <Col xs={24} lg={12}>
           <Card title="物业性质面积分布" style={{ marginBottom: 16 }}>
             <Spin spinning={isLoading}>
-              <div style={{ height: height }}>
-                <Bar data={propertyNatureChartData} options={propertyNatureChartOptions as any} />
-              </div>
+              <Column {...propertyNatureChartConfig} height={height} />
             </Spin>
           </Card>
         </Col>
@@ -420,9 +376,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
         <Col xs={24} lg={12}>
           <Card title="面积区间分布" style={{ marginBottom: 16 }}>
             <Spin spinning={isLoading}>
-              <div style={{ height: height }}>
-                <Bar data={areaRangeChartData} options={areaRangeChartOptions as any} />
-              </div>
+              <Column {...areaRangeChartConfig} height={height} />
             </Spin>
           </Card>
         </Col>
@@ -431,9 +385,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
         <Col xs={24}>
           <Card title="权属方面积与出租率对比">
             <Spin spinning={isLoading}>
-              <div style={{ height: height }}>
-                <Bar data={ownershipEntityChartData as any} options={ownershipEntityChartOptions as any} />
-              </div>
+              <DualAxes {...ownershipEntityChartConfig} height={height} />
             </Spin>
           </Card>
         </Col>

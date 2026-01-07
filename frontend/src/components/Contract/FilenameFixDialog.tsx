@@ -11,20 +11,17 @@ import {
   Col,
   Table,
   Tag,
-  Tooltip,
   message,
-  Spin,
-  Divider
+  Spin
 } from 'antd';
 import {
-  CheckCircleOutlined,
-  ExclamationCircleOutlined,
   InfoCircleOutlined,
   ReloadOutlined,
-  CopyOutlined,
-  EditOutlined
+  CopyOutlined
 } from '@ant-design/icons';
+import { createLogger } from '../../utils/logger';
 
+const componentLogger = createLogger('FilenameFixDialog');
 const { Title, Text, Paragraph } = Typography;
 
 interface FilenameFixDialogProps {
@@ -62,10 +59,10 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
   onFilenameFixed
 }) => {
   const [loading, setLoading] = useState(false);
-  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
+  const [_validationResult, _setValidationResult] = useState<ValidationResult | null>(null);
   const [suggestedFilename, setSuggestedFilename] = useState<string>('');
   const [currentStep, setCurrentStep] = useState<number>(0);
-  const [filenameChanges, setFilenameChanges] = useState<FilenameChange[]>([]);
+  const [_filenameChanges, _setFilenameChanges] = useState<FilenameChange[]>([]);
   const [customFilename, setCustomFilename] = useState<string>('');
   const [copySuccess, setCopySuccess] = useState<boolean>(false);
 
@@ -207,7 +204,7 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
       // 本地分析和修复
       const { fixed, changes } = analyzeAndFixFilename(originalFilename);
       setSuggestedFilename(fixed);
-      setFilenameChanges(changes);
+      _setFilenameChanges(changes);
       setCustomFilename(fixed);
 
       // 构建步骤信息
@@ -312,7 +309,7 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
       setCurrentStep(newSteps.length - 1);
 
     } catch (error) {
-      console.error('文件名修复失败:', error);
+      componentLogger.error('文件名修复失败:', error as Error);
       setSteps([
         {
           title: '修复失败',
@@ -336,7 +333,7 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
     setCustomFilename(value);
     const { fixed, changes } = analyzeAndFixFilename(value);
     setSuggestedFilename(fixed);
-    setFilenameChanges(changes);
+    _setFilenameChanges(changes);
   };
 
   const handleConfirm = () => {

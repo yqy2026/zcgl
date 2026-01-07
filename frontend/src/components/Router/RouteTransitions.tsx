@@ -3,7 +3,7 @@
  * 提供流畅的页面切换动画和过渡效果
  */
 
-import React, { useState, useEffect, useRef, ReactNode } from "react";
+import React, { useState, useEffect, ReactNode } from "react";
 import { useLocation, useNavigationType } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ConfigProvider, theme } from "antd";
@@ -196,12 +196,12 @@ export const RouteTransition: React.FC<RouteTransitionProps> = ({
   children,
   animationType = "fade",
   duration,
-  easing,
+  easing: _easing,
   custom,
 }) => {
   const location = useLocation();
   const navigationType = useNavigationType();
-  const [prevLocation, setPrevLocation] = useState(location);
+  const [_prevLocation, setPrevLocation] = useState(location);
 
   useEffect(() => {
     setPrevLocation(location);

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Modal, Typography, Space, Button } from 'antd'
+import { Modal, Typography, Space } from 'antd'
 import {
   ExclamationCircleOutlined,
   DeleteOutlined,

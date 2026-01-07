@@ -1,5 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { AssetSearchParams } from '@/types/asset'
+import { createLogger } from '@/utils/logger'
+
+const searchLogger = createLogger('SearchHistory')
 
 interface SearchHistoryItem {
   id: string
@@ -24,7 +27,7 @@ export const useSearchHistory = () => {
         setSearchHistory(history)
       }
     } catch (error) {
-      console.error('Failed to load search history:', error)
+      searchLogger.error('Failed to load search history:', error as Error)
     }
   }, [])
 
@@ -33,7 +36,7 @@ export const useSearchHistory = () => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(history))
     } catch (error) {
-      console.error('Failed to save search history:', error)
+      searchLogger.error('Failed to save search history:', error as Error)
     }
   }, [])
 

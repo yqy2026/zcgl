@@ -475,7 +475,7 @@ class EnhancedDatabaseManager:
                     )  # pragma: no cover
                     cleaned_count += result.rowcount  # pragma: no cover
                     session.commit()  # pragma: no cover
-                except Exception:  # pragma: no cover
+                except Exception:  # pragma: no cover  # nosec - B110: Intentional graceful degradation when history table doesn't exist
                     # 如果查询历史表不存在，跳过
                     pass  # pragma: no cover
 

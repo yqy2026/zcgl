@@ -1,6 +1,9 @@
 import { useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import SuccessNotification from '@/components/Feedback/SuccessNotification'
+import { createLogger } from '@/utils/logger'
+
+const errorLogger = createLogger('useErrorHandler')
 
 interface ErrorInfo {
   code?: string | number
@@ -106,7 +109,7 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}) => {
 
     // 记录错误日志
     if (logErrors) {
-      console.error('Error handled:', errorInfo)
+      errorLogger.error('Error handled:', undefined, errorInfo as unknown as Record<string, unknown>)
 
       // 发送错误报告到监控服务
       reportError(errorInfo)
@@ -143,7 +146,7 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}) => {
     }
 
     if (logErrors) {
-      console.error('Validation errors:', errors)
+      errorLogger.error('Validation errors:', undefined, errors as unknown as Record<string, unknown>)
     }
 
     return errors
@@ -158,7 +161,7 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}) => {
     }
 
     if (logErrors) {
-      console.error('Business error:', errorInfo)
+      errorLogger.error('Business error:', undefined, errorInfo as unknown as Record<string, unknown>)
     }
 
     if (showNotification) {
@@ -192,7 +195,7 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}) => {
     }
 
     if (logErrors) {
-      console.error('Upload error:', errorInfo)
+      errorLogger.error('Upload error:', undefined, errorInfo as unknown as Record<string, unknown>)
     }
 
     if (showNotification) {
@@ -243,7 +246,7 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}) => {
 }
 
 // 错误报告函数
-const reportError = (errorInfo: ErrorInfo) => {
+const reportError = (_errorInfo: ErrorInfo) => {
   // 这里可以集成错误监控服务
   try {
     // 示例：发送到后端API
@@ -265,7 +268,7 @@ const reportError = (errorInfo: ErrorInfo) => {
     //   })
     // }
   } catch (error) {
-    console.error('Failed to report error:', error)
+    errorLogger.error('Failed to report error:', error as Error)
   }
 }
 

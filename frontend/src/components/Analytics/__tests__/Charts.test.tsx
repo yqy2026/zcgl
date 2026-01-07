@@ -6,95 +6,36 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import React from 'react'
 
-// Mock recharts components
-vi.mock('recharts', () => ({
-  ResponsiveContainer: ({ children, width, height }: any) => (
-    <div data-testid="responsive-container" data-width={width} data-height={height}>
-      {children}
+// Mock @ant-design/plots
+vi.mock('@ant-design/plots', () => ({
+  Pie: ({ data, height }: any) => (
+    <div data-testid="pie" data-height={height}>
+      {data?.map((d: any, i: number) => (
+        <div key={i} />
+      ))}
     </div>
   ),
-  PieChart: ({ children }: any) => (
-    <div data-testid="pie-chart">{children}</div>
-  ),
-  Pie: ({ data, dataKey, nameKey, cx, cy, innerRadius, outerRadius, paddingAngle }: any) => (
-    <div
-      data-testid="pie"
-      data-data={JSON.stringify(data)}
-      data-data-key={dataKey}
-      data-name-key={nameKey}
-      data-cx={cx}
-      data-cy={cy}
-      data-inner-radius={innerRadius}
-      data-outer-radius={outerRadius}
-      data-padding-angle={paddingAngle}
-    />
-  ),
-  BarChart: ({ children, data, layout, margin }: any) => (
-    <div data-testid="bar-chart" data-layout={layout} data-margin={JSON.stringify(margin)}>
-      {children}
-      <div data-testid="bar-data">{JSON.stringify(data)}</div>
+  Column: ({ data, height }: any) => (
+    <div data-testid="column" data-height={height}>
+      {data?.map((d: any, i: number) => (
+        <div key={i} />
+      ))}
     </div>
   ),
-  Bar: ({ dataKey, fill, radius, stackId }: any) => (
-    <div
-      data-testid="bar"
-      data-data-key={dataKey}
-      data-fill={fill}
-      data-radius={JSON.stringify(radius)}
-      data-stack-id={stackId}
-    />
-  ),
-  XAxis: ({ dataKey, tick, angle }: any) => (
-    <div data-testid="x-axis" data-data-key={dataKey} data-angle={angle} />
-  ),
-  YAxis: ({ tick }: any) => <div data-testid="y-axis" data-tick={tick} />,
-  CartesianGrid: ({ strokeDasharray }: any) => (
-    <div data-testid="cartesian-grid" data-stroke-dasharray={strokeDasharray} />
-  ),
-  Tooltip: ({ content, cursor }: any) => (
-    <div data-testid="tooltip" data-cursor={cursor}>
-      {content}
+  Line: ({ data, height }: any) => (
+    <div data-testid="line" data-height={height}>
+      {data?.map((d: any, i: number) => (
+        <div key={i} />
+      ))}
     </div>
   ),
-  Legend: ({ content, align, verticalAlign }: any) => (
-    <div data-testid="legend" data-align={align} data-vertical-align={verticalAlign}>
-      {content}
+  Area: ({ data, height }: any) => (
+    <div data-testid="area" data-height={height}>
+      {data?.map((d: any, i: number) => (
+        <div key={i} />
+      ))}
     </div>
   ),
-  LineChart: ({ children, data, margin }: any) => (
-    <div data-testid="line-chart" data-margin={JSON.stringify(margin)}>
-      {children}
-      <div data-testid="line-data">{JSON.stringify(data)}</div>
-    </div>
-  ),
-  Line: ({ dataKey, stroke, strokeWidth, dot, activeDot, type }: any) => (
-    <div
-      data-testid="line"
-      data-data-key={dataKey}
-      data-stroke={stroke}
-      data-stroke-width={strokeWidth}
-      data-dot={dot}
-      data-active-dot={activeDot}
-      data-type={type}
-    />
-  ),
-  AreaChart: ({ children, data, margin }: any) => (
-    <div data-testid="area-chart" data-margin={JSON.stringify(margin)}>
-      {children}
-      <div data-testid="area-data">{JSON.stringify(data)}</div>
-    </div>
-  ),
-  Area: ({ dataKey, stroke, fill, stackId, type }: any) => (
-    <div
-      data-testid="area"
-      data-data-key={dataKey}
-      data-stroke={stroke}
-      data-fill={fill}
-      data-stack-id={stackId}
-      data-type={type}
-    />
-  ),
-  Cell: ({ fill }: any) => <div data-testid="cell" data-fill={fill} />,
 }))
 
 // Mock Ant Design components

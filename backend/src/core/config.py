@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
 
     # 服务器配置
-    HOST: str = Field(default="0.0.0.0", json_schema_extra={"env": "HOST"})
+    HOST: str = Field(default="0.0.0.0", json_schema_extra={"env": "HOST"})  # nosec - B104: Dev default, override in prod
     PORT: int = Field(default=8002, json_schema_extra={"env": "PORT"})
     RELOAD: bool = Field(default=True, json_schema_extra={"env": "RELOAD"})
 

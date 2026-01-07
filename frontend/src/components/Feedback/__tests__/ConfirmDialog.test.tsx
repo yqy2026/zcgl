@@ -192,7 +192,7 @@ describe('ConfirmDialog - 回调函数测试', () => {
     const element = React.createElement(ConfirmDialog, {
       type: 'warning',
       visible: true,
-      onCancel: handleCancel,
+      onCancel: _onCancel, handleCancel,
     })
     expect(element).toBeTruthy()
   })
@@ -390,7 +390,7 @@ describe('ConfirmDialog - 边界情况测试', () => {
       type: 'warning',
       visible: true,
       onConfirm: undefined,
-      onCancel: undefined,
+      onCancel: _onCancel, undefined,
     })
     expect(element).toBeTruthy()
   })
@@ -446,7 +446,7 @@ describe('ConfirmDialog - 组合属性测试', () => {
       cancelText: '取消',
       confirmLoading: false,
       onConfirm: handleConfirm,
-      onCancel: handleCancel,
+      onCancel: _onCancel, handleCancel,
       width: 500,
       centered: true,
       maskClosable: false,

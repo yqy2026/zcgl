@@ -1,4 +1,7 @@
 import { message, notification, Modal } from 'antd'
+import { createLogger } from './logger'
+
+const uxLogger = createLogger('UX')
 
 // 用户操作记录接口
 export interface UserAction {
@@ -22,21 +25,21 @@ export interface UXConfig {
   enableErrorReporting?: boolean
   enablePerformanceMonitoring?: boolean
   enableUserFeedback?: boolean
-  
+
   // 错误处理设置
   errorReportingEndpoint?: string
   maxErrorReports?: number
   errorReportingInterval?: number
-  
+
   // 通知设置
   notificationPlacement?: 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight'
   notificationDuration?: number
   maxNotifications?: number
-  
+
   // 消息设置
   messageDuration?: number
   maxMessages?: number
-  
+
   // 性能监控设置
   performanceThreshold?: number
   memoryThreshold?: number
@@ -176,7 +179,7 @@ class UXManager {
 
   // 错误处理
   public handleError(error: Error, context?: ErrorContext) {
-    console.error('UXManager caught error:', error, context)
+    uxLogger.error('UXManager caught error:', error, context)
 
     // 添加到错误队列
     this.errorQueue.push(error)
@@ -193,7 +196,7 @@ class UXManager {
     }
   }
 
-  private showErrorFeedbackInternal(error: Error, context?: ErrorContext) {
+  private showErrorFeedbackInternal(error: Error, _context?: ErrorContext) {
     // 根据错误类型显示不同的反馈
     // Error context
     if (error.message.includes('Network')) {
@@ -242,17 +245,17 @@ class UXManager {
         body: JSON.stringify(report),
       })
     } catch (reportError) {
-      console.error('Failed to send error report:', reportError)
+      uxLogger.error('Failed to send error report:', reportError as Error)
     }
   }
 
   // 性能监控
   public recordPerformanceMetric(name: string, value: number) {
     this.performanceMetrics.set(name, value)
-    
+
     // 如果性能指标超过阈值，显示警告
     if (value > this.config.performanceThreshold!) {
-      console.warn(`Performance warning: ${name} took ${value}ms`)
+      uxLogger.warn(`Performance warning: ${name} took ${value}ms`)
     }
   }
 
@@ -263,7 +266,7 @@ class UXManager {
   public endPerformanceMeasure(name: string) {
     performance.mark(`${name}-end`)
     performance.measure(name, `${name}-start`, `${name}-end`)
-    
+
     const measure = performance.getEntriesByName(name, 'measure')[0]
     if (measure) {
       this.recordPerformanceMetric(name, measure.duration)
@@ -338,7 +341,7 @@ class UXManager {
 
   public setLoading(key: string, loading: boolean) {
     this.loadingStates.set(key, loading)
-    
+
     if (loading) {
       this.recordUserAction('startLoading', { key })
     } else {
@@ -386,7 +389,7 @@ class UXManager {
     this.performanceMetrics.clear()
     this.userActions = []
     this.loadingStates.clear()
-    
+
     notification.destroy()
     message.destroy()
   }
@@ -394,7 +397,7 @@ class UXManager {
   // 更新配置
   public updateConfig(newConfig: Partial<UXConfig>) {
     this.config = { ...this.config, ...newConfig }
-    
+
     // 重新配置组件
     notification.config({
       placement: this.config.notificationPlacement!,
@@ -413,34 +416,34 @@ class UXManager {
 export const uxManager = new UXManager()
 
 // 导出便捷方法
-export const showSuccess = (message: string, description?: string) => 
+export const showSuccess = (message: string, description?: string) =>
   uxManager.showSuccessFeedback(message, description)
 
-export const showError = (message: string, description?: string) => 
+export const showError = (message: string, description?: string) =>
   uxManager.showErrorFeedback(message, description)
 
-export const showWarning = (message: string, description?: string) => 
+export const showWarning = (message: string, description?: string) =>
   uxManager.showWarningFeedback(message, description)
 
-export const showInfo = (message: string, description?: string) => 
+export const showInfo = (message: string, description?: string) =>
   uxManager.showInfoFeedback(message, description)
 
-export const showConfirm = (options: Parameters<typeof uxManager.showConfirmDialog>[0]) => 
+export const showConfirm = (options: Parameters<typeof uxManager.showConfirmDialog>[0]) =>
   uxManager.showConfirmDialog(options)
 
 export const recordAction = (action: string, data?: Record<string, unknown>) =>
   uxManager.recordUserAction(action, data)
 
-export const startMeasure = (name: string) => 
+export const startMeasure = (name: string) =>
   uxManager.startPerformanceMeasure(name)
 
-export const endMeasure = (name: string) => 
+export const endMeasure = (name: string) =>
   uxManager.endPerformanceMeasure(name)
 
-export const setLoading = (key: string, loading: boolean) => 
+export const setLoading = (key: string, loading: boolean) =>
   uxManager.setLoading(key, loading)
 
-export const isLoading = (key: string) => 
+export const isLoading = (key: string) =>
   uxManager.isLoading(key)
 
 export default uxManager

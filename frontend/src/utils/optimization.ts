@@ -131,7 +131,7 @@ export const useMemoryLeakDetection = (componentName: string) => {
     
     return () => {
       const unmountTime = Date.now()
-      const lifeTime = unmountTime - (mountTimeRef.current || 0)
+      const _lifeTime = unmountTime - (mountTimeRef.current || 0)
       
       // 清理定时器
       timersRef.current.forEach(timer => clearTimeout(timer))
@@ -278,8 +278,8 @@ export const useWebWorker = (workerScript: string) => {
       return () => {
         workerRef.current?.terminate()
       }
-    } catch (err) {
-      setError(err as Error)
+    } catch (error) {
+      setError(error as Error)
     }
   }, [workerScript])
 

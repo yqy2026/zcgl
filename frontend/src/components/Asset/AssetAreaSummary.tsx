@@ -15,15 +15,15 @@ const AssetAreaSummary: React.FC<AssetAreaSummaryProps> = ({ analyticsData, load
     analyticsData?.area_summary && analyticsData.area_summary.total_assets >= 0;
 
   const summary =
-    hasAnalyticsData && analyticsData.area_summary
+    hasAnalyticsData === true && analyticsData?.area_summary !== undefined
       ? {
-          totalLandArea: analyticsData.area_summary.total_area || 0,
-          totalActualArea: analyticsData.area_summary.total_area || 0,
-          totalRentableArea: analyticsData.area_summary.total_rentable_area,
-          totalRentedArea: analyticsData.area_summary.total_rented_area,
-          totalUnrentedArea: analyticsData.area_summary.total_unrented_area,
-          averageOccupancyRate: analyticsData.area_summary.occupancy_rate,
-        }
+        totalLandArea: analyticsData.area_summary.total_area ?? 0,
+        totalActualArea: analyticsData.area_summary.total_area ?? 0,
+        totalRentableArea: analyticsData.area_summary.total_rentable_area,
+        totalRentedArea: analyticsData.area_summary.total_rented_area,
+        totalUnrentedArea: analyticsData.area_summary.total_unrented_area,
+        averageOccupancyRate: analyticsData.area_summary.occupancy_rate,
+      }
       : null;
 
   return (

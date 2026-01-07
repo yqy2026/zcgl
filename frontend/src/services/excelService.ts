@@ -8,8 +8,11 @@
 
 import { enhancedApiClient } from '@/api/client';
 import { ApiErrorHandler } from '../utils/responseExtractor';
+import { createLogger } from '../utils/logger';
 import type { ExcelImportResponse, ExcelExportRequest, ExcelExportResponse } from '@/types/api';
 import type { ImportExportHistory, TaskStatusResponse, Filters } from '@/types/common';
+
+const logger = createLogger('ExcelService');
 
 // Excel文件验证结果接口
 export interface ExcelValidationResult {
@@ -119,7 +122,7 @@ export class ExcelService {
             'Content-Type': 'multipart/form-data'
           },
           onUploadProgress: onProgress ? (progressEvent) => {
-            if (progressEvent.total) {
+            if (progressEvent.total !== undefined && progressEvent.total > 0) {
               const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
               onProgress(progress);
             }
@@ -347,7 +350,7 @@ export class ExcelService {
    */
   async downloadExportFile(filename: string, taskId?: string): Promise<void> {
     try {
-      const url = taskId ? `${this.baseUrl}/download/${filename}?task_id=${taskId}` : `${this.baseUrl}/download/${filename}`;
+      const url = (taskId !== undefined && taskId !== '') ? `${this.baseUrl}/download/${filename}?task_id=${taskId}` : `${this.baseUrl}/download/${filename}`;
       const result = await enhancedApiClient.get<Blob>(
         url,
         {
@@ -384,7 +387,7 @@ export class ExcelService {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      if (sheetName) {
+      if (sheetName !== undefined && sheetName !== '') {
         formData.append('sheet_name', sheetName);
       }
 
@@ -470,7 +473,7 @@ export class ExcelService {
       return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.warn('获取Excel模板列表失败:', enhancedError.message);
+      logger.warn('获取Excel模板列表失败', { error: enhancedError.message });
       return [];
     }
   }
@@ -482,7 +485,7 @@ export class ExcelService {
    */
   async getImportHistory(page = 1, limit = 20): Promise<ImportExportHistory[]> {
     try {
-      const result = await enhancedApiClient.get<{ data: ImportExportHistory[] }>(
+      const result = await enhancedApiClient.get<ImportExportHistory[]>(
         `${this.baseUrl}/import/history`,
         {
           params: { page, limit },
@@ -492,15 +495,10 @@ export class ExcelService {
         }
       );
 
-      if (!result.success) {
-        throw new Error(`获取导入历史失败: ${result.error}`);
-      }
-
-      // 处理嵌套数据结构
-      return (result.data as any)?.data || [];
+      return result.data ?? [];
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.warn('获取导入历史失败:', enhancedError.message);
+      logger.warn('获取导入历史失败', { error: enhancedError.message });
       return [];
     }
   }
@@ -510,7 +508,7 @@ export class ExcelService {
    */
   async getExportHistory(page = 1, limit = 20): Promise<ImportExportHistory[]> {
     try {
-      const result = await enhancedApiClient.get<{ data: ImportExportHistory[] }>(
+      const result = await enhancedApiClient.get<ImportExportHistory[]>(
         `${this.baseUrl}/export/history`,
         {
           params: { page, limit },
@@ -520,15 +518,10 @@ export class ExcelService {
         }
       );
 
-      if (!result.success) {
-        throw new Error(`获取导出历史失败: ${result.error}`);
-      }
-
-      // 处理嵌套数据结构
-      return (result.data as any)?.data || [];
+      return result.data ?? [];
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.warn('获取导出历史失败:', enhancedError.message);
+      logger.warn('获取导出历史失败', { error: enhancedError.message });
       return [];
     }
   }
@@ -592,7 +585,7 @@ export class ExcelService {
       return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.warn('获取字段映射失败:', enhancedError.message);
+      logger.warn('获取字段映射失败', { error: enhancedError.message });
       return {};
     }
   }
@@ -670,7 +663,7 @@ export class ExcelService {
       return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.warn('获取支持格式失败:', enhancedError.message);
+      logger.warn('获取支持格式失败', { error: enhancedError.message });
       // 返回默认格式
       return {
         formats: ['xlsx', 'xls', 'csv'],
@@ -712,14 +705,13 @@ export class ExcelService {
       }
 
       return result.data!;
-    } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
+    } catch {
       // 本地进行基本检查
       const extension = filename.split('.').pop()?.toLowerCase();
       const supportedExtensions = ['xlsx', 'xls', 'csv'];
       const maxFileSize = 50 * 1024 * 1024; // 50MB
 
-      if (!extension || !supportedExtensions.includes(extension)) {
+      if (extension === undefined || extension === '' || !supportedExtensions.includes(extension)) {
         return {
           supported: false,
           reason: '不支持的文件格式',

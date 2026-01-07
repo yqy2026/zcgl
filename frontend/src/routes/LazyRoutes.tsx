@@ -1,5 +1,8 @@
 import React, { Suspense } from 'react'
 import { SkeletonLoader } from '@/components/Loading'
+import { createLogger } from '@/utils/logger'
+
+const routeLogger = createLogger('LazyRoutes')
 
 // 懒加载页面组件
 const DashboardPage = React.lazy(() => import('@/pages/Dashboard/DashboardPage'))
@@ -58,7 +61,7 @@ export const preloadRoutes = {
 // 路由预加载钩子
 export const useRoutePreload = () => {
   const preloadRoute = (routeName: keyof typeof preloadRoutes) => {
-    preloadRoutes[routeName]().catch(console.error)
+    preloadRoutes[routeName]().catch((error: unknown) => routeLogger.error(`Failed to preload route ${routeName}:`, error as Error))
   }
 
   return { preloadRoute }

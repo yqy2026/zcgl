@@ -44,7 +44,7 @@ const OwnershipDetail: React.FC<OwnershipDetailProps> = ({
       title: '项目名称',
       dataIndex: 'name',
       key: 'name',
-      render: (text: string, record: Project) => (
+      render: (text: string, _record: Project) => (
         <Space>
           <ProjectOutlined />
           {text}

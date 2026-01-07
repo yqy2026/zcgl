@@ -5,7 +5,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from ...crud.organization import get_organization_crud
+from ...crud.organization import organization as organization_crud
 from ...database import get_db
 from ...middleware.auth import get_current_active_user
 from ...models.auth import User
@@ -20,6 +20,7 @@ from ...schemas.organization import (
     OrganizationTree,
     OrganizationUpdate,
 )
+from ...services.organization import organization_service
 
 router = APIRouter(tags=["组织架构管理"])
 
@@ -32,8 +33,7 @@ async def get_organizations(
     current_user: User = Depends(get_current_active_user),
 ):
     """获取组织列表"""
-    crud = get_organization_crud(db)
-    organizations = crud.get_all(skip=skip, limit=limit)
+    organizations = organization_crud.get_multi_with_filters(db, skip=skip, limit=limit)
     return organizations
 
 
@@ -44,11 +44,10 @@ async def get_organization_tree(
     current_user: User = Depends(get_current_active_user),
 ):
     """获取组织树形结构"""
-    crud = get_organization_crud(db)
 
-    def build_tree(parent_id: str | None = None) -> list[OrganizationTree]:
+    def build_tree(pid: str | None = None) -> list[OrganizationTree]:
         """递归构建组织树"""
-        organizations = crud.get_tree(parent_id)
+        organizations = organization_crud.get_tree(db, parent_id=pid)
         tree = []
 
         for org in organizations:
@@ -76,8 +75,9 @@ async def search_organizations(
     current_user: User = Depends(get_current_active_user),
 ):
     """搜索组织"""
-    crud = get_organization_crud(db)
-    organizations = crud.search(keyword, skip=skip, limit=limit)
+    organizations = organization_crud.search(
+        db, keyword=keyword, skip=skip, limit=limit
+    )
     return organizations
 
 
@@ -87,8 +87,7 @@ async def get_organization_statistics(
     current_user: User = Depends(get_current_active_user),
 ):
     """获取组织统计信息"""
-    crud = get_organization_crud(db)
-    stats = crud.get_statistics()
+    stats = organization_service.get_statistics(db)
     return OrganizationStatistics(**stats)
 
 
@@ -99,8 +98,7 @@ async def get_organization(
     current_user: User = Depends(get_current_active_user),
 ):
     """根据ID获取组织详情"""
-    crud = get_organization_crud(db)
-    organization = crud.get(org_id)
+    organization = organization_crud.get(db, id=org_id)
     if not organization:
         raise HTTPException(status_code=404, detail="组织不存在")
     return organization
@@ -114,14 +112,12 @@ async def get_organization_children(
     current_user: User = Depends(get_current_active_user),
 ):
     """获取组织的子组织"""
-    crud = get_organization_crud(db)
-
     # 先检查父组织是否存在
-    parent = crud.get(org_id)
+    parent = organization_crud.get(db, id=org_id)
     if not parent:
         raise HTTPException(status_code=404, detail="组织不存在")
 
-    children = crud.get_children(org_id, recursive=recursive)
+    children = organization_crud.get_children(db, parent_id=org_id, recursive=recursive)
     return children
 
 
@@ -132,14 +128,12 @@ async def get_organization_path(
     current_user: User = Depends(get_current_active_user),
 ):
     """获取组织到根节点的路径"""
-    crud = get_organization_crud(db)
-
     # 检查组织是否存在
-    organization = crud.get(org_id)
+    organization = organization_crud.get(db, id=org_id)
     if not organization:
         raise HTTPException(status_code=404, detail="组织不存在")
 
-    path = crud.get_path_to_root(org_id)
+    path = organization_crud.get_path_to_root(db, org_id=org_id)
     return path
 
 
@@ -152,14 +146,14 @@ async def get_organization_history(
     current_user: User = Depends(get_current_active_user),
 ):
     """获取组织变更历史"""
-    crud = get_organization_crud(db)
-
     # 检查组织是否存在
-    organization = crud.get(org_id)
+    organization = organization_crud.get(db, id=org_id)
     if not organization:
         raise HTTPException(status_code=404, detail="组织不存在")
 
-    history = crud.get_history(org_id, skip=skip, limit=limit)
+    history = organization_service.get_history(
+        db, org_id=org_id, skip=skip, limit=limit
+    )
     return history
 
 
@@ -170,10 +164,10 @@ async def create_organization(
     current_user: User = Depends(get_current_active_user),
 ):
     """创建组织"""
-    crud = get_organization_crud(db)
-
     try:
-        db_organization = crud.create(organization)
+        db_organization = organization_service.create_organization(
+            db, obj_in=organization
+        )
         return db_organization
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -187,14 +181,14 @@ async def update_organization(
     current_user: User = Depends(get_current_active_user),
 ):
     """更新组织"""
-    crud = get_organization_crud(db)
-
     try:
-        db_organization = crud.update(org_id, organization)
-        if not db_organization:
-            raise HTTPException(status_code=404, detail="组织不存在")
+        db_organization = organization_service.update_organization(
+            db, org_id=org_id, obj_in=organization
+        )
         return db_organization
     except ValueError as e:
+        if str(e).startswith("组织ID"):
+            raise HTTPException(status_code=404, detail=str(e))
         raise HTTPException(status_code=400, detail=str(e))
 
 
@@ -206,10 +200,10 @@ async def delete_organization(
     current_user: User = Depends(get_current_active_user),
 ):
     """删除组织（软删除）"""
-    crud = get_organization_crud(db)
-
     try:
-        success = crud.delete(org_id, deleted_by=deleted_by)
+        success = organization_service.delete_organization(
+            db, org_id=org_id, deleted_by=deleted_by
+        )
         if not success:
             raise HTTPException(status_code=404, detail="组织不存在")
         return {"message": "组织删除成功"}
@@ -225,19 +219,19 @@ async def move_organization(
     current_user: User = Depends(get_current_active_user),
 ):
     """移动组织到新的父组织下"""
-    crud = get_organization_crud(db)
-
     try:
         update_data = OrganizationUpdate(
             parent_id=move_request.target_parent_id,
             sort_order=move_request.sort_order,
             updated_by=move_request.updated_by,
         )
-        db_organization = crud.update(org_id, update_data)
-        if not db_organization:
-            raise HTTPException(status_code=404, detail="组织不存在")
+        db_organization = organization_service.update_organization(
+            db, org_id=org_id, obj_in=update_data
+        )
         return {"message": "组织移动成功", "organization": db_organization}
     except ValueError as e:
+        if str(e).startswith("组织ID"):
+            raise HTTPException(status_code=404, detail=str(e))
         raise HTTPException(status_code=400, detail=str(e))
 
 
@@ -248,14 +242,15 @@ async def batch_organization_operation(
     current_user: User = Depends(get_current_active_user),
 ):
     """批量操作组织"""
-    crud = get_organization_crud(db)
     results = []
     errors = []
 
     for org_id in batch_request.organization_ids:
         try:
             if batch_request.action == "delete":
-                success = crud.delete(org_id, deleted_by=batch_request.updated_by)
+                success = organization_service.delete_organization(
+                    db, org_id=org_id, deleted_by=batch_request.updated_by
+                )
                 if success:
                     results.append(
                         {"id": org_id, "status": "success", "message": "删除成功"}
@@ -280,16 +275,19 @@ async def advanced_search_organizations(
     current_user: User = Depends(get_current_active_user),
 ):
     """高级搜索组织"""
-    crud = get_organization_crud(db)
-
     if search_request.keyword:
-        organizations = crud.search(
-            search_request.keyword, search_request.skip, search_request.limit
+        organizations = organization_crud.search(
+            db,
+            keyword=search_request.keyword,
+            skip=search_request.skip,
+            limit=search_request.limit,
         )
     else:
-        organizations = crud.get_all(search_request.skip, search_request.limit)
+        organizations = organization_crud.get_multi_with_filters(
+            db, skip=search_request.skip, limit=search_request.limit
+        )
 
-    # 根据其他条件过滤
+    # 内存中过滤其他条件，保持原有逻辑
     if search_request.level:
         organizations = [
             org for org in organizations if org.level == search_request.level

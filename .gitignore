@@ -68,16 +68,7 @@ venv.bak/
 .dmypy.json
 dmypy.json
 
-# 后端日志文件
-logs/
-*.log
-backend/logs/
-# 确保所有日志文件都被忽略
-*.log.*
-*.log.[0-9]*
-app.log
-requests.log
-security.log
+# 后端日志文件 - 已合并到统一日志部分
 
 # 测试覆盖率报告
 htmlcov/
@@ -94,17 +85,13 @@ junit-report.xml
 # 缓存文件
 .cache/
 __pycache__/
-*.pyc
-*.pyo
+# Note: *.py[cod] above already covers *.pyc and *.pyo
 
 # 质量监控报告
 backend/reports/quality_check_*.txt
 backend/quality_monitor_*.json
 ruff-report.json
 *.report.json
-
-# 静态检查报告
-ruff-report.json
 mypy-report.txt
 pylint-report.txt
 
@@ -162,9 +149,6 @@ next-env.d.ts
 .vscode/
 .idea/
 .cursor/
-*.swp
-*.swo
-*~
 
 # Vim
 *.swp
@@ -172,7 +156,6 @@ next-env.d.ts
 *~
 
 # Emacs
-*~
 \#*\#
 /.emacs.desktop
 /.emacs.desktop.lock
@@ -241,13 +224,21 @@ backend/src/data/defect_tracking.db
 # ----------
 logs/
 *.log
+# 确保所有日志文件都被忽略
+*.log.*
+*.log.[0-9]*
+app.log
+requests.log
+security.log
+
+# Node.js package manager logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# 应用日志
+# 应用日志目录
 /backend/logs/
 /frontend/logs/
 /logs/
@@ -268,10 +259,7 @@ nul
 *.nul
 
 # 测试快照和临时测试文件（在test-reports目录中）
-test-reports/
-/reports/
-# Exception: Allow docs/reports/ for project documentation
-!docs/reports/
+# Note: Moved to unified section below
 
 # ----------
 # 环境变量和配置文件
@@ -482,12 +470,18 @@ site/
 /dashboard_optimization_screenshot.png
 
 # Prevent temporary debug files from being committed
-debug_*
-temp_*
-test_*
+# Note: Allow legitimate debugging tools with "debug" in name
+debug_*.tmp
+debug_*.log
+debug_*.bak
+/temp_*
+/test_*.py
+/test_*.db
 demo_*
 sample_*
-*_debug.*
+# Only ignore debug backups, not source files
+*_debug.bak
+*_debug.tmp
 
 # 临时分析脚本（一次性使用）
 backend/find_quick_wins.py
@@ -499,11 +493,16 @@ backend/find_*_wins.py
 backend/analyze_*.py
 
 # Prevent backup and archive files from being committed
-*_backup.*
-*_archive.*
-*_$(date +%Y%m%d)*
-*_old.*
-*_orig.*
+# Note: Only ignore backup files with date patterns or common backup extensions
+# Avoid ignoring legitimate source files with backup-related names
+*.backup.*
+*.archive.*
+backup_*.*
+*_backup_*.*
+*.$(date +%Y%m%d)*
+# Be more specific about _old and _orig to avoid false positives
+*_old.py.bak
+*_orig.py.bak
 
 # Prevent IDE and editor backup files
 *.bak
@@ -589,3 +588,37 @@ test*.db
 # 构建产物
 *-report.json
 *-report.xml
+
+# ============================================
+# Explicit Preserve Rules for Test Directories
+# ============================================
+# Always track pytest test files in standard test directories
+!backend/tests/**/*.py
+!tests/**/*.py
+!frontend/src/**/__tests__/**/*.ts*
+!frontend/src/**/*.test.ts*
+!frontend/src/**/*.test.tsx
+!frontend/src/**/*.spec.ts*
+
+# ============================================
+# Explicit Preserve Rules for Source Files
+# ============================================
+# Ensure legitimate source files with certain patterns are tracked
+# Debug tools and utilities
+!**/debug_*.py
+!**/debug_*.ts
+!**/debug_*.tsx
+!**/utils/**/*debug*.py
+!**/utils/**/*debug*.ts
+
+# Backup and archive utilities (but not backup files)
+!**/backup_service.py
+!**/archive_*.py
+!**/*_manager.py
+
+# Configuration examples
+!**/*.example
+!**/*.example.*
+!**/*.template
+!**/*.template.*
+lint-results.txt

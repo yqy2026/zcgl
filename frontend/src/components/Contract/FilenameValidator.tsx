@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Input, Alert, Typography, Space, Button, Tooltip, Tag, Divider } from 'antd';
-import { InfoCircleOutlined, CheckCircleOutlined, ExclamationCircleOutlined, EditOutlined } from '@ant-design/icons';
+import { Input, Alert, Typography, Space, Button, Tag, Divider } from 'antd';
+import { InfoCircleOutlined, ExclamationCircleOutlined, CheckCircleOutlined, EditOutlined } from '@ant-design/icons';
+import { createLogger } from '../../utils/logger';
 
-const { Text, Title } = Typography;
+const componentLogger = createLogger('FilenameValidator');
+const { Text } = Typography;
 
 interface FilenameValidationResult {
   valid: boolean;
@@ -28,7 +30,7 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
 }) => {
   const [validationResult, setValidationResult] = useState<FilenameValidationResult | null>(null);
   const [suggestedFilename, setSuggestedFilename] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(false);
+  const [_loading, setLoading] = useState<boolean>(false);
   const [editing, setEditing] = useState<boolean>(false);
   const [customFilename, setCustomFilename] = useState<string>(filename);
 
@@ -158,12 +160,12 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
           // const response = await validateFilenameAPI(fname);
           // setSuggestedFilename(response.suggested_filename || localSuggested);
         } catch (error) {
-          console.warn('服务器验证失败，使用本地验证结果:', error);
+          componentLogger.warn(`服务器验证失败: ${String(error)}`);
         }
       }
 
     } catch (error) {
-      console.error('文件名验证失败:', error);
+      componentLogger.error('文件名验证失败:', error as Error);
       setValidationResult({
         valid: false,
         issues: ['验证过程中发生错误'],

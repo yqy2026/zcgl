@@ -23,6 +23,24 @@ export interface User {
   login_attempts: number
 }
 
+export interface UserListResponse {
+  items: User[]
+  total: number
+  page: number
+  limit: number
+  pages: number
+}
+
+export interface OrganizationOption {
+  id: string
+  name: string
+}
+
+export interface RoleOption {
+  id: string
+  name: string
+}
+
 export interface CreateUserData {
   username: string
   email: string
@@ -52,9 +70,9 @@ export const userService = {
     status?: string
     role?: string
     organization_id?: string
-  }) {
-    const response = await api.get(SYSTEM_API.USERS, { params })
-    return response.data
+  }): Promise<UserListResponse> {
+    const response = await api.get<UserListResponse>(SYSTEM_API.USERS, { params })
+    return response.data!
   },
 
   // 获取用户详情
@@ -217,6 +235,17 @@ export interface OperationLog {
   created_at: string
 }
 
+export interface LogStatistics {
+  total: number
+  today: number
+  this_week: number
+  this_month: number
+  by_action: Record<string, number>
+  by_module: Record<string, number>
+  error_count: number
+  avg_response_time: number
+}
+
 export const logService = {
   // 获取操作日志列表
   async getLogs(params?: {
@@ -241,7 +270,7 @@ export const logService = {
   },
 
   // 获取操作日志统计
-  async getLogStatistics(params?: {
+  async getLogStatistics(_params?: {
     start_date?: string
     end_date?: string
   }) {

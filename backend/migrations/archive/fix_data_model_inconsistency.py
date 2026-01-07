@@ -9,6 +9,7 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
+
 def upgrade_database(db_session):
     """
     执行数据库升级，添加缺失字段
@@ -35,7 +36,7 @@ def upgrade_database(db_session):
         return {
             "success": True,
             "message": "数据库升级成功",
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
 
     except Exception as e:
@@ -44,8 +45,9 @@ def upgrade_database(db_session):
         return {
             "success": False,
             "message": f"数据库升级失败: {str(e)}",
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
+
 
 def _add_financial_fields(db_session):
     """添加财务相关字段"""
@@ -57,14 +59,16 @@ def _add_financial_fields(db_session):
     """
 
     financial_fields = [
-        ('annual_income', 'DECIMAL(15, 2)', '年收益（元）'),
-        ('annual_expense', 'DECIMAL(15, 2)', '年支出（元）'),
-        ('net_income', 'DECIMAL(15, 2)', '净收益（元）')
+        ("annual_income", "DECIMAL(15, 2)", "年收益（元）"),
+        ("annual_expense", "DECIMAL(15, 2)", "年支出（元）"),
+        ("net_income", "DECIMAL(15, 2)", "净收益（元）"),
     ]
 
     for field_name, field_type, comment in financial_fields:
         # 检查字段是否存在
-        result = db_session.execute(text(check_sql), {"field_name": field_name}).fetchone()
+        result = db_session.execute(
+            text(check_sql), {"field_name": field_name}
+        ).fetchone()
 
         if result and result.count == 0:
             # 字段不存在，添加字段
@@ -75,6 +79,7 @@ def _add_financial_fields(db_session):
             db_session.execute(text(alter_sql))
         else:
             logger.info(f"字段已存在，跳过: {field_name}")
+
 
 def _add_tenant_contact_field(db_session):
     """添加租户联系字段"""
@@ -97,6 +102,7 @@ def _add_tenant_contact_field(db_session):
     else:
         logger.info("字段已存在，跳过: tenant_contact")
 
+
 def _add_audit_fields(db_session):
     """添加审核相关字段"""
     logger.info("检查并添加审核字段...")
@@ -107,14 +113,16 @@ def _add_audit_fields(db_session):
     """
 
     audit_fields = [
-        ('last_audit_date', 'DATE', '最后审核时间'),
-        ('audit_status', 'VARCHAR(20)', '审核状态'),
-        ('auditor', 'VARCHAR(100)', '审核人')
+        ("last_audit_date", "DATE", "最后审核时间"),
+        ("audit_status", "VARCHAR(20)", "审核状态"),
+        ("auditor", "VARCHAR(100)", "审核人"),
     ]
 
     for field_name, field_type, comment in audit_fields:
         # 检查字段是否存在
-        result = db_session.execute(text(check_sql), {"field_name": field_name}).fetchone()
+        result = db_session.execute(
+            text(check_sql), {"field_name": field_name}
+        ).fetchone()
 
         if result and result.count == 0:
             # 字段不存在，添加字段
@@ -125,6 +133,7 @@ def _add_audit_fields(db_session):
             db_session.execute(text(alter_sql))
         else:
             logger.info(f"字段已存在，跳过: {field_name}")
+
 
 def verify_database_schema(db_session):
     """
@@ -146,49 +155,74 @@ def verify_database_schema(db_session):
         # 必需的字段列表
         required_fields = {
             # 基本字段
-            'id', 'ownership_entity', 'ownership_category', 'project_name',
-            'property_name', 'address', 'ownership_status', 'property_nature',
-            'usage_status', 'business_category', 'is_litigated', 'notes',
-
+            "id",
+            "ownership_entity",
+            "ownership_category",
+            "project_name",
+            "property_name",
+            "address",
+            "ownership_status",
+            "property_nature",
+            "usage_status",
+            "business_category",
+            "is_litigated",
+            "notes",
             # 面积字段
-            'land_area', 'actual_property_area', 'rentable_area', 'rented_area',
-            'unrented_area', 'non_commercial_area', 'occupancy_rate',
-            'include_in_occupancy_rate',
-
+            "land_area",
+            "actual_property_area",
+            "rentable_area",
+            "rented_area",
+            "unrented_area",
+            "non_commercial_area",
+            "occupancy_rate",
+            "include_in_occupancy_rate",
             # 用途字段
-            'certificated_usage', 'actual_usage',
-
+            "certificated_usage",
+            "actual_usage",
             # 租户字段
-            'tenant_name', 'tenant_contact', 'tenant_type',
-
+            "tenant_name",
+            "tenant_contact",
+            "tenant_type",
             # 合同字段
-            'lease_contract_number', 'contract_start_date', 'contract_end_date',
-            'monthly_rent', 'deposit', 'is_sublease', 'sublease_notes',
-
+            "lease_contract_number",
+            "contract_start_date",
+            "contract_end_date",
+            "monthly_rent",
+            "deposit",
+            "is_sublease",
+            "sublease_notes",
             # 管理字段
-            'manager_name', 'business_model', 'operation_status',
-
+            "manager_name",
+            "business_model",
+            "operation_status",
             # 财务字段 (新增)
-            'annual_income', 'annual_expense', 'net_income',
-
+            "annual_income",
+            "annual_expense",
+            "net_income",
             # 接收相关字段
-            'operation_agreement_start_date', 'operation_agreement_end_date',
-            'operation_agreement_attachments', 'terminal_contract_files',
-
+            "operation_agreement_start_date",
+            "operation_agreement_end_date",
+            "operation_agreement_attachments",
+            "terminal_contract_files",
             # 系统字段
-            'data_status', 'created_by', 'updated_by', 'version', 'tags',
-
+            "data_status",
+            "created_by",
+            "updated_by",
+            "version",
+            "tags",
             # 审核字段 (新增)
-            'last_audit_date', 'audit_status', 'auditor', 'audit_notes',
-
+            "last_audit_date",
+            "audit_status",
+            "auditor",
+            "audit_notes",
             # 时间戳
-            'created_at', 'updated_at',
-
+            "created_at",
+            "updated_at",
             # 多租户
-            'tenant_id',
-
+            "tenant_id",
             # 关联字段
-            'project_id', 'ownership_id'
+            "project_id",
+            "ownership_id",
         }
 
         # 检查缺失字段
@@ -209,7 +243,7 @@ def verify_database_schema(db_session):
             "extra_fields": list(extra_fields),
             "total_existing": len(existing_fields),
             "total_required": len(required_fields),
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
 
     except Exception as e:
@@ -217,8 +251,9 @@ def verify_database_schema(db_session):
         return {
             "success": False,
             "error": str(e),
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
+
 
 def get_migration_status(db_session):
     """
@@ -239,15 +274,16 @@ def get_migration_status(db_session):
             "version": "1.0.0",
             "verification_result": verification,
             "recommendations": _get_recommendations(verification),
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
 
     except Exception as e:
         return {
             "migration_name": "fix_frontend_backend_data_model_inconsistency",
             "error": str(e),
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
+
 
 def _get_recommendations(verification):
     """获取基于验证结果的建议"""
@@ -260,9 +296,12 @@ def _get_recommendations(verification):
         recommendations.append("数据库schema已包含所有必需字段")
 
     if verification["extra_fields"]:
-        recommendations.append(f"发现额外字段: {', '.join(verification['extra_fields'])}")
+        recommendations.append(
+            f"发现额外字段: {', '.join(verification['extra_fields'])}"
+        )
 
     return recommendations
+
 
 if __name__ == "__main__":
     # 测试脚本

@@ -6,6 +6,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { ownershipService } from '@/services/ownershipService'
 import type { Ownership } from '@/types/ownership'
+import { createLogger } from '@/utils/logger'
+
+const ownershipLogger = createLogger('useOwnership')
 
 interface UseOwnershipOptionsResult {
   ownerships: Ownership[]
@@ -27,7 +30,7 @@ export const useOwnershipOptions = (isActive: boolean = true): UseOwnershipOptio
         const response = await ownershipService.getOwnershipOptions(isActive)
         return response
       } catch (err) {
-        console.error('获取权属方选项失败:', err)
+        ownershipLogger.error('Error fetching ownership options:', err as Error)
         throw err
       }
     },
@@ -68,7 +71,7 @@ export const useOwnershipDetail = (id?: string): UseOwnershipDetailResult => {
         const response = await ownershipService.getOwnership(id)
         return response
       } catch (err) {
-        console.error('获取权属方详情失败:', err)
+        ownershipLogger.error('Error fetching ownership detail:', err as Error)
         throw err
       }
     },

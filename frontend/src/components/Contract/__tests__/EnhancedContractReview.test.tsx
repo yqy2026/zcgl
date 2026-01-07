@@ -35,7 +35,7 @@ vi.mock('antd', () => ({
       data-layout={layout}
       onSubmit={(e) => {
         e.preventDefault()
-        onFinish && onFinish({})
+        onFinish?.({})
       }}
     >
       {children}
@@ -210,7 +210,7 @@ vi.mock('dayjs', () => ({
     format: (fmt: string) => '2024-01-01',
     valueOf: () => 1704067200000,
   }),
-  extend: () => {},
+  extend: () => { },
 }))
 
 // Mock services

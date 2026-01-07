@@ -1,16 +1,13 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Select,
   Button,
   Modal,
   message,
   Space,
-  Input,
   Tooltip,
-  Tag
 } from 'antd';
 import {
-  SearchOutlined,
   PlusOutlined,
   ReloadOutlined,
   UnorderedListOutlined
@@ -18,8 +15,6 @@ import {
 import { useProjectOptions } from '@/hooks/useProject';
 import type { Project } from '@/types/project';
 import ProjectList from '@/components/Project/ProjectList';
-
-const { Search } = Input;
 
 interface ProjectSelectProps {
   value?: string;
@@ -58,7 +53,7 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
   }, [allProjects]);
 
   // 当前选中的项目
-  const selectedProject = useMemo(() => {
+  const _selectedProject = useMemo(() => {
     if (!value) return null;
     return allProjects.find(p => p.id === value) ||
            allProjects.find(p => p.name === value) ||

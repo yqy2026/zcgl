@@ -20,22 +20,22 @@ export interface AnalyticsExportData {
   property_nature_distribution: Array<{
     name: string
     count: number
-    percentage: number
+    percentage: number | string
   }>
   ownership_status_distribution: Array<{
     status: string
     count: number
-    percentage: number
+    percentage: number | string
   }>
   usage_status_distribution: Array<{
     status: string
     count: number
-    percentage: number
+    percentage: number | string
   }>
   business_category_distribution: Array<{
     category: string
     count: number
-    occupancy_rate: number
+    occupancy_rate: number | string
   }>
   occupancy_trend?: Array<{
     date: string

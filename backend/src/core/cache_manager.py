@@ -447,7 +447,7 @@ class CacheManager:
 
         # 生成参数的哈希值
         params_str = json.dumps(sorted_kwargs, sort_keys=True, separators=(",", ":"))
-        params_hash = hashlib.md5(params_str.encode()).hexdigest()[:8]
+        params_hash = hashlib.md5(params_str.encode()).hexdigest()[:8]  # nosec - B324: Cache key, not security
 
         return f"{prefix}_{params_hash}"
 
@@ -550,11 +550,11 @@ def _hash_function_call(args: tuple, kwargs: dict) -> str:
             default=str,
         )
 
-        return md5(content.encode()).hexdigest()[:16]
+        return md5(content.encode()).hexdigest()[:16]  # nosec - B324: Cache key generation  # fmt: skip
     except Exception:  # pragma: no cover
         # 如果序列化失败，使用字符串表示
         content = f"{args}{kwargs}"  # pragma: no cover
-        return md5(content.encode()).hexdigest()[:16]  # pragma: no cover
+        return md5(content.encode()).hexdigest()[:16]  # pragma: no cover  # nosec - B324: Cache key generation  # fmt: skip
 
 
 # 全局缓存管理器实例

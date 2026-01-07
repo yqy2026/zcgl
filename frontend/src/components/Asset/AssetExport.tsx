@@ -42,6 +42,12 @@ interface ExportOptions {
   filters?: AssetSearchParams;
 }
 
+interface ExportFormValues {
+  format?: "xlsx" | "csv";
+  includeHeaders?: boolean;
+  selectedFields?: string[];
+}
+
 // 扩展ExportTask接口以匹配API返回的实际字段名
 interface ExportTaskWithApiFields {
   id: string;
@@ -118,7 +124,7 @@ const AssetExport: React.FC<AssetExportProps> = ({
   // 导出数据
   const exportMutation = useMutation({
     mutationFn: async (options: ExportOptions): Promise<ExportTaskWithApiFields> => {
-      const blob = selectedAssetIds?.length
+      const blob = selectedAssetIds !== undefined && selectedAssetIds !== null && selectedAssetIds.length > 0
         ? await assetService.exportSelectedAssets(selectedAssetIds, options)
         : await assetService.exportAssets(options.filters || searchParams, options);
 
@@ -181,13 +187,13 @@ const AssetExport: React.FC<AssetExportProps> = ({
               status: task.status,
               progress: task.progress,
               downloadUrl: task.download_url || task.downloadUrl,
-              createdAt: task.created_at || task.createdAt || new Date().toISOString(),
+              createdAt: task.created_at ?? task.createdAt ?? new Date().toISOString(),
               completedAt: task.completedAt,
               errorMessage: task.errorMessage,
             };
             onExportComplete?.(standardTask);
           } else {
-            message.error(task.errorMessage || "导出失败");
+            message.error(task.errorMessage ?? "导出失败");
           }
         }
       } catch {
@@ -199,11 +205,11 @@ const AssetExport: React.FC<AssetExportProps> = ({
 
   // 开始导出
   const handleExport = () => {
-    form.validateFields().then((values) => {
+    form.validateFields().then((values: ExportFormValues) => {
       const options: ExportOptions = {
-        format: values.format || "xlsx",
+        format: values.format ?? "xlsx",
         includeHeaders: values.includeHeaders !== false,
-        selectedFields: values.selectedFields || availableFields.map((f) => f.key),
+        selectedFields: values.selectedFields ?? availableFields.map((f) => f.key),
         filters: searchParams,
       };
 
@@ -213,8 +219,8 @@ const AssetExport: React.FC<AssetExportProps> = ({
 
   // 下载文件
   const handleDownload = async (task: ExportTaskWithApiFields) => {
-    const downloadUrl = task.download_url || task.downloadUrl;
-    if (!downloadUrl) return;
+    const downloadUrl = task.download_url ?? task.downloadUrl ?? '';
+    if (downloadUrl === '') return;
 
     try {
       await assetService.downloadExportFile(downloadUrl);
@@ -237,7 +243,7 @@ const AssetExport: React.FC<AssetExportProps> = ({
 
   // 格式化文件大小
   const formatFileSize = (bytes?: number) => {
-    if (!bytes) return "-";
+    if (bytes === undefined || bytes === null || bytes === 0) return "-";
 
     const sizes = ["B", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
@@ -284,7 +290,7 @@ const AssetExport: React.FC<AssetExportProps> = ({
           <Space>
             <FileExcelOutlined />
             数据导出
-            {selectedAssetIds?.length && (
+            {selectedAssetIds !== undefined && selectedAssetIds !== null && selectedAssetIds.length > 0 && (
               <Tag color="blue">已选择 {selectedAssetIds.length} 条记录</Tag>
             )}
           </Space>
@@ -338,11 +344,11 @@ const AssetExport: React.FC<AssetExportProps> = ({
           </Form.Item>
 
           {/* 筛选条件预览 */}
-          {(searchParams || selectedAssetIds?.length) && (
+          {(searchParams !== undefined || (selectedAssetIds !== undefined && selectedAssetIds !== null && selectedAssetIds.length > 0)) && (
             <div>
               <Divider orientation="left">导出范围</Divider>
 
-              {selectedAssetIds?.length ? (
+              {selectedAssetIds !== undefined && selectedAssetIds !== null && selectedAssetIds.length > 0 ? (
                 <Alert
                   message={`将导出已选择的 ${selectedAssetIds.length} 条资产记录`}
                   type="info"

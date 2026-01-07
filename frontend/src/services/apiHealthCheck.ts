@@ -4,7 +4,9 @@
  */
 
 import { enhancedApiClient } from '@/api/client'
+import { createLogger } from '@/utils/logger'
 
+const logger = createLogger('ApiHealthCheck');
 const api = enhancedApiClient
 import {
   AUTH_API,
@@ -33,6 +35,18 @@ export interface HealthCheckConfig {
   retryDelay: number // 毫秒
   interval: number // 毫秒
   criticalEndpoints: string[]
+}
+
+export interface HealthReport {
+  timestamp: Date
+  critical: {
+    total: number
+    healthy: number
+    unhealthy: number
+    unknown: number
+    healthPercentage: number
+  }
+  details: HealthCheckResult[]
 }
 
 // 默认配置
@@ -72,12 +86,12 @@ export class ApiHealthCheckService {
 
     try {
       // 使用HEAD请求检查端点可用性（如果支持的话）
-      const response = await (api as any).head(endpoint)
+      const response = await api.getAxiosInstance().head(endpoint)
       const responseTime = Date.now() - startTime
 
       const result: HealthCheckResult = {
         endpoint: name,
-        status: (response as any).status >= 200 && (response as any).status < 300 ? 'healthy' : 'unhealthy',
+        status: (response as any)?.status >= 200 && (response as any)?.status < 300 ? 'healthy' : 'unhealthy',
         responseTime,
         lastChecked: new Date()
       }
@@ -87,16 +101,17 @@ export class ApiHealthCheckService {
         const getResponse = await api.get(endpoint)
         const getResponseTime = Date.now() - startTime
 
-        result.status = (getResponse as any).status >= 200 && (getResponse as any).status < 300 ? 'healthy' : 'unhealthy'
+        result.status = (getResponse as any)?.status >= 200 && (getResponse as any)?.status < 300 ? 'healthy' : 'unhealthy'
         result.responseTime = getResponseTime
       }
 
       this.results.set(name, result)
       return result
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error instanceof Error ? error : new Error(String(error));
       const responseTime = Date.now() - startTime
-      lastError = error.message || 'Unknown error'
+      lastError = err.message || 'Unknown error'
 
       const result: HealthCheckResult = {
         endpoint: name,
@@ -122,7 +137,7 @@ export class ApiHealthCheckService {
         const result = await this.checkEndpoint(endpoint)
         results.push(result)
       } catch (error) {
-        console.error(`Health check failed for ${endpoint}:`, error)
+        logger.error(`Health check failed for ${endpoint}`, error instanceof Error ? error : new Error(String(error)))
         results.push({
           endpoint,
           status: 'unknown',
@@ -184,7 +199,7 @@ export class ApiHealthCheckService {
         else unknown++
 
       } catch (error) {
-        console.error(`Health check failed for ${name}:`, error)
+        logger.error(`Health check failed for ${name}`, error instanceof Error ? error : new Error(String(error)))
         results.push({
           endpoint: name,
           status: 'unknown',
@@ -209,22 +224,22 @@ export class ApiHealthCheckService {
    */
   startPeriodicCheck(): void {
     if (this.isRunning) {
-      console.warn('Health check service is already running')
+      logger.warn('Health check service is already running')
       return
     }
 
     this.isRunning = true
-    console.log('🏥 Starting periodic API health checks...')
+    logger.debug('Starting periodic API health checks...')
 
     // 立即执行一次检查
     this.checkCriticalEndpoints().catch(error => {
-      console.error('Initial health check failed:', error)
+      logger.error('Initial health check failed', error instanceof Error ? error : new Error(String(error)))
     })
 
     // 设置定期检查
     this.intervalId = setInterval(() => {
       this.checkCriticalEndpoints().catch(error => {
-        console.error('Periodic health check failed:', error)
+        logger.error('Periodic health check failed', error instanceof Error ? error : new Error(String(error)))
       })
     }, this.config.interval)
   }
@@ -239,7 +254,7 @@ export class ApiHealthCheckService {
     }
 
     this.isRunning = false
-    console.log('⏹️ Stopped periodic API health checks')
+    logger.debug('Stopped periodic API health checks')
   }
 
   /**
@@ -259,21 +274,11 @@ export class ApiHealthCheckService {
   /**
    * 生成健康检查报告
    */
-  generateReport(): {
-    timestamp: Date
-    critical: {
-      total: number
-      healthy: number
-      unhealthy: number
-      unknown: number
-      healthPercentage: number
-    }
-    details: HealthCheckResult[]
-  } {
+  generateReport(): HealthReport {
     const criticalResults = this.config.criticalEndpoints.map(endpoint =>
       this.results.get(endpoint) || {
         endpoint,
-        status: 'unknown',
+        status: 'unknown' as const,
         lastChecked: new Date()
       }
     )
@@ -291,7 +296,7 @@ export class ApiHealthCheckService {
         unknown,
         healthPercentage: criticalResults.length > 0 ? (healthy / criticalResults.length) * 100 : 0
       },
-      details: criticalResults as any
+      details: criticalResults as HealthCheckResult[]
     }
   }
 
@@ -301,9 +306,9 @@ export class ApiHealthCheckService {
   async checkSystemHealth(): Promise<{
     isHealthy: boolean
     criticalIssues: string[]
-    report: any
+    report: HealthReport
   }> {
-    const results = await this.checkAllEndpoints()
+    await this.checkAllEndpoints()
     const report = this.generateReport()
     const issues: string[] = []
 
@@ -336,7 +341,7 @@ export const apiHealthCheck = new ApiHealthCheckService()
 export const checkApiHealth = async (): Promise<{
   isHealthy: boolean
   criticalIssues: string[]
-  report: any
+  report: HealthReport
 }> => {
   return apiHealthCheck.checkSystemHealth()
 }
@@ -347,9 +352,9 @@ if (process.env.NODE_ENV === 'development') {
   setTimeout(() => {
     try {
       apiHealthCheck.startPeriodicCheck()
-      console.log('✅ API Health Check Service started')
+      logger.info('API Health Check Service started')
     } catch (error) {
-      console.error('❌ Failed to start API Health Check Service:', error)
+      logger.error('Failed to start API Health Check Service', error instanceof Error ? error : new Error(String(error)))
     }
   }, 2000)
 }

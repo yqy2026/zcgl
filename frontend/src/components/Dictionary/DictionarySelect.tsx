@@ -5,7 +5,6 @@
 
 import React from 'react'
 import { Select, Spin } from 'antd'
-import { SelectProps } from 'antd/es/select'
 import { useDictionary } from '../../hooks/useDictionary'
 import { unifiedDictionaryService } from '../../services/dictionary'
 
@@ -38,19 +37,19 @@ const DictionarySelect: React.FC<DictionarySelectProps> = ({
   placeholder,
   ...props
 }) => {
-  const { options, loading, error } = useDictionary(dictType, isActive)
+  const { options, loading, error: _error } = useDictionary(dictType, isActive)
 
   // Track data flow for debugging
 
   // 检查字典类型是否可用
-  const isAvailable = unifiedDictionaryService.isTypeAvailable(dictType)
+  const _isAvailable = unifiedDictionaryService.isTypeAvailable(dictType)
 
   // If dictionary type is not available, show warning
 
   // If there's an error, show error message
 
   // 默认选项渲染
-  const renderOption = (option: DictionaryOption) => {
+  const _renderOption = (option: DictionaryOption) => {
     if (optionRender) {
       return optionRender(option)
     }

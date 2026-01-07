@@ -1,0 +1,7 @@
+[Security vulnerabilities]
+# Ignore ecdsa vulnerabilities - transitive dependency, side-channel attacks not exploitable in our context
+64459  # CVE-2024-23342 - Minerva attack in python-ecdsa
+64396  # PVE-2024-64396 - Side-channel attacks in python-ecdsa
+
+# Ignore paddlepaddle vulnerability - optional OCR dependency, vulnerable component not used
+71831  # CVE-2024-1603 - Arbitrary file read via paddle.vision.ops.read_file

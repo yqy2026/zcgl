@@ -3,7 +3,7 @@
 // Jest DOM类型声明
 declare global {
   namespace jest {
-    interface Matchers<R, T> {
+    interface Matchers<R, _T> {
       toBeInTheDocument(): R;
       toHaveClass(className: string): R;
       toBeVisible(): R;
@@ -75,8 +75,6 @@ declare global {
 }
 
 // 扩展Asset接口，添加一些可能缺失的属性
-import { Asset } from "./asset";
-
 declare module "@/types/asset" {
   interface Asset {
     // 添加一些测试数据中可能使用的属性

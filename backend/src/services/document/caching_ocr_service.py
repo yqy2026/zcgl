@@ -105,7 +105,7 @@ class CachingOCRService(IOCRService):  # type: ignore[misc]
                 "ttl_seconds": self._ttl_seconds,
                 "max_entries": self._max_entries,
             }
-        except Exception:
+        except Exception:  # nosec - B110: Intentional graceful degradation for optional metrics
             # metrics enrichment is optional; ignore failures
             pass
         return report

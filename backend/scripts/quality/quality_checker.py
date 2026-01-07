@@ -217,7 +217,7 @@ class BasicQualityChecker:
         score = success_rate * 100
 
         print(
-            f"  {executable_tests}/{total_tests} tests executable ({success_rate*100:.1f}%)"
+            f"  {executable_tests}/{total_tests} tests executable ({success_rate * 100:.1f}%)"
         )
 
         return score

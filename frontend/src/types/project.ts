@@ -43,7 +43,7 @@ export interface ProjectUpdate {
   }>;
 }
 
-export interface ProjectResponse extends Project {}
+export type ProjectResponse = Project;
 
 export interface ProjectListResponse {
   items: ProjectResponse[];

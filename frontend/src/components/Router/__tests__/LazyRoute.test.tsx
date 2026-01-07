@@ -4,8 +4,8 @@
  * 增强版本 - 添加更全面的测试用例
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { describe, it, expect } from 'vitest'
+import { } from '@testing-library/react'
 import React from 'react'
 import { MemoryRouter, Routes } from 'react-router-dom'
 

@@ -1,12 +1,11 @@
 import { notification } from 'antd'
-import { 
-  CheckCircleOutlined, 
-  ExclamationCircleOutlined, 
-  InfoCircleOutlined, 
+import {
+  CheckCircleOutlined,
+  ExclamationCircleOutlined,
+  InfoCircleOutlined,
   CloseCircleOutlined,
   WifiOutlined,
-  LockOutlined,
-  CheckCircleOutlined as ServerOutlined
+  LockOutlined
 } from '@ant-design/icons'
 
 interface NotificationOptions {

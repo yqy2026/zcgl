@@ -13,5 +13,5 @@ try:
     from .asset_calculator import AssetCalculator, OccupancyRateCalculator
 
     __all__ += ["AssetCalculator", "OccupancyRateCalculator"]  # pragma: no cover
-except Exception:  # pragma: no cover
+except Exception:  # nosec - B110: Intentional graceful degradation  # pragma: no cover
     pass

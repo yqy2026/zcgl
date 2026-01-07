@@ -147,8 +147,8 @@ def migrate_assets_data():
             values = list(new_data.values())
 
             insert_sql = f"""
-            INSERT OR REPLACE INTO assets ({', '.join(columns)})
-            VALUES ({', '.join(placeholders)})
+            INSERT OR REPLACE INTO assets ({", ".join(columns)})
+            VALUES ({", ".join(placeholders)})
             """
 
             new_cursor.execute(insert_sql, values)

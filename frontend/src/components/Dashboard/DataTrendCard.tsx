@@ -1,5 +1,5 @@
 import React from 'react'
-import { Card, Statistic, Tooltip } from 'antd'
+import { Card, Statistic } from 'antd'
 import { ArrowUpOutlined, ArrowDownOutlined, MinusOutlined } from '@ant-design/icons'
 import styles from './DataTrendCard.module.css'
 

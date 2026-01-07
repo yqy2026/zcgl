@@ -2,7 +2,6 @@ import React from 'react'
 import { Route } from 'react-router-dom'
 import { SystemErrorBoundary } from '@/components/ErrorHandling'
 import { PermissionGuard } from '../System/PermissionGuard'
-import { LoadingSpinner } from '../Loading'
 import { RouteConfig } from '@/constants/routes'
 
 interface ProtectedRouteProps extends Omit<RouteConfig, 'children'> {

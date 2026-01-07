@@ -3,7 +3,6 @@ import { Layout, Typography, Space, Avatar, Button } from 'antd'
 import {
   UserOutlined,
   BellOutlined,
-  HomeOutlined,
 } from '@ant-design/icons'
 
 import MobileMenu from './MobileMenu'

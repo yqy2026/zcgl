@@ -103,7 +103,7 @@ class ErrorBoundaryComponent extends Component<ErrorBoundaryProps, ErrorBoundary
 
     // 存储错误到 window 对象用于调试
     if (process.env.NODE_ENV === 'development') {
-      ;(window as any).__lastError = errorReport
+      (window as any).__lastError = errorReport
     }
 
     // 发送错误报告到监控服务
@@ -349,7 +349,7 @@ export const useErrorHandler = () => {
 
     // 存储错误到 window 对象用于调试
     if (process.env.NODE_ENV === 'development') {
-      ;(window as any).__lastError = {
+      (window as any).__lastError = {
         message: error.message,
         stack: error.stack,
         timestamp: new Date().toISOString()

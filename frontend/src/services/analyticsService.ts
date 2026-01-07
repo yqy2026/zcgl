@@ -2,6 +2,9 @@ import { enhancedApiClient } from '@/api/client'
 import { STATISTICS_API } from '@/constants/api'
 import type { AssetSearchParams } from '../types/asset'
 import type { AnalyticsData, AnalyticsResponse } from '../types/analytics'
+import { createLogger } from '../utils/logger'
+
+const serviceLogger = createLogger('analyticsService')
 
 // Re-export the types for compatibility
 export type { AnalyticsData, AnalyticsResponse }
@@ -21,7 +24,7 @@ export class AnalyticsService {
       // 如果response.data为空，返回模拟数据
       return this.getMockAnalyticsData()
     } catch (error) {
-      console.error('Analytics API Error:', error)
+      serviceLogger.error('Analytics API Error:', error as Error)
       // 返回模拟数据而不是抛出错误
       return this.getMockAnalyticsData()
     }
@@ -32,13 +35,13 @@ export class AnalyticsService {
       const response = await this.api.get<AnalyticsResponse>(STATISTICS_API.OVERVIEW, {
         params: filters
       })
-      // Add message property if missing
-      return {
-        message: 'Success',
-        ...response
-      } as any
+
+      if (response.success && response.data) {
+        return response.data
+      }
+      throw new Error(response.error ?? 'Failed to fetch basic statistics')
     } catch (error) {
-      console.error('Basic statistics API Error:', error)
+      serviceLogger.error('Basic statistics API Error:', error as Error)
       throw error
     }
   }
@@ -46,13 +49,13 @@ export class AnalyticsService {
   async getAreaSummary(): Promise<AnalyticsResponse> {
     try {
       const response = await this.api.get<AnalyticsResponse>(STATISTICS_API.ASSET_SUMMARY)
-      // Add message property if missing
-      return {
-        message: 'Success',
-        ...response
-      } as any
+
+      if (response.success && response.data) {
+        return response.data
+      }
+      throw new Error(response.error ?? 'Failed to fetch area summary')
     } catch (error) {
-      console.error('Area summary API Error:', error)
+      serviceLogger.error('Area summary API Error:', error as Error)
       throw error
     }
   }
@@ -60,16 +63,13 @@ export class AnalyticsService {
   async getFinancialSummary(): Promise<AnalyticsResponse> {
     try {
       const response = await this.api.get<AnalyticsResponse>(STATISTICS_API.FINANCIAL_SUMMARY)
-      if (response) {
-        // Add message property if missing
-        return {
-          message: 'Success',
-          ...response
-        } as any
+
+      if (response.success && response.data) {
+        return response.data
       }
       return this.getMockAnalyticsData()
     } catch (error) {
-      console.error('Financial summary API Error:', error)
+      serviceLogger.error('Financial summary API Error:', error as Error)
       return this.getMockAnalyticsData()
     }
   }
@@ -88,6 +88,7 @@ export class AnalyticsService {
           total_unrented_area: 3075.66,
           assets_with_area_data: 669,
           occupancy_rate: 97.48,
+          total_non_commercial_area: 0,
         },
         financial_summary: {
           estimated_annual_income: 0.0,
@@ -109,7 +110,7 @@ export class AnalyticsService {
       },
       cache_stats: { cache_size: 0, hits: 0, misses: 0, hit_rate: 0 },
       performance_info: { calculation_time: 0, asset_count: 696, cache_enabled: true },
-    } as any
+    }
   }
 }
 

@@ -3,6 +3,7 @@ import { Typography, Button, Space, Row, Col, Spin, Alert, message } from "antd"
 import { PlusOutlined, ExportOutlined, ImportOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import type { PaginationConfig, FilterConfig, SorterConfig } from "@/types/common";
 import { assetService } from "../../services/assetService";
 import { analyticsService } from "../../services/analyticsService";
 import { useAssets } from "../../hooks/useAssets";
@@ -10,15 +11,9 @@ import AssetList from "../../components/Asset/AssetList";
 import AssetSearch from "../../components/Asset/AssetSearch";
 import AssetAreaSummary from "../../components/Asset/AssetAreaSummary";
 import type { AssetSearchParams } from "../../types/asset";
-import type { AnalyticsData } from "../../services/analyticsService";
-import type {
-  TablePaginationConfig,
-  SorterResult,
-  TableCurrentDataSource,
-} from "antd/es/table/interface";
-import type { FilterValue } from "antd/es/table/interface";
-import type { Asset } from "@/types/asset";
-import type { PaginationConfig, FilterConfig, SorterConfig } from "../../types/common";
+import { createLogger } from "../../utils/logger";
+
+const pageLogger = createLogger('AssetList');
 
 const { Title } = Typography;
 
@@ -37,7 +32,6 @@ const AssetListPage: React.FC = () => {
   const {
     data: analyticsData,
     isLoading: analyticsLoading,
-    error: analyticsError,
   } = useQuery({
     queryKey: ["analytics", searchParams],
     queryFn: () => analyticsService.getComprehensiveAnalytics(searchParams),
@@ -62,7 +56,7 @@ const AssetListPage: React.FC = () => {
   // 处理表格变化
   const handleTableChange = (
     pagination: PaginationConfig,
-    filters: FilterConfig,
+    _filters: FilterConfig,
     sorter: SorterConfig,
   ) => {
     setSearchParams((prev) => ({
@@ -128,7 +122,7 @@ const AssetListPage: React.FC = () => {
 
       message.success("资产数据导出成功");
     } catch (error) {
-      console.error("导出失败:", error);
+      pageLogger.error("导出失败:", error as Error);
       const errorMessage = error instanceof Error ? error.message : "导出失败，请稍后重试";
       message.error(errorMessage);
     }
@@ -162,7 +156,7 @@ const AssetListPage: React.FC = () => {
 
       message.success("选中资产数据导出成功");
     } catch (error) {
-      console.error("导出失败:", error);
+      pageLogger.error("导出失败:", error as Error);
       const errorMessage = error instanceof Error ? error.message : "导出失败，请稍后重试";
       message.error(errorMessage);
     }

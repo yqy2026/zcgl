@@ -57,7 +57,7 @@ def update_dictionary_categories():
 
         for et in enum_types:
             categories.add(et.category)
-            print(f'{et.code:20} | {et.name:15} | {et.category or "未分类":10}')
+            print(f"{et.code:20} | {et.name:15} | {et.category or '未分类':10}")
 
         print(f"\n=== All Categories: {sorted(list(categories))}")
 

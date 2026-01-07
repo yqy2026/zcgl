@@ -15,37 +15,27 @@ vi.mock('@tanstack/react-query', () => ({
   })),
 }))
 
-// Mock Chart.js
-vi.mock('chart.js', () => ({
-  Chart: {
-    register: vi.fn(),
-  },
-  CategoryScale: vi.fn(),
-  LinearScale: vi.fn(),
-  PointElement: vi.fn(),
-  LineElement: vi.fn(),
-  BarElement: vi.fn(),
-  Title: vi.fn(),
-  Tooltip: vi.fn(),
-  Legend: vi.fn(),
-  ArcElement: vi.fn(),
-}))
-
-// Mock react-chartjs-2
-vi.mock('react-chartjs-2', () => ({
-  Line: ({ data, options }: any) => (
-    <div data-testid="line-chart" data-chart-type="line">
-      {JSON.stringify({ data, options })}
+// Mock @ant-design/plots
+vi.mock('@ant-design/plots', () => ({
+  Line: ({ data, height }: any) => (
+    <div data-testid="line-chart" data-height={height}>
+      {data?.map((d: any, i: number) => (
+        <div key={i} />
+      ))}
     </div>
   ),
-  Bar: ({ data, options }: any) => (
-    <div data-testid="bar-chart" data-chart-type="bar">
-      {JSON.stringify({ data, options })}
+  Column: ({ data, height }: any) => (
+    <div data-testid="column-chart" data-height={height}>
+      {data?.map((d: any, i: number) => (
+        <div key={i} />
+      ))}
     </div>
   ),
-  Doughnut: ({ data, options }: any) => (
-    <div data-testid="doughnut-chart" data-chart-type="doughnut">
-      {JSON.stringify({ data, options })}
+  Pie: ({ data, height }: any) => (
+    <div data-testid="pie-chart" data-height={height}>
+      {data?.map((d: any, i: number) => (
+        <div key={i} />
+      ))}
     </div>
   ),
 }))
@@ -67,7 +57,7 @@ vi.mock('antd', () => ({
       {children}
     </div>
   ),
-  Statistic: ({ title, value, precision, suffix, prefix, valueStyle, formatter }: any) => (
+  Statistic: ({ title, value, precision: _precision, suffix, prefix, valueStyle, formatter }: any) => (
     <div data-testid="statistic" data-title={title} data-value={value} style={valueStyle}>
       {prefix && <span data-testid="statistic-prefix">{prefix}</span>}
       <span>{formatter ? formatter(value) : value}</span>
@@ -79,7 +69,7 @@ vi.mock('antd', () => ({
       {children}
     </div>
   ),
-  Alert: ({ message, description, type, showIcon }: any) => (
+  Alert: ({ message, description, type, showIcon: _showIcon }: any) => (
     <div data-testid="alert" data-type={type} data-message={message}>
       {description}
     </div>

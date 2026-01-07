@@ -2,7 +2,7 @@
  * 租金台账页面
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Table,
   Card,
@@ -15,7 +15,6 @@ import {
   message,
   Modal,
   Tooltip,
-  Badge,
   Row,
   Col,
   Statistic,
@@ -30,26 +29,38 @@ import {
   ClockCircleOutlined,
   ExclamationCircleOutlined,
   DollarOutlined,
-  FileExcelOutlined,
-  SyncOutlined,
-  CalendarOutlined
+  FileExcelOutlined
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 
-import { RentLedger, RentLedgerQueryParams, RentLedgerPageState, RentLedgerUpdate } from '../../types/rentContract';
+import {
+  RentLedger,
+  RentLedgerQueryParams,
+  RentLedgerPageState,
+  RentLedgerUpdate,
+  RentStatisticsOverview
+} from '../../types/rentContract';
 import { Asset } from '../../types/asset';
 import { Ownership } from '../../types/ownership';
 import { rentContractService } from '../../services/rentContractService';
 import { assetService } from '../../services/assetService';
 import { ownershipService } from '../../services/ownershipService';
 import { useFormat } from '../../utils/format';
+import { createLogger } from '../../utils/logger';
 
-const { Title } = Typography;
+const pageLogger = createLogger('RentLedger');
+
+const { Title, Text } = Typography;
 const { Search } = Input;
 const { Option } = Select;
-const { RangePicker } = DatePicker;
-const { Text } = Typography;
+
+interface BatchUpdateValues {
+  payment_status: '未支付' | '部分支付' | '已支付' | '逾期';
+  payment_date?: dayjs.Dayjs;
+  payment_method?: string;
+  notes?: string;
+}
 
 const RentLedgerPage: React.FC = () => {
   const [form] = Form.useForm();
@@ -70,12 +81,12 @@ const RentLedgerPage: React.FC = () => {
 
   const [assets, setAssets] = useState<Asset[]>([]);
   const [ownerships, setOwnerships] = useState<Ownership[]>([]);
-  const [statistics, setStatistics] = useState<any>(null);
+  const [statistics, setStatistics] = useState<RentStatisticsOverview | null>(null);
 
   const format = useFormat();
 
   // 加载台账列表
-  const loadLedgers = async (params?: RentLedgerQueryParams) => {
+  const loadLedgers = useCallback(async (params?: RentLedgerQueryParams) => {
     setState(prev => ({ ...prev, loading: true }));
     try {
       const response = await rentContractService.getRentLedgers({
@@ -87,7 +98,7 @@ const RentLedgerPage: React.FC = () => {
 
       // 安全检查：确保response和response.items存在
       if (!response) {
-        console.error('API响应为空');
+        pageLogger.error('API响应为空');
         message.error('加载台账列表失败：响应为空');
         setState(prev => ({ ...prev, loading: false }));
         return;
@@ -107,24 +118,25 @@ const RentLedgerPage: React.FC = () => {
         },
       }));
     } catch (error) {
-      console.error('加载台账列表失败:', error);
-      message.error(`加载台账列表失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      pageLogger.error('加载台账列表失败:', error as Error);
+      const errorMessage = error instanceof Error ? error.message : '未知错误';
+      message.error(`加载台账列表失败: ${errorMessage}`);
       setState(prev => ({ ...prev, loading: false, ledgers: [] }));
     }
-  };
+  }, [state.pagination.current, state.pagination.pageSize, state.filters]);
 
   // 加载统计数据
-  const loadStatistics = async () => {
+  const loadStatistics = useCallback(async () => {
     try {
       const stats = await rentContractService.getRentStatistics();
       setStatistics(stats);
     } catch (error) {
-      console.error('加载统计数据失败:', error);
+      pageLogger.error('加载统计数据失败:', error as Error);
     }
-  };
+  }, []);
 
   // 加载资产和权属方数据
-  const loadReferenceData = async () => {
+  const loadReferenceData = useCallback(async () => {
     try {
       const [assetsResponse, ownershipsResponse] = await Promise.all([
         assetService.getAssets({ limit: 100 }),
@@ -132,38 +144,39 @@ const RentLedgerPage: React.FC = () => {
       ]);
 
       // 安全检查：确保响应和items存在
-      const assets = assetsResponse?.items || [];
-      const ownerships = ownershipsResponse?.items || [];
+      const assetItems = assetsResponse?.items || [];
+      const ownershipItems = ownershipsResponse?.items || [];
 
-      setAssets(assets);
-      setOwnerships(ownerships);
+      setAssets(assetItems);
+      setOwnerships(ownershipItems);
     } catch (error) {
-      console.error('加载参考数据失败:', error);
-      message.error(`加载参考数据失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      pageLogger.error('加载参考数据失败:', error as Error);
+      const errorMessage = error instanceof Error ? error.message : '未知错误';
+      message.error(`加载参考数据失败: ${errorMessage}`);
     }
-  };
-
-  useEffect(() => {
-    loadLedgers();
-    loadStatistics();
-    loadReferenceData();
   }, []);
 
+  useEffect(() => {
+    void loadLedgers();
+    void loadStatistics();
+    void loadReferenceData();
+  }, [loadLedgers, loadStatistics, loadReferenceData]);
+
   // 处理分页变化
-  const handleTableChange = ((pagination: { current: number; pageSize: number; total?: number }) => {
+  const handleTableChange = (pagination: { current?: number; pageSize?: number }): void => {
     setState(prev => ({
       ...prev,
       pagination: {
         ...prev.pagination,
-        current: pagination.current,
-        pageSize: pagination.pageSize,
+        current: pagination.current ?? 1,
+        pageSize: pagination.pageSize ?? 10,
       },
     }));
-    loadLedgers({
-      page: pagination.current,
-      limit: pagination.pageSize,
+    void loadLedgers({
+      page: pagination.current ?? 1,
+      limit: pagination.pageSize ?? 10,
     });
-  }) as any;
+  };
 
   // 处理搜索
   const handleSearch = (values: Record<string, unknown>) => {
@@ -172,7 +185,7 @@ const RentLedgerPage: React.FC = () => {
       filters: values,
       pagination: { ...prev.pagination, current: 1 },
     }));
-    loadLedgers({ ...values, page: 1 });
+    void loadLedgers({ ...values, page: 1 });
   };
 
   // 重置搜索
@@ -182,7 +195,7 @@ const RentLedgerPage: React.FC = () => {
       filters: {},
       pagination: { ...prev.pagination, current: 1 },
     }));
-    loadLedgers({ page: 1 });
+    void loadLedgers({ page: 1 });
   };
 
   // 更新台账支付状态
@@ -190,15 +203,15 @@ const RentLedgerPage: React.FC = () => {
     try {
       await rentContractService.updateRentLedger(id, data);
       message.success('更新成功');
-      loadLedgers();
-      loadStatistics();
-    } catch (error) {
+      void loadLedgers();
+      void loadStatistics();
+    } catch {
       message.error('更新失败');
     }
   };
 
   // 批量更新支付状态
-  const handleBatchUpdate = async (values: { paymentStatus: string; paymentDate?: string }) => {
+  const handleBatchUpdate = async (values: BatchUpdateValues) => {
     if (state.selectedLedgers.length === 0) {
       message.warning('请先选择要更新的台账记录');
       return;
@@ -207,16 +220,16 @@ const RentLedgerPage: React.FC = () => {
     try {
       await rentContractService.batchUpdateRentLedger({
         ledger_ids: state.selectedLedgers.map(ledger => ledger.id),
-        payment_status: values.paymentStatus as any,
-        payment_date: values.paymentDate,
-        payment_method: (values as any).payment_method || '',
-        notes: (values as any).notes || '',
+        payment_status: values.payment_status,
+        payment_date: values.payment_date?.format('YYYY-MM-DD'),
+        payment_method: values.payment_method || '',
+        notes: values.notes || '',
       });
       message.success('批量更新成功');
       setState(prev => ({ ...prev, showBatchModal: false, selectedLedgers: [] }));
-      loadLedgers();
-      loadStatistics();
-    } catch (error) {
+      void loadLedgers();
+      void loadStatistics();
+    } catch {
       message.error('批量更新失败');
     }
   };
@@ -224,7 +237,7 @@ const RentLedgerPage: React.FC = () => {
   // 导出Excel
   const handleExport = async () => {
     try {
-      const blob = await rentContractService.exportLedgersToExcel(state.filters as any);
+      const blob = await rentContractService.exportLedgersToExcel(state.filters as Record<string, unknown>);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -234,21 +247,21 @@ const RentLedgerPage: React.FC = () => {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
       message.success('导出成功');
-    } catch (error) {
+    } catch {
       message.error('导出失败');
     }
   };
 
   // 选择行变化
-  const rowSelection: any = {
+  const rowSelection: object = {
     selectedRowKeys: state.selectedLedgers.map(ledger => ledger.id),
-    onChange: (selectedRowKeys: string[], selectedRows: RentLedger[]) => {
+    onChange: (_selectedRowKeys: React.Key[], selectedRows: RentLedger[]) => {
       setState(prev => ({ ...prev, selectedLedgers: selectedRows }));
     },
   };
 
   // 快速支付
-  const handleQuickPayment = async (ledger: RentLedger) => {
+  const handleQuickPayment = (ledger: RentLedger) => {
     Modal.confirm({
       title: '确认支付',
       content: `确认将台账 ${ledger.year_month} 标记为已支付？`,
@@ -360,7 +373,7 @@ const RentLedgerPage: React.FC = () => {
       title: '操作',
       key: 'actions',
       width: 150,
-      render: (record: RentLedger) => (
+      render: (_, record: RentLedger) => (
         <Space size="small">
           {record.payment_status !== '已支付' && (
             <Tooltip title="快速支付">
@@ -507,7 +520,7 @@ const RentLedgerPage: React.FC = () => {
             <DatePicker.MonthPicker
               placeholder="选择月份"
               style={{ width: '100%' }}
-              onChange={(date, dateString) => handleSearch({ year_month: dateString })}
+              onChange={(_date, dateString) => handleSearch({ year_month: dateString })}
             />
           </Col>
           <Col span={4}>

@@ -8,7 +8,10 @@
 
 import { enhancedApiClient } from '@/api/client';
 import { ApiErrorHandler } from '../utils/responseExtractor';
+import { createLogger } from '../utils/logger';
 import type { BackupInfo, BackupListResponse } from '@/types/api';
+
+const logger = createLogger('BackupService');
 
 export interface BackupRequest {
   description?: string
@@ -534,7 +537,7 @@ export class BackupService {
       return result.data!;
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
-      console.warn('获取备份历史记录失败:', enhancedError.message);
+      logger.warn('获取备份历史记录失败', { error: enhancedError.message });
       return [];
     }
   }
@@ -632,13 +635,13 @@ export class BackupService {
       );
 
       if (!result.success) {
-        console.warn(`检查备份文件存在性失败: ${result.error}`);
+        logger.warn(`检查备份文件存在性失败`, { error: result.error });
         return false;
       }
 
       return result.data!.exists;
     } catch (error) {
-      console.warn(`检查备份文件存在性失败: ${error}`);
+      logger.warn(`检查备份文件存在性失败`, { error });
       return false;
     }
   }

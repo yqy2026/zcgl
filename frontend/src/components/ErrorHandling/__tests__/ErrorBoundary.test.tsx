@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ErrorBoundary, AssetErrorBoundary, SystemErrorBoundary, useErrorHandler } from '../ErrorBoundary'
 
@@ -157,9 +157,9 @@ describe('ErrorBoundary - 重试功能', () => {
 
   it('应该支持重试功能', async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    const user = userEvent.setup()
+    const _user = userEvent.setup()
 
-    let shouldThrow = true
+    const shouldThrow = true
 
     render(
       <ErrorBoundary maxRetries={3}>

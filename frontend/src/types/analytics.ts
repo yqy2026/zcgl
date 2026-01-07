@@ -8,6 +8,7 @@ export interface AreaSummary {
   total_unrented_area: number
   assets_with_area_data: number
   occupancy_rate: number
+  total_non_commercial_area: number
 }
 
 export interface FinancialSummary {
@@ -113,6 +114,8 @@ export interface AnalyticsResponse {
   ownership_status_area_distribution?: OwnershipStatusDistribution[]
   usage_status_area_distribution?: UsageStatusDistribution[]
   business_category_area_distribution?: BusinessCategoryDistribution[]
+  cache_stats?: { cache_size: number; hits: number; misses: number; hit_rate: number }
+  performance_info?: { calculation_time: number; asset_count: number; cache_enabled: boolean }
 }
 
 export interface ChartDataPoint {
@@ -151,7 +154,7 @@ export interface DashboardWidget {
   type: 'statistic' | 'chart' | 'table'
   size: 'small' | 'medium' | 'large'
   position: { x: number; y: number; width: number; height: number }
-  config: Record<string, any>
+  config: Record<string, unknown>
 }
 
 export interface AnalyticsSettings {

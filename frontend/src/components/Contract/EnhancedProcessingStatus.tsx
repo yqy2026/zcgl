@@ -3,56 +3,38 @@
  * 支持中文合同识别的详细处理进度和状态显示
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Card,
-  Steps,
   Progress,
   Tag,
   Row,
   Col,
   Statistic,
   Alert,
-  Tooltip,
   Space,
-  Divider,
   Button,
   Timeline,
   Badge,
   Typography,
-  Spin,
-  Descriptions,
-  List
+  Spin
 } from 'antd';
 import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   ClockCircleOutlined,
-  InfoCircleOutlined,
-  WarningOutlined,
   LoadingOutlined,
   RocketOutlined,
   ExperimentOutlined,
   EyeOutlined,
-  SyncOutlined,
-  FireOutlined,
-  ThunderboltOutlined,
-  RobotOutlined,
-  SafetyCertificateOutlined,
-  FileTextOutlined,
-  TableOutlined,
-  ScanOutlined,
-  EditOutlined
+  SyncOutlined
 } from '@ant-design/icons';
 import type {
   EnhancedSessionProgress,
-  ValidationLevel,
-  EngineType,
-  ProcessingOptions,
-  QualityMetrics
+  ProcessingOptions
 } from '../../types/enhancedPdfImport';
 
-const { Title, Text, Paragraph } = Typography;
+const { Text } = Typography;
 
 interface ProcessingStep {
   step: string;
@@ -74,32 +56,27 @@ interface EnhancedProcessingStatusProps {
   showDetails?: boolean;
   compact?: boolean;
   onError?: (error: string) => void;
+  // Internal properties for compatibility
+  _sessionId?: string;
+  _processingOptions?: ProcessingOptions;
+  _onRefresh?: () => void;
+  _onCancel?: () => void;
+  _compact?: boolean;
+  _onError?: (error: string) => void;
 }
 
 const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
-  sessionId,
+  _sessionId,
   currentStatus,
-  processingOptions,
-  onRefresh,
-  onCancel,
+  _processingOptions,
+  _onRefresh,
+  _onCancel,
   showDetails = true,
-  compact = false,
-  onError
+  _compact = false,
+  _onError
 }) => {
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [autoRefresh, setAutoRefresh] = useState(true);
-
-  // 增强版处理步骤映射
-  const enhancedStepMap: Record<string, string> = {
-    'pdf_conversion': 'PDF转换',
-    'enhanced_text_extraction': '增强版文本提取',
-    'table_analysis': '表格分析',
-    'enhanced_info_extraction': '增强版信息提取',
-    'multi_engine_fusion': '多引擎融合',
-    'semantic_validation': '语义验证',
-    'final_validation': '最终验证',
-    'ready_for_review': '等待审核'
-  };
+  const [_autoRefresh, _setAutoRefresh] = useState(true);
 
   // 兼容旧版步骤映射
   const stepMap: Record<string, string> = {
@@ -149,35 +126,35 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
       },
       {
         step: 'pdf_conversion',
-        status: (currentStatus as any).processing_method === 'ocr' ? 'processing' : 'completed',
+        status: currentStatus.processing_method === 'ocr' ? 'processing' : 'completed',
         title: 'PDF处理',
-        description: (currentStatus as any).processing_method === 'ocr'
+        description: currentStatus.processing_method === 'ocr'
           ? '正在使用OCR技术处理PDF文档'
           : 'PDF文档处理完成',
-        progress: (currentStatus as any).processing_method === 'ocr' ? 80 : 100
+        progress: currentStatus.processing_method === 'ocr' ? 80 : 100
       },
       {
         step: 'text_extraction',
         status: 'completed',
         title: '文本提取',
-        description: `成功提取${(currentStatus as any).chinese_char_count || 0}个中文字符`,
+        description: `成功提取${currentStatus.chinese_char_count || 0}个中文字符`,
         progress: 100
       },
       {
         step: 'info_extraction',
         status: 'completed',
         title: '信息提取',
-        description: `提取了${Object.keys((currentStatus as any).extracted_data || {}).length}个字段`,
+        description: `提取了${Object.keys(currentStatus.extracted_data || {}).length}个字段`,
         progress: 100
       },
       {
         step: 'data_validation',
-        status: (currentStatus as any).validation_results ? 'completed' : 'processing',
+        status: currentStatus.validation_results ? 'completed' : 'processing',
         title: '数据验证',
-        description: (currentStatus as any).validation_results
+        description: currentStatus.validation_results
           ? '数据验证完成，置信度优秀'
           : '正在进行智能数据验证',
-        progress: (currentStatus as any).validation_results ? 100 : 70
+        progress: currentStatus.validation_results ? 100 : 70
       },
       {
         step: 'matching',
@@ -207,7 +184,7 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
             step.progress = 100;
           } else if (index === stepIndex) {
             step.status = 'processing';
-            step.progress = (currentStatus as any).progress_percentage || 0;
+            step.progress = currentStatus.progress_percentage || 0;
           } else {
             step.status = 'waiting';
             step.progress = 0;
@@ -224,20 +201,20 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
     if (!currentStatus) return null;
 
     return {
-      processingMethod: (currentStatus as any).processing_method,
-      textQuality: (currentStatus as any).chinese_char_count ? '优秀' : '良好',
-      extractionConfidence: (currentStatus as any).confidence_score
-        ? `${(((currentStatus as any).confidence_score) * 100).toFixed(1)}%`
+      processingMethod: currentStatus.processing_method,
+      textQuality: currentStatus.chinese_char_count ? '优秀' : '良好',
+      extractionConfidence: currentStatus.confidence_score
+        ? `${((currentStatus.confidence_score) * 100).toFixed(1)}%`
         : '计算中',
-      ocrUsed: (currentStatus as any).ocr_used,
-      estimatedTime: (currentStatus as any).processing_method === 'ocr' ? '45-60秒' : '30-45秒'
+      ocrUsed: currentStatus.ocr_used,
+      estimatedTime: currentStatus.processing_method === 'ocr' ? '45-60秒' : '30-45秒'
     };
   }, [currentStatus]);
 
   // 错误处理和重试逻辑
   const handleRetry = async () => {
-    if (onRefresh) {
-      onRefresh();
+    if (_onRefresh) {
+      _onRefresh();
     }
   };
 
@@ -273,50 +250,50 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
             </Button>
           </Space>
         }
-        >
-          <Row gutter={16}>
-            <Col span={16}>
-              <Progress
-                percent={(currentStatus as any).progress_percentage || 0}
-                status={(currentStatus as any).progress_percentage === 100 ? 'success' : 'active'}
-                strokeColor={{
-                  '0%': '#108ee9',
-                  '100%': '#87d068',
-                }}
-                strokeWidth={8}
-                format={(percent) => `${percent}%`}
+      >
+        <Row gutter={16}>
+          <Col span={16}>
+            <Progress
+              percent={currentStatus.progress_percentage || 0}
+              status={currentStatus.progress_percentage === 100 ? 'success' : 'active'}
+              strokeColor={{
+                '0%': '#108ee9',
+                '100%': '#87d068',
+              }}
+              strokeWidth={8}
+              format={(percent) => `${percent}%`}
+            />
+            <div style={{ marginTop: 16 }}>
+              <Text type="secondary">
+                当前状态：{stepMap[currentStatus.current_step] || '准备中'}
+              </Text>
+            </div>
+          </Col>
+          <Col span={8}>
+            <Space direction="vertical" style={{ width: '100%' }}>
+              <Statistic
+                title="处理方法"
+                value={performanceMetrics?.processingMethod === 'ocr' ? 'OCR识别' : '文本提取'}
+                prefix={<ExperimentOutlined />}
               />
-              <div style={{ marginTop: 16 }}>
-                <Text type="secondary">
-                  当前状态：{stepMap[currentStatus.current_step] || '准备中'}
-                </Text>
-              </div>
-            </Col>
-            <Col span={8}>
-              <Space direction="vertical" style={{ width: '100%' }}>
-                <Statistic
-                  title="处理方法"
-                  value={performanceMetrics?.processingMethod === 'ocr' ? 'OCR识别' : '文本提取'}
-                  prefix={<ExperimentOutlined />}
-                />
-                <Statistic
-                  title="置信度"
-                  value={performanceMetrics?.extractionConfidence || '计算中'}
-                  suffix="%"
-                  valueStyle={{
-                    color: parseFloat(performanceMetrics?.extractionConfidence || '0') > 80 ? '#3f8600' : '#cf1322'
-                  }}
-                />
-              </Space>
-            </Col>
-          </Row>
-        </Card>
+              <Statistic
+                title="置信度"
+                value={performanceMetrics?.extractionConfidence || '计算中'}
+                suffix="%"
+                valueStyle={{
+                  color: parseFloat(performanceMetrics?.extractionConfidence || '0') > 80 ? '#3f8600' : '#cf1322'
+                }}
+              />
+            </Space>
+          </Col>
+        </Row>
+      </Card>
 
       {/* 详细步骤 */}
       {showDetails && (
         <Card title="处理详情" style={{ marginTop: 16 }}>
           <Timeline>
-            {processingSteps.map((step, index) => (
+            {processingSteps.map((step, _index) => (
               <Timeline.Item
                 key={step.step}
                 dot={getStatusIcon(step.status)}
@@ -336,12 +313,12 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
                       <Text strong>{step.title}</Text>
                       <Badge
                         status={step.status === 'completed' ? 'success' :
-                               step.status === 'processing' ? 'processing' :
-                               step.status === 'error' ? 'error' : 'default'}
+                          step.status === 'processing' ? 'processing' :
+                            step.status === 'error' ? 'error' : 'default'}
                         text={
                           step.status === 'completed' ? '已完成' :
-                          step.status === 'processing' ? '处理中' :
-                          step.status === 'error' ? '失败' : '等待中'
+                            step.status === 'processing' ? '处理中' :
+                              step.status === 'error' ? '失败' : '等待中'
                         }
                       />
                     </Space>
@@ -392,12 +369,12 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
       )}
 
       {/* 警告和建议 */}
-      {(currentStatus as any).warnings && (currentStatus as any).warnings.length > 0 && (
+      {currentStatus.warnings && currentStatus.warnings.length > 0 && (
         <Alert
           message="处理提示"
           description={
             <ul>
-              {(currentStatus as any).warnings.map((warning: string, index: number) => (
+              {currentStatus.warnings.map((warning: string, index: number) => (
                 <li key={index}>{warning}</li>
               ))}
             </ul>

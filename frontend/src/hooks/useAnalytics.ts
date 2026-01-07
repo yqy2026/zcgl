@@ -2,6 +2,9 @@ import { useQuery } from '@tanstack/react-query'
 import { analyticsService } from '../services/analyticsService'
 import type { AssetSearchParams } from '../types/asset'
 import type { AnalyticsResponse } from '../types/analytics'
+import { createLogger } from '../utils/logger'
+
+const analyticsLogger = createLogger('useAnalytics')
 
 export const useAnalytics = (filters?: AssetSearchParams) => {
   return useQuery<AnalyticsResponse>({
@@ -11,7 +14,7 @@ export const useAnalytics = (filters?: AssetSearchParams) => {
         const result = await analyticsService.getComprehensiveAnalytics(filters)
         return result
       } catch (error) {
-        console.error('Analytics query error:', error)
+        analyticsLogger.error('Analytics query error:', error as Error)
         // 返回模拟数据以避免页面崩溃
         return {
           success: true,

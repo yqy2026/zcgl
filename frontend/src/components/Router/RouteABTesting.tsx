@@ -4,7 +4,6 @@
  */
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { useLocation } from 'react-router-dom'
 
 interface ABTestVariant {
   id: string
@@ -299,9 +298,10 @@ class ABTestManager {
 interface ABTestProviderProps {
   children: ReactNode
   userId?: string
+  _userId?: string
 }
 
-export const ABTestProvider: React.FC<ABTestProviderProps> = ({ children, userId }) => {
+export const ABTestProvider: React.FC<ABTestProviderProps> = ({ children, _userId }) => {
   const [manager] = useState(() => new ABTestManager())
   const [currentTests, setCurrentTests] = useState<Map<string, string>>(new Map())
   const [loading, setLoading] = useState(true)
@@ -459,13 +459,12 @@ export const useABTestAnalytics = (testId: string) => {
 
 // 预定义的A/B测试组件
 export const DashboardABTest: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { currentVariant } = useABTestAnalytics('dashboard_layout_v2')
+  const { currentVariant, trackView } = useABTestAnalytics('dashboard_layout_v2')
 
   useEffect(() => {
     // 自动跟踪页面浏览
-    const { trackView } = useABTestAnalytics('dashboard_layout_v2')
     trackView()
-  }, [])
+  }, [trackView])
 
   // 根据变体应用不同的样式
   const getLayoutStyle = () => {

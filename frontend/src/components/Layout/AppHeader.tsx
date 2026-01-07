@@ -1,22 +1,21 @@
 import React from 'react'
-import { Layout, Button, Space, Avatar, Dropdown, Badge, Typography, Tooltip, Modal, message } from 'antd'
+import { Layout, Button, Avatar, Dropdown, Badge, message, Modal, Space, Tooltip, Typography } from 'antd'
+import type { MenuProps } from 'antd'
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
-  BellOutlined,
+  LogoutOutlined,
   UserOutlined,
   SettingOutlined,
-  LogoutOutlined,
   QuestionCircleOutlined,
-  GlobalOutlined,
   ExclamationCircleOutlined,
+  GlobalOutlined,
+  BellOutlined,
 } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { AuthService } from '../../services/authService'
-import type { MenuProps } from 'antd'
 
 const { Header } = Layout
-const { Text } = Typography
 
 interface AppHeaderProps {
   collapsed: boolean
@@ -194,9 +193,9 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
         />
 
         <div style={{ marginLeft: 16 }}>
-          <Text strong style={{ fontSize: '18px', color: '#1890ff' }}>
+          <Typography.Text strong style={{ fontSize: '18px', color: '#1890ff' }}>
             土地房产资产管理系统
-          </Text>
+          </Typography.Text>
         </div>
       </div>
 
@@ -253,7 +252,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
               icon={<UserOutlined />}
               style={{ backgroundColor: '#1890ff' }}
             />
-            <Text>{user?.full_name || user?.username || '用户'}</Text>
+            <Typography.Text>{user?.full_name || user?.username || '用户'}</Typography.Text>
           </Space>
         </Dropdown>
       </Space>

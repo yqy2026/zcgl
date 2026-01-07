@@ -1,23 +1,16 @@
 import React, { useMemo } from 'react'
-import {
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer
-} from 'recharts'
+import { Pie, Column, Line, Area } from '@ant-design/plots'
 import ChartErrorBoundary from './ChartErrorBoundary'
 import { Empty, Spin } from 'antd'
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4']
+const COLORS = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2', '#fa8c16', '#eb2f96', '#13c2c2', '#52c41a']
+
+// Type for chart tooltip/formatter datum with dynamic field access
+interface ChartDatum {
+  type?: string
+  value?: number
+  [key: string]: unknown
+}
 
 interface PieChartProps {
   data: Array<{ name: string; value: number; percentage?: number }>
@@ -31,8 +24,8 @@ interface PieChartProps {
 
 export const AnalyticsPieChart: React.FC<PieChartProps> = ({
   data,
-  dataKey,
-  labelKey = 'name',
+  dataKey: _dataKey,  // Unused in current implementation
+  labelKey: _labelKey = 'name',  // Unused in current implementation
   outerRadius = 80,
   height = 300,
   showLegend = true,
@@ -40,8 +33,33 @@ export const AnalyticsPieChart: React.FC<PieChartProps> = ({
 }) => {
   const chartData = useMemo(() => {
     if (!data || data.length === 0) return []
-    return data.filter(item => item.value > 0)
+    return data.filter(item => item.value > 0).map(item => ({
+      type: item.name,
+      value: item.value,
+    }))
   }, [data])
+
+  const config = {
+    data: chartData,
+    angleField: 'value',
+    colorField: 'type',
+    color: COLORS,
+    radius: outerRadius / 100,
+    label: {
+      type: 'outer' as const,
+      content: '{name} {percentage}',
+    },
+    legend: showLegend ? {
+      layout: 'horizontal' as const,
+      position: 'bottom' as const,
+    } : false,
+    tooltip: {
+      formatter: (datum: ChartDatum) => ({
+        name: datum.type ?? '',
+        value: typeof datum.value === 'number' ? datum.value.toLocaleString() : String(datum.value ?? ''),
+      }),
+    },
+  }
 
   if (loading) {
     return (
@@ -61,33 +79,7 @@ export const AnalyticsPieChart: React.FC<PieChartProps> = ({
 
   return (
     <ChartErrorBoundary>
-      <ResponsiveContainer width="100%" height={height}>
-        <PieChart>
-          <Pie
-            data={chartData}
-            cx="50%"
-            cy="50%"
-            labelLine={false}
-            label={({ [labelKey]: name, percentage }) =>
-              `${name} ${percentage ? percentage.toFixed(1) + '%' : ''}`
-            }
-            outerRadius={outerRadius}
-            fill="#8884d8"
-            dataKey={dataKey}
-          >
-            {chartData.map((_entry, index) => (
-              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-            ))}
-          </Pie>
-          {showLegend && <Legend />}
-          <Tooltip
-            formatter={(value: number, name: string, props: { payload?: Record<string, string> }) => [
-              `${value.toLocaleString()}`,
-              props?.payload?.[labelKey] || name
-            ]}
-          />
-        </PieChart>
-      </ResponsiveContainer>
+      <Pie {...config} height={height} />
     </ChartErrorBoundary>
   )
 }
@@ -109,7 +101,7 @@ export const AnalyticsBarChart: React.FC<BarChartProps> = ({
   xDataKey,
   yDataKey,
   barName = '数值',
-  fill = '#8884d8',
+  fill = '#1890ff',
   height = 300,
   showLegend = true,
   loading = false,
@@ -119,6 +111,53 @@ export const AnalyticsBarChart: React.FC<BarChartProps> = ({
     if (!data || data.length === 0) return []
     return data
   }, [data])
+
+  const config = {
+    data: chartData,
+    xField: xDataKey,
+    yField: yDataKey,
+    color: fill,
+    columnStyle: {
+      fillOpacity: 0.8,
+      radius: [4, 4, 0, 0],
+    },
+    label: {
+      position: 'top' as const,
+      formatter: (datum: ChartDatum) => {
+        const val = datum[yDataKey] as number | undefined
+        return isPercentage
+          ? `${val?.toFixed(1) ?? '0'}%`
+          : val?.toLocaleString() ?? '0'
+      },
+    },
+    legend: showLegend ? {
+      position: 'top' as const,
+    } : false,
+    tooltip: {
+      formatter: (datum: ChartDatum) => {
+        const val = datum[yDataKey] as number | undefined
+        return {
+          name: barName,
+          value: isPercentage
+            ? `${val?.toFixed(1) ?? '0'}%`
+            : val?.toLocaleString() ?? '0',
+        }
+      },
+    },
+    yAxis: {
+      min: 0,
+      label: {
+        formatter: isPercentage ? (value: number) => `${value}%` : undefined,
+      },
+    },
+    xAxis: {
+      label: {
+        autoRotate: true,
+        rotate: -45,
+        offset: 30,
+      },
+    },
+  }
 
   if (loading) {
     return (
@@ -138,34 +177,7 @@ export const AnalyticsBarChart: React.FC<BarChartProps> = ({
 
   return (
     <ChartErrorBoundary>
-      <ResponsiveContainer width="100%" height={height}>
-        <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis
-            dataKey={xDataKey}
-            angle={-45}
-            textAnchor="end"
-            height={60}
-            interval={0}
-          />
-          <YAxis
-            tickFormatter={isPercentage ? (value) => `${value}%` : undefined}
-          />
-          <Tooltip
-            formatter={(value: number) => [
-              isPercentage ? `${value.toFixed(1)}%` : value.toLocaleString(),
-              barName
-            ]}
-          />
-          {showLegend && <Legend />}
-          <Bar
-            dataKey={yDataKey}
-            fill={fill}
-            name={barName}
-            radius={[4, 4, 0, 0]}
-          />
-        </BarChart>
-      </ResponsiveContainer>
+      <Column {...config} height={height} />
     </ChartErrorBoundary>
   )
 }
@@ -218,39 +230,65 @@ export const AnalyticsLineChart: React.FC<LineChartProps> = ({
     )
   }
 
+  const config = {
+    data: chartData,
+    xField: xDataKey,
+    yField: yDataKey,
+    smooth: true,
+    color: stroke,
+    lineStyle: {
+      lineWidth: strokeWidth,
+    },
+    point: showDots ? {
+      size: 4,
+    } : false,
+    legend: showLegend ? {
+      position: 'top' as const,
+    } : false,
+    tooltip: {
+      formatter: (datum: ChartDatum) => {
+        const val = datum[yDataKey] as number | undefined
+        return {
+          name: lineName,
+          value: isPercentage
+            ? `${val?.toFixed(1) ?? '0'}%`
+            : val?.toLocaleString() ?? '0',
+        }
+      },
+    },
+    yAxis: {
+      label: {
+        formatter: isPercentage ? (value: number) => `${value}%` : undefined,
+      },
+    },
+    xAxis: {
+      label: {
+        autoRotate: true,
+        rotate: -45,
+        offset: 30,
+      },
+    },
+  }
+
+  if (loading) {
+    return (
+      <div style={{ height: `${height}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Spin size="large" />
+      </div>
+    )
+  }
+
+  if (!chartData || chartData.length === 0) {
+    return (
+      <div style={{ height: `${height}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Empty description="暂无数据" />
+      </div>
+    )
+  }
+
   return (
     <ChartErrorBoundary>
-      <ResponsiveContainer width="100%" height={height}>
-        <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis
-            dataKey={xDataKey}
-            angle={-45}
-            textAnchor="end"
-            height={60}
-            interval={0}
-          />
-          <YAxis
-            tickFormatter={isPercentage ? (value) => `${value}%` : undefined}
-          />
-          <Tooltip
-            formatter={(value: number) => [
-              isPercentage ? `${value.toFixed(1)}%` : value.toLocaleString(),
-              lineName
-            ]}
-          />
-          {showLegend && <Legend />}
-          <Line
-            type="monotone"
-            dataKey={yDataKey}
-            stroke={stroke}
-            name={lineName}
-            strokeWidth={strokeWidth}
-            dot={showDots ? { r: 4 } : false}
-            activeDot={{ r: 6 }}
-          />
-        </LineChart>
-      </ResponsiveContainer>
+      <Line {...config} height={height} />
     </ChartErrorBoundary>
   )
 }
@@ -281,6 +319,69 @@ export const AnalyticsMultiBarChart: React.FC<MultiBarChartProps> = ({
     return data
   }, [data])
 
+  // Transform data for multi-series column chart
+  const multiBarData = useMemo(() => {
+    if (!chartData || chartData.length === 0) return []
+    return chartData.flatMap(item =>
+      bars.map(bar => ({
+        [xDataKey]: item[xDataKey],
+        type: bar.name,
+        value: item[bar.dataKey],
+      }))
+    )
+  }, [chartData, bars, xDataKey])
+
+  if (loading) {
+    return (
+      <div style={{ height: `${height}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Spin size="large" />
+      </div>
+    )
+  }
+
+  if (!chartData || chartData.length === 0) {
+    return (
+      <div style={{ height: `${height}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Empty description="暂无数据" />
+      </div>
+    )
+  }
+
+  const config = {
+    data: multiBarData,
+    xField: xDataKey,
+    yField: 'value',
+    seriesField: 'type',
+    color: ({ type }: ChartDatum) => {
+      const bar = bars.find(b => b.name === type)
+      return bar?.fill ?? '#1890ff'
+    },
+    isGroup: true,
+    columnStyle: {
+      fillOpacity: 0.8,
+      radius: [4, 4, 0, 0],
+    },
+    legend: showLegend ? {
+      position: 'top' as const,
+    } : false,
+    tooltip: {
+      formatter: (datum: ChartDatum) => ({
+        name: datum.type ?? '',
+        value: typeof datum.value === 'number' ? datum.value.toLocaleString() : String(datum.value ?? ''),
+      }),
+    },
+    yAxis: {
+      min: 0,
+    },
+    xAxis: {
+      label: {
+        autoRotate: true,
+        rotate: -45,
+        offset: 30,
+      },
+    },
+  }
+
   if (loading) {
     return (
       <div style={{ height: `${height}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -299,30 +400,7 @@ export const AnalyticsMultiBarChart: React.FC<MultiBarChartProps> = ({
 
   return (
     <ChartErrorBoundary>
-      <ResponsiveContainer width="100%" height={height}>
-        <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis
-            dataKey={xDataKey}
-            angle={-45}
-            textAnchor="end"
-            height={60}
-            interval={0}
-          />
-          <YAxis />
-          <Tooltip />
-          {showLegend && <Legend />}
-          {bars.map((bar) => (
-            <Bar
-              key={bar.dataKey}
-              dataKey={bar.dataKey}
-              fill={bar.fill}
-              name={bar.name}
-              radius={[4, 4, 0, 0]}
-            />
-          ))}
-        </BarChart>
-      </ResponsiveContainer>
+      <Column {...config} height={height} />
     </ChartErrorBoundary>
   )
 }
@@ -338,12 +416,18 @@ interface AreaChartProps {
   showLegend?: boolean
   loading?: boolean
   isPercentage?: boolean
+  // Internal properties for compatibility
+  _fill?: string
+  _stroke?: string
 }
 
 export const AnalyticsAreaChart: React.FC<AreaChartProps> = ({
   data,
   xDataKey,
+  yDataKey,
   areaName = '数值',
+  _fill,
+  _stroke,
   height = 300,
   showLegend = true,
   loading = false,
@@ -370,30 +454,52 @@ export const AnalyticsAreaChart: React.FC<AreaChartProps> = ({
     )
   }
 
+  const config = {
+    data: chartData,
+    xField: xDataKey,
+    yField: yDataKey,
+    smooth: true,
+    areaStyle: {
+      fillOpacity: 0.3,
+    },
+    line: {
+      color: '#1890ff',
+      style: {
+        lineWidth: 2,
+      },
+    },
+    color: '#1890ff',
+    legend: showLegend ? {
+      position: 'top' as const,
+    } : false,
+    tooltip: {
+      formatter: (datum: ChartDatum) => {
+        const val = datum[yDataKey] as number | undefined
+        return {
+          name: areaName,
+          value: isPercentage
+            ? `${val?.toFixed(1) ?? '0'}%`
+            : val?.toLocaleString() ?? '0',
+        }
+      },
+    },
+    yAxis: {
+      label: {
+        formatter: isPercentage ? (value: number) => `${value}%` : undefined,
+      },
+    },
+    xAxis: {
+      label: {
+        autoRotate: true,
+        rotate: -45,
+        offset: 30,
+      },
+    },
+  }
+
   return (
     <ChartErrorBoundary>
-      <ResponsiveContainer width="100%" height={height}>
-        <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis
-            dataKey={xDataKey}
-            angle={-45}
-            textAnchor="end"
-            height={60}
-            interval={0}
-          />
-          <YAxis
-            tickFormatter={isPercentage ? (value) => `${value}%` : undefined}
-          />
-          <Tooltip
-            formatter={(value: number) => [
-              isPercentage ? `${value.toFixed(1)}%` : value.toLocaleString(),
-              areaName
-            ]}
-          />
-          {showLegend && <Legend />}
-        </LineChart>
-      </ResponsiveContainer>
+      <Area {...config} height={height} />
     </ChartErrorBoundary>
   )
 }

@@ -843,7 +843,7 @@ class QualityMonitor:
 
 ## 基本信息
 
-- **报告时间**: {report.timestamp.strftime('%Y-%m-%d %H:%M:%S')}
+- **报告时间**: {report.timestamp.strftime("%Y-%m-%d %H:%M:%S")}
 - **总体分数**: {report.overall_score:.1f}分
 - **质量等级**: {self._get_level_display(report.overall_level)}
 - **检查指标数**: {len(report.metrics)}
@@ -887,7 +887,7 @@ class QualityMonitor:
         content += f"""
 ## 报告生成时间
 
-报告生成于: {report.timestamp.strftime('%Y-%m-%d %H:%M:%S')}
+报告生成于: {report.timestamp.strftime("%Y-%m-%d %H:%M:%S")}
 
 ---
 *该报告由持续质量监控系统自动生成*
@@ -991,9 +991,9 @@ async def main():
 
         if args.format == "console":
             # 控制台输出
-            print(f"\n{'='*60}")
+            print(f"\n{'=' * 60}")
             print(f"质量监控报告 - {args.mode.upper()} 模式")
-            print(f"{'='*60}")
+            print(f"{'=' * 60}")
             print(
                 f"总体分数: {report.overall_score:.1f}分 ({monitor._get_level_display(report.overall_level)})"
             )

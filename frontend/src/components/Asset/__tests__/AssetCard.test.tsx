@@ -3,29 +3,24 @@
  * 测试资产卡片组件
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import React from 'react'
 
 // Mock format utilities
 vi.mock('@/utils/format', () => ({
   formatPercentage: (value: number) => `${value.toFixed(2)}%`,
-  formatDate: (date: string, format?: string) => '2024-01-01',
-  getStatusColor: (status: string, type: string) => 'blue',
-  calculateOccupancyRate: (rented: number, rentable: number) => 50,
+  formatDate: (_date: string, _format?: string) => '2024-01-01',
+  getStatusColor: (_status: string, _type: string) => 'blue',
+  calculateOccupancyRate: (_rented: number, _rentable: number) => 50,
 }))
 
 // Mock Ant Design components
 vi.mock('antd', () => ({
-  Card: ({ children, className, hoverable, style, actions, title }: any) => (
-    <div data-testid="card" className={className} style={style} data-hoverable={hoverable}>
-      {title}
-      {actions}
-      {children}
-    </div>
-  ),
-  Card: ({ Meta, children, ...props }: any) => (
-    <div data-testid="card" {...props}>
-      <div data-testid="card-meta">{Meta}</div>
+  Card: ({ children, className, hoverable, style, actions, title, Meta, ...props }: any) => (
+    <div data-testid="card" className={className} style={style} data-hoverable={hoverable} {...props}>
+      {title && <div data-testid="card-title">{title}</div>}
+      {Meta && <div data-testid="card-meta">{Meta}</div>}
+      {actions && <div data-testid="card-actions">{actions}</div>}
       {children}
     </div>
   ),

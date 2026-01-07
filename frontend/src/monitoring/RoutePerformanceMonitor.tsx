@@ -257,14 +257,14 @@ class RoutePerformanceMonitor {
             `route-start-${route}`,
             `route-interactive-${route}`
           )
-        } catch (error) {
+        } catch {
           // 忽略测量错误
         }
       }
     }
   }
 
-  recordError(route: string, error: Error) {
+  recordError(route: string, _error: Error) {
     const metric = this.metrics.find(m => m.route === route)
     if (metric) {
       metric.errorCount++

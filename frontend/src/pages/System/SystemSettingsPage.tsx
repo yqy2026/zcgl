@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { Card, Form, Input, Switch, Button, message, Divider, Typography, Space, Tabs, Alert } from 'antd'
-import { SettingOutlined, InfoCircleOutlined, DatabaseOutlined, CloudDownloadOutlined, CloudUploadOutlined } from '@ant-design/icons'
+import { SettingOutlined, DatabaseOutlined, CloudDownloadOutlined, CloudUploadOutlined } from '@ant-design/icons'
 import { systemService } from '../../services/systemService'
+import type { SystemSettings } from '../../services/systemService'
+import { createLogger } from '../../utils/logger'
+
+const pageLogger = createLogger('SystemSettings')
 
 const { Title, Text } = Typography
 const { TabPane } = Tabs
@@ -14,20 +18,6 @@ interface SystemInfo {
   environment: string
 }
 
-interface SystemSettings {
-  site_name: string
-  site_description: string
-  allow_registration: boolean
-  session_timeout: number
-  password_policy: {
-    min_length: number
-    require_uppercase: boolean
-    require_lowercase: boolean
-    require_numbers: boolean
-    require_special_chars: boolean
-  }
-}
-
 const SystemSettingsPage: React.FC = () => {
   const [form] = Form.useForm()
   const [loading, setLoading] = useState(false)
@@ -36,45 +26,45 @@ const SystemSettingsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState('settings')
 
   // 获取系统信息
-  const fetchSystemInfo = async () => {
+  const fetchSystemInfo = React.useCallback(async () => {
     try {
       setLoading(true)
       const response = await systemService.getSystemInfo()
-      setSystemInfo(response.data)
+      setSystemInfo(response as unknown as SystemInfo)
     } catch (error: unknown) {
-      console.error('获取系统信息失败:', error)
+      pageLogger.error('获取系统信息失败:', error as Error)
       const errorMsg = error instanceof Error ? error.message : '未知错误'
       message.error('获取系统信息失败: ' + errorMsg)
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   // 获取系统设置
-  const fetchSettings = async () => {
+  const fetchSettings = React.useCallback(async () => {
     try {
       setLoading(true)
       const response = await systemService.getSettings()
-      setSettings(response.data)
-      form.setFieldsValue(response.data)
+      setSettings(response as unknown as SystemSettings)
+      form.setFieldsValue(response)
     } catch (error: unknown) {
-      console.error('获取系统设置失败:', error)
+      pageLogger.error('获取系统设置失败:', error as Error)
       const errorMsg = error instanceof Error ? error.message : '未知错误'
       message.error('获取系统设置失败: ' + errorMsg)
     } finally {
       setLoading(false)
     }
-  }
+  }, [form])
 
   // 保存设置
-  const handleSaveSettings = async (values: any) => {
+  const handleSaveSettings = async (values: Partial<SystemSettings>) => {
     try {
       setLoading(true)
       await systemService.updateSettings(values)
       message.success('设置保存成功')
-      fetchSettings()
+      void fetchSettings()
     } catch (error: unknown) {
-      console.error('保存设置失败:', error)
+      pageLogger.error('保存设置失败:', error as Error)
       const errorMsg = error instanceof Error ? error.message : '未知错误'
       message.error('保存设置失败: ' + errorMsg)
     } finally {
@@ -89,7 +79,7 @@ const SystemSettingsPage: React.FC = () => {
       const response = await systemService.backupSystem()
       message.success('数据备份成功')
       // 创建下载链接
-      const blob = new Blob([JSON.stringify(response.data, null, 2)], { type: 'application/json' })
+      const blob = new Blob([JSON.stringify(response, null, 2)], { type: 'application/json' })
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -97,7 +87,7 @@ const SystemSettingsPage: React.FC = () => {
       a.click()
       window.URL.revokeObjectURL(url)
     } catch (error: unknown) {
-      console.error('数据备份失败:', error)
+      pageLogger.error('数据备份失败:', error as Error)
       const errorMsg = error instanceof Error ? error.message : '未知错误'
       message.error('数据备份失败: ' + errorMsg)
     } finally {
@@ -118,7 +108,7 @@ const SystemSettingsPage: React.FC = () => {
         window.location.reload()
       }, 2000)
     } catch (error: unknown) {
-      console.error('数据恢复失败:', error)
+      pageLogger.error('数据恢复失败:', error as Error)
       const errorMsg = error instanceof Error ? error.message : '未知错误'
       message.error('数据恢复失败: ' + errorMsg)
     } finally {
@@ -128,9 +118,9 @@ const SystemSettingsPage: React.FC = () => {
 
   useEffect(() => {
     if (activeTab === 'info') {
-      fetchSystemInfo()
+      void fetchSystemInfo()
     } else if (activeTab === 'settings') {
-      fetchSettings()
+      void fetchSettings()
     }
   }, [activeTab])
 

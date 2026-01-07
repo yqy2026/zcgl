@@ -402,14 +402,16 @@ interface ProgressTrackerProps {
   current: number
   size?: 'small' | 'default'
   direction?: 'horizontal' | 'vertical'
+  _size?: 'small' | 'default'
+  _direction?: 'horizontal' | 'vertical'
   showDetails?: boolean
 }
 
 export const SmartProgressTracker: React.FC<ProgressTrackerProps> = ({
   steps,
   current,
-  size = 'default',
-  direction = 'horizontal',
+  _size = 'default',
+  _direction = 'horizontal',
   showDetails = true
 }) => {
   return (

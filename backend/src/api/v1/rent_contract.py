@@ -44,6 +44,7 @@ from ...schemas.rent_contract import (
     RentTermCreate,
     RentTermResponse,
 )
+from ...services.rent_contract import rent_contract_service
 
 try:
     from ...services.document.rent_contract_excel import rent_contract_excel_service
@@ -80,7 +81,7 @@ def create_contract(
         raise HTTPException(status_code=404, detail="关联的权属方不存在")
 
     try:
-        contract = rent_contract.create_with_terms(db=db, obj_in=contract_in)
+        contract = rent_contract_service.create_contract(db=db, obj_in=contract_in)
         return contract
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -170,7 +171,7 @@ def update_contract(
         raise HTTPException(status_code=404, detail="合同不存在")
 
     try:
-        updated_contract = rent_contract.update_with_terms(
+        updated_contract = rent_contract_service.update_contract(
             db=db, db_obj=contract, obj_in=contract_in
         )
         return updated_contract
@@ -261,7 +262,7 @@ def generate_monthly_ledger(
     根据合同信息生成月度租金台账
     """
     try:
-        ledgers = rent_ledger.generate_monthly_ledger(db=db, request=request)
+        ledgers = rent_contract_service.generate_monthly_ledger(db=db, request=request)
         # 转换为Pydantic响应模型
         ledger_responses = []
         for ledger in ledgers:
@@ -348,7 +349,7 @@ def batch_update_rent_ledger(
     批量更新租金台账支付状态
     """
     try:
-        ledgers = rent_ledger.batch_update_payment(db=db, request=request)
+        ledgers = rent_contract_service.batch_update_payment(db=db, request=request)
         # Convert SQLAlchemy models to Pydantic schemas
         ledger_responses = [
             RentLedgerResponse.model_validate(ledger) for ledger in ledgers
@@ -419,7 +420,9 @@ def get_rent_statistics(
     )
 
     try:
-        statistics = rent_ledger.get_statistics(db=db, query_params=query_params)
+        statistics = rent_contract_service.get_statistics(
+            db=db, query_params=query_params
+        )
         return statistics
     except Exception as e:
         # Don't catch HTTPException - let it propagate
@@ -444,7 +447,7 @@ def get_ownership_statistics(
     按权属方统计租金情况
     """
     try:
-        statistics = rent_ledger.get_ownership_statistics(
+        statistics = rent_contract_service.get_ownership_statistics(
             db=db, start_date=start_date, end_date=end_date, ownership_ids=ownership_ids
         )
         return statistics
@@ -471,7 +474,7 @@ def get_asset_statistics(
     按资产统计租金情况
     """
     try:
-        statistics = rent_ledger.get_asset_statistics(
+        statistics = rent_contract_service.get_asset_statistics(
             db=db, start_date=start_date, end_date=end_date, asset_ids=asset_ids
         )
         return statistics
@@ -498,7 +501,7 @@ def get_monthly_statistics(
     获取月度租金统计
     """
     try:
-        statistics = rent_ledger.get_monthly_statistics(
+        statistics = rent_contract_service.get_monthly_statistics(
             db=db, year=year, start_month=start_month, end_month=end_month
         )
         return statistics
@@ -526,20 +529,20 @@ def export_statistics(
         from ..services.excel_export import export_statistics_report
 
         # 获取统计数据
-        overview_stats = rent_ledger.get_statistics(
+        overview_stats = rent_contract_service.get_statistics(
             db=db,
             query_params=RentStatisticsQuery(start_date=start_date, end_date=end_date),
         )
 
-        ownership_stats = rent_ledger.get_ownership_statistics(
+        ownership_stats = rent_contract_service.get_ownership_statistics(
             db=db, start_date=start_date, end_date=end_date
         )
 
-        asset_stats = rent_ledger.get_asset_statistics(
+        asset_stats = rent_contract_service.get_asset_statistics(
             db=db, start_date=start_date, end_date=end_date
         )
 
-        monthly_stats = rent_ledger.get_monthly_statistics(db=db)
+        monthly_stats = rent_contract_service.get_monthly_statistics(db=db)
 
         # 生成Excel文件
         excel_data = export_statistics_report(

@@ -50,7 +50,7 @@ import { StatisticCard, FinancialStatisticCard } from "./StatisticCard";
 import { ChartCard } from "./AnalyticsCard";
 import { AnalyticsPieChart, AnalyticsBarChart, AnalyticsLineChart } from "./Charts";
 // import AdvancedAnalyticsCard from './AdvancedAnalyticsCard'  // 暂时注释，等待后端API支持
-import { PerformanceMonitor } from "./PerformanceMonitor";
+import PerformanceMonitor from "../Performance/PerformanceMonitor";
 
 const { Title } = Typography;
 
@@ -78,9 +78,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   // 导出选项 - removed unused variable
 
   const handleExport = (_format: "excel" | "pdf" | "csv") => {
-    // 实现导出逻辑
-    // Export analytics data
-    console.log("Export functionality to be implemented");
+    // TODO: Implement export functionality
   };
 
   const handleRefresh = () => {
@@ -197,10 +195,10 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         title: "资产收益率",
         value:
           analytics.financial_summary.estimated_annual_income > 0 &&
-          analytics.area_summary.total_area > 0
+            analytics.area_summary.total_area > 0
             ? (analytics.financial_summary.estimated_annual_income /
-                analytics.area_summary.total_area) *
-              100
+              analytics.area_summary.total_area) *
+            100
             : 0,
         suffix: "%",
         precision: 2,
@@ -234,7 +232,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
       }}
     >
       {/* 性能监控 */}
-      <PerformanceMonitor enabled={process.env.NODE_ENV === "development"} />
+      {process.env.NODE_ENV === "development" && <PerformanceMonitor />}
 
       {/* 头部操作栏 */}
       <Row gutter={[16, 16]} style={{ marginBottom: "24px" }}>

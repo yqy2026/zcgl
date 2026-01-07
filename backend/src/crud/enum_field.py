@@ -339,7 +339,7 @@ class EnumFieldValueCRUD:
 
         if parent_id is None:
             # Get top-level items (parent_id is NULL)
-            query = query.filter(EnumFieldValue.parent_id == None)
+            query = query.filter(EnumFieldValue.parent_id.is_(None))
         else:
             query = query.filter(EnumFieldValue.parent_id == parent_id)
 

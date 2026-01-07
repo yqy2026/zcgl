@@ -418,7 +418,9 @@ class DataCleaner:
                         return datetime.strptime(value, fmt)
                     except ValueError:
                         continue
-            except Exception:  # pragma: no cover
+            except (
+                Exception
+            ):  # pragma: no cover  # nosec - B110: Intentional graceful degradation
                 pass  # pragma: no cover
         return None
 

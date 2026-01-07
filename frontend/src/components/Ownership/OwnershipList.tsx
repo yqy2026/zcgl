@@ -3,11 +3,11 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { createLogger } from '@/utils/logger';
 import {
   Table,
   Button,
   Space,
-  Tag,
   Tooltip,
   Modal,
   message,
@@ -18,8 +18,7 @@ import {
   Badge,
   Input,
   Select,
-  Switch,
-  Pagination
+  Switch
 } from 'antd';
 import {
   PlusOutlined,
@@ -40,6 +39,7 @@ import OwnershipDetail from './OwnershipDetail';
 const { Search } = Input;
 const { Option } = Select;
 const { confirm } = Modal;
+const componentLogger = createLogger('OwnershipList');
 
 interface OwnershipListProps {
   onSelectOwnership?: (ownership: Ownership) => void;
@@ -79,7 +79,7 @@ const OwnershipList: React.FC<OwnershipListProps> = ({
       });
       setOwnerships(response.items);
       setTotal(response.total);
-    } catch (error) {
+    } catch {
       message.error('加载权属方列表失败');
     } finally {
       setLoading(false);
@@ -91,8 +91,8 @@ const OwnershipList: React.FC<OwnershipListProps> = ({
     try {
       const stats = await ownershipService.getOwnershipStatistics();
       setStatistics(stats);
-    } catch (error) {
-      console.error('加载统计信息失败:', error);
+    } catch {
+      componentLogger.warn('加载统计信息失败');
     }
   };
 
@@ -173,7 +173,7 @@ const OwnershipList: React.FC<OwnershipListProps> = ({
       message.success(`${record.is_active ? '禁用' : '启用'}成功`);
       loadOwnerships();
       loadStatistics();
-    } catch (error) {
+    } catch {
       message.error('操作失败');
     }
   };

@@ -95,7 +95,9 @@ class JWTSecurityConfig:
 
     @classmethod
     def create_token_with_claims(
-        cls, payload: dict[str, Any], token_type: str = "access"
+        cls,
+        payload: dict[str, Any],
+        token_type: str = "access",  # nosec - B107: Token type name, not password
     ) -> str:
         """
         创建包含标准声明和自定义声明的JWT令牌
@@ -110,9 +112,9 @@ class JWTSecurityConfig:
         now = datetime.now(UTC)
 
         # 根据令牌类型设置过期时间
-        if token_type == "access":
+        if token_type == "access":  # nosec - B105: Token type name, not password
             expire_time = now + cls.DEFAULT_ACCESS_TOKEN_LIFETIME
-        elif token_type == "refresh":
+        elif token_type == "refresh":  # nosec - B105: Token type name, not password
             expire_time = now + cls.DEFAULT_REFRESH_TOKEN_LIFETIME
         else:
             expire_time = now + cls.DEFAULT_ACCESS_TOKEN_LIFETIME

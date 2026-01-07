@@ -83,16 +83,16 @@ vi.mock('@ant-design/icons', () => ({
 vi.mock('@/utils/format', () => ({
   formatArea: (value: number) => `${value.toLocaleString()} ㎡`,
   formatPercentage: (value: number) => `${value.toFixed(2)}%`,
-  formatDate: (date: string, format?: string) => '2024-01-01',
+  formatDate: (_date: string, _format?: string) => '2024-01-01',
   formatCurrency: (value: number) => `¥${value.toLocaleString()}`,
-  getStatusColor: (status: string, type: string) => 'blue',
+  getStatusColor: (_status: string, _type: string) => 'blue',
 }))
 
 // Mock services
 vi.mock('@/services', () => ({
-  getAssetStatusLabel: (status: string) => status,
-  getPropertyNatureLabel: (nature: string) => nature,
-  getUsageStatusCategory: (status: string) => 'operating',
+  getAssetStatusLabel: (_status: string) => 'status',
+  getPropertyNatureLabel: (_nature: string) => 'nature',
+  getUsageStatusCategory: (_status: string) => 'operating',
 }))
 
 describe('AssetDetailInfo 组件测试', () => {

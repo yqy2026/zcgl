@@ -4,15 +4,13 @@
 
 import logging
 import os
-from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from ...database import get_db
-
-DATABASE_URL = "sqlite:///:memory:"
+from ...services.backup import BackupService
 
 # 配置日志
 logger = logging.getLogger(__name__)
@@ -42,36 +40,24 @@ async def create_backup(
         备份结果信息
     """
     try:
-        # 生成备份文件名
-        if not backup_name:
-            backup_name = f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        # 使用BackupService创建备份
+        service = BackupService(backup_dir=BACKUP_DIR)
 
-        backup_filename = f"{backup_name}.db"
-        backup_path = os.path.join(BACKUP_DIR, backup_filename)
+        # 从数据库连接获取数据库文件路径（SQLite）
+        db_path = None
+        if hasattr(db.bind, "url"):
+            db_url = str(db.bind.url)
+            if db_url.startswith("sqlite:///"):
+                db_path = db_url.replace("sqlite:///", "")
 
-        logger.info(f"开始创建数据备份: {backup_path}")
+        result = service.create_backup(backup_name=backup_name, db_path=db_path)
 
-        # 模拟创建备份文件
-        with open(backup_path, "w") as f:
-            f.write("# 模拟备份文件\n")
-            f.write(f"# 创建时间: {datetime.now().isoformat()}\n")
-            f.write("# 这是一个模拟的备份文件\n")
-
-        # 获取备份文件信息
-        backup_size = os.path.getsize(backup_path)
-
-        logger.info(f"数据备份创建成功: {backup_path}")
+        logger.info(f"数据备份创建成功: {result['backup_path']}")
 
         return {
             "success": True,
             "message": "数据备份创建成功",
-            "data": {
-                "backup_name": backup_name,
-                "backup_filename": backup_filename,
-                "backup_path": backup_path,
-                "backup_size": backup_size,
-                "created_at": datetime.now().isoformat(),
-            },
+            "data": result,
         }
 
     except Exception as e:
@@ -88,34 +74,9 @@ async def list_backups():
         备份文件列表
     """
     try:
-        logger.info("获取备份文件列表")
-
-        if not os.path.exists(BACKUP_DIR):
-            return {"success": True, "message": "备份目录不存在", "data": []}
-
-        backups = []
-        for filename in os.listdir(BACKUP_DIR):
-            if filename.endswith(".db"):
-                file_path = os.path.join(BACKUP_DIR, filename)
-                file_stat = os.stat(file_path)
-
-                backups.append(
-                    {
-                        "filename": filename,
-                        "backup_name": filename.replace(".db", ""),
-                        "file_path": file_path,
-                        "file_size": file_stat.st_size,
-                        "created_at": datetime.fromtimestamp(
-                            file_stat.st_ctime
-                        ).isoformat(),
-                        "modified_at": datetime.fromtimestamp(
-                            file_stat.st_mtime
-                        ).isoformat(),
-                    }
-                )
-
-        # 按创建时间倒序排列
-        backups.sort(key=lambda x: x["created_at"], reverse=True)
+        # 使用BackupService获取备份列表
+        service = BackupService(backup_dir=BACKUP_DIR)
+        backups = service.list_backups()
 
         logger.info(f"找到 {len(backups)} 个备份文件")
 
@@ -142,13 +103,16 @@ async def download_backup(backup_name: str):
         备份文件
     """
     try:
-        backup_filename = f"{backup_name}.db"
-        backup_path = os.path.join(BACKUP_DIR, backup_filename)
+        service = BackupService(backup_dir=BACKUP_DIR)
+        backup_info = service.get_backup(backup_name)
 
-        if not os.path.exists(backup_path):
+        if not backup_info:
             raise HTTPException(
                 status_code=404, detail=f"备份文件不存在: {backup_name}"
             )
+
+        backup_path = backup_info["file_path"]
+        backup_filename = backup_info["filename"]
 
         logger.info(f"下载备份文件: {backup_path}")
 
@@ -167,7 +131,9 @@ async def download_backup(backup_name: str):
 
 @router.post("/restore/{backup_name}", summary="恢复数据备份")
 async def restore_backup(
-    backup_name: str, confirm: bool = Query(False, description="确认恢复操作")
+    backup_name: str,
+    confirm: bool = Query(False, description="确认恢复操作"),
+    db: Session = Depends(get_db),
 ):
     """
     从备份文件恢复数据
@@ -175,6 +141,7 @@ async def restore_backup(
     Args:
         backup_name: 备份名称
         confirm: 确认恢复操作
+        db: 数据库会话
 
     Returns:
         恢复结果信息
@@ -185,37 +152,32 @@ async def restore_backup(
                 status_code=400, detail="请确认恢复操作，这将覆盖当前数据"
             )
 
-        backup_filename = f"{backup_name}.db"
-        backup_path = os.path.join(BACKUP_DIR, backup_filename)
+        # 使用BackupService恢复备份
+        service = BackupService(backup_dir=BACKUP_DIR)
 
-        if not os.path.exists(backup_path):
-            raise HTTPException(
-                status_code=404, detail=f"备份文件不存在: {backup_name}"
-            )
+        # 从数据库连接获取数据库文件路径（SQLite）
+        db_path = None
+        if hasattr(db.bind, "url"):
+            db_url = str(db.bind.url)
+            if db_url.startswith("sqlite:///"):
+                db_path = db_url.replace("sqlite:///", "")
 
-        logger.info(f"开始恢复数据备份: {backup_path}")
-
-        # 模拟恢复操作
-        current_backup = f"current_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
-        current_backup_path = os.path.join(BACKUP_DIR, current_backup)
-
-        # 创建当前状态的备份
-        with open(current_backup_path, "w") as f:
-            f.write("# 当前状态备份\n")
-            f.write(f"# 备份时间: {datetime.now().isoformat()}\n")
+        result = service.restore_backup(
+            backup_name=backup_name,
+            db_path=db_path,
+            create_current_backup=True,
+        )
 
         logger.info(f"数据恢复成功: {backup_name}")
 
         return {
             "success": True,
             "message": "数据恢复成功",
-            "data": {
-                "restored_backup": backup_name,
-                "current_backup": current_backup,
-                "restored_at": datetime.now().isoformat(),
-            },
+            "data": result,
         }
 
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:
@@ -235,29 +197,95 @@ async def delete_backup(backup_name: str):
         删除结果信息
     """
     try:
-        backup_filename = f"{backup_name}.db"
-        backup_path = os.path.join(BACKUP_DIR, backup_filename)
+        # 使用BackupService删除备份
+        service = BackupService(backup_dir=BACKUP_DIR)
+        result = service.delete_backup(backup_name)
 
-        if not os.path.exists(backup_path):
-            raise HTTPException(
-                status_code=404, detail=f"备份文件不存在: {backup_name}"
-            )
-
-        logger.info(f"删除备份文件: {backup_path}")
-
-        os.remove(backup_path)
+        logger.info(f"删除备份文件: {backup_name}")
 
         return {
             "success": True,
             "message": f"备份文件 {backup_name} 已成功删除",
-            "data": {
-                "deleted_backup": backup_name,
-                "deleted_at": datetime.now().isoformat(),
-            },
+            "data": result,
         }
 
-    except HTTPException:
-        raise
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         logger.error(f"删除备份文件异常: {str(e)}")
         raise HTTPException(status_code=500, detail=f"删除备份文件失败: {str(e)}")
+
+
+@router.get("/stats", summary="获取备份统计信息")
+async def get_backup_stats():
+    """
+    获取备份统计信息
+
+    Returns:
+        备份统计信息
+    """
+    try:
+        service = BackupService(backup_dir=BACKUP_DIR)
+        stats = service.get_backup_stats()
+
+        return {
+            "success": True,
+            "data": stats,
+        }
+
+    except Exception as e:
+        logger.error(f"获取备份统计异常: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"获取备份统计失败: {str(e)}")
+
+
+@router.post("/validate/{backup_name}", summary="验证备份文件")
+async def validate_backup(backup_name: str):
+    """
+    验证备份文件的完整性
+
+    Args:
+        backup_name: 备份名称
+
+    Returns:
+        验证结果
+    """
+    try:
+        service = BackupService(backup_dir=BACKUP_DIR)
+        validation_result = service.validate_backup(backup_name)
+
+        return {
+            "success": validation_result["valid"],
+            "data": validation_result,
+        }
+
+    except Exception as e:
+        logger.error(f"验证备份文件异常: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"验证备份文件失败: {str(e)}")
+
+
+@router.post("/cleanup", summary="清理旧备份")
+async def cleanup_old_backups(
+    keep_count: int = Query(10, ge=1, le=100, description="保留的备份数量"),
+):
+    """
+    清理旧的备份文件，保留最新的 N 个
+
+    Args:
+        keep_count: 保留的备份数量
+
+    Returns:
+        清理结果
+    """
+    try:
+        service = BackupService(backup_dir=BACKUP_DIR)
+        result = service.cleanup_old_backups(keep_count=keep_count)
+
+        return {
+            "success": True,
+            "message": f"已清理 {result['cleaned']} 个旧备份",
+            "data": result,
+        }
+
+    except Exception as e:
+        logger.error(f"清理旧备份异常: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"清理旧备份失败: {str(e)}")

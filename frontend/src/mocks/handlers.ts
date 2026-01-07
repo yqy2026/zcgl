@@ -60,8 +60,8 @@ export const getAssetsHandler = http.get(
     await delay(50)
 
     const params = getSearchParams(request)
-    const page = parseInt(params.page || '1')
-    const limit = parseInt(params.limit || '20')
+    const _page = parseInt(params.page || '1')
+    const _limit = parseInt(params.limit || '20')
 
     // 模拟搜索过滤
     if (params.search) {

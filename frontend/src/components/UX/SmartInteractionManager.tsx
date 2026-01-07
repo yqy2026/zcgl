@@ -1,18 +1,5 @@
-import React, { createContext, useCallback, useContext, useState, useRef, useEffect } from 'react'
-import { message, notification, Modal, Drawer, Button, Space, Typography } from 'antd'
-import {
-  InfoCircleOutlined,
-  CheckCircleOutlined,
-  ExclamationCircleOutlined,
-  CloseOutlined,
-  PlayCircleOutlined,
-  PauseCircleOutlined,
-  EyeOutlined,
-  EyeInvisibleOutlined,
-  FullscreenOutlined,
-  CompressOutlined,
-  ExpandOutlined
-} from '@ant-design/icons'
+import React, { createContext, useCallback, useContext, useState, useEffect } from 'react'
+import { notification, Modal, Drawer, Button, Space, Typography } from 'antd'
 
 const { Text, Title } = Typography
 
@@ -65,6 +52,7 @@ interface SmartInteractionManagerProps {
   children: React.ReactNode
   enableBehaviorTracking?: boolean
   enableUserPreferences?: boolean
+  _enableUserPreferences?: boolean
   enableSmartNotifications?: boolean
   enableKeyboardShortcuts?: boolean
   enableUndoRedo?: boolean
@@ -83,7 +71,7 @@ export const useSmartInteraction = () => {
 const SmartInteractionProvider: React.FC<SmartInteractionManagerProps> = ({
   children,
   enableBehaviorTracking = true,
-  enableUserPreferences = true,
+  _enableUserPreferences = true,
   enableSmartNotifications = true,
   enableKeyboardShortcuts = true,
   enableUndoRedo = true
@@ -288,7 +276,7 @@ const SmartInteractionProvider: React.FC<SmartInteractionManagerProps> = ({
         message: '自动保存成功',
         duration: 3000
       })
-    } catch (error) {
+    } catch {
       showNotification({
         type: 'error',
         message: '自动保存失败',

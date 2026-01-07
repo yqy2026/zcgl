@@ -1,8 +1,91 @@
-# 智能项目清理脚本使用说明
+# Scripts 文档
 
-## 概述
+本目录包含项目开发过程中使用的各种辅助脚本。
 
-`cleanup_project.py` 是一个**智能**项目清理脚本，使用模式匹配自动发现并清理临时文件、缓存文件和无效文件。**无需手动维护文件列表**，自动适应项目变化。
+---
+
+## 1. check_file_naming.py
+
+**文件命名规范检查脚本** - 自动检查前端和后端文件是否符合项目命名规范。
+
+### 功能特性
+
+- ✅ 自动检测前端（TypeScript/TSX）文件命名
+- ✅ 自动检测后端（Python）文件命名
+- ✅ 根据文件路径智能应用不同的命名规则
+- ✅ 提供清晰的错误提示和修复建议
+- ✅ 支持 Windows/Linux/macOS 跨平台使用
+
+### 使用方法
+
+```bash
+# 检查单个文件
+python scripts/check_file_naming.py frontend/src/hooks/useAuth.ts
+
+# 检查多个文件
+python scripts/check_file_naming.py frontend/src/hooks/*.ts
+
+# 检查整个目录
+python scripts/check_file_naming.py frontend/src/components/**/*.tsx
+```
+
+### 命名规则
+
+#### Frontend (TypeScript/TSX)
+
+| 文件类型 | 路径位置 | 命名规则 | 示例 |
+|---------|---------|---------|------|
+| 组件文件 | `components/` | PascalCase | `AssetForm.tsx`, `Dashboard.tsx` |
+| Hook 文件 | `hooks/` | `use` 前缀 + PascalCase | `useAuth.ts`, `useAssets.ts` |
+| 页面文件 | `pages/` | PascalCase | `AssetListPage.tsx` |
+| 测试文件 | `**/__tests__/` | `.test.` 后缀 | `AssetList.test.tsx` |
+| Store 文件 | `store/` | `use` 前缀 + PascalCase | `useAppStore.ts` |
+| Service/Util | `services/`, `utils/` | camelCase | `format.ts`, `authService.ts` |
+
+#### Backend (Python)
+
+| 文件类型 | 命名规则 | 示例 |
+|---------|---------|------|
+| 源代码文件 | snake_case | `asset_service.py`, `rent_contract.py` |
+| 测试文件 | `test_` 前缀 或 `_test.py` 后缀 | `test_auth.py`, `auth_test.py` |
+
+### 输出示例
+
+**✅ 通过检查：**
+```bash
+$ python scripts/check_file_naming.py frontend/src/hooks/useAuth.ts
+✅ 所有文件命名符合规范！
+```
+
+**❌ 未通过检查：**
+```bash
+$ python scripts/check_file_naming.py frontend/src/hooks/UseAuth.ts
+
+❌ 发现 1 个文件命名问题：
+
+❌ frontend/src/hooks/UseAuth.ts
+   Hook 文件应使用 use 前缀 + PascalCase
+   当前: UseAuth.ts
+   期望: use{FeatureName}.ts
+```
+
+### 通过 Pre-commit 自动运行
+
+安装后每次提交会自动检查：
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+详细文档请参考：[CONTRIBUTING.md - Automated File Naming Checks](../CONTRIBUTING.md#automated-file-naming-checks)
+
+---
+
+## 2. cleanup_project.py
+
+**智能项目清理脚本** - 使用模式匹配自动发现并清理临时文件、缓存文件和无效文件。
+
+### 概述
 
 ## 核心特性
 

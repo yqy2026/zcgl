@@ -225,7 +225,7 @@ def add_legacy_enum_values(db: Session, created_by: str = "system") -> dict:
     这些值可能来自旧系统导入的数据，需要添加到枚举管理中以避免验证错误
     """
     # 遗留值映射：旧值 -> 添加到哪个枚举类型
-    LEGACY_VALUES = {
+    legacy_values = {
         "ownership_status": [
             {"value": "正常", "label": "正常 (遗留)", "sort_order": 99},
         ],
@@ -242,7 +242,7 @@ def add_legacy_enum_values(db: Session, created_by: str = "system") -> dict:
 
     stats = {"values_added": 0, "errors": []}
 
-    for enum_code, legacy_values in LEGACY_VALUES.items():
+    for enum_code, values in legacy_values.items():
         try:
             enum_type = (
                 db.query(EnumFieldType).filter(EnumFieldType.code == enum_code).first()

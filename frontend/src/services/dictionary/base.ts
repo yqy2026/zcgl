@@ -81,6 +81,13 @@ class DictionaryCache {
   private missCount = 0;
   private lastCleanup = Date.now();
 
+  /**
+   * 获取最后一次清理时间
+   */
+  public getLastCleanup(): number {
+    return this.lastCleanup;
+  }
+
   get(dictType: string): DictionaryOption[] | null {
     const cached = this.cache.get(dictType);
     if (!cached) {
@@ -214,7 +221,7 @@ class DictionaryCache {
     for (const type of dictTypes) {
       const cached = this.cache.get(type);
       if (cached) {
-        preloaded.set(type, cached.data as any);
+        preloaded.set(type, cached.data);
       }
     }
 
@@ -426,7 +433,7 @@ class BaseDictionaryService {
           source: 'cache',
           metadata: includeMetadata ? {
             totalItems: cached.length,
-            activeItems: cached.filter((item: any) => item.isActive !== false).length,
+            activeItems: cached.filter((item: DictionaryOption) => item.isActive !== false).length,
             lastUpdated: new Date().toISOString(),
             cacheTimestamp: Date.now()
           } : undefined
@@ -499,7 +506,7 @@ class BaseDictionaryService {
       timeout?: number;
     } = {}
   ): Promise<Record<string, DictionaryServiceResult>> {
-    const { useCache = true, useFallback = true, isActive = true, timeout = 5000 } = options;
+    const { useCache = true, useFallback = true, isActive = true } = options;
 
     const promises = dictTypes.map(async (dictType) => {
       const result = await this.getOptions(dictType, { useCache, useFallback, isActive });
@@ -579,7 +586,6 @@ class BaseDictionaryService {
    * 清除过期缓存
    */
   cleanupExpiredCache(): void {
-    const now = Date.now();
     const detailedInfo = cache.getDetailedInfo();
 
     detailedInfo.forEach(info => {
@@ -695,7 +701,7 @@ class BaseDictionaryService {
       totalItems,
       activeItems,
       cacheSize: cacheInfo.size,
-      lastCacheCleanup: cache['lastCleanup'] || Date.now(),
+      lastCacheCleanup: cache.getLastCleanup(),
       cacheHitRate: cacheInfo.hitRate,
       mostUsedTypes
     };

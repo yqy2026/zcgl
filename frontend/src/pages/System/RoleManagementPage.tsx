@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Card,
   Table,
@@ -22,8 +22,8 @@ import {
   Divider,
   Typography
 } from 'antd'
+import { systemService as _systemService, roleService as _roleService, type Role } from '../../services/systemService'
 import SystemBreadcrumb from '../../components/System/SystemBreadcrumb'
-import { roleService, type Role, type CreateRoleData, type UpdateRoleData } from '../../services/systemService'
 import {
   PlusOutlined,
   EditOutlined,
@@ -76,8 +76,8 @@ const RoleManagementPage: React.FC = () => {
   const [editingRole, setEditingRole] = useState<Role | null>(null)
   const [selectedRole, setSelectedRole] = useState<Role | null>(null)
   const [targetPermissions, setTargetPermissions] = useState<string[]>([])
-  const [searchText, setSearchText] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('')
+  const [_searchText, _setSearchText] = useState('')
+  const [_statusFilter, _setStatusFilter] = useState<string>('')
   const [permissionTreeData, setPermissionTreeData] = useState<DataNode[]>([])
 
   const [form] = Form.useForm()
@@ -89,22 +89,16 @@ const RoleManagementPage: React.FC = () => {
   ]
 
   // 权限模块选项
-  const permissionModules = [
+  const permissionModules = React.useMemo(() => [
     { value: 'dashboard', label: '数据看板', icon: <SettingOutlined /> },
     { value: 'assets', label: '资产管理', icon: <ApartmentOutlined /> },
     { value: 'rental', label: '租赁管理', icon: <UserOutlined /> },
     { value: 'ownership', label: '权属方管理', icon: <KeyOutlined /> },
     { value: 'project', label: '项目管理', icon: <TeamOutlined /> },
     { value: 'system', label: '系统管理', icon: <SettingOutlined /> }
-  ]
+  ], [])
 
-  useEffect(() => {
-    loadRoles()
-    loadPermissions()
-    loadStatistics()
-  }, [])
-
-  const loadRoles = async () => {
+  const loadRoles = React.useCallback(async () => {
     setLoading(true)
     try {
       // 模拟API调用
@@ -147,14 +141,53 @@ const RoleManagementPage: React.FC = () => {
         }
       ]
       setRoles(mockRoles)
-    } catch (error) {
+    } catch {
       message.error('加载角色列表失败')
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  const loadPermissions = async () => {
+  const buildPermissionTree = React.useCallback((permissionList: Permission[]): DataNode[] => {
+    const moduleMap: Record<string, DataNode> = {}
+
+    // 按模块分组
+    permissionList.forEach(permission => {
+      if (moduleMap[permission.module] === undefined) {
+        const module = permissionModules.find(m => m.value === permission.module)
+        moduleMap[permission.module] = {
+          key: permission.module,
+          title: (
+            <Space>
+              {module?.icon ?? <SettingOutlined />}
+              {module?.label ?? permission.module}
+            </Space>
+          ),
+          children: []
+        }
+      }
+
+      moduleMap[permission.module].children!.push({
+        key: permission.id,
+        title: (
+          <Space>
+            <span>{permission.name}</span>
+            <Tag color={
+              permission.type === 'menu' ? 'blue' :
+                permission.type === 'action' ? 'green' : 'orange'
+            }>
+              {permission.type === 'menu' ? '菜单' :
+                permission.type === 'action' ? '操作' : '数据'}
+            </Tag>
+          </Space>
+        )
+      })
+    })
+
+    return Object.values(moduleMap)
+  }, [permissionModules])
+
+  const loadPermissions = React.useCallback(async () => {
     try {
       // 模拟权限数据
       const mockPermissions: Permission[] = [
@@ -174,55 +207,14 @@ const RoleManagementPage: React.FC = () => {
         { id: 'system.role.create', name: '创建角色', code: 'system.role.create', module: 'system', description: '创建新角色', type: 'action' }
       ]
       setPermissions(mockPermissions)
-
-      // 构建权限树
       const treeData = buildPermissionTree(mockPermissions)
       setPermissionTreeData(treeData)
-    } catch (error) {
+    } catch {
       message.error('加载权限列表失败')
     }
-  }
+  }, [buildPermissionTree])
 
-  const buildPermissionTree = (permissions: Permission[]): DataNode[] => {
-    const moduleMap: Record<string, DataNode> = {}
-
-    // 按模块分组
-    permissions.forEach(permission => {
-      if (!moduleMap[permission.module]) {
-        const module = permissionModules.find(m => m.value === permission.module)
-        moduleMap[permission.module] = {
-          key: permission.module,
-          title: (
-            <Space>
-              {module?.icon || <SettingOutlined />}
-              {module?.label || permission.module}
-            </Space>
-          ),
-          children: []
-        }
-      }
-
-      moduleMap[permission.module].children!.push({
-        key: permission.id,
-        title: (
-          <Space>
-            <span>{permission.name}</span>
-            <Tag color={
-              permission.type === 'menu' ? 'blue' :
-              permission.type === 'action' ? 'green' : 'orange'
-            }>
-              {permission.type === 'menu' ? '菜单' :
-               permission.type === 'action' ? '操作' : '数据'}
-            </Tag>
-          </Space>
-        )
-      })
-    })
-
-    return Object.values(moduleMap)
-  }
-
-  const loadStatistics = async () => {
+  const loadStatistics = React.useCallback(async () => {
     try {
       // 模拟统计数据
       const mockStats: RoleStatistics = {
@@ -231,16 +223,25 @@ const RoleManagementPage: React.FC = () => {
         inactive: roles.filter(r => r.status === 'inactive').length,
         system: roles.filter(r => r.is_system).length,
         custom: roles.filter(r => !r.is_system).length,
-        avg_permissions: Math.round(roles.reduce((sum, r) => sum + r.permissions.length, 0) / roles.length) || 0
+        avg_permissions: roles.length > 0 ? Math.round(roles.reduce((sum, r) => sum + r.permissions.length, 0) / roles.length) : 0
       }
       setStatistics(mockStats)
-    } catch (error) {
+    } catch {
       message.error('加载统计信息失败')
     }
-  }
+  }, [roles])
+
+  useEffect(() => {
+    void loadRoles()
+    void loadPermissions()
+  }, [])
+
+  useEffect(() => {
+    void loadStatistics()
+  }, [loadStatistics])
 
   const handleSearch = (value: string) => {
-    setSearchText(value)
+    _setSearchText(value)
     // 这里可以添加搜索逻辑
   }
 
@@ -261,24 +262,22 @@ const RoleManagementPage: React.FC = () => {
     setModalVisible(true)
   }
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (_id: string) => {
     try {
       // 模拟删除API调用
       message.success('删除成功')
-      loadRoles()
-      loadStatistics()
-    } catch (error) {
+      void loadRoles()
+    } catch {
       message.error('删除失败')
     }
   }
 
-  const handleToggleStatus = async (role: Role, newStatus: string) => {
+  const handleToggleStatus = async (_role: Role, _newStatus: string) => {
     try {
       // 模拟状态切换API调用
       message.success('状态已更新')
-      loadRoles()
-      loadStatistics()
-    } catch (error) {
+      void loadRoles()
+    } catch {
       message.error('状态更新失败')
     }
   }
@@ -289,7 +288,7 @@ const RoleManagementPage: React.FC = () => {
     setPermissionModalVisible(true)
   }
 
-  const handleSubmit = async (values: {
+  const handleSubmit = async (_values: {
     name: string;
     description?: string;
     permissions?: string[];
@@ -304,9 +303,8 @@ const RoleManagementPage: React.FC = () => {
         message.success('创建成功')
       }
       setModalVisible(false)
-      loadRoles()
-      loadStatistics()
-    } catch (error) {
+      void loadRoles()
+    } catch {
       message.error(editingRole ? '更新失败' : '创建失败')
     }
   }
@@ -316,8 +314,8 @@ const RoleManagementPage: React.FC = () => {
       // 模拟保存权限API调用
       message.success('权限配置已保存')
       setPermissionModalVisible(false)
-      loadRoles()
-    } catch (error) {
+      void loadRoles()
+    } catch {
       message.error('保存权限失败')
     }
   }
@@ -325,8 +323,8 @@ const RoleManagementPage: React.FC = () => {
   const getStatusTag = (status: string) => {
     const statusConfig = statusOptions.find(s => s.value === status)
     return (
-      <Tag color={statusConfig?.color || 'default'}>
-        {statusConfig?.label || status}
+      <Tag color={statusConfig?.color ?? 'default'}>
+        {statusConfig?.label ?? status}
       </Tag>
     )
   }
@@ -362,15 +360,15 @@ const RoleManagementPage: React.FC = () => {
       title: '权限数量',
       dataIndex: 'permissions',
       key: 'permissions',
-      render: (permissions) => (
-        <Badge count={permissions.length} showZero color="#1890ff" />
+      render: (perms: string[]) => (
+        <Badge count={perms.length} showZero color="#1890ff" />
       )
     },
     {
       title: '用户数量',
       dataIndex: 'user_count',
       key: 'user_count',
-      render: (count) => (
+      render: (count: number) => (
         <Badge count={count} showZero color="#52c41a" />
       )
     },
@@ -378,13 +376,13 @@ const RoleManagementPage: React.FC = () => {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      render: (status) => getStatusTag(status)
+      render: (status: string) => getStatusTag(status)
     },
     {
       title: '创建时间',
       dataIndex: 'created_at',
       key: 'created_at',
-      render: (date) => dayjs(date).format('YYYY-MM-DD')
+      render: (date: string) => dayjs(date).format('YYYY-MM-DD')
     },
     {
       title: '操作',
@@ -449,234 +447,231 @@ const RoleManagementPage: React.FC = () => {
     <>
       <SystemBreadcrumb />
       <div style={{ padding: '24px' }}>
-        {/* 统计卡片 */}
-      {statistics && (
-        <Row gutter={16} style={{ marginBottom: 24 }}>
-          <Col span={6}>
-            <Card>
-              <Statistic
-                title="总角色数"
-                value={statistics.total}
-                prefix={<TeamOutlined />}
-              />
-            </Card>
-          </Col>
-          <Col span={6}>
-            <Card>
-              <Statistic
-                title="启用角色"
-                value={statistics.active}
-                prefix={<SafetyOutlined />}
-                valueStyle={{ color: '#3f8600' }}
-              />
-            </Card>
-          </Col>
-          <Col span={6}>
-            <Card>
-              <Statistic
-                title="系统角色"
-                value={statistics.system}
-                prefix={<SettingOutlined />}
-                valueStyle={{ color: '#722ed1' }}
-              />
-            </Card>
-          </Col>
-          <Col span={6}>
-            <Card>
-              <Statistic
-                title="平均权限数"
-                value={statistics.avg_permissions}
-                prefix={<KeyOutlined />}
-                suffix="个"
-              />
-            </Card>
-          </Col>
-        </Row>
-      )}
-
-      <Card>
-        <div style={{ marginBottom: 16 }}>
-          <Row justify="space-between" gutter={16}>
-            <Col flex="auto">
-              <Space size="middle">
-                <Search
-                  placeholder="搜索角色名称或编码"
-                  allowClear
-                  style={{ width: 300 }}
-                  onSearch={handleSearch}
+        {statistics && (
+          <Row gutter={16} style={{ marginBottom: 24 }}>
+            <Col span={6}>
+              <Card>
+                <Statistic
+                  title="总角色数"
+                  value={statistics.total}
+                  prefix={<TeamOutlined />}
                 />
-                <Select
-                  placeholder="状态筛选"
-                  allowClear
-                  style={{ width: 120 }}
-                  onChange={setStatusFilter}
-                >
-                  {statusOptions.map(status => (
-                    <Option key={status.value} value={status.value}>
-                      {status.label}
-                    </Option>
-                  ))}
-                </Select>
+              </Card>
+            </Col>
+            <Col span={6}>
+              <Card>
+                <Statistic
+                  title="启用角色"
+                  value={statistics.active}
+                  prefix={<SafetyOutlined />}
+                  valueStyle={{ color: '#3f8600' }}
+                />
+              </Card>
+            </Col>
+            <Col span={6}>
+              <Card>
+                <Statistic
+                  title="系统角色"
+                  value={statistics.system}
+                  prefix={<SettingOutlined />}
+                  valueStyle={{ color: '#722ed1' }}
+                />
+              </Card>
+            </Col>
+            <Col span={6}>
+              <Card>
+                <Statistic
+                  title="平均权限数"
+                  value={statistics.avg_permissions}
+                  prefix={<KeyOutlined />}
+                  suffix="个"
+                />
+              </Card>
+            </Col>
+          </Row>
+        )}
+
+        <Card>
+          <div style={{ marginBottom: 16 }}>
+            <Row justify="space-between" gutter={16}>
+              <Col flex="auto">
+                <Space size="middle">
+                  <Search
+                    placeholder="搜索角色名称或编码"
+                    allowClear
+                    style={{ width: 300 }}
+                    onSearch={handleSearch}
+                  />
+                  <Select
+                    placeholder="状态筛选"
+                    allowClear
+                    style={{ width: 120 }}
+                    onChange={_setStatusFilter}
+                  >
+                    {statusOptions.map(status => (
+                      <Option key={status.value} value={status.value}>
+                        {status.label}
+                      </Option>
+                    ))}
+                  </Select>
+                  <Button
+                    icon={<ReloadOutlined />}
+                    onClick={loadRoles}
+                  >
+                    刷新
+                  </Button>
+                </Space>
+              </Col>
+              <Col>
                 <Button
-                  icon={<ReloadOutlined />}
-                  onClick={loadRoles}
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={handleCreate}
                 >
-                  刷新
+                  新建角色
+                </Button>
+              </Col>
+            </Row>
+          </div>
+
+          <Table
+            columns={columns}
+            dataSource={roles}
+            rowKey="id"
+            loading={loading}
+            pagination={{
+              total: roles.length,
+              pageSize: 10,
+              showSizeChanger: true,
+              showQuickJumper: true,
+              showTotal: (total) => `共 ${total} 条记录`
+            }}
+          />
+        </Card>
+
+        {/* 创建/编辑模态框 */}
+        <Modal
+          title={editingRole ? '编辑角色' : '新建角色'}
+          open={modalVisible}
+          onCancel={() => setModalVisible(false)}
+          footer={null}
+          width={600}
+        >
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={handleSubmit}
+          >
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  name="name"
+                  label="角色名称"
+                  rules={[{ required: true, message: '请输入角色名称' }]}
+                >
+                  <Input placeholder="请输入角色名称" />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  name="code"
+                  label="角色编码"
+                  rules={[
+                    { required: true, message: '请输入角色编码' },
+                    { pattern: /^[a-z_][a-z0-9_]*$/, message: '编码只能包含小写字母、数字和下划线，且不能以数字开头' }
+                  ]}
+                >
+                  <Input placeholder="请输入角色编码" />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Form.Item
+              name="description"
+              label="角色描述"
+              rules={[{ required: true, message: '请输入角色描述' }]}
+            >
+              <TextArea rows={3} placeholder="请输入角色描述" />
+            </Form.Item>
+
+            <Form.Item
+              name="status"
+              label="状态"
+              rules={[{ required: true, message: '请选择状态' }]}
+            >
+              <Select placeholder="请选择状态">
+                {statusOptions.map(status => (
+                  <Option key={status.value} value={status.value}>
+                    {status.label}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+
+            <Form.Item style={{ textAlign: 'right', marginBottom: 0 }}>
+              <Space>
+                <Button onClick={() => setModalVisible(false)}>
+                  取消
+                </Button>
+                <Button type="primary" htmlType="submit">
+                  {editingRole ? '更新' : '创建'}
                 </Button>
               </Space>
-            </Col>
-            <Col>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={handleCreate}
-              >
-                新建角色
-              </Button>
-            </Col>
-          </Row>
-        </div>
+            </Form.Item>
+          </Form>
+        </Modal>
 
-        <Table
-          columns={columns}
-          dataSource={roles}
-          rowKey="id"
-          loading={loading}
-          pagination={{
-            total: roles.length,
-            pageSize: 10,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条记录`
-          }}
-        />
-      </Card>
-
-      {/* 创建/编辑模态框 */}
-      <Modal
-        title={editingRole ? '编辑角色' : '新建角色'}
-        open={modalVisible}
-        onCancel={() => setModalVisible(false)}
-        footer={null}
-        width={600}
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleSubmit}
+        {/* 权限配置模态框 */}
+        <Modal
+          title={`权限配置 - ${selectedRole?.name}`}
+          open={permissionModalVisible}
+          onCancel={() => setPermissionModalVisible(false)}
+          onOk={handleSavePermissions}
+          width={1000}
+          okText="保存权限"
+          cancelText="取消"
         >
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="name"
-                label="角色名称"
-                rules={[{ required: true, message: '请输入角色名称' }]}
-              >
-                <Input placeholder="请输入角色名称" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="code"
-                label="角色编码"
-                rules={[
-                  { required: true, message: '请输入角色编码' },
-                  { pattern: /^[a-z_][a-z0-9_]*$/, message: '编码只能包含小写字母、数字和下划线，且不能以数字开头' }
-                ]}
-              >
-                <Input placeholder="请输入角色编码" />
-              </Form.Item>
-            </Col>
-          </Row>
+          <div style={{ marginBottom: 16 }}>
+            <Text type="secondary">
+              为角色 <strong>{selectedRole?.name}</strong> 配置系统权限
+            </Text>
+          </div>
 
-          <Form.Item
-            name="description"
-            label="角色描述"
-            rules={[{ required: true, message: '请输入角色描述' }]}
-          >
-            <TextArea rows={3} placeholder="请输入角色描述" />
-          </Form.Item>
-
-          <Form.Item
-            name="status"
-            label="状态"
-            rules={[{ required: true, message: '请选择状态' }]}
-          >
-            <Select placeholder="请选择状态">
-              {statusOptions.map(status => (
-                <Option key={status.value} value={status.value}>
-                  {status.label}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-
-          <Form.Item style={{ textAlign: 'right', marginBottom: 0 }}>
-            <Space>
-              <Button onClick={() => setModalVisible(false)}>
-                取消
-              </Button>
-              <Button type="primary" htmlType="submit">
-                {editingRole ? '更新' : '创建'}
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      {/* 权限配置模态框 */}
-      <Modal
-        title={`权限配置 - ${selectedRole?.name}`}
-        open={permissionModalVisible}
-        onCancel={() => setPermissionModalVisible(false)}
-        onOk={handleSavePermissions}
-        width={1000}
-        okText="保存权限"
-        cancelText="取消"
-      >
-        <div style={{ marginBottom: 16 }}>
-          <Text type="secondary">
-            为角色 <strong>{selectedRole?.name}</strong> 配置系统权限
-          </Text>
-        </div>
-
-        <Transfer
-          {...{
-            dataSource: transferData,
-            targetKeys: targetPermissions,
-            onChange: (keys: any) => setTargetPermissions(keys),
-            render: (item: any) => (
+          <Transfer
+            dataSource={transferData}
+            targetKeys={targetPermissions}
+            onChange={(keys) => setTargetPermissions(keys as string[])}
+            render={(item) => (
               <div>
                 <div style={{ fontWeight: 500 }}>{item.title}</div>
                 <div style={{ fontSize: '12px', color: '#666' }}>
                   {item.description}
                 </div>
               </div>
-            ),
-            listStyle: {
+            )}
+            listStyle={{
               width: 400,
               height: 400
-            },
-            titles: ['可选权限', '已选权限'],
-            showSearch: true,
-            searchPlaceholder: '搜索权限'
-          } as any}
-        />
+            }}
+            titles={['可选权限', '已选权限']}
+            showSearch
+            locale={{ searchPlaceholder: '搜索权限' }}
+          />
 
-        <Divider />
+          <Divider />
 
-        <div>
-          <Text strong>权限预览：</Text>
-          <div style={{ marginTop: 8, maxHeight: 200, overflow: 'auto' }}>
-            <Tree
-              treeData={permissionTreeData}
-              checkable
-              checkedKeys={targetPermissions}
-              style={{ background: '#fafafa', padding: 16 }}
-            />
+          <div>
+            <Text strong>权限预览：</Text>
+            <div style={{ marginTop: 8, maxHeight: 200, overflow: 'auto' }}>
+              <Tree
+                treeData={permissionTreeData}
+                checkable
+                checkedKeys={targetPermissions}
+                style={{ background: '#fafafa', padding: 16 }}
+              />
+            </div>
           </div>
-        </div>
-      </Modal>
+        </Modal>
       </div>
     </>
   )

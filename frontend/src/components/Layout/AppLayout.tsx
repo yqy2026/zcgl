@@ -1,28 +1,11 @@
 import React, { useState } from 'react'
-import { Layout, Menu, Breadcrumb, Avatar, Dropdown, Space, Typography, Badge } from 'antd'
-import {
-  MenuFoldOutlined,
-  MenuUnfoldOutlined,
-  DashboardOutlined,
-  HomeOutlined,
-  SearchOutlined,
-  FileExcelOutlined,
-  BarChartOutlined,
-  SettingOutlined,
-  UserOutlined,
-  LogoutOutlined,
-  BellOutlined,
-  QuestionCircleOutlined,
-} from '@ant-design/icons'
-import { useLocation, useNavigate } from 'react-router-dom'
-import type { MenuProps } from 'antd'
+import { Layout, Typography } from 'antd'
 
 import AppHeader from './AppHeader'
 import AppSidebar from './AppSidebar'
 import AppBreadcrumb from './AppBreadcrumb'
 
 const { Content, Footer } = Layout
-const { Text } = Typography
 
 interface AppLayoutProps {
   children: React.ReactNode
@@ -30,8 +13,6 @@ interface AppLayoutProps {
 
 const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [collapsed, setCollapsed] = useState(false)
-  const location = useLocation()
-  const navigate = useNavigate()
 
   const toggleCollapsed = () => {
     setCollapsed(!collapsed)
@@ -78,9 +59,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           borderTop: '1px solid #f0f0f0',
           padding: '12px 24px'
         }}>
-          <Text type="secondary">
+          <Typography.Text type="secondary">
             土地房产资产管理系统 ©2024 Created by Asset Management Team
-          </Text>
+          </Typography.Text>
         </Footer>
       </Layout>
     </Layout>

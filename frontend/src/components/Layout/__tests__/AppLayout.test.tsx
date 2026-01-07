@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { } from '@testing-library/react'
 import AppLayout from '../AppLayout'
 
 // =============================================================================
@@ -131,7 +131,7 @@ describe('AppLayout - 布局结构', () => {
   })
 
   it('应该包含所有主要布局区域', () => {
-    const { container } = render(
+    const { container: _container } = render(
       <AppLayout>
         <TestContent />
       </AppLayout>
@@ -170,7 +170,7 @@ describe('AppLayout - 边界情况', () => {
   })
 
   it('应该处理null children', () => {
-    const { container } = render(
+    const { container: _container } = render(
       <AppLayout>
         {null}
       </AppLayout>
@@ -182,7 +182,7 @@ describe('AppLayout - 边界情况', () => {
   })
 
   it('应该处理空children', () => {
-    const { container } = render(
+    const { container: _container } = render(
       <AppLayout>
         <>
         </>

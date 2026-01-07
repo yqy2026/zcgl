@@ -1,8 +1,8 @@
-from typing import Any
-
 """
 自定义字段管理API路由
 """
+
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy.orm import Session
@@ -17,6 +17,7 @@ from ...schemas.asset import (
     AssetCustomFieldUpdate,
     CustomFieldValueUpdate,
 )
+from ...services.custom_field import custom_field_service
 
 # 创建自定义字段路由器
 router = APIRouter()
@@ -101,18 +102,11 @@ async def create_custom_field(
     - **field_in**: 字段创建数据
     """
     try:
-        # 检查是否存在相同的字段名
-        existing = custom_field_crud.get_by_field_name(
-            db=db, field_name=field_in.field_name
-        )
-        if existing:
-            raise HTTPException(
-                status_code=400, detail=f"字段名 {field_in.field_name} 已存在"
-            )
-
-        field = custom_field_crud.create(db=db, obj_in=field_in)
+        field = custom_field_service.create_custom_field(db=db, obj_in=field_in)
         return field
 
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:
@@ -135,24 +129,15 @@ async def update_custom_field(
     - **field_in**: 字段更新数据
     """
     try:
-        # 检查字段是否存在
-        field = custom_field_crud.get(db=db, id=field_id)
-        if not field:
-            raise HTTPException(status_code=404, detail=f"字段 {field_id} 不存在")
-
-        # 如果更新了字段名，检查是否重复
-        if field_in.field_name and field_in.field_name != field.field_name:
-            existing = custom_field_crud.get_by_field_name(
-                db=db, field_name=field_in.field_name
-            )
-            if existing and existing.id != field_id:
-                raise HTTPException(
-                    status_code=400, detail=f"字段名 {field_in.field_name} 已存在"
-                )
-
-        updated_field = custom_field_crud.update(db=db, db_obj=field, obj_in=field_in)
+        updated_field = custom_field_service.update_custom_field(
+            db=db, id=field_id, obj_in=field_in
+        )
         return updated_field
 
+    except ValueError as e:
+        if "不存在" in str(e) and "已存在" not in str(e):
+            raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:
@@ -171,15 +156,11 @@ async def delete_custom_field(
     - **field_id**: 字段ID
     """
     try:
-        # 检查字段是否存在
-        field = custom_field_crud.get(db=db, id=field_id)
-        if not field:
-            raise HTTPException(status_code=404, detail=f"字段 {field_id} 不存在")
-
-        # 删除字段
-        custom_field_crud.remove(db=db, id=field_id)
+        custom_field_service.delete_custom_field(db=db, id=field_id)
         return {"message": f"字段 {field_id} 已成功删除"}
 
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:
@@ -205,8 +186,10 @@ async def validate_custom_field_value(
         if not field:
             raise HTTPException(status_code=404, detail=f"字段 {field_id} 不存在")
 
-        # 验证字段值
-        is_valid, error_message = custom_field_crud.validate_field_value(field, value)
+        # 验证字段值 (使用Service)
+        is_valid, error_message = custom_field_service.validate_field_value(
+            field, value
+        )
 
         if is_valid:
             return {"valid": True, "message": "验证通过"}
@@ -283,11 +266,13 @@ async def update_asset_custom_field_values(
     - **values_update**: 字段值更新数据
     """
     try:
-        updated_values = custom_field_crud.update_asset_field_values(
+        updated_values = custom_field_service.update_asset_field_values(
             db=db, asset_id=asset_id, values=values_update.values
         )
         return {"asset_id": asset_id, "values": updated_values}
 
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"更新资产自定义字段值失败: {str(e)}"
@@ -316,7 +301,7 @@ async def batch_set_custom_field_values(
                 continue
 
             try:
-                updated_values = custom_field_crud.update_asset_field_values(
+                updated_values = custom_field_service.update_asset_field_values(
                     db=db, asset_id=asset_id, values=values
                 )
                 results.append(

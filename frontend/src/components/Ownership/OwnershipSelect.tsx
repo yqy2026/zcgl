@@ -5,22 +5,20 @@ import {
   Modal,
   message,
   Space,
-  Input,
   Tooltip,
   Tag
 } from 'antd';
 import {
-  SearchOutlined,
   PlusOutlined,
   ReloadOutlined,
-  UnorderedListOutlined
+  UnorderedListOutlined,
+  SearchOutlined
 } from '@ant-design/icons';
 import { useOwnershipOptions } from '@/hooks/useOwnership';
 import type { Ownership } from '@/types/ownership';
 import OwnershipList from './OwnershipList';
 
 const { Option } = Select;
-const { Search } = Input;
 
 interface OwnershipSelectProps {
   /** 选中的权属方ID(s) */
@@ -84,7 +82,7 @@ const OwnershipSelect: React.FC<OwnershipSelectProps> = ({
   }, [allOwnerships, searchText]);
 
   // 当前选中的权属方（单选模式）
-  const selectedOwnership = useMemo(() => {
+  const _selectedOwnership = useMemo(() => {
     if (mode === 'multiple' || !value) return null;
     const singleValue = Array.isArray(value) ? value[0] : value;
     return allOwnerships.find(o => o.id === singleValue) ||
@@ -93,7 +91,7 @@ const OwnershipSelect: React.FC<OwnershipSelectProps> = ({
   }, [value, filteredOwnerships, allOwnerships, mode]);
 
   // 当前选中的权属方（多选模式）
-  const selectedOwnerships = useMemo(() => {
+  const _selectedOwnerships = useMemo(() => {
     if (mode === 'single' || !value) return [];
     const values = Array.isArray(value) ? value : value ? [value] : [];
     return allOwnerships.filter(o => values.includes(o.id)) ||
@@ -161,7 +159,7 @@ const OwnershipSelect: React.FC<OwnershipSelectProps> = ({
     closable: boolean;
     onClose: () => void;
   }) => {
-    const { label, value, closable, onClose } = props;
+    const { label: _label, value, closable, onClose } = props;
     const ownership = allOwnerships.find(o => o.id === value);
 
     return (

@@ -8,12 +8,12 @@ import logging
 import time
 
 from pydantic import BaseModel
-from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.orm import Session
 
 from ..core.response_handler import ResponseHandler
+from .query_builder import QueryBuilder
 
 ModelType = TypeVar("ModelType", bound=DeclarativeMeta)
 CreateSchemaType = TypeVar("CreateSchemaType", bound=BaseModel)
@@ -37,6 +37,7 @@ class CRUDBase[
             model: SQLAlchemy模型类
         """
         self.model = model
+        self.query_builder = QueryBuilder(model)
         self._cache = {}  # 简单内存缓存
         self._cache_timeout = 300  # 5分钟缓存超时
 
@@ -111,7 +112,7 @@ class CRUDBase[
         except Exception as e:  # pragma: no cover
             raise self._handle_database_error(e, "获取记录列表")  # pragma: no cover
 
-    def create(self, db: Session, *, obj_in: CreateSchemaType) -> ModelType:
+    def create(self, db: Session, *, obj_in: CreateSchemaType, **kwargs) -> ModelType:
         """创建新记录（支持事务回滚和错误处理）"""
         try:
             if hasattr(obj_in, "model_dump"):
@@ -119,6 +120,7 @@ class CRUDBase[
             else:
                 obj_in_data = obj_in
 
+            obj_in_data.update(kwargs)
             db_obj = self.model(**obj_in_data)
             db.add(db_obj)
             db.commit()
@@ -224,44 +226,19 @@ class CRUDBase[
     ) -> list[ModelType]:
         """高级查询方法（支持筛选、搜索、排序）"""
         try:
-            query = db.query(self.model)
-
-            # 应用筛选条件
-            if filters:
-                for field, value in filters.items():
-                    if (
-                        hasattr(self.model, field) and value is not None
-                    ):  # pragma: no cover
-                        if isinstance(value, list):  # pragma: no cover
-                            query = query.filter(
-                                getattr(self.model, field).in_(value)
-                            )  # pragma: no cover
-                        else:  # pragma: no cover
-                            query = query.filter(
-                                getattr(self.model, field) == value
-                            )  # pragma: no cover
-
-            # 应用搜索条件
-            if search and search_fields:
-                search_conditions = []
-                for field in search_fields:
-                    if hasattr(self.model, field):
-                        search_conditions.append(
-                            getattr(self.model, field).contains(search)
-                        )
-                if search_conditions:
-                    query = query.filter(or_(*search_conditions))
-
-            # 应用排序
-            if order_by and hasattr(self.model, order_by):  # pragma: no cover
-                order_field = getattr(self.model, order_by)  # pragma: no cover
-                if order_desc:  # pragma: no cover
-                    query = query.order_by(order_field.desc())  # pragma: no cover
-                else:  # pragma: no cover
-                    query = query.order_by(order_field)  # pragma: no cover
-
-            # 应用分页
-            return query.offset(skip).limit(limit).all()
+            # 使用 QueryBuilder 构建查询
+            # 注意: QueryBuilder 返回 sqlalchemy.sql.selectable.Select
+            # 我们需要使用 db.execute(query).scalars().all() 来获取对象
+            query = self.query_builder.build_query(
+                filters=filters,
+                search_query=search,
+                search_fields=search_fields,
+                sort_by=order_by,
+                sort_desc=order_desc,
+                skip=skip,
+                limit=limit,
+            )
+            return list(db.execute(query).scalars().all())
         except Exception as e:  # pragma: no cover
             raise self._handle_database_error(e, "高级查询")  # pragma: no cover
 

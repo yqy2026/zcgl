@@ -3,14 +3,14 @@
  * 测试API客户端的核心功能（简化版本，不依赖MSW）
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { EnhancedApiClient } from '../client'
 
 // =============================================================================
 // Mock数据
 // =============================================================================
 
-const mockResponse = {
+const _mockResponse = {
   success: true,
   data: { id: 1, name: 'test' },
   message: 'Success'

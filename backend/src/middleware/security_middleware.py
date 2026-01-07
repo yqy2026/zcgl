@@ -194,7 +194,7 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
             "127.0.0.1",
             "localhost",
             "::1",
-            "0.0.0.0",  # Docker/容器环境
+            "0.0.0.0",  # nosec - B104: Docker/容器环境, not binding
             "192.168.1.90",  # 当前本地网络IP
         ]
 
@@ -224,8 +224,8 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
     def _check_rate_limit(self, ip: str, request: Request) -> bool:
         """检查请求频率限制"""
         # 本地开发环境更宽松的限制
-        is_local = (
-            ip in ["127.0.0.1", "localhost", "::1", "0.0.0.0"]
+        (
+            ip in ["127.0.0.1", "localhost", "::1", "0.0.0.0"]  # nosec - B104: Local IP check, not binding
             or ip.startswith("192.168.")
             or ip.startswith("10.")
             or ip.startswith("172.")

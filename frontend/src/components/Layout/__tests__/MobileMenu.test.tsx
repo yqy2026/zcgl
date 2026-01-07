@@ -24,7 +24,7 @@ vi.mock('antd', () => ({
     onClose,
     open,
     width,
-    styles,
+    styles: _styles,
     extra,
   }: any) => (
     <div

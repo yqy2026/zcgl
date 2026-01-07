@@ -27,90 +27,13 @@ interface ApiError {
 
 const { Title } = Typography
 
-interface AssetFormData {
-  property_name: string
-  address: string
-  ownership_status: string
-  property_nature: string
-  usage_status: string
-  ownership_entity: string
-  management_entity?: string
-  business_category?: string
-
-  // 面积相关字段
-  total_area?: number
-  usable_area?: number
-  land_area?: number
-  total_building_area?: number
-  actual_property_area?: number
-  rentable_area?: number
-  rented_area?: number
-  unrented_area?: number
-  non_commercial_area?: number
-  occupancy_rate?: number
-  include_in_occupancy_rate?: boolean
-
-  // 用途相关字段
-  certificated_usage?: string
-  actual_usage?: string
-
-  // 租户相关字段
-  tenant_name?: string
-  tenant_type?: string
-  // tenant_contact 字段已删除
-
-  // 合同相关字段
-  lease_contract_number?: string
-  contract_start_date?: string
-  contract_end_date?: string
-  contract_status?: string
-  monthly_rent?: number
-  deposit?: number
-  is_sublease?: boolean
-  sublease_notes?: string
-
-  // 管理相关字段
-  manager_name?: string
-  business_model?: string
-  operation_status?: string
-
-  // 财务相关字段已删除
-  // annual_income, annual_expense, net_income 字段已删除
-
-  // 协议相关字段
-  operation_agreement_start_date?: string
-  operation_agreement_end_date?: string
-  operation_agreement_attachments?: string
-
-  // 项目相关字段
-  project_name?: string
-  project_short_name?: string
-  ownership_category?: string
-
-  // 系统字段
-  data_status?: string
-  created_by?: string
-  updated_by?: string
-  version?: number
-  tags?: string
-
-  // 审核相关字段已删除
-  // last_audit_date, audit_status, auditor 字段已删除
-  audit_notes?: string
-
-  // 其他字段
-  is_litigated?: boolean
-  notes?: string
-
-  // 多租户支持
-  tenant_id?: string
-}
+// AssetFormData interface removed, using AssetCreateRequest from types/asset
 
 const AssetCreatePage: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const [form] = Form.useForm()
+  const _form = Form.useForm()
 
   const isEdit = !!id
 
@@ -151,15 +74,11 @@ const AssetCreatePage: React.FC = () => {
   })
 
   // 提交表单
-  const handleSubmit = async (data: AssetFormData) => {
-    try {
-      if (isEdit) {
-        updateMutation.mutate(data as AssetUpdateRequest)
-      } else {
-        createMutation.mutate(data as AssetCreateRequest)
-      }
-    } catch (error) {
-      console.error('Submit error:', error)
+  const handleSubmit = async (data: AssetCreateRequest) => {
+    if (isEdit) {
+      updateMutation.mutate(data as AssetUpdateRequest)
+    } else {
+      createMutation.mutate(data as AssetCreateRequest)
     }
   }
 
@@ -194,8 +113,8 @@ const AssetCreatePage: React.FC = () => {
       </div>
 
       <AssetForm
-        initialData={asset as any}
-        onSubmit={handleSubmit as any}
+        initialData={asset}
+        onSubmit={handleSubmit}
         onCancel={handleCancel}
         loading={createMutation.isPending || updateMutation.isPending}
         mode={isEdit ? 'edit' : 'create'}
