@@ -28,9 +28,7 @@ from ...services.enum_validation_service import get_enum_validation_service
 router = APIRouter()
 
 
-@router.post(
-    "/batch-update", response_model=AssetBatchUpdateResponse, summary="批量更新资产"
-)
+@router.post("/batch-update", response_model=AssetBatchUpdateResponse, summary="批量更新资产")
 async def batch_update_assets(
     request: AssetBatchUpdateRequest,
     db: Session = Depends(get_db),
@@ -100,9 +98,7 @@ async def batch_update_assets(
         raise HTTPException(status_code=500, detail=f"批量更新失败: {str(e)}")
 
 
-@router.post(
-    "/validate", response_model=AssetValidationResponse, summary="验证资产数据"
-)
+@router.post("/validate", response_model=AssetValidationResponse, summary="验证资产数据")
 async def validate_asset_data(
     request: AssetValidationRequest,
     db: Session = Depends(get_db),
@@ -186,9 +182,7 @@ async def validate_asset_data(
                         float(data[field])
                         validated_fields.append(field)
                     except (ValueError, TypeError):
-                        errors.append(
-                            {"field": field, "error": f"{field}必须是有效的数字"}
-                        )
+                        errors.append({"field": field, "error": f"{field}必须是有效的数字"})
 
             # 验证日期字段
             date_fields = [

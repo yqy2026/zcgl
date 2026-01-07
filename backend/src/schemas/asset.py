@@ -17,14 +17,10 @@ class AssetBase(BaseModel):
     """资产基础模型"""
 
     # 基本信息 - 按照权属方、权属类别、项目名称、物业名称、物业地址顺序
-    ownership_entity: str = Field(
-        ..., min_length=1, max_length=200, description="权属方"
-    )
+    ownership_entity: str = Field(..., min_length=1, max_length=200, description="权属方")
     ownership_category: str | None = Field(None, max_length=100, description="权属类别")
     project_name: str | None = Field(None, max_length=200, description="项目名称")
-    property_name: str = Field(
-        ..., min_length=1, max_length=200, description="物业名称"
-    )
+    property_name: str = Field(..., min_length=1, max_length=200, description="物业名称")
     address: str = Field(..., min_length=1, max_length=500, description="物业地址")
     ownership_status: str = Field(..., description="确权状态")
     property_nature: str = Field(..., description="物业性质")
@@ -35,17 +31,11 @@ class AssetBase(BaseModel):
 
     # 面积相关字段
     land_area: Decimal | None = Field(None, ge=0, description="土地面积（平方米）")
-    actual_property_area: Decimal | None = Field(
-        None, ge=0, description="实际房产面积（平方米）"
-    )
-    rentable_area: Decimal | None = Field(
-        None, ge=0, description="可出租面积（平方米）"
-    )
+    actual_property_area: Decimal | None = Field(None, ge=0, description="实际房产面积（平方米）")
+    rentable_area: Decimal | None = Field(None, ge=0, description="可出租面积（平方米）")
     rented_area: Decimal | None = Field(None, ge=0, description="已出租面积（平方米）")
     # unrented_area 已移除，改为计算字段
-    non_commercial_area: Decimal | None = Field(
-        None, ge=0, description="非经营物业面积（平方米）"
-    )
+    non_commercial_area: Decimal | None = Field(None, ge=0, description="非经营物业面积（平方米）")
     # occupancy_rate 已移除，改为计算字段
     include_in_occupancy_rate: bool = Field(True, description="是否计入出租率统计")
 
@@ -58,9 +48,7 @@ class AssetBase(BaseModel):
     tenant_type: str | None = Field(None, description="租户类型")
 
     # 合同相关字段
-    lease_contract_number: str | None = Field(
-        None, max_length=500, description="租赁合同编号"
-    )
+    lease_contract_number: str | None = Field(None, max_length=500, description="租赁合同编号")
     contract_start_date: date | None = Field(None, description="合同开始日期")
     contract_end_date: date | None = Field(None, description="合同结束日期")
     monthly_rent: Decimal | None = Field(None, ge=0, description="月租金（元）")
@@ -69,9 +57,7 @@ class AssetBase(BaseModel):
     sublease_notes: str | None = Field(None, description="分租/转租备注")
 
     # 管理相关字段
-    manager_name: str | None = Field(
-        None, max_length=100, description="管理责任人（网格员）"
-    )
+    manager_name: str | None = Field(None, max_length=100, description="管理责任人（网格员）")
     business_model: str | None = Field(None, description="接收模式")
     operation_status: str | None = Field(None, description="经营状态")
 
@@ -79,15 +65,9 @@ class AssetBase(BaseModel):
     # annual_income, annual_expense, net_income 字段已移除
 
     # 接收相关字段
-    operation_agreement_start_date: date | None = Field(
-        None, description="接收协议开始日期"
-    )
-    operation_agreement_end_date: date | None = Field(
-        None, description="接收协议结束日期"
-    )
-    operation_agreement_attachments: str | None = Field(
-        None, description="接收协议文件"
-    )
+    operation_agreement_start_date: date | None = Field(None, description="接收协议开始日期")
+    operation_agreement_end_date: date | None = Field(None, description="接收协议结束日期")
+    operation_agreement_attachments: str | None = Field(None, description="接收协议文件")
     terminal_contract_files: str | None = Field(None, description="终端合同文件")
 
     # 项目相关字段
@@ -163,17 +143,11 @@ class AssetUpdate(BaseModel):
     """更新资产模型"""
 
     # 基本信息 - 按照权属方、权属类别、项目名称、物业名称、物业地址顺序
-    ownership_entity: str | None = Field(
-        None, min_length=1, max_length=200, description="权属方"
-    )
+    ownership_entity: str | None = Field(None, min_length=1, max_length=200, description="权属方")
     ownership_category: str | None = Field(None, max_length=100, description="权属类别")
     project_name: str | None = Field(None, max_length=200, description="项目名称")
-    property_name: str | None = Field(
-        None, min_length=1, max_length=200, description="物业名称"
-    )
-    address: str | None = Field(
-        None, min_length=1, max_length=500, description="物业地址"
-    )
+    property_name: str | None = Field(None, min_length=1, max_length=200, description="物业名称")
+    address: str | None = Field(None, min_length=1, max_length=500, description="物业地址")
     ownership_status: str | None = Field(None, description="确权状态")
     property_nature: str | None = Field(None, description="物业性质")
     usage_status: str | None = Field(None, description="使用状态")
@@ -183,21 +157,13 @@ class AssetUpdate(BaseModel):
 
     # 面积相关字段
     land_area: Decimal | None = Field(None, ge=0, description="土地面积（平方米）")
-    actual_property_area: Decimal | None = Field(
-        None, ge=0, description="实际房产面积（平方米）"
-    )
-    rentable_area: Decimal | None = Field(
-        None, ge=0, description="可出租面积（平方米）"
-    )
+    actual_property_area: Decimal | None = Field(None, ge=0, description="实际房产面积（平方米）")
+    rentable_area: Decimal | None = Field(None, ge=0, description="可出租面积（平方米）")
     rented_area: Decimal | None = Field(None, ge=0, description="已出租面积（平方米）")
     # unrented_area 已移除，改为计算字段
-    non_commercial_area: Decimal | None = Field(
-        None, ge=0, description="非经营物业面积（平方米）"
-    )
+    non_commercial_area: Decimal | None = Field(None, ge=0, description="非经营物业面积（平方米）")
     # occupancy_rate 已移除，改为计算字段
-    include_in_occupancy_rate: bool | None = Field(
-        None, description="是否计入出租率统计"
-    )
+    include_in_occupancy_rate: bool | None = Field(None, description="是否计入出租率统计")
 
     # 用途相关字段
     certificated_usage: str | None = Field(None, max_length=100, description="证载用途")
@@ -208,9 +174,7 @@ class AssetUpdate(BaseModel):
     tenant_type: str | None = Field(None, description="租户类型")
 
     # 合同相关字段
-    lease_contract_number: str | None = Field(
-        None, max_length=500, description="租赁合同编号"
-    )
+    lease_contract_number: str | None = Field(None, max_length=500, description="租赁合同编号")
     contract_start_date: date | None = Field(None, description="合同开始日期")
     contract_end_date: date | None = Field(None, description="合同结束日期")
     monthly_rent: Decimal | None = Field(None, ge=0, description="月租金（元）")
@@ -219,9 +183,7 @@ class AssetUpdate(BaseModel):
     sublease_notes: str | None = Field(None, description="分租/转租备注")
 
     # 管理相关字段
-    manager_name: str | None = Field(
-        None, max_length=100, description="管理责任人（网格员）"
-    )
+    manager_name: str | None = Field(None, max_length=100, description="管理责任人（网格员）")
     business_model: str | None = Field(None, description="接收模式")
     operation_status: str | None = Field(None, description="经营状态")
 
@@ -229,15 +191,9 @@ class AssetUpdate(BaseModel):
     # annual_income, annual_expense, net_income 字段已移除
 
     # 接收相关字段
-    operation_agreement_start_date: date | None = Field(
-        None, description="接收协议开始日期"
-    )
-    operation_agreement_end_date: date | None = Field(
-        None, description="接收协议结束日期"
-    )
-    operation_agreement_attachments: str | None = Field(
-        None, description="接收协议文件"
-    )
+    operation_agreement_start_date: date | None = Field(None, description="接收协议开始日期")
+    operation_agreement_end_date: date | None = Field(None, description="接收协议结束日期")
+    operation_agreement_attachments: str | None = Field(None, description="接收协议文件")
     terminal_contract_files: str | None = Field(None, description="终端合同文件")
 
     # 项目相关字段
@@ -302,14 +258,10 @@ class AssetResponseBase(BaseModel):
 
     # 面积相关字段
     land_area: Decimal | None = Field(None, description="土地面积（平方米）")
-    actual_property_area: Decimal | None = Field(
-        None, description="实际房产面积（平方米）"
-    )
+    actual_property_area: Decimal | None = Field(None, description="实际房产面积（平方米）")
     rentable_area: Decimal | None = Field(None, description="可出租面积（平方米）")
     rented_area: Decimal | None = Field(None, description="已出租面积（平方米）")
-    non_commercial_area: Decimal | None = Field(
-        None, description="非经营物业面积（平方米）"
-    )
+    non_commercial_area: Decimal | None = Field(None, description="非经营物业面积（平方米）")
     include_in_occupancy_rate: bool = Field(True, description="是否计入出租率统计")
 
     # 用途相关字段
@@ -335,15 +287,9 @@ class AssetResponseBase(BaseModel):
     operation_status: str | None = Field(None, description="经营状态")
 
     # 接收相关字段
-    operation_agreement_start_date: date | None = Field(
-        None, description="接收协议开始日期"
-    )
-    operation_agreement_end_date: date | None = Field(
-        None, description="接收协议结束日期"
-    )
-    operation_agreement_attachments: str | None = Field(
-        None, description="接收协议文件"
-    )
+    operation_agreement_start_date: date | None = Field(None, description="接收协议开始日期")
+    operation_agreement_end_date: date | None = Field(None, description="接收协议结束日期")
+    operation_agreement_attachments: str | None = Field(None, description="接收协议文件")
     terminal_contract_files: str | None = Field(None, description="终端合同文件")
 
     # 系统字段
@@ -530,9 +476,7 @@ class AssetBatchUpdateResponse(BaseModel):
     failed_count: int = Field(..., description="失败数量")
     total_count: int = Field(..., description="总数量")
     errors: list[dict] = Field(default_factory=list, description="错误信息列表")
-    updated_assets: list[str] = Field(
-        default_factory=list, description="成功更新的资产ID"
-    )
+    updated_assets: list[str] = Field(default_factory=list, description="成功更新的资产ID")
 
     model_config = ConfigDict(json_schema_extra={"example": {"description": "示例"}})
 
@@ -575,9 +519,7 @@ class AssetImportResponse(BaseModel):
     failed_count: int = Field(..., description="失败数量")
     total_count: int = Field(..., description="总数量")
     errors: list[dict] = Field(default_factory=list, description="错误信息列表")
-    imported_assets: list[str] = Field(
-        default_factory=list, description="成功导入的资产ID"
-    )
+    imported_assets: list[str] = Field(default_factory=list, description="成功导入的资产ID")
     import_id: str | None = Field(None, description="导入任务ID")
 
     model_config = ConfigDict(json_schema_extra={"example": {"description": "示例"}})
@@ -615,7 +557,5 @@ class AssetCustomFieldAssignment(BaseModel):
     @classmethod
     def validate_field_type(cls, v):
         if v not in ["text", "number", "date", "boolean"]:  # pragma: no cover
-            raise ValueError(
-                "字段类型必须是text、number、date或boolean之一"
-            )  # pragma: no cover
+            raise ValueError("字段类型必须是text、number、date或boolean之一")  # pragma: no cover
         return v  # pragma: no cover

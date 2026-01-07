@@ -2,7 +2,7 @@
 """
 Fix F401 errors in __init__.py files by adding # noqa: F401 comments
 """
-import re
+
 from pathlib import Path
 
 

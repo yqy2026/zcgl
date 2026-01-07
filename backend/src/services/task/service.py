@@ -45,7 +45,13 @@ class TaskService:
         return db_obj
 
     def update_task_status(
-        self, db: Session, *, task_id: str, status: TaskStatus, progress: int = None, error_message: str = None
+        self,
+        db: Session,
+        *,
+        task_id: str,
+        status: TaskStatus,
+        progress: int = None,
+        error_message: str = None,
     ) -> AsyncTask:
         """更新任务状态"""
         task = task_crud.get(db, task_id)
@@ -68,7 +74,7 @@ class TaskService:
                 update_data["progress"] = 100
 
         if progress is not None:
-             update_data["progress"] = progress
+            update_data["progress"] = progress
 
         if error_message is not None:
             update_data["error_message"] = error_message
@@ -87,7 +93,8 @@ class TaskService:
                 db=db,
                 task_id=task.id,
                 action="status_changed",
-                message=f"任务状态从 {old_status} 变更为 {status}" + (f": {error_message}" if error_message else ""),
+                message=f"任务状态从 {old_status} 变更为 {status}"
+                + (f": {error_message}" if error_message else ""),
                 user_id=task.user_id,
                 details={"old_status": old_status, "new_status": status},
             )
@@ -102,9 +109,9 @@ class TaskService:
 
         # Check permissions/state logic if any (from API)
         if task.status in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]:
-             # Only allow updating active tasks generally, unless specific fields?
-             # API says: "已完成的任务无法更新"
-             raise ValueError("已完成的任务无法更新")
+            # Only allow updating active tasks generally, unless specific fields?
+            # API says: "已完成的任务无法更新"
+            raise ValueError("已完成的任务无法更新")
 
         # Reuse update_task_status logic if status changes, OR just generic update?
         # If status is in obj_in, we should be careful.
@@ -113,19 +120,19 @@ class TaskService:
 
         update_data = obj_in.dict(exclude_unset=True)
         if "status" in update_data:
-             # Calling specific status update logic would be cleaner, but let's replicate logic locally to support single commit
-             new_status = update_data["status"]
-             old_status = task.status
+            # Calling specific status update logic would be cleaner, but let's replicate logic locally to support single commit
+            new_status = update_data["status"]
+            old_status = task.status
 
-             if old_status == TaskStatus.PENDING and new_status == TaskStatus.RUNNING:
+            if old_status == TaskStatus.PENDING and new_status == TaskStatus.RUNNING:
                 update_data["started_at"] = datetime.now(UTC)
 
-             if new_status in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]:
+            if new_status in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]:
                 update_data["completed_at"] = datetime.now(UTC)
                 if new_status == TaskStatus.COMPLETED:
                     update_data["progress"] = 100
 
-             # Log history later
+            # Log history later
 
         for field, value in update_data.items():
             setattr(task, field, value)
@@ -135,7 +142,7 @@ class TaskService:
         db.refresh(task)
 
         if "status" in update_data and update_data["status"] != old_status:
-             self.create_history(
+            self.create_history(
                 db=db,
                 task_id=task.id,
                 action="status_changed",
@@ -150,13 +157,15 @@ class TaskService:
         """取消任务"""
         task = task_crud.get(db, task_id)
         if not task:
-             raise ValueError("任务不存在")
+            raise ValueError("任务不存在")
 
         if task.status not in [TaskStatus.PENDING, TaskStatus.RUNNING]:
-             raise ValueError("任务无法取消")
+            raise ValueError("任务无法取消")
 
         error_msg = f"任务被取消: {reason if reason else '无原因'}"
-        return self.update_task_status(db, task_id=task_id, status=TaskStatus.CANCELLED, error_message=error_msg)
+        return self.update_task_status(
+            db, task_id=task_id, status=TaskStatus.CANCELLED, error_message=error_msg
+        )
 
     def delete_task(self, db: Session, *, task_id: str) -> None:
         """删除任务"""
@@ -195,7 +204,7 @@ class TaskService:
             details=details or {},
         )
         db.add(history)
-        db.commit() # Ensuring history is persisted
+        db.commit()  # Ensuring history is persisted
         db.refresh(history)
         return history
 
@@ -208,6 +217,7 @@ class TaskService:
         """清理过期任务"""
         # Moving logic from API
         from datetime import timedelta
+
         cutoff_date = datetime.now(UTC) - timedelta(days=days)
 
         old_tasks = (
@@ -244,7 +254,9 @@ class TaskService:
         }
 
     # Excel Config Logic
-    def create_excel_config(self, db: Session, *, obj_in: ExcelTaskConfigCreate, user_id: str = None) -> ExcelTaskConfig:
+    def create_excel_config(
+        self, db: Session, *, obj_in: ExcelTaskConfigCreate, user_id: str = None
+    ) -> ExcelTaskConfig:
         if obj_in.is_default:
             db.query(ExcelTaskConfig).filter(
                 and_(

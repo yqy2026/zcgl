@@ -184,9 +184,7 @@ class CRUDBase[
                 del self._cache[cache_key]
             self._clear_cache_pattern("get_multi")
 
-            logger.info(
-                f"Successfully deleted {self.model.__tablename__} record with id: {id}"
-            )
+            logger.info(f"Successfully deleted {self.model.__tablename__} record with id: {id}")
             return obj
         except ValueError:
             raise
@@ -236,14 +234,14 @@ class CRUDBase[
         except Exception as e:  # pragma: no cover
             raise self._handle_database_error(e, "高级查询")  # pragma: no cover
 
-    def bulk_create(
-        self, db: Session, *, objects_in: list[CreateSchemaType]
-    ) -> list[ModelType]:
+    def bulk_create(self, db: Session, *, objects_in: list[CreateSchemaType]) -> list[ModelType]:
         """批量创建记录"""
         try:
             db_objects = []
             for obj_in in objects_in:
-                obj_in_data = obj_in.model_dump() if hasattr(obj_in, "model_dump") else obj_in  # pragma: no cover
+                obj_in_data = (
+                    obj_in.model_dump() if hasattr(obj_in, "model_dump") else obj_in
+                )  # pragma: no cover
                 db_objects.append(self.model(**obj_in_data))
 
             db.add_all(db_objects)

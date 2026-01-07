@@ -32,17 +32,15 @@ class OrganizationService:
         db_obj = Organization(**obj_in.model_dump())
         db_obj.level = level
         # Temporary path until flush
-        db_obj.path = "/" # Placeholder
+        db_obj.path = "/"  # Placeholder
 
         db.add(db_obj)
-        db.flush() # Get ID
+        db.flush()  # Get ID
 
         # Now set path
         if parent:
             db_obj.path = (
-                f"{parent.path}/{db_obj.id}"
-                if parent.path
-                else f"/{parent.id}/{db_obj.id}"
+                f"{parent.path}/{db_obj.id}" if parent.path else f"/{parent.id}/{db_obj.id}"
             )
         else:
             db_obj.path = f"/{db_obj.id}"
@@ -123,7 +121,9 @@ class OrganizationService:
 
         return db_obj
 
-    def delete_organization(self, db: Session, *, org_id: str, deleted_by: str | None = None) -> bool:
+    def delete_organization(
+        self, db: Session, *, org_id: str, deleted_by: str | None = None
+    ) -> bool:
         """软删除组织"""
         db_obj = organization_crud.get(db, org_id)
         if not db_obj:
@@ -145,27 +145,18 @@ class OrganizationService:
 
     def get_statistics(self, db: Session) -> dict[str, Any]:
         """获取组织统计信息"""
-        total = (
-            db.query(Organization).filter(not_(Organization.is_deleted)).count()
-        )
+        total = db.query(Organization).filter(not_(Organization.is_deleted)).count()
         active = total  # 由于删除了status字段，所有未删除的组织都视为活跃
         inactive = 0
 
         # 按层级统计
         level_stats = {}
-        levels = (
-            db.query(Organization.level)
-            .filter(not_(Organization.is_deleted))
-            .distinct()
-            .all()
-        )
+        levels = db.query(Organization.level).filter(not_(Organization.is_deleted)).distinct().all()
         for level_row in levels:
             level = level_row[0]
             count = (
                 db.query(Organization)
-                .filter(
-                    and_(not_(Organization.is_deleted), Organization.level == level)
-                )
+                .filter(and_(not_(Organization.is_deleted), Organization.level == level))
                 .count()
             )
             level_stats[f"level_{level}"] = count

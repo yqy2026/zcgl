@@ -140,9 +140,7 @@ async def lifespan(app: FastAPI):
                 logger.error(f"JWT安全问题: {issue}")
             # 非测试模式下拒绝启动
             if not is_testing():
-                raise RuntimeError(
-                    "JWT配置存在严重安全问题，拒绝启动。请检查SECRET_KEY配置。"
-                )
+                raise RuntimeError("JWT配置存在严重安全问题，拒绝启动。请检查SECRET_KEY配置。")
         else:
             logger.info("JWT配置安全检查通过")
 
@@ -206,9 +204,7 @@ app = FastAPI(
 initialize_config()
 
 # 设置CORS中间件
-cors_origins = get_config(
-    "cors_origins", ["http://localhost:5173", "http://localhost:5174"]
-)
+cors_origins = get_config("cors_origins", ["http://localhost:5173", "http://localhost:5174"])
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
@@ -262,9 +258,7 @@ try:
     file_security_middleware = create_file_security_middleware(app)
     app.add_middleware(type(file_security_middleware))
 except ImportError as e:
-    safe_print(
-        f"Warning: File upload security middleware not available - {safe_error_message(e)}"
-    )
+    safe_print(f"Warning: File upload security middleware not available - {safe_error_message(e)}")
 
 # 设置统一异常处理器
 setup_exception_handlers(app)

@@ -54,9 +54,7 @@ class FilenameSanitizer:
 
     def __init__(self):
         # 预编译正则表达式以提高性能
-        self._compiled_patterns = [
-            re.compile(pattern) for pattern in self.DANGEROUS_PATTERNS
-        ]
+        self._compiled_patterns = [re.compile(pattern) for pattern in self.DANGEROUS_PATTERNS]
 
     def sanitize_filename(
         self, filename: str, options: dict[str, Any] | None = None
@@ -109,9 +107,7 @@ class FilenameSanitizer:
             for chinese_char, standard_char in self.CHINESE_SPECIAL_CHARS.items():
                 if chinese_char in cleaned_name:
                     cleaned_name = cleaned_name.replace(chinese_char, standard_char)
-                    changes_made.append(
-                        f"替换中文特殊字符: {chinese_char} → {standard_char}"
-                    )
+                    changes_made.append(f"替换中文特殊字符: {chinese_char} → {standard_char}")
 
             # 3. 处理危险字符
             for pattern in self._compiled_patterns:
@@ -139,16 +135,12 @@ class FilenameSanitizer:
                 if allow_unicode and len(cleaned_name) > 50:
                     # 对于长文件名，保留开头部分和结尾部分
                     keep_start = max_length - len(ext) - 15  # 保留结尾15个字符
-                    cleaned_name = (
-                        cleaned_name[:keep_start] + "..." + cleaned_name[-12:]
-                    )
+                    cleaned_name = cleaned_name[:keep_start] + "..." + cleaned_name[-12:]
                 else:
                     # 简单截断
                     cleaned_name = cleaned_name[: max_length - len(ext)]
 
-                changes_made.append(
-                    f"文件名截断: {original_length} → {len(cleaned_name)}"
-                )
+                changes_made.append(f"文件名截断: {original_length} → {len(cleaned_name)}")
                 warnings.append("文件名已被截断以符合系统限制")
 
             # 7. 确保文件名不为空
@@ -270,9 +262,7 @@ class FilenameSanitizer:
             severity = "medium"
 
         # 特殊字符检查
-        has_chinese_special = any(
-            char in self.CHINESE_SPECIAL_CHARS for char in filename
-        )
+        has_chinese_special = any(char in self.CHINESE_SPECIAL_CHARS for char in filename)
         if has_chinese_special:
             issues.append("包含中文特殊字符")
             suggestions.append("建议将中文特殊字符替换为标准字符")
@@ -287,9 +277,7 @@ class FilenameSanitizer:
                 severity = "low"
 
         # 危险字符检查
-        has_dangerous = any(
-            pattern.search(filename) for pattern in self._compiled_patterns
-        )
+        has_dangerous = any(pattern.search(filename) for pattern in self._compiled_patterns)
         if has_dangerous:
             issues.append("包含系统不兼容字符")
             suggestions.append("移除或替换特殊字符")
@@ -341,9 +329,7 @@ class FilenameSanitizer:
             "name_length": len(name),
             "has_unicode": any(ord(char) > 127 for char in filename),
             "has_chinese": any("\u4e00" <= char <= "\u9fff" for char in filename),
-            "has_chinese_special": any(
-                char in self.CHINESE_SPECIAL_CHARS for char in filename
-            ),
+            "has_chinese_special": any(char in self.CHINESE_SPECIAL_CHARS for char in filename),
             "extension_is_pdf": ext.lower() == ".pdf",
             "is_safe": self._is_filename_safe(filename),
         }

@@ -20,13 +20,15 @@ from .user_management_service import UserManagementService
 UserCreate = UserCreate
 UserUpdate = UserUpdate
 TokenResponse = TokenResponse
-UserSessionResponse = object # Placeholder if needed, or import if available
+UserSessionResponse = object  # Placeholder if needed, or import if available
+
 
 class AuthService:
     """
     Deprecated monolithic service.
     Delegates calls to new specialized services.
     """
+
     def __init__(self, db: Session):
         self.db = db
         self.auth_service = AuthenticationService(db)
@@ -82,6 +84,7 @@ class AuthService:
         # For now returning ORM objects as SessionService does
         # If API expects Pydantic, the router handles conversion usually
         from ...schemas.auth import UserSessionResponse
+
         sessions = self.session_service.get_user_sessions(user_id)
         return [UserSessionResponse.from_orm(s) for s in sessions]
 

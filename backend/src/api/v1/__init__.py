@@ -69,13 +69,9 @@ api_router.include_router(auth_router, prefix="/auth", tags=["用户认证"])
 api_router.include_router(roles_router, prefix="/roles", tags=["角色管理"])
 api_router.include_router(operation_logs_router, prefix="/logs", tags=["操作日志"])
 api_router.include_router(assets_router, prefix="/assets", tags=["资产管理"])
-api_router.include_router(
-    excel_router, tags=["Excel导入导出"]
-)  # 移除重复的prefix，excel.py已定义
+api_router.include_router(excel_router, tags=["Excel导入导出"])  # 移除重复的prefix，excel.py已定义
 api_router.include_router(history_router, prefix="/history", tags=["变更历史"])
-api_router.include_router(
-    statistics_router, prefix="/statistics", tags=["数据统计和报表"]
-)
+api_router.include_router(statistics_router, prefix="/statistics", tags=["数据统计和报表"])
 api_router.include_router(
     tasks_router, tags=["任务管理"]
 )  # Remove prefix - router defines its own paths
@@ -88,23 +84,17 @@ api_router.include_router(
 api_router.include_router(
     custom_fields_router, prefix="/asset-custom-fields", tags=["自定义字段管理"]
 )
-api_router.include_router(
-    organization_router, prefix="/organizations", tags=["组织架构管理"]
-)
+api_router.include_router(organization_router, prefix="/organizations", tags=["组织架构管理"])
 api_router.include_router(enum_field_router, tags=["枚举字段管理"])
 api_router.include_router(dictionaries_router, tags=["统一字典管理"])
 api_router.include_router(ownership_router, prefix="/ownerships", tags=["权属方管理"])
 api_router.include_router(project_router, prefix="/projects", tags=["项目管理"])
-api_router.include_router(
-    rent_contract_router, prefix="/rental-contracts", tags=["租赁合同管理"]
-)
+api_router.include_router(rent_contract_router, prefix="/rental-contracts", tags=["租赁合同管理"])
 # Analytics路由 - 修复analytics端点404问题
 api_router.include_router(analytics_router, prefix="/analytics", tags=["综合分析"])
 # 条件注册系统设置路由
 if system_settings_router is not None:
-    api_router.include_router(
-        system_settings_router, prefix="/system", tags=["系统设置"]
-    )
+    api_router.include_router(system_settings_router, prefix="/system", tags=["系统设置"])
 api_router.include_router(monitoring_router, prefix="/monitoring", tags=["系统监控"])
 # test_coverage and test_performance routers removed
 api_router.include_router(defect_tracking_router, prefix="/defects", tags=["缺陷跟踪"])

@@ -119,9 +119,7 @@ class FileValidator:
         self.config = FileValidationConfig()
         self.logger = logging.getLogger(__name__)
 
-    def validate_file_type(
-        self, file: UploadFile, allowed_types: list[str] | None = None
-    ) -> bool:
+    def validate_file_type(self, file: UploadFile, allowed_types: list[str] | None = None) -> bool:
         """
         验证文件类型
 
@@ -141,15 +139,11 @@ class FileValidator:
         # 检查文件扩展名
         file_ext = Path(file.filename or "").suffix.lower()
         if file_ext not in [
-            ext
-            for exts in self.config.ALLOWED_MIME_TYPES.values()
-            for ext in exts.split(",")
+            ext for exts in self.config.ALLOWED_MIME_TYPES.values() for ext in exts.split(",")
         ]:
             raise BusinessValidationError(
                 f"不支持的文件扩展名: {file_ext}",
-                details={
-                    "allowed_extensions": list(self.config.ALLOWED_MIME_TYPES.values())
-                },
+                details={"allowed_extensions": list(self.config.ALLOWED_MIME_TYPES.values())},
             )
 
         # 检查MIME类型 - 使用流式读取避免内存耗尽攻击
@@ -341,9 +335,7 @@ class FileValidator:
                         raise BusinessValidationError(
                             "检测到可能的恶意内容",
                             details={
-                                "malicious_signature": signature.decode(
-                                    "utf-8", errors="ignore"
-                                )
+                                "malicious_signature": signature.decode("utf-8", errors="ignore")
                             },
                         )
 
@@ -464,16 +456,8 @@ class RateLimiter:
             bool: 是否允许请求
         """
         # 设置默认值
-        max_req = (
-            max_requests
-            if max_requests is not None
-            else self.config.get("max_requests", 100)
-        )
-        time_win = (
-            time_window
-            if time_window is not None
-            else self.config.get("time_window", 60)
-        )
+        max_req = max_requests if max_requests is not None else self.config.get("max_requests", 100)
+        time_win = time_window if time_window is not None else self.config.get("time_window", 60)
 
         current_time = time()
         request_queue = self.requests[key]
@@ -515,16 +499,8 @@ class RateLimiter:
             int: 剩余请求数
         """
         # 设置默认值
-        max_req = (
-            max_requests
-            if max_requests is not None
-            else self.config.get("max_requests", 100)
-        )
-        time_win = (
-            time_window
-            if time_window is not None
-            else self.config.get("time_window", 60)
-        )
+        max_req = max_requests if max_requests is not None else self.config.get("max_requests", 100)
+        time_win = time_window if time_window is not None else self.config.get("time_window", 60)
 
         current_time = time()
         request_queue = self.requests[key]
@@ -560,9 +536,7 @@ class SecurityMiddleware:
 
         # 检查IP黑名单
         if self._is_ip_blacklisted(client_ip):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="IP地址已被封禁"
-            )
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="IP地址已被封禁")
 
         # 检查请求频率限制
         if not self.rate_limiter.check_rate_limit(client_ip):

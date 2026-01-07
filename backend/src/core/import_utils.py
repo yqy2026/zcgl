@@ -105,9 +105,7 @@ def safe_import_from(
 
     Examples:
         >>> get_ocr_service = safe_import_from(
-        ...     "services.providers.ocr_provider",
-        ...     "get_ocr_service",
-        ...     fallback=lambda: None
+        ...     "services.providers.ocr_provider", "get_ocr_service", fallback=lambda: None
         ... )
     """
     policy = get_dependency_policy()
@@ -121,9 +119,7 @@ def safe_import_from(
 
         if critical and is_production():
             logger.error(f"生产环境关键依赖缺失: {error_msg}")
-            raise ImportError(
-                f"生产环境缺少关键依赖: {module_path}.{attribute_name}"
-            ) from e
+            raise ImportError(f"生产环境缺少关键依赖: {module_path}.{attribute_name}") from e
 
         if critical and policy == DependencyPolicy.STRICT:
             logger.warning(f"关键依赖缺失（严格模式）: {error_msg}")

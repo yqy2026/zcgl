@@ -18,9 +18,7 @@ class CustomFieldService:
         self, db: Session, *, obj_in: AssetCustomFieldCreate
     ) -> AssetCustomField:
         """创建自定义字段"""
-        existing = custom_field_crud.get_by_field_name(
-            db, field_name=obj_in.field_name
-        )
+        existing = custom_field_crud.get_by_field_name(db, field_name=obj_in.field_name)
         if existing:
             raise ValueError(f"字段名 {obj_in.field_name} 已存在")
 
@@ -35,9 +33,7 @@ class CustomFieldService:
             raise ValueError(f"字段 {id} 不存在")
 
         if obj_in.field_name and obj_in.field_name != field.field_name:
-            existing = custom_field_crud.get_by_field_name(
-                db, field_name=obj_in.field_name
-            )
+            existing = custom_field_crud.get_by_field_name(db, field_name=obj_in.field_name)
             if existing and existing.id != id:
                 raise ValueError(f"字段名 {obj_in.field_name} 已存在")
 
@@ -50,9 +46,7 @@ class CustomFieldService:
             raise ValueError(f"字段 {id} 不存在")
         return custom_field_crud.remove(db, id=id)
 
-    def validate_field_value(
-        self, field: AssetCustomField, value: Any
-    ) -> tuple[bool, str | None]:
+    def validate_field_value(self, field: AssetCustomField, value: Any) -> tuple[bool, str | None]:
         """验证字段值是否符合配置要求 (Refactored from CRUD)"""
         try:
             # 必填验证
@@ -131,16 +125,12 @@ class CustomFieldService:
                         max_value = rules.get("max_value")
                         min_value = rules.get("min_value")
 
-                        if max_value is not None and decimal_value > Decimal(
-                            str(max_value)
-                        ):
+                        if max_value is not None and decimal_value > Decimal(str(max_value)):
                             return (
                                 False,
                                 f"字段 {field.display_name} 值不能大于 {max_value}",
                             )
-                        if min_value is not None and decimal_value < Decimal(
-                            str(min_value)
-                        ):
+                        if min_value is not None and decimal_value < Decimal(str(min_value)):
                             return (
                                 False,
                                 f"字段 {field.display_name} 值不能小于 {min_value}",
@@ -151,8 +141,8 @@ class CustomFieldService:
 
             elif field.field_type == "boolean":
                 if not isinstance(value, bool):
-                     # Allow string 'true'/'false' for APIs sometimes?
-                     # Strict check as per original code
+                    # Allow string 'true'/'false' for APIs sometimes?
+                    # Strict check as per original code
                     return False, f"字段 {field.display_name} 必须为布尔类型"
 
             elif field.field_type == "date":
@@ -180,9 +170,7 @@ class CustomFieldService:
                         if isinstance(field.field_options, str)
                         else field.field_options
                     )
-                    valid_values = [
-                        opt.get("value") for opt in options if isinstance(opt, dict)
-                    ]
+                    valid_values = [opt.get("value") for opt in options if isinstance(opt, dict)]
 
                     if field.field_type == "select":
                         if value not in valid_values:
@@ -257,9 +245,7 @@ class CustomFieldService:
 
         return updated_values
 
-    def get_asset_field_values(
-        self, db: Session, *, asset_id: str
-    ) -> list[dict[str, Any]]:
+    def get_asset_field_values(self, db: Session, *, asset_id: str) -> list[dict[str, Any]]:
         """获取资产的自定义字段值"""
         # Delegating to CRUD or implementing logic.
         # Original CRUD logic was empty stub.

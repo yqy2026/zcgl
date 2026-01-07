@@ -161,17 +161,11 @@ class DatabaseManager:
                     self._optimize_sqlite_connection(dbapi_connection)
 
         @event.listens_for(self.engine, "checkout")
-        def on_checkout(
-            dbapi_connection: DBAPIConnection, connection_record, connection_proxy
-        ):
+        def on_checkout(dbapi_connection: DBAPIConnection, connection_record, connection_proxy):
             """检出连接事件"""
             with self._metrics_lock:
-                if connection_record and hasattr(
-                    connection_record, "info"
-                ):  # pragma: no cover
-                    if (
-                        connection_record.info.get("origin", "") == "pool"
-                    ):  # pragma: no cover
+                if connection_record and hasattr(connection_record, "info"):  # pragma: no cover
+                    if connection_record.info.get("origin", "") == "pool":  # pragma: no cover
                         self.metrics.pool_hits += 1  # pragma: no cover
                     else:  # pragma: no cover
                         self.metrics.pool_misses += 1  # pragma: no cover
@@ -182,9 +176,7 @@ class DatabaseManager:
             conn.info.setdefault("query_start_time", time.time())
 
         @event.listens_for(self.engine, "after_execute")
-        def after_execute(
-            conn, clauseelement, multiparams, params, execution_options, result
-        ):
+        def after_execute(conn, clauseelement, multiparams, params, execution_options, result):
             """查询执行后事件"""
             try:
                 start_time = conn.info.pop("query_start_time", time.time())
@@ -212,9 +204,7 @@ class DatabaseManager:
                     except Exception:  # pragma: no cover
                         try:  # pragma: no cover
                             self.query_history.get_nowait()  # pragma: no cover
-                            self.query_history.put_nowait(
-                                query_info
-                            )  # pragma: no cover
+                            self.query_history.put_nowait(query_info)  # pragma: no cover
                         except Empty:  # pragma: no cover
                             pass  # pragma: no cover
             except Exception as e:  # pragma: no cover

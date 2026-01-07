@@ -5,6 +5,7 @@ from sqlalchemy.orm import DeclarativeMeta
 
 ModelType = TypeVar("ModelType", bound=DeclarativeMeta)
 
+
 class QueryBuilder[ModelType: DeclarativeMeta]:
     """
     Unified Query Builder for SQLAlchemy models.
@@ -24,6 +25,7 @@ class QueryBuilder[ModelType: DeclarativeMeta]:
         Builds a query to count records matching criteria.
         """
         from sqlalchemy import func
+
         query = select(func.count()).select_from(self.model)
 
         if filters:
@@ -43,7 +45,7 @@ class QueryBuilder[ModelType: DeclarativeMeta]:
         sort_desc: bool = True,
         skip: int = 0,
         limit: int = 100,
-        base_query: Select | None = None
+        base_query: Select | None = None,
     ) -> Select:
         """
         Builds a SQLAlchemy query with the given parameters.
@@ -82,7 +84,7 @@ class QueryBuilder[ModelType: DeclarativeMeta]:
             query = self._apply_sorting(query, sort_by, sort_desc)
         else:
             # Default sort by id desc if available, closely matching standard expectations
-            if hasattr(self.model, 'id'):
+            if hasattr(self.model, "id"):
                 query = query.order_by(self.model.id.desc())
 
         # 4. Apply Pagination
@@ -132,7 +134,7 @@ class QueryBuilder[ModelType: DeclarativeMeta]:
             else:
                 # Direct equality
                 if hasattr(self.model, key):
-                     conditions.append(getattr(self.model, key) == value)
+                    conditions.append(getattr(self.model, key) == value)
 
         if conditions:
             query = query.where(and_(*conditions))
