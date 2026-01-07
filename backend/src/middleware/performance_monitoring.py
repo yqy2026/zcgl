@@ -31,9 +31,7 @@ class PerformanceMonitoringMiddleware(BaseHTTPMiddleware):
         # 每分钟重置计数器
         self._reset_task = asyncio.create_task(self._reset_counters())
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         """处理请求并收集性能指标"""
 
         # 获取请求开始时间
@@ -122,9 +120,7 @@ class PerformanceMonitoringMiddleware(BaseHTTPMiddleware):
             if len(times) > 100:
                 times.pop(0)
 
-    async def _record_slow_query(
-        self, path: str, process_time: float, method: str
-    ) -> None:
+    async def _record_slow_query(self, path: str, process_time: float, method: str) -> None:
         """记录慢查询"""
         self.slow_queries.append(
             {
@@ -152,9 +148,7 @@ class PerformanceMonitoringMiddleware(BaseHTTPMiddleware):
                 # 清理过期的请求计数
                 current_minute = datetime.now().strftime("%Y-%m-%d %H:%M")
                 expired_keys = [
-                    key
-                    for key in self.request_count
-                    if key.split(":")[1] != current_minute
+                    key for key in self.request_count if key.split(":")[1] != current_minute
                 ]
                 for key in expired_keys:
                     del self.request_count[key]
@@ -230,19 +224,14 @@ class PerformanceMonitoringMiddleware(BaseHTTPMiddleware):
             stats["system_info"] = {
                 "cpu_percent": psutil.cpu_percent(),
                 "memory_percent": psutil.virtual_memory().percent,
-                "disk_percent": (
-                    psutil.disk_usage("/").used / psutil.disk_usage("/").total
-                )
-                * 100,
+                "disk_percent": (psutil.disk_usage("/").used / psutil.disk_usage("/").total) * 100,
             }
 
         return stats
 
     def get_slow_queries(self, limit: int = 10) -> list:
         """获取慢查询列表"""
-        return sorted(self.slow_queries, key=lambda x: x["process_time"], reverse=True)[
-            :limit
-        ]
+        return sorted(self.slow_queries, key=lambda x: x["process_time"], reverse=True)[:limit]
 
     async def cleanup(self) -> None:
         """清理资源"""

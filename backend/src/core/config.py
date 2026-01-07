@@ -42,22 +42,14 @@ class Settings(BaseSettings):
         default="sqlite:///./land_property.db",
         json_schema_extra={"env": "DATABASE_URL"},
     )
-    DATABASE_ECHO: bool = Field(
-        default=False, json_schema_extra={"env": "DATABASE_ECHO"}
-    )
+    DATABASE_ECHO: bool = Field(default=False, json_schema_extra={"env": "DATABASE_ECHO"})
 
     # Redis缓存配置
-    REDIS_HOST: str | None = Field(
-        default=None, json_schema_extra={"env": "REDIS_HOST"}
-    )
+    REDIS_HOST: str | None = Field(default=None, json_schema_extra={"env": "REDIS_HOST"})
     REDIS_PORT: int = Field(default=6379, json_schema_extra={"env": "REDIS_PORT"})
     REDIS_DB: int = Field(default=0, json_schema_extra={"env": "REDIS_DB"})
-    REDIS_PASSWORD: str | None = Field(
-        default=None, json_schema_extra={"env": "REDIS_PASSWORD"}
-    )
-    REDIS_ENABLED: bool = Field(
-        default=False, json_schema_extra={"env": "REDIS_ENABLED"}
-    )
+    REDIS_PASSWORD: str | None = Field(default=None, json_schema_extra={"env": "REDIS_PASSWORD"})
+    REDIS_ENABLED: bool = Field(default=False, json_schema_extra={"env": "REDIS_ENABLED"})
 
     # CORS配置
     CORS_ORIGINS: list[str] = Field(
@@ -84,15 +76,9 @@ class Settings(BaseSettings):
     )
 
     # JWT安全强化配置
-    JWT_ISSUER: str = Field(
-        default="zcgl-system", json_schema_extra={"env": "JWT_ISSUER"}
-    )
-    JWT_AUDIENCE: str = Field(
-        default="zcgl-users", json_schema_extra={"env": "JWT_AUDIENCE"}
-    )
-    ENABLE_JTI_CLAIM: bool = Field(
-        default=True, json_schema_extra={"env": "ENABLE_JTI_CLAIM"}
-    )
+    JWT_ISSUER: str = Field(default="zcgl-system", json_schema_extra={"env": "JWT_ISSUER"})
+    JWT_AUDIENCE: str = Field(default="zcgl-users", json_schema_extra={"env": "JWT_AUDIENCE"})
+    ENABLE_JTI_CLAIM: bool = Field(default=True, json_schema_extra={"env": "ENABLE_JTI_CLAIM"})
     TOKEN_BLACKLIST_ENABLED: bool = Field(
         default=True, json_schema_extra={"env": "TOKEN_BLACKLIST_ENABLED"}
     )
@@ -101,20 +87,14 @@ class Settings(BaseSettings):
     MAX_FILE_SIZE: int = Field(
         default=50 * 1024 * 1024, json_schema_extra={"env": "MAX_FILE_SIZE"}
     )  # 50MB
-    UPLOAD_DIR: str = Field(
-        default="./uploads", json_schema_extra={"env": "UPLOAD_DIR"}
-    )
+    UPLOAD_DIR: str = Field(default="./uploads", json_schema_extra={"env": "UPLOAD_DIR"})
 
     # 分页配置
-    DEFAULT_PAGE_SIZE: int = Field(
-        default=20, json_schema_extra={"env": "DEFAULT_PAGE_SIZE"}
-    )
+    DEFAULT_PAGE_SIZE: int = Field(default=20, json_schema_extra={"env": "DEFAULT_PAGE_SIZE"})
     MAX_PAGE_SIZE: int = Field(default=100, json_schema_extra={"env": "MAX_PAGE_SIZE"})
 
     # 缓存配置
-    CACHE_TTL: int = Field(
-        default=3600, json_schema_extra={"env": "CACHE_TTL"}
-    )  # 1小时
+    CACHE_TTL: int = Field(default=3600, json_schema_extra={"env": "CACHE_TTL"})  # 1小时
     CACHE_PREFIX: str = Field(default="zcgl", json_schema_extra={"env": "CACHE_PREFIX"})
 
     # 日志配置
@@ -148,9 +128,7 @@ class Settings(BaseSettings):
 
         # 检查数据库是否为SQLite（生产环境推荐PostgreSQL）
         if self.DATABASE_URL.startswith("sqlite:///./land_property.db"):
-            warnings.append(
-                "提醒: 使用默认SQLite数据库路径，生产环境建议使用PostgreSQL。"
-            )
+            warnings.append("提醒: 使用默认SQLite数据库路径，生产环境建议使用PostgreSQL。")
 
         return warnings
 
@@ -171,23 +149,15 @@ class Settings(BaseSettings):
             logger.info("安全配置检查通过")
 
     # 性能监控
-    ENABLE_METRICS: bool = Field(
-        default=True, json_schema_extra={"env": "ENABLE_METRICS"}
-    )
+    ENABLE_METRICS: bool = Field(default=True, json_schema_extra={"env": "ENABLE_METRICS"})
     SLOW_QUERY_THRESHOLD: float = Field(
         default=1.0, json_schema_extra={"env": "SLOW_QUERY_THRESHOLD"}
     )
 
     # 认证配置
-    MIN_PASSWORD_LENGTH: int = Field(
-        default=8, json_schema_extra={"env": "MIN_PASSWORD_LENGTH"}
-    )
-    SESSION_EXPIRE_DAYS: int = Field(
-        default=30, json_schema_extra={"env": "SESSION_EXPIRE_DAYS"}
-    )
-    MAX_FAILED_ATTEMPTS: int = Field(
-        default=5, json_schema_extra={"env": "MAX_FAILED_ATTEMPTS"}
-    )
+    MIN_PASSWORD_LENGTH: int = Field(default=8, json_schema_extra={"env": "MIN_PASSWORD_LENGTH"})
+    SESSION_EXPIRE_DAYS: int = Field(default=30, json_schema_extra={"env": "SESSION_EXPIRE_DAYS"})
+    MAX_FAILED_ATTEMPTS: int = Field(default=5, json_schema_extra={"env": "MAX_FAILED_ATTEMPTS"})
     LOCKOUT_DURATION: int = Field(
         default=900, json_schema_extra={"env": "LOCKOUT_DURATION"}
     )  # 15分钟
@@ -202,21 +172,15 @@ class Settings(BaseSettings):
     CHATGLM3_API_URL: str | None = Field(
         default=None, json_schema_extra={"env": "CHATGLM3_API_URL"}
     )
-    CHATGLM3_MAX_TOKENS: int = Field(
-        default=1500, json_schema_extra={"env": "CHATGLM3_MAX_TOKENS"}
-    )
+    CHATGLM3_MAX_TOKENS: int = Field(default=1500, json_schema_extra={"env": "CHATGLM3_MAX_TOKENS"})
     CHATGLM3_TEMPERATURE: float = Field(
         default=0.2, json_schema_extra={"env": "CHATGLM3_TEMPERATURE"}
     )
-    CHATGLM3_TIMEOUT: int = Field(
-        default=30, json_schema_extra={"env": "CHATGLM3_TIMEOUT"}
-    )
+    CHATGLM3_TIMEOUT: int = Field(default=30, json_schema_extra={"env": "CHATGLM3_TIMEOUT"})
     CHATGLM3_MODEL_ID: str = Field(
         default="THUDM/chatglm3-6b", json_schema_extra={"env": "CHATGLM3_MODEL_ID"}
     )
-    CHATGLM3_DEVICE: str = Field(
-        default="cpu", json_schema_extra={"env": "CHATGLM3_DEVICE"}
-    )
+    CHATGLM3_DEVICE: str = Field(default="cpu", json_schema_extra={"env": "CHATGLM3_DEVICE"})
     LLM_TRIGGER_THRESHOLD: float = Field(
         default=0.65, json_schema_extra={"env": "LLM_TRIGGER_THRESHOLD"}
     )
@@ -285,9 +249,7 @@ def validate_config():
     if settings.REDIS_ENABLED and not settings.REDIS_HOST:
         raise ValueError("启用Redis时需要配置REDIS_HOST")
 
-    logger.info(
-        f"配置验证完成 - 应用: {settings.APP_NAME}, 版本: {settings.APP_VERSION}"
-    )
+    logger.info(f"配置验证完成 - 应用: {settings.APP_NAME}, 版本: {settings.APP_VERSION}")
 
 
 # 导出配置实例

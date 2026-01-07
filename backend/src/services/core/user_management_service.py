@@ -35,9 +35,7 @@ class UserManagementService:
         # 检查用户名是否已存在
         existing_user = (
             self.db.query(User)
-            .filter(
-                (User.username == user_data.username) | (User.email == user_data.email)
-            )
+            .filter((User.username == user_data.username) | (User.email == user_data.email))
             .first()
         )
         if existing_user:

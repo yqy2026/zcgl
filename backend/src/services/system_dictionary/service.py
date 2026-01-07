@@ -10,9 +10,7 @@ from ...schemas.asset import SystemDictionaryCreate, SystemDictionaryUpdate
 class SystemDictionaryService:
     """系统字典服务层"""
 
-    def create_dictionary(
-        self, db: Session, *, obj_in: SystemDictionaryCreate
-    ) -> SystemDictionary:
+    def create_dictionary(self, db: Session, *, obj_in: SystemDictionaryCreate) -> SystemDictionary:
         """创建字典项"""
         # Check uniqueness
         existing = system_dictionary_crud.get_by_type_and_code(

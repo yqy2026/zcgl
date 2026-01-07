@@ -121,9 +121,7 @@ def secure_filename(filename: str) -> str:
     return filename
 
 
-def validate_file_extension(
-    filename: str, allowed_extensions: list | None = None
-) -> bool:
+def validate_file_extension(filename: str, allowed_extensions: list | None = None) -> bool:
     """
     验证文件扩展名是否安全
 
@@ -156,9 +154,7 @@ def validate_file_extension(
     return ext in ALLOWED_EXTENSIONS
 
 
-def generate_safe_filename(
-    original_filename: str, prefix: str = "", suffix: str = ""
-) -> str:
+def generate_safe_filename(original_filename: str, prefix: str = "", suffix: str = "") -> str:
     """
     生成唯一的安全文件名
 
@@ -208,10 +204,7 @@ def validate_file_path(file_path: str, allowed_directories: list[str]) -> bool:
         # 检查路径是否在允许的目录中
         for allowed_dir in allowed_directories:
             allowed_abs = os.path.abspath(allowed_dir)
-            if (
-                normalized_path.startswith(allowed_abs + os.sep)
-                or normalized_path == allowed_abs
-            ):
+            if normalized_path.startswith(allowed_abs + os.sep) or normalized_path == allowed_abs:
                 return True
 
         return False
@@ -288,9 +281,7 @@ def sanitize_file_content(
                 text_content,
                 flags=re.DOTALL | re.IGNORECASE,
             )
-            text_content = re.sub(
-                r"<embed[^>]*>", "", text_content, flags=re.IGNORECASE
-            )
+            text_content = re.sub(r"<embed[^>]*>", "", text_content, flags=re.IGNORECASE)
 
             # 重新编码
             return text_content.encode("utf-8")
@@ -366,9 +357,7 @@ def validate_upload_file(
         }
 
         if content_type in mime_extensions and mime_extensions[content_type] != ext:
-            result["warnings"].append(
-                f"MIME类型与文件扩展名不匹配: {content_type} vs {ext}"
-            )
+            result["warnings"].append(f"MIME类型与文件扩展名不匹配: {content_type} vs {ext}")
 
     return result
 

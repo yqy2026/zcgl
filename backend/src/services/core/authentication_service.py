@@ -23,6 +23,7 @@ REFRESH_TOKEN_EXPIRE_DAYS = settings.REFRESH_TOKEN_EXPIRE_DAYS
 if ACCESS_TOKEN_EXPIRE_MINUTES < 120:
     ACCESS_TOKEN_EXPIRE_MINUTES = 120
 
+
 class AuthenticationService:
     """认证服务 - 协调者"""
 
@@ -68,9 +69,7 @@ class AuthenticationService:
             # 如果达到最大失败次数，锁定账户
             if user.failed_login_attempts >= settings.MAX_FAILED_ATTEMPTS:
                 user.is_locked = True
-                user.locked_until = datetime.now() + timedelta(
-                    minutes=settings.LOCKOUT_DURATION
-                )
+                user.locked_until = datetime.now() + timedelta(minutes=settings.LOCKOUT_DURATION)
 
             self.db.commit()
             return None
@@ -100,6 +99,7 @@ class AuthenticationService:
         device_fingerprint = None
         if device_info:
             import hashlib
+
             fingerprint_data = [
                 device_info.get("user_agent", ""),
                 device_info.get("ip_address", ""),

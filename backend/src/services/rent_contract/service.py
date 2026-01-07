@@ -46,9 +46,7 @@ class RentContractService:
                 monthly_rent = term_data_dict.get("monthly_rent", Decimal("0"))
                 management_fee = term_data_dict.get("management_fee", Decimal("0"))
                 other_fees = term_data_dict.get("other_fees", Decimal("0"))
-                term_data_dict["total_monthly_amount"] = (
-                    monthly_rent + management_fee + other_fees
-                )
+                term_data_dict["total_monthly_amount"] = monthly_rent + management_fee + other_fees
 
             term_data_dict["contract_id"] = db_contract.id
             db_term = RentTerm(**term_data_dict)
@@ -177,9 +175,7 @@ class RentContractService:
         self, db: Session, *, request: RentLedgerBatchUpdate
     ) -> list[RentLedger]:
         """批量更新支付状态"""
-        ledgers = (
-            db.query(RentLedger).filter(RentLedger.id.in_(request.ledger_ids)).all()
-        )
+        ledgers = db.query(RentLedger).filter(RentLedger.id.in_(request.ledger_ids)).all()
 
         for ledger in ledgers:
             # 更新支付信息
@@ -197,9 +193,7 @@ class RentContractService:
             # 计算逾期金额
             if ledger.payment_status in ["已支付", "部分支付"]:
                 if ledger.paid_amount < ledger.due_amount:
-                    ledger.overdue_amount = (
-                        ledger.due_amount - ledger.paid_amount
-                    )
+                    ledger.overdue_amount = ledger.due_amount - ledger.paid_amount
                 else:
                     ledger.overdue_amount = Decimal("0")
 
@@ -207,30 +201,20 @@ class RentContractService:
         return ledgers
 
     # 统计相关方法
-    def get_statistics(
-        self, db: Session, *, query_params: RentStatisticsQuery
-    ) -> dict[str, Any]:
+    def get_statistics(self, db: Session, *, query_params: RentStatisticsQuery) -> dict[str, Any]:
         """获取统计信息"""
         # 构建基础查询
         base_query = db.query(RentLedger)
 
         # 应用筛选条件
         if query_params.start_date:
-            base_query = base_query.filter(
-                RentLedger.due_date >= query_params.start_date
-            )
+            base_query = base_query.filter(RentLedger.due_date >= query_params.start_date)
         if query_params.end_date:
-            base_query = base_query.filter(
-                RentLedger.due_date <= query_params.end_date
-            )
+            base_query = base_query.filter(RentLedger.due_date <= query_params.end_date)
         if query_params.ownership_ids:
-            base_query = base_query.filter(
-                RentLedger.ownership_id.in_(query_params.ownership_ids)
-            )
+            base_query = base_query.filter(RentLedger.ownership_id.in_(query_params.ownership_ids))
         if query_params.asset_ids:
-            base_query = base_query.filter(
-                RentLedger.asset_id.in_(query_params.asset_ids)
-            )
+            base_query = base_query.filter(RentLedger.asset_id.in_(query_params.asset_ids))
 
         # 基础统计
         stats = base_query.with_entities(
@@ -331,9 +315,7 @@ class RentContractService:
         for result in results:
             total_due = result.total_due_amount or Decimal("0")
             total_paid = result.total_paid_amount or Decimal("0")
-            payment_rate = (
-                (total_paid / total_due * 100) if total_due > 0 else Decimal("0")
-            )
+            payment_rate = (total_paid / total_due * 100) if total_due > 0 else Decimal("0")
 
             ownership_stats.append(
                 {
@@ -387,9 +369,7 @@ class RentContractService:
         for result in results:
             total_due = result.total_due_amount or Decimal("0")
             total_paid = result.total_paid_amount or Decimal("0")
-            payment_rate = (
-                (total_paid / total_due * 100) if total_due > 0 else Decimal("0")
-            )
+            payment_rate = (total_paid / total_due * 100) if total_due > 0 else Decimal("0")
 
             asset_stats.append(
                 {
@@ -418,9 +398,7 @@ class RentContractService:
         query = (
             db.query(
                 RentLedger.year_month,
-                func.count(func.distinct(RentLedger.contract_id)).label(
-                    "total_contracts"
-                ),
+                func.count(func.distinct(RentLedger.contract_id)).label("total_contracts"),
                 func.sum(RentLedger.due_amount).label("total_due_amount"),
                 func.sum(RentLedger.paid_amount).label("total_paid_amount"),
                 func.sum(RentLedger.overdue_amount).label("total_overdue_amount"),
@@ -443,9 +421,7 @@ class RentContractService:
         for result in results:
             total_due = result.total_due_amount or Decimal("0")
             total_paid = result.total_paid_amount or Decimal("0")
-            payment_rate = (
-                (total_paid / total_due * 100) if total_due > 0 else Decimal("0")
-            )
+            payment_rate = (total_paid / total_due * 100) if total_due > 0 else Decimal("0")
 
             monthly_stats.append(
                 {

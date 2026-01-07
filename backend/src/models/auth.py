@@ -29,9 +29,7 @@ class User(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
 
     # 基本信息
-    username = Column(
-        String(50), unique=True, nullable=False, index=True, comment="用户名"
-    )
+    username = Column(String(50), unique=True, nullable=False, index=True, comment="用户名")
     email = Column(String(100), unique=True, nullable=False, index=True, comment="邮箱")
     full_name = Column(String(100), nullable=False, comment="全名")
 
@@ -40,32 +38,22 @@ class User(Base):
     password_history = Column(JSON, comment="密码历史记录")
 
     # 角色和状态
-    role = Column(
-        String(20), nullable=False, default=UserRole.USER.value, comment="用户角色"
-    )
+    role = Column(String(20), nullable=False, default=UserRole.USER.value, comment="用户角色")
     is_active = Column(Boolean, nullable=False, default=True, comment="是否激活")
     is_locked = Column(Boolean, nullable=False, default=False, comment="是否锁定")
 
     # 登录信息
     last_login_at = Column(DateTime, comment="最后登录时间")
-    failed_login_attempts = Column(
-        Integer, nullable=False, default=0, comment="失败登录次数"
-    )
+    failed_login_attempts = Column(Integer, nullable=False, default=0, comment="失败登录次数")
     locked_until = Column(DateTime, comment="锁定到期时间")
-    password_last_changed = Column(
-        DateTime, default=datetime.now, comment="密码最后修改时间"
-    )
+    password_last_changed = Column(DateTime, default=datetime.now, comment="密码最后修改时间")
 
     # 组织关联
     employee_id = Column(String, ForeignKey("employees.id"), comment="关联员工ID")
-    default_organization_id = Column(
-        String, ForeignKey("organizations.id"), comment="默认组织ID"
-    )
+    default_organization_id = Column(String, ForeignKey("organizations.id"), comment="默认组织ID")
 
     # 审计信息
-    created_at = Column(
-        DateTime, nullable=False, default=datetime.now, comment="创建时间"
-    )
+    created_at = Column(DateTime, nullable=False, default=datetime.now, comment="创建时间")
     updated_at = Column(
         DateTime,
         nullable=False,
@@ -80,9 +68,7 @@ class User(Base):
     # 暂时移除双向关系以避免循环依赖问题
     # employee = relationship("Employee", back_populates="user", foreign_keys=[employee_id])
     default_organization = relationship("Organization")
-    user_sessions = relationship(
-        "UserSession", back_populates="user", cascade="all, delete-orphan"
-    )
+    user_sessions = relationship("UserSession", back_populates="user", cascade="all, delete-orphan")
     audit_logs = relationship("AuditLog", back_populates="user")
     role_assignments = relationship("UserRoleAssignment", back_populates="user")
 
@@ -129,9 +115,7 @@ class User(Base):
                     "yes",
                 )  # pragma: no cover
             elif not isinstance(is_locked, bool):  # pragma: no cover
-                is_locked = (
-                    bool(is_locked) if is_locked is not None else False
-                )  # pragma: no cover
+                is_locked = bool(is_locked) if is_locked is not None else False  # pragma: no cover
 
             if not is_locked:  # pragma: no cover
                 return False  # pragma: no cover
@@ -179,9 +163,7 @@ class UserSession(Base):
     expires_at = Column(DateTime, nullable=False, comment="过期时间")
 
     # 时间信息
-    created_at = Column(
-        DateTime, nullable=False, default=datetime.now, comment="创建时间"
-    )
+    created_at = Column(DateTime, nullable=False, default=datetime.now, comment="创建时间")
     last_accessed_at = Column(
         DateTime, nullable=False, default=datetime.now, comment="最后访问时间"
     )
@@ -239,9 +221,7 @@ class AuditLog(Base):
     session_id = Column(String(100), comment="会话ID")
 
     # 时间信息
-    created_at = Column(
-        DateTime, nullable=False, default=datetime.now, comment="创建时间"
-    )
+    created_at = Column(DateTime, nullable=False, default=datetime.now, comment="创建时间")
 
     # 关系
     user = relationship("User", back_populates="audit_logs")

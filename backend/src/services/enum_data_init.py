@@ -140,9 +140,7 @@ def init_enum_data(db: Session, created_by: str = "system") -> dict:
     for enum_code, enum_config in STANDARD_ENUMS.items():
         try:
             # 查找或创建枚举类型
-            enum_type = (
-                db.query(EnumFieldType).filter(EnumFieldType.code == enum_code).first()
-            )
+            enum_type = db.query(EnumFieldType).filter(EnumFieldType.code == enum_code).first()
 
             if not enum_type:
                 # 创建新枚举类型
@@ -163,9 +161,7 @@ def init_enum_data(db: Session, created_by: str = "system") -> dict:
                 # 更新现有枚举类型
                 enum_type.name = enum_config["name"]
                 enum_type.category = enum_config.get("category", enum_type.category)
-                enum_type.description = enum_config.get(
-                    "description", enum_type.description
-                )
+                enum_type.description = enum_config.get("description", enum_type.description)
                 enum_type.is_system = True
                 enum_type.status = "active"
                 enum_type.is_deleted = False
@@ -244,9 +240,7 @@ def add_legacy_enum_values(db: Session, created_by: str = "system") -> dict:
 
     for enum_code, _values in legacy_values.items():
         try:
-            enum_type = (
-                db.query(EnumFieldType).filter(EnumFieldType.code == enum_code).first()
-            )
+            enum_type = db.query(EnumFieldType).filter(EnumFieldType.code == enum_code).first()
 
             if not enum_type:
                 stats["errors"].append(f"枚举类型 {enum_code} 不存在")

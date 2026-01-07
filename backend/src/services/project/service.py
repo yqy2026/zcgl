@@ -28,7 +28,7 @@ class ProjectService:
             # 2. 检查编码唯一性
             existing_project = project_crud.get_by_code(db, code=obj_in.code)
             if existing_project:
-                 raise ValueError(f"项目编码 '{obj_in.code}' 已存在")
+                raise ValueError(f"项目编码 '{obj_in.code}' 已存在")
 
             # 3. 创建项目
             project_data = obj_in.model_dump()
@@ -50,9 +50,7 @@ class ProjectService:
 
         return project_crud.update(db, db_obj=project, obj_in=obj_in, updated_by=updated_by)
 
-    def toggle_status(
-        self, db: Session, *, project_id: str, updated_by: str = None
-    ) -> Project:
+    def toggle_status(self, db: Session, *, project_id: str, updated_by: str = None) -> Project:
         """切换项目状态"""
         project = project_crud.get(db, project_id)
         if not project:
@@ -62,10 +60,10 @@ class ProjectService:
         if project.project_status in ["规划中", "进行中"]:
             project.project_status = "暂停"
         elif project.project_status == "暂停":
-            project.project_status = "进行中" # Resume to active
+            project.project_status = "进行中"  # Resume to active
         else:
-             # Default to active if unknown
-             project.project_status = "进行中"
+            # Default to active if unknown
+            project.project_status = "进行中"
 
         project.updated_by = updated_by
         project.updated_at = datetime.now()
@@ -105,10 +103,10 @@ class ProjectService:
                 # PJ2501001 -> 001. Assume code format length 9 (PJ+4+3)
                 # But actual format might vary. Just take last 3 if length fits
                 if len(last_project.code) >= 3:
-                     seq = int(last_project.code[-3:])
-                     next_seq = seq + 1
+                    seq = int(last_project.code[-3:])
+                    next_seq = seq + 1
                 else:
-                     next_seq = 1
+                    next_seq = 1
             except ValueError:
                 next_seq = 1
         else:
@@ -131,21 +129,21 @@ class ProjectService:
                 # I will fallback to standard generation logic inside `generate_project_code` and drop `_generate_name_code` logic
                 # OR adapt it to use initials as prefix? PJ is hardcoded in example.
                 # Let's just use the standard format PJ+YYMM+NNN to be safe and consistent.
-                return None # Disabled
+                return None  # Disabled
             else:
-                 return None
+                return None
         except Exception:
-             return None
+            return None
 
     def search_projects(self, db: Session, search_params: ProjectSearchRequest) -> dict[str, Any]:
-         items, total = project_crud.search(db, search_params)
-         return {
-             "items": items,
-             "total": total,
-             "page": search_params.page,
-             "size": search_params.size,
-             "pages": (total + search_params.size - 1) // search_params.size
-         }
+        items, total = project_crud.search(db, search_params)
+        return {
+            "items": items,
+            "total": total,
+            "page": search_params.page,
+            "size": search_params.size,
+            "pages": (total + search_params.size - 1) // search_params.size,
+        }
 
 
 project_service = ProjectService()

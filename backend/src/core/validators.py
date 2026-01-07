@@ -48,9 +48,7 @@ class BaseValidator:
     @staticmethod
     def validate_id_card(id_card: str) -> bool:
         """验证身份证号格式"""
-        pattern = (
-            r"^[1-9]\d{5}(19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\d{3}[\dXx]$"
-        )
+        pattern = r"^[1-9]\d{5}(19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\d{3}[\dXx]$"
         return bool(re.match(pattern, id_card))
 
     @staticmethod
@@ -127,15 +125,11 @@ class AssetValidator(BaseValidator):
                 errors.append(f"缺少必填字段: {field}")
 
         # 验证物业名称
-        if "property_name" in data and not cls.validate_length(
-            data["property_name"], 1, 200
-        ):
+        if "property_name" in data and not cls.validate_length(data["property_name"], 1, 200):
             errors.append("物业名称长度应在1-200个字符之间")
 
         # 验证物业地址
-        if "property_address" in data and not cls.validate_length(
-            data["property_address"], 5, 500
-        ):
+        if "property_address" in data and not cls.validate_length(data["property_address"], 5, 500):
             errors.append("物业地址长度应在5-500个字符之间")
 
         # 验证建筑面积
@@ -182,9 +176,7 @@ class AssetValidator(BaseValidator):
         """
         from ..models.asset import Asset  # pragma: no cover
 
-        query = db.query(Asset).filter(
-            Asset.property_name == property_name
-        )  # pragma: no cover
+        query = db.query(Asset).filter(Asset.property_name == property_name)  # pragma: no cover
         if exclude_id:  # pragma: no cover
             query = query.filter(Asset.id != exclude_id)  # pragma: no cover
 
@@ -369,9 +361,7 @@ class RentContractValidator(BaseValidator):
         if (
             "lease_start_date" in data
             and "lease_end_date" in data
-            and not cls.validate_date_range(
-                data["lease_start_date"], data["lease_end_date"]
-            )
+            and not cls.validate_date_range(data["lease_start_date"], data["lease_end_date"])
         ):
             errors.append("租赁开始日期不能晚于结束日期")
 
@@ -437,17 +427,13 @@ class DataCleaner:
                         return datetime.strptime(value, fmt)
                     except ValueError:
                         continue
-            except (
-                Exception
-            ):  # pragma: no cover  # nosec - B110: Intentional graceful degradation
+            except Exception:  # pragma: no cover  # nosec - B110: Intentional graceful degradation
                 pass  # pragma: no cover
         return None
 
 
 # 便捷函数
-def validate_required_fields(
-    data: dict[str, Any], required_fields: list[str]
-) -> list[str]:
+def validate_required_fields(data: dict[str, Any], required_fields: list[str]) -> list[str]:
     """验证必填字段"""
     errors = []
     for field in required_fields:
@@ -475,15 +461,11 @@ def validate_field_length(
     return errors
 
 
-def validate_field_values(
-    data: dict[str, Any], field_values: dict[str, list[Any]]
-) -> list[str]:
+def validate_field_values(data: dict[str, Any], field_values: dict[str, list[Any]]) -> list[str]:
     """验证字段值范围"""
     errors = []
     for field, valid_values in field_values.items():
         if field in data and data[field] not in valid_values:
-            errors.append(
-                f"{field}的值应为以下之一: {', '.join(map(str, valid_values))}"
-            )
+            errors.append(f"{field}的值应为以下之一: {', '.join(map(str, valid_values))}")
 
     return errors

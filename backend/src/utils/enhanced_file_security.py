@@ -17,9 +17,7 @@ try:
 except ImportError:
     magic = None
     MAGIC_AVAILABLE = False
-    logging.getLogger(__name__).warning(
-        "python-magic模块不可用，MIME类型检测功能将使用备用方案"
-    )
+    logging.getLogger(__name__).warning("python-magic模块不可用，MIME类型检测功能将使用备用方案")
 
 from fastapi import UploadFile
 
@@ -218,9 +216,7 @@ class EnhancedFileSecurityValidator:
                 return result
 
             if not self.validate_file_extension(file.filename):
-                result["errors"].append(
-                    f"不支持的文件类型: {Path(file.filename).suffix}"
-                )
+                result["errors"].append(f"不支持的文件类型: {Path(file.filename).suffix}")
                 return result
 
             # 2. 清理文件名
@@ -250,9 +246,7 @@ class EnhancedFileSecurityValidator:
             # 4. 验证文件大小
             if not self.validate_file_size(file, max_size):
                 limit = max_size or self.MAX_FILE_SIZE
-                result["errors"].append(
-                    f"文件大小超过限制: {limit / 1024 / 1024:.1f}MB"
-                )
+                result["errors"].append(f"文件大小超过限制: {limit / 1024 / 1024:.1f}MB")
                 return result
 
             # 5. 扫描文件内容

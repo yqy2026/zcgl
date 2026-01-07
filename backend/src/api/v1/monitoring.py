@@ -61,9 +61,7 @@ class HealthCheck(BaseModel):
 
 
 @router.post("/route-performance", summary="上报路由性能指标")
-async def report_route_performance(
-    report: PerformanceReport, db: Session = Depends(get_db)
-):
+async def report_route_performance(report: PerformanceReport, db: Session = Depends(get_db)):
     """
     接收前端上报的路由性能指标
     """
@@ -75,14 +73,10 @@ async def report_route_performance(
 
         # 计算基本统计
         if report.metrics:
-            avg_load_time = sum(m.route_load_time for m in report.metrics) / len(
-                report.metrics
-            )
+            avg_load_time = sum(m.route_load_time for m in report.metrics) / len(report.metrics)
             total_errors = sum(m.error_count for m in report.metrics)
 
-            logger.info(
-                f"平均加载时间: {avg_load_time:.2f}ms, 总错误数: {total_errors}"
-            )
+            logger.info(f"平均加载时间: {avg_load_time:.2f}ms, 总错误数: {total_errors}")
 
             # 检查性能告警
             for metric in report.metrics:
@@ -92,9 +86,7 @@ async def report_route_performance(
                     )
 
                 if metric.error_count > 0:
-                    logger.error(
-                        f"路由错误告警: {metric.route}, 错误数: {metric.error_count}"
-                    )
+                    logger.error(f"路由错误告警: {metric.route}, 错误数: {metric.error_count}")
 
         return {"success": True, "message": "性能指标已保存"}
 
@@ -205,9 +197,7 @@ class ApplicationMetrics(BaseModel):
 class HealthStatus(BaseModel):
     """健康状态模型"""
 
-    status: str = Field(
-        ..., pattern="^(healthy|degraded|unhealthy)$", description="健康状态"
-    )
+    status: str = Field(..., pattern="^(healthy|degraded|unhealthy)$", description="健康状态")
     timestamp: datetime = Field(..., description="检查时间")
     components: dict[str, dict[str, Any]] = Field(..., description="组件状态详情")
     overall_score: float = Field(..., ge=0, le=100, description="总体健康评分")
@@ -430,12 +420,8 @@ async def get_system_monitoring_dashboard(
             },
             "summary": {
                 "total_alerts": len(_active_alerts),
-                "critical_alerts": len(
-                    [a for a in _active_alerts if a.level == "critical"]
-                ),
-                "warning_alerts": len(
-                    [a for a in _active_alerts if a.level == "warning"]
-                ),
+                "critical_alerts": len([a for a in _active_alerts if a.level == "critical"]),
+                "warning_alerts": len([a for a in _active_alerts if a.level == "warning"]),
                 "health_score": overall_score,
                 "last_updated": datetime.now().isoformat(),
             },

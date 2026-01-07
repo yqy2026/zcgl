@@ -11,6 +11,7 @@ from ...models.auth import UserSession
 SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = "HS256"
 
+
 class SessionService:
     """会话管理服务"""
 
@@ -35,13 +36,9 @@ class SessionService:
         )
 
         # 限制并发会话数量
-        if (
-            len(existing_sessions) >= settings.MAX_CONCURRENT_SESSIONS
-        ):  # pragma: no cover
+        if len(existing_sessions) >= settings.MAX_CONCURRENT_SESSIONS:  # pragma: no cover
             # 取消最旧的会话
-            oldest_session = min(
-                existing_sessions, key=lambda x: x.created_at
-            )  # pragma: no cover
+            oldest_session = min(existing_sessions, key=lambda x: x.created_at)  # pragma: no cover
             oldest_session.is_active = False  # pragma: no cover
 
         # 提取设备信息
@@ -92,9 +89,7 @@ class SessionService:
     def revoke_session(self, refresh_token: str) -> bool:
         """撤销会话"""
         session = (
-            self.db.query(UserSession)
-            .filter(UserSession.refresh_token == refresh_token)
-            .first()
+            self.db.query(UserSession).filter(UserSession.refresh_token == refresh_token).first()
         )
 
         if session:
