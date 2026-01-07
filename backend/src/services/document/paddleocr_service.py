@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 # 尝试导入 PaddleOCR
 try:
     from paddleocr import PaddleOCR
+
     # PaddleOCR 3.3+ 使用 PPStructureV3
     try:
         from paddleocr import PPStructureV3 as PPStructure
@@ -353,9 +354,7 @@ class PaddleOCRService:
 
         # 添加表格解析警告
         if failed_table_count > 0:
-            warnings.append(
-                f"共 {table_count} 个表格，{failed_table_count} 个解析失败"
-            )
+            warnings.append(f"共 {table_count} 个表格，{failed_table_count} 个解析失败")
 
         result = {
             "success": True,
@@ -400,6 +399,7 @@ def _get_lock():
     global _paddleocr_lock
     if _paddleocr_lock is None:
         import threading
+
         _paddleocr_lock = threading.Lock()
     return _paddleocr_lock
 

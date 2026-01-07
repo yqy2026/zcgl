@@ -2,13 +2,14 @@
 测试 ExcelImportService (Excel导入服务) 错误处理
 """
 
-from unittest.mock import MagicMock, patch, AsyncMock
-import pytest
+from unittest.mock import MagicMock, patch
+
 import pandas as pd
+import pytest
 from sqlalchemy.orm import Session
 
-from src.services.excel.excel_import_service import ExcelImportService
 from src.core.exception_handler import BusinessValidationError
+from src.services.excel.excel_import_service import ExcelImportService
 
 
 @pytest.fixture
@@ -32,9 +33,7 @@ class TestExcelImportServiceErrorHandling:
         with patch("pandas.read_excel") as mock_read:
             mock_read.return_value = pd.DataFrame()
 
-            result = await excel_service.import_assets_from_excel(
-                file_path="test.xlsx"
-            )
+            result = await excel_service.import_assets_from_excel(file_path="test.xlsx")
 
             assert result["total"] == 0
             assert result["success"] == 0
@@ -45,10 +44,12 @@ class TestExcelImportServiceErrorHandling:
         """测试验证失败时跳过错误模式"""
         # Mock 数据帧
         with patch("pandas.read_excel") as mock_read:
-            mock_read.return_value = pd.DataFrame({
-                "物业名称": ["", "有效资产"],  # 第一行空名称
-                "物业地址": ["地址1", "地址2"],
-            })
+            mock_read.return_value = pd.DataFrame(
+                {
+                    "物业名称": ["", "有效资产"],  # 第一行空名称
+                    "物业地址": ["地址1", "地址2"],
+                }
+            )
 
             # Mock 验证器返回失败
             excel_service.validator.validate_all = MagicMock(
@@ -83,13 +84,20 @@ class TestExcelImportServiceErrorHandling:
     async def test_import_with_validation_errors_strict_mode(self, excel_service):
         """测试验证失败时严格模式抛出异常"""
         with patch("pandas.read_excel") as mock_read:
-            mock_read.return_value = pd.DataFrame({
-                "物业名称": [""],
-                "物业地址": ["地址1"],
-            })
+            mock_read.return_value = pd.DataFrame(
+                {
+                    "物业名称": [""],
+                    "物业地址": ["地址1"],
+                }
+            )
 
             excel_service.validator.validate_all = MagicMock(
-                return_value=(False, [{"field": "property_name", "error": "不能为空"}], [], [])
+                return_value=(
+                    False,
+                    [{"field": "property_name", "error": "不能为空"}],
+                    [],
+                    [],
+                )
             )
 
             excel_service._map_excel_row_to_asset_data = MagicMock(
@@ -110,10 +118,12 @@ class TestExcelImportServiceErrorHandling:
     async def test_import_with_duplicate_assets(self, excel_service, mock_db):
         """测试导入重复资产时跳过"""
         with patch("pandas.read_excel") as mock_read:
-            mock_read.return_value = pd.DataFrame({
-                "物业名称": ["已存在资产"],
-                "物业地址": ["地址1"],
-            })
+            mock_read.return_value = pd.DataFrame(
+                {
+                    "物业名称": ["已存在资产"],
+                    "物业地址": ["地址1"],
+                }
+            )
 
             excel_service.validator.validate_all = MagicMock(
                 return_value=(True, [], [], ["property_name"])
@@ -145,10 +155,12 @@ class TestExcelImportServiceErrorHandling:
         """测试批量提交策略"""
         # 创建150行数据，batch_size=50
         with patch("pandas.read_excel") as mock_read:
-            mock_read.return_value = pd.DataFrame({
-                "物业名称": [f"资产{i}" for i in range(150)],
-                "物业地址": [f"地址{i}" for i in range(150)],
-            })
+            mock_read.return_value = pd.DataFrame(
+                {
+                    "物业名称": [f"资产{i}" for i in range(150)],
+                    "物业地址": [f"地址{i}" for i in range(150)],
+                }
+            )
 
             excel_service.validator.validate_all = MagicMock(
                 return_value=(True, [], [], ["property_name"])
@@ -171,7 +183,9 @@ class TestExcelImportServiceErrorHandling:
 
             excel_service._find_existing_asset = MagicMock(return_value=None)
 
-            with patch("src.services.excel.excel_import_service.asset_crud") as mock_crud:
+            with patch(
+                "src.services.excel.excel_import_service.asset_crud"
+            ) as mock_crud:
                 mock_crud.create.return_value = MagicMock(id="new_id")
 
                 result = await excel_service.import_assets_from_excel(
@@ -192,10 +206,12 @@ class TestExcelImportServiceErrorHandling:
     async def test_import_rollback_on_error_strict_mode(self, excel_service, mock_db):
         """测试严格模式下错误时回滚"""
         with patch("pandas.read_excel") as mock_read:
-            mock_read.return_value = pd.DataFrame({
-                "物业名称": ["资产1", "资产2"],
-                "物业地址": ["地址1", "地址2"],
-            })
+            mock_read.return_value = pd.DataFrame(
+                {
+                    "物业名称": ["资产1", "资产2"],
+                    "物业地址": ["地址1", "地址2"],
+                }
+            )
 
             excel_service.validator.validate_all = MagicMock(
                 return_value=(True, [], [], ["property_name"])
@@ -227,9 +243,14 @@ class TestExcelImportServiceErrorHandling:
 
             excel_service._find_existing_asset = MagicMock(return_value=None)
 
-            with patch("src.services.excel.excel_import_service.asset_crud") as mock_crud:
+            with patch(
+                "src.services.excel.excel_import_service.asset_crud"
+            ) as mock_crud:
                 # 第一个成功，第二个失败
-                mock_crud.create.side_effect = [MagicMock(id="id1"), Exception("创建失败")]
+                mock_crud.create.side_effect = [
+                    MagicMock(id="id1"),
+                    Exception("创建失败"),
+                ]
 
                 with pytest.raises(Exception) as excinfo:
                     await excel_service.import_assets_from_excel(
@@ -242,15 +263,17 @@ class TestExcelImportServiceErrorHandling:
                 assert "创建失败" in str(excinfo.value)
                 mock_db.rollback.assert_called()
 
-    @pytest.mark.asyncio 
+    @pytest.mark.asyncio
     async def test_import_date_parsing_failure(self, excel_service):
         """测试日期解析失败处理"""
         with patch("pandas.read_excel") as mock_read:
-            mock_read.return_value = pd.DataFrame({
-                "物业名称": ["资产1"],
-                "物业地址": ["地址1"],
-                "(当前)接收协议开始日期": ["invalid_date"],
-            })
+            mock_read.return_value = pd.DataFrame(
+                {
+                    "物业名称": ["资产1"],
+                    "物业地址": ["地址1"],
+                    "(当前)接收协议开始日期": ["invalid_date"],
+                }
+            )
 
             # Mock _map_excel_row_to_asset_data 正常处理
             excel_service._map_excel_row_to_asset_data = MagicMock(

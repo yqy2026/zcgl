@@ -123,15 +123,19 @@ class ExcelImportService:
             for idx, row in df.iterrows():
                 try:
                     # 转换Excel列为数据库字段（返回数据和解析警告）
-                    asset_data, parse_warnings = self._map_excel_row_to_asset_data(row, idx + 1)
+                    asset_data, parse_warnings = self._map_excel_row_to_asset_data(
+                        row, idx + 1
+                    )
 
                     # 收集解析警告
                     for pw in parse_warnings:
-                        results["warnings"].append({
-                            "row": idx + 2,
-                            "field": pw["field"],
-                            "warning": pw["warning"],
-                        })
+                        results["warnings"].append(
+                            {
+                                "row": idx + 2,
+                                "field": pw["field"],
+                                "warning": pw["warning"],
+                            }
+                        )
 
                     # 验证数据
                     if validate_data:
@@ -272,11 +276,13 @@ class ExcelImportService:
                     try:
                         value = float(value)
                     except (ValueError, TypeError):
-                        parse_warnings.append({
-                            "field": db_field,
-                            "value": str(value)[:50],
-                            "warning": f"无法解析为数值，已忽略",
-                        })
+                        parse_warnings.append(
+                            {
+                                "field": db_field,
+                                "value": str(value)[:50],
+                                "warning": "无法解析为数值，已忽略",
+                            }
+                        )
                         value = None
                 # 处理日期字段
                 elif db_field in [
@@ -289,11 +295,13 @@ class ExcelImportService:
                         try:
                             value = datetime.strptime(value, "%Y-%m-%d").date()
                         except ValueError:
-                            parse_warnings.append({
-                                "field": db_field,
-                                "value": str(value)[:50],
-                                "warning": f"日期格式无效(应为YYYY-MM-DD)，已忽略",
-                            })
+                            parse_warnings.append(
+                                {
+                                    "field": db_field,
+                                    "value": str(value)[:50],
+                                    "warning": "日期格式无效(应为YYYY-MM-DD)，已忽略",
+                                }
+                            )
                             value = None
 
                 asset_data[db_field] = value

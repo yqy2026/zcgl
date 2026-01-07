@@ -3,12 +3,12 @@
 """
 
 from unittest.mock import MagicMock, patch
-from datetime import datetime, timedelta, UTC
+
 import pytest
 from sqlalchemy.orm import Session
 
-from src.services.core.authentication_service import AuthenticationService
 from src.exceptions import BusinessLogicError
+from src.services.core.authentication_service import AuthenticationService
 
 
 @pytest.fixture
