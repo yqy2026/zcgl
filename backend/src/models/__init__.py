@@ -26,7 +26,12 @@ from .enum_field import (  # noqa: F401
     EnumFieldUsage,
     EnumFieldValue,
 )
-from .organization import Employee, Organization, OrganizationHistory, Position  # noqa: F401
+from .organization import (  # noqa: F401
+    Employee,
+    Organization,
+    OrganizationHistory,
+    Position,
+)
 from .rbac import (  # noqa: F401
     Permission,
     PermissionAuditLog,
@@ -34,7 +39,19 @@ from .rbac import (  # noqa: F401
     Role,
     UserRoleAssignment,
 )
-from .rent_contract import RentContract, RentContractHistory, RentLedger, RentTerm  # noqa: F401
+from .rent_contract import (  # noqa: F401
+    ContractType,
+    DepositTransactionType,
+    PaymentCycle,
+    RentContract,
+    RentContractAttachment,
+    RentContractHistory,
+    RentDepositLedger,
+    RentLedger,
+    RentTerm,
+    ServiceFeeLedger,
+    rent_contract_assets,
+)
 from .task import AsyncTask, ExcelTaskConfig, TaskHistory  # noqa: F401
 
 __all__ = [
@@ -64,6 +81,13 @@ __all__ = [
     "RentTerm",
     "RentLedger",
     "RentContractHistory",
+    "RentContractAttachment",
+    "RentDepositLedger",
+    "ServiceFeeLedger",
+    "ContractType",
+    "DepositTransactionType",
+    "PaymentCycle",
+    "rent_contract_assets",
     "DynamicPermission",
     "TemporaryPermission",
     "ConditionalPermission",

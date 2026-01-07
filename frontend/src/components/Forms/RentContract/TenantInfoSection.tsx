@@ -45,6 +45,17 @@ const TenantInfoSection: React.FC = () => {
                     </Form.Item>
                 </Col>
             </Row>
+            <Row gutter={16}>
+                <Col span={24}>
+                    <Form.Item
+                        label="经营用途"
+                        name="tenant_usage"
+                        tooltip="例如：餐饮、办公、仓储等"
+                    >
+                        <Input.TextArea rows={2} placeholder="请输入经营用途说明" />
+                    </Form.Item>
+                </Col>
+            </Row>
         </Card>
     );
 };

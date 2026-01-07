@@ -25,19 +25,29 @@ export interface RentTermData {
 // Rent contract form initial data interface
 export interface RentContractInitialData {
     contract_number?: string;
-    asset_id: string;
+    asset_ids: string[]; // V2
     ownership_id: string;
+    // V2: Contract Type & Upstream
+    contract_type?: string;
+    upstream_contract_id?: string;
+    service_fee_rate?: number;
+    // Tenant Info
     tenant_name: string;
     tenant_contact?: string;
     tenant_phone?: string;
     tenant_address?: string;
+    tenant_usage?: string; // V2
+    // Dates
     sign_date?: string;
     start_date: string;
     end_date: string;
+    // Financials
     total_deposit?: number;
     monthly_rent_base?: number;
-    contract_status?: string;
+    payment_cycle?: string; // V2
     payment_terms?: string;
+    // Status & Notes
+    contract_status?: string;
     contract_notes?: string;
     rent_terms?: RentTermData[];
 }
@@ -196,9 +206,13 @@ export const RentContractFormProvider: React.FC<RentContractFormProviderProps> =
 
             const contractData: RentContractCreate = {
                 contract_number: values.contract_number,
-                asset_id: values.asset_id,
+                asset_ids: values.asset_ids, // V2
                 ownership_id: values.ownership_id,
+                contract_type: values.contract_type, // V2
+                upstream_contract_id: values.upstream_contract_id, // V2
+                service_fee_rate: values.service_fee_rate, // V2
                 tenant_name: values.tenant_name,
+                tenant_usage: values.tenant_usage, // V2
                 tenant_contact: values.tenant_contact,
                 tenant_phone: values.tenant_phone,
                 tenant_address: values.tenant_address,
@@ -208,6 +222,7 @@ export const RentContractFormProvider: React.FC<RentContractFormProviderProps> =
                 total_deposit: values.total_deposit || 0,
                 monthly_rent_base: values.monthly_rent_base,
                 contract_status: values.contract_status || '有效',
+                payment_cycle: values.payment_cycle, // V2
                 payment_terms: values.payment_terms,
                 contract_notes: values.contract_notes,
                 rent_terms,

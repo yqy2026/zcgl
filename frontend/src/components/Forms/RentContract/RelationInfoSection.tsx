@@ -17,12 +17,13 @@ const RelationInfoSection: React.FC = () => {
                 <Col span={12}>
                     <Form.Item
                         label="关联资产"
-                        name="asset_id"
+                        name="asset_ids"
                         rules={[{ required: true, message: '请选择关联资产' }]}
                     >
                         <Select
+                            mode="multiple"
                             showSearch
-                            placeholder="选择资产"
+                            placeholder="选择资产（可多选）"
                             loading={loadingAssets}
                             optionFilterProp="children"
                             filterOption={(input, option) =>

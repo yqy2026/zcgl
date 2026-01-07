@@ -66,15 +66,19 @@ def create_contract(
     current_user: User = Depends(get_current_active_user),
 ) -> Any:
     """
-    创建新的租金合同，包含租金条款信息
+    创建新的租金合同，包含租金条款信息 - V2 支持多资产
     """
     # HTTPException should propagate through
     from fastapi import HTTPException
 
-    # 验证关联的资产和权属方是否存在
-    asset = asset_crud.get(db, id=contract_in.asset_id)
-    if not asset:
-        raise HTTPException(status_code=404, detail="关联的资产不存在")
+    # V2: 验证关联的资产（多资产）
+    if contract_in.asset_ids:
+        for asset_id in contract_in.asset_ids:
+            asset = asset_crud.get(db, id=asset_id)
+            if not asset:
+                raise HTTPException(
+                    status_code=404, detail=f"关联的资产不存在: {asset_id}"
+                )
 
     ownership_obj = ownership.get(db, id=contract_in.ownership_id)
     if not ownership_obj:
@@ -205,6 +209,81 @@ def delete_contract(
         if isinstance(e, HTTPException):
             raise
         raise HTTPException(status_code=500, detail=f"删除合同失败: {str(e)}")
+
+
+# V2: 续签和终止API
+@router.post(
+    "/contracts/{contract_id}/renew",
+    response_model=RentContractResponse,
+    summary="V2: 合同续签",
+)
+def renew_contract(
+    contract_id: str,
+    *,
+    db: Session = Depends(get_db),
+    new_contract_data: RentContractCreate,
+    transfer_deposit: bool = True,
+    current_user: User = Depends(get_current_active_user),
+) -> Any:
+    """
+    合同续签：创建新合同，结束原合同，转移押金
+    """
+    try:
+        new_contract = rent_contract_service.renew_contract(
+            db=db,
+            original_contract_id=contract_id,
+            new_contract_data=new_contract_data,
+            transfer_deposit=transfer_deposit,
+            operator=current_user.username if current_user else None,
+            operator_id=current_user.id if current_user else None,
+        )
+        return new_contract
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise
+        raise HTTPException(status_code=500, detail=f"合同续签失败: {str(e)}")
+
+
+@router.post(
+    "/contracts/{contract_id}/terminate",
+    response_model=RentContractResponse,
+    summary="V2: 合同终止",
+)
+def terminate_contract(
+    contract_id: str,
+    *,
+    db: Session = Depends(get_db),
+    termination_date: date,
+    refund_deposit: bool = True,
+    deduction_amount: float = 0.0,
+    termination_reason: str | None = None,
+    current_user: User = Depends(get_current_active_user),
+) -> Any:
+    """
+    合同终止：提前结束合同，处理押金退还/抵扣
+    """
+    from decimal import Decimal
+
+    try:
+        contract = rent_contract_service.terminate_contract(
+            db=db,
+            contract_id=contract_id,
+            termination_date=termination_date,
+            refund_deposit=refund_deposit,
+            deduction_amount=Decimal(str(deduction_amount)),
+            termination_reason=termination_reason,
+            operator=current_user.username if current_user else None,
+            operator_id=current_user.id if current_user else None,
+        )
+        return contract
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise
+        raise HTTPException(status_code=500, detail=f"合同终止失败: {str(e)}")
 
 
 # 租金条款API

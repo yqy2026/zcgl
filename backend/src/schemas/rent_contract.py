@@ -4,8 +4,27 @@
 
 from datetime import date, datetime
 from decimal import Decimal
+from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+# V2 Enums
+class ContractTypeEnum(str, Enum):
+    """合同类型枚举"""
+
+    LEASE_UPSTREAM = "lease_upstream"
+    LEASE_DOWNSTREAM = "lease_downstream"
+    ENTRUSTED = "entrusted"
+
+
+class PaymentCycleEnum(str, Enum):
+    """付款周期枚举"""
+
+    MONTHLY = "monthly"
+    QUARTERLY = "quarterly"
+    SEMI_ANNUAL = "semi_annual"
+    ANNUAL = "annual"
 
 
 # 基础Schema
@@ -67,20 +86,37 @@ class RentTermResponse(RentTermBase):
 
 
 class RentContractBase(BaseModel):
-    """租金合同基础Schema"""
+    """租金合同基础Schema - V2"""
 
-    contract_number: str = Field(..., description="合同编号")
-    asset_id: str = Field(..., description="关联资产ID")
+    contract_number: str | None = Field(None, description="合同编号（空则自动生成）")
+    # V2: 改为多资产关联
+    asset_ids: list[str] = Field(default_factory=list, description="关联资产ID列表")
     ownership_id: str = Field(..., description="权属方ID")
+    # V2: 合同类型
+    contract_type: ContractTypeEnum = Field(
+        ContractTypeEnum.LEASE_DOWNSTREAM, description="合同类型"
+    )
+    # V2: 上游合同关联（可选）
+    upstream_contract_id: str | None = Field(None, description="上游合同ID")
+    # V2: 委托运营服务费率
+    service_fee_rate: Decimal | None = Field(
+        None, ge=0, le=1, description="服务费率（委托运营）"
+    )
     tenant_name: str = Field(..., description="承租方名称")
     tenant_contact: str | None = Field(None, description="承租方联系人")
     tenant_phone: str | None = Field(None, description="承租方联系电话")
     tenant_address: str | None = Field(None, description="承租方地址")
+    # V2: 用途说明
+    tenant_usage: str | None = Field(None, description="用途说明（下游合同）")
     sign_date: date = Field(..., description="签订日期")
     start_date: date = Field(..., description="租期开始日期")
     end_date: date = Field(..., description="租期结束日期")
     total_deposit: Decimal = Field(0, ge=0, description="总押金金额")
     monthly_rent_base: Decimal | None = Field(None, ge=0, description="基础月租金")
+    # V2: 付款周期
+    payment_cycle: PaymentCycleEnum | None = Field(
+        PaymentCycleEnum.MONTHLY, description="付款周期"
+    )
     contract_status: str = Field("有效", description="合同状态")
     payment_terms: str | None = Field(None, description="支付条款")
     contract_notes: str | None = Field(None, description="合同备注")
@@ -136,21 +172,43 @@ class RentContractCreate(RentContractBase):
         return v
 
 
-class RentContractUpdate(RentContractBase):
-    """更新租金合同Schema"""
+class RentContractUpdate(BaseModel):
+    """更新租金合同Schema - V2"""
 
     contract_number: str | None = Field(None, description="合同编号")
-    asset_id: str | None = Field(None, description="关联资产ID")
+    asset_ids: list[str] | None = Field(None, description="关联资产ID列表")
     ownership_id: str | None = Field(None, description="权属方ID")
+    contract_type: ContractTypeEnum | None = Field(None, description="合同类型")
+    upstream_contract_id: str | None = Field(None, description="上游合同ID")
+    service_fee_rate: Decimal | None = Field(None, ge=0, le=1, description="服务费率")
     tenant_name: str | None = Field(None, description="承租方名称")
+    tenant_contact: str | None = Field(None, description="承租方联系人")
+    tenant_phone: str | None = Field(None, description="承租方联系电话")
+    tenant_address: str | None = Field(None, description="承租方地址")
+    tenant_usage: str | None = Field(None, description="用途说明")
     sign_date: date | None = Field(None, description="签订日期")
     start_date: date | None = Field(None, description="租期开始日期")
     end_date: date | None = Field(None, description="租期结束日期")
+    total_deposit: Decimal | None = Field(None, ge=0, description="总押金金额")
+    monthly_rent_base: Decimal | None = Field(None, ge=0, description="基础月租金")
+    payment_cycle: PaymentCycleEnum | None = Field(None, description="付款周期")
+    contract_status: str | None = Field(None, description="合同状态")
+    payment_terms: str | None = Field(None, description="支付条款")
+    contract_notes: str | None = Field(None, description="合同备注")
     rent_terms: list[RentTermUpdate] | None = Field(None, description="租金条款列表")
 
 
+class AssetSimpleResponse(BaseModel):
+    """资产简略响应（用于合同关联）"""
+
+    id: str
+    property_name: str
+    address: str | None = None
+    model_config = ConfigDict(from_attributes=True)
+
+
 class RentContractResponse(RentContractBase):
-    """租金合同响应Schema"""
+    """租金合同响应Schema - V2"""
 
     id: str
     data_status: str = Field("正常", description="数据状态")
@@ -159,6 +217,8 @@ class RentContractResponse(RentContractBase):
     updated_at: datetime
     tenant_id: str | None = Field(None, description="租户ID")
     rent_terms: list[RentTermResponse] = Field([], description="租金条款列表")
+    # V2: 返回资产对象列表
+    assets: list[AssetSimpleResponse] = Field([], description="关联资产列表")
 
     model_config = ConfigDict(from_attributes=True)
 

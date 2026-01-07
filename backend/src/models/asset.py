@@ -119,7 +119,9 @@ class Asset(Base):
         "AssetDocument", back_populates="asset", cascade="all, delete-orphan"
     )
     rent_contracts = relationship(
-        "RentContract", back_populates="asset", cascade="all, delete-orphan"
+        "RentContract",
+        secondary="rent_contract_assets",
+        back_populates="assets",
     )
     project_id = Column(
         String, ForeignKey("projects.id"), nullable=True, comment="项目ID"

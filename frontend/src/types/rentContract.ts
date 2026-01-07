@@ -1,9 +1,14 @@
 /**
- * 租金台账相关的TypeScript类型定义
+ * 租金台账相关的TypeScript类型定义 - V2
  */
 
 import { Asset } from './asset';
 import { Ownership } from './ownership';
+
+// V2 枚举类型
+export type ContractType = 'lease_upstream' | 'lease_downstream' | 'entrusted';
+export type PaymentCycle = 'monthly' | 'quarterly' | 'semi_annual' | 'annual';
+export type DepositTransactionType = 'receipt' | 'refund' | 'deduction' | 'transfer_out' | 'transfer_in';
 
 // 基础类型
 export interface RentTerm {
@@ -23,17 +28,24 @@ export interface RentTerm {
 export interface RentContract {
   id: string;
   contract_number: string;
-  asset_id: string;
+  // V2: 改为多资产关联
+  asset_ids: string[];
   ownership_id: string;
+  // V2: 合同类型和上游关联
+  contract_type: ContractType;
+  upstream_contract_id?: string;
+  service_fee_rate?: number;
   tenant_name: string;
   tenant_contact?: string;
   tenant_phone?: string;
   tenant_address?: string;
+  tenant_usage?: string; // V2
   sign_date: string;
   start_date: string;
   end_date: string;
   total_deposit: number;
   monthly_rent_base?: number;
+  payment_cycle?: PaymentCycle; // V2
   contract_status: string;
   payment_terms?: string;
   contract_notes?: string;
@@ -43,8 +55,8 @@ export interface RentContract {
   updated_at: string;
   tenant_id?: string;
   rent_terms: RentTerm[];
-  // 关联数据
-  asset?: Asset;
+  // V2: 关联资产列表
+  assets?: Asset[];
   ownership?: Ownership;
 }
 
@@ -90,17 +102,23 @@ export interface RentContractHistory {
 // 请求类型
 export interface RentContractCreate {
   contract_number?: string;
-  asset_id: string;
+  // V2: 多资产
+  asset_ids?: string[];
   ownership_id: string;
+  contract_type?: ContractType;
+  upstream_contract_id?: string;
+  service_fee_rate?: number;
   tenant_name: string;
   tenant_contact?: string;
   tenant_phone?: string;
   tenant_address?: string;
+  tenant_usage?: string;
   sign_date: string;
   start_date: string;
   end_date: string;
   total_deposit?: number;
   monthly_rent_base?: number;
+  payment_cycle?: PaymentCycle;
   contract_status?: string;
   payment_terms?: string;
   contract_notes?: string;
@@ -109,17 +127,22 @@ export interface RentContractCreate {
 
 export interface RentContractUpdate {
   contract_number?: string;
-  asset_id?: string;
+  asset_ids?: string[];
   ownership_id?: string;
+  contract_type?: ContractType;
+  upstream_contract_id?: string;
+  service_fee_rate?: number;
   tenant_name?: string;
   tenant_contact?: string;
   tenant_phone?: string;
   tenant_address?: string;
+  tenant_usage?: string;
   sign_date?: string;
   start_date?: string;
   end_date?: string;
   total_deposit?: number;
   monthly_rent_base?: number;
+  payment_cycle?: PaymentCycle;
   contract_status?: string;
   payment_terms?: string;
   contract_notes?: string;
@@ -291,16 +314,21 @@ export interface RentStatisticsOverview {
 export interface RentContractFormData {
   basicInfo: {
     contract_number?: string;
-    asset_id: string;
+    asset_ids?: string[]; // V2: 多资产
     ownership_id: string;
+    contract_type?: ContractType;
+    upstream_contract_id?: string;
+    service_fee_rate?: number;
     tenant_name: string;
     tenant_contact?: string;
     tenant_phone?: string;
     tenant_address?: string;
+    tenant_usage?: string;
     sign_date: string;
     start_date: string;
     end_date: string;
     total_deposit?: number;
+    payment_cycle?: PaymentCycle;
     contract_status?: string;
     payment_terms?: string;
     contract_notes?: string;

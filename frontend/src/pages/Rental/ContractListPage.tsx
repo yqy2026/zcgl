@@ -29,6 +29,8 @@ import {
   FileTextOutlined,
   DollarOutlined,
   SearchOutlined,
+  SyncOutlined,
+  StopOutlined,
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import dayjs from "dayjs";
@@ -203,6 +205,34 @@ const ContractListPage: React.FC = () => {
     }
   };
 
+  // V2: 续签合同
+  const handleRenew = (contract: RentContract) => {
+    navigate(`/rental/contracts/${contract.id}/renew`);
+  };
+
+  // V2: 终止合同
+  const handleTerminate = async (contract: RentContract) => {
+    Modal.confirm({
+      title: "确认终止合同",
+      content: `确定要终止合同「${contract.contract_number}」吗？`,
+      okText: "确认终止",
+      okType: "danger",
+      cancelText: "取消",
+      onOk: async () => {
+        try {
+          await rentContractService.terminateContract(
+            contract.id,
+            new Date().toISOString().split('T')[0]
+          );
+          message.success("合同已终止");
+          loadContracts();
+        } catch {
+          message.error("终止合同失败");
+        }
+      },
+    });
+  };
+
   // 查看合同详情
   const handleViewDetail = (contract: RentContract) => {
     navigate(`/rental/contracts/${contract.id}`);
@@ -250,11 +280,24 @@ const ContractListPage: React.FC = () => {
     },
     {
       title: "物业名称",
-      dataIndex: ["asset", "property_name"],
-      key: "property_name",
-      render: (text: string | undefined, record: RentContract) => (
-        <Tooltip title={record.asset?.address}>{text ?? "未知"}</Tooltip>
-      ),
+      key: "assets",
+      render: (_: unknown, record: RentContract) => {
+        // V2: 多资产显示
+        const assetList = record.assets ?? [];
+        if (assetList.length === 0) return "未关联";
+        if (assetList.length === 1) {
+          return (
+            <Tooltip title={assetList[0].address ?? ""}>
+              {assetList[0].property_name}
+            </Tooltip>
+          );
+        }
+        return (
+          <Tooltip title={assetList.map(a => a.property_name).join(', ')}>
+            <Tag>{assetList.length}个资产</Tag>
+          </Tooltip>
+        );
+      },
     },
     {
       title: "权属方",
@@ -285,15 +328,15 @@ const ContractListPage: React.FC = () => {
       dataIndex: "contract_status",
       key: "contract_status",
       render: (status: string) => {
-        const statusConfig = {
-          有效: { color: "green", text: "有效" },
-          到期: { color: "orange", text: "到期" },
-          终止: { color: "red", text: "终止" },
+        // V2: 扩展状态
+        const statusConfig: Record<string, { color: string; text: string }> = {
+          "有效": { color: "green", text: "有效" },
+          "到期": { color: "orange", text: "到期" },
+          "终止": { color: "red", text: "终止" },
+          "已终止": { color: "red", text: "已终止" },
+          "已续签": { color: "blue", text: "已续签" },
         };
-        const config = statusConfig[status as keyof typeof statusConfig] || {
-          color: "default",
-          text: status,
-        };
+        const config = statusConfig[status] ?? { color: "default", text: status };
         return <Tag color={config.color}>{config.text}</Tag>;
       },
     },
@@ -306,8 +349,8 @@ const ContractListPage: React.FC = () => {
     {
       title: "操作",
       key: "actions",
-      width: 200,
-      render: (record: RentContract) => (
+      width: 260,
+      render: (_: unknown, record: RentContract) => (
         <Space size="small">
           <Tooltip title="查看详情">
             <Button type="text" icon={<EyeOutlined />} onClick={() => handleViewDetail(record)} />
@@ -316,19 +359,20 @@ const ContractListPage: React.FC = () => {
             <Button type="text" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
           </Tooltip>
           <Tooltip title="生成台账">
-            <Button
-              type="text"
-              icon={<FileTextOutlined />}
-              onClick={() => handleGenerateLedger(record.id)}
-            />
+            <Button type="text" icon={<FileTextOutlined />} onClick={() => handleGenerateLedger(record.id)} />
           </Tooltip>
+          {record.contract_status === "有效" && (
+            <>
+              <Tooltip title="续签">
+                <Button type="text" icon={<SyncOutlined />} onClick={() => handleRenew(record)} />
+              </Tooltip>
+              <Tooltip title="终止">
+                <Button type="text" danger icon={<StopOutlined />} onClick={() => handleTerminate(record)} />
+              </Tooltip>
+            </>
+          )}
           <Tooltip title="删除">
-            <Button
-              type="text"
-              danger
-              icon={<DeleteOutlined />}
-              onClick={() => handleDelete(record.id)}
-            />
+            <Button type="text" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record.id)} />
           </Tooltip>
         </Space>
       ),
@@ -438,7 +482,8 @@ const ContractListPage: React.FC = () => {
             >
               <Option value="有效">有效</Option>
               <Option value="到期">到期</Option>
-              <Option value="终止">终止</Option>
+              <Option value="已续签">已续签</Option>
+              <Option value="已终止">已终止</Option>
             </Select>
           </Col>
           <Col span={4}>

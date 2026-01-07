@@ -1,9 +1,9 @@
 /**
- * 租金台账相关的API服务 - 统一响应处理版本
+ * 租金台账相关的API服务 - V2 with 多资产/续签/终止
  *
- * @description 租赁合同管理核心服务，包含合同、条款、台账、统计等完整功能
+ * @description 租赁合同管理核心服务，包含合同、条款、台账、统计、续签、终止等完整功能
  * @author Claude Code
- * @updated 2025-11-10
+ * @updated 2026-01-07
  */
 
 import {
@@ -618,6 +618,84 @@ class RentContractService {
     }
 
     return { deleted, errors };
+  }
+
+  // ==================== V2: 续签和终止 ====================
+
+  /**
+   * V2: 合同续签
+   * @param originalContractId 原合同ID
+   * @param newContractData 新合同数据
+   * @param transferDeposit 是否转移押金
+   */
+  async renewContract(
+    originalContractId: string,
+    newContractData: RentContractCreate,
+    transferDeposit: boolean = true
+  ): Promise<RentContract> {
+    try {
+      const result = await enhancedApiClient.post<RentContract>(
+        `${this.baseUrl}/${originalContractId}/renew`,
+        {
+          new_contract_data: newContractData,
+          transfer_deposit: transferDeposit,
+        },
+        {
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true,
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`合同续签失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
+  }
+
+  /**
+   * V2: 合同终止
+   * @param contractId 合同ID
+   * @param terminationDate 终止日期
+   * @param refundDeposit 是否退还押金
+   * @param deductionAmount 抵扣金额
+   * @param terminationReason 终止原因
+   */
+  async terminateContract(
+    contractId: string,
+    terminationDate: string,
+    refundDeposit: boolean = true,
+    deductionAmount: number = 0,
+    terminationReason?: string
+  ): Promise<RentContract> {
+    try {
+      const result = await enhancedApiClient.post<RentContract>(
+        `${this.baseUrl}/${contractId}/terminate`,
+        {
+          termination_date: terminationDate,
+          refund_deposit: refundDeposit,
+          deduction_amount: deductionAmount,
+          termination_reason: terminationReason,
+        },
+        {
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true,
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`合同终止失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      throw new Error(enhancedError.message);
+    }
   }
 
   /**

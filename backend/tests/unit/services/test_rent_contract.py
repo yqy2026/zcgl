@@ -44,7 +44,7 @@ class TestRentContractService:
         contract_in = RentContractCreate(
             contract_number="TEST2024001",
             tenant_name="Test Tenant",
-            asset_id=TEST_ASSET_ID,
+            asset_ids=[TEST_ASSET_ID],  # V2: 多资产
             ownership_id=TEST_OWNERSHIP_ID,
             sign_date=date(2024, 1, 1),
             start_date=date(2024, 1, 1),
@@ -140,7 +140,7 @@ class TestRentContractService:
             id=TEST_CONTRACT_ID,
             start_date=date(2024, 1, 1),
             end_date=date(2024, 3, 31),  # 3 months
-            asset_id=TEST_ASSET_ID,
+            # V2: asset_id removed from model, use ownership_id only for FK
             ownership_id=TEST_OWNERSHIP_ID,
         )
         mock_contract_crud.get.return_value = contract
