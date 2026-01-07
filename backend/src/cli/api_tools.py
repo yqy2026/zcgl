@@ -50,7 +50,7 @@ def docs(app_path: str, output_dir: str, format: str):
 
         # 动态导入生成API文档函数
         try:
-            from src.utils.api_doc_generator import generate_api_docs
+            from scripts.devtools.api_doc_generator import generate_api_docs
         except ImportError as e:
             click.echo(f"❌ 无法导入API文档生成器: {e}", err=True)
             sys.exit(1)
@@ -84,7 +84,7 @@ def check(frontend_dir: str, backend_dir: str, output_dir: str, severity: str):
 
     try:
         # 动态导入一致性检查函数
-        from src.utils.api_consistency_checker import check_api_consistency
+        from scripts.devtools.api_consistency_checker import check_api_consistency
 
         # 执行检查
         report = check_api_consistency(frontend_dir, backend_dir, output_dir)
@@ -135,10 +135,9 @@ def analyze(output_dir: str):
         click.echo("🔍 扫描API端点...")
         try:
             # 尝试导入应用
-            from src.main import app
-
             # 尝试导入API文档生成器
-            from src.utils.api_doc_generator import generate_api_docs
+            from scripts.devtools.api_doc_generator import generate_api_docs
+            from src.main import app
 
             docs_data = generate_api_docs(app, output_dir)
 

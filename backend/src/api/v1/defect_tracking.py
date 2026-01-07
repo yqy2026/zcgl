@@ -77,7 +77,9 @@ class DefectReport(BaseModel):
     environment: str | None = Field(None, description="环境信息")
     attachments: list[str] | None = Field(default=[], description="附件")
     tags: list[str] | None = Field(default=[], description="标签")
-    test_coverage_impact: dict[str, Any] | None = Field(None, description="测试覆盖率影响")
+    test_coverage_impact: dict[str, Any] | None = Field(
+        None, description="测试覆盖率影响"
+    )
     created_at: datetime | None = Field(None, description="创建时间")
     updated_at: datetime | None = Field(None, description="更新时间")
     resolved_at: datetime | None = Field(None, description="解决时间")
@@ -204,11 +206,21 @@ def init_defect_db():
     """)
 
     # 创建索引
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_defect_status ON defect_reports(status)")
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_defect_severity ON defect_reports(severity)")
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_defect_module ON defect_reports(module)")
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_defect_category ON defect_reports(category)")
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_defect_created_at ON defect_reports(created_at)")
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_defect_status ON defect_reports(status)"
+    )
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_defect_severity ON defect_reports(severity)"
+    )
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_defect_module ON defect_reports(module)"
+    )
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_defect_category ON defect_reports(category)"
+    )
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_defect_created_at ON defect_reports(created_at)"
+    )
     cursor.execute(
         "CREATE INDEX IF NOT EXISTS idx_defect_history_defect_id ON defect_history(defect_id)"
     )
@@ -237,7 +249,9 @@ async def create_defect(defect: DefectReport):
 
     try:
         # 生成缺陷ID
-        defect_id = f"DEF-{datetime.now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}"
+        defect_id = (
+            f"DEF-{datetime.now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}"
+        )
 
         # 插入缺陷报告
         cursor.execute(
@@ -265,7 +279,9 @@ async def create_defect(defect: DefectReport):
                 defect.environment,
                 json.dumps(defect.attachments or []),
                 json.dumps(defect.tags or []),
-                json.dumps(defect.test_coverage_impact) if defect.test_coverage_impact else None,
+                json.dumps(defect.test_coverage_impact)
+                if defect.test_coverage_impact
+                else None,
             ),
         )
 
@@ -552,9 +568,13 @@ async def update_defect(defect_id: str, updates: dict[str, Any]):
             field_name = field_part.split(" = ")[0]
             if field_name not in allowed_fields:
                 conn.close()
-                raise HTTPException(status_code=400, detail=f"不允许的字段: {field_name}")
+                raise HTTPException(
+                    status_code=400, detail=f"不允许的字段: {field_name}"
+                )
 
-        update_query = f"UPDATE defect_reports SET {', '.join(update_fields)} WHERE defect_id = ?"  # nosec - B608: update_fields validated against allowlist above
+        update_query = (
+            f"UPDATE defect_reports SET {', '.join(update_fields)} WHERE defect_id = ?"  # nosec - B608: update_fields validated against allowlist above
+        )
         cursor.execute(update_query, update_params)
 
         # 记录变更历史
@@ -859,7 +879,9 @@ async def create_prevention_measure(prevention: DefectPrevention):
 
     try:
         # 生成预防ID
-        prevention_id = f"PREV-{datetime.now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}"
+        prevention_id = (
+            f"PREV-{datetime.now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}"
+        )
 
         # 插入预防措施
         cursor.execute(
@@ -881,7 +903,9 @@ async def create_prevention_measure(prevention: DefectPrevention):
         )
 
         # 获取创建的预防措施
-        cursor.execute("SELECT * FROM defect_prevention WHERE prevention_id = ?", (prevention_id,))
+        cursor.execute(
+            "SELECT * FROM defect_prevention WHERE prevention_id = ?", (prevention_id,)
+        )
         row = cursor.fetchone()
 
         conn.commit()
@@ -1038,7 +1062,9 @@ def _generate_defect_recommendations(
     # 基于严重程度的建议
     critical_count = severity_dist.get("critical", 0)
     if critical_count > 0:
-        recommendations.append(f"发现 {critical_count} 个严重缺陷，需要优先处理并制定预防措施")
+        recommendations.append(
+            f"发现 {critical_count} 个严重缺陷，需要优先处理并制定预防措施"
+        )
 
     # 基于分类的建议
     functional_count = category_dist.get("functional", 0)
@@ -1053,9 +1079,13 @@ def _generate_defect_recommendations(
         recommendations.append("存在安全问题，建议进行安全审计和漏洞扫描")
 
     # 基于模块的建议
-    high_risk_modules = [(module, count) for module, count in module_dist.items() if count > 8]
+    high_risk_modules = [
+        (module, count) for module, count in module_dist.items() if count > 8
+    ]
     if high_risk_modules:
-        modules = ", ".join([f"{module}({count})" for module, count in high_risk_modules[:3]])
+        modules = ", ".join(
+            [f"{module}({count})" for module, count in high_risk_modules[:3]]
+        )
         recommendations.append(f"模块 {modules} 缺陷较多，建议进行专项重构和测试")
 
     # 通用建议

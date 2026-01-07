@@ -1,15 +1,18 @@
-import React from 'react';
-import { Layout, Typography, Space, Avatar, Button } from 'antd';
-import { UserOutlined, BellOutlined } from '@ant-design/icons';
+import React from 'react'
+import { Layout, Typography, Space, Avatar, Button } from 'antd'
+import {
+  UserOutlined,
+  BellOutlined,
+} from '@ant-design/icons'
 
-import MobileMenu from './MobileMenu';
-import AppBreadcrumb from './AppBreadcrumb';
+import MobileMenu from './MobileMenu'
+import AppBreadcrumb from './AppBreadcrumb'
 
-const { Header, Content, Footer } = Layout;
-const { Text } = Typography;
+const { Header, Content, Footer } = Layout
+const { Text } = Typography
 
 interface MobileLayoutProps {
-  children: React.ReactNode;
+  children: React.ReactNode
 }
 
 const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
@@ -44,8 +47,17 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
 
         {/* 右侧：用户信息 */}
         <Space size="small">
-          <Button type="text" icon={<BellOutlined />} size="small" style={{ fontSize: '16px' }} />
-          <Avatar size="small" icon={<UserOutlined />} style={{ backgroundColor: '#1890ff' }} />
+          <Button
+            type="text"
+            icon={<BellOutlined />}
+            size="small"
+            style={{ fontSize: '16px' }}
+          />
+          <Avatar
+            size="small"
+            icon={<UserOutlined />}
+            style={{ backgroundColor: '#1890ff' }}
+          />
         </Space>
       </Header>
 
@@ -86,10 +98,12 @@ const MobileLayout: React.FC<MobileLayoutProps> = ({ children }) => {
           fontSize: '12px',
         }}
       >
-        <Text type="secondary">资产管理系统 ©2024</Text>
+        <Text type="secondary">
+          资产管理系统 ©2024
+        </Text>
       </Footer>
     </Layout>
-  );
-};
+  )
+}
 
-export default MobileLayout;
+export default MobileLayout

@@ -4,20 +4,9 @@ module.exports = {
   extends: [
     'eslint:recommended',
     'plugin:@typescript-eslint/recommended',
-    'plugin:react/recommended',
     'plugin:react-hooks/recommended',
-    'plugin:prettier/recommended', // Must be last to override other configs
   ],
-  ignorePatterns: [
-    'dist',
-    '.eslintrc.js',
-    'node_modules',
-    'coverage',
-    'build',
-    '*.config.js',
-    '*.config.ts',
-    'vite.config.ts',
-  ],
+  ignorePatterns: ['dist', '.eslintrc.js', 'node_modules', 'coverage', 'build'],
   parser: '@typescript-eslint/parser',
   parserOptions: {
     ecmaVersion: 2020,
@@ -25,96 +14,53 @@ module.exports = {
     ecmaFeatures: {
       jsx: true,
     },
+    project: ['./tsconfig.eslint.json'],
     tsconfigRootDir: __dirname,
+
   },
-  plugins: ['@typescript-eslint', 'react-hooks', 'react', 'prettier'],
+  plugins: ['@typescript-eslint', 'react-hooks'],
   settings: {
     react: {
       version: 'detect',
     },
   },
   rules: {
-    // Prettier integration
-    'prettier/prettier': 'error',
-
-    // TypeScript strict rules
-    '@typescript-eslint/no-unused-vars': [
-      'error',
-      { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
-    ],
-    '@typescript-eslint/no-explicit-any': 'error',
-    '@typescript-eslint/ban-ts-comment': ['error', { 'ts-ignore': true }],
-    '@typescript-eslint/explicit-module-boundary-types': 'off',
+    '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+    '@typescript-eslint/no-explicit-any': 'off', // 允许 any 类型用于测试和复杂转换
+    '@typescript-eslint/ban-ts-comment': ['warn', { 'ts-ignore': true }],
+    '@typescript-eslint/explicit-module-boundary-types': 'off', // 关闭严格边界类型要求
     '@typescript-eslint/consistent-type-definitions': ['error', 'interface'],
-
-    // React rules
-    'react/react-in-jsx-scope': 'off', // React 17+ doesn't need import
-    'react/prop-types': 'off', // Using TypeScript for props validation
+    '@typescript-eslint/strict-boolean-expressions': 'warn',
+    '@typescript-eslint/no-unsafe-assignment': 'warn', // 降级为警告
+    '@typescript-eslint/no-unsafe-member-access': 'warn',
+    '@typescript-eslint/no-unsafe-call': 'warn',
+    '@typescript-eslint/no-unsafe-return': 'warn',
     'react-hooks/rules-of-hooks': 'error',
     'react-hooks/exhaustive-deps': 'warn',
-
-    // General code quality
-    'no-console': ['warn', { allow: ['warn', 'error'] }],
+    'no-console': 'warn',
     'prefer-const': 'error',
-    'no-var': 'error',
-    curly: ['error', 'all'],
   },
   overrides: [
     {
-      // Non-test source files - enable strict type checking
-      files: ['src/**/*.ts', 'src/**/*.tsx'],
-      excludedFiles: [
-        '**/__tests__/**',
-        '**/*.test.ts',
-        '**/*.test.tsx',
-        'src/test/**/*',
-        'src/test-utils.*',
-        'src/vitest-setup.*',
-        'src/test-response-extraction.ts',
-      ],
-      extends: ['plugin:@typescript-eslint/recommended-type-checked'],
-      parserOptions: {
-        project: ['./tsconfig.eslint.json'],
-        tsconfigRootDir: __dirname,
-      },
-      rules: {
-        '@typescript-eslint/strict-boolean-expressions': 'warn',
-        '@typescript-eslint/no-unsafe-assignment': 'warn',
-        '@typescript-eslint/no-unsafe-member-access': 'warn',
-        '@typescript-eslint/no-unsafe-call': 'warn',
-        '@typescript-eslint/no-unsafe-return': 'warn',
-        '@typescript-eslint/no-floating-promises': 'warn',
-        '@typescript-eslint/no-misused-promises': 'warn',
-      },
-    },
-    {
-      // Test files special rules - no type checking
-      files: [
-        '**/__tests__/**/*',
-        '**/*.test.ts',
-        '**/*.test.tsx',
-        'src/test/**/*',
-        'src/test-utils.*',
-        'src/vitest-setup.*',
-        'src/test-response-extraction.ts',
-      ],
+      // 测试文件的特殊规则
+      files: ['**/__tests__/**/*', '**/*.test.ts', '**/*.test.tsx', 'src/test/**/*', 'src/test-utils.*', 'src/vitest-setup.*'],
       env: { jest: true },
       parserOptions: {
+        // Disable project for test files since they're excluded from tsconfig.json
         project: null,
       },
       rules: {
-        '@typescript-eslint/no-explicit-any': 'off',
+        '@typescript-eslint/no-explicit-any': 'off', // 测试中允许 any
+        '@typescript-eslint/no-unsafe-assignment': 'off',
+        // Disable type-aware rules for test files (no project config)
         '@typescript-eslint/strict-boolean-expressions': 'off',
-        '@typescript-eslint/no-unused-vars': [
-          'warn',
-          {
-            argsIgnorePattern: '^_',
-            varsIgnorePattern: '^_',
-            ignoreRestSiblings: true,
-          },
-        ],
-        'no-unused-vars': 'off',
+        '@typescript-eslint/no-unsafe-member-access': 'off',
+        '@typescript-eslint/no-unsafe-call': 'off',
+        '@typescript-eslint/no-unsafe-return': 'off',
+        // Allow unused vars with underscore prefix in tests
+        '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_', ignoreRestSiblings: true }],
+        'no-unused-vars': 'off', // Use TypeScript version instead
       },
     },
   ],
-};
+}

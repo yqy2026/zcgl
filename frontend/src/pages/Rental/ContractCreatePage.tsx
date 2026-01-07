@@ -3,7 +3,17 @@
  */
 
 import React, { useState } from 'react';
-import { Card, Button, Space, Breadcrumb, Typography, Row, Col, Statistic, message } from 'antd';
+import {
+  Card,
+  Button,
+  Space,
+  Breadcrumb,
+  Typography,
+  Row,
+  Col,
+  Statistic,
+  message,
+} from 'antd';
 import {
   HomeOutlined,
   FileTextOutlined,
@@ -96,7 +106,10 @@ const ContractCreatePage: React.FC = () => {
           </Col>
           <Col>
             <Space>
-              <Button icon={<ArrowLeftOutlined />} onClick={handleCancel}>
+              <Button
+                icon={<ArrowLeftOutlined />}
+                onClick={handleCancel}
+              >
                 返回列表
               </Button>
             </Space>
@@ -109,15 +122,15 @@ const ContractCreatePage: React.FC = () => {
         <Card style={{ marginBottom: '16px', borderColor: '#52c41a', backgroundColor: '#f6ffed' }}>
           <Row align="middle">
             <Col>
-              <InfoCircleOutlined
-                style={{ fontSize: '24px', color: '#52c41a', marginRight: '12px' }}
-              />
+              <InfoCircleOutlined style={{ fontSize: '24px', color: '#52c41a', marginRight: '12px' }} />
             </Col>
             <Col flex="1">
               <Title level={4} style={{ color: '#52c41a', margin: 0 }}>
                 合同创建成功！
               </Title>
-              <Text type="secondary">合同已成功创建并生成租金台账，即将跳转到合同列表页面...</Text>
+              <Text type="secondary">
+                合同已成功创建并生成租金台账，即将跳转到合同列表页面...
+              </Text>
             </Col>
           </Row>
         </Card>
@@ -166,10 +179,9 @@ const ContractCreatePage: React.FC = () => {
           </Row>
           <div style={{ marginTop: '12px' }}>
             <Text type="secondary">
-              • 请确保所有必填字段都已填写完整
-              <br />
-              • 租金条款可以设置多个时间段的租金
-              <br />• 合同创建后将自动生成租金台账
+              • 请确保所有必填字段都已填写完整<br />
+              • 租金条款可以设置多个时间段的租金<br />
+              • 合同创建后将自动生成租金台账
             </Text>
           </div>
         </Card>
@@ -189,7 +201,11 @@ const ContractCreatePage: React.FC = () => {
       {!contractCreated && (
         <Card style={{ marginTop: '16px', textAlign: 'center' }}>
           <Space size="large">
-            <Button size="large" icon={<ArrowLeftOutlined />} onClick={handleCancel}>
+            <Button
+              size="large"
+              icon={<ArrowLeftOutlined />}
+              onClick={handleCancel}
+            >
               取消创建
             </Button>
             <Button

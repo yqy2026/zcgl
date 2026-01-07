@@ -128,39 +128,23 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
     if (initialData) {
       const formData = {
         ...initialData,
-        contract_start_date:
-          initialData.contract_start_date !== null &&
-          initialData.contract_start_date !== undefined &&
-          initialData.contract_start_date !== ''
-            ? dayjs(String(initialData.contract_start_date))
-            : undefined,
-        contract_end_date:
-          initialData.contract_end_date !== null &&
-          initialData.contract_end_date !== undefined &&
-          initialData.contract_end_date !== ''
-            ? dayjs(String(initialData.contract_end_date))
-            : undefined,
-        operation_agreement_start_date:
-          initialData.operation_agreement_start_date !== null &&
-          initialData.operation_agreement_start_date !== undefined &&
-          initialData.operation_agreement_start_date !== ''
-            ? dayjs(String(initialData.operation_agreement_start_date))
-            : undefined,
-        operation_agreement_end_date:
-          initialData.operation_agreement_end_date !== null &&
-          initialData.operation_agreement_end_date !== undefined &&
-          initialData.operation_agreement_end_date !== ''
-            ? dayjs(String(initialData.operation_agreement_end_date))
-            : undefined,
+        contract_start_date: initialData.contract_start_date
+          ? dayjs(String(initialData.contract_start_date))
+          : undefined,
+        contract_end_date: initialData.contract_end_date
+          ? dayjs(String(initialData.contract_end_date))
+          : undefined,
+        operation_agreement_start_date: initialData.operation_agreement_start_date
+          ? dayjs(String(initialData.operation_agreement_start_date))
+          : undefined,
+        operation_agreement_end_date: initialData.operation_agreement_end_date
+          ? dayjs(String(initialData.operation_agreement_end_date))
+          : undefined,
       };
       form.setFieldsValue(formData);
 
       // Initialize attachment lists
-      if (
-        initialData.operation_agreement_attachments !== null &&
-        initialData.operation_agreement_attachments !== undefined &&
-        initialData.operation_agreement_attachments !== ''
-      ) {
+      if (initialData.operation_agreement_attachments) {
         const fileNames = String(initialData.operation_agreement_attachments)
           .split(',')
           .filter(Boolean);
@@ -174,21 +158,15 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
         setFileList(initialFileList);
       }
 
-      if (
-        initialData.terminal_contract_files !== null &&
-        initialData.terminal_contract_files !== undefined &&
-        initialData.terminal_contract_files !== ''
-      ) {
+      if (initialData.terminal_contract_files) {
         const fileNames = String(initialData.terminal_contract_files).split(',').filter(Boolean);
-        const initialTerminalFileList: UploadFile[] = fileNames.map(
-          (name: string, index: number) => ({
-            uid: `terminal-${index}`,
-            name: name,
-            status: 'done' as const,
-            url: `/assets/terminal-contracts/${name}`,
-            size: 0,
-          })
-        );
+        const initialTerminalFileList: UploadFile[] = fileNames.map((name: string, index: number) => ({
+          uid: `terminal-${index}`,
+          name: name,
+          status: 'done' as const,
+          url: `/assets/terminal-contracts/${name}`,
+          size: 0,
+        }));
         setTerminalContractFileList(initialTerminalFileList);
       }
     }
@@ -196,9 +174,9 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
 
   // Load rent contracts when asset ID changes
   useEffect(() => {
-    const assetId = String(initialData?.id ?? form.getFieldValue('id'));
+    const assetId = String(initialData?.id || form.getFieldValue('id'));
     if (assetId && assetId !== 'undefined') {
-      void loadRentContracts(assetId);
+      loadRentContracts(assetId);
     }
   }, [initialData?.id, form, loadRentContracts]);
 
@@ -216,10 +194,7 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
       'usage_status',
     ];
 
-    const filledFields = requiredFields.filter(
-      field =>
-        allValues[field] !== null && allValues[field] !== undefined && allValues[field] !== ''
-    );
+    const filledFields = requiredFields.filter((field) => allValues[field]);
     const rate = (filledFields.length / requiredFields.length) * 100;
     setCompletionRate(rate);
 
@@ -241,17 +216,10 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
   const handleSubmit = async (values: Record<string, unknown>) => {
     try {
       const formatDate = (val: unknown): string | undefined => {
-        if (val === null || val === undefined) {
-          return undefined;
-        }
-        if (dayjs.isDayjs(val)) {
-          return val.format('YYYY-MM-DD');
-        }
-        if (typeof val === 'string') {
-          const parsed = dayjs(val);
-          return parsed.isValid() ? parsed.format('YYYY-MM-DD') : undefined;
-        }
-        return undefined;
+        if (!val) return undefined;
+        if (dayjs.isDayjs(val)) return (val as dayjs.Dayjs).format('YYYY-MM-DD');
+        const parsed = dayjs(String(val));
+        return parsed.isValid() ? parsed.format('YYYY-MM-DD') : undefined;
       };
 
       const submitData = {
@@ -260,8 +228,8 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
         contract_end_date: formatDate(values.contract_end_date),
         operation_agreement_start_date: formatDate(values.operation_agreement_start_date),
         operation_agreement_end_date: formatDate(values.operation_agreement_end_date),
-        operation_agreement_attachments: fileList.map(file => file.name).join(','),
-        terminal_contract_files: terminalContractFileList.map(file => file.name).join(','),
+        operation_agreement_attachments: fileList.map((file) => file.name).join(','),
+        terminal_contract_files: terminalContractFileList.map((file) => file.name).join(','),
       };
 
       if (onSubmit) {
@@ -286,9 +254,7 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
       <Form
         form={form}
         layout="vertical"
-        onFinish={values => {
-          void handleSubmit(values);
-        }}
+        onFinish={handleSubmit}
         onValuesChange={handleValuesChange}
       >
         <AssetBasicInfoSection />

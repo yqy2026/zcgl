@@ -101,14 +101,20 @@ class TaskService:
 
         return task
 
-    def update_task(self, db: Session, *, task_id: str, obj_in: TaskUpdate) -> AsyncTask:
+    def update_task(
+        self, db: Session, *, task_id: str, obj_in: TaskUpdate
+    ) -> AsyncTask:
         """通用更新任务"""
         task = task_crud.get(db, task_id)
         if not task:
             raise ValueError(f"任务 {task_id} 不存在")
 
         # Check permissions/state logic if any (from API)
-        if task.status in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]:
+        if task.status in [
+            TaskStatus.COMPLETED,
+            TaskStatus.FAILED,
+            TaskStatus.CANCELLED,
+        ]:
             # Only allow updating active tasks generally, unless specific fields?
             # API says: "已完成的任务无法更新"
             raise ValueError("已完成的任务无法更新")
@@ -127,7 +133,11 @@ class TaskService:
             if old_status == TaskStatus.PENDING and new_status == TaskStatus.RUNNING:
                 update_data["started_at"] = datetime.now(UTC)
 
-            if new_status in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]:
+            if new_status in [
+                TaskStatus.COMPLETED,
+                TaskStatus.FAILED,
+                TaskStatus.CANCELLED,
+            ]:
                 update_data["completed_at"] = datetime.now(UTC)
                 if new_status == TaskStatus.COMPLETED:
                     update_data["progress"] = 100
@@ -153,7 +163,9 @@ class TaskService:
 
         return task
 
-    def cancel_task(self, db: Session, *, task_id: str, reason: str = None) -> AsyncTask:
+    def cancel_task(
+        self, db: Session, *, task_id: str, reason: str = None
+    ) -> AsyncTask:
         """取消任务"""
         task = task_crud.get(db, task_id)
         if not task:
@@ -213,7 +225,9 @@ class TaskService:
         # Kept in CRUD for now as it's read-only aggregation.
         return task_crud.get_statistics(db, user_id=user_id)
 
-    def cleanup_old_tasks(self, db: Session, *, days: int, dry_run: bool) -> dict[str, Any]:
+    def cleanup_old_tasks(
+        self, db: Session, *, days: int, dry_run: bool
+    ) -> dict[str, Any]:
         """清理过期任务"""
         # Moving logic from API
         from datetime import timedelta

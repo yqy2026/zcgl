@@ -4,14 +4,14 @@
  * 采用实用主义策略 - 测试组件结构和导出
  */
 
-import { describe, it, expect, vi } from 'vitest';
-import {} from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest'
+import { } from '@testing-library/react'
 import {
   PermissionGuard,
   UserManagementGuard,
   RoleManagementGuard,
-  AssetManagementGuard,
-} from '../PermissionGuard';
+  AssetManagementGuard
+} from '../PermissionGuard'
 
 // =============================================================================
 // Mock localStorage
@@ -21,13 +21,13 @@ const mockLocalStorage = {
   getItem: vi.fn(() => null),
   setItem: vi.fn(),
   removeItem: vi.fn(),
-  clear: vi.fn(),
-};
+  clear: vi.fn()
+}
 
 Object.defineProperty(global, 'localStorage', {
   value: mockLocalStorage,
-  writable: true,
-});
+  writable: true
+})
 
 // =============================================================================
 // Mock usePermission hook
@@ -46,7 +46,7 @@ vi.mock('../../hooks/usePermission', () => ({
     requirePermission: vi.fn(),
     checkPageAccess: vi.fn(() => true),
     getAccessibleMenuItems: vi.fn(() => []),
-    refreshPermissions: vi.fn(),
+    refreshPermissions: vi.fn()
   })),
   PERMISSIONS: {
     USER_VIEW: { resource: 'users', action: 'view' },
@@ -55,15 +55,15 @@ vi.mock('../../hooks/usePermission', () => ({
     SYSTEM_LOGS: { resource: 'system', action: 'logs' },
     ASSET_VIEW: { resource: 'assets', action: 'view' },
     ASSET_CREATE: { resource: 'assets', action: 'create' },
-    RENTAL_VIEW: { resource: 'rental', action: 'view' },
-  },
-}));
+    RENTAL_VIEW: { resource: 'rental', action: 'view' }
+  }
+}))
 
 // =============================================================================
 // 测试组件
 // =============================================================================
 
-const TestComponent = () => <div>Protected Content</div>;
+const TestComponent = () => <div>Protected Content</div>
 
 // =============================================================================
 // 导出和结构测试
@@ -71,25 +71,25 @@ const TestComponent = () => <div>Protected Content</div>;
 
 describe('PermissionGuard - 导出和结构', () => {
   it('应该导出PermissionGuard组件', () => {
-    expect(PermissionGuard).toBeDefined();
-    expect(typeof PermissionGuard).toBe('function');
-  });
+    expect(PermissionGuard).toBeDefined()
+    expect(typeof PermissionGuard).toBe('function')
+  })
 
   it('应该导出UserManagementGuard组件', () => {
-    expect(UserManagementGuard).toBeDefined();
-    expect(typeof UserManagementGuard).toBe('function');
-  });
+    expect(UserManagementGuard).toBeDefined()
+    expect(typeof UserManagementGuard).toBe('function')
+  })
 
   it('应该导出RoleManagementGuard组件', () => {
-    expect(RoleManagementGuard).toBeDefined();
-    expect(typeof RoleManagementGuard).toBe('function');
-  });
+    expect(RoleManagementGuard).toBeDefined()
+    expect(typeof RoleManagementGuard).toBe('function')
+  })
 
   it('应该导出AssetManagementGuard组件', () => {
-    expect(AssetManagementGuard).toBeDefined();
-    expect(typeof AssetManagementGuard).toBe('function');
-  });
-});
+    expect(AssetManagementGuard).toBeDefined()
+    expect(typeof AssetManagementGuard).toBe('function')
+  })
+})
 
 // =============================================================================
 // 基础渲染测试
@@ -97,52 +97,52 @@ describe('PermissionGuard - 导出和结构', () => {
 
 describe('PermissionGuard - 基础渲染', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-  });
+    vi.clearAllMocks()
+  })
 
   it('应该正常渲染组件结构', () => {
     const { container } = render(
       <PermissionGuard permissions={[{ resource: 'assets', action: 'view' }]}>
         <TestComponent />
       </PermissionGuard>
-    );
+    )
 
     // 验证组件渲染了内容（无论是受保护内容还是403页面）
-    expect(container.firstChild).not.toBeNull();
-  });
+    expect(container.firstChild).not.toBeNull()
+  })
 
   it('应该处理null children', () => {
     const { container } = render(
       <PermissionGuard permissions={[{ resource: 'assets', action: 'view' }]}>
         {null}
       </PermissionGuard>
-    );
+    )
 
     // null children 应该渲染为空或占位符
-    expect(container).toBeDefined();
-  });
+    expect(container).toBeDefined()
+  })
 
   it('应该支持mode属性', () => {
     const { container: containerAny } = render(
       <PermissionGuard mode="any" permissions={[{ resource: 'assets', action: 'view' }]}>
         <TestComponent />
       </PermissionGuard>
-    );
+    )
 
     const { container: containerAll } = render(
       <PermissionGuard mode="all" permissions={[{ resource: 'assets', action: 'view' }]}>
         <TestComponent />
       </PermissionGuard>
-    );
+    )
 
-    expect(containerAny.firstChild).not.toBeNull();
-    expect(containerAll.firstChild).not.toBeNull();
-  });
+    expect(containerAny.firstChild).not.toBeNull()
+    expect(containerAll.firstChild).not.toBeNull()
+  })
 
   it('应该支持自定义fallback', () => {
     // 注意：由于mock始终返回有权限，fallback不会被触发
     // 这里只验证组件接受fallback属性而不报错
-    const customFallback = <div>Custom Fallback</div>;
+    const customFallback = <div>Custom Fallback</div>
 
     const { container } = render(
       <PermissionGuard
@@ -151,11 +151,11 @@ describe('PermissionGuard - 基础渲染', () => {
       >
         <TestComponent />
       </PermissionGuard>
-    );
+    )
 
-    expect(container).toBeDefined();
-  });
-});
+    expect(container).toBeDefined()
+  })
+})
 
 // =============================================================================
 // 预定义组件渲染测试
@@ -163,39 +163,39 @@ describe('PermissionGuard - 基础渲染', () => {
 
 describe('预定义权限保护组件 - 渲染', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-  });
+    vi.clearAllMocks()
+  })
 
   it('UserManagementGuard应该正常渲染', () => {
     const { container } = render(
       <UserManagementGuard>
         <TestComponent />
       </UserManagementGuard>
-    );
+    )
 
-    expect(container.firstChild).not.toBeNull();
-  });
+    expect(container.firstChild).not.toBeNull()
+  })
 
   it('RoleManagementGuard应该正常渲染', () => {
     const { container } = render(
       <RoleManagementGuard>
         <TestComponent />
       </RoleManagementGuard>
-    );
+    )
 
-    expect(container.firstChild).not.toBeNull();
-  });
+    expect(container.firstChild).not.toBeNull()
+  })
 
   it('AssetManagementGuard应该正常渲染', () => {
     const { container } = render(
       <AssetManagementGuard>
         <TestComponent />
       </AssetManagementGuard>
-    );
+    )
 
-    expect(container.firstChild).not.toBeNull();
-  });
-});
+    expect(container.firstChild).not.toBeNull()
+  })
+})
 
 // =============================================================================
 // Props验证测试
@@ -207,10 +207,10 @@ describe('PermissionGuard - Props验证', () => {
       <PermissionGuard permissions={[{ resource: 'assets', action: 'view' }]}>
         <div>Content</div>
       </PermissionGuard>
-    );
+    )
 
-    expect(container).toBeDefined();
-  });
+    expect(container).toBeDefined()
+  })
 
   it('应该接受多个permissions', () => {
     const { container } = render(
@@ -218,48 +218,48 @@ describe('PermissionGuard - Props验证', () => {
         permissions={[
           { resource: 'assets', action: 'view' },
           { resource: 'assets', action: 'create' },
-          { resource: 'assets', action: 'edit' },
+          { resource: 'assets', action: 'edit' }
         ]}
       >
         <div>Content</div>
       </PermissionGuard>
-    );
+    )
 
-    expect(container).toBeDefined();
-  });
+    expect(container).toBeDefined()
+  })
 
   it('应该接受空permissions数组', () => {
     const { container } = render(
       <PermissionGuard permissions={[]}>
         <div>Content</div>
       </PermissionGuard>
-    );
+    )
 
-    expect(container).toBeDefined();
-  });
+    expect(container).toBeDefined()
+  })
 
   it('应该接受mode="any"', () => {
     const { container } = render(
       <PermissionGuard mode="any" permissions={[{ resource: 'assets', action: 'view' }]}>
         <div>Content</div>
       </PermissionGuard>
-    );
+    )
 
-    expect(container).toBeDefined();
-  });
+    expect(container).toBeDefined()
+  })
 
   it('应该接受mode="all"', () => {
     const { container } = render(
       <PermissionGuard mode="all" permissions={[{ resource: 'assets', action: 'view' }]}>
         <div>Content</div>
       </PermissionGuard>
-    );
+    )
 
-    expect(container).toBeDefined();
-  });
+    expect(container).toBeDefined()
+  })
 
   it('应该接受自定义fallback', () => {
-    const customFallback = <div>No Access</div>;
+    const customFallback = <div>No Access</div>
 
     const { container } = render(
       <PermissionGuard
@@ -268,11 +268,11 @@ describe('PermissionGuard - Props验证', () => {
       >
         <div>Content</div>
       </PermissionGuard>
-    );
+    )
 
-    expect(container).toBeDefined();
-  });
-});
+    expect(container).toBeDefined()
+  })
+})
 
 // =============================================================================
 // 组件组合测试
@@ -286,10 +286,10 @@ describe('PermissionGuard - 组件组合', () => {
           <div>Nested Content</div>
         </PermissionGuard>
       </PermissionGuard>
-    );
+    )
 
-    expect(container).toBeDefined();
-  });
+    expect(container).toBeDefined()
+  })
 
   it('应该支持多个子元素', () => {
     const { container } = render(
@@ -298,8 +298,8 @@ describe('PermissionGuard - 组件组合', () => {
         <div>Child 2</div>
         <div>Child 3</div>
       </PermissionGuard>
-    );
+    )
 
-    expect(container).toBeDefined();
-  });
-});
+    expect(container).toBeDefined()
+  })
+})

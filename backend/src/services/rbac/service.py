@@ -33,7 +33,10 @@ class RBACService:
         # Handle initial permissions
         if obj_in.permission_ids:
             self.update_role_permissions(
-                db, role_id=role.id, permission_ids=obj_in.permission_ids, updated_by=created_by
+                db,
+                role_id=role.id,
+                permission_ids=obj_in.permission_ids,
+                updated_by=created_by,
             )
 
         return role
@@ -57,7 +60,10 @@ class RBACService:
         # Update permissions if provided
         if obj_in.permission_ids is not None:
             self.update_role_permissions(
-                db, role_id=role.id, permission_ids=obj_in.permission_ids, updated_by=updated_by
+                db,
+                role_id=role.id,
+                permission_ids=obj_in.permission_ids,
+                updated_by=updated_by,
             )
 
         return role
@@ -128,7 +134,9 @@ class RBACService:
             else:
                 raise ValueError("用户已分配此角色")
 
-        return user_role_assignment_crud.create(db, obj_in=obj_in, assigned_by=assigned_by)
+        return user_role_assignment_crud.create(
+            db, obj_in=obj_in, assigned_by=assigned_by
+        )
 
     def revoke_user_role(self, db: Session, *, user_id: str, role_id: str) -> bool:
         """撤销用户角色"""
@@ -145,12 +153,16 @@ class RBACService:
 
     # ================= Permission Check =================
 
-    def check_permission(self, db: Session, *, user_id: str, resource: str, action: str) -> bool:
+    def check_permission(
+        self, db: Session, *, user_id: str, resource: str, action: str
+    ) -> bool:
         """检查用户是否有特定权限"""
         # 1. Check Super Admin (if implied, distinct from RBAC)
 
         # 2. Check Role Permissions
-        user_roles = user_role_assignment_crud.get_user_active_assignments(db, user_id=user_id)
+        user_roles = user_role_assignment_crud.get_user_active_assignments(
+            db, user_id=user_id
+        )
         role_ids = [ur.role_id for ur in user_roles]
 
         # This query implies: find a permission that matches resource/action and is assigned to one of the user's roles
@@ -171,7 +183,10 @@ class RBACService:
             .first()
         )
 
-        return bool(has_perm)
+        if has_perm:
+            return True
+
+        return False
 
 
 rbac_service = RBACService()

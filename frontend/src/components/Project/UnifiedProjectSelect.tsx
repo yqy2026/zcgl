@@ -4,8 +4,20 @@
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
-import { Select, Button, Modal, message, Space, Tooltip, Tag } from 'antd';
-import { PlusOutlined, ReloadOutlined, UnorderedListOutlined } from '@ant-design/icons';
+import {
+  Select,
+  Button,
+  Modal,
+  message,
+  Space,
+  Tooltip,
+  Tag
+} from 'antd';
+import {
+  PlusOutlined,
+  ReloadOutlined,
+  UnorderedListOutlined
+} from '@ant-design/icons';
 import { useProjectOptions } from '@/hooks/useProject';
 import type { Project } from '@/types/project';
 import ProjectList from '@/components/Project/ProjectList';
@@ -62,7 +74,7 @@ const UnifiedProjectSelect: React.FC<UnifiedProjectSelectProps> = ({
   onlyActive = true,
   showAdvancedSelect = true,
   showSearch = true,
-  maxCount,
+  maxCount
 }) => {
   const [searchText, setSearchText] = useState('');
   const [selectModalVisible, setSelectModalVisible] = useState(false);
@@ -72,14 +84,11 @@ const UnifiedProjectSelect: React.FC<UnifiedProjectSelectProps> = ({
 
   // 根据搜索文本过滤项目
   const filteredProjects = useMemo(() => {
-    if (searchText === null || searchText === undefined || searchText === '') {
-      return allProjects;
-    }
+    if (!searchText) return allProjects;
 
-    return allProjects.filter(
-      project =>
-        project.name.toLowerCase().includes(searchText.toLowerCase()) ||
-        project.code.toLowerCase().includes(searchText.toLowerCase())
+    return allProjects.filter(project =>
+      project.name.toLowerCase().includes(searchText.toLowerCase()) ||
+      project.code.toLowerCase().includes(searchText.toLowerCase())
     );
   }, [allProjects, searchText]);
 
@@ -91,13 +100,13 @@ const UnifiedProjectSelect: React.FC<UnifiedProjectSelectProps> = ({
   // 处理单选
   const handleSingleChange = (selectedValue: string) => {
     const selected = allProjects.find(p => p.id === selectedValue);
-    onChange?.(selectedValue, selected as Project | undefined);
+    onChange?.(selectedValue, selected as any);
   };
 
   // 处理多选
   const handleMultipleChange = (selectedValues: string[]) => {
     const selectedProjects = allProjects.filter(p => selectedValues.includes(p.id));
-    onChange?.(selectedValues, selectedProjects as Project[]);
+    onChange?.(selectedValues, selectedProjects as any);
   };
 
   // 处理清除
@@ -113,21 +122,14 @@ const UnifiedProjectSelect: React.FC<UnifiedProjectSelectProps> = ({
   // 从弹窗中选择项目
   const handleModalSelect = (project: Project) => {
     if (mode === 'single') {
-      onChange?.(project.id, project);
+      onChange?.(project.id, project as any);
     } else {
       // 多选模式下，添加到已选列表
-      const currentValues = Array.isArray(value)
-        ? value
-        : value !== null && value !== undefined && value !== ''
-          ? [value]
-          : [];
+      const currentValues = Array.isArray(value) ? value : value ? [value] : [];
       if (!currentValues.includes(project.id)) {
-        const newValues =
-          maxCount !== null && maxCount !== undefined && maxCount > 0
-            ? [...currentValues.slice(-maxCount + 1), project.id]
-            : [...currentValues, project.id];
+        const newValues = maxCount ? [...currentValues.slice(-maxCount + 1), project.id] : [...currentValues, project.id];
         const selectedProjects = allProjects.filter(p => newValues.includes(p.id));
-        onChange?.(newValues, selectedProjects as Project[]);
+        onChange?.(newValues, selectedProjects as any);
       }
     }
     setSelectModalVisible(false);
@@ -150,26 +152,12 @@ const UnifiedProjectSelect: React.FC<UnifiedProjectSelectProps> = ({
 
     return (
       <Tag
-        color={
-          project !== null &&
-          project !== undefined &&
-          project.is_active !== null &&
-          project.is_active !== undefined &&
-          project.is_active === true
-            ? 'blue'
-            : 'red'
-        }
+        color={project?.is_active ? 'blue' : 'red'}
         closable={closable}
         onClose={onClose}
         style={{ marginRight: 3 }}
       >
-        {project !== null &&
-        project !== undefined &&
-        project.name !== null &&
-        project.name !== undefined &&
-        project.name !== ''
-          ? project.name
-          : value}
+        {project?.name || value}
       </Tag>
     );
   };
@@ -178,18 +166,8 @@ const UnifiedProjectSelect: React.FC<UnifiedProjectSelectProps> = ({
     <div style={style}>
       <Space.Compact style={{ width: '100%' }}>
         <Select
-          value={
-            value !== null && value !== undefined && value !== ''
-              ? value
-              : mode === 'multiple'
-                ? []
-                : undefined
-          }
-          onChange={
-            mode === 'multiple'
-              ? (handleMultipleChange as (values: string[]) => void)
-              : (handleSingleChange as (value: string) => void)
-          }
+          value={value as any || (mode === 'multiple' ? [] : undefined)}
+          onChange={mode === 'multiple' ? (handleMultipleChange as any) : (handleSingleChange as any)}
           onClear={handleClear}
           placeholder={placeholder}
           disabled={disabled}
@@ -255,7 +233,10 @@ const UnifiedProjectSelect: React.FC<UnifiedProjectSelectProps> = ({
         width={1200}
         destroyOnHidden
       >
-        <ProjectList mode="select" onSelectProject={handleModalSelect} />
+        <ProjectList
+          mode="select"
+          onSelectProject={handleModalSelect}
+        />
       </Modal>
     </div>
   );

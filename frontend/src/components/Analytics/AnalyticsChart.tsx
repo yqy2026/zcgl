@@ -1,55 +1,46 @@
-import React from 'react';
-import { Pie, Column, Line } from '@ant-design/plots';
-import { Card, Empty, Spin } from 'antd';
+import React from 'react'
+import { Pie, Column, Line } from '@ant-design/plots'
+import { Card, Empty, Spin } from 'antd'
 
 // 图表颜色主题 - 使用 Ant Design 颜色
-const COLORS = [
-  '#1890ff',
-  '#52c41a',
-  '#faad14',
-  '#f5222d',
-  '#722ed1',
-  '#13c2c2',
-  '#fa8c16',
-  '#eb2f96',
-];
+const COLORS = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2', '#fa8c16', '#eb2f96']
 
 // 基础图表组件属性
 interface BaseChartProps {
-  title: string;
-  loading?: boolean;
-  height?: number;
-  className?: string;
+  title: string
+  loading?: boolean
+  height?: number
+  className?: string
 }
 
 // 饼图数据接口
 interface PieData {
-  type: string;
-  value: number;
-  count?: number;
-  percentage?: number;
+  type: string
+  value: number
+  count?: number
+  percentage?: number
 }
 
 // 柱状图数据接口
 interface BarData {
-  name: string;
-  value: number;
-  [key: string]: unknown;
+  name: string
+  value: number
+  [key: string]: unknown
 }
 
 // 折线图数据接口
 interface LineData {
-  date: string;
-  [key: string]: unknown;
+  date: string
+  [key: string]: unknown
 }
 
 // 饼图组件
 interface PieChartProps extends BaseChartProps {
-  data: PieData[];
-  showLegend?: boolean;
-  showTooltip?: boolean;
-  innerRadius?: number;
-  outerRadius?: number;
+  data: PieData[]
+  showLegend?: boolean
+  showTooltip?: boolean
+  innerRadius?: number
+  outerRadius?: number
 }
 
 export const AnalyticsPieChart: React.FC<PieChartProps> = ({
@@ -61,14 +52,15 @@ export const AnalyticsPieChart: React.FC<PieChartProps> = ({
   showTooltip = true,
   innerRadius = 0,
   outerRadius = 80,
-  className,
+  className
 }) => {
   // Transform data from {name, value} to {type, value} for @ant-design/plots
   const chartData = data.map(item => ({
-    type: ((item as unknown as Record<string, unknown>).name as string) || item.type,
+    type: (item as unknown as Record<string, unknown>).name as string || item.type,
 
     value: item.value,
-  }));
+  }))
+
 
   const config = {
     data: chartData,
@@ -78,7 +70,7 @@ export const AnalyticsPieChart: React.FC<PieChartProps> = ({
     radius: outerRadius / 100,
     innerRadius: innerRadius / 100,
     label: {
-      type: innerRadius > 0 ? 'inner' : 'outer',
+      type: (innerRadius > 0 ? 'inner' : 'outer'),
       offset: innerRadius > 0 ? '-50%' : undefined,
       content: innerRadius > 0 ? '{percentage}%' : '{name} {percentage}',
       style: {
@@ -87,61 +79,57 @@ export const AnalyticsPieChart: React.FC<PieChartProps> = ({
       },
     },
 
-    legend:
-      showLegend !== null && showLegend !== undefined
-        ? {
-            layout: 'horizontal' as const,
-            position: 'bottom' as const,
-          }
-        : false,
-    tooltip:
-      showTooltip !== null && showTooltip !== undefined
-        ? {
-            formatter: (datum: Record<string, unknown>) => ({
-              name: datum.type as string,
-              value: formatAreaValue(datum.value as number),
-            }),
-          }
-        : false,
-  };
+    legend: showLegend ? {
+      layout: 'horizontal' as const,
+      position: 'bottom' as const,
+    } : false,
+    tooltip: showTooltip ? {
+      formatter: (datum: Record<string, unknown>) => ({
+        name: datum.type as string,
+        value: formatAreaValue(datum.value as number),
+      }),
+    } : false,
 
-  if (loading !== null && loading !== undefined) {
+  }
+
+  if (loading) {
     return (
       <Card title={title} className={className}>
         <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Spin size="large" />
         </div>
       </Card>
-    );
+    )
   }
 
   if (data.length === 0) {
+
     return (
       <Card title={title} className={className}>
         <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Empty description="暂无数据" />
         </div>
       </Card>
-    );
+    )
   }
 
   return (
     <Card title={title} className={className}>
       <Pie {...config} height={height} />
     </Card>
-  );
-};
+  )
+}
 
 // 柱状图组件
 interface BarChartProps extends BaseChartProps {
-  data: BarData[];
-  xAxisKey: string;
-  barKey: string;
-  barSize?: number;
-  showLegend?: boolean;
-  showTooltip?: boolean;
-  showGrid?: boolean;
-  color?: string;
+  data: BarData[]
+  xAxisKey: string
+  barKey: string
+  barSize?: number
+  showLegend?: boolean
+  showTooltip?: boolean
+  showGrid?: boolean
+  color?: string
 }
 
 export const AnalyticsBarChart: React.FC<BarChartProps> = ({
@@ -154,9 +142,9 @@ export const AnalyticsBarChart: React.FC<BarChartProps> = ({
   barSize = 30,
   showLegend = false,
   showTooltip = true,
-  showGrid: _showGrid = true, // TODO: Implement grid control
+  showGrid: _showGrid = true,  // TODO: Implement grid control
   color = '#1890ff',
-  className,
+  className
 }) => {
   const config = {
     data: data,
@@ -177,21 +165,15 @@ export const AnalyticsBarChart: React.FC<BarChartProps> = ({
         fontSize: 12,
       },
     },
-    legend:
-      showLegend !== null && showLegend !== undefined
-        ? {
-            position: 'top' as const,
-          }
-        : false,
-    tooltip:
-      showTooltip !== null && showTooltip !== undefined
-        ? {
-            formatter: (datum: Record<string, unknown>) => ({
-              name: datum[xAxisKey] as string,
-              value: formatAreaValue(datum[barKey] as number),
-            }),
-          }
-        : false,
+    legend: showLegend ? {
+      position: 'top' as const,
+    } : false,
+    tooltip: showTooltip ? {
+      formatter: (datum: Record<string, unknown>) => ({
+        name: datum[xAxisKey] as string,
+        value: formatAreaValue(datum[barKey] as number),
+      }),
+    } : false,
 
     yAxis: {
       min: 0,
@@ -210,49 +192,50 @@ export const AnalyticsBarChart: React.FC<BarChartProps> = ({
         },
       },
     },
-  };
+  }
 
-  if (loading !== null && loading !== undefined) {
+  if (loading) {
     return (
       <Card title={title} className={className}>
         <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Spin size="large" />
         </div>
       </Card>
-    );
+    )
   }
 
   if (data.length === 0) {
+
     return (
       <Card title={title} className={className}>
         <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Empty description="暂无数据" />
         </div>
       </Card>
-    );
+    )
   }
 
   return (
     <Card title={title} className={className}>
       <Column {...config} height={height} />
     </Card>
-  );
-};
+  )
+}
 
 // 折线图组件
 interface LineChartProps extends BaseChartProps {
-  data: LineData[];
+  data: LineData[]
   lines: Array<{
-    key: string;
-    name: string;
-    color: string;
-    strokeWidth?: number;
-  }>;
-  xAxisKey: string;
-  showGrid?: boolean;
-  showLegend?: boolean;
-  showTooltip?: boolean;
-  showDots?: boolean;
+    key: string
+    name: string
+    color: string
+    strokeWidth?: number
+  }>
+  xAxisKey: string
+  showGrid?: boolean
+  showLegend?: boolean
+  showTooltip?: boolean
+  showDots?: boolean
 }
 
 export const AnalyticsLineChart: React.FC<LineChartProps> = ({
@@ -262,11 +245,11 @@ export const AnalyticsLineChart: React.FC<LineChartProps> = ({
   xAxisKey,
   loading = false,
   height = 300,
-  showGrid: _showGrid = true, // TODO: Implement grid control
+  showGrid: _showGrid = true,  // TODO: Implement grid control
   showLegend = true,
   showTooltip = true,
   showDots = true,
-  className,
+  className
 }) => {
   // Transform data for multi-line chart
   const chartData = data.flatMap(item =>
@@ -275,7 +258,7 @@ export const AnalyticsLineChart: React.FC<LineChartProps> = ({
       type: line.name,
       value: item[line.key],
     }))
-  );
+  )
 
   const config = {
     data: chartData,
@@ -283,76 +266,63 @@ export const AnalyticsLineChart: React.FC<LineChartProps> = ({
     yField: 'value',
     seriesField: 'type',
     color: ({ type }: { type: string }) => {
-      const line = lines.find(l => l.name === type);
-      return line !== undefined && typeof line.color === 'string' && line.color !== ''
-        ? line.color
-        : '#1890ff';
+      const line = lines.find(l => l.name === type)
+      return (line !== undefined && typeof line.color === 'string' && line.color !== '') ? line.color : '#1890ff'
     },
+
 
     smooth: true,
     lineStyle: {
-      lineWidth:
-        lines[0] !== undefined && typeof lines[0].strokeWidth === 'number'
-          ? lines[0].strokeWidth
-          : 2,
+      lineWidth: (lines[0] !== undefined && typeof lines[0].strokeWidth === 'number') ? lines[0].strokeWidth : 2,
     },
 
-    point:
-      showDots !== null && showDots !== undefined
-        ? {
-            size: 4,
-          }
-        : false,
-    legend:
-      showLegend !== null && showLegend !== undefined
-        ? {
-            position: 'top' as const,
-          }
-        : false,
-    tooltip:
-      showTooltip !== null && showTooltip !== undefined
-        ? {
-            formatter: (datum: Record<string, unknown>) => ({
-              name: datum.type as string,
-              value: datum.value as number,
-            }),
-          }
-        : false,
-  };
+    point: showDots ? {
+      size: 4,
+    } : false,
+    legend: showLegend ? {
+      position: 'top' as const,
+    } : false,
+    tooltip: showTooltip ? {
+      formatter: (datum: Record<string, unknown>) => ({
+        name: datum.type as string,
+        value: datum.value as number,
+      }),
+    } : false,
 
-  if (loading !== null && loading !== undefined) {
+  }
+
+  if (loading) {
     return (
       <Card title={title} className={className}>
         <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Spin size="large" />
         </div>
       </Card>
-    );
+    )
   }
 
   if (data.length === 0) {
+
     return (
       <Card title={title} className={className}>
         <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Empty description="暂无数据" />
         </div>
       </Card>
-    );
+    )
   }
 
   return (
     <Card title={title} className={className}>
       <Line {...config} height={height} />
     </Card>
-  );
-};
+  )
+}
 
 // 统一的数值格式化函数
 const formatAreaValue = (value: number): string => {
   const num = Number(value);
-  if (isNaN(num)) {
-    return '0㎡';
-  }
+  if (isNaN(num)) return '0㎡';
 
   if (num >= 10000) {
     return `${(num / 10000).toFixed(2)}万㎡`;
@@ -368,9 +338,7 @@ const formatAreaValue = (value: number): string => {
 // 更激进的数值格式化函数，用于去除所有可能的尾随零
 const formatAggressive = (value: number): string => {
   const num = Number(value);
-  if (isNaN(num)) {
-    return '0';
-  }
+  if (isNaN(num)) return '0';
 
   if (num >= 10000) {
     const result = (num / 10000).toFixed(2);
@@ -388,103 +356,77 @@ export const chartDataUtils = {
   // 转换饼图数据
   toPieData: (data: Array<{ name: string; count: number; percentage?: number }>): PieData[] => {
     return data.map(item => ({
-      type: item.name, // Changed from 'name' to 'type' for @ant-design/plots
+      type: item.name,  // Changed from 'name' to 'type' for @ant-design/plots
       value: item.count,
       count: item.count,
-      percentage: item.percentage,
-    }));
+      percentage: item.percentage
+    }))
   },
 
   // 转换业态类别数据
-  toBusinessCategoryData: (
-    data: Array<{ category: string; count: number; occupancy_rate?: number }>
-  ): BarData[] => {
+  toBusinessCategoryData: (data: Array<{ category: string; count: number; occupancy_rate?: number }>): BarData[] => {
     return data.map(item => ({
       name: item.category,
       value: item.count,
       count: item.count,
-      occupancy_rate: item.occupancy_rate != null ? item.occupancy_rate : 0,
-    }));
+      occupancy_rate: item.occupancy_rate || 0
+    }))
   },
 
   // 转换出租率分布数据
-  toOccupancyData: (
-    data: Array<{ range: string; count: number; percentage?: number }>
-  ): BarData[] => {
+  toOccupancyData: (data: Array<{ range: string; count: number; percentage?: number }>): BarData[] => {
     return data.map(item => ({
       name: item.range,
       value: item.count,
       count: item.count,
-      percentage: typeof item.percentage === 'number' ? item.percentage : 0,
-    }));
+      percentage: typeof item.percentage === 'number' ? item.percentage : 0
+    }))
   },
 
+
   // 转换趋势数据
-  toTrendData: (
-    data: Array<{
-      date: string;
-      occupancy_rate: number;
-      total_rented_area?: number;
-      total_rentable_area?: number;
-    }>
-  ): LineData[] => {
+  toTrendData: (data: Array<{ date: string; occupancy_rate: number; total_rented_area?: number; total_rentable_area?: number }>): LineData[] => {
     return data.map(item => ({
       date: item.date,
       occupancy_rate: item.occupancy_rate,
-      total_rented_area: item.total_rented_area ?? 0,
-      total_rentable_area: item.total_rentable_area ?? 0,
-    }));
+      total_rented_area: item.total_rented_area || 0,
+      total_rentable_area: item.total_rentable_area || 0
+    }))
   },
 
   // 转换面积维度数据
-  toAreaData: (
-    data: Array<{
-      name: string;
-      total_area?: number;
-      area_percentage?: number;
-      average_area?: number;
-    }>
-  ): PieData[] => {
+  toAreaData: (data: Array<{ name: string; total_area?: number; area_percentage?: number; average_area?: number }>): PieData[] => {
     return data.map(item => ({
-      type: item.name, // Changed from 'name' to 'type' for @ant-design/plots
+      type: item.name,  // Changed from 'name' to 'type' for @ant-design/plots
       value: Math.round((typeof item.total_area === 'number' ? item.total_area : 0) * 100) / 100,
-      total_area:
-        Math.round((typeof item.total_area === 'number' ? item.total_area : 0) * 100) / 100,
+      total_area: Math.round((typeof item.total_area === 'number' ? item.total_area : 0) * 100) / 100,
       percentage: typeof item.area_percentage === 'number' ? item.area_percentage : 0,
-      average_area: typeof item.average_area === 'number' ? item.average_area : 0,
-    }));
+      average_area: typeof item.average_area === 'number' ? item.average_area : 0
+    }))
   },
 
+
   // 转换面积维度柱状图数据
-  toAreaBarData: (
-    data: Array<{ name: string; total_area?: number; count?: number; average_area?: number }>
-  ): BarData[] => {
+  toAreaBarData: (data: Array<{ name: string; total_area?: number; count?: number; average_area?: number }>): BarData[] => {
     return data.map(item => ({
       name: item.name,
       value: Math.round((typeof item.total_area === 'number' ? item.total_area : 0) * 100) / 100,
-      total_area:
-        Math.round((typeof item.total_area === 'number' ? item.total_area : 0) * 100) / 100,
+      total_area: Math.round((typeof item.total_area === 'number' ? item.total_area : 0) * 100) / 100,
       count: typeof item.count === 'number' ? item.count : 0,
-      average_area: typeof item.average_area === 'number' ? item.average_area : 0,
-    }));
+      average_area: typeof item.average_area === 'number' ? item.average_area : 0
+    }))
   },
 
+
   // 转换业态类别面积数据
-  toBusinessCategoryAreaData: (
-    data: Array<{
-      category: string;
-      total_area?: number;
-      area_percentage?: number;
-      occupancy_rate?: number;
-    }>
-  ): BarData[] => {
+  toBusinessCategoryAreaData: (data: Array<{ category: string; total_area?: number; area_percentage?: number; occupancy_rate?: number }>): BarData[] => {
     return data.map(item => ({
       name: item.category,
       value: Math.round((typeof item.total_area === 'number' ? item.total_area : 0) * 100) / 100,
-      total_area:
-        Math.round((typeof item.total_area === 'number' ? item.total_area : 0) * 100) / 100,
+      total_area: Math.round((typeof item.total_area === 'number' ? item.total_area : 0) * 100) / 100,
       area_percentage: typeof item.area_percentage === 'number' ? item.area_percentage : 0,
-      occupancy_rate: typeof item.occupancy_rate === 'number' ? item.occupancy_rate : 0,
-    }));
-  },
-};
+      occupancy_rate: typeof item.occupancy_rate === 'number' ? item.occupancy_rate : 0
+    }))
+  }
+
+}

@@ -1,5 +1,5 @@
-import { ThemeConfig } from 'antd';
-import zhCN from 'antd/locale/zh_CN';
+import { ThemeConfig } from 'antd'
+import zhCN from 'antd/locale/zh_CN'
 
 /**
  * Base theme configuration for the application
@@ -24,9 +24,9 @@ export const baseThemeConfig: ThemeConfig = {
       subMenuItemBg: 'transparent',
     },
   },
-};
+}
 
 /**
  * Application locale configuration
  */
-export const appLocale = zhCN;
+export const appLocale = zhCN

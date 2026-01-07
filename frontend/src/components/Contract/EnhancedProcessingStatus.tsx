@@ -17,7 +17,7 @@ import {
   Timeline,
   Badge,
   Typography,
-  Spin,
+  Spin
 } from 'antd';
 import {
   CheckCircleOutlined,
@@ -27,9 +27,12 @@ import {
   RocketOutlined,
   ExperimentOutlined,
   EyeOutlined,
-  SyncOutlined,
+  SyncOutlined
 } from '@ant-design/icons';
-import type { EnhancedSessionProgress, ProcessingOptions } from '../../types/enhancedPdfImport';
+import type {
+  EnhancedSessionProgress,
+  ProcessingOptions
+} from '../../types/enhancedPdfImport';
 
 const { Text } = Typography;
 
@@ -70,59 +73,48 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
   _onCancel,
   showDetails = true,
   _compact = false,
-  _onError,
+  _onError
 }) => {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [_autoRefresh, _setAutoRefresh] = useState(true);
 
   // 兼容旧版步骤映射
   const stepMap: Record<string, string> = {
-    file_upload: '文件上传',
-    pdf_conversion: 'PDF转换',
-    text_extraction: '文本提取',
-    info_extraction: '信息提取',
-    data_validation: '数据验证',
-    asset_matching: '资产匹配',
-    ownership_matching: '权属方匹配',
-    duplicate_check: '重复检查',
-    final_review: '最终审核',
+    'file_upload': '文件上传',
+    'pdf_conversion': 'PDF转换',
+    'text_extraction': '文本提取',
+    'info_extraction': '信息提取',
+    'data_validation': '数据验证',
+    'asset_matching': '资产匹配',
+    'ownership_matching': '权属方匹配',
+    'duplicate_check': '重复检查',
+    'final_review': '最终审核'
   };
 
   // 状态颜色映射
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed':
-        return 'success';
-      case 'processing':
-        return 'processing';
-      case 'error':
-        return 'error';
-      case 'uploading':
-        return 'warning';
-      default:
-        return 'default';
+      case 'completed': return 'success';
+      case 'processing': return 'processing';
+      case 'error': return 'error';
+      case 'uploading': return 'warning';
+      default: return 'default';
     }
   };
 
   // 获取状态图标
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'completed':
-        return <CheckCircleOutlined />;
-      case 'processing':
-        return <LoadingOutlined spin />;
-      case 'error':
-        return <CloseCircleOutlined />;
-      default:
-        return <ClockCircleOutlined />;
+      case 'completed': return <CheckCircleOutlined />;
+      case 'processing': return <LoadingOutlined spin />;
+      case 'error': return <CloseCircleOutlined />;
+      default: return <ClockCircleOutlined />;
     }
   };
 
   // 处理步骤数据
   const processingSteps = useMemo((): ProcessingStep[] => {
-    if (currentStatus === null || currentStatus === undefined) {
-      return [];
-    }
+    if (!currentStatus) return [];
 
     const steps: ProcessingStep[] = [
       {
@@ -130,65 +122,54 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
         status: 'completed',
         title: '文件上传',
         description: 'PDF文件已成功上传并保存',
-        progress: 100,
+        progress: 100
       },
       {
         step: 'pdf_conversion',
         status: currentStatus.processing_method === 'ocr' ? 'processing' : 'completed',
         title: 'PDF处理',
-        description:
-          currentStatus.processing_method === 'ocr'
-            ? '正在使用OCR技术处理PDF文档'
-            : 'PDF文档处理完成',
-        progress: currentStatus.processing_method === 'ocr' ? 80 : 100,
+        description: currentStatus.processing_method === 'ocr'
+          ? '正在使用OCR技术处理PDF文档'
+          : 'PDF文档处理完成',
+        progress: currentStatus.processing_method === 'ocr' ? 80 : 100
       },
       {
         step: 'text_extraction',
         status: 'completed',
         title: '文本提取',
-        description: `成功提取${currentStatus.chinese_char_count ?? 0}个中文字符`,
-        progress: 100,
+        description: `成功提取${currentStatus.chinese_char_count || 0}个中文字符`,
+        progress: 100
       },
       {
         step: 'info_extraction',
         status: 'completed',
         title: '信息提取',
         description: `提取了${Object.keys(currentStatus.extracted_data || {}).length}个字段`,
-        progress: 100,
+        progress: 100
       },
       {
         step: 'data_validation',
-        status:
-          currentStatus.validation_results !== null &&
-          currentStatus.validation_results !== undefined
-            ? 'completed'
-            : 'processing',
+        status: currentStatus.validation_results ? 'completed' : 'processing',
         title: '数据验证',
-        description:
-          currentStatus.validation_results !== null &&
-          currentStatus.validation_results !== undefined
-            ? '数据验证完成，置信度优秀'
-            : '正在进行智能数据验证',
-        progress:
-          currentStatus.validation_results !== null &&
-          currentStatus.validation_results !== undefined
-            ? 100
-            : 70,
+        description: currentStatus.validation_results
+          ? '数据验证完成，置信度优秀'
+          : '正在进行智能数据验证',
+        progress: currentStatus.validation_results ? 100 : 70
       },
       {
         step: 'matching',
         status: 'processing',
         title: '智能匹配',
         description: '正在进行资产和权属方智能匹配',
-        progress: 60,
+        progress: 60
       },
       {
         step: 'final_review',
         status: 'waiting',
         title: '最终审核',
         description: '等待用户审核和确认',
-        progress: 0,
-      },
+        progress: 0
+      }
     ];
 
     // 根据实际状态更新步骤
@@ -203,7 +184,7 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
             step.progress = 100;
           } else if (index === stepIndex) {
             step.status = 'processing';
-            step.progress = currentStatus.progress_percentage ?? 0;
+            step.progress = currentStatus.progress_percentage || 0;
           } else {
             step.status = 'waiting';
             step.progress = 0;
@@ -217,27 +198,21 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
 
   // 性能指标
   const performanceMetrics = useMemo(() => {
-    if (currentStatus === null || currentStatus === undefined) {
-      return null;
-    }
+    if (!currentStatus) return null;
 
     return {
       processingMethod: currentStatus.processing_method,
-      textQuality:
-        currentStatus.chinese_char_count !== null && currentStatus.chinese_char_count !== undefined
-          ? '优秀'
-          : '良好',
-      extractionConfidence:
-        currentStatus.confidence_score !== null && currentStatus.confidence_score !== undefined
-          ? `${(currentStatus.confidence_score * 100).toFixed(1)}%`
-          : '计算中',
+      textQuality: currentStatus.chinese_char_count ? '优秀' : '良好',
+      extractionConfidence: currentStatus.confidence_score
+        ? `${((currentStatus.confidence_score) * 100).toFixed(1)}%`
+        : '计算中',
       ocrUsed: currentStatus.ocr_used,
-      estimatedTime: currentStatus.processing_method === 'ocr' ? '45-60秒' : '30-45秒',
+      estimatedTime: currentStatus.processing_method === 'ocr' ? '45-60秒' : '30-45秒'
     };
   }, [currentStatus]);
 
   // 错误处理和重试逻辑
-  const handleRetry = () => {
+  const handleRetry = async () => {
     if (_onRefresh) {
       _onRefresh();
     }
@@ -247,7 +222,7 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
     setExpanded(expanded === step ? null : step);
   };
 
-  if (currentStatus == null) {
+  if (!currentStatus) {
     return (
       <Card>
         <Spin size="large" tip="加载处理状态中...">
@@ -265,7 +240,12 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
           <Space>
             <RocketOutlined />
             <span>PDF智能处理进度</span>
-            <Button type="text" size="small" icon={<SyncOutlined />} onClick={handleRetry}>
+            <Button
+              type="text"
+              size="small"
+              icon={<SyncOutlined />}
+              onClick={handleRetry}
+            >
               刷新
             </Button>
           </Space>
@@ -274,14 +254,14 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
         <Row gutter={16}>
           <Col span={16}>
             <Progress
-              percent={currentStatus.progress_percentage ?? 0}
+              percent={currentStatus.progress_percentage || 0}
               status={currentStatus.progress_percentage === 100 ? 'success' : 'active'}
               strokeColor={{
                 '0%': '#108ee9',
                 '100%': '#87d068',
               }}
               strokeWidth={8}
-              format={percent => `${percent}%`}
+              format={(percent) => `${percent}%`}
             />
             <div style={{ marginTop: 16 }}>
               <Text type="secondary">
@@ -298,13 +278,10 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
               />
               <Statistic
                 title="置信度"
-                value={performanceMetrics?.extractionConfidence ?? '计算中'}
+                value={performanceMetrics?.extractionConfidence || '计算中'}
                 suffix="%"
                 valueStyle={{
-                  color:
-                    parseFloat(performanceMetrics?.extractionConfidence ?? '0') > 80
-                      ? '#3f8600'
-                      : '#cf1322',
+                  color: parseFloat(performanceMetrics?.extractionConfidence || '0') > 80 ? '#3f8600' : '#cf1322'
                 }}
               />
             </Space>
@@ -327,7 +304,7 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
                     cursor: step.details ? 'pointer' : 'default',
                     padding: '8px 12px',
                     borderRadius: '6px',
-                    backgroundColor: step.status === 'processing' ? '#f6ffed' : 'transparent',
+                    backgroundColor: step.status === 'processing' ? '#f6ffed' : 'transparent'
                   }}
                   onClick={() => step.details && handleStepDetail(step.step)}
                 >
@@ -335,28 +312,18 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
                     <Space>
                       <Text strong>{step.title}</Text>
                       <Badge
-                        status={
-                          step.status === 'completed'
-                            ? 'success'
-                            : step.status === 'processing'
-                              ? 'processing'
-                              : step.status === 'error'
-                                ? 'error'
-                                : 'default'
-                        }
+                        status={step.status === 'completed' ? 'success' :
+                          step.status === 'processing' ? 'processing' :
+                            step.status === 'error' ? 'error' : 'default'}
                         text={
-                          step.status === 'completed'
-                            ? '已完成'
-                            : step.status === 'processing'
-                              ? '处理中'
-                              : step.status === 'error'
-                                ? '失败'
-                                : '等待中'
+                          step.status === 'completed' ? '已完成' :
+                            step.status === 'processing' ? '处理中' :
+                              step.status === 'error' ? '失败' : '等待中'
                         }
                       />
                     </Space>
 
-                    {step.description !== null && step.description !== undefined && (
+                    {step.description && (
                       <Text type="secondary" style={{ fontSize: '12px' }}>
                         {step.description}
                       </Text>
@@ -371,23 +338,27 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
                       />
                     )}
 
-                    {step.error !== null && step.error !== undefined && (
-                      <Alert message={step.error} type="error" style={{ marginTop: 8 }} />
+                    {step.error && (
+                      <Alert
+                        message={step.error}
+                        type="error"
+                        style={{ marginTop: 8 }}
+                      />
                     )}
                   </Space>
 
                   {/* 展开的详细信息 */}
                   {expanded === step.step && step.details && (
-                    <div
-                      style={{
-                        marginTop: 12,
-                        padding: 12,
-                        backgroundColor: '#fafafa',
-                        borderRadius: 4,
-                        border: '1px solid #d9d9d9',
-                      }}
-                    >
-                      <Text code>{JSON.stringify(step.details, null, 2)}</Text>
+                    <div style={{
+                      marginTop: 12,
+                      padding: 12,
+                      backgroundColor: '#fafafa',
+                      borderRadius: 4,
+                      border: '1px solid #d9d9d9'
+                    }}>
+                      <Text code>
+                        {JSON.stringify(step.details, null, 2)}
+                      </Text>
                     </div>
                   )}
                 </div>
@@ -398,23 +369,21 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
       )}
 
       {/* 警告和建议 */}
-      {currentStatus.warnings !== null &&
-        currentStatus.warnings !== undefined &&
-        currentStatus.warnings.length > 0 && (
-          <Alert
-            message="处理提示"
-            description={
-              <ul>
-                {currentStatus.warnings.map((warning: string, index: number) => (
-                  <li key={index}>{warning}</li>
-                ))}
-              </ul>
-            }
-            type="warning"
-            showIcon
-            style={{ marginTop: 16 }}
-          />
-        )}
+      {currentStatus.warnings && currentStatus.warnings.length > 0 && (
+        <Alert
+          message="处理提示"
+          description={
+            <ul>
+              {currentStatus.warnings.map((warning: string, index: number) => (
+                <li key={index}>{warning}</li>
+              ))}
+            </ul>
+          }
+          type="warning"
+          showIcon
+          style={{ marginTop: 16 }}
+        />
+      )}
 
       {/* 增强功能标识 */}
       <Card size="small" style={{ marginTop: 16 }}>
@@ -425,8 +394,14 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
           <Tag icon={<EyeOutlined />} color="green">
             智能质量评估
           </Tag>
-          <Tag color="purple">多引擎支持</Tag>
-          {performanceMetrics?.ocrUsed === true && <Tag color="orange">OCR增强</Tag>}
+          <Tag color="purple">
+            多引擎支持
+          </Tag>
+          {performanceMetrics?.ocrUsed && (
+            <Tag color="orange">
+              OCR增强
+            </Tag>
+          )}
         </Space>
       </Card>
     </div>

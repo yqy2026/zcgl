@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Card,
   Timeline,
@@ -15,7 +15,7 @@ import {
   Row,
   Col,
   Pagination,
-} from 'antd';
+} from "antd";
 import {
   HistoryOutlined,
   EyeOutlined,
@@ -26,13 +26,13 @@ import {
   EditOutlined,
   PlusOutlined,
   DeleteOutlined,
-} from '@ant-design/icons';
-import { useQuery } from '@tanstack/react-query';
-import dayjs from 'dayjs';
+} from "@ant-design/icons";
+import { useQuery } from "@tanstack/react-query";
+import dayjs, { Dayjs } from "dayjs";
 
-import { assetService } from '@/services/assetService';
-import type { AssetHistory } from '@/types/asset';
-import { formatDate } from '@/utils/format';
+import { assetService } from "@/services/assetService";
+import type { AssetHistory } from "@/types/asset";
+import { formatDate } from "@/utils/format";
 
 const { Option } = Select;
 const { RangePicker } = DatePicker;
@@ -56,14 +56,14 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
     error,
     refetch,
   } = useQuery({
-    queryKey: ['asset-history', assetId, page, limit, changeType, dateRange],
+    queryKey: ["asset-history", assetId, page, limit, changeType, dateRange],
     queryFn: () => assetService.getAssetHistory(assetId, page, limit, changeType),
     enabled: !!assetId,
   });
 
   // 获取历史详情
   const { isLoading: detailLoading } = useQuery({
-    queryKey: ['history-detail', selectedHistory?.id],
+    queryKey: ["history-detail", selectedHistory?.id],
     queryFn: () => assetService.getHistoryDetail(selectedHistory!.id),
     enabled: !!selectedHistory,
   });
@@ -84,29 +84,29 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
   // 获取变更类型图标和颜色
   const getChangeTypeConfig = (type?: string) => {
     switch (type) {
-      case 'create':
+      case "create":
         return {
           icon: <PlusOutlined />,
-          color: 'green',
-          text: '创建',
+          color: "green",
+          text: "创建",
         };
-      case 'update':
+      case "update":
         return {
           icon: <EditOutlined />,
-          color: 'blue',
-          text: '更新',
+          color: "blue",
+          text: "更新",
         };
-      case 'delete':
+      case "delete":
         return {
           icon: <DeleteOutlined />,
-          color: 'red',
-          text: '删除',
+          color: "red",
+          text: "删除",
         };
       default:
         return {
           icon: <EditOutlined />,
-          color: 'default',
-          text: type != null ? type : '未知',
+          color: "default",
+          text: type || "未知",
         };
     }
   };
@@ -114,15 +114,12 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
   // 渲染字段变更详情
   const renderFieldChanges = (
     oldValues: Record<string, unknown>,
-    newValues: Record<string, unknown>
+    newValues: Record<string, unknown>,
   ) => {
     const changes = [];
 
     // 合并所有变更的字段
-    const allFields = new Set([
-      ...Object.keys(oldValues != null ? oldValues : {}),
-      ...Object.keys(newValues != null ? newValues : {}),
-    ]);
+    const allFields = new Set([...Object.keys(oldValues || {}), ...Object.keys(newValues || {})]);
 
     for (const field of allFields) {
       const oldValue = oldValues?.[field];
@@ -131,34 +128,23 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
       if (oldValue !== newValue) {
         changes.push({
           field,
-          oldValue: oldValue ?? '-',
-          newValue: newValue ?? '-',
+          oldValue: oldValue || "-",
+          newValue: newValue || "-",
         });
       }
     }
 
-    return changes.map((change, index) => {
-      const formatValue = (val: unknown): string => {
-        if (typeof val === 'object' && val !== null) {
-          return JSON.stringify(val);
-        }
-        return String(val);
-      };
-
-      return (
-        <Descriptions.Item key={index} label={change.field} span={3}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ color: '#ff4d4f', textDecoration: 'line-through' }}>
-              {formatValue(change.oldValue)}
-            </span>
-            <span>→</span>
-            <span style={{ color: '#52c41a', fontWeight: 'bold' }}>
-              {formatValue(change.newValue)}
-            </span>
-          </div>
-        </Descriptions.Item>
-      );
-    });
+    return changes.map((change, index) => (
+      <Descriptions.Item key={index} label={change.field} span={3}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ color: "#ff4d4f", textDecoration: "line-through" }}>
+            {String(change.oldValue)}
+          </span>
+          <span>→</span>
+          <span style={{ color: "#52c41a", fontWeight: "bold" }}>{String(change.newValue)}</span>
+        </div>
+      </Descriptions.Item>
+    ));
   };
 
   if (error) {
@@ -168,15 +154,7 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
         description="无法加载变更历史，请稍后重试"
         type="error"
         showIcon
-        action={
-          <Button
-            onClick={() => {
-              void refetch();
-            }}
-          >
-            重新加载
-          </Button>
-        }
+        action={<Button onClick={() => refetch()}>重新加载</Button>}
       />
     );
   }
@@ -192,7 +170,7 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
               value={changeType}
               onChange={setChangeType}
               allowClear
-              style={{ width: '100%' }}
+              style={{ width: "100%" }}
             >
               <Option value="create">创建</Option>
               <Option value="update">更新</Option>
@@ -203,15 +181,15 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
           <Col xs={24} sm={10} md={8}>
             <RangePicker
               value={dateRange}
-              onChange={dates => {
+              onChange={(dates) => {
                 if (dates && dates[0] && dates[1]) {
-                  setDateRange([dates[0], dates[1]]);
+                  setDateRange([dates[0] as Dayjs, dates[1] as Dayjs]);
                 } else {
                   setDateRange(null);
                 }
               }}
-              placeholder={['开始日期', '结束日期']}
-              style={{ width: '100%' }}
+              placeholder={["开始日期", "结束日期"]}
+              style={{ width: "100%" }}
             />
           </Col>
 
@@ -220,21 +198,15 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
               <Button icon={<FilterOutlined />} onClick={handleResetFilter}>
                 重置
               </Button>
-              <Button
-                icon={<ReloadOutlined />}
-                onClick={() => {
-                  void refetch();
-                }}
-                loading={isLoading}
-              >
+              <Button icon={<ReloadOutlined />} onClick={() => refetch()} loading={isLoading}>
                 刷新
               </Button>
             </Space>
           </Col>
 
-          <Col xs={24} sm={24} md={6} style={{ textAlign: 'right' }}>
-            <span style={{ color: '#8c8c8c', fontSize: '14px' }}>
-              共 {historyData?.data?.pagination?.total ?? 0} 条记录
+          <Col xs={24} sm={24} md={6} style={{ textAlign: "right" }}>
+            <span style={{ color: "#8c8c8c", fontSize: "14px" }}>
+              共 {historyData?.data?.pagination?.total || 0} 条记录
             </span>
           </Col>
         </Row>
@@ -253,7 +225,7 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
           {historyData?.data?.items && historyData.data.items.length > 0 ? (
             <>
               <Timeline>
-                {historyData.data.items.map(history => {
+                {historyData.data.items.map((history) => {
                   const config = getChangeTypeConfig(history.change_type);
 
                   return (
@@ -263,29 +235,29 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
                         <div style={{ marginBottom: 8 }}>
                           <Space>
                             <Tag color={config.color}>{config.text}</Tag>
-                            <span style={{ fontWeight: 'bold' }}>
-                              {history.changed_fields?.join(', ') ?? '无字段变更'}
+                            <span style={{ fontWeight: "bold" }}>
+                              {history.changed_fields?.join(", ") || "无字段变更"}
                             </span>
                           </Space>
                         </div>
 
                         {/* 变更信息 */}
-                        <div style={{ marginBottom: 8, color: '#8c8c8c', fontSize: '14px' }}>
+                        <div style={{ marginBottom: 8, color: "#8c8c8c", fontSize: "14px" }}>
                           <Space split={<span>•</span>}>
                             <span>
                               <UserOutlined style={{ marginRight: 4 }} />
-                              {history.changed_by ?? history.operator ?? '未知用户'}
+                              {history.changed_by || history.operator || "未知用户"}
                             </span>
                             <span>
                               <CalendarOutlined style={{ marginRight: 4 }} />
-                              {formatDate(history.changed_at ?? history.operation_time, 'datetime')}
+                              {formatDate(history.changed_at || history.operation_time, "datetime")}
                             </span>
                           </Space>
                         </div>
 
                         {/* 变更原因 */}
-                        {history.reason != null && (
-                          <div style={{ marginBottom: 8, color: '#595959' }}>
+                        {history.reason && (
+                          <div style={{ marginBottom: 8, color: "#595959" }}>
                             原因：{history.reason}
                           </div>
                         )}
@@ -309,12 +281,12 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
               </Timeline>
 
               {/* 分页 */}
-              {(historyData?.data?.pagination?.total ?? 0) > limit && (
-                <div style={{ textAlign: 'center', marginTop: 24 }}>
+              {(historyData?.data?.pagination?.total || 0) > limit && (
+                <div style={{ textAlign: "center", marginTop: 24 }}>
                   <Pagination
                     current={page}
                     pageSize={limit}
-                    total={historyData?.data?.pagination?.total ?? 0}
+                    total={historyData?.data?.pagination?.total || 0}
                     showSizeChanger
                     showQuickJumper
                     showTotal={(total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`}
@@ -353,7 +325,7 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
       >
         {selectedHistory && (
           <Spin spinning={detailLoading}>
-            <Descriptions bordered column={1} labelStyle={{ width: '120px' }}>
+            <Descriptions bordered column={1} labelStyle={{ width: "120px" }}>
               <Descriptions.Item label="变更类型">
                 <Tag color={getChangeTypeConfig(selectedHistory.change_type).color}>
                   {getChangeTypeConfig(selectedHistory.change_type).text}
@@ -361,46 +333,44 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
               </Descriptions.Item>
 
               <Descriptions.Item label="变更字段">
-                {selectedHistory.changed_fields?.join(', ') ?? '无字段变更'}
+                {selectedHistory.changed_fields?.join(", ") || "无字段变更"}
               </Descriptions.Item>
 
               <Descriptions.Item label="操作人">
-                {selectedHistory.changed_by ?? selectedHistory.operator ?? '未知用户'}
+                {selectedHistory.changed_by || selectedHistory.operator || "未知用户"}
               </Descriptions.Item>
 
               <Descriptions.Item label="变更时间">
                 {formatDate(
-                  selectedHistory.changed_at ?? selectedHistory.operation_time,
-                  'datetime'
+                  selectedHistory.changed_at || selectedHistory.operation_time,
+                  "datetime",
                 )}
               </Descriptions.Item>
 
-              {((selectedHistory.reason != null && selectedHistory.reason.length > 0) ||
-                (selectedHistory.description != null &&
-                  selectedHistory.description.length > 0)) && (
+              {(selectedHistory.reason || selectedHistory.description) && (
                 <Descriptions.Item label="变更原因">
-                  {selectedHistory.reason ?? selectedHistory.description}
+                  {selectedHistory.reason || selectedHistory.description}
                 </Descriptions.Item>
               )}
             </Descriptions>
 
             {/* 字段变更详情 */}
-            {selectedHistory.change_type === 'update' &&
+            {selectedHistory.change_type === "update" &&
               selectedHistory.old_values &&
               selectedHistory.new_values && (
                 <div style={{ marginTop: 24 }}>
                   <h4>字段变更详情</h4>
-                  <Descriptions bordered column={1} labelStyle={{ width: '120px' }}>
+                  <Descriptions bordered column={1} labelStyle={{ width: "120px" }}>
                     {renderFieldChanges(selectedHistory.old_values, selectedHistory.new_values)}
                   </Descriptions>
                 </div>
               )}
 
             {/* 创建时的数据 */}
-            {selectedHistory.change_type === 'create' && selectedHistory.new_values && (
+            {selectedHistory.change_type === "create" && selectedHistory.new_values && (
               <div style={{ marginTop: 24 }}>
                 <h4>创建时的数据</h4>
-                <Descriptions bordered column={2} labelStyle={{ width: '120px' }}>
+                <Descriptions bordered column={2} labelStyle={{ width: "120px" }}>
                   {Object.entries(selectedHistory.new_values).map(([key, value]) => (
                     <Descriptions.Item key={key} label={key}>
                       {String(value)}

@@ -72,7 +72,7 @@ safe_print("Info: OCR service disabled - PDF intelligent import unavailable")
 # ===== 关键依赖（生产环境必须存在）=====
 # 路由注册器 - 关键依赖
 router_registry_module = safe_import(
-    ".core.router_registry",
+    "src.core.router_registry",
     critical=True,
     mock_factory=create_mock_registry,
 )
@@ -88,7 +88,7 @@ else:
 
 # 安全中间件 - 关键依赖
 setup_security_middleware = safe_import_from(
-    ".middleware.security_middleware",
+    "src.middleware.security_middleware",
     "setup_security_middleware",
     critical=True,
     fallback=lambda app: None,
@@ -96,22 +96,22 @@ setup_security_middleware = safe_import_from(
 
 # ===== 重要功能（推荐存在，允许降级）=====
 ErrorRecoveryMiddleware = safe_import(
-    ".middleware.error_recovery_middleware:ErrorRecoveryMiddleware",
+    "src.middleware.error_recovery_middleware:ErrorRecoveryMiddleware",
     fallback=None,
 )
 
 RequestLoggingMiddleware = safe_import(
-    ".middleware.request_logging:RequestLoggingMiddleware",
+    "src.middleware.request_logging:RequestLoggingMiddleware",
     fallback=None,
 )
 
 # V1 兼容中间件（可选，迁移完成后可移除）
 V1CompatibilityMiddleware = safe_import(
-    ".middleware.v1_compatibility:V1CompatibilityMiddleware",
+    "src.middleware.v1_compatibility:V1CompatibilityMiddleware",
     fallback=None,
 )
 add_v1_compatibility = safe_import_from(
-    ".middleware.v1_compatibility",
+    "src.middleware.v1_compatibility",
     "add_v1_compatibility",
     fallback=lambda app, preserve_endpoints=None: None,
 )
@@ -140,7 +140,9 @@ async def lifespan(app: FastAPI):
                 logger.error(f"JWT安全问题: {issue}")
             # 非测试模式下拒绝启动
             if not is_testing():
-                raise RuntimeError("JWT配置存在严重安全问题，拒绝启动。请检查SECRET_KEY配置。")
+                raise RuntimeError(
+                    "JWT配置存在严重安全问题，拒绝启动。请检查SECRET_KEY配置。"
+                )
         else:
             logger.info("JWT配置安全检查通过")
 
@@ -204,7 +206,9 @@ app = FastAPI(
 initialize_config()
 
 # 设置CORS中间件
-cors_origins = get_config("cors_origins", ["http://localhost:5173", "http://localhost:5174"])
+cors_origins = get_config(
+    "cors_origins", ["http://localhost:5173", "http://localhost:5174"]
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
@@ -258,7 +262,9 @@ try:
     file_security_middleware = create_file_security_middleware(app)
     app.add_middleware(type(file_security_middleware))
 except ImportError as e:
-    safe_print(f"Warning: File upload security middleware not available - {safe_error_message(e)}")
+    safe_print(
+        f"Warning: File upload security middleware not available - {safe_error_message(e)}"
+    )
 
 # 设置统一异常处理器
 setup_exception_handlers(app)

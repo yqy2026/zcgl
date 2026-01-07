@@ -1,3 +1,3 @@
-from .service import custom_field_service  # noqa: F401
+from .service import custom_field_service
 
 __all__ = ["custom_field_service"]

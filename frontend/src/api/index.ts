@@ -17,5 +17,5 @@ export type {
   EnhancedApiClientConfig,
   EnhancedApiError,
   RetryConfig,
-  CacheConfig,
+  CacheConfig
 } from '../types/apiResponse';

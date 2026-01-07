@@ -1,116 +1,113 @@
-import { useState, useEffect, useCallback } from 'react';
-import { message } from 'antd';
-import { AuthService } from '../services/authService';
-import type { User, LoginCredentials } from '../types/auth';
-import { createLogger } from '../utils/logger';
+import { useState, useEffect, useCallback } from 'react'
+import { message } from 'antd'
+import { AuthService } from '../services/authService'
+import type { User, LoginCredentials } from '../types/auth'
+import { createLogger } from '../utils/logger'
 
-const authLogger = createLogger('Auth');
+const authLogger = createLogger('Auth')
 
 export const useAuth = () => {
-  const [user, setUser] = useState<User | null>(AuthService.getLocalUser());
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(AuthService.getLocalUser())
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   // 初始化认证状态
   useEffect(() => {
-    const initAuth = () => {
+    const initAuth = async () => {
       try {
         if (AuthService.isAuthenticated()) {
-          const currentUser = AuthService.getLocalUser();
-          const _permissions = AuthService.getLocalPermissions();
+          const currentUser = AuthService.getLocalUser()
+          const _permissions = AuthService.getLocalPermissions()
 
-          setUser(currentUser);
+          setUser(currentUser)
           // 设置API请求头
-          const token = localStorage.getItem('auth_token');
-          if (token !== null && token !== undefined && token !== '') {
+          const token = localStorage.getItem('auth_token')
+          if (token) {
             // 这里可以设置API默认的Authorization header
           }
         }
       } catch (error) {
-        authLogger.error('初始化认证状态失败:', error as Error);
+        authLogger.error('初始化认证状态失败:', error as Error)
         // 清除可能损坏的本地存储
-        void AuthService.logout();
+        AuthService.logout()
       }
-    };
+    }
 
-    initAuth();
-  }, []);
+    initAuth()
+  }, [])
 
   const login = useCallback(async (credentials: LoginCredentials) => {
-    setLoading(true);
-    setError(null);
+    setLoading(true)
+    setError(null)
 
     try {
-      const response = await AuthService.login(credentials);
+      const response = await AuthService.login(credentials) as any
 
       if (response.success) {
-        setUser(response.data.user);
-        message.success('登录成功');
+        setUser(response.data.user)
+        message.success('登录成功')
       } else {
-        setError('用户名或密码错误');
+        setError('用户名或密码错误')
       }
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : '登录失败，请稍后重试';
-      setError(errorMessage);
-      message.error(errorMessage);
+      const errorMessage = err instanceof Error ? err.message : '登录失败，请稍后重试'
+      setError(errorMessage)
+      message.error(errorMessage)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, []);
+  }, [])
 
   const logout = useCallback(async () => {
-    setLoading(true);
+    setLoading(true)
 
     try {
-      await AuthService.logout();
-      setUser(null);
-      setError(null);
-      message.success('已安全登出');
+      await AuthService.logout()
+      setUser(null)
+      setError(null)
+      message.success('已安全登出')
     } catch (err: unknown) {
-      authLogger.error('登出失败:', err as Error);
+      authLogger.error('登出失败:', err as Error)
       // 即使API失败，也要清除本地状态
-      setUser(null);
-      setError(null);
+      setUser(null)
+      setError(null)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, []);
+  }, [])
 
   const refreshUser = useCallback(async () => {
     try {
       if (AuthService.isAuthenticated()) {
-        const currentUser = await AuthService.getCurrentUser();
-        setUser(currentUser);
+        const currentUser = await AuthService.getCurrentUser()
+        setUser(currentUser)
       }
     } catch (error) {
-      authLogger.error('刷新用户信息失败:', error as Error);
+      authLogger.error('刷新用户信息失败:', error as Error)
       // 如果刷新失败，尝试刷新token
       try {
-        await AuthService.refreshToken();
-        const currentUser = await AuthService.getCurrentUser();
-        setUser(currentUser);
+        await AuthService.refreshToken()
+        const currentUser = await AuthService.getCurrentUser()
+        setUser(currentUser)
       } catch (refreshError) {
-        authLogger.error('刷新token失败:', refreshError as Error);
+        authLogger.error('刷新token失败:', refreshError as Error)
         // 彻底登出
-        await logout();
+        await logout()
       }
     }
-  }, [logout]);
+  }, [logout])
 
   const hasPermission = useCallback((resource: string, action: string): boolean => {
-    return AuthService.hasPermission(resource, action);
-  }, []);
+    return AuthService.hasPermission(resource, action)
+  }, [])
 
-  const hasAnyPermission = useCallback(
-    (permissions: Array<{ resource: string; action: string }>): boolean => {
-      return AuthService.hasAnyPermission(permissions);
-    },
-    []
-  );
+  const hasAnyPermission = useCallback((permissions: Array<{ resource: string; action: string }>): boolean => {
+    return AuthService.hasAnyPermission(permissions)
+  }, [])
 
   const clearError = useCallback(() => {
-    setError(null);
-  }, []);
+    setError(null)
+  }, [])
 
   return {
     user,
@@ -123,6 +120,6 @@ export const useAuth = () => {
     refreshUser,
     hasPermission,
     hasAnyPermission,
-    clearError,
-  };
-};
+    clearError
+  }
+}

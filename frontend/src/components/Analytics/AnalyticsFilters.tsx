@@ -7,7 +7,7 @@ import {
   HistoryOutlined,
   ReloadOutlined,
   DownOutlined,
-  UpOutlined,
+  UpOutlined
 } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { createLogger } from '@/utils/logger';
@@ -53,7 +53,7 @@ const FiltersCardHeader: React.FC = () => {
     handleApply,
     loading,
     showAdvanced,
-    onToggleAdvanced,
+    onToggleAdvanced
   } = useAnalyticsFiltersContext();
 
   return (
@@ -63,7 +63,11 @@ const FiltersCardHeader: React.FC = () => {
         <Space>
           <FilterOutlined />
           <span>数据筛选</span>
-          {activeFiltersCount > 0 && <Tag color="blue">{activeFiltersCount} 个筛选条件</Tag>}
+          {activeFiltersCount > 0 && (
+            <Tag color="blue">
+              {activeFiltersCount} 个筛选条件
+            </Tag>
+          )}
         </Space>
       }
       extra={
@@ -153,23 +157,21 @@ const AnalyticsFiltersInner: React.FC = () => {
       try {
         const [ownershipEntities, businessCategories] = await Promise.all([
           assetService.getOwnershipEntities(),
-          assetService.getBusinessCategories(),
+          assetService.getBusinessCategories()
         ]);
         return {
           ownershipEntities,
-          businessCategories,
+          businessCategories
         };
       } catch (error) {
-        logger.warn('获取筛选选项失败:', {
-          error: error instanceof Error ? error.message : String(error),
-        });
+        logger.warn('获取筛选选项失败:', { error: error instanceof Error ? error.message : String(error) });
         return {
           ownershipEntities: [],
-          businessCategories: [],
+          businessCategories: []
         };
       }
     },
-    staleTime: 30 * 60 * 1000, // 30 minute cache
+    staleTime: 30 * 60 * 1000 // 30 minute cache
   });
 
   return <FiltersCardHeader />;
@@ -188,7 +190,7 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = ({
   loading = false,
   showAdvanced = false,
   onToggleAdvanced,
-  realTimeUpdate = true,
+  realTimeUpdate = true
 }) => {
   return (
     <AnalyticsFiltersProvider

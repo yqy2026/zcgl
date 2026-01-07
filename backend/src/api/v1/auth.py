@@ -37,7 +37,9 @@ router = APIRouter(tags=["认证管理"])
 
 
 @router.post("/login", summary="用户登录")
-async def login(request: Request, credentials: LoginRequest, db: Session = Depends(get_db)):
+async def login(
+    request: Request, credentials: LoginRequest, db: Session = Depends(get_db)
+):
     """
     用户登录接口
 
@@ -55,7 +57,9 @@ async def login(request: Request, credentials: LoginRequest, db: Session = Depen
 
     try:
         # 认证用户（启用真实认证流程）
-        user = auth_service.authenticate_user(credentials.username, credentials.password)
+        user = auth_service.authenticate_user(
+            credentials.username, credentials.password
+        )
         if not user:
             # 记录失败登录
             existing_user = user_crud.get_by_username(db, credentials.username)
@@ -69,7 +73,9 @@ async def login(request: Request, credentials: LoginRequest, db: Session = Depen
                     user_agent=user_agent,
                 )
 
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="用户名或密码错误")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="用户名或密码错误"
+            )
 
         # 创建令牌（增强安全性）
         device_info = {
@@ -247,7 +253,9 @@ async def refresh_token(
             ip_address=client_ip,
             user_agent=user_agent,
         )
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="无效的刷新令牌")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="无效的刷新令牌"
+        )
 
     # 获取用户
     user = auth_service.get_user_by_id(str(session.user_id))
@@ -255,11 +263,15 @@ async def refresh_token(
     if not user or not user_active:
         # 撤销无效会话
         auth_service.revoke_session(refresh_data.refresh_token)
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="用户不存在或已被禁用")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="用户不存在或已被禁用"
+        )
 
     # 检查IP变化（可选安全检查）
     session_ip = (
-        str(getattr(session, "ip_address", "")) if getattr(session, "ip_address", "") else None
+        str(getattr(session, "ip_address", ""))
+        if getattr(session, "ip_address", "")
+        else None
     )
     if session_ip and session_ip != client_ip:
         # 可以选择拒绝IP变化的请求，或记录警告
@@ -277,13 +289,13 @@ async def refresh_token(
     tokens = auth_service.create_tokens(user, device_info)
 
     # 更新会话
-    session.refresh_token = tokens.refresh_token
-    session.last_accessed_at = datetime.now()
-    session.ip_address = client_ip  # 更新IP地址
-    session.user_agent = user_agent  # 更新User-Agent
+    setattr(session, "refresh_token", tokens.refresh_token)
+    setattr(session, "last_accessed_at", datetime.now())
+    setattr(session, "ip_address", client_ip)  # 更新IP地址
+    setattr(session, "user_agent", user_agent)  # 更新User-Agent
     # 更新会话ID（如果存在）
     if tokens.session_id:
-        session.session_id = tokens.session_id
+        setattr(session, "session_id", tokens.session_id)
     db.commit()
 
     # 记录成功的刷新操作
@@ -355,7 +367,9 @@ async def debug_auth(db: Session = Depends(get_db)):
             return {"error": "Admin user not found"}
 
         # 2. 测试密码验证
-        password_valid = auth_service.verify_password("Admin123!@#", admin_user.password_hash)
+        password_valid = auth_service.verify_password(
+            "Admin123!@#", admin_user.password_hash
+        )
 
         # 3. 测试用户认证
         try:
@@ -372,7 +386,9 @@ async def debug_auth(db: Session = Depends(get_db)):
             if authenticated_user:
                 tokens = auth_service.create_tokens(authenticated_user)
                 token_success = True
-                access_token_length = len(tokens.access_token) if tokens.access_token else 0
+                access_token_length = (
+                    len(tokens.access_token) if tokens.access_token else 0
+                )
             else:
                 token_success = False
                 access_token_length = 0
@@ -500,7 +516,9 @@ async def get_user(
 
     # 权限检查
     if current_user.role != "admin" and current_user.id != user_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="无权访问该用户信息")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="无权访问该用户信息"
+        )
 
     user = user_crud.get(db, user_id)
     if not user:
@@ -527,7 +545,9 @@ async def update_user(
 
     # 权限检查
     if current_user.role != "admin" and current_user.id != user_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="无权修改该用户信息")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="无权修改该用户信息"
+        )
 
     try:
         user = user_crud.update(db, user_crud.get(db, str(user_id)), user_data)
@@ -555,7 +575,9 @@ async def change_password(
 
     # 权限检查
     if current_user.role != "admin" and current_user.id != user_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="无权修改该用户密码")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="无权修改该用户密码"
+        )
 
     user = user_crud.get(db, user_id)
     if not user:
@@ -593,7 +615,10 @@ async def deactivate_user(
     user_crud = UserCRUD()
 
     user = user_crud.get(db, str(user_id))
-    success = user_crud.delete(db, str(user_id)) if user else False
+    if user:
+        success = user_crud.delete(db, str(user_id))
+    else:
+        success = False
     if not success:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在")
 
@@ -642,7 +667,9 @@ async def unlock_user(
     return {"message": "用户已解锁"}
 
 
-@router.get("/sessions", response_model=list[UserSessionResponse], summary="获取用户会话列表")
+@router.get(
+    "/sessions", response_model=list[UserSessionResponse], summary="获取用户会话列表"
+)
 async def get_user_sessions(
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(get_current_active_user),
@@ -727,10 +754,12 @@ async def lock_user(
         user = user_crud.get(db, user_id)
 
         if not user:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在"
+            )
 
-        user.is_locked = True
-        user.updated_at = datetime.now(UTC)
+        setattr(user, "is_locked", True)
+        setattr(user, "updated_at", datetime.now(UTC))
         db.commit()
         db.refresh(user)
 
@@ -770,10 +799,12 @@ async def unlock_user_account(
         user = user_crud.get(db, user_id)
 
         if not user:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在"
+            )
 
-        user.is_locked = False
-        user.updated_at = datetime.now(UTC)
+        setattr(user, "is_locked", False)
+        setattr(user, "updated_at", datetime.now(UTC))
         db.commit()
         db.refresh(user)
 
@@ -800,7 +831,7 @@ async def unlock_user_account(
 @router.post("/users/{user_id}/reset-password", summary="重置用户密码")
 async def reset_user_password(
     user_id: str,
-    password_data: dict = None,
+    password_data: dict = {"new_password": ..., "reason": None},
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(require_admin),
 ):
@@ -811,9 +842,6 @@ async def reset_user_password(
     - 适用于用户忘记密码等情况
     """
     from pydantic import BaseModel
-
-    if password_data is None:
-        password_data = {"new_password": ..., "reason": None}
 
     class PasswordResetRequest(BaseModel):
         new_password: str
@@ -833,11 +861,17 @@ async def reset_user_password(
 
         user = user_crud.get(db, user_id)
         if not user:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在"
+            )
 
         # 设置新密码
-        user.hashed_password = auth_service.get_password_hash(reset_request.new_password)
-        user.updated_at = datetime.now(UTC)
+        setattr(
+            user,
+            "hashed_password",
+            auth_service.get_password_hash(reset_request.new_password),
+        )
+        setattr(user, "updated_at", datetime.now(UTC))
         db.commit()
         db.refresh(user)
 
@@ -881,7 +915,9 @@ async def get_user_statistics(
         total_users = db.query(func.count(User.id)).scalar()
         active_users = db.query(func.count(User.id)).filter(User.is_active).scalar()
         locked_users = db.query(func.count(User.id)).filter(User.is_locked).scalar()
-        inactive_users = db.query(func.count(User.id)).filter(User.is_active.is_(False)).scalar()
+        inactive_users = (
+            db.query(func.count(User.id)).filter(User.is_active.is_(False)).scalar()
+        )
 
         return {
             "success": True,
@@ -894,4 +930,6 @@ async def get_user_statistics(
             },
         }
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e)
+        )

@@ -1,11 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Input, Alert, Typography, Space, Button, Tag, Divider } from 'antd';
-import {
-  InfoCircleOutlined,
-  ExclamationCircleOutlined,
-  CheckCircleOutlined,
-  EditOutlined,
-} from '@ant-design/icons';
+import { InfoCircleOutlined, ExclamationCircleOutlined, CheckCircleOutlined, EditOutlined } from '@ant-design/icons';
 import { createLogger } from '../../utils/logger';
 
 const componentLogger = createLogger('FilenameValidator');
@@ -31,7 +26,7 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
   onValidationChange,
   onFilenameChange,
   showSuggestions = true,
-  className = '',
+  className = ''
 }) => {
   const [validationResult, setValidationResult] = useState<FilenameValidationResult | null>(null);
   const [suggestedFilename, setSuggestedFilename] = useState<string>('');
@@ -47,17 +42,17 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
     '）': ')',
     '《': '<',
     '》': '>',
-    '\u201C': '"', // Left double quotation mark
-    '\u201D': '"', // Right double quotation mark
-    '\u2018': "'", // Left single quotation mark
-    '\u2019': "'", // Right single quotation mark
+    '\u201C': '"',  // Left double quotation mark
+    '\u201D': '"',  // Right double quotation mark
+    '\u2018': "'",  // Left single quotation mark
+    '\u2019': "'",  // Right single quotation mark
     '：': ':',
     '，': ',',
     '。': '.',
     '；': ';',
     '！': '!',
     '？': '?',
-    '…': '...',
+    '…': '...'
   };
 
   // 本地文件名验证
@@ -78,15 +73,11 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
     }
 
     // 中文特殊字符检查
-    const hasChineseSpecial = Object.keys(chineseSpecialCharsMap).some(char =>
-      fname.includes(char)
-    );
+    const hasChineseSpecial = Object.keys(chineseSpecialCharsMap).some(char => fname.includes(char));
     if (hasChineseSpecial) {
       issues.push('包含中文特殊字符');
       suggestions.push('建议将中文特殊字符替换为标准字符');
-      if (severity === 'low') {
-        severity = 'medium';
-      }
+      if (severity === 'low') severity = 'medium';
     }
 
     // Unicode字符检查
@@ -115,7 +106,7 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
       valid: issues.length === 0,
       issues,
       suggestions,
-      severity,
+      severity
     };
   };
 
@@ -145,8 +136,8 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
     return suggested;
   };
 
-  const validateFilename = (fname: string) => {
-    if (fname == null || fname === '') {
+  const validateFilename = async (fname: string) => {
+    if (!fname) {
       setValidationResult(null);
       setSuggestedFilename('');
       return;
@@ -172,13 +163,14 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
           componentLogger.warn(`服务器验证失败: ${String(error)}`);
         }
       }
+
     } catch (error) {
       componentLogger.error('文件名验证失败:', error as Error);
       setValidationResult({
         valid: false,
         issues: ['验证过程中发生错误'],
         suggestions: ['请稍后重试'],
-        severity: 'high',
+        severity: 'high'
       });
     } finally {
       setLoading(false);
@@ -188,7 +180,6 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
   useEffect(() => {
     validateFilename(filename);
     setCustomFilename(filename);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filename]);
 
   useEffect(() => {
@@ -216,41 +207,23 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
   };
 
   const getStatusIcon = () => {
-    if (!validationResult) {
-      return <InfoCircleOutlined style={{ color: '#1890ff' }} />;
-    }
-    if (validationResult.valid) {
-      return <CheckCircleOutlined style={{ color: '#52c41a' }} />;
-    }
-    if (validationResult.severity === 'high') {
-      return <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />;
-    }
+    if (!validationResult) return <InfoCircleOutlined style={{ color: '#1890ff' }} />;
+    if (validationResult.valid) return <CheckCircleOutlined style={{ color: '#52c41a' }} />;
+    if (validationResult.severity === 'high') return <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />;
     return <ExclamationCircleOutlined style={{ color: '#faad14' }} />;
   };
 
   const getStatusColor = () => {
-    if (!validationResult) {
-      return '#1890ff';
-    }
-    if (validationResult.valid) {
-      return '#52c41a';
-    }
-    if (validationResult.severity === 'high') {
-      return '#ff4d4f';
-    }
+    if (!validationResult) return '#1890ff';
+    if (validationResult.valid) return '#52c41a';
+    if (validationResult.severity === 'high') return '#ff4d4f';
     return '#faad14';
   };
 
   const getStatusText = () => {
-    if (!validationResult) {
-      return '正在验证...';
-    }
-    if (validationResult.valid) {
-      return '文件名符合要求';
-    }
-    if (validationResult.severity === 'high') {
-      return '文件名存在问题，建议修改';
-    }
+    if (!validationResult) return '正在验证...';
+    if (validationResult.valid) return '文件名符合要求';
+    if (validationResult.severity === 'high') return '文件名存在问题，建议修改';
     return '文件名可以优化';
   };
 
@@ -264,20 +237,8 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
             {getStatusText()}
           </Text>
           {validationResult && (
-            <Tag
-              color={
-                validationResult.valid
-                  ? 'success'
-                  : validationResult.severity === 'high'
-                    ? 'error'
-                    : 'warning'
-              }
-            >
-              {validationResult.severity === 'high'
-                ? '严重'
-                : validationResult.severity === 'medium'
-                  ? '警告'
-                  : '轻微'}
+            <Tag color={validationResult.valid ? 'success' : validationResult.severity === 'high' ? 'error' : 'warning'}>
+              {validationResult.severity === 'high' ? '严重' : validationResult.severity === 'medium' ? '警告' : '轻微'}
             </Tag>
           )}
         </div>
@@ -300,23 +261,19 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
           {editing ? (
             <Input
               value={customFilename}
-              onChange={e => handleCustomFilenameChange(e.target.value)}
+              onChange={(e) => handleCustomFilenameChange(e.target.value)}
               onBlur={() => setEditing(false)}
               placeholder="输入文件名"
               status={validationResult && !validationResult.valid ? 'error' : undefined}
             />
           ) : (
-            <div
-              style={{
-                padding: '8px 12px',
-                backgroundColor: '#f5f5f5',
-                borderRadius: '6px',
-                border: `1px solid ${validationResult && !validationResult.valid ? '#ff4d4f' : '#d9d9d9'}`,
-              }}
-            >
-              <Text code style={{ wordBreak: 'break-all' }}>
-                {customFilename}
-              </Text>
+            <div style={{
+              padding: '8px 12px',
+              backgroundColor: '#f5f5f5',
+              borderRadius: '6px',
+              border: `1px solid ${validationResult && !validationResult.valid ? '#ff4d4f' : '#d9d9d9'}`
+            }}>
+              <Text code style={{ wordBreak: 'break-all' }}>{customFilename}</Text>
             </div>
           )}
         </div>
@@ -346,18 +303,20 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
                 <Divider style={{ margin: '12px 0 8px 0' }} />
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                   <Text strong>建议的文件名:</Text>
-                  <Button type="primary" size="small" onClick={acceptSuggestion}>
+                  <Button
+                    type="primary"
+                    size="small"
+                    onClick={acceptSuggestion}
+                  >
                     采用建议
                   </Button>
                 </div>
-                <div
-                  style={{
-                    padding: '8px 12px',
-                    backgroundColor: '#f6ffed',
-                    borderRadius: '6px',
-                    border: '1px solid #b7eb8f',
-                  }}
-                >
+                <div style={{
+                  padding: '8px 12px',
+                  backgroundColor: '#f6ffed',
+                  borderRadius: '6px',
+                  border: '1px solid #b7eb8f'
+                }}>
                   <Text code style={{ wordBreak: 'break-all', color: '#389e0d' }}>
                     {suggestedFilename}
                   </Text>
@@ -381,25 +340,20 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
         )}
 
         {/* 使用提示 */}
-        <div
-          style={{
-            padding: '8px 12px',
-            backgroundColor: '#e6f7ff',
-            borderRadius: '6px',
-            fontSize: '12px',
-            lineHeight: '1.4',
-          }}
-        >
+        <div style={{
+          padding: '8px 12px',
+          backgroundColor: '#e6f7ff',
+          borderRadius: '6px',
+          fontSize: '12px',
+          lineHeight: '1.4'
+        }}>
           <Text style={{ color: '#0050b3' }}>
             <InfoCircleOutlined style={{ marginRight: 4 }} />
-            <strong>文件名最佳实践:</strong>
-            <br />
-            • 避免使用中文特殊字符【】（）
-            <br />
-            • 文件名长度建议在150字符以内
-            <br />
-            • 确保以.pdf结尾
-            <br />• 避免使用&lt;&gt;:&quot;/\\|?*等特殊字符
+            <strong>文件名最佳实践:</strong><br />
+            • 避免使用中文特殊字符【】（）<br />
+            • 文件名长度建议在150字符以内<br />
+            • 确保以.pdf结尾<br />
+            • 避免使用&lt;&gt;:"/\\|?*等特殊字符
           </Text>
         </div>
       </Space>

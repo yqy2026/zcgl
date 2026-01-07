@@ -1,5 +1,5 @@
-import React from 'react';
-import { Card, Tag, Button, Space, Tooltip, Row, Col, Statistic, Progress } from 'antd';
+import React from 'react'
+import { Card, Tag, Button, Space, Tooltip, Row, Col, Statistic, Progress } from 'antd'
 import {
   EditOutlined,
   DeleteOutlined,
@@ -7,23 +7,18 @@ import {
   HistoryOutlined,
   EnvironmentOutlined,
   UserOutlined,
-} from '@ant-design/icons';
+} from '@ant-design/icons'
 
-import type { Asset } from '@/types/asset';
-import {
-  formatPercentage,
-  formatDate,
-  getStatusColor,
-  calculateOccupancyRate,
-} from '@/utils/format';
+import type { Asset } from '@/types/asset'
+import { formatPercentage, formatDate, getStatusColor, calculateOccupancyRate } from '@/utils/format'
 
 interface AssetCardProps {
-  asset: Asset;
-  onEdit: (asset: Asset) => void;
-  onDelete: (id: string) => void;
-  onView: (asset: Asset) => void;
-  selected?: boolean;
-  onSelect?: (asset: Asset, selected: boolean) => void;
+  asset: Asset
+  onEdit: (asset: Asset) => void
+  onDelete: (id: string) => void
+  onView: (asset: Asset) => void
+  selected?: boolean
+  onSelect?: (asset: Asset, selected: boolean) => void
 }
 
 const AssetCard: React.FC<AssetCardProps> = ({
@@ -35,21 +30,16 @@ const AssetCard: React.FC<AssetCardProps> = ({
   onSelect,
 }) => {
   // 计算出租率
-  const occupancyRate =
-    asset.occupancy_rate !== undefined && asset.occupancy_rate !== null
-      ? asset.occupancy_rate
-      : calculateOccupancyRate(asset.rented_area, asset.rentable_area);
+  const occupancyRate = asset.occupancy_rate !== undefined && asset.occupancy_rate !== null
+    ? asset.occupancy_rate
+    : calculateOccupancyRate(asset.rented_area, asset.rentable_area)
 
   // 获取出租率颜色
   const getOccupancyColor = (rate: number) => {
-    if (rate >= 80) {
-      return '#52c41a';
-    }
-    if (rate >= 60) {
-      return '#faad14';
-    }
-    return '#ff4d4f';
-  };
+    if (rate >= 80) return '#52c41a'
+    if (rate >= 60) return '#faad14'
+    return '#ff4d4f'
+  }
 
   return (
     <Card
@@ -65,9 +55,9 @@ const AssetCard: React.FC<AssetCardProps> = ({
           <Button
             type="text"
             icon={<EyeOutlined />}
-            onClick={e => {
-              e.stopPropagation();
-              onView(asset);
+            onClick={(e) => {
+              e.stopPropagation()
+              onView(asset)
             }}
           />
         </Tooltip>,
@@ -75,9 +65,9 @@ const AssetCard: React.FC<AssetCardProps> = ({
           <Button
             type="text"
             icon={<EditOutlined />}
-            onClick={e => {
-              e.stopPropagation();
-              onEdit(asset);
+            onClick={(e) => {
+              e.stopPropagation()
+              onEdit(asset)
             }}
           />
         </Tooltip>,
@@ -85,8 +75,8 @@ const AssetCard: React.FC<AssetCardProps> = ({
           <Button
             type="text"
             icon={<HistoryOutlined />}
-            onClick={e => {
-              e.stopPropagation();
+            onClick={(e) => {
+              e.stopPropagation()
               // 这里可以打开历史记录
             }}
           />
@@ -96,9 +86,9 @@ const AssetCard: React.FC<AssetCardProps> = ({
             type="text"
             danger
             icon={<DeleteOutlined />}
-            onClick={e => {
-              e.stopPropagation();
-              onDelete(asset.id);
+            onClick={(e) => {
+              e.stopPropagation()
+              onDelete(asset.id)
             }}
           />
         </Tooltip>,
@@ -108,7 +98,9 @@ const AssetCard: React.FC<AssetCardProps> = ({
       <Card.Meta
         title={
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '16px', fontWeight: 'bold' }}>{asset.property_name}</span>
+            <span style={{ fontSize: '16px', fontWeight: 'bold' }}>
+              {asset.property_name}
+            </span>
             <Space>
               <Tag color={getStatusColor(asset.ownership_status, 'ownership')}>
                 {asset.ownership_status}
@@ -176,44 +168,38 @@ const AssetCard: React.FC<AssetCardProps> = ({
         </Row>
 
         {/* 出租率进度条 */}
-        {asset.rentable_area !== undefined &&
-          asset.rentable_area !== null &&
-          asset.rentable_area > 0 && (
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ fontSize: '12px', color: '#8c8c8c' }}>出租率</span>
-                <span
-                  style={{
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    color: getOccupancyColor(occupancyRate),
-                  }}
-                >
-                  {formatPercentage(occupancyRate)}
-                </span>
-              </div>
-              <Progress
-                percent={occupancyRate}
-                strokeColor={getOccupancyColor(occupancyRate)}
-                size="small"
-                showInfo={false}
-              />
+        {asset.rentable_area !== undefined && asset.rentable_area !== null && asset.rentable_area > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+              <span style={{ fontSize: '12px', color: '#8c8c8c' }}>出租率</span>
+              <span style={{ fontSize: '12px', fontWeight: 'bold', color: getOccupancyColor(occupancyRate) }}>
+                {formatPercentage(occupancyRate)}
+              </span>
             </div>
-          )}
+            <Progress
+              percent={occupancyRate}
+              strokeColor={getOccupancyColor(occupancyRate)}
+              size="small"
+              showInfo={false}
+            />
+          </div>
+        )}
 
         {/* 状态标签 */}
         <div style={{ marginBottom: 12 }}>
           <Space wrap>
-            <Tag color={getStatusColor(asset.usage_status, 'usage')}>{asset.usage_status}</Tag>
-            {asset.is_litigated && <Tag color="red">涉诉</Tag>}
+            <Tag color={getStatusColor(asset.usage_status, 'usage')}>
+              {asset.usage_status}
+            </Tag>
+            {asset.is_litigated && (
+              <Tag color="red">涉诉</Tag>
+            )}
             {asset.certificated_usage !== undefined && asset.certificated_usage !== '' && (
               <Tag color="blue">证载：{asset.certificated_usage}</Tag>
             )}
-            {asset.actual_usage !== undefined &&
-              asset.actual_usage !== '' &&
-              asset.actual_usage !== asset.certificated_usage && (
-                <Tag color="orange">实际：{asset.actual_usage}</Tag>
-              )}
+            {asset.actual_usage !== undefined && asset.actual_usage !== '' && asset.actual_usage !== asset.certificated_usage && (
+              <Tag color="orange">实际：{asset.actual_usage}</Tag>
+            )}
           </Space>
         </div>
 
@@ -224,7 +210,7 @@ const AssetCard: React.FC<AssetCardProps> = ({
         </div>
       </div>
     </Card>
-  );
-};
+  )
+}
 
-export default AssetCard;
+export default AssetCard

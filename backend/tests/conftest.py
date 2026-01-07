@@ -16,6 +16,30 @@ os.environ["ENVIRONMENT"] = "test"
 os.environ["PYDANTIC_SETTINGS_IGNORE_DOT_ENV"] = "1"
 
 
+def pytest_collection_modifyitems(items, config):
+    """
+    钩子：为特定目录下的测试自动应用标记
+
+    这个钩子在测试收集完成后、测试执行前被调用
+    """
+    for item in items:
+        # 获取测试文件的路径
+        test_path = str(item.fspath)
+
+        # 根据目录自动添加标记
+        if "/tests/unit/" in test_path or "\\tests\\unit\\" in test_path:
+            if "unit" not in [mark.name for mark in item.iter_markers()]:
+                item.add_marker(pytest.mark.unit)
+        elif (
+            "/tests/integration/" in test_path or "\\tests\\integration\\" in test_path
+        ):
+            if "integration" not in [mark.name for mark in item.iter_markers()]:
+                item.add_marker(pytest.mark.integration)
+        elif "/tests/api/" in test_path or "\\tests\\api\\" in test_path:
+            if "api" not in [mark.name for mark in item.iter_markers()]:
+                item.add_marker(pytest.mark.api)
+
+
 @pytest.fixture(autouse=True)
 def reset_settings_debug():
     """

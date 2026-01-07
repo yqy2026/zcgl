@@ -76,6 +76,7 @@ export interface AuthResponse {
   permissions: string[];
 }
 
+
 /**
  * 资产列表响应
  */
@@ -139,7 +140,7 @@ export enum ApiErrorType {
   AUTH_ERROR = 'AUTH_ERROR',
   VALIDATION_ERROR = 'VALIDATION_ERROR',
   BUSINESS_ERROR = 'BUSINESS_ERROR',
-  UNKNOWN_ERROR = 'UNKNOWN_ERROR',
+  UNKNOWN_ERROR = 'UNKNOWN_ERROR'
 }
 
 /**
@@ -153,7 +154,7 @@ export interface EnhancedApiError {
   timestamp: string;
   requestId?: string;
   statusCode?: number;
-  originalError?: unknown;
+  originalError?: Error | unknown;
 }
 
 // ==================== 重试和缓存类型 ====================
@@ -165,7 +166,7 @@ export interface RetryConfig {
   maxAttempts: number;
   delay: number;
   backoffMultiplier: number;
-  retryCondition?: (error: unknown) => boolean;
+  retryCondition?: (error: Error | unknown) => boolean;
 }
 
 /**
@@ -213,12 +214,8 @@ export interface EnhancedApiClientConfig {
  * 检查是否为标准API响应
  */
 export function isStandardApiResponse(response: unknown): response is StandardApiResponse {
-  if (response === null || response === undefined) {
-    return false;
-  }
-  if (typeof response !== 'object') {
-    return false;
-  }
+  if (response === null || response === undefined) return false;
+  if (typeof response !== 'object') return false;
   const obj = response as Record<string, unknown>;
   return 'success' in obj && typeof obj.success === 'boolean';
 }
@@ -227,13 +224,9 @@ export function isStandardApiResponse(response: unknown): response is StandardAp
  * 检查是否为分页响应
  */
 export function isPaginatedResponse(response: unknown): response is PaginatedApiResponse {
-  if (!isStandardApiResponse(response)) {
-    return false;
-  }
+  if (!isStandardApiResponse(response)) return false;
   const data = response.data;
-  if (data === null || data === undefined || typeof data !== 'object') {
-    return false;
-  }
+  if (data === null || data === undefined || typeof data !== 'object') return false;
   return 'items' in data && 'pagination' in data;
 }
 
@@ -241,12 +234,8 @@ export function isPaginatedResponse(response: unknown): response is PaginatedApi
  * 检查是否为错误响应
  */
 export function isErrorResponse(response: unknown): response is ErrorResponse {
-  if (response === null || response === undefined) {
-    return false;
-  }
-  if (typeof response !== 'object') {
-    return false;
-  }
+  if (response === null || response === undefined) return false;
+  if (typeof response !== 'object') return false;
   const obj = response as Record<string, unknown>;
   return obj.success === false && 'error' in obj;
 }
@@ -255,12 +244,8 @@ export function isErrorResponse(response: unknown): response is ErrorResponse {
  * 检查是否为直接数据响应
  */
 export function isDirectResponse<T>(response: unknown): response is DirectResponse<T> {
-  if (response === null || response === undefined) {
-    return false;
-  }
-  if (typeof response !== 'object') {
-    return false;
-  }
+  if (response === null || response === undefined) return false;
+  if (typeof response !== 'object') return false;
   return !('success' in response);
 }
 

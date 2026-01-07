@@ -48,7 +48,9 @@ class BaseValidator:
     @staticmethod
     def validate_id_card(id_card: str) -> bool:
         """验证身份证号格式"""
-        pattern = r"^[1-9]\d{5}(19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\d{3}[\dXx]$"
+        pattern = (
+            r"^[1-9]\d{5}(19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\d{3}[\dXx]$"
+        )
         return bool(re.match(pattern, id_card))
 
     @staticmethod
@@ -88,7 +90,9 @@ class BaseValidator:
         """验证文本长度"""
         if len(text) < min_length:
             return False
-        return not (max_length is not None and len(text) > max_length)
+        if max_length is not None and len(text) > max_length:
+            return False
+        return True
 
     @staticmethod
     def validate_regex(text: str, pattern: str) -> bool:
@@ -125,28 +129,24 @@ class AssetValidator(BaseValidator):
                 errors.append(f"缺少必填字段: {field}")
 
         # 验证物业名称
-        if "property_name" in data and not cls.validate_length(data["property_name"], 1, 200):
-            errors.append("物业名称长度应在1-200个字符之间")
+        if "property_name" in data:
+            if not cls.validate_length(data["property_name"], 1, 200):
+                errors.append("物业名称长度应在1-200个字符之间")
 
         # 验证物业地址
-        if "property_address" in data and not cls.validate_length(data["property_address"], 5, 500):
-            errors.append("物业地址长度应在5-500个字符之间")
+        if "property_address" in data:
+            if not cls.validate_length(data["property_address"], 5, 500):
+                errors.append("物业地址长度应在5-500个字符之间")
 
         # 验证建筑面积
-        if (
-            "building_area" in data
-            and data["building_area"]
-            and not cls.validate_positive_number(data["building_area"])
-        ):
-            errors.append("建筑面积必须为正数")
+        if "building_area" in data and data["building_area"]:
+            if not cls.validate_positive_number(data["building_area"]):
+                errors.append("建筑面积必须为正数")
 
         # 验证土地面积
-        if (
-            "land_area" in data  # pragma: no cover
-            and data["land_area"]  # pragma: no cover
-            and not cls.validate_positive_number(data["land_area"])  # pragma: no cover
-        ):
-            errors.append("土地面积必须为正数")  # pragma: no cover
+        if "land_area" in data and data["land_area"]:  # pragma: no cover
+            if not cls.validate_positive_number(data["land_area"]):  # pragma: no cover
+                errors.append("土地面积必须为正数")  # pragma: no cover
 
         # 验证建成年份
         if "construction_year" in data and data["construction_year"]:
@@ -176,7 +176,9 @@ class AssetValidator(BaseValidator):
         """
         from ..models.asset import Asset  # pragma: no cover
 
-        query = db.query(Asset).filter(Asset.property_name == property_name)  # pragma: no cover
+        query = db.query(Asset).filter(
+            Asset.property_name == property_name
+        )  # pragma: no cover
         if exclude_id:  # pragma: no cover
             query = query.filter(Asset.id != exclude_id)  # pragma: no cover
 
@@ -212,19 +214,19 @@ class UserValidator(BaseValidator):
                 errors.append("用户名只能包含字母、数字和下划线")
 
         # 验证邮箱
-        if "email" in data and not cls.validate_email(data["email"]):
-            errors.append("邮箱格式不正确")
+        if "email" in data:
+            if not cls.validate_email(data["email"]):
+                errors.append("邮箱格式不正确")
 
         # 验证手机号
-        if "phone" in data and data["phone"] and not cls.validate_phone(data["phone"]):
-            errors.append("手机号格式不正确")
+        if "phone" in data and data["phone"]:
+            if not cls.validate_phone(data["phone"]):
+                errors.append("手机号格式不正确")
 
         # 验证全名
-        if (
-            "full_name" in data  # pragma: no cover
-            and not cls.validate_length(data["full_name"], 1, 100)  # pragma: no cover
-        ):
-            errors.append("姓名长度应在1-100个字符之间")  # pragma: no cover
+        if "full_name" in data:  # pragma: no cover
+            if not cls.validate_length(data["full_name"], 1, 100):  # pragma: no cover
+                errors.append("姓名长度应在1-100个字符之间")  # pragma: no cover
 
         return errors
 
@@ -290,30 +292,26 @@ class OrganizationValidator(BaseValidator):
         errors = []
 
         # 验证组织名称
-        if "name" in data and not cls.validate_length(data["name"], 1, 200):
-            errors.append("组织名称长度应在1-200个字符之间")
+        if "name" in data:
+            if not cls.validate_length(data["name"], 1, 200):
+                errors.append("组织名称长度应在1-200个字符之间")
 
         # 验证组织代码
-        if "code" in data and not cls.validate_length(data["code"], 2, 50):
-            errors.append("组织代码长度应在2-50个字符之间")
-        if "code" in data and not re.match(r"^[A-Z0-9_]+$", data["code"]):
-            errors.append("组织代码只能包含大写字母、数字和下划线")
+        if "code" in data:
+            if not cls.validate_length(data["code"], 2, 50):
+                errors.append("组织代码长度应在2-50个字符之间")
+            if not re.match(r"^[A-Z0-9_]+$", data["code"]):
+                errors.append("组织代码只能包含大写字母、数字和下划线")
 
         # 验证联系电话
-        if (
-            "phone" in data
-            and data["phone"]
-            and not cls.validate_phone(data["phone"])  # pragma: no cover
-        ):
-            errors.append("联系电话格式不正确")  # pragma: no cover
+        if "phone" in data and data["phone"]:  # pragma: no cover
+            if not cls.validate_phone(data["phone"]):  # pragma: no cover
+                errors.append("联系电话格式不正确")  # pragma: no cover
 
         # 验证邮箱
-        if (
-            "email" in data
-            and data["email"]
-            and not cls.validate_email(data["email"])  # pragma: no cover
-        ):
-            errors.append("邮箱格式不正确")  # pragma: no cover
+        if "email" in data and data["email"]:  # pragma: no cover
+            if not cls.validate_email(data["email"]):  # pragma: no cover
+                errors.append("邮箱格式不正确")  # pragma: no cover
 
         return errors
 
@@ -335,35 +333,28 @@ class RentContractValidator(BaseValidator):
         errors = []
 
         # 验证合同编号
-        if (
-            "contract_number" in data  # pragma: no cover
-            and not cls.validate_length(data["contract_number"], 1, 100)  # pragma: no cover
-        ):
-            errors.append("合同编号长度应在1-100个字符之间")  # pragma: no cover
+        if "contract_number" in data:  # pragma: no cover
+            if not cls.validate_length(
+                data["contract_number"], 1, 100
+            ):  # pragma: no cover
+                errors.append("合同编号长度应在1-100个字符之间")  # pragma: no cover
 
         # 验证租金金额
-        if (
-            "monthly_rent" in data
-            and data["monthly_rent"]
-            and not cls.validate_positive_number(data["monthly_rent"])
-        ):
-            errors.append("月租金必须为正数")
+        if "monthly_rent" in data and data["monthly_rent"]:
+            if not cls.validate_positive_number(data["monthly_rent"]):
+                errors.append("月租金必须为正数")
 
         # 验证保证金
-        if (
-            "security_deposit" in data
-            and data["security_deposit"]
-            and not cls.validate_non_negative_number(data["security_deposit"])
-        ):
-            errors.append("保证金不能为负数")
+        if "security_deposit" in data and data["security_deposit"]:
+            if not cls.validate_non_negative_number(data["security_deposit"]):
+                errors.append("保证金不能为负数")
 
         # 验证租赁期限
-        if (
-            "lease_start_date" in data
-            and "lease_end_date" in data
-            and not cls.validate_date_range(data["lease_start_date"], data["lease_end_date"])
-        ):
-            errors.append("租赁开始日期不能晚于结束日期")
+        if "lease_start_date" in data and "lease_end_date" in data:
+            if not cls.validate_date_range(
+                data["lease_start_date"], data["lease_end_date"]
+            ):
+                errors.append("租赁开始日期不能晚于结束日期")
 
         return errors
 
@@ -427,13 +418,17 @@ class DataCleaner:
                         return datetime.strptime(value, fmt)
                     except ValueError:
                         continue
-            except Exception:  # pragma: no cover  # nosec - B110: Intentional graceful degradation
+            except (
+                Exception
+            ):  # pragma: no cover  # nosec - B110: Intentional graceful degradation
                 pass  # pragma: no cover
         return None
 
 
 # 便捷函数
-def validate_required_fields(data: dict[str, Any], required_fields: list[str]) -> list[str]:
+def validate_required_fields(
+    data: dict[str, Any], required_fields: list[str]
+) -> list[str]:
     """验证必填字段"""
     errors = []
     for field in required_fields:
@@ -461,11 +456,15 @@ def validate_field_length(
     return errors
 
 
-def validate_field_values(data: dict[str, Any], field_values: dict[str, list[Any]]) -> list[str]:
+def validate_field_values(
+    data: dict[str, Any], field_values: dict[str, list[Any]]
+) -> list[str]:
     """验证字段值范围"""
     errors = []
     for field, valid_values in field_values.items():
         if field in data and data[field] not in valid_values:
-            errors.append(f"{field}的值应为以下之一: {', '.join(map(str, valid_values))}")
+            errors.append(
+                f"{field}的值应为以下之一: {', '.join(map(str, valid_values))}"
+            )
 
     return errors

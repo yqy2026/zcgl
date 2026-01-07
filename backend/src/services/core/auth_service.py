@@ -45,7 +45,9 @@ class AuthService:
         return self.auth_service.create_tokens(user, device_info)
 
     def validate_refresh_token(self, refresh_token, client_ip=None, user_agent=None):
-        return self.auth_service.validate_refresh_token(refresh_token, client_ip, user_agent)
+        return self.auth_service.validate_refresh_token(
+            refresh_token, client_ip, user_agent
+        )
 
     # --- User Management Delegate ---
     def create_user(self, user_data):

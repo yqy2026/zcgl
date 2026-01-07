@@ -66,11 +66,30 @@ React UI → EnhancedApiClient → FastAPI (/api/v1/*) → Service → CRUD → 
 ### 后端分层
 
 ```
-api/v1/     → API 端点定义
-services/   → 业务逻辑 (必须放这里!)
-crud/       → 数据库操作
-models/     → SQLAlchemy ORM
-schemas/    → Pydantic 验证
+请求 → api/v1/ (端点定义) → services/ (业务逻辑) → crud/ (数据库操作) → models/ (ORM)
+                              ↑ 必须放这里!
+```
+
+**Service层目录结构** (2026-01-04 更新):
+```
+backend/src/services/
+├── analytics/         # 分析服务 (出租率、面积汇总)
+│   ├── occupancy_service.py
+│   └── area_service.py
+├── asset/            # 资产服务
+│   ├── asset_service.py
+│   ├── batch_service.py      # 批量操作（事务管理）
+│   └── validators.py         # 数据验证
+├── backup/           # 备份服务
+│   └── backup_service.py
+├── excel/            # Excel服务
+│   ├── excel_import_service.py
+│   ├── excel_export_service.py
+│   └── excel_template_service.py
+├── core/             # 核心服务 (认证、用户管理)
+├── custom_field/     # 自定义字段服务
+├── document/         # 文档处理服务
+└── [其他服务目录...]
 ```
 
 ### 前端状态管理
@@ -131,14 +150,15 @@ route_registry.register_router(router, prefix="/api/v1", tags=["My Feature"], ve
 
 ## ⚠️ 关键陷阱警告
 
-> [!CAUTION]
-> **OCR 服务已禁用** - PaddleOCR 存在编码问题，请勿尝试使用
+> [!NOTE]
+> **OCR 服务已升级** - PaddleOCR 3.3 已可用，使用 `paddleocr_service.py` 进行文档处理。
+> 安装 OCR 依赖：`uv sync --extra pdf-ocr`
 
 ```python
-from src.core.import_utils import safe_import
-ocr = safe_import("services.ocr", fallback=None)
-if ocr is None:
-    # 必须提供回退方案
+from src.services.document.paddleocr_service import get_paddleocr_service
+service = get_paddleocr_service()
+if service.is_available:
+    result = service.to_markdown("contract.pdf")
 ```
 
 > [!WARNING]
@@ -161,12 +181,20 @@ zcgl/
 │   ├── hooks/          # 19 个自定义 Hook
 │   ├── store/          # Zustand 状态
 │   └── types/          # TypeScript 类型
-├── backend/src/
-│   ├── api/v1/         # 33 个 API 端点
-│   ├── services/       # 7 个业务服务目录
-│   ├── crud/           # 16 个 CRUD 文件
-│   ├── models/         # 11 个 ORM 模型
-│   └── schemas/        # 16 个 Pydantic 模型
+├── backend/
+│   ├── src/
+│   │   ├── api/v1/     # 33+ 个 API 端点
+│   │   ├── services/   # 模块化服务层 (核心业务逻辑)
+│   │   ├── crud/       # 16 个 CRUD 文件
+│   │   ├── models/     # 11 个 ORM 模型
+│   │   ├── schemas/    # 16 个 Pydantic 模型
+│   │   └── utils/      # 运行时工具
+│   ├── scripts/
+│   │   └── devtools/   # 开发工具脚本
+│   └── tests/
+│       ├── unit/       # 单元测试 (97个通过 ✅)
+│       ├── integration/ # 集成测试
+│       └── api/        # API 测试
 └── docs/               # 详细文档
 ```
 

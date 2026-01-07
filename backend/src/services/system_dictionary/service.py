@@ -10,14 +10,18 @@ from ...schemas.asset import SystemDictionaryCreate, SystemDictionaryUpdate
 class SystemDictionaryService:
     """系统字典服务层"""
 
-    def create_dictionary(self, db: Session, *, obj_in: SystemDictionaryCreate) -> SystemDictionary:
+    def create_dictionary(
+        self, db: Session, *, obj_in: SystemDictionaryCreate
+    ) -> SystemDictionary:
         """创建字典项"""
         # Check uniqueness
         existing = system_dictionary_crud.get_by_type_and_code(
             db, dict_type=obj_in.dict_type, dict_code=obj_in.dict_code
         )
         if existing:
-            raise ValueError(f"字典代码 {obj_in.dict_code} 在类型 {obj_in.dict_type} 中已存在")
+            raise ValueError(
+                f"字典代码 {obj_in.dict_code} 在类型 {obj_in.dict_type} 中已存在"
+            )
 
         return system_dictionary_crud.create(db, obj_in=obj_in)
 

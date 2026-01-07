@@ -75,9 +75,7 @@ class FrontendAPIConsistencyChecker {
           this.issues.push({
             type: 'import_format',
             severity: 'warning',
-            message:
-              'File uses apiClient but has no proper import from @/api: ' +
-              path.relative(this.frontendPath, file),
+            message: 'File uses apiClient but has no proper import from @/api: ' + path.relative(this.frontendPath, file),
             file: path.relative(this.frontendPath, file),
           });
         }
@@ -96,7 +94,7 @@ class FrontendAPIConsistencyChecker {
     const report = {
       timestamp: new Date().toISOString(),
       total_issues: this.issues.length,
-      issues: this.issues.map(function (issue) {
+      issues: this.issues.map(function(issue) {
         return {
           type: issue.type,
           severity: issue.severity,
@@ -112,15 +110,9 @@ class FrontendAPIConsistencyChecker {
   }
 
   printSummary() {
-    const critical = this.issues.filter(function (i) {
-      return i.severity === 'critical';
-    });
-    const warnings = this.issues.filter(function (i) {
-      return i.severity === 'warning';
-    });
-    const info = this.issues.filter(function (i) {
-      return i.severity === 'info';
-    });
+    const critical = this.issues.filter(function(i) { return i.severity === 'critical'; });
+    const warnings = this.issues.filter(function(i) { return i.severity === 'warning'; });
+    const info = this.issues.filter(function(i) { return i.severity === 'info'; });
 
     console.log('\n' + colors.blue + '=== Summary ===' + colors.reset);
     console.log('Total Issues: ' + this.issues.length);
@@ -129,9 +121,7 @@ class FrontendAPIConsistencyChecker {
     console.log(colors.blue + 'Info: ' + info.length + colors.reset);
 
     if (this.issues.length === 0) {
-      console.log(
-        '\n' + colors.green + '✅ All frontend API consistency checks passed!' + colors.reset
-      );
+      console.log('\n' + colors.green + '✅ All frontend API consistency checks passed!' + colors.reset);
     } else if (critical.length === 0) {
       console.log('\n' + colors.yellow + '⚠️  No critical issues found' + colors.reset);
     }
@@ -139,17 +129,14 @@ class FrontendAPIConsistencyChecker {
 }
 
 // Main execution
-(function () {
+(function() {
   const frontendPath = process.argv[2] || '.';
   const checker = new FrontendAPIConsistencyChecker(frontendPath);
 
-  checker
-    .runChecks()
-    .then(function (exitCode) {
-      process.exit(exitCode);
-    })
-    .catch(function (error) {
-      console.error('Error running checks:', error.message);
-      process.exit(1);
-    });
+  checker.runChecks().then(function(exitCode) {
+    process.exit(exitCode);
+  }).catch(function(error) {
+    console.error('Error running checks:', error.message);
+    process.exit(1);
+  });
 })();

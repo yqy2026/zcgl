@@ -7,7 +7,25 @@
       "Bash(rm:*)",
       "mcp__plugin_serena_serena__get_symbols_overview",
       "mcp__plugin_serena_serena__list_dir",
-      "Bash(uv run ruff check:*)"
+      "Bash(findstr:*)",
+      "Bash(tasklist:*)",
+      "Bash(curl:*)",
+      "mcp__chrome-devtools__list_console_messages",
+      "mcp__chrome-devtools__navigate_page",
+      "mcp__chrome-devtools__take_snapshot",
+      "Bash(python:*)",
+      "WebSearch",
+      "mcp__chrome-devtools__list_pages",
+      "mcp__chrome-devtools__list_network_requests",
+      "mcp__chrome-devtools__click",
+      "mcp__chrome-devtools__evaluate_script",
+      "Bash(npm run dev)",
+      "Bash(netstat:*)",
+      "mcp__chrome-devtools__new_page",
+      "mcp__chrome-devtools__get_network_request",
+      "mcp__chrome-devtools__wait_for",
+      "Bash(git config:*)",
+      "Bash(gh repo view:*)"
     ]
   },
   "outputStyle": "Structural Thinking"

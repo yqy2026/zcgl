@@ -1,104 +1,146 @@
 # Document Processing Services
-__all__ = []
+# Using explicit re-export pattern to satisfy ruff F401
+__all__: list[str] = []
 
 # Core PDF processing services
 try:
-    from .pdf_import_service import PDFImportService  # noqa: F401
+    from .pdf_import_service import PDFImportService as PDFImportService
 
-    __all__.append("PDFImportService")  # pragma: no cover
-except Exception:  # nosec - B110: Intentional graceful degradation  # pragma: no cover
+    __all__.append("PDFImportService")
+except Exception:  # nosec - B110: Intentional graceful degradation
     pass
 
 try:
-    from .pdf_processing_service import PDFProcessingService  # noqa: F401
+    from .pdf_processing_service import (
+        PDFProcessingService as PDFProcessingService,
+    )
 
-    __all__.append("PDFProcessingService")  # pragma: no cover
-except Exception:  # nosec - B110: Intentional graceful degradation  # pragma: no cover
+    __all__.append("PDFProcessingService")
+except Exception:  # nosec - B110: Intentional graceful degradation
     pass
 
 try:
-    from .parallel_pdf_processor import ParallelPDFProcessor  # noqa: F401
+    from .parallel_pdf_processor import (
+        ParallelPDFProcessor as ParallelPDFProcessor,
+    )
 
-    __all__.append("ParallelPDFProcessor")  # pragma: no cover
-except Exception:  # nosec - B110: Intentional graceful degradation  # pragma: no cover
+    __all__.append("ParallelPDFProcessor")
+except Exception:  # nosec - B110: Intentional graceful degradation
     pass
 
 try:
-    from .pdf_quality_assessment import PDFQualityAssessment  # noqa: F401
+    from .pdf_quality_assessment import (
+        PDFQualityAssessment as PDFQualityAssessment,
+    )
 
-    __all__.append("PDFQualityAssessment")  # pragma: no cover
-except Exception:  # nosec - B110: Intentional graceful degradation  # pragma: no cover
+    __all__.append("PDFQualityAssessment")
+except Exception:  # nosec - B110: Intentional graceful degradation
     pass
 
 try:
-    from .pdf_processing_cache import PDFProcessingCache  # noqa: F401
+    from .pdf_processing_cache import PDFProcessingCache as PDFProcessingCache
 
-    __all__.append("PDFProcessingCache")  # pragma: no cover
-except Exception:  # nosec - B110: Intentional graceful degradation  # pragma: no cover
+    __all__.append("PDFProcessingCache")
+except Exception:  # nosec - B110: Intentional graceful degradation
     pass
 
 try:
-    from .pdf_session_service import PDFSessionService  # noqa: F401
+    from .pdf_session_service import PDFSessionService as PDFSessionService
 
-    __all__.append("PDFSessionService")  # pragma: no cover
-except Exception:  # nosec - B110: Intentional graceful degradation  # pragma: no cover
+    __all__.append("PDFSessionService")
+except Exception:  # nosec - B110: Intentional graceful degradation
     pass
 
 # OCR services
 try:
-    from .caching_ocr_service import CachingOCRService  # noqa: F401
+    from .caching_ocr_service import CachingOCRService as CachingOCRService
 
-    __all__.append("CachingOCRService")  # pragma: no cover
-except Exception:  # nosec - B110: Intentional graceful degradation  # pragma: no cover
+    __all__.append("CachingOCRService")
+except Exception:  # nosec - B110: Intentional graceful degradation
     pass
 
 try:
-    from .ocr_engine_selector import OCREngineSelector  # noqa: F401
+    from .ocr_engine_selector import OCREngineSelector as OCREngineSelector
 
-    __all__.append("OCREngineSelector")  # pragma: no cover
-except Exception:  # nosec - B110: Intentional graceful degradation  # pragma: no cover
+    __all__.append("OCREngineSelector")
+except Exception:  # nosec - B110: Intentional graceful degradation
     pass
 
 try:
-    from .ocr_text_processor import OCRTextProcessor  # noqa: F401
+    from .ocr_text_processor import OCRTextProcessor as OCRTextProcessor
 
-    __all__.append("OCRTextProcessor")  # pragma: no cover
-except Exception:  # nosec - B110: Intentional graceful degradation  # pragma: no cover
+    __all__.append("OCRTextProcessor")
+except Exception:  # nosec - B110: Intentional graceful degradation
     pass
 
 # Contract extraction services
 try:
-    from .contract_extractor import ContractExtractor  # noqa: F401
+    from .contract_extractor import ContractExtractor as ContractExtractor
+    from .contract_extractor import (
+        extract_contract_from_pdf as extract_contract_from_pdf,
+    )
 
-    __all__.append("ContractExtractor")  # pragma: no cover
-except Exception:  # nosec - B110: Intentional graceful degradation  # pragma: no cover
+    __all__.extend(["ContractExtractor", "extract_contract_from_pdf"])
+except Exception:  # nosec - B110: Intentional graceful degradation
     pass
 
 try:
-    from .contract_extractor_manager import ContractExtractorManager  # noqa: F401
+    from .contract_extractor_manager import (
+        ContractExtractorManager as ContractExtractorManager,
+    )
 
-    __all__.append("ContractExtractorManager")  # pragma: no cover
-except Exception:  # nosec - B110: Intentional graceful degradation  # pragma: no cover
+    __all__.append("ContractExtractorManager")
+except Exception:  # nosec - B110: Intentional graceful degradation
     pass
 
 try:
-    from .chinese_nlp_processor import ChineseNLPProcessor  # noqa: F401
+    from .chinese_nlp_processor import ChineseNLPProcessor as ChineseNLPProcessor
 
-    __all__.append("ChineseNLPProcessor")  # pragma: no cover
-except Exception:  # nosec - B110: Intentional graceful degradation  # pragma: no cover
+    __all__.append("ChineseNLPProcessor")
+except Exception:  # nosec - B110: Intentional graceful degradation
     pass
 
 # Excel services
 try:
-    from .excel_export import ExcelExportService  # noqa: F401
+    from .excel_export import ExcelExportService as ExcelExportService
 
-    __all__.append("ExcelExportService")  # pragma: no cover
-except Exception:  # nosec - B110: Intentional graceful degradation  # pragma: no cover
+    __all__.append("ExcelExportService")
+except Exception:  # nosec - B110: Intentional graceful degradation
     pass
 
 try:
-    from .excel_import import ExcelImportService  # noqa: F401
+    from .excel_import import ExcelImportService as ExcelImportService
 
-    __all__.append("ExcelImportService")  # pragma: no cover
-except Exception:  # nosec - B110: Intentional graceful degradation  # pragma: no cover
+    __all__.append("ExcelImportService")
+except Exception:  # nosec - B110: Intentional graceful degradation
+    pass
+
+# PaddleOCR 3.3 services
+try:
+    from .paddleocr_service import PaddleOCRService as PaddleOCRService
+    from .paddleocr_service import get_paddleocr_service as get_paddleocr_service
+
+    __all__.extend(["PaddleOCRService", "get_paddleocr_service"])
+except Exception:  # nosec - B110: Intentional graceful degradation
+    pass
+
+try:
+    from .markdown_contract_parser import (
+        MarkdownContractParser as MarkdownContractParser,
+    )
+    from .markdown_contract_parser import (
+        get_markdown_contract_parser as get_markdown_contract_parser,
+    )
+    from .markdown_contract_parser import (
+        parse_contract_markdown as parse_contract_markdown,
+    )
+
+    __all__.extend(
+        [
+            "MarkdownContractParser",
+            "get_markdown_contract_parser",
+            "parse_contract_markdown",
+        ]
+    )
+except Exception:  # nosec - B110: Intentional graceful degradation
     pass

@@ -55,7 +55,9 @@ async def import_assets(
             try:
                 # 验证数据
                 validation_request = AssetValidationRequest(data=asset_data)
-                validation_result = await validate_asset_data(validation_request, db, current_user)
+                validation_result = await validate_asset_data(
+                    validation_request, db, current_user
+                )
 
                 if not validation_result.is_valid and not request.skip_errors:
                     errors.append(
@@ -70,19 +72,16 @@ async def import_assets(
 
                 # 检查重复项（仅在merge和update模式下）
                 existing_asset = None
-                if (
-                    request.import_mode in ["merge", "update"]
-                    and "property_name" in asset_data
-                    and "address" in asset_data
-                ):
-                    # 按物业名称和地址查找重复项
-                    assets, _ = asset_crud.get_multi_with_search(
-                        db=db,
-                        search=f"{asset_data.get('property_name', '')} {asset_data.get('address', '')}",
-                        limit=1,
-                    )
-                    if assets:
-                        existing_asset = assets[0]
+                if request.import_mode in ["merge", "update"]:
+                    if "property_name" in asset_data and "address" in asset_data:
+                        # 按物业名称和地址查找重复项
+                        assets, _ = asset_crud.get_multi_with_search(
+                            db=db,
+                            search=f"{asset_data.get('property_name', '')} {asset_data.get('address', '')}",
+                            limit=1,
+                        )
+                        if assets:
+                            existing_asset = assets[0]
 
                 if request.dry_run:
                     # 仅验证，不实际导入
@@ -100,7 +99,11 @@ async def import_assets(
                 elif request.import_mode == "merge" and existing_asset:
                     # 更新现有资产
                     asset_update = AssetUpdate(
-                        **{k: v for k, v in asset_data.items() if k not in ["id", "created_at"]}
+                        **{
+                            k: v
+                            for k, v in asset_data.items()
+                            if k not in ["id", "created_at"]
+                        }
                     )
                     updated_asset = asset_crud.update(
                         db=db, db_obj=existing_asset, obj_in=asset_update
@@ -128,7 +131,9 @@ async def import_assets(
                 history_crud.create(
                     db=db,
                     obj_in={
-                        "asset_id": imported_assets[-1] if imported_assets else "unknown",
+                        "asset_id": imported_assets[-1]
+                        if imported_assets
+                        else "unknown",
                         "operation_type": "批量导入",
                         "description": "通过批量导入创建/更新资产",
                         "operator": "system",

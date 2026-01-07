@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react'
 import {
   Card,
   Table,
@@ -17,21 +17,14 @@ import {
   Avatar,
   Switch,
   Drawer,
-  Descriptions,
-} from 'antd';
-import SystemBreadcrumb from '../../components/System/SystemBreadcrumb';
-import {
-  userService,
-  type User,
-  type CreateUserData,
-  type UpdateUserData,
-  type OrganizationOption,
-  type RoleOption,
-} from '../../services/systemService';
-import { useMessage } from '../../hooks/useMessage';
-import { createLogger } from '../../utils/logger';
+  Descriptions
+} from 'antd'
+import SystemBreadcrumb from '../../components/System/SystemBreadcrumb'
+import { userService, type User, type CreateUserData, type UpdateUserData, type OrganizationOption, type RoleOption } from '../../services/systemService'
+import { useMessage } from '../../hooks/useMessage'
+import { createLogger } from '../../utils/logger'
 
-const pageLogger = createLogger('UserManagement');
+const pageLogger = createLogger('UserManagement')
 import {
   PlusOutlined,
   EditOutlined,
@@ -43,58 +36,60 @@ import {
   EyeOutlined,
   LockOutlined,
   UnlockOutlined,
-  ExclamationCircleOutlined,
-} from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
-import dayjs from 'dayjs';
+  ExclamationCircleOutlined
+} from '@ant-design/icons'
+import type { ColumnsType } from 'antd/es/table'
+import dayjs from 'dayjs'
 
-const { Option } = Select;
-const { Search } = Input;
+const { Option } = Select
+const { Search } = Input
 
 // User类型已从systemService导入
 
 interface UserStatistics {
-  total: number;
-  active: number;
-  inactive: number;
-  locked: number;
-  by_role: Record<string, number>;
-  by_organization: Record<string, number>;
+  total: number
+  active: number
+  inactive: number
+  locked: number
+  by_role: Record<string, number>
+  by_organization: Record<string, number>
 }
 
 const UserManagementPage: React.FC = () => {
-  const message = useMessage();
-  const [users, setUsers] = useState<User[]>([]);
-  const [organizations, setOrganizations] = useState<OrganizationOption[]>([]);
-  const [roles, setRoles] = useState<RoleOption[]>([]);
-  const [statistics, setStatistics] = useState<UserStatistics | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [detailDrawerVisible, setDetailDrawerVisible] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [_searchText, _setSearchText] = useState('');
-  const [_statusFilter, _setStatusFilter] = useState<string>('');
-  const [_roleFilter, _setRoleFilter] = useState<string>('');
-  const [_organizationFilter, _setOrganizationFilter] = useState<string>('');
+  const message = useMessage()
+  const [users, setUsers] = useState<User[]>([])
+  const [organizations, setOrganizations] = useState<OrganizationOption[]>([])
+  const [roles, setRoles] = useState<RoleOption[]>([])
+  const [statistics, setStatistics] = useState<UserStatistics | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [modalVisible, setModalVisible] = useState(false)
+  const [detailDrawerVisible, setDetailDrawerVisible] = useState(false)
+  const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [_searchText, _setSearchText] = useState('')
+  const [_statusFilter, _setStatusFilter] = useState<string>('')
+  const [_roleFilter, _setRoleFilter] = useState<string>('')
+  const [_organizationFilter, _setOrganizationFilter] = useState<string>('')
 
-  const [form] = Form.useForm();
+  const [form] = Form.useForm()
 
   // 状态选项
   const statusOptions = [
     { value: 'active', label: '活跃', color: 'green' },
     { value: 'inactive', label: '停用', color: 'red' },
-    { value: 'locked', label: '锁定', color: 'orange' },
-  ];
+    { value: 'locked', label: '锁定', color: 'orange' }
+  ]
+
+
 
   const loadUsers = useCallback(async () => {
-    setLoading(true);
+    setLoading(true)
     try {
-      const data = await userService.getUsers();
-      setUsers(data.items);
+      const data = await userService.getUsers()
+      setUsers(data.items)
     } catch (error) {
-      pageLogger.error('加载用户列表失败:', error as Error);
-      message.error('加载用户列表失败');
+      pageLogger.error('加载用户列表失败:', error as Error)
+      message.error('加载用户列表失败')
       // 如果API失败，使用模拟数据作为后备
       const mockUsers: User[] = [
         {
@@ -112,44 +107,44 @@ const UserManagementPage: React.FC = () => {
           created_at: '2024-01-01T00:00:00Z',
           updated_at: '2024-10-15T00:00:00Z',
           is_locked: false,
-          login_attempts: 0,
-        },
-      ];
-      setUsers(mockUsers);
+          login_attempts: 0
+        }
+      ]
+      setUsers(mockUsers)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, [message]);
+  }, [message])
 
-  const loadOrganizations = useCallback(() => {
+  const loadOrganizations = useCallback(async () => {
     try {
       // 模拟组织数据
       const mockOrgs: OrganizationOption[] = [
         { id: '1', name: '总公司' },
         { id: '2', name: '项目部' },
-        { id: '3', name: '财务部' },
-      ];
-      setOrganizations(mockOrgs);
+        { id: '3', name: '财务部' }
+      ]
+      setOrganizations(mockOrgs)
     } catch {
-      message.error('加载组织列表失败');
+      message.error('加载组织列表失败')
     }
-  }, [message]);
+  }, [message])
 
-  const loadRoles = useCallback(() => {
+  const loadRoles = useCallback(async () => {
     try {
       // 模拟角色数据
       const mockRoles: RoleOption[] = [
         { id: 'admin', name: '系统管理员' },
         { id: 'manager', name: '项目经理' },
-        { id: 'user', name: '普通用户' },
-      ];
-      setRoles(mockRoles);
+        { id: 'user', name: '普通用户' }
+      ]
+      setRoles(mockRoles)
     } catch {
-      message.error('加载角色列表失败');
+      message.error('加载角色列表失败')
     }
-  }, [message]);
+  }, [message])
 
-  const loadStatistics = useCallback(() => {
+  const loadStatistics = useCallback(async () => {
     try {
       // 模拟统计数据
       const mockStats: UserStatistics = {
@@ -158,34 +153,34 @@ const UserManagementPage: React.FC = () => {
         inactive: users.filter(u => u.status === 'inactive').length,
         locked: users.filter(u => u.status === 'locked').length,
         by_role: {},
-        by_organization: {},
-      };
-      setStatistics(mockStats);
+        by_organization: {}
+      }
+      setStatistics(mockStats)
     } catch {
-      message.error('加载统计信息失败');
+      message.error('加载统计信息失败')
     }
-  }, [message, users]);
+  }, [message, users])
 
   useEffect(() => {
-    void loadUsers();
-    void loadOrganizations();
-    void loadRoles();
-    void loadStatistics();
-  }, [loadUsers, loadOrganizations, loadRoles, loadStatistics]);
+    loadUsers()
+    loadOrganizations()
+    loadRoles()
+    loadStatistics()
+  }, [loadUsers, loadOrganizations, loadRoles, loadStatistics])
 
   const handleSearch = (value: string) => {
-    _setSearchText(value);
+    _setSearchText(value)
     // 这里可以添加搜索逻辑
-  };
+  }
 
   const handleCreate = () => {
-    setEditingUser(null);
-    form.resetFields();
-    setModalVisible(true);
-  };
+    setEditingUser(null)
+    form.resetFields()
+    setModalVisible(true)
+  }
 
   const handleEdit = (user: User) => {
-    setEditingUser(user);
+    setEditingUser(user)
     form.setFieldsValue({
       username: user.username,
       email: user.email,
@@ -193,73 +188,74 @@ const UserManagementPage: React.FC = () => {
       phone: user.phone,
       status: user.status,
       role: user.role,
-      organization_id: user.organization_id,
-    });
-    setModalVisible(true);
-  };
+      organization_id: user.organization_id
+    })
+    setModalVisible(true)
+  }
 
-  const handleDelete = (_id: string) => {
+  const handleDelete = async (_id: string) => {
     try {
       // 模拟删除API调用
-      message.success('删除成功');
-      void loadUsers();
-      void loadStatistics();
+      message.success('删除成功')
+      loadUsers()
+      loadStatistics()
     } catch {
-      message.error('删除失败');
+      message.error('删除失败')
     }
-  };
+  }
 
-  const handleToggleStatus = (_user: User, _newStatus: string) => {
+  const handleToggleStatus = async (_user: User, _newStatus: string) => {
     try {
       // 模拟状态切换API调用
-      message.success('状态已更新');
-      void loadUsers();
-      void loadStatistics();
+      message.success('状态已更新')
+      loadUsers()
+      loadStatistics()
     } catch {
-      message.error('状态更新失败');
+      message.error('状态更新失败')
     }
-  };
+  }
 
-  const handleToggleLock = (user: User) => {
+  const handleToggleLock = async (user: User) => {
     try {
       // 模拟锁定/解锁API调用
-      const isLocked = user.is_locked === true;
-      message.success(isLocked ? '用户已解锁' : '用户已锁定');
-      void loadUsers();
-      void loadStatistics();
+      message.success(user.is_locked ? '用户已解锁' : '用户已锁定')
+      loadUsers()
+      loadStatistics()
     } catch {
-      message.error('操作失败');
+      message.error('操作失败')
     }
-  };
+  }
 
   const handleViewDetail = (user: User) => {
-    setSelectedUser(user);
-    setDetailDrawerVisible(true);
-  };
+    setSelectedUser(user)
+    setDetailDrawerVisible(true)
+  }
 
-  const handleSubmit = (_values: CreateUserData | UpdateUserData) => {
+  const handleSubmit = async (_values: CreateUserData | UpdateUserData) => {
     try {
-      const isEditing = editingUser !== null && editingUser !== undefined;
-      if (isEditing) {
+      if (editingUser) {
         // 模拟更新API调用
-        message.success('更新成功');
+        message.success('更新成功')
       } else {
         // 模拟创建API调用
-        message.success('创建成功');
+        message.success('创建成功')
       }
-      setModalVisible(false);
-      void loadUsers();
-      void loadStatistics();
+      setModalVisible(false)
+      loadUsers()
+      loadStatistics()
     } catch {
-      const isEditing = editingUser !== null && editingUser !== undefined;
-      message.error(isEditing ? '更新失败' : '创建失败');
+      message.error(editingUser ? '更新失败' : '创建失败')
     }
-  };
+  }
 
   const getStatusTag = (status: string) => {
-    const statusConfig = statusOptions.find(s => s.value === status);
-    return <Tag color={statusConfig?.color ?? 'default'}>{statusConfig?.label ?? status}</Tag>;
-  };
+    const statusConfig = statusOptions.find(s => s.value === status)
+    return (
+      <Tag color={statusConfig?.color ?? 'default'}>
+        {statusConfig?.label ?? status}
+      </Tag>
+    )
+  }
 
   const columns: ColumnsType<User> = [
     {
@@ -270,10 +266,12 @@ const UserManagementPage: React.FC = () => {
           <Avatar icon={<UserOutlined />} />
           <div>
             <div style={{ fontWeight: 500 }}>{record.full_name}</div>
-            <div style={{ fontSize: '12px', color: '#666' }}>@{record.username}</div>
+            <div style={{ fontSize: '12px', color: '#666' }}>
+              @{record.username}
+            </div>
           </div>
         </Space>
-      ),
+      )
     },
     {
       title: '联系方式',
@@ -281,42 +279,43 @@ const UserManagementPage: React.FC = () => {
       render: (_, record) => (
         <div>
           <div>{record.email}</div>
-          <div style={{ fontSize: '12px', color: '#666' }}>{record.phone || '未设置'}</div>
+          <div style={{ fontSize: '12px', color: '#666' }}>
+            {record.phone || '未设置'}
+          </div>
         </div>
-      ),
+      )
     },
     {
       title: '角色',
       dataIndex: 'role_name',
       key: 'role',
-      render: role => <Tag color="blue">{role}</Tag>,
+      render: (role) => <Tag color="blue">{role}</Tag>
     },
     {
       title: '组织',
       dataIndex: 'organization_name',
-      key: 'organization',
+      key: 'organization'
     },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      render: (status: unknown, record: { is_locked?: boolean }) => (
+      render: (status, record) => (
         <Space>
-          {getStatusTag(status as string)}
-          {record.is_locked !== null && record.is_locked !== undefined && record.is_locked && (
+          {getStatusTag(status)}
+          {record.is_locked && (
             <Tooltip title="账户已锁定">
               <LockOutlined style={{ color: '#ff4d4f' }} />
             </Tooltip>
           )}
         </Space>
-      ),
+      )
     },
     {
       title: '最后登录',
       dataIndex: 'last_login',
       key: 'last_login',
-      render: (date: string | number | Date | dayjs.Dayjs | null | undefined) =>
-        date !== null && date !== undefined ? dayjs(date).format('YYYY-MM-DD HH:mm') : '从未登录',
+      render: (date) => (date !== null && date !== undefined) ? dayjs(date).format('YYYY-MM-DD HH:mm') : '从未登录'
     },
     {
       title: '操作',
@@ -339,22 +338,20 @@ const UserManagementPage: React.FC = () => {
               onClick={() => handleEdit(record)}
             />
           </Tooltip>
-          <Tooltip title={record.is_locked === true ? '解锁' : '锁定'}>
+          <Tooltip title={record.is_locked ? '解锁' : '锁定'}>
             <Button
               type="link"
               size="small"
-              icon={record.is_locked === true ? <UnlockOutlined /> : <LockOutlined />}
+              icon={record.is_locked ? <UnlockOutlined /> : <LockOutlined />}
               onClick={() => handleToggleLock(record)}
-              style={{
-                color: record.is_locked === true ? '#52c41a' : '#ff4d4f',
-              }}
+              style={{ color: record.is_locked ? '#52c41a' : '#ff4d4f' }}
             />
           </Tooltip>
           <Tooltip title={record.status === 'active' ? '停用' : '启用'}>
             <Switch
               size="small"
               checked={record.status === 'active'}
-              onChange={checked => handleToggleStatus(record, checked ? 'active' : 'inactive')}
+              onChange={(checked) => handleToggleStatus(record, checked ? 'active' : 'inactive')}
             />
           </Tooltip>
           <Popconfirm
@@ -365,13 +362,18 @@ const UserManagementPage: React.FC = () => {
             icon={<ExclamationCircleOutlined style={{ color: 'red' }} />}
           >
             <Tooltip title="删除">
-              <Button type="link" size="small" danger icon={<DeleteOutlined />} />
+              <Button
+                type="link"
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+              />
             </Tooltip>
           </Popconfirm>
         </Space>
-      ),
-    },
-  ];
+      )
+    }
+  ]
 
   return (
     <>
@@ -382,7 +384,11 @@ const UserManagementPage: React.FC = () => {
           <Row gutter={16} style={{ marginBottom: 24 }}>
             <Col span={6}>
               <Card>
-                <Statistic title="总用户数" value={statistics.total} prefix={<UserOutlined />} />
+                <Statistic
+                  title="总用户数"
+                  value={statistics.total}
+                  prefix={<UserOutlined />}
+                />
               </Card>
             </Col>
             <Col span={6}>
@@ -465,13 +471,20 @@ const UserManagementPage: React.FC = () => {
                       </Option>
                     ))}
                   </Select>
-                  <Button icon={<ReloadOutlined />} onClick={() => void loadUsers()}>
+                  <Button
+                    icon={<ReloadOutlined />}
+                    onClick={loadUsers}
+                  >
                     刷新
                   </Button>
                 </Space>
               </Col>
               <Col>
-                <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={handleCreate}
+                >
                   新建用户
                 </Button>
               </Col>
@@ -488,20 +501,24 @@ const UserManagementPage: React.FC = () => {
               pageSize: 10,
               showSizeChanger: true,
               showQuickJumper: true,
-              showTotal: total => `共 ${total} 条记录`,
+              showTotal: (total) => `共 ${total} 条记录`
             }}
           />
         </Card>
 
         {/* 创建/编辑模态框 */}
         <Modal
-          title={editingUser !== null && editingUser !== undefined ? '编辑用户' : '新建用户'}
+          title={editingUser ? '编辑用户' : '新建用户'}
           open={modalVisible}
           onCancel={() => setModalVisible(false)}
           footer={null}
           width={600}
         >
-          <Form form={form} layout="vertical" onFinish={handleSubmit}>
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={handleSubmit}
+          >
             <Row gutter={16}>
               <Col span={12}>
                 <Form.Item
@@ -509,7 +526,7 @@ const UserManagementPage: React.FC = () => {
                   label="用户名"
                   rules={[
                     { required: true, message: '请输入用户名' },
-                    { pattern: /^[a-zA-Z0-9_]+$/, message: '用户名只能包含字母、数字和下划线' },
+                    { pattern: /^[a-zA-Z0-9_]+$/, message: '用户名只能包含字母、数字和下划线' }
                   ]}
                 >
                   <Input placeholder="请输入用户名" />
@@ -521,7 +538,7 @@ const UserManagementPage: React.FC = () => {
                   label="邮箱"
                   rules={[
                     { required: true, message: '请输入邮箱' },
-                    { type: 'email', message: '请输入正确的邮箱格式' },
+                    { type: 'email', message: '请输入正确的邮箱格式' }
                   ]}
                 >
                   <Input placeholder="请输入邮箱" />
@@ -543,7 +560,9 @@ const UserManagementPage: React.FC = () => {
                 <Form.Item
                   name="phone"
                   label="手机号"
-                  rules={[{ pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号格式' }]}
+                  rules={[
+                    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号格式' }
+                  ]}
                 >
                   <Input placeholder="请输入手机号" />
                 </Form.Item>
@@ -600,9 +619,11 @@ const UserManagementPage: React.FC = () => {
 
             <Form.Item style={{ textAlign: 'right', marginBottom: 0 }}>
               <Space>
-                <Button onClick={() => setModalVisible(false)}>取消</Button>
+                <Button onClick={() => setModalVisible(false)}>
+                  取消
+                </Button>
                 <Button type="primary" htmlType="submit">
-                  {editingUser !== null && editingUser !== undefined ? '更新' : '创建'}
+                  {editingUser ? '更新' : '创建'}
                 </Button>
               </Space>
             </Form.Item>
@@ -617,17 +638,25 @@ const UserManagementPage: React.FC = () => {
           open={detailDrawerVisible}
           width={600}
         >
-          {selectedUser !== null && selectedUser !== undefined && (
+          {selectedUser && (
             <div>
               <div style={{ textAlign: 'center', marginBottom: 24 }}>
                 <Avatar size={80} icon={<UserOutlined />} />
-                <h3 style={{ marginTop: 16, marginBottom: 8 }}>{selectedUser.full_name}</h3>
-                <p style={{ color: '#666', margin: 0 }}>@{selectedUser.username}</p>
+                <h3 style={{ marginTop: 16, marginBottom: 8 }}>
+                  {selectedUser.full_name}
+                </h3>
+                <p style={{ color: '#666', margin: 0 }}>
+                  @{selectedUser.username}
+                </p>
               </div>
 
               <Descriptions column={1} bordered>
-                <Descriptions.Item label="用户名">{selectedUser.username}</Descriptions.Item>
-                <Descriptions.Item label="邮箱">{selectedUser.email}</Descriptions.Item>
+                <Descriptions.Item label="用户名">
+                  {selectedUser.username}
+                </Descriptions.Item>
+                <Descriptions.Item label="邮箱">
+                  {selectedUser.email}
+                </Descriptions.Item>
                 <Descriptions.Item label="手机号">
                   {selectedUser.phone || '未设置'}
                 </Descriptions.Item>
@@ -640,16 +669,16 @@ const UserManagementPage: React.FC = () => {
                 <Descriptions.Item label="状态">
                   <Space>
                     {getStatusTag(selectedUser.status)}
-                    {selectedUser.is_locked !== null &&
-                      selectedUser.is_locked !== undefined &&
-                      selectedUser.is_locked === true && <Tag color="red">已锁定</Tag>}
+                    {selectedUser.is_locked && (
+                      <Tag color="red">已锁定</Tag>
+                    )}
                   </Space>
                 </Descriptions.Item>
                 <Descriptions.Item label="最后登录">
-                  {(selectedUser.last_login !== null && selectedUser.last_login !== undefined) ||
-                  false
+                  {((selectedUser.last_login !== null && selectedUser.last_login !== undefined) || false)
                     ? dayjs(selectedUser.last_login).format('YYYY-MM-DD HH:mm:ss')
-                    : '从未登录'}
+                    : '从未登录'
+                  }
                 </Descriptions.Item>
                 <Descriptions.Item label="创建时间">
                   {dayjs(selectedUser.created_at).format('YYYY-MM-DD HH:mm:ss')}
@@ -665,32 +694,20 @@ const UserManagementPage: React.FC = () => {
                     type="primary"
                     icon={<EditOutlined />}
                     onClick={() => {
-                      setDetailDrawerVisible(false);
-                      handleEdit(selectedUser);
+                      setDetailDrawerVisible(false)
+                      handleEdit(selectedUser)
                     }}
                   >
                     编辑用户
                   </Button>
                   <Button
-                    icon={
-                      selectedUser.is_locked !== null &&
-                      selectedUser.is_locked !== undefined &&
-                      selectedUser.is_locked === true ? (
-                        <UnlockOutlined />
-                      ) : (
-                        <LockOutlined />
-                      )
-                    }
+                    icon={selectedUser.is_locked ? <UnlockOutlined /> : <LockOutlined />}
                     onClick={() => {
-                      setDetailDrawerVisible(false);
-                      handleToggleLock(selectedUser);
+                      setDetailDrawerVisible(false)
+                      handleToggleLock(selectedUser)
                     }}
                   >
-                    {selectedUser.is_locked !== null &&
-                    selectedUser.is_locked !== undefined &&
-                    selectedUser.is_locked === true
-                      ? '解锁账户'
-                      : '锁定账户'}
+                    {selectedUser.is_locked ? '解锁账户' : '锁定账户'}
                   </Button>
                 </Space>
               </div>
@@ -699,7 +716,7 @@ const UserManagementPage: React.FC = () => {
         </Drawer>
       </div>
     </>
-  );
-};
+  )
+}
 
-export default UserManagementPage;
+export default UserManagementPage

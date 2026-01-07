@@ -41,16 +41,25 @@ class ProjectService:
             raise ValueError(f"创建项目失败: {str(e)}")
 
     def update_project(
-        self, db: Session, *, project_id: str, obj_in: ProjectUpdate, updated_by: str = None
+        self,
+        db: Session,
+        *,
+        project_id: str,
+        obj_in: ProjectUpdate,
+        updated_by: str = None,
     ) -> Project:
         """更新项目"""
         project = project_crud.get(db, project_id)
         if not project:
             raise ValueError(f"项目 {project_id} 不存在")
 
-        return project_crud.update(db, db_obj=project, obj_in=obj_in, updated_by=updated_by)
+        return project_crud.update(
+            db, db_obj=project, obj_in=obj_in, updated_by=updated_by
+        )
 
-    def toggle_status(self, db: Session, *, project_id: str, updated_by: str = None) -> Project:
+    def toggle_status(
+        self, db: Session, *, project_id: str, updated_by: str = None
+    ) -> Project:
         """切换项目状态"""
         project = project_crud.get(db, project_id)
         if not project:
@@ -118,7 +127,12 @@ class ProjectService:
         """从名称生成语义化编码"""
         try:
             if get_pinyin:
-                "".join([c[0] for c in get_pinyin(name, format="strip", delimiter=" ").split()])
+                "".join(
+                    [
+                        c[0]
+                        for c in get_pinyin(name, format="strip", delimiter=" ").split()
+                    ]
+                )
                 # Need to match Schema validation: PJ + 2509 + 001 ?
                 # Wait, schema validation says: 2字母前缀 + 4位年月 + 3位序号
                 # If Validation is strict, then pinyin initials won't work unless they follow that format!
@@ -135,7 +149,9 @@ class ProjectService:
         except Exception:
             return None
 
-    def search_projects(self, db: Session, search_params: ProjectSearchRequest) -> dict[str, Any]:
+    def search_projects(
+        self, db: Session, search_params: ProjectSearchRequest
+    ) -> dict[str, Any]:
         items, total = project_crud.search(db, search_params)
         return {
             "items": items,

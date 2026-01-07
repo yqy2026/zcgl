@@ -7,10 +7,14 @@ import axios, {
   AxiosInstance,
   AxiosRequestConfig,
   AxiosResponse,
-  InternalAxiosRequestConfig,
+  InternalAxiosRequestConfig
 } from 'axios';
 import { ResponseExtractor, ApiErrorHandler } from '../utils/responseExtractor';
-import { EnhancedApiClientConfig, RetryConfig, ExtractResult } from '../types/apiResponse';
+import {
+  EnhancedApiClientConfig,
+  RetryConfig,
+  ExtractResult
+} from '../types/apiResponse';
 import { createLogger } from '../utils/logger';
 
 const apiLogger = createLogger('API');
@@ -40,11 +44,11 @@ class MemoryCache {
     this.cache.set(key, {
       data,
       timestamp: Date.now(),
-      ttl,
+      ttl
     });
   }
 
-  get(key: string): unknown {
+  get(key: string): unknown | null {
     const item = this.cache.get(key);
     if (!item) {
       return null;
@@ -90,10 +94,7 @@ class RetryManager {
       return await requestFn();
     } catch (error) {
       // 检查是否应该重试
-      if (
-        attempt < config.maxAttempts &&
-        (!config.retryCondition || config.retryCondition(error))
-      ) {
+      if (attempt < config.maxAttempts && (!config.retryCondition || config.retryCondition(error))) {
         // 计算延迟时间（指数退避）
         const delay = config.delay * Math.pow(config.backoffMultiplier, attempt - 1);
         await new Promise(resolve => setTimeout(resolve, delay));
@@ -120,35 +121,35 @@ export class EnhancedApiClient {
   constructor(config: EnhancedApiClientConfig = {}) {
     this.config = {
       // 默认配置
-      baseURL: config.baseURL != null ? config.baseURL : '/api/v1',
-      timeout: config.timeout != null ? config.timeout : 30000,
+      baseURL: config.baseURL || '/api/v1',
+      timeout: config.timeout || 30000,
       responseDetection: {
         successField: 'success',
         dataField: 'data',
         errorFields: ['error', 'message'],
         strict: false,
-        ...config.responseDetection,
+        ...config.responseDetection
       },
       defaultRetryConfig: {
         maxAttempts: 3,
         delay: 1000,
         backoffMultiplier: 2,
-        ...config.defaultRetryConfig,
+        ...config.defaultRetryConfig
       },
       defaultCacheConfig: {
         enabled: false,
         ttl: 5 * 60 * 1000, // 5分钟
         maxSize: 100,
-        ...config.defaultCacheConfig,
+        ...config.defaultCacheConfig
       },
       enableAutoRetry: config.enableAutoRetry ?? false,
       enableCaching: config.enableCaching ?? false,
       enableLogging: config.enableLogging ?? process.env.NODE_ENV === 'development',
       enableTypeValidation: config.enableTypeValidation ?? false,
       globalErrorHandler: config.globalErrorHandler,
-      requestInterceptors: config.requestInterceptors ?? [],
-      responseInterceptors: config.responseInterceptors ?? [],
-      ...config,
+      requestInterceptors: config.requestInterceptors || [],
+      responseInterceptors: config.responseInterceptors || [],
+      ...config
     };
 
     // 初始化axios实例
@@ -156,8 +157,8 @@ export class EnhancedApiClient {
       baseURL: this.config.baseURL,
       timeout: this.config.timeout,
       headers: {
-        'Content-Type': 'application/json',
-      },
+        'Content-Type': 'application/json'
+      }
     });
 
     // 初始化缓存
@@ -177,101 +178,89 @@ export class EnhancedApiClient {
     this.instance.interceptors.request.use(
       (config: InternalAxiosRequestConfig) => {
         // 添加认证token
-        const token = localStorage.getItem('auth_token');
-        if (token != null && token.length > 0 && config.headers != null) {
-          config.headers.set('Authorization', `Bearer ${token}`);
+        const token = localStorage.getItem('auth_token')
+        if (token && config.headers) {
+          config.headers.set('Authorization', `Bearer ${token}`)
         }
 
         // 添加请求ID
-        if (config.headers != null) {
-          config.headers.set('X-Request-ID', this.generateRequestId());
+        if (config.headers) {
+          config.headers.set('X-Request-ID', this.generateRequestId())
         }
 
         // 添加时间戳防止缓存
         if (config.method === 'get') {
           // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-          const params = ((config.params as unknown) || {}) as Record<string, unknown>;
+          const params = ((config.params as unknown) || {}) as Record<string, unknown>
           config.params = {
             ...params,
-            _t: Date.now(),
-          };
+            _t: Date.now()
+          }
         }
 
         // 执行自定义请求拦截器
         if (this.config.requestInterceptors) {
           for (const interceptor of this.config.requestInterceptors) {
-            config = interceptor(config);
+            config = interceptor(config)
           }
         }
 
         if (this.config.enableLogging === true) {
           apiLogger.debug(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`, {
             params: config.params,
-            data: config.data,
-          });
+            data: config.data
+          })
         }
 
-        return config;
+        return config
       },
-      error => {
-        apiLogger.error(
-          '❌ Request Error:',
-          error instanceof Error ? error : new Error(String(error))
-        );
-        return Promise.reject(error instanceof Error ? error : new Error(String(error)));
+      (error) => {
+        apiLogger.error('❌ Request Error:', error)
+        return Promise.reject(error)
       }
-    );
+    )
 
     // 响应拦截器
     this.instance.interceptors.response.use(
       (response: AxiosResponse) => {
         if (this.config.enableLogging === true) {
-          apiLogger.debug(
-            `✅ API Response: ${response.config.method?.toUpperCase()} ${response.config.url}`,
-            {
-              status: response.status,
-              data: response.data,
-            }
-          );
+          apiLogger.debug(`✅ API Response: ${response.config.method?.toUpperCase()} ${response.config.url}`, {
+            status: response.status,
+            data: response.data
+          })
         }
 
         // 执行自定义响应拦截器
         if (this.config.responseInterceptors) {
-          let finalResponse = response;
+          let finalResponse = response
           for (const interceptor of this.config.responseInterceptors) {
-            finalResponse = interceptor(finalResponse);
+            finalResponse = interceptor(finalResponse)
           }
-          return finalResponse;
+          return finalResponse
         }
 
-        return response;
+        return response
       },
-      async error => {
-        const enhancedError = ApiErrorHandler.handleError(error);
+      async (error) => {
+        const enhancedError = ApiErrorHandler.handleError(error)
 
         if (this.config.enableLogging === true) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const err = error as Record<string, unknown>;
-          apiLogger.error(
-            `❌ API Error: ${enhancedError.type} - ${enhancedError.message}`,
-            undefined,
-            {
-              config: err.config,
-              response: err.response,
-            }
-          );
+          const err = error as Record<string, unknown>
+          apiLogger.error(`❌ API Error: ${enhancedError.type} - ${enhancedError.message}`, undefined, {
+            config: err.config,
+            response: err.response
+          })
         }
 
         // 执行全局错误处理器
         if (this.config.globalErrorHandler) {
-          this.config.globalErrorHandler(enhancedError);
+          this.config.globalErrorHandler(enhancedError)
         }
 
-        return Promise.reject(
-          enhancedError instanceof Error ? enhancedError : new Error(enhancedError.message)
-        );
+        return Promise.reject(enhancedError)
       }
-    );
+    )
   }
 
   // ==================== 核心HTTP方法 ====================
@@ -296,66 +285,55 @@ export class EnhancedApiClient {
 
     // 检查缓存
     if (cache === true) {
-      const cacheKey = this.generateCacheKey(
-        'GET',
-        url,
-        axiosConfig.params as Record<string, unknown> | undefined
-      );
-      const cachedData = this.cache.get(cacheKey);
+      const cacheKey = this.generateCacheKey('GET', url, axiosConfig.params)
+      const cachedData = this.cache.get(cacheKey)
       if (cachedData !== null && cachedData !== undefined) {
         if (this.config.enableLogging === true) {
-          apiLogger.debug(`📦 Cache Hit: ${url}`);
+          apiLogger.debug(`📦 Cache Hit: ${url}`)
         }
         return {
           success: true,
           data: cachedData as T,
-          rawResponse: {} as AxiosResponse,
-        };
+          rawResponse: {} as AxiosResponse
+        }
       }
     }
 
     // 执行请求
     const executeRequest = async (): Promise<AxiosResponse> => {
-      const response = await this.instance.get(url, axiosConfig);
+      const response = await this.instance.get(url, axiosConfig)
 
       // 存储到缓存
       if (cache === true && response.data !== undefined && response.data !== null) {
-        const cacheKey = this.generateCacheKey(
-          'GET',
-          url,
-          axiosConfig.params as Record<string, unknown> | undefined
-        );
-        this.cache.set(cacheKey, response.data, this.config.defaultCacheConfig!.ttl);
+        const cacheKey = this.generateCacheKey('GET', url, axiosConfig.params)
+        this.cache.set(cacheKey, response.data, this.config.defaultCacheConfig!.ttl)
       }
 
-      return response;
-    };
+      return response
+    }
 
     // 处理重试
-    let response: AxiosResponse;
+    let response: AxiosResponse
     if (retry === true) {
-      response = await RetryManager.executeWithRetry(
-        executeRequest,
-        this.config.defaultRetryConfig!
-      );
+      response = await RetryManager.executeWithRetry(executeRequest, this.config.defaultRetryConfig!)
     } else if (retry !== undefined && retry !== null && typeof retry === 'object') {
-      response = await RetryManager.executeWithRetry(executeRequest, retry);
+      response = await RetryManager.executeWithRetry(executeRequest, retry)
     } else {
-      response = await executeRequest();
+      response = await executeRequest()
     }
 
     // 智能提取数据
     if (smartExtract) {
       return ResponseExtractor.smartExtract<T>(response, {
         detection: this.config.responseDetection,
-        enableTypeValidation: this.config.enableTypeValidation,
-      });
+        enableTypeValidation: this.config.enableTypeValidation
+      })
     }
 
     return {
       success: true,
       data: response.data as T,
-      rawResponse: response,
+      rawResponse: response
     };
   }
 
@@ -381,30 +359,27 @@ export class EnhancedApiClient {
     };
 
     // 处理重试
-    let response: AxiosResponse;
+    let response: AxiosResponse
     if (retry === true) {
-      response = await RetryManager.executeWithRetry(
-        executeRequest,
-        this.config.defaultRetryConfig!
-      );
+      response = await RetryManager.executeWithRetry(executeRequest, this.config.defaultRetryConfig!)
     } else if (retry !== undefined && retry !== null && typeof retry === 'object') {
-      response = await RetryManager.executeWithRetry(executeRequest, retry);
+      response = await RetryManager.executeWithRetry(executeRequest, retry)
     } else {
-      response = await executeRequest();
+      response = await executeRequest()
     }
 
     // 智能提取数据
     if (smartExtract) {
       return ResponseExtractor.smartExtract<T>(response, {
         detection: this.config.responseDetection,
-        enableTypeValidation: this.config.enableTypeValidation,
+        enableTypeValidation: this.config.enableTypeValidation
       });
     }
 
     return {
       success: true,
       data: response.data as T,
-      rawResponse: response,
+      rawResponse: response
     };
   }
 
@@ -430,30 +405,27 @@ export class EnhancedApiClient {
     };
 
     // 处理重试
-    let response: AxiosResponse;
+    let response: AxiosResponse
     if (retry === true) {
-      response = await RetryManager.executeWithRetry(
-        executeRequest,
-        this.config.defaultRetryConfig!
-      );
+      response = await RetryManager.executeWithRetry(executeRequest, this.config.defaultRetryConfig!)
     } else if (retry !== undefined && retry !== null && typeof retry === 'object') {
-      response = await RetryManager.executeWithRetry(executeRequest, retry);
+      response = await RetryManager.executeWithRetry(executeRequest, retry)
     } else {
-      response = await executeRequest();
+      response = await executeRequest()
     }
 
     // 智能提取数据
     if (smartExtract) {
       return ResponseExtractor.smartExtract<T>(response, {
         detection: this.config.responseDetection,
-        enableTypeValidation: this.config.enableTypeValidation,
+        enableTypeValidation: this.config.enableTypeValidation
       });
     }
 
     return {
       success: true,
       data: response.data as T,
-      rawResponse: response,
+      rawResponse: response
     };
   }
 
@@ -478,30 +450,27 @@ export class EnhancedApiClient {
     };
 
     // 处理重试
-    let response: AxiosResponse;
+    let response: AxiosResponse
     if (retry === true) {
-      response = await RetryManager.executeWithRetry(
-        executeRequest,
-        this.config.defaultRetryConfig!
-      );
+      response = await RetryManager.executeWithRetry(executeRequest, this.config.defaultRetryConfig!)
     } else if (retry !== undefined && retry !== null && typeof retry === 'object') {
-      response = await RetryManager.executeWithRetry(executeRequest, retry);
+      response = await RetryManager.executeWithRetry(executeRequest, retry)
     } else {
-      response = await executeRequest();
+      response = await executeRequest()
     }
 
     // 智能提取数据
     if (smartExtract) {
       return ResponseExtractor.smartExtract<T>(response, {
         detection: this.config.responseDetection,
-        enableTypeValidation: this.config.enableTypeValidation,
+        enableTypeValidation: this.config.enableTypeValidation
       });
     }
 
     return {
       success: true,
       data: response.data as T,
-      rawResponse: response,
+      rawResponse: response
     };
   }
 
@@ -536,7 +505,7 @@ export class EnhancedApiClient {
       config?: AxiosRequestConfig;
     }>
   ): Promise<ExtractResult<T>[]> {
-    const promises = requests.map(async request => {
+    const promises = requests.map(async (request) => {
       switch (request.method) {
         case 'GET':
           return await this.get<T>(request.url, request.config);
@@ -546,11 +515,8 @@ export class EnhancedApiClient {
           return await this.put<T>(request.url, request.data, request.config);
         case 'DELETE':
           return await this.delete<T>(request.url, request.config);
-        // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-        default: {
-          const exhaustiveCheck: never = request.method;
-          throw new Error(`不支持的请求方法: ${String(exhaustiveCheck)}`);
-        }
+        default:
+          throw new Error(`不支持的请求方法: ${request.method}`);
       }
     });
 
@@ -629,8 +595,8 @@ export const enhancedApiClient = new EnhancedApiClient({
   defaultRetryConfig: {
     maxAttempts: 3,
     delay: 1000,
-    backoffMultiplier: 2,
-  },
+    backoffMultiplier: 2
+  }
 });
 
 export default EnhancedApiClient;

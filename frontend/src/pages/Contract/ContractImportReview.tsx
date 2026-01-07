@@ -3,9 +3,6 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { createLogger } from '../../utils/logger';
-
-const logger = createLogger('ContractImportReview');
 import {
   Card,
   Form,
@@ -23,9 +20,11 @@ import {
   Tabs,
   message,
   Statistic,
-  Switch,
+  Switch
 } from 'antd';
-import { SaveOutlined } from '@ant-design/icons';
+import {
+  SaveOutlined
+} from '@ant-design/icons';
 import dayjs from 'dayjs';
 
 import {
@@ -33,7 +32,7 @@ import {
   type ConfirmedContractData,
   type ConfirmImportResponse,
   type AssetMatch,
-  type OwnershipMatch,
+  type OwnershipMatch
 } from '../../services/pdfImportService';
 
 const { Title } = Typography;
@@ -51,7 +50,7 @@ interface ContractImportReviewProps {
 const ContractImportReview: React.FC<ContractImportReviewProps> = ({
   result,
   onConfirm,
-  onBack,
+  onBack
 }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
@@ -66,72 +65,40 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
 
     // 设置表单初始值 - 确保数字字段正确转换
     form.setFieldsValue({
-      contract_number: validatedData.contract_number ?? '',
-      asset_id: recommendations.asset_id ?? '',
-      ownership_id: recommendations.ownership_id ?? '',
-      tenant_name: validatedData.tenant_name ?? '',
-      tenant_contact: validatedData.tenant_contact ?? '',
-      sign_date: validatedData.sign_date != null ? dayjs(validatedData.sign_date as string) : null,
-      start_date:
-        validatedData.start_date != null ? dayjs(validatedData.start_date as string) : null,
-      end_date: validatedData.end_date != null ? dayjs(validatedData.end_date as string) : null,
-      rentable_area:
-        validatedData.rentable_area !== null && validatedData.rentable_area !== undefined
-          ? typeof validatedData.rentable_area === 'number'
-            ? validatedData.rentable_area
-            : typeof validatedData.rentable_area === 'string'
-              ? parseFloat(validatedData.rentable_area)
-              : 0
-          : undefined,
-      monthly_rent:
-        validatedData.monthly_rent !== null && validatedData.monthly_rent !== undefined
-          ? typeof validatedData.monthly_rent === 'number'
-            ? validatedData.monthly_rent
-            : typeof validatedData.monthly_rent === 'string'
-              ? parseFloat(validatedData.monthly_rent)
-              : 0
-          : undefined,
-      total_deposit:
-        validatedData.total_deposit !== null && validatedData.total_deposit !== undefined
-          ? typeof validatedData.total_deposit === 'number'
-            ? validatedData.total_deposit
-            : typeof validatedData.total_deposit === 'string'
-              ? parseFloat(validatedData.total_deposit)
-              : 0
-          : 0,
-      contract_status:
-        validatedData.contract_status !== null &&
-        validatedData.contract_status !== undefined &&
-        validatedData.contract_status !== ''
-          ? validatedData.contract_status
-          : '有效',
-      payment_terms: validatedData.payment_terms ?? '',
-      contract_notes: validatedData.contract_notes ?? '',
-      rent_terms: validatedData.rent_terms ?? [],
+      contract_number: validatedData.contract_number || '',
+      asset_id: recommendations.asset_id || '',
+      ownership_id: recommendations.ownership_id || '',
+      tenant_name: validatedData.tenant_name || '',
+      tenant_contact: validatedData.tenant_contact || '',
+      sign_date: validatedData.sign_date ? dayjs(String(validatedData.sign_date)) : null,
+      start_date: validatedData.start_date ? dayjs(String(validatedData.start_date)) : null,
+      end_date: validatedData.end_date ? dayjs(String(validatedData.end_date)) : null,
+      rentable_area: validatedData.rentable_area ? parseFloat(String(validatedData.rentable_area)) : undefined,
+      monthly_rent: validatedData.monthly_rent ? parseFloat(String(validatedData.monthly_rent)) : undefined,
+      total_deposit: validatedData.total_deposit ? parseFloat(String(validatedData.total_deposit)) : 0,
+      contract_status: validatedData.contract_status || '有效',
+      payment_terms: validatedData.payment_terms || '',
+      contract_notes: validatedData.contract_notes || '',
+      rent_terms: validatedData.rent_terms || []
     });
+
   }, [result, form]);
 
   // 表单字段变更接口
-  interface FormFieldChange {
-    name: string[] | number;
-    value: unknown;
-    touched?: boolean;
-    validating?: boolean;
-  }
+interface FormFieldChange {
+  name: string[];
+  value: unknown;
+  touched?: boolean;
+  validating?: boolean;
+}
 
-  // 表单字段变更处理
+// 表单字段变更处理
   const handleFieldChange = (changedFields: FormFieldChange[]) => {
     // 标记已修改的字段
     const newModifiedFields = new Set(modifiedFields);
     changedFields.forEach((field: FormFieldChange) => {
-      const fieldName = field.name as string[];
-      if (
-        fieldName !== null &&
-        fieldName !== undefined &&
-        Array.isArray(fieldName) &&
-        fieldName.length > 0
-      ) {
-        newModifiedFields.add(fieldName[0]);
+      if (field.name) {
+        newModifiedFields.add(field.name[0]);
       }
     });
     setModifiedFields(newModifiedFields);
@@ -140,38 +107,16 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
   // 确认导入
   const handleConfirm = async () => {
     try {
-      const values = (await form.validateFields()) as Record<string, unknown>;
+      const values = await form.validateFields();
 
       // 转换日期格式
-      const valuesRecord = values;
-      const signDateValue = valuesRecord.sign_date as dayjs.Dayjs | undefined;
-      const startDateValue = valuesRecord.start_date as dayjs.Dayjs | undefined;
-      const endDateValue = valuesRecord.end_date as dayjs.Dayjs | undefined;
-      const monthlyRentValue = valuesRecord.monthly_rent as number | undefined;
-      const totalDepositValue = valuesRecord.total_deposit as number | undefined;
-
       const confirmedData: ConfirmedContractData = {
         ...values,
-        sign_date:
-          signDateValue !== null && signDateValue !== undefined
-            ? signDateValue.format('YYYY-MM-DD')
-            : undefined,
-        start_date:
-          startDateValue !== null && startDateValue !== undefined
-            ? startDateValue.format('YYYY-MM-DD')
-            : '',
-        end_date:
-          endDateValue !== null && endDateValue !== undefined
-            ? endDateValue.format('YYYY-MM-DD')
-            : '',
-        monthly_rent:
-          monthlyRentValue !== null && monthlyRentValue !== undefined
-            ? monthlyRentValue.toString()
-            : '',
-        total_deposit:
-          totalDepositValue !== null && totalDepositValue !== undefined
-            ? totalDepositValue.toString()
-            : '0',
+        sign_date: values.sign_date ? values.sign_date.format('YYYY-MM-DD') : undefined,
+        start_date: values.start_date ? values.start_date.format('YYYY-MM-DD') : '',
+        end_date: values.end_date ? values.end_date.format('YYYY-MM-DD') : '',
+        monthly_rent: values.monthly_rent?.toString() || '',
+        total_deposit: values.total_deposit?.toString() || '0'
       };
 
       setLoading(true);
@@ -181,10 +126,11 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
         message.success('合同导入成功！');
         // 可以在这里添加跳转逻辑
       } else {
-        message.error(response.error ?? '导入失败');
+        message.error(response.error || '导入失败');
       }
     } catch (error: unknown) {
-      logger.error('表单验证失败:', error instanceof Error ? error : new Error(String(error)));
+      console.error('表单验证失败:', error);
+      const _errorMessage = error instanceof Error ? error.message : '表单验证失败';
       message.error('请检查表单填写是否正确');
     } finally {
       setLoading(false);
@@ -193,29 +139,28 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
 
   // 获取置信度颜色
   const getConfidenceColor = (score: number): string => {
-    if (score >= 0.9) {
-      return '#52c41a';
-    }
-    if (score >= 0.7) {
-      return '#faad14';
-    }
+    if (score >= 0.9) return '#52c41a';
+    if (score >= 0.7) return '#faad14';
     return '#ff4d4f';
   };
 
+  
   // 基本信息表单
   const BasicInfoForm = () => (
-    <Form form={form} layout="vertical" onValuesChange={handleFieldChange}>
+    <Form
+      form={form}
+      layout="vertical"
+      onValuesChange={handleFieldChange}
+    >
       <Row gutter={16}>
         <Col span={12}>
           <Form.Item
             label={
               <Space>
                 <span>合同编号</span>
-                {result.extraction_result.data.contract_number !== null &&
-                  result.extraction_result.data.contract_number !== undefined &&
-                  result.extraction_result.data.contract_number !== '' && (
-                    <Tag color="blue">自动提取</Tag>
-                  )}
+                {!!result.extraction_result.data.contract_number && (
+                  <Tag color="blue">自动提取</Tag>
+                )}
               </Space>
             }
             name="contract_number"
@@ -229,11 +174,9 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
             label={
               <Space>
                 <span>承租方名称</span>
-                {result.extraction_result.data.tenant_name !== null &&
-                  result.extraction_result.data.tenant_name !== undefined &&
-                  result.extraction_result.data.tenant_name !== '' && (
-                    <Tag color="blue">自动提取</Tag>
-                  )}
+                {!!result.extraction_result.data.tenant_name && (
+                  <Tag color="blue">自动提取</Tag>
+                )}
               </Space>
             }
             name="tenant_name"
@@ -250,11 +193,9 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
             label={
               <Space>
                 <span>承租方联系方式</span>
-                {result.extraction_result.data.tenant_contact !== null &&
-                  result.extraction_result.data.tenant_contact !== undefined &&
-                  result.extraction_result.data.tenant_contact !== '' && (
-                    <Tag color="blue">自动提取</Tag>
-                  )}
+                {!!result.extraction_result.data.tenant_contact && (
+                  <Tag color="blue">自动提取</Tag>
+                )}
               </Space>
             }
             name="tenant_contact"
@@ -267,11 +208,9 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
             label={
               <Space>
                 <span>合同状态</span>
-                {result.extraction_result.data.contract_status !== null &&
-                  result.extraction_result.data.contract_status !== undefined &&
-                  result.extraction_result.data.contract_status !== '' && (
-                    <Tag color="blue">自动提取</Tag>
-                  )}
+                {!!result.extraction_result.data.contract_status && (
+                  <Tag color="blue">自动提取</Tag>
+                )}
               </Space>
             }
             name="contract_status"
@@ -291,18 +230,20 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
 
   // 日期和金额表单
   const DateAmountForm = () => (
-    <Form form={form} layout="vertical" onValuesChange={handleFieldChange}>
+    <Form
+      form={form}
+      layout="vertical"
+      onValuesChange={handleFieldChange}
+    >
       <Row gutter={16}>
         <Col span={8}>
           <Form.Item
             label={
               <Space>
                 <span>签订日期</span>
-                {result.extraction_result.data.sign_date !== null &&
-                  result.extraction_result.data.sign_date !== undefined &&
-                  result.extraction_result.data.sign_date !== '' && (
-                    <Tag color="blue">自动提取</Tag>
-                  )}
+                {!!result.extraction_result.data.sign_date && (
+                  <Tag color="blue">自动提取</Tag>
+                )}
               </Space>
             }
             name="sign_date"
@@ -315,11 +256,9 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
             label={
               <Space>
                 <span>开始日期</span>
-                {result.extraction_result.data.start_date !== null &&
-                  result.extraction_result.data.start_date !== undefined &&
-                  result.extraction_result.data.start_date !== '' && (
-                    <Tag color="blue">自动提取</Tag>
-                  )}
+                {!!result.extraction_result.data.start_date && (
+                  <Tag color="blue">自动提取</Tag>
+                )}
               </Space>
             }
             name="start_date"
@@ -333,9 +272,9 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
             label={
               <Space>
                 <span>结束日期</span>
-                {result.extraction_result.data.end_date !== null &&
-                  result.extraction_result.data.end_date !== undefined &&
-                  result.extraction_result.data.end_date !== '' && <Tag color="blue">自动提取</Tag>}
+                {!!result.extraction_result.data.end_date && (
+                  <Tag color="blue">自动提取</Tag>
+                )}
               </Space>
             }
             name="end_date"
@@ -352,11 +291,9 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
             label={
               <Space>
                 <span>租赁面积(㎡)</span>
-                {result.extraction_result.data.rentable_area !== null &&
-                  result.extraction_result.data.rentable_area !== undefined &&
-                  result.extraction_result.data.rentable_area !== '' && (
-                    <Tag color="blue">自动提取</Tag>
-                  )}
+                {!!result.extraction_result.data.rentable_area && (
+                  <Tag color="blue">自动提取</Tag>
+                )}
               </Space>
             }
             name="rentable_area"
@@ -366,7 +303,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
               placeholder="请输入租赁面积"
               min={0}
               precision={2}
-              formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+              formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
             />
           </Form.Item>
         </Col>
@@ -375,10 +312,9 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
             label={
               <Space>
                 <span>月租金(元)</span>
-                {result.extraction_result.data.monthly_rent !== null &&
-                  result.extraction_result.data.monthly_rent !== undefined && (
-                    <Tag color="blue">自动提取</Tag>
-                  )}
+                {!!result.extraction_result.data.monthly_rent && (
+                  <Tag color="blue">自动提取</Tag>
+                )}
               </Space>
             }
             name="monthly_rent"
@@ -389,7 +325,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
               placeholder="请输入月租金"
               min={0}
               precision={2}
-              formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+              formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
             />
           </Form.Item>
         </Col>
@@ -398,10 +334,9 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
             label={
               <Space>
                 <span>押金(元)</span>
-                {result.extraction_result.data.total_deposit !== null &&
-                  result.extraction_result.data.total_deposit !== undefined && (
-                    <Tag color="blue">自动提取</Tag>
-                  )}
+                {!!result.extraction_result.data.total_deposit && (
+                  <Tag color="blue">自动提取</Tag>
+                )}
               </Space>
             }
             name="total_deposit"
@@ -412,7 +347,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
               min={0}
               precision={2}
               defaultValue={0}
-              formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+              formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
             />
           </Form.Item>
         </Col>
@@ -444,9 +379,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
               placeholder="请选择匹配的资产"
               showSearch
               filterOption={(input, option) =>
-                typeof option?.children === 'string' || typeof option?.children === 'number'
-                  ? String(option?.children).toLowerCase().includes(input.toLowerCase())
-                  : false
+                String(option?.children || '').toLowerCase().includes(input.toLowerCase())
               }
             >
               {result.matching_result.matched_assets.map((asset: AssetMatch) => (
@@ -454,19 +387,13 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
                   <div>
                     <Space>
                       <span>{asset.property_name}</span>
-                      <Tag
-                        color={
-                          asset.similarity >= 80
-                            ? 'green'
-                            : asset.similarity >= 60
-                              ? 'orange'
-                              : 'red'
-                        }
-                      >
+                      <Tag color={asset.similarity >= 80 ? 'green' : asset.similarity >= 60 ? 'orange' : 'red'}>
                         相似度: {asset.similarity}%
                       </Tag>
                     </Space>
-                    <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>{asset.address}</div>
+                    <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+                      {asset.address}
+                    </div>
                   </div>
                 </Select.Option>
               ))}
@@ -503,24 +430,14 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
               placeholder="请选择匹配的权属方"
               showSearch
               filterOption={(input, option) =>
-                typeof option?.children === 'string' || typeof option?.children === 'number'
-                  ? String(option?.children).toLowerCase().includes(input.toLowerCase())
-                  : false
+                String(option?.children || '').toLowerCase().includes(input.toLowerCase())
               }
             >
               {result.matching_result.matched_ownerships.map((ownership: OwnershipMatch) => (
                 <Select.Option key={ownership.id} value={ownership.id}>
                   <Space>
                     <span>{ownership.ownership_name}</span>
-                    <Tag
-                      color={
-                        ownership.similarity >= 80
-                          ? 'green'
-                          : ownership.similarity >= 60
-                            ? 'orange'
-                            : 'red'
-                      }
-                    >
+                    <Tag color={ownership.similarity >= 80 ? 'green' : ownership.similarity >= 60 ? 'orange' : 'red'}>
                       相似度: {ownership.similarity}%
                     </Tag>
                   </Space>
@@ -542,16 +459,18 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
 
   // 高级字段表单
   const AdvancedForm = () => (
-    <Form form={form} layout="vertical" onValuesChange={handleFieldChange}>
+    <Form
+      form={form}
+      layout="vertical"
+      onValuesChange={handleFieldChange}
+    >
       <Form.Item
         label={
           <Space>
             <span>支付条款</span>
-            {result.extraction_result.data.payment_terms !== null &&
-              result.extraction_result.data.payment_terms !== undefined &&
-              result.extraction_result.data.payment_terms !== '' && (
-                <Tag color="blue">自动提取</Tag>
-              )}
+            {!!result.extraction_result.data.payment_terms && (
+              <Tag color="blue">自动提取</Tag>
+            )}
           </Space>
         }
         name="payment_terms"
@@ -563,11 +482,9 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
         label={
           <Space>
             <span>合同备注</span>
-            {result.extraction_result.data.contract_notes !== null &&
-              result.extraction_result.data.contract_notes !== undefined &&
-              result.extraction_result.data.contract_notes !== '' && (
-                <Tag color="blue">自动提取</Tag>
-              )}
+            {!!result.extraction_result.data.contract_notes && (
+              <Tag color="blue">自动提取</Tag>
+            )}
           </Space>
         }
         name="contract_notes"
@@ -708,9 +625,7 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
             type="primary"
             icon={<SaveOutlined />}
             loading={loading}
-            onClick={() => {
-              void handleConfirm();
-            }}
+            onClick={handleConfirm}
             disabled={result.validation_result.errors.length > 0}
           >
             确认导入

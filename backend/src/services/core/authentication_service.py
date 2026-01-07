@@ -69,7 +69,9 @@ class AuthenticationService:
             # 如果达到最大失败次数，锁定账户
             if user.failed_login_attempts >= settings.MAX_FAILED_ATTEMPTS:
                 user.is_locked = True
-                user.locked_until = datetime.now() + timedelta(minutes=settings.LOCKOUT_DURATION)
+                user.locked_until = datetime.now() + timedelta(
+                    minutes=settings.LOCKOUT_DURATION
+                )
 
             self.db.commit()
             return None
@@ -88,7 +90,9 @@ class AuthenticationService:
         self.db.commit()
         return user
 
-    def create_tokens(self, user: User, device_info: dict | None = None) -> TokenResponse:
+    def create_tokens(
+        self, user: User, device_info: dict | None = None
+    ) -> TokenResponse:
         """创建JWT令牌"""
         now = datetime.now(UTC)
         jti_access = self._generate_jti()
@@ -107,7 +111,9 @@ class AuthenticationService:
                 device_info.get("platform", ""),
             ]
             fingerprint_string = "|".join(filter(None, fingerprint_data))
-            device_fingerprint = hashlib.sha256(fingerprint_string.encode()).hexdigest()[:16]
+            device_fingerprint = hashlib.sha256(
+                fingerprint_string.encode()
+            ).hexdigest()[:16]
 
         # 访问令牌
         access_token_data = {
@@ -119,7 +125,9 @@ class AuthenticationService:
             "session_id": session_id,
             "device_fingerprint": device_fingerprint,
             "iat": int(now.timestamp()),
-            "exp": int((now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)).timestamp()),
+            "exp": int(
+                (now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)).timestamp()
+            ),
             "aud": "land-property-system",
             "iss": "land-property-auth",
         }
@@ -208,9 +216,9 @@ class AuthenticationService:
         # 更新最后访问时间等
         session.last_accessed_at = datetime.now()
         if client_ip:
-            session.ip_address = client_ip
+            setattr(session, "ip_address", client_ip)
         if user_agent:
-            session.user_agent = user_agent
+            setattr(session, "user_agent", user_agent)
         self.db.commit()
 
         return session

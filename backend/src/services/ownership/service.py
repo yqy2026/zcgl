@@ -41,7 +41,11 @@ class OwnershipService:
         for existing_code in existing_codes:
             code_str = existing_code[0]
             # 新格式：OW2501001 (9位)
-            if len(code_str) == 9 and code_str[:2] == prefix and code_str[2:6].isdigit():
+            if (
+                len(code_str) == 9
+                and code_str[:2] == prefix
+                and code_str[2:6].isdigit()
+            ):
                 try:
                     sequence = int(code_str[6:])
                     if sequence > max_sequence:
@@ -116,7 +120,9 @@ class OwnershipService:
         active_count = db.query(Ownership).filter(Ownership.is_active).count()
         inactive_count = total_count - active_count
 
-        recent_created = db.query(Ownership).order_by(desc(Ownership.created_at)).limit(5).all()
+        recent_created = (
+            db.query(Ownership).order_by(desc(Ownership.created_at)).limit(5).all()
+        )
 
         return {
             "total_count": total_count,
@@ -178,7 +184,9 @@ class OwnershipService:
             raise ValueError(f"权属方ID {id} 不存在")
 
         # 检查是否有关联的资产
-        asset_count = db.query(Asset).filter(Asset.ownership_entity == db_obj.name).count()
+        asset_count = (
+            db.query(Asset).filter(Asset.ownership_entity == db_obj.name).count()
+        )
 
         if asset_count > 0:
             raise ValueError(f"该权属方还有 {asset_count} 个关联资产，无法删除")

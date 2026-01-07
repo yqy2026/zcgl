@@ -141,7 +141,9 @@ class QueryBuilder[ModelType: DeclarativeMeta]:
 
         return query
 
-    def _apply_search(self, query: Select, search_term: str, search_fields: list[str]) -> Select:
+    def _apply_search(
+        self, query: Select, search_term: str, search_fields: list[str]
+    ) -> Select:
         search_conditions = []
         for field in search_fields:
             if hasattr(self.model, field):
@@ -159,5 +161,8 @@ class QueryBuilder[ModelType: DeclarativeMeta]:
     def _apply_sorting(self, query: Select, sort_by: str, sort_desc: bool) -> Select:
         if hasattr(self.model, sort_by):
             column = getattr(self.model, sort_by)
-            query = query.order_by(column.desc()) if sort_desc else query.order_by(column.asc())
+            if sort_desc:
+                query = query.order_by(column.desc())
+            else:
+                query = query.order_by(column.asc())
         return query

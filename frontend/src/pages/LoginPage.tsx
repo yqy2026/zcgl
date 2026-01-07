@@ -1,60 +1,51 @@
-import React, { useState } from 'react';
-import { Form, Input, Button, Card, Checkbox, Space, Typography, Divider, Alert } from 'antd';
-import type { CheckboxChangeEvent } from 'antd/es/checkbox';
-import {
-  UserOutlined,
-  LockOutlined,
-  SafetyCertificateOutlined,
-  LoginOutlined,
-} from '@ant-design/icons';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import type { LoginFormData } from '../types/auth';
-import styles from './LoginPage.module.css';
+import React, { useState } from 'react'
+import { Form, Input, Button, Card, Checkbox, Space, Typography, Divider, Alert } from 'antd'
+import type { CheckboxChangeEvent } from 'antd/es/checkbox'
+import { UserOutlined, LockOutlined, SafetyCertificateOutlined, LoginOutlined } from '@ant-design/icons'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
+import type { LoginFormData } from '../types/auth'
+import styles from './LoginPage.module.css'
 
-const { Title, Text } = Typography;
+const { Title, Text } = Typography
 
 const LoginPage: React.FC = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { login, loading, error } = useAuth();
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { login, loading, error } = useAuth()
   const [formData, setFormData] = useState<LoginFormData>({
     username: '',
     password: '',
-    remember: false,
-  });
+    remember: false
+  })
 
-  const _handleFormChange = (
-    changedFields: { [key: string]: unknown },
-    allFields: LoginFormData
-  ) => {
-    setFormData(allFields);
-  };
+  const _handleFormChange = (changedFields: { [key: string]: unknown }, allFields: LoginFormData) => {
+    setFormData(allFields)
+  }
 
   const handleSubmit = async (values: LoginFormData) => {
     try {
-      await login({ username: values.username, password: values.password });
+      await login({ username: values.username, password: values.password })
 
       // 登录成功，跳转到目标页面或默认工作台
-      const state = location.state as { from?: { pathname?: string } } | null;
-      const from = state?.from?.pathname ?? '/dashboard';
-      navigate(from, { replace: true });
+      const from = location.state?.from?.pathname || '/dashboard'
+      navigate(from, { replace: true })
     } catch {
       // 错误处理已在useAuth中完成，这里不需要额外处理
     }
-  };
+  }
 
   const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({ ...prev, username: e.target.value }));
-  };
+    setFormData(prev => ({ ...prev, username: e.target.value }))
+  }
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({ ...prev, password: e.target.value }));
-  };
+    setFormData(prev => ({ ...prev, password: e.target.value }))
+  }
 
   const handleRememberChange = (e: CheckboxChangeEvent) => {
-    setFormData(prev => ({ ...prev, remember: e.target.checked }));
-  };
+    setFormData(prev => ({ ...prev, remember: e.target.checked }))
+  }
 
   return (
     <div className={styles['login-page']}>
@@ -82,13 +73,7 @@ const LoginPage: React.FC = () => {
             name="login"
             className={styles['login-form']}
             initialValues={formData}
-            onFinish={values => {
-              const formData = {
-                username: String((values as Record<string, unknown>).username),
-                password: String((values as Record<string, unknown>).password),
-              };
-              void handleSubmit(formData);
-            }}
+            onFinish={handleSubmit}
             size="large"
             autoComplete="off"
             layout="vertical"
@@ -99,7 +84,7 @@ const LoginPage: React.FC = () => {
               rules={[
                 { required: true, message: '请输入用户名' },
                 { min: 2, message: '用户名至少2个字符' },
-                { max: 50, message: '用户名最多50个字符' },
+                { max: 50, message: '用户名最多50个字符' }
               ]}
             >
               <Input
@@ -117,7 +102,7 @@ const LoginPage: React.FC = () => {
               name="password"
               rules={[
                 { required: true, message: '请输入密码' },
-                { min: 6, message: '密码至少6个字符' },
+                { min: 6, message: '密码至少6个字符' }
               ]}
             >
               <Input.Password
@@ -131,12 +116,15 @@ const LoginPage: React.FC = () => {
             </Form.Item>
 
             <Form.Item name="remember" valuePropName="checked">
-              <Checkbox checked={formData.remember} onChange={handleRememberChange}>
+              <Checkbox
+                checked={formData.remember}
+                onChange={handleRememberChange}
+              >
                 记住我的登录状态
               </Checkbox>
             </Form.Item>
 
-            {error !== null && error !== undefined && error !== '' && (
+            {error && (
               <Alert
                 message="登录失败"
                 description={error}
@@ -178,7 +166,7 @@ const LoginPage: React.FC = () => {
         </Card>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default LoginPage;
+export default LoginPage

@@ -34,32 +34,32 @@ declare global {
   }
 }
 
-declare module '*.svg' {
+declare module "*.svg" {
   const content: string;
   export default content;
 }
 
-declare module '*.png' {
+declare module "*.png" {
   const content: string;
   export default content;
 }
 
-declare module '*.jpg' {
+declare module "*.jpg" {
   const content: string;
   export default content;
 }
 
-declare module '*.jpeg' {
+declare module "*.jpeg" {
   const content: string;
   export default content;
 }
 
-declare module '*.gif' {
+declare module "*.gif" {
   const content: string;
   export default content;
 }
 
-declare module '*.webp' {
+declare module "*.webp" {
   const content: string;
   export default content;
 }
@@ -75,7 +75,7 @@ declare global {
 }
 
 // 扩展Asset接口，添加一些可能缺失的属性
-declare module '@/types/asset' {
+declare module "@/types/asset" {
   interface Asset {
     // 添加一些测试数据中可能使用的属性
     contract_status?: string;

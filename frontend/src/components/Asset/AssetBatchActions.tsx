@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Card,
   Button,
@@ -12,19 +12,19 @@ import {
   Popconfirm,
   Typography,
   Alert,
-} from 'antd';
+} from "antd";
 import {
   DeleteOutlined,
   EditOutlined,
   ExportOutlined,
   DownOutlined,
   TagOutlined,
-} from '@ant-design/icons';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+} from "@ant-design/icons";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import type { Asset, AssetUpdateRequest } from '@/types/asset';
-import { assetService } from '@/services/assetService';
-import { excelService } from '@/services/excelService';
+import type { Asset, AssetUpdateRequest } from "@/types/asset";
+import { assetService } from "@/services/assetService";
+import { excelService } from "@/services/excelService";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -54,10 +54,10 @@ const AssetBatchActions: React.FC<AssetBatchActionsProps> = ({
       message.success(`成功删除 ${selectedRowKeys.length} 个资产`);
       onClearSelection();
       onRefresh();
-      void queryClient.invalidateQueries({ queryKey: ['assets'] });
+      queryClient.invalidateQueries({ queryKey: ["assets"] });
     },
     onError: (error: unknown) => {
-      message.error(`批量删除失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      message.error(`批量删除失败: ${error instanceof Error ? error.message : "未知错误"}`);
     },
   });
 
@@ -65,7 +65,7 @@ const AssetBatchActions: React.FC<AssetBatchActionsProps> = ({
   const updateMutation = useMutation({
     mutationFn: async (data: { ids: string[]; updates: AssetUpdateRequest }) => {
       // 这里需要后端支持批量更新API
-      const promises = data.ids.map(id => assetService.updateAsset(id, data.updates));
+      const promises = data.ids.map((id) => assetService.updateAsset(id, data.updates));
       return Promise.all(promises);
     },
     onSuccess: () => {
@@ -74,10 +74,10 @@ const AssetBatchActions: React.FC<AssetBatchActionsProps> = ({
       form.resetFields();
       onClearSelection();
       onRefresh();
-      void queryClient.invalidateQueries({ queryKey: ['assets'] });
+      queryClient.invalidateQueries({ queryKey: ["assets"] });
     },
     onError: (error: unknown) => {
-      message.error(`批量更新失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      message.error(`批量更新失败: ${error instanceof Error ? error.message : "未知错误"}`);
     },
   });
 
@@ -86,15 +86,15 @@ const AssetBatchActions: React.FC<AssetBatchActionsProps> = ({
     mutationFn: (ids: string[]) =>
       excelService.exportExcel({
         filters: { ids },
-        format: 'xlsx',
+        format: "xlsx",
         include_headers: true,
       }),
-    onSuccess: result => {
-      message.success('导出成功，开始下载...');
-      void excelService.downloadExportFile(result.file_name);
+    onSuccess: (result) => {
+      message.success("导出成功，开始下载...");
+      excelService.downloadExportFile(result.file_name);
     },
     onError: (error: unknown) => {
-      message.error(`导出失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      message.error(`导出失败: ${error instanceof Error ? error.message : "未知错误"}`);
     },
   });
 
@@ -105,20 +105,21 @@ const AssetBatchActions: React.FC<AssetBatchActionsProps> = ({
 
   // 处理批量编辑
   const handleBatchEdit = () => {
-    void form.validateFields().then(values => {
+    form.validateFields().then((values) => {
       // 过滤空值
-      const updates = Object.entries(values as Record<string, unknown>).reduce<
-        Partial<AssetUpdateRequest>
-      >((acc, [key, value]) => {
-        if (value !== undefined && value !== null && value !== '') {
-          const typedKey = key as keyof AssetUpdateRequest;
-          (acc[typedKey] as unknown) = value;
-        }
-        return acc;
-      }, {} as Partial<AssetUpdateRequest>);
+      const updates = Object.entries(values).reduce<Partial<AssetUpdateRequest>>(
+        (acc, [key, value]) => {
+          if (value !== undefined && value !== null && value !== "") {
+            const typedKey = key as keyof AssetUpdateRequest;
+            (acc[typedKey] as unknown) = value;
+          }
+          return acc;
+        },
+        {} as Partial<AssetUpdateRequest>,
+      );
 
       if (Object.keys(updates).length === 0) {
-        message.warning('请至少选择一个字段进行更新');
+        message.warning("请至少选择一个字段进行更新");
         return;
       }
 
@@ -137,21 +138,21 @@ const AssetBatchActions: React.FC<AssetBatchActionsProps> = ({
   // 更多操作菜单
   const moreActions = [
     {
-      key: 'tag',
-      label: '批量标记',
+      key: "tag",
+      label: "批量标记",
       icon: <TagOutlined />,
       onClick: () => {
         // 实现批量标记功能
-        message.info('批量标记功能开发中...');
+        message.info("批量标记功能开发中...");
       },
     },
     {
-      key: 'move',
-      label: '批量移动',
+      key: "move",
+      label: "批量移动",
       icon: <EditOutlined />,
       onClick: () => {
         // 实现批量移动功能
-        message.info('批量移动功能开发中...');
+        message.info("批量移动功能开发中...");
       },
     },
   ];
@@ -163,14 +164,14 @@ const AssetBatchActions: React.FC<AssetBatchActionsProps> = ({
   return (
     <>
       <Card size="small" style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <Text strong>已选择 {selectedRowKeys.length} 个资产</Text>
             <Button
               type="link"
               size="small"
               onClick={onClearSelection}
-              style={{ padding: '0 8px' }}
+              style={{ padding: "0 8px" }}
             >
               清空选择
             </Button>
@@ -206,7 +207,7 @@ const AssetBatchActions: React.FC<AssetBatchActionsProps> = ({
               menu={{
                 items: moreActions,
                 onClick: ({ key }) => {
-                  const action = moreActions.find(item => item.key === key);
+                  const action = moreActions.find((item) => item.key === key);
                   action?.onClick();
                 },
               }}
@@ -317,7 +318,7 @@ const AssetBatchActions: React.FC<AssetBatchActionsProps> = ({
             <Select
               mode="multiple"
               placeholder="选择要导出的字段"
-              defaultValue={['property_name', 'ownership_entity', 'address']}
+              defaultValue={["property_name", "ownership_entity", "address"]}
             >
               <Option value="property_name">物业名称</Option>
               <Option value="ownership_entity">权属方</Option>

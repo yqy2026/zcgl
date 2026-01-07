@@ -45,7 +45,9 @@ class AssetService:
             raise ResourceNotFoundError("Asset", asset_id)
         return asset
 
-    def create_asset(self, asset_in: AssetCreate, current_user: User | None = None) -> Asset:
+    def create_asset(
+        self, asset_in: AssetCreate, current_user: User | None = None
+    ) -> Asset:
         """
         创建新资产
         包含逻辑: 枚举验证, 名称查重, 自动计算, 面积一致性验证, 历史记录
@@ -54,12 +56,18 @@ class AssetService:
         validation_service = get_enum_validation_service(self.db)
         is_valid, errors = validation_service.validate_asset_data(asset_in.model_dump())
         if not is_valid:
-            raise HTTPException(status_code=422, detail=f"枚举值验证失败: {'; '.join(errors)}")
+            raise HTTPException(
+                status_code=422, detail=f"枚举值验证失败: {'; '.join(errors)}"
+            )
 
         # 2. 名称查重
-        existing_asset = asset_crud.get_by_name(db=self.db, property_name=asset_in.property_name)
+        existing_asset = asset_crud.get_by_name(
+            db=self.db, property_name=asset_in.property_name
+        )
         if existing_asset:
-            raise DuplicateResourceError("Asset", "property_name", asset_in.property_name)
+            raise DuplicateResourceError(
+                "Asset", "property_name", asset_in.property_name
+            )
 
         # 3. 自动计算与一致性验证
         asset_data = asset_in.model_dump()
@@ -68,7 +76,9 @@ class AssetService:
 
         errors = AssetCalculator.validate_area_consistency(final_data)
         if errors:
-            raise HTTPException(status_code=422, detail=f"数据验证失败: {'; '.join(errors)}")
+            raise HTTPException(
+                status_code=422, detail=f"数据验证失败: {'; '.join(errors)}"
+            )
 
         enhanced_asset_in = AssetCreate(**final_data)
 
@@ -94,7 +104,9 @@ class AssetService:
         update_data_raw = asset_in.model_dump(exclude_unset=True)
         is_valid, errors = validation_service.validate_asset_data(update_data_raw)
         if not is_valid:
-            raise HTTPException(status_code=422, detail=f"枚举值验证失败: {'; '.join(errors)}")
+            raise HTTPException(
+                status_code=422, detail=f"枚举值验证失败: {'; '.join(errors)}"
+            )
 
         # 3. 名称查重 (如果修改了名称)
         if asset_in.property_name and asset_in.property_name != asset.property_name:
@@ -102,13 +114,20 @@ class AssetService:
                 db=self.db, property_name=asset_in.property_name
             )
             if existing_asset and existing_asset.id != asset_id:
-                raise DuplicateResourceError("Asset", "property_name", asset_in.property_name)
+                raise DuplicateResourceError(
+                    "Asset", "property_name", asset_in.property_name
+                )
 
         # 4. 自动计算与一致性验证
         # 需要合并当前数据和更新数据
         current_data = {}
         # 提取关键计算字段
-        for field in ["rentable_area", "rented_area", "annual_income", "annual_expense"]:
+        for field in [
+            "rentable_area",
+            "rented_area",
+            "annual_income",
+            "annual_expense",
+        ]:
             if hasattr(asset, field):
                 current_data[field] = getattr(asset, field)
 
@@ -117,7 +136,9 @@ class AssetService:
 
         errors = AssetCalculator.validate_area_consistency(calculated_data)
         if errors:
-            raise HTTPException(status_code=422, detail=f"数据验证失败: {'; '.join(errors)}")
+            raise HTTPException(
+                status_code=422, detail=f"数据验证失败: {'; '.join(errors)}"
+            )
 
         # 合并计算字段到更新数据
         final_update = {
@@ -127,7 +148,9 @@ class AssetService:
         enhanced_asset_in = AssetUpdate(**final_update)
 
         # 5. 更新并记录历史
-        return asset_crud.update_with_history(db=self.db, db_obj=asset, obj_in=enhanced_asset_in)
+        return asset_crud.update_with_history(
+            db=self.db, db_obj=asset, obj_in=enhanced_asset_in
+        )
 
     def delete_asset(self, asset_id: str, current_user: User | None = None) -> None:
         """

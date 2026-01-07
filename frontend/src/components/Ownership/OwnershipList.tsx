@@ -18,7 +18,7 @@ import {
   Badge,
   Input,
   Select,
-  Switch,
+  Switch
 } from 'antd';
 import {
   PlusOutlined,
@@ -27,16 +27,12 @@ import {
   EyeOutlined,
   SearchOutlined,
   ReloadOutlined,
-  ExclamationCircleOutlined,
+  ExclamationCircleOutlined
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 
 import { ownershipService } from '@/services/ownershipService';
-import type {
-  Ownership,
-  OwnershipListResponse,
-  OwnershipStatisticsResponse,
-} from '@/types/ownership';
+import type { Ownership, OwnershipListResponse, OwnershipStatisticsResponse } from '@/types/ownership';
 import { OwnershipForm } from '../Forms';
 import OwnershipDetail from './OwnershipDetail';
 
@@ -50,7 +46,10 @@ interface OwnershipListProps {
   mode?: 'list' | 'select';
 }
 
-const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode = 'list' }) => {
+const OwnershipList: React.FC<OwnershipListProps> = ({
+  onSelectOwnership,
+  mode = 'list'
+}) => {
   const [ownerships, setOwnerships] = useState<Ownership[]>([]);
   const [loading, setLoading] = useState(false);
   const [statistics, setStatistics] = useState<OwnershipStatisticsResponse | null>(null);
@@ -76,7 +75,7 @@ const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode =
         keyword,
         is_active: isActive,
         page: current,
-        size: pageSize,
+        size: pageSize
       });
       setOwnerships(response.items);
       setTotal(response.total);
@@ -97,28 +96,27 @@ const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode =
     }
   };
 
+
   useEffect(() => {
-    void loadOwnerships();
-    void loadStatistics();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    loadOwnerships();
+    loadStatistics();
   }, [current, pageSize]);
 
   useEffect(() => {
     setCurrent(1);
-    void loadOwnerships();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    loadOwnerships();
   }, [keyword, isActive]);
 
   // 刷新列表
   const handleRefresh = () => {
-    void loadOwnerships();
-    void loadStatistics();
+    loadOwnerships();
+    loadStatistics();
   };
 
   // 搜索
   const handleSearch = () => {
     setCurrent(1);
-    void loadOwnerships();
+    loadOwnerships();
   };
 
   // 重置筛选
@@ -159,12 +157,12 @@ const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode =
         try {
           await ownershipService.deleteOwnership(record.id);
           message.success('删除成功');
-          void loadOwnerships();
-          void loadStatistics();
+          loadOwnerships();
+          loadStatistics();
         } catch (error: unknown) {
           message.error(error instanceof Error ? error.message : '删除失败');
         }
-      },
+      }
     });
   };
 
@@ -173,8 +171,8 @@ const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode =
     try {
       await ownershipService.toggleOwnershipStatus(record.id);
       message.success(`${record.is_active ? '禁用' : '启用'}成功`);
-      void loadOwnerships();
-      void loadStatistics();
+      loadOwnerships();
+      loadStatistics();
     } catch {
       message.error('操作失败');
     }
@@ -183,8 +181,8 @@ const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode =
   // 表单提交成功
   const handleFormSuccess = () => {
     setFormVisible(false);
-    void loadOwnerships();
-    void loadStatistics();
+    loadOwnerships();
+    loadStatistics();
   };
 
   // 选中权属方（选择模式）
@@ -201,38 +199,42 @@ const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode =
       dataIndex: 'name',
       key: 'name',
       render: (text: string, record: Ownership) => (
-        <Button type="link" onClick={() => handleView(record)} style={{ padding: 0 }}>
+        <Button
+          type="link"
+          onClick={() => handleView(record)}
+          style={{ padding: 0 }}
+        >
           {text}
         </Button>
-      ),
+      )
     },
     {
       title: '权属方编码',
       dataIndex: 'code',
       key: 'code',
       width: 120,
-      render: (text: string) => text || '-',
+      render: (text: string) => text || '-'
     },
     {
       title: '权属方简称',
       dataIndex: 'short_name',
       key: 'short_name',
       width: 150,
-      render: (text: string) => text || '-',
+      render: (text: string) => text || '-'
     },
     {
       title: '关联资产',
       dataIndex: 'asset_count',
       key: 'asset_count',
       width: 100,
-      render: (count: number) => count ?? 0,
+      render: (count: number) => count || 0
     },
     {
       title: '关联项目',
       dataIndex: 'project_count',
       key: 'project_count',
       width: 100,
-      render: (count: number) => count ?? 0,
+      render: (count: number) => count || 0
     },
     {
       title: '状态',
@@ -240,8 +242,11 @@ const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode =
       key: 'is_active',
       width: 80,
       render: (active: boolean) => (
-        <Badge status={active ? 'success' : 'error'} text={active ? '启用' : '禁用'} />
-      ),
+        <Badge
+          status={active ? 'success' : 'error'}
+          text={active ? '启用' : '禁用'}
+        />
+      )
     },
     {
       title: '操作',
@@ -250,17 +255,29 @@ const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode =
       render: (_, record: Ownership) => (
         <Space size="small">
           {mode === 'select' && (
-            <Button type="primary" size="small" onClick={() => handleSelect(record)}>
+            <Button
+              type="primary"
+              size="small"
+              onClick={() => handleSelect(record)}
+            >
               选择
             </Button>
           )}
           {mode === 'list' && (
             <>
               <Tooltip title="查看详情">
-                <Button type="text" icon={<EyeOutlined />} onClick={() => handleView(record)} />
+                <Button
+                  type="text"
+                  icon={<EyeOutlined />}
+                  onClick={() => handleView(record)}
+                />
               </Tooltip>
               <Tooltip title="编辑">
-                <Button type="text" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+                <Button
+                  type="text"
+                  icon={<EditOutlined />}
+                  onClick={() => handleEdit(record)}
+                />
               </Tooltip>
               <Tooltip title="删除">
                 <Button
@@ -275,15 +292,13 @@ const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode =
           <Switch
             size="small"
             checked={record.is_active}
-            onChange={() => {
-              void handleToggleStatus(record);
-            }}
+            onChange={() => handleToggleStatus(record)}
             checkedChildren="启用"
             unCheckedChildren="禁用"
           />
         </Space>
-      ),
-    },
+      )
+    }
   ];
 
   return (
@@ -322,7 +337,7 @@ const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode =
             <Card>
               <Statistic
                 title="关联资产"
-                value={ownerships.reduce((sum, ownership) => sum + (ownership.asset_count ?? 0), 0)}
+                value={ownerships.reduce((sum, ownership) => sum + (ownership.asset_count || 0), 0)}
                 valueStyle={{ color: '#722ed1' }}
               />
             </Card>
@@ -340,7 +355,7 @@ const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode =
               enterButton={<SearchOutlined />}
               style={{ width: '100%' }}
               value={keyword}
-              onChange={e => setKeyword(e.target.value)}
+              onChange={(e) => setKeyword(e.target.value)}
               onSearch={handleSearch}
             />
           </Col>
@@ -363,10 +378,18 @@ const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode =
           </Col>
           <Col xs={24} sm={12} md={6} lg={4}>
             <Space>
-              <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={handleCreate}
+              >
                 新建权属方
               </Button>
-              <Button icon={<ReloadOutlined />} onClick={handleRefresh} loading={loading}>
+              <Button
+                icon={<ReloadOutlined />}
+                onClick={handleRefresh}
+                loading={loading}
+              >
                 刷新
               </Button>
             </Space>
@@ -391,7 +414,7 @@ const OwnershipList: React.FC<OwnershipListProps> = ({ onSelectOwnership, mode =
             onChange: (page, size) => {
               setCurrent(page);
               setPageSize(size || 10);
-            },
+            }
           }}
           scroll={{ x: 1000 }}
         />

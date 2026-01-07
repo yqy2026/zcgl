@@ -10,20 +10,11 @@ import styles from './PDFImportPage.module.css';
 interface ApiError {
   response?: {
     data?: {
-      message?: string;
-      detail?: string;
-    };
-  };
-  message?: string;
-}
-
-// 用户偏好设置接口
-interface UserPreferencesState {
-  autoRefresh: boolean;
-  showAdvancedOptions: boolean;
-  preferMarkitdown: boolean;
-  enableNotifications: boolean;
-  compactView: boolean;
+      message?: string
+      detail?: string
+    }
+  }
+  message?: string
 }
 import {
   Card,
@@ -41,7 +32,7 @@ import {
   Tag,
   Tooltip,
   Switch,
-  Modal,
+  Modal
 } from 'antd';
 import type { UploadFile } from 'antd/es/upload/interface';
 import {
@@ -54,7 +45,7 @@ import {
   CloseCircleOutlined,
   QuestionCircleOutlined,
   ApiOutlined,
-  BulbOutlined,
+  BulbOutlined
 } from '@ant-design/icons';
 
 import ContractImportUpload from './ContractImportUpload';
@@ -66,7 +57,7 @@ import type { SystemInfoResponse } from '../../services/pdfImportService';
 import type {
   CompleteResult,
   ConfirmedContractData,
-  ConfirmImportResponse,
+  ConfirmImportResponse
 } from '../../services/pdfImportService';
 import { createLogger } from '../../utils/logger';
 
@@ -107,7 +98,7 @@ const PDFImportPage: React.FC = () => {
     showAdvancedOptions: false,
     preferMarkitdown: true,
     enableNotifications: true,
-    compactView: false,
+    compactView: false
   });
 
   // 使用 ref 避免闭包问题
@@ -118,7 +109,7 @@ const PDFImportPage: React.FC = () => {
   useEffect(() => {
     void loadSystemInfo();
     void loadSessionHistory();
-    void loadUserPreferences();
+    loadUserPreferences();
 
     // 设置键盘快捷键
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -156,21 +147,14 @@ const PDFImportPage: React.FC = () => {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [handleReload, loadUserPreferences, loadSessionHistory, loadSystemInfo]);
+  }, []);
 
   // 加载用户偏好设置
   const loadUserPreferences = useCallback(() => {
     try {
       const saved = localStorage.getItem('pdf-import-preferences');
-      if (saved !== null && saved !== undefined && saved !== '') {
-        const parsed = JSON.parse(saved) as Partial<UserPreferencesState>;
-        setUserPreferences({
-          autoRefresh: parsed.autoRefresh ?? true,
-          showAdvancedOptions: parsed.showAdvancedOptions ?? false,
-          preferMarkitdown: parsed.preferMarkitdown ?? true,
-          enableNotifications: parsed.enableNotifications ?? true,
-          compactView: parsed.compactView ?? false,
-        });
+      if (saved) {
+        setUserPreferences(JSON.parse(saved));
       }
     } catch (error) {
       pageLogger.warn(`加载用户偏好设置失败: ${String(error)}`);
@@ -187,24 +171,22 @@ const PDFImportPage: React.FC = () => {
     }
   }, []);
 
-  const loadSystemInfo = useCallback(async () => {
+  const loadSystemInfo = async () => {
     try {
       const info = await pdfImportService.getSystemInfo();
       setSystemInfo(info);
     } catch (error) {
       pageLogger.error('加载系统信息失败:', error as Error);
     }
-  }, []);
+  };
 
-  const loadSessionHistory = useCallback(async () => {
+  const loadSessionHistory = async () => {
     try {
       const response = await pdfImportService.getActiveSessions();
-      if (response.success === true) {
+      if (response.success) {
         // 转换为历史记录格式
         const history = response.active_sessions
-          .filter(session =>
-            ['ready_for_review', 'failed', 'cancelled', 'completed'].includes(session.status)
-          )
+          .filter(session => ['ready_for_review', 'failed', 'cancelled', 'completed'].includes(session.status))
           .map(session => ({
             sessionId: session.session_id,
             fileInfo: {
@@ -212,7 +194,7 @@ const PDFImportPage: React.FC = () => {
               name: session.file_name,
               status: 'done',
               size: 0,
-              type: 'application/pdf',
+              type: 'application/pdf'
             } as UploadFile,
             status: ((): 'ready' | 'completed' | 'failed' | 'processing' => {
               switch (session.status) {
@@ -228,24 +210,24 @@ const PDFImportPage: React.FC = () => {
                   return 'processing';
               }
             })(),
-            progress: session.progress,
+            progress: session.progress
           }));
         setSessionHistory(history);
       }
     } catch (error) {
       pageLogger.error('加载会话历史失败:', error as Error);
     }
-  }, []);
+  };
 
   // 文件上传成功处理
-  const handleUploadSuccess = useCallback((sessionId: string, fileInfo: UploadFile) => {
+  const handleUploadSuccess = (sessionId: string, fileInfo: UploadFile) => {
     // Upload success
 
     const newSession: ProcessingSession = {
       sessionId,
       fileInfo,
       status: 'processing',
-      progress: 0,
+      progress: 0
     };
 
     setCurrentSession(newSession);
@@ -253,103 +235,96 @@ const PDFImportPage: React.FC = () => {
 
     // 强制重新渲染
     setTimeout(() => {
-      setCurrentSession(prev => (prev ? { ...prev } : null));
+      setCurrentSession(prev => prev ? { ...prev } : null);
     }, 100);
-  }, []);
+  };
 
   // 文件上传失败处理
-  const handleUploadError = useCallback((error: unknown) => {
-    const errorMsg =
-      typeof error === 'string' ? error : error instanceof Error ? error.message : '上传失败';
+  const handleUploadError = (error: unknown) => {
+    const errorMsg = typeof error === 'string' ? error : (error instanceof Error ? error.message : '上传失败');
     message.error(errorMsg);
     setCurrentSession(null);
-  }, []);
+  };
 
   // 处理完成处理
-  const handleProcessingComplete = useCallback(
-    (result: CompleteResult) => {
-      // Processing complete
+  const handleProcessingComplete = (result: CompleteResult) => {
+    // Processing complete
 
-      if (currentSession) {
-        setCurrentSession({
-          ...currentSession,
-          status: 'ready',
-          progress: 100,
-          result,
-        });
-      }
-    },
-    [currentSession]
-  );
+    if (currentSession) {
+      setCurrentSession({
+        ...currentSession,
+        status: 'ready',
+        progress: 100,
+        result
+      });
+    }
+  };
 
   // 处理错误处理
-  const handleProcessingError = useCallback(
-    (error: string) => {
-      if (currentSession) {
-        setCurrentSession({
-          ...currentSession,
-          status: 'failed',
-          error,
-        });
-      }
-      message.error(error);
-    },
-    [currentSession]
-  );
+  const handleProcessingError = (error: string) => {
+    if (currentSession) {
+      setCurrentSession({
+        ...currentSession,
+        status: 'failed',
+        error
+      });
+    }
+    message.error(error);
+  };
 
   // 确认导入处理
-  const handleConfirmImport = useCallback(
-    async (data: ConfirmedContractData): Promise<ConfirmImportResponse> => {
-      try {
-        const response = await pdfImportService.confirmImport(currentSession!.sessionId, data);
+  const handleConfirmImport = async (data: ConfirmedContractData): Promise<ConfirmImportResponse> => {
+    try {
+      const response = await pdfImportService.confirmImport(
+        currentSession!.sessionId,
+        data
+      );
 
-        if (response.success) {
-          // 更新会话状态
-          setCurrentSession({
-            ...currentSession!,
-            status: 'completed',
-          });
+      if (response.success) {
+        // 更新会话状态
+        setCurrentSession({
+          ...currentSession!,
+          status: 'completed'
+        });
 
-          // 添加到历史记录
-          if (currentSession) {
-            setSessionHistory(prev => [currentSession, ...prev]);
-          }
-
-          // 显示成功通知
-          if (userPreferences.enableNotifications) {
-            notification.success({
-              message: '合同导入成功！',
-              description: `已成功导入合同 ${currentSession!.fileInfo.name}`,
-              duration: 4.5,
-              placement: 'topRight',
-            });
-          } else {
-            message.success('合同导入成功！');
-          }
+        // 添加到历史记录
+        if (currentSession) {
+          setSessionHistory(prev => [currentSession!, ...prev]);
         }
 
-        return response;
-      } catch (error: unknown) {
-        const errorMsg = (error as ApiError).message ?? '合同导入过程中发生错误';
+        // 显示成功通知
         if (userPreferences.enableNotifications) {
-          notification.error({
-            message: '导入失败',
-            description: errorMsg,
-            duration: 6,
-            placement: 'topRight',
+          notification.success({
+            message: '合同导入成功！',
+            description: `已成功导入合同 ${currentSession!.fileInfo.name}`,
+            duration: 4.5,
+            placement: 'topRight'
           });
         } else {
-          message.error(errorMsg);
+          message.success('合同导入成功！');
         }
-        throw error;
       }
-    },
-    [currentSession, userPreferences]
-  );
+
+      return response;
+    } catch (error: unknown) {
+      const errorMsg = (error as ApiError).message || '合同导入过程中发生错误';
+      if (userPreferences.enableNotifications) {
+        notification.error({
+          message: '导入失败',
+          description: errorMsg,
+          duration: 6,
+          placement: 'topRight'
+        });
+      } else {
+        message.error(errorMsg);
+      }
+      throw error;
+    }
+  };
 
   // 取消处理
-  const handleCancel = useCallback(async () => {
-    if (currentSession !== null && currentSession !== undefined) {
+  const handleCancel = async () => {
+    if (currentSession) {
       try {
         const response = await pdfImportService.cancelSession(currentSession.sessionId);
         if (response.success) {
@@ -357,37 +332,39 @@ const PDFImportPage: React.FC = () => {
           setCurrentSession(null);
         }
       } catch (error: unknown) {
-        const apiError = error as ApiError;
-        message.error(apiError.message ?? '取消失败');
+        message.error((error as ApiError).message || '取消失败');
       }
     }
-  }, [currentSession]);
+  };
 
   // 返回上传页面
-  const handleBackToUpload = useCallback(() => {
+  const handleBackToUpload = () => {
     setCurrentSession(null);
     setActiveTab('upload');
-  }, []);
+  };
 
   // 重新加载
-  const handleReload = useCallback(async () => {
+  const handleReload = async () => {
     setLoading(true);
     try {
-      await Promise.all([loadSystemInfo(), loadSessionHistory()]);
+      await Promise.all([
+        loadSystemInfo(),
+        loadSessionHistory()
+      ]);
       message.success('数据已刷新');
     } catch {
       message.error('刷新失败');
     } finally {
       setLoading(false);
     }
-  }, [loadSystemInfo, loadSessionHistory]);
+  };
 
   // 测试系统功能
   const handleTestSystem = async () => {
     try {
       setLoading(true);
       const response = await pdfImportService.testConversion();
-      if (response.system_ready === true) {
+      if (response.system_ready) {
         message.success('系统功能正常');
       } else {
         message.warning('系统可能存在问题');
@@ -401,9 +378,7 @@ const PDFImportPage: React.FC = () => {
 
   // 获取系统状态统计 - 使用 useMemo 优化
   const systemStats = useMemo(() => {
-    if (!systemInfo) {
-      return null;
-    }
+    if (!systemInfo) return null;
 
     const capabilities = systemInfo.capabilities as unknown as PDFSystemCapabilities;
 
@@ -414,21 +389,19 @@ const PDFImportPage: React.FC = () => {
       capabilities.pdfplumber_available,
       capabilities.pymupdf_available,
       capabilities.spacy_available,
-      capabilities.ocr_available,
+      capabilities.ocr_available
     ].filter(Boolean).length;
 
     return {
       total: 4,
       available: availableCount,
-      percentage: Math.round((availableCount / 4) * 100),
+      percentage: Math.round((availableCount / 4) * 100)
     };
   }, [systemInfo]);
 
   // 获取类型安全的capabilities
   const safeCapabilities = useMemo(() => {
-    if (!systemInfo) {
-      return null;
-    }
+    if (!systemInfo) return null;
     return systemInfo.capabilities as unknown as PDFSystemCapabilities;
   }, [systemInfo]);
 
@@ -454,14 +427,12 @@ const PDFImportPage: React.FC = () => {
             sessionId={currentSession.sessionId}
             fileInfo={{
               filename: currentSession.fileInfo.name,
-              size: currentSession.fileInfo.size ?? 0,
-              content_type: currentSession.fileInfo.type ?? 'application/pdf',
+              size: currentSession.fileInfo.size || 0,
+              content_type: currentSession.fileInfo.type || 'application/pdf'
             }}
             onComplete={handleProcessingComplete}
             onError={handleProcessingError}
-            onCancel={() => {
-              void handleCancel();
-            }}
+            onCancel={handleCancel}
           />
         );
       case 'ready':
@@ -482,12 +453,16 @@ const PDFImportPage: React.FC = () => {
             <Title level={4} style={{ color: '#52c41a' }}>
               导入成功！
             </Title>
-            <Paragraph>合同已成功导入到系统中。</Paragraph>
+            <Paragraph>
+              合同已成功导入到系统中。
+            </Paragraph>
             <Space>
               <Button type="primary" onClick={() => setCurrentSession(null)}>
                 导入新合同
               </Button>
-              <Button onClick={() => setActiveTab('history')}>查看历史记录</Button>
+              <Button onClick={() => setActiveTab('history')}>
+                查看历史记录
+              </Button>
             </Space>
           </div>
         );
@@ -498,10 +473,16 @@ const PDFImportPage: React.FC = () => {
             <Title level={4} style={{ color: '#ff4d4f' }}>
               处理失败
             </Title>
-            <Paragraph>{currentSession.error ?? '处理过程中发生错误'}</Paragraph>
+            <Paragraph>
+              {currentSession.error || '处理过程中发生错误'}
+            </Paragraph>
             <Space>
-              <Button onClick={() => setCurrentSession(null)}>重新上传</Button>
-              <Button onClick={() => setActiveTab('history')}>查看历史记录</Button>
+              <Button onClick={() => setCurrentSession(null)}>
+                重新上传
+              </Button>
+              <Button onClick={() => setActiveTab('history')}>
+                查看历史记录
+              </Button>
             </Space>
           </div>
         );
@@ -514,31 +495,20 @@ const PDFImportPage: React.FC = () => {
           />
         );
     }
-  }, [
-    currentSession,
-    handleUploadSuccess,
-    handleUploadError,
-    handleProcessingComplete,
-    handleProcessingError,
-    handleCancel,
-    handleConfirmImport,
-    handleBackToUpload,
-    setActiveTab,
-  ]);
+  }, [currentSession, handleUploadSuccess, handleUploadError, handleProcessingComplete,
+    handleProcessingError, handleCancel, handleConfirmImport, handleBackToUpload, setActiveTab]);
 
   // 页面加载状态
   if (loading && !systemInfo && !currentSession) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '100vh',
-          flexDirection: 'column',
-          gap: 16,
-        }}
-      >
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        flexDirection: 'column',
+        gap: 16
+      }}>
         <Spin size="large" />
         <Text type="secondary">正在初始化PDF导入系统...</Text>
       </div>
@@ -546,13 +516,10 @@ const PDFImportPage: React.FC = () => {
   }
 
   return (
-    <div
-      className={styles['pdf-import-page']}
-      style={{
-        animation: 'fadeIn 0.3s ease-in-out',
-        minHeight: '100vh',
-      }}
-    >
+    <div className={styles['pdf-import-page']} style={{
+      animation: 'fadeIn 0.3s ease-in-out',
+      minHeight: '100vh'
+    }}>
       {/* 页面头部 */}
       <Card style={{ marginBottom: 16 }}>
         <Row justify="space-between" align="middle">
@@ -565,7 +532,9 @@ const PDFImportPage: React.FC = () => {
                 <Title level={3} style={{ margin: 0 }}>
                   PDF合同智能导入
                 </Title>
-                <Text type="secondary">上传PDF文件，自动提取合同信息并导入系统</Text>
+                <Text type="secondary">
+                  上传PDF文件，自动提取合同信息并导入系统
+                </Text>
               </div>
             </Space>
           </Col>
@@ -585,12 +554,15 @@ const PDFImportPage: React.FC = () => {
               >
                 使用帮助
               </Button>
-              <Button icon={<SettingOutlined />} onClick={() => setShowSystemInfo(!showSystemInfo)}>
+              <Button
+                icon={<SettingOutlined />}
+                onClick={() => setShowSystemInfo(!showSystemInfo)}
+              >
                 {showSystemInfo ? '隐藏状态' : '系统状态'}
               </Button>
               <Button
                 icon={<ReloadOutlined />}
-                onClick={() => void handleReload()}
+                onClick={handleReload}
                 loading={loading}
                 title="快捷键: Ctrl/Cmd + R"
               >
@@ -608,33 +580,30 @@ const PDFImportPage: React.FC = () => {
               <div>
                 <Row gutter={16}>
                   <Col span={6}>
-                    <Tag
-                      color={safeCapabilities.pdfplumber_available === true ? 'green' : 'orange'}
-                    >
-                      PDFPlumber:{' '}
-                      {safeCapabilities.pdfplumber_available === true ? '可用' : '不可用'}
+                    <Tag color={safeCapabilities.pdfplumber_available ? 'green' : 'orange'}>
+                      PDFPlumber: {safeCapabilities.pdfplumber_available ? '可用' : '不可用'}
                     </Tag>
                   </Col>
                   <Col span={6}>
-                    <Tag color={safeCapabilities.pymupdf_available === true ? 'green' : 'orange'}>
-                      PyMuPDF: {safeCapabilities.pymupdf_available === true ? '可用' : '不可用'}
+                    <Tag color={safeCapabilities.pymupdf_available ? 'green' : 'orange'}>
+                      PyMuPDF: {safeCapabilities.pymupdf_available ? '可用' : '不可用'}
                     </Tag>
                   </Col>
                   <Col span={6}>
-                    <Tag color={safeCapabilities.ocr_available === true ? 'green' : 'default'}>
-                      OCR: {safeCapabilities.ocr_available === true ? '可用' : '不可用'}
+                    <Tag color={safeCapabilities.ocr_available ? 'green' : 'default'}>
+                      OCR: {safeCapabilities.ocr_available ? '可用' : '不可用'}
                     </Tag>
                   </Col>
                   <Col span={6}>
-                    <Text type="secondary">最大文件: {safeCapabilities.max_file_size_mb}MB</Text>
+                    <Text type="secondary">
+                      最大文件: {safeCapabilities.max_file_size_mb}MB
+                    </Text>
                   </Col>
                 </Row>
                 <div style={{ marginTop: 8 }}>
                   <Text type="secondary">
-                    处理时间: {safeCapabilities.estimated_processing_time} | 支持格式:{' '}
-                    {Array.isArray(safeCapabilities.supported_formats)
-                      ? safeCapabilities.supported_formats.join(', ')
-                      : 'PDF'}
+                    处理时间: {safeCapabilities.estimated_processing_time} |
+                    支持格式: {Array.isArray(safeCapabilities.supported_formats) ? safeCapabilities.supported_formats.join(', ') : 'PDF'}
                   </Text>
                 </div>
               </div>
@@ -642,7 +611,7 @@ const PDFImportPage: React.FC = () => {
             type="info"
             showIcon
             action={
-              <Button size="small" onClick={() => void handleTestSystem()}>
+              <Button size="small" onClick={handleTestSystem}>
                 测试功能
               </Button>
             }
@@ -665,11 +634,11 @@ const PDFImportPage: React.FC = () => {
             <Card size="small">
               <Statistic
                 title="系统状态"
-                value={systemStats?.percentage ?? 0}
+                value={systemStats?.percentage || 0}
                 suffix="%"
                 prefix={<SettingOutlined />}
                 valueStyle={{
-                  color: systemStats?.percentage === 100 ? '#3f8600' : '#faad14',
+                  color: systemStats?.percentage === 100 ? '#3f8600' : '#faad14'
                 }}
               />
             </Card>
@@ -678,7 +647,7 @@ const PDFImportPage: React.FC = () => {
             <Card size="small">
               <Statistic
                 title="文件大小限制"
-                value={safeCapabilities?.max_file_size_mb ?? 50}
+                value={safeCapabilities?.max_file_size_mb || 50}
                 suffix="MB"
                 prefix={<FileTextOutlined />}
               />
@@ -688,7 +657,7 @@ const PDFImportPage: React.FC = () => {
             <Card size="small">
               <Statistic
                 title="预估处理时间"
-                value={safeCapabilities?.estimated_processing_time ?? '30-60秒'}
+                value={safeCapabilities?.estimated_processing_time || '30-60秒'}
                 prefix={<SettingOutlined />}
               />
             </Card>
@@ -697,15 +666,24 @@ const PDFImportPage: React.FC = () => {
       </Card>
 
       {/* 主要内容区域 */}
-      <Spin spinning={loading} tip="正在加载数据..." size="large" delay={300}>
+      <Spin
+        spinning={loading}
+        tip="正在加载数据..."
+        size="large"
+        delay={300}
+      >
         <Tabs
           activeKey={activeTab}
-          onChange={key => setActiveTab(key as 'upload' | 'history')}
+          onChange={(key) => setActiveTab(key as 'upload' | 'history')}
           items={[
             {
               key: 'upload',
               label: 'PDF导入',
-              children: <div>{renderCurrentSession}</div>,
+              children: (
+                <div>
+                  {renderCurrentSession}
+                </div>
+              )
             },
             {
               key: 'history',
@@ -722,62 +700,59 @@ const PDFImportPage: React.FC = () => {
                           title={
                             <Space>
                               <Text>{session.fileInfo.name}</Text>
-                              <Tag
-                                color={
-                                  session.status === 'completed'
-                                    ? 'green'
-                                    : session.status === 'ready'
-                                      ? 'blue'
-                                      : session.status === 'failed'
-                                        ? 'red'
-                                        : 'orange'
-                                }
-                              >
-                                {session.status === 'completed'
-                                  ? '已完成'
-                                  : session.status === 'ready'
-                                    ? '待确认'
-                                    : session.status === 'failed'
-                                      ? '失败'
-                                      : '其他'}
+                              <Tag color={
+                                session.status === 'completed' ? 'green' :
+                                  session.status === 'ready' ? 'blue' :
+                                    session.status === 'failed' ? 'red' : 'orange'
+                              }>
+                                {session.status === 'completed' ? '已完成' :
+                                  session.status === 'ready' ? '待确认' :
+                                    session.status === 'failed' ? '失败' : '其他'}
                               </Tag>
                             </Space>
                           }
                           extra={
                             <Space>
-                              <Text type="secondary">进度: {session.progress}%</Text>
+                              <Text type="secondary">
+                                进度: {session.progress}%
+                              </Text>
                               <Button size="small" type="text">
                                 查看详情
                               </Button>
                             </Space>
                           }
                         >
-                          <Text type="secondary">会话ID: {session.sessionId}</Text>
+                          <Text type="secondary">
+                            会话ID: {session.sessionId}
+                          </Text>
                         </Card>
                       ))}
                     </div>
                   ) : (
                     <div style={{ textAlign: 'center', padding: '40px' }}>
-                      <HistoryOutlined
-                        style={{ fontSize: 48, color: '#d9d9d9', marginBottom: 16 }}
-                      />
+                      <HistoryOutlined style={{ fontSize: 48, color: '#d9d9d9', marginBottom: 16 }} />
                       <Title level={4} style={{ color: '#d9d9d9' }}>
                         暂无导入记录
                       </Title>
-                      <Paragraph>开始上传PDF文件以创建导入记录。</Paragraph>
+                      <Paragraph>
+                        开始上传PDF文件以创建导入记录。
+                      </Paragraph>
                       <Button type="primary" onClick={() => setActiveTab('upload')}>
                         开始导入
                       </Button>
                     </div>
                   )}
                 </Card>
-              ),
-            },
+              )
+            }
           ]}
         />
 
         {/* 使用帮助模态框 */}
-        <PDFImportHelp visible={showHelp} onClose={() => setShowHelp(false)} />
+        <PDFImportHelp
+          visible={showHelp}
+          onClose={() => setShowHelp(false)}
+        />
 
         {/* 键盘快捷键和设置模态框 */}
         <Modal
@@ -792,7 +767,7 @@ const PDFImportPage: React.FC = () => {
           footer={[
             <Button key="close" onClick={() => setShowKeyboardShortcuts(false)}>
               保存并关闭
-            </Button>,
+            </Button>
           ]}
           width={800}
         >
@@ -869,7 +844,7 @@ const PDFImportPage: React.FC = () => {
                         style={{ marginTop: 16 }}
                       />
                     </div>
-                  ),
+                  )
                 },
                 {
                   key: 'preferences',
@@ -893,12 +868,10 @@ const PDFImportPage: React.FC = () => {
                                   <Text>启用桌面通知：</Text>
                                   <Switch
                                     checked={userPreferences.enableNotifications}
-                                    onChange={checked =>
-                                      saveUserPreferences({
-                                        ...userPreferences,
-                                        enableNotifications: checked,
-                                      })
-                                    }
+                                    onChange={(checked) => saveUserPreferences({
+                                      ...userPreferences,
+                                      enableNotifications: checked
+                                    })}
                                   />
                                   <Tooltip title="在导入完成或失败时显示系统通知">
                                     <QuestionCircleOutlined style={{ color: '#999' }} />
@@ -910,12 +883,10 @@ const PDFImportPage: React.FC = () => {
                                   <Text>紧凑视图：</Text>
                                   <Switch
                                     checked={userPreferences.compactView}
-                                    onChange={checked =>
-                                      saveUserPreferences({
-                                        ...userPreferences,
-                                        compactView: checked,
-                                      })
-                                    }
+                                    onChange={(checked) => saveUserPreferences({
+                                      ...userPreferences,
+                                      compactView: checked
+                                    })}
                                   />
                                   <Tooltip title="减少界面元素间距，显示更多内容">
                                     <QuestionCircleOutlined style={{ color: '#999' }} />
@@ -927,12 +898,10 @@ const PDFImportPage: React.FC = () => {
                                   <Text>显示高级选项：</Text>
                                   <Switch
                                     checked={userPreferences.showAdvancedOptions}
-                                    onChange={checked =>
-                                      saveUserPreferences({
-                                        ...userPreferences,
-                                        showAdvancedOptions: checked,
-                                      })
-                                    }
+                                    onChange={(checked) => saveUserPreferences({
+                                      ...userPreferences,
+                                      showAdvancedOptions: checked
+                                    })}
                                   />
                                   <Tooltip title="显示更多技术性选项和详细信息">
                                     <QuestionCircleOutlined style={{ color: '#999' }} />
@@ -950,12 +919,10 @@ const PDFImportPage: React.FC = () => {
                                   <Text>自动刷新进度：</Text>
                                   <Switch
                                     checked={userPreferences.autoRefresh}
-                                    onChange={checked =>
-                                      saveUserPreferences({
-                                        ...userPreferences,
-                                        autoRefresh: checked,
-                                      })
-                                    }
+                                    onChange={(checked) => saveUserPreferences({
+                                      ...userPreferences,
+                                      autoRefresh: checked
+                                    })}
                                   />
                                   <Tooltip title="自动刷新处理进度，无需手动操作">
                                     <QuestionCircleOutlined style={{ color: '#999' }} />
@@ -967,12 +934,10 @@ const PDFImportPage: React.FC = () => {
                                   <Text>优先使用MarkItDown：</Text>
                                   <Switch
                                     checked={userPreferences.preferMarkitdown}
-                                    onChange={checked =>
-                                      saveUserPreferences({
-                                        ...userPreferences,
-                                        preferMarkitdown: checked,
-                                      })
-                                    }
+                                    onChange={(checked) => saveUserPreferences({
+                                      ...userPreferences,
+                                      preferMarkitdown: checked
+                                    })}
                                   />
                                   <Tooltip title="PDF转换时优先使用MarkItDown引擎">
                                     <QuestionCircleOutlined style={{ color: '#999' }} />
@@ -1004,8 +969,8 @@ const PDFImportPage: React.FC = () => {
                         </Row>
                       </Card>
                     </div>
-                  ),
-                },
+                  )
+                }
               ]}
             />
           </div>

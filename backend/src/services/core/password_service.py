@@ -30,7 +30,9 @@ class PasswordService:
                     # 可能是base64编码的
                     try:
                         decoded_hash = base64.b64decode(hashed_password)
-                        return bcrypt.checkpw(plain_password.encode("utf-8"), decoded_hash)
+                        return bcrypt.checkpw(
+                            plain_password.encode("utf-8"), decoded_hash
+                        )
                     except (base64.binascii.Error, ValueError):  # pragma: no cover
                         return bcrypt.checkpw(  # pragma: no cover
                             plain_password.encode("utf-8"),

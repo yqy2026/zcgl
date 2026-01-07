@@ -1,111 +1,99 @@
-import React, { createContext, useCallback, useContext, useState, useRef } from 'react';
-import { Alert, Button, Modal, Typography, Space, Collapse } from 'antd';
+import React, { createContext, useCallback, useContext, useState, useRef } from 'react'
+import { Alert, Button, Modal, Typography, Space, Collapse } from 'antd'
 import {
   CloseOutlined,
   InfoCircleOutlined,
   WarningOutlined,
   CheckCircleOutlined,
-  ExclamationCircleOutlined,
-} from '@ant-design/icons';
+  ExclamationCircleOutlined
+} from '@ant-design/icons'
 
-const { Text } = Typography;
-const { Panel } = Collapse;
+const { Text } = Typography
+const { Panel } = Collapse
 
-export type ErrorType = 'error' | 'warning' | 'info' | 'success';
-export type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical';
+export type ErrorType = 'error' | 'warning' | 'info' | 'success'
+export type ErrorSeverity = 'low' | 'medium' | 'high' | 'critical'
 
 interface ErrorInfo {
-  id: string;
-  type: ErrorType;
-  severity: ErrorSeverity;
-  title: string;
-  message: string;
-  details?: unknown;
-  timestamp: Date;
-  stack?: string;
+  id: string
+  type: ErrorType
+  severity: ErrorSeverity
+  title: string
+  message: string
+  details?: unknown
+  timestamp: Date
+  stack?: string
   action?: {
-    text: string;
-    onClick: () => void;
-  };
-  retryCount?: number;
-  resolved?: boolean;
+    text: string
+    onClick: () => void
+  }
+  retryCount?: number
+  resolved?: boolean
 }
 
 interface ErrorContextType {
-  showError: (error: Omit<ErrorInfo, 'id' | 'timestamp'>) => void;
-  showWarning: (message: string, details?: unknown) => void;
-  showSuccess: (message: string, details?: unknown) => void;
-  showInfo: (message: string, details?: unknown) => void;
-  clearError: (id: string) => void;
-  clearAllErrors: () => void;
-  retryError: (id: string) => void;
-  getErrors: () => ErrorInfo[];
-  getErrorStats: () => {
-    total: number;
-    byType: Record<string, number>;
-    bySeverity: Record<string, number>;
-  };
+  showError: (error: Omit<ErrorInfo, 'id' | 'timestamp'>) => void
+  showWarning: (message: string, details?: unknown) => void
+  showSuccess: (message: string, details?: unknown) => void
+  showInfo: (message: string, details?: unknown) => void
+  clearError: (id: string) => void
+  clearAllErrors: () => void
+  retryError: (id: string) => void
+  getErrors: () => ErrorInfo[]
+  getErrorStats: () => { total: number; byType: Record<string, number>; bySeverity: Record<string, number> }
 }
 
-const ErrorContext = createContext<ErrorContextType | null>(null);
+const ErrorContext = createContext<ErrorContextType | null>(null)
 
 // Helper functions - defined outside component for shared use
 const getErrorIcon = (type: ErrorType, severity: ErrorSeverity) => {
   switch (type) {
     case 'error':
-      return severity === 'critical' ? (
-        <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />
-      ) : severity === 'high' ? (
-        <ExclamationCircleOutlined style={{ color: '#ff7a45' }} />
-      ) : (
-        <ExclamationCircleOutlined style={{ color: '#fa8c16' }} />
-      );
+      return severity === 'critical' ? <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} /> :
+             severity === 'high' ? <ExclamationCircleOutlined style={{ color: '#ff7a45' }} /> :
+             <ExclamationCircleOutlined style={{ color: '#fa8c16' }} />
     case 'warning':
-      return <WarningOutlined style={{ color: '#faad14' }} />;
+      return <WarningOutlined style={{ color: '#faad14' }} />
     case 'success':
-      return <CheckCircleOutlined style={{ color: '#52c41a' }} />;
+      return <CheckCircleOutlined style={{ color: '#52c41a' }} />
     case 'info':
-      return <InfoCircleOutlined style={{ color: '#1890ff' }} />;
+      return <InfoCircleOutlined style={{ color: '#1890ff' }} />
     default:
-      return <ExclamationCircleOutlined />;
+      return <ExclamationCircleOutlined />
   }
-};
+}
 
 const getErrorColor = (type: ErrorType, severity: ErrorSeverity) => {
   switch (type) {
     case 'error':
-      return severity === 'critical'
-        ? '#ff4d4f'
-        : severity === 'high'
-          ? '#ff7a45'
-          : severity === 'medium'
-            ? '#fa8c16'
-            : '#ffc53d';
+      return severity === 'critical' ? '#ff4d4f' :
+             severity === 'high' ? '#ff7a45' :
+             severity === 'medium' ? '#fa8c16' : '#ffc53d'
     case 'warning':
-      return '#faad14';
+      return '#faad14'
     case 'success':
-      return '#52c41a';
+      return '#52c41a'
     case 'info':
-      return '#1890ff';
+      return '#1890ff'
     default:
-      return '#d9d9d9';
+      return '#d9d9d9'
   }
-};
+}
 
 export const useSmartError = () => {
-  const context = useContext(ErrorContext);
-  if (context === null || context === undefined) {
-    throw new Error('useSmartError must be used within SmartErrorProvider');
+  const context = useContext(ErrorContext)
+  if (!context) {
+    throw new Error('useSmartError must be used within SmartErrorProvider')
   }
-  return context;
-};
+  return context
+}
 
 interface SmartErrorHandlerProps {
-  children: React.ReactNode;
-  maxErrors?: number;
-  autoHideDuration?: number;
-  enableRetry?: boolean;
-  maxRetryAttempts?: number;
+  children: React.ReactNode
+  maxErrors?: number
+  autoHideDuration?: number
+  enableRetry?: boolean
+  maxRetryAttempts?: number
 }
 
 export const SmartErrorHandler: React.FC<SmartErrorHandlerProps> = ({
@@ -113,157 +101,135 @@ export const SmartErrorHandler: React.FC<SmartErrorHandlerProps> = ({
   maxErrors = 50,
   autoHideDuration = 5000,
   enableRetry = true,
-  maxRetryAttempts = 3,
+  maxRetryAttempts = 3
 }) => {
-  const [errors, setErrors] = useState<ErrorInfo[]>([]);
-  const [selectedError, setSelectedError] = useState<ErrorInfo | null>(null);
-  const retryAttempts = useRef<Record<string, number>>({});
-  const autoHideTimeouts = useRef<Record<string, NodeJS.Timeout>>({});
+  const [errors, setErrors] = useState<ErrorInfo[]>([])
+  const [selectedError, setSelectedError] = useState<ErrorInfo | null>(null)
+  const retryAttempts = useRef<Record<string, number>>({})
+  const autoHideTimeouts = useRef<Record<string, NodeJS.Timeout>>({})
 
   const generateErrorId = useCallback(() => {
-    return `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }, []);
+    return `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  }, [])
 
-  const showError = useCallback(
-    (error: Omit<ErrorInfo, 'id' | 'timestamp'>) => {
-      const errorInfo: ErrorInfo = {
-        id: generateErrorId(),
-        timestamp: new Date(),
-        retryCount: 0,
-        resolved: false,
-        ...error,
-      };
+  const showError = useCallback((error: Omit<ErrorInfo, 'id' | 'timestamp'>) => {
+    const errorInfo: ErrorInfo = {
+      id: generateErrorId(),
+      timestamp: new Date(),
+      retryCount: 0,
+      resolved: false,
+      ...error
+    }
 
-      setErrors(prev => {
-        const newErrors = [errorInfo, ...prev.slice(0, maxErrors - 1)];
-        return newErrors.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-      });
+    setErrors(prev => {
+      const newErrors = [errorInfo, ...prev.slice(0, maxErrors - 1)]
+      return newErrors.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+    })
 
-      // 自动隐藏（5秒后）
-      if (autoHideDuration > 0) {
-        autoHideTimeouts.current[errorInfo.id] = setTimeout(() => {
-          setErrors(prev => prev.filter(e => e.id !== errorInfo.id));
-          delete autoHideTimeouts.current[errorInfo.id];
-        }, autoHideDuration);
-      }
+    // 自动隐藏（5秒后）
+    if (autoHideDuration > 0) {
+      autoHideTimeouts.current[errorInfo.id] = setTimeout(() => {
+        setErrors(prev => prev.filter(e => e.id !== errorInfo.id))
+        delete autoHideTimeouts.current[errorInfo.id]
+      }, autoHideDuration)
+    }
 
-      return errorInfo.id;
-    },
-    [maxErrors, autoHideDuration, generateErrorId]
-  );
+    return errorInfo.id
+  }, [maxErrors, autoHideDuration])
 
-  const showWarning = useCallback(
-    (message: string, details?: unknown) => {
-      showError({
-        type: 'warning',
-        severity: 'medium',
-        title: '警告',
-        message,
-        details,
-      });
-    },
-    [showError]
-  );
+  const showWarning = useCallback((message: string, details?: unknown) => {
+    showError({
+      type: 'warning',
+      severity: 'medium',
+      title: '警告',
+      message,
+      details
+    })
+  }, [showError])
 
-  const showSuccess = useCallback(
-    (message: string, details?: unknown) => {
-      showError({
-        type: 'success',
-        severity: 'low',
-        title: '成功',
-        message,
-        details,
-      });
-    },
-    [showError]
-  );
+  const showSuccess = useCallback((message: string, details?: unknown) => {
+    showError({
+      type: 'success',
+      severity: 'low',
+      title: '成功',
+      message,
+      details
+    })
+  }, [showError])
 
-  const showInfo = useCallback(
-    (message: string, details?: unknown) => {
-      showError({
-        type: 'info',
-        severity: 'low',
-        title: '信息',
-        message,
-        details,
-      });
-    },
-    [showError]
-  );
+  const showInfo = useCallback((message: string, details?: unknown) => {
+    showError({
+      type: 'info',
+      severity: 'low',
+      title: '信息',
+      message,
+      details
+    })
+  }, [showError])
 
-  const clearError = useCallback(
-    (id: string) => {
-      setErrors(prev => prev.filter(e => e.id !== id));
-      if (autoHideTimeouts.current[id] !== null && autoHideTimeouts.current[id] !== undefined) {
-        clearTimeout(autoHideTimeouts.current[id]);
-        delete autoHideTimeouts.current[id];
-      }
-      if (selectedError !== null && selectedError !== undefined && selectedError.id === id) {
-        setSelectedError(null);
-      }
-    },
-    [selectedError]
-  );
+  const clearError = useCallback((id: string) => {
+    setErrors(prev => prev.filter(e => e.id !== id))
+    if (autoHideTimeouts.current[id]) {
+      clearTimeout(autoHideTimeouts.current[id])
+      delete autoHideTimeouts.current[id]
+    }
+    if (selectedError?.id === id) {
+      setSelectedError(null)
+    }
+  }, [])
 
   const clearAllErrors = useCallback(() => {
-    setErrors([]);
-    setSelectedError(null);
+    setErrors([])
+    setSelectedError(null)
     Object.keys(autoHideTimeouts.current).forEach(id => {
-      clearTimeout(autoHideTimeouts.current[id]);
-    });
-    autoHideTimeouts.current = {};
-  }, []);
+      clearTimeout(autoHideTimeouts.current[id])
+    })
+    autoHideTimeouts.current = {}
+  }, [])
 
-  const retryError = useCallback(
-    (id: string) => {
-      if (!enableRetry) {
-        return;
-      }
+  const retryError = useCallback((id: string) => {
+    if (!enableRetry) return
 
-      const error = errors.find(e => e.id === id);
-      if (!error) {
-        return;
-      }
+    const error = errors.find(e => e.id === id)
+    if (!error) return
 
-      const currentAttempts = retryAttempts.current[id] || 0;
-      if (currentAttempts >= maxRetryAttempts) {
-        // 达到最大重试次数，显示错误信息
-        showError({
-          type: 'error',
-          severity: 'high',
-          title: '重试失败',
-          message: `已达到最大重试次数 (${maxRetryAttempts}次)，请检查网络连接或联系管理员`,
-        });
-        return;
-      }
+    const currentAttempts = retryAttempts.current[id] || 0
+    if (currentAttempts >= maxRetryAttempts) {
+      // 达到最大重试次数，显示错误信息
+      showError({
+        type: 'error',
+        severity: 'high',
+        title: '重试失败',
+        message: `已达到最大重试次数 (${maxRetryAttempts}次)，请检查网络连接或联系管理员`
+      })
+      return
+    }
 
-      // 增加重试次数
-      retryAttempts.current[id] = currentAttempts + 1;
+    // 增加重试次数
+    retryAttempts.current[id] = currentAttempts + 1
 
-      // 执行重试操作
-      if (error.action) {
-        error.action.onClick();
-      }
-    },
-    [errors, enableRetry, maxRetryAttempts, showError]
-  );
+    // 执行重试操作
+    if (error.action) {
+      error.action.onClick()
+    }
+  }, [errors, enableRetry, maxRetryAttempts])
 
-  const getErrors = useCallback(() => errors, [errors]);
+  const getErrors = useCallback(() => errors, [errors])
 
   const getErrorStats = useCallback(() => {
     const stats = {
       total: errors.length,
       byType: {} as Record<string, number>,
-      bySeverity: {} as Record<string, number>,
-    };
+      bySeverity: {} as Record<string, number>
+    }
 
     errors.forEach(error => {
-      stats.byType[error.type] = (stats.byType[error.type] || 0) + 1;
-      stats.bySeverity[error.severity] = (stats.bySeverity[error.severity] || 0) + 1;
-    });
+      stats.byType[error.type] = (stats.byType[error.type] || 0) + 1
+      stats.bySeverity[error.severity] = (stats.bySeverity[error.severity] || 0) + 1
+    })
 
-    return stats;
-  }, [errors]);
+    return stats
+  }, [errors])
 
   const contextValue: ErrorContextType = {
     showError,
@@ -274,8 +240,8 @@ export const SmartErrorHandler: React.FC<SmartErrorHandlerProps> = ({
     clearAllErrors,
     retryError,
     getErrors,
-    getErrorStats,
-  };
+    getErrorStats
+  }
 
   return (
     <ErrorContext.Provider value={contextValue}>
@@ -289,30 +255,26 @@ export const SmartErrorHandler: React.FC<SmartErrorHandlerProps> = ({
         maxRetryAttempts={maxRetryAttempts}
       />
     </ErrorContext.Provider>
-  );
-};
+  )
+}
 
 interface ErrorNotificationContainerProps {
-  errors: ErrorInfo[];
+  errors: ErrorInfo[]
 }
 
 const ErrorNotificationContainer: React.FC<ErrorNotificationContainerProps> = ({ errors }) => {
-  if (errors.length === 0) {
-    return null;
-  }
+  if (errors.length === 0) return null
 
-  const latestErrors = errors.slice(0, 3).reverse(); // 显示最近3个错误
+  const latestErrors = errors.slice(0, 3).reverse() // 显示最近3个错误
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: '20px',
-        right: '20px',
-        zIndex: 9999,
-        maxWidth: '400px',
-      }}
-    >
+    <div style={{
+      position: 'fixed',
+      top: '20px',
+      right: '20px',
+      zIndex: 9999,
+      maxWidth: '400px'
+    }}>
       {latestErrors.map((error, index) => (
         <div
           key={error.id}
@@ -321,41 +283,33 @@ const ErrorNotificationContainer: React.FC<ErrorNotificationContainerProps> = ({
             backgroundColor: 'white',
             borderRadius: '6px',
             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-            borderLeft: `4px solid ${getErrorColor(error.type, error.severity)}`,
+            borderLeft: `4px solid ${getErrorColor(error.type, error.severity)}`
           }}
         >
           <div style={{ padding: '12px 16px 12px 16px' }}>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                marginBottom: '8px',
-              }}
-            >
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              marginBottom: '8px'
+            }}>
               {getErrorIcon(error.type, error.severity)}
               <div style={{ marginLeft: '8px', flex: 1 }}>
-                <div
-                  style={{
-                    fontWeight: 'bold',
-                    color: getErrorColor(error.type, error.severity),
-                    fontSize: '14px',
-                  }}
-                >
+                <div style={{
+                  fontWeight: 'bold',
+                  color: getErrorColor(error.type, error.severity),
+                  fontSize: '14px'
+                }}>
                   {error.title}
                 </div>
-                {error.retryCount !== null &&
-                  error.retryCount !== undefined &&
-                  error.retryCount > 1 && (
-                    <div
-                      style={{
-                        fontSize: '12px',
-                        color: '#666',
-                        marginTop: '2px',
-                      }}
-                    >
-                      重试 {error.retryCount} 次
-                    </div>
-                  )}
+                {error.retryCount && error.retryCount > 1 && (
+                  <div style={{
+                    fontSize: '12px',
+                    color: '#666',
+                    marginTop: '2px'
+                  }}>
+                    重试 {error.retryCount} 次
+                  </div>
+                )}
               </div>
               <Button
                 type="text"
@@ -366,14 +320,14 @@ const ErrorNotificationContainer: React.FC<ErrorNotificationContainerProps> = ({
                 }}
               />
             </div>
-            <Text style={{ fontSize: '13px', color: '#333' }}>{error.message}</Text>
+            <Text style={{ fontSize: '13px', color: '#333' }}>
+              {error.message}
+            </Text>
           </div>
-          <div
-            style={{
-              borderTop: '1px solid #f0f0f0',
-              padding: '8px 16px',
-            }}
-          >
+          <div style={{
+            borderTop: '1px solid #f0f0f0',
+            padding: '8px 16px'
+          }}>
             <Space>
               <Button
                 type="primary"
@@ -401,27 +355,19 @@ const ErrorNotificationContainer: React.FC<ErrorNotificationContainerProps> = ({
         </div>
       ))}
     </div>
-  );
-};
-
-interface ErrorModalProps {
-  error: ErrorInfo | null;
-  onClose: () => void;
-  onRetry: (id: string) => void;
-  enableRetry: boolean;
-  maxRetryAttempts: number;
+  )
 }
 
-const ErrorModal: React.FC<ErrorModalProps> = ({
-  error,
-  onClose,
-  onRetry,
-  enableRetry,
-  maxRetryAttempts,
-}) => {
-  if (!error) {
-    return null;
-  }
+interface ErrorModalProps {
+  error: ErrorInfo | null
+  onClose: () => void
+  onRetry: (id: string) => void
+  enableRetry: boolean
+  maxRetryAttempts: number
+}
+
+const ErrorModal: React.FC<ErrorModalProps> = ({ error, onClose, onRetry, enableRetry, maxRetryAttempts }) => {
+  if (!error) return null
 
   return (
     <Modal
@@ -439,7 +385,7 @@ const ErrorModal: React.FC<ErrorModalProps> = ({
           <Button onClick={onClose}>关闭</Button>
           {enableRetry && error.action && (
             <Button type="primary" onClick={() => onRetry(error.id)}>
-              重试 ({Math.min((error.retryCount ?? 0) + 1, maxRetryAttempts)}/{maxRetryAttempts})
+              重试 ({Math.min((error.retryCount || 0) + 1, maxRetryAttempts)}/{maxRetryAttempts})
             </Button>
           )}
         </Space>
@@ -448,65 +394,62 @@ const ErrorModal: React.FC<ErrorModalProps> = ({
       <div style={{ padding: '16px 0px' }}>
         <div style={{ marginBottom: '16px' }}>
           <Text strong>错误时间：</Text>
-          <Text style={{ marginLeft: '8px' }}>{error.timestamp.toLocaleString()}</Text>
+          <Text style={{ marginLeft: '8px' }}>
+            {error.timestamp.toLocaleString()}
+          </Text>
         </div>
 
         <div style={{ marginBottom: '16px' }}>
           <Text strong>错误信息：</Text>
         </div>
-        <div
-          style={{
-            backgroundColor: '#f8f9fa',
-            padding: '12px',
-            borderRadius: '4px',
-            border: '1px solid #e9ecef',
-            fontSize: '14px',
-            color: '#333',
-          }}
-        >
+        <div style={{
+          backgroundColor: '#f8f9fa',
+          padding: '12px',
+          borderRadius: '4px',
+          border: '1px solid #e9ecef',
+          fontSize: '14px',
+          color: '#333'
+        }}>
           {error.message}
         </div>
 
-        {error.details !== null && error.details !== undefined && (
+        {(error.details as any) && (
           <div style={{ marginTop: '16px' }}>
             <Text strong>详细信息：</Text>
             <Collapse ghost style={{ marginTop: '8px' }}>
               <Panel header="查看详细信息" key="details">
-                <pre
-                  style={{
-                    backgroundColor: '#f8f9fa',
-                    padding: '12px',
-                    borderRadius: '4px',
-                    overflow: 'auto',
-                    maxHeight: '200px',
-                    fontSize: '12px',
-                  }}
-                >
+                <pre style={{
+                  backgroundColor: '#f8f9fa',
+                  padding: '12px',
+                  borderRadius: '4px',
+                  overflow: 'auto',
+                  maxHeight: '200px',
+                  fontSize: '12px'
+                }}>
                   {typeof error.details === 'object'
-                    ? JSON.stringify(error.details, null, 2)
-                    : (error.details ?? '')}
+                    ? JSON.stringify(error.details, null, 2) as string
+                    : String(error.details)
+                  }
                 </pre>
               </Panel>
             </Collapse>
           </div>
         )}
 
-        {error.stack !== null && error.stack !== undefined && error.stack !== '' && (
+        {error.stack && (
           <div style={{ marginTop: '16px' }}>
             <Text strong>堆栈信息：</Text>
             <Collapse ghost style={{ marginTop: '8px' }}>
               <Panel header="查看堆栈信息" key="stack">
-                <pre
-                  style={{
-                    backgroundColor: '#fff2f0',
-                    padding: '12px',
-                    borderRadius: '4px',
-                    overflow: 'auto',
-                    maxHeight: '200px',
-                    fontSize: '11px',
-                    color: '#d63384',
-                  }}
-                >
+                <pre style={{
+                  backgroundColor: '#fff2f0',
+                  padding: '12px',
+                  borderRadius: '4px',
+                  overflow: 'auto',
+                  maxHeight: '200px',
+                  fontSize: '11px',
+                  color: '#d63384'
+                }}>
                   {error.stack}
                 </pre>
               </Panel>
@@ -532,5 +475,5 @@ const ErrorModal: React.FC<ErrorModalProps> = ({
         )}
       </div>
     </Modal>
-  );
-};
+  )
+}

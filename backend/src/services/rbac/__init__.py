@@ -1,3 +1,3 @@
-from .service import rbac_service  # noqa: F401
+from .service import rbac_service
 
 __all__ = ["rbac_service"]

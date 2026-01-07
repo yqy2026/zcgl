@@ -34,12 +34,12 @@ import { AssetForm } from '@/components/Asset';
 
 ## 状态管理策略
 
-| 状态类型       | 使用工具        | 适用场景                     |
-| -------------- | --------------- | ---------------------------- |
-| **全局 UI**    | Zustand         | 主题、侧边栏、用户信息、通知 |
-| **服务器数据** | React Query     | API 数据获取、缓存、同步     |
-| **表单状态**   | React Hook Form | 表单验证、提交               |
-| **局部 UI**    | useState        | 模态框开关、loading 状态     |
+| 状态类型 | 使用工具 | 适用场景 |
+|---------|---------|---------|
+| **全局 UI** | Zustand | 主题、侧边栏、用户信息、通知 |
+| **服务器数据** | React Query | API 数据获取、缓存、同步 |
+| **表单状态** | React Hook Form | 表单验证、提交 |
+| **局部 UI** | useState | 模态框开关、loading 状态 |
 
 ### React Query 示例
 
@@ -82,11 +82,8 @@ src/
 ## 添加新功能
 
 ### 1. 类型定义 (`types/myFeature.ts`)
-
 ### 2. API 服务 (`services/myFeatureService.ts`)
-
 ### 3. 自定义 Hook (`hooks/useMyFeature.ts`)
-
 ### 4. 页面组件 (`pages/MyFeature/MyFeatureListPage.tsx`)
 
 详细模式参考: `docs/guides/frontend.md`
@@ -121,19 +118,19 @@ npm run test:watch          # 监听模式
 
 ## 代码风格
 
-| 类型 | 命名规范    | 示例              |
-| ---- | ----------- | ----------------- |
-| 组件 | PascalCase  | `AssetCard.tsx`   |
-| 服务 | camelCase   | `assetService.ts` |
-| Hook | use\*       | `useAssets.ts`    |
-| 常量 | UPPER_SNAKE | `API_BASE_URL`    |
+| 类型 | 命名规范 | 示例 |
+|------|---------|------|
+| 组件 | PascalCase | `AssetCard.tsx` |
+| 服务 | camelCase | `assetService.ts` |
+| Hook | use* | `useAssets.ts` |
+| 常量 | UPPER_SNAKE | `API_BASE_URL` |
 
 ---
 
 ## 常见问题
 
-| 问题             | 解决方案                      |
-| ---------------- | ----------------------------- |
-| Port 5173 被占用 | 修改 `vite.config.ts`         |
-| API 请求失败     | 确保后端运行在 8002 端口      |
-| TypeScript 错误  | `npm run type-check` 查看详情 |
+| 问题 | 解决方案 |
+|------|---------|
+| Port 5173 被占用 | 修改 `vite.config.ts` |
+| API 请求失败 | 确保后端运行在 8002 端口 |
+| TypeScript 错误 | `npm run type-check` 查看详情 |

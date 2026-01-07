@@ -1,3 +1,3 @@
-from .service import organization_service  # noqa: F401
+from .service import organization_service
 
 __all__ = ["organization_service"]

@@ -35,7 +35,9 @@ class UserManagementService:
         # 检查用户名是否已存在
         existing_user = (
             self.db.query(User)
-            .filter((User.username == user_data.username) | (User.email == user_data.email))
+            .filter(
+                (User.username == user_data.username) | (User.email == user_data.email)
+            )
             .first()
         )
         if existing_user:
@@ -143,10 +145,14 @@ class UserManagementService:
         self.db.commit()
         return True
 
-    def change_password(self, user: User, current_password: str, new_password: str) -> bool:
+    def change_password(
+        self, user: User, current_password: str, new_password: str
+    ) -> bool:
         """修改密码"""
         # 验证当前密码
-        if not self.password_service.verify_password(current_password, user.password_hash):
+        if not self.password_service.verify_password(
+            current_password, user.password_hash
+        ):
             raise BusinessLogicError("当前密码不正确")
 
         # 验证新密码强度

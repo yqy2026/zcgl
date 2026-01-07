@@ -12,7 +12,9 @@ from ...schemas.organization import OrganizationCreate, OrganizationUpdate
 class OrganizationService:
     """组织架构服务层"""
 
-    def create_organization(self, db: Session, *, obj_in: OrganizationCreate) -> Organization:
+    def create_organization(
+        self, db: Session, *, obj_in: OrganizationCreate
+    ) -> Organization:
         """创建组织"""
         # 计算层级和路径
         level = 1
@@ -40,7 +42,9 @@ class OrganizationService:
         # Now set path
         if parent:
             db_obj.path = (
-                f"{parent.path}/{db_obj.id}" if parent.path else f"/{parent.id}/{db_obj.id}"
+                f"{parent.path}/{db_obj.id}"
+                if parent.path
+                else f"/{parent.id}/{db_obj.id}"
             )
         else:
             db_obj.path = f"/{db_obj.id}"
@@ -151,12 +155,19 @@ class OrganizationService:
 
         # 按层级统计
         level_stats = {}
-        levels = db.query(Organization.level).filter(not_(Organization.is_deleted)).distinct().all()
+        levels = (
+            db.query(Organization.level)
+            .filter(not_(Organization.is_deleted))
+            .distinct()
+            .all()
+        )
         for level_row in levels:
             level = level_row[0]
             count = (
                 db.query(Organization)
-                .filter(and_(not_(Organization.is_deleted), Organization.level == level))
+                .filter(
+                    and_(not_(Organization.is_deleted), Organization.level == level)
+                )
                 .count()
             )
             level_stats[f"level_{level}"] = count
