@@ -99,6 +99,38 @@ export interface RentContractHistory {
   created_at: string;
 }
 
+// V2: 押金台账记录
+export interface DepositLedger {
+  id: string;
+  contract_id: string;
+  transaction_type: DepositTransactionType;
+  amount: number;
+  transaction_date: string;
+  operator?: string;
+  operator_id?: string;
+  notes?: string;
+  related_contract_id?: string; // 用于续签转移
+  created_at: string;
+}
+
+// V2: 服务费台账记录
+export interface ServiceFeeLedger {
+  id: string;
+  contract_id: string;
+  source_ledger_id?: string;
+  year_month: string;
+  paid_rent_amount: number;
+  fee_rate: number;
+  fee_amount: number;
+  settlement_status: string;
+  settlement_date?: string;
+  notes?: string;
+  operator?: string;
+  operator_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // 请求类型
 export interface RentContractCreate {
   contract_number?: string;
@@ -308,6 +340,9 @@ export interface RentStatisticsOverview {
     paid_amount: number;
     overdue_amount: number;
   }>;
+  // V2: Operational Indicators
+  average_unit_price?: number;
+  renewal_rate?: number;
 }
 
 // 表单数据类型

@@ -771,8 +771,8 @@ describe('AnalyticsChart - chartDataUtils测试', () => {
     ]
     const result = chartDataUtils.toPieData(input)
     expect(result).toEqual([
-      { name: '选项1', value: 100, count: 100, percentage: 10 },
-      { name: '选项2', value: 200, count: 200, percentage: 20 },
+      { type: '选项1', value: 100, count: 100, percentage: 10 },
+      { type: '选项2', value: 200, count: 200, percentage: 20 },
     ])
   })
 
@@ -820,7 +820,7 @@ describe('AnalyticsChart - chartDataUtils测试', () => {
     ]
     const result = chartDataUtils.toAreaData(input)
     expect(result).toEqual([
-      { name: '商业', value: 1000, total_area: 1000, percentage: 10, average_area: 100 },
+      { type: '商业', value: 1000, total_area: 1000, percentage: 10, average_area: 100 },
     ])
   })
 })

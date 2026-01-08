@@ -272,6 +272,9 @@ export interface AssetSearchParams {
   // 新增字段以匹配AnalyticsFilters的使用
   operation_status?: string;
   ownership_entity?: string;
+  // V2: 关联筛选
+  project_id?: string;
+  ownership_id?: string;
   // 添加索引签名以支持动态字段访问
   [key: string]: unknown;
 }

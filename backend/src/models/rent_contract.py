@@ -95,6 +95,13 @@ class RentContract(Base):
         comment="上游合同ID（下游合同可选填）",
     )
 
+    # V2: 甲方/权属方信息（上游合同使用）
+    owner_name = Column(
+        String(200), nullable=True, comment="甲方/权属方名称（上游合同必填）"
+    )
+    owner_contact = Column(String(100), nullable=True, comment="甲方联系人")
+    owner_phone = Column(String(20), nullable=True, comment="甲方联系电话")
+
     # V2: 委托运营服务费率（仅委托运营合同使用）
     service_fee_rate = Column(
         DECIMAL(5, 4),

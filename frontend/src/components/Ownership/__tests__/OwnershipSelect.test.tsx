@@ -161,7 +161,7 @@ describe('OwnershipSelect 组件测试', () => {
 
     it('应该接收 onChange 回调', async () => {
       const handleChange = vi.fn()
-      const element = await createElement({ onChange: _onChange, handleChange })
+      const element = await createElement({ onChange: handleChange })
       expect(element).toBeTruthy()
     })
 
@@ -321,7 +321,7 @@ describe('OwnershipSelect 组件测试', () => {
 
     it('点击清除应该触发 onChange', async () => {
       const handleChange = vi.fn()
-      const element = await createElement({ allowClear: true, onChange: _onChange, handleChange })
+      const element = await createElement({ allowClear: true, onChange: handleChange })
       expect(element).toBeTruthy()
     })
 

@@ -25,6 +25,8 @@ import {
   MonthlyRentStatistics,
   RentContractQueryParams,
   RentLedgerQueryParams,
+  DepositLedger,
+  ServiceFeeLedger,
 } from '../types/rentContract';
 import { enhancedApiClient } from '@/api/client';
 import { ApiErrorHandler } from '../utils/responseExtractor';
@@ -593,6 +595,61 @@ class RentContractService {
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       throw new Error(enhancedError.message);
+    }
+  }
+
+  // ==================== V2: 押金台账 ====================
+
+  /**
+   * V2: 获取合同押金变动记录
+   */
+  async getContractDepositLedger(contractId: string): Promise<DepositLedger[]> {
+    try {
+      const result = await enhancedApiClient.get<DepositLedger[]>(
+        `${this.baseUrl}/${contractId}/deposit-ledger`,
+        {
+          cache: true,
+          retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
+          smartExtract: true,
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`获取押金变动记录失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      // 返回空数组，避免UI崩溃
+      console.warn('获取押金变动记录失败:', enhancedError.message);
+      return [];
+    }
+  }
+
+  /**
+   * V2: 获取合同服务费台账
+   */
+  async getServiceFeeLedgers(contractId: string): Promise<ServiceFeeLedger[]> {
+    try {
+      const result = await enhancedApiClient.get<ServiceFeeLedger[]>(
+        `${this.baseUrl}/${contractId}/service-fee-ledger`,
+        {
+          cache: true,
+          retry: { maxAttempts: 2, delay: 1000, backoffMultiplier: 1 },
+          smartExtract: true,
+        }
+      );
+
+      if (!result.success) {
+        throw new Error(`获取服务费台账失败: ${result.error}`);
+      }
+
+      return result.data!;
+    } catch (error) {
+      const enhancedError = ApiErrorHandler.handleError(error);
+      console.warn('获取服务费台账失败:', enhancedError.message);
+      return [];
     }
   }
 

@@ -116,15 +116,20 @@ class TestAssetBatchService:
         mock_asset_crud.get.side_effect = [mock_asset_1, mock_asset_2]
         mock_asset_crud.update.side_effect = [MagicMock(), Exception("Update failed")]
 
-        # 执行批量更新并预期失败
-        with pytest.raises(Exception) as excinfo:
-            batch_service.batch_update(
-                asset_ids=["asset_1", "asset_2"],
-                updates={"usage_status": "出租"},
-            )
+        # V2: 批量服务现在返回BatchOperationResult而不是抛出异常
+        # 这样更容错，即使部分失败也能继续处理其他资产
+        result = batch_service.batch_update(
+            asset_ids=["asset_1", "asset_2"],
+            updates={"usage_status": "出租"},
+        )
 
-        assert "Update failed" in str(excinfo.value)
-        mock_db.rollback.assert_called_once()
+        # 验证结果：1个成功，1个失败
+        assert result.success_count == 1
+        assert result.failed_count == 1
+        assert len(result.errors) == 1
+        assert "Update failed" in result.errors[0]["error"]
+        mock_db.commit.assert_called()  # 有成功的更新会提交
+        mock_db.rollback.assert_not_called()  # 有成功的不回滚
 
     @patch("src.services.asset.batch_service.asset_crud")
     def test_batch_update_all(self, mock_asset_crud, batch_service, mock_db):

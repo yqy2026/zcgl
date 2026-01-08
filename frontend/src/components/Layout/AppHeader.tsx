@@ -10,10 +10,10 @@ import {
   QuestionCircleOutlined,
   ExclamationCircleOutlined,
   GlobalOutlined,
-  BellOutlined,
 } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { AuthService } from '../../services/authService'
+import { NotificationCenter } from '../Notification'
 
 const { Header } = Layout
 
@@ -79,68 +79,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
     },
   ]
 
-  // 通知菜单
-  const notificationItems: MenuProps['items'] = [
-    {
-      key: 'notification1',
-      label: (
-        <div style={{ width: 300 }}>
-          <div style={{ fontWeight: 'bold', marginBottom: 4 }}>
-            新增资产审核通知
-          </div>
-          <div style={{ fontSize: '12px', color: '#8c8c8c' }}>
-            有3个新增资产等待审核，请及时处理
-          </div>
-          <div style={{ fontSize: '11px', color: '#bfbfbf', marginTop: 4 }}>
-            2分钟前
-          </div>
-        </div>
-      ),
-    },
-    {
-      key: 'notification2',
-      label: (
-        <div style={{ width: 300 }}>
-          <div style={{ fontWeight: 'bold', marginBottom: 4 }}>
-            数据导入完成
-          </div>
-          <div style={{ fontSize: '12px', color: '#8c8c8c' }}>
-            Excel数据导入已完成，成功导入156条记录
-          </div>
-          <div style={{ fontSize: '11px', color: '#bfbfbf', marginTop: 4 }}>
-            10分钟前
-          </div>
-        </div>
-      ),
-    },
-    {
-      key: 'notification3',
-      label: (
-        <div style={{ width: 300 }}>
-          <div style={{ fontWeight: 'bold', marginBottom: 4 }}>
-            系统维护通知
-          </div>
-          <div style={{ fontSize: '12px', color: '#8c8c8c' }}>
-            系统将于今晚22:00-24:00进行维护升级
-          </div>
-          <div style={{ fontSize: '11px', color: '#bfbfbf', marginTop: 4 }}>
-            1小时前
-          </div>
-        </div>
-      ),
-    },
-    {
-      type: 'divider',
-    },
-    {
-      key: 'viewAll',
-      label: (
-        <div style={{ textAlign: 'center', color: '#1890ff' }}>
-          查看全部通知
-        </div>
-      ),
-    },
-  ]
+  // 通知菜单已移除，使用 NotificationCenter 组件替代
 
   const handleUserMenuClick = ({ key }: { key: string }) => {
     switch (key) {
@@ -156,14 +95,6 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
       case 'logout':
         handleLogoutConfirm()
         break
-    }
-  }
-
-  const handleNotificationClick = ({ key }: { key: string }) => {
-    if (key === 'viewAll') {
-      // View all notifications
-    } else {
-      // View notification details
     }
   }
 
@@ -220,22 +151,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
         </Tooltip>
 
         {/* 通知 */}
-        <Dropdown
-          menu={{
-            items: notificationItems,
-            onClick: handleNotificationClick,
-          }}
-          placement="bottomRight"
-          trigger={['click']}
-        >
-          <Badge count={3} size="small">
-            <Button
-              type="text"
-              icon={<BellOutlined />}
-              style={{ fontSize: '16px' }}
-            />
-          </Badge>
-        </Dropdown>
+        <NotificationCenter />
 
         {/* 用户信息 */}
         <Dropdown

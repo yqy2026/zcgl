@@ -5,6 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import React from 'react'
+import { render, screen } from '@testing-library/react'
 
 // Mock hooks
 vi.mock('@/hooks/useSearchHistory', () => ({
@@ -73,7 +74,7 @@ vi.mock('antd', () => ({
       </div>
     ),
   },
-  Select: ({ children, value, onChange: _onChange, _onChange, placeholder, mode, allowClear }: any) => (
+  Select: ({ children, value, onChange, placeholder, mode, allowClear }: any) => (
     <div
       data-testid="select"
       data-value={value}
@@ -85,7 +86,7 @@ vi.mock('antd', () => ({
     </div>
   ),
   DatePicker: {
-    RangePicker: ({ onChange: _onChange, _onChange, placeholder }: any) => (
+    RangePicker: ({ onChange, placeholder }: any) => (
       <div data-testid="range-picker" data-placeholder={JSON.stringify(placeholder)} />
     ),
   },
@@ -113,7 +114,7 @@ vi.mock('antd', () => ({
     </div>
   ),
   Input: {
-    Search: ({ value, onChange: _onChange, _onChange, placeholder, onSearch: _onSearch, _onSearch }: any) => (
+    Search: ({ value, onChange, placeholder, onSearch }: any) => (
       <div
         data-testid="search"
         data-value={value}

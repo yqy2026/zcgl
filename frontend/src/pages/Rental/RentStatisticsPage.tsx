@@ -586,6 +586,39 @@ const RentStatisticsPage: React.FC = () => {
           </Row>
         )}
 
+        {/* V2: Operational Indicators */}
+        {overviewData && (
+          <>
+            <Title level={4} style={{ marginBottom: '16px' }}>运营指标</Title>
+            <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+              <Col xs={24} sm={12} md={6}>
+                <Card>
+                  <Statistic
+                    title="平均租金单价"
+                    value={Number(overviewData.average_unit_price || 0)}
+                    precision={2}
+                    prefix={<DollarOutlined />}
+                    suffix="元/㎡/月"
+                    valueStyle={{ color: '#722ed1' }}
+                  />
+                </Card>
+              </Col>
+              <Col xs={24} sm={12} md={6}>
+                <Card>
+                  <Statistic
+                    title="合同续签率"
+                    value={Number(overviewData.renewal_rate || 0)}
+                    precision={1}
+                    prefix={<ReloadOutlined />}
+                    suffix="%"
+                    valueStyle={{ color: '#13c2c2' }}
+                  />
+                </Card>
+              </Col>
+            </Row>
+          </>
+        )}
+
         <Tabs defaultActiveKey="ownership" type="card" items={tabItems} />
       </Card>
     </div>

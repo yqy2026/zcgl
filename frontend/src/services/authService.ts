@@ -82,7 +82,8 @@ export class AuthService {
         // 存储到多个键以确保兼容性
         localStorage.setItem('auth_token', accessToken);
         localStorage.setItem('token', accessToken); // 前端常用的键
-        localStorage.setItem('refreshToken', refreshToken);
+        localStorage.setItem('refresh_token', refreshToken); // snake_case (匹配后端schema)
+        localStorage.setItem('refreshToken', refreshToken); // camelCase (向后兼容)
       } else if (typeof responseData.token === 'string' && responseData.token !== '') {
         // 旧格式：单个token字段
         accessToken = responseData.token;
@@ -90,7 +91,8 @@ export class AuthService {
 
         localStorage.setItem('auth_token', accessToken);
         localStorage.setItem('token', accessToken);
-        localStorage.setItem('refreshToken', refreshToken);
+        localStorage.setItem('refresh_token', refreshToken); // snake_case
+        localStorage.setItem('refreshToken', refreshToken); // camelCase
       } else {
 
         throw new Error('未找到访问令牌');
@@ -143,13 +145,13 @@ export class AuthService {
   static async refreshToken(): Promise<StandardApiResponse<AuthResponse['tokens']>> {
 
     try {
-      const refreshTokenValue = localStorage.getItem('refreshToken') ?? ''
+      const refreshTokenValue = localStorage.getItem('refresh_token') ?? localStorage.getItem('refreshToken') ?? ''
       if (refreshTokenValue === '') {
         throw new Error('没有刷新令牌');
       }
 
       const result = await enhancedApiClient.post(AUTH_API.REFRESH, {
-        refreshToken: refreshTokenValue
+        refresh_token: refreshTokenValue
       }, {
 
         retry: {
@@ -173,6 +175,13 @@ export class AuthService {
 
       if (typeof responseData?.access_token === 'string' && responseData.access_token !== '') {
         localStorage.setItem('auth_token', responseData.access_token);
+        localStorage.setItem('token', responseData.access_token);
+      }
+
+      // 同时存储新的刷新令牌（如果返回）
+      if (typeof responseData?.refresh_token === 'string' && responseData.refresh_token !== '') {
+        localStorage.setItem('refresh_token', responseData.refresh_token);
+        localStorage.setItem('refreshToken', responseData.refresh_token);
       }
 
 

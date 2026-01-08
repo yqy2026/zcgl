@@ -134,9 +134,7 @@ export const isVersionCompatible = (
 
 // 获取当前环境
 export const getCurrentEnvironment = (): string => {
-  return (process.env.NODE_ENV ?? null) !== null
-    ? process.env.NODE_ENV
-    : VERSION_CONFIG.ENVIRONMENT.DEVELOPMENT;
+  return process.env.NODE_ENV ?? VERSION_CONFIG.ENVIRONMENT.DEVELOPMENT;
 };
 
 // 检查是否为开发环境

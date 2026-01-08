@@ -378,6 +378,15 @@ export const ERROR_REPORTING_API = {
   ANALYTICS: buildApiPath('/errors/analytics'),
 } as const;
 
+// 通知管理API
+export const NOTIFICATION_API = {
+  LIST: buildApiPath('/notifications'),
+  UNREAD_COUNT: buildApiPath('/notifications/unread-count'),
+  MARK_READ: (id: string) => buildApiPath(`/notifications/${id}/read`),
+  MARK_ALL_READ: buildApiPath('/notifications/read-all'),
+  DELETE: (id: string) => buildApiPath(`/notifications/${id}`),
+} as const;
+
 // A/B测试API
 export const AB_TESTING_API = {
   EVENTS: buildApiPath('/analytics/abtest-events'),
@@ -456,4 +465,5 @@ export const API_ENDPOINTS = {
   MONITORING: MONITORING_API,
   ERROR_REPORTING: ERROR_REPORTING_API,
   AB_TESTING: AB_TESTING_API,
+  NOTIFICATION: NOTIFICATION_API,
 } as const;

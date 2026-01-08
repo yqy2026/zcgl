@@ -25,13 +25,23 @@ const OwnershipDetail: React.FC<OwnershipDetailProps> = ({ ownership, onEdit }) 
     return new Date(dateStr).toLocaleDateString('zh-CN');
   };
 
+  // 关联项目的简化类型
+  type RelatedProject = {
+    id: string;
+    name: string;
+    code: string;
+    relation_type: string;
+    start_date?: string;
+    end_date?: string;
+  };
+
   // 关联项目表格列定义
-  const projectColumns: ColumnsType<Project> = [
+  const projectColumns: ColumnsType<RelatedProject> = [
     {
       title: '项目名称',
       dataIndex: 'name',
       key: 'name',
-      render: (text: string, _record: Project) => (
+      render: (text: string) => (
         <Space>
           <ProjectOutlined />
           {text}
@@ -100,8 +110,8 @@ const OwnershipDetail: React.FC<OwnershipDetailProps> = ({ ownership, onEdit }) 
           <Descriptions.Item label="权属方全称">{ownership.name}</Descriptions.Item>
           <Descriptions.Item label="权属方简称">
             {ownership.short_name !== null &&
-            ownership.short_name !== undefined &&
-            ownership.short_name !== ''
+              ownership.short_name !== undefined &&
+              ownership.short_name !== ''
               ? ownership.short_name
               : '-'}
           </Descriptions.Item>

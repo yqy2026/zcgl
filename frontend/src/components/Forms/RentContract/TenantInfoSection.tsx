@@ -52,7 +52,11 @@ const TenantInfoSection: React.FC = () => {
                         name="tenant_usage"
                         tooltip="例如：餐饮、办公、仓储等"
                     >
-                        <Input.TextArea rows={2} placeholder="请输入经营用途说明" />
+                        <Input.TextArea
+                            id="tenant_usage"
+                            rows={2}
+                            placeholder="请输入经营用途说明"
+                        />
                     </Form.Item>
                 </Col>
             </Row>

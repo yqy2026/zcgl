@@ -1,5 +1,8 @@
 /**
- * 新建租赁合同页面
+ * 新建/编辑租赁合同页面
+ *
+ * @description 支持创建和编辑两种模式，通过URL参数id判断
+ * @module pages/Rental
  */
 
 import React, { useState } from 'react';
@@ -13,6 +16,7 @@ import {
   Col,
   Statistic,
   message,
+  Spin,
 } from 'antd';
 import {
   HomeOutlined,
@@ -20,33 +24,46 @@ import {
   SaveOutlined,
   ArrowLeftOutlined,
   PlusOutlined,
+  EditOutlined,
   InfoCircleOutlined,
 } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { RentContractForm } from '../../components/Forms';
-import { RentContractCreate } from '../../types/rentContract';
+import { RentContractCreate, RentContractUpdate, RentContract } from '../../types/rentContract';
 import { rentContractService } from '../../services/rentContractService';
 import { useFormat } from '../../utils/format';
 import { createLogger } from '../../utils/logger';
 
-const pageLogger = createLogger('ContractCreate');
+const pageLogger = createLogger('ContractCreateEdit');
 
 const { Title, Text } = Typography;
 
 const ContractCreatePage: React.FC = () => {
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
   const _format = useFormat();
+  const queryClient = useQueryClient();
+
+  // 判断当前模式：有id则为编辑模式
+  const isEdit = !!id;
+
   const [loading, setLoading] = useState(false);
   const [contractCreated, setContractCreated] = useState(false);
   const [_createdContractId, _setCreatedContractId] = useState<string | null>(null);
 
-  // 处理合同创建
-  const handleCreateContract = async (contractData: RentContractCreate) => {
-    setLoading(true);
-    try {
-      const contract = await rentContractService.createContract(contractData);
+  // 获取合同详情（编辑模式）
+  const { data: contract, isLoading: isLoadingContract } = useQuery({
+    queryKey: ['rent-contract', id],
+    queryFn: () => rentContractService.getContract(id!),
+    enabled: isEdit,
+  });
 
+  // 创建合同时的mutation
+  const createMutation = useMutation({
+    mutationFn: (data: RentContractCreate) => rentContractService.createContract(data),
+    onSuccess: (contract) => {
       setContractCreated(true);
       _setCreatedContractId(contract.id);
       message.success('合同创建成功！');
@@ -55,18 +72,84 @@ const ContractCreatePage: React.FC = () => {
       setTimeout(() => {
         navigate('/rental/contracts');
       }, 3000);
-    } catch (error) {
+    },
+    onError: (error) => {
       pageLogger.error('创建合同失败:', error as Error);
       message.error('创建合同失败，请检查网络连接');
+    },
+  });
+
+  // 更新合同时的mutation
+  const updateMutation = useMutation({
+    mutationFn: (data: RentContractUpdate) => rentContractService.updateContract(id!, data),
+    onSuccess: (contract) => {
+      message.success('合同更新成功！');
+
+      // 使相关查询缓存失效
+      queryClient.invalidateQueries({ queryKey: ['rent-contract'] });
+      queryClient.invalidateQueries({ queryKey: ['rent-contracts'] });
+
+      // 跳转到详情页
+      setTimeout(() => {
+        navigate(`/rental/contracts/${contract.id}`);
+      }, 1000);
+    },
+    onError: (error) => {
+      pageLogger.error('更新合同失败:', error as Error);
+      message.error('更新合同失败，请检查网络连接');
+    },
+  });
+
+  // 处理表单提交
+  const handleSubmit = async (contractData: RentContractCreate) => {
+    setLoading(true);
+    try {
+      if (isEdit) {
+        // 编辑模式：调用更新API
+        await updateMutation.mutateAsync(contractData as RentContractUpdate);
+      } else {
+        // 创建模式：调用创建API
+        await createMutation.mutateAsync(contractData);
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // 取消创建
+  // 取消操作
   const handleCancel = () => {
-    navigate('/rental/contracts');
+    if (isEdit) {
+      // 编辑模式：返回详情页
+      navigate(`/rental/contracts/${id}`);
+    } else {
+      // 创建模式：返回列表页
+      navigate('/rental/contracts');
+    }
   };
+
+  // 加载状态（编辑模式下正在获取数据）
+  if (isEdit && isLoadingContract) {
+    return (
+      <div style={{ padding: '24px', textAlign: 'center' }}>
+        <Spin size="large" />
+        <div style={{ marginTop: '16px' }}>加载合同数据中...</div>
+      </div>
+    );
+  }
+
+  // 页面标题和描述
+  const pageTitle = isEdit ? '编辑租赁合同' : '新建租赁合同';
+  const pageDescription = isEdit
+    ? '修改现有租赁合同信息和租金条款'
+    : '创建新的租赁合同，填写完整的合同信息和租金条款';
+  const pageIcon = isEdit ? <EditOutlined /> : <PlusOutlined />;
+  const breadcrumbTitle = isEdit ? '编辑合同' : '新建合同';
+  const successTitle = isEdit ? '合同更新成功！' : '合同创建成功！';
+  const successMessage = isEdit
+    ? '合同已成功更新，即将跳转到合同详情页面...'
+    : '合同已成功创建并生成租金台账，即将跳转到合同列表页面...';
+  const submitButtonText = isEdit ? '保存修改' : '创建合同';
+  const cancelButtonText = isEdit ? '取消编辑' : '取消创建';
 
   return (
     <div style={{ padding: '24px', background: '#f5f5f5', minHeight: '100vh' }}>
@@ -90,17 +173,19 @@ const ContractCreatePage: React.FC = () => {
                   ),
                 },
                 {
-                  title: '新建合同',
+                  title: breadcrumbTitle,
                 },
               ]}
             />
             <div style={{ marginTop: '16px' }}>
               <Title level={3} style={{ margin: 0 }}>
-                <PlusOutlined style={{ marginRight: '8px', color: '#1890ff' }} />
-                新建租赁合同
+                <span style={{ marginRight: '8px', color: '#1890ff' }}>
+                  {pageIcon}
+                </span>
+                {pageTitle}
               </Title>
               <Text type="secondary" style={{ marginTop: '8px', display: 'block' }}>
-                创建新的租赁合同，填写完整的合同信息和租金条款
+                {pageDescription}
               </Text>
             </div>
           </Col>
@@ -117,7 +202,7 @@ const ContractCreatePage: React.FC = () => {
         </Row>
       </Card>
 
-      {/* 创建成功提示 */}
+      {/* 创建/更新成功提示 */}
       {contractCreated && (
         <Card style={{ marginBottom: '16px', borderColor: '#52c41a', backgroundColor: '#f6ffed' }}>
           <Row align="middle">
@@ -126,10 +211,10 @@ const ContractCreatePage: React.FC = () => {
             </Col>
             <Col flex="1">
               <Title level={4} style={{ color: '#52c41a', margin: 0 }}>
-                合同创建成功！
+                {successTitle}
               </Title>
               <Text type="secondary">
-                合同已成功创建并生成租金台账，即将跳转到合同列表页面...
+                {successMessage}
               </Text>
             </Col>
           </Row>
@@ -190,8 +275,9 @@ const ContractCreatePage: React.FC = () => {
       {/* 合同表单 */}
       <Card title="合同信息" loading={loading}>
         <RentContractForm
-          mode="create"
-          onSubmit={handleCreateContract}
+          mode={isEdit ? 'edit' : 'create'}
+          initialData={contract}
+          onSubmit={handleSubmit}
           onCancel={handleCancel}
           loading={loading}
         />
@@ -206,7 +292,7 @@ const ContractCreatePage: React.FC = () => {
               icon={<ArrowLeftOutlined />}
               onClick={handleCancel}
             >
-              取消创建
+              {cancelButtonText}
             </Button>
             <Button
               type="primary"
@@ -224,7 +310,7 @@ const ContractCreatePage: React.FC = () => {
                 }
               }}
             >
-              创建合同
+              {submitButtonText}
             </Button>
           </Space>
         </Card>

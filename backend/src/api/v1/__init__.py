@@ -8,6 +8,7 @@ from .analytics import router as analytics_router
 from .assets import router as assets_router
 from .auth import router as auth_router
 from .backup import router as backup_router
+from .contact import router as contact_router
 from .custom_fields import router as custom_fields_router
 from .defect_tracking import router as defect_tracking_router
 from .dictionaries import router as dictionaries_router
@@ -19,6 +20,7 @@ from .history import router as history_router
 
 # from .missing_apis import missing_apis_router  # Removed - module doesn't exist
 from .monitoring import router as monitoring_router
+from .notifications import router as notifications_router
 from .occupancy import router as occupancy_router
 from .operation_logs import router as operation_logs_router
 from .organization import router as organization_router
@@ -116,6 +118,10 @@ api_router.include_router(defect_tracking_router, prefix="/defects", tags=["缺�
 # 注册新创建的统一路由模块
 api_router.include_router(system_router, tags=["系统管理"])
 api_router.include_router(pdf_import_router, tags=["PDF智能导入"])
+api_router.include_router(
+    notifications_router, prefix="/notifications", tags=["通知管理"]
+)
+api_router.include_router(contact_router, prefix="/contacts", tags=["联系人管理"])
 
 # from .simple_pdf_import import router as pdf_import_router  # 已删除
 # api_router.include_router(

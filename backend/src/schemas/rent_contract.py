@@ -98,6 +98,10 @@ class RentContractBase(BaseModel):
     )
     # V2: 上游合同关联（可选）
     upstream_contract_id: str | None = Field(None, description="上游合同ID")
+    # V2: 甲方/权属方信息（上游合同使用）
+    owner_name: str | None = Field(None, description="甲方/权属方名称（上游合同）")
+    owner_contact: str | None = Field(None, description="甲方联系人")
+    owner_phone: str | None = Field(None, description="甲方联系电话")
     # V2: 委托运营服务费率
     service_fee_rate: Decimal | None = Field(
         None, ge=0, le=1, description="服务费率（委托运营）"
@@ -400,3 +404,20 @@ class RentLedgerListResponse(BaseModel):
     page: int
     limit: int
     pages: int
+
+
+# V2: 押金台账响应
+class DepositLedgerResponse(BaseModel):
+    """押金台账记录响应"""
+
+    id: str
+    contract_id: str
+    transaction_type: str
+    amount: Decimal
+    transaction_date: date
+    related_contract_id: str | None = None
+    notes: str | None = None
+    operator: str | None = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

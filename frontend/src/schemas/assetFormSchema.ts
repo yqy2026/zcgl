@@ -38,15 +38,17 @@ export const assetFormSchema = z
   .refine(
     data => {
       // 验证已出租面积不能大于可出租面积
+      const rentedArea = data.rented_area;
+      const rentableArea = data.rentable_area;
       if (
-        value !== null &&
-        value !== undefined &&
-        value !== 0 &&
-        otherValue !== null &&
-        otherValue !== undefined &&
-        otherValue !== 0
+        rentedArea !== null &&
+        rentedArea !== undefined &&
+        rentedArea !== 0 &&
+        rentableArea !== null &&
+        rentableArea !== undefined &&
+        rentableArea !== 0
       ) {
-        return data.rented_area <= data.rentable_area;
+        return rentedArea <= rentableArea;
       }
       return true;
     },

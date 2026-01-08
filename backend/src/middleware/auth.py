@@ -108,7 +108,9 @@ def get_current_user(
         # 验证token是否在黑名单中（如果实现了token黑名单）
         if jti and _is_token_blacklisted(jti):
             logger.warning(f"JWT token {jti} is blacklisted")
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token已失效")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Token已失效"
+            )
 
         # Handle both string and enum role types
         role_enum = role
@@ -148,7 +150,9 @@ def get_current_user(
         raise credentials_exception
 
     if not user.is_active:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="用户账户已被禁用")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="用户账户已被禁用"
+        )
 
     if user.is_locked_now():
         raise HTTPException(
@@ -162,14 +166,18 @@ def get_current_user(
 def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
     """获取当前活跃用户"""
     if not current_user.is_active:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="用户账户未激活")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="用户账户未激活"
+        )
     return current_user
 
 
 def require_admin(current_user: User = Depends(get_current_active_user)) -> User:
     """要求管理员权限"""
     if not safe_role_compare(current_user.role, UserRole.ADMIN):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="需要管理员权限")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="需要管理员权限"
+        )
     return current_user
 
 
@@ -211,7 +219,9 @@ class PermissionChecker:
     def __call__(self, current_user: User = Depends(get_current_active_user)):
         """检查用户权限"""
         if not self._has_permission(current_user):
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="权限不足")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="权限不足"
+            )
         return current_user
 
     def _has_permission(self, user: User) -> bool:
@@ -394,7 +404,9 @@ class RBACPermissionChecker:
 
         # 如果没有用户（未认证），抛出认证异常
         if current_user is None:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="需要认证")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="需要认证"
+            )
 
         # 管理员拥有所有权限
         if safe_role_compare(current_user.role, UserRole.ADMIN):
@@ -406,7 +418,9 @@ class RBACPermissionChecker:
             resource=self.resource, action=self.action, resource_id=self.resource_id
         )
 
-        permission_result = rbac_service.check_permission(current_user.id, permission_request)
+        permission_result = rbac_service.check_permission(
+            current_user.id, permission_request
+        )
 
         if not permission_result.has_permission:
             raise HTTPException(
@@ -520,6 +534,26 @@ class RoleBasedAccessChecker:
 def require_roles(required_roles: list[str]):
     """角色权限装饰器工厂函数"""
     return RoleBasedAccessChecker(required_roles)
+
+
+def can_edit_contract(user: User) -> bool:
+    """
+    检查用户是否可以编辑合同
+
+    规则:
+    - 管理员可以编辑任何合同
+    - 其他角色需要有特定权限
+    """
+    if user.role == UserRole.ADMIN:
+        return True
+
+    # TODO: 扩展更细粒度的权限检查
+    # 例如: 检查用户是否是合同的创建者
+    # 或者: 检查用户是否有合同编辑权限
+
+    # 目前暂时允许所有认证用户编辑
+    # 在实际生产环境中应该更严格
+    return user.is_active
 
 
 def get_user_rbac_permissions(

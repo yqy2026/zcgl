@@ -166,8 +166,8 @@ const ProfilePage: React.FC = () => {
                   <Descriptions.Item label="姓名">
                     <Text strong>
                       {user.full_name !== null &&
-                      user.full_name !== undefined &&
-                      user.full_name !== ''
+                        user.full_name !== undefined &&
+                        user.full_name !== ''
                         ? user.full_name
                         : '-'}
                     </Text>
@@ -188,15 +188,15 @@ const ProfilePage: React.FC = () => {
                   </Descriptions.Item>
                   <Descriptions.Item label="最后登录时间">
                     {user.last_login_at !== null &&
-                    user.last_login_at !== undefined &&
-                    user.last_login_at !== ''
+                      user.last_login_at !== undefined &&
+                      user.last_login_at !== ''
                       ? new Date(user.last_login_at).toLocaleString()
                       : '从未登录'}
                   </Descriptions.Item>
                   <Descriptions.Item label="密码最后修改时间">
                     {user.password_last_changed !== null &&
-                    user.password_last_changed !== undefined &&
-                    user.password_last_changed !== ''
+                      user.password_last_changed !== undefined &&
+                      user.password_last_changed !== ''
                       ? new Date(user.password_last_changed).toLocaleString()
                       : '未修改'}
                   </Descriptions.Item>
@@ -277,7 +277,7 @@ const ProfilePage: React.FC = () => {
         <Form
           form={form}
           layout="vertical"
-          onFinish={() => void handleUpdateProfile()}
+          onFinish={(values) => void handleUpdateProfile(values as ProfileFormData)}
           style={{ marginTop: '16px' }}
         >
           <Form.Item
@@ -337,7 +337,7 @@ const ProfilePage: React.FC = () => {
         <Form
           form={passwordForm}
           layout="vertical"
-          onFinish={() => void handleChangePassword()}
+          onFinish={(values) => void handleChangePassword(values as { oldPassword: string; newPassword: string })}
           style={{ marginTop: '16px' }}
         >
           <Form.Item

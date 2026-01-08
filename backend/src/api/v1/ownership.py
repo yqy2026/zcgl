@@ -29,9 +29,20 @@ async def get_ownership_dropdown_options(
     is_active: bool | None = Query(True, description="是否启用"),
     current_user: User = Depends(get_current_active_user),
 ):
-    """获取权属方选项列表（用于下拉选择等）"""
+    """获取权属方选项列表（用于下拉选择等）- V2修复is_active过滤"""
     try:
-        ownerships = ownership.get_multi(db, skip=0, limit=1000, is_active=is_active)
+        # V2: 使用基础查询并手动过滤，因为CRUD.get_multi不支持is_active参数
+
+        from ...models import Ownership
+
+        query = db.query(Ownership).filter(Ownership.data_status == "正常")
+        if is_active is not None:
+            # 使用is_active字段过滤（如果存在）或通过data_status推断
+            if hasattr(Ownership, "is_active"):
+                query = query.filter(Ownership.is_active == is_active)
+
+        ownerships = query.order_by(Ownership.created_at.desc()).limit(1000).all()
+
         # 为下拉选项添加关联计数
         responses = []
         for item in ownerships:
@@ -252,3 +263,98 @@ async def toggle_ownership_status(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"切换状态失败: {str(e)}")
+
+
+@router.get(
+    "/{ownership_id}/financial-summary",
+    summary="获取权属方收支汇总",
+)
+async def get_ownership_financial_summary(
+    ownership_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    获取权属方的收支汇总信息
+
+    包括:
+    - 总收入 (来自租金台账)
+    - 总支出 (如果有的话)
+    - 应收未收金额
+    - 已收金额
+    """
+
+    from sqlalchemy import and_, func
+
+    from ...models.rent_contract import RentContract, RentLedger
+
+    # 验证权属方是否存在
+    ownership_obj = ownership.get(db, id=ownership_id)
+    if not ownership_obj:
+        raise HTTPException(status_code=404, detail="权属方不存在")
+
+    # 查询该权属方下所有合同的台账
+    subquery = (
+        db.query(RentContract.id)
+        .filter(RentContract.ownership_id == ownership_id)
+        .subquery()
+    )
+
+    # 统计应收总额
+    due_amount_result = (
+        db.query(func.coalesce(func.sum(RentLedger.due_amount), 0))
+        .filter(RentLedger.contract_id.in_(subquery))
+        .scalar()
+    )
+
+    # 统计实收总额
+    paid_amount_result = (
+        db.query(func.coalesce(func.sum(RentLedger.paid_amount), 0))
+        .filter(RentLedger.contract_id.in_(subquery))
+        .scalar()
+    )
+
+    # 统计欠款总额
+    arrears_amount_result = (
+        db.query(func.coalesce(func.sum(RentLedger.arrears_amount), 0))
+        .filter(RentLedger.contract_id.in_(subquery))
+        .scalar()
+    )
+
+    # 统计合同数量
+    contract_count = (
+        db.query(func.count(RentContract.id))
+        .filter(RentContract.ownership_id == ownership_id)
+        .scalar()
+    )
+
+    # 统计活跃合同数
+    active_contract_count = (
+        db.query(func.count(RentContract.id))
+        .filter(
+            and_(
+                RentContract.ownership_id == ownership_id,
+                RentContract.contract_status == "有效",
+            )
+        )
+        .scalar()
+    )
+
+    return {
+        "ownership_id": ownership_id,
+        "ownership_name": ownership_obj.name,
+        "financial_summary": {
+            "total_due_amount": float(due_amount_result or 0),
+            "total_paid_amount": float(paid_amount_result or 0),
+            "total_arrears_amount": float(arrears_amount_result or 0),
+            "payment_rate": float(
+                (paid_amount_result / due_amount_result * 100)
+                if due_amount_result > 0
+                else 0
+            ),
+        },
+        "contract_summary": {
+            "total_contracts": contract_count or 0,
+            "active_contracts": active_contract_count or 0,
+        },
+    }

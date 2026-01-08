@@ -2,11 +2,12 @@ from datetime import date
 
 from sqlalchemy.orm import Session
 
-from ..models import Asset, Ownership
+from ..models import Ownership
 from ..models.rent_contract import (
     RentContract,
     RentLedger,
     RentTerm,
+    rent_contract_assets,
 )
 from ..schemas.rent_contract import (
     RentContractCreate,
@@ -23,10 +24,9 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
     """租金合同CRUD操作"""
 
     def get_with_details(self, db: Session, id: str) -> RentContract | None:
-        """获取合同详情（包含关联的租金条款）- 优化版本使用join预加载关联数据"""
+        """获取合同详情（包含关联的租金条款和资产）- V2使用多对多关系"""
         return (
             db.query(RentContract)
-            .join(Asset, RentContract.asset_id == Asset.id, isouter=True)
             .join(Ownership, RentContract.ownership_id == Ownership.id, isouter=True)
             .filter(RentContract.id == id)
             .first()
@@ -47,32 +47,28 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
         end_date: date | None = None,
         include_relations: bool = True,
     ) -> tuple[list[RentContract], int]:
-        """获取合同列表（支持筛选）"""
+        """获取合同列表（支持筛选）- V2支持通过资产ID筛选"""
 
         # 使用 QueryBuilder
         filters = {}
-        if contract_number:
-            # QueryBuilder default allows extract matches via filters, but 'contains' needs special handling or search_query
-            # For specific fields like 'contract_number__contains', if we adapted QB.
-            # Here we can use base_query or simple filters.
-            # Let's use standard filters if exact match, or use search capabilities.
-            pass  # We will handle this in QB search or base_query logic
-
-        if asset_id:
-            filters["asset_id"] = asset_id
         if ownership_id:
             filters["ownership_id"] = ownership_id
         if contract_status:
             filters["contract_status"] = contract_status
 
-        # QB doesn't support date range filters out of the box in `filters` dict yet (needs `__gte` etc support if Extended).
-        # Assuming QB is simple, we might need to build base_query for complex filters.
-
+        # 构建基础查询
         query = db.query(RentContract)
         if include_relations:
             query = query.join(
-                Asset, RentContract.asset_id == Asset.id, isouter=True
-            ).join(Ownership, RentContract.ownership_id == Ownership.id, isouter=True)
+                Ownership, RentContract.ownership_id == Ownership.id, isouter=True
+            )
+
+        # V2: 通过多对多关联表筛选资产
+        if asset_id:
+            query = query.join(
+                rent_contract_assets,
+                RentContract.id == rent_contract_assets.c.contract_id,
+            ).filter(rent_contract_assets.c.asset_id == asset_id)
 
         if contract_number:
             query = query.filter(RentContract.contract_number.contains(contract_number))
@@ -87,8 +83,6 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
         # We pass the pre-filtered query as base_query
 
         results = self.query_builder.build_query(
-            db_session=db,
-            model=RentContract,
             filters=filters,
             base_query=query,
             sort_by="created_at",
@@ -98,11 +92,13 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
         )
 
         # For count, we need to rebuild the query without pagination
-        # QB doesn't have a "count from base query" helper yet that strips order/limit easily
-        # So manual count on the base query + filters
-
         # Re-apply filters for count
         count_query = db.query(RentContract)
+        if asset_id:
+            count_query = count_query.join(
+                rent_contract_assets,
+                RentContract.id == rent_contract_assets.c.contract_id,
+            ).filter(rent_contract_assets.c.asset_id == asset_id)
         if contract_number:
             count_query = count_query.filter(
                 RentContract.contract_number.contains(contract_number)
@@ -115,8 +111,6 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
             count_query = count_query.filter(RentContract.start_date >= start_date)
         if end_date:
             count_query = count_query.filter(RentContract.end_date <= end_date)
-        if asset_id:
-            count_query = count_query.filter(RentContract.asset_id == asset_id)
         if ownership_id:
             count_query = count_query.filter(RentContract.ownership_id == ownership_id)
         if contract_status:
@@ -193,8 +187,6 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
 
         # Use QB
         stmt = self.query_builder.build_query(
-            db_session=db,
-            model=RentLedger,
             filters=filters,
             base_query=query,
             sort_by="year_month",

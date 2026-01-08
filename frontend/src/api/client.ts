@@ -242,6 +242,49 @@ export class EnhancedApiClient {
         return response
       },
       async (error) => {
+        const originalRequest = error.config
+
+        // 处理401错误 - 自动刷新token
+        if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
+          apiLogger.warn('🔑 Token过期，尝试刷新...')
+
+          try {
+            // 动态导入AuthService避免循环依赖
+            const { AuthService } = await import('../services/authService')
+
+            // 尝试刷新token
+            await AuthService.refreshToken()
+
+            apiLogger.info('✅ Token刷新成功，重试原始请求')
+
+            // 标记请求已重试过，避免无限循环
+            originalRequest._retry = true
+
+            // 更新请求头中的token
+            const newToken = localStorage.getItem('auth_token')
+            if (newToken && originalRequest.headers) {
+              originalRequest.headers.set('Authorization', `Bearer ${newToken}`)
+            }
+
+            // 重试原始请求
+            return await this.instance(originalRequest)
+          } catch (refreshError) {
+            apiLogger.error('❌ Token刷新失败，执行登出', { refreshError })
+
+            // 刷新失败，清除认证数据
+            localStorage.removeItem('auth_token')
+            localStorage.removeItem('refreshToken')
+            localStorage.removeItem('user')
+
+            // 跳转到登录页
+            if (typeof window !== 'undefined') {
+              window.location.href = '/login'
+            }
+
+            return Promise.reject(refreshError)
+          }
+        }
+
         const enhancedError = ApiErrorHandler.handleError(error)
 
         if (this.config.enableLogging === true) {
