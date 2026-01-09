@@ -46,6 +46,7 @@ async def create_task(
         raise HTTPException(status_code=500, detail=f"创建任务失败: {str(e)}")
 
 
+@router.get("", response_model=TaskListResponse, summary="获取任务列表")
 @router.get("/", response_model=TaskListResponse, summary="获取任务列表")
 async def get_tasks(
     skip: int = Query(0, ge=0, description="跳过记录数"),

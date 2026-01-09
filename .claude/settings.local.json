@@ -44,7 +44,11 @@
       "Bash(find:*)",
       "Bash(cat:*)",
       "Bash(timeout 30 pytest:*)",
-      "Bash(sqlite3:*)"
+      "Bash(sqlite3:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(taskkill:*)",
+      "Bash(timeout:*)",
+      "Bash(alembic downgrade:*)"
     ]
   },
   "outputStyle": "Structural Thinking"

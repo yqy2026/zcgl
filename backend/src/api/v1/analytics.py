@@ -26,6 +26,7 @@ router = APIRouter()
 
 @router.get("/comprehensive", summary="获取综合统计分析数据")
 async def get_comprehensive_analytics(
+    request: Request,
     include_deleted: bool = False,
     date_from: str | None = None,
     date_to: str | None = None,
@@ -67,14 +68,14 @@ async def get_comprehensive_analytics(
         return ResponseHandler.success(
             data=result,
             message="统计分析数据获取成功",
-            request_id=get_request_id(),
+            request_id=get_request_id(request),
         )
 
     except Exception as e:
         logger.error(f"获取综合分析数据失败: {str(e)}")
         return ResponseHandler.error(
             message=f"获取分析数据失败: {str(e)}",
-            request_id=get_request_id(),
+            request_id=get_request_id(request),
         )
 
 
@@ -96,14 +97,14 @@ async def get_cache_stats(
         return ResponseHandler.success(
             data=stats,
             message="缓存统计信息获取成功",
-            request_id=get_request_id(),
+            request_id=get_request_id(request),
         )
 
     except Exception as e:
         logger.error(f"获取缓存统计失败: {str(e)}")
         return ResponseHandler.error(
             message=f"获取缓存统计失败: {str(e)}",
-            request_id=get_request_id(),
+            request_id=get_request_id(request),
         )
 
 
@@ -125,14 +126,14 @@ async def clear_cache(
         return ResponseHandler.success(
             data=result,
             message="缓存清除成功",
-            request_id=get_request_id(),
+            request_id=get_request_id(request),
         )
 
     except Exception as e:
         logger.error(f"清除缓存失败: {str(e)}")
         return ResponseHandler.error(
             message=f"清除缓存失败: {str(e)}",
-            request_id=get_request_id(),
+            request_id=get_request_id(request),
         )
 
 
@@ -160,19 +161,20 @@ async def debug_cache_status(
         return ResponseHandler.success(
             data=debug_info,
             message="缓存调试信息获取成功",
-            request_id=get_request_id(),
+            request_id=get_request_id(request),
         )
 
     except Exception as e:
         logger.error(f"获取缓存调试信息失败: {str(e)}")
         return ResponseHandler.error(
             message=f"获取调试信息失败: {str(e)}",
-            request_id=get_request_id(),
+            request_id=get_request_id(request),
         )
 
 
 @router.get("/trend", summary="获取趋势数据")
 async def get_trend_data(
+    request: Request,
     trend_type: str = Query(..., description="趋势类型: occupancy, area, financial"),
     time_dimension: str = Query(
         "monthly", description="时间维度: daily, weekly, monthly, quarterly, yearly"
@@ -206,19 +208,20 @@ async def get_trend_data(
                 "data": trend_data,
             },
             message="趋势数据获取成功",
-            request_id=get_request_id(),
+            request_id=get_request_id(request),
         )
 
     except Exception as e:
         logger.error(f"获取趋势数据失败: {str(e)}")
         return ResponseHandler.error(
             message=f"获取趋势数据失败: {str(e)}",
-            request_id=get_request_id(),
+            request_id=get_request_id(request),
         )
 
 
 @router.get("/distribution", summary="获取分布数据")
 async def get_distribution_data(
+    request: Request,
     distribution_type: str = Query(
         ..., description="分布类型: property_nature, business_category, usage_status"
     ),
@@ -245,12 +248,12 @@ async def get_distribution_data(
         return ResponseHandler.success(
             data=distribution,
             message="分布数据获取成功",
-            request_id=get_request_id(),
+            request_id=get_request_id(request),
         )
 
     except Exception as e:
         logger.error(f"获取分布数据失败: {str(e)}")
         return ResponseHandler.error(
             message=f"获取分布数据失败: {str(e)}",
-            request_id=get_request_id(),
+            request_id=get_request_id(request),
         )

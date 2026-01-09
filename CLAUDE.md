@@ -2,6 +2,8 @@
 
 本文件为 Claude Code 提供项目上下文。详细文档请参阅 `docs/` 目录。
 
+**最后更新**: 2026-01-08
+
 ---
 
 ## 项目概述
@@ -70,26 +72,25 @@ React UI → EnhancedApiClient → FastAPI (/api/v1/*) → Service → CRUD → 
                               ↑ 必须放这里!
 ```
 
-**Service层目录结构** (2026-01-04 更新):
+**Service层目录结构** (2026-01-08 更新):
 ```
-backend/src/services/
+backend/src/services/        # 19 个子目录
 ├── analytics/         # 分析服务 (出租率、面积汇总)
-│   ├── occupancy_service.py
-│   └── area_service.py
-├── asset/            # 资产服务
-│   ├── asset_service.py
-│   ├── batch_service.py      # 批量操作（事务管理）
-│   └── validators.py         # 数据验证
+├── asset/            # 资产服务 (核心业务、批量操作、验证)
 ├── backup/           # 备份服务
-│   └── backup_service.py
-├── excel/            # Excel服务
-│   ├── excel_import_service.py
-│   ├── excel_export_service.py
-│   └── excel_template_service.py
 ├── core/             # 核心服务 (认证、用户管理)
 ├── custom_field/     # 自定义字段服务
-├── document/         # 文档处理服务
-└── [其他服务目录...]
+├── document/         # 文档处理服务 (OCR、PDF解析)
+├── excel/            # Excel 导入/导出服务
+├── notification/     # 通知服务 (企业微信等)
+├── organization/     # 组织管理服务
+├── ownership/        # 权属管理服务
+├── permission/       # 权限服务
+├── project/          # 项目管理服务
+├── rbac/             # 角色权限服务
+├── rent_contract/    # 租赁合同服务 (V2生命周期管理)
+├── system_dictionary/ # 系统字典服务
+└── task/             # 任务管理服务
 ```
 
 ### 前端状态管理
@@ -175,24 +176,25 @@ if service.is_available:
 zcgl/
 ├── frontend/src/
 │   ├── api/            # API 客户端 (client.ts, config.ts)
-│   ├── components/     # 159 个 React 组件
-│   ├── pages/          # 42 个页面
+│   ├── components/     # 114+ 个 React 组件
+│   ├── pages/          # 40 个页面
 │   ├── services/       # 35 个 API 服务
-│   ├── hooks/          # 19 个自定义 Hook
+│   ├── hooks/          # 13 个自定义 Hook
 │   ├── store/          # Zustand 状态
-│   └── types/          # TypeScript 类型
+│   ├── types/          # 15 个 TypeScript 类型定义
+│   └── utils/          # 15 个工具函数
 ├── backend/
 │   ├── src/
-│   │   ├── api/v1/     # 33+ 个 API 端点
-│   │   ├── services/   # 模块化服务层 (核心业务逻辑)
-│   │   ├── crud/       # 16 个 CRUD 文件
-│   │   ├── models/     # 11 个 ORM 模型
-│   │   ├── schemas/    # 16 个 Pydantic 模型
+│   │   ├── api/v1/     # 37 个 API 端点
+│   │   ├── services/   # 19 个服务子目录 (核心业务逻辑)
+│   │   ├── crud/       # 18 个 CRUD 文件
+│   │   ├── models/     # 14 个 ORM 模型
+│   │   ├── schemas/    # 18 个 Pydantic 模型
 │   │   └── utils/      # 运行时工具
 │   ├── scripts/
 │   │   └── devtools/   # 开发工具脚本
 │   └── tests/
-│       ├── unit/       # 单元测试 (97个通过 ✅)
+│       ├── unit/       # 单元测试
 │       ├── integration/ # 集成测试
 │       └── api/        # API 测试
 └── docs/               # 详细文档

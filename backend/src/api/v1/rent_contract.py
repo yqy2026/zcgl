@@ -44,6 +44,7 @@ from ...schemas.rent_contract import (
     RentStatisticsQuery,
     RentTermCreate,
     RentTermResponse,
+    ServiceFeeLedgerResponse,
 )
 from ...services.rent_contract import rent_contract_service
 
@@ -333,6 +334,41 @@ def get_contract_deposit_ledger(
     )
 
     return [DepositLedgerResponse.model_validate(ledger) for ledger in ledgers]
+
+
+# V2: 服务费台账API
+@router.get(
+    "/contracts/{contract_id}/service-fee-ledger",
+    response_model=list[ServiceFeeLedgerResponse],
+    summary="获取合同服务费台账",
+)
+def get_contract_service_fee_ledger(
+    contract_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    获取指定合同的服务费台账记录
+
+    - **contract_id**: 合同ID
+    - 返回该合同的所有服务费台账，按年月倒序排列
+    """
+    from ...models.rent_contract import RentContract, ServiceFeeLedger
+
+    # 检查合同是否存在
+    contract = db.query(RentContract).filter(RentContract.id == contract_id).first()
+    if not contract:
+        raise HTTPException(status_code=404, detail="合同不存在")
+
+    # 获取服务费台账，按年月倒序
+    ledgers = (
+        db.query(ServiceFeeLedger)
+        .filter(ServiceFeeLedger.contract_id == contract_id)
+        .order_by(ServiceFeeLedger.year_month.desc())
+        .all()
+    )
+
+    return [ServiceFeeLedgerResponse.model_validate(ledger) for ledger in ledgers]
 
 
 # 租金条款API

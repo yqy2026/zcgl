@@ -597,4 +597,137 @@ describe('AssetDetailInfo 组件测试', () => {
       expect(element).toBeTruthy()
     })
   })
+
+  describe('空值保护修复验证', () => {
+    it('应该处理undefined可选字段不崩溃', async () => {
+      const minimalAsset = {
+        id: '1',
+        property_name: '测试资产',
+        // 缺失所有可选字段
+      }
+      const element = await createElement({ asset: minimalAsset })
+      expect(element).toBeTruthy()
+    })
+
+    it('应该将null面积字段显示为0', async () => {
+      const assetWithNullAreas = {
+        ...mockAsset,
+        rentable_area: null,
+        rented_area: null,
+        land_area: null,
+      }
+      const element = await createElement({ asset: assetWithNullAreas })
+      expect(element).toBeTruthy()
+    })
+
+    it('应该将undefined字段显示为占位符', async () => {
+      const assetWithUndefinedFields = {
+        ...mockAsset,
+        ownership_entity: undefined,
+        address: undefined,
+        property_nature: undefined,
+      }
+      const element = await createElement({ asset: assetWithUndefinedFields })
+      expect(element).toBeTruthy()
+    })
+
+    it('应该处理空字符串日期', async () => {
+      const assetWithEmptyDates = {
+        ...mockAsset,
+        contract_start_date: '',
+        contract_end_date: '',
+        registration_date: '',
+      }
+      const element = await createElement({ asset: assetWithEmptyDates })
+      expect(element).toBeTruthy()
+    })
+
+    it('应该处理property_nature为undefined', async () => {
+      const assetWithUndefinedNature = {
+        ...mockAsset,
+        property_nature: undefined,
+      }
+      const element = await createElement({ asset: assetWithUndefinedNature })
+      expect(element).toBeTruthy()
+    })
+
+    it('应该处理property_nature为null', async () => {
+      const assetWithNullNature = {
+        ...mockAsset,
+        property_nature: null,
+      }
+      const element = await createElement({ asset: assetWithNullNature })
+      expect(element).toBeTruthy()
+    })
+
+    it('应该处理usage_status为undefined', async () => {
+      const assetWithUndefinedStatus = {
+        ...mockAsset,
+        usage_status: undefined,
+      }
+      const element = await createElement({ asset: assetWithUndefinedStatus })
+      expect(element).toBeTruthy()
+    })
+
+    it('应该处理ownership_status为undefined', async () => {
+      const assetWithUndefinedOwnershipStatus = {
+        ...mockAsset,
+        ownership_status: undefined,
+      }
+      const element = await createElement({ asset: assetWithUndefinedOwnershipStatus })
+      expect(element).toBeTruthy()
+    })
+  })
+
+  describe('format工具函数空值保护', () => {
+    it('getStatusColor应该处理undefined status', async () => {
+      const { getStatusColor } = await import('@/utils/format')
+      const color = getStatusColor(undefined as any, 'property')
+      expect(color).toBeDefined()
+      expect(typeof color).toBe('string')
+    })
+
+    it('getStatusColor应该处理空字符串status', async () => {
+      const { getStatusColor } = await import('@/utils/format')
+      const color = getStatusColor('', 'property')
+      expect(color).toBeDefined()
+      expect(typeof color).toBe('string')
+    })
+
+    it('getStatusColor应该处理null status', async () => {
+      const { getStatusColor } = await import('@/utils/format')
+      const color = getStatusColor(null as any, 'property')
+      expect(color).toBeDefined()
+      expect(typeof color).toBe('string')
+    })
+  })
+
+  describe('property_nature可选链保护', () => {
+    it('应该安全处理property_nature可选链调用', async () => {
+      const assetWithUndefinedNature = {
+        ...mockAsset,
+        property_nature: undefined,
+      }
+      const element = await createElement({ asset: assetWithUndefinedNature })
+      expect(element).toBeTruthy()
+    })
+
+    it('应该处理非经营类property_nature', async () => {
+      const assetWithNonOperatingNature = {
+        ...mockAsset,
+        property_nature: '非经营类',
+      }
+      const element = await createElement({ asset: assetWithNonOperatingNature })
+      expect(element).toBeTruthy()
+    })
+
+    it('应该处理经营类property_nature', async () => {
+      const assetWithOperatingNature = {
+        ...mockAsset,
+        property_nature: '经营类',
+      }
+      const element = await createElement({ asset: assetWithOperatingNature })
+      expect(element).toBeTruthy()
+    })
+  })
 })

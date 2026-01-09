@@ -155,6 +155,7 @@ async def delete_ownership(
         raise HTTPException(status_code=500, detail=f"删除权属方失败: {str(e)}")
 
 
+@router.get("", response_model=OwnershipListResponse, summary="获取权属方列表")
 @router.get("/", response_model=OwnershipListResponse, summary="获取权属方列表")
 async def get_ownerships(
     db: Session = Depends(get_db),

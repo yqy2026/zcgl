@@ -49,6 +49,13 @@ const ContractDetailPage: React.FC = () => {
     enabled: id !== null && id !== undefined && id !== '',
   });
 
+  // V2: 获取服务费台账
+  const { data: serviceFeeLedgers, isLoading: serviceFeeLoading } = useQuery({
+    queryKey: ['contract-service-fee-ledger', id],
+    queryFn: () => rentContractService.getServiceFeeLedgers(id as string),
+    enabled: id !== null && id !== undefined && id !== '',
+  });
+
   // 加载状态
   if (isLoading) {
     return (

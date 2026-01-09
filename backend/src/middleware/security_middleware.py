@@ -40,7 +40,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
-        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Strict-Transport-Security"] = (
+            "max-age=31536000; includeSubDomains"
+        )
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Content-Security-Policy"] = "default-src 'self'"
 
@@ -77,11 +79,15 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
             # 检查IP是否被封禁
             if self._is_ip_blocked(client_ip):
                 await self._log_blocked_request(request, client_ip, "IP_BLOCKED")
-                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="IP地址已被封禁")
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN, detail="IP地址已被封禁"
+                )
 
             # 请求频率限制
             if not self._check_rate_limit(client_ip, request):
-                await self._log_blocked_request(request, client_ip, "RATE_LIMIT_EXCEEDED")
+                await self._log_blocked_request(
+                    request, client_ip, "RATE_LIMIT_EXCEEDED"
+                )
                 raise HTTPException(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                     detail="请求过于频繁，请稍后重试",
@@ -99,31 +105,16 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
             return response
 
         except HTTPException:
+            # HTTPException 应该正常传播，不应该被重新抛出为 500
             raise
         except Exception as e:
-            # 清理异常信息中的不可序列化对象
-            error_message = self._sanitize_exception_message(str(e))
-
-            # 确保异常对象可以被序列化
-            try:
-                from decimal import Decimal
-
-                def decimal_default(obj):
-                    if isinstance(obj, Decimal):
-                        return float(obj)
-                    # Handle other non-serializable types
-                    if hasattr(obj, "__dict__"):
-                        return str(obj)
-                    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
-
-                # Only log the error message string, not the full exception object
-                logger.error(f"Security middleware error: {error_message}")
-            except (TypeError, ValueError):
-                # 如果异常信息不能序列化，使用通用消息
-                logger.error("Security middleware error: Unable to serialize exception object")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="请求处理失败"
+            # 对于非 HTTPException 的异常，记录详细日志后重新抛出
+            # 不要掩盖原始错误信息
+            logger.exception(
+                f"Security middleware caught unexpected exception: {type(e).__name__}: {str(e)}"
             )
+            # 重新抛出原始异常，让上层处理器处理
+            raise
 
     def _sanitize_exception_message(self, message: str) -> str:
         """清理异常消息中的不可序列化内容"""
@@ -149,7 +140,9 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         # 移除可能的内存地址引用
         message = re.sub(r"0x[0-9a-fA-F]{8,}", "<内存地址>", message)
         # 移除可能的模块路径引用
-        message = re.sub(r"[a-zA-Z_][a-zA-Z0-9_.]*\.[a-zA-Z_][a-zA-Z0-9_.]*", "<模块引用>", message)
+        message = re.sub(
+            r"[a-zA-Z_][a-zA-Z0-9_.]*\.[a-zA-Z_][a-zA-Z0-9_.]*", "<模块引用>", message
+        )
         # 移除可能的尖括号包围的内容（除了我们替换的占位符）
         message = re.sub(
             r"<(?!模型对象|对象实例|内存地址|模块引用|无法序列化的异常信息)[^>]*>",
@@ -241,7 +234,9 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
             return adaptive_limiter.check_rate_limit(rate_limit_key, is_suspicious)
         else:
             # 如果自适应限流器不可用，使用简单的默认限流器
-            logger.warning("Adaptive rate limiter not available, using default rate limiting")
+            logger.warning(
+                "Adaptive rate limiter not available, using default rate limiting"
+            )
             return True  # 默认允许通过，在生产环境中应该实现更严格的限流
 
     def _is_suspicious_request(self, request: Request) -> bool:
@@ -263,7 +258,9 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
             if (
                 value is not None
                 and isinstance(value, str)
-                and any(pattern in value.lower() for pattern in self.suspicious_patterns)
+                and any(
+                    pattern in value.lower() for pattern in self.suspicious_patterns
+                )
             ):
                 return True
 
@@ -290,7 +287,9 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
             if (
                 value is not None
                 and isinstance(value, str)
-                and any(pattern in value.lower() for pattern in self.suspicious_patterns)
+                and any(
+                    pattern in value.lower() for pattern in self.suspicious_patterns
+                )
             ):
                 await self._log_suspicious_request(request, "SUSPICIOUS_QUERY_PARAM")
                 break
@@ -458,7 +457,9 @@ class CORSExtendedMiddleware(BaseHTTPMiddleware):
         origin = request.headers.get("origin")
         if origin and (origin in self.allowed_origins or "localhost" in origin):
             response.headers["Access-Control-Allow-Origin"] = origin
-            response.headers["Access-Control-Allow-Methods"] = ", ".join(self.allowed_methods)
+            response.headers["Access-Control-Allow-Methods"] = ", ".join(
+                self.allowed_methods
+            )
             response.headers["Access-Control-Allow-Headers"] = (
                 "Authorization, Content-Type, X-Requested-With, Accept, Origin"
             )
@@ -489,7 +490,9 @@ def create_security_middleware(app, config: dict[str, Any] | None = None):
         FileUploadSecurityMiddleware,
         max_file_size=config.get("max_file_size", 50 * 1024 * 1024),
     )
-    app.add_middleware(RequestValidationMiddleware, rate_limit_config=config.get("rate_limit", {}))
+    app.add_middleware(
+        RequestValidationMiddleware, rate_limit_config=config.get("rate_limit", {})
+    )
 
 
 # 创建中间件工厂函数

@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 # OAuth2密码流 - 始终启用安全性
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 
 
 def _is_token_blacklisted(jti: str) -> bool:

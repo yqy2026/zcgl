@@ -65,6 +65,7 @@ class UnreadCountResponse(BaseModel):
 # ==================== API 端点 ====================
 
 
+@router.get("", response_model=NotificationListResponse)
 @router.get("/", response_model=NotificationListResponse)
 async def get_notifications(
     page: int = Query(1, ge=1, description="页码"),
@@ -101,7 +102,7 @@ async def get_notifications(
     unread_count = (
         db.query(Notification)
         .filter(
-            Notification.recipient_id == current_user.id, Notification.is_read == False
+            Notification.recipient_id == current_user.id, not Notification.is_read
         )
         .count()
     )
@@ -177,7 +178,7 @@ async def mark_all_as_read(
     """
     # 更新所有未读通知
     db.query(Notification).filter(
-        Notification.recipient_id == current_user.id, Notification.is_read == False
+        Notification.recipient_id == current_user.id, not Notification.is_read
     ).update({"is_read": True, "read_at": datetime.utcnow()})
 
     db.commit()

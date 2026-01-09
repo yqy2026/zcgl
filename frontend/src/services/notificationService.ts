@@ -21,7 +21,7 @@ class NotificationService {
         API_ENDPOINTS.NOTIFICATION.LIST,
         {
           params,
-          retry: { maxAttempts: 2, delay: 1000 },
+          retry: { maxAttempts: 2, delay: 1000, backoffMultiplier: 1 },
         }
       );
 
@@ -44,7 +44,7 @@ class NotificationService {
       const result = await enhancedApiClient.get<{ count: number }>(
         API_ENDPOINTS.NOTIFICATION.UNREAD_COUNT,
         {
-          retry: { maxAttempts: 2, delay: 1000 },
+          retry: { maxAttempts: 2, delay: 1000, backoffMultiplier: 1 },
         }
       );
 
@@ -69,7 +69,7 @@ class NotificationService {
         API_ENDPOINTS.NOTIFICATION.MARK_READ(id),
         {},
         {
-          retry: { maxAttempts: 2, delay: 1000 },
+          retry: { maxAttempts: 2, delay: 1000, backoffMultiplier: 1 },
         }
       );
 
@@ -91,7 +91,7 @@ class NotificationService {
         API_ENDPOINTS.NOTIFICATION.MARK_ALL_READ,
         {},
         {
-          retry: { maxAttempts: 2, delay: 1000 },
+          retry: { maxAttempts: 2, delay: 1000, backoffMultiplier: 1 },
         }
       );
 
@@ -112,7 +112,7 @@ class NotificationService {
       const result = await enhancedApiClient.delete<void>(
         API_ENDPOINTS.NOTIFICATION.DELETE(id),
         {
-          retry: { maxAttempts: 2, delay: 1000 },
+          retry: { maxAttempts: 2, delay: 1000, backoffMultiplier: 1 },
         }
       );
 

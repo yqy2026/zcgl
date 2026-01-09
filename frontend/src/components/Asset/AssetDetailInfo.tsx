@@ -69,7 +69,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
             }
           >
             <span style={{ fontSize: '16px', fontWeight: 'bold' }}>
-              {asset.property_name}
+              {asset.property_name ?? '-'}
             </span>
           </Descriptions.Item>
 
@@ -81,7 +81,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
               </span>
             }
           >
-            {asset.ownership_entity}
+            {asset.ownership_entity ?? '-'}
           </Descriptions.Item>
 
           <Descriptions.Item
@@ -93,7 +93,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
             }
             span={2}
           >
-            {asset.address}
+            {asset.address ?? '-'}
           </Descriptions.Item>
 
           <Descriptions.Item label="确权状态">
@@ -190,7 +190,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
             />
           </Col>
 
-          {asset.property_nature === '经营类' && (
+          {asset.property_nature?.startsWith('经营') && (
             <>
               <Col xs={24} sm={12} md={8} lg={6}>
                 <Statistic

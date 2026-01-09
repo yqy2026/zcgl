@@ -25,6 +25,7 @@ from ...services.organization import organization_service
 router = APIRouter(tags=["组织架构管理"])
 
 
+@router.get("", response_model=list[OrganizationResponse])
 @router.get("/", response_model=list[OrganizationResponse])
 async def get_organizations(
     skip: int = Query(0, ge=0, description="跳过记录数"),

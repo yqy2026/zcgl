@@ -421,3 +421,25 @@ class DepositLedgerResponse(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# V2: 服务费台账响应
+class ServiceFeeLedgerResponse(BaseModel):
+    """服务费台账记录响应"""
+
+    id: str
+    contract_id: str
+    source_ledger_id: str | None = None
+    year_month: str
+    paid_rent_amount: Decimal
+    fee_rate: Decimal
+    fee_amount: Decimal
+    settlement_status: str
+    settlement_date: date | None = None
+    notes: str | None = None
+    operator: str | None = None
+    operator_id: str | None = None
+    created_at: datetime
+    updated_at: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)
