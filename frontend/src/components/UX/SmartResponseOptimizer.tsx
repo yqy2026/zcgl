@@ -1,9 +1,10 @@
 import React, { createContext, useCallback, useContext, useState, useRef } from 'react'
-import { message, Statistic, Card, Row, Col, Switch, Button, Space, Typography } from 'antd'
+import { Statistic, Card, Row, Col, Switch, Button, Space, Typography } from 'antd'
 import {
   ThunderboltOutlined,
   EyeOutlined
 } from '@ant-design/icons'
+import { MessageManager } from '@/utils/messageManager'
 
 const { Text } = Typography
 
@@ -94,7 +95,7 @@ const SmartResponseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // 优化响应
   const optimizeResponse = useCallback((newConfig: SmartResponseConfig) => {
     setConfig(prev => ({ ...prev, ...newConfig }))
-    message.info('响应优化配置已更新')
+    MessageManager.info('响应优化配置已更新')
   }, [])
 
   // 获取响应类型
@@ -185,7 +186,7 @@ const SmartResponseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       ...prev,
       [type]: !prev[type]
     }))
-    message.info(`${type}优化已${optimizationStates[type] ? '启用' : '禁用'}`)
+    MessageManager.info(`${type}优化已${optimizationStates[type] ? '启用' : '禁用'}`)
   }, [optimizationStates])
 
   // 重置配置

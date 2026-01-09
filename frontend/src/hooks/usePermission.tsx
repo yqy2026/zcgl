@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { message } from 'antd'
+import { MessageManager } from '@/utils/messageManager'
 import { createLogger } from '@/utils/logger'
 
 const permLogger = createLogger('usePermission')
@@ -63,7 +63,7 @@ const usePermission = () => {
       setUserPermissions(userPermissionsData)
     } catch (error) {
       permLogger.error('加载用户权限失败:', error as Error)
-      message.error('加载权限信息失败')
+      MessageManager.error('加载权限信息失败')
     } finally {
       setLoading(false)
     }

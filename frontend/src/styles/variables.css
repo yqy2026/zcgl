@@ -4,16 +4,17 @@
  */
 
 :root {
-  /* Primary Colors */
-  --color-primary: #1890ff;
+  /* Primary Colors - Asset Blue */
+  --color-primary: #1677ff;
   --color-primary-hover: #4096ff;
   --color-primary-active: #0958d9;
   --color-primary-light: #e6f4ff;
 
-  /* Secondary Colors */
-  --color-secondary: #722ed1;
-  --color-secondary-hover: #9254de;
-  --color-secondary-active: #531dab;
+  /* Secondary Colors - Mapped to Blue/Slate for cleaner pro look */
+  --color-secondary: #0ea5e9;
+  /* Sky Blue */
+  --color-secondary-hover: #38bdf8;
+  --color-secondary-active: #0284c7;
 
   /* Semantic Colors */
   --color-success: #52c41a;

@@ -9,7 +9,6 @@ import {
   Alert,
   Steps,
   Table,
-  message,
   Row,
   Col,
   Statistic,
@@ -19,6 +18,7 @@ import {
   InputNumber,
   Select,
 } from "antd";
+import { MessageManager } from "@/utils/MessageManager";
 import type { ColumnsType } from "antd/es/table";
 import {
   UploadOutlined,
@@ -91,9 +91,9 @@ const OptimizedAssetImport: React.FC = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      message.success("模板下载成功");
+      MessageManager.success("模板下载成功");
     } catch {
-      message.error("模板下载失败");
+      MessageManager.error("模板下载失败");
     }
   };
 
@@ -106,13 +106,13 @@ const OptimizedAssetImport: React.FC = () => {
         file.type === "application/vnd.ms-excel";
 
       if (!isExcel) {
-        message.error("只能上传Excel文件(.xlsx, .xls)");
+        MessageManager.error("只能上传Excel文件(.xlsx, .xls)");
         return false;
       }
 
       const isLt50M = file.size / 1024 / 1024 < 50;
       if (!isLt50M) {
-        message.error("文件大小不能超过50MB");
+        MessageManager.error("文件大小不能超过50MB");
         return false;
       }
 
@@ -146,7 +146,7 @@ const OptimizedAssetImport: React.FC = () => {
   // 执行导入
   const handleImport = async () => {
     if (fileList.length === 0) {
-      message.error("请先选择要导入的文件");
+      MessageManager.error("请先选择要导入的文件");
       return;
     }
 
@@ -187,9 +187,9 @@ const OptimizedAssetImport: React.FC = () => {
 
       // 显示性能信息
       if (result.processing_time !== undefined && result.processing_time !== null) {
-        message.success(`🎉 导入完成！用时 ${result.processing_time} 秒`);
+        MessageManager.success(`🎉 导入完成！用时 ${result.processing_time} 秒`);
       } else {
-        message.success(`🎉 导入完成！成功导入 ${result.success} 条记录`);
+        MessageManager.success(`🎉 导入完成！成功导入 ${result.success} 条记录`);
       }
     } catch (err: unknown) {
       clearInterval(progressInterval);
@@ -214,7 +214,7 @@ const OptimizedAssetImport: React.FC = () => {
 
       setImportResult(errorResult);
       setCurrentStep(2);
-      message.error(`❌ 导入失败: ${errorResult.errors[0] ?? '未知错误'}`);
+      MessageManager.error(`❌ 导入失败: ${errorResult.errors[0] ?? '未知错误'}`);
     } finally {
       setUploading(false);
     }
@@ -535,7 +535,7 @@ const OptimizedAssetImport: React.FC = () => {
                     onClick={() => {
                       const errorText = importResult.errors.join("\\n");
                       navigator.clipboard.writeText(errorText);
-                      message.success("错误信息已复制到剪贴板");
+                      MessageManager.success("错误信息已复制到剪贴板");
                     }}
                   >
                     复制错误信息

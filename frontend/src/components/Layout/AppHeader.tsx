@@ -1,5 +1,6 @@
 import React from 'react'
-import { Layout, Button, Avatar, Dropdown, Badge, message, Modal, Space, Tooltip, Typography } from 'antd'
+import { Layout, Button, Avatar, Dropdown, Badge, Modal, Space, Tooltip, Typography } from 'antd'
+import { MessageManager } from '@/utils/messageManager'
 import type { MenuProps } from 'antd'
 import {
   MenuFoldOutlined,
@@ -14,6 +15,8 @@ import {
 import { useNavigate } from 'react-router-dom'
 import { AuthService } from '../../services/authService'
 import { NotificationCenter } from '../Notification'
+
+import styles from './Layout.module.css'
 
 const { Header } = Layout
 
@@ -87,10 +90,10 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
         navigate('/profile')
         break
       case 'settings':
-        message.info('系统设置功能开发中')
+        MessageManager.info('系统设置功能开发中')
         break
       case 'help':
-        message.info('帮助中心功能开发中')
+        MessageManager.info('帮助中心功能开发中')
         break
       case 'logout':
         handleLogoutConfirm()
@@ -99,19 +102,9 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
   }
 
   return (
-    <Header
-      style={{
-        padding: '0 24px',
-        background: '#fff',
-        borderBottom: '1px solid #f0f0f0',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        height: 64,
-      }}
-    >
+    <Header className={styles.header}>
       {/* 左侧 */}
-      <div style={{ display: 'flex', alignItems: 'center' }}>
+      <div className={styles.headerLeft}>
         <Button
           type="text"
           icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
@@ -124,30 +117,26 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
         />
 
         <div style={{ marginLeft: 16 }}>
-          <Typography.Text strong style={{ fontSize: '18px', color: '#1890ff' }}>
+          <Typography.Text strong className={styles.headerTitle}>
             土地房产资产管理系统
           </Typography.Text>
         </div>
       </div>
 
       {/* 右侧 */}
-      <Space size="middle">
+      <Space size="middle" className={styles.headerRight}>
         {/* 语言切换 */}
         <Tooltip title="语言切换">
-          <Button
-            type="text"
-            icon={<GlobalOutlined />}
-            style={{ fontSize: '16px' }}
-          />
+          <div className={styles.headerAction}>
+            <GlobalOutlined style={{ fontSize: '16px' }} />
+          </div>
         </Tooltip>
 
         {/* 帮助 */}
         <Tooltip title="帮助文档">
-          <Button
-            type="text"
-            icon={<QuestionCircleOutlined />}
-            style={{ fontSize: '16px' }}
-          />
+          <div className={styles.headerAction}>
+            <QuestionCircleOutlined style={{ fontSize: '16px' }} />
+          </div>
         </Tooltip>
 
         {/* 通知 */}
@@ -162,14 +151,14 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
           placement="bottomRight"
           trigger={['click']}
         >
-          <Space style={{ cursor: 'pointer', padding: '4px 8px', borderRadius: '6px' }}>
+          <div className={styles.userInfo}>
             <Avatar
               size="small"
               icon={<UserOutlined />}
-              style={{ backgroundColor: '#1890ff' }}
+              style={{ backgroundColor: '#1677ff' }}
             />
-            <Typography.Text>{user?.full_name || user?.username || '用户'}</Typography.Text>
-          </Space>
+            <Typography.Text strong style={{ color: '#1e293b' }}>{user?.full_name || user?.username || '用户'}</Typography.Text>
+          </div>
         </Dropdown>
       </Space>
     </Header>

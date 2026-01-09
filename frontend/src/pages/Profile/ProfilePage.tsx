@@ -10,10 +10,10 @@ import {
   Modal,
   Form,
   Input,
-  message,
   Skeleton,
   Typography,
 } from 'antd';
+import { MessageManager } from '@/utils/messageManager';
 import { UserOutlined, EditOutlined, LockOutlined, HistoryOutlined } from '@ant-design/icons';
 import { useAuth } from '../../hooks/useAuth';
 import { AuthService } from '../../services/authService';
@@ -54,11 +54,11 @@ const ProfilePage: React.FC = () => {
     setLoading(true);
     try {
       await AuthService.updateProfile(values);
-      message.success('个人资料更新成功');
+      MessageManager.success('个人资料更新成功');
       setEditModalVisible(false);
       await refreshUser(); // 刷新用户信息
     } catch (error: unknown) {
-      message.error((error as Error).message || '更新失败，请稍后重试');
+      MessageManager.error((error as Error).message || '更新失败，请稍后重试');
     } finally {
       setLoading(false);
     }
@@ -69,11 +69,11 @@ const ProfilePage: React.FC = () => {
     setLoading(true);
     try {
       await AuthService.changePassword(values.oldPassword, values.newPassword);
-      message.success('密码修改成功');
+      MessageManager.success('密码修改成功');
       setPasswordModalVisible(false);
       passwordForm.resetFields();
     } catch (error: unknown) {
-      message.error((error as Error).message || '密码修改失败');
+      MessageManager.error((error as Error).message || '密码修改失败');
     } finally {
       setLoading(false);
     }
@@ -255,7 +255,7 @@ const ProfilePage: React.FC = () => {
                 <Button
                   icon={<HistoryOutlined />}
                   onClick={() => {
-                    void message.info('登录历史功能开发中');
+                    void MessageManager.info('登录历史功能开发中');
                   }}
                 >
                   查看历史

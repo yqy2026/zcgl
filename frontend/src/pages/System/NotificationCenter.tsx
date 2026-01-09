@@ -10,9 +10,9 @@ import {
     Tabs,
     Badge,
     Spin,
-    message,
     Modal,
 } from 'antd';
+import { MessageManager } from '@/utils/messageManager';
 import {
     BellOutlined,
     CheckOutlined,
@@ -63,7 +63,7 @@ const NotificationCenter: React.FC = () => {
             });
         } catch (error) {
             console.error('加载通知失败:', error);
-            message.error('加载通知列表失败');
+            MessageManager.error('加载通知列表失败');
         } finally {
             setLoading(false);
         }
@@ -83,14 +83,14 @@ const NotificationCenter: React.FC = () => {
     const handleMarkAsRead = async (id: string) => {
         try {
             await notificationService.markAsRead(id);
-            message.success('已标记为已读');
+            MessageManager.success('已标记为已读');
             // 更新本地状态
             setNotifications(prev =>
                 prev.map(item => (item.id === id ? { ...item, is_read: true, read_at: new Date().toISOString() } : item))
             );
             // 触发全局未读数更新（如果有Context的话）
         } catch (error) {
-            message.error('操作失败');
+            MessageManager.error('操作失败');
         }
     };
 
@@ -102,10 +102,10 @@ const NotificationCenter: React.FC = () => {
             onOk: async () => {
                 try {
                     await notificationService.markAllAsRead();
-                    message.success('全部已读成功');
+                    MessageManager.success('全部已读成功');
                     loadNotifications(1, activeTab);
                 } catch (error) {
-                    message.error('操作失败');
+                    MessageManager.error('操作失败');
                 }
             },
         });
@@ -120,10 +120,10 @@ const NotificationCenter: React.FC = () => {
             onOk: async () => {
                 try {
                     await notificationService.deleteNotification(id);
-                    message.success('删除成功');
+                    MessageManager.success('删除成功');
                     loadNotifications(pagination.current, activeTab);
                 } catch (error) {
-                    message.error('删除失败');
+                    MessageManager.error('删除失败');
                 }
             },
         });

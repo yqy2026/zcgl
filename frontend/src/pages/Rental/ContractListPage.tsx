@@ -12,7 +12,6 @@ import {
   Tag,
   Input,
   Select,
-  message,
   Modal,
   Tooltip,
   Row,
@@ -21,6 +20,7 @@ import {
   Typography,
   type TableProps,
 } from "antd";
+import { MessageManager } from "@/utils/MessageManager";
 import {
   PlusOutlined,
   EditOutlined,
@@ -105,7 +105,7 @@ const ContractListPage: React.FC = () => {
       }));
     } catch (error) {
       pageLogger.error("加载合同列表失败:", error as Error);
-      message.error(`加载合同列表失败: ${error instanceof Error ? error.message : "未知错误"}`);
+      MessageManager.error(`加载合同列表失败: ${error instanceof Error ? error.message : "未知错误"}`);
       setState((prev) => ({ ...prev, loading: false, contracts: [] }));
     }
   }, [state.pagination.current, state.pagination.pageSize, state.filters]);
@@ -130,7 +130,7 @@ const ContractListPage: React.FC = () => {
       setAssets(assetsResponse.items);
       setOwnerships(ownershipsData);
     } catch {
-      message.error("加载参考数据失败");
+      MessageManager.error("加载参考数据失败");
     }
   }, []);
 
@@ -186,10 +186,10 @@ const ContractListPage: React.FC = () => {
       onOk: async () => {
         try {
           await rentContractService.deleteContract(id);
-          message.success("删除成功");
+          MessageManager.success("删除成功");
 
         } catch {
-          message.error("删除失败");
+          MessageManager.error("删除失败");
         }
       },
     });
@@ -199,9 +199,9 @@ const ContractListPage: React.FC = () => {
   const handleGenerateLedger = async (contractId: string) => {
     try {
       await rentContractService.generateMonthlyLedger({ contract_id: contractId });
-      message.success("生成台账成功");
+      MessageManager.success("生成台账成功");
     } catch {
-      message.error("生成台账失败");
+      MessageManager.error("生成台账失败");
     }
   };
 
@@ -224,10 +224,10 @@ const ContractListPage: React.FC = () => {
             contract.id,
             new Date().toISOString().split('T')[0]
           );
-          message.success("合同已终止");
+          MessageManager.success("合同已终止");
           loadContracts();
         } catch {
-          message.error("终止合同失败");
+          MessageManager.error("终止合同失败");
         }
       },
     });

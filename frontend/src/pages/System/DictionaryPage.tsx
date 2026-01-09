@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Button, Card, Form, Input, Modal, Select, Space, Switch, Table, Tag, message, Popconfirm, Row, Col, Badge } from 'antd'
+import { Button, Card, Form, Input, Modal, Select, Space, Switch, Table, Tag, Popconfirm, Row, Col, Badge } from 'antd'
+import { MessageManager } from '@/utils/messageManager'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 import { SearchOutlined } from '@ant-design/icons'
@@ -69,7 +70,7 @@ const DictionaryPage: React.FC = () => {
     } catch (e: unknown) {
       pageLogger.error('获取枚举数据失败:', e as Error)
       const errorMessage = e instanceof Error ? e.message : '获取枚举数据失败'
-      message.error(errorMessage)
+      MessageManager.error(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -90,7 +91,7 @@ const DictionaryPage: React.FC = () => {
     } catch (e: unknown) {
       pageLogger.error('获取枚举值失败:', e as Error)
       const errorMessage = e instanceof Error ? e.message : '获取枚举值失败'
-      message.error(errorMessage)
+      MessageManager.error(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -107,14 +108,14 @@ const DictionaryPage: React.FC = () => {
 
   const handleCreate = async () => {
     if (!activeType) {
-      message.warning('请先选择字典类型')
+      MessageManager.warning('请先选择字典类型')
       return
     }
 
     // 获取对应的枚举类型
     const _targetType = enumTypes.find(type => type.code === activeType)
     if (!_targetType) {
-      message.error('未找到对应的枚举类型')
+      MessageManager.error('未找到对应的枚举类型')
       return
     }
 
@@ -160,7 +161,7 @@ const DictionaryPage: React.FC = () => {
     try {
       const success = await unifiedDictionaryService.deleteEnumValue(record.id)
       if (success) {
-        message.success('删除成功')
+        MessageManager.success('删除成功')
         fetchList(activeType)
         fetchAllEnumData()
         // 如果详情模态框打开，刷新详情数据
@@ -168,11 +169,11 @@ const DictionaryPage: React.FC = () => {
           fetchList(activeType)
         }
       } else {
-        message.error('删除失败')
+        MessageManager.error('删除失败')
       }
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : '删除失败'
-      message.error(errorMessage)
+      MessageManager.error(errorMessage)
     }
   }
 
@@ -181,13 +182,13 @@ const DictionaryPage: React.FC = () => {
       const values = await form.validateFields()
 
       if (!activeType) {
-        message.error('未找到对应的枚举类型')
+        MessageManager.error('未找到对应的枚举类型')
         return
       }
 
       const targetType = enumTypes.find(type => type.code === activeType)
       if (!targetType) {
-        message.error('未找到对应的枚举类型')
+        MessageManager.error('未找到对应的枚举类型')
         return
       }
 
@@ -203,9 +204,9 @@ const DictionaryPage: React.FC = () => {
         })
 
         if (success) {
-          message.success('更新成功')
+          MessageManager.success('更新成功')
         } else {
-          message.error('更新失败')
+          MessageManager.error('更新失败')
           return
         }
       } else {
@@ -219,9 +220,9 @@ const DictionaryPage: React.FC = () => {
         })
 
         if (success) {
-          message.success('创建成功')
+          MessageManager.success('创建成功')
         } else {
-          message.error('创建失败')
+          MessageManager.error('创建失败')
           return
         }
       }
@@ -240,7 +241,7 @@ const DictionaryPage: React.FC = () => {
 
       const errorMessage = e instanceof Error ? e.message : '保存失败'
       pageLogger.error('保存字典失败:', e as Error)
-      message.error(errorMessage)
+      MessageManager.error(errorMessage)
     }
   }
 
@@ -248,7 +249,7 @@ const DictionaryPage: React.FC = () => {
     try {
       const success = await unifiedDictionaryService.toggleEnumValueActive(record.id, checked)
       if (success) {
-        message.success('状态已更新')
+        MessageManager.success('状态已更新')
         fetchList(activeType)
         fetchAllEnumData()
         // 如果详情模态框打开，刷新详情数据
@@ -256,11 +257,11 @@ const DictionaryPage: React.FC = () => {
           fetchList(activeType)
         }
       } else {
-        message.error('更新失败')
+        MessageManager.error('更新失败')
       }
     } catch (e: unknown) {
       const errorMessage = e instanceof Error ? e.message : '更新失败'
-      message.error(errorMessage)
+      MessageManager.error(errorMessage)
     }
   }
 

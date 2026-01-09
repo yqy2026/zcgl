@@ -48,93 +48,7 @@
   margin-bottom: 24px;
 }
 
-/* 关键指标卡片 */
-.keyMetricCard {
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  transition: all 0.3s ease;
-  border: 1px solid #f0f0f0;
-  overflow: hidden;
-}
-
-.keyMetricCard:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-}
-
-.keyMetricCard.primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #fff;
-}
-
-.keyMetricCard.success {
-  background: linear-gradient(135deg, #13c2c2 0%, #36cfc9 100%);
-  color: #fff;
-}
-
-.keyMetricCard.warning {
-  background: linear-gradient(135deg, #fadb14 0%, #faad14 100%);
-  color: #fff;
-}
-
-.keyMetricCard.error {
-  background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%);
-  color: #fff;
-}
-
-.keyMetricCardContent {
-  padding: 20px;
-  position: relative;
-}
-
-.keyMetricIcon {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  font-size: 24px;
-  opacity: 0.8;
-}
-
-.keyMetricTitle {
-  margin: 0 0 8px 0;
-  font-size: 14px;
-  font-weight: 500;
-  opacity: 0.9;
-}
-
-.keyMetricValue {
-  font-size: 28px;
-  font-weight: 700;
-  margin: 0;
-  line-height: 1.2;
-}
-
-.keyMetricSuffix {
-  font-size: 16px;
-  font-weight: 400;
-  opacity: 0.8;
-}
-
-.keyMetricTrend {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 8px;
-  font-size: 12px;
-}
-
-.trendUp {
-  color: #52c41a;
-}
-
-.trendDown {
-  color: #ff4d4f;
-}
-
-.trendNeutral {
-  color: #8c8c8c;
-}
+/* DataTrendCard handles its own styling, removing legacy keyMetricCard styles */
 
 /* 详细统计区域 */
 .detailedStatsSection {
@@ -144,20 +58,31 @@
 .statsCard {
   background: #fff;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02);
   height: 100%;
+  border: 1px solid #f1f5f9;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.statsCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: rgba(22, 119, 255, 0.2);
 }
 
 .statsCardHeader {
-  padding: 20px 20px 16px 20px;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f1f5f9;
+  background: #fff;
 }
 
 .statsCardTitle {
-  margin: 0;
+  margin: 0 !important;
   font-size: 16px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: #1e293b;
+  /* Slate 800 */
   display: flex;
   align-items: center;
   gap: 8px;
@@ -344,6 +269,7 @@
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -358,9 +284,11 @@
   0% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.05);
   }
+
   100% {
     transform: scale(1);
   }

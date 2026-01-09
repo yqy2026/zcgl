@@ -14,7 +14,6 @@ import {
   Typography,
   Row,
   Col,
-  message,
   Spin,
 } from 'antd';
 import {
@@ -24,6 +23,7 @@ import {
   ArrowLeftOutlined,
   CheckCircleOutlined,
 } from '@ant-design/icons';
+import { MessageManager } from '@/utils/messageManager';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { addDays, differenceInDays, parseISO, formatISO } from 'date-fns';
@@ -133,7 +133,7 @@ const ContractRenewPage: React.FC = () => {
       rentContractService.renewContract(id!, data, true),
     onSuccess: (newContract) => {
       setContractCreated(true);
-      message.success('合同续签成功！');
+      MessageManager.success('合同续签成功！');
 
       // 3秒后跳转到新合同详情页
       setTimeout(() => {
@@ -147,7 +147,7 @@ const ContractRenewPage: React.FC = () => {
     },
     onError: (error) => {
       pageLogger.error('续签合同失败:', error as Error);
-      message.error('续签合同失败，请检查网络连接');
+      MessageManager.error('续签合同失败，请检查网络连接');
     },
   });
 

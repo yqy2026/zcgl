@@ -8,11 +8,11 @@ import {
   Form,
   Select,
   Input,
-  message,
   Popconfirm,
   Typography,
   Alert,
 } from "antd";
+import { MessageManager } from "@/utils/MessageManager";
 import {
   DeleteOutlined,
   EditOutlined,
@@ -51,13 +51,13 @@ const AssetBatchActions: React.FC<AssetBatchActionsProps> = ({
   const deleteMutation = useMutation({
     mutationFn: (ids: string[]) => assetService.deleteAssets(ids),
     onSuccess: () => {
-      message.success(`成功删除 ${selectedRowKeys.length} 个资产`);
+      MessageManager.success(`成功删除 ${selectedRowKeys.length} 个资产`);
       onClearSelection();
       onRefresh();
       queryClient.invalidateQueries({ queryKey: ["assets"] });
     },
     onError: (error: unknown) => {
-      message.error(`批量删除失败: ${error instanceof Error ? error.message : "未知错误"}`);
+      MessageManager.error(`批量删除失败: ${error instanceof Error ? error.message : "未知错误"}`);
     },
   });
 
@@ -69,7 +69,7 @@ const AssetBatchActions: React.FC<AssetBatchActionsProps> = ({
       return Promise.all(promises);
     },
     onSuccess: () => {
-      message.success(`成功更新 ${selectedRowKeys.length} 个资产`);
+      MessageManager.success(`成功更新 ${selectedRowKeys.length} 个资产`);
       setBatchEditVisible(false);
       form.resetFields();
       onClearSelection();
@@ -77,7 +77,7 @@ const AssetBatchActions: React.FC<AssetBatchActionsProps> = ({
       queryClient.invalidateQueries({ queryKey: ["assets"] });
     },
     onError: (error: unknown) => {
-      message.error(`批量更新失败: ${error instanceof Error ? error.message : "未知错误"}`);
+      MessageManager.error(`批量更新失败: ${error instanceof Error ? error.message : "未知错误"}`);
     },
   });
 
@@ -90,11 +90,11 @@ const AssetBatchActions: React.FC<AssetBatchActionsProps> = ({
         include_headers: true,
       }),
     onSuccess: (result) => {
-      message.success("导出成功，开始下载...");
+      MessageManager.success("导出成功，开始下载...");
       excelService.downloadExportFile(result.file_name);
     },
     onError: (error: unknown) => {
-      message.error(`导出失败: ${error instanceof Error ? error.message : "未知错误"}`);
+      MessageManager.error(`导出失败: ${error instanceof Error ? error.message : "未知错误"}`);
     },
   });
 
@@ -119,7 +119,7 @@ const AssetBatchActions: React.FC<AssetBatchActionsProps> = ({
       );
 
       if (Object.keys(updates).length === 0) {
-        message.warning("请至少选择一个字段进行更新");
+        MessageManager.warning("请至少选择一个字段进行更新");
         return;
       }
 
@@ -143,7 +143,7 @@ const AssetBatchActions: React.FC<AssetBatchActionsProps> = ({
       icon: <TagOutlined />,
       onClick: () => {
         // 实现批量标记功能
-        message.info("批量标记功能开发中...");
+        MessageManager.info("批量标记功能开发中...");
       },
     },
     {
@@ -152,7 +152,7 @@ const AssetBatchActions: React.FC<AssetBatchActionsProps> = ({
       icon: <EditOutlined />,
       onClick: () => {
         // 实现批量移动功能
-        message.info("批量移动功能开发中...");
+        MessageManager.info("批量移动功能开发中...");
       },
     },
   ];

@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { message } from 'antd'
 
 import { assetService } from '@/services/assetService'
+import { MessageManager } from '@/utils/messageManager'
 import type {
   AssetSearchParams,
   AssetCreateRequest,
@@ -45,10 +45,10 @@ export const useCreateAsset = () => {
     onSuccess: () => {
       // 使响应缓存失效，触发重新查询
       queryClient.invalidateQueries({ queryKey: ['assets'] })
-      message.success('资产创建成功')
+      MessageManager.success('资产创建成功')
     },
     onError: (error: { message: string }) => {
-      message.error(`创建失败: ${error.message}`)
+      MessageManager.error(`创建失败: ${error.message}`)
     },
   })
 }
@@ -66,10 +66,10 @@ export const useUpdateAsset = () => {
       // 使响应缓存失效，触发重新查询
       queryClient.invalidateQueries({ queryKey: ['assets'] })
       queryClient.invalidateQueries({ queryKey: ['asset', asset.id] })
-      message.success('资产更新成功')
+      MessageManager.success('资产更新成功')
     },
     onError: (error: { message: string }) => {
-      message.error(`更新失败: ${error.message}`)
+      MessageManager.error(`更新失败: ${error.message}`)
     },
   })
 }
@@ -85,10 +85,10 @@ export const useDeleteAsset = () => {
     onSuccess: () => {
       // 使响应缓存失效，触发重新查询
       queryClient.invalidateQueries({ queryKey: ['assets'] })
-      message.success('资产删除成功')
+      MessageManager.success('资产删除成功')
     },
     onError: (error: { message: string }) => {
-      message.error(`删除失败: ${error.message}`)
+      MessageManager.error(`删除失败: ${error.message}`)
     },
   })
 }
@@ -105,10 +105,10 @@ export const useBatchDeleteAssets = () => {
       // 更新缓存
       queryClient.invalidateQueries({ queryKey: ['assets'] })
 
-      message.success(`成功删除 ${ids.length} 个资产`)
+      MessageManager.success(`成功删除 ${ids.length} 个资产`)
     },
     onError: (error: { message: string }) => {
-      message.error(`批量删除失败: ${error.message}`)
+      MessageManager.error(`批量删除失败: ${error.message}`)
     },
   })
 }

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import {
-  message, Form, Space, Tag, Button, Card, Input,
+  Form, Space, Tag, Button, Card, Input,
   Select, Tooltip, Col, Row, Table, Modal, Popconfirm,
   Badge, Statistic, Tabs, Switch
 } from 'antd'
+import { MessageManager } from '@/utils/messageManager'
 import type { ColumnsType } from 'antd/es/table'
 import {
   PlusOutlined, EditOutlined, DeleteOutlined,
@@ -73,7 +74,7 @@ const EnumFieldPage: React.FC = () => {
       setEnumTypes(data);
     } catch (error: unknown) {
       const apiError = error as ApiError
-      message.error(apiError?.response?.data?.detail ?? apiError?.message ?? '加载枚举类型失败');
+      MessageManager.error(apiError?.response?.data?.detail ?? apiError?.message ?? '加载枚举类型失败');
     } finally {
       setLoading(false);
     }
@@ -85,7 +86,7 @@ const EnumFieldPage: React.FC = () => {
       setEnumValues(data);
     } catch (error: unknown) {
       const apiError = error as ApiError
-      message.error(apiError?.response?.data?.detail ?? apiError?.message ?? '加载枚举值失败');
+      MessageManager.error(apiError?.response?.data?.detail ?? apiError?.message ?? '加载枚举值失败');
     }
   };
 
@@ -102,7 +103,7 @@ const EnumFieldPage: React.FC = () => {
       });
     } catch (error: unknown) {
       const apiError = error as ApiError
-      message.error(apiError?.message ?? '加载统计信息失败');
+      MessageManager.error(apiError?.message ?? '加载统计信息失败');
     }
   };
 
@@ -349,21 +350,21 @@ const EnumFieldPage: React.FC = () => {
     try {
       const success = await unifiedDictionaryService.deleteEnumFieldType(id)
       if (success) {
-        message.success('删除成功');
+        MessageManager.success('删除成功');
         loadEnumTypes();
         loadStatistics();
       } else {
-        message.error('删除失败');
+        MessageManager.error('删除失败');
       }
     } catch (error: unknown) {
       const apiError = error as ApiError
-      message.error(apiError?.message || '删除失败');
+      MessageManager.error(apiError?.message || '删除失败');
     }
   };
 
   const handleCreateValue = () => {
     if (!selectedTypeId) {
-      message.warning('请先选择枚举类型');
+      MessageManager.warning('请先选择枚举类型');
       return;
     }
 
@@ -381,16 +382,16 @@ const EnumFieldPage: React.FC = () => {
     try {
       const success = await unifiedDictionaryService.deleteEnumValue(id)
       if (success) {
-        message.success('删除成功');
+        MessageManager.success('删除成功');
         if (selectedTypeId) {
           loadEnumValues(selectedTypeId);
         }
       } else {
-        message.error('删除失败');
+        MessageManager.error('删除失败');
       }
     } catch (error: unknown) {
       const apiError = error as ApiError
-      message.error(apiError?.message || '删除失败');
+      MessageManager.error(apiError?.message || '删除失败');
     }
   };
 
@@ -408,16 +409,16 @@ const EnumFieldPage: React.FC = () => {
       }
 
       if (success) {
-        message.success(editingType ? '更新成功' : '创建成功');
+        MessageManager.success(editingType ? '更新成功' : '创建成功');
         setTypeModalVisible(false);
         loadEnumTypes();
         loadStatistics();
       } else {
-        message.error('操作失败');
+        MessageManager.error('操作失败');
       }
     } catch (error: unknown) {
       const apiError = error as ApiError
-      message.error(apiError?.message ?? '操作失败');
+      MessageManager.error(apiError?.message ?? '操作失败');
     }
   };
 
@@ -444,18 +445,18 @@ const EnumFieldPage: React.FC = () => {
       }
 
       if (success) {
-        message.success(editingValue ? '更新成功' : '创建成功');
+        MessageManager.success(editingValue ? '更新成功' : '创建成功');
         setValueModalVisible(false);
         setEditingValue(null);
         if (selectedTypeId) {
           loadEnumValues(selectedTypeId);
         }
       } else {
-        message.error('操作失败');
+        MessageManager.error('操作失败');
       }
     } catch (error: unknown) {
       const apiError = error as ApiError
-      message.error(apiError?.message ?? '操作失败');
+      MessageManager.error(apiError?.message ?? '操作失败');
     }
   };
 

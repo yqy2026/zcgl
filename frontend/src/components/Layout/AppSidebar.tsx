@@ -21,6 +21,7 @@ import {
 } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import type { MenuProps } from 'antd';
+import styles from './Layout.module.css';
 
 const { Sider } = Layout;
 const { Text } = Typography;
@@ -201,47 +202,27 @@ const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed }) => {
       collapsible
       collapsed={collapsed}
       width={240}
-      style={{
-        background: '#001529',
-        borderRight: '1px solid #f0f0f0',
-      }}
+      className={styles.sidebar}
     >
       {/* Logo区域 */}
-      <div
-        style={{
-          height: 64,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: collapsed ? 'center' : 'flex-start',
-          padding: collapsed ? 0 : '0 24px',
-          background: '#002140',
-          borderBottom: '1px solid #1f1f1f',
-        }}
-      >
-        {collapsed ? (
-          <HomeOutlined style={{ fontSize: '24px', color: '#1890ff' }} />
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <HomeOutlined style={{ fontSize: '24px', color: '#1890ff', marginRight: 12 }} />
-            <Text strong style={{ color: '#fff', fontSize: '16px' }}>
-              资产管理
-            </Text>
-          </div>
+      <div className={collapsed ? `${styles.sidebarLogo} ${styles.sidebarLogoCollapsed}` : styles.sidebarLogo}>
+        <HomeOutlined className={styles.sidebarLogoIcon} />
+        {!collapsed && (
+          <span className={styles.sidebarLogoText}>
+            资产管理
+          </span>
         )}
       </div>
 
       {/* 菜单 */}
       <Menu
-        theme="dark"
+        theme="light"
         mode="inline"
         selectedKeys={getSelectedKeys()}
         defaultOpenKeys={getOpenKeys()}
         items={menuItems}
         onClick={handleMenuClick}
-        style={{
-          borderRight: 0,
-          background: '#001529',
-        }}
+        className={styles.sidebarMenu}
       />
     </Sider>
   );

@@ -22,6 +22,7 @@ import {
 import SystemBreadcrumb from '../../components/System/SystemBreadcrumb'
 import { userService, type User, type CreateUserData, type UpdateUserData, type OrganizationOption, type RoleOption } from '../../services/systemService'
 import { useMessage } from '../../hooks/useMessage'
+import { MessageManager } from '@/utils/messageManager'
 import { createLogger } from '../../utils/logger'
 
 const pageLogger = createLogger('UserManagement')
@@ -89,7 +90,7 @@ const UserManagementPage: React.FC = () => {
       setUsers(data.items)
     } catch (error) {
       pageLogger.error('加载用户列表失败:', error as Error)
-      message.error('加载用户列表失败')
+      MessageManager.error('加载用户列表失败')
       // 如果API失败，使用模拟数据作为后备
       const mockUsers: User[] = [
         {
@@ -126,7 +127,7 @@ const UserManagementPage: React.FC = () => {
       ]
       setOrganizations(mockOrgs)
     } catch {
-      message.error('加载组织列表失败')
+      MessageManager.error('加载组织列表失败')
     }
   }, [message])
 
@@ -140,7 +141,7 @@ const UserManagementPage: React.FC = () => {
       ]
       setRoles(mockRoles)
     } catch {
-      message.error('加载角色列表失败')
+      MessageManager.error('加载角色列表失败')
     }
   }, [message])
 
@@ -157,7 +158,7 @@ const UserManagementPage: React.FC = () => {
       }
       setStatistics(mockStats)
     } catch {
-      message.error('加载统计信息失败')
+      MessageManager.error('加载统计信息失败')
     }
   }, [message, users])
 
@@ -196,33 +197,33 @@ const UserManagementPage: React.FC = () => {
   const handleDelete = async (_id: string) => {
     try {
       // 模拟删除API调用
-      message.success('删除成功')
+      MessageManager.success('删除成功')
       loadUsers()
       loadStatistics()
     } catch {
-      message.error('删除失败')
+      MessageManager.error('删除失败')
     }
   }
 
   const handleToggleStatus = async (_user: User, _newStatus: string) => {
     try {
       // 模拟状态切换API调用
-      message.success('状态已更新')
+      MessageManager.success('状态已更新')
       loadUsers()
       loadStatistics()
     } catch {
-      message.error('状态更新失败')
+      MessageManager.error('状态更新失败')
     }
   }
 
   const handleToggleLock = async (user: User) => {
     try {
       // 模拟锁定/解锁API调用
-      message.success(user.is_locked ? '用户已解锁' : '用户已锁定')
+      MessageManager.success(user.is_locked ? '用户已解锁' : '用户已锁定')
       loadUsers()
       loadStatistics()
     } catch {
-      message.error('操作失败')
+      MessageManager.error('操作失败')
     }
   }
 
@@ -235,16 +236,16 @@ const UserManagementPage: React.FC = () => {
     try {
       if (editingUser) {
         // 模拟更新API调用
-        message.success('更新成功')
+        MessageManager.success('更新成功')
       } else {
         // 模拟创建API调用
-        message.success('创建成功')
+        MessageManager.success('创建成功')
       }
       setModalVisible(false)
       loadUsers()
       loadStatistics()
     } catch {
-      message.error(editingUser ? '更新失败' : '创建失败')
+      MessageManager.error(editingUser ? '更新失败' : '创建失败')
     }
   }
 

@@ -285,7 +285,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
       </Card>
 
       {/* 接收协议详情 */}
-      {((asset.operation_agreement_start_date !== undefined && asset.operation_agreement_start_date !== '') || (asset.operation_agreement_end_date !== undefined && asset.operation_agreement_end_date !== '') || (asset.operation_agreement_attachments !== undefined && asset.operation_agreement_attachments !== '')) && (
+      {((asset.operation_agreement_start_date !== undefined && asset.operation_agreement_start_date !== '' && asset.operation_agreement_start_date !== null) || (asset.operation_agreement_end_date !== undefined && asset.operation_agreement_end_date !== '' && asset.operation_agreement_end_date !== null) || (asset.operation_agreement_attachments !== undefined && asset.operation_agreement_attachments !== '' && asset.operation_agreement_attachments !== null)) && (
         <Card title="接收协议详情" style={{ marginBottom: 16 }}>
           <Descriptions
             bordered
@@ -295,15 +295,15 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
             }}
           >
             <Descriptions.Item label="(当前)接收协议开始日期">
-              {asset.operation_agreement_start_date !== undefined && asset.operation_agreement_start_date !== '' ? formatDate(asset.operation_agreement_start_date) : '-'}
+              {asset.operation_agreement_start_date !== undefined && asset.operation_agreement_start_date !== '' && asset.operation_agreement_start_date !== null ? formatDate(asset.operation_agreement_start_date) : '-'}
             </Descriptions.Item>
 
             <Descriptions.Item label="(当前)接收协议结束日期">
-              {asset.operation_agreement_end_date !== undefined && asset.operation_agreement_end_date !== '' ? formatDate(asset.operation_agreement_end_date) : '-'}
+              {asset.operation_agreement_end_date !== undefined && asset.operation_agreement_end_date !== '' && asset.operation_agreement_end_date !== null ? formatDate(asset.operation_agreement_end_date) : '-'}
             </Descriptions.Item>
 
             <Descriptions.Item label="接收协议文件" span={2}>
-              {asset.operation_agreement_attachments !== undefined && asset.operation_agreement_attachments !== '' ? (
+              {asset.operation_agreement_attachments !== undefined && asset.operation_agreement_attachments !== '' && asset.operation_agreement_attachments !== null ? (
                 <div>
                   {asset.operation_agreement_attachments.split(',').map((fileName, index) => (
                     <div key={index} style={{ marginBottom: 4 }}>

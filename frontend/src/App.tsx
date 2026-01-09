@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react'
+import React, { Suspense, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Spin, App as AntdApp } from 'antd'
 import { protectedRoutes } from './routes/AppRoutes'
@@ -7,6 +7,7 @@ import LoginPage from './pages/LoginPage'
 import ErrorBoundary from './components/ErrorHandling/ErrorBoundary'
 import { AuthService } from './services/authService'
 import { AuthProvider } from './contexts/AuthContext'
+import { MessageManager } from './utils/MessageManager'
 // App.css removed - classes were unused default React template styles
 
 /**
@@ -22,6 +23,9 @@ interface LocationState {
  * 受保护的路由组件 - 需要认证才能访问
  */
 
+import { AnimatePresence } from 'framer-motion'
+import PageTransition from './components/Layout/PageTransition'
+
 const ProtectedRoutes: React.FC = () => {
   const isAuthenticated = AuthService.isAuthenticated()
   const location = useLocation()
@@ -34,21 +38,25 @@ const ProtectedRoutes: React.FC = () => {
   // 已认证用户,渲染带布局的应用路由
   return (
     <AppLayout>
-      <Routes>
-        {protectedRoutes.map((route, index) => (
-          <Route
-            key={index}
-            path={route.path}
-            element={
-              <Suspense fallback={<Spin size="large" style={{ display: 'flex', justifyContent: 'center', marginTop: '100px' }} />}>
-                <route.element />
-              </Suspense>
-            }
-          />
-        ))}
-        {/* 默认路由重定向到仪表板 */}
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
+      <AnimatePresence mode="wait">
+        <Routes location={location} key={location.pathname}>
+          {protectedRoutes.map((route, index) => (
+            <Route
+              key={index}
+              path={route.path}
+              element={
+                <PageTransition>
+                  <Suspense fallback={<Spin size="large" style={{ display: 'flex', justifyContent: 'center', marginTop: '100px' }} />}>
+                    <route.element />
+                  </Suspense>
+                </PageTransition>
+              }
+            />
+          ))}
+          {/* 默认路由重定向到仪表板 */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </AnimatePresence>
     </AppLayout>
   )
 }
@@ -83,19 +91,35 @@ const AppContent: React.FC = () => {
   )
 }
 
+/**
+ * App初始化组件 - 用于初始化MessageManager
+ */
+const AppInitializer: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { message } = AntdApp.useApp();
+
+  useEffect(() => {
+    // 初始化全局消息管理器
+    MessageManager.init(message);
+  }, [message]);
+
+  return <>{children}</>;
+};
+
 const App: React.FC = () => {
   return (
     <ErrorBoundary>
       <AuthProvider>
         <AntdApp>
-          <BrowserRouter
-            future={{
-              v7_startTransition: true,
-              v7_relativeSplatPath: true,
-            }}
-          >
-            <AppContent />
-          </BrowserRouter>
+          <AppInitializer>
+            <BrowserRouter
+              future={{
+                v7_startTransition: true,
+                v7_relativeSplatPath: true,
+              }}
+            >
+              <AppContent />
+            </BrowserRouter>
+          </AppInitializer>
         </AntdApp>
       </AuthProvider>
     </ErrorBoundary>

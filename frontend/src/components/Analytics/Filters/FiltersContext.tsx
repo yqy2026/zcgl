@@ -4,7 +4,7 @@ import type { AssetSearchParams } from '../../../types/asset';
 import type { FilterPreset } from '../../../types/analytics';
 import { UsageStatus, PropertyNature, OwnershipStatus } from '../../../types/asset';
 import { useSearchHistory } from '../../../hooks/useSearchHistory';
-import { message } from 'antd';
+import { MessageManager } from '@/utils/messageManager';
 
 // Filter presets configuration
 export const FILTER_PRESETS: FilterPreset[] = [
@@ -181,17 +181,17 @@ export const AnalyticsFiltersProvider: React.FC<AnalyticsFiltersProviderProps> =
         setSelectedPreset('all');
         setSearchText('');
         onResetFilters?.();
-        message.success('筛选条件已重置');
+        MessageManager.success('筛选条件已重置');
     }, [onResetFilters]);
 
     const handleApply = useCallback(() => {
         onApplyFilters?.();
-        message.success('筛选条件已应用');
+        MessageManager.success('筛选条件已应用');
     }, [onApplyFilters]);
 
     const handleSaveFilters = useCallback(() => {
         if (!saveName.trim()) {
-            message.warning('请输入保存名称');
+            MessageManager.warning('请输入保存名称');
             return;
         }
 
@@ -201,7 +201,7 @@ export const AnalyticsFiltersProvider: React.FC<AnalyticsFiltersProviderProps> =
         }).length;
 
         if (activeCount === 0) {
-            message.warning('请先设置筛选条件');
+            MessageManager.warning('请先设置筛选条件');
             return;
         }
 
@@ -213,7 +213,7 @@ export const AnalyticsFiltersProvider: React.FC<AnalyticsFiltersProviderProps> =
         });
 
         setSaveName('');
-        message.success('筛选条件已保存');
+        MessageManager.success('筛选条件已保存');
     }, [saveName, localFilters, addSearchHistory]);
 
     const handleApplyHistory = useCallback((historyId: string) => {
@@ -232,7 +232,7 @@ export const AnalyticsFiltersProvider: React.FC<AnalyticsFiltersProviderProps> =
             }
 
             setShowHistory(false);
-            message.success(`已应用历史筛选条件: ${history.name}`);
+            MessageManager.success(`已应用历史筛选条件: ${history.name}`);
         }
     }, [searchHistory, onFiltersChange]);
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { message } from 'antd'
+import { MessageManager } from '@/utils/messageManager'
 import { createLogger } from '@/utils/logger'
 
 const rtLogger = createLogger('RealTimeUpdates')
@@ -165,12 +165,12 @@ export const useWebSocketUpdates = (
               case 'asset_deleted':
                 // 刷新资产列表
                 queryClient.invalidateQueries({ queryKey })
-                message.info('数据已更新')
+                MessageManager.info('数据已更新')
                 break
               case 'bulk_operation':
                 // 批量操作完成
                 queryClient.invalidateQueries({ queryKey })
-                message.success(data.message || '批量操作完成')
+                MessageManager.success(data.message || '批量操作完成')
                 break
               default:
               // Unknown message type
@@ -200,7 +200,7 @@ export const useWebSocketUpdates = (
               connect()
             }, delay)
           } else {
-            message.error('WebSocket连接失败，请刷新页面重试')
+            MessageManager.error('WebSocket连接失败，请刷新页面重试')
           }
         }
       } catch (error) {

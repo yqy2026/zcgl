@@ -10,7 +10,6 @@ import {
   Space,
   Tooltip,
   Modal,
-  message,
   Card,
   Row,
   Col,
@@ -20,6 +19,7 @@ import {
   Select,
   Switch
 } from 'antd';
+import { MessageManager } from '@/utils/messageManager';
 import {
   PlusOutlined,
   EditOutlined,
@@ -80,7 +80,7 @@ const OwnershipList: React.FC<OwnershipListProps> = ({
       setOwnerships(response.items);
       setTotal(response.total);
     } catch {
-      message.error('加载权属方列表失败');
+      MessageManager.error('加载权属方列表失败');
     } finally {
       setLoading(false);
     }
@@ -156,11 +156,11 @@ const OwnershipList: React.FC<OwnershipListProps> = ({
       onOk: async () => {
         try {
           await ownershipService.deleteOwnership(record.id);
-          message.success('删除成功');
+          MessageManager.success('删除成功');
           loadOwnerships();
           loadStatistics();
         } catch (error: unknown) {
-          message.error(error instanceof Error ? error.message : '删除失败');
+          MessageManager.error(error instanceof Error ? error.message : '删除失败');
         }
       }
     });
@@ -170,11 +170,11 @@ const OwnershipList: React.FC<OwnershipListProps> = ({
   const handleToggleStatus = async (record: Ownership) => {
     try {
       await ownershipService.toggleOwnershipStatus(record.id);
-      message.success(`${record.is_active ? '禁用' : '启用'}成功`);
+      MessageManager.success(`${record.is_active ? '禁用' : '启用'}成功`);
       loadOwnerships();
       loadStatistics();
     } catch {
-      message.error('操作失败');
+      MessageManager.error('操作失败');
     }
   };
 

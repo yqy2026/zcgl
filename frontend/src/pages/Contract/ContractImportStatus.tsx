@@ -18,10 +18,10 @@ import {
   Timeline,
   Statistic,
   Modal,
-  message,
   Descriptions,
   Divider
 } from 'antd';
+import { MessageManager } from '@/utils/messageManager';
 import {
   CheckCircleOutlined,
   LoadingOutlined,
@@ -210,7 +210,7 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
 
   // 下载原始文件
   const handleDownload = () => {
-    message.info('下载功能待实现');
+    MessageManager.info('下载功能待实现');
   };
 
   // 获取状态颜色

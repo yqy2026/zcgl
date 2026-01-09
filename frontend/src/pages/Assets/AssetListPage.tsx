@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { Typography, Button, Space, Row, Col, Spin, Alert, message } from "antd";
+import { Typography, Button, Space, Row, Col, Spin, Alert } from "antd";
 import { PlusOutlined, ExportOutlined, ImportOutlined } from "@ant-design/icons";
+import { MessageManager } from "@/utils/MessageManager";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import type { PaginationConfig, FilterConfig, SorterConfig } from "@/types/common";
@@ -77,12 +78,12 @@ const AssetListPage: React.FC = () => {
   const handleDelete = async (id: string) => {
     try {
       await assetService.deleteAsset(id);
-      message.success("删除成功");
+      MessageManager.success("删除成功");
       // 重新加载数据
       window.location.reload();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "删除失败";
-      message.error(errorMessage);
+      MessageManager.error(errorMessage);
     }
   };
 
@@ -104,7 +105,7 @@ const AssetListPage: React.FC = () => {
   // 处理导出所有资产
   const handleExportAll = async () => {
     try {
-      message.success("正在导出资产数据，请稍候...");
+      MessageManager.success("正在导出资产数据，请稍候...");
       const blob = await assetService.exportAssets({
         format: "excel",
         filters: searchParams,
@@ -120,23 +121,23 @@ const AssetListPage: React.FC = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      message.success("资产数据导出成功");
+      MessageManager.success("资产数据导出成功");
     } catch (error) {
       pageLogger.error("导出失败:", error as Error);
       const errorMessage = error instanceof Error ? error.message : "导出失败，请稍后重试";
-      message.error(errorMessage);
+      MessageManager.error(errorMessage);
     }
   };
 
   // 处理导出选中资产
   const handleExportSelected = async () => {
     if (selectedRowKeys.length === 0) {
-      message.warning("请先选择要导出的资产");
+      MessageManager.warning("请先选择要导出的资产");
       return;
     }
 
     try {
-      message.success("正在导出选中的资产数据，请稍候...");
+      MessageManager.success("正在导出选中的资产数据，请稍候...");
       const blob = await assetService.exportSelectedAssets(
         selectedRowKeys.map((key) => String(key)),
         {
@@ -154,11 +155,11 @@ const AssetListPage: React.FC = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      message.success("选中资产数据导出成功");
+      MessageManager.success("选中资产数据导出成功");
     } catch (error) {
       pageLogger.error("导出失败:", error as Error);
       const errorMessage = error instanceof Error ? error.message : "导出失败，请稍后重试";
-      message.error(errorMessage);
+      MessageManager.error(errorMessage);
     }
   };
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Card, Button, Table, Tag, Space, Typography, Row, Col, message, Modal, Tooltip } from 'antd'
+import { Card, Button, Table, Tag, Space, Typography, Row, Col, Modal, Tooltip } from 'antd'
 import {
   DownloadOutlined,
   EyeOutlined,
@@ -8,6 +8,7 @@ import {
   CheckCircleOutlined,
   ClockCircleOutlined
 } from '@ant-design/icons'
+import { MessageManager } from '@/utils/messageManager'
 import { assetService } from '@/services/assetService'
 import { rentContractExcelService } from '@/services/rentContractExcelService'
 import type { ColumnsType } from 'antd/es/table'
@@ -66,14 +67,14 @@ const TemplateManagementPage: React.FC = () => {
     try {
       if (template.type === 'asset') {
         await assetService.downloadImportTemplate()
-        message.success('资产导入模板下载成功')
+        MessageManager.success('资产导入模板下载成功')
       } else if (template.type === 'rent-contract') {
         await rentContractExcelService.downloadTemplateFile()
-        message.success('租赁合同导入模板下载成功')
+        MessageManager.success('租赁合同导入模板下载成功')
       }
     } catch (error: unknown) {
       pageLogger.error('下载模板失败:', error as Error)
-      message.error(`下载模板失败: ${(error as Error).message || '网络错误'}`)
+      MessageManager.error(`下载模板失败: ${(error as Error).message || '网络错误'}`)
     } finally {
       setLoading(false)
     }

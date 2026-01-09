@@ -1,5 +1,6 @@
 import React from 'react';
-import { Typography, Button, Empty, message } from 'antd';
+import { Typography, Button, Empty } from 'antd';
+import { MessageManager } from '@/utils/messageManager';
 import { useAnalyticsFiltersContext } from './FiltersContext';
 
 const { Text } = Typography;
@@ -89,7 +90,7 @@ const FilterHistorySection: React.FC = () => {
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             removeSearchHistory(history.id);
-                                            message.success('历史记录已删除');
+                                            MessageManager.success('历史记录已删除');
                                         }}
                                     >
                                         删除

@@ -14,8 +14,8 @@ import {
   Statistic,
   Descriptions,
   Drawer,
-  message
 } from 'antd'
+import { MessageManager } from '@/utils/messageManager'
 import {
   ReloadOutlined,
   SearchOutlined,
@@ -161,7 +161,7 @@ const OperationLogPage: React.FC = () => {
       ]
       setLogs(mockLogs)
     } catch {
-      message.error('加载操作日志失败')
+      MessageManager.error('加载操作日志失败')
     } finally {
       setLoading(false)
     }
@@ -182,7 +182,7 @@ const OperationLogPage: React.FC = () => {
       }
       setStatistics(mockStats)
     } catch {
-      message.error('加载统计信息失败')
+      MessageManager.error('加载统计信息失败')
     }
   }
 

@@ -3,8 +3,8 @@
  */
 
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
-import { message } from "antd";
 import { createLogger } from "./logger";
+import { MessageManager } from "./MessageManager";
 
 const logger = createLogger('Request');
 
@@ -63,41 +63,41 @@ const createApiInstance = (): AxiosInstance => {
 
         switch (status) {
           case 400:
-            message.error(`请求参数错误 [${errorId}]`);
+            MessageManager.error(`请求参数错误 [${errorId}]`);
             break;
           case 401:
-            message.error(`未授权，请重新登录 [${errorId}]`);
+            MessageManager.error(`未授权，请重新登录 [${errorId}]`);
             // 可以在这里处理登录跳转
             break;
           case 403:
-            message.error(`权限不足 [${errorId}]`);
+            MessageManager.error(`权限不足 [${errorId}]`);
             break;
           case 404:
-            message.error(`资源不存在 [${errorId}]`);
+            MessageManager.error(`资源不存在 [${errorId}]`);
             break;
           case 422:
             // 处理验证错误
             if (data.detail && Array.isArray(data.detail)) {
               const errorMsg = data.detail.map((err: { msg: string }) => err.msg).join(", ");
-              message.error(`数据验证失败: ${errorMsg} [${errorId}]`);
+              MessageManager.error(`数据验证失败: ${errorMsg} [${errorId}]`);
             } else {
-              message.error(`数据验证失败 [${errorId}]`);
+              MessageManager.error(`数据验证失败 [${errorId}]`);
             }
             break;
           case 500:
-            message.error(`服务器内部错误 [${errorId}]`);
+            MessageManager.error(`服务器内部错误 [${errorId}]`);
             // 在开发环境，记录更详细的信息
             if (import.meta.env.DEV) {
               console.error(`[${errorId}] 服务器错误详情:`, data);
             }
             break;
           default:
-            message.error(`请求失败 [${errorId}]`);
+            MessageManager.error(`请求失败 [${errorId}]`);
         }
       } else if (error.request) {
-        message.error(`网络连接失败，请检查网络 [${errorId}]`);
+        MessageManager.error(`网络连接失败，请检查网络 [${errorId}]`);
       } else {
-        message.error(`请求配置错误 [${errorId}]`);
+        MessageManager.error(`请求配置错误 [${errorId}]`);
       }
 
       // 添加错误ID到error对象，便于后续追踪
@@ -194,7 +194,7 @@ export const downloadFile = async (url: string, filename?: string): Promise<void
     document.body.removeChild(link);
     window.URL.revokeObjectURL(downloadUrl);
   } catch (error) {
-    message.error("文件下载失败");
+    MessageManager.error("文件下载失败");
     throw error;
   }
 };

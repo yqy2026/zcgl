@@ -23,7 +23,6 @@ import {
   Space,
   Typography,
   Alert,
-  message,
   notification,
   Spin,
   Row,
@@ -34,6 +33,7 @@ import {
   Switch,
   Modal
 } from 'antd';
+import { MessageManager } from '@/utils/messageManager';
 import type { UploadFile } from 'antd/es/upload/interface';
 import {
   UploadOutlined,
@@ -242,7 +242,7 @@ const PDFImportPage: React.FC = () => {
   // 文件上传失败处理
   const handleUploadError = (error: unknown) => {
     const errorMsg = typeof error === 'string' ? error : (error instanceof Error ? error.message : '上传失败');
-    message.error(errorMsg);
+    MessageManager.error(errorMsg);
     setCurrentSession(null);
   };
 
@@ -269,7 +269,7 @@ const PDFImportPage: React.FC = () => {
         error
       });
     }
-    message.error(error);
+    MessageManager.error(error);
   };
 
   // 确认导入处理
@@ -301,7 +301,7 @@ const PDFImportPage: React.FC = () => {
             placement: 'topRight'
           });
         } else {
-          message.success('合同导入成功！');
+          MessageManager.success('合同导入成功！');
         }
       }
 
@@ -316,7 +316,7 @@ const PDFImportPage: React.FC = () => {
           placement: 'topRight'
         });
       } else {
-        message.error(errorMsg);
+        MessageManager.error(errorMsg);
       }
       throw error;
     }
@@ -328,11 +328,11 @@ const PDFImportPage: React.FC = () => {
       try {
         const response = await pdfImportService.cancelSession(currentSession.sessionId);
         if (response.success) {
-          message.info('已取消导入');
+          MessageManager.info('已取消导入');
           setCurrentSession(null);
         }
       } catch (error: unknown) {
-        message.error((error as ApiError).message || '取消失败');
+        MessageManager.error((error as ApiError).message || '取消失败');
       }
     }
   };
@@ -351,9 +351,9 @@ const PDFImportPage: React.FC = () => {
         loadSystemInfo(),
         loadSessionHistory()
       ]);
-      message.success('数据已刷新');
+      MessageManager.success('数据已刷新');
     } catch {
-      message.error('刷新失败');
+      MessageManager.error('刷新失败');
     } finally {
       setLoading(false);
     }
@@ -365,12 +365,12 @@ const PDFImportPage: React.FC = () => {
       setLoading(true);
       const response = await pdfImportService.testConversion();
       if (response.system_ready) {
-        message.success('系统功能正常');
+        MessageManager.success('系统功能正常');
       } else {
-        message.warning('系统可能存在问题');
+        MessageManager.warning('系统可能存在问题');
       }
     } catch {
-      message.error('测试失败');
+      MessageManager.error('测试失败');
     } finally {
       setLoading(false);
     }

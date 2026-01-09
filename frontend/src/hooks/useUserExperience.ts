@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { message } from 'antd'
+import { MessageManager } from '@/utils/messageManager'
 import SuccessNotification from '@/components/Feedback/SuccessNotification'
 import { createLogger } from '@/utils/logger'
 
@@ -95,7 +95,7 @@ export const useUserExperience = (options: UseUserExperienceOptions = {}) => {
     autoSaveTimerRef.current = setInterval(async () => {
       try {
         await saveFunction()
-        message.success('数据已自动保存', 1)
+        MessageManager.success('数据已自动保存')
       } catch (error) {
         uxLogger.error('Auto save failed:', error as Error)
       }

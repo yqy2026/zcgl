@@ -20,8 +20,8 @@ import {
   Typography,
   Divider,
   List,
-  message,
 } from 'antd';
+import { MessageManager } from '@/utils/messageManager';
 import {
   DownloadOutlined,
   ExportOutlined,
@@ -72,23 +72,23 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
         onSuccess: (result) => {
           setImportResult(result);
           if (result.success) {
-            message.success(rentContractExcelService.getImportSuccessSummary(result));
+            MessageManager.success(rentContractExcelService.getImportSuccessSummary(result));
             if (onImportSuccess) {
               onImportSuccess();
             }
           } else {
-            message.error(result.message);
+            MessageManager.error(result.message);
           }
         },
         onError: (error) => {
-          message.error(error.message);
+          MessageManager.error(error.message);
         },
       });
 
       return result;
     } catch (error) {
       componentLogger.error('导入失败:', error as Error);
-      message.error('导入失败，请重试');
+      MessageManager.error('导入失败，请重试');
       return null;
     } finally {
       setImporting(false);
@@ -109,12 +109,12 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
         include_ledger: values.include_ledger,
       });
 
-      message.success('导出成功');
+      MessageManager.success('导出成功');
       setExportModalVisible(false);
       form.resetFields();
     } catch (error) {
       componentLogger.error('导出失败:', error as Error);
-      message.error('导出失败，请重试');
+      MessageManager.error('导出失败，请重试');
     } finally {
       setExporting(false);
     }
@@ -124,9 +124,9 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
   const handleDownloadTemplate = async () => {
     try {
       await rentContractExcelService.downloadTemplateFile();
-      message.success('模板下载成功');
+      MessageManager.success('模板下载成功');
     } catch {
-      message.error('模板下载失败，请重试');
+      MessageManager.error('模板下载失败，请重试');
     }
   };
 
@@ -136,7 +136,7 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
     beforeUpload: (file: File) => {
       const validation = rentContractExcelService.validateExcelFile(file);
       if (!validation.isValid) {
-        message.error(validation.error);
+        MessageManager.error(validation.error);
         return Upload.LIST_IGNORE;
       }
 

@@ -12,7 +12,6 @@ import {
   Input,
   Select,
   DatePicker,
-  message,
   Modal,
   Tooltip,
   Row,
@@ -22,6 +21,7 @@ import {
   Form,
   Alert
 } from 'antd';
+import { MessageManager } from '@/utils/messageManager';
 import {
   SearchOutlined,
   EditOutlined,
@@ -99,7 +99,7 @@ const RentLedgerPage: React.FC = () => {
       // 安全检查：确保response和response.items存在
       if (!response) {
         pageLogger.error('API响应为空');
-        message.error('加载台账列表失败：响应为空');
+        MessageManager.error('加载台账列表失败：响应为空');
         setState(prev => ({ ...prev, loading: false }));
         return;
       }
@@ -120,7 +120,7 @@ const RentLedgerPage: React.FC = () => {
     } catch (error) {
       pageLogger.error('加载台账列表失败:', error as Error);
       const errorMessage = error instanceof Error ? error.message : '未知错误';
-      message.error(`加载台账列表失败: ${errorMessage}`);
+      MessageManager.error(`加载台账列表失败: ${errorMessage}`);
       setState(prev => ({ ...prev, loading: false, ledgers: [] }));
     }
   }, [state.pagination.current, state.pagination.pageSize, state.filters]);
@@ -152,7 +152,7 @@ const RentLedgerPage: React.FC = () => {
     } catch (error) {
       pageLogger.error('加载参考数据失败:', error as Error);
       const errorMessage = error instanceof Error ? error.message : '未知错误';
-      message.error(`加载参考数据失败: ${errorMessage}`);
+      MessageManager.error(`加载参考数据失败: ${errorMessage}`);
     }
   }, []);
 
@@ -202,18 +202,18 @@ const RentLedgerPage: React.FC = () => {
   const handleUpdateLedger = async (id: string, data: RentLedgerUpdate) => {
     try {
       await rentContractService.updateRentLedger(id, data);
-      message.success('更新成功');
+      MessageManager.success('更新成功');
       void loadLedgers();
       void loadStatistics();
     } catch {
-      message.error('更新失败');
+      MessageManager.error('更新失败');
     }
   };
 
   // 批量更新支付状态
   const handleBatchUpdate = async (values: BatchUpdateValues) => {
     if (state.selectedLedgers.length === 0) {
-      message.warning('请先选择要更新的台账记录');
+      MessageManager.warning('请先选择要更新的台账记录');
       return;
     }
 
@@ -225,12 +225,12 @@ const RentLedgerPage: React.FC = () => {
         payment_method: values.payment_method || '',
         notes: values.notes || '',
       });
-      message.success('批量更新成功');
+      MessageManager.success('批量更新成功');
       setState(prev => ({ ...prev, showBatchModal: false, selectedLedgers: [] }));
       void loadLedgers();
       void loadStatistics();
     } catch {
-      message.error('批量更新失败');
+      MessageManager.error('批量更新失败');
     }
   };
 
@@ -246,9 +246,9 @@ const RentLedgerPage: React.FC = () => {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      message.success('导出成功');
+      MessageManager.success('导出成功');
     } catch {
-      message.error('导出失败');
+      MessageManager.error('导出失败');
     }
   };
 

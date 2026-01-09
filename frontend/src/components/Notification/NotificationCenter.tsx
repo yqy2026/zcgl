@@ -230,7 +230,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClick }) => {
     <Dropdown
       open={open}
       onOpenChange={setOpen}
-      dropdownRender={() => content}
+      popupRender={() => content}
       trigger={['click']}
       placement="bottomRight"
     >

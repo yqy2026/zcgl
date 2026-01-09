@@ -9,10 +9,10 @@ import {
   Button,
   Space,
   Card,
-  message,
   Select,
   Tag
 } from 'antd';
+import { MessageManager } from '@/utils/messageManager';
 
 import { ownershipService } from '@/services/ownershipService';
 import { projectService } from '@/services/projectService';
@@ -47,7 +47,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
         setOwnerships(response);
       } catch (error) {
         componentLogger.error('获取权属方列表失败:', error as Error);
-        message.error('获取权属方列表失败');
+        MessageManager.error('获取权属方列表失败');
       }
     };
     loadOwnerships();
@@ -111,16 +111,16 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
 
       if (project) {
         await projectService.updateProject(project.id, submitData as ProjectUpdate);
-        message.success('项目更新成功');
+        MessageManager.success('项目更新成功');
       } else {
         await projectService.createProject(submitData as ProjectCreate);
-        message.success('项目创建成功');
+        MessageManager.success('项目创建成功');
       }
       onSuccess();
     } catch (error: unknown) {
       componentLogger.error('保存项目失败:', error as Error);
       const errorMsg = (error as any)?.response?.data?.detail || '保存项目失败';
-      message.error(errorMsg);
+      MessageManager.error(errorMsg);
     } finally {
       setLoading(false);
     }

@@ -14,9 +14,9 @@ import {
   List,
   Typography,
   Popconfirm,
-  message,
   Tag,
 } from 'antd'
+import { MessageManager } from '@/utils/messageManager'
 import {
   SearchOutlined,
   ReloadOutlined,
@@ -171,12 +171,12 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
     )
 
     if (!hasConditions) {
-      message.warning('请先设置搜索条件')
+      MessageManager.warning('请先设置搜索条件')
       return
     }
 
     if (!saveName.trim()) {
-      message.warning('请输入保存名称')
+      MessageManager.warning('请输入保存名称')
       return
     }
 
@@ -189,7 +189,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
 
     setSaveName('')
     setSaveModalVisible(false)
-    message.success('搜索条件已保存')
+    MessageManager.success('搜索条件已保存')
   }
 
   // 处理应用历史搜索条件
@@ -205,7 +205,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
   // 处理删除历史记录
   const handleDeleteHistory = (historyId: string) => {
     removeSearchHistory(historyId)
-    message.success('历史记录已删除')
+    MessageManager.success('历史记录已删除')
   }
 
   // 处理编辑历史记录名称
@@ -220,7 +220,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
       updateSearchHistoryName(editingHistoryId, editingName.trim())
       setEditingHistoryId(null)
       setEditingName('')
-      message.success('名称已更新')
+      MessageManager.success('名称已更新')
     }
   }
 

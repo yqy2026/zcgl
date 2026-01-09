@@ -17,11 +17,35 @@ html {
 body {
   margin: 0;
   padding: 0;
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell',
-    'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #f8fafc; /* Match layout background */
+}
+
+/* Custom Scrollbar - Modern & Thin */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1; /* Slate 300 */
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8; /* Slate 400 */
+}
+
+/* Selection Color */
+::selection {
+  background-color: rgba(22, 119, 255, 0.2);
+  color: #1677ff;
 }
 
 /* Code and Monospace Fonts */
@@ -39,7 +63,7 @@ pre {
 
 /* Focus Styles for Accessibility */
 *:focus-visible {
-  outline: 2px solid #1890ff;
+  outline: 2px solid #1677ff;
   outline-offset: 2px;
 }
 

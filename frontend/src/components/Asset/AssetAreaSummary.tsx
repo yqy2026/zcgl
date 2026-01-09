@@ -27,7 +27,7 @@ const AssetAreaSummary: React.FC<AssetAreaSummaryProps> = ({ analyticsData, load
       : null;
 
   return (
-    <Card title="面积统计汇总" size="small" loading={loading} style={{ marginBottom: 16 }}>
+    <Card title="面积统计汇总" size="small" loading={loading} className="asset-area-summary-card">
       {summary ? (
         <Row gutter={[16, 16]}>
           <Col xs={24} sm={12} md={8} lg={6}>

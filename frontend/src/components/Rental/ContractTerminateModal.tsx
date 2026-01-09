@@ -16,12 +16,12 @@ import {
   Descriptions,
   DatePicker,
   AutoComplete,
-  message,
   Space,
 } from 'antd';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { MessageManager } from '@/utils/messageManager';
 
 import { RentContract } from '../../types/rentContract';
 import { rentContractService } from '../../services/rentContractService';
@@ -106,7 +106,7 @@ const ContractTerminateModal: React.FC<ContractTerminateModalProps> = ({
       return values;
     } catch (error) {
       if (error instanceof Error) {
-        message.error(error.message);
+        MessageManager.error(error.message);
       }
       throw error;
     }
@@ -123,12 +123,12 @@ const ContractTerminateModal: React.FC<ContractTerminateModalProps> = ({
         values.termination_reason
       ),
     onSuccess: () => {
-      message.success('合同已成功终止');
+      MessageManager.success('合同已成功终止');
       logger.info('合同终止成功', { contractId: contract.id });
       onSuccess();
     },
     onError: (error: Error) => {
-      message.error(`终止失败: ${error.message}`);
+      MessageManager.error(`终止失败: ${error.message}`);
       logger.error('合同终止失败', { contractId: contract.id, error });
     },
   });

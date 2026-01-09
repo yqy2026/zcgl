@@ -15,8 +15,8 @@ import {
   Tag,
   Row,
   Col,
-  message
 } from 'antd';
+import { MessageManager } from '@/utils/messageManager';
 import {
   InboxOutlined,
   UploadOutlined,
@@ -71,13 +71,13 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
   const beforeUpload = useCallback((file: RcFile) => {
     // 验证文件类型
     if (!pdfImportService.validateFileType(file)) {
-      message.error('只支持PDF文件格式！');
+      MessageManager.error('只支持PDF文件格式！');
       return false;
     }
 
     // 验证文件大小
     if (!pdfImportService.validateFileSize(file, maxFileSize)) {
-      message.error(`文件大小不能超过 ${maxFileSize}MB！当前文件大小：${pdfImportService.formatFileSize(file.size)}`);
+      MessageManager.error(`文件大小不能超过 ${maxFileSize}MB！当前文件大小：${pdfImportService.formatFileSize(file.size)}`);
       return false;
     }
 
@@ -93,7 +93,7 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
     }
     setUploadStatus('idle');
     setUploadProgress(0);
-    message.info('已取消上传');
+    MessageManager.info('已取消上传');
   }, [abortController]);
 
   // 自定义上传请求
@@ -146,7 +146,7 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
         // 重要：立即调用父组件的成功回调，让父组件接管后续处理
         if (response.session_id) {
           onUploadSuccess(response.session_id, uploadFile);
-          message.success('文件上传成功！正在处理中...');
+          MessageManager.success('文件上传成功！正在处理中...');
         } else {
           throw new Error('未收到有效的会话ID');
         }
@@ -169,7 +169,7 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
         onError(err);
       }
       onUploadError(err.message || '上传失败');
-      message.error(err.message || '文件上传失败');
+      MessageManager.error(err.message || '文件上传失败');
     }
   }, [onUploadSuccess, onUploadError]);
 
@@ -385,7 +385,7 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
                 icon={<EyeOutlined />}
                 onClick={() => {
                   // 这里可以跳转到进度查看页面
-                  message.info('请等待处理完成后查看结果');
+                  MessageManager.info('请等待处理完成后查看结果');
                 }}
               >
                 查看处理进度

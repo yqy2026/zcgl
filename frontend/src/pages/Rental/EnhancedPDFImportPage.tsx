@@ -18,10 +18,10 @@ import {
   Form,
   Switch,
   InputNumber,
-  message,
   Badge,
   Statistic,
 } from 'antd';
+import { MessageManager } from '@/utils/messageManager';
 import {
   InboxOutlined,
   SettingOutlined,
@@ -98,7 +98,7 @@ const EnhancedPDFImportPage: React.FC = () => {
       }
     } catch (error) {
       pageLogger.error('检查系统能力失败:', error as Error);
-      message.error('无法检查系统能力');
+      MessageManager.error('无法检查系统能力');
     }
   }, []);
 
@@ -106,13 +106,13 @@ const EnhancedPDFImportPage: React.FC = () => {
   const beforeUpload = (file: File, _fileList: File[]) => {
     const isValidType = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
     if (!isValidType) {
-      message.error('只支持PDF文件上传！');
+      MessageManager.error('只支持PDF文件上传！');
       return false;
     }
 
     const isValidSize = file.size / 1024 / 1024 <= 50; // 50MB限制
     if (!isValidSize) {
-      message.error('文件大小不能超过50MB！');
+      MessageManager.error('文件大小不能超过50MB！');
       return false;
     }
 
@@ -156,18 +156,18 @@ const EnhancedPDFImportPage: React.FC = () => {
 
         if (result.success && result.session_id) {
           setSessionId(result.session_id);
-          message.success('文件上传成功，开始智能处理...');
+          MessageManager.success('文件上传成功，开始智能处理...');
 
           // 开始轮询进度
           startProgressPolling(result.session_id);
         } else {
-          message.error(result.error || '文件上传失败');
+          MessageManager.error(result.error || '文件上传失败');
           setProcessing(false);
           onError?.(new Error(result.error || '上传失败'));
         }
       } catch (error) {
         pageLogger.error('上传失败:', error as Error);
-        message.error('上传过程中发生错误');
+        MessageManager.error('上传过程中发生错误');
         setProcessing(false);
         onError?.(error instanceof Error ? error : new Error(String(error)));
       }
@@ -187,7 +187,7 @@ const EnhancedPDFImportPage: React.FC = () => {
           setShowResults(true);
         } else if (status.status === 'failed') {
           setProcessing(false);
-          message.error('处理失败: ' + (status.error_message || '未知错误'));
+          MessageManager.error('处理失败: ' + (status.error_message || '未知错误'));
         }
       }
     );
@@ -207,16 +207,16 @@ const EnhancedPDFImportPage: React.FC = () => {
       try {
         const result = await pdfImportService.cancelEnhancedSession(sessionId);
         if (result.success) {
-          message.success('处理已取消');
+          MessageManager.success('处理已取消');
           setProcessing(false);
           setCurrentStatus(null);
           setSessionId(null);
         } else {
-          message.error(result.error || '取消失败');
+          MessageManager.error(result.error || '取消失败');
         }
       } catch (error) {
         pageLogger.error('取消失败:', error as Error);
-        message.error('取消过程中发生错误');
+        MessageManager.error('取消过程中发生错误');
       }
     }
   }, [sessionId, currentStatus]);
@@ -501,7 +501,7 @@ const EnhancedPDFImportPage: React.FC = () => {
           <EnhancedProcessingStatus
             sessionId={sessionId}
             currentStatus={currentStatus || undefined}
-            onError={(error) => message.error('处理状态错误: ' + error)}
+            onError={(error) => MessageManager.error('处理状态错误: ' + error)}
             showDetails={true}
           />
         </Card>
@@ -556,7 +556,7 @@ const EnhancedPDFImportPage: React.FC = () => {
               sessionData={currentStatus as unknown as Record<string, unknown>}
               onConfirm={(_confirmedData: Record<string, unknown>) => {
                 // Confirm import data
-                message.success('功能开发中，数据提交功能将在下个版本实现');
+                MessageManager.success('功能开发中，数据提交功能将在下个版本实现');
               }}
               onCancel={handleCancel}
             />

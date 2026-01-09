@@ -15,9 +15,9 @@ import {
   Row,
   Col,
   Statistic,
-  message,
   Spin,
 } from 'antd';
+import { MessageManager } from '@/utils/messageManager';
 import {
   HomeOutlined,
   FileTextOutlined,
@@ -66,7 +66,7 @@ const ContractCreatePage: React.FC = () => {
     onSuccess: (contract) => {
       setContractCreated(true);
       _setCreatedContractId(contract.id);
-      message.success('合同创建成功！');
+      MessageManager.success('合同创建成功！');
 
       // 3秒后跳转到合同列表页面
       setTimeout(() => {
@@ -75,7 +75,7 @@ const ContractCreatePage: React.FC = () => {
     },
     onError: (error) => {
       pageLogger.error('创建合同失败:', error as Error);
-      message.error('创建合同失败，请检查网络连接');
+      MessageManager.error('创建合同失败，请检查网络连接');
     },
   });
 
@@ -83,7 +83,7 @@ const ContractCreatePage: React.FC = () => {
   const updateMutation = useMutation({
     mutationFn: (data: RentContractUpdate) => rentContractService.updateContract(id!, data),
     onSuccess: (contract) => {
-      message.success('合同更新成功！');
+      MessageManager.success('合同更新成功！');
 
       // 使相关查询缓存失效
       queryClient.invalidateQueries({ queryKey: ['rent-contract'] });
@@ -96,7 +96,7 @@ const ContractCreatePage: React.FC = () => {
     },
     onError: (error) => {
       pageLogger.error('更新合同失败:', error as Error);
-      message.error('更新合同失败，请检查网络连接');
+      MessageManager.error('更新合同失败，请检查网络连接');
     },
   });
 

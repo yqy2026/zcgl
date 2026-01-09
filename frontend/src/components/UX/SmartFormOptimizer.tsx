@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react'
-import { Form, Input, InputNumber, Select, Button, Card, message } from 'antd'
+import { Form, Input, InputNumber, Select, Button, Card } from 'antd'
 import { CheckCircleOutlined, CloseOutlined } from '@ant-design/icons'
+import { MessageManager } from '@/utils/messageManager'
 
 // 表单数据类型
 export interface FormData {
@@ -104,16 +105,16 @@ const SmartFormOptimizer: React.FC<SmartFormOptimizerProps> = ({
 
       if (Object.keys(newErrors).length > 0) {
         setErrors(newErrors)
-        message.error('请修正表单错误')
+        MessageManager.error('请修正表单错误')
         return
       }
 
       await onSubmit(values)
       form.resetFields()
       setErrors({})
-      message.success('表单提交成功')
+      MessageManager.success('表单提交成功')
     } catch {
-      message.error('表单提交失败')
+      MessageManager.error('表单提交失败')
     }
   }, [fields, onSubmit, form])
 

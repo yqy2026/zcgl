@@ -8,11 +8,11 @@ import {
   Select,
   Button,
   Modal,
-  message,
   Space,
   Tooltip,
   Tag
 } from 'antd';
+import { MessageManager } from '@/utils/messageManager';
 import {
   PlusOutlined,
   ReloadOutlined,
@@ -142,7 +142,7 @@ const UnifiedProjectSelect: React.FC<UnifiedProjectSelectProps> = ({
 
   // 创建新项目
   const handleCreateProject = () => {
-    message.info('创建新项目功能开发中');
+    MessageManager.info('创建新项目功能开发中');
   };
 
   // 多选模式下已选项目的标签渲染

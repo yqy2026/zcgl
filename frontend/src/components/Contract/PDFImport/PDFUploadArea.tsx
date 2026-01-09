@@ -3,8 +3,9 @@
  */
 
 import React, { useCallback } from 'react';
-import { Upload, message } from 'antd';
+import { Upload } from 'antd';
 import { CloudUploadOutlined } from '@ant-design/icons';
+import { MessageManager } from '@/utils/messageManager';
 import type { UploadProps } from 'antd';
 import { usePDFImportContext, usePDFImportUpload } from './PDFImportContext';
 
@@ -18,13 +19,13 @@ const PDFUploadArea: React.FC = () => {
     const beforeUpload = useCallback((file: File) => {
         const isPDF = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
         if (!isPDF) {
-            message.error('只能上传PDF文件！');
+            MessageManager.error('只能上传PDF文件！');
             return false;
         }
 
         const isLtMaxSize = file.size / 1024 / 1024 < maxSize;
         if (!isLtMaxSize) {
-            message.error(`文件大小不能超过 ${maxSize}MB！`);
+            MessageManager.error(`文件大小不能超过 ${maxSize}MB！`);
             return false;
         }
 

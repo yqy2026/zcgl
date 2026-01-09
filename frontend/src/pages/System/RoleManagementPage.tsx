@@ -8,7 +8,6 @@ import {
   Form,
   Input,
   Select,
-  message,
   Popconfirm,
   Tag,
   Tooltip,
@@ -22,6 +21,7 @@ import {
   Divider,
   Typography
 } from 'antd'
+import { MessageManager } from '@/utils/messageManager'
 import { systemService as _systemService, roleService as _roleService, type Role } from '../../services/systemService'
 import SystemBreadcrumb from '../../components/System/SystemBreadcrumb'
 import {
@@ -142,7 +142,7 @@ const RoleManagementPage: React.FC = () => {
       ]
       setRoles(mockRoles)
     } catch {
-      message.error('加载角色列表失败')
+      MessageManager.error('加载角色列表失败')
     } finally {
       setLoading(false)
     }
@@ -210,7 +210,7 @@ const RoleManagementPage: React.FC = () => {
       const treeData = buildPermissionTree(mockPermissions)
       setPermissionTreeData(treeData)
     } catch {
-      message.error('加载权限列表失败')
+      MessageManager.error('加载权限列表失败')
     }
   }, [buildPermissionTree])
 
@@ -227,7 +227,7 @@ const RoleManagementPage: React.FC = () => {
       }
       setStatistics(mockStats)
     } catch {
-      message.error('加载统计信息失败')
+      MessageManager.error('加载统计信息失败')
     }
   }, [roles])
 
@@ -265,20 +265,20 @@ const RoleManagementPage: React.FC = () => {
   const handleDelete = async (_id: string) => {
     try {
       // 模拟删除API调用
-      message.success('删除成功')
+      MessageManager.success('删除成功')
       void loadRoles()
     } catch {
-      message.error('删除失败')
+      MessageManager.error('删除失败')
     }
   }
 
   const handleToggleStatus = async (_role: Role, _newStatus: string) => {
     try {
       // 模拟状态切换API调用
-      message.success('状态已更新')
+      MessageManager.success('状态已更新')
       void loadRoles()
     } catch {
-      message.error('状态更新失败')
+      MessageManager.error('状态更新失败')
     }
   }
 
@@ -297,26 +297,26 @@ const RoleManagementPage: React.FC = () => {
     try {
       if (editingRole) {
         // 模拟更新API调用
-        message.success('更新成功')
+        MessageManager.success('更新成功')
       } else {
         // 模拟创建API调用
-        message.success('创建成功')
+        MessageManager.success('创建成功')
       }
       setModalVisible(false)
       void loadRoles()
     } catch {
-      message.error(editingRole ? '更新失败' : '创建失败')
+      MessageManager.error(editingRole ? '更新失败' : '创建失败')
     }
   }
 
   const handleSavePermissions = async () => {
     try {
       // 模拟保存权限API调用
-      message.success('权限配置已保存')
+      MessageManager.success('权限配置已保存')
       setPermissionModalVisible(false)
       void loadRoles()
     } catch {
-      message.error('保存权限失败')
+      MessageManager.error('保存权限失败')
     }
   }
 

@@ -26,6 +26,10 @@ export const protectedRoutes = [
     element: React.lazy(() => import('../pages/Assets/AssetAnalyticsPage')),
   },
   {
+    path: '/assets/analytics-simple',
+    element: React.lazy(() => import('../pages/Assets/SimpleAnalyticsPage')),
+  },
+  {
     path: '/assets/list',
     element: React.lazy(() => import('../pages/Assets/AssetListPage')),
   },
