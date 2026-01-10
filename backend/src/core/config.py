@@ -234,6 +234,28 @@ class Settings(BaseSettings):
         default=False, json_schema_extra={"env": "WECOM_MENTION_ALL"}
     )
 
+    # V2.0 NVIDIA Cloud OCR配置
+    NVIDIA_API_KEY: str | None = Field(
+        default=None,
+        description="NVIDIA API Key for Cloud OCR",
+        json_schema_extra={"env": "NVIDIA_API_KEY"},
+    )
+    NVIDIA_OCR_BASE_URL: str = Field(
+        default="https://ai.api.nvidia.com/v1/cv/baidu/paddleocr",
+        description="NVIDIA Cloud PaddleOCR API endpoint",
+        json_schema_extra={"env": "NVIDIA_OCR_BASE_URL"},
+    )
+    NVIDIA_OCR_TIMEOUT: int = Field(
+        default=60,
+        description="NVIDIA OCR API timeout in seconds",
+        json_schema_extra={"env": "NVIDIA_OCR_TIMEOUT"},
+    )
+    OCR_PROVIDER: str = Field(
+        default="auto",
+        description="OCR provider: auto, local, nvidia_cloud",
+        json_schema_extra={"env": "OCR_PROVIDER"},
+    )
+
     # 创建全局配置实例
 
 
