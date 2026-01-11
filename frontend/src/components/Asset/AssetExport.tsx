@@ -27,6 +27,7 @@ import {
   LoadingOutlined,
 } from "@ant-design/icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { COLORS } from "@/styles/colorMap";
 
 import type { AssetSearchParams } from "@/types/asset";
 import { assetService } from "@/services/assetService";
@@ -426,7 +427,7 @@ const AssetExport: React.FC<AssetExportProps> = ({
                 </Title>
                 {(exportTask.status === "running" || exportTask.status === "processing") && <LoadingOutlined />}
                 {exportTask.status === "completed" && (
-                  <CheckCircleOutlined style={{ color: "#52c41a" }} />
+                  <CheckCircleOutlined style={{ color: COLORS.success }} />
                 )}
               </Space>
             </div>

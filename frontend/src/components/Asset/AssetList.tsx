@@ -6,6 +6,7 @@ import type { ColumnsType } from "antd/es/table";
 import type { Asset, AssetListResponse } from "@/types/asset";
 import { formatArea, formatPercentage, formatDate, getStatusColor } from "@/utils/format";
 import type { PaginationConfig, FilterConfig, SorterConfig } from "@/types/common";
+import { getOccupancyRateColor, COLORS } from "@/styles/colorMap";
 
 interface AssetListProps {
   data?: AssetListResponse;
@@ -225,8 +226,7 @@ const AssetList: React.FC<AssetListProps> = ({
           return (
             <span
               style={{
-                color:
-                  calculatedRate >= 80 ? "#52c41a" : calculatedRate >= 60 ? "#faad14" : "#ff4d4f",
+                color: getOccupancyRateColor(calculatedRate),
               }}
             >
               {formatPercentage(calculatedRate)}
@@ -379,12 +379,7 @@ const AssetList: React.FC<AssetListProps> = ({
           <Table.Summary.Cell index={15} align="right">
             <strong
               style={{
-                color:
-                  summary.occupancyRate >= 80
-                    ? "#52c41a"
-                    : summary.occupancyRate >= 60
-                      ? "#faad14"
-                      : "#ff4d4f",
+                color: getOccupancyRateColor(summary.occupancyRate),
               }}
             >
               {formatPercentage(summary.occupancyRate)}

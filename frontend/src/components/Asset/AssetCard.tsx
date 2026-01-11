@@ -11,6 +11,7 @@ import {
 
 import type { Asset } from '@/types/asset'
 import { formatPercentage, formatDate, getStatusColor, calculateOccupancyRate } from '@/utils/format'
+import { getOccupancyRateColor, COLORS } from '@/styles/colorMap'
 
 interface AssetCardProps {
   asset: Asset
@@ -34,20 +35,13 @@ const AssetCard: React.FC<AssetCardProps> = ({
     ? asset.occupancy_rate
     : calculateOccupancyRate(asset.rented_area, asset.rentable_area)
 
-  // 获取出租率颜色
-  const getOccupancyColor = (rate: number) => {
-    if (rate >= 80) return '#52c41a'
-    if (rate >= 60) return '#faad14'
-    return '#ff4d4f'
-  }
-
   return (
     <Card
       className={`asset-card ${selected ? 'selected' : ''}`}
       hoverable
       style={{
         marginBottom: 16,
-        border: selected ? '2px solid #1890ff' : '1px solid #d9d9d9',
+        border: selected ? `2px solid ${COLORS.primary}` : `1px solid ${COLORS.border}`,
       }}
       onClick={() => onSelect?.(asset, !selected)}
       actions={[
@@ -114,12 +108,12 @@ const AssetCard: React.FC<AssetCardProps> = ({
         description={
           <div>
             <div style={{ marginBottom: 8 }}>
-              <EnvironmentOutlined style={{ marginRight: 4, color: '#8c8c8c' }} />
-              <span style={{ color: '#8c8c8c' }}>{asset.address}</span>
+              <EnvironmentOutlined style={{ marginRight: 4, color: COLORS.textTertiary }} />
+              <span style={{ color: COLORS.textTertiary }}>{asset.address}</span>
             </div>
             <div style={{ marginBottom: 8 }}>
-              <UserOutlined style={{ marginRight: 4, color: '#8c8c8c' }} />
-              <span style={{ color: '#8c8c8c' }}>权属方：{asset.ownership_entity}</span>
+              <UserOutlined style={{ marginRight: 4, color: COLORS.textTertiary }} />
+              <span style={{ color: COLORS.textTertiary }}>权属方：{asset.ownership_entity}</span>
             </div>
           </div>
         }
@@ -171,14 +165,14 @@ const AssetCard: React.FC<AssetCardProps> = ({
         {asset.rentable_area !== undefined && asset.rentable_area !== null && asset.rentable_area > 0 && (
           <div style={{ marginBottom: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-              <span style={{ fontSize: '12px', color: '#8c8c8c' }}>出租率</span>
-              <span style={{ fontSize: '12px', fontWeight: 'bold', color: getOccupancyColor(occupancyRate) }}>
+              <span style={{ fontSize: '12px', color: COLORS.textTertiary }}>出租率</span>
+              <span style={{ fontSize: '12px', fontWeight: 'bold', color: getOccupancyRateColor(occupancyRate) }}>
                 {formatPercentage(occupancyRate)}
               </span>
             </div>
             <Progress
               percent={occupancyRate}
-              strokeColor={getOccupancyColor(occupancyRate)}
+              strokeColor={getOccupancyRateColor(occupancyRate)}
               size="small"
               showInfo={false}
             />
@@ -204,7 +198,7 @@ const AssetCard: React.FC<AssetCardProps> = ({
         </div>
 
         {/* 时间信息 */}
-        <div style={{ fontSize: '12px', color: '#8c8c8c' }}>
+        <div style={{ fontSize: '12px', color: COLORS.textTertiary }}>
           <div>创建时间：{formatDate(asset.created_at)}</div>
           <div>更新时间：{formatDate(asset.updated_at)}</div>
         </div>

@@ -1,0 +1,135 @@
+/**
+ * Color Mapping Utilities
+ * Maps legacy hardcoded color values to CSS variables
+ */
+
+// Color value to CSS variable mapping
+export const COLOR_MAP = {
+  // Primary colors
+  '#1677ff': 'var(--color-primary)',
+  '#1890ff': 'var(--color-primary)',
+  '#4096ff': 'var(--color-primary-hover)',
+  '#0958d9': 'var(--color-primary-active)',
+  '#e6f4ff': 'var(--color-primary-light)',
+
+  // Secondary colors
+  '#0ea5e9': 'var(--color-secondary)',
+  '#38bdf8': 'var(--color-secondary-hover)',
+  '#0284c7': 'var(--color-secondary-active)',
+
+  // Semantic colors
+  '#52c41a': 'var(--color-success)',
+  '#faad14': 'var(--color-warning)',
+  '#ff4d4f': 'var(--color-error)',
+  '#f5222d': 'var(--color-error)',
+  '#1890ff': 'var(--color-info)',
+
+  // Neutral colors
+  '#262626': 'var(--color-text-primary)',
+  '#595959': 'var(--color-text-secondary)',
+  '#8c8c8c': 'var(--color-text-tertiary)',
+  '#bfbfbf': 'var(--color-text-quaternary)',
+
+  '#ffffff': 'var(--color-bg-primary)',
+  '#fff': 'var(--color-bg-primary)',
+  '#fafafa': 'var(--color-bg-secondary)',
+  '#f5f5f5': 'var(--color-bg-tertiary)',
+  '#f0f0f0': 'var(--color-bg-quaternary)',
+
+  '#d9d9d9': 'var(--color-border)',
+  '#f0f0f0': 'var(--color-border-light)',
+  '#bfbfbf': 'var(--color-border-dark)',
+
+  // Chart colors (can be mapped to semantic or kept as palette)
+  '#722ed1': 'var(--color-primary)', // purple → primary
+  '#13c2c2': 'var(--color-success)', // cyan → success
+  '#fa8c16': 'var(--color-warning)', // orange → warning
+  '#eb2f96': 'var(--color-error)',   // pink → error
+} as const;
+
+// Helper function to get CSS variable from color value
+export function toCssVar(color: string): string {
+  const lowerColor = color.toLowerCase();
+  return COLOR_MAP[lowerColor as keyof typeof COLOR_MAP] || color;
+}
+
+// Helper function to create style object with CSS variables
+export function createColorStyle(
+  colorKey: keyof typeof COLOR_MAP | string
+): { color: string } {
+  return {
+    color: toCssVar(colorKey),
+  };
+}
+
+// Type for color keys
+export type ColorKey = keyof typeof COLOR_MAP;
+
+// Export color constants for use in components
+export const COLORS = {
+  primary: 'var(--color-primary)',
+  primaryHover: 'var(--color-primary-hover)',
+  primaryActive: 'var(--color-primary-active)',
+  primaryLight: 'var(--color-primary-light)',
+
+  secondary: 'var(--color-secondary)',
+  secondaryHover: 'var(--color-secondary-hover)',
+  secondaryActive: 'var(--color-secondary-active)',
+
+  success: 'var(--color-success)',
+  warning: 'var(--color-warning)',
+  error: 'var(--color-error)',
+  info: 'var(--color-info)',
+
+  textPrimary: 'var(--color-text-primary)',
+  textSecondary: 'var(--color-text-secondary)',
+  textTertiary: 'var(--color-text-tertiary)',
+  textQuaternary: 'var(--color-text-quaternary)',
+
+  bgPrimary: 'var(--color-bg-primary)',
+  bgSecondary: 'var(--color-bg-secondary)',
+  bgTertiary: 'var(--color-bg-tertiary)',
+  bgQuaternary: 'var(--color-bg-quaternary)',
+
+  border: 'var(--color-border)',
+  borderLight: 'var(--color-border-light)',
+  borderDark: 'var(--color-border-dark)',
+} as const;
+
+/**
+ * Helper to get occupancy rate color
+ * @param rate - Occupancy rate (0-100)
+ * @returns CSS variable color
+ */
+export function getOccupancyRateColor(rate: number): string {
+  if (rate >= 80) return COLORS.success;
+  if (rate >= 60) return COLORS.warning;
+  return COLORS.error;
+}
+
+/**
+ * Helper to get trend color (positive/negative)
+ * @param value - Trend value
+ * @param trendType - 'up' means up is good, 'down' means down is good
+ * @returns CSS variable color
+ */
+export function getTrendColor(value: number, trendType?: 'up' | 'down'): string {
+  const isPositive = value > 0;
+  if (trendType === 'up') {
+    return isPositive ? COLORS.success : COLORS.error;
+  } else {
+    return isPositive ? COLORS.error : COLORS.success;
+  }
+}
+
+/**
+ * Chart color palette (using semantic colors)
+ */
+export const CHART_COLORS = [
+  COLORS.primary,
+  COLORS.success,
+  COLORS.warning,
+  COLORS.error,
+  COLORS.info,
+  COLORS.secondary,
+] as const;
