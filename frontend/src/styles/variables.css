@@ -73,6 +73,70 @@
   --z-index-modal: 1050;
   --z-index-popover: 1060;
   --z-index-tooltip: 1070;
+
+  /* Responsive Breakpoints */
+  --breakpoint-xs: 576px;
+  --breakpoint-sm: 768px;
+  --breakpoint-md: 992px;
+  --breakpoint-lg: 1200px;
+  --breakpoint-xl: 1400px;
+  --breakpoint-xxl: 1600px;
+
+  /* Typography */
+  --font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-size-xs: 12px;
+  --font-size-sm: 13px;
+  --font-size-base: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 18px;
+  --font-size-xxl: 20px;
+  --font-size-xxxl: 24px;
+  --line-height-tight: 1.25;
+  --line-height-base: 1.5;
+  --line-height-loose: 1.75;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Component: Card */
+  --card-padding-sm: var(--spacing-md);
+  --card-padding-md: var(--spacing-lg);
+  --card-padding-lg: var(--spacing-xl);
+  --card-radius: var(--radius-md);
+  --card-shadow: var(--shadow-sm);
+  --card-shadow-hover: var(--shadow-md);
+
+  /* Component: Button */
+  --button-height-sm: 32px;
+  --button-height-md: 36px;
+  --button-height-lg: 40px;
+  --button-padding-sm: 8px 16px;
+  --button-padding-md: 8px 20px;
+  --button-padding-lg: 12px 24px;
+  --button-radius: 6px;
+
+  /* Component: Form */
+  --form-item-margin-bottom: var(--spacing-md);
+  --form-label-margin-bottom: var(--spacing-xs);
+  --form-input-height: 32px;
+  --form-input-radius: 6px;
+
+  /* Component: Table */
+  --table-cell-padding-sm: 12px;
+  --table-cell-padding-md: 16px;
+  --table-header-bg: #f8fafc;
+  --table-row-hover-bg: #f1f5f9;
+  --table-border-color: var(--color-border-light);
+
+  /* Component: Modal */
+  --modal-width-sm: 520px;
+  --modal-width-md: 720px;
+  --modal-width-lg: 920px;
+  --modal-radius: var(--radius-md);
+  --modal-header-padding: 16px 24px;
+  --modal-body-padding: 24px;
+  --modal-footer-padding: 12px 24px;
 }
 
 /* Dark Theme Variables */

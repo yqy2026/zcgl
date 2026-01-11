@@ -5,6 +5,8 @@ module.exports = {
     'eslint:recommended',
     'plugin:@typescript-eslint/recommended',
     'plugin:react-hooks/recommended',
+    'plugin:jsx-a11y/recommended',
+    'plugin:react/recommended',
   ],
   ignorePatterns: ['dist', '.eslintrc.js', 'node_modules', 'coverage', 'build'],
   parser: '@typescript-eslint/parser',
@@ -16,9 +18,8 @@ module.exports = {
     },
     project: ['./tsconfig.eslint.json'],
     tsconfigRootDir: __dirname,
-
   },
-  plugins: ['@typescript-eslint', 'react-hooks'],
+  plugins: ['@typescript-eslint', 'react-hooks', 'jsx-a11y'],
   settings: {
     react: {
       version: 'detect',
@@ -39,6 +40,16 @@ module.exports = {
     'react-hooks/exhaustive-deps': 'warn',
     'no-console': 'warn',
     'prefer-const': 'error',
+    // UI Design Audit - Accessibility rules (warn mode to avoid breaking builds)
+    'jsx-a11y/anchor-is-valid': 'warn',
+    'jsx-a11y/click-events-have-key-events': 'warn',
+    'jsx-a11y/no-static-element-interactions': 'warn',
+    'jsx-a11y/no-autofocus': 'warn',
+    'jsx-a11y/label-has-associated-control': 'warn',
+    // React best practices for UI consistency
+    'react/jsx-props-no-spreading': 'off', // Allow spreading for flexibility
+    'react/prop-types': 'off', // Using TypeScript
+    'react/react-in-jsx-scope': 'off', // React 17+ doesn't need it
   },
   overrides: [
     {
