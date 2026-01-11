@@ -15,7 +15,6 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from ...core.task_queue import get_task_queue  # 现有任务队列系统
-from ...database import get_session_factory
 from ...models.pdf_import_session import PDFImportSession, ProcessingStep, SessionStatus
 from ...models.rent_contract import (
     ContractType,

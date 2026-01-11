@@ -13,8 +13,8 @@ from typing import Any
 
 # 使用项目的 safe_import 机制进行依赖管理
 try:
-    from ...core.import_utils import safe_import
     from ...core.environment import DependencyPolicy
+    from ...core.import_utils import safe_import
 except ImportError:
     # 如果核心模块不可用，回退到标准导入
     def safe_import(*args, **kwargs):
@@ -175,7 +175,7 @@ class PaddleOCRService:
                     "error": "PP-Structure Engine not initialized (Check logs for init failure)",
                     "structure": []
                 }
-            
+
             # 调用 PP-StructureV3 处理
             result = self._structure_engine(str(file_path))
 

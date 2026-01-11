@@ -492,7 +492,7 @@ const AssetExport: React.FC<AssetExportProps> = ({
             <List.Item
               actions={[
                 item.status === "completed" && (item.download_url || item.downloadUrl) && (
-                  <Tooltip title="下载文件">
+                  <Tooltip key="download" title="下载文件">
                     <Button
                       type="text"
                       icon={<DownloadOutlined />}
@@ -500,7 +500,7 @@ const AssetExport: React.FC<AssetExportProps> = ({
                     />
                   </Tooltip>
                 ),
-                <Tooltip title="删除记录">
+                <Tooltip key="delete" title="删除记录">
                   <Button
                     type="text"
                     danger

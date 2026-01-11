@@ -6,7 +6,7 @@ import type { ColumnsType } from "antd/es/table";
 import type { Asset, AssetListResponse } from "@/types/asset";
 import { formatArea, formatPercentage, formatDate, getStatusColor } from "@/utils/format";
 import type { PaginationConfig, FilterConfig, SorterConfig } from "@/types/common";
-import { getOccupancyRateColor, COLORS } from "@/styles/colorMap";
+import { getOccupancyRateColor } from "@/styles/colorMap";
 
 interface AssetListProps {
   data?: AssetListResponse;

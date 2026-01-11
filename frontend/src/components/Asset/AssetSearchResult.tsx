@@ -47,14 +47,14 @@ const AssetSearchResult: React.FC<AssetSearchResultProps> = ({
         <List.Item
           key={asset.id}
           actions={[
-            <Tooltip title="查看详情">
+            <Tooltip key="view" title="查看详情">
               <Button
                 type="text"
                 icon={<EyeOutlined />}
                 onClick={() => onViewDetail(asset)}
               />
             </Tooltip>,
-            <Tooltip title="编辑">
+            <Tooltip key="edit" title="编辑">
               <Button
                 type="text"
                 icon={<EditOutlined />}

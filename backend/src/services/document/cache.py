@@ -14,7 +14,7 @@ import time
 from collections.abc import Callable
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from .config import get_config
 
@@ -106,7 +106,7 @@ class PDFCache:
             try:
                 with open(cache_file, encoding="utf-8") as f:
                     cached_data = json.load(f)
-            except json.JSONDecodeError as e:
+            except json.JSONDecodeError:
                 logger.error(
                     f"Cache file corrupted: {cache_file}",
                     exc_info=True,
@@ -346,7 +346,7 @@ class AsyncDocumentCache:
                 md5.update(chunk)
         return md5.hexdigest()
 
-    async def get(self, file_hash: str) -> Optional[dict[str, Any]]:
+    async def get(self, file_hash: str) -> dict[str, Any] | None:
         """
         异步获取缓存
 
@@ -399,7 +399,7 @@ class AsyncDocumentCache:
         self,
         file_hash: str,
         data: dict[str, Any],
-        ttl: Optional[int] = None
+        ttl: int | None = None
     ) -> bool:
         """
         异步设置缓存
@@ -460,7 +460,7 @@ class AsyncDocumentCache:
             logger.warning(f"Failed to invalidate cache: {e}")
             return False
 
-    async def clear(self, older_than_seconds: Optional[int] = None) -> int:
+    async def clear(self, older_than_seconds: int | None = None) -> int:
         """
         清理缓存
 

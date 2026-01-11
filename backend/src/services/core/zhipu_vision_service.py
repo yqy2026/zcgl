@@ -5,10 +5,11 @@ Zhipu AI GLM-4.6V Multimodal Vision Service
 支持图片直接输入进行合同信息提取
 Supports direct image input for contract information extraction
 """
-import httpx
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any
+
+import httpx
 from pydantic import BaseModel
 
 from .base_vision_service import (
@@ -25,7 +26,7 @@ class VisionResponse(BaseModel):
     """Response from vision model"""
     content: str
     raw_response: Any
-    usage: Dict[str, Any] = {}
+    usage: dict[str, Any] = {}
 
 
 class ZhipuVisionService(BaseVisionService):
@@ -67,7 +68,7 @@ class ZhipuVisionService(BaseVisionService):
 
     async def extract_from_images(
         self,
-        image_paths: List[str],
+        image_paths: list[str],
         prompt: str,
         temperature: float = 0.1,
         max_tokens: int = 4096
@@ -92,7 +93,7 @@ class ZhipuVisionService(BaseVisionService):
             raise RuntimeError("ZHIPU_API_KEY not configured")
 
         # Build multimodal content array
-        content: List[Dict[str, Any]] = []
+        content: list[dict[str, Any]] = []
 
         for img_path in image_paths:
             img_base64 = self._encode_image(img_path)
@@ -187,7 +188,7 @@ class ZhipuVisionService(BaseVisionService):
 
 
 # Singleton instance
-_vision_service: Optional[ZhipuVisionService] = None
+_vision_service: ZhipuVisionService | None = None
 
 
 def get_zhipu_vision_service() -> ZhipuVisionService:

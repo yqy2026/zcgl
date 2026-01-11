@@ -1,55 +1,49 @@
 import logging
-import json
-import re
-from typing import Any, Dict, Optional, List
-from .contract_extractor import ContractExtractor
-from .pdf_to_images import pdf_to_images, cleanup_temp_images
-from .pdf_analyzer import analyze_pdf, get_extraction_recommendation
-from ..core.llm_service import get_llm_service
-from ..core.zhipu_vision_service import get_zhipu_vision_service
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 from .extractors.factory import get_llm_extractor
+
 
 class LLMContractExtractor:
     """
     Facade for LLM Contract Extraction using the configured provider (Adapter Pattern).
     Delegates actual work to GLMAdapter, QwenAdapter etc. based on config.
     """
-    
+
     def __init__(self):
         self.adapter = get_llm_extractor()
 
-    async def extract(self, markdown_content: str) -> Dict[str, Any]:
+    async def extract(self, markdown_content: str) -> dict[str, Any]:
         """
         Legacy text-only extraction (keeps backward compatibility).
         Ideally, adapters should handle both text and vision, but for now 
         we primarily route 'vision' calls to the new adapters.
         """
-        # For pure text/markdown extraction, we might still want to use 
+        # For pure text/markdown extraction, we might still want to use
         # the original prompt logic or delegate if the adapter supports text-only.
-        # Here we assume the adapter *can* handle text if we implement it, 
+        # Here we assume the adapter *can* handle text if we implement it,
         # but for safety let's keep the original logic OR just warn.
-        
-        # ACTUALLY: The best way is to make the adapter handle it. 
-        # But Qwen-VL is vision-first. 
+
+        # ACTUALLY: The best way is to make the adapter handle it.
+        # But Qwen-VL is vision-first.
         # Let's keep the legacy LLMService logic here strictly for "text mode"
-        # OR better: Assume 'extract' in this class is for the "Text Mode" path 
+        # OR better: Assume 'extract' in this class is for the "Text Mode" path
         # and 'extract_from_pdf_vision' is for "Vision Mode".
-        
+
         # For this refactor, I will DELEGATE vision calls to the adapter,
-        # but keep the original text-based extract() here if needed, 
-        # or (better) move it to a specific TextAdapter. 
+        # but keep the original text-based extract() here if needed,
+        # or (better) move it to a specific TextAdapter.
         # To avoid breaking too much, I'll allow this class to hold the legacy text logic
         # but usage of 'extract_from_pdf_vision' will go to the adapter.
-        pass 
+        pass
 
     async def extract_smart(
-        self, 
+        self,
         pdf_path: str,
-        force_method: Optional[str] = None
-    ) -> Dict[str, Any]:
+        force_method: str | None = None
+    ) -> dict[str, Any]:
         """
         Smart extraction routing.
         """

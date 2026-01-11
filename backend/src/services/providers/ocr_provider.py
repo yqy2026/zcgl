@@ -7,7 +7,7 @@ OCR 服务提供者
 """
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +76,7 @@ class OCRProvider:
         """获取当前使用的 OCR 服务类型"""
         return self._service_type
 
-    def get_service(self) -> Optional[Any]:
+    def get_service(self) -> Any | None:
         """
         获取 OCR 服务实例
 
@@ -99,10 +99,10 @@ class OCRProvider:
 
 
 # 全局 OCR 服务实例
-_ocr_provider_instance: Optional[OCRProvider] = None
+_ocr_provider_instance: OCRProvider | None = None
 
 
-def get_ocr_service() -> Optional[Any]:
+def get_ocr_service() -> Any | None:
     """
     获取 OCR 服务实例（兼容旧接口）
 
@@ -148,7 +148,7 @@ def set_ocr_service(service: Any) -> None:
     _ocr_provider_instance = provider
 
 
-def get_current_ocr_service() -> Optional[Any]:
+def get_current_ocr_service() -> Any | None:
     """
     获取当前 OCR 服务实例（兼容旧接口）
 
