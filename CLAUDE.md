@@ -1,8 +1,8 @@
 # CLAUDE.md
 
-本文件为 Claude Code 提供项目上下文。详细文档请参阅 `docs/` 目录。
+本文件为 Claude Code 提供项目上下文。详细文档请参阅 `README.md` 和 `docs/` 目录。
 
-**最后更新**: 2026-01-08
+**最后更新**: 2026-01-11
 
 ---
 
@@ -72,7 +72,7 @@ React UI → EnhancedApiClient → FastAPI (/api/v1/*) → Service → CRUD → 
                               ↑ 必须放这里!
 ```
 
-**Service层目录结构** (2026-01-08 更新):
+**Service层目录结构** (2026-01-11 更新):
 ```
 backend/src/services/        # 19 个子目录
 ├── analytics/         # 分析服务 (出租率、面积汇总)
@@ -80,9 +80,9 @@ backend/src/services/        # 19 个子目录
 ├── backup/           # 备份服务
 ├── core/             # 核心服务 (认证、用户管理)
 ├── custom_field/     # 自定义字段服务
-├── document/         # 文档处理服务 (OCR、PDF解析)
+├── document/         # 文档处理服务 (OCR、PDF解析、LLM提取)
 ├── excel/            # Excel 导入/导出服务
-├── notification/     # 通知服务 (企业微信等)
+├── notification/     # 通知服务 (站内消息、企业微信推送)
 ├── organization/     # 组织管理服务
 ├── ownership/        # 权属管理服务
 ├── permission/       # 权限服务
@@ -243,6 +243,8 @@ DEPENDENCY_POLICY=strict # graceful, optional
 | API 概览 | `docs/integrations/api-overview.md` |
 | 测试标准 | `docs/TESTING_STANDARDS.md` |
 
+| 开发工作流 | `docs/guides/development-workflow.md` |
+
 ---
 
 ## Git 工作流
@@ -253,3 +255,13 @@ DEPENDENCY_POLICY=strict # graceful, optional
 - **hotfix/***: 热修复
 
 **提交格式**: `type(scope): description` (如 `feat(auth): add JWT refresh`)
+
+---
+
+## V2.0 新功能
+
+- **通知中心**: 站内消息、合同到期提醒、企业微信推送
+- **项目/权属详情页**: 独立详情页、关联资产/合同列表
+- **合同智能提取**: PDF OCR + LLM 多模型混合提取
+
+详见 `docs/v2-release-notes.md`

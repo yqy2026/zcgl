@@ -11,9 +11,16 @@
 
 import logging
 import os
+import re
 from typing import Any
 
-from pydantic import ConfigDict, Field
+from pydantic import (
+    ConfigDict,
+    Field,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
 from pydantic_settings import BaseSettings
 
 logger = logging.getLogger(__name__)
@@ -125,43 +132,49 @@ class Settings(BaseSettings):
         """
         验证安全配置
         返回安全警告列表
+        注意: 此方法保留向后兼容性，实际验证由 model_validator 处理
         """
         warnings = []
 
-        # 检查JWT密钥安全性
+        # 检查 JWT 密钥安全性
         if self.SECRET_KEY in [
             "EMERGENCY-ONLY-REPLACE-WITH-ENV-SECRET-KEY-NOW",
             "dev-secret-key-DO-NOT-USE-IN-PRODUCTION-REPLACE-WITH-ENV-VAR",
             "dev-secret-key-change-in-production",
+            "your-secret-key-change-in-production",
+            "secret-key",
         ]:
             warnings.append(
-                "严重安全风险: 使用了默认或不安全的JWT密钥！"
-                "请立即设置环境变量SECRET_KEY为强随机密钥。"
+                "严重安全风险: 使用了默认或不安全的 JWT 密钥！"
+                "请立即设置环境变量 SECRET_KEY 为强随机密钥。"
             )
 
         if len(self.SECRET_KEY) < 32:
-            warnings.append("警告: JWT密钥长度不足32字符，建议使用更长的密钥。")
+            warnings.append(
+                f"警告: JWT 密钥长度不足 ({len(self.SECRET_KEY)}字符)，"
+                "建议使用至少 32 字符的密钥。"
+            )
 
         # 检查是否在调试模式运行
         if self.DEBUG:
-            warnings.append("警告: 当前在调试模式运行，生产环境必须设置DEBUG=false。")
+            warnings.append("警告: 当前在调试模式运行，生产环境必须设置 DEBUG=false。")
 
-        # 检查数据库是否为SQLite（生产环境推荐PostgreSQL）
+        # 检查数据库是否为 SQLite（生产环境推荐 PostgreSQL）
         if self.DATABASE_URL.startswith("sqlite:///./land_property.db"):
             warnings.append(
-                "提醒: 使用默认SQLite数据库路径，生产环境建议使用PostgreSQL。"
+                "提醒: 使用默认 SQLite 数据库路径，生产环境建议使用 PostgreSQL。"
             )
 
         return warnings
 
     def log_security_status(self) -> None:
-        """记录安全配置状态"""
-        import logging
-
-        logger = logging.getLogger(__name__)
+        """
+        记录安全配置状态
+        注意: 保留向后兼容性，实际验证在 model_validator 中完成
+        """
         warnings = self.validate_security_config()
 
-        if warnings:
+        if warnings and not os.getenv("TESTING_MODE", "false").lower() == "true":
             logger.warning("=" * 60)
             logger.warning("安全配置检查发现以下问题:")
             for warning in warnings:
@@ -255,6 +268,304 @@ class Settings(BaseSettings):
         description="OCR provider: auto, local, nvidia_cloud",
         json_schema_extra={"env": "OCR_PROVIDER"},
     )
+
+    # LLM Provider Configuration
+    LLM_PROVIDER: str = Field(
+        default="glm-4v",
+        description="LLM provider: glm-4v, qwen-vl-max, deepseek-vl",
+        json_schema_extra={"env": "LLM_PROVIDER"},
+    )
+
+    # Qwen/DashScope Configuration
+    DASHSCOPE_API_KEY: str | None = Field(
+        default=None,
+        description="阿里云 DashScope API Key for Qwen-VL",
+        json_schema_extra={"env": "DASHSCOPE_API_KEY"},
+    )
+
+    # DeepSeek Configuration
+    DEEPSEEK_API_KEY: str | None = Field(
+        default=None,
+        description="DeepSeek API Key for DeepSeek-VL",
+        json_schema_extra={"env": "DEEPSEEK_API_KEY"},
+    )
+
+    # GLM/Zhipu Configuration
+    ZHIPU_API_KEY: str | None = Field(
+        default=None,
+        description="智谱 AI API Key for GLM-4V",
+        json_schema_extra={"env": "ZHIPU_API_KEY"},
+    )
+
+    # ========================================================================
+    # 验证器 (Pydantic v2)
+    # ========================================================================
+
+    @field_validator("PORT", "REDIS_PORT")
+    @classmethod
+    def validate_port_range(cls, v: int) -> int:
+        """验证端口号在有效范围内 (1-65535)"""
+        if not 1 <= v <= 65535:
+            raise ValueError(
+                f"端口号必须在 1-65535 范围内，当前值: {v}"
+            )
+        return v
+
+    @field_validator("REDIS_PORT")
+    @classmethod
+    def validate_redis_port(cls, v: int) -> int:
+        """验证 Redis 端口 - 推荐使用标准端口或高位端口"""
+        # 允许标准 Redis 端口或高位端口 (1024+)
+        if v != 6379 and v < 1024:
+            logger.warning(
+                f"Redis 端口 {v} 小于 1024，可能需要管理员权限"
+            )
+        return v
+
+    @field_validator("LOG_LEVEL")
+    @classmethod
+    def validate_log_level(cls, v: str) -> str:
+        """验证日志级别"""
+        valid_levels = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+        v_upper = v.upper()
+        if v_upper not in valid_levels:
+            raise ValueError(
+                f"无效的日志级别: {v}. 有效值为: {', '.join(sorted(valid_levels))}"
+            )
+        return v_upper
+
+    @field_validator("OCR_PROVIDER")
+    @classmethod
+    def validate_ocr_provider(cls, v: str) -> str:
+        """验证 OCR 提供商"""
+        valid_providers = {"auto", "local", "nvidia_cloud"}
+        if v not in valid_providers:
+            raise ValueError(
+                f"无效的 OCR 提供商: {v}. 有效值为: {', '.join(sorted(valid_providers))}"
+            )
+        return v
+
+    @field_validator("LLM_PROVIDER")
+    @classmethod
+    def validate_llm_provider(cls, v: str) -> str:
+        """验证 LLM 提供商"""
+        valid_providers = {"glm-4v", "qwen-vl-max", "deepseek-vl", "glm", "qwen", "deepseek"}
+        v_normalized = v.lower().strip()
+        if v_normalized not in valid_providers:
+            raise ValueError(
+                f"无效的 LLM 提供商: {v}. "
+                f"有效值为: {', '.join(sorted(valid_providers))}"
+            )
+        return v_normalized
+
+    @field_validator("CHATGLM3_TEMPERATURE")
+    @classmethod
+    def validate_temperature(cls, v: float) -> float:
+        """验证温度参数范围"""
+        if not 0.0 <= v <= 2.0:
+            raise ValueError(
+                f"温度参数必须在 0.0-2.0 范围内，当前值: {v}"
+            )
+        return v
+
+    @field_validator("CHATGLM3_MAX_TOKENS")
+    @classmethod
+    def validate_max_tokens(cls, v: int) -> int:
+        """验证最大 tokens 范围"""
+        if not 1 <= v <= 32000:
+            raise ValueError(
+                f"最大 tokens 必须在 1-32000 范围内，当前值: {v}"
+            )
+        return v
+
+    @field_validator("SLOW_QUERY_THRESHOLD")
+    @classmethod
+    def validate_slow_query_threshold(cls, v: float) -> float:
+        """验证慢查询阈值"""
+        if v < 0:
+            raise ValueError(
+                f"慢查询阈值不能为负数，当前值: {v}"
+            )
+        if v > 60:
+            logger.warning(
+                f"慢查询阈值 {v} 秒过高，建议设置为 0.1-10 秒之间"
+            )
+        return v
+
+    @field_validator("MAX_FILE_SIZE")
+    @classmethod
+    def validate_max_file_size(cls, v: int) -> int:
+        """验证最大文件大小"""
+        max_allowed = 500 * 1024 * 1024  # 500MB
+        if v > max_allowed:
+            raise ValueError(
+                f"最大文件大小不能超过 {max_allowed / (1024*1024)}MB，当前值: {v / (1024*1024)}MB"
+            )
+        if v < 1024:  # 1KB
+            raise ValueError(
+                f"最大文件大小不能小于 1KB，当前值: {v} 字节"
+            )
+        return v
+
+    @field_validator("DEFAULT_PAGE_SIZE", "MAX_PAGE_SIZE")
+    @classmethod
+    def validate_page_size(cls, v: int, info) -> int:
+        """验证分页大小"""
+        if v < 1:
+            raise ValueError(
+                f"{info.field_name} 不能小于 1，当前值: {v}"
+            )
+        if v > 1000:
+            raise ValueError(
+                f"{info.field_name} 不能大于 1000，当前值: {v}"
+            )
+        return v
+
+    @field_validator("DEFAULT_PAGE_SIZE")
+    @classmethod
+    def validate_default_page_size_not_exceed_max(cls, v: int) -> int:
+        """验证默认分页大小不超过最大值"""
+        # 这个验证器会在 MAX_PAGE_SIZE 之后运行
+        return v
+
+    @field_validator("CHATGLM3_DEVICE")
+    @classmethod
+    def validate_device(cls, v: str) -> str:
+        """验证设备类型"""
+        valid_devices = {"cpu", "cuda", "mps", "xpu"}
+        v_lower = v.lower()
+        if v_lower not in valid_devices:
+            raise ValueError(
+                f"无效的设备类型: {v}. 有效值为: {', '.join(sorted(valid_devices))}"
+            )
+        return v_lower
+
+    @model_validator(mode="after")
+    def validate_page_size_consistency(self) -> "Settings":
+        """验证分页大小一致性 - DEFAULT_PAGE_SIZE 不能超过 MAX_PAGE_SIZE"""
+        if self.DEFAULT_PAGE_SIZE > self.MAX_PAGE_SIZE:
+            raise ValueError(
+                f"DEFAULT_PAGE_SIZE ({self.DEFAULT_PAGE_SIZE}) "
+                f"不能超过 MAX_PAGE_SIZE ({self.MAX_PAGE_SIZE})"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def validate_redis_configuration(self) -> "Settings":
+        """验证 Redis 配置一致性"""
+        if self.REDIS_ENABLED:
+            if not self.REDIS_HOST:
+                raise ValueError(
+                    "启用 Redis 时必须设置 REDIS_HOST"
+                )
+            if not self.REDIS_PASSWORD:
+                logger.warning(
+                    "Redis 已启用但未设置密码，生产环境建议配置 REDIS_PASSWORD"
+                )
+        return self
+
+    @model_validator(mode="after")
+    def validate_llm_configuration(self) -> "Settings":
+        """验证 LLM 配置一致性"""
+        provider = self.LLM_PROVIDER.lower()
+        has_api_key = False
+
+        # 检查提供商是否有对应的 API Key
+        if "glm" in provider or "chatglm" in provider:
+            has_api_key = bool(self.ZHIPU_API_KEY)
+        elif "qwen" in provider or "dashscope" in provider:
+            has_api_key = bool(self.DASHSCOPE_API_KEY)
+        elif "deepseek" in provider:
+            has_api_key = bool(self.DEEPSEEK_API_KEY)
+
+        if not has_api_key:
+            logger.warning(
+                f"LLM 提供商 '{provider}' 可能未配置对应的 API Key，"
+                "可能影响 PDF 提取功能"
+            )
+
+        return self
+
+    @model_validator(mode="after")
+    def validate_wecom_configuration(self) -> "Settings":
+        """验证企业微信配置一致性"""
+        if self.WECOM_ENABLED and not self.WECOM_WEBHOOK_URL:
+            logger.warning(
+                "企业微信通知已启用但未配置 Webhook URL，"
+                "通知功能将无法工作"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def validate_nvidia_ocr_configuration(self) -> "Settings":
+        """验证 NVIDIA OCR 配置一致性"""
+        if self.OCR_PROVIDER == "nvidia_cloud" and not self.NVIDIA_API_KEY:
+            logger.warning(
+                "OCR 提供商设置为 NVIDIA Cloud 但未配置 NVIDIA_API_KEY，"
+                "将回退到本地 OCR"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def validate_cache_configuration(self) -> "Settings":
+        """验证缓存配置一致性"""
+        if self.CACHE_TTL < 0:
+            raise ValueError(
+                f"CACHE_TTL 不能为负数，当前值: {self.CACHE_TTL}"
+            )
+        if self.CACHE_TTL > 86400:  # 24小时
+            logger.warning(
+                f"CACHE_TTL ({self.CACHE_TTL}s) 超过 24 小时，"
+                "可能导致缓存数据过期"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def validate_security_configuration(self) -> "Settings":
+        """验证安全配置"""
+        warnings = []
+
+        # 检查 JWT 密钥安全性
+        if self.SECRET_KEY in [
+            "EMERGENCY-ONLY-REPLACE-WITH-ENV-SECRET-KEY-NOW",
+            "dev-secret-key-DO-NOT-USE-IN-PRODUCTION-REPLACE-WITH-ENV-VAR",
+            "dev-secret-key-change-in-production",
+            "your-secret-key-change-in-production",
+            "secret-key",
+        ]:
+            warnings.append(
+                "严重安全风险: 使用了默认或不安全的 JWT 密钥！"
+                "请立即设置环境变量 SECRET_KEY 为强随机密钥。"
+            )
+
+        if len(self.SECRET_KEY) < 32:
+            warnings.append(
+                f"警告: JWT 密钥长度不足 ({len(self.SECRET_KEY)}字符)，"
+                "建议使用至少 32 字符的密钥。"
+            )
+
+        # 检查调试模式
+        if self.DEBUG:
+            warnings.append(
+                "警告: 当前在调试模式运行，生产环境必须设置 DEBUG=false。"
+            )
+
+        # 检查数据库
+        if self.DATABASE_URL.startswith("sqlite:///./land_property.db"):
+            warnings.append(
+                "提醒: 使用默认 SQLite 数据库路径，"
+                "生产环境建议使用 PostgreSQL。"
+            )
+
+        # 记录警告
+        if warnings and not os.getenv("TESTING_MODE", "false").lower() == "true":
+            logger.warning("=" * 60)
+            logger.warning("安全配置检查发现以下问题:")
+            for warning in warnings:
+                logger.warning(f"  {warning}")
+            logger.warning("=" * 60)
+
+        return self
 
     # 创建全局配置实例
 

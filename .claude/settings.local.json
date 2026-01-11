@@ -48,7 +48,20 @@
       "Bash(powershell -Command:*)",
       "Bash(taskkill:*)",
       "Bash(timeout:*)",
-      "Bash(alembic downgrade:*)"
+      "Bash(alembic downgrade:*)",
+      "Bash(uv pip list:*)",
+      "Bash(uv pip show:*)",
+      "Bash(uv run pytest:*)",
+      "Bash(python.exe -m pytest:*)",
+      "Bash(python.exe:*)",
+      "Bash(source:*)",
+      "Bash(./venv/Scripts/python.exe -m pytest:*)",
+      "Bash(.venv/Scripts/python.exe -m pytest:*)",
+      "Bash(uv run ruff check:*)",
+      "Bash(.venv/Scripts/python.exe -m ruff check:*)",
+      "Bash(uv run mypy:*)",
+      "Bash(uv sync:*)",
+      "Bash(uv run:*)"
     ]
   },
   "outputStyle": "Structural Thinking"

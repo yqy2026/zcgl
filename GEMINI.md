@@ -61,6 +61,7 @@ D:\code\zcgl\
 │   ├── package.json        # Frontend dependencies & scripts
 │   └── vite.config.ts      # Vite configuration
 ├── docs/                   # Comprehensive documentation
+├── README.md               # Project documentation entry point
 ├── docker-compose.yml      # Service orchestration
 ├── CLAUDE.md               # AI assistant guide (Claude)
 └── GEMINI.md               # AI assistant guide (Gemini)

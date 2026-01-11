@@ -11,8 +11,8 @@
 - 安全配置最佳实践
 
 ## ✅ Status
-**当前状态**: Active (2025-12-23 创建)
-**适用版本**: v1.0.0
+**当前状态**: Active (2026-01-08 更新)
+**适用版本**: v1.1.0
 **配置文件位置**:
 - 后端: `backend/.env.example`
 - 前端: `frontend/.env.example`
@@ -201,6 +201,18 @@ ENABLE_METRICS=true
 
 # 慢查询阈值 (秒)
 SLOW_QUERY_THRESHOLD=1.0
+```
+
+#### 11. 企业微信通知配置 (V2.0)
+```bash
+# 是否启用企业微信通知
+WECOM_ENABLED=false
+
+# 企业微信机器人 Webhook URL
+WECOM_WEBHOOK_URL=https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=YOUR_KEY
+
+# 是否 @所有人
+WECOM_MENTION_ALL=false
 ```
 
 ---

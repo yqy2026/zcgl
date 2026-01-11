@@ -26,6 +26,7 @@ from .operation_logs import router as operation_logs_router
 from .organization import router as organization_router
 from .ownership import router as ownership_router
 from .pdf_import_routes import router as pdf_import_router
+from .pdf_batch_routes import router as pdf_batch_router
 from .project import router as project_router
 from .rent_contract import router as rent_contract_router
 from .roles import router as roles_router
@@ -118,6 +119,7 @@ api_router.include_router(defect_tracking_router, prefix="/defects", tags=["缺�
 # 注册新创建的统一路由模块
 api_router.include_router(system_router, tags=["系统管理"])
 api_router.include_router(pdf_import_router, tags=["PDF智能导入"])
+api_router.include_router(pdf_batch_router, tags=["PDF批量导入"])
 api_router.include_router(
     notifications_router, prefix="/notifications", tags=["通知管理"]
 )

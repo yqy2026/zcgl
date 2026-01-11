@@ -14,7 +14,10 @@ import {
   Statistic,
   Descriptions,
   Drawer,
+  Typography,
 } from 'antd'
+
+const { Text } = Typography
 import { MessageManager } from '@/utils/messageManager'
 import {
   ReloadOutlined,
@@ -531,19 +534,25 @@ const OperationLogPage: React.FC = () => {
                   {selectedLog.user_agent}
                 </div>
               </Descriptions.Item>
-              {selectedLog.details && (
-                <Descriptions.Item label="详细信息">
-                  <pre style={{
-                    background: '#f5f5f5',
-                    padding: '12px',
-                    borderRadius: '4px',
-                    fontSize: '12px',
-                    overflow: 'auto'
-                  }}>
-                    {JSON.stringify(selectedLog.details, null, 2)}
-                  </pre>
-                </Descriptions.Item>
-              )}
+              <Descriptions.Item label="详细信息">
+                <div style={{
+                  background: '#f5f5f5',
+                  padding: '12px',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  overflow: 'auto',
+                  maxHeight: '300px'
+                }}>
+                  {Object.entries(selectedLog.details || {}).map(([key, value]) => (
+                    <div key={key} style={{ marginBottom: 4 }}>
+                      <Text strong style={{ marginRight: 8 }}>{key}:</Text>
+                      <Text type="secondary">
+                        {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                      </Text>
+                    </div>
+                  ))}
+                </div>
+              </Descriptions.Item>
             </Descriptions>
           </div>
         )}
