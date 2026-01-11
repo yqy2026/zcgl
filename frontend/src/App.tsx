@@ -7,7 +7,7 @@ import LoginPage from './pages/LoginPage'
 import ErrorBoundary from './components/ErrorHandling/ErrorBoundary'
 import { AuthService } from './services/authService'
 import { AuthProvider } from './contexts/AuthContext'
-import { MessageManager } from './utils/MessageManager'
+import { MessageManager } from './utils/messageManager'
 // App.css removed - classes were unused default React template styles
 
 /**

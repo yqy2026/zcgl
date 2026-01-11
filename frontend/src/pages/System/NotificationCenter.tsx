@@ -24,6 +24,7 @@ import {
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
+import { COLORS } from '@/styles/colorMap';
 
 dayjs.extend(relativeTime);
 dayjs.locale('zh-cn');
@@ -152,15 +153,15 @@ const NotificationCenter: React.FC = () => {
         switch (type) {
             case NotificationType.CONTRACT_EXPIRING:
             case NotificationType.CONTRACT_EXPIRED:
-                return <ClockCircleOutlined style={{ color: '#faad14' }} />;
+                return <ClockCircleOutlined style={{ color: COLORS.warning }} />;
             case NotificationType.PAYMENT_OVERDUE:
-                return <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />;
+                return <ExclamationCircleOutlined style={{ color: COLORS.error }} />;
             case NotificationType.PAYMENT_DUE:
-                return <InfoCircleOutlined style={{ color: '#1890ff' }} />;
+                return <InfoCircleOutlined style={{ color: COLORS.primary }} />;
             case NotificationType.APPROVAL_PENDING:
-                return <CheckOutlined style={{ color: '#52c41a' }} />;
+                return <CheckOutlined style={{ color: COLORS.success }} />;
             default:
-                return <BellOutlined style={{ color: '#1890ff' }} />;
+                return <BellOutlined style={{ color: COLORS.primary }} />;
         }
     };
 
@@ -247,7 +248,7 @@ const NotificationCenter: React.FC = () => {
                                 ]}
                                 style={{
                                     cursor: 'pointer',
-                                    backgroundColor: item.is_read ? 'transparent' : '#f0f9ff',
+                                    backgroundColor: item.is_read ? 'transparent' : COLORS.infoLight,
                                     padding: '12px 24px',
                                     borderRadius: '4px',
                                     marginBottom: '8px',
@@ -262,11 +263,11 @@ const NotificationCenter: React.FC = () => {
                                                 width: 40,
                                                 height: 40,
                                                 borderRadius: '50%',
-                                                backgroundColor: '#fff',
+                                                backgroundColor: COLORS.bgPrimary,
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
-                                                border: '1px solid #f0f0f0',
+                                                border: '1px solid ' + COLORS.borderLight,
                                             }}
                                         >
                                             {getIcon(item.type)}
@@ -285,7 +286,7 @@ const NotificationCenter: React.FC = () => {
                                     description={
                                         <Paragraph
                                             ellipsis={{ rows: 2 }}
-                                            style={{ margin: 0, color: item.is_read ? '#8c8c8c' : '#262626' }}
+                                            style={{ margin: 0, color: item.is_read ? COLORS.textTertiary : COLORS.textPrimary }}
                                         >
                                             {item.content}
                                         </Paragraph>

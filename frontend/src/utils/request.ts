@@ -4,7 +4,7 @@
 
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 import { createLogger } from "./logger";
-import { MessageManager } from "./MessageManager";
+import { MessageManager } from "./messageManager";
 
 const logger = createLogger('Request');
 

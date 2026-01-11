@@ -12,7 +12,7 @@ import {
   Typography,
   Alert,
 } from "antd";
-import { MessageManager } from "@/utils/MessageManager";
+import { MessageManager } from "@/utils/messageManager";
 import {
   DeleteOutlined,
   EditOutlined,

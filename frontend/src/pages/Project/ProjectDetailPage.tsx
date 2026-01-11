@@ -34,6 +34,7 @@ import { projectService } from '@/services/projectService';
 import { assetService } from '@/services/assetService';
 import type { ColumnsType } from 'antd/es/table';
 import type { Asset } from '@/types/asset';
+import { COLORS } from '@/styles/colorMap';
 
 const { Title, Text } = Typography;
 
@@ -251,10 +252,10 @@ const ProjectDetailPage: React.FC = () => {
               valueStyle={{
                 color:
                   parseFloat(occupancyRate) >= 80
-                    ? '#3f8600'
+                    ? COLORS.success
                     : parseFloat(occupancyRate) >= 50
-                      ? '#faad14'
-                      : '#cf1322',
+                      ? COLORS.warning
+                      : COLORS.error,
               }}
             />
           </Card>
@@ -293,7 +294,7 @@ const ProjectDetailPage: React.FC = () => {
         title={
           <Space>
             <span>关联资产</span>
-            <Badge count={totalAssets} style={{ backgroundColor: '#1890ff' }} />
+            <Badge count={totalAssets} style={{ backgroundColor: COLORS.primary }} />
           </Space>
         }
       >

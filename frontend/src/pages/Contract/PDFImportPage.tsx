@@ -47,6 +47,7 @@ import {
   ApiOutlined,
   BulbOutlined
 } from '@ant-design/icons';
+import { COLORS } from '@/styles/colorMap';
 
 import ContractImportUpload from './ContractImportUpload';
 import ContractImportStatus from './ContractImportStatus';
@@ -350,10 +351,7 @@ const PDFImportPage: React.FC = () => {
   const handleReload = async () => {
     setLoading(true);
     try {
-      await Promise.all([
-        loadSystemInfo(),
-        loadSessionHistory()
-      ]);
+      await loadSessionHistory();
       MessageManager.success('数据已刷新');
     } catch {
       MessageManager.error('刷新失败');
@@ -425,8 +423,8 @@ const PDFImportPage: React.FC = () => {
       case 'completed':
         return (
           <div key={keyPrefix} style={{ textAlign: 'center', padding: '40px' }}>
-            <CheckCircleOutlined style={{ fontSize: 64, color: '#52c41a', marginBottom: 16 }} />
-            <Title level={4} style={{ color: '#52c41a' }}>
+            <CheckCircleOutlined style={{ fontSize: 64, color: COLORS.success, marginBottom: 16 }} />
+            <Title level={4} style={{ color: COLORS.success }}>
               导入成功！
             </Title>
             <Paragraph>
@@ -445,8 +443,8 @@ const PDFImportPage: React.FC = () => {
       case 'failed':
         return (
           <div key={keyPrefix} style={{ textAlign: 'center', padding: '40px' }}>
-            <CloseCircleOutlined style={{ fontSize: 64, color: '#ff4d4f', marginBottom: 16 }} />
-            <Title level={4} style={{ color: '#ff4d4f' }}>
+            <CloseCircleOutlined style={{ fontSize: 64, color: COLORS.error, marginBottom: 16 }} />
+            <Title level={4} style={{ color: COLORS.error }}>
               处理失败
             </Title>
             <Paragraph>
@@ -502,7 +500,7 @@ const PDFImportPage: React.FC = () => {
           <Col>
             <Space size="large">
               <div className={styles['status-icon']}>
-                <UploadOutlined style={{ fontSize: 24, color: '#1890ff' }} />
+                <UploadOutlined style={{ fontSize: 24, color: COLORS.primary }} />
               </div>
               <div>
                 <Title level={3} style={{ margin: 0 }}>
@@ -608,8 +606,8 @@ const PDFImportPage: React.FC = () => {
                     </div>
                   ) : (
                     <div style={{ textAlign: 'center', padding: '40px' }}>
-                      <HistoryOutlined style={{ fontSize: 48, color: '#d9d9d9', marginBottom: 16 }} />
-                      <Title level={4} style={{ color: '#d9d9d9' }}>
+                      <HistoryOutlined style={{ fontSize: 48, color: COLORS.textTertiary, marginBottom: 16 }} />
+                      <Title level={4} style={{ color: COLORS.textTertiary }}>
                         暂无导入记录
                       </Title>
                       <Paragraph>
@@ -752,7 +750,7 @@ const PDFImportPage: React.FC = () => {
                                     })}
                                   />
                                   <Tooltip title="在导入完成或失败时显示系统通知">
-                                    <QuestionCircleOutlined style={{ color: '#999' }} />
+                                    <QuestionCircleOutlined style={{ color: COLORS.textTertiary }} />
                                   </Tooltip>
                                 </Space>
                               </div>
@@ -767,7 +765,7 @@ const PDFImportPage: React.FC = () => {
                                     })}
                                   />
                                   <Tooltip title="减少界面元素间距，显示更多内容">
-                                    <QuestionCircleOutlined style={{ color: '#999' }} />
+                                    <QuestionCircleOutlined style={{ color: COLORS.textTertiary }} />
                                   </Tooltip>
                                 </Space>
                               </div>
@@ -782,7 +780,7 @@ const PDFImportPage: React.FC = () => {
                                     })}
                                   />
                                   <Tooltip title="显示更多技术性选项和详细信息">
-                                    <QuestionCircleOutlined style={{ color: '#999' }} />
+                                    <QuestionCircleOutlined style={{ color: COLORS.textTertiary }} />
                                   </Tooltip>
                                 </Space>
                               </div>
@@ -803,7 +801,7 @@ const PDFImportPage: React.FC = () => {
                                     })}
                                   />
                                   <Tooltip title="自动刷新处理进度，无需手动操作">
-                                    <QuestionCircleOutlined style={{ color: '#999' }} />
+                                    <QuestionCircleOutlined style={{ color: COLORS.textTertiary }} />
                                   </Tooltip>
                                 </Space>
                               </div>
@@ -818,7 +816,7 @@ const PDFImportPage: React.FC = () => {
                                     })}
                                   />
                                   <Tooltip title="PDF转换时优先使用MarkItDown引擎">
-                                    <QuestionCircleOutlined style={{ color: '#999' }} />
+                                    <QuestionCircleOutlined style={{ color: COLORS.textTertiary }} />
                                   </Tooltip>
                                 </Space>
                               </div>

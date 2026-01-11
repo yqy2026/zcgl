@@ -34,6 +34,7 @@ import {
   type AssetMatch,
   type OwnershipMatch
 } from '../../services/pdfImportService';
+import { COLORS } from '@/styles/colorMap';
 
 const { Title } = Typography;
 const { TabPane } = Tabs;
@@ -139,9 +140,9 @@ interface FormFieldChange {
 
   // 获取置信度颜色
   const getConfidenceColor = (score: number): string => {
-    if (score >= 0.9) return '#52c41a';
-    if (score >= 0.7) return '#faad14';
-    return '#ff4d4f';
+    if (score >= 0.9) return COLORS.success;
+    if (score >= 0.7) return COLORS.warning;
+    return COLORS.error;
   };
 
 
@@ -391,7 +392,7 @@ interface FormFieldChange {
                         相似度: {asset.similarity}%
                       </Tag>
                     </Space>
-                    <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+                    <div style={{ fontSize: 12, color: COLORS.textSecondary, marginTop: 4 }}>
                       {asset.address}
                     </div>
                   </div>

@@ -21,6 +21,7 @@ import {
   Divider,
   Badge
 } from 'antd';
+import { COLORS } from '@/styles/colorMap';
 import { MessageManager } from '@/utils/messageManager';
 import {
   PlusOutlined,
@@ -400,7 +401,7 @@ const OrganizationPage: React.FC = () => {
                 title="活跃组织"
                 value={statistics.active}
                 prefix={<TeamOutlined />}
-                valueStyle={{ color: '#3f8600' }}
+                valueStyle={{ color: COLORS.success }}
               />
             </Card>
           </Col>
@@ -410,7 +411,7 @@ const OrganizationPage: React.FC = () => {
                 title="停用组织"
                 value={statistics.inactive}
                 prefix={<SettingOutlined />}
-                valueStyle={{ color: '#cf1322' }}
+                valueStyle={{ color: COLORS.error }}
               />
             </Card>
           </Col>
@@ -488,7 +489,7 @@ const OrganizationPage: React.FC = () => {
               treeData={organizationTree}
               showLine={{ showLeafIcon: false }}
               defaultExpandAll
-              style={{ background: '#fafafa', padding: 16, borderRadius: 6 }}
+              style={{ background: COLORS.bgSecondary, padding: 16, borderRadius: 6 }}
             />
           </TabPane>
 

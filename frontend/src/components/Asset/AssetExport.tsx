@@ -17,7 +17,7 @@ import {
   List,
   Tooltip,
 } from "antd";
-import { MessageManager } from "@/utils/MessageManager";
+import { MessageManager } from "@/utils/messageManager";
 import {
   DownloadOutlined,
   FileExcelOutlined,

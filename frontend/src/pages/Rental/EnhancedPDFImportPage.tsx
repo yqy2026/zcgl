@@ -41,6 +41,7 @@ import type {
   EnhancedSystemCapabilities
 } from '../../types/enhancedPdfImport';
 import { createLogger } from '../../utils/logger';
+import { COLORS } from '@/styles/colorMap';
 
 const pageLogger = createLogger('EnhancedPDFImport');
 
@@ -73,6 +74,71 @@ const EnhancedPDFImportPage: React.FC = () => {
     checkSystemCapabilities();
   }, []);
 
+  // 检查系统能力 (占位符实现 - 页面已废弃)
+  const checkSystemCapabilities = async () => {
+    try {
+      // 占位符 - 页面已废弃，直接设置默认值
+      setSystemCapabilities({
+        pdfplumber_available: true,
+        pymupdf_available: true,
+        spacy_available: true,
+        ocr_available: true,
+        enhanced_extraction: true,
+        intelligent_matching: true,
+        multi_engine_support: true,
+        chinese_optimized: true,
+        real_time_validation: true,
+        table_detection: true,
+        seal_detection: true,
+        template_learning: true,
+        semantic_validation: true,
+        supported_formats: ['pdf'],
+        max_file_size_mb: 50,
+        estimated_processing_time: '2-5秒',
+      });
+    } catch {
+      // 忽略错误，页面已废弃
+    }
+  };
+
+  // 渲染功能标签 (占位符实现 - 页面已废弃)
+  const renderFeatureTag = (enabled: boolean, text: string, color: string) => {
+    return enabled ? <Tag color={color}>{text}</Tag> : null;
+  };
+
+  // 上传配置 (占位符实现 - 页面已废弃)
+  const uploadProps: UploadProps = {
+    name: 'file',
+    multiple: false,
+    fileList: fileList as unknown as any[],
+    beforeUpload: () => false,
+    onChange: () => {
+      // 占位符 - 页面已废弃
+    },
+  };
+
+  // 重试处理 (占位符实现 - 页面已废弃)
+  const handleRetry = () => {
+    // 占位符 - 页面已废弃
+  };
+
+  // 取消处理 (占位符实现 - 页面已废弃)
+  const handleCancel = () => {
+    setProcessing(false);
+    setShowResults(false);
+    setSessionId(null);
+  };
+
+  // 渲染处理选项 (占位符实现 - 页面已废弃)
+  const renderProcessingOptions = () => {
+    if (!showAdvancedSettings) return null;
+    return (
+      <Card title="高级处理选项" style={{ marginTop: 16 }} size="small">
+        <Text>此页面已废弃，请使用标准的PDF导入页面</Text>
+      </Card>
+    );
+  };
+
   return (
     <div style={{ padding: '24px', maxWidth: 1200, margin: '0 auto' }}>
       <Alert
@@ -94,7 +160,7 @@ const EnhancedPDFImportPage: React.FC = () => {
       <div style={{ opacity: 0.5, pointerEvents: 'none', filter: 'grayscale(100%)' }}>
         {/* Deprecated Content Below */}
         <Title level={2} style={{ textAlign: 'center', marginBottom: 32 }}>
-          <FireOutlined style={{ color: '#ff4d4f', marginRight: 8 }} />
+          <FireOutlined style={{ color: COLORS.error, marginRight: 8 }} />
           增强版PDF智能导入
           <Tag color="blue" style={{ marginLeft: 8 }}>中文合同专用</Tag>
         </Title>
@@ -278,7 +344,7 @@ const EnhancedPDFImportPage: React.FC = () => {
                       title="状态"
                       value={currentStatus.status === 'ready_for_review' ? '完成' : '处理中'}
                       valueStyle={{
-                        color: currentStatus.status === 'ready_for_review' ? '#3f8600' : '#1890ff'
+                        color: currentStatus.status === 'ready_for_review' ? COLORS.success : COLORS.primary
                       }}
                     />
                   </Col>
@@ -326,6 +392,7 @@ const EnhancedPDFImportPage: React.FC = () => {
           style={{ marginTop: 24 }}
           showIcon
         />
+      </div>
       </div>
       );
 };

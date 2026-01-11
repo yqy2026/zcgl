@@ -30,6 +30,7 @@ import {
   EyeOutlined,
   SettingOutlined,
 } from '@ant-design/icons';
+import { COLORS } from '@/styles/colorMap';
 
 const { Title, Text } = Typography;
 const { Panel } = Collapse;
@@ -411,7 +412,7 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
                   <Card style={{ height: '100%', marginBottom: 16 }}>
                     <Space direction="vertical" size="middle" style={{ width: '100%' }}>
                       <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: 32, color: '#1890ff' }}>{practice.icon}</div>
+                        <div style={{ fontSize: 32, color: COLORS.primary }}>{practice.icon}</div>
                         <Title level={4} style={{ margin: 0 }}>
                           {practice.title}
                         </Title>

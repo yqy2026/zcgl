@@ -80,9 +80,13 @@ export const COLORS = {
   secondaryActive: 'var(--color-secondary-active)',
 
   success: 'var(--color-success)',
+  successLight: 'var(--color-success-light)',
   warning: 'var(--color-warning)',
+  warningLight: 'var(--color-warning-light)',
   error: 'var(--color-error)',
+  errorLight: 'var(--color-error-light)',
   info: 'var(--color-info)',
+  infoLight: 'var(--color-info-light)',
 
   textPrimary: 'var(--color-text-primary)',
   textSecondary: 'var(--color-text-secondary)',

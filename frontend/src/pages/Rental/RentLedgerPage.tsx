@@ -48,6 +48,7 @@ import { assetService } from '../../services/assetService';
 import { ownershipService } from '../../services/ownershipService';
 import { useFormat } from '../../utils/format';
 import { createLogger } from '../../utils/logger';
+import { COLORS } from '@/styles/colorMap';
 
 const pageLogger = createLogger('RentLedger');
 
@@ -327,7 +328,7 @@ const RentLedgerPage: React.FC = () => {
       dataIndex: 'paid_amount',
       key: 'paid_amount',
       render: (amount: number, record: RentLedger) => {
-        const color = amount < record.due_amount ? '#ff4d4f' : '#52c41a';
+        const color = amount < record.due_amount ? COLORS.error : COLORS.success;
         return <Text style={{ color }}>{format.currency(amount)}</Text>;
       },
       align: 'right' as const,
@@ -411,7 +412,7 @@ const RentLedgerPage: React.FC = () => {
       {/* 页面标题 */}
       <div style={{ marginBottom: '24px' }}>
         <Title level={2}>租金台账管理</Title>
-        <p style={{ color: '#666' }}>管理物业租金台账，支持支付状态更新和统计分析</p>
+        <p style={{ color: COLORS.textSecondary }}>管理物业租金台账，支持支付状态更新和统计分析</p>
       </div>
 
       {/* 统计卡片 */}
@@ -447,7 +448,7 @@ const RentLedgerPage: React.FC = () => {
                 precision={2}
                 prefix={<DollarOutlined />}
                 suffix="元"
-                valueStyle={{ color: '#cf1322' }}
+                valueStyle={{ color: COLORS.error }}
               />
             </Card>
           </Col>
@@ -458,7 +459,7 @@ const RentLedgerPage: React.FC = () => {
                 value={statistics.payment_rate}
                 precision={2}
                 suffix="%"
-                valueStyle={{ color: statistics.payment_rate > 80 ? '#3f8600' : '#cf1322' }}
+                valueStyle={{ color: statistics.payment_rate > 80 ? COLORS.success : COLORS.error }}
               />
             </Card>
           </Col>

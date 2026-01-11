@@ -27,6 +27,7 @@ import {
   InfoCircleOutlined
 } from '@ant-design/icons';
 import { Line, Column } from '@ant-design/plots';
+import { COLORS, CHART_COLORS } from '@/styles/colorMap';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import type { ColumnsType } from 'antd/es/table';
@@ -237,7 +238,7 @@ const TestCoverageDashboard: React.FC = () => {
       width: 120,
       sorter: (a, b) => a.coverage_percentage - b.coverage_percentage,
       render: (value) => {
-        const color = value >= 80 ? '#52c41a' : value >= 60 ? '#faad14' : '#ff4d4f';
+        const color = value >= 80 ? COLORS.success : value >= 60 ? COLORS.warning : COLORS.error;
         return (
           <Progress
             percent={value}
@@ -255,7 +256,7 @@ const TestCoverageDashboard: React.FC = () => {
       render: (_, record) => (
         <span>
           {record.lines_covered}/{record.lines_total}
-          <span style={{ marginLeft: 4, color: '#666' }}>
+          <span style={{ marginLeft: 4, color: COLORS.textSecondary }}>
             ({((record.lines_covered / record.lines_total) * 100).toFixed(1)}%)
           </span>
         </span>
@@ -268,7 +269,7 @@ const TestCoverageDashboard: React.FC = () => {
       render: (_, record) => (
         <span>
           {record.branches_covered}/{record.branches_total}
-          <span style={{ marginLeft: 4, color: '#666' }}>
+          <span style={{ marginLeft: 4, color: COLORS.textSecondary }}>
             ({((record.branches_covered / record.branches_total) * 100).toFixed(1)}%)
           </span>
         </span>
@@ -281,7 +282,7 @@ const TestCoverageDashboard: React.FC = () => {
       render: (_, record) => (
         <span>
           {record.functions_covered}/{record.functions_total}
-          <span style={{ marginLeft: 4, color: '#666' }}>
+          <span style={{ marginLeft: 4, color: COLORS.textSecondary }}>
             ({((record.functions_covered / record.functions_total) * 100).toFixed(1)}%)
           </span>
         </span>
@@ -308,7 +309,7 @@ const TestCoverageDashboard: React.FC = () => {
     yField: 'value',
     seriesField: 'type',
     smooth: true,
-    color: ['#1890ff', '#52c41a', '#faad14'],
+    color: [COLORS.primary, COLORS.success, COLORS.warning],
     point: {
       size: 3,
       shape: 'circle',
@@ -330,7 +331,7 @@ const TestCoverageDashboard: React.FC = () => {
     xField: 'module',
     yField: '覆盖率',
     color: (datum: ChartDatum) => {
-      return datum.覆盖率 >= 80 ? '#52c41a' : datum.覆盖率 >= 60 ? '#faad14' : '#ff4d4f';
+      return datum.覆盖率 >= 80 ? COLORS.success : datum.覆盖率 >= 60 ? COLORS.warning : COLORS.error;
     },
     label: {
       position: 'middle',
@@ -403,12 +404,12 @@ const TestCoverageDashboard: React.FC = () => {
               precision={1}
               suffix="%"
               valueStyle={{
-                color: (coverageReport?.total_coverage || 0) >= (thresholds?.total_threshold || 75) ? '#3f8600' : '#cf1322',
+                color: (coverageReport?.total_coverage || 0) >= (thresholds?.total_threshold || 75) ? COLORS.success : COLORS.error,
               }}
               prefix={(coverageReport?.total_coverage || 0) >= (thresholds?.total_threshold || 75) ? <RiseOutlined /> : <FallOutlined />}
             />
             {thresholds && (
-              <div style={{ fontSize: 12, color: '#666', marginTop: 8 }}>
+              <div style={{ fontSize: 12, color: COLORS.textSecondary, marginTop: 8 }}>
                 目标: {thresholds.total_threshold}%
               </div>
             )}
@@ -422,12 +423,12 @@ const TestCoverageDashboard: React.FC = () => {
               precision={1}
               suffix="%"
               valueStyle={{
-                color: (coverageReport?.backend_coverage || 0) >= (thresholds?.backend_threshold || 80) ? '#3f8600' : '#cf1322',
+                color: (coverageReport?.backend_coverage || 0) >= (thresholds?.backend_threshold || 80) ? COLORS.success : COLORS.error,
               }}
               prefix={(coverageReport?.backend_coverage || 0) >= (thresholds?.backend_threshold || 80) ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
             />
             {thresholds && (
-              <div style={{ fontSize: 12, color: '#666', marginTop: 8 }}>
+              <div style={{ fontSize: 12, color: COLORS.textSecondary, marginTop: 8 }}>
                 目标: {thresholds.backend_threshold}%
               </div>
             )}
@@ -441,12 +442,12 @@ const TestCoverageDashboard: React.FC = () => {
               precision={1}
               suffix="%"
               valueStyle={{
-                color: (coverageReport?.frontend_coverage || 0) >= (thresholds?.frontend_threshold || 70) ? '#3f8600' : '#cf1322',
+                color: (coverageReport?.frontend_coverage || 0) >= (thresholds?.frontend_threshold || 70) ? COLORS.success : COLORS.error,
               }}
               prefix={(coverageReport?.frontend_coverage || 0) >= (thresholds?.frontend_threshold || 70) ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
             />
             {thresholds && (
-              <div style={{ fontSize: 12, color: '#666', marginTop: 8 }}>
+              <div style={{ fontSize: 12, color: COLORS.textSecondary, marginTop: 8 }}>
                 目标: {thresholds.frontend_threshold}%
               </div>
             )}
@@ -461,7 +462,7 @@ const TestCoverageDashboard: React.FC = () => {
               suffix="秒"
               prefix={<InfoCircleOutlined />}
             />
-            <div style={{ fontSize: 12, color: '#666', marginTop: 8 }}>
+            <div style={{ fontSize: 12, color: COLORS.textSecondary, marginTop: 8 }}>
               总测试数: {coverageReport?.total_tests || 0}
             </div>
           </Card>

@@ -40,6 +40,7 @@ import {
   type CompleteResult,
   type FileInfo
 } from '../../services/pdfImportService';
+import { COLORS } from '@/styles/colorMap';
 
 const { Title, Text } = Typography;
 const { Step } = Steps;
@@ -216,11 +217,11 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
   // 获取状态颜色
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'ready_for_review': return '#52c41a';
+      case 'ready_for_review': return COLORS.success;
       case 'failed':
-      case 'cancelled': return '#ff4d4f';
-      case 'completed': return '#1890ff';
-      default: return '#faad14';
+      case 'cancelled': return COLORS.error;
+      case 'completed': return COLORS.primary;
+      default: return COLORS.warning;
     }
   };
 
@@ -453,7 +454,7 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
                 title="提取字段数"
                 value={result.extraction_result.processed_fields}
                 suffix={`/ ${result.extraction_result.total_fields}`}
-                valueStyle={{ color: '#3f8600' }}
+                valueStyle={{ color: COLORS.success }}
               />
             </Col>
             <Col span={6}>
@@ -462,7 +463,7 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
                 value={result.validation_result.validation_score}
                 precision={2}
                 suffix="%"
-                valueStyle={{ color: '#3f8600' }}
+                valueStyle={{ color: COLORS.success }}
               />
             </Col>
             <Col span={6}>
@@ -471,7 +472,7 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
                 value={result.matching_result.match_confidence}
                 precision={2}
                 suffix="%"
-                valueStyle={{ color: '#3f8600' }}
+                valueStyle={{ color: COLORS.success }}
               />
             </Col>
             <Col span={6}>
@@ -480,7 +481,7 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
                 value={result.summary.total_confidence}
                 precision={2}
                 suffix="%"
-                valueStyle={{ color: '#3f8600' }}
+                valueStyle={{ color: COLORS.success }}
               />
             </Col>
           </Row>

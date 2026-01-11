@@ -18,9 +18,13 @@
 
   /* Semantic Colors */
   --color-success: #52c41a;
+  --color-success-light: #f6ffed;
   --color-warning: #faad14;
+  --color-warning-light: #fffbe6;
   --color-error: #ff4d4f;
+  --color-error-light: #fff2f0;
   --color-info: #1890ff;
+  --color-info-light: #e6f7ff;
 
   /* Neutral Colors */
   --color-text-primary: #262626;

@@ -41,6 +41,7 @@ import {
 } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
+import { COLORS } from '@/styles/colorMap'
 
 const { Option } = Select
 const { Search } = Input
@@ -267,7 +268,7 @@ const UserManagementPage: React.FC = () => {
           <Avatar icon={<UserOutlined />} />
           <div>
             <div style={{ fontWeight: 500 }}>{record.full_name}</div>
-            <div style={{ fontSize: '12px', color: '#666' }}>
+            <div style={{ fontSize: '12px', color: COLORS.textSecondary }}>
               @{record.username}
             </div>
           </div>
@@ -280,7 +281,7 @@ const UserManagementPage: React.FC = () => {
       render: (_, record) => (
         <div>
           <div>{record.email}</div>
-          <div style={{ fontSize: '12px', color: '#666' }}>
+          <div style={{ fontSize: '12px', color: COLORS.textSecondary }}>
             {record.phone || '未设置'}
           </div>
         </div>
@@ -306,7 +307,7 @@ const UserManagementPage: React.FC = () => {
           {getStatusTag(status)}
           {record.is_locked && (
             <Tooltip title="账户已锁定">
-              <LockOutlined style={{ color: '#ff4d4f' }} />
+              <LockOutlined style={{ color: COLORS.error }} />
             </Tooltip>
           )}
         </Space>
@@ -345,7 +346,7 @@ const UserManagementPage: React.FC = () => {
               size="small"
               icon={record.is_locked ? <UnlockOutlined /> : <LockOutlined />}
               onClick={() => handleToggleLock(record)}
-              style={{ color: record.is_locked ? '#52c41a' : '#ff4d4f' }}
+              style={{ color: record.is_locked ? COLORS.success : COLORS.error }}
             />
           </Tooltip>
           <Tooltip title={record.status === 'active' ? '停用' : '启用'}>
@@ -398,7 +399,7 @@ const UserManagementPage: React.FC = () => {
                   title="活跃用户"
                   value={statistics.active}
                   prefix={<TeamOutlined />}
-                  valueStyle={{ color: '#3f8600' }}
+                  valueStyle={{ color: COLORS.success }}
                 />
               </Card>
             </Col>
@@ -408,7 +409,7 @@ const UserManagementPage: React.FC = () => {
                   title="停用用户"
                   value={statistics.inactive}
                   prefix={<SettingOutlined />}
-                  valueStyle={{ color: '#cf1322' }}
+                  valueStyle={{ color: COLORS.error }}
                 />
               </Card>
             </Col>
@@ -418,7 +419,7 @@ const UserManagementPage: React.FC = () => {
                   title="锁定用户"
                   value={statistics.locked}
                   prefix={<LockOutlined />}
-                  valueStyle={{ color: '#fa8c16' }}
+                  valueStyle={{ color: COLORS.warning }}
                 />
               </Card>
             </Col>
@@ -646,7 +647,7 @@ const UserManagementPage: React.FC = () => {
                 <h3 style={{ marginTop: 16, marginBottom: 8 }}>
                   {selectedUser.full_name}
                 </h3>
-                <p style={{ color: '#666', margin: 0 }}>
+                <p style={{ color: COLORS.textSecondary, margin: 0 }}>
                   @{selectedUser.username}
                 </p>
               </div>

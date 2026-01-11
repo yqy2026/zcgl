@@ -8,6 +8,7 @@ import {
   HomeOutlined,
   ShopOutlined,
 } from '@ant-design/icons';
+import { COLORS } from '@/styles/colorMap';
 
 interface MetricsCardsProps {
   metrics?: {
@@ -31,7 +32,7 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({ metrics, loading }) => {
             value={metrics?.totalAssets ?? 0}
             suffix="个"
             prefix={<BuildOutlined />}
-            valueStyle={{ color: '#1890ff' }}
+            valueStyle={{ color: COLORS.primary }}
           />
         </Card>
       </Col>
@@ -42,7 +43,7 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({ metrics, loading }) => {
             value={metrics?.totalArea ?? 0}
             suffix="㎡"
             prefix={<AreaChartOutlined />}
-            valueStyle={{ color: '#52c41a' }}
+            valueStyle={{ color: COLORS.success }}
           />
         </Card>
       </Col>
@@ -54,7 +55,7 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({ metrics, loading }) => {
             suffix="%"
             prefix={<PercentageOutlined />}
             precision={1}
-            valueStyle={{ color: '#faad14' }}
+            valueStyle={{ color: COLORS.warning }}
           />
         </Card>
       </Col>
@@ -64,7 +65,7 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({ metrics, loading }) => {
             title="月度收入"
             value={metrics?.monthlyRevenue ?? 0}
             prefix={<DollarOutlined />}
-            valueStyle={{ color: '#722ed1' }}
+            valueStyle={{ color: COLORS.info }}
           />
         </Card>
       </Col>
@@ -75,7 +76,7 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({ metrics, loading }) => {
             value={metrics?.rentedAssets ?? 0}
             suffix="个"
             prefix={<HomeOutlined />}
-            valueStyle={{ color: '#52c41a' }}
+            valueStyle={{ color: COLORS.success }}
           />
         </Card>
       </Col>
@@ -86,7 +87,7 @@ const MetricsCards: React.FC<MetricsCardsProps> = ({ metrics, loading }) => {
             value={metrics?.vacantAssets ?? 0}
             suffix="个"
             prefix={<ShopOutlined />}
-            valueStyle={{ color: '#ff4d4f' }}
+            valueStyle={{ color: COLORS.error }}
           />
         </Card>
       </Col>

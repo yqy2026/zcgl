@@ -18,7 +18,7 @@ import {
   InputNumber,
   Select,
 } from "antd";
-import { MessageManager } from "@/utils/MessageManager";
+import { MessageManager } from "@/utils/messageManager";
 import type { ColumnsType } from "antd/es/table";
 import {
   UploadOutlined,

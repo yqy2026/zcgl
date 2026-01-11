@@ -10,7 +10,7 @@ import {
   TransactionOutlined,
   AreaChartOutlined,
 } from '@ant-design/icons';
-import { getTrendColor, COLORS } from '@/styles/colorMap';
+import { getTrendColor, getOccupancyRateColor, COLORS } from '@/styles/colorMap';
 
 interface StatCardProps {
   title: string;

@@ -38,6 +38,7 @@ import { rentContractService } from '@/services/rentContractService';
 import type { ColumnsType } from 'antd/es/table';
 import type { Asset } from '@/types/asset';
 import type { RentContract } from '@/types/rentContract';
+import { COLORS } from '@/styles/colorMap';
 
 const { Title, Text } = Typography;
 
@@ -359,7 +360,7 @@ const OwnershipDetailPage: React.FC = () => {
               precision={2}
               prefix={<DollarOutlined />}
               suffix="元"
-              valueStyle={{ color: '#3f8600' }}
+              valueStyle={{ color: COLORS.success }}
             />
           </Card>
         </Col>
@@ -374,10 +375,10 @@ const OwnershipDetailPage: React.FC = () => {
               valueStyle={{
                 color:
                   parseFloat(collectionRate) >= 90
-                    ? '#3f8600'
+                    ? COLORS.success
                     : parseFloat(collectionRate) >= 70
-                      ? '#faad14'
-                      : '#cf1322',
+                      ? COLORS.warning
+                      : COLORS.error,
               }}
             />
           </Card>
