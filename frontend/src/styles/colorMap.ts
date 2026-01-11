@@ -22,29 +22,32 @@ export const COLOR_MAP = {
   '#faad14': 'var(--color-warning)',
   '#ff4d4f': 'var(--color-error)',
   '#f5222d': 'var(--color-error)',
-  '#1890ff': 'var(--color-info)',
 
-  // Neutral colors
+  // Neutral colors - text
   '#262626': 'var(--color-text-primary)',
   '#595959': 'var(--color-text-secondary)',
   '#8c8c8c': 'var(--color-text-tertiary)',
   '#bfbfbf': 'var(--color-text-quaternary)',
 
+  // Neutral colors - background
   '#ffffff': 'var(--color-bg-primary)',
   '#fff': 'var(--color-bg-primary)',
   '#fafafa': 'var(--color-bg-secondary)',
   '#f5f5f5': 'var(--color-bg-tertiary)',
   '#f0f0f0': 'var(--color-bg-quaternary)',
 
+  // Neutral colors - border
   '#d9d9d9': 'var(--color-border)',
-  '#f0f0f0': 'var(--color-border-light)',
-  '#bfbfbf': 'var(--color-border-dark)',
+  '#e8e8e8': 'var(--color-border-light)',
+  '#cccccc': 'var(--color-border-dark)',
 
-  // Chart colors (can be mapped to semantic or kept as palette)
-  '#722ed1': 'var(--color-primary)', // purple → primary
-  '#13c2c2': 'var(--color-success)', // cyan → success
-  '#fa8c16': 'var(--color-warning)', // orange → warning
-  '#eb2f96': 'var(--color-error)',   // pink → error
+  // Additional chart colors (mapped to semantic colors)
+  '#722ed1': 'var(--color-primary)',    // purple → primary
+  '#13c2c2': 'var(--color-success)',    // cyan → success
+  '#fa8c16': 'var(--color-warning)',    // dark orange → warning
+  '#eb2f96': 'var(--color-error)',      // pink → error
+  '#3f8600': 'var(--color-success)',    // dark green → success
+  '#8884d8': 'var(--color-secondary)',  // purple line → secondary
 } as const;
 
 // Helper function to get CSS variable from color value
@@ -127,16 +130,16 @@ export function getTrendColor(value: number, trendType?: 'up' | 'down'): string 
  * Replaces hardcoded hex values like ['#1890ff', '#52c41a', '#faad14', '#f5222d', ...]
  */
 export const CHART_COLORS = [
-  COLORS.primary,    // #1677ff - blue
-  COLORS.success,    // #52c41a - green
-  COLORS.warning,    // #faad14 - orange/gold
-  COLORS.error,      // #ff4d4f - red
-  COLORS.secondary,  // #0ea5e9 - cyan/sky
+  COLORS.primary,      // #1677ff - blue
+  COLORS.success,      // #52c41a - green
+  COLORS.warning,      // #faad14 - orange/gold
+  COLORS.error,        // #ff4d4f - red
+  COLORS.secondary,    // #0ea5e9 - cyan/sky
   COLORS.primaryHover, // #4096ff - lighter blue
-  COLORS.warning,    // #fa8c16 - darker orange
-  COLORS.error,      // #f5222d - darker red (pink-ish)
-  COLORS.secondary,  // #13c2c2 - cyan
-  COLORS.success,    // Duplicate for palette length
+  COLORS.warning,      // #fa8c16 - darker orange
+  COLORS.error,        // #f5222d - darker red (pink-ish)
+  COLORS.secondary,    // #13c2c2 - cyan
+  COLORS.success,      // Duplicate for palette length
 ] as const;
 
 /**
