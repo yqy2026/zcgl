@@ -18,7 +18,7 @@ class LLMContractExtractor:
     async def extract(self, markdown_content: str) -> dict[str, Any]:
         """
         Legacy text-only extraction (keeps backward compatibility).
-        Ideally, adapters should handle both text and vision, but for now 
+        Ideally, adapters should handle both text and vision, but for now
         we primarily route 'vision' calls to the new adapters.
         """
         # For pure text/markdown extraction, we might still want to use

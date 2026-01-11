@@ -457,9 +457,9 @@ try:
     import httpx
     httpx.TimeoutException = httpx.TimeoutException
 except ImportError:
-    class MockTimeoutException(Exception):
+    class MockTimeoutError(Exception):
         pass
-    httpx = type("obj", (object,), {"TimeoutException": MockTimeoutException})
+    httpx = type("obj", (object,), {"TimeoutException": MockTimeoutError})
 
 
 # ============================================================================

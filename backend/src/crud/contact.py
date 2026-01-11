@@ -26,7 +26,7 @@ class ContactCRUD:
         query = db.query(Contact).filter(
             Contact.entity_type == entity_type,
             Contact.entity_id == entity_id,
-            Contact.is_active == True,
+            Contact.is_active.is_(True),
         )
 
         total = query.count()
@@ -48,8 +48,8 @@ class ContactCRUD:
             .filter(
                 Contact.entity_type == entity_type,
                 Contact.entity_id == entity_id,
-                Contact.is_primary == True,
-                Contact.is_active == True,
+                Contact.is_primary.is_(True),
+                Contact.is_active.is_(True),
             )
             .first()
         )
@@ -61,7 +61,7 @@ class ContactCRUD:
             db.query(Contact).filter(
                 Contact.entity_type == obj_in["entity_type"],
                 Contact.entity_id == obj_in["entity_id"],
-                Contact.is_primary == True,
+                Contact.is_primary.is_(True),
             ).update({"is_primary": False}, synchronize_session=False)
 
         db_obj = Contact(**obj_in)
@@ -77,7 +77,7 @@ class ContactCRUD:
             db.query(Contact).filter(
                 Contact.entity_type == db_obj.entity_type,
                 Contact.entity_id == db_obj.entity_id,
-                Contact.is_primary == True,
+                Contact.is_primary.is_(True),
             ).update({"is_primary": False}, synchronize_session=False)
 
         for field, value in obj_in.items():
@@ -108,7 +108,7 @@ class ContactCRUD:
         query = db.query(Contact).filter(
             Contact.entity_type == entity_type,
             Contact.entity_id.in_(entity_ids),
-            Contact.is_active == True,
+            Contact.is_active.is_(True),
         )
 
         if contact_type:

@@ -30,16 +30,16 @@ class DeepSeekVisionResponse(BaseModel):
 class DeepSeekVisionService:
     """
     深度求索 DeepSeek-VL 多模态视觉服务
-    
+
     Environment Variables:
     - DEEPSEEK_API_KEY: DeepSeek API密钥 (required)
     - DEEPSEEK_VISION_MODEL: 视觉模型 (default: deepseek-vl)
     - DEEPSEEK_TIMEOUT: API timeout in seconds (default: 120)
-    
+
     Available Models (2026.01):
     - deepseek-vl: 开源视觉模型，支持1024x1024高分辨率
     - deepseek-vl-v2: 增强版，更好的表格理解
-    
+
     Pricing:
     - 输入: ¥1/M tokens (非常便宜)
     - 输出: ¥2/M tokens
@@ -93,13 +93,13 @@ class DeepSeekVisionService:
     ) -> DeepSeekVisionResponse:
         """
         Send images to DeepSeek-VL for contract extraction.
-        
+
         Args:
             image_paths: List of image file paths (PNG/JPG)
             prompt: Extraction prompt
             temperature: Model temperature (0.0-1.0)
             max_tokens: Maximum tokens in response
-            
+
         Returns:
             DeepSeekVisionResponse with extracted content
         """

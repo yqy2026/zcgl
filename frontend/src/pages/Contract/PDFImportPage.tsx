@@ -27,7 +27,6 @@ import {
   Spin,
   Row,
   Col,
-  Statistic,
   Tag,
   Tooltip,
   Switch,
@@ -37,9 +36,7 @@ import { MessageManager } from '@/utils/messageManager';
 import type { UploadFile } from 'antd/es/upload/interface';
 import {
   UploadOutlined,
-  FileTextOutlined,
   HistoryOutlined,
-  SettingOutlined,
   ReloadOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
@@ -54,7 +51,7 @@ import ContractImportStatus from './ContractImportStatus';
 import ContractImportReview from './ContractImportReview';
 import PDFImportHelp from './PDFImportHelp';
 import { pdfImportService } from '../../services/pdfImportService';
-import type { SystemInfoResponse } from '../../services/pdfImportService';
+import type { SystemInfoResponse as _SystemInfoResponse } from '../../services/pdfImportService';
 import type {
   CompleteResult,
   ConfirmedContractData,
@@ -75,7 +72,7 @@ interface ProcessingSession {
   error?: string;
 }
 
-interface PDFSystemCapabilities {
+interface _PDFSystemCapabilities {
   pdfplumber_available: boolean;
   pymupdf_available: boolean;
   spacy_available: boolean;
@@ -363,7 +360,7 @@ const PDFImportPage: React.FC = () => {
   };
 
   // 测试系统功能
-  const handleTestSystem = async () => {
+  const _handleTestSystem = async () => {
     try {
       setLoading(true);
       const response = await pdfImportService.testConversion();

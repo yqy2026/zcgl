@@ -3,7 +3,7 @@
  * 专门针对中文租赁合同识别的智能处理界面
  */
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   Upload,
@@ -15,9 +15,6 @@ import {
   Progress,
   Tag,
   Alert,
-  Form,
-  Switch,
-  InputNumber,
   Badge,
   Statistic,
 } from 'antd';
@@ -43,7 +40,7 @@ import type {
 import { createLogger } from '../../utils/logger';
 import { COLORS } from '@/styles/colorMap';
 
-const pageLogger = createLogger('EnhancedPDFImport');
+const _pageLogger = createLogger('EnhancedPDFImport');
 
 const { Title, Text } = Typography;
 const { Dragger } = Upload;
@@ -52,11 +49,11 @@ const EnhancedPDFImportPage: React.FC = () => {
   // 状态管理
   const [processing, setProcessing] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [currentStatus, setCurrentStatus] = useState<EnhancedSessionProgress | null>(null);
+  const [currentStatus, _setCurrentStatus] = useState<EnhancedSessionProgress | null>(null);
   const [systemCapabilities, setSystemCapabilities] = useState<EnhancedSystemCapabilities | null>(null);
-  const [fileList, setFileList] = useState<RcFile[]>([]);
+  const [fileList, _setFileList] = useState<RcFile[]>([]);
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
-  const [processingOptions, setProcessingOptions] = useState<ProcessingOptions>({
+  const [processingOptions, _setProcessingOptions] = useState<ProcessingOptions>({
     prefer_ocr: true,
     enable_chinese_optimization: true,
     enable_table_detection: true,
@@ -67,7 +64,7 @@ const EnhancedPDFImportPage: React.FC = () => {
     enable_semantic_validation: true
   });
   const [showResults, setShowResults] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadProgress, _setUploadProgress] = useState(0);
 
   // 组件挂载时检查系统能力
   useEffect(() => {

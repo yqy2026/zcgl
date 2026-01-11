@@ -24,10 +24,10 @@ def analyze_pdf(pdf_path: str) -> dict:
     """
     Analyze PDF to determine its type and characteristics.
     分析PDF以确定其类型和特征。
-    
+
     Args:
         pdf_path: Path to PDF file
-        
+
     Returns:
         dict with analysis results:
         - is_scanned: True if PDF appears to be scanned/image-based
@@ -124,10 +124,10 @@ def is_scanned_pdf(pdf_path: str) -> bool:
     """
     Quick check if PDF is scanned/image-based.
     快速检查PDF是否为扫描件。
-    
+
     Args:
         pdf_path: Path to PDF file
-        
+
     Returns:
         True if PDF appears to be scanned, False if digital
     """
@@ -139,10 +139,10 @@ def get_extraction_recommendation(pdf_path: str) -> str:
     """
     Get recommended extraction method for the PDF.
     获取PDF的推荐提取方式。
-    
+
     Args:
         pdf_path: Path to PDF file
-        
+
     Returns:
         "vision" or "text"
     """

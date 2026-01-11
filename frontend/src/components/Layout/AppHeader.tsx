@@ -1,5 +1,5 @@
 import React from 'react'
-import { Layout, Button, Avatar, Dropdown, Badge, Modal, Space, Tooltip, Typography } from 'antd'
+import { Layout, Button, Avatar, Dropdown, Modal, Space, Tooltip, Typography } from 'antd'
 import { MessageManager } from '@/utils/messageManager'
 import type { MenuProps } from 'antd'
 import {

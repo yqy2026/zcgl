@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layout, Menu, Typography } from 'antd';
+import { Layout, Menu } from 'antd';
 import {
   DashboardOutlined,
   HomeOutlined,
@@ -20,11 +20,9 @@ import {
   FileAddOutlined,
 } from '@ant-design/icons';
 import { useLocation, useNavigate } from 'react-router-dom';
-import type { MenuProps } from 'antd';
 import styles from './Layout.module.css';
 
 const { Sider } = Layout;
-const { Text } = Typography;
 
 interface AppSidebarProps {
   collapsed: boolean;

@@ -31,17 +31,17 @@ def pdf_to_images(
     """
     Convert PDF pages to PNG images.
     将PDF页面转换为PNG图片
-    
+
     Args:
         pdf_path: Path to PDF file / PDF文件路径
         output_dir: Output directory (uses temp if None) / 输出目录
         dpi: Resolution (200 recommended for OCR/Vision) / 分辨率
         max_pages: Maximum pages to convert / 最大转换页数
         image_format: Output format (png/jpg) / 输出格式
-    
+
     Returns:
         List of image file paths / 图片文件路径列表
-        
+
     Raises:
         ImportError: If PyMuPDF not installed
         FileNotFoundError: If PDF file not found
@@ -101,10 +101,10 @@ def get_pdf_page_count(pdf_path: str) -> int:
     """
     Get the number of pages in a PDF file.
     获取PDF文件的页数
-    
+
     Args:
         pdf_path: Path to PDF file
-        
+
     Returns:
         Number of pages
     """
@@ -129,7 +129,7 @@ def cleanup_temp_images(image_paths: list[str]) -> None:
     """
     Delete temporary image files.
     删除临时图片文件
-    
+
     Args:
         image_paths: List of image file paths to delete
     """

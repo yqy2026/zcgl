@@ -12,7 +12,6 @@ import {
   Space,
   Typography,
   Divider,
-  Tag,
   Row,
   Col,
 } from 'antd';
@@ -22,7 +21,6 @@ import {
   UploadOutlined,
   DeleteOutlined,
   EyeOutlined,
-  SettingOutlined,
   CloseOutlined
 } from '@ant-design/icons';
 import type { UploadFile, UploadProps, RcFile } from 'antd/es/upload/interface';
@@ -31,7 +29,7 @@ import { pdfImportService, type FileUploadResponse } from '../../services/pdfImp
 import { createLogger } from '../../utils/logger';
 import { COLORS } from '@/styles/colorMap';
 
-const pageLogger = createLogger('ContractImportUpload');
+const _pageLogger = createLogger('ContractImportUpload');
 
 const { Title, Text, Paragraph } = Typography;
 

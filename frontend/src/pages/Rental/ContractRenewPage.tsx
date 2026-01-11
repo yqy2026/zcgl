@@ -5,7 +5,7 @@
  * @module pages/Rental
  */
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Card,
   Button,
@@ -19,7 +19,6 @@ import {
 import {
   HomeOutlined,
   FileTextOutlined,
-  SaveOutlined,
   ArrowLeftOutlined,
   CheckCircleOutlined,
 } from '@ant-design/icons';
@@ -28,7 +27,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { addDays, differenceInDays, parseISO, formatISO } from 'date-fns';
 import { RentContractForm } from '../../components/Forms';
-import { RentContractCreate, RentContract } from '../../types/rentContract';
+import { RentContractCreate } from '../../types/rentContract';
 import { rentContractService } from '../../services/rentContractService';
 import RenewalSummarySection from '../../components/Forms/RentContract/RenewalSummarySection';
 import { createLogger } from '../../utils/logger';
@@ -74,7 +73,7 @@ function adjustRentTermsDate(
 const ContractRenewPage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const queryClient = useQueryClient();
+  const _queryClient = useQueryClient();
 
   const [loading, setLoading] = useState(false);
   const [contractCreated, setContractCreated] = useState(false);

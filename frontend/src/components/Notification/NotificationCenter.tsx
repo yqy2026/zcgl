@@ -4,13 +4,12 @@
  * @description 显示用户通知列表的铃铛图标和下拉菜单
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Badge, Dropdown, List, Empty, Spin, Button, Tag, Typography } from 'antd';
 import { BellOutlined, CheckOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { notificationService } from '@/services/notificationService';
 import { Notification } from '@/types/notification';
-import type { MenuProps } from 'antd';
 import { useNavigate } from 'react-router-dom';
 
 const { Text } = Typography;
@@ -36,7 +35,6 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClick }) => {
   const {
     data: notificationsData,
     isLoading,
-    refetch,
   } = useQuery({
     queryKey: ['notifications', 'list'],
     queryFn: () => notificationService.getNotifications({ limit: 10 }),

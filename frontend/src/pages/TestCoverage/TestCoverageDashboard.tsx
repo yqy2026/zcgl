@@ -27,7 +27,7 @@ import {
   InfoCircleOutlined
 } from '@ant-design/icons';
 import { Line, Column } from '@ant-design/plots';
-import { COLORS, CHART_COLORS } from '@/styles/colorMap';
+import { COLORS } from '@/styles/colorMap';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import type { ColumnsType } from 'antd/es/table';

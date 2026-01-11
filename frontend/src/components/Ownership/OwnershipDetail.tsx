@@ -8,7 +8,6 @@ import { EditOutlined, ProjectOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 
 import type { Ownership } from '@/types/ownership';
-import type { Project } from '@/types/project';
 
 const { Text } = Typography;
 

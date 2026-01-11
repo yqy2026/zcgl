@@ -15,7 +15,7 @@ import type { ColumnsType } from 'antd/es/table'
 import { createLogger } from '@/utils/logger'
 import { COLORS } from '@/styles/colorMap'
 
-const pageLogger = createLogger('TemplateManagement')
+const _pageLogger = createLogger('TemplateManagement')
 
 const { Title, Text } = Typography
 
@@ -74,7 +74,7 @@ const TemplateManagementPage: React.FC = () => {
         MessageManager.success('租赁合同导入模板下载成功')
       }
     } catch (error: unknown) {
-      pageLogger.error('下载模板失败:', error as Error)
+      _pageLogger.error('下载模板失败:', error as Error)
       MessageManager.error(`下载模板失败: ${(error as Error).message || '网络错误'}`)
     } finally {
       setLoading(false)

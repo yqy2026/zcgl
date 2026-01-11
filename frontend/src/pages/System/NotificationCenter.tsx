@@ -16,7 +16,6 @@ import { MessageManager } from '@/utils/messageManager';
 import {
     BellOutlined,
     CheckOutlined,
-    DeleteOutlined,
     ExclamationCircleOutlined,
     ClockCircleOutlined,
     InfoCircleOutlined,
@@ -33,7 +32,7 @@ import { useNavigate } from 'react-router-dom';
 import { notificationService } from '@/services/notificationService';
 import { Notification, NotificationType, NotificationPriority } from '@/types/notification';
 
-const { Title, Text, Paragraph } = Typography;
+const { Text, Paragraph } = Typography;
 
 const NotificationCenter: React.FC = () => {
     const navigate = useNavigate();
@@ -62,8 +61,8 @@ const NotificationCenter: React.FC = () => {
                 current: response.page,
                 total: response.total,
             });
-        } catch (error) {
-            console.error('加载通知失败:', error);
+        } catch {
+            console.error('加载通知失败');
             MessageManager.error('加载通知列表失败');
         } finally {
             setLoading(false);
@@ -90,7 +89,7 @@ const NotificationCenter: React.FC = () => {
                 prev.map(item => (item.id === id ? { ...item, is_read: true, read_at: new Date().toISOString() } : item))
             );
             // 触发全局未读数更新（如果有Context的话）
-        } catch (error) {
+        } catch {
             MessageManager.error('操作失败');
         }
     };
@@ -105,7 +104,7 @@ const NotificationCenter: React.FC = () => {
                     await notificationService.markAllAsRead();
                     MessageManager.success('全部已读成功');
                     loadNotifications(1, activeTab);
-                } catch (error) {
+                } catch {
                     MessageManager.error('操作失败');
                 }
             },
@@ -123,7 +122,7 @@ const NotificationCenter: React.FC = () => {
                     await notificationService.deleteNotification(id);
                     MessageManager.success('删除成功');
                     loadNotifications(pagination.current, activeTab);
-                } catch (error) {
+                } catch {
                     MessageManager.error('删除失败');
                 }
             },

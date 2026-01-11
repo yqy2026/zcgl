@@ -30,7 +30,7 @@ import {
 } from "@/components/Analytics/AnalyticsChart";
 import AnalyticsFilters from "@/components/Analytics/AnalyticsFilters";
 import type { AssetSearchParams } from "@/types/asset";
-import type { AnalyticsData, AnalyticsResponse } from "@/types/analytics";
+import type { AnalyticsData } from "@/types/analytics";
 import { createLogger } from "@/utils/logger";
 import { MessageManager } from "@/utils/messageManager";
 import { COLORS } from '@/styles/colorMap';
@@ -51,7 +51,6 @@ const AssetAnalyticsPage: React.FC = () => {
   const {
     data: analyticsResponse,
     isLoading,
-    error,
     refetch,
   } = useQuery({
     queryKey: ["asset-analytics", filters],

@@ -30,12 +30,12 @@ class QwenVisionResponse(BaseModel):
 class QwenVisionService:
     """
     阿里通义千问 Qwen-VL 多模态视觉服务
-    
+
     Environment Variables:
     - DASHSCOPE_API_KEY: 阿里云 DashScope API密钥 (required)
     - QWEN_VISION_MODEL: 视觉模型 (default: qwen-vl-max)
     - QWEN_TIMEOUT: API timeout in seconds (default: 120)
-    
+
     Available Models (2026.01):
     - qwen-vl-max: 最强视觉理解，¥20/M输入
     - qwen-vl-plus: 平衡性价比，¥8/M输入
@@ -90,16 +90,16 @@ class QwenVisionService:
     ) -> QwenVisionResponse:
         """
         Send images to Qwen-VL for contract extraction.
-        
+
         Args:
             image_paths: List of image file paths (PNG/JPG)
             prompt: Extraction prompt (Chinese preferred)
             temperature: Model temperature (0.0-1.0)
             max_tokens: Maximum tokens in response
-            
+
         Returns:
             QwenVisionResponse with extracted content
-            
+
         Raises:
             RuntimeError: If API key not configured
             httpx.HTTPStatusError: If API request fails

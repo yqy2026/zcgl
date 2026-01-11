@@ -165,7 +165,7 @@ class NotificationSchedulerService:
                 content = f"合同 {contract.contract_number}（{contract.tenant_name}）将在{days_remaining}天后到期"
 
             # 查找所有活跃用户
-            active_users = self.db.query(User).filter(User.is_active == True).all()
+            active_users = self.db.query(User).filter(User.is_active.is_(True)).all()
 
             # 为每个用户创建通知
             for user in active_users:
@@ -178,7 +178,7 @@ class NotificationSchedulerService:
                             Notification.related_entity_id == contract.id,
                             Notification.related_entity_type == "contract",
                             Notification.type == notification_type,
-                            Notification.is_read == False,
+                            Notification.is_read.is_(False),
                         )
                     )
                     .first()
@@ -244,7 +244,7 @@ class NotificationSchedulerService:
             )
 
             # 为所有活跃用户创建通知
-            active_users = self.db.query(User).filter(User.is_active == True).all()
+            active_users = self.db.query(User).filter(User.is_active.is_(True)).all()
 
             for user in active_users:
                 # 检查是否已存在相同的通知
@@ -326,7 +326,7 @@ class NotificationSchedulerService:
             )
 
             # 为所有活跃用户创建通知
-            active_users = self.db.query(User).filter(User.is_active == True).all()
+            active_users = self.db.query(User).filter(User.is_active.is_(True)).all()
 
             for user in active_users:
                 # 检查是否已存在相同的通知

@@ -143,7 +143,7 @@ class ContactService {
         `${this.basePath}/entity/${entityType}/${entityId}/primary`
       );
       return response.data ?? null;
-    } catch (error) {
+    } catch {
       // 404错误表示没有主要联系人
       return null;
     }

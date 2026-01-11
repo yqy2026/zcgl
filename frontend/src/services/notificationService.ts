@@ -6,7 +6,7 @@ import { enhancedApiClient } from '@/api/client';
 import { ApiErrorHandler } from '../utils/responseExtractor';
 import { API_ENDPOINTS } from '@/constants/api';
 import {
-  Notification,
+  Notification as _Notification,
   NotificationQueryParams,
   NotificationListResponse,
 } from '../types/notification';
@@ -30,8 +30,8 @@ class NotificationService {
       }
 
       return result.data!;
-    } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
+    } catch (err) {
+      const enhancedError = ApiErrorHandler.handleError(err);
       throw new Error(enhancedError.message);
     }
   }
@@ -76,8 +76,8 @@ class NotificationService {
       if (!result.success) {
         throw new Error(`标记通知已读失败: ${result.error}`);
       }
-    } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
+    } catch (err) {
+      const enhancedError = ApiErrorHandler.handleError(err);
       throw new Error(enhancedError.message);
     }
   }
@@ -98,8 +98,8 @@ class NotificationService {
       if (!result.success) {
         throw new Error(`标记所有通知已读失败: ${result.error}`);
       }
-    } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
+    } catch (err) {
+      const enhancedError = ApiErrorHandler.handleError(err);
       throw new Error(enhancedError.message);
     }
   }
@@ -119,8 +119,8 @@ class NotificationService {
       if (!result.success) {
         throw new Error(`删除通知失败: ${result.error}`);
       }
-    } catch (error) {
-      const enhancedError = ApiErrorHandler.handleError(error);
+    } catch (err) {
+      const enhancedError = ApiErrorHandler.handleError(err);
       throw new Error(enhancedError.message);
     }
   }
