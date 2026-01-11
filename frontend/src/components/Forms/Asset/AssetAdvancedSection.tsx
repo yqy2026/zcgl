@@ -18,6 +18,7 @@ import {
     Switch,
 } from 'antd';
 import { MessageManager } from '@/utils/messageManager';
+import { COLORS } from '@/styles/colorMap';
 import {
     UploadOutlined,
     DeleteOutlined,
@@ -86,7 +87,7 @@ const AssetAdvancedSection: React.FC = () => {
                     <Title level={5}>
                         租户信息
                         <Tooltip title="租户信息来自合同管理模块，只能查看不能编辑">
-                            <InfoCircleOutlined style={{ marginLeft: 8, color: '#666' }} />
+                            <InfoCircleOutlined style={{ marginLeft: 8, color: COLORS.textSecondary }} />
                         </Tooltip>
                     </Title>
                     <Row gutter={16}>
@@ -142,7 +143,7 @@ const AssetAdvancedSection: React.FC = () => {
                     <Title level={5}>
                         合同信息
                         <Tooltip title="合同信息来自合同管理模块，只能查看不能编辑">
-                            <InfoCircleOutlined style={{ marginLeft: 8, color: '#666' }} />
+                            <InfoCircleOutlined style={{ marginLeft: 8, color: COLORS.textSecondary }} />
                         </Tooltip>
                     </Title>
                     <Row gutter={16}>
@@ -215,7 +216,7 @@ const AssetAdvancedSection: React.FC = () => {
                                     <Upload {...terminalContractUploadProps}>
                                         <Button icon={<UploadOutlined />}>上传PDF终端合同文件</Button>
                                     </Upload>
-                                    <div style={{ marginTop: 8, fontSize: 12, color: '#666' }}>
+                                    <div style={{ marginTop: 8, fontSize: 12, color: COLORS.textSecondary }}>
                                         支持多文件上传，每个文件不超过10MB，仅支持PDF格式
                                     </div>
                                     {terminalContractFileList.length > 0 && (

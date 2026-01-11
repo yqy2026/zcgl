@@ -1,9 +1,7 @@
 import React from 'react'
 import { Pie, Column, Line } from '@ant-design/plots'
 import { Card, Empty, Spin } from 'antd'
-
-// 图表颜色主题 - 使用 Ant Design 颜色
-const COLORS = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2', '#fa8c16', '#eb2f96']
+import { CHART_COLORS, CHART_LABEL_COLORS } from '@/styles/colorMap'
 
 // 基础图表组件属性
 interface BaseChartProps {
@@ -66,7 +64,7 @@ export const AnalyticsPieChart: React.FC<PieChartProps> = ({
     data: chartData,
     angleField: 'value',
     colorField: 'type',
-    color: COLORS,
+    color: CHART_COLORS,
     radius: outerRadius / 100,
     innerRadius: innerRadius / 100,
     label: {
@@ -75,7 +73,7 @@ export const AnalyticsPieChart: React.FC<PieChartProps> = ({
       content: innerRadius > 0 ? '{percentage}%' : '{name} {percentage}',
       style: {
         fontSize: 12,
-        fill: '#fff',
+        fill: CHART_LABEL_COLORS.light,
       },
     },
 
@@ -143,7 +141,7 @@ export const AnalyticsBarChart: React.FC<BarChartProps> = ({
   showLegend = false,
   showTooltip = true,
   showGrid: _showGrid = true,  // TODO: Implement grid control
-  color = '#1890ff',
+  color = CHART_COLORS[0],
   className
 }) => {
   const config = {
@@ -161,7 +159,7 @@ export const AnalyticsBarChart: React.FC<BarChartProps> = ({
       formatter: (datum: Record<string, unknown>) => formatAggressive(datum[barKey] as number),
 
       style: {
-        fill: '#666',
+        fill: CHART_LABEL_COLORS.medium,
         fontSize: 12,
       },
     },
@@ -267,7 +265,7 @@ export const AnalyticsLineChart: React.FC<LineChartProps> = ({
     seriesField: 'type',
     color: ({ type }: { type: string }) => {
       const line = lines.find(l => l.name === type)
-      return (line !== undefined && typeof line.color === 'string' && line.color !== '') ? line.color : '#1890ff'
+      return (line !== undefined && typeof line.color === 'string' && line.color !== '') ? line.color : CHART_COLORS[0]
     },
 
 

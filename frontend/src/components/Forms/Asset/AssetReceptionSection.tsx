@@ -6,6 +6,7 @@ import type { UploadFile, UploadProps } from 'antd/es/upload/interface';
 import GroupedSelectSingle from '../../Common/GroupedSelect';
 import { BusinessModelOptions } from '../../../utils/enumHelpers';
 import { useAssetFormContext } from './AssetFormContext';
+import { COLORS } from '@/styles/colorMap';
 
 const { Title } = Typography;
 
@@ -70,7 +71,7 @@ const AssetReceptionSection: React.FC = () => {
                             <Upload {...uploadProps}>
                                 <Button icon={<UploadOutlined />}>上传PDF接收协议文件</Button>
                             </Upload>
-                            <div style={{ marginTop: 8, fontSize: 12, color: '#666' }}>
+                            <div style={{ marginTop: 8, fontSize: 12, color: COLORS.textSecondary }}>
                                 支持多文件上传，每个文件不超过10MB，仅支持PDF格式
                             </div>
                             {fileList.length > 0 && (

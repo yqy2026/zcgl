@@ -12,7 +12,7 @@
 
 .title {
   margin: 0 !important;
-  color: #1a1a1a;
+  color: var(--color-text-primary);
 }
 
 .insightCard {
@@ -22,10 +22,8 @@
   transition: all 0.3s ease;
   overflow: hidden;
   height: 100%;
-  border: 1px solid #f1f5f9;
-  /* Slate 100 */
-  background: #fff;
-  /* Removed border-left */
+  border: 1px solid var(--color-border-light);
+  background: var(--color-bg-primary);
 }
 
 .insightCard:hover {
@@ -45,7 +43,6 @@
   font-size: 18px;
   padding: 8px;
   border-radius: 10px;
-  /* Softer radius */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -53,34 +50,32 @@
 }
 
 .insightCard.info .insightIcon {
-  background: #eff6ff;
-  /* Blue 50 */
-  color: #1677ff;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
 }
 
 .insightCard.success .insightIcon {
   background: #f0fdf4;
   /* Green 50 */
-  color: #22c55e;
+  color: var(--color-success);
 }
 
 .insightCard.warning .insightIcon {
   background: #fffbeb;
   /* Amber 50 */
-  color: #f59e0b;
+  color: var(--color-warning);
 }
 
 .insightCard.error .insightIcon {
   background: #fef2f2;
   /* Red 50 */
-  color: #ef4444;
+  color: var(--color-error);
 }
 
 .insightTitle {
   font-size: 14px;
   font-weight: 600;
-  color: #1e293b;
-  /* Slate 800 */
+  color: var(--color-text-primary);
   margin: 0;
 }
 
@@ -92,25 +87,21 @@
 
 .insightDescription {
   margin: 0;
-  color: #64748b;
-  /* Slate 500 */
+  color: var(--color-text-secondary);
   font-size: 13px;
-  /* Slightly larger text */
   line-height: 1.5;
 }
 
 .insightHighlight {
   font-size: 12px;
   font-weight: 600;
-  color: #334155;
-  /* Slate 700 */
-  background: #f8fafc;
-  /* Slate 50 */
+  color: var(--color-text-primary);
+  background: var(--color-bg-secondary);
   padding: 4px 10px;
   border-radius: 6px;
   display: inline-block;
   width: fit-content;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border);
 }
 
 /* 响应式设计 */

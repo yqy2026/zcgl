@@ -124,12 +124,53 @@ export function getTrendColor(value: number, trendType?: 'up' | 'down'): string 
 
 /**
  * Chart color palette (using semantic colors)
+ * Replaces hardcoded hex values like ['#1890ff', '#52c41a', '#faad14', '#f5222d', ...]
  */
 export const CHART_COLORS = [
-  COLORS.primary,
-  COLORS.success,
-  COLORS.warning,
-  COLORS.error,
-  COLORS.info,
-  COLORS.secondary,
+  COLORS.primary,    // #1677ff - blue
+  COLORS.success,    // #52c41a - green
+  COLORS.warning,    // #faad14 - orange/gold
+  COLORS.error,      // #ff4d4f - red
+  COLORS.secondary,  // #0ea5e9 - cyan/sky
+  COLORS.primaryHover, // #4096ff - lighter blue
+  COLORS.warning,    // #fa8c16 - darker orange
+  COLORS.error,      // #f5222d - darker red (pink-ish)
+  COLORS.secondary,  // #13c2c2 - cyan
+  COLORS.success,    // Duplicate for palette length
 ] as const;
+
+/**
+ * Performance status colors for analytics
+ */
+export const PERFORMANCE_COLORS = {
+  excellent: COLORS.success,    // #52c41a
+  good: COLORS.primary,         // #1677ff
+  average: COLORS.warning,      // #faad14
+  poor: COLORS.error,           // #ff4d4f
+} as const;
+
+/**
+ * Chart label colors
+ */
+export const CHART_LABEL_COLORS = {
+  light: '#ffffff',  // For dark backgrounds
+  medium: '#666666', // For light backgrounds
+  dark: '#1a1a1a',   // For high contrast
+} as const;
+
+/**
+ * Get performance color by status type
+ * Maps Ant Design status types to actual color values
+ * @param status - 'success' | 'processing' | 'warning' | 'error'
+ * @returns CSS variable color
+ */
+export function getPerformanceColor(status: 'success' | 'processing' | 'warning' | 'error' | 'default'): string {
+  const colorMap = {
+    success: COLORS.success,    // #52c41a
+    processing: COLORS.primary, // #1677ff
+    warning: COLORS.warning,    // #faad14
+    error: COLORS.error,        // #ff4d4f
+    default: COLORS.textPrimary,// #262626
+  };
+  return colorMap[status] || colorMap.default;
+}

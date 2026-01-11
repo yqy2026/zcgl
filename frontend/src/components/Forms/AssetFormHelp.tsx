@@ -6,6 +6,7 @@ import {
   BulbOutlined,
   CheckCircleOutlined,
 } from '@ant-design/icons';
+import { COLORS } from '@/styles/colorMap';
 
 const { Panel } = Collapse;
 const { Text, Paragraph } = Typography;
@@ -255,7 +256,7 @@ export const AssetFormHelpButton: React.FC = () => {
         type="text"
         icon={<QuestionCircleOutlined />}
         onClick={() => setHelpVisible(true)}
-        style={{ color: '#1890ff' }}
+        style={{ color: COLORS.primary }}
       >
         填写帮助
       </Button>
