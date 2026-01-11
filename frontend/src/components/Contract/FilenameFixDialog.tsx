@@ -465,7 +465,7 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
             description={
               <div style={{ fontSize: '12px' }}>
                 <p>• <strong>中文特殊字符</strong>：【】（）等会被替换为标准字符 []()</p>
-                <p>• <strong>危险字符</strong>：&lt;&gt;:"/\\|?* 等会被移除或替换</p>
+                <p>• <strong>危险字符</strong>：&lt;&gt;:&quot;/\\|?* 等会被移除或替换</p>
                 <p>• <strong>长度限制</strong>：超过200字符的文件名会被智能截断</p>
                 <p>• <strong>扩展名</strong>：确保文件以.pdf结尾</p>
               </div>

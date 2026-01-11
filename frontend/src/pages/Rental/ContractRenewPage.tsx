@@ -254,7 +254,7 @@ const ContractRenewPage: React.FC = () => {
                 合同续签成功！
               </Title>
               <Text type="secondary">
-                新合同已成功创建，原合同状态已变更为"已续签"，即将跳转到新合同详情页...
+                新合同已成功创建，原合同状态已变更为&quot;已续签&quot;，即将跳转到新合同详情页...
               </Text>
             </Col>
           </Row>

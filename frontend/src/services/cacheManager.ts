@@ -217,7 +217,7 @@ export function cached(options: CacheOptions = {}) {
 
       // 如果强制刷新或没有缓存，执行原方法
       if (options.force || !cacheManager.has(cacheKey, params)) {
-        const result = await (originalMethod as Function).apply(this, args)
+        const result = await (originalMethod as (...args: unknown[]) => Promise<unknown>).apply(this, args)
         cacheManager.set(cacheKey, result, options, params)
         return result
       }
@@ -236,7 +236,7 @@ export function invalidateCache(tags: string[]) {
     const originalMethod = descriptor.value
 
     descriptor.value = async function (...args: unknown[]) {
-      const result = await (originalMethod as Function).apply(this, args)
+      const result = await (originalMethod as (...args: unknown[]) => Promise<unknown>).apply(this, args)
 
       // 执行成功后失效相关缓存
       tags.forEach(tag => {

@@ -248,7 +248,7 @@ const TemplateManagementPage: React.FC = () => {
           <Col xs={24} md={8}>
             <Card size="small" title="1. 下载模板">
               <Text>
-                点击"下载"按钮获取对应的数据导入模板文件
+                点击&quot;下载&quot;按钮获取对应的数据导入模板文件
               </Text>
             </Card>
           </Col>
