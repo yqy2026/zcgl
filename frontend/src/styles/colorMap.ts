@@ -53,7 +53,17 @@ export const COLOR_MAP = {
 // Helper function to get CSS variable from color value
 export function toCssVar(color: string): string {
   const lowerColor = color.toLowerCase();
-  return COLOR_MAP[lowerColor as keyof typeof COLOR_MAP] || color;
+  const mappedColor = COLOR_MAP[lowerColor as keyof typeof COLOR_MAP];
+
+  // Warn in development if color not found in map
+  if (!mappedColor && process.env.NODE_ENV === 'development') {
+    console.warn(
+      `[ColorMap] Unknown color "${color}" not found in COLOR_MAP. ` +
+      `Using original value. Available colors: ${Object.keys(COLOR_MAP).join(', ')}`
+    );
+  }
+
+  return mappedColor || color;
 }
 
 // Helper function to create style object with CSS variables

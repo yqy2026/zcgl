@@ -353,8 +353,10 @@ const PDFImportPage: React.FC = () => {
     try {
       await loadSessionHistory();
       MessageManager.success('数据已刷新');
-    } catch {
-      MessageManager.error('刷新失败');
+    } catch (error) {
+      const errorId = `ERR-RELOAD-${Date.now()}`;
+      console.error('[PDFImportPage] 刷新数据失败:', error, { errorId });
+      MessageManager.error(`刷新失败 [${errorId}]，请稍后重试`);
     } finally {
       setLoading(false);
     }
@@ -370,8 +372,10 @@ const PDFImportPage: React.FC = () => {
       } else {
         MessageManager.warning('系统可能存在问题');
       }
-    } catch {
-      MessageManager.error('测试失败');
+    } catch (error) {
+      const errorId = `ERR-TEST-${Date.now()}`;
+      console.error('[PDFImportPage] 测试系统功能失败:', error, { errorId });
+      MessageManager.error(`测试失败 [${errorId}]，请稍后重试`);
     } finally {
       setLoading(false);
     }

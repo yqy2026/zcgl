@@ -71,6 +71,8 @@ module.exports = {
         // Allow unused vars with underscore prefix in tests
         '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_', ignoreRestSiblings: true }],
         'no-unused-vars': 'off', // Use TypeScript version instead
+        // Allow React.createElement with children prop in tests
+        'react/no-children-prop': 'off',
       },
     },
   ],

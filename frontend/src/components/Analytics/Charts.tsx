@@ -2,7 +2,7 @@ import React, { useMemo } from 'react'
 import { Pie, Column, Line, Area } from '@ant-design/plots'
 import ChartErrorBoundary from './ChartErrorBoundary'
 import { Empty, Spin } from 'antd'
-import { CHART_COLORS, CHART_LABEL_COLORS } from '@/styles/colorMap'
+import { CHART_COLORS } from '@/styles/colorMap'
 
 // Type for chart tooltip/formatter datum with dynamic field access
 interface ChartDatum {
