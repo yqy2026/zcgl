@@ -334,6 +334,53 @@ class Settings(BaseSettings):
             )
         return v_upper
 
+    @field_validator("SECRET_KEY")
+    @classmethod
+    def validate_secret_key(cls, v: str, info) -> str:
+        """验证 SECRET_KEY 强度，生产环境必须使用强密钥"""
+        # 定义弱密钥模式（不应在生产环境使用）
+        weak_patterns = [
+            "EMERGENCY-ONLY",
+            "dev-secret-key",
+            "secret-key",
+            "test-key",
+            "example",
+            "default",
+            "changeme",
+        ]
+
+        # 检查是否为弱密钥
+        is_weak = any(pattern.lower() in v.lower() for pattern in weak_patterns)
+
+        # 检查长度
+        is_too_short = len(v) < 32
+
+        # 生产环境强制检查
+        environment = info.data.get("ENVIRONMENT", "development")
+
+        if environment == "production":
+            if is_weak:
+                raise ValueError(
+                    f"生产环境禁止使用弱密钥。SECRET_KEY 包含常见弱密钥模式。"
+                    f"请设置至少 32 字符的强随机密钥。"
+                )
+            if is_too_short:
+                raise ValueError(
+                    f"生产环境 SECRET_KEY 长度必须至少 32 字符，当前: {len(v)} 字符"
+                )
+        elif is_weak or is_too_short:
+            # 非生产环境发出警告
+            if is_weak:
+                logger.warning(
+                    "使用弱 SECRET_KEY（仅用于开发环境）。生产环境必须设置强密钥。"
+                )
+            if is_too_short:
+                logger.warning(
+                    f"SECRET_KEY 长度不足 ({len(v)} < 32)。生产环境建议使用至少 32 字符的密钥。"
+                )
+
+        return v
+
     @field_validator("OCR_PROVIDER")
     @classmethod
     def validate_ocr_provider(cls, v: str) -> str:

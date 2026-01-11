@@ -79,6 +79,9 @@ class PDFCache:
 
         Returns:
             缓存的结果，如果不存在或已过期则返回 None
+
+        Raises:
+            OSError, PermissionError: 文件系统错误会重新抛出
         """
         try:
             hash_key = self.get_file_hash(file_path)
@@ -99,19 +102,50 @@ class PDFCache:
                 logger.debug(f"Cache expired for {file_path} (age: {age_seconds}s)")
                 return None
 
-            # 读取缓存
-            with open(cache_file, encoding="utf-8") as f:
-                cached_data = json.load(f)
+            # 读取缓存，单独处理 JSON 解析错误
+            try:
+                with open(cache_file, encoding="utf-8") as f:
+                    cached_data = json.load(f)
+            except json.JSONDecodeError as e:
+                logger.error(
+                    f"Cache file corrupted: {cache_file}",
+                    exc_info=True,
+                    extra={"error_id": "CACHE_CORRUPTED", "file_path": str(cache_file)}
+                )
+                # 删除损坏的缓存文件
+                try:
+                    cache_file.unlink()
+                except Exception:
+                    pass
+                self._evictions += 1
+                self._misses += 1
+                return None
 
             # 更新访问时间（LRU策略）
-            os.utime(cache_file, None)
+            try:
+                os.utime(cache_file, None)
+            except OSError:
+                # 访问时间更新失败不影响缓存命中
+                pass
 
             self._hits += 1
             logger.info(f"Cache HIT for {file_path} (age: {age_seconds:.0f}s)")
             return cached_data
 
+        except (PermissionError, OSError) as e:
+            logger.error(
+                f"Cache access failed for {file_path}: {e}",
+                exc_info=True,
+                extra={"error_id": "CACHE_ACCESS_ERROR", "file_path": file_path}
+            )
+            # 文件系统错误应该重新抛出，让调用者知道有问题
+            raise
         except Exception as e:
-            logger.warning(f"Failed to read cache for {file_path}: {e}")
+            logger.error(
+                f"Unexpected cache error for {file_path}: {e}",
+                exc_info=True,
+                extra={"error_id": "CACHE_UNEXPECTED_ERROR", "file_path": file_path}
+            )
             self._misses += 1
             return None
 

@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from typing import Any, Callable, Dict, Optional, Union
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class ExtractionMethod(str, Enum):
@@ -98,6 +98,34 @@ class ExtractionResult(BaseModel):
 
     class Config:
         use_enum_values = True
+
+    @model_validator(mode="after")
+    def validate_success_consistency(self) -> "ExtractionResult":
+        """
+        验证成功/错误状态的一致性
+
+        规则:
+        - success=True 时，error 必须为 None，且必须有 extracted_fields
+        - success=False 时，error 必须有值
+        """
+        if self.success:
+            if self.error is not None:
+                raise ValueError(
+                    f"success=True 时 error 必须为 None，当前值: '{self.error}'"
+                )
+            if not self.extracted_fields and self.status != ExtractionStatus.SKIPPED:
+                # 允许空字段在跳过状态下，但成功时应该有数据
+                pass  # 可以改为强制要求：raise ValueError("success=True 时 extracted_fields 不能为空")
+        else:
+            if self.error is None:
+                raise ValueError(
+                    "success=False 时必须提供 error 信息"
+                )
+            # 根据错误自动设置状态
+            if self.status == ExtractionStatus.SUCCESS:
+                self.status = ExtractionStatus.FAILED
+
+        return self
 
 
 class ProgressCallback:

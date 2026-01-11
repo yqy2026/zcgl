@@ -45,6 +45,9 @@ class PDFImportService:
 
     # 类级别的并发控制信号量
     _processing_semaphore = asyncio.Semaphore(MAX_CONCURRENT_PDF_TASKS)
+    # 显式跟踪活动任务数，避免访问私有属性
+    _active_tasks = 0
+    _active_tasks_lock = asyncio.Lock()
 
     def __init__(self):
         self.paddle_service = get_paddleocr_service()
@@ -55,18 +58,13 @@ class PDFImportService:
     @classmethod
     def get_available_slots(cls) -> int:
         """获取当前可用的处理槽位数"""
-        # Semaphore._value 直接表示可用的槽位数
-        try:
-            return cls._processing_semaphore._value
-        except AttributeError:
-            # 如果无法访问内部属性，返回最大值
-            return MAX_CONCURRENT_PDF_TASKS
+        available = max(0, MAX_CONCURRENT_PDF_TASKS - cls._active_tasks)
+        return available
 
     @classmethod
     def get_current_concurrent_count(cls) -> int:
         """获取当前正在处理的任务数"""
-        # 当前并发数 = 最大值 - 可用槽位数
-        return MAX_CONCURRENT_PDF_TASKS - cls.get_available_slots()
+        return cls._active_tasks
 
     async def get_session_status(
         self, db: Session, session_id: str
@@ -181,6 +179,10 @@ class PDFImportService:
             options: 处理选项
         """
         async with self._processing_semaphore:
+            # 增加活动任务计数
+            async with self._active_tasks_lock:
+                self.__class__._active_tasks += 1
+
             logger.info(
                 f"Acquired processing slot for {session_id} "
                 f"(active: {self.get_current_concurrent_count()})"
@@ -189,10 +191,23 @@ class PDFImportService:
             try:
                 await self._process_background(session_id, file_path, options)
             except Exception as e:
-                logger.error(f"Processing failed for {session_id}: {e}")
-                # 这里无法直接更新数据库，因为需要 db session
-                # 异常会被 _handle_task_completion 捕获
+                logger.error(
+                    f"Processing failed for {session_id}: {e}",
+                    exc_info=True,
+                    extra={"error_id": "PDF_BACKGROUND_TASK_FAILED", "session_id": session_id}
+                )
+                # 持久化错误到数据库
+                error_result = {
+                    "success": False,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                    "traceback": traceback.format_exc(),
+                }
+                await self._persist_processing_error(session_id, error_result)
             finally:
+                # 减少活动任务计数
+                async with self._active_tasks_lock:
+                    self.__class__._active_tasks -= 1
                 logger.info(f"Released processing slot for {session_id}")
 
     async def _process_background(
@@ -289,51 +304,62 @@ class PDFImportService:
             result: 处理结果
             processing_time_ms: 处理耗时（毫秒）
         """
-        session_factory = get_session_factory()
-        db = session_factory()
+        from ...database import _get_database_manager
 
-        try:
-            session = (
-                db.query(PDFImportSession)
-                .filter(PDFImportSession.session_id == session_id)
-                .first()
-            )
+        db_manager = _get_database_manager()
 
-            if session:
-                # 更新处理结果（包含处理时间）
-                result_with_metrics = {
-                    **result,
-                    "processing_time_ms": processing_time_ms,
-                }
-                session.processing_result = result_with_metrics
-                session.extracted_data = result.get("extracted_fields", {})
-                session.confidence_score = result.get("confidence_score", 0.0)
-                session.processing_method = result.get("extraction_method", "unknown")
+        with db_manager.get_session() as db:
+            try:
+                session = (
+                    db.query(PDFImportSession)
+                    .filter(PDFImportSession.session_id == session_id)
+                    .first()
+                )
 
-                # 更新状态
-                if result.get("auto_confirm") and result.get("confidence_score", 0) > 0.8:
-                    # 高置信度，自动完成
-                    session.status = SessionStatus.COMPLETED
-                    session.progress_percentage = 100.0
-                else:
-                    # 需要用户确认
-                    session.status = SessionStatus.READY_FOR_REVIEW
-                    session.progress_percentage = 90.0
+                if session:
+                    # 更新处理结果（包含处理时间）
+                    result_with_metrics = {
+                        **result,
+                        "processing_time_ms": processing_time_ms,
+                    }
+                    session.processing_result = result_with_metrics
+                    session.extracted_data = result.get("extracted_fields", {})
+                    session.confidence_score = result.get("confidence_score", 0.0)
+                    session.processing_method = result.get("extraction_method", "unknown")
 
-                session.current_step = ProcessingStep.FINAL_REVIEW
+                    # 更新状态
+                    CONFIDENCE_THRESHOLD = 0.8
+                    should_auto_confirm = (
+                        result.get("auto_confirm")
+                        and result.get("confidence_score", 0) > CONFIDENCE_THRESHOLD
+                    )
 
-                # 设置完成时间
-                from datetime import datetime
-                session.completed_at = datetime.now(UTC)
+                    if should_auto_confirm:
+                        # 高置信度，自动完成
+                        session.status = SessionStatus.COMPLETED
+                        session.progress_percentage = 100.0
+                    else:
+                        # 需要用户确认
+                        session.status = SessionStatus.READY_FOR_REVIEW
+                        session.progress_percentage = 90.0
 
-                db.commit()
-                logger.info(f"Persisted processing result for session {session_id}")
+                    session.current_step = ProcessingStep.FINAL_REVIEW
 
-        except Exception as e:
-            logger.error(f"Failed to persist processing result for {session_id}: {e}")
-            db.rollback()
-        finally:
-            db.close()
+                    # 设置完成时间
+                    from datetime import datetime
+                    session.completed_at = datetime.now(UTC)
+
+                    db.commit()
+                    logger.info(f"Persisted processing result for session {session_id}")
+
+            except Exception as e:
+                logger.error(
+                    f"Failed to persist processing result for {session_id}: {e}",
+                    exc_info=True,
+                    extra={"error_id": "PERSIST_RESULT_FAILED", "session_id": session_id}
+                )
+                db.rollback()
+                raise
 
     async def _persist_processing_error(
         self, session_id: str, error_result: dict[str, Any]
@@ -345,35 +371,95 @@ class PDFImportService:
             session_id: 会话 ID
             error_result: 错误结果
         """
-        session_factory = get_session_factory()
-        db = session_factory()
+        from ...database import _get_database_manager
 
-        try:
-            session = (
-                db.query(PDFImportSession)
-                .filter(PDFImportSession.session_id == session_id)
-                .first()
-            )
+        db_manager = _get_database_manager()
 
-            if session:
-                # 更新错误信息
-                session.error_message = error_result.get("error", "Unknown error")
-                session.processing_result = error_result
-                session.status = SessionStatus.FAILED
-                session.progress_percentage = 0.0
+        with db_manager.get_session() as db:
+            try:
+                session = (
+                    db.query(PDFImportSession)
+                    .filter(PDFImportSession.session_id == session_id)
+                    .first()
+                )
 
-                # 设置完成时间
-                from datetime import datetime
-                session.completed_at = datetime.now(UTC)
+                if session:
+                    # 更新错误信息
+                    session.error_message = error_result.get("error", "Unknown error")
+                    session.processing_result = error_result
+                    session.status = SessionStatus.FAILED
+                    session.progress_percentage = 0.0
 
-                db.commit()
-                logger.info(f"Persisted processing error for session {session_id}")
+                    # 设置完成时间
+                    from datetime import datetime
+                    session.completed_at = datetime.now(UTC)
 
-        except Exception as e:
-            logger.error(f"Failed to persist processing error for {session_id}: {e}")
-            db.rollback()
-        finally:
-            db.close()
+                    db.commit()
+                    logger.info(f"Persisted processing error for session {session_id}")
+
+            except Exception as e:
+                logger.error(
+                    f"Failed to persist processing error for {session_id}: {e}",
+                    exc_info=True,
+                    extra={"error_id": "PERSIST_ERROR_FAILED", "session_id": session_id}
+                )
+                db.rollback()
+                raise
+
+    # ========================================================================
+    # 结果合并辅助函数
+    # ========================================================================
+
+    # 常量定义
+    EXPECTED_FIELD_COUNT = 14
+    CONFIDENCE_BASE_THRESHOLD = 0.8
+    CONFIDENCE_MIN_BASE = 0.3
+    CONFIDENCE_WEIGHT_EXTRACTION = 0.3
+    CONFIDENCE_MAX_SCORE = 0.95
+
+    def _get_extracted_fields(self, smart_result: dict) -> dict:
+        """从智能提取结果中获取字段"""
+        return smart_result.get("raw_llm_json") or smart_result.get("extracted_fields", {})
+
+    def _fill_missing_fields_with_regex(self, extracted: dict, regex_result: dict | None) -> tuple[dict, int]:
+        """
+        使用正则提取结果填补缺失字段
+
+        Returns:
+            tuple[dict, int]: (填充后的字段字典, 填充的字段数)
+        """
+        extracted_count = sum(1 for v in extracted.values() if v is not None)
+
+        if regex_result and regex_result.get("success"):
+            regex_fields = regex_result.get("extracted_fields", {})
+            for key, val in regex_fields.items():
+                if not extracted.get(key):
+                    extracted[key] = (
+                        val["value"] if isinstance(val, dict) else val
+                    )
+                    extracted_count += 1
+
+        return extracted, extracted_count
+
+    def _calculate_extraction_rate(self, extracted_count: int) -> float:
+        """计算字段提取率"""
+        return (
+            extracted_count / self.EXPECTED_FIELD_COUNT
+            if self.EXPECTED_FIELD_COUNT > 0
+            else 0
+        )
+
+    def _calculate_confidence(self, smart_result: dict, extraction_rate: float) -> float:
+        """计算综合置信度分数"""
+        base_confidence = (
+            smart_result.get("confidence", self.CONFIDENCE_BASE_THRESHOLD)
+            if smart_result.get("success")
+            else self.CONFIDENCE_MIN_BASE
+        )
+        weighted_confidence = base_confidence * (
+            0.7 + self.CONFIDENCE_WEIGHT_EXTRACTION * extraction_rate
+        )
+        return min(self.CONFIDENCE_MAX_SCORE, weighted_confidence)
 
     def _merge_smart_results(
         self, smart_result: dict, regex_result: dict | None
@@ -385,33 +471,17 @@ class PDFImportService:
         - LLM/Vision 提取为主数据源
         - 正则填补空缺和验证模式
         """
-        # 从智能提取开始
-        extracted = smart_result.get("raw_llm_json") or smart_result.get(
-            "extracted_fields", {}
+        # 获取提取字段
+        extracted = self._get_extracted_fields(smart_result)
+
+        # 用正则填补空缺并统计
+        extracted, extracted_count = self._fill_missing_fields_with_regex(
+            extracted, regex_result
         )
-
-        # 统计字段
-        total_expected_fields = 14
-        extracted_count = sum(1 for v in extracted.values() if v is not None)
-
-        # 用正则填补空缺
-        if regex_result and regex_result.get("success"):
-            regex_fields = regex_result.get("extracted_fields", {})
-            for key, val in regex_fields.items():
-                if not extracted.get(key):
-                    extracted[key] = (
-                        val["value"] if isinstance(val, dict) else val
-                    )
-                    extracted_count += 1
 
         # 计算置信度
-        extraction_rate = (
-            extracted_count / total_expected_fields if total_expected_fields > 0 else 0
-        )
-        base_confidence = (
-            smart_result.get("confidence", 0.8) if smart_result.get("success") else 0.3
-        )
-        confidence_score = min(0.95, base_confidence * (0.7 + 0.3 * extraction_rate))
+        extraction_rate = self._calculate_extraction_rate(extracted_count)
+        confidence_score = self._calculate_confidence(smart_result, extraction_rate)
 
         return {
             "success": True,
@@ -420,7 +490,7 @@ class PDFImportService:
             "confidence_score": round(confidence_score, 2),
             "extraction_method": smart_result.get("extraction_method", "unknown"),
             "processed_fields": extracted_count,
-            "total_fields": total_expected_fields,
+            "total_fields": self.EXPECTED_FIELD_COUNT,
             "pdf_analysis": smart_result.get("pdf_analysis"),
             "usage": smart_result.get("usage"),
             "source": "smart_extraction",
