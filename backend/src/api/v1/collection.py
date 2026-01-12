@@ -152,7 +152,11 @@ async def list_collection_records(
     pages = (total + limit - 1) // limit if total > 0 else 0
 
     return CollectionRecordListResponse(
-        items=records, total=total, page=page, limit=limit, pages=pages
+        items=records,  # type: ignore[arg-type]  # FastAPI handles ORM to response model conversion
+        total=total,
+        page=page,
+        limit=limit,
+        pages=pages,
     )
 
 
@@ -214,7 +218,7 @@ async def update_collection_record(
     update_data: CollectionRecordUpdate,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
-):
+) -> CollectionRecordResponse:
     """更新催缴记录（状态、承诺信息等）"""
     record = db.query(CollectionRecord).filter(CollectionRecord.id == record_id).first()
 
@@ -237,7 +241,7 @@ async def delete_collection_record(
     record_id: str,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, str]:
     """删除催缴记录"""
     record = db.query(CollectionRecord).filter(CollectionRecord.id == record_id).first()
 
