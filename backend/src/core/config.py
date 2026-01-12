@@ -14,12 +14,12 @@ import os
 from typing import Any
 
 from pydantic import (
-    ConfigDict,
     Field,
+    ValidationInfo,
     field_validator,
     model_validator,
 )
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 class Settings(BaseSettings):
     """应用配置"""
 
-    model_config = ConfigDict(
+    model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore"
     )
 
@@ -330,7 +330,7 @@ class Settings(BaseSettings):
 
     @field_validator("SECRET_KEY")
     @classmethod
-    def validate_secret_key(cls, v: str, info) -> str:
+    def validate_secret_key(cls, v: str, info: ValidationInfo) -> str:
         """验证 SECRET_KEY 强度，生产环境必须使用强密钥"""
         # 定义弱密钥模式（不应在生产环境使用）
         weak_patterns = [
@@ -447,7 +447,7 @@ class Settings(BaseSettings):
 
     @field_validator("DEFAULT_PAGE_SIZE", "MAX_PAGE_SIZE")
     @classmethod
-    def validate_page_size(cls, v: int, info) -> int:
+    def validate_page_size(cls, v: int, info: ValidationInfo) -> int:
         """验证分页大小"""
         if v < 1:
             raise ValueError(f"{info.field_name} 不能小于 1，当前值: {v}")
@@ -606,7 +606,7 @@ elif os.getenv("ENVIRONMENT") == "development":  # pragma: no cover
 
 
 # 验证必要配置
-def validate_config():
+def validate_config() -> None:
     """验证配置是否正确"""
     import os
 

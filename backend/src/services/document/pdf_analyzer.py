@@ -8,12 +8,13 @@ Used for smart routing between text and vision extraction methods.
 
 import logging
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 # PyMuPDF import with graceful fallback
 try:
-    import fitz  # PyMuPDF
+    import fitz  # PyMuPDF  # type: ignore
 
     PYMUPDF_AVAILABLE = True
 except ImportError:
@@ -22,7 +23,7 @@ except ImportError:
     PYMUPDF_AVAILABLE = False
 
 
-def analyze_pdf(pdf_path: str) -> dict:
+def analyze_pdf(pdf_path: str | Path) -> dict[str, Any]:
     """
     Analyze PDF to determine its type and characteristics.
     分析PDF以确定其类型和特征。
@@ -48,12 +49,12 @@ def analyze_pdf(pdf_path: str) -> dict:
             "recommendation": "vision",
         }
 
-    pdf_path = Path(pdf_path)
-    if not pdf_path.exists():
-        raise FileNotFoundError(f"PDF not found: {pdf_path}")
+    pdf_path_obj: Path = Path(pdf_path)
+    if not pdf_path_obj.exists():
+        raise FileNotFoundError(f"PDF not found: {pdf_path_obj}")
 
     try:
-        doc = fitz.open(str(pdf_path))
+        doc = fitz.open(str(pdf_path_obj))
         page_count = len(doc)
 
         total_text_chars = 0
@@ -124,7 +125,7 @@ def analyze_pdf(pdf_path: str) -> dict:
         }
 
 
-def is_scanned_pdf(pdf_path: str) -> bool:
+def is_scanned_pdf(pdf_path: str | Path) -> bool:
     """
     Quick check if PDF is scanned/image-based.
     快速检查PDF是否为扫描件。
@@ -135,11 +136,12 @@ def is_scanned_pdf(pdf_path: str) -> bool:
     Returns:
         True if PDF appears to be scanned, False if digital
     """
-    result = analyze_pdf(pdf_path)
-    return result.get("is_scanned", True)
+    result: dict[str, Any] = analyze_pdf(pdf_path)
+    is_scanned: bool = result.get("is_scanned", True)
+    return is_scanned
 
 
-def get_extraction_recommendation(pdf_path: str) -> str:
+def get_extraction_recommendation(pdf_path: str | Path) -> str:
     """
     Get recommended extraction method for the PDF.
     获取PDF的推荐提取方式。
@@ -150,5 +152,6 @@ def get_extraction_recommendation(pdf_path: str) -> str:
     Returns:
         "vision" or "text"
     """
-    result = analyze_pdf(pdf_path)
-    return result.get("recommendation", "vision")
+    result: dict[str, Any] = analyze_pdf(pdf_path)
+    recommendation: str = result.get("recommendation", "vision")
+    return recommendation

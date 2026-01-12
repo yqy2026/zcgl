@@ -44,7 +44,7 @@ class Task:
 
     id: str
     func_name: str
-    args: tuple = ()
+    args: tuple[Any, ...] = ()
     kwargs: dict[str, Any] = field(default_factory=dict)
     status: TaskStatus = TaskStatus.PENDING
     priority: TaskPriority = TaskPriority.NORMAL
@@ -56,7 +56,7 @@ class Task:
     error_message: str | None = None
     progress: int = 0  # 0-100
 
-    def __lt__(self, other):
+    def __lt__(self, other: Task) -> bool:
         """用于优先级队列的比较"""
         if self.priority.value != other.priority.value:
             return self.priority.value < other.priority.value
@@ -78,16 +78,16 @@ class Task:
 class TaskQueue:
     """任务队列管理器"""
 
-    def __init__(self, max_workers: int = 4):
-        self.queue: PriorityQueue = PriorityQueue()
+    def __init__(self, max_workers: int = 4) -> None:
+        self.queue: PriorityQueue[tuple[int, datetime, Task]] = PriorityQueue()
         self.tasks: dict[str, Task] = {}  # 任务存储
         self.max_workers = max_workers
         self.active_workers = 0
-        self.worker_threads = []
+        self.worker_threads: list[threading.Thread] = []
         self.is_running = False
-        self.callbacks: dict[str, Callable] = {}  # 任务处理函数
+        self.callbacks: dict[str, Callable[..., Any]] = {}  # 任务处理函数
 
-    def register_callback(self, func_name: str, func: Callable) -> None:
+    def register_callback(self, func_name: str, func: Callable[..., Any]) -> None:
         """注册任务处理函数"""
         self.callbacks[func_name] = func
         logger.info(f"已注册任务处理函数: {func_name}")
@@ -95,8 +95,8 @@ class TaskQueue:
     def submit_task(
         self,
         func_name: str,
-        args: tuple = (),
-        kwargs: dict | None = None,
+        args: tuple[Any, ...] = (),
+        kwargs: dict[str, Any] | None = None,
         priority: TaskPriority = TaskPriority.NORMAL,
         max_retries: int = 3,
     ) -> str:
@@ -184,7 +184,10 @@ class TaskQueue:
         while self.is_running:
             try:
                 # 获取任务
-                _, _, task = self.queue.get(timeout=1)
+                priority: int
+                created_at: datetime
+                task: Task
+                priority, created_at, task = self.queue.get(timeout=1)
 
                 # 处理任务
                 self.process_task(task)
@@ -255,7 +258,7 @@ def get_task_queue() -> TaskQueue:
 
 def async_task(
     priority: TaskPriority = TaskPriority.NORMAL, max_retries: int = 3
-) -> Callable:
+) -> Callable[..., Callable[..., Any]]:
     """
     异步任务装饰器
 
@@ -269,14 +272,14 @@ def async_task(
         task_id = submit_async_task(process_pdf_import, file_path, org_id)
     """
 
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             # 同步调用，支持异步提交
             return func(*args, **kwargs)
 
         # 添加异步提交方法
-        def submit_async(*args, **kwargs) -> str:
+        def submit_async(*args: Any, **kwargs: Any) -> str:
             queue = get_task_queue()
             queue.register_callback(func.__name__, func)
             return queue.submit_task(
@@ -288,7 +291,7 @@ def async_task(
             )
 
         # 使用一个字典来存储子函数
-        wrapper_dict = vars(wrapper)  # type: ignore
+        wrapper_dict = vars(wrapper)
         wrapper_dict["submit_async"] = submit_async
         return wrapper
 
@@ -296,11 +299,11 @@ def async_task(
 
 
 def submit_task(
-    func: Callable,
-    *args,
+    func: Callable[..., Any],
+    *args: Any,
     priority: TaskPriority = TaskPriority.NORMAL,
     max_retries: int = 3,
-    **kwargs,
+    **kwargs: Any,
 ) -> str:
     """
     提交异步任务

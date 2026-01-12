@@ -4,9 +4,10 @@
 
 注意：使用延迟导入以避免在测试收集时过早初始化 Settings
 """
+from typing import Any
 
 
-def __getattr__(name: str):
+def __getattr__(name: str) -> Any:
     """延迟导入配置，避免在模块导入时立即初始化 Settings"""
     if name == "settings":
         from .config import settings as _settings  # noqa: F401
