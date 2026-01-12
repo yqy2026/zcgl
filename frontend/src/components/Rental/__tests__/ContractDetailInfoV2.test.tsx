@@ -14,92 +14,102 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 
 // Mock antd
-vi.mock('antd', () => ({
-    Card: ({ children, title }: any) => (
-        <div data-testid="card" data-title={title}>
-            <div className="card-title">{title}</div>
-            {children}
-        </div>
-    ),
-    Descriptions: ({ items, children }: any) => (
-        <div data-testid="descriptions">
-            {children || items?.map((item: any, index: number) => (
-                <div key={index} data-testid={`desc-item-${item.key || index}`}>
-                    <span className="label">{item.label}</span>
-                    <span className="value">{item.children}</span>
-                </div>
-            ))}
-        </div>
-    ),
-    // Add Descriptions.Item mock
-    'Descriptions.Item': ({ children, label }: any) => (
+vi.mock('antd', () => {
+    const DescriptionsItemMock = ({ children, label }: any) => (
         <div data-testid="descriptions-item" data-label={label}>
             {label && <span className="item-label">{label}</span>}
             <span className="item-content">{children}</span>
         </div>
-    ),
-    Tag: ({ children, color }: any) => (
-        <span data-testid="tag" data-color={color}>
-            {children}
-        </span>
-    ),
-    Table: ({ dataSource, columns }: any) => (
-        <table data-testid="table">
-            <thead>
-                <tr>
-                    {columns?.map((col: any, i: number) => (
-                        <th key={i}>{col.title}</th>
-                    ))}
-                </tr>
-            </thead>
-            <tbody>
-                {dataSource?.map((row: any, i: number) => (
-                    <tr key={i} data-testid={`table-row-${i}`}>
-                        {columns?.map((col: any, j: number) => (
-                            <td key={j}>{row[col.dataIndex]}</td>
+    );
+
+    const DescriptionsMock = ({ items, children }: any) => {
+        const MockComponent = children ? (
+            <div data-testid="descriptions">{children}</div>
+        ) : (
+            <div data-testid="descriptions">
+                {items?.map((item: any, index: number) => (
+                    <div key={index} data-testid={`desc-item-${item.key || index}`}>
+                        <span className="label">{item.label}</span>
+                        <span className="value">{item.children}</span>
+                    </div>
+                ))}
+            </div>
+        );
+        MockComponent.Item = DescriptionsItemMock;
+        return MockComponent;
+    };
+
+    return {
+        Card: ({ children, title }: any) => (
+            <div data-testid="card" data-title={title}>
+                <div className="card-title">{title}</div>
+                {children}
+            </div>
+        ),
+        Descriptions: DescriptionsMock,
+        Tag: ({ children, color }: any) => (
+            <span data-testid="tag" data-color={color}>
+                {children}
+            </span>
+        ),
+        Table: ({ dataSource, columns }: any) => (
+            <table data-testid="table">
+                <thead>
+                    <tr>
+                        {columns?.map((col: any, i: number) => (
+                            <th key={i}>{col.title}</th>
                         ))}
                     </tr>
+                </thead>
+                <tbody>
+                    {dataSource?.map((row: any, i: number) => (
+                        <tr key={i} data-testid={`table-row-${i}`}>
+                            {columns?.map((col: any, j: number) => (
+                                <td key={j}>{row[col.dataIndex]}</td>
+                            ))}
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        ),
+        Tabs: ({ items, defaultActiveKey }: any) => (
+            <div data-testid="tabs" data-default-key={defaultActiveKey}>
+                {items?.map((item: any) => (
+                    <div key={item.key} data-testid={`tab-${item.key}`}>
+                        {item.label}: {item.children}
+                    </div>
                 ))}
-            </tbody>
-        </table>
-    ),
-    Tabs: ({ items, defaultActiveKey }: any) => (
-        <div data-testid="tabs" data-default-key={defaultActiveKey}>
-            {items?.map((item: any) => (
-                <div key={item.key} data-testid={`tab-${item.key}`}>
-                    {item.label}: {item.children}
-                </div>
-            ))}
-        </div>
-    ),
-    Space: ({ children }: any) => <div data-testid="space">{children}</div>,
-    Divider: () => <hr data-testid="divider" />,
-    Timeline: ({ items }: any) => (
-        <div data-testid="timeline">
-            {items?.map((item: any, i: number) => (
-                <div key={i} data-testid={`timeline-item-${i}`}>
-                    {item.children}
-                </div>
-            ))}
-        </div>
-    ),
-    Empty: ({ description }: any) => (
-        <div data-testid="empty">{description}</div>
-    ),
-    Statistic: ({ title, value, suffix }: any) => (
-        <div data-testid="statistic" data-title={title}>
-            <span>{title}</span>: <span>{value}</span>
-            {suffix && <span>{suffix}</span>}
-        </div>
-    ),
-    Row: ({ children }: any) => <div data-testid="row">{children}</div>,
-    Col: ({ children }: any) => <div data-testid="col">{children}</div>,
-    Typography: {
-        Text: ({ children }: any) => <span>{children}</span>,
-        Title: ({ children }: any) => <h1>{children}</h1>,
-        Paragraph: ({ children }: any) => <p>{children}</p>,
-    },
-}));
+            </div>
+        ),
+        Space: ({ children }: any) => <div data-testid="space">{children}</div>,
+        Divider: () => <hr data-testid="divider" />,
+        Timeline: ({ items }: any) => (
+            <div data-testid="timeline">
+                {items?.map((item: any, i: number) => (
+                    <div key={i} data-testid={`timeline-item-${i}`}>
+                        {item.children}
+                    </div>
+                ))}
+            </div>
+        ),
+        Empty: ({ description }: any) => (
+            <div data-testid="empty">{description}</div>
+        ),
+        Statistic: ({ title, value, suffix }: any) => (
+            <div data-testid="statistic" data-title={title}>
+                <span>{title}</span>: <span>{value}</span>
+                {suffix && <span>{suffix}</span>}
+            </div>
+        ),
+        Row: ({ children }: any) => <div data-testid="row">{children}</div>,
+        Col: ({ children }: any) => <div data-testid="col">{children}</div>,
+        Typography: {
+            Text: ({ children }: any) => <span>{children}</span>,
+            Title: ({ children }: any) => <h1>{children}</h1>,
+            Paragraph: ({ children }: any) => <p>{children}</p>,
+        },
+    };
+});
 
 // Mock icons
 vi.mock('@ant-design/icons', () => ({
