@@ -31,7 +31,7 @@ router = APIRouter(prefix="/collection", tags=["催缴管理"])
 async def get_collection_summary(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
-):
+) -> CollectionTaskSummary:
     """
     获取催缴任务汇总统计
 
@@ -62,8 +62,8 @@ async def get_collection_summary(
         .first()
     )
 
-    total_overdue_count = overdue_stats.total_count or 0
-    total_overdue_amount = overdue_stats.total_amount or Decimal("0")
+    total_overdue_count = overdue_stats.total_count if overdue_stats else 0
+    total_overdue_amount = overdue_stats.total_amount if overdue_stats else Decimal("0")
 
     # 2. 统计待催缴数量（状态为 pending 或 in_progress 的记录）
     pending_count = (
@@ -123,7 +123,7 @@ async def list_collection_records(
     limit: int = Query(20, ge=1, le=100, description="每页数量"),
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
-):
+) -> CollectionRecordListResponse:
     """查询催缴记录列表，支持按台账、合同、状态筛选"""
 
     query = db.query(CollectionRecord)
@@ -165,7 +165,7 @@ async def get_collection_record(
     record_id: str,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
-):
+) -> CollectionRecordResponse:
     """获取单条催缴记录详情"""
     record = db.query(CollectionRecord).filter(CollectionRecord.id == record_id).first()
 
@@ -182,7 +182,7 @@ async def create_collection_record(
     record_data: CollectionRecordCreate,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
-):
+) -> CollectionRecordResponse:
     """创建新的催缴记录"""
     # 验证台账和合同存在
     ledger = db.query(RentLedger).filter(RentLedger.id == record_data.ledger_id).first()
@@ -191,9 +191,9 @@ async def create_collection_record(
 
     # 设置操作人
     if not record_data.operator:
-        record_data.operator = current_user.username or current_user.email
+        record_data.operator = str(current_user.username or current_user.email)
     if not record_data.operator_id:
-        record_data.operator_id = current_user.id
+        record_data.operator_id = str(current_user.id)
 
     # 创建记录
     record = CollectionRecord(**record_data.model_dump())
