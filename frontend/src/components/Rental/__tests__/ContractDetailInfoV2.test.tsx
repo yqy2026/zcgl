@@ -21,14 +21,21 @@ vi.mock('antd', () => ({
             {children}
         </div>
     ),
-    Descriptions: ({ items }: any) => (
+    Descriptions: ({ items, children }: any) => (
         <div data-testid="descriptions">
-            {items?.map((item: any, index: number) => (
+            {children || items?.map((item: any, index: number) => (
                 <div key={index} data-testid={`desc-item-${item.key || index}`}>
                     <span className="label">{item.label}</span>
                     <span className="value">{item.children}</span>
                 </div>
             ))}
+        </div>
+    ),
+    // Add Descriptions.Item mock
+    'Descriptions.Item': ({ children, label }: any) => (
+        <div data-testid="descriptions-item" data-label={label}>
+            {label && <span className="item-label">{label}</span>}
+            <span className="item-content">{children}</span>
         </div>
     ),
     Tag: ({ children, color }: any) => (
@@ -128,6 +135,8 @@ vi.mock('../ServiceFeeLedgerTable', () => ({
 describe('ContractDetailInfo V2 Tests', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        // Cleanup after each test to prevent DOM pollution
+        document.body.innerHTML = '';
     });
 
     // ==================== Mock Data ====================
