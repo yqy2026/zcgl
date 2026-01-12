@@ -16,8 +16,8 @@ import {
     Tooltip,
     Space,
     Switch,
-    message,
 } from 'antd';
+import { MessageManager } from '@/utils/messageManager';
 import {
     UploadOutlined,
     DeleteOutlined,
@@ -54,12 +54,12 @@ const AssetAdvancedSection: React.FC = () => {
         beforeUpload: (file: File) => {
             const isPDF = file.type === 'application/pdf';
             if (!isPDF) {
-                message.error('只能上传PDF文件');
+                MessageManager.error('只能上传PDF文件');
                 return false;
             }
             const isLt10M = file.size / 1024 / 1024 < 10;
             if (!isLt10M) {
-                message.error('文件大小不能超过10MB');
+                MessageManager.error('文件大小不能超过10MB');
                 return false;
             }
             return false;

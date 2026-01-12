@@ -12,7 +12,7 @@ import type {
   ProjectStatisticsResponse,
   ProjectDropdownOption
 } from '@/types/project'
-import { message } from 'antd'
+import { MessageManager } from '@/utils/messageManager'
 import { createLogger } from '@/utils/logger'
 
 const projectLogger = createLogger('useProject')
@@ -218,12 +218,12 @@ export const useCreateProject = () => {
       queryClient.invalidateQueries({ queryKey: ['project-list'] })
       queryClient.invalidateQueries({ queryKey: ['project-options'] })
       queryClient.invalidateQueries({ queryKey: ['project-statistics'] })
-      message.success('项目创建成功')
+      MessageManager.success('项目创建成功')
     },
     onError: (error: unknown) => {
       projectLogger.error('创建项目失败:', error as Error)
       const err = error as any
-      message.error(err.response?.data?.detail || '创建项目失败')
+      MessageManager.error(err.response?.data?.detail || '创建项目失败')
     }
   })
 }
@@ -244,12 +244,12 @@ export const useUpdateProject = () => {
       queryClient.invalidateQueries({ queryKey: ['project-options'] })
       queryClient.invalidateQueries({ queryKey: ['project-statistics'] })
       queryClient.invalidateQueries({ queryKey: ['project-detail', data.id] })
-      message.success('项目更新成功')
+      MessageManager.success('项目更新成功')
     },
     onError: (error: unknown) => {
       projectLogger.error('更新项目失败:', error as Error)
       const err = error as any
-      message.error(err.response?.data?.detail || '更新项目失败')
+      MessageManager.error(err.response?.data?.detail || '更新项目失败')
     }
   })
 }
@@ -269,12 +269,12 @@ export const useDeleteProject = () => {
       queryClient.invalidateQueries({ queryKey: ['project-list'] })
       queryClient.invalidateQueries({ queryKey: ['project-options'] })
       queryClient.invalidateQueries({ queryKey: ['project-statistics'] })
-      message.success('项目删除成功')
+      MessageManager.success('项目删除成功')
     },
     onError: (error: unknown) => {
       projectLogger.error('删除项目失败:', error as Error)
       const err = error as any
-      message.error(err.response?.data?.detail || '删除项目失败')
+      MessageManager.error(err.response?.data?.detail || '删除项目失败')
     }
   })
 }
@@ -295,12 +295,12 @@ export const useToggleProjectStatus = () => {
       queryClient.invalidateQueries({ queryKey: ['project-options'] })
       queryClient.invalidateQueries({ queryKey: ['project-statistics'] })
       queryClient.invalidateQueries({ queryKey: ['project-detail', data.id] })
-      message.success('项目状态切换成功')
+      MessageManager.success('项目状态切换成功')
     },
     onError: (error: unknown) => {
       projectLogger.error('切换项目状态失败:', error as Error)
       const err = error as any
-      message.error(err.response?.data?.detail || '切换项目状态失败')
+      MessageManager.error(err.response?.data?.detail || '切换项目状态失败')
     }
   })
 }

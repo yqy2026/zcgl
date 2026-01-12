@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { message } from "antd";
 import { apiRequest, API_ENDPOINTS, ApiError, API_BASE_URL } from "@/api/config";
 import type { StandardApiResponse } from "@/types/apiResponse";
+import { MessageManager } from "@/utils/MessageManager";
 
 // API返回的资产数据格式
 interface AssetApiResponse {
@@ -167,7 +167,7 @@ const fetchAssetSummary = async (): Promise<AssetSummary> => {
     };
   } catch (error) {
     if (error instanceof ApiError) {
-      message.error(`获取统计数据失败: ${error.message}`);
+      MessageManager.error(`获取统计数据失败: ${error.message}`);
     }
     // 返回默认值
     return {
@@ -275,12 +275,12 @@ export const useAssetList = () => {
   const deleteMutation = useMutation({
     mutationFn: deleteAssets,
     onSuccess: (data) => {
-      message.success(`成功删除 ${data.deletedCount} 个资产`);
+      MessageManager.success(`成功删除 ${data.deletedCount} 个资产`);
       queryClient.invalidateQueries({ queryKey: ["assets"] });
       queryClient.invalidateQueries({ queryKey: ["asset-summary"] });
     },
     onError: () => {
-      message.error("删除失败，请重试");
+      MessageManager.error("删除失败，请重试");
     },
   });
 
@@ -288,10 +288,10 @@ export const useAssetList = () => {
   const exportMutation = useMutation({
     mutationFn: exportAssets,
     onSuccess: () => {
-      message.success("导出成功");
+      MessageManager.success("导出成功");
     },
     onError: () => {
-      message.error("导出失败，请重试");
+      MessageManager.error("导出失败，请重试");
     },
   });
 

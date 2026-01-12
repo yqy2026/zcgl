@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { Form, Button, Space, Card, Row, Col, Progress, Typography, message } from 'antd';
+import { Form, Button, Space, Card, Row, Col, Progress, Typography } from 'antd';
+import { MessageManager } from '@/utils/messageManager';
 import { SaveOutlined, ReloadOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { Asset, AssetCreateRequest } from '../../types/asset';
@@ -236,7 +237,7 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
         await onSubmit(submitData as unknown as AssetCreateRequest);
       }
     } catch {
-      message.error('提交失败，请重试');
+      MessageManager.error('提交失败，请重试');
     }
   };
 

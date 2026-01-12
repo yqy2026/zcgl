@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { FormInstance } from 'antd';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
-import { message } from 'antd';
+import { MessageManager } from '@/utils/messageManager';
 import { Asset } from '../../../types/asset';
 import { Ownership } from '../../../types/ownership';
 import { RentContractCreate, RentTermCreate } from '../../../types/rentContract';
@@ -136,7 +136,7 @@ export const RentContractFormProvider: React.FC<RentContractFormProviderProps> =
                 setAssets(response.items);
             } catch (error) {
                 componentLogger.error('加载资产列表失败:', error as Error);
-                message.error('加载资产列表失败');
+                MessageManager.error('加载资产列表失败');
             } finally {
                 setLoadingAssets(false);
             }
@@ -149,7 +149,7 @@ export const RentContractFormProvider: React.FC<RentContractFormProviderProps> =
                 setOwnerships(response.items);
             } catch (error) {
                 componentLogger.error('加载权属方列表失败:', error as Error);
-                message.error('加载权属方列表失败');
+                MessageManager.error('加载权属方列表失败');
             } finally {
                 setLoadingOwnerships(false);
             }
@@ -190,7 +190,7 @@ export const RentContractFormProvider: React.FC<RentContractFormProviderProps> =
             const values = await form.validateFields();
 
             if (rentTerms.length === 0) {
-                message.error('请至少添加一个租金条款');
+                MessageManager.error('请至少添加一个租金条款');
                 return;
             }
 

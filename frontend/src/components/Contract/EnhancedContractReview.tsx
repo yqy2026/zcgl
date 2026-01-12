@@ -24,8 +24,8 @@ import {
   Statistic,
   Tabs,
   Typography,
-  message
 } from 'antd';
+import { MessageManager } from '@/utils/messageManager';
 import {
   EditOutlined,
   SaveOutlined,
@@ -285,7 +285,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
     const missingFields = requiredFields.filter(field => !confirmedData[field]);
 
     if (missingFields.length > 0) {
-      message.error(`请填写必填字段：${missingFields.join(', ')}`);
+      MessageManager.error(`请填写必填字段：${missingFields.join(', ')}`);
       return;
     }
 

@@ -3,31 +3,72 @@
 PaddleOCR 3.3 服务模块
 封装 PP-StructureV3 版面分析和 OCR 能力
 支持中文合同的智能识别和结构化输出
+
+依赖安装: uv sync --extra pdf-ocr
 """
 
 import logging
 from pathlib import Path
 from typing import Any
 
+# 使用项目的 safe_import 机制进行依赖管理
+try:
+    from ...core.import_utils import safe_import
+    from ...core.environment import DependencyPolicy
+except ImportError:
+    # 如果核心模块不可用，回退到标准导入
+    def safe_import(*args, **kwargs):
+        import importlib
+        return importlib.import_module(args[0]) if args else None
+    class DependencyPolicy:
+        STRICT = "strict"
+
 logger = logging.getLogger(__name__)
 
-# 尝试导入 PaddleOCR
-try:
-    from paddleocr import PaddleOCR
+# 安全导入 PaddleOCR 依赖（非关键依赖，允许降级）
+_PADDLEOCR_MODULE = safe_import("paddleocr", critical=False, fallback=None)
 
-    # PaddleOCR 3.3+ 使用 PPStructureV3
+# 尝试导入 PaddleOCR 主模块
+if _PADDLEOCR_MODULE is not None:
     try:
-        from paddleocr import PPStructureV3 as PPStructure
-    except ImportError:
-        # 旧版本使用 PPStructure
-        from paddleocr import PPStructure
-
-    PADDLEOCR_AVAILABLE = True
-except ImportError:
-    logger.warning("PaddleOCR 未安装，请运行: pip install paddleocr>=3.3.0")
-    PPStructure = None
+        from paddleocr import PaddleOCR
+    except (ImportError, AttributeError):
+        PaddleOCR = None
+else:
     PaddleOCR = None
-    PADDLEOCR_AVAILABLE = False
+
+# 尝试导入 PPStructure（支持多种版本）
+PPStructure = None
+if _PADDLEOCR_MODULE is not None:
+    try:
+        # 优先尝试 PPStructureV3 (最新版本)
+        from paddleocr import PPStructureV3 as PPStructure
+        logger.info("使用 PPStructureV3 (最新版本)")
+    except ImportError:
+        try:
+            # 尝试 PPStructure (标准版本)
+            from paddleocr import PPStructure
+            logger.info("使用 PPStructure (标准版本)")
+        except ImportError:
+            try:
+                # 尝试直接从子模块导入
+                from paddleocr.ppstructure import PPStructure
+                logger.info("使用 PPStructure (子模块版本)")
+            except ImportError:
+                PPStructure = None
+                logger.warning(
+                    "PPStructure 不可用，将使用基础 OCR 功能。"
+                    "如需完整功能，请安装: uv sync --extra pdf-ocr"
+                )
+
+PADDLEOCR_AVAILABLE = PaddleOCR is not None
+
+if not PADDLEOCR_AVAILABLE:
+    install_hint = "uv sync --extra pdf-ocr"
+    logger.warning(
+        f"PaddleOCR 未安装。PDF 处理功能将受限。"
+        f"安装方法: {install_hint}"
+    )
 
 
 class PaddleOCRService:
@@ -75,6 +116,7 @@ class PaddleOCRService:
             logger.info("PP-StructureV3 引擎初始化成功")
         except Exception as e:
             # PP-StructureV3 需要额外依赖,记录警告但继续
+            print(f"CRITICAL INIT ERROR: {e}") # Force print to see in non-logged env
             logger.warning(f"PP-StructureV3 初始化失败 (需要 paddlex[ocr]): {e}")
             self._structure_engine = None
 
@@ -126,6 +168,14 @@ class PaddleOCRService:
         try:
             logger.info(f"开始处理文件: {file_path}")
 
+            # Check if engine was initialized
+            if self._structure_engine is None:
+                return {
+                    "success": False,
+                    "error": "PP-Structure Engine not initialized (Check logs for init failure)",
+                    "structure": []
+                }
+            
             # 调用 PP-StructureV3 处理
             result = self._structure_engine(str(file_path))
 

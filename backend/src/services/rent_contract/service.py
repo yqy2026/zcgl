@@ -38,6 +38,28 @@ class RentContractService:
         if not obj_in.contract_number:
             obj_in.contract_number = self._generate_contract_number(db)
 
+        # V2: 检查资产租金冲突
+        if obj_in.asset_ids:
+            conflicts = self._check_asset_rent_conflicts(
+                db,
+                asset_ids=obj_in.asset_ids,
+                start_date=obj_in.start_date,
+                end_date=obj_in.end_date,
+                exclude_contract_id=None,
+            )
+            if conflicts:
+                # 构造友好的错误消息
+                conflict_details = [
+                    f"资产 {c['asset_name']} 已被合同 {c['contract_number']} 覆盖 "
+                    f"({c['contract_start_date']} 至 {c['contract_end_date']})"
+                    for c in conflicts
+                ]
+                raise ValueError(
+                    "资产租金冲突检测:\n"
+                    + "\n".join(conflict_details)
+                    + "\n\n是否仍要创建? 如果确认创建,请联系管理员或使用强制覆盖功能。"
+                )
+
         # V2: 提取 asset_ids 单独处理
         asset_ids = obj_in.asset_ids or []
         contract_data = obj_in.model_dump(exclude={"rent_terms", "asset_ids"})
@@ -448,6 +470,9 @@ class RentContractService:
             "payment_rate": (stats.total_paid / stats.total_due * 100)
             if stats.total_due
             else Decimal("0"),
+            # V2: New Operational Metrics
+            "average_unit_price": self._calculate_average_unit_price(db, query_params),
+            "renewal_rate": self._calculate_renewal_rate(db, query_params),
             "status_breakdown": [
                 {
                     "status": stat.payment_status,
@@ -636,6 +661,80 @@ class RentContractService:
         return monthly_stats
 
     # Private helper methods
+    def _check_asset_rent_conflicts(
+        self,
+        db: Session,
+        *,
+        asset_ids: list[str],
+        start_date: date,
+        end_date: date,
+        exclude_contract_id: str | None = None,
+    ) -> list[dict]:
+        """
+        检查资产租金冲突
+
+        检测指定资产在指定时间段内是否已被其他合同覆盖
+
+        Args:
+            db: 数据库会话
+            asset_ids: 要检查的资产ID列表
+            start_date: 新合同的开始日期
+            end_date: 新合同的结束日期
+            exclude_contract_id: 要排除的合同ID(更新合同时使用)
+
+        Returns:
+            冲突列表,每个冲突包含资产信息和合同信息
+        """
+        from sqlalchemy import and_
+
+        conflicts = []
+
+        # 查询与指定资产相关的所有有效合同
+        existing_contracts = (
+            db.query(RentContract)
+            .filter(
+                and_(
+                    RentContract.contract_status == "有效",
+                    RentContract.id != exclude_contract_id
+                    if exclude_contract_id
+                    else True,
+                )
+            )
+            .all()
+        )
+
+        # 检查每个现有合同是否与新合同时间段重叠
+        for contract in existing_contracts:
+            # 获取该合同的资产
+            contract_assets = [a.id for a in contract.assets]
+
+            # 检查是否有资产重叠
+            overlapping_assets = set(asset_ids) & set(contract_assets)
+
+            if overlapping_assets:
+                # 检查时间段是否重叠
+                # 重叠条件: (新合同开始 <= 旧合同结束) AND (新合同结束 >= 旧合同开始)
+                if start_date <= contract.end_date and end_date >= contract.start_date:
+                    # 获取重叠资产的名称
+                    overlapping_asset_names = [
+                        a.name for a in contract.assets if a.id in overlapping_assets
+                    ]
+
+                    conflicts.append(
+                        {
+                            "contract_id": contract.id,
+                            "contract_number": contract.contract_number,
+                            "contract_start_date": contract.start_date.isoformat(),
+                            "contract_end_date": contract.end_date.isoformat(),
+                            "asset_ids": list(overlapping_assets),
+                            "asset_name": overlapping_asset_names[0]
+                            if overlapping_asset_names
+                            else "未知",
+                        }
+                    )
+
+        return conflicts
+
     def _generate_contract_number(self, db: Session) -> str:
         """生成合同编号"""
         today = datetime.now()
@@ -756,6 +855,103 @@ class RentContractService:
         )
         db.add(service_fee)
         return service_fee
+
+    def _calculate_average_unit_price(
+        self, db: Session, query_params: RentStatisticsQuery
+    ) -> Decimal:
+        """
+        Calculates the average unit price (Monthly Rent / Rentable Area).
+        Note: Only considers 'lease_downstream' contracts which typically generate revenue.
+        Formula: Sum(Monthly Rent) / Sum(Rentable Area)
+        """
+        # Join RentContract with Asset to get area
+        # V2: Contracts have many-to-many relationship with Assets, but here we can approximate
+        # by checking contracts that have associated assets.
+        # Since calculating exact area share for multi-asset contracts is complex,
+        # we will aggregate total rent of downstream contracts and divide by total area of assets linked to them.
+
+        # 1. Filter valid downstream contracts
+        query = db.query(RentContract).filter(
+            RentContract.contract_type == ContractType.LEASE_DOWNSTREAM,
+            RentContract.contract_status == "有效",
+        )
+
+        if query_params.start_date:
+            # Check if contract is active during the period
+            query = query.filter(RentContract.start_date <= query_params.end_date)
+        if query_params.end_date:
+            query = query.filter(RentContract.end_date >= query_params.start_date)
+
+        if query_params.ownership_ids:
+            query = query.filter(
+                RentContract.ownership_id.in_(query_params.ownership_ids)
+            )
+
+        contracts = query.all()
+        if not contracts:
+            return Decimal("0")
+
+        total_rent = Decimal("0")
+        total_area = Decimal("0")
+
+        for contract in contracts:
+            # Monthly Rent
+            # If monthly_rent_base is set, use it. Otherwise try to get from current term
+            rent = contract.monthly_rent_base or Decimal("0")
+            if rent == 0 and contract.rent_terms:
+                # Use first active term or just first term as fallback
+                rent = contract.rent_terms[0].monthly_rent
+
+            # Asset Area
+            # Sum area of all associated assets
+            area = sum((asset.area or Decimal("0")) for asset in contract.assets)
+
+            if area > 0:
+                total_rent += rent
+                total_area += area
+
+        if total_area == 0:
+            return Decimal("0")
+
+        return (total_rent / total_area).quantize(Decimal("0.00"))
+
+    def _calculate_renewal_rate(
+        self, db: Session, query_params: RentStatisticsQuery
+    ) -> Decimal:
+        """
+        Calculates renewal rate.
+        Formula: Renewed Contracts / (Renewed + Expired + Terminated)
+        Renewal Rate = '已续签' / ('已续签' + '已到期' + '已终止')
+        """
+        query = db.query(
+            RentContract.contract_status, func.count(RentContract.id)
+        ).group_by(RentContract.contract_status)
+
+        if query_params.ownership_ids:
+            query = query.filter(
+                RentContract.ownership_id.in_(query_params.ownership_ids)
+            )
+
+        # Date filtering for renewal rate
+        if query_params.start_date and query_params.end_date:
+            query = query.filter(
+                RentContract.end_date.between(
+                    query_params.start_date, query_params.end_date
+                )
+            )
+
+        stats = {row[0]: row[1] for row in query.all()}
+
+        renewed = stats.get("已续签", 0)
+        expired = stats.get("已到期", 0)
+        terminated = stats.get("已终止", 0)
+
+        total_ended = renewed + expired + terminated
+        if total_ended == 0:
+            return Decimal("0")
+
+        rate = (Decimal(str(renewed)) / Decimal(str(total_ended))) * 100
+        return rate.quantize(Decimal("0.00"))
 
 
 rent_contract_service = RentContractService()

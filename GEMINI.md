@@ -3,7 +3,8 @@
 ## Project Overview
 
 **Project Name:** 土地物业资产管理系统 (Land Property Asset Management System)
-**Description:** A comprehensive full-stack web application designed for managing real estate assets, rental contracts, and property operations. It features bilingual support (Chinese/English), RBAC permission systems, and advanced features like PDF OCR for contract processing.
+**Description:** A comprehensive full-stack web application designed for managing real estate assets, rental contracts, and property operations. It features bilingual support (Chinese/English), RBAC permission systems, and advanced features like PDF OCR for contract processing, Dynamic Enum Management, and Contract Life Cycle Management V2.
+**Last Updated:** 2026-01-08
 
 ## Tech Stack
 
@@ -32,15 +33,15 @@
 ## Directory Structure & Key Files
 
 ```
-D:\ccode\zcgl\
+D:\code\zcgl\
 ├── backend/                # Python/FastAPI Backend
 │   ├── src/
-│   │   ├── api/v1/         # API Endpoints (33 endpoint files)
+│   │   ├── api/v1/         # API Endpoints (37 endpoint files)
 │   │   ├── core/           # Core config, security, router registry, environment
-│   │   ├── crud/           # Database operations (16 files)
-│   │   ├── models/         # SQLAlchemy ORM models (11 files)
-│   │   ├── schemas/        # Pydantic models (16 files)
-│   │   ├── services/       # Business logic (7 subdirectories)
+│   │   ├── crud/           # Database operations (18 files)
+│   │   ├── models/         # SQLAlchemy ORM models (14 files)
+│   │   ├── schemas/        # Pydantic models (18 files)
+│   │   ├── services/       # Business logic (19 subdirectories)
 │   │   ├── middleware/     # Auth, CORS, request processing
 │   │   └── main.py         # Application entry point
 │   ├── tests/              # Pytest suite
@@ -50,16 +51,17 @@ D:\ccode\zcgl\
 ├── frontend/               # React/TypeScript Frontend
 │   ├── src/
 │   │   ├── api/            # API client & configuration
-│   │   ├── components/     # Reusable UI components (159 files)
-│   │   ├── pages/          # Application pages/routes (42 files)
+│   │   ├── components/     # Reusable UI components (114+ TSX files)
+│   │   ├── pages/          # Application pages/routes (40 files)
 │   │   ├── services/       # API services (35 files)
-│   │   ├── hooks/          # Custom React hooks (19 files)
+│   │   ├── hooks/          # Custom React hooks (13 files)
 │   │   ├── store/          # Zustand stores
-│   │   ├── types/          # TypeScript definitions (14 files)
+│   │   ├── types/          # TypeScript definitions (15 files)
 │   │   └── utils/          # Utility functions (15 files)
 │   ├── package.json        # Frontend dependencies & scripts
 │   └── vite.config.ts      # Vite configuration
 ├── docs/                   # Comprehensive documentation
+├── README.md               # Project documentation entry point
 ├── docker-compose.yml      # Service orchestration
 ├── CLAUDE.md               # AI assistant guide (Claude)
 └── GEMINI.md               # AI assistant guide (Gemini)

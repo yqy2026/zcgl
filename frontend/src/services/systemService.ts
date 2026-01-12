@@ -71,8 +71,35 @@ export const userService = {
     role?: string
     organization_id?: string
   }): Promise<UserListResponse> {
-    const response = await api.get<UserListResponse>(SYSTEM_API.USERS, { params })
-    return response.data!
+    const response = await api.get<any>(SYSTEM_API.USERS, { params })
+
+    // 智能提取可能返回 items 或 UserListResponse
+    const data = response.data
+
+    // 如果直接是 UserListResponse 格式（包含 items、total 等）
+    if (data && typeof data === 'object' && 'items' in data && 'total' in data) {
+      return data as UserListResponse
+    }
+
+    // 如果只是 items 数组，包装成 UserListResponse
+    if (Array.isArray(data)) {
+      return {
+        items: data,
+        total: data.length,
+        page: 1,
+        limit: data.length,
+        pages: 1
+      }
+    }
+
+    // 其他情况，返回空结构
+    return {
+      items: [],
+      total: 0,
+      page: 1,
+      limit: 20,
+      pages: 0
+    }
   },
 
   // 获取用户详情

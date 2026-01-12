@@ -9,7 +9,6 @@ import {
   Typography,
   Space,
   Button,
-  message,
   Radio,
 } from "antd";
 import styles from "./AssetAnalyticsPage.module.css";
@@ -31,7 +30,9 @@ import {
 } from "@/components/Analytics/AnalyticsChart";
 import AnalyticsFilters from "@/components/Analytics/AnalyticsFilters";
 import type { AssetSearchParams } from "@/types/asset";
+import type { AnalyticsData, AnalyticsResponse } from "@/types/analytics";
 import { createLogger } from "@/utils/logger";
+import { MessageManager } from "@/utils/MessageManager";
 
 const pageLogger = createLogger('AssetAnalytics');
 
@@ -39,31 +40,6 @@ const { Text } = Typography;
 
 // 分析维度类型
 type AnalysisDimension = "count" | "area";
-
-// AnalyticsData 类型定义
-interface AnalyticsData {
-  area_summary: {
-    total_assets: number;
-    total_area: number;
-    total_rentable_area: number;
-    occupancy_rate: number;
-  };
-  financial_summary: {
-    total_annual_income: number;
-    total_annual_expense: number;
-    total_net_income: number;
-    total_monthly_rent: number;
-  };
-  property_nature_distribution?: Array<{ name: string; count: number; percentage: number }>;
-  ownership_status_distribution?: Array<{ status: string; count: number; percentage: number }>;
-  usage_status_distribution?: Array<{ status: string; count: number; percentage: number }>;
-  business_category_distribution?: Array<{ category: string; count: number; percentage: number; occupancy_rate?: number }>;
-  occupancy_trend?: Array<{ date: string; occupancy_rate: number }>;
-  property_nature_area_distribution?: Array<{ name: string; total_area?: number; area_percentage?: number }>;
-  ownership_status_area_distribution?: Array<{ status: string; total_area?: number; area_percentage?: number; percentage?: number; average_area?: number }>;
-  usage_status_area_distribution?: Array<{ status: string; total_area?: number; area_percentage?: number; count?: number; average_area?: number }>;
-  business_category_area_distribution?: Array<{ category: string; total_area?: number; area_percentage?: number; occupancy_rate?: number }>;
-}
 
 const AssetAnalyticsPage: React.FC = () => {
   const [filters, setFilters] = useState<AssetSearchParams>({});
@@ -80,24 +56,25 @@ const AssetAnalyticsPage: React.FC = () => {
     queryKey: ["asset-analytics", filters],
     queryFn: async () => {
       const result = await analyticsService.getComprehensiveAnalytics(filters);
+      pageLogger.debug('Analytics API Result:', result as unknown as Record<string, unknown>);
       return result;
     },
     staleTime: 5 * 60 * 1000, // 5分钟缓存
     refetchOnWindowFocus: false,
   });
 
-  // React Query 可能直接返回解析后的数据，也可能是包装在响应对象中
-  // 我们需要检查两种可能性
-  let analyticsData: AnalyticsData | null;
-  if (analyticsResponse && analyticsResponse.data) {
-    // 标准情况：analyticsResponse 是 AnalyticsResponse 类型
-    analyticsData = analyticsResponse.data as unknown as AnalyticsData;
-  } else if (analyticsResponse && analyticsResponse.area_summary) {
-    // React Query 直接返回了 AnalyticsData (使用 flat structure)
-    analyticsData = analyticsResponse as unknown as AnalyticsData;
-  } else {
-    // 没有数据
-    analyticsData = null;
+  // React Query 返回 AnalyticsResponse，从中提取 AnalyticsData
+  // analyticsService 已经处理了数据适配，这里直接使用
+  let analyticsData: AnalyticsData | null = null;
+  if (analyticsResponse) {
+    if ('success' in analyticsResponse && 'data' in analyticsResponse) {
+      analyticsData = analyticsResponse.data;
+    } else if ('area_summary' in analyticsResponse) {
+      // 兼容直接返回 AnalyticsData 的情况
+      analyticsData = analyticsResponse as unknown as AnalyticsData;
+    } else {
+      pageLogger.warn('Unexpected analytics response format:', analyticsResponse as unknown as Record<string, unknown>);
+    }
   }
 
   // 处理筛选条件变化
@@ -120,7 +97,7 @@ const AssetAnalyticsPage: React.FC = () => {
     if (!analyticsData) return;
 
     try {
-      message.loading("正在导出数据...", 0);
+      MessageManager.loading("正在导出数据...", 0);
 
       const exportData = {
         summary: {
@@ -155,12 +132,12 @@ const AssetAnalyticsPage: React.FC = () => {
       };
 
       await exportAnalyticsData(exportData, "excel");
-      message.success("数据导出成功！");
+      MessageManager.success("数据导出成功！");
     } catch (error) {
       pageLogger.error("导出失败:", error as Error);
-      message.error("导出失败，请重试");
+      MessageManager.error("导出失败，请重试");
     } finally {
-      message.destroy();
+      MessageManager.destroy();
     }
   };
 
@@ -171,16 +148,16 @@ const AssetAnalyticsPage: React.FC = () => {
         // 进入全屏
         await document.documentElement.requestFullscreen();
         setIsFullscreen(true);
-        message.success("已进入全屏模式");
+        MessageManager.success("已进入全屏模式");
       } else {
         // 退出全屏
         await document.exitFullscreen();
         setIsFullscreen(false);
-        message.success("已退出全屏模式");
+        MessageManager.success("已退出全屏模式");
       }
     } catch (error) {
       pageLogger.error("全屏切换失败:", error as Error);
-      message.error("全屏切换失败，请检查浏览器权限设置");
+      MessageManager.error("全屏切换失败，请检查浏览器权限设置");
     }
   };
 
@@ -346,7 +323,7 @@ const AssetAnalyticsPage: React.FC = () => {
                       })),
                     )
                     : chartDataUtils.toAreaData(
-                      analyticsData.ownership_status_area_distribution?.map((item) => ({
+                      (analyticsData.ownership_status_area_distribution as any)?.map((item: any) => ({
                         name: item.status,
                         total_area: item.total_area,
                         area_percentage: item.area_percentage ?? item.percentage ?? 0,
@@ -370,7 +347,7 @@ const AssetAnalyticsPage: React.FC = () => {
                       value: item.count,
                     }))
                     : chartDataUtils.toAreaBarData(
-                      analyticsData.usage_status_area_distribution?.map((item) => ({
+                      (analyticsData.usage_status_area_distribution as any)?.map((item: any) => ({
                         name: item.status,
                         total_area: item.total_area,
                         count: item.count,
@@ -520,18 +497,18 @@ const AssetAnalyticsPage: React.FC = () => {
                           </span>
                           <span className={styles.itemStats}>
                             {dimension === "count"
-                              ? `${(item as { count: number }).count}个 (占比${(item as { percentage: number }).percentage}%)`
-                              : `${(item as { total_area?: number }).total_area?.toFixed(0)}㎡ (占比${(item as { area_percentage?: number }).area_percentage}%)`}
-                            {dimension === "count" && Number((item as { occupancy_rate?: number }).occupancy_rate) > 0 && (
+                              ? `${(item as any).count}个 (占比${(item as any).percentage}%)`
+                              : `${(item as any).total_area?.toFixed(0)}㎡ (占比${(item as any).area_percentage}%)`}
+                            {dimension === "count" && Number((item as any).occupancy_rate) > 0 && (
                               <span className={styles.occupancyRate}>
-                                ，出租率{Number((item as { occupancy_rate?: number }).occupancy_rate).toFixed(2)}%
+                                ，出租率{Number((item as any).occupancy_rate).toFixed(2)}%
                               </span>
                             )}
                             {dimension === "area" &&
-                              (item as { occupancy_rate?: number }).occupancy_rate &&
-                              Number((item as { occupancy_rate?: number }).occupancy_rate) > 0 && (
+                              (item as any).occupancy_rate &&
+                              Number((item as any).occupancy_rate) > 0 && (
                                 <span className={styles.occupancyRate}>
-                                  ，出租率{Number((item as { occupancy_rate?: number }).occupancy_rate).toFixed(2)}%
+                                  ，出租率{Number((item as any).occupancy_rate).toFixed(2)}%
                                 </span>
                               )}
                           </span>

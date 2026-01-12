@@ -14,8 +14,8 @@
 - 常见问题解决
 
 ## ✅ Status
-**当前状态**: Active (2025-12-23 创建)
-**适用版本**: v1.0.0
+**当前状态**: Active (2026-01-08 更新)
+**适用版本**: v2.0.0
 **技术栈**: React 18 + TypeScript + Vite + Ant Design
 
 ---
@@ -46,20 +46,22 @@
 ```
 frontend/
 ├── src/
-│   ├── components/          # React 组件 (70+)
-│   │   ├── Asset/          # 资产管理组件 (15个)
-│   │   ├── Router/         # 路由管理组件 (7个)
-│   │   ├── Layout/         # 布局组件 (8个)
-│   │   ├── Charts/         # 图表组件 (6个)
-│   │   ├── ErrorHandling/  # 错误处理 (5个)
+│   ├── components/          # React 组件 (114+ TSX 文件)
+│   │   ├── Asset/          # 资产管理组件
+│   │   ├── Analytics/      # 分析组件
+│   │   ├── Router/         # 路由管理组件
+│   │   ├── Layout/         # 布局组件
+│   │   ├── Charts/         # 图表组件
+│   │   ├── Forms/          # 表单组件
+│   │   ├── ErrorHandling/  # 错误处理
 │   │   └── ...
-│   ├── pages/              # 页面组件 (15个)
+│   ├── pages/              # 页面组件 (40个)
 │   ├── routes/             # 路由配置
 │   ├── store/              # Zustand 状态管理
-│   ├── services/           # API 服务
-│   ├── hooks/              # 自定义 Hooks
-│   ├── utils/              # 工具函数
-│   ├── types/              # TypeScript 类型定义
+│   ├── services/           # API 服务 (35个)
+│   ├── hooks/              # 自定义 Hooks (13个)
+│   ├── utils/              # 工具函数 (15个)
+│   ├── types/              # TypeScript 类型定义 (15个)
 │   ├── constants/          # 常量配置
 │   ├── contexts/           # React Context
 │   ├── monitoring/         # 性能监控

@@ -3,7 +3,7 @@ import type { FormInstance } from 'antd';
 import type { UploadFile } from 'antd/es/upload/interface';
 import type { RentContract } from '../../../types/rentContract';
 import { rentContractService } from '../../../services/rentContractService';
-import { message } from 'antd';
+import { MessageManager } from '@/utils/messageManager';
 import { createLogger } from '../../../utils/logger';
 
 const componentLogger = createLogger('AssetFormContext');
@@ -69,7 +69,7 @@ export const AssetFormProvider: React.FC<AssetFormProviderProps> = ({
             const response = await rentContractService.getAssetContracts(assetId);
             setRentContracts(response);
         } catch (error) {
-            message.error('加载租赁合同数据失败');
+            MessageManager.error('加载租赁合同数据失败');
             componentLogger.error('加载租赁合同数据失败:', error as Error);
         } finally {
             setLoadingContracts(false);

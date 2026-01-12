@@ -143,7 +143,7 @@ class AnalyticsService:
         stats["area_summary"] = area_stats
 
         # 出租率统计
-        occupancy_stats = occupancy_service.calculate_overall_rate(filters=filters)
+        occupancy_stats = occupancy_service.calculate_with_aggregation(filters=filters)
         stats["occupancy_rate"] = occupancy_stats
 
         return stats

@@ -18,7 +18,7 @@ from ...schemas.project import (
 )
 from ...services.project import project_service
 
-router = APIRouter(prefix="/projects", tags=["项目管理"])
+router = APIRouter()
 
 
 @router.post("/", response_model=ProjectResponse, summary="创建项目")
@@ -41,6 +41,32 @@ async def create_project(
         raise HTTPException(status_code=500, detail=f"创建项目失败: {str(e)}")
 
 
+@router.get("", response_model=ProjectListResponse, summary="获取项目列表")
+@router.get("/", response_model=ProjectListResponse, summary="获取项目列表")
+async def list_projects(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+    page: int = 1,
+    limit: int = 20,
+    keyword: str = None,
+    status: str = None,
+):
+    """
+    获取项目列表，支持分页和筛选
+    """
+    try:
+        search_params = ProjectSearchRequest(
+            page=page,
+            limit=limit,
+            keyword=keyword,
+            status=status,
+        )
+        result = project_service.search_projects(db=db, search_params=search_params)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取项目列表失败: {str(e)}")
+
+
 @router.post("/search", response_model=ProjectListResponse, summary="搜索项目")
 async def search_projects(
     search_params: ProjectSearchRequest,
@@ -55,6 +81,28 @@ async def search_projects(
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"搜索项目失败: {str(e)}")
+
+
+@router.get("/options/dropdown", summary="获取项目下拉选项")
+async def get_project_options(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    获取项目下拉列表选项
+    """
+    return project_service.get_dropdown_options(db=db)
+
+
+@router.get("/stats/overview", summary="获取项目统计")
+async def get_project_statistics(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    获取项目统计概览
+    """
+    return project_crud.get_statistics(db=db)
 
 
 @router.get("/{project_id}", response_model=ProjectResponse, summary="获取项目详情")
@@ -131,25 +179,3 @@ async def toggle_project_status(
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"切换状态失败: {str(e)}")
-
-
-@router.get("/options/dropdown", summary="获取项目下拉选项")
-async def get_project_options(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-):
-    """
-    获取项目下拉列表选项
-    """
-    return project_service.get_dropdown_options(db=db)
-
-
-@router.get("/stats/overview", summary="获取项目统计")
-async def get_project_statistics(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-):
-    """
-    获取项目统计概览
-    """
-    return project_crud.get_statistics(db=db)

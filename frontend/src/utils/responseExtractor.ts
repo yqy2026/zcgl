@@ -1,6 +1,11 @@
 /**
  * 统一API响应数据提取器
  * 智能识别和提取不同格式的API响应数据
+ *
+ * @module utils/responseExtractor
+ * @description
+ * 提供智能的响应数据提取功能，支持多种响应格式。
+ * 集成了响应验证器，可以在开发环境下进行严格的响应格式验证。
  */
 
 import { AxiosResponse, AxiosError } from 'axios';
@@ -11,6 +16,10 @@ import {
   EnhancedApiError,
   ApiErrorType,
 } from '../types/apiResponse';
+import {
+  validateApiResponse,
+  type ValidationResult,
+} from './responseValidator';
 
 // ==================== 响应检测器 ====================
 
@@ -108,6 +117,10 @@ export class ResponseExtractor {
   /**
    * 智能提取响应数据
    * 自动识别响应格式并提取数据
+   *
+   * @param response - Axios 响应对象
+   * @param options - 提取选项
+   * @returns 提取结果
    */
   static smartExtract<T = unknown>(
     response: AxiosResponse,
@@ -118,6 +131,29 @@ export class ResponseExtractor {
     try {
       // 获取响应数据
       const responseData = response.data;
+
+      // 开发模式下启用响应格式验证
+      if (process.env.NODE_ENV === 'development' && finalOptions.detection?.strict !== false) {
+        const validation = validateApiResponse(responseData);
+
+        if (!validation.valid) {
+          // 未知格式，记录警告但继续尝试提取
+          console.warn('⚠️ API 响应格式不符合标准:', {
+            url: response.config.url,
+            method: response.config.method?.toUpperCase(),
+            data: responseData,
+          });
+        } else if (validation.result && !validation.result.valid) {
+          // 格式可识别但验证失败
+          console.warn('⚠️ API 响应验证失败:', {
+            url: response.config.url,
+            method: response.config.method?.toUpperCase(),
+            type: validation.type,
+            missingFields: validation.result.missingFields,
+            typeErrors: validation.result.typeErrors,
+          });
+        }
+      }
 
       // 检测响应类型
       const responseType = ResponseDetector.detectResponseType(responseData, finalOptions.detection);

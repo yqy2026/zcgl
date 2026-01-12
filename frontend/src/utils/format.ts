@@ -117,9 +117,10 @@ export const truncateText = (text: string, maxLength: number): string => {
  * 获取状态颜色
  */
 export const getStatusColor = (
-  status: string,
+  status: string | undefined,
   type: 'ownership' | 'property' | 'usage'
 ): string => {
+  if (!status) return 'default';
   const colorMaps = {
     ownership: {
       已确权: 'green',

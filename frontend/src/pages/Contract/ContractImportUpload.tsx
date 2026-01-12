@@ -15,8 +15,8 @@ import {
   Tag,
   Row,
   Col,
-  message
 } from 'antd';
+import { MessageManager } from '@/utils/messageManager';
 import {
   InboxOutlined,
   UploadOutlined,
@@ -27,7 +27,7 @@ import {
 } from '@ant-design/icons';
 import type { UploadFile, UploadProps, RcFile } from 'antd/es/upload/interface';
 
-import { pdfImportService, type FileUploadResponse, type SystemInfoResponse } from '../../services/pdfImportService';
+import { pdfImportService, type FileUploadResponse } from '../../services/pdfImportService';
 import { createLogger } from '../../utils/logger';
 
 const pageLogger = createLogger('ContractImportUpload');
@@ -49,35 +49,25 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [sessionId, setSessionId] = useState<string>('');
   const [uploadedFile, setUploadedFile] = useState<UploadFile | null>(null);
-  const [systemInfo, setSystemInfo] = useState<SystemInfoResponse | null>(null);
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  /* Removed systemInfo state */
+  /* const [systemInfo, setSystemInfo] = useState<SystemInfoResponse | null>(null); */
+  /* Removed showAdvanced state */
+  /* const [showAdvanced, setShowAdvanced] = useState(false); */
   const [abortController, setAbortController] = useState<AbortController | null>(null);
 
-  // 加载系统信息
-  React.useEffect(() => {
-    void loadSystemInfo();
-  }, []);
-
-  const loadSystemInfo = async () => {
-    try {
-      const info = await pdfImportService.getSystemInfo();
-      setSystemInfo(info);
-    } catch (error) {
-      pageLogger.error('加载系统信息失败:', error as Error);
-    }
-  };
+  /* Removed loadSystemInfo effect */
 
   // 文件上传前的验证
   const beforeUpload = useCallback((file: RcFile) => {
     // 验证文件类型
     if (!pdfImportService.validateFileType(file)) {
-      message.error('只支持PDF文件格式！');
+      MessageManager.error('只支持PDF文件格式！');
       return false;
     }
 
     // 验证文件大小
     if (!pdfImportService.validateFileSize(file, maxFileSize)) {
-      message.error(`文件大小不能超过 ${maxFileSize}MB！当前文件大小：${pdfImportService.formatFileSize(file.size)}`);
+      MessageManager.error(`文件大小不能超过 ${maxFileSize}MB！当前文件大小：${pdfImportService.formatFileSize(file.size)}`);
       return false;
     }
 
@@ -93,7 +83,7 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
     }
     setUploadStatus('idle');
     setUploadProgress(0);
-    message.info('已取消上传');
+    MessageManager.info('已取消上传');
   }, [abortController]);
 
   // 自定义上传请求
@@ -146,7 +136,7 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
         // 重要：立即调用父组件的成功回调，让父组件接管后续处理
         if (response.session_id) {
           onUploadSuccess(response.session_id, uploadFile);
-          message.success('文件上传成功！正在处理中...');
+          MessageManager.success('文件上传成功！正在处理中...');
         } else {
           throw new Error('未收到有效的会话ID');
         }
@@ -169,7 +159,7 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
         onError(err);
       }
       onUploadError(err.message || '上传失败');
-      message.error(err.message || '文件上传失败');
+      MessageManager.error(err.message || '文件上传失败');
     }
   }, [onUploadSuccess, onUploadError]);
 
@@ -197,37 +187,7 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
     disabled: uploadStatus === 'uploading'
   };
 
-  // 获取系统状态标签
-  const getSystemStatusTags = () => {
-    if (!systemInfo) return null;
-
-    const { capabilities } = systemInfo;
-    const tags = [];
-
-    // PaddleOCR PP-StructureV3 状态 (最重要的能力)
-    if (capabilities.paddleocr_available === true) {
-      const version = capabilities.paddleocr_version as string | undefined;
-      tags.push(
-        <Tag color="blue" key="paddleocr">
-          PaddleOCR {version || '3.3+'} ✓
-        </Tag>
-      );
-    }
-
-    if (capabilities.pdfplumber_available === true) {
-      tags.push(<Tag color="green" key="pdfplumber">PDFPlumber可用</Tag>);
-    } else {
-      tags.push(<Tag color="orange" key="pdfplumber">PDFPlumber不可用</Tag>);
-    }
-
-    if (capabilities.spacy_available === true) {
-      tags.push(<Tag color="green" key="spacy">NLP增强可用</Tag>);
-    } else {
-      tags.push(<Tag color="default" key="spacy">NLP增强不可用</Tag>);
-    }
-
-    return tags;
-  };
+  /* Removed getSystemStatusTags function */
 
   return (
     <div className="contract-import-upload">
@@ -238,36 +198,9 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
             <span>PDF合同文件上传</span>
           </Space>
         }
-        extra={
-          <Button
-            type="text"
-            icon={<SettingOutlined />}
-            onClick={() => setShowAdvanced(!showAdvanced)}
-          >
-            {showAdvanced ? '隐藏高级' : '显示高级'}
-          </Button>
-        }
+      /* Removed extra actions for Advanced Options */
       >
-        {/* 系统状态 */}
-        {systemInfo && (
-          <div style={{ marginBottom: 16 }}>
-            <Row gutter={[16, 8]} align="middle">
-              <Col>
-                <Text type="secondary">系统状态：</Text>
-              </Col>
-              <Col>
-                <Space wrap>{getSystemStatusTags()}</Space>
-              </Col>
-              <Col flex="auto" style={{ textAlign: 'right' }}>
-                <Text type="secondary">
-                  支持格式：{Array.isArray(systemInfo.capabilities.supported_formats) ? systemInfo.capabilities.supported_formats.join(', ') : 'PDF'} |
-                  最大文件：{systemInfo.capabilities.max_file_size_mb}MB |
-                  预计时间：{systemInfo.capabilities.estimated_processing_time}
-                </Text>
-              </Col>
-            </Row>
-          </div>
-        )}
+        {/* Removed System Status section */}
 
         <Divider />
 
@@ -385,7 +318,7 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
                 icon={<EyeOutlined />}
                 onClick={() => {
                   // 这里可以跳转到进度查看页面
-                  message.info('请等待处理完成后查看结果');
+                  MessageManager.info('请等待处理完成后查看结果');
                 }}
               >
                 查看处理进度
@@ -432,42 +365,12 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
               >
                 重新上传
               </Button>
-              <Button
-                icon={<SettingOutlined />}
-                onClick={() => setShowAdvanced(true)}
-              >
-                查看系统状态
-              </Button>
+              {/* Removed View System Status button */}
             </Space>
           </div>
         )}
 
-        {/* 高级选项 */}
-        {showAdvanced && systemInfo && (
-          <div style={{ marginTop: 24, padding: 16, backgroundColor: '#fafafa', borderRadius: 6 }}>
-            <Title level={5}>系统详细信息</Title>
-            <Row gutter={16}>
-              <Col span={8}>
-                <Text strong>提取器摘要：</Text>
-                <pre style={{ fontSize: 12, backgroundColor: '#fff', padding: 8, borderRadius: 4 }}>
-                  {JSON.stringify(systemInfo.extractor_summary, null, 2)}
-                </pre>
-              </Col>
-              <Col span={8}>
-                <Text strong>验证器摘要：</Text>
-                <pre style={{ fontSize: 12, backgroundColor: '#fff', padding: 8, borderRadius: 4 }}>
-                  {JSON.stringify(systemInfo.validator_summary, null, 2)}
-                </pre>
-              </Col>
-              <Col span={8}>
-                <Text strong>系统能力：</Text>
-                <pre style={{ fontSize: 12, backgroundColor: '#fff', padding: 8, borderRadius: 4 }}>
-                  {JSON.stringify(systemInfo.capabilities, null, 2)}
-                </pre>
-              </Col>
-            </Row>
-          </div>
-        )}
+        {/* Removed Advanced Options panel */}
 
         {/* 使用说明 */}
         {uploadStatus === 'idle' && (

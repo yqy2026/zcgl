@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
-import { message } from 'antd'
 import { AuthService } from '../services/authService'
 import type { User, LoginCredentials } from '../types/auth'
 import { createLogger } from '../utils/logger'
+import { MessageManager } from '@/utils/messageManager'
 
 const authLogger = createLogger('Auth')
 
@@ -45,14 +45,14 @@ export const useAuth = () => {
 
       if (response.success) {
         setUser(response.data.user)
-        message.success('登录成功')
+        MessageManager.success('登录成功')
       } else {
         setError('用户名或密码错误')
       }
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : '登录失败，请稍后重试'
       setError(errorMessage)
-      message.error(errorMessage)
+      MessageManager.error(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -65,7 +65,7 @@ export const useAuth = () => {
       await AuthService.logout()
       setUser(null)
       setError(null)
-      message.success('已安全登出')
+      MessageManager.success('已安全登出')
     } catch (err: unknown) {
       authLogger.error('登出失败:', err as Error)
       // 即使API失败，也要清除本地状态

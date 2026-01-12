@@ -1,5 +1,6 @@
 import React from 'react';
-import { Form, Button, DatePicker, Upload, List, Tag, Row, Col, Card, Typography, message } from 'antd';
+import { Form, Button, DatePicker, Upload, List, Tag, Row, Col, Card, Typography } from 'antd';
+import { MessageManager } from '@/utils/messageManager';
 import { UploadOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import type { UploadFile, UploadProps } from 'antd/es/upload/interface';
 import GroupedSelectSingle from '../../Common/GroupedSelect';
@@ -21,12 +22,12 @@ const AssetReceptionSection: React.FC = () => {
         beforeUpload: (file: File) => {
             const isPDF = file.type === 'application/pdf';
             if (!isPDF) {
-                message.error('只能上传PDF文件');
+                MessageManager.error('只能上传PDF文件');
                 return false;
             }
             const isLt10M = file.size / 1024 / 1024 < 10;
             if (!isLt10M) {
-                message.error('文件大小不能超过10MB');
+                MessageManager.error('文件大小不能超过10MB');
                 return false;
             }
             return false; // Prevent auto-upload

@@ -10,7 +10,6 @@ import {
   Select,
   TreeSelect,
   InputNumber,
-  message,
   Popconfirm,
   Tag,
   Tooltip,
@@ -22,6 +21,7 @@ import {
   Divider,
   Badge
 } from 'antd';
+import { MessageManager } from '@/utils/messageManager';
 import {
   PlusOutlined,
   EditOutlined,
@@ -97,7 +97,7 @@ const OrganizationPage: React.FC = () => {
       const data = await organizationService.getOrganizations();
       setOrganizations(data);
     } catch {
-      message.error('加载组织列表失败');
+      MessageManager.error('加载组织列表失败');
     } finally {
       setLoading(false);
     }
@@ -108,7 +108,7 @@ const OrganizationPage: React.FC = () => {
       const data = await organizationService.getOrganizationTree();
       setOrganizationTree(convertTreeToDataNodes(data));
     } catch {
-      message.error('加载组织树失败');
+      MessageManager.error('加载组织树失败');
     }
   };
 
@@ -117,7 +117,7 @@ const OrganizationPage: React.FC = () => {
       const data = await organizationService.getStatistics();
       setStatistics(data);
     } catch {
-      message.error('加载统计信息失败');
+      MessageManager.error('加载统计信息失败');
     }
   };
 
@@ -177,7 +177,7 @@ const OrganizationPage: React.FC = () => {
       const data = await organizationService.searchOrganizations(keyword);
       setOrganizations(data);
     } catch {
-      message.error('搜索失败');
+      MessageManager.error('搜索失败');
     } finally {
       setLoading(false);
     }
@@ -201,12 +201,12 @@ const OrganizationPage: React.FC = () => {
   const handleDelete = async (id: string) => {
     try {
       await organizationService.deleteOrganization(id);
-      message.success('删除成功');
+      MessageManager.success('删除成功');
       loadOrganizations();
       loadOrganizationTree();
       loadStatistics();
     } catch {
-      message.error('删除失败');
+      MessageManager.error('删除失败');
     }
   };
 
@@ -217,7 +217,7 @@ const OrganizationPage: React.FC = () => {
       setOrganizationHistory(history);
       setHistoryModalVisible(true);
     } catch {
-      message.error('加载历史记录失败');
+      MessageManager.error('加载历史记录失败');
     }
   };
 
@@ -225,17 +225,17 @@ const OrganizationPage: React.FC = () => {
     try {
       if (editingOrganization) {
         await organizationService.updateOrganization(editingOrganization.id, values);
-        message.success('更新成功');
+        MessageManager.success('更新成功');
       } else {
         await organizationService.createOrganization(values);
-        message.success('创建成功');
+        MessageManager.success('创建成功');
       }
       setModalVisible(false);
       loadOrganizations();
       loadOrganizationTree();
       loadStatistics();
     } catch {
-      message.error(editingOrganization ? '更新失败' : '创建失败');
+      MessageManager.error(editingOrganization ? '更新失败' : '创建失败');
     }
   };
 

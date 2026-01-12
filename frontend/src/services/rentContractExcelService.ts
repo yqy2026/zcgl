@@ -104,12 +104,9 @@ class RentContractExcelService {
     try {
       const params = new URLSearchParams();
       if (
-        startDate !== null &&
-        startDate !== undefined &&
-        startDate !== 0 &&
-        endDate !== null &&
-        endDate !== undefined &&
-        endDate !== 0
+        options.contract_ids !== null &&
+        options.contract_ids !== undefined &&
+        options.contract_ids.length > 0
       ) {
         options.contract_ids.forEach(id => params.append('contract_ids', id));
       }

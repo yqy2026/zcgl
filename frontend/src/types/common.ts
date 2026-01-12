@@ -1,9 +1,18 @@
 /**
- * 通用类型定义
- * 用于替换 any 类型，提高类型安全性
+ * @deprecated API 响应类型已迁移至 @/types/apiResponse
+ * 请使用 StandardApiResponse、PaginatedApiResponse 等标准类型
+ *
+ * @module types/common
+ * @description
+ * 通用类型定义，用于替换 any 类型，提高类型安全性。
+ * API 响应类型已迁移至 @/types/apiResponse，此处保留以向后兼容。
  */
 
-// API响应类型
+// ==================== API 响应类型（已废弃，保留向后兼容）====================
+
+/**
+ * @deprecated 使用 @/types/apiResponse 中的 StandardApiResponse 代替
+ */
 export interface ApiSuccessResponse<T> {
   success: true;
   data: T;
@@ -11,6 +20,9 @@ export interface ApiSuccessResponse<T> {
   timestamp?: string;
 }
 
+/**
+ * @deprecated 使用 @/types/apiResponse 中的 ErrorResponse 代替
+ */
 export interface ApiErrorResponse {
   success: false;
   error: string;
@@ -19,6 +31,9 @@ export interface ApiErrorResponse {
   timestamp?: string;
 }
 
+/**
+ * @deprecated 使用 @/types/apiResponse 中的 StandardApiResponse 代替
+ */
 export type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse;
 
 // 分页相关类型
@@ -141,7 +156,9 @@ export interface QueryParams {
 // 通用过滤器类型（替代Record<string, any>）
 export type Filters = Record<string, string | number | boolean | undefined | null>;
 
-// API分页响应类型
+/**
+ * @deprecated 使用 @/types/apiResponse 中的 PaginatedApiResponse 代替
+ */
 export interface PaginatedResponse<T> {
   items: T[];
   total: number;

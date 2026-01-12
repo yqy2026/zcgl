@@ -65,7 +65,7 @@ export interface PDFImportContextType {
 }
 
 export const DEFAULT_PROCESSING_OPTIONS: ProcessingOptions = {
-    prefer_ocr: true,
+    prefer_ocr: false,
     enable_chinese_optimization: true,
     enable_table_detection: true,
     enable_seal_detection: true,

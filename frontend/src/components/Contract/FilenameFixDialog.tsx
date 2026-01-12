@@ -11,9 +11,9 @@ import {
   Col,
   Table,
   Tag,
-  message,
   Spin
 } from 'antd';
+import { MessageManager } from '@/utils/messageManager';
 import {
   InfoCircleOutlined,
   ReloadOutlined,
@@ -295,7 +295,7 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
                   navigator.clipboard.writeText(fixed);
                   setCopySuccess(true);
                   setTimeout(() => setCopySuccess(false), 2000);
-                  message.success('文件名已复制到剪贴板');
+                  MessageManager.success('文件名已复制到剪贴板');
                 }}
               >
                 {copySuccess ? '已复制' : '复制文件名'}
@@ -339,7 +339,7 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
   const handleConfirm = () => {
     onFilenameFixed(suggestedFilename);
     onCancel();
-    message.success('文件名已更新');
+    MessageManager.success('文件名已更新');
   };
 
   const renderStepContent = () => {

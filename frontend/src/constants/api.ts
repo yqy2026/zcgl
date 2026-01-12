@@ -256,56 +256,55 @@ export const EXCEL_API = {
 // PDF导入API
 export const PDF_API = {
   // PDF处理
-  UPLOAD: buildApiPath('/pdf-import/upload'),
-  PROCESS: buildApiPath('/pdf-import/process'),
-  PREVIEW: buildApiPath('/pdf-import/preview'),
+  UPLOAD: '/pdf-import/upload',
+  PROCESS: '/pdf-import/process',
+  PREVIEW: '/pdf-import/preview',
 
   // 系统信息
-  INFO: buildApiPath('/pdf-import/info'),
-  SESSIONS: buildApiPath('/pdf-import/sessions'),
-  SESSION_PROGRESS: (sessionId: string) => buildApiPath(`/pdf-import/progress/${sessionId}`),
+  INFO: '/pdf-import/info',
+  SESSIONS: '/pdf-import/sessions',
+  SESSION_PROGRESS: (sessionId: string) => `/pdf-import/progress/${sessionId}`,
 
   // 批量处理
-  BATCH_UPLOAD: buildApiPath('/pdf-import/batch'),
-  BATCH_PROCESS: buildApiPath('/pdf-import/batch/process'),
+  BATCH_UPLOAD: '/pdf-import/batch',
+  BATCH_PROCESS: '/pdf-import/batch/process',
 
   // 处理状态
-  STATUS: (taskId: string) => buildApiPath(`/pdf-import/status/${taskId}`),
-  RESULT: (taskId: string) => buildApiPath(`/pdf-import/result/${taskId}`),
+  STATUS: (taskId: string) => `/pdf-import/status/${taskId}`,
+  RESULT: (taskId: string) => `/pdf-import/result/${taskId}`,
 
   // 质量评估
-  QUALITY_ASSESSMENT: (sessionId: string) =>
-    buildApiPath(`/pdf-import/quality/assessment/${sessionId}`),
-  QUALITY_ANALYZE: buildApiPath('/pdf-import/quality/analyze'),
+  QUALITY_ASSESSMENT: (sessionId: string) => `/pdf-import/quality/assessment/${sessionId}`,
+  QUALITY_ANALYZE: '/pdf-import/quality/analyze',
 
   // 导入确认
-  CONFIRM_IMPORT: buildApiPath('/pdf-import/confirm_import'),
-  CANCEL_SESSION: (sessionId: string) => buildApiPath(`/pdf-import/session/${sessionId}`),
+  CONFIRM_IMPORT: '/pdf-import/confirm_import',
+  CANCEL_SESSION: (sessionId: string) => `/pdf-import/session/${sessionId}`,
 
   // 历史记录
-  HISTORY: buildApiPath('/pdf-import/history'),
-  HISTORY_DETAIL: (id: string) => buildApiPath(`/pdf-import/history/${id}`),
+  HISTORY: '/pdf-import/history',
+  HISTORY_DETAIL: (id: string) => `/pdf-import/history/${id}`,
 
   // 性能监控
-  PERFORMANCE_REALTIME: buildApiPath('/pdf-import/performance/realtime'),
-  PERFORMANCE_REPORT: buildApiPath('/pdf-import/performance/report'),
-  PERFORMANCE_HEALTH: buildApiPath('/pdf-import/performance/health'),
+  PERFORMANCE_REALTIME: '/pdf-import/performance/realtime',
+  PERFORMANCE_REPORT: '/pdf-import/performance/report',
+  PERFORMANCE_HEALTH: '/pdf-import/performance/health',
 
   // 测试端点
-  TEST_SYSTEM: buildApiPath('/pdf-import/test_system'),
-  TEST_DETAILED: buildApiPath('/pdf-import/test_detailed'),
-  HEALTH_CHECK: buildApiPath('/pdf-import/health'),
+  TEST_SYSTEM: '/pdf-import/test_system',
+  TEST_DETAILED: '/pdf-import/test_detailed',
+  HEALTH_CHECK: '/pdf-import/health',
 } as const;
 
 // 系统管理API
 export const SYSTEM_API = {
   // 系统设置
-  SETTINGS: buildApiPath('/system/settings'),
-  CONFIG: buildApiPath('/system/config'),
+  SETTINGS: '/system/settings',
+  CONFIG: '/system/config',
 
   // 字典管理
-  DICTIONARIES: buildApiPath('/system/dictionaries'),
-  DICTIONARY_DETAIL: (id: string) => buildApiPath(`/system/dictionaries/${id}`),
+  DICTIONARIES: '/system/dictionaries',
+  DICTIONARY_DETAIL: (id: string) => `/system/dictionaries/${id}`,
 
   // 用户管理 (引用AUTH_API中的定义)
   USERS: AUTH_API.USERS,
@@ -313,29 +312,29 @@ export const SYSTEM_API = {
   USER_STATISTICS: AUTH_API.USER_STATISTICS,
 
   // 日志管理
-  LOGS: buildApiPath('/logs'),
-  LOG_DETAIL: (id: string) => buildApiPath(`/logs/${id}`),
+  LOGS: '/logs',
+  LOG_DETAIL: (id: string) => `/logs/${id}`,
 
   // 系统监控
-  HEALTH: buildApiPath('/system/health'),
-  PERFORMANCE: buildApiPath('/system/performance'),
-  STATUS: buildApiPath('/system/status'),
+  HEALTH: '/system/health',
+  PERFORMANCE: '/system/performance',
+  STATUS: '/system/status',
 
   // 组织管理
-  ORGANIZATIONS: buildApiPath('/organizations'),
-  ORGANIZATION_DETAIL: (id: string) => buildApiPath(`/organizations/${id}`),
+  ORGANIZATIONS: '/organizations',
+  ORGANIZATION_DETAIL: (id: string) => `/organizations/${id}`,
 
   // 角色管理
-  ROLES: buildApiPath('/roles'),
-  ROLE_DETAIL: (id: string) => buildApiPath(`/roles/${id}`),
+  ROLES: '/roles',
+  ROLE_DETAIL: (id: string) => `/roles/${id}`,
 
   // 权限管理
-  PERMISSIONS: buildApiPath('/permissions'),
-  PERMISSION_CHECK: buildApiPath('/permissions/check'),
+  PERMISSIONS: '/permissions',
+  PERMISSION_CHECK: '/permissions/check',
 
   // 审计日志
-  AUDIT_LOGS: buildApiPath('/logs'),
-  AUDIT_LOG_DETAIL: (id: string) => buildApiPath(`/logs/${id}`),
+  AUDIT_LOGS: '/logs',
+  AUDIT_LOG_DETAIL: (id: string) => `/logs/${id}`,
 } as const;
 
 // 数据备份API
@@ -357,33 +356,44 @@ export const BACKUP_API = {
 
 // 测试覆盖率API
 export const TEST_COVERAGE_API = {
-  REPORT: buildApiPath('/test-coverage/report'),
-  TREND: (days: number) => buildApiPath(`/test-coverage/trend?days=${days}`),
-  THRESHOLDS: buildApiPath('/test-coverage/thresholds'),
-  THRESHOLDS_UPDATE: buildApiPath('/test-coverage/thresholds'),
-  QUALITY_GATE: buildApiPath('/test-coverage/quality-gate'),
+  REPORT: '/test-coverage/report',
+  TREND: (days: number) => `/test-coverage/trend?days=${days}`,
+  THRESHOLDS: '/test-coverage/thresholds',
+  THRESHOLDS_UPDATE: '/test-coverage/thresholds',
+  QUALITY_GATE: '/test-coverage/quality-gate',
 } as const;
 
 // 监控API
 export const MONITORING_API = {
-  ROUTE_PERFORMANCE: buildApiPath('/monitoring/route-performance'),
-  SYSTEM_HEALTH: buildApiPath('/monitoring/health'), // 迁移到 /api/v1/monitoring/health
-  PERFORMANCE_METRICS: buildApiPath('/monitoring/performance'),
+  ROUTE_PERFORMANCE: '/monitoring/route-performance',
+  SYSTEM_HEALTH: '/monitoring/health',
+  PERFORMANCE_METRICS: '/monitoring/performance',
 } as const;
 
 // 错误报告API
 export const ERROR_REPORTING_API = {
-  REPORT: buildApiPath('/errors/report'),
-  LIST: buildApiPath('/errors'),
-  ANALYTICS: buildApiPath('/errors/analytics'),
+  REPORT: '/errors/report',
+  LIST: '/errors',
+  ANALYTICS: '/errors/analytics',
 } as const;
+
+// 通知管理API
+export const NOTIFICATION_API = {
+  LIST: '/notifications',
+  UNREAD_COUNT: '/notifications/unread-count',
+  MARK_READ: (id: string) => `/notifications/${id}/read`,
+  MARK_ALL_READ: '/notifications/read-all',
+  DELETE: (id: string) => `/notifications/${id}`,
+} as const;
+
 
 // A/B测试API
 export const AB_TESTING_API = {
-  EVENTS: buildApiPath('/analytics/abtest-events'),
-  CONVERSIONS: buildApiPath('/analytics/abtest-conversions'),
-  CONFIGURATIONS: buildApiPath('/analytics/abtest-config'),
+  EVENTS: '/analytics/abtest-events',
+  CONVERSIONS: '/analytics/abtest-conversions',
+  CONFIGURATIONS: '/analytics/abtest-config',
 } as const;
+
 
 // ==================== API路径构建工具 ====================
 
@@ -456,4 +466,5 @@ export const API_ENDPOINTS = {
   MONITORING: MONITORING_API,
   ERROR_REPORTING: ERROR_REPORTING_API,
   AB_TESTING: AB_TESTING_API,
+  NOTIFICATION: NOTIFICATION_API,
 } as const;

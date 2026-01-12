@@ -32,7 +32,8 @@ dependencies = [
     "pymupdf>=1.24.14",
     "pdfplumber>=0.11.7",
     "pdf2image>=1.17.0",
-    # PaddleOCR 移动到 pdf-ocr 可选依赖组
+    # OCR重型依赖已移动到 [pdf-ocr] 可选依赖组
+    # 安装OCR功能: uv sync --extra pdf-ocr
 ]
 
 [project.optional-dependencies]

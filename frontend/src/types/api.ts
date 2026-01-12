@@ -1,13 +1,50 @@
-// API响应类型定义
+/**
+ * @deprecated 请直接从 '@/types/apiResponse' 或 '@/types' 导入标准响应类型
+ * 此文件保留以向后兼容，将在未来版本中移除
+ *
+ * @module types/api
+ * @description
+ * 旧的 API 响应类型定义。新代码应使用 `@/types/apiResponse` 中定义的标准化类型。
+ *
+ * @example
+ * ```typescript
+ * // ✅ 推荐：使用标准类型
+ * import type { StandardApiResponse, PaginatedApiResponse } from '@/types';
+ *
+ * // ❌ 已废弃：从此文件导入
+ * import type { ApiResponse } from '@/types/api';
+ * ```
+ */
 
-export interface ApiResponse<T = unknown> {
-  success?: boolean;
-  message?: string;
-  data?: T;
-  error?: string;
-  timestamp?: string;
-}
+// ==================== 重新导出标准类型（向后兼容） ====================
 
+/**
+ * @deprecated 使用 StandardApiResponse 代替
+ */
+export type ApiResponse<T = unknown> =
+  | {
+      success?: boolean;
+      message?: string;
+      data?: T;
+      error?: string;
+      timestamp?: string;
+    }
+  | {
+      success: true;
+      data: T;
+      message?: string;
+      timestamp?: string;
+    }
+  | {
+      success: false;
+      error: string;
+      message?: string;
+      timestamp?: string;
+    };
+
+/**
+ * @deprecated 使用 PaginatedApiResponse 代替
+ */
 export interface PaginatedResponse<T> {
   data: T[];
   total: number;
@@ -17,6 +54,9 @@ export interface PaginatedResponse<T> {
   has_prev: boolean;
 }
 
+/**
+ * @deprecated 使用 apiResponse.ts 中的 ErrorResponse 代替
+ */
 export interface ErrorResponse {
   error: string;
   message: string;

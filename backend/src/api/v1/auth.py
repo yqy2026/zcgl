@@ -4,7 +4,7 @@
 
 from datetime import UTC, datetime
 
-import jwt
+from jose import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 

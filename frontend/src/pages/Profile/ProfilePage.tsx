@@ -10,10 +10,10 @@ import {
   Modal,
   Form,
   Input,
-  message,
   Skeleton,
   Typography,
 } from 'antd';
+import { MessageManager } from '@/utils/messageManager';
 import { UserOutlined, EditOutlined, LockOutlined, HistoryOutlined } from '@ant-design/icons';
 import { useAuth } from '../../hooks/useAuth';
 import { AuthService } from '../../services/authService';
@@ -54,11 +54,11 @@ const ProfilePage: React.FC = () => {
     setLoading(true);
     try {
       await AuthService.updateProfile(values);
-      message.success('个人资料更新成功');
+      MessageManager.success('个人资料更新成功');
       setEditModalVisible(false);
       await refreshUser(); // 刷新用户信息
     } catch (error: unknown) {
-      message.error((error as Error).message || '更新失败，请稍后重试');
+      MessageManager.error((error as Error).message || '更新失败，请稍后重试');
     } finally {
       setLoading(false);
     }
@@ -69,11 +69,11 @@ const ProfilePage: React.FC = () => {
     setLoading(true);
     try {
       await AuthService.changePassword(values.oldPassword, values.newPassword);
-      message.success('密码修改成功');
+      MessageManager.success('密码修改成功');
       setPasswordModalVisible(false);
       passwordForm.resetFields();
     } catch (error: unknown) {
-      message.error((error as Error).message || '密码修改失败');
+      MessageManager.error((error as Error).message || '密码修改失败');
     } finally {
       setLoading(false);
     }
@@ -166,8 +166,8 @@ const ProfilePage: React.FC = () => {
                   <Descriptions.Item label="姓名">
                     <Text strong>
                       {user.full_name !== null &&
-                      user.full_name !== undefined &&
-                      user.full_name !== ''
+                        user.full_name !== undefined &&
+                        user.full_name !== ''
                         ? user.full_name
                         : '-'}
                     </Text>
@@ -188,15 +188,15 @@ const ProfilePage: React.FC = () => {
                   </Descriptions.Item>
                   <Descriptions.Item label="最后登录时间">
                     {user.last_login_at !== null &&
-                    user.last_login_at !== undefined &&
-                    user.last_login_at !== ''
+                      user.last_login_at !== undefined &&
+                      user.last_login_at !== ''
                       ? new Date(user.last_login_at).toLocaleString()
                       : '从未登录'}
                   </Descriptions.Item>
                   <Descriptions.Item label="密码最后修改时间">
                     {user.password_last_changed !== null &&
-                    user.password_last_changed !== undefined &&
-                    user.password_last_changed !== ''
+                      user.password_last_changed !== undefined &&
+                      user.password_last_changed !== ''
                       ? new Date(user.password_last_changed).toLocaleString()
                       : '未修改'}
                   </Descriptions.Item>
@@ -255,7 +255,7 @@ const ProfilePage: React.FC = () => {
                 <Button
                   icon={<HistoryOutlined />}
                   onClick={() => {
-                    void message.info('登录历史功能开发中');
+                    void MessageManager.info('登录历史功能开发中');
                   }}
                 >
                   查看历史
@@ -277,7 +277,7 @@ const ProfilePage: React.FC = () => {
         <Form
           form={form}
           layout="vertical"
-          onFinish={() => void handleUpdateProfile()}
+          onFinish={(values) => void handleUpdateProfile(values as ProfileFormData)}
           style={{ marginTop: '16px' }}
         >
           <Form.Item
@@ -337,7 +337,7 @@ const ProfilePage: React.FC = () => {
         <Form
           form={passwordForm}
           layout="vertical"
-          onFinish={() => void handleChangePassword()}
+          onFinish={(values) => void handleChangePassword(values as { oldPassword: string; newPassword: string })}
           style={{ marginTop: '16px' }}
         >
           <Form.Item

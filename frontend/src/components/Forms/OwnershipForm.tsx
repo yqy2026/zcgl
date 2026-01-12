@@ -11,11 +11,11 @@ import {
   Card,
   Row,
   Col,
-  message,
   Divider,
   Switch,
   Select
 } from 'antd';
+import { MessageManager } from '@/utils/messageManager';
 
 const { Option } = Select;
 
@@ -52,7 +52,7 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
 
       setProjectOptions(projects);
     } catch {
-      message.error('加载项目选项失败');
+      MessageManager.error('加载项目选项失败');
       setProjectOptions([]); // 设置为空数组避免 undefined 错误
     }
   };
@@ -119,11 +119,11 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
           try {
             await (ownershipService as any).updateOwnershipProjects(initialValues.id, values.related_projects);
           } catch {
-            message.warning('基本信息更新成功，但关联项目更新失败');
+            MessageManager.warning('基本信息更新成功，但关联项目更新失败');
           }
         }
 
-        message.success('更新成功');
+        MessageManager.success('更新成功');
       } else {
         // 创建权属方 - 编码将由后端自动生成
         const createData: OwnershipCreate = {
@@ -133,13 +133,13 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
         };
 
         await ownershipService.createOwnership(createData);
-        message.success('创建成功');
+        MessageManager.success('创建成功');
       }
 
       onSuccess();
     } catch (error: unknown) {
       const errorMsg = error instanceof Error ? error.message : '操作失败';
-      message.error(errorMsg);
+      MessageManager.error(errorMsg);
     } finally {
       setLoading(false);
     }

@@ -18,10 +18,10 @@ import {
   Timeline,
   Statistic,
   Modal,
-  message,
   Descriptions,
   Divider
 } from 'antd';
+import { MessageManager } from '@/utils/messageManager';
 import {
   CheckCircleOutlined,
   LoadingOutlined,
@@ -86,32 +86,32 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
         details: `文件: ${fileInfo?.filename} (${pdfImportService.formatFileSize(fileInfo?.size || 0)})`
       },
       {
-        title: '文档转换',
-        description: '将PDF转换为Markdown格式',
+        title: '文档解析',
+        description: '解析文档结构与内容',
         icon: <RobotOutlined />,
         status: 'process',
-        details: '使用MarkItDown引擎进行转换'
+        details: '智能识别文档布局'
       },
       {
-        title: '信息提取',
-        description: '提取合同关键信息',
+        title: '智能识别',
+        description: '识别合同条款与关键要素',
         icon: <DatabaseOutlined />,
         status: 'wait',
-        details: '智能识别58个关键字段'
+        details: '提取合同编号、金额等关键信息'
       },
       {
-        title: '数据验证',
-        description: '验证数据完整性和格式',
+        title: '数据校验',
+        description: '校验数据完整性与合规性',
         icon: <CheckCircleOutlined />,
         status: 'wait',
-        details: '检查必填字段和业务逻辑'
+        details: '自动检查必填项'
       },
       {
-        title: '智能匹配',
-        description: '匹配现有资产和权属方',
+        title: '关联分析',
+        description: '匹配系统内资产与权属方',
         icon: <EyeOutlined />,
         status: 'wait',
-        details: '模糊匹配相似数据'
+        details: '自动关联业务数据'
       }
     ];
     setSteps(initialSteps);
@@ -210,7 +210,7 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
 
   // 下载原始文件
   const handleDownload = () => {
-    message.info('下载功能待实现');
+    MessageManager.info('下载功能待实现');
   };
 
   // 获取状态颜色

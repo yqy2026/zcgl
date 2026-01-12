@@ -1,6 +1,7 @@
 // API错误处理工具
 
-import { message, notification } from 'antd'
+import { notification } from 'antd'
+import { MessageManager } from '@/utils/messageManager'
 import type { ErrorResponse } from '@/types/api'
 import { HTTP_STATUS, ERROR_CODES } from '../api/config'
 import { createLogger } from '../utils/logger'
@@ -91,8 +92,7 @@ export class ApiErrorHandler {
     const errorMessage = this.getErrorMessage(error)
 
     // 避免显示重复的错误消息
-    message.destroy()
-    message.error(errorMessage)
+    MessageManager.error(errorMessage)
   }
 
   // 显示错误通知
@@ -174,7 +174,7 @@ export class ApiErrorHandler {
 
     // 跳转到登录页
     if (window.location.pathname !== '/login') {
-      message.warning('登录已过期，请重新登录')
+      MessageManager.warning('登录已过期，请重新登录')
       // 使用window.location跳转，因为这里是非React组件环境
       setTimeout(() => {
         window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`

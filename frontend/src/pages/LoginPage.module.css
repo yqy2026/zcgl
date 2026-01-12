@@ -1,241 +1,198 @@
-/* 登录页面 - 统一Ant Design风格优化 */
+/* 登录页面 - Modern Enterprise Redesign */
 
 .login-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #1890ff 0%, #722ed1 100%);
+  background: #f8fafc;
+  /* Slate 50 */
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 24px;
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans',
-    sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
+  background-size: 24px 24px;
 }
 
 .login-container {
   width: 100%;
-  max-width: 440px;
+  max-width: 420px;
 }
 
 .login-card {
   border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-  background: rgba(255, 255, 255, 0.98);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  /* Slate 200 */
   overflow: hidden;
 }
 
 .login-card .ant-card-body {
-  padding: 40px 32px;
+  padding: 48px 40px;
 }
 
 /* 登录头部样式 */
 .login-header {
   text-align: center;
-  margin-bottom: 32px;
+  margin-bottom: 40px;
 }
 
 .login-logo {
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 72px;
-  height: 72px;
-  background: linear-gradient(135deg, #1890ff 0%, #722ed1 100%);
-  border-radius: 50%;
+  width: 64px;
+  height: 64px;
+  background: #eff6ff;
+  /* Blue 50 */
+  border-radius: 16px;
   margin: 0 auto 24px;
-  box-shadow: 0 8px 24px rgba(24, 144, 255, 0.3);
-  animation: float 3s ease-in-out infinite;
-}
-
-@keyframes float {
-  0%,
-  100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-6px);
-  }
+  color: #1677ff;
+  border: 1px solid #dbeafe;
+  /* Blue 100 */
 }
 
 .login-icon {
-  font-size: 36px;
-  color: white;
+  font-size: 32px;
+  color: #1677ff;
 }
 
 .login-title {
   margin: 0 !important;
-  color: #262626 !important;
-  font-size: 32px !important;
+  color: #1e293b !important;
+  /* Slate 800 */
+  font-size: 24px !important;
   font-weight: 700 !important;
-  background: linear-gradient(135deg, #1890ff 0%, #722ed1 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  letter-spacing: -0.025em;
 }
 
 .login-subtitle {
-  margin: 8px 0 0 0 !important;
-  color: #8c8c8c !important;
-  font-size: 16px !important;
+  margin: 12px 0 0 0 !important;
+  color: #64748b !important;
+  /* Slate 500 */
+  font-size: 14px !important;
   font-weight: 400;
+  line-height: 1.5;
 }
 
 /* 表单样式优化 */
 .login-form {
-  margin: 32px 0;
+  margin: 32px 0 0 0;
 }
 
 .login-form .ant-form-item {
   margin-bottom: 24px;
 }
 
-.login-form .ant-form-item-label > label {
+.login-form .ant-form-item-label>label {
   font-size: 14px;
   font-weight: 500;
-  color: #262626;
-  height: 22px;
+  color: #334155;
+  /* Slate 700 */
 }
 
-/* 普通输入框样式（不包括密码框内部的input） */
+/* 普通输入框样式 */
 .login-form .ant-input:not(.ant-input-affix-wrapper .ant-input) {
-  height: 48px !important;
+  height: 44px !important;
   border-radius: 8px !important;
-  border: 1px solid #d9d9d9 !important;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  font-size: 16px !important;
-  padding: 12px 16px !important;
+  border: 1px solid #cbd5e1 !important;
+  /* Slate 300 */
+  transition: all 0.2s ease !important;
+  font-size: 15px !important;
+  padding: 10px 16px !important;
   background-color: #ffffff !important;
+  color: #1e293b;
 }
 
 .login-form .ant-input:not(.ant-input-affix-wrapper .ant-input):hover {
-  border-color: #4096ff !important;
-  box-shadow: 0 0 0 2px rgba(64, 150, 255, 0.06) !important;
+  border-color: #94a3b8 !important;
+  /* Slate 400 */
 }
 
 .login-form .ant-input:not(.ant-input-affix-wrapper .ant-input):focus,
 .login-form .ant-input-focused:not(.ant-input-affix-wrapper .ant-input) {
-  border-color: #1890ff !important;
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important;
+  border-color: #1677ff !important;
+  box-shadow: 0 0 0 3px rgba(22, 119, 255, 0.1) !important;
 }
 
 /* 密码输入框外层容器样式 */
 .login-form .ant-input-affix-wrapper {
-  height: 48px !important;
+  height: 44px !important;
   border-radius: 8px !important;
-  border: 1px solid #d9d9d9 !important;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  font-size: 16px !important;
+  border: 1px solid #cbd5e1 !important;
+  transition: all 0.2s ease !important;
   padding: 4px 11px !important;
   background-color: #ffffff !important;
 }
 
 .login-form .ant-input-affix-wrapper:hover {
-  border-color: #4096ff !important;
-  box-shadow: 0 0 0 2px rgba(64, 150, 255, 0.06) !important;
+  border-color: #94a3b8 !important;
 }
 
 .login-form .ant-input-affix-wrapper-focused {
-  border-color: #1890ff !important;
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important;
+  border-color: #1677ff !important;
+  box-shadow: 0 0 0 3px rgba(22, 119, 255, 0.1) !important;
 }
 
-/* 密码输入框内部的input - 完全透明，无样式 */
 .login-form .ant-input-affix-wrapper .ant-input {
-  padding: 0 !important;
-  border: none !important;
-  box-shadow: none !important;
-  background: transparent !important;
-  outline: none !important;
-}
-
-.login-form .ant-input-affix-wrapper .ant-input:hover,
-.login-form .ant-input-affix-wrapper .ant-input:focus {
-  border: none !important;
-  box-shadow: none !important;
-  background: transparent !important;
-}
-
-/* 覆盖浏览器自动填充的样式 */
-.login-form .ant-input:-webkit-autofill,
-.login-form .ant-input-affix-wrapper .ant-input:-webkit-autofill {
-  -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
-  box-shadow: 0 0 0 1000px #ffffff inset !important;
-  -webkit-text-fill-color: #000000 !important;
+  font-size: 15px !important;
+  color: #1e293b;
 }
 
 .login-form .ant-input-prefix,
 .login-form .ant-input-password-prefix {
   margin-right: 12px;
-  color: #8c8c8c;
+  color: #94a3b8;
+  /* Slate 400 */
   font-size: 16px;
-}
-
-.login-form .ant-input:hover .ant-input-prefix,
-.login-form .ant-input-password:hover .ant-input-password-prefix,
-.login-form .ant-input:focus .ant-input-prefix,
-.login-form .ant-input-password:focus .ant-input-password-prefix {
-  color: #1890ff;
-}
-
-.input-icon {
-  transition: color 0.3s ease;
 }
 
 /* Checkbox样式优化 */
 .login-form .ant-checkbox-wrapper {
-  color: #595959;
+  color: #64748b;
+  /* Slate 500 */
   font-size: 14px;
-  font-weight: 400;
-}
-
-.login-form .ant-checkbox-checked .ant-checkbox-inner {
-  background-color: #1890ff;
-  border-color: #1890ff;
-}
-
-.login-form .ant-checkbox:hover .ant-checkbox-inner {
-  border-color: #1890ff;
 }
 
 /* 按钮样式优化 */
 .login-button {
-  height: 48px !important;
+  height: 44px !important;
   border-radius: 8px !important;
-  background: linear-gradient(135deg, #1890ff 0%, #722ed1 100%) !important;
+  background: #1677ff !important;
+  /* Brand Blue */
   border: none !important;
-  font-size: 16px !important;
+  font-size: 15px !important;
   font-weight: 600 !important;
-  margin-top: 16px !important;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3) !important;
+  margin-top: 8px !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
 }
 
 .login-button:hover {
-  transform: translateY(-2px) !important;
-  box-shadow: 0 8px 24px rgba(24, 144, 255, 0.4) !important;
-  background: linear-gradient(135deg, #4096ff 0%, #9254de 100%) !important;
+  background: #0958d9 !important;
+  /* Darker Blue */
+  transform: translateY(-1px);
 }
 
 .login-button:active {
-  transform: translateY(0) !important;
-  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.2) !important;
-}
-
-.login-button.ant-btn-loading {
-  background: linear-gradient(135deg, #1890ff 0%, #722ed1 100%) !important;
+  transform: translateY(0);
 }
 
 /* 错误提示样式优化 */
 .login-error {
-  margin-bottom: 16px;
+  margin-bottom: 24px;
   border-radius: 8px;
+  border: 1px solid #fecaca;
+  background: #fef2f2;
 }
 
-.login-error .ant-alert {
-  border-radius: 8px;
-  font-size: 14px;
+.login-error .ant-alert-message {
+  color: #991b1b;
+  font-weight: 500;
+}
+
+.login-error .ant-alert-description {
+  color: #b91c1c;
 }
 
 /* 底部样式优化 */
@@ -246,195 +203,36 @@
 
 .login-help {
   margin: 0 !important;
-  color: #8c8c8c !important;
+  color: #64748b !important;
   font-size: 13px !important;
-  font-weight: 400;
 }
 
 .login-tips {
   margin: 8px 0 0 0 !important;
-  color: #bfbfbf !important;
+  color: #94a3b8 !important;
+  /* Slate 400 */
   font-size: 12px !important;
-  font-weight: 400;
 }
 
 /* Divider样式优化 */
 .login-form .ant-divider {
-  margin: 24px 0;
-  border-color: #f0f0f0;
-}
-
-.login-form .ant-divider-horizontal.ant-divider-with-text::before,
-.login-form .ant-divider-horizontal.ant-divider-with-text::after {
-  border-color: #f0f0f0;
+  margin: 32px 0;
+  border-color: #f1f5f9;
 }
 
 /* 响应式设计优化 */
-@media (max-width: 768px) {
-  .login-page {
-    padding: 16px;
-  }
-
-  .login-container {
-    max-width: 100%;
-  }
-
-  .login-card .ant-card-body {
-    padding: 32px 24px;
-  }
-
-  .login-title {
-    font-size: 28px !important;
-  }
-
-  .login-subtitle {
-    font-size: 14px !important;
-  }
-
-  .login-logo {
-    width: 64px;
-    height: 64px;
-  }
-
-  .login-icon {
-    font-size: 32px;
-  }
-}
-
 @media (max-width: 480px) {
   .login-page {
-    padding: 12px;
+    padding: 16px;
+    background: #fff;
+  }
+
+  .login-card {
+    box-shadow: none;
+    border: none;
   }
 
   .login-card .ant-card-body {
-    padding: 24px 20px;
-  }
-
-  .login-title {
-    font-size: 24px !important;
-  }
-
-  .login-form .ant-input,
-  .login-form .ant-input-password {
-    height: 44px;
-    font-size: 16px;
-  }
-
-  .login-button {
-    height: 44px !important;
-    font-size: 15px !important;
-  }
-}
-
-/* 暗色模式支持优化 */
-@media (prefers-color-scheme: dark) {
-  .login-card {
-    background: rgba(0, 0, 0, 0.9);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-  }
-
-  .login-title {
-    color: #ffffff !important;
-  }
-
-  .login-subtitle {
-    color: rgba(255, 255, 255, 0.7) !important;
-  }
-
-  .login-form .ant-form-item-label > label {
-    color: rgba(255, 255, 255, 0.85);
-  }
-
-  .login-form .ant-input,
-  .login-form .ant-input-password {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.2);
-    color: #ffffff;
-  }
-
-  .login-form .ant-input::placeholder {
-    color: rgba(255, 255, 255, 0.4);
-  }
-
-  .login-form .ant-checkbox-wrapper {
-    color: rgba(255, 255, 255, 0.7);
-  }
-
-  .login-help {
-    color: rgba(255, 255, 255, 0.6) !important;
-  }
-
-  .login-tips {
-    color: rgba(255, 255, 255, 0.4) !important;
-  }
-
-  .login-form .ant-divider {
-    border-color: rgba(255, 255, 255, 0.1);
-  }
-}
-
-/* 高对比度模式支持 */
-@media (prefers-contrast: high) {
-  .login-page {
-    background: #ffffff;
-  }
-
-  .login-card {
-    border: 2px solid #000000;
-    box-shadow: 0 0 0 4px #ffffff;
-  }
-
-  .login-form .ant-input,
-  .login-form .ant-input-password {
-    border: 2px solid #000000;
-  }
-
-  .login-button {
-    background: #000000 !important;
-    color: #ffffff !important;
-    border: 2px solid #000000 !important;
-  }
-}
-
-/* 动画性能优化 */
-@media (prefers-reduced-motion: reduce) {
-  .login-logo {
-    animation: none;
-  }
-
-  .login-form .ant-input,
-  .login-form .ant-input-password,
-  .login-button {
-    transition: none;
-  }
-
-  .login-button:hover {
-    transform: none;
-  }
-}
-
-/* 焦点可见性优化 */
-.login-form .ant-input:focus-visible,
-.login-form .ant-input-password:focus-visible,
-.login-button:focus-visible {
-  outline: 2px solid #1890ff;
-  outline-offset: 2px;
-}
-
-/* 加载状态优化 */
-.login-button.ant-btn-loading .anticon-loading {
-  color: #ffffff;
-}
-
-/* 触摸设备优化 */
-@media (hover: none) and (pointer: coarse) {
-  .login-button:hover {
-    transform: none;
-    box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3) !important;
-  }
-
-  .login-form .ant-input:hover,
-  .login-form .ant-input-password:hover {
-    transform: none;
+    padding: 0;
   }
 }

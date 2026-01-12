@@ -12,9 +12,9 @@ import {
   Tag,
   Progress,
   Space,
-  Typography,
-  message
+  Typography
 } from 'antd';
+import { MessageManager } from '@/utils/messageManager';
 import { Pie, Column, Line } from '@ant-design/plots';
 import {
   DollarOutlined,
@@ -119,13 +119,73 @@ const RentStatisticsPage: React.FC = () => {
       setAssetStats(assetData);
       setMonthlyStats(monthlyData);
     } catch (error) {
-      message.error('获取统计数据失败');
       pageLogger.error('Statistics fetch error:', error as Error);
-      // 设置默认值以防止undefined错误
-      setOverviewData(null);
-      setOwnershipStats([]);
-      setAssetStats([]);
-      setMonthlyStats([]);
+      MessageManager.error('获取统计数据失败，显示模拟数据');
+
+      // 使用模拟数据作为降级方案
+      const mockOverview: RentStatisticsOverview = {
+        total_contracts: 120,
+        active_contracts: 98,
+        total_rent: 1500000,
+        paid_rent: 1200000,
+        overdue_rent: 300000,
+        payment_rate: 80,
+        total_areas: 50000,
+        rented_areas: 45000,
+        occupancy_rate: 90,
+      };
+
+      const mockOwnershipStats: OwnershipRentStatistics[] = [
+        {
+          ownership_name: '权属方A',
+          total_contracts: 30,
+          active_contracts: 28,
+          total_rent: 500000,
+          paid_rent: 450000,
+          overdue_rent: 50000,
+          payment_rate: 90,
+          total_area: 15000,
+          rented_area: 14000,
+        },
+        {
+          ownership_name: '权属方B',
+          total_contracts: 25,
+          active_contracts: 22,
+          total_rent: 400000,
+          paid_rent: 350000,
+          overdue_rent: 50000,
+          payment_rate: 87.5,
+          total_area: 12000,
+          rented_area: 11000,
+        },
+      ];
+
+      const mockAssetStats: AssetRentStatistics[] = [
+        {
+          asset_name: '资产A',
+          total_contracts: 15,
+          active_contracts: 14,
+          total_rent: 300000,
+          paid_rent: 280000,
+          overdue_rent: 20000,
+          payment_rate: 93.3,
+          total_area: 8000,
+          rented_area: 7500,
+        },
+      ];
+
+      const mockMonthlyStats: MonthlyRentStatistics[] = Array.from({ length: 12 }, (_, i) => ({
+        month: `${String(i + 1).padStart(2, '0')}月`,
+        total_rent: 100000 + i * 10000,
+        paid_rent: 80000 + i * 8000,
+        overdue_rent: 20000 + i * 2000,
+        payment_rate: 80 + i,
+      }));
+
+      setOverviewData(mockOverview);
+      setOwnershipStats(mockOwnershipStats);
+      setAssetStats(mockAssetStats);
+      setMonthlyStats(mockMonthlyStats);
     } finally {
       setLoading(false);
     }
@@ -152,10 +212,10 @@ const RentStatisticsPage: React.FC = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      message.success('导出成功');
+      MessageManager.success('导出成功');
     } catch (error) {
       pageLogger.error('Export failed:', error as Error);
-      message.error('导出失败');
+      MessageManager.error('导出失败');
     }
   };
 
@@ -584,6 +644,39 @@ const RentStatisticsPage: React.FC = () => {
               </Card>
             </Col>
           </Row>
+        )}
+
+        {/* V2: Operational Indicators */}
+        {overviewData && (
+          <>
+            <Title level={4} style={{ marginBottom: '16px' }}>运营指标</Title>
+            <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+              <Col xs={24} sm={12} md={6}>
+                <Card>
+                  <Statistic
+                    title="平均租金单价"
+                    value={Number(overviewData.average_unit_price || 0)}
+                    precision={2}
+                    prefix={<DollarOutlined />}
+                    suffix="元/㎡/月"
+                    valueStyle={{ color: '#722ed1' }}
+                  />
+                </Card>
+              </Col>
+              <Col xs={24} sm={12} md={6}>
+                <Card>
+                  <Statistic
+                    title="合同续签率"
+                    value={Number(overviewData.renewal_rate || 0)}
+                    precision={1}
+                    prefix={<ReloadOutlined />}
+                    suffix="%"
+                    valueStyle={{ color: '#13c2c2' }}
+                  />
+                </Card>
+              </Col>
+            </Row>
+          </>
         )}
 
         <Tabs defaultActiveKey="ownership" type="card" items={tabItems} />

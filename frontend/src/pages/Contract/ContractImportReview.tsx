@@ -18,7 +18,6 @@ import {
   Tag,
   Typography,
   Tabs,
-  message,
   Statistic,
   Switch
 } from 'antd';
@@ -26,6 +25,7 @@ import {
   SaveOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { MessageManager } from '@/utils/messageManager';
 
 import {
   type CompleteResult,
@@ -123,15 +123,15 @@ interface FormFieldChange {
       const response = await onConfirm(confirmedData);
 
       if (response.success) {
-        message.success('合同导入成功！');
+        MessageManager.success('合同导入成功！');
         // 可以在这里添加跳转逻辑
       } else {
-        message.error(response.error || '导入失败');
+        MessageManager.error(response.error || '导入失败');
       }
     } catch (error: unknown) {
       console.error('表单验证失败:', error);
       const _errorMessage = error instanceof Error ? error.message : '表单验证失败';
-      message.error('请检查表单填写是否正确');
+      MessageManager.error('请检查表单填写是否正确');
     } finally {
       setLoading(false);
     }
@@ -144,7 +144,7 @@ interface FormFieldChange {
     return '#ff4d4f';
   };
 
-  
+
   // 基本信息表单
   const BasicInfoForm = () => (
     <Form

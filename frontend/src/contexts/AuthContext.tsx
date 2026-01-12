@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { message } from 'antd'
 import { User, LoginCredentials } from '../types/auth'
 import { AuthService } from '../services/authService'
 import { AUTH_API } from '../constants/api'
 import { createLogger } from '../utils/logger'
+import { MessageManager } from '@/utils/messageManager'
 
 const logger = createLogger('AuthContext');
 
@@ -79,8 +79,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(response.data.user)
         logger.debug('用户状态已更新', { user: response.data.user } as Record<string, unknown>);
         const successLog = typeof response.message === 'string' && response.message !== '' ? response.message : '登录成功';
-        message.success(successLog)
-
+        MessageManager.success(successLog)
 
 
       } else {
@@ -89,7 +88,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '登录失败'
       setError(errorMessage)
-      message.error(errorMessage)
+      MessageManager.error(errorMessage)
       throw error
     } finally {
       setLoading(false)
@@ -110,7 +109,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.removeItem('permissions')
 
       setUser(null)
-      message.success('已退出登录')
+      MessageManager.success('已退出登录')
     } catch (error) {
       logger.error('登出错误', error instanceof Error ? error : new Error(String(error)))
       // 即使出错也要确保清除状态

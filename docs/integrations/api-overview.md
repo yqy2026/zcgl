@@ -5,12 +5,12 @@
 
 ## 🎯 Scope
 - API 架构设计
-- 33个 API 端点分类说明
+- 37个 API 端点分类说明
 - 认证和授权机制
 - 请求/响应格式规范
 
 ## ✅ Status
-**当前状态**: Active (2026-01-02 创建)
+**当前状态**: Active (2026-01-08 更新)
 **API 版本**: v1.0.0
 **基础路径**: `/api/v1`
 
@@ -56,7 +56,7 @@
 
 ---
 
-## 📡 API 端点列表 (33个)
+## 📡 API 端点列表 (37个)
 
 ### 🔐 认证模块
 
@@ -145,6 +145,10 @@
 |----------|------|------|
 | [defect_tracking.py](../../backend/src/api/v1/defect_tracking.py) | `/defects` | 缺陷跟踪 |
 | [error_recovery.py](../../backend/src/api/v1/error_recovery.py) | `/error-recovery` | 错误恢复 |
+| [contact.py](../../backend/src/api/v1/contact.py) | `/contacts` | 联系人管理 |
+| [collection.py](../../backend/src/api/v1/collection.py) | `/collections` | 收款管理 |
+| [notifications.py](../../backend/src/api/v1/notifications.py) | `/notifications` | 通知管理 |
+| [analytics_v1_legacy.py](../../backend/src/api/v1/analytics_v1_legacy.py) | `/analytics/legacy` | 旧版分析接口 |
 
 ---
 
@@ -254,6 +258,11 @@ FastAPI 自动生成交互式 API 文档：
 ---
 
 ## 📋 Changelog
+
+### 2026-01-08 v1.1.0 - 端点统计更新
+- 📊 更新：API 端点数量从 33 更新到 37
+- ✨ 新增：contact.py, collection.py, notifications.py, analytics_v1_legacy.py 端点说明
+- 📝 更新：文档日期和状态
 
 ### 2026-01-02 v1.0.0 - 初始版本
 - ✨ 新增：API 架构概述

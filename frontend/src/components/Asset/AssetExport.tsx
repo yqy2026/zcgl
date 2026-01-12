@@ -16,8 +16,8 @@ import {
   Modal,
   List,
   Tooltip,
-  message,
 } from "antd";
+import { MessageManager } from "@/utils/MessageManager";
 import {
   DownloadOutlined,
   FileExcelOutlined,
@@ -158,13 +158,13 @@ const AssetExport: React.FC<AssetExportProps> = ({
     },
     onSuccess: (task) => {
       setExportTask(task);
-      message.success("导出任务已创建，正在处理...");
+      MessageManager.success("导出任务已创建，正在处理...");
 
       // 开始轮询导出状态
       pollExportStatus(task.id);
     },
     onError: (error: unknown) => {
-      message.error((error as Error).message || "导出失败");
+      MessageManager.error((error as Error).message || "导出失败");
     },
   });
 
@@ -180,7 +180,7 @@ const AssetExport: React.FC<AssetExportProps> = ({
           refetchHistory();
 
           if (task.status === "completed") {
-            message.success("导出完成！");
+            MessageManager.success("导出完成！");
             // 转换为标准ExportTask类型
             const standardTask: ExportTask = {
               id: task.id,
@@ -193,12 +193,12 @@ const AssetExport: React.FC<AssetExportProps> = ({
             };
             onExportComplete?.(standardTask);
           } else {
-            message.error(task.errorMessage ?? "导出失败");
+            MessageManager.error(task.errorMessage ?? "导出失败");
           }
         }
       } catch {
         clearInterval(interval);
-        message.error("获取导出状态失败");
+        MessageManager.error("获取导出状态失败");
       }
     }, 2000);
   };
@@ -224,9 +224,9 @@ const AssetExport: React.FC<AssetExportProps> = ({
 
     try {
       await assetService.downloadExportFile(downloadUrl);
-      message.success("下载成功");
+      MessageManager.success("下载成功");
     } catch (error: unknown) {
-      message.error((error as Error).message || "下载失败");
+      MessageManager.error((error as Error).message || "下载失败");
     }
   };
 
@@ -234,10 +234,10 @@ const AssetExport: React.FC<AssetExportProps> = ({
   const handleDeleteExportRecord = async (id: string) => {
     try {
       await assetService.deleteExportRecord(id);
-      message.success("删除成功");
+      MessageManager.success("删除成功");
       refetchHistory();
     } catch (error: unknown) {
-      message.error((error as Error).message || "删除失败");
+      MessageManager.error((error as Error).message || "删除失败");
     }
   };
 

@@ -3,10 +3,10 @@ import {
   Select,
   Button,
   Modal,
-  message,
   Space,
   Tooltip,
 } from 'antd';
+import { MessageManager } from '@/utils/messageManager';
 import {
   PlusOutlined,
   ReloadOutlined,
@@ -132,7 +132,7 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
   // 创建新项目
   const handleCreateProject = () => {
     // 这里可以跳转到项目管理页面或打开创建弹窗
-    message.info('创建新项目功能开发中');
+    MessageManager.info('创建新项目功能开发中');
   };
 
   return (

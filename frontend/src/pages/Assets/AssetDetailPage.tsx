@@ -62,7 +62,7 @@ const AssetDetailPage: React.FC = () => {
                 返回列表
               </Button>
               <Title level={2} style={{ margin: 0 }}>
-                {asset.property_name}
+                {asset.property_name ?? '资产详情'}
               </Title>
             </Space>
           </Col>

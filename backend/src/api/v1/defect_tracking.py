@@ -309,6 +309,7 @@ async def create_defect(defect: DefectReport):
         conn.close()
 
 
+@router.get("", response_model=dict[str, Any])
 @router.get("/", response_model=dict[str, Any])
 async def get_defects(
     status: DefectStatus | None = Query(None, description="状态过滤"),

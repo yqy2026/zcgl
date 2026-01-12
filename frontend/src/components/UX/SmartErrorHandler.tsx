@@ -50,8 +50,8 @@ const getErrorIcon = (type: ErrorType, severity: ErrorSeverity) => {
   switch (type) {
     case 'error':
       return severity === 'critical' ? <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} /> :
-             severity === 'high' ? <ExclamationCircleOutlined style={{ color: '#ff7a45' }} /> :
-             <ExclamationCircleOutlined style={{ color: '#fa8c16' }} />
+        severity === 'high' ? <ExclamationCircleOutlined style={{ color: '#ff7a45' }} /> :
+          <ExclamationCircleOutlined style={{ color: '#fa8c16' }} />
     case 'warning':
       return <WarningOutlined style={{ color: '#faad14' }} />
     case 'success':
@@ -67,8 +67,8 @@ const getErrorColor = (type: ErrorType, severity: ErrorSeverity) => {
   switch (type) {
     case 'error':
       return severity === 'critical' ? '#ff4d4f' :
-             severity === 'high' ? '#ff7a45' :
-             severity === 'medium' ? '#fa8c16' : '#ffc53d'
+        severity === 'high' ? '#ff7a45' :
+          severity === 'medium' ? '#fa8c16' : '#ffc53d'
     case 'warning':
       return '#faad14'
     case 'success':
@@ -436,7 +436,7 @@ const ErrorModal: React.FC<ErrorModalProps> = ({ error, onClose, onRetry, enable
           </div>
         )}
 
-        {error.stack && (
+        {process.env.NODE_ENV === 'development' && error.stack && (
           <div style={{ marginTop: '16px' }}>
             <Text strong>堆栈信息：</Text>
             <Collapse ghost style={{ marginTop: '8px' }}>

@@ -25,10 +25,11 @@ from ...crud.asset import asset_crud
 from ...crud.ownership import ownership
 from ...crud.rent_contract import rent_contract, rent_ledger, rent_term
 from ...database import get_db
-from ...middleware.auth import get_current_active_user
-from ...models.auth import User
+from ...middleware.auth import can_edit_contract, get_current_active_user
+from ...models.auth import User, UserRole
 from ...schemas.rent_contract import (
     AssetRentStatistics,
+    DepositLedgerResponse,
     GenerateLedgerRequest,
     MonthlyRentStatistics,
     OwnershipRentStatistics,
@@ -43,6 +44,7 @@ from ...schemas.rent_contract import (
     RentStatisticsQuery,
     RentTermCreate,
     RentTermResponse,
+    ServiceFeeLedgerResponse,
 )
 from ...services.rent_contract import rent_contract_service
 
@@ -169,7 +171,15 @@ def update_contract(
 ) -> Any:
     """
     更新租金合同信息
+
+    权限要求:
+    - 管理员可以编辑任何合同
+    - 其他活跃用户可以编辑（TODO: 未来应增加更细粒度的权限控制）
     """
+    # 权限检查
+    if not can_edit_contract(current_user):
+        raise HTTPException(status_code=403, detail="权限不足: 只有管理员可以编辑合同")
+
     contract = rent_contract.get_with_details(db, id=contract_id)
     if not contract:
         raise HTTPException(status_code=404, detail="合同不存在")
@@ -196,7 +206,13 @@ def delete_contract(
 ) -> Any:
     """
     删除租金合同（同时删除相关的租金条款和台账记录）
+
+    权限要求: 仅管理员可以删除合同
     """
+    # 权限检查 - 删除是敏感操作,仅管理员可以执行
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="权限不足: 只有管理员可以删除合同")
+
     contract = rent_contract.get(db, id=contract_id)
     if not contract:
         raise HTTPException(status_code=404, detail="合同不存在")
@@ -284,6 +300,75 @@ def terminate_contract(
         if isinstance(e, HTTPException):
             raise
         raise HTTPException(status_code=500, detail=f"合同终止失败: {str(e)}")
+
+
+# V2: 押金台账API
+@router.get(
+    "/contracts/{contract_id}/deposit-ledger",
+    response_model=list[DepositLedgerResponse],
+    summary="获取合同押金变动记录",
+)
+def get_contract_deposit_ledger(
+    contract_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    获取指定合同的押金变动记录
+
+    - **contract_id**: 合同ID
+    """
+    from ...models.rent_contract import RentContract, RentDepositLedger
+
+    # 检查合同是否存在
+    contract = db.query(RentContract).filter(RentContract.id == contract_id).first()
+    if not contract:
+        raise HTTPException(status_code=404, detail="合同不存在")
+
+    # 获取押金变动记录，按时间倒序
+    ledgers = (
+        db.query(RentDepositLedger)
+        .filter(RentDepositLedger.contract_id == contract_id)
+        .order_by(RentDepositLedger.created_at.desc())
+        .all()
+    )
+
+    return [DepositLedgerResponse.model_validate(ledger) for ledger in ledgers]
+
+
+# V2: 服务费台账API
+@router.get(
+    "/contracts/{contract_id}/service-fee-ledger",
+    response_model=list[ServiceFeeLedgerResponse],
+    summary="获取合同服务费台账",
+)
+def get_contract_service_fee_ledger(
+    contract_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    获取指定合同的服务费台账记录
+
+    - **contract_id**: 合同ID
+    - 返回该合同的所有服务费台账，按年月倒序排列
+    """
+    from ...models.rent_contract import RentContract, ServiceFeeLedger
+
+    # 检查合同是否存在
+    contract = db.query(RentContract).filter(RentContract.id == contract_id).first()
+    if not contract:
+        raise HTTPException(status_code=404, detail="合同不存在")
+
+    # 获取服务费台账，按年月倒序
+    ledgers = (
+        db.query(ServiceFeeLedger)
+        .filter(ServiceFeeLedger.contract_id == contract_id)
+        .order_by(ServiceFeeLedger.year_month.desc())
+        .all()
+    )
+
+    return [ServiceFeeLedgerResponse.model_validate(ledger) for ledger in ledgers]
 
 
 # 租金条款API
@@ -790,3 +875,218 @@ def export_contracts_to_excel(
         if isinstance(e, HTTPException):
             raise
         raise HTTPException(status_code=500, detail=f"导出失败: {str(e)}")
+
+
+# ==================== 合同附件管理 ====================
+
+
+@router.post("/{contract_id}/attachments", response_model=dict, summary="上传合同附件")
+async def upload_contract_attachment(
+    contract_id: str,
+    file: UploadFile = File(..., description="附件文件"),
+    file_type: str = Form("other", description="文件类型: contract_scan/id_card/other"),
+    description: str | None = Form(None, description="附件描述"),
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """
+    上传合同附件
+
+    支持的文件类型:
+    - PDF (.pdf)
+    - 图片 (.jpg, .jpeg, .png)
+    - Word文档 (.doc, .docx)
+
+    文件将存储在 uploads/contracts/ 目录下
+    """
+    import uuid
+    from pathlib import Path
+
+    from ...models.rent_contract import RentContractAttachment
+
+    # 验证合同是否存在
+    contract = rent_contract.get(db, id=contract_id)
+    if not contract:
+        raise HTTPException(status_code=404, detail="合同不存在")
+
+    # 验证文件类型
+    allowed_extensions = {".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx"}
+    file_ext = Path(file.filename).suffix.lower() if file.filename else ""
+
+    if file_ext not in allowed_extensions:
+        raise HTTPException(
+            status_code=400,
+            detail=f"不支持的文件类型: {file_ext}。支持的类型: {', '.join(allowed_extensions)}",
+        )
+
+    # 创建上传目录
+    upload_dir = Path("uploads/contracts")
+    upload_dir.mkdir(parents=True, exist_ok=True)
+
+    # 生成唯一文件名
+    unique_filename = f"{uuid.uuid4()}{file_ext}"
+    file_path = upload_dir / unique_filename
+
+    # 保存文件
+    try:
+        contents = await file.read()
+        with open(file_path, "wb") as f:
+            f.write(contents)
+        file_size = len(contents)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"文件保存失败: {str(e)}")
+
+    # 创建附件记录
+    attachment = RentContractAttachment(
+        contract_id=contract_id,
+        file_name=file.filename or "unnamed",
+        file_path=str(file_path),
+        file_size=file_size,
+        mime_type=file.content_type,
+        file_type=file_type,
+        description=description,
+        uploader=current_user.full_name or current_user.username,
+        uploader_id=current_user.id,
+    )
+
+    db.add(attachment)
+    db.commit()
+    db.refresh(attachment)
+
+    return {
+        "id": attachment.id,
+        "file_name": attachment.file_name,
+        "file_size": attachment.file_size,
+        "file_type": attachment.file_type,
+        "description": attachment.description,
+        "uploaded_at": attachment.created_at.isoformat(),
+    }
+
+
+@router.get(
+    "/{contract_id}/attachments", response_model=list, summary="获取合同附件列表"
+)
+async def get_contract_attachments(
+    contract_id: str,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """
+    获取指定合同的所有附件
+    """
+    from ...models.rent_contract import RentContractAttachment
+
+    # 验证合同是否存在
+    contract = rent_contract.get(db, id=contract_id)
+    if not contract:
+        raise HTTPException(status_code=404, detail="合同不存在")
+
+    # 查询附件列表
+    attachments = (
+        db.query(RentContractAttachment)
+        .filter(RentContractAttachment.contract_id == contract_id)
+        .order_by(RentContractAttachment.created_at.desc())
+        .all()
+    )
+
+    return [
+        {
+            "id": a.id,
+            "file_name": a.file_name,
+            "file_size": a.file_size,
+            "file_type": a.file_type,
+            "mime_type": a.mime_type,
+            "description": a.description,
+            "uploader": a.uploader,
+            "uploaded_at": a.created_at.isoformat(),
+        }
+        for a in attachments
+    ]
+
+
+@router.get(
+    "/{contract_id}/attachments/{attachment_id}/download", summary="下载合同附件"
+)
+async def download_contract_attachment(
+    contract_id: str,
+    attachment_id: str,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """
+    下载指定的合同附件
+    """
+    from pathlib import Path
+
+    from ...models.rent_contract import RentContractAttachment
+
+    # 查询附件记录
+    attachment = (
+        db.query(RentContractAttachment)
+        .filter(
+            RentContractAttachment.id == attachment_id,
+            RentContractAttachment.contract_id == contract_id,
+        )
+        .first()
+    )
+
+    if not attachment:
+        raise HTTPException(status_code=404, detail="附件不存在")
+
+    # 验证文件是否存在
+    file_path = Path(attachment.file_path)
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="文件不存在")
+
+    return FileResponse(
+        path=str(file_path),
+        filename=attachment.file_name,
+        media_type=attachment.mime_type or "application/octet-stream",
+    )
+
+
+@router.delete(
+    "/{contract_id}/attachments/{attachment_id}",
+    response_model=dict,
+    summary="删除合同附件",
+)
+async def delete_contract_attachment(
+    contract_id: str,
+    attachment_id: str,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """
+    删除指定的合同附件
+    """
+    from pathlib import Path
+
+    from ...models.rent_contract import RentContractAttachment
+
+    # 查询附件记录
+    attachment = (
+        db.query(RentContractAttachment)
+        .filter(
+            RentContractAttachment.id == attachment_id,
+            RentContractAttachment.contract_id == contract_id,
+        )
+        .first()
+    )
+
+    if not attachment:
+        raise HTTPException(status_code=404, detail="附件不存在")
+
+    # 删除物理文件
+    file_path = Path(attachment.file_path)
+    if file_path.exists():
+        try:
+            file_path.unlink()
+        except Exception:
+            # 即使文件删除失败,也继续删除数据库记录
+            pass
+
+    # 删除数据库记录
+    db.delete(attachment)
+    db.commit()
+
+    return {"message": "附件已删除"}

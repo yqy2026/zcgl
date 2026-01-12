@@ -10,7 +10,6 @@ import {
   Tag,
   Tooltip,
   Modal,
-  message,
   Card,
   Row,
   Col,
@@ -20,6 +19,7 @@ import {
   Select,
   Switch
 } from 'antd';
+import { MessageManager } from '@/utils/messageManager';
 import {
   PlusOutlined,
   EditOutlined,
@@ -153,7 +153,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
         status: err.response?.status,
         data: err.response?.data
       });
-      message.error(`获取项目列表失败: ${err.message || '未知错误'}`);
+      MessageManager.error(`获取项目列表失败: ${err.message || '未知错误'}`);
     } finally {
       setLoading(false);
     }
@@ -211,11 +211,11 @@ const ProjectList: React.FC<ProjectListProps> = ({
       onOk: async () => {
         try {
           await projectService.deleteProject(project.id);
-          message.success('项目删除成功');
+          MessageManager.success('项目删除成功');
           fetchProjects();
         } catch (error) {
           console.error('删除项目失败:', error);
-          message.error('删除项目失败');
+          MessageManager.error('删除项目失败');
         }
       }
     });
@@ -225,11 +225,11 @@ const ProjectList: React.FC<ProjectListProps> = ({
   const handleToggleStatus = async (project: Project) => {
     try {
       await projectService.toggleProjectStatus(project.id);
-      message.success('项目状态切换成功');
+      MessageManager.success('项目状态切换成功');
       fetchProjects();
     } catch (error) {
       console.error('切换项目状态失败:', error);
-      message.error('切换项目状态失败');
+      MessageManager.error('切换项目状态失败');
     }
   };
 

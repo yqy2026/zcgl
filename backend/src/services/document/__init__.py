@@ -79,8 +79,17 @@ try:
     from .contract_extractor import (
         extract_contract_from_pdf as extract_contract_from_pdf,
     )
+    from .contract_extractor import (
+        extract_contract_from_pdf_cloud as extract_contract_from_pdf_cloud,
+    )
 
-    __all__.extend(["ContractExtractor", "extract_contract_from_pdf"])
+    __all__.extend(
+        [
+            "ContractExtractor",
+            "extract_contract_from_pdf",
+            "extract_contract_from_pdf_cloud",
+        ]
+    )
 except Exception:  # nosec - B110: Intentional graceful degradation
     pass
 
@@ -140,6 +149,28 @@ try:
             "MarkdownContractParser",
             "get_markdown_contract_parser",
             "parse_contract_markdown",
+        ]
+    )
+except Exception:  # nosec - B110: Intentional graceful degradation
+    pass
+
+# NVIDIA Cloud OCR services
+try:
+    from .nvidia_cloud_ocr_service import (
+        NvidiaCloudOCRService as NvidiaCloudOCRService,
+    )
+    from .nvidia_cloud_ocr_service import (
+        extract_text_from_pdf as extract_text_from_pdf_nvidia,
+    )
+    from .nvidia_cloud_ocr_service import (
+        get_nvidia_ocr_service as get_nvidia_ocr_service,
+    )
+
+    __all__.extend(
+        [
+            "NvidiaCloudOCRService",
+            "get_nvidia_ocr_service",
+            "extract_text_from_pdf_nvidia",
         ]
     )
 except Exception:  # nosec - B110: Intentional graceful degradation

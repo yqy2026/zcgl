@@ -23,7 +23,6 @@ import {
   Space,
   Typography,
   Alert,
-  message,
   notification,
   Spin,
   Row,
@@ -34,6 +33,7 @@ import {
   Switch,
   Modal
 } from 'antd';
+import { MessageManager } from '@/utils/messageManager';
 import type { UploadFile } from 'antd/es/upload/interface';
 import {
   UploadOutlined,
@@ -88,9 +88,9 @@ const PDFImportPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'upload' | 'history'>('upload');
   const [currentSession, setCurrentSession] = useState<ProcessingSession | null>(null);
   const [sessionHistory, setSessionHistory] = useState<ProcessingSession[]>([]);
-  const [systemInfo, setSystemInfo] = useState<SystemInfoResponse | null>(null);
+  /* Removed unused system info state */
+  /* const [systemInfo, setSystemInfo] = useState<SystemInfoResponse | null>(null); */
   const [loading, setLoading] = useState(false);
-  const [showSystemInfo, setShowSystemInfo] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
   const [userPreferences, setUserPreferences] = useState({
@@ -106,8 +106,9 @@ const PDFImportPage: React.FC = () => {
   currentSessionRef.current = currentSession;
 
   // 加载系统信息和键盘快捷键
+  // 加载系统信息和键盘快捷键
   useEffect(() => {
-    void loadSystemInfo();
+    // void loadSystemInfo(); // System info no longer needed for UI
     void loadSessionHistory();
     loadUserPreferences();
 
@@ -171,6 +172,7 @@ const PDFImportPage: React.FC = () => {
     }
   }, []);
 
+  /*
   const loadSystemInfo = async () => {
     try {
       const info = await pdfImportService.getSystemInfo();
@@ -179,6 +181,7 @@ const PDFImportPage: React.FC = () => {
       pageLogger.error('加载系统信息失败:', error as Error);
     }
   };
+  */
 
   const loadSessionHistory = async () => {
     try {
@@ -242,7 +245,7 @@ const PDFImportPage: React.FC = () => {
   // 文件上传失败处理
   const handleUploadError = (error: unknown) => {
     const errorMsg = typeof error === 'string' ? error : (error instanceof Error ? error.message : '上传失败');
-    message.error(errorMsg);
+    MessageManager.error(errorMsg);
     setCurrentSession(null);
   };
 
@@ -269,7 +272,7 @@ const PDFImportPage: React.FC = () => {
         error
       });
     }
-    message.error(error);
+    MessageManager.error(error);
   };
 
   // 确认导入处理
@@ -301,7 +304,7 @@ const PDFImportPage: React.FC = () => {
             placement: 'topRight'
           });
         } else {
-          message.success('合同导入成功！');
+          MessageManager.success('合同导入成功！');
         }
       }
 
@@ -316,7 +319,7 @@ const PDFImportPage: React.FC = () => {
           placement: 'topRight'
         });
       } else {
-        message.error(errorMsg);
+        MessageManager.error(errorMsg);
       }
       throw error;
     }
@@ -328,11 +331,11 @@ const PDFImportPage: React.FC = () => {
       try {
         const response = await pdfImportService.cancelSession(currentSession.sessionId);
         if (response.success) {
-          message.info('已取消导入');
+          MessageManager.info('已取消导入');
           setCurrentSession(null);
         }
       } catch (error: unknown) {
-        message.error((error as ApiError).message || '取消失败');
+        MessageManager.error((error as ApiError).message || '取消失败');
       }
     }
   };
@@ -351,9 +354,9 @@ const PDFImportPage: React.FC = () => {
         loadSystemInfo(),
         loadSessionHistory()
       ]);
-      message.success('数据已刷新');
+      MessageManager.success('数据已刷新');
     } catch {
-      message.error('刷新失败');
+      MessageManager.error('刷新失败');
     } finally {
       setLoading(false);
     }
@@ -365,45 +368,18 @@ const PDFImportPage: React.FC = () => {
       setLoading(true);
       const response = await pdfImportService.testConversion();
       if (response.system_ready) {
-        message.success('系统功能正常');
+        MessageManager.success('系统功能正常');
       } else {
-        message.warning('系统可能存在问题');
+        MessageManager.warning('系统可能存在问题');
       }
     } catch {
-      message.error('测试失败');
+      MessageManager.error('测试失败');
     } finally {
       setLoading(false);
     }
   };
 
-  // 获取系统状态统计 - 使用 useMemo 优化
-  const systemStats = useMemo(() => {
-    if (!systemInfo) return null;
-
-    const capabilities = systemInfo.capabilities as unknown as PDFSystemCapabilities;
-
-    // 检查核心功能是否可用
-    // 注意: systemInfo.capabilities 中的值可能是布尔值或字符串，这里我们假设API返回的是正确的布尔值
-    // 或者我们进行安全检查
-    const availableCount = [
-      capabilities.pdfplumber_available,
-      capabilities.pymupdf_available,
-      capabilities.spacy_available,
-      capabilities.ocr_available
-    ].filter(Boolean).length;
-
-    return {
-      total: 4,
-      available: availableCount,
-      percentage: Math.round((availableCount / 4) * 100)
-    };
-  }, [systemInfo]);
-
-  // 获取类型安全的capabilities
-  const safeCapabilities = useMemo(() => {
-    if (!systemInfo) return null;
-    return systemInfo.capabilities as unknown as PDFSystemCapabilities;
-  }, [systemInfo]);
+  /* Removed unused capability memos */
 
   // 渲染当前会话内容 - 使用 useMemo 优化复杂条件渲染
   const renderCurrentSession = useMemo(() => {
@@ -499,7 +475,7 @@ const PDFImportPage: React.FC = () => {
     handleProcessingError, handleCancel, handleConfirmImport, handleBackToUpload, setActiveTab]);
 
   // 页面加载状态
-  if (loading && !systemInfo && !currentSession) {
+  if (loading && !currentSession) {
     return (
       <div style={{
         display: 'flex',
@@ -555,12 +531,6 @@ const PDFImportPage: React.FC = () => {
                 使用帮助
               </Button>
               <Button
-                icon={<SettingOutlined />}
-                onClick={() => setShowSystemInfo(!showSystemInfo)}
-              >
-                {showSystemInfo ? '隐藏状态' : '系统状态'}
-              </Button>
-              <Button
                 icon={<ReloadOutlined />}
                 onClick={handleReload}
                 loading={loading}
@@ -569,98 +539,6 @@ const PDFImportPage: React.FC = () => {
                 刷新
               </Button>
             </Space>
-          </Col>
-        </Row>
-
-        {/* 系统状态信息 */}
-        {showSystemInfo && systemInfo && safeCapabilities && (
-          <Alert
-            message="系统状态"
-            description={
-              <div>
-                <Row gutter={16}>
-                  <Col span={6}>
-                    <Tag color={safeCapabilities.pdfplumber_available ? 'green' : 'orange'}>
-                      PDFPlumber: {safeCapabilities.pdfplumber_available ? '可用' : '不可用'}
-                    </Tag>
-                  </Col>
-                  <Col span={6}>
-                    <Tag color={safeCapabilities.pymupdf_available ? 'green' : 'orange'}>
-                      PyMuPDF: {safeCapabilities.pymupdf_available ? '可用' : '不可用'}
-                    </Tag>
-                  </Col>
-                  <Col span={6}>
-                    <Tag color={safeCapabilities.ocr_available ? 'green' : 'default'}>
-                      OCR: {safeCapabilities.ocr_available ? '可用' : '不可用'}
-                    </Tag>
-                  </Col>
-                  <Col span={6}>
-                    <Text type="secondary">
-                      最大文件: {safeCapabilities.max_file_size_mb}MB
-                    </Text>
-                  </Col>
-                </Row>
-                <div style={{ marginTop: 8 }}>
-                  <Text type="secondary">
-                    处理时间: {safeCapabilities.estimated_processing_time} |
-                    支持格式: {Array.isArray(safeCapabilities.supported_formats) ? safeCapabilities.supported_formats.join(', ') : 'PDF'}
-                  </Text>
-                </div>
-              </div>
-            }
-            type="info"
-            showIcon
-            action={
-              <Button size="small" onClick={handleTestSystem}>
-                测试功能
-              </Button>
-            }
-            style={{ marginBottom: 16 }}
-          />
-        )}
-
-        {/* 统计信息 */}
-        <Row gutter={16}>
-          <Col span={6}>
-            <Card size="small">
-              <Statistic
-                title="活跃会话"
-                value={sessionHistory.length + (currentSession ? 1 : 0)}
-                prefix={<HistoryOutlined />}
-              />
-            </Card>
-          </Col>
-          <Col span={6}>
-            <Card size="small">
-              <Statistic
-                title="系统状态"
-                value={systemStats?.percentage || 0}
-                suffix="%"
-                prefix={<SettingOutlined />}
-                valueStyle={{
-                  color: systemStats?.percentage === 100 ? '#3f8600' : '#faad14'
-                }}
-              />
-            </Card>
-          </Col>
-          <Col span={6}>
-            <Card size="small">
-              <Statistic
-                title="文件大小限制"
-                value={safeCapabilities?.max_file_size_mb || 50}
-                suffix="MB"
-                prefix={<FileTextOutlined />}
-              />
-            </Card>
-          </Col>
-          <Col span={6}>
-            <Card size="small">
-              <Statistic
-                title="预估处理时间"
-                value={safeCapabilities?.estimated_processing_time || '30-60秒'}
-                prefix={<SettingOutlined />}
-              />
-            </Card>
           </Col>
         </Row>
       </Card>

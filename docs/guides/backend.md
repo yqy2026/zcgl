@@ -14,9 +14,9 @@
 - 常见问题解决
 
 ## ✅ Status
-**当前状态**: Active (2025-12-23 创建)
-**适用版本**: v1.0.0
-**技术栈**: FastAPI + Python 3.12 + SQLAlchemy 2.0 + Pydantic
+**当前状态**: Active (2026-01-08 更新)
+**适用版本**: v2.0.0
+**技术栈**: FastAPI + Python 3.12 + SQLAlchemy 2.0 + Pydantic v2
 
 ---
 

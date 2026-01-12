@@ -3,11 +3,11 @@ import {
   Select,
   Button,
   Modal,
-  message,
   Space,
   Tooltip,
   Tag
 } from 'antd';
+import { MessageManager } from '@/utils/messageManager';
 import {
   PlusOutlined,
   ReloadOutlined,
@@ -203,7 +203,7 @@ const OwnershipSelect: React.FC<OwnershipSelectProps> = ({
   // 创建新权属方
   const handleCreateOwnership = () => {
     // 这里可以跳转到权属方管理页面或打开创建弹窗
-    message.info('创建新权属方功能开发中');
+    MessageManager.info('创建新权属方功能开发中');
   };
 
   return (

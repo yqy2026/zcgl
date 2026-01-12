@@ -11,6 +11,12 @@ from .asset import (  # noqa: F401
     ProjectOwnershipRelation,
 )
 from .auth import AuditLog, User, UserSession  # noqa: F401
+from .collection import (  # noqa: F401
+    CollectionMethod,
+    CollectionRecord,
+    CollectionStatus,
+)
+from .contact import Contact, ContactType  # noqa: F401
 from .dynamic_permission import (  # noqa: F401
     ConditionalPermission,
     DynamicPermission,
@@ -25,6 +31,11 @@ from .enum_field import (  # noqa: F401
     EnumFieldType,
     EnumFieldUsage,
     EnumFieldValue,
+)
+from .notification import (  # noqa: F401
+    Notification,
+    NotificationPriority,
+    NotificationType,
 )
 from .organization import (  # noqa: F401
     Employee,
@@ -95,6 +106,17 @@ __all__ = [
     "DynamicPermissionAudit",
     "PermissionRequest",
     "PermissionDelegation",
+    # Contact models
+    "Contact",
+    "ContactType",
+    # Collection models
+    "CollectionRecord",
+    "CollectionMethod",
+    "CollectionStatus",
+    # Notification models
+    "Notification",
+    "NotificationType",
+    "NotificationPriority",
     # Task models
     "AsyncTask",
     "ExcelTaskConfig",

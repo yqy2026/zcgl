@@ -14,9 +14,9 @@ import {
   Modal,
   Form,
   InputNumber,
-  message,
   Tabs
 } from 'antd';
+import { MessageManager } from '@/utils/messageManager';
 import {
   ReloadOutlined,
   SettingOutlined,
@@ -203,12 +203,12 @@ const TestCoverageDashboard: React.FC = () => {
   const updateThresholdsMutation = useMutation({
     mutationFn: updateCoverageThresholds,
     onSuccess: (data) => {
-      message.success('阈值配置更新成功');
+      MessageManager.success('阈值配置更新成功');
       setThresholdModalVisible(false);
       queryClient.setQueryData(['coverage-thresholds'], data);
     },
     onError: (error) => {
-      message.error(`更新阈值失败: ${error.message}`);
+      MessageManager.error(`更新阈值失败: ${error.message}`);
     },
   });
 

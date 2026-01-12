@@ -3,10 +3,10 @@ import {
   Typography,
   Button,
   Space,
-  message,
   Spin,
   Form
 } from 'antd'
+import { MessageManager } from '@/utils/messageManager'
 import { ArrowLeftOutlined } from '@ant-design/icons'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -48,13 +48,13 @@ const AssetCreatePage: React.FC = () => {
   const createMutation = useMutation({
     mutationFn: (data: AssetCreateRequest) => assetService.createAsset(data),
     onSuccess: () => {
-      message.success('资产创建成功')
+      MessageManager.success('资产创建成功')
       queryClient.invalidateQueries({ queryKey: ['assets'] })
       navigate('/assets/list')
     },
     onError: (error: unknown) => {
       const apiError = error as ApiError
-      message.error(apiError.response?.data?.detail || apiError.message || '创建失败')
+      MessageManager.error(apiError.response?.data?.detail || apiError.message || '创建失败')
     },
   })
 
@@ -62,14 +62,14 @@ const AssetCreatePage: React.FC = () => {
   const updateMutation = useMutation({
     mutationFn: (data: AssetUpdateRequest) => assetService.updateAsset(id!, data),
     onSuccess: () => {
-      message.success('资产更新成功')
+      MessageManager.success('资产更新成功')
       queryClient.invalidateQueries({ queryKey: ['assets'] })
       queryClient.invalidateQueries({ queryKey: ['asset', id] })
       navigate(`/assets/${id}`)
     },
     onError: (error: unknown) => {
       const apiError = error as ApiError
-      message.error(apiError.response?.data?.detail || apiError.message || '更新失败')
+      MessageManager.error(apiError.response?.data?.detail || apiError.message || '更新失败')
     },
   })
 

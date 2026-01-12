@@ -4,13 +4,13 @@
 
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
 import type { UploadFile } from 'antd';
-import { message } from 'antd';
 import {
     CheckCircleOutlined,
     ExclamationCircleOutlined,
     LoadingOutlined,
     FileTextOutlined
 } from '@ant-design/icons';
+import { MessageManager } from '@/utils/messageManager';
 
 import { pdfImportService } from '../../../services/pdfImportService';
 import type { SessionProgress, SystemInfoResponse } from '../../../services/pdfImportService';
@@ -174,9 +174,9 @@ export const PDFImportProvider: React.FC<PDFImportProviderProps> = ({
                         }
 
                         if (result.session_status.status === 'ready_for_review' || result.session_status.status === 'completed') {
-                            message.success('文件处理完成！');
+                            MessageManager.success('文件处理完成！');
                         } else if (result.session_status.status === 'failed') {
-                            message.error(`处理失败: ${result.session_status.error_message ?? '未知错误'}`);
+                            MessageManager.error(`处理失败: ${result.session_status.error_message ?? '未知错误'}`);
                         }
                     }
                 }
@@ -241,7 +241,7 @@ export const PDFImportProvider: React.FC<PDFImportProviderProps> = ({
                     type: file.type
                 });
 
-                message.success('文件上传成功，开始智能处理...');
+                MessageManager.success('文件上传成功，开始智能处理...');
             } else {
                 throw new Error(response.error ?? '上传失败');
             }
@@ -252,7 +252,7 @@ export const PDFImportProvider: React.FC<PDFImportProviderProps> = ({
             const errorMessage = error instanceof Error ? error.message : '上传失败';
             onError?.(new Error(errorMessage));
             onUploadError(errorMessage);
-            message.error(errorMessage);
+            MessageManager.error(errorMessage);
         } finally {
             setTimeout(() => {
                 setUploading(false);
@@ -282,7 +282,7 @@ export const PDFImportProvider: React.FC<PDFImportProviderProps> = ({
         setCurrentSession(null);
         setProcessingSteps(initializeProcessingSteps());
 
-        message.info('已取消上传');
+        MessageManager.info('已取消上传');
     }, [currentSession]);
 
     // 重置状态
