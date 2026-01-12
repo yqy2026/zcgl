@@ -16,7 +16,6 @@ import { MessageManager } from '@/utils/messageManager';
 import {
     BellOutlined,
     CheckOutlined,
-    DeleteOutlined,
     ExclamationCircleOutlined,
     ClockCircleOutlined,
     InfoCircleOutlined,
@@ -24,6 +23,7 @@ import {
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
+import { COLORS } from '@/styles/colorMap';
 
 dayjs.extend(relativeTime);
 dayjs.locale('zh-cn');
@@ -32,7 +32,7 @@ import { useNavigate } from 'react-router-dom';
 import { notificationService } from '@/services/notificationService';
 import { Notification, NotificationType, NotificationPriority } from '@/types/notification';
 
-const { Title, Text, Paragraph } = Typography;
+const { Text, Paragraph } = Typography;
 
 const NotificationCenter: React.FC = () => {
     const navigate = useNavigate();
@@ -61,8 +61,8 @@ const NotificationCenter: React.FC = () => {
                 current: response.page,
                 total: response.total,
             });
-        } catch (error) {
-            console.error('加载通知失败:', error);
+        } catch {
+            console.error('加载通知失败');
             MessageManager.error('加载通知列表失败');
         } finally {
             setLoading(false);
@@ -89,7 +89,7 @@ const NotificationCenter: React.FC = () => {
                 prev.map(item => (item.id === id ? { ...item, is_read: true, read_at: new Date().toISOString() } : item))
             );
             // 触发全局未读数更新（如果有Context的话）
-        } catch (error) {
+        } catch {
             MessageManager.error('操作失败');
         }
     };
@@ -104,7 +104,7 @@ const NotificationCenter: React.FC = () => {
                     await notificationService.markAllAsRead();
                     MessageManager.success('全部已读成功');
                     loadNotifications(1, activeTab);
-                } catch (error) {
+                } catch {
                     MessageManager.error('操作失败');
                 }
             },
@@ -122,7 +122,7 @@ const NotificationCenter: React.FC = () => {
                     await notificationService.deleteNotification(id);
                     MessageManager.success('删除成功');
                     loadNotifications(pagination.current, activeTab);
-                } catch (error) {
+                } catch {
                     MessageManager.error('删除失败');
                 }
             },
@@ -152,15 +152,15 @@ const NotificationCenter: React.FC = () => {
         switch (type) {
             case NotificationType.CONTRACT_EXPIRING:
             case NotificationType.CONTRACT_EXPIRED:
-                return <ClockCircleOutlined style={{ color: '#faad14' }} />;
+                return <ClockCircleOutlined style={{ color: COLORS.warning }} />;
             case NotificationType.PAYMENT_OVERDUE:
-                return <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />;
+                return <ExclamationCircleOutlined style={{ color: COLORS.error }} />;
             case NotificationType.PAYMENT_DUE:
-                return <InfoCircleOutlined style={{ color: '#1890ff' }} />;
+                return <InfoCircleOutlined style={{ color: COLORS.primary }} />;
             case NotificationType.APPROVAL_PENDING:
-                return <CheckOutlined style={{ color: '#52c41a' }} />;
+                return <CheckOutlined style={{ color: COLORS.success }} />;
             default:
-                return <BellOutlined style={{ color: '#1890ff' }} />;
+                return <BellOutlined style={{ color: COLORS.primary }} />;
         }
     };
 
@@ -247,7 +247,7 @@ const NotificationCenter: React.FC = () => {
                                 ]}
                                 style={{
                                     cursor: 'pointer',
-                                    backgroundColor: item.is_read ? 'transparent' : '#f0f9ff',
+                                    backgroundColor: item.is_read ? 'transparent' : COLORS.infoLight,
                                     padding: '12px 24px',
                                     borderRadius: '4px',
                                     marginBottom: '8px',
@@ -262,11 +262,11 @@ const NotificationCenter: React.FC = () => {
                                                 width: 40,
                                                 height: 40,
                                                 borderRadius: '50%',
-                                                backgroundColor: '#fff',
+                                                backgroundColor: COLORS.bgPrimary,
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
-                                                border: '1px solid #f0f0f0',
+                                                border: '1px solid ' + COLORS.borderLight,
                                             }}
                                         >
                                             {getIcon(item.type)}
@@ -285,7 +285,7 @@ const NotificationCenter: React.FC = () => {
                                     description={
                                         <Paragraph
                                             ellipsis={{ rows: 2 }}
-                                            style={{ margin: 0, color: item.is_read ? '#8c8c8c' : '#262626' }}
+                                            style={{ margin: 0, color: item.is_read ? COLORS.textTertiary : COLORS.textPrimary }}
                                         >
                                             {item.content}
                                         </Paragraph>

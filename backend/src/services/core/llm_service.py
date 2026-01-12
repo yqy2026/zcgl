@@ -8,7 +8,7 @@ LLM 服务模块
 import logging
 import os
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import httpx
 from pydantic import BaseModel
@@ -26,7 +26,7 @@ class LLMResponse(BaseModel):
     """LLM 响应模型"""
     content: str
     raw_response: Any = None
-    usage: Dict[str, Any] = {}
+    usage: dict[str, Any] = {}
     provider: str = ""
 
 
@@ -50,10 +50,10 @@ class LLMServiceInterface(ABC):
     @abstractmethod
     async def chat_completion(
         self,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, str]],
         temperature: float = 0.0,
         json_mode: bool = False,
-        max_tokens: Optional[int] = None,
+        max_tokens: int | None = None,
     ) -> LLMResponse:
         """
         发送聊天完成请求
@@ -111,10 +111,10 @@ class BaseOpenAILLM(LLMServiceInterface):
 
     async def chat_completion(
         self,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, str]],
         temperature: float = 0.0,
         json_mode: bool = False,
-        max_tokens: Optional[int] = None,
+        max_tokens: int | None = None,
     ) -> LLMResponse:
         """发送聊天完成请求"""
         headers = {
@@ -170,15 +170,15 @@ class LLMServiceFactory:
     负责创建和管理 LLM 服务实例
     """
 
-    _services: Dict[LLMProvider, type[LLMServiceInterface]] = {}
-    _config: Dict[LLMProvider, Dict[str, Any]] = {}
+    _services: dict[LLMProvider, type[LLMServiceInterface]] = {}
+    _config: dict[LLMProvider, dict[str, Any]] = {}
 
     @classmethod
     def register(
         cls,
         provider: LLMProvider,
         service_class: type[LLMServiceInterface],
-        config: Optional[Dict[str, Any]] = None,
+        config: dict[str, Any] | None = None,
     ) -> None:
         """
         注册 LLM 服务
@@ -219,7 +219,7 @@ class LLMServiceFactory:
         return service_class(**config)
 
     @classmethod
-    def create_from_env(cls, provider: Optional[LLMProvider] = None) -> LLMServiceInterface:
+    def create_from_env(cls, provider: LLMProvider | None = None) -> LLMServiceInterface:
         """
         从环境变量创建 LLM 服务实例
 
@@ -325,7 +325,7 @@ class LLMService(BaseOpenAILLM):
 
 
 # 单例（保留向后兼容，建议使用工厂）
-_llm_service: Optional[LLMService] = None
+_llm_service: LLMService | None = None
 
 
 def get_llm_service() -> LLMService:
@@ -344,7 +344,7 @@ def get_llm_service() -> LLMService:
 # 便捷函数
 # ============================================================================
 
-def create_llm_service(provider: Optional[LLMProvider] = None) -> LLMServiceInterface:
+def create_llm_service(provider: LLMProvider | None = None) -> LLMServiceInterface:
     """
     创建 LLM 服务实例（推荐使用）
 

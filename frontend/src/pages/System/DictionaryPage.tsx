@@ -4,6 +4,7 @@ import { MessageManager } from '@/utils/messageManager'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 import { SearchOutlined } from '@ant-design/icons'
+import { COLORS } from '@/styles/colorMap'
 import { unifiedDictionaryService } from '../../services/dictionary'
 import type { EnumFieldType, EnumFieldValue } from '../../services/dictionary'
 import type { SystemDictionary } from '@/types/dictionary'
@@ -326,7 +327,7 @@ const DictionaryPage: React.FC = () => {
       render: (name: string, record) => (
         <div>
           <div style={{ fontWeight: 500 }}>{name}</div>
-          <div style={{ fontSize: '12px', color: '#666' }}>
+          <div style={{ fontSize: '12px', color: COLORS.textSecondary }}>
             <Tag color="blue">{record.type.code}</Tag>
           </div>
         </div>
@@ -384,7 +385,7 @@ const DictionaryPage: React.FC = () => {
           <div>
             <Tag color="blue">{t}</Tag>
             {typeInfo && (
-              <div style={{ fontSize: '12px', color: '#666', marginTop: '2px' }}>
+              <div style={{ fontSize: '12px', color: COLORS.textSecondary, marginTop: '2px' }}>
                 {typeInfo.name}
               </div>
             )}
@@ -513,7 +514,7 @@ const DictionaryPage: React.FC = () => {
           </Col>
           <Col span={4}>
             <div style={{ textAlign: 'right' }}>
-              <span style={{ color: '#666', fontSize: '14px' }}>
+              <span style={{ color: COLORS.textSecondary, fontSize: '14px' }}>
                 共 {filteredEnumData.length} 个类型
               </span>
             </div>
@@ -585,10 +586,10 @@ const DictionaryPage: React.FC = () => {
           {enumTypes.find(t => t.code === activeType) && (
             <div style={{
               padding: '12px',
-              backgroundColor: '#f5f5f5',
+              backgroundColor: COLORS.bgTertiary,
               borderRadius: '6px',
               fontSize: '12px',
-              color: '#666'
+              color: COLORS.textSecondary
             }}>
               <div><strong>枚举类型：</strong>{enumTypes.find(t => t.code === activeType)?.name}</div>
               <div><strong>类型编码：</strong>{activeType}</div>

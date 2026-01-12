@@ -22,8 +22,7 @@
 export type {
   // 标准响应格式（统一使用 common.ts 中的定义）
   ApiResponse,
-  ApiSuccessResponse,
-  ApiErrorResponse,
+  ErrorResponse,
 
   // 分页响应格式
   PaginatedResponse,
@@ -133,85 +132,98 @@ export type {
 
 export type {
   // 认证和用户
+  LoginFormData,
+  LoginCredentials,
   User,
-  LoginRequest,
-  RegisterRequest,
-  AuthTokens,
-  UserProfile,
+  Role,
+  // Permission, // Duplicate - exported from common
+  // Organization, // Duplicate - exported from organization
+  AuthState,
+  TokenResponse,
+  LoginResponse,
+  AuthResponse,
+  UserActivity,
 } from './auth';
 
 export type {
   // 资产相关
   Asset,
-  AssetListItem,
+  // AssetListItem, // Does not exist
   AssetFormData,
-  AssetAreaSummary,
-  AssetFilters,
+  // AssetAreaSummary, // Does not exist (use AssetSummary)
+  // AssetFilters, // Does not exist
 } from './asset';
 
 export type {
   // 权属方相关
   Ownership,
-  OwnershipListItem,
+  // OwnershipListItem, // Does not exist
   OwnershipFormData,
 } from './ownership';
 
 export type {
   // 项目相关
   Project,
-  ProjectListItem,
-  ProjectFormData,
+  // ProjectListItem, // Does not exist
+  // ProjectFormData, // Does not exist
 } from './project';
 
 export type {
   // 组织相关
-  Organization,
-  OrganizationListItem,
-  OrganizationFormData,
+  // Organization, // Duplicate - exported from auth
+  // OrganizationListItem, // Does not exist
+  // OrganizationFormData, // Does not exist
 } from './organization';
 
 export type {
   // 租赁合同相关
   RentContract,
-  RentContractListItem,
+  // RentContractListItem, // Does not exist
   RentContractFormData,
-  ContractStatus,
-  ContractTerm,
+  // ContractStatus, // Does not exist
+  // ContractTerm, // Does not exist (use ContractType)
 } from './rentContract';
 
 export type {
   // 通知相关
   Notification,
-  NotificationListItem,
-  NotificationPreferences,
+  // NotificationListItem, // Does not exist
+  // NotificationPreferences, // Does not exist
 } from './notification';
 
 export type {
   // 字典相关
-  Dictionary,
-  DictionaryItem,
-  DictionaryCategory,
+  EnumFieldValue,
+  EnumFieldType,
+  EnumFieldWithType,
+  DictionaryType,
+  DictionaryField,
+  DictionaryOption,
+  DictionaryTypeInfo,
+  SystemDictionary,
+  DictionaryServiceResult,
+  DictionaryQueryParams,
 } from './dictionary';
 
 export type {
   // 枚举字段相关
-  EnumField,
-  EnumFieldOption,
+  // EnumField, // Does not exist
+  // EnumFieldOption, // Does not exist
 } from './enumField';
 
 export type {
   // 分析相关
   AnalyticsData,
   ChartDataPoint,
-  MetricValue,
-  TrendData,
+  // MetricValue, // Does not exist
+  // TrendData, // Does not exist
 } from './analytics';
 
 export type {
   // PDF 导入相关
-  EnhancedPdfImportResult,
-  ParsedFieldData,
-  FieldExtractionResult,
+  // EnhancedPdfImportResult, // Does not exist
+  // ParsedFieldData, // Does not exist
+  // FieldExtractionResult, // Does not exist
 } from './enhancedPdfImport';
 
 // ==================== 类型守卫 ====================
@@ -299,7 +311,7 @@ export {
 // 重新导出 API 响应验证器
 export {
   // 类型守卫
-  isStandardApiResponse,
+  // isStandardApiResponse, // Duplicate - exported from apiResponse
   isPaginatedApiResponse as isPaginatedApiValidationResponse,
   isErrorResponse as isApiValidationErrorResponse,
 

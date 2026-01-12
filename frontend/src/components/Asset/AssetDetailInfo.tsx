@@ -11,6 +11,7 @@ import {
 
 import type { Asset } from '@/types/asset'
 import { formatDate, getStatusColor, calculateOccupancyRate } from '@/utils/format'
+import { getOccupancyRateColor, COLORS } from '@/styles/colorMap'
 
 interface AssetDetailInfoProps {
   asset: Asset
@@ -21,13 +22,6 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
   const occupancyRate = asset.occupancy_rate !== undefined && asset.occupancy_rate !== null
     ? asset.occupancy_rate
     : calculateOccupancyRate(asset.rented_area, asset.rentable_area)
-
-  // 获取出租率颜色
-  const getOccupancyColor = (rate: number) => {
-    if (rate >= 80) return '#52c41a'
-    if (rate >= 60) return '#faad14'
-    return '#ff4d4f'
-  }
 
   return (
     <div>
@@ -162,7 +156,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
         style={{ marginBottom: 16 }}
         extra={
           asset.property_nature === '经营性' && (
-            <span style={{ color: '#1890ff' }}>
+            <span style={{ color: COLORS.primary }}>
               <PercentageOutlined style={{ marginRight: 4 }} />
               出租率: {occupancyRate.toFixed(2)}%
             </span>
@@ -176,7 +170,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
               value={asset.land_area ?? 0}
               suffix="㎡"
               precision={2}
-              valueStyle={{ color: '#1890ff' }}
+              valueStyle={{ color: COLORS.primary }}
             />
           </Col>
 
@@ -186,7 +180,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
               value={asset.actual_property_area ?? 0}
               suffix="㎡"
               precision={2}
-              valueStyle={{ color: '#52c41a' }}
+              valueStyle={{ color: COLORS.success }}
             />
           </Col>
 
@@ -198,7 +192,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
                   value={asset.rentable_area ?? 0}
                   suffix="㎡"
                   precision={2}
-                  valueStyle={{ color: '#faad14' }}
+                  valueStyle={{ color: COLORS.warning }}
                 />
               </Col>
 
@@ -208,7 +202,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
                   value={asset.rented_area ?? 0}
                   suffix="㎡"
                   precision={2}
-                  valueStyle={{ color: '#52c41a' }}
+                  valueStyle={{ color: COLORS.success }}
                 />
               </Col>
 
@@ -218,7 +212,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
                   value={asset.unrented_area ?? 0}
                   suffix="㎡"
                   precision={2}
-                  valueStyle={{ color: '#ff4d4f' }}
+                  valueStyle={{ color: COLORS.error }}
                 />
               </Col>
             </>
@@ -231,7 +225,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
                 value={asset.non_commercial_area}
                 suffix="㎡"
                 precision={2}
-                valueStyle={{ color: '#722ed1' }}
+                valueStyle={{ color: COLORS.primary }}
               />
             </Col>
           )}
@@ -245,12 +239,12 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
               <div style={{ flex: 1 }}>
                 <Progress
                   percent={occupancyRate}
-                  strokeColor={getOccupancyColor(occupancyRate)}
+                  strokeColor={getOccupancyRateColor(occupancyRate)}
                   format={(percent) => `${percent?.toFixed(2)}%`}
                 />
               </div>
               <div style={{ minWidth: 120, textAlign: 'right' }}>
-                <div style={{ fontSize: '12px', color: '#8c8c8c' }}>
+                <div style={{ fontSize: '12px', color: COLORS.textTertiary }}>
                   {asset.rented_area?.toLocaleString() ?? 0} / {asset.rentable_area?.toLocaleString() ?? 0} ㎡
                 </div>
               </div>

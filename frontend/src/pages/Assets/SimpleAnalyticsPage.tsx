@@ -2,7 +2,7 @@
  * 简化版的资产分析页面 - 用于调试
  */
 import React from 'react';
-import { Card, Spin, Empty, Alert, Typography } from 'antd';
+import { Card, Empty, Typography } from 'antd';
 import { AnalyticsStatsGrid } from '@/components/Analytics/AnalyticsStatsCard';
 
 const { Title } = Typography;

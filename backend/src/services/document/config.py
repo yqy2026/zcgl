@@ -6,10 +6,8 @@ PDF/OCR 统一配置
 
 import os
 from enum import Enum
-from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
-
 
 # ============================================================================
 # LLM 提供商枚举 - 统一命名
@@ -242,7 +240,7 @@ class ExtractionConfig(BaseModel):
     )
 
     # 方法选择
-    force_method: Optional[str] = Field(
+    force_method: str | None = Field(
         default=None,
         description="强制使用的提取方法: text, vision, smart",
     )
@@ -298,7 +296,7 @@ class ExtractionConfig(BaseModel):
         default=True,
         description="是否启用缓存",
     )
-    cache_dir: Optional[str] = Field(
+    cache_dir: str | None = Field(
         default=None,
         description="缓存目录路径（默认为系统临时目录）",
     )
@@ -310,7 +308,7 @@ class ExtractionConfig(BaseModel):
 
     @field_validator("force_method")
     @classmethod
-    def validate_force_method(cls, v: Optional[str]) -> Optional[str]:
+    def validate_force_method(cls, v: str | None) -> str | None:
         """验证强制方法"""
         if v is not None:
             valid_methods = ["text", "vision", "smart", "ocr", "llm"]
@@ -380,7 +378,7 @@ class PDFImportConfig(BaseModel):
 # 全局配置实例
 # ============================================================================
 
-_config: Optional[PDFImportConfig] = None
+_config: PDFImportConfig | None = None
 
 
 def get_config() -> PDFImportConfig:
@@ -493,7 +491,7 @@ def validate_config(config: PDFImportConfig) -> list[str]:
 # 配置导出（用于调试）
 # ============================================================================
 
-def export_config_dict(config: Optional[PDFImportConfig] = None) -> dict:
+def export_config_dict(config: PDFImportConfig | None = None) -> dict:
     """
     导出配置为字典
 

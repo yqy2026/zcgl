@@ -20,6 +20,7 @@ import type {
   UpdateEnumFieldValueRequest
 } from '../../services/dictionary'
 import EnumValuePreview from '../../components/Dictionary/EnumValuePreview'
+import { COLORS } from '@/styles/colorMap'
 
 const { TabPane } = Tabs
 const { TextArea } = Input
@@ -286,7 +287,7 @@ const EnumFieldPage: React.FC = () => {
               width: 16,
               height: 16,
               backgroundColor: color,
-              border: '1px solid #d9d9d9',
+              border: `1px solid ${COLORS.border}`,
               borderRadius: 2,
             }}
           />
@@ -468,7 +469,7 @@ const EnumFieldPage: React.FC = () => {
             <Statistic
               title="枚举类型总数"
               value={statistics?.total_types || 0}
-              valueStyle={{ color: '#1890ff' }}
+              valueStyle={{ color: COLORS.primary }}
             />
           </Card>
         </Col>
@@ -477,7 +478,7 @@ const EnumFieldPage: React.FC = () => {
             <Statistic
               title="启用类型"
               value={statistics?.active_types || 0}
-              valueStyle={{ color: '#52c41a' }}
+              valueStyle={{ color: COLORS.success }}
             />
           </Card>
         </Col>
@@ -486,7 +487,7 @@ const EnumFieldPage: React.FC = () => {
             <Statistic
               title="枚举值总数"
               value={statistics?.total_values || 0}
-              valueStyle={{ color: '#722ed1' }}
+              valueStyle={{ color: COLORS.primary }}
             />
           </Card>
         </Col>
@@ -495,7 +496,7 @@ const EnumFieldPage: React.FC = () => {
             <Statistic
               title="使用次数"
               value={statistics?.usage_count || 0}
-              valueStyle={{ color: '#fa8c16' }}
+              valueStyle={{ color: COLORS.warning }}
             />
           </Card>
         </Col>

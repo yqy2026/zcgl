@@ -136,7 +136,7 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
     beforeUpload: (file: File) => {
       const validation = rentContractExcelService.validateExcelFile(file);
       if (!validation.isValid) {
-        MessageManager.error(validation.error);
+        MessageManager.error(validation.error || '文件验证失败');
         return Upload.LIST_IGNORE;
       }
 

@@ -32,7 +32,7 @@ vi.mock('antd', () => ({
       data-placement={placement}
       data-open={open}
       data-width={width}
-      onClose={onClose}
+      data-onclose={onClose ? 'defined' : 'undefined'}
     >
       {title && <div data-testid="drawer-title">{title}</div>}
       {extra && <div data-testid="drawer-extra">{extra}</div>}

@@ -314,7 +314,7 @@ export const withPreload = <T extends Record<string, unknown> = Record<string, u
   Component: React.ComponentType<T>,
   route: string,
 ) => {
-  return (props: T) => {
+  const PreloadWrapper = (props: T) => {
     const { preloadRoute } = useSmartPreload();
 
     useEffect(() => {
@@ -323,6 +323,8 @@ export const withPreload = <T extends Record<string, unknown> = Record<string, u
 
     return <Component {...props} />;
   };
+  PreloadWrapper.displayName = `withPreload(${Component.displayName || Component.name || 'Component'})`;
+  return PreloadWrapper;
 };
 
 // 预加载指令 - 用于组件中

@@ -18,7 +18,7 @@ import {
   InputNumber,
   Select,
 } from "antd";
-import { MessageManager } from "@/utils/MessageManager";
+import { MessageManager } from "@/utils/messageManager";
 import type { ColumnsType } from "antd/es/table";
 import {
   UploadOutlined,
@@ -32,6 +32,7 @@ import type { UploadProps, UploadFile } from "antd";
 import { enhancedApiClient } from "@/api/client";
 import { STANDARD_SHEET_NAME, IMPORT_INSTRUCTIONS } from "../../config/excelConfig";
 import { createLogger } from "@/utils/logger";
+import { COLORS } from "@/styles/colorMap";
 
 const importLogger = createLogger('AssetImport');
 
@@ -369,7 +370,7 @@ const OptimizedAssetImport: React.FC = () => {
                     <Text>选择填写好的Excel文件</Text>
                     <Upload.Dragger {...uploadProps}>
                       <p className="ant-upload-drag-icon">
-                        <FileExcelOutlined style={{ fontSize: "48px", color: "#1890ff" }} />
+                        <FileExcelOutlined style={{ fontSize: "48px", color: COLORS.primary }} />
                       </p>
                       <p className="ant-upload-text">点击或拖拽文件到此区域上传</p>
                       <p className="ant-upload-hint">
@@ -387,7 +388,7 @@ const OptimizedAssetImport: React.FC = () => {
         {currentStep === 1 && (
           <div style={{ textAlign: "center" }}>
             <FileExcelOutlined
-              style={{ fontSize: "64px", color: "#52c41a", marginBottom: "16px" }}
+              style={{ fontSize: "64px", color: COLORS.success, marginBottom: "16px" }}
             />
             <Title level={4}>文件已选择</Title>
             <Text>文件名：{fileList[0]?.name}</Text>
@@ -444,11 +445,11 @@ const OptimizedAssetImport: React.FC = () => {
             >
               <div style={{ textAlign: "center", padding: "16px" }}>
                 {importResult.success > 0 && importResult.failed === 0 ? (
-                  <CheckCircleOutlined style={{ fontSize: "64px", color: "#52c41a" }} />
+                  <CheckCircleOutlined style={{ fontSize: "64px", color: COLORS.success }} />
                 ) : importResult.success > 0 && importResult.failed > 0 ? (
-                  <ExclamationCircleOutlined style={{ fontSize: "64px", color: "#faad14" }} />
+                  <ExclamationCircleOutlined style={{ fontSize: "64px", color: COLORS.warning }} />
                 ) : (
-                  <ExclamationCircleOutlined style={{ fontSize: "64px", color: "#ff4d4f" }} />
+                  <ExclamationCircleOutlined style={{ fontSize: "64px", color: COLORS.error }} />
                 )}
 
                 <Title level={3} style={{ marginTop: "8px" }}>
@@ -517,7 +518,7 @@ const OptimizedAssetImport: React.FC = () => {
                   <Statistic
                     title="总计"
                     value={importResult.total}
-                    valueStyle={{ color: "#1890ff" }}
+                    valueStyle={{ color: COLORS.primary }}
                   />
                 </Card>
               </Col>

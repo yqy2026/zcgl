@@ -18,7 +18,7 @@ import {
 } from '../types/apiResponse';
 import {
   validateApiResponse,
-  type ValidationResult,
+  type ValidationResult as _ValidationResult,
 } from './responseValidator';
 
 // ==================== 响应检测器 ====================

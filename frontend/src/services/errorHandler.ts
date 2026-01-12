@@ -1,6 +1,6 @@
 // API错误处理工具
 
-import { notification } from 'antd'
+import { notification as antdNotification } from 'antd'
 import { MessageManager } from '@/utils/messageManager'
 import type { ErrorResponse } from '@/types/api'
 import { HTTP_STATUS, ERROR_CODES } from '../api/config'
@@ -99,7 +99,7 @@ export class ApiErrorHandler {
   private showErrorNotification(error: ExtendedError): void {
     const errorMessage = this.getErrorMessage(error)
 
-    notification.error({
+    antdNotification.error({
       message: '请求出错',
       description: errorMessage,
       duration: 4.5,

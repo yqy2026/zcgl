@@ -5,9 +5,8 @@
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px 0 rgba(0, 0, 0, 0.02);
   transition: all 0.3s ease;
   overflow: hidden;
-  border: 1px solid #f1f5f9;
-  /* Slate 100 */
-  background: #fff;
+  border: 1px solid var(--color-border-light);
+  background: var(--color-bg-primary);
   height: 100%;
 }
 
@@ -19,33 +18,31 @@
 
 /* Color Variants determining Icon Bubble colors */
 .trendCard.primary .cardIcon {
-  background: #eff6ff;
-  /* Blue 50 */
-  color: #1677ff;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
 }
 
 .trendCard.success .cardIcon {
   background: #f0fdf4;
-  /* Green 50 */
-  color: #22c55e;
+  /* Green 50 - keeping custom green for success variant */
+  color: var(--color-success);
 }
 
 .trendCard.warning .cardIcon {
   background: #fffbeb;
-  /* Amber 50 */
-  color: #f59e0b;
+  /* Amber 50 - keeping custom amber for warning variant */
+  color: var(--color-warning);
 }
 
 .trendCard.error .cardIcon {
   background: #fef2f2;
-  /* Red 50 */
-  color: #ef4444;
+  /* Red 50 - keeping custom red for error variant */
+  color: var(--color-error);
 }
 
 .trendCard.default .cardIcon {
-  background: #f1f5f9;
-  /* Slate 100 */
-  color: #64748b;
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
 }
 
 /* Size Variants */
@@ -71,12 +68,10 @@
 .cardTitle {
   font-size: 14px;
   font-weight: 500;
-  color: #64748b;
-  /* Slate 500 - Secondary text color for title */
+  color: var(--color-text-secondary);
   margin: 0;
   line-height: 1.4;
   margin-top: 4px;
-  /* Align with icon */
 }
 
 .cardIcon {
@@ -99,8 +94,7 @@
 /* Statistic Value Override */
 .trendCard :global(.ant-statistic-content-value) {
   font-weight: 700;
-  color: #1e293b;
-  /* Slate 800 */
+  color: var(--color-text-primary);
 }
 
 /* Trends */
@@ -108,8 +102,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  color: #22c55e;
-  /* Green 500 */
+  color: var(--color-success);
   background: #f0fdf4;
   padding: 2px 8px;
   border-radius: 12px;
@@ -122,8 +115,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  color: #ef4444;
-  /* Red 500 */
+  color: var(--color-error);
   background: #fef2f2;
   padding: 2px 8px;
   border-radius: 12px;
@@ -136,8 +128,8 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  color: #64748b;
-  background: #f1f5f9;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-tertiary);
   padding: 2px 8px;
   border-radius: 12px;
   font-size: 12px;
@@ -158,7 +150,7 @@
   opacity: 0.8;
   font-size: 11px;
   margin-left: 4px;
-  color: #64748b;
+  color: var(--color-text-secondary);
 }
 
 /* 响应式设计 */

@@ -5,7 +5,7 @@
  * @module pages/Rental
  */
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Card,
   Button,
@@ -19,7 +19,6 @@ import {
 import {
   HomeOutlined,
   FileTextOutlined,
-  SaveOutlined,
   ArrowLeftOutlined,
   CheckCircleOutlined,
 } from '@ant-design/icons';
@@ -28,10 +27,11 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { addDays, differenceInDays, parseISO, formatISO } from 'date-fns';
 import { RentContractForm } from '../../components/Forms';
-import { RentContractCreate, RentContract } from '../../types/rentContract';
+import { RentContractCreate } from '../../types/rentContract';
 import { rentContractService } from '../../services/rentContractService';
 import RenewalSummarySection from '../../components/Forms/RentContract/RenewalSummarySection';
 import { createLogger } from '../../utils/logger';
+import { COLORS } from '@/styles/colorMap';
 
 const pageLogger = createLogger('ContractRenewPage');
 
@@ -73,7 +73,7 @@ function adjustRentTermsDate(
 const ContractRenewPage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const queryClient = useQueryClient();
+  const _queryClient = useQueryClient();
 
   const [loading, setLoading] = useState(false);
   const [contractCreated, setContractCreated] = useState(false);
@@ -188,7 +188,7 @@ const ContractRenewPage: React.FC = () => {
   }
 
   return (
-    <div style={{ padding: '24px', background: '#f5f5f5', minHeight: '100vh' }}>
+    <div style={{ padding: '24px', background: COLORS.bgTertiary, minHeight: '100vh' }}>
       {/* 页面头部 */}
       <Card style={{ marginBottom: '16px' }}>
         <Row align="middle" justify="space-between">
@@ -219,7 +219,7 @@ const ContractRenewPage: React.FC = () => {
             />
             <div style={{ marginTop: '16px' }}>
               <Title level={3} style={{ margin: 0 }}>
-                <span style={{ marginRight: '8px', color: '#52c41a' }}>
+                <span style={{ marginRight: '8px', color: COLORS.success }}>
                   <CheckCircleOutlined />
                 </span>
                 合同续签
@@ -244,17 +244,17 @@ const ContractRenewPage: React.FC = () => {
 
       {/* 创建/更新成功提示 */}
       {contractCreated && (
-        <Card style={{ marginBottom: '16px', borderColor: '#52c41a', backgroundColor: '#f6ffed' }}>
+        <Card style={{ marginBottom: '16px', borderColor: COLORS.success, backgroundColor: 'var(--color-success-light, #f6ffed)' }}>
           <Row align="middle">
             <Col>
-              <CheckCircleOutlined style={{ fontSize: '24px', color: '#52c41a', marginRight: '12px' }} />
+              <CheckCircleOutlined style={{ fontSize: '24px', color: COLORS.success, marginRight: '12px' }} />
             </Col>
             <Col flex="1">
-              <Title level={4} style={{ color: '#52c41a', margin: 0 }}>
+              <Title level={4} style={{ color: COLORS.success, margin: 0 }}>
                 合同续签成功！
               </Title>
               <Text type="secondary">
-                新合同已成功创建，原合同状态已变更为"已续签"，即将跳转到新合同详情页...
+                新合同已成功创建，原合同状态已变更为&quot;已续签&quot;，即将跳转到新合同详情页...
               </Text>
             </Col>
           </Row>
@@ -263,15 +263,15 @@ const ContractRenewPage: React.FC = () => {
 
       {/* 创建指南 */}
       {!contractCreated && (
-        <Card style={{ marginBottom: '16px', backgroundColor: '#e6f7ff' }}>
-          <Title level={5} style={{ color: '#1890ff', marginBottom: '12px' }}>
+        <Card style={{ marginBottom: '16px', backgroundColor: 'var(--color-primary-light, #e6f7ff)' }}>
+          <Title level={5} style={{ color: COLORS.primary, marginBottom: '12px' }}>
             <CheckCircleOutlined style={{ marginRight: '6px' }} />
             续签说明
           </Title>
           <Row gutter={16}>
             <Col span={6}>
               <div style={{ textAlign: 'center', padding: '8px' }}>
-                <FileTextOutlined style={{ fontSize: '24px', color: '#1890ff' }} />
+                <FileTextOutlined style={{ fontSize: '24px', color: COLORS.primary }} />
                 <div style={{ marginTop: '8px' }}>
                   <Text strong>自动继承</Text>
                   <br />
@@ -281,7 +281,7 @@ const ContractRenewPage: React.FC = () => {
             </Col>
             <Col span={6}>
               <div style={{ textAlign: 'center', padding: '8px' }}>
-                <FileTextOutlined style={{ fontSize: '24px', color: '#1890ff' }} />
+                <FileTextOutlined style={{ fontSize: '24px', color: COLORS.primary }} />
                 <div style={{ marginTop: '8px' }}>
                   <Text strong>日期调整</Text>
                   <br />
@@ -291,7 +291,7 @@ const ContractRenewPage: React.FC = () => {
             </Col>
             <Col span={6}>
               <div style={{ textAlign: 'center', padding: '8px' }}>
-                <FileTextOutlined style={{ fontSize: '24px', color: '#1890ff' }} />
+                <FileTextOutlined style={{ fontSize: '24px', color: COLORS.primary }} />
                 <div style={{ marginTop: '8px' }}>
                   <Text strong>条款继承</Text>
                   <br />
@@ -301,7 +301,7 @@ const ContractRenewPage: React.FC = () => {
             </Col>
             <Col span={6}>
               <div style={{ textAlign: 'center', padding: '8px' }}>
-                <FileTextOutlined style={{ fontSize: '24px', color: '#1890ff' }} />
+                <FileTextOutlined style={{ fontSize: '24px', color: COLORS.primary }} />
                 <div style={{ marginTop: '8px' }}>
                   <Text strong>押金转移</Text>
                   <br />

@@ -15,6 +15,7 @@ import {
 } from 'antd';
 import { MessageManager } from '@/utils/messageManager';
 import { UserOutlined, EditOutlined, LockOutlined, HistoryOutlined } from '@ant-design/icons';
+import { COLORS } from '@/styles/colorMap';
 import { useAuth } from '../../hooks/useAuth';
 import { AuthService } from '../../services/authService';
 
@@ -111,9 +112,9 @@ const ProfilePage: React.FC = () => {
   }
 
   return (
-    <div style={{ padding: '24px', background: '#f5f5f5', minHeight: '100vh' }}>
+    <div style={{ padding: '24px', background: COLORS.bgTertiary, minHeight: '100vh' }}>
       {/* 页面标题 */}
-      <Title level={2} style={{ marginBottom: '24px', color: '#1890ff' }}>
+      <Title level={2} style={{ marginBottom: '24px', color: COLORS.primary }}>
         个人资料
       </Title>
 
@@ -146,13 +147,13 @@ const ProfilePage: React.FC = () => {
                       height: '80px',
                       margin: '0 auto 16px',
                       borderRadius: '50%',
-                      background: '#f0f0f0',
+                      background: COLORS.bgQuaternary,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                     }}
                   >
-                    <UserOutlined style={{ fontSize: '32px', color: '#1890ff' }} />
+                    <UserOutlined style={{ fontSize: '32px', color: COLORS.primary }} />
                   </div>
                   <Text type="secondary">用户头像</Text>
                 </div>
@@ -220,7 +221,7 @@ const ProfilePage: React.FC = () => {
               <div
                 style={{
                   padding: '16px',
-                  background: '#fafafa',
+                  background: COLORS.bgSecondary,
                   borderRadius: '6px',
                   display: 'flex',
                   justifyContent: 'space-between',
@@ -240,7 +241,7 @@ const ProfilePage: React.FC = () => {
               <div
                 style={{
                   padding: '16px',
-                  background: '#fafafa',
+                  background: COLORS.bgSecondary,
                   borderRadius: '6px',
                   display: 'flex',
                   justifyContent: 'space-between',

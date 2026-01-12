@@ -5,7 +5,6 @@ Contract Extractor Factory
 使用字典映射替代 if-elif 链，支持统一的 LLMProvider 枚举
 """
 import logging
-from typing import Dict, Optional, Type
 
 from src.core.config import settings
 
@@ -23,7 +22,7 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 
 # 提取器类型映射（字典替代 if-elif 链）
-EXTRACTOR_MAP: Dict[LLMProvider, Type[ContractExtractorInterface]] = {
+EXTRACTOR_MAP: dict[LLMProvider, type[ContractExtractorInterface]] = {
     LLMProvider.QWEN: QwenAdapter,
     LLMProvider.DEEPSEEK: DeepSeekAdapter,
     LLMProvider.GLM: GLMAdapter,
@@ -76,7 +75,7 @@ class ExtractorFactory:
         return extractor_class()
 
     @classmethod
-    def list_providers(cls) -> Dict[str, list[str]]:
+    def list_providers(cls) -> dict[str, list[str]]:
         """
         列出可用的提供商及其别名
 
@@ -95,7 +94,7 @@ class ExtractorFactory:
 # ============================================================================
 
 # 单例实例（用于便捷函数）
-_llm_extractor_singleton: Optional[ContractExtractorInterface] = None
+_llm_extractor_singleton: ContractExtractorInterface | None = None
 
 
 def get_llm_extractor(

@@ -6,10 +6,9 @@
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
-
 
 # ============================================================================
 # 错误码枚举
@@ -80,19 +79,19 @@ class ErrorResponse(BaseModel):
     success: bool = Field(default=False, description="请求是否成功")
     error_code: ErrorCode = Field(description="错误码")
     error_message: str = Field(description="错误消息")
-    error_type: Optional[str] = Field(None, description="异常类型名")
+    error_type: str | None = Field(None, description="异常类型名")
     severity: ErrorSeverity = Field(default=ErrorSeverity.MEDIUM, description="错误严重程度")
 
     # 重试建议
     retry_suggested: bool = Field(default=False, description="是否建议重试")
-    retry_after_seconds: Optional[int] = Field(None, description="建议重试间隔（秒）")
+    retry_after_seconds: int | None = Field(None, description="建议重试间隔（秒）")
 
     # 详细信息
-    details: Optional[Dict[str, Any]] = Field(None, description="错误详情")
-    stack_trace: Optional[str] = Field(None, description="堆栈跟踪（仅调试模式）")
+    details: dict[str, Any] | None = Field(None, description="错误详情")
+    stack_trace: str | None = Field(None, description="堆栈跟踪（仅调试模式）")
 
     # 上下文
-    request_id: Optional[str] = Field(None, description="请求 ID")
+    request_id: str | None = Field(None, description="请求 ID")
     timestamp: datetime = Field(default_factory=datetime.now, description="错误时间")
 
     class Config:
@@ -123,15 +122,15 @@ class DetailedErrorResponse(ErrorResponse):
     source: str = Field(description="错误来源: api, service, database, external")
 
     # 相关资源
-    session_id: Optional[str] = Field(None, description="相关的会话 ID")
-    file_path: Optional[str] = Field(None, description="相关的文件路径")
+    session_id: str | None = Field(None, description="相关的会话 ID")
+    file_path: str | None = Field(None, description="相关的文件路径")
 
     # 解决建议
-    suggestions: List[str] = Field(default_factory=list, description="解决建议")
+    suggestions: list[str] = Field(default_factory=list, description="解决建议")
 
     # 支持信息
-    support_url: Optional[str] = Field(None, description="支持文档 URL")
-    issue_tracking_id: Optional[str] = Field(None, description="问题追踪 ID")
+    support_url: str | None = Field(None, description="支持文档 URL")
+    issue_tracking_id: str | None = Field(None, description="问题追踪 ID")
 
     class Config:
         json_schema_extra = {
@@ -158,7 +157,7 @@ class BatchItemError(BaseModel):
     """批量操作中的单个错误"""
 
     index: int = Field(description="项目索引")
-    identifier: Optional[str] = Field(None, description="项目标识符")
+    identifier: str | None = Field(None, description="项目标识符")
     error_code: ErrorCode = Field(description="错误码")
     error_message: str = Field(description="错误消息")
 
@@ -172,7 +171,7 @@ class BatchErrorResponse(ErrorResponse):
     total_count: int = Field(description="总项目数")
     success_count: int = Field(description="成功项目数")
     failed_count: int = Field(description="失败项目数")
-    errors: List[BatchItemError] = Field(default_factory=list, description="失败项目详情")
+    errors: list[BatchItemError] = Field(default_factory=list, description="失败项目详情")
 
     class Config:
         json_schema_extra = {
@@ -208,7 +207,7 @@ class ErrorBuilder:
     @staticmethod
     def network_error(
         message: str = "Network error occurred",
-        details: Optional[Dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
         retry_after: int = 5,
     ) -> ErrorResponse:
         """创建网络错误响应"""
@@ -225,7 +224,7 @@ class ErrorBuilder:
     def timeout_error(
         timeout_seconds: int,
         operation: str = "operation",
-        details: Optional[Dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
     ) -> ErrorResponse:
         """创建超时错误响应"""
         return ErrorResponse(
@@ -240,7 +239,7 @@ class ErrorBuilder:
     @staticmethod
     def file_not_found(
         file_path: str,
-        details: Optional[Dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
     ) -> ErrorResponse:
         """创建文件未找到错误响应"""
         return ErrorResponse(
@@ -255,7 +254,7 @@ class ErrorBuilder:
     def file_too_large(
         file_size_mb: float,
         max_size_mb: int,
-        details: Optional[Dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
     ) -> ErrorResponse:
         """创建文件过大错误响应"""
         return ErrorResponse(
@@ -275,7 +274,7 @@ class ErrorBuilder:
 
     @staticmethod
     def ocr_unavailable(
-        details: Optional[Dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
     ) -> DetailedErrorResponse:
         """创建 OCR 不可用错误响应"""
         return DetailedErrorResponse(
@@ -295,7 +294,7 @@ class ErrorBuilder:
     @staticmethod
     def invalid_pdf(
         reason: str = "Invalid or corrupted PDF file",
-        details: Optional[Dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
     ) -> ErrorResponse:
         """创建无效 PDF 错误响应"""
         return ErrorResponse(
@@ -313,8 +312,8 @@ class ErrorBuilder:
     @staticmethod
     def extraction_failed(
         reason: str = "Failed to extract information from PDF",
-        details: Optional[Dict[str, Any]] = None,
-        confidence: Optional[float] = None,
+        details: dict[str, Any] | None = None,
+        confidence: float | None = None,
     ) -> ErrorResponse:
         """创建提取失败错误响应"""
         error_response = ErrorResponse(
@@ -333,7 +332,7 @@ class ErrorBuilder:
     def low_confidence(
         confidence: float,
         threshold: float = 0.7,
-        details: Optional[Dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
     ) -> ErrorResponse:
         """创建低置信度错误响应"""
         return ErrorResponse(
@@ -355,7 +354,7 @@ class ErrorBuilder:
     @staticmethod
     def api_key_missing(
         service: str = "API",
-        details: Optional[Dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
     ) -> ErrorResponse:
         """创建 API Key 缺失错误响应"""
         return ErrorResponse(
@@ -366,13 +365,13 @@ class ErrorBuilder:
             details=details or {"service": service},
             suggestions=[
                 f"Set {service.upper()}_API_KEY environment variable",
-                f"Check configuration file",
+                "Check configuration file",
             ],
         )
 
     @staticmethod
     def out_of_memory(
-        details: Optional[Dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
     ) -> ErrorResponse:
         """创建内存不足错误响应"""
         return ErrorResponse(
@@ -392,7 +391,7 @@ class ErrorBuilder:
     @staticmethod
     def internal_error(
         message: str,
-        details: Optional[Dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
     ) -> ErrorResponse:
         """创建内部错误响应"""
         return ErrorResponse(
@@ -410,7 +409,7 @@ class ErrorBuilder:
 
 def exception_to_error_response(
     exception: Exception,
-    request_id: Optional[str] = None,
+    request_id: str | None = None,
     include_traceback: bool = False,
 ) -> ErrorResponse:
     """
@@ -458,9 +457,9 @@ try:
     import httpx
     httpx.TimeoutException = httpx.TimeoutException
 except ImportError:
-    class MockTimeoutException(Exception):
+    class MockTimeoutError(Exception):
         pass
-    httpx = type("obj", (object,), {"TimeoutException": MockTimeoutException})
+    httpx = type("obj", (object,), {"TimeoutException": MockTimeoutError})
 
 
 # ============================================================================

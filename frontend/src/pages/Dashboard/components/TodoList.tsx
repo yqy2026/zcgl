@@ -5,6 +5,7 @@ import {
   ExclamationCircleOutlined,
   CheckCircleOutlined,
 } from '@ant-design/icons';
+import { COLORS } from '@/styles/colorMap';
 
 const { Text } = Typography;
 
@@ -73,10 +74,10 @@ const TodoList: React.FC<TodoListProps> = ({ items, loading }) => {
                 style={{
                   color:
                     item.priority === 'high'
-                      ? '#ff4d4f'
+                      ? COLORS.error
                       : item.priority === 'medium'
-                        ? '#faad14'
-                        : '#8c8c8c',
+                        ? COLORS.warning
+                        : COLORS.textTertiary,
                   fontSize: '16px',
                 }}
               />
@@ -96,7 +97,7 @@ const TodoList: React.FC<TodoListProps> = ({ items, loading }) => {
                 </Text>
                 <br />
                 <Space style={{ marginTop: '4px' }}>
-                  <ClockCircleOutlined style={{ color: '#8c8c8c' }} />
+                  <ClockCircleOutlined style={{ color: COLORS.textTertiary }} />
                   <Text type="secondary" style={{ fontSize: '12px' }}>
                     截止日期: {item.dueDate}
                   </Text>

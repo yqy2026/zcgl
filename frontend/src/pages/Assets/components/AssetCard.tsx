@@ -10,6 +10,7 @@ import {
 } from '@ant-design/icons';
 import type { Asset } from '@/types/asset';
 import { PropertyNature } from '@/types/asset';
+import { COLORS } from '@/styles/colorMap';
 
 const { Text, Title } = Typography;
 const { Meta } = Card;
@@ -26,12 +27,12 @@ const AssetCard: React.FC<AssetCardProps> = ({ asset, onView, onEdit, onDelete }
 
   const getOccupancyColor = (rate: number) => {
     if (rate > 80) {
-      return '#52c41a';
+      return COLORS.success;
     }
     if (rate > 50) {
-      return '#faad14';
+      return COLORS.warning;
     }
-    return '#ff4d4f';
+    return COLORS.error;
   };
 
   const getStatusColor = (status: string) => {
@@ -89,7 +90,7 @@ const AssetCard: React.FC<AssetCardProps> = ({ asset, onView, onEdit, onDelete }
             {/* 地址信息 */}
             <div style={{ marginBottom: '8px' }}>
               <Space>
-                <EnvironmentOutlined style={{ color: '#8c8c8c' }} />
+                <EnvironmentOutlined style={{ color: COLORS.textTertiary }} />
                 <Text type="secondary" style={{ fontSize: '12px' }}>
                   {asset.address}
                 </Text>
@@ -99,7 +100,7 @@ const AssetCard: React.FC<AssetCardProps> = ({ asset, onView, onEdit, onDelete }
             {/* 权属方 */}
             <div style={{ marginBottom: '8px' }}>
               <Space>
-                <UserOutlined style={{ color: '#8c8c8c' }} />
+                <UserOutlined style={{ color: COLORS.textTertiary }} />
                 <Text type="secondary" style={{ fontSize: '12px' }}>
                   {asset.ownership_entity}
                 </Text>
@@ -109,7 +110,7 @@ const AssetCard: React.FC<AssetCardProps> = ({ asset, onView, onEdit, onDelete }
             {/* 面积信息 */}
             <div style={{ marginBottom: '12px' }}>
               <Space>
-                <BuildOutlined style={{ color: '#8c8c8c' }} />
+                <BuildOutlined style={{ color: COLORS.textTertiary }} />
                 <Text type="secondary" style={{ fontSize: '12px' }}>
                   总面积: {asset.actual_property_area}㎡ | 可租: {asset.rentable_area}㎡ | 已租:{' '}
                   {asset.rented_area}㎡

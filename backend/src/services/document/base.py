@@ -5,10 +5,10 @@
 """
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from datetime import datetime
+from collections.abc import Callable
 from enum import Enum
-from typing import Any, Callable, Dict, Optional, Union
+from typing import Any
+
 from pydantic import BaseModel, Field, model_validator
 
 
@@ -73,27 +73,27 @@ class ExtractionResult(BaseModel):
     status: ExtractionStatus = ExtractionStatus.SUCCESS
 
     # 提取的数据
-    extracted_fields: Dict[str, Any] = Field(default_factory=dict)
-    raw_llm_json: Optional[Dict[str, Any]] = None
+    extracted_fields: dict[str, Any] = Field(default_factory=dict)
+    raw_llm_json: dict[str, Any] | None = None
 
     # 元数据
     extraction_method: ExtractionMethod = ExtractionMethod.UNKNOWN
     confidence: float = Field(default=0.8, ge=0.0, le=1.0)
 
     # 性能指标
-    processing_time_ms: Optional[int] = None
+    processing_time_ms: int | None = None
 
     # 错误信息
-    error: Optional[str] = None
-    error_code: Optional[ErrorCode] = None
-    error_details: Optional[Dict[str, Any]] = None
+    error: str | None = None
+    error_code: ErrorCode | None = None
+    error_details: dict[str, Any] | None = None
 
     # 重试建议
     retry_suggested: bool = False
 
     # 额外信息
-    pdf_analysis: Optional[Dict[str, Any]] = None
-    usage: Optional[Dict[str, Any]] = None
+    pdf_analysis: dict[str, Any] | None = None
+    usage: dict[str, Any] | None = None
     warnings: list[str] = Field(default_factory=list)
 
     class Config:
@@ -135,7 +135,7 @@ class ProgressCallback:
         self,
         progress: int,  # 0-100
         message: str,   # 状态消息
-        stage: Optional[str] = None,  # 阶段标识
+        stage: str | None = None,  # 阶段标识
     ) -> None:
         """
         报告处理进度
@@ -149,7 +149,7 @@ class ProgressCallback:
 
 
 # 类型别名
-ProgressCallbackType = Callable[[int, str, Optional[str]], None]
+ProgressCallbackType = Callable[[int, str, str | None], None]
 
 
 class ContractExtractorInterface(ABC):
@@ -229,7 +229,7 @@ class BatchExtractorInterface(ContractExtractorInterface):
     async def extract_batch(
         self,
         sources: list[str],
-        progress_callback: Optional[ProgressCallbackType] = None,
+        progress_callback: ProgressCallbackType | None = None,
         **kwargs
     ) -> list[ExtractionResult]:
         """
@@ -266,7 +266,7 @@ class ExtractionConfig(BaseModel):
     dpi: int = Field(default=200, ge=100, le=600)
 
     # 提取配置
-    force_method: Optional[ExtractionMethod] = None
+    force_method: ExtractionMethod | None = None
     enable_regex_validation: bool = True
     enable_llm_fallback: bool = True
 
@@ -292,7 +292,7 @@ class ExtractorFactory:
     根据配置创建合适的提取器实例
     """
 
-    _extractors: Dict[str, type] = {}
+    _extractors: dict[str, type] = {}
 
     @classmethod
     def register(
@@ -314,7 +314,7 @@ class ExtractorFactory:
         cls,
         name: str,
         **kwargs
-    ) -> Optional[ContractExtractorInterface]:
+    ) -> ContractExtractorInterface | None:
         """
         创建提取器实例
 
@@ -347,7 +347,7 @@ def create_error_result(
     error_code: ErrorCode = ErrorCode.INTERNAL_ERROR,
     method: ExtractionMethod = ExtractionMethod.UNKNOWN,
     retry_suggested: bool = False,
-    details: Optional[Dict[str, Any]] = None
+    details: dict[str, Any] | None = None
 ) -> ExtractionResult:
     """
     创建错误结果
@@ -374,7 +374,7 @@ def create_error_result(
 
 
 def create_success_result(
-    extracted_fields: Dict[str, Any],
+    extracted_fields: dict[str, Any],
     method: ExtractionMethod,
     confidence: float = 0.8,
     **kwargs

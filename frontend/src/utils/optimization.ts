@@ -349,12 +349,14 @@ export const withPerformanceMonitoring = <P extends object>(
   Component: React.ComponentType<P>,
   componentName: string
 ) => {
-  return React.memo((props: P) => {
+  const PerformanceWrapper = React.memo((props: P) => {
     useRenderPerformance(componentName)
     useMemoryLeakDetection(componentName)
 
     return React.createElement(Component, props)
   })
+  PerformanceWrapper.displayName = `withPerformanceMonitoring(${componentName})`
+  return PerformanceWrapper
 }
 
 export default {

@@ -30,9 +30,10 @@ import {
 } from "@/components/Analytics/AnalyticsChart";
 import AnalyticsFilters from "@/components/Analytics/AnalyticsFilters";
 import type { AssetSearchParams } from "@/types/asset";
-import type { AnalyticsData, AnalyticsResponse } from "@/types/analytics";
+import type { AnalyticsData } from "@/types/analytics";
 import { createLogger } from "@/utils/logger";
-import { MessageManager } from "@/utils/MessageManager";
+import { MessageManager } from "@/utils/messageManager";
+import { COLORS } from '@/styles/colorMap';
 
 const pageLogger = createLogger('AssetAnalytics');
 
@@ -50,7 +51,6 @@ const AssetAnalyticsPage: React.FC = () => {
   const {
     data: analyticsResponse,
     isLoading,
-    error,
     refetch,
   } = useQuery({
     queryKey: ["asset-analytics", filters],
@@ -398,7 +398,7 @@ const AssetAnalyticsPage: React.FC = () => {
                   {
                     key: "occupancy_rate",
                     name: "出租率 (%)",
-                    color: "#1890ff",
+                    color: COLORS.primary,
                   },
                 ]}
                 xAxisKey="date"

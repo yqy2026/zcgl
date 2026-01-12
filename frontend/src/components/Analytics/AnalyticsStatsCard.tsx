@@ -10,6 +10,7 @@ import {
   TransactionOutlined,
   AreaChartOutlined,
 } from '@ant-design/icons';
+import { getTrendColor, getOccupancyRateColor, COLORS } from '@/styles/colorMap';
 
 interface StatCardProps {
   title: string;
@@ -49,7 +50,7 @@ const StatCard: React.FC<StatCardProps> = ({
   trend,
   trendType,
   icon,
-  color = '#1890ff',
+  color = COLORS.primary,
   loading = false,
 }) => {
   const getTrendIcon = () => {
@@ -58,14 +59,7 @@ const StatCard: React.FC<StatCardProps> = ({
     }
 
     const isPositive = trend > 0;
-    const color =
-      trendType === 'up'
-        ? isPositive
-          ? '#52c41a'
-          : '#ff4d4f'
-        : isPositive
-          ? '#ff4d4f'
-          : '#52c41a';
+    const color = getTrendColor(trend, trendType);
     const Icon = isPositive ? ArrowUpOutlined : ArrowDownOutlined;
 
     return (
@@ -114,7 +108,7 @@ const StatCard: React.FC<StatCardProps> = ({
           </div>
         )}
         <div style={{ flex: 1 }}>
-          <div style={{ color: '#8c8c8c', fontSize: 14, marginBottom: 4 }}>{title}</div>
+          <div style={{ color: COLORS.textTertiary, fontSize: 14, marginBottom: 4 }}>{title}</div>
           <Statistic
             value={value}
             precision={precision}
@@ -147,7 +141,7 @@ export const AnalyticsStatsGrid: React.FC<StatsGridProps> = ({ data, loading = f
           value={data.total_assets}
           suffix="个"
           icon={<ApartmentOutlined />}
-          color="#2f54eb"
+          color={COLORS.primary}
           loading={loading}
         />
       </Col>
@@ -159,7 +153,7 @@ export const AnalyticsStatsGrid: React.FC<StatsGridProps> = ({ data, loading = f
           precision={2}
           suffix="㎡"
           icon={<AreaChartOutlined />}
-          color="#13c2c2"
+          color={COLORS.success}
           loading={loading}
         />
       </Col>
@@ -171,7 +165,7 @@ export const AnalyticsStatsGrid: React.FC<StatsGridProps> = ({ data, loading = f
           precision={2}
           suffix="㎡"
           icon={<ThunderboltOutlined />}
-          color="#722ed1"
+          color={COLORS.primary}
           loading={loading}
         />
       </Col>
@@ -183,14 +177,9 @@ export const AnalyticsStatsGrid: React.FC<StatsGridProps> = ({ data, loading = f
           precision={2}
           suffix="%"
           icon={<PieChartOutlined />}
-          color="#fa8c16"
+          color={COLORS.warning}
           valueStyle={{
-            color:
-              data.occupancy_rate >= 80
-                ? '#52c41a'
-                : data.occupancy_rate >= 60
-                  ? '#faad14'
-                  : '#ff4d4f',
+            color: getOccupancyRateColor(data.occupancy_rate),
           }}
           loading={loading}
         />
@@ -205,7 +194,7 @@ export const AnalyticsStatsGrid: React.FC<StatsGridProps> = ({ data, loading = f
             precision={2}
             suffix="元"
             icon={<MoneyCollectOutlined />}
-            color="#52c41a"
+            color={COLORS.success}
             loading={loading}
           />
         </Col>
@@ -219,7 +208,7 @@ export const AnalyticsStatsGrid: React.FC<StatsGridProps> = ({ data, loading = f
             precision={2}
             suffix="元"
             icon={<MoneyCollectOutlined />}
-            color={data.total_net_income >= 0 ? '#52c41a' : '#ff4d4f'}
+            color={data.total_net_income >= 0 ? COLORS.success : COLORS.error}
             trendType={data.total_net_income >= 0 ? 'up' : 'down'}
             loading={loading}
           />
@@ -234,7 +223,7 @@ export const AnalyticsStatsGrid: React.FC<StatsGridProps> = ({ data, loading = f
             precision={2}
             suffix="元"
             icon={<TransactionOutlined />}
-            color="#eb2f96"
+            color={COLORS.primary}
             loading={loading}
           />
         </Col>
@@ -268,7 +257,7 @@ export const FinancialStatsGrid: React.FC<FinancialStatsGridProps> = ({
             value={data.total_annual_income}
             precision={2}
             suffix="元"
-            valueStyle={{ color: '#3f8600' }}
+            valueStyle={{ color: COLORS.success }}
           />
         </Card>
       </Col>
@@ -280,7 +269,7 @@ export const FinancialStatsGrid: React.FC<FinancialStatsGridProps> = ({
             value={data.total_annual_expense}
             precision={2}
             suffix="元"
-            valueStyle={{ color: '#cf1322' }}
+            valueStyle={{ color: COLORS.error }}
           />
         </Card>
       </Col>
@@ -293,7 +282,7 @@ export const FinancialStatsGrid: React.FC<FinancialStatsGridProps> = ({
             precision={2}
             suffix="元"
             valueStyle={{
-              color: data.total_net_income >= 0 ? '#3f8600' : '#cf1322',
+              color: data.total_net_income >= 0 ? COLORS.success : COLORS.error,
             }}
           />
         </Card>
@@ -306,7 +295,7 @@ export const FinancialStatsGrid: React.FC<FinancialStatsGridProps> = ({
             value={data.total_monthly_rent}
             precision={2}
             suffix="元"
-            valueStyle={{ color: '#1890ff' }}
+            valueStyle={{ color: COLORS.primary }}
           />
         </Card>
       </Col>

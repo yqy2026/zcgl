@@ -31,10 +31,11 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { RentContractForm } from '../../components/Forms';
-import { RentContractCreate, RentContractUpdate, RentContract } from '../../types/rentContract';
+import { RentContractCreate, RentContractUpdate } from '../../types/rentContract';
 import { rentContractService } from '../../services/rentContractService';
 import { useFormat } from '../../utils/format';
 import { createLogger } from '../../utils/logger';
+import { COLORS } from '@/styles/colorMap';
 
 const pageLogger = createLogger('ContractCreateEdit');
 
@@ -152,7 +153,7 @@ const ContractCreatePage: React.FC = () => {
   const cancelButtonText = isEdit ? '取消编辑' : '取消创建';
 
   return (
-    <div style={{ padding: '24px', background: '#f5f5f5', minHeight: '100vh' }}>
+    <div style={{ padding: '24px', background: COLORS.bgTertiary, minHeight: '100vh' }}>
       {/* 页面头部 */}
       <Card style={{ marginBottom: '16px' }}>
         <Row align="middle" justify="space-between">
@@ -179,7 +180,7 @@ const ContractCreatePage: React.FC = () => {
             />
             <div style={{ marginTop: '16px' }}>
               <Title level={3} style={{ margin: 0 }}>
-                <span style={{ marginRight: '8px', color: '#1890ff' }}>
+                <span style={{ marginRight: '8px', color: COLORS.primary }}>
                   {pageIcon}
                 </span>
                 {pageTitle}
@@ -204,13 +205,13 @@ const ContractCreatePage: React.FC = () => {
 
       {/* 创建/更新成功提示 */}
       {contractCreated && (
-        <Card style={{ marginBottom: '16px', borderColor: '#52c41a', backgroundColor: '#f6ffed' }}>
+        <Card style={{ marginBottom: '16px', borderColor: COLORS.success, backgroundColor: 'var(--color-primary-light)' }}>
           <Row align="middle">
             <Col>
-              <InfoCircleOutlined style={{ fontSize: '24px', color: '#52c41a', marginRight: '12px' }} />
+              <InfoCircleOutlined style={{ fontSize: '24px', color: COLORS.success, marginRight: '12px' }} />
             </Col>
             <Col flex="1">
-              <Title level={4} style={{ color: '#52c41a', margin: 0 }}>
+              <Title level={4} style={{ color: COLORS.success, margin: 0 }}>
                 {successTitle}
               </Title>
               <Text type="secondary">
@@ -223,8 +224,8 @@ const ContractCreatePage: React.FC = () => {
 
       {/* 创建指南 */}
       {!contractCreated && (
-        <Card style={{ marginBottom: '16px', backgroundColor: '#e6f7ff' }}>
-          <Title level={5} style={{ color: '#1890ff', marginBottom: '12px' }}>
+        <Card style={{ marginBottom: '16px', backgroundColor: 'var(--color-primary-light)' }}>
+          <Title level={5} style={{ color: COLORS.primary, marginBottom: '12px' }}>
             <InfoCircleOutlined style={{ marginRight: '6px' }} />
             创建指南
           </Title>
@@ -234,7 +235,7 @@ const ContractCreatePage: React.FC = () => {
                 title="步骤 1"
                 value="基本信息"
                 prefix={<FileTextOutlined />}
-                valueStyle={{ fontSize: '16px', color: '#1890ff' }}
+                valueStyle={{ fontSize: '16px', color: COLORS.primary }}
               />
             </Col>
             <Col span={6}>
@@ -242,7 +243,7 @@ const ContractCreatePage: React.FC = () => {
                 title="步骤 2"
                 value="关联资产"
                 prefix={<InfoCircleOutlined />}
-                valueStyle={{ fontSize: '16px', color: '#1890ff' }}
+                valueStyle={{ fontSize: '16px', color: COLORS.primary }}
               />
             </Col>
             <Col span={6}>
@@ -250,7 +251,7 @@ const ContractCreatePage: React.FC = () => {
                 title="步骤 3"
                 value="承租信息"
                 prefix={<InfoCircleOutlined />}
-                valueStyle={{ fontSize: '16px', color: '#1890ff' }}
+                valueStyle={{ fontSize: '16px', color: COLORS.primary }}
               />
             </Col>
             <Col span={6}>
@@ -258,7 +259,7 @@ const ContractCreatePage: React.FC = () => {
                 title="步骤 4"
                 value="租金条款"
                 prefix={<InfoCircleOutlined />}
-                valueStyle={{ fontSize: '16px', color: '#1890ff' }}
+                valueStyle={{ fontSize: '16px', color: COLORS.primary }}
               />
             </Col>
           </Row>

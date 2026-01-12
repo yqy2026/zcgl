@@ -33,6 +33,7 @@ import dayjs, { Dayjs } from "dayjs";
 import { assetService } from "@/services/assetService";
 import type { AssetHistory } from "@/types/asset";
 import { formatDate } from "@/utils/format";
+import { COLORS } from "@/styles/colorMap";
 
 const { Option } = Select;
 const { RangePicker } = DatePicker;
@@ -137,11 +138,11 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
     return changes.map((change, index) => (
       <Descriptions.Item key={index} label={change.field} span={3}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ color: "#ff4d4f", textDecoration: "line-through" }}>
+          <span style={{ color: COLORS.error, textDecoration: "line-through" }}>
             {String(change.oldValue)}
           </span>
           <span>→</span>
-          <span style={{ color: "#52c41a", fontWeight: "bold" }}>{String(change.newValue)}</span>
+          <span style={{ color: COLORS.success, fontWeight: "bold" }}>{String(change.newValue)}</span>
         </div>
       </Descriptions.Item>
     ));

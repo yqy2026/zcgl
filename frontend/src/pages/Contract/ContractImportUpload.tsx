@@ -12,7 +12,6 @@ import {
   Space,
   Typography,
   Divider,
-  Tag,
   Row,
   Col,
 } from 'antd';
@@ -22,15 +21,15 @@ import {
   UploadOutlined,
   DeleteOutlined,
   EyeOutlined,
-  SettingOutlined,
   CloseOutlined
 } from '@ant-design/icons';
 import type { UploadFile, UploadProps, RcFile } from 'antd/es/upload/interface';
 
 import { pdfImportService, type FileUploadResponse } from '../../services/pdfImportService';
 import { createLogger } from '../../utils/logger';
+import { COLORS } from '@/styles/colorMap';
 
-const pageLogger = createLogger('ContractImportUpload');
+const _pageLogger = createLogger('ContractImportUpload');
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -208,15 +207,15 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
         {uploadStatus === 'idle' && (
           <Upload.Dragger {...uploadProps}>
             <p className="ant-upload-drag-icon">
-              <InboxOutlined style={{ fontSize: 48, color: '#1890ff' }} />
+              <InboxOutlined style={{ fontSize: 48, color: COLORS.primary }} />
             </p>
             <p className="ant-upload-text" style={{ fontSize: 16, fontWeight: 500 }}>
               点击或拖拽PDF合同文件到此区域上传
             </p>
-            <p className="ant-upload-hint" style={{ color: '#666' }}>
+            <p className="ant-upload-hint" style={{ color: COLORS.textSecondary }}>
               支持单个PDF文件上传，文件大小不超过 {maxFileSize}MB
             </p>
-            <p className="ant-upload-hint" style={{ color: '#999', fontSize: 12 }}>
+            <p className="ant-upload-hint" style={{ color: COLORS.textTertiary, fontSize: 12 }}>
               系统将自动提取合同信息，包括合同编号、承租方、地址、租金等关键字段
             </p>
           </Upload.Dragger>
@@ -232,8 +231,8 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
               percent={uploadProgress}
               status={uploadProgress < 100 ? "active" : "success"}
               strokeColor={{
-                '0%': '#108ee9',
-                '100%': '#87d068',
+                '0%': COLORS.primary,
+                '100%': COLORS.success,
               }}
               style={{ marginBottom: 16 }}
             />
@@ -270,20 +269,20 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
               height: 80,
               margin: '0 auto 16px',
               borderRadius: '50%',
-              backgroundColor: '#f6ffed',
+              backgroundColor: 'var(--color-primary-light)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
             }}>
-              <EyeOutlined style={{ fontSize: 32, color: '#52c41a' }} />
+              <EyeOutlined style={{ fontSize: 32, color: COLORS.success }} />
             </div>
 
-            <Title level={4} style={{ color: '#52c41a', margin: '16px 0 8px' }}>
+            <Title level={4} style={{ color: COLORS.success, margin: '16px 0 8px' }}>
               文件上传成功！
             </Title>
 
             <div style={{
-              backgroundColor: '#f5f5f5',
+              backgroundColor: COLORS.bgTertiary,
               padding: '12px 16px',
               borderRadius: '6px',
               marginBottom: 16
@@ -341,19 +340,19 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
               height: 80,
               margin: '0 auto 16px',
               borderRadius: '50%',
-              backgroundColor: '#fff2f0',
+              backgroundColor: 'var(--color-error-light)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
             }}>
-              <DeleteOutlined style={{ fontSize: 32, color: '#ff4d4f' }} />
+              <DeleteOutlined style={{ fontSize: 32, color: COLORS.error }} />
             </div>
 
-            <Title level={4} style={{ color: '#ff4d4f', margin: '16px 0 8px' }}>
+            <Title level={4} style={{ color: COLORS.error, margin: '16px 0 8px' }}>
               文件上传失败
             </Title>
 
-            <Paragraph style={{ color: '#666', marginBottom: 16 }}>
+            <Paragraph style={{ color: COLORS.textSecondary, marginBottom: 16 }}>
               上传过程中发生错误，请检查文件格式和大小后重试。
             </Paragraph>
 
@@ -374,8 +373,8 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
 
         {/* 使用说明 */}
         {uploadStatus === 'idle' && (
-          <div style={{ marginTop: 24, padding: 16, backgroundColor: '#e6f7ff', borderRadius: 6 }}>
-            <Title level={5} style={{ color: '#0958d9', marginBottom: 12 }}>
+          <div style={{ marginTop: 24, padding: 16, backgroundColor: 'var(--color-primary-light)', borderRadius: 6 }}>
+            <Title level={5} style={{ color: COLORS.primaryActive, marginBottom: 12 }}>
               <EyeOutlined /> 使用说明
             </Title>
             <Space direction="vertical" size="small">

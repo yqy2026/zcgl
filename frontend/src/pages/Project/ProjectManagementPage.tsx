@@ -4,6 +4,7 @@
 
 import React, { Suspense } from 'react';
 import { Spin, Row, Col, Typography } from 'antd';
+import { COLORS } from '@/styles/colorMap';
 
 // 动态导入项目列表组件
 const ProjectList = React.lazy(() => import('@/components/Project/ProjectList'));
@@ -29,7 +30,7 @@ const ProjectManagementPage: React.FC = () => {
             style={{
               padding: '60px',
               textAlign: 'center',
-              backgroundColor: '#fafafa',
+              backgroundColor: COLORS.bgSecondary,
             }}
           >
             <Spin size="large" />

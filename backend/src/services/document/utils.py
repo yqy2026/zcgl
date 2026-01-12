@@ -9,7 +9,7 @@ import logging
 import re
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ DATE_FORMATS = [
 ]
 
 
-def parse_contract_date(date_str: Optional[str]) -> Optional[datetime]:
+def parse_contract_date(date_str: str | None) -> datetime | None:
     """
     解析合同日期字符串
 
@@ -77,7 +77,7 @@ def parse_contract_date(date_str: Optional[str]) -> Optional[datetime]:
     return None
 
 
-def format_date(date: Optional[datetime], output_format: str = "%Y-%m-%d") -> str:
+def format_date(date: datetime | None, output_format: str = "%Y-%m-%d") -> str:
     """
     格式化日期
 
@@ -94,8 +94,8 @@ def format_date(date: Optional[datetime], output_format: str = "%Y-%m-%d") -> st
 
 
 def validate_date_range(
-    start_date: Optional[datetime],
-    end_date: Optional[datetime]
+    start_date: datetime | None,
+    end_date: datetime | None
 ) -> bool:
     """
     验证日期范围有效性
@@ -117,7 +117,7 @@ def validate_date_range(
 # 金额解析工具
 # ============================================================================
 
-def parse_amount(amount_str: Optional[str]) -> Optional[float]:
+def parse_amount(amount_str: str | None) -> float | None:
     """
     解析金额字符串
 
@@ -169,7 +169,7 @@ def parse_amount(amount_str: Optional[str]) -> Optional[float]:
         return None
 
 
-def format_amount(amount: Optional[float], unit: str = "元") -> str:
+def format_amount(amount: float | None, unit: str = "元") -> str:
     """
     格式化金额
 
@@ -203,8 +203,8 @@ def format_amount(amount: Optional[float], unit: str = "元") -> str:
 def validate_field_value(
     field_name: str,
     value: Any,
-    rules: Optional[Dict[str, Any]] = None
-) -> tuple[bool, Optional[str]]:
+    rules: dict[str, Any] | None = None
+) -> tuple[bool, str | None]:
     """
     验证字段值
 
@@ -253,28 +253,28 @@ def validate_field_value(
     return True, None
 
 
-def _validate_contract_number(value: str) -> tuple[bool, Optional[str]]:
+def _validate_contract_number(value: str) -> tuple[bool, str | None]:
     """验证合同编号"""
     if len(value) < 3:
         return False, "合同编号长度不能少于3个字符"
     return True, None
 
 
-def _validate_party_name(value: str) -> tuple[bool, Optional[str]]:
+def _validate_party_name(value: str) -> tuple[bool, str | None]:
     """验证当事人名称"""
     if len(value) < 2:
         return False, "名称长度不能少于2个字符"
     return True, None
 
 
-def _validate_address(value: str) -> tuple[bool, Optional[str]]:
+def _validate_address(value: str) -> tuple[bool, str | None]:
     """验证地址"""
     if len(value) < 5:
         return False, "地址长度不能少于5个字符"
     return True, None
 
 
-def _validate_id_number(value: str) -> tuple[bool, Optional[str]]:
+def _validate_id_number(value: str) -> tuple[bool, str | None]:
     """验证身份证号或统一社会信用代码"""
     # 18位身份证
     if len(value) == 18 and value.isdigit():
@@ -287,7 +287,7 @@ def _validate_id_number(value: str) -> tuple[bool, Optional[str]]:
     return False, "证件号格式不正确"
 
 
-def _validate_phone(value: str) -> tuple[bool, Optional[str]]:
+def _validate_phone(value: str) -> tuple[bool, str | None]:
     """验证电话号码"""
     # 移除所有非数字字符
     digits = re.sub(r"\D", "", value)
@@ -301,7 +301,7 @@ def _validate_phone(value: str) -> tuple[bool, Optional[str]]:
     return False, "电话号码格式不正确"
 
 
-def _validate_rent_amount(value: str) -> tuple[bool, Optional[str]]:
+def _validate_rent_amount(value: str) -> tuple[bool, str | None]:
     """验证租金金额"""
     amount = parse_amount(value)
     if amount is None:
@@ -320,7 +320,7 @@ def _validate_rent_amount(value: str) -> tuple[bool, Optional[str]]:
 # JSON 工具
 # ============================================================================
 
-def safe_parse_json(json_str: str) -> Optional[Dict]:
+def safe_parse_json(json_str: str) -> dict | None:
     """
     安全解析 JSON
 
@@ -346,7 +346,7 @@ def safe_parse_json(json_str: str) -> Optional[Dict]:
         return None
 
 
-def extract_json_from_response(response: str) -> Optional[Dict]:
+def extract_json_from_response(response: str) -> dict | None:
     """
     从 LLM 响应中提取 JSON
 
@@ -363,7 +363,7 @@ def extract_json_from_response(response: str) -> Optional[Dict]:
 # 文本清理工具
 # ============================================================================
 
-def clean_text(text: Optional[str], remove_extra_spaces: bool = True) -> str:
+def clean_text(text: str | None, remove_extra_spaces: bool = True) -> str:
     """
     清理文本
 
@@ -492,7 +492,7 @@ def to_float(value: Any, default: float = 0.0) -> float:
 # 列表/数组工具
 # ============================================================================
 
-def merge_dicts(*dicts: Dict[str, Any]) -> Dict[str, Any]:
+def merge_dicts(*dicts: dict[str, Any]) -> dict[str, Any]:
     """
     合并多个字典（后面的覆盖前面的）
 
@@ -509,7 +509,7 @@ def merge_dicts(*dicts: Dict[str, Any]) -> Dict[str, Any]:
     return result
 
 
-def filter_none_values(data: Dict[str, Any]) -> Dict[str, Any]:
+def filter_none_values(data: dict[str, Any]) -> dict[str, Any]:
     """
     过滤掉值为 None 的项
 
@@ -522,7 +522,7 @@ def filter_none_values(data: Dict[str, Any]) -> Dict[str, Any]:
     return {k: v for k, v in data.items() if v is not None}
 
 
-def compact_list(lst: List) -> List:
+def compact_list(lst: list) -> list:
     """
     压缩列表（移除 None 和空字符串）
 
@@ -556,7 +556,7 @@ def truncate_for_log(text: str, max_length: int = 200) -> str:
     return text[:max_length] + f"... ({len(text)} chars total)"
 
 
-def log_dict(d: Dict[str, Any], max_value_length: int = 100) -> str:
+def log_dict(d: dict[str, Any], max_value_length: int = 100) -> str:
     """
     将字典转换为可日志记录的字符串
 
