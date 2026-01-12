@@ -16,10 +16,10 @@ logger = logging.getLogger(__name__)
 class RouteRegistry:
     """路由注册器"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.routers: list[dict[str, Any]] = []
         self.versioned_routers: dict[str, list[dict[str, Any]]] = {}
-        self.global_middlewares: list[Callable] = []
+        self.global_middlewares: list[Callable[..., Any]] = []
         self.global_dependencies: list[Any] = []
 
     def register_router(
@@ -27,8 +27,8 @@ class RouteRegistry:
         router: APIRouter,
         prefix: str,
         tags: list[str],
-        version: str = "v1",
-        middleware: list[Callable] | None = None,
+        version: str | None = "v1",
+        middleware: list[Callable[..., Any]] | None = None,
         dependencies: list[Any] | None = None,
         include_in_schema: bool = True,
         deprecated: bool = False,
@@ -57,13 +57,15 @@ class RouteRegistry:
             "version": version,
         }
 
-        if version not in self.versioned_routers:
-            self.versioned_routers[version] = []
+        # Only add to versioned_routers if version is not None
+        if version is not None:
+            if version not in self.versioned_routers:
+                self.versioned_routers[version] = []
 
-        self.versioned_routers[version].append(router_config)
+            self.versioned_routers[version].append(router_config)
         logger.info(f"注册路由: {prefix} (版本: {version}, 标签: {tags})")
 
-    def register_global_middleware(self, middleware: Callable) -> None:
+    def register_global_middleware(self, middleware: Callable[..., Any]) -> None:
         """注册全局中间件"""
         self.global_middlewares.append(middleware)
         logger.info(f"注册全局中间件: {middleware.__name__}")
@@ -190,7 +192,7 @@ class APIVersionManager:
 
         # 添加版本信息端点
         @app.get("/api/versions", tags=["API版本"])
-        async def get_supported_versions():
+        async def get_supported_versions() -> dict[str, Any]:
             return {
                 "supported_versions": self.supported_versions,
                 "default_version": self.default_version,
@@ -199,7 +201,7 @@ class APIVersionManager:
 
         # 添加版本重定向
         @app.get("/api", tags=["API版本"])
-        async def redirect_to_default_version():
+        async def redirect_to_default_version() -> Any:
             from fastapi.responses import RedirectResponse
 
             return RedirectResponse(url=f"/api/{self.default_version}")
@@ -210,7 +212,7 @@ route_registry = RouteRegistry()
 version_manager = APIVersionManager(route_registry)
 
 
-def register_api_routes():
+def register_api_routes() -> None:
     """注册所有API路由的便捷函数"""
     try:
         from ..api.v1 import api_router as v1_router
@@ -245,7 +247,7 @@ def register_api_routes():
         pdf_fallback_router = APIRouter()  # pragma: no cover
 
         @pdf_fallback_router.get("/info")  # pragma: no cover
-        async def get_pdf_import_info():  # pragma: no cover
+        async def get_pdf_import_info() -> dict[str, Any]:  # pragma: no cover
             """获取PDF导入系统信息"""
             return {  # pragma: no cover
                 "success": True,  # pragma: no cover
@@ -259,7 +261,7 @@ def register_api_routes():
             }  # pragma: no cover
 
         @pdf_fallback_router.get("/sessions")  # pragma: no cover
-        async def get_pdf_import_sessions():  # pragma: no cover
+        async def get_pdf_import_sessions() -> dict[str, Any]:  # pragma: no cover
             """获取PDF导入会话列表"""
             return {
                 "success": True,
@@ -268,7 +270,7 @@ def register_api_routes():
             }  # pragma: no cover
 
         @pdf_fallback_router.post("/upload")  # pragma: no cover
-        async def upload_pdf_for_import():  # pragma: no cover
+        async def upload_pdf_for_import() -> dict[str, Any]:  # pragma: no cover
             """上传PDF进行智能导入"""
             return {
                 "success": True,
