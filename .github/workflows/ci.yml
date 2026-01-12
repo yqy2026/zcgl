@@ -22,7 +22,7 @@ jobs:
   # Backend Tests & Quality
   # ===========================
   backend:
-    name: Backend (Python ${{ env.PYTHON_VERSION }})
+    name: Backend Tests
     runs-on: ubuntu-latest
 
     steps:
@@ -120,7 +120,7 @@ jobs:
   # Frontend Tests & Quality
   # ===========================
   frontend:
-    name: Frontend (Node ${{ env.NODE_VERSION }})
+    name: Frontend Tests
     runs-on: ubuntu-latest
 
     steps:
