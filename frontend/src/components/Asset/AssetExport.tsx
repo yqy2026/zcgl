@@ -17,7 +17,7 @@ import {
   List,
   Tooltip,
 } from "antd";
-import { MessageManager } from "@/utils/MessageManager";
+import { MessageManager } from "@/utils/messageManager";
 import {
   DownloadOutlined,
   FileExcelOutlined,
@@ -27,6 +27,7 @@ import {
   LoadingOutlined,
 } from "@ant-design/icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { COLORS } from "@/styles/colorMap";
 
 import type { AssetSearchParams } from "@/types/asset";
 import { assetService } from "@/services/assetService";
@@ -426,7 +427,7 @@ const AssetExport: React.FC<AssetExportProps> = ({
                 </Title>
                 {(exportTask.status === "running" || exportTask.status === "processing") && <LoadingOutlined />}
                 {exportTask.status === "completed" && (
-                  <CheckCircleOutlined style={{ color: "#52c41a" }} />
+                  <CheckCircleOutlined style={{ color: COLORS.success }} />
                 )}
               </Space>
             </div>
@@ -491,7 +492,7 @@ const AssetExport: React.FC<AssetExportProps> = ({
             <List.Item
               actions={[
                 item.status === "completed" && (item.download_url || item.downloadUrl) && (
-                  <Tooltip title="下载文件">
+                  <Tooltip key="download" title="下载文件">
                     <Button
                       type="text"
                       icon={<DownloadOutlined />}
@@ -499,7 +500,7 @@ const AssetExport: React.FC<AssetExportProps> = ({
                     />
                   </Tooltip>
                 ),
-                <Tooltip title="删除记录">
+                <Tooltip key="delete" title="删除记录">
                   <Button
                     type="text"
                     danger

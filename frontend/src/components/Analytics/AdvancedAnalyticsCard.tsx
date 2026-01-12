@@ -3,6 +3,7 @@ import { Card, Row, Col, Statistic, Progress, Tag, Tooltip } from 'antd';
 import { ArrowUpOutlined, ArrowDownOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import type { PerformanceMetrics, ComparisonData } from '../../types/analytics';
 import { FinancialStatisticCard } from './StatisticCard';
+import { getPerformanceColor, COLORS } from '@/styles/colorMap';
 
 interface AdvancedAnalyticsCardProps {
   performanceMetrics: PerformanceMetrics;
@@ -58,24 +59,13 @@ const AdvancedAnalyticsCard: React.FC<AdvancedAnalyticsCardProps> = ({
               precision={1}
               suffix="%"
               valueStyle={{
-                color:
-                  performanceStatus.utilization.color === 'success'
-                    ? '#3f8600'
-                    : performanceStatus.utilization.color === 'processing'
-                      ? '#1890ff'
-                      : '#fa8c16',
+                color: getPerformanceColor(performanceStatus.utilization.color as any),
               }}
             />
             <Progress
               percent={performanceMetrics.asset_utilization * 100}
               size="small"
-              strokeColor={
-                performanceStatus.utilization.color === 'success'
-                  ? '#3f8600'
-                  : performanceStatus.utilization.color === 'processing'
-                    ? '#1890ff'
-                    : '#fa8c16'
-              }
+              strokeColor={getPerformanceColor(performanceStatus.utilization.color as any)}
               style={{ marginTop: 8 }}
             />
             <Tag color={performanceStatus.utilization.color} style={{ marginTop: 8 }}>
@@ -93,24 +83,13 @@ const AdvancedAnalyticsCard: React.FC<AdvancedAnalyticsCardProps> = ({
               precision={1}
               suffix="%"
               valueStyle={{
-                color:
-                  performanceStatus.efficiency.color === 'success'
-                    ? '#3f8600'
-                    : performanceStatus.efficiency.color === 'processing'
-                      ? '#1890ff'
-                      : '#fa8c16',
+                color: getPerformanceColor(performanceStatus.efficiency.color as any),
               }}
             />
             <Progress
               percent={performanceMetrics.income_efficiency * 100}
               size="small"
-              strokeColor={
-                performanceStatus.efficiency.color === 'success'
-                  ? '#3f8600'
-                  : performanceStatus.efficiency.color === 'processing'
-                    ? '#1890ff'
-                    : '#fa8c16'
-              }
+              strokeColor={getPerformanceColor(performanceStatus.efficiency.color as any)}
               style={{ marginTop: 8 }}
             />
             <Tag color={performanceStatus.efficiency.color} style={{ marginTop: 8 }}>
@@ -128,24 +107,13 @@ const AdvancedAnalyticsCard: React.FC<AdvancedAnalyticsCardProps> = ({
               precision={1}
               suffix="%"
               valueStyle={{
-                color:
-                  performanceStatus.variance.color === 'success'
-                    ? '#3f8600'
-                    : performanceStatus.variance.color === 'processing'
-                      ? '#1890ff'
-                      : '#fa8c16',
+                color: getPerformanceColor(performanceStatus.variance.color as any),
               }}
             />
             <Progress
               percent={(1 - performanceMetrics.occupancy_variance) * 100}
               size="small"
-              strokeColor={
-                performanceStatus.variance.color === 'success'
-                  ? '#3f8600'
-                  : performanceStatus.variance.color === 'processing'
-                    ? '#1890ff'
-                    : '#fa8c16'
-              }
+              strokeColor={getPerformanceColor(performanceStatus.variance.color as any)}
               style={{ marginTop: 8 }}
             />
             <Tag color={performanceStatus.variance.color} style={{ marginTop: 8 }}>
@@ -170,24 +138,13 @@ const AdvancedAnalyticsCard: React.FC<AdvancedAnalyticsCardProps> = ({
                 ) : null
               }
               valueStyle={{
-                color:
-                  performanceStatus.growth.color === 'success'
-                    ? '#3f8600'
-                    : performanceStatus.growth.color === 'processing'
-                      ? '#1890ff'
-                      : '#fa8c16',
+                color: getPerformanceColor(performanceStatus.growth.color as any),
               }}
             />
             <Progress
               percent={Math.abs(performanceMetrics.growth_rate * 100)}
               size="small"
-              strokeColor={
-                performanceStatus.growth.color === 'success'
-                  ? '#3f8600'
-                  : performanceStatus.growth.color === 'processing'
-                    ? '#1890ff'
-                    : '#fa8c16'
-              }
+              strokeColor={getPerformanceColor(performanceStatus.growth.color as any)}
               style={{ marginTop: 8 }}
             />
             <Tag color={performanceStatus.growth.color} style={{ marginTop: 8 }}>
@@ -204,7 +161,7 @@ const AdvancedAnalyticsCard: React.FC<AdvancedAnalyticsCardProps> = ({
             <h4>
               同比分析
               <Tooltip title="与上一周期对比">
-                <InfoCircleOutlined style={{ marginLeft: '8px', color: '#666' }} />
+                <InfoCircleOutlined style={{ marginLeft: '8px', color: COLORS.textSecondary }} />
               </Tooltip>
             </h4>
           </div>

@@ -8,7 +8,6 @@ import { EditOutlined, ProjectOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 
 import type { Ownership } from '@/types/ownership';
-import type { Project } from '@/types/project';
 
 const { Text } = Typography;
 
@@ -26,14 +25,14 @@ const OwnershipDetail: React.FC<OwnershipDetailProps> = ({ ownership, onEdit }) 
   };
 
   // 关联项目的简化类型
-  type RelatedProject = {
+  interface RelatedProject {
     id: string;
     name: string;
     code: string;
     relation_type: string;
     start_date?: string;
     end_date?: string;
-  };
+  }
 
   // 关联项目表格列定义
   const projectColumns: ColumnsType<RelatedProject> = [

@@ -36,7 +36,6 @@ const FilterHistorySection: React.FC = () => {
                                 }
                             }}
                             style={{ flex: 1, padding: '4px 11px', border: '1px solid #d9d9d9', borderRadius: 6 }}
-                            autoFocus
                         />
                         <Button type="primary" onClick={handleSaveFilters}>
                             保存
@@ -57,6 +56,8 @@ const FilterHistorySection: React.FC = () => {
                             {searchHistory.slice(0, 5).map(history => (
                                 <div
                                     key={history.id}
+                                    role="button"
+                                    tabIndex={0}
                                     style={{
                                         padding: '8px 12px',
                                         background: 'white',
@@ -70,6 +71,12 @@ const FilterHistorySection: React.FC = () => {
                                         alignItems: 'center'
                                     }}
                                     onClick={() => handleApplyHistory(history.id)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === ' ') {
+                                            e.preventDefault();
+                                            handleApplyHistory(history.id);
+                                        }
+                                    }}
                                     onMouseEnter={(e) => {
                                         e.currentTarget.style.backgroundColor = '#f0f0f0';
                                     }}
@@ -79,7 +86,7 @@ const FilterHistorySection: React.FC = () => {
                                 >
                                     <div>
                                         <div style={{ fontWeight: 'bold' }}>{history.name}</div>
-                                        <div style={{ fontSize: 12, color: '#8c8c8c' }}>
+                                        <div style={{ fontSize: 12, color: 'var(--color-text-tertiary, #8c8c8c)' }}>
                                             {new Date(history.createdAt).toLocaleDateString()}
                                         </div>
                                     </div>

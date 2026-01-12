@@ -5,12 +5,12 @@ Vision 服务基类和异常定义
 """
 
 import base64
-import httpx
 import logging
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
 
+import httpx
 
 logger = logging.getLogger(__name__)
 

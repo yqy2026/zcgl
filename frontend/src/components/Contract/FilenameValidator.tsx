@@ -353,7 +353,7 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
             • 避免使用中文特殊字符【】（）<br />
             • 文件名长度建议在150字符以内<br />
             • 确保以.pdf结尾<br />
-            • 避免使用&lt;&gt;:"/\\|?*等特殊字符
+            • 避免使用&lt;&gt;:&quot;/\\|?*等特殊字符
           </Text>
         </div>
       </Space>

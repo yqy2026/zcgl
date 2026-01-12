@@ -4,6 +4,7 @@
 
 import React, { Suspense } from 'react';
 import { Spin, Row, Col, Typography } from 'antd';
+import { COLORS } from '@/styles/colorMap';
 
 // 动态导入权属方列表组件
 const OwnershipList = React.lazy(() => import('@/components/Ownership/OwnershipList'));
@@ -29,7 +30,7 @@ const OwnershipManagementPage: React.FC = () => {
             style={{
               padding: '60px',
               textAlign: 'center',
-              backgroundColor: '#fafafa',
+              backgroundColor: COLORS.bgSecondary,
             }}
           >
             <Spin size="large" />

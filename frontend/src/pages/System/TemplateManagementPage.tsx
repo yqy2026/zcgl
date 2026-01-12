@@ -13,8 +13,9 @@ import { assetService } from '@/services/assetService'
 import { rentContractExcelService } from '@/services/rentContractExcelService'
 import type { ColumnsType } from 'antd/es/table'
 import { createLogger } from '@/utils/logger'
+import { COLORS } from '@/styles/colorMap'
 
-const pageLogger = createLogger('TemplateManagement')
+const _pageLogger = createLogger('TemplateManagement')
 
 const { Title, Text } = Typography
 
@@ -73,7 +74,7 @@ const TemplateManagementPage: React.FC = () => {
         MessageManager.success('租赁合同导入模板下载成功')
       }
     } catch (error: unknown) {
-      pageLogger.error('下载模板失败:', error as Error)
+      _pageLogger.error('下载模板失败:', error as Error)
       MessageManager.error(`下载模板失败: ${(error as Error).message || '网络错误'}`)
     } finally {
       setLoading(false)
@@ -108,7 +109,7 @@ const TemplateManagementPage: React.FC = () => {
       key: 'name',
       render: (text: string, record: TemplateInfo) => (
         <Space>
-          <FileExcelOutlined style={{ color: '#52c41a' }} />
+          <FileExcelOutlined style={{ color: COLORS.success }} />
           <span>
             {text}
             <Text type="secondary" style={{ marginLeft: 8, fontSize: '12px' }}>
@@ -200,7 +201,7 @@ const TemplateManagementPage: React.FC = () => {
               title="可用模板"
               value={templates.filter(t => t.status === 'active').length}
               suffix="个"
-              valueStyle={{ color: '#3f8600' }}
+              valueStyle={{ color: COLORS.success }}
             />
           </Card>
         </Col>
@@ -247,7 +248,7 @@ const TemplateManagementPage: React.FC = () => {
           <Col xs={24} md={8}>
             <Card size="small" title="1. 下载模板">
               <Text>
-                点击"下载"按钮获取对应的数据导入模板文件
+                点击&quot;下载&quot;按钮获取对应的数据导入模板文件
               </Text>
             </Card>
           </Col>
@@ -359,13 +360,13 @@ const Statistic: React.FC<{
   valueStyle?: React.CSSProperties
 }> = ({ title, value, suffix, valueStyle }) => (
   <div>
-    <div style={{ color: '#00000073', fontSize: '14px', marginBottom: '4px' }}>
+    <div style={{ color: COLORS.textSecondary, fontSize: '14px', marginBottom: '4px' }}>
       {title}
     </div>
     <div style={{
       fontSize: '24px',
       fontWeight: 'bold',
-      color: '#000000d9',
+      color: COLORS.textPrimary,
       ...valueStyle
     }}>
       {value}

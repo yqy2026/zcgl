@@ -6,6 +6,7 @@ import dayjs from 'dayjs';
 import type { Asset, AssetCreateRequest } from '../../types/asset';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { useDictionaries } from '../../hooks/useDictionary';
+import { COLORS } from '@/styles/colorMap';
 
 // Section components
 import {
@@ -44,7 +45,7 @@ const FormCompletionProgress: React.FC = () => {
           <Progress
             percent={completionRate}
             size="small"
-            strokeColor={completionRate === 100 ? '#52c41a' : '#1890ff'}
+            strokeColor={completionRate === 100 ? COLORS.success : COLORS.primary}
           />
         </Col>
         <Col>

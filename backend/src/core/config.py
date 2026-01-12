@@ -11,13 +11,11 @@
 
 import logging
 import os
-import re
 from typing import Any
 
 from pydantic import (
     ConfigDict,
     Field,
-    ValidationError,
     field_validator,
     model_validator,
 )
@@ -361,8 +359,8 @@ class Settings(BaseSettings):
         if environment == "production":
             if is_weak:
                 raise ValueError(
-                    f"生产环境禁止使用弱密钥。SECRET_KEY 包含常见弱密钥模式。"
-                    f"请设置至少 32 字符的强随机密钥。"
+                    "生产环境禁止使用弱密钥。SECRET_KEY 包含常见弱密钥模式。"
+                    "请设置至少 32 字符的强随机密钥。"
                 )
             if is_too_short:
                 raise ValueError(

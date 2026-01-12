@@ -147,6 +147,29 @@ async def get_items(): ...
 route_registry.register_router(router, prefix="/api/v1", tags=["My Feature"], version="v1")
 ```
 
+### 环境感知依赖加载
+
+后端使用独特的依赖管理策略，支持三种模式：
+
+```bash
+# backend/.env
+DEPENDENCY_POLICY=strict     # 严格模式: 关键依赖必须存在
+DEPENDENCY_POLICY=graceful   # 优雅模式: 可选依赖降级处理
+DEPENDENCY_POLICY=optional   # 可选模式: 依赖缺失时禁用功能
+```
+
+详见 `backend/src/core/environment.py` 和 `backend/src/core/import_utils.py`
+
+### 前端 Code Splitting 策略
+
+```typescript
+// Vite 配置实现代码分割
+// - React 核心库单独打包
+// - Ant Design 组件按需加载
+// - 页面级别懒加载
+// - 功能模块分割
+```
+
 ---
 
 ## ⚠️ 关键陷阱警告
@@ -176,19 +199,24 @@ if service.is_available:
 zcgl/
 ├── frontend/src/
 │   ├── api/            # API 客户端 (client.ts, config.ts)
-│   ├── components/     # 114+ 个 React 组件
-│   ├── pages/          # 40 个页面
+│   ├── components/     # 136 个 React 组件
+│   │   ├── Forms/      # 统一表单组件
+│   │   ├── Asset/      # 资产相关组件
+│   │   ├── Charts/     # 数据可视化
+│   │   ├── Layout/     # 布局组件
+│   │   └── Router/     # 动态路由加载
+│   ├── pages/          # 41 个页面
 │   ├── services/       # 35 个 API 服务
-│   ├── hooks/          # 13 个自定义 Hook
+│   ├── hooks/          # 17 个自定义 Hook
 │   ├── store/          # Zustand 状态
-│   ├── types/          # 15 个 TypeScript 类型定义
-│   └── utils/          # 15 个工具函数
+│   ├── types/          # 18 个 TypeScript 类型定义
+│   └── utils/          # 19 个工具函数
 ├── backend/
 │   ├── src/
-│   │   ├── api/v1/     # 37 个 API 端点
+│   │   ├── api/v1/     # 41 个 API 端点
 │   │   ├── services/   # 19 个服务子目录 (核心业务逻辑)
 │   │   ├── crud/       # 18 个 CRUD 文件
-│   │   ├── models/     # 14 个 ORM 模型
+│   │   ├── models/     # 16 个 ORM 模型
 │   │   ├── schemas/    # 18 个 Pydantic 模型
 │   │   └── utils/      # 运行时工具
 │   ├── scripts/
@@ -205,17 +233,20 @@ zcgl/
 ## 测试
 
 ```bash
-# 后端 (按类型)
+# 后端 (按标记)
 pytest -m unit          # 单元测试
 pytest -m integration   # 集成测试
 pytest -m api           # API 测试
+pytest -m e2e           # 端到端测试
+pytest -m security      # 安全测试
+pytest -m performance   # 性能测试
 
 # 前端
 npm test                # 运行测试
 npm run test:coverage   # 覆盖率报告
 ```
 
-**覆盖率要求**: > 95%
+**覆盖率要求**: 后端 > 85%, 前端 > 75%
 
 ---
 

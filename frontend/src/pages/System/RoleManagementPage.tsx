@@ -40,6 +40,7 @@ import type { ColumnsType } from 'antd/es/table'
 import type { TransferItem } from 'antd/es/transfer'
 import type { DataNode } from 'antd/es/tree'
 import dayjs from 'dayjs'
+import { COLORS } from '@/styles/colorMap'
 
 const { Option } = Select
 const { Search } = Input
@@ -335,10 +336,10 @@ const RoleManagementPage: React.FC = () => {
       key: 'role_info',
       render: (_, record) => (
         <Space>
-          <TeamOutlined style={{ color: '#1890ff' }} />
+          <TeamOutlined style={{ color: COLORS.primary }} />
           <div>
             <div style={{ fontWeight: 500 }}>{record.name}</div>
-            <div style={{ fontSize: '12px', color: '#666' }}>
+            <div style={{ fontSize: '12px', color: COLORS.textSecondary }}>
               {record.code}
               {record.is_system && (
                 <Tag color="purple" style={{ marginLeft: 8 }}>
@@ -361,7 +362,7 @@ const RoleManagementPage: React.FC = () => {
       dataIndex: 'permissions',
       key: 'permissions',
       render: (perms: string[]) => (
-        <Badge count={perms.length} showZero color="#1890ff" />
+        <Badge count={perms.length} showZero color={COLORS.primary} />
       )
     },
     {
@@ -369,7 +370,7 @@ const RoleManagementPage: React.FC = () => {
       dataIndex: 'user_count',
       key: 'user_count',
       render: (count: number) => (
-        <Badge count={count} showZero color="#52c41a" />
+        <Badge count={count} showZero color={COLORS.success} />
       )
     },
     {
@@ -464,7 +465,7 @@ const RoleManagementPage: React.FC = () => {
                   title="启用角色"
                   value={statistics.active}
                   prefix={<SafetyOutlined />}
-                  valueStyle={{ color: '#3f8600' }}
+                  valueStyle={{ color: COLORS.success }}
                 />
               </Card>
             </Col>
@@ -474,7 +475,7 @@ const RoleManagementPage: React.FC = () => {
                   title="系统角色"
                   value={statistics.system}
                   prefix={<SettingOutlined />}
-                  valueStyle={{ color: '#722ed1' }}
+                  valueStyle={{ color: COLORS.primary }}
                 />
               </Card>
             </Col>
@@ -644,7 +645,7 @@ const RoleManagementPage: React.FC = () => {
             render={(item) => (
               <div>
                 <div style={{ fontWeight: 500 }}>{item.title}</div>
-                <div style={{ fontSize: '12px', color: '#666' }}>
+                <div style={{ fontSize: '12px', color: COLORS.textSecondary }}>
                   {item.description}
                 </div>
               </div>
@@ -667,7 +668,7 @@ const RoleManagementPage: React.FC = () => {
                 treeData={permissionTreeData}
                 checkable
                 checkedKeys={targetPermissions}
-                style={{ background: '#fafafa', padding: 16 }}
+                style={{ background: COLORS.bgSecondary, padding: 16 }}
               />
             </div>
           </div>

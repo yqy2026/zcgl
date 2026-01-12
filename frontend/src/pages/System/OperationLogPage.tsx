@@ -36,6 +36,7 @@ import {
 } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
+import { COLORS } from '@/styles/colorMap'
 
 const { RangePicker } = DatePicker
 const { Search } = Input
@@ -234,7 +235,7 @@ const OperationLogPage: React.FC = () => {
       render: (_, record) => (
         <Space direction="vertical" size="small">
           <div style={{ fontWeight: 500 }}>{record.user_name}</div>
-          <div style={{ fontSize: '12px', color: '#666' }}>
+          <div style={{ fontSize: '12px', color: COLORS.textSecondary }}>
             @{record.username}
           </div>
         </Space>
@@ -261,7 +262,7 @@ const OperationLogPage: React.FC = () => {
       render: (_, record) => (
         <div>
           <div style={{ fontWeight: 500 }}>{record.resource_name || '-'}</div>
-          <div style={{ fontSize: '12px', color: '#666' }}>
+          <div style={{ fontSize: '12px', color: COLORS.textSecondary }}>
             {record.resource_type || '-'}
           </div>
         </div>
@@ -291,7 +292,7 @@ const OperationLogPage: React.FC = () => {
       key: 'response_time',
       width: 100,
       render: (time) => (
-        <span style={{ color: time > 1000 ? '#ff4d4f' : time > 500 ? '#fa8c16' : '#52c41a' }}>
+        <span style={{ color: time > 1000 ? COLORS.error : time > 500 ? COLORS.warning : COLORS.success }}>
           {time}ms
         </span>
       )
@@ -325,7 +326,7 @@ const OperationLogPage: React.FC = () => {
                 title="今日操作"
                 value={statistics.today}
                 prefix={<FileTextOutlined />}
-                valueStyle={{ color: '#3f8600' }}
+                valueStyle={{ color: COLORS.success }}
               />
             </Card>
           </Col>
@@ -335,7 +336,7 @@ const OperationLogPage: React.FC = () => {
                 title="本周操作"
                 value={statistics.this_week}
                 prefix={<SettingOutlined />}
-                valueStyle={{ color: '#1890ff' }}
+                valueStyle={{ color: COLORS.primary }}
               />
             </Card>
           </Col>
@@ -345,7 +346,7 @@ const OperationLogPage: React.FC = () => {
                 title="错误数量"
                 value={statistics.error_count}
                 prefix={<ExclamationCircleOutlined />}
-                valueStyle={{ color: '#cf1322' }}
+                valueStyle={{ color: COLORS.error }}
               />
             </Card>
           </Col>
@@ -357,8 +358,8 @@ const OperationLogPage: React.FC = () => {
                 suffix="ms"
                 prefix={<SettingOutlined />}
                 valueStyle={{
-                  color: statistics.avg_response_time > 1000 ? '#cf1322' :
-                    statistics.avg_response_time > 500 ? '#fa8c16' : '#3f8600'
+                  color: statistics.avg_response_time > 1000 ? COLORS.error :
+                    statistics.avg_response_time > 500 ? COLORS.warning : COLORS.success
                 }}
               />
             </Card>
@@ -490,7 +491,7 @@ const OperationLogPage: React.FC = () => {
                 {selectedLog.resource_name ? (
                   <div>
                     <div>{selectedLog.resource_name}</div>
-                    <div style={{ fontSize: '12px', color: '#666' }}>
+                    <div style={{ fontSize: '12px', color: COLORS.textSecondary }}>
                       {selectedLog.resource_type} (ID: {selectedLog.resource_id})
                     </div>
                   </div>
@@ -502,11 +503,11 @@ const OperationLogPage: React.FC = () => {
                 <div>
                   <div>
                     <Tag color="purple">{selectedLog.request_method}</Tag>
-                    <code style={{ background: '#f5f5f5', padding: '2px 4px' }}>
+                    <code style={{ background: COLORS.bgTertiary, padding: '2px 4px' }}>
                       {selectedLog.request_url}
                     </code>
                   </div>
-                  <div style={{ marginTop: 8, fontSize: '12px', color: '#666' }}>
+                  <div style={{ marginTop: 8, fontSize: '12px', color: COLORS.textSecondary }}>
                     IP: {selectedLog.ip_address}
                   </div>
                 </div>
@@ -515,8 +516,8 @@ const OperationLogPage: React.FC = () => {
                 <div>
                   <div>状态: {getStatusTag(selectedLog.response_status)}</div>
                   <div>耗时: <span style={{
-                    color: selectedLog.response_time > 1000 ? '#ff4d4f' :
-                      selectedLog.response_time > 500 ? '#fa8c16' : '#52c41a'
+                    color: selectedLog.response_time > 1000 ? COLORS.error :
+                      selectedLog.response_time > 500 ? COLORS.warning : COLORS.success
                   }}>
                     {selectedLog.response_time}ms
                   </span></div>
@@ -524,19 +525,19 @@ const OperationLogPage: React.FC = () => {
               </Descriptions.Item>
               {selectedLog.error_message && (
                 <Descriptions.Item label="错误信息">
-                  <div style={{ color: '#ff4d4f', background: '#fff2f0', padding: '8px', borderRadius: '4px' }}>
+                  <div style={{ color: COLORS.error, background: 'var(--color-error-light)', padding: '8px', borderRadius: '4px' }}>
                     {selectedLog.error_message}
                   </div>
                 </Descriptions.Item>
               )}
               <Descriptions.Item label="用户代理">
-                <div style={{ fontSize: '12px', color: '#666', wordBreak: 'break-all' }}>
+                <div style={{ fontSize: '12px', color: COLORS.textSecondary, wordBreak: 'break-all' }}>
                   {selectedLog.user_agent}
                 </div>
               </Descriptions.Item>
               <Descriptions.Item label="详细信息">
                 <div style={{
-                  background: '#f5f5f5',
+                  background: COLORS.bgTertiary,
                   padding: '12px',
                   borderRadius: '4px',
                   fontSize: '12px',

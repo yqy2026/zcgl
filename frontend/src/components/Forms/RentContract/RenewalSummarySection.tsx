@@ -9,6 +9,7 @@ import React from 'react';
 import { Card, Descriptions, Typography, Space } from 'antd';
 import { FileTextOutlined, CalendarOutlined, DollarOutlined, HomeOutlined } from '@ant-design/icons';
 import { RentContract } from '../../../types/rentContract';
+import { COLORS } from '@/styles/colorMap';
 
 const { Text } = Typography;
 
@@ -47,13 +48,13 @@ const RenewalSummarySection: React.FC<RenewalSummarySectionProps> = ({ contract 
     <Card
       title={
         <Space>
-          <FileTextOutlined style={{ color: '#1890ff' }} />
+          <FileTextOutlined style={{ color: COLORS.primary }} />
           原合同信息
         </Space>
       }
       size="small"
       style={{ marginBottom: 16 }}
-      headStyle={{ borderBottom: '2px solid #f0f0f0' }}
+      headStyle={{ borderBottom: '2px solid ' + COLORS.borderLight }}
     >
       <Descriptions column={2} size="small" bordered>
         <Descriptions.Item label="合同编号">
@@ -73,7 +74,7 @@ const RenewalSummarySection: React.FC<RenewalSummarySectionProps> = ({ contract 
         </Descriptions.Item>
 
         <Descriptions.Item label={<Space><DollarOutlined /> 押金金额</Space>}>
-          <Text strong style={{ color: '#1890ff' }}>
+          <Text strong style={{ color: COLORS.primary }}>
             ¥{(typeof contract.total_deposit === 'number'
               ? contract.total_deposit
               : parseFloat(contract.total_deposit as string) || 0

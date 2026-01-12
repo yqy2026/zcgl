@@ -352,7 +352,6 @@ class RentContractService:
 
                 ledger_data = {
                     "contract_id": request.contract_id,
-                    "contract_id": request.contract_id,
                     # V2: asset_id is nullable in RentLedger, contract has M2M assets
                     "asset_id": None,
                     "ownership_id": contract.ownership_id,

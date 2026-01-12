@@ -54,7 +54,7 @@ const ContractTerminateModal: React.FC<ContractTerminateModalProps> = ({
   onSuccess,
 }) => {
   const [form] = Form.useForm<TerminateFormData>();
-  const queryClient = useQueryClient();
+  const _queryClient = useQueryClient();
   const [showConfirm, setShowConfirm] = useState(false);
 
   // 实时计算应退押金
@@ -138,7 +138,7 @@ const ContractTerminateModal: React.FC<ContractTerminateModalProps> = ({
     try {
       await validateForm();
       setShowConfirm(true);
-    } catch (error) {
+    } catch {
       // 表单验证失败，错误信息已在validateForm中处理
     }
   };

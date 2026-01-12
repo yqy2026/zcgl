@@ -51,27 +51,27 @@ class BaseVisionAdapter(ContractExtractorInterface):
 {{
     "contract_number": "合同编号",
     "sign_date": "签订日期(YYYY-MM-DD)",
-    
+
     "landlord_name": "出租方/甲方名称",
     "landlord_legal_rep": "法定代表人",
     "landlord_phone": "甲方联系电话",
     "landlord_address": "甲方地址",
-    
+
     "tenant_name": "承租方/乙方名称",
     "tenant_id": "身份证号或统一社会信用代码",
     "tenant_phone": "乙方联系电话",
     "tenant_address": "乙方地址",
     "tenant_usage": "租赁用途",
-    
+
     "property_address": "租赁物业地址",
     "property_area": "建筑面积(数字,平方米)",
-    
+
     "lease_start_date": "合同开始日期(YYYY-MM-DD)",
     "lease_end_date": "合同结束日期(YYYY-MM-DD)",
-    
+
     "deposit": "押金/保证金(数字)",
     "payment_cycle": "付款周期(月付/季付/半年付/年付)",
-    
+
     "rent_terms": [
         {{
             "start_date": "该条款开始日期(YYYY-MM-DD)",

@@ -2,8 +2,7 @@ import React, { useMemo } from 'react'
 import { Pie, Column, Line, Area } from '@ant-design/plots'
 import ChartErrorBoundary from './ChartErrorBoundary'
 import { Empty, Spin } from 'antd'
-
-const COLORS = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2', '#fa8c16', '#eb2f96', '#13c2c2', '#52c41a']
+import { CHART_COLORS } from '@/styles/colorMap'
 
 // Type for chart tooltip/formatter datum with dynamic field access
 interface ChartDatum {
@@ -43,7 +42,7 @@ export const AnalyticsPieChart: React.FC<PieChartProps> = ({
     data: chartData,
     angleField: 'value',
     colorField: 'type',
-    color: COLORS,
+    color: CHART_COLORS,
     radius: outerRadius / 100,
     label: {
       type: 'outer' as const,
@@ -101,7 +100,7 @@ export const AnalyticsBarChart: React.FC<BarChartProps> = ({
   xDataKey,
   yDataKey,
   barName = '数值',
-  fill = '#1890ff',
+  fill = CHART_COLORS[0],
   height = 300,
   showLegend = true,
   loading = false,
@@ -201,7 +200,7 @@ export const AnalyticsLineChart: React.FC<LineChartProps> = ({
   xDataKey,
   yDataKey,
   lineName = '趋势',
-  stroke = '#8884d8',
+  stroke = CHART_COLORS[4],
   strokeWidth = 2,
   height = 300,
   showLegend = true,
@@ -354,7 +353,7 @@ export const AnalyticsMultiBarChart: React.FC<MultiBarChartProps> = ({
     seriesField: 'type',
     color: ({ type }: ChartDatum) => {
       const bar = bars.find(b => b.name === type)
-      return bar?.fill ?? '#1890ff'
+      return bar?.fill ?? CHART_COLORS[0]
     },
     isGroup: true,
     columnStyle: {
@@ -463,12 +462,12 @@ export const AnalyticsAreaChart: React.FC<AreaChartProps> = ({
       fillOpacity: 0.3,
     },
     line: {
-      color: '#1890ff',
+      color: CHART_COLORS[0],
       style: {
         lineWidth: 2,
       },
     },
-    color: '#1890ff',
+    color: CHART_COLORS[0],
     legend: showLegend ? {
       position: 'top' as const,
     } : false,

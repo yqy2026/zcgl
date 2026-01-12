@@ -39,6 +39,7 @@ import {
 } from '@/types/rentContract';
 import { formatCurrency } from '@/utils/format';
 import { createLogger } from '@/utils/logger';
+import { COLORS, CHART_COLORS } from '@/styles/colorMap';
 
 const pageLogger = createLogger('RentStatistics');
 
@@ -47,9 +48,6 @@ const { Option } = Select;
 const { Title } = Typography;
 
 dayjs.locale('zh-cn');
-
-// 颜色配置
-const COLORS = ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#13c2c2'];
 
 interface ChartDatum {
   type: string;
@@ -124,61 +122,66 @@ const RentStatisticsPage: React.FC = () => {
 
       // 使用模拟数据作为降级方案
       const mockOverview: RentStatisticsOverview = {
-        total_contracts: 120,
-        active_contracts: 98,
-        total_rent: 1500000,
-        paid_rent: 1200000,
-        overdue_rent: 300000,
+        total_due: 1500000,
+        total_paid: 1200000,
+        total_overdue: 300000,
+        total_records: 120,
         payment_rate: 80,
-        total_areas: 50000,
-        rented_areas: 45000,
-        occupancy_rate: 90,
+        status_breakdown: [
+          { status: 'active', count: 98, due_amount: 1300000, paid_amount: 1100000 },
+          { status: 'pending', count: 22, due_amount: 200000, paid_amount: 100000 },
+        ],
+        monthly_breakdown: [
+          { year_month: '2024-12', due_amount: 500000, paid_amount: 450000, overdue_amount: 50000 },
+          { year_month: '2024-11', due_amount: 500000, paid_amount: 400000, overdue_amount: 100000 },
+          { year_month: '2024-10', due_amount: 500000, paid_amount: 350000, overdue_amount: 150000 },
+        ],
+        average_unit_price: 30,
+        renewal_rate: 85,
       };
 
       const mockOwnershipStats: OwnershipRentStatistics[] = [
         {
+          ownership_id: '1',
           ownership_name: '权属方A',
-          total_contracts: 30,
-          active_contracts: 28,
-          total_rent: 500000,
-          paid_rent: 450000,
-          overdue_rent: 50000,
+          ownership_short_name: '权属A',
+          contract_count: 30,
+          total_due_amount: 500000,
+          total_paid_amount: 450000,
+          total_overdue_amount: 50000,
           payment_rate: 90,
-          total_area: 15000,
-          rented_area: 14000,
         },
         {
+          ownership_id: '2',
           ownership_name: '权属方B',
-          total_contracts: 25,
-          active_contracts: 22,
-          total_rent: 400000,
-          paid_rent: 350000,
-          overdue_rent: 50000,
+          ownership_short_name: '权属B',
+          contract_count: 25,
+          total_due_amount: 400000,
+          total_paid_amount: 350000,
+          total_overdue_amount: 50000,
           payment_rate: 87.5,
-          total_area: 12000,
-          rented_area: 11000,
         },
       ];
 
       const mockAssetStats: AssetRentStatistics[] = [
         {
+          asset_id: '1',
           asset_name: '资产A',
-          total_contracts: 15,
-          active_contracts: 14,
-          total_rent: 300000,
-          paid_rent: 280000,
-          overdue_rent: 20000,
+          asset_address: '地址A',
+          contract_count: 15,
+          total_due_amount: 300000,
+          total_paid_amount: 280000,
+          total_overdue_amount: 20000,
           payment_rate: 93.3,
-          total_area: 8000,
-          rented_area: 7500,
         },
       ];
 
       const mockMonthlyStats: MonthlyRentStatistics[] = Array.from({ length: 12 }, (_, i) => ({
-        month: `${String(i + 1).padStart(2, '0')}月`,
-        total_rent: 100000 + i * 10000,
-        paid_rent: 80000 + i * 8000,
-        overdue_rent: 20000 + i * 2000,
+        year_month: `2024-${String(i + 1).padStart(2, '0')}`,
+        total_contracts: 10 + i,
+        total_due_amount: 100000 + i * 10000,
+        total_paid_amount: 80000 + i * 8000,
+        total_overdue_amount: 20000 + i * 2000,
         payment_rate: 80 + i,
       }));
 
@@ -228,7 +231,7 @@ const RentStatisticsPage: React.FC = () => {
       render: (text: string, record) => (
         <div>
           <div style={{ fontWeight: 'bold' }}>{text}</div>
-          <div style={{ fontSize: '12px', color: '#666' }}>
+          <div style={{ fontSize: '12px', color: COLORS.textSecondary }}>
             {record.ownership_short_name}
           </div>
         </div>
@@ -254,7 +257,7 @@ const RentStatisticsPage: React.FC = () => {
       key: 'total_paid_amount',
       align: 'right',
       render: (amount: number) => (
-        <span style={{ color: '#52c41a' }}>
+        <span style={{ color: COLORS.success }}>
           {formatCurrency(amount)}
         </span>
       )
@@ -265,7 +268,7 @@ const RentStatisticsPage: React.FC = () => {
       key: 'total_overdue_amount',
       align: 'right',
       render: (amount: number) => (
-        <span style={{ color: amount > 0 ? '#f5222d' : '#52c41a' }}>
+        <span style={{ color: amount > 0 ? COLORS.error : COLORS.success }}>
           {formatCurrency(amount)}
         </span>
       )
@@ -277,9 +280,9 @@ const RentStatisticsPage: React.FC = () => {
       align: 'center',
       render: (rate: number | string) => {
         const percentage = Number(rate);
-        let color = '#f5222d';
-        if (percentage >= 90) color = '#52c41a';
-        else if (percentage >= 70) color = '#faad14';
+        let color: string = COLORS.error;
+        if (percentage >= 90) color = COLORS.success;
+        else if (percentage >= 70) color = COLORS.warning;
 
         return (
           <Progress
@@ -303,7 +306,7 @@ const RentStatisticsPage: React.FC = () => {
       render: (text: string, record) => (
         <div>
           <div style={{ fontWeight: 'bold' }}>{text}</div>
-          <div style={{ fontSize: '12px', color: '#666' }}>
+          <div style={{ fontSize: '12px', color: COLORS.textSecondary }}>
             {record.asset_address?.substring(0, 30)}...
           </div>
         </div>
@@ -329,7 +332,7 @@ const RentStatisticsPage: React.FC = () => {
       key: 'total_paid_amount',
       align: 'right',
       render: (amount: number) => (
-        <span style={{ color: '#52c41a' }}>
+        <span style={{ color: COLORS.success }}>
           {formatCurrency(amount)}
         </span>
       )
@@ -340,7 +343,7 @@ const RentStatisticsPage: React.FC = () => {
       key: 'total_overdue_amount',
       align: 'right',
       render: (amount: number) => (
-        <span style={{ color: amount > 0 ? '#f5222d' : '#52c41a' }}>
+        <span style={{ color: amount > 0 ? COLORS.error : COLORS.success }}>
           {formatCurrency(amount)}
         </span>
       )
@@ -352,9 +355,9 @@ const RentStatisticsPage: React.FC = () => {
       align: 'center',
       render: (rate: number | string) => {
         const percentage = Number(rate);
-        let color = '#f5222d';
-        if (percentage >= 90) color = '#52c41a';
-        else if (percentage >= 70) color = '#faad14';
+        let color: string = COLORS.error;
+        if (percentage >= 90) color = COLORS.success;
+        else if (percentage >= 70) color = COLORS.warning;
 
         return (
           <Progress
@@ -381,7 +384,7 @@ const RentStatisticsPage: React.FC = () => {
     data: ownershipChartData,
     angleField: 'value',
     colorField: 'type',
-    color: COLORS,
+    color: CHART_COLORS,
     radius: 0.8,
     innerRadius: 0.4,
     label: {
@@ -421,10 +424,10 @@ const RentStatisticsPage: React.FC = () => {
     yField: 'value',
     seriesField: 'type',
     color: ({ type }: { type: string }) => {
-      if (type === '应收金额') return '#1890ff';
-      if (type === '已收金额') return '#52c41a';
-      if (type === '欠款金额') return '#f5222d';
-      return '#1890ff';
+      if (type === '应收金额') return COLORS.primary;
+      if (type === '已收金额') return COLORS.success;
+      if (type === '欠款金额') return COLORS.error;
+      return COLORS.primary;
     },
     isGroup: true,
     columnStyle: {
@@ -451,7 +454,7 @@ const RentStatisticsPage: React.FC = () => {
     xField: 'month',
     yField: 'rate',
     smooth: true,
-    color: '#52c41a',
+    color: COLORS.success,
     lineStyle: {
       lineWidth: 2,
     },
@@ -546,7 +549,7 @@ const RentStatisticsPage: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: '24px', background: '#f0f2f5', minHeight: '100vh' }}>
+    <div style={{ padding: '24px', background: COLORS.bgQuaternary, minHeight: '100vh' }}>
       <Card>
         <div style={{ marginBottom: '24px' }}>
           <Row justify="space-between" align="middle">
@@ -603,7 +606,7 @@ const RentStatisticsPage: React.FC = () => {
                   precision={2}
                   prefix={<DollarOutlined />}
                   suffix="元"
-                  valueStyle={{ color: '#1890ff' }}
+                  valueStyle={{ color: COLORS.primary }}
                 />
               </Card>
             </Col>
@@ -615,7 +618,7 @@ const RentStatisticsPage: React.FC = () => {
                   precision={2}
                   prefix={<DollarOutlined />}
                   suffix="元"
-                  valueStyle={{ color: '#52c41a' }}
+                  valueStyle={{ color: COLORS.success }}
                 />
               </Card>
             </Col>
@@ -627,7 +630,7 @@ const RentStatisticsPage: React.FC = () => {
                   precision={2}
                   prefix={<DollarOutlined />}
                   suffix="元"
-                  valueStyle={{ color: Number(overviewData.total_overdue || 0) > 0 ? '#f5222d' : '#52c41a' }}
+                  valueStyle={{ color: Number(overviewData.total_overdue || 0) > 0 ? COLORS.error : COLORS.success }}
                 />
               </Card>
             </Col>
@@ -639,7 +642,7 @@ const RentStatisticsPage: React.FC = () => {
                   precision={1}
                   prefix={<RiseOutlined />}
                   suffix="%"
-                  valueStyle={{ color: Number(overviewData.payment_rate || 0) >= 90 ? '#52c41a' : '#faad14' }}
+                  valueStyle={{ color: Number(overviewData.payment_rate || 0) >= 90 ? COLORS.success : COLORS.warning }}
                 />
               </Card>
             </Col>
@@ -659,7 +662,7 @@ const RentStatisticsPage: React.FC = () => {
                     precision={2}
                     prefix={<DollarOutlined />}
                     suffix="元/㎡/月"
-                    valueStyle={{ color: '#722ed1' }}
+                    valueStyle={{ color: COLORS.primary }}
                   />
                 </Card>
               </Col>
@@ -671,7 +674,7 @@ const RentStatisticsPage: React.FC = () => {
                     precision={1}
                     prefix={<ReloadOutlined />}
                     suffix="%"
-                    valueStyle={{ color: '#13c2c2' }}
+                    valueStyle={{ color: COLORS.success }}
                   />
                 </Card>
               </Col>

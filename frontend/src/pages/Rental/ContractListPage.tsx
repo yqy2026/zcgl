@@ -20,7 +20,7 @@ import {
   Typography,
   type TableProps,
 } from "antd";
-import { MessageManager } from "@/utils/MessageManager";
+import { MessageManager } from "@/utils/messageManager";
 import {
   PlusOutlined,
   EditOutlined,
@@ -49,6 +49,7 @@ import { ownershipService } from "../../services/ownershipService";
 import { useFormat } from "../../utils/format";
 import RentContractExcelImport from "../../components/Rental/RentContractExcelImport";
 import { createLogger } from "../../utils/logger";
+import { COLORS } from '@/styles/colorMap';
 
 const pageLogger = createLogger('ContractList');
 
@@ -384,7 +385,7 @@ const ContractListPage: React.FC = () => {
       {/* 页面标题 */}
       <div style={{ marginBottom: "24px" }}>
         <Title level={2}>租金合同管理</Title>
-        <p style={{ color: "#666" }}>管理物业租赁合同，支持租金条款设置和台账生成</p>
+        <p style={{ color: COLORS.textSecondary }}>管理物业租赁合同，支持租金条款设置和台账生成</p>
       </div>
 
       {/* 统计卡片 */}
@@ -428,7 +429,7 @@ const ContractListPage: React.FC = () => {
                 value={statistics.payment_rate}
                 precision={2}
                 suffix="%"
-                valueStyle={{ color: statistics.payment_rate > 80 ? "#3f8600" : "#cf1322" }}
+                valueStyle={{ color: statistics.payment_rate > 80 ? COLORS.success : COLORS.error }}
               />
             </Card>
           </Col>

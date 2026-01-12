@@ -2,6 +2,7 @@ import React from 'react'
 import { Card, Statistic } from 'antd'
 import { ArrowUpOutlined, ArrowDownOutlined, MinusOutlined } from '@ant-design/icons'
 import styles from './DataTrendCard.module.css'
+import { COLORS } from '@/styles/colorMap'
 
 interface DataTrendCardProps {
   title: string
@@ -78,7 +79,7 @@ const DataTrendCard: React.FC<DataTrendCardProps> = ({
           valueStyle={{
             fontSize: size === 'large' ? 28 : size === 'small' ? 20 : 24,
             fontWeight: 600,
-            color: color === 'default' ? '#1a1a1a' : undefined
+            color: color === 'default' ? COLORS.textPrimary : undefined
           }}
         />
 
