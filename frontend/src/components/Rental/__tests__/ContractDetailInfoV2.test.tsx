@@ -22,8 +22,8 @@ vi.mock('antd', () => {
         </div>
     );
 
-    const DescriptionsMock = ({ items, children }: any) => {
-        const MockComponent = children ? (
+    const DescriptionsMock: any = ({ items, children }: any) => {
+        return children ? (
             <div data-testid="descriptions">{children}</div>
         ) : (
             <div data-testid="descriptions">
@@ -35,9 +35,10 @@ vi.mock('antd', () => {
                 ))}
             </div>
         );
-        MockComponent.Item = DescriptionsItemMock;
-        return MockComponent;
     };
+
+    // Attach Item as a property before returning
+    DescriptionsMock.Item = DescriptionsItemMock;
 
     return {
         Card: ({ children, title }: any) => (
@@ -226,9 +227,9 @@ describe('ContractDetailInfo V2 Tests', () => {
 
             render(<ContractDetailInfo contract={mockUpstreamContract} />);
 
-            // Contract type should be displayed
-            const descriptions = screen.getByTestId('descriptions');
-            expect(descriptions).toBeInTheDocument();
+            // Contract should render with multiple descriptions sections
+            const descriptions = screen.getAllByTestId('descriptions');
+            expect(descriptions.length).toBeGreaterThan(0);
         });
 
         it('should display downstream contract type correctly', async () => {
@@ -237,8 +238,8 @@ describe('ContractDetailInfo V2 Tests', () => {
 
             render(<ContractDetailInfo contract={mockDownstreamContract} />);
 
-            const descriptions = screen.getByTestId('descriptions');
-            expect(descriptions).toBeInTheDocument();
+            const descriptions = screen.getAllByTestId('descriptions');
+            expect(descriptions.length).toBeGreaterThan(0);
         });
 
         it('should display entrusted contract type correctly', async () => {
@@ -247,8 +248,8 @@ describe('ContractDetailInfo V2 Tests', () => {
 
             render(<ContractDetailInfo contract={mockEntrustedContract} />);
 
-            const descriptions = screen.getByTestId('descriptions');
-            expect(descriptions).toBeInTheDocument();
+            const descriptions = screen.getAllByTestId('descriptions');
+            expect(descriptions.length).toBeGreaterThan(0);
         });
     });
 
@@ -263,7 +264,7 @@ describe('ContractDetailInfo V2 Tests', () => {
 
             // Should have table or list for assets
             // The component should render asset information
-            expect(screen.getByTestId('descriptions')).toBeInTheDocument();
+            expect(screen.getAllByTestId('descriptions').length).toBeGreaterThan(0);
         });
 
         it('should handle contract with no assets', async () => {
@@ -273,7 +274,7 @@ describe('ContractDetailInfo V2 Tests', () => {
             const contractNoAssets = { ...mockUpstreamContract, assets: [] };
             render(<ContractDetailInfo contract={contractNoAssets} />);
 
-            expect(screen.getByTestId('descriptions')).toBeInTheDocument();
+            expect(screen.getAllByTestId('descriptions').length).toBeGreaterThan(0);
         });
     });
 
@@ -287,8 +288,8 @@ describe('ContractDetailInfo V2 Tests', () => {
             render(<ContractDetailInfo contract={mockEntrustedContract} />);
 
             // Service fee rate (5%) should be visible for entrusted contracts
-            const descriptions = screen.getByTestId('descriptions');
-            expect(descriptions).toBeInTheDocument();
+            const descriptions = screen.getAllByTestId('descriptions');
+            expect(descriptions.length).toBeGreaterThan(0);
         });
 
         it('should not show service fee rate for non-entrusted contract', async () => {
@@ -298,7 +299,7 @@ describe('ContractDetailInfo V2 Tests', () => {
             render(<ContractDetailInfo contract={mockDownstreamContract} />);
 
             // Non-entrusted contracts should not show service fee
-            expect(screen.getByTestId('descriptions')).toBeInTheDocument();
+            expect(screen.getAllByTestId('descriptions').length).toBeGreaterThan(0);
         });
     });
 
@@ -312,7 +313,7 @@ describe('ContractDetailInfo V2 Tests', () => {
             render(<ContractDetailInfo contract={mockUpstreamContract} />);
 
             // Payment cycle should be displayed
-            expect(screen.getByTestId('descriptions')).toBeInTheDocument();
+            expect(screen.getAllByTestId('descriptions').length).toBeGreaterThan(0);
         });
 
         it('should display monthly payment cycle', async () => {
@@ -321,7 +322,7 @@ describe('ContractDetailInfo V2 Tests', () => {
 
             render(<ContractDetailInfo contract={mockDownstreamContract} />);
 
-            expect(screen.getByTestId('descriptions')).toBeInTheDocument();
+            expect(screen.getAllByTestId('descriptions').length).toBeGreaterThan(0);
         });
     });
 
@@ -335,7 +336,7 @@ describe('ContractDetailInfo V2 Tests', () => {
             render(<ContractDetailInfo contract={mockDownstreamContract} />);
 
             // tenant_usage field should be visible
-            expect(screen.getByTestId('descriptions')).toBeInTheDocument();
+            expect(screen.getAllByTestId('descriptions').length).toBeGreaterThan(0);
         });
 
         it('should display upstream contract reference', async () => {
@@ -345,7 +346,7 @@ describe('ContractDetailInfo V2 Tests', () => {
             render(<ContractDetailInfo contract={mockDownstreamContract} />);
 
             // upstream_contract_id should be referenced
-            expect(screen.getByTestId('descriptions')).toBeInTheDocument();
+            expect(screen.getAllByTestId('descriptions').length).toBeGreaterThan(0);
         });
     });
 
@@ -366,7 +367,7 @@ describe('ContractDetailInfo V2 Tests', () => {
 
             render(<ContractDetailInfo contract={contractWithTerms} />);
 
-            expect(screen.getByTestId('descriptions')).toBeInTheDocument();
+            expect(screen.getAllByTestId('descriptions').length).toBeGreaterThan(0);
         });
 
         it('should handle contract with no rent terms', async () => {
@@ -375,7 +376,7 @@ describe('ContractDetailInfo V2 Tests', () => {
 
             render(<ContractDetailInfo contract={mockDownstreamContract} />);
 
-            expect(screen.getByTestId('descriptions')).toBeInTheDocument();
+            expect(screen.getAllByTestId('descriptions').length).toBeGreaterThan(0);
         });
     });
 
@@ -388,7 +389,7 @@ describe('ContractDetailInfo V2 Tests', () => {
 
             render(<ContractDetailInfo contract={mockUpstreamContract} />);
 
-            expect(screen.getByTestId('descriptions')).toBeInTheDocument();
+            expect(screen.getAllByTestId('descriptions').length).toBeGreaterThan(0);
         });
 
         it('should show terminated status with red tag', async () => {
@@ -398,7 +399,7 @@ describe('ContractDetailInfo V2 Tests', () => {
             const terminatedContract = { ...mockUpstreamContract, contract_status: '终止' };
             render(<ContractDetailInfo contract={terminatedContract} />);
 
-            expect(screen.getByTestId('descriptions')).toBeInTheDocument();
+            expect(screen.getAllByTestId('descriptions').length).toBeGreaterThan(0);
         });
 
         it('should show renewed status with blue tag', async () => {
@@ -408,7 +409,7 @@ describe('ContractDetailInfo V2 Tests', () => {
             const renewedContract = { ...mockUpstreamContract, contract_status: '已续签' };
             render(<ContractDetailInfo contract={renewedContract} />);
 
-            expect(screen.getByTestId('descriptions')).toBeInTheDocument();
+            expect(screen.getAllByTestId('descriptions').length).toBeGreaterThan(0);
         });
     });
 });
