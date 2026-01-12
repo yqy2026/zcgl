@@ -20,6 +20,7 @@ from .config import get_config
 
 try:
     import aiofiles
+
     AIOFILES_AVAILABLE = True
 except ImportError:
     AIOFILES_AVAILABLE = False
@@ -44,7 +45,11 @@ class PDFCache:
             ttl_seconds: 缓存过期时间（秒）
         """
         config = get_config()
-        self.cache_dir = Path(cache_dir or config.extraction.cache_dir or Path(tempfile.gettempdir()) / "pdf_cache")
+        self.cache_dir = Path(
+            cache_dir
+            or config.extraction.cache_dir
+            or Path(tempfile.gettempdir()) / "pdf_cache"
+        )
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.ttl_seconds = ttl_seconds
 
@@ -82,6 +87,13 @@ class PDFCache:
 
         Raises:
             OSError, PermissionError: 文件系统错误会重新抛出
+            RuntimeError: 缓存系统故障时抛出（需要立即处理的严重问题）
+
+        Note:
+            - 缓存未命中（文件不存在、已过期）返回 None
+            - JSON 损坏会删除缓存文件并返回 None
+            - 文件系统错误（权限、磁盘故障）会抛出异常
+            - 其他严重错误会抛出 RuntimeError
         """
         try:
             hash_key = self.get_file_hash(file_path)
@@ -110,7 +122,7 @@ class PDFCache:
                 logger.error(
                     f"Cache file corrupted: {cache_file}",
                     exc_info=True,
-                    extra={"error_id": "CACHE_CORRUPTED", "file_path": str(cache_file)}
+                    extra={"error_id": "CACHE_CORRUPTED", "file_path": str(cache_file)},
                 )
                 # 删除损坏的缓存文件
                 try:
@@ -134,20 +146,22 @@ class PDFCache:
 
         except (PermissionError, OSError) as e:
             logger.error(
-                f"Cache access failed for {file_path}: {e}",
+                f"Cache file system error for {file_path}: {e}",
                 exc_info=True,
-                extra={"error_id": "CACHE_ACCESS_ERROR", "file_path": file_path}
+                extra={"error_id": "CACHE_FILESYSTEM_ERROR", "file_path": file_path},
             )
-            # 文件系统错误应该重新抛出，让调用者知道有问题
+            # 文件系统错误必须重新抛出 - 这些是需要立即关注的严重问题
             raise
         except Exception as e:
+            # 未预期的错误不应该被静默转换为缓存未命中
+            # 这可能表示缓存系统出现严重问题
             logger.error(
-                f"Unexpected cache error for {file_path}: {e}",
+                f"Cache system failure for {file_path}: {e}",
                 exc_info=True,
-                extra={"error_id": "CACHE_UNEXPECTED_ERROR", "file_path": file_path}
+                extra={"error_id": "CACHE_SYSTEM_FAILURE", "file_path": file_path},
             )
-            self._misses += 1
-            return None
+            # 抛出运行时错误而不是静默返回 None
+            raise RuntimeError(f"Cache system malfunction: {e}") from e
 
     def set(self, file_path: str, result: dict[str, Any]) -> bool:
         """
@@ -159,6 +173,15 @@ class PDFCache:
 
         Returns:
             bool: 是否成功缓存
+
+        Raises:
+            OSError: 磁盘空间不足、权限错误或其他文件系统错误
+            RuntimeError: 磁盘满或缓存目录不可写时抛出
+
+        Note:
+            - 序列化错误（TypeError, ValueError）返回 False，不抛出异常
+            - 文件系统错误（磁盘满、权限）会抛出异常，需要立即处理
+            - 其他未预期错误会抛出异常
         """
         try:
             hash_key = self.get_file_hash(file_path)
@@ -179,9 +202,48 @@ class PDFCache:
             logger.info(f"Cached result for {file_path}")
             return True
 
-        except Exception as e:
-            logger.warning(f"Failed to cache result for {file_path}: {e}")
+        except OSError as e:
+            # 磁盘空间不足
+            if "No space left" in str(e) or getattr(e, "errno", None) == 28:
+                logger.error(
+                    f"Disk full - cannot cache {file_path}",
+                    extra={"error_id": "CACHE_DISK_FULL", "file_path": file_path},
+                )
+                raise RuntimeError("Disk space exhausted, cannot cache results") from e
+            # 权限错误
+            elif "Permission denied" in str(e) or getattr(e, "errno", None) == 13:
+                logger.error(
+                    f"Permission denied writing cache for {file_path}",
+                    extra={
+                        "error_id": "CACHE_PERMISSION_ERROR",
+                        "file_path": file_path,
+                    },
+                )
+                raise RuntimeError("Cache directory not writable") from e
+            else:
+                # 其他文件系统错误
+                logger.error(
+                    f"File system error caching {file_path}: {e}",
+                    exc_info=True,
+                    extra={"error_id": "CACHE_WRITE_ERROR"},
+                )
+                raise
+        except (TypeError, ValueError) as e:
+            # 序列化错误 - 数据无法转换为 JSON
+            logger.error(
+                f"Cannot serialize result for caching {file_path}: {e}",
+                extra={"error_id": "CACHE_SERIALIZATION_ERROR", "file_path": file_path},
+            )
+            # 序列化错误可以继续（返回 False），因为是数据问题而非系统问题
             return False
+        except Exception as e:
+            # 其他未预期错误应该抛出
+            logger.error(
+                f"Unexpected cache write error for {file_path}: {e}",
+                exc_info=True,
+                extra={"error_id": "CACHE_WRITE_FAILURE"},
+            )
+            raise
 
     def invalidate(self, file_path: str) -> bool:
         """
@@ -280,6 +342,7 @@ class PDFCache:
 # 异步缓存系统
 # ============================================================================
 
+
 class AsyncDocumentCache:
     """
     异步文档缓存系统
@@ -303,7 +366,11 @@ class AsyncDocumentCache:
             use_async: 是否使用异步操作（False 时强制使用同步）
         """
         config = get_config()
-        self.cache_dir = Path(cache_dir or config.extraction.cache_dir or Path(tempfile.gettempdir()) / "pdf_cache")
+        self.cache_dir = Path(
+            cache_dir
+            or config.extraction.cache_dir
+            or Path(tempfile.gettempdir()) / "pdf_cache"
+        )
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.ttl_seconds = ttl_seconds
         self._use_async = use_async and AIOFILES_AVAILABLE
@@ -315,7 +382,9 @@ class AsyncDocumentCache:
         self._evictions = 0
 
         if not self._use_async and use_async:
-            logger.warning("aiofiles not available, falling back to synchronous file operations")
+            logger.warning(
+                "aiofiles not available, falling back to synchronous file operations"
+            )
 
     async def compute_file_hash(self, file_path: str) -> str:
         """
@@ -379,7 +448,9 @@ class AsyncDocumentCache:
                 async with aiofiles.open(cache_file, "r", encoding="utf-8") as f:
                     content = await f.read()
             else:
-                content = await asyncio.to_thread(cache_file.read_text, encoding="utf-8")
+                content = await asyncio.to_thread(
+                    cache_file.read_text, encoding="utf-8"
+                )
 
             cached_data = json.loads(content)
 
@@ -390,16 +461,46 @@ class AsyncDocumentCache:
             logger.info(f"Cache HIT (age: {age_seconds:.0f}s)")
             return cached_data
 
-        except Exception as e:
-            logger.warning(f"Failed to read cache: {e}")
+        except json.JSONDecodeError:
+            # JSON 解析错误 - 缓存文件损坏
+            logger.error(
+                f"Async cache file corrupted: {cache_file}",
+                exc_info=True,
+                extra={"error_id": "ASYNC_CACHE_CORRUPTED", "file_hash": file_hash},
+            )
+            # 删除损坏的缓存
+            try:
+                await asyncio.to_thread(cache_file.unlink)
+            except Exception:
+                pass
+            self._evictions += 1
             self._misses += 1
             return None
+        except (PermissionError, OSError) as e:
+            # 文件系统错误必须抛出
+            logger.error(
+                f"Async cache file system error: {e}",
+                exc_info=True,
+                extra={
+                    "error_id": "ASYNC_CACHE_FILESYSTEM_ERROR",
+                    "file_hash": file_hash,
+                },
+            )
+            raise
+        except Exception as e:
+            # 其他严重错误（事件循环问题、内存错误等）
+            logger.error(
+                f"Async cache system failure: {e}",
+                exc_info=True,
+                extra={
+                    "error_id": "ASYNC_CACHE_SYSTEM_FAILURE",
+                    "file_hash": file_hash,
+                },
+            )
+            raise RuntimeError(f"Async cache system malfunction: {e}") from e
 
     async def set(
-        self,
-        file_hash: str,
-        data: dict[str, Any],
-        ttl: int | None = None
+        self, file_hash: str, data: dict[str, Any], ttl: int | None = None
     ) -> bool:
         """
         异步设置缓存
@@ -420,7 +521,9 @@ class AsyncDocumentCache:
                 cached_data = {
                     "file_hash": file_hash,
                     "cached_at": datetime.now().isoformat(),
-                    "expires_at": (datetime.now() + timedelta(seconds=ttl or self.ttl_seconds)).isoformat(),
+                    "expires_at": (
+                        datetime.now() + timedelta(seconds=ttl or self.ttl_seconds)
+                    ).isoformat(),
                     "data": data,
                 }
 
@@ -430,14 +533,58 @@ class AsyncDocumentCache:
                     async with aiofiles.open(cache_file, "w", encoding="utf-8") as f:
                         await f.write(content)
                 else:
-                    await asyncio.to_thread(cache_file.write_text, content, encoding="utf-8")
+                    await asyncio.to_thread(
+                        cache_file.write_text, content, encoding="utf-8"
+                    )
 
                 logger.info(f"Cached data for hash {file_hash[:8]}...")
                 return True
 
-        except Exception as e:
-            logger.warning(f"Failed to set cache: {e}")
+        except OSError as e:
+            # 磁盘空间不足
+            if "No space left" in str(e) or getattr(e, "errno", None) == 28:
+                logger.error(
+                    "Disk full - cannot cache async",
+                    extra={
+                        "error_id": "ASYNC_CACHE_DISK_FULL",
+                        "file_hash": file_hash[:8],
+                    },
+                )
+                raise RuntimeError("Disk space exhausted, cannot cache results") from e
+            # 权限错误
+            elif "Permission denied" in str(e) or getattr(e, "errno", None) == 13:
+                logger.error(
+                    "Permission denied writing async cache",
+                    extra={
+                        "error_id": "ASYNC_CACHE_PERMISSION_ERROR",
+                        "file_hash": file_hash[:8],
+                    },
+                )
+                raise RuntimeError("Cache directory not writable") from e
+            else:
+                logger.error(
+                    f"File system error caching async: {e}",
+                    exc_info=True,
+                    extra={"error_id": "ASYNC_CACHE_WRITE_ERROR"},
+                )
+                raise
+        except (TypeError, ValueError) as e:
+            # 序列化错误
+            logger.error(
+                f"Cannot serialize async cache data: {e}",
+                extra={
+                    "error_id": "ASYNC_CACHE_SERIALIZATION_ERROR",
+                    "file_hash": file_hash[:8],
+                },
+            )
             return False
+        except Exception as e:
+            logger.error(
+                f"Unexpected async cache write error: {e}",
+                exc_info=True,
+                extra={"error_id": "ASYNC_CACHE_WRITE_FAILURE"},
+            )
+            raise
 
     async def invalidate(self, file_hash: str) -> bool:
         """
@@ -559,7 +706,9 @@ class CachedExtractor:
 
         async def wrapper(file_path: str, *args, **kwargs):
             # 检查缓存
-            cache_key = self.cache_key_func(file_path) if self.cache_key_func else file_path
+            cache_key = (
+                self.cache_key_func(file_path) if self.cache_key_func else file_path
+            )
 
             # 尝试从缓存获取
             if isinstance(cache_key, str):
@@ -626,7 +775,9 @@ class ExtractionCache:
         """
         self._conditional_caches[name] = condition_func
 
-    def get(self, file_path: str, condition: str | None = None) -> dict[str, Any] | None:
+    def get(
+        self, file_path: str, condition: str | None = None
+    ) -> dict[str, Any] | None:
         """
         获取缓存，支持条件过滤
 
@@ -728,6 +879,7 @@ def clear_all_caches() -> int:
 # ============================================================================
 # 便捷装饰器
 # ============================================================================
+
 
 def cached_extraction(ttl_seconds: int = 3600):
     """
