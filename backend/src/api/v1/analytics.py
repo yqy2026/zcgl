@@ -11,6 +11,7 @@ Version: 2026-01-04 - Service层重构版
 import logging
 
 from fastapi import APIRouter, Depends, Query, Request
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from ...core.response_handler import ResponseHandler, get_request_id
@@ -33,7 +34,7 @@ async def get_comprehensive_analytics(
     use_cache: bool = True,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> JSONResponse:
     """
     获取综合统计分析数据
 
@@ -52,9 +53,9 @@ async def get_comprehensive_analytics(
             "include_deleted": include_deleted,
         }
 
-        if date_from:
+        if date_from is not None:
             filters["date_from"] = date_from
-        if date_to:
+        if date_to is not None:
             filters["date_to"] = date_to
 
         # 调用服务层
@@ -84,7 +85,7 @@ async def get_cache_stats(
     request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> JSONResponse:
     """
     获取分析缓存的统计信息
 
@@ -113,7 +114,7 @@ async def clear_cache(
     request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> JSONResponse:
     """
     清除所有分析相关的缓存
 
@@ -141,7 +142,7 @@ async def clear_cache(
 async def debug_cache_status(
     request: Request,
     db: Session = Depends(get_db),
-):
+) -> JSONResponse:
     """
     调试端点：获取详细的缓存状态
 
@@ -182,7 +183,7 @@ async def get_trend_data(
     include_deleted: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> JSONResponse:
     """
     获取指定类型的趋势数据
 
@@ -228,7 +229,7 @@ async def get_distribution_data(
     include_deleted: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> JSONResponse:
     """
     获取指定类型的分布数据
 

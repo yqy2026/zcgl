@@ -33,6 +33,7 @@ from fastapi import (
 )
 from sqlalchemy.orm import Session
 from starlette.status import HTTP_204_NO_CONTENT
+from typing import Any
 
 from ...core.exception_handler import DuplicateResourceError, ResourceNotFoundError
 from ...crud.history import history_crud
@@ -82,7 +83,7 @@ async def get_assets(
     current_user: User = Depends(get_current_active_user),
     sort_field: str = Query("created_at", description="排序字段"),
     sort_order: str = Query("desc", pattern="^(asc|desc)$", description="排序方向"),
-):
+) -> AssetListResponse:
     """
     获取资产列表，支持分页、搜索和筛选
 
@@ -146,7 +147,7 @@ async def get_assets(
 @router.get("/ownership-entities", response_model=list[str], summary="获取权属方列表")
 async def get_ownership_entities(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
-):
+) -> list[str]:
     """获取所有权属方列表，用于搜索筛选"""
     try:
         # 从资产表中获取所有不重复的权属方
@@ -170,7 +171,7 @@ async def get_ownership_entities(
 )
 async def get_business_categories(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
-):
+) -> list[str]:
     """获取所有业态类别列表，用于搜索筛选"""
     try:
         # 从资产表中获取所有不重复的业态类别
@@ -192,7 +193,7 @@ async def get_business_categories(
 @router.get("/usage-statuses", response_model=list[str], summary="获取使用情况列表")
 async def get_usage_statuses(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
-):
+) -> list[str]:
     """获取所有使用情况列表，用于搜索筛选"""
     try:
         # 从资产表中获取所有不重复的使用情况
@@ -212,7 +213,7 @@ async def get_usage_statuses(
 @router.get("/property-natures", response_model=list[str], summary="获取物业性质列表")
 async def get_property_natures(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
-):
+) -> list[str]:
     """获取所有物业性质列表，用于搜索筛选"""
     try:
         # 从资产表中获取所有不重复的物业性质
@@ -232,7 +233,7 @@ async def get_property_natures(
 @router.get("/ownership-statuses", response_model=list[str], summary="获取确权状态列表")
 async def get_ownership_statuses(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
-):
+) -> list[str]:
     """获取所有确权状态列表，用于搜索筛选"""
     try:
         # 从资产表中获取所有不重复的确权状态
@@ -257,7 +258,7 @@ async def get_asset(
     asset_id: str = Path(..., description="资产ID"),
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
-):
+) -> AssetResponse:
     """
     根据ID获取单个资产的详细信息
 
@@ -278,7 +279,7 @@ async def create_asset(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("asset", "create")),
     audit_logger=Depends(audit_action("asset_create", "asset")),
-):
+) -> AssetResponse:
     """
     创建新的资产记录
 
@@ -303,7 +304,7 @@ async def update_asset(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("asset", "update")),
     audit_logger=Depends(audit_action("asset_update", "asset")),
-):
+) -> AssetResponse:
     """
     更新资产信息
 
@@ -328,7 +329,7 @@ async def delete_asset(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("asset", "delete")),
     audit_logger=Depends(audit_action("asset_delete", "asset")),
-):
+) -> Response:
     """
     删除资产记录
 
@@ -350,7 +351,7 @@ async def get_asset_history(
     asset_id: str = Path(..., description="资产ID"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> dict[str, Any]:
     """
     获取资产的变更历史记录
 
