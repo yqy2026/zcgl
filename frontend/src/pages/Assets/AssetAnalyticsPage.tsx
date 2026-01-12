@@ -51,6 +51,7 @@ const AssetAnalyticsPage: React.FC = () => {
   const {
     data: analyticsResponse,
     isLoading,
+    error,
     refetch,
   } = useQuery({
     queryKey: ["asset-analytics", filters],
