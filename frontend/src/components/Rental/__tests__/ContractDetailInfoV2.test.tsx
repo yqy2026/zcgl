@@ -87,6 +87,11 @@ vi.mock('antd', () => ({
     ),
     Row: ({ children }: any) => <div data-testid="row">{children}</div>,
     Col: ({ children }: any) => <div data-testid="col">{children}</div>,
+    Typography: {
+        Text: ({ children }: any) => <span>{children}</span>,
+        Title: ({ children }: any) => <h1>{children}</h1>,
+        Paragraph: ({ children }: any) => <p>{children}</p>,
+    },
 }));
 
 // Mock icons
