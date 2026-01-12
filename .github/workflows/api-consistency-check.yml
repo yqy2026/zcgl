@@ -1,6 +1,6 @@
 name: API Consistency Check
 
-"on":
+on:
   push:
     branches: [main, develop]
   pull_request:

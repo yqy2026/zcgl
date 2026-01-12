@@ -1,6 +1,6 @@
 name: Documentation
 
-"on":
+on:
   push:
     branches: [main, develop]
     paths:
@@ -14,7 +14,7 @@ name: Documentation
       - 'docs/**'
       - 'backend/docs/**'
       - 'backend/mkdocs.yml'
-  workflow_dispatch:
+  workflow_dispatch: {}
 
 permissions:
   contents: write

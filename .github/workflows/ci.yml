@@ -1,11 +1,11 @@
 name: CI Pipeline
 
-"on":
+on:
   push:
     branches: [main, develop]
   pull_request:
     branches: [main, develop, "feature/*", "hotfix/*"]
-  workflow_dispatch:
+  workflow_dispatch: {}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
