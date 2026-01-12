@@ -4,6 +4,7 @@
 
 import re
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
@@ -20,7 +21,7 @@ class UserBase(BaseModel):
 
     @field_validator("username")
     @classmethod
-    def validate_username(cls, v):
+    def validate_username(cls, v: str) -> str:
         """验证用户名格式"""
         if not re.match(r"^[a-zA-Z0-9_-]+$", v):
             raise ValueError("用户名只能包含字母、数字、下划线和连字符")
@@ -28,7 +29,7 @@ class UserBase(BaseModel):
 
     @field_validator("full_name")
     @classmethod
-    def validate_full_name(cls, v):
+    def validate_full_name(cls, v: str) -> str:
         """验证姓名格式"""
         if not v.strip():
             raise ValueError("姓名不能为空")
@@ -45,7 +46,7 @@ class UserCreate(UserBase):
 
     @field_validator("password")
     @classmethod
-    def validate_password_strength(cls, v):
+    def validate_password_strength(cls, v: str) -> str:
         """验证密码强度"""
         if len(v) < 8:
             raise ValueError("密码长度至少8位")
@@ -78,7 +79,7 @@ class UserUpdate(BaseModel):
 
     @field_validator("full_name")
     @classmethod
-    def validate_full_name(cls, v):
+    def validate_full_name(cls, v: str | None) -> str | None:
         if v is not None:
             return v.strip()
         return v
@@ -101,7 +102,7 @@ class UserResponse(UserBase):
 
     @field_validator("role", mode="before")
     @classmethod
-    def parse_role(cls, v):
+    def parse_role(cls, v: Any) -> Any:
         """Parse role from string or enum"""
         if isinstance(v, str):
             return v
@@ -109,7 +110,7 @@ class UserResponse(UserBase):
 
     @field_validator("is_active", "is_locked", mode="before")
     @classmethod
-    def parse_boolean(cls, v):
+    def parse_boolean(cls, v: Any) -> Any:
         """Parse boolean from int or bool"""
         if isinstance(v, int):
             return bool(v)
@@ -117,7 +118,7 @@ class UserResponse(UserBase):
 
     @field_validator("last_login_at", "created_at", "updated_at", mode="before")
     @classmethod
-    def parse_datetime(cls, v):
+    def parse_datetime(cls, v: Any) -> Any:
         """Parse datetime from string or datetime object"""
         if v is None:
             return v
@@ -152,7 +153,7 @@ class TokenData(BaseModel):
 
     @field_validator("role", mode="before")
     @classmethod
-    def validate_role(cls, v):
+    def validate_role(cls, v: Any) -> Any:
         """验证角色字段，支持字符串和枚举"""
         if isinstance(v, str):
             try:
@@ -195,7 +196,7 @@ class PasswordChangeRequest(BaseModel):
 
     @field_validator("new_password")
     @classmethod
-    def validate_password_strength(cls, v):
+    def validate_password_strength(cls, v: str) -> str:
         """验证密码强度"""
         if len(v) < 8:
             raise ValueError("密码长度至少8位")
@@ -286,7 +287,7 @@ class PasswordResetConfirm(BaseModel):
 
     @field_validator("new_password")
     @classmethod
-    def validate_password_strength(cls, v):
+    def validate_password_strength(cls, v: str) -> str:
         """验证密码强度"""
         if len(v) < 8:
             raise ValueError("密码长度至少8位")

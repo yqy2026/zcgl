@@ -17,6 +17,7 @@ from typing import Any
 from sqlalchemy import create_engine, event, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.engine.interfaces import DBAPIConnection
+from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 from sqlalchemy.pool import QueuePool, StaticPool
 
@@ -345,7 +346,7 @@ def _init_globals():
 
 
 # 创建基础模型类
-Base = declarative_base()
+Base: DeclarativeMeta = declarative_base()
 
 
 def get_db():

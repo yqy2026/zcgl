@@ -4,6 +4,7 @@
 
 注意：使用延迟导入以避免在测试收集时过早初始化 Settings
 """
+
 from typing import Any
 
 
