@@ -338,10 +338,10 @@ class PDFImportService:
                     )
 
                     # 更新状态
-                    CONFIDENCE_THRESHOLD = 0.8
+                    confidence_threshold = 0.8
                     should_auto_confirm = (
                         result.get("auto_confirm")
-                        and result.get("confidence_score", 0) > CONFIDENCE_THRESHOLD
+                        and result.get("confidence_score", 0) > confidence_threshold
                     )
 
                     if should_auto_confirm:

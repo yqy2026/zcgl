@@ -160,7 +160,7 @@ try:
         NvidiaCloudOCRService as NvidiaCloudOCRService,
     )
     from .nvidia_cloud_ocr_service import (
-        extract_text_from_pdf as extract_text_from_pdf_nvidia,
+        extract_text_from_pdf as extract_text_from_pdf_nvidia,  # noqa: F401
     )
     from .nvidia_cloud_ocr_service import (
         get_nvidia_ocr_service as get_nvidia_ocr_service,
