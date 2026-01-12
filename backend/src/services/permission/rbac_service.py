@@ -97,7 +97,11 @@ class RBACService:
         if role_data.display_name and role_data.display_name != role.display_name:
             existing_role = (
                 self.db.query(Role)
-                .filter(and_(Role.display_name == role_data.display_name, Role.id != role_id))
+                .filter(
+                    and_(
+                        Role.display_name == role_data.display_name, Role.id != role_id
+                    )
+                )
                 .first()
             )
             if existing_role:
@@ -208,11 +212,15 @@ class RBACService:
 
     # ==================== 权限管理 ====================
 
-    def create_permission(self, permission_data: PermissionCreate, created_by: str) -> Permission:
+    def create_permission(
+        self, permission_data: PermissionCreate, created_by: str
+    ) -> Permission:
         """创建权限"""
         # 检查权限名称唯一性
         existing_permission = (
-            self.db.query(Permission).filter(Permission.name == permission_data.name).first()
+            self.db.query(Permission)
+            .filter(Permission.name == permission_data.name)
+            .first()
         )
         if existing_permission:
             raise BusinessLogicError("权限名称已存在")
@@ -269,14 +277,19 @@ class RBACService:
         if action:
             query = query.filter(Permission.action == action)
         if is_system_permission is not None:
-            query = query.filter(Permission.is_system_permission == is_system_permission)
+            query = query.filter(
+                Permission.is_system_permission == is_system_permission
+            )
 
         # 总数
         total = query.count()
 
         # 分页
         permissions = (
-            query.order_by(Permission.resource, Permission.action).offset(skip).limit(limit).all()
+            query.order_by(Permission.resource, Permission.action)
+            .offset(skip)
+            .limit(limit)
+            .all()
         )
 
         return permissions, total
@@ -320,7 +333,9 @@ class RBACService:
             expires_at=assignment_data.expires_at,
             reason=assignment_data.reason,
             notes=assignment_data.notes,
-            context=json.dumps(assignment_data.context) if assignment_data.context else None,
+            context=json.dumps(assignment_data.context)
+            if assignment_data.context
+            else None,
         )
 
         self.db.add(assignment)
@@ -342,7 +357,9 @@ class RBACService:
 
         return assignment
 
-    def revoke_role_from_user(self, user_id: str, role_id: str, revoked_by: str) -> bool:
+    def revoke_role_from_user(
+        self, user_id: str, role_id: str, revoked_by: str
+    ) -> bool:
         """撤销用户角色"""
         assignment = (
             self.db.query(UserRoleAssignment)
@@ -424,7 +441,9 @@ class RBACService:
             )
 
         # 检查资源权限
-        resource_permissions = self._get_user_resource_permissions(user_id, permission_request)
+        resource_permissions = self._get_user_resource_permissions(
+            user_id, permission_request
+        )
         if resource_permissions:
             return PermissionCheckResponse(
                 has_permission=True,
@@ -441,10 +460,14 @@ class RBACService:
             if self._role_has_permission(role, permission_request):
                 granted_by.append(f"role_{role.name}")
                 # 如果有权限条件，使用最严格的条件
-                role_conditions = self._get_role_permission_conditions(role, permission_request)
+                role_conditions = self._get_role_permission_conditions(
+                    role, permission_request
+                )
                 if role_conditions:
                     conditions = (
-                        role_conditions if not conditions else {**conditions, **role_conditions}
+                        role_conditions
+                        if not conditions
+                        else {**conditions, **role_conditions}
                     )
 
         return PermissionCheckResponse(
@@ -486,7 +509,9 @@ class RBACService:
         )
 
         # 计算有效权限
-        effective_permissions = self._calculate_effective_permissions(roles, resource_permissions)
+        effective_permissions = self._calculate_effective_permissions(
+            roles, resource_permissions
+        )
 
         return UserPermissionSummary(
             user_id=user_id,
@@ -505,7 +530,9 @@ class RBACService:
         """为角色分配权限"""
 
         # 清除现有权限
-        self.db.execute(role_permissions.delete().where(role_permissions.c.role_id == role_id))
+        self.db.execute(
+            role_permissions.delete().where(role_permissions.c.role_id == role_id)
+        )
 
         # 添加新权限
         for permission_id in permission_ids:
@@ -527,7 +554,8 @@ class RBACService:
                     ResourcePermission.resource_type == permission_request.resource,
                     or_(
                         ResourcePermission.resource_id.is_(None),
-                        ResourcePermission.resource_id == permission_request.resource_id,
+                        ResourcePermission.resource_id
+                        == permission_request.resource_id,
                     ),
                     ResourcePermission.is_active,
                     or_(
@@ -555,7 +583,9 @@ class RBACService:
             else None,
         }
 
-    def _role_has_permission(self, role: Role, permission_request: PermissionCheckRequest) -> bool:
+    def _role_has_permission(
+        self, role: Role, permission_request: PermissionCheckRequest
+    ) -> bool:
         """检查角色是否有权限"""
         for permission in role.permissions:
             if (
@@ -574,7 +604,9 @@ class RBACService:
                 permission.resource == permission_request.resource
                 and permission.action == permission_request.action
             ):
-                return json.loads(permission.conditions) if permission.conditions else None
+                return (
+                    json.loads(permission.conditions) if permission.conditions else None
+                )
         return None  # pragma: no cover  # Defensive: only reached if role_has_permission check is bypassed
 
     def _check_permission_level(self, permission_level: str, action: str) -> bool:
@@ -662,7 +694,9 @@ class RBACService:
     # These methods provide the interface expected by permission decorators
     # They adapt the existing check_permission method to the decorator's expected signature
 
-    async def check_user_permission(self, user_id: str, resource: str, action: str) -> bool:
+    async def check_user_permission(
+        self, user_id: str, resource: str, action: str
+    ) -> bool:
         """
         检查用户权限 - 适配器方法供装饰器使用
 
@@ -710,7 +744,9 @@ class RBACService:
         response = self.check_permission(user_id, permission_request)
         return response.has_permission
 
-    async def check_organization_access(self, user_id: str, organization_id: str) -> bool:
+    async def check_organization_access(
+        self, user_id: str, organization_id: str
+    ) -> bool:
         """
         检查组织访问权限 - 适配器方法供装饰器使用
 

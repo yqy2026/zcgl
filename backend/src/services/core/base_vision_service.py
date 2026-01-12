@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 # 自定义异常类型
 # ============================================================================
 
+
 class VisionAPIError(Exception):
     """
     Vision API 错误
@@ -31,7 +32,7 @@ class VisionAPIError(Exception):
         message: str,
         status_code: int | None = None,
         retryable: bool = False,
-        details: dict[str, Any] | None = None
+        details: dict[str, Any] | None = None,
     ):
         """
         初始化 Vision API 错误
@@ -59,16 +60,21 @@ class VisionAPIError(Exception):
         """转换为字典，用于 API 响应"""
         return {
             "error": str(self),
-            "error_code": f"HTTP_{self.status_code}" if self.status_code else "API_ERROR",
+            "error_code": f"HTTP_{self.status_code}"
+            if self.status_code
+            else "API_ERROR",
             "retryable": self.retryable,
-            "suggested_action": "Retry later" if self.retryable else "Check API credentials or configuration",
-            "details": self.details
+            "suggested_action": "Retry later"
+            if self.retryable
+            else "Check API credentials or configuration",
+            "details": self.details,
         }
 
 
 # ============================================================================
 # Vision 服务基类
 # ============================================================================
+
 
 class BaseVisionService(ABC):
     """
@@ -150,10 +156,7 @@ class BaseVisionService(ABC):
 
     @abstractmethod
     async def extract_from_images(
-        self,
-        image_paths: list[str],
-        prompt: str,
-        **kwargs
+        self, image_paths: list[str], prompt: str, **kwargs
     ) -> str:
         """
         从图像提取内容
@@ -172,6 +175,7 @@ class BaseVisionService(ABC):
 # ============================================================================
 # HTTP 错误处理工具
 # ============================================================================
+
 
 def handle_http_status_error(error: httpx.HTTPStatusError) -> VisionAPIError:
     """
@@ -221,10 +225,7 @@ def handle_http_status_error(error: httpx.HTTPStatusError) -> VisionAPIError:
         pass
 
     return VisionAPIError(
-        message=message,
-        status_code=status,
-        retryable=retryable,
-        details=details
+        message=message, status_code=status, retryable=retryable, details=details
     )
 
 
@@ -254,13 +255,14 @@ def handle_network_error(error: Exception) -> VisionAPIError:
         message=message,
         status_code=None,
         retryable=True,  # 网络错误通常可以重试
-        details={"original_error_type": error_type.__name__}
+        details={"original_error_type": error_type.__name__},
     )
 
 
 # ============================================================================
 # 验证工具
 # ============================================================================
+
 
 def validate_image_path(image_path: str) -> Path:
     """

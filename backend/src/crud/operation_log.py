@@ -117,14 +117,23 @@ class OperationLogCRUD:
         total = query.count()
 
         # 分页和排序
-        logs = query.order_by(OperationLog.created_at.desc()).offset(skip).limit(limit).all()
+        logs = (
+            query.order_by(OperationLog.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
 
         return logs, total
 
     def delete_old_logs(self, db: Session, days: int = 90) -> int:
         """删除指定天数前的日志"""
         cutoff_date = datetime.now() - timedelta(days=days)
-        deleted = db.query(OperationLog).filter(OperationLog.created_at < cutoff_date).delete()
+        deleted = (
+            db.query(OperationLog)
+            .filter(OperationLog.created_at < cutoff_date)
+            .delete()
+        )
         db.commit()
         return deleted
 

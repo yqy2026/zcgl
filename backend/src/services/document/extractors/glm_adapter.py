@@ -2,6 +2,7 @@
 GLM-4V Contract Extractor Adapter
 智谱 GLM-4V 合同提取适配器
 """
+
 import logging
 
 from ...core.zhipu_vision_service import get_zhipu_vision_service

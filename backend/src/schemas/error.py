@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 # 错误码枚举
 # ============================================================================
 
+
 class ErrorCode(str, Enum):
     """标准错误码"""
 
@@ -59,15 +60,17 @@ class ErrorCode(str, Enum):
 
 class ErrorSeverity(str, Enum):
     """错误严重程度"""
-    LOW = "low"           # 可恢复，不影响主流程
-    MEDIUM = "medium"     # 部分功能受限
-    HIGH = "high"         # 严重错误，需要人工介入
-    CRITICAL = "critical" # 系统级错误
+
+    LOW = "low"  # 可恢复，不影响主流程
+    MEDIUM = "medium"  # 部分功能受限
+    HIGH = "high"  # 严重错误，需要人工介入
+    CRITICAL = "critical"  # 系统级错误
 
 
 # ============================================================================
 # 基础错误响应
 # ============================================================================
+
 
 class ErrorResponse(BaseModel):
     """
@@ -80,7 +83,9 @@ class ErrorResponse(BaseModel):
     error_code: ErrorCode = Field(description="错误码")
     error_message: str = Field(description="错误消息")
     error_type: str | None = Field(None, description="异常类型名")
-    severity: ErrorSeverity = Field(default=ErrorSeverity.MEDIUM, description="错误严重程度")
+    severity: ErrorSeverity = Field(
+        default=ErrorSeverity.MEDIUM, description="错误严重程度"
+    )
 
     # 重试建议
     retry_suggested: bool = Field(default=False, description="是否建议重试")
@@ -111,6 +116,7 @@ class ErrorResponse(BaseModel):
 # ============================================================================
 # 详细错误响应
 # ============================================================================
+
 
 class DetailedErrorResponse(ErrorResponse):
     """
@@ -153,6 +159,7 @@ class DetailedErrorResponse(ErrorResponse):
 # 批量错误响应
 # ============================================================================
 
+
 class BatchItemError(BaseModel):
     """批量操作中的单个错误"""
 
@@ -171,7 +178,9 @@ class BatchErrorResponse(ErrorResponse):
     total_count: int = Field(description="总项目数")
     success_count: int = Field(description="成功项目数")
     failed_count: int = Field(description="失败项目数")
-    errors: list[BatchItemError] = Field(default_factory=list, description="失败项目详情")
+    errors: list[BatchItemError] = Field(
+        default_factory=list, description="失败项目详情"
+    )
 
     class Config:
         json_schema_extra = {
@@ -187,9 +196,9 @@ class BatchErrorResponse(ErrorResponse):
                         "index": 2,
                         "identifier": "file_2.pdf",
                         "error_code": "FILE_TOO_LARGE",
-                        "error_message": "File size (80MB) exceeds limit (50MB)"
+                        "error_message": "File size (80MB) exceeds limit (50MB)",
                     }
-                ]
+                ],
             }
         }
 
@@ -197,6 +206,7 @@ class BatchErrorResponse(ErrorResponse):
 # ============================================================================
 # 错误构建器
 # ============================================================================
+
 
 class ErrorBuilder:
     """
@@ -233,7 +243,8 @@ class ErrorBuilder:
             severity=ErrorSeverity.MEDIUM,
             retry_suggested=True,
             retry_after_seconds=10,
-            details=details or {"timeout_seconds": timeout_seconds, "operation": operation},
+            details=details
+            or {"timeout_seconds": timeout_seconds, "operation": operation},
         )
 
     @staticmethod
@@ -262,7 +273,8 @@ class ErrorBuilder:
             error_message=f"File size ({file_size_mb:.1f}MB) exceeds limit ({max_size_mb}MB)",
             severity=ErrorSeverity.MEDIUM,
             retry_suggested=False,
-            details=details or {
+            details=details
+            or {
                 "file_size_mb": file_size_mb,
                 "max_size_mb": max_size_mb,
             },
@@ -340,7 +352,8 @@ class ErrorBuilder:
             error_message=f"Extraction confidence ({confidence:.2f}) below threshold ({threshold:.2f})",
             severity=ErrorSeverity.MEDIUM,
             retry_suggested=True,
-            details=details or {
+            details=details
+            or {
                 "confidence": confidence,
                 "threshold": threshold,
             },
@@ -407,6 +420,7 @@ class ErrorBuilder:
 # 错误转换工具
 # ============================================================================
 
+
 def exception_to_error_response(
     exception: Exception,
     request_id: str | None = None,
@@ -455,10 +469,13 @@ def exception_to_error_response(
 # 导入 httpx（如果可用）
 try:
     import httpx
+
     httpx.TimeoutException = httpx.TimeoutException
 except ImportError:
+
     class MockTimeoutError(Exception):
         pass
+
     httpx = type("obj", (object,), {"TimeoutException": MockTimeoutError})
 
 

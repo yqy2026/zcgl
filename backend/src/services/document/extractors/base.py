@@ -2,6 +2,7 @@
 Contract Extractor Base Classes and Utilities
 合同提取器基类和工具函数
 """
+
 import json
 import logging
 import re
@@ -113,7 +114,7 @@ class BaseVisionAdapter(ContractExtractorInterface):
         max_pages: int = 10,
         batch_size: int = 3,
         dpi: int = 200,
-        **kwargs
+        **kwargs,
     ) -> dict[str, Any]:
         """
         Common extraction logic for all vision adapters.
@@ -124,7 +125,7 @@ class BaseVisionAdapter(ContractExtractorInterface):
             return {
                 "success": False,
                 "error": f"{self.api_key_env_name} not configured",
-                "extraction_method": f"{self.provider_name}_unavailable"
+                "extraction_method": f"{self.provider_name}_unavailable",
             }
 
         image_paths: list[str] = []
@@ -139,7 +140,7 @@ class BaseVisionAdapter(ContractExtractorInterface):
             all_results = []
 
             for i in range(0, total_pages, batch_size):
-                batch = image_paths[i:i + batch_size]
+                batch = image_paths[i : i + batch_size]
                 batch_num = i // batch_size + 1
 
                 logger.info(f"Processing batch {batch_num} ({len(batch)} images)")
@@ -147,18 +148,18 @@ class BaseVisionAdapter(ContractExtractorInterface):
 
                 try:
                     response = await self.vision_service.extract_from_images(
-                        image_paths=batch,
-                        prompt=prompt,
-                        temperature=0.1
+                        image_paths=batch, prompt=prompt, temperature=0.1
                     )
 
                     data = self._parse_json(response.content)
-                    all_results.append({
-                        "success": True,
-                        "data": data,
-                        "images_count": len(batch),
-                        "usage": response.usage
-                    })
+                    all_results.append(
+                        {
+                            "success": True,
+                            "data": data,
+                            "images_count": len(batch),
+                            "usage": response.usage,
+                        }
+                    )
 
                 except Exception as e:
                     logger.error(f"Batch {batch_num} failed: {e}")
@@ -167,7 +168,7 @@ class BaseVisionAdapter(ContractExtractorInterface):
                 return {
                     "success": False,
                     "error": "All batches failed to extract data",
-                    "extraction_method": f"{self.provider_name}_failed"
+                    "extraction_method": f"{self.provider_name}_failed",
                 }
 
             merged_data = self._merge_multi_page_results(all_results)
@@ -180,7 +181,7 @@ class BaseVisionAdapter(ContractExtractorInterface):
                 "extraction_method": f"vision_{self.provider_name}",
                 "pages_processed": total_pages,
                 "batches_processed": len(all_results),
-                "usage": self._aggregate_usage(all_results)
+                "usage": self._aggregate_usage(all_results),
             }
 
         except Exception as e:
@@ -188,7 +189,7 @@ class BaseVisionAdapter(ContractExtractorInterface):
             return {
                 "success": False,
                 "error": str(e),
-                "extraction_method": f"{self.provider_name}_failed"
+                "extraction_method": f"{self.provider_name}_failed",
             }
 
         finally:
@@ -207,7 +208,9 @@ class BaseVisionAdapter(ContractExtractorInterface):
 
     def _build_extraction_prompt(self, num_images: int) -> str:
         """Build extraction prompt (unified format)"""
-        pages_hint = f"\n\n注意：共{num_images}页，请分析所有页面。" if num_images > 1 else ""
+        pages_hint = (
+            f"\n\n注意：共{num_images}页，请分析所有页面。" if num_images > 1 else ""
+        )
         return self.EXTRACTION_PROMPT_TEMPLATE.format(pages_hint=pages_hint)
 
     def _merge_multi_page_results(self, results: list[dict]) -> dict:
@@ -244,7 +247,4 @@ class BaseVisionAdapter(ContractExtractorInterface):
                 total_tokens += result["usage"].get("total_tokens", 0)
             total_images += result.get("images_count", 0)
 
-        return {
-            "total_tokens": total_tokens,
-            "total_images_processed": total_images
-        }
+        return {"total_tokens": total_tokens, "total_images_processed": total_images}

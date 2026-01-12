@@ -18,6 +18,7 @@ except ImportError:
     # 回退到标准导入
     def safe_import(module_path: str, **kwargs):
         import importlib
+
         try:
             return importlib.import_module(module_path)
         except ImportError:
@@ -43,6 +44,7 @@ class OCRProvider:
         if paddleocr_available:
             try:
                 from ..document.paddleocr_service import get_paddleocr_service
+
                 self._service = get_paddleocr_service()
                 self._service_type = "paddleocr"
                 if self._service.is_available:

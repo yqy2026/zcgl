@@ -111,11 +111,16 @@ def check(frontend_dir: str, backend_dir: str, output_dir: str, severity: str):
         if severity == "high" and summary["high_severity"] > 0:
             click.echo("\n❌ 发现高严重性问题，请及时修复", err=True)
             sys.exit(1)
-        elif severity == "medium" and (summary["high_severity"] + summary["medium_severity"]) > 0:
+        elif (
+            severity == "medium"
+            and (summary["high_severity"] + summary["medium_severity"]) > 0
+        ):
             click.echo("\n⚠️ 发现中高严重性问题", err=True)
             sys.exit(1)
         elif summary["total_issues"] > 0:
-            click.echo(f"\n📄 详细报告: {os.path.join(output_dir, 'api_consistency_report.md')}")
+            click.echo(
+                f"\n📄 详细报告: {os.path.join(output_dir, 'api_consistency_report.md')}"
+            )
 
     except Exception as e:
         click.echo(f"❌ 检查失败: {e}", err=True)
@@ -184,8 +189,12 @@ def _analyze_api_quality(api_data: dict[str, Any]) -> dict[str, Any]:
             if operation.get("tags"):
                 tagged_endpoints += 1
 
-    doc_coverage = (documented_endpoints / total_endpoints * 100) if total_endpoints > 0 else 0
-    tag_coverage = (tagged_endpoints / total_endpoints * 100) if total_endpoints > 0 else 0
+    doc_coverage = (
+        (documented_endpoints / total_endpoints * 100) if total_endpoints > 0 else 0
+    )
+    tag_coverage = (
+        (tagged_endpoints / total_endpoints * 100) if total_endpoints > 0 else 0
+    )
 
     # 计算质量得分
     quality_score = int((doc_coverage + tag_coverage) / 2)

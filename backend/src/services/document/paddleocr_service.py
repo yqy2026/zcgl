@@ -19,9 +19,12 @@ except ImportError:
     # 如果核心模块不可用，回退到标准导入
     def safe_import(*args, **kwargs):
         import importlib
+
         return importlib.import_module(args[0]) if args else None
+
     class DependencyPolicy:
         STRICT = "strict"
+
 
 logger = logging.getLogger(__name__)
 
@@ -43,16 +46,19 @@ if _PADDLEOCR_MODULE is not None:
     try:
         # 优先尝试 PPStructureV3 (最新版本)
         from paddleocr import PPStructureV3 as PPStructure
+
         logger.info("使用 PPStructureV3 (最新版本)")
     except ImportError:
         try:
             # 尝试 PPStructure (标准版本)
             from paddleocr import PPStructure
+
             logger.info("使用 PPStructure (标准版本)")
         except ImportError:
             try:
                 # 尝试直接从子模块导入
                 from paddleocr.ppstructure import PPStructure
+
                 logger.info("使用 PPStructure (子模块版本)")
             except ImportError:
                 PPStructure = None
@@ -65,10 +71,7 @@ PADDLEOCR_AVAILABLE = PaddleOCR is not None
 
 if not PADDLEOCR_AVAILABLE:
     install_hint = "uv sync --extra pdf-ocr"
-    logger.warning(
-        f"PaddleOCR 未安装。PDF 处理功能将受限。"
-        f"安装方法: {install_hint}"
-    )
+    logger.warning(f"PaddleOCR 未安装。PDF 处理功能将受限。安装方法: {install_hint}")
 
 
 class PaddleOCRService:
@@ -116,7 +119,7 @@ class PaddleOCRService:
             logger.info("PP-StructureV3 引擎初始化成功")
         except Exception as e:
             # PP-StructureV3 需要额外依赖,记录警告但继续
-            print(f"CRITICAL INIT ERROR: {e}") # Force print to see in non-logged env
+            print(f"CRITICAL INIT ERROR: {e}")  # Force print to see in non-logged env
             logger.warning(f"PP-StructureV3 初始化失败 (需要 paddlex[ocr]): {e}")
             self._structure_engine = None
 
@@ -173,7 +176,7 @@ class PaddleOCRService:
                 return {
                     "success": False,
                     "error": "PP-Structure Engine not initialized (Check logs for init failure)",
-                    "structure": []
+                    "structure": [],
                 }
 
             # 调用 PP-StructureV3 处理

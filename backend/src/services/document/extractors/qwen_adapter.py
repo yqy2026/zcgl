@@ -2,6 +2,7 @@
 Qwen-VL Contract Extractor Adapter
 阿里通义千问 Qwen-VL 合同提取适配器
 """
+
 import logging
 
 from ...core.qwen_vision_service import get_qwen_vision_service

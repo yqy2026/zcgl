@@ -5,6 +5,7 @@ PDF分析器 - 检测PDF是扫描件还是数字版
 Used for smart routing between text and vision extraction methods.
 用于智能路由选择文本或视觉提取方式。
 """
+
 import logging
 from pathlib import Path
 
@@ -13,6 +14,7 @@ logger = logging.getLogger(__name__)
 # PyMuPDF import with graceful fallback
 try:
     import fitz  # PyMuPDF
+
     PYMUPDF_AVAILABLE = True
 except ImportError:
     logger.warning("PyMuPDF not installed. Run: pip install pymupdf")
@@ -43,7 +45,7 @@ def analyze_pdf(pdf_path: str) -> dict:
             "text_ratio": 0,
             "page_count": 0,
             "has_images": True,
-            "recommendation": "vision"
+            "recommendation": "vision",
         }
 
     pdf_path = Path(pdf_path)
@@ -82,7 +84,9 @@ def analyze_pdf(pdf_path: str) -> dict:
         # - If more than 50% of pages have extractable text (>50 chars) → likely digital
         # - If very few text chars but has images → likely scanned
         text_ratio = pages_with_text / pages_to_check if pages_to_check > 0 else 0
-        avg_chars_per_page = total_text_chars / pages_to_check if pages_to_check > 0 else 0
+        avg_chars_per_page = (
+            total_text_chars / pages_to_check if pages_to_check > 0 else 0
+        )
 
         # Scanned PDF typically has very little extractable text
         # Digital PDF typically has >100 chars per page
@@ -101,7 +105,7 @@ def analyze_pdf(pdf_path: str) -> dict:
             "page_count": page_count,
             "has_images": total_images > 0,
             "total_images": total_images,
-            "recommendation": recommendation
+            "recommendation": recommendation,
         }
 
         logger.info(f"PDF analysis: {result}")
@@ -116,7 +120,7 @@ def analyze_pdf(pdf_path: str) -> dict:
             "page_count": 0,
             "has_images": True,
             "recommendation": "vision",
-            "error": str(e)
+            "error": str(e),
         }
 
 

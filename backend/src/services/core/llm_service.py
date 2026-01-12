@@ -22,8 +22,10 @@ logger = logging.getLogger(__name__)
 # 数据模型
 # ============================================================================
 
+
 class LLMResponse(BaseModel):
     """LLM 响应模型"""
+
     content: str
     raw_response: Any = None
     usage: dict[str, Any] = {}
@@ -33,6 +35,7 @@ class LLMResponse(BaseModel):
 # ============================================================================
 # LLM 服务接口
 # ============================================================================
+
 
 class LLMServiceInterface(ABC):
     """
@@ -74,6 +77,7 @@ class LLMServiceInterface(ABC):
 # 通用 OpenAI 兼容服务
 # ============================================================================
 
+
 class BaseOpenAILLM(LLMServiceInterface):
     """
     基础 OpenAI 兼容 LLM 服务
@@ -100,7 +104,7 @@ class BaseOpenAILLM(LLMServiceInterface):
             provider: 提供商枚举
         """
         self._api_key = api_key
-        self._base_url = base_url.rstrip('/')
+        self._base_url = base_url.rstrip("/")
         self._model = model
         self._timeout = timeout
         self._provider = provider
@@ -119,7 +123,7 @@ class BaseOpenAILLM(LLMServiceInterface):
         """发送聊天完成请求"""
         headers = {
             "Authorization": f"Bearer {self._api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
 
         payload = {
@@ -137,9 +141,7 @@ class BaseOpenAILLM(LLMServiceInterface):
         try:
             async with httpx.AsyncClient(timeout=self._timeout) as client:
                 response = await client.post(
-                    f"{self._base_url}/chat/completions",
-                    json=payload,
-                    headers=headers
+                    f"{self._base_url}/chat/completions", json=payload, headers=headers
                 )
                 response.raise_for_status()
                 data = response.json()
@@ -162,6 +164,7 @@ class BaseOpenAILLM(LLMServiceInterface):
 # ============================================================================
 # 服务工厂
 # ============================================================================
+
 
 class LLMServiceFactory:
     """
@@ -219,7 +222,9 @@ class LLMServiceFactory:
         return service_class(**config)
 
     @classmethod
-    def create_from_env(cls, provider: LLMProvider | None = None) -> LLMServiceInterface:
+    def create_from_env(
+        cls, provider: LLMProvider | None = None
+    ) -> LLMServiceInterface:
         """
         从环境变量创建 LLM 服务实例
 
@@ -249,7 +254,9 @@ class LLMServiceFactory:
         """创建智谱 GLM 服务"""
         return BaseOpenAILLM(
             api_key=os.getenv("ZHIPU_API_KEY", os.getenv("LLM_API_KEY", "")),
-            base_url=os.getenv("ZHIPU_API_BASE", "https://open.bigmodel.cn/api/paas/v4"),
+            base_url=os.getenv(
+                "ZHIPU_API_BASE", "https://open.bigmodel.cn/api/paas/v4"
+            ),
             model=os.getenv("ZHIPU_MODEL", "glm-4v"),
             timeout=int(os.getenv("LLM_TIMEOUT", "30")),
             provider=LLMProvider.GLM,
@@ -260,7 +267,10 @@ class LLMServiceFactory:
         """创建通义千问服务"""
         return BaseOpenAILLM(
             api_key=os.getenv("DASHSCOPE_API_KEY", os.getenv("LLM_API_KEY", "")),
-            base_url=os.getenv("DASHSCOPE_API_BASE", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
+            base_url=os.getenv(
+                "DASHSCOPE_API_BASE",
+                "https://dashscope.aliyuncs.com/compatible-mode/v1",
+            ),
             model=os.getenv("DASHSCOPE_MODEL", "qwen-vl-max"),
             timeout=int(os.getenv("LLM_TIMEOUT", "30")),
             provider=LLMProvider.QWEN,
@@ -282,6 +292,7 @@ class LLMServiceFactory:
 # 向后兼容函数（逐步废弃）
 # ============================================================================
 
+
 class LLMService(BaseOpenAILLM):
     """
     兼容类 - 保持向后兼容
@@ -300,12 +311,17 @@ class LLMService(BaseOpenAILLM):
 
         # 根据提供商设置默认配置
         if provider == LLMProvider.GLM:
-            base_url = os.getenv("ZHIPU_API_BASE", "https://open.bigmodel.cn/api/paas/v4")
+            base_url = os.getenv(
+                "ZHIPU_API_BASE", "https://open.bigmodel.cn/api/paas/v4"
+            )
             model = os.getenv("ZHIPU_MODEL", "glm-4v")
             api_key = os.getenv("ZHIPU_API_KEY", api_key)
             timeout = int(os.getenv("LLM_TIMEOUT", "30"))
         elif provider == LLMProvider.QWEN:
-            base_url = os.getenv("DASHSCOPE_API_BASE", "https://dashscope.aliyuncs.com/compatible-mode/v1")
+            base_url = os.getenv(
+                "DASHSCOPE_API_BASE",
+                "https://dashscope.aliyuncs.com/compatible-mode/v1",
+            )
             model = os.getenv("DASHSCOPE_MODEL", "qwen-vl-max")
             api_key = os.getenv("DASHSCOPE_API_KEY", api_key)
             timeout = int(os.getenv("LLM_TIMEOUT", "30"))
@@ -344,6 +360,7 @@ def get_llm_service() -> LLMService:
 # 便捷函数
 # ============================================================================
 
+
 def create_llm_service(provider: LLMProvider | None = None) -> LLMServiceInterface:
     """
     创建 LLM 服务实例（推荐使用）
@@ -355,4 +372,3 @@ def create_llm_service(provider: LLMProvider | None = None) -> LLMServiceInterfa
         LLMServiceInterface: 服务实例
     """
     return LLMServiceFactory.create_from_env(provider)
-

@@ -4,6 +4,7 @@ Contract Extractor Factory
 
 使用字典映射替代 if-elif 链，支持统一的 LLMProvider 枚举
 """
+
 import logging
 
 from src.core.config import settings
@@ -40,8 +41,7 @@ class ExtractorFactory:
 
     @classmethod
     def get_extractor(
-        cls,
-        provider: str | LLMProvider | None = None
+        cls, provider: str | LLMProvider | None = None
     ) -> ContractExtractorInterface:
         """
         获取 LLM 提取器实例
@@ -84,7 +84,15 @@ class ExtractorFactory:
         """
         return {
             "glm": ["glm-4v", "glm", "zhipu", "智谱", "chatglm"],
-            "qwen": ["qwen-vl-max", "qwen-vl-plus", "qwen", "alibaba", "阿里", "通义", "dashscope"],
+            "qwen": [
+                "qwen-vl-max",
+                "qwen-vl-plus",
+                "qwen",
+                "alibaba",
+                "阿里",
+                "通义",
+                "dashscope",
+            ],
             "deepseek": ["deepseek-vl", "deepseek", "深度求索"],
         }
 
@@ -98,7 +106,7 @@ _llm_extractor_singleton: ContractExtractorInterface | None = None
 
 
 def get_llm_extractor(
-    force_provider: str | LLMProvider | None = None
+    force_provider: str | LLMProvider | None = None,
 ) -> ContractExtractorInterface:
     """
     获取 LLM 提取器实例（推荐使用，单例模式）
@@ -159,4 +167,3 @@ _PROVIDER_ALIASES = {
     "deepseek": LLMProvider.DEEPSEEK,
     "深度求索": LLMProvider.DEEPSEEK,
 }
-

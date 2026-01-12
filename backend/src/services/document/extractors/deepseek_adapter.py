@@ -2,6 +2,7 @@
 DeepSeek-VL Contract Extractor Adapter
 深度求索 DeepSeek-VL 合同提取适配器
 """
+
 import logging
 
 from ...core.deepseek_vision_service import get_deepseek_vision_service

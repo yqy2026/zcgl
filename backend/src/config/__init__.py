@@ -41,7 +41,9 @@ class Settings:
         "SECRET_KEY",
         "emergency-test-secret-key-for-development-only-change-in-production",
     )
-    if not SECRET_KEY or SECRET_KEY in ["EMERGENCY-ONLY-REPLACE-WITH-ENV-SECRET-KEY-NOW"]:
+    if not SECRET_KEY or SECRET_KEY in [
+        "EMERGENCY-ONLY-REPLACE-WITH-ENV-SECRET-KEY-NOW"
+    ]:
         print(
             "Warning: Using default or missing SECRET_KEY. Please set a proper environment variable in production."
         )
@@ -69,7 +71,9 @@ class Settings:
     EXCEL_BATCH_SIZE: int = int(os.getenv("EXCEL_BATCH_SIZE", "100"))
 
     # JWT配置
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "120"))
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(
+        os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "120")
+    )
     REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
 
     # 密码策略
@@ -91,7 +95,9 @@ class Settings:
 
     # OCR配置
     OCR_DEFAULT_ENGINE: str = os.getenv("OCR_DEFAULT_ENGINE", "paddleocr")
-    OCR_HIGH_ACCURACY_THRESHOLD: float = float(os.getenv("OCR_HIGH_ACCURACY_THRESHOLD", "0.8"))
+    OCR_HIGH_ACCURACY_THRESHOLD: float = float(
+        os.getenv("OCR_HIGH_ACCURACY_THRESHOLD", "0.8")
+    )
 
 
 # 创建全局设置实例
@@ -134,7 +140,9 @@ async def close_redis():
 class RedisTaskStore:
     """Redis任务状态存储"""
 
-    async def set_task_status(self, task_id: str, status: dict, expire_seconds: int = 3600):
+    async def set_task_status(
+        self, task_id: str, status: dict, expire_seconds: int = 3600
+    ):
         """设置任务状态"""
         if redis_client:
             try:

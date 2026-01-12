@@ -204,7 +204,9 @@ def cache_key_builder(func_name: str, **kwargs) -> str:
     """构建缓存键"""
     # 过滤掉不需要包含在缓存键中的参数
     filtered_kwargs = {
-        k: v for k, v in kwargs.items() if k not in ["db", "current_user", "skip", "limit"]
+        k: v
+        for k, v in kwargs.items()
+        if k not in ["db", "current_user", "skip", "limit"]
     }
 
     # 将参数转换为字符串

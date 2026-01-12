@@ -141,7 +141,9 @@ class AdaptiveRateLimiter:
         if is_suspicious:
             self.suspicious_ips[key] += 1
             # 如果违规次数过多，临时封禁
-            if self.suspicious_ips[key] >= self.config.get("max_suspicious_requests", 5):
+            if self.suspicious_ips[key] >= self.config.get(
+                "max_suspicious_requests", 5
+            ):
                 self._block_ip(key)
                 return False
 

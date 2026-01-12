@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 try:
     import redis
+
     REDIS_AVAILABLE = True
 except ImportError:
     REDIS_AVAILABLE = False
@@ -301,7 +302,11 @@ class ProcessingTracker:
                 self.fail_step(
                     step=step,
                     error_message=result.error or "Extraction failed",
-                    details={"error_code": result.error_code.value if result.error_code else None},
+                    details={
+                        "error_code": result.error_code.value
+                        if result.error_code
+                        else None
+                    },
                 )
 
             return True
@@ -387,7 +392,9 @@ def track_processing_step(
                 # 完成步骤
                 if isinstance(result, ExtractionResult):
                     if result.success:
-                        tracker.complete_step(step, details={"result": result.model_dump()})
+                        tracker.complete_step(
+                            step, details={"result": result.model_dump()}
+                        )
                     else:
                         tracker.fail_step(step, result.error or "Processing failed")
                 else:
@@ -428,6 +435,7 @@ class ProgressCallback:
 # ============================================================================
 # 批处理状态追踪器 (支持 Redis 持久化)
 # ============================================================================
+
 
 class BatchStatusTracker:
     """
@@ -474,9 +482,13 @@ class BatchStatusTracker:
                 # 测试连接
                 self._redis_client.ping()
                 self._use_redis = True
-                logger.info(f"BatchStatusTracker: Using Redis at {redis_host}:{redis_port}")
+                logger.info(
+                    f"BatchStatusTracker: Using Redis at {redis_host}:{redis_port}"
+                )
             except Exception as e:
-                logger.warning(f"Redis connection failed: {e}, falling back to memory storage")
+                logger.warning(
+                    f"Redis connection failed: {e}, falling back to memory storage"
+                )
                 self._redis_client = None
         else:
             logger.info("Redis not available, using in-memory batch status storage")
@@ -491,7 +503,7 @@ class BatchStatusTracker:
         total: int,
         user_id: int | None = None,
         organization_id: int | None = None,
-        **metadata
+        **metadata,
     ) -> bool:
         """
         创建批处理记录
@@ -516,8 +528,10 @@ class BatchStatusTracker:
             "organization_id": str(organization_id) if organization_id else "",
             "created_at": datetime.now().isoformat(),
             "updated_at": datetime.now().isoformat(),
-            **{k: str(v) if not isinstance(v, (str, int, float, bool)) else v
-               for k, v in metadata.items()},
+            **{
+                k: str(v) if not isinstance(v, (str, int, float, bool)) else v
+                for k, v in metadata.items()
+            },
         }
 
         if self._use_redis and self._redis_client:
@@ -528,14 +542,19 @@ class BatchStatusTracker:
                 logger.debug(f"Batch {batch_id} created in Redis")
                 return True
             except Exception as e:
-                logger.error(f"Failed to create batch in Redis: {e}, falling back to memory")
+                logger.error(
+                    f"Failed to create batch in Redis: {e}, falling back to memory"
+                )
                 self._use_redis = False
 
         # 回退到内存存储
-        self._fallback_store[batch_id] = {**batch_data, **{
-            k: int(v) if isinstance(v, str) and v.isdigit() else v
-            for k, v in batch_data.items()
-        }}
+        self._fallback_store[batch_id] = {
+            **batch_data,
+            **{
+                k: int(v) if isinstance(v, str) and v.isdigit() else v
+                for k, v in batch_data.items()
+            },
+        }
         return True
 
     def update_progress(
@@ -574,7 +593,9 @@ class BatchStatusTracker:
                 if status:
                     self._redis_client.hset(key, "status", status)
                     if status == "completed":
-                        self._redis_client.hset(key, "completed_at", datetime.now().isoformat())
+                        self._redis_client.hset(
+                            key, "completed_at", datetime.now().isoformat()
+                        )
 
                 self._redis_client.hset(key, "updated_at", updates["updated_at"])
                 return True
@@ -595,7 +616,9 @@ class BatchStatusTracker:
             if status:
                 self._fallback_store[batch_id]["status"] = status
                 if status == "completed":
-                    self._fallback_store[batch_id]["completed_at"] = datetime.now().isoformat()
+                    self._fallback_store[batch_id]["completed_at"] = (
+                        datetime.now().isoformat()
+                    )
             self._fallback_store[batch_id]["updated_at"] = datetime.now().isoformat()
             return True
         return False
@@ -663,9 +686,7 @@ class BatchStatusTracker:
         return self._fallback_store.pop(batch_id, None) is not None
 
     def list_batches(
-        self,
-        status_filter: str | None = None,
-        limit: int = 100
+        self, status_filter: str | None = None, limit: int = 100
     ) -> list[dict[str, Any]]:
         """
         列出批处理记录
@@ -685,12 +706,15 @@ class BatchStatusTracker:
                     keys.append(key)
 
                 batches = []
-                for key in keys[:limit * 2]:  # 多获取一些用于过滤
+                for key in keys[: limit * 2]:  # 多获取一些用于过滤
                     data = self._redis_client.hgetall(key)
                     if not data:
                         continue
                     # Redis 返回的值都是字符串，转换数字类型
-                    batch = {k: int(v) if isinstance(v, str) and v.isdigit() else v for k, v in data.items()}
+                    batch = {
+                        k: int(v) if isinstance(v, str) and v.isdigit() else v
+                        for k, v in data.items()
+                    }
                     if status_filter is None or batch.get("status") == status_filter:
                         batches.append(batch)
                     if len(batches) >= limit:

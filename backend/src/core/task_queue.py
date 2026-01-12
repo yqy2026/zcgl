@@ -222,8 +222,12 @@ class TaskQueue:
     def get_stats(self) -> dict[str, Any]:
         """获取队列统计"""
         pending = sum(1 for t in self.tasks.values() if t.status == TaskStatus.PENDING)
-        processing = sum(1 for t in self.tasks.values() if t.status == TaskStatus.PROCESSING)
-        completed = sum(1 for t in self.tasks.values() if t.status == TaskStatus.COMPLETED)
+        processing = sum(
+            1 for t in self.tasks.values() if t.status == TaskStatus.PROCESSING
+        )
+        completed = sum(
+            1 for t in self.tasks.values() if t.status == TaskStatus.COMPLETED
+        )
         failed = sum(1 for t in self.tasks.values() if t.status == TaskStatus.FAILED)
 
         return {
@@ -249,7 +253,9 @@ def get_task_queue() -> TaskQueue:
     return _task_queue
 
 
-def async_task(priority: TaskPriority = TaskPriority.NORMAL, max_retries: int = 3) -> Callable:
+def async_task(
+    priority: TaskPriority = TaskPriority.NORMAL, max_retries: int = 3
+) -> Callable:
     """
     异步任务装饰器
 

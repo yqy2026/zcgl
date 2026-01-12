@@ -97,7 +97,9 @@ class SortOrder:
 class QuerySort:
     """查询排序"""
 
-    def __init__(self, field: str, order: str = SortOrder.ASC, model_class: type | None = None):
+    def __init__(
+        self, field: str, order: str = SortOrder.ASC, model_class: type | None = None
+    ):
         self.field = field
         self.order = order
         self.model_class = model_class
@@ -216,7 +218,9 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
         Returns:
             记录总数
         """
-        query = self._build_query(db=db, filters=filters, include_deleted=include_deleted)
+        query = self._build_query(
+            db=db, filters=filters, include_deleted=include_deleted
+        )
 
         return query.count()
 
@@ -240,7 +244,9 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
         Returns:
             创建的模型实例
         """
-        obj_in_data = obj_in.dict(exclude_unset=True) if hasattr(obj_in, "dict") else obj_in
+        obj_in_data = (
+            obj_in.dict(exclude_unset=True) if hasattr(obj_in, "dict") else obj_in
+        )
 
         # 添加创建者信息
         if created_by and hasattr(self.model, "created_by"):
@@ -293,7 +299,9 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
         Returns:
             更新后的模型实例
         """
-        update_data = obj_in if isinstance(obj_in, dict) else obj_in.dict(exclude_unset=True)
+        update_data = (
+            obj_in if isinstance(obj_in, dict) else obj_in.dict(exclude_unset=True)
+        )
 
         # 添加更新者信息
         if updated_by and hasattr(self.model, "updated_by"):
@@ -366,7 +374,9 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
         logger.info(f"Deleted {self.model.__name__} with ID: {id}")
         return obj
 
-    def restore(self, db: Session, *, id: Any, restored_by: str | None = None) -> ModelType | None:
+    def restore(
+        self, db: Session, *, id: Any, restored_by: str | None = None
+    ) -> ModelType | None:
         """
         恢复软删除的记录
 
@@ -460,7 +470,9 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
             模型实例或None
         """
         if not hasattr(self.model, field_name):
-            raise ValueError(f"Model {self.model.__name__} does not have field {field_name}")
+            raise ValueError(
+                f"Model {self.model.__name__} does not have field {field_name}"
+            )
 
         filter_obj = QueryFilter(field_name, FilterOperator.EQ, value)
         results = self.get_multi(
@@ -509,7 +521,9 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
         """
         db_objects = []
         for obj_in in objects_in:
-            obj_in_data = obj_in.dict(exclude_unset=True) if hasattr(obj_in, "dict") else obj_in
+            obj_in_data = (
+                obj_in.dict(exclude_unset=True) if hasattr(obj_in, "dict") else obj_in
+            )
 
             if created_by and hasattr(self.model, "created_by"):
                 obj_in_data["created_by"] = created_by

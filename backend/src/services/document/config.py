@@ -13,15 +13,17 @@ from pydantic import BaseModel, Field, field_validator
 # LLM 提供商枚举 - 统一命名
 # ============================================================================
 
+
 class LLMProvider(str, Enum):
     """
     LLM 提供商枚举 - 统一命名规范
 
     标准化所有 LLM 提供商的名称，避免不一致的命名问题
     """
-    QWEN = "qwen"        # 通义千问 (阿里云 DashScope)
+
+    QWEN = "qwen"  # 通义千问 (阿里云 DashScope)
     DEEPSEEK = "deepseek"  # DeepSeek-VL
-    GLM = "glm"          # 智谱 GLM (GLM-4V)
+    GLM = "glm"  # 智谱 GLM (GLM-4V)
 
     @classmethod
     def normalize(cls, value: str) -> "LLMProvider":
@@ -204,7 +206,10 @@ class OCRConfig(BaseModel):
             language=os.getenv("OCR_LANG", "ch"),
             use_gpu=os.getenv("OCR_USE_GPU", "false").lower() == "true",
             enable_mkldnn=os.getenv("OCR_ENABLE_MKLDNN", "true").lower() == "true",
-            use_textline_orientation=os.getenv("OCR_USE_TEXTLINE_ORIENTATION", "true").lower() == "true",
+            use_textline_orientation=os.getenv(
+                "OCR_USE_TEXTLINE_ORIENTATION", "true"
+            ).lower()
+            == "true",
             det_db_thresh=float(os.getenv("OCR_DET_DB_THRESH", "0.3")),
             drop_score=float(os.getenv("OCR_DROP_SCORE", "0.5")),
             vision_timeout=int(os.getenv("OCR_VISION_TIMEOUT", "180")),
@@ -327,11 +332,17 @@ class ExtractionConfig(BaseModel):
             llm_provider = LLMProvider.GLM  # 默认值
 
         return cls(
-            confidence_threshold=float(os.getenv("EXTRACTION_CONFIDENCE_THRESHOLD", "0.7")),
+            confidence_threshold=float(
+                os.getenv("EXTRACTION_CONFIDENCE_THRESHOLD", "0.7")
+            ),
             max_retries=int(os.getenv("EXTRACTION_MAX_RETRIES", "3")),
             force_method=os.getenv("EXTRACTION_FORCE_METHOD"),
-            enable_regex_validation=os.getenv("EXTRACTION_ENABLE_REGEX", "true").lower() == "true",
-            enable_llm_fallback=os.getenv("EXTRACTION_ENABLE_LLM_FALLBACK", "true").lower() == "true",
+            enable_regex_validation=os.getenv("EXTRACTION_ENABLE_REGEX", "true").lower()
+            == "true",
+            enable_llm_fallback=os.getenv(
+                "EXTRACTION_ENABLE_LLM_FALLBACK", "true"
+            ).lower()
+            == "true",
             llm_provider=llm_provider,
             llm_timeout=int(os.getenv("EXTRACTION_LLM_TIMEOUT", "30")),
             llm_max_tokens=int(os.getenv("EXTRACTION_LLM_MAX_TOKENS", "1500")),
@@ -421,6 +432,7 @@ def set_config(config: PDFImportConfig) -> None:
 # 便捷访问函数
 # ============================================================================
 
+
 def get_ocr_config() -> OCRConfig:
     """获取 OCR 配置"""
     return get_config().ocr
@@ -444,6 +456,7 @@ def should_save_intermediate() -> bool:
 # ============================================================================
 # 配置验证
 # ============================================================================
+
 
 def validate_config(config: PDFImportConfig) -> list[str]:
     """
@@ -480,7 +493,9 @@ def validate_config(config: PDFImportConfig) -> list[str]:
             import paddle
 
             if not paddle.is_compiled_with_cuda():
-                warnings.append("use_gpu=True but CUDA is not available in PaddlePaddle")
+                warnings.append(
+                    "use_gpu=True but CUDA is not available in PaddlePaddle"
+                )
         except ImportError:
             warnings.append("use_gpu=True but PaddlePaddle is not installed")
 
@@ -490,6 +505,7 @@ def validate_config(config: PDFImportConfig) -> list[str]:
 # ============================================================================
 # 配置导出（用于调试）
 # ============================================================================
+
 
 def export_config_dict(config: PDFImportConfig | None = None) -> dict:
     """

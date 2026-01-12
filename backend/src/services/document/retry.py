@@ -22,12 +22,12 @@ try:
         stop_after_attempt,
         wait_exponential,
     )
+
     TENACITY_AVAILABLE = True
 except ImportError:
     TENACITY_AVAILABLE = False
     logging.warning(
-        "tenacity 库未安装，将使用简化版重试机制。"
-        "建议安装: uv sync --extra pdf-ocr"
+        "tenacity 库未安装，将使用简化版重试机制。建议安装: uv sync --extra pdf-ocr"
     )
 
 
@@ -89,11 +89,15 @@ if TENACITY_AVAILABLE:
             async def call_llm_api():
                 return await client.chat.completions.create(...)
         """
+
         def is_retryable_error(exception: Exception) -> bool:
             """判断是否为可重试的 API 错误"""
             if isinstance(exception, httpx.HTTPStatusError):
                 # 重试 5xx 服务器错误和 429 限流
-                return exception.response.status_code >= 500 or exception.response.status_code == 429
+                return (
+                    exception.response.status_code >= 500
+                    or exception.response.status_code == 429
+                )
             return False
 
         return retry(
@@ -157,7 +161,11 @@ else:
                 for attempt in range(max_attempts):
                     try:
                         return await func(*args, **kwargs)
-                    except (httpx.TimeoutException, httpx.NetworkError, httpx.RemoteProtocolError) as e:
+                    except (
+                        httpx.TimeoutException,
+                        httpx.NetworkError,
+                        httpx.RemoteProtocolError,
+                    ) as e:
                         last_exception = e
                         if attempt < max_attempts - 1:
                             logger.warning(
@@ -206,7 +214,11 @@ else:
                             wait_time = min(wait_time * 2, wait_max)
                             continue
                         last_exception = e
-                    except (httpx.TimeoutException, httpx.NetworkError, httpx.RemoteProtocolError) as e:
+                    except (
+                        httpx.TimeoutException,
+                        httpx.NetworkError,
+                        httpx.RemoteProtocolError,
+                    ) as e:
                         last_exception = e
                         if attempt < max_attempts - 1:
                             logger.warning(
@@ -232,7 +244,9 @@ else:
         timeout: float = 180.0,
     ):
         """简化版视觉 API 重试装饰器"""
-        return retry_on_network_error(max_attempts=max_attempts, wait_min=2.0, wait_max=30.0)
+        return retry_on_network_error(
+            max_attempts=max_attempts, wait_min=2.0, wait_max=30.0
+        )
 
 
 # ============================================================================
@@ -281,11 +295,11 @@ async def retry_async_call[T](
         except Exception as e:
             last_exception = e
             is_network_error = isinstance(
-                e, (httpx.TimeoutException, httpx.NetworkError, httpx.RemoteProtocolError)
+                e,
+                (httpx.TimeoutException, httpx.NetworkError, httpx.RemoteProtocolError),
             )
-            is_retryable_api = (
-                isinstance(e, httpx.HTTPStatusError)
-                and (e.response.status_code >= 500 or e.response.status_code == 429)
+            is_retryable_api = isinstance(e, httpx.HTTPStatusError) and (
+                e.response.status_code >= 500 or e.response.status_code == 429
             )
 
             should_retry = is_network_error or is_retryable_api

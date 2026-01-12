@@ -5,6 +5,7 @@ PDF转图片转换器
 Converts PDF pages to PNG images for multimodal LLM processing
 将PDF页面转换为PNG图片，用于多模态LLM处理
 """
+
 import logging
 import tempfile
 from pathlib import Path
@@ -14,6 +15,7 @@ logger = logging.getLogger(__name__)
 # PyMuPDF import with graceful fallback
 try:
     import fitz  # PyMuPDF
+
     PYMUPDF_AVAILABLE = True
 except ImportError:
     logger.warning("PyMuPDF not installed. Run: pip install pymupdf")
@@ -26,7 +28,7 @@ def pdf_to_images(
     output_dir: str | None = None,
     dpi: int = 200,
     max_pages: int = 10,
-    image_format: str = "png"
+    image_format: str = "png",
 ) -> list[str]:
     """
     Convert PDF pages to PNG images.

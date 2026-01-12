@@ -8,6 +8,7 @@ Supports direct image input for contract information extraction
 DashScope API Documentation:
 https://help.aliyun.com/zh/model-studio/developer-reference/qwen-vl-api
 """
+
 import base64
 import logging
 import os
@@ -22,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 class QwenVisionResponse(BaseModel):
     """Response from Qwen vision model"""
+
     content: str
     raw_response: Any
     usage: dict[str, Any] = {}
@@ -51,7 +53,9 @@ class QwenVisionService:
         self.timeout = int(os.getenv("QWEN_TIMEOUT", "120"))
 
         if not self.api_key:
-            logger.warning("DASHSCOPE_API_KEY not set, Qwen vision service will be disabled")
+            logger.warning(
+                "DASHSCOPE_API_KEY not set, Qwen vision service will be disabled"
+            )
         else:
             logger.info(f"QwenVisionService initialized with model: {self.model}")
 
@@ -86,7 +90,7 @@ class QwenVisionService:
         image_paths: list[str],
         prompt: str,
         temperature: float = 0.1,
-        max_tokens: int = 4096
+        max_tokens: int = 4096,
     ) -> QwenVisionResponse:
         """
         Send images to Qwen-VL for contract extraction.
@@ -113,34 +117,26 @@ class QwenVisionService:
         for img_path in image_paths:
             img_base64 = self._encode_image(img_path)
             mime_type = self._get_mime_type(img_path)
-            content.append({
-                "type": "image_url",
-                "image_url": {
-                    "url": f"data:{mime_type};base64,{img_base64}"
+            content.append(
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:{mime_type};base64,{img_base64}"},
                 }
-            })
+            )
 
         # Add text prompt
-        content.append({
-            "type": "text",
-            "text": prompt
-        })
+        content.append({"type": "text", "text": prompt})
 
         headers = {
             "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
 
         payload = {
             "model": self.model,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": content
-                }
-            ],
+            "messages": [{"role": "user", "content": content}],
             "temperature": temperature,
-            "max_tokens": max_tokens
+            "max_tokens": max_tokens,
         }
 
         logger.info(f"Sending {len(image_paths)} images to {self.model}")
@@ -148,9 +144,7 @@ class QwenVisionService:
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.post(
-                    f"{self.base_url}/chat/completions",
-                    json=payload,
-                    headers=headers
+                    f"{self.base_url}/chat/completions", json=payload, headers=headers
                 )
                 response.raise_for_status()
                 data = response.json()
@@ -161,13 +155,13 @@ class QwenVisionService:
                 logger.info(f"Qwen vision extraction complete. Tokens used: {usage}")
 
                 return QwenVisionResponse(
-                    content=result_content,
-                    raw_response=data,
-                    usage=usage
+                    content=result_content, raw_response=data, usage=usage
                 )
 
         except httpx.HTTPStatusError as e:
-            logger.error(f"DashScope API error: {e.response.status_code} - {e.response.text}")
+            logger.error(
+                f"DashScope API error: {e.response.status_code} - {e.response.text}"
+            )
             raise
         except Exception as e:
             logger.error(f"Qwen vision extraction failed: {e}")

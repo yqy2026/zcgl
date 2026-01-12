@@ -87,7 +87,9 @@ class ApplicationMetrics(BaseModel):
 class HealthStatus(BaseModel):
     """健康状态模型"""
 
-    status: str = Field(..., pattern="^(healthy|degraded|unhealthy)$", description="健康状态")
+    status: str = Field(
+        ..., pattern="^(healthy|degraded|unhealthy)$", description="健康状态"
+    )
     timestamp: datetime = Field(..., description="检查时间")
     components: dict[str, dict[str, Any]] = Field(..., description="组件状态详情")
     overall_score: float = Field(..., ge=0, le=100, description="总体健康评分")
@@ -336,7 +338,8 @@ def calculate_overall_health_score(components: dict[str, dict[str, Any]]) -> flo
     status_scores = {"healthy": 100, "warning": 70, "degraded": 50, "unhealthy": 0}
 
     total_score = sum(
-        status_scores.get(comp.get("status", "unhealthy"), 0) for comp in components.values()
+        status_scores.get(comp.get("status", "unhealthy"), 0)
+        for comp in components.values()
     )
 
     return round(total_score / len(components), 2)
@@ -450,7 +453,9 @@ def check_performance_alerts(
     # 清理过期的告警 (保留1小时)
     cutoff_time = datetime.now() - timedelta(hours=1)
     _active_alerts[:] = [
-        alert for alert in _active_alerts if alert.timestamp > cutoff_time or not alert.resolved
+        alert
+        for alert in _active_alerts
+        if alert.timestamp > cutoff_time or not alert.resolved
     ]
 
     return alerts
@@ -525,7 +530,9 @@ async def get_health_status(current_user: User = Depends(get_current_user)):
     )
 
 
-@router.get("/metrics/history", response_model=list[SystemMetrics], summary="获取系统指标历史")
+@router.get(
+    "/metrics/history", response_model=list[SystemMetrics], summary="获取系统指标历史"
+)
 @require_permission("system_monitoring", "read")
 async def get_metrics_history(
     hours: int = Query(default=24, ge=1, le=168, description="查询历史时间范围(小时)"),
@@ -623,7 +630,9 @@ async def get_monitoring_dashboard(current_user: User = Depends(get_current_user
         },
         "summary": {
             "total_alerts": len(_active_alerts),
-            "critical_alerts": len([a for a in _active_alerts if a.level == "critical"]),
+            "critical_alerts": len(
+                [a for a in _active_alerts if a.level == "critical"]
+            ),
             "warning_alerts": len([a for a in _active_alerts if a.level == "warning"]),
             "health_score": health_status.overall_score,
             "last_updated": datetime.now().isoformat(),
@@ -721,7 +730,9 @@ async def get_database_health_metrics(current_user: User = Depends(get_current_u
             slow_queries=metrics.slow_queries,
             avg_response_time=metrics.avg_response_time,
             pool_hit_rate=pool_status.get("pool_hit_rate", 0),
-            database_size_mb=health_check["checks"].get("database_size", {}).get("size_mb", 0),
+            database_size_mb=health_check["checks"]
+            .get("database_size", {})
+            .get("size_mb", 0),
             health_score=health_score,
         )
 

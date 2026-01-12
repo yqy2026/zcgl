@@ -40,9 +40,7 @@ class LLMContractExtractor:
         pass
 
     async def extract_smart(
-        self,
-        pdf_path: str,
-        force_method: str | None = None
+        self, pdf_path: str, force_method: str | None = None
     ) -> dict[str, Any]:
         """
         Smart extraction routing.
@@ -55,8 +53,10 @@ class LLMContractExtractor:
             logger.error(f"Smart extraction failed via adapter: {e}")
             return {"success": False, "error": str(e)}
 
+
 # Singleton getter (keeps existing API compatible)
 _llm_extractor = None
+
 
 def get_llm_contract_extractor() -> LLMContractExtractor:
     global _llm_extractor

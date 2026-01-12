@@ -5,6 +5,7 @@ Zhipu AI GLM-4.6V Multimodal Vision Service
 支持图片直接输入进行合同信息提取
 Supports direct image input for contract information extraction
 """
+
 import logging
 import os
 from typing import Any
@@ -24,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 class VisionResponse(BaseModel):
     """Response from vision model"""
+
     content: str
     raw_response: Any
     usage: dict[str, Any] = {}
@@ -57,7 +59,9 @@ class ZhipuVisionService(BaseVisionService):
         self.timeout = int(os.getenv("ZHIPU_TIMEOUT", "120"))
 
         if not self.api_key:
-            logger.warning("ZHIPU_API_KEY (or LLM_API_KEY) not set, vision service will be disabled")
+            logger.warning(
+                "ZHIPU_API_KEY (or LLM_API_KEY) not set, vision service will be disabled"
+            )
         else:
             logger.info(f"ZhipuVisionService initialized with model: {self.model}")
 
@@ -71,7 +75,7 @@ class ZhipuVisionService(BaseVisionService):
         image_paths: list[str],
         prompt: str,
         temperature: float = 0.1,
-        max_tokens: int = 4096
+        max_tokens: int = 4096,
     ) -> str:
         """
         Send images to GLM-4V for contract extraction.
@@ -98,33 +102,25 @@ class ZhipuVisionService(BaseVisionService):
         for img_path in image_paths:
             img_base64 = self._encode_image(img_path)
             mime_type = self._get_mime_type(img_path)
-            content.append({
-                "type": "image_url",
-                "image_url": {
-                    "url": f"data:{mime_type};base64,{img_base64}"
+            content.append(
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:{mime_type};base64,{img_base64}"},
                 }
-            })
+            )
 
         # Add text prompt
-        content.append({
-            "type": "text",
-            "text": prompt
-        })
+        content.append({"type": "text", "text": prompt})
 
         headers = {
             "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
         # Note: GLM-4V does NOT support max_tokens parameter (causes error 1210)
         payload = {
             "model": self.model,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": content
-                }
-            ],
-            "temperature": temperature
+            "messages": [{"role": "user", "content": content}],
+            "temperature": temperature,
         }
 
         logger.info(f"Sending {len(image_paths)} images to {self.model}")
@@ -138,9 +134,7 @@ class ZhipuVisionService(BaseVisionService):
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.post(
-                    f"{self.base_url}/chat/completions",
-                    json=payload,
-                    headers=headers
+                    f"{self.base_url}/chat/completions", json=payload, headers=headers
                 )
                 response.raise_for_status()
                 data = response.json()
@@ -160,17 +154,22 @@ class ZhipuVisionService(BaseVisionService):
                 extra={
                     "error_id": "ZHIPU_API_ERROR",
                     "status_code": vision_error.status_code,
-                    "retryable": vision_error.retryable
-                }
+                    "retryable": vision_error.retryable,
+                },
             )
             raise vision_error from e
 
-        except (httpx.NetworkError, httpx.TimeoutError, ConnectionError, TimeoutError) as e:
+        except (
+            httpx.NetworkError,
+            httpx.TimeoutError,
+            ConnectionError,
+            TimeoutError,
+        ) as e:
             # 使用增强的网络错误处理
             vision_error = handle_network_error(e)
             logger.error(
                 f"Zhipu network error: {vision_error}",
-                extra={"error_id": "ZHIPU_NETWORK_ERROR"}
+                extra={"error_id": "ZHIPU_NETWORK_ERROR"},
             )
             raise vision_error from e
 
@@ -178,12 +177,10 @@ class ZhipuVisionService(BaseVisionService):
             logger.error(
                 f"Vision extraction failed: {e}",
                 exc_info=True,
-                extra={"error_id": "ZHIPU_UNKNOWN_ERROR"}
+                extra={"error_id": "ZHIPU_UNKNOWN_ERROR"},
             )
             raise VisionAPIError(
-                message=f"Unexpected error: {str(e)}",
-                status_code=None,
-                retryable=False
+                message=f"Unexpected error: {str(e)}", status_code=None, retryable=False
             ) from e
 
 

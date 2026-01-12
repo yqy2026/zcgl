@@ -14,25 +14,28 @@ from pydantic import BaseModel, Field, model_validator
 
 class ExtractionMethod(str, Enum):
     """提取方法枚举"""
-    LLM_HYBRID = "llm_hybrid"           # LLM 文本提取
-    VISION_GLM4V = "vision_glm4v"       # GLM-4V 视觉提取
-    REGEX_PATTERN = "regex_pattern"     # 正则表达式提取
-    SMART_AUTO = "smart_auto"           # 智能自动检测
-    OCR_PADDLE = "ocr_paddle"           # PaddleOCR 提取
-    NVIDIA_CLOUD = "nvidia_cloud"       # NVIDIA Cloud OCR
-    UNKNOWN = "unknown"                 # 未知方法
+
+    LLM_HYBRID = "llm_hybrid"  # LLM 文本提取
+    VISION_GLM4V = "vision_glm4v"  # GLM-4V 视觉提取
+    REGEX_PATTERN = "regex_pattern"  # 正则表达式提取
+    SMART_AUTO = "smart_auto"  # 智能自动检测
+    OCR_PADDLE = "ocr_paddle"  # PaddleOCR 提取
+    NVIDIA_CLOUD = "nvidia_cloud"  # NVIDIA Cloud OCR
+    UNKNOWN = "unknown"  # 未知方法
 
 
 class ExtractionStatus(str, Enum):
     """提取状态枚举"""
+
     SUCCESS = "success"
     FAILED = "failed"
-    PARTIAL = "partial"                 # 部分成功
-    SKIPPED = "skipped"                 # 已跳过
+    PARTIAL = "partial"  # 部分成功
+    SKIPPED = "skipped"  # 已跳过
 
 
 class ErrorCode(str, Enum):
     """标准错误码"""
+
     # 网络相关
     NETWORK_ERROR = "NETWORK_ERROR"
     API_TIMEOUT = "API_TIMEOUT"
@@ -68,6 +71,7 @@ class ExtractionResult(BaseModel):
     统一的提取结果格式
     所有提取器必须返回此格式
     """
+
     # 基础状态
     success: bool
     status: ExtractionStatus = ExtractionStatus.SUCCESS
@@ -118,9 +122,7 @@ class ExtractionResult(BaseModel):
                 pass  # 可以改为强制要求：raise ValueError("success=True 时 extracted_fields 不能为空")
         else:
             if self.error is None:
-                raise ValueError(
-                    "success=False 时必须提供 error 信息"
-                )
+                raise ValueError("success=False 时必须提供 error 信息")
             # 根据错误自动设置状态
             if self.status == ExtractionStatus.SUCCESS:
                 self.status = ExtractionStatus.FAILED
@@ -134,7 +136,7 @@ class ProgressCallback:
     def __call__(
         self,
         progress: int,  # 0-100
-        message: str,   # 状态消息
+        message: str,  # 状态消息
         stage: str | None = None,  # 阶段标识
     ) -> None:
         """
@@ -160,11 +162,7 @@ class ContractExtractorInterface(ABC):
     """
 
     @abstractmethod
-    async def extract(
-        self,
-        source: str,
-        **kwargs
-    ) -> ExtractionResult:
+    async def extract(self, source: str, **kwargs) -> ExtractionResult:
         """
         从源文本中提取合同信息
 
@@ -230,7 +228,7 @@ class BatchExtractorInterface(ContractExtractorInterface):
         self,
         sources: list[str],
         progress_callback: ProgressCallbackType | None = None,
-        **kwargs
+        **kwargs,
     ) -> list[ExtractionResult]:
         """
         批量提取合同信息
@@ -255,6 +253,7 @@ class ExtractionConfig(BaseModel):
     提取配置模型
     统一管理各种提取参数
     """
+
     # 基础配置
     confidence_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
     timeout_seconds: int = Field(default=180, ge=1, le=600)
@@ -296,9 +295,7 @@ class ExtractorFactory:
 
     @classmethod
     def register(
-        cls,
-        name: str,
-        extractor_class: type[ContractExtractorInterface]
+        cls, name: str, extractor_class: type[ContractExtractorInterface]
     ) -> None:
         """
         注册提取器
@@ -310,11 +307,7 @@ class ExtractorFactory:
         cls._extractors[name] = extractor_class
 
     @classmethod
-    def create(
-        cls,
-        name: str,
-        **kwargs
-    ) -> ContractExtractorInterface | None:
+    def create(cls, name: str, **kwargs) -> ContractExtractorInterface | None:
         """
         创建提取器实例
 
@@ -347,7 +340,7 @@ def create_error_result(
     error_code: ErrorCode = ErrorCode.INTERNAL_ERROR,
     method: ExtractionMethod = ExtractionMethod.UNKNOWN,
     retry_suggested: bool = False,
-    details: dict[str, Any] | None = None
+    details: dict[str, Any] | None = None,
 ) -> ExtractionResult:
     """
     创建错误结果
@@ -369,7 +362,7 @@ def create_error_result(
         error_code=error_code,
         extraction_method=method,
         retry_suggested=retry_suggested,
-        error_details=details
+        error_details=details,
     )
 
 
@@ -377,7 +370,7 @@ def create_success_result(
     extracted_fields: dict[str, Any],
     method: ExtractionMethod,
     confidence: float = 0.8,
-    **kwargs
+    **kwargs,
 ) -> ExtractionResult:
     """
     创建成功结果
@@ -397,5 +390,5 @@ def create_success_result(
         extracted_fields=extracted_fields,
         extraction_method=method,
         confidence=confidence,
-        **kwargs
+        **kwargs,
     )

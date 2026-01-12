@@ -264,7 +264,9 @@ async def upload_pdf_file(
     retry_count = 0
 
     # 验证文件类型
-    if file.content_type != "application/pdf" and not file.filename.lower().endswith(".pdf"):
+    if file.content_type != "application/pdf" and not file.filename.lower().endswith(
+        ".pdf"
+    ):
         if enhanced_error_handler:
             error_result = enhanced_error_handler.handle_error(
                 ValueError("不支持的文件类型"),
@@ -395,7 +397,9 @@ async def upload_pdf_file(
                     "processing_options": processing_options,
                     "step": "pdf_processing",
                 },
-                "processing_timeout" if "timeout" in str(e).lower() else "unknown_error",
+                "processing_timeout"
+                if "timeout" in str(e).lower()
+                else "unknown_error",
                 retry_count,
             )
 
@@ -454,7 +458,9 @@ async def upload_pdf_file(
         raise
     except Exception as e:
         logger.error(f"PDF上传处理失败: {str(e)}")
-        return FileUploadResponse(success=False, message=f"处理失败: {str(e)}", error=str(e))
+        return FileUploadResponse(
+            success=False, message=f"处理失败: {str(e)}", error=str(e)
+        )
 
 
 @router.get("/progress/{session_id}", response_model=SessionProgressResponse)
@@ -499,9 +505,13 @@ async def get_active_sessions(
                     "session_id": session.session_id,
                     "status": session.status.value,
                     "progress": session.progress_percentage,
-                    "current_step": session.current_step.value if session.current_step else None,
+                    "current_step": session.current_step.value
+                    if session.current_step
+                    else None,
                     "created_at": session.created_at.isoformat(),
-                    "updated_at": session.updated_at.isoformat() if session.updated_at else None,
+                    "updated_at": session.updated_at.isoformat()
+                    if session.updated_at
+                    else None,
                     "file_name": session.original_filename,
                     "file_size": session.file_size,
                     "error_message": session.error_message,
@@ -519,7 +529,9 @@ async def get_active_sessions(
         import traceback
 
         traceback.print_exc()
-        return ActiveSessionResponse(success=False, active_sessions=[], total_count=0, error=str(e))
+        return ActiveSessionResponse(
+            success=False, active_sessions=[], total_count=0, error=str(e)
+        )
 
 
 @router.get("/sessions/history")
@@ -604,7 +616,9 @@ async def confirm_import(
 
     except Exception as e:
         logger.error(f"确认导入失败: {str(e)}")
-        return ConfirmImportResponse(success=False, message=f"导入失败: {str(e)}", error=str(e))
+        return ConfirmImportResponse(
+            success=False, message=f"导入失败: {str(e)}", error=str(e)
+        )
 
 
 @router.delete("/session/{session_id}")
@@ -726,9 +740,9 @@ async def get_quality_assessment(session_id: str, db: Session = Depends(get_db))
                 "quality_level": quality_assessment.get("quality_level", {}).get(
                     "description", "Unknown"
                 ),
-                "total_fields_expected": quality_assessment.get("field_analysis", {}).get(
-                    "total_expected_fields", 0
-                ),
+                "total_fields_expected": quality_assessment.get(
+                    "field_analysis", {}
+                ).get("total_expected_fields", 0),
                 "fields_extracted": quality_assessment.get("field_analysis", {}).get(
                     "extracted_fields_count", 0
                 ),

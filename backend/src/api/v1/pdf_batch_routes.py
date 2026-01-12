@@ -51,8 +51,10 @@ router = APIRouter(prefix="/pdf-import/batch", tags=["PDF批量导入"])
 # 批处理数据模型
 # ============================================================================
 
+
 class BatchStatus:
     """批处理状态枚举"""
+
     PENDING = "pending"
     PROCESSING = "processing"
     COMPLETED = "completed"
@@ -65,6 +67,7 @@ class BatchStatus:
 # 辅助函数
 # ============================================================================
 
+
 def _generate_batch_id() -> str:
     """生成唯一的批处理 ID"""
     return f"batch-{uuid.uuid4().hex[:12]}"
@@ -76,11 +79,7 @@ def _get_batch_status(batch_id: str) -> dict[str, Any] | None:
     return tracker.get_status(batch_id)
 
 
-def _update_batch_status(
-    batch_id: str,
-    status: str,
-    **updates
-) -> None:
+def _update_batch_status(batch_id: str, status: str, **updates) -> None:
     """更新批处理状态"""
     tracker = _get_batch_tracker()
     tracker.update_progress(batch_id, status=status)
@@ -110,6 +109,7 @@ def _calculate_batch_progress(batch_id: str) -> dict[str, Any]:
 # ============================================================================
 # API 端点
 # ============================================================================
+
 
 @router.post("/upload")
 async def batch_upload_pdfs(
@@ -156,7 +156,7 @@ async def batch_upload_pdfs(
     if len(files) > MAX_BATCH_SIZE:
         raise HTTPException(
             status_code=400,
-            detail=f"文件数量超过限制，最多支持 {MAX_BATCH_SIZE} 个文件"
+            detail=f"文件数量超过限制，最多支持 {MAX_BATCH_SIZE} 个文件",
         )
 
     # 验证并发限制
@@ -165,7 +165,7 @@ async def batch_upload_pdfs(
     if stats["active_batches"] >= MAX_CONCURRENT_BATCHES:
         raise HTTPException(
             status_code=503,
-            detail=f"系统繁忙，同时最多支持 {MAX_CONCURRENT_BATCHES} 个批处理任务"
+            detail=f"系统繁忙，同时最多支持 {MAX_CONCURRENT_BATCHES} 个批处理任务",
         )
 
     # 生成批处理 ID
@@ -194,8 +194,7 @@ async def batch_upload_pdfs(
 
     if not valid_files:
         raise HTTPException(
-            status_code=400,
-            detail="没有有效的 PDF 文件（请检查文件格式和大小）"
+            status_code=400, detail="没有有效的 PDF 文件（请检查文件格式和大小）"
         )
 
     # 初始化批处理状态（使用 BatchStatusTracker）
@@ -256,8 +255,7 @@ async def batch_upload_pdfs(
             session_ids.append(session_id)
 
             logger.info(
-                f"Batch {batch_id}: Started processing {file.filename} "
-                f"-> {session_id}"
+                f"Batch {batch_id}: Started processing {file.filename} -> {session_id}"
             )
 
         except Exception as e:
@@ -334,13 +332,15 @@ async def get_batch_status(
             .first()
         )
         if session:
-            session_statuses.append({
-                "session_id": session_id,
-                "file_name": session.original_filename,
-                "status": session.status.value,
-                "progress": session.progress_percentage,
-                "error": session.error_message,
-            })
+            session_statuses.append(
+                {
+                    "session_id": session_id,
+                    "file_name": session.original_filename,
+                    "status": session.status.value,
+                    "progress": session.progress_percentage,
+                    "error": session.error_message,
+                }
+            )
 
     # 计算进度
     progress_info = _calculate_batch_progress(batch_id)
@@ -399,15 +399,17 @@ async def list_batches(
     # 简化返回数据
     result_batches = []
     for batch in batches:
-        result_batches.append({
-            "batch_id": batch["batch_id"],
-            "status": batch["status"],
-            "total": int(batch.get("total", 0)),
-            "completed": int(batch.get("processed", 0)),
-            "failed": int(batch.get("failed", 0)),
-            "created_at": batch.get("created_at"),
-            "updated_at": batch.get("updated_at"),
-        })
+        result_batches.append(
+            {
+                "batch_id": batch["batch_id"],
+                "status": batch["status"],
+                "total": int(batch.get("total", 0)),
+                "completed": int(batch.get("processed", 0)),
+                "failed": int(batch.get("failed", 0)),
+                "created_at": batch.get("created_at"),
+                "updated_at": batch.get("updated_at"),
+            }
+        )
 
     return success_response(
         data={"batches": result_batches, "count": len(result_batches)},
@@ -439,10 +441,13 @@ async def cancel_batch(
     if not batch:
         raise HTTPException(status_code=404, detail=f"批处理任务不存在: {batch_id}")
 
-    if batch["status"] in [BatchStatus.COMPLETED, BatchStatus.FAILED, BatchStatus.CANCELLED]:
+    if batch["status"] in [
+        BatchStatus.COMPLETED,
+        BatchStatus.FAILED,
+        BatchStatus.CANCELLED,
+    ]:
         raise HTTPException(
-            status_code=400,
-            detail="批处理任务已完成或已取消，无法取消"
+            status_code=400, detail="批处理任务已完成或已取消，无法取消"
         )
 
     # 取消所有处理中的会话
@@ -459,7 +464,7 @@ async def cancel_batch(
             await service.cancel_processing(
                 db=db,
                 session_id=session_id,
-                reason=f"Batch {batch_id} cancelled by user"
+                reason=f"Batch {batch_id} cancelled by user",
             )
             cancelled_count += 1
 
@@ -504,6 +509,7 @@ async def cleanup_completed_batches(
 # 后台任务
 # ============================================================================
 
+
 def _handle_task_exception(task: asyncio.Task, batch_id: str) -> None:
     """
     处理后台任务异常
@@ -515,15 +521,15 @@ def _handle_task_exception(task: asyncio.Task, batch_id: str) -> None:
         if exception:
             logger.error(
                 f"Batch {batch_id} monitoring task failed: {exception}",
-                exc_info=exception
+                exc_info=exception,
             )
+
             # 更新批处理状态为失败
             async def _update_failed_status():
                 _update_batch_status(
-                    batch_id,
-                    BatchStatus.FAILED,
-                    error_message=str(exception)
+                    batch_id, BatchStatus.FAILED, error_message=str(exception)
                 )
+
             # 在新的事件循环中运行（如果当前没有运行中的循环）
             try:
                 asyncio.get_running_loop()
@@ -597,8 +603,7 @@ async def _monitor_batch_progress(batch_id: str, db: Session) -> None:
             )
             tracker.set_status(batch_id, final_status)
             logger.info(
-                f"Batch {batch_id} completed: "
-                f"{completed} succeeded, {failed} failed"
+                f"Batch {batch_id} completed: {completed} succeeded, {failed} failed"
             )
             break
 
@@ -609,6 +614,7 @@ async def _monitor_batch_progress(batch_id: str, db: Session) -> None:
 # ============================================================================
 # 健康检查
 # ============================================================================
+
 
 @router.get("/health")
 async def batch_health_check() -> dict[str, Any]:
@@ -629,7 +635,8 @@ async def batch_health_check() -> dict[str, Any]:
             },
             "current_usage": {
                 "active_batches": stats.get("active_batches", 0),
-                "available_slots": MAX_CONCURRENT_BATCHES - stats.get("active_batches", 0),
+                "available_slots": MAX_CONCURRENT_BATCHES
+                - stats.get("active_batches", 0),
                 "total_stored_batches": stats.get("total_batches", 0),
             },
         },

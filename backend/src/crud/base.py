@@ -115,7 +115,9 @@ class CRUDBase[
     def create(self, db: Session, *, obj_in: CreateSchemaType, **kwargs) -> ModelType:
         """创建新记录（支持事务回滚和错误处理）"""
         try:
-            obj_in_data = obj_in.model_dump() if hasattr(obj_in, "model_dump") else obj_in
+            obj_in_data = (
+                obj_in.model_dump() if hasattr(obj_in, "model_dump") else obj_in
+            )
 
             obj_in_data.update(kwargs)
             db_obj = self.model(**obj_in_data)
@@ -144,7 +146,9 @@ class CRUDBase[
         """更新记录（支持事务回滚和缓存清理）"""
         try:
             obj_data = db_obj.__dict__
-            update_data = obj_in if isinstance(obj_in, dict) else obj_in.dict(exclude_unset=True)
+            update_data = (
+                obj_in if isinstance(obj_in, dict) else obj_in.dict(exclude_unset=True)
+            )
 
             for field in obj_data:
                 if field in update_data:
@@ -184,7 +188,9 @@ class CRUDBase[
                 del self._cache[cache_key]
             self._clear_cache_pattern("get_multi")
 
-            logger.info(f"Successfully deleted {self.model.__tablename__} record with id: {id}")
+            logger.info(
+                f"Successfully deleted {self.model.__tablename__} record with id: {id}"
+            )
             return obj
         except ValueError:
             raise
@@ -234,7 +240,9 @@ class CRUDBase[
         except Exception as e:  # pragma: no cover
             raise self._handle_database_error(e, "高级查询")  # pragma: no cover
 
-    def bulk_create(self, db: Session, *, objects_in: list[CreateSchemaType]) -> list[ModelType]:
+    def bulk_create(
+        self, db: Session, *, objects_in: list[CreateSchemaType]
+    ) -> list[ModelType]:
         """批量创建记录"""
         try:
             db_objects = []

@@ -20,16 +20,16 @@ logger = logging.getLogger(__name__)
 
 # 支持的日期格式（按优先级排序）
 DATE_FORMATS = [
-    "%Y-%m-%d",           # 2024-01-15
-    "%Y/%m/%d",           # 2024/01/15
-    "%Y.%m.%d",           # 2024.01.15
-    "%Y年%m月%d日",        # 2024年01月15日
-    "%Y年%m月%d",         # 2024年1月15日
-    "%d/%m/%Y",           # 15/01/2024
-    "%m/%d/%Y",           # 01/15/2024
-    "%d.%m.%Y",           # 15.01.2024
-    "%d-%m-%Y",           # 15-01-2024
-    "%Y%m%d",             # 20240115
+    "%Y-%m-%d",  # 2024-01-15
+    "%Y/%m/%d",  # 2024/01/15
+    "%Y.%m.%d",  # 2024.01.15
+    "%Y年%m月%d日",  # 2024年01月15日
+    "%Y年%m月%d",  # 2024年1月15日
+    "%d/%m/%Y",  # 15/01/2024
+    "%m/%d/%Y",  # 01/15/2024
+    "%d.%m.%Y",  # 15.01.2024
+    "%d-%m-%Y",  # 15-01-2024
+    "%Y%m%d",  # 20240115
 ]
 
 
@@ -64,7 +64,7 @@ def parse_contract_date(date_str: str | None) -> datetime | None:
     # 移除常见的日期前缀
     for prefix in ["日期", "签订日期", "签约日期", "时间:", "日期:"]:
         if date_str.startswith(prefix):
-            date_str = date_str[len(prefix):].strip()
+            date_str = date_str[len(prefix) :].strip()
 
     # 尝试各种格式
     for fmt in DATE_FORMATS:
@@ -93,10 +93,7 @@ def format_date(date: datetime | None, output_format: str = "%Y-%m-%d") -> str:
     return date.strftime(output_format)
 
 
-def validate_date_range(
-    start_date: datetime | None,
-    end_date: datetime | None
-) -> bool:
+def validate_date_range(start_date: datetime | None, end_date: datetime | None) -> bool:
     """
     验证日期范围有效性
 
@@ -116,6 +113,7 @@ def validate_date_range(
 # ============================================================================
 # 金额解析工具
 # ============================================================================
+
 
 def parse_amount(amount_str: str | None) -> float | None:
     """
@@ -200,10 +198,9 @@ def format_amount(amount: float | None, unit: str = "元") -> str:
 # 字段验证工具
 # ============================================================================
 
+
 def validate_field_value(
-    field_name: str,
-    value: Any,
-    rules: dict[str, Any] | None = None
+    field_name: str, value: Any, rules: dict[str, Any] | None = None
 ) -> tuple[bool, str | None]:
     """
     验证字段值
@@ -320,6 +317,7 @@ def _validate_rent_amount(value: str) -> tuple[bool, str | None]:
 # JSON 工具
 # ============================================================================
 
+
 def safe_parse_json(json_str: str) -> dict | None:
     """
     安全解析 JSON
@@ -362,6 +360,7 @@ def extract_json_from_response(response: str) -> dict | None:
 # ============================================================================
 # 文本清理工具
 # ============================================================================
+
 
 def clean_text(text: str | None, remove_extra_spaces: bool = True) -> str:
     """
@@ -406,6 +405,7 @@ def normalize_whitespace(text: str) -> str:
 # ============================================================================
 # 类型转换工具
 # ============================================================================
+
 
 def to_bool(value: Any) -> bool:
     """
@@ -492,6 +492,7 @@ def to_float(value: Any, default: float = 0.0) -> float:
 # 列表/数组工具
 # ============================================================================
 
+
 def merge_dicts(*dicts: dict[str, Any]) -> dict[str, Any]:
     """
     合并多个字典（后面的覆盖前面的）
@@ -538,6 +539,7 @@ def compact_list(lst: list) -> list:
 # ============================================================================
 # 调试工具
 # ============================================================================
+
 
 def truncate_for_log(text: str, max_length: int = 200) -> str:
     """

@@ -8,6 +8,7 @@ Supports direct image input for contract information extraction
 API Documentation:
 https://platform.deepseek.com/api-reference
 """
+
 import base64
 import logging
 import os
@@ -22,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 class DeepSeekVisionResponse(BaseModel):
     """Response from DeepSeek vision model"""
+
     content: str
     raw_response: Any
     usage: dict[str, Any] = {}
@@ -54,7 +56,9 @@ class DeepSeekVisionService:
         self.timeout = int(os.getenv("DEEPSEEK_TIMEOUT", "120"))
 
         if not self.api_key:
-            logger.warning("DEEPSEEK_API_KEY not set, DeepSeek vision service will be disabled")
+            logger.warning(
+                "DEEPSEEK_API_KEY not set, DeepSeek vision service will be disabled"
+            )
         else:
             logger.info(f"DeepSeekVisionService initialized with model: {self.model}")
 
@@ -89,7 +93,7 @@ class DeepSeekVisionService:
         image_paths: list[str],
         prompt: str,
         temperature: float = 0.1,
-        max_tokens: int = 4096
+        max_tokens: int = 4096,
     ) -> DeepSeekVisionResponse:
         """
         Send images to DeepSeek-VL for contract extraction.
@@ -112,33 +116,25 @@ class DeepSeekVisionService:
         for img_path in image_paths:
             img_base64 = self._encode_image(img_path)
             mime_type = self._get_mime_type(img_path)
-            content.append({
-                "type": "image_url",
-                "image_url": {
-                    "url": f"data:{mime_type};base64,{img_base64}"
+            content.append(
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:{mime_type};base64,{img_base64}"},
                 }
-            })
+            )
 
-        content.append({
-            "type": "text",
-            "text": prompt
-        })
+        content.append({"type": "text", "text": prompt})
 
         headers = {
             "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
 
         payload = {
             "model": self.model,
-            "messages": [
-                {
-                    "role": "user",
-                    "content": content
-                }
-            ],
+            "messages": [{"role": "user", "content": content}],
             "temperature": temperature,
-            "max_tokens": max_tokens
+            "max_tokens": max_tokens,
         }
 
         logger.info(f"Sending {len(image_paths)} images to {self.model}")
@@ -146,9 +142,7 @@ class DeepSeekVisionService:
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.post(
-                    f"{self.base_url}/chat/completions",
-                    json=payload,
-                    headers=headers
+                    f"{self.base_url}/chat/completions", json=payload, headers=headers
                 )
                 response.raise_for_status()
                 data = response.json()
@@ -159,13 +153,13 @@ class DeepSeekVisionService:
                 logger.info(f"DeepSeek vision extraction complete. Tokens: {usage}")
 
                 return DeepSeekVisionResponse(
-                    content=result_content,
-                    raw_response=data,
-                    usage=usage
+                    content=result_content, raw_response=data, usage=usage
                 )
 
         except httpx.HTTPStatusError as e:
-            logger.error(f"DeepSeek API error: {e.response.status_code} - {e.response.text}")
+            logger.error(
+                f"DeepSeek API error: {e.response.status_code} - {e.response.text}"
+            )
             raise
         except Exception as e:
             logger.error(f"DeepSeek vision extraction failed: {e}")

@@ -31,6 +31,7 @@ try:
     from .pdf_batch_routes import router as pdf_batch_router
 except ImportError as e:
     import logging
+
     logging.warning(f"PDF batch routes not available: {e}")
     pdf_batch_router = None
 

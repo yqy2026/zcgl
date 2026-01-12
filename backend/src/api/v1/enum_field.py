@@ -94,7 +94,9 @@ async def get_enum_field_statistics(db: Session = Depends(get_db)):
     type_stats = type_crud.get_statistics()
 
     # 获取枚举值统计
-    total_values = db.query(EnumFieldValue).filter(not EnumFieldValue.is_deleted).count()
+    total_values = (
+        db.query(EnumFieldValue).filter(not EnumFieldValue.is_deleted).count()
+    )
     active_values = (
         db.query(EnumFieldValue)
         .filter(and_(not EnumFieldValue.is_deleted, EnumFieldValue.is_active))
@@ -127,7 +129,9 @@ async def get_enum_field_type(
 
 
 @router.post("/types", response_model=EnumFieldTypeResponse)
-async def create_enum_field_type(enum_type: EnumFieldTypeCreate, db: Session = Depends(get_db)):
+async def create_enum_field_type(
+    enum_type: EnumFieldTypeCreate, db: Session = Depends(get_db)
+):
     """创建枚举字段类型"""
     crud = get_enum_field_type_crud(db)
 
@@ -287,7 +291,9 @@ async def update_enum_field_value(
 
     # 如果更新了值，检查是否重复
     if enum_value.value and enum_value.value != db_enum_value.value:
-        existing = crud.get_by_type_and_value(db_enum_value.enum_type_id, enum_value.value)
+        existing = crud.get_by_type_and_value(
+            db_enum_value.enum_type_id, enum_value.value
+        )
         if existing and existing.id != value_id:
             raise HTTPException(status_code=400, detail=f"值 {enum_value.value} 已存在")
 
@@ -316,7 +322,9 @@ async def delete_enum_field_value(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.post("/types/{type_id}/values/batch", response_model=list[EnumFieldValueResponse])
+@router.post(
+    "/types/{type_id}/values/batch", response_model=list[EnumFieldValueResponse]
+)
 async def batch_create_enum_field_values(
     type_id: str, batch_data: EnumFieldBatchCreate, db: Session = Depends(get_db)
 ):
@@ -330,7 +338,9 @@ async def batch_create_enum_field_values(
         raise HTTPException(status_code=404, detail="枚举类型不存在")
 
     try:
-        created_values = crud.batch_create(type_id, batch_data.values, batch_data.created_by)
+        created_values = crud.batch_create(
+            type_id, batch_data.values, batch_data.created_by
+        )
         return created_values
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -353,7 +363,9 @@ async def get_enum_field_usage(
 
 
 @router.post("/usage", response_model=EnumFieldUsageResponse)
-async def create_enum_field_usage(usage: EnumFieldUsageCreate, db: Session = Depends(get_db)):
+async def create_enum_field_usage(
+    usage: EnumFieldUsageCreate, db: Session = Depends(get_db)
+):
     """创建枚举字段使用记录"""
     crud = get_enum_field_usage_crud(db)
 
