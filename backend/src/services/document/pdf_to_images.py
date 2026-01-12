@@ -14,8 +14,7 @@ logger = logging.getLogger(__name__)
 
 # PyMuPDF import with graceful fallback
 try:
-    import fitz  # PyMuPDF
-
+    import fitz  # type: ignore
     PYMUPDF_AVAILABLE = True
 except ImportError:
     logger.warning("PyMuPDF not installed. Run: pip install pymupdf")
@@ -24,8 +23,8 @@ except ImportError:
 
 
 def pdf_to_images(
-    pdf_path: str,
-    output_dir: str | None = None,
+    pdf_path: str | Path,
+    output_dir: str | Path | None = None,
     dpi: int = 200,
     max_pages: int = 10,
     image_format: str = "png",
@@ -51,15 +50,19 @@ def pdf_to_images(
     if not PYMUPDF_AVAILABLE:
         raise ImportError("PyMuPDF is required. Install with: pip install pymupdf")
 
-    pdf_path = Path(pdf_path)
-    if not pdf_path.exists():
-        raise FileNotFoundError(f"PDF not found: {pdf_path}")
+    # Ensure pdf_path is a Path object
+    pdf_path_obj: Path = Path(pdf_path)
+    if not pdf_path_obj.exists():
+        raise FileNotFoundError(f"PDF not found: {pdf_path_obj}")
 
     # Create output directory
+    output_dir_obj: Path
     if output_dir is None:
-        output_dir = tempfile.mkdtemp(prefix="pdf_images_")
-    output_dir = Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
+        output_dir_str = tempfile.mkdtemp(prefix="pdf_images_")
+        output_dir_obj = Path(output_dir_str)
+    else:
+        output_dir_obj = Path(output_dir) if isinstance(output_dir, str) else output_dir
+    output_dir_obj.mkdir(parents=True, exist_ok=True)
 
     image_paths: list[str] = []
 
@@ -68,10 +71,10 @@ def pdf_to_images(
     matrix = fitz.Matrix(zoom, zoom)
 
     try:
-        doc = fitz.open(str(pdf_path))
+        doc = fitz.open(str(pdf_path_obj))
         page_count = min(len(doc), max_pages)
 
-        logger.info(f"Converting {page_count} pages from {pdf_path.name} at {dpi} DPI")
+        logger.info(f"Converting {page_count} pages from {pdf_path_obj.name} at {dpi} DPI")
 
         for page_num in range(page_count):
             page = doc[page_num]
@@ -81,7 +84,7 @@ def pdf_to_images(
 
             # Determine output filename
             ext = "png" if image_format.lower() == "png" else "jpg"
-            output_path = output_dir / f"page_{page_num + 1:03d}.{ext}"
+            output_path = output_dir_obj / f"page_{page_num + 1:03d}.{ext}"
 
             # Save image
             pix.save(str(output_path))
@@ -99,7 +102,7 @@ def pdf_to_images(
     return image_paths
 
 
-def get_pdf_page_count(pdf_path: str) -> int:
+def get_pdf_page_count(pdf_path: str | Path) -> int:
     """
     Get the number of pages in a PDF file.
     获取PDF文件的页数
@@ -113,12 +116,12 @@ def get_pdf_page_count(pdf_path: str) -> int:
     if not PYMUPDF_AVAILABLE:
         raise ImportError("PyMuPDF is required. Install with: pip install pymupdf")
 
-    pdf_path = Path(pdf_path)
-    if not pdf_path.exists():
-        raise FileNotFoundError(f"PDF not found: {pdf_path}")
+    pdf_path_obj: Path = Path(pdf_path)
+    if not pdf_path_obj.exists():
+        raise FileNotFoundError(f"PDF not found: {pdf_path_obj}")
 
     try:
-        doc = fitz.open(str(pdf_path))
+        doc = fitz.open(str(pdf_path_obj))
         count = len(doc)
         doc.close()
         return count

@@ -19,7 +19,7 @@ from collections import OrderedDict
 from ...services.interfaces.ocr_service import IOCRService
 
 
-class CachingOCRService(IOCRService):  # type: ignore[misc]
+class CachingOCRService(IOCRService):
     def __init__(
         self,
         delegate: IOCRService,
@@ -48,7 +48,8 @@ class CachingOCRService(IOCRService):  # type: ignore[misc]
         return f"{pdf_path}|pages={max_pages}|conc={max_concurrency}|pre={use_preprocessing}"
 
     def _is_valid(self, entry: dict[str, Any]) -> bool:
-        return entry.get("expires_at", 0) > self._now()
+        expires_at: float = entry.get("expires_at", 0)
+        return expires_at > self._now()
 
     def _evict_lru(self, cache: OrderedDict[str, dict[str, Any]]) -> None:
         while len(cache) > self._max_entries:
@@ -68,7 +69,8 @@ class CachingOCRService(IOCRService):  # type: ignore[misc]
         if entry and self._is_valid(entry):
             # Move to end to mark as most recently used
             self._doc_cache.move_to_end(key)
-            return entry["value"]
+            result: dict[str, Any] = entry["value"]
+            return result
 
         result = await self._delegate.process_pdf_document(
             pdf_path=pdf_path,
