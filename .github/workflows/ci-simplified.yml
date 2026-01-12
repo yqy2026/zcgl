@@ -1,0 +1,27 @@
+name: CI Pipeline Simplified
+
+"on":
+  push:
+    branches: [fix/ci-workflow-errors]
+  workflow_dispatch: {}
+
+env:
+  PYTHON_VERSION: '3.12'
+  NODE_VERSION: '20'
+
+jobs:
+  backend:
+    name: Backend (Python ${{ env.PYTHON_VERSION }})
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Test echo
+      run: echo "Backend job running successfully"
