@@ -15,7 +15,6 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from ...core.task_queue import get_task_queue  # 现有任务队列系统
-from ...database import get_session_factory
 from ...models.pdf_import_session import PDFImportSession, ProcessingStep, SessionStatus
 from ...models.rent_contract import (
     ContractType,
@@ -66,9 +65,7 @@ class PDFImportService:
         """获取当前正在处理的任务数"""
         return cls._active_tasks
 
-    async def get_session_status(
-        self, db: Session, session_id: str
-    ) -> dict[str, Any]:
+    async def get_session_status(self, db: Session, session_id: str) -> dict[str, Any]:
         """
         获取会话状态
 
@@ -94,8 +91,10 @@ class PDFImportService:
                 "progress": session.progress_percentage,
                 "error": session.error_message,
                 "result": session.processing_result,
-                "current_step": session.current_step.value if session.current_step else None,
-            }
+                "current_step": session.current_step.value
+                if session.current_step
+                else None,
+            },
         }
 
     async def process_pdf_file(
@@ -155,7 +154,10 @@ class PDFImportService:
     def _handle_task_completion(self, task: asyncio.Task) -> None:
         """
         任务完成回调
-        捕获未被处理的异常
+        捕获未被处理的异常并记录到日志
+
+        注意: 实际的错误持久化已经在 _process_background_safe 中处理
+        这个回调主要用于最后一道防线的错误日志记录
 
         Args:
             task: 已完成的任务
@@ -164,7 +166,11 @@ class PDFImportService:
             # 获取任务结果（如果抛出异常会重新抛出）
             task.result()
         except Exception as e:
-            logger.error(f"Background task failed: {e}", exc_info=True)
+            logger.error(
+                f"Background task failed (caught by completion callback): {e}",
+                exc_info=True,
+                extra={"error_id": "TASK_COMPLETION_ERROR"},
+            )
 
     async def _process_background_safe(
         self, session_id: str, file_path: str, options: dict[str, Any]
@@ -194,7 +200,10 @@ class PDFImportService:
                 logger.error(
                     f"Processing failed for {session_id}: {e}",
                     exc_info=True,
-                    extra={"error_id": "PDF_BACKGROUND_TASK_FAILED", "session_id": session_id}
+                    extra={
+                        "error_id": "PDF_BACKGROUND_TASK_FAILED",
+                        "session_id": session_id,
+                    },
                 )
                 # 持久化错误到数据库
                 error_result = {
@@ -227,8 +236,8 @@ class PDFImportService:
         logger.info(f"Starting smart processing for session {session_id}")
         start_time = time.time()
 
-        # 注意: 这里无法直接使用 ProcessingTracker，因为需要 db session
-        # 在实际实现中，应该为每个后台任务创建新的 db session
+        # 注意: 后台任务使用独立的数据库会话（通过 _persist_processing_result/error 方法）
+        # 避免与主请求会话冲突，每个持久化操作都创建新的会话上下文
 
         try:
             # 确定提取方法
@@ -251,9 +260,8 @@ class PDFImportService:
             # Step 2: 正则验证
             logger.info("Step 2: Running Regex validation...")
             regex_result = None
-            if (
-                smart_result.get("extraction_method") == "text"
-                and smart_result.get("markdown_content")
+            if smart_result.get("extraction_method") == "text" and smart_result.get(
+                "markdown_content"
             ):
                 regex_result = self.regex_extractor.extract_contract_info(
                     smart_result.get("markdown_content", "")
@@ -325,7 +333,9 @@ class PDFImportService:
                     session.processing_result = result_with_metrics
                     session.extracted_data = result.get("extracted_fields", {})
                     session.confidence_score = result.get("confidence_score", 0.0)
-                    session.processing_method = result.get("extraction_method", "unknown")
+                    session.processing_method = result.get(
+                        "extraction_method", "unknown"
+                    )
 
                     # 更新状态
                     CONFIDENCE_THRESHOLD = 0.8
@@ -347,6 +357,7 @@ class PDFImportService:
 
                     # 设置完成时间
                     from datetime import datetime
+
                     session.completed_at = datetime.now(UTC)
 
                     db.commit()
@@ -356,7 +367,10 @@ class PDFImportService:
                 logger.error(
                     f"Failed to persist processing result for {session_id}: {e}",
                     exc_info=True,
-                    extra={"error_id": "PERSIST_RESULT_FAILED", "session_id": session_id}
+                    extra={
+                        "error_id": "PERSIST_RESULT_FAILED",
+                        "session_id": session_id,
+                    },
                 )
                 db.rollback()
                 raise
@@ -392,6 +406,7 @@ class PDFImportService:
 
                     # 设置完成时间
                     from datetime import datetime
+
                     session.completed_at = datetime.now(UTC)
 
                     db.commit()
@@ -401,7 +416,10 @@ class PDFImportService:
                 logger.error(
                     f"Failed to persist processing error for {session_id}: {e}",
                     exc_info=True,
-                    extra={"error_id": "PERSIST_ERROR_FAILED", "session_id": session_id}
+                    extra={
+                        "error_id": "PERSIST_ERROR_FAILED",
+                        "session_id": session_id,
+                    },
                 )
                 db.rollback()
                 raise
@@ -419,9 +437,13 @@ class PDFImportService:
 
     def _get_extracted_fields(self, smart_result: dict) -> dict:
         """从智能提取结果中获取字段"""
-        return smart_result.get("raw_llm_json") or smart_result.get("extracted_fields", {})
+        return smart_result.get("raw_llm_json") or smart_result.get(
+            "extracted_fields", {}
+        )
 
-    def _fill_missing_fields_with_regex(self, extracted: dict, regex_result: dict | None) -> tuple[dict, int]:
+    def _fill_missing_fields_with_regex(
+        self, extracted: dict, regex_result: dict | None
+    ) -> tuple[dict, int]:
         """
         使用正则提取结果填补缺失字段
 
@@ -434,9 +456,7 @@ class PDFImportService:
             regex_fields = regex_result.get("extracted_fields", {})
             for key, val in regex_fields.items():
                 if not extracted.get(key):
-                    extracted[key] = (
-                        val["value"] if isinstance(val, dict) else val
-                    )
+                    extracted[key] = val["value"] if isinstance(val, dict) else val
                     extracted_count += 1
 
         return extracted, extracted_count
@@ -449,7 +469,9 @@ class PDFImportService:
             else 0
         )
 
-    def _calculate_confidence(self, smart_result: dict, extraction_rate: float) -> float:
+    def _calculate_confidence(
+        self, smart_result: dict, extraction_rate: float
+    ) -> float:
         """计算综合置信度分数"""
         base_confidence = (
             smart_result.get("confidence", self.CONFIDENCE_BASE_THRESHOLD)
@@ -558,10 +580,13 @@ class PDFImportService:
             # 目前只创建合同记录，资产关联逻辑待实现
 
             # 验证必填字段
-            required_fields = ["contract_number", "tenant_name", "start_date", "end_date"]
-            missing_fields = [
-                f for f in required_fields if not contract_data.get(f)
+            required_fields = [
+                "contract_number",
+                "tenant_name",
+                "start_date",
+                "end_date",
             ]
+            missing_fields = [f for f in required_fields if not contract_data.get(f)]
             if missing_fields:
                 return {
                     "success": False,
@@ -634,14 +659,65 @@ class PDFImportService:
                 "message": "Contract created successfully",
             }
 
-        except Exception as e:
+        except ValueError as e:
+            # 用户输入验证错误 - 用户可修复
             db.rollback()
-            logger.error(f"Failed to create contract from session {session_id}: {e}")
+            logger.info(
+                f"Validation failed for session {session_id}: {e}",
+                extra={
+                    "error_id": "CONTRACT_VALIDATION_ERROR",
+                    "session_id": session_id,
+                },
+            )
             return {
                 "success": False,
                 "error": str(e),
-                "error_type": type(e).__name__,
+                "error_type": "VALIDATION_ERROR",
+                "error_category": "USER_ERROR",
             }
+        except Exception as e:
+            # 导入 SQLAlchemy 异常类型
+            from sqlalchemy.exc import IntegrityError, OperationalError
+
+            if isinstance(e, IntegrityError):
+                # 数据库约束冲突 - 用户可能需要修复数据
+                db.rollback()
+                logger.error(
+                    f"Database constraint violation creating contract: {e}",
+                    extra={
+                        "error_id": "CONTRACT_INTEGRITY_ERROR",
+                        "session_id": session_id,
+                    },
+                )
+                return {
+                    "success": False,
+                    "error": "Cannot create contract: data conflicts with existing records",
+                    "error_type": "INTEGRITY_ERROR",
+                    "error_category": "USER_ERROR",
+                    "suggested_action": "Check if contract number already exists or review data for duplicates",
+                }
+            elif isinstance(e, OperationalError):
+                # 数据库操作错误 - 系统问题
+                logger.error(
+                    f"Database operation failed creating contract: {e}",
+                    exc_info=True,
+                    extra={"error_id": "CONTRACT_DB_ERROR", "session_id": session_id},
+                )
+                # 重新抛出 - 这是服务器错误，不是用户错误
+                raise RuntimeError("Database error creating contract") from e
+            else:
+                # 其他未预期错误 - 系统问题
+                db.rollback()
+                logger.error(
+                    f"Unexpected error creating contract from session {session_id}: {e}",
+                    exc_info=True,
+                    extra={
+                        "error_id": "CONTRACT_CREATE_ERROR",
+                        "session_id": session_id,
+                    },
+                )
+                # 重新抛出未预期错误，不要静默处理
+                raise
 
     def _parse_date(self, date_value: Any) -> date | None:
         """
@@ -661,6 +737,7 @@ class PDFImportService:
             for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%d/%m/%Y", "%Y年%m月%d日"):
                 try:
                     from datetime import datetime
+
                     return datetime.strptime(date_value, fmt).date()
                 except ValueError:
                     continue
