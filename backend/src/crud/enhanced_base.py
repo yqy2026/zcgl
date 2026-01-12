@@ -53,7 +53,7 @@ class QueryFilter:
         self.value = value
         self.model_class = model_class
 
-    def apply(self, query, model_class):
+    def apply(self, query: Any, model_class: type[ModelType]) -> Any:
         """应用过滤器到查询"""
         actual_model = self.model_class or model_class
 
@@ -104,7 +104,7 @@ class QuerySort:
         self.order = order
         self.model_class = model_class
 
-    def apply(self, query, model_class):
+    def apply(self, query: Any, model_class: type[ModelType]) -> Any:
         """应用排序到查询"""
         actual_model = self.model_class or model_class
 
@@ -160,9 +160,9 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
 
         # 应用删除过滤器
         if not include_deleted and hasattr(self.model, "is_deleted"):
-            query = query.filter(self.model.is_deleted.is_(False))
+            query = query.filter(self.model.is_deleted.is_(False))  # type: ignore[attr-defined]
 
-        return query.filter(self.model.id == id).first()
+        return query.filter(self.model.id == id).first()  # type: ignore[attr-defined]
 
     def get_multi(
         self,
@@ -198,7 +198,7 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
             eager_loads=eager_loads,
         )
 
-        return query.offset(skip).limit(limit).all()
+        return query.offset(skip).limit(limit).all()  # type: ignore[no-any-return]
 
     def count(
         self,
@@ -222,7 +222,7 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
             db=db, filters=filters, include_deleted=include_deleted
         )
 
-        return query.count()
+        return query.count()  # type: ignore[no-any-return]
 
     def create(
         self,
@@ -230,7 +230,7 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
         *,
         obj_in: CreateSchemaType,
         created_by: str | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> ModelType:
         """
         创建新记录
@@ -284,7 +284,7 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
         db_obj: ModelType,
         obj_in: UpdateSchemaType | dict[str, Any],
         updated_by: str | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> ModelType:
         """
         更新记录
@@ -300,7 +300,7 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
             更新后的模型实例
         """
         update_data = (
-            obj_in if isinstance(obj_in, dict) else obj_in.dict(exclude_unset=True)
+            obj_in if isinstance(obj_in, dict) else obj_in.model_dump(exclude_unset=True)  # type: ignore[attr-defined]
         )
 
         # 添加更新者信息
@@ -414,7 +414,7 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
         sorts: list[QuerySort] | None = None,
         include_deleted: bool = False,
         eager_loads: list[str] | None = None,
-    ):
+    ) -> Any:
         """
         构建查询
 
@@ -438,17 +438,17 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
 
         # 应用删除过滤器
         if not include_deleted and hasattr(self.model, "is_deleted"):
-            query = query.filter(self.model.is_deleted.is_(False))
+            query = query.filter(self.model.is_deleted.is_(False))  # type: ignore[attr-defined]
 
         # 应用过滤器
         if filters:
             for filter_obj in filters:
-                query = filter_obj.apply(query, self.model)
+                query = filter_obj.apply(query, self.model)  # type: ignore[type-var]
 
         # 应用排序
         if sorts:
             for sort_obj in sorts:
-                query = sort_obj.apply(query, self.model)
+                query = sort_obj.apply(query, self.model)  # type: ignore[type-var]
 
         return query
 
