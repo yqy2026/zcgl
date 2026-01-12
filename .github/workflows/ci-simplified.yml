@@ -11,7 +11,7 @@ env:
 
 jobs:
   backend:
-    name: Backend (Python ${{ env.PYTHON_VERSION }})
+    name: Backend Tests
     runs-on: ubuntu-latest
 
     steps:
