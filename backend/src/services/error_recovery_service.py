@@ -7,7 +7,7 @@ This is a minimal stub to make error_recovery.py importable
 
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import Any, Callable
 
 
 class ErrorCategory(str, Enum):
@@ -48,11 +48,11 @@ class ErrorContext:
         category: ErrorCategory,
         timestamp: datetime,
         operation: str = "",
-        user_id: str = None,
-        request_id: str = None,
+        user_id: str | None = None,
+        request_id: str | None = None,
         component: str = "",
-        additional_data: dict = None,
-    ):
+        additional_data: dict[str, Any] | None = None,
+    ) -> None:
         self.error_id = error_id
         self.error_type = error_type
         self.error_message = error_message
@@ -81,8 +81,8 @@ class RecoveryStrategy:
         auto_recovery: bool = True,
         fallback_enabled: bool = True,
         requires_manual_intervention: bool = False,
-        retry_conditions: list = None,
-    ):
+        retry_conditions: list[Any] | None = None,
+    ) -> None:
         self.name = name
         self.category = category
         self.max_attempts = max_attempts
@@ -104,10 +104,10 @@ class RecoveryResult:
         attempts_made: int,
         total_time: float,
         strategy_used: str,
-        recovery_actions: list = None,
-        final_error: str = None,
-        metrics: dict = None,
-    ):
+        recovery_actions: list[Any] | None = None,
+        final_error: str | None = None,
+        metrics: dict[str, Any] | None = None,
+    ) -> None:
         self.success = success
         self.attempts_made = attempts_made
         self.total_time = total_time
@@ -120,10 +120,10 @@ class RecoveryResult:
 class ErrorRecoveryEngine:
     """错误恢复引擎"""
 
-    def __init__(self):
-        self.strategies = {}
-        self.circuit_breakers = {}
-        self.recovery_history = []
+    def __init__(self) -> None:
+        self.strategies: dict[ErrorCategory, RecoveryStrategy] = {}
+        self.circuit_breakers: dict[str, dict[str, Any]] = {}
+        self.recovery_history: list[Any] = []
 
         # Initialize with default strategies for each category
         for category in ErrorCategory:
@@ -157,7 +157,7 @@ class ErrorRecoveryEngine:
         }
 
     async def recover_from_error(
-        self, error_context: ErrorContext, recovery_func
+        self, error_context: ErrorContext, recovery_func: Callable[..., Any]
     ) -> RecoveryResult:
         """从错误中恢复"""
         return RecoveryResult(
@@ -169,11 +169,11 @@ class ErrorRecoveryEngine:
         )
 
 
-def with_error_recovery(error_category: ErrorCategory):
+def with_error_recovery(error_category: ErrorCategory) -> Any:
     """错误恢复装饰器"""
 
-    def decorator(func):
-        async def wrapper(*args, **kwargs):
+    def decorator(func: Any) -> Any:
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
             return await func(*args, **kwargs)
 
         return wrapper

@@ -138,22 +138,22 @@ def create_mock_registry() -> Any:
     """创建 Mock 路由注册器"""
 
     class MockRegistry:
-        def register_global_dependency(self, dep):
+        def register_global_dependency(self, dep: Any) -> None:
             pass
 
-        def include_all(self, app, version):
+        def include_all(self, app: Any, version: str | None = None) -> None:
             pass
 
     return MockRegistry()
 
 
-def create_lambda_none(*args, **kwargs) -> None:
+def create_lambda_none(*args: Any, **kwargs: Any) -> Any:
     """返回 lambda: None 的工厂函数"""
     return lambda *args, **kwargs: None
 
 
 # 便捷装饰器
-def optional_import(module_path: str):
+def optional_import(module_path: str) -> Any:
     """
     装饰器：标记导入失败时应跳过的功能
 
@@ -163,7 +163,7 @@ def optional_import(module_path: str):
             redis_client.ping()
     """
 
-    def decorator(func):
+    def decorator(func: Any) -> Any:
         try:
             __import__(module_path)
             return func
