@@ -101,6 +101,7 @@ vi.mock('@ant-design/icons', () => ({
     DollarOutlined: () => <span data-testid="icon-dollar" />,
     CalendarOutlined: () => <span data-testid="icon-calendar" />,
     HomeOutlined: () => <span data-testid="icon-home" />,
+    InfoCircleOutlined: () => <span data-testid="icon-info" />,
 }));
 
 describe('ContractDetailInfo V2 Tests', () => {
