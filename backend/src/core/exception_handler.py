@@ -524,4 +524,4 @@ if __name__ == "__main__":
     try:
         raise_not_found("Asset", "123", reason="测试")
     except BaseBusinessError as e:
-        print("Exception handled:", e.to_dict())
+        logger.error(f"Exception handled: {e.to_dict()}")

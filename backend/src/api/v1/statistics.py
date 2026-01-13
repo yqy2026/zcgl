@@ -176,8 +176,7 @@ async def get_statistics_summary(
     获取统计摘要信息
     """
     # DEBUG: 添加调试日志
-    print("=== DEBUG: statistics.py中的get_statistics_summary被调用 ===")
-    logger.info("=== statistics.py中的get_statistics摘要函数被调用 ===")
+    logger.debug("statistics.py get_statistics_summary called")
 
     try:
         # 总资产数

@@ -202,4 +202,4 @@ if __name__ == "__main__":
             allowed_count += 1
         time.sleep(0.1)  # 100ms间隔
 
-    print(f"Allowed {allowed_count} requests out of 20")
+    logger.info(f"Allowed {allowed_count} requests out of 20")

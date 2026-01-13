@@ -6,6 +6,7 @@
 """
 
 import asyncio
+import logging
 from datetime import date, datetime, timedelta
 
 from sqlalchemy import and_
@@ -13,6 +14,8 @@ from sqlalchemy.orm import Session
 
 from ...database import get_db
 from ...models.auth import User
+
+logger = logging.getLogger(__name__)
 from ...models.notification import Notification, NotificationPriority, NotificationType
 from ...models.rent_contract import RentContract, RentLedger
 from .wecom_service import wecom_service
@@ -389,4 +392,4 @@ def run_notification_tasks():
 if __name__ == "__main__":
     # 测试运行
     result = run_notification_tasks()
-    print(f"通知任务执行结果: {result}")
+    logger.info(f"通知任务执行结果: {result}")
