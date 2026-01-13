@@ -3,6 +3,7 @@
 """
 
 from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from jose import jwt
@@ -39,7 +40,7 @@ router = APIRouter(tags=["认证管理"])
 @router.post("/login", summary="用户登录")
 async def login(
     request: Request, credentials: LoginRequest, db: Session = Depends(get_db)
-):
+) -> dict[str, Any]:
     """
     用户登录接口
 
@@ -151,7 +152,7 @@ async def logout(
     request: Request,
     current_user: UserResponse = Depends(get_current_active_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, Any]:
     """
     用户登出接口
 
@@ -218,7 +219,7 @@ async def logout(
 @router.post("/refresh", response_model=TokenResponse, summary="刷新令牌")
 async def refresh_token(
     request: Request, refresh_data: RefreshTokenRequest, db: Session = Depends(get_db)
-):
+) -> TokenResponse:
     """
     刷新访问令牌接口
 
@@ -315,13 +316,13 @@ async def refresh_token(
         user_agent=user_agent,
     )
 
-    return tokens
+    return tokens  # type: ignore[return-value]
 
 
 @router.get("/me", response_model=dict[str, Any], summary="获取当前用户信息")
 async def get_current_user_info(
-    current_user=Depends(get_current_active_user),
-):
+    current_user: UserResponse = Depends(get_current_active_user),
+) -> dict[str, Any]:
     """
     获取当前登录用户的信息
 
@@ -345,7 +346,7 @@ async def get_current_user_info(
 
 @router.get("/test-enhanced", summary="测试增强端点")
 @debug_only
-async def test_enhanced():
+async def test_enhanced() -> dict[str, Any]:
     """测试端点，验证增强功能"""
     return {
         "success": True,
@@ -356,24 +357,24 @@ async def test_enhanced():
 
 @router.get("/debug-auth", summary="调试认证流程")
 @debug_only
-async def debug_auth(db: Session = Depends(get_db)):
+async def debug_auth(db: Session = Depends(get_db)) -> dict[str, Any]:
     """调试认证流程，测试各个步骤"""
     try:
         auth_service = AuthService(db)
 
         # 1. 测试用户查询
-        admin_user = auth_service.get_user_by_username("admin")
+        admin_user = auth_service.get_user_by_username("admin")  # type: ignore[no-untyped-call]
         if not admin_user:
             return {"error": "Admin user not found"}
 
         # 2. 测试密码验证
-        password_valid = auth_service.verify_password(
+        password_valid = auth_service.verify_password(  # type: ignore[no-untyped-call]
             "Admin123!@#", admin_user.password_hash
         )
 
         # 3. 测试用户认证
         try:
-            authenticated_user = auth_service.authenticate_user("admin", "Admin123!@#")
+            authenticated_user = auth_service.authenticate_user("admin", "Admin123!@#")  # type: ignore[no-untyped-call]
             auth_success = authenticated_user is not None
         except Exception as e:
             auth_success = False
@@ -384,7 +385,7 @@ async def debug_auth(db: Session = Depends(get_db)):
         # 4. 测试token创建
         try:
             if authenticated_user:
-                tokens = auth_service.create_tokens(authenticated_user)
+                tokens = auth_service.create_tokens(authenticated_user)  # type: ignore[no-untyped-call]
                 token_success = True
                 access_token_length = (
                     len(tokens.access_token) if tokens.access_token else 0
@@ -395,7 +396,7 @@ async def debug_auth(db: Session = Depends(get_db)):
         except Exception as e:
             token_success = False
             access_token_length = 0
-            token_error = str(e)
+            token_error: str | None = str(e)
         else:
             token_error = None
 
@@ -417,13 +418,15 @@ async def debug_auth(db: Session = Depends(get_db)):
 
 @router.get("/test-me-debug", summary="调试ME端点")
 @debug_only
-async def test_me_debug(current_user: UserResponse = Depends(get_current_active_user)):
+async def test_me_debug(
+    current_user: UserResponse = Depends(get_current_active_user),
+) -> dict[str, Any]:
     """调试ME端点，检查UserResponse内容"""
     from datetime import datetime
 
     # 检查 UserResponse 的所有字段
     user_dict = current_user.model_dump()
-    print(f"UserResponse字段: {list[Any](user_dict.keys())}")
+    print(f"UserResponse字段: {list(user_dict.keys())}")
     print(f"UserResponse内容: {user_dict}")
 
     # 手动构建增强响应
@@ -448,7 +451,7 @@ async def get_users(
     params: UserQueryParamsSchema = Depends(),
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(require_admin),
-):
+) -> UserListResponse:
     """
     获取用户列表（仅管理员）
 
@@ -485,7 +488,7 @@ async def create_user(
     user_data: UserCreate,
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(require_admin),
-):
+) -> UserResponse:
     """
     创建新用户（仅管理员）
 
@@ -505,7 +508,7 @@ async def get_user(
     user_id: str,
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(get_current_active_user),
-):
+) -> UserResponse:
     """
     获取用户详情
 
@@ -533,7 +536,7 @@ async def update_user(
     user_data: UserUpdate,
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(get_current_active_user),
-):
+) -> UserResponse:
     """
     更新用户信息
 
@@ -550,7 +553,12 @@ async def update_user(
         )
 
     try:
-        user = user_crud.update(db, user_crud.get(db, str(user_id)), user_data)
+        existing_user = user_crud.get(db, str(user_id))
+        if not existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在"
+            )
+        user = user_crud.update(db, existing_user, user_data)
         return UserResponse.model_validate(user)
     except BusinessLogicError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
@@ -562,7 +570,7 @@ async def change_password(
     password_data: PasswordChangeRequest,
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(get_current_active_user),
-):
+) -> dict[str, str]:
     """
     修改用户密码
 
@@ -584,7 +592,7 @@ async def change_password(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在")
 
     try:
-        success = auth_service.change_password(
+        success = auth_service.change_password(  # type: ignore[no-untyped-call]
             user=user,
             current_password=password_data.current_password,
             new_password=password_data.new_password,
@@ -605,7 +613,7 @@ async def deactivate_user(
     user_id: str,
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(require_admin),
-):
+) -> dict[str, str]:
     """
     停用用户（仅管理员）
 
@@ -630,7 +638,7 @@ async def activate_user(
     user_id: str,
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(require_admin),
-):
+) -> dict[str, str]:
     """
     激活用户（仅管理员）
 
@@ -639,7 +647,7 @@ async def activate_user(
     """
     auth_service = AuthService(db)
 
-    success = auth_service.activate_user(user_id)
+    success = auth_service.activate_user(user_id)  # type: ignore[no-untyped-call]
     if not success:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在")
 
@@ -651,7 +659,7 @@ async def unlock_user(
     user_id: str,
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(require_admin),
-):
+) -> dict[str, str]:
     """
     解锁用户（仅管理员）
 
@@ -660,7 +668,7 @@ async def unlock_user(
     """
     auth_service = AuthService(db)
 
-    success = auth_service.unlock_user(user_id)
+    success = auth_service.unlock_user(user_id)  # type: ignore[no-untyped-call]
     if not success:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在")
 
@@ -673,7 +681,7 @@ async def unlock_user(
 async def get_user_sessions(
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(get_current_active_user),
-):
+) -> list[UserSessionResponse]:
     """获取当前用户的所有会话"""
     session_crud = UserSessionCRUD()
     sessions = session_crud.get_user_sessions(db, current_user.id)
@@ -685,7 +693,7 @@ async def revoke_session(
     session_id: str,
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(get_current_active_user),
-):
+) -> dict[str, str]:
     """撤销指定会话"""
     auth_service = AuthService(db)
     session_crud = UserSessionCRUD()
@@ -696,7 +704,7 @@ async def revoke_session(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="会话不存在")
 
     # 使用refresh_token撤销会话（API修复：传递refresh_token而非session_id）
-    success = auth_service.revoke_session(session.refresh_token)
+    success = auth_service.revoke_session(session.refresh_token)  # type: ignore[no-untyped-call]
     if success:
         return {"message": "会话已撤销"}
     else:
@@ -710,7 +718,7 @@ async def get_audit_statistics(
     days: int = 30,
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(require_admin),
-):
+) -> dict[str, Any]:
     """
     获取审计日志统计（仅管理员）
     """
@@ -720,7 +728,9 @@ async def get_audit_statistics(
 
 
 @router.get("/security/config", response_model=dict[str, Any], summary="获取安全配置")
-async def get_security_config(current_user: UserResponse = Depends(require_admin)):
+async def get_security_config(
+    current_user: UserResponse = Depends(require_admin),
+) -> dict[str, Any]:
     """
     获取安全配置信息（仅管理员）
     """
@@ -743,7 +753,7 @@ async def lock_user(
     user_id: str,
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(require_admin),
-):
+) -> dict[str, Any]:
     """
     锁定用户账户（仅管理员）
 
@@ -788,7 +798,7 @@ async def unlock_user_account(
     user_id: str,
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(require_admin),
-):
+) -> dict[str, Any]:
     """
     解锁用户账户（仅管理员）
 
@@ -831,10 +841,10 @@ async def unlock_user_account(
 @router.post("/users/{user_id}/reset-password", summary="重置用户密码")
 async def reset_user_password(
     user_id: str,
-    password_data: dict = {"new_password": ..., "reason": None},
+    password_data: dict[str, Any],
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(require_admin),
-):
+) -> dict[str, Any]:
     """
     重置用户密码（仅管理员）
 
@@ -869,7 +879,7 @@ async def reset_user_password(
         setattr(
             user,
             "hashed_password",
-            auth_service.get_password_hash(reset_request.new_password),
+            auth_service.get_password_hash(reset_request.new_password),  # type: ignore[no-untyped-call]
         )
         setattr(user, "updated_at", datetime.now(UTC))
         db.commit()
@@ -903,7 +913,7 @@ async def reset_user_password(
 async def get_user_statistics(
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(require_admin),
-):
+) -> dict[str, Any]:
     """
     获取用户相关统计数据（仅管理员）
     """

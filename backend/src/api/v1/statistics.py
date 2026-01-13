@@ -224,7 +224,7 @@ async def get_statistics_summary(
 
     try:
         # 总资产数
-        assets_list, _ = asset_crud.get_multi(db=db, skip=0, limit=1)
+        assets_list: list[Any] = asset_crud.get_multi(db=db, skip=0, limit=1)
         total_assets = len(assets_list)
 
         # 按确权状态统计
@@ -649,44 +649,52 @@ async def get_dashboard_data(
     """
     try:
         # 获取基础统计
-        assets, _ = asset_crud.get_multi(db=db, skip=0, limit=1)
+        assets: list[Any] = asset_crud.get_multi(db=db, skip=0, limit=1)
         total_assets = len(assets)
 
         # 计算各类统计
-        assets, _ = asset_crud.get_multi_with_search(
-            db=db, skip=0, limit=10000, filters=confirmed
+        # 按确权状态统计
+        confirmed_assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters={"ownership_status": "已确权"}
         )
-        count = len(assets)
-        assets, _ = asset_crud.get_multi_with_search(
-            db=db, skip=0, limit=10000, filters=unconfirmed
-        )
-        count = len(assets)
-        assets, _ = asset_crud.get_multi_with_search(
-            db=db, skip=0, limit=10000, filters=partial
-        )
-        count = len(assets)
+        confirmed_count = len(confirmed_assets)
 
-        assets, _ = asset_crud.get_multi_with_search(
-            db=db, skip=0, limit=10000, filters=commercial
+        unconfirmed_assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters={"ownership_status": "未确权"}
         )
-        count = len(assets)
-        assets, _ = asset_crud.get_multi_with_search(
-            db=db, skip=0, limit=10000, filters=non_commercial
-        )
-        count = len(assets)
+        unconfirmed_count = len(unconfirmed_assets)
 
-        assets, _ = asset_crud.get_multi_with_search(
-            db=db, skip=0, limit=10000, filters=rented
+        partial_assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters={"ownership_status": "部分确权"}
         )
-        count = len(assets)
-        assets, _ = asset_crud.get_multi_with_search(
-            db=db, skip=0, limit=10000, filters=vacant
+        partial_count = len(partial_assets)
+
+        # 按物业性质统计
+        commercial_assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters={"property_nature": "经营性"}
         )
-        count = len(assets)
-        assets, _ = asset_crud.get_multi_with_search(
-            db=db, skip=0, limit=10000, filters=self_used
+        commercial_count = len(commercial_assets)
+
+        non_commercial_assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters={"property_nature": "非经营性"}
         )
-        count = len(assets)
+        non_commercial_count = len(non_commercial_assets)
+
+        # 按使用状态统计
+        rented_assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters={"usage_status": "出租"}
+        )
+        rented_count = len(rented_assets)
+
+        vacant_assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters={"usage_status": "空置"}
+        )
+        vacant_count = len(vacant_assets)
+
+        self_used_assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters={"usage_status": "自用"}
+        )
+        self_used_count = len(self_used_assets)
 
         # 获取面积和财务数据
         assets, _ = asset_crud.get_multi_with_search(db=db, skip=0, limit=10000)
@@ -716,84 +724,52 @@ async def get_dashboard_data(
             else 0.0
         )
 
-        # 构建分布数据
-        ownership_distribution = [
-            ChartDataItem(
-                name="已确权",
-                value=confirmed_count,
-                percentage=(confirmed_count / total_assets * 100)
-                if total_assets > 0
-                else 0,
-            ),
-            ChartDataItem(
-                name="未确权",
-                value=unconfirmed_count,
-                percentage=(unconfirmed_count / total_assets * 100)
-                if total_assets > 0
-                else 0,
-            ),
-            ChartDataItem(
-                name="部分确权",
-                value=partial_count,
-                percentage=(partial_count / total_assets * 100)
-                if total_assets > 0
-                else 0,
-            ),
-        ]
-
-        property_nature_distribution = [
-            ChartDataItem(
-                name="经营性",
-                value=commercial_count,
-                percentage=(commercial_count / total_assets * 100)
-                if total_assets > 0
-                else 0,
-            ),
-            ChartDataItem(
-                name="非经营性",
-                value=non_commercial_count,
-                percentage=(non_commercial_count / total_assets * 100)
-                if total_assets > 0
-                else 0,
-            ),
-        ]
-
-        usage_status_distribution = [
-            ChartDataItem(
-                name="出租",
-                value=rented_count,
-                percentage=(rented_count / total_assets * 100)
-                if total_assets > 0
-                else 0,
-            ),
-            ChartDataItem(
-                name="空置",
-                value=vacant_count,
-                percentage=(vacant_count / total_assets * 100)
-                if total_assets > 0
-                else 0,
-            ),
-            ChartDataItem(
-                name="自用",
-                value=self_used_count,
-                percentage=(self_used_count / total_assets * 100)
-                if total_assets > 0
-                else 0,
-            ),
-        ]
-
         return DashboardDataResponse(
-            basic_stats={
-                "total_assets": total_assets,
-                "total_area": round(total_area, 2),
-                "total_income": round(total_income, 2),
-                "total_expense": round(total_expense, 2),
-                "net_income": round(net_income, 2),
-                "occupancy_rate": round(occupancy_rate, 2),
-            },
-            ownership_distribution=ownership_distribution,
-            property_nature_distribution=property_nature_distribution,
-            usage_status_distribution=usage_status_distribution,
+            basic_stats=BasicStatisticsResponse(
+                total_assets=total_assets,
+                ownership_status={
+                    "confirmed": confirmed_count,
+                    "unconfirmed": unconfirmed_count,
+                    "partial": partial_count,
+                },
+                property_nature={
+                    "commercial": commercial_count,
+                    "non_commercial": non_commercial_count,
+                },
+                usage_status={
+                    "rented": rented_count,
+                    "self_used": self_used_count,
+                    "vacant": vacant_count,
+                },
+                generated_at=datetime.now(),
+                filters_applied={},
+            ),
+            area_summary=AreaSummaryResponse(
+                total_area=round(total_area, 2),
+                rentable_area=round(total_rentable_area, 2),
+                rented_area=round(total_rented_area, 2),
+                unrented_area=round(total_rentable_area - total_rented_area, 2)
+                if total_rentable_area > total_rented_area
+                else 0.0,
+                occupancy_rate=round(occupancy_rate, 2),
+            ),
+            financial_summary=FinancialSummaryResponse(
+                total_assets=total_assets,
+                total_annual_income=round(total_income, 2),
+                total_annual_expense=round(total_expense, 2),
+                net_annual_income=round(net_income, 2),
+                income_per_sqm=round(total_income / total_area, 2) if total_area > 0 else 0.0,
+                expense_per_sqm=round(total_expense / total_area, 2) if total_area > 0 else 0.0,
+            ),
+            occupancy_stats=OccupancyRateStatsResponse(
+                overall_occupancy_rate=round(occupancy_rate, 2),
+                total_rentable_area=round(total_rentable_area, 2),
+                total_rented_area=round(total_rented_area, 2),
+                calculated_at=datetime.now(),
+            ),
+            category_occupancy=[],
+            generated_at=datetime.now(),
+            filters_applied={},
         )
 
     except Exception as e:
@@ -814,21 +790,23 @@ async def get_ownership_distribution(
     获取按权属状态的资产分布统计
     """
     try:
-        assets, _ = asset_crud.get_multi(db=db, skip=0, limit=1)
+        assets: list[Any] = asset_crud.get_multi(db=db, skip=0, limit=1)
         total_assets = len(assets)
 
-        assets, _ = asset_crud.get_multi_with_search(
-            db=db, skip=0, limit=10000, filters=confirmed
+        confirmed_assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters={"ownership_status": "已确权"}
         )
-        count = len(assets)
-        assets, _ = asset_crud.get_multi_with_search(
-            db=db, skip=0, limit=10000, filters=unconfirmed
+        confirmed_count = len(confirmed_assets)
+
+        unconfirmed_assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters={"ownership_status": "未确权"}
         )
-        count = len(assets)
-        assets, _ = asset_crud.get_multi_with_search(
-            db=db, skip=0, limit=10000, filters=partial
+        unconfirmed_count = len(unconfirmed_assets)
+
+        partial_assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters={"ownership_status": "部分确权"}
         )
-        count = len(assets)
+        partial_count = len(partial_assets)
 
         distribution = [
             ChartDataItem(
@@ -877,17 +855,18 @@ async def get_property_nature_distribution(
     获取按物业性质的资产分布统计
     """
     try:
-        assets, _ = asset_crud.get_multi(db=db, skip=0, limit=1)
+        assets: list[Any] = asset_crud.get_multi(db=db, skip=0, limit=1)
         total_assets = len(assets)
 
-        assets, _ = asset_crud.get_multi_with_search(
-            db=db, skip=0, limit=10000, filters=commercial
+        commercial_assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters={"property_nature": "经营性"}
         )
-        count = len(assets)
-        assets, _ = asset_crud.get_multi_with_search(
-            db=db, skip=0, limit=10000, filters=non_commercial
+        commercial_count = len(commercial_assets)
+
+        non_commercial_assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters={"property_nature": "非经营性"}
         )
-        count = len(assets)
+        non_commercial_count = len(non_commercial_assets)
 
         distribution = [
             ChartDataItem(
@@ -931,21 +910,23 @@ async def get_usage_status_distribution(
     获取按使用状态的资产分布统计
     """
     try:
-        assets, _ = asset_crud.get_multi(db=db, skip=0, limit=1)
+        assets: list[Any] = asset_crud.get_multi(db=db, skip=0, limit=1)
         total_assets = len(assets)
 
-        assets, _ = asset_crud.get_multi_with_search(
-            db=db, skip=0, limit=10000, filters=rented
+        rented_assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters={"usage_status": "出租"}
         )
-        count = len(assets)
-        assets, _ = asset_crud.get_multi_with_search(
-            db=db, skip=0, limit=10000, filters=vacant
+        rented_count = len(rented_assets)
+
+        vacant_assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters={"usage_status": "空置"}
         )
-        count = len(assets)
-        assets, _ = asset_crud.get_multi_with_search(
-            db=db, skip=0, limit=10000, filters=self_used
+        vacant_count = len(vacant_assets)
+
+        self_used_assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters={"usage_status": "自用"}
         )
-        count = len(assets)
+        self_used_count = len(self_used_assets)
 
         distribution = [
             ChartDataItem(
@@ -1000,19 +981,22 @@ async def get_trend_data(
         period: 时间周期 (daily, weekly, monthly, yearly)
     """
     try:
-        # 这里简化实现，实际项目中可以根据时间周期和指标从历史数据中计算趋势
+        # 这里简化实现,实际项目中可以根据时间周期和指标从历史数据中计算趋势
         # 目前返回模拟数据
-        trend_data = []
+        from ...schemas.statistics import TimeSeriesDataPoint
+
+        time_series: list[TimeSeriesDataPoint] = []
 
         if metric == "occupancy_rate":
             # 模拟最近6个月的出租率趋势
             for i in range(6):
                 month_value = 75 + (i * 2) + (hash(f"{metric}_{i}") % 10)
-                trend_data.append(
-                    {
-                        "date": f"2024-{i + 1:02d}",
-                        "value": round(min(month_value, 95), 1),
-                    }
+                time_series.append(
+                    TimeSeriesDataPoint(
+                        date=datetime.strptime(f"2024-{i + 1:02d}-01", "%Y-%m-%d"),
+                        value=float(round(min(month_value, 95), 1)),
+                        label=f"2024-{i + 1:02d}",
+                    )
                 )
         elif metric == "income":
             # 模拟最近6个月的收入趋势
@@ -1021,17 +1005,29 @@ async def get_trend_data(
                 month_income = (
                     base_income + (i * 50000) + (hash(f"{metric}_{i}") % 100000)
                 )
-                trend_data.append(
-                    {"date": f"2024-{i + 1:02d}", "value": round(month_income, 2)}
+                time_series.append(
+                    TimeSeriesDataPoint(
+                        date=datetime.strptime(f"2024-{i + 1:02d}-01", "%Y-%m-%d"),
+                        value=float(round(month_income, 2)),
+                        label=f"2024-{i + 1:02d}",
+                    )
                 )
         else:
             # 默认返回简单的趋势数据
             for i in range(6):
-                trend_data.append({"date": f"2024-{i + 1:02d}", "value": 100 + i * 10})
+                time_series.append(
+                    TimeSeriesDataPoint(
+                        date=datetime.strptime(f"2024-{i + 1:02d}-01", "%Y-%m-%d"),
+                        value=float(100 + i * 10),
+                        label=f"2024-{i + 1:02d}",
+                    )
+                )
 
         return TrendDataResponse(
-            metric=metric,
-            trend_data=trend_data,
+            metric_name=metric,
+            time_series=time_series,
+            trend_direction="up" if metric == "income" else "stable",
+            change_percentage=5.0 if metric == "income" else None,
         )
 
     except Exception as e:

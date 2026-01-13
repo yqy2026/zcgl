@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Generator
 
 """
 系统监控API - 提供全面的系统性能和健康状态监控
@@ -17,10 +17,17 @@ from typing import Any
 import contextlib
 import os
 from datetime import datetime, timedelta
+from typing import TYPE_CHECKING
 
 import psutil
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy.orm import Session
+
+if TYPE_CHECKING:
+    from src.core.config import Config
+    from src.database import DatabaseManager
+    from src.models.auth import User
 
 try:
     from src.core.config import get_config
@@ -29,25 +36,24 @@ try:
     from src.services.core.auth_service import get_current_user, require_permission
 except ImportError:
     # 独立运行时的回退方案
-    def get_db():
-        return None
+    def get_db() -> Generator[Session, None, None]:
+        yield None  # type: ignore[return-value]
 
-    def get_config():
+    def get_config(*args: Any, **kwargs: Any) -> Any:
         return {}
 
-    def get_database_manager():
+    def get_database_manager() -> Any:
         return None
 
-    def get_current_user():
+    def get_current_user() -> Any:
         return None
 
-    def require_permission(*args):
-        def decorator(func):
+    def require_permission(*args: Any, **kwargs: Any) -> Any:
+        def decorator(func: Any) -> Any:
             return func
-
         return decorator
 
-    class User:
+    class User:  # type: ignore[no-redef]
         pass
 
 
@@ -231,14 +237,14 @@ def collect_application_metrics() -> ApplicationMetrics:
 
 def check_component_health() -> dict[str, dict[str, Any]]:
     """检查各组件健康状态"""
-    components = {}
+    components: dict[str, dict[str, Any]] = {}
 
     # 数据库健康检查 - 使用增强的数据库管理器
     try:
-        db_manager = get_database_manager()
+        db_manager: Any = get_database_manager()
         if db_manager:
             health_check = db_manager.run_health_check()
-            pool_status = db_manager.get_connection_pool_status()
+            pool_status = db_manager.get_connection_pool_status()  # type: ignore[attr-defined]
 
             # 根据健康检查结果确定状态
             if health_check["healthy"] and pool_status.get("utilization", 0) < 80:
@@ -363,6 +369,7 @@ def check_performance_alerts(
                 current_value=system_metrics.cpu_percent,
                 threshold=90.0,
                 timestamp=current_time,
+                resolved=False,
             )
         )
     elif system_metrics.cpu_percent > 70:
@@ -375,6 +382,7 @@ def check_performance_alerts(
                 current_value=system_metrics.cpu_percent,
                 threshold=70.0,
                 timestamp=current_time,
+                resolved=False,
             )
         )
 
@@ -389,6 +397,7 @@ def check_performance_alerts(
                 current_value=system_metrics.memory_percent,
                 threshold=90.0,
                 timestamp=current_time,
+                resolved=False,
             )
         )
 
@@ -403,6 +412,7 @@ def check_performance_alerts(
                 current_value=system_metrics.disk_free_gb,
                 threshold=5.0,
                 timestamp=current_time,
+                resolved=False,
             )
         )
     elif system_metrics.disk_usage_percent > 85:
@@ -415,6 +425,7 @@ def check_performance_alerts(
                 current_value=system_metrics.disk_free_gb,
                 threshold=10.0,
                 timestamp=current_time,
+                resolved=False,
             )
         )
 
@@ -429,6 +440,7 @@ def check_performance_alerts(
                 current_value=app_metrics.average_response_time,
                 threshold=1000.0,
                 timestamp=current_time,
+                resolved=False,
             )
         )
 
@@ -443,6 +455,7 @@ def check_performance_alerts(
                 current_value=app_metrics.error_rate,
                 threshold=5.0,
                 timestamp=current_time,
+                resolved=False,
             )
         )
 
@@ -463,7 +476,9 @@ def check_performance_alerts(
 
 @router.get("/system-metrics", response_model=SystemMetrics, summary="获取系统性能指标")
 @require_permission("system_monitoring", "read")
-async def get_system_metrics(current_user: User = Depends(get_current_user)):
+async def get_system_metrics(
+    current_user: Any = Depends(get_current_user),
+) -> SystemMetrics:
     """
     获取当前系统性能指标
 
@@ -484,7 +499,9 @@ async def get_system_metrics(current_user: User = Depends(get_current_user)):
     summary="获取应用性能指标",
 )
 @require_permission("system_monitoring", "read")
-async def get_application_metrics(current_user: User = Depends(get_current_user)):
+async def get_application_metrics(
+    current_user: Any = Depends(get_current_user),
+) -> ApplicationMetrics:
     """
     获取应用性能指标
 
@@ -501,7 +518,9 @@ async def get_application_metrics(current_user: User = Depends(get_current_user)
 
 @router.get("/health", response_model=HealthStatus, summary="获取系统健康状态")
 @require_permission("system_monitoring", "read")
-async def get_health_status(current_user: User = Depends(get_current_user)):
+async def get_health_status(
+    current_user: Any = Depends(get_current_user),
+) -> HealthStatus:
     """
     获取系统整体健康状态
 
@@ -536,8 +555,8 @@ async def get_health_status(current_user: User = Depends(get_current_user)):
 @require_permission("system_monitoring", "read")
 async def get_metrics_history(
     hours: int = Query(default=24, ge=1, le=168, description="查询历史时间范围(小时)"),
-    current_user: User = Depends(get_current_user),
-):
+    current_user: Any = Depends(get_current_user),
+) -> list[SystemMetrics]:
     """
     获取系统性能指标历史数据
 
@@ -556,8 +575,8 @@ async def get_performance_alerts(
         default=None, regex="^(info|warning|critical)$", description="告警级别过滤"
     ),
     resolved: bool | None = Query(default=None, description="是否已解决过滤"),
-    current_user: User = Depends(get_current_user),
-):
+    current_user: Any = Depends(get_current_user),
+) -> list[PerformanceAlert]:
     """
     获取性能告警列表
 
@@ -579,7 +598,10 @@ async def get_performance_alerts(
 
 @router.post("/alerts/{alert_id}/resolve", summary="解决告警")
 @require_permission("system_monitoring", "write")
-async def resolve_alert(alert_id: str, current_user: User = Depends(get_current_user)):
+async def resolve_alert(
+    alert_id: str,
+    current_user: Any = Depends(get_current_user),
+) -> dict[str, Any]:
     """
     标记告警为已解决
 
@@ -597,7 +619,9 @@ async def resolve_alert(alert_id: str, current_user: User = Depends(get_current_
 
 @router.get("/dashboard", summary="获取监控仪表板数据")
 @require_permission("system_monitoring", "read")
-async def get_monitoring_dashboard(current_user: User = Depends(get_current_user)):
+async def get_monitoring_dashboard(
+    current_user: Any = Depends(get_current_user),
+) -> dict[str, Any]:
     """
     获取监控仪表板综合数据
 
@@ -642,7 +666,9 @@ async def get_monitoring_dashboard(current_user: User = Depends(get_current_user
 
 @router.post("/metrics/collect", summary="手动触发指标收集")
 @require_permission("system_monitoring", "write")
-async def trigger_metrics_collection(current_user: User = Depends(get_current_user)):
+async def trigger_metrics_collection(
+    current_user: Any = Depends(get_current_user),
+) -> dict[str, Any]:
     """
     手动触发一次指标收集
 
@@ -669,7 +695,9 @@ async def trigger_metrics_collection(current_user: User = Depends(get_current_us
     summary="获取数据库健康指标",
 )
 @require_permission("system_monitoring", "read")
-async def get_database_health_metrics(current_user: User = Depends(get_current_user)):
+async def get_database_health_metrics(
+    current_user: Any = Depends(get_current_user),
+) -> DatabaseHealthMetrics:
     """
     获取数据库健康状态和性能指标
 
@@ -685,13 +713,13 @@ async def get_database_health_metrics(current_user: User = Depends(get_current_u
     需要system_monitoring读取权限
     """
     try:
-        db_manager = get_database_manager()
+        db_manager: Any = get_database_manager()
         if not db_manager:
             raise HTTPException(status_code=503, detail="数据库管理器不可用")
 
         # 获取健康检查结果
         health_check = db_manager.run_health_check()
-        pool_status = db_manager.get_connection_pool_status()
+        pool_status = db_manager.get_connection_pool_status()  # type: ignore[attr-defined]
         metrics = db_manager.get_metrics()
 
         # 计算健康评分
@@ -746,8 +774,8 @@ async def get_database_health_metrics(current_user: User = Depends(get_current_u
 @require_permission("system_monitoring", "read")
 async def get_slow_queries(
     limit: int = Query(default=20, ge=1, le=100, description="返回数量限制"),
-    current_user: User = Depends(get_current_user),
-):
+    current_user: Any = Depends(get_current_user),
+) -> dict[str, Any]:
     """
     获取数据库慢查询列表
 
@@ -756,16 +784,16 @@ async def get_slow_queries(
     返回执行时间超过阈值的查询列表，包含查询语句、执行时间等信息
     """
     try:
-        db_manager = get_database_manager()
+        db_manager: Any = get_database_manager()
         if not db_manager:
             raise HTTPException(status_code=503, detail="数据库管理器不可用")
 
-        slow_queries = db_manager.get_slow_queries(limit=limit)
+        slow_queries = db_manager.get_slow_queries(limit=limit)  # type: ignore[attr-defined]
 
         return {
             "slow_queries": slow_queries,
             "total_count": len(slow_queries),
-            "threshold_ms": db_manager.slow_query_threshold,
+            "threshold_ms": db_manager.slow_query_threshold,  # type: ignore[attr-defined]
             "timestamp": datetime.now().isoformat(),
         }
 
@@ -781,7 +809,9 @@ async def get_slow_queries(
     summary="执行数据库优化",
 )
 @require_permission("system_monitoring", "write")
-async def optimize_database(current_user: User = Depends(get_current_user)):
+async def optimize_database(
+    current_user: Any = Depends(get_current_user),
+) -> DatabaseOptimizationReport:
     """
     执行数据库优化操作
 
@@ -795,26 +825,26 @@ async def optimize_database(current_user: User = Depends(get_current_user)):
     需要system_monitoring写入权限
     """
     try:
-        db_manager = get_database_manager()
+        db_manager: Any = get_database_manager()
         if not db_manager:
             raise HTTPException(status_code=503, detail="数据库管理器不可用")
 
         # 记录优化前的指标
         before_metrics = db_manager.get_metrics()
-        before_pool_status = db_manager.get_connection_pool_status()
+        before_pool_status = db_manager.get_connection_pool_status()  # type: ignore[attr-defined]
 
         # 执行优化
-        optimization_results = db_manager.optimize_database()
+        optimization_results = db_manager.optimize_database()  # type: ignore[attr-defined]
 
         # 清理旧数据
-        cleanup_count = db_manager.cleanup_old_sessions(days=7)
+        cleanup_count = db_manager.cleanup_old_sessions(days=7)  # type: ignore[attr-defined]
 
         # 记录优化后的指标
         after_metrics = db_manager.get_metrics()
-        after_pool_status = db_manager.get_connection_pool_status()
+        after_pool_status = db_manager.get_connection_pool_status()  # type: ignore[attr-defined]
 
         # 计算性能改进
-        performance_improvement = {}
+        performance_improvement: dict[str, float] = {}
         if before_metrics.avg_response_time > 0:
             improvement_percent = (
                 (before_metrics.avg_response_time - after_metrics.avg_response_time)
@@ -854,8 +884,8 @@ async def optimize_database(current_user: User = Depends(get_current_user)):
 @require_permission("system_monitoring", "write")
 async def cleanup_database(
     days: int = Query(default=7, ge=1, le=90, description="清理多少天前的数据"),
-    current_user: User = Depends(get_current_user),
-):
+    current_user: Any = Depends(get_current_user),
+) -> dict[str, Any]:
     """
     清理数据库过期数据
 
@@ -870,11 +900,11 @@ async def cleanup_database(
     需要system_monitoring写入权限
     """
     try:
-        db_manager = get_database_manager()
+        db_manager: Any = get_database_manager()
         if not db_manager:
             raise HTTPException(status_code=503, detail="数据库管理器不可用")
 
-        cleaned_count = db_manager.cleanup_old_sessions(days=days)
+        cleaned_count = db_manager.cleanup_old_sessions(days=days)  # type: ignore[attr-defined]
 
         return {
             "message": f"成功清理了 {cleaned_count} 条过期数据",
@@ -891,7 +921,9 @@ async def cleanup_database(
 
 @router.get("/database/connection-pool", summary="获取连接池状态")
 @require_permission("system_monitoring", "read")
-async def get_connection_pool_status(current_user: User = Depends(get_current_user)):
+async def get_connection_pool_status(
+    current_user: Any = Depends(get_current_user),
+) -> dict[str, Any]:
     """
     获取数据库连接池详细状态
 
@@ -902,11 +934,11 @@ async def get_connection_pool_status(current_user: User = Depends(get_current_us
     - 性能指标
     """
     try:
-        db_manager = get_database_manager()
+        db_manager: Any = get_database_manager()
         if not db_manager:
             raise HTTPException(status_code=503, detail="数据库管理器不可用")
 
-        pool_status = db_manager.get_connection_pool_status()
+        pool_status = db_manager.get_connection_pool_status()  # type: ignore[attr-defined]
 
         return {
             "pool_status": pool_status,
