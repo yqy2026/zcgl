@@ -37,7 +37,6 @@ class CRUDOwnership(CRUDBase):
         keyword: str | None = None,
     ) -> list[Ownership]:
         """获取多个权属方"""
-        query = db.query(Ownership)
         filters = {}
 
         # 构造过滤条件
@@ -46,10 +45,7 @@ class CRUDOwnership(CRUDBase):
 
         # 构建基础查询
         stmt = self.query_builder.build_query(
-            db_session=db,  # type: ignore[call-arg]
-            model=Ownership,  # type: ignore[call-arg]
             filters=filters,
-            base_query=query,  # type: ignore[arg-type]
             search_query=keyword,
             search_fields=["name", "short_name", "code"],
             sort_by="created_at",
@@ -77,16 +73,12 @@ class CRUDOwnership(CRUDBase):
         skip = (search_params.page - 1) * search_params.size
         limit = search_params.size
 
-        query = db.query(Ownership)
         filters = {}
         if search_params.is_active is not None:
             filters["is_active"] = search_params.is_active
 
         stmt = self.query_builder.build_query(
-            db_session=db,  # type: ignore[call-arg]
-            model=Ownership,  # type: ignore[call-arg]
             filters=filters,
-            base_query=query,  # type: ignore[arg-type]
             search_query=search_params.keyword,
             search_fields=["name", "short_name", "code"],
             sort_by="created_at",
@@ -97,9 +89,7 @@ class CRUDOwnership(CRUDBase):
 
         # Count
         count_stmt = self.query_builder.build_count_query(
-            model=Ownership,  # type: ignore[call-arg]
             filters=filters,
-            base_query=query,  # type: ignore[call-arg]
             search_query=search_params.keyword,
             search_fields=["name", "short_name", "code"],
         )

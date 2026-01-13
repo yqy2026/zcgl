@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy.orm import Session
 
@@ -35,7 +35,7 @@ class RBACService:
         if obj_in.permission_ids:
             self.update_role_permissions(
                 db,
-                role_id=role.id,
+                role_id=str(role.id),
                 permission_ids=obj_in.permission_ids,
                 updated_by=created_by,
             )
@@ -126,10 +126,10 @@ class RBACService:
         if existing:
             # If inactive, reactivate? Or raise?
             if not existing.is_active:
-                existing.is_active = True
-                existing.expires_at = obj_in.expires_at
-                existing.assigned_by = assigned_by
-                existing.assigned_at = datetime.now()
+                existing.is_active = True  # type: ignore[assignment]
+                existing.expires_at = obj_in.expires_at  # type: ignore[assignment]
+                existing.assigned_by = assigned_by  # type: ignore[assignment]
+                existing.assigned_at = datetime.now()  # type: ignore[assignment]
                 db.commit()
                 return existing
             else:
@@ -147,8 +147,8 @@ class RBACService:
         if not assignment or not assignment.is_active:
             return False
 
-        assignment.is_active = False
-        assignment.updated_at = datetime.now()
+        assignment.is_active = False  # type: ignore[assignment]
+        assignment.updated_at = datetime.now()  # type: ignore[assignment]
         db.commit()
         return True
 

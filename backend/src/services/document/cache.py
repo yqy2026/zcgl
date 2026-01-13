@@ -19,12 +19,12 @@ from typing import Any
 from .config import get_config
 
 try:
-    import aiofiles
+    import aiofiles  # type: ignore[import-untyped]
 
     AIOFILES_AVAILABLE = True
 except ImportError:
     AIOFILES_AVAILABLE = False
-    aiofiles = None  # type: ignore
+    aiofiles = None
 
 logger = logging.getLogger(__name__)
 
@@ -681,8 +681,8 @@ class CachedExtractor:
     def __init__(
         self,
         cache: PDFCache | None = None,
-        cache_key_func: Callable | None = None,
-    ):
+        cache_key_func: Callable[..., str] | None = None,
+    ) -> None:
         """
         初始化装饰器
 
@@ -693,7 +693,7 @@ class CachedExtractor:
         self.cache = cache or PDFCache()
         self.cache_key_func = cache_key_func
 
-    def __call__(self, func: Callable) -> Callable:
+    def __call__(self, func: Callable[..., Any]) -> Callable[..., Any]:
         """
         装饰器函数
 
@@ -743,7 +743,7 @@ class ExtractionCache:
     - 缓存预热
     """
 
-    def __init__(self, base_cache: PDFCache | None = None):
+    def __init__(self, base_cache: PDFCache | None = None) -> None:
         """
         初始化高级缓存
 
@@ -751,12 +751,12 @@ class ExtractionCache:
             base_cache: 基础缓存实例
         """
         self.cache = base_cache or PDFCache()
-        self._conditional_caches: dict[str, Callable] = {}
+        self._conditional_caches: dict[str, Callable[[dict[str, Any]], bool]] = {}
 
     def register_conditional_cache(
         self,
         name: str,
-        condition_func: Callable,
+        condition_func: Callable[[dict[str, Any]], bool],
     ) -> None:
         """
         注册条件性缓存
@@ -801,7 +801,7 @@ class ExtractionCache:
     def warm_up(
         self,
         file_paths: list[str],
-        extraction_func: Callable,
+        extraction_func: Callable[[str], dict[str, Any]],
     ) -> dict[str, Any]:
         """
         缓存预热
@@ -881,7 +881,7 @@ def clear_all_caches() -> int:
 # ============================================================================
 
 
-def cached_extraction(ttl_seconds: int = 3600):
+def cached_extraction(ttl_seconds: int = 3600) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """
     提取结果缓存装饰器
 
@@ -894,8 +894,8 @@ def cached_extraction(ttl_seconds: int = 3600):
             return await llm_extractor.extract_smart(pdf_path)
     """
 
-    def decorator(func: Callable) -> Callable:
-        async def wrapper(file_path: str, *args, **kwargs):
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        async def wrapper(file_path: str, *args: Any, **kwargs: Any) -> Any:
             cache = PDFCache(ttl_seconds=ttl_seconds)
 
             # 检查缓存

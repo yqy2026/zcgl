@@ -499,7 +499,9 @@ def validate_config(config: PDFImportConfig) -> list[str]:
         try:
             import paddle
 
-            if not paddle.is_compiled_with_cuda():
+            # PaddlePaddle 的 CUDA 检查
+            cuda_available: bool = getattr(paddle, "is_compiled_with_cuda", lambda: False)()
+            if not cuda_available:
                 warnings.append(
                     "use_gpu=True but CUDA is not available in PaddlePaddle"
                 )

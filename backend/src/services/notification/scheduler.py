@@ -7,6 +7,7 @@
 
 import asyncio
 from datetime import date, datetime, timedelta
+from typing import Any
 
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
@@ -361,7 +362,7 @@ class NotificationSchedulerService:
         return notifications_created
 
 
-def run_notification_tasks():
+def run_notification_tasks() -> dict[str, Any]:
     """运行所有通知任务"""
     db = next(get_db())
     try:

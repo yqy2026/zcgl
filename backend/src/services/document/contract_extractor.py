@@ -50,7 +50,7 @@ class ExtractedField:
 class ContractExtractor:
     """合同信息提取器 - 智能PDF导入的核心组件"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """初始化提取器"""
         self.extraction_rules = self._load_fixed_extraction_rules()
 
@@ -781,7 +781,7 @@ if __name__ == "__main__":  # pragma: no cover
     # 测试固定租金合同提取  # pragma: no cover
     def extract_fixed_rent_contract_info(
         contract_text: str,
-    ) -> dict:  # pragma: no cover
+    ) -> dict[str, Any]:  # pragma: no cover
         """
         提取固定租金合同信息
 

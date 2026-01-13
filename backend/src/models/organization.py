@@ -11,7 +11,7 @@ from sqlalchemy.orm import relationship
 from ..database import Base
 
 
-class Organization(Base):
+class Organization(Base):  # type: ignore[valid-type, misc]
     """组织架构模型"""
 
     __tablename__ = "organizations"
@@ -73,11 +73,11 @@ class Organization(Base):
     )
     employees = relationship("Employee", back_populates="organization")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Organization(id={self.id}, name={self.name})>"  # pragma: no cover
 
 
-class Position(Base):
+class Position(Base):  # type: ignore[valid-type, misc]
     """职位模型"""
 
     __tablename__ = "positions"
@@ -124,11 +124,11 @@ class Position(Base):
     organization = relationship("Organization", back_populates="positions")
     employees = relationship("Employee", back_populates="position")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Position(id={self.id}, name={self.name})>"  # pragma: no cover
 
 
-class Employee(Base):
+class Employee(Base):  # type: ignore[valid-type, misc]
     """员工模型"""
 
     __tablename__ = "employees"
@@ -203,11 +203,11 @@ class Employee(Base):
     # 暂时移除双向关系以避免循环依赖问题
     # user = relationship("User", back_populates="employee", uselist=False)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Employee(id={self.id}, name={self.name}, employee_no={self.employee_no})>"  # pragma: no cover
 
 
-class OrganizationHistory(Base):
+class OrganizationHistory(Base):  # type: ignore[valid-type, misc]
     """组织架构变更历史"""
 
     __tablename__ = "organization_history"
@@ -235,5 +235,5 @@ class OrganizationHistory(Base):
     # 关系
     organization = relationship("Organization")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<OrganizationHistory(id={self.id}, action={self.action})>"  # pragma: no cover

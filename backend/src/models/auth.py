@@ -162,7 +162,7 @@ class User(Base):  # type: ignore[valid-type, misc]
             return False  # pragma: no cover
 
 
-class UserSession(Base):
+class UserSession(Base):  # type: ignore[valid-type, misc]
     """用户会话模型"""
 
     __tablename__ = "user_sessions"
@@ -196,7 +196,7 @@ class UserSession(Base):
     # 关系
     user = relationship("User", back_populates="user_sessions")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<UserSession(id={self.id}, user_id={self.user_id}, active={self.is_active})>"
 
     def is_expired(self) -> bool:
@@ -211,7 +211,7 @@ class UserSession(Base):
             return datetime.now() > expires_at_value  # pragma: no cover
 
 
-class AuditLog(Base):
+class AuditLog(Base):  # type: ignore[valid-type, misc]
     """审计日志模型"""
 
     __tablename__ = "audit_logs"
@@ -253,5 +253,5 @@ class AuditLog(Base):
     # 关系
     user = relationship("User", back_populates="audit_logs")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<AuditLog(id={self.id}, action={self.action}, user={self.username})>"

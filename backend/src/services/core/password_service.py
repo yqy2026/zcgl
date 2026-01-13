@@ -2,6 +2,7 @@ import base64
 import binascii  # pylint: disable=unused-import
 import json
 from datetime import datetime, timedelta
+from typing import Any, cast
 
 import bcrypt
 
@@ -66,15 +67,16 @@ class PasswordService:
 
     def is_password_in_history(self, user: User, password: str) -> bool:
         """检查密码是否在历史记录中"""
-        if not user.password_history:  # pragma: no cover
+        password_history_value = user.password_history
+        if not password_history_value:  # pragma: no cover
             return False  # pragma: no cover
 
         try:
             # 解析密码历史记录
-            if isinstance(user.password_history, str):
-                password_history: list[str] = json.loads(user.password_history)
+            if isinstance(password_history_value, str):
+                password_history: list[str] = json.loads(password_history_value)
             else:  # pragma: no cover
-                password_history = user.password_history  # pragma: no cover
+                password_history = cast(list[str], password_history_value)  # pragma: no cover
 
             # 检查密码是否与历史记录中的任何密码匹配
             for old_hash in password_history:
@@ -89,12 +91,13 @@ class PasswordService:
     def add_password_to_history(self, user: User, password_hash: str) -> None:
         """将密码哈希添加到历史记录中"""
         # 获取现有历史记录或创建空列表
-        if user.password_history:
+        password_history_value = user.password_history
+        if password_history_value:
             try:
-                if isinstance(user.password_history, str):
-                    password_history = json.loads(user.password_history)
+                if isinstance(password_history_value, str):
+                    password_history = json.loads(password_history_value)
                 else:  # pragma: no cover
-                    password_history = user.password_history  # pragma: no cover
+                    password_history = cast(list[str], password_history_value)  # pragma: no cover
             except (json.JSONDecodeError, TypeError):  # pragma: no cover
                 password_history = []  # pragma: no cover
         else:
@@ -108,12 +111,13 @@ class PasswordService:
             password_history = password_history[-10:]
 
         # 更新用户记录
-        user.password_history = json.dumps(password_history)
-        user.password_last_changed = datetime.now()
+        user.password_history = json.dumps(password_history)  # type: ignore[assignment]
+        user.password_last_changed = datetime.now()  # type: ignore[assignment]
 
     def is_password_expired(self, user: User) -> bool:
         """检查密码是否过期"""
-        if not user.password_last_changed:  # pragma: no cover
+        password_last_changed_value = user.password_last_changed
+        if not password_last_changed_value:  # pragma: no cover
             return False  # pragma: no cover
 
         # 如果PASSWORD_EXPIRE_DAYS为0或负数，表示不启用密码过期策略
@@ -121,5 +125,5 @@ class PasswordService:
             return False  # pragma: no cover
 
         # 计算密码过期时间
-        expire_time = user.password_last_changed + timedelta(days=PASSWORD_EXPIRE_DAYS)
-        return datetime.now() > expire_time
+        expire_time = password_last_changed_value + timedelta(days=PASSWORD_EXPIRE_DAYS)
+        return bool(datetime.now() > expire_time)

@@ -2,6 +2,8 @@
 组织架构管理API路由
 """
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
@@ -32,10 +34,11 @@ async def get_organizations(
     limit: int = Query(100, ge=1, le=1000, description="返回记录数"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> list[OrganizationResponse]:
     """获取组织列表"""
+    # FastAPI will convert Organization to OrganizationResponse via response_model
     organizations = organization_crud.get_multi_with_filters(db, skip=skip, limit=limit)
-    return organizations
+    return organizations  # type: ignore[return-value]
 
 
 @router.get("/tree", response_model=list[OrganizationTree])
@@ -43,7 +46,7 @@ async def get_organization_tree(
     parent_id: str | None = Query(None, description="父组织ID，为空则获取根组织"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> list[OrganizationTree]:
     """获取组织树形结构"""
 
     def build_tree(pid: str | None = None) -> list[OrganizationTree]:
@@ -52,12 +55,14 @@ async def get_organization_tree(
         tree = []
 
         for org in organizations:
-            children = build_tree(org.id)
+            # Access attribute values to avoid Column type issues
+            org_id = getattr(org, 'id', '')
+            children = build_tree(org_id)
             tree_node = OrganizationTree(
-                id=org.id,
-                name=org.name,
-                level=org.level,
-                sort_order=org.sort_order,
+                id=str(getattr(org, 'id', '')),
+                name=str(getattr(org, 'name', '')),
+                level=int(getattr(org, 'level', 0)),
+                sort_order=int(getattr(org, 'sort_order', 0)),
                 children=children,
             )
             tree.append(tree_node)
@@ -74,19 +79,18 @@ async def search_organizations(
     limit: int = Query(100, ge=1, le=1000, description="返回记录数"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> list[OrganizationResponse]:
     """搜索组织"""
-    organizations = organization_crud.search(
-        db, keyword=keyword, skip=skip, limit=limit
-    )
-    return organizations
+    # FastAPI will convert Organization to OrganizationResponse via response_model
+    organizations = organization_crud.search(db, keyword=keyword, skip=skip, limit=limit)
+    return organizations  # type: ignore[return-value]
 
 
 @router.get("/statistics", response_model=OrganizationStatistics)
 async def get_organization_statistics(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> OrganizationStatistics:
     """获取组织统计信息"""
     stats = organization_service.get_statistics(db)
     return OrganizationStatistics(**stats)
@@ -97,7 +101,7 @@ async def get_organization(
     org_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> OrganizationResponse:
     """根据ID获取组织详情"""
     organization = organization_crud.get(db, id=org_id)
     if not organization:
@@ -111,7 +115,7 @@ async def get_organization_children(
     recursive: bool = Query(False, description="是否递归获取所有子组织"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> list[OrganizationResponse]:
     """获取组织的子组织"""
     # 先检查父组织是否存在
     parent = organization_crud.get(db, id=org_id)
@@ -127,7 +131,7 @@ async def get_organization_path(
     org_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> list[OrganizationResponse]:
     """获取组织到根节点的路径"""
     # 检查组织是否存在
     organization = organization_crud.get(db, id=org_id)
@@ -145,7 +149,7 @@ async def get_organization_history(
     limit: int = Query(100, ge=1, le=1000, description="返回记录数"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> list[OrganizationHistoryResponse]:
     """获取组织变更历史"""
     # 检查组织是否存在
     organization = organization_crud.get(db, id=org_id)
@@ -163,7 +167,7 @@ async def create_organization(
     organization: OrganizationCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> OrganizationResponse:
     """创建组织"""
     try:
         db_organization = organization_service.create_organization(
@@ -180,7 +184,7 @@ async def update_organization(
     organization: OrganizationUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> OrganizationResponse:
     """更新组织"""
     try:
         db_organization = organization_service.update_organization(
@@ -199,7 +203,7 @@ async def delete_organization(
     deleted_by: str | None = Query(None, description="删除人"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> dict[str, str]:
     """删除组织（软删除）"""
     try:
         success = organization_service.delete_organization(
@@ -218,14 +222,17 @@ async def move_organization(
     move_request: OrganizationMoveRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> dict[str, Any]:
     """移动组织到新的父组织下"""
     try:
-        update_data = OrganizationUpdate(
-            parent_id=move_request.target_parent_id,
-            sort_order=move_request.sort_order,
-            updated_by=move_request.updated_by,
-        )
+        # Create update data as dict to avoid field requirements
+        update_dict: dict[str, Any] = {
+            "parent_id": move_request.target_parent_id,
+            "sort_order": move_request.sort_order,
+            "updated_by": move_request.updated_by,
+        }
+        # Create OrganizationUpdate with model_validate
+        update_data = OrganizationUpdate.model_validate(update_dict)
         db_organization = organization_service.update_organization(
             db, org_id=org_id, obj_in=update_data
         )
@@ -241,7 +248,7 @@ async def batch_organization_operation(
     batch_request: OrganizationBatchRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> dict[str, Any]:
     """批量操作组织"""
     results = []
     errors = []
@@ -274,8 +281,9 @@ async def advanced_search_organizations(
     search_request: OrganizationSearchRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> list[OrganizationResponse]:
     """高级搜索组织"""
+    # FastAPI will convert Organization to OrganizationResponse via response_model
     if search_request.keyword:
         organizations = organization_crud.search(
             db,
@@ -298,4 +306,4 @@ async def advanced_search_organizations(
             org for org in organizations if org.parent_id == search_request.parent_id
         ]
 
-    return organizations
+    return organizations  # type: ignore[return-value]

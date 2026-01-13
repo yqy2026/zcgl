@@ -20,7 +20,7 @@ from sqlalchemy.orm import relationship
 from ..database import Base
 
 
-class EnumFieldType(Base):
+class EnumFieldType(Base):  # type: ignore[valid-type, misc]
     """枚举字段类型模型"""
 
     __tablename__ = "enum_field_types"
@@ -70,11 +70,11 @@ class EnumFieldType(Base):
         "EnumFieldValue", back_populates="enum_type", cascade="all, delete-orphan"
     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<EnumFieldType(id={self.id}, name={self.name}, code={self.code})>"  # pragma: no cover
 
 
-class EnumFieldValue(Base):
+class EnumFieldValue(Base):  # type: ignore[valid-type, misc]
     """枚举字段值模型"""
 
     __tablename__ = "enum_field_values"
@@ -133,11 +133,11 @@ class EnumFieldValue(Base):
         "EnumFieldValue", back_populates="parent", cascade="all, delete-orphan"
     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<EnumFieldValue(id={self.id}, label={self.label}, value={self.value})>"  # pragma: no cover
 
 
-class EnumFieldUsage(Base):
+class EnumFieldUsage(Base):  # type: ignore[valid-type, misc]
     """枚举字段使用记录模型"""
 
     __tablename__ = "enum_field_usage"
@@ -180,11 +180,11 @@ class EnumFieldUsage(Base):
     # 关系定义
     enum_type = relationship("EnumFieldType")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<EnumFieldUsage(id={self.id}, table={self.table_name}, field={self.field_name})>"  # pragma: no cover
 
 
-class EnumFieldHistory(Base):
+class EnumFieldHistory(Base):  # type: ignore[valid-type, misc]
     """枚举字段变更历史模型"""
 
     __tablename__ = "enum_field_history"
@@ -221,5 +221,5 @@ class EnumFieldHistory(Base):
     enum_type = relationship("EnumFieldType")
     enum_value = relationship("EnumFieldValue")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<EnumFieldHistory(id={self.id}, action={self.action}, target_type={self.target_type})>"  # pragma: no cover

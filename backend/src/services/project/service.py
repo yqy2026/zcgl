@@ -7,7 +7,7 @@ try:
     from pinyin import get as get_pinyin
 except ImportError:
 
-    def get_pinyin(*args: Any, **kwargs: Any) -> Any:  # type: ignore[misc]
+    def get_pinyin(*args: Any, **kwargs: Any) -> Any:
         return None
 
 from ...crud.project import project_crud
@@ -91,7 +91,7 @@ class ProjectService:
         # Use remove instead of delete
         project = project_crud.get(db, project_id)
         if project:
-            db.delete(project)  # type: ignore[arg-type]
+            db.delete(project)
             db.commit()
 
     def generate_project_code(self, db: Session, name: str | None = None) -> str:
@@ -99,7 +99,7 @@ class ProjectService:
         # 1. 尝试从名称生成语义化编码
         if name:
             code = self._generate_name_code(name)
-            if not project_crud.get_by_code(db, code):
+            if code and not project_crud.get_by_code(db, code):
                 return code
 
         # 2. 生成顺序编码 PJ + YYMM + NNN

@@ -17,7 +17,6 @@ try:
     from tenacity import (
         before_sleep_log,
         retry,
-        retry_if,
         retry_if_exception_type,
         stop_after_attempt,
         wait_exponential,
@@ -42,7 +41,7 @@ T = TypeVar("T")
 
 if TENACITY_AVAILABLE:
 
-    def retry_on_network_error(  # type: ignore[misc]
+    def retry_on_network_error(
         max_attempts: int = 3,
         wait_min: float = 1.0,
         wait_max: float = 10.0,
@@ -56,11 +55,11 @@ if TENACITY_AVAILABLE:
             wait_max: 最大等待时间（秒）
 
         Example:
-            @retry_on_network_error(max_attempts=3)  # type: ignore[misc]  # type: ignore[misc]
+            @retry_on_network_error(max_attempts=3)
             async def call_api():
                 return await httpx.AsyncClient().get(url)
         """
-        return retry(  # type: ignore[return-value]
+        return retry(
             stop=stop_after_attempt(max_attempts),
             wait=wait_exponential(multiplier=1, min=wait_min, max=wait_max),
             retry=retry_if_exception_type(
@@ -70,7 +69,7 @@ if TENACITY_AVAILABLE:
             reraise=True,
         )
 
-    def retry_on_api_error(  # type: ignore[misc]
+    def retry_on_api_error(
         max_attempts: int = 3,
         wait_min: float = 2.0,
         wait_max: float = 30.0,
@@ -85,33 +84,21 @@ if TENACITY_AVAILABLE:
             wait_max: 最大等待时间（秒）
 
         Example:
-            @retry_on_api_error(max_attempts=3)  # type: ignore[misc]  # type: ignore[misc]
+            @retry_on_api_error(max_attempts=3)
             async def call_llm_api():
                 return await client.chat.completions.create(...)
         """
-
-        def is_retryable_error(exception: Exception) -> bool:
-            """判断是否为可重试的 API 错误"""
-            if isinstance(exception, httpx.HTTPStatusError):
-                # 重试 5xx 服务器错误和 429 限流
-                return (
-                    exception.response.status_code >= 500
-                    or exception.response.status_code == 429
-                )
-            return False
-
-        return retry(  # type: ignore[return-value]
+        return retry(
             stop=stop_after_attempt(max_attempts),
             wait=wait_exponential(multiplier=1, min=wait_min, max=wait_max),
             retry=retry_if_exception_type(
                 (httpx.HTTPStatusError, httpx.TimeoutException, httpx.NetworkError)
-            )
-            & retry_if(is_retryable_error),
+            ),
             before_sleep=before_sleep_log(logger, logging.WARNING),
             reraise=True,
         )
 
-    def retry_on_vision_api(  # type: ignore[misc]
+    def retry_on_vision_api(
         max_attempts: int = 3,
         timeout: float = 180.0,
     ) -> Callable[[Callable[..., T]], Callable[..., T]]:
@@ -124,11 +111,11 @@ if TENACITY_AVAILABLE:
             timeout: 超时时间（秒）
 
         Example:
-            @retry_on_vision_api(max_attempts=3)  # type: ignore[misc]  # type: ignore[misc]
+            @retry_on_vision_api(max_attempts=3)
             async def extract_from_images(images):
                 return await vision_service.extract(images)
         """
-        return retry(  # type: ignore[return-value]
+        return retry(
             stop=stop_after_attempt(max_attempts),
             wait=wait_exponential(multiplier=1, min=2, max=30),
             retry=retry_if_exception_type(
@@ -410,7 +397,7 @@ class RetryContext:
 
 if __name__ == "__main__":  # pragma: no cover
     # 装饰器使用示例
-    @retry_on_network_error(max_attempts=3)  # type: ignore[misc]  # type: ignore[misc]
+    @retry_on_network_error(max_attempts=3)
     async def example_api_call(url: str):
         async with httpx.AsyncClient() as client:
             response = await client.get(url, timeout=30.0)

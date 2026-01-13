@@ -74,7 +74,7 @@ async def get_notifications(
     type: str | None = Query(None, description="通知类型筛选"),
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
-):
+) -> NotificationListResponse:
     """
     获取当前用户的通知列表
 
@@ -101,7 +101,7 @@ async def get_notifications(
     # 获取未读数量
     unread_count = (
         db.query(Notification)
-        .filter(Notification.recipient_id == current_user.id, not Notification.is_read)
+        .filter(Notification.recipient_id == current_user.id, Notification.is_read.is_(False))
         .count()
     )
 
@@ -121,7 +121,7 @@ async def get_notifications(
 async def get_unread_count(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
-):
+) -> UnreadCountResponse:
     """
     获取当前用户的未读通知数量
     """
@@ -145,7 +145,7 @@ async def mark_notification_as_read(
     notification_id: str,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
-):
+) -> NotificationResponse:
     """
     标记通知为已读
     """
@@ -171,13 +171,13 @@ async def mark_notification_as_read(
 async def mark_all_as_read(
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, str]:
     """
     标记所有通知为已读
     """
     # 更新所有未读通知
     db.query(Notification).filter(
-        Notification.recipient_id == current_user.id, not Notification.is_read
+        Notification.recipient_id == current_user.id, Notification.is_read.is_(False)
     ).update({"is_read": True, "read_at": datetime.utcnow()})
 
     db.commit()
@@ -190,7 +190,7 @@ async def delete_notification(
     notification_id: str,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, str]:
     """
     删除通知
     """
@@ -216,7 +216,7 @@ async def delete_notification(
 async def run_notification_tasks_endpoint(
     background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_active_user),
-):
+) -> dict[str, str]:
     """
     手动触发通知任务（用于测试和管理）
 
