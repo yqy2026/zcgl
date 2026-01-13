@@ -4,6 +4,7 @@
 """
 
 from datetime import datetime
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
@@ -67,7 +68,7 @@ class RolePermissionUpdateRequest(BaseModel):
 class RoleUserListResponse(BaseModel):
     """角色用户列表响应"""
 
-    users: list[dict]
+    users: list[dict[str, Any]]
     total: int
 
 
@@ -84,7 +85,7 @@ async def get_roles(
     organization_id: str | None = Query(None, description="组织ID"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> RoleListResponse:
     """
     获取角色列表，支持分页和筛选
 
@@ -148,7 +149,7 @@ async def create_role(
     role_data: RoleCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
-):
+) -> RoleDetailResponse:
     """
     创建新角色（仅管理员）
 
@@ -161,7 +162,7 @@ async def create_role(
         new_role = rbac_service.create_role(
             db=db,
             obj_in=role_data,
-            created_by=current_user.id,
+            created_by=str(current_user.id),
         )
 
         return RoleDetailResponse.model_validate(new_role)
@@ -176,7 +177,7 @@ async def get_role(
     role_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> RoleDetailResponse:
     """获取角色详情及其关联的权限和用户"""
     try:
         role = role_crud.get(db, id=role_id)
@@ -201,7 +202,7 @@ async def update_role(
     role_data: RoleUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
-):
+) -> RoleDetailResponse:
     """
     更新角色信息（仅管理员）
 
@@ -213,7 +214,7 @@ async def update_role(
             db=db,
             role_id=role_id,
             obj_in=role_data,
-            updated_by=current_user.id,
+            updated_by=str(current_user.id),
         )
 
         return RoleDetailResponse.model_validate(updated_role)
@@ -230,7 +231,7 @@ async def delete_role(
     role_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
-):
+) -> None:
     """
     删除角色（仅管理员）
 
@@ -239,7 +240,7 @@ async def delete_role(
     """
     try:
         success = rbac_service.delete_role(
-            db=db, role_id=role_id, deleted_by=current_user.id
+            db=db, role_id=role_id, deleted_by=str(current_user.id)
         )
 
         if not success:
@@ -255,19 +256,21 @@ async def delete_role(
 # ==================== 权限管理端点 ====================
 
 
-@router.get("/permissions/list[Any]", response_model=dict[str, Any], summary="获取所有权限")
+@router.get(
+    "/permissions/list", response_model=dict[str, Any], summary="获取所有权限"
+)
 async def get_all_permissions(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> dict[str, Any]:
     """获取系统中所有可用权限，按资源分组"""
     try:
         # Use simple get_multi from generic CRUD since no complex filters needed here
         # or use get_multi_with_filters
-        permissions = permission_crud.get_multi(db, skip=0, limit=10000)
+        permissions: list[Any] = permission_crud.get_multi(db, skip=0, limit=10000)
 
         # 按资源类型分组
-        grouped = {}
+        grouped: dict[str, list[PermissionResponse]] = {}
         for perm in permissions:
             resource = perm.resource
             if resource not in grouped:
@@ -291,7 +294,7 @@ async def set_role_permissions(
     request: RolePermissionUpdateRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
-):
+) -> dict[str, Any]:
     """
     为角色分配权限
 
@@ -302,7 +305,7 @@ async def set_role_permissions(
             db=db,
             role_id=role_id,
             permission_ids=request.permission_ids,
-            updated_by=current_user.id,
+            updated_by=str(current_user.id),
         )
 
         # Get count for response
@@ -313,7 +316,7 @@ async def set_role_permissions(
             "message": "权限更新成功",
             "data": {
                 "role_id": role_id,
-                "permission_count": len(role.permissions),
+                "permission_count": len(role.permissions) if role else 0,
             },
         }
     except ValueError as e:
@@ -338,7 +341,7 @@ async def get_role_users(
     limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> RoleUserListResponse:
     """获取拥有某个角色的所有用户"""
     try:
         role = role_crud.get(db, id=role_id)
@@ -386,7 +389,7 @@ async def get_role_users(
 async def get_role_statistics(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> dict[str, Any]:
     """获取角色相关的统计数据"""
     try:
         total_roles = role_crud.count(db)
@@ -396,9 +399,15 @@ async def get_role_statistics(
             "success": True,
             "data": {
                 "total_roles": total_roles,
-                "active_roles": db.query(Role).filter(Role.is_active).count(),
-                "system_roles": db.query(Role).filter(Role.is_system_role).count(),
-                "custom_roles": db.query(Role).filter(not Role.is_system_role).count(),
+                "active_roles": db.query(Role).filter(
+                    getattr(Role, "is_active").is_(True)
+                ).count(),
+                "system_roles": db.query(Role).filter(
+                    getattr(Role, "is_system_role").is_(True)
+                ).count(),
+                "custom_roles": db.query(Role).filter(
+                    getattr(Role, "is_system_role").is_(False)
+                ).count(),
                 "by_category": by_category,
             },
         }

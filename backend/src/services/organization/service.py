@@ -32,22 +32,22 @@ class OrganizationService:
 
         # Create object
         db_obj = Organization(**obj_in.model_dump())
-        db_obj.level = level
+        object.__setattr__(db_obj, 'level', level)
         # Temporary path until flush
-        db_obj.path = "/"
+        object.__setattr__(db_obj, 'path', "/")
 
         db.add(db_obj)
         db.flush()  # Get ID
 
         # Now set path
         if parent:
-            db_obj.path = (
+            object.__setattr__(db_obj, 'path',
                 f"{parent.path}/{db_obj.id}"
                 if parent.path
                 else f"/{parent.id}/{db_obj.id}"
             )
         else:
-            db_obj.path = f"/{db_obj.id}"
+            object.__setattr__(db_obj, 'path', f"/{db_obj.id}")
 
         db.commit()
         db.refresh(db_obj)
@@ -88,8 +88,8 @@ class OrganizationService:
 
                     parent = organization_crud.get(db, new_parent_id)
                     if parent:
-                        db_obj.level = parent.level + 1
-                        db_obj.path = (
+                        object.__setattr__(db_obj, 'level', parent.level + 1)
+                        object.__setattr__(db_obj, 'path',
                             f"{parent.path}/{db_obj.id}"
                             if parent.path
                             else f"/{parent.id}/{db_obj.id}"
@@ -97,8 +97,8 @@ class OrganizationService:
                     else:
                         raise ValueError(f"上级组织 {new_parent_id} 不存在")
                 else:
-                    db_obj.level = 1
-                    db_obj.path = f"/{db_obj.id}"
+                    object.__setattr__(db_obj, 'level', 1)
+                    object.__setattr__(db_obj, 'path', f"/{db_obj.id}")
 
                 # 更新所有子组织的层级和路径
                 self._update_children_path(db, db_obj)
@@ -197,14 +197,14 @@ class OrganizationService:
 
     def _would_create_cycle(self, db: Session, org_id: str, new_parent_id: str) -> bool:
         """检查是否会创建循环引用"""
-        current_id = new_parent_id
+        current_id: str | None = new_parent_id
         while current_id:
             if current_id == org_id:
                 return True
             parent = organization_crud.get(db, current_id)
             if parent:
                 parent_id_value: str | None = getattr(parent, "parent_id")
-                current_id = parent_id_value
+                current_id = parent_id_value if parent_id_value else None
             else:
                 current_id = None
         return False

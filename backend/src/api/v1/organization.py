@@ -38,7 +38,7 @@ async def get_organizations(
     """获取组织列表"""
     # FastAPI will convert Organization to OrganizationResponse via response_model
     organizations = organization_crud.get_multi_with_filters(db, skip=skip, limit=limit)
-    return organizations  # type: ignore[return-value]
+    return list(organizations)
 
 
 @router.get("/tree", response_model=list[OrganizationTree])
@@ -83,7 +83,7 @@ async def search_organizations(
     """搜索组织"""
     # FastAPI will convert Organization to OrganizationResponse via response_model
     organizations = organization_crud.search(db, keyword=keyword, skip=skip, limit=limit)
-    return organizations  # type: ignore[return-value]
+    return list(organizations)
 
 
 @router.get("/statistics", response_model=OrganizationStatistics)
@@ -123,7 +123,7 @@ async def get_organization_children(
         raise HTTPException(status_code=404, detail="组织不存在")
 
     children = organization_crud.get_children(db, parent_id=org_id, recursive=recursive)
-    return children
+    return list(children)
 
 
 @router.get("/{org_id}/path", response_model=list[OrganizationResponse])
@@ -139,7 +139,7 @@ async def get_organization_path(
         raise HTTPException(status_code=404, detail="组织不存在")
 
     path = organization_crud.get_path_to_root(db, org_id=org_id)
-    return path
+    return list(path)
 
 
 @router.get("/{org_id}/history", response_model=list[OrganizationHistoryResponse])
@@ -159,7 +159,7 @@ async def get_organization_history(
     history = organization_service.get_history(
         db, org_id=org_id, skip=skip, limit=limit
     )
-    return history
+    return list(history)
 
 
 @router.post("/", response_model=OrganizationResponse)
@@ -250,8 +250,8 @@ async def batch_organization_operation(
     current_user: User = Depends(get_current_active_user),
 ) -> dict[str, Any]:
     """批量操作组织"""
-    results = []
-    errors = []
+    results: list[dict[str, str]] = []
+    errors: list[dict[str, str]] = []
 
     for org_id in batch_request.organization_ids:
         try:
@@ -306,4 +306,4 @@ async def advanced_search_organizations(
             org for org in organizations if org.parent_id == search_request.parent_id
         ]
 
-    return organizations  # type: ignore[return-value]
+    return list(organizations)

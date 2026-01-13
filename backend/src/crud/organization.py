@@ -1,3 +1,5 @@
+from typing import Any
+
 from sqlalchemy import and_, not_
 from sqlalchemy.orm import Session
 
@@ -20,7 +22,7 @@ class CRUDOrganization(CRUDBase):
     ) -> list[Organization]:
         """获取多个组织"""
         query = db.query(Organization).filter(not_(Organization.is_deleted))
-        filters = {}
+        filters: dict[str, Any] = {}
 
         if parent_id:
             filters["parent_id"] = parent_id
@@ -40,7 +42,7 @@ class CRUDOrganization(CRUDBase):
         query = query.order_by(Organization.level.asc(), Organization.sort_order.asc())
 
         # Apply pagination
-        result = query.offset(skip).limit(limit).all()
+        result: list[Organization] = query.offset(skip).limit(limit).all()
         return result
 
     def get_tree(self, db: Session, parent_id: str | None = None) -> list[Organization]:
@@ -48,7 +50,8 @@ class CRUDOrganization(CRUDBase):
         query = db.query(Organization).filter(
             and_(not_(Organization.is_deleted), Organization.parent_id == parent_id)
         )
-        return query.order_by(Organization.sort_order, Organization.name).all()
+        result: list[Organization] = query.order_by(Organization.sort_order, Organization.name).all()
+        return result
 
     def get_children(
         self, db: Session, parent_id: str, recursive: bool = False
@@ -78,7 +81,7 @@ class CRUDOrganization(CRUDBase):
     def get_path_to_root(self, db: Session, org_id: str) -> list[Organization]:
         """获取到根节点的路径"""
         path: list[Organization] = []
-        current = self.get(db, id=org_id)
+        current: Organization | None = self.get(db, id=org_id)
 
         while current:
             path.insert(0, current)
