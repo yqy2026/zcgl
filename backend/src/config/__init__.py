@@ -108,7 +108,7 @@ redis_pool: "ConnectionPool | None" = None
 redis_client: "Redis | None" = None
 
 
-async def init_redis():
+async def init_redis() -> None:
     """初始化Redis连接"""
     global redis_pool, redis_client
 
@@ -117,17 +117,18 @@ async def init_redis():
         return
 
     try:
-        redis_pool = redis.ConnectionPool.from_url(settings.REDIS_URL)  # type: ignore
-        redis_client = redis.Redis(connection_pool=redis_pool)  # type: ignore
+        redis_pool = redis.ConnectionPool.from_url(settings.REDIS_URL)
+        redis_client = redis.Redis(connection_pool=redis_pool)
         # 测试连接
-        await redis_client.ping()
+        if redis_client is not None:
+            await redis_client.ping()
         print(f"✅ Redis连接成功: {settings.REDIS_URL}")
     except Exception as e:
         print(f"❌ Redis连接失败: {e}")
         redis_client = None
 
 
-async def close_redis():
+async def close_redis() -> None:
     """关闭Redis连接"""
     global redis_pool, redis_client
     if redis_client:
@@ -141,8 +142,8 @@ class RedisTaskStore:
     """Redis任务状态存储"""
 
     async def set_task_status(
-        self, task_id: str, status: dict, expire_seconds: int = 3600
-    ):
+        self, task_id: str, status: dict[str, Any], expire_seconds: int = 3600
+    ) -> None:
         """设置任务状态"""
         if redis_client:
             try:
@@ -156,15 +157,16 @@ class RedisTaskStore:
             try:
                 data = await redis_client.get(f"task:{task_id}")
                 if data:
+                    import json
+
                     # TODO: Use json.loads() or pickle.loads() for safer deserialization
-                    return eval(  # nosec - B307: Internal Redis data, but should be fixed
-                        data.decode("utf-8")
-                    )  # 注意：实际应用中应使用更安全的序列化方法
+                    parsed = json.loads(data.decode("utf-8"))
+                    return parsed  # type: ignore[no-any-return]
             except Exception as e:
                 print(f"获取任务状态失败: {e}")
         return None
 
-    async def delete_task(self, task_id: str):
+    async def delete_task(self, task_id: str) -> None:
         """删除任务"""
         if redis_client:
             try:
@@ -178,7 +180,7 @@ task_store = RedisTaskStore()
 
 
 # 定期清理过期任务的后台任务
-async def cleanup_expired_tasks():
+async def cleanup_expired_tasks() -> None:
     """定期清理过期任务"""
     # Redis会自动清理过期键，这里可以用于其他清理工作
     while True:
@@ -190,7 +192,7 @@ async def cleanup_expired_tasks():
 
 
 @asynccontextmanager
-async def lifespan(app):
+async def lifespan(app: Any) -> Any:
     """应用生命周期管理"""
     # 启动时
     print("🚀 启动土地物业资产管理系统")

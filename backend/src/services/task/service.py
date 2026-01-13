@@ -34,12 +34,14 @@ class TaskService:
         db.refresh(db_obj)
 
         # Log creation history
+        task_id_value: str = getattr(db_obj, "id")
+        user_id_value: str = user_id or ""
         self.create_history(
             db=db,
-            task_id=db_obj.id,
+            task_id=task_id_value,
             action="created",
             message=f"任务 '{db_obj.title}' 已创建",
-            user_id=user_id,
+            user_id=user_id_value,
         )
 
         return db_obj
@@ -50,8 +52,8 @@ class TaskService:
         *,
         task_id: str,
         status: TaskStatus,
-        progress: int = None,
-        error_message: str = None,
+        progress: int | None = None,
+        error_message: str | None = None,
     ) -> AsyncTask:
         """更新任务状态"""
         task = task_crud.get(db, task_id)
@@ -89,13 +91,15 @@ class TaskService:
 
         # Log history
         if status != old_status:
+            task_id_value: str = getattr(task, "id")
+            task_user_id: str | None = getattr(task, "user_id", None)
             self.create_history(
                 db=db,
-                task_id=task.id,
+                task_id=task_id_value,
                 action="status_changed",
                 message=f"任务状态从 {old_status} 变更为 {status}"
                 + (f": {error_message}" if error_message else ""),
-                user_id=task.user_id,
+                user_id=task_user_id or "",
                 details={"old_status": old_status, "new_status": status},
             )
 
@@ -152,19 +156,21 @@ class TaskService:
         db.refresh(task)
 
         if "status" in update_data and update_data["status"] != old_status:
+            task_id_value: str = getattr(task, "id")
+            task_user_id: str | None = getattr(task, "user_id", None)
             self.create_history(
                 db=db,
-                task_id=task.id,
+                task_id=task_id_value,
                 action="status_changed",
                 message=f"任务状态从 {old_status} 变更为 {new_status}",
-                user_id=task.user_id,
+                user_id=task_user_id or "",
                 details={"old_status": old_status, "new_status": new_status},
             )
 
         return task
 
     def cancel_task(
-        self, db: Session, *, task_id: str, reason: str = None
+        self, db: Session, *, task_id: str, reason: str | None = None
     ) -> AsyncTask:
         """取消任务"""
         task = task_crud.get(db, task_id)
@@ -185,16 +191,17 @@ class TaskService:
         if not task:
             raise ValueError("任务不存在")
 
-        task.is_active = False
+        task.is_active = False  # type: ignore[assignment]
         db.add(task)
         db.commit()
 
+        task_user_id: str | None = getattr(task, "user_id", None)
         self.create_history(
             db=db,
             task_id=task_id,
             action="deleted",
             message=f"任务 '{task.title}' 已删除",
-            user_id=task.user_id,
+            user_id=task_user_id or "",
         )
 
     def create_history(
@@ -204,8 +211,8 @@ class TaskService:
         task_id: str,
         action: str,
         message: str,
-        user_id: str = None,
-        details: dict[str, Any] = None,
+        user_id: str | None = None,
+        details: dict[str, Any] | None = None,
     ) -> TaskHistory:
         """创建历史记录"""
         history = TaskHistory(
@@ -257,7 +264,7 @@ class TaskService:
 
         count = 0
         for task in old_tasks:
-            task.is_active = False
+            task.is_active = False  # type: ignore[assignment]
             count += 1
 
         db.commit()
@@ -269,7 +276,7 @@ class TaskService:
 
     # Excel Config Logic
     def create_excel_config(
-        self, db: Session, *, obj_in: ExcelTaskConfigCreate, user_id: str = None
+        self, db: Session, *, obj_in: ExcelTaskConfigCreate, user_id: str | None = None
     ) -> ExcelTaskConfig:
         if obj_in.is_default:
             db.query(ExcelTaskConfig).filter(
@@ -281,7 +288,9 @@ class TaskService:
             ).update({"is_default": False})
 
         # Delegating actual creation to CRUD but handling transaction
-        config = excel_task_config_crud.create(db, obj_in=obj_in, user_id=user_id)
+        config: ExcelTaskConfig = excel_task_config_crud.create(  # type: ignore[no-any-return]
+            db, obj_in=obj_in, user_id=user_id
+        )
         # Note: CRUD might flush, we commit here
         db.commit()
         db.refresh(config)

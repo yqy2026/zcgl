@@ -108,7 +108,7 @@ class RBACService:
                 raise BusinessLogicError("角色显示名称已存在")
 
         # 更新字段
-        update_data = role_data.dict[str, Any](exclude_unset=True, exclude={"permission_ids"})
+        update_data = role_data.model_dump(exclude_unset=True, exclude={"permission_ids"})
         for field, value in update_data.items():
             setattr(role, field, value)
 
@@ -464,11 +464,10 @@ class RBACService:
                     role, permission_request
                 )
                 if role_conditions:
-                    conditions = (
-                        role_conditions
-                        if not conditions
-                        else {**conditions, **role_conditions}
-                    )
+                    if conditions is None:
+                        conditions = role_conditions
+                    else:
+                        conditions = {**conditions, **role_conditions}
 
         return PermissionCheckResponse(
             has_permission=len(granted_by) > 0,
@@ -526,7 +525,7 @@ class RBACService:
 
     def _assign_permissions_to_role(
         self, role_id: str, permission_ids: list[str], operator_id: str
-    ):
+    ) -> None:
         """为角色分配权限"""
 
         # 清除现有权限
@@ -621,10 +620,10 @@ class RBACService:
         return action in level_hierarchy.get(permission_level, [])
 
     def _calculate_effective_permissions(
-        self, roles: list[Role], resource_permissions: list
+        self, roles: list[Role], resource_permissions: list[Any]
     ) -> dict[str, list[str]]:
         """计算有效权限"""
-        effective_permissions = {}
+        effective_permissions: dict[str, list[str]] = {}
 
         # 角色权限
         for role in roles:
@@ -664,12 +663,12 @@ class RBACService:
         resource_type: str,
         resource_id: str,
         operator_id: str,
-        old_permissions: dict | None = None,
-        new_permissions: dict | None = None,
+        old_permissions: dict[str, Any] | None = None,
+        new_permissions: dict[str, Any] | None = None,
         reason: str | None = None,
         ip_address: str | None = None,
         user_agent: str | None = None,
-    ):
+    ) -> None:
         """创建权限审计日志"""
         audit_log = PermissionAuditLog(
             action=action,
@@ -713,6 +712,8 @@ class RBACService:
         permission_request = PermissionCheckRequest(
             resource=resource,
             action=action,
+            resource_id=None,
+            context=None,
         )
 
         response = self.check_permission(user_id, permission_request)
@@ -739,6 +740,7 @@ class RBACService:
             resource=resource,
             action=action,
             resource_id=resource_id,
+            context=None,
         )
 
         response = self.check_permission(user_id, permission_request)
@@ -762,7 +764,8 @@ class RBACService:
         permission_request = PermissionCheckRequest(
             resource="organization",
             action="view",
-            organization_id=organization_id,
+            resource_id=organization_id,
+            context=None,
         )
 
         response = self.check_permission(user_id, permission_request)

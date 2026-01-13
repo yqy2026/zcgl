@@ -32,22 +32,22 @@ class OrganizationService:
 
         # Create object
         db_obj = Organization(**obj_in.model_dump())
-        db_obj.level = level
+        db_obj.level = level  # type: ignore[assignment]
         # Temporary path until flush
-        db_obj.path = "/"  # Placeholder
+        db_obj.path = "/"  # type: ignore[assignment]
 
         db.add(db_obj)
         db.flush()  # Get ID
 
         # Now set path
         if parent:
-            db_obj.path = (
+            db_obj.path = (  # type: ignore[assignment]
                 f"{parent.path}/{db_obj.id}"
                 if parent.path
                 else f"/{parent.id}/{db_obj.id}"
             )
         else:
-            db_obj.path = f"/{db_obj.id}"
+            db_obj.path = f"/{db_obj.id}"  # type: ignore[assignment]
 
         db.commit()
         db.refresh(db_obj)
@@ -113,9 +113,10 @@ class OrganizationService:
 
         # 记录变更历史
         for field, values in old_values.items():
+            org_id_value: str = getattr(db_obj, "id")
             self._create_history(
                 db,
-                org_id,
+                org_id_value,
                 "update",
                 field,
                 values["old"],
@@ -200,15 +201,19 @@ class OrganizationService:
             if current_id == org_id:
                 return True
             parent = organization_crud.get(db, current_id)
-            current_id = parent.parent_id if parent else None
+            if parent:
+                current_id = parent.parent_id  # type: ignore[assignment]
+            else:
+                current_id = None
         return False
 
-    def _update_children_path(self, db: Session, parent_org: Organization):
+    def _update_children_path(self, db: Session, parent_org: Organization) -> None:
         """更新子组织路径"""
-        children = organization_crud.get_children(db, parent_org.id)
+        parent_org_id: str = getattr(parent_org, "id")
+        children = organization_crud.get_children(db, parent_org_id)
         for child in children:
-            child.level = parent_org.level + 1
-            child.path = f"{parent_org.path}/{child.id}"
+            child.level = parent_org.level + 1  # type: ignore[assignment]
+            child.path = f"{parent_org.path}/{child.id}"  # type: ignore[assignment]
             db.commit()
             # 递归更新子组织的子组织
             self._update_children_path(db, child)
@@ -222,7 +227,7 @@ class OrganizationService:
         old_value: str | None = None,
         new_value: str | None = None,
         created_by: str | None = None,
-    ):
+    ) -> None:
         """创建历史记录"""
         history = OrganizationHistory(
             organization_id=org_id,

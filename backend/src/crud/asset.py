@@ -34,7 +34,7 @@ from .base import CRUDBase
 class AssetCRUD(CRUDBase):
     """资产CRUD操作类 - 优化版本"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(Asset)
         self.sensitive_data_handler = SensitiveDataHandler()
 
@@ -117,10 +117,17 @@ class AssetCRUD(CRUDBase):
         db.commit()
         return db_obj
 
-    def update(
-        self, db: Session, db_obj: Asset, obj_in: AssetUpdate | dict[str, Any]
+    def update(  # type: ignore[override]
+        self,
+        db: Session,
+        *,
+        db_obj: Asset,
+        obj_in: AssetUpdate | dict[str, Any],
     ) -> Asset:
-        """更新资产，增加版本号"""
+        """更新资产，增加版本号
+
+        Note: Signature intentionally specializes generic CRUDBase.update for Asset type
+        """
         # CRUDBase.update returns db_obj
         # We need to hook in before commit?
         # CRUDBase.update does commit.
@@ -151,7 +158,7 @@ class AssetCRUD(CRUDBase):
         if hasattr(obj_in, "model_dump"):
             update_data = obj_in.model_dump(exclude_unset=True)
         else:
-            update_data = obj_in.dict(exclude_unset=True)  # type: ignore[attr-defined]
+            update_data = obj_in.dict(exclude_unset=True)
 
         for field, new_value in update_data.items():
             if hasattr(db_obj, field):
@@ -181,4 +188,4 @@ class AssetCRUD(CRUDBase):
 
 
 # 创建全局实例
-asset_crud: AssetCRUD = AssetCRUD()  # type: ignore[no-untyped-call]
+asset_crud = AssetCRUD()

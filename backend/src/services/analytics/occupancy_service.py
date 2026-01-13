@@ -7,7 +7,7 @@
 import logging
 from typing import Any
 
-from sqlalchemy import case, func
+from sqlalchemy import Float, case, cast as sql_cast, func
 from sqlalchemy.orm import Session
 
 from ...crud.asset import asset_crud
@@ -74,11 +74,11 @@ class OccupancyService:
 
             # 使用数据库聚合函数计算 - 避免加载所有数据到内存
             result = query.with_entities(
-                func.cast(
-                    func.sum(func.coalesce(Asset.rentable_area, 0)), func.Float
+                sql_cast(
+                    func.sum(func.coalesce(Asset.rentable_area, 0)), Float
                 ).label("total_rentable_area"),
-                func.cast(
-                    func.sum(func.coalesce(Asset.rented_area, 0)), func.Float
+                sql_cast(
+                    func.sum(func.coalesce(Asset.rented_area, 0)), Float
                 ).label("total_rented_area"),
                 func.count(Asset.id).label("total_assets"),
                 func.count(case((Asset.rentable_area > 0, 1))).label(
@@ -87,6 +87,16 @@ class OccupancyService:
             ).first()
 
             # 提取结果并转换为float
+            if result is None:
+                return {
+                    "overall_rate": 0.0,
+                    "total_rentable_area": 0.0,
+                    "total_rented_area": 0.0,
+                    "total_assets": 0,
+                    "rentable_assets_count": 0,
+                    "calculation_method": "aggregation",
+                }
+
             total_rentable_area = to_float(result.total_rentable_area)
             total_rented_area = to_float(result.total_rented_area)
             total_assets = int(result.total_assets or 0)
@@ -116,9 +126,9 @@ class OccupancyService:
         except Exception as e:
             logger.error(f"数据库聚合查询失败: {str(e)}，降级到内存计算")
             # 降级到内存计算
-            result = self._calculate_in_memory(filters)
-            result["calculation_method"] = "memory_fallback"
-            return result
+            memory_result = self._calculate_in_memory(filters)
+            memory_result["calculation_method"] = "memory_fallback"
+            return memory_result
 
     def _calculate_in_memory(
         self, filters: dict[str, Any] | None = None
@@ -194,11 +204,11 @@ class OccupancyService:
             results = (
                 query.with_entities(
                     getattr(Asset, category_field).label("category"),
-                    func.cast(
-                        func.sum(func.coalesce(Asset.rentable_area, 0)), func.Float
+                    sql_cast(
+                        func.sum(func.coalesce(Asset.rentable_area, 0)), Float
                     ).label("total_rentable_area"),
-                    func.cast(
-                        func.sum(func.coalesce(Asset.rented_area, 0)), func.Float
+                    sql_cast(
+                        func.sum(func.coalesce(Asset.rented_area, 0)), Float
                     ).label("total_rented_area"),
                     func.count(Asset.id).label("total_assets"),
                     func.count(case((Asset.rentable_area > 0, 1))).label(

@@ -33,7 +33,7 @@ async def get_custom_fields(
     is_active: bool | None = Query(None, description="是否启用筛选"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> list[AssetCustomFieldResponse]:
     """
     获取自定义字段配置列表，支持筛选
 
@@ -43,18 +43,19 @@ async def get_custom_fields(
     - **is_active**: 是否启用
     """
     try:
-        filters = {}
+        filters: dict[str, Any] = {}
         if asset_id:
             filters["asset_id"] = asset_id
         if field_type:
             filters["field_type"] = field_type
         if is_required is not None:
-            filters["is_required"] = is_required
+            filters["is_required"] = str(is_required)
         if is_active is not None:
-            filters["is_active"] = is_active
+            filters["is_active"] = str(is_active)
 
         fields = custom_field_crud.get_multi_with_filters(db=db, filters=filters)
-        return fields
+        # Explicitly convert to response models
+        return [AssetCustomFieldResponse.model_validate(f) for f in fields]
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取自定义字段列表失败: {str(e)}")
@@ -67,7 +68,7 @@ async def get_custom_field(
     field_id: str = Path(..., description="字段ID"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> AssetCustomFieldResponse:
     """
     根据ID获取单个自定义字段的详细信息
 
@@ -95,7 +96,7 @@ async def create_custom_field(
     field_in: AssetCustomFieldCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> AssetCustomFieldResponse:
     """
     创建新的自定义字段配置
 
@@ -121,7 +122,7 @@ async def update_custom_field(
     field_id: str = Path(..., description="字段ID"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> AssetCustomFieldResponse:
     """
     更新自定义字段配置
 
@@ -149,7 +150,7 @@ async def delete_custom_field(
     field_id: str = Path(..., description="字段ID"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> dict[str, str]:
     """
     删除自定义字段配置
 
@@ -173,7 +174,7 @@ async def validate_custom_field_value(
     value: Any,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> dict[str, Any]:
     """
     验证自定义字段值是否符合配置要求
 
@@ -205,7 +206,7 @@ async def validate_custom_field_value(
 @router.get("/types/list[Any]", summary="获取字段类型列表")
 async def get_field_types(
     current_user: User = Depends(get_current_active_user),
-):
+) -> dict[str, Any]:
     """
     获取支持的字段类型列表
     """
@@ -236,7 +237,7 @@ async def get_asset_custom_field_values(
     asset_id: str = Path(..., description="资产ID"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> dict[str, Any]:
     """
     获取指定资产的所有自定义字段值
 
@@ -258,7 +259,7 @@ async def update_asset_custom_field_values(
     asset_id: str = Path(..., description="资产ID"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> dict[str, Any]:
     """
     更新指定资产的自定义字段值
 
@@ -281,10 +282,10 @@ async def update_asset_custom_field_values(
 
 @router.post("/assets/batch-values", summary="批量设置自定义字段值")
 async def batch_set_custom_field_values(
-    updates: list[dict],
+    updates: list[dict[str, Any]],
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> dict[str, Any]:
     """
     批量设置多个资产的自定义字段值
 

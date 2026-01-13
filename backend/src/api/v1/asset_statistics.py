@@ -4,6 +4,8 @@
 从 assets.py 中提取的统计相关端点
 """
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, text
 from sqlalchemy.orm import Session
@@ -28,7 +30,7 @@ logger = logging.getLogger(__name__)
 @debug_only
 async def test_statistics(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
-):
+) -> dict[str, Any]:
     """
     简单的统计测试API
     """
@@ -56,7 +58,7 @@ async def test_statistics(
 @router.get("/summary", summary="获取资产统计摘要")
 async def get_asset_statistics(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
-):
+) -> dict[str, Any]:
     """
     获取资产统计摘要信息
     """
@@ -123,13 +125,21 @@ async def get_asset_statistics(
             .first()
         )
 
-        # 使用共享的 to_float 函数进行数值转换
-        total_land_area = to_float(area_result.total_land_area)
-        total_rentable_area = to_float(area_result.total_rentable_area)
-        total_rented_area = to_float(area_result.total_rented_area)
+        # 安全处理 area_result 可能为 None 的情况
+        if area_result is None:
+            total_land_area = 0.0
+            total_rentable_area = 0.0
+            total_rented_area = 0.0
+            total_non_commercial_area = 0.0
+        else:
+            # 使用共享的 to_float 函数进行数值转换
+            total_land_area = to_float(area_result.total_land_area)
+            total_rentable_area = to_float(area_result.total_rentable_area)
+            total_rented_area = to_float(area_result.total_rented_area)
+            total_non_commercial_area = to_float(area_result.total_non_commercial_area)
+
         # 计算未出租面积（可出租面积 - 已出租面积）
         total_unrented_area = max(total_rentable_area - total_rented_area, 0.0)
-        total_non_commercial_area = to_float(area_result.total_non_commercial_area)
 
         # 计算有面积数据的资产数
         assets_with_area = (
@@ -188,7 +198,7 @@ async def get_asset_statistics(
 @router.get("/area-summary", summary="获取资产面积统计摘要")
 async def get_asset_area_statistics(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
-):
+) -> dict[str, Any]:
     """
     获取资产面积统计摘要信息
     """
@@ -205,16 +215,25 @@ async def get_asset_area_statistics(
             func.count(Asset.id).label("total_assets"),
         ).first()
 
-        # 使用共享的 to_float 函数进行数值转换
-        total_land_area = to_float(total_result.total_land_area)
-        total_rentable_area = to_float(total_result.total_rentable_area)
-        total_rented_area = to_float(total_result.total_rented_area)
+        # 安全处理 total_result 可能为 None 的情况
+        if total_result is None:
+            total_land_area = 0.0
+            total_rentable_area = 0.0
+            total_rented_area = 0.0
+            total_non_commercial_area = 0.0
+            total_assets = 0
+        else:
+            # 使用共享的 to_float 函数进行数值转换
+            total_land_area = to_float(total_result.total_land_area)
+            total_rentable_area = to_float(total_result.total_rentable_area)
+            total_rented_area = to_float(total_result.total_rented_area)
+            total_non_commercial_area = to_float(total_result.total_non_commercial_area)
+            total_assets = (
+                int(total_result.total_assets) if total_result.total_assets else 0
+            )
+
         # 计算未出租面积（可出租面积 - 已出租面积）
         total_unrented_area = max(total_rentable_area - total_rented_area, 0.0)
-        total_non_commercial_area = to_float(total_result.total_non_commercial_area)
-        total_assets = (
-            int(total_result.total_assets) if total_result.total_assets else 0
-        )
 
         # 计算有面积数据的资产数
         assets_with_area = assets_query.filter(

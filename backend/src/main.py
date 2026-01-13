@@ -9,6 +9,7 @@ from typing import Any
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 # 核心依赖 - 严格导入（开发/生产环境必须存在）
 from .core.config import get_config, initialize_config, settings
@@ -53,16 +54,16 @@ logger.info(f"依赖策略: {get_dependency_policy().value}")
 # The system will run without PDF OCR text extraction capabilities
 OCR_SERVICE_AVAILABLE = False
 OCR_PROVIDER_AVAILABLE = False
-PaddleOCREngineAdapter = None  # type: ignore
-OptimizedOCRService = None  # type: ignore
+PaddleOCREngineAdapter: Any = None
+OptimizedOCRService: Any = None
 
 
-def get_ocr_service() -> None:  # type: ignore
+def get_ocr_service() -> Any:
     """OCR服务占位函数 - 返回None"""
     return None
 
 
-def set_ocr_service(service: Any) -> None:  # type: ignore
+def set_ocr_service(service: Any) -> None:
     """OCR服务占位函数 - 不执行任何操作"""
     pass
 
@@ -121,7 +122,7 @@ logger.info("依赖导入完成")
 
 # ===== 应用生命周期管理 =====
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> Any:
     """应用生命周期管理器"""
     # 启动时执行
     # 安全配置检查
@@ -276,7 +277,7 @@ setup_exception_handlers(app)
 
 # 根路由端点
 @app.get("/", tags=["根路由"])
-async def root_endpoint():
+async def root_endpoint() -> JSONResponse:
     """根路由端点"""
     return success_response(
         data={
