@@ -115,7 +115,7 @@ class FileValidationConfig:
 class FileValidator:
     """文件验证器"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.config = FileValidationConfig()
         self.logger = logging.getLogger(__name__)
 
@@ -444,8 +444,8 @@ class FileValidator:
 class RateLimiter:
     """请求频率限制器"""
 
-    def __init__(self):
-        self.requests = defaultdict(deque)
+    def __init__(self) -> None:
+        self.requests: defaultdict[str, deque[float]] = defaultdict(deque)
         self.config = get_config("rate_limit", {})
         self.logger = logging.getLogger(__name__)
 
@@ -533,13 +533,14 @@ class RateLimiter:
         while request_queue and request_queue[0] <= current_time - time_win:
             request_queue.popleft()
 
-        return max(0, max_req - len(request_queue))
+        result = max(0, max_req - len(request_queue))
+        return int(result)
 
 
 class SecurityMiddleware:
     """安全中间件"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.rate_limiter = RateLimiter()
         self.file_validator = FileValidator()
         self.config = get_config("security", {})
@@ -705,7 +706,7 @@ request_security = RequestSecurity()
 # FastAPI依赖注入
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()),
-):
+) -> None:
     """获取当前用户"""
     # 这里可以实现JWT验证或其他身份验证逻辑
     pass

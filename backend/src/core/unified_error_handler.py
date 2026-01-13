@@ -92,7 +92,7 @@ class UnifiedError(Exception):
         message: str,
         code: ErrorCode = ErrorCode.BUSINESS_ERROR,
         status_code: int = status.HTTP_400_BAD_REQUEST,
-        details: str | dict[str, Any] | list | None = None,
+        details: str | dict[str, Any] | list[str] | None = None,
         severity: ErrorSeverity = ErrorSeverity.MEDIUM,
         extra_data: dict[str, Any] | None = None,
     ):
@@ -128,11 +128,11 @@ class UnifiedError(Exception):
 class UnifiedErrorHandler:
     """统一错误处理器"""
 
-    def __init__(self, logger: logging.Logger | None = None):
+    def __init__(self, logger: logging.Logger | None = None) -> None:
         self.logger = logger or logging.getLogger(__name__)
         self._setup_logger()
 
-    def _setup_logger(self):
+    def _setup_logger(self) -> None:
         """设置日志格式"""
         if not self.logger.handlers:
             handler = logging.StreamHandler()
@@ -179,7 +179,7 @@ class UnifiedErrorHandler:
             status_code=status_code, content=response.model_dump(mode="json")
         )
 
-    def _log_error(self, error: Exception, request: Request | None = None):
+    def _log_error(self, error: Exception, request: Request | None = None) -> None:
         """记录错误日志"""
         error_info = {
             "error_type": type(error).__name__,
@@ -192,8 +192,8 @@ class UnifiedErrorHandler:
                 {
                     "method": request.method,
                     "url": str(request.url),
-                    "client_ip": request.client.host if request.client else None,
-                    "user_agent": request.headers.get("user-agent"),
+                    "client_ip": request.client.host if request.client else "unknown",
+                    "user_agent": request.headers.get("user-agent") or "unknown",
                 }
             )
 
@@ -288,7 +288,7 @@ def create_not_found_error(
 
 
 def create_validation_error(
-    message: str, field_errors: list | None = None
+    message: str, field_errors: list[str] | None = None
 ) -> UnifiedError:
     """创建验证错误"""
     return UnifiedError(
@@ -356,7 +356,7 @@ class ErrorHandler:
         error_type = type(error)
         handler = self.error_handlers.get(error_type, self._handle_unknown_error)
 
-        error_response = handler(error)
+        error_response = handler(error)  # type: ignore[operator]
 
         if context:
             error_response["context"] = context
@@ -364,7 +364,7 @@ class ErrorHandler:
         # 记录错误
         self._log_error(error, error_response)
 
-        return error_response
+        return error_response  # type: ignore[no-any-return]
 
     def _handle_unified_error(self, error: UnifiedError) -> dict[str, Any]:
         """处理统一错误"""
@@ -406,7 +406,7 @@ class ErrorHandler:
             "timestamp": datetime.utcnow().isoformat(),
         }
 
-    def _log_error(self, error: Exception, error_response: dict[str, Any]):
+    def _log_error(self, error: Exception, error_response: dict[str, Any]) -> None:
         """记录错误日志"""
         error_info = {
             "error_type": type(error).__name__,

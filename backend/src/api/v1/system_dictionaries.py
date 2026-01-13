@@ -1,6 +1,7 @@
 """
 系统字典管理API路由
 """
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy.orm import Session
@@ -25,7 +26,7 @@ async def get_system_dictionaries(
     dict_type: str | None = Query(None, description="字典类型筛选"),
     is_active: bool | None = Query(None, description="是否启用筛选"),
     db: Session = Depends(get_db),
-):
+) -> list[SystemDictionaryResponse]:
     """
     获取系统字典列表，支持按类型和状态筛选
 
@@ -55,7 +56,7 @@ async def get_system_dictionaries(
 )
 async def get_system_dictionary(
     dictionary_id: str = Path(..., description="字典ID"), db: Session = Depends(get_db)
-):
+) -> SystemDictionaryResponse:
     """
     根据ID获取单个系统字典的详细信息
 
@@ -81,7 +82,7 @@ async def get_system_dictionary(
 )
 async def create_system_dictionary(
     dictionary_in: SystemDictionaryCreate, db: Session = Depends(get_db)
-):
+) -> SystemDictionaryResponse:
     """
     创建新的系统字典项
 
@@ -108,7 +109,7 @@ async def update_system_dictionary(
     dictionary_in: SystemDictionaryUpdate,
     dictionary_id: str = Path(..., description="字典ID"),
     db: Session = Depends(get_db),
-):
+) -> SystemDictionaryResponse:
     """
     更新系统字典信息
 
@@ -134,7 +135,7 @@ async def update_system_dictionary(
 @router.delete("/{dictionary_id}", summary="删除系统字典")
 async def delete_system_dictionary(
     dictionary_id: str = Path(..., description="字典ID"), db: Session = Depends(get_db)
-):
+) -> dict[str, str]:
     """
     删除系统字典项
 
@@ -159,7 +160,7 @@ async def delete_system_dictionary(
 )
 async def batch_update_system_dictionaries(
     updates: list[dict], db: Session = Depends(get_db)
-):
+) -> list[SystemDictionaryResponse]:
     """
     批量更新系统字典
 
@@ -200,7 +201,7 @@ async def batch_update_system_dictionaries(
 
 
 @router.get("/types/list[Any]", summary="获取字典类型列表")
-async def get_dictionary_types(db: Session = Depends(get_db)):
+async def get_dictionary_types(db: Session = Depends(get_db)) -> dict[str, list[str]]:
     """
     获取所有字典类型列表
     """

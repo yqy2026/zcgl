@@ -4,6 +4,7 @@
 
 import logging
 import os
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
@@ -28,7 +29,7 @@ if not os.path.exists(BACKUP_DIR):
 async def create_backup(
     backup_name: str | None = Query(None, description="备份名称，默认使用时间戳"),
     db: Session = Depends(get_db),
-):
+) -> dict[str, Any]:
     """
     创建数据库备份
 
@@ -44,8 +45,8 @@ async def create_backup(
         service = BackupService(backup_dir=BACKUP_DIR)
 
         # 从数据库连接获取数据库文件路径（SQLite）
-        db_path = None
-        if hasattr(db.bind, "url"):
+        db_path: str | None = None
+        if hasattr(db.bind, "url") and db.bind.url is not None:
             db_url = str(db.bind.url)
             if db_url.startswith("sqlite:///"):
                 db_path = db_url.replace("sqlite:///", "")
@@ -66,7 +67,7 @@ async def create_backup(
 
 
 @router.get("/list[Any]", summary="获取备份列表")
-async def list_backups():
+async def list_backups() -> dict[str, Any]:
     """
     获取所有备份文件列表
 
@@ -92,7 +93,7 @@ async def list_backups():
 
 
 @router.get("/download/{backup_name}", summary="下载备份文件")
-async def download_backup(backup_name: str):
+async def download_backup(backup_name: str) -> FileResponse:
     """
     下载指定的备份文件
 
@@ -156,8 +157,8 @@ async def restore_backup(
         service = BackupService(backup_dir=BACKUP_DIR)
 
         # 从数据库连接获取数据库文件路径（SQLite）
-        db_path = None
-        if hasattr(db.bind, "url"):
+        db_path: str | None = None
+        if hasattr(db.bind, "url") and db.bind.url is not None:
             db_url = str(db.bind.url)
             if db_url.startswith("sqlite:///"):
                 db_path = db_url.replace("sqlite:///", "")

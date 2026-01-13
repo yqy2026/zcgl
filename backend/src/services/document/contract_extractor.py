@@ -21,8 +21,12 @@ try:
     from .paddleocr_service import PADDLEOCR_AVAILABLE, get_paddleocr_service
 except ImportError:
     PADDLEOCR_AVAILABLE = False
-    get_paddleocr_service = None
-    get_markdown_contract_parser = None
+
+    def get_paddleocr_service(*args: Any, **kwargs: Any) -> Any:  # type: ignore[misc]
+        return None
+
+    def get_markdown_contract_parser() -> Any:  # type: ignore[misc]
+        return None
 
 
 class ExtractionMethod(Enum):
@@ -303,7 +307,7 @@ class ContractExtractor:
             # 获取 PaddleOCR 服务
             ocr_service = get_paddleocr_service(use_gpu=use_gpu)
 
-            if not ocr_service or not ocr_service.is_available():
+            if not ocr_service or (hasattr(ocr_service, "is_available") and not ocr_service.is_available):
                 logger.warning("PaddleOCR 服务不可用")
                 return {
                     "success": False,

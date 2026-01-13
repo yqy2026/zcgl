@@ -1,4 +1,5 @@
 import base64
+import binascii  # pylint: disable=unused-import
 import json
 from datetime import datetime, timedelta
 
@@ -33,7 +34,7 @@ class PasswordService:
                         return bcrypt.checkpw(
                             plain_password.encode("utf-8"), decoded_hash
                         )
-                    except (base64.binascii.Error, ValueError):  # pragma: no cover
+                    except (binascii.Error, ValueError):  # pragma: no cover
                         return bcrypt.checkpw(  # pragma: no cover
                             plain_password.encode("utf-8"),
                             hashed_password.encode("utf-8"),
@@ -71,7 +72,7 @@ class PasswordService:
         try:
             # 解析密码历史记录
             if isinstance(user.password_history, str):
-                password_history = json.loads(user.password_history)
+                password_history: list[str] = json.loads(user.password_history)
             else:  # pragma: no cover
                 password_history = user.password_history  # pragma: no cover
 
@@ -85,7 +86,7 @@ class PasswordService:
 
         return False
 
-    def add_password_to_history(self, user: User, password_hash: str):
+    def add_password_to_history(self, user: User, password_hash: str) -> None:
         """将密码哈希添加到历史记录中"""
         # 获取现有历史记录或创建空列表
         if user.password_history:

@@ -94,12 +94,12 @@ class CustomFieldService:
 
                     # 检查数值范围
                     if field.validation_rules:
-                        rules_str: str | None = (
+                        number_rules_str: str | None = (
                             field.validation_rules
                             if isinstance(field.validation_rules, str)
                             else None
                         )
-                        rules = json.loads(rules_str) if rules_str else field.validation_rules
+                        rules = json.loads(number_rules_str) if number_rules_str else field.validation_rules
                         max_value = rules.get("max_value")
                         min_value = rules.get("min_value")
 
@@ -123,12 +123,12 @@ class CustomFieldService:
 
                     # 检查数值范围
                     if field.validation_rules:
-                        rules_str: str | None = (
+                        decimal_rules_str: str | None = (
                             field.validation_rules
                             if isinstance(field.validation_rules, str)
                             else None
                         )
-                        rules = json.loads(rules_str) if rules_str else field.validation_rules
+                        rules = json.loads(decimal_rules_str) if decimal_rules_str else field.validation_rules
                         max_value = rules.get("max_value")
                         min_value = rules.get("min_value")
 

@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class TokenBucketRateLimiter:
     """基于令牌桶算法的速率限制器"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.buckets: dict[str, tuple[float, float]] = defaultdict(
             lambda: (0.0, 0.0)
         )  # (tokens, last_time)
@@ -116,10 +116,10 @@ class TokenBucketRateLimiter:
 class AdaptiveRateLimiter:
     """自适应速率限制器"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.token_bucket = TokenBucketRateLimiter()
-        self.suspicious_ips = defaultdict(int)  # 记录可疑IP的违规次数
-        self.blocked_ips = {}  # 记录被临时封禁的IP
+        self.suspicious_ips: defaultdict[str, int] = defaultdict(int)  # 记录可疑IP的违规次数
+        self.blocked_ips: dict[str, float] = {}  # 记录被临时封禁的IP
         self.config = get_config("adaptive_rate_limit", {})
 
     def check_rate_limit(self, key: str, is_suspicious: bool = False) -> bool:
@@ -165,7 +165,7 @@ class AdaptiveRateLimiter:
                     del self.suspicious_ips[ip]
         return False
 
-    def _block_ip(self, ip: str):
+    def _block_ip(self, ip: str) -> None:
         """封禁IP"""
         self.blocked_ips[ip] = time.time()
         security_auditor.log_security_event(
@@ -178,7 +178,7 @@ class AdaptiveRateLimiter:
             },
         )
 
-    def report_suspicious_activity(self, key: str):
+    def report_suspicious_activity(self, key: str) -> None:
         """报告可疑活动"""
         self.suspicious_ips[key] += 1
         if self.suspicious_ips[key] >= self.config.get("max_suspicious_requests", 5):

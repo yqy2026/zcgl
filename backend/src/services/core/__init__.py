@@ -21,7 +21,7 @@ try:
 except Exception:  # nosec - B110: Intentional graceful degradation
     # Fallback to legacy shim
     try:
-        from ..auth_service import AuthService as AuthService
+        from ..auth_service import AuthService as AuthService  # type: ignore[no-redef]
 
         __all__.append("AuthService")
     except Exception:  # nosec - B110: Intentional graceful degradation
@@ -46,7 +46,7 @@ try:
     __all__.append("SecurityService")
 except Exception:  # nosec - B110: Intentional graceful degradation
     # Provide a minimal stub to ensure import success
-    _SecurityServiceStub = SecurityService  # type: ignore[misc]
+    _SecurityServiceStub = SecurityService
 
     class SecurityService:  # type: ignore[no-redef]
         def __init__(self, *args, **kwargs):
@@ -68,7 +68,7 @@ except Exception:  # nosec - B110: Intentional graceful degradation
         __all__.append("ErrorRecoveryEngine")
     except Exception:  # nosec - B110: Intentional graceful degradation
         # Provide a minimal stub to ensure import success
-        _ErrorRecoveryEngineStub = ErrorRecoveryEngine  # type: ignore[misc]
+        _ErrorRecoveryEngineStub = ErrorRecoveryEngine
 
         class ErrorRecoveryEngine:  # type: ignore[no-redef]
             def __init__(self, *args, **kwargs):

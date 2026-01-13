@@ -131,7 +131,7 @@ class UserCRUD:
         for field, value in update_data.items():
             setattr(db_obj, field, value)
 
-        db_obj.updated_at = datetime.now()
+        db_obj.updated_at = datetime.now()  # type: ignore[assignment]
         db.commit()
         db.refresh(db_obj)
         return db_obj
@@ -143,21 +143,24 @@ class UserCRUD:
             return False
 
         # 软删除
-        user.is_active = False
+        user.is_active = False  # type: ignore[assignment]
         db.commit()
         return True
 
     def count(self, db: Session) -> int:
         """用户总数"""
-        return db.query(func.count(User.id)).scalar()
+        result = db.query(func.count(User.id)).scalar()
+        return int(result) if result is not None else 0
 
     def count_active(self, db: Session) -> int:
         """活跃用户总数"""
-        return db.query(func.count(User.id)).filter(User.is_active).scalar()
+        result = db.query(func.count(User.id)).filter(User.is_active).scalar()
+        return int(result) if result is not None else 0
 
     def count_by_role(self, db: Session, role: UserRole) -> int:
         """按角色统计用户数"""
-        return db.query(func.count(User.id)).filter(User.role == role).scalar()
+        result = db.query(func.count(User.id)).filter(User.role == role).scalar()
+        return int(result) if result is not None else 0
 
     def get_recent_logins(self, db: Session, limit: int = 10) -> list[User]:
         """获取最近登录的用户"""
@@ -225,7 +228,7 @@ class UserSessionCRUD:
         if not session:
             return False
 
-        session.is_active = False
+        session.is_active = False  # type: ignore[assignment]
         db.commit()
         return True
 
@@ -251,9 +254,10 @@ class UserSessionCRUD:
 
     def count_active_sessions(self, db: Session) -> int:
         """活跃会话总数"""
-        return (
+        result = (
             db.query(func.count(UserSession.id)).filter(UserSession.is_active).scalar()
         )
+        return int(result) if result is not None else 0
 
 
 class AuditLogCRUD:
@@ -352,7 +356,8 @@ class AuditLogCRUD:
 
     def count(self, db: Session) -> int:
         """审计日志总数"""
-        return db.query(func.count(AuditLog.id)).scalar()
+        result = db.query(func.count(AuditLog.id)).scalar()
+        return int(result) if result is not None else 0
 
     def get_user_actions(self, db: Session, user_id: str, days: int = 30) -> list[str]:
         """获取用户最近操作"""

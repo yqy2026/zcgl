@@ -5,9 +5,9 @@
 from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
-from typing import Any
+from typing import Any, cast
 
-from pydantic import BaseModel, ConfigDict, Field, FieldValidationInfo, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator
 
 
 # V2 Enums
@@ -43,7 +43,7 @@ class RentTermBase(BaseModel):
     @field_validator("total_monthly_amount")
     @classmethod
     def calculate_total_amount(
-        cls, v: Decimal | None, info: FieldValidationInfo
+        cls, v: Decimal | None, info: ValidationInfo
     ) -> Decimal | None:
         """计算月总金额"""
         if v is None:
@@ -51,12 +51,24 @@ class RentTermBase(BaseModel):
             monthly_rent = data.get("monthly_rent", Decimal("0"))
             management_fee = data.get("management_fee", Decimal("0"))
             other_fees = data.get("other_fees", Decimal("0"))
-            return monthly_rent + management_fee + other_fees
+
+            # Type narrowing to ensure Decimal types
+            if not isinstance(monthly_rent, Decimal):
+                monthly_rent = Decimal("0")
+            if not isinstance(management_fee, Decimal):
+                management_fee = Decimal("0")
+            if not isinstance(other_fees, Decimal):
+                other_fees = Decimal("0")
+
+            # Cast to Decimal for mypy - we've verified types above
+            return cast(Decimal, monthly_rent) + cast(
+                Decimal, management_fee
+            ) + cast(Decimal, other_fees)
         return v
 
     @field_validator("end_date")
     @classmethod
-    def validate_date_range(cls, v: date, info: FieldValidationInfo) -> date:
+    def validate_date_range(cls, v: date, info: ValidationInfo) -> date:
         """验证日期范围"""
         data = info.data if hasattr(info, "data") else {}
         start_date = data.get("start_date")
@@ -130,7 +142,7 @@ class RentContractBase(BaseModel):
 
     @field_validator("end_date")
     @classmethod
-    def validate_date_range(cls, v: date, info: FieldValidationInfo) -> date:
+    def validate_date_range(cls, v: date, info: ValidationInfo) -> date:
         """验证日期范围"""
         data = info.data if hasattr(info, "data") else {}
         start_date = data.get("start_date")
@@ -147,7 +159,7 @@ class RentContractCreate(RentContractBase):
     @field_validator("rent_terms")
     @classmethod
     def validate_rent_terms(
-        cls, v: list[RentTermCreate], info: FieldValidationInfo
+        cls, v: list[RentTermCreate], info: ValidationInfo
     ) -> list[RentTermCreate]:
         """验证租金条款"""
         if not v:

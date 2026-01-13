@@ -113,9 +113,9 @@ async def get_assets(
         if business_category:
             filters["business_category"] = business_category
         if min_area is not None:
-            filters["min_area"] = min_area
+            filters["min_area"] = str(min_area)
         if max_area is not None:
-            filters["max_area"] = max_area
+            filters["max_area"] = str(max_area)
         if is_litigated:
             filters["is_litigated"] = is_litigated
 
@@ -129,8 +129,12 @@ async def get_assets(
             sort_order=sort_order,
         )
 
+        # Convert Asset models to AssetResponse
+        from ...schemas.asset import AssetResponse
+        items = [AssetResponse.model_validate(asset) for asset in assets]
+
         return AssetListResponse(
-            items=assets,
+            items=items,
             total=total,
             page=page,
             limit=limit,
@@ -278,7 +282,7 @@ async def create_asset(
     asset_in: AssetCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("asset", "create")),
-    audit_logger=Depends(audit_action("asset_create", "asset")),
+    audit_logger: Any = Depends(audit_action("asset_create", "asset")),
 ) -> AssetResponse:
     """
     创建新的资产记录
@@ -299,11 +303,11 @@ async def create_asset(
 
 @router.put("/{asset_id}", response_model=AssetResponse, summary="更新资产")
 async def update_asset(
-    asset_id: str = Path(..., description="资产ID"),
-    asset_in: AssetUpdate = None,
+    asset_id: str,
+    asset_in: AssetUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("asset", "update")),
-    audit_logger=Depends(audit_action("asset_update", "asset")),
+    audit_logger: Any = Depends(audit_action("asset_update", "asset")),
 ) -> AssetResponse:
     """
     更新资产信息
@@ -328,7 +332,7 @@ async def delete_asset(
     asset_id: str = Path(..., description="资产ID"),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("asset", "delete")),
-    audit_logger=Depends(audit_action("asset_delete", "asset")),
+    audit_logger: Any = Depends(audit_action("asset_delete", "asset")),
 ) -> Response:
     """
     删除资产记录

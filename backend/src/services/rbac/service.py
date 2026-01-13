@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -28,7 +29,7 @@ class RBACService:
             raise ValueError(f"角色名称 '{obj_in.name}' 已存在")
 
         # Create role
-        role = role_crud.create(db, obj_in=obj_in, created_by=created_by)
+        role: Role = role_crud.create(db, obj_in=obj_in, created_by=created_by)
 
         # Handle initial permissions
         if obj_in.permission_ids:
@@ -88,7 +89,7 @@ class RBACService:
 
     def update_role_permissions(
         self, db: Session, *, role_id: str, permission_ids: list[str], updated_by: str
-    ):
+    ) -> None:
         """更新角色权限"""
         role = role_crud.get(db, id=role_id)
         if not role:

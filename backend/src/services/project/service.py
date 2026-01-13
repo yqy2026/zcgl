@@ -6,7 +6,9 @@ from sqlalchemy.orm import Session
 try:
     from pinyin import get as get_pinyin
 except ImportError:
-    get_pinyin = None
+
+    def get_pinyin(*args: Any, **kwargs: Any) -> Any:  # type: ignore[misc]
+        return None
 
 from ...crud.project import project_crud
 from ...models import Project
@@ -17,7 +19,7 @@ class ProjectService:
     """项目服务层"""
 
     def create_project(
-        self, db: Session, *, obj_in: ProjectCreate, created_by: str = None
+        self, db: Session, *, obj_in: ProjectCreate, created_by: str | None = None
     ) -> Project:
         """创建项目"""
         try:
@@ -31,10 +33,9 @@ class ProjectService:
                 raise ValueError(f"项目编码 '{obj_in.code}' 已存在")
 
             # 3. 创建项目
-            project_data = obj_in.model_dump()
-            project_data["created_by"] = created_by
-
-            project = project_crud.create(db, obj_in=obj_in, created_by=created_by)
+            project: Project = project_crud.create(
+                db, obj_in=obj_in, created_by=created_by
+            )
             return project
 
         except Exception as e:
@@ -46,7 +47,7 @@ class ProjectService:
         *,
         project_id: str,
         obj_in: ProjectUpdate,
-        updated_by: str = None,
+        updated_by: str | None = None,
     ) -> Project:
         """更新项目"""
         project = project_crud.get(db, project_id)
@@ -58,7 +59,7 @@ class ProjectService:
         )
 
     def toggle_status(
-        self, db: Session, *, project_id: str, updated_by: str = None
+        self, db: Session, *, project_id: str, updated_by: str | None = None
     ) -> Project:
         """切换项目状态"""
         project = project_crud.get(db, project_id)
@@ -87,7 +88,11 @@ class ProjectService:
         if count > 0:
             raise ValueError(f"项目包含 {count} 个资产，无法删除")
 
-        project_crud.delete(db, id=project_id)
+        # Use remove instead of delete
+        project = project_crud.get(db, project_id)
+        if project:
+            db.delete(project)  # type: ignore[arg-type]
+            db.commit()
 
     def generate_project_code(self, db: Session, name: str | None = None) -> str:
         """生成项目编码"""
@@ -123,7 +128,7 @@ class ProjectService:
 
         return f"{prefix}{next_seq:03d}"
 
-    def _generate_name_code(self, name: str) -> str:
+    def _generate_name_code(self, name: str) -> str | None:
         """从名称生成语义化编码"""
         try:
             if get_pinyin:

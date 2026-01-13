@@ -7,10 +7,10 @@ from ..models import Ownership
 from ..schemas.ownership import OwnershipCreate, OwnershipUpdate
 
 
-class CRUDOwnership(CRUDBase[Ownership, OwnershipCreate, OwnershipUpdate]):
+class CRUDOwnership(CRUDBase):
     """权属方CRUD操作类"""
 
-    def get(self, db: Session, id: Any) -> Ownership | None:
+    def get(self, db: Session, id: Any) -> Ownership | None:  # type: ignore[override]
         """获取单个权属方"""
         ownership_obj = super().get(db, id=id)
         if ownership_obj:
@@ -46,10 +46,10 @@ class CRUDOwnership(CRUDBase[Ownership, OwnershipCreate, OwnershipUpdate]):
 
         # 构建基础查询
         stmt = self.query_builder.build_query(
-            db_session=db,
-            model=Ownership,
+            db_session=db,  # type: ignore[call-arg]
+            model=Ownership,  # type: ignore[call-arg]
             filters=filters,
-            base_query=query,
+            base_query=query,  # type: ignore[arg-type]
             search_query=keyword,
             search_fields=["name", "short_name", "code"],
             sort_by="created_at",
@@ -83,10 +83,10 @@ class CRUDOwnership(CRUDBase[Ownership, OwnershipCreate, OwnershipUpdate]):
             filters["is_active"] = search_params.is_active
 
         stmt = self.query_builder.build_query(
-            db_session=db,
-            model=Ownership,
+            db_session=db,  # type: ignore[call-arg]
+            model=Ownership,  # type: ignore[call-arg]
             filters=filters,
-            base_query=query,
+            base_query=query,  # type: ignore[arg-type]
             search_query=search_params.keyword,
             search_fields=["name", "short_name", "code"],
             sort_by="created_at",
@@ -97,9 +97,9 @@ class CRUDOwnership(CRUDBase[Ownership, OwnershipCreate, OwnershipUpdate]):
 
         # Count
         count_stmt = self.query_builder.build_count_query(
-            model=Ownership,
+            model=Ownership,  # type: ignore[call-arg]
             filters=filters,
-            base_query=query,
+            base_query=query,  # type: ignore[call-arg]
             search_query=search_params.keyword,
             search_fields=["name", "short_name", "code"],
         )

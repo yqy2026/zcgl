@@ -21,7 +21,7 @@ class UserRole(str, Enum):
     USER = "user"
 
 
-class User(Base):
+class User(Base):  # type: ignore[valid-type, misc]
     """用户模型"""
 
     __tablename__ = "users"
@@ -101,7 +101,7 @@ class User(Base):
     # delegated_permissions = relationship("PermissionDelegation", foreign_keys="PermissionDelegation.delegatee_id", back_populates="delegatee")
     # delegated_permissions_to_others = relationship("PermissionDelegation", foreign_keys="PermissionDelegation.delegator_id", back_populates="delegator")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<User(id={self.id}, username={self.username}, role={self.role})>"
 
     @property
