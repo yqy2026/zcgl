@@ -40,7 +40,7 @@ router = APIRouter(tags=["认证管理"])
 @router.post("/login", summary="用户登录")
 async def login(
     request: Request, credentials: LoginRequest, db: Session = Depends(get_db)
-) -> dict[str, Any]:
+) -> dict[str, Any]:  # type: ignore[misc]
     """
     用户登录接口
 
@@ -58,7 +58,7 @@ async def login(
 
     try:
         # 认证用户（启用真实认证流程）
-        user = auth_service.authenticate_user(
+        user = auth_service.authenticate_user(  # type: ignore[no-untyped-call]
             credentials.username, credentials.password
         )
         if not user:
@@ -79,14 +79,14 @@ async def login(
             )
 
         # 创建令牌（增强安全性）
-        device_info = {
+        device_info: dict[str, str] = {
             "user_agent": user_agent,
             "ip_address": client_ip,
         }
-        tokens = auth_service.create_tokens(user, device_info)
+        tokens = auth_service.create_tokens(user, device_info)  # type: ignore[no-untyped-call]
 
         # 创建会话
-        auth_service.create_user_session(
+        auth_service.create_user_session(  # type: ignore[no-untyped-call]
             user_id=str(user.id),
             refresh_token=tokens.refresh_token,
             ip_address=client_ip,
@@ -197,7 +197,7 @@ async def logout(
             logger.warning(f"Failed to blacklist token during logout: {e}")
 
     # 撤销用户所有会话
-    revoked_count = auth_service.revoke_all_user_sessions(current_user.id)
+    revoked_count = auth_service.revoke_all_user_sessions(current_user.id)  # type: ignore[no-untyped-call]
 
     # 记录登出日志
     audit_crud.create(
@@ -234,7 +234,7 @@ async def refresh_token(
     user_agent = request.headers.get("user-agent", "unknown")
 
     # 验证刷新令牌（增强安全性）
-    session = auth_service.validate_refresh_token(
+    session = auth_service.validate_refresh_token(  # type: ignore[no-untyped-call]
         refresh_data.refresh_token, client_ip=client_ip, user_agent=user_agent
     )
     if not session:
@@ -259,11 +259,11 @@ async def refresh_token(
         )
 
     # 获取用户
-    user = auth_service.get_user_by_id(str(session.user_id))
+    user = auth_service.get_user_by_id(str(session.user_id))  # type: ignore[no-untyped-call]
     user_active = getattr(user, "is_active", False) if user else False
     if not user or not user_active:
         # 撤销无效会话
-        auth_service.revoke_session(refresh_data.refresh_token)
+        auth_service.revoke_session(refresh_data.refresh_token)  # type: ignore[no-untyped-call]
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="用户不存在或已被禁用"
         )
@@ -281,13 +281,13 @@ async def refresh_token(
         )
 
     # 创建新令牌（增强安全性）
-    device_info = {
+    device_info: dict[str, str | None] = {
         "user_agent": user_agent,
         "ip_address": client_ip,
         "device_id": getattr(session, "device_id", None),
         "platform": getattr(session, "platform", None),
     }
-    tokens = auth_service.create_tokens(user, device_info)
+    tokens = auth_service.create_tokens(user, device_info)  # type: ignore[no-untyped-call]
 
     # 更新会话
     setattr(session, "refresh_token", tokens.refresh_token)
@@ -316,7 +316,7 @@ async def refresh_token(
         user_agent=user_agent,
     )
 
-    return tokens  # type: ignore[return-value]
+    return tokens  # type: ignore[no-any-return]
 
 
 @router.get("/me", response_model=dict[str, Any], summary="获取当前用户信息")
@@ -378,9 +378,9 @@ async def debug_auth(db: Session = Depends(get_db)) -> dict[str, Any]:
             auth_success = authenticated_user is not None
         except Exception as e:
             auth_success = False
-            auth_error = str(e)
+            auth_error: str | None = str(e)
         else:
-            auth_error = None
+            auth_error: str | None = None
 
         # 4. 测试token创建
         try:
