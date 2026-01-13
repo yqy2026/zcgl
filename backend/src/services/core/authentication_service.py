@@ -1,5 +1,6 @@
 import secrets
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
@@ -62,14 +63,15 @@ class AuthenticationService:
             raise BusinessLogicError("账户已被锁定，请稍后再试")
 
         # 验证密码
-        if not self.password_service.verify_password(password, user.password_hash):
+        password_hash: str = getattr(user, "password_hash", "")
+        if not self.password_service.verify_password(password, password_hash):
             # 增加失败次数
-            user.failed_login_attempts += 1
+            user.failed_login_attempts += 1  # type: ignore[assignment]
 
             # 如果达到最大失败次数，锁定账户
             if user.failed_login_attempts >= settings.MAX_FAILED_ATTEMPTS:
-                user.is_locked = True
-                user.locked_until = datetime.now() + timedelta(
+                user.is_locked = True  # type: ignore[assignment]
+                user.locked_until = datetime.now() + timedelta(  # type: ignore[assignment]
                     minutes=settings.LOCKOUT_DURATION
                 )
 
@@ -82,16 +84,16 @@ class AuthenticationService:
 
         # 登录成功，重置失败次数
         if user.failed_login_attempts > 0:
-            user.failed_login_attempts = 0
-            user.is_locked = False
-            user.locked_until = None
-            user.last_login_at = datetime.now()
+            user.failed_login_attempts = 0  # type: ignore[assignment]
+            user.is_locked = False  # type: ignore[assignment]
+            user.locked_until = None  # type: ignore[assignment]
+            user.last_login_at = datetime.now()  # type: ignore[assignment]
 
         self.db.commit()
         return user
 
     def create_tokens(
-        self, user: User, device_info: dict | None = None
+        self, user: User, device_info: dict[str, Any] | None = None
     ) -> TokenResponse:
         """创建JWT令牌"""
         now = datetime.now(UTC)
@@ -203,18 +205,18 @@ class AuthenticationService:
         # 检查用户是否仍然活跃
         user = self.user_service.get_user_by_id(user_id)
         if not user or not user.is_active:
-            session.is_active = False
+            session.is_active = False  # type: ignore[assignment]
             self.db.commit()
             return None
 
         # 检查会话ID匹配
         if session_id and getattr(session, "session_id", None) != session_id:
-            session.is_active = False
+            session.is_active = False  # type: ignore[assignment]
             self.db.commit()
             return None
 
         # 更新最后访问时间等
-        session.last_accessed_at = datetime.now()
+        session.last_accessed_at = datetime.now()  # type: ignore[assignment]
         if client_ip:
             setattr(session, "ip_address", client_ip)
         if user_agent:

@@ -42,7 +42,8 @@ async def get_system_dictionaries(
 
         # FastAPI will convert SystemDictionary to SystemDictionaryResponse via response_model
         dictionaries = system_dictionary_crud.get_multi_with_filters(db=db, filters=filters)
-        return dictionaries  # type: ignore[return-value]
+        # Use explicit conversion to satisfy mypy's invariance check
+        return [SystemDictionaryResponse.model_validate(d) for d in dictionaries]
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取系统字典列表失败: {str(e)}")
