@@ -8,7 +8,8 @@ from typing import Any
 
 from datetime import datetime
 
-from fastapi import APIRouter, Body, HTTPException, Query
+from fastapi import APIRouter, Body, HTTPException, Query, Response
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from ...middleware.auth import require_permissions
@@ -106,8 +107,8 @@ class RecoveryConfigResponse(BaseModel):
     description="获取系统错误恢复的整体统计信息，包括成功率、平均尝试次数等",
     response_model=ErrorStatisticsResponse,
 )
-@api_error_recovery(ErrorCategory.DATABASE)
-@require_permissions("system:error_recovery:view")
+@api_error_recovery(ErrorCategory.DATABASE)  # type: ignore[misc]
+@require_permissions(["system:error_recovery:view"])  # type: ignore[misc]
 async def get_recovery_statistics(
     category: str | None = Query(None, description="按错误类别筛选"),
     start_time: datetime | None = Query(None, description="开始时间"),
@@ -137,8 +138,8 @@ async def get_recovery_statistics(
     description="获取所有错误类别对应的恢复策略配置信息",
     response_model=list[RecoveryConfigResponse],
 )
-@api_error_recovery(ErrorCategory.DATABASE)
-@require_permissions("system:error_recovery:view")
+@api_error_recovery(ErrorCategory.DATABASE)  # type: ignore[misc]
+@require_permissions(["system:error_recovery:view"])  # type: ignore[misc]
 async def get_recovery_strategies() -> list[RecoveryConfigResponse]:
     """获取错误恢复策略配置"""
 
@@ -172,8 +173,8 @@ async def get_recovery_strategies() -> list[RecoveryConfigResponse]:
     summary="更新错误恢复策略",
     description="更新指定错误类别的恢复策略配置",
 )
-@api_error_recovery(ErrorCategory.DATABASE)
-@require_permissions("system:error_recovery:edit")
+@api_error_recovery(ErrorCategory.DATABASE)  # type: ignore[misc]
+@require_permissions(["system:error_recovery:edit"])  # type: ignore[misc]
 async def update_recovery_strategy(
     category: str, strategy_update: RecoveryStrategyUpdate
 ) -> dict[str, Any]:
@@ -235,8 +236,8 @@ async def update_recovery_strategy(
     description="获取所有错误类别的熔断器当前状态",
     response_model=list[CircuitBreakerStatus],
 )
-@api_error_recovery(ErrorCategory.DATABASE)
-@require_permissions("system:error_recovery:view")
+@api_error_recovery(ErrorCategory.DATABASE)  # type: ignore[misc]
+@require_permissions(["system:error_recovery:view"])  # type: ignore[misc]
 async def get_circuit_breaker_status() -> list[CircuitBreakerStatus]:
     """获取熔断器状态"""
 
@@ -270,8 +271,8 @@ async def get_circuit_breaker_status() -> list[CircuitBreakerStatus]:
     summary="重置熔断器",
     description="重置指定错误类别的熔断器状态",
 )
-@api_error_recovery(ErrorCategory.DATABASE)
-@require_permissions("system:error_recovery:edit")
+@api_error_recovery(ErrorCategory.DATABASE)  # type: ignore[misc]
+@require_permissions(["system:error_recovery:edit"])  # type: ignore[misc]
 async def reset_circuit_breaker(category: str) -> dict[str, Any]:
     """重置熔断器"""
 
@@ -309,8 +310,8 @@ async def reset_circuit_breaker(category: str) -> dict[str, Any]:
     summary="获取错误恢复历史",
     description="获取错误恢复的历史记录，支持分页和筛选",
 )
-@api_error_recovery(ErrorCategory.DATABASE)
-@require_permissions("system:error_recovery:view")
+@api_error_recovery(ErrorCategory.DATABASE)  # type: ignore[misc]
+@require_permissions(["system:error_recovery:view"])  # type: ignore[misc]
 async def get_recovery_history(
     category: str | None = Query(None, description="按错误类别筛选"),
     success: bool | None = Query(None, description="按是否成功筛选"),
@@ -350,8 +351,8 @@ async def get_recovery_history(
     summary="测试错误恢复",
     description="手动触发错误恢复测试，验证恢复策略的有效性",
 )
-@api_error_recovery(ErrorCategory.DATABASE)
-@require_permissions("system:error_recovery:test")
+@api_error_recovery(ErrorCategory.DATABASE)  # type: ignore[misc]
+@require_permissions(["system:error_recovery:test"])  # type: ignore[misc]
 async def test_error_recovery(
     category: str = Body(..., description="错误类别"),
     simulate_error: bool = Body(True, description="是否模拟错误"),
@@ -415,8 +416,8 @@ async def test_error_recovery(
     summary="清理错误恢复历史",
     description="清理指定时间之前的错误恢复历史记录",
 )
-@api_error_recovery(ErrorCategory.DATABASE)
-@require_permissions("system:error_recovery:edit")
+@api_error_recovery(ErrorCategory.DATABASE)  # type: ignore[misc]
+@require_permissions(["system:error_recovery:edit"])  # type: ignore[misc]
 async def clear_recovery_history(
     before_time: datetime | None = Query(None, description="清理此时间之前的记录"),
 ) -> dict[str, Any]:
@@ -451,7 +452,7 @@ async def clear_recovery_history(
     summary="获取错误恢复系统健康状态",
     description="检查错误恢复系统的整体健康状态",
 )
-async def get_error_recovery_health() -> dict[str, Any]:
+async def get_error_recovery_health() -> JSONResponse:
     """获取错误恢复系统健康状态"""
 
     try:
@@ -469,7 +470,7 @@ async def get_error_recovery_health() -> dict[str, Any]:
             health_status = "unhealthy"
             status_code = 503
 
-        return {
+        content = {
             "status": health_status,
             "success_rate": success_rate,
             "total_recoveries": statistics.get("total_recoveries", 0),
@@ -481,11 +482,13 @@ async def get_error_recovery_health() -> dict[str, Any]:
                 ]
             ),
             "timestamp": datetime.now().isoformat(),
-        }, status_code
+        }
+        return JSONResponse(content=content, status_code=status_code)
 
     except Exception as e:
-        return {
+        content = {
             "status": "error",
             "error": str(e),
             "timestamp": datetime.now().isoformat(),
-        }, 500
+        }
+        return JSONResponse(content=content, status_code=500)
