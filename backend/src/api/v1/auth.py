@@ -2,11 +2,14 @@
 认证相关API路由
 """
 
+import logging
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from jose import jwt
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 from ...core.route_guards import debug_only
 from ...crud.auth import AuditLogCRUD, UserCRUD, UserSessionCRUD
@@ -275,8 +278,11 @@ async def refresh_token(
     )
     if session_ip and session_ip != client_ip:
         # 可以选择拒绝IP变化的请求，或记录警告
-        print(
-            f"警告：用户 {getattr(user, 'username', 'unknown')} 的IP地址发生变化：{session_ip} -> {client_ip}"
+        user_id = getattr(user, 'id', None)
+        logger.warning(
+            "IP address changed for user during session refresh",
+            extra={"user_id": user_id},
+            exc_info=False
         )
 
     # 创建新令牌（增强安全性）
@@ -423,8 +429,7 @@ async def test_me_debug(current_user: UserResponse = Depends(get_current_active_
 
     # 检查 UserResponse 的所有字段
     user_dict = current_user.model_dump()
-    print(f"UserResponse字段: {list(user_dict.keys())}")
-    print(f"UserResponse内容: {user_dict}")
+    logger.debug(f"UserResponse fields: {len(user_dict.keys())} fields")
 
     # 手动构建增强响应
     enhanced_response = {
