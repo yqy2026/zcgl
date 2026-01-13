@@ -68,14 +68,16 @@ class CustomFieldService:
 
                 # 检查长度限制
                 if field.validation_rules:
-                    rules_str: str | None = (
+                    text_rules_str: str | None = (
                         field.validation_rules
                         if isinstance(field.validation_rules, str)
                         else None
                     )
-                    rules = json.loads(rules_str) if rules_str else field.validation_rules
-                    max_length = rules.get("max_length")
-                    min_length = rules.get("min_length")
+                    text_rules: dict[str, Any] = (
+                        json.loads(text_rules_str) if text_rules_str else field.validation_rules
+                    )
+                    max_length = text_rules.get("max_length")
+                    min_length = text_rules.get("min_length")
 
                     if max_length and len(value) > max_length:
                         return (
@@ -99,9 +101,11 @@ class CustomFieldService:
                             if isinstance(field.validation_rules, str)
                             else None
                         )
-                        rules = json.loads(number_rules_str) if number_rules_str else field.validation_rules
-                        max_value = rules.get("max_value")
-                        min_value = rules.get("min_value")
+                        number_rules: dict[str, Any] = (
+                            json.loads(number_rules_str) if number_rules_str else field.validation_rules
+                        )
+                        max_value = number_rules.get("max_value")
+                        min_value = number_rules.get("min_value")
 
                         if max_value is not None and int_value > max_value:
                             return (
@@ -128,9 +132,11 @@ class CustomFieldService:
                             if isinstance(field.validation_rules, str)
                             else None
                         )
-                        rules = json.loads(decimal_rules_str) if decimal_rules_str else field.validation_rules
-                        max_value = rules.get("max_value")
-                        min_value = rules.get("min_value")
+                        decimal_rules: dict[str, Any] = (
+                            json.loads(decimal_rules_str) if decimal_rules_str else field.validation_rules
+                        )
+                        max_value = decimal_rules.get("max_value")
+                        min_value = decimal_rules.get("min_value")
 
                         if max_value is not None and decimal_value > Decimal(
                             str(max_value)
@@ -181,10 +187,15 @@ class CustomFieldService:
                         if isinstance(field.field_options, str)
                         else None
                     )
-                    options_list = (
+                    options_list: list[dict[str, Any]] | None = (
                         json.loads(field_options_str) if field_options_str else None
                     )
-                    options = options_list if options_list else field.field_options
+                    # Handle both parsed JSON and already-parsed options
+                    if options_list is not None:
+                        options: list[dict[str, Any]] = options_list
+                    else:
+                        # Cast to expected type if already parsed
+                        options = field.field_options if isinstance(field.field_options, list) else []
                     valid_values = [
                         opt.get("value") for opt in options if isinstance(opt, dict)
                     ]

@@ -2,7 +2,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import func
+from sqlalchemy import and_, func
 from sqlalchemy.orm import Session
 
 from ...crud.rent_contract import rent_contract, rent_ledger, rent_term
@@ -210,7 +210,7 @@ class RentContractService:
             db.add(transfer_in)
 
         # 结束原合同
-        original.contract_status = "已续签"
+        setattr(original, 'contract_status', "已续签")
         db.add(original)
 
         # 记录历史
@@ -285,8 +285,8 @@ class RentContractService:
             db.add(refund)
 
         # 更新合同状态
-        contract.contract_status = "已终止"
-        contract.end_date = termination_date
+        setattr(contract, 'contract_status', "已终止")
+        setattr(contract, 'end_date', datetime.combine(termination_date, datetime.min.time()))
         db.add(contract)
 
         # 记录历史
@@ -383,7 +383,7 @@ class RentContractService:
             if request.payment_status is not None:
                 ledger.payment_status = request.payment_status
             if request.payment_date is not None:
-                ledger.payment_date = request.payment_date
+                setattr(ledger, 'payment_date', datetime.combine(request.payment_date, datetime.min.time()))
             if request.payment_method is not None:
                 ledger.payment_method = request.payment_method
             if request.payment_reference is not None:
@@ -436,6 +436,18 @@ class RentContractService:
             func.count(RentLedger.id).label("total_records"),
         ).first()
 
+        # Handle None case for stats
+        if stats is None:
+            total_due = Decimal("0")
+            total_paid = Decimal("0")
+            total_overdue = Decimal("0")
+            total_records = 0
+        else:
+            total_due = stats.total_due or Decimal("0")
+            total_paid = stats.total_paid or Decimal("0")
+            total_overdue = stats.total_overdue or Decimal("0")
+            total_records = stats.total_records or 0
+
         # 按状态统计
         status_stats = (
             base_query.with_entities(
@@ -461,14 +473,14 @@ class RentContractService:
             .all()
         )
 
+        payment_rate = (total_paid / total_due * 100) if total_due else Decimal("0")
+
         return {
-            "total_due": stats.total_due or Decimal("0"),
-            "total_paid": stats.total_paid or Decimal("0"),
-            "total_overdue": stats.total_overdue or Decimal("0"),
-            "total_records": stats.total_records or 0,
-            "payment_rate": (stats.total_paid / stats.total_due * 100)
-            if stats.total_due
-            else Decimal("0"),
+            "total_due": total_due,
+            "total_paid": total_paid,
+            "total_overdue": total_overdue,
+            "total_records": total_records,
+            "payment_rate": payment_rate,
             # V2: New Operational Metrics
             "average_unit_price": self._calculate_average_unit_price(db, query_params),
             "renewal_rate": self._calculate_renewal_rate(db, query_params),
@@ -668,7 +680,7 @@ class RentContractService:
         start_date: date,
         end_date: date,
         exclude_contract_id: str | None = None,
-    ) -> list[dict]:
+    ) -> list[dict[str, Any]]:
         """
         检查资产租金冲突
 
@@ -684,21 +696,17 @@ class RentContractService:
         Returns:
             冲突列表,每个冲突包含资产信息和合同信息
         """
-        from sqlalchemy import and_
-
         conflicts = []
+
+        # Build conditions for and_()
+        conditions = [RentContract.contract_status == "有效"]
+        if exclude_contract_id:
+            conditions.append(RentContract.id != exclude_contract_id)
 
         # 查询与指定资产相关的所有有效合同
         existing_contracts = (
             db.query(RentContract)
-            .filter(
-                and_(
-                    RentContract.contract_status == "有效",
-                    RentContract.id != exclude_contract_id
-                    if exclude_contract_id
-                    else True,
-                )
-            )
+            .filter(and_(*conditions))
             .all()
         )
 
@@ -753,8 +761,8 @@ class RentContractService:
         contract_id: str,
         change_type: str,
         change_description: str,
-        old_data: dict | None = None,
-        new_data: dict | None = None,
+        old_data: dict[str, Any] | None = None,
+        new_data: dict[str, Any] | None = None,
         operator: str | None = None,
         operator_id: str | None = None,
     ) -> RentContractHistory:
