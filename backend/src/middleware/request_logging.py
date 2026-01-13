@@ -3,12 +3,13 @@
 记录所有API请求的详细信息，用于安全和审计
 """
 
+from collections.abc import Awaitable, Callable
+
 import time
 import uuid
-from collections.abc import Callable
-
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.types import ASGIApp
 
 from ..core.logging_security import SensitiveDataFilter, log_request_info
 
@@ -16,11 +17,13 @@ from ..core.logging_security import SensitiveDataFilter, log_request_info
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """请求日志中间件"""
 
-    def __init__(self, app):
+    def __init__(self, app: ASGIApp) -> None:
         super().__init__(app)
-        self.sensitive_filter = SensitiveDataFilter()
+        self.sensitive_filter = SensitiveDataFilter()  # type: ignore[no-untyped-call]
 
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+    async def dispatch(  # type: ignore[override]
+        self, request: Request, call_next: Callable[[Request], Awaitable[object]]
+    ) -> Response:
         # 生成请求ID
         request_id = str(uuid.uuid4())
 
@@ -93,7 +96,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
 
 # 便捷函数创建中间件
-def create_request_logging_middleware(app=None):
+def create_request_logging_middleware(app: ASGIApp | None = None) -> RequestLoggingMiddleware | type[RequestLoggingMiddleware]:
     """创建请求日志中间件"""
     if app is None:  # pragma: no cover
         return RequestLoggingMiddleware  # pragma: no cover

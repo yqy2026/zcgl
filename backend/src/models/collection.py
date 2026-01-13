@@ -5,6 +5,7 @@
 import enum
 import uuid
 from datetime import datetime
+from decimal import Decimal
 
 from sqlalchemy import (
     DECIMAL,
@@ -43,7 +44,7 @@ class CollectionStatus(str, enum.Enum):
     PARTIAL = "partial"  # 部分成功
 
 
-class CollectionRecord(Base):
+class CollectionRecord(Base):  # type: ignore[valid-type, misc]
     """催缴记录模型 - V2 新增"""
 
     __tablename__ = "collection_records"
@@ -65,13 +66,13 @@ class CollectionRecord(Base):
     )
 
     # 催缴信息
-    collection_method = Column(
+    collection_method: Column[CollectionMethod] = Column(
         Enum(CollectionMethod),
         nullable=False,
         comment="催缴方式：电话/短信/邮件/企业微信/上门/催缴函",
     )
     collection_date = Column(Date, nullable=False, comment="催缴日期")
-    collection_status = Column(
+    collection_status: Column[CollectionStatus] = Column(
         Enum(CollectionStatus),
         default=CollectionStatus.PENDING,
         comment="催缴状态",
@@ -82,9 +83,9 @@ class CollectionRecord(Base):
     contact_phone = Column(String(20), comment="联系电话")
 
     # 催缴结果
-    promised_amount = Column(DECIMAL(15, 2), comment="承诺付款金额")
+    promised_amount: Column[Decimal] = Column(DECIMAL(15, 2), comment="承诺付款金额")
     promised_date = Column(Date, comment="承诺付款日期")
-    actual_payment_amount = Column(DECIMAL(15, 2), comment="实际付款金额")
+    actual_payment_amount: Column[Decimal] = Column(DECIMAL(15, 2), comment="实际付款金额")
 
     # 备注信息
     collection_notes = Column(Text, comment="催缴备注")
@@ -104,5 +105,5 @@ class CollectionRecord(Base):
     ledger = relationship("RentLedger")
     contract = relationship("RentContract")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<CollectionRecord(ledger_id={self.ledger_id}, method={self.collection_method}, status={self.collection_status})>"  # pragma: no cover

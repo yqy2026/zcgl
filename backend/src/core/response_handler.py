@@ -1,4 +1,4 @@
-from typing import Any, TypeVar
+from typing import Any, Generic, TypeVar
 
 """
 统一响应处理器
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T")
 
 
-class APIResponse[T](BaseModel):
+class APIResponse(BaseModel, Generic[T]):
     """统一API响应格式"""
 
     success: bool = True
@@ -334,21 +334,21 @@ def get_request_id(request: Request) -> str | None:
 
 # 便捷函数
 def success_response(
-    data: Any = None, message: str = "操作成功", **kwargs
+    data: Any = None, message: str = "操作成功", **kwargs: Any
 ) -> JSONResponse:
     """成功响应便捷函数"""
     return ResponseHandler.success(data=data, message=message, **kwargs)
 
 
 def error_response(
-    message: str, error_code: str = "UNKNOWN_ERROR", **kwargs
+    message: str, error_code: str = "UNKNOWN_ERROR", **kwargs: Any
 ) -> JSONResponse:
     """错误响应便捷函数"""
     return ResponseHandler.error(message=message, error_code=error_code, **kwargs)
 
 
 def not_found_response(
-    resource: str = "资源", resource_id: str | None = None, **kwargs
+    resource: str = "资源", resource_id: str | None = None, **kwargs: Any
 ) -> JSONResponse:
     """404响应便捷函数"""
     return ResponseHandler.not_found(
@@ -357,7 +357,7 @@ def not_found_response(
 
 
 def paginated_response(
-    data: list[Any], page: int, page_size: int, total: int, **kwargs
+    data: list[Any], page: int, page_size: int, total: int, **kwargs: Any
 ) -> JSONResponse:
     """分页响应便捷函数"""
     return ResponseHandler.paginated(

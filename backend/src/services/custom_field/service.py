@@ -68,11 +68,12 @@ class CustomFieldService:
 
                 # 检查长度限制
                 if field.validation_rules:
-                    rules = (
-                        json.loads(field.validation_rules)
+                    rules_str: str | None = (
+                        field.validation_rules
                         if isinstance(field.validation_rules, str)
-                        else field.validation_rules
+                        else None
                     )
+                    rules = json.loads(rules_str) if rules_str else field.validation_rules
                     max_length = rules.get("max_length")
                     min_length = rules.get("min_length")
 
@@ -93,11 +94,12 @@ class CustomFieldService:
 
                     # 检查数值范围
                     if field.validation_rules:
-                        rules = (
-                            json.loads(field.validation_rules)
+                        rules_str: str | None = (
+                            field.validation_rules
                             if isinstance(field.validation_rules, str)
-                            else field.validation_rules
+                            else None
                         )
+                        rules = json.loads(rules_str) if rules_str else field.validation_rules
                         max_value = rules.get("max_value")
                         min_value = rules.get("min_value")
 
@@ -121,11 +123,12 @@ class CustomFieldService:
 
                     # 检查数值范围
                     if field.validation_rules:
-                        rules = (
-                            json.loads(field.validation_rules)
+                        rules_str: str | None = (
+                            field.validation_rules
                             if isinstance(field.validation_rules, str)
-                            else field.validation_rules
+                            else None
                         )
+                        rules = json.loads(rules_str) if rules_str else field.validation_rules
                         max_value = rules.get("max_value")
                         min_value = rules.get("min_value")
 
@@ -173,11 +176,15 @@ class CustomFieldService:
             elif field.field_type in ["select", "multiselect"]:
                 # 检查选项是否在允许的范围内
                 if field.field_options:
-                    options = (
-                        json.loads(field.field_options)
+                    field_options_str: str | None = (
+                        field.field_options
                         if isinstance(field.field_options, str)
-                        else field.field_options
+                        else None
                     )
+                    options_list = (
+                        json.loads(field_options_str) if field_options_str else None
+                    )
+                    options = options_list if options_list else field.field_options
                     valid_values = [
                         opt.get("value") for opt in options if isinstance(opt, dict)
                     ]
@@ -222,7 +229,7 @@ class CustomFieldService:
         self, db: Session, *, asset_id: str, values: list[dict[str, Any]]
     ) -> list[dict[str, Any]]:
         """更新资产的自定义字段值 (Refactored from CRUD)"""
-        updated_values = []
+        updated_values: list[dict[str, Any]] = []
 
         for value_data in values:
             field_id = value_data.get("field_id")
@@ -279,7 +286,7 @@ class CustomFieldService:
         self, db: Session, *, sort_data: list[dict[str, Any]]
     ) -> list[AssetCustomField]:
         """批量更新排序"""
-        updated_fields = []
+        updated_fields: list[AssetCustomField] = []
 
         for item in sort_data:
             field_id = item.get("id")

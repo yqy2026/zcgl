@@ -322,17 +322,11 @@ def get_permission_cache_service() -> PermissionCacheService:
         # 尝试获取Redis客户端
         redis_client = None
         try:
-            try:
-                from ...core.cache_manager import get_cache_manager
+            from ...core.database import get_redis
 
-                cache_manager = get_cache_manager()
-                if cache_manager and cache_manager.redis:
-                    redis_client = cache_manager.redis
-            except ImportError:  # pragma: no cover
-                logger.warning("Cache manager not available")  # pragma: no cover
-            except Exception as e:  # pragma: no cover
-                logger.warning(f"Failed to get Redis client: {e}")  # pragma: no cover
-
+            redis_client = get_redis()
+        except ImportError:  # pragma: no cover
+            logger.warning("Redis client not available")  # pragma: no cover
         except Exception as e:  # pragma: no cover
             logger.warning(f"Failed to get Redis client: {e}")  # pragma: no cover
 

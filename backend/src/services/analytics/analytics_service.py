@@ -61,7 +61,7 @@ class AnalyticsService:
             cached_result = self.cache.get(cache_key)
             if cached_result:
                 logger.info(f"从缓存返回分析结果: {cache_key}")
-                return cached_result
+                return cached_result  # type: ignore[no-any-return]
 
         # 执行分析计算
         result = self._calculate_analytics(validated_filters)
@@ -119,7 +119,7 @@ class AnalyticsService:
             query = query.filter(
                 or_(
                     Asset.data_status == "正常",
-                    Asset.data_status is None,
+                    Asset.data_status.is_(None),
                 )
             )
 
@@ -195,14 +195,14 @@ class AnalyticsService:
         # 获取资产数据
         query = self.db.query(Asset)
 
-        if not filters.get("include_deleted", False):
+        if filters is not None and not filters.get("include_deleted", False):
             # 使用 data_status 筛选
             from sqlalchemy import or_
 
             query = query.filter(
                 or_(
                     Asset.data_status == "正常",
-                    Asset.data_status is None,
+                    Asset.data_status.is_(None),
                 )
             )
 
@@ -272,21 +272,21 @@ class AnalyticsService:
         """
         query = self.db.query(Asset)
 
-        if not filters.get("include_deleted", False):
+        if filters is not None and not filters.get("include_deleted", False):
             # 使用 data_status 筛选
             from sqlalchemy import or_
 
             query = query.filter(
                 or_(
                     Asset.data_status == "正常",
-                    Asset.data_status is None,
+                    Asset.data_status.is_(None),
                 )
             )
 
         assets = query.all()
 
         # 统计分布
-        distribution = defaultdict(lambda: {"count": 0, "area": 0.0})
+        distribution: defaultdict[str, dict[str, Any]] = defaultdict(lambda: {"count": 0, "area": 0.0})
 
         for asset in assets:
             key = getattr(asset, distribution_type, "unknown")

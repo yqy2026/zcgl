@@ -26,7 +26,7 @@ def model_to_dict(model: Any, include_relations: bool = False) -> dict[str, Any]
         return None
 
     columns = [c.key for c in class_mapper(model.__class__).columns]
-    result = {}
+    result: dict[str, Any] = {}
 
     for column in columns:
         value = getattr(model, column)
@@ -35,7 +35,7 @@ def model_to_dict(model: Any, include_relations: bool = False) -> dict[str, Any]
         if isinstance(value, datetime | date):
             result[column] = value.isoformat()
         elif isinstance(value, Decimal):
-            result[column] = float(value)
+            result[column] = float(value)  # type: ignore[assignment]
         else:
             result[column] = value
 
@@ -45,13 +45,13 @@ def model_to_dict(model: Any, include_relations: bool = False) -> dict[str, Any]
             rel_value = getattr(model, rel.key)
             if rel_value is not None:
                 if rel.uselist:  # 一对多关系
-                    result[rel.key] = [
+                    result[rel.key] = [  # type: ignore[assignment]
                         model_to_dict(item) for item in rel_value if item is not None
                     ]
                 else:  # 多对一或一对一关系
                     dict_result = model_to_dict(rel_value)
                     if dict_result is not None:
-                        result[rel.key] = dict_result
+                        result[rel.key] = dict_result  # type: ignore[assignment]
 
     return result
 
@@ -69,7 +69,11 @@ def batch_to_dict(
     Returns:
         转换后的字典列表
     """
-    return [model_to_dict(model, include_relations) for model in models]
+    return [
+        model_dict
+        for model in models
+        if (model_dict := model_to_dict(model, include_relations)) is not None
+    ]
 
 
 def generate_uuid() -> str:

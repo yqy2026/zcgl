@@ -21,7 +21,7 @@ try:
 except Exception:  # nosec - B110: Intentional graceful degradation
     # Fallback to legacy shim
     try:
-        from ..auth_service import AuthService as AuthService  # type: ignore
+        from ..auth_service import AuthService as AuthService
 
         __all__.append("AuthService")
     except Exception:  # nosec - B110: Intentional graceful degradation

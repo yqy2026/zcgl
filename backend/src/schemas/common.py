@@ -237,19 +237,23 @@ class ResponseBuilder:
 
 # 常用响应实例
 def create_success_response(
-    data: T | None = None, message: str | None = None
+    data: T | None = None, message: str | None = None, **kwargs: Any
 ) -> SuccessResponse[T]:
     """创建成功响应"""
-    return SuccessResponse(data=data, message=message)  # pragma: no cover
+    return SuccessResponse(data=data, message=message, **kwargs)  # pragma: no cover
 
 
 def create_error_response(
-    message: str, error_code: str = "unknown_error", details: dict | None = None
+    message: str,
+    error_code: str = "unknown_error",
+    details: dict[str, Any] | None = None,
 ) -> ErrorResponse:
     """创建错误响应"""
     return ErrorResponse(  # pragma: no cover
+        success=False,
         error={"code": error_code, "details": details or {}},
-        message=message,  # pragma: no cover
+        message=message,
+        request_id=None,  # pragma: no cover
     )  # pragma: no cover
 
 
@@ -267,7 +271,11 @@ def create_paginated_response(
         has_prev=page > 1,  # pragma: no cover
     )  # pragma: no cover
     return PaginatedResponse(
-        data=data, pagination=pagination, message=message
+        success=True,
+        data=data,
+        pagination=pagination,
+        message=message,
+        request_id=None,
     )  # pragma: no cover
 
 

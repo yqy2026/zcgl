@@ -8,7 +8,7 @@ from ..schemas.project import ProjectCreate, ProjectSearchRequest, ProjectUpdate
 from .base import CRUDBase
 
 
-class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
+class CRUDProject(CRUDBase):
     """项目管理CRUD操作类"""
 
     def get_by_code(self, db: Session, code: str) -> Project | None:
@@ -19,7 +19,7 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
         """通过名称获取项目"""
         return db.query(Project).filter(Project.name == name).first()
 
-    def get_multi(
+    def get_multi(  # type: ignore[override]
         self,
         db: Session,
         *,
@@ -65,12 +65,8 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
             query = query.filter(Project.project_status == search_params.project_status)
 
         # 负责人筛选
-        if search_params.project_manager:  # Changed from manager_id to project_manager string check? Model has project_manager string
-            # Schema has project_manager field string? Yes.
-            # But old crud might used manager_id.
-            # Schema ProjectSearchRequest has no manager_id, checks keyword?
-            # Wait, Schema ProjectSearchRequest has `keyword`, `is_active`, `project_type`, `project_status`, `city`, `ownership_id`, `ownership_entity`. NO `manager_id`.
-            pass  # Removed invalid filter
+        # Schema ProjectSearchRequest has no project_manager field
+        # This functionality removed in current schema
 
         # 部门筛选 - Schema doesn't have it. Removed.
 
@@ -101,11 +97,12 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
 
     def get_asset_count(self, db: Session, project_id: str) -> int:
         """获取项目关联的资产数量"""
-        return (
+        result = (
             db.query(func.count(Asset.id))
             .filter(Asset.project_id == project_id)
             .scalar()
         )
+        return result or 0
 
     def get_dropdown_options(self, db: Session) -> list[dict[str, Any]]:
         """获取下拉选项"""
@@ -114,9 +111,9 @@ class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
 
     def get_statistics(self, db: Session) -> dict[str, Any]:
         """获取统计信息"""
-        total = db.query(func.count(Project.id)).scalar()
+        total = db.query(func.count(Project.id)).scalar() or 0
         active = (
-            db.query(func.count(Project.id)).filter(Project.status == "doing").scalar()
+            db.query(func.count(Project.id)).filter(Project.status == "doing").scalar() or 0
         )  # assuming 'doing' is active
         # ... logic reduced for brevity, keeping simpler stats in CRUD is okay or move to service?
         # Keeping minimal here.

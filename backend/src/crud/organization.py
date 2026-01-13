@@ -6,7 +6,7 @@ from ..models.organization import Organization
 from ..schemas.organization import OrganizationCreate, OrganizationUpdate
 
 
-class CRUDOrganization(CRUDBase[Organization, OrganizationCreate, OrganizationUpdate]):
+class CRUDOrganization(CRUDBase):
     """组织架构CRUD操作"""
 
     def get_multi_with_filters(
@@ -25,25 +25,23 @@ class CRUDOrganization(CRUDBase[Organization, OrganizationCreate, OrganizationUp
         if parent_id:
             filters["parent_id"] = parent_id
 
-        stmt = self.query_builder.build_query(
-            db_session=db,
-            model=Organization,
-            filters=filters,
-            base_query=query,
-            search_query=keyword,
-            search_fields=["name", "description"],
-            sort_by="level",  # Sort by level, then sort_order
-            sort_desc=False,
-            skip=skip,
-            limit=limit,
-        )
-        # Note: QueryBuilder only supports one sort field.
-        # For complex sort (level asc, sort_order asc), we might need to rely on base query if QB doesn't override.
-        # But QB applies order_by(desc(id)) if sort_by not provided.
-        # Let's use QB for main list, but for tree operations we might use specific methods.
+        # Apply filters and search directly on query, then paginate
+        if keyword:
+            from sqlalchemy import or_
 
-        result = db.execute(stmt)
-        return list(result.scalars().all())
+            query = query.filter(
+                or_(
+                    Organization.name.ilike(f"%{keyword}%"),
+                    Organization.description.ilike(f"%{keyword}%"),
+                )
+            )
+
+        # Apply sorting
+        query = query.order_by(Organization.level.asc(), Organization.sort_order.asc())
+
+        # Apply pagination
+        result = query.offset(skip).limit(limit).all()
+        return result
 
     def get_tree(self, db: Session, parent_id: str | None = None) -> list[Organization]:
         """获取组织树形结构"""
@@ -70,16 +68,16 @@ class CRUDOrganization(CRUDBase[Organization, OrganizationCreate, OrganizationUp
             )
         else:
             # 递归获取所有子组织
-            children = []
+            children: list[Organization] = []
             direct_children = self.get_children(db, parent_id, False)
             for child in direct_children:
                 children.append(child)
-                children.extend(self.get_children(db, child.id, True))
+                children.extend(self.get_children(db, str(child.id), True))
             return children
 
     def get_path_to_root(self, db: Session, org_id: str) -> list[Organization]:
         """获取到根节点的路径"""
-        path = []
+        path: list[Organization] = []
         current = self.get(db, id=org_id)
 
         while current:

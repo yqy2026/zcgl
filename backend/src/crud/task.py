@@ -10,10 +10,10 @@ from ..schemas.task import ExcelTaskConfigCreate, TaskCreate, TaskUpdate
 from .base import CRUDBase
 
 
-class TaskCRUD(CRUDBase[AsyncTask, TaskCreate, TaskUpdate]):
+class TaskCRUD(CRUDBase):
     """任务CRUD操作类"""
 
-    def get_multi(
+    def get_multi(  # type: ignore[override]
         self,
         db: Session,
         *,
@@ -53,7 +53,7 @@ class TaskCRUD(CRUDBase[AsyncTask, TaskCreate, TaskUpdate]):
         # 应用分页
         return query.offset(skip).limit(limit).all()
 
-    def count(
+    def count(  # type: ignore[override]
         self, db: Session, *, task_type: str | None = None, status: str | None = None
     ) -> int:
         """统计任务数量"""
@@ -136,7 +136,7 @@ class TaskCRUD(CRUDBase[AsyncTask, TaskCreate, TaskUpdate]):
     # create_history, update status logic, etc moved to Service.
 
 
-class ExcelTaskConfigCRUD(CRUDBase[ExcelTaskConfig, ExcelTaskConfigCreate, dict]):
+class ExcelTaskConfigCRUD(CRUDBase):
     """Excel任务配置CRUD操作类"""
 
     def get_default(
@@ -156,7 +156,7 @@ class ExcelTaskConfigCRUD(CRUDBase[ExcelTaskConfig, ExcelTaskConfigCreate, dict]
             .first()
         )
 
-    def get_multi(
+    def get_multi(  # type: ignore[override]
         self,
         db: Session,
         *,

@@ -202,10 +202,15 @@ class OwnershipService:
         if not db_obj:
             raise ValueError(f"权属方ID {id} 不存在")
 
+        # Convert Column[str] to str using getattr
+        obj_name: str | None = name or getattr(db_obj, "name", None)
+        obj_code: str | None = code or getattr(db_obj, "code", None)
+        obj_short_name: str | None = getattr(db_obj, "short_name", None)
+
         update_in = OwnershipUpdate(
-            name=name or db_obj.name,
-            code=code or db_obj.code,
-            short_name=db_obj.short_name,
+            name=obj_name,
+            code=obj_code,
+            short_name=obj_short_name,
             is_active=not db_obj.is_active,
         )
         return self.update_ownership(db, db_obj=db_obj, obj_in=update_in)
