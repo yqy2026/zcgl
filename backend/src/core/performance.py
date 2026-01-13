@@ -497,6 +497,6 @@ if __name__ == "__main__":
         return {"result": "test"}
 
     result = test_function()
-    print("Test result:", result)
-    print("Performance stats:", get_performance_stats())
-    print("Cache stats:", get_cache_stats())
+    logger.info(f"Test result: {result}")
+    logger.info(f"Performance stats: {get_performance_stats()}")
+    logger.info(f"Cache stats: {get_cache_stats()}")

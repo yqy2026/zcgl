@@ -31,12 +31,15 @@ def setup_utf8_encoding():
 def safe_print(message: Any) -> None:
     """安全打印，避免编码错误"""
     try:
-        print(str(message))
+        sys.stdout.write(str(message) + "\n")
+        sys.stdout.flush()
     except UnicodeEncodeError:
         # 降级到ASCII编码，替换无法编码的字符
-        print(str(message).encode("ascii", errors="replace").decode("ascii"))
+        sys.stdout.write(str(message).encode("ascii", errors="replace").decode("ascii") + "\n")
+        sys.stdout.flush()
     except Exception:
-        print("[Encoding Error: Unable to display message]")
+        sys.stdout.write("[Encoding Error: Unable to display message]\n")
+        sys.stdout.flush()
 
 
 def safe_log_format(message: str) -> str:
@@ -75,9 +78,8 @@ class EncodingSafeHandler(logging.Handler):
             safe_msg = safe_log_format(msg)
 
             # 输出到控制台
-            print(safe_msg, file=sys.stderr)
+            sys.stderr.write(safe_msg + "\n")
+            sys.stderr.flush()
         except Exception:
-            print(
-                f"[Logging Error] Unable to format log record: {record}",
-                file=sys.stderr,
-            )
+            sys.stderr.write(f"[Logging Error] Unable to format log record: {record}\n")
+            sys.stderr.flush()
