@@ -5,8 +5,11 @@ from typing import TYPE_CHECKING, Any  # noqa: F401
 """
 
 import asyncio
+import logging
 import os
 from contextlib import asynccontextmanager  # noqa: F401
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from redis.asyncio import ConnectionPool, Redis  # noqa: F401
@@ -44,8 +47,8 @@ class Settings:
     if not SECRET_KEY or SECRET_KEY in [
         "EMERGENCY-ONLY-REPLACE-WITH-ENV-SECRET-KEY-NOW"
     ]:
-        print(
-            "Warning: Using default or missing SECRET_KEY. Please set a proper environment variable in production."
+        logger.warning(
+            "Using default or missing SECRET_KEY. Please set a proper environment variable in production."
         )
     DATA_ENCRYPTION_KEY: str = os.getenv("DATA_ENCRYPTION_KEY", "")
     DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"
@@ -113,7 +116,7 @@ async def init_redis():
     global redis_pool, redis_client
 
     if not REDIS_AVAILABLE:
-        print("⚠️ Redis库未安装，跳过Redis初始化")
+        logger.warning("Redis库未安装，跳过Redis初始化")
         return
 
     try:
@@ -121,9 +124,9 @@ async def init_redis():
         redis_client = redis.Redis(connection_pool=redis_pool)  # type: ignore
         # 测试连接
         await redis_client.ping()
-        print(f"✅ Redis连接成功: {settings.REDIS_URL}")
+        logger.info(f"Redis连接成功: {settings.REDIS_URL}")
     except Exception as e:
-        print(f"❌ Redis连接失败: {e}")
+        logger.error(f"Redis连接失败: {e}")
         redis_client = None
 
 
@@ -148,7 +151,7 @@ class RedisTaskStore:
             try:
                 await redis_client.setex(f"task:{task_id}", expire_seconds, str(status))
             except Exception as e:
-                print(f"设置任务状态失败: {e}")
+                logger.error(f"设置任务状态失败: {e}")
 
     async def get_task_status(self, task_id: str) -> dict[str, Any] | None:
         """获取任务状态"""
@@ -161,7 +164,7 @@ class RedisTaskStore:
                         data.decode("utf-8")
                     )  # 注意：实际应用中应使用更安全的序列化方法
             except Exception as e:
-                print(f"获取任务状态失败: {e}")
+                logger.error(f"获取任务状态失败: {e}")
         return None
 
     async def delete_task(self, task_id: str):
@@ -170,7 +173,7 @@ class RedisTaskStore:
             try:
                 await redis_client.delete(f"task:{task_id}")
             except Exception as e:
-                print(f"删除任务失败: {e}")
+                logger.error(f"删除任务失败: {e}")
 
 
 # 创建全局任务存储实例
@@ -185,7 +188,7 @@ async def cleanup_expired_tasks():
         try:
             await asyncio.sleep(3600)  # 1小时检查一次
         except Exception as e:
-            print(f"清理过期任务时出错: {e}")
+            logger.error(f"清理过期任务时出错: {e}")
             await asyncio.sleep(60)  # 出错时等1分钟再重试
 
 
@@ -193,10 +196,10 @@ async def cleanup_expired_tasks():
 async def lifespan(app):
     """应用生命周期管理"""
     # 启动时
-    print("🚀 启动土地物业资产管理系统")
-    print(f"📊 数据库: {settings.DATABASE_URL}")
-    print(f"🔗 Redis: {settings.REDIS_URL}")
-    print(f"🔧 调试模式: {settings.DEBUG}")
+    logger.info("启动土地物业资产管理系统")
+    logger.info(f"数据库: {settings.DATABASE_URL}")
+    logger.info(f"Redis: {settings.REDIS_URL}")
+    logger.info(f"调试模式: {settings.DEBUG}")
 
     # 初始化Redis
     await init_redis()
@@ -209,7 +212,7 @@ async def lifespan(app):
     # 关闭时
     cleanup_task.cancel()
     await close_redis()
-    print("🛑 系统已关闭")
+    logger.info("系统已关闭")
 
 
 # 导出配置
