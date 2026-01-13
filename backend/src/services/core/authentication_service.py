@@ -1,3 +1,4 @@
+import logging
 import secrets
 from datetime import UTC, datetime, timedelta
 
@@ -12,6 +13,8 @@ from ...schemas.auth import TokenResponse
 from .password_service import PasswordService
 from .session_service import SessionService
 from .user_management_service import UserManagementService
+
+logger = logging.getLogger(__name__)
 
 # JWT配置
 SECRET_KEY = settings.SECRET_KEY
@@ -183,7 +186,7 @@ class AuthenticationService:
                 return None
 
         except JWTError as e:
-            print(f"JWT validation failed: {str(e)}")
+            logger.error(f"JWT validation failed: {str(e)}")
             return None
 
         # 查找会话 (Delegating to SessionService would be cleaner but requires careful session loop handling)
