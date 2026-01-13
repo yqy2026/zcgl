@@ -13,16 +13,27 @@ logger = logging.getLogger(__name__)
 
 # 使用项目的 safe_import 机制
 try:
+    from collections.abc import Callable
+
     from ...core.import_utils import safe_import
 except ImportError:
-    # 回退到标准导入
-    def safe_import(module_path: str, **kwargs):
+    # 回退到标准导入 - 必须与原始签名完全匹配
+    from collections.abc import Callable
+
+    def safe_import(
+        module_path: str,
+        *,
+        critical: bool = False,
+        fallback: Any = None,
+        mock_factory: Callable[[], Any] | None = None,
+        silent: bool = False,
+    ) -> Any:
         import importlib
 
         try:
             return importlib.import_module(module_path)
         except ImportError:
-            return None
+            return fallback
 
 
 class OCRProvider:
@@ -31,12 +42,12 @@ class OCRProvider:
     统一管理不同的 OCR 服务实现
     """
 
-    def __init__(self):
-        self._service = None
-        self._service_type = None
+    def __init__(self) -> None:
+        self._service: Any = None
+        self._service_type: str | None = None
         self._initialize_service()
 
-    def _initialize_service(self):
+    def _initialize_service(self) -> None:
         """初始化可用的 OCR 服务"""
         # 优先尝试 PaddleOCR (功能最完整)
         paddleocr_available = safe_import("paddleocr", critical=False) is not None
@@ -76,7 +87,7 @@ class OCRProvider:
     @property
     def service_type(self) -> str:
         """获取当前使用的 OCR 服务类型"""
-        return self._service_type
+        return self._service_type if self._service_type is not None else "none"
 
     def get_service(self) -> Any | None:
         """

@@ -140,7 +140,7 @@ def parse_amount(amount_str: str | None) -> float | None:
     if not amount_str:
         return None
 
-    if isinstance(amount_str, (int, float)):
+    if isinstance(amount_str, int | float):
         return float(amount_str)
 
     amount_str = str(amount_str).strip()
@@ -318,7 +318,7 @@ def _validate_rent_amount(value: str) -> tuple[bool, str | None]:
 # ============================================================================
 
 
-def safe_parse_json(json_str: str) -> dict | None:
+def safe_parse_json(json_str: str) -> dict[str, Any] | None:
     """
     安全解析 JSON
 
@@ -332,19 +332,23 @@ def safe_parse_json(json_str: str) -> dict | None:
         return None
 
     try:
-        return json.loads(json_str)
+        from typing import cast
+
+        return cast(dict[str, Any], json.loads(json_str))
     except json.JSONDecodeError:
         # 尝试提取 JSON 片段
         match = re.search(r"\{.*\}", json_str, re.DOTALL)
         if match:
             try:
-                return json.loads(match.group(0))
+                from typing import cast
+
+                return cast(dict[str, Any], json.loads(match.group(0)))
             except json.JSONDecodeError:
                 pass
         return None
 
 
-def extract_json_from_response(response: str) -> dict | None:
+def extract_json_from_response(response: str) -> dict[str, Any] | None:
     """
     从 LLM 响应中提取 JSON
 
@@ -428,7 +432,7 @@ def to_bool(value: Any) -> bool:
     if isinstance(value, bool):
         return value
 
-    if isinstance(value, (int, float)):
+    if isinstance(value, int | float):
         return bool(value)
 
     if isinstance(value, str):
@@ -475,7 +479,7 @@ def to_float(value: Any, default: float = 0.0) -> float:
     Returns:
         float: 转换结果
     """
-    if isinstance(value, (int, float)):
+    if isinstance(value, int | float):
         return float(value)
 
     if isinstance(value, str):
@@ -523,7 +527,7 @@ def filter_none_values(data: dict[str, Any]) -> dict[str, Any]:
     return {k: v for k, v in data.items() if v is not None}
 
 
-def compact_list(lst: list) -> list:
+def compact_list(lst: list[Any]) -> list[Any]:
     """
     压缩列表（移除 None 和空字符串）
 

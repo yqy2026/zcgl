@@ -10,7 +10,7 @@ from typing import Any
 
 
 # 强制设置UTF-8编码输出
-def setup_utf8_encoding():
+def setup_utf8_encoding() -> bool:
     """设置UTF-8编码环境"""
     try:
         # 强制设置stdout和stderr为UTF-8编码
@@ -67,7 +67,7 @@ setup_utf8_encoding()
 class EncodingSafeHandler(logging.Handler):
     """编码安全的日志处理器"""
 
-    def emit(self, record):
+    def emit(self, record: logging.LogRecord) -> None:
         try:
             # 格式化日志消息
             msg = self.format(record)

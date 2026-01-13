@@ -122,7 +122,7 @@ class AssetCalculator:
         Returns:
             包含计算字段的结果字典（不修改原数据）
         """
-        calculated_fields = {}
+        calculated_fields: dict[str, Any] = {}
 
         # 出租率相关字段都是计算属性，不需要存储在数据库中
         # occupancy_rate 和 unrented_area 都是通过@property计算的，不在这里设置
@@ -155,7 +155,7 @@ class OccupancyRateCalculator:
     """出租率统计计算器"""
 
     @staticmethod
-    def calculate_overall_occupancy_rate(assets: list) -> dict[str, Any]:
+    def calculate_overall_occupancy_rate(assets: list[Any]) -> dict[str, Any]:
         """
         计算整体出租率
 
@@ -182,7 +182,7 @@ class OccupancyRateCalculator:
                 total_rented_area += float(min(rented_area, rentable_area))  # 防止超出
                 included_assets += 1
 
-        overall_rate = 0.0
+        overall_rate: float | None = None
         if total_rentable_area > 0:
             overall_rate = AssetCalculator.calculate_occupancy_rate(
                 total_rentable_area, total_rented_area
@@ -199,7 +199,7 @@ class OccupancyRateCalculator:
 
     @staticmethod
     def calculate_occupancy_by_category(
-        assets: list, category_field: str = "asset_category"
+        assets: list[Any], category_field: str = "asset_category"
     ) -> dict[str, Any]:
         """
         按类别计算出租率

@@ -14,11 +14,11 @@ logger = logging.getLogger(__name__)
 class DependencyChecker:
     """依赖检查器"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.critical_deps: dict[str, Callable[[], bool]] = {}
         self.optional_deps: dict[str, Callable[[], bool]] = {}
 
-    def register_critical(self, name: str, check_fn: Callable[[], bool]):
+    def register_critical(self, name: str, check_fn: Callable[[], bool]) -> None:
         """
         注册关键依赖检查函数
 
@@ -28,7 +28,7 @@ class DependencyChecker:
         """
         self.critical_deps[name] = check_fn
 
-    def register_optional(self, name: str, check_fn: Callable[[], bool]):
+    def register_optional(self, name: str, check_fn: Callable[[], bool]) -> None:
         """
         注册可选依赖检查函数
 

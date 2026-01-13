@@ -32,7 +32,7 @@ def model_to_dict(model: Any, include_relations: bool = False) -> dict[str, Any]
         value = getattr(model, column)
 
         # 处理特殊类型
-        if isinstance(value, (datetime, date)):
+        if isinstance(value, datetime | date):
             result[column] = value.isoformat()
         elif isinstance(value, Decimal):
             result[column] = float(value)
@@ -45,9 +45,13 @@ def model_to_dict(model: Any, include_relations: bool = False) -> dict[str, Any]
             rel_value = getattr(model, rel.key)
             if rel_value is not None:
                 if rel.uselist:  # 一对多关系
-                    result[rel.key] = [model_to_dict(item) for item in rel_value]
+                    result[rel.key] = [
+                        model_to_dict(item) for item in rel_value if item is not None
+                    ]
                 else:  # 多对一或一对一关系
-                    result[rel.key] = model_to_dict(rel_value)
+                    dict_result = model_to_dict(rel_value)
+                    if dict_result is not None:
+                        result[rel.key] = dict_result
 
     return result
 
