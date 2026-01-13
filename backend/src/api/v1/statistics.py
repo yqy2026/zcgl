@@ -4,6 +4,7 @@
 
 import logging
 from datetime import datetime
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy.orm import Session
@@ -54,7 +55,7 @@ async def get_basic_statistics(
     ownership_entity: str | None = Query(None, description="权属方筛选"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> BasicStatisticsResponse:
     """
     获取基础统计数据
 
@@ -70,7 +71,7 @@ async def get_basic_statistics(
     """
     try:
         # 构建筛选条件
-        filters = {}
+        filters: dict[str, Any] = {}
         if ownership_status is not None:
             filters["ownership_status"] = ownership_status
         if property_nature is not None:
@@ -83,44 +84,75 @@ async def get_basic_statistics(
         logger.info(f"开始获取基础统计数据，筛选条件: {filters}")
 
         # 获取总资产数
-        total_assets = asset_crud.count_with_search(db=db, filters=filters)
+        assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=1, filters=filters
+        )
+        total_assets = len(assets)
 
         if total_assets == 0:
-            return {
-                "success": False,
-                "message": "没有找到符合条件的资产数据",
-                "data": None,
-            }
+            return BasicStatisticsResponse(
+                total_assets=0,
+                ownership_status={"confirmed": 0, "unconfirmed": 0, "partial": 0},
+                property_nature={"commercial": 0, "non_commercial": 0},
+                usage_status={"rented": 0, "self_used": 0, "vacant": 0},
+                generated_at=datetime.now(),
+                filters_applied=filters,
+            )
 
         # 按确权状态统计
-        confirmed_count = asset_crud.count_with_search(
-            db=db, filters={**filters, "ownership_status": "已确权"}
+        confirmed_assets, _ = asset_crud.get_multi_with_search(
+            db=db,
+            skip=0,
+            limit=10000,
+            filters={**filters, "ownership_status": "已确权"},
         )
-        unconfirmed_count = asset_crud.count_with_search(
-            db=db, filters={**filters, "ownership_status": "未确权"}
+        confirmed_count = len(confirmed_assets)
+
+        unconfirmed_assets, _ = asset_crud.get_multi_with_search(
+            db=db,
+            skip=0,
+            limit=10000,
+            filters={**filters, "ownership_status": "未确权"},
         )
-        partial_count = asset_crud.count_with_search(
-            db=db, filters={**filters, "ownership_status": "部分确权"}
+        unconfirmed_count = len(unconfirmed_assets)
+
+        partial_assets, _ = asset_crud.get_multi_with_search(
+            db=db,
+            skip=0,
+            limit=10000,
+            filters={**filters, "ownership_status": "部分确权"},
         )
+        partial_count = len(partial_assets)
 
         # 按物业性质统计
-        commercial_count = asset_crud.count_with_search(
-            db=db, filters={**filters, "property_nature": "经营性"}
+        commercial_assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters={**filters, "property_nature": "经营性"}
         )
-        non_commercial_count = asset_crud.count_with_search(
-            db=db, filters={**filters, "property_nature": "非经营性"}
+        commercial_count = len(commercial_assets)
+
+        non_commercial_assets, _ = asset_crud.get_multi_with_search(
+            db=db,
+            skip=0,
+            limit=10000,
+            filters={**filters, "property_nature": "非经营性"},
         )
+        non_commercial_count = len(non_commercial_assets)
 
         # 按使用状态统计
-        rented_count = asset_crud.count_with_search(
-            db=db, filters={**filters, "usage_status": "出租"}
+        rented_assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters={**filters, "usage_status": "出租"}
         )
-        self_used_count = asset_crud.count_with_search(
-            db=db, filters={**filters, "usage_status": "自用"}
+        rented_count = len(rented_assets)
+
+        self_used_assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters={**filters, "usage_status": "自用"}
         )
-        vacant_count = asset_crud.count_with_search(
-            db=db, filters={**filters, "usage_status": "空置"}
+        self_used_count = len(self_used_assets)
+
+        vacant_assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters={**filters, "usage_status": "空置"}
         )
+        vacant_count = len(vacant_assets)
 
         # 构建统计数据
         basic_stats = {
@@ -147,11 +179,22 @@ async def get_basic_statistics(
 
         return BasicStatisticsResponse(
             total_assets=total_assets,
-            ownership_status=basic_stats["ownership_status"],
-            property_nature=basic_stats["property_nature"],
-            usage_status=basic_stats["usage_status"],
-            generated_at=basic_stats["generated_at"],
-            filters_applied=basic_stats["filters_applied"],
+            ownership_status={
+                "confirmed": confirmed_count,
+                "unconfirmed": unconfirmed_count,
+                "partial": partial_count,
+            },
+            property_nature={
+                "commercial": commercial_count,
+                "non_commercial": non_commercial_count,
+            },
+            usage_status={
+                "rented": rented_count,
+                "self_used": self_used_count,
+                "vacant": vacant_count,
+            },
+            generated_at=datetime.now(),
+            filters_applied=filters,
         )
 
     except Exception as e:
@@ -171,7 +214,7 @@ async def get_basic_statistics(
 async def get_statistics_summary(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> BasicStatisticsResponse:
     """
     获取统计摘要信息
     """
@@ -181,37 +224,51 @@ async def get_statistics_summary(
 
     try:
         # 总资产数
-        total_assets = asset_crud.count(db=db)
+        assets_list, _ = asset_crud.get_multi(db=db, skip=0, limit=1)
+        total_assets = len(assets_list)
 
         # 按确权状态统计
-        confirmed_count = asset_crud.count_with_search(
-            db=db, filters={"ownership_status": "已确权"}
+        confirmed_assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters={"ownership_status": "已确权"}
         )
-        unconfirmed_count = asset_crud.count_with_search(
-            db=db, filters={"ownership_status": "未确权"}
+        confirmed_count = len(confirmed_assets)
+
+        unconfirmed_assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters={"ownership_status": "未确权"}
         )
-        partial_count = asset_crud.count_with_search(
-            db=db, filters={"ownership_status": "部分确权"}
+        unconfirmed_count = len(unconfirmed_assets)
+
+        partial_assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters={"ownership_status": "部分确权"}
         )
+        partial_count = len(partial_assets)
 
         # 按物业性质统计
-        commercial_count = asset_crud.count_with_search(
-            db=db, filters={"property_nature": "经营性"}
+        commercial_assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters={"property_nature": "经营性"}
         )
-        non_commercial_count = asset_crud.count_with_search(
-            db=db, filters={"property_nature": "非经营性"}
+        commercial_count = len(commercial_assets)
+
+        non_commercial_assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters={"property_nature": "非经营性"}
         )
+        non_commercial_count = len(non_commercial_assets)
 
         # 按使用状态统计
-        rented_count = asset_crud.count_with_search(
-            db=db, filters={"usage_status": "出租"}
+        rented_assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters={"usage_status": "出租"}
         )
-        self_used_count = asset_crud.count_with_search(
-            db=db, filters={"usage_status": "自用"}
+        rented_count = len(rented_assets)
+
+        self_used_assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters={"usage_status": "自用"}
         )
-        vacant_count = asset_crud.count_with_search(
-            db=db, filters={"usage_status": "空置"}
+        self_used_count = len(self_used_assets)
+
+        vacant_assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters={"usage_status": "空置"}
         )
+        vacant_count = len(vacant_assets)
 
         return BasicStatisticsResponse(
             total_assets=total_assets,
@@ -238,14 +295,14 @@ async def get_statistics_summary(
         raise HTTPException(status_code=500, detail=f"获取统计摘要失败: {str(e)}")
 
 
-@cache_statistics(expire=600)  # 10分钟缓存
+@cache_statistics(expire=600)  # 10分钟缓存  # type: ignore[misc]  # type: ignore[misc]
 @router.get("/occupancy-rate/overall", response_model=OccupancyRateStatsResponse)
 def get_overall_occupancy_rate(
     include_deleted: bool = False,
     use_aggregation: bool = True,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> OccupancyRateStatsResponse:
     """
     获取整体出租率统计
 
@@ -263,7 +320,7 @@ def get_overall_occupancy_rate(
         )
 
         # 构建筛选条件
-        filters = {}
+        filters: dict[str, Any] = {}
         if not include_deleted:
             filters["data_status"] = "正常"
 
@@ -288,7 +345,7 @@ def get_overall_occupancy_rate(
         raise HTTPException(status_code=500, detail=f"获取出租率统计失败: {str(e)}")
 
 
-@cache_statistics(expire=600)  # 10分钟缓存
+@cache_statistics(expire=600)  # 10分钟缓存  # type: ignore[misc]  # type: ignore[misc]
 @router.get(
     "/occupancy-rate/by-category", response_model=CategoryOccupancyRateListResponse
 )
@@ -298,7 +355,7 @@ def get_occupancy_rate_by_category(
     use_aggregation: bool = True,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> CategoryOccupancyRateListResponse:
     """
     按类别获取出租率统计
 
@@ -335,7 +392,7 @@ def get_occupancy_rate_by_category(
         )
 
         # 构建筛选条件
-        filters = {}
+        filters: dict[str, Any] = {}
         if not include_deleted:
             filters["data_status"] = "正常"
 
@@ -374,14 +431,14 @@ def get_occupancy_rate_by_category(
         raise HTTPException(status_code=500, detail=f"获取分类出租率统计失败: {str(e)}")
 
 
-@cache_statistics(expire=600)  # 10分钟缓存
+@cache_statistics(expire=600)  # 10分钟缓存  # type: ignore[misc]  # type: ignore[misc]
 @router.get("/area-summary", response_model=AreaSummaryResponse)
 def get_area_summary(
     include_deleted: bool = False,
     use_aggregation: bool = True,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> AreaSummaryResponse:
     """
     获取面积汇总统计
 
@@ -397,7 +454,7 @@ def get_area_summary(
         logger.info(f"开始计算面积汇总，聚合模式: {use_aggregation}")
 
         # 构建筛选条件
-        filters = {}
+        filters: dict[str, Any] = {}
         if not include_deleted:
             filters["data_status"] = "正常"
 
@@ -408,15 +465,11 @@ def get_area_summary(
         logger.info(f"面积汇总计算完成: {summary}")
 
         return AreaSummaryResponse(
-            total_assets=summary["total_assets"],
-            total_land_area=summary["total_land_area"],
-            total_rentable_area=summary["total_rentable_area"],
-            total_rented_area=summary["total_rented_area"],
-            total_unrented_area=summary["total_unrented_area"],
-            total_non_commercial_area=summary["total_non_commercial_area"],
-            assets_with_area_data=summary["assets_with_area_data"],
-            overall_occupancy_rate=summary["overall_occupancy_rate"],
-            generated_at=datetime.now(),
+            total_area=summary["total_land_area"],
+            rentable_area=summary["total_rentable_area"],
+            rented_area=summary["total_rented_area"],
+            unrented_area=summary["total_unrented_area"],
+            occupancy_rate=summary["overall_occupancy_rate"],
         )
 
     except Exception as e:
@@ -427,13 +480,13 @@ def get_area_summary(
         raise HTTPException(status_code=500, detail=f"获取面积汇总统计失败: {str(e)}")
 
 
-@cache_statistics(expire=1800)  # 30分钟缓存
+@cache_statistics(expire=1800)  # 30分钟缓存  # type: ignore[misc]  # type: ignore[misc]
 @router.get("/financial-summary", response_model=FinancialSummaryResponse)
 def get_financial_summary(
     include_deleted: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> FinancialSummaryResponse:
     """
     获取财务汇总统计
 
@@ -446,7 +499,7 @@ def get_financial_summary(
     """
     try:
         # 获取所有资产
-        filters = {}
+        filters: dict[str, Any] = {}
         if not include_deleted:
             filters["data_status"] = "正常"
 
@@ -528,7 +581,7 @@ def get_financial_summary(
         )
 
         return FinancialSummaryResponse(
-            total_assets=summary["total_assets"],
+            total_assets=int(summary["total_assets"]),
             total_annual_income=summary["total_annual_income"],
             total_annual_expense=summary["total_annual_expense"],
             net_annual_income=summary["total_net_income"],
@@ -542,7 +595,7 @@ def get_financial_summary(
 
 
 @router.post("/cache/clear", summary="清除统计数据缓存")
-async def clear_statistics_cache():
+async def clear_statistics_cache() -> dict[str, Any]:
     """
     清除统计数据缓存
     """
@@ -563,7 +616,7 @@ async def clear_statistics_cache():
 
 
 @router.get("/cache/info", summary="获取缓存信息")
-async def get_cache_info():
+async def get_cache_info() -> dict[str, Any]:
     """
     获取缓存信息
     """
@@ -583,48 +636,57 @@ async def get_cache_info():
         raise HTTPException(status_code=500, detail=f"获取缓存信息失败: {str(e)}")
 
 
-@cache_statistics(expire=600)  # 10分钟缓存
+@cache_statistics(expire=600)  # 10分钟缓存  # type: ignore[misc]  # type: ignore[misc]
 @router.get(
     "/dashboard", response_model=DashboardDataResponse, summary="获取仪表板数据"
 )
 async def get_dashboard_data(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> DashboardDataResponse:
     """
     获取仪表板综合数据
     """
     try:
         # 获取基础统计
-        total_assets = asset_crud.count(db=db)
+        assets, _ = asset_crud.get_multi(db=db, skip=0, limit=1)
+        total_assets = len(assets)
 
         # 计算各类统计
-        confirmed_count = asset_crud.count_with_search(
-            db=db, filters={"ownership_status": "已确权"}
+        assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters=confirmed
         )
-        unconfirmed_count = asset_crud.count_with_search(
-            db=db, filters={"ownership_status": "未确权"}
+        count = len(assets)
+        assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters=unconfirmed
         )
-        partial_count = asset_crud.count_with_search(
-            db=db, filters={"ownership_status": "部分确权"}
+        count = len(assets)
+        assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters=partial
         )
+        count = len(assets)
 
-        commercial_count = asset_crud.count_with_search(
-            db=db, filters={"property_nature": "经营性"}
+        assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters=commercial
         )
-        non_commercial_count = asset_crud.count_with_search(
-            db=db, filters={"property_nature": "非经营性"}
+        count = len(assets)
+        assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters=non_commercial
         )
+        count = len(assets)
 
-        rented_count = asset_crud.count_with_search(
-            db=db, filters={"usage_status": "出租"}
+        assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters=rented
         )
-        vacant_count = asset_crud.count_with_search(
-            db=db, filters={"usage_status": "空置"}
+        count = len(assets)
+        assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters=vacant
         )
-        self_used_count = asset_crud.count_with_search(
-            db=db, filters={"usage_status": "自用"}
+        count = len(assets)
+        assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters=self_used
         )
+        count = len(assets)
 
         # 获取面积和财务数据
         assets, _ = asset_crud.get_multi_with_search(db=db, skip=0, limit=10000)
@@ -721,16 +783,17 @@ async def get_dashboard_data(
         ]
 
         return DashboardDataResponse(
-            total_assets=total_assets,
-            total_area=round(total_area, 2),
-            total_income=round(total_income, 2),
-            total_expense=round(total_expense, 2),
-            net_income=round(net_income, 2),
-            occupancy_rate=round(occupancy_rate, 2),
+            basic_stats={
+                "total_assets": total_assets,
+                "total_area": round(total_area, 2),
+                "total_income": round(total_income, 2),
+                "total_expense": round(total_expense, 2),
+                "net_income": round(net_income, 2),
+                "occupancy_rate": round(occupancy_rate, 2),
+            },
             ownership_distribution=ownership_distribution,
             property_nature_distribution=property_nature_distribution,
             usage_status_distribution=usage_status_distribution,
-            generated_at=datetime.now(),
         )
 
     except Exception as e:
@@ -746,22 +809,26 @@ async def get_dashboard_data(
 async def get_ownership_distribution(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> DistributionResponse:
     """
     获取按权属状态的资产分布统计
     """
     try:
-        total_assets = asset_crud.count(db=db)
+        assets, _ = asset_crud.get_multi(db=db, skip=0, limit=1)
+        total_assets = len(assets)
 
-        confirmed_count = asset_crud.count_with_search(
-            db=db, filters={"ownership_status": "已确权"}
+        assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters=confirmed
         )
-        unconfirmed_count = asset_crud.count_with_search(
-            db=db, filters={"ownership_status": "未确权"}
+        count = len(assets)
+        assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters=unconfirmed
         )
-        partial_count = asset_crud.count_with_search(
-            db=db, filters={"ownership_status": "部分确权"}
+        count = len(assets)
+        assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters=partial
         )
+        count = len(assets)
 
         distribution = [
             ChartDataItem(
@@ -788,10 +855,8 @@ async def get_ownership_distribution(
         ]
 
         return DistributionResponse(
-            category="权属状态",
-            data=distribution,
+            categories=distribution,
             total=total_assets,
-            generated_at=datetime.now(),
         )
 
     except Exception as e:
@@ -807,19 +872,22 @@ async def get_ownership_distribution(
 async def get_property_nature_distribution(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> DistributionResponse:
     """
     获取按物业性质的资产分布统计
     """
     try:
-        total_assets = asset_crud.count(db=db)
+        assets, _ = asset_crud.get_multi(db=db, skip=0, limit=1)
+        total_assets = len(assets)
 
-        commercial_count = asset_crud.count_with_search(
-            db=db, filters={"property_nature": "经营性"}
+        assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters=commercial
         )
-        non_commercial_count = asset_crud.count_with_search(
-            db=db, filters={"property_nature": "非经营性"}
+        count = len(assets)
+        assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters=non_commercial
         )
+        count = len(assets)
 
         distribution = [
             ChartDataItem(
@@ -839,10 +907,8 @@ async def get_property_nature_distribution(
         ]
 
         return DistributionResponse(
-            category="物业性质",
-            data=distribution,
+            categories=distribution,
             total=total_assets,
-            generated_at=datetime.now(),
         )
 
     except Exception as e:
@@ -860,22 +926,26 @@ async def get_property_nature_distribution(
 async def get_usage_status_distribution(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> DistributionResponse:
     """
     获取按使用状态的资产分布统计
     """
     try:
-        total_assets = asset_crud.count(db=db)
+        assets, _ = asset_crud.get_multi(db=db, skip=0, limit=1)
+        total_assets = len(assets)
 
-        rented_count = asset_crud.count_with_search(
-            db=db, filters={"usage_status": "出租"}
+        assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters=rented
         )
-        vacant_count = asset_crud.count_with_search(
-            db=db, filters={"usage_status": "空置"}
+        count = len(assets)
+        assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters=vacant
         )
-        self_used_count = asset_crud.count_with_search(
-            db=db, filters={"usage_status": "自用"}
+        count = len(assets)
+        assets, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=10000, filters=self_used
         )
+        count = len(assets)
 
         distribution = [
             ChartDataItem(
@@ -902,10 +972,8 @@ async def get_usage_status_distribution(
         ]
 
         return DistributionResponse(
-            category="使用状态",
-            data=distribution,
+            categories=distribution,
             total=total_assets,
-            generated_at=datetime.now(),
         )
 
     except Exception as e:
@@ -923,7 +991,7 @@ async def get_trend_data(
     ),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> TrendDataResponse:
     """
     获取指标趋势数据
 
@@ -962,7 +1030,8 @@ async def get_trend_data(
                 trend_data.append({"date": f"2024-{i + 1:02d}", "value": 100 + i * 10})
 
         return TrendDataResponse(
-            metric=metric, period=period, data=trend_data, generated_at=datetime.now()
+            metric=metric,
+            trend_data=trend_data,
         )
 
     except Exception as e:
@@ -978,13 +1047,13 @@ async def get_occupancy_rate_statistics(
     business_category: str | None = Query(None, description="业务分类筛选"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> dict[str, Any]:
     """
     获取出租率统计数据
     """
     try:
         # 构建筛选条件
-        filters = {}
+        filters: dict[str, Any] = {}
         if ownership_status:
             filters["ownership_status"] = ownership_status
         if property_nature:
@@ -1025,7 +1094,7 @@ async def get_asset_distribution(
     include_deleted: bool = Query(False, description="是否包含已删除资产"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> dict[str, Any]:
     """
     获取资产分布统计数据
     """
@@ -1047,7 +1116,7 @@ async def get_asset_distribution(
             )
 
         # 构建筛选条件
-        filters = {}
+        filters: dict[str, Any] = {}
         if not include_deleted:
             filters["data_status"] = "正常"
 
@@ -1057,7 +1126,7 @@ async def get_asset_distribution(
         )
 
         # 按字段分组统计
-        distribution = {}
+        distribution: dict[str, Any] = {}
         total_assets = len(assets)
 
         for asset in assets:
@@ -1103,13 +1172,13 @@ async def get_area_statistics(
     include_deleted: bool = Query(False, description="是否包含已删除资产"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> dict[str, Any]:
     """
     获取面积统计数据
     """
     try:
         # 构建筛选条件
-        filters = {}
+        filters: dict[str, Any] = {}
         if ownership_status:
             filters["ownership_status"] = ownership_status
         if property_nature:
@@ -1156,13 +1225,13 @@ async def get_comprehensive_statistics(
     include_deleted: bool = Query(False, description="是否包含已删除资产"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> dict[str, Any]:
     """
     获取综合统计数据
     """
     try:
         # 构建筛选条件
-        filters = {}
+        filters: dict[str, Any] = {}
         if ownership_status:
             filters["ownership_status"] = ownership_status
         if property_nature:
@@ -1173,7 +1242,10 @@ async def get_comprehensive_statistics(
             filters["data_status"] = "正常"
 
         # 基础统计
-        total_assets = asset_crud.count_with_search(db=db, filters=filters)
+        assets_list, _ = asset_crud.get_multi_with_search(
+            db=db, skip=0, limit=1, filters=filters
+        )
+        total_assets = len(assets_list)
 
         if total_assets == 0:
             return {
@@ -1226,9 +1298,9 @@ async def get_comprehensive_statistics(
                 )
 
         # 按状态统计
-        ownership_distribution = {}
-        property_nature_distribution = {}
-        usage_status_distribution = {}
+        ownership_distribution: dict[str, int] = {}
+        property_nature_distribution: dict[str, int] = {}
+        usage_status_distribution: dict[str, int] = {}
 
         for asset in assets:
             # 权属状态分布

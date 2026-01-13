@@ -55,11 +55,11 @@ class PerformanceMonitor:
     """性能监控器"""
 
     @staticmethod
-    def monitor_performance(func_name: str):
+    def monitor_performance(func_name: str) -> Any:
         """性能监控装饰器"""
 
-        def decorator(func):
-            def wrapper(*args, **kwargs):
+        def decorator(func: Any) -> Any:
+            def wrapper(*args: Any, **kwargs: Any) -> Any:
                 start_time = time.time()
                 try:
                     result = func(*args, **kwargs)
@@ -206,7 +206,7 @@ def to_float(value: Any) -> float:
         return 0.0
 
 
-def calculate_percentage(count: int, total: int) -> float:
+def calculate_percentage(count: int | float, total: int | float) -> float:
     """安全计算百分比"""
     if total <= 0:
         return 0.0
@@ -239,7 +239,7 @@ class DistributionCalculator:
             return []
 
         result_key = result_key or value_key
-        distribution_counts = defaultdict(int)
+        distribution_counts: defaultdict[str, int] = defaultdict(int)
 
         # 统计各类型的数量
         for asset in assets:
@@ -298,7 +298,9 @@ class DistributionCalculator:
         if not assets:
             return []
 
-        category_stats = defaultdict(lambda: {"count": 0, "occupancy_rates": []})
+        category_stats: defaultdict[str, dict[str, Any]] = defaultdict(
+            lambda: {"count": 0, "occupancy_rates": []}
+        )
 
         for asset in assets:
             category = getattr(asset, "business_category", None)
@@ -314,7 +316,7 @@ class DistributionCalculator:
             if not include_in_stats:
                 continue
 
-            category_stats[category]["count"] += 1
+            category_stats[category]["count"] = category_stats[category]["count"] + 1  # type: ignore[index]
 
             # 计算出租率 - 处理Decimal类型
             if rentable_area and rentable_area > 0 and rented_area is not None:
@@ -328,7 +330,7 @@ class DistributionCalculator:
             else:
                 occupancy_rate = 0.0
 
-            category_stats[category]["occupancy_rates"].append(occupancy_rate)
+            category_stats[category]["occupancy_rates"].append(occupancy_rate)  # type: ignore[index]
 
         distribution = []
         total_count = sum(stats["count"] for stats in category_stats.values())
@@ -383,13 +385,17 @@ class DistributionCalculator:
             return []
 
         result_key = result_key or value_key
-        distribution_stats = defaultdict(lambda: {"count": 0, "total_area": 0.0})
+        distribution_stats: defaultdict[str, dict[str, Any]] = defaultdict(
+            lambda: {"count": 0, "total_area": 0.0}
+        )
 
         # 统计各类型的数量和面积
         for asset in assets:
             field_value = getattr(asset, field_name, None)
             if field_value and str(field_value).strip():
-                distribution_stats[field_value]["count"] += 1
+                distribution_stats[field_value]["count"] = (
+                    distribution_stats[field_value]["count"] + 1
+                )  # type: ignore[index]
 
                 # 累计面积 - 优先使用实际物业面积，其次使用土地面积
                 area = 0.0
@@ -400,7 +406,9 @@ class DistributionCalculator:
                 elif hasattr(asset, "land_area") and getattr(asset, "land_area"):
                     area = to_float(getattr(asset, "land_area"))
 
-                distribution_stats[field_value]["total_area"] += area
+                distribution_stats[field_value]["total_area"] = (
+                    distribution_stats[field_value]["total_area"] + area
+                )  # type: ignore[index]
 
         total_count = len(assets)
         total_area = sum(stats["total_area"] for stats in distribution_stats.values())
@@ -467,7 +475,7 @@ class DistributionCalculator:
         if not assets:
             return []
 
-        category_stats = defaultdict(
+        category_stats: defaultdict[str, dict[str, Any]] = defaultdict(
             lambda: {"count": 0, "total_area": 0.0, "occupancy_rates": []}
         )
 
@@ -485,7 +493,7 @@ class DistributionCalculator:
             if not include_in_stats:
                 continue
 
-            category_stats[category]["count"] += 1
+            category_stats[category]["count"] = category_stats[category]["count"] + 1  # type: ignore[index]
 
             # 累计面积
             area = 0.0
@@ -496,7 +504,9 @@ class DistributionCalculator:
             elif hasattr(asset, "land_area") and getattr(asset, "land_area"):
                 area = to_float(getattr(asset, "land_area"))
 
-            category_stats[category]["total_area"] += area
+            category_stats[category]["total_area"] = (
+                category_stats[category]["total_area"] + area
+            )  # type: ignore[index]
 
             # 计算出租率 - 处理Decimal类型
             if rentable_area and rentable_area > 0 and rented_area is not None:
@@ -510,7 +520,7 @@ class DistributionCalculator:
             else:
                 occupancy_rate = 0.0
 
-            category_stats[category]["occupancy_rates"].append(occupancy_rate)
+            category_stats[category]["occupancy_rates"].append(occupancy_rate)  # type: ignore[index]
 
         total_count = len(assets)
         total_area = sum(stats["total_area"] for stats in category_stats.values())

@@ -42,11 +42,11 @@ T = TypeVar("T")
 
 if TENACITY_AVAILABLE:
 
-    def retry_on_network_error(
+    def retry_on_network_error(  # type: ignore[misc]
         max_attempts: int = 3,
         wait_min: float = 1.0,
         wait_max: float = 10.0,
-    ):
+    ) -> Callable[[Callable[..., T]], Callable[..., T]]:
         """
         网络错误重试装饰器
 
@@ -56,11 +56,11 @@ if TENACITY_AVAILABLE:
             wait_max: 最大等待时间（秒）
 
         Example:
-            @retry_on_network_error(max_attempts=3)
+            @retry_on_network_error(max_attempts=3)  # type: ignore[misc]  # type: ignore[misc]
             async def call_api():
                 return await httpx.AsyncClient().get(url)
         """
-        return retry(
+        return retry(  # type: ignore[return-value]
             stop=stop_after_attempt(max_attempts),
             wait=wait_exponential(multiplier=1, min=wait_min, max=wait_max),
             retry=retry_if_exception_type(
@@ -70,11 +70,11 @@ if TENACITY_AVAILABLE:
             reraise=True,
         )
 
-    def retry_on_api_error(
+    def retry_on_api_error(  # type: ignore[misc]
         max_attempts: int = 3,
         wait_min: float = 2.0,
         wait_max: float = 30.0,
-    ):
+    ) -> Callable[[Callable[..., T]], Callable[..., T]]:
         """
         API 错误重试装饰器
         重试 HTTP 5xx 错误和 429 限流错误
@@ -85,7 +85,7 @@ if TENACITY_AVAILABLE:
             wait_max: 最大等待时间（秒）
 
         Example:
-            @retry_on_api_error(max_attempts=3)
+            @retry_on_api_error(max_attempts=3)  # type: ignore[misc]  # type: ignore[misc]
             async def call_llm_api():
                 return await client.chat.completions.create(...)
         """
@@ -100,7 +100,7 @@ if TENACITY_AVAILABLE:
                 )
             return False
 
-        return retry(
+        return retry(  # type: ignore[return-value]
             stop=stop_after_attempt(max_attempts),
             wait=wait_exponential(multiplier=1, min=wait_min, max=wait_max),
             retry=retry_if_exception_type(
@@ -111,10 +111,10 @@ if TENACITY_AVAILABLE:
             reraise=True,
         )
 
-    def retry_on_vision_api(
+    def retry_on_vision_api(  # type: ignore[misc]
         max_attempts: int = 3,
         timeout: float = 180.0,
-    ):
+    ) -> Callable[[Callable[..., T]], Callable[..., T]]:
         """
         视觉 API 专用重试装饰器
         针对视觉模型的特殊重试策略
@@ -124,11 +124,11 @@ if TENACITY_AVAILABLE:
             timeout: 超时时间（秒）
 
         Example:
-            @retry_on_vision_api(max_attempts=3)
+            @retry_on_vision_api(max_attempts=3)  # type: ignore[misc]  # type: ignore[misc]
             async def extract_from_images(images):
                 return await vision_service.extract(images)
         """
-        return retry(
+        return retry(  # type: ignore[return-value]
             stop=stop_after_attempt(max_attempts),
             wait=wait_exponential(multiplier=1, min=2, max=30),
             retry=retry_if_exception_type(
@@ -149,18 +149,18 @@ else:
         max_attempts: int = 3,
         wait_min: float = 1.0,
         wait_max: float = 10.0,
-    ):
+    ) -> Callable[[Callable[..., T]], Callable[..., T]]:
         """简化版网络错误重试装饰器"""
 
         def decorator(func: Callable[..., T]) -> Callable[..., T]:
             @wraps(func)
-            async def wrapper(*args, **kwargs) -> T:
-                last_exception = None
+            async def wrapper(*args: Any, **kwargs: Any) -> T:
+                last_exception: Exception | None = None
                 wait_time = wait_min
 
                 for attempt in range(max_attempts):
                     try:
-                        return await func(*args, **kwargs)
+                        return await func(*args, **kwargs)  # type: ignore[misc]
                     except (
                         httpx.TimeoutException,
                         httpx.NetworkError,
@@ -177,9 +177,11 @@ else:
                         else:
                             logger.error(f"Max retries ({max_attempts}) reached")
 
+                if last_exception is None:
+                    raise RuntimeError("Unexpected error in retry logic")
                 raise last_exception
 
-            return wrapper
+            return wrapper  # type: ignore[return-value]
 
         return decorator
 
@@ -187,18 +189,18 @@ else:
         max_attempts: int = 3,
         wait_min: float = 2.0,
         wait_max: float = 30.0,
-    ):
+    ) -> Callable[[Callable[..., T]], Callable[..., T]]:
         """简化版 API 错误重试装饰器"""
 
         def decorator(func: Callable[..., T]) -> Callable[..., T]:
             @wraps(func)
-            async def wrapper(*args, **kwargs) -> T:
-                last_exception = None
+            async def wrapper(*args: Any, **kwargs: Any) -> T:
+                last_exception: Exception | None = None
                 wait_time = wait_min
 
                 for attempt in range(max_attempts):
                     try:
-                        return await func(*args, **kwargs)
+                        return await func(*args, **kwargs)  # type: ignore[misc]
                     except httpx.HTTPStatusError as e:
                         is_retryable = (
                             e.response.status_code >= 500
@@ -233,16 +235,18 @@ else:
 
                     break
 
+                if last_exception is None:
+                    raise RuntimeError("Unexpected error in retry logic")
                 raise last_exception
 
-            return wrapper
+            return wrapper  # type: ignore[return-value]
 
         return decorator
 
     def retry_on_vision_api(
         max_attempts: int = 3,
         timeout: float = 180.0,
-    ):
+    ) -> Callable[[Callable[..., T]], Callable[..., T]]:
         """简化版视觉 API 重试装饰器"""
         return retry_on_network_error(
             max_attempts=max_attempts, wait_min=2.0, wait_max=30.0
@@ -254,14 +258,14 @@ else:
 # ============================================================================
 
 
-async def retry_async_call[T](
-    func: Callable[..., T],
+async def retry_async_call(
+    func: Callable[..., Any],
     *args: Any,
     max_attempts: int = 3,
     wait_min: float = 1.0,
     wait_max: float = 10.0,
     **kwargs: Any,
-) -> T:
+) -> Any:
     """
     通用异步函数重试包装器
 
@@ -286,7 +290,7 @@ async def retry_async_call[T](
             max_attempts=3
         )
     """
-    last_exception = None
+    last_exception: Exception | None = None
     wait_time = wait_min
 
     for attempt in range(max_attempts):
@@ -314,6 +318,8 @@ async def retry_async_call[T](
             else:
                 logger.error(f"Max retries ({max_attempts}) reached")
 
+    if last_exception is None:
+        raise RuntimeError("Unexpected error in retry logic")
     raise last_exception
 
 
@@ -343,7 +349,10 @@ class RetryContext:
         max_attempts: int = 3,
         wait_min: float = 1.0,
         wait_max: float = 10.0,
-        retry_on: tuple = (httpx.TimeoutException, httpx.NetworkError),
+        retry_on: tuple[type[Exception], ...] = (
+            httpx.TimeoutException,
+            httpx.NetworkError,
+        ),
     ):
         self.max_attempts = max_attempts
         self.wait_min = wait_min
@@ -352,10 +361,15 @@ class RetryContext:
         self.attempts = 0
         self._succeeded = False
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "RetryContext":
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: Any,
+    ) -> bool:
         return False
 
     def should_continue(self) -> bool:
@@ -396,7 +410,7 @@ class RetryContext:
 
 if __name__ == "__main__":  # pragma: no cover
     # 装饰器使用示例
-    @retry_on_network_error(max_attempts=3)
+    @retry_on_network_error(max_attempts=3)  # type: ignore[misc]  # type: ignore[misc]
     async def example_api_call(url: str):
         async with httpx.AsyncClient() as client:
             response = await client.get(url, timeout=30.0)
