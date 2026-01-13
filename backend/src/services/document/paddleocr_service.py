@@ -17,10 +17,20 @@ try:
     from ...core.import_utils import safe_import
 except ImportError:
     # 如果核心模块不可用，回退到标准导入
-    def safe_import(*args, **kwargs):
+    from collections.abc import Callable
+
+    def safe_import(
+        module_path: str,
+        *,
+        critical: bool = False,
+        fallback: Any = None,
+        mock_factory: Callable[[], Any] | None = None,
+        silent: bool = False,
+    ) -> Any:
+        """简化版safe_import，用于回退"""
         import importlib
 
-        return importlib.import_module(args[0]) if args else None
+        return importlib.import_module(module_path)
 
     class DependencyPolicy:
         STRICT = "strict"
@@ -41,27 +51,33 @@ else:
     PaddleOCR = None
 
 # 尝试导入 PPStructure（支持多种版本）
-PPStructure = None
+_PPStructure: Any = None
 if _PADDLEOCR_MODULE is not None:
     try:
         # 优先尝试 PPStructureV3 (最新版本)
-        from paddleocr import PPStructureV3 as PPStructure
+        from paddleocr import PPStructureV3 as _PPStructureV3
+
+        _PPStructure = _PPStructureV3
 
         logger.info("使用 PPStructureV3 (最新版本)")
     except ImportError:
         try:
             # 尝试 PPStructure (标准版本)
-            from paddleocr import PPStructure
+            from paddleocr import PPStructure as _PPStructureStd
+
+            _PPStructure = _PPStructureStd
 
             logger.info("使用 PPStructure (标准版本)")
         except ImportError:
             try:
                 # 尝试直接从子模块导入
-                from paddleocr.ppstructure import PPStructure
+                from paddleocr.ppstructure import PPStructure as _PPStructureSub
+
+                _PPStructure = _PPStructureSub
 
                 logger.info("使用 PPStructure (子模块版本)")
             except ImportError:
-                PPStructure = None
+                _PPStructure = None
                 logger.warning(
                     "PPStructure 不可用，将使用基础 OCR 功能。"
                     "如需完整功能，请安装: uv sync --extra pdf-ocr"
@@ -108,15 +124,18 @@ class PaddleOCRService:
 
         self._init_engines()
 
-    def _init_engines(self):
+    def _init_engines(self) -> None:
         """初始化引擎"""
         # 尝试初始化 PP-StructureV3 (需要 paddlex[ocr] 依赖)
         try:
-            self._structure_engine = PPStructure(
-                lang=self.lang,
-                use_table_recognition=True,
-            )
-            logger.info("PP-StructureV3 引擎初始化成功")
+            if _PPStructure is not None:
+                self._structure_engine = _PPStructure(
+                    lang=self.lang,
+                    use_table_recognition=True,
+                )
+                logger.info("PP-StructureV3 引擎初始化成功")
+            else:
+                self._structure_engine = None
         except Exception as e:
             # PP-StructureV3 需要额外依赖,记录警告但继续
             print(f"CRITICAL INIT ERROR: {e}")  # Force print to see in non-logged env
@@ -160,8 +179,8 @@ class PaddleOCRService:
                 "structure": [],
             }
 
-        file_path = Path(file_path)
-        if not file_path.exists():
+        file_path_obj = Path(file_path)
+        if not file_path_obj.exists():
             return {
                 "success": False,
                 "error": f"文件不存在: {file_path}",
@@ -180,7 +199,7 @@ class PaddleOCRService:
                 }
 
             # 调用 PP-StructureV3 处理
-            result = self._structure_engine(str(file_path))
+            result = self._structure_engine(str(file_path_obj))
 
             # 解析结果
             parsed_result = self._parse_structure_result(result)
@@ -266,7 +285,7 @@ class PaddleOCRService:
             for line in res:
                 if isinstance(line, dict):
                     texts.append(line.get("text", ""))
-                elif isinstance(line, (list, tuple)) and len(line) >= 2:
+                elif isinstance(line, list | tuple) and len(line) >= 2:
                     texts.append(
                         str(line[1][0]) if isinstance(line[1], tuple) else str(line[1])
                     )
