@@ -113,7 +113,6 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
   const [fieldReviews, setFieldReviews] = useState<FieldReview[]>([]);
   const [selectedAsset, setSelectedAsset] = useState<string>('');
   const [selectedOwnership, setSelectedOwnership] = useState<string>('');
-  const [_showAdvancedOptions, _setShowAdvancedOptions] = useState(false);
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   const [validationSummary, setValidationSummary] = useState<ValidationResults>({});
 
@@ -480,53 +479,53 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
       {/* 匹配结果 */}
       {((sessionData as any).matching_results?.matched_assets?.length > 0 ||
         (sessionData as any).matching_results?.matched_ownerships?.landlords?.length > 0) && (
-        <Card
-          title={
-            <Space>
-              <SearchOutlined />
-              <span>智能匹配结果</span>
-              <Badge count={(sessionData as any).matching_results?.matched_assets?.length || 0} />
-            </Space>
-          }
-          style={{ marginBottom: 24 }}
-        >
-          <Tabs defaultActiveKey="assets">
-            <TabPane tab="资产匹配" key="assets">
-              <Table
-                columns={matchingResultsColumns}
-                dataSource={(sessionData as any).matching_results?.matched_assets || []}
-                rowKey="id"
-                pagination={false}
-                size="small"
-              />
-            </TabPane>
-            <TabPane tab="权属方匹配" key="ownerships">
-              <Table
-                columns={[
-                  ...matchingResultsColumns.slice(0, -1) as any,
-                  {
-                    title: '操作',
-                    key: 'action',
-                    render: (_: any, record: OwnershipMatch) => (
-                      <Button
-                        type="primary"
-                        size="small"
-                        onClick={() => handleOwnershipSelection(record.id, 'landlord')}
-                      >
-                        选择
-                      </Button>
-                    )
-                  }
-                ] as any}
-                dataSource={(sessionData as any).matching_results?.matched_ownerships?.landlords || []}
-                rowKey="id"
-                pagination={false}
-                size="small"
-              />
-            </TabPane>
-          </Tabs>
-        </Card>
-      )}
+          <Card
+            title={
+              <Space>
+                <SearchOutlined />
+                <span>智能匹配结果</span>
+                <Badge count={(sessionData as any).matching_results?.matched_assets?.length || 0} />
+              </Space>
+            }
+            style={{ marginBottom: 24 }}
+          >
+            <Tabs defaultActiveKey="assets">
+              <TabPane tab="资产匹配" key="assets">
+                <Table
+                  columns={matchingResultsColumns}
+                  dataSource={(sessionData as any).matching_results?.matched_assets || []}
+                  rowKey="id"
+                  pagination={false}
+                  size="small"
+                />
+              </TabPane>
+              <TabPane tab="权属方匹配" key="ownerships">
+                <Table
+                  columns={[
+                    ...matchingResultsColumns.slice(0, -1) as any,
+                    {
+                      title: '操作',
+                      key: 'action',
+                      render: (_: any, record: OwnershipMatch) => (
+                        <Button
+                          type="primary"
+                          size="small"
+                          onClick={() => handleOwnershipSelection(record.id, 'landlord')}
+                        >
+                          选择
+                        </Button>
+                      )
+                    }
+                  ] as any}
+                  dataSource={(sessionData as any).matching_results?.matched_ownerships?.landlords || []}
+                  rowKey="id"
+                  pagination={false}
+                  size="small"
+                />
+              </TabPane>
+            </Tabs>
+          </Card>
+        )}
 
       {/* 字段编辑 */}
       <Card
@@ -547,9 +546,9 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
                     <Space>
                       <span>{field.label}</span>
                       <Tag color={field.validationStatus === 'valid' ? 'green' :
-                                 field.validationStatus === 'warning' ? 'orange' : 'red'}>
+                        field.validationStatus === 'warning' ? 'orange' : 'red'}>
                         {field.validationStatus === 'valid' ? '有效' :
-                         field.validationStatus === 'warning' ? '警告' : '错误'}
+                          field.validationStatus === 'warning' ? '警告' : '错误'}
                       </Tag>
                       <Tooltip title={`置信度: ${(field.confidence * 100).toFixed(1)}%`}>
                         <Progress
@@ -563,7 +562,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
                     </Space>
                   }
                   validateStatus={field.validationStatus === 'error' ? 'error' :
-                               field.validationStatus === 'warning' ? 'warning' : undefined}
+                    field.validationStatus === 'warning' ? 'warning' : undefined}
                   help={field.validationMessage}
                   extra={
                     <Button

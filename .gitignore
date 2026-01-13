@@ -518,6 +518,7 @@ backup_*.*
 .claude/cache/
 .claude/temp/
 .claude/logs/
+tmpclaude-*
 
 # BMad-Method Framework
 .bmad-core/
@@ -572,6 +573,10 @@ test-reports/
 
 # 自动添加的清理规则
 # 测试输出
+test_output*.txt
+test_output*.log
+backend/test_output*.txt
+backend/test_output*.log
 # 前端构建产物
 # 后端测试产物
 backend/database.sqlite
