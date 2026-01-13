@@ -19,13 +19,13 @@ logger = logging.getLogger(__name__)
 class PerformanceMonitoringMiddleware(BaseHTTPMiddleware):
     """性能监控中间件"""
 
-    def __init__(self, app, max_requests_per_minute: int = 1000):
+    def __init__(self, app: Any, max_requests_per_minute: int = 1000) -> None:
         super().__init__(app)
         self.max_requests_per_minute = max_requests_per_minute
         self.request_count: dict[str, int] = {}
-        self.response_times: dict[str, list] = {}
+        self.response_times: dict[str, list[float]] = {}
         self.error_counts: dict[str, int] = {}
-        self.slow_queries: list = []
+        self.slow_queries: list[dict[str, Any]] = []
 
         # 每分钟重置计数器
         self._reset_task = asyncio.create_task(self._reset_counters())
@@ -239,7 +239,7 @@ class PerformanceMonitoringMiddleware(BaseHTTPMiddleware):
 
         return stats
 
-    def get_slow_queries(self, limit: int = 10) -> list:
+    def get_slow_queries(self, limit: int = 10) -> list[dict[str, Any]]:
         """获取慢查询列表"""
         return sorted(self.slow_queries, key=lambda x: x["process_time"], reverse=True)[
             :limit

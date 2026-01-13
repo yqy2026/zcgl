@@ -1,5 +1,6 @@
 import json
 from datetime import datetime, timedelta
+from typing import Any, cast
 
 from jose import jwt
 from sqlalchemy.orm import Session
@@ -41,9 +42,10 @@ class SessionService:
         ):  # pragma: no cover
             # 取消最旧的会话
             oldest_session = min(
-                existing_sessions, key=lambda x: x.created_at
+                existing_sessions,
+                key=lambda x: cast(datetime, x.created_at),
             )  # pragma: no cover
-            oldest_session.is_active = False  # pragma: no cover
+            oldest_session.is_active = False  # type: ignore  # pragma: no cover
 
         # 提取设备信息
         device_id = None
@@ -99,7 +101,7 @@ class SessionService:
         )
 
         if session:
-            session.is_active = False
+            session.is_active = False  # type: ignore
 
             # 将令牌添加到黑名单
             try:

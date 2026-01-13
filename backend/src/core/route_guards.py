@@ -6,6 +6,7 @@
 import functools
 import os
 from collections.abc import Callable
+from typing import Any
 
 from fastapi import HTTPException, status
 
@@ -15,7 +16,7 @@ def is_debug_mode() -> bool:
     return os.getenv("DEBUG", "false").lower() == "true"
 
 
-def debug_only(func: Callable) -> Callable:
+def debug_only(func: Callable[..., Any]) -> Callable[..., Any]:
     """
     装饰器：仅在调试模式下允许访问端点
 
@@ -30,7 +31,7 @@ def debug_only(func: Callable) -> Callable:
     """
 
     @functools.wraps(func)
-    async def wrapper(*args, **kwargs):
+    async def wrapper(*args: Any, **kwargs: Any) -> Any:
         if not is_debug_mode():
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -41,14 +42,14 @@ def debug_only(func: Callable) -> Callable:
     return wrapper
 
 
-def require_debug_mode(func: Callable) -> Callable:
+def require_debug_mode(func: Callable[..., Any]) -> Callable[..., Any]:
     """
     同步版本的调试模式装饰器
     用于非async函数
     """
 
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
         if not is_debug_mode():
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Not Found"

@@ -6,6 +6,7 @@
 
 import os
 import shutil
+from typing import Any
 
 from fastapi import APIRouter, Depends, File, HTTPException, Path, UploadFile
 from fastapi.responses import FileResponse
@@ -27,7 +28,7 @@ async def upload_asset_attachments(
     files: list[UploadFile] = File(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("asset", "update")),
-):
+) -> dict[str, Any]:
     """
     上传资产附件（PDF格式）
 
@@ -102,7 +103,7 @@ async def get_asset_attachments(
     asset_id: str = Path(..., description="资产ID"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> dict[str, Any]:
     """
     获取资产附件列表
 
@@ -150,7 +151,7 @@ async def download_asset_attachment(
     filename: str = Path(..., description="文件名"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> dict[str, Any]:
     """
     下载资产附件
 
@@ -189,7 +190,7 @@ async def delete_asset_attachment(
     attachment_id: str = Path(..., description="附件ID"),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("asset", "delete")),
-):
+) -> dict[str, Any]:
     """
     删除资产附件
 

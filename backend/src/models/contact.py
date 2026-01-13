@@ -24,7 +24,7 @@ class ContactType(str, Enum):
     GENERAL = "general"  # 一般联系人
 
 
-class Contact(Base):
+class Contact(Base):  # type: ignore[valid-type, misc]
     """
     联系人模型
 
@@ -58,7 +58,7 @@ class Contact(Base):
     address = Column(String(500), comment="地址")
 
     # 联系人分类
-    contact_type = Column(
+    contact_type: "Column[ContactType]" = Column(
         SQLEnum(ContactType),
         default=ContactType.GENERAL,
         nullable=False,
@@ -86,5 +86,5 @@ class Contact(Base):
     created_by = Column(String(100), comment="创建人")
     updated_by = Column(String(100), comment="更新人")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Contact(id={self.id}, name={self.name}, entity_type={self.entity_type}, is_primary={self.is_primary})>"
