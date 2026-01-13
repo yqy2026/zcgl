@@ -199,7 +199,7 @@ async def batch_update_system_dictionaries(
         raise HTTPException(status_code=500, detail=f"批量更新系统字典失败: {str(e)}")
 
 
-@router.get("/types/list", summary="获取字典类型列表")
+@router.get("/types/list[Any]", summary="获取字典类型列表")
 async def get_dictionary_types(db: Session = Depends(get_db)):
     """
     获取所有字典类型列表

@@ -529,9 +529,9 @@ class AssetBatchUpdateResponse(BaseModel):
     success_count: int = Field(..., description="成功更新数量")
     failed_count: int = Field(..., description="失败数量")
     total_count: int = Field(..., description="总数量")
-    errors: list[dict] = Field(default_factory=list, description="错误信息列表")
+    errors: list[dict] = Field(default_factory=list[Any], description="错误信息列表")
     updated_assets: list[str] = Field(
-        default_factory=list, description="成功更新的资产ID"
+        default_factory=list[Any], description="成功更新的资产ID"
     )
 
     model_config = ConfigDict(json_schema_extra={"example": {"description": "示例"}})
@@ -550,9 +550,9 @@ class AssetValidationResponse(BaseModel):
     """资产数据验证响应模型"""
 
     is_valid: bool = Field(..., description="是否通过验证")
-    errors: list[dict] = Field(default_factory=list, description="错误信息列表")
-    warnings: list[dict] = Field(default_factory=list, description="警告信息列表")
-    validated_fields: list[str] = Field(default_factory=list, description="已验证字段")
+    errors: list[dict] = Field(default_factory=list[Any], description="错误信息列表")
+    warnings: list[dict] = Field(default_factory=list[Any], description="警告信息列表")
+    validated_fields: list[str] = Field(default_factory=list[Any], description="已验证字段")
 
     model_config = ConfigDict(json_schema_extra={"example": {"description": "示例"}})
 
@@ -574,9 +574,9 @@ class AssetImportResponse(BaseModel):
     success_count: int = Field(..., description="成功导入数量")
     failed_count: int = Field(..., description="失败数量")
     total_count: int = Field(..., description="总数量")
-    errors: list[dict] = Field(default_factory=list, description="错误信息列表")
+    errors: list[dict] = Field(default_factory=list[Any], description="错误信息列表")
     imported_assets: list[str] = Field(
-        default_factory=list, description="成功导入的资产ID"
+        default_factory=list[Any], description="成功导入的资产ID"
     )
     import_id: str | None = Field(None, description="导入任务ID")
 
@@ -598,7 +598,7 @@ class BatchCustomFieldUpdateResponse(BaseModel):
     success_count: int = Field(..., description="成功更新数量")
     failed_count: int = Field(..., description="失败数量")
     total_count: int = Field(..., description="总数量")
-    errors: list[dict] = Field(default_factory=list, description="错误信息列表")
+    errors: list[dict] = Field(default_factory=list[Any], description="错误信息列表")
 
     model_config = ConfigDict(json_schema_extra={"example": {"description": "示例"}})
 

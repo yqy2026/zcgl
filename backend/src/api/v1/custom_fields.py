@@ -202,7 +202,7 @@ async def validate_custom_field_value(
         raise HTTPException(status_code=500, detail=f"验证字段值失败: {str(e)}")
 
 
-@router.get("/types/list", summary="获取字段类型列表")
+@router.get("/types/list[Any]", summary="获取字段类型列表")
 async def get_field_types(
     current_user: User = Depends(get_current_active_user),
 ):

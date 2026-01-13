@@ -880,7 +880,7 @@ def export_contracts_to_excel(
 # ==================== 合同附件管理 ====================
 
 
-@router.post("/{contract_id}/attachments", response_model=dict, summary="上传合同附件")
+@router.post("/{contract_id}/attachments", response_model=dict[str, Any], summary="上传合同附件")
 async def upload_contract_attachment(
     contract_id: str,
     file: UploadFile = File(..., description="附件文件"),
@@ -964,7 +964,7 @@ async def upload_contract_attachment(
 
 
 @router.get(
-    "/{contract_id}/attachments", response_model=list, summary="获取合同附件列表"
+    "/{contract_id}/attachments", response_model=list[Any], summary="获取合同附件列表"
 )
 async def get_contract_attachments(
     contract_id: str,
@@ -1047,7 +1047,7 @@ async def download_contract_attachment(
 
 @router.delete(
     "/{contract_id}/attachments/{attachment_id}",
-    response_model=dict,
+    response_model=dict[str, Any],
     summary="删除合同附件",
 )
 async def delete_contract_attachment(

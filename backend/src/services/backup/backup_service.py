@@ -104,7 +104,7 @@ class BackupService:
                 logger.warning(f"备份目录不存在: {self.backup_dir}")
                 return []
 
-            backups = []
+            backups: list[dict[str, Any]] = []
             for filename in os.listdir(self.backup_dir):
                 if filename.endswith(".db"):
                     file_path = os.path.join(self.backup_dir, filename)

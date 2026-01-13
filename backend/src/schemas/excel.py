@@ -24,7 +24,7 @@ class ExcelImportResponse(BaseModel):
     success: int = Field(..., description="成功导入的记录数")
     failed: int = Field(..., description="导入失败的记录数")
     total: int = Field(..., description="总记录数")
-    errors: list[str] = Field(default_factory=list, description="错误信息列表")
+    errors: list[str] = Field(default_factory=list[Any], description="错误信息列表")
     message: str = Field(..., description="导入结果消息")
 
 
@@ -37,7 +37,7 @@ class ExcelImportStatus(BaseModel):
     success: int = Field(0, description="成功导入的记录数")
     failed: int = Field(0, description="导入失败的记录数")
     total: int = Field(0, description="总记录数")
-    errors: list[str] = Field(default_factory=list, description="错误信息列表")
+    errors: list[str] = Field(default_factory=list[Any], description="错误信息列表")
     started_at: str | None = Field(None, description="开始时间")
     completed_at: str | None = Field(None, description="完成时间")
     message: str = Field("", description="状态消息")
@@ -49,15 +49,15 @@ class ExcelValidationResponse(BaseModel):
     valid: bool = Field(..., description="文件是否有效")
     total_rows: int = Field(..., description="总行数")
     total_columns: int = Field(..., description="总列数")
-    errors: list[str] = Field(default_factory=list, description="验证错误列表")
-    columns: list[str] = Field(default_factory=list, description="列名列表")
+    errors: list[str] = Field(default_factory=list[Any], description="验证错误列表")
+    columns: list[str] = Field(default_factory=list[Any], description="列名列表")
     message: str = Field(..., description="验证结果消息")
 
 
 class ExcelExportRequest(BaseModel):
     """Excel导出请求模型"""
 
-    filters: dict | None = Field(None, description="筛选条件")
+    filters: dict[str, Any] | None = Field(None, description="筛选条件")
     columns: list[str] | None = Field(None, description="要导出的列")
     format: str = Field("xlsx", description="导出格式", pattern="^(xlsx|xls|csv)$")
     include_headers: bool = Field(True, description="是否包含表头")
@@ -82,8 +82,8 @@ class ImportTemplateInfo(BaseModel):
     description: str = Field(..., description="模板描述")
     required_columns: list[str] = Field(..., description="必填列")
     optional_columns: list[str] = Field(..., description="可选列")
-    sample_data: list[dict] = Field(default_factory=list, description="示例数据")
-    instructions: list[str] = Field(default_factory=list, description="使用说明")
+    sample_data: list[dict[str, Any]] = Field(default_factory=list[dict[str, Any]], description="示例数据")
+    instructions: list[str] = Field(default_factory=list[Any], description="使用说明")
 
 
 class DataMappingRule(BaseModel):
@@ -94,7 +94,7 @@ class DataMappingRule(BaseModel):
     data_type: str = Field(..., description="数据类型")
     required: bool = Field(False, description="是否必填")
     default_value: str | None = Field(None, description="默认值")
-    validation_rules: list[str] = Field(default_factory=list, description="验证规则")
+    validation_rules: list[str] = Field(default_factory=list[Any], description="验证规则")
     transformation: str | None = Field(None, description="数据转换规则")
 
 
@@ -108,7 +108,7 @@ class ImportConfiguration(BaseModel):
     max_errors: int = Field(100, description="最大错误数")
     batch_size: int = Field(1000, description="批处理大小")
     mapping_rules: list[DataMappingRule] = Field(
-        default_factory=list, description="字段映射规则"
+        default_factory=list[Any], description="字段映射规则"
     )
     validation_enabled: bool = Field(True, description="是否启用数据验证")
     duplicate_handling: str = Field(
@@ -120,9 +120,9 @@ class ImportPreviewResponse(BaseModel):
     """导入预览响应模型"""
 
     total_rows: int = Field(..., description="总行数")
-    preview_data: list[dict] = Field(..., description="预览数据（前10行）")
+    preview_data: list[dict[str, Any]] = Field(..., description="预览数据（前10行）")
     column_mapping: dict[str, Any] = Field(..., description="列映射关系")
     validation_summary: dict[str, Any] = Field(..., description="验证摘要")
     estimated_import_time: int = Field(..., description="预估导入时间（秒）")
-    warnings: list[str] = Field(default_factory=list, description="警告信息")
-    recommendations: list[str] = Field(default_factory=list, description="建议信息")
+    warnings: list[str] = Field(default_factory=list[Any], description="警告信息")
+    recommendations: list[str] = Field(default_factory=list[Any], description="建议信息")

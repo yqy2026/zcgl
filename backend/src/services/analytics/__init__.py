@@ -32,14 +32,14 @@ except Exception:  # nosec - B110: Intentional graceful degradation
 
 # 保留对旧服务的导入尝试（如果存在的话）
 try:
-    from .statistics import StatisticsService as StatisticsService  # type: ignore
+    from .statistics import StatisticsService as StatisticsService
 
     __all__.append("StatisticsService")
 except Exception:  # nosec - B110: Intentional graceful degradation
     pass
 
 try:
-    from .data_filter import DataFilterService as DataFilterService  # type: ignore
+    from .data_filter import DataFilterService as DataFilterService
 
     __all__.append("DataFilterService")
 except Exception:  # nosec - B110: Intentional graceful degradation

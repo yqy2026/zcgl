@@ -442,7 +442,7 @@ class DatabaseOptimizer:
                     f"考虑优化批量更新操作: {query_name} (平均耗时: {query['avg_duration_ms']:.2f}ms)"
                 )
 
-            if "list" in query_name and query["avg_duration_ms"] > 300:
+            if "list[Any]" in query_name and query["avg_duration_ms"] > 300:
                 recommendations.append(
                     f"考虑为列表查询添加分页和索引: {query_name} (平均耗时: {query['avg_duration_ms']:.2f}ms)"
                 )

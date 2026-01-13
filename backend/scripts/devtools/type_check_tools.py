@@ -13,11 +13,9 @@ Usage:
 import argparse
 import re
 import subprocess
-import sys
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
-
 
 # 预编译正则表达式
 ERROR_CODE_PATTERN = re.compile(r"\[([a-z-]+)\]")
@@ -64,7 +62,9 @@ def find_quick_wins(errors_text: str, max_errors: int = 5) -> dict[str, list[str
     """查找可以快速修复的文件（<=5个错误）"""
     files_by_error_count = group_by_file(errors_text)
     return {
-        f: errors for f, errors in files_by_error_count.items() if len(errors) <= max_errors
+        f: errors
+        for f, errors in files_by_error_count.items()
+        if len(errors) <= max_errors
     }
 
 
@@ -72,7 +72,14 @@ def classify_by_tier(files_errors: dict[str, list[str]]) -> dict[str, dict[str, 
     """按 Tier 分层分类文件"""
     tiers = {
         "Tier 0 (Core)": {
-            "patterns": ["database.py", "core/security", "core/config", "core/jwt", "models/", "schemas/"],
+            "patterns": [
+                "database.py",
+                "core/security",
+                "core/config",
+                "core/jwt",
+                "models/",
+                "schemas/",
+            ],
             "files": {},
         },
         "Tier 1 (Business)": {
@@ -106,7 +113,9 @@ def classify_by_tier(files_errors: dict[str, list[str]]) -> dict[str, dict[str, 
 
     # 统计每个 tier 的错误数
     for tier_name, tier_data in tiers.items():
-        tier_data["error_count"] = sum(len(errs) for errs in tier_data["files"].values())
+        tier_data["error_count"] = sum(
+            len(errs) for errs in tier_data["files"].values()
+        )
         tier_data["file_count"] = len(tier_data["files"])
 
     return tiers
@@ -121,7 +130,9 @@ def print_report(errors_text: str):
     # 1. 错误分类统计
     print("\n【错误分类统计】")
     categories = categorize_errors(errors_text)
-    for code, lines in sorted(categories.items(), key=lambda x: len(x[1]), reverse=True):
+    for code, lines in sorted(
+        categories.items(), key=lambda x: len(x[1]), reverse=True
+    ):
         print(f"  {code:25s}: {len(lines):4d} 个")
 
     total_errors = sum(len(lines) for lines in categories.values())
@@ -145,7 +156,9 @@ def print_report(errors_text: str):
     print("\n【按 Tier 分层统计】")
     tiers = classify_by_tier(files)
     for tier_name, tier_data in tiers.items():
-        print(f"  {tier_name:20s}: {tier_data['error_count']:4d} errors in {tier_data['file_count']:3d} files")
+        print(
+            f"  {tier_name:20s}: {tier_data['error_count']:4d} errors in {tier_data['file_count']:3d} files"
+        )
 
 
 def print_quick_wins(errors_text: str, max_errors: int = 5):
@@ -206,9 +219,7 @@ def main():
     parser.add_argument(
         "--max-errors", type=int, default=5, help="快速胜利的最大错误数（默认: 5）"
     )
-    parser.add_argument(
-        "--source-dir", default="src", help="源代码目录（默认: src）"
-    )
+    parser.add_argument("--source-dir", default="src", help="源代码目录（默认: src）")
 
     args = parser.parse_args()
 

@@ -6,6 +6,7 @@ PDF/OCR 统一配置
 
 import os
 from enum import Enum
+from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -513,7 +514,7 @@ def validate_config(config: PDFImportConfig) -> list[str]:
 # ============================================================================
 
 
-def export_config_dict(config: PDFImportConfig | None = None) -> dict:
+def export_config_dict(config: PDFImportConfig | None = None) -> dict[str, Any]:
     """
     导出配置为字典
 

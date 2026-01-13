@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 # PyMuPDF import with graceful fallback
 try:
-    import fitz  # type: ignore
+    import fitz
     PYMUPDF_AVAILABLE = True
 except ImportError:
     logger.warning("PyMuPDF not installed. Run: pip install pymupdf")

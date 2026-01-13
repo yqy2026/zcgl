@@ -245,7 +245,7 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
             创建的模型实例
         """
         obj_in_data = (
-            obj_in.dict(exclude_unset=True) if hasattr(obj_in, "dict") else obj_in
+            obj_in.dict[str, Any](exclude_unset=True) if hasattr(obj_in, "dict[str, Any]") else obj_in
         )
 
         # 添加创建者信息
@@ -522,7 +522,7 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
         db_objects = []
         for obj_in in objects_in:
             obj_in_data = (
-                obj_in.dict(exclude_unset=True) if hasattr(obj_in, "dict") else obj_in
+                obj_in.dict[str, Any](exclude_unset=True) if hasattr(obj_in, "dict[str, Any]") else obj_in
             )
 
             if created_by and hasattr(self.model, "created_by"):

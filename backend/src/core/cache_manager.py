@@ -148,7 +148,7 @@ class CacheManager:
 
     def _serialize_value(self, value: Any) -> Any:
         """序列化值"""
-        if isinstance(value, (dict, list, tuple, set)):
+        if isinstance(value, (dict[str, Any], list, tuple, set)):
             return json.dumps(value, ensure_ascii=False, default=str)
         elif hasattr(value, "model_dump"):
             return json.dumps(value.model_dump(), ensure_ascii=False, default=str)

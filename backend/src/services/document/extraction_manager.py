@@ -84,12 +84,8 @@ class KeywordClassifier:
         """根据文本内容分类文档类型"""
         text_lower = text.lower()
 
-        contract_score = sum(
-            1 for kw in cls.CONTRACT_KEYWORDS if kw in text_lower
-        )
-        property_score = sum(
-            1 for kw in cls.PROPERTY_CERT_KEYWORDS if kw in text_lower
-        )
+        contract_score = sum(1 for kw in cls.CONTRACT_KEYWORDS if kw in text_lower)
+        property_score = sum(1 for kw in cls.PROPERTY_CERT_KEYWORDS if kw in text_lower)
 
         logger.debug(
             f"Classification scores - Contract: {contract_score}, Property: {property_score}"
@@ -129,6 +125,7 @@ class DocumentExtractionManager:
         """懒加载产权证提取器"""
         if self._property_cert_extractor is None:
             from .extractors.property_cert_adapter import PropertyCertAdapter
+
             self._property_cert_extractor = PropertyCertAdapter()
         return self._property_cert_extractor
 

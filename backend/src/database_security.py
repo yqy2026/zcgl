@@ -3,6 +3,7 @@
 """
 
 import sqlite3
+from typing import Any
 
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
@@ -10,13 +11,13 @@ from sqlalchemy.engine import Engine
 from .core.config import settings
 
 
-def enhance_sqlite_security(engine: Engine):
+def enhance_sqlite_security(engine: Engine) -> None:
     """
     增强SQLite数据库安全
     """
 
     @event.listens_for(engine, "connect")
-    def set_sqlite_pragma(dbapi_connection, connection_record):
+    def set_sqlite_pragma(dbapi_connection: Any, connection_record: Any) -> None:
         if isinstance(dbapi_connection, sqlite3.Connection):
             cursor = dbapi_connection.cursor()
             # 启用外键约束
@@ -32,7 +33,7 @@ def enhance_sqlite_security(engine: Engine):
             cursor.close()
 
 
-def enhance_database_security(engine: Engine):
+def enhance_database_security(engine: Engine) -> None:
     """
     增强数据库安全配置
     """

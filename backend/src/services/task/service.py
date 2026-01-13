@@ -124,7 +124,7 @@ class TaskService:
         # API logic was just CRUD update with status hooks in CRUD.
         # Let's handle generic update here but delegate status specific logic blocks if needed.
 
-        update_data = obj_in.dict(exclude_unset=True)
+        update_data = obj_in.dict[str, Any](exclude_unset=True)
         if "status" in update_data:
             # Calling specific status update logic would be cleaner, but let's replicate logic locally to support single commit
             new_status = update_data["status"]

@@ -147,7 +147,7 @@ class OrganizationBatchRequest(BaseModel):
 
     @field_validator("action")
     @classmethod
-    def validate_action(cls, v):
+    def validate_action(cls, v: str) -> str:
         allowed_actions = ["delete", "move"]  # pragma: no cover
         if v not in allowed_actions:  # pragma: no cover
             raise ValueError(

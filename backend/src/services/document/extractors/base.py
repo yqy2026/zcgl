@@ -199,11 +199,11 @@ class BaseVisionAdapter(ContractExtractorInterface):
     def _parse_json(self, content: str) -> dict[str, Any]:
         """Parse JSON from model response (common logic)"""
         try:
-            return json.loads(content)  # type: ignore[return-value]
+            return json.loads(content)
         except json.JSONDecodeError:
             match = re.search(r"\{.*\}", content, re.DOTALL)
             if match:
-                return json.loads(match.group(0))  # type: ignore[return-value]
+                return json.loads(match.group(0))
             raise ValueError(f"Could not parse JSON from response: {content[:200]}")
 
     def _build_extraction_prompt(self, num_images: int) -> str:

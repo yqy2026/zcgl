@@ -189,7 +189,7 @@ async def delete_enum_field_type(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.get("/types/categories/list")
+@router.get("/types/categories/list[Any]")
 async def get_enum_field_categories(db: Session = Depends(get_db)):
     """获取枚举字段类别列表"""
     crud = get_enum_field_type_crud(db)

@@ -132,7 +132,7 @@ class DetailedErrorResponse(ErrorResponse):
     file_path: str | None = Field(None, description="相关的文件路径")
 
     # 解决建议
-    suggestions: list[str] = Field(default_factory=list, description="解决建议")
+    suggestions: list[str] = Field(default_factory=list[Any], description="解决建议")
 
     # 支持信息
     support_url: str | None = Field(None, description="支持文档 URL")
@@ -179,7 +179,7 @@ class BatchErrorResponse(ErrorResponse):
     success_count: int = Field(description="成功项目数")
     failed_count: int = Field(description="失败项目数")
     errors: list[BatchItemError] = Field(
-        default_factory=list, description="失败项目详情"
+        default_factory=list[Any], description="失败项目详情"
     )
 
     class Config:

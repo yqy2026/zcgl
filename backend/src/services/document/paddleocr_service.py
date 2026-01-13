@@ -9,7 +9,7 @@ PaddleOCR 3.3 服务模块 [DEPRECATED]
     - Qwen3-VL-Flash (推荐): services/core/qwen_vision_service.py
     - DeepSeek-OCR: services/core/deepseek_vision_service.py
     - Zhipu GLM-4V: services/core/zhipu_vision_service.py
-    
+
     使用 extractors/factory.py 进行统一调用。
 
 依赖安装: uv sync --extra pdf-ocr

@@ -25,12 +25,12 @@ load_dotenv()
 
 async def test_extraction():
     """Test DeepSeek OCR extraction"""
-    
+
     # Check configuration
     api_key = os.getenv("DEEPSEEK_API_KEY")
     base_url = os.getenv("DEEPSEEK_BASE_URL")
     model = os.getenv("DEEPSEEK_VISION_MODEL")
-    
+
     print("=" * 60)
     print("DeepSeek OCR Test (SiliconFlow)")
     print("=" * 60)
@@ -38,36 +38,36 @@ async def test_extraction():
     print(f"Base URL: {base_url or 'NOT SET'}")
     print(f"Model: {model or 'NOT SET'}")
     print("=" * 60)
-    
+
     if not api_key:
         print("[ERROR] DEEPSEEK_API_KEY not set in .env")
         return
-    
+
     # Find test PDF
     pdf_dir = Path("D:/code/zcgl/tools/pdf-samples")
     pdf_files = list(pdf_dir.glob("*.pdf"))
-    
+
     if not pdf_files:
         print("[ERROR] No PDF files found in pdf-samples")
         return
-    
+
     pdf_path = pdf_files[0]
     print(f"\n[INFO] Testing with: {pdf_path.name}")
     print(f"[INFO] File size: {pdf_path.stat().st_size / 1024 / 1024:.2f} MB")
-    
+
     # Use DocumentExtractionManager
     try:
         from src.services.document.extraction_manager import (
-            get_extraction_manager,
             DocumentType,
+            get_extraction_manager,
         )
-        
+
         print("\n[INFO] Initializing extraction manager...")
         manager = get_extraction_manager()
-        
+
         print("[INFO] Starting extraction (this may take 1-2 minutes)...")
         result = await manager.extract(str(pdf_path), doc_type=DocumentType.CONTRACT)
-        
+
         print("\n" + "=" * 60)
         print("EXTRACTION RESULT")
         print("=" * 60)
@@ -76,22 +76,23 @@ async def test_extraction():
         print(f"Confidence: {result.confidence_score:.2%}")
         print(f"Processing Time: {result.processing_time_ms:.0f}ms")
         print(f"Extraction Method: {result.extraction_method}")
-        
+
         if result.warnings:
             print(f"\nWarnings: {result.warnings}")
-        
+
         if result.error:
             print(f"\n[ERROR] {result.error}")
-        
+
         if result.extracted_fields:
             print("\n" + "-" * 40)
             print("EXTRACTED FIELDS")
             print("-" * 40)
             print(json.dumps(result.extracted_fields, ensure_ascii=False, indent=2))
-        
+
     except Exception as e:
         print(f"\n[ERROR] Extraction failed: {e}")
         import traceback
+
         traceback.print_exc()
 
 

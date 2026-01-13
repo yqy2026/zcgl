@@ -311,7 +311,7 @@ class PDFCache:
         Returns:
             缓存统计数据
         """
-        total_files = len(list(self.cache_dir.glob("*.json")))
+        total_files = len(list[Any](self.cache_dir.glob("*.json")))
         hit_rate = (
             self._hits / (self._hits + self._misses)
             if (self._hits + self._misses) > 0
@@ -647,7 +647,7 @@ class AsyncDocumentCache:
         Returns:
             缓存统计数据
         """
-        total_files = len(list(self.cache_dir.glob("*.json")))
+        total_files = len(list[Any](self.cache_dir.glob("*.json")))
         hit_rate = (
             self._hits / (self._hits + self._misses)
             if (self._hits + self._misses) > 0

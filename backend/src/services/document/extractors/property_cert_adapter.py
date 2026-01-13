@@ -28,21 +28,21 @@ class PropertyCertAdapter(BaseVisionAdapter):
 {{
     "certificate_number": "不动产权证号/房产证编号",
     "registration_date": "登记日期(YYYY-MM-DD)",
-    
+
     "owner_name": "权利人姓名/单位名称",
     "owner_id_type": "证件类型(身份证/营业执照等)",
     "owner_id_number": "证件号码",
-    
+
     "property_address": "坐落地址(完整地址)",
     "property_type": "用途(住宅/商业/工业/办公)",
     "building_area": "建筑面积(数字,平方米)",
     "land_area": "土地使用面积(数字,平方米)",
     "floor_info": "楼层信息",
-    
+
     "land_use_type": "土地使用权类型(出让/划拨)",
     "land_use_term_start": "土地使用期限起(YYYY-MM-DD)",
     "land_use_term_end": "土地使用期限止(YYYY-MM-DD)",
-    
+
     "co_ownership": "共有情况",
     "restrictions": "权利限制情况",
     "remarks": "备注"

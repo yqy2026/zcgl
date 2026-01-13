@@ -5,9 +5,9 @@
 from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
+from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
-from pydantic.functional_validators import FieldValidationInfo
+from pydantic import BaseModel, ConfigDict, Field, FieldValidationInfo, field_validator
 
 
 # V2 Enums
@@ -42,7 +42,9 @@ class RentTermBase(BaseModel):
 
     @field_validator("total_monthly_amount")
     @classmethod
-    def calculate_total_amount(cls, v: Decimal | None, info: FieldValidationInfo) -> Decimal | None:
+    def calculate_total_amount(
+        cls, v: Decimal | None, info: FieldValidationInfo
+    ) -> Decimal | None:
         """计算月总金额"""
         if v is None:
             data = info.data if hasattr(info, "data") else {}
@@ -91,7 +93,7 @@ class RentContractBase(BaseModel):
 
     contract_number: str | None = Field(None, description="合同编号（空则自动生成）")
     # V2: 改为多资产关联
-    asset_ids: list[str] = Field(default_factory=list, description="关联资产ID列表")
+    asset_ids: list[str] = Field(default_factory=list[Any], description="关联资产ID列表")
     ownership_id: str = Field(..., description="权属方ID")
     # V2: 合同类型
     contract_type: ContractTypeEnum = Field(
@@ -144,7 +146,9 @@ class RentContractCreate(RentContractBase):
 
     @field_validator("rent_terms")
     @classmethod
-    def validate_rent_terms(cls, v: list[RentTermCreate], info: FieldValidationInfo) -> list[RentTermCreate]:
+    def validate_rent_terms(
+        cls, v: list[RentTermCreate], info: FieldValidationInfo
+    ) -> list[RentTermCreate]:
         """验证租金条款"""
         if not v:
             raise ValueError("租金条款不能为空")

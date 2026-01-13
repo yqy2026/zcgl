@@ -318,7 +318,7 @@ async def refresh_token(
     return tokens
 
 
-@router.get("/me", response_model=dict, summary="获取当前用户信息")
+@router.get("/me", response_model=dict[str, Any], summary="获取当前用户信息")
 async def get_current_user_info(
     current_user=Depends(get_current_active_user),
 ):
@@ -423,7 +423,7 @@ async def test_me_debug(current_user: UserResponse = Depends(get_current_active_
 
     # 检查 UserResponse 的所有字段
     user_dict = current_user.model_dump()
-    print(f"UserResponse字段: {list(user_dict.keys())}")
+    print(f"UserResponse字段: {list[Any](user_dict.keys())}")
     print(f"UserResponse内容: {user_dict}")
 
     # 手动构建增强响应
@@ -705,7 +705,7 @@ async def revoke_session(
         )
 
 
-@router.get("/audit-logs", response_model=dict, summary="获取审计日志统计")
+@router.get("/audit-logs", response_model=dict[str, Any], summary="获取审计日志统计")
 async def get_audit_statistics(
     days: int = 30,
     db: Session = Depends(get_db),
@@ -719,7 +719,7 @@ async def get_audit_statistics(
     return stats
 
 
-@router.get("/security/config", response_model=dict, summary="获取安全配置")
+@router.get("/security/config", response_model=dict[str, Any], summary="获取安全配置")
 async def get_security_config(current_user: UserResponse = Depends(require_admin)):
     """
     获取安全配置信息（仅管理员）
@@ -899,7 +899,7 @@ async def reset_user_password(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-@router.get("/users/statistics/summary", response_model=dict, summary="获取用户统计")
+@router.get("/users/statistics/summary", response_model=dict[str, Any], summary="获取用户统计")
 async def get_user_statistics(
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(require_admin),

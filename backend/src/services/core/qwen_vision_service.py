@@ -46,19 +46,24 @@ class QwenVisionService:
 
     DEFAULT_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 
-    def __init__(self):
+    def __init__(self) -> None:
         # 优先使用 centralized config，fallback 到环境变量
         try:
             from src.core.config import settings
+
             self.api_key = settings.DASHSCOPE_API_KEY or os.getenv("DASHSCOPE_API_KEY")
-            self.base_url = settings.DASHSCOPE_BASE_URL or os.getenv("DASHSCOPE_BASE_URL", self.DEFAULT_BASE_URL)
-            self.model = settings.QWEN_VISION_MODEL or os.getenv("QWEN_VISION_MODEL", "qwen3-vl-flash")
+            self.base_url = settings.DASHSCOPE_BASE_URL or os.getenv(
+                "DASHSCOPE_BASE_URL", self.DEFAULT_BASE_URL
+            )
+            self.model = settings.QWEN_VISION_MODEL or os.getenv(
+                "QWEN_VISION_MODEL", "qwen3-vl-flash"
+            )
         except ImportError:
             # Fallback for standalone usage
             self.api_key = os.getenv("DASHSCOPE_API_KEY")
             self.base_url = os.getenv("DASHSCOPE_BASE_URL", self.DEFAULT_BASE_URL)
             self.model = os.getenv("QWEN_VISION_MODEL", "qwen3-vl-flash")
-        
+
         self.timeout = int(os.getenv("QWEN_TIMEOUT", "120"))
 
         if not self.api_key:

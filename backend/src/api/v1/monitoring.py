@@ -145,7 +145,7 @@ async def get_performance_dashboard():
             },
             "route_performance": {
                 "/dashboard": {"visits": 450, "avg_load_time": 800},
-                "/assets/list": {"visits": 320, "avg_load_time": 1200},
+                "/assets/list[Any]": {"visits": 320, "avg_load_time": 1200},
                 "/rental/contracts": {"visits": 280, "avg_load_time": 1500},
             },
             "trends": [

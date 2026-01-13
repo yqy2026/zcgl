@@ -9,7 +9,7 @@ Provides remote OCR capabilities for PDF/image text extraction.
     本模块已被标记为废弃。推荐使用 LLM Vision 提取方案：
     - Qwen3-VL-Flash (推荐): services/core/qwen_vision_service.py
     - DeepSeek-OCR: services/core/deepseek_vision_service.py
-    
+
     使用 extractors/factory.py 进行统一调用。
 """
 

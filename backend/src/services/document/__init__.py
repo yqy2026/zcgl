@@ -178,7 +178,9 @@ except Exception:  # nosec - B110: Intentional graceful degradation
 
 # V3 Document Extraction Manager (2026-01)
 try:
-    from .extraction_manager import DocumentExtractionManager as DocumentExtractionManager
+    from .extraction_manager import (
+        DocumentExtractionManager as DocumentExtractionManager,
+    )
     from .extraction_manager import DocumentType as DocumentType
     from .extraction_manager import ExtractionResult as ExtractionResult
     from .extraction_manager import get_extraction_manager as get_extraction_manager

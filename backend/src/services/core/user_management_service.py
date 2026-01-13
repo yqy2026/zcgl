@@ -91,7 +91,7 @@ class UserManagementService:
                 raise BusinessLogicError("用户名已被其他用户使用")
 
         # 更新字段
-        update_data = user_data.dict(exclude_unset=True)
+        update_data = user_data.dict[str, Any](exclude_unset=True)
         for field, value in update_data.items():
             setattr(user, field, value)
 

@@ -65,7 +65,7 @@ async def create_backup(
         raise HTTPException(status_code=500, detail=f"创建数据备份失败: {str(e)}")
 
 
-@router.get("/list", summary="获取备份列表")
+@router.get("/list[Any]", summary="获取备份列表")
 async def list_backups():
     """
     获取所有备份文件列表

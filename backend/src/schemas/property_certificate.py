@@ -28,9 +28,7 @@ class PropertyCertificateFields(BaseModel):
 
     # 不动产信息
     property_address: str | None = Field(default=None, description="坐落地址")
-    property_type: str | None = Field(
-        default=None, description="用途 (住宅/商业/工业)"
-    )
+    property_type: str | None = Field(default=None, description="用途 (住宅/商业/工业)")
     building_area: Decimal | None = Field(default=None, description="建筑面积 (㎡)")
     land_area: Decimal | None = Field(default=None, description="土地使用面积 (㎡)")
     floor_info: str | None = Field(default=None, description="楼层信息")

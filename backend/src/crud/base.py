@@ -147,7 +147,7 @@ class CRUDBase[
         try:
             obj_data = db_obj.__dict__
             update_data = (
-                obj_in if isinstance(obj_in, dict) else obj_in.dict(exclude_unset=True)
+                obj_in if isinstance(obj_in, dict) else obj_in.dict[str, Any](exclude_unset=True)
             )
 
             for field in obj_data:

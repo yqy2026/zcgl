@@ -146,7 +146,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         self, db: Session, db_obj: Asset, obj_in: AssetUpdate
     ) -> Asset:
         """更新资产并记录历史"""
-        update_data = obj_in.dict(exclude_unset=True)
+        update_data = obj_in.dict[str, Any](exclude_unset=True)
         for field, new_value in update_data.items():
             if hasattr(db_obj, field):
                 old_value = getattr(db_obj, field)

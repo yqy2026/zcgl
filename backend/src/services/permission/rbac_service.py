@@ -108,7 +108,7 @@ class RBACService:
                 raise BusinessLogicError("角色显示名称已存在")
 
         # 更新字段
-        update_data = role_data.dict(exclude_unset=True, exclude={"permission_ids"})
+        update_data = role_data.dict[str, Any](exclude_unset=True, exclude={"permission_ids"})
         for field, value in update_data.items():
             setattr(role, field, value)
 
@@ -517,7 +517,7 @@ class RBACService:
             user_id=user_id,
             username=cast("str", user.username),
             roles=roles,  # type: ignore
-            permissions=list(role_permissions),
+            permissions=list[Any](role_permissions),
             resource_permissions=resource_permissions,  # type: ignore
             effective_permissions=effective_permissions,
         )

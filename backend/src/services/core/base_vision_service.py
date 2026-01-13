@@ -156,7 +156,7 @@ class BaseVisionService(ABC):
 
     @abstractmethod
     async def extract_from_images(
-        self, image_paths: list[str], prompt: str, **kwargs
+        self, image_paths: list[str], prompt: str, **kwargs: Any
     ) -> str:
         """
         从图像提取内容

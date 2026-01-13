@@ -12,7 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class ExcelExportRequest(BaseModel):
     """Excel导出请求模型"""
 
-    filters: dict[str, Any] | None = Field(default_factory=dict, description="筛选条件")
+    filters: dict[str, Any] | None = Field(default_factory=dict[str, Any], description="筛选条件")
     fields: list[str] | None = Field(None, description="导出字段列表")
     export_format: str = Field(
         "xlsx", pattern="^(xlsx|xls|csv)$", description="导出格式"
@@ -65,7 +65,7 @@ class ExcelValidationRule(BaseModel):
 
     field_name: str = Field(..., description="字段名")
     rule_type: str = Field(..., description="规则类型")
-    rule_value: str | int | float | bool | list | dict = Field(
+    rule_value: str | int | float | bool | list[Any] | dict[str, Any] = Field(
         ..., description="规则值"
     )
     error_message: str = Field(..., description="错误消息")
@@ -84,10 +84,10 @@ class ExcelImportResult(BaseModel):
     created_assets: int = Field(..., description="创建的资产数")
     updated_assets: int = Field(..., description="更新的资产数")
     errors: list[dict[str, Any]] = Field(
-        default_factory=list, description="错误信息列表"
+        default_factory=list[Any], description="错误信息列表"
     )
     warnings: list[dict[str, Any]] = Field(
-        default_factory=list, description="警告信息列表"
+        default_factory=list[Any], description="警告信息列表"
     )
 
     model_config = ConfigDict(json_schema_extra={})
@@ -141,9 +141,9 @@ class ExcelConfigCreate(BaseModel):
     config_type: str = Field(..., description="配置类型")
     field_mapping: list[ExcelFieldMapping] = Field(..., description="字段映射配置")
     validation_rules: list[ExcelValidationRule] = Field(
-        default_factory=list, description="验证规则"
+        default_factory=list[Any], description="验证规则"
     )
-    default_values: dict[str, Any] = Field(default_factory=dict, description="默认值")
+    default_values: dict[str, Any] = Field(default_factory=dict[str, Any], description="默认值")
     is_default: bool = Field(False, description="是否默认配置")
     description: str | None = Field(None, description="配置描述")
 
@@ -158,9 +158,9 @@ class ExcelConfigResponse(BaseModel):
     config_type: str = Field(..., description="配置类型")
     field_mapping: list[ExcelFieldMapping] = Field(..., description="字段映射配置")
     validation_rules: list[ExcelValidationRule] = Field(
-        default_factory=list, description="验证规则"
+        default_factory=list[Any], description="验证规则"
     )
-    default_values: dict[str, Any] = Field(default_factory=dict, description="默认值")
+    default_values: dict[str, Any] = Field(default_factory=dict[str, Any], description="默认值")
     is_default: bool = Field(..., description="是否默认配置")
     is_active: bool = Field(..., description="是否启用")
     description: str | None = Field(None, description="配置描述")

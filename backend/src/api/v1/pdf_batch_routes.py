@@ -364,7 +364,7 @@ async def get_batch_status(
     )
 
 
-@router.get("/list")
+@router.get("/list[Any]")
 async def list_batches(
     status_filter: str | None = None,
     limit: int = 20,

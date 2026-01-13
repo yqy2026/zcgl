@@ -162,7 +162,7 @@ class SensitiveDataFilter(logging.Filter):
         """过滤单个值"""
         if is_sensitive:
             return "***"
-        elif isinstance(value, (dict, list)):
+        elif isinstance(value, (dict[str, Any], list)):
             return self._filter_dict(value)
         elif isinstance(value, str):
             return self._filter_sensitive_data(value)

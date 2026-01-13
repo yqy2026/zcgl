@@ -301,7 +301,7 @@ class ExceptionHandler:
                 # 对于其他字段，转换Decimal为float
                 if isinstance(value, Decimal):
                     cleaned_error[key] = float(value)
-                elif isinstance(value, (list, dict)):
+                elif isinstance(value, (list[Any], dict)):
                     # 递归清理嵌套结构
                     cleaned_error[key] = self._clean_for_serialization(
                         value

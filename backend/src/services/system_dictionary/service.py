@@ -63,7 +63,7 @@ class SystemDictionaryService:
         self, db: Session, *, dict_type: str, sort_data: list[dict[str, Any]]
     ) -> list[SystemDictionary]:
         """批量更新排序"""
-        updated_items = []
+        updated_items: list[SystemDictionary] = []
 
         for item in sort_data:
             dictionary_id = item.get("id")
