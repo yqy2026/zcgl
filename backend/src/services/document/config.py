@@ -24,6 +24,7 @@ class LLMProvider(str, Enum):
     QWEN = "qwen"  # 通义千问 (阿里云 DashScope)
     DEEPSEEK = "deepseek"  # DeepSeek-VL
     GLM = "glm"  # 智谱 GLM (GLM-4V)
+    HUNYUAN = "hunyuan"  # 腾讯混元 (2026-01 新增)
 
     @classmethod
     def normalize(cls, value: str) -> "LLMProvider":
@@ -56,6 +57,11 @@ class LLMProvider(str, Enum):
             "阿里": cls.QWEN,  # Chinese alias
             # DeepSeek 别名
             "deepseek-vl": cls.DEEPSEEK,
+            # Hunyuan 别名 (2026-01 新增)
+            "hunyuan-vision": cls.HUNYUAN,
+            "tencent": cls.HUNYUAN,
+            "腾讯": cls.HUNYUAN,  # Chinese alias
+            "混元": cls.HUNYUAN,  # Chinese alias
         }
 
         normalized = value_map.get(value.lower())

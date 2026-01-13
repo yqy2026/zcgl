@@ -49,13 +49,19 @@ class ZhipuVisionService(BaseVisionService):
     DEFAULT_BASE_URL = "https://open.bigmodel.cn/api/paas/v4"
 
     def __init__(self):
-        # Support both ZHIPU_API_KEY and LLM_API_KEY (for compatibility with existing config)
-        api_key = os.getenv("ZHIPU_API_KEY") or os.getenv("LLM_API_KEY")
+        # 优先使用 centralized config，fallback 到环境变量
+        try:
+            from src.core.config import settings
+            api_key = settings.ZHIPU_API_KEY or os.getenv("ZHIPU_API_KEY") or os.getenv("LLM_API_KEY")
+            self.base_url = settings.ZHIPU_BASE_URL or os.getenv("ZHIPU_BASE_URL", self.DEFAULT_BASE_URL)
+            self.model = settings.ZHIPU_VISION_MODEL or os.getenv("ZHIPU_VISION_MODEL", "glm-4v")
+        except ImportError:
+            # Fallback for standalone usage
+            api_key = os.getenv("ZHIPU_API_KEY") or os.getenv("LLM_API_KEY")
+            self.base_url = os.getenv("ZHIPU_BASE_URL", self.DEFAULT_BASE_URL)
+            self.model = os.getenv("ZHIPU_VISION_MODEL", "glm-4v")
+        
         super().__init__(api_key=api_key)
-
-        self.base_url = os.getenv("ZHIPU_BASE_URL", self.DEFAULT_BASE_URL)
-        # Note: glm-4v is the correct model name (glm-4v-flash causes error 1210)
-        self.model = os.getenv("ZHIPU_VISION_MODEL", "glm-4v")
         self.timeout = int(os.getenv("ZHIPU_TIMEOUT", "120"))
 
         if not self.api_key:

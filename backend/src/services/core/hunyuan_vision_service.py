@@ -1,12 +1,12 @@
 """
-阿里通义千问 Qwen-VL 多模态视觉服务
-Alibaba Qwen-VL Multimodal Vision Service
+腾讯混元 Hunyuan-Vision 多模态视觉服务
+Tencent Hunyuan-Vision Multimodal Vision Service
 
 支持图片直接输入进行合同信息提取
 Supports direct image input for contract information extraction
 
-DashScope API Documentation:
-https://help.aliyun.com/zh/model-studio/developer-reference/qwen-vl-api
+API Documentation:
+https://cloud.tencent.com/document/product/1729
 """
 
 import base64
@@ -21,52 +21,58 @@ from pydantic import BaseModel
 logger = logging.getLogger(__name__)
 
 
-class QwenVisionResponse(BaseModel):
-    """Response from Qwen vision model"""
+class HunyuanVisionResponse(BaseModel):
+    """Response from Hunyuan vision model"""
 
     content: str
     raw_response: Any
     usage: dict[str, Any] = {}
 
 
-class QwenVisionService:
+class HunyuanVisionService:
     """
-    阿里通义千问 Qwen-VL 多模态视觉服务
+    腾讯混元 Hunyuan-Vision 多模态视觉服务
 
     Environment Variables:
-    - DASHSCOPE_API_KEY: 阿里云 DashScope API密钥 (required)
-    - QWEN_VISION_MODEL: 视觉模型 (default: qwen3-vl-flash)
-    - QWEN_TIMEOUT: API timeout in seconds (default: 120)
+    - HUNYUAN_API_KEY: 腾讯混元 API密钥 (required)
+    - HUNYUAN_BASE_URL: API基础地址 (default: OpenAI兼容接口)
+    - HUNYUAN_VISION_MODEL: 视觉模型 (default: hunyuan-vision)
+    - HUNYUAN_TIMEOUT: API timeout in seconds (default: 120)
 
-    Available Models (2026.01 最新):
-    - qwen3-vl-flash: 性价比最高 $0.05/M输入 (推荐)
-    - qwen-vl-max: 最强视觉理解 $0.23/M输入
-    - qwen-vl-plus: 平衡性价比 $0.08/M输入
+    Available Models (2026.01):
+    - hunyuan-vision: 通用视觉理解
+    - hunyuan-t1-vision: 深度思考视觉模型
+    - hunyuan-vision-1.5-instruct: 增强版图生文
+    - hunyuan-large-vision: 基于混元Large的视觉语言模型
+
+    Pricing:
+    - 新用户免费100万Tokens
+    - 后付费按Token计费
     """
 
-    DEFAULT_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    DEFAULT_BASE_URL = "https://api.hunyuan.cloud.tencent.com/v1"
 
     def __init__(self):
         # 优先使用 centralized config，fallback 到环境变量
         try:
             from src.core.config import settings
-            self.api_key = settings.DASHSCOPE_API_KEY or os.getenv("DASHSCOPE_API_KEY")
-            self.base_url = settings.DASHSCOPE_BASE_URL or os.getenv("DASHSCOPE_BASE_URL", self.DEFAULT_BASE_URL)
-            self.model = settings.QWEN_VISION_MODEL or os.getenv("QWEN_VISION_MODEL", "qwen3-vl-flash")
+            self.api_key = settings.HUNYUAN_API_KEY or os.getenv("HUNYUAN_API_KEY")
+            self.base_url = settings.HUNYUAN_BASE_URL or os.getenv("HUNYUAN_BASE_URL", self.DEFAULT_BASE_URL)
+            self.model = settings.HUNYUAN_VISION_MODEL or os.getenv("HUNYUAN_VISION_MODEL", "hunyuan-vision")
         except ImportError:
             # Fallback for standalone usage
-            self.api_key = os.getenv("DASHSCOPE_API_KEY")
-            self.base_url = os.getenv("DASHSCOPE_BASE_URL", self.DEFAULT_BASE_URL)
-            self.model = os.getenv("QWEN_VISION_MODEL", "qwen3-vl-flash")
+            self.api_key = os.getenv("HUNYUAN_API_KEY")
+            self.base_url = os.getenv("HUNYUAN_BASE_URL", self.DEFAULT_BASE_URL)
+            self.model = os.getenv("HUNYUAN_VISION_MODEL", "hunyuan-vision")
         
-        self.timeout = int(os.getenv("QWEN_TIMEOUT", "120"))
+        self.timeout = int(os.getenv("HUNYUAN_TIMEOUT", "120"))
 
         if not self.api_key:
             logger.warning(
-                "DASHSCOPE_API_KEY not set, Qwen vision service will be disabled"
+                "HUNYUAN_API_KEY not set, Hunyuan vision service will be disabled"
             )
         else:
-            logger.info(f"QwenVisionService initialized with model: {self.model}")
+            logger.info(f"HunyuanVisionService initialized with model: {self.model}")
 
     @property
     def is_available(self) -> bool:
@@ -100,25 +106,21 @@ class QwenVisionService:
         prompt: str,
         temperature: float = 0.1,
         max_tokens: int = 4096,
-    ) -> QwenVisionResponse:
+    ) -> HunyuanVisionResponse:
         """
-        Send images to Qwen-VL for contract extraction.
+        Send images to Hunyuan-Vision for contract extraction.
 
         Args:
             image_paths: List of image file paths (PNG/JPG)
-            prompt: Extraction prompt (Chinese preferred)
+            prompt: Extraction prompt
             temperature: Model temperature (0.0-1.0)
             max_tokens: Maximum tokens in response
 
         Returns:
-            QwenVisionResponse with extracted content
-
-        Raises:
-            RuntimeError: If API key not configured
-            httpx.HTTPStatusError: If API request fails
+            HunyuanVisionResponse with extracted content
         """
         if not self.is_available:
-            raise RuntimeError("DASHSCOPE_API_KEY not configured")
+            raise RuntimeError("HUNYUAN_API_KEY not configured")
 
         # Build multimodal content array (OpenAI-compatible format)
         content: list[dict[str, Any]] = []
@@ -133,7 +135,6 @@ class QwenVisionService:
                 }
             )
 
-        # Add text prompt
         content.append({"type": "text", "text": prompt})
 
         headers = {
@@ -161,29 +162,29 @@ class QwenVisionService:
                 result_content = data["choices"][0]["message"]["content"]
                 usage = data.get("usage", {})
 
-                logger.info(f"Qwen vision extraction complete. Tokens used: {usage}")
+                logger.info(f"Hunyuan vision extraction complete. Tokens: {usage}")
 
-                return QwenVisionResponse(
+                return HunyuanVisionResponse(
                     content=result_content, raw_response=data, usage=usage
                 )
 
         except httpx.HTTPStatusError as e:
             logger.error(
-                f"DashScope API error: {e.response.status_code} - {e.response.text}"
+                f"Hunyuan API error: {e.response.status_code} - {e.response.text}"
             )
             raise
         except Exception as e:
-            logger.error(f"Qwen vision extraction failed: {e}")
+            logger.error(f"Hunyuan vision extraction failed: {e}")
             raise
 
 
 # Singleton instance
-_qwen_vision_service: QwenVisionService | None = None
+_hunyuan_vision_service: HunyuanVisionService | None = None
 
 
-def get_qwen_vision_service() -> QwenVisionService:
-    """Get or create singleton QwenVisionService instance"""
-    global _qwen_vision_service
-    if _qwen_vision_service is None:
-        _qwen_vision_service = QwenVisionService()
-    return _qwen_vision_service
+def get_hunyuan_vision_service() -> HunyuanVisionService:
+    """Get or create singleton HunyuanVisionService instance"""
+    global _hunyuan_vision_service
+    if _hunyuan_vision_service is None:
+        _hunyuan_vision_service = HunyuanVisionService()
+    return _hunyuan_vision_service

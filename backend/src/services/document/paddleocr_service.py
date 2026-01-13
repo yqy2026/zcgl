@@ -1,8 +1,16 @@
 #!/usr/bin/env python3
 """
-PaddleOCR 3.3 服务模块
+PaddleOCR 3.3 服务模块 [DEPRECATED]
 封装 PP-StructureV3 版面分析和 OCR 能力
 支持中文合同的智能识别和结构化输出
+
+⚠️ DEPRECATED (2026-01):
+    本模块已被标记为废弃。推荐使用 LLM Vision 提取方案：
+    - Qwen3-VL-Flash (推荐): services/core/qwen_vision_service.py
+    - DeepSeek-OCR: services/core/deepseek_vision_service.py
+    - Zhipu GLM-4V: services/core/zhipu_vision_service.py
+    
+    使用 extractors/factory.py 进行统一调用。
 
 依赖安装: uv sync --extra pdf-ocr
 """

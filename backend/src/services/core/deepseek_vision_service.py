@@ -50,9 +50,18 @@ class DeepSeekVisionService:
     DEFAULT_BASE_URL = "https://api.deepseek.com/v1"
 
     def __init__(self):
-        self.api_key = os.getenv("DEEPSEEK_API_KEY")
-        self.base_url = os.getenv("DEEPSEEK_BASE_URL", self.DEFAULT_BASE_URL)
-        self.model = os.getenv("DEEPSEEK_VISION_MODEL", "deepseek-vl")
+        # 优先使用 centralized config，fallback 到环境变量
+        try:
+            from src.core.config import settings
+            self.api_key = settings.DEEPSEEK_API_KEY or os.getenv("DEEPSEEK_API_KEY")
+            self.base_url = settings.DEEPSEEK_BASE_URL or os.getenv("DEEPSEEK_BASE_URL", self.DEFAULT_BASE_URL)
+            self.model = settings.DEEPSEEK_VISION_MODEL or os.getenv("DEEPSEEK_VISION_MODEL", "deepseek-vl")
+        except ImportError:
+            # Fallback for standalone usage
+            self.api_key = os.getenv("DEEPSEEK_API_KEY")
+            self.base_url = os.getenv("DEEPSEEK_BASE_URL", self.DEFAULT_BASE_URL)
+            self.model = os.getenv("DEEPSEEK_VISION_MODEL", "deepseek-vl")
+        
         self.timeout = int(os.getenv("DEEPSEEK_TIMEOUT", "120"))
 
         if not self.api_key:

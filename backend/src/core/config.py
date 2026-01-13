@@ -267,10 +267,10 @@ class Settings(BaseSettings):
         json_schema_extra={"env": "OCR_PROVIDER"},
     )
 
-    # LLM Provider Configuration
+    # LLM Provider Configuration (2026.01 更新)
     LLM_PROVIDER: str = Field(
-        default="glm-4v",
-        description="LLM provider: glm-4v, qwen-vl-max, deepseek-vl",
+        default="qwen",
+        description="LLM provider: qwen (推荐), deepseek, glm. 默认使用 qwen3-vl-flash ($0.05/M)",
         json_schema_extra={"env": "LLM_PROVIDER"},
     )
 
@@ -280,6 +280,16 @@ class Settings(BaseSettings):
         description="阿里云 DashScope API Key for Qwen-VL",
         json_schema_extra={"env": "DASHSCOPE_API_KEY"},
     )
+    DASHSCOPE_BASE_URL: str = Field(
+        default="https://dashscope.aliyuncs.com/compatible-mode/v1",
+        description="DashScope API 基础地址",
+        json_schema_extra={"env": "DASHSCOPE_BASE_URL"},
+    )
+    QWEN_VISION_MODEL: str = Field(
+        default="qwen3-vl-flash",
+        description="Qwen 视觉模型: qwen3-vl-flash (便宜), qwen-vl-max (最强)",
+        json_schema_extra={"env": "QWEN_VISION_MODEL"},
+    )
 
     # DeepSeek Configuration
     DEEPSEEK_API_KEY: str | None = Field(
@@ -287,12 +297,49 @@ class Settings(BaseSettings):
         description="DeepSeek API Key for DeepSeek-VL",
         json_schema_extra={"env": "DEEPSEEK_API_KEY"},
     )
+    DEEPSEEK_BASE_URL: str = Field(
+        default="https://api.deepseek.com/v1",
+        description="DeepSeek API 基础地址",
+        json_schema_extra={"env": "DEEPSEEK_BASE_URL"},
+    )
+    DEEPSEEK_VISION_MODEL: str = Field(
+        default="deepseek-vl",
+        description="DeepSeek 视觉模型",
+        json_schema_extra={"env": "DEEPSEEK_VISION_MODEL"},
+    )
 
     # GLM/Zhipu Configuration
     ZHIPU_API_KEY: str | None = Field(
         default=None,
         description="智谱 AI API Key for GLM-4V",
         json_schema_extra={"env": "ZHIPU_API_KEY"},
+    )
+    ZHIPU_BASE_URL: str = Field(
+        default="https://open.bigmodel.cn/api/paas/v4",
+        description="智谱 AI API 基础地址",
+        json_schema_extra={"env": "ZHIPU_BASE_URL"},
+    )
+    ZHIPU_VISION_MODEL: str = Field(
+        default="glm-4v",
+        description="智谱视觉模型: glm-4v, glm-4v-flash, glm-4v-plus, glm-4.6v-flash",
+        json_schema_extra={"env": "ZHIPU_VISION_MODEL"},
+    )
+
+    # Tencent Hunyuan Configuration (2026-01 新增)
+    HUNYUAN_API_KEY: str | None = Field(
+        default=None,
+        description="腾讯混元 API Key",
+        json_schema_extra={"env": "HUNYUAN_API_KEY"},
+    )
+    HUNYUAN_BASE_URL: str = Field(
+        default="https://api.hunyuan.cloud.tencent.com/v1",
+        description="腾讯混元 API 基础地址 (OpenAI 兼容)",
+        json_schema_extra={"env": "HUNYUAN_BASE_URL"},
+    )
+    HUNYUAN_VISION_MODEL: str = Field(
+        default="hunyuan-vision",
+        description="腾讯混元视觉模型: hunyuan-vision, hunyuan-t1-vision",
+        json_schema_extra={"env": "HUNYUAN_VISION_MODEL"},
     )
 
     # ========================================================================
