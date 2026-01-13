@@ -46,10 +46,10 @@ async def test_statistics(
         }
 
     except Exception as e:
-        print(f"[ERROR] 测试统计API失败: {e}")
+        logger.error(f"测试统计API失败: {e}")
         import traceback
 
-        print(f"[ERROR] 详细错误: {traceback.format_exc()}")
+        logger.error(f"详细错误: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"测试失败: {str(e)}")
 
 
@@ -62,7 +62,7 @@ async def get_asset_statistics(
     """
     try:
         # 添加调试信息
-        print(
+        logger.debug(
             f"开始执行资产统计查询，"
             f"用户: {current_user.username if current_user else 'unknown'}"
         )
@@ -71,7 +71,7 @@ async def get_asset_statistics(
         try:
             db.execute(text("SELECT 1"))
         except Exception as e:
-            print(f"[ERROR] 数据库连接检查失败: {e}")
+            logger.error(f"数据库连接检查失败: {e}")
             raise HTTPException(status_code=500, detail="数据库连接失败")
 
         # 总资产数 - 直接查询避免缓存问题
@@ -177,8 +177,8 @@ async def get_asset_statistics(
         import traceback
 
         error_detail = traceback.format_exc()
-        print(f"[ERROR] 资产统计查询失败: {str(e)}")
-        print(f"[ERROR] 详细错误信息: {error_detail}")
+        logger.error(f"资产统计查询失败: {str(e)}")
+        logger.error(f"详细错误信息: {error_detail}")
         raise HTTPException(
             status_code=500,
             detail=f"获取统计信息失败: {str(e)}. 请检查数据库连接和表结构。",
@@ -241,8 +241,8 @@ async def get_asset_area_statistics(
         import traceback
 
         error_detail = traceback.format_exc()
-        print(f"[ERROR] 面积统计查询失败: {str(e)}")
-        print(f"[ERROR] 详细错误信息: {error_detail}")
+        logger.error(f"面积统计查询失败: {str(e)}")
+        logger.error(f"详细错误信息: {error_detail}")
         raise HTTPException(
             status_code=500,
             detail=f"获取面积统计信息失败: {str(e)}. 请检查数据库连接和表结构。",

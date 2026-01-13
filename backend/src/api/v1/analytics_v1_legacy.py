@@ -33,14 +33,14 @@ from ...database import get_db
 from ...middleware.auth import get_current_active_user
 from ...models.auth import User
 
+logger = logging.getLogger(__name__)
+
 # 强制重新加载标记 - 2025-10-30 06:30 - VERSION 2
-print(
-    "[ANALYTICS] Analytics module loaded - CacheManager has get_stats:",
+logger.debug(
+    "Analytics module loaded - CacheManager has get_stats: %s",
     hasattr(analytics_cache, "get_stats"),
 )
-print("[ANALYTICS] VERSION 2 - RELOAD TRIGGERED")
-
-logger = logging.getLogger(__name__)
+logger.debug("ANALYTICS VERSION 2 - RELOAD TRIGGERED")
 
 router = APIRouter()
 
