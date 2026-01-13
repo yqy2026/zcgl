@@ -11,11 +11,14 @@ Provides multi-document-type support with unified LLM Vision entry point
 import logging
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
 
 from .extractors.factory import ExtractorFactory
+
+if TYPE_CHECKING:
+    from .extractors.property_cert_adapter import PropertyCertAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -114,6 +117,10 @@ class DocumentExtractionManager:
     - 结果标准化
     """
 
+    _contract_extractor: Any
+    _property_cert_extractor: PropertyCertAdapter | None
+    classifier: KeywordClassifier
+
     def __init__(self) -> None:
         # 默认使用合同提取器
         self._contract_extractor = ExtractorFactory.get_extractor()
@@ -121,12 +128,12 @@ class DocumentExtractionManager:
         self.classifier = KeywordClassifier()
         logger.info("DocumentExtractionManager initialized")
 
-    def _get_property_cert_extractor(self):
+    def _get_property_cert_extractor(self) -> Any:
         """懒加载产权证提取器"""
         if self._property_cert_extractor is None:
             from .extractors.property_cert_adapter import PropertyCertAdapter
 
-            self._property_cert_extractor = PropertyCertAdapter()
+            self._property_cert_extractor = PropertyCertAdapter()  # type: ignore[no-untyped-call]
         return self._property_cert_extractor
 
     async def extract(

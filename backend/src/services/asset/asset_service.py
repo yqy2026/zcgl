@@ -1,3 +1,5 @@
+from typing import Any
+
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
@@ -19,7 +21,7 @@ class AssetService:
         skip: int = 0,
         limit: int = 100,
         search: str | None = None,
-        filters: dict | None = None,
+        filters: dict[str, Any] | None = None,
         sort_field: str = "created_at",
         sort_order: str = "desc",
     ) -> tuple[list[Asset], int]:

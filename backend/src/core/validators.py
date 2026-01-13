@@ -86,7 +86,7 @@ class BaseValidator:
         return isinstance(value, (int, float)) and 0 <= value <= 100
 
     @staticmethod
-    def validate_length(text: str, min_length: int = 0, max_length: int = None) -> bool:
+    def validate_length(text: str, min_length: int = 0, max_length: int | None = None) -> bool:
         """验证文本长度"""
         if len(text) < min_length:
             return False
@@ -362,7 +362,7 @@ class RentContractValidator(BaseValidator):
 class ValidationMixin:
     """验证混入类"""
 
-    def validate_and_raise(self, errors: list[str], context: str = "数据验证"):
+    def validate_and_raise(self, errors: list[str], context: str = "数据验证") -> None:
         """验证并抛出异常"""
         if errors:
             from ..exceptions import BusinessLogicError

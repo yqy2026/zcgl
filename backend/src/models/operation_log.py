@@ -56,5 +56,5 @@ class OperationLog(Base):
         DateTime, nullable=False, default=datetime.now, comment="创建时间"
     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<OperationLog(user={self.username}, action={self.action}, resource={self.resource_type}:{self.resource_id})>"

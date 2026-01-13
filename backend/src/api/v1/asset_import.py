@@ -8,11 +8,13 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from typing import Any
 
 from ...crud.asset import asset_crud
 from ...crud.history import history_crud
 from ...database import get_db
 from ...middleware.auth import require_permission
+from ...models.asset import Asset
 from ...models.auth import User
 from ...schemas.asset import (
     AssetCreate,
@@ -89,10 +91,12 @@ async def import_assets(
                     continue
 
                 # 根据模式处理数据
+                new_asset: Asset | None = None
                 if request.import_mode == "create":
                     # 创建新资产
                     asset_create = AssetCreate(**asset_data)
                     new_asset = asset_crud.create(db=db, obj_in=asset_create)
+                    assert new_asset is not None  # for mypy
                     imported_assets.append(new_asset.id)
                     success_count += 1
 
@@ -124,6 +128,7 @@ async def import_assets(
                     # 创建新资产（默认情况）
                     asset_create = AssetCreate(**asset_data)
                     new_asset = asset_crud.create(db=db, obj_in=asset_create)
+                    assert new_asset is not None  # for mypy
                     imported_assets.append(new_asset.id)
                     success_count += 1
 

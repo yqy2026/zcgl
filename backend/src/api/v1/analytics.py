@@ -9,6 +9,7 @@ Version: 2026-01-04 - Service层重构版
 """
 
 import logging
+from typing import Any
 
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse
@@ -49,7 +50,7 @@ async def get_comprehensive_analytics(
     """
     try:
         # 构建筛选条件
-        filters = {
+        filters: dict[str, Any] = {
             "include_deleted": include_deleted,
         }
 

@@ -22,7 +22,7 @@ async def health_check():
 
 
 @router.post("/database/reset")
-async def reset_database(current_user: dict[str, Any] = Depends(require_admin)):
+async def reset_database(current_user: dict[str, Any] = Depends(require_admin)) -> dict[str, Any]:
     """
     重置数据库（仅管理员）
     """

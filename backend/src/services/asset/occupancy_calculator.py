@@ -88,11 +88,13 @@ class OccupancyRateCalculator:
 
             # 使用数据库聚合计算，避免在内存中加载所有数据
             from sqlalchemy import func
+            from sqlalchemy.orm import Session
 
             from ...database import get_db
 
             # 获取数据库连接
-            db = next(get_db())
+            db_gen = get_db()
+            db: Session = next(db_gen)
 
             try:
                 from sqlalchemy import case
@@ -164,7 +166,7 @@ class OccupancyRateCalculator:
                 return {}
 
             # 按分类分组
-            categories = {}
+            categories: dict[str, Any] = {}
             for asset in assets:
                 category_value = getattr(asset, category_field, None) or "未知"
                 if category_value not in categories:
