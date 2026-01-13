@@ -17,6 +17,7 @@ PaddleOCR 3.3 服务模块 [DEPRECATED]
 
 import logging
 from pathlib import Path
+from threading import Lock
 from typing import Any
 
 # 使用项目的 safe_import 机制进行依赖管理
@@ -39,9 +40,6 @@ except ImportError:
         import importlib
 
         return importlib.import_module(module_path)
-
-    class DependencyPolicy:
-        STRICT = "strict"
 
 
 logger = logging.getLogger(__name__)
@@ -228,7 +226,7 @@ class PaddleOCRService:
                 "structure": [],
             }
 
-    def _parse_structure_result(self, result: list) -> dict[str, Any]:
+    def _parse_structure_result(self, result: list[Any]) -> dict[str, Any]:
         """
         解析 PP-StructureV3 返回结果
 
@@ -285,7 +283,7 @@ class PaddleOCRService:
             "page_count": len(result),
         }
 
-    def _extract_text_from_item(self, item: dict) -> str:
+    def _extract_text_from_item(self, item: dict[str, Any]) -> str:
         """从结构项中提取文本"""
         res = item.get("res", [])
         if isinstance(res, list):
@@ -300,7 +298,7 @@ class PaddleOCRService:
             return "\n".join(texts)
         return str(res)
 
-    def _extract_table_cells(self, item: dict) -> list[list[str]]:
+    def _extract_table_cells(self, item: dict[str, Any]) -> list[list[str]]:
         """从表格项中提取单元格数据"""
         res = item.get("res", {})
         if isinstance(res, dict):
@@ -353,6 +351,12 @@ class PaddleOCRService:
             }
 
         try:
+            if self._ocr_engine is None:
+                return {
+                    "success": False,
+                    "error": "OCR engine not initialized",
+                    "text": "",
+                }
             result = self._ocr_engine.ocr(str(file_path), cls=True)
 
             # 合并所有文本
@@ -470,11 +474,11 @@ class PaddleOCRService:
 
 
 # 单例实例和线程锁
-_paddleocr_service = None
-_paddleocr_lock = None
+_paddleocr_service: PaddleOCRService | None = None
+_paddleocr_lock: Lock | None = None
 
 
-def _get_lock():
+def _get_lock() -> Lock:
     """延迟初始化锁（避免模块导入时创建）"""
     global _paddleocr_lock
     if _paddleocr_lock is None:

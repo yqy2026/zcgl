@@ -202,7 +202,12 @@ class OwnershipService:
         if not db_obj:
             raise ValueError(f"权属方ID {id} 不存在")
 
-        update_in = OwnershipUpdate(is_active=not db_obj.is_active)
+        update_in = OwnershipUpdate(
+            name=name or db_obj.name,
+            code=code or db_obj.code,
+            short_name=db_obj.short_name,
+            is_active=not db_obj.is_active,
+        )
         return self.update_ownership(db, db_obj=db_obj, obj_in=update_in)
 
 

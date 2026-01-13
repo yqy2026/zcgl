@@ -31,7 +31,7 @@ class EnumValidationService:
         self._cache_timestamps: dict[str, float] = {}
 
         # 验证统计信息
-        self._validation_stats: dict[str, dict] = defaultdict(
+        self._validation_stats: dict[str, dict[str, Any]] = defaultdict(
             lambda: {
                 "total_validations": 0,
                 "failures": 0,
@@ -48,12 +48,12 @@ class EnumValidationService:
         age = time.time() - self._cache_timestamps[enum_type_code]
         return age < self.CACHE_TTL
 
-    def _update_cache(self, enum_type_code: str, values: list[str]):
+    def _update_cache(self, enum_type_code: str, values: list[str]) -> None:
         """更新缓存"""
         self._cache[enum_type_code] = values
         self._cache_timestamps[enum_type_code] = time.time()
 
-    def invalidate_cache(self, enum_type_code: str | None = None):
+    def invalidate_cache(self, enum_type_code: str | None = None) -> None:
         """
         清除缓存
 
@@ -207,7 +207,9 @@ class EnumValidationService:
             stats["last_failure_context"] = context
             return False, error_msg
 
-    def get_validation_stats(self, enum_type_code: str | None = None) -> dict:
+    def get_validation_stats(
+        self, enum_type_code: str | None = None
+    ) -> dict[str, Any]:
         """
         获取验证统计信息
 
@@ -222,7 +224,7 @@ class EnumValidationService:
         else:
             return {k: dict(v) for k, v in self._validation_stats.items()}
 
-    def reset_validation_stats(self, enum_type_code: str | None = None):
+    def reset_validation_stats(self, enum_type_code: str | None = None) -> None:
         """
         重置验证统计信息
 
@@ -322,7 +324,9 @@ def validate_enum_value(
     return service.validate_value(enum_type_code, value, allow_empty, context)
 
 
-def get_enum_validation_stats(db: Session, enum_type_code: str | None = None) -> dict:
+def get_enum_validation_stats(
+    db: Session, enum_type_code: str | None = None
+) -> dict[str, Any]:
     """
     便捷函数：获取验证统计信息
 

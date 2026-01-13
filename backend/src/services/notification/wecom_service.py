@@ -5,6 +5,7 @@
 """
 
 import logging
+from typing import Any
 
 import httpx
 
@@ -16,7 +17,7 @@ logger = logging.getLogger(__name__)
 class WecomService:
     """企业微信服务"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.webhook_url = getattr(settings, "WECOM_WEBHOOK_URL", None)
         self.enabled = (
             getattr(settings, "WECOM_ENABLED", False) and self.webhook_url is not None
@@ -41,7 +42,7 @@ class WecomService:
 
         try:
             # 构建消息体
-            data = {"msgtype": "text", "text": {"content": message}}
+            data: dict[str, Any] = {"msgtype": "text", "text": {"content": message}}
 
             # 添加@用户
             if mentioned_list:
@@ -49,7 +50,9 @@ class WecomService:
 
             # 发送请求
             async with httpx.AsyncClient() as client:
-                response = await client.post(self.webhook_url, json=data, timeout=10.0)
+                response = await client.post(
+                    str(self.webhook_url), json=data, timeout=10.0
+                )
                 response.raise_for_status()
 
             result = response.json()
@@ -84,14 +87,16 @@ class WecomService:
 
         try:
             # 构建消息体
-            data = {
+            data: dict[str, Any] = {
                 "msgtype": "markdown",
                 "markdown": {"content": f"# {title}\n\n{content}"},
             }
 
             # 发送请求
             async with httpx.AsyncClient() as client:
-                response = await client.post(self.webhook_url, json=data, timeout=10.0)
+                response = await client.post(
+                    str(self.webhook_url), json=data, timeout=10.0
+                )
                 response.raise_for_status()
 
             result = response.json()

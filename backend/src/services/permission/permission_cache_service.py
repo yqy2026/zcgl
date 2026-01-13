@@ -5,7 +5,7 @@
 
 import json
 import logging
-from typing import Any
+from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ class PermissionCacheService:
 
             if cached:
                 logger.debug(f"Cache hit for user {user_id} permissions")
-                return json.loads(cached)
+                return cast(list[str], json.loads(cached))
 
             logger.debug(f"Cache miss for user {user_id} permissions")
             return None
@@ -95,7 +95,7 @@ class PermissionCacheService:
             logger.error(f"Error setting user permissions cache: {e}")
             return False
 
-    async def get_user_roles(self, user_id: int | str) -> list[dict] | None:
+    async def get_user_roles(self, user_id: int | str) -> list[dict[str, Any]] | None:
         """
         获取用户角色列表（从缓存）
 
@@ -114,7 +114,7 @@ class PermissionCacheService:
 
             if cached:
                 logger.debug(f"Cache hit for user {user_id} roles")
-                return json.loads(cached)
+                return cast(list[dict[str, Any]], json.loads(cached))
 
             logger.debug(f"Cache miss for user {user_id} roles")
             return None
@@ -125,7 +125,7 @@ class PermissionCacheService:
             )  # pragma: no cover
             return None  # pragma: no cover
 
-    async def set_user_roles(self, user_id: int | str, roles: list[dict]) -> bool:
+    async def set_user_roles(self, user_id: int | str, roles: list[dict[str, Any]]) -> bool:
         """
         设置用户角色缓存
 
@@ -323,7 +323,7 @@ def get_permission_cache_service() -> PermissionCacheService:
         redis_client = None
         try:
             try:
-                from ...core.cache_manager import get_cache_manager  # type: ignore
+                from ...core.cache_manager import get_cache_manager
 
                 cache_manager = get_cache_manager()
                 if cache_manager and cache_manager.redis:
@@ -339,7 +339,7 @@ def get_permission_cache_service() -> PermissionCacheService:
         # 从配置获取TTL
         ttl_seconds = 300  # 默认5分钟
         try:
-            from ...core.config import get_config  # type: ignore
+            from ...core.config import get_config
 
             ttl_seconds = get_config("permission_cache_ttl", 300)
         except Exception as e:  # pragma: no cover
@@ -354,7 +354,7 @@ def get_permission_cache_service() -> PermissionCacheService:
     return _permission_cache_service
 
 
-def set_permission_cache_service(service: PermissionCacheService):
+def set_permission_cache_service(service: PermissionCacheService) -> None:
     """设置权限缓存服务实例（用于测试）"""
     global _permission_cache_service
     _permission_cache_service = service

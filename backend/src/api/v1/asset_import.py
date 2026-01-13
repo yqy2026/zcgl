@@ -33,7 +33,7 @@ async def import_assets(
     request: AssetImportRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("asset", "create")),
-):
+) -> AssetImportResponse:
     """
     批量导入资产数据
 
@@ -50,13 +50,15 @@ async def import_assets(
         success_count = 0
         failed_count = 0
         total_count = len(request.data)
-        errors = []
-        imported_assets = []
+        errors: list[dict[str, Any]] = []
+        imported_assets: list[str] = []
 
         for index, asset_data in enumerate(request.data):
             try:
                 # 验证数据
-                validation_request = AssetValidationRequest(data=asset_data)
+                validation_request = AssetValidationRequest(
+                    data=asset_data, validate_rules=None
+                )
                 validation_result = await validate_asset_data(
                     validation_request, db, current_user
                 )
@@ -112,7 +114,7 @@ async def import_assets(
                     updated_asset = asset_crud.update(
                         db=db, db_obj=existing_asset, obj_in=asset_update
                     )
-                    imported_assets.append(updated_asset.id)
+                    imported_assets.append(str(updated_asset.id))
                     success_count += 1
 
                 elif request.import_mode == "update" and existing_asset:
@@ -121,7 +123,7 @@ async def import_assets(
                     updated_asset = asset_crud.update(
                         db=db, db_obj=existing_asset, obj_in=asset_update
                     )
-                    imported_assets.append(updated_asset.id)
+                    imported_assets.append(str(updated_asset.id))
                     success_count += 1
 
                 else:

@@ -27,8 +27,8 @@ async def reset_database(current_user: dict[str, Any] = Depends(require_admin)) 
     重置数据库（仅管理员）
     """
     try:  # pragma: no cover
-        drop_tables()  # pragma: no cover
-        create_tables()  # pragma: no cover
+        drop_tables()  # type: ignore[no-untyped-call]  # pragma: no cover
+        create_tables()  # type: ignore[no-untyped-call]  # pragma: no cover
         return {"message": "数据库重置成功"}  # pragma: no cover
     except Exception as e:  # pragma: no cover
         raise HTTPException(
