@@ -349,7 +349,7 @@ def _init_globals():
 Base: DeclarativeMeta = declarative_base()
 
 
-def get_db():
+def get_db() -> Generator[Session, None, None]:
     """获取数据库会话（FastAPI依赖注入）"""
     _init_globals()
     db_manager = _get_database_manager()

@@ -46,7 +46,7 @@ async def create_backup(
 
         # 从数据库连接获取数据库文件路径（SQLite）
         db_path: str | None = None
-        if hasattr(db.bind, "url") and db.bind.url is not None:
+        if db.bind is not None and hasattr(db.bind, "url") and db.bind.url is not None:
             db_url = str(db.bind.url)
             if db_url.startswith("sqlite:///"):
                 db_path = db_url.replace("sqlite:///", "")
@@ -135,7 +135,7 @@ async def restore_backup(
     backup_name: str,
     confirm: bool = Query(False, description="确认恢复操作"),
     db: Session = Depends(get_db),
-):
+) -> dict[str, Any]:
     """
     从备份文件恢复数据
 
@@ -158,7 +158,7 @@ async def restore_backup(
 
         # 从数据库连接获取数据库文件路径（SQLite）
         db_path: str | None = None
-        if hasattr(db.bind, "url") and db.bind.url is not None:
+        if db.bind is not None and hasattr(db.bind, "url") and db.bind.url is not None:
             db_url = str(db.bind.url)
             if db_url.startswith("sqlite:///"):
                 db_path = db_url.replace("sqlite:///", "")
@@ -187,7 +187,7 @@ async def restore_backup(
 
 
 @router.delete("/delete/{backup_name}", summary="删除备份文件")
-async def delete_backup(backup_name: str):
+async def delete_backup(backup_name: str) -> dict[str, Any]:
     """
     删除指定的备份文件
 
@@ -218,7 +218,7 @@ async def delete_backup(backup_name: str):
 
 
 @router.get("/stats", summary="获取备份统计信息")
-async def get_backup_stats():
+async def get_backup_stats() -> dict[str, Any]:
     """
     获取备份统计信息
 
@@ -240,7 +240,7 @@ async def get_backup_stats():
 
 
 @router.post("/validate/{backup_name}", summary="验证备份文件")
-async def validate_backup(backup_name: str):
+async def validate_backup(backup_name: str) -> dict[str, Any]:
     """
     验证备份文件的完整性
 
@@ -267,7 +267,7 @@ async def validate_backup(backup_name: str):
 @router.post("/cleanup", summary="清理旧备份")
 async def cleanup_old_backups(
     keep_count: int = Query(10, ge=1, le=100, description="保留的备份数量"),
-):
+) -> dict[str, Any]:
     """
     清理旧的备份文件，保留最新的 N 个
 

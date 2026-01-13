@@ -28,7 +28,7 @@ class AssetService:
         """
         获取资产列表，支持分页、搜索和筛选
         """
-        return asset_crud.get_multi_with_search(
+        result: tuple[list[Asset], int] = asset_crud.get_multi_with_search(
             self.db,
             skip=skip,
             limit=limit,
@@ -37,6 +37,7 @@ class AssetService:
             sort_field=sort_field,
             sort_order=sort_order,
         )
+        return result
 
     def get_asset(self, asset_id: str) -> Asset:
         """

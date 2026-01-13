@@ -22,7 +22,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         self.sensitive_filter = SensitiveDataFilter()  # type: ignore[no-untyped-call]
 
     async def dispatch(  # type: ignore[override]
-        self, request: Request, call_next: Callable[[Request], Awaitable[object]]
+        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
         # 生成请求ID
         request_id = str(uuid.uuid4())
@@ -48,7 +48,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
         # 对查询参数进行脱敏处理
         query_params = dict(request.query_params)
-        filtered_query_params = {}
+        filtered_query_params: dict[str, str] = {}
         for key, value in query_params.items():
             # 检查键是否敏感
             if self.sensitive_filter._is_sensitive_key(key):

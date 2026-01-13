@@ -669,7 +669,7 @@ def log_security_event(event_type: str, message: str, **kwargs):
     security_auditor.log_security_event(event_type, message, **kwargs)
 
 
-def log_request_info(**kwargs):
+def log_request_info(**kwargs: Any) -> None:
     """记录请求信息的便捷函数"""
     request_logger.log_request(**kwargs)
 
