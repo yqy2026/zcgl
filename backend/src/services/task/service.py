@@ -191,7 +191,7 @@ class TaskService:
         if not task:
             raise ValueError("任务不存在")
 
-        task.is_active = False  # type: ignore[assignment]
+        setattr(task, "is_active", False)
         db.add(task)
         db.commit()
 
@@ -264,7 +264,7 @@ class TaskService:
 
         count = 0
         for task in old_tasks:
-            task.is_active = False  # type: ignore[assignment]
+            setattr(task, "is_active", False)
             count += 1
 
         db.commit()
@@ -288,7 +288,7 @@ class TaskService:
             ).update({"is_default": False})
 
         # Delegating actual creation to CRUD but handling transaction
-        config: ExcelTaskConfig = excel_task_config_crud.create(  # type: ignore[no-any-return]
+        config: ExcelTaskConfig = excel_task_config_crud.create(
             db, obj_in=obj_in, user_id=user_id
         )
         # Note: CRUD might flush, we commit here

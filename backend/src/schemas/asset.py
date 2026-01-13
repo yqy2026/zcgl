@@ -116,7 +116,7 @@ class AssetBase(BaseModel):
         "deposit",
     )
     @classmethod
-    def validate_area(cls, v):
+    def validate_area(cls, v: Decimal | None) -> Decimal | None:
         if v is not None and v < 0:  # pragma: no cover
             raise ValueError("数值不能为负数")  # pragma: no cover
         return v  # pragma: no cover
@@ -125,14 +125,14 @@ class AssetBase(BaseModel):
 
     @field_validator("is_litigated")
     @classmethod
-    def validate_is_litigated(cls, v):
+    def validate_is_litigated(cls, v: bool) -> bool:
         if v is not None and not isinstance(v, bool):  # pragma: no cover
             raise ValueError("是否涉诉必须是布尔值")  # pragma: no cover
         return v  # pragma: no cover
 
     @field_validator("contract_end_date")
     @classmethod
-    def validate_contract_dates(cls, v, info):
+    def validate_contract_dates(cls, v: date | None, info: Any) -> date | None:
         if (
             v  # pragma: no cover
             and info.data.get("contract_start_date")  # pragma: no cover
@@ -143,7 +143,7 @@ class AssetBase(BaseModel):
 
     @field_validator("operation_agreement_end_date")
     @classmethod
-    def validate_agreement_dates(cls, v, info):
+    def validate_agreement_dates(cls, v: date | None, info: Any) -> date | None:
         if (
             v  # pragma: no cover
             and info.data.get("operation_agreement_start_date")  # pragma: no cover
@@ -261,7 +261,7 @@ class AssetUpdate(BaseModel):
         "deposit",
     )
     @classmethod
-    def validate_area(cls, v):
+    def validate_area(cls, v: Decimal | None) -> Decimal | None:
         if v is not None and v < 0:  # pragma: no cover
             raise ValueError("数值不能为负数")  # pragma: no cover
         return v  # pragma: no cover
@@ -270,7 +270,7 @@ class AssetUpdate(BaseModel):
 
     @field_validator("is_litigated")
     @classmethod
-    def validate_is_litigated(cls, v):
+    def validate_is_litigated(cls, v: bool | None) -> bool | None:
         if v is not None and not isinstance(v, bool):  # pragma: no cover
             raise ValueError("是否涉诉必须是布尔值")  # pragma: no cover
         return v  # pragma: no cover
@@ -486,7 +486,7 @@ class AssetCustomFieldUpdate(BaseModel):
 class CustomFieldValueUpdate(BaseModel):
     """自定义字段值更新模型"""
 
-    values: list[dict] = Field(..., description="字段值列表")
+    values: list[dict[str, Any]] = Field(..., description="字段值列表")
 
 
 class AssetCustomFieldResponse(BaseModel):
@@ -529,9 +529,11 @@ class AssetBatchUpdateResponse(BaseModel):
     success_count: int = Field(..., description="成功更新数量")
     failed_count: int = Field(..., description="失败数量")
     total_count: int = Field(..., description="总数量")
-    errors: list[dict] = Field(default_factory=list[Any], description="错误信息列表")
+    errors: list[dict[str, Any]] = Field(
+        default_factory=list, description="错误信息列表"
+    )
     updated_assets: list[str] = Field(
-        default_factory=list[Any], description="成功更新的资产ID"
+        default_factory=list, description="成功更新的资产ID"
     )
 
     model_config = ConfigDict(json_schema_extra={"example": {"description": "示例"}})
@@ -550,9 +552,15 @@ class AssetValidationResponse(BaseModel):
     """资产数据验证响应模型"""
 
     is_valid: bool = Field(..., description="是否通过验证")
-    errors: list[dict] = Field(default_factory=list[Any], description="错误信息列表")
-    warnings: list[dict] = Field(default_factory=list[Any], description="警告信息列表")
-    validated_fields: list[str] = Field(default_factory=list[Any], description="已验证字段")
+    errors: list[dict[str, Any]] = Field(
+        default_factory=list, description="错误信息列表"
+    )
+    warnings: list[dict[str, Any]] = Field(
+        default_factory=list, description="警告信息列表"
+    )
+    validated_fields: list[str] = Field(
+        default_factory=list, description="已验证字段"
+    )
 
     model_config = ConfigDict(json_schema_extra={"example": {"description": "示例"}})
 
@@ -560,7 +568,7 @@ class AssetValidationResponse(BaseModel):
 class AssetImportRequest(BaseModel):
     """资产导入请求模型"""
 
-    data: list[dict] = Field(..., description="待导入的资产数据列表")
+    data: list[dict[str, Any]] = Field(..., description="待导入的资产数据列表")
     import_mode: str = Field("create", description="导入模式：create/merge/update")
     skip_errors: bool = Field(False, description="是否跳过错误数据")
     dry_run: bool = Field(False, description="是否仅验证不实际导入")
@@ -574,9 +582,11 @@ class AssetImportResponse(BaseModel):
     success_count: int = Field(..., description="成功导入数量")
     failed_count: int = Field(..., description="失败数量")
     total_count: int = Field(..., description="总数量")
-    errors: list[dict] = Field(default_factory=list[Any], description="错误信息列表")
+    errors: list[dict[str, Any]] = Field(
+        default_factory=list, description="错误信息列表"
+    )
     imported_assets: list[str] = Field(
-        default_factory=list[Any], description="成功导入的资产ID"
+        default_factory=list, description="成功导入的资产ID"
     )
     import_id: str | None = Field(None, description="导入任务ID")
 
@@ -598,7 +608,9 @@ class BatchCustomFieldUpdateResponse(BaseModel):
     success_count: int = Field(..., description="成功更新数量")
     failed_count: int = Field(..., description="失败数量")
     total_count: int = Field(..., description="总数量")
-    errors: list[dict] = Field(default_factory=list[Any], description="错误信息列表")
+    errors: list[dict[str, Any]] = Field(
+        default_factory=list, description="错误信息列表"
+    )
 
     model_config = ConfigDict(json_schema_extra={"example": {"description": "示例"}})
 
@@ -613,7 +625,7 @@ class AssetCustomFieldAssignment(BaseModel):
 
     @field_validator("field_type")
     @classmethod
-    def validate_field_type(cls, v):
+    def validate_field_type(cls, v: str) -> str:
         if v not in ["text", "number", "date", "boolean"]:  # pragma: no cover
             raise ValueError(
                 "字段类型必须是text、number、date或boolean之一"

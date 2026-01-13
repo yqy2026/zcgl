@@ -32,28 +32,29 @@ class OrganizationService:
 
         # Create object
         db_obj = Organization(**obj_in.model_dump())
-        db_obj.level = level  # type: ignore[assignment]
+        db_obj.level = level
         # Temporary path until flush
-        db_obj.path = "/"  # type: ignore[assignment]
+        db_obj.path = "/"
 
         db.add(db_obj)
         db.flush()  # Get ID
 
         # Now set path
         if parent:
-            db_obj.path = (  # type: ignore[assignment]
+            db_obj.path = (
                 f"{parent.path}/{db_obj.id}"
                 if parent.path
                 else f"/{parent.id}/{db_obj.id}"
             )
         else:
-            db_obj.path = f"/{db_obj.id}"  # type: ignore[assignment]
+            db_obj.path = f"/{db_obj.id}"
 
         db.commit()
         db.refresh(db_obj)
 
         # 记录创建历史
-        self._create_history(db, db_obj.id, "create", created_by=obj_in.created_by)
+        org_id_value: str = getattr(db_obj, "id")
+        self._create_history(db, org_id_value, "create", created_by=obj_in.created_by)
 
         return db_obj
 
@@ -202,7 +203,8 @@ class OrganizationService:
                 return True
             parent = organization_crud.get(db, current_id)
             if parent:
-                current_id = parent.parent_id  # type: ignore[assignment]
+                parent_id_value: str | None = getattr(parent, "parent_id")
+                current_id = parent_id_value
             else:
                 current_id = None
         return False
@@ -210,10 +212,13 @@ class OrganizationService:
     def _update_children_path(self, db: Session, parent_org: Organization) -> None:
         """更新子组织路径"""
         parent_org_id: str = getattr(parent_org, "id")
+        parent_level: int = getattr(parent_org, "level")
+        parent_path: str = getattr(parent_org, "path")
         children = organization_crud.get_children(db, parent_org_id)
         for child in children:
-            child.level = parent_org.level + 1  # type: ignore[assignment]
-            child.path = f"{parent_org.path}/{child.id}"  # type: ignore[assignment]
+            setattr(child, "level", parent_level + 1)
+            child_id: str = getattr(child, "id")
+            setattr(child, "path", f"{parent_path}/{child_id}")
             db.commit()
             # 递归更新子组织的子组织
             self._update_children_path(db, child)

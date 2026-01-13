@@ -11,6 +11,7 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from ...core.config import settings
@@ -79,7 +80,7 @@ def _get_batch_status(batch_id: str) -> dict[str, Any] | None:
     return tracker.get_status(batch_id)
 
 
-def _update_batch_status(batch_id: str, status: str, **updates) -> None:
+def _update_batch_status(batch_id: str, status: str, **updates: Any) -> None:
     """更新批处理状态"""
     tracker = _get_batch_tracker()
     tracker.update_progress(batch_id, status=status)
@@ -119,7 +120,7 @@ async def batch_upload_pdfs(
     prefer_ocr: bool = Form(False),
     prefer_vision: bool = Form(False),
     auto_confirm: bool = Form(False),
-) -> dict[str, Any]:
+) -> JSONResponse:
     """
     批量上传 PDF 文件进行智能识别
 
@@ -174,7 +175,7 @@ async def batch_upload_pdfs(
     # 验证文件
     valid_files = []
     for file in files:
-        if not file.filename.lower().endswith(".pdf"):
+        if file.filename is None or not file.filename.lower().endswith(".pdf"):
             logger.warning(f"跳过非 PDF 文件: {file.filename}")
             continue
 
@@ -208,7 +209,7 @@ async def batch_upload_pdfs(
     )
 
     # 处理每个文件
-    service = PDFImportService()
+    service = PDFImportService()  # type: ignore[no-untyped-call]
     session_ids = []
 
     for file, content, file_size in valid_files:
@@ -286,7 +287,7 @@ async def batch_upload_pdfs(
 async def get_batch_status(
     batch_id: str,
     db: Session = Depends(get_db),
-) -> dict[str, Any]:
+) -> JSONResponse:
     """
     查询批处理状态
 
@@ -364,11 +365,11 @@ async def get_batch_status(
     )
 
 
-@router.get("/list[Any]")
+@router.get("/list")
 async def list_batches(
     status_filter: str | None = None,
     limit: int = 20,
-) -> dict[str, Any]:
+) -> JSONResponse:
     """
     列出批处理任务
 
@@ -421,7 +422,7 @@ async def list_batches(
 async def cancel_batch(
     batch_id: str,
     db: Session = Depends(get_db),
-) -> dict[str, Any]:
+) -> JSONResponse:
     """
     取消批处理任务
 
@@ -451,7 +452,7 @@ async def cancel_batch(
         )
 
     # 取消所有处理中的会话
-    service = PDFImportService()
+    service = PDFImportService()  # type: ignore[no-untyped-call]
     cancelled_count = 0
 
     for session_id in batch.get("session_ids", []):
@@ -480,7 +481,7 @@ async def cancel_batch(
 @router.delete("/cleanup")
 async def cleanup_completed_batches(
     older_than_hours: int = 24,
-) -> dict[str, Any]:
+) -> JSONResponse:
     """
     清理已完成的批处理记录
 
@@ -510,7 +511,7 @@ async def cleanup_completed_batches(
 # ============================================================================
 
 
-def _handle_task_exception(task: asyncio.Task, batch_id: str) -> None:
+def _handle_task_exception(task: asyncio.Task[None], batch_id: str) -> None:
     """
     处理后台任务异常
 
@@ -525,7 +526,7 @@ def _handle_task_exception(task: asyncio.Task, batch_id: str) -> None:
             )
 
             # 更新批处理状态为失败
-            async def _update_failed_status():
+            async def _update_failed_status() -> None:
                 _update_batch_status(
                     batch_id, BatchStatus.FAILED, error_message=str(exception)
                 )
@@ -553,7 +554,7 @@ async def _monitor_batch_progress(batch_id: str, db: Session) -> None:
     """
     from ...database import _get_database_manager
 
-    service = PDFImportService()
+    service = PDFImportService()  # type: ignore[no-untyped-call]
     db_manager = _get_database_manager()
     tracker = _get_batch_tracker()
 
@@ -617,7 +618,7 @@ async def _monitor_batch_progress(batch_id: str, db: Session) -> None:
 
 
 @router.get("/health")
-async def batch_health_check() -> dict[str, Any]:
+async def batch_health_check() -> JSONResponse:
     """
     批处理系统健康检查
 

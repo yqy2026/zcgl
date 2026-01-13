@@ -50,7 +50,7 @@ class ProcessingTracker:
         self.db = db
         self.session_id = session_id
         self._start_time = time.time()
-        self._step_start_time = None
+        self._step_start_time: float | None = None
 
     def get_session(self) -> PDFImportSession | None:
         """
@@ -378,8 +378,8 @@ def track_processing_step(
             pass
     """
 
-    def decorator(func: Callable) -> Callable:
-        async def wrapper(*args, **kwargs):
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
             tracker = ProcessingTracker(db, session_id)
 
             # 开始步骤
@@ -640,10 +640,13 @@ class BatchStatusTracker:
                 if not data:
                     return None
                 # 转换数字类型 (Redis 返回的值都是字符串)
-                return {
-                    k: int(v) if isinstance(v, str) and v.isdigit() else v
-                    for k, v in data.items()
-                }
+                result: dict[str, Any] = {}
+                for k, v in data.items():
+                    if isinstance(v, str) and v.isdigit():
+                        result[k] = int(v)
+                    else:
+                        result[k] = v
+                return result
             except Exception as e:
                 logger.error(f"Failed to get batch from Redis: {e}")
                 return None
@@ -711,10 +714,12 @@ class BatchStatusTracker:
                     if not data:
                         continue
                     # Redis 返回的值都是字符串，转换数字类型
-                    batch = {
-                        k: int(v) if isinstance(v, str) and v.isdigit() else v
-                        for k, v in data.items()
-                    }
+                    batch: dict[str, Any] = {}
+                    for k, v in data.items():
+                        if isinstance(v, str) and v.isdigit():
+                            batch[k] = int(v)
+                        else:
+                            batch[k] = v
                     if status_filter is None or batch.get("status") == status_filter:
                         batches.append(batch)
                     if len(batches) >= limit:
@@ -775,7 +780,7 @@ class BatchStatusTracker:
         Returns:
             统计信息字典
         """
-        stats = {
+        stats: dict[str, Any] = {
             "storage_type": "redis" if self._use_redis else "memory",
             "total_batches": 0,
             "active_batches": 0,
@@ -788,27 +793,39 @@ class BatchStatusTracker:
                 keys = list(self._redis_client.scan_iter(match="batch:status:*"))
                 stats["total_batches"] = len(keys)
                 # 统计各状态数量
+                active_count = 0
+                completed_count = 0
+                failed_count = 0
                 for key in keys:
                     status = self._redis_client.hget(key, "status")
                     if status == "pending" or status == "processing":
-                        stats["active_batches"] += 1
+                        active_count += 1
                     elif status == "completed":
-                        stats["completed_batches"] += 1
+                        completed_count += 1
                     elif status == "failed":
-                        stats["failed_batches"] += 1
+                        failed_count += 1
+                stats["active_batches"] = active_count
+                stats["completed_batches"] = completed_count
+                stats["failed_batches"] = failed_count
             except Exception as e:
                 logger.error(f"Failed to get stats from Redis: {e}")
         else:
             batches = list(self._fallback_store.values())
             stats["total_batches"] = len(batches)
+            active_count = 0
+            completed_count = 0
+            failed_count = 0
             for batch in batches:
                 status = batch.get("status")
                 if status in ("pending", "processing"):
-                    stats["active_batches"] += 1
+                    active_count += 1
                 elif status == "completed":
-                    stats["completed_batches"] += 1
+                    completed_count += 1
                 elif status == "failed":
-                    stats["failed_batches"] += 1
+                    failed_count += 1
+            stats["active_batches"] = active_count
+            stats["completed_batches"] = completed_count
+            stats["failed_batches"] = failed_count
 
         return stats
 

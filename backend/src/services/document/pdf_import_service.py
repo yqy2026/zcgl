@@ -151,7 +151,7 @@ class PDFImportService:
 
         return {"success": True, "message": "Processing started"}
 
-    def _handle_task_completion(self, task: asyncio.Task) -> None:
+    def _handle_task_completion(self, task: asyncio.Task[Any]) -> None:
         """
         任务完成回调
         捕获未被处理的异常并记录到日志
@@ -435,15 +435,15 @@ class PDFImportService:
     CONFIDENCE_WEIGHT_EXTRACTION = 0.3
     CONFIDENCE_MAX_SCORE = 0.95
 
-    def _get_extracted_fields(self, smart_result: dict) -> dict:
+    def _get_extracted_fields(self, smart_result: dict[str, Any]) -> dict[str, Any]:
         """从智能提取结果中获取字段"""
         return smart_result.get("raw_llm_json") or smart_result.get(
             "extracted_fields", {}
         )
 
     def _fill_missing_fields_with_regex(
-        self, extracted: dict, regex_result: dict | None
-    ) -> tuple[dict, int]:
+        self, extracted: dict[str, Any], regex_result: dict[str, Any] | None
+    ) -> tuple[dict[str, Any], int]:
         """
         使用正则提取结果填补缺失字段
 
@@ -470,7 +470,7 @@ class PDFImportService:
         )
 
     def _calculate_confidence(
-        self, smart_result: dict, extraction_rate: float
+        self, smart_result: dict[str, Any], extraction_rate: float
     ) -> float:
         """计算综合置信度分数"""
         base_confidence = (
@@ -484,8 +484,8 @@ class PDFImportService:
         return min(self.CONFIDENCE_MAX_SCORE, weighted_confidence)
 
     def _merge_smart_results(
-        self, smart_result: dict, regex_result: dict | None
-    ) -> dict:
+        self, smart_result: dict[str, Any], regex_result: dict[str, Any] | None
+    ) -> dict[str, Any]:
         """
         合并智能提取结果与正则验证结果
 
@@ -518,7 +518,7 @@ class PDFImportService:
             "source": "smart_extraction",
         }
 
-    def _merge_results(self, regex_result: dict, llm_result: dict) -> dict:
+    def _merge_results(self, regex_result: dict[str, Any], llm_result: dict[str, Any]) -> dict[str, Any]:
         """
         合并策略: LLM 优先，正则补充
 
@@ -548,7 +548,7 @@ class PDFImportService:
         self,
         db: Session,
         session_id: str,
-        confirmed_data: dict,
+        confirmed_data: dict[str, Any],
         user_id: int,
     ) -> dict[str, Any]:
         """

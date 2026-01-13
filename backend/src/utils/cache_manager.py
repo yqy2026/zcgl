@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Callable
 
 """
 缓存管理模块
@@ -37,13 +37,13 @@ logger = logging.getLogger(__name__)
 class CacheManager:
     """缓存管理器 - 支持Redis和内存缓存后备"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.redis_client: Redis | None = None
         self.memory_cache: dict[str, Any] = {}
-        self.memory_cache_expiry: dict[str, Any] = {}
+        self.memory_cache_expiry: dict[str, datetime] = {}
         self.use_memory_fallback = True
 
-    async def initialize(self):
+    async def initialize(self) -> None:
         """初始化Redis连接"""
         if not REDIS_AVAILABLE:
             logger.warning("Redis库未安装，使用内存缓存")
@@ -60,7 +60,8 @@ class CacheManager:
                 socket_connect_timeout=5,
             )
             # 测试连接
-            await self.redis_client.ping()
+            if self.redis_client is not None:
+                await self.redis_client.ping()
             logger.info("Redis缓存连接成功")
         except Exception as e:
             logger.warning(f"Redis连接失败: {e}")
@@ -70,7 +71,7 @@ class CacheManager:
             else:
                 logger.warning("缓存功能已禁用")
 
-    def _clean_expired_memory_cache(self):
+    def _clean_expired_memory_cache(self) -> None:
         """清理过期的内存缓存"""
         current_time = datetime.now()
         expired_keys = [
@@ -82,7 +83,7 @@ class CacheManager:
             self.memory_cache.pop(key, None)
             self.memory_cache_expiry.pop(key, None)
 
-    async def close(self):
+    async def close(self) -> None:
         """关闭Redis连接"""
         if self.redis_client:
             await self.redis_client.close()
@@ -192,7 +193,7 @@ class CacheManager:
 
 
 # 全局缓存管理器实例
-cache_manager = CacheManager()
+cache_manager: CacheManager = CacheManager()
 
 
 async def get_cache_manager() -> CacheManager:
@@ -200,7 +201,7 @@ async def get_cache_manager() -> CacheManager:
     return cache_manager
 
 
-def cache_key_builder(func_name: str, **kwargs) -> str:
+def cache_key_builder(func_name: str, **kwargs: Any) -> str:
     """构建缓存键"""
     # 过滤掉不需要包含在缓存键中的参数
     filtered_kwargs = {
@@ -220,12 +221,14 @@ def cache_key_builder(func_name: str, **kwargs) -> str:
 class CacheDecorator:
     """缓存装饰器 - 支持同步和异步函数"""
 
-    def __init__(self, prefix: str, expire: int = 3600, key_builder=None):
+    def __init__(
+        self, prefix: str, expire: int = 3600, key_builder: Callable[..., str] | None = None
+    ) -> None:
         self.prefix = prefix
         self.expire = expire
         self.key_builder = key_builder or cache_key_builder
 
-    def __call__(self, func):
+    def __call__(self, func: Callable[..., Any]) -> Callable[..., Any]:
         # 检测函数是否为异步函数
         import asyncio
 
@@ -233,7 +236,7 @@ class CacheDecorator:
 
         if is_async_func:
             # 异步函数的处理逻辑
-            async def async_wrapper(*args, **kwargs):
+            async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
                 # 构建缓存键
                 cache_key = self.key_builder(func.__name__, **kwargs)
 
@@ -253,7 +256,7 @@ class CacheDecorator:
             return async_wrapper
         else:
             # 同步函数的处理逻辑
-            def sync_wrapper(*args, **kwargs):
+            def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
                 # 构建缓存键
                 self.key_builder(func.__name__, **kwargs)
 
@@ -269,16 +272,16 @@ class CacheDecorator:
 
 
 # 常用缓存装饰器
-def cache_statistics(expire: int = 1800):  # 30分钟
+def cache_statistics(expire: int = 1800) -> CacheDecorator:  # 30分钟
     """统计数据缓存"""
     return CacheDecorator("statistics", expire)
 
 
-def cache_assets(expire: int = 3600):  # 1小时
+def cache_assets(expire: int = 3600) -> CacheDecorator:  # 1小时
     """资产数据缓存"""
     return CacheDecorator("assets", expire)
 
 
-def cache_dictionary(expire: int = 7200):  # 2小时
+def cache_dictionary(expire: int = 7200) -> CacheDecorator:  # 2小时
     """字典数据缓存"""
     return CacheDecorator("dictionary", expire)
