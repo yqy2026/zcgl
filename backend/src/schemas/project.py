@@ -3,6 +3,7 @@
 """
 
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -44,7 +45,7 @@ class ProjectBase(BaseModel):
 
     @field_validator("code")
     @classmethod
-    def validate_code(cls, v):
+    def validate_code(cls, v: str | None) -> str | None:
         """验证项目编码格式"""
         if v is not None:  # pragma: no cover
             # 验证编码格式：[前缀][年月][序号]
@@ -62,7 +63,7 @@ class ProjectBase(BaseModel):
 class ProjectCreate(ProjectBase):
     """创建项目模式"""
 
-    ownership_relations: list[dict] | None = Field(None, title="权属方关系")
+    ownership_relations: list[dict[str, Any]] | None = Field(None, title="权属方关系")
     ownership_ids: list[str] | None = Field(None, title="权属方ID列表")
 
 
@@ -100,12 +101,12 @@ class ProjectUpdate(BaseModel):
     supervision_company: str | None = Field(None, title="监理单位", max_length=200)
     is_active: bool | None = Field(None, title="是否启用")
     data_status: str | None = Field(None, title="数据状态", max_length=20)
-    ownership_relations: list[dict] | None = Field(None, title="权属方关系")
+    ownership_relations: list[dict[str, Any]] | None = Field(None, title="权属方关系")
     ownership_ids: list[str] | None = Field(None, title="权属方ID列表")
 
     @field_validator("code")
     @classmethod
-    def validate_code(cls, v):
+    def validate_code(cls, v: str | None) -> str | None:
         """验证项目编码格式"""
         if v is not None:  # pragma: no cover
             # 验证编码格式：[前缀][年月][序号]
@@ -131,11 +132,11 @@ class ProjectResponse(ProjectBase):
     created_by: str | None
     updated_by: str | None
     asset_count: int = 0
-    ownership_relations: list[dict] | None = None
+    ownership_relations: list[dict[str, Any]] | None = None
 
     @field_validator("ownership_relations", mode="before")
     @classmethod
-    def convert_ownership_relations(cls, v):
+    def convert_ownership_relations(cls, v: Any) -> Any:
         """转换权属方关系对象为字典格式"""
         if v is None:  # pragma: no cover
             return None  # pragma: no cover
@@ -238,8 +239,8 @@ class ProjectStatisticsResponse(BaseModel):
     total_count: int
     active_count: int
     inactive_count: int
-    type_distribution: dict | None = None
-    status_distribution: dict | None = None
-    city_distribution: dict | None = None
-    investment_stats: dict | None = None
-    recent_created: list | None = None
+    type_distribution: dict[str, int] | None = None
+    status_distribution: dict[str, int] | None = None
+    city_distribution: dict[str, int] | None = None
+    investment_stats: dict[str, float] | None = None
+    recent_created: list[dict[str, Any]] | None = None

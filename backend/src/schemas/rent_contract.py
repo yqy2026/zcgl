@@ -7,6 +7,7 @@ from decimal import Decimal
 from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic.functional_validators import FieldValidationInfo
 
 
 # V2 Enums
@@ -35,13 +36,13 @@ class RentTermBase(BaseModel):
     end_date: date = Field(..., description="条款结束日期")
     monthly_rent: Decimal = Field(..., ge=0, description="月租金金额")
     rent_description: str | None = Field(None, description="租金描述")
-    management_fee: Decimal = Field(0, ge=0, description="管理费")
-    other_fees: Decimal = Field(0, ge=0, description="其他费用")
+    management_fee: Decimal = Field(Decimal("0"), ge=0, description="管理费")
+    other_fees: Decimal = Field(Decimal("0"), ge=0, description="其他费用")
     total_monthly_amount: Decimal | None = Field(None, ge=0, description="月总金额")
 
     @field_validator("total_monthly_amount")
     @classmethod
-    def calculate_total_amount(cls, v, info):
+    def calculate_total_amount(cls, v: Decimal | None, info: FieldValidationInfo) -> Decimal | None:
         """计算月总金额"""
         if v is None:
             data = info.data if hasattr(info, "data") else {}
@@ -53,7 +54,7 @@ class RentTermBase(BaseModel):
 
     @field_validator("end_date")
     @classmethod
-    def validate_date_range(cls, v, info):
+    def validate_date_range(cls, v: date, info: FieldValidationInfo) -> date:
         """验证日期范围"""
         data = info.data if hasattr(info, "data") else {}
         start_date = data.get("start_date")
@@ -115,7 +116,7 @@ class RentContractBase(BaseModel):
     sign_date: date = Field(..., description="签订日期")
     start_date: date = Field(..., description="租期开始日期")
     end_date: date = Field(..., description="租期结束日期")
-    total_deposit: Decimal = Field(0, ge=0, description="总押金金额")
+    total_deposit: Decimal = Field(Decimal("0"), ge=0, description="总押金金额")
     monthly_rent_base: Decimal | None = Field(None, ge=0, description="基础月租金")
     # V2: 付款周期
     payment_cycle: PaymentCycleEnum | None = Field(
@@ -127,7 +128,7 @@ class RentContractBase(BaseModel):
 
     @field_validator("end_date")
     @classmethod
-    def validate_date_range(cls, v, info):
+    def validate_date_range(cls, v: date, info: FieldValidationInfo) -> date:
         """验证日期范围"""
         data = info.data if hasattr(info, "data") else {}
         start_date = data.get("start_date")
@@ -143,7 +144,7 @@ class RentContractCreate(RentContractBase):
 
     @field_validator("rent_terms")
     @classmethod
-    def validate_rent_terms(cls, v, info):
+    def validate_rent_terms(cls, v: list[RentTermCreate], info: FieldValidationInfo) -> list[RentTermCreate]:
         """验证租金条款"""
         if not v:
             raise ValueError("租金条款不能为空")
@@ -236,19 +237,19 @@ class RentLedgerBase(BaseModel):
     year_month: str = Field(..., description="年月，格式：YYYY-MM")
     due_date: date = Field(..., description="应缴日期")
     due_amount: Decimal = Field(..., ge=0, description="应收金额")
-    paid_amount: Decimal = Field(0, ge=0, description="实收金额")
-    overdue_amount: Decimal = Field(0, ge=0, description="逾期金额")
+    paid_amount: Decimal = Field(Decimal("0"), ge=0, description="实收金额")
+    overdue_amount: Decimal = Field(Decimal("0"), ge=0, description="逾期金额")
     payment_status: str = Field("未支付", description="支付状态")
     payment_date: date | None = Field(None, description="支付日期")
     payment_method: str | None = Field(None, description="支付方式")
     payment_reference: str | None = Field(None, description="支付参考号")
-    late_fee: Decimal = Field(0, ge=0, description="滞纳金")
+    late_fee: Decimal = Field(Decimal("0"), ge=0, description="滞纳金")
     late_fee_days: int = Field(0, ge=0, description="滞纳天数")
     notes: str | None = Field(None, description="备注")
 
     @field_validator("year_month")
     @classmethod
-    def validate_year_month(cls, v):
+    def validate_year_month(cls, v: str) -> str:
         """验证年月格式"""
         if len(v) != 7 or v[4] != "-":
             raise ValueError("年月格式必须是YYYY-MM")
@@ -262,7 +263,7 @@ class RentLedgerBase(BaseModel):
 
     @field_validator("payment_status")
     @classmethod
-    def validate_payment_status(cls, v):
+    def validate_payment_status(cls, v: str) -> str:
         """验证支付状态"""
         valid_statuses = ["未支付", "部分支付", "已支付", "逾期"]
         if v not in valid_statuses:
@@ -370,7 +371,7 @@ class GenerateLedgerRequest(BaseModel):
 
     @field_validator("start_year_month", "end_year_month")
     @classmethod
-    def validate_year_month(cls, v):
+    def validate_year_month(cls, v: str | None) -> str | None:
         """验证年月格式"""
         if v is None:
             return v

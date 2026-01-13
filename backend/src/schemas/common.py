@@ -1,4 +1,4 @@
-from typing import Any, TypeVar
+from typing import Any, Generic, TypeVar
 
 """
 通用响应模式
@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 T = TypeVar("T")
 
 
-class BaseResponse[T](BaseModel):
+class BaseResponse(BaseModel, Generic[T]):
     """基础响应模式"""
 
     success: bool = Field(..., description="请求是否成功")
@@ -47,7 +47,7 @@ class PaginationInfo(BaseModel):
     has_prev: bool = Field(..., description="是否有上一页")
 
 
-class PaginatedResponse[T](BaseModel):
+class PaginatedResponse(BaseModel, Generic[T]):
     """分页响应模式"""
 
     success: bool = Field(True, description="请求是否成功")
@@ -73,7 +73,7 @@ class BusinessValidationErrorResponse(BaseModel):
     request_id: str | None = Field(None, description="请求ID")
 
 
-class SuccessResponse[T](BaseModel):
+class SuccessResponse(BaseModel, Generic[T]):
     """成功响应模式"""
 
     success: bool = Field(True, description="请求成功")
@@ -85,7 +85,7 @@ class SuccessResponse[T](BaseModel):
     request_id: str | None = Field(None, description="请求ID")
 
 
-class CreatedResponse[T](BaseModel):
+class CreatedResponse(BaseModel, Generic[T]):
     """创建成功响应模式"""
 
     success: bool = Field(True, description="创建成功")
@@ -97,7 +97,7 @@ class CreatedResponse[T](BaseModel):
     request_id: str | None = Field(None, description="请求ID")
 
 
-class UpdatedResponse[T](BaseModel):
+class UpdatedResponse(BaseModel, Generic[T]):
     """更新成功响应模式"""
 
     success: bool = Field(True, description="更新成功")
@@ -164,7 +164,7 @@ class ResponseBuilder:
 
     @staticmethod
     def error(
-        message: str, error_code: str = "unknown_error", details: dict | None = None
+        message: str, error_code: str = "unknown_error", details: dict[str, Any] | None = None
     ) -> dict[str, Any]:
         """构建错误响应"""
         return {  # pragma: no cover
@@ -217,8 +217,8 @@ class ResponseBuilder:
         total_count: int,
         success_count: int,
         failed_count: int,
-        errors: list[dict] = None,
-        data: dict | None = None,
+        errors: list[dict[str, Any]] | None = None,
+        data: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """构建批量操作响应"""
         return {  # pragma: no cover
@@ -234,7 +234,7 @@ class ResponseBuilder:
 
 
 # 常用响应实例
-def create_success_response[T](
+def create_success_response(
     data: T | None = None, message: str | None = None
 ) -> SuccessResponse[T]:
     """创建成功响应"""
@@ -251,7 +251,7 @@ def create_error_response(
     )  # pragma: no cover
 
 
-def create_paginated_response[T](
+def create_paginated_response(
     data: list[T], page: int, page_size: int, total: int, message: str | None = None
 ) -> PaginatedResponse[T]:
     """创建分页响应"""

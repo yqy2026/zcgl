@@ -1,4 +1,4 @@
-from typing import Any, TypeVar
+from typing import Any, Generic, TypeVar
 
 from sqlalchemy import Select, and_, or_, select
 from sqlalchemy.orm import DeclarativeMeta
@@ -6,7 +6,7 @@ from sqlalchemy.orm import DeclarativeMeta
 ModelType = TypeVar("ModelType", bound=DeclarativeMeta)
 
 
-class QueryBuilder[ModelType: DeclarativeMeta]:
+class QueryBuilder(Generic[ModelType]):
     """
     Unified Query Builder for SQLAlchemy models.
     Supports dynamic filtering, searching, sorting, and pagination.

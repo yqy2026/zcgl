@@ -119,10 +119,88 @@ indent-style = "space"
 
 [tool.mypy]
 python_version = "3.12"
-strict = true
+# 渐进式类型检查策略：核心代码严格，边缘代码宽松
 warn_return_any = true
 warn_unused_configs = true
+disallow_untyped_defs = false  # Phase 1: 渐进式启用
+check_untyped_defs = true
+warn_unused_ignores = false  # Phase 2: 启用
+
+# 忽略第三方库的类型错误
+ignore_missing_imports = true
+
+# === Tier 0: 核心基础设施 (STRICT) ===
+# 数据库、认证、配置、模型、Schema
+[[tool.mypy.overrides]]
+module = [
+    "src.database",
+    "src.core.security",
+    "src.core.config",
+    "src.core.jwt_security",
+    "src.models.*",
+    "src.schemas.*",
+]
+# Phase 0: 立即启用严格模式
+strict = true
 disallow_untyped_defs = true
+disallow_any_generics = true
+disallow_subclassing_any = true
+
+# === Tier 1: 核心业务逻辑 (STANDARD) ===
+# API 端点、服务层、CRUD
+[[tool.mypy.overrides]]
+module = [
+    "src.api.v1.*",
+    "src.services.asset.*",
+    "src.services.core.*",
+    "src.services.rent_contract.*",
+    "src.services.ownership.*",
+    "src.services.project.*",
+    "src.crud.*",
+]
+# Phase 1: 逐步启用（当前允许未类型定义）
+disallow_untyped_defs = false  # Week 2-5: 逐步修复后启用
+check_untyped_defs = true
+warn_return_any = true
+warn_unused_ignores = true
+
+# === Tier 2: 边缘工具 (BASIC) ===
+# Utils、Middleware、Validation
+[[tool.mypy.overrides]]
+module = [
+    "src.utils.*",
+    "src.middleware.*",
+    "src.validation.*",
+]
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = false  # Week 6: 启用
+
+# === Tier 3: 第三方集成 (PERMISSIVE) ===
+# OCR、PDF、文档处理服务
+[[tool.mypy.overrides]]
+module = [
+    "src.services.document.*",
+    "src.services.excel.*",
+]
+ignore_missing_imports = true
+# 允许策略化使用 # type: ignore
+warn_return_any = false
+disable_error_code = ["no-untyped-def", "no-any-return"]
+
+# === 无类型第三方库的显式忽略 ===
+[[tool.mypy.overrides]]
+module = [
+    "paddleocr.*",
+    "fitz.*",
+    "pymupdf.*",
+    "pdfplumber.*",
+    "jieba.*",
+    "fuzzywuzzy.*",
+    "Levenshtein.*",
+    "tenacity.*",
+]
+ignore_errors = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

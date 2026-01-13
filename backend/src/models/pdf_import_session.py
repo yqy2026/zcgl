@@ -16,10 +16,9 @@ from sqlalchemy import (
     String,
     Text,
 )
-from sqlalchemy.orm import declarative_base
 from sqlalchemy.sql import func
 
-Base = declarative_base()
+from ..database import Base
 
 
 class SessionStatus(str, enum.Enum):
