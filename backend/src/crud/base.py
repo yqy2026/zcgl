@@ -1,4 +1,4 @@
-from typing import Any, Generic, TypeVar, cast
+from typing import Any, TypeVar, cast
 
 """
 增强的基础CRUD操作类 - 支持缓存、性能监控和错误处理
@@ -17,17 +17,17 @@ from ..core.response_handler import ResponseHandler
 from .query_builder import QueryBuilder
 
 # Define TypeVars at module level with unique names
-_ModelType = TypeVar("_ModelType", bound=DeclarativeMeta)
-_CreateSchemaType = TypeVar("_CreateSchemaType", bound=BaseModel)
-_UpdateSchemaType = TypeVar("_UpdateSchemaType", bound=BaseModel)
+ModelType = TypeVar("ModelType", bound=DeclarativeMeta)
+CreateSchemaType = TypeVar("CreateSchemaType", bound=BaseModel)
+UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
 
 logger = logging.getLogger(__name__)
 
 
-class CRUDBase(Generic[_ModelType, _CreateSchemaType, _UpdateSchemaType]):
+class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
     """增强的基础CRUD操作类"""
 
-    def __init__(self, model: type[_ModelType]) -> None:
+    def __init__(self, model: type[ModelType]) -> None:
         """
         初始化CRUD对象
 
@@ -74,14 +74,14 @@ class CRUDBase(Generic[_ModelType, _CreateSchemaType, _UpdateSchemaType]):
             return ResponseHandler.database_error(error, f"{operation}失败")
         return error
 
-    def get(self, db: Session, id: Any, use_cache: bool = True) -> _ModelType | None:
+    def get(self, db: Session, id: Any, use_cache: bool = True) -> ModelType | None:
         """根据ID获取单个记录（支持缓存）"""
         cache_key = self._get_cache_key("get", id=id)
 
         if use_cache:
             cached_result = self._get_from_cache(cache_key)
             if cached_result is not None:
-                return cast(_ModelType, cached_result)
+                return cast(ModelType, cached_result)
 
         try:
             result = (
@@ -95,14 +95,14 @@ class CRUDBase(Generic[_ModelType, _CreateSchemaType, _UpdateSchemaType]):
 
     def get_multi(
         self, db: Session, *, skip: int = 0, limit: int = 100, use_cache: bool = False
-    ) -> list[_ModelType]:
+    ) -> list[ModelType]:
         """获取多个记录（支持缓存）"""
         cache_key = self._get_cache_key("get_multi", skip=skip, limit=limit)
 
         if use_cache and limit <= 50:  # 只对小结果集缓存
             cached_result = self._get_from_cache(cache_key)  # pragma: no cover
             if cached_result is not None:  # pragma: no cover
-                return cast(list[_ModelType], cached_result)
+                return cast(list[ModelType], cached_result)
         try:
             query = db.query(self.model).offset(skip).limit(limit)
             result = query.all()
@@ -114,8 +114,8 @@ class CRUDBase(Generic[_ModelType, _CreateSchemaType, _UpdateSchemaType]):
             raise self._handle_database_error(e, "获取记录列表")  # pragma: no cover
 
     def create(
-        self, db: Session, *, obj_in: _CreateSchemaType | dict[str, Any], **kwargs: Any
-    ) -> _ModelType:
+        self, db: Session, *, obj_in: CreateSchemaType | dict[str, Any], **kwargs: Any
+    ) -> ModelType:
         """创建新记录（支持事务回滚和错误处理）"""
         try:
             if isinstance(obj_in, dict):
@@ -146,9 +146,9 @@ class CRUDBase(Generic[_ModelType, _CreateSchemaType, _UpdateSchemaType]):
         self,
         db: Session,
         *,
-        db_obj: _ModelType,
-        obj_in: _UpdateSchemaType | dict[str, Any],
-    ) -> _ModelType:
+        db_obj: ModelType,
+        obj_in: UpdateSchemaType | dict[str, Any],
+    ) -> ModelType:
         """更新记录（支持事务回滚和缓存清理）"""
         try:
             obj_data = db_obj.__dict__
@@ -180,7 +180,7 @@ class CRUDBase(Generic[_ModelType, _CreateSchemaType, _UpdateSchemaType]):
             db.rollback()  # pragma: no cover
             raise self._handle_database_error(e, "更新记录")  # pragma: no cover
 
-    def remove(self, db: Session, *, id: Any) -> _ModelType:
+    def remove(self, db: Session, *, id: Any) -> ModelType:
         """删除记录（支持事务回滚和缓存清理）"""
         try:
             obj = db.query(self.model).get(id)
@@ -199,7 +199,7 @@ class CRUDBase(Generic[_ModelType, _CreateSchemaType, _UpdateSchemaType]):
             logger.info(
                 f"Successfully deleted {getattr(self.model, '__tablename__', 'unknown')} record with id: {id}"
             )
-            return cast(_ModelType, obj)
+            return cast(ModelType, obj)
         except ValueError:
             raise
         except Exception as e:  # pragma: no cover
@@ -229,7 +229,7 @@ class CRUDBase(Generic[_ModelType, _CreateSchemaType, _UpdateSchemaType]):
         limit: int = 100,
         order_by: str | None = None,
         order_desc: bool = False,
-    ) -> list[_ModelType]:
+    ) -> list[ModelType]:
         """高级查询方法（支持筛选、搜索、排序）"""
         try:
             # 使用 QueryBuilder 构建查询
@@ -250,11 +250,11 @@ class CRUDBase(Generic[_ModelType, _CreateSchemaType, _UpdateSchemaType]):
             raise self._handle_database_error(e, "高级查询")  # pragma: no cover
 
     def bulk_create(
-        self, db: Session, *, objects_in: list[_CreateSchemaType | dict[str, Any]]
-    ) -> list[_ModelType]:
+        self, db: Session, *, objects_in: list[CreateSchemaType | dict[str, Any]]
+    ) -> list[ModelType]:
         """批量创建记录"""
         try:
-            db_objects: list[_ModelType] = []
+            db_objects: list[ModelType] = []
             for obj_in in objects_in:
                 if isinstance(obj_in, dict):
                     obj_in_data = obj_in

@@ -1,4 +1,4 @@
-from typing import Any, Generic, TypeVar
+from typing import Any, TypeVar
 
 """
 增强的基础CRUD操作类
@@ -116,7 +116,7 @@ class QuerySort:
             return query.order_by(desc(field_attr))
 
 
-class EnhancedCRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType], ABC):
+class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
     """增强的基础CRUD操作类"""
 
     def __init__(self, model: type[ModelType]):

@@ -1,4 +1,4 @@
-from typing import Any, Generic, TypeVar
+from typing import Any, TypeVar
 
 """
 统一响应处理器
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T")
 
 
-class APIResponse(BaseModel, Generic[T]):
+class APIResponse[T](BaseModel):
     """统一API响应格式"""
 
     success: bool = True

@@ -1,4 +1,4 @@
-from typing import Any, Generic, TypeVar
+from typing import Any, TypeVar
 
 """
 通用响应模式
@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 T = TypeVar("T")
 
 
-class BaseResponse(BaseModel, Generic[T]):
+class BaseResponse[T](BaseModel):
     """基础响应模式"""
 
     success: bool = Field(..., description="请求是否成功")
@@ -47,7 +47,7 @@ class PaginationInfo(BaseModel):
     has_prev: bool = Field(..., description="是否有上一页")
 
 
-class PaginatedResponse(BaseModel, Generic[T]):
+class PaginatedResponse[T](BaseModel):
     """分页响应模式"""
 
     success: bool = Field(True, description="请求是否成功")
@@ -73,7 +73,7 @@ class BusinessValidationErrorResponse(BaseModel):
     request_id: str | None = Field(None, description="请求ID")
 
 
-class SuccessResponse(BaseModel, Generic[T]):
+class SuccessResponse[T](BaseModel):
     """成功响应模式"""
 
     success: bool = Field(True, description="请求成功")
@@ -85,7 +85,7 @@ class SuccessResponse(BaseModel, Generic[T]):
     request_id: str | None = Field(None, description="请求ID")
 
 
-class CreatedResponse(BaseModel, Generic[T]):
+class CreatedResponse[T](BaseModel):
     """创建成功响应模式"""
 
     success: bool = Field(True, description="创建成功")
@@ -97,7 +97,7 @@ class CreatedResponse(BaseModel, Generic[T]):
     request_id: str | None = Field(None, description="请求ID")
 
 
-class UpdatedResponse(BaseModel, Generic[T]):
+class UpdatedResponse[T](BaseModel):
     """更新成功响应模式"""
 
     success: bool = Field(True, description="更新成功")
@@ -240,7 +240,7 @@ class ResponseBuilder:
 
 
 # 常用响应实例
-def create_success_response(
+def create_success_response[T](
     data: T | None = None, message: str | None = None, **kwargs: Any
 ) -> SuccessResponse[T]:
     """创建成功响应"""
@@ -261,7 +261,7 @@ def create_error_response(
     )  # pragma: no cover
 
 
-def create_paginated_response(
+def create_paginated_response[T](
     data: list[T], page: int, page_size: int, total: int, message: str | None = None
 ) -> PaginatedResponse[T]:
     """创建分页响应"""

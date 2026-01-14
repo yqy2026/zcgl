@@ -126,6 +126,9 @@ disallow_untyped_defs = false  # Phase 1: 渐进式启用
 check_untyped_defs = true
 warn_unused_ignores = false  # Phase 2: 启用
 
+# 启用 PEP 695 新类型参数语法 (Python 3.12+)
+enable_incomplete_feature = ["NewGenericSyntax"]
+
 # 忽略第三方库的类型错误
 ignore_missing_imports = true
 
