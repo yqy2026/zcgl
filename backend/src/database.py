@@ -25,10 +25,12 @@ try:
     from .database_security import enhance_database_security
 except ImportError:  # pragma: no cover
     try:  # pragma: no cover
-        from database_security import enhance_database_security  # pragma: no cover
+        from database_security import enhance_database_security  # type: ignore[no-redef] # noqa: F401 # pragma: no cover
     except ImportError:  # pragma: no cover
+        from sqlalchemy.engine import Engine
 
-        def enhance_database_security(engine):  # pragma: no cover
+        def enhance_database_security(engine: Engine) -> None:  # pragma: no cover
+            """Fallback database security enhancer when module is not available."""
             pass  # pragma: no cover
 
 
@@ -74,12 +76,12 @@ class ConnectionPoolConfig:
 class DatabaseManager:
     """统一的数据库管理器，整合增强功能"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.engine: Engine | None = None
-        self.session_factory: sessionmaker | None = None
+        self.session_factory: sessionmaker[Session] | None = None
         self.config: ConnectionPoolConfig = self._load_config()
         self.metrics: DatabaseMetrics = DatabaseMetrics()
-        self.query_history: Queue = Queue(maxsize=1000)
+        self.query_history: Queue[dict[str, Any]] = Queue(maxsize=1000)
         self._metrics_lock = threading.Lock()
         self.slow_query_threshold = 100.0  # ms
         self.enable_query_logging = get_config("database.enable_query_logging", False)
@@ -101,7 +103,7 @@ class DatabaseManager:
         print(f"DEBUG: Initializing database engine with URL: {database_url}")
         logger.info(f"正在初始化数据库引擎: {database_url}")
 
-        engine_kwargs = {
+        engine_kwargs: dict[str, Any] = {
             "echo": self.config.echo,
             "future": True,
         }
@@ -147,13 +149,15 @@ class DatabaseManager:
         logger.info("数据库引擎初始化完成")
         return self.engine
 
-    def _setup_event_listeners(self):
+    def _setup_event_listeners(self) -> None:
         """设置数据库事件监听器"""
         if not self.engine:  # pragma: no cover
             return  # pragma: no cover
 
         @event.listens_for(self.engine, "connect")
-        def on_connect(dbapi_connection: DBAPIConnection, connection_record):
+        def on_connect(
+            dbapi_connection: DBAPIConnection, connection_record: Any
+        ) -> None:
             """连接事件"""
             with self._metrics_lock:
                 self.metrics.active_connections += 1
@@ -163,8 +167,10 @@ class DatabaseManager:
 
         @event.listens_for(self.engine, "checkout")
         def on_checkout(
-            dbapi_connection: DBAPIConnection, connection_record, connection_proxy
-        ):
+            dbapi_connection: DBAPIConnection,
+            connection_record: Any,
+            connection_proxy: Any,
+        ) -> None:
             """检出连接事件"""
             with self._metrics_lock:
                 if connection_record and hasattr(
@@ -178,14 +184,21 @@ class DatabaseManager:
                         self.metrics.pool_misses += 1  # pragma: no cover
 
         @event.listens_for(self.engine, "before_execute")
-        def on_execute(conn, clauseelement, multiparams, params, execution_options):
+        def on_execute(
+            conn: Any, clauseelement: Any, multiparams: Any, params: Any, execution_options: Any
+        ) -> None:
             """执行查询事件"""
             conn.info.setdefault("query_start_time", time.time())
 
         @event.listens_for(self.engine, "after_execute")
         def after_execute(
-            conn, clauseelement, multiparams, params, execution_options, result
-        ):
+            conn: Any,
+            clauseelement: Any,
+            multiparams: Any,
+            params: Any,
+            execution_options: Any,
+            result: Any,
+        ) -> None:
             """查询执行后事件"""
             try:
                 start_time = conn.info.pop("query_start_time", time.time())
@@ -221,7 +234,7 @@ class DatabaseManager:
             except Exception as e:  # pragma: no cover
                 logger.error(f"记录查询指标时出错: {e}")  # pragma: no cover
 
-    def _optimize_sqlite_connection(self, dbapi_connection):
+    def _optimize_sqlite_connection(self, dbapi_connection: DBAPIConnection) -> None:
         """优化SQLite连接"""
         cursor = dbapi_connection.cursor()
         try:
@@ -261,7 +274,7 @@ class DatabaseManager:
 
     def run_health_check(self) -> dict[str, Any]:
         """运行数据库健康检查"""
-        health_status = {
+        health_status: dict[str, Any] = {
             "healthy": True,
             "checks": {},
             "timestamp": datetime.now().isoformat(),
@@ -274,16 +287,20 @@ class DatabaseManager:
                 session.execute(text("SELECT 1"))
                 response_time = (time.time() - start_time) * 1000
 
-                health_status["checks"]["basic_connection"] = {
-                    "status": "healthy" if response_time < 1000 else "degraded",
-                    "response_time_ms": response_time,
-                }
+                checks = health_status["checks"]
+                if isinstance(checks, dict):
+                    checks["basic_connection"] = {
+                        "status": "healthy" if response_time < 1000 else "degraded",
+                        "response_time_ms": response_time,
+                    }
         except Exception as e:  # pragma: no cover
             health_status["healthy"] = False  # pragma: no cover
-            health_status["checks"]["connection_test"] = {  # pragma: no cover
-                "status": "failed",  # pragma: no cover
-                "error": str(e),  # pragma: no cover
-            }  # pragma: no cover
+            checks = health_status["checks"]
+            if isinstance(checks, dict):  # pragma: no cover
+                checks["connection_test"] = {  # pragma: no cover
+                    "status": "failed",  # pragma: no cover
+                    "error": str(e),  # pragma: no cover
+                }  # pragma: no cover
             logger.error(f"数据库健康检查失败: {e}")  # pragma: no cover
 
         return health_status
@@ -321,22 +338,22 @@ def _get_database_manager() -> DatabaseManager:
 
 
 # 导出引擎和会话工厂（向后兼容，延迟初始化）
-def _get_engine():
+def _get_engine() -> Engine | None:
     """获取引擎（延迟初始化）"""
     return _get_database_manager().engine  # pragma: no cover
 
 
-def _get_session_local():
+def _get_session_local() -> sessionmaker[Session] | None:
     """获取会话工厂（延迟初始化）"""
     return _get_database_manager().session_factory  # pragma: no cover
 
 
 # 为了向后兼容，提供全局变量（但实际使用时通过函数获取）
-engine = None  # 将在首次使用时初始化
-SessionLocal = None  # 将在首次使用时初始化
+engine: Engine | None = None  # 将在首次使用时初始化
+SessionLocal: sessionmaker[Session] | None = None  # 将在首次使用时初始化
 
 
-def _init_globals():
+def _init_globals() -> None:
     """初始化全局变量"""
     global engine, SessionLocal
     if engine is None or SessionLocal is None:
@@ -353,7 +370,10 @@ def get_db() -> Generator[Session, None, None]:
     """获取数据库会话（FastAPI依赖注入）"""
     _init_globals()
     db_manager = _get_database_manager()
-    session = db_manager.session_factory()
+    session_factory = db_manager.session_factory
+    if session_factory is None:
+        raise RuntimeError("Database session factory is not initialized")
+    session = session_factory()
     try:
         yield session
     except Exception as e:  # pragma: no cover
@@ -367,13 +387,19 @@ def get_db() -> Generator[Session, None, None]:
 def get_database_engine() -> Engine:
     """获取数据库引擎"""
     _init_globals()
-    return _get_database_manager().engine
+    db_manager = _get_database_manager()
+    if db_manager.engine is None:
+        raise RuntimeError("Database engine is not initialized")
+    return db_manager.engine
 
 
-def get_session_factory():
+def get_session_factory() -> sessionmaker[Session]:
     """获取会话工厂"""
     _init_globals()
-    return _get_database_manager().session_factory
+    db_manager = _get_database_manager()
+    if db_manager.session_factory is None:
+        raise RuntimeError("Database session factory is not initialized")
+    return db_manager.session_factory
 
 
 def get_database_manager() -> DatabaseManager:
@@ -381,7 +407,7 @@ def get_database_manager() -> DatabaseManager:
     return _get_database_manager()
 
 
-def create_tables():
+def create_tables() -> None:
     """创建所有数据库表"""
     _init_globals()
     if engine:
@@ -389,7 +415,7 @@ def create_tables():
         logger.info("数据库表创建完成")
 
 
-def drop_tables():
+def drop_tables() -> None:
     """删除所有数据库表"""
     _init_globals()
     if engine:
@@ -409,7 +435,7 @@ def get_database_status() -> dict[str, Any]:
     return status
 
 
-def init_db():
+def init_db() -> None:
     """初始化数据库"""
     create_tables()
     logger.info("数据库初始化完成")

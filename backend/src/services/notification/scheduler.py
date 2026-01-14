@@ -7,7 +7,7 @@
 
 import asyncio
 from datetime import date, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
@@ -26,7 +26,7 @@ class NotificationSchedulerService:
         self.db = db
         self.wecom_enabled = wecom_service.enabled
 
-    async def _send_wecom_notification(self, notification: Notification):
+    async def _send_wecom_notification(self, notification: Notification) -> bool:
         """
         发送企业微信通知（异步）
 
@@ -47,31 +47,31 @@ class NotificationSchedulerService:
             success = await wecom_service.send_notification(message=message)
 
             # 更新通知状态
-            notification.is_sent_wecom = success
+            notification.is_sent_wecom = success  # type: ignore[assignment]
             if success:
-                notification.wecom_sent_at = datetime.now()
+                notification.wecom_sent_at = datetime.now()  # type: ignore[assignment]
             else:
-                notification.wecom_send_error = "企业微信返回失败"
+                notification.wecom_send_error = "企业微信返回失败"  # type: ignore[assignment]
 
             self.db.commit()
             return success
 
         except Exception as e:
             # 记录错误但不影响主流程
-            notification.wecom_send_error = f"企业微信发送异常: {str(e)}"
+            notification.wecom_send_error = f"企业微信发送异常: {str(e)}"  # type: ignore[assignment]
             self.db.commit()
             return False
 
     def _create_and_send_notification(
         self,
         recipient_id: str,
-        notification_type: NotificationType,
-        priority: NotificationPriority,
+        notification_type: str,
+        priority: str,
         title: str,
         content: str,
         related_entity_type: str,
         related_entity_id: str,
-    ):
+    ) -> Notification:
         """
         创建通知并发送企业微信（如果启用）
 
@@ -112,16 +112,19 @@ class NotificationSchedulerService:
                     loop.close()
             except Exception as e:
                 # 推送失败不影响通知创建
-                notification.wecom_send_error = f"企业微信推送失败: {str(e)}"
+                notification.wecom_send_error = f"企业微信推送失败: {str(e)}"  # type: ignore[assignment]
 
         return notification
 
-    def check_contract_expiry(self, days_ahead: int = 30):
+    def check_contract_expiry(self, days_ahead: int = 30) -> int:
         """
         检查合同到期
 
         Args:
             days_ahead: 提前多少天提醒，默认30天
+
+        Returns:
+            int: 即将到期的合同数量
         """
         today = date.today()
         warning_date = today + timedelta(days=days_ahead)
@@ -141,9 +144,15 @@ class NotificationSchedulerService:
 
         for contract in expiring_contracts:
             # 计算剩余天数
-            days_remaining = (contract.end_date - today).days
+            # end_date is Mapped[datetime] but stored as Date, convert to date for subtraction
+            end_date_val: date | datetime = contract.end_date
+            if isinstance(end_date_val, datetime):
+                end_date_val = end_date_val.date()
+            days_remaining = (end_date_val - today).days
 
             # 确定通知类型和优先级
+            notification_type: str
+            priority: str
             if days_remaining == 0:
                 notification_type = NotificationType.CONTRACT_EXPIRED
                 priority = NotificationPriority.URGENT
@@ -200,11 +209,14 @@ class NotificationSchedulerService:
         self.db.commit()
         return len(expiring_contracts)
 
-    def check_payment_overdue(self):
+    def check_payment_overdue(self) -> int:
         """
         检查付款逾期
 
         查找所有逾期未支付的租金台账记录，生成逾期提醒通知
+
+        Returns:
+            int: 创建的通知数量
         """
         today = date.today()
 
@@ -225,9 +237,14 @@ class NotificationSchedulerService:
 
         for ledger in overdue_ledgers:
             # 计算逾期天数
-            days_overdue = (today - ledger.due_date).days
+            # due_date is Mapped[datetime] but stored as Date, convert to date for subtraction
+            due_date_val: date | datetime = ledger.due_date
+            if isinstance(due_date_val, datetime):
+                due_date_val = due_date_val.date()
+            days_overdue = (today - due_date_val).days
 
             # 确定优先级
+            priority: str
             if days_overdue >= 30:
                 priority = NotificationPriority.URGENT
                 title = f"租金严重逾期（{days_overdue}天）"
@@ -279,12 +296,15 @@ class NotificationSchedulerService:
         self.db.commit()
         return notifications_created
 
-    def check_payment_due_soon(self, days_ahead: int = 7):
+    def check_payment_due_soon(self, days_ahead: int = 7) -> int:
         """
         检查即将到期的付款
 
         Args:
             days_ahead: 提前多少天提醒，默认7天
+
+        Returns:
+            int: 创建的通知数量
         """
         today = date.today()
         warning_date = today + timedelta(days=days_ahead)
@@ -307,9 +327,14 @@ class NotificationSchedulerService:
 
         for ledger in due_soon_ledgers:
             # 计算剩余天数
-            days_remaining = (ledger.due_date - today).days
+            # due_date is Mapped[datetime] but stored as Date, convert to date for subtraction
+            due_date_val: date | datetime = ledger.due_date
+            if isinstance(due_date_val, datetime):
+                due_date_val = due_date_val.date()
+            days_remaining = (due_date_val - today).days
 
             # 确定优先级
+            priority: str
             if days_remaining == 0:
                 priority = NotificationPriority.HIGH
                 title = "租金今日到期"
