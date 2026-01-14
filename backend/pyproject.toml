@@ -172,7 +172,7 @@ module = [
     "src.middleware.*",
     "src.validation.*",
 ]
-warn_unused_configs = true
+# Removed: warn_unused_configs (not allowed in per-module overrides)
 # Removed: warn_redundant_casts (not allowed in per-module overrides)
 # Removed: warn_unused_ignores (not allowed in per-module overrides)
 

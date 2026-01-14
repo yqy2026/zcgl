@@ -6,12 +6,12 @@ API文档生成工具
 import inspect
 import json
 import os
+from collections.abc import Callable
 from datetime import datetime
-from typing import Any, Callable
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
-
 
 # Type alias for endpoint functions
 EndpointFunction = Callable[..., Any]
@@ -67,7 +67,9 @@ class APIDocGenerator:
         # 获取路由信息
         endpoint: EndpointFunction = route.endpoint
         path_params: dict[str, Any] = getattr(route, "path_params", {})
-        query_params: list[Any] = list(getattr(route.dependant, "call_params", {}).values())
+        query_params: list[Any] = list(
+            getattr(route.dependant, "call_params", {}).values()
+        )
 
         # 解析端点函数
         inspect.signature(endpoint)  # 预留字段，当前未使用
@@ -195,10 +197,16 @@ class APIDocGenerator:
     def _generate_tags_info(self) -> None:
         """生成标签详细信息"""
         tag_details: dict[str, dict[str, str]] = {
-            "资产": {"description": "资产信息管理相关接口，包括资产的增删改查、批量操作等功能"},
-            "项目": {"description": "项目管理相关接口，包括项目的创建、查询、更新等操作"},
+            "资产": {
+                "description": "资产信息管理相关接口，包括资产的增删改查、批量操作等功能"
+            },
+            "项目": {
+                "description": "项目管理相关接口，包括项目的创建、查询、更新等操作"
+            },
             "权属方": {"description": "权属方管理相关接口，包括权属方信息的维护和查询"},
-            "统计": {"description": "数据统计分析接口，提供各种维度的数据统计和报表功能"},
+            "统计": {
+                "description": "数据统计分析接口，提供各种维度的数据统计和报表功能"
+            },
             "Excel": {"description": "Excel导入导出功能，支持异步处理和任务跟踪"},
             "PDF": {"description": "PDF文件处理功能，支持智能提取和批量导入"},
             "任务管理": {"description": "异步任务管理，提供任务状态跟踪和历史记录查询"},
@@ -382,7 +390,9 @@ class APIDocGenerator:
         with open(md_path, "w", encoding="utf-8") as f:
             f.write(md_content)
 
-    def _generate_api_md(self, path: str, method: str, operation: dict[str, Any]) -> str:
+    def _generate_api_md(
+        self, path: str, method: str, operation: dict[str, Any]
+    ) -> str:
         """生成单个API的Markdown文档"""
         summary: str = operation.get("summary", f"{method.upper()} {path}")
         description: str = operation.get("description", "")
