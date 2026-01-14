@@ -39,7 +39,7 @@ class JWTSecurityConfig:
         Returns:
             dict: 验证结果包含is_valid, issues, suggestions
         """
-        result = {
+        result: dict[str, Any] = {
             "is_valid": True,
             "issues": [],
             "suggestions": [],
@@ -131,7 +131,7 @@ class JWTSecurityConfig:
         full_payload = {**standard_claims, **payload}
 
         # 创建令牌
-        token = jwt.encode(
+        token: str = jwt.encode(
             full_payload,
             settings.SECRET_KEY,
             algorithm=getattr(settings, "ALGORITHM", "HS256"),
@@ -268,7 +268,7 @@ def validate_current_jwt_config() -> dict[str, Any]:
     Returns:
         配置验证结果
     """
-    result = {
+    result: dict[str, Any] = {
         "config_valid": True,
         "issues": [],
         "recommendations": [],
