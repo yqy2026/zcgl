@@ -4,11 +4,11 @@ from sqlalchemy import desc, func, or_
 from sqlalchemy.orm import Session
 
 from ..models.asset import Asset, Project
-from ..schemas.project import ProjectSearchRequest
+from ..schemas.project import ProjectCreate, ProjectSearchRequest, ProjectUpdate
 from .base import CRUDBase
 
 
-class CRUDProject(CRUDBase):
+class CRUDProject(CRUDBase[Project, ProjectCreate, ProjectUpdate]):
     """项目管理CRUD操作类"""
 
     def get_by_code(self, db: Session, code: str) -> Project | None:
@@ -113,7 +113,8 @@ class CRUDProject(CRUDBase):
         """获取统计信息"""
         total = db.query(func.count(Project.id)).scalar() or 0
         active = (
-            db.query(func.count(Project.id)).filter(Project.status == "doing").scalar() or 0
+            db.query(func.count(Project.id)).filter(Project.status == "doing").scalar()
+            or 0
         )  # assuming 'doing' is active
         # ... logic reduced for brevity, keeping simpler stats in CRUD is okay or move to service?
         # Keeping minimal here.

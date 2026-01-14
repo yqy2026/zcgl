@@ -3,10 +3,13 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from ..models.asset import AssetCustomField
+from ..schemas.asset import AssetCustomFieldCreate, AssetCustomFieldUpdate
 from .base import CRUDBase
 
 
-class CRUDCustomField(CRUDBase):
+class CRUDCustomField(
+    CRUDBase[AssetCustomField, AssetCustomFieldCreate, AssetCustomFieldUpdate]
+):
     """自定义字段CRUD操作类"""
 
     def get_by_field_name(

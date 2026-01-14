@@ -9,10 +9,18 @@ from ..models.rent_contract import (
     RentTerm,
     rent_contract_assets,
 )
+from ..schemas.rent_contract import (
+    RentContractCreate,
+    RentContractUpdate,
+    RentLedgerCreate,
+    RentLedgerUpdate,
+    RentTermCreate,
+    RentTermUpdate,
+)
 from .base import CRUDBase
 
 
-class CRUDRentContract(CRUDBase):
+class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUpdate]):
     """租金合同CRUD操作"""
 
     def get_with_details(self, db: Session, id: str) -> RentContract | None:
@@ -125,7 +133,7 @@ class CRUDRentContract(CRUDBase):
         )
 
 
-class CRUDRentTerm(CRUDBase):
+class CRUDRentTerm(CRUDBase[RentTerm, RentTermCreate, RentTermUpdate]):
     """租金条款CRUD操作"""
 
     def get_by_contract(self, db: Session, contract_id: str) -> list[RentTerm]:
@@ -138,7 +146,7 @@ class CRUDRentTerm(CRUDBase):
         )
 
 
-class CRUDRentLedger(CRUDBase):
+class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
     """租金台账CRUD操作"""
 
     def get_multi_with_filters(

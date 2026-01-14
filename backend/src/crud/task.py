@@ -6,10 +6,11 @@ from sqlalchemy.orm import Session
 
 from ..enums.task import TaskStatus, TaskType
 from ..models.task import AsyncTask, ExcelTaskConfig, TaskHistory
+from ..schemas.task import TaskCreate, TaskUpdate
 from .base import CRUDBase
 
 
-class TaskCRUD(CRUDBase):
+class TaskCRUD(CRUDBase[AsyncTask, TaskCreate, TaskUpdate]):
     """任务CRUD操作类"""
 
     def get_multi(  # type: ignore[override]
@@ -135,7 +136,7 @@ class TaskCRUD(CRUDBase):
     # create_history, update status logic, etc moved to Service.
 
 
-class ExcelTaskConfigCRUD(CRUDBase):
+class ExcelTaskConfigCRUD(CRUDBase[ExcelTaskConfig, TaskCreate, TaskUpdate]):
     """Excel任务配置CRUD操作类"""
 
     def get_default(

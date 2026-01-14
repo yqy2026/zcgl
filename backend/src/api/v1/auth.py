@@ -40,7 +40,7 @@ router = APIRouter(tags=["认证管理"])
 @router.post("/login", summary="用户登录")
 async def login(
     request: Request, credentials: LoginRequest, db: Session = Depends(get_db)
-) -> dict[str, Any]:  # type: ignore[misc]
+) -> dict[str, Any]:
     """
     用户登录接口
 
@@ -909,7 +909,9 @@ async def reset_user_password(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
-@router.get("/users/statistics/summary", response_model=dict[str, Any], summary="获取用户统计")
+@router.get(
+    "/users/statistics/summary", response_model=dict[str, Any], summary="获取用户统计"
+)
 async def get_user_statistics(
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(require_admin),

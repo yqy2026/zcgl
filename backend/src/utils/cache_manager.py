@@ -51,7 +51,7 @@ class CacheManager:
             return
 
         try:
-            self.redis_client = redis.Redis(  # type: ignore
+            self.redis_client = redis.Redis(
                 host=settings.REDIS_HOST or "localhost",
                 port=settings.REDIS_PORT or 6379,
                 db=settings.REDIS_DB or 0,
@@ -223,7 +223,10 @@ class CacheDecorator:
     """缓存装饰器 - 支持同步和异步函数"""
 
     def __init__(
-        self, prefix: str, expire: int = 3600, key_builder: Callable[..., str] | None = None
+        self,
+        prefix: str,
+        expire: int = 3600,
+        key_builder: Callable[..., str] | None = None,
     ) -> None:
         self.prefix = prefix
         self.expire = expire

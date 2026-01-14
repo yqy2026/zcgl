@@ -19,9 +19,9 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
     def __init__(self, app: ASGIApp) -> None:
         super().__init__(app)
-        self.sensitive_filter = SensitiveDataFilter()  # type: ignore[no-untyped-call]
+        self.sensitive_filter = SensitiveDataFilter()
 
-    async def dispatch(  # type: ignore[override]
+    async def dispatch(
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
         # 生成请求ID
@@ -96,7 +96,9 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
 
 # 便捷函数创建中间件
-def create_request_logging_middleware(app: ASGIApp | None = None) -> RequestLoggingMiddleware | type[RequestLoggingMiddleware]:
+def create_request_logging_middleware(
+    app: ASGIApp | None = None,
+) -> RequestLoggingMiddleware | type[RequestLoggingMiddleware]:
     """创建请求日志中间件"""
     if app is None:  # pragma: no cover
         return RequestLoggingMiddleware  # pragma: no cover

@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from ..core.performance import cached, monitor_query
 from ..models.asset import Asset, AssetHistory
 from ..schemas.asset import AssetCreate, AssetUpdate
+from .base import CRUDBase
 
 
 class SensitiveDataHandler:
@@ -27,10 +28,7 @@ class SensitiveDataHandler:
         return data
 
 
-from .base import CRUDBase
-
-
-class AssetCRUD(CRUDBase):
+class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
     """资产CRUD操作类 - 优化版本"""
 
     def __init__(self) -> None:
@@ -45,8 +43,8 @@ class AssetCRUD(CRUDBase):
         """根据物业名称获取资产（别名方法）"""
         return self.get_by_name(db, property_name)
 
-    @monitor_query("asset_get_multi_with_search")  # type: ignore[misc]
-    @cached(ttl=600)  # type: ignore[misc]
+    @monitor_query("asset_get_multi_with_search")
+    @cached(ttl=600)
     def get_multi_with_search(
         self,
         db: Session,
@@ -116,7 +114,7 @@ class AssetCRUD(CRUDBase):
         db.commit()
         return db_obj
 
-    def update(  # type: ignore[override]
+    def update(
         self,
         db: Session,
         *,
@@ -145,10 +143,11 @@ class AssetCRUD(CRUDBase):
         # Let's use the explicit implementation for update to ensure version increment works
         if hasattr(db_obj, "version") and db_obj.version is not None:
             current_version = int(db_obj.version)
-            db_obj.version = current_version + 1  # type: ignore[assignment]
+            db_obj.version = current_version + 1
 
         # Call super().update (which handles mapping obj_in to db_obj and commit)
-        return super().update(db=db, db_obj=db_obj, obj_in=obj_in)
+        result: Asset = super().update(db=db, db_obj=db_obj, obj_in=obj_in)
+        return result
 
     def update_with_history(
         self, db: Session, db_obj: Asset, obj_in: AssetUpdate

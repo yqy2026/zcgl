@@ -10,6 +10,7 @@ except ImportError:
     def get_pinyin(*args: Any, **kwargs: Any) -> Any:
         return None
 
+
 from ...crud.project import project_crud
 from ...models import Project
 from ...schemas.project import ProjectCreate, ProjectSearchRequest, ProjectUpdate
@@ -50,19 +51,20 @@ class ProjectService:
         updated_by: str | None = None,
     ) -> Project:
         """更新项目"""
-        project = project_crud.get(db, project_id)
+        project: Project | None = project_crud.get(db, project_id)
         if not project:
             raise ValueError(f"项目 {project_id} 不存在")
 
-        return project_crud.update(
+        result: Project = project_crud.update(
             db, db_obj=project, obj_in=obj_in, updated_by=updated_by
         )
+        return result
 
     def toggle_status(
         self, db: Session, *, project_id: str, updated_by: str | None = None
     ) -> Project:
         """切换项目状态"""
-        project = project_crud.get(db, project_id)
+        project: Project | None = project_crud.get(db, project_id)
         if not project:
             raise ValueError(f"项目 {project_id} 不存在")
 

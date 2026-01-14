@@ -5,9 +5,10 @@ from sqlalchemy.orm import Session
 
 from ..crud.base import CRUDBase
 from ..models.organization import Organization
+from ..schemas.organization import OrganizationCreate, OrganizationUpdate
 
 
-class CRUDOrganization(CRUDBase):
+class CRUDOrganization(CRUDBase[Organization, OrganizationCreate, OrganizationUpdate]):
     """组织架构CRUD操作"""
 
     def get_multi_with_filters(
@@ -49,7 +50,9 @@ class CRUDOrganization(CRUDBase):
         query = db.query(Organization).filter(
             and_(not_(Organization.is_deleted), Organization.parent_id == parent_id)
         )
-        result: list[Organization] = query.order_by(Organization.sort_order, Organization.name).all()
+        result: list[Organization] = query.order_by(
+            Organization.sort_order, Organization.name
+        ).all()
         return result
 
     def get_children(

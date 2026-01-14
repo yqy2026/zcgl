@@ -29,7 +29,7 @@ except Exception:  # nosec - B110: Intentional graceful degradation
 
 try:
     from .audit_service import (
-        EnhancedAuditLogger as EnhancedAuditLogger,  # type: ignore[attr-defined]
+        EnhancedAuditLogger as EnhancedAuditLogger,
     )
 
     __all__.append("EnhancedAuditLogger")

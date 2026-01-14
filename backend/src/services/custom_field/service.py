@@ -22,7 +22,8 @@ class CustomFieldService:
         if existing:
             raise ValueError(f"字段名 {obj_in.field_name} 已存在")
 
-        return custom_field_crud.create(db, obj_in=obj_in)
+        result: AssetCustomField = custom_field_crud.create(db, obj_in=obj_in)
+        return result
 
     def update_custom_field(
         self, db: Session, *, id: str, obj_in: AssetCustomFieldUpdate
@@ -39,14 +40,18 @@ class CustomFieldService:
             if existing and existing.id != id:
                 raise ValueError(f"字段名 {obj_in.field_name} 已存在")
 
-        return custom_field_crud.update(db, db_obj=field, obj_in=obj_in)
+        result: AssetCustomField = custom_field_crud.update(
+            db, db_obj=field, obj_in=obj_in
+        )
+        return result
 
     def delete_custom_field(self, db: Session, *, id: str) -> AssetCustomField:
         """删除自定义字段"""
         field = custom_field_crud.get(db, id)
         if not field:
             raise ValueError(f"字段 {id} 不存在")
-        return custom_field_crud.remove(db, id=id)
+        result: AssetCustomField = custom_field_crud.remove(db, id=id)
+        return result
 
     def validate_field_value(
         self, field: AssetCustomField, value: Any
@@ -74,7 +79,9 @@ class CustomFieldService:
                         else None
                     )
                     text_rules: dict[str, Any] = (
-                        json.loads(text_rules_str) if text_rules_str else field.validation_rules
+                        json.loads(text_rules_str)
+                        if text_rules_str
+                        else field.validation_rules
                     )
                     max_length = text_rules.get("max_length")
                     min_length = text_rules.get("min_length")
@@ -102,7 +109,9 @@ class CustomFieldService:
                             else None
                         )
                         number_rules: dict[str, Any] = (
-                            json.loads(number_rules_str) if number_rules_str else field.validation_rules
+                            json.loads(number_rules_str)
+                            if number_rules_str
+                            else field.validation_rules
                         )
                         max_value = number_rules.get("max_value")
                         min_value = number_rules.get("min_value")
@@ -133,7 +142,9 @@ class CustomFieldService:
                             else None
                         )
                         decimal_rules: dict[str, Any] = (
-                            json.loads(decimal_rules_str) if decimal_rules_str else field.validation_rules
+                            json.loads(decimal_rules_str)
+                            if decimal_rules_str
+                            else field.validation_rules
                         )
                         max_value = decimal_rules.get("max_value")
                         min_value = decimal_rules.get("min_value")
@@ -195,7 +206,11 @@ class CustomFieldService:
                         options: list[dict[str, Any]] = options_list
                     else:
                         # Cast to expected type if already parsed
-                        options = field.field_options if isinstance(field.field_options, list) else []
+                        options = (
+                            field.field_options
+                            if isinstance(field.field_options, list)
+                            else []
+                        )
                     valid_values = [
                         opt.get("value") for opt in options if isinstance(opt, dict)
                     ]
@@ -291,7 +306,8 @@ class CustomFieldService:
         db.add(field)
         db.commit()
         db.refresh(field)
-        return field
+        result: AssetCustomField = field
+        return result
 
     def update_sort_orders(
         self, db: Session, *, sort_data: list[dict[str, Any]]

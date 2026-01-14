@@ -131,7 +131,7 @@ class UserCRUD:
         for field, value in update_data.items():
             setattr(db_obj, field, value)
 
-        db_obj.updated_at = datetime.now()  # type: ignore[assignment]
+        db_obj.updated_at = datetime.now()
         db.commit()
         db.refresh(db_obj)
         return db_obj
@@ -143,7 +143,7 @@ class UserCRUD:
             return False
 
         # 软删除
-        user.is_active = False  # type: ignore[assignment]
+        user.is_active = False
         db.commit()
         return True
 
@@ -171,6 +171,17 @@ class UserCRUD:
             .limit(limit)
             .all()
         )
+
+    def get_users_by_role(
+        self, db: Session, role_id: str, skip: int = 0, limit: int = 100
+    ) -> tuple[list[User], int]:
+        """根据角色ID获取用户列表"""
+        # Note: This implementation assumes role_id is a UserRole enum value
+        # If you need role-based filtering by Role model ID, this needs adjustment
+        query = db.query(User).filter(User.role == role_id)
+        total = query.count()
+        users = query.offset(skip).limit(limit).all()
+        return users, total
 
 
 class UserSessionCRUD:
@@ -228,7 +239,7 @@ class UserSessionCRUD:
         if not session:
             return False
 
-        session.is_active = False  # type: ignore[assignment]
+        session.is_active = False
         db.commit()
         return True
 

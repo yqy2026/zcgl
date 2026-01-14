@@ -503,7 +503,7 @@ def create_security_middleware(app: Any, config: dict[str, Any] | None = None) -
     config = config or {}
 
     # 按顺序添加中间件
-    app.add_middleware(SecurityHeadersMiddleware)  # type: ignore[attr-defined]
+    app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(
         FileUploadSecurityMiddleware,
         max_file_size=config.get("max_file_size", 50 * 1024 * 1024),

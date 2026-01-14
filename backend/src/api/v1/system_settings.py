@@ -109,7 +109,6 @@ async def update_system_settings(
             audit_crud.create(
                 db,
                 user_id=current_user.id,
-                username=current_user.username,
                 action="UPDATE_SYSTEM_SETTINGS",
                 resource_type="system_settings",
                 ip_address=ip_address,
@@ -209,7 +208,6 @@ async def backup_system(
             audit_crud.create(
                 db,
                 user_id=current_user.id,
-                username=current_user.username,
                 action="SYSTEM_BACKUP",
                 resource_type="system",
                 request_body=json.dumps({"backup_time": backup_data["backup_time"]}),
@@ -284,7 +282,6 @@ async def restore_system(
             audit_crud.create(
                 db,
                 user_id=current_user.id,
-                username=current_user.username,
                 action="SYSTEM_RESTORE",
                 resource_type="system",
                 request_body=json.dumps(

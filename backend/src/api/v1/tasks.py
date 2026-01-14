@@ -90,9 +90,7 @@ async def get_tasks(
         total = task_crud.count(db=db, task_type=task_type, status=status)
 
         # Convert AsyncTask models to TaskResponse schemas
-        task_responses = [
-            TaskResponse.model_validate(task) for task in tasks
-        ]
+        task_responses = [TaskResponse.model_validate(task) for task in tasks]
 
         return TaskListResponse(
             items=task_responses,
@@ -117,7 +115,8 @@ async def get_task(
     task = task_crud.get(db=db, id=task_id)
     if not task:
         raise HTTPException(status_code=404, detail="任务不存在")
-    return task
+    result: TaskResponse = TaskResponse.model_validate(task)
+    return result
 
 
 @router.put("/{task_id}", response_model=TaskResponse, summary="更新任务")
@@ -201,7 +200,11 @@ async def get_task_history(
 
     try:
         history = task_crud.get_history(db=db, task_id=task_id)
-        return history
+        # Convert TaskHistory models to TaskHistoryResponse schemas
+        result: list[TaskHistoryResponse] = [
+            TaskHistoryResponse.model_validate(h) for h in history
+        ]
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取任务历史失败: {str(e)}")
 
@@ -348,7 +351,8 @@ async def get_excel_config(
     config = excel_task_config_crud.get(db=db, id=config_id)
     if not config:
         raise HTTPException(status_code=404, detail="配置不存在")
-    return config
+    result: ExcelTaskConfigResponse = ExcelTaskConfigResponse.model_validate(config)
+    return result
 
 
 @router.put(
@@ -372,7 +376,10 @@ async def update_excel_config(
         updated_config = excel_task_config_crud.update(
             db=db, db_obj=config, obj_in=config_in
         )
-        return updated_config
+        result: ExcelTaskConfigResponse = ExcelTaskConfigResponse.model_validate(
+            updated_config
+        )
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"更新Excel配置失败: {str(e)}")
 
@@ -390,9 +397,7 @@ async def delete_excel_config(
         if not config:
             raise HTTPException(status_code=404, detail="配置不存在")
 
-        excel_task_config_crud.update(
-            db=db, db_obj=config, obj_in={"is_active": False}
-        )
+        excel_task_config_crud.update(db=db, db_obj=config, obj_in={"is_active": False})
         return {"message": "Excel配置删除成功"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"删除Excel配置失败: {str(e)}")

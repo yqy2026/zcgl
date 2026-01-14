@@ -56,13 +56,13 @@ async def get_organization_tree(
 
         for org in organizations:
             # Access attribute values to avoid Column type issues
-            org_id = getattr(org, 'id', '')
+            org_id = getattr(org, "id", "")
             children = build_tree(org_id)
             tree_node = OrganizationTree(
-                id=str(getattr(org, 'id', '')),
-                name=str(getattr(org, 'name', '')),
-                level=int(getattr(org, 'level', 0)),
-                sort_order=int(getattr(org, 'sort_order', 0)),
+                id=str(getattr(org, "id", "")),
+                name=str(getattr(org, "name", "")),
+                level=int(getattr(org, "level", 0)),
+                sort_order=int(getattr(org, "sort_order", 0)),
                 children=children,
             )
             tree.append(tree_node)
@@ -82,7 +82,9 @@ async def search_organizations(
 ) -> list[OrganizationResponse]:
     """搜索组织"""
     # FastAPI will convert Organization to OrganizationResponse via response_model
-    organizations = organization_crud.search(db, keyword=keyword, skip=skip, limit=limit)
+    organizations = organization_crud.search(
+        db, keyword=keyword, skip=skip, limit=limit
+    )
     return list(organizations)
 
 
@@ -103,7 +105,9 @@ async def get_organization(
     current_user: User = Depends(get_current_active_user),
 ) -> OrganizationResponse:
     """根据ID获取组织详情"""
-    organization = organization_crud.get(db, id=org_id)
+    from ...models.organization import Organization
+
+    organization: Organization | None = organization_crud.get(db, id=org_id)
     if not organization:
         raise HTTPException(status_code=404, detail="组织不存在")
     return organization

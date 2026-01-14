@@ -1,6 +1,7 @@
 """
 系统字典管理API路由
 """
+
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
@@ -41,7 +42,9 @@ async def get_system_dictionaries(
             filters["is_active"] = is_active
 
         # FastAPI will convert SystemDictionary to SystemDictionaryResponse via response_model
-        dictionaries = system_dictionary_crud.get_multi_with_filters(db=db, filters=filters)
+        dictionaries = system_dictionary_crud.get_multi_with_filters(
+            db=db, filters=filters
+        )
         # Use explicit conversion to satisfy mypy's invariance check
         return [SystemDictionaryResponse.model_validate(d) for d in dictionaries]
 
@@ -63,7 +66,11 @@ async def get_system_dictionary(
     - **dictionary_id**: 字典ID
     """
     try:
-        dictionary = system_dictionary_crud.get(db=db, id=dictionary_id)
+        from ...models.asset import SystemDictionary
+
+        dictionary: SystemDictionary | None = system_dictionary_crud.get(
+            db=db, id=dictionary_id
+        )
         if not dictionary:
             raise HTTPException(status_code=404, detail=f"字典 {dictionary_id} 不存在")
         return dictionary

@@ -2,11 +2,10 @@
 项目管理API路由
 """
 
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Path
 from sqlalchemy.orm import Session
-from typing_extensions import Annotated
 
 from ...crud.project import project_crud
 from ...database import get_db
@@ -37,7 +36,7 @@ async def create_project(
         project = project_service.create_project(
             db=db, obj_in=project_in, created_by=current_user.id
         )
-        return project
+        return ProjectResponse.model_validate(project)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -52,7 +51,7 @@ async def list_projects(
     page: int = 1,
     limit: int = 20,
     keyword: str | None = None,
-    status: str | None = None,
+    project_status: str | None = None,
 ) -> ProjectListResponse:
     """
     获取项目列表，支持分页和筛选
@@ -60,12 +59,17 @@ async def list_projects(
     try:
         search_params = ProjectSearchRequest(
             page=page,
-            limit=limit,
+            size=limit,
             keyword=keyword,
-            status=status,
+            is_active=None,
+            project_type=None,
+            project_status=project_status,
+            city=None,
+            ownership_id=None,
+            ownership_entity=None,
         )
         result = project_service.search_projects(db=db, search_params=search_params)
-        return result
+        return ProjectListResponse(**result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取项目列表失败: {str(e)}")
 
@@ -81,7 +85,7 @@ async def search_projects(
     """
     try:
         result = project_service.search_projects(db=db, search_params=search_params)
-        return result
+        return ProjectListResponse(**result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"搜索项目失败: {str(e)}")
 
@@ -94,7 +98,7 @@ async def get_project_options(
     """
     获取项目下拉列表选项
     """
-    return project_service.get_dropdown_options(db=db)
+    return project_crud.get_dropdown_options(db=db)
 
 
 @router.get("/stats/overview", summary="获取项目统计")
@@ -120,7 +124,7 @@ async def get_project(
     project = project_crud.get(db=db, id=project_id)
     if not project:
         raise HTTPException(status_code=404, detail="项目不存在")
-    return project
+    return ProjectResponse.model_validate(project)
 
 
 @router.put("/{project_id}", response_model=ProjectResponse, summary="更新项目")
@@ -137,7 +141,7 @@ async def update_project(
         project = project_service.update_project(
             db=db, project_id=project_id, obj_in=project_in, updated_by=current_user.id
         )
-        return project
+        return ProjectResponse.model_validate(project)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
@@ -177,7 +181,7 @@ async def toggle_project_status(
         project = project_service.toggle_status(
             db=db, project_id=project_id, updated_by=current_user.id
         )
-        return project
+        return ProjectResponse.model_validate(project)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:

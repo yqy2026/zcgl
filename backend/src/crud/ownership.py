@@ -4,9 +4,10 @@ from sqlalchemy.orm import Session
 
 from ..crud.base import CRUDBase
 from ..models import Ownership
+from ..schemas.ownership import OwnershipCreate, OwnershipUpdate
 
 
-class CRUDOwnership(CRUDBase):
+class CRUDOwnership(CRUDBase[Ownership, OwnershipCreate, OwnershipUpdate]):
     """权属方CRUD操作类"""
 
     def get(self, db: Session, id: Any) -> Ownership | None:  # type: ignore[override]

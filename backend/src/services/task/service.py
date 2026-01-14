@@ -56,7 +56,7 @@ class TaskService:
         error_message: str | None = None,
     ) -> AsyncTask:
         """更新任务状态"""
-        task = task_crud.get(db, task_id)
+        task: AsyncTask | None = task_crud.get(db, task_id)
         if not task:
             raise ValueError(f"任务 {task_id} 不存在")
 
@@ -113,7 +113,7 @@ class TaskService:
         self, db: Session, *, task_id: str, obj_in: TaskUpdate
     ) -> AsyncTask:
         """通用更新任务"""
-        task = task_crud.get(db, task_id)
+        task: AsyncTask | None = task_crud.get(db, task_id)
         if not task:
             raise ValueError(f"任务 {task_id} 不存在")
 
@@ -235,7 +235,9 @@ class TaskService:
         db.refresh(history)
         return history
 
-    def get_statistics(self, db: Session, *, user_id: str | None = None) -> dict[str, Any]:
+    def get_statistics(
+        self, db: Session, *, user_id: str | None = None
+    ) -> dict[str, Any]:
         """获取统计信息 (Proxy to CRUD or implement here?) - Logic is reading DB, so keep in CRUD or move here? moving to service is fine for consistency"""
         # Kept in CRUD for now as it's read-only aggregation.
         return task_crud.get_statistics(db, user_id=user_id)

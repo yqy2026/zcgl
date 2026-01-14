@@ -76,7 +76,9 @@ class PasswordService:
             if isinstance(password_history_value, str):
                 password_history: list[str] = json.loads(password_history_value)
             else:  # pragma: no cover
-                password_history = cast(list[str], password_history_value)  # pragma: no cover
+                password_history = cast(
+                    list[str], password_history_value
+                )  # pragma: no cover
 
             # 检查密码是否与历史记录中的任何密码匹配
             for old_hash in password_history:
@@ -97,7 +99,9 @@ class PasswordService:
                 if isinstance(password_history_value, str):
                     password_history = json.loads(password_history_value)
                 else:  # pragma: no cover
-                    password_history = cast(list[str], password_history_value)  # pragma: no cover
+                    password_history = cast(
+                        list[str], password_history_value
+                    )  # pragma: no cover
             except (json.JSONDecodeError, TypeError):  # pragma: no cover
                 password_history = []  # pragma: no cover
         else:
@@ -111,8 +115,8 @@ class PasswordService:
             password_history = password_history[-10:]
 
         # 更新用户记录
-        user.password_history = json.dumps(password_history)  # type: ignore[assignment]
-        user.password_last_changed = datetime.now()  # type: ignore[assignment]
+        user.password_history = json.dumps(password_history)
+        user.password_last_changed = datetime.now()
 
     def is_password_expired(self, user: User) -> bool:
         """检查密码是否过期"""

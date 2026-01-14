@@ -23,7 +23,8 @@ class SystemDictionaryService:
                 f"字典代码 {obj_in.dict_code} 在类型 {obj_in.dict_type} 中已存在"
             )
 
-        return system_dictionary_crud.create(db, obj_in=obj_in)
+        result: SystemDictionary = system_dictionary_crud.create(db, obj_in=obj_in)
+        return result
 
     def update_dictionary(
         self, db: Session, *, id: str, obj_in: SystemDictionaryUpdate
@@ -33,7 +34,10 @@ class SystemDictionaryService:
         if not db_obj:
             raise ValueError("字典项不存在")
 
-        return system_dictionary_crud.update(db, db_obj=db_obj, obj_in=obj_in)
+        result: SystemDictionary = system_dictionary_crud.update(
+            db, db_obj=db_obj, obj_in=obj_in
+        )
+        return result
 
     def delete_dictionary(self, db: Session, *, id: str) -> SystemDictionary:
         """删除字典项"""
@@ -45,11 +49,12 @@ class SystemDictionaryService:
         # SystemDictionary usually hard delete or soft?
         # CRUDBase remove is hard delete unless overridden.
         # Let's check model.
-        return system_dictionary_crud.remove(db, id=id)
+        result: SystemDictionary = system_dictionary_crud.remove(db, id=id)
+        return result
 
     def toggle_active_status(self, db: Session, *, id: str) -> SystemDictionary:
         """切换启用状态"""
-        dictionary = system_dictionary_crud.get(db, id)
+        dictionary: SystemDictionary | None = system_dictionary_crud.get(db, id)
         if not dictionary:
             raise ValueError("字典项不存在")
 

@@ -75,7 +75,9 @@ async def get_custom_field(
     - **field_id**: 字段ID
     """
     try:
-        field = custom_field_crud.get(db=db, id=field_id)
+        from ...models.asset import AssetCustomField
+
+        field: AssetCustomField | None = custom_field_crud.get(db=db, id=field_id)
         if not field:
             raise HTTPException(status_code=404, detail=f"字段 {field_id} 不存在")
         return field

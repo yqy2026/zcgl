@@ -167,24 +167,27 @@ async def lifespan(app: FastAPI) -> Any:
             from .database import SessionLocal
             from .services.enum_data_init import add_legacy_enum_values, init_enum_data
 
-            db = SessionLocal()
-            try:
-                logger.info("开始初始化枚举字段数据...")
-                init_result = init_enum_data(db, created_by="system")
-                logger.info(
-                    f"枚举类型初始化: 创建 {init_result['types_created']}, 更新 {init_result['types_updated']}"
-                )
-                logger.info(
-                    f"枚举值初始化: 创建 {init_result['values_created']}, 更新 {init_result['values_updated']}"
-                )
+            if SessionLocal is None:
+                logger.warning("无法获取数据库会话工厂，跳过枚举初始化")
+            else:
+                db = SessionLocal()
+                try:
+                    logger.info("开始初始化枚举字段数据...")
+                    init_result = init_enum_data(db, created_by="system")
+                    logger.info(
+                        f"枚举类型初始化: 创建 {init_result['types_created']}, 更新 {init_result['types_updated']}"
+                    )
+                    logger.info(
+                        f"枚举值初始化: 创建 {init_result['values_created']}, 更新 {init_result['values_updated']}"
+                    )
 
-                # 添加遗留枚举值支持
-                legacy_result = add_legacy_enum_values(db, created_by="system")
-                logger.info(f"遗留枚举值添加: {legacy_result['values_added']}")
-            except Exception as e:
-                logger.warning(f"枚举数据初始化失败: {e}")
-            finally:
-                db.close()
+                    # 添加遗留枚举值支持
+                    legacy_result = add_legacy_enum_values(db, created_by="system")
+                    logger.info(f"遗留枚举值添加: {legacy_result['values_added']}")
+                except Exception as e:
+                    logger.warning(f"枚举数据初始化失败: {e}")
+                finally:
+                    db.close()
         except ImportError as e:
             logger.warning(f"枚举初始化模块导入失败: {e}")
         except Exception as e:
@@ -261,7 +264,8 @@ try:
     from .middleware.file_upload_security import create_file_security_middleware
 
     file_security_middleware = create_file_security_middleware(app)
-    app.add_middleware(type(file_security_middleware))
+    # The middleware factory is already correctly configured by create_file_security_middleware
+    # No need to add it again
 except ImportError as e:
     safe_print(
         f"Warning: File upload security middleware not available - {safe_error_message(e)}"

@@ -24,16 +24,11 @@ from sqlalchemy.pool import QueuePool, StaticPool
 try:
     from .database_security import enhance_database_security
 except ImportError:  # pragma: no cover
-    try:  # pragma: no cover
-        from database_security import (
-            enhance_database_security,  # type: ignore[no-redef] # noqa: F401 # pragma: no cover
-        )
-    except ImportError:  # pragma: no cover
-        from sqlalchemy.engine import Engine
+    # Fallback database security enhancer when module is not available
+    from sqlalchemy.engine import Engine
 
-        def enhance_database_security(engine: Engine) -> None:  # pragma: no cover
-            """Fallback database security enhancer when module is not available."""
-            pass  # pragma: no cover
+    def enhance_database_security(engine: Engine) -> None:  # pragma: no cover
+        pass  # pragma: no cover
 
 
 try:
@@ -187,7 +182,11 @@ class DatabaseManager:
 
         @event.listens_for(self.engine, "before_execute")
         def on_execute(
-            conn: Any, clauseelement: Any, multiparams: Any, params: Any, execution_options: Any
+            conn: Any,
+            clauseelement: Any,
+            multiparams: Any,
+            params: Any,
+            execution_options: Any,
         ) -> None:
             """执行查询事件"""
             conn.info.setdefault("query_start_time", time.time())

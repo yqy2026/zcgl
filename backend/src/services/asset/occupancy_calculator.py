@@ -122,11 +122,19 @@ class OccupancyRateCalculator:
                     .first()
                 )
 
-                total_rentable = float(occupancy_stats.total_rentable or 0)
-                total_rented = float(occupancy_stats.total_rented or 0)
+                # Add None check for occupancy_stats
+                if occupancy_stats is None:
+                    total_rentable = 0.0
+                    total_rented = 0.0
+                    asset_count = 0
+                    rentable_asset_count = 0
+                else:
+                    total_rentable = float(occupancy_stats.total_rentable or 0)
+                    total_rented = float(occupancy_stats.total_rented or 0)
+                    asset_count = occupancy_stats.total_count or 0
+                    rentable_asset_count = occupancy_stats.rentable_count or 0
+
                 total_unrented = total_rentable - total_rented
-                asset_count = occupancy_stats.total_count or 0
-                rentable_asset_count = occupancy_stats.rentable_count or 0
 
             finally:
                 db.close()

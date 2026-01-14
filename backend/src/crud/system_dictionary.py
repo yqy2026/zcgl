@@ -4,10 +4,13 @@ from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
 from ..models.asset import SystemDictionary
+from ..schemas.asset import SystemDictionaryCreate, SystemDictionaryUpdate
 from .base import CRUDBase
 
 
-class CRUDSystemDictionary(CRUDBase):
+class CRUDSystemDictionary(
+    CRUDBase[SystemDictionary, SystemDictionaryCreate, SystemDictionaryUpdate]
+):
     """系统字典CRUD操作类"""
 
     def __init__(self) -> None:

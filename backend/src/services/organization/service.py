@@ -32,22 +32,24 @@ class OrganizationService:
 
         # Create object
         db_obj = Organization(**obj_in.model_dump())
-        object.__setattr__(db_obj, 'level', level)
+        object.__setattr__(db_obj, "level", level)
         # Temporary path until flush
-        object.__setattr__(db_obj, 'path', "/")
+        object.__setattr__(db_obj, "path", "/")
 
         db.add(db_obj)
         db.flush()  # Get ID
 
         # Now set path
         if parent:
-            object.__setattr__(db_obj, 'path',
+            object.__setattr__(
+                db_obj,
+                "path",
                 f"{parent.path}/{db_obj.id}"
                 if parent.path
-                else f"/{parent.id}/{db_obj.id}"
+                else f"/{parent.id}/{db_obj.id}",
             )
         else:
-            object.__setattr__(db_obj, 'path', f"/{db_obj.id}")
+            object.__setattr__(db_obj, "path", f"/{db_obj.id}")
 
         db.commit()
         db.refresh(db_obj)
@@ -62,7 +64,7 @@ class OrganizationService:
         self, db: Session, *, org_id: str, obj_in: OrganizationUpdate
     ) -> Organization:
         """更新组织"""
-        db_obj = organization_crud.get(db, org_id)
+        db_obj: Organization | None = organization_crud.get(db, org_id)
         if not db_obj:
             raise ValueError(f"组织ID {org_id} 不存在")
 
@@ -88,17 +90,19 @@ class OrganizationService:
 
                     parent = organization_crud.get(db, new_parent_id)
                     if parent:
-                        object.__setattr__(db_obj, 'level', parent.level + 1)
-                        object.__setattr__(db_obj, 'path',
+                        object.__setattr__(db_obj, "level", parent.level + 1)
+                        object.__setattr__(
+                            db_obj,
+                            "path",
                             f"{parent.path}/{db_obj.id}"
                             if parent.path
-                            else f"/{parent.id}/{db_obj.id}"
+                            else f"/{parent.id}/{db_obj.id}",
                         )
                     else:
                         raise ValueError(f"上级组织 {new_parent_id} 不存在")
                 else:
-                    object.__setattr__(db_obj, 'level', 1)
-                    object.__setattr__(db_obj, 'path', f"/{db_obj.id}")
+                    object.__setattr__(db_obj, "level", 1)
+                    object.__setattr__(db_obj, "path", f"/{db_obj.id}")
 
                 # 更新所有子组织的层级和路径
                 self._update_children_path(db, db_obj)

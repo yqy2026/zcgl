@@ -59,6 +59,11 @@ async def upload_asset_attachments(
                 file_size = file.file.tell()
                 file.file.seek(0)  # 重置到文件开头
 
+                # Ensure filename is not None
+                if file.filename is None:
+                    failed_files.append("unknown_filename: 文件名不能为空")
+                    continue
+
                 validation_result = validate_upload_file(
                     filename=file.filename,
                     content_type=file.content_type,
@@ -103,7 +108,7 @@ async def get_asset_attachments(
     asset_id: str = Path(..., description="资产ID"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-) -> dict[str, Any]:
+) -> list[dict[str, Any]]:
     """
     获取资产附件列表
 
@@ -151,7 +156,7 @@ async def download_asset_attachment(
     filename: str = Path(..., description="文件名"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-) -> dict[str, Any]:
+) -> FileResponse:
     """
     下载资产附件
 

@@ -26,34 +26,51 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
 if TYPE_CHECKING:
+    from src.database import DatabaseManager
     from src.models.auth import User
 
 try:
     from src.core.config import get_config
     from src.database import get_database_manager, get_db
+    from src.middleware.auth import get_current_user, require_permission
     from src.models.auth import User
-    from src.services.core.auth_service import get_current_user, require_permission
 except ImportError:
     # 独立运行时的回退方案
-    def get_db() -> Generator[Session | None, None, None]:
-        yield None
+
+    def get_db() -> Generator[Session, None, None]:
+        yield Session()
 
     def get_config(key: str, default: Any = None) -> Any:
         return default
 
-    def get_database_manager() -> Any:
+    def get_database_manager() -> DatabaseManager | None:  # type: ignore[misc]
         return None
 
-    def get_current_user() -> Any:
+    def get_current_user(
+        token: str | None = None, db: Session = Depends(get_db)
+    ) -> User | None:
         return None
-
-    def require_permission(*args: Any, **kwargs: Any) -> Any:
-        def decorator(func: Any) -> Any:
-            return func
-        return decorator
 
     class User:  # type: ignore[no-redef]
         pass
+
+    class RBACPermissionChecker:
+        def __init__(self, resource: str, action: str, resource_id: str | None = None):
+            self.resource = resource
+            self.action = action
+            self.resource_id = resource_id
+
+        def __call__(
+            self,
+            current_user: User | None = Depends(get_current_user),
+            db: Session = Depends(get_db),
+        ) -> User | None:
+            return None
+
+    def require_permission(  # type: ignore[misc]
+        resource: str, action: str, resource_id: str | None = None
+    ) -> RBACPermissionChecker:
+        return RBACPermissionChecker(resource, action, resource_id)
 
 
 router = APIRouter(prefix="/monitoring", tags=["系统监控"])
@@ -243,7 +260,7 @@ def check_component_health() -> dict[str, dict[str, Any]]:
         db_manager: Any = get_database_manager()
         if db_manager:
             health_check = db_manager.run_health_check()
-            pool_status = db_manager.get_connection_pool_status()  # type: ignore[attr-defined]
+            pool_status: dict[str, Any] = db_manager.get_connection_pool_status()
 
             # 根据健康检查结果确定状态
             if health_check["healthy"] and pool_status.get("utilization", 0) < 80:
@@ -474,9 +491,8 @@ def check_performance_alerts(
 
 
 @router.get("/system-metrics", response_model=SystemMetrics, summary="获取系统性能指标")
-@require_permission("system_monitoring", "read")  # type: ignore[misc]
 async def get_system_metrics(
-    current_user: Any = Depends(get_current_user),
+    current_user: User = Depends(require_permission("system_monitoring", "read")),
 ) -> SystemMetrics:
     """
     获取当前系统性能指标
@@ -497,9 +513,8 @@ async def get_system_metrics(
     response_model=ApplicationMetrics,
     summary="获取应用性能指标",
 )
-@require_permission("system_monitoring", "read")  # type: ignore[misc]
 async def get_application_metrics(
-    current_user: Any = Depends(get_current_user),
+    current_user: User = Depends(require_permission("system_monitoring", "read")),
 ) -> ApplicationMetrics:
     """
     获取应用性能指标
@@ -516,9 +531,8 @@ async def get_application_metrics(
 
 
 @router.get("/health", response_model=HealthStatus, summary="获取系统健康状态")
-@require_permission("system_monitoring", "read")  # type: ignore[misc]
 async def get_health_status(
-    current_user: Any = Depends(get_current_user),
+    current_user: User = Depends(require_permission("system_monitoring", "read")),
 ) -> HealthStatus:
     """
     获取系统整体健康状态
@@ -551,10 +565,9 @@ async def get_health_status(
 @router.get(
     "/metrics/history", response_model=list[SystemMetrics], summary="获取系统指标历史"
 )
-@require_permission("system_monitoring", "read")  # type: ignore[misc]
 async def get_metrics_history(
     hours: int = Query(default=24, ge=1, le=168, description="查询历史时间范围(小时)"),
-    current_user: Any = Depends(get_current_user),
+    current_user: User = Depends(require_permission("system_monitoring", "read")),
 ) -> list[SystemMetrics]:
     """
     获取系统性能指标历史数据
@@ -568,13 +581,12 @@ async def get_metrics_history(
 
 
 @router.get("/alerts", response_model=list[PerformanceAlert], summary="获取性能告警")
-@require_permission("system_monitoring", "read")  # type: ignore[misc]
 async def get_performance_alerts(
     level: str | None = Query(
         default=None, regex="^(info|warning|critical)$", description="告警级别过滤"
     ),
     resolved: bool | None = Query(default=None, description="是否已解决过滤"),
-    current_user: Any = Depends(get_current_user),
+    current_user: User = Depends(require_permission("system_monitoring", "read")),
 ) -> list[PerformanceAlert]:
     """
     获取性能告警列表
@@ -596,10 +608,9 @@ async def get_performance_alerts(
 
 
 @router.post("/alerts/{alert_id}/resolve", summary="解决告警")
-@require_permission("system_monitoring", "write")  # type: ignore[misc]
 async def resolve_alert(
     alert_id: str,
-    current_user: Any = Depends(get_current_user),
+    current_user: User = Depends(require_permission("system_monitoring", "write")),
 ) -> dict[str, Any]:
     """
     标记告警为已解决
@@ -617,9 +628,8 @@ async def resolve_alert(
 
 
 @router.get("/dashboard", summary="获取监控仪表板数据")
-@require_permission("system_monitoring", "read")  # type: ignore[misc]
 async def get_monitoring_dashboard(
-    current_user: Any = Depends(get_current_user),
+    current_user: User = Depends(require_permission("system_monitoring", "read")),
 ) -> dict[str, Any]:
     """
     获取监控仪表板综合数据
@@ -664,9 +674,8 @@ async def get_monitoring_dashboard(
 
 
 @router.post("/metrics/collect", summary="手动触发指标收集")
-@require_permission("system_monitoring", "write")  # type: ignore[misc]
 async def trigger_metrics_collection(
-    current_user: Any = Depends(get_current_user),
+    current_user: User = Depends(require_permission("system_monitoring", "write")),
 ) -> dict[str, Any]:
     """
     手动触发一次指标收集
@@ -693,9 +702,8 @@ async def trigger_metrics_collection(
     response_model=DatabaseHealthMetrics,
     summary="获取数据库健康指标",
 )
-@require_permission("system_monitoring", "read")  # type: ignore[misc]
 async def get_database_health_metrics(
-    current_user: Any = Depends(get_current_user),
+    current_user: User = Depends(require_permission("system_monitoring", "read")),
 ) -> DatabaseHealthMetrics:
     """
     获取数据库健康状态和性能指标
@@ -770,10 +778,9 @@ async def get_database_health_metrics(
 
 
 @router.get("/database/slow-queries", summary="获取慢查询列表")
-@require_permission("system_monitoring", "read")  # type: ignore[misc]
 async def get_slow_queries(
     limit: int = Query(default=20, ge=1, le=100, description="返回数量限制"),
-    current_user: Any = Depends(get_current_user),
+    current_user: User = Depends(require_permission("system_monitoring", "read")),
 ) -> dict[str, Any]:
     """
     获取数据库慢查询列表
@@ -807,9 +814,8 @@ async def get_slow_queries(
     response_model=DatabaseOptimizationReport,
     summary="执行数据库优化",
 )
-@require_permission("system_monitoring", "write")  # type: ignore[misc]
 async def optimize_database(
-    current_user: Any = Depends(get_current_user),
+    current_user: User = Depends(require_permission("system_monitoring", "write")),
 ) -> DatabaseOptimizationReport:
     """
     执行数据库优化操作
@@ -880,10 +886,9 @@ async def optimize_database(
 
 
 @router.post("/database/cleanup", summary="清理数据库过期数据")
-@require_permission("system_monitoring", "write")  # type: ignore[misc]
 async def cleanup_database(
     days: int = Query(default=7, ge=1, le=90, description="清理多少天前的数据"),
-    current_user: Any = Depends(get_current_user),
+    current_user: User = Depends(require_permission("system_monitoring", "write")),
 ) -> dict[str, Any]:
     """
     清理数据库过期数据
@@ -919,9 +924,8 @@ async def cleanup_database(
 
 
 @router.get("/database/connection-pool", summary="获取连接池状态")
-@require_permission("system_monitoring", "read")  # type: ignore[misc]
 async def get_connection_pool_status(
-    current_user: Any = Depends(get_current_user),
+    current_user: User = Depends(require_permission("system_monitoring", "read")),
 ) -> dict[str, Any]:
     """
     获取数据库连接池详细状态
