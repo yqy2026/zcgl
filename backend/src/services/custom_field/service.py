@@ -80,7 +80,9 @@ class CustomFieldService:
                     )
                     text_rules: dict[str, Any] = cast(
                         dict[str, Any],
-                        json.loads(text_rules_str) if text_rules_str else field.validation_rules,
+                        json.loads(text_rules_str)
+                        if text_rules_str
+                        else field.validation_rules,
                     )
                     max_length = text_rules.get("max_length")
                     min_length = text_rules.get("min_length")
@@ -109,7 +111,9 @@ class CustomFieldService:
                         )
                         number_rules: dict[str, Any] = cast(
                             dict[str, Any],
-                            json.loads(number_rules_str) if number_rules_str else field.validation_rules,
+                            json.loads(number_rules_str)
+                            if number_rules_str
+                            else field.validation_rules,
                         )
                         max_value = number_rules.get("max_value")
                         min_value = number_rules.get("min_value")
@@ -141,7 +145,9 @@ class CustomFieldService:
                         )
                         decimal_rules: dict[str, Any] = cast(
                             dict[str, Any],
-                            json.loads(decimal_rules_str) if decimal_rules_str else field.validation_rules,
+                            json.loads(decimal_rules_str)
+                            if decimal_rules_str
+                            else field.validation_rules,
                         )
                         max_value = decimal_rules.get("max_value")
                         min_value = decimal_rules.get("min_value")
