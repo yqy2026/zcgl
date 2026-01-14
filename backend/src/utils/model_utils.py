@@ -8,7 +8,10 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy.orm import class_mapper
+from sqlalchemy.orm import Mapper, class_mapper
+
+# Type alias for SQLAlchemy models
+SQLAlchemyModel = Any
 
 
 def model_to_dict(model: Any, include_relations: bool = False) -> dict[str, Any] | None:
@@ -25,7 +28,8 @@ def model_to_dict(model: Any, include_relations: bool = False) -> dict[str, Any]
     if model is None:
         return None
 
-    columns = [c.key for c in class_mapper(model.__class__).columns]
+    mapper: Mapper[Any] = class_mapper(model.__class__)
+    columns = [c.key for c in mapper.columns]
     result: dict[str, Any] = {}
 
     for column in columns:
@@ -35,23 +39,25 @@ def model_to_dict(model: Any, include_relations: bool = False) -> dict[str, Any]
         if isinstance(value, datetime | date):
             result[column] = value.isoformat()
         elif isinstance(value, Decimal):
-            result[column] = float(value)  # type: ignore[assignment]
+            result[column] = float(value)
         else:
             result[column] = value
 
     # 处理关联关系
     if include_relations:
-        for rel in class_mapper(model.__class__).relationships:
+        for rel in mapper.relationships:
             rel_value = getattr(model, rel.key)
             if rel_value is not None:
                 if rel.uselist:  # 一对多关系
-                    result[rel.key] = [  # type: ignore[assignment]
-                        model_to_dict(item) for item in rel_value if item is not None
+                    # Type assertion: we know this is a list of models
+                    result[rel.key] = [
+                        item_dict for item in rel_value
+                        if item is not None and (item_dict := model_to_dict(item)) is not None
                     ]
                 else:  # 多对一或一对一关系
                     dict_result = model_to_dict(rel_value)
                     if dict_result is not None:
-                        result[rel.key] = dict_result  # type: ignore[assignment]
+                        result[rel.key] = dict_result
 
     return result
 
@@ -86,7 +92,7 @@ def generate_uuid() -> str:
     return str(uuid.uuid4())
 
 
-def format_currency(amount: Decimal, decimal_places: int = 2) -> float:
+def format_currency(amount: Decimal | None, decimal_places: int = 2) -> float:
     """
     格式化金额为浮点数
 
@@ -167,7 +173,7 @@ def generate_month_range(start_month: str, end_month: str) -> list[str]:
 
 
 def safe_divide(
-    numerator: Decimal, denominator: Decimal, default: float = 0.0
+    numerator: Decimal | None, denominator: Decimal | None, default: float = 0.0
 ) -> float:
     """
     安全除法，避免除零错误
@@ -180,7 +186,9 @@ def safe_divide(
     Returns:
         除法结果
     """
-    if denominator == 0:
+    if denominator is None or denominator == 0:
+        return default
+    if numerator is None:
         return default
     return float(numerator / denominator)
 
