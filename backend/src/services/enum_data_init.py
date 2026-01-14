@@ -6,6 +6,7 @@
 """
 
 import logging
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -118,7 +119,7 @@ STANDARD_ENUMS = {
 }
 
 
-def init_enum_data(db: Session, created_by: str = "system") -> dict:
+def init_enum_data(db: Session, created_by: str = "system") -> dict[str, Any]:
     """
     初始化标准枚举数据
 
@@ -129,7 +130,7 @@ def init_enum_data(db: Session, created_by: str = "system") -> dict:
     Returns:
         初始化结果统计
     """
-    stats = {
+    stats: dict[str, Any] = {
         "types_created": 0,
         "types_updated": 0,
         "values_created": 0,
@@ -161,25 +162,26 @@ def init_enum_data(db: Session, created_by: str = "system") -> dict:
                 logger.info(f"创建枚举类型: {enum_code}")
             else:
                 # 更新现有枚举类型
-                enum_type.name = enum_config["name"]
-                enum_type.category = enum_config.get("category", enum_type.category)
-                enum_type.description = enum_config.get(
+                enum_type.name = enum_config["name"]  # type: ignore[assignment]
+                enum_type.category = enum_config.get("category", enum_type.category)  # type: ignore[assignment]
+                enum_type.description = enum_config.get(  # type: ignore[assignment]
                     "description", enum_type.description
                 )
-                enum_type.is_system = True
-                enum_type.status = "active"
-                enum_type.is_deleted = False
-                enum_type.updated_by = created_by
+                enum_type.is_system = True  # type: ignore[assignment]
+                enum_type.status = "active"  # type: ignore[assignment]
+                enum_type.is_deleted = False  # type: ignore[assignment]
+                enum_type.updated_by = created_by  # type: ignore[assignment]
                 stats["types_updated"] += 1
                 logger.info(f"更新枚举类型: {enum_code}")
 
             # 处理枚举值
             for value_config in enum_config["values"]:
+                value_dict: dict[str, Any] = value_config  # type: ignore[assignment]
                 existing_value = (
                     db.query(EnumFieldValue)
                     .filter(
                         EnumFieldValue.enum_type_id == enum_type.id,
-                        EnumFieldValue.value == value_config["value"],
+                        EnumFieldValue.value == value_dict["value"],
                     )
                     .first()
                 )
@@ -188,9 +190,9 @@ def init_enum_data(db: Session, created_by: str = "system") -> dict:
                     # 创建新枚举值
                     new_value = EnumFieldValue(
                         enum_type_id=enum_type.id,
-                        value=value_config["value"],
-                        label=value_config["label"],
-                        sort_order=value_config.get("sort_order", 0),
+                        value=value_dict["value"],
+                        label=value_dict["label"],
+                        sort_order=value_dict.get("sort_order", 0),
                         is_active=True,
                         is_deleted=False,
                         created_by=created_by,
@@ -199,13 +201,13 @@ def init_enum_data(db: Session, created_by: str = "system") -> dict:
                     stats["values_created"] += 1
                 else:
                     # 更新现有枚举值
-                    existing_value.label = value_config["label"]
-                    existing_value.sort_order = value_config.get(
+                    existing_value.label = value_dict["label"]
+                    existing_value.sort_order = value_dict.get(
                         "sort_order", existing_value.sort_order
                     )
-                    existing_value.is_active = True
-                    existing_value.is_deleted = False
-                    existing_value.updated_by = created_by
+                    existing_value.is_active = True  # type: ignore[assignment]
+                    existing_value.is_deleted = False  # type: ignore[assignment]
+                    existing_value.updated_by = created_by  # type: ignore[assignment]
                     stats["values_updated"] += 1
 
         except Exception as e:
@@ -218,14 +220,14 @@ def init_enum_data(db: Session, created_by: str = "system") -> dict:
     return stats
 
 
-def add_legacy_enum_values(db: Session, created_by: str = "system") -> dict:
+def add_legacy_enum_values(db: Session, created_by: str = "system") -> dict[str, Any]:
     """
     添加遗留数据中存在但标准定义中没有的枚举值
 
     这些值可能来自旧系统导入的数据，需要添加到枚举管理中以避免验证错误
     """
     # 遗留值映射：旧值 -> 添加到哪个枚举类型
-    legacy_values = {
+    legacy_values: dict[str, list[dict[str, Any]]] = {
         "ownership_status": [
             {"value": "正常", "label": "正常 (遗留)", "sort_order": 99},
         ],
@@ -240,7 +242,7 @@ def add_legacy_enum_values(db: Session, created_by: str = "system") -> dict:
         ],
     }
 
-    stats = {"values_added": 0, "errors": []}
+    stats: dict[str, Any] = {"values_added": 0, "errors": []}
 
     for enum_code, values in legacy_values.items():
         try:
@@ -252,12 +254,13 @@ def add_legacy_enum_values(db: Session, created_by: str = "system") -> dict:
                 stats["errors"].append(f"枚举类型 {enum_code} 不存在")
                 continue
 
-            for value_config in legacy_values:
+            for value_config in values:
+                value_dict: dict[str, Any] = value_config
                 existing = (
                     db.query(EnumFieldValue)
                     .filter(
                         EnumFieldValue.enum_type_id == enum_type.id,
-                        EnumFieldValue.value == value_config["value"],
+                        EnumFieldValue.value == value_dict["value"],
                     )
                     .first()
                 )
@@ -265,16 +268,16 @@ def add_legacy_enum_values(db: Session, created_by: str = "system") -> dict:
                 if not existing:
                     new_value = EnumFieldValue(
                         enum_type_id=enum_type.id,
-                        value=value_config["value"],
-                        label=value_config["label"],
-                        sort_order=value_config.get("sort_order", 99),
+                        value=value_dict["value"],
+                        label=value_dict["label"],
+                        sort_order=value_dict.get("sort_order", 99),
                         is_active=True,
                         is_deleted=False,
                         created_by=created_by,
                     )
                     db.add(new_value)
                     stats["values_added"] += 1
-                    logger.info(f"添加遗留枚举值: {enum_code}.{value_config['value']}")
+                    logger.info(f"添加遗留枚举值: {enum_code}.{value_dict['value']}")
 
         except Exception as e:
             stats["errors"].append(f"处理遗留值 {enum_code} 失败: {e}")

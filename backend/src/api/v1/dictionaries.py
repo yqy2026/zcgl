@@ -7,7 +7,8 @@ from typing import Any
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -51,7 +52,7 @@ async def get_dictionary_options(
     dict_type: str = Path(..., description="字典类型"),
     is_active: bool = Query(True, description="是否只返回启用的选项"),
     db: Session = Depends(get_db),
-):
+) -> list[DictionaryOptionResponse]:
     """
     获取字典选项（统一接口）
     支持从枚举字段和系统字典两个来源获取数据
@@ -64,8 +65,9 @@ async def get_dictionary_options(
         if enum_type:  # pragma: no cover
             # 从枚举字段获取
             enum_value_crud = get_enum_field_value_crud(db)  # pragma: no cover
+            enum_type_id_str = str(enum_type.id)  # pragma: no cover
             enum_values = enum_value_crud.get_by_type(  # pragma: no cover
-                enum_type.id,
+                enum_type_id_str,
                 is_active=is_active
                 if is_active is not None
                 else None,  # pragma: no cover
@@ -73,25 +75,29 @@ async def get_dictionary_options(
 
             return [  # pragma: no cover
                 DictionaryOptionResponse(
-                    label=fix_chinese_label(dict_type, value.value, value.label),
-                    value=value.value,
-                    code=value.code,
-                    sort_order=value.sort_order,
-                    color=value.color,
-                    icon=value.icon,
+                    label=fix_chinese_label(
+                        dict_type, str(value.value), str(value.label)
+                    ),
+                    value=str(value.value),
+                    code=str(value.code) if value.code is not None else None,
+                    sort_order=int(value.sort_order),
+                    color=str(value.color) if value.color is not None else None,
+                    icon=str(value.icon) if value.icon is not None else None,
                 )
                 for value in enum_values
             ]
 
         # 兜底：从系统字典获取（向后兼容）
-        system_dicts = db.query(SystemDictionary).filter(
+        system_dicts_query = db.query(SystemDictionary).filter(
             SystemDictionary.dict_type == dict_type
         )
 
         if is_active is not None:
-            system_dicts = system_dicts.filter(SystemDictionary.is_active == is_active)
+            system_dicts_query = system_dicts_query.filter(
+                SystemDictionary.is_active == is_active
+            )
 
-        system_dicts = system_dicts.order_by(
+        system_dicts = system_dicts_query.order_by(
             SystemDictionary.sort_order, SystemDictionary.created_at
         ).all()
 
@@ -114,9 +120,9 @@ async def get_dictionary_options(
 @router.post("/{dict_type}/quick-create")
 async def quick_create_dictionary(
     dict_type: str = Path(..., description="字典类型"),
-    dictionary_data: SimpleDictionaryCreate = ...,
+    dictionary_data: SimpleDictionaryCreate = Body(...),
     db: Session = Depends(get_db),
-):
+) -> JSONResponse:
     """
     快速创建字典（兼容原系统字典功能）
     自动创建枚举类型和枚举值
@@ -139,6 +145,9 @@ async def quick_create_dictionary(
             is_hierarchical=False,
             is_multiple=False,
             created_by="系统",
+            default_value=None,
+            validation_rules=None,
+            display_config=None,
         )
 
         enum_type = enum_type_crud.create(enum_type_create)
@@ -146,10 +155,11 @@ async def quick_create_dictionary(
         # 批量创建枚举值
         enum_value_crud = get_enum_field_value_crud(db)
         created_values = []
+        enum_type_id_str = str(enum_type.id)
 
         for i, option in enumerate(dictionary_data.options):
             enum_value_create = EnumFieldValueCreate(
-                enum_type_id=enum_type.id,
+                enum_type_id=enum_type_id_str,
                 label=option.get("label", ""),
                 value=option.get("value", ""),
                 code=option.get("code"),
@@ -159,16 +169,21 @@ async def quick_create_dictionary(
                 icon=option.get("icon"),
                 is_active=option.get("is_active", True),
                 created_by="系统",
+                parent_id=None,
+                extra_properties=None,
             )
 
             created_value = enum_value_crud.create(enum_value_create)
             created_values.append(created_value)
 
-        return {
-            "message": f"字典 {dict_type} 创建成功",
-            "type_id": enum_type.id,
-            "values_count": len(created_values),
-        }
+        return JSONResponse(
+            status_code=200,
+            content={
+                "message": f"字典 {dict_type} 创建成功",
+                "type_id": str(enum_type.id),
+                "values_count": len(created_values),
+            },
+        )
 
     except HTTPException:
         raise
@@ -177,7 +192,7 @@ async def quick_create_dictionary(
 
 
 @router.get("/types", response_model=list[str])
-async def get_dictionary_types(db: Session = Depends(get_db)):
+async def get_dictionary_types(db: Session = Depends(get_db)) -> list[str]:
     """
     获取所有字典类型列表
 
@@ -196,7 +211,7 @@ async def get_dictionary_types(db: Session = Depends(get_db)):
 async def get_validation_statistics(
     enum_type: str | None = Query(None, description="枚举类型编码（可选）"),
     db: Session = Depends(get_db),
-):
+) -> JSONResponse:
     """
     获取枚举验证统计信息
 
@@ -219,7 +234,7 @@ async def get_validation_statistics(
     stats = enum_service.get_validation_stats(enum_type)
 
     # 添加计算字段
-    result = {}
+    result: dict[str, dict[str, Any]] = {}
     for enum_code, stat_data in stats.items():
         failure_rate = (
             (stat_data["failures"] / stat_data["total_validations"] * 100)
@@ -232,19 +247,22 @@ async def get_validation_statistics(
             "failure_rate": round(failure_rate, 2),
         }
 
-    return {
-        "success": True,
-        "data": result,
-        "total_enum_types": len(result),
-    }
+    return JSONResponse(
+        status_code=200,
+        content={
+            "success": True,
+            "data": result,
+            "total_enum_types": len(result),
+        },
+    )
 
 
 @router.post("/{dict_type}/values")
 async def add_dictionary_value(
     dict_type: str = Path(..., description="字典类型"),
-    value_data: dict[str, Any] = ...,
+    value_data: dict[str, Any] = Body(...),
     db: Session = Depends(get_db),
-):
+) -> JSONResponse:
     """为指定字典类型添加新的选项值"""
     try:
         enum_type_crud = get_enum_field_type_crud(db)
@@ -256,8 +274,9 @@ async def add_dictionary_value(
         enum_value_crud = get_enum_field_value_crud(db)
 
         # 检查值是否已存在
+        enum_type_id_str = str(enum_type.id)
         existing_value = enum_value_crud.get_by_type_and_value(
-            enum_type.id, value_data.get("value", "")
+            enum_type_id_str, value_data.get("value", "")
         )  # pragma: no cover
         if existing_value:  # pragma: no cover
             raise HTTPException(  # pragma: no cover
@@ -266,7 +285,7 @@ async def add_dictionary_value(
             )  # pragma: no cover
 
         enum_value_create = EnumFieldValueCreate(
-            enum_type_id=enum_type.id,
+            enum_type_id=enum_type_id_str,
             label=value_data.get("label", ""),
             value=value_data.get("value", ""),
             code=value_data.get("code"),
@@ -276,11 +295,16 @@ async def add_dictionary_value(
             icon=value_data.get("icon"),
             is_active=value_data.get("is_active", True),
             created_by="系统",
+            parent_id=None,
+            extra_properties=None,
         )
 
         created_value = enum_value_crud.create(enum_value_create)
 
-        return {"message": "字典值添加成功", "value_id": created_value.id}
+        return JSONResponse(
+            status_code=200,
+            content={"message": "字典值添加成功", "value_id": str(created_value.id)},
+        )
 
     except HTTPException:
         raise
@@ -290,8 +314,9 @@ async def add_dictionary_value(
 
 @router.delete("/{dict_type}")
 async def delete_dictionary_type(
-    dict_type: str = Path(..., description="字典类型"), db: Session = Depends(get_db)
-):
+    dict_type: str = Path(..., description="字典类型"),
+    db: Session = Depends(get_db),
+) -> JSONResponse:
     """删除字典类型及其所有值"""
     try:
         enum_type_crud = get_enum_field_type_crud(db)
@@ -301,14 +326,18 @@ async def delete_dictionary_type(
             raise HTTPException(status_code=404, detail=f"字典类型 {dict_type} 不存在")
 
         # 软删除枚举类型（会级联删除枚举值）
+        enum_type_id_str = str(enum_type.id)
         success = enum_type_crud.delete(
-            enum_type.id, deleted_by="系统"
+            enum_type_id_str, deleted_by="系统"
         )  # pragma: no cover
 
         if not success:  # pragma: no cover
             raise HTTPException(status_code=500, detail="删除失败")  # pragma: no cover
 
-        return {"message": f"字典类型 {dict_type} 删除成功"}  # pragma: no cover
+        return JSONResponse(
+            status_code=200,
+            content={"message": f"字典类型 {dict_type} 删除成功"},  # pragma: no cover
+        )  # pragma: no cover
 
     except HTTPException:  # pragma: no cover
         raise  # pragma: no cover

@@ -25,8 +25,6 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
 if TYPE_CHECKING:
-    from src.core.config import Config
-    from src.database import DatabaseManager
     from src.models.auth import User
 
 try:
@@ -36,11 +34,11 @@ try:
     from src.services.core.auth_service import get_current_user, require_permission
 except ImportError:
     # 独立运行时的回退方案
-    def get_db() -> Generator[Session, None, None]:
-        yield None  # type: ignore[return-value]
+    def get_db() -> Generator[Session | None, None, None]:
+        yield None
 
-    def get_config(*args: Any, **kwargs: Any) -> Any:
-        return {}
+    def get_config(key: str, default: Any = None) -> Any:
+        return default
 
     def get_database_manager() -> Any:
         return None
@@ -475,7 +473,7 @@ def check_performance_alerts(
 
 
 @router.get("/system-metrics", response_model=SystemMetrics, summary="获取系统性能指标")
-@require_permission("system_monitoring", "read")
+@require_permission("system_monitoring", "read")  # type: ignore[misc]
 async def get_system_metrics(
     current_user: Any = Depends(get_current_user),
 ) -> SystemMetrics:
@@ -498,7 +496,7 @@ async def get_system_metrics(
     response_model=ApplicationMetrics,
     summary="获取应用性能指标",
 )
-@require_permission("system_monitoring", "read")
+@require_permission("system_monitoring", "read")  # type: ignore[misc]
 async def get_application_metrics(
     current_user: Any = Depends(get_current_user),
 ) -> ApplicationMetrics:
@@ -517,7 +515,7 @@ async def get_application_metrics(
 
 
 @router.get("/health", response_model=HealthStatus, summary="获取系统健康状态")
-@require_permission("system_monitoring", "read")
+@require_permission("system_monitoring", "read")  # type: ignore[misc]
 async def get_health_status(
     current_user: Any = Depends(get_current_user),
 ) -> HealthStatus:
@@ -552,7 +550,7 @@ async def get_health_status(
 @router.get(
     "/metrics/history", response_model=list[SystemMetrics], summary="获取系统指标历史"
 )
-@require_permission("system_monitoring", "read")
+@require_permission("system_monitoring", "read")  # type: ignore[misc]
 async def get_metrics_history(
     hours: int = Query(default=24, ge=1, le=168, description="查询历史时间范围(小时)"),
     current_user: Any = Depends(get_current_user),
@@ -569,7 +567,7 @@ async def get_metrics_history(
 
 
 @router.get("/alerts", response_model=list[PerformanceAlert], summary="获取性能告警")
-@require_permission("system_monitoring", "read")
+@require_permission("system_monitoring", "read")  # type: ignore[misc]
 async def get_performance_alerts(
     level: str | None = Query(
         default=None, regex="^(info|warning|critical)$", description="告警级别过滤"
@@ -597,7 +595,7 @@ async def get_performance_alerts(
 
 
 @router.post("/alerts/{alert_id}/resolve", summary="解决告警")
-@require_permission("system_monitoring", "write")
+@require_permission("system_monitoring", "write")  # type: ignore[misc]
 async def resolve_alert(
     alert_id: str,
     current_user: Any = Depends(get_current_user),
@@ -618,7 +616,7 @@ async def resolve_alert(
 
 
 @router.get("/dashboard", summary="获取监控仪表板数据")
-@require_permission("system_monitoring", "read")
+@require_permission("system_monitoring", "read")  # type: ignore[misc]
 async def get_monitoring_dashboard(
     current_user: Any = Depends(get_current_user),
 ) -> dict[str, Any]:
@@ -665,7 +663,7 @@ async def get_monitoring_dashboard(
 
 
 @router.post("/metrics/collect", summary="手动触发指标收集")
-@require_permission("system_monitoring", "write")
+@require_permission("system_monitoring", "write")  # type: ignore[misc]
 async def trigger_metrics_collection(
     current_user: Any = Depends(get_current_user),
 ) -> dict[str, Any]:
@@ -694,7 +692,7 @@ async def trigger_metrics_collection(
     response_model=DatabaseHealthMetrics,
     summary="获取数据库健康指标",
 )
-@require_permission("system_monitoring", "read")
+@require_permission("system_monitoring", "read")  # type: ignore[misc]
 async def get_database_health_metrics(
     current_user: Any = Depends(get_current_user),
 ) -> DatabaseHealthMetrics:
@@ -719,7 +717,7 @@ async def get_database_health_metrics(
 
         # 获取健康检查结果
         health_check = db_manager.run_health_check()
-        pool_status = db_manager.get_connection_pool_status()  # type: ignore[attr-defined]
+        pool_status: dict[str, Any] = db_manager.get_connection_pool_status()
         metrics = db_manager.get_metrics()
 
         # 计算健康评分
@@ -771,7 +769,7 @@ async def get_database_health_metrics(
 
 
 @router.get("/database/slow-queries", summary="获取慢查询列表")
-@require_permission("system_monitoring", "read")
+@require_permission("system_monitoring", "read")  # type: ignore[misc]
 async def get_slow_queries(
     limit: int = Query(default=20, ge=1, le=100, description="返回数量限制"),
     current_user: Any = Depends(get_current_user),
@@ -788,12 +786,12 @@ async def get_slow_queries(
         if not db_manager:
             raise HTTPException(status_code=503, detail="数据库管理器不可用")
 
-        slow_queries = db_manager.get_slow_queries(limit=limit)  # type: ignore[attr-defined]
+        slow_queries = db_manager.get_slow_queries(limit=limit)
 
         return {
             "slow_queries": slow_queries,
             "total_count": len(slow_queries),
-            "threshold_ms": db_manager.slow_query_threshold,  # type: ignore[attr-defined]
+            "threshold_ms": db_manager.slow_query_threshold,
             "timestamp": datetime.now().isoformat(),
         }
 
@@ -808,7 +806,7 @@ async def get_slow_queries(
     response_model=DatabaseOptimizationReport,
     summary="执行数据库优化",
 )
-@require_permission("system_monitoring", "write")
+@require_permission("system_monitoring", "write")  # type: ignore[misc]
 async def optimize_database(
     current_user: Any = Depends(get_current_user),
 ) -> DatabaseOptimizationReport:
@@ -831,17 +829,17 @@ async def optimize_database(
 
         # 记录优化前的指标
         before_metrics = db_manager.get_metrics()
-        before_pool_status = db_manager.get_connection_pool_status()  # type: ignore[attr-defined]
+        before_pool_status: dict[str, Any] = db_manager.get_connection_pool_status()
 
         # 执行优化
-        optimization_results = db_manager.optimize_database()  # type: ignore[attr-defined]
+        optimization_results: dict[str, Any] = db_manager.optimize_database()
 
         # 清理旧数据
-        cleanup_count = db_manager.cleanup_old_sessions(days=7)  # type: ignore[attr-defined]
+        cleanup_count: int = db_manager.cleanup_old_sessions(days=7)
 
         # 记录优化后的指标
         after_metrics = db_manager.get_metrics()
-        after_pool_status = db_manager.get_connection_pool_status()  # type: ignore[attr-defined]
+        after_pool_status: dict[str, Any] = db_manager.get_connection_pool_status()
 
         # 计算性能改进
         performance_improvement: dict[str, float] = {}
@@ -881,7 +879,7 @@ async def optimize_database(
 
 
 @router.post("/database/cleanup", summary="清理数据库过期数据")
-@require_permission("system_monitoring", "write")
+@require_permission("system_monitoring", "write")  # type: ignore[misc]
 async def cleanup_database(
     days: int = Query(default=7, ge=1, le=90, description="清理多少天前的数据"),
     current_user: Any = Depends(get_current_user),
@@ -904,7 +902,7 @@ async def cleanup_database(
         if not db_manager:
             raise HTTPException(status_code=503, detail="数据库管理器不可用")
 
-        cleaned_count = db_manager.cleanup_old_sessions(days=days)  # type: ignore[attr-defined]
+        cleaned_count: int = db_manager.cleanup_old_sessions(days=days)
 
         return {
             "message": f"成功清理了 {cleaned_count} 条过期数据",
@@ -920,7 +918,7 @@ async def cleanup_database(
 
 
 @router.get("/database/connection-pool", summary="获取连接池状态")
-@require_permission("system_monitoring", "read")
+@require_permission("system_monitoring", "read")  # type: ignore[misc]
 async def get_connection_pool_status(
     current_user: Any = Depends(get_current_user),
 ) -> dict[str, Any]:
@@ -938,7 +936,7 @@ async def get_connection_pool_status(
         if not db_manager:
             raise HTTPException(status_code=503, detail="数据库管理器不可用")
 
-        pool_status = db_manager.get_connection_pool_status()  # type: ignore[attr-defined]
+        pool_status: dict[str, Any] = db_manager.get_connection_pool_status()
 
         return {
             "pool_status": pool_status,
