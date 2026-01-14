@@ -117,10 +117,10 @@ def _calculate_batch_progress(batch_id: str) -> dict[str, Any]:
 async def batch_upload_pdfs(
     db: Annotated[Session, Depends(get_db)],
     files: Annotated[list[UploadFile], File(...)],
-    organization_id: Annotated[int | None, Form(None)] = None,
-    prefer_ocr: Annotated[bool, Form(False)] = False,
-    prefer_vision: Annotated[bool, Form(False)] = False,
-    auto_confirm: Annotated[bool, Form(False)] = False,
+    organization_id: Annotated[int | None, Form()] = None,
+    prefer_ocr: Annotated[bool, Form()] = False,
+    prefer_vision: Annotated[bool, Form()] = False,
+    auto_confirm: Annotated[bool, Form()] = False,
 ) -> JSONResponse:
     """
     批量上传 PDF 文件进行智能识别
