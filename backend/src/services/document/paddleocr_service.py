@@ -18,7 +18,7 @@ PaddleOCR 3.3 服务模块 [DEPRECATED]
 import logging
 from pathlib import Path
 from threading import Lock
-from typing import Any
+from typing import Any, Optional
 
 # 使用项目的 safe_import 机制进行依赖管理
 try:
@@ -474,7 +474,7 @@ class PaddleOCRService:
 
 # 单例实例和线程锁
 _paddleocr_service: PaddleOCRService | None = None
-_paddleocr_lock: Lock | None = None
+_paddleocr_lock: Optional[Lock] = None
 
 
 def _get_lock() -> Lock:

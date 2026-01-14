@@ -43,8 +43,6 @@ try:
     __all__.append("SecurityService")
 except Exception:  # nosec - B110: Intentional graceful degradation
     # Provide a minimal stub to ensure import success
-    _SecurityServiceStub = SecurityService
-
     class SecurityService:  # type: ignore[no-redef]
         def __init__(self, *args, **kwargs):
             pass
