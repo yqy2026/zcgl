@@ -85,7 +85,9 @@ class CollectionRecord(Base):  # type: ignore[valid-type, misc]
     # 催缴结果
     promised_amount: Column[Decimal] = Column(DECIMAL(15, 2), comment="承诺付款金额")
     promised_date = Column(Date, comment="承诺付款日期")
-    actual_payment_amount: Column[Decimal] = Column(DECIMAL(15, 2), comment="实际付款金额")
+    actual_payment_amount: Column[Decimal] = Column(
+        DECIMAL(15, 2), comment="实际付款金额"
+    )
 
     # 备注信息
     collection_notes = Column(Text, comment="催缴备注")

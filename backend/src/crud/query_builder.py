@@ -93,7 +93,9 @@ class QueryBuilder(Generic[ModelType]):
 
         return query
 
-    def _apply_filters(self, query: Select[Any], filters: dict[str, Any]) -> Select[Any]:
+    def _apply_filters(
+        self, query: Select[Any], filters: dict[str, Any]
+    ) -> Select[Any]:
         conditions = []
         for key, value in filters.items():
             if value is None:
@@ -159,7 +161,9 @@ class QueryBuilder(Generic[ModelType]):
 
         return query
 
-    def _apply_sorting(self, query: Select[Any], sort_by: str, sort_desc: bool) -> Select[Any]:
+    def _apply_sorting(
+        self, query: Select[Any], sort_by: str, sort_desc: bool
+    ) -> Select[Any]:
         if hasattr(self.model, sort_by):
             column = getattr(self.model, sort_by)
             if sort_desc:

@@ -37,9 +37,7 @@ class User(Base):  # type: ignore[valid-type, misc]
     email: Mapped[str] = mapped_column(
         String(100), unique=True, nullable=False, index=True, comment="邮箱"
     )
-    full_name: Mapped[str] = mapped_column(
-        String(100), nullable=False, comment="全名"
-    )
+    full_name: Mapped[str] = mapped_column(String(100), nullable=False, comment="全名")
 
     # 认证信息
     password_hash: Mapped[str] = mapped_column(
@@ -192,9 +190,7 @@ class UserSession(Base):  # type: ignore[valid-type, misc]
     )
 
     # 关联用户
-    user_id: Mapped[str] = mapped_column(
-        String, ForeignKey("users.id"), nullable=False
-    )
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"), nullable=False)
 
     # 会话信息
     session_id: Mapped[str | None] = mapped_column(
@@ -253,9 +249,7 @@ class AuditLog(Base):  # type: ignore[valid-type, misc]
     )
 
     # 用户信息
-    user_id: Mapped[str] = mapped_column(
-        String, ForeignKey("users.id"), nullable=False
-    )
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"), nullable=False)
     username: Mapped[str] = mapped_column(String(50), nullable=False)
     user_role: Mapped[str | None] = mapped_column(String(20), comment="用户角色")
     user_organization: Mapped[str | None] = mapped_column(
@@ -263,16 +257,10 @@ class AuditLog(Base):  # type: ignore[valid-type, misc]
     )
 
     # 操作信息
-    action: Mapped[str] = mapped_column(
-        String(100), nullable=False, comment="操作动作"
-    )
-    resource_type: Mapped[str | None] = mapped_column(
-        String(50), comment="资源类型"
-    )
+    action: Mapped[str] = mapped_column(String(100), nullable=False, comment="操作动作")
+    resource_type: Mapped[str | None] = mapped_column(String(50), comment="资源类型")
     resource_id: Mapped[str | None] = mapped_column(String, comment="资源ID")
-    resource_name: Mapped[str | None] = mapped_column(
-        String(200), comment="资源名称"
-    )
+    resource_name: Mapped[str | None] = mapped_column(String(200), comment="资源名称")
 
     # 请求信息
     api_endpoint: Mapped[str | None] = mapped_column(String(200), comment="API端点")
@@ -281,9 +269,7 @@ class AuditLog(Base):  # type: ignore[valid-type, misc]
     request_body: Mapped[str | None] = mapped_column(Text, comment="请求体")
 
     # 响应信息
-    response_status: Mapped[int | None] = mapped_column(
-        Integer, comment="响应状态码"
-    )
+    response_status: Mapped[int | None] = mapped_column(Integer, comment="响应状态码")
     response_message: Mapped[str | None] = mapped_column(
         String(500), comment="响应消息"
     )

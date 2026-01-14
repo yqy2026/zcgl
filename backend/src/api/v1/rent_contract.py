@@ -484,7 +484,7 @@ def get_rent_ledger(
     pages = (total + limit - 1) // limit
 
     # Convert ORM models to response schemas
-    ledger_responses = [RentLedgerResponse.model_validate(l) for l in ledgers]
+    ledger_responses = [RentLedgerResponse.model_validate(ledger) for ledger in ledgers]
 
     return RentLedgerListResponse(
         items=ledger_responses, total=total, page=page, limit=limit, pages=pages
@@ -704,7 +704,11 @@ def export_statistics(
         overview_stats = rent_contract_service.get_statistics(
             db=db,
             query_params=RentStatisticsQuery(
-                start_date=start_date, end_date=end_date, ownership_ids=None, asset_ids=None, contract_status=None
+                start_date=start_date,
+                end_date=end_date,
+                ownership_ids=None,
+                asset_ids=None,
+                contract_status=None,
             ),
         )
 
@@ -892,7 +896,9 @@ def export_contracts_to_excel(
 # ==================== 合同附件管理 ====================
 
 
-@router.post("/{contract_id}/attachments", response_model=dict[str, Any], summary="上传合同附件")
+@router.post(
+    "/{contract_id}/attachments", response_model=dict[str, Any], summary="上传合同附件"
+)
 async def upload_contract_attachment(
     contract_id: str,
     file: UploadFile = File(..., description="附件文件"),

@@ -319,7 +319,9 @@ def collect_application_metrics() -> ApplicationMetrics:
 
 @router.get("/system-metrics", response_model=SystemMetrics, summary="获取系统性能指标")
 @permission_required("system_monitoring", "read")
-async def get_system_metrics(current_user: User = Depends(get_current_user)) -> SystemMetrics:
+async def get_system_metrics(
+    current_user: User = Depends(get_current_user),
+) -> SystemMetrics:
     """获取当前系统性能指标"""
     return collect_system_metrics()
 
@@ -330,7 +332,9 @@ async def get_system_metrics(current_user: User = Depends(get_current_user)) -> 
     summary="获取应用性能指标",
 )
 @permission_required("system_monitoring", "read")
-async def get_application_metrics(current_user: User = Depends(get_current_user)) -> ApplicationMetrics:
+async def get_application_metrics(
+    current_user: User = Depends(get_current_user),
+) -> ApplicationMetrics:
     """获取应用性能指标"""
     return collect_application_metrics()
 
@@ -450,7 +454,9 @@ async def get_system_monitoring_dashboard(
 
 @router.post("/metrics/collect", summary="手动触发指标收集")
 @permission_required("system_monitoring", "write")
-async def trigger_metrics_collection(current_user: User = Depends(get_current_user)) -> dict[str, Any]:
+async def trigger_metrics_collection(
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
     """手动触发一次指标收集"""
     try:
         system_metrics = collect_system_metrics()

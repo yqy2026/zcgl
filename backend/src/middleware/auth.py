@@ -278,7 +278,9 @@ class OrganizationPermissionChecker:
         return bool(user.employee_id)
 
 
-def require_organization_access(organization_id: str | None = None) -> OrganizationPermissionChecker:
+def require_organization_access(
+    organization_id: str | None = None,
+) -> OrganizationPermissionChecker:
     """组织权限装饰器工厂函数"""
     return OrganizationPermissionChecker(organization_id)
 
@@ -290,7 +292,9 @@ class AuditLogger:
         self.action = action
         self.resource_type = resource_type
 
-    def __call__(self, current_user: User | None = Depends(get_optional_current_user)) -> User | None:
+    def __call__(
+        self, current_user: User | None = Depends(get_optional_current_user)
+    ) -> User | None:
         """记录审计日志"""
         # 这个装饰器不阻止操作，只是记录日志
         return current_user
@@ -434,7 +438,9 @@ class RBACPermissionChecker:
         return current_user
 
 
-def require_permission(resource: str, action: str, resource_id: str | None = None) -> RBACPermissionChecker:
+def require_permission(
+    resource: str, action: str, resource_id: str | None = None
+) -> RBACPermissionChecker:
     """RBAC权限装饰器工厂函数"""
     return RBACPermissionChecker(resource, action, resource_id)
 
@@ -497,7 +503,9 @@ class ResourcePermissionChecker:
         return current_user
 
 
-def require_resource_permission(resource_type: str, required_level: str = "read") -> ResourcePermissionChecker:
+def require_resource_permission(
+    resource_type: str, required_level: str = "read"
+) -> ResourcePermissionChecker:
     """资源权限装饰器工厂函数"""
     return ResourcePermissionChecker(resource_type, required_level)
 

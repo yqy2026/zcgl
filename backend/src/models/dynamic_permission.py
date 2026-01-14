@@ -4,6 +4,10 @@
 """
 
 from datetime import datetime
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .rbac import Permission
 
 from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -42,21 +46,29 @@ class DynamicPermission(Base):  # type: ignore[valid-type, misc]
     )
 
     # 分配信息
-    assigned_by: Mapped[str] = mapped_column(String, ForeignKey("users.id"), nullable=False)
+    assigned_by: Mapped[str] = mapped_column(
+        String, ForeignKey("users.id"), nullable=False
+    )
     assigned_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, nullable=False
     )
 
     # 撤销信息
-    revoked_by: Mapped[str | None] = mapped_column(String, ForeignKey("users.id"), nullable=True)
+    revoked_by: Mapped[str | None] = mapped_column(
+        String, ForeignKey("users.id"), nullable=True
+    )
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # 状态
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False, index=True
+    )
 
     # 关系 - 暂时注释掉User关系引用
     # user = relationship("User", foreign_keys=[user_id], back_populates="dynamic_permissions")
-    permission: Mapped["Permission"] = relationship("Permission", back_populates="dynamic_permissions")  # type: ignore[name-defined]
+    permission: Mapped["Permission"] = relationship(
+        "Permission", back_populates="dynamic_permissions"
+    )  # type: ignore[name-defined]
     # assigned_by_user = relationship("User", foreign_keys=[assigned_by])
     # revoked_by_user = relationship("User", foreign_keys=[revoked_by])
 
@@ -82,17 +94,23 @@ class TemporaryPermission(Base):  # type: ignore[valid-type, misc]
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
 
     # 分配信息
-    assigned_by: Mapped[str] = mapped_column(String, ForeignKey("users.id"), nullable=False)
+    assigned_by: Mapped[str] = mapped_column(
+        String, ForeignKey("users.id"), nullable=False
+    )
     assigned_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, nullable=False
     )
 
     # 状态
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False, index=True
+    )
 
     # 关系 - 暂时注释掉User关系引用
     # user = relationship("User", foreign_keys=[user_id], back_populates="temporary_permissions")
-    permission: Mapped["Permission"] = relationship("Permission", back_populates="temporary_permissions")  # type: ignore[name-defined]
+    permission: Mapped["Permission"] = relationship(
+        "Permission", back_populates="temporary_permissions"
+    )  # type: ignore[name-defined]
     # assigned_by_user = relationship("User", foreign_keys=[assigned_by])
 
 
@@ -117,17 +135,23 @@ class ConditionalPermission(Base):  # type: ignore[valid-type, misc]
     conditions: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False)
 
     # 分配信息
-    assigned_by: Mapped[str] = mapped_column(String, ForeignKey("users.id"), nullable=False)
+    assigned_by: Mapped[str] = mapped_column(
+        String, ForeignKey("users.id"), nullable=False
+    )
     assigned_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, nullable=False
     )
 
     # 状态
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False, index=True
+    )
 
     # 关系 - 暂时注释掉User关系引用
     # user = relationship("User", foreign_keys=[user_id], back_populates="conditional_permissions")
-    permission: Mapped["Permission"] = relationship("Permission", back_populates="conditional_permissions")  # type: ignore[name-defined]
+    permission: Mapped["Permission"] = relationship(
+        "Permission", back_populates="conditional_permissions"
+    )  # type: ignore[name-defined]
     # assigned_by_user = relationship("User", foreign_keys=[assigned_by])
 
 
@@ -150,13 +174,17 @@ class PermissionTemplate(Base):  # type: ignore[valid-type, misc]
     conditions: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
 
     # 创建信息
-    created_by: Mapped[str] = mapped_column(String, ForeignKey("users.id"), nullable=False)
+    created_by: Mapped[str] = mapped_column(
+        String, ForeignKey("users.id"), nullable=False
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, nullable=False
     )
 
     # 状态
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False, index=True
+    )
 
     # 关系 - 暂时注释掉User关系引用
     # created_by_user = relationship("User", foreign_keys=[created_by])
@@ -216,7 +244,9 @@ class PermissionRequest(Base):  # type: ignore[valid-type, misc]
     user_id: Mapped[str] = mapped_column(
         String, ForeignKey("users.id"), nullable=False, index=True
     )
-    permission_ids: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False)  # 申请的权限ID列表
+    permission_ids: Mapped[dict[str, object]] = mapped_column(
+        JSON, nullable=False
+    )  # 申请的权限ID列表
 
     # 申请范围
     scope: Mapped[str] = mapped_column(String, nullable=False, index=True)
@@ -229,7 +259,9 @@ class PermissionRequest(Base):  # type: ignore[valid-type, misc]
     requested_duration_hours: Mapped[str | None] = mapped_column(String, nullable=True)
 
     # 申请条件（条件权限申请）
-    requested_conditions: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True)
+    requested_conditions: Mapped[dict[str, object] | None] = mapped_column(
+        JSON, nullable=True
+    )
 
     # 审批状态: pending, approved, rejected
     status: Mapped[str] = mapped_column(
@@ -270,7 +302,9 @@ class PermissionDelegation(Base):  # type: ignore[valid-type, misc]
     delegatee_id: Mapped[str] = mapped_column(
         String, ForeignKey("users.id"), nullable=False, index=True
     )  # 被委托人
-    permission_ids: Mapped[dict[str, object]] = mapped_column(JSON, nullable=False)  # 委托的权限ID列表
+    permission_ids: Mapped[dict[str, object]] = mapped_column(
+        JSON, nullable=False
+    )  # 委托的权限ID列表
 
     # 委托范围
     scope: Mapped[str] = mapped_column(String, nullable=False, index=True)
@@ -289,7 +323,9 @@ class PermissionDelegation(Base):  # type: ignore[valid-type, misc]
     reason: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # 状态
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, default=True, nullable=False, index=True
+    )
 
     # 创建信息
     created_at: Mapped[datetime] = mapped_column(

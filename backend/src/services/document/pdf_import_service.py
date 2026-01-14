@@ -518,7 +518,9 @@ class PDFImportService:
             "source": "smart_extraction",
         }
 
-    def _merge_results(self, regex_result: dict[str, Any], llm_result: dict[str, Any]) -> dict[str, Any]:
+    def _merge_results(
+        self, regex_result: dict[str, Any], llm_result: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         合并策略: LLM 优先，正则补充
 

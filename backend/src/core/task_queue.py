@@ -56,7 +56,7 @@ class Task:
     error_message: str | None = None
     progress: int = 0  # 0-100
 
-    def __lt__(self, other: Task) -> bool:
+    def __lt__(self, other: "Task") -> bool:
         """用于优先级队列的比较"""
         if self.priority.value != other.priority.value:
             return self.priority.value < other.priority.value

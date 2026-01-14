@@ -1024,7 +1024,9 @@ async def _add_defect_history(
     )
 
 
-def _get_module_severity(conn: sqlite3.Connection, module: str, start_date: datetime) -> str:
+def _get_module_severity(
+    conn: sqlite3.Connection, module: str, start_date: datetime
+) -> str:
     """获取模块的缺陷严重程度"""
     cursor = conn.cursor()
     cursor.execute(

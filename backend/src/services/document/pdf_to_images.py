@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 # PyMuPDF import with graceful fallback
 try:
     import fitz
+
     PYMUPDF_AVAILABLE = True
 except ImportError:
     logger.warning("PyMuPDF not installed. Run: pip install pymupdf")
@@ -74,7 +75,9 @@ def pdf_to_images(
         doc = fitz.open(str(pdf_path_obj))
         page_count = min(len(doc), max_pages)
 
-        logger.info(f"Converting {page_count} pages from {pdf_path_obj.name} at {dpi} DPI")
+        logger.info(
+            f"Converting {page_count} pages from {pdf_path_obj.name} at {dpi} DPI"
+        )
 
         for page_num in range(page_count):
             page = doc[page_num]

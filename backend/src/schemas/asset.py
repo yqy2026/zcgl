@@ -558,9 +558,7 @@ class AssetValidationResponse(BaseModel):
     warnings: list[dict[str, Any]] = Field(
         default_factory=list, description="警告信息列表"
     )
-    validated_fields: list[str] = Field(
-        default_factory=list, description="已验证字段"
-    )
+    validated_fields: list[str] = Field(default_factory=list, description="已验证字段")
 
     model_config = ConfigDict(json_schema_extra={"example": {"description": "示例"}})
 

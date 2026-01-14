@@ -20,7 +20,9 @@ class TaskCreate(BaseModel):
     parameters: dict[str, Any] | None = Field(
         default_factory=dict[str, Any], description="任务参数"
     )
-    config: dict[str, Any] | None = Field(default_factory=dict[str, Any], description="任务配置")
+    config: dict[str, Any] | None = Field(
+        default_factory=dict[str, Any], description="任务配置"
+    )
 
     model_config = ConfigDict(
         json_schema_extra={"example": {"description": "任务创建示例"}}

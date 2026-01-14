@@ -210,7 +210,7 @@ class RentContractService:
             db.add(transfer_in)
 
         # 结束原合同
-        setattr(original, 'contract_status', "已续签")
+        setattr(original, "contract_status", "已续签")
         db.add(original)
 
         # 记录历史
@@ -285,8 +285,12 @@ class RentContractService:
             db.add(refund)
 
         # 更新合同状态
-        setattr(contract, 'contract_status', "已终止")
-        setattr(contract, 'end_date', datetime.combine(termination_date, datetime.min.time()))
+        setattr(contract, "contract_status", "已终止")
+        setattr(
+            contract,
+            "end_date",
+            datetime.combine(termination_date, datetime.min.time()),
+        )
         db.add(contract)
 
         # 记录历史
@@ -383,7 +387,11 @@ class RentContractService:
             if request.payment_status is not None:
                 ledger.payment_status = request.payment_status
             if request.payment_date is not None:
-                setattr(ledger, 'payment_date', datetime.combine(request.payment_date, datetime.min.time()))
+                setattr(
+                    ledger,
+                    "payment_date",
+                    datetime.combine(request.payment_date, datetime.min.time()),
+                )
             if request.payment_method is not None:
                 ledger.payment_method = request.payment_method
             if request.payment_reference is not None:
@@ -704,11 +712,7 @@ class RentContractService:
             conditions.append(RentContract.id != exclude_contract_id)
 
         # 查询与指定资产相关的所有有效合同
-        existing_contracts = (
-            db.query(RentContract)
-            .filter(and_(*conditions))
-            .all()
-        )
+        existing_contracts = db.query(RentContract).filter(and_(*conditions)).all()
 
         # 检查每个现有合同是否与新合同时间段重叠
         for contract in existing_contracts:

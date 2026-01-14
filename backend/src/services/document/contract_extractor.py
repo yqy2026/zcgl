@@ -307,7 +307,9 @@ class ContractExtractor:
             # 获取 PaddleOCR 服务
             ocr_service = get_paddleocr_service(use_gpu=use_gpu)
 
-            if not ocr_service or (hasattr(ocr_service, "is_available") and not ocr_service.is_available):
+            if not ocr_service or (
+                hasattr(ocr_service, "is_available") and not ocr_service.is_available
+            ):
                 logger.warning("PaddleOCR 服务不可用")
                 return {
                     "success": False,

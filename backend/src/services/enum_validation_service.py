@@ -207,9 +207,7 @@ class EnumValidationService:
             stats["last_failure_context"] = context
             return False, error_msg
 
-    def get_validation_stats(
-        self, enum_type_code: str | None = None
-    ) -> dict[str, Any]:
+    def get_validation_stats(self, enum_type_code: str | None = None) -> dict[str, Any]:
         """
         获取验证统计信息
 

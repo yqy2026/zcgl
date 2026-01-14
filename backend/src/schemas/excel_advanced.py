@@ -12,7 +12,9 @@ from pydantic import BaseModel, ConfigDict, Field
 class ExcelExportRequest(BaseModel):
     """Excel导出请求模型"""
 
-    filters: dict[str, Any] | None = Field(default_factory=dict[str, Any], description="筛选条件")
+    filters: dict[str, Any] | None = Field(
+        default_factory=dict[str, Any], description="筛选条件"
+    )
     fields: list[str] | None = Field(None, description="导出字段列表")
     export_format: str = Field(
         "xlsx", pattern="^(xlsx|xls|csv)$", description="导出格式"
@@ -143,7 +145,9 @@ class ExcelConfigCreate(BaseModel):
     validation_rules: list[ExcelValidationRule] = Field(
         default_factory=list[Any], description="验证规则"
     )
-    default_values: dict[str, Any] = Field(default_factory=dict[str, Any], description="默认值")
+    default_values: dict[str, Any] = Field(
+        default_factory=dict[str, Any], description="默认值"
+    )
     is_default: bool = Field(False, description="是否默认配置")
     description: str | None = Field(None, description="配置描述")
 
@@ -160,7 +164,9 @@ class ExcelConfigResponse(BaseModel):
     validation_rules: list[ExcelValidationRule] = Field(
         default_factory=list[Any], description="验证规则"
     )
-    default_values: dict[str, Any] = Field(default_factory=dict[str, Any], description="默认值")
+    default_values: dict[str, Any] = Field(
+        default_factory=dict[str, Any], description="默认值"
+    )
     is_default: bool = Field(..., description="是否默认配置")
     is_active: bool = Field(..., description="是否启用")
     description: str | None = Field(None, description="配置描述")

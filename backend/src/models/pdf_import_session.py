@@ -60,7 +60,9 @@ class PDFImportSession(Base):  # type: ignore[valid-type, misc]
     __tablename__ = "pdf_import_sessions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    session_id: Mapped[str] = mapped_column(String(100), unique=True, index=True, nullable=False)
+    session_id: Mapped[str] = mapped_column(
+        String(100), unique=True, index=True, nullable=False
+    )
 
     # 文件信息
     original_filename: Mapped[str] = mapped_column(String(500), nullable=False)
@@ -78,7 +80,9 @@ class PDFImportSession(Base):  # type: ignore[valid-type, misc]
 
     # 处理结果数据
     extracted_text: Mapped[str | None] = mapped_column(Text)  # 原始提取的文本
-    extracted_data: Mapped[dict[str, Any] | None] = mapped_column(JSON)  # 提取的结构化数据
+    extracted_data: Mapped[dict[str, Any] | None] = mapped_column(
+        JSON
+    )  # 提取的结构化数据
     # 完整处理结果（包含质量评估与性能指标，如并发和吞吐量）
     processing_result: Mapped[dict[str, Any] | None] = mapped_column(JSON)
     validation_results: Mapped[dict[str, Any] | None] = mapped_column(JSON)  # 验证结果
@@ -86,13 +90,21 @@ class PDFImportSession(Base):  # type: ignore[valid-type, misc]
     confidence_score: Mapped[float] = mapped_column(Float, default=0.0)  # 整体置信度
 
     # 处理配置
-    processing_method: Mapped[str | None] = mapped_column(String(50))  # pdfplumber, markitdown, ocr
+    processing_method: Mapped[str | None] = mapped_column(
+        String(50)
+    )  # pdfplumber, markitdown, ocr
     ocr_used: Mapped[bool] = mapped_column(Boolean, default=False)
-    processing_options: Mapped[dict[str, Any] | None] = mapped_column(JSON)  # 用户选择的处理选项
+    processing_options: Mapped[dict[str, Any] | None] = mapped_column(
+        JSON
+    )  # 用户选择的处理选项
 
     # 时间戳
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), onupdate=func.now()
+    )
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # 用户信息
@@ -139,12 +151,16 @@ class SessionLog(Base):  # type: ignore[valid-type, misc]
 
     # 日志信息
     step: Mapped[ProcessingStep] = mapped_column(Enum(ProcessingStep), nullable=False)
-    status: Mapped[str] = mapped_column(String(50), nullable=False)  # started, completed, failed, warning
+    status: Mapped[str] = mapped_column(
+        String(50), nullable=False
+    )  # started, completed, failed, warning
     message: Mapped[str] = mapped_column(Text, nullable=False)
     details: Mapped[dict[str, Any] | None] = mapped_column(JSON)  # 详细信息
 
     # 时间戳
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
     # 性能数据
     duration_ms: Mapped[float | None] = mapped_column(Float)  # 处理耗时
@@ -160,11 +176,15 @@ class ProcessingConfiguration(Base):  # type: ignore[valid-type, misc]
     __tablename__ = "pdf_import_configurations"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    session_id: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
+    session_id: Mapped[str] = mapped_column(
+        String(100), unique=True, nullable=False, index=True
+    )
 
     # PDF处理配置
     prefer_ocr: Mapped[bool] = mapped_column(Boolean, default=False)
-    ocr_languages: Mapped[dict[str, Any] | None] = mapped_column(JSON, default=list)  # OCR识别语言
+    ocr_languages: Mapped[dict[str, Any] | None] = mapped_column(
+        JSON, default=list
+    )  # OCR识别语言
     dpi: Mapped[int] = mapped_column(Integer, default=300)  # OCR分辨率
     max_pages: Mapped[int] = mapped_column(Integer, default=100)  # 最大处理页数
 
@@ -184,8 +204,12 @@ class ProcessingConfiguration(Base):  # type: ignore[valid-type, misc]
     notification_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
 
     # 时间戳
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), onupdate=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), onupdate=func.now()
+    )
 
     def __repr__(self) -> str:
         return f"<ProcessingConfiguration(session_id='{self.session_id}', prefer_ocr={self.prefer_ocr})>"  # pragma: no cover

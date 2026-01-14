@@ -61,9 +61,11 @@ class RentTermBase(BaseModel):
                 other_fees = Decimal("0")
 
             # Cast to Decimal for mypy - we've verified types above
-            return cast(Decimal, monthly_rent) + cast(
-                Decimal, management_fee
-            ) + cast(Decimal, other_fees)
+            return (
+                cast(Decimal, monthly_rent)
+                + cast(Decimal, management_fee)
+                + cast(Decimal, other_fees)
+            )
         return v
 
     @field_validator("end_date")
@@ -105,7 +107,9 @@ class RentContractBase(BaseModel):
 
     contract_number: str | None = Field(None, description="合同编号（空则自动生成）")
     # V2: 改为多资产关联
-    asset_ids: list[str] = Field(default_factory=list[Any], description="关联资产ID列表")
+    asset_ids: list[str] = Field(
+        default_factory=list[Any], description="关联资产ID列表"
+    )
     ownership_id: str = Field(..., description="权属方ID")
     # V2: 合同类型
     contract_type: ContractTypeEnum = Field(

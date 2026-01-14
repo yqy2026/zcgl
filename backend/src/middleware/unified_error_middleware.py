@@ -17,7 +17,9 @@ from .unified_error_handler import ErrorCode, UnifiedError, UnifiedErrorHandler
 class UnifiedErrorMiddleware(BaseHTTPMiddleware):
     """统一错误处理中间件"""
 
-    def __init__(self, app: Any, error_handler: UnifiedErrorHandler | None = None) -> None:
+    def __init__(
+        self, app: Any, error_handler: UnifiedErrorHandler | None = None
+    ) -> None:
         super().__init__(app)
         self.error_handler = error_handler or UnifiedErrorHandler()
 

@@ -51,8 +51,10 @@ def model_to_dict(model: Any, include_relations: bool = False) -> dict[str, Any]
                 if rel.uselist:  # 一对多关系
                     # Type assertion: we know this is a list of models
                     result[rel.key] = [
-                        item_dict for item in rel_value
-                        if item is not None and (item_dict := model_to_dict(item)) is not None
+                        item_dict
+                        for item in rel_value
+                        if item is not None
+                        and (item_dict := model_to_dict(item)) is not None
                     ]
                 else:  # 多对一或一对一关系
                     dict_result = model_to_dict(rel_value)

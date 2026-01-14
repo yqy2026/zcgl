@@ -75,12 +75,12 @@ class OccupancyService:
 
             # 使用数据库聚合函数计算 - 避免加载所有数据到内存
             result = query.with_entities(
-                sql_cast(
-                    func.sum(func.coalesce(Asset.rentable_area, 0)), Float
-                ).label("total_rentable_area"),
-                sql_cast(
-                    func.sum(func.coalesce(Asset.rented_area, 0)), Float
-                ).label("total_rented_area"),
+                sql_cast(func.sum(func.coalesce(Asset.rentable_area, 0)), Float).label(
+                    "total_rentable_area"
+                ),
+                sql_cast(func.sum(func.coalesce(Asset.rented_area, 0)), Float).label(
+                    "total_rented_area"
+                ),
                 func.count(Asset.id).label("total_assets"),
                 func.count(case((Asset.rentable_area > 0, 1))).label(
                     "rentable_assets_count"

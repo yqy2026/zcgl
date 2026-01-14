@@ -60,7 +60,10 @@ class LengthRule(ValidationRule):
     """长度验证"""
 
     def __init__(
-        self, min_length: int | None = None, max_length: int | None = None, **kwargs: Any
+        self,
+        min_length: int | None = None,
+        max_length: int | None = None,
+        **kwargs: Any,
     ) -> None:
         super().__init__("length", "字段长度验证", **kwargs)
         self.min_length = min_length
@@ -485,7 +488,9 @@ validation_framework.register_schema(create_project_validation_schema())
 
 
 # 装饰器：用于API端点的数据验证
-def validate_data(schema_name: str) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+def validate_data(
+    schema_name: str,
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """数据验证装饰器"""
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:

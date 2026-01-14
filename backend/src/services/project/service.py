@@ -55,9 +55,7 @@ class ProjectService:
         if not project:
             raise ValueError(f"项目 {project_id} 不存在")
 
-        result: Project = project_crud.update(
-            db, db_obj=project, obj_in=obj_in
-        )
+        result: Project = project_crud.update(db, db_obj=project, obj_in=obj_in)
         return result
 
     def toggle_status(

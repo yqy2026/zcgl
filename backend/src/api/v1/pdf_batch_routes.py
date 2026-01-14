@@ -8,13 +8,11 @@ import asyncio
 import logging
 import os
 import uuid
-from collections.abc import AsyncGenerator
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-from typing_extensions import Annotated
 
 from ...core.config import settings
 from ...core.response_handler import success_response

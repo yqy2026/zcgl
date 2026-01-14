@@ -75,15 +75,15 @@ class AreaService:
             # 使用数据库聚合函数计算
             result = query.with_entities(
                 func.count(Asset.id).label("total_assets"),
-                sql_cast(
-                    func.sum(func.coalesce(Asset.land_area, 0)), Float
-                ).label("total_land_area"),
-                sql_cast(
-                    func.sum(func.coalesce(Asset.rentable_area, 0)), Float
-                ).label("total_rentable_area"),
-                sql_cast(
-                    func.sum(func.coalesce(Asset.rented_area, 0)), Float
-                ).label("total_rented_area"),
+                sql_cast(func.sum(func.coalesce(Asset.land_area, 0)), Float).label(
+                    "total_land_area"
+                ),
+                sql_cast(func.sum(func.coalesce(Asset.rentable_area, 0)), Float).label(
+                    "total_rentable_area"
+                ),
+                sql_cast(func.sum(func.coalesce(Asset.rented_area, 0)), Float).label(
+                    "total_rented_area"
+                ),
                 sql_cast(
                     func.sum(func.coalesce(Asset.non_commercial_area, 0)), Float
                 ).label("total_non_commercial_area"),

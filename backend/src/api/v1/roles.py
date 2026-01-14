@@ -256,9 +256,7 @@ async def delete_role(
 # ==================== 权限管理端点 ====================
 
 
-@router.get(
-    "/permissions/list", response_model=dict[str, Any], summary="获取所有权限"
-)
+@router.get("/permissions/list", response_model=dict[str, Any], summary="获取所有权限")
 async def get_all_permissions(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -288,7 +286,9 @@ async def get_all_permissions(
         )
 
 
-@router.put("/{role_id}/permissions", response_model=dict[str, Any], summary="设置角色权限")
+@router.put(
+    "/{role_id}/permissions", response_model=dict[str, Any], summary="设置角色权限"
+)
 async def set_role_permissions(
     role_id: str,
     request: RolePermissionUpdateRequest,
@@ -385,7 +385,9 @@ async def get_role_users(
 # ==================== 统计端点 ====================
 
 
-@router.get("/statistics/summary", response_model=dict[str, Any], summary="获取角色统计信息")
+@router.get(
+    "/statistics/summary", response_model=dict[str, Any], summary="获取角色统计信息"
+)
 async def get_role_statistics(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
@@ -399,15 +401,15 @@ async def get_role_statistics(
             "success": True,
             "data": {
                 "total_roles": total_roles,
-                "active_roles": db.query(Role).filter(
-                    getattr(Role, "is_active").is_(True)
-                ).count(),
-                "system_roles": db.query(Role).filter(
-                    getattr(Role, "is_system_role").is_(True)
-                ).count(),
-                "custom_roles": db.query(Role).filter(
-                    getattr(Role, "is_system_role").is_(False)
-                ).count(),
+                "active_roles": db.query(Role)
+                .filter(getattr(Role, "is_active").is_(True))
+                .count(),
+                "system_roles": db.query(Role)
+                .filter(getattr(Role, "is_system_role").is_(True))
+                .count(),
+                "custom_roles": db.query(Role)
+                .filter(getattr(Role, "is_system_role").is_(False))
+                .count(),
                 "by_category": by_category,
             },
         }

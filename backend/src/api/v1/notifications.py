@@ -101,7 +101,10 @@ async def get_notifications(
     # 获取未读数量
     unread_count = (
         db.query(Notification)
-        .filter(Notification.recipient_id == current_user.id, Notification.is_read.is_(False))
+        .filter(
+            Notification.recipient_id == current_user.id,
+            Notification.is_read.is_(False),
+        )
         .count()
     )
 

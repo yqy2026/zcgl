@@ -15,7 +15,9 @@ from ..services.organization_permission_service import OrganizationPermissionSer
 from .auth import get_current_active_user
 
 
-def require_organization_access(organization_id_param: str = "organization_id") -> Callable[..., Any]:
+def require_organization_access(
+    organization_id_param: str = "organization_id",
+) -> Callable[..., Any]:
     """
     组织访问权限装饰器工厂函数
 
@@ -47,7 +49,9 @@ def require_organization_access(organization_id_param: str = "organization_id") 
     return dependency
 
 
-def require_organization_management(organization_id_param: str = "organization_id") -> Callable[..., Any]:
+def require_organization_management(
+    organization_id_param: str = "organization_id",
+) -> Callable[..., Any]:
     """
     组织管理权限装饰器工厂函数
 
@@ -168,7 +172,9 @@ class OrganizationPermissionChecker:
     组织权限检查器
     """
 
-    def __init__(self, required_permission: str, organization_id_param: str | None = None) -> None:
+    def __init__(
+        self, required_permission: str, organization_id_param: str | None = None
+    ) -> None:
         self.required_permission = required_permission
         self.organization_id_param = organization_id_param
 

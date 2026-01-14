@@ -82,7 +82,9 @@ class ImportTemplateInfo(BaseModel):
     description: str = Field(..., description="模板描述")
     required_columns: list[str] = Field(..., description="必填列")
     optional_columns: list[str] = Field(..., description="可选列")
-    sample_data: list[dict[str, Any]] = Field(default_factory=list[dict[str, Any]], description="示例数据")
+    sample_data: list[dict[str, Any]] = Field(
+        default_factory=list[dict[str, Any]], description="示例数据"
+    )
     instructions: list[str] = Field(default_factory=list[Any], description="使用说明")
 
 
@@ -94,7 +96,9 @@ class DataMappingRule(BaseModel):
     data_type: str = Field(..., description="数据类型")
     required: bool = Field(False, description="是否必填")
     default_value: str | None = Field(None, description="默认值")
-    validation_rules: list[str] = Field(default_factory=list[Any], description="验证规则")
+    validation_rules: list[str] = Field(
+        default_factory=list[Any], description="验证规则"
+    )
     transformation: str | None = Field(None, description="数据转换规则")
 
 
@@ -125,4 +129,6 @@ class ImportPreviewResponse(BaseModel):
     validation_summary: dict[str, Any] = Field(..., description="验证摘要")
     estimated_import_time: int = Field(..., description="预估导入时间（秒）")
     warnings: list[str] = Field(default_factory=list[Any], description="警告信息")
-    recommendations: list[str] = Field(default_factory=list[Any], description="建议信息")
+    recommendations: list[str] = Field(
+        default_factory=list[Any], description="建议信息"
+    )

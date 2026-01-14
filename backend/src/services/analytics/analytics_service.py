@@ -286,7 +286,9 @@ class AnalyticsService:
         assets: list[Asset] = query.all()
 
         # 统计分布
-        distribution: defaultdict[str, dict[str, Any]] = defaultdict(lambda: {"count": 0, "area": 0.0})
+        distribution: defaultdict[str, dict[str, Any]] = defaultdict(
+            lambda: {"count": 0, "area": 0.0}
+        )
 
         for asset in assets:
             key = str(getattr(asset, distribution_type, "unknown"))

@@ -41,7 +41,9 @@ class LLMContractExtractor:
         # but usage of 'extract_from_pdf_vision' will go to the adapter.
 
         # TODO: Implement text-only extraction or remove this method
-        raise NotImplementedError("Text-only extraction not implemented. Use extract_smart() instead.")
+        raise NotImplementedError(
+            "Text-only extraction not implemented. Use extract_smart() instead."
+        )
 
     async def extract_smart(
         self, pdf_path: str, force_method: str | None = None

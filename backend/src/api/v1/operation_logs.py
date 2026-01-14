@@ -264,7 +264,9 @@ async def get_error_operation_statistics(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/statistics/summary", response_model=dict[str, Any], summary="获取日志汇总统计")
+@router.get(
+    "/statistics/summary", response_model=dict[str, Any], summary="获取日志汇总统计"
+)
 async def get_operation_log_summary(
     days: int = Query(30, ge=1, le=365, description="统计天数"),
     db: Session = Depends(get_db),

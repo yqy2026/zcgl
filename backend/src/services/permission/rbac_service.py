@@ -108,7 +108,9 @@ class RBACService:
                 raise BusinessLogicError("角色显示名称已存在")
 
         # 更新字段
-        update_data = role_data.model_dump(exclude_unset=True, exclude={"permission_ids"})
+        update_data = role_data.model_dump(
+            exclude_unset=True, exclude={"permission_ids"}
+        )
         for field, value in update_data.items():
             setattr(role, field, value)
 

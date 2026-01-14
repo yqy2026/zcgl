@@ -125,7 +125,9 @@ class PermissionCacheService:
             )  # pragma: no cover
             return None  # pragma: no cover
 
-    async def set_user_roles(self, user_id: int | str, roles: list[dict[str, Any]]) -> bool:
+    async def set_user_roles(
+        self, user_id: int | str, roles: list[dict[str, Any]]
+    ) -> bool:
         """
         设置用户角色缓存
 

@@ -141,9 +141,7 @@ def update_contact(
     update_data["updated_by"] = current_user.username
 
     try:
-        updated_contact = contact_crud.update(
-            db=db, db_obj=contact, obj_in=update_data
-        )
+        updated_contact = contact_crud.update(db=db, db_obj=contact, obj_in=update_data)
         return updated_contact
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"更新联系人失败: {str(e)}")

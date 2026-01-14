@@ -70,7 +70,9 @@ class RentContract(Base):  # type: ignore[valid-type, misc]
 
     __tablename__ = "rent_contracts"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, default=lambda: str(uuid.uuid4())
+    )
 
     # 基本信息
     contract_number: Mapped[str] = mapped_column(
@@ -101,8 +103,12 @@ class RentContract(Base):  # type: ignore[valid-type, misc]
     owner_name: Mapped[str | None] = mapped_column(
         String(200), nullable=True, comment="甲方/权属方名称（上游合同必填）"
     )
-    owner_contact: Mapped[str | None] = mapped_column(String(100), nullable=True, comment="甲方联系人")
-    owner_phone: Mapped[str | None] = mapped_column(String(20), nullable=True, comment="甲方联系电话")
+    owner_contact: Mapped[str | None] = mapped_column(
+        String(100), nullable=True, comment="甲方联系人"
+    )
+    owner_phone: Mapped[str | None] = mapped_column(
+        String(20), nullable=True, comment="甲方联系电话"
+    )
 
     # V2: 委托运营服务费率（仅委托运营合同使用）
     service_fee_rate: Mapped[Decimal | None] = mapped_column(
@@ -112,21 +118,41 @@ class RentContract(Base):  # type: ignore[valid-type, misc]
     )
 
     # 承租方信息
-    tenant_name: Mapped[str] = mapped_column(String(200), nullable=False, comment="承租方名称")
-    tenant_contact: Mapped[str | None] = mapped_column(String(100), comment="承租方联系人")
-    tenant_phone: Mapped[str | None] = mapped_column(String(20), comment="承租方联系电话")
-    tenant_address: Mapped[str | None] = mapped_column(String(500), comment="承租方地址")
+    tenant_name: Mapped[str] = mapped_column(
+        String(200), nullable=False, comment="承租方名称"
+    )
+    tenant_contact: Mapped[str | None] = mapped_column(
+        String(100), comment="承租方联系人"
+    )
+    tenant_phone: Mapped[str | None] = mapped_column(
+        String(20), comment="承租方联系电话"
+    )
+    tenant_address: Mapped[str | None] = mapped_column(
+        String(500), comment="承租方地址"
+    )
     # V2: 下游合同额外字段
-    tenant_usage: Mapped[str | None] = mapped_column(String(500), nullable=True, comment="用途说明（下游合同）")
+    tenant_usage: Mapped[str | None] = mapped_column(
+        String(500), nullable=True, comment="用途说明（下游合同）"
+    )
 
     # 合同日期信息
-    sign_date: Mapped[datetime] = mapped_column(Date, nullable=False, comment="签订日期")
-    start_date: Mapped[datetime] = mapped_column(Date, nullable=False, comment="租期开始日期")
-    end_date: Mapped[datetime] = mapped_column(Date, nullable=False, comment="租期结束日期")
+    sign_date: Mapped[datetime] = mapped_column(
+        Date, nullable=False, comment="签订日期"
+    )
+    start_date: Mapped[datetime] = mapped_column(
+        Date, nullable=False, comment="租期开始日期"
+    )
+    end_date: Mapped[datetime] = mapped_column(
+        Date, nullable=False, comment="租期结束日期"
+    )
 
     # 金额信息
-    total_deposit: Mapped[Decimal] = mapped_column(DECIMAL(15, 2), default=0, comment="总押金金额")
-    monthly_rent_base: Mapped[Decimal | None] = mapped_column(DECIMAL(15, 2), comment="基础月租金")
+    total_deposit: Mapped[Decimal] = mapped_column(
+        DECIMAL(15, 2), default=0, comment="总押金金额"
+    )
+    monthly_rent_base: Mapped[Decimal | None] = mapped_column(
+        DECIMAL(15, 2), comment="基础月租金"
+    )
     # V2: 付款周期
     payment_cycle: Mapped[PaymentCycle] = mapped_column(
         Enum(PaymentCycle),
@@ -202,7 +228,9 @@ class RentDepositLedger(Base):  # type: ignore[valid-type, misc]
 
     __tablename__ = "rent_deposit_ledger"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, default=lambda: str(uuid.uuid4())
+    )
 
     # 关联信息
     contract_id: Mapped[str] = mapped_column(
@@ -217,10 +245,14 @@ class RentDepositLedger(Base):  # type: ignore[valid-type, misc]
     )
 
     # 金额（正数表示增加，负数表示减少）
-    amount: Mapped[Decimal] = mapped_column(DECIMAL(15, 2), nullable=False, comment="金额")
+    amount: Mapped[Decimal] = mapped_column(
+        DECIMAL(15, 2), nullable=False, comment="金额"
+    )
 
     # 交易日期
-    transaction_date: Mapped[datetime] = mapped_column(Date, nullable=False, comment="交易日期")
+    transaction_date: Mapped[datetime] = mapped_column(
+        Date, nullable=False, comment="交易日期"
+    )
 
     # 关联其他合同（用于续签转移）
     related_contract_id: Mapped[str | None] = mapped_column(
@@ -238,14 +270,18 @@ class RentDepositLedger(Base):  # type: ignore[valid-type, misc]
     operator_id: Mapped[str | None] = mapped_column(String(50), comment="操作人ID")
 
     # 时间戳
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, comment="创建时间")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, comment="创建时间"
+    )
 
     # 关联关系
-    contract = relationship(        "RentContract",
+    contract = relationship(
+        "RentContract",
         back_populates="deposit_ledger",
         foreign_keys=[contract_id],
     )
     related_contract = relationship("RentContract", foreign_keys=[related_contract_id])
+
     def __repr__(self) -> str:
         return f"<RentDepositLedger(contract_id={self.contract_id}, type={self.transaction_type}, amount={self.amount})>"  # pragma: no cover
 
@@ -255,33 +291,53 @@ class RentTerm(Base):  # type: ignore[valid-type, misc]
 
     __tablename__ = "rent_terms"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, default=lambda: str(uuid.uuid4())
+    )
     contract_id: Mapped[str] = mapped_column(
         String, ForeignKey("rent_contracts.id"), nullable=False, comment="关联合同ID"
     )
 
     # 时间段
-    start_date: Mapped[datetime] = mapped_column(Date, nullable=False, comment="条款开始日期")
-    end_date: Mapped[datetime] = mapped_column(Date, nullable=False, comment="条款结束日期")
+    start_date: Mapped[datetime] = mapped_column(
+        Date, nullable=False, comment="条款开始日期"
+    )
+    end_date: Mapped[datetime] = mapped_column(
+        Date, nullable=False, comment="条款结束日期"
+    )
 
     # 租金信息
-    monthly_rent: Mapped[Decimal] = mapped_column(DECIMAL(15, 2), nullable=False, comment="月租金金额")
-    rent_description: Mapped[str | None] = mapped_column(String(500), comment="租金描述")
+    monthly_rent: Mapped[Decimal] = mapped_column(
+        DECIMAL(15, 2), nullable=False, comment="月租金金额"
+    )
+    rent_description: Mapped[str | None] = mapped_column(
+        String(500), comment="租金描述"
+    )
 
     # 其他费用
-    management_fee: Mapped[Decimal] = mapped_column(DECIMAL(15, 2), default=0, comment="管理费")
-    other_fees: Mapped[Decimal] = mapped_column(DECIMAL(15, 2), default=0, comment="其他费用")
-    total_monthly_amount: Mapped[Decimal | None] = mapped_column(DECIMAL(15, 2), comment="月总金额")
+    management_fee: Mapped[Decimal] = mapped_column(
+        DECIMAL(15, 2), default=0, comment="管理费"
+    )
+    other_fees: Mapped[Decimal] = mapped_column(
+        DECIMAL(15, 2), default=0, comment="其他费用"
+    )
+    total_monthly_amount: Mapped[Decimal | None] = mapped_column(
+        DECIMAL(15, 2), comment="月总金额"
+    )
 
     # 系统字段
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, comment="创建时间")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, comment="创建时间"
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间"
     )
 
     # 关联关系
     contract = relationship("RentContract", back_populates="rent_terms")
-    def __repr__(self) -> str:        return f"<RentTerm(contract_id={self.contract_id}, monthly_rent={self.monthly_rent})>"  # pragma: no cover
+
+    def __repr__(self) -> str:
+        return f"<RentTerm(contract_id={self.contract_id}, monthly_rent={self.monthly_rent})>"  # pragma: no cover
 
 
 class RentLedger(Base):  # type: ignore[valid-type, misc]
@@ -289,7 +345,9 @@ class RentLedger(Base):  # type: ignore[valid-type, misc]
 
     __tablename__ = "rent_ledger"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, default=lambda: str(uuid.uuid4())
+    )
 
     # 关联信息
     contract_id: Mapped[str] = mapped_column(
@@ -303,13 +361,21 @@ class RentLedger(Base):  # type: ignore[valid-type, misc]
     )
 
     # 时间信息
-    year_month: Mapped[str] = mapped_column(String(7), nullable=False, comment="年月，格式：YYYY-MM")
+    year_month: Mapped[str] = mapped_column(
+        String(7), nullable=False, comment="年月，格式：YYYY-MM"
+    )
     due_date: Mapped[datetime] = mapped_column(Date, nullable=False, comment="应缴日期")
 
     # 金额信息
-    due_amount: Mapped[Decimal] = mapped_column(DECIMAL(15, 2), nullable=False, comment="应收金额")
-    paid_amount: Mapped[Decimal] = mapped_column(DECIMAL(15, 2), default=0, comment="实收金额")
-    overdue_amount: Mapped[Decimal] = mapped_column(DECIMAL(15, 2), default=0, comment="逾期金额")
+    due_amount: Mapped[Decimal] = mapped_column(
+        DECIMAL(15, 2), nullable=False, comment="应收金额"
+    )
+    paid_amount: Mapped[Decimal] = mapped_column(
+        DECIMAL(15, 2), default=0, comment="实收金额"
+    )
+    overdue_amount: Mapped[Decimal] = mapped_column(
+        DECIMAL(15, 2), default=0, comment="逾期金额"
+    )
 
     # 支付状态
     payment_status: Mapped[str] = mapped_column(
@@ -317,21 +383,29 @@ class RentLedger(Base):  # type: ignore[valid-type, misc]
     )
     payment_date: Mapped[datetime | None] = mapped_column(Date, comment="支付日期")
     payment_method: Mapped[str | None] = mapped_column(String(50), comment="支付方式")
-    payment_reference: Mapped[str | None] = mapped_column(String(100), comment="支付参考号")
+    payment_reference: Mapped[str | None] = mapped_column(
+        String(100), comment="支付参考号"
+    )
 
     # 滞纳金
-    late_fee: Mapped[Decimal] = mapped_column(DECIMAL(15, 2), default=0, comment="滞纳金")
+    late_fee: Mapped[Decimal] = mapped_column(
+        DECIMAL(15, 2), default=0, comment="滞纳金"
+    )
     late_fee_days: Mapped[int] = mapped_column(Integer, default=0, comment="滞纳天数")
 
     # 备注
     notes: Mapped[str | None] = mapped_column(Text, comment="备注")
 
     # 系统字段
-    data_status: Mapped[str] = mapped_column(String(20), default="正常", comment="数据状态")
+    data_status: Mapped[str] = mapped_column(
+        String(20), default="正常", comment="数据状态"
+    )
     version: Mapped[int] = mapped_column(Integer, default=1, comment="版本号")
 
     # 时间戳
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, comment="创建时间")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, comment="创建时间"
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间"
     )
@@ -350,7 +424,9 @@ class ServiceFeeLedger(Base):  # type: ignore[valid-type, misc]
 
     __tablename__ = "service_fee_ledger"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, default=lambda: str(uuid.uuid4())
+    )
 
     # 关联信息
     contract_id: Mapped[str] = mapped_column(
@@ -367,12 +443,18 @@ class ServiceFeeLedger(Base):  # type: ignore[valid-type, misc]
     )
 
     # 服务费信息
-    year_month: Mapped[str] = mapped_column(String(7), nullable=False, comment="年月，格式：YYYY-MM")
+    year_month: Mapped[str] = mapped_column(
+        String(7), nullable=False, comment="年月，格式：YYYY-MM"
+    )
     paid_rent_amount: Mapped[Decimal] = mapped_column(
         DECIMAL(15, 2), nullable=False, comment="实收租金（计算基数）"
     )
-    fee_rate: Mapped[Decimal] = mapped_column(DECIMAL(5, 4), nullable=False, comment="服务费率")
-    fee_amount: Mapped[Decimal] = mapped_column(DECIMAL(15, 2), nullable=False, comment="服务费金额")
+    fee_rate: Mapped[Decimal] = mapped_column(
+        DECIMAL(5, 4), nullable=False, comment="服务费率"
+    )
+    fee_amount: Mapped[Decimal] = mapped_column(
+        DECIMAL(15, 2), nullable=False, comment="服务费金额"
+    )
 
     # 结算状态
     settlement_status: Mapped[str] = mapped_column(
@@ -388,7 +470,9 @@ class ServiceFeeLedger(Base):  # type: ignore[valid-type, misc]
     operator_id: Mapped[str | None] = mapped_column(String(50), comment="操作人ID")
 
     # 时间戳
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, comment="创建时间")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, comment="创建时间"
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间"
     )
@@ -406,7 +490,9 @@ class RentContractHistory(Base):  # type: ignore[valid-type, misc]
 
     __tablename__ = "rent_contract_history"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, default=lambda: str(uuid.uuid4())
+    )
     contract_id: Mapped[str] = mapped_column(
         String, ForeignKey("rent_contracts.id"), nullable=False, comment="关联合同ID"
     )
@@ -428,11 +514,15 @@ class RentContractHistory(Base):  # type: ignore[valid-type, misc]
     operator_id: Mapped[str | None] = mapped_column(String(50), comment="操作人ID")
 
     # 时间戳
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, comment="创建时间")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, comment="创建时间"
+    )
 
     # 关联关系
     contract = relationship("RentContract")
-    def __repr__(self) -> str:        return f"<RentContractHistory(contract_id={self.contract_id}, change_type={self.change_type})>"  # pragma: no cover
+
+    def __repr__(self) -> str:
+        return f"<RentContractHistory(contract_id={self.contract_id}, change_type={self.change_type})>"  # pragma: no cover
 
 
 class RentContractAttachment(Base):  # type: ignore[valid-type, misc]
@@ -440,7 +530,9 @@ class RentContractAttachment(Base):  # type: ignore[valid-type, misc]
 
     __tablename__ = "rent_contract_attachments"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, default=lambda: str(uuid.uuid4())
+    )
 
     # 关联信息
     contract_id: Mapped[str] = mapped_column(
@@ -448,8 +540,12 @@ class RentContractAttachment(Base):  # type: ignore[valid-type, misc]
     )
 
     # 附件信息
-    file_name: Mapped[str] = mapped_column(String(255), nullable=False, comment="文件名")
-    file_path: Mapped[str] = mapped_column(String(500), nullable=False, comment="文件存储路径")
+    file_name: Mapped[str] = mapped_column(
+        String(255), nullable=False, comment="文件名"
+    )
+    file_path: Mapped[str] = mapped_column(
+        String(500), nullable=False, comment="文件存储路径"
+    )
     file_size: Mapped[int | None] = mapped_column(Integer, comment="文件大小(字节)")
     mime_type: Mapped[str | None] = mapped_column(String(100), comment="文件MIME类型")
     file_type: Mapped[str] = mapped_column(
@@ -464,8 +560,12 @@ class RentContractAttachment(Base):  # type: ignore[valid-type, misc]
     uploader_id: Mapped[str | None] = mapped_column(String(50), comment="上传人ID")
 
     # 时间戳
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, comment="上传时间")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, comment="上传时间"
+    )
 
     # 关联关系
     contract = relationship("RentContract", back_populates="attachments")
-    def __repr__(self) -> str:        return f"<RentContractAttachment(contract_id={self.contract_id}, file_name={self.file_name})>"  # pragma: no cover
+
+    def __repr__(self) -> str:
+        return f"<RentContractAttachment(contract_id={self.contract_id}, file_name={self.file_name})>"  # pragma: no cover

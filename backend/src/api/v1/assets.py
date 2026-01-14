@@ -131,6 +131,7 @@ async def get_assets(
 
         # Convert Asset models to AssetResponse
         from ...schemas.asset import AssetResponse
+
         items = [AssetResponse.model_validate(asset) for asset in assets]
 
         return AssetListResponse(

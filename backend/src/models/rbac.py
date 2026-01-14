@@ -47,22 +47,32 @@ class Role(Base):  # type: ignore[valid-type, misc]
 
     __tablename__ = "roles"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, default=lambda: str(uuid.uuid4())
+    )
 
     # 基本信息
-    name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True, comment="角色名称")
-    display_name: Mapped[str] = mapped_column(String(200), nullable=False, comment="显示名称")
+    name: Mapped[str] = mapped_column(
+        String(100), nullable=False, unique=True, comment="角色名称"
+    )
+    display_name: Mapped[str] = mapped_column(
+        String(200), nullable=False, comment="显示名称"
+    )
     description: Mapped[str | None] = mapped_column(Text, comment="角色描述")
 
     # 角色级别和类型
-    level: Mapped[int] = mapped_column(Integer, nullable=False, default=1, comment="角色级别")
+    level: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=1, comment="角色级别"
+    )
     category: Mapped[str | None] = mapped_column(String(50), comment="角色类别")
     is_system_role: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, comment="是否系统角色"
     )
 
     # 状态信息
-    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, comment="是否激活")
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, comment="是否激活"
+    )
 
     # 组织关联
     organization_id: Mapped[str | None] = mapped_column(
@@ -95,7 +105,9 @@ class Role(Base):  # type: ignore[valid-type, misc]
         "Permission", secondary=role_permissions, back_populates="roles"
     )
     # users = relationship("User", secondary="user_role_assignments")  # 完全移除以避免循环依赖
-    user_assignments: Mapped[list["UserRoleAssignment"]] = relationship("UserRoleAssignment", back_populates="role")
+    user_assignments: Mapped[list["UserRoleAssignment"]] = relationship(
+        "UserRoleAssignment", back_populates="role"
+    )
 
     def __repr__(self) -> str:
         return (  # pragma: no cover
@@ -108,26 +120,38 @@ class Permission(Base):  # type: ignore[valid-type, misc]
 
     __tablename__ = "permissions"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, default=lambda: str(uuid.uuid4())
+    )
 
     # 基本信息
-    name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True, comment="权限名称")
-    display_name: Mapped[str] = mapped_column(String(200), nullable=False, comment="显示名称")
+    name: Mapped[str] = mapped_column(
+        String(100), nullable=False, unique=True, comment="权限名称"
+    )
+    display_name: Mapped[str] = mapped_column(
+        String(200), nullable=False, comment="显示名称"
+    )
     description: Mapped[str | None] = mapped_column(Text, comment="权限描述")
 
     # 权限分类
-    resource: Mapped[str] = mapped_column(String(50), nullable=False, comment="资源类型")
+    resource: Mapped[str] = mapped_column(
+        String(50), nullable=False, comment="资源类型"
+    )
     action: Mapped[str] = mapped_column(String(50), nullable=False, comment="操作类型")
 
     # 权限特征
     is_system_permission: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, comment="是否系统权限"
     )
-    requires_approval: Mapped[bool] = mapped_column(Boolean, default=False, comment="是否需要审批")
+    requires_approval: Mapped[bool] = mapped_column(
+        Boolean, default=False, comment="是否需要审批"
+    )
 
     # 权限限制
     max_level: Mapped[int | None] = mapped_column(Integer, comment="最大级别")
-    conditions: Mapped[dict[str, Any] | None] = mapped_column(JSON, comment="权限条件(JSON格式)")
+    conditions: Mapped[dict[str, Any] | None] = mapped_column(
+        JSON, comment="权限条件(JSON格式)"
+    )
 
     # 审计信息
     created_at: Mapped[datetime] = mapped_column(
@@ -147,7 +171,9 @@ class Permission(Base):  # type: ignore[valid-type, misc]
     roles: Mapped[list["Role"]] = relationship(
         "Role", secondary=role_permissions, back_populates="permissions"
     )
-    dynamic_permissions: Mapped[list["DynamicPermission"]] = relationship("DynamicPermission", back_populates="permission")
+    dynamic_permissions: Mapped[list["DynamicPermission"]] = relationship(
+        "DynamicPermission", back_populates="permission"
+    )
     temporary_permissions: Mapped[list["TemporaryPermission"]] = relationship(
         "TemporaryPermission", back_populates="permission"
     )
@@ -170,7 +196,9 @@ class UserRoleAssignment(Base):  # type: ignore[valid-type, misc]
     __tablename__ = "user_role_assignments"
     __table_args__ = {"extend_existing": True}
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, default=lambda: str(uuid.uuid4())
+    )
 
     # 关联信息
     user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"), nullable=False)
@@ -184,14 +212,18 @@ class UserRoleAssignment(Base):  # type: ignore[valid-type, misc]
 
     # 有效期
     expires_at: Mapped[datetime | None] = mapped_column(DateTime, comment="过期时间")
-    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, comment="是否激活")
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, comment="是否激活"
+    )
 
     # 分配原因和备注
     reason: Mapped[str | None] = mapped_column(Text, comment="分配原因")
     notes: Mapped[str | None] = mapped_column(Text, comment="备注")
 
     # 上下文信息
-    context: Mapped[dict[str, Any] | None] = mapped_column(JSON, comment="上下文信息(JSON格式)")
+    context: Mapped[dict[str, Any] | None] = mapped_column(
+        JSON, comment="上下文信息(JSON格式)"
+    )
 
     # 审计信息
     created_at: Mapped[datetime] = mapped_column(
@@ -218,16 +250,26 @@ class ResourcePermission(Base):  # type: ignore[valid-type, misc]
 
     __tablename__ = "resource_permissions"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, default=lambda: str(uuid.uuid4())
+    )
 
     # 资源信息
-    resource_type: Mapped[str] = mapped_column(String(50), nullable=False, comment="资源类型")
+    resource_type: Mapped[str] = mapped_column(
+        String(50), nullable=False, comment="资源类型"
+    )
     resource_id: Mapped[str] = mapped_column(String, nullable=False, comment="资源ID")
 
     # 权限信息
-    user_id: Mapped[str | None] = mapped_column(String, ForeignKey("users.id"), comment="用户ID")
-    role_id: Mapped[str | None] = mapped_column(String, ForeignKey("roles.id"), comment="角色ID")
-    permission_id: Mapped[str | None] = mapped_column(String, ForeignKey("permissions.id"), comment="权限ID")
+    user_id: Mapped[str | None] = mapped_column(
+        String, ForeignKey("users.id"), comment="用户ID"
+    )
+    role_id: Mapped[str | None] = mapped_column(
+        String, ForeignKey("roles.id"), comment="角色ID"
+    )
+    permission_id: Mapped[str | None] = mapped_column(
+        String, ForeignKey("permissions.id"), comment="权限ID"
+    )
 
     # 权限级别
     permission_level: Mapped[str] = mapped_column(
@@ -239,14 +281,18 @@ class ResourcePermission(Base):  # type: ignore[valid-type, misc]
         DateTime, nullable=False, default=datetime.now, comment="授权时间"
     )
     expires_at: Mapped[datetime | None] = mapped_column(DateTime, comment="过期时间")
-    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, comment="是否激活")
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, comment="是否激活"
+    )
 
     # 授权信息
     granted_by: Mapped[str | None] = mapped_column(String(100), comment="授权人")
     reason: Mapped[str | None] = mapped_column(Text, comment="授权原因")
 
     # 条件限制
-    conditions: Mapped[dict[str, Any] | None] = mapped_column(JSON, comment="权限条件(JSON格式)")
+    conditions: Mapped[dict[str, Any] | None] = mapped_column(
+        JSON, comment="权限条件(JSON格式)"
+    )
 
     # 审计信息
     created_at: Mapped[datetime] = mapped_column(
@@ -274,7 +320,9 @@ class PermissionAuditLog(Base):  # type: ignore[valid-type, misc]
 
     __tablename__ = "permission_audit_logs"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    id: Mapped[str] = mapped_column(
+        String, primary_key=True, default=lambda: str(uuid.uuid4())
+    )
 
     # 操作信息
     action: Mapped[str] = mapped_column(String(50), nullable=False, comment="操作类型")
@@ -282,12 +330,20 @@ class PermissionAuditLog(Base):  # type: ignore[valid-type, misc]
     resource_id: Mapped[str | None] = mapped_column(String, comment="资源ID")
 
     # 用户信息
-    user_id: Mapped[str | None] = mapped_column(String, ForeignKey("users.id"), comment="用户ID")
-    operator_id: Mapped[str | None] = mapped_column(String, ForeignKey("users.id"), comment="操作人ID")
+    user_id: Mapped[str | None] = mapped_column(
+        String, ForeignKey("users.id"), comment="用户ID"
+    )
+    operator_id: Mapped[str | None] = mapped_column(
+        String, ForeignKey("users.id"), comment="操作人ID"
+    )
 
     # 权限变更
-    old_permissions: Mapped[dict[str, Any] | None] = mapped_column(JSON, comment="原权限(JSON格式)")
-    new_permissions: Mapped[dict[str, Any] | None] = mapped_column(JSON, comment="新权限(JSON格式)")
+    old_permissions: Mapped[dict[str, Any] | None] = mapped_column(
+        JSON, comment="原权限(JSON格式)"
+    )
+    new_permissions: Mapped[dict[str, Any] | None] = mapped_column(
+        JSON, comment="新权限(JSON格式)"
+    )
 
     # 变更原因
     reason: Mapped[str | None] = mapped_column(Text, comment="变更原因")

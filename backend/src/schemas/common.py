@@ -129,7 +129,9 @@ class BatchOperationResponse(BaseModel):
     total_count: int = Field(..., ge=0, description="总操作数量")
     success_count: int = Field(..., ge=0, description="成功数量")
     failed_count: int = Field(..., ge=0, description="失败数量")
-    errors: list[dict[str, Any]] = Field(default_factory=list[Any], description="错误详情")
+    errors: list[dict[str, Any]] = Field(
+        default_factory=list[Any], description="错误详情"
+    )
     data: dict[str, Any] | None = Field(None, description="操作结果数据")
     timestamp: datetime = Field(
         default_factory=datetime.utcnow, description="响应时间戳"
@@ -143,7 +145,9 @@ class HealthCheckResponse(BaseModel):
     status: str = Field(..., description="服务状态")
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="检查时间")
     version: str = Field(..., description="服务版本")
-    services: dict[str, str] = Field(default_factory=dict[str, Any], description="依赖服务状态")
+    services: dict[str, str] = Field(
+        default_factory=dict[str, Any], description="依赖服务状态"
+    )
     uptime: float | None = Field(None, description="运行时间（秒）")
     memory_usage: dict[str, Any] | None = Field(None, description="内存使用情况")
 

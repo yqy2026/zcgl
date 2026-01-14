@@ -303,7 +303,9 @@ class EnhancedCRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType], A
             更新后的模型实例
         """
         update_data = (
-            obj_in if isinstance(obj_in, dict) else obj_in.model_dump(exclude_unset=True)
+            obj_in
+            if isinstance(obj_in, dict)
+            else obj_in.model_dump(exclude_unset=True)
         )
 
         # 添加更新者信息

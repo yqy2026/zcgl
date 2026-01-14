@@ -573,7 +573,9 @@ def cached(ttl: int | None = None, namespace: str | None = None) -> Callable[...
     return cache_manager.cached(ttl=ttl, namespace=namespace)
 
 
-def cache_invalidate(namespace: str | None = None, pattern: str | None = None) -> Callable[..., Any]:
+def cache_invalidate(
+    namespace: str | None = None, pattern: str | None = None
+) -> Callable[..., Any]:
     """缓存失效装饰器便捷函数"""
     return cache_manager.cache_invalidate(namespace=namespace, pattern=pattern)
 

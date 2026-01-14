@@ -22,7 +22,6 @@ from typing import Any
 
 # 使用项目的 safe_import 机制进行依赖管理
 try:
-    from ...core.environment import DependencyPolicy
     from ...core.import_utils import safe_import
 except ImportError:
     # 如果核心模块不可用，回退到标准导入

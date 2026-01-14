@@ -2,7 +2,7 @@
 权属方相关API端点
 """
 
-from typing import Any, Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from sqlalchemy.orm import Session

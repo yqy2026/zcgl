@@ -11,10 +11,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from ...middleware.auth import (
-    PermissionChecker,
-    get_current_active_user,
-)
+from ...middleware.auth import PermissionChecker
 from ...middleware.error_recovery_middleware import api_error_recovery
 from ...models.auth import User
 from ...services.error_recovery_service import (
