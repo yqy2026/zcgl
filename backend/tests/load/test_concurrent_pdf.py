@@ -6,19 +6,15 @@
 
 import asyncio
 import gc
-import io
 import time
-from pathlib import Path
-from typing import List
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
 from src.services.document.pdf_import_service import (
+    MAX_CONCURRENT_PDF_TASKS,
     PDFImportService,
-    MAX_CONCURRENT_PDF_TASKS
 )
-
 
 # ============================================================================
 # 并发信号量测试
@@ -157,7 +153,7 @@ class TestConcurrentPDFProcessing:
                 await asyncio.sleep(0.05)
                 completed_tasks.append(task_id)
                 return {"success": True, "task_id": task_id}
-            except Exception as e:
+            except Exception:
                 failed_tasks.append(task_id)
                 raise
 
@@ -385,7 +381,7 @@ class TestResourceLimits:
                     await asyncio.sleep(0.01)
                 successes.append(task_id)
                 return {"success": True}
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 timeouts.append(task_id)
                 return {"success": False, "error": "timeout"}
 

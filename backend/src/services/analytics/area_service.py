@@ -7,7 +7,8 @@
 import logging
 from typing import Any
 
-from sqlalchemy import Float, case, cast as sql_cast, func
+from sqlalchemy import Float, case, func
+from sqlalchemy import cast as sql_cast
 from sqlalchemy.orm import Session
 
 from ...crud.asset import asset_crud

@@ -9,14 +9,6 @@ from ..models.rent_contract import (
     RentTerm,
     rent_contract_assets,
 )
-from ..schemas.rent_contract import (
-    RentContractCreate,
-    RentContractUpdate,
-    RentLedgerCreate,
-    RentLedgerUpdate,
-    RentTermCreate,
-    RentTermUpdate,
-)
 from .base import CRUDBase
 
 

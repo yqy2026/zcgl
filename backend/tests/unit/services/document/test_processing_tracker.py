@@ -5,10 +5,7 @@ Unit tests for BatchStatusTracker
 """
 
 import asyncio
-import json
-import tempfile
-from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -142,7 +139,6 @@ class TestBatchStatusTracker:
         tracker.create_batch("new-batch", total=5)
 
         # 手动修改创建时间（模拟旧记录）
-        import time
         old_batch = tracker._fallback_store["old-batch"]
         old_batch["created_at"] = "2020-01-01T00:00:00"
 

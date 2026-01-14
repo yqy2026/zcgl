@@ -5,10 +5,10 @@
 """
 
 from datetime import datetime
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import Any
 
 from ...crud.asset import asset_crud
 from ...crud.history import history_crud

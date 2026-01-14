@@ -28,7 +28,9 @@ except Exception:  # nosec - B110: Intentional graceful degradation
         pass
 
 try:
-    from .audit_service import EnhancedAuditLogger as EnhancedAuditLogger  # type: ignore[attr-defined]
+    from .audit_service import (
+        EnhancedAuditLogger as EnhancedAuditLogger,  # type: ignore[attr-defined]
+    )
 
     __all__.append("EnhancedAuditLogger")
 except Exception:  # nosec - B110: Intentional graceful degradation

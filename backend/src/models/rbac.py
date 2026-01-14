@@ -7,12 +7,12 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     Column,
     DateTime,
     ForeignKey,
     Integer,
-    JSON,
     String,
     Table,
     Text,
@@ -22,7 +22,11 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from ..database import Base
 
 if TYPE_CHECKING:
-    from .dynamic_permission import ConditionalPermission, DynamicPermission, TemporaryPermission
+    from .dynamic_permission import (
+        ConditionalPermission,
+        DynamicPermission,
+        TemporaryPermission,
+    )
     from .organization import Organization
     from .user import User
 

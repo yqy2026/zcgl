@@ -3,9 +3,10 @@
 添加缺失的财务、租户联系、审核字段
 """
 
-from sqlalchemy import text
 import logging
 from datetime import datetime
+
+from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 

@@ -2,7 +2,7 @@ import base64
 import binascii  # pylint: disable=unused-import
 import json
 from datetime import datetime, timedelta
-from typing import Any, cast
+from typing import cast
 
 import bcrypt
 

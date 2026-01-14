@@ -62,7 +62,7 @@ class TaskService:
 
         old_status = task.status
 
-        update_data = {"status": status}
+        update_data: dict[str, Any] = {"status": status}
 
         # Logic moved from CRUD.update
         # Start time
@@ -93,6 +93,10 @@ class TaskService:
         if status != old_status:
             task_id_value: str = getattr(task, "id")
             task_user_id: str | None = getattr(task, "user_id", None)
+            status_details: dict[str, Any] = {
+                "old_status": old_status,
+                "new_status": status,
+            }
             self.create_history(
                 db=db,
                 task_id=task_id_value,
@@ -100,7 +104,7 @@ class TaskService:
                 message=f"任务状态从 {old_status} 变更为 {status}"
                 + (f": {error_message}" if error_message else ""),
                 user_id=task_user_id or "",
-                details={"old_status": old_status, "new_status": status},
+                details=status_details,
             )
 
         return task
@@ -128,10 +132,10 @@ class TaskService:
         # API logic was just CRUD update with status hooks in CRUD.
         # Let's handle generic update here but delegate status specific logic blocks if needed.
 
-        update_data = obj_in.dict[str, Any](exclude_unset=True)
+        update_data: dict[str, Any] = obj_in.model_dump(exclude_unset=True)
         if "status" in update_data:
             # Calling specific status update logic would be cleaner, but let's replicate logic locally to support single commit
-            new_status = update_data["status"]
+            new_status: TaskStatus = update_data["status"]
             old_status = task.status
 
             if old_status == TaskStatus.PENDING and new_status == TaskStatus.RUNNING:
@@ -158,13 +162,17 @@ class TaskService:
         if "status" in update_data and update_data["status"] != old_status:
             task_id_value: str = getattr(task, "id")
             task_user_id: str | None = getattr(task, "user_id", None)
+            status_details: dict[str, Any] = {
+                "old_status": old_status,
+                "new_status": new_status,
+            }
             self.create_history(
                 db=db,
                 task_id=task_id_value,
                 action="status_changed",
                 message=f"任务状态从 {old_status} 变更为 {new_status}",
                 user_id=task_user_id or "",
-                details={"old_status": old_status, "new_status": new_status},
+                details=status_details,
             )
 
         return task
@@ -227,7 +235,7 @@ class TaskService:
         db.refresh(history)
         return history
 
-    def get_statistics(self, db: Session, user_id: str | None = None) -> dict[str, Any]:
+    def get_statistics(self, db: Session, *, user_id: str | None = None) -> dict[str, Any]:
         """获取统计信息 (Proxy to CRUD or implement here?) - Logic is reading DB, so keep in CRUD or move here? moving to service is fine for consistency"""
         # Kept in CRUD for now as it's read-only aggregation.
         return task_crud.get_statistics(db, user_id=user_id)
@@ -256,11 +264,12 @@ class TaskService:
         )
 
         if dry_run:
-            return {
+            dry_run_result: dict[str, Any] = {
                 "message": f"试运行模式，发现 {len(old_tasks)} 个可清理的任务",
                 "cleanup_date": cutoff_date.isoformat(),
                 "task_count": len(old_tasks),
             }
+            return dry_run_result
 
         count = 0
         for task in old_tasks:
@@ -268,11 +277,12 @@ class TaskService:
             count += 1
 
         db.commit()
-        return {
+        cleanup_result: dict[str, Any] = {
             "message": f"成功清理 {count} 个过期任务",
             "cleanup_date": cutoff_date.isoformat(),
             "cleaned_count": count,
         }
+        return cleanup_result
 
     # Excel Config Logic
     def create_excel_config(

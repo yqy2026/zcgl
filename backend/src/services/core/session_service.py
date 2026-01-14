@@ -1,6 +1,5 @@
 import json
 from datetime import datetime, timedelta
-from typing import Any
 
 from jose import jwt
 from sqlalchemy.orm import Session

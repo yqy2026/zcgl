@@ -8,11 +8,10 @@ PDF 处理边缘情况测试
 import json
 import os
 import tempfile
-import pytest
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch, MagicMock
-import PyPDF2
+from unittest.mock import AsyncMock, Mock, patch
 
+import pytest
 
 # ============================================================================
 # PDF 转 图像边缘情况测试
@@ -130,7 +129,9 @@ class TestPDFToImagesEdgeCases:
     @pytest.mark.unit
     def test_cleanup_on_conversion_failure(self):
         """测试转换失败时的清理"""
-        from src.services.document.pdf_to_images import pdf_to_images, cleanup_temp_images
+        from src.services.document.pdf_to_images import (
+            pdf_to_images,
+        )
 
         # 模拟部分转换失败
         with patch("fitz.open") as mock_open:
@@ -379,8 +380,9 @@ class TestCacheEdgeCases:
     @pytest.mark.unit
     def test_cache_write_conflict(self):
         """测试并发缓存写入冲突"""
-        from src.services.document.cache import PDFCache
         import asyncio
+
+        from src.services.document.cache import PDFCache
 
         with tempfile.TemporaryDirectory() as temp_dir:
             cache = PDFCache(cache_dir=temp_dir)
@@ -495,8 +497,8 @@ class TestEndToEndEdgeCases:
     @pytest.mark.asyncio
     async def test_retry_on_transient_vision_api_error(self):
         """测试 vision API 瞬态错误时的重试"""
-        from src.services.document.llm_contract_extractor import LLMContractExtractor
         from src.services.document.extractors.glm_adapter import GLMVisionAdapter
+        from src.services.document.llm_contract_extractor import LLMContractExtractor
 
         extractor = LLMContractExtractor()
 

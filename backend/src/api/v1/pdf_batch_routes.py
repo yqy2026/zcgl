@@ -8,11 +8,13 @@ import asyncio
 import logging
 import os
 import uuid
+from collections.abc import AsyncGenerator
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session
+from typing_extensions import Annotated
 
 from ...core.config import settings
 from ...core.response_handler import success_response
@@ -78,7 +80,7 @@ def _get_batch_status(batch_id: str) -> dict[str, Any] | None:
     """获取批处理状态"""
     tracker = _get_batch_tracker()
     result = tracker.get_status(batch_id)
-    return result  # type: ignore[no-any-return]
+    return result
 
 
 def _update_batch_status(batch_id: str, status: str, **updates: Any) -> None:
@@ -113,14 +115,14 @@ def _calculate_batch_progress(batch_id: str) -> dict[str, Any]:
 # ============================================================================
 
 
-@router.post("/upload")  # type: ignore[misc]
+@router.post("/upload")
 async def batch_upload_pdfs(
-    db: Session = Depends(get_db),
-    files: list[UploadFile] = File(...),
-    organization_id: int | None = Form(None),
-    prefer_ocr: bool = Form(False),
-    prefer_vision: bool = Form(False),
-    auto_confirm: bool = Form(False),
+    db: Annotated[Session, Depends(get_db)],
+    files: Annotated[list[UploadFile], File(...)],
+    organization_id: Annotated[int | None, Form(None)] = None,
+    prefer_ocr: Annotated[bool, Form(False)] = False,
+    prefer_vision: Annotated[bool, Form(False)] = False,
+    auto_confirm: Annotated[bool, Form(False)] = False,
 ) -> JSONResponse:
     """
     批量上传 PDF 文件进行智能识别
@@ -284,10 +286,10 @@ async def batch_upload_pdfs(
     )
 
 
-@router.get("/status/{batch_id}")  # type: ignore[misc]
+@router.get("/status/{batch_id}")
 async def get_batch_status(
     batch_id: str,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ) -> JSONResponse:
     """
     查询批处理状态
@@ -366,7 +368,7 @@ async def get_batch_status(
     )
 
 
-@router.get("/list")  # type: ignore[misc]
+@router.get("/list")
 async def list_batches(
     status_filter: str | None = None,
     limit: int = 20,
@@ -419,10 +421,10 @@ async def list_batches(
     )
 
 
-@router.post("/cancel/{batch_id}")  # type: ignore[misc]
+@router.post("/cancel/{batch_id}")
 async def cancel_batch(
     batch_id: str,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
 ) -> JSONResponse:
     """
     取消批处理任务
@@ -479,7 +481,7 @@ async def cancel_batch(
     )
 
 
-@router.delete("/cleanup")  # type: ignore[misc]
+@router.delete("/cleanup")
 async def cleanup_completed_batches(
     older_than_hours: int = 24,
 ) -> JSONResponse:
@@ -619,7 +621,7 @@ async def _monitor_batch_progress(batch_id: str, db: Session) -> None:
 # ============================================================================
 
 
-@router.get("/health")  # type: ignore[misc]
+@router.get("/health")
 async def batch_health_check() -> JSONResponse:
     """
     批处理系统健康检查

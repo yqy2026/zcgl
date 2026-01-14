@@ -4,7 +4,7 @@ from sqlalchemy import desc, func, or_
 from sqlalchemy.orm import Session
 
 from ..models.asset import Asset, Project
-from ..schemas.project import ProjectCreate, ProjectSearchRequest, ProjectUpdate
+from ..schemas.project import ProjectSearchRequest
 from .base import CRUDBase
 
 

@@ -1,10 +1,12 @@
 """Quick test for single image extraction"""
 from dotenv import load_dotenv
+
 load_dotenv('.env')
-import httpx
-import os
 import base64
+import os
+
 import fitz
+import httpx
 
 pdf_path = r'D:\ccode\zcgl\tools\pdf-samples\【包装合字（2025）第022号】租赁合同-番禺区洛浦南浦环岛西路29号1号商业楼14号铺-王军20250401-20280331.pdf'
 

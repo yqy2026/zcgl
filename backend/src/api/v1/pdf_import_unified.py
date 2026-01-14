@@ -1,4 +1,4 @@
-from typing import Any, AsyncGenerator
+from typing import Any
 
 """
 PDF智能导入API (统一版本)
@@ -1104,7 +1104,7 @@ async def get_realtime_performance() -> dict[str, Any]:
 
 @router.get("/performance/report")
 async def get_performance_report(
-    hours: int = Query(default=24, ge=1, le=168)
+    hours: int = Query(default=24, ge=1, le=168),
 ) -> dict[str, Any]:
     """获取性能报告"""
     try:

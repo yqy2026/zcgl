@@ -3,11 +3,11 @@ JWT令牌黑名单管理器
 用于管理被撤销的JWT令牌，防止令牌重放攻击
 """
 
-from datetime import UTC, datetime
-from typing import Any, Callable
-
 import json
 import time
+from collections.abc import Callable
+from datetime import UTC, datetime
+from typing import Any
 
 from ..core.config import settings
 

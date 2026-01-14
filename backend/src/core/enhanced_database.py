@@ -19,7 +19,7 @@ from sqlalchemy import create_engine, event, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.engine.interfaces import DBAPIConnection
 from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.pool import Pool, QueuePool, StaticPool
+from sqlalchemy.pool import QueuePool, StaticPool
 
 from .config import get_config
 
@@ -136,7 +136,9 @@ class EnhancedDatabaseManager:
         """设置数据库事件监听器"""
 
         @event.listens_for(self.engine, "connect")
-        def on_connect(dbapi_connection: DBAPIConnection, connection_record: Any) -> None:
+        def on_connect(
+            dbapi_connection: DBAPIConnection, connection_record: Any
+        ) -> None:
             """连接事件"""
             with self._metrics_lock:
                 self.metrics.active_connections += 1
@@ -148,7 +150,9 @@ class EnhancedDatabaseManager:
 
         @event.listens_for(self.engine, "checkout")
         def on_checkout(
-            dbapi_connection: DBAPIConnection, connection_record: Any, connection_proxy: Any
+            dbapi_connection: DBAPIConnection,
+            connection_record: Any,
+            connection_proxy: Any,
         ) -> None:
             """检出连接事件"""
             with self._metrics_lock:
@@ -163,7 +167,9 @@ class EnhancedDatabaseManager:
                         self.metrics.pool_misses += 1  # pragma: no cover
 
         @event.listens_for(self.engine, "checkin")
-        def on_checkin(dbapi_connection: DBAPIConnection, connection_record: Any) -> None:
+        def on_checkin(
+            dbapi_connection: DBAPIConnection, connection_record: Any
+        ) -> None:
             """检入连接事件"""
             with self._metrics_lock:
                 self.metrics.active_connections -= 1
@@ -176,13 +182,24 @@ class EnhancedDatabaseManager:
                     self.metrics.active_connections -= 1  # pragma: no cover
 
         @event.listens_for(self.engine, "before_execute")
-        def on_execute(conn: Any, clauseelement: Any, multiparams: Any, params: Any, execution_options: Any) -> None:
+        def on_execute(
+            conn: Any,
+            clauseelement: Any,
+            multiparams: Any,
+            params: Any,
+            execution_options: Any,
+        ) -> None:
             """执行查询事件"""
             conn.info.setdefault("query_start_time", time.time())
 
         @event.listens_for(self.engine, "after_execute")
         def after_execute(
-            conn: Any, clauseelement: Any, multiparams: Any, params: Any, execution_options: Any, result: Any
+            conn: Any,
+            clauseelement: Any,
+            multiparams: Any,
+            params: Any,
+            execution_options: Any,
+            result: Any,
         ) -> None:
             """查询执行后事件"""
             try:
@@ -350,7 +367,9 @@ class EnhancedDatabaseManager:
                 "pool_hits": self.metrics.pool_hits,
                 "pool_misses": self.metrics.pool_misses,
                 "pool_hit_rate": (
-                    self.metrics.pool_hits / (self.metrics.pool_hits + self.metrics.pool_misses) * 100
+                    self.metrics.pool_hits
+                    / (self.metrics.pool_hits + self.metrics.pool_misses)
+                    * 100
                     if (self.metrics.pool_hits + self.metrics.pool_misses) > 0
                     else 0
                 ),
@@ -530,13 +549,17 @@ class EnhancedDatabaseManager:
                     session.execute(text("ANALYZE"))
                     session.commit()
                     if isinstance(optimization_results["actions_taken"], list):
-                        optimization_results["actions_taken"].append("更新了SQLite统计信息")
+                        optimization_results["actions_taken"].append(
+                            "更新了SQLite统计信息"
+                        )
 
                 # 检查连接池使用情况
                 pool_status = self.get_connection_pool_status()
                 if pool_status.get("utilization", 0) > 80:  # pragma: no cover
                     if isinstance(optimization_results["recommendations"], list):
-                        optimization_results["recommendations"].append(  # pragma: no cover
+                        optimization_results[
+                            "recommendations"
+                        ].append(  # pragma: no cover
                             "连接池使用率过高，考虑增加连接池大小"  # pragma: no cover
                         )  # pragma: no cover
 

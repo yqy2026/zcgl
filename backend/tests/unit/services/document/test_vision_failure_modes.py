@@ -6,10 +6,10 @@ Vision API 失败模式测试
 """
 
 import json
-import pytest
-from unittest.mock import AsyncMock, Mock, patch
-from httpx import HTTPStatusError, Response, Request
+from unittest.mock import AsyncMock, patch
 
+import pytest
+from httpx import HTTPStatusError, Request, Response
 
 # ============================================================================
 # Zhipu Vision Service 失败模式测试
@@ -238,7 +238,9 @@ class TestDeepSeekVisionFailureModes:
     @pytest.mark.asyncio
     async def test_timeout_handling(self):
         """测试超时处理"""
-        from src.services.document.extractors.deepseek_adapter import DeepSeekVisionAdapter
+        from src.services.document.extractors.deepseek_adapter import (
+            DeepSeekVisionAdapter,
+        )
 
         adapter = DeepSeekVisionAdapter()
 

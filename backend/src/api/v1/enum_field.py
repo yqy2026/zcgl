@@ -89,16 +89,16 @@ async def get_enum_field_types(
 
 
 @router.get("/types/statistics", response_model=EnumFieldStatistics)
-async def get_enum_field_statistics(db: Session = Depends(get_db)) -> EnumFieldStatistics:
+async def get_enum_field_statistics(
+    db: Session = Depends(get_db),
+) -> EnumFieldStatistics:
     """获取枚举字段统计信息"""
     type_crud = get_enum_field_type_crud(db)
 
     type_stats = type_crud.get_statistics()
 
     # 获取枚举值统计
-    total_values = (
-        db.query(EnumFieldValue).filter(~EnumFieldValue.is_deleted).count()
-    )
+    total_values = db.query(EnumFieldValue).filter(~EnumFieldValue.is_deleted).count()
     active_values = (
         db.query(EnumFieldValue)
         .filter(and_(~EnumFieldValue.is_deleted, EnumFieldValue.is_active))
@@ -192,7 +192,9 @@ async def delete_enum_field_type(
 
 
 @router.get("/types/categories/list[Any]")
-async def get_enum_field_categories(db: Session = Depends(get_db)) -> dict[str, list[str]]:
+async def get_enum_field_categories(
+    db: Session = Depends(get_db),
+) -> dict[str, list[str]]:
     """获取枚举字段类别列表"""
     crud = get_enum_field_type_crud(db)
     categories = crud.get_categories()
@@ -214,7 +216,9 @@ async def get_enum_field_values(
 
 
 @router.get("/types/{type_id}/values/tree", response_model=list[EnumFieldTree])
-async def get_enum_field_values_tree(type_id: str, db: Session = Depends(get_db)) -> list[EnumFieldTree]:
+async def get_enum_field_values_tree(
+    type_id: str, db: Session = Depends(get_db)
+) -> list[EnumFieldTree]:
     """获取枚举字段值树形结构"""
     crud = get_enum_field_value_crud(db)
 
@@ -399,7 +403,9 @@ async def update_enum_field_usage(
 
 
 @router.delete("/usage/{usage_id}")
-async def delete_enum_field_usage(usage_id: str, db: Session = Depends(get_db)) -> dict[str, str]:
+async def delete_enum_field_usage(
+    usage_id: str, db: Session = Depends(get_db)
+) -> dict[str, str]:
     """删除枚举字段使用记录"""
     crud = get_enum_field_usage_crud(db)
 

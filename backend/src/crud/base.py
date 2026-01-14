@@ -1,4 +1,4 @@
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, TypeVar, cast
 
 """
 增强的基础CRUD操作类 - 支持缓存、性能监控和错误处理
@@ -41,13 +41,13 @@ class CRUDBase(Generic[_ModelType, _CreateSchemaType, _UpdateSchemaType]):
 
     def _get_cache_key(self, method: str, **kwargs: Any) -> str:
         """生成缓存键"""
-        key_parts = [getattr(self.model, '__tablename__', 'unknown'), method]
+        key_parts = [getattr(self.model, "__tablename__", "unknown"), method]
         for k, v in sorted(kwargs.items()):
             if v is not None:
                 key_parts.append(f"{k}:{v}")
         return "|".join(key_parts)
 
-    def _get_from_cache(self, cache_key: str) -> Any | None:
+    def _get_from_cache(self, cache_key: str) -> Any:
         """从缓存获取数据"""
         if cache_key in self._cache:
             data, timestamp = self._cache[cache_key]
@@ -65,7 +65,9 @@ class CRUDBase(Generic[_ModelType, _CreateSchemaType, _UpdateSchemaType]):
             oldest_key = min(self._cache.keys(), key=lambda k: self._cache[k][1])
             del self._cache[oldest_key]
 
-    def _handle_database_error(self, error: Exception, operation: str) -> Exception:  # pragma: no cover
+    def _handle_database_error(
+        self, error: Exception, operation: str
+    ) -> Exception:  # pragma: no cover
         """处理数据库错误"""
         logger.error(f"Database error during {operation}: {str(error)}", exc_info=True)
         if isinstance(error, SQLAlchemyError):
@@ -79,10 +81,12 @@ class CRUDBase(Generic[_ModelType, _CreateSchemaType, _UpdateSchemaType]):
         if use_cache:
             cached_result = self._get_from_cache(cache_key)
             if cached_result is not None:
-                return cached_result
+                return cast(_ModelType, cached_result)
 
         try:
-            result = db.query(self.model).filter(getattr(self.model, 'id') == id).first()
+            result = (
+                db.query(self.model).filter(getattr(self.model, "id") == id).first()
+            )
             if use_cache and result is not None:  # pragma: no cover
                 self._set_cache(cache_key, result)  # pragma: no cover
             return result
@@ -98,7 +102,7 @@ class CRUDBase(Generic[_ModelType, _CreateSchemaType, _UpdateSchemaType]):
         if use_cache and limit <= 50:  # 只对小结果集缓存
             cached_result = self._get_from_cache(cache_key)  # pragma: no cover
             if cached_result is not None:  # pragma: no cover
-                return cached_result  # type: ignore[return-value]
+                return cast(list[_ModelType], cached_result)
         try:
             query = db.query(self.model).offset(skip).limit(limit)
             result = query.all()
@@ -109,12 +113,17 @@ class CRUDBase(Generic[_ModelType, _CreateSchemaType, _UpdateSchemaType]):
         except Exception as e:  # pragma: no cover
             raise self._handle_database_error(e, "获取记录列表")  # pragma: no cover
 
-    def create(self, db: Session, *, obj_in: _CreateSchemaType, **kwargs: Any) -> _ModelType:
+    def create(
+        self, db: Session, *, obj_in: _CreateSchemaType | dict[str, Any], **kwargs: Any
+    ) -> _ModelType:
         """创建新记录（支持事务回滚和错误处理）"""
         try:
-            obj_in_data: dict[str, Any] = (
-                obj_in.model_dump() if hasattr(obj_in, "model_dump") else obj_in  # type: ignore[assignment]
-            )
+            if isinstance(obj_in, dict):
+                obj_in_data = obj_in
+            elif hasattr(obj_in, "model_dump"):
+                obj_in_data = obj_in.model_dump()
+            else:
+                obj_in_data = dict(obj_in)
 
             obj_in_data.update(kwargs)
             db_obj = self.model(**obj_in_data)
@@ -144,7 +153,9 @@ class CRUDBase(Generic[_ModelType, _CreateSchemaType, _UpdateSchemaType]):
         try:
             obj_data = db_obj.__dict__
             update_data: dict[str, Any] = (
-                obj_in if isinstance(obj_in, dict) else obj_in.model_dump(exclude_unset=True)
+                obj_in
+                if isinstance(obj_in, dict)
+                else obj_in.model_dump(exclude_unset=True)
             )
 
             for field in obj_data:
@@ -156,7 +167,7 @@ class CRUDBase(Generic[_ModelType, _CreateSchemaType, _UpdateSchemaType]):
             db.refresh(db_obj)
 
             # 清除相关缓存
-            cache_key = self._get_cache_key("get", id=getattr(db_obj, 'id', None))
+            cache_key = self._get_cache_key("get", id=getattr(db_obj, "id", None))
             if cache_key in self._cache:
                 del self._cache[cache_key]
             self._clear_cache_pattern("get_multi")
@@ -188,7 +199,7 @@ class CRUDBase(Generic[_ModelType, _CreateSchemaType, _UpdateSchemaType]):
             logger.info(
                 f"Successfully deleted {getattr(self.model, '__tablename__', 'unknown')} record with id: {id}"
             )
-            return obj
+            return cast(_ModelType, obj)
         except ValueError:
             raise
         except Exception as e:  # pragma: no cover
@@ -234,21 +245,24 @@ class CRUDBase(Generic[_ModelType, _CreateSchemaType, _UpdateSchemaType]):
                 limit=limit,
             )
             result = db.execute(query).scalars().all()
-            return list(result)  # type: ignore[return-value]
+            return list(result)
         except Exception as e:  # pragma: no cover
             raise self._handle_database_error(e, "高级查询")  # pragma: no cover
 
     def bulk_create(
-        self, db: Session, *, objects_in: list[_CreateSchemaType]
+        self, db: Session, *, objects_in: list[_CreateSchemaType | dict[str, Any]]
     ) -> list[_ModelType]:
         """批量创建记录"""
         try:
             db_objects: list[_ModelType] = []
             for obj_in in objects_in:
-                obj_in_data: dict[str, Any] = (
-                    obj_in.model_dump() if hasattr(obj_in, "model_dump") else obj_in  # type: ignore[assignment]
-                )  # pragma: no cover
-                db_objects.append(self.model(**obj_in_data))  # type: ignore[arg-type]
+                if isinstance(obj_in, dict):
+                    obj_in_data = obj_in
+                elif hasattr(obj_in, "model_dump"):
+                    obj_in_data = obj_in.model_dump()
+                else:
+                    obj_in_data = dict(obj_in)
+                db_objects.append(self.model(**obj_in_data))
 
             db.add_all(db_objects)
             db.commit()
@@ -281,12 +295,14 @@ class CRUDBase(Generic[_ModelType, _CreateSchemaType, _UpdateSchemaType]):
     def clear_cache(self) -> None:
         """清除所有缓存"""
         self._cache.clear()
-        logger.info(f"Cache cleared for {getattr(self.model, '__tablename__', 'unknown')}")
+        logger.info(
+            f"Cache cleared for {getattr(self.model, '__tablename__', 'unknown')}"
+        )
 
     def get_cache_stats(self) -> dict[str, Any]:
         """获取缓存统计信息"""
         return {
-            "model": getattr(self.model, '__tablename__', 'unknown'),
+            "model": getattr(self.model, "__tablename__", "unknown"),
             "cache_size": len(self._cache),
             "cache_timeout": self._cache_timeout,
         }

@@ -2,9 +2,10 @@
 资产历史记录API路由
 """
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy.orm import Session
-from typing import Any
 
 from ...core.exception_handler import ResourceNotFoundError
 from ...crud.asset import asset_crud

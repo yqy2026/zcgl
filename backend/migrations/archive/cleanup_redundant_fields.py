@@ -3,9 +3,10 @@
 移除与前端不一致的冗余字段
 """
 
-from sqlalchemy import text
 import logging
 from datetime import datetime
+
+from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 

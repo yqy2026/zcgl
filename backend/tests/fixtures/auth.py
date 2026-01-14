@@ -3,9 +3,9 @@
 提供认证相关的测试辅助函数
 """
 
-import jwt
 from datetime import datetime, timedelta
-from typing import Dict
+
+import jwt
 
 
 class AuthFixture:
@@ -24,6 +24,6 @@ class AuthFixture:
         return jwt.encode(token_data, secret, algorithm="HS256")
 
     @staticmethod
-    def create_auth_headers(token: str) -> Dict[str, str]:
+    def create_auth_headers(token: str) -> dict[str, str]:
         """创建认证头"""
         return {"Authorization": f"Bearer {token}"}

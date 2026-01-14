@@ -1,4 +1,4 @@
-from typing import Any, cast
+from typing import Any
 
 
 class AssetNotFoundError(Exception):
@@ -79,7 +79,7 @@ class RBACService:
         # 添加权限
         if role_data.permission_ids:
             self._assign_permissions_to_role(
-                cast("str", role.id), role_data.permission_ids, created_by
+                role.id, role_data.permission_ids, created_by
             )
 
         return role
@@ -90,7 +90,7 @@ class RBACService:
         if not role:
             raise BusinessLogicError("角色不存在")
 
-        if cast("bool", role.is_system_role):
+        if role.is_system_role:
             raise BusinessLogicError("系统角色不能修改")
 
         # 检查名称唯一性
@@ -112,13 +112,13 @@ class RBACService:
         for field, value in update_data.items():
             setattr(role, field, value)
 
-        role.updated_at = datetime.now(UTC)  # type: ignore
-        role.updated_by = updated_by  # type: ignore
+        role.updated_at = datetime.now(UTC)
+        role.updated_by = updated_by
 
         # 更新权限
         if role_data.permission_ids is not None:
             self._assign_permissions_to_role(
-                cast("str", role.id), role_data.permission_ids, updated_by
+                role.id, role_data.permission_ids, updated_by
             )
 
         self.db.commit()
@@ -132,7 +132,7 @@ class RBACService:
         if not role:
             return False
 
-        if cast("bool", role.is_system_role):
+        if role.is_system_role:
             raise BusinessLogicError("系统角色不能删除")
 
         # 保存角色名称用于审计日志（在删除之前）
@@ -376,8 +376,8 @@ class RBACService:
         if not assignment:
             return False
 
-        assignment.is_active = False  # type: ignore
-        assignment.updated_at = datetime.now(UTC)  # type: ignore
+        assignment.is_active = False
+        assignment.updated_at = datetime.now(UTC)
 
         self.db.commit()
 
@@ -571,15 +571,13 @@ class RBACService:
 
         # 检查权限级别
         if not self._check_permission_level(
-            cast("str", permission.permission_level), permission_request.action
+            permission.permission_level, permission_request.action
         ):
             return None
 
         return {
             "permission_level": permission.permission_level,
-            "conditions": json.loads(cast("str", permission.conditions))
-            if cast("str", permission.conditions)
-            else None,
+            "conditions": permission.conditions if permission.conditions else None,
         }
 
     def _role_has_permission(
@@ -603,9 +601,7 @@ class RBACService:
                 permission.resource == permission_request.resource
                 and permission.action == permission_request.action
             ):
-                return (
-                    json.loads(permission.conditions) if permission.conditions else None
-                )
+                return permission.conditions if permission.conditions else None
         return None  # pragma: no cover  # Defensive: only reached if role_has_permission check is bypassed
 
     def _check_permission_level(self, permission_level: str, action: str) -> bool:

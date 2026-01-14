@@ -22,6 +22,7 @@ class NotFoundError(Exception):
 """
 
 import os
+from typing import Any
 
 from fastapi import (
     APIRouter,
@@ -33,7 +34,6 @@ from fastapi import (
 )
 from sqlalchemy.orm import Session
 from starlette.status import HTTP_204_NO_CONTENT
-from typing import Any
 
 from ...core.exception_handler import DuplicateResourceError, ResourceNotFoundError
 from ...crud.history import history_crud

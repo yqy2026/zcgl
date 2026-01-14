@@ -7,7 +7,7 @@
 
 import asyncio
 from datetime import date, datetime, timedelta
-from typing import Any, cast
+from typing import Any
 
 from sqlalchemy import and_
 from sqlalchemy.orm import Session

@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Query, Response
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/defects", tags=["defect-tracking"])

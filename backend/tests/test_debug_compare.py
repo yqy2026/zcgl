@@ -1,15 +1,17 @@
 """Debug script to compare working vs failing API calls"""
 from dotenv import load_dotenv
+
 load_dotenv('.env')
 import asyncio
-import httpx
-import os
 import base64
+import os
 import sys
-import json
+
+import httpx
+
 sys.path.insert(0, 'src')
-from services.document.pdf_to_images import pdf_to_images
 from services.core.zhipu_vision_service import ZhipuVisionService
+from services.document.pdf_to_images import pdf_to_images
 
 pdf = r'D:\ccode\zcgl\tools\pdf-samples\【包装合字（2025）第022号】租赁合同-番禺区洛浦南浦环岛西路29号1号商业楼14号铺-王军20250401-20280331.pdf'
 images = pdf_to_images(pdf, max_pages=1, dpi=150)
@@ -42,7 +44,7 @@ async def test_direct(prompt, label):
         }],
         'temperature': 0.1
     }
-    
+
     async with httpx.AsyncClient(timeout=120) as client:
         response = await client.post(
             'https://open.bigmodel.cn/api/paas/v4/chat/completions',
@@ -68,15 +70,15 @@ async def main():
     print('=' * 60)
     print('Test 1: Direct call with short prompt')
     await test_direct(short_prompt, 'DIRECT-SHORT')
-    
+
     print('\n' + '=' * 60)
     print('Test 2: Direct call with long prompt')
     await test_direct(long_prompt, 'DIRECT-LONG')
-    
+
     print('\n' + '=' * 60)
     print('Test 3: Service call with short prompt')
     await test_service(short_prompt, 'SERVICE-SHORT')
-    
+
     print('\n' + '=' * 60)
     print('Test 4: Service call with long prompt')
     await test_service(long_prompt, 'SERVICE-LONG')

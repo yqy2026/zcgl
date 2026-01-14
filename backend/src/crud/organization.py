@@ -5,7 +5,6 @@ from sqlalchemy.orm import Session
 
 from ..crud.base import CRUDBase
 from ..models.organization import Organization
-from ..schemas.organization import OrganizationCreate, OrganizationUpdate
 
 
 class CRUDOrganization(CRUDBase):

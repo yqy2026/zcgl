@@ -3,10 +3,10 @@
 记录所有API请求的详细信息，用于安全和审计
 """
 
-from collections.abc import Awaitable, Callable
-
 import time
 import uuid
+from collections.abc import Awaitable, Callable
+
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp

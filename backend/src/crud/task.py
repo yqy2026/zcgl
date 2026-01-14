@@ -6,7 +6,6 @@ from sqlalchemy.orm import Session
 
 from ..enums.task import TaskStatus, TaskType
 from ..models.task import AsyncTask, ExcelTaskConfig, TaskHistory
-from ..schemas.task import ExcelTaskConfigCreate, TaskCreate, TaskUpdate
 from .base import CRUDBase
 
 

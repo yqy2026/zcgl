@@ -1,4 +1,4 @@
-from typing import Any, Awaitable, Callable
+from typing import Any
 
 """
 认证中间件
@@ -11,8 +11,6 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
-from starlette.requests import Request
-from starlette.responses import Response
 
 from ..core.config import settings
 from ..database import get_db

@@ -4,20 +4,18 @@
 测试 retry.py 中的装饰器和函数
 """
 
-import asyncio
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock
 
 import httpx
 import pytest
 
 from src.services.document.retry import (
-    retry_on_network_error,
-    retry_on_api_error,
-    retry_on_vision_api,
-    retry_async_call,
     RetryContext,
+    retry_async_call,
+    retry_on_api_error,
+    retry_on_network_error,
+    retry_on_vision_api,
 )
-
 
 # ============================================================================
 # retry_on_network_error 装饰器测试

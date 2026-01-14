@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 """
 错误恢复中间件

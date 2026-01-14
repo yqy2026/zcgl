@@ -1,4 +1,5 @@
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 """
 资产分析API路由 - 提供综合的统计分析数据

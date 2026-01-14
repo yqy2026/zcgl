@@ -1,4 +1,5 @@
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
 
 """
 FastAPI安全中间件
@@ -8,7 +9,6 @@ FastAPI安全中间件
 import logging
 import time
 from collections import defaultdict
-from collections.abc import Mapping
 
 from fastapi import HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
@@ -24,7 +24,7 @@ try:
 
     ADAPTIVE_LIMITER_AVAILABLE = True
 except ImportError:
-    adaptive_limiter_var: Optional[AdaptiveRateLimiter] = None
+    adaptive_limiter_var: AdaptiveRateLimiter | None = None
     ADAPTIVE_LIMITER_AVAILABLE = False
     # Create a compatible wrapper for type checking
     adaptive_limiter = adaptive_limiter_var  # type: ignore[assignment]
@@ -58,7 +58,7 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
     """请求验证中间件"""
 
     def __init__(
-        self, app: ASGIApp, rate_limit_config: Optional[dict[str, Any]] = None
+        self, app: ASGIApp, rate_limit_config: dict[str, Any] | None = None
     ) -> None:
         super().__init__(app)
         self.rate_limiter = RateLimiter()
@@ -376,7 +376,9 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
 class FileUploadSecurityMiddleware(BaseHTTPMiddleware):
     """文件上传安全中间件"""
 
-    def __init__(self, app: ASGIApp, max_file_size: int = 50 * 1024 * 1024) -> None:  # 50MB
+    def __init__(
+        self, app: ASGIApp, max_file_size: int = 50 * 1024 * 1024
+    ) -> None:  # 50MB
         super().__init__(app)
         self.max_file_size = max_file_size
 
@@ -442,8 +444,8 @@ class CORSExtendedMiddleware(BaseHTTPMiddleware):
     def __init__(
         self,
         app: ASGIApp,
-        allowed_origins: Optional[list[str]] = None,
-        allowed_methods: Optional[list[str]] = None,
+        allowed_origins: list[str] | None = None,
+        allowed_methods: list[str] | None = None,
     ) -> None:
         super().__init__(app)
         self.allowed_origins = allowed_origins or [
@@ -490,9 +492,7 @@ class CORSExtendedMiddleware(BaseHTTPMiddleware):
         return response
 
 
-def create_security_middleware(
-    app: Any, config: Optional[dict[str, Any]] = None
-) -> None:
+def create_security_middleware(app: Any, config: dict[str, Any] | None = None) -> None:
     """
     创建安全中间件链
 

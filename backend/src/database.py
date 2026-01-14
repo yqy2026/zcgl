@@ -25,7 +25,9 @@ try:
     from .database_security import enhance_database_security
 except ImportError:  # pragma: no cover
     try:  # pragma: no cover
-        from database_security import enhance_database_security  # type: ignore[no-redef] # noqa: F401 # pragma: no cover
+        from database_security import (
+            enhance_database_security,  # type: ignore[no-redef] # noqa: F401 # pragma: no cover
+        )
     except ImportError:  # pragma: no cover
         from sqlalchemy.engine import Engine
 

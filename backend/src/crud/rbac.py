@@ -42,8 +42,7 @@ class CRUDRole(CRUDBase[Role, RoleCreate, RoleUpdate]):
         organization_id: str | None = None,
     ) -> list[Role]:
         """获取角色列表"""
-        query = db.query(Role)
-        filters = {}
+        filters: dict[str, Any] = {}
 
         if category:
             filters["category"] = category
@@ -52,24 +51,18 @@ class CRUDRole(CRUDBase[Role, RoleCreate, RoleUpdate]):
         if organization_id:
             filters["organization_id"] = organization_id
 
-        return (
-            self.query_builder.build_query(
-                db_session=db,
-                model=Role,
-                filters=filters,
-                base_query=query,
-                search_query=search,
-                search_fields=["name", "display_name", "description"],
-                sort_by="level",
-                sort_desc=False,
-                skip=skip,
-                limit=limit,
-            )
-            .order_by(
-                Role.level, Role.name
-            )  # Appending secondary sort if QB doesn't support list
-            .all()
+        stmt = self.query_builder.build_query(
+            filters=filters,
+            search_query=search,
+            search_fields=["name", "display_name", "description"],
+            sort_by="level",
+            sort_desc=False,
+            skip=skip,
+            limit=limit,
         )
+
+        result = db.execute(stmt)
+        return list(result.scalars().all())
 
     # Override count to use QueryBuilder implicitly or keep custom if complex logic needed
     # But for standard counts, CRUDBase.count works if filters aligned.
@@ -100,8 +93,7 @@ class CRUDPermission(CRUDBase[Permission, PermissionCreate, PermissionUpdate]):
         is_system_permission: bool | None = None,
     ) -> list[Permission]:
         """获取权限列表"""
-        query = db.query(Permission)
-        filters = {}
+        filters: dict[str, Any] = {}
 
         if resource:
             filters["resource"] = resource
@@ -110,21 +102,17 @@ class CRUDPermission(CRUDBase[Permission, PermissionCreate, PermissionUpdate]):
         if is_system_permission is not None:
             filters["is_system_permission"] = is_system_permission
 
-        return (
-            self.query_builder.build_query(
-                db_session=db,
-                model=Permission,
-                filters=filters,
-                base_query=query,
-                search_query=search,
-                search_fields=["name", "display_name", "description"],
-                sort_by="resource",  # Default sort
-                skip=skip,
-                limit=limit,
-            )
-            .order_by(Permission.resource, Permission.action)
-            .all()
+        stmt = self.query_builder.build_query(
+            filters=filters,
+            search_query=search,
+            search_fields=["name", "display_name", "description"],
+            sort_by="resource",
+            skip=skip,
+            limit=limit,
         )
+
+        result = db.execute(stmt)
+        return list(result.scalars().all())
 
     def count_by_resource(self, db: Session) -> dict[str, Any]:
         """按资源统计权限数"""

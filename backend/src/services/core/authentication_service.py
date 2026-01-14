@@ -14,6 +14,10 @@ from .password_service import PasswordService
 from .session_service import SessionService
 from .user_management_service import UserManagementService
 
+# Type aliases for better readability
+TokenType = str
+JtiType = str
+
 # JWT配置
 SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = "HS256"
@@ -35,11 +39,11 @@ class AuthenticationService:
         self.session_service = SessionService(db)
         self.token_blacklist = blacklist_manager
 
-    def _generate_jti(self) -> str:
+    def _generate_jti(self) -> JtiType:
         """生成JWT ID"""
         return secrets.token_urlsafe(32)
 
-    def _is_token_revoked(self, jti: str) -> bool:
+    def _is_token_revoked(self, jti: JtiType) -> bool:
         """检查令牌是否已被撤销"""
         return self.token_blacklist.is_blacklisted(jti)
 
@@ -66,12 +70,12 @@ class AuthenticationService:
         password_hash: str = getattr(user, "password_hash", "")
         if not self.password_service.verify_password(password, password_hash):
             # 增加失败次数
-            user.failed_login_attempts += 1  # type: ignore[assignment]
+            user.failed_login_attempts += 1
 
             # 如果达到最大失败次数，锁定账户
             if user.failed_login_attempts >= settings.MAX_FAILED_ATTEMPTS:
-                user.is_locked = True  # type: ignore[assignment]
-                user.locked_until = datetime.now() + timedelta(  # type: ignore[assignment]
+                user.is_locked = True
+                user.locked_until = datetime.now() + timedelta(
                     minutes=settings.LOCKOUT_DURATION
                 )
 
@@ -84,10 +88,10 @@ class AuthenticationService:
 
         # 登录成功，重置失败次数
         if user.failed_login_attempts > 0:
-            user.failed_login_attempts = 0  # type: ignore[assignment]
-            user.is_locked = False  # type: ignore[assignment]
-            user.locked_until = None  # type: ignore[assignment]
-            user.last_login_at = datetime.now()  # type: ignore[assignment]
+            user.failed_login_attempts = 0
+            user.is_locked = False
+            user.locked_until = None
+            user.last_login_at = datetime.now()
 
         self.db.commit()
         return user
@@ -97,28 +101,28 @@ class AuthenticationService:
     ) -> TokenResponse:
         """创建JWT令牌"""
         now = datetime.now(UTC)
-        jti_access = self._generate_jti()
-        jti_refresh = self._generate_jti()
-        session_id = secrets.token_urlsafe(16)
+        jti_access: JtiType = self._generate_jti()
+        jti_refresh: JtiType = self._generate_jti()
+        session_id: str = secrets.token_urlsafe(16)
 
         # 生成设备指纹
-        device_fingerprint = None
+        device_fingerprint: str | None = None
         if device_info:
             import hashlib
 
-            fingerprint_data = [
+            fingerprint_data: list[str] = [
                 device_info.get("user_agent", ""),
                 device_info.get("ip_address", ""),
                 device_info.get("device_id", ""),
                 device_info.get("platform", ""),
             ]
-            fingerprint_string = "|".join(filter(None, fingerprint_data))
+            fingerprint_string: str = "|".join(filter(None, fingerprint_data))
             device_fingerprint = hashlib.sha256(
                 fingerprint_string.encode()
             ).hexdigest()[:16]
 
         # 访问令牌
-        access_token_data = {
+        access_token_data: dict[str, Any] = {
             "sub": user.id,
             "username": user.username,
             "role": user.role.value if hasattr(user.role, "value") else user.role,
@@ -133,10 +137,10 @@ class AuthenticationService:
             "aud": "land-property-system",
             "iss": "land-property-auth",
         }
-        access_token = jwt.encode(access_token_data, SECRET_KEY, algorithm=ALGORITHM)
+        access_token: TokenType = jwt.encode(access_token_data, SECRET_KEY, algorithm=ALGORITHM)
 
         # 刷新令牌
-        refresh_token_data = {
+        refresh_token_data: dict[str, Any] = {
             "sub": user.id,
             "type": "refresh",
             "jti": jti_refresh,
@@ -148,7 +152,7 @@ class AuthenticationService:
             "aud": "land-property-system",
             "iss": "land-property-auth",
         }
-        refresh_token = jwt.encode(refresh_token_data, SECRET_KEY, algorithm=ALGORITHM)
+        refresh_token: TokenType = jwt.encode(refresh_token_data, SECRET_KEY, algorithm=ALGORITHM)
 
         return TokenResponse(
             access_token=access_token,
@@ -166,22 +170,22 @@ class AuthenticationService:
     ) -> UserSession | None:
         """验证刷新令牌"""
         try:
-            payload = jwt.decode(
+            payload: dict[str, Any] = jwt.decode(
                 refresh_token,
                 SECRET_KEY,
                 algorithms=[ALGORITHM],
                 audience="land-property-system",
                 issuer="land-property-auth",
             )
-            user_id = payload.get("sub")
-            token_type = payload.get("type")
-            jti = payload.get("jti")
-            session_id = payload.get("session_id")
+            user_id: Any = payload.get("sub")
+            token_type: Any = payload.get("type")
+            jti: Any = payload.get("jti")
+            session_id: Any = payload.get("session_id")
 
             if user_id is None or token_type != "refresh":
                 return None
 
-            if self._is_token_revoked(jti):
+            if jti and self._is_token_revoked(jti):
                 return None
 
         except JWTError as e:
@@ -190,7 +194,7 @@ class AuthenticationService:
 
         # 查找会话 (Delegating to SessionService would be cleaner but requires careful session loop handling)
         # Using session service for specific lookup
-        session = (
+        session: UserSession | None = (
             self.db.query(UserSession)
             .filter(
                 UserSession.refresh_token == refresh_token,
@@ -205,18 +209,18 @@ class AuthenticationService:
         # 检查用户是否仍然活跃
         user = self.user_service.get_user_by_id(user_id)
         if not user or not user.is_active:
-            session.is_active = False  # type: ignore[assignment]
+            session.is_active = False
             self.db.commit()
             return None
 
         # 检查会话ID匹配
         if session_id and getattr(session, "session_id", None) != session_id:
-            session.is_active = False  # type: ignore[assignment]
+            session.is_active = False
             self.db.commit()
             return None
 
         # 更新最后访问时间等
-        session.last_accessed_at = datetime.now()  # type: ignore[assignment]
+        session.last_accessed_at = datetime.now()
         if client_ip:
             setattr(session, "ip_address", client_ip)
         if user_agent:

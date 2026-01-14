@@ -3,7 +3,6 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from ..models.asset import AssetCustomField
-from ..schemas.asset import AssetCustomFieldCreate, AssetCustomFieldUpdate
 from .base import CRUDBase
 
 

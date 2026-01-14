@@ -1,4 +1,5 @@
-from typing import Any, Generator
+from collections.abc import Generator
+from typing import Any
 
 """
 系统监控API - 提供全面的系统性能和健康状态监控

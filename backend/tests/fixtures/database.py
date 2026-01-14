@@ -3,9 +3,7 @@
 提供数据库相关的测试辅助函数
 """
 
-from typing import Generator
 from sqlalchemy.orm import Session
-import pytest
 
 
 class DatabaseFixture:

@@ -48,7 +48,7 @@ class PDFImportService:
     _active_tasks = 0
     _active_tasks_lock = asyncio.Lock()
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.paddle_service = get_paddleocr_service()
         self.regex_extractor = ContractExtractor()
         self.llm_extractor = get_llm_contract_extractor()
