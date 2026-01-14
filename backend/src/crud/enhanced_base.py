@@ -1,4 +1,4 @@
-from typing import Any, TypeVar
+from typing import Any, Protocol, TypeVar, cast
 
 """
 增强的基础CRUD操作类
@@ -16,9 +16,18 @@ from sqlalchemy.orm import Session, joinedload
 
 logger = logging.getLogger(__name__)
 
+
+class HasModelDump(Protocol):
+    """Pydantic model protocol with model_dump method"""
+
+    def model_dump(self, *, exclude_unset: bool = False, **kwargs: Any) -> dict[str, Any]:
+        """Dump model to dictionary"""
+        ...
+
+
 ModelType = TypeVar("ModelType", bound=DeclarativeMeta)
-CreateSchemaType = TypeVar("CreateSchemaType", bound=BaseModel)
-UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
+CreateSchemaType = TypeVar("CreateSchemaType", bound=HasModelDump)
+UpdateSchemaType = TypeVar("UpdateSchemaType", bound=HasModelDump)
 
 
 class FilterOperator:
@@ -448,12 +457,12 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
         # 应用过滤器
         if filters:
             for filter_obj in filters:
-                query = filter_obj.apply(query, self.model)
+                query = filter_obj.apply(query, cast(type[ModelType], self.model))
 
         # 应用排序
         if sorts:
             for sort_obj in sorts:
-                query = sort_obj.apply(query, self.model)
+                query = sort_obj.apply(query, cast(type[ModelType], self.model))
 
         return query
 

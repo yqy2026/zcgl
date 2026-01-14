@@ -7,15 +7,18 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from ..database import Base
     from .rbac import Permission
 
 from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from ..database import Base
+# Base is imported at runtime to avoid circular imports
+if not TYPE_CHECKING:
+    from ..database import Base
 
 
-class DynamicPermission(Base):  # type: ignore[valid-type, misc]
+class DynamicPermission(Base):
     """动态权限模型"""
 
     __tablename__ = "dynamic_permissions"
@@ -68,12 +71,12 @@ class DynamicPermission(Base):  # type: ignore[valid-type, misc]
     # user = relationship("User", foreign_keys=[user_id], back_populates="dynamic_permissions")
     permission: Mapped["Permission"] = relationship(
         "Permission", back_populates="dynamic_permissions"
-    )  # type: ignore[name-defined]
+    )
     # assigned_by_user = relationship("User", foreign_keys=[assigned_by])
     # revoked_by_user = relationship("User", foreign_keys=[revoked_by])
 
 
-class TemporaryPermission(Base):  # type: ignore[valid-type, misc]
+class TemporaryPermission(Base):
     """临时权限模型"""
 
     __tablename__ = "temporary_permissions"
@@ -110,11 +113,11 @@ class TemporaryPermission(Base):  # type: ignore[valid-type, misc]
     # user = relationship("User", foreign_keys=[user_id], back_populates="temporary_permissions")
     permission: Mapped["Permission"] = relationship(
         "Permission", back_populates="temporary_permissions"
-    )  # type: ignore[name-defined]
+    )
     # assigned_by_user = relationship("User", foreign_keys=[assigned_by])
 
 
-class ConditionalPermission(Base):  # type: ignore[valid-type, misc]
+class ConditionalPermission(Base):
     """条件权限模型"""
 
     __tablename__ = "conditional_permissions"
@@ -151,11 +154,11 @@ class ConditionalPermission(Base):  # type: ignore[valid-type, misc]
     # user = relationship("User", foreign_keys=[user_id], back_populates="conditional_permissions")
     permission: Mapped["Permission"] = relationship(
         "Permission", back_populates="conditional_permissions"
-    )  # type: ignore[name-defined]
+    )
     # assigned_by_user = relationship("User", foreign_keys=[assigned_by])
 
 
-class PermissionTemplate(Base):  # type: ignore[valid-type, misc]
+class PermissionTemplate(Base):
     """权限模板模型"""
 
     __tablename__ = "permission_templates"
@@ -231,7 +234,7 @@ class DynamicPermissionAudit(Base):  # type: ignore[valid-type, misc]
 
     # 关系 - 暂时注释掉User关系引用
     # user = relationship("User", foreign_keys=[user_id])
-    permission: Mapped["Permission"] = relationship("Permission")  # type: ignore[name-defined]
+    permission: Mapped["Permission"] = relationship("Permission")
     # assigned_by_user = relationship("User", foreign_keys=[assigned_by])
 
 

@@ -60,11 +60,11 @@ class RentTermBase(BaseModel):
             if not isinstance(other_fees, Decimal):
                 other_fees = Decimal("0")
 
-            # Cast to Decimal for mypy - we've verified types above
+            # We've verified types above, cast is no longer needed
             return (
-                cast(Decimal, monthly_rent)
-                + cast(Decimal, management_fee)
-                + cast(Decimal, other_fees)
+                monthly_rent
+                + management_fee
+                + other_fees
             )
         return v
 

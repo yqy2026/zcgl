@@ -1,4 +1,4 @@
-from typing import Any, TypeVar, cast
+from typing import Any, Protocol, TypeVar, cast
 
 """
 增强的基础CRUD操作类 - 支持缓存、性能监控和错误处理
@@ -16,10 +16,19 @@ from sqlalchemy.orm import Session
 from ..core.response_handler import ResponseHandler
 from .query_builder import QueryBuilder
 
+
+class HasModelDump(Protocol):
+    """Pydantic model protocol with model_dump method"""
+
+    def model_dump(self, *, exclude_unset: bool = False, **kwargs: Any) -> dict[str, Any]:
+        """Dump model to dictionary"""
+        ...
+
+
 # Define TypeVars at module level with unique names
 ModelType = TypeVar("ModelType", bound=DeclarativeMeta)
-CreateSchemaType = TypeVar("CreateSchemaType", bound=BaseModel)
-UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
+CreateSchemaType = TypeVar("CreateSchemaType", bound=HasModelDump)
+UpdateSchemaType = TypeVar("UpdateSchemaType", bound=HasModelDump)
 
 logger = logging.getLogger(__name__)
 
@@ -123,7 +132,8 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
             elif hasattr(obj_in, "model_dump"):
                 obj_in_data = obj_in.model_dump()
             else:
-                obj_in_data = dict(obj_in)
+                # Fallback: try to convert to dict (should rarely happen)
+                obj_in_data = cast(dict[str, Any], dict(obj_in))
 
             obj_in_data.update(kwargs)
             db_obj = self.model(**obj_in_data)
@@ -261,7 +271,8 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
                 elif hasattr(obj_in, "model_dump"):
                     obj_in_data = obj_in.model_dump()
                 else:
-                    obj_in_data = dict(obj_in)
+                    # Fallback: try to convert to dict (should rarely happen)
+                    obj_in_data = cast(dict[str, Any], dict(obj_in))
                 db_objects.append(self.model(**obj_in_data))
 
             db.add_all(db_objects)

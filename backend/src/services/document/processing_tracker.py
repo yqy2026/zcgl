@@ -9,7 +9,7 @@ import time
 import traceback
 from collections.abc import Callable
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy.orm import Session
 
@@ -636,7 +636,7 @@ class BatchStatusTracker:
         if self._use_redis and self._redis_client:
             try:
                 key = self._get_key(batch_id)
-                data = self._redis_client.hgetall(key)
+                data: dict[str, Any] = cast(dict[str, Any], self._redis_client.hgetall(key))
                 if not data:
                     return None
                 # 转换数字类型 (Redis 返回的值都是字符串)
@@ -710,7 +710,7 @@ class BatchStatusTracker:
 
                 batches = []
                 for key in keys[: limit * 2]:  # 多获取一些用于过滤
-                    data = self._redis_client.hgetall(key)
+                    data: dict[str, Any] = cast(dict[str, Any], self._redis_client.hgetall(key))
                     if not data:
                         continue
                     # Redis 返回的值都是字符串，转换数字类型

@@ -62,7 +62,7 @@ class CacheManager:
             )
             # 测试连接
             if self.redis_client is not None:
-                await self.redis_client.ping()
+                self.redis_client.ping()  # Synchronous call
             logger.info("Redis缓存连接成功")
         except Exception as e:
             logger.warning(f"Redis连接失败: {e}")

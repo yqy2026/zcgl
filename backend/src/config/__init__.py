@@ -123,7 +123,8 @@ async def init_redis() -> None:
         redis_pool = redis.ConnectionPool.from_url(settings.REDIS_URL)
         redis_client = redis.Redis(connection_pool=redis_pool)
         # 测试连接
-        await redis_client.ping()
+        if redis_client is not None:
+            redis_client.ping()
         logger.info(f"Redis连接成功: {settings.REDIS_URL}")
     except Exception as e:
         logger.error(f"Redis连接失败: {e}")

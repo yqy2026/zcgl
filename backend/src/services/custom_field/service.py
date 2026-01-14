@@ -2,7 +2,7 @@ import json
 import re
 from datetime import datetime
 from decimal import Decimal
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy.orm import Session
 
@@ -78,10 +78,9 @@ class CustomFieldService:
                         if isinstance(field.validation_rules, str)
                         else None
                     )
-                    text_rules: dict[str, Any] = (
-                        json.loads(text_rules_str)
-                        if text_rules_str
-                        else field.validation_rules
+                    text_rules: dict[str, Any] = cast(
+                        dict[str, Any],
+                        json.loads(text_rules_str) if text_rules_str else field.validation_rules,
                     )
                     max_length = text_rules.get("max_length")
                     min_length = text_rules.get("min_length")
@@ -108,10 +107,9 @@ class CustomFieldService:
                             if isinstance(field.validation_rules, str)
                             else None
                         )
-                        number_rules: dict[str, Any] = (
-                            json.loads(number_rules_str)
-                            if number_rules_str
-                            else field.validation_rules
+                        number_rules: dict[str, Any] = cast(
+                            dict[str, Any],
+                            json.loads(number_rules_str) if number_rules_str else field.validation_rules,
                         )
                         max_value = number_rules.get("max_value")
                         min_value = number_rules.get("min_value")
@@ -141,10 +139,9 @@ class CustomFieldService:
                             if isinstance(field.validation_rules, str)
                             else None
                         )
-                        decimal_rules: dict[str, Any] = (
-                            json.loads(decimal_rules_str)
-                            if decimal_rules_str
-                            else field.validation_rules
+                        decimal_rules: dict[str, Any] = cast(
+                            dict[str, Any],
+                            json.loads(decimal_rules_str) if decimal_rules_str else field.validation_rules,
                         )
                         max_value = decimal_rules.get("max_value")
                         min_value = decimal_rules.get("min_value")
