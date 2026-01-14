@@ -7,14 +7,16 @@
 from datetime import datetime
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Body, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from ...middleware.auth import (
-    require_permissions,
+    PermissionChecker,
+    get_current_active_user,
 )
 from ...middleware.error_recovery_middleware import api_error_recovery
+from ...models.auth import User
 from ...services.error_recovery_service import (
     ErrorCategory,
     ErrorSeverity,
@@ -109,8 +111,8 @@ class RecoveryConfigResponse(BaseModel):
     response_model=ErrorStatisticsResponse,
 )
 @api_error_recovery(ErrorCategory.DATABASE)
-@require_permissions(["system:error_recovery:view"])
 async def get_recovery_statistics(
+    current_user: User = Depends(PermissionChecker(["system:error_recovery:view"])),
     category: Annotated[str | None, Query(None, description="按错误类别筛选")] = None,
     start_time: Annotated[datetime | None, Query(None, description="开始时间")] = None,
     end_time: Annotated[datetime | None, Query(None, description="结束时间")] = None,
@@ -140,8 +142,9 @@ async def get_recovery_statistics(
     response_model=list[RecoveryConfigResponse],
 )
 @api_error_recovery(ErrorCategory.DATABASE)
-@require_permissions(["system:error_recovery:view"])
-async def get_recovery_strategies() -> list[RecoveryConfigResponse]:
+async def get_recovery_strategies(
+    current_user: User = Depends(PermissionChecker(["system:error_recovery:view"])),
+) -> list[RecoveryConfigResponse]:
     """获取错误恢复策略配置"""
 
     try:
@@ -175,10 +178,10 @@ async def get_recovery_strategies() -> list[RecoveryConfigResponse]:
     description="更新指定错误类别的恢复策略配置",
 )
 @api_error_recovery(ErrorCategory.DATABASE)
-@require_permissions(["system:error_recovery:edit"])
 async def update_recovery_strategy(
     category: str,
     strategy_update: RecoveryStrategyUpdate,
+    current_user: User = Depends(PermissionChecker(["system:error_recovery:edit"])),
 ) -> dict[str, Any]:
     """更新错误恢复策略"""
 
@@ -239,8 +242,9 @@ async def update_recovery_strategy(
     response_model=list[CircuitBreakerStatus],
 )
 @api_error_recovery(ErrorCategory.DATABASE)
-@require_permissions(["system:error_recovery:view"])
-async def get_circuit_breaker_status() -> list[CircuitBreakerStatus]:
+async def get_circuit_breaker_status(
+    current_user: User = Depends(PermissionChecker(["system:error_recovery:view"])),
+) -> list[CircuitBreakerStatus]:
     """获取熔断器状态"""
 
     try:
@@ -274,9 +278,9 @@ async def get_circuit_breaker_status() -> list[CircuitBreakerStatus]:
     description="重置指定错误类别的熔断器状态",
 )
 @api_error_recovery(ErrorCategory.DATABASE)
-@require_permissions(["system:error_recovery:edit"])
 async def reset_circuit_breaker(
     category: str,
+    current_user: User = Depends(PermissionChecker(["system:error_recovery:edit"])),
 ) -> dict[str, Any]:
     """重置熔断器"""
 
@@ -315,8 +319,8 @@ async def reset_circuit_breaker(
     description="获取错误恢复的历史记录，支持分页和筛选",
 )
 @api_error_recovery(ErrorCategory.DATABASE)
-@require_permissions(["system:error_recovery:view"])
 async def get_recovery_history(
+    current_user: User = Depends(PermissionChecker(["system:error_recovery:view"])),
     category: Annotated[str | None, Query(None, description="按错误类别筛选")] = None,
     success: Annotated[bool | None, Query(None, description="按是否成功筛选")] = None,
     limit: Annotated[int, Query(50, ge=1, le=1000, description="每页记录数")] = 50,
@@ -356,10 +360,10 @@ async def get_recovery_history(
     description="手动触发错误恢复测试，验证恢复策略的有效性",
 )
 @api_error_recovery(ErrorCategory.DATABASE)
-@require_permissions(["system:error_recovery:test"])
 async def test_error_recovery(
     category: Annotated[str, Body(..., description="错误类别")],
     simulate_error: Annotated[bool, Body(True, description="是否模拟错误")] = True,
+    current_user: User = Depends(PermissionChecker(["system:error_recovery:test"])),
 ) -> dict[str, Any]:
     """测试错误恢复"""
 
@@ -421,8 +425,8 @@ async def test_error_recovery(
     description="清理指定时间之前的错误恢复历史记录",
 )
 @api_error_recovery(ErrorCategory.DATABASE)
-@require_permissions(["system:error_recovery:edit"])
 async def clear_recovery_history(
+    current_user: User = Depends(PermissionChecker(["system:error_recovery:edit"])),
     before_time: Annotated[
         datetime | None, Query(None, description="清理此时间之前的记录")
     ] = None,

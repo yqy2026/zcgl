@@ -24,7 +24,8 @@ class OrganizationService:
             parent = organization_crud.get(db, obj_in.parent_id)
             if not parent:
                 raise ValueError(f"上级组织 {obj_in.parent_id} 不存在")
-            level = parent.level + 1
+            parent_level: int = getattr(parent, "level")
+            level = parent_level + 1
             # path will be set after ID is generated or we need to generate ID first?
             # Organization model ID is UUID default.
             # We can let DB generate or generate here?
@@ -112,7 +113,7 @@ class OrganizationService:
             if field != "updated_by":
                 setattr(db_obj, field, value)
 
-        db_obj.updated_at = datetime.now()
+        setattr(db_obj, "updated_at", datetime.now())
         db.commit()
         db.refresh(db_obj)
 
@@ -144,8 +145,8 @@ class OrganizationService:
         if children:
             raise ValueError("不能删除有子组织的组织，请先删除或移动子组织")
 
-        db_obj.is_deleted = True
-        db_obj.updated_at = datetime.now()
+        setattr(db_obj, "is_deleted", True)
+        setattr(db_obj, "updated_at", datetime.now())
         db.commit()
 
         # 记录删除历史

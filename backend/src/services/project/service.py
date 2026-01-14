@@ -56,7 +56,7 @@ class ProjectService:
             raise ValueError(f"项目 {project_id} 不存在")
 
         result: Project = project_crud.update(
-            db, db_obj=project, obj_in=obj_in, updated_by=updated_by
+            db, db_obj=project, obj_in=obj_in
         )
         return result
 

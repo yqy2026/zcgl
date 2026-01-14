@@ -113,7 +113,7 @@ async def create_excel_config(
     try:
         from ...crud.task import excel_task_config_crud
 
-        config = excel_task_config_crud.create(db=db, obj_in=config_in)
+        config = excel_task_config_crud.create(db=db, obj_in=config_in.model_dump())
         return {
             "message": "配置创建成功",
             "config_id": config.id,
@@ -590,7 +590,7 @@ async def import_excel_async(
         # 添加后台任务
         background_tasks.add_task(
             _process_excel_import_async,
-            task_id=task.id,
+            task_id=str(task.id),
             file_path=tmp_file_path,
             request=request,
             db_session=db,
@@ -617,18 +617,20 @@ async def _process_excel_import_async(
 
     # 更新任务状态为运行中
     try:
-        task_crud.update(
-            db=db_session,
-            db_obj=task_crud.get(db=db_session, id=task_id),
-            obj_in=TaskUpdate(
-                status=TaskStatus.RUNNING,
-                progress=0,
-                processed_items=0,
-                failed_items=0,
-                error_message=None,
-                result_data=None,
-            ),
-        )
+        db_obj = task_crud.get(db=db_session, id=task_id)
+        if db_obj is not None:
+            task_crud.update(
+                db=db_session,
+                db_obj=db_obj,
+                obj_in=TaskUpdate(
+                    status=TaskStatus.RUNNING,
+                    progress=0,
+                    processed_items=0,
+                    failed_items=0,
+                    error_message=None,
+                    result_data=None,
+                ),
+            )
         db_session.commit()
 
         # 使用ExcelImportService进行导入
@@ -646,42 +648,46 @@ async def _process_excel_import_async(
         )
 
         # 更新任务完成状态
-        task_crud.update(
-            db=db_session,
-            db_obj=task_crud.get(db=db_session, id=task_id),
-            obj_in=TaskUpdate(
-                status=TaskStatus.COMPLETED,
-                progress=100,
-                processed_items=0,
-                failed_items=0,
-                error_message=None,
-                result_data={
-                    "total": result.get("total", 0),
-                    "success": result.get("success", 0),
-                    "failed": result.get("failed", 0),
-                    "created_assets": result.get("created_assets", 0),
-                    "updated_assets": result.get("updated_assets", 0),
-                    "errors": result.get("errors", []),
-                    "warnings": result.get("warnings", []),
-                },
-            ),
-        )
+        db_obj = task_crud.get(db=db_session, id=task_id)
+        if db_obj is not None:
+            task_crud.update(
+                db=db_session,
+                db_obj=db_obj,
+                obj_in=TaskUpdate(
+                    status=TaskStatus.COMPLETED,
+                    progress=100,
+                    processed_items=0,
+                    failed_items=0,
+                    error_message=None,
+                    result_data={
+                        "total": result.get("total", 0),
+                        "success": result.get("success", 0),
+                        "failed": result.get("failed", 0),
+                        "created_assets": result.get("created_assets", 0),
+                        "updated_assets": result.get("updated_assets", 0),
+                        "errors": result.get("errors", []),
+                        "warnings": result.get("warnings", []),
+                    },
+                ),
+            )
         db_session.commit()
 
     except Exception as e:
         # 更新任务失败状态
-        task_crud.update(
-            db=db_session,
-            db_obj=task_crud.get(db=db_session, id=task_id),
-            obj_in=TaskUpdate(
-                status=TaskStatus.FAILED,
-                error_message=str(e),
-                progress=0,
-                processed_items=0,
-                failed_items=0,
-                result_data=None,
-            ),
-        )
+        db_obj = task_crud.get(db=db_session, id=task_id)
+        if db_obj is not None:
+            task_crud.update(
+                db=db_session,
+                db_obj=db_obj,
+                obj_in=TaskUpdate(
+                    status=TaskStatus.FAILED,
+                    error_message=str(e),
+                    progress=0,
+                    processed_items=0,
+                    failed_items=0,
+                    result_data=None,
+                ),
+            )
         db_session.commit()
 
     finally:
@@ -773,7 +779,7 @@ async def export_excel_async(
 
         # 添加后台任务
         background_tasks.add_task(
-            _process_excel_export_async, task_id=task.id, request=request, db_session=db
+            _process_excel_export_async, task_id=str(task.id), request=request, db_session=db
         )
 
         return {
@@ -797,18 +803,20 @@ async def _process_excel_export_async(
 
     try:
         # 更新任务状态为运行中
-        task_crud.update(
-            db=db_session,
-            db_obj=task_crud.get(db=db_session, id=task_id),
-            obj_in=TaskUpdate(
-                status=TaskStatus.RUNNING,
-                progress=0,
-                processed_items=0,
-                failed_items=0,
-                error_message=None,
-                result_data=None,
-            ),
-        )
+        db_obj = task_crud.get(db=db_session, id=task_id)
+        if db_obj is not None:
+            task_crud.update(
+                db=db_session,
+                db_obj=db_obj,
+                obj_in=TaskUpdate(
+                    status=TaskStatus.RUNNING,
+                    progress=0,
+                    processed_items=0,
+                    failed_items=0,
+                    error_message=None,
+                    result_data=None,
+                ),
+            )
         db_session.commit()
 
         # 使用ExcelExportService进行导出
@@ -836,37 +844,41 @@ async def _process_excel_export_async(
         )
 
         # 更新任务完成状态
-        task_crud.update(
-            db=db_session,
-            db_obj=task_crud.get(db=db_session, id=task_id),
-            obj_in=TaskUpdate(
-                status=TaskStatus.COMPLETED,
-                progress=100,
-                processed_items=0,
-                failed_items=0,
-                error_message=None,
-                result_data={
-                    **result_info,
-                    "download_url": f"/api/v1/excel/download/{task_id}",
-                },
-            ),
-        )
+        db_obj = task_crud.get(db=db_session, id=task_id)
+        if db_obj is not None:
+            task_crud.update(
+                db=db_session,
+                db_obj=db_obj,
+                obj_in=TaskUpdate(
+                    status=TaskStatus.COMPLETED,
+                    progress=100,
+                    processed_items=0,
+                    failed_items=0,
+                    error_message=None,
+                    result_data={
+                        **result_info,
+                        "download_url": f"/api/v1/excel/download/{task_id}",
+                    },
+                ),
+            )
         db_session.commit()
 
     except Exception as e:
         # 更新任务失败状态
-        task_crud.update(
-            db=db_session,
-            db_obj=task_crud.get(db=db_session, id=task_id),
-            obj_in=TaskUpdate(
-                status=TaskStatus.FAILED,
-                error_message=str(e),
-                progress=0,
-                processed_items=0,
-                failed_items=0,
-                result_data=None,
-            ),
-        )
+        db_obj = task_crud.get(db=db_session, id=task_id)
+        if db_obj is not None:
+            task_crud.update(
+                db=db_session,
+                db_obj=db_obj,
+                obj_in=TaskUpdate(
+                    status=TaskStatus.FAILED,
+                    error_message=str(e),
+                    progress=0,
+                    processed_items=0,
+                    failed_items=0,
+                    result_data=None,
+                ),
+            )
         db_session.commit()
 
 
@@ -931,16 +943,28 @@ async def get_excel_task_status(
         if not task:
             raise HTTPException(status_code=404, detail="任务不存在")
 
+        # Extract values from Column objects - use getattr to get actual values
+        task_id_val = str(getattr(task, "id", ""))
+        status_val = str(getattr(task, "status", ""))
+        progress_val = int(getattr(task, "progress", 0)) or 0
+        total_items_val = getattr(task, "total_items", None)
+        total_items_final = int(total_items_val) if total_items_val is not None else None
+        processed_items_val = int(getattr(task, "processed_items", 0)) or 0
+        error_message_val = getattr(task, "error_message", None)
+        created_at_val = getattr(task, "created_at")
+        started_at_val = getattr(task, "started_at")
+        completed_at_val = getattr(task, "completed_at")
+
         return ExcelStatusResponse(
-            task_id=task.id,
-            status=task.status,
-            progress=task.progress or 0,
-            total_items=task.total_items,
-            processed_items=task.processed_items or 0,
-            error_message=task.error_message,
-            created_at=task.created_at,
-            started_at=task.started_at,
-            completed_at=task.completed_at,
+            task_id=task_id_val,
+            status=status_val,
+            progress=progress_val,
+            total_items=total_items_final,
+            processed_items=processed_items_val,
+            error_message=str(error_message_val) if error_message_val is not None else None,
+            created_at=created_at_val,
+            started_at=started_at_val,
+            completed_at=completed_at_val,
         )
 
     except HTTPException:

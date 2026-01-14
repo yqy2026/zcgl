@@ -2,7 +2,7 @@ import base64
 import binascii  # pylint: disable=unused-import
 import json
 from datetime import datetime, timedelta
-from typing import cast
+from typing import Any, cast
 
 import bcrypt
 
@@ -74,7 +74,10 @@ class PasswordService:
         try:
             # 解析密码历史记录
             if isinstance(password_history_value, str):
-                password_history: list[str] = json.loads(password_history_value)
+                parsed_data: dict[str, Any] = json.loads(password_history_value)
+                password_history = parsed_data.get("passwords", [])
+            elif isinstance(password_history_value, dict):
+                password_history = password_history_value.get("passwords", [])
             else:  # pragma: no cover
                 password_history = cast(
                     list[str], password_history_value
@@ -97,7 +100,10 @@ class PasswordService:
         if password_history_value:
             try:
                 if isinstance(password_history_value, str):
-                    password_history = json.loads(password_history_value)
+                    parsed_data: dict[str, Any] = json.loads(password_history_value)
+                    password_history = parsed_data.get("passwords", [])
+                elif isinstance(password_history_value, dict):
+                    password_history = password_history_value.get("passwords", [])
                 else:  # pragma: no cover
                     password_history = cast(
                         list[str], password_history_value
@@ -114,8 +120,8 @@ class PasswordService:
         if len(password_history) > 10:
             password_history = password_history[-10:]
 
-        # 更新用户记录
-        user.password_history = json.dumps(password_history)
+        # 更新用户记录 (password_history expects dict[str, Any] | None)
+        user.password_history = {"passwords": password_history}
         user.password_last_changed = datetime.now()
 
     def is_password_expired(self, user: User) -> bool:

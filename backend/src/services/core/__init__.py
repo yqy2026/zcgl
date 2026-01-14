@@ -27,20 +27,15 @@ except Exception:  # nosec - B110: Intentional graceful degradation
     except Exception:  # nosec - B110: Intentional graceful degradation
         pass
 
+# Import AuditService
 try:
-    from .audit_service import (
-        EnhancedAuditLogger as EnhancedAuditLogger,
-    )
+    from . import audit_service
 
-    __all__.append("EnhancedAuditLogger")
+    AuditService = audit_service.AuditService
+    EnhancedAuditLogger = audit_service.AuditService
+    __all__.extend(["AuditService", "EnhancedAuditLogger"])
 except Exception:  # nosec - B110: Intentional graceful degradation
-    # Fallback shim that exposes AuditService alias
-    try:
-        from ..audit_service import EnhancedAuditLogger as EnhancedAuditLogger
-
-        __all__.append("EnhancedAuditLogger")
-    except Exception:  # nosec - B110: Intentional graceful degradation
-        pass
+    pass
 
 try:
     from .security_service import SecurityService as SecurityService

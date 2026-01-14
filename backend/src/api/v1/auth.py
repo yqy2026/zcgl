@@ -373,14 +373,13 @@ async def debug_auth(db: Session = Depends(get_db)) -> dict[str, Any]:
         )
 
         # 3. 测试用户认证
+        auth_error_debug: str | None = None
         try:
             authenticated_user = auth_service.authenticate_user("admin", "Admin123!@#")  # type: ignore[no-untyped-call]
             auth_success = authenticated_user is not None
-        except Exception as e:
+        except Exception as auth_exc:
             auth_success = False
-            auth_error: str | None = str(e)
-        else:
-            auth_error: str | None = None
+            auth_error_debug = str(auth_exc)
 
         # 4. 测试token创建
         try:
@@ -406,7 +405,7 @@ async def debug_auth(db: Session = Depends(get_db)) -> dict[str, Any]:
             "admin_role": admin_user.role if admin_user else None,
             "password_valid": password_valid,
             "auth_success": auth_success,
-            "auth_error": auth_error,
+            "auth_error": auth_error_debug,
             "token_success": token_success,
             "token_error": token_error,
             "access_token_length": access_token_length,

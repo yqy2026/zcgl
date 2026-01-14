@@ -44,11 +44,12 @@ try:
 except Exception:  # nosec - B110: Intentional graceful degradation
     pass
 
+# Core services - Audit Service
 try:
-    from .core.audit_service import (
-        EnhancedAuditLogger as EnhancedAuditLogger,
-    )
+    from .core.audit_service import AuditService as AuditService
 
+    __all__.append("AuditService")
+    EnhancedAuditLogger = AuditService
     __all__.append("EnhancedAuditLogger")
 except Exception:  # nosec - B110: Intentional graceful degradation
     pass
