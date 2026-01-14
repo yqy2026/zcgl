@@ -2,6 +2,8 @@
 枚举字段管理API路由
 """
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
@@ -36,7 +38,7 @@ router = APIRouter(prefix="/enum-fields", tags=["枚举字段管理"])
 # Debug endpoint for testing
 @router.get("/debug")
 @debug_only
-async def debug_endpoint():
+async def debug_endpoint() -> dict[str, str]:
     """Debug endpoint to test basic API functionality"""
     return {"message": "Debug endpoint working", "timestamp": "2025-10-17T22:07:00Z"}
 
@@ -51,7 +53,7 @@ async def get_enum_field_types(
     is_system: bool | None = Query(None, description="是否系统内置"),
     keyword: str | None = Query(None, description="搜索关键词"),
     db: Session = Depends(get_db),
-):
+) -> list[EnumFieldTypeResponse]:
     """获取枚举字段类型列表"""
     # 显式处理Query参数，确保传递实际值而不是Query对象
     # 这解决了FastAPI Query(None)对象没有正确转换为None值的问题
@@ -83,11 +85,11 @@ async def get_enum_field_types(
         is_system=actual_is_system,
         keyword=actual_keyword,
     )
-    return enum_types
+    return enum_types  # type: ignore[return-value]
 
 
 @router.get("/types/statistics", response_model=EnumFieldStatistics)
-async def get_enum_field_statistics(db: Session = Depends(get_db)):
+async def get_enum_field_statistics(db: Session = Depends(get_db)) -> EnumFieldStatistics:
     """获取枚举字段统计信息"""
     type_crud = get_enum_field_type_crud(db)
 
@@ -95,11 +97,11 @@ async def get_enum_field_statistics(db: Session = Depends(get_db)):
 
     # 获取枚举值统计
     total_values = (
-        db.query(EnumFieldValue).filter(not EnumFieldValue.is_deleted).count()
+        db.query(EnumFieldValue).filter(~EnumFieldValue.is_deleted).count()
     )
     active_values = (
         db.query(EnumFieldValue)
-        .filter(and_(not EnumFieldValue.is_deleted, EnumFieldValue.is_active))
+        .filter(and_(~EnumFieldValue.is_deleted, EnumFieldValue.is_active))
         .count()
     )
 
@@ -119,7 +121,7 @@ async def get_enum_field_statistics(db: Session = Depends(get_db)):
 @router.get("/types/{type_id}", response_model=EnumFieldTypeResponse)
 async def get_enum_field_type(
     type_id: str = Path(..., description="枚举类型ID"), db: Session = Depends(get_db)
-):
+) -> EnumFieldTypeResponse:
     """根据ID获取枚举字段类型详情"""
     crud = get_enum_field_type_crud(db)
     enum_type = crud.get(type_id)
@@ -131,7 +133,7 @@ async def get_enum_field_type(
 @router.post("/types", response_model=EnumFieldTypeResponse)
 async def create_enum_field_type(
     enum_type: EnumFieldTypeCreate, db: Session = Depends(get_db)
-):
+) -> EnumFieldTypeResponse:
     """创建枚举字段类型"""
     crud = get_enum_field_type_crud(db)
 
@@ -150,7 +152,7 @@ async def create_enum_field_type(
 @router.put("/types/{type_id}", response_model=EnumFieldTypeResponse)
 async def update_enum_field_type(
     type_id: str, enum_type: EnumFieldTypeUpdate, db: Session = Depends(get_db)
-):
+) -> EnumFieldTypeResponse:
     """更新枚举字段类型"""
     crud = get_enum_field_type_crud(db)
 
@@ -176,7 +178,7 @@ async def delete_enum_field_type(
     type_id: str,
     deleted_by: str | None = Query(None, description="删除人"),
     db: Session = Depends(get_db),
-):
+) -> dict[str, str]:
     """删除枚举字段类型"""
     crud = get_enum_field_type_crud(db)
 
@@ -190,7 +192,7 @@ async def delete_enum_field_type(
 
 
 @router.get("/types/categories/list[Any]")
-async def get_enum_field_categories(db: Session = Depends(get_db)):
+async def get_enum_field_categories(db: Session = Depends(get_db)) -> dict[str, list[str]]:
     """获取枚举字段类别列表"""
     crud = get_enum_field_type_crud(db)
     categories = crud.get_categories()
@@ -204,19 +206,19 @@ async def get_enum_field_values(
     parent_id: str | None = Query(None, description="父级枚举值ID"),
     is_active: bool | None = Query(None, description="是否启用"),
     db: Session = Depends(get_db),
-):
+) -> list[EnumFieldValueResponse]:
     """获取枚举字段值列表"""
     crud = get_enum_field_value_crud(db)
     enum_values = crud.get_by_type(type_id, parent_id=parent_id, is_active=is_active)
-    return enum_values
+    return enum_values  # type: ignore[return-value]
 
 
 @router.get("/types/{type_id}/values/tree", response_model=list[EnumFieldTree])
-async def get_enum_field_values_tree(type_id: str, db: Session = Depends(get_db)):
+async def get_enum_field_values_tree(type_id: str, db: Session = Depends(get_db)) -> list[EnumFieldTree]:
     """获取枚举字段值树形结构"""
     crud = get_enum_field_value_crud(db)
 
-    def build_tree_response(values: list) -> list[EnumFieldTree]:
+    def build_tree_response(values: list[Any]) -> list[EnumFieldTree]:
         tree = []
         for value in values:
             children = build_tree_response(getattr(value, "children", []))
@@ -242,7 +244,7 @@ async def get_enum_field_values_tree(type_id: str, db: Session = Depends(get_db)
 @router.get("/values/{value_id}", response_model=EnumFieldValueResponse)
 async def get_enum_field_value(
     value_id: str = Path(..., description="枚举值ID"), db: Session = Depends(get_db)
-):
+) -> EnumFieldValueResponse:
     """根据ID获取枚举字段值详情"""
     crud = get_enum_field_value_crud(db)
     enum_value = crud.get(value_id)
@@ -254,7 +256,7 @@ async def get_enum_field_value(
 @router.post("/types/{type_id}/values", response_model=EnumFieldValueResponse)
 async def create_enum_field_value(
     type_id: str, enum_value: EnumFieldValueCreate, db: Session = Depends(get_db)
-):
+) -> EnumFieldValueResponse:
     """创建枚举字段值"""
     crud = get_enum_field_value_crud(db)
 
@@ -281,7 +283,7 @@ async def create_enum_field_value(
 @router.put("/values/{value_id}", response_model=EnumFieldValueResponse)
 async def update_enum_field_value(
     value_id: str, enum_value: EnumFieldValueUpdate, db: Session = Depends(get_db)
-):
+) -> EnumFieldValueResponse:
     """更新枚举字段值"""
     crud = get_enum_field_value_crud(db)
 
@@ -292,7 +294,7 @@ async def update_enum_field_value(
     # 如果更新了值，检查是否重复
     if enum_value.value and enum_value.value != db_enum_value.value:
         existing = crud.get_by_type_and_value(
-            db_enum_value.enum_type_id, enum_value.value
+            getattr(db_enum_value, "enum_type_id", ""), enum_value.value
         )
         if existing and existing.id != value_id:
             raise HTTPException(status_code=400, detail=f"值 {enum_value.value} 已存在")
@@ -309,7 +311,7 @@ async def delete_enum_field_value(
     value_id: str,
     deleted_by: str | None = Query(None, description="删除人"),
     db: Session = Depends(get_db),
-):
+) -> dict[str, str]:
     """删除枚举字段值"""
     crud = get_enum_field_value_crud(db)
 
@@ -327,7 +329,7 @@ async def delete_enum_field_value(
 )
 async def batch_create_enum_field_values(
     type_id: str, batch_data: EnumFieldBatchCreate, db: Session = Depends(get_db)
-):
+) -> list[EnumFieldValueResponse]:
     """批量创建枚举字段值"""
     crud = get_enum_field_value_crud(db)
 
@@ -341,7 +343,7 @@ async def batch_create_enum_field_values(
         created_values = crud.batch_create(
             type_id, batch_data.values, batch_data.created_by
         )
-        return created_values
+        return created_values  # type: ignore[return-value]
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -353,19 +355,19 @@ async def get_enum_field_usage(
     table_name: str | None = Query(None, description="表名"),
     module_name: str | None = Query(None, description="模块名"),
     db: Session = Depends(get_db),
-):
+) -> list[EnumFieldUsageResponse]:
     """获取枚举字段使用记录"""
     crud = get_enum_field_usage_crud(db)
 
     usage_records = crud.get_by_enum_type(enum_type_id) if enum_type_id else []
 
-    return usage_records
+    return usage_records  # type: ignore[return-value]
 
 
 @router.post("/usage", response_model=EnumFieldUsageResponse)
 async def create_enum_field_usage(
     usage: EnumFieldUsageCreate, db: Session = Depends(get_db)
-):
+) -> EnumFieldUsageResponse:
     """创建枚举字段使用记录"""
     crud = get_enum_field_usage_crud(db)
 
@@ -384,7 +386,7 @@ async def create_enum_field_usage(
 @router.put("/usage/{usage_id}", response_model=EnumFieldUsageResponse)
 async def update_enum_field_usage(
     usage_id: str, usage: EnumFieldUsageUpdate, db: Session = Depends(get_db)
-):
+) -> EnumFieldUsageResponse:
     """更新枚举字段使用记录"""
     crud = get_enum_field_usage_crud(db)
 
@@ -397,7 +399,7 @@ async def update_enum_field_usage(
 
 
 @router.delete("/usage/{usage_id}")
-async def delete_enum_field_usage(usage_id: str, db: Session = Depends(get_db)):
+async def delete_enum_field_usage(usage_id: str, db: Session = Depends(get_db)) -> dict[str, str]:
     """删除枚举字段使用记录"""
     crud = get_enum_field_usage_crud(db)
 
@@ -414,7 +416,7 @@ async def get_enum_field_type_history(
     skip: int = Query(0, ge=0, description="跳过记录数"),
     limit: int = Query(100, ge=1, le=1000, description="返回记录数"),
     db: Session = Depends(get_db),
-):
+) -> list[EnumFieldHistoryResponse]:
     """获取枚举字段类型变更历史"""
     history_records = (
         db.query(EnumFieldHistory)
@@ -425,7 +427,7 @@ async def get_enum_field_type_history(
         .all()
     )
 
-    return history_records
+    return history_records  # type: ignore[return-value]
 
 
 @router.get("/values/{value_id}/history", response_model=list[EnumFieldHistoryResponse])
@@ -434,7 +436,7 @@ async def get_enum_field_value_history(
     skip: int = Query(0, ge=0, description="跳过记录数"),
     limit: int = Query(100, ge=1, le=1000, description="返回记录数"),
     db: Session = Depends(get_db),
-):
+) -> list[EnumFieldHistoryResponse]:
     """获取枚举字段值变更历史"""
     history_records = (
         db.query(EnumFieldHistory)
@@ -445,4 +447,4 @@ async def get_enum_field_value_history(
         .all()
     )
 
-    return history_records
+    return history_records  # type: ignore[return-value]

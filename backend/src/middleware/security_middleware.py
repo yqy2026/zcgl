@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Callable, Optional
 
 """
 FastAPI安全中间件
@@ -8,23 +8,26 @@ FastAPI安全中间件
 import logging
 import time
 from collections import defaultdict
-from collections.abc import Callable
+from collections.abc import Mapping
 
 from fastapi import HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.types import ASGIApp
 
 from ..core.exception_handler import BusinessValidationError
 from ..core.logging_security import security_auditor
 from ..core.security import RateLimiter
 
 try:
-    from ..core.security.ratelimit import adaptive_limiter
+    from ..core.security.ratelimit import AdaptiveRateLimiter, adaptive_limiter
 
     ADAPTIVE_LIMITER_AVAILABLE = True
 except ImportError:
-    adaptive_limiter = None
+    adaptive_limiter_var: Optional[AdaptiveRateLimiter] = None
     ADAPTIVE_LIMITER_AVAILABLE = False
+    # Create a compatible wrapper for type checking
+    adaptive_limiter = adaptive_limiter_var  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -32,9 +35,11 @@ logger = logging.getLogger(__name__)
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """安全头部中间件"""
 
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Any]
+    ) -> Response:
         """添加安全头部"""
-        response = await call_next(request)
+        response: Response = await call_next(request)
 
         # 安全头部
         response.headers["X-Content-Type-Options"] = "nosniff"
@@ -52,12 +57,14 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 class RequestValidationMiddleware(BaseHTTPMiddleware):
     """请求验证中间件"""
 
-    def __init__(self, app, rate_limit_config: dict[str, Any] | None = None):
+    def __init__(
+        self, app: ASGIApp, rate_limit_config: Optional[dict[str, Any]] = None
+    ) -> None:
         super().__init__(app)
         self.rate_limiter = RateLimiter()
         self.config = rate_limit_config or {}
-        self.request_count = defaultdict(int)
-        self.blocked_ips = {}
+        self.request_count: dict[str, int] = defaultdict(int)
+        self.blocked_ips: dict[str, float] = {}
         self.suspicious_patterns = [
             r"<script",
             r"javascript:",
@@ -70,7 +77,9 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
             r"window\.",
         ]
 
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Any]
+    ) -> Response:
         """执行请求验证"""
         start_time = time.time()
         client_ip = self._get_client_ip(request)
@@ -97,7 +106,7 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
             await self._validate_request_content(request)
 
             # 处理请求
-            response = await call_next(request)
+            response: Response = await call_next(request)
 
             # 记录请求统计
             await self._log_request_stats(request, response, start_time, client_ip)
@@ -266,7 +275,7 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
 
         return False
 
-    async def _validate_request_content(self, request: Request):
+    async def _validate_request_content(self, request: Request) -> None:
         """验证请求内容"""
         # 检查可疑的User-Agent
         user_agent = request.headers.get("User-Agent", "")
@@ -294,7 +303,9 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
                 await self._log_suspicious_request(request, "SUSPICIOUS_QUERY_PARAM")
                 break
 
-    async def _log_blocked_request(self, request: Request, ip: str, reason: str):
+    async def _log_blocked_request(
+        self, request: Request, ip: str, reason: str
+    ) -> None:
         """记录被封禁的请求"""
         security_auditor.log_security_event(
             event_type="REQUEST_BLOCKED",
@@ -314,7 +325,7 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         if reason in ["RATE_LIMIT_EXCEEDED", "SUSPICIOUS_REQUEST"]:
             self.blocked_ips[ip] = time.time()
 
-    async def _log_suspicious_request(self, request: Request, reason: str):
+    async def _log_suspicious_request(self, request: Request, reason: str) -> None:
         """记录可疑请求"""
         client_ip = self._get_client_ip(request)
 
@@ -335,7 +346,7 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
 
     async def _log_request_stats(
         self, request: Request, response: Response, start_time: float, ip: str
-    ):
+    ) -> None:
         """记录请求统计信息"""
         try:
             processing_time = time.time() - start_time
@@ -365,11 +376,13 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
 class FileUploadSecurityMiddleware(BaseHTTPMiddleware):
     """文件上传安全中间件"""
 
-    def __init__(self, app, max_file_size: int = 50 * 1024 * 1024):  # 50MB
+    def __init__(self, app: ASGIApp, max_file_size: int = 50 * 1024 * 1024) -> None:  # 50MB
         super().__init__(app)
         self.max_file_size = max_file_size
 
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Any]
+    ) -> Response:
         """处理文件上传安全检查"""
 
         # 检查是否为文件上传请求
@@ -397,9 +410,10 @@ class FileUploadSecurityMiddleware(BaseHTTPMiddleware):
                     },
                 )
 
-        return await call_next(request)
+        result: Response = await call_next(request)
+        return result
 
-    async def _validate_file_upload(self, request: Request):
+    async def _validate_file_upload(self, request: Request) -> None:
         """验证文件上传"""
         content_length = int(request.headers.get("content-length", 0))
 
@@ -427,10 +441,10 @@ class CORSExtendedMiddleware(BaseHTTPMiddleware):
 
     def __init__(
         self,
-        app,
-        allowed_origins: list[Any] | None = None,
-        allowed_methods: list[Any] | None = None,
-    ):
+        app: ASGIApp,
+        allowed_origins: Optional[list[str]] = None,
+        allowed_methods: Optional[list[str]] = None,
+    ) -> None:
         super().__init__(app)
         self.allowed_origins = allowed_origins or [
             "http://localhost:5173",
@@ -444,14 +458,16 @@ class CORSExtendedMiddleware(BaseHTTPMiddleware):
             "OPTIONS",
         ]
 
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Any]
+    ) -> Response:
         """处理CORS和安全头部"""
 
         # 预检请求处理
         if request.method == "OPTIONS":
-            response = Response()
-        else:
-            response = await call_next(request)
+            return Response()
+
+        response: Response = await call_next(request)
 
         # 设置CORS头部
         origin = request.headers.get("origin")
@@ -474,7 +490,9 @@ class CORSExtendedMiddleware(BaseHTTPMiddleware):
         return response
 
 
-def create_security_middleware(app, config: dict[str, Any] | None = None):
+def create_security_middleware(
+    app: Any, config: Optional[dict[str, Any]] = None
+) -> None:
     """
     创建安全中间件链
 
@@ -485,7 +503,7 @@ def create_security_middleware(app, config: dict[str, Any] | None = None):
     config = config or {}
 
     # 按顺序添加中间件
-    app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(SecurityHeadersMiddleware)  # type: ignore[attr-defined]
     app.add_middleware(
         FileUploadSecurityMiddleware,
         max_file_size=config.get("max_file_size", 50 * 1024 * 1024),
@@ -496,7 +514,7 @@ def create_security_middleware(app, config: dict[str, Any] | None = None):
 
 
 # 创建中间件工厂函数
-def setup_security_middleware(app):
+def setup_security_middleware(app: Any) -> None:
     """设置安全中间件"""
     config = {
         "allowed_origins": ["http://localhost:5173", "http://localhost:3000"],

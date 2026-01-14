@@ -8,6 +8,7 @@ import logging
 import time
 
 from pydantic import BaseModel
+from sqlalchemy import Select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.orm import Session
@@ -40,7 +41,7 @@ class CRUDBase(Generic[_ModelType, _CreateSchemaType, _UpdateSchemaType]):
 
     def _get_cache_key(self, method: str, **kwargs: Any) -> str:
         """生成缓存键"""
-        key_parts = [getattr(self.model, '__tablename__', 'unknown'), method]  # type: ignore[attr-defined]
+        key_parts = [getattr(self.model, '__tablename__', 'unknown'), method]
         for k, v in sorted(kwargs.items()):
             if v is not None:
                 key_parts.append(f"{k}:{v}")
@@ -81,10 +82,10 @@ class CRUDBase(Generic[_ModelType, _CreateSchemaType, _UpdateSchemaType]):
                 return cached_result
 
         try:
-            result = db.query(self.model).filter(getattr(self.model, 'id') == id).first()  # type: ignore[attr-defined]
+            result = db.query(self.model).filter(getattr(self.model, 'id') == id).first()
             if use_cache and result is not None:  # pragma: no cover
                 self._set_cache(cache_key, result)  # pragma: no cover
-            return result  # type: ignore[no-any-return]
+            return result
         except Exception as e:  # pragma: no cover
             raise self._handle_database_error(e, "获取记录")  # pragma: no cover
 
@@ -97,15 +98,14 @@ class CRUDBase(Generic[_ModelType, _CreateSchemaType, _UpdateSchemaType]):
         if use_cache and limit <= 50:  # 只对小结果集缓存
             cached_result = self._get_from_cache(cache_key)  # pragma: no cover
             if cached_result is not None:  # pragma: no cover
-                return cached_result  # pragma: no cover
-
+                return cached_result  # type: ignore[return-value]
         try:
             query = db.query(self.model).offset(skip).limit(limit)
             result = query.all()
 
             if use_cache and limit <= 50:
                 self._set_cache(cache_key, result)  # pragma: no cover
-            return result  # type: ignore[no-any-return]
+            return result
         except Exception as e:  # pragma: no cover
             raise self._handle_database_error(e, "获取记录列表")  # pragma: no cover
 
@@ -126,7 +126,7 @@ class CRUDBase(Generic[_ModelType, _CreateSchemaType, _UpdateSchemaType]):
             self._clear_cache_pattern("get_multi")
 
             logger.info(
-                f"Successfully created {getattr(self.model, '__tablename__', 'unknown')} record with id: {getattr(db_obj, 'id', 'unknown')}"  # type: ignore[attr-defined]
+                f"Successfully created {getattr(self.model, '__tablename__', 'unknown')} record with id: {getattr(db_obj, 'id', 'unknown')}"
             )
             return db_obj
         except Exception as e:  # pragma: no cover
@@ -144,7 +144,7 @@ class CRUDBase(Generic[_ModelType, _CreateSchemaType, _UpdateSchemaType]):
         try:
             obj_data = db_obj.__dict__
             update_data: dict[str, Any] = (
-                obj_in if isinstance(obj_in, dict) else obj_in.model_dump(exclude_unset=True)  # type: ignore[assignment]
+                obj_in if isinstance(obj_in, dict) else obj_in.model_dump(exclude_unset=True)
             )
 
             for field in obj_data:
@@ -156,13 +156,13 @@ class CRUDBase(Generic[_ModelType, _CreateSchemaType, _UpdateSchemaType]):
             db.refresh(db_obj)
 
             # 清除相关缓存
-            cache_key = self._get_cache_key("get", id=getattr(db_obj, 'id', None))  # type: ignore[attr-defined]
+            cache_key = self._get_cache_key("get", id=getattr(db_obj, 'id', None))
             if cache_key in self._cache:
                 del self._cache[cache_key]
             self._clear_cache_pattern("get_multi")
 
             logger.info(
-                f"Successfully updated {getattr(self.model, '__tablename__', 'unknown')} record with id: {getattr(db_obj, 'id', 'unknown')}"  # type: ignore[attr-defined]
+                f"Successfully updated {getattr(self.model, '__tablename__', 'unknown')} record with id: {getattr(db_obj, 'id', 'unknown')}"
             )
             return db_obj
         except Exception as e:  # pragma: no cover
@@ -186,9 +186,9 @@ class CRUDBase(Generic[_ModelType, _CreateSchemaType, _UpdateSchemaType]):
             self._clear_cache_pattern("get_multi")
 
             logger.info(
-                f"Successfully deleted {getattr(self.model, '__tablename__', 'unknown')} record with id: {id}"  # type: ignore[attr-defined]
+                f"Successfully deleted {getattr(self.model, '__tablename__', 'unknown')} record with id: {id}"
             )
-            return obj  # type: ignore[no-any-return]
+            return obj
         except ValueError:
             raise
         except Exception as e:  # pragma: no cover
@@ -224,7 +224,7 @@ class CRUDBase(Generic[_ModelType, _CreateSchemaType, _UpdateSchemaType]):
             # 使用 QueryBuilder 构建查询
             # 注意: QueryBuilder 返回 sqlalchemy.sql.selectable.Select
             # 我们需要使用 db.execute(query).scalars().all() 来获取对象
-            query = self.query_builder.build_query(
+            query: Select[Any] = self.query_builder.build_query(
                 filters=filters,
                 search_query=search,
                 search_fields=search_fields,
@@ -233,7 +233,8 @@ class CRUDBase(Generic[_ModelType, _CreateSchemaType, _UpdateSchemaType]):
                 skip=skip,
                 limit=limit,
             )
-            return list(db.execute(query).scalars().all())
+            result = db.execute(query).scalars().all()
+            return list(result)  # type: ignore[return-value]
         except Exception as e:  # pragma: no cover
             raise self._handle_database_error(e, "高级查询")  # pragma: no cover
 
@@ -260,7 +261,7 @@ class CRUDBase(Generic[_ModelType, _CreateSchemaType, _UpdateSchemaType]):
             self._clear_cache_pattern("get_multi")
 
             logger.info(
-                f"Successfully bulk created {len(db_objects)} {getattr(self.model, '__tablename__', 'unknown')} records"  # type: ignore[attr-defined]
+                f"Successfully bulk created {len(db_objects)} {getattr(self.model, '__tablename__', 'unknown')} records"
             )
             return db_objects
         except Exception as e:  # pragma: no cover
@@ -280,12 +281,12 @@ class CRUDBase(Generic[_ModelType, _CreateSchemaType, _UpdateSchemaType]):
     def clear_cache(self) -> None:
         """清除所有缓存"""
         self._cache.clear()
-        logger.info(f"Cache cleared for {getattr(self.model, '__tablename__', 'unknown')}")  # type: ignore[attr-defined]
+        logger.info(f"Cache cleared for {getattr(self.model, '__tablename__', 'unknown')}")
 
     def get_cache_stats(self) -> dict[str, Any]:
         """获取缓存统计信息"""
         return {
-            "model": getattr(self.model, '__tablename__', 'unknown'),  # type: ignore[attr-defined]
+            "model": getattr(self.model, '__tablename__', 'unknown'),
             "cache_size": len(self._cache),
             "cache_timeout": self._cache_timeout,
         }

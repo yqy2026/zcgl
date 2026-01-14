@@ -173,8 +173,8 @@ module = [
     "src.validation.*",
 ]
 warn_unused_configs = true
-warn_redundant_casts = true
-warn_unused_ignores = false  # Week 6: 启用
+# Removed: warn_redundant_casts (not allowed in per-module overrides)
+# Removed: warn_unused_ignores (not allowed in per-module overrides)
 
 # === Tier 3: 第三方集成 (PERMISSIVE) ===
 # OCR、PDF、文档处理服务

@@ -95,7 +95,7 @@ class EnhancedDatabaseManager:
 
         # 根据数据库类型配置连接池
         if "sqlite" in database_url.lower():
-            engine_kwargs.update(  # type: ignore[dict-item]
+            engine_kwargs.update(
                 {
                     "poolclass": StaticPool,
                     "connect_args": {
@@ -106,7 +106,7 @@ class EnhancedDatabaseManager:
                 }
             )
         else:  # pragma: no cover
-            engine_kwargs.update(  # type: ignore[dict-item]  # pragma: no cover
+            engine_kwargs.update(  # pragma: no cover
                 {
                     "poolclass": QueuePool,  # pragma: no cover
                     "pool_size": self.config.pool_size,  # pragma: no cover
@@ -328,11 +328,11 @@ class EnhancedDatabaseManager:
 
             # 计算连接使用率
             if pool.size() > 0:  # pragma: no cover
-                pool_status["utilization"] = (  # type: ignore[index]  # pragma: no cover
+                pool_status["utilization"] = (  # pragma: no cover
                     pool.checkedout() / pool.size()  # type: ignore[attr-defined]  # pragma: no cover
                 ) * 100  # pragma: no cover
             else:  # pragma: no cover
-                pool_status["utilization"] = 0  # type: ignore[index]  # pragma: no cover
+                pool_status["utilization"] = 0  # pragma: no cover
         else:
             # SQLite StaticPool
             return {
@@ -392,7 +392,7 @@ class EnhancedDatabaseManager:
                 session.execute(text("SELECT 1"))
                 response_time = (time.time() - start_time) * 1000
 
-                health_status["checks"]["basic_connection"] = {  # type: ignore[index]
+                health_status["checks"]["basic_connection"] = {
                     "status": "healthy" if response_time < 1000 else "degraded",
                     "response_time_ms": response_time,
                 }
@@ -405,7 +405,7 @@ class EnhancedDatabaseManager:
                 """)
                 tables = [row[0] for row in session.execute(tables_query)]
 
-                health_status["checks"]["table_access"] = {  # type: ignore[index]
+                health_status["checks"]["table_access"] = {
                     "status": "healthy",
                     "table_count": len(tables),
                     "tables": tables[:10],  # 限制显示数量
@@ -420,20 +420,20 @@ class EnhancedDatabaseManager:
                     size_result = session.execute(size_query).fetchone()
                     if size_result:
                         db_size_bytes = size_result[0]
-                        health_status["checks"]["database_size"] = {  # type: ignore[index]
+                        health_status["checks"]["database_size"] = {
                             "status": "healthy",
                             "size_bytes": db_size_bytes,
                             "size_mb": round(db_size_bytes / (1024 * 1024), 2),
                         }
                 except Exception:  # pragma: no cover
-                    health_status["checks"]["database_size"] = {  # type: ignore[index]  # pragma: no cover
+                    health_status["checks"]["database_size"] = {  # pragma: no cover
                         "status": "unknown",  # pragma: no cover
                         "message": "无法获取数据库大小",  # pragma: no cover
                     }  # pragma: no cover
 
         except Exception as e:  # pragma: no cover
-            health_status["healthy"] = False  # type: ignore[index]  # pragma: no cover
-            health_status["checks"]["connection_test"] = {  # type: ignore[index]  # pragma: no cover
+            health_status["healthy"] = False  # pragma: no cover
+            health_status["checks"]["connection_test"] = {  # pragma: no cover
                 "status": "failed",  # pragma: no cover
                 "error": str(e),  # pragma: no cover
             }  # pragma: no cover
@@ -441,12 +441,12 @@ class EnhancedDatabaseManager:
 
         # 检查连接池状态
         pool_status = self.get_connection_pool_status()
-        health_status["checks"]["connection_pool"] = pool_status  # type: ignore[index]
+        health_status["checks"]["connection_pool"] = pool_status
 
         # 检查是否有过多的慢查询
         metrics = self.get_metrics()
         if metrics.slow_queries > metrics.total_queries * 0.1:  # 超过10%的查询是慢查询
-            health_status["checks"]["slow_queries"] = {  # type: ignore[index]  # pragma: no cover
+            health_status["checks"]["slow_queries"] = {  # pragma: no cover
                 "status": "warning",  # pragma: no cover
                 "slow_queries": metrics.slow_queries,  # pragma: no cover
                 "total_queries": metrics.total_queries,  # pragma: no cover
@@ -456,7 +456,7 @@ class EnhancedDatabaseManager:
                 ),  # pragma: no cover
             }  # pragma: no cover
         else:
-            health_status["checks"]["slow_queries"] = {  # type: ignore[index]
+            health_status["checks"]["slow_queries"] = {
                 "status": "healthy",
                 "slow_queries": metrics.slow_queries,
                 "total_queries": metrics.total_queries,
@@ -517,11 +517,11 @@ class EnhancedDatabaseManager:
                 slow_queries = self.get_slow_queries(limit=10)
                 if slow_queries:
                     if isinstance(optimization_results["actions_taken"], list):
-                        optimization_results["actions_taken"].append(  # type: ignore[arg-type]
+                        optimization_results["actions_taken"].append(
                             f"分析了 {len(slow_queries)} 个慢查询"
                         )
                     if isinstance(optimization_results["recommendations"], list):
-                        optimization_results["recommendations"].append(  # type: ignore[arg-type]
+                        optimization_results["recommendations"].append(
                             "考虑添加适当的索引来优化慢查询"
                         )
 
@@ -530,13 +530,13 @@ class EnhancedDatabaseManager:
                     session.execute(text("ANALYZE"))
                     session.commit()
                     if isinstance(optimization_results["actions_taken"], list):
-                        optimization_results["actions_taken"].append("更新了SQLite统计信息")  # type: ignore[arg-type]
+                        optimization_results["actions_taken"].append("更新了SQLite统计信息")
 
                 # 检查连接池使用情况
                 pool_status = self.get_connection_pool_status()
                 if pool_status.get("utilization", 0) > 80:  # pragma: no cover
                     if isinstance(optimization_results["recommendations"], list):
-                        optimization_results["recommendations"].append(  # type: ignore[arg-type]  # pragma: no cover
+                        optimization_results["recommendations"].append(  # pragma: no cover
                             "连接池使用率过高，考虑增加连接池大小"  # pragma: no cover
                         )  # pragma: no cover
 
@@ -544,7 +544,7 @@ class EnhancedDatabaseManager:
 
         except Exception as e:  # pragma: no cover
             logger.error(f"数据库优化时出错: {e}")  # pragma: no cover
-            optimization_results["error"] = str(e)  # type: ignore[index]  # pragma: no cover
+            optimization_results["error"] = str(e)  # pragma: no cover
 
         return optimization_results
 
@@ -560,7 +560,7 @@ def get_database_manager() -> EnhancedDatabaseManager:
 
 def get_enhanced_db_session() -> Any:
     """获取增强的数据库会话"""
-    return database_manager.get_session()  # type: ignore[return-value]
+    return database_manager.get_session()
 
 
 # 为了向后兼容，保留原始的get_db函数

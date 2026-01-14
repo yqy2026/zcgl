@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from typing import Any
+from typing import Any, Callable
 
 """
 错误恢复中间件
@@ -10,18 +10,20 @@ import logging
 import time
 import traceback
 import uuid
-from collections.abc import Callable
+from collections.abc import Awaitable
 from datetime import datetime
 
 from fastapi import HTTPException, Request, Response
 from fastapi.responses import JSONResponse
-from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from starlette.types import ASGIApp
 
 from ..services.error_recovery_service import (
     ErrorCategory,
     ErrorContext,
     ErrorRecoveryEngine,
     ErrorSeverity,
+    RecoveryResult,
     with_error_recovery,
 )
 
@@ -31,12 +33,16 @@ logger = logging.getLogger(__name__)
 class ErrorRecoveryMiddleware(BaseHTTPMiddleware):
     """错误恢复中间件"""
 
-    def __init__(self, app, recovery_engine: ErrorRecoveryEngine | None = None):
+    def __init__(
+        self, app: ASGIApp, recovery_engine: ErrorRecoveryEngine | None = None
+    ) -> None:
         super().__init__(app)
         self.recovery_engine = recovery_engine or ErrorRecoveryEngine()
-        self.request_contexts = {}  # 存储请求上下文
+        self.request_contexts: dict[str, dict[str, Any]] = {}  # 存储请求上下文
 
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
         """处理请求并执行错误恢复"""
 
         request_id = str(uuid.uuid4())
@@ -70,7 +76,7 @@ class ErrorRecoveryMiddleware(BaseHTTPMiddleware):
         self,
         exc: Exception,
         request: Request,
-        call_next: Callable,
+        call_next: RequestResponseEndpoint,
         request_id: str,
         start_time: float,
     ) -> Response:
@@ -246,11 +252,11 @@ class ErrorRecoveryMiddleware(BaseHTTPMiddleware):
         return ErrorSeverity.MEDIUM
 
     def _create_recovery_function(
-        self, request: Request, call_next: Callable
-    ) -> Callable:
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Callable[[], Awaitable[Any]]:
         """创建恢复函数"""
 
-        async def recovery_function():
+        async def recovery_function() -> Any:
             # 在恢复时重新创建请求上下文
             response = await call_next(request)
             return response
@@ -281,7 +287,7 @@ class ErrorRecoveryMiddleware(BaseHTTPMiddleware):
 
         return status_map.get(error_category, 500)
 
-    def _get_error_suggestions(self, error_category) -> list[Any]:
+    def _get_error_suggestions(self, error_category: ErrorCategory) -> list[str]:
         """获取错误处理建议"""
 
         suggestions_map = {
@@ -313,7 +319,7 @@ class ErrorRecoveryMiddleware(BaseHTTPMiddleware):
 
     def _record_success_request(
         self, request: Request, response: Response, start_time: float
-    ):
+    ) -> None:
         """记录成功请求"""
         processing_time = time.time() - start_time
 
@@ -322,7 +328,9 @@ class ErrorRecoveryMiddleware(BaseHTTPMiddleware):
             f"请求成功: {request.method} {request.url.path} - {processing_time:.3f}s"
         )
 
-    def _record_recovery_failure(self, error_context: ErrorContext, recovery_result):
+    def _record_recovery_failure(
+        self, error_context: ErrorContext, recovery_result: RecoveryResult
+    ) -> None:
         """记录恢复失败"""
         # 这里可以发送告警或记录到监控系统
         logger.critical(f"错误恢复失败严重事件: {error_context.error_id}")
@@ -347,7 +355,9 @@ class ErrorRecoveryMiddleware(BaseHTTPMiddleware):
 
 
 # 错误恢复中间件工厂函数
-def create_error_recovery_middleware(app, **options):
+def create_error_recovery_middleware(
+    app: ASGIApp, **options: Any
+) -> ErrorRecoveryMiddleware:
     """创建错误恢复中间件"""
     recovery_engine = options.get("recovery_engine")
     return ErrorRecoveryMiddleware(app, recovery_engine)
@@ -355,13 +365,14 @@ def create_error_recovery_middleware(app, **options):
 
 # API路由错误恢复装饰器
 def api_error_recovery(
-    error_category: ErrorCategory, fallback_response: dict[str, Any] | None = None
-):
+    error_category: ErrorCategory,
+    fallback_response: dict[str, Any] | None = None,
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """API错误恢复装饰器"""
 
-    def decorator(func):
-        @with_error_recovery(error_category)
-        async def wrapper(*args, **kwargs):
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        @with_error_recovery(error_category)  # type: ignore[misc]
+        async def wrapper(*args: Any, **kwargs: Any) -> dict[str, Any]:
             try:
                 result = await func(*args, **kwargs)
                 return {"success": True, "data": result}
@@ -371,6 +382,6 @@ def api_error_recovery(
                     return fallback_response
                 raise e
 
-        return wrapper
+        return wrapper  # type: ignore[no-any-return]
 
     return decorator

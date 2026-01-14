@@ -129,7 +129,7 @@ class EnumFieldTypeCRUD:
 
         # 记录历史
         self._create_history(
-            enum_type_id=db_obj.id,
+            enum_type_id=str(db_obj.id),
             action="create",
             target_type="type",
             new_value=f"创建枚举类型: {db_obj.name}",
@@ -152,7 +152,7 @@ class EnumFieldTypeCRUD:
             old_value = getattr(db_obj, field, None)
             if old_value != new_value:
                 self._create_history(
-                    enum_type_id=db_obj.id,
+                    enum_type_id=str(db_obj.id),
                     action="update",
                     target_type="type",
                     field_name=field,
@@ -204,8 +204,9 @@ class EnumFieldTypeCRUD:
         if usage_count > 0:
             raise ValueError("无法删除正在使用的枚举类型")
 
-        db_obj.is_deleted = True
-        db_obj.updated_by = deleted_by
+        # Cast Column types to Python types for assignment
+        db_obj.is_deleted = True  # type: ignore[assignment]
+        db_obj.updated_by = deleted_by  # type: ignore[assignment]
 
         # 记录历史
         self._create_history(
@@ -274,7 +275,7 @@ class EnumFieldTypeCRUD:
         old_value: str | None = None,
         new_value: str | None = None,
         created_by: str | None = None,
-    ):
+    ) -> None:
         """创建历史记录"""
         history = EnumFieldHistory(
             enum_type_id=enum_type_id,
@@ -356,7 +357,7 @@ class EnumFieldValueCRUD:
         def build_tree(parent_id: str | None = None) -> list[EnumFieldValue]:
             values = self.get_by_type(enum_type_id, parent_id=parent_id, is_active=True)
             for value in values:
-                value.children = build_tree(value.id)
+                value.children = build_tree(parent_id=str(value.id))
             return values
 
         return build_tree()
@@ -364,18 +365,20 @@ class EnumFieldValueCRUD:
     def create(self, obj_in: EnumFieldValueCreate) -> EnumFieldValue:
         """创建枚举值"""
         # 计算层级和路径
-        level = 1
-        path = ""
+        level: int = 1
+        path: str = ""
 
         if obj_in.parent_id:
             parent = self.get(obj_in.parent_id)
             if parent:
-                level = parent.level + 1
-                path = f"{parent.path}/{parent.id}" if parent.path else parent.id
+                level = int(parent.level) + 1
+                parent_path = str(parent.path) if parent.path else ""
+                parent_id = str(parent.id) if parent.id else ""
+                path = f"{parent_path}/{parent_id}" if parent_path else parent_id
 
         db_obj = EnumFieldValue(**obj_in.model_dump())
-        db_obj.level = level
-        db_obj.path = path
+        db_obj.level = level  # type: ignore[assignment]
+        db_obj.path = path  # type: ignore[assignment]
 
         self.db.add(db_obj)
         self.db.commit()
@@ -383,8 +386,8 @@ class EnumFieldValueCRUD:
 
         # 记录历史
         self._create_history(
-            enum_type_id=db_obj.enum_type_id,
-            enum_value_id=db_obj.id,
+            enum_type_id=str(db_obj.enum_type_id),
+            enum_value_id=str(db_obj.id),
             action="create",
             target_type="value",
             new_value=f"创建枚举值: {db_obj.label}",
@@ -407,8 +410,8 @@ class EnumFieldValueCRUD:
             old_value = getattr(db_obj, field, None)
             if old_value != new_value:
                 self._create_history(
-                    enum_type_id=db_obj.enum_type_id,
-                    enum_value_id=db_obj.id,
+                    enum_type_id=str(db_obj.enum_type_id),
+                    enum_value_id=str(db_obj.id),
                     action="update",
                     target_type="value",
                     field_name=field,
@@ -419,14 +422,16 @@ class EnumFieldValueCRUD:
 
         # 如果更新了父级，重新计算层级和路径
         if "parent_id" in update_data:
-            level = 1
-            path = ""
+            level: int = 1
+            path: str = ""
 
             if update_data["parent_id"]:
                 parent = self.get(update_data["parent_id"])
                 if parent:
-                    level = parent.level + 1
-                    path = f"{parent.path}/{parent.id}" if parent.path else parent.id
+                    level = int(parent.level) + 1
+                    parent_path = str(parent.path) if parent.path else ""
+                    parent_id = str(parent.id) if parent.id else ""
+                    path = f"{parent_path}/{parent_id}" if parent_path else parent_id
 
             update_data["level"] = level
             update_data["path"] = path
@@ -459,12 +464,13 @@ class EnumFieldValueCRUD:
         if children_count > 0:
             raise ValueError("无法删除包含子枚举值的枚举值")
 
-        db_obj.is_deleted = True
-        db_obj.updated_by = deleted_by
+        # Cast Column types to Python types for assignment
+        db_obj.is_deleted = True  # type: ignore[assignment]
+        db_obj.updated_by = deleted_by  # type: ignore[assignment]
 
         # 记录历史
         self._create_history(
-            enum_type_id=db_obj.enum_type_id,
+            enum_type_id=str(db_obj.enum_type_id),
             enum_value_id=enum_value_id,
             action="delete",
             target_type="value",
@@ -503,7 +509,7 @@ class EnumFieldValueCRUD:
         old_value: str | None = None,
         new_value: str | None = None,
         created_by: str | None = None,
-    ):
+    ) -> None:
         """创建历史记录"""
         history = EnumFieldHistory(
             enum_type_id=enum_type_id,

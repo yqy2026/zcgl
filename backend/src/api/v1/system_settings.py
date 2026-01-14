@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Annotated
 
 """
 系统设置API路由
@@ -18,6 +18,7 @@ from fastapi import (
     UploadFile,
 )
 from pydantic import BaseModel
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from ...crud.auth import AuditLogCRUD
@@ -61,9 +62,9 @@ _system_settings = SystemSettings()
 
 @router.get("/settings", summary="获取系统设置")
 async def get_system_settings(
-    db: Session = Depends(get_db),
-    current_user: UserResponse = Depends(get_current_active_user),
-):
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[UserResponse, Depends(get_current_active_user)],
+) -> dict[str, Any]:
     """
     获取系统设置
 
@@ -82,10 +83,10 @@ async def get_system_settings(
 @router.put("/settings", summary="更新系统设置")
 async def update_system_settings(
     settings: SystemSettings,
-    db: Session = Depends(get_db),
-    current_user=Depends(get_current_active_user),
-    request: Request = None,
-):
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[UserResponse, Depends(get_current_active_user)],
+    request: Request | None = None,
+) -> dict[str, Any]:
     """
     更新系统设置
 
@@ -97,24 +98,30 @@ async def update_system_settings(
 
         # 记录审计日志
         try:
-            audit_data = {
-                "user_id": current_user.id,
-                "username": current_user.username,
-                "action": "UPDATE_SYSTEM_SETTINGS",
-                "resource": "system_settings",
-                "details": {"updated_settings": settings.model_dump()},
-                "ip_address": request.client.host if request else None,
-                "user_agent": str(request.headers.get("user-agent", ""))
-                if request
-                else "",
-            }
-            AuditLogCRUD.create_log(db, audit_data)
-        except Exception as e:
+            ip_address: str | None = None
+            user_agent: str = ""
+            if request is not None:
+                if request.client is not None:
+                    ip_address = request.client.host
+                user_agent = str(request.headers.get("user-agent", ""))
+
+            audit_crud = AuditLogCRUD()
+            audit_crud.create(
+                db,
+                user_id=current_user.id,
+                username=current_user.username,
+                action="UPDATE_SYSTEM_SETTINGS",
+                resource_type="system_settings",
+                ip_address=ip_address,
+                user_agent=user_agent,
+                request_body=json.dumps({"updated_settings": settings.model_dump()}),
+            )
+        except Exception:
             # 审计日志失败不应该影响系统设置更新
             import logging
 
             logger = logging.getLogger(__name__)
-            logger.warning(f"记录系统设置审计日志失败: {e}")
+            logger.warning("记录系统设置审计日志失败", exc_info=True)
 
         return {
             "success": True,
@@ -128,9 +135,9 @@ async def update_system_settings(
 
 @router.get("/info", summary="获取系统信息")
 async def get_system_info(
-    db: Session = Depends(get_db),
-    current_user: UserResponse = Depends(get_current_active_user),
-):
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[UserResponse, Depends(get_current_active_user)],
+) -> dict[str, Any]:
     """
     获取系统信息
 
@@ -139,8 +146,8 @@ async def get_system_info(
     try:
         # 检查数据库连接
         try:
-            db.execute("SELECT 1")
-            database_status = "connected"
+            db.execute(text("SELECT 1"))
+            database_status: str = "connected"
         except Exception:
             database_status = "disconnected"
 
@@ -168,10 +175,10 @@ async def get_system_info(
 @router.post("/backup", summary="备份系统数据")
 async def backup_system(
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db),
-    current_user: UserResponse = Depends(get_current_active_user),
-    request: Request = None,
-):
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[UserResponse, Depends(get_current_active_user)],
+    request: Request | None = None,
+) -> dict[str, Any]:
     """
     备份系统数据
 
@@ -181,7 +188,7 @@ async def backup_system(
         # 这里可以实现真正的数据备份逻辑
         # 目前返回模拟的备份数据
 
-        backup_data = {
+        backup_data: dict[str, Any] = {
             "backup_time": datetime.now().isoformat(),
             "backup_user": current_user.username,
             "system_settings": _system_settings.model_dump(),
@@ -191,24 +198,30 @@ async def backup_system(
 
         # 记录审计日志
         try:
-            audit_data = {
-                "user_id": current_user.id,
-                "username": current_user.username,
-                "action": "SYSTEM_BACKUP",
-                "resource": "system",
-                "details": {"backup_time": backup_data["backup_time"]},
-                "ip_address": request.client.host if request else None,
-                "user_agent": str(request.headers.get("user-agent", ""))
-                if request
-                else "",
-            }
-            AuditLogCRUD.create_log(db, audit_data)
-        except Exception as e:
+            ip_address: str | None = None
+            user_agent: str = ""
+            if request is not None:
+                if request.client is not None:
+                    ip_address = request.client.host
+                user_agent = str(request.headers.get("user-agent", ""))
+
+            audit_crud = AuditLogCRUD()
+            audit_crud.create(
+                db,
+                user_id=current_user.id,
+                username=current_user.username,
+                action="SYSTEM_BACKUP",
+                resource_type="system",
+                request_body=json.dumps({"backup_time": backup_data["backup_time"]}),
+                ip_address=ip_address,
+                user_agent=user_agent,
+            )
+        except Exception:
             # 审计日志失败不应该影响备份流程
             import logging
 
             logger = logging.getLogger(__name__)
-            logger.warning(f"记录备份审计日志失败: {e}")
+            logger.warning("记录备份审计日志失败", exc_info=True)
 
         return {
             "success": True,
@@ -222,11 +235,11 @@ async def backup_system(
 
 @router.post("/restore", summary="恢复系统数据")
 async def restore_system(
-    backup_file: UploadFile = File(...),
-    db: Session = Depends(get_db),
-    current_user: UserResponse = Depends(get_current_active_user),
-    request: Request = None,
-):
+    backup_file: Annotated[UploadFile, File(...)],
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[UserResponse, Depends(get_current_active_user)],
+    request: Request | None = None,
+) -> dict[str, Any]:
     """
     恢复系统数据
 
@@ -234,13 +247,14 @@ async def restore_system(
     """
     try:
         # 验证文件类型
-        if not backup_file.filename.endswith(".json"):
+        filename = backup_file.filename
+        if filename is None or not filename.endswith(".json"):
             raise HTTPException(status_code=400, detail="备份文件必须是JSON格式")
 
         # 读取备份文件内容
         content = await backup_file.read()
         try:
-            backup_data = json.loads(content.decode("utf-8"))
+            backup_data: dict[str, Any] = json.loads(content.decode("utf-8"))
         except json.JSONDecodeError:
             raise HTTPException(status_code=400, detail="备份文件格式错误")
 
@@ -259,28 +273,36 @@ async def restore_system(
 
         # 记录审计日志
         try:
-            audit_data = {
-                "user_id": current_user.id,
-                "username": current_user.username,
-                "action": "SYSTEM_RESTORE",
-                "resource": "system",
-                "details": {
-                    "backup_time": backup_data.get("backup_time"),
-                    "backup_file": backup_file.filename,
-                    "restored_settings": backup_data.get("system_settings", {}),
-                },
-                "ip_address": request.client.host if request else None,
-                "user_agent": str(request.headers.get("user-agent", ""))
-                if request
-                else "",
-            }
-            AuditLogCRUD.create_log(db, audit_data)
-        except Exception as e:
+            ip_address: str | None = None
+            user_agent: str = ""
+            if request is not None:
+                if request.client is not None:
+                    ip_address = request.client.host
+                user_agent = str(request.headers.get("user-agent", ""))
+
+            audit_crud = AuditLogCRUD()
+            audit_crud.create(
+                db,
+                user_id=current_user.id,
+                username=current_user.username,
+                action="SYSTEM_RESTORE",
+                resource_type="system",
+                request_body=json.dumps(
+                    {
+                        "backup_time": backup_data.get("backup_time"),
+                        "backup_file": filename,
+                        "restored_settings": backup_data.get("system_settings", {}),
+                    }
+                ),
+                ip_address=ip_address,
+                user_agent=user_agent,
+            )
+        except Exception:
             # 审计日志失败不应该影响恢复流程
             import logging
 
             logger = logging.getLogger(__name__)
-            logger.warning(f"记录恢复审计日志失败: {e}")
+            logger.warning("记录恢复审计日志失败", exc_info=True)
 
         return {
             "success": True,
@@ -288,7 +310,7 @@ async def restore_system(
             "restored_backup": {
                 "backup_time": backup_data.get("backup_time"),
                 "version": backup_data.get("version"),
-                "filename": backup_file.filename,
+                "filename": filename,
             },
             "timestamp": datetime.now().isoformat(),
         }
