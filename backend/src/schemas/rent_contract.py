@@ -5,7 +5,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
-from typing import Any, cast
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator
 
@@ -67,11 +67,7 @@ class RentTermBase(BaseModel):
                 other_fees = other_fees_raw
 
             # We've verified types above, all variables are Decimal
-            return (
-                monthly_rent
-                + management_fee
-                + other_fees
-            )
+            return monthly_rent + management_fee + other_fees
         return v
 
     @field_validator("end_date")

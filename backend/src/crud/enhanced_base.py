@@ -9,7 +9,6 @@ import logging
 from abc import ABC, abstractmethod
 from datetime import UTC, datetime
 
-from pydantic import BaseModel
 from sqlalchemy import asc, desc
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.orm import Session, joinedload
@@ -20,7 +19,9 @@ logger = logging.getLogger(__name__)
 class HasModelDump(Protocol):
     """Pydantic model protocol with model_dump method"""
 
-    def model_dump(self, *, exclude_unset: bool = False, **kwargs: Any) -> dict[str, Any]:
+    def model_dump(
+        self, *, exclude_unset: bool = False, **kwargs: Any
+    ) -> dict[str, Any]:
         """Dump model to dictionary"""
         ...
 

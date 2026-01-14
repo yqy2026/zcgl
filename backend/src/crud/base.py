@@ -7,7 +7,6 @@ from typing import Any, Protocol, TypeVar, cast
 import logging
 import time
 
-from pydantic import BaseModel
 from sqlalchemy import Select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.declarative import DeclarativeMeta
@@ -20,7 +19,9 @@ from .query_builder import QueryBuilder
 class HasModelDump(Protocol):
     """Pydantic model protocol with model_dump method"""
 
-    def model_dump(self, *, exclude_unset: bool = False, **kwargs: Any) -> dict[str, Any]:
+    def model_dump(
+        self, *, exclude_unset: bool = False, **kwargs: Any
+    ) -> dict[str, Any]:
         """Dump model to dictionary"""
         ...
 
