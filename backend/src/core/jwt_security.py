@@ -9,6 +9,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from jose import jwt
+from jose.exceptions import ExpiredSignatureError, JWTError
 
 from ..config import settings
 
@@ -168,16 +169,16 @@ class JWTSecurityConfig:
             # 检查过期时间
             exp = payload.get("exp")
             if exp is None:
-                raise jwt.JWTError("Token missing expiration time")
+                raise JWTError("Token missing expiration time")
 
             exp_datetime = datetime.fromtimestamp(exp, UTC)
             if exp_datetime <= now:
-                raise jwt.JWTError("Token has expired")
+                raise JWTError("Token has expired")
 
             # 检查签发时间
             iat = payload.get("iat")
             if iat is None:
-                raise jwt.JWTError("Token missing issued at time")
+                raise JWTError("Token missing issued at time")
 
             # 检查令牌类型
             token_type = payload.get("type")
@@ -197,13 +198,13 @@ class JWTSecurityConfig:
                 "jti": jti,
             }
 
-        except jwt.ExpiredSignatureError:
-            raise jwt.JWTError("Token has expired")
-        except jwt.JWTError as e:
-            raise jwt.JWTError(f"Token validation failed: {str(e)}")
+        except ExpiredSignatureError:
+            raise JWTError("Token has expired")
+        except JWTError as e:
+            raise JWTError(f"Token validation failed: {str(e)}")
         except Exception as e:
             logger.error(f"Unexpected error during token verification: {e}")
-            raise jwt.JWTError("Token verification failed")
+            raise JWTError("Token verification failed")
 
     @classmethod
     def get_token_security_info(cls, token: str) -> dict[str, Any]:

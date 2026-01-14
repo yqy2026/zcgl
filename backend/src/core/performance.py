@@ -7,7 +7,7 @@ from typing import Any
 
 import logging
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 from functools import wraps
@@ -23,18 +23,18 @@ logger = logging.getLogger(__name__)
 class PerformanceMonitor:
     """性能监控器"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.slow_query_threshold = get_config("slow_query_threshold_ms", 1000)
         self.enabled = get_config("performance_monitoring_enabled", True)
-        self.query_stats: dict[str, dict] = {}
+        self.query_stats: dict[str, dict[str, Any]] = {}
 
     def record_query(
         self,
         query_name: str,
         duration_ms: float,
-        parameters: dict | None = None,
+        parameters: dict[str, Any] | None = None,
         result_count: int | None = None,
-    ):
+    ) -> None:
         """记录查询性能数据"""
         if not self.enabled:
             return
@@ -89,7 +89,7 @@ class PerformanceMonitor:
             ),
         }
 
-    def reset_stats(self):
+    def reset_stats(self) -> None:
         """重置统计信息"""
         self.query_stats.clear()
         logger.info("Performance statistics reset")
@@ -99,12 +99,12 @@ class PerformanceMonitor:
 performance_monitor = PerformanceMonitor()
 
 
-def monitor_query(query_name: str):
+def monitor_query(query_name: str) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """查询性能监控装饰器"""
 
-    def decorator(func: Callable):
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             start_time = time.time()
             try:
                 result = func(*args, **kwargs)
@@ -141,13 +141,13 @@ def monitor_query(query_name: str):
 class QueryOptimizer:
     """查询优化器"""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: Session) -> None:
         self.db = db
         self.cache_enabled = get_config("cache_enabled", False)
         self.cache_ttl = get_config("cache_ttl_seconds", 3600)
 
     @contextmanager
-    def query_with_monitoring(self, query_name: str):
+    def query_with_monitoring(self, query_name: str) -> Generator[None, None, None]:
         """带监控的查询上下文管理器"""
         start_time = time.time()
         try:
@@ -158,7 +158,7 @@ class QueryOptimizer:
                 query_name=query_name, duration_ms=duration_ms
             )
 
-    def optimize_asset_query(self, include_related: bool = False):
+    def optimize_asset_query(self, include_related: bool = False) -> Any:
         """优化资产查询"""
         with self.query_with_monitoring("optimized_asset_query"):
             from ..models.asset import Asset
@@ -176,11 +176,11 @@ class QueryOptimizer:
     def optimize_asset_list_query(
         self,
         search: str | None = None,
-        filters: dict | None = None,
+        filters: dict[str, Any] | None = None,
         order_by: str | None = None,
         limit: int | None = None,
         offset: int | None = None,
-    ):
+    ) -> Any:
         """优化资产列表查询"""
         from ..models.asset import Asset
 
@@ -220,7 +220,7 @@ class QueryOptimizer:
 
             return query
 
-    def optimize_batch_update_query(self, asset_ids: list[str], update_data: dict):
+    def optimize_batch_update_query(self, asset_ids: list[str], update_data: dict[str, Any]) -> int:
         """优化批量更新查询"""
         from ..models.asset import Asset
 
@@ -229,10 +229,10 @@ class QueryOptimizer:
             return (
                 self.db.query(Asset)
                 .filter(Asset.id.in_(asset_ids))
-                .update(update_data, synchronize_session=False)
+                .update(update_data, synchronize_session=False)  # type: ignore[arg-type]
             )
 
-    def optimize_statistics_query(self):
+    def optimize_statistics_query(self) -> Any:
         """优化统计查询"""
         from ..models.asset import Asset
 
@@ -255,19 +255,19 @@ class QueryOptimizer:
 class CacheManager:
     """缓存管理器"""
 
-    def __init__(self):
-        self.cache = {}
+    def __init__(self) -> None:
+        self.cache: dict[str, dict[str, Any]] = {}
         self.cache_enabled = get_config("cache_enabled", False)
         self.default_ttl = get_config("cache_ttl_seconds", 3600)
         self.max_size = get_config("cache_max_size", 1000)
 
-    def _is_expired(self, cache_item: dict) -> bool:
+    def _is_expired(self, cache_item: dict[str, Any] | None) -> bool:
         """检查缓存是否过期"""
         if not cache_item:
             return True
-        return datetime.now(UTC) > cache_item["expires_at"]
+        return datetime.now(UTC) > cache_item["expires_at"]  # type: ignore[no-any-return]
 
-    def _cleanup_expired(self):
+    def _cleanup_expired(self) -> None:
         """清理过期缓存"""
         expired_keys = [
             key for key, item in self.cache.items() if self._is_expired(item)
@@ -336,12 +336,12 @@ class CacheManager:
 cache_manager = CacheManager()
 
 
-def cached(ttl: int | None = None, key_prefix: str = ""):
+def cached(ttl: int | None = None, key_prefix: str = "") -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """缓存装饰器"""
 
-    def decorator(func: Callable):
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             # 生成缓存键
             cache_key = f"{key_prefix}:{func.__name__}:{hash(str(args) + str(kwargs))}"
 
@@ -366,11 +366,11 @@ def cached(ttl: int | None = None, key_prefix: str = ""):
 class DatabaseOptimizer:
     """数据库优化器"""
 
-    def __init__(self, db: Session):
+    def __init__(self, db: Session) -> None:
         self.db = db
         self.query_optimizer = QueryOptimizer(db)
 
-    def create_indexes(self):  # pragma: no cover
+    def create_indexes(self) -> None:  # pragma: no cover
         """创建数据库索引"""
         from ..models.asset import Asset  # pragma: no cover
 
@@ -398,7 +398,7 @@ class DatabaseOptimizer:
 
         for index in indexes:  # pragma: no cover
             try:  # pragma: no cover
-                index.create(self.db.bind)  # pragma: no cover
+                index.create(self.db.bind)  # type: ignore[arg-type]  # pragma: no cover
                 logger.info(f"Created index: {index.name}")  # pragma: no cover
             except Exception as e:  # pragma: no cover
                 logger.warning(
@@ -430,7 +430,7 @@ class DatabaseOptimizer:
             "recommendations": self._generate_recommendations(slow_queries),
         }
 
-    def _generate_recommendations(self, slow_queries: list[dict]) -> list[str]:
+    def _generate_recommendations(self, slow_queries: list[dict[str, Any]]) -> list[str]:
         """生成优化建议"""
         recommendations = []
 
@@ -442,7 +442,7 @@ class DatabaseOptimizer:
                     f"考虑优化批量更新操作: {query_name} (平均耗时: {query['avg_duration_ms']:.2f}ms)"
                 )
 
-            if "list[Any]" in query_name and query["avg_duration_ms"] > 300:
+            if "list" in query_name and query["avg_duration_ms"] > 300:
                 recommendations.append(
                     f"考虑为列表查询添加分页和索引: {query_name} (平均耗时: {query['avg_duration_ms']:.2f}ms)"
                 )
@@ -464,7 +464,7 @@ def get_performance_stats() -> dict[str, Any]:
     return performance_monitor.get_stats()
 
 
-def reset_performance_stats():
+def reset_performance_stats() -> None:
     """重置性能统计"""
     performance_monitor.reset_stats()
 
@@ -484,7 +484,7 @@ def get_cache_stats() -> dict[str, Any]:
         }  # pragma: no cover
 
 
-def clear_cache():
+def clear_cache() -> None:
     """清空缓存"""
     cache_manager.clear()
 
@@ -492,7 +492,7 @@ def clear_cache():
 if __name__ == "__main__":
     # 测试性能监控
     @monitor_query("test_query")
-    def test_function():
+    def test_function() -> dict[str, str]:
         time.sleep(0.1)  # 模拟慢查询
         return {"result": "test"}
 
