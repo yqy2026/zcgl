@@ -80,7 +80,7 @@ async def get_system_settings(
         raise HTTPException(status_code=500, detail=f"获取系统设置失败: {str(e)}")
 
 
-@router.put("/settings", summary="更新系统设置")
+@router.put("/settings", summary="更新系统设置", response_model=None)
 async def update_system_settings(
     settings: SystemSettings,
     db: Annotated[Session, Depends(get_db)],
