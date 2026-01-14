@@ -133,7 +133,7 @@ const OrganizationPage: React.FC = () => {
           </Tag>
         </span>
       ),
-      children: org.children ? _convertToTreeData(org.children) : []
+      children: org.children != null && org.children.length > 0 ? _convertToTreeData(org.children) : []
     }));
   };
 
@@ -148,7 +148,7 @@ const OrganizationPage: React.FC = () => {
           </Tag>
         </span>
       ),
-      children: node.children ? convertTreeToDataNodes(node.children) : []
+      children: node.children != null && node.children.length > 0 ? convertTreeToDataNodes(node.children) : []
     }));
   };
 
@@ -159,12 +159,12 @@ const OrganizationPage: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     const statusConfig = statusOptions.find(s => s.value === status);
-    return statusConfig?.color || 'default';
+    return statusConfig?.color ?? 'default';
   };
 
   const getStatusLabel = (status: string) => {
     const statusConfig = statusOptions.find(s => s.value === status);
-    return statusConfig?.label || status;
+    return statusConfig?.label ?? status;
   };
 
   const handleSearch = async (keyword: string) => {
@@ -194,7 +194,7 @@ const OrganizationPage: React.FC = () => {
     setEditingOrganization(organization);
     form.setFieldsValue({
       ...organization,
-      parent_id: organization.parent_id || undefined
+      parent_id: organization.parent_id ?? undefined
     });
     setModalVisible(true);
   };
@@ -259,7 +259,7 @@ const OrganizationPage: React.FC = () => {
       key: 'type',
       render: (type) => {
         const typeConfig = organizationTypes.find(t => t.value === type);
-        return typeConfig?.label || type;
+        return typeConfig?.label ?? type;
       }
     },
     {
@@ -273,8 +273,8 @@ const OrganizationPage: React.FC = () => {
       dataIndex: 'leader_name',
       key: 'leader_name',
       render: (name, record) => (
-        name ? (
-          <Tooltip title={`电话: ${record.leader_phone || '未设置'} | 邮箱: ${record.leader_email || '未设置'}`}>
+        name != null ? (
+          <Tooltip title={`电话: ${record.leader_phone ?? '未设置'} | 邮箱: ${record.leader_email ?? '未设置'}`}>
             <span>{name}</span>
           </Tooltip>
         ) : '-'
@@ -345,7 +345,7 @@ const OrganizationPage: React.FC = () => {
           update: { label: '更新', color: 'blue' },
           delete: { label: '删除', color: 'red' }
         };
-        const config = actionMap[action] || { label: action, color: 'default' };
+        const config = actionMap[action] ?? { label: action ?? '未知', color: 'default' };
         return <Tag color={config.color}>{config.label}</Tag>;
       }
     },
@@ -353,25 +353,25 @@ const OrganizationPage: React.FC = () => {
       title: '字段名称',
       dataIndex: 'field_name',
       key: 'field_name',
-      render: (field) => field || '-'
+      render: (field) => field ?? '-'
     },
     {
       title: '原值',
       dataIndex: 'old_value',
       key: 'old_value',
-      render: (value) => value || '-'
+      render: (value) => value ?? '-'
     },
     {
       title: '新值',
       dataIndex: 'new_value',
       key: 'new_value',
-      render: (value) => value || '-'
+      render: (value) => value ?? '-'
     },
     {
       title: '操作人',
       dataIndex: 'created_by',
       key: 'created_by',
-      render: (user) => user || '系统'
+      render: (user) => user ?? '系统'
     },
     {
       title: '操作时间',

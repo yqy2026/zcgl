@@ -156,18 +156,16 @@ const ContractDetailPage: React.FC = () => {
       />
 
       {/* 终止合同模态框 */}
-      {contract && (
-        <ContractTerminateModal
-          visible={terminateModalVisible}
-          contract={contract}
-          onCancel={() => setTerminateModalVisible(false)}
-          onSuccess={() => {
-            setTerminateModalVisible(false);
-            // 刷新合同详情数据
-            queryClient.invalidateQueries({ queryKey: ['rent-contract', id] });
-          }}
-        />
-      )}
+      <ContractTerminateModal
+        visible={terminateModalVisible}
+        contract={contract}
+        onCancel={() => setTerminateModalVisible(false)}
+        onSuccess={() => {
+          setTerminateModalVisible(false);
+          // 刷新合同详情数据
+          queryClient.invalidateQueries({ queryKey: ['rent-contract', id] });
+        }}
+      />
     </div>
   );
 };

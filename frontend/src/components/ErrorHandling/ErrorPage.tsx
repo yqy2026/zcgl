@@ -86,7 +86,7 @@ const ErrorPage: React.FC<ErrorPageProps> = ({
   const config = errorConfigs[type];
 
   const handleBack = () => {
-    if (onBack) {
+    if (onBack !== undefined && onBack !== null) {
       onBack();
     } else {
       navigate(-1);
@@ -94,7 +94,7 @@ const ErrorPage: React.FC<ErrorPageProps> = ({
   };
 
   const handleHome = () => {
-    if (onHome) {
+    if (onHome !== undefined && onHome !== null) {
       onHome();
     } else {
       navigate('/');
@@ -102,7 +102,7 @@ const ErrorPage: React.FC<ErrorPageProps> = ({
   };
 
   const handleReload = () => {
-    if (onReload) {
+    if (onReload !== undefined && onReload !== null) {
       onReload();
     } else {
       window.location.reload();
@@ -205,7 +205,7 @@ const ErrorPage: React.FC<ErrorPageProps> = ({
   const getActionButtons = () => {
     const buttons = [];
 
-    if (showBackButton) {
+    if (showBackButton !== undefined && showBackButton !== null) {
       buttons.push(
         <Button key="back" icon={<ArrowLeftOutlined />} onClick={handleBack}>
           返回上页
@@ -213,7 +213,7 @@ const ErrorPage: React.FC<ErrorPageProps> = ({
       );
     }
 
-    if (showHomeButton) {
+    if (showHomeButton !== undefined && showHomeButton !== null) {
       buttons.push(
         <Button key="home" icon={<HomeOutlined />} onClick={handleHome}>
           返回首页

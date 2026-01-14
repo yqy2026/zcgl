@@ -41,9 +41,9 @@ export const LoadingProvider: React.FC<{ children: ReactNode }> = ({ children })
   const showGlobalLoading = useCallback((state: Partial<LoadingState>) => {
     setGlobalLoading(prev => ({
       loading: true,
-      text: state.text || prev.text,
-      tip: state.tip || prev.tip,
-      delay: state.delay || prev.delay,
+      text: (state.text !== undefined && state.text !== null && state.text !== '') ? state.text : prev.text,
+      tip: (state.tip !== undefined && state.tip !== null && state.tip !== '') ? state.tip : prev.tip,
+      delay: (state.delay !== undefined && state.delay !== null) ? state.delay : prev.delay,
     }))
   }, [])
 
@@ -71,7 +71,7 @@ export const LoadingProvider: React.FC<{ children: ReactNode }> = ({ children })
     setLocalLoadings(prev => {
       const newMap = new Map(prev)
       const current = newMap.get(key)
-      if (current) {
+      if (current !== undefined && current !== null) {
         newMap.set(key, { ...current, loading: false })
       }
       return newMap
@@ -136,7 +136,7 @@ export const useGlobalLoading = () => {
 export const useLocalLoading = (key: string) => {
   const { showLocalLoading, hideLocalLoading, localLoadings } = useLoading()
 
-  const loading = localLoadings.get(key)?.loading || false
+  const loading = localLoadings.get(key)?.loading ?? false
   const loadingState = localLoadings.get(key) || { loading: false }
 
   return {
@@ -151,7 +151,7 @@ export const useLocalLoading = (key: string) => {
 export const GlobalLoadingOverlay: React.FC = () => {
   const { globalLoading } = useLoading()
 
-  if (!globalLoading.loading) {
+  if (globalLoading.loading === false) {
     return null
   }
 
@@ -172,7 +172,8 @@ export const GlobalLoadingOverlay: React.FC = () => {
     >
       <Spin
         size="large"
-        tip={globalLoading.tip || globalLoading.text || '加载中...'}
+        tip={(globalLoading.tip !== undefined && globalLoading.tip !== null && globalLoading.tip !== '') ? globalLoading.tip :
+             (globalLoading.text !== undefined && globalLoading.text !== null && globalLoading.text !== '') ? globalLoading.text : '加载中...'}
         delay={globalLoading.delay}
       />
     </div>
@@ -204,7 +205,7 @@ export const LocalLoading: React.FC<LocalLoadingProps> = ({
   return (
     <Spin
       spinning={loading}
-      tip={tip || text}
+      tip={tip ?? text}
       delay={delay}
       size={size}
       className={className}
@@ -234,7 +235,7 @@ export const LoadingButton: React.FC<LoadingButtonProps> = ({
   style,
 }) => {
   const handleClick = useCallback(async () => {
-    if (onClick && !loading) {
+    if (onClick !== undefined && onClick !== null && typeof onClick === 'function' && loading === false) {
       try {
         await onClick()
       } catch (error) {
@@ -249,9 +250,9 @@ export const LoadingButton: React.FC<LoadingButtonProps> = ({
       style={{
         ...style,
         opacity: loading ? 0.6 : 1,
-        cursor: loading ? 'not-allowed' : disabled ? 'not-allowed' : 'pointer',
+        cursor: loading ? 'not-allowed' : (disabled ?? false) ? 'not-allowed' : 'pointer',
       }}
-      disabled={disabled || loading}
+      disabled={(disabled ?? false) || loading}
       onClick={handleClick}
     >
       {loading && (

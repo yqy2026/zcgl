@@ -24,7 +24,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 }) => {
   const renderElement = () => {
     // 如果没有权限要求，直接渲染组件
-    if (!permissions || permissions.length === 0) {
+    if (permissions == null || permissions.length === 0) {
       return <Component />
     }
 

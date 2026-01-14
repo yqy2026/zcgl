@@ -16,7 +16,7 @@ export const validationRules = {
   // 必填验证
   required: (message?: string) => ({
     required: true,
-    message: message || '此字段为必填项'
+    message: message ?? '此字段为必填项'
   }),
 
   // 邮箱验证
@@ -122,7 +122,7 @@ export const userValidationRules = {
   ],
   confirmPassword: (passwordFieldName: string = 'password') => ({
     validator: (_: FormValidationRule, value: string) => {
-      if (!value) {
+      if (value == null || value === '') {
         return Promise.reject('请确认密码')
       }
       if (value !== document.querySelector(`[name="${passwordFieldName}"]`)?.getAttribute('value')) {
@@ -201,7 +201,7 @@ export const customValidators = {
   // 验证两次密码是否一致
   passwordMatch: (getForm: () => { getFieldValue: (field: string) => unknown }) => ({
     validator: (_: FormValidationRule, value: string) => {
-      if (!value || getForm().getFieldValue('password') === value) {
+      if (value == null || getForm().getFieldValue('password') === value) {
         return Promise.resolve()
       }
       return Promise.reject(new Error('两次输入的密码不一致'))
@@ -212,12 +212,12 @@ export const customValidators = {
   dateRange: (startDateField: string, _endDateField: string) => ({
     validator: (_: FormValidationRule, value: string) => {
       const form = document.querySelector('form')
-      if (!form) return Promise.resolve()
+      if (form == null) return Promise.resolve()
 
       const startDate = (form.querySelector(`[name="${startDateField}"]`) as HTMLInputElement)?.value
       const endDate = value
 
-      if (startDate && endDate && new Date(startDate) >= new Date(endDate)) {
+      if (startDate != null && endDate != null && startDate !== '' && endDate !== '' && new Date(startDate) >= new Date(endDate)) {
         return Promise.reject(new Error('结束日期必须大于开始日期'))
       }
       return Promise.resolve()
@@ -229,7 +229,7 @@ export const customValidators = {
     validator: (_: FormValidationRule, value: number) => {
       if (value === undefined || value === null) return Promise.resolve()
       if (value < min || value > max) {
-        return Promise.reject(new Error(message || `数值应在${min}-${max}之间`))
+        return Promise.reject(new Error(message ?? `数值应在${min}-${max}之间`))
       }
       return Promise.resolve()
     }
@@ -238,9 +238,9 @@ export const customValidators = {
   // 验证字符串长度
   stringLength: (min: number, max: number, message?: string) => ({
     validator: (_: FormValidationRule, value: string) => {
-      if (!value) return Promise.resolve()
+      if (value == null || value === '') return Promise.resolve()
       if (value.length < min || value.length > max) {
-        return Promise.reject(new Error(message || `长度应在${min}-${max}个字符之间`))
+        return Promise.reject(new Error(message ?? `长度应在${min}-${max}个字符之间`))
       }
       return Promise.resolve()
     }

@@ -86,8 +86,8 @@ export class ProjectService {
     try {
       // 确保提供必需的分页参数
       const requestParams = {
-        page: params?.page || 1,
-        size: params?.size || 10,
+        page: params?.page ?? 1,
+        size: params?.size ?? 10,
         keyword: params?.keyword,
         is_active: params?.is_active,
         ownership_id: params?.ownership_id,
@@ -278,7 +278,7 @@ export class ProjectService {
     try {
       const promises = ids.map(id => this.getProject(id));
       const projects = await Promise.all(promises);
-      return projects.filter(project => project && project.is_active);
+      return projects.filter(project => project != null && project.is_active);
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);
       projectLogger.error('批量获取项目信息失败:', undefined, { error: enhancedError.message });
@@ -362,11 +362,11 @@ export class ProjectService {
   async canDeleteProject(id: string): Promise<{ canDelete: boolean; reason?: string }> {
     try {
       const project = await this.getProject(id);
-      if (!project) {
+      if (project == null) {
         return { canDelete: false, reason: '项目不存在' };
       }
 
-      if (project.asset_count && project.asset_count > 0) {
+      if (project.asset_count != null && project.asset_count > 0) {
         return {
           canDelete: false,
           reason: `该项目还有 ${project.asset_count} 个关联资产，无法删除`
@@ -547,8 +547,8 @@ export class ProjectService {
 
       return {
         project,
-        assetCount: projectStats.asset_count || project.asset_count || 0,
-        totalArea: projectStats.total_area || 0,
+        assetCount: projectStats.asset_count ?? project.asset_count ?? 0,
+        totalArea: projectStats.total_area ?? 0,
         lastUpdated: project.updated_at
       };
     } catch (error) {

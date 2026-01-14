@@ -77,14 +77,14 @@ export const userService = {
     const data = response.data
 
     // 如果直接是 UserListResponse 格式（包含 items、total 等）
-    if (data && typeof data === 'object' && 'items' in data && 'total' in data) {
+    if (data != null && typeof data === 'object' && 'items' in data && 'total' in data) {
       return data as UserListResponse
     }
 
     // 如果只是 items 数组，包装成 UserListResponse
     if (Array.isArray(data)) {
       return {
-        items: data,
+        items: data as User[],
         total: data.length,
         page: 1,
         limit: data.length,

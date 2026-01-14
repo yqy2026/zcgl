@@ -364,7 +364,7 @@ export function assert<T>(
   message?: string
 ): asserts value is T {
   if (!guard(value)) {
-    throw new TypeError(message || `Type assertion failed: ${typeof value}`);
+    throw new TypeError(message ?? `Type assertion failed: ${typeof value}`);
   }
 }
 
@@ -376,7 +376,7 @@ export function assertNotNullish<T>(
   message?: string
 ): asserts value is T {
   if (isNullish(value)) {
-    throw new TypeError(message || 'Value should not be null or undefined');
+    throw new TypeError(message ?? 'Value should not be null or undefined');
   }
 }
 
@@ -388,7 +388,7 @@ export function assertTrue(
   message?: string
 ): asserts condition is true {
   if (!condition) {
-    throw new Error(message || 'Assertion failed: condition is not true');
+    throw new Error(message ?? 'Assertion failed: condition is not true');
   }
 }
 

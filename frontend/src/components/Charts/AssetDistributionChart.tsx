@@ -73,7 +73,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
       value: item.count,
       percentage: item.percentage,
       total_area: item.total_area,
-    })) || [],
+    })) ?? [],
     angleField: 'value',
     colorField: 'type',
     color: ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#fa8c16'],
@@ -94,7 +94,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
       }),
       customContent: (title: any, data: any) => {
         const datum = data?.[0]?.data
-        if (!datum) return null
+        if (datum == null) return null
         return (
           <div style={{ padding: '8px' }}>
             <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{datum.type}</div>
@@ -113,7 +113,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
       type: item.ownership_status,
       value: item.count,
       percentage: item.percentage,
-    })) || [],
+    })) ?? [],
     angleField: 'value',
     colorField: 'type',
     color: ['#52c41a', '#ff4d4f', '#faad14', '#1890ff'],
@@ -147,7 +147,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
       type: item.usage_status,
       value: item.count,
       percentage: item.percentage,
-    })) || [],
+    })) ?? [],
     angleField: 'value',
     colorField: 'type',
     color: ['#52c41a', '#ff4d4f', '#1890ff', '#722ed1', '#faad14'],
@@ -179,7 +179,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
       percentage: item.percentage,
       total_area: item.total_area,
       full_name: item.ownership_entity,
-    })) || [],
+    })) ?? [],
     xField: 'entity',
     yField: 'count',
     color: '#1890ff',
@@ -198,15 +198,15 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
     },
     tooltip: {
       formatter: (datum: any) => ({
-        name: datum.full_name || datum.entity,
+        name: datum.full_name ?? datum.entity,
         value: `${datum.count} 个`,
       }),
       customContent: (title: any, data: any) => {
         const datum = data?.[0]?.data
-        if (!datum) return null
+        if (datum == null) return null
         return (
           <div style={{ padding: '8px' }}>
-            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{datum.full_name || datum.entity}</div>
+            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{datum.full_name ?? datum.entity}</div>
             <div>资产数量: {datum.count} 个</div>
             <div>占比: {datum.percentage?.toFixed(1)}%</div>
             <div>总面积: {datum.total_area?.toLocaleString()} ㎡</div>
@@ -233,7 +233,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
     },
   }
 
-  if (error) {
+  if (error !== undefined && error !== null) {
     return (
       <Alert
         message="数据加载失败"
@@ -252,7 +252,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
           <Card>
             <Statistic
               title="资产总数"
-              value={data?.total_assets || 0}
+              value={data?.total_assets ?? 0}
               suffix="个"
               prefix={<HomeOutlined />}
               valueStyle={{ color: '#1890ff' }}
@@ -264,7 +264,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
           <Card>
             <Statistic
               title="总面积"
-              value={data?.summary?.total_area || 0}
+              value={data?.summary?.total_area ?? 0}
               suffix="㎡"
               formatter={(value) => `${Number(value).toLocaleString()}`}
               valueStyle={{ color: '#52c41a' }}
@@ -276,7 +276,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
           <Card>
             <Statistic
               title="权属方数量"
-              value={data?.by_ownership_entity?.length || 0}
+              value={data?.by_ownership_entity?.length ?? 0}
               suffix="个"
               prefix={<UserOutlined />}
               valueStyle={{ color: '#722ed1' }}
@@ -288,7 +288,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
           <Card>
             <Statistic
               title="经营类面积"
-              value={data?.summary?.commercial_area || 0}
+              value={data?.summary?.commercial_area ?? 0}
               suffix="㎡"
               formatter={(value) => `${Number(value).toLocaleString()}`}
               valueStyle={{ color: '#faad14' }}
@@ -347,7 +347,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
                   justifyContent: 'space-between', 
                   alignItems: 'center',
                   padding: '8px 0',
-                  borderBottom: index < (data.by_property_nature?.length || 0) - 1 ? '1px solid #f0f0f0' : 'none'
+                  borderBottom: index < (data.by_property_nature?.length ?? 0) - 1 ? '1px solid #f0f0f0' : 'none'
                 }}>
                   <div>
                     <Space>
@@ -381,7 +381,7 @@ const AssetDistributionChart: React.FC<AssetDistributionChartProps> = ({
                   justifyContent: 'space-between', 
                   alignItems: 'center',
                   padding: '8px 0',
-                  borderBottom: index < (data.by_usage_status?.length || 0) - 1 ? '1px solid #f0f0f0' : 'none'
+                  borderBottom: index < (data.by_usage_status?.length ?? 0) - 1 ? '1px solid #f0f0f0' : 'none'
                 }}>
                   <div>
                     <Space>

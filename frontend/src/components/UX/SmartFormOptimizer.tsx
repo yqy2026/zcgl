@@ -78,7 +78,7 @@ const SmartFormOptimizer: React.FC<SmartFormOptimizerProps> = ({
 
       // 验证必填字段
       fields.forEach(field => {
-        if (field.required && !values[field.name]) {
+        if (field.required === true && values[field.name] == null) {
           newErrors[field.name] = `${field.label}为必填项`
         }
       })
@@ -87,7 +87,7 @@ const SmartFormOptimizer: React.FC<SmartFormOptimizerProps> = ({
       fields.forEach(field => {
         if (field.validation && values[field.name] !== undefined && values[field.name] !== null) {
           field.validation.forEach(rule => {
-            if (rule.required && !values[field.name]) {
+            if (rule.required === true && values[field.name] == null) {
               newErrors[field.name] = rule.message
             }
             if (rule.min !== undefined && (values[field.name] as any) < rule.min) {
@@ -133,8 +133,8 @@ const SmartFormOptimizer: React.FC<SmartFormOptimizerProps> = ({
             style={{ width: '100%' }}
             min={0}
             max={field.maxLength}
-            formatter={value => `${value}${field.suffix || ''}`}
-            parser={value => value?.replace(new RegExp(`${field.suffix || ''}$`), '') as any}
+            formatter={value => `${value}${field.suffix ?? ''}`}
+            parser={value => value?.replace(new RegExp(`${field.suffix ?? ''}$`), '') as any}
           />
         )
 
@@ -207,7 +207,7 @@ const SmartFormOptimizer: React.FC<SmartFormOptimizerProps> = ({
 
       {Object.keys(errors).length > 0 && (
         <div style={{ marginTop: 16 }}>
-          {errors.general && (
+              {errors.general != null && (
             <div style={{ color: '#ff4d4f', marginBottom: 8 }}>
               {errors.general}
             </div>

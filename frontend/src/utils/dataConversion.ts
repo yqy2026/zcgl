@@ -221,7 +221,7 @@ export const validateNumericFields = (asset: Record<string, unknown>): string[] 
   // 验证面积逻辑关系
   const rentableArea = asset.rentable_area
   const rentedArea = asset.rented_area
-  if (rentableArea && rentedArea) {
+  if (rentableArea != null && rentedArea != null) {
     const rArea = typeof rentableArea === 'number' ? rentableArea : parseFloat(String(rentableArea))
     const rdArea = typeof rentedArea === 'number' ? rentedArea : parseFloat(String(rentedArea))
     if (!isNaN(rArea) && !isNaN(rdArea) && rdArea > rArea) {

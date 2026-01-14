@@ -122,7 +122,7 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
     const beforeDangerous = tempFixed;
     tempFixed = tempFixed.replace(dangerousChars, '_');
     if (beforeDangerous !== tempFixed) {
-      const dangerousMatches = beforeDangerous.match(/[<>:"/\\|?*]/g) || [];
+      const dangerousMatches = beforeDangerous.match(/[<>:"/\\|?*]/g) ?? [];
       dangerousMatches.forEach(char => {
         changes.push({
           original: char,
@@ -191,7 +191,7 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
   };
 
   useEffect(() => {
-    if (visible && originalFilename) {
+    if (visible !== undefined && visible !== null &&  originalFilename) {
       validateAndSuggest();
     }
   }, [visible, originalFilename]);
@@ -344,7 +344,7 @@ export const FilenameFixDialog: React.FC<FilenameFixDialogProps> = ({
 
   const renderStepContent = () => {
     const currentStepData = steps[currentStep];
-    if (!currentStepData) return null;
+    if (currentStepData == null) return null;
 
     return (
       <div style={{ padding: '20px 0' }}>

@@ -114,7 +114,7 @@ const EnumFieldPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (selectedTypeId) {
+    if (selectedTypeId != null) {
       loadEnumValues(selectedTypeId);
     }
   }, [selectedTypeId]);
@@ -125,16 +125,16 @@ const EnumFieldPage: React.FC = () => {
       if (editingValue) {
         // 编辑模式 - 设置表单字段值
         const formData = {
-          label: String(editingValue.label || ''),
-          value: String(editingValue.value || ''),
-          code: String(editingValue.code || ''),
-          description: String(editingValue.description || ''),
-          sort_order: Number(editingValue.sort_order || 0),
-          color: String(editingValue.color || ''),
-          icon: String(editingValue.icon || ''),
+          label: String(editingValue.label ?? ''),
+          value: String(editingValue.value ?? ''),
+          code: String(editingValue.code ?? ''),
+          description: String(editingValue.description ?? ''),
+          sort_order: Number(editingValue.sort_order ?? 0),
+          color: String(editingValue.color ?? ''),
+          icon: String(editingValue.icon ?? ''),
           is_active: Boolean(editingValue.is_active),
           is_default: Boolean(editingValue.is_default),
-          enum_type_id: String(editingValue.enum_type_id || selectedTypeId)
+          enum_type_id: String(editingValue.enum_type_id ?? selectedTypeId)
         };
 
         // 使用 setTimeout 确保 modal 完全打开后再设置表单值
@@ -153,7 +153,7 @@ const EnumFieldPage: React.FC = () => {
           icon: '',
           is_active: true,
           is_default: false,
-          enum_type_id: String(selectedTypeId || '')
+          enum_type_id: String(selectedTypeId ?? '')
         };
 
         // 使用 setTimeout 确保 modal 完全打开后再设置表单值
@@ -187,7 +187,7 @@ const EnumFieldPage: React.FC = () => {
       title: '类别',
       dataIndex: 'category',
       key: 'category',
-      render: (text) => text || '-',
+      render: (text) => text ?? '-',
     },
     {
       title: '配置',
@@ -274,13 +274,13 @@ const EnumFieldPage: React.FC = () => {
       title: '编码',
       dataIndex: 'code',
       key: 'code',
-      render: (text) => text ? <code>{text}</code> : '-',
+      render: (text) => text != null ? <code>{text}</code> : '-',
     },
     {
       title: '颜色',
       dataIndex: 'color',
       key: 'color',
-      render: (color) => color ? (
+      render: (color) => color != null ? (
         <Space>
           <div
             style={{
@@ -359,12 +359,12 @@ const EnumFieldPage: React.FC = () => {
       }
     } catch (error: unknown) {
       const apiError = error as ApiError
-      MessageManager.error(apiError?.message || '删除失败');
+      MessageManager.error(apiError?.message ?? '删除失败');
     }
   };
 
   const handleCreateValue = () => {
-    if (!selectedTypeId) {
+    if (selectedTypeId == null) {
       MessageManager.warning('请先选择枚举类型');
       return;
     }
@@ -381,10 +381,10 @@ const EnumFieldPage: React.FC = () => {
 
   const handleDeleteValue = async (id: string) => {
     try {
-      const success = await unifiedDictionaryService.deleteEnumValue(id)
-      if (success) {
+      const result = await unifiedDictionaryService.deleteEnumValue(id)
+      if (result.success) {
         MessageManager.success('删除成功');
-        if (selectedTypeId) {
+        if (selectedTypeId != null) {
           loadEnumValues(selectedTypeId);
         }
       } else {
@@ -392,7 +392,7 @@ const EnumFieldPage: React.FC = () => {
       }
     } catch (error: unknown) {
       const apiError = error as ApiError
-      MessageManager.error(apiError?.message || '删除失败');
+      MessageManager.error(apiError?.message ?? '删除失败');
     }
   };
 
@@ -426,7 +426,7 @@ const EnumFieldPage: React.FC = () => {
   const handleValueSubmit = async (values: EnumValueFormValues) => {
     try {
       let success = false
-      if (editingValue && selectedTypeId) {
+      if (editingValue != null && selectedTypeId != null) {
         // For update, we need to cast values to UpdateEnumFieldValueRequest as it might contain extra fields or we just pick what we need
         // But UpdateEnumFieldValueRequest is subset/compatible mostly.
         const updateData: UpdateEnumFieldValueRequest = {
@@ -442,14 +442,14 @@ const EnumFieldPage: React.FC = () => {
         }
         success = await unifiedDictionaryService.updateEnumFieldValue(selectedTypeId, editingValue.id, updateData) !== null
       } else {
-        success = await unifiedDictionaryService.addEnumFieldValue(editingValue?.enum_type_id || selectedTypeId!, values) !== null
+        success = await unifiedDictionaryService.addEnumFieldValue(editingValue?.enum_type_id ?? selectedTypeId!, values) !== null
       }
 
       if (success) {
         MessageManager.success(editingValue ? '更新成功' : '创建成功');
         setValueModalVisible(false);
         setEditingValue(null);
-        if (selectedTypeId) {
+        if (selectedTypeId != null) {
           loadEnumValues(selectedTypeId);
         }
       } else {
@@ -468,7 +468,7 @@ const EnumFieldPage: React.FC = () => {
           <Card>
             <Statistic
               title="枚举类型总数"
-              value={statistics?.total_types || 0}
+              value={statistics?.total_types ?? 0}
               valueStyle={{ color: COLORS.primary }}
             />
           </Card>
@@ -477,7 +477,7 @@ const EnumFieldPage: React.FC = () => {
           <Card>
             <Statistic
               title="启用类型"
-              value={statistics?.active_types || 0}
+              value={statistics?.active_types ?? 0}
               valueStyle={{ color: COLORS.success }}
             />
           </Card>
@@ -486,7 +486,7 @@ const EnumFieldPage: React.FC = () => {
           <Card>
             <Statistic
               title="枚举值总数"
-              value={statistics?.total_values || 0}
+              value={statistics?.total_values ?? 0}
               valueStyle={{ color: COLORS.primary }}
             />
           </Card>
@@ -495,7 +495,7 @@ const EnumFieldPage: React.FC = () => {
           <Card>
             <Statistic
               title="使用次数"
-              value={statistics?.usage_count || 0}
+              value={statistics?.usage_count ?? 0}
               valueStyle={{ color: COLORS.warning }}
             />
           </Card>
@@ -547,7 +547,7 @@ const EnumFieldPage: React.FC = () => {
                   type="primary"
                   icon={<PlusOutlined />}
                   onClick={handleCreateValue}
-                  disabled={!selectedTypeId}
+                  disabled={selectedTypeId == null}
                 >
                   新建枚举值
                 </Button>

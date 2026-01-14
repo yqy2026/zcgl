@@ -161,24 +161,24 @@ export const RentContractFormProvider: React.FC<RentContractFormProviderProps> =
 
     // Initialize form data
     useEffect(() => {
-        if (initialData && mode === 'edit') {
+        if (initialData !== undefined && initialData !== null &&  mode === 'edit') {
             const formData = {
                 ...initialData,
-                sign_date: initialData.sign_date ? dayjs(initialData.sign_date) : undefined,
-                start_date: initialData.start_date ? dayjs(initialData.start_date) : undefined,
-                end_date: initialData.end_date ? dayjs(initialData.end_date) : undefined,
+                sign_date: initialData.sign_date != null ? dayjs(initialData.sign_date) : undefined,
+                start_date: initialData.start_date != null ? dayjs(initialData.start_date) : undefined,
+                end_date: initialData.end_date != null ? dayjs(initialData.end_date) : undefined,
             };
             form.setFieldsValue(formData);
 
-            if (initialData.rent_terms) {
+            if (initialData.rent_terms != null) {
                 const terms = initialData.rent_terms.map((term: RentTermData, index: number) => ({
                     key: `term-${index}`,
                     start_date: dayjs(term.start_date),
                     end_date: dayjs(term.end_date),
                     monthly_rent: term.monthly_rent,
                     rent_description: term.rent_description,
-                    management_fee: term.management_fee || 0,
-                    other_fees: term.other_fees || 0,
+                    management_fee: term.management_fee ?? 0,
+                    other_fees: term.other_fees ?? 0,
                 }));
                 setRentTerms(terms);
             }
@@ -199,32 +199,32 @@ export const RentContractFormProvider: React.FC<RentContractFormProviderProps> =
                 end_date: term.end_date.format('YYYY-MM-DD'),
                 monthly_rent: term.monthly_rent,
                 rent_description: term.rent_description,
-                management_fee: term.management_fee || 0,
-                other_fees: term.other_fees || 0,
-                total_monthly_amount: term.monthly_rent + (term.management_fee || 0) + (term.other_fees || 0),
+                management_fee: term.management_fee ?? 0,
+                other_fees: term.other_fees ?? 0,
+                total_monthly_amount: term.monthly_rent + (term.management_fee ?? 0) + (term.other_fees ?? 0),
             }));
 
             const contractData: RentContractCreate = {
-                contract_number: values.contract_number,
-                asset_ids: values.asset_ids, // V2
-                ownership_id: values.ownership_id,
-                contract_type: values.contract_type, // V2
-                upstream_contract_id: values.upstream_contract_id, // V2
-                service_fee_rate: values.service_fee_rate, // V2
-                tenant_name: values.tenant_name,
-                tenant_usage: values.tenant_usage, // V2
-                tenant_contact: values.tenant_contact,
-                tenant_phone: values.tenant_phone,
-                tenant_address: values.tenant_address,
+                contract_number: values.contract_number as string,
+                asset_ids: values.asset_ids as string[], // V2
+                ownership_id: values.ownership_id as string,
+                contract_type: values.contract_type as string | undefined, // V2
+                upstream_contract_id: values.upstream_contract_id as string | undefined, // V2
+                service_fee_rate: values.service_fee_rate as number | undefined, // V2
+                tenant_name: values.tenant_name as string,
+                tenant_usage: values.tenant_usage as string | undefined, // V2
+                tenant_contact: values.tenant_contact as string | undefined,
+                tenant_phone: values.tenant_phone as string | undefined,
+                tenant_address: values.tenant_address as string | undefined,
                 sign_date: values.sign_date.format('YYYY-MM-DD'),
                 start_date: values.start_date.format('YYYY-MM-DD'),
                 end_date: values.end_date.format('YYYY-MM-DD'),
-                total_deposit: values.total_deposit || 0,
-                monthly_rent_base: values.monthly_rent_base,
-                contract_status: values.contract_status || '有效',
-                payment_cycle: values.payment_cycle, // V2
-                payment_terms: values.payment_terms,
-                contract_notes: values.contract_notes,
+                total_deposit: values.total_deposit ?? 0,
+                monthly_rent_base: values.monthly_rent_base as number,
+                contract_status: values.contract_status ?? '有效',
+                payment_cycle: values.payment_cycle as string | undefined, // V2
+                payment_terms: values.payment_terms as string | undefined,
+                contract_notes: values.contract_notes as string | undefined,
                 rent_terms,
             };
 
@@ -259,11 +259,11 @@ export const RentContractFormProvider: React.FC<RentContractFormProviderProps> =
                 end_date: values.end_date,
                 monthly_rent: values.monthly_rent,
                 rent_description: values.rent_description,
-                management_fee: values.management_fee || 0,
-                other_fees: values.other_fees || 0,
+                management_fee: values.management_fee ?? 0,
+                other_fees: values.other_fees ?? 0,
             };
 
-            if (editingTerm) {
+            if (editingTerm !== undefined && editingTerm !== null) {
                 setRentTerms(prev => prev.map(term =>
                     term.key === editingTerm.key ? termData : term
                 ));

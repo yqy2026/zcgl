@@ -50,19 +50,19 @@ export const SmartLoadingManager: React.FC<SmartLoadingManagerProps> = ({
     loadingQueue.current.push({ ...state, timestamp: Date.now() })
 
     // 限制队列大小
-    if (loadingQueue.current.length > maxQueueSize) {
+    if (loadingQueue.current.length > (maxQueueSize ?? 10)) {
       loadingQueue.current.shift() // 移除最旧的请求
     }
 
     // 延迟显示，避免闪烁
-    const delay = state.delay !== undefined ? state.delay : defaultDelay
-    const timestamp = state.timestamp || Date.now()
+    const delay = state.delay ?? defaultDelay
+    const timestamp = state.timestamp ?? Date.now()
     const timeSinceRequest = Date.now() - timestamp
 
     const showLoadingState = () => {
       // 只显示最新状态
       const latestState = loadingQueue.current[loadingQueue.current.length - 1]
-      if (latestState) {
+      if (latestState !== undefined && latestState !== null) {
         setLoadingState(latestState)
       }
     }
@@ -102,7 +102,7 @@ export const SmartLoadingManager: React.FC<SmartLoadingManagerProps> = ({
   }, [])
 
   const updateProgress = useCallback((progress: number) => {
-    if (loadingState) {
+    if (loadingState !== undefined && loadingState !== null) {
       setLoadingState({ ...loadingState, progress })
     }
   }, [loadingState])
@@ -146,7 +146,7 @@ const SmartLoadingOverlay: React.FC<SmartLoadingOverlayProps> = ({ state }) => {
             />
             <div style={{ marginTop: 16 }}>
               <Progress
-                percent={state.progress || 0}
+                percent={state.progress ?? 0}
                 status="active"
                 strokeColor={{
                   '0%': '#108ee9',
@@ -168,7 +168,7 @@ const SmartLoadingOverlay: React.FC<SmartLoadingOverlayProps> = ({ state }) => {
             <Spin size="large" tip={state.message} />
             <div style={{ marginTop: 16 }}>
               <Progress
-                percent={state.progress || 0}
+                percent={state.progress ?? 0}
                 status="active"
                 strokeColor={{
                   '0%': '#1890ff',
@@ -199,7 +199,7 @@ const SmartLoadingOverlay: React.FC<SmartLoadingOverlayProps> = ({ state }) => {
               <Spin indicator={<LoadingOutlined style={{ fontSize: 20 }} />} tip="数据处理中" />
               <div style={{ marginTop: 12 }}>
                 <Progress
-                  percent={state.progress || 0}
+                  percent={state.progress ?? 0}
                   status="active"
                   size="small"
                   strokeWidth={4}
@@ -230,7 +230,7 @@ const SmartLoadingOverlay: React.FC<SmartLoadingOverlayProps> = ({ state }) => {
             />
             <div style={{ marginTop: 16, marginLeft: 16 }}>
               <Text style={{ color: 'white', fontSize: 16 }}>
-                {state.message || '加载中...'}
+                {state.message ?? '加载中...'}
               </Text>
             </div>
           </div>
@@ -358,7 +358,7 @@ export const SmartPreloader: React.FC<PreloaderProps> = ({
   const [isPreloading, setIsPreloading] = useState(false)
 
   React.useEffect(() => {
-    if (resource && !isPreloaded && !isPreloading) {
+    if (resource !== undefined && resource !== null &&  !isPreloaded && !isPreloading) {
       setIsPreloading(true)
 
       // 创建预加载链接
@@ -384,7 +384,7 @@ export const SmartPreloader: React.FC<PreloaderProps> = ({
     }
   }, [resource, isPreloaded, isPreloading])
 
-  if (fallback && !isPreloaded) {
+  if (fallback !== undefined && fallback !== null &&  !isPreloaded) {
     return <>{fallback}</>
   }
 
@@ -438,7 +438,7 @@ export const SmartProgressTracker: React.FC<ProgressTrackerProps> = ({
         }}
         strokeWidth={8}
         size="small"
-        format={(percent) => `${Math.round(percent || 0)}%`}
+        format={(percent) => `${Math.round(percent ?? 0)}%`}
       />
 
       <div style={{ marginTop: '16px' }}>
@@ -471,7 +471,7 @@ export const SmartProgressTracker: React.FC<ProgressTrackerProps> = ({
               <div style={{ fontWeight: index === current ? 'bold' : 'normal' }}>
                 {step.title}
               </div>
-              {showDetails && step.description && (
+              {showDetails === true && (step.description ?? '') !== '' && (
                 <div style={{
                   fontSize: '12px',
                   color: '#666',

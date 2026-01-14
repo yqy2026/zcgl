@@ -22,7 +22,7 @@ export const useAuth = () => {
           setUser(currentUser)
           // 设置API请求头
           const token = localStorage.getItem('auth_token')
-          if (token) {
+          if (token != null) {
             // 这里可以设置API默认的Authorization header
           }
         }
@@ -43,7 +43,7 @@ export const useAuth = () => {
     try {
       const response = await AuthService.login(credentials) as any
 
-      if (response.success) {
+      if (response.success === true) {
         setUser(response.data.user)
         MessageManager.success('登录成功')
       } else {

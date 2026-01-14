@@ -116,7 +116,7 @@ vi.mock('antd', () => ({
     <div data-testid="slider" data-range={range} data-min={min} data-max={max}>
       <input
         type="range"
-        value={value?.[0] || 0}
+        value={value?.[0] ?? 0}
         onChange={(e) => onChange && onChange([e.target.value, value?.[1]])}
       />
       <input

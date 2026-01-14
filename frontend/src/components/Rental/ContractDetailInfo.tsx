@@ -130,17 +130,17 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
   // 计算统计数据
   const calculateStats = () => {
     const totalMonthlyRent = contract.rent_terms?.reduce(
-      (sum, term) => sum + (term.total_monthly_amount || term.monthly_rent + term.management_fee + term.other_fees),
+      (sum, term) => sum + (term.total_monthly_amount ?? term.monthly_rent + term.management_fee + term.other_fees),
       0
-    ) || 0;
-    const avgMonthlyRent = contract.rent_terms?.length ? totalMonthlyRent / contract.rent_terms.length : 0;
-    const assetCount = contract.assets?.length || 0;
+    ) ?? 0;
+    const avgMonthlyRent = (contract.rent_terms?.length ?? 0) > 0 ? totalMonthlyRent / (contract.rent_terms.length ?? 1) : 0;
+    const assetCount = contract.assets?.length ?? 0;
 
     return {
       totalMonthlyRent,
       avgMonthlyRent,
       assetCount,
-      termCount: contract.rent_terms?.length || 0,
+      termCount: contract.rent_terms?.length ?? 0,
     };
   };
 
@@ -219,19 +219,19 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
           </Descriptions.Item>
 
           <Descriptions.Item label="联系人">
-            {contract.tenant_contact || '-'}
+            {contract.tenant_contact ?? '-'}
           </Descriptions.Item>
 
           <Descriptions.Item label="联系电话">
-            {contract.tenant_phone || '-'}
+            {contract.tenant_phone ?? '-'}
           </Descriptions.Item>
 
           <Descriptions.Item label="承租方地址" span={2}>
-            {contract.tenant_address || '-'}
+            {contract.tenant_address ?? '-'}
           </Descriptions.Item>
 
           <Descriptions.Item label="用途说明（下游合同）">
-            {contract.tenant_usage || '-'}
+            {contract.tenant_usage ?? '-'}
           </Descriptions.Item>
         </Descriptions>
       </Card>
@@ -301,14 +301,14 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
       </Card>
 
       {/* V2字段：上游合同和服务费率 */}
-      {(contract.upstream_contract_id || contract.service_fee_rate) && (
+      {(contract.upstream_contract_id != null || contract.service_fee_rate != null) && (
         <Card
           title="V2 委托运营信息"
           style={{ marginBottom: 16 }}
         >
           <Descriptions bordered column={{ xs: 1, sm: 2 }} style={{ marginBottom: 16 }}>
             <Descriptions.Item label="上游合同ID">
-              {contract.upstream_contract_id || '-'}
+              {contract.upstream_contract_id ?? '-'}
             </Descriptions.Item>
             <Descriptions.Item label="服务费率">
               {contract.service_fee_rate !== undefined && contract.service_fee_rate !== null
@@ -318,12 +318,12 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
           </Descriptions>
 
           {/* 服务费台账表格 */}
-          {(serviceFeeLoading || (serviceFeeLedgers && serviceFeeLedgers.length > 0)) && (
+          {(serviceFeeLoading != null && serviceFeeLoading) || ((serviceFeeLedgers ?? []).length > 0) ? (
             <>
               <Divider orientation="left" style={{ margin: '12px 0' }}>服务费台账</Divider>
-              <ServiceFeeLedgerTable ledgers={serviceFeeLedgers || []} loading={serviceFeeLoading} />
+              <ServiceFeeLedgerTable ledgers={serviceFeeLedgers ?? []} loading={serviceFeeLoading} />
             </>
-          )}
+          ) : null}
         </Card>
       )}
 
@@ -380,7 +380,7 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
         style={{ marginBottom: 16 }}
       >
         <Table
-          dataSource={contract.rent_terms || []}
+          dataSource={contract.rent_terms ?? []}
           columns={rentTermColumns}
           rowKey="id"
           pagination={false}
@@ -396,7 +396,7 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
       />
 
       {/* 其他信息 */}
-      {(contract.payment_terms || contract.contract_notes) && (
+      {(contract.payment_terms != null || contract.contract_notes != null) && (
         <Card
           title={
             <span>
@@ -406,12 +406,12 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
           }
         >
           <Descriptions bordered column={1}>
-            {contract.payment_terms && (
+            {contract.payment_terms != null && (
               <Descriptions.Item label="支付条款">
                 <div style={{ whiteSpace: 'pre-wrap' }}>{contract.payment_terms}</div>
               </Descriptions.Item>
             )}
-            {contract.contract_notes && (
+            {contract.contract_notes != null && (
               <Descriptions.Item label="合同备注">
                 <div style={{ whiteSpace: 'pre-wrap' }}>{contract.contract_notes}</div>
               </Descriptions.Item>

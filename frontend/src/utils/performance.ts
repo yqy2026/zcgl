@@ -48,12 +48,12 @@ export function createLazyComponent<T extends ComponentType<Record<string, unkno
 ) {
   return lazy(() => {
     // 添加性能标记
-    if (chunkName && performance.mark) {
+    if (chunkName != null && performance.mark != null) {
       performance.mark(`lazy-load-start-${chunkName}`)
     }
 
     return importFn().then(module => {
-      if (chunkName && performance.mark && performance.measure) {
+      if (chunkName != null && performance.mark != null && performance.measure != null) {
         performance.mark(`lazy-load-end-${chunkName}`)
         performance.measure(
           `lazy-load-${chunkName}`,
@@ -196,8 +196,8 @@ class PerformanceMonitor {
     // Cumulative Layout Shift
     this.observeMetric('layout-shift', (entry) => {
       const entryRecord = entry as unknown as Record<string, unknown>
-      if (!entryRecord.hadRecentInput) {
-        const currentCLS = this.metrics.get('cls') || 0
+      if (entryRecord.hadRecentInput === false) {
+        const currentCLS = this.metrics.get('cls') ?? 0
         const newCLS = currentCLS + (entryRecord.value as number)
         this.metrics.set('cls', newCLS)
 
@@ -220,7 +220,7 @@ class PerformanceMonitor {
 
       // 按资源类型分类
       const resourceType = this.getResourceType(entry.name)
-      const typeMetrics = this.metrics.get(`resource-${resourceType}`) || 0
+      const typeMetrics = this.metrics.get(`resource-${resourceType}`) ?? 0
       this.metrics.set(`resource-${resourceType}`, typeMetrics + duration)
     })
   }
@@ -230,7 +230,7 @@ class PerformanceMonitor {
       const duration = entry.duration
       perfLogger.warn(`Long task detected: ${duration}ms`)
 
-      const longTasks = this.metrics.get('long-tasks') || 0
+      const longTasks = this.metrics.get('long-tasks') ?? 0
       this.metrics.set('long-tasks', longTasks + 1)
     })
   }
@@ -275,13 +275,13 @@ class PerformanceMonitor {
 
   // 手动记录性能指标
   mark(name: string) {
-    if (performance.mark) {
+    if (performance.mark != null) {
       performance.mark(name)
     }
   }
 
   measure(name: string, startMark: string, endMark?: string) {
-    if (performance.measure) {
+    if (performance.measure != null) {
       performance.measure(name, startMark, endMark)
     }
   }
@@ -316,7 +316,7 @@ class PerformanceMonitor {
 
   // 清理
   disconnect() {
-    if (this.observer) {
+    if (this.observer != null) {
       this.observer.disconnect()
     }
   }
@@ -330,7 +330,7 @@ export class ResourcePreloader {
   private preloadedResources = new Set<string>()
 
   static getInstance(): ResourcePreloader {
-    if (!ResourcePreloader.instance) {
+    if (ResourcePreloader.instance == null) {
       ResourcePreloader.instance = new ResourcePreloader()
     }
     return ResourcePreloader.instance
@@ -397,7 +397,7 @@ export class MemoryManager {
   private cleanupTasks: (() => void)[] = []
 
   static getInstance(): MemoryManager {
-    if (!MemoryManager.instance) {
+    if (MemoryManager.instance == null) {
       MemoryManager.instance = new MemoryManager()
     }
     return MemoryManager.instance

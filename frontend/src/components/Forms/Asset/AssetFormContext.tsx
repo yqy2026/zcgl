@@ -60,7 +60,7 @@ export const AssetFormProvider: React.FC<AssetFormProviderProps> = ({
     const [loadingContracts, setLoadingContracts] = useState(false);
 
     const loadRentContracts = useCallback(async (assetId?: string) => {
-        if (!assetId) {
+        if (assetId == null) {
             setRentContracts([]);
             return;
         }
@@ -80,12 +80,12 @@ export const AssetFormProvider: React.FC<AssetFormProviderProps> = ({
     const handleContractChange = useCallback((contractId: string) => {
         const selectedContract = rentContracts.find((contract) => contract.id === contractId);
 
-        if (selectedContract) {
+        if (selectedContract !== undefined && selectedContract !== null) {
             // Auto-fill tenant and contract info
             form.setFieldsValue({
                 tenant_name: selectedContract.tenant_name,
                 tenant_contact: selectedContract.tenant_contact,
-                tenant_type: selectedContract.tenant_id ? 'enterprise' : 'individual',
+                tenant_type: selectedContract.tenant_id != null ? 'enterprise' : 'individual',
                 lease_contract_number: selectedContract.contract_number,
                 contract_start_date: selectedContract.start_date
                     ? dayjs(selectedContract.start_date)

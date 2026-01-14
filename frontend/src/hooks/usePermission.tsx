@@ -44,7 +44,7 @@ const usePermission = () => {
     try {
       // 从localStorage或API获取当前用户信息
       const storedUser = localStorage.getItem('currentUser')
-      if (!storedUser) {
+      if (storedUser == null) {
         setUserPermissions(null)
         return
       }
@@ -55,8 +55,8 @@ const usePermission = () => {
       const userPermissionsData: UserPermissions = {
         userId: currentUser.id,
         username: currentUser.username,
-        roles: currentUser.roles || [],
-        permissions: currentUser.permissions || [],
+        roles: currentUser.roles ?? [],
+        permissions: currentUser.permissions ?? [],
         organizationId: currentUser.organization_id
       }
 
@@ -123,13 +123,13 @@ const usePermission = () => {
     if (hasPermission(resource, action)) {
       return null
     }
-    return fallback || <div>Access Denied</div>
+    return fallback ?? <div>Access Denied</div>
   }, [hasPermission])
 
   // 页面权限检查
   const checkPageAccess = useCallback((pagePermissions: Array<{ resource: string; action: string }>): boolean => {
     // 如果没有配置权限要求，则允许访问
-    if (!pagePermissions || pagePermissions.length === 0) {
+    if (pagePermissions == null || pagePermissions.length === 0) {
       return true
     }
 
@@ -138,10 +138,10 @@ const usePermission = () => {
 
   // 获取可访问的菜单项
   const getAccessibleMenuItems = useCallback((menuItems: MenuItem[]) => {
-    if (!userPermissions) return []
+    if (userPermissions == null) return []
 
     return menuItems.filter(item => {
-      if (!item.permission) return true
+      if (item.permission == null) return true
       return hasPermission(item.permission.resource, item.permission.action)
     })
   }, [userPermissions, hasPermission])

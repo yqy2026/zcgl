@@ -143,7 +143,7 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
         } else if (response.session_status.status === 'failed') {
           // 停止自动刷新
           setAutoRefresh(false);
-          onError(response.session_status.error_message || '处理失败');
+          onError(response.session_status.error_message ?? '处理失败');
         } else if (response.session_status.status === 'cancelled') {
           // 停止自动刷新
           setAutoRefresh(false);
@@ -194,7 +194,7 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
           step.status = 'finish';
         } else if (index === currentStep) {
           step.status = progress.status === 'failed' ? 'error' : 'process';
-          step.details = progress.error_message || step.description;
+          step.details = progress.error_message ?? step.description;
         } else {
           step.status = 'wait';
         }
@@ -281,7 +281,7 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
               <Button
                 icon={<DownloadOutlined />}
                 onClick={handleDownload}
-                disabled={!fileInfo}
+                disabled={fileInfo == null}
               >
                 下载
               </Button>
@@ -334,7 +334,7 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
             </Col>
           </Row>
 
-          {currentProgress.error_message && (
+          {(currentProgress.error_message?.length ?? 0) > 0 && (
             <Alert
               message="处理错误"
               description={currentProgress.error_message}
@@ -359,7 +359,7 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
               description={
                 <div>
                   <div>{step.description}</div>
-                  {step.details && (
+                  {(step.details != null) && (
                     <Text type="secondary" style={{ fontSize: 12 }}>
                       {step.details}
                     </Text>
@@ -424,7 +424,7 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
                     <br />
                     <Text type="secondary">{currentProgress.created_at}</Text>
                   </Timeline.Item>
-                  {currentProgress.error_message && (
+                  {(currentProgress.error_message?.length ?? 0) > 0 && (
                     <Timeline.Item color="red" dot>
                       <Text strong>处理失败</Text>
                       <br />
@@ -560,7 +560,7 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
               {currentProgress.updated_at}
             </Descriptions.Item>
             <Descriptions.Item label="错误信息" span={2}>
-              {currentProgress.error_message || '无'}
+              {currentProgress.error_message ?? '无'}
             </Descriptions.Item>
           </Descriptions>
         )}

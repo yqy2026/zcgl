@@ -54,28 +54,28 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
 
   // 当前选中的项目
   const _selectedProject = useMemo(() => {
-    if (!value) return null;
-    return allProjects.find(p => p.id === value) ||
-           allProjects.find(p => p.name === value) ||
+    if (value == null || value === '') return null;
+    return allProjects.find(p => p.id === value) ??
+           allProjects.find(p => p.name === value) ??
            null;
   }, [value, allProjects]);
 
   // 监听value变化，更新显示值
   useEffect(() => {
-    if (!value) {
+    if (value == null || value === '') {
       setDisplayValue('');
       return;
     }
 
     const project = allProjects.find(p => p.id === value);
-    if (project) {
-      const displayName = (project as any).short_name ? `${project.name} (${(project as any).short_name})` : project.name;
+    if (project != null) {
+      const displayName = (project as any).short_name != null ? `${project.name} (${(project as any).short_name})` : project.name;
       setDisplayValue(displayName);
     } else {
       // 如果在allProjects中找不到项目，不要覆盖现有的显示值
       // 这可能发生在项目数据还在加载中的情况
       // 只有当displayValue为空时才设置为原始value
-      if (!displayValue) {
+      if (displayValue == null || displayValue === '') {
         setDisplayValue(value);
       }
     }
@@ -90,10 +90,10 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
     title?: React.ReactNode;
   }) => {
     // 从option中获取真实的项目ID
-    const realValue = option?.realValue || option?.value;
+    const realValue = option?.realValue ?? option?.value;
     const selected = filteredProjects.find(p => p.id === realValue);
 
-    if (selected) {
+    if (selected != null) {
       setDisplayValue(selectedValue);
       onChange?.(selected.id, selected as any);
     } else {
@@ -116,7 +116,7 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
   // 从弹窗中选择项目
   const handleModalSelect = (project: Project) => {
     // 更新显示值
-    const displayName = (project as any).short_name ? `${project.name} (${(project as any).short_name})` : project.name;
+    const displayName = (project as any).short_name != null ? `${project.name} (${(project as any).short_name})` : project.name;
     setDisplayValue(displayName);
 
     // 调用父组件的onChange
@@ -150,22 +150,22 @@ const ProjectSelect: React.FC<ProjectSelectProps> = ({
           loading={loading}
           showSearch
           filterOption={(input, option) =>
-            String(option?.children as any || '').toLowerCase().includes(input.toLowerCase()) ||
-            String(option?.label as any || '').toLowerCase().includes(input.toLowerCase())
+            String(option?.children as any ?? '').toLowerCase().includes(input.toLowerCase()) ||
+            String(option?.label as any ?? '').toLowerCase().includes(input.toLowerCase())
           }
           notFoundContent={loading ? '加载中...' : '暂无数据'}
           optionLabelProp="label"
           // 自定义显示文本，确保选择项目后显示项目名称而不是ID
           options={filteredProjects.map(project => ({
-            label: (project as any).short_name ? `${project.name} (${(project as any).short_name})` : project.name,
-            value: (project as any).short_name ? `${project.name} (${(project as any).short_name})` : project.name,
+            label: (project as any).short_name != null ? `${project.name} (${(project as any).short_name})` : project.name,
+            value: (project as any).short_name != null ? `${project.name} (${(project as any).short_name})` : project.name,
             // 存储真实的项目ID用于内部处理
             realValue: project.id,
             // 保留完整信息用于下拉显示
             title: (
               <Space>
                 <span>{project.name}</span>
-                {(project as any).short_name && (
+                {(project as any).short_name != null && (
                   <span style={{ color: '#999', fontSize: '12px' }}>
                     ({(project as any).short_name})
                   </span>

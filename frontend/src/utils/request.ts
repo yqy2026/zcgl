@@ -11,7 +11,7 @@ const logger = createLogger('Request');
 // 创建axios实例
 const createApiInstance = (): AxiosInstance => {
   const instance = axios.create({
-    baseURL: process.env.VITE_API_BASE_URL || "/api",
+    baseURL: process.env.VITE_API_BASE_URL ?? "/api",
     timeout: 30000,
     headers: {
       "Content-Type": "application/json",
@@ -22,8 +22,8 @@ const createApiInstance = (): AxiosInstance => {
   instance.interceptors.request.use(
     (config) => {
       // 兼容两种token键名：优先使用auth_token，回退到token
-      const token = localStorage.getItem("auth_token") || localStorage.getItem("token");
-      if (token) {
+      const token = localStorage.getItem("auth_token") ?? localStorage.getItem("token");
+      if (token != null) {
         config.headers.Authorization = `Bearer ${token}`;
       }
       return config;
@@ -58,7 +58,7 @@ const createApiInstance = (): AxiosInstance => {
       });
 
       // 统一错误处理
-      if (error.response) {
+      if (error.response != null) {
         const { status, data } = error.response;
 
         switch (status) {
@@ -77,7 +77,7 @@ const createApiInstance = (): AxiosInstance => {
             break;
           case 422:
             // 处理验证错误
-            if (data.detail && Array.isArray(data.detail)) {
+            if (data.detail != null && Array.isArray(data.detail)) {
               const errorMsg = data.detail.map((err: { msg: string }) => err.msg).join(", ");
               MessageManager.error(`数据验证失败: ${errorMsg} [${errorId}]`);
             } else {
@@ -94,7 +94,7 @@ const createApiInstance = (): AxiosInstance => {
           default:
             MessageManager.error(`请求失败 [${errorId}]`);
         }
-      } else if (error.request) {
+      } else if (error.request != null) {
         MessageManager.error(`网络连接失败，请检查网络 [${errorId}]`);
       } else {
         MessageManager.error(`请求配置错误 [${errorId}]`);
@@ -169,7 +169,7 @@ export const uploadFile = async (
       "Content-Type": "multipart/form-data",
     },
     onUploadProgress: (progressEvent) => {
-      if (onProgress && progressEvent.total) {
+      if (onProgress != null && progressEvent.total != null) {
         const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
         onProgress(progress);
       }
@@ -188,7 +188,7 @@ export const downloadFile = async (url: string, filename?: string): Promise<void
     const downloadUrl = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = downloadUrl;
-    link.download = filename || "download";
+    link.download = filename ?? "download";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

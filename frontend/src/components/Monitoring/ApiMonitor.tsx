@@ -83,7 +83,7 @@ const ApiMonitor: React.FC = () => {
   }
 
   const formatResponseTime = (time?: number) => {
-    if (!time) return '-'
+    if (time == null) return '-'
     if (time < 1000) return `${time}ms`
     return `${(time / 1000).toFixed(2)}s`
   }
@@ -113,7 +113,7 @@ const ApiMonitor: React.FC = () => {
       key: 'responseTime',
       width: 120,
       render: (time?: number) => (
-        <span style={{ color: time && time > 3000 ? '#ff4d4f' : time && time > 1000 ? '#fa8c16' : '#52c41a' }}>
+        <span style={{ color: (time ?? 0) > 3000 ? '#ff4d4f' : (time ?? 0) > 1000 ? '#fa8c16' : '#52c41a' }}>
           {formatResponseTime(time)}
         </span>
       )
@@ -123,7 +123,7 @@ const ApiMonitor: React.FC = () => {
       dataIndex: 'error',
       key: 'error',
       ellipsis: true,
-      render: (error?: string) => error ? <span style={{ color: '#ff4d4f' }}>{error}</span> : '-'
+      render: (error?: string) => (error != null && error !== '') ? <span style={{ color: '#ff4d4f' }}>{error}</span> : '-'
     },
     {
       title: '最后检查',

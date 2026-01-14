@@ -50,8 +50,8 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ onClick }) => {
     refetchInterval: 30000, // 每30秒刷新一次
   });
 
-  const unreadCount = unreadCountData || 0;
-  const notifications = notificationsData?.items || [];
+  const unreadCount = unreadCountData ?? 0;
+  const notifications = notificationsData?.items ?? [];
 
   // 标记已读
   const handleMarkAsRead = async (notificationId: string, e: React.MouseEvent) => {

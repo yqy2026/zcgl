@@ -205,10 +205,10 @@ class DictionaryManagerService {
 
           return {
             id: `enum-type-${index}`,
-            name: config?.name || typeCode.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+            name: config?.name ?? typeCode.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
             code: typeCode,
-            category: config?.category || '系统字典',
-            description: config?.description || `${typeCode} 枚举类型`,
+            category: config?.category ?? '系统字典',
+            description: config?.description ?? `${typeCode} 枚举类型`,
             is_system: true,
             is_multiple: false,
             is_hierarchical: false,
@@ -290,7 +290,7 @@ class DictionaryManagerService {
         color: option.color as string,
         icon: option.icon as string,
         is_active: (option.is_active as boolean | undefined) !== false,
-        is_default: option.is_default || index === 0,
+        is_default: option.is_default ?? index === 0,
         created_at: (option.created_at as string) || new Date().toISOString(),
         updated_at: new Date().toISOString()
       }));
@@ -313,7 +313,7 @@ class DictionaryManagerService {
             code: option.code,
             description: '',
             level: 1,
-            sort_order: option.sort_order || index + 1,
+            sort_order: option.sort_order ?? index + 1,
             color: option.color,
             icon: option.icon,
             is_active: true,
@@ -598,11 +598,11 @@ class DictionaryManagerService {
 
       // 确保返回完整的统计信息
       return {
-        total_records: data.total_records || 0,
-        active_records: data.active_records || 0,
-        usage_by_field: data.usage_by_field || {},
+        total_records: data.total_records ?? 0,
+        active_records: data.active_records ?? 0,
+        usage_by_field: data.usage_by_field ?? {},
         last_updated: new Date().toISOString(),
-        popular_values: data.popular_values || []
+        popular_values: data.popular_values ?? []
       };
     } catch (error) {
       const enhancedError = ApiErrorHandler.handleError(error);

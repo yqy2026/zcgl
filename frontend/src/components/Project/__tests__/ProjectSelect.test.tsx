@@ -45,9 +45,9 @@ vi.mock('antd', () => ({
       data-tree-checkable={treeCheckable}
       data-has-tree-data={!!treeData?.length}
       onClick={() => {
-        if (onChange && multiple) {
+        if (onChange !== undefined && onChange !== null &&  multiple) {
           onChange(['test-id'])
-        } else if (onChange) {
+        } else if (onChange !== undefined && onChange !== null) {
           onChange('test-id')
         }
       }}
@@ -68,9 +68,9 @@ vi.mock('antd', () => ({
       data-disabled={disabled}
       data-show-search={showSearch}
       onClick={() => {
-        if (onChange && mode === 'multiple') {
+        if (onChange !== undefined && onChange !== null &&  mode === 'multiple') {
           onChange(['test-id'])
-        } else if (onChange) {
+        } else if (onChange !== undefined && onChange !== null) {
           onChange('test-id')
         }
       }}

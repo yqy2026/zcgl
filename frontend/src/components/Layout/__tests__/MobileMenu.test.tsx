@@ -45,7 +45,7 @@ vi.mock('antd', () => ({
       data-selected-keys={JSON.stringify(selectedKeys)}
       data-default-open-keys={JSON.stringify(defaultOpenKeys)}
       data-mode={mode}
-      data-items-count={items?.length || 0}
+      data-items-count={items?.length ?? 0}
       onClick={onClick}
       style={style}
     >

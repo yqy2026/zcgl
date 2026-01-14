@@ -19,5 +19,5 @@ export const TERMINATION_REASONS = [
  */
 export const getTerminationReasonLabel = (value: string): string => {
   const reason = TERMINATION_REASONS.find(r => r.value === value);
-  return reason?.label || value;
+  return reason?.label ?? value;
 };

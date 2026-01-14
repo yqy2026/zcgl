@@ -21,7 +21,7 @@ export const useErrorHandler = () => {
 
 // 加载状态Hook
 export const useLoadingState = (key?: string) => {
-  const loadingKey = key || `loading_${Math.random().toString(36).substr(2, 9)}`
+  const loadingKey = key ?? `loading_${Math.random().toString(36).substr(2, 9)}`
   const [loading, setLoadingState] = useState(false)
 
   const setLoading = useCallback((loading: boolean) => {
@@ -74,7 +74,7 @@ export const usePerformanceMonitoring = () => {
 
   const endMeasure = useCallback((name: string) => {
     const startTime = measureRef.current.get(name)
-    if (startTime) {
+    if (startTime != null) {
       const duration = performance.now() - startTime
       uxManager.recordPerformanceMetric(name, duration)
       measureRef.current.delete(name)
@@ -159,12 +159,12 @@ export const useOperationState = <T = unknown>() => {
     setState(prev => ({ ...prev, loading: true, error: null, success: false }))
 
     try {
-      if (options?.trackAction) {
+      if (options?.trackAction != null) {
         recordAction(`start_${options.trackAction}`)
       }
 
       const result = await operation()
-      
+
       setState({
         loading: false,
         error: null,
@@ -172,11 +172,11 @@ export const useOperationState = <T = unknown>() => {
         success: true,
       })
 
-      if (options?.showFeedback !== false && options?.successMessage) {
+      if (options?.showFeedback !== false && options?.successMessage != null) {
         showSuccess(options.successMessage)
       }
 
-      if (options?.trackAction) {
+      if (options?.trackAction != null) {
         recordAction(`success_${options.trackAction}`, { data: result })
       }
 
@@ -192,11 +192,11 @@ export const useOperationState = <T = unknown>() => {
 
       handleError(err, { operation: options?.trackAction })
 
-      if (options?.showFeedback !== false && options?.errorMessage) {
+      if (options?.showFeedback !== false && options?.errorMessage != null) {
         showError(options.errorMessage)
       }
 
-      if (options?.trackAction) {
+      if (options?.trackAction != null) {
         recordAction(`error_${options.trackAction}`, { error: err.message })
       }
 
@@ -237,13 +237,13 @@ export const useFormEnhancement = () => {
 
   const setErrors = useCallback((hasErrors: boolean) => {
     setHasErrors(hasErrors)
-    if (hasErrors) {
+    if (hasErrors === true) {
       trackAction('formValidationError')
     }
   }, [trackAction])
 
   const confirmLeave = useCallback((callback: () => void) => {
-    if (isDirty) {
+    if (isDirty === true) {
       showConfirm({
         title: '确认离开',
         content: '您有未保存的更改，确定要离开吗？',
@@ -259,7 +259,7 @@ export const useFormEnhancement = () => {
   }, [isDirty, showConfirm, markClean])
 
   const warnUnsaved = useCallback(() => {
-    if (isDirty) {
+    if (isDirty === true) {
       showWarning('数据未保存', '您有未保存的更改，请及时保存')
     }
   }, [isDirty, showWarning])
@@ -267,7 +267,7 @@ export const useFormEnhancement = () => {
   // 监听页面刷新/关闭
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (isDirty) {
+      if (isDirty === true) {
         e.preventDefault()
         e.returnValue = '您有未保存的更改，确定要离开吗？'
         return e.returnValue
@@ -312,8 +312,8 @@ export const useNetworkStatus = (enabled = true) => {
 
     const handleConnectionChange = () => {
       const connection = (navigator as unknown as { connection?: { effectiveType?: string } }).connection
-      if (connection) {
-        setConnectionType(connection.effectiveType || 'unknown')
+      if (connection != null) {
+        setConnectionType(connection.effectiveType ?? 'unknown')
         recordAction('connectionChange', { type: connection.effectiveType })
       }
     }
@@ -323,15 +323,15 @@ export const useNetworkStatus = (enabled = true) => {
 
     // 监听连接类型变化
     const connection = (navigator as unknown as { connection?: { effectiveType?: string; addEventListener?: (type: string, handler: () => void) => void; removeEventListener?: (type: string, handler: () => void) => void } }).connection
-    if (connection) {
+    if (connection != null) {
       connection.addEventListener?.('change', handleConnectionChange)
-      setConnectionType(connection.effectiveType || 'unknown')
+      setConnectionType(connection.effectiveType ?? 'unknown')
     }
 
     return () => {
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
-      if (connection) {
+      if (connection != null) {
         connection.removeEventListener?.('change', handleConnectionChange)
       }
     }
@@ -355,7 +355,7 @@ export const useUXEnhancement = (options?: {
 
   // 页面加载时跟踪页面访问
   useEffect(() => {
-    if (options?.trackPageView) {
+    if (options?.trackPageView != null) {
       actionTracking.trackPageView(options.trackPageView)
     }
   }, [options?.trackPageView, actionTracking])
@@ -374,7 +374,7 @@ export const useUXEnhancement = (options?: {
     ...userFeedback,
     
     // 网络状态
-    ...(options?.enableNetworkMonitoring ? networkStatus : {}),
+    ...(options?.enableNetworkMonitoring === true ? networkStatus : {}),
   }
 }
 

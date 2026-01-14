@@ -227,14 +227,14 @@ const OwnershipList: React.FC<OwnershipListProps> = ({
       dataIndex: 'asset_count',
       key: 'asset_count',
       width: 100,
-      render: (count: number) => count || 0
+      render: (count: number) => count ?? 0
     },
     {
       title: '关联项目',
       dataIndex: 'project_count',
       key: 'project_count',
       width: 100,
-      render: (count: number) => count || 0
+      render: (count: number) => count ?? 0
     },
     {
       title: '状态',
@@ -337,7 +337,7 @@ const OwnershipList: React.FC<OwnershipListProps> = ({
             <Card>
               <Statistic
                 title="关联资产"
-                value={ownerships.reduce((sum, ownership) => sum + (ownership.asset_count || 0), 0)}
+                value={ownerships.reduce((sum, ownership) => sum + (ownership.asset_count ?? 0), 0)}
                 valueStyle={{ color: '#722ed1' }}
               />
             </Card>

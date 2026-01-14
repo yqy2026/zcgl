@@ -351,7 +351,7 @@ class BaseDictionaryService {
       const enhancedError = ApiErrorHandler.handleError(error);
 
       // 如果启用备用数据，返回备用数据
-      if (useFallback && config.fallbackOptions) {
+      if (useFallback && config.fallbackOptions != null) {
         const fallbackData = config.fallbackOptions.filter(option =>
           isActive ? option.isActive !== false : true
         );
@@ -426,7 +426,7 @@ class BaseDictionaryService {
     // 首先处理已缓存的数据
     for (const dictType of dictTypes) {
       const cached = preloaded.get(dictType);
-      if (cached && !forceRefresh) {
+      if (cached != null && !forceRefresh) {
         results[dictType] = {
           success: true,
           data: cached,
@@ -575,7 +575,7 @@ class BaseDictionaryService {
    * 清除缓存
    */
   clearCache(dictType?: string): void {
-    if (dictType) {
+    if (dictType != null) {
       cache.clearForType(dictType);
     } else {
       cache.clear();
@@ -627,7 +627,7 @@ class BaseDictionaryService {
             loadedTypes.push(dictType);
             totalItems += result.data.length;
           } else {
-            failedTypes.push({ type: dictType, error: result.error || 'Unknown error' });
+            failedTypes.push({ type: dictType, error: result.error ?? 'Unknown error' });
           }
 
           onProgress?.(loadedTypes.length + failedTypes.length, dictTypes.length, dictType);
@@ -773,7 +773,7 @@ class BaseDictionaryService {
         if (result.success) {
           success.push(dictType);
         } else {
-          failed.push({ type: dictType, error: result.error || 'Unknown error' });
+          failed.push({ type: dictType, error: result.error ?? 'Unknown error' });
         }
       } catch (error) {
         const enhancedError = ApiErrorHandler.handleError(error);

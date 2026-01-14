@@ -49,16 +49,16 @@ const AssetList: React.FC<AssetListProps> = ({
       },
       render: (text, record) => {
         // 如果是项目ID格式，尝试显示关联的项目名称
-        const projectName = record.project_name || text;
+        const projectName = record.project_name ?? text;
         const isId = typeof projectName === "string" && projectName.length === 36; // UUID格式
 
         let displayText = projectName;
-        if (isId) {
+        if (isId !== undefined && isId !== null) {
           // 如果是ID格式，显示"未配置项目"
           displayText = "未配置项目";
         }
 
-        return <Tooltip title={displayText || "未设置"}>{displayText || "-"}</Tooltip>;
+        return <Tooltip title={displayText ?? "未设置"}>{displayText ?? "-"}</Tooltip>;
       },
     },
     {
@@ -119,7 +119,7 @@ const AssetList: React.FC<AssetListProps> = ({
           }
         }
 
-        return <Tooltip title={displayText || "未设置"}>{displayText || "-"}</Tooltip>;
+        return <Tooltip title={displayText ?? "未设置"}>{displayText ?? "-"}</Tooltip>;
       },
     },
     {
@@ -216,12 +216,12 @@ const AssetList: React.FC<AssetListProps> = ({
       sorter: true,
       render: (rate, record) => {
         // 如果有出租率字段直接显示，否则计算
-        if (rate) {
+        if (rate !== undefined && rate !== null) {
           return formatPercentage(rate);
         }
 
         // 计算出租率
-        if (record.rentable_area && record.rented_area) {
+        if (record.rentable_area !== undefined && record.rentable_area !== null && record.rented_area !== undefined && record.rented_area !== null) {
           const calculatedRate = (record.rented_area / record.rentable_area) * 100;
           return (
             <span
@@ -247,7 +247,7 @@ const AssetList: React.FC<AssetListProps> = ({
         { text: "否", value: false },
       ],
       render: (isLitigated) => (
-        <Tag color={isLitigated ? "red" : "green"}>{isLitigated ? "是" : "否"}</Tag>
+        <Tag color={isLitigated === true ? "red" : "green"}>{isLitigated === true ? "是" : "否"}</Tag>
       ),
     },
     {
@@ -319,16 +319,16 @@ const AssetList: React.FC<AssetListProps> = ({
 
   // 计算当前页汇总数据
   const calculateSummary = () => {
-    const items = data?.items || [];
+    const items = data?.items ?? [];
     if (items.length === 0) return null;
 
     const summary = items.reduce(
       (acc, item) => {
         return {
-          landArea: acc.landArea + (Number(item.land_area) || 0),
-          actualArea: acc.actualArea + (Number(item.actual_property_area) || 0),
-          rentableArea: acc.rentableArea + (Number(item.rentable_area) || 0),
-          rentedArea: acc.rentedArea + (Number(item.rented_area) || 0),
+          landArea: acc.landArea + (Number(item.land_area) ?? 0),
+          actualArea: acc.actualArea + (Number(item.actual_property_area) ?? 0),
+          rentableArea: acc.rentableArea + (Number(item.rentable_area) ?? 0),
+          rentedArea: acc.rentedArea + (Number(item.rented_area) ?? 0),
         };
       },
       {
@@ -405,16 +405,16 @@ const AssetList: React.FC<AssetListProps> = ({
   return (
     <Table
       columns={columns}
-      dataSource={data?.items || []}
+      dataSource={data?.items ?? []}
       rowKey="id"
       loading={loading}
       scroll={{ x: 1800, y: 600 }}
       rowSelection={rowSelection}
       summary={renderSummary}
       pagination={{
-        current: data?.page || 1,
-        pageSize: data?.limit || 20,
-        total: data?.total || 0,
+        current: data?.page ?? 1,
+        pageSize: data?.limit ?? 20,
+        total: data?.total ?? 0,
         showSizeChanger: true,
         showQuickJumper: true,
         showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条记录`,

@@ -71,9 +71,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   const { data: analyticsResponse, isLoading, error, refetch } = useAnalytics(filters);
   const analytics = (analyticsResponse as AnalyticsResponse | undefined)?.data;
 
-  const hasData = analytics?.area_summary?.total_assets
-    ? analytics.area_summary.total_assets > 0
-    : false;
+  const hasData = (analytics?.area_summary?.total_assets ?? 0) > 0;
 
   // 导出选项 - removed unused variable
 
@@ -207,7 +205,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
     ];
   }, [analytics]);
 
-  if (error) {
+  if (error !== undefined && error !== null) {
     return (
       <Card className={className}>
         <div style={{ textAlign: "center", padding: "60px 0" }}>
@@ -343,7 +341,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                       name: item.name,
                       value: item.count,
                       percentage: item.percentage,
-                    })) || []
+                    })) ?? []
                   }
                   dataKey="value"
                   labelKey="name"
@@ -359,7 +357,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                 loading={isLoading}
               >
                 <AnalyticsBarChart
-                  data={(analytics?.ownership_status_distribution || []).map(
+                  data={(analytics?.ownership_status_distribution ?? []).map(
                     (item: StatusDistributionItem) => ({
                       status: item.status,
                       count: item.count,
@@ -386,7 +384,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                       name: item.status,
                       value: item.count,
                       percentage: item.percentage,
-                    })) || []
+                    })) ?? []
                   }
                   dataKey="value"
                   labelKey="name"
@@ -402,7 +400,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                 loading={isLoading}
               >
                 <AnalyticsBarChart
-                  data={(analytics?.occupancy_distribution || []).map(
+                  data={(analytics?.occupancy_distribution ?? []).map(
                     (item: OccupancyDistributionItem) => ({
                       range: item.range,
                       count: item.count,
@@ -425,7 +423,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                 loading={isLoading}
               >
                 <AnalyticsBarChart
-                  data={(analytics?.business_category_distribution || []).map(
+                  data={(analytics?.business_category_distribution ?? []).map(
                     (item: BusinessCategoryItem) => ({
                       category: item.category,
                       occupancy_rate: item.occupancy_rate,
@@ -449,7 +447,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                 loading={isLoading}
               >
                 <AnalyticsLineChart
-                  data={(analytics?.occupancy_trend || []).map((item: TrendItem) => ({
+                  data={(analytics?.occupancy_trend ?? []).map((item: TrendItem) => ({
                     date: item.date,
                     occupancy_rate: item.occupancy_rate,
                     total_rented_area: item.total_rented_area,

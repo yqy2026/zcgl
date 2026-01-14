@@ -49,7 +49,7 @@ const PDFUploadArea: React.FC = () => {
     };
 
     // 如果已有会话，不显示上传区域
-    if (currentSession) {
+    if (currentSession !== undefined && currentSession !== null) {
         return null;
     }
 

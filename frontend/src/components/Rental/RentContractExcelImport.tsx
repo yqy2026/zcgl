@@ -73,7 +73,7 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
           setImportResult(result);
           if (result.success) {
             MessageManager.success(rentContractExcelService.getImportSuccessSummary(result));
-            if (onImportSuccess) {
+            if (onImportSuccess !== undefined && onImportSuccess !== null) {
               onImportSuccess();
             }
           } else {
@@ -136,7 +136,7 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
     beforeUpload: (file: File) => {
       const validation = rentContractExcelService.validateExcelFile(file);
       if (!validation.isValid) {
-        MessageManager.error(validation.error || '文件验证失败');
+        MessageManager.error(validation.error ?? '文件验证失败');
         return Upload.LIST_IGNORE;
       }
 

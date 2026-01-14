@@ -70,7 +70,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
       rate: item.rate,
       total_area: item.total_area,
       rented_area: item.rented_area,
-    })) || [],
+    })) ?? [],
     xField: 'month',
     yField: 'rate',
     smooth: true,
@@ -89,7 +89,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
       }),
       customContent: (title: any, data: any) => {
         const datum = data?.[0]?.data
-        if (!datum) return null
+        if (datum == null) return null
         return (
           <div style={{ padding: '8px' }}>
             <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{datum.month}</div>
@@ -122,7 +122,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
       value: item.rate,
       total_area: item.total_area,
       rented_area: item.rented_area,
-    })) || [],
+    })) ?? [],
     angleField: 'value',
     colorField: 'type',
     color: ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#fa8c16'],
@@ -149,7 +149,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
       }),
       customContent: (title: any, data: any) => {
         const datum = data?.[0]?.data
-        if (!datum) return null
+        if (datum == null) return null
         return (
           <div style={{ padding: '8px' }}>
             <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{datum.type}</div>
@@ -174,7 +174,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
           fontSize: '20px',
           fontWeight: 'bold',
         },
-        content: `${data?.overall_rate?.toFixed(2) || 0}%`,
+        content: `${data?.overall_rate?.toFixed(2) ?? 0}%`,
       },
     },
   }
@@ -188,7 +188,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
       rate: item.rate,
       asset_count: item.asset_count,
       full_name: item.ownership_entity,
-    })) || [],
+    })) ?? [],
     xField: 'ownership',
     yField: 'rate',
     color: '#1890ff',
@@ -207,15 +207,15 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
     },
     tooltip: {
       formatter: (datum: any) => ({
-        name: datum.full_name || datum.ownership,
+        name: datum.full_name ?? datum.ownership,
         value: `${datum.rate.toFixed(2)}%`,
       }),
       customContent: (title: any, data: any) => {
         const datum = data?.[0]?.data
-        if (!datum) return null
+        if (datum == null) return null
         return (
           <div style={{ padding: '8px' }}>
-            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{datum.full_name || datum.ownership}</div>
+            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{datum.full_name ?? datum.ownership}</div>
             <div>出租率: {datum.rate.toFixed(2)}%</div>
             <div>资产数量: {datum.asset_count} 个</div>
           </div>
@@ -263,7 +263,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
     return '#8c8c8c'
   }
 
-  if (error) {
+  if (error !== undefined && error !== null) {
     return (
       <Alert
         message="数据加载失败"
@@ -282,13 +282,13 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
           <Card>
             <Statistic
               title="总体出租率"
-              value={data?.overall_rate || 0}
+              value={data?.overall_rate ?? 0}
               precision={2}
               suffix="%"
               prefix={<PercentageOutlined />}
-              valueStyle={{ 
-                color: data?.overall_rate && data.overall_rate >= 80 ? '#52c41a' : 
-                       data?.overall_rate && data.overall_rate >= 60 ? '#faad14' : '#ff4d4f'
+              valueStyle={{
+                color: (data?.overall_rate ?? 0) >= 80 ? '#52c41a' :
+                       (data?.overall_rate ?? 0) >= 60 ? '#faad14' : '#ff4d4f'
               }}
             />
           </Card>
@@ -298,11 +298,11 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
           <Card>
             <Statistic
               title="趋势变化"
-              value={data?.trend_percentage || 0}
+              value={data?.trend_percentage ?? 0}
               precision={2}
               suffix="%"
-              prefix={getTrendIcon(data?.trend || 'stable', data?.trend_percentage || 0)}
-              valueStyle={{ color: getTrendColor(data?.trend || 'stable') }}
+              prefix={getTrendIcon(data?.trend ?? 'stable', data?.trend_percentage ?? 0)}
+              valueStyle={{ color: getTrendColor(data?.trend ?? 'stable') }}
             />
           </Card>
         </Col>
@@ -311,7 +311,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
           <Card>
             <Statistic
               title="经营类物业出租率"
-              value={data?.by_property_nature?.find(item => item.property_nature === '经营类')?.rate || 0}
+              value={data?.by_property_nature?.find(item => item.property_nature === '经营类')?.rate ?? 0}
               precision={2}
               suffix="%"
               valueStyle={{ color: '#1890ff' }}
@@ -323,7 +323,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
           <Card>
             <Statistic
               title="权属方数量"
-              value={data?.by_ownership_entity?.length || 0}
+              value={data?.by_ownership_entity?.length ?? 0}
               suffix="个"
               valueStyle={{ color: '#722ed1' }}
             />
@@ -367,12 +367,12 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
           <Card title="出租率最高资产" size="small">
             <div style={{ maxHeight: 300, overflowY: 'auto' }}>
               {data?.top_performers?.map((asset, index) => (
-                <div key={index} style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
+                <div key={index} style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
                   alignItems: 'center',
                   padding: '8px 0',
-                  borderBottom: index < (data.top_performers?.length || 0) - 1 ? '1px solid #f0f0f0' : 'none'
+                  borderBottom: index < (data.top_performers?.length ?? 0) - 1 ? '1px solid #f0f0f0' : 'none'
                 }}>
                   <div>
                     <Text strong>{asset.property_name}</Text>
@@ -396,12 +396,12 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
           <Card title="出租率最低资产" size="small">
             <div style={{ maxHeight: 300, overflowY: 'auto' }}>
               {data?.low_performers?.map((asset, index) => (
-                <div key={index} style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
+                <div key={index} style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
                   alignItems: 'center',
                   padding: '8px 0',
-                  borderBottom: index < (data.low_performers?.length || 0) - 1 ? '1px solid #f0f0f0' : 'none'
+                  borderBottom: index < (data.low_performers?.length ?? 0) - 1 ? '1px solid #f0f0f0' : 'none'
                 }}>
                   <div>
                     <Text strong>{asset.property_name}</Text>

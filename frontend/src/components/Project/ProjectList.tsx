@@ -90,7 +90,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
         size: pagination.pageSize
       };
 
-      if (searchKeyword) {
+      if (searchKeyword !== undefined && searchKeyword !== null) {
         params.keyword = searchKeyword;
       }
 
@@ -98,7 +98,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
         params.is_active = isActiveFilter;
       }
 
-      if (ownershipFilter) {
+      if (ownershipFilter !== undefined && ownershipFilter !== null) {
         params.ownership_id = ownershipFilter;
       }
 
@@ -106,26 +106,26 @@ const ProjectList: React.FC<ProjectListProps> = ({
       // API response received
 
       // 处理后端响应格式: {items: [...], total: 58, page: 1, size: 10, pages: 6}
-      if (response && response.items) {
+      if (response != null && 'items' in response) {
         // 标准响应格式：{items: [...], total: number, page: number, size: number}
-        setProjects(response.items || []);
+        setProjects(response.items ?? []);
         setPagination(prev => ({
           ...prev,
-          total: response.total || 0,
-          current: response.page || prev.current,
-          pageSize: response.size || prev.pageSize
+          total: response.total ?? 0,
+          current: response.page ?? prev.current,
+          pageSize: response.size ?? prev.pageSize
         }));
-      } else if (response && (response as any).data && (response as any).data.items) {
+      } else if (response != null && (response as any).data != null && (response as any).data.items != null) {
         // 嵌套响应格式：{data: {items: [...], total: number}}
-        setProjects((response as any).data.items || []);
+        setProjects((response as any).data.items ?? []);
         setPagination(prev => ({
           ...prev,
-          total: (response as any).data.total || (response as any).data.total_count || 0,
-          current: (response as any).data.page || prev.current,
-          pageSize: (response as any).data.size || prev.pageSize
+          total: (response as any).data.total ?? (response as any).data.total_count ?? 0,
+          current: (response as any).data.page ?? prev.current,
+          pageSize: (response as any).data.size ?? prev.pageSize
         }));
       } else {
-        console.error('Unexpected response format:', response);
+        console.error('Unexpected response format:', response ?? 'undefined response');
         setProjects([]);
         setPagination(prev => ({
           ...prev,
@@ -134,8 +134,8 @@ const ProjectList: React.FC<ProjectListProps> = ({
       }
 
       // 在项目数据加载后，基于实际数据计算统计信息
-      const loadedProjects = response?.items || (response as any)?.data?.items || [];
-      const activeCount = loadedProjects.filter(p => p.is_active).length;
+      const loadedProjects = response?.items ?? (response as any)?.data?.items ?? [];
+      const activeCount = loadedProjects.filter(p => p.is_active === true).length;
       const inactiveCount = loadedProjects.length - activeCount;
 
       setStatistics({
@@ -153,7 +153,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
         status: err.response?.status,
         data: err.response?.data
       });
-      MessageManager.error(`获取项目列表失败: ${err.message || '未知错误'}`);
+      MessageManager.error(`获取项目列表失败: ${err.message ?? '未知错误'}`);
     } finally {
       setLoading(false);
     }
@@ -287,19 +287,19 @@ const ProjectList: React.FC<ProjectListProps> = ({
       width: 150,
       render: (text: string, record: Project) => {
         // 如果有直接权属方字段，显示它
-        if (text) {
+        if (text != null && text !== '') {
           return <Tag color="blue">{text}</Tag>;
         }
 
         // 如果有权属方关系，显示主要权属方
-        if (record.ownership_relations && record.ownership_relations.length > 0) {
-          const activeRelations = record.ownership_relations.filter(rel => rel.is_active);
+        if (record.ownership_relations != null && record.ownership_relations.length > 0) {
+          const activeRelations = record.ownership_relations.filter(rel => rel.is_active === true);
           if (activeRelations.length > 0) {
             return (
               <div>
                 {activeRelations.slice(0, 2).map((rel, _index) => (
                   <Tag key={rel.id} color="blue" style={{ marginRight: 4 }}>
-                    {rel.ownership_name || (record as any).ownership_entity || '权属方已关联'}
+                    {rel.ownership_name ?? (record as any).ownership_entity ?? '权属方已关联'}
                   </Tag>
                 ))}
                 {activeRelations.length > 2 && (
@@ -318,14 +318,14 @@ const ProjectList: React.FC<ProjectListProps> = ({
       dataIndex: 'description',
       key: 'description',
       width: 200,
-      render: (text: string) => text || '-'
+      render: (text: string) => text ?? '-'
     },
     {
       title: '关联资产',
       dataIndex: 'asset_count',
       key: 'asset_count',
       width: 100,
-      render: (count: number) => count || 0
+      render: (count: number) => count ?? 0
     },
     {
       title: '状态',
@@ -357,7 +357,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
             color = 'default';
             break;
         }
-        return <Tag color={color}>{text}</Tag>;
+        return <Tag color={color}>{text ?? '-'}</Tag>;
       }
     },
     {
@@ -421,7 +421,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
           <Card>
             <Statistic
               title="总项目数"
-              value={statistics?.total_count || 0}
+              value={statistics?.total_count ?? 0}
               prefix={<span style={{ color: '#1890ff' }}>📊</span>}
             />
           </Card>
@@ -430,7 +430,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
           <Card>
             <Statistic
               title="启用项目"
-              value={statistics?.active_count || 0}
+              value={statistics?.active_count ?? 0}
               valueStyle={{ color: '#3f8600' }}
               prefix={<span style={{ color: '#52c41a' }}>✅</span>}
             />
@@ -440,7 +440,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
           <Card>
             <Statistic
               title="禁用项目"
-              value={statistics?.inactive_count || 0}
+              value={statistics?.inactive_count ?? 0}
               valueStyle={{ color: '#cf1322' }}
               prefix={<span style={{ color: '#ff4d4f' }}>❌</span>}
             />
@@ -450,7 +450,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
           <Card>
             <Statistic
               title="总关联资产"
-              value={projects.reduce((sum, project) => sum + (project.asset_count || 0), 0)}
+              value={projects.reduce((sum, project) => sum + (project.asset_count ?? 0), 0)}
               prefix={<span style={{ color: '#722ed1' }}>🏢</span>}
             />
           </Card>

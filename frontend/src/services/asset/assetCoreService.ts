@@ -28,8 +28,8 @@ export class AssetCoreService {
             const result = await enhancedApiClient.get<AssetListResponse>(ASSET_API.LIST, {
                 params: {
                     ...params,
-                    page: params?.page || 1,
-                    limit: params?.limit || 20,
+                    page: (params?.page ?? 1),
+                    limit: (params?.limit ?? 20),
                 },
                 cache: true,
                 retry: { maxAttempts: 3, delay: 1000, backoffMultiplier: 2 },
@@ -40,7 +40,7 @@ export class AssetCoreService {
                 throw new Error(`获取资产列表失败: ${result.error}`);
             }
 
-            return result.data!;
+            return result.data ?? [];
         } catch (error) {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);
@@ -222,7 +222,7 @@ export class AssetCoreService {
             if (!result.success) {
                 return {
                     valid: false,
-                    errors: [result.error || '验证失败']
+                    errors: [result.error ?? '验证失败']
                 };
             }
 

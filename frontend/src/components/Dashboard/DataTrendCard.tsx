@@ -68,7 +68,7 @@ const DataTrendCard: React.FC<DataTrendCardProps> = ({
     >
       <div className={styles.cardHeader}>
         <div className={styles.cardTitle}>{title}</div>
-        {icon && <div className={styles.cardIcon}>{icon}</div>}
+        {icon !== undefined && icon !== null && <div className={styles.cardIcon}>{icon}</div>}
       </div>
 
       <div className={styles.cardContent}>

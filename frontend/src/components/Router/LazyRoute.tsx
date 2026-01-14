@@ -27,7 +27,7 @@ const LazyRoute: React.FC<LazyRouteProps> = ({
 }) => {
   // 如果提供了预加载函数，在组件加载时执行
   const _handleMouseEnter = () => {
-    if (preload) {
+    if (preload != null) {
       preload();
     }
   };
@@ -40,7 +40,7 @@ const LazyRoute: React.FC<LazyRouteProps> = ({
     );
 
     // 如果没有权限要求，直接渲染懒加载组件
-    if (!permissions || permissions.length === 0) {
+    if (permissions == null || permissions.length === 0) {
       return WrappedComponent;
     }
 

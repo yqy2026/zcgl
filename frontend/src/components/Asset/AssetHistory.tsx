@@ -107,7 +107,7 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
         return {
           icon: <EditOutlined />,
           color: "default",
-          text: type || "未知",
+          text: type ?? "未知",
         };
     }
   };
@@ -120,7 +120,7 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
     const changes = [];
 
     // 合并所有变更的字段
-    const allFields = new Set([...Object.keys(oldValues || {}), ...Object.keys(newValues || {})]);
+    const allFields = new Set([...Object.keys(oldValues ?? {}), ...Object.keys(newValues ?? {})]);
 
     for (const field of allFields) {
       const oldValue = oldValues?.[field];
@@ -129,8 +129,8 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
       if (oldValue !== newValue) {
         changes.push({
           field,
-          oldValue: oldValue || "-",
-          newValue: newValue || "-",
+          oldValue: oldValue ?? "-",
+          newValue: newValue ?? "-",
         });
       }
     }
@@ -148,7 +148,7 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
     ));
   };
 
-  if (error) {
+  if (error !== undefined && error !== null) {
     return (
       <Alert
         message="加载失败"
@@ -183,7 +183,7 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
             <RangePicker
               value={dateRange}
               onChange={(dates) => {
-                if (dates && dates[0] && dates[1]) {
+                if (dates !== undefined && dates !== null &&  dates[0] && dates[1]) {
                   setDateRange([dates[0] as Dayjs, dates[1] as Dayjs]);
                 } else {
                   setDateRange(null);
@@ -207,7 +207,7 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
 
           <Col xs={24} sm={24} md={6} style={{ textAlign: "right" }}>
             <span style={{ color: "#8c8c8c", fontSize: "14px" }}>
-              共 {historyData?.data?.pagination?.total || 0} 条记录
+              共 {historyData?.data?.pagination?.total ?? 0} 条记录
             </span>
           </Col>
         </Row>
@@ -237,7 +237,7 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
                           <Space>
                             <Tag color={config.color}>{config.text}</Tag>
                             <span style={{ fontWeight: "bold" }}>
-                              {history.changed_fields?.join(", ") || "无字段变更"}
+                              {history.changed_fields?.join(", ") ?? "无字段变更"}
                             </span>
                           </Space>
                         </div>
@@ -247,17 +247,17 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
                           <Space split={<span>•</span>}>
                             <span>
                               <UserOutlined style={{ marginRight: 4 }} />
-                              {history.changed_by || history.operator || "未知用户"}
+                              {history.changed_by ?? history.operator ?? "未知用户"}
                             </span>
                             <span>
                               <CalendarOutlined style={{ marginRight: 4 }} />
-                              {formatDate(history.changed_at || history.operation_time, "datetime")}
+                              {formatDate(history.changed_at ?? history.operation_time, "datetime")}
                             </span>
                           </Space>
                         </div>
 
                         {/* 变更原因 */}
-                        {history.reason && (
+                        {(history.reason != null) && (
                           <div style={{ marginBottom: 8, color: "#595959" }}>
                             原因：{history.reason}
                           </div>
@@ -282,12 +282,12 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
               </Timeline>
 
               {/* 分页 */}
-              {(historyData?.data?.pagination?.total || 0) > limit && (
+              {(historyData?.data?.pagination?.total ?? 0) > limit && (
                 <div style={{ textAlign: "center", marginTop: 24 }}>
                   <Pagination
                     current={page}
                     pageSize={limit}
-                    total={historyData?.data?.pagination?.total || 0}
+                    total={historyData?.data?.pagination?.total ?? 0}
                     showSizeChanger
                     showQuickJumper
                     showTotal={(total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`}
@@ -334,23 +334,23 @@ const AssetHistory: React.FC<AssetHistoryProps> = ({ assetId }) => {
               </Descriptions.Item>
 
               <Descriptions.Item label="变更字段">
-                {selectedHistory.changed_fields?.join(", ") || "无字段变更"}
+                {selectedHistory.changed_fields?.join(", ") ?? "无字段变更"}
               </Descriptions.Item>
 
               <Descriptions.Item label="操作人">
-                {selectedHistory.changed_by || selectedHistory.operator || "未知用户"}
+                {selectedHistory.changed_by ?? selectedHistory.operator ?? "未知用户"}
               </Descriptions.Item>
 
               <Descriptions.Item label="变更时间">
                 {formatDate(
-                  selectedHistory.changed_at || selectedHistory.operation_time,
+                  selectedHistory.changed_at ?? selectedHistory.operation_time,
                   "datetime",
                 )}
               </Descriptions.Item>
 
-              {(selectedHistory.reason || selectedHistory.description) && (
+              {(selectedHistory.reason != null || selectedHistory.description != null) && (
                 <Descriptions.Item label="变更原因">
-                  {selectedHistory.reason || selectedHistory.description}
+                  {selectedHistory.reason ?? selectedHistory.description}
                 </Descriptions.Item>
               )}
             </Descriptions>

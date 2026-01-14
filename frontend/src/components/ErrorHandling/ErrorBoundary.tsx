@@ -63,7 +63,7 @@ class ErrorBoundaryComponent extends Component<ErrorBoundaryProps, ErrorBoundary
       retryCount: 0
     }
 
-    this.maxRetries = props.maxRetries || 3
+    this.maxRetries = (props.maxRetries !== undefined && props.maxRetries !== null) ? props.maxRetries : 3
   }
 
   static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
@@ -161,7 +161,7 @@ class ErrorBoundaryComponent extends Component<ErrorBoundaryProps, ErrorBoundary
   render() {
     if (this.state.hasError) {
       // 如果提供了自定义fallback，使用它
-      if (this.props.fallback) {
+      if (this.props.fallback !== undefined && this.props.fallback !== null) {
         return this.props.fallback
       }
 
@@ -223,7 +223,7 @@ const ErrorHandler: React.FC<RouterErrorHandlerProps> = ({
   }
 
   const getErrorDescription = () => {
-    if (isChunkLoadError) {
+    if (isChunkLoadError === true) {
       return '页面资源加载失败，可能是网络问题或应用版本更新。请尝试刷新页面。'
     }
     if (errorType === 'network') {
@@ -298,7 +298,7 @@ const ErrorHandler: React.FC<RouterErrorHandlerProps> = ({
             <Text strong>重试次数:</Text> {retryCount}/{maxRetries}
           </Paragraph>
 
-          {error.stack && (
+          {error.stack !== undefined && error.stack !== null && error.stack !== '' && (
             <details style={{ marginTop: '10px' }}>
               <summary>错误堆栈</summary>
               <pre style={{
@@ -312,7 +312,7 @@ const ErrorHandler: React.FC<RouterErrorHandlerProps> = ({
             </details>
           )}
 
-          {errorInfo?.componentStack && (
+          {errorInfo !== null && errorInfo.componentStack !== undefined && errorInfo.componentStack !== null && errorInfo.componentStack !== '' && (
             <details style={{ marginTop: '10px' }}>
               <summary>组件堆栈</summary>
               <pre style={{

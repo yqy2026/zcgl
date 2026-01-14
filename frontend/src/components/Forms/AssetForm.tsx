@@ -127,26 +127,26 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
 
   // Initialize form data
   useEffect(() => {
-    if (initialData) {
+    if (initialData !== undefined && initialData !== null) {
       const formData = {
         ...initialData,
-        contract_start_date: initialData.contract_start_date
+        contract_start_date: initialData.contract_start_date != null
           ? dayjs(String(initialData.contract_start_date))
           : undefined,
-        contract_end_date: initialData.contract_end_date
+        contract_end_date: initialData.contract_end_date != null
           ? dayjs(String(initialData.contract_end_date))
           : undefined,
-        operation_agreement_start_date: initialData.operation_agreement_start_date
+        operation_agreement_start_date: initialData.operation_agreement_start_date != null
           ? dayjs(String(initialData.operation_agreement_start_date))
           : undefined,
-        operation_agreement_end_date: initialData.operation_agreement_end_date
+        operation_agreement_end_date: initialData.operation_agreement_end_date != null
           ? dayjs(String(initialData.operation_agreement_end_date))
           : undefined,
       };
       form.setFieldsValue(formData);
 
       // Initialize attachment lists
-      if (initialData.operation_agreement_attachments) {
+      if (initialData.operation_agreement_attachments != null) {
         const fileNames = String(initialData.operation_agreement_attachments)
           .split(',')
           .filter(Boolean);
@@ -160,7 +160,7 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
         setFileList(initialFileList);
       }
 
-      if (initialData.terminal_contract_files) {
+      if (initialData.terminal_contract_files != null) {
         const fileNames = String(initialData.terminal_contract_files).split(',').filter(Boolean);
         const initialTerminalFileList: UploadFile[] = fileNames.map((name: string, index: number) => ({
           uid: `terminal-${index}`,
@@ -176,8 +176,8 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
 
   // Load rent contracts when asset ID changes
   useEffect(() => {
-    const assetId = String(initialData?.id || form.getFieldValue('id'));
-    if (assetId && assetId !== 'undefined') {
+    const assetId = String(initialData?.id ?? form.getFieldValue('id'));
+    if (assetId !== undefined && assetId !== null &&  assetId !== 'undefined') {
       loadRentContracts(assetId);
     }
   }, [initialData?.id, form, loadRentContracts]);
@@ -196,13 +196,13 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
       'usage_status',
     ];
 
-    const filledFields = requiredFields.filter((field) => allValues[field]);
+    const filledFields = requiredFields.filter((field) => allValues[field] != null);
     const rate = (filledFields.length / requiredFields.length) * 100;
     setCompletionRate(rate);
 
     // Auto-calculate occupancy
-    const rentableArea = Number(allValues.rentable_area) || 0;
-    const rentedArea = Number(allValues.rented_area) || 0;
+    const rentableArea = Number(allValues.rentable_area) ?? 0;
+    const rentedArea = Number(allValues.rented_area) ?? 0;
 
     if (rentableArea > 0) {
       const occupancyRate = ((rentedArea / rentableArea) * 100).toFixed(2);
@@ -218,7 +218,7 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
   const handleSubmit = async (values: Record<string, unknown>) => {
     try {
       const formatDate = (val: unknown): string | undefined => {
-        if (!val) return undefined;
+        if (val == null) return undefined;
         if (dayjs.isDayjs(val)) return (val as dayjs.Dayjs).format('YYYY-MM-DD');
         const parsed = dayjs(String(val));
         return parsed.isValid() ? parsed.format('YYYY-MM-DD') : undefined;
@@ -234,7 +234,7 @@ const AssetFormInner: React.FC<AssetFormInnerProps> = ({
         terminal_contract_files: terminalContractFileList.map((file) => file.name).join(','),
       };
 
-      if (onSubmit) {
+      if (onSubmit !== undefined && onSubmit !== null) {
         await onSubmit(submitData as unknown as AssetCreateRequest);
       }
     } catch {

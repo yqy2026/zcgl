@@ -139,14 +139,14 @@ class AnalyticsExportService {
       workbook.Sheets['使用状态分布']['!cols'] = columnWidths
       workbook.Sheets['业态类别分布']['!cols'] = columnWidths
 
-      if (workbook.Sheets['出租率趋势']) {
+      if (workbook.Sheets['出租率趋势'] != null) {
         workbook.Sheets['出租率趋势']['!cols'] = [{ wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 15 }]
       }
 
       // 生成文件名
       const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-')
       const defaultFilename = `资产分析报告_${timestamp}.xlsx`
-      const finalFilename = filename || defaultFilename
+      const finalFilename = filename ?? defaultFilename
 
       // 导出文件
       XLSX.writeFile(workbook, finalFilename)
@@ -221,7 +221,7 @@ class AnalyticsExportService {
       // 生成文件名
       const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-')
       const defaultFilename = `资产分析报告_${timestamp}.csv`
-      const finalFilename = filename || defaultFilename
+      const finalFilename = filename ?? defaultFilename
 
       // 下载文件
       const link = document.createElement('a')
@@ -253,7 +253,7 @@ class AnalyticsExportService {
       // 生成文件名
       const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-')
       const defaultFilename = `资产分析报告_${timestamp}.html`
-      const finalFilename = filename || defaultFilename
+      const finalFilename = filename ?? defaultFilename
 
       const link = document.createElement('a')
       link.setAttribute('href', url)

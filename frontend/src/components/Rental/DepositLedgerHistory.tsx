@@ -49,7 +49,7 @@ const DepositLedgerHistory: React.FC<DepositLedgerHistoryProps> = ({
             key: 'transaction_type',
             width: 120,
             render: (type: DepositTransactionType) => {
-                const info = TRANSACTION_TYPE_MAP[type] || { label: type, color: 'default' };
+                const info = TRANSACTION_TYPE_MAP[type] ?? { label: type, color: 'default' };
                 return <Tag color={info.color}>{info.label}</Tag>;
             },
         },

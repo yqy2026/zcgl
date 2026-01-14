@@ -46,7 +46,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({
   }
 
   // 检查单个权限
-  if (requiredPermission) {
+  if (requiredPermission !== undefined) {
     // 解析权限字符串，格式通常为 "resource:action" 或 "resource action"
     const [resource, action] = requiredPermission.includes(':')
       ? requiredPermission.split(':')
@@ -69,7 +69,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({
   }
 
   // 检查多个权限（任一满足即可）
-  if (requiredPermissions && requiredPermissions.length > 0 && !hasAnyPermission(requiredPermissions)) {
+  if (requiredPermissions !== undefined && requiredPermissions !== null &&  requiredPermissions.length > 0 && !hasAnyPermission(requiredPermissions)) {
     const permissionNames = requiredPermissions.map(p => `${p.resource}:${p.action}`).join(', ')
     return (
       <Result
@@ -87,7 +87,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({
   }
 
   // 检查用户是否激活
-  if (user && !user.isActive) {
+  if (user !== undefined && user !== null && user.isActive === false) {
     return (
       <Result
         status="403"

@@ -89,9 +89,7 @@ export const useAppStore = create<AppState>()(
               () => {
                 get().removeNotification(id);
               },
-              notification.duration !== null && notification.duration !== undefined
-                ? notification.duration
-                : 4500
+              notification.duration ?? 4500
             );
           }
         },

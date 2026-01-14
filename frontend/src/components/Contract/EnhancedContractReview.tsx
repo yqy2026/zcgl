@@ -117,13 +117,13 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
   const [validationSummary, setValidationSummary] = useState<ValidationResults>({});
 
   useEffect(() => {
-    if (sessionData?.extracted_data) {
+    if (sessionData?.extracted_data != null) {
       initializeFieldReviews();
     }
   }, [sessionData]);
 
   useEffect(() => {
-    if (sessionData?.validation_results) {
+    if (sessionData?.validation_results != null) {
       setValidationSummary(sessionData.validation_results);
     }
   }, [sessionData?.validation_results]);
@@ -132,9 +132,9 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
     const fields: FieldReview[] = [];
     const fieldConfig = getFieldConfig();
 
-    Object.entries(sessionData.extracted_data || {}).forEach(([key, value]) => {
+    Object.entries(sessionData.extracted_data ?? {}).forEach(([key, value]) => {
       const config = fieldConfig[key as keyof FieldConfig];
-      if (config) {
+      if (config != null) {
         fields.push({
           fieldName: key,
           label: config.label,
@@ -153,7 +153,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
 
   const calculateFieldConfidence = (fieldName: string, value: unknown, sessionData: Record<string, unknown>): number => {
     // 基础置信度
-    let confidence = (sessionData.confidence_score as number) || 0.8;
+    let confidence = (sessionData.confidence_score as number) ?? 0.8;
 
     // 根据字段重要性调整
     const importantFields = ['tenant_name', 'landlord_name', 'monthly_rent', 'property_address'];
@@ -162,7 +162,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
     }
 
     // 根据值的质量调整
-    if (value && typeof value === 'string' && value.length > 5) {
+    if (value != null && typeof value === 'string' && value.length > 5) {
       confidence += 0.05;
     }
 
@@ -236,12 +236,12 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
       field.fieldName === fieldName ? { ...field, value } : field
     ));
 
-    if (onFieldChange) {
+    if (onFieldChange !== undefined && onFieldChange !== null) {
       onFieldChange(fieldName, value);
     }
 
     // 自动保存
-    if (autoSaveEnabled) {
+    if (autoSaveEnabled !== undefined && autoSaveEnabled !== null) {
       const timer = setTimeout(() => {
         // 触发自动保存逻辑
         // Auto-save field value
@@ -255,7 +255,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
     // 更新字段值
     const matchingResults = sessionData.matching_results as MatchingResults | undefined;
     const selectedAssetData = matchingResults?.matched_assets?.find((asset: AssetMatch) => asset.id === assetId);
-    if (selectedAssetData) {
+    if (selectedAssetData !== undefined && selectedAssetData !== null) {
       handleFieldChange('property_address', selectedAssetData.address);
     }
   };
@@ -265,7 +265,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
       setSelectedOwnership(ownershipId);
       const matchingResults = sessionData.matching_results as MatchingResults | undefined;
       const selectedOwnershipData = matchingResults?.matched_ownerships?.landlords?.find((ownership: OwnershipMatch) => ownership.id === ownershipId);
-      if (selectedOwnershipData) {
+      if (selectedOwnershipData !== undefined && selectedOwnershipData !== null) {
         handleFieldChange('landlord_name', selectedOwnershipData.ownership_name);
       }
     }
@@ -281,7 +281,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
 
     // 验证必填字段
     const requiredFields = ['tenant_name', 'landlord_name', 'monthly_rent', 'property_address'];
-    const missingFields = requiredFields.filter(field => !confirmedData[field]);
+    const missingFields = requiredFields.filter(field => confirmedData[field] == null);
 
     if (missingFields.length > 0) {
       MessageManager.error(`请填写必填字段：${missingFields.join(', ')}`);
@@ -316,8 +316,8 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
       case 'date':
         return (
           <DatePicker
-            value={field.value && typeof field.value === 'string' ? dayjs(field.value) : null}
-            onChange={(date) => handleFieldChange(field.fieldName, date ? date.format('YYYY-MM-DD') : null)}
+            value={field.value != null && typeof field.value === 'string' ? dayjs(field.value) : null}
+            onChange={(date) => handleFieldChange(field.fieldName, date != null ? date.format('YYYY-MM-DD') : null)}
             style={{ width: '100%' }}
             placeholder={`请选择${config.label}`}
           />
@@ -330,7 +330,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
             style={{ width: '100%' }}
             placeholder={`请输入${config.label}`}
             formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-            parser={value => Number(value!.replace(/\$\s?|(,*)/g, '')) || 0}
+            parser={value => Number(value!.replace(/\$\s?|(,*)/g, '')) ?? 0}
             addonAfter={config.unit}
           />
         );
@@ -353,7 +353,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
             value={typeof field.value === 'string' ? field.value : String(field.value ?? '')}
             onChange={(e) => handleFieldChange(field.fieldName, e.target.value)}
             placeholder={`请输入${config.label}`}
-            suffix={field.suggestedValue && field.suggestedValue !== field.value ? (
+            suffix={field.suggestedValue != null && field.suggestedValue !== field.value ? (
               <Tooltip title="建议使用匹配的值">
                 <Button
                   type="link"
@@ -484,7 +484,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
               <Space>
                 <SearchOutlined />
                 <span>智能匹配结果</span>
-                <Badge count={(sessionData as any).matching_results?.matched_assets?.length || 0} />
+                <Badge count={(sessionData as any).matching_results?.matched_assets?.length ?? 0} />
               </Space>
             }
             style={{ marginBottom: 24 }}
@@ -493,7 +493,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
               <TabPane tab="资产匹配" key="assets">
                 <Table
                   columns={matchingResultsColumns}
-                  dataSource={(sessionData as any).matching_results?.matched_assets || []}
+                  dataSource={(sessionData as any).matching_results?.matched_assets ?? []}
                   rowKey="id"
                   pagination={false}
                   size="small"
@@ -517,7 +517,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
                       )
                     }
                   ] as any}
-                  dataSource={(sessionData as any).matching_results?.matched_ownerships?.landlords || []}
+                  dataSource={(sessionData as any).matching_results?.matched_ownerships?.landlords ?? []}
                   rowKey="id"
                   pagination={false}
                   size="small"
@@ -581,7 +581,7 @@ const EnhancedContractReview: React.FC<EnhancedContractReviewProps> = ({
                     <div onClick={() => handleFieldEdit(field.fieldName)}>
                       {(() => {
                         const val = field.value
-                        if (!val) return <Text type="secondary" italic>未提取</Text>
+                        if (val == null) return <Text type="secondary" italic>未提取</Text>
                         if (typeof val === 'object' && Object.keys(val).length === 0) {
                           return <Text type="secondary" italic>未提取</Text>
                         }

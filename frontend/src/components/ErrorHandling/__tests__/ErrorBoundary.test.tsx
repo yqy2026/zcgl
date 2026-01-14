@@ -14,7 +14,7 @@ import { ErrorBoundary, AssetErrorBoundary, SystemErrorBoundary, useErrorHandler
 // =============================================================================
 
 const ThrowError = ({ shouldThrow = false }: { shouldThrow?: boolean }) => {
-  if (shouldThrow) {
+  if (shouldThrow !== undefined && shouldThrow !== null) {
     throw new Error('Test error')
   }
   return <div>Normal Content</div>
