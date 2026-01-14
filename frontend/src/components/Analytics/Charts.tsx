@@ -31,7 +31,7 @@ export const AnalyticsPieChart: React.FC<PieChartProps> = ({
   loading = false
 }) => {
   const chartData = useMemo(() => {
-    if (!data || data.length === 0) return []
+    if (data == null || data.length === 0) return []
     return data.filter(item => item.value > 0).map(item => ({
       type: item.name,
       value: item.value,
@@ -60,7 +60,7 @@ export const AnalyticsPieChart: React.FC<PieChartProps> = ({
     },
   }
 
-  if (loading) {
+  if (loading !== undefined && loading !== null) {
     return (
       <div style={{ height: `${height}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Spin size="large" />
@@ -68,7 +68,7 @@ export const AnalyticsPieChart: React.FC<PieChartProps> = ({
     )
   }
 
-  if (!chartData || chartData.length === 0) {
+  if (chartData == null || chartData.length === 0) {
     return (
       <div style={{ height: `${height}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Empty description="暂无数据" />
@@ -107,7 +107,7 @@ export const AnalyticsBarChart: React.FC<BarChartProps> = ({
   isPercentage = false
 }) => {
   const chartData = useMemo(() => {
-    if (!data || data.length === 0) return []
+    if (data == null || data.length === 0) return []
     return data
   }, [data])
 
@@ -158,7 +158,7 @@ export const AnalyticsBarChart: React.FC<BarChartProps> = ({
     },
   }
 
-  if (loading) {
+  if (loading !== undefined && loading !== null) {
     return (
       <div style={{ height: `${height}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Spin size="large" />
@@ -166,7 +166,7 @@ export const AnalyticsBarChart: React.FC<BarChartProps> = ({
     )
   }
 
-  if (!chartData || chartData.length === 0) {
+  if (chartData == null || chartData.length === 0) {
     return (
       <div style={{ height: `${height}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Empty description="暂无数据" />
@@ -209,11 +209,11 @@ export const AnalyticsLineChart: React.FC<LineChartProps> = ({
   showDots = true
 }) => {
   const chartData = useMemo(() => {
-    if (!data || data.length === 0) return []
+    if (data == null || data.length === 0) return []
     return data
   }, [data])
 
-  if (loading) {
+  if (loading !== undefined && loading !== null) {
     return (
       <div style={{ height: `${height}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Spin size="large" />
@@ -221,7 +221,7 @@ export const AnalyticsLineChart: React.FC<LineChartProps> = ({
     )
   }
 
-  if (!chartData || chartData.length === 0) {
+  if (chartData == null || chartData.length === 0) {
     return (
       <div style={{ height: `${height}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Empty description="暂无数据" />
@@ -269,7 +269,7 @@ export const AnalyticsLineChart: React.FC<LineChartProps> = ({
     },
   }
 
-  if (loading) {
+  if (loading !== undefined && loading !== null) {
     return (
       <div style={{ height: `${height}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Spin size="large" />
@@ -277,7 +277,7 @@ export const AnalyticsLineChart: React.FC<LineChartProps> = ({
     )
   }
 
-  if (!chartData || chartData.length === 0) {
+  if (chartData == null || chartData.length === 0) {
     return (
       <div style={{ height: `${height}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Empty description="暂无数据" />
@@ -314,13 +314,13 @@ export const AnalyticsMultiBarChart: React.FC<MultiBarChartProps> = ({
   loading = false
 }) => {
   const chartData = useMemo(() => {
-    if (!data || data.length === 0) return []
+    if (data == null || data.length === 0) return []
     return data
   }, [data])
 
   // Transform data for multi-series column chart
   const multiBarData = useMemo(() => {
-    if (!chartData || chartData.length === 0) return []
+    if (chartData === undefined || chartData === null || chartData.length === 0) return []
     return chartData.flatMap(item =>
       bars.map(bar => ({
         [xDataKey]: item[xDataKey],
@@ -330,7 +330,7 @@ export const AnalyticsMultiBarChart: React.FC<MultiBarChartProps> = ({
     )
   }, [chartData, bars, xDataKey])
 
-  if (loading) {
+  if (loading !== undefined && loading !== null) {
     return (
       <div style={{ height: `${height}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Spin size="large" />
@@ -338,7 +338,7 @@ export const AnalyticsMultiBarChart: React.FC<MultiBarChartProps> = ({
     )
   }
 
-  if (!chartData || chartData.length === 0) {
+  if (chartData == null || chartData.length === 0) {
     return (
       <div style={{ height: `${height}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Empty description="暂无数据" />
@@ -353,7 +353,7 @@ export const AnalyticsMultiBarChart: React.FC<MultiBarChartProps> = ({
     seriesField: 'type',
     color: ({ type }: ChartDatum) => {
       const bar = bars.find(b => b.name === type)
-      return bar?.fill ?? CHART_COLORS[0]
+      return (bar !== undefined && bar !== null) ? bar.fill : CHART_COLORS[0]
     },
     isGroup: true,
     columnStyle: {
@@ -381,7 +381,7 @@ export const AnalyticsMultiBarChart: React.FC<MultiBarChartProps> = ({
     },
   }
 
-  if (loading) {
+  if (loading !== undefined && loading !== null) {
     return (
       <div style={{ height: `${height}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Spin size="large" />
@@ -389,7 +389,7 @@ export const AnalyticsMultiBarChart: React.FC<MultiBarChartProps> = ({
     )
   }
 
-  if (!chartData || chartData.length === 0) {
+  if (chartData == null || chartData.length === 0) {
     return (
       <div style={{ height: `${height}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Empty description="暂无数据" />
@@ -433,11 +433,11 @@ export const AnalyticsAreaChart: React.FC<AreaChartProps> = ({
   isPercentage = false
 }) => {
   const chartData = useMemo(() => {
-    if (!data || data.length === 0) return []
+    if (data == null || data.length === 0) return []
     return data
   }, [data])
 
-  if (loading) {
+  if (loading !== undefined && loading !== null) {
     return (
       <div style={{ height: `${height}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Spin size="large" />
@@ -445,7 +445,7 @@ export const AnalyticsAreaChart: React.FC<AreaChartProps> = ({
     )
   }
 
-  if (!chartData || chartData.length === 0) {
+  if (chartData == null || chartData.length === 0) {
     return (
       <div style={{ height: `${height}px`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Empty description="暂无数据" />

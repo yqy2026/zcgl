@@ -39,7 +39,7 @@ const RenewalSummarySection: React.FC<RenewalSummarySectionProps> = ({ contract 
       已终止: { text: '已终止', color: 'red' },
       已续签: { text: '已续签', color: 'blue' },
     };
-    return statusMap[status] || { text: status, color: 'default' };
+    return statusMap[status] ?? { text: status, color: 'default' };
   };
 
   const statusInfo = getContractStatusLabel(contract.contract_status || '');
@@ -77,24 +77,24 @@ const RenewalSummarySection: React.FC<RenewalSummarySectionProps> = ({ contract 
           <Text strong style={{ color: COLORS.primary }}>
             ¥{(typeof contract.total_deposit === 'number'
               ? contract.total_deposit
-              : parseFloat(contract.total_deposit as string) || 0
+              : parseFloat(contract.total_deposit as string) ?? 0
             ).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </Text>
         </Descriptions.Item>
         <Descriptions.Item label={<Space><HomeOutlined /> 关联资产</Space>}>
-          <Text>{contract.assets?.length || 0} 个资产</Text>
+          <Text>{(contract.assets?.length ?? 0)} 个资产</Text>
         </Descriptions.Item>
 
         <Descriptions.Item label="承租方/委托方" span={2}>
           <Text strong>{contract.tenant_name}</Text>
-          {contract.tenant_contact && (
+          {contract.tenant_contact != null && (
             <Text type="secondary" style={{ marginLeft: 8 }}>
               （联系人: {contract.tenant_contact}）
             </Text>
           )}
         </Descriptions.Item>
 
-        {contract.rent_terms && contract.rent_terms.length > 0 && (
+        {contract.rent_terms != null && contract.rent_terms.length > 0 && (
           <Descriptions.Item label="租金条款" span={2}>
             <Space direction="vertical" size={0}>
               {contract.rent_terms.map((term, index) => (
@@ -102,7 +102,7 @@ const RenewalSummarySection: React.FC<RenewalSummarySectionProps> = ({ contract 
                   条款{index + 1}: {term.start_date} ~ {term.end_date}
                   , 月租 ¥{(typeof term.total_monthly_amount === 'number'
                     ? term.total_monthly_amount
-                    : parseFloat(term.total_monthly_amount as string) || 0
+                    : parseFloat(term.total_monthly_amount as string) ?? 0
                   ).toLocaleString('zh-CN')}
                 </Text>
               ))}

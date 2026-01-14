@@ -63,7 +63,7 @@ const OwnershipDetailPage: React.FC = () => {
   } = useQuery({
     queryKey: ['ownership', id],
     queryFn: () => ownershipService.getOwnership(id as string),
-    enabled: !!id,
+    enabled: id !== null && id !== undefined && id.length > 0,
   });
 
   // 获取关联资产
@@ -75,7 +75,7 @@ const OwnershipDetailPage: React.FC = () => {
         page: 1,
         limit: 100,
       }),
-    enabled: !!id,
+    enabled: id !== null && id !== undefined && id.length > 0,
   });
 
   // 获取关联合同
@@ -87,7 +87,7 @@ const OwnershipDetailPage: React.FC = () => {
         page: 1,
         limit: 100,
       }),
-    enabled: !!id,
+    enabled: id !== null && id !== undefined && id.length > 0,
   });
 
   // 获取财务统计
@@ -97,7 +97,7 @@ const OwnershipDetailPage: React.FC = () => {
       rentContractService.getOwnershipStatistics({
         ownership_ids: [id as string],
       }),
-    enabled: !!id,
+    enabled: id !== null && id !== undefined && id.length > 0,
   });
 
   // 资产表格列定义
@@ -158,7 +158,7 @@ const OwnershipDetailPage: React.FC = () => {
           lease_downstream: { label: '下游租赁', color: 'green' },
           entrusted: { label: '委托运营', color: 'purple' },
         };
-        const info = typeMap[type] || { label: type, color: 'default' };
+        const info = typeMap[type] ?? { label: type, color: 'default' };
         return <Tag color={info.color}>{info.label}</Tag>;
       },
     },
@@ -308,7 +308,7 @@ const OwnershipDetailPage: React.FC = () => {
               <Title level={2} style={{ margin: 0 }}>
                 {ownership.name}
               </Title>
-              {ownership.short_name && (
+              {(ownership.short_name !== null && ownership.short_name !== undefined && ownership.short_name.length > 0) && (
                 <Text type="secondary">({ownership.short_name})</Text>
               )}
               <Badge
@@ -390,7 +390,7 @@ const OwnershipDetailPage: React.FC = () => {
         <Descriptions column={2}>
           <Descriptions.Item label="权属方全称">{ownership.name}</Descriptions.Item>
           <Descriptions.Item label="权属方简称">
-            {ownership.short_name || '-'}
+            {ownership.short_name ?? '-'}
           </Descriptions.Item>
           <Descriptions.Item label="状态">
             <Badge

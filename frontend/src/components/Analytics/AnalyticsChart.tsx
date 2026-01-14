@@ -90,7 +90,7 @@ export const AnalyticsPieChart: React.FC<PieChartProps> = ({
 
   }
 
-  if (loading) {
+  if (loading !== undefined && loading !== null) {
     return (
       <Card title={title} className={className}>
         <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -192,7 +192,7 @@ export const AnalyticsBarChart: React.FC<BarChartProps> = ({
     },
   }
 
-  if (loading) {
+  if (loading !== undefined && loading !== null) {
     return (
       <Card title={title} className={className}>
         <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -289,7 +289,7 @@ export const AnalyticsLineChart: React.FC<LineChartProps> = ({
 
   }
 
-  if (loading) {
+  if (loading !== undefined && loading !== null) {
     return (
       <Card title={title} className={className}>
         <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -367,7 +367,7 @@ export const chartDataUtils = {
       name: item.category,
       value: item.count,
       count: item.count,
-      occupancy_rate: item.occupancy_rate || 0
+      occupancy_rate: item.occupancy_rate ?? 0
     }))
   },
 
@@ -387,8 +387,8 @@ export const chartDataUtils = {
     return data.map(item => ({
       date: item.date,
       occupancy_rate: item.occupancy_rate,
-      total_rented_area: item.total_rented_area || 0,
-      total_rentable_area: item.total_rentable_area || 0
+      total_rented_area: item.total_rented_area ?? 0,
+      total_rentable_area: item.total_rentable_area ?? 0
     }))
   },
 

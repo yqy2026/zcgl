@@ -117,7 +117,7 @@ vi.mock('antd', async () => {
   const mockTable = vi.fn(({ dataSource }: any) =>
     React.createElement('div', {
       'data-testid': 'error-table',
-      'data-row-count': dataSource?.length || 0,
+      'data-row-count': dataSource?.length ?? 0,
     })
   )
 

@@ -50,7 +50,7 @@ const PerformanceMonitor: React.FC = () => {
   const collectWebVitals = useCallback(() => {
     // FCP - First Contentful Paint
     const fcpEntry = performance.getEntriesByName('first-contentful-paint')[0] as PerformanceEntry
-    if (fcpEntry) {
+    if (fcpEntry != null) {
       setMetrics(prev => ({ ...prev, fcp: fcpEntry.startTime }))
     }
 
@@ -108,7 +108,7 @@ interface MemoryInfo {
   const collectNetworkInfo = useCallback(() => {
     if ('connection' in navigator) {
       const connection = (navigator as unknown as { connection?: NetworkConnection }).connection
-      if (connection) {
+      if (connection !== undefined && connection !== null) {
         setMetrics(prev => ({
           ...prev,
           connectionType: connection.type,
@@ -161,7 +161,7 @@ interface MemoryInfo {
   }, [collectWebVitals, collectNetworkInfo, collectMemoryInfo, collectComponentMetrics])
 
   useEffect(() => {
-    if (isMonitoring) {
+    if (isMonitoring !== undefined && isMonitoring !== null) {
       const cleanup = startMonitoring()
       return cleanup
     }
@@ -177,20 +177,20 @@ interface MemoryInfo {
   // 性能建议
   const getPerformanceAdvice = () => {
     const advice = []
-    
-    if (metrics.lcp && metrics.lcp > 2500) {
+
+    if (metrics.lcp != null && metrics.lcp > 2500) {
       advice.push('LCP过高，建议优化图片加载和关键资源')
     }
-    
-    if (metrics.fid && metrics.fid > 100) {
+
+    if (metrics.fid != null && metrics.fid > 100) {
       advice.push('FID过高，建议减少JavaScript执行时间')
     }
-    
-    if (metrics.cls && metrics.cls > 0.1) {
+
+    if (metrics.cls != null && metrics.cls > 0.1) {
       advice.push('CLS过高，建议为图片和广告预留空间')
     }
-    
-    if (metrics.memoryUsage && metrics.memoryUsage > 80) {
+
+    if (metrics.memoryUsage != null && metrics.memoryUsage > 80) {
       advice.push('内存使用率过高，建议检查内存泄漏')
     }
 
@@ -270,37 +270,37 @@ interface MemoryInfo {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
                 <Statistic
                   title="FCP (ms)"
-                  value={metrics.fcp || 0}
+                  value={metrics.fcp ?? 0}
                   precision={0}
-                  valueStyle={{ 
-                    color: metrics.fcp ? getPerformanceScore(metrics.fcp, [1800, 3000]).color : 'inherit' 
+                  valueStyle={{
+                    color: metrics.fcp != null ? getPerformanceScore(metrics.fcp, [1800, 3000]).color : 'inherit'
                   }}
                   prefix={<ThunderboltOutlined />}
                 />
                 <Statistic
                   title="LCP (ms)"
-                  value={metrics.lcp || 0}
+                  value={metrics.lcp ?? 0}
                   precision={0}
-                  valueStyle={{ 
-                    color: metrics.lcp ? getPerformanceScore(metrics.lcp, [2500, 4000]).color : 'inherit' 
+                  valueStyle={{
+                    color: metrics.lcp != null ? getPerformanceScore(metrics.lcp, [2500, 4000]).color : 'inherit'
                   }}
                   prefix={<ClockCircleOutlined />}
                 />
                 <Statistic
                   title="FID (ms)"
-                  value={metrics.fid || 0}
+                  value={metrics.fid ?? 0}
                   precision={0}
-                  valueStyle={{ 
-                    color: metrics.fid ? getPerformanceScore(metrics.fid, [100, 300]).color : 'inherit' 
+                  valueStyle={{
+                    color: metrics.fid != null ? getPerformanceScore(metrics.fid, [100, 300]).color : 'inherit'
                   }}
                   prefix={<ThunderboltOutlined />}
                 />
                 <Statistic
                   title="CLS"
-                  value={metrics.cls || 0}
+                  value={metrics.cls ?? 0}
                   precision={3}
-                  valueStyle={{ 
-                    color: metrics.cls ? getPerformanceScore(metrics.cls, [0.1, 0.25]).color : 'inherit' 
+                  valueStyle={{
+                    color: metrics.cls != null ? getPerformanceScore(metrics.cls, [0.1, 0.25]).color : 'inherit'
                   }}
                   prefix={<WarningOutlined />}
                 />
@@ -313,18 +313,18 @@ interface MemoryInfo {
                 <div>
                   <div style={{ marginBottom: 8 }}>内存使用率</div>
                   <Progress
-                    percent={metrics.memoryUsage || 0}
-                    status={metrics.memoryUsage && metrics.memoryUsage > 80 ? 'exception' : 'normal'}
+                    percent={metrics.memoryUsage ?? 0}
+                    status={metrics.memoryUsage != null && metrics.memoryUsage > 80 ? 'exception' : 'normal'}
                     format={(percent) => `${percent?.toFixed(1)}%`}
                   />
                 </div>
                 <div>
                   <Statistic
                     title="网络类型"
-                    value={metrics.effectiveType || '未知'}
+                    value={metrics.effectiveType ?? '未知'}
                     prefix={<ThunderboltOutlined />}
                   />
-                  {metrics.downlink && (
+                  {metrics.downlink != null && (
                     <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
                       下行速度: {metrics.downlink} Mbps | RTT: {metrics.rtt}ms
                     </div>

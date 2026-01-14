@@ -1,3 +1,4 @@
+import logging
 import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -13,6 +14,8 @@ from ...schemas.auth import TokenResponse
 from .password_service import PasswordService
 from .session_service import SessionService
 from .user_management_service import UserManagementService
+
+logger = logging.getLogger(__name__)
 
 # Type aliases for better readability
 TokenType = str
@@ -137,7 +140,9 @@ class AuthenticationService:
             "aud": "land-property-system",
             "iss": "land-property-auth",
         }
-        access_token: TokenType = jwt.encode(access_token_data, SECRET_KEY, algorithm=ALGORITHM)
+        access_token: TokenType = jwt.encode(
+            access_token_data, SECRET_KEY, algorithm=ALGORITHM
+        )
 
         # 刷新令牌
         refresh_token_data: dict[str, Any] = {
@@ -152,7 +157,9 @@ class AuthenticationService:
             "aud": "land-property-system",
             "iss": "land-property-auth",
         }
-        refresh_token: TokenType = jwt.encode(refresh_token_data, SECRET_KEY, algorithm=ALGORITHM)
+        refresh_token: TokenType = jwt.encode(
+            refresh_token_data, SECRET_KEY, algorithm=ALGORITHM
+        )
 
         return TokenResponse(
             access_token=access_token,
@@ -189,7 +196,7 @@ class AuthenticationService:
                 return None
 
         except JWTError as e:
-            print(f"JWT validation failed: {str(e)}")
+            logger.error(f"JWT validation failed: {str(e)}")
             return None
 
         # 查找会话 (Delegating to SessionService would be cleaner but requires careful session loop handling)

@@ -31,9 +31,7 @@ const AssetCard: React.FC<AssetCardProps> = ({
   onSelect,
 }) => {
   // 计算出租率
-  const occupancyRate = asset.occupancy_rate !== undefined && asset.occupancy_rate !== null
-    ? asset.occupancy_rate
-    : calculateOccupancyRate(asset.rented_area, asset.rentable_area)
+  const occupancyRate = asset.occupancy_rate ?? calculateOccupancyRate(asset.rented_area, asset.rentable_area)
 
   return (
     <Card
@@ -162,7 +160,7 @@ const AssetCard: React.FC<AssetCardProps> = ({
         </Row>
 
         {/* 出租率进度条 */}
-        {asset.rentable_area !== undefined && asset.rentable_area !== null && asset.rentable_area > 0 && (
+        {(asset.rentable_area ?? 0) > 0 && (
           <div style={{ marginBottom: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
               <span style={{ fontSize: '12px', color: COLORS.textTertiary }}>出租率</span>
@@ -185,13 +183,13 @@ const AssetCard: React.FC<AssetCardProps> = ({
             <Tag color={getStatusColor(asset.usage_status, 'usage')}>
               {asset.usage_status}
             </Tag>
-            {asset.is_litigated && (
+            {asset.is_litigated == true && (
               <Tag color="red">涉诉</Tag>
             )}
-            {asset.certificated_usage !== undefined && asset.certificated_usage !== '' && (
+            {(asset.certificated_usage?.trim() ?? '') !== '' && (
               <Tag color="blue">证载：{asset.certificated_usage}</Tag>
             )}
-            {asset.actual_usage !== undefined && asset.actual_usage !== '' && asset.actual_usage !== asset.certificated_usage && (
+            {(asset.actual_usage?.trim() ?? '') !== '' && asset.actual_usage !== asset.certificated_usage && (
               <Tag color="orange">实际：{asset.actual_usage}</Tag>
             )}
           </Space>

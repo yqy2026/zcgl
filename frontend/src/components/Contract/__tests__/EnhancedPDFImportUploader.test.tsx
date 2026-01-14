@@ -25,14 +25,14 @@ import React from 'react'
 // Mock antd 组件
 vi.mock('antd', () => ({
   Upload: ({ children, fileList, onChange, customRequest: _customRequest }: any) => (
-    <div data-testid="upload" data-file-count={fileList?.length || 0}>
+    <div data-testid="upload" data-file-count={fileList?.length ?? 0}>
       {children}
       <input
         type="file"
         onChange={(e) => {
-          const files = Array.from(e.target.files || [])
-          if (onChange && files.length > 0) {
-            onChange({ file: files[0], fileList: [...(fileList || []), files[0]] })
+          const files = Array.from(e.target.files ?? [])
+          if (onChange !== undefined && onChange !== null &&  files.length > 0) {
+            onChange({ file: files[0], fileList: [...(fileList ?? []), files[0]] })
           }
         }}
       />

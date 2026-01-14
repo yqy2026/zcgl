@@ -102,10 +102,10 @@ const SmartResponseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const getResponseType = useCallback((metric: PerformanceMetrics): OptimizationType => {
     // 根据时间分配类型
     if (metric.responseTime < 100) return 'loading'
-    if (metric.renderTime > metric.responseTime * 2) return 'rendering'
+    if (metric.renderTime > (metric.responseTime * 2)) return 'rendering'
     if (metric.compressionRatio > 0.8) return 'compression'
-    if (metric.cacheHit) return 'caching'
-    if (metric.networkTime > metric.responseTime * 0.5) return 'network'
+    if (metric.cacheHit === true) return 'caching'
+    if (metric.networkTime > (metric.responseTime * 0.5)) return 'network'
     return 'database'
   }, [])
 
@@ -131,7 +131,7 @@ const SmartResponseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     const byType = totalMetrics.reduce((acc, m) => {
       const type = getResponseType(m)
-      acc[type] = (acc[type] || 0) + 1
+      acc[type] = (acc[type] ?? 0) + 1
       return acc
     }, {} as Record<string, number>)
 
@@ -186,7 +186,7 @@ const SmartResponseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       ...prev,
       [type]: !prev[type]
     }))
-    MessageManager.info(`${type}优化已${optimizationStates[type] ? '启用' : '禁用'}`)
+    MessageManager.info(`${type}优化已${(optimizationStates[type] ?? false) ? '启用' : '禁用'}`)
   }, [optimizationStates])
 
   // 重置配置
@@ -229,10 +229,10 @@ const ResponseOptimizationDashboard: React.FC<{ config: SmartResponseConfig; met
   // 获取响应类型（本地定义，因为不在context中）
   const _getResponseType = (metric: PerformanceMetrics): OptimizationType => {
     if (metric.responseTime < 100) return 'loading'
-    if (metric.renderTime > metric.responseTime * 2) return 'rendering'
+    if (metric.renderTime > (metric.responseTime * 2)) return 'rendering'
     if (metric.compressionRatio > 0.8) return 'compression'
-    if (metric.cacheHit) return 'caching'
-    if (metric.networkTime > metric.responseTime * 0.5) return 'network'
+    if (metric.cacheHit === true) return 'caching'
+    if (metric.networkTime > (metric.responseTime * 0.5)) return 'network'
     return 'database'
   }
 
@@ -433,7 +433,7 @@ const ResponseOptimizationDashboard: React.FC<{ config: SmartResponseConfig; met
                              _getResponseType(metric) === 'rendering' ? '🎨' :
                              _getResponseType(metric) === 'compression' ? '📦' :
                              _getResponseType(metric) === 'caching' ? '💾' :
-                             '🌐'} {metric.cacheHit ? '✅' : '❌'}
+                             '🌐'} {metric.cacheHit === true ? '✅' : '❌'}
                       </Text>
                     </Col>
                     <Col span={4}>

@@ -173,10 +173,10 @@ class RouteTransitionManager {
 
   public getAnimationConfig(type: string): PageTransitionConfig {
     if (this.reducedMotion) {
-      return this.animationTypes.get("fade") || this.animationTypes.get("none")!;
+      return this.animationTypes.get("fade") ?? this.animationTypes.get("none")!;
     }
 
-    return this.animationTypes.get(type) || this.animationTypes.get("fade")!;
+    return this.animationTypes.get(type) ?? this.animationTypes.get("fade")!;
   }
 
   public setReducedMotion(reduced: boolean) {
@@ -209,7 +209,7 @@ export const RouteTransition: React.FC<RouteTransitionProps> = ({
 
   // 根据导航类型选择动画
   const getAnimationType = () => {
-    if (custom) return "fade";
+    if (custom != null) return "fade";
 
     switch (navigationType) {
       case "POP":
@@ -226,7 +226,7 @@ export const RouteTransition: React.FC<RouteTransitionProps> = ({
   const animationConfig = globalTransitionManager.getAnimationConfig(getAnimationType());
 
   // 应用自定义持续时间
-  if (duration) {
+  if (duration != null) {
     animationConfig.enter.transition = {
       ...animationConfig.enter.transition,
       duration,
@@ -307,7 +307,7 @@ export const useElementTransition = (isVisible: boolean) => {
   const [shouldRender, setShouldRender] = useState(isVisible);
 
   useEffect(() => {
-    if (isVisible) {
+    if (isVisible !== undefined && isVisible !== null) {
       setShouldRender(true);
     } else {
       // 延迟卸载以允许退出动画完成
@@ -357,7 +357,7 @@ export const useRouteAnimation = (route: string) => {
     };
 
     const defaultAnimation = Object.keys(routeAnimations).find((r) => route.startsWith(r));
-    setAnimationType(defaultAnimation ? routeAnimations[defaultAnimation] : "fade");
+    setAnimationType(defaultAnimation != null ? routeAnimations[defaultAnimation] : "fade");
   }, [route]);
 
   return { animationType };
@@ -374,7 +374,7 @@ export const useSmartTransition = () => {
   useEffect(() => {
     // 根据用户行为学习偏好
     const userPreferences = localStorage.getItem("preferred_route_animation");
-    if (userPreferences && ["fade", "slide", "scale", "flip", "none"].includes(userPreferences)) {
+    if (userPreferences != null && ["fade", "slide", "scale", "flip", "none"].includes(userPreferences)) {
       setPreferredAnimation(userPreferences as AnimationType);
     }
   }, []);
@@ -475,7 +475,7 @@ export const TransitionConfigProvider: React.FC<{ children: ReactNode }> = ({ ch
     const checkPerformance = () => {
       const connection =
         navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-      if (connection && connection.effectiveType) {
+      if (connection !== undefined && connection !== null &&  connection.effectiveType) {
         // 在慢速网络上禁用动画
         const isSlowNetwork = ["slow-2g", "2g", "3g"].includes(connection.effectiveType);
         setAnimationsEnabled(!isSlowNetwork);

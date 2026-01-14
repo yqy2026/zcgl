@@ -87,9 +87,9 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}) => {
           errorInfo.message = '请求超时'
           break
         default:
-          errorInfo.message = (data?.message as string) || `服务器错误 (${status})`
+          errorInfo.message = (data?.message as string) ?? `服务器错误 (${status})`
       }
-    } else if ((error as any)?.request) {
+    } else if ((error as any)?.request != null) {
       // 网络错误
       errorInfo = {
         code: 'NETWORK_ERROR',
@@ -97,7 +97,7 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}) => {
         details: error as any,
         timestamp: new Date().toISOString(),
       }
-    } else if (error?.message) {
+    } else if (error?.message != null) {
       // JavaScript错误
       errorInfo = {
         code: 'CLIENT_ERROR',
@@ -155,7 +155,7 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}) => {
   // 处理业务逻辑错误
   const handleBusinessError = useCallback((message: string, code?: string) => {
     const errorInfo: ErrorInfo = {
-      code: code || 'BUSINESS_ERROR',
+      code: code ?? 'BUSINESS_ERROR',
       message,
       timestamp: new Date().toISOString(),
     }
@@ -183,7 +183,7 @@ export const useErrorHandler = (options: UseErrorHandlerOptions = {}) => {
       message = '文件大小超出限制'
     } else if (error?.response?.status === 415) {
       message = '不支持的文件格式'
-    } else if (error?.message?.includes('timeout')) {
+    } else if (error?.message?.includes('timeout') === true) {
       message = '上传超时，请重试'
     }
 

@@ -64,14 +64,14 @@ export class ApiClient {
       (config) => {
         // 添加认证token
         const token = localStorage.getItem('token')
-        if (token) {
+        if (token != null) {
           config.headers.Authorization = `Bearer ${token}`
         }
 
         // 开发模式特殊处理
         if (API_CONFIG.ENVIRONMENT === 'development') {
           const mockToken = localStorage.getItem('mock_token')
-          if (mockToken) {
+          if (mockToken != null) {
             config.headers['X-Development-Auth'] = 'mock-token'
           }
         }
@@ -92,11 +92,14 @@ export class ApiClient {
         return response
       },
       async (error) => {
-        const originalRequest = error.config
+        const originalRequest = error.config as any
+        const errorResp = error as { response?: { status?: number } }
 
         // 处理401未授权错误
-        if (error.response?.status === 401 && !originalRequest._retry) {
-          originalRequest._retry = true
+        if (errorResp.response?.status === 401 && !((originalRequest != null) && (originalRequest._retry === true))) {
+          if (originalRequest != null) {
+            originalRequest._retry = true
+          }
 
           // 开发模式处理
           if (API_CONFIG.ENVIRONMENT === 'development') {
@@ -133,7 +136,7 @@ export class ApiClient {
    */
   private async refreshToken(): Promise<void> {
     const refreshToken = localStorage.getItem('refresh_token')
-    if (!refreshToken) {
+    if (refreshToken == null) {
       throw new Error('No refresh token available')
     }
 
@@ -220,7 +223,7 @@ export class ApiClient {
       },
       timeout: API_CONFIG.TIMEOUTS.UPLOAD,
       onUploadProgress: (progressEvent) => {
-        if (onProgress && progressEvent.total) {
+        if (onProgress != null && progressEvent.total != null) {
           const progress = (progressEvent.loaded / progressEvent.total) * 100
           onProgress(Math.round(progress))
         }
@@ -248,7 +251,7 @@ export class ApiClient {
     const downloadUrl = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = downloadUrl
-    link.download = filename || 'download'
+    link.download = filename ?? 'download'
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)

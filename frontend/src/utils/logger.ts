@@ -48,7 +48,7 @@ class Logger {
     }
 
     private shouldLog(level: LogLevel): boolean {
-        if (!this.config.enabled) return false;
+        if (this.config.enabled === false) return false;
         return this.levels[level] >= this.levels[this.config.level];
     }
 
@@ -66,17 +66,17 @@ class Logger {
 
         // 构建前缀
         const prefixParts: string[] = [];
-        if (this.config.useTimestamp) {
+        if (this.config.useTimestamp === true) {
             prefixParts.push(this.getTimestamp());
         }
         prefixParts.push(`[${level.toUpperCase()}]`);
-        if (this.config.prefix) {
+        if (this.config.prefix != null) {
             prefixParts.push(`[${this.config.prefix}]`);
         }
 
         parts.push(`${prefixParts.join(' ')} ${message}`);
 
-        if (meta && Object.keys(meta).length > 0) {
+        if (meta != null && Object.keys(meta).length > 0) {
             parts.push(meta);
         }
 
@@ -123,7 +123,7 @@ class Logger {
     child(prefix: string): Logger {
         return new Logger({
             ...this.config,
-            prefix: this.config.prefix ? `${this.config.prefix}:${prefix}` : prefix,
+            prefix: this.config.prefix != null ? `${this.config.prefix}:${prefix}` : prefix,
         });
     }
 

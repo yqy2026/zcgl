@@ -54,10 +54,10 @@ const ActionFeedback: React.FC<ActionFeedbackProps> = ({
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    if (autoHide && result?.status === 'success') {
+    if (autoHide !== undefined && autoHide !== null &&  result?.status === 'success') {
       const timer = setTimeout(() => {
         setVisible(false);
-        if (onClose) {
+        if (onClose !== undefined && onClose !== null) {
           onClose();
         }
       }, autoHideDelay);
@@ -232,7 +232,7 @@ const ActionFeedback: React.FC<ActionFeedbackProps> = ({
         closable={result.status !== 'loading'}
         onClose={() => {
           setVisible(false);
-          if (onClose) {
+          if (onClose !== undefined && onClose !== null) {
             onClose();
           }
         }}

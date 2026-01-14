@@ -120,7 +120,7 @@ export const getStatusColor = (
   status: string | undefined,
   type: 'ownership' | 'property' | 'usage'
 ): string => {
-  if (!status) return 'default';
+  if (status == null || status === '') return 'default';
   const colorMaps = {
     ownership: {
       已确权: 'green',

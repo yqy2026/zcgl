@@ -136,7 +136,7 @@ const NotificationCenter: React.FC = () => {
         }
 
         // 根据类型跳转
-        if (item.related_entity_id) {
+        if (item.related_entity_id != null) {
             if (item.related_entity_type === 'contract' ||
                 item.type === NotificationType.CONTRACT_EXPIRING ||
                 item.type === NotificationType.CONTRACT_EXPIRED) {

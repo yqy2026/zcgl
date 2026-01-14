@@ -38,21 +38,21 @@ const RentTermsSection: React.FC = () => {
             title: '管理费',
             dataIndex: 'management_fee',
             key: 'management_fee',
-            render: (amount: number) => `¥${(amount || 0).toLocaleString()}`,
+            render: (amount: number) => `¥${(amount ?? 0).toLocaleString()}`,
             width: 100,
         },
         {
             title: '其他费用',
             dataIndex: 'other_fees',
             key: 'other_fees',
-            render: (amount: number) => `¥${(amount || 0).toLocaleString()}`,
+            render: (amount: number) => `¥${(amount ?? 0).toLocaleString()}`,
             width: 100,
         },
         {
             title: '月应收总额',
             key: 'total_amount',
             render: (record: RentTermFormData) => {
-                const total = record.monthly_rent + (record.management_fee || 0) + (record.other_fees || 0);
+                const total = record.monthly_rent + (record.management_fee ?? 0) + (record.other_fees ?? 0);
                 return `¥${total.toLocaleString()}`;
             },
             width: 120,

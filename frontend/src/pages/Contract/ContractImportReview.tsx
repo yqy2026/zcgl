@@ -66,21 +66,21 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
 
     // 设置表单初始值 - 确保数字字段正确转换
     form.setFieldsValue({
-      contract_number: validatedData.contract_number || '',
-      asset_id: recommendations.asset_id || '',
-      ownership_id: recommendations.ownership_id || '',
-      tenant_name: validatedData.tenant_name || '',
-      tenant_contact: validatedData.tenant_contact || '',
-      sign_date: validatedData.sign_date ? dayjs(String(validatedData.sign_date)) : null,
-      start_date: validatedData.start_date ? dayjs(String(validatedData.start_date)) : null,
-      end_date: validatedData.end_date ? dayjs(String(validatedData.end_date)) : null,
-      rentable_area: validatedData.rentable_area ? parseFloat(String(validatedData.rentable_area)) : undefined,
-      monthly_rent: validatedData.monthly_rent ? parseFloat(String(validatedData.monthly_rent)) : undefined,
-      total_deposit: validatedData.total_deposit ? parseFloat(String(validatedData.total_deposit)) : 0,
-      contract_status: validatedData.contract_status || '有效',
-      payment_terms: validatedData.payment_terms || '',
-      contract_notes: validatedData.contract_notes || '',
-      rent_terms: validatedData.rent_terms || []
+      contract_number: validatedData.contract_number ?? '',
+      asset_id: recommendations.asset_id ?? '',
+      ownership_id: recommendations.ownership_id ?? '',
+      tenant_name: validatedData.tenant_name ?? '',
+      tenant_contact: validatedData.tenant_contact ?? '',
+      sign_date: validatedData.sign_date != null ? dayjs(String(validatedData.sign_date)) : null,
+      start_date: validatedData.start_date != null ? dayjs(String(validatedData.start_date)) : null,
+      end_date: validatedData.end_date != null ? dayjs(String(validatedData.end_date)) : null,
+      rentable_area: validatedData.rentable_area != null ? parseFloat(String(validatedData.rentable_area)) : undefined,
+      monthly_rent: validatedData.monthly_rent != null ? parseFloat(String(validatedData.monthly_rent)) : undefined,
+      total_deposit: validatedData.total_deposit != null ? parseFloat(String(validatedData.total_deposit)) : 0,
+      contract_status: validatedData.contract_status ?? '有效',
+      payment_terms: validatedData.payment_terms ?? '',
+      contract_notes: validatedData.contract_notes ?? '',
+      rent_terms: validatedData.rent_terms ?? []
     });
 
   }, [result, form]);
@@ -98,7 +98,7 @@ interface FormFieldChange {
     // 标记已修改的字段
     const newModifiedFields = new Set(modifiedFields);
     changedFields.forEach((field: FormFieldChange) => {
-      if (field.name) {
+      if (field.name != null) {
         newModifiedFields.add(field.name[0]);
       }
     });
@@ -113,11 +113,11 @@ interface FormFieldChange {
       // 转换日期格式
       const confirmedData: ConfirmedContractData = {
         ...values,
-        sign_date: values.sign_date ? values.sign_date.format('YYYY-MM-DD') : undefined,
-        start_date: values.start_date ? values.start_date.format('YYYY-MM-DD') : '',
-        end_date: values.end_date ? values.end_date.format('YYYY-MM-DD') : '',
-        monthly_rent: values.monthly_rent?.toString() || '',
-        total_deposit: values.total_deposit?.toString() || '0'
+        sign_date: values.sign_date != null ? values.sign_date.format('YYYY-MM-DD') : undefined,
+        start_date: values.start_date != null ? values.start_date.format('YYYY-MM-DD') : '',
+        end_date: values.end_date != null ? values.end_date.format('YYYY-MM-DD') : '',
+        monthly_rent: values.monthly_rent?.toString() ?? '',
+        total_deposit: values.total_deposit?.toString() ?? '0'
       };
 
       setLoading(true);
@@ -127,7 +127,7 @@ interface FormFieldChange {
         MessageManager.success('合同导入成功！');
         // 可以在这里添加跳转逻辑
       } else {
-        MessageManager.error(response.error || '导入失败');
+        MessageManager.error(response.error ?? '导入失败');
       }
     } catch (error: unknown) {
       console.error('表单验证失败:', error);
@@ -159,7 +159,7 @@ interface FormFieldChange {
             label={
               <Space>
                 <span>合同编号</span>
-                {!!result.extraction_result.data.contract_number && (
+                {(result.extraction_result.data.contract_number ?? '') !== '' && (
                   <Tag color="blue">自动提取</Tag>
                 )}
               </Space>
@@ -175,7 +175,7 @@ interface FormFieldChange {
             label={
               <Space>
                 <span>承租方名称</span>
-                {!!result.extraction_result.data.tenant_name && (
+                {(result.extraction_result.data.tenant_name ?? '') !== '' && (
                   <Tag color="blue">自动提取</Tag>
                 )}
               </Space>
@@ -194,7 +194,7 @@ interface FormFieldChange {
             label={
               <Space>
                 <span>承租方联系方式</span>
-                {!!result.extraction_result.data.tenant_contact && (
+                {(result.extraction_result.data.tenant_contact ?? '') !== '' && (
                   <Tag color="blue">自动提取</Tag>
                 )}
               </Space>
@@ -209,7 +209,7 @@ interface FormFieldChange {
             label={
               <Space>
                 <span>合同状态</span>
-                {!!result.extraction_result.data.contract_status && (
+                {(result.extraction_result.data.contract_status ?? '') !== '' && (
                   <Tag color="blue">自动提取</Tag>
                 )}
               </Space>
@@ -242,7 +242,7 @@ interface FormFieldChange {
             label={
               <Space>
                 <span>签订日期</span>
-                {!!result.extraction_result.data.sign_date && (
+                {(result.extraction_result.data.sign_date ?? '') !== '' && (
                   <Tag color="blue">自动提取</Tag>
                 )}
               </Space>
@@ -257,7 +257,7 @@ interface FormFieldChange {
             label={
               <Space>
                 <span>开始日期</span>
-                {!!result.extraction_result.data.start_date && (
+                {(result.extraction_result.data.start_date ?? '') !== '' && (
                   <Tag color="blue">自动提取</Tag>
                 )}
               </Space>
@@ -273,7 +273,7 @@ interface FormFieldChange {
             label={
               <Space>
                 <span>结束日期</span>
-                {!!result.extraction_result.data.end_date && (
+                {(result.extraction_result.data.end_date ?? '') !== '' && (
                   <Tag color="blue">自动提取</Tag>
                 )}
               </Space>
@@ -292,7 +292,7 @@ interface FormFieldChange {
             label={
               <Space>
                 <span>租赁面积(㎡)</span>
-                {!!result.extraction_result.data.rentable_area && (
+                {result.extraction_result.data.rentable_area != null && (
                   <Tag color="blue">自动提取</Tag>
                 )}
               </Space>
@@ -313,7 +313,7 @@ interface FormFieldChange {
             label={
               <Space>
                 <span>月租金(元)</span>
-                {!!result.extraction_result.data.monthly_rent && (
+                {result.extraction_result.data.monthly_rent != null && (
                   <Tag color="blue">自动提取</Tag>
                 )}
               </Space>
@@ -335,7 +335,7 @@ interface FormFieldChange {
             label={
               <Space>
                 <span>押金(元)</span>
-                {!!result.extraction_result.data.total_deposit && (
+                {result.extraction_result.data.total_deposit != null && (
                   <Tag color="blue">自动提取</Tag>
                 )}
               </Space>
@@ -469,7 +469,7 @@ interface FormFieldChange {
         label={
           <Space>
             <span>支付条款</span>
-            {!!result.extraction_result.data.payment_terms && (
+            {(result.extraction_result.data.payment_terms ?? '') !== '' && (
               <Tag color="blue">自动提取</Tag>
             )}
           </Space>
@@ -483,7 +483,7 @@ interface FormFieldChange {
         label={
           <Space>
             <span>合同备注</span>
-            {!!result.extraction_result.data.contract_notes && (
+            {(result.extraction_result.data.contract_notes ?? '') !== '' && (
               <Tag color="blue">自动提取</Tag>
             )}
           </Space>

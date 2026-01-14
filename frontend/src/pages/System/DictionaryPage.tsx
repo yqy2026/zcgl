@@ -51,11 +51,11 @@ const DictionaryPage: React.FC = () => {
   const fetchTypes = async () => {
     try {
       const types = await unifiedDictionaryService.getTypes()
-      setDictTypes(types || [])
+      setDictTypes(types ?? [])
 
       // 同时获取枚举类型详细信息
       const typesData = await unifiedDictionaryService.getEnumFieldTypes()
-      setEnumTypes(typesData || [])
+      setEnumTypes(typesData ?? [])
     } catch (error) {
       pageLogger.error('获取字典类型失败:', error as Error)
     }
@@ -79,7 +79,7 @@ const DictionaryPage: React.FC = () => {
 
   // 获取指定类型的字典数据
   const fetchList = async (type?: string) => {
-    if (!type) {
+    if (type == null) {
       setData([])
       return
     }
@@ -108,7 +108,7 @@ const DictionaryPage: React.FC = () => {
   }, [activeType])
 
   const handleCreate = async () => {
-    if (!activeType) {
+    if (activeType == null) {
       MessageManager.warning('请先选择字典类型')
       return
     }
@@ -147,8 +147,8 @@ const DictionaryPage: React.FC = () => {
       dict_label: record.dict_label,
       dict_value: record.dict_value,
       dict_code: record.dict_code,
-      description: record.description || '',
-      sort_order: record.sort_order || 0,
+      description: record.description ?? '',
+      sort_order: record.sort_order ?? 0,
       is_active: record.is_active
     }
 
@@ -160,8 +160,8 @@ const DictionaryPage: React.FC = () => {
 
   const handleDelete = async (record: SystemDictionary) => {
     try {
-      const success = await unifiedDictionaryService.deleteEnumValue(record.id)
-      if (success) {
+      const result = await unifiedDictionaryService.deleteEnumValue(record.id)
+      if (result.success === true) {
         MessageManager.success('删除成功')
         fetchList(activeType)
         fetchAllEnumData()
@@ -182,7 +182,7 @@ const DictionaryPage: React.FC = () => {
     try {
       const values = await form.validateFields()
 
-      if (!activeType) {
+      if (activeType == null) {
         MessageManager.error('未找到对应的枚举类型')
         return
       }
@@ -195,7 +195,7 @@ const DictionaryPage: React.FC = () => {
 
       if (editingRecord) {
         // 更新现有枚举值
-        const success = await unifiedDictionaryService.updateEnumValue(editingRecord.id, {
+        const result = await unifiedDictionaryService.updateEnumValue(editingRecord.id, {
           label: values.dict_label,
           value: values.dict_value,
           code: values.dict_code,
@@ -204,7 +204,7 @@ const DictionaryPage: React.FC = () => {
           is_active: values.is_active
         })
 
-        if (success) {
+        if (result.success === true) {
           MessageManager.success('更新成功')
         } else {
           MessageManager.error('更新失败')
@@ -212,7 +212,7 @@ const DictionaryPage: React.FC = () => {
         }
       } else {
         // 创建新的枚举值
-        const success = await unifiedDictionaryService.createEnumValue(targetType.id, {
+        const createResult = await unifiedDictionaryService.createEnumValue(targetType.id, {
           label: values.dict_label,
           value: values.dict_value,
           code: values.dict_code,
@@ -220,7 +220,7 @@ const DictionaryPage: React.FC = () => {
           sort_order: values.sort_order
         })
 
-        if (success) {
+        if (createResult.success === true) {
           MessageManager.success('创建成功')
         } else {
           MessageManager.error('创建失败')
@@ -248,8 +248,8 @@ const DictionaryPage: React.FC = () => {
 
   const handleToggleActive = async (record: SystemDictionary, checked: boolean) => {
     try {
-      const success = await unifiedDictionaryService.toggleEnumValueActive(record.id, checked)
-      if (success) {
+      const result = await unifiedDictionaryService.toggleEnumValueActive(record.id, checked)
+      if (result.success === true) {
         MessageManager.success('状态已更新')
         fetchList(activeType)
         fetchAllEnumData()
@@ -268,10 +268,10 @@ const DictionaryPage: React.FC = () => {
 
   // 获取所有分类
   const categories = useMemo(() => {
-    if (!enumTypes || enumTypes.length === 0) {
+    if (enumTypes.length === 0) {
       return ['all']
     }
-    const cats = enumTypes.map(type => type.category || '未分类')
+    const cats = enumTypes.map(type => type.category ?? '未分类')
     return ['all', ...Array.from(new Set(cats))]
   }, [enumTypes])
 
@@ -291,7 +291,7 @@ const DictionaryPage: React.FC = () => {
         const valueMatch = item.values.some(value =>
           value.label.toLowerCase().includes(searchLower) ||
           value.value.toLowerCase().includes(searchLower) ||
-          (value.code && value.code.toLowerCase().includes(searchLower))
+          (value.code != null && value.code.toLowerCase().includes(searchLower))
         )
         return typeMatch || valueMatch
       }
@@ -593,8 +593,8 @@ const DictionaryPage: React.FC = () => {
             }}>
               <div><strong>枚举类型：</strong>{enumTypes.find(t => t.code === activeType)?.name}</div>
               <div><strong>类型编码：</strong>{activeType}</div>
-              <div><strong>分类：</strong>{enumTypes.find(t => t.code === activeType)?.category || '未分类'}</div>
-              {enumTypes.find(t => t.code === activeType)?.description && (
+              <div><strong>分类：</strong>{enumTypes.find(t => t.code === activeType)?.category ?? '未分类'}</div>
+              {enumTypes.find(t => t.code === activeType)?.description != null && (
                 <div><strong>描述：</strong>{enumTypes.find(t => t.code === activeType)?.description}</div>
               )}
             </div>
@@ -606,7 +606,7 @@ const DictionaryPage: React.FC = () => {
       <Modal
         open={detailModalVisible}
         title={
-          activeType ? `${enumTypes.find(t => t.code === activeType)?.name} (${activeType})` : '枚举值详情'
+          activeType != null ? `${enumTypes.find(t => t.code === activeType)?.name} (${activeType})` : '枚举值详情'
         }
         onCancel={() => setDetailModalVisible(false)}
         footer={[

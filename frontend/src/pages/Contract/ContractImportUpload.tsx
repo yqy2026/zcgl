@@ -117,7 +117,7 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
         }
 
         const uploadFile: UploadFile = {
-          uid: response.session_id || Date.now().toString(),
+          uid: response.session_id ?? Date.now().toString(),
           name: pdfFile.name,
           status: 'done',
           size: pdfFile.size,
@@ -126,21 +126,21 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
         };
 
         setUploadedFile(uploadFile);
-        setSessionId(response.session_id || '');
+        setSessionId(response.session_id ?? '');
         setUploadStatus('success');
         if (onSuccess) {
           onSuccess(response);
         }
 
         // 重要：立即调用父组件的成功回调，让父组件接管后续处理
-        if (response.session_id) {
+        if (response.session_id !== null && response.session_id !== undefined && response.session_id.length > 0) {
           onUploadSuccess(response.session_id, uploadFile);
           MessageManager.success('文件上传成功！正在处理中...');
         } else {
           throw new Error('未收到有效的会话ID');
         }
       } else {
-        throw new Error(response.error || response.message || '上传失败');
+        throw new Error(response.error ?? response.message ?? '上传失败');
       }
     } catch (error: unknown) {
       // 清理controller
@@ -294,7 +294,7 @@ const ContractImportUpload: React.FC<ContractImportUploadProps> = ({
                 </Row>
                 <Row justify="space-between">
                   <Col><Text type="secondary">文件大小：</Text></Col>
-                  <Col><Text>{pdfImportService.formatFileSize(uploadedFile.size || 0)}</Text></Col>
+                  <Col><Text>{pdfImportService.formatFileSize(uploadedFile.size ?? 0)}</Text></Col>
                 </Row>
                 <Row justify="space-between">
                   <Col><Text type="secondary">会话ID：</Text></Col>

@@ -56,11 +56,11 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
   const [ownerships, setOwnerships] = useState<Ownership[]>([]);
 
   useEffect(() => {
-    if (project) {
+    if (project !== undefined && project !== null) {
       // 设置基本信息
       form.setFieldsValue({
         name: project.name,
-        description: project.description || ''
+        description: project.description ?? ''
       });
 
       // 设置权属方关联
@@ -109,7 +109,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
         ownership_relations
       };
 
-      if (project) {
+      if (project !== undefined && project !== null) {
         await projectService.updateProject(project.id, submitData as ProjectUpdate);
         MessageManager.success('项目更新成功');
       } else {
@@ -119,7 +119,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
       onSuccess();
     } catch (error: unknown) {
       componentLogger.error('保存项目失败:', error as Error);
-      const errorMsg = (error as any)?.response?.data?.detail || '保存项目失败';
+      const errorMsg = (((error as any)?.response?.data?.detail != null) ? (error as any).response.data.detail : '保存项目失败') as string;
       MessageManager.error(errorMsg);
     } finally {
       setLoading(false);
@@ -137,7 +137,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
 
   // 验证项目名称
   const validateProjectName = async (rule: FormValidationRule, value: string) => {
-    if (!value) return Promise.reject('请输入项目名称');
+    if (value == null) return Promise.reject('请输入项目名称');
     if (value.length < 1) return Promise.reject('项目名称至少1个字符');
     if (value.length > 200) return Promise.reject('项目名称不能超过200个字符');
     return Promise.resolve();
@@ -186,7 +186,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
             }
             onSelect={(value) => {
               const ownership = ownerships.find(o => o.id === value);
-              if (ownership) {
+              if (ownership !== undefined && ownership !== null) {
                 addOwnership(ownership);
               }
             }}

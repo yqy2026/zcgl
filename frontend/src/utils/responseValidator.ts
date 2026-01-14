@@ -59,7 +59,7 @@ export interface DetailedValidationResult<T = unknown> extends ValidationResult<
 export function isStandardApiResponse<T = unknown>(
   data: unknown
 ): data is StandardApiResponse<T> {
-  if (!data || typeof data !== 'object') {
+  if (data == null || typeof data !== 'object') {
     return false;
   }
 
@@ -103,7 +103,7 @@ export function validateStandardResponse<T = unknown>(
   };
 
   // 基础类型检查
-  if (!data || typeof data !== 'object') {
+  if (data == null || typeof data !== 'object') {
     result.error = '响应必须是对象类型';
     return result;
   }
@@ -192,7 +192,7 @@ export function isPaginatedApiResponse<T = unknown>(
   const obj = data as StandardApiResponse<unknown>;
 
   // 成功响应必须有嵌套的 data 对象
-  if (!obj.data || typeof obj.data !== 'object') {
+  if (obj.data == null || typeof obj.data !== 'object') {
     return false;
   }
 
@@ -244,7 +244,7 @@ export function validatePaginatedResponse<T = unknown>(
   const obj = data as StandardApiResponse<unknown>;
 
   // 检查 data 是否为对象
-  if (!obj.data || typeof obj.data !== 'object') {
+  if (obj.data == null || typeof obj.data !== 'object') {
     result.missingFields.push('data (object)');
     return result;
   }
@@ -322,7 +322,7 @@ export function validatePaginatedResponse<T = unknown>(
  * @returns 类型守卫，如果验证通过则返回 true
  */
 export function isErrorResponse(data: unknown): data is ErrorResponse {
-  if (!data || typeof data !== 'object') {
+  if (data == null || typeof data !== 'object') {
     return false;
   }
 
@@ -367,7 +367,7 @@ export function validateErrorResponse(
     typeErrors: [],
   };
 
-  if (!data || typeof data !== 'object') {
+  if (data == null || typeof data !== 'object') {
     result.error = '响应必须是对象类型';
     return result;
   }

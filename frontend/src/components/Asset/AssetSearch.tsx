@@ -109,8 +109,8 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
   })
 
   // 提取查询结果
-  const ownershipEntities = searchQueries[0].data || []
-  const businessCategories = searchQueries[1].data || []
+  const ownershipEntities = searchQueries[0].data ?? []
+  const businessCategories = searchQueries[1].data ?? []
 
   // 检查是否所有查询都已加载完成
   const isLoadingQueries = searchQueries.some(query => query.isLoading)
@@ -120,7 +120,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
 
   // 设置初始值
   useEffect(() => {
-    if (initialValues) {
+    if (Object.keys(initialValues).length > 0) {
       form.setFieldsValue(initialValues)
     }
   }, [initialValues, form])
@@ -130,14 +130,14 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
     const values = form.getFieldsValue()
 
     // 处理日期范围
-    if (values.dateRange) {
+    if (values.dateRange !== undefined && values.dateRange !== null) {
       values.created_start = values.dateRange[0]?.format('YYYY-MM-DD')
       values.created_end = values.dateRange[1]?.format('YYYY-MM-DD')
       delete values.dateRange
     }
 
     // 处理面积范围
-    if (values.areaRange) {
+    if (values.areaRange !== undefined && values.areaRange !== null) {
       values.area_min = values.areaRange[0]
       values.area_max = values.areaRange[1]
       delete values.areaRange
@@ -195,7 +195,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
   // 处理应用历史搜索条件
   const handleApplyHistory = (historyId: string) => {
     const history = searchHistory.find(h => h.id === historyId)
-    if (history) {
+    if (history !== undefined && history !== null) {
       form.setFieldsValue(history.conditions)
       handleSearch()
       setHistoryModalVisible(false)
@@ -216,7 +216,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
 
   // 保存编辑的名称
   const handleSaveEdit = () => {
-    if (editingHistoryId && editingName.trim()) {
+    if (editingHistoryId !== null && editingName.trim() !== '') {
       updateSearchHistoryName(editingHistoryId, editingName.trim())
       setEditingHistoryId(null)
       setEditingName('')
@@ -430,7 +430,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
                       placeholder="最小面积"
                       value={areaRange[0]}
                       onChange={(value) =>
-                        setAreaRange([value || 0, areaRange[1]])
+                        setAreaRange([value ?? 0, areaRange[1]])
                       }
                     />
                     <Input
@@ -443,7 +443,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
                       placeholder="最大面积"
                       value={areaRange[1]}
                       onChange={(value) =>
-                        setAreaRange([areaRange[0], value || 100000])
+                        setAreaRange([areaRange[0], value ?? 100000])
                       }
                     />
                   </Space.Compact>

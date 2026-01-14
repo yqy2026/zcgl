@@ -157,7 +157,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapsed }) =
               icon={<UserOutlined />}
               style={{ backgroundColor: '#1677ff' }}
             />
-            <Typography.Text strong style={{ color: '#1e293b' }}>{user?.full_name || user?.username || '用户'}</Typography.Text>
+            <Typography.Text strong style={{ color: '#1e293b' }}>{user?.full_name ?? user?.username ?? '用户'}</Typography.Text>
           </div>
         </Dropdown>
       </Space>

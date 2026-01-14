@@ -88,7 +88,7 @@ const fetchAssets = async (params: {
     const result = await response.json() as { items: AssetApiResponse[]; total: number; page: number; limit: number };
 
     // 检查响应格式
-    if (!result || !Array.isArray(result.items)) {
+    if (result == null || !Array.isArray(result.items)) {
       throw new Error("Invalid API response format");
     }
 
@@ -97,19 +97,19 @@ const fetchAssets = async (params: {
       .map((item: AssetApiResponse) => {
         // 确保所有必需字段都有有效值
         const transformed = {
-          id: item.id || "",
-          propertyName: item.property_name || "",
-          address: item.address || "",
-          ownershipEntity: item.ownership_entity || "",
-          managementEntity: item.management_entity || "",
-          propertyNature: item.property_nature || "",
-          usageStatus: item.usage_status || "",
+          id: item.id ?? "",
+          propertyName: item.property_name ?? "",
+          address: item.address ?? "",
+          ownershipEntity: item.ownership_entity ?? "",
+          managementEntity: item.management_entity ?? "",
+          propertyNature: item.property_nature ?? "",
+          usageStatus: item.usage_status ?? "",
           actualPropertyArea: Number(item.total_area) || 0,
           rentableArea: Number(item.usable_area) || 0,
           rentedArea: Number(item.usable_area) || 0,
           occupancyRate: item.usage_status === "出租" ? "100" : "0", // 移除%符号，只保留数字
-          ownershipStatus: item.ownership_status || "",
-          businessCategory: item.business_category || "",
+          ownershipStatus: item.ownership_status ?? "",
+          businessCategory: item.business_category ?? "",
           isLitigated: (item.is_litigated === true || item.is_litigated === "true" || item.is_litigated === "是") ? "是" : "否",
           notes: item.notes ?? "",
           createdAt: item.created_at ?? "",
@@ -117,7 +117,7 @@ const fetchAssets = async (params: {
         };
 
         // 验证关键字段
-        if ((transformed.id === undefined || transformed.id === '') || (transformed.propertyName === undefined || transformed.propertyName === '')) {
+        if (transformed.id === undefined || transformed.id === '' || transformed.propertyName === undefined || transformed.propertyName === '') {
           return null;
         }
 

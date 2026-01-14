@@ -36,7 +36,7 @@ export class ApiCacheManager {
 
   // 生成缓存键
   private generateKey(url: string, params?: unknown): string {
-    const paramStr = params ? JSON.stringify(params) : ''
+    const paramStr = params != null ? JSON.stringify(params) : ''
     return `${url}:${paramStr}`
   }
 
@@ -48,7 +48,7 @@ export class ApiCacheManager {
     params?: unknown
   ): void {
     const key = this.generateKey(url, params)
-    const ttl = options.ttl || CACHE.DEFAULT_TTL
+    const ttl = options.ttl ?? CACHE.DEFAULT_TTL
 
     const cacheItem: CacheItem<T> = {
       data,
@@ -216,7 +216,7 @@ export function cached(options: CacheOptions = {}) {
       const params = args.length > 0 ? args[0] : undefined
 
       // 如果强制刷新或没有缓存，执行原方法
-      if (options.force || !cacheManager.has(cacheKey, params)) {
+      if ((options.force ?? false) || !cacheManager.has(cacheKey, params)) {
         const result = await (originalMethod as (...args: unknown[]) => Promise<unknown>).apply(this, args)
         cacheManager.set(cacheKey, result, options, params)
         return result

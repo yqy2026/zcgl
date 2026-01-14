@@ -135,7 +135,7 @@ export const PDFImportProvider: React.FC<PDFImportProviderProps> = ({
             'failed': -1
         };
 
-        const currentStepIndex = stepMapping[progress.status] || 0;
+        const currentStepIndex = stepMapping[progress.status] ?? 0;
 
         steps.forEach((step, index) => {
             if (index < currentStepIndex) {
@@ -220,14 +220,15 @@ export const PDFImportProvider: React.FC<PDFImportProviderProps> = ({
 
                 // 使用类型安全的方式访问enhanced_status
                 const enhancedStatus = (response as unknown as { enhanced_status?: { final_results?: { extraction_quality?: { processing_methods?: string[] } } } }).enhanced_status;
-                if (enhancedStatus) {
+                if (enhancedStatus !== undefined && enhancedStatus !== null) {
+                    const processingMethods = enhancedStatus.final_results?.extraction_quality?.processing_methods;
                     setUploadStats({
                         uploadSpeed: file.size / 1024 / (Date.now() / 1000),
                         estimatedTime: 30,
                         fileAnalysis: {
                             type: 'mixed',
                             quality: 'good',
-                            recommendedMethod: enhancedStatus.final_results?.extraction_quality?.processing_methods?.[0] || 'hybrid'
+                            recommendedMethod: (processingMethods !== undefined && processingMethods !== null && processingMethods.length > 0) ? processingMethods[0] : 'hybrid'
                         }
                     });
                 }
@@ -340,7 +341,7 @@ export const PDFImportProvider: React.FC<PDFImportProviderProps> = ({
 // 扩展 context 以包含 handleUpload
 export const usePDFImportUpload = () => {
     const context = useContext(PDFImportContext) as PDFImportContextType & { handleUpload: (file: File, onSuccess?: (response: unknown) => void, onError?: (error: Error) => void) => Promise<void> };
-    if (!context) {
+    if (context === undefined || context === null) {
         throw new Error('usePDFImportUpload must be used within PDFImportProvider');
     }
     return context.handleUpload;

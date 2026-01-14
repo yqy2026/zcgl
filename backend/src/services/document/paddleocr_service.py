@@ -144,7 +144,7 @@ class PaddleOCRService:
                 self._structure_engine = None
         except Exception as e:
             # PP-StructureV3 需要额外依赖,记录警告但继续
-            print(f"CRITICAL INIT ERROR: {e}")  # Force print to see in non-logged env
+            logger.critical(f"PP-StructureV3 初始化失败: {e}")
             logger.warning(f"PP-StructureV3 初始化失败 (需要 paddlex[ocr]): {e}")
             self._structure_engine = None
 

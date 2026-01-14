@@ -170,7 +170,7 @@ export const useWebSocketUpdates = (
               case 'bulk_operation':
                 // 批量操作完成
                 queryClient.invalidateQueries({ queryKey })
-                MessageManager.success(data.message || '批量操作完成')
+                MessageManager.success(data.message ?? '批量操作完成')
                 break
               default:
               // Unknown message type

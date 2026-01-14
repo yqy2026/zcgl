@@ -152,7 +152,7 @@ const PDFImportPage: React.FC = () => {
   const loadUserPreferences = useCallback(() => {
     try {
       const saved = localStorage.getItem('pdf-import-preferences');
-      if (saved) {
+      if (saved != null) {
         setUserPreferences(JSON.parse(saved));
       }
     } catch (error) {
@@ -308,7 +308,7 @@ const PDFImportPage: React.FC = () => {
 
       return response;
     } catch (error: unknown) {
-      const errorMsg = (error as ApiError).message || '合同导入过程中发生错误';
+      const errorMsg = (error as ApiError).message ?? '合同导入过程中发生错误';
       if (userPreferences.enableNotifications) {
         notification.error({
           message: '导入失败',
@@ -333,7 +333,7 @@ const PDFImportPage: React.FC = () => {
           setCurrentSession(null);
         }
       } catch (error: unknown) {
-        MessageManager.error((error as ApiError).message || '取消失败');
+        MessageManager.error((error as ApiError).message ?? '取消失败');
       }
     }
   };
@@ -364,7 +364,7 @@ const PDFImportPage: React.FC = () => {
     try {
       setLoading(true);
       const response = await pdfImportService.testConversion();
-      if (response.system_ready) {
+      if (response.system_ready === true) {
         MessageManager.success('系统功能正常');
       } else {
         MessageManager.warning('系统可能存在问题');
@@ -402,8 +402,8 @@ const PDFImportPage: React.FC = () => {
             sessionId={currentSession.sessionId}
             fileInfo={{
               filename: currentSession.fileInfo.name,
-              size: currentSession.fileInfo.size || 0,
-              content_type: currentSession.fileInfo.type || 'application/pdf'
+              size: currentSession.fileInfo.size ?? 0,
+              content_type: currentSession.fileInfo.type ?? 'application/pdf'
             }}
             onComplete={handleProcessingComplete}
             onError={handleProcessingError}
@@ -449,7 +449,7 @@ const PDFImportPage: React.FC = () => {
               处理失败
             </Title>
             <Paragraph>
-              {currentSession.error || '处理过程中发生错误'}
+              {currentSession.error ?? '处理过程中发生错误'}
             </Paragraph>
             <Space>
               <Button onClick={() => setCurrentSession(null)}>

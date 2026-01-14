@@ -31,12 +31,12 @@ const AssetSearchResult: React.FC<AssetSearchResultProps> = ({
   onEdit,
 }) => {
   // 提取搜索关键词
-  const searchTerms = extractSearchTerms(searchParams.search || '')
+  const searchTerms = extractSearchTerms(searchParams.search ?? '')
 
   // 高亮文本的辅助函数
   const highlightSearchText = (text: string) => {
-    if (!searchTerms.length) return text
-    return highlightText(text, searchParams.search || '')
+    if (searchTerms.length === 0) return text
+    return highlightText(text, searchParams.search ?? '')
   }
 
   return (
@@ -100,7 +100,7 @@ const AssetSearchResult: React.FC<AssetSearchResultProps> = ({
                     <Text type="secondary">
                       权属方: {highlightSearchText(asset.ownership_entity)}
                     </Text>
-                    {asset.management_entity && (
+                    {asset.management_entity != null && (
                       <>
                         <Text type="secondary">|</Text>
                         <Text type="secondary">
@@ -114,22 +114,22 @@ const AssetSearchResult: React.FC<AssetSearchResultProps> = ({
                 {/* 面积信息 */}
                 <div style={{ marginBottom: 8 }}>
                   <Space wrap>
-                    {asset.actual_property_area && (
+                    {asset.actual_property_area != null && (
                       <Text type="secondary">
                         实际面积: {formatArea(asset.actual_property_area)}
                       </Text>
                     )}
-                    {asset.rentable_area && (
+                    {asset.rentable_area != null && (
                       <Text type="secondary">
                         可租面积: {formatArea(asset.rentable_area)}
                       </Text>
                     )}
-                    {asset.rented_area && (
+                    {asset.rented_area != null && (
                       <Text type="secondary">
                         已租面积: {formatArea(asset.rented_area)}
                       </Text>
                     )}
-                    {asset.occupancy_rate && (
+                    {asset.occupancy_rate != null && (
                       <Text type="secondary">
                         出租率: {asset.occupancy_rate}
                       </Text>
@@ -138,20 +138,20 @@ const AssetSearchResult: React.FC<AssetSearchResultProps> = ({
                 </div>
 
                 {/* 用途信息 */}
-                {(asset.certificated_usage || asset.actual_usage || asset.business_category) && (
+                {(asset.certificated_usage != null || asset.actual_usage != null || asset.business_category != null) && (
                   <div style={{ marginBottom: 8 }}>
                     <Space wrap>
-                      {asset.certificated_usage && (
+                      {asset.certificated_usage != null && (
                         <Text type="secondary">
                           证载用途: {highlightSearchText(asset.certificated_usage)}
                         </Text>
                       )}
-                      {asset.actual_usage && (
+                      {asset.actual_usage != null && (
                         <Text type="secondary">
                           实际用途: {highlightSearchText(asset.actual_usage)}
                         </Text>
                       )}
-                      {asset.business_category && (
+                      {asset.business_category != null && (
                         <Text type="secondary">
                           业态: {highlightSearchText(asset.business_category)}
                         </Text>
@@ -161,7 +161,7 @@ const AssetSearchResult: React.FC<AssetSearchResultProps> = ({
                 )}
 
                 {/* 租户信息 */}
-                {asset.tenant_name && (
+                {asset.tenant_name != null && (
                   <div style={{ marginBottom: 8 }}>
                     <Text type="secondary">
                       租户: {highlightSearchText(asset.tenant_name)}
@@ -172,20 +172,20 @@ const AssetSearchResult: React.FC<AssetSearchResultProps> = ({
                 {/* 特殊标记 */}
                 <div>
                   <Space>
-                    {asset.is_litigated && (
+                    {asset.is_litigated != null && (
                       <Tag color="red">涉诉</Tag>
                     )}
-                    {asset.include_in_occupancy_rate && (
+                    {asset.include_in_occupancy_rate != null && (
                       <Tag color="green">计入出租率</Tag>
                     )}
-                    {asset.wuyang_project_name && (
+                    {asset.wuyang_project_name != null && (
                       <Tag color="blue">五羊项目</Tag>
                     )}
                   </Space>
                 </div>
 
                 {/* 描述信息 */}
-                {asset.description && (
+                {asset.description != null && (
                   <div style={{ marginTop: 8 }}>
                     <Paragraph
                       ellipsis={{ rows: 2, expandable: true, symbol: '展开' }}

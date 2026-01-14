@@ -68,7 +68,7 @@ const GroupedSelect: React.FC<GroupedSelectProps> = ({
 
   // 自定义下拉选择器内容
   const dropdownRender = (menu: React.ReactElement) => {
-    if (searchKeyword && filteredGroups.every(group => group.options.length === 0)) {
+    if ((searchKeyword !== undefined && searchKeyword !== null && searchKeyword !== '') && filteredGroups.every(group => group.options.length === 0)) {
       return (
         <div style={{ padding: '8px', textAlign: 'center' }}>
           <Text type="secondary">未找到匹配的选项</Text>
@@ -99,7 +99,7 @@ const GroupedSelect: React.FC<GroupedSelectProps> = ({
     return filteredGroups.map((group, groupIndex) => {
       if (group.options.length === 0) return null
 
-      if (showGroupLabel) {
+      if (showGroupLabel !== undefined && showGroupLabel !== null && showGroupLabel !== false) {
         // 显示分组标签
         return (
           <React.Fragment key={groupIndex}>
@@ -112,7 +112,7 @@ const GroupedSelect: React.FC<GroupedSelectProps> = ({
               {group.options.map((option) => (
                 <Option key={option.value} value={option.value}>
                   <Space>
-                    {option.color && (
+                    {option.color != null && (
                       <span
                         style={{
                           display: 'inline-block',
@@ -125,7 +125,7 @@ const GroupedSelect: React.FC<GroupedSelectProps> = ({
                       />
                     )}
                     <span>{option.label}</span>
-                    {option.description && (
+                    {option.description != null && (
                       <Text type="secondary" style={{ fontSize: '12px' }}>
                         - {option.description}
                       </Text>
@@ -141,7 +141,7 @@ const GroupedSelect: React.FC<GroupedSelectProps> = ({
         return group.options.map((option) => (
           <Option key={option.value} value={option.value}>
             <Space>
-              {option.color && (
+              {option.color != null && (
                 <span
                   style={{
                     display: 'inline-block',
@@ -154,7 +154,7 @@ const GroupedSelect: React.FC<GroupedSelectProps> = ({
                 />
               )}
               <span>{option.label}</span>
-              {option.description && (
+              {option.description != null && (
                 <Text type="secondary" style={{ fontSize: '12px' }}>
                   - {option.description}
                 </Text>
@@ -187,12 +187,12 @@ const GroupedSelect: React.FC<GroupedSelectProps> = ({
 
     return (
       <Tag
-        color={optionInfo?.color}
+        color={optionInfo !== undefined && optionInfo !== null ? optionInfo.color : undefined}
         closable={closable}
         onClose={onClose}
         style={{ marginRight: 3 }}
       >
-        {optionInfo?.label || label}
+        {(optionInfo !== undefined && optionInfo !== null) ? optionInfo.label : label}
       </Tag>
     )
   }

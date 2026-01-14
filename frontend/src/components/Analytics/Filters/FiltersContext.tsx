@@ -225,7 +225,7 @@ export const AnalyticsFiltersProvider: React.FC<AnalyticsFiltersProviderProps> =
             const matchingPreset = FILTER_PRESETS.find(preset =>
                 JSON.stringify(preset.filters) === JSON.stringify(history.conditions)
             );
-            if (matchingPreset) {
+            if (matchingPreset !== undefined && matchingPreset !== null) {
                 setSelectedPreset(matchingPreset.key);
             } else {
                 setSelectedPreset('custom');

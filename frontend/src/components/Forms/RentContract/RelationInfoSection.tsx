@@ -30,7 +30,7 @@ const RelationInfoSection: React.FC = () => {
                                 String(option?.children || '').toLowerCase().includes(input.toLowerCase())
                             }
                         >
-                            {(assets || []).map(asset => (
+                            {(assets.length > 0 ? assets : []).map(asset => (
                                 <Option key={asset.id} value={asset.id}>
                                     {asset.property_name} - {asset.address}
                                 </Option>
@@ -53,7 +53,7 @@ const RelationInfoSection: React.FC = () => {
                                 String(option?.children || '').toLowerCase().includes(input.toLowerCase())
                             }
                         >
-                            {(ownerships || []).map(ownership => (
+                            {(ownerships.length > 0 ? ownerships : []).map(ownership => (
                                 <Option key={ownership.id} value={ownership.id}>
                                     {ownership.name}
                                 </Option>

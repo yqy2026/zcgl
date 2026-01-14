@@ -79,17 +79,17 @@ const getColumns = (
       showTitle: false,
     },
     render: (text, record) => {
-      const projectName = record.project_name || text
+      const projectName = record.project_name ?? text
       const isId = typeof projectName === 'string' && projectName.length === 36
 
       let displayText = projectName
-      if (isId) {
+      if (isId !== undefined && isId !== null) {
         displayText = '未配置项目'
       }
 
       return (
-        <Tooltip title={displayText || '未设置'}>
-          {displayText || '-'}
+        <Tooltip title={displayText ?? '未设置'}>
+          {displayText ?? '-'}
         </Tooltip>
       )
     },
@@ -237,11 +237,11 @@ const getColumns = (
     align: 'right',
     sorter: true,
     render: (rate, record) => {
-      if (rate) {
+      if (rate != null) {
         return formatPercentage(rate)
       }
 
-      if (record.rentable_area && record.rented_area) {
+      if (record.rentable_area != null && record.rented_area != null) {
         const calculatedRate = (record.rented_area / record.rentable_area) * 100
         return (
           <span style={{
@@ -266,8 +266,8 @@ const getColumns = (
       { text: '否', value: false },
     ],
     render: (isLitigated) => (
-      <Tag color={isLitigated ? 'red' : 'green'}>
-        {isLitigated ? '是' : '否'}
+      <Tag color={isLitigated === true ? 'red' : 'green'}>
+        {isLitigated === true ? '是' : '否'}
       </Tag>
     ),
   },
@@ -363,7 +363,7 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
 }) => {
   const parentRef = useRef<HTMLDivElement>(null)
   const columns = getColumns(onView, onEdit, onDelete, onViewHistory)
-  const items = data?.items || []
+  const items = data?.items ?? []
 
   // 虚拟滚动配置
   const rowVirtualizer = useVirtualizer({
@@ -416,15 +416,15 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
 
             return (
               <div
-                key={column.key || colIndex}
+                key={column.key ?? colIndex}
                 style={{
-                  flex: column.width ? `0 0 ${column.width}px` : 1,
-                  minWidth: column.width || 100,
+                  flex: column.width != null ? `0 0 ${column.width}px` : '1',
+                  minWidth: column.width ?? 100,
                   padding: '0 8px',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
-                  textAlign: column.align || 'left'
+                  textAlign: column.align ?? 'left'
                 }}
               >
                 {renderValue}
@@ -463,10 +463,10 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
           const title = isColumnType(column) ? column.title : undefined
           return (
             <div
-              key={column.key || index}
+              key={column.key ?? index}
               style={{
-                flex: column.width ? `0 0 ${column.width}px` : 1,
-                minWidth: column.width || 100,
+                flex: column.width != null ? `0 0 ${column.width}px` : '1',
+                minWidth: column.width ?? 100,
                 padding: '0 8px',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
@@ -517,9 +517,9 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
       {/* 分页 */}
       <div style={{ padding: '16px 0', textAlign: 'right' }}>
         <Pagination
-          current={data?.page || 1}
-          pageSize={data?.limit || 20}
-          total={data?.total || 0}
+          current={data?.page ?? 1}
+          pageSize={data?.limit ?? 20}
+          total={data?.total ?? 0}
           showSizeChanger={true}
           showQuickJumper={true}
           showTotal={(total: number, range: [number, number]) =>

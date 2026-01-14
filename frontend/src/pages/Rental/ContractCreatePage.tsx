@@ -48,7 +48,7 @@ const ContractCreatePage: React.FC = () => {
   const queryClient = useQueryClient();
 
   // 判断当前模式：有id则为编辑模式
-  const isEdit = !!id;
+  const isEdit = id != null;
 
   const [loading, setLoading] = useState(false);
   const [contractCreated, setContractCreated] = useState(false);
@@ -277,7 +277,7 @@ const ContractCreatePage: React.FC = () => {
       <Card title="合同信息" loading={loading}>
         <RentContractForm
           mode={isEdit ? 'edit' : 'create'}
-          initialData={contract}
+          initialData={contract ?? undefined}
           onSubmit={handleSubmit}
           onCancel={handleCancel}
           loading={loading}

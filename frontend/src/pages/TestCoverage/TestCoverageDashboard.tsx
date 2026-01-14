@@ -400,15 +400,15 @@ const TestCoverageDashboard: React.FC = () => {
           <Card>
             <Statistic
               title="总体覆盖率"
-              value={coverageReport?.total_coverage || 0}
+              value={coverageReport?.total_coverage ?? 0}
               precision={1}
               suffix="%"
               valueStyle={{
-                color: (coverageReport?.total_coverage || 0) >= (thresholds?.total_threshold || 75) ? COLORS.success : COLORS.error,
+                color: (coverageReport?.total_coverage ?? 0) >= (thresholds?.total_threshold ?? 75) ? COLORS.success : COLORS.error,
               }}
-              prefix={(coverageReport?.total_coverage || 0) >= (thresholds?.total_threshold || 75) ? <RiseOutlined /> : <FallOutlined />}
+              prefix={(coverageReport?.total_coverage ?? 0) >= (thresholds?.total_threshold ?? 75) ? <RiseOutlined /> : <FallOutlined />}
             />
-            {thresholds && (
+            {thresholds != null && (
               <div style={{ fontSize: 12, color: COLORS.textSecondary, marginTop: 8 }}>
                 目标: {thresholds.total_threshold}%
               </div>
@@ -419,15 +419,15 @@ const TestCoverageDashboard: React.FC = () => {
           <Card>
             <Statistic
               title="后端覆盖率"
-              value={coverageReport?.backend_coverage || 0}
+              value={coverageReport?.backend_coverage ?? 0}
               precision={1}
               suffix="%"
               valueStyle={{
-                color: (coverageReport?.backend_coverage || 0) >= (thresholds?.backend_threshold || 80) ? COLORS.success : COLORS.error,
+                color: (coverageReport?.backend_coverage ?? 0) >= (thresholds?.backend_threshold ?? 80) ? COLORS.success : COLORS.error,
               }}
-              prefix={(coverageReport?.backend_coverage || 0) >= (thresholds?.backend_threshold || 80) ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
+              prefix={(coverageReport?.backend_coverage ?? 0) >= (thresholds?.backend_threshold ?? 80) ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
             />
-            {thresholds && (
+            {thresholds != null && (
               <div style={{ fontSize: 12, color: COLORS.textSecondary, marginTop: 8 }}>
                 目标: {thresholds.backend_threshold}%
               </div>
@@ -438,15 +438,15 @@ const TestCoverageDashboard: React.FC = () => {
           <Card>
             <Statistic
               title="前端覆盖率"
-              value={coverageReport?.frontend_coverage || 0}
+              value={coverageReport?.frontend_coverage ?? 0}
               precision={1}
               suffix="%"
               valueStyle={{
-                color: (coverageReport?.frontend_coverage || 0) >= (thresholds?.frontend_threshold || 70) ? COLORS.success : COLORS.error,
+                color: (coverageReport?.frontend_coverage ?? 0) >= (thresholds?.frontend_threshold ?? 70) ? COLORS.success : COLORS.error,
               }}
-              prefix={(coverageReport?.frontend_coverage || 0) >= (thresholds?.frontend_threshold || 70) ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
+              prefix={(coverageReport?.frontend_coverage ?? 0) >= (thresholds?.frontend_threshold ?? 70) ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
             />
-            {thresholds && (
+            {thresholds != null && (
               <div style={{ fontSize: 12, color: COLORS.textSecondary, marginTop: 8 }}>
                 目标: {thresholds.frontend_threshold}%
               </div>
@@ -457,13 +457,13 @@ const TestCoverageDashboard: React.FC = () => {
           <Card>
             <Statistic
               title="测试执行时间"
-              value={coverageReport?.test_execution_time || 0}
+              value={coverageReport?.test_execution_time ?? 0}
               precision={1}
               suffix="秒"
               prefix={<InfoCircleOutlined />}
             />
             <div style={{ fontSize: 12, color: COLORS.textSecondary, marginTop: 8 }}>
-              总测试数: {coverageReport?.total_tests || 0}
+              总测试数: {coverageReport?.total_tests ?? 0}
             </div>
           </Card>
         </Col>

@@ -46,8 +46,8 @@ export const useDictionary = (dictType: string, isActive: boolean = true): UseDi
     enabled: !!dictType
   })
 
-  const options = data?.success ? (data.data ?? []) : []
-  const errorMessage = data?.success ? null : (data?.error || error?.message || null)
+  const options = data?.success === true ? (data.data ?? []) : []
+  const errorMessage = data?.success === true ? null : (data?.error ?? error?.message ?? null)
 
   const refresh: () => Promise<void> = async () => {
     await refetch()
@@ -95,8 +95,8 @@ export const useDictionaries = (dictTypes: string[]): Record<string, UseDictiona
     const error = queryResults[index].error
     const isLoading = queryResults[index].isLoading
 
-    const options = data?.success ? (data.data ?? []) : []
-    const errorMessage = data?.success ? null : (data?.error || error?.message || null)
+    const options = data?.success === true ? (data.data ?? []) : []
+    const errorMessage = data?.success === true ? null : (data?.error ?? error?.message ?? null)
 
     results[dictType] = {
       options,
@@ -138,11 +138,11 @@ export const useDictionaryManager = () => {
     code?: string
   }>) => {
     try {
-      const success = await unifiedDictionaryService.quickCreate(dictType, { options })
-      if (success) {
+      const result = await unifiedDictionaryService.quickCreate(dictType, { options })
+      if (result.success === true) {
         await loadTypes() // 刷新类型列表
       }
-      return success
+      return result.success
     } catch (error) {
       dictLogger.error('创建字典失败:', error as Error)
       return false
@@ -151,11 +151,11 @@ export const useDictionaryManager = () => {
 
   const deleteDictionary = useCallback(async (dictType: string) => {
     try {
-      const success = await unifiedDictionaryService.deleteType(dictType)
-      if (success) {
+      const result = await unifiedDictionaryService.deleteType(dictType)
+      if (result.success === true) {
         await loadTypes() // 刷新类型列表
       }
-      return success
+      return result.success
     } catch (error) {
       dictLogger.error('删除字典失败:', error as Error)
       return false

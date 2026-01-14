@@ -55,7 +55,7 @@ class ABTestManager {
   private getUserId(): string {
     // 获取或生成用户ID用于A/B测试分组
     let userId = localStorage.getItem('abtest_user_id')
-    if (!userId) {
+    if (userId == null) {
       userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       localStorage.setItem('abtest_user_id', userId)
     }
@@ -123,12 +123,12 @@ class ABTestManager {
 
   private getAssignedVariant(testId: string): ABTestVariant | null {
     const test = this.tests.get(testId)
-    if (!test || !this.userId) return null
+    if (test == null || this.userId == null) return null
 
     // 检查是否已经分配过变体
     const savedVariants = this.userVariants.get(this.userId)
-    if (savedVariants && savedVariants[testId]) {
-      return test.variants.find(v => v.id === savedVariants[testId]) || null
+    if (savedVariants != null && savedVariants[testId] != null) {
+      return test.variants.find(v => v.id === savedVariants[testId]) ?? null
     }
 
     // 检查测试是否有效
@@ -195,16 +195,16 @@ class ABTestManager {
 
   public isTestActive(testId: string): boolean {
     const test = this.tests.get(testId)
-    if (!test) return false
+    if (test == null) return false
 
     const now = new Date()
 
     // 检查日期范围
-    if (test.startDate && now < test.startDate) return false
-    if (test.endDate && now > test.endDate) return false
+    if (test.startDate != null && now < test.startDate) return false
+    if (test.endDate != null && now > test.endDate) return false
 
     // 检查目标受众
-    if (test.targetAudience && test.targetAudience.length > 0) {
+    if (test.targetAudience != null && test.targetAudience.length > 0) {
       // 这里可以实现用户群体匹配逻辑
       // 简化版本，假设所有用户都符合
     }
@@ -279,7 +279,7 @@ class ABTestManager {
   }
 
   public getTestResults(testId: string) {
-    const conversions = this.conversions.get(testId) || new Map()
+    const conversions = this.conversions.get(testId) ?? new Map()
     return {
       conversions: Object.fromEntries(conversions),
       testId,
@@ -313,7 +313,7 @@ export const ABTestProvider: React.FC<ABTestProviderProps> = ({ children, _userI
 
     tests.forEach(test => {
       const variant = manager.getVariant(test.id)
-      if (variant) {
+      if (variant !== undefined && variant !== null) {
         variants.set(test.id, variant.id)
       }
     })
@@ -365,8 +365,8 @@ export const ABTestWrapper: React.FC<ABTestWrapperProps> = ({
 }) => {
   const { getVariant, isTestActive, loading } = useABTest()
 
-  if (loading) {
-    return LoadingComponent ? <LoadingComponent /> : null
+  if (loading !== undefined && loading !== null) {
+    return LoadingComponent != null ? <LoadingComponent /> : null
   }
 
   if (!isTestActive(testId)) {
@@ -375,12 +375,12 @@ export const ABTestWrapper: React.FC<ABTestWrapperProps> = ({
 
   const variant = getVariant(testId)
 
-  if (!variant) {
-    return FallbackComponent ? <FallbackComponent /> : <>{children}</>
+  if (variant == null) {
+    return FallbackComponent != null ? <FallbackComponent /> : <>{children}</>
   }
 
   // 如果变体有自定义组件，使用它
-  if (variant.component) {
+  if (variant.component != null) {
     const VariantComponent = variant.component
     return <VariantComponent {...variant.props}>{children}</VariantComponent>
   }
@@ -419,7 +419,7 @@ export const useABTestAnalytics = (testId: string) => {
   const currentVariant = getVariant(testId)
 
   const trackView = () => {
-    if (currentVariant) {
+    if (currentVariant !== undefined && currentVariant !== null) {
       trackConversion(testId, 'view', {
         variant: currentVariant.id,
         timestamp: new Date().toISOString()
@@ -428,7 +428,7 @@ export const useABTestAnalytics = (testId: string) => {
   }
 
   const trackEngagement = (duration: number) => {
-    if (currentVariant) {
+    if (currentVariant !== undefined && currentVariant !== null) {
       trackConversion(testId, 'engagement_time', {
         variant: currentVariant.id,
         duration,
@@ -438,7 +438,7 @@ export const useABTestAnalytics = (testId: string) => {
   }
 
   const trackClick = (element: string, data?: unknown) => {
-    if (currentVariant) {
+    if (currentVariant !== undefined && currentVariant !== null) {
       trackConversion(testId, 'click', {
         variant: currentVariant.id,
         element,

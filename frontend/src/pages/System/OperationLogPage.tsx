@@ -203,8 +203,8 @@ const OperationLogPage: React.FC = () => {
   const getActionTag = (action: string) => {
     const actionConfig = actionOptions.find(a => a.value === action)
     return (
-      <Tag color={actionConfig?.color || 'default'} icon={actionConfig?.icon}>
-        {actionConfig?.label || action}
+      <Tag color={actionConfig?.color ?? 'default'} icon={actionConfig?.icon}>
+        {actionConfig?.label ?? action}
       </Tag>
     )
   }
@@ -261,7 +261,7 @@ const OperationLogPage: React.FC = () => {
       width: 150,
       render: (_, record) => (
         <div>
-          <div style={{ fontWeight: 500 }}>{record.resource_name || '-'}</div>
+          <div style={{ fontWeight: 500 }}>{record.resource_name ?? '-'}</div>
           <div style={{ fontSize: '12px', color: COLORS.textSecondary }}>
             {record.resource_type || '-'}
           </div>
@@ -274,8 +274,8 @@ const OperationLogPage: React.FC = () => {
       key: 'ip_address',
       width: 120,
       render: (ip) => (
-        <Tooltip title={ip}>
-          <span>{ip}</span>
+        <Tooltip title={ip ?? ''}>
+          <span>{ip ?? ''}</span>
         </Tooltip>
       )
     },
@@ -488,7 +488,7 @@ const OperationLogPage: React.FC = () => {
                 <Tag color="blue">{selectedLog.module_name}</Tag>
               </Descriptions.Item>
               <Descriptions.Item label="资源信息">
-                {selectedLog.resource_name ? (
+                {selectedLog.resource_name != null ? (
                   <div>
                     <div>{selectedLog.resource_name}</div>
                     <div style={{ fontSize: '12px', color: COLORS.textSecondary }}>
@@ -523,7 +523,7 @@ const OperationLogPage: React.FC = () => {
                   </span></div>
                 </div>
               </Descriptions.Item>
-              {selectedLog.error_message && (
+              {selectedLog.error_message != null && (
                 <Descriptions.Item label="错误信息">
                   <div style={{ color: COLORS.error, background: 'var(--color-error-light)', padding: '8px', borderRadius: '4px' }}>
                     {selectedLog.error_message}

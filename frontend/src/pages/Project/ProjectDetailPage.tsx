@@ -59,7 +59,7 @@ const ProjectDetailPage: React.FC = () => {
   } = useQuery({
     queryKey: ['project', id],
     queryFn: () => projectService.getProject(id as string),
-    enabled: !!id,
+    enabled: id !== null && id !== undefined && id.length > 0,
   });
 
   // 获取项目关联资产
@@ -71,7 +71,7 @@ const ProjectDetailPage: React.FC = () => {
         page: 1,
         limit: 100,
       }),
-    enabled: !!id,
+    enabled: id !== null && id !== undefined && id.length > 0,
   });
 
   // 资产表格列定义
@@ -124,11 +124,11 @@ const ProjectDetailPage: React.FC = () => {
   const assets = assetsData?.items || [];
   const totalAssets = assets.length;
   const totalRentableArea = assets.reduce(
-    (sum, a) => sum + (a.rentable_area || 0),
+    (sum, a) => sum + (a.rentable_area ?? 0),
     0
   );
   const totalRentedArea = assets.reduce(
-    (sum, a) => sum + (a.rented_area || 0),
+    (sum, a) => sum + (a.rented_area ?? 0),
     0
   );
   const occupancyRate =
@@ -274,7 +274,7 @@ const ProjectDetailPage: React.FC = () => {
             </Tag>
           </Descriptions.Item>
           <Descriptions.Item label="项目描述" span={2}>
-            {project.description || '-'}
+            {project.description ?? '-'}
           </Descriptions.Item>
           <Descriptions.Item label="创建时间">
             {project.created_at

@@ -155,7 +155,7 @@ async def get_basic_statistics(
         vacant_count = len(vacant_assets)
 
         # 构建统计数据
-        basic_stats = {
+        _basic_stats = {
             "total_assets": total_assets,
             "ownership_status": {
                 "confirmed": confirmed_count,
@@ -219,8 +219,7 @@ async def get_statistics_summary(
     获取统计摘要信息
     """
     # DEBUG: 添加调试日志
-    print("=== DEBUG: statistics.py中的get_statistics_summary被调用 ===")
-    logger.info("=== statistics.py中的get_statistics摘要函数被调用 ===")
+    logger.debug("statistics.py get_statistics_summary called")
 
     try:
         # 总资产数
@@ -758,8 +757,12 @@ async def get_dashboard_data(
                 total_annual_income=round(total_income, 2),
                 total_annual_expense=round(total_expense, 2),
                 net_annual_income=round(net_income, 2),
-                income_per_sqm=round(total_income / total_area, 2) if total_area > 0 else 0.0,
-                expense_per_sqm=round(total_expense / total_area, 2) if total_area > 0 else 0.0,
+                income_per_sqm=round(total_income / total_area, 2)
+                if total_area > 0
+                else 0.0,
+                expense_per_sqm=round(total_expense / total_area, 2)
+                if total_area > 0
+                else 0.0,
             ),
             occupancy_stats=OccupancyRateStatsResponse(
                 overall_occupancy_rate=round(occupancy_rate, 2),

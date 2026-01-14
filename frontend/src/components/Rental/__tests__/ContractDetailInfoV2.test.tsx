@@ -130,7 +130,7 @@ vi.mock('@ant-design/icons', () => ({
 vi.mock('../DepositLedgerHistory', () => ({
     default: ({ ledgers, loading }: any) => (
         <div data-testid="deposit-ledger-history" data-loading={loading}>
-            {ledgers?.length || 0} 条押金记录
+            {ledgers?.length ?? 0} 条押金记录
         </div>
     ),
 }));
@@ -138,7 +138,7 @@ vi.mock('../DepositLedgerHistory', () => ({
 vi.mock('../ServiceFeeLedgerTable', () => ({
     default: ({ ledgers, loading }: any) => (
         <div data-testid="service-fee-ledger-table" data-loading={loading}>
-            {ledgers?.length || 0} 条服务费记录
+            {ledgers?.length ?? 0} 条服务费记录
         </div>
     ),
 }));

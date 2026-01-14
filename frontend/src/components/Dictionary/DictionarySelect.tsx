@@ -50,13 +50,13 @@ const DictionarySelect: React.FC<DictionarySelectProps> = ({
 
   // 默认选项渲染
   const _renderOption = (option: DictionaryOption) => {
-    if (optionRender) {
+    if (optionRender !== undefined && optionRender !== null && typeof optionRender === 'function') {
       return optionRender(option)
     }
 
     return (
       <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        {showColor && option.color && (
+        {showColor && option.color !== undefined && option.color !== null && option.color !== '' && (
           <span
             style={{
               width: '12px',
@@ -67,7 +67,7 @@ const DictionarySelect: React.FC<DictionarySelectProps> = ({
             }}
           />
         )}
-        {showIcon && option.icon && (
+        {showIcon && option.icon !== undefined && option.icon !== null && option.icon !== '' && (
           <span className={option.icon} />
         )}
         <span>{option.label}</span>
@@ -81,15 +81,15 @@ const DictionarySelect: React.FC<DictionarySelectProps> = ({
     <Select
       {...props}
       loading={loading}
-      placeholder={placeholder || `请选择${dictType.replace('_', '')}`}
+      placeholder={placeholder ?? `请选择${dictType.replace('_', '')}`}
       notFoundContent={loading ? <Spin size="small" /> : '暂无数据'}
       options={options}
       filterOption={(input, option) => {
         // 处理React元素类型的label
         const label = typeof option?.label === 'string' ? option.label :
-                     (React.isValidElement(option?.label) ?
-                       (option?.label as React.ReactElement)?.props?.children?.toString() || '' :
-                       String(option?.label || ''))
+                     (option?.label !== null && option?.label !== undefined && React.isValidElement(option?.label) ?
+                       (option?.label as React.ReactElement)?.props?.children?.toString() ?? '' :
+                       String(option?.label ?? ''))
         return label.toLowerCase().includes(input.toLowerCase())
       }}
       virtual

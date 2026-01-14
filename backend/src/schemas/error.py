@@ -111,7 +111,7 @@ class ErrorResponse(BaseModel):
                 "retry_suggested": True,
                 "retry_after_seconds": 5,
             }
-        }
+        },
     }
 
 
@@ -548,23 +548,27 @@ async def error_response_handler(
 # ============================================================================
 
 if __name__ == "__main__":  # pragma: no cover
+    import logging
+
+    logger = logging.getLogger(__name__)
+
     # 网络错误
-    print(ErrorBuilder.network_error("Connection failed"))
+    logger.info(ErrorBuilder.network_error("Connection failed"))
 
     # 超时错误
-    print(ErrorBuilder.timeout_error(180, "PDF processing"))
+    logger.info(ErrorBuilder.timeout_error(180, "PDF processing"))
 
     # 文件过大
-    print(ErrorBuilder.file_too_large(80.5, 50))
+    logger.info(ErrorBuilder.file_too_large(80.5, 50))
 
     # OCR 不可用
-    print(ErrorBuilder.ocr_unavailable())
+    logger.info(ErrorBuilder.ocr_unavailable())
 
     # 低置信度
-    print(ErrorBuilder.low_confidence(0.5, 0.7))
+    logger.info(ErrorBuilder.low_confidence(0.5, 0.7))
 
     # 异常转换
     try:
         raise FileNotFoundError("test.pdf")
     except Exception as e:
-        print(exception_to_error_response(e, request_id="req-123"))
+        logger.info(exception_to_error_response(e, request_id="req-123"))

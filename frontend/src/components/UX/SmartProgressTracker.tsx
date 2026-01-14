@@ -92,7 +92,7 @@ export const SmartProgressProvider: React.FC<SmartProgressProviderProps> = ({
       id: trackerId,
       startTime: new Date(),
       ...tracker,
-      status: tracker.status || 'active'
+      status: tracker.status ?? 'active'
     }
 
     setTrackers(prev => {
@@ -152,7 +152,7 @@ export const SmartProgressProvider: React.FC<SmartProgressProviderProps> = ({
       if (tracker.id === trackerId) {
         if (updates.status === 'completed') {
           // 清除定时器
-          if (intervals.current[trackerId]) {
+          if (intervals.current[trackerId] != null) {
             clearInterval(intervals.current[trackerId])
             delete intervals.current[trackerId]
           }
@@ -170,7 +170,7 @@ export const SmartProgressProvider: React.FC<SmartProgressProviderProps> = ({
       estimatedEndTime: new Date()
     })
 
-    if (intervals.current[trackerId]) {
+    if (intervals.current[trackerId] != null) {
       clearInterval(intervals.current[trackerId])
       delete intervals.current[trackerId]
     }
@@ -189,7 +189,7 @@ export const SmartProgressProvider: React.FC<SmartProgressProviderProps> = ({
     }))
 
     // 清除定时器
-    if (intervals.current[trackerId]) {
+    if (intervals.current[trackerId] != null) {
       clearInterval(intervals.current[trackerId])
       delete intervals.current[trackerId]
     }
@@ -201,7 +201,7 @@ export const SmartProgressProvider: React.FC<SmartProgressProviderProps> = ({
       estimatedEndTime: undefined
     })
 
-    if (intervals.current[trackerId]) {
+    if (intervals.current[trackerId] != null) {
       clearInterval(intervals.current[trackerId])
       delete intervals.current[trackerId]
     }
@@ -214,7 +214,7 @@ export const SmartProgressProvider: React.FC<SmartProgressProviderProps> = ({
 
     // 重新启动定时器
     const tracker = getTracker(trackerId)
-    if (tracker) {
+    if (tracker !== undefined && tracker !== null) {
       intervals.current[trackerId] = setInterval(() => {
         updateTracker(trackerId, { estimatedEndTime: calculateEstimatedEndTime(tracker) })
       }, 1000)
@@ -246,7 +246,7 @@ export const SmartProgressProvider: React.FC<SmartProgressProviderProps> = ({
     const completedWeight = steps
       .filter(step => step.status === 'finish')
       .reduce((sum, step) => {
-        const weight = step.progress || 100
+        const weight = step.progress ?? 100
         return sum + weight
       }, 0)
 
@@ -257,7 +257,7 @@ export const SmartProgressProvider: React.FC<SmartProgressProviderProps> = ({
     if (!tracker.startTime) return new Date()
 
     const elapsed = new Date().getTime() - tracker.startTime.getTime()
-    const progress = tracker.totalProgress || 0
+    const progress = tracker.totalProgress ?? 0
 
     if (progress <= 0) return new Date()
 
@@ -328,7 +328,7 @@ const ProgressTrackersList: React.FC<ProgressTrackersListProps> = ({ trackers })
   }
 
   const getStepIcon = (step: ProgressStep) => {
-    return step.icon || getStatusIcon(step.status)
+    return step.icon ?? getStatusIcon(step.status)
   }
 
   const formatDuration = (duration: number): string => {
@@ -395,7 +395,7 @@ const ProgressTrackersList: React.FC<ProgressTrackersListProps> = ({ trackers })
             >
             <div style={{ marginBottom: '8px' }}>
               <Progress
-                percent={tracker.totalProgress || 0}
+                percent={tracker.totalProgress ?? 0}
                 size="small"
                 status={tracker.status === 'error' ? 'exception' :
                        tracker.status === 'completed' ? 'success' : 'normal'}
@@ -413,13 +413,13 @@ const ProgressTrackersList: React.FC<ProgressTrackersListProps> = ({ trackers })
               items={tracker.steps.map(step => ({
                 title: (
                   <div style={{ display: 'flex', alignItems: 'center' }}>
-                    {getStepIcon(step)}
+                            {getStepIcon(step) ?? null}
                     <span style={{ marginLeft: '8px', fontSize: '12px' }}>
                       {step.title}
                     </span>
-                    {step.duration && (
+                    {(step.duration ?? 0) > 0 && (
                       <span style={{ marginLeft: '8px', fontSize: '11px', color: '#666' }}>
-                        ({formatDuration(step.duration)})
+                        ({formatDuration(step.duration ?? 0)})
                       </span>
                     )}
                   </div>
@@ -429,7 +429,7 @@ const ProgressTrackersList: React.FC<ProgressTrackersListProps> = ({ trackers })
               })) as any}
             />
 
-            {tracker.error && (
+            {(tracker.error ?? '') !== '' && (
               <div style={{
                 marginTop: '8px',
                 padding: '8px',
@@ -439,7 +439,7 @@ const ProgressTrackersList: React.FC<ProgressTrackersListProps> = ({ trackers })
               }}>
                 <Text type="danger" style={{ display: 'flex', alignItems: 'center' }}>
                   <ExclamationCircleOutlined style={{ marginRight: '8px' }} />
-                  {tracker.error}
+                    {tracker.error ?? ''}
                 </Text>
               </div>
             )}
@@ -450,12 +450,12 @@ const ProgressTrackersList: React.FC<ProgressTrackersListProps> = ({ trackers })
               justifyContent: 'flex-end',
               gap: '8px'
             }}>
-              {tracker.canCancel && (
+              {tracker.canCancel === true && (
                 <Button size="small" danger onClick={() => cancelTracker(tracker.id)}>
                   取消
                 </Button>
               )}
-              {tracker.canPause && (
+              {tracker.canPause === true && (
                 <Button size="small" onClick={() => {
                   if (tracker.status === 'paused') {
                     resumeTracker(tracker.id)

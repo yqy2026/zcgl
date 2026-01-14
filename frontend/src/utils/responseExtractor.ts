@@ -64,11 +64,11 @@ class ResponseDetector {
    * 检查是否为标准响应
    */
   private static isStandardResponse(response: unknown, config: ResponseDetectionConfig): boolean {
-    return response !== null &&
+    return response != null &&
       typeof response === 'object' &&
-      !!config.successField && config.successField in response &&
+      config.successField != null && config.successField in response &&
       typeof (response as Record<string, unknown>)[config.successField] === 'boolean' &&
-      !!config.dataField && config.dataField in response;
+      config.dataField != null && config.dataField in response;
   }
 
   /**
@@ -79,8 +79,8 @@ class ResponseDetector {
       return false;
     }
 
-    const data = config.dataField && (response as Record<string, unknown>)[config.dataField];
-    return data !== null &&
+    const data = config.dataField != null && (response as Record<string, unknown>)[config.dataField];
+    return data != null &&
       typeof data === 'object' &&
       'items' in (data as Record<string, unknown>) &&
       'pagination' in (data as Record<string, unknown>);
@@ -90,10 +90,10 @@ class ResponseDetector {
    * 检查是否为错误响应
    */
   private static isErrorResponse(response: unknown, config: ResponseDetectionConfig): boolean {
-    return response !== null &&
+    return response != null &&
       typeof response === 'object' &&
-      !!config.successField && (response as Record<string, unknown>)[config.successField] === false &&
-      !!config.errorFields && config.errorFields.some(field => field in (response as Record<string, unknown>));
+      config.successField != null && (response as Record<string, unknown>)[config.successField] === false &&
+      config.errorFields != null && config.errorFields.some(field => field in (response as Record<string, unknown>));
   }
 }
 
@@ -192,9 +192,9 @@ export class ResponseExtractor {
     options: SmartExtractOptions<T>
   ): ExtractResult<T> {
     const responseData = response.data;
-    const dataField = options.detection?.dataField || 'data';
+    const dataField = options.detection?.dataField ?? 'data';
 
-    if (!responseData[dataField]) {
+    if (responseData[dataField] == null) {
       return {
         success: false,
         error: '标准响应中缺少数据字段',
@@ -219,10 +219,10 @@ export class ResponseExtractor {
     options: SmartExtractOptions<T>
   ): ExtractResult<T> {
     const responseData = response.data;
-    const dataField = options.detection?.dataField || 'data';
+    const dataField = options.detection?.dataField ?? 'data';
     const dataContainer = (responseData as Record<string, unknown>)[dataField] as Record<string, unknown>;
 
-    if (!dataContainer || !dataContainer.items) {
+    if (dataContainer == null || dataContainer.items == null) {
       return {
         success: false,
         error: '分页响应中缺少items字段',
@@ -261,16 +261,16 @@ export class ResponseExtractor {
     options: SmartExtractOptions<T>
   ): ExtractResult<T> {
     const responseData = response.data;
-    const errorFields = options.detection?.errorFields || ['error', 'message'];
+    const errorFields = options.detection?.errorFields ?? ['error', 'message'];
     let errorMessage = '未知错误';
 
     // 尝试从常见字段提取错误信息
     for (const field of errorFields) {
-      if ((responseData as Record<string, unknown>)[field]) {
+      if ((responseData as Record<string, unknown>)[field] != null) {
         const value = (responseData as Record<string, unknown>)[field];
         if (typeof value === 'string') {
           errorMessage = value;
-        } else if (value && typeof value === 'object' && 'message' in (value as Record<string, unknown>)) {
+        } else if (value != null && typeof value === 'object' && 'message' in (value as Record<string, unknown>)) {
           errorMessage = (value as Record<string, unknown>).message as string;
         }
         break;
@@ -288,7 +288,7 @@ export class ResponseExtractor {
    * 类型验证
    */
   private static validateType<T>(data: unknown, options: SmartExtractOptions<T>): T {
-    if (!options.enableTypeValidation || !options.expectedType) {
+    if (options.enableTypeValidation !== true || options.expectedType == null) {
       return data as T;
     }
 
@@ -337,11 +337,11 @@ export class ResponseExtractor {
       const responseData = response.data;
 
       // 尝试从常见字段提取消息
-      if (responseData.message) {
+      if (responseData.message != null) {
         return responseData.message;
       }
 
-      if (responseData.data?.message) {
+      if (responseData.data?.message != null) {
         return responseData.data.message;
       }
 
@@ -420,7 +420,7 @@ export class ApiErrorHandler {
     }
 
     // 检查是否已经是增强型错误对象
-    if (error && typeof error === 'object' && 'type' in error && 'code' in error && 'message' in error) {
+    if (error != null && typeof error === 'object' && 'type' in error && 'code' in error && 'message' in error) {
       return error as EnhancedApiError;
     }
 
@@ -443,7 +443,7 @@ export class ApiErrorHandler {
     const responseData = error.response?.data;
 
     // 网络错误
-    if (!error.response) {
+    if (error.response == null) {
       return {
         type: ApiErrorType.NETWORK_ERROR,
         code: 'NETWORK_ERROR',
@@ -455,12 +455,12 @@ export class ApiErrorHandler {
     }
 
     // 4xx 客户端错误
-    if (statusCode && statusCode >= 400 && statusCode < 500) {
+    if (statusCode != null && statusCode >= 400 && statusCode < 500) {
       const data = responseData as Record<string, unknown> | undefined;
       return {
         type: this.getClientErrorType(statusCode),
-        code: (data?.code as string) || `HTTP_${statusCode}`,
-        message: (data?.message as string) || (data?.error as string) || this.getDefaultErrorMessage(statusCode),
+        code: (data?.code as string) ?? `HTTP_${statusCode}`,
+        message: (data?.message as string) ?? (data?.error as string) ?? this.getDefaultErrorMessage(statusCode),
         details: data?.details as Record<string, unknown> | undefined,
         statusCode,
         timestamp: new Date().toISOString(),
@@ -470,12 +470,12 @@ export class ApiErrorHandler {
     }
 
     // 5xx 服务器错误
-    if (statusCode && statusCode >= 500) {
+    if (statusCode != null && statusCode >= 500) {
       const data = responseData as Record<string, unknown> | undefined;
       return {
         type: ApiErrorType.SERVER_ERROR,
-        code: (data?.code as string) || `HTTP_${statusCode}`,
-        message: (data?.message as string) || '服务器内部错误',
+        code: (data?.code as string) ?? `HTTP_${statusCode}`,
+        message: (data?.message as string) ?? '服务器内部错误',
         details: data?.details as Record<string, unknown> | undefined,
         statusCode,
         timestamp: new Date().toISOString(),

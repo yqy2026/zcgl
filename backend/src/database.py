@@ -97,7 +97,6 @@ class DatabaseManager:
 
     def initialize_engine(self, database_url: str) -> Engine:
         """初始化数据库引擎"""
-        print(f"DEBUG: Initializing database engine with URL: {database_url}")
         logger.info(f"正在初始化数据库引擎: {database_url}")
 
         engine_kwargs: dict[str, Any] = {

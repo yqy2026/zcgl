@@ -119,7 +119,8 @@ export class AssetHistoryService {
                 throw new Error(`获取字段历史失败: ${result.error}`);
             }
 
-            return result.data!.history || [];
+            const historyData = result.data as { history: FieldHistoryRecord[] } | null;
+            return historyData?.history ?? [];
         } catch (error) {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);

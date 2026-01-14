@@ -24,10 +24,10 @@ const calculateSummary = (items: Asset[] = []) => {
   const summary = items.reduce(
     (acc, item) => {
       return {
-        landArea: acc.landArea + (Number(item.land_area) || 0),
-        actualArea: acc.actualArea + (Number(item.actual_property_area) || 0),
-        rentableArea: acc.rentableArea + (Number(item.rentable_area) || 0),
-        rentedArea: acc.rentedArea + (Number(item.rented_area) || 0),
+        landArea: acc.landArea + (Number(item.land_area) ?? 0),
+        actualArea: acc.actualArea + (Number(item.actual_property_area) ?? 0),
+        rentableArea: acc.rentableArea + (Number(item.rentable_area) ?? 0),
+        rentedArea: acc.rentedArea + (Number(item.rented_area) ?? 0),
       };
     },
     {

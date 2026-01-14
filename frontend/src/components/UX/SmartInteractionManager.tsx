@@ -62,7 +62,7 @@ const InteractionContext = createContext<any>(null)
 
 export const useSmartInteraction = () => {
   const context = useContext(InteractionContext)
-  if (!context) {
+  if (context == null) {
     throw new Error('useSmartInteraction must be used within SmartInteractionProvider')
   }
   return context
@@ -78,8 +78,16 @@ const SmartInteractionProvider: React.FC<SmartInteractionManagerProps> = ({
 }) => {
   const [userBehavior, setUserBehavior] = useState<UserBehavior>({
     sessionId: `session_${Date.now()}`,
-    actions: [] as any
-  } as any)
+    actions: [],
+    preferences: {
+      theme: 'light',
+      language: 'zh-CN',
+      autoSave: true,
+      notifications: true,
+      animations: true,
+      compactMode: false
+    }
+  })
   const [userPreferences, setUserPreferences] = useState({
     theme: 'light',
     language: 'zh-CN',
@@ -95,7 +103,7 @@ const SmartInteractionProvider: React.FC<SmartInteractionManagerProps> = ({
 
   // 跟踪用户行为
   const trackInteraction = useCallback((type: InteractionType, element: string, data?: unknown, duration?: number) => {
-    if (!enableBehaviorTracking) return
+    if (enableBehaviorTracking !== true) return
 
     const action = {
       type,
@@ -104,7 +112,7 @@ const SmartInteractionProvider: React.FC<SmartInteractionManagerProps> = ({
       data
     }
 
-    if (duration) {
+    if (duration !== undefined && duration !== null) {
       setTimeout(() => {
         setUserBehavior(prev => ({
           ...prev,
@@ -121,7 +129,7 @@ const SmartInteractionProvider: React.FC<SmartInteractionManagerProps> = ({
 
   // 显示智能通知
   const showNotification = useCallback((config: FeedbackConfig) => {
-    if (!enableSmartNotifications) return
+    if (enableSmartNotifications !== true) return
 
     const configWithDefaults = {
       duration: 4500,
@@ -136,9 +144,9 @@ const SmartInteractionProvider: React.FC<SmartInteractionManagerProps> = ({
         notification.success({
           message,
           description,
-          btn: action?.text ? (
+          btn: (action?.text ?? '') !== '' ? (
             <Button type="primary" size="small" onClick={action?.onClick}>
-              {action.text}
+              {action?.text}
             </Button>
           ) : undefined
         })
@@ -147,9 +155,9 @@ const SmartInteractionProvider: React.FC<SmartInteractionManagerProps> = ({
         notification.error({
           message,
           description,
-          btn: action?.text ? (
+          btn: (action?.text ?? '') !== '' ? (
             <Button type="primary" size="small" onClick={action?.onClick}>
-              {action.text}
+              {action?.text}
             </Button>
           ) : undefined
         })
@@ -158,9 +166,9 @@ const SmartInteractionProvider: React.FC<SmartInteractionManagerProps> = ({
         notification.warning({
           message,
           description,
-          btn: action?.text ? (
+          btn: (action?.text ?? '') !== '' ? (
             <Button type="primary" size="small" onClick={action?.onClick}>
-              {action.text}
+              {action?.text}
             </Button>
           ) : undefined
         })
@@ -169,9 +177,9 @@ const SmartInteractionProvider: React.FC<SmartInteractionManagerProps> = ({
         notification.info({
           message,
           description,
-          btn: action?.text ? (
+          btn: (action?.text ?? '') !== '' ? (
             <Button type="primary" size="small" onClick={action?.onClick}>
-              {action.text}
+              {action?.text}
             </Button>
           ) : undefined
         })
@@ -181,7 +189,7 @@ const SmartInteractionProvider: React.FC<SmartInteractionManagerProps> = ({
 
   // 键盘快捷键支持
   const setupKeyboardShortcuts = useCallback(() => {
-    if (!enableKeyboardShortcuts) return
+    if (enableKeyboardShortcuts !== true) return
 
     const shortcuts = [
       { key: 'ctrl+z', description: '撤销', action: 'undo' },
@@ -202,7 +210,7 @@ const SmartInteractionProvider: React.FC<SmartInteractionManagerProps> = ({
       const combo = `${ctrlKey ? 'ctrl+' : ''}${altKey ? 'alt+' : ''}${shiftKey ? 'shift+' : ''}${key}`
 
       const action = shortcuts.find(s => s.key === combo)?.action
-      if (action) {
+      if (action != null) {
         e.preventDefault()
 
         switch (action) {
@@ -260,7 +268,7 @@ const SmartInteractionProvider: React.FC<SmartInteractionManagerProps> = ({
 
   // 自动保存
   const autoSave = useCallback(() => {
-    if (!userPreferences.autoSave) return
+    if (userPreferences.autoSave !== true) return
 
     try {
       // 模拟自动保存逻辑
@@ -298,14 +306,14 @@ const SmartInteractionProvider: React.FC<SmartInteractionManagerProps> = ({
 
   // 撤销重做
   const undo = useCallback(() => {
-    if (!enableUndoRedo || undoStack.length === 0) return
+    if (enableUndoRedo !== true || undoStack.length === 0) return
 
     setRedoStack(prev => [...prev, undoStack[undoStack.length - 1]])
     setUndoStack(prev => prev.slice(0, -1))
   }, [enableUndoRedo, undoStack])
 
   const redo = useCallback(() => {
-    if (!enableUndoRedo || redoStack.length === 0) return
+    if (enableUndoRedo !== true || redoStack.length === 0) return
 
     setUndoStack(prev => [...prev, redoStack[redoStack.length - 1]])
     setRedoStack(prev => prev.slice(0, -1))
@@ -489,8 +497,8 @@ const SmartInteractionExample: React.FC = () => {
         <h4>用户偏好</h4>
         <p>主题：{userPreferences.theme}</p>
         <p>语言：{userPreferences.language}</p>
-        <p>自动保存：{userPreferences.autoSave ? '启用' : '禁用'}</p>
-        <p>通知：{userPreferences.notifications ? '启用' : '禁用'}</p>
+        <p>自动保存：{userPreferences.autoSave === true ? '启用' : '禁用'}</p>
+        <p>通知：{userPreferences.notifications === true ? '启用' : '禁用'}</p>
       </div>
     </div>
   )

@@ -63,7 +63,7 @@ const ServiceFeeLedgerTable: React.FC<ServiceFeeLedgerTableProps> = ({ ledgers, 
             dataIndex: 'settlement_date',
             key: 'settlement_date',
             width: 120,
-            render: (date) => (date ? dayjs(date).format('YYYY-MM-DD') : '-'),
+            render: (date) => (date != null ? dayjs(date).format('YYYY-MM-DD') : '-'),
         },
         {
             title: '备注',

@@ -44,7 +44,7 @@ function adjustRentTermsDate(
   originalTerms: any[],
   newStartDate: Date
 ): any[] {
-  if (!originalTerms || originalTerms.length === 0) return [];
+  if (originalTerms == null || originalTerms.length === 0) return [];
 
   const originalStart = parseISO(originalTerms[0].start_date);
   const originalEnd = parseISO(originalTerms[originalTerms.length - 1].end_date);
@@ -82,7 +82,7 @@ const ContractRenewPage: React.FC = () => {
   const { data: originalContract, isLoading: isLoadingContract } = useQuery({
     queryKey: ['rent-contract', id],
     queryFn: () => rentContractService.getContract(id as string),
-    enabled: !!id,
+    enabled: id != null,
   });
 
   // 计算新合同的初始数据
@@ -94,7 +94,7 @@ const ContractRenewPage: React.FC = () => {
 
     // 调整租金条款日期
     const adjustedRentTerms = adjustRentTermsDate(
-      originalContract.rent_terms || [],
+      originalContract.rent_terms ?? [],
       newStartDate
     );
 
@@ -117,7 +117,7 @@ const ContractRenewPage: React.FC = () => {
       total_deposit: originalContract.total_deposit,
 
       // 继承资产关联 - 确保始终是数组
-      asset_ids: originalContract.assets?.map((a: { id: string }) => a.id) || [],
+      asset_ids: originalContract.assets?.map((a: { id: string }) => a.id) ?? [],
 
       // 继承租金条款（日期已调整）
       rent_terms: adjustedRentTerms,

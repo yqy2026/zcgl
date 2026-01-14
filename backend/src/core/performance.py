@@ -99,7 +99,9 @@ class PerformanceMonitor:
 performance_monitor = PerformanceMonitor()
 
 
-def monitor_query(query_name: str) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+def monitor_query(
+    query_name: str,
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """查询性能监控装饰器"""
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -220,7 +222,9 @@ class QueryOptimizer:
 
             return query
 
-    def optimize_batch_update_query(self, asset_ids: list[str], update_data: dict[str, Any]) -> int:
+    def optimize_batch_update_query(
+        self, asset_ids: list[str], update_data: dict[str, Any]
+    ) -> int:
         """优化批量更新查询"""
         from ..models.asset import Asset
 
@@ -336,7 +340,9 @@ class CacheManager:
 cache_manager = CacheManager()
 
 
-def cached(ttl: int | None = None, key_prefix: str = "") -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+def cached(
+    ttl: int | None = None, key_prefix: str = ""
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """缓存装饰器"""
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -430,7 +436,9 @@ class DatabaseOptimizer:
             "recommendations": self._generate_recommendations(slow_queries),
         }
 
-    def _generate_recommendations(self, slow_queries: list[dict[str, Any]]) -> list[str]:
+    def _generate_recommendations(
+        self, slow_queries: list[dict[str, Any]]
+    ) -> list[str]:
         """生成优化建议"""
         recommendations = []
 
@@ -497,6 +505,6 @@ if __name__ == "__main__":
         return {"result": "test"}
 
     result = test_function()
-    print("Test result:", result)
-    print("Performance stats:", get_performance_stats())
-    print("Cache stats:", get_cache_stats())
+    logger.info(f"Test result: {result}")
+    logger.info(f"Performance stats: {get_performance_stats()}")
+    logger.info(f"Cache stats: {get_cache_stats()}")

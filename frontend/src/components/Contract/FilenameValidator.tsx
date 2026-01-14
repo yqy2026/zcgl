@@ -74,7 +74,7 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
 
     // 中文特殊字符检查
     const hasChineseSpecial = Object.keys(chineseSpecialCharsMap).some(char => fname.includes(char));
-    if (hasChineseSpecial) {
+    if (hasChineseSpecial !== undefined && hasChineseSpecial !== null) {
       issues.push('包含中文特殊字符');
       suggestions.push('建议将中文特殊字符替换为标准字符');
       if (severity === 'low') severity = 'medium';
@@ -82,7 +82,7 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
 
     // Unicode字符检查
     const hasUnicode = [...fname].some(char => char.charCodeAt(0) > 127);
-    if (hasUnicode) {
+    if (hasUnicode !== undefined && hasUnicode !== null) {
       issues.push('包含Unicode字符');
       suggestions.push('确保系统支持Unicode字符');
     }
@@ -155,7 +155,7 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
       setSuggestedFilename(localSuggested);
 
       // 如果需要服务器验证（可选）
-      if (showSuggestions && localResult.issues.length > 0) {
+      if (showSuggestions !== undefined && showSuggestions !== null &&  localResult.issues.length > 0) {
         try {
           // const response = await validateFilenameAPI(fname);
           // setSuggestedFilename(response.suggested_filename || localSuggested);
@@ -183,7 +183,7 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
   }, [filename]);
 
   useEffect(() => {
-    if (validationResult && onValidationChange) {
+    if (validationResult !== undefined && validationResult !== null &&  onValidationChange) {
       onValidationChange(
         validationResult.valid,
         validationResult.valid ? undefined : suggestedFilename
@@ -194,14 +194,14 @@ export const FilenameValidator: React.FC<FilenameValidatorProps> = ({
   const handleCustomFilenameChange = (value: string) => {
     setCustomFilename(value);
     validateFilename(value);
-    if (onFilenameChange) {
+    if (onFilenameChange !== undefined && onFilenameChange !== null) {
       onFilenameChange(value);
     }
   };
 
   const acceptSuggestion = () => {
     setCustomFilename(suggestedFilename);
-    if (onFilenameChange) {
+    if (onFilenameChange !== undefined && onFilenameChange !== null) {
       onFilenameChange(suggestedFilename);
     }
   };

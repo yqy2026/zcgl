@@ -51,7 +51,7 @@ const ProcessingStepsDisplay: React.FC = () => {
             {(uploading || processingProgress) && (
                 <div style={{ marginTop: 16 }}>
                     <Progress
-                        percent={uploading ? uploadProgress : (processingProgress?.progress || 0)}
+                        percent={uploading ? uploadProgress : (processingProgress?.progress ?? 0)}
                         status={processingProgress?.status === 'failed' ? 'exception' : undefined}
                         strokeColor={{
                             '0%': '#108ee9',
@@ -65,7 +65,7 @@ const ProcessingStepsDisplay: React.FC = () => {
                                 {processingProgress.current_step || '准备中...'}
                             </Typography.Text>
                             <Typography.Text type="secondary">
-                                {processingProgress.progress || 0}%
+                                {processingProgress.progress ?? 0}%
                             </Typography.Text>
                         </div>
                     )}

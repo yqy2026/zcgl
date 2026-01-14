@@ -121,8 +121,8 @@ export class EnhancedApiClient {
   constructor(config: EnhancedApiClientConfig = {}) {
     this.config = {
       // 默认配置
-      baseURL: config.baseURL || '/api/v1',
-      timeout: config.timeout || 30000,
+      baseURL: config.baseURL ?? '/api/v1',
+      timeout: config.timeout ?? 30000,
       responseDetection: {
         successField: 'success',
         dataField: 'data',
@@ -179,12 +179,12 @@ export class EnhancedApiClient {
       (config: InternalAxiosRequestConfig) => {
         // 添加认证token
         const token = localStorage.getItem('auth_token')
-        if (token && config.headers) {
+        if (token != null && config.headers != null) {
           config.headers.set('Authorization', `Bearer ${token}`)
         }
 
         // 添加请求ID
-        if (config.headers) {
+        if (config.headers != null) {
           config.headers.set('X-Request-ID', this.generateRequestId())
         }
 
@@ -245,7 +245,7 @@ export class EnhancedApiClient {
         const originalRequest = error.config
 
         // 处理401错误 - 自动刷新token
-        if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
+        if (error.response?.status === 401 && originalRequest != null && originalRequest._retry !== true) {
           apiLogger.warn('🔑 Token过期，尝试刷新...')
 
           try {
@@ -262,7 +262,7 @@ export class EnhancedApiClient {
 
             // 更新请求头中的token
             const newToken = localStorage.getItem('auth_token')
-            if (newToken && originalRequest.headers) {
+            if (newToken != null && originalRequest.headers != null) {
               originalRequest.headers.set('Authorization', `Bearer ${newToken}`)
             }
 

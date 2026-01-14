@@ -199,7 +199,7 @@ const AssetAnalyticsPage: React.FC = () => {
   }
 
   const hasData =
-    analyticsData && analyticsData.area_summary && Number(analyticsData.area_summary.total_assets) > 0;
+    analyticsData != null && analyticsData.area_summary != null && Number(analyticsData.area_summary.total_assets) > 0;
 
   return (
     <div className={styles.analyticsContainer}>
@@ -225,7 +225,7 @@ const AssetAnalyticsPage: React.FC = () => {
               <Button
                 icon={<DownloadOutlined />}
                 onClick={handleExport}
-                disabled={!hasData}
+                disabled={hasData === false}
                 size="small"
                 className="no-print"
               >
@@ -270,7 +270,7 @@ const AssetAnalyticsPage: React.FC = () => {
         </Space>
       </Card>
 
-      {!hasData || !analyticsData ? (
+      {hasData === false || analyticsData == null ? (
         <Card>
           <Empty description="暂无数据" style={{ padding: "60px 0" }}>
             <p>数据库中还没有资产数据，请先录入资产信息</p>
@@ -390,7 +390,7 @@ const AssetAnalyticsPage: React.FC = () => {
           </Card>
 
           {/* 出租率趋势 */}
-          {analyticsData.occupancy_trend && analyticsData.occupancy_trend.length > 0 && (
+          {analyticsData.occupancy_trend != null && analyticsData.occupancy_trend.length > 0 && (
             <Card title="出租率趋势" style={{ marginBottom: "24px" }}>
               <AnalyticsLineChart
                 title="出租率趋势"
@@ -453,7 +453,7 @@ const AssetAnalyticsPage: React.FC = () => {
                           <span className={styles.itemStats}>
                             {dimension === "count"
                               ? `${(item as { count: number }).count} (${(item as { percentage: number }).percentage}%)`
-                              : `${(item as { total_area?: number }).total_area?.toFixed(0)}㎡ (${(item as { area_percentage?: number; percentage?: number }).area_percentage || (item as { area_percentage?: number; percentage?: number }).percentage}%)`}
+                              : `${(item as { total_area?: number }).total_area?.toFixed(0)}㎡ (${(item as { area_percentage?: number; percentage?: number }).area_percentage ?? (item as { area_percentage?: number; percentage?: number }).percentage}%)`}
                           </span>
                         </div>
                       ))}
@@ -506,7 +506,7 @@ const AssetAnalyticsPage: React.FC = () => {
                               </span>
                             )}
                             {dimension === "area" &&
-                              (item as any).occupancy_rate &&
+                              (item as any).occupancy_rate != null &&
                               Number((item as any).occupancy_rate) > 0 && (
                                 <span className={styles.occupancyRate}>
                                   ，出租率{Number((item as any).occupancy_rate).toFixed(2)}%

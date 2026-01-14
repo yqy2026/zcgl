@@ -13,7 +13,7 @@ vi.mock('antd', async () => {
   return {
     ...actual,
     Table: vi.fn(({ dataSource, columns: _columns, pagination, loading, rowSelection, summary }: any) => {
-      const data = dataSource || []
+      const data = dataSource ?? []
       return React.createElement('div', {
         'data-testid': 'table',
         'data-loading': loading,

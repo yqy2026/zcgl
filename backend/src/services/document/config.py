@@ -4,6 +4,7 @@ PDF/OCR 统一配置
 集中管理所有 PDF 处理和 OCR 相关的配置参数
 """
 
+import logging
 import os
 from enum import Enum
 from typing import Any
@@ -500,7 +501,9 @@ def validate_config(config: PDFImportConfig) -> list[str]:
             import paddle
 
             # PaddlePaddle 的 CUDA 检查
-            cuda_available: bool = getattr(paddle, "is_compiled_with_cuda", lambda: False)()
+            cuda_available: bool = getattr(
+                paddle, "is_compiled_with_cuda", lambda: False
+            )()
             if not cuda_available:
                 warnings.append(
                     "use_gpu=True but CUDA is not available in PaddlePaddle"
@@ -572,29 +575,31 @@ if __name__ == "__main__":  # pragma: no cover
     # 加载配置
     config = get_config()
 
-    print("=== OCR Configuration ===")
-    print(f"Engine: {config.ocr.engine_provider}")
-    print(f"Language: {config.ocr.language}")
-    print(f"GPU: {config.ocr.use_gpu}")
-    print(f"Timeout: {config.ocr.vision_timeout}s")
-    print(f"Max Pages: {config.ocr.max_pdf_pages}")
-    print(f"Concurrent: {config.ocr.max_concurrent_tasks}")
+    logger = logging.getLogger(__name__)
 
-    print("\n=== Extraction Configuration ===")
-    print(f"Confidence Threshold: {config.extraction.confidence_threshold}")
-    print(f"Max Retries: {config.extraction.max_retries}")
-    print(f"Cache: {config.extraction.enable_cache}")
+    logger.info("=== OCR Configuration ===")
+    logger.info(f"Engine: {config.ocr.engine_provider}")
+    logger.info(f"Language: {config.ocr.language}")
+    logger.info(f"GPU: {config.ocr.use_gpu}")
+    logger.info(f"Timeout: {config.ocr.vision_timeout}s")
+    logger.info(f"Max Pages: {config.ocr.max_pdf_pages}")
+    logger.info(f"Concurrent: {config.ocr.max_concurrent_tasks}")
+
+    logger.info("=== Extraction Configuration ===")
+    logger.info(f"Confidence Threshold: {config.extraction.confidence_threshold}")
+    logger.info(f"Max Retries: {config.extraction.max_retries}")
+    logger.info(f"Cache: {config.extraction.enable_cache}")
 
     # 验证配置
     warnings = validate_config(config)
     if warnings:
-        print("\n=== Warnings ===")
+        logger.warning("=== Warnings ===")
         for warning in warnings:
-            print(f"⚠️  {warning}")
+            logger.warning(f"⚠️  {warning}")
     else:
-        print("\n✅ Configuration is valid")
+        logger.info("✅ Configuration is valid")
 
     # 导出环境变量
-    print("\n=== Environment Variables ===")
+    logger.info("=== Environment Variables ===")
     for line in export_config_env():
-        print(line)
+        logger.info(line)

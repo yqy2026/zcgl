@@ -44,9 +44,9 @@ vi.mock('antd', () => ({
       data-show-search={showSearch}
       data-has-options={!!options?.length}
       onClick={() => {
-        if (onChange && mode === 'multiple') {
+        if (onChange !== undefined && onChange !== null &&  mode === 'multiple') {
           onChange(['test-id'], { key: 'test-id', label: '测试权属方' })
-        } else if (onChange) {
+        } else if (onChange !== undefined && onChange !== null) {
           onChange('test-id', { key: 'test-id', label: '测试权属方' })
         }
       }}

@@ -86,8 +86,8 @@ export class OwnershipService {
     try {
       // 确保提供必需的分页参数
       const requestParams = {
-        page: params?.page || 1,
-        size: params?.size || 10,
+        page: (params?.page ?? 1),
+        size: (params?.size ?? 10),
         keyword: params?.keyword,
         is_active: params?.is_active,
       };
@@ -324,12 +324,12 @@ export class OwnershipService {
   async canDeleteOwnership(id: string): Promise<{ canDelete: boolean; reason?: string }> {
     try {
       const ownership = await this.getOwnership(id);
-      if (!ownership) {
+      if (ownership == null) {
         return { canDelete: false, reason: '权属方不存在' };
       }
 
       // 检查是否有关联的资产或项目
-      if (ownership.asset_count && ownership.asset_count > 0) {
+      if ((ownership.asset_count ?? 0) > 0) {
         return {
           canDelete: false,
           reason: `该权属方还有 ${ownership.asset_count} 个关联资产，无法删除`

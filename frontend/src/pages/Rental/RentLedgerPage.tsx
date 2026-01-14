@@ -98,7 +98,7 @@ const RentLedgerPage: React.FC = () => {
       });
 
       // 安全检查：确保response和response.items存在
-      if (!response) {
+      if (response == null) {
         pageLogger.error('API响应为空');
         MessageManager.error('加载台账列表失败：响应为空');
         setState(prev => ({ ...prev, loading: false }));
@@ -145,8 +145,8 @@ const RentLedgerPage: React.FC = () => {
       ]);
 
       // 安全检查：确保响应和items存在
-      const assetItems = assetsResponse?.items || [];
-      const ownershipItems = ownershipsResponse?.items || [];
+      const assetItems = assetsResponse?.items ?? [];
+      const ownershipItems = ownershipsResponse?.items ?? [];
 
       setAssets(assetItems);
       setOwnerships(ownershipItems);
@@ -223,8 +223,8 @@ const RentLedgerPage: React.FC = () => {
         ledger_ids: state.selectedLedgers.map(ledger => ledger.id),
         payment_status: values.payment_status,
         payment_date: values.payment_date?.format('YYYY-MM-DD'),
-        payment_method: values.payment_method || '',
-        notes: values.notes || '',
+        payment_method: values.payment_method ?? '',
+        notes: values.notes ?? '',
       });
       MessageManager.success('批量更新成功');
       setState(prev => ({ ...prev, showBatchModal: false, selectedLedgers: [] }));
@@ -356,7 +356,7 @@ const RentLedgerPage: React.FC = () => {
           '已支付': { color: 'success', icon: <CheckOutlined /> },
           '逾期': { color: 'error', icon: <ExclamationCircleOutlined /> },
         };
-        const config = statusConfig[status as keyof typeof statusConfig] || statusConfig['未支付'];
+        const config = statusConfig[status as keyof typeof statusConfig] ?? statusConfig['未支付'];
         return (
           <Tag color={config.color} icon={config.icon}>
             {status}
@@ -368,7 +368,7 @@ const RentLedgerPage: React.FC = () => {
       title: '支付日期',
       dataIndex: 'payment_date',
       key: 'payment_date',
-      render: (date: string) => date ? dayjs(date).format('YYYY-MM-DD') : '-',
+      render: (date: string) => date != null ? dayjs(date).format('YYYY-MM-DD') : '-',
     },
     {
       title: '操作',
@@ -394,7 +394,7 @@ const RentLedgerPage: React.FC = () => {
                 form.setFieldsValue({
                   payment_status: record.payment_status,
                   paid_amount: record.paid_amount,
-                  payment_date: record.payment_date ? dayjs(record.payment_date) : null,
+                  payment_date: record.payment_date != null ? dayjs(record.payment_date) : null,
                   payment_method: record.payment_method,
                   notes: record.notes,
                 });

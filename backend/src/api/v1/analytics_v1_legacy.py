@@ -35,14 +35,14 @@ from ...database import get_db
 from ...middleware.auth import get_current_active_user
 from ...models.auth import User
 
+logger = logging.getLogger(__name__)
+
 # 强制重新加载标记 - 2025-10-30 06:30 - VERSION 2
-print(
-    "[ANALYTICS] Analytics module loaded - CacheManager has get_stats:",
+logger.debug(
+    "Analytics module loaded - CacheManager has get_stats: %s",
     hasattr(analytics_cache, "get_stats"),
 )
-print("[ANALYTICS] VERSION 2 - RELOAD TRIGGERED")
-
-logger = logging.getLogger(__name__)
+logger.debug("ANALYTICS VERSION 2 - RELOAD TRIGGERED")
 
 router = APIRouter()
 
@@ -1410,7 +1410,7 @@ class CategoryTrendGenerator:
 
     @staticmethod
     def _generate_category_comparison_trend(
-        category_groups: defaultdict[str, list[Any]]
+        category_groups: defaultdict[str, list[Any]],
     ) -> list[dict[str, Any]]:
         """生成类别对比趋势"""
         try:
@@ -1444,7 +1444,7 @@ class CategoryTrendGenerator:
 
     @staticmethod
     def _generate_category_summary(
-        category_groups: defaultdict[str, list[Any]]
+        category_groups: defaultdict[str, list[Any]],
     ) -> dict[str, Any]:
         """生成类别汇总信息"""
         try:
@@ -1500,7 +1500,9 @@ class CategoryTrendGenerator:
                     category_stats, key=lambda x: float(x["occupancy_rate"])
                 )
                 summary["category_details"] = sorted(
-                    category_stats, key=lambda x: float(x["occupancy_rate"]), reverse=True
+                    category_stats,
+                    key=lambda x: float(x["occupancy_rate"]),
+                    reverse=True,
                 )
 
             return summary
@@ -1599,9 +1601,7 @@ async def get_comprehensive_analytics(
 
         # 检查综合分析缓存
         cache_filters = {**filters, "search": search}
-        filter_str = "_".join(
-            [f"{k}_{v}" for k, v in sorted(cache_filters.items())]
-        )
+        filter_str = "_".join([f"{k}_{v}" for k, v in sorted(cache_filters.items())])
         cache_key = f"comprehensive_analytics_{filter_str}"
         request_id = get_request_id(request)
         cached_result = analytics_cache.get(cache_key)

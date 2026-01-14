@@ -35,7 +35,7 @@ const AssetCreatePage: React.FC = () => {
   const queryClient = useQueryClient()
   const _form = Form.useForm()
 
-  const isEdit = !!id
+  const isEdit = id != null
 
   // 获取资产详情（编辑模式）
   const { data: asset, isLoading } = useQuery({
@@ -54,7 +54,7 @@ const AssetCreatePage: React.FC = () => {
     },
     onError: (error: unknown) => {
       const apiError = error as ApiError
-      MessageManager.error(apiError.response?.data?.detail || apiError.message || '创建失败')
+      MessageManager.error(apiError.response?.data?.detail ?? apiError.message ?? '创建失败')
     },
   })
 
@@ -69,7 +69,7 @@ const AssetCreatePage: React.FC = () => {
     },
     onError: (error: unknown) => {
       const apiError = error as ApiError
-      MessageManager.error(apiError.response?.data?.detail || apiError.message || '更新失败')
+      MessageManager.error(apiError.response?.data?.detail ?? apiError.message ?? '更新失败')
     },
   })
 

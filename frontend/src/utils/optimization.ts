@@ -11,10 +11,10 @@ export const useDebounce = <T extends (...args: unknown[]) => unknown>(
 
   return useCallback(
     ((...args: Parameters<T>) => {
-      if (timeoutRef.current) {
+      if (timeoutRef.current != null) {
         clearTimeout(timeoutRef.current)
       }
-      
+
       timeoutRef.current = setTimeout(() => {
         callback(...args)
       }, delay)
@@ -131,25 +131,25 @@ export const useMemoryLeakDetection = (componentName: string) => {
     
     return () => {
       const unmountTime = Date.now()
-      const _lifeTime = unmountTime - (mountTimeRef.current || 0)
-      
+      const _lifeTime = unmountTime - (mountTimeRef.current ?? 0)
+
       // 清理定时器
       timersRef.current.forEach(timer => clearTimeout(timer))
       intervalsRef.current.forEach(interval => clearInterval(interval))
-      
+
       // 清理事件监听器
       listenersRef.current.forEach((listener, event) => {
         window.removeEventListener(event, listener)
       })
-      
+
       // 在开发环境下记录组件生命周期
       if (process.env.NODE_ENV === 'development') {
         // Component unmounted
-        
+
         if (timersRef.current.size > 0) {
           console.warn(`Component ${componentName} had ${timersRef.current.size} uncleaned timers`)
         }
-        
+
         if (listenersRef.current.size > 0) {
           console.warn(`Component ${componentName} had ${listenersRef.current.size} uncleaned listeners`)
         }
@@ -187,15 +187,15 @@ export const useRenderPerformance = (componentName: string) => {
   useEffect(() => {
     renderCountRef.current++
     const now = performance.now()
-    
-    if (lastRenderTimeRef.current) {
+
+    if (lastRenderTimeRef.current != null) {
       const renderTime = now - lastRenderTimeRef.current
-      
+
       if (process.env.NODE_ENV === 'development' && renderTime > 16) {
         console.warn(`Slow render detected in ${componentName}: ${renderTime.toFixed(2)}ms`)
       }
     }
-    
+
     lastRenderTimeRef.current = now
   })
 
@@ -227,7 +227,7 @@ export const useCache = <T>(key: string, factory: () => T, deps: unknown[] = [])
     // 限制缓存大小
     if (cache.current.size > 100) {
       const firstKey = cache.current.keys().next().value
-      if (firstKey) {
+      if (firstKey != null) {
         cache.current.delete(firstKey)
       }
     }

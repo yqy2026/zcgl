@@ -125,9 +125,9 @@ const UnifiedProjectSelect: React.FC<UnifiedProjectSelectProps> = ({
       onChange?.(project.id, project as any);
     } else {
       // 多选模式下，添加到已选列表
-      const currentValues = Array.isArray(value) ? value : value ? [value] : [];
+      const currentValues = Array.isArray(value) ? value : (value != null && value !== '') ? [value] : [];
       if (!currentValues.includes(project.id)) {
-        const newValues = maxCount ? [...currentValues.slice(-maxCount + 1), project.id] : [...currentValues, project.id];
+        const newValues = maxCount != null && maxCount > 0 ? [...currentValues.slice(-maxCount + 1), project.id] : [...currentValues, project.id];
         const selectedProjects = allProjects.filter(p => newValues.includes(p.id));
         onChange?.(newValues, selectedProjects as any);
       }
@@ -152,12 +152,12 @@ const UnifiedProjectSelect: React.FC<UnifiedProjectSelectProps> = ({
 
     return (
       <Tag
-        color={project?.is_active ? 'blue' : 'red'}
+        color={project?.is_active === true ? 'blue' : 'red'}
         closable={closable}
         onClose={onClose}
         style={{ marginRight: 3 }}
       >
-        {project?.name || value}
+        {project?.name ?? value}
       </Tag>
     );
   };
@@ -166,7 +166,7 @@ const UnifiedProjectSelect: React.FC<UnifiedProjectSelectProps> = ({
     <div style={style}>
       <Space.Compact style={{ width: '100%' }}>
         <Select
-          value={value as any || (mode === 'multiple' ? [] : undefined)}
+          value={value != null ? value as any : (mode === 'multiple' ? [] : undefined)}
           onChange={mode === 'multiple' ? (handleMultipleChange as any) : (handleSingleChange as any)}
           onClear={handleClear}
           placeholder={placeholder}

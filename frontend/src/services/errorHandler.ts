@@ -46,7 +46,7 @@ export class ApiErrorHandler {
   private constructor() { }
 
   static getInstance(): ApiErrorHandler {
-    if (!ApiErrorHandler.instance) {
+    if (ApiErrorHandler.instance == null) {
       ApiErrorHandler.instance = new ApiErrorHandler()
     }
     return ApiErrorHandler.instance
@@ -108,7 +108,7 @@ export class ApiErrorHandler {
 
   // 获取错误消息
   private getErrorMessage(error: ExtendedError): string {
-    if (error.message) {
+    if (error.message != null) {
       return error.message
     }
 

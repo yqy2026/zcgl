@@ -158,7 +158,7 @@ const OptimizedAssetImport: React.FC = () => {
       const formData = new FormData();
       // Get the actual File object from UploadFile
       const file = fileList[0]?.originFileObj;
-      if (file) {
+      if (file !== undefined && file !== null) {
         formData.append("file", file);
       }
 
@@ -250,7 +250,7 @@ const OptimizedAssetImport: React.FC = () => {
     importResult?.errors?.map((error, index) => ({
       key: index,
       error,
-    })) || [];
+    })) ?? [];
 
   return (
     <div style={{ padding: "24px" }}>

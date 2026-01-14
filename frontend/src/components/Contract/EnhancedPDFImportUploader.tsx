@@ -69,7 +69,7 @@ const EnhancedPDFImportUploaderInner: React.FC<{ className?: string }> = ({ clas
                 onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
               />
             </Tooltip>
-            {currentSession && (
+            {currentSession !== undefined && currentSession !== null && (
               <Tooltip title="预览处理结果">
                 <Button
                   type="text"

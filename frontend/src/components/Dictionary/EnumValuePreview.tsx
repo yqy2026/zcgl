@@ -22,7 +22,7 @@ const EnumValuePreview: React.FC<EnumValuePreviewProps> = ({
   size = 'small',
   className = ''
 }) => {
-  if (!values || !Array.isArray(values) || values.length === 0) {
+  if (values === undefined || values === null || !Array.isArray(values) || values.length === 0) {
     return (
       <span className={`enum-preview-empty ${className}`} style={{ color: '#999', fontSize: '12px' }}>
         暂无枚举值
@@ -65,19 +65,19 @@ const EnumValuePreview: React.FC<EnumValuePreviewProps> = ({
               <div>
                 <div><strong>标签:</strong> {value.label}</div>
                 <div><strong>值:</strong> {value.value}</div>
-                {value.code && <div><strong>编码:</strong> {value.code}</div>}
-                {value.description && <div><strong>描述:</strong> {value.description}</div>}
+                {value.code !== undefined && value.code !== null && value.code !== '' && <div><strong>编码:</strong> {value.code}</div>}
+                {value.description !== undefined && value.description !== null && value.description !== '' && <div><strong>描述:</strong> {value.description}</div>}
                 <div><strong>排序:</strong> {value.sort_order}</div>
                 {value.is_default && <div><strong>默认值:</strong> 是</div>}
               </div>
             }
           >
             <Tag
-              color={value.color || (value.is_default ? 'gold' : 'green')}
+              color={(value.color !== undefined && value.color !== null && value.color !== '') ? value.color : (value.is_default ? 'gold' : 'green')}
               style={{
                 ...tagStyle,
                 cursor: 'default',
-                border: value.color ? 'none' : '1px solid #d9d9d9'
+                border: (value.color !== undefined && value.color !== null && value.color !== '') ? 'none' : '1px solid #d9d9d9'
               }}
             >
               {value.label}

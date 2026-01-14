@@ -187,7 +187,7 @@ const AssetExport: React.FC<AssetExportProps> = ({
               id: task.id,
               status: task.status,
               progress: task.progress,
-              downloadUrl: task.download_url || task.downloadUrl,
+              downloadUrl: task.download_url ?? task.downloadUrl,
               createdAt: task.created_at ?? task.createdAt ?? new Date().toISOString(),
               completedAt: task.completedAt,
               errorMessage: task.errorMessage,
@@ -309,7 +309,7 @@ const AssetExport: React.FC<AssetExportProps> = ({
           initialValues={{
             format: "xlsx",
             includeHeaders: true,
-            selectedFields: availableFields.filter((f) => f.required).map((f) => f.key),
+            selectedFields: availableFields.filter((f) => f.required === true).map((f) => f.key),
           }}
         >
           <Row gutter={16}>
@@ -336,7 +336,7 @@ const AssetExport: React.FC<AssetExportProps> = ({
                   <Col xs={24} sm={12} md={8} lg={6} key={field.key}>
                     <Checkbox value={field.key} disabled={field.required}>
                       {field.label}
-                      {field.required && <Text type="secondary"> *</Text>}
+                      {field.required === true && <Text type="secondary"> *</Text>}
                     </Checkbox>
                   </Col>
                 ))}
@@ -435,7 +435,7 @@ const AssetExport: React.FC<AssetExportProps> = ({
             <div style={{ marginBottom: 16 }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
                 <Text>文件名: {exportTask.filename}</Text>
-                <Text>记录数: {exportTask.total_records || 0}</Text>
+                <Text>记录数: {exportTask.total_records ?? 0}</Text>
               </div>
 
               {(exportTask.status === "running" || exportTask.status === "processing") && (
@@ -491,7 +491,7 @@ const AssetExport: React.FC<AssetExportProps> = ({
           renderItem={(item: ExportTaskWithApiFields) => (
             <List.Item
               actions={[
-                item.status === "completed" && (item.download_url || item.downloadUrl) && (
+                item.status === "completed" && (item.download_url !== undefined || item.downloadUrl !== undefined) && (
                   <Tooltip key="download" title="下载文件">
                     <Button
                       type="text"
@@ -529,7 +529,7 @@ const AssetExport: React.FC<AssetExportProps> = ({
                   <div>
                     <div>创建时间: {new Date(item.created_at).toLocaleString()}</div>
                     <div>
-                      记录数: {item.total_records || 0} | 文件大小: {formatFileSize(item.file_size)}
+                      记录数: {item.total_records ?? 0} | 文件大小: {formatFileSize(item.file_size)}
                     </div>
                     {(item.status === "running" || item.status === "processing") && (
                       <Progress percent={item.progress} size="small" style={{ marginTop: 4 }} />

@@ -261,8 +261,8 @@ const SystemMonitoringDashboard: React.FC = () => {
 
   // 健康评分仪表盘配置
   const healthGaugeConfig = useMemo(() => ({
-    percent: (dashboardData?.health_status?.overall_score || 0) / 100,
-    color: getStatusColor(dashboardData?.health_status?.status || 'unknown'),
+    percent: ((dashboardData?.health_status?.overall_score ?? 0) / 100),
+    color: getStatusColor(dashboardData?.health_status?.status ?? 'unknown'),
     indicator: {
       pointer: { style: { stroke: '#D0D0D0' } },
       pin: { style: { stroke: '#D0D0D0' } }
@@ -270,12 +270,12 @@ const SystemMonitoringDashboard: React.FC = () => {
     statistic: {
       content: {
         style: { fontSize: '36px', lineHeight: '36px' },
-        formatter: () => `${dashboardData?.health_status?.overall_score || 0}%`
+        formatter: () => `${dashboardData?.health_status?.overall_score ?? 0}%`
       }
     }
   }), [dashboardData])
 
-  if (error) {
+  if (error !== undefined && error !== null) {
     return (
       <Alert
         message="监控数据加载失败"
@@ -342,17 +342,17 @@ const SystemMonitoringDashboard: React.FC = () => {
           <Card size="small">
             <Statistic
               title="CPU使用率"
-              value={dashboardData?.current_system?.cpu_percent || 0}
+              value={dashboardData?.current_system?.cpu_percent ?? 0}
               suffix="%"
               valueStyle={{ color: getStatusColor(
-                (dashboardData?.current_system?.cpu_percent || 0) > 80 ? 'critical' : 'normal'
+                (dashboardData?.current_system?.cpu_percent ?? 0) > 80 ? 'critical' : 'normal'
               )}}
             />
             <Progress
-              percent={dashboardData?.current_system?.cpu_percent || 0}
+              percent={dashboardData?.current_system?.cpu_percent ?? 0}
               showInfo={false}
               strokeColor={getStatusColor(
-                (dashboardData?.current_system?.cpu_percent || 0) > 80 ? 'critical' : 'normal'
+                (dashboardData?.current_system?.cpu_percent ?? 0) > 80 ? 'critical' : 'normal'
               )}
             />
           </Card>
@@ -361,17 +361,17 @@ const SystemMonitoringDashboard: React.FC = () => {
           <Card size="small">
             <Statistic
               title="内存使用率"
-              value={dashboardData?.current_system?.memory_percent || 0}
+              value={dashboardData?.current_system?.memory_percent ?? 0}
               suffix="%"
               valueStyle={{ color: getStatusColor(
-                (dashboardData?.current_system?.memory_percent || 0) > 85 ? 'critical' : 'normal'
+                (dashboardData?.current_system?.memory_percent ?? 0) > 85 ? 'critical' : 'normal'
               )}}
             />
             <Progress
-              percent={dashboardData?.current_system?.memory_percent || 0}
+              percent={dashboardData?.current_system?.memory_percent ?? 0}
               showInfo={false}
               strokeColor={getStatusColor(
-                (dashboardData?.current_system?.memory_percent || 0) > 85 ? 'critical' : 'normal'
+                (dashboardData?.current_system?.memory_percent ?? 0) > 85 ? 'critical' : 'normal'
               )}
             />
           </Card>
@@ -380,17 +380,17 @@ const SystemMonitoringDashboard: React.FC = () => {
           <Card size="small">
             <Statistic
               title="磁盘使用率"
-              value={dashboardData?.current_system?.disk_usage_percent || 0}
+              value={dashboardData?.current_system?.disk_usage_percent ?? 0}
               suffix="%"
               valueStyle={{ color: getStatusColor(
-                (dashboardData?.current_system?.disk_usage_percent || 0) > 90 ? 'critical' : 'normal'
+                (dashboardData?.current_system?.disk_usage_percent ?? 0) > 90 ? 'critical' : 'normal'
               )}}
             />
             <Progress
-              percent={dashboardData?.current_system?.disk_usage_percent || 0}
+              percent={dashboardData?.current_system?.disk_usage_percent ?? 0}
               showInfo={false}
               strokeColor={getStatusColor(
-                (dashboardData?.current_system?.disk_usage_percent || 0) > 90 ? 'critical' : 'normal'
+                (dashboardData?.current_system?.disk_usage_percent ?? 0) > 90 ? 'critical' : 'normal'
               )}
             />
           </Card>
@@ -399,7 +399,7 @@ const SystemMonitoringDashboard: React.FC = () => {
           <Card size="small">
             <Statistic
               title="活跃连接"
-              value={dashboardData?.current_application?.active_connections || 0}
+              value={dashboardData?.current_application?.active_connections ?? 0}
               valueStyle={{ color: '#1890ff' }}
             />
           </Card>
@@ -413,8 +413,8 @@ const SystemMonitoringDashboard: React.FC = () => {
             <div style={{ textAlign: 'center', padding: '20px 0' }}>
               <Gauge {...healthGaugeConfig} height={200} />
               <div style={{ marginTop: 16 }}>
-                <Tag color={getStatusColor(dashboardData?.health_status?.status || 'unknown')}>
-                  {dashboardData?.health_status?.status?.toUpperCase() || 'UNKNOWN'}
+                <Tag color={getStatusColor(dashboardData?.health_status?.status ?? 'unknown')}>
+                  {(dashboardData?.health_status?.status ?? 'unknown').toUpperCase()}
                 </Tag>
               </div>
             </div>
@@ -426,14 +426,14 @@ const SystemMonitoringDashboard: React.FC = () => {
               <Space>
                 <AlertOutlined />
                 活跃告警
-                <Badge count={dashboardData?.summary?.total_alerts || 0} />
+                <Badge count={dashboardData?.summary?.total_alerts ?? 0} />
               </Space>
             }
             size="small"
           >
             <List
               size="small"
-              dataSource={dashboardData?.active_alerts?.slice(0, 5) || []}
+              dataSource={dashboardData?.active_alerts?.slice(0, 5) ?? []}
               renderItem={(alert: PerformanceAlert) => (
                 <List.Item
                   actions={[
@@ -501,7 +501,7 @@ const SystemMonitoringDashboard: React.FC = () => {
               <Col span={12}>
                 <Statistic
                   title="可用内存"
-                  value={dashboardData?.current_system?.memory_available_gb || 0}
+                  value={dashboardData?.current_system?.memory_available_gb ?? 0}
                   suffix="GB"
                   precision={1}
                 />
@@ -509,7 +509,7 @@ const SystemMonitoringDashboard: React.FC = () => {
               <Col span={12}>
                 <Statistic
                   title="可用磁盘"
-                  value={dashboardData?.current_system?.disk_free_gb || 0}
+                  value={dashboardData?.current_system?.disk_free_gb ?? 0}
                   suffix="GB"
                   precision={1}
                 />
@@ -517,13 +517,13 @@ const SystemMonitoringDashboard: React.FC = () => {
               <Col span={12}>
                 <Statistic
                   title="进程数"
-                  value={dashboardData?.current_system?.process_count || 0}
+                  value={dashboardData?.current_system?.process_count ?? 0}
                 />
               </Col>
               <Col span={12}>
                 <Statistic
                   title="系统负载"
-                  value={dashboardData?.current_system?.load_average?.[0] || 0}
+                  value={dashboardData?.current_system?.load_average?.[0] ?? 0}
                   precision={2}
                 />
               </Col>
@@ -536,13 +536,13 @@ const SystemMonitoringDashboard: React.FC = () => {
               <Col span={12}>
                 <Statistic
                   title="总请求数"
-                  value={dashboardData?.current_application?.total_requests || 0}
+                  value={dashboardData?.current_application?.total_requests ?? 0}
                 />
               </Col>
               <Col span={12}>
                 <Statistic
                   title="平均响应时间"
-                  value={dashboardData?.current_application?.average_response_time || 0}
+                  value={dashboardData?.current_application?.average_response_time ?? 0}
                   suffix="ms"
                   precision={1}
                 />
@@ -550,12 +550,12 @@ const SystemMonitoringDashboard: React.FC = () => {
               <Col span={12}>
                 <Statistic
                   title="错误率"
-                  value={dashboardData?.current_application?.error_rate || 0}
+                  value={dashboardData?.current_application?.error_rate ?? 0}
                   suffix="%"
                   precision={2}
                   valueStyle={{
                     color: getStatusColor(
-                      (dashboardData?.current_application?.error_rate || 0) > 5 ? 'critical' : 'normal'
+                      (dashboardData?.current_application?.error_rate ?? 0) > 5 ? 'critical' : 'normal'
                     )
                   }}
                 />
@@ -563,7 +563,7 @@ const SystemMonitoringDashboard: React.FC = () => {
               <Col span={12}>
                 <Statistic
                   title="缓存命中率"
-                  value={dashboardData?.current_application?.cache_hit_rate || 0}
+                  value={dashboardData?.current_application?.cache_hit_rate ?? 0}
                   suffix="%"
                   precision={1}
                 />

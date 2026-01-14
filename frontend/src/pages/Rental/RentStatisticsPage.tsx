@@ -373,7 +373,7 @@ const RentStatisticsPage: React.FC = () => {
   ];
 
   // 准备图表数据
-  const ownershipChartData: PieChartDatum[] = (ownershipStats || []).map(item => ({
+  const ownershipChartData: PieChartDatum[] = ownershipStats.map(item => ({
     type: item.ownership_name,
     value: Number(item.total_due_amount),
     paid: Number(item.total_paid_amount),
@@ -403,7 +403,7 @@ const RentStatisticsPage: React.FC = () => {
     },
   };
 
-  const monthlyChartData: LineChartDatum[] = (monthlyStats || []).map(item => ({
+  const monthlyChartData: LineChartDatum[] = monthlyStats.map(item => ({
     month: item.year_month,
     due: Number(item.total_due_amount),
     paid: Number(item.total_paid_amount),
@@ -412,7 +412,7 @@ const RentStatisticsPage: React.FC = () => {
   }));
 
   // Prepare monthly bar chart data - transform to stacked format
-  const monthlyBarData = (monthlyStats || []).flatMap(item => [
+  const monthlyBarData = monthlyStats.flatMap(item => [
     { month: item.year_month, type: '应收金额', value: Number(item.total_due_amount) },
     { month: item.year_month, type: '已收金额', value: Number(item.total_paid_amount) },
     { month: item.year_month, type: '欠款金额', value: Number(item.total_overdue_amount) },
@@ -658,7 +658,7 @@ const RentStatisticsPage: React.FC = () => {
                 <Card>
                   <Statistic
                     title="平均租金单价"
-                    value={Number(overviewData.average_unit_price || 0)}
+                    value={Number(overviewData.average_unit_price ?? 0)}
                     precision={2}
                     prefix={<DollarOutlined />}
                     suffix="元/㎡/月"
@@ -670,7 +670,7 @@ const RentStatisticsPage: React.FC = () => {
                 <Card>
                   <Statistic
                     title="合同续签率"
-                    value={Number(overviewData.renewal_rate || 0)}
+                    value={Number(overviewData.renewal_rate ?? 0)}
                     precision={1}
                     prefix={<ReloadOutlined />}
                     suffix="%"

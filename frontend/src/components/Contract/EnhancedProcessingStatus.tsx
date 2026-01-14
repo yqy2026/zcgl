@@ -137,7 +137,7 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
         step: 'text_extraction',
         status: 'completed',
         title: '文本提取',
-        description: `成功提取${currentStatus.chinese_char_count || 0}个中文字符`,
+        description: `成功提取${currentStatus.chinese_char_count ?? 0}个中文字符`,
         progress: 100
       },
       {
@@ -149,12 +149,12 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
       },
       {
         step: 'data_validation',
-        status: currentStatus.validation_results ? 'completed' : 'processing',
+        status: (currentStatus.validation_results !== undefined && currentStatus.validation_results !== null) ? 'completed' : 'processing',
         title: '数据验证',
-        description: currentStatus.validation_results
+        description: (currentStatus.validation_results !== undefined && currentStatus.validation_results !== null)
           ? '数据验证完成，置信度优秀'
           : '正在进行智能数据验证',
-        progress: currentStatus.validation_results ? 100 : 70
+        progress: (currentStatus.validation_results !== undefined && currentStatus.validation_results !== null) ? 100 : 70
       },
       {
         step: 'matching',
@@ -174,7 +174,7 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
 
     // 根据实际状态更新步骤
     const currentStep = currentStatus.current_step;
-    if (currentStep) {
+    if (currentStep !== undefined && currentStep !== null) {
       const stepIndex = steps.findIndex(s => s.step === currentStep);
       if (stepIndex !== -1) {
         // 更新当前步骤及之前步骤的状态
@@ -184,7 +184,7 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
             step.progress = 100;
           } else if (index === stepIndex) {
             step.status = 'processing';
-            step.progress = currentStatus.progress_percentage || 0;
+            step.progress = currentStatus.progress_percentage ?? 0;
           } else {
             step.status = 'waiting';
             step.progress = 0;
@@ -198,12 +198,12 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
 
   // 性能指标
   const performanceMetrics = useMemo(() => {
-    if (!currentStatus) return null;
+    if (currentStatus === undefined || currentStatus === null) return null;
 
     return {
       processingMethod: currentStatus.processing_method,
-      textQuality: currentStatus.chinese_char_count ? '优秀' : '良好',
-      extractionConfidence: currentStatus.confidence_score
+      textQuality: (currentStatus.chinese_char_count !== undefined && currentStatus.chinese_char_count !== null && currentStatus.chinese_char_count > 0) ? '优秀' : '良好',
+      extractionConfidence: (currentStatus.confidence_score !== undefined && currentStatus.confidence_score !== null)
         ? `${((currentStatus.confidence_score) * 100).toFixed(1)}%`
         : '计算中',
       ocrUsed: currentStatus.ocr_used,
@@ -213,7 +213,7 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
 
   // 错误处理和重试逻辑
   const handleRetry = async () => {
-    if (_onRefresh) {
+    if (_onRefresh !== undefined && _onRefresh !== null && typeof _onRefresh === 'function') {
       _onRefresh();
     }
   };
@@ -222,7 +222,7 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
     setExpanded(expanded === step ? null : step);
   };
 
-  if (!currentStatus) {
+  if (currentStatus === undefined || currentStatus === null) {
     return (
       <Card>
         <Spin size="large" tip="加载处理状态中...">
@@ -254,7 +254,7 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
         <Row gutter={16}>
           <Col span={16}>
             <Progress
-              percent={currentStatus.progress_percentage || 0}
+              percent={currentStatus.progress_percentage ?? 0}
               status={currentStatus.progress_percentage === 100 ? 'success' : 'active'}
               strokeColor={{
                 '0%': '#108ee9',
@@ -278,10 +278,10 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
               />
               <Statistic
                 title="置信度"
-                value={performanceMetrics?.extractionConfidence || '计算中'}
+                value={performanceMetrics?.extractionConfidence ?? '计算中'}
                 suffix="%"
                 valueStyle={{
-                  color: parseFloat(performanceMetrics?.extractionConfidence || '0') > 80 ? '#3f8600' : '#cf1322'
+                  color: parseFloat(performanceMetrics?.extractionConfidence ?? '0') > 80 ? '#3f8600' : '#cf1322'
                 }}
               />
             </Space>
@@ -323,7 +323,7 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
                       />
                     </Space>
 
-                    {step.description && (
+                    {step.description != null && (
                       <Text type="secondary" style={{ fontSize: '12px' }}>
                         {step.description}
                       </Text>
@@ -338,7 +338,7 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
                       />
                     )}
 
-                    {step.error && (
+                    {step.error != null && (
                       <Alert
                         message={step.error}
                         type="error"
@@ -397,7 +397,7 @@ const EnhancedProcessingStatus: React.FC<EnhancedProcessingStatusProps> = ({
           <Tag color="purple">
             多引擎支持
           </Tag>
-          {performanceMetrics?.ocrUsed && (
+          {(performanceMetrics?.ocrUsed ?? false) && (
             <Tag color="orange">
               OCR增强
             </Tag>

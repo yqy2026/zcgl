@@ -118,7 +118,9 @@ class AdaptiveRateLimiter:
 
     def __init__(self) -> None:
         self.token_bucket = TokenBucketRateLimiter()
-        self.suspicious_ips: defaultdict[str, int] = defaultdict(int)  # 记录可疑IP的违规次数
+        self.suspicious_ips: defaultdict[str, int] = defaultdict(
+            int
+        )  # 记录可疑IP的违规次数
         self.blocked_ips: dict[str, float] = {}  # 记录被临时封禁的IP
         self.config = get_config("adaptive_rate_limit", {})
 
@@ -202,4 +204,4 @@ if __name__ == "__main__":
             allowed_count += 1
         time.sleep(0.1)  # 100ms间隔
 
-    print(f"Allowed {allowed_count} requests out of 20")
+    logger.info(f"Allowed {allowed_count} requests out of 20")

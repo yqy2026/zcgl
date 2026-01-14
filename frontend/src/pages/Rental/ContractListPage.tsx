@@ -100,8 +100,8 @@ const ContractListPage: React.FC = () => {
         contracts: contracts,
         pagination: {
           ...prev.pagination,
-          total: response.total || 0,
-          pages: response.pages || 0,
+          total: response.total ?? 0,
+          pages: response.pages ?? 0,
         },
       }));
     } catch (error) {
@@ -215,7 +215,7 @@ const ContractListPage: React.FC = () => {
   const handleTerminate = async (contract: RentContract) => {
     Modal.confirm({
       title: "确认终止合同",
-      content: `确定要终止合同「${contract.contract_number}」吗？`,
+      content: `确定要终止合同「${contract.contract_number ?? ""}」吗？`,
       okText: "确认终止",
       okType: "danger",
       cancelText: "取消",

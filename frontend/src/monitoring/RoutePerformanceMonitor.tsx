@@ -84,7 +84,7 @@ class RoutePerformanceMonitor {
   }
 
   private checkSupport(): boolean {
-    return !!(window.performance && window.PerformanceObserver)
+    return window.performance != null && window.PerformanceObserver != null
   }
 
   private initializeObservers() {
@@ -123,7 +123,7 @@ class RoutePerformanceMonitor {
       const lcpObserver = new PerformanceObserver((list) => {
         const entries = list.getEntries()
         const lastEntry = entries[entries.length - 1]
-        if (lastEntry) {
+        if (lastEntry != null) {
           this.updateCurrentMetric('LCP', lastEntry.startTime)
         }
       })
@@ -144,8 +144,8 @@ class RoutePerformanceMonitor {
       const clsObserver = new PerformanceObserver((list) => {
         for (const entry of list.getEntries()) {
           const layoutShiftEntry = entry as PerformanceEntry & { hadRecentInput?: boolean; value?: number }
-          if (!layoutShiftEntry.hadRecentInput && layoutShiftEntry.value) {
-            clsValue += layoutShiftEntry.value
+          if (layoutShiftEntry.hadRecentInput === false && (layoutShiftEntry.value ?? 0) > 0) {
+            clsValue += layoutShiftEntry.value ?? 0
           }
         }
         this.updateCurrentMetric('CLS', clsValue)
@@ -279,7 +279,7 @@ class RoutePerformanceMonitor {
   }
 
   getMetrics(route?: string): RoutePerformanceMetrics[] {
-    if (route) {
+    if (route != null && route !== '') {
       return this.metrics.filter(m => m.route === route)
     }
     return [...this.metrics]
@@ -309,10 +309,10 @@ class RoutePerformanceMonitor {
       acc.componentLoadTime += metric.componentLoadTime
       acc.renderTime += metric.renderTime
       acc.interactiveTime += metric.interactiveTime
-      acc.FCP += metric.FCP || 0
-      acc.LCP += metric.LCP || 0
-      acc.FID += metric.FID || 0
-      acc.CLS += metric.CLS || 0
+      acc.FCP += metric.FCP ?? 0
+      acc.LCP += metric.LCP ?? 0
+      acc.FID += metric.FID ?? 0
+      acc.CLS += metric.CLS ?? 0
       acc.errorCount += metric.errorCount
       acc.retryCount += metric.retryCount
       return acc
@@ -419,18 +419,18 @@ export const useRoutePerformanceMonitor = (config?: Partial<RoutePerformanceConf
 
   // Start monitoring when route changes
   useEffect(() => {
-    if (!monitor) return
+    if (monitor == null) return
 
     const route = location.pathname
     const navType = navigationType === 'POP' ? 'back' :
                      navigationType === 'PUSH' ? 'navigate' : 'replace'
 
     const monitoring = monitor.startRouteMonitoring(route, navType)
-    monitoringRef.current = monitoring || null
+    monitoringRef.current = monitoring ?? null
 
     // Record when route becomes interactive
     const timer = setTimeout(() => {
-      if (monitoring) {
+      if (monitoring != null) {
         monitoring.endInteractive()
       }
     }, 100)
@@ -443,30 +443,30 @@ export const useRoutePerformanceMonitor = (config?: Partial<RoutePerformanceConf
   // Cleanup
   useEffect(() => {
     return () => {
-      if (monitor) {
+      if (monitor != null) {
         monitor.destroy()
       }
     }
   }, [monitor])
 
   const recordError = useCallback((error: Error) => {
-    if (monitor) {
+    if (monitor != null) {
       monitor.recordError(location.pathname, error)
     }
   }, [monitor, location.pathname])
 
   const recordRetry = useCallback(() => {
-    if (monitor) {
+    if (monitor != null) {
       monitor.recordRetry(location.pathname)
     }
   }, [monitor, location.pathname])
 
   const getMetrics = useCallback((route?: string) => {
-    return monitor ? monitor.getMetrics(route) : []
+    return monitor != null ? monitor.getMetrics(route) : []
   }, [monitor])
 
   const getAggregatedMetrics = useCallback((route?: string) => {
-    return monitor ? monitor.getAggregatedMetrics(route) : null
+    return monitor != null ? monitor.getAggregatedMetrics(route) : null
   }, [monitor])
 
   return {

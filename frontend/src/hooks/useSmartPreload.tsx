@@ -94,9 +94,9 @@ class SmartPreloadManager {
     // 检查鼠标是否悬停在可预加载的元素上
     const target = event.target as HTMLElement;
     const routeElement = target.closest("[data-route]");
-    if (routeElement) {
+    if (routeElement != null) {
       const route = routeElement.getAttribute("data-route");
-      if (route && this.config.enabledRoutes.includes(route)) {
+      if (route != null && this.config.enabledRoutes.includes(route)) {
         this.schedulePreload(route, "hover");
       }
     }
@@ -107,9 +107,9 @@ class SmartPreloadManager {
 
     const target = event.target as HTMLElement;
     const linkElement = target.closest("a[href]");
-    if (linkElement) {
+    if (linkElement != null) {
       const href = linkElement.getAttribute("href");
-      if (href && this.config.enabledRoutes.includes(href)) {
+      if (href != null && this.config.enabledRoutes.includes(href)) {
         this.schedulePreload(href, "click");
       }
     }
@@ -183,7 +183,7 @@ class SmartPreloadManager {
       "/system/roles": () => import("../pages/System/RoleManagementPage"),
     };
 
-    return preloadFunctions[route] || null;
+    return preloadFunctions[route] ?? null;
   }
 
   private pausePreloading() {
@@ -305,7 +305,7 @@ export const useSmartPreload = (config?: Partial<PreloadConfig>) => {
     preloadRoute,
     getStats,
     clearCache,
-    config: managerRef.current ? { ...DEFAULT_CONFIG, ...config } : DEFAULT_CONFIG,
+    config: managerRef.current != null ? { ...DEFAULT_CONFIG, ...config } : DEFAULT_CONFIG,
   };
 };
 
@@ -323,7 +323,7 @@ export const withPreload = <T extends Record<string, unknown> = Record<string, u
 
     return <Component {...props} />;
   };
-  PreloadWrapper.displayName = `withPreload(${Component.displayName || Component.name || 'Component'})`;
+  PreloadWrapper.displayName = `withPreload(${Component.displayName ?? Component.name ?? 'Component'})`;
   return PreloadWrapper;
 };
 

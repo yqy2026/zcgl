@@ -4,12 +4,15 @@ JWT令牌黑名单管理器
 """
 
 import json
+import logging
 import time
 from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any
 
 from ..core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class TokenBlacklistManager:
@@ -91,7 +94,7 @@ class TokenBlacklistManager:
         self._last_cleanup = current_time
 
         if expired_tokens:
-            print(f"清理了 {len(expired_tokens)} 个过期令牌")
+            logger.info(f"清理了 {len(expired_tokens)} 个过期令牌")
 
     def get_blacklist_stats(self) -> dict[str, Any]:
         """获取黑名单统计信息"""
@@ -123,7 +126,7 @@ class TokenBlacklistManager:
                 json.dump(data, f, ensure_ascii=False, indent=2)
 
         except Exception as e:
-            print(f"保存黑名单到文件失败: {e}")
+            logger.error(f"保存黑名单到文件失败: {e}")
 
     def load_from_file(self, filepath: str) -> None:
         """从文件加载黑名单"""
@@ -139,9 +142,9 @@ class TokenBlacklistManager:
             self._cleanup_expired_tokens()
 
         except FileNotFoundError:
-            print(f"黑名单文件不存在: {filepath}")
+            logger.warning(f"黑名单文件不存在: {filepath}")
         except Exception as e:
-            print(f"从文件加载黑名单失败: {e}")
+            logger.error(f"从文件加载黑名单失败: {e}")
 
 
 # 全局黑名单管理器实例
@@ -172,7 +175,7 @@ def blacklist_token_on_revoke(revoke_func: Callable[..., Any]) -> Callable[..., 
                 blacklist_manager.add_token(jti, exp)
 
         except Exception as e:
-            print(f"添加令牌到黑名单失败: {e}")
+            logger.error(f"添加令牌到黑名单失败: {e}")
 
         return result
 
@@ -189,7 +192,7 @@ async def periodic_cleanup() -> None:
             blacklist_manager._cleanup_expired_tokens()
             await asyncio.sleep(3600)  # 每小时清理一次
         except Exception as e:
-            print(f"定期清理令牌黑名单时出错: {e}")
+            logger.error(f"定期清理令牌黑名单时出错: {e}")
             await asyncio.sleep(300)  # 出错时等5分钟再重试
 
 

@@ -262,7 +262,9 @@ class ExceptionHandler:
 
         return JSONResponse(status_code=exc.status_code, content=exc.to_dict())
 
-    def _sanitize_exception_details(self, details: dict[str, Any]) -> dict[str, Any] | str | None:
+    def _sanitize_exception_details(
+        self, details: dict[str, Any]
+    ) -> dict[str, Any] | str | None:
         """清理异常详情中的不可序列化内容"""
         if details is None:
             return None
@@ -301,7 +303,7 @@ class ExceptionHandler:
                 # 对于其他字段，转换Decimal为float
                 if isinstance(value, Decimal):
                     cleaned_error[key] = float(value)
-                elif isinstance(value, (list, dict)):
+                elif isinstance(value, list | dict):
                     # 递归清理嵌套结构
                     cleaned_error[key] = self._clean_for_serialization(
                         value
@@ -429,7 +431,9 @@ def setup_exception_handlers(app: Any) -> None:
 
     # 业务异常处理器
     @app.exception_handler(BaseBusinessError)  # type: ignore[misc]
-    async def business_exception_handler(request: Request, exc: BaseBusinessError) -> JSONResponse:
+    async def business_exception_handler(
+        request: Request, exc: BaseBusinessError
+    ) -> JSONResponse:
         return exception_handler.handle_business_exception(request, exc)
 
     # FastAPI验证异常处理器
@@ -452,24 +456,32 @@ def setup_exception_handlers(app: Any) -> None:
 
     # HTTP异常处理器
     @app.exception_handler(HTTPException)  # type: ignore[misc]
-    async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+    async def http_exception_handler(
+        request: Request, exc: HTTPException
+    ) -> JSONResponse:
         return exception_handler.handle_http_exception(request, exc)  # pragma: no cover
 
     # 通用异常处理器
     @app.exception_handler(Exception)  # type: ignore[misc]
-    async def general_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    async def general_exception_handler(
+        request: Request, exc: Exception
+    ) -> JSONResponse:
         return exception_handler.handle_general_exception(
             request, exc
         )  # pragma: no cover
 
 
 # 便捷异常抛出函数
-def raise_not_found(resource_type: str, resource_id: str | None = None, **kwargs: Any) -> NoReturn:
+def raise_not_found(
+    resource_type: str, resource_id: str | None = None, **kwargs: Any
+) -> NoReturn:
     """抛出资源未找到异常"""
     raise ResourceNotFoundError(resource_type, resource_id, kwargs)
 
 
-def raise_duplicate(resource_type: str, field: str, value: str, **kwargs: Any) -> NoReturn:
+def raise_duplicate(
+    resource_type: str, field: str, value: str, **kwargs: Any
+) -> NoReturn:
     """抛出资源重复异常"""
     raise DuplicateResourceError(resource_type, field, value, kwargs)
 
@@ -489,20 +501,28 @@ def raise_validation_error(
 
 
 def raise_file_error(
-    message: str, file_name: str | None = None, file_type: str | None = None, **kwargs: Any
+    message: str,
+    file_name: str | None = None,
+    file_type: str | None = None,
+    **kwargs: Any,
 ) -> NoReturn:
     """抛出文件处理异常"""
     raise FileProcessingError(message, file_name, file_type, kwargs)
 
 
 def raise_task_error(
-    message: str, task_id: str | None = None, task_type: str | None = None, **kwargs: Any
+    message: str,
+    task_id: str | None = None,
+    task_type: str | None = None,
+    **kwargs: Any,
 ) -> NoReturn:
     """抛出任务处理异常"""
     raise TaskProcessingError(message, task_id, task_type, kwargs)
 
 
-def raise_config_error(message: str, config_key: str | None = None, **kwargs: Any) -> NoReturn:
+def raise_config_error(
+    message: str, config_key: str | None = None, **kwargs: Any
+) -> NoReturn:
     """抛出配置异常"""
     raise ConfigurationError(message, config_key, kwargs)
 
@@ -524,4 +544,4 @@ if __name__ == "__main__":
     try:
         raise_not_found("Asset", "123", reason="测试")
     except BaseBusinessError as e:
-        print("Exception handled:", e.to_dict())
+        logger.error(f"Exception handled: {e.to_dict()}")

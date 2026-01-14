@@ -881,7 +881,9 @@ def clear_all_caches() -> int:
 # ============================================================================
 
 
-def cached_extraction(ttl_seconds: int = 3600) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+def cached_extraction(
+    ttl_seconds: int = 3600,
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """
     提取结果缓存装饰器
 
@@ -926,9 +928,9 @@ if __name__ == "__main__":  # pragma: no cover
     cache = PDFCache()
 
     # 模拟缓存操作
-    print("=== PDF Cache Example ===")
-    print(f"Cache dir: {cache.cache_dir}")
-    print(f"Stats: {cache.get_stats()}")
+    logger.info("=== PDF Cache Example ===")
+    logger.info(f"Cache dir: {cache.cache_dir}")
+    logger.info(f"Stats: {cache.get_stats()}")
 
     # 使用装饰器
     @cached_extraction(ttl_seconds=1800)

@@ -127,7 +127,7 @@ export const SmartErrorHandler: React.FC<SmartErrorHandlerProps> = ({
     })
 
     // 自动隐藏（5秒后）
-    if (autoHideDuration > 0) {
+    if ((autoHideDuration ?? 0) > 0) {
       autoHideTimeouts.current[errorInfo.id] = setTimeout(() => {
         setErrors(prev => prev.filter(e => e.id !== errorInfo.id))
         delete autoHideTimeouts.current[errorInfo.id]
@@ -169,7 +169,7 @@ export const SmartErrorHandler: React.FC<SmartErrorHandlerProps> = ({
 
   const clearError = useCallback((id: string) => {
     setErrors(prev => prev.filter(e => e.id !== id))
-    if (autoHideTimeouts.current[id]) {
+    if (autoHideTimeouts.current[id] != null) {
       clearTimeout(autoHideTimeouts.current[id])
       delete autoHideTimeouts.current[id]
     }
@@ -188,12 +188,12 @@ export const SmartErrorHandler: React.FC<SmartErrorHandlerProps> = ({
   }, [])
 
   const retryError = useCallback((id: string) => {
-    if (!enableRetry) return
+    if (enableRetry !== true) return
 
     const error = errors.find(e => e.id === id)
-    if (!error) return
+    if (error == null) return
 
-    const currentAttempts = retryAttempts.current[id] || 0
+    const currentAttempts = retryAttempts.current[id] ?? 0
     if (currentAttempts >= maxRetryAttempts) {
       // 达到最大重试次数，显示错误信息
       showError({
@@ -209,7 +209,7 @@ export const SmartErrorHandler: React.FC<SmartErrorHandlerProps> = ({
     retryAttempts.current[id] = currentAttempts + 1
 
     // 执行重试操作
-    if (error.action) {
+    if (error.action != null) {
       error.action.onClick()
     }
   }, [errors, enableRetry, maxRetryAttempts])
@@ -224,8 +224,8 @@ export const SmartErrorHandler: React.FC<SmartErrorHandlerProps> = ({
     }
 
     errors.forEach(error => {
-      stats.byType[error.type] = (stats.byType[error.type] || 0) + 1
-      stats.bySeverity[error.severity] = (stats.bySeverity[error.severity] || 0) + 1
+      stats.byType[error.type] = (stats.byType[error.type] ?? 0) + 1
+      stats.bySeverity[error.severity] = (stats.bySeverity[error.severity] ?? 0) + 1
     })
 
     return stats
@@ -301,7 +301,7 @@ const ErrorNotificationContainer: React.FC<ErrorNotificationContainerProps> = ({
                 }}>
                   {error.title}
                 </div>
-                {error.retryCount && error.retryCount > 1 && (
+                {(error.retryCount ?? 0) > 1 && (
                   <div style={{
                     fontSize: '12px',
                     color: '#666',
@@ -385,7 +385,7 @@ const ErrorModal: React.FC<ErrorModalProps> = ({ error, onClose, onRetry, enable
           <Button onClick={onClose}>关闭</Button>
           {enableRetry && error.action && (
             <Button type="primary" onClick={() => onRetry(error.id)}>
-              重试 ({Math.min((error.retryCount || 0) + 1, maxRetryAttempts)}/{maxRetryAttempts})
+              重试 ({Math.min((error.retryCount ?? 0) + 1, maxRetryAttempts)}/{maxRetryAttempts})
             </Button>
           )}
         </Space>
@@ -413,7 +413,7 @@ const ErrorModal: React.FC<ErrorModalProps> = ({ error, onClose, onRetry, enable
           {error.message}
         </div>
 
-        {(error.details as any) && (
+        {error.details != null && (
           <div style={{ marginTop: '16px' }}>
             <Text strong>详细信息：</Text>
             <Collapse ghost style={{ marginTop: '8px' }}>
@@ -436,7 +436,7 @@ const ErrorModal: React.FC<ErrorModalProps> = ({ error, onClose, onRetry, enable
           </div>
         )}
 
-        {process.env.NODE_ENV === 'development' && error.stack && (
+        {process.env.NODE_ENV === 'development' && (error.stack ?? '') !== '' && (
           <div style={{ marginTop: '16px' }}>
             <Text strong>堆栈信息：</Text>
             <Collapse ghost style={{ marginTop: '8px' }}>

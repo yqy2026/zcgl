@@ -47,7 +47,7 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
       // Got project options response
 
       // 确保响应数据是数组
-      const projects = Array.isArray(response) ? response : ((response as any)?.data || []);
+      const projects = Array.isArray(response) ? response : (((response as any)?.data != null ? (response as any).data : []) as ProjectDropdownOption[]);
       // Processed project options
 
       setProjectOptions(projects);
@@ -59,7 +59,7 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
 
   // 设置初始值
   useEffect(() => {
-    if (initialValues) {
+    if (initialValues !== undefined && initialValues !== null) {
       form.setFieldsValue(initialValues);
     } else {
       form.resetFields();
@@ -78,7 +78,7 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
 
   // 验证名称唯一性
   const validateName = async (_: FormValidationRule, value: string) => {
-    if (!value) return Promise.resolve();
+    if (value == null) return Promise.resolve();
 
     const isUnique = await ownershipService.validateOwnershipName(
       value,
@@ -98,7 +98,7 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
       const values = await form.validateFields();
       setLoading(true);
 
-      if (initialValues) {
+      if (initialValues !== undefined && initialValues !== null) {
         // 更新权属方
         const updateData: OwnershipUpdate = {
           name: values.name,
@@ -115,7 +115,7 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
         await ownershipService.updateOwnership(initialValues.id, updateData);
 
         // 如果有关联项目数据，则更新关联项目
-        if (values.related_projects && Array.isArray(values.related_projects)) {
+        if (values.related_projects != null && Array.isArray(values.related_projects)) {
           try {
             await (ownershipService as any).updateOwnershipProjects(initialValues.id, values.related_projects);
           } catch {
@@ -128,7 +128,7 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
         // 创建权属方 - 编码将由后端自动生成
         const createData: OwnershipCreate = {
           name: values.name,
-          code: values.code || '',  // 临时设为空字符串，后端会自动生成
+          code: values.code ?? '',  // 临时设为空字符串，后端会自动生成
           short_name: values.short_name
         };
 
@@ -191,12 +191,12 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
                 style={{ width: '100%' }}
                 showSearch
                 filterOption={(input, option) => {
-                  if (!option?.children) return false;
+                  if (option?.children == null) return false;
                   const optionText = String(option.children).toLowerCase();
                   return optionText.includes(input.toLowerCase());
                 }}
               >
-                {(projectOptions || []).map(project => (
+                {(projectOptions.length > 0 ? projectOptions : []).map(project => (
                   <Option key={project.id} value={project.id}>
                     {project.name} ({project.code})
                   </Option>
