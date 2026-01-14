@@ -5,7 +5,7 @@ import dayjs from 'dayjs';
 import { MessageManager } from '@/utils/messageManager';
 import { Asset } from '../../../types/asset';
 import { Ownership } from '../../../types/ownership';
-import { RentContractCreate, RentTermCreate } from '../../../types/rentContract';
+import { RentContractCreate, RentTermCreate, ContractType, PaymentCycle } from '../../../types/rentContract';
 import { assetService } from '../../../services/assetService';
 import { ownershipService } from '../../../services/ownershipService';
 import { createLogger } from '../../../utils/logger';
@@ -208,7 +208,7 @@ export const RentContractFormProvider: React.FC<RentContractFormProviderProps> =
                 contract_number: values.contract_number as string,
                 asset_ids: values.asset_ids as string[], // V2
                 ownership_id: values.ownership_id as string,
-                contract_type: values.contract_type as string | undefined, // V2
+                contract_type: values.contract_type as ContractType | undefined, // V2
                 upstream_contract_id: values.upstream_contract_id as string | undefined, // V2
                 service_fee_rate: values.service_fee_rate as number | undefined, // V2
                 tenant_name: values.tenant_name as string,
@@ -222,7 +222,7 @@ export const RentContractFormProvider: React.FC<RentContractFormProviderProps> =
                 total_deposit: values.total_deposit ?? 0,
                 monthly_rent_base: values.monthly_rent_base as number,
                 contract_status: values.contract_status ?? '有效',
-                payment_cycle: values.payment_cycle as string | undefined, // V2
+                payment_cycle: values.payment_cycle as PaymentCycle | undefined, // V2
                 payment_terms: values.payment_terms as string | undefined,
                 contract_notes: values.contract_notes as string | undefined,
                 rent_terms,

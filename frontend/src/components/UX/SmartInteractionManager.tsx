@@ -146,7 +146,7 @@ const SmartInteractionProvider: React.FC<SmartInteractionManagerProps> = ({
           description,
           btn: (action?.text ?? '') !== '' ? (
             <Button type="primary" size="small" onClick={action?.onClick}>
-              {action.text}
+              {action?.text}
             </Button>
           ) : undefined
         })
@@ -157,7 +157,7 @@ const SmartInteractionProvider: React.FC<SmartInteractionManagerProps> = ({
           description,
           btn: (action?.text ?? '') !== '' ? (
             <Button type="primary" size="small" onClick={action?.onClick}>
-              {action.text}
+              {action?.text}
             </Button>
           ) : undefined
         })
@@ -168,7 +168,7 @@ const SmartInteractionProvider: React.FC<SmartInteractionManagerProps> = ({
           description,
           btn: (action?.text ?? '') !== '' ? (
             <Button type="primary" size="small" onClick={action?.onClick}>
-              {action.text}
+              {action?.text}
             </Button>
           ) : undefined
         })
@@ -179,7 +179,7 @@ const SmartInteractionProvider: React.FC<SmartInteractionManagerProps> = ({
           description,
           btn: (action?.text ?? '') !== '' ? (
             <Button type="primary" size="small" onClick={action?.onClick}>
-              {action.text}
+              {action?.text}
             </Button>
           ) : undefined
         })

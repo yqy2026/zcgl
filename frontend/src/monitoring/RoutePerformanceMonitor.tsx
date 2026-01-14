@@ -145,7 +145,7 @@ class RoutePerformanceMonitor {
         for (const entry of list.getEntries()) {
           const layoutShiftEntry = entry as PerformanceEntry & { hadRecentInput?: boolean; value?: number }
           if (layoutShiftEntry.hadRecentInput === false && (layoutShiftEntry.value ?? 0) > 0) {
-            clsValue += layoutShiftEntry.value
+            clsValue += layoutShiftEntry.value ?? 0
           }
         }
         this.updateCurrentMetric('CLS', clsValue)

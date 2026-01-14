@@ -40,7 +40,13 @@ export class AssetCoreService {
                 throw new Error(`获取资产列表失败: ${result.error}`);
             }
 
-            return result.data ?? [];
+            return result.data ?? {
+                items: [],
+                total: 0,
+                page: 1,
+                limit: 20,
+                pages: 0
+            };
         } catch (error) {
             const enhancedError = ApiErrorHandler.handleError(error);
             throw new Error(enhancedError.message);

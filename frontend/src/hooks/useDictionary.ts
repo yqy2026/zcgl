@@ -138,11 +138,11 @@ export const useDictionaryManager = () => {
     code?: string
   }>) => {
     try {
-      const success = await unifiedDictionaryService.quickCreate(dictType, { options })
-      if (success === true) {
+      const result = await unifiedDictionaryService.quickCreate(dictType, { options })
+      if (result.success === true) {
         await loadTypes() // 刷新类型列表
       }
-      return success
+      return result.success
     } catch (error) {
       dictLogger.error('创建字典失败:', error as Error)
       return false
@@ -151,11 +151,11 @@ export const useDictionaryManager = () => {
 
   const deleteDictionary = useCallback(async (dictType: string) => {
     try {
-      const success = await unifiedDictionaryService.deleteType(dictType)
-      if (success === true) {
+      const result = await unifiedDictionaryService.deleteType(dictType)
+      if (result.success === true) {
         await loadTypes() // 刷新类型列表
       }
-      return success
+      return result.success
     } catch (error) {
       dictLogger.error('删除字典失败:', error as Error)
       return false

@@ -419,7 +419,7 @@ const ProgressTrackersList: React.FC<ProgressTrackersListProps> = ({ trackers })
                     </span>
                     {(step.duration ?? 0) > 0 && (
                       <span style={{ marginLeft: '8px', fontSize: '11px', color: '#666' }}>
-                        ({formatDuration(step.duration)})
+                        ({formatDuration(step.duration ?? 0)})
                       </span>
                     )}
                   </div>

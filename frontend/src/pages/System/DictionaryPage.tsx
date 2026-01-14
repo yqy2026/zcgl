@@ -160,8 +160,8 @@ const DictionaryPage: React.FC = () => {
 
   const handleDelete = async (record: SystemDictionary) => {
     try {
-      const success = await unifiedDictionaryService.deleteEnumValue(record.id)
-      if (success === true) {
+      const result = await unifiedDictionaryService.deleteEnumValue(record.id)
+      if (result.success === true) {
         MessageManager.success('删除成功')
         fetchList(activeType)
         fetchAllEnumData()
@@ -195,7 +195,7 @@ const DictionaryPage: React.FC = () => {
 
       if (editingRecord) {
         // 更新现有枚举值
-        const success = await unifiedDictionaryService.updateEnumValue(editingRecord.id, {
+        const result = await unifiedDictionaryService.updateEnumValue(editingRecord.id, {
           label: values.dict_label,
           value: values.dict_value,
           code: values.dict_code,
@@ -204,7 +204,7 @@ const DictionaryPage: React.FC = () => {
           is_active: values.is_active
         })
 
-        if (success === true) {
+        if (result.success === true) {
           MessageManager.success('更新成功')
         } else {
           MessageManager.error('更新失败')
@@ -212,7 +212,7 @@ const DictionaryPage: React.FC = () => {
         }
       } else {
         // 创建新的枚举值
-        const success = await unifiedDictionaryService.createEnumValue(targetType.id, {
+        const createResult = await unifiedDictionaryService.createEnumValue(targetType.id, {
           label: values.dict_label,
           value: values.dict_value,
           code: values.dict_code,
@@ -220,7 +220,7 @@ const DictionaryPage: React.FC = () => {
           sort_order: values.sort_order
         })
 
-        if (success === true) {
+        if (createResult.success === true) {
           MessageManager.success('创建成功')
         } else {
           MessageManager.error('创建失败')
@@ -248,8 +248,8 @@ const DictionaryPage: React.FC = () => {
 
   const handleToggleActive = async (record: SystemDictionary, checked: boolean) => {
     try {
-      const success = await unifiedDictionaryService.toggleEnumValueActive(record.id, checked)
-      if (success === true) {
+      const result = await unifiedDictionaryService.toggleEnumValueActive(record.id, checked)
+      if (result.success === true) {
         MessageManager.success('状态已更新')
         fetchList(activeType)
         fetchAllEnumData()
