@@ -7,18 +7,16 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ..database import Base
     from .rbac import Permission
 
 from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-# Base is imported at runtime to avoid circular imports
-if not TYPE_CHECKING:
-    from ..database import Base
+# Import Base unconditionally for MyPy to recognize it as a valid base class
+from ..database import Base
 
 
-class DynamicPermission(Base):
+class DynamicPermission(Base):  # type: ignore[misc, valid-type]
     """动态权限模型"""
 
     __tablename__ = "dynamic_permissions"
@@ -76,7 +74,7 @@ class DynamicPermission(Base):
     # revoked_by_user = relationship("User", foreign_keys=[revoked_by])
 
 
-class TemporaryPermission(Base):
+class TemporaryPermission(Base):  # type: ignore[misc, valid-type]
     """临时权限模型"""
 
     __tablename__ = "temporary_permissions"
@@ -117,7 +115,7 @@ class TemporaryPermission(Base):
     # assigned_by_user = relationship("User", foreign_keys=[assigned_by])
 
 
-class ConditionalPermission(Base):
+class ConditionalPermission(Base):  # type: ignore[misc, valid-type]
     """条件权限模型"""
 
     __tablename__ = "conditional_permissions"
@@ -158,7 +156,7 @@ class ConditionalPermission(Base):
     # assigned_by_user = relationship("User", foreign_keys=[assigned_by])
 
 
-class PermissionTemplate(Base):
+class PermissionTemplate(Base):  # type: ignore[misc, valid-type]
     """权限模板模型"""
 
     __tablename__ = "permission_templates"

@@ -129,11 +129,11 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
         try:
             if isinstance(obj_in, dict):
                 obj_in_data = obj_in
-            elif hasattr(obj_in, "model_dump"):
-                obj_in_data = obj_in.model_dump()
             else:
-                # Fallback: try to convert to dict (should rarely happen)
-                obj_in_data = cast(dict[str, Any], dict(obj_in))
+                # obj_in is CreateSchemaType which has model_dump() per the Protocol
+                # Use cast(Any) to bypass MyPy's type narrowing limitations
+                obj_any = cast(Any, obj_in)
+                obj_in_data = obj_any.model_dump()
 
             obj_in_data.update(kwargs)
             db_obj = self.model(**obj_in_data)
@@ -162,11 +162,13 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
         """更新记录（支持事务回滚和缓存清理）"""
         try:
             obj_data = db_obj.__dict__
-            update_data: dict[str, Any] = (
-                obj_in
-                if isinstance(obj_in, dict)
-                else obj_in.model_dump(exclude_unset=True)
-            )
+            if isinstance(obj_in, dict):
+                update_data = obj_in
+            else:
+                # obj_in is UpdateSchemaType which has model_dump() per the Protocol
+                # Use cast(Any) to bypass MyPy's type narrowing limitations
+                obj_any = cast(Any, obj_in)
+                update_data = obj_any.model_dump(exclude_unset=True)
 
             for field in obj_data:
                 if field in update_data:
@@ -268,11 +270,11 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
             for obj_in in objects_in:
                 if isinstance(obj_in, dict):
                     obj_in_data = obj_in
-                elif hasattr(obj_in, "model_dump"):
-                    obj_in_data = obj_in.model_dump()
                 else:
-                    # Fallback: try to convert to dict (should rarely happen)
-                    obj_in_data = cast(dict[str, Any], dict(obj_in))
+                    # obj_in is CreateSchemaType which has model_dump() per the Protocol
+                    # Use cast(Any) to bypass MyPy's type narrowing limitations
+                    obj_any = cast(Any, obj_in)
+                    obj_in_data = obj_any.model_dump()
                 db_objects.append(self.model(**obj_in_data))
 
             db.add_all(db_objects)

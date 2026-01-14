@@ -363,7 +363,7 @@ def _init_globals() -> None:
 
 
 # 创建基础模型类
-Base: DeclarativeMeta = declarative_base()
+Base: DeclarativeMeta | Any = declarative_base()
 
 
 def get_db() -> Generator[Session, None, None]:

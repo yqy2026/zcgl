@@ -257,8 +257,10 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
         if isinstance(obj_in, dict):
             obj_in_data = obj_in
         else:
-            # obj_in is a CreateSchemaType (Pydantic model)
-            obj_in_data = obj_in.model_dump(exclude_unset=True)
+            # obj_in is CreateSchemaType which has model_dump() per the Protocol
+            # Use cast(Any) to bypass MyPy's type narrowing limitations
+            obj_any = cast(Any, obj_in)
+            obj_in_data = obj_any.model_dump(exclude_unset=True)
 
         # 添加创建者信息
         if created_by and hasattr(self.model, "created_by"):
@@ -311,11 +313,13 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
         Returns:
             更新后的模型实例
         """
-        update_data = (
-            obj_in
-            if isinstance(obj_in, dict)
-            else obj_in.model_dump(exclude_unset=True)
-        )
+        if isinstance(obj_in, dict):
+            update_data = obj_in
+        else:
+            # obj_in is UpdateSchemaType which has model_dump() per the Protocol
+            # Use cast(Any) to bypass MyPy's type narrowing limitations
+            obj_any = cast(Any, obj_in)
+            update_data = obj_any.model_dump(exclude_unset=True)
 
         # 添加更新者信息
         if updated_by and hasattr(self.model, "updated_by"):
@@ -457,12 +461,12 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
         # 应用过滤器
         if filters:
             for filter_obj in filters:
-                query = filter_obj.apply(query, cast(type[ModelType], self.model))
+                query = filter_obj.apply(query, self.model)  # type: ignore[type-var]
 
         # 应用排序
         if sorts:
             for sort_obj in sorts:
-                query = sort_obj.apply(query, cast(type[ModelType], self.model))
+                query = sort_obj.apply(query, self.model)  # type: ignore[type-var]
 
         return query
 
@@ -538,8 +542,10 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
             if isinstance(obj_in, dict):
                 obj_in_data = obj_in
             else:
-                # obj_in is a CreateSchemaType (Pydantic model)
-                obj_in_data = obj_in.model_dump(exclude_unset=True)
+                # obj_in is CreateSchemaType which has model_dump() per the Protocol
+                # Use cast(Any) to bypass MyPy's type narrowing limitations
+                obj_any = cast(Any, obj_in)
+                obj_in_data = obj_any.model_dump(exclude_unset=True)
 
             if created_by and hasattr(self.model, "created_by"):
                 obj_in_data["created_by"] = created_by

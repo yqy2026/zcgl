@@ -48,19 +48,25 @@ class RentTermBase(BaseModel):
         """计算月总金额"""
         if v is None:
             data = info.data if hasattr(info, "data") else {}
-            monthly_rent = data.get("monthly_rent", Decimal("0"))
-            management_fee = data.get("management_fee", Decimal("0"))
-            other_fees = data.get("other_fees", Decimal("0"))
+            monthly_rent_raw = data.get("monthly_rent", Decimal("0"))
+            management_fee_raw = data.get("management_fee", Decimal("0"))
+            other_fees_raw = data.get("other_fees", Decimal("0"))
 
             # Type narrowing to ensure Decimal types
-            if not isinstance(monthly_rent, Decimal):
+            if not isinstance(monthly_rent_raw, Decimal):
                 monthly_rent = Decimal("0")
-            if not isinstance(management_fee, Decimal):
+            else:
+                monthly_rent = monthly_rent_raw
+            if not isinstance(management_fee_raw, Decimal):
                 management_fee = Decimal("0")
-            if not isinstance(other_fees, Decimal):
+            else:
+                management_fee = management_fee_raw
+            if not isinstance(other_fees_raw, Decimal):
                 other_fees = Decimal("0")
+            else:
+                other_fees = other_fees_raw
 
-            # We've verified types above, cast is no longer needed
+            # We've verified types above, all variables are Decimal
             return (
                 monthly_rent
                 + management_fee
