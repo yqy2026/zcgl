@@ -2,6 +2,8 @@
 权属方相关API端点
 """
 
+from typing import Any, Annotated
+
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
@@ -25,10 +27,10 @@ router = APIRouter()
 
 @router.get("/dropdown-options", summary="获取权属方选项列表")
 async def get_ownership_dropdown_options(
-    db: Session = Depends(get_db),
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    db: Annotated[Session, Depends(get_db)],
     is_active: bool | None = Query(True, description="是否启用"),
-    current_user: User = Depends(get_current_active_user),
-):
+) -> list[OwnershipResponse]:
     """获取权属方选项列表（用于下拉选择等）- V2修复is_active过滤"""
     try:
         # V2: 使用基础查询并手动过滤，因为CRUD.get_multi不支持is_active参数
@@ -60,10 +62,10 @@ async def get_ownership_dropdown_options(
 @router.post("/", response_model=OwnershipResponse, summary="创建权属方")
 async def create_ownership(
     *,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
     ownership_in: OwnershipCreate,
-    current_user: User = Depends(get_current_active_user),
-):
+    current_user: Annotated[User, Depends(get_current_active_user)],
+) -> OwnershipResponse:
     """创建新权属方"""
     try:
         db_ownership = ownership_service.create_ownership(db, obj_in=ownership_in)
@@ -77,11 +79,11 @@ async def create_ownership(
 @router.put("/{ownership_id}", response_model=OwnershipResponse, summary="更新权属方")
 async def update_ownership(
     *,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
     ownership_id: str,
     ownership_in: OwnershipUpdate,
-    current_user: User = Depends(get_current_active_user),
-):
+    current_user: Annotated[User, Depends(get_current_active_user)],
+) -> OwnershipResponse:
     """更新权属方信息"""
     db_ownership = ownership.get(db, id=ownership_id)
     if not db_ownership:
@@ -101,11 +103,11 @@ async def update_ownership(
 @router.put("/{ownership_id}/projects", summary="更新权属方关联项目")
 async def update_ownership_projects(
     *,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
     ownership_id: str,
     project_ids: list[str] = Body(..., description="关联项目ID列表"),
-    current_user: User = Depends(get_current_active_user),
-):
+    current_user: Annotated[User, Depends(get_current_active_user)],
+) -> OwnershipResponse:
     """更新权属方的关联项目"""
     db_ownership = ownership.get(db, id=ownership_id)
     if not db_ownership:
@@ -134,10 +136,10 @@ async def update_ownership_projects(
 )
 async def delete_ownership(
     *,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
     ownership_id: str,
-    current_user: User = Depends(get_current_active_user),
-):
+    current_user: Annotated[User, Depends(get_current_active_user)],
+) -> OwnershipDeleteResponse:
     """删除权属方"""
     try:
         # 先检查关联资产数量
@@ -158,13 +160,13 @@ async def delete_ownership(
 @router.get("", response_model=OwnershipListResponse, summary="获取权属方列表")
 @router.get("/", response_model=OwnershipListResponse, summary="获取权属方列表")
 async def get_ownerships(
-    db: Session = Depends(get_db),
+    current_user: Annotated[User, Depends(get_current_active_user)],
+    db: Annotated[Session, Depends(get_db)],
     page: int = Query(1, ge=1, description="页码"),
     size: int = Query(10, ge=1, le=100, description="每页数量"),
     keyword: str | None = Query(None, description="搜索关键词"),
     is_active: bool | None = Query(None, description="是否启用"),
-    current_user: User = Depends(get_current_active_user),
-):
+) -> OwnershipListResponse:
     """获取权属方列表"""
     search_params = OwnershipSearchRequest(
         page=page, size=size, keyword=keyword, is_active=is_active
@@ -194,10 +196,10 @@ async def get_ownerships(
 @router.post("/search", response_model=OwnershipListResponse, summary="搜索权属方")
 async def search_ownerships(
     *,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
     search_params: OwnershipSearchRequest,
-    current_user: User = Depends(get_current_active_user),
-):
+    current_user: Annotated[User, Depends(get_current_active_user)],
+) -> OwnershipListResponse:
     """搜索权属方"""
     result = ownership.search(db, search_params)
 
@@ -226,9 +228,9 @@ async def search_ownerships(
     summary="获取权属方统计",
 )
 async def get_ownership_statistics(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-):
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+) -> OwnershipStatisticsResponse:
     """获取权属方统计信息"""
     stats = ownership_service.get_statistics(db)
 
@@ -252,10 +254,10 @@ async def get_ownership_statistics(
 )
 async def toggle_ownership_status(
     *,
-    db: Session = Depends(get_db),
+    db: Annotated[Session, Depends(get_db)],
     ownership_id: str,
-    current_user: User = Depends(get_current_active_user),
-):
+    current_user: Annotated[User, Depends(get_current_active_user)],
+) -> OwnershipResponse:
     """切换权属方启用/禁用状态"""
     try:
         db_ownership = ownership_service.toggle_status(db, id=ownership_id)
@@ -272,9 +274,9 @@ async def toggle_ownership_status(
 )
 async def get_ownership_financial_summary(
     ownership_id: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-):
+    db: Annotated[Session, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_active_user)],
+) -> dict[str, Any]:
     """
     获取权属方的收支汇总信息
 
@@ -298,27 +300,27 @@ async def get_ownership_financial_summary(
     subquery = (
         db.query(RentContract.id)
         .filter(RentContract.ownership_id == ownership_id)
-        .subquery()
+        .scalar_subquery()
     )
 
     # 统计应收总额
     due_amount_result = (
         db.query(func.coalesce(func.sum(RentLedger.due_amount), 0))
-        .filter(RentLedger.contract_id.in_(subquery))
+        .filter(RentLedger.contract_id == subquery)
         .scalar()
     )
 
     # 统计实收总额
     paid_amount_result = (
         db.query(func.coalesce(func.sum(RentLedger.paid_amount), 0))
-        .filter(RentLedger.contract_id.in_(subquery))
+        .filter(RentLedger.contract_id == subquery)
         .scalar()
     )
 
     # 统计欠款总额
     arrears_amount_result = (
         db.query(func.coalesce(func.sum(RentLedger.arrears_amount), 0))
-        .filter(RentLedger.contract_id.in_(subquery))
+        .filter(RentLedger.contract_id == subquery)
         .scalar()
     )
 

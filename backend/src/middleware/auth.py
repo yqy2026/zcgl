@@ -51,11 +51,11 @@ SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = "HS256"
 
 
-def safe_role_compare(role_value, target_role) -> bool:
+def safe_role_compare(role_value: Any, target_role: Any) -> bool:
     """安全地比较角色值，支持字符串和枚举类型"""
     if isinstance(role_value, str):
-        return role_value == target_role.value
-    return role_value == target_role
+        return role_value == target_role.value  # type: ignore[no-any-return]
+    return role_value == target_role  # type: ignore[no-any-return]
 
 
 def get_current_user(
@@ -81,12 +81,12 @@ def get_current_user(
             audience="land-property-system",
             issuer="land-property-auth",
         )
-        user_id: str = payload.get("sub")
-        username: str = payload.get("username")
-        role: str = payload.get("role")
-        exp: int = payload.get("exp")
-        iat: int = payload.get("iat")
-        jti: str = payload.get("jti")  # JWT ID for token tracking
+        user_id: str | None = payload.get("sub")
+        username: str | None = payload.get("username")
+        role: str | None = payload.get("role")
+        exp: int | None = payload.get("exp")
+        iat: int | None = payload.get("iat")
+        jti: str | None = payload.get("jti")  # JWT ID for token tracking
 
         # 验证必需字段
         if user_id is None or username is None or role is None:
@@ -196,7 +196,7 @@ def get_optional_current_user(
             audience="land-property-system",
             issuer="land-property-auth",
         )
-        user_id: str = payload.get("sub")
+        user_id: str | None = payload.get("sub")
 
         if user_id is None:
             return None
@@ -216,7 +216,7 @@ class PermissionChecker:
     def __init__(self, required_permissions: list[str]):
         self.required_permissions = required_permissions
 
-    def __call__(self, current_user: User = Depends(get_current_active_user)):
+    def __call__(self, current_user: User = Depends(get_current_active_user)) -> User:
         """检查用户权限"""
         if not self._has_permission(current_user):
             raise HTTPException(
@@ -244,7 +244,7 @@ class PermissionChecker:
         return []
 
 
-def require_permissions(required_permissions: list[str]):
+def require_permissions(required_permissions: list[str]) -> PermissionChecker:
     """权限装饰器工厂函数"""
     return PermissionChecker(required_permissions)
 
@@ -255,7 +255,7 @@ class OrganizationPermissionChecker:
     def __init__(self, organization_id: str | None = None):
         self.organization_id = organization_id
 
-    def __call__(self, current_user: User = Depends(get_current_active_user)):
+    def __call__(self, current_user: User = Depends(get_current_active_user)) -> User:
         """检查用户是否有访问指定组织的权限"""
         if not self._can_access_organization(current_user):
             raise HTTPException(
@@ -278,7 +278,7 @@ class OrganizationPermissionChecker:
         return bool(user.employee_id)
 
 
-def require_organization_access(organization_id: str | None = None):
+def require_organization_access(organization_id: str | None = None) -> OrganizationPermissionChecker:
     """组织权限装饰器工厂函数"""
     return OrganizationPermissionChecker(organization_id)
 
@@ -290,7 +290,7 @@ class AuditLogger:
         self.action = action
         self.resource_type = resource_type
 
-    def __call__(self, current_user: User | None = Depends(get_optional_current_user)):
+    def __call__(self, current_user: User | None = Depends(get_optional_current_user)) -> User | None:
         """记录审计日志"""
         # 这个装饰器不阻止操作，只是记录日志
         return current_user
@@ -310,7 +310,7 @@ class AuditLogger:
         ip_address: str | None = None,
         user_agent: str | None = None,
         session_id: str | None = None,
-    ):
+    ) -> None:
         """记录操作日志"""
         from ..crud.auth import AuditLogCRUD
 
@@ -334,7 +334,7 @@ class AuditLogger:
         )
 
 
-def audit_action(action: str, resource_type: str | None = None):
+def audit_action(action: str, resource_type: str | None = None) -> AuditLogger:
     """审计装饰器工厂函数"""
     return AuditLogger(action, resource_type)
 
@@ -415,7 +415,10 @@ class RBACPermissionChecker:
         # 使用RBAC服务检查权限
         rbac_service = RBACService(db)
         permission_request = PermissionCheckRequest(
-            resource=self.resource, action=self.action, resource_id=self.resource_id
+            resource=self.resource,
+            action=self.action,
+            resource_id=self.resource_id,
+            context=None,
         )
 
         permission_result = rbac_service.check_permission(
@@ -431,7 +434,7 @@ class RBACPermissionChecker:
         return current_user
 
 
-def require_permission(resource: str, action: str, resource_id: str | None = None):
+def require_permission(resource: str, action: str, resource_id: str | None = None) -> RBACPermissionChecker:
     """RBAC权限装饰器工厂函数"""
     return RBACPermissionChecker(resource, action, resource_id)
 
@@ -494,7 +497,7 @@ class ResourcePermissionChecker:
         return current_user
 
 
-def require_resource_permission(resource_type: str, required_level: str = "read"):
+def require_resource_permission(resource_type: str, required_level: str = "read") -> ResourcePermissionChecker:
     """资源权限装饰器工厂函数"""
     return ResourcePermissionChecker(resource_type, required_level)
 
@@ -531,7 +534,7 @@ class RoleBasedAccessChecker:
         return current_user
 
 
-def require_roles(required_roles: list[str]):
+def require_roles(required_roles: list[str]) -> RoleBasedAccessChecker:
     """角色权限装饰器工厂函数"""
     return RoleBasedAccessChecker(required_roles)
 
@@ -558,7 +561,7 @@ def can_edit_contract(user: User) -> bool:
 
 def get_user_rbac_permissions(
     current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)
-):
+) -> dict[str, Any]:
     """获取用户RBAC权限信息"""
     if current_user.role == UserRole.ADMIN:
         return {"is_admin": True, "roles": ["admin"], "permissions": ["all"]}

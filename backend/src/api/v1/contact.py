@@ -35,11 +35,13 @@ def create_contact(
     - 如果 is_primary=True，会自动取消该实体的其他主要联系人
     - 支持权属方(ownership)、项目(project)、租户(tenant)等实体类型
     """
-    contact_in.created_by = current_user.username
-    contact_in.updated_by = current_user.username
+    # Create a copy with the user info
+    contact_data = contact_in.model_dump()
+    contact_data["created_by"] = current_user.username
+    contact_data["updated_by"] = current_user.username
 
     try:
-        contact = contact_crud.create(db=db, obj_in=contact_in.model_dump())
+        contact = contact_crud.create(db=db, obj_in=contact_data)
         return contact
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"创建联系人失败: {str(e)}")
@@ -90,7 +92,7 @@ def get_entity_contacts(
     pages = (total + limit - 1) // limit
 
     return ContactListResponse(
-        items=contacts, total=total, page=page, limit=limit, pages=pages
+        items=list(contacts), total=total, page=page, limit=limit, pages=pages
     )
 
 
@@ -134,11 +136,13 @@ def update_contact(
     if not contact:
         raise HTTPException(status_code=404, detail="联系人不存在")
 
-    contact_in.updated_by = current_user.username
+    # Include updated_by in the update
+    update_data = contact_in.model_dump(exclude_unset=True)
+    update_data["updated_by"] = current_user.username
 
     try:
         updated_contact = contact_crud.update(
-            db=db, db_obj=contact, obj_in=contact_in.model_dump(exclude_unset=True)
+            db=db, db_obj=contact, obj_in=update_data
         )
         return updated_contact
     except Exception as e:
@@ -184,13 +188,15 @@ def create_contacts_batch(
     """
     created_contacts = []
     for contact_in in contacts_in:
-        contact_in.entity_type = entity_type
-        contact_in.entity_id = entity_id
-        contact_in.created_by = current_user.username
-        contact_in.updated_by = current_user.username
+        # Create a dict with all required fields
+        contact_data = contact_in.model_dump()
+        contact_data["entity_type"] = entity_type
+        contact_data["entity_id"] = entity_id
+        contact_data["created_by"] = current_user.username
+        contact_data["updated_by"] = current_user.username
 
         try:
-            contact = contact_crud.create(db=db, obj_in=contact_in.model_dump())
+            contact = contact_crud.create(db=db, obj_in=contact_data)
             created_contacts.append(contact)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"批量创建失败: {str(e)}")

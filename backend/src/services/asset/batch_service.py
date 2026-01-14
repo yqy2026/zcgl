@@ -24,8 +24,12 @@ class BatchOperationResult(BaseModel):
     success_count: int = Field(default=0, ge=0, description="成功数量")
     failed_count: int = Field(default=0, ge=0, description="失败数量")
     total_count: int = Field(default=0, ge=0, description="总数量")
-    errors: list[dict[str, Any]] = Field(default_factory=list, description="错误列表")
-    updated_ids: list[str] = Field(default_factory=list, description="已更新的资产ID")
+    errors: list[dict[str, Any]] = Field(
+        default_factory=list[Any], description="错误列表"
+    )
+    updated_ids: list[str] = Field(
+        default_factory=list[Any], description="已更新的资产ID"
+    )
 
     model_config = {"frozen": False}
 
@@ -124,6 +128,8 @@ class AssetBatchService:
                     continue
 
                 # 更新资产
+                if updates is None:
+                    updates = {}
                 update_schema = AssetUpdate(**updates)
                 asset_crud.update(db=self.db, db_obj=asset, obj_in=update_schema)
 

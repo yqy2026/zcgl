@@ -1,3 +1,5 @@
+from typing import Any
+
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
@@ -11,7 +13,7 @@ from ...services.enum_validation_service import get_enum_validation_service
 
 
 class AssetService:
-    def __init__(self, db: Session):
+    def __init__(self, db: Session) -> None:
         self.db = db
 
     def get_assets(
@@ -19,14 +21,14 @@ class AssetService:
         skip: int = 0,
         limit: int = 100,
         search: str | None = None,
-        filters: dict | None = None,
+        filters: dict[str, Any] | None = None,
         sort_field: str = "created_at",
         sort_order: str = "desc",
     ) -> tuple[list[Asset], int]:
         """
         获取资产列表，支持分页、搜索和筛选
         """
-        return asset_crud.get_multi_with_search(
+        result: tuple[list[Asset], int] = asset_crud.get_multi_with_search(
             self.db,
             skip=skip,
             limit=limit,
@@ -35,6 +37,7 @@ class AssetService:
             sort_field=sort_field,
             sort_order=sort_order,
         )
+        return result
 
     def get_asset(self, asset_id: str) -> Asset:
         """

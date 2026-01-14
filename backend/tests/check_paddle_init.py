@@ -1,5 +1,5 @@
-import sys
 import paddleocr
+
 print(f"PaddleOCR Path: {paddleocr.__file__}")
 print(f"PaddleOCR Dir: {dir(paddleocr)}")
 

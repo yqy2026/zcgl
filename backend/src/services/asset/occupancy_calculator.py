@@ -87,12 +87,16 @@ class OccupancyRateCalculator:
                 }
 
             # 使用数据库聚合计算，避免在内存中加载所有数据
+            from collections.abc import Generator
+
             from sqlalchemy import func
+            from sqlalchemy.orm import Session
 
             from ...database import get_db
 
             # 获取数据库连接
-            db = next(get_db())
+            db_gen: Generator[Session, None, None] = get_db()
+            db: Session = next(db_gen)
 
             try:
                 from sqlalchemy import case
@@ -118,11 +122,19 @@ class OccupancyRateCalculator:
                     .first()
                 )
 
-                total_rentable = float(occupancy_stats.total_rentable or 0)
-                total_rented = float(occupancy_stats.total_rented or 0)
+                # Add None check for occupancy_stats
+                if occupancy_stats is None:
+                    total_rentable = 0.0
+                    total_rented = 0.0
+                    asset_count = 0
+                    rentable_asset_count = 0
+                else:
+                    total_rentable = float(occupancy_stats.total_rentable or 0)
+                    total_rented = float(occupancy_stats.total_rented or 0)
+                    asset_count = occupancy_stats.total_count or 0
+                    rentable_asset_count = occupancy_stats.rentable_count or 0
+
                 total_unrented = total_rentable - total_rented
-                asset_count = occupancy_stats.total_count or 0
-                rentable_asset_count = occupancy_stats.rentable_count or 0
 
             finally:
                 db.close()
@@ -164,7 +176,7 @@ class OccupancyRateCalculator:
                 return {}
 
             # 按分类分组
-            categories = {}
+            categories: dict[str, Any] = {}
             for asset in assets:
                 category_value = getattr(asset, category_field, None) or "未知"
                 if category_value not in categories:

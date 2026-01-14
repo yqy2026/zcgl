@@ -48,7 +48,7 @@ except ImportError as e:
     pdf_session_service = None
     pdf_processing_service = None
     PDFValidationMatchingService = None
-    enhanced_error_handler = None
+    enhanced_error_handler = None  # type: ignore[assignment]
     PDF_SERVICES_AVAILABLE = False
 
 router = APIRouter(tags=["pdf-import"])
@@ -185,7 +185,7 @@ class SystemInfoResponse(BaseModel):
 
 
 @router.get("/info", response_model=SystemInfoResponse)
-async def get_system_info():
+async def get_system_info() -> SystemInfoResponse:
     """获取系统信息和能力"""
     try:
         # 检测 PaddleOCR 3.3+ 可用性
@@ -247,7 +247,7 @@ async def get_system_info():
 
 @router.get("/test_system")
 @debug_only
-async def test_system():
+async def test_system() -> dict[str, Any]:
     """测试系统功能"""
     return {"system_status": "normal", "message": "PDF处理系统正常"}
 
@@ -259,13 +259,13 @@ async def upload_pdf_file(
     prefer_ocr: bool = Form(default=False),
     organization_id: int | None = Form(default=None),
     db: Session = Depends(get_db),
-):
+) -> FileUploadResponse:
     """上传PDF文件并开始处理"""
     retry_count = 0
 
     # 验证文件类型
-    if file.content_type != "application/pdf" and not file.filename.lower().endswith(
-        ".pdf"
+    if file.content_type != "application/pdf" and not (
+        file.filename and file.filename.lower().endswith(".pdf")
     ):
         if enhanced_error_handler:
             error_result = enhanced_error_handler.handle_error(
@@ -430,7 +430,6 @@ async def upload_pdf_file(
             message="PDF文件上传成功，正在处理中（优化版）",
             session_id=session.session_id,
             estimated_time="30-60秒",
-            processing_options=processing_options,
         )
     else:
         return FileUploadResponse(
@@ -464,7 +463,9 @@ async def upload_pdf_file(
 
 
 @router.get("/progress/{session_id}", response_model=SessionProgressResponse)
-async def get_session_progress(session_id: str, db: Session = Depends(get_db)):
+async def get_session_progress(
+    session_id: str, db: Session = Depends(get_db)
+) -> SessionProgressResponse:
     """获取会话处理进度"""
     try:
         result = await pdf_import_service.get_session_status(db, session_id)
@@ -483,7 +484,7 @@ async def get_active_sessions(
     organization_id: int | None = Query(None),
     limit: int = Query(50, le=100),
     db: Session = Depends(get_db),
-):
+) -> ActiveSessionResponse:
     """获取活跃会话列表"""
     try:
         if not PDF_SERVICES_AVAILABLE or pdf_session_service is None:
@@ -539,7 +540,7 @@ async def get_session_history(
     organization_id: int | None = Query(None),
     limit: int = Query(100, le=200),
     db: Session = Depends(get_db),
-):
+) -> dict[str, Any]:
     """获取会话历史记录"""
     try:
         sessions = await pdf_session_service.get_session_history(
@@ -579,8 +580,8 @@ async def get_session_history(
 async def confirm_import(
     request: ConfirmImportRequest,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_active_user),
-):
+    current_user: Any = Depends(get_current_active_user),
+) -> ConfirmImportResponse:
     """确认导入合同数据"""
     start_time = datetime.now()
 
@@ -626,7 +627,7 @@ async def cancel_session(
     session_id: str,
     reason: str = Query(default="用户取消"),
     db: Session = Depends(get_db),
-):
+) -> dict[str, Any]:
     """取消会话处理"""
     try:
         result = await pdf_import_service.cancel_processing(
@@ -650,7 +651,7 @@ async def cancel_session(
 
 @router.get("/test_detailed")
 @debug_only
-async def test_system_detailed():
+async def test_system_detailed() -> dict[str, Any]:
     """测试系统功能"""
     try:
         # 测试PDF处理服务
@@ -678,7 +679,7 @@ async def test_system_detailed():
 
 
 @router.get("/health")
-async def health_check():
+async def health_check() -> dict[str, Any]:
     """健康检查"""
     try:
         return {
@@ -702,7 +703,9 @@ async def health_check():
 
 
 @router.get("/quality/assessment/{session_id}")
-async def get_quality_assessment(session_id: str, db: Session = Depends(get_db)):
+async def get_quality_assessment(
+    session_id: str, db: Session = Depends(get_db)
+) -> dict[str, Any]:
     """获取会话的质量评估结果"""
     try:
         if not PDF_SERVICES_AVAILABLE or pdf_session_service is None:
@@ -768,8 +771,8 @@ async def get_quality_assessment(session_id: str, db: Session = Depends(get_db))
 async def analyze_pdf_quality(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    ocr_service=Depends(get_ocr_service),
-):
+    ocr_service: Any = Depends(get_ocr_service),
+) -> dict[str, Any]:
     """分析PDF文件质量"""
     try:
         if not PDF_SERVICES_AVAILABLE or pdf_processing_service is None:
@@ -780,7 +783,7 @@ async def analyze_pdf_quality(
             }
 
         # 验证文件类型
-        if not file.filename.lower().endswith(".pdf"):
+        if not file.filename or not file.filename.lower().endswith(".pdf"):
             return {
                 "success": False,
                 "error": "只支持PDF文件质量分析",
@@ -866,7 +869,9 @@ async def analyze_pdf_quality(
 
 # === V1兼容性API端点 ===
 @router.post("/extract", response_model=ExtractionResponse)
-async def extract_contract_from_text_v1_compatible(request: ExtractionRequest):
+async def extract_contract_from_text_v1_compatible(
+    request: ExtractionRequest,
+) -> ExtractionResponse:
     """从文本提取合同信息 (V1兼容版本)"""
     start_time = datetime.now()
 
@@ -934,8 +939,8 @@ async def upload_and_extract_pdf_v1_compatible(
     include_raw_text: bool = Form(default=False),
     validate_fields: bool = Form(default=True),
     background_tasks: BackgroundTasks = BackgroundTasks(),
-    ocr_service=Depends(get_ocr_service),
-):
+    ocr_service: Any = Depends(get_ocr_service),
+) -> ExtractionResponse:
     """上传PDF文件并提取信息 (V1兼容版本)"""
     start_time = datetime.now()
 
@@ -1047,7 +1052,7 @@ async def extract_contract_info_v2_enhanced(
     text: str = Form(...),
     validate_fields: bool = Form(default=True),
     db: Session = Depends(get_db),
-):
+) -> dict[str, Any]:
     """直接从文本提取合同信息 (V2增强版本)"""
     try:
         from ...services.contract_extractor import extract_contract_info
@@ -1083,7 +1088,7 @@ async def extract_contract_info_v2_enhanced(
 
 # === 增强性能监控端点 ===
 @router.get("/performance/realtime")
-async def get_realtime_performance():
+async def get_realtime_performance() -> dict[str, Any]:
     """获取实时性能监控数据"""
     try:
         performance_data = await performance_monitor.get_real_time_performance()
@@ -1098,7 +1103,9 @@ async def get_realtime_performance():
 
 
 @router.get("/performance/report")
-async def get_performance_report(hours: int = Query(default=24, ge=1, le=168)):
+async def get_performance_report(
+    hours: int = Query(default=24, ge=1, le=168),
+) -> dict[str, Any]:
     """获取性能报告"""
     try:
         report = await performance_monitor.get_performance_report(hours)
@@ -1109,7 +1116,7 @@ async def get_performance_report(hours: int = Query(default=24, ge=1, le=168)):
 
 
 @router.get("/performance/health")
-async def get_system_health():
+async def get_system_health() -> dict[str, Any]:
     """获取系统健康状态"""
     try:
         from ...services.core.enhanced_error_handler import monitor_processing_health

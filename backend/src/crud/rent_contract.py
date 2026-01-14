@@ -79,17 +79,17 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
         if end_date:
             query = query.filter(RentContract.end_date <= end_date)
 
-        # Use QB for the rest (pagination, simple filters, ordering)
-        # We pass the pre-filtered query as base_query
+        # Apply additional filters from QB
+        from sqlalchemy import desc
 
-        results = self.query_builder.build_query(
-            filters=filters,
-            base_query=query,
-            sort_by="created_at",
-            sort_desc=True,
-            skip=skip,
-            limit=limit,
-        )
+        if ownership_id:
+            query = query.filter(RentContract.ownership_id == ownership_id)
+        if contract_status:
+            query = query.filter(RentContract.contract_status == contract_status)
+
+        # Apply sorting and pagination
+        query = query.order_by(desc(RentContract.created_at))
+        items = query.offset(skip).limit(limit).all()
 
         # For count, we need to rebuild the query without pagination
         # Re-apply filters for count
@@ -119,8 +119,6 @@ class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUp
             )
 
         total = count_query.count()
-
-        items = db.execute(results).scalars().all()
 
         return items, total
 
@@ -185,15 +183,23 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
         if end_date:
             query = query.filter(RentLedger.due_date <= end_date)
 
-        # Use QB
-        stmt = self.query_builder.build_query(
-            filters=filters,
-            base_query=query,
-            sort_by="year_month",
-            sort_desc=True,
-            skip=skip,
-            limit=limit,
-        )
+        # Apply filters from QB
+        from sqlalchemy import desc
+
+        if contract_id:
+            query = query.filter(RentLedger.contract_id == contract_id)
+        if asset_id:
+            query = query.filter(RentLedger.asset_id == asset_id)
+        if ownership_id:
+            query = query.filter(RentLedger.ownership_id == ownership_id)
+        if year_month:
+            query = query.filter(RentLedger.year_month == year_month)
+        if payment_status:
+            query = query.filter(RentLedger.payment_status == payment_status)
+
+        # Apply sorting and pagination
+        query = query.order_by(desc(RentLedger.year_month), desc(RentLedger.due_date))
+        items = query.offset(skip).limit(limit).all()
 
         # Need to fix sort to match original: year_month desc, due_date desc
         # Since QB replaces order, we might lose 2nd sort key.
@@ -219,7 +225,6 @@ class CRUDRentLedger(CRUDBase[RentLedger, RentLedgerCreate, RentLedgerUpdate]):
             count_query = count_query.filter(RentLedger.due_date <= end_date)
 
         total = count_query.count()
-        items = db.execute(stmt).scalars().all()
 
         return items, total
 

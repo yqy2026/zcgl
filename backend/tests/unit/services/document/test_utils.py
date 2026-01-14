@@ -6,8 +6,6 @@ Unit tests for document processing utils
 
 from datetime import datetime
 
-import pytest
-
 from src.services.document.utils import (
     clean_text,
     compact_list,

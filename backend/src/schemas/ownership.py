@@ -20,7 +20,7 @@ class OwnershipCreate(OwnershipBase):
 
     @field_validator("code")
     @classmethod
-    def validate_code(cls, v):
+    def validate_code(cls, v: str | None) -> str | None:
         """验证权属方编码格式"""
         if v is not None:  # pragma: no cover
             # 验证编码格式：[前缀][年月][序号]
@@ -45,7 +45,7 @@ class OwnershipUpdate(BaseModel):
 
     @field_validator("code")
     @classmethod
-    def validate_code(cls, v):
+    def validate_code(cls, v: str | None) -> str | None:
         """验证权属方编码格式"""
         if v is not None:  # pragma: no cover
             # 验证编码格式：[前缀][年月][序号]

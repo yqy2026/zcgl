@@ -14,7 +14,7 @@ Version: 2026-01-04
 import logging
 from collections import defaultdict
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy.orm import Session
 
@@ -59,9 +59,9 @@ class AnalyticsService:
         cache_key = self._generate_cache_key(validated_filters)
         if use_cache:
             cached_result = self.cache.get(cache_key)
-            if cached_result:
+            if cached_result is not None:
                 logger.info(f"从缓存返回分析结果: {cache_key}")
-                return cached_result
+                return cast(dict[str, Any], cached_result)
 
         # 执行分析计算
         result = self._calculate_analytics(validated_filters)
@@ -119,11 +119,11 @@ class AnalyticsService:
             query = query.filter(
                 or_(
                     Asset.data_status == "正常",
-                    Asset.data_status is None,
+                    Asset.data_status.is_(None),
                 )
             )
 
-        assets = query.all()
+        assets: list[Asset] = query.all()
 
         # 计算各项统计
         stats = {
@@ -195,18 +195,18 @@ class AnalyticsService:
         # 获取资产数据
         query = self.db.query(Asset)
 
-        if not filters.get("include_deleted", False):
+        if filters is not None and not filters.get("include_deleted", False):
             # 使用 data_status 筛选
             from sqlalchemy import or_
 
             query = query.filter(
                 or_(
                     Asset.data_status == "正常",
-                    Asset.data_status is None,
+                    Asset.data_status.is_(None),
                 )
             )
 
-        assets = query.all()
+        assets: list[Asset] = query.all()
 
         # 根据趋势类型和维度生成数据
         if trend_type == "occupancy":
@@ -272,24 +272,24 @@ class AnalyticsService:
         """
         query = self.db.query(Asset)
 
-        if not filters.get("include_deleted", False):
+        if filters is not None and not filters.get("include_deleted", False):
             # 使用 data_status 筛选
             from sqlalchemy import or_
 
             query = query.filter(
                 or_(
                     Asset.data_status == "正常",
-                    Asset.data_status is None,
+                    Asset.data_status.is_(None),
                 )
             )
 
-        assets = query.all()
+        assets: list[Asset] = query.all()
 
         # 统计分布
-        distribution = defaultdict(lambda: {"count": 0, "area": 0.0})
+        distribution: defaultdict[str, dict[str, Any]] = defaultdict(lambda: {"count": 0, "area": 0.0})
 
         for asset in assets:
-            key = getattr(asset, distribution_type, "unknown")
+            key = str(getattr(asset, distribution_type, "unknown"))
             distribution[key]["count"] += 1
             if asset.rentable_area:
                 distribution[key]["area"] += float(asset.rentable_area)

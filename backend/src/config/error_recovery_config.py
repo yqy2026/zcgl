@@ -421,7 +421,7 @@ ERROR_RECOVERY_CONFIG = {
 }
 
 
-def get_recovery_strategy(error_category: ErrorCategory) -> RecoveryStrategy:
+def get_recovery_strategy(error_category: ErrorCategory) -> RecoveryStrategy | None:
     """获取错误恢复策略"""
     return RECOVERY_STRATEGIES.get(error_category)  # pragma: no cover
 
@@ -445,4 +445,4 @@ def get_fallback_response(error_category: ErrorCategory) -> dict[str, Any]:
 
 def is_recovery_enabled() -> bool:
     """检查错误恢复是否启用"""
-    return MONITORING_CONFIG.get("enabled", True)  # pragma: no cover
+    return bool(MONITORING_CONFIG.get("enabled", True))  # pragma: no cover

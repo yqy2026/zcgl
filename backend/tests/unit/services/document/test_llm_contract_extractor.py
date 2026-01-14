@@ -8,12 +8,11 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from src.services.document.extractors.factory import reset_extractor
 from src.services.document.llm_contract_extractor import (
     LLMContractExtractor,
     get_llm_contract_extractor,
 )
-from src.services.document.extractors.factory import reset_extractor
-
 
 # ============================================================================
 # LLMContractExtractor 基础测试
@@ -139,7 +138,9 @@ class TestAdapterFactory:
     def test_adapter_is_singleton(self):
         """测试适配器使用工厂单例"""
         reset_extractor()
-        from src.services.document.extractors.factory import get_llm_extractor as get_adapter
+        from src.services.document.extractors.factory import (
+            get_llm_extractor as get_adapter,
+        )
 
         adapter1 = get_adapter()
         adapter2 = get_adapter()
@@ -180,7 +181,6 @@ class TestBackwardCompatibility:
     @pytest.mark.asyncio
     async def test_extract_smart_is_async(self, extractor):
         """测试 extract_smart 是异步方法"""
-        import asyncio
         sample_path = "/fake/path.pdf"
 
         with patch.object(extractor.adapter, 'extract', new_callable=AsyncMock) as mock_extract:

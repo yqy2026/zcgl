@@ -10,10 +10,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class EnhancedPDFImportError:
+class EnhancedPDFImportError(Exception):
     """PDF导入增强错误处理"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.max_retries = 3
         self.max_file_size_mb = 50  # 最大文件大小限制
         self.retry_delays = [1, 5, 10]  # 重试延迟（秒）

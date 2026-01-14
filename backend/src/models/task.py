@@ -12,7 +12,7 @@ from ..database import Base
 from ..enums.task import TaskStatus
 
 
-class AsyncTask(Base):
+class AsyncTask(Base):  # type: ignore[valid-type, misc]
     """异步任务模型"""
 
     __tablename__ = "async_tasks"
@@ -57,7 +57,7 @@ class AsyncTask(Base):
     retry_count = Column(Integer, default=0, comment="重试次数")
     max_retries = Column(Integer, default=3, comment="最大重试次数")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<AsyncTask(id={self.id}, type={self.task_type}, status={self.status})>"
 
     @property
@@ -72,7 +72,7 @@ class AsyncTask(Base):
     @property
     def is_running(self) -> bool:
         """任务是否正在运行"""
-        return self.status == TaskStatus.RUNNING  # pragma: no cover
+        return self.status == TaskStatus.RUNNING  # type: ignore[return-value]  # pragma: no cover
 
     @property
     def success_rate(self) -> float:
@@ -82,7 +82,7 @@ class AsyncTask(Base):
             return 0.0  # pragma: no cover
         failed = self.failed_items or 0  # Handle None case  # pragma: no cover
         return (
-            (self.processed_items - failed) / self.total_items * 100
+            (self.processed_items - failed) / self.total_items * 100  # type: ignore[return-value]
         )  # pragma: no cover
 
     @property
@@ -92,10 +92,10 @@ class AsyncTask(Base):
             return 0.0  # pragma: no cover
 
         end_time = self.completed_at or datetime.now(UTC)  # pragma: no cover
-        return (end_time - self.started_at).total_seconds()  # pragma: no cover
+        return (end_time - self.started_at).total_seconds()  # type: ignore[no-any-return]  # pragma: no cover
 
 
-class TaskHistory(Base):
+class TaskHistory(Base):  # type: ignore[valid-type, misc]
     """任务历史记录模型"""
 
     __tablename__ = "task_history"
@@ -116,13 +116,13 @@ class TaskHistory(Base):
     # 用户信息
     user_id = Column(String(100), comment="用户ID")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"<TaskHistory(id={self.id}, task_id={self.task_id}, action={self.action})>"
         )
 
 
-class ExcelTaskConfig(Base):
+class ExcelTaskConfig(Base):  # type: ignore[valid-type, misc]
     """Excel任务配置模型"""
 
     __tablename__ = "excel_task_configs"
@@ -156,5 +156,5 @@ class ExcelTaskConfig(Base):
         comment="更新时间",
     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<ExcelTaskConfig(id={self.id}, name={self.config_name}, type={self.config_type})>"

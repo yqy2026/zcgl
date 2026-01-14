@@ -3,6 +3,9 @@
 实现基于组织架构的权限控制和数据隔离
 """
 
+from collections.abc import Callable
+from typing import Any
+
 from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -12,7 +15,7 @@ from ..services.organization_permission_service import OrganizationPermissionSer
 from .auth import get_current_active_user
 
 
-def require_organization_access(organization_id_param: str = "organization_id"):
+def require_organization_access(organization_id_param: str = "organization_id") -> Callable[..., Any]:
     """
     组织访问权限装饰器工厂函数
 
@@ -21,10 +24,10 @@ def require_organization_access(organization_id_param: str = "organization_id"):
     """
 
     def dependency(
-        organization_id: str = None,
+        organization_id: str | None = None,
         current_user: User = Depends(get_current_active_user),
         db: Session = Depends(get_db),
-    ):
+    ) -> Any:
         """
         检查用户是否有权访问指定组织
         """
@@ -44,7 +47,7 @@ def require_organization_access(organization_id_param: str = "organization_id"):
     return dependency
 
 
-def require_organization_management(organization_id_param: str = "organization_id"):
+def require_organization_management(organization_id_param: str = "organization_id") -> Callable[..., Any]:
     """
     组织管理权限装饰器工厂函数
 
@@ -53,10 +56,10 @@ def require_organization_management(organization_id_param: str = "organization_i
     """
 
     def dependency(
-        organization_id: str = None,
+        organization_id: str | None = None,
         current_user: User = Depends(get_current_active_user),
         db: Session = Depends(get_db),
-    ):
+    ) -> Any:
         """
         检查用户是否有权管理指定组织
         """
@@ -87,31 +90,37 @@ class OrganizationDataFilter:
         self.user_id = user_id
         self.org_service = OrganizationPermissionService(db)
 
-    def filter_assets_query(self, query):
+    def filter_assets_query(self, query: Any) -> Any:
         """过滤资产查询"""
         return self.org_service.filter_assets_by_organization(self.user_id, query)
 
-    def filter_projects_query(self, query):
+    def filter_projects_query(self, query: Any) -> Any:
         """过滤项目查询"""
         return self.org_service.filter_projects_by_organization(self.user_id, query)
 
-    def filter_ownership_query(self, query):
+    def filter_ownership_query(self, query: Any) -> Any:
         """过滤权属方查询"""
         return self.org_service.filter_ownership_by_organization(self.user_id, query)
 
     def get_accessible_organizations(self) -> list[str]:
         """获取可访问的组织ID列表"""
-        return self.org_service.get_user_accessible_organizations(self.user_id)
+        result = self.org_service.get_user_accessible_organizations(self.user_id)
+        assert isinstance(result, list)
+        return result
 
-    def get_accessible_organizations_with_details(self) -> list[dict]:
+    def get_accessible_organizations_with_details(self) -> list[dict[str, Any]]:
         """获取可访问的组织详细信息"""
-        return self.org_service.get_user_accessible_organizations_with_details(
+        result = self.org_service.get_user_accessible_organizations_with_details(
             self.user_id
         )
+        assert isinstance(result, list)
+        return result
 
-    def get_organization_hierarchy(self) -> list[dict]:
+    def get_organization_hierarchy(self) -> list[dict[str, Any]]:
         """获取组织层次结构"""
-        return self.org_service.get_organization_hierarchy(self.user_id)
+        result = self.org_service.get_organization_hierarchy(self.user_id)
+        assert isinstance(result, list)
+        return result
 
 
 def get_organization_filter(
@@ -120,17 +129,21 @@ def get_organization_filter(
     """
     获取组织数据过滤器依赖
     """
-    return OrganizationDataFilter(db, current_user.id)
+    # Extract the actual user_id from the Column
+    user_id = current_user.id
+    return OrganizationDataFilter(db, str(user_id))
 
 
 def get_accessible_organizations(
     current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """
     获取用户可访问的组织列表
     """
     org_service = OrganizationPermissionService(db)
-    return org_service.get_user_accessible_organizations_with_details(current_user.id)
+    result = org_service.get_user_accessible_organizations_with_details(current_user.id)
+    assert isinstance(result, list)
+    return result
 
 
 def get_user_organization_role(
@@ -140,7 +153,11 @@ def get_user_organization_role(
     获取用户在组织中的角色
     """
     org_service = OrganizationPermissionService(db)
-    return org_service.get_user_organization_role(current_user.id)
+    result = org_service.get_user_organization_role(current_user.id)
+    # The result might already be str | None, but we need to ensure it matches the return type
+    if result is None or isinstance(result, str):
+        return result
+    return str(result)
 
 
 # 导入必要的依赖已在顶部完成
@@ -151,7 +168,7 @@ class OrganizationPermissionChecker:
     组织权限检查器
     """
 
-    def __init__(self, required_permission: str, organization_id_param: str = None):
+    def __init__(self, required_permission: str, organization_id_param: str | None = None) -> None:
         self.required_permission = required_permission
         self.organization_id_param = organization_id_param
 
@@ -159,7 +176,7 @@ class OrganizationPermissionChecker:
         self,
         current_user: User = Depends(get_current_active_user),
         db: Session = Depends(get_db),
-    ):
+    ) -> User:
         """
         检查用户权限
         """
@@ -186,8 +203,8 @@ class OrganizationPermissionChecker:
 
 
 def require_organization_permission(
-    required_permission: str, organization_id_param: str = None
-):
+    required_permission: str, organization_id_param: str | None = None
+) -> OrganizationPermissionChecker:
     """
     组织权限装饰器工厂函数
     """

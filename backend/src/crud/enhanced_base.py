@@ -1,4 +1,4 @@
-from typing import Any, TypeVar
+from typing import Any, Generic, TypeVar
 
 """
 增强的基础CRUD操作类
@@ -116,7 +116,7 @@ class QuerySort:
             return query.order_by(desc(field_attr))
 
 
-class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
+class EnhancedCRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType], ABC):
     """增强的基础CRUD操作类"""
 
     def __init__(self, model: type[ModelType]):
@@ -162,7 +162,8 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
         if not include_deleted and hasattr(self.model, "is_deleted"):
             query = query.filter(self.model.is_deleted.is_(False))  # type: ignore[attr-defined]
 
-        return query.filter(self.model.id == id).first()  # type: ignore[attr-defined]
+        result = query.filter(self.model.id == id).first()  # type: ignore[attr-defined]
+        return result
 
     def get_multi(
         self,
@@ -228,7 +229,7 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
         self,
         db: Session,
         *,
-        obj_in: CreateSchemaType,
+        obj_in: CreateSchemaType | dict[str, Any],
         created_by: str | None = None,
         **kwargs: Any,
     ) -> ModelType:
@@ -244,9 +245,11 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
         Returns:
             创建的模型实例
         """
-        obj_in_data = (
-            obj_in.dict(exclude_unset=True) if hasattr(obj_in, "dict") else obj_in
-        )
+        if isinstance(obj_in, dict):
+            obj_in_data = obj_in
+        else:
+            # obj_in is a CreateSchemaType (Pydantic model)
+            obj_in_data = obj_in.model_dump(exclude_unset=True)
 
         # 添加创建者信息
         if created_by and hasattr(self.model, "created_by"):
@@ -300,7 +303,7 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
             更新后的模型实例
         """
         update_data = (
-            obj_in if isinstance(obj_in, dict) else obj_in.model_dump(exclude_unset=True)  # type: ignore[attr-defined]
+            obj_in if isinstance(obj_in, dict) else obj_in.model_dump(exclude_unset=True)
         )
 
         # 添加更新者信息
@@ -443,12 +446,12 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
         # 应用过滤器
         if filters:
             for filter_obj in filters:
-                query = filter_obj.apply(query, self.model)  # type: ignore[type-var]
+                query = filter_obj.apply(query, self.model)
 
         # 应用排序
         if sorts:
             for sort_obj in sorts:
-                query = sort_obj.apply(query, self.model)  # type: ignore[type-var]
+                query = sort_obj.apply(query, self.model)
 
         return query
 
@@ -505,7 +508,7 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
         self,
         db: Session,
         *,
-        objects_in: list[CreateSchemaType],
+        objects_in: list[CreateSchemaType | dict[str, Any]],
         created_by: str | None = None,
     ) -> list[ModelType]:
         """
@@ -521,9 +524,11 @@ class EnhancedCRUDBase[ModelType, CreateSchemaType, UpdateSchemaType](ABC):
         """
         db_objects = []
         for obj_in in objects_in:
-            obj_in_data = (
-                obj_in.dict(exclude_unset=True) if hasattr(obj_in, "dict") else obj_in
-            )
+            if isinstance(obj_in, dict):
+                obj_in_data = obj_in
+            else:
+                # obj_in is a CreateSchemaType (Pydantic model)
+                obj_in_data = obj_in.model_dump(exclude_unset=True)
 
             if created_by and hasattr(self.model, "created_by"):
                 obj_in_data["created_by"] = created_by

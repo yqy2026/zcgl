@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, TypeVar
 
 """
 监控API路由
@@ -18,6 +18,8 @@ from ...database import get_db
 from ...decorators.permission import permission_required
 from ...middleware.auth import get_current_user
 from ...models.auth import User
+
+T = TypeVar("T")
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +65,7 @@ class HealthCheck(BaseModel):
 @router.post("/route-performance", summary="上报路由性能指标")
 async def report_route_performance(
     report: PerformanceReport, db: Session = Depends(get_db)
-):
+) -> dict[str, str]:
     """
     接收前端上报的路由性能指标
     """
@@ -96,7 +98,7 @@ async def report_route_performance(
                         f"路由错误告警: {metric.route}, 错误数: {metric.error_count}"
                     )
 
-        return {"success": True, "message": "性能指标已保存"}
+        return {"success": str(True), "message": "性能指标已保存"}
 
     except Exception as e:
         logger.error(f"保存性能指标失败: {str(e)}")
@@ -104,7 +106,7 @@ async def report_route_performance(
 
 
 @router.get("/system-health", summary="获取系统健康状态", response_model=HealthCheck)
-async def get_system_health():
+async def get_system_health() -> HealthCheck:
     """
     获取系统健康状态
     """
@@ -129,7 +131,7 @@ async def get_system_health():
 
 @router.get("/performance/dashboard", summary="获取性能监控仪表板数据")
 @permission_required("system", "monitoring")
-async def get_performance_dashboard():
+async def get_performance_dashboard() -> dict[str, Any]:
     """
     获取性能监控仪表板数据
     """
@@ -145,7 +147,7 @@ async def get_performance_dashboard():
             },
             "route_performance": {
                 "/dashboard": {"visits": 450, "avg_load_time": 800},
-                "/assets/list": {"visits": 320, "avg_load_time": 1200},
+                "/assets/list[Any]": {"visits": 320, "avg_load_time": 1200},
                 "/rental/contracts": {"visits": 280, "avg_load_time": 1500},
             },
             "trends": [
@@ -317,7 +319,7 @@ def collect_application_metrics() -> ApplicationMetrics:
 
 @router.get("/system-metrics", response_model=SystemMetrics, summary="获取系统性能指标")
 @permission_required("system_monitoring", "read")
-async def get_system_metrics(current_user: User = Depends(get_current_user)):
+async def get_system_metrics(current_user: User = Depends(get_current_user)) -> SystemMetrics:
     """获取当前系统性能指标"""
     return collect_system_metrics()
 
@@ -328,7 +330,7 @@ async def get_system_metrics(current_user: User = Depends(get_current_user)):
     summary="获取应用性能指标",
 )
 @permission_required("system_monitoring", "read")
-async def get_application_metrics(current_user: User = Depends(get_current_user)):
+async def get_application_metrics(current_user: User = Depends(get_current_user)) -> ApplicationMetrics:
     """获取应用性能指标"""
     return collect_application_metrics()
 
@@ -337,7 +339,7 @@ async def get_application_metrics(current_user: User = Depends(get_current_user)
 @permission_required("system_monitoring", "read")
 async def get_system_monitoring_dashboard(
     current_user: User = Depends(get_current_user),
-):
+) -> dict[str, Any]:
     """获取系统监控仪表板综合数据"""
     try:
         system_metrics = collect_system_metrics()
@@ -448,7 +450,7 @@ async def get_system_monitoring_dashboard(
 
 @router.post("/metrics/collect", summary="手动触发指标收集")
 @permission_required("system_monitoring", "write")
-async def trigger_metrics_collection(current_user: User = Depends(get_current_user)):
+async def trigger_metrics_collection(current_user: User = Depends(get_current_user)) -> dict[str, Any]:
     """手动触发一次指标收集"""
     try:
         system_metrics = collect_system_metrics()

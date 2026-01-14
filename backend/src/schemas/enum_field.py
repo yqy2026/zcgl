@@ -28,7 +28,7 @@ class EnumFieldTypeBase(BaseModel):
 
     @field_validator("status")
     @classmethod
-    def validate_status(cls, v):
+    def validate_status(cls, v: str) -> str:
         allowed_statuses = ["active", "inactive"]  # pragma: no cover
         if v not in allowed_statuses:  # pragma: no cover
             raise ValueError(
@@ -38,7 +38,7 @@ class EnumFieldTypeBase(BaseModel):
 
     @field_validator("code")
     @classmethod
-    def validate_code(cls, v):
+    def validate_code(cls, v: str) -> str:
         # 编码只能包含字母、数字和下划线
         import re  # pragma: no cover
 
@@ -79,7 +79,7 @@ class EnumFieldTypeUpdate(BaseModel):
 
     @field_validator("status")
     @classmethod
-    def validate_status(cls, v):
+    def validate_status(cls, v: str) -> str:
         if v is not None:  # pragma: no cover
             allowed_statuses = ["active", "inactive"]  # pragma: no cover
             if v not in allowed_statuses:  # pragma: no cover
@@ -90,7 +90,7 @@ class EnumFieldTypeUpdate(BaseModel):
 
     @field_validator("code")
     @classmethod
-    def validate_code(cls, v):
+    def validate_code(cls, v: str) -> str:
         if v is not None:  # pragma: no cover
             import re  # pragma: no cover
 
@@ -124,7 +124,7 @@ class EnumFieldValueBase(BaseModel):
 
     @field_validator("code")
     @classmethod
-    def validate_code(cls, v):
+    def validate_code(cls, v: str) -> str:
         """验证编码格式：只能包含字母、数字和下划线"""
         if v is not None:  # pragma: no cover
             import re  # pragma: no cover
@@ -137,7 +137,7 @@ class EnumFieldValueBase(BaseModel):
 
     @field_validator("color")
     @classmethod
-    def validate_color(cls, v):
+    def validate_color(cls, v: str | None) -> str | None:
         if v is not None:  # pragma: no cover
             # 验证颜色格式（支持hex格式）
             import re  # pragma: no cover
@@ -180,7 +180,7 @@ class EnumFieldValueUpdate(BaseModel):
 
     @field_validator("color")
     @classmethod
-    def validate_color(cls, v):
+    def validate_color(cls, v: str | None) -> str | None:
         if v is not None:  # pragma: no cover
             import re  # pragma: no cover
 

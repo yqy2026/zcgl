@@ -145,7 +145,7 @@ class OwnershipService:
         valid_project_ids = [p.id for p in valid_projects]
 
         if len(valid_project_ids) != len(project_ids):
-            invalid_ids = set(project_ids) - set(valid_project_ids)
+            invalid_ids = set(project_ids) - {str(p.id) for p in valid_projects}
             raise ValueError(f"以下项目ID不存在: {invalid_ids}")
 
         # 删除现有关联
@@ -194,13 +194,25 @@ class OwnershipService:
         ownership_crud.remove(db, id=id)
         return db_obj
 
-    def toggle_status(self, db: Session, *, id: str) -> Ownership:
+    def toggle_status(
+        self, db: Session, *, id: str, name: str | None = None, code: str | None = None
+    ) -> Ownership:
         """切换权属方状态"""
         db_obj = ownership_crud.get(db, id=id)
         if not db_obj:
             raise ValueError(f"权属方ID {id} 不存在")
 
-        update_in = OwnershipUpdate(is_active=not db_obj.is_active)
+        # Convert Column[str] to str using getattr
+        obj_name: str | None = name or getattr(db_obj, "name", None)
+        obj_code: str | None = code or getattr(db_obj, "code", None)
+        obj_short_name: str | None = getattr(db_obj, "short_name", None)
+
+        update_in = OwnershipUpdate(
+            name=obj_name,
+            code=obj_code,
+            short_name=obj_short_name,
+            is_active=not db_obj.is_active,
+        )
         return self.update_ownership(db, db_obj=db_obj, obj_in=update_in)
 
 

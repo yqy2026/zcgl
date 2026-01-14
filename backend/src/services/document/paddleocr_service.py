@@ -1,14 +1,23 @@
 #!/usr/bin/env python3
 """
-PaddleOCR 3.3 服务模块
+PaddleOCR 3.3 服务模块 [DEPRECATED]
 封装 PP-StructureV3 版面分析和 OCR 能力
 支持中文合同的智能识别和结构化输出
+
+⚠️ DEPRECATED (2026-01):
+    本模块已被标记为废弃。推荐使用 LLM Vision 提取方案：
+    - Qwen3-VL-Flash (推荐): services/core/qwen_vision_service.py
+    - DeepSeek-OCR: services/core/deepseek_vision_service.py
+    - Zhipu GLM-4V: services/core/zhipu_vision_service.py
+
+    使用 extractors/factory.py 进行统一调用。
 
 依赖安装: uv sync --extra pdf-ocr
 """
 
 import logging
 from pathlib import Path
+from threading import Lock
 from typing import Any
 
 # 使用项目的 safe_import 机制进行依赖管理
@@ -17,13 +26,20 @@ try:
     from ...core.import_utils import safe_import
 except ImportError:
     # 如果核心模块不可用，回退到标准导入
-    def safe_import(*args, **kwargs):
+    from collections.abc import Callable
+
+    def safe_import(
+        module_path: str,
+        *,
+        critical: bool = False,
+        fallback: Any = None,
+        mock_factory: Callable[[], Any] | None = None,
+        silent: bool = False,
+    ) -> Any:
+        """简化版safe_import，用于回退"""
         import importlib
 
-        return importlib.import_module(args[0]) if args else None
-
-    class DependencyPolicy:
-        STRICT = "strict"
+        return importlib.import_module(module_path)
 
 
 logger = logging.getLogger(__name__)
@@ -41,27 +57,33 @@ else:
     PaddleOCR = None
 
 # 尝试导入 PPStructure（支持多种版本）
-PPStructure = None
+_PPStructure: Any = None
 if _PADDLEOCR_MODULE is not None:
     try:
         # 优先尝试 PPStructureV3 (最新版本)
-        from paddleocr import PPStructureV3 as PPStructure
+        from paddleocr import PPStructureV3 as _PPStructureV3
+
+        _PPStructure = _PPStructureV3
 
         logger.info("使用 PPStructureV3 (最新版本)")
     except ImportError:
         try:
             # 尝试 PPStructure (标准版本)
-            from paddleocr import PPStructure
+            from paddleocr import PPStructure as _PPStructureStd
+
+            _PPStructure = _PPStructureStd
 
             logger.info("使用 PPStructure (标准版本)")
         except ImportError:
             try:
                 # 尝试直接从子模块导入
-                from paddleocr.ppstructure import PPStructure
+                from paddleocr.ppstructure import PPStructure as _PPStructureSub
+
+                _PPStructure = _PPStructureSub
 
                 logger.info("使用 PPStructure (子模块版本)")
             except ImportError:
-                PPStructure = None
+                _PPStructure = None
                 logger.warning(
                     "PPStructure 不可用，将使用基础 OCR 功能。"
                     "如需完整功能，请安装: uv sync --extra pdf-ocr"
@@ -108,15 +130,18 @@ class PaddleOCRService:
 
         self._init_engines()
 
-    def _init_engines(self):
+    def _init_engines(self) -> None:
         """初始化引擎"""
         # 尝试初始化 PP-StructureV3 (需要 paddlex[ocr] 依赖)
         try:
-            self._structure_engine = PPStructure(
-                lang=self.lang,
-                use_table_recognition=True,
-            )
-            logger.info("PP-StructureV3 引擎初始化成功")
+            if _PPStructure is not None:
+                self._structure_engine = _PPStructure(
+                    lang=self.lang,
+                    use_table_recognition=True,
+                )
+                logger.info("PP-StructureV3 引擎初始化成功")
+            else:
+                self._structure_engine = None
         except Exception as e:
             # PP-StructureV3 需要额外依赖,记录警告但继续
             logger.critical(f"PP-StructureV3 初始化失败: {e}")
@@ -160,8 +185,8 @@ class PaddleOCRService:
                 "structure": [],
             }
 
-        file_path = Path(file_path)
-        if not file_path.exists():
+        file_path_obj = Path(file_path)
+        if not file_path_obj.exists():
             return {
                 "success": False,
                 "error": f"文件不存在: {file_path}",
@@ -180,7 +205,7 @@ class PaddleOCRService:
                 }
 
             # 调用 PP-StructureV3 处理
-            result = self._structure_engine(str(file_path))
+            result = self._structure_engine(str(file_path_obj))
 
             # 解析结果
             parsed_result = self._parse_structure_result(result)
@@ -201,7 +226,7 @@ class PaddleOCRService:
                 "structure": [],
             }
 
-    def _parse_structure_result(self, result: list) -> dict[str, Any]:
+    def _parse_structure_result(self, result: list[Any]) -> dict[str, Any]:
         """
         解析 PP-StructureV3 返回结果
 
@@ -258,7 +283,7 @@ class PaddleOCRService:
             "page_count": len(result),
         }
 
-    def _extract_text_from_item(self, item: dict) -> str:
+    def _extract_text_from_item(self, item: dict[str, Any]) -> str:
         """从结构项中提取文本"""
         res = item.get("res", [])
         if isinstance(res, list):
@@ -266,14 +291,14 @@ class PaddleOCRService:
             for line in res:
                 if isinstance(line, dict):
                     texts.append(line.get("text", ""))
-                elif isinstance(line, (list, tuple)) and len(line) >= 2:
+                elif isinstance(line, list | tuple) and len(line) >= 2:
                     texts.append(
                         str(line[1][0]) if isinstance(line[1], tuple) else str(line[1])
                     )
             return "\n".join(texts)
         return str(res)
 
-    def _extract_table_cells(self, item: dict) -> list[list[str]]:
+    def _extract_table_cells(self, item: dict[str, Any]) -> list[list[str]]:
         """从表格项中提取单元格数据"""
         res = item.get("res", {})
         if isinstance(res, dict):
@@ -326,6 +351,12 @@ class PaddleOCRService:
             }
 
         try:
+            if self._ocr_engine is None:
+                return {
+                    "success": False,
+                    "error": "OCR engine not initialized",
+                    "text": "",
+                }
             result = self._ocr_engine.ocr(str(file_path), cls=True)
 
             # 合并所有文本
@@ -443,11 +474,11 @@ class PaddleOCRService:
 
 
 # 单例实例和线程锁
-_paddleocr_service = None
-_paddleocr_lock = None
+_paddleocr_service: PaddleOCRService | None = None
+_paddleocr_lock: Lock | None = None
 
 
-def _get_lock():
+def _get_lock() -> Lock:
     """延迟初始化锁（避免模块导入时创建）"""
     global _paddleocr_lock
     if _paddleocr_lock is None:

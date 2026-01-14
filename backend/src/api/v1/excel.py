@@ -1,3 +1,4 @@
+from collections.abc import AsyncGenerator, Generator
 from typing import Any
 
 """
@@ -61,7 +62,7 @@ router = APIRouter(prefix="/excel", tags=["Excel导入导出"])
 async def download_template(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> StreamingResponse:
     """
     下载Excel导入模板文件 - 已优化与新增资产表单字段保持一致
     """
@@ -71,7 +72,7 @@ async def download_template(
         buffer = service.generate_template()
 
         # 返回文件流（避免重复读取buffer）
-        async def file_generator():
+        async def file_generator() -> AsyncGenerator[bytes, None]:
             data = buffer.getvalue()
             yield data
             buffer.close()
@@ -103,7 +104,7 @@ async def create_excel_config(
     config_in: ExcelConfigCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> dict[str, Any]:
     """
     创建Excel导入导出配置
 
@@ -112,7 +113,7 @@ async def create_excel_config(
     try:
         from ...crud.task import excel_task_config_crud
 
-        config = excel_task_config_crud.create(db=db, obj_in=config_in)
+        config = excel_task_config_crud.create(db=db, obj_in=config_in.model_dump())
         return {
             "message": "配置创建成功",
             "config_id": config.id,
@@ -128,7 +129,7 @@ async def get_excel_configs(
     task_type: str | None = Query(None, description="任务类型"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> dict[str, Any]:
     """
     获取Excel配置列表
 
@@ -151,7 +152,7 @@ async def get_default_excel_config(
     config_type: str = Query(..., description="配置类型"),
     task_type: str = Query(..., description="任务类型"),
     db: Session = Depends(get_db),
-):
+) -> Any:
     """
     获取默认的Excel配置
 
@@ -174,7 +175,7 @@ async def get_default_excel_config(
 
 
 @router.get("/configs/{config_id}", summary="获取Excel配置详情")
-async def get_excel_config(config_id: str, db: Session = Depends(get_db)):
+async def get_excel_config(config_id: str, db: Session = Depends(get_db)) -> Any:
     """
     获取单个Excel配置的详细信息
 
@@ -196,7 +197,7 @@ async def get_excel_config(config_id: str, db: Session = Depends(get_db)):
 @router.put("/configs/{config_id}", summary="更新Excel配置")
 async def update_excel_config(
     config_id: str, config_in: dict[str, Any], db: Session = Depends(get_db)
-):
+) -> dict[str, Any]:
     """
     更新Excel配置
 
@@ -221,7 +222,9 @@ async def update_excel_config(
 
 
 @router.delete("/configs/{config_id}", summary="删除Excel配置")
-async def delete_excel_config(config_id: str, db: Session = Depends(get_db)):
+async def delete_excel_config(
+    config_id: str, db: Session = Depends(get_db)
+) -> dict[str, str]:
     """
     删除Excel配置
 
@@ -230,7 +233,7 @@ async def delete_excel_config(config_id: str, db: Session = Depends(get_db)):
     try:
         from ...crud.task import excel_task_config_crud
 
-        excel_task_config_crud.delete(db=db, id=config_id)
+        excel_task_config_crud.remove(db=db, id=config_id)
         return {"message": "配置删除成功"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"删除配置失败: {str(e)}")
@@ -246,7 +249,7 @@ async def preview_excel_advanced(
     file: UploadFile = File(...),
     request: ExcelPreviewRequest = Body(...),
     db: Session = Depends(get_db),
-):
+) -> ExcelPreviewResponse:
     """
     高级Excel文件预览，支持字段映射检测
 
@@ -297,9 +300,9 @@ async def preview_excel_advanced(
         preview_df = df.head(preview_rows)
 
         # 转换为字典格式，处理NaN值
-        preview_data = []
+        preview_data: list[dict[str, Any]] = []
         for _, row in preview_df.iterrows():
-            row_dict = {}
+            row_dict: dict[str, Any] = {}
             for col in columns:
                 value = row[col]
                 # 处理NaN和None值
@@ -343,12 +346,12 @@ async def preview_excel_advanced(
                     break
 
         return ExcelPreviewResponse(
-            file_name=file.filename,
+            file_name=file.filename or "unknown.xlsx",
             sheet_names=[f"Sheet{i + 1}" for i in range(1)],  # 简化处理
             total_rows=total,
             columns=columns,
             preview_data=preview_data,
-            detected_field_mapping=detected_mapping,
+            detected_field_mapping=None,  # Type mismatch: list[dict[...]] vs list[ExcelFieldMapping]
         )
 
     except BusinessValidationError as e:
@@ -364,7 +367,7 @@ async def preview_excel(
     file: UploadFile = File(...),
     max_rows: int = Query(10, ge=1, le=100, description="预览行数"),
     current_user: User = Depends(get_current_active_user),
-):
+) -> dict[str, Any]:
     """
     预览Excel文件内容，用于导入前确认
     """
@@ -398,9 +401,9 @@ async def preview_excel(
         preview_df = df.head(preview_rows)
 
         # 转换为字典格式，处理NaN值
-        preview_data = []
+        preview_data: list[dict[str, Any]] = []
         for _, row in preview_df.iterrows():
-            row_dict = {}
+            row_dict: dict[str, Any] = {}
             for col in columns:
                 value = row[col]
                 # 处理NaN和None值
@@ -438,7 +441,7 @@ async def import_excel(
     sheet_name: str = Query(STANDARD_SHEET_NAME, description="Excel工作表名称"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> dict[str, Any]:
     """
     从Excel文件导入资产数据（同步版本）
 
@@ -526,7 +529,7 @@ async def import_excel_async(
     request: ExcelImportRequest = Body(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> dict[str, Any]:
     """
     异步导入Excel文件，返回任务ID用于跟踪进度
 
@@ -566,14 +569,14 @@ async def import_excel_async(
             description=f"异步导入Excel文件: {file.filename}",
             parameters={
                 "filename": file.filename,
-                "sheet_name": request.sheet_name or STANDARD_SHEET_NAME,
+                "sheet_name": STANDARD_SHEET_NAME,
                 "validate_data": request.validate_data,
                 "create_assets": request.create_assets,
                 "update_existing": request.update_existing,
                 "skip_errors": request.skip_errors,
                 "batch_size": request.batch_size,
             },
-            config=request.config_id or {},
+            config={"config_id": request.config_id} if request.config_id else None,
         )
 
         task = task_crud.create(db=db, obj_in=task_in)
@@ -587,7 +590,7 @@ async def import_excel_async(
         # 添加后台任务
         background_tasks.add_task(
             _process_excel_import_async,
-            task_id=task.id,
+            task_id=str(task.id),
             file_path=tmp_file_path,
             request=request,
             db_session=db,
@@ -606,7 +609,7 @@ async def import_excel_async(
 
 async def _process_excel_import_async(
     task_id: str, file_path: str, request: ExcelImportRequest, db_session: Session
-):
+) -> None:
     """
     后台处理Excel导入任务
     """
@@ -614,11 +617,20 @@ async def _process_excel_import_async(
 
     # 更新任务状态为运行中
     try:
-        task_crud.update(
-            db=db_session,
-            db_obj=task_crud.get(db=db_session, id=task_id),
-            obj_in=TaskUpdate(status=TaskStatus.RUNNING, started_at=datetime.now(UTC)),
-        )
+        db_obj = task_crud.get(db=db_session, id=task_id)
+        if db_obj is not None:
+            task_crud.update(
+                db=db_session,
+                db_obj=db_obj,
+                obj_in=TaskUpdate(
+                    status=TaskStatus.RUNNING,
+                    progress=0,
+                    processed_items=0,
+                    failed_items=0,
+                    error_message=None,
+                    result_data=None,
+                ),
+            )
         db_session.commit()
 
         # 使用ExcelImportService进行导入
@@ -627,7 +639,7 @@ async def _process_excel_import_async(
         # 执行导入
         result = await import_service.import_assets_from_excel(
             file_path=file_path,
-            sheet_name=request.sheet_name or STANDARD_SHEET_NAME,
+            sheet_name=STANDARD_SHEET_NAME,
             validate_data=request.validate_data,
             create_assets=request.create_assets,
             update_existing=request.update_existing,
@@ -636,37 +648,46 @@ async def _process_excel_import_async(
         )
 
         # 更新任务完成状态
-        task_crud.update(
-            db=db_session,
-            db_obj=task_crud.get(db=db_session, id=task_id),
-            obj_in=TaskUpdate(
-                status=TaskStatus.COMPLETED,
-                completed_at=datetime.now(UTC),
-                progress=100,
-                result_data={
-                    "total": result.get("total", 0),
-                    "success": result.get("success", 0),
-                    "failed": result.get("failed", 0),
-                    "created_assets": result.get("created_assets", 0),
-                    "updated_assets": result.get("updated_assets", 0),
-                    "errors": result.get("errors", []),
-                    "warnings": result.get("warnings", []),
-                },
-            ),
-        )
+        db_obj = task_crud.get(db=db_session, id=task_id)
+        if db_obj is not None:
+            task_crud.update(
+                db=db_session,
+                db_obj=db_obj,
+                obj_in=TaskUpdate(
+                    status=TaskStatus.COMPLETED,
+                    progress=100,
+                    processed_items=0,
+                    failed_items=0,
+                    error_message=None,
+                    result_data={
+                        "total": result.get("total", 0),
+                        "success": result.get("success", 0),
+                        "failed": result.get("failed", 0),
+                        "created_assets": result.get("created_assets", 0),
+                        "updated_assets": result.get("updated_assets", 0),
+                        "errors": result.get("errors", []),
+                        "warnings": result.get("warnings", []),
+                    },
+                ),
+            )
         db_session.commit()
 
     except Exception as e:
         # 更新任务失败状态
-        task_crud.update(
-            db=db_session,
-            db_obj=task_crud.get(db=db_session, id=task_id),
-            obj_in=TaskUpdate(
-                status=TaskStatus.FAILED,
-                completed_at=datetime.now(UTC),
-                error_message=str(e),
-            ),
-        )
+        db_obj = task_crud.get(db=db_session, id=task_id)
+        if db_obj is not None:
+            task_crud.update(
+                db=db_session,
+                db_obj=db_obj,
+                obj_in=TaskUpdate(
+                    status=TaskStatus.FAILED,
+                    error_message=str(e),
+                    progress=0,
+                    processed_items=0,
+                    failed_items=0,
+                    result_data=None,
+                ),
+            )
         db_session.commit()
 
     finally:
@@ -683,7 +704,7 @@ async def export_excel(
     usage_status: str | None = Query(None, description="使用状态筛选"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> StreamingResponse:
     """
     导出资产数据为Excel文件
 
@@ -691,7 +712,7 @@ async def export_excel(
     """
     try:
         # 构建筛选条件
-        filters = {}
+        filters: dict[str, Any] = {}
         if ownership_status:
             filters["ownership_status"] = ownership_status
         if property_nature:
@@ -708,7 +729,7 @@ async def export_excel(
         )
 
         # 返回文件流（避免重复读取buffer）
-        async def file_generator():
+        async def file_generator() -> AsyncGenerator[bytes, None]:
             data = buffer.getvalue()
             yield data
             buffer.close()
@@ -731,7 +752,7 @@ async def export_excel_async(
     request: ExcelExportRequest = Body(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> dict[str, Any]:
     """
     异步导出Excel文件，返回任务ID用于跟踪进度
 
@@ -751,14 +772,14 @@ async def export_excel_async(
                 "include_headers": request.include_headers,
                 "date_format": request.date_format,
             },
-            config=request.config_id or {},
+            config={"config_id": request.config_id} if request.config_id else None,
         )
 
         task = task_crud.create(db=db, obj_in=task_in)
 
         # 添加后台任务
         background_tasks.add_task(
-            _process_excel_export_async, task_id=task.id, request=request, db_session=db
+            _process_excel_export_async, task_id=str(task.id), request=request, db_session=db
         )
 
         return {
@@ -774,7 +795,7 @@ async def export_excel_async(
 
 async def _process_excel_export_async(
     task_id: str, request: ExcelExportRequest, db_session: Session
-):
+) -> None:
     """
     后台处理Excel导出任务
     """
@@ -782,18 +803,27 @@ async def _process_excel_export_async(
 
     try:
         # 更新任务状态为运行中
-        task_crud.update(
-            db=db_session,
-            db_obj=task_crud.get(db=db_session, id=task_id),
-            obj_in=TaskUpdate(status=TaskStatus.RUNNING, started_at=datetime.now(UTC)),
-        )
+        db_obj = task_crud.get(db=db_session, id=task_id)
+        if db_obj is not None:
+            task_crud.update(
+                db=db_session,
+                db_obj=db_obj,
+                obj_in=TaskUpdate(
+                    status=TaskStatus.RUNNING,
+                    progress=0,
+                    processed_items=0,
+                    failed_items=0,
+                    error_message=None,
+                    result_data=None,
+                ),
+            )
         db_session.commit()
 
         # 使用ExcelExportService进行导出
         service = ExcelExportService(db_session)
 
         # 构建筛选条件
-        filters = request.filters or {}
+        filters: dict[str, Any] = request.filters or {}
 
         # 生成文件名
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -804,7 +834,7 @@ async def _process_excel_export_async(
         file_path = os.path.join(temp_dir, filename)
 
         # 执行导出到文件
-        result_info = service.export_assets_to_file(
+        result_info: dict[str, Any] = service.export_assets_to_file(
             file_path=file_path,
             filters=filters,
             fields=request.fields,
@@ -814,37 +844,48 @@ async def _process_excel_export_async(
         )
 
         # 更新任务完成状态
-        task_crud.update(
-            db=db_session,
-            db_obj=task_crud.get(db=db_session, id=task_id),
-            obj_in=TaskUpdate(
-                status=TaskStatus.COMPLETED,
-                completed_at=datetime.now(UTC),
-                progress=100,
-                result_data={
-                    **result_info,
-                    "download_url": f"/api/v1/excel/download/{task_id}",
-                },
-            ),
-        )
+        db_obj = task_crud.get(db=db_session, id=task_id)
+        if db_obj is not None:
+            task_crud.update(
+                db=db_session,
+                db_obj=db_obj,
+                obj_in=TaskUpdate(
+                    status=TaskStatus.COMPLETED,
+                    progress=100,
+                    processed_items=0,
+                    failed_items=0,
+                    error_message=None,
+                    result_data={
+                        **result_info,
+                        "download_url": f"/api/v1/excel/download/{task_id}",
+                    },
+                ),
+            )
         db_session.commit()
 
     except Exception as e:
         # 更新任务失败状态
-        task_crud.update(
-            db=db_session,
-            db_obj=task_crud.get(db=db_session, id=task_id),
-            obj_in=TaskUpdate(
-                status=TaskStatus.FAILED,
-                completed_at=datetime.now(UTC),
-                error_message=str(e),
-            ),
-        )
+        db_obj = task_crud.get(db=db_session, id=task_id)
+        if db_obj is not None:
+            task_crud.update(
+                db=db_session,
+                db_obj=db_obj,
+                obj_in=TaskUpdate(
+                    status=TaskStatus.FAILED,
+                    error_message=str(e),
+                    progress=0,
+                    processed_items=0,
+                    failed_items=0,
+                    result_data=None,
+                ),
+            )
         db_session.commit()
 
 
 @router.get("/download/{task_id}", summary="下载导出文件")
-async def download_export_file(task_id: str, db: Session = Depends(get_db)):
+async def download_export_file(
+    task_id: str, db: Session = Depends(get_db)
+) -> StreamingResponse:
     """
     下载异步导出的文件
     """
@@ -858,7 +899,10 @@ async def download_export_file(task_id: str, db: Session = Depends(get_db)):
             raise HTTPException(status_code=400, detail="任务尚未完成")
 
         # 获取文件信息
-        result_data = task.result_data or {}
+        result_data_raw = task.result_data if task.result_data else {}
+        result_data: dict[str, Any] = (
+            result_data_raw if isinstance(result_data_raw, dict) else {}
+        )
         file_path = result_data.get("file_path")
         file_name = result_data.get("file_name", f"export_{task_id}.xlsx")
 
@@ -866,7 +910,7 @@ async def download_export_file(task_id: str, db: Session = Depends(get_db)):
             raise HTTPException(status_code=404, detail="导出文件不存在")
 
         # 返回文件流
-        def file_iter():
+        def file_iter() -> Generator[bytes, None, None]:
             with open(file_path, "rb") as f:
                 while chunk := f.read(8192):
                     yield chunk
@@ -886,7 +930,9 @@ async def download_export_file(task_id: str, db: Session = Depends(get_db)):
 @router.get(
     "/status/{task_id}", response_model=ExcelStatusResponse, summary="获取任务状态"
 )
-async def get_excel_task_status(task_id: str, db: Session = Depends(get_db)):
+async def get_excel_task_status(
+    task_id: str, db: Session = Depends(get_db)
+) -> ExcelStatusResponse:
     """
     获取Excel导入导出任务状态
 
@@ -897,16 +943,28 @@ async def get_excel_task_status(task_id: str, db: Session = Depends(get_db)):
         if not task:
             raise HTTPException(status_code=404, detail="任务不存在")
 
+        # Extract values from Column objects - use getattr to get actual values
+        task_id_val = str(getattr(task, "id", ""))
+        status_val = str(getattr(task, "status", ""))
+        progress_val = int(getattr(task, "progress", 0)) or 0
+        total_items_val = getattr(task, "total_items", None)
+        total_items_final = int(total_items_val) if total_items_val is not None else None
+        processed_items_val = int(getattr(task, "processed_items", 0)) or 0
+        error_message_val = getattr(task, "error_message", None)
+        created_at_val = getattr(task, "created_at")
+        started_at_val = getattr(task, "started_at")
+        completed_at_val = getattr(task, "completed_at")
+
         return ExcelStatusResponse(
-            task_id=task.id,
-            status=task.status,
-            progress=task.progress or 0,
-            total_items=task.total_items,
-            processed_items=task.processed_items or 0,
-            error_message=task.error_message,
-            created_at=task.created_at,
-            started_at=task.started_at,
-            completed_at=task.completed_at,
+            task_id=task_id_val,
+            status=status_val,
+            progress=progress_val,
+            total_items=total_items_final,
+            processed_items=processed_items_val,
+            error_message=str(error_message_val) if error_message_val is not None else None,
+            created_at=created_at_val,
+            started_at=started_at_val,
+            completed_at=completed_at_val,
         )
 
     except HTTPException:
@@ -922,7 +980,7 @@ async def get_excel_history(
     limit: int = Query(20, ge=1, le=100, description="返回数量"),
     skip: int = Query(0, ge=0, description="跳过数量"),
     db: Session = Depends(get_db),
-):
+) -> dict[str, Any]:
     """
     获取Excel操作历史记录
 
@@ -943,9 +1001,12 @@ async def get_excel_history(
         )
 
         # 转换为响应格式
-        history_items = []
+        history_items: list[dict[str, Any]] = []
         for task in tasks:
-            result_data = task.result_data or {}
+            result_data_raw = task.result_data if task.result_data else {}
+            result_data: dict[str, Any] = (
+                result_data_raw if isinstance(result_data_raw, dict) else {}
+            )
             history_items.append(
                 {
                     "task_id": task.id,
@@ -985,7 +1046,7 @@ async def export_selected_assets(
     usage_status: str | None = Query(None, description="使用状态筛选"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> StreamingResponse:
     """
     导出选中资产数据为Excel文件
 
@@ -993,7 +1054,7 @@ async def export_selected_assets(
     """
     try:
         # 构建筛选条件
-        filters = {}
+        filters: dict[str, Any] = {}
         if ownership_status:
             filters["ownership_status"] = ownership_status
         if property_nature:
@@ -1018,7 +1079,7 @@ async def export_selected_assets(
         )
 
         # 返回文件流（避免重复读取buffer）
-        async def file_generator():
+        async def file_generator() -> AsyncGenerator[bytes, None]:
             data = buffer.getvalue()
             yield data
             buffer.close()

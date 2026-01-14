@@ -21,26 +21,21 @@ try:
 except Exception:  # nosec - B110: Intentional graceful degradation
     # Fallback to legacy shim
     try:
-        from ..auth_service import AuthService as AuthService  # type: ignore
+        from ..auth_service import AuthService as AuthService  # type: ignore[no-redef]
 
         __all__.append("AuthService")
     except Exception:  # nosec - B110: Intentional graceful degradation
         pass
 
+# Import AuditService
 try:
-    from .audit_service import EnhancedAuditLogger as EnhancedAuditLogger
+    from . import audit_service
 
-    __all__.append("EnhancedAuditLogger")
+    AuditService = audit_service.AuditService
+    EnhancedAuditLogger = audit_service.AuditService
+    __all__.extend(["AuditService", "EnhancedAuditLogger"])
 except Exception:  # nosec - B110: Intentional graceful degradation
-    # Fallback shim that exposes AuditService alias
-    try:
-        from ..audit_service import (
-            EnhancedAuditLogger as EnhancedAuditLogger,  # type: ignore
-        )
-
-        __all__.append("EnhancedAuditLogger")
-    except Exception:  # nosec - B110: Intentional graceful degradation
-        pass
+    pass
 
 try:
     from .security_service import SecurityService as SecurityService
@@ -48,8 +43,10 @@ try:
     __all__.append("SecurityService")
 except Exception:  # nosec - B110: Intentional graceful degradation
     # Provide a minimal stub to ensure import success
-    class SecurityService:  # type: ignore
-        def __init__(self, *args, **kwargs):  # type: ignore
+    _SecurityServiceStub = SecurityService
+
+    class SecurityService:  # type: ignore[no-redef]
+        def __init__(self, *args, **kwargs):
             pass
 
     __all__.append("SecurityService")
@@ -62,14 +59,16 @@ except Exception:  # nosec - B110: Intentional graceful degradation
     # Fallback to legacy shim
     try:
         from ..error_recovery_service import (
-            ErrorRecoveryEngine as ErrorRecoveryEngine,  # type: ignore
+            ErrorRecoveryEngine as ErrorRecoveryEngine,
         )
 
         __all__.append("ErrorRecoveryEngine")
     except Exception:  # nosec - B110: Intentional graceful degradation
         # Provide a minimal stub to ensure import success
-        class ErrorRecoveryEngine:  # type: ignore
-            def __init__(self, *args, **kwargs):  # type: ignore
+        _ErrorRecoveryEngineStub = ErrorRecoveryEngine
+
+        class ErrorRecoveryEngine:  # type: ignore[no-redef]
+            def __init__(self, *args, **kwargs):
                 pass
 
         __all__.append("ErrorRecoveryEngine")

@@ -5,9 +5,6 @@ Token Blacklist Manager 单元测试
 
 import time
 from datetime import datetime, timedelta
-from unittest.mock import patch
-
-import pytest
 
 from src.core.token_blacklist import TokenBlacklistManager, blacklist_manager
 

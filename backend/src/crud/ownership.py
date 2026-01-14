@@ -10,7 +10,7 @@ from ..schemas.ownership import OwnershipCreate, OwnershipUpdate
 class CRUDOwnership(CRUDBase[Ownership, OwnershipCreate, OwnershipUpdate]):
     """权属方CRUD操作类"""
 
-    def get(self, db: Session, id: Any) -> Ownership | None:
+    def get(self, db: Session, id: Any) -> Ownership | None:  # type: ignore[override]
         """获取单个权属方"""
         ownership_obj = super().get(db, id=id)
         if ownership_obj:
@@ -37,7 +37,6 @@ class CRUDOwnership(CRUDBase[Ownership, OwnershipCreate, OwnershipUpdate]):
         keyword: str | None = None,
     ) -> list[Ownership]:
         """获取多个权属方"""
-        query = db.query(Ownership)
         filters = {}
 
         # 构造过滤条件
@@ -46,10 +45,7 @@ class CRUDOwnership(CRUDBase[Ownership, OwnershipCreate, OwnershipUpdate]):
 
         # 构建基础查询
         stmt = self.query_builder.build_query(
-            db_session=db,
-            model=Ownership,
             filters=filters,
-            base_query=query,
             search_query=keyword,
             search_fields=["name", "short_name", "code"],
             sort_by="created_at",
@@ -77,16 +73,12 @@ class CRUDOwnership(CRUDBase[Ownership, OwnershipCreate, OwnershipUpdate]):
         skip = (search_params.page - 1) * search_params.size
         limit = search_params.size
 
-        query = db.query(Ownership)
         filters = {}
         if search_params.is_active is not None:
             filters["is_active"] = search_params.is_active
 
         stmt = self.query_builder.build_query(
-            db_session=db,
-            model=Ownership,
             filters=filters,
-            base_query=query,
             search_query=search_params.keyword,
             search_fields=["name", "short_name", "code"],
             sort_by="created_at",
@@ -97,9 +89,7 @@ class CRUDOwnership(CRUDBase[Ownership, OwnershipCreate, OwnershipUpdate]):
 
         # Count
         count_stmt = self.query_builder.build_count_query(
-            model=Ownership,
             filters=filters,
-            base_query=query,
             search_query=search_params.keyword,
             search_fields=["name", "short_name", "code"],
         )

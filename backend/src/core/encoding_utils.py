@@ -10,7 +10,7 @@ from typing import Any
 
 
 # 强制设置UTF-8编码输出
-def setup_utf8_encoding():
+def setup_utf8_encoding() -> bool:
     """设置UTF-8编码环境"""
     try:
         # 强制设置stdout和stderr为UTF-8编码
@@ -35,7 +35,9 @@ def safe_print(message: Any) -> None:
         sys.stdout.flush()
     except UnicodeEncodeError:
         # 降级到ASCII编码，替换无法编码的字符
-        sys.stdout.write(str(message).encode("ascii", errors="replace").decode("ascii") + "\n")
+        sys.stdout.write(
+            str(message).encode("ascii", errors="replace").decode("ascii") + "\n"
+        )
         sys.stdout.flush()
     except Exception:
         sys.stdout.write("[Encoding Error: Unable to display message]\n")
@@ -70,7 +72,7 @@ setup_utf8_encoding()
 class EncodingSafeHandler(logging.Handler):
     """编码安全的日志处理器"""
 
-    def emit(self, record):
+    def emit(self, record: logging.LogRecord) -> None:
         try:
             # 格式化日志消息
             msg = self.format(record)

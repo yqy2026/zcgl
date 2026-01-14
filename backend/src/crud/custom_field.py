@@ -26,14 +26,19 @@ class CRUDCustomField(
         self,
         db: Session,
         *,
-        filters: dict[str, Any] = None,
+        filters: dict[str, Any] | None = None,
         skip: int = 0,
         limit: int = 100,
     ) -> list[AssetCustomField]:
         """根据筛选条件获取字段列表"""
-        query = db.query(self.model)
+        if filters is None:
+            filters = {}
 
-        qb_filters = {}
+        from sqlalchemy import select
+
+        base_query = select(self.model)
+
+        qb_filters: dict[str, Any] = {}
         if filters:
             if "field_type" in filters:
                 qb_filters["field_type"] = filters["field_type"]
@@ -43,26 +48,29 @@ class CRUDCustomField(
                 qb_filters["is_active"] = filters["is_active"]
             # asset_id logic in original was pass/empty, keeping it implicitly handled or ignored
 
-        return self.query_builder.build_query(
-            db_session=db,
-            model=self.model,
+        query = self.query_builder.build_query(
             filters=qb_filters,
-            base_query=query,
+            base_query=base_query,
             sort_by="sort_order",
             sort_desc=False,
             skip=skip,
             limit=limit,
-        ).all()
+        )
+        return list(db.execute(query).scalars().all())
 
     def get_active_fields(self, db: Session) -> list[AssetCustomField]:
         """获取所有启用的字段"""
-        return self.query_builder.build_query(
-            db_session=db,
-            model=self.model,
+        from sqlalchemy import select
+
+        base_query = select(self.model)
+
+        query = self.query_builder.build_query(
             filters={"is_active": True},
+            base_query=base_query,
             sort_by="sort_order",
             sort_desc=False,
-        ).all()
+        )
+        return list(db.execute(query).scalars().all())
 
     def get_asset_field_values(
         self, db: Session, *, asset_id: str
@@ -79,4 +87,4 @@ class CRUDCustomField(
 
 
 # 创建自定义字段CRUD实例
-custom_field_crud = CRUDCustomField(AssetCustomField)
+custom_field_crud: CRUDCustomField = CRUDCustomField(AssetCustomField)

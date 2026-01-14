@@ -1,7 +1,7 @@
 import asyncio
-import sys
-import os
 import json
+import os
+import sys
 
 # Setup Path
 src_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../src"))
@@ -20,24 +20,25 @@ except ImportError:
 
 from services.document.llm_contract_extractor import LLMContractExtractor
 
+
 async def verify_real_connection():
     print("Initializing LLMContractExtractor with REAL configuration...")
-    
+
     api_key = os.getenv("LLM_API_KEY")
     base_url = os.getenv("LLM_BASE_URL")
     model = os.getenv("LLM_MODEL")
-    
-    print(f"Configuration detected:")
+
+    print("Configuration detected:")
     print(f"  API Key: {'*' * 8 if api_key else 'MISSING'}")
     print(f"  Base URL: {base_url}")
     print(f"  Model: {model}")
-    
+
     if not api_key:
         print("ERROR: LLM_API_KEY is not set.")
         return
 
     extractor = LLMContractExtractor()
-    
+
     # Sample tiny markdown contract
     sample_text = """
     # 房屋租赁合同
@@ -61,11 +62,11 @@ async def verify_real_connection():
     每月租金为人民币 15000 元。
     押金为人民币 30000 元。
     """
-    
+
     print("\nSending request to LLM... (This may take a few seconds)")
     try:
         result = await extractor.extract(sample_text)
-        
+
         if result['success']:
             print("\n✅ Extraction SUCCESS!")
             print("Extracted Data:")
@@ -74,7 +75,7 @@ async def verify_real_connection():
         else:
             print("\n❌ Extraction FAILED.")
             print(f"Error: {result.get('error')}")
-            
+
     except Exception as e:
         print(f"\n❌ Exception during execution: {e}")
 

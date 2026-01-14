@@ -11,7 +11,7 @@ from sqlalchemy import Column, DateTime, Integer, String, Text
 from ..database import Base
 
 
-class OperationLog(Base):
+class OperationLog(Base):  # type: ignore[valid-type, misc]
     """操作日志模型"""
 
     __tablename__ = "operation_logs"
@@ -56,5 +56,5 @@ class OperationLog(Base):
         DateTime, nullable=False, default=datetime.now, comment="创建时间"
     )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<OperationLog(user={self.username}, action={self.action}, resource={self.resource_type}:{self.resource_id})>"

@@ -2,6 +2,8 @@
 资产历史CRUD操作
 """
 
+from typing import Any
+
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
@@ -36,7 +38,7 @@ class HistoryCRUD:
             .all()
         )
 
-    def create(self, db: Session, **kwargs) -> AssetHistory:
+    def create(self, db: Session, **kwargs: Any) -> AssetHistory:
         """创建历史记录"""
         db_obj = AssetHistory(**kwargs)
         db.add(db_obj)
@@ -44,9 +46,9 @@ class HistoryCRUD:
         db.refresh(db_obj)
         return db_obj
 
-    def remove(self, db: Session, id: str) -> AssetHistory:
+    def remove(self, db: Session, id: str) -> AssetHistory | None:
         """删除历史记录"""
-        obj = db.query(AssetHistory).get(id)
+        obj = db.query(AssetHistory).filter(AssetHistory.id == id).first()
         if obj:
             db.delete(obj)
             db.commit()

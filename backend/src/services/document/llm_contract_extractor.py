@@ -12,7 +12,7 @@ class LLMContractExtractor:
     Delegates actual work to GLMAdapter, QwenAdapter etc. based on config.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.adapter = get_llm_extractor()
 
     async def extract(self, markdown_content: str) -> dict[str, Any]:
@@ -20,6 +20,8 @@ class LLMContractExtractor:
         Legacy text-only extraction (keeps backward compatibility).
         Ideally, adapters should handle both text and vision, but for now
         we primarily route 'vision' calls to the new adapters.
+
+        Note: This method is deprecated. Use extract_smart() instead.
         """
         # For pure text/markdown extraction, we might still want to use
         # the original prompt logic or delegate if the adapter supports text-only.
@@ -37,7 +39,9 @@ class LLMContractExtractor:
         # or (better) move it to a specific TextAdapter.
         # To avoid breaking too much, I'll allow this class to hold the legacy text logic
         # but usage of 'extract_from_pdf_vision' will go to the adapter.
-        pass
+
+        # TODO: Implement text-only extraction or remove this method
+        raise NotImplementedError("Text-only extraction not implemented. Use extract_smart() instead.")
 
     async def extract_smart(
         self, pdf_path: str, force_method: str | None = None

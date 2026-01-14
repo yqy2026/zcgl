@@ -1,6 +1,7 @@
 import logging
 import secrets
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
@@ -15,6 +16,10 @@ from .session_service import SessionService
 from .user_management_service import UserManagementService
 
 logger = logging.getLogger(__name__)
+
+# Type aliases for better readability
+TokenType = str
+JtiType = str
 
 # JWT配置
 SECRET_KEY = settings.SECRET_KEY
@@ -37,11 +42,11 @@ class AuthenticationService:
         self.session_service = SessionService(db)
         self.token_blacklist = blacklist_manager
 
-    def _generate_jti(self) -> str:
+    def _generate_jti(self) -> JtiType:
         """生成JWT ID"""
         return secrets.token_urlsafe(32)
 
-    def _is_token_revoked(self, jti: str) -> bool:
+    def _is_token_revoked(self, jti: JtiType) -> bool:
         """检查令牌是否已被撤销"""
         return self.token_blacklist.is_blacklisted(jti)
 
@@ -65,7 +70,8 @@ class AuthenticationService:
             raise BusinessLogicError("账户已被锁定，请稍后再试")
 
         # 验证密码
-        if not self.password_service.verify_password(password, user.password_hash):
+        password_hash: str = getattr(user, "password_hash", "")
+        if not self.password_service.verify_password(password, password_hash):
             # 增加失败次数
             user.failed_login_attempts += 1
 
@@ -94,32 +100,32 @@ class AuthenticationService:
         return user
 
     def create_tokens(
-        self, user: User, device_info: dict | None = None
+        self, user: User, device_info: dict[str, Any] | None = None
     ) -> TokenResponse:
         """创建JWT令牌"""
         now = datetime.now(UTC)
-        jti_access = self._generate_jti()
-        jti_refresh = self._generate_jti()
-        session_id = secrets.token_urlsafe(16)
+        jti_access: JtiType = self._generate_jti()
+        jti_refresh: JtiType = self._generate_jti()
+        session_id: str = secrets.token_urlsafe(16)
 
         # 生成设备指纹
-        device_fingerprint = None
+        device_fingerprint: str | None = None
         if device_info:
             import hashlib
 
-            fingerprint_data = [
+            fingerprint_data: list[str] = [
                 device_info.get("user_agent", ""),
                 device_info.get("ip_address", ""),
                 device_info.get("device_id", ""),
                 device_info.get("platform", ""),
             ]
-            fingerprint_string = "|".join(filter(None, fingerprint_data))
+            fingerprint_string: str = "|".join(filter(None, fingerprint_data))
             device_fingerprint = hashlib.sha256(
                 fingerprint_string.encode()
             ).hexdigest()[:16]
 
         # 访问令牌
-        access_token_data = {
+        access_token_data: dict[str, Any] = {
             "sub": user.id,
             "username": user.username,
             "role": user.role.value if hasattr(user.role, "value") else user.role,
@@ -134,10 +140,12 @@ class AuthenticationService:
             "aud": "land-property-system",
             "iss": "land-property-auth",
         }
-        access_token = jwt.encode(access_token_data, SECRET_KEY, algorithm=ALGORITHM)
+        access_token: TokenType = jwt.encode(
+            access_token_data, SECRET_KEY, algorithm=ALGORITHM
+        )
 
         # 刷新令牌
-        refresh_token_data = {
+        refresh_token_data: dict[str, Any] = {
             "sub": user.id,
             "type": "refresh",
             "jti": jti_refresh,
@@ -149,7 +157,9 @@ class AuthenticationService:
             "aud": "land-property-system",
             "iss": "land-property-auth",
         }
-        refresh_token = jwt.encode(refresh_token_data, SECRET_KEY, algorithm=ALGORITHM)
+        refresh_token: TokenType = jwt.encode(
+            refresh_token_data, SECRET_KEY, algorithm=ALGORITHM
+        )
 
         return TokenResponse(
             access_token=access_token,
@@ -167,22 +177,22 @@ class AuthenticationService:
     ) -> UserSession | None:
         """验证刷新令牌"""
         try:
-            payload = jwt.decode(
+            payload: dict[str, Any] = jwt.decode(
                 refresh_token,
                 SECRET_KEY,
                 algorithms=[ALGORITHM],
                 audience="land-property-system",
                 issuer="land-property-auth",
             )
-            user_id = payload.get("sub")
-            token_type = payload.get("type")
-            jti = payload.get("jti")
-            session_id = payload.get("session_id")
+            user_id: Any = payload.get("sub")
+            token_type: Any = payload.get("type")
+            jti: Any = payload.get("jti")
+            session_id: Any = payload.get("session_id")
 
             if user_id is None or token_type != "refresh":
                 return None
 
-            if self._is_token_revoked(jti):
+            if jti and self._is_token_revoked(jti):
                 return None
 
         except JWTError as e:
@@ -191,7 +201,7 @@ class AuthenticationService:
 
         # 查找会话 (Delegating to SessionService would be cleaner but requires careful session loop handling)
         # Using session service for specific lookup
-        session = (
+        session: UserSession | None = (
             self.db.query(UserSession)
             .filter(
                 UserSession.refresh_token == refresh_token,

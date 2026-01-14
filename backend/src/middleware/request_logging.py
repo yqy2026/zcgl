@@ -5,10 +5,11 @@
 
 import time
 import uuid
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.types import ASGIApp
 
 from ..core.logging_security import SensitiveDataFilter, log_request_info
 
@@ -16,11 +17,13 @@ from ..core.logging_security import SensitiveDataFilter, log_request_info
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """请求日志中间件"""
 
-    def __init__(self, app):
+    def __init__(self, app: ASGIApp) -> None:
         super().__init__(app)
         self.sensitive_filter = SensitiveDataFilter()
 
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
         # 生成请求ID
         request_id = str(uuid.uuid4())
 
@@ -45,7 +48,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
         # 对查询参数进行脱敏处理
         query_params = dict(request.query_params)
-        filtered_query_params = {}
+        filtered_query_params: dict[str, str] = {}
         for key, value in query_params.items():
             # 检查键是否敏感
             if self.sensitive_filter._is_sensitive_key(key):
@@ -93,7 +96,9 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
 
 # 便捷函数创建中间件
-def create_request_logging_middleware(app=None):
+def create_request_logging_middleware(
+    app: ASGIApp | None = None,
+) -> RequestLoggingMiddleware | type[RequestLoggingMiddleware]:
     """创建请求日志中间件"""
     if app is None:  # pragma: no cover
         return RequestLoggingMiddleware  # pragma: no cover

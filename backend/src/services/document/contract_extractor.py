@@ -21,8 +21,12 @@ try:
     from .paddleocr_service import PADDLEOCR_AVAILABLE, get_paddleocr_service
 except ImportError:
     PADDLEOCR_AVAILABLE = False
-    get_paddleocr_service = None  # type: ignore[assignment,misc]
-    get_markdown_contract_parser = None  # type: ignore[assignment,misc]
+
+    def get_paddleocr_service(*args: Any, **kwargs: Any) -> Any:  # type: ignore[misc]
+        return None
+
+    def get_markdown_contract_parser() -> Any:  # type: ignore[misc]
+        return None
 
 
 class ExtractionMethod(Enum):
@@ -46,7 +50,7 @@ class ExtractedField:
 class ContractExtractor:
     """合同信息提取器 - 智能PDF导入的核心组件"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """初始化提取器"""
         self.extraction_rules = self._load_fixed_extraction_rules()
 
@@ -303,7 +307,7 @@ class ContractExtractor:
             # 获取 PaddleOCR 服务
             ocr_service = get_paddleocr_service(use_gpu=use_gpu)
 
-            if not ocr_service.is_available():
+            if not ocr_service or (hasattr(ocr_service, "is_available") and not ocr_service.is_available):
                 logger.warning("PaddleOCR 服务不可用")
                 return {
                     "success": False,
@@ -777,7 +781,7 @@ if __name__ == "__main__":  # pragma: no cover
     # 测试固定租金合同提取  # pragma: no cover
     def extract_fixed_rent_contract_info(
         contract_text: str,
-    ) -> dict:  # pragma: no cover
+    ) -> dict[str, Any]:  # pragma: no cover
         """
         提取固定租金合同信息
 

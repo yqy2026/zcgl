@@ -2,6 +2,8 @@
 联系人 CRUD 操作
 """
 
+from typing import Any
+
 from sqlalchemy.orm import Session
 
 from ..models.contact import Contact, ContactType
@@ -54,7 +56,7 @@ class ContactCRUD:
             .first()
         )
 
-    def create(self, db: Session, obj_in: dict) -> Contact:
+    def create(self, db: Session, obj_in: dict[str, Any]) -> Contact:
         """创建联系人"""
         # 如果设置为主要联系人，先取消该实体的其他主要联系人
         if obj_in.get("is_primary", False):
@@ -70,7 +72,7 @@ class ContactCRUD:
         db.refresh(db_obj)
         return db_obj
 
-    def update(self, db: Session, db_obj: Contact, obj_in: dict) -> Contact:
+    def update(self, db: Session, db_obj: Contact, obj_in: dict[str, Any]) -> Contact:
         """更新联系人"""
         # 如果设置为主要联系人，先取消其他主要联系人
         if obj_in.get("is_primary", False) and not db_obj.is_primary:
@@ -88,11 +90,11 @@ class ContactCRUD:
         db.refresh(db_obj)
         return db_obj
 
-    def delete(self, db: Session, id: str) -> Contact:
+    def delete(self, db: Session, id: str) -> Contact | None:
         """软删除联系人（设置is_active=False）"""
         obj = self.get(db, id)
         if obj:
-            obj.is_active = False
+            obj.is_active = False  # type: ignore[assignment]
             db.commit()
             db.refresh(obj)
         return obj

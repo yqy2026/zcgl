@@ -78,7 +78,7 @@ def safe_divide(
     try:
         if denominator == 0:
             return default
-        return float(numerator / denominator)
+        return float(to_decimal(numerator) / to_decimal(denominator))
     except (ValueError, TypeError, ZeroDivisionError):
         return default
 

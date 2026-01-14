@@ -4,6 +4,7 @@
 
 import logging
 from datetime import datetime
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -23,7 +24,7 @@ async def calculate_occupancy_rate(
     ownership_status: str | None = Query(None, description="确权状态筛选"),
     ownership_entity: str | None = Query(None, description="权属方筛选"),
     db: Session = Depends(get_db),
-):
+) -> dict[str, Any]:
     """
     计算出租率
 
@@ -97,7 +98,7 @@ async def calculate_occupancy_rate(
 
 
 @router.get("/analysis", summary="出租率分析")
-async def analyze_occupancy(db: Session = Depends(get_db)):
+async def analyze_occupancy(db: Session = Depends(get_db)) -> dict[str, Any]:
     """
     出租率分析
 
@@ -181,7 +182,7 @@ async def analyze_occupancy(db: Session = Depends(get_db)):
 async def get_occupancy_trends(
     months: int = Query(12, ge=1, le=36, description="分析月数"),
     db: Session = Depends(get_db),
-):
+) -> dict[str, Any]:
     """
     获取出租率趋势（简化版本）
 

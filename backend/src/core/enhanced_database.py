@@ -57,12 +57,12 @@ class ConnectionPoolConfig:
 class EnhancedDatabaseManager:
     """增强的数据库管理器"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.engine: Engine | None = None
-        self.session_factory: sessionmaker | None = None
+        self.session_factory: sessionmaker[Session] | None = None
         self.config: ConnectionPoolConfig = self._load_config()
         self.metrics: DatabaseMetrics = DatabaseMetrics()
-        self.query_history: Queue = Queue(maxsize=1000)
+        self.query_history: Queue[dict[str, Any]] = Queue(maxsize=1000)
         self._metrics_lock = threading.Lock()
         self._pool_configured = False
 
@@ -88,7 +88,7 @@ class EnhancedDatabaseManager:
         logger.info(f"正在初始化数据库引擎: {database_url}")
 
         # 创建引擎配置
-        engine_kwargs = {
+        engine_kwargs: dict[str, Any] = {
             "echo": self.config.echo,
             "future": True,
         }
@@ -116,7 +116,7 @@ class EnhancedDatabaseManager:
                     "pool_pre_ping": self.config.pool_pre_ping,  # pragma: no cover
                     "connect_args": self.config.connect_args,  # pragma: no cover
                 }  # pragma: no cover
-            )  # pragma: no cover
+            )
 
         # 创建引擎
         self.engine = create_engine(database_url, **engine_kwargs)
@@ -125,18 +125,20 @@ class EnhancedDatabaseManager:
         self._setup_event_listeners()
 
         # 创建会话工厂
-        self.session_factory = sessionmaker(
+        self.session_factory = sessionmaker[Session](
             bind=self.engine, autocommit=False, autoflush=False, expire_on_commit=False
         )
 
         logger.info("数据库引擎初始化完成")
         return self.engine
 
-    def _setup_event_listeners(self):
+    def _setup_event_listeners(self) -> None:
         """设置数据库事件监听器"""
 
         @event.listens_for(self.engine, "connect")
-        def on_connect(dbapi_connection: DBAPIConnection, connection_record):
+        def on_connect(
+            dbapi_connection: DBAPIConnection, connection_record: Any
+        ) -> None:
             """连接事件"""
             with self._metrics_lock:
                 self.metrics.active_connections += 1
@@ -148,8 +150,10 @@ class EnhancedDatabaseManager:
 
         @event.listens_for(self.engine, "checkout")
         def on_checkout(
-            dbapi_connection: DBAPIConnection, connection_record, connection_proxy
-        ):
+            dbapi_connection: DBAPIConnection,
+            connection_record: Any,
+            connection_proxy: Any,
+        ) -> None:
             """检出连接事件"""
             with self._metrics_lock:
                 if connection_record and hasattr(
@@ -163,27 +167,40 @@ class EnhancedDatabaseManager:
                         self.metrics.pool_misses += 1  # pragma: no cover
 
         @event.listens_for(self.engine, "checkin")
-        def on_checkin(dbapi_connection: DBAPIConnection, connection_record):
+        def on_checkin(
+            dbapi_connection: DBAPIConnection, connection_record: Any
+        ) -> None:
             """检入连接事件"""
             with self._metrics_lock:
                 self.metrics.active_connections -= 1
 
         @event.listens_for(self.engine, "close")
-        def on_close(dbapi_connection, connection_record):
+        def on_close(dbapi_connection: Any, connection_record: Any) -> None:
             """关闭连接事件"""
             with self._metrics_lock:  # pragma: no cover
                 if self.metrics.active_connections > 0:  # pragma: no cover
                     self.metrics.active_connections -= 1  # pragma: no cover
 
         @event.listens_for(self.engine, "before_execute")
-        def on_execute(conn, clauseelement, multiparams, params, execution_options):
+        def on_execute(
+            conn: Any,
+            clauseelement: Any,
+            multiparams: Any,
+            params: Any,
+            execution_options: Any,
+        ) -> None:
             """执行查询事件"""
             conn.info.setdefault("query_start_time", time.time())
 
         @event.listens_for(self.engine, "after_execute")
         def after_execute(
-            conn, clauseelement, multiparams, params, execution_options, result
-        ):
+            conn: Any,
+            clauseelement: Any,
+            multiparams: Any,
+            params: Any,
+            execution_options: Any,
+            result: Any,
+        ) -> None:
             """查询执行后事件"""
             try:
                 start_time = conn.info.pop("query_start_time", time.time())
@@ -226,7 +243,7 @@ class EnhancedDatabaseManager:
             except Exception as e:  # pragma: no cover
                 logger.error(f"记录查询指标时出错: {e}")  # pragma: no cover
 
-    def _optimize_sqlite_connection(self, dbapi_connection):
+    def _optimize_sqlite_connection(self, dbapi_connection: Any) -> None:
         """优化SQLite连接"""
         cursor = dbapi_connection.cursor()
         try:
@@ -317,25 +334,25 @@ class EnhancedDatabaseManager:
         # 检查是否为SQLite StaticPool
         if hasattr(pool, "size"):  # pragma: no cover
             # 标准连接池（如MySQL/PostgreSQL）
-            status = {  # pragma: no cover
+            pool_status: dict[str, Any] = {  # pragma: no cover
                 "pool_size": pool.size(),  # pragma: no cover
-                "checked_in": pool.checkedin(),  # pragma: no cover
-                "checked_out": pool.checkedout(),  # pragma: no cover
-                "overflow": pool.overflow(),  # pragma: no cover
-                "invalid": pool.invalid(),  # pragma: no cover
+                "checked_in": pool.checkedin(),  # type: ignore[attr-defined]  # pragma: no cover
+                "checked_out": pool.checkedout(),  # type: ignore[attr-defined]  # pragma: no cover
+                "overflow": pool.overflow(),  # type: ignore[attr-defined]  # pragma: no cover
+                "invalid": pool.invalid(),  # type: ignore[attr-defined]  # pragma: no cover
                 "pool_type": "QueuePool",  # pragma: no cover
             }  # pragma: no cover
 
             # 计算连接使用率
             if pool.size() > 0:  # pragma: no cover
-                status["utilization"] = (
-                    pool.checkedout() / pool.size()
+                pool_status["utilization"] = (  # pragma: no cover
+                    pool.checkedout() / pool.size()  # type: ignore[attr-defined]  # pragma: no cover
                 ) * 100  # pragma: no cover
             else:  # pragma: no cover
-                status["utilization"] = 0  # pragma: no cover
+                pool_status["utilization"] = 0  # pragma: no cover
         else:
             # SQLite StaticPool
-            status = {
+            return {
                 "pool_size": 1,  # SQLite单连接
                 "checked_in": 1,
                 "checked_out": 0,
@@ -343,11 +360,24 @@ class EnhancedDatabaseManager:
                 "invalid": 0,
                 "pool_type": "StaticPool",
                 "utilization": 0,
+                "active_connections": self.metrics.active_connections,
+                "total_queries": self.metrics.total_queries,
+                "slow_queries": self.metrics.slow_queries,
+                "avg_response_time_ms": self.metrics.avg_response_time,
+                "pool_hits": self.metrics.pool_hits,
+                "pool_misses": self.metrics.pool_misses,
+                "pool_hit_rate": (
+                    self.metrics.pool_hits
+                    / (self.metrics.pool_hits + self.metrics.pool_misses)
+                    * 100
+                    if (self.metrics.pool_hits + self.metrics.pool_misses) > 0
+                    else 0
+                ),
             }
 
         # 添加指标信息
         metrics = self.get_metrics()
-        status.update(
+        pool_status.update(
             {
                 "active_connections": metrics.active_connections,
                 "total_queries": metrics.total_queries,
@@ -363,11 +393,11 @@ class EnhancedDatabaseManager:
             }
         )
 
-        return status
+        return pool_status
 
     def run_health_check(self) -> dict[str, Any]:
         """运行数据库健康检查"""
-        health_status = {
+        health_status: dict[str, Any] = {
             "healthy": True,
             "checks": {},
             "timestamp": datetime.now().isoformat(),
@@ -473,7 +503,7 @@ class EnhancedDatabaseManager:
                         cleanup_query,
                         {"cutoff_date": cutoff_date},  # pragma: no cover
                     )  # pragma: no cover
-                    cleaned_count += result.rowcount  # pragma: no cover
+                    cleaned_count += result.rowcount  # type: ignore[attr-defined]  # pragma: no cover
                     session.commit()  # pragma: no cover
                 except Exception:  # pragma: no cover  # nosec - B110: Intentional graceful degradation when history table doesn't exist
                     # 如果查询历史表不存在，跳过
@@ -494,7 +524,7 @@ class EnhancedDatabaseManager:
 
     def optimize_database(self) -> dict[str, Any]:
         """优化数据库性能"""
-        optimization_results = {
+        optimization_results: dict[str, Any] = {
             "timestamp": datetime.now().isoformat(),
             "actions_taken": [],
             "recommendations": [],
@@ -505,25 +535,33 @@ class EnhancedDatabaseManager:
                 # 分析慢查询
                 slow_queries = self.get_slow_queries(limit=10)
                 if slow_queries:
-                    optimization_results["actions_taken"].append(
-                        f"分析了 {len(slow_queries)} 个慢查询"
-                    )
-                    optimization_results["recommendations"].append(
-                        "考虑添加适当的索引来优化慢查询"
-                    )
+                    if isinstance(optimization_results["actions_taken"], list):
+                        optimization_results["actions_taken"].append(
+                            f"分析了 {len(slow_queries)} 个慢查询"
+                        )
+                    if isinstance(optimization_results["recommendations"], list):
+                        optimization_results["recommendations"].append(
+                            "考虑添加适当的索引来优化慢查询"
+                        )
 
                 # 更新统计信息
                 if self.engine and "sqlite" in str(self.engine.url).lower():
                     session.execute(text("ANALYZE"))
                     session.commit()
-                    optimization_results["actions_taken"].append("更新了SQLite统计信息")
+                    if isinstance(optimization_results["actions_taken"], list):
+                        optimization_results["actions_taken"].append(
+                            "更新了SQLite统计信息"
+                        )
 
                 # 检查连接池使用情况
                 pool_status = self.get_connection_pool_status()
                 if pool_status.get("utilization", 0) > 80:  # pragma: no cover
-                    optimization_results["recommendations"].append(  # pragma: no cover
-                        "连接池使用率过高，考虑增加连接池大小"  # pragma: no cover
-                    )  # pragma: no cover
+                    if isinstance(optimization_results["recommendations"], list):
+                        optimization_results[
+                            "recommendations"
+                        ].append(  # pragma: no cover
+                            "连接池使用率过高，考虑增加连接池大小"  # pragma: no cover
+                        )  # pragma: no cover
 
                 logger.info("数据库优化完成")
 
@@ -543,13 +581,13 @@ def get_database_manager() -> EnhancedDatabaseManager:
     return database_manager
 
 
-def get_enhanced_db_session() -> Generator[Session, None, None]:
+def get_enhanced_db_session() -> Any:
     """获取增强的数据库会话"""
     return database_manager.get_session()
 
 
 # 为了向后兼容，保留原始的get_db函数
-def get_db():
+def get_db() -> Any:
     """获取数据库会话（向后兼容）"""
     return get_enhanced_db_session()  # pragma: no cover
 

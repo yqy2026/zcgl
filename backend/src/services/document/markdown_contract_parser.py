@@ -82,7 +82,7 @@ class MarkdownContractParser:
     从 PP-StructureV3 输出的 Markdown 中提取合同关键字段
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """初始化解析器"""
         self.patterns = self._build_patterns()
 
@@ -286,7 +286,7 @@ class MarkdownContractParser:
 
     def _parse_rent_table(self, table_text: str) -> list[RentTerm]:
         """解析租金表格"""
-        terms = []
+        terms: list[RentTerm] = []
 
         # 按行分割
         lines = [line.strip() for line in table_text.split("\n") if line.strip()]

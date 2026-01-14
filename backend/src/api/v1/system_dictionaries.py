@@ -2,6 +2,8 @@
 系统字典管理API路由
 """
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy.orm import Session
 
@@ -25,7 +27,7 @@ async def get_system_dictionaries(
     dict_type: str | None = Query(None, description="字典类型筛选"),
     is_active: bool | None = Query(None, description="是否启用筛选"),
     db: Session = Depends(get_db),
-):
+) -> list[SystemDictionaryResponse]:
     """
     获取系统字典列表，支持按类型和状态筛选
 
@@ -33,16 +35,18 @@ async def get_system_dictionaries(
     - **is_active**: 是否启用
     """
     try:
-        filters = {}
+        filters: dict[str, Any] = {}
         if dict_type:
             filters["dict_type"] = dict_type
         if is_active is not None:
             filters["is_active"] = is_active
 
+        # FastAPI will convert SystemDictionary to SystemDictionaryResponse via response_model
         dictionaries = system_dictionary_crud.get_multi_with_filters(
             db=db, filters=filters
         )
-        return dictionaries
+        # Use explicit conversion to satisfy mypy's invariance check
+        return [SystemDictionaryResponse.model_validate(d) for d in dictionaries]
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取系统字典列表失败: {str(e)}")
@@ -55,14 +59,18 @@ async def get_system_dictionaries(
 )
 async def get_system_dictionary(
     dictionary_id: str = Path(..., description="字典ID"), db: Session = Depends(get_db)
-):
+) -> SystemDictionaryResponse:
     """
     根据ID获取单个系统字典的详细信息
 
     - **dictionary_id**: 字典ID
     """
     try:
-        dictionary = system_dictionary_crud.get(db=db, id=dictionary_id)
+        from ...models.asset import SystemDictionary
+
+        dictionary: SystemDictionary | None = system_dictionary_crud.get(
+            db=db, id=dictionary_id
+        )
         if not dictionary:
             raise HTTPException(status_code=404, detail=f"字典 {dictionary_id} 不存在")
         return dictionary
@@ -81,7 +89,7 @@ async def get_system_dictionary(
 )
 async def create_system_dictionary(
     dictionary_in: SystemDictionaryCreate, db: Session = Depends(get_db)
-):
+) -> SystemDictionaryResponse:
     """
     创建新的系统字典项
 
@@ -108,7 +116,7 @@ async def update_system_dictionary(
     dictionary_in: SystemDictionaryUpdate,
     dictionary_id: str = Path(..., description="字典ID"),
     db: Session = Depends(get_db),
-):
+) -> SystemDictionaryResponse:
     """
     更新系统字典信息
 
@@ -134,7 +142,7 @@ async def update_system_dictionary(
 @router.delete("/{dictionary_id}", summary="删除系统字典")
 async def delete_system_dictionary(
     dictionary_id: str = Path(..., description="字典ID"), db: Session = Depends(get_db)
-):
+) -> dict[str, str]:
     """
     删除系统字典项
 
@@ -158,8 +166,8 @@ async def delete_system_dictionary(
     summary="批量更新系统字典",
 )
 async def batch_update_system_dictionaries(
-    updates: list[dict], db: Session = Depends(get_db)
-):
+    updates: list[dict[str, Any]], db: Session = Depends(get_db)
+) -> list[SystemDictionaryResponse]:
     """
     批量更新系统字典
 
@@ -173,7 +181,7 @@ async def batch_update_system_dictionaries(
     - I can forward to a loop in Service or keep loop here calling update.
     """
     try:
-        updated_dictionaries = []
+        updated_dictionaries: list[SystemDictionaryResponse] = []
 
         for update in updates:
             dictionary_id = update.get("id")
@@ -199,8 +207,8 @@ async def batch_update_system_dictionaries(
         raise HTTPException(status_code=500, detail=f"批量更新系统字典失败: {str(e)}")
 
 
-@router.get("/types/list", summary="获取字典类型列表")
-async def get_dictionary_types(db: Session = Depends(get_db)):
+@router.get("/types/list[Any]", summary="获取字典类型列表")
+async def get_dictionary_types(db: Session = Depends(get_db)) -> dict[str, list[str]]:
     """
     获取所有字典类型列表
     """

@@ -5,6 +5,7 @@
 """
 
 from datetime import datetime
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -13,6 +14,7 @@ from ...crud.asset import asset_crud
 from ...crud.history import history_crud
 from ...database import get_db
 from ...middleware.auth import require_permission
+from ...models.asset import Asset
 from ...models.auth import User
 from ...schemas.asset import (
     AssetCreate,
@@ -31,7 +33,7 @@ async def import_assets(
     request: AssetImportRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission("asset", "create")),
-):
+) -> AssetImportResponse:
     """
     批量导入资产数据
 
@@ -48,13 +50,15 @@ async def import_assets(
         success_count = 0
         failed_count = 0
         total_count = len(request.data)
-        errors = []
-        imported_assets = []
+        errors: list[dict[str, Any]] = []
+        imported_assets: list[str] = []
 
         for index, asset_data in enumerate(request.data):
             try:
                 # 验证数据
-                validation_request = AssetValidationRequest(data=asset_data)
+                validation_request = AssetValidationRequest(
+                    data=asset_data, validate_rules=None
+                )
                 validation_result = await validate_asset_data(
                     validation_request, db, current_user
                 )
@@ -89,10 +93,12 @@ async def import_assets(
                     continue
 
                 # 根据模式处理数据
+                new_asset: Asset | None = None
                 if request.import_mode == "create":
                     # 创建新资产
                     asset_create = AssetCreate(**asset_data)
                     new_asset = asset_crud.create(db=db, obj_in=asset_create)
+                    assert new_asset is not None  # for mypy
                     imported_assets.append(new_asset.id)
                     success_count += 1
 
@@ -108,7 +114,7 @@ async def import_assets(
                     updated_asset = asset_crud.update(
                         db=db, db_obj=existing_asset, obj_in=asset_update
                     )
-                    imported_assets.append(updated_asset.id)
+                    imported_assets.append(str(updated_asset.id))
                     success_count += 1
 
                 elif request.import_mode == "update" and existing_asset:
@@ -117,13 +123,14 @@ async def import_assets(
                     updated_asset = asset_crud.update(
                         db=db, db_obj=existing_asset, obj_in=asset_update
                     )
-                    imported_assets.append(updated_asset.id)
+                    imported_assets.append(str(updated_asset.id))
                     success_count += 1
 
                 else:
                     # 创建新资产（默认情况）
                     asset_create = AssetCreate(**asset_data)
                     new_asset = asset_crud.create(db=db, obj_in=asset_create)
+                    assert new_asset is not None  # for mypy
                     imported_assets.append(new_asset.id)
                     success_count += 1
 

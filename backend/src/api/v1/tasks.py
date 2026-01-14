@@ -35,7 +35,7 @@ async def create_task(
     task_in: TaskCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> TaskResponse:
     """
     创建新的异步任务
     """
@@ -60,7 +60,7 @@ async def get_tasks(
     order_dir: str = Query("desc", regex="^(asc|desc)$", description="排序方向"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> TaskListResponse:
     """
     获取任务列表，支持分页和筛选
     """
@@ -89,8 +89,11 @@ async def get_tasks(
         # 计算总数
         total = task_crud.count(db=db, task_type=task_type, status=status)
 
+        # Convert AsyncTask models to TaskResponse schemas
+        task_responses = [TaskResponse.model_validate(task) for task in tasks]
+
         return TaskListResponse(
-            items=tasks,
+            items=task_responses,
             total=total,
             page=skip // limit + 1,
             limit=limit,
@@ -105,14 +108,15 @@ async def get_task(
     task_id: str = Path(..., description="任务ID"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> TaskResponse:
     """
     获取单个任务的详细信息
     """
     task = task_crud.get(db=db, id=task_id)
     if not task:
         raise HTTPException(status_code=404, detail="任务不存在")
-    return task
+    result: TaskResponse = TaskResponse.model_validate(task)
+    return result
 
 
 @router.put("/{task_id}", response_model=TaskResponse, summary="更新任务")
@@ -121,7 +125,7 @@ async def update_task(
     task_in: TaskUpdate = Body(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> TaskResponse:
     """
     更新任务信息
     """
@@ -137,10 +141,10 @@ async def update_task(
 @router.post("/{task_id}/cancel", response_model=TaskResponse, summary="取消任务")
 async def cancel_task(
     task_id: str = Path(..., description="任务ID"),
-    cancel_request: TaskCancelRequest = None,
+    cancel_request: TaskCancelRequest | None = Body(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> TaskResponse:
     """
     取消正在运行的任务
     """
@@ -164,7 +168,7 @@ async def delete_task(
     task_id: str = Path(..., description="任务ID"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> dict[str, str]:
     """
     删除任务（软删除）
     """
@@ -186,7 +190,7 @@ async def get_task_history(
     task_id: str = Path(..., description="任务ID"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> list[TaskHistoryResponse]:
     """
     获取任务的历史记录
     """
@@ -196,7 +200,11 @@ async def get_task_history(
 
     try:
         history = task_crud.get_history(db=db, task_id=task_id)
-        return history
+        # Convert TaskHistory models to TaskHistoryResponse schemas
+        result: list[TaskHistoryResponse] = [
+            TaskHistoryResponse.model_validate(h) for h in history
+        ]
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取任务历史失败: {str(e)}")
 
@@ -206,13 +214,13 @@ async def get_task_statistics(
     user_id: str | None = Query(None, description="用户ID筛选"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> TaskStatistics:
     """
     获取任务统计信息
     """
     try:
         stats = task_service.get_statistics(db=db, user_id=user_id)
-        return stats
+        return TaskStatistics.model_validate(stats)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取任务统计失败: {str(e)}")
 
@@ -221,7 +229,7 @@ async def get_task_statistics(
 async def get_running_tasks(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> list[TaskResponse]:
     """
     获取当前正在运行的所有任务
     """
@@ -233,7 +241,7 @@ async def get_running_tasks(
             order_by="started_at",
             order_dir="asc",
         )
-        return tasks
+        return [TaskResponse.model_validate(task) for task in tasks]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取运行任务失败: {str(e)}")
 
@@ -243,7 +251,7 @@ async def get_recent_tasks(
     limit: int = Query(10, ge=1, le=50, description="返回数量"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> list[TaskResponse]:
     """
     获取最近的任务
     """
@@ -251,7 +259,7 @@ async def get_recent_tasks(
         tasks = task_crud.get_multi(
             db=db, limit=limit, order_by="created_at", order_dir="desc"
         )
-        return tasks
+        return [TaskResponse.model_validate(task) for task in tasks]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取最近任务失败: {str(e)}")
 
@@ -268,7 +276,7 @@ async def create_excel_config(
     config_in: ExcelTaskConfigCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> ExcelTaskConfigResponse:
     """
     创建Excel任务配置
     """
@@ -290,7 +298,7 @@ async def get_excel_configs(
     config_type: str | None = Query(None, description="配置类型"),
     task_type: str | None = Query(None, description="任务类型"),
     db: Session = Depends(get_db),
-):
+) -> list[ExcelTaskConfigResponse]:
     """
     获取Excel任务配置列表
     """
@@ -298,7 +306,7 @@ async def get_excel_configs(
         configs = excel_task_config_crud.get_multi(
             db=db, limit=50, config_type=config_type, task_type=task_type
         )
-        return configs
+        return [ExcelTaskConfigResponse.model_validate(cfg) for cfg in configs]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取Excel配置失败: {str(e)}")
 
@@ -312,7 +320,7 @@ async def get_default_excel_config(
     config_type: str = Query(..., description="配置类型"),
     task_type: str = Query(..., description="任务类型"),
     db: Session = Depends(get_db),
-):
+) -> ExcelTaskConfigResponse:
     """
     获取默认的Excel任务配置
     """
@@ -336,14 +344,15 @@ async def get_default_excel_config(
 )
 async def get_excel_config(
     config_id: str = Path(..., description="配置ID"), db: Session = Depends(get_db)
-):
+) -> ExcelTaskConfigResponse:
     """
     获取单个Excel配置的详细信息
     """
     config = excel_task_config_crud.get(db=db, id=config_id)
     if not config:
         raise HTTPException(status_code=404, detail="配置不存在")
-    return config
+    result: ExcelTaskConfigResponse = ExcelTaskConfigResponse.model_validate(config)
+    return result
 
 
 @router.put(
@@ -355,7 +364,7 @@ async def update_excel_config(
     config_id: str = Path(..., description="配置ID"),
     config_in: dict[str, Any] = Body(...),
     db: Session = Depends(get_db),
-):
+) -> ExcelTaskConfigResponse:
     """
     更新Excel任务配置
     """
@@ -367,7 +376,10 @@ async def update_excel_config(
         updated_config = excel_task_config_crud.update(
             db=db, db_obj=config, obj_in=config_in
         )
-        return updated_config
+        result: ExcelTaskConfigResponse = ExcelTaskConfigResponse.model_validate(
+            updated_config
+        )
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"更新Excel配置失败: {str(e)}")
 
@@ -375,12 +387,17 @@ async def update_excel_config(
 @router.delete("/configs/excel/{config_id}", summary="删除Excel配置")
 async def delete_excel_config(
     config_id: str = Path(..., description="配置ID"), db: Session = Depends(get_db)
-):
+) -> dict[str, str]:
     """
     删除Excel配置（软删除）
     """
     try:
-        excel_task_config_crud.delete(db=db, id=config_id)
+        # Use soft deletion by setting is_active=False
+        config = excel_task_config_crud.get(db=db, id=config_id)
+        if not config:
+            raise HTTPException(status_code=404, detail="配置不存在")
+
+        excel_task_config_crud.update(db=db, db_obj=config, obj_in={"is_active": False})
         return {"message": "Excel配置删除成功"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"删除Excel配置失败: {str(e)}")
@@ -392,7 +409,7 @@ async def cleanup_old_tasks(
     dry_run: bool = Query(False, description="是否为试运行"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> dict[str, Any]:
     """
     清理过期的任务记录
     """

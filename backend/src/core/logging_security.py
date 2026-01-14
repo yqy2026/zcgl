@@ -19,7 +19,7 @@ from .config import get_config
 class SensitiveDataFilter(logging.Filter):
     """敏感数据过滤器"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.sensitive_patterns = [
             # 密码相关
@@ -162,7 +162,9 @@ class SensitiveDataFilter(logging.Filter):
         """过滤单个值"""
         if is_sensitive:
             return "***"
-        elif isinstance(value, (dict, list)):
+        elif isinstance(value, dict):
+            return self._filter_dict(value)
+        elif isinstance(value, list):
             return self._filter_dict(value)
         elif isinstance(value, str):
             return self._filter_sensitive_data(value)
@@ -280,7 +282,7 @@ class StructuredFormatter(logging.Formatter):
             except (TypeError, ValueError):  # pragma: no cover
                 return str(obj)[:500]  # 限制长度  # pragma: no cover
 
-    def _format_exception(self, exc_info) -> str:
+    def _format_exception(self, exc_info: Any) -> str:
         """格式化异常信息"""
         import traceback
 
@@ -290,13 +292,13 @@ class StructuredFormatter(logging.Formatter):
 class SecurityAuditor:
     """安全审计器"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.security_log_file = get_config("security_log_file", "logs/security.log")
         self.enabled = get_config("security_logging_enabled", True)
         self._setup_security_logger()
         self.sensitive_filter = SensitiveDataFilter()
 
-    def _setup_security_logger(self):
+    def _setup_security_logger(self) -> None:
         """设置安全日志记录器"""
         if not self.enabled:
             return
@@ -325,8 +327,8 @@ class SecurityAuditor:
         ip_address: str | None = None,
         user_agent: str | None = None,
         request_id: str | None = None,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """记录安全事件"""
         if not self.enabled:
             return
@@ -480,13 +482,13 @@ class SecurityAuditor:
 class RequestLogger:
     """请求日志记录器"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.request_log_file = get_config("request_log_file", "logs/requests.log")
         self.enabled = get_config("request_logging_enabled", True)
         self._setup_request_logger()
         self.sensitive_filter = SensitiveDataFilter()
 
-    def _setup_request_logger(self):
+    def _setup_request_logger(self) -> None:
         """设置请求日志记录器"""
         if not self.enabled:
             return
@@ -517,8 +519,8 @@ class RequestLogger:
         ip_address: str | None = None,
         user_agent: str | None = None,
         request_id: str | None = None,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """记录请求信息"""
         if not self.enabled:
             return
@@ -632,11 +634,11 @@ class RequestLogger:
 
 
 # 全局实例
-security_auditor = SecurityAuditor()
-request_logger = RequestLogger()
+security_auditor: SecurityAuditor = SecurityAuditor()
+request_logger: RequestLogger = RequestLogger()
 
 
-def setup_logging_security():
+def setup_logging_security() -> logging.Logger:
     """设置日志安全"""
     # 获取日志配置
     log_level = get_config("log_level", "INFO")
@@ -664,12 +666,12 @@ def setup_logging_security():
 
 
 # 便捷函数
-def log_security_event(event_type: str, message: str, **kwargs):
+def log_security_event(event_type: str, message: str, **kwargs: Any) -> None:
     """记录安全事件的便捷函数"""
     security_auditor.log_security_event(event_type, message, **kwargs)
 
 
-def log_request_info(**kwargs):
+def log_request_info(**kwargs: Any) -> None:
     """记录请求信息的便捷函数"""
     request_logger.log_request(**kwargs)
 

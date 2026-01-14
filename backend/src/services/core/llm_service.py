@@ -196,7 +196,7 @@ class LLMServiceFactory:
             cls._config[provider] = config
 
     @classmethod
-    def create(cls, provider: LLMProvider, **kwargs) -> LLMServiceInterface:
+    def create(cls, provider: LLMProvider, **kwargs: Any) -> LLMServiceInterface:
         """
         创建 LLM 服务实例
 
@@ -214,7 +214,7 @@ class LLMServiceFactory:
         if not service_class:
             raise ValueError(
                 f"Unknown LLM provider: {provider}. "
-                f"Registered providers: {list(cls._services.keys())}"
+                f"Registered providers: {list[Any](cls._services.keys())}"
             )
 
         # 合并配置
@@ -300,7 +300,7 @@ class LLMService(BaseOpenAILLM):
     保留原有的 LLMService 类作为 BaseOpenAILLM 的别名
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         provider_str = os.getenv("LLM_PROVIDER", "glm")
         provider = LLMProvider.normalize(provider_str)
 

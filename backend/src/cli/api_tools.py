@@ -18,7 +18,7 @@ sys.path.insert(0, str(project_root))
 
 @click.group()
 @click.version_option(version="2.0.0")
-def cli():
+def cli() -> None:
     """API工具集 - 用于管理API文档和一致性检查"""
     pass
 
@@ -38,7 +38,7 @@ def cli():
     default="all",
     help="输出格式",
 )
-def docs(app_path: str, output_dir: str, format: str):
+def docs(app_path: str, output_dir: str, format: str) -> None:
     """生成API文档"""
     click.echo("🚀 开始生成API文档...")
 
@@ -78,7 +78,7 @@ def docs(app_path: str, output_dir: str, format: str):
     default="all",
     help="只显示指定严重程度的问题",
 )
-def check(frontend_dir: str, backend_dir: str, output_dir: str, severity: str):
+def check(frontend_dir: str, backend_dir: str, output_dir: str, severity: str) -> None:
     """检查API一致性"""
     click.echo("🔍 开始API一致性检查...")
 
@@ -129,7 +129,7 @@ def check(frontend_dir: str, backend_dir: str, output_dir: str, severity: str):
 
 @cli.command()
 @click.option("--output-dir", "-o", default="analysis", help="分析输出目录")
-def analyze(output_dir: str):
+def analyze(output_dir: str) -> None:
     """分析API质量指标"""
     click.echo("📊 开始API质量分析...")
 
@@ -221,7 +221,7 @@ def _analyze_api_quality(api_data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _save_analysis_report(analysis: dict, output_dir: str):
+def _save_analysis_report(analysis: dict[str, Any], output_dir: str) -> None:
     """保存分析报告"""
     import json
     from datetime import datetime
@@ -257,7 +257,7 @@ def _save_analysis_report(analysis: dict, output_dir: str):
 
 
 @cli.command()
-def setup():
+def setup() -> None:
     """初始化API工具配置"""
     click.echo("🔧 初始化API工具配置...")
 

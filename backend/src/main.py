@@ -9,6 +9,7 @@ from typing import Any
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 # 核心依赖 - 严格导入（开发/生产环境必须存在）
 from .core.config import get_config, initialize_config, settings
@@ -53,16 +54,16 @@ logger.info(f"依赖策略: {get_dependency_policy().value}")
 # The system will run without PDF OCR text extraction capabilities
 OCR_SERVICE_AVAILABLE = False
 OCR_PROVIDER_AVAILABLE = False
-PaddleOCREngineAdapter = None  # type: ignore
-OptimizedOCRService = None  # type: ignore
+PaddleOCREngineAdapter: Any = None
+OptimizedOCRService: Any = None
 
 
-def get_ocr_service() -> None:  # type: ignore
+def get_ocr_service() -> Any:
     """OCR服务占位函数 - 返回None"""
     return None
 
 
-def set_ocr_service(service: Any) -> None:  # type: ignore
+def set_ocr_service(service: Any) -> None:
     """OCR服务占位函数 - 不执行任何操作"""
     pass
 
@@ -121,7 +122,7 @@ logger.info("依赖导入完成")
 
 # ===== 应用生命周期管理 =====
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> Any:
     """应用生命周期管理器"""
     # 启动时执行
     # 安全配置检查
@@ -166,24 +167,27 @@ async def lifespan(app: FastAPI):
             from .database import SessionLocal
             from .services.enum_data_init import add_legacy_enum_values, init_enum_data
 
-            db = SessionLocal()
-            try:
-                logger.info("开始初始化枚举字段数据...")
-                init_result = init_enum_data(db, created_by="system")
-                logger.info(
-                    f"枚举类型初始化: 创建 {init_result['types_created']}, 更新 {init_result['types_updated']}"
-                )
-                logger.info(
-                    f"枚举值初始化: 创建 {init_result['values_created']}, 更新 {init_result['values_updated']}"
-                )
+            if SessionLocal is None:
+                logger.warning("无法获取数据库会话工厂，跳过枚举初始化")
+            else:
+                db = SessionLocal()
+                try:
+                    logger.info("开始初始化枚举字段数据...")
+                    init_result = init_enum_data(db, created_by="system")
+                    logger.info(
+                        f"枚举类型初始化: 创建 {init_result['types_created']}, 更新 {init_result['types_updated']}"
+                    )
+                    logger.info(
+                        f"枚举值初始化: 创建 {init_result['values_created']}, 更新 {init_result['values_updated']}"
+                    )
 
-                # 添加遗留枚举值支持
-                legacy_result = add_legacy_enum_values(db, created_by="system")
-                logger.info(f"遗留枚举值添加: {legacy_result['values_added']}")
-            except Exception as e:
-                logger.warning(f"枚举数据初始化失败: {e}")
-            finally:
-                db.close()
+                    # 添加遗留枚举值支持
+                    legacy_result = add_legacy_enum_values(db, created_by="system")
+                    logger.info(f"遗留枚举值添加: {legacy_result['values_added']}")
+                except Exception as e:
+                    logger.warning(f"枚举数据初始化失败: {e}")
+                finally:
+                    db.close()
         except ImportError as e:
             logger.warning(f"枚举初始化模块导入失败: {e}")
         except Exception as e:
@@ -260,7 +264,8 @@ try:
     from .middleware.file_upload_security import create_file_security_middleware
 
     file_security_middleware = create_file_security_middleware(app)
-    app.add_middleware(type(file_security_middleware))
+    # The middleware factory is already correctly configured by create_file_security_middleware
+    # No need to add it again
 except ImportError as e:
     safe_print(
         f"Warning: File upload security middleware not available - {safe_error_message(e)}"
@@ -276,7 +281,7 @@ setup_exception_handlers(app)
 
 # 根路由端点
 @app.get("/", tags=["根路由"])
-async def root_endpoint():
+async def root_endpoint() -> JSONResponse:
     """根路由端点"""
     return success_response(
         data={

@@ -7,7 +7,8 @@
 import logging
 from typing import Any
 
-from sqlalchemy import case, func
+from sqlalchemy import Float, case, func
+from sqlalchemy import cast as sql_cast
 from sqlalchemy.orm import Session
 
 from ...crud.asset import asset_crud
@@ -74,17 +75,17 @@ class AreaService:
             # 使用数据库聚合函数计算
             result = query.with_entities(
                 func.count(Asset.id).label("total_assets"),
-                func.cast(
-                    func.sum(func.coalesce(Asset.land_area, 0)), func.Float
+                sql_cast(
+                    func.sum(func.coalesce(Asset.land_area, 0)), Float
                 ).label("total_land_area"),
-                func.cast(
-                    func.sum(func.coalesce(Asset.rentable_area, 0)), func.Float
+                sql_cast(
+                    func.sum(func.coalesce(Asset.rentable_area, 0)), Float
                 ).label("total_rentable_area"),
-                func.cast(
-                    func.sum(func.coalesce(Asset.rented_area, 0)), func.Float
+                sql_cast(
+                    func.sum(func.coalesce(Asset.rented_area, 0)), Float
                 ).label("total_rented_area"),
-                func.cast(
-                    func.sum(func.coalesce(Asset.non_commercial_area, 0)), func.Float
+                sql_cast(
+                    func.sum(func.coalesce(Asset.non_commercial_area, 0)), Float
                 ).label("total_non_commercial_area"),
                 func.count(case((Asset.land_area.isnot(None), 1))).label(
                     "assets_with_area_data"
@@ -92,6 +93,19 @@ class AreaService:
             ).first()
 
             # 提取并转换结果
+            if result is None:
+                return {
+                    "total_assets": 0,
+                    "total_land_area": 0.0,
+                    "total_rentable_area": 0.0,
+                    "total_rented_area": 0.0,
+                    "total_unrented_area": 0.0,
+                    "total_non_commercial_area": 0.0,
+                    "assets_with_area_data": 0,
+                    "overall_occupancy_rate": 0.0,
+                    "calculation_method": "aggregation",
+                }
+
             total_assets = int(result.total_assets or 0)
             total_land_area = to_float(result.total_land_area)
             total_rentable_area = to_float(result.total_rentable_area)
@@ -128,9 +142,9 @@ class AreaService:
         except Exception as e:
             logger.error(f"面积汇总数据库聚合查询失败: {str(e)}，降级到内存计算")
             # 降级到内存计算
-            result = self._calculate_summary_in_memory(filters)
-            result["calculation_method"] = "memory_fallback"
-            return result
+            memory_result = self._calculate_summary_in_memory(filters)
+            memory_result["calculation_method"] = "memory_fallback"
+            return memory_result
 
     def _calculate_summary_in_memory(
         self, filters: dict[str, Any] | None = None

@@ -13,6 +13,9 @@ class CRUDSystemDictionary(
 ):
     """系统字典CRUD操作类"""
 
+    def __init__(self) -> None:
+        super().__init__(SystemDictionary)
+
     def get_by_type_and_code(
         self, db: Session, *, dict_type: str, dict_code: str
     ) -> SystemDictionary | None:
@@ -32,53 +35,48 @@ class CRUDSystemDictionary(
         self,
         db: Session,
         *,
-        filters: dict[str, Any] = None,
+        filters: dict[str, Any] | None = None,
         skip: int = 0,
         limit: int = 100,
     ) -> list[SystemDictionary]:
         """根据筛选条件获取字典列表"""
-        query = db.query(self.model)
-
         # Use simple filter dict mapping for consistency if possible, or QueryBuilder
         # Given existing logic was simple, let's keep it but enhance with QueryBuilder if complex features needed
         # Or just stick to manual filtering for this specific case if simple enough.
         # But standardize means using QueryBuilder is better.
 
-        qb_filters = {}
+        qb_filters: dict[str, Any] = {}
         if filters:
             if "dict_type" in filters:
                 qb_filters["dict_type"] = filters["dict_type"]
             if "is_active" in filters:
                 qb_filters["is_active"] = filters["is_active"]
 
-        return self.query_builder.build_query(
-            db_session=db,
-            model=self.model,
+        query = self.query_builder.build_query(
             filters=qb_filters,
-            base_query=query,
             sort_by="sort_order",
             sort_desc=False,
             skip=skip,
             limit=limit,
-        ).all()
+        )
+        return list(db.execute(query).scalars().all())
 
     def get_by_type(
         self, db: Session, *, dict_type: str, is_active: bool = True
     ) -> list[SystemDictionary]:
         """根据类型获取字典列表"""
-        filters = {"dict_type": dict_type}
+        filters: dict[str, Any] = {"dict_type": dict_type}
         if is_active is not None:
             filters["is_active"] = is_active
 
-        return self.query_builder.build_query(
-            db_session=db,
-            model=self.model,
+        query = self.query_builder.build_query(
             filters=filters,
             sort_by="sort_order",
             sort_desc=False,
             # No pagination usually for get_by_type usage (dropdowns), but safer to limit?
             # Existing code didn't limit.
-        ).all()
+        )
+        return list(db.execute(query).scalars().all())
 
     def get_types(self, db: Session) -> list[str]:
         """
@@ -103,4 +101,4 @@ class CRUDSystemDictionary(
 
 
 # 创建系统字典CRUD实例
-system_dictionary_crud = CRUDSystemDictionary(SystemDictionary)
+system_dictionary_crud = CRUDSystemDictionary()

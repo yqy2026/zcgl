@@ -7,7 +7,7 @@
 import logging
 import traceback
 
-from fastapi import Request, status
+from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
@@ -36,11 +36,13 @@ def get_http_status_code(error_code: ErrorCode) -> int:
     return status.HTTP_500_INTERNAL_SERVER_ERROR
 
 
-def create_error_handlers(app) -> None:
+def create_error_handlers(app: FastAPI) -> None:
     """为FastAPI应用添加统一的错误处理器"""
 
     @app.exception_handler(BusinessError)
-    async def business_exception_handler(request: Request, exc: BusinessError):
+    async def business_exception_handler(
+        request: Request, exc: BusinessError
+    ) -> JSONResponse:
         """业务异常处理器"""
         logger.warning(
             f"业务异常 [{exc.error_code.code}]: {exc.message} "
@@ -55,7 +57,7 @@ def create_error_handlers(app) -> None:
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(
         request: Request, exc: RequestValidationError
-    ):
+    ) -> JSONResponse:
         """FastAPI数据验证异常处理器"""
         errors = {}
         for error in exc.errors():
@@ -77,7 +79,9 @@ def create_error_handlers(app) -> None:
         )
 
     @app.exception_handler(Exception)
-    async def general_exception_handler(request: Request, exc: Exception):
+    async def general_exception_handler(
+        request: Request, exc: Exception
+    ) -> JSONResponse:
         """通用异常处理器"""
         logger.error(
             f"未处理的异常 [{type(exc).__name__}]: {str(exc)}\n"

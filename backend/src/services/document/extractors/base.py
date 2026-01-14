@@ -19,7 +19,7 @@ class ContractExtractorInterface(ABC):
     """
 
     @abstractmethod
-    async def extract(self, file_path: str, **kwargs) -> dict[str, Any]:
+    async def extract(self, file_path: str, **kwargs: Any) -> dict[str, Any]:
         """
         Extract structured contract data from a file.
 
@@ -92,7 +92,7 @@ class BaseVisionAdapter(ContractExtractorInterface):
 
     @property
     @abstractmethod
-    def vision_service(self):
+    def vision_service(self) -> Any:
         """Return the vision service instance (to be implemented by subclass)"""
         pass
 
@@ -114,7 +114,7 @@ class BaseVisionAdapter(ContractExtractorInterface):
         max_pages: int = 10,
         batch_size: int = 3,
         dpi: int = 200,
-        **kwargs,
+        **kwargs: Any,
     ) -> dict[str, Any]:
         """
         Common extraction logic for all vision adapters.
@@ -196,7 +196,7 @@ class BaseVisionAdapter(ContractExtractorInterface):
             if image_paths:
                 cleanup_temp_images(image_paths)
 
-    def _parse_json(self, content: str) -> dict:
+    def _parse_json(self, content: str) -> dict[str, Any]:
         """Parse JSON from model response (common logic)"""
         try:
             return json.loads(content)
@@ -213,9 +213,11 @@ class BaseVisionAdapter(ContractExtractorInterface):
         )
         return self.EXTRACTION_PROMPT_TEMPLATE.format(pages_hint=pages_hint)
 
-    def _merge_multi_page_results(self, results: list[dict]) -> dict:
+    def _merge_multi_page_results(
+        self, results: list[dict[str, Any]]
+    ) -> dict[str, Any]:
         """Merge results from multiple pages (common logic)"""
-        merged = {}
+        merged: dict[str, Any] = {}
 
         for result in results:
             if result.get("success") and result.get("data"):
@@ -230,14 +232,14 @@ class BaseVisionAdapter(ContractExtractorInterface):
 
         return merged
 
-    def _calculate_confidence(self, results: list[dict]) -> float:
+    def _calculate_confidence(self, results: list[dict[str, Any]]) -> float:
         """Calculate confidence based on successful batches"""
         if not results:
             return 0.0
         success_count = sum(1 for r in results if r.get("success"))
         return min(0.95, 0.7 + 0.25 * (success_count / len(results)))
 
-    def _aggregate_usage(self, results: list[dict]) -> dict:
+    def _aggregate_usage(self, results: list[dict[str, Any]]) -> dict[str, Any]:
         """Aggregate token usage from all batches"""
         total_tokens = 0
         total_images = 0

@@ -3,6 +3,7 @@
 """
 
 from datetime import datetime, timedelta
+from typing import Any
 
 from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
@@ -137,7 +138,9 @@ class OperationLogCRUD:
         db.commit()
         return deleted
 
-    def get_user_statistics(self, db: Session, user_id: str, days: int = 30) -> dict:
+    def get_user_statistics(
+        self, db: Session, user_id: str, days: int = 30
+    ) -> dict[str, Any]:
         """获取用户操作统计"""
         start_date = datetime.now() - timedelta(days=days)
 
@@ -169,10 +172,12 @@ class OperationLogCRUD:
             "user_id": user_id,
             "days": days,
             "total_operations": total_operations,
-            "action_breakdown": dict(action_stats),
+            "action_breakdown": {str(action): count for action, count in action_stats},
         }
 
-    def get_module_statistics(self, db: Session, module: str, days: int = 30) -> dict:
+    def get_module_statistics(
+        self, db: Session, module: str, days: int = 30
+    ) -> dict[str, Any]:
         """获取模块操作统计"""
         start_date = datetime.now() - timedelta(days=days)
 
@@ -204,10 +209,10 @@ class OperationLogCRUD:
             "module": module,
             "days": days,
             "total_operations": total_operations,
-            "action_breakdown": dict(action_stats),
+            "action_breakdown": {str(action): count for action, count in action_stats},
         }
 
-    def get_daily_statistics(self, db: Session, days: int = 30) -> dict:
+    def get_daily_statistics(self, db: Session, days: int = 30) -> dict[str, Any]:
         """获取每日操作统计"""
         start_date = datetime.now() - timedelta(days=days)
 
@@ -227,7 +232,7 @@ class OperationLogCRUD:
             "daily_breakdown": {str(date): count for date, count in daily_stats},
         }
 
-    def get_error_statistics(self, db: Session, days: int = 30) -> dict:
+    def get_error_statistics(self, db: Session, days: int = 30) -> dict[str, Any]:
         """获取错误操作统计"""
         start_date = datetime.now() - timedelta(days=days)
 
@@ -235,7 +240,7 @@ class OperationLogCRUD:
             db.query(func.count(OperationLog.id))
             .filter(
                 and_(
-                    OperationLog.error_message is not None,
+                    OperationLog.error_message.isnot(None),
                     OperationLog.created_at >= start_date,
                 )
             )
@@ -250,7 +255,7 @@ class OperationLogCRUD:
             )
             .filter(
                 and_(
-                    OperationLog.error_message is not None,
+                    OperationLog.error_message.isnot(None),
                     OperationLog.created_at >= start_date,
                 )
             )
@@ -261,9 +266,10 @@ class OperationLogCRUD:
         return {
             "days": days,
             "total_errors": total_errors,
-            "error_breakdown": dict(error_types),
+            "error_breakdown": {str(action): count for action, count in error_types},
         }
 
     def count(self, db: Session) -> int:
         """日志总数"""
-        return db.query(func.count(OperationLog.id)).scalar()
+        result = db.query(func.count(OperationLog.id)).scalar()
+        return int(result) if result is not None else 0

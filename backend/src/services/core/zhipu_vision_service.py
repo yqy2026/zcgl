@@ -49,13 +49,28 @@ class ZhipuVisionService(BaseVisionService):
     DEFAULT_BASE_URL = "https://open.bigmodel.cn/api/paas/v4"
 
     def __init__(self):
-        # Support both ZHIPU_API_KEY and LLM_API_KEY (for compatibility with existing config)
-        api_key = os.getenv("ZHIPU_API_KEY") or os.getenv("LLM_API_KEY")
-        super().__init__(api_key=api_key)
+        # 优先使用 centralized config，fallback 到环境变量
+        try:
+            from src.core.config import settings
 
-        self.base_url = os.getenv("ZHIPU_BASE_URL", self.DEFAULT_BASE_URL)
-        # Note: glm-4v is the correct model name (glm-4v-flash causes error 1210)
-        self.model = os.getenv("ZHIPU_VISION_MODEL", "glm-4v")
+            api_key = (
+                settings.ZHIPU_API_KEY
+                or os.getenv("ZHIPU_API_KEY")
+                or os.getenv("LLM_API_KEY")
+            )
+            self.base_url = settings.ZHIPU_BASE_URL or os.getenv(
+                "ZHIPU_BASE_URL", self.DEFAULT_BASE_URL
+            )
+            self.model = settings.ZHIPU_VISION_MODEL or os.getenv(
+                "ZHIPU_VISION_MODEL", "glm-4v"
+            )
+        except ImportError:
+            # Fallback for standalone usage
+            api_key = os.getenv("ZHIPU_API_KEY") or os.getenv("LLM_API_KEY")
+            self.base_url = os.getenv("ZHIPU_BASE_URL", self.DEFAULT_BASE_URL)
+            self.model = os.getenv("ZHIPU_VISION_MODEL", "glm-4v")
+
+        super().__init__(api_key=api_key)
         self.timeout = int(os.getenv("ZHIPU_TIMEOUT", "120"))
 
         if not self.api_key:
@@ -74,8 +89,7 @@ class ZhipuVisionService(BaseVisionService):
         self,
         image_paths: list[str],
         prompt: str,
-        temperature: float = 0.1,
-        max_tokens: int = 4096,
+        **kwargs: Any,
     ) -> str:
         """
         Send images to GLM-4V for contract extraction.
@@ -83,8 +97,9 @@ class ZhipuVisionService(BaseVisionService):
         Args:
             image_paths: List of image file paths (PNG/JPG)
             prompt: Extraction prompt (Chinese preferred)
-            temperature: Model temperature (0.0-1.0, lower = more deterministic)
-            max_tokens: Maximum tokens in response
+            **kwargs: Additional parameters (temperature, max_tokens, etc.)
+                - temperature: float (default: 0.1) - Model temperature (0.0-1.0)
+                - max_tokens: int (default: 4096) - Max tokens in response (ignored by API)
 
         Returns:
             str: Extracted content (JSON string)
@@ -95,6 +110,10 @@ class ZhipuVisionService(BaseVisionService):
         """
         if not self.is_available:
             raise RuntimeError("ZHIPU_API_KEY not configured")
+
+        # Extract kwargs with defaults
+        temperature: float = kwargs.get("temperature", 0.1)
+        max_tokens: int = kwargs.get("max_tokens", 4096)
 
         # Build multimodal content array
         content: list[dict[str, Any]] = []
@@ -126,7 +145,8 @@ class ZhipuVisionService(BaseVisionService):
         logger.info(f"Sending {len(image_paths)} images to {self.model}")
 
         # Debug: Log payload structure (without base64 content)
-        logger.debug(f"API Key prefix: {self.api_key[:10]}...")
+        if self.api_key:
+            logger.debug(f"API Key prefix: {self.api_key[:10]}...")
         logger.debug(f"Model: {self.model}")
         logger.debug(f"Temperature: {temperature}, max_tokens: {max_tokens}")
         logger.debug(f"Content items: {len(content)} (images + text)")
@@ -137,10 +157,34 @@ class ZhipuVisionService(BaseVisionService):
                     f"{self.base_url}/chat/completions", json=payload, headers=headers
                 )
                 response.raise_for_status()
-                data = response.json()
+                data: dict[str, Any] = response.json()
 
-                result_content = data["choices"][0]["message"]["content"]
-                usage = data.get("usage", {})
+                choices = data.get("choices", [])
+                if not choices:
+                    raise VisionAPIError(
+                        message="API returned no choices",
+                        status_code=response.status_code,
+                        retryable=True,
+                    )
+
+                first_choice = choices[0]
+                if not isinstance(first_choice, dict):
+                    raise VisionAPIError(
+                        message=f"Invalid choice format: {type(first_choice)}",
+                        status_code=response.status_code,
+                        retryable=True,
+                    )
+
+                message = first_choice.get("message", {})
+                if not isinstance(message, dict):
+                    raise VisionAPIError(
+                        message=f"Invalid message format: {type(message)}",
+                        status_code=response.status_code,
+                        retryable=True,
+                    )
+
+                result_content: str = message.get("content", "")
+                usage: dict[str, Any] = data.get("usage", {})
 
                 logger.info(f"Vision extraction complete. Tokens used: {usage}")
 
@@ -161,9 +205,8 @@ class ZhipuVisionService(BaseVisionService):
 
         except (
             httpx.NetworkError,
-            httpx.TimeoutError,
+            httpx.TimeoutException,
             ConnectionError,
-            TimeoutError,
         ) as e:
             # 使用增强的网络错误处理
             vision_error = handle_network_error(e)
@@ -192,5 +235,6 @@ def get_zhipu_vision_service() -> ZhipuVisionService:
     """Get or create singleton ZhipuVisionService instance"""
     global _vision_service
     if _vision_service is None:
-        _vision_service = ZhipuVisionService()
+        _vision_service = ZhipuVisionService()  # type: ignore[no-untyped-call]
+    assert _vision_service is not None  # for type narrowing
     return _vision_service

@@ -11,14 +11,13 @@ from pathlib import Path
 import pytest
 
 from src.services.document.cache import (
-    PDFCache,
     CachedExtractor,
     ExtractionCache,
+    PDFCache,
     cached_extraction,
-    get_cache,
     clear_all_caches,
+    get_cache,
 )
-
 
 # ============================================================================
 # PDFCache 测试

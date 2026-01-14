@@ -41,7 +41,8 @@ class SessionService:
         ):  # pragma: no cover
             # 取消最旧的会话
             oldest_session = min(
-                existing_sessions, key=lambda x: x.created_at
+                existing_sessions,
+                key=lambda x: x.created_at,
             )  # pragma: no cover
             oldest_session.is_active = False  # pragma: no cover
 

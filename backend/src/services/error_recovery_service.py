@@ -5,9 +5,10 @@
 This is a minimal stub to make error_recovery.py importable
 """
 
+from collections.abc import Callable
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable
+from typing import Any
 
 
 class ErrorCategory(str, Enum):

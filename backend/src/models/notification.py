@@ -6,6 +6,7 @@
 
 import uuid
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import relationship
@@ -33,7 +34,7 @@ class NotificationPriority:
     URGENT = "urgent"
 
 
-class Notification(Base):
+class Notification(Base):  # type: ignore[valid-type, misc]
     """
     通知模型
 
@@ -77,18 +78,18 @@ class Notification(Base):
     # 关系
     recipient = relationship("User", back_populates="notifications")
 
-    def mark_as_read(self):
+    def mark_as_read(self) -> None:
         """标记通知为已读"""
         if not self.is_read:
-            self.is_read = True
-            self.read_at = datetime.utcnow()
+            self.is_read = True  # type: ignore[assignment]
+            self.read_at = datetime.utcnow()  # type: ignore[assignment]
 
-    def mark_as_unread(self):
+    def mark_as_unread(self) -> None:
         """标记通知为未读"""
-        self.is_read = False
-        self.read_at = None
+        self.is_read = False  # type: ignore[assignment]
+        self.read_at = None  # type: ignore[assignment]
 
-    def to_dict(self):
+    def to_dict(self) -> dict[str, Any]:
         """转换为字典"""
         return {
             "id": self.id,
@@ -109,5 +110,5 @@ class Notification(Base):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<Notification(id={self.id}, type={self.type}, title={self.title}, is_read={self.is_read})>"

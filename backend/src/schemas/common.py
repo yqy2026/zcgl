@@ -1,4 +1,4 @@
-from typing import Any, TypeVar
+from typing import Any, Generic, TypeVar
 
 """
 通用响应模式
@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 T = TypeVar("T")
 
 
-class BaseResponse[T](BaseModel):
+class BaseResponse(BaseModel, Generic[T]):
     """基础响应模式"""
 
     success: bool = Field(..., description="请求是否成功")
@@ -47,7 +47,7 @@ class PaginationInfo(BaseModel):
     has_prev: bool = Field(..., description="是否有上一页")
 
 
-class PaginatedResponse[T](BaseModel):
+class PaginatedResponse(BaseModel, Generic[T]):
     """分页响应模式"""
 
     success: bool = Field(True, description="请求是否成功")
@@ -73,7 +73,7 @@ class BusinessValidationErrorResponse(BaseModel):
     request_id: str | None = Field(None, description="请求ID")
 
 
-class SuccessResponse[T](BaseModel):
+class SuccessResponse(BaseModel, Generic[T]):
     """成功响应模式"""
 
     success: bool = Field(True, description="请求成功")
@@ -85,7 +85,7 @@ class SuccessResponse[T](BaseModel):
     request_id: str | None = Field(None, description="请求ID")
 
 
-class CreatedResponse[T](BaseModel):
+class CreatedResponse(BaseModel, Generic[T]):
     """创建成功响应模式"""
 
     success: bool = Field(True, description="创建成功")
@@ -97,7 +97,7 @@ class CreatedResponse[T](BaseModel):
     request_id: str | None = Field(None, description="请求ID")
 
 
-class UpdatedResponse[T](BaseModel):
+class UpdatedResponse(BaseModel, Generic[T]):
     """更新成功响应模式"""
 
     success: bool = Field(True, description="更新成功")
@@ -129,7 +129,7 @@ class BatchOperationResponse(BaseModel):
     total_count: int = Field(..., ge=0, description="总操作数量")
     success_count: int = Field(..., ge=0, description="成功数量")
     failed_count: int = Field(..., ge=0, description="失败数量")
-    errors: list[dict[str, Any]] = Field(default_factory=list, description="错误详情")
+    errors: list[dict[str, Any]] = Field(default_factory=list[Any], description="错误详情")
     data: dict[str, Any] | None = Field(None, description="操作结果数据")
     timestamp: datetime = Field(
         default_factory=datetime.utcnow, description="响应时间戳"
@@ -143,7 +143,7 @@ class HealthCheckResponse(BaseModel):
     status: str = Field(..., description="服务状态")
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="检查时间")
     version: str = Field(..., description="服务版本")
-    services: dict[str, str] = Field(default_factory=dict, description="依赖服务状态")
+    services: dict[str, str] = Field(default_factory=dict[str, Any], description="依赖服务状态")
     uptime: float | None = Field(None, description="运行时间（秒）")
     memory_usage: dict[str, Any] | None = Field(None, description="内存使用情况")
 
@@ -164,7 +164,9 @@ class ResponseBuilder:
 
     @staticmethod
     def error(
-        message: str, error_code: str = "unknown_error", details: dict | None = None
+        message: str,
+        error_code: str = "unknown_error",
+        details: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """构建错误响应"""
         return {  # pragma: no cover
@@ -217,8 +219,8 @@ class ResponseBuilder:
         total_count: int,
         success_count: int,
         failed_count: int,
-        errors: list[dict] = None,
-        data: dict | None = None,
+        errors: list[dict[str, Any]] | None = None,
+        data: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """构建批量操作响应"""
         return {  # pragma: no cover
@@ -234,24 +236,28 @@ class ResponseBuilder:
 
 
 # 常用响应实例
-def create_success_response[T](
-    data: T | None = None, message: str | None = None
+def create_success_response(
+    data: T | None = None, message: str | None = None, **kwargs: Any
 ) -> SuccessResponse[T]:
     """创建成功响应"""
-    return SuccessResponse(data=data, message=message)  # pragma: no cover
+    return SuccessResponse(data=data, message=message, **kwargs)  # pragma: no cover
 
 
 def create_error_response(
-    message: str, error_code: str = "unknown_error", details: dict | None = None
+    message: str,
+    error_code: str = "unknown_error",
+    details: dict[str, Any] | None = None,
 ) -> ErrorResponse:
     """创建错误响应"""
     return ErrorResponse(  # pragma: no cover
+        success=False,
         error={"code": error_code, "details": details or {}},
-        message=message,  # pragma: no cover
+        message=message,
+        request_id=None,  # pragma: no cover
     )  # pragma: no cover
 
 
-def create_paginated_response[T](
+def create_paginated_response(
     data: list[T], page: int, page_size: int, total: int, message: str | None = None
 ) -> PaginatedResponse[T]:
     """创建分页响应"""
@@ -265,7 +271,11 @@ def create_paginated_response[T](
         has_prev=page > 1,  # pragma: no cover
     )  # pragma: no cover
     return PaginatedResponse(
-        data=data, pagination=pagination, message=message
+        success=True,
+        data=data,
+        pagination=pagination,
+        message=message,
+        request_id=None,
     )  # pragma: no cover
 
 

@@ -17,7 +17,7 @@ from pydantic import BaseModel
 class BusinessValidationError(Exception):
     """业务验证错误"""
 
-    def __init__(self, message: str, code: str = None):
+    def __init__(self, message: str, code: str | None = None) -> None:
         self.message = message
         self.code = code
         super().__init__(message)
@@ -31,8 +31,8 @@ class ValidationRule:
         name: str,
         description: str,
         required: bool = True,
-        error_message: str = None,
-    ):
+        error_message: str | None = None,
+    ) -> None:
         self.name = name
         self.description = description
         self.required = required
@@ -59,7 +59,9 @@ class RequiredRule(ValidationRule):
 class LengthRule(ValidationRule):
     """长度验证"""
 
-    def __init__(self, min_length: int = None, max_length: int = None, **kwargs):
+    def __init__(
+        self, min_length: int | None = None, max_length: int | None = None, **kwargs: Any
+    ) -> None:
         super().__init__("length", "字段长度验证", **kwargs)
         self.min_length = min_length
         self.max_length = max_length
@@ -81,7 +83,7 @@ class LengthRule(ValidationRule):
 class PatternRule(ValidationRule):
     """正则表达式验证"""
 
-    def __init__(self, pattern: str, **kwargs):
+    def __init__(self, pattern: str, **kwargs: Any) -> None:
         super().__init__("pattern", "正则表达式验证", **kwargs)
         self.pattern = re.compile(pattern)
 
@@ -96,10 +98,10 @@ class RangeRule(ValidationRule):
 
     def __init__(
         self,
-        min_value: int | float | Decimal = None,
-        max_value: int | float | Decimal = None,
-        **kwargs,
-    ):
+        min_value: int | float | Decimal | None = None,
+        max_value: int | float | Decimal | None = None,
+        **kwargs: Any,
+    ) -> None:
         super().__init__("range", "数值范围验证", **kwargs)
         self.min_value = min_value
         self.max_value = max_value
@@ -125,7 +127,7 @@ class RangeRule(ValidationRule):
 class EmailRule(PatternRule):
     """邮箱验证"""
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         email_pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
         super().__init__(
             email_pattern, name="email", description="邮箱格式验证", **kwargs
@@ -136,7 +138,7 @@ class EmailRule(PatternRule):
 class PhoneRule(PatternRule):
     """手机号验证"""
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         phone_pattern = r"^1[3-9]\d{9}$"
         super().__init__(
             phone_pattern, name="phone", description="手机号格式验证", **kwargs
@@ -147,7 +149,7 @@ class PhoneRule(PatternRule):
 class DateRule(ValidationRule):
     """日期验证"""
 
-    def __init__(self, date_format: str = "%Y-%m-%d", **kwargs):
+    def __init__(self, date_format: str = "%Y-%m-%d", **kwargs: Any) -> None:
         super().__init__("date", "日期格式验证", **kwargs)
         self.date_format = date_format
 
@@ -169,7 +171,7 @@ class DateRule(ValidationRule):
 class EnumRule(ValidationRule):
     """枚举值验证"""
 
-    def __init__(self, allowed_values: list[Any], **kwargs):
+    def __init__(self, allowed_values: list[Any], **kwargs: Any) -> None:
         super().__init__("enum", "枚举值验证", **kwargs)
         self.allowed_values = allowed_values
 
@@ -188,8 +190,11 @@ class FileRule(ValidationRule):
     """文件验证"""
 
     def __init__(
-        self, allowed_extensions: list[str] = None, max_size_mb: int = None, **kwargs
-    ):
+        self,
+        allowed_extensions: list[str] | None = None,
+        max_size_mb: int | None = None,
+        **kwargs: Any,
+    ) -> None:
         super().__init__("file", "文件验证", **kwargs)
         self.allowed_extensions = allowed_extensions or []
         self.max_size_mb = max_size_mb
@@ -228,18 +233,20 @@ class FileRule(ValidationRule):
 class ValidationSchema:
     """验证模式"""
 
-    def __init__(self, name: str):
+    def __init__(self, name: str) -> None:
         self.name = name
         self.rules: dict[str, list[ValidationRule]] = {}
-        self.custom_validators: dict[str, Callable] = {}
+        self.custom_validators: dict[str, Callable[[Any, dict[str, Any]], None]] = {}
 
-    def add_rule(self, field: str, rule: ValidationRule):
+    def add_rule(self, field: str, rule: ValidationRule) -> None:
         """添加验证规则"""
         if field not in self.rules:
             self.rules[field] = []
         self.rules[field].append(rule)
 
-    def add_validator(self, field: str, validator: Callable):
+    def add_validator(
+        self, field: str, validator: Callable[[Any, dict[str, Any]], None]
+    ) -> None:
         """添加自定义验证器"""
         self.custom_validators[field] = validator
 
@@ -274,15 +281,15 @@ class ValidationSchema:
 class ValidationFramework:
     """验证框架"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.schemas: dict[str, ValidationSchema] = {}
-        self.global_validators: dict[str, Callable] = {}
+        self.global_validators: dict[str, Callable[..., Any]] = {}
 
-    def register_schema(self, schema: ValidationSchema):
+    def register_schema(self, schema: ValidationSchema) -> None:
         """注册验证模式"""
         self.schemas[schema.name] = schema
 
-    def register_validator(self, name: str, validator: Callable):
+    def register_validator(self, name: str, validator: Callable[..., Any]) -> None:
         """注册全局验证器"""
         self.global_validators[name] = validator
 
@@ -329,8 +336,8 @@ class ValidationFramework:
                 schema.add_rule(
                     field_name,
                     RangeRule(
-                        min_value=getattr(field_info, "ge", None),
-                        max_value=getattr(field_info, "le", None),
+                        min_value=getattr(field_info, "ge", None) or None,
+                        max_value=getattr(field_info, "le", None) or None,
                         required=False,
                     ),
                 )
@@ -442,7 +449,7 @@ def create_asset_validation_schema() -> ValidationSchema:
     )
 
     # 自定义验证器：出租面积不能大于可出租面积
-    def validate_rented_area(value, data):
+    def validate_rented_area(value: Any, data: dict[str, Any]) -> None:
         if (
             value is not None
             and data.get("rentable_area") is not None
@@ -478,17 +485,20 @@ validation_framework.register_schema(create_project_validation_schema())
 
 
 # 装饰器：用于API端点的数据验证
-def validate_data(schema_name: str):
+def validate_data(schema_name: str) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
     """数据验证装饰器"""
 
-    def decorator(func):
-        def wrapper(*args, **kwargs):
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             # 假设第一个参数是请求数据
             if len(args) > 0 and isinstance(args[0], dict):
                 data = args[0]
                 errors = validation_framework.validate(schema_name, data)
                 if errors:
-                    raise BusinessValidationError(errors)
+                    error_str = ", ".join(
+                        f"{k}: {', '.join(v)}" for k, v in errors.items()
+                    )
+                    raise BusinessValidationError(error_str)
             return func(*args, **kwargs)
 
         return wrapper
@@ -497,9 +507,9 @@ def validate_data(schema_name: str):
 
 
 # 工具函数
-def validate_excel_file(file_obj) -> dict[str, list[str]]:
+def validate_excel_file(file_obj: Any) -> dict[str, list[str]]:
     """验证Excel文件"""
-    errors = {}
+    errors: dict[str, list[str]] = {}
 
     file_rule = FileRule(
         allowed_extensions=["xlsx", "xls"], max_size_mb=50, required=True
@@ -511,9 +521,9 @@ def validate_excel_file(file_obj) -> dict[str, list[str]]:
     return errors
 
 
-def validate_pdf_file(file_obj) -> dict[str, list[str]]:
+def validate_pdf_file(file_obj: Any) -> dict[str, list[str]]:
     """验证PDF文件"""
-    errors = {}
+    errors: dict[str, list[str]] = {}
 
     file_rule = FileRule(allowed_extensions=["pdf"], max_size_mb=100, required=True)
 
@@ -525,7 +535,7 @@ def validate_pdf_file(file_obj) -> dict[str, list[str]]:
 
 def validate_date_range(start_date: str, end_date: str) -> dict[str, list[str]]:
     """验证日期范围"""
-    errors = {}
+    errors: dict[str, list[str]] = {}
 
     date_rule = DateRule(date_format="%Y-%m-%d")
 

@@ -1,7 +1,7 @@
 import asyncio
-import sys
-import os
 import json
+import os
+import sys
 from pathlib import Path
 
 # Setup Path
@@ -9,6 +9,7 @@ src_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../src"))
 sys.path.append(src_path)
 
 import logging
+
 logging.basicConfig(level=logging.INFO)
 
 # Load env
@@ -19,8 +20,9 @@ try:
 except ImportError:
     pass
 
-from services.document.paddleocr_service import get_paddleocr_service
 from services.document.llm_contract_extractor import LLMContractExtractor
+from services.document.paddleocr_service import get_paddleocr_service
+
 
 async def verify_full_pipeline(pdf_path_str: str):
     pdf_path = Path(pdf_path_str)
@@ -28,32 +30,32 @@ async def verify_full_pipeline(pdf_path_str: str):
         print(f"ERROR: File not found at {pdf_path}")
         return
 
-    print(f"=== Starting Full Pipeline Verification ===")
+    print("=== Starting Full Pipeline Verification ===")
     print(f"Target File: {pdf_path.name}")
     print(f"File Size: {pdf_path.stat().st_size / 1024 / 1024:.2f} MB")
-    
+
     # 1. OCR Stage
     print("\n--- Stage 1: PaddleOCR (Layout Analysis) ---")
     print("Initializing PaddleOCR (this takes time to load models)...")
     paddle_service = get_paddleocr_service()
-    
+
     # Check if we have GPU
     print(f"PaddleOCR GPU Enabled: {paddle_service.use_gpu}")
-    
+
     print("converting to Markdown...")
     try:
         # Run synchronous code in thread pool if needed, but for script is fine
         ocr_result = paddle_service.to_markdown(str(pdf_path))
-        
+
         if not ocr_result['success']:
             print(f"[ERROR] OCR Stage Failed: {ocr_result.get('error')}")
             return
-            
+
         markdown_content = ocr_result['markdown']
         print(f"[SUCCESS] OCR Success! Generated {len(markdown_content)} characters of Markdown.")
         # Preview
         print(f"Preview:\n{markdown_content[:300]}...\n")
-        
+
     except Exception as e:
         print(f"[ERROR] OCR Exception: {e}")
         import traceback
@@ -64,10 +66,10 @@ async def verify_full_pipeline(pdf_path_str: str):
     print("\n--- Stage 2: LLM Extraction ---")
     print(f"Model: {os.getenv('LLM_MODEL', 'unknown')}")
     extractor = LLMContractExtractor()
-    
+
     try:
         llm_result = await extractor.extract(markdown_content)
-        
+
         if llm_result['success']:
             print("[SUCCESS] LLM Extraction Success!")
             print("\n>>> Extracted Data <<<")
@@ -76,7 +78,7 @@ async def verify_full_pipeline(pdf_path_str: str):
             print(f"Confidence: {llm_result.get('confidence')}")
         else:
             print(f"[ERROR] LLM Extraction Failed: {llm_result.get('error')}")
-            
+
     except Exception as e:
         print(f"[ERROR] LLM Exception: {e}")
         import traceback

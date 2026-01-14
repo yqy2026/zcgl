@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, NoReturn
 
 """
 统一异常处理机制
@@ -52,7 +52,7 @@ class BusinessValidationError(BaseBusinessError):
     def __init__(
         self,
         message: str,
-        field_errors: dict[str, list] | None = None,
+        field_errors: dict[str, list[str]] | None = None,
         details: dict[str, Any] | None = None,
     ):
         self.field_errors = field_errors or {}
@@ -240,7 +240,7 @@ class RateLimitError(BaseBusinessError):
 class ExceptionHandler:
     """统一异常处理器"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.logger = logging.getLogger(__name__)
 
     def handle_business_exception(
@@ -262,7 +262,9 @@ class ExceptionHandler:
 
         return JSONResponse(status_code=exc.status_code, content=exc.to_dict())
 
-    def _sanitize_exception_details(self, details):
+    def _sanitize_exception_details(
+        self, details: dict[str, Any]
+    ) -> dict[str, Any] | str | None:
         """清理异常详情中的不可序列化内容"""
         if details is None:
             return None
@@ -301,7 +303,7 @@ class ExceptionHandler:
                 # 对于其他字段，转换Decimal为float
                 if isinstance(value, Decimal):
                     cleaned_error[key] = float(value)
-                elif isinstance(value, (list, dict)):
+                elif isinstance(value, list | dict):
                     # 递归清理嵌套结构
                     cleaned_error[key] = self._clean_for_serialization(
                         value
@@ -310,7 +312,7 @@ class ExceptionHandler:
                     cleaned_error[key] = value
             cleaned_errors.append(cleaned_error)
 
-        field_errors = {}
+        field_errors: dict[str, list[str]] = {}
         for error in exc.errors():
             field_name = ".".join(str(loc) for loc in error["loc"])
             if field_name not in field_errors:
@@ -325,7 +327,7 @@ class ExceptionHandler:
 
         return self.handle_business_exception(request, business_exc)
 
-    def _clean_for_serialization(self, obj):
+    def _clean_for_serialization(self, obj: Any) -> Any:
         """递归清理对象以便JSON序列化"""
         from decimal import Decimal
 
@@ -349,10 +351,10 @@ class ExceptionHandler:
     def handle_pydantic_validation_exception(  # pragma: no cover
         self,
         request: Request,
-        exc: BusinessValidationError,  # pragma: no cover
+        exc: RequestValidationError,  # pragma: no cover
     ) -> JSONResponse:  # pragma: no cover
         """处理Pydantic验证异常"""
-        field_errors = {}  # pragma: no cover
+        field_errors: dict[str, list[str]] = {}  # pragma: no cover
         for error in exc.errors():  # pragma: no cover
             field_name = ".".join(str(loc) for loc in error["loc"])  # pragma: no cover
             if field_name not in field_errors:  # pragma: no cover
@@ -424,97 +426,115 @@ class ExceptionHandler:
 exception_handler = ExceptionHandler()
 
 
-def setup_exception_handlers(app):
+def setup_exception_handlers(app: Any) -> None:
     """设置应用异常处理器"""
 
     # 业务异常处理器
-    @app.exception_handler(BaseBusinessError)
-    async def business_exception_handler(request: Request, exc: BaseBusinessError):
+    @app.exception_handler(BaseBusinessError)  # type: ignore[misc]
+    async def business_exception_handler(
+        request: Request, exc: BaseBusinessError
+    ) -> JSONResponse:
         return exception_handler.handle_business_exception(request, exc)
 
     # FastAPI验证异常处理器
-    @app.exception_handler(RequestValidationError)
+    @app.exception_handler(RequestValidationError)  # type: ignore[misc]
     async def validation_exception_handler(
         request: Request, exc: RequestValidationError
-    ):
+    ) -> JSONResponse:
         return exception_handler.handle_validation_exception(
             request, exc
         )  # pragma: no cover
 
     # Pydantic验证异常处理器
-    @app.exception_handler(BusinessValidationError)
+    @app.exception_handler(RequestValidationError)  # type: ignore[misc]
     async def pydantic_validation_exception_handler(
-        request: Request, exc: BusinessValidationError
-    ):
+        request: Request, exc: RequestValidationError
+    ) -> JSONResponse:
         return exception_handler.handle_pydantic_validation_exception(
             request, exc
         )  # pragma: no cover
 
     # HTTP异常处理器
-    @app.exception_handler(HTTPException)
-    async def http_exception_handler(request: Request, exc: HTTPException):
+    @app.exception_handler(HTTPException)  # type: ignore[misc]
+    async def http_exception_handler(
+        request: Request, exc: HTTPException
+    ) -> JSONResponse:
         return exception_handler.handle_http_exception(request, exc)  # pragma: no cover
 
     # 通用异常处理器
-    @app.exception_handler(Exception)
-    async def general_exception_handler(request: Request, exc: Exception):
+    @app.exception_handler(Exception)  # type: ignore[misc]
+    async def general_exception_handler(
+        request: Request, exc: Exception
+    ) -> JSONResponse:
         return exception_handler.handle_general_exception(
             request, exc
         )  # pragma: no cover
 
 
 # 便捷异常抛出函数
-def raise_not_found(resource_type: str, resource_id: str | None = None, **kwargs):
+def raise_not_found(
+    resource_type: str, resource_id: str | None = None, **kwargs: Any
+) -> NoReturn:
     """抛出资源未找到异常"""
     raise ResourceNotFoundError(resource_type, resource_id, kwargs)
 
 
-def raise_duplicate(resource_type: str, field: str, value: str, **kwargs):
+def raise_duplicate(
+    resource_type: str, field: str, value: str, **kwargs: Any
+) -> NoReturn:
     """抛出资源重复异常"""
     raise DuplicateResourceError(resource_type, field, value, kwargs)
 
 
 def raise_permission_denied(
-    message: str | None = None, required_permission: str | None = None, **kwargs
-):
+    message: str | None = None, required_permission: str | None = None, **kwargs: Any
+) -> NoReturn:
     """抛出权限不足异常"""
     raise PermissionDeniedError(message or "权限不足", required_permission, kwargs)
 
 
 def raise_validation_error(
-    message: str, field_errors: dict[str, list] | None = None, **kwargs
-):
+    message: str, field_errors: dict[str, list[str]] | None = None, **kwargs: Any
+) -> NoReturn:
     """抛出验证异常"""
     raise BusinessValidationError(message, field_errors, kwargs)
 
 
 def raise_file_error(
-    message: str, file_name: str | None = None, file_type: str | None = None, **kwargs
-):
+    message: str,
+    file_name: str | None = None,
+    file_type: str | None = None,
+    **kwargs: Any,
+) -> NoReturn:
     """抛出文件处理异常"""
     raise FileProcessingError(message, file_name, file_type, kwargs)
 
 
 def raise_task_error(
-    message: str, task_id: str | None = None, task_type: str | None = None, **kwargs
-):
+    message: str,
+    task_id: str | None = None,
+    task_type: str | None = None,
+    **kwargs: Any,
+) -> NoReturn:
     """抛出任务处理异常"""
     raise TaskProcessingError(message, task_id, task_type, kwargs)
 
 
-def raise_config_error(message: str, config_key: str | None = None, **kwargs):
+def raise_config_error(
+    message: str, config_key: str | None = None, **kwargs: Any
+) -> NoReturn:
     """抛出配置异常"""
     raise ConfigurationError(message, config_key, kwargs)
 
 
 def raise_external_service_error(
-    message: str, service_name: str | None = None, **kwargs
-):
+    message: str, service_name: str | None = None, **kwargs: Any
+) -> NoReturn:
     """抛出外部服务异常"""
     raise ExternalServiceError(message, service_name, **kwargs)
 
 
-def raise_rate_limit(retry_after: int | None = None, **kwargs):
+def raise_rate_limit(retry_after: int | None = None, **kwargs: Any) -> NoReturn:
     """抛出频率限制异常"""
     raise RateLimitError(retry_after=retry_after, **kwargs)
 

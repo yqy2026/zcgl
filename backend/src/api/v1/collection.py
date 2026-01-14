@@ -8,8 +8,9 @@ from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from ...core.database import get_db
 from ...core.router_registry import route_registry
+from ...database import get_db
+from ...middleware.auth import get_current_active_user
 from ...models.auth import User
 from ...models.collection import CollectionRecord, CollectionStatus
 from ...models.rent_contract import RentLedger
@@ -20,7 +21,6 @@ from ...schemas.collection import (
     CollectionRecordUpdate,
     CollectionTaskSummary,
 )
-from ...services.auth.dependency import get_current_active_user
 
 router = APIRouter(prefix="/collection", tags=["催缴管理"])
 

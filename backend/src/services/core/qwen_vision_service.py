@@ -35,21 +35,35 @@ class QwenVisionService:
 
     Environment Variables:
     - DASHSCOPE_API_KEY: 阿里云 DashScope API密钥 (required)
-    - QWEN_VISION_MODEL: 视觉模型 (default: qwen-vl-max)
+    - QWEN_VISION_MODEL: 视觉模型 (default: qwen3-vl-flash)
     - QWEN_TIMEOUT: API timeout in seconds (default: 120)
 
-    Available Models (2026.01):
-    - qwen-vl-max: 最强视觉理解，¥20/M输入
-    - qwen-vl-plus: 平衡性价比，¥8/M输入
-    - qwen2.5-vl-72b-instruct: 开源最强，支持JSON输出
+    Available Models (2026.01 最新):
+    - qwen3-vl-flash: 性价比最高 $0.05/M输入 (推荐)
+    - qwen-vl-max: 最强视觉理解 $0.23/M输入
+    - qwen-vl-plus: 平衡性价比 $0.08/M输入
     """
 
     DEFAULT_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 
-    def __init__(self):
-        self.api_key = os.getenv("DASHSCOPE_API_KEY")
-        self.base_url = os.getenv("DASHSCOPE_BASE_URL", self.DEFAULT_BASE_URL)
-        self.model = os.getenv("QWEN_VISION_MODEL", "qwen-vl-max")
+    def __init__(self) -> None:
+        # 优先使用 centralized config，fallback 到环境变量
+        try:
+            from src.core.config import settings
+
+            self.api_key = settings.DASHSCOPE_API_KEY or os.getenv("DASHSCOPE_API_KEY")
+            self.base_url = settings.DASHSCOPE_BASE_URL or os.getenv(
+                "DASHSCOPE_BASE_URL", self.DEFAULT_BASE_URL
+            )
+            self.model = settings.QWEN_VISION_MODEL or os.getenv(
+                "QWEN_VISION_MODEL", "qwen3-vl-flash"
+            )
+        except ImportError:
+            # Fallback for standalone usage
+            self.api_key = os.getenv("DASHSCOPE_API_KEY")
+            self.base_url = os.getenv("DASHSCOPE_BASE_URL", self.DEFAULT_BASE_URL)
+            self.model = os.getenv("QWEN_VISION_MODEL", "qwen3-vl-flash")
+
         self.timeout = int(os.getenv("QWEN_TIMEOUT", "120"))
 
         if not self.api_key:

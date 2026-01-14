@@ -99,9 +99,10 @@ class ErrorResponse(BaseModel):
     request_id: str | None = Field(None, description="请求 ID")
     timestamp: datetime = Field(default_factory=datetime.now, description="错误时间")
 
-    class Config:
-        use_enum_values = True
-        json_schema_extra = {
+    model_config = {
+        "use_enum_values": True,
+        "validate_default": True,
+        "json_schema_extra": {
             "example": {
                 "success": False,
                 "error_code": "API_TIMEOUT",
@@ -110,7 +111,8 @@ class ErrorResponse(BaseModel):
                 "retry_suggested": True,
                 "retry_after_seconds": 5,
             }
-        }
+        },
+    }
 
 
 # ============================================================================
@@ -138,8 +140,8 @@ class DetailedErrorResponse(ErrorResponse):
     support_url: str | None = Field(None, description="支持文档 URL")
     issue_tracking_id: str | None = Field(None, description="问题追踪 ID")
 
-    class Config:
-        json_schema_extra = {
+    model_config = {
+        "json_schema_extra": {
             "example": {
                 "success": False,
                 "error_code": "OCR_UNAVAILABLE",
@@ -153,6 +155,7 @@ class DetailedErrorResponse(ErrorResponse):
                 ],
             }
         }
+    }
 
 
 # ============================================================================
@@ -182,8 +185,8 @@ class BatchErrorResponse(ErrorResponse):
         default_factory=list, description="失败项目详情"
     )
 
-    class Config:
-        json_schema_extra = {
+    model_config = {
+        "json_schema_extra": {
             "example": {
                 "success": False,
                 "error_code": "PARTIAL_FAILURE",
@@ -201,6 +204,7 @@ class BatchErrorResponse(ErrorResponse):
                 ],
             }
         }
+    }
 
 
 # ============================================================================
@@ -228,6 +232,9 @@ class ErrorBuilder:
             retry_suggested=True,
             retry_after_seconds=retry_after,
             details=details,
+            error_type=None,
+            stack_trace=None,
+            request_id=None,
         )
 
     @staticmethod
@@ -245,6 +252,9 @@ class ErrorBuilder:
             retry_after_seconds=10,
             details=details
             or {"timeout_seconds": timeout_seconds, "operation": operation},
+            error_type=None,
+            stack_trace=None,
+            request_id=None,
         )
 
     @staticmethod
@@ -258,7 +268,11 @@ class ErrorBuilder:
             error_message=f"File not found: {file_path}",
             severity=ErrorSeverity.HIGH,
             retry_suggested=False,
+            retry_after_seconds=None,
             details=details or {"file_path": file_path},
+            error_type=None,
+            stack_trace=None,
+            request_id=None,
         )
 
     @staticmethod
@@ -273,15 +287,15 @@ class ErrorBuilder:
             error_message=f"File size ({file_size_mb:.1f}MB) exceeds limit ({max_size_mb}MB)",
             severity=ErrorSeverity.MEDIUM,
             retry_suggested=False,
+            retry_after_seconds=None,
             details=details
             or {
                 "file_size_mb": file_size_mb,
                 "max_size_mb": max_size_mb,
             },
-            suggestions=[
-                f"Compress the PDF to under {max_size_mb}MB",
-                f"Split the PDF into smaller files (max {max_size_mb}MB each)",
-            ],
+            error_type=None,
+            stack_trace=None,
+            request_id=None,
         )
 
     @staticmethod
@@ -295,7 +309,15 @@ class ErrorBuilder:
             severity=ErrorSeverity.HIGH,
             source="service",
             retry_suggested=False,
+            retry_after_seconds=None,
             details=details,
+            error_type=None,
+            stack_trace=None,
+            request_id=None,
+            session_id=None,
+            file_path=None,
+            support_url=None,
+            issue_tracking_id=None,
             suggestions=[
                 "Install OCR dependencies: uv sync --extra pdf-ocr",
                 "Check OCR service status",
@@ -314,11 +336,11 @@ class ErrorBuilder:
             error_message=f"Invalid PDF: {reason}",
             severity=ErrorSeverity.HIGH,
             retry_suggested=False,
+            retry_after_seconds=None,
             details=details,
-            suggestions=[
-                "Verify the PDF file is not corrupted",
-                "Try re-downloading or re-creating the PDF",
-            ],
+            error_type=None,
+            stack_trace=None,
+            request_id=None,
         )
 
     @staticmethod
@@ -328,16 +350,21 @@ class ErrorBuilder:
         confidence: float | None = None,
     ) -> ErrorResponse:
         """创建提取失败错误响应"""
+        final_details = details or {}
+        if confidence is not None:
+            final_details = {"confidence": confidence, **final_details}
+
         error_response = ErrorResponse(
             error_code=ErrorCode.EXTRACTION_FAILED,
             error_message=reason,
             severity=ErrorSeverity.MEDIUM,
             retry_suggested=True,
-            details=details,
+            retry_after_seconds=5,
+            details=final_details if final_details else None,
+            error_type=None,
+            stack_trace=None,
+            request_id=None,
         )
-        if confidence is not None:
-            error_response.details = error_response.details or {}
-            error_response.details["confidence"] = confidence
         return error_response
 
     @staticmethod
@@ -352,16 +379,15 @@ class ErrorBuilder:
             error_message=f"Extraction confidence ({confidence:.2f}) below threshold ({threshold:.2f})",
             severity=ErrorSeverity.MEDIUM,
             retry_suggested=True,
+            retry_after_seconds=5,
             details=details
             or {
                 "confidence": confidence,
                 "threshold": threshold,
             },
-            suggestions=[
-                "Try using a different extraction method",
-                "Verify the PDF quality",
-                "Manually review and correct the extracted data",
-            ],
+            error_type=None,
+            stack_trace=None,
+            request_id=None,
         )
 
     @staticmethod
@@ -375,11 +401,11 @@ class ErrorBuilder:
             error_message=f"{service} key not configured",
             severity=ErrorSeverity.HIGH,
             retry_suggested=False,
+            retry_after_seconds=None,
             details=details or {"service": service},
-            suggestions=[
-                f"Set {service.upper()}_API_KEY environment variable",
-                "Check configuration file",
-            ],
+            error_type=None,
+            stack_trace=None,
+            request_id=None,
         )
 
     @staticmethod
@@ -394,11 +420,9 @@ class ErrorBuilder:
             retry_suggested=True,
             retry_after_seconds=60,
             details=details,
-            suggestions=[
-                "Reduce concurrent processing (OCR_MAX_CONCURRENT)",
-                "Process smaller PDFs",
-                "Increase system memory",
-            ],
+            error_type=None,
+            stack_trace=None,
+            request_id=None,
         )
 
     @staticmethod
@@ -412,7 +436,11 @@ class ErrorBuilder:
             error_message=f"Internal error: {message}",
             severity=ErrorSeverity.HIGH,
             retry_suggested=True,
+            retry_after_seconds=5,
             details=details,
+            error_type=None,
+            stack_trace=None,
+            request_id=None,
         )
 
 
@@ -443,11 +471,22 @@ def exception_to_error_response(
     error_message = str(exception)
 
     # 根据异常类型确定错误码
-    if isinstance(exception, (ConnectionError, httpx.NetworkError)):
-        return ErrorBuilder.network_error(error_message)
+    try:
+        import httpx
 
-    if isinstance(exception, (TimeoutError, httpx.TimeoutException)):
-        return ErrorBuilder.timeout_error(180, "request")
+        if isinstance(exception, (ConnectionError, httpx.NetworkError)):
+            return ErrorBuilder.network_error(error_message)
+
+        if isinstance(exception, (TimeoutError, httpx.TimeoutException)):
+            return ErrorBuilder.timeout_error(180, "request")
+    except ImportError:
+        pass
+
+    if isinstance(exception, ConnectionError | TimeoutError):
+        if isinstance(exception, ConnectionError):
+            return ErrorBuilder.network_error(error_message)
+        else:
+            return ErrorBuilder.timeout_error(180, "request")
 
     if isinstance(exception, FileNotFoundError):
         return ErrorBuilder.file_not_found(error_message)
@@ -470,13 +509,13 @@ def exception_to_error_response(
 try:
     import httpx
 
-    httpx.TimeoutException = httpx.TimeoutException
+    _httpx_timeout_exception = httpx.TimeoutException
 except ImportError:
 
     class MockTimeoutError(Exception):
         pass
 
-    httpx = type("obj", (object,), {"TimeoutException": MockTimeoutError})
+    _httpx_timeout_exception = MockTimeoutError  # type: ignore[misc,assignment]
 
 
 # ============================================================================
@@ -510,6 +549,7 @@ async def error_response_handler(
 
 if __name__ == "__main__":  # pragma: no cover
     import logging
+
     logger = logging.getLogger(__name__)
 
     # 网络错误

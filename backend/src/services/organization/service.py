@@ -24,7 +24,8 @@ class OrganizationService:
             parent = organization_crud.get(db, obj_in.parent_id)
             if not parent:
                 raise ValueError(f"上级组织 {obj_in.parent_id} 不存在")
-            level = parent.level + 1
+            parent_level: int = getattr(parent, "level")
+            level = parent_level + 1
             # path will be set after ID is generated or we need to generate ID first?
             # Organization model ID is UUID default.
             # We can let DB generate or generate here?
@@ -32,28 +33,31 @@ class OrganizationService:
 
         # Create object
         db_obj = Organization(**obj_in.model_dump())
-        db_obj.level = level
+        object.__setattr__(db_obj, "level", level)
         # Temporary path until flush
-        db_obj.path = "/"  # Placeholder
+        object.__setattr__(db_obj, "path", "/")
 
         db.add(db_obj)
         db.flush()  # Get ID
 
         # Now set path
         if parent:
-            db_obj.path = (
+            object.__setattr__(
+                db_obj,
+                "path",
                 f"{parent.path}/{db_obj.id}"
                 if parent.path
-                else f"/{parent.id}/{db_obj.id}"
+                else f"/{parent.id}/{db_obj.id}",
             )
         else:
-            db_obj.path = f"/{db_obj.id}"
+            object.__setattr__(db_obj, "path", f"/{db_obj.id}")
 
         db.commit()
         db.refresh(db_obj)
 
         # 记录创建历史
-        self._create_history(db, db_obj.id, "create", created_by=obj_in.created_by)
+        org_id_value: str = getattr(db_obj, "id")
+        self._create_history(db, org_id_value, "create", created_by=obj_in.created_by)
 
         return db_obj
 
@@ -61,7 +65,7 @@ class OrganizationService:
         self, db: Session, *, org_id: str, obj_in: OrganizationUpdate
     ) -> Organization:
         """更新组织"""
-        db_obj = organization_crud.get(db, org_id)
+        db_obj: Organization | None = organization_crud.get(db, org_id)
         if not db_obj:
             raise ValueError(f"组织ID {org_id} 不存在")
 
@@ -87,17 +91,19 @@ class OrganizationService:
 
                     parent = organization_crud.get(db, new_parent_id)
                     if parent:
-                        db_obj.level = parent.level + 1
-                        db_obj.path = (
+                        object.__setattr__(db_obj, "level", parent.level + 1)
+                        object.__setattr__(
+                            db_obj,
+                            "path",
                             f"{parent.path}/{db_obj.id}"
                             if parent.path
-                            else f"/{parent.id}/{db_obj.id}"
+                            else f"/{parent.id}/{db_obj.id}",
                         )
                     else:
                         raise ValueError(f"上级组织 {new_parent_id} 不存在")
                 else:
-                    db_obj.level = 1
-                    db_obj.path = f"/{db_obj.id}"
+                    object.__setattr__(db_obj, "level", 1)
+                    object.__setattr__(db_obj, "path", f"/{db_obj.id}")
 
                 # 更新所有子组织的层级和路径
                 self._update_children_path(db, db_obj)
@@ -107,15 +113,16 @@ class OrganizationService:
             if field != "updated_by":
                 setattr(db_obj, field, value)
 
-        db_obj.updated_at = datetime.now()
+        setattr(db_obj, "updated_at", datetime.now())
         db.commit()
         db.refresh(db_obj)
 
         # 记录变更历史
         for field, values in old_values.items():
+            org_id_value: str = getattr(db_obj, "id")
             self._create_history(
                 db,
-                org_id,
+                org_id_value,
                 "update",
                 field,
                 values["old"],
@@ -138,8 +145,8 @@ class OrganizationService:
         if children:
             raise ValueError("不能删除有子组织的组织，请先删除或移动子组织")
 
-        db_obj.is_deleted = True
-        db_obj.updated_at = datetime.now()
+        setattr(db_obj, "is_deleted", True)
+        setattr(db_obj, "updated_at", datetime.now())
         db.commit()
 
         # 记录删除历史
@@ -195,20 +202,28 @@ class OrganizationService:
 
     def _would_create_cycle(self, db: Session, org_id: str, new_parent_id: str) -> bool:
         """检查是否会创建循环引用"""
-        current_id = new_parent_id
+        current_id: str | None = new_parent_id
         while current_id:
             if current_id == org_id:
                 return True
             parent = organization_crud.get(db, current_id)
-            current_id = parent.parent_id if parent else None
+            if parent:
+                parent_id_value: str | None = getattr(parent, "parent_id")
+                current_id = parent_id_value if parent_id_value else None
+            else:
+                current_id = None
         return False
 
-    def _update_children_path(self, db: Session, parent_org: Organization):
+    def _update_children_path(self, db: Session, parent_org: Organization) -> None:
         """更新子组织路径"""
-        children = organization_crud.get_children(db, parent_org.id)
+        parent_org_id: str = getattr(parent_org, "id")
+        parent_level: int = getattr(parent_org, "level")
+        parent_path: str = getattr(parent_org, "path")
+        children = organization_crud.get_children(db, parent_org_id)
         for child in children:
-            child.level = parent_org.level + 1
-            child.path = f"{parent_org.path}/{child.id}"
+            setattr(child, "level", parent_level + 1)
+            child_id: str = getattr(child, "id")
+            setattr(child, "path", f"{parent_path}/{child_id}")
             db.commit()
             # 递归更新子组织的子组织
             self._update_children_path(db, child)
@@ -222,7 +237,7 @@ class OrganizationService:
         old_value: str | None = None,
         new_value: str | None = None,
         created_by: str | None = None,
-    ):
+    ) -> None:
         """创建历史记录"""
         history = OrganizationHistory(
             organization_id=org_id,

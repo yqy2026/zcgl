@@ -1,7 +1,7 @@
 import asyncio
-import sys
 import os
-from unittest.mock import MagicMock, AsyncMock
+import sys
+from unittest.mock import AsyncMock
 
 # Add 'src' to path so we can import directly from services
 # d:/ccode/zcgl/backend/tests/manual_test_llm_extractor.py -> ../src
@@ -13,17 +13,18 @@ print(f"Added to path: {src_path}")
 # Mock environment variables
 os.environ["LLM_API_KEY"] = "test-key"
 
-# Import directly from src... 
+# Import directly from src...
 # Assuming backend/src is the root of the source code when running from backend/
-from services.document.llm_contract_extractor import LLMContractExtractor
 from services.core.llm_service import LLMResponse
+from services.document.llm_contract_extractor import LLMContractExtractor
+
 
 async def test_extraction():
     print("Testing LLMContractExtractor...")
-    
+
     # 1. Setup Extractor with Mocked LLM Service
     extractor = LLMContractExtractor()
-    
+
     # Mock return data from "LLM"
     mock_json_content = """
     {
@@ -59,30 +60,30 @@ async def test_extraction():
         }
     }
     """
-    
+
     # Mock the chat_completion method
     extractor.llm_service.chat_completion = AsyncMock(return_value=LLMResponse(
         content=mock_json_content,
         raw_response={},
         usage={}
     ))
-    
+
     # 2. Run Extraction on "Markdown"
     fake_markdown = "# Contract 2024..."
     result = await extractor.extract(fake_markdown)
-    
+
     # 3. Verify Results
     print(f"Success: {result['success']}")
     print(f"Extraction Method: {result['extraction_method']}")
-    
+
     fields = result['extracted_fields']
     print(f"Contract Number: {fields['contract_number']}")
     print(f"Monthly Rent: {fields['monthly_rent']}")
-    
+
     assert fields['contract_number'] == "HT-2024-888"
     assert fields['monthly_rent'] == 5000.0
     assert fields['landlord_name'] == "Guangzhou Property Co"
-    
+
     print("Verification Passed!")
 
 if __name__ == "__main__":

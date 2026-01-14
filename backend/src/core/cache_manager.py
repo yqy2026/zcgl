@@ -255,11 +255,11 @@ class CacheManager:
     def get_or_set(
         self,
         key: str,
-        factory_func,
+        factory_func: Callable[..., Any],
         ttl: int | None = None,
         namespace: str | None = None,
-        *args,
-        **kwargs,
+        *args: Any,
+        **kwargs: Any,
     ) -> Any:
         """
         获取缓存或设置新值
@@ -421,7 +421,7 @@ class CacheManager:
                 "created_at": datetime.now(UTC).isoformat(),  # pragma: no cover
             }
 
-    def generate_key(self, prefix: str, **kwargs) -> str:
+    def generate_key(self, prefix: str, **kwargs: Any) -> str:
         """
         生成缓存键，支持多个参数
 
@@ -457,8 +457,8 @@ class CacheManager:
         self,
         ttl: int | None = None,
         namespace: str | None = None,
-        key_generator: Callable | None = None,
-    ):
+        key_generator: Callable[..., Any] | None = None,
+    ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
         """
         缓存装饰器
 
@@ -468,8 +468,8 @@ class CacheManager:
             key_generator: 键生成函数
         """
 
-        def decorator(func):
-            def wrapper(*args, **kwargs):
+        def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+            def wrapper(*args: Any, **kwargs: Any) -> Any:
                 # 生成缓存键
                 if key_generator:  # pragma: no cover
                     cache_key = key_generator(*args, **kwargs)  # pragma: no cover
@@ -496,7 +496,7 @@ class CacheManager:
 
     def cache_invalidate(
         self, namespace: str | None = None, pattern: str | None = None
-    ):
+    ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
         """
         缓存失效装饰器
 
@@ -505,8 +505,8 @@ class CacheManager:
             pattern: 匹配模式
         """
 
-        def decorator(func):
-            def wrapper(*args, **kwargs):
+        def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+            def wrapper(*args: Any, **kwargs: Any) -> Any:
                 try:
                     result = func(*args, **kwargs)
                     # 执行成功后清除缓存
@@ -521,7 +521,7 @@ class CacheManager:
         return decorator
 
 
-def _hash_function_call(args: tuple, kwargs: dict) -> str:
+def _hash_function_call(args: tuple[Any, ...], kwargs: dict[str, Any]) -> str:
     """哈希函数调用参数"""
     try:
         # 尝试序列化参数
@@ -568,12 +568,12 @@ analytics_cache.key_prefix = "analytics"
 
 
 # 便捷函数
-def cached(ttl: int | None = None, namespace: str | None = None):
+def cached(ttl: int | None = None, namespace: str | None = None) -> Callable[..., Any]:
     """缓存装饰器便捷函数"""
     return cache_manager.cached(ttl=ttl, namespace=namespace)
 
 
-def cache_invalidate(namespace: str | None = None, pattern: str | None = None):
+def cache_invalidate(namespace: str | None = None, pattern: str | None = None) -> Callable[..., Any]:
     """缓存失效装饰器便捷函数"""
     return cache_manager.cache_invalidate(namespace=namespace, pattern=pattern)
 

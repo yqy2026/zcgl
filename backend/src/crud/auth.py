@@ -149,15 +149,18 @@ class UserCRUD:
 
     def count(self, db: Session) -> int:
         """用户总数"""
-        return db.query(func.count(User.id)).scalar()
+        result = db.query(func.count(User.id)).scalar()
+        return int(result) if result is not None else 0
 
     def count_active(self, db: Session) -> int:
         """活跃用户总数"""
-        return db.query(func.count(User.id)).filter(User.is_active).scalar()
+        result = db.query(func.count(User.id)).filter(User.is_active).scalar()
+        return int(result) if result is not None else 0
 
     def count_by_role(self, db: Session, role: UserRole) -> int:
         """按角色统计用户数"""
-        return db.query(func.count(User.id)).filter(User.role == role).scalar()
+        result = db.query(func.count(User.id)).filter(User.role == role).scalar()
+        return int(result) if result is not None else 0
 
     def get_recent_logins(self, db: Session, limit: int = 10) -> list[User]:
         """获取最近登录的用户"""
@@ -168,6 +171,17 @@ class UserCRUD:
             .limit(limit)
             .all()
         )
+
+    def get_users_by_role(
+        self, db: Session, role_id: str, skip: int = 0, limit: int = 100
+    ) -> tuple[list[User], int]:
+        """根据角色ID获取用户列表"""
+        # Note: This implementation assumes role_id is a UserRole enum value
+        # If you need role-based filtering by Role model ID, this needs adjustment
+        query = db.query(User).filter(User.role == role_id)
+        total = query.count()
+        users = query.offset(skip).limit(limit).all()
+        return users, total
 
 
 class UserSessionCRUD:
@@ -251,9 +265,10 @@ class UserSessionCRUD:
 
     def count_active_sessions(self, db: Session) -> int:
         """活跃会话总数"""
-        return (
+        result = (
             db.query(func.count(UserSession.id)).filter(UserSession.is_active).scalar()
         )
+        return int(result) if result is not None else 0
 
 
 class AuditLogCRUD:
@@ -352,7 +367,8 @@ class AuditLogCRUD:
 
     def count(self, db: Session) -> int:
         """审计日志总数"""
-        return db.query(func.count(AuditLog.id)).scalar()
+        result = db.query(func.count(AuditLog.id)).scalar()
+        return int(result) if result is not None else 0
 
     def get_user_actions(self, db: Session, user_id: str, days: int = 30) -> list[str]:
         """获取用户最近操作"""

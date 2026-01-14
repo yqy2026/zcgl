@@ -4,6 +4,7 @@
 """
 
 from datetime import datetime, timedelta
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict
@@ -58,7 +59,7 @@ class OperationLogStatisticsResponse(BaseModel):
     """操作日志统计响应"""
 
     success: bool
-    data: dict
+    data: dict[str, Any]
     message: str = "统计成功"
 
 
@@ -78,7 +79,7 @@ async def get_operation_logs(
     end_date: str | None = Query(None, description="结束日期(YYYY-MM-DD)"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> OperationLogListResponse:
     """
     获取操作日志列表，支持多条件筛选
 
@@ -148,7 +149,7 @@ async def get_operation_log(
     log_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> OperationLogResponse:
     """获取单条操作日志详情"""
     try:
         log_crud = OperationLogCRUD()
@@ -179,7 +180,7 @@ async def get_user_operation_statistics(
     days: int = Query(30, ge=1, le=365, description="统计天数"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> OperationLogStatisticsResponse:
     """获取指定用户的操作统计"""
     try:
         log_crud = OperationLogCRUD()
@@ -203,7 +204,7 @@ async def get_module_operation_statistics(
     days: int = Query(30, ge=1, le=365, description="统计天数"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> OperationLogStatisticsResponse:
     """获取指定模块的操作统计"""
     try:
         log_crud = OperationLogCRUD()
@@ -226,7 +227,7 @@ async def get_daily_operation_statistics(
     days: int = Query(30, ge=1, le=365, description="统计天数"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> OperationLogStatisticsResponse:
     """获取每日操作统计"""
     try:
         log_crud = OperationLogCRUD()
@@ -249,7 +250,7 @@ async def get_error_operation_statistics(
     days: int = Query(30, ge=1, le=365, description="统计天数"),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
-):
+) -> OperationLogStatisticsResponse:
     """获取错误操作统计（仅管理员）"""
     try:
         log_crud = OperationLogCRUD()
@@ -263,12 +264,12 @@ async def get_error_operation_statistics(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/statistics/summary", response_model=dict, summary="获取日志汇总统计")
+@router.get("/statistics/summary", response_model=dict[str, Any], summary="获取日志汇总统计")
 async def get_operation_log_summary(
     days: int = Query(30, ge=1, le=365, description="统计天数"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> dict[str, Any]:
     """获取操作日志汇总统计"""
     try:
         log_crud = OperationLogCRUD()
@@ -295,11 +296,11 @@ async def get_operation_log_summary(
 
 @router.post("/export", summary="导出操作日志")
 async def export_operation_logs(
-    filters: dict = None,
+    filters: dict[str, Any] | None = None,
     format: str = Query("excel", description="导出格式: excel 或 csv"),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
-):
+) -> dict[str, Any]:
     """
     导出操作日志为Excel或CSV格式
 
@@ -340,7 +341,7 @@ async def cleanup_old_logs(
     days: int = Query(90, ge=1, le=365, description="保留天数"),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
-):
+) -> dict[str, Any]:
     """
     删除指定天数前的日志（仅管理员）
 

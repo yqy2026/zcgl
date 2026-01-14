@@ -2,6 +2,8 @@
 资产历史记录API路由
 """
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy.orm import Session
 
@@ -21,7 +23,7 @@ async def get_history_list(
     limit: int = Query(20, ge=1, le=100, description="每页记录数"),
     asset_id: str | None = Query(None, description="资产ID筛选"),
     db: Session = Depends(get_db),
-):
+) -> dict[str, Any]:
     """
     获取资产历史记录列表
 
@@ -76,7 +78,7 @@ async def get_history_list(
 )
 async def get_history_detail(
     history_id: str = Path(..., description="历史记录ID"), db: Session = Depends(get_db)
-):
+) -> dict[str, Any]:
     """
     根据ID获取历史记录详情
 
@@ -98,7 +100,7 @@ async def get_history_detail(
 @router.delete("/{history_id}", summary="删除历史记录")
 async def delete_history(
     history_id: str = Path(..., description="历史记录ID"), db: Session = Depends(get_db)
-):
+) -> dict[str, Any]:
     """
     删除历史记录
 

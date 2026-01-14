@@ -36,7 +36,7 @@ class BasicStatisticsResponse(BaseModel):
     usage_status: dict[str, int] = Field(..., description="按使用状态统计")
     generated_at: datetime = Field(..., description="生成时间")
     filters_applied: dict[str, Any] = Field(
-        default_factory=dict, description="应用的筛选条件"
+        default_factory=dict[str, Any], description="应用的筛选条件"
     )
 
     model_config = ConfigDict(json_schema_extra={})
@@ -51,7 +51,7 @@ class DetailedStatisticsResponse(BaseModel):
     occupancy_analysis: dict[str, Any] = Field(..., description="出租率分析")
     contract_analysis: dict[str, Any] = Field(..., description="合同分析")
     filters_applied: dict[str, Any] = Field(
-        default_factory=dict, description="应用的筛选条件"
+        default_factory=dict[str, Any], description="应用的筛选条件"
     )
 
     model_config = ConfigDict(json_schema_extra={})
@@ -73,7 +73,7 @@ class TimeSeriesStatisticsResponse(BaseModel):
     period_start: datetime = Field(..., description="统计开始时间")
     period_end: datetime = Field(..., description="统计结束时间")
     filters_applied: dict[str, Any] = Field(
-        default_factory=dict, description="应用的筛选条件"
+        default_factory=dict[str, Any], description="应用的筛选条件"
     )
 
 
@@ -139,7 +139,7 @@ class DashboardDataResponse(BaseModel):
     )
     generated_at: datetime = Field(..., description="生成时间")
     filters_applied: dict[str, Any] = Field(
-        default_factory=dict, description="应用的筛选条件"
+        default_factory=dict[str, Any], description="应用的筛选条件"
     )
 
 

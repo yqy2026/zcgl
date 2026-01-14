@@ -94,7 +94,7 @@ class ExcelImportService:
             df = pd.read_excel(file_path, sheet_name=sheet_name)
 
             if df.empty:
-                return {
+                empty_result: dict[str, Any] = {
                     "total": 0,
                     "success": 0,
                     "failed": 0,
@@ -103,9 +103,10 @@ class ExcelImportService:
                     "errors": [],
                     "warnings": [],
                 }
+                return empty_result
 
             total_rows = len(df)
-            results = {
+            results: dict[str, Any] = {
                 "total": total_rows,
                 "success": 0,
                 "failed": 0,
@@ -242,7 +243,7 @@ class ExcelImportService:
 
     def _map_excel_row_to_asset_data(
         self, row: pd.Series, row_num: int
-    ) -> dict[str, Any]:
+    ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
         """
         将Excel行数据映射为资产数据字典
 
@@ -253,8 +254,8 @@ class ExcelImportService:
         Returns:
             元组 (资产数据字典, 解析警告列表)
         """
-        asset_data = {}
-        parse_warnings = []
+        asset_data: dict[str, Any] = {}
+        parse_warnings: list[dict[str, Any]] = []
 
         for excel_col, db_field in FIELD_MAPPING.items():
             if excel_col in row and pd.notna(row[excel_col]):
@@ -420,9 +421,9 @@ class ExcelImportService:
             preview_df = df.head(preview_rows)
 
             # 转换为字典格式，处理NaN值
-            preview_data = []
+            preview_data: list[dict[str, Any]] = []
             for _, row in preview_df.iterrows():
-                row_dict = {}
+                row_dict: dict[str, Any] = {}
                 for col in columns:
                     value = row[col]
                     if pd.isna(value):

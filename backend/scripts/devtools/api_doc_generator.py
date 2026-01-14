@@ -1,5 +1,3 @@
-from typing import Any
-
 """
 API文档生成工具
 自动扫描FastAPI应用并生成标准化的API文档
@@ -8,18 +6,23 @@ API文档生成工具
 import inspect
 import json
 import os
+from collections.abc import Callable
 from datetime import datetime
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
+
+# Type alias for endpoint functions
+EndpointFunction = Callable[..., Any]
 
 
 class APIDocGenerator:
     """API文档生成器"""
 
-    def __init__(self, app: FastAPI):
+    def __init__(self, app: FastAPI) -> None:
         self.app = app
-        self.docs_data = {
+        self.docs_data: dict[str, Any] = {
             "info": {
                 "title": "Land Property Asset Management API",
                 "description": "土地物业管理资产系统 API 文档",
@@ -56,22 +59,24 @@ class APIDocGenerator:
 
         return self.docs_data
 
-    def _process_route(self, route: APIRoute):
+    def _process_route(self, route: APIRoute) -> None:
         """处理单个路由"""
-        path = route.path
-        methods = list(route.methods)
+        path: str = route.path
+        methods: list[str] = list(route.methods or [])
 
         # 获取路由信息
-        endpoint = route.endpoint
-        path_params = route.path_params
-        query_params = list(route.dependant.call_params.values())
+        endpoint: EndpointFunction = route.endpoint
+        path_params: dict[str, Any] = getattr(route, "path_params", {})
+        query_params: list[Any] = list(
+            getattr(route.dependant, "call_params", {}).values()
+        )
 
         # 解析端点函数
         inspect.signature(endpoint)  # 预留字段，当前未使用
-        docstring = inspect.getdoc(endpoint) or ""
+        docstring: str = inspect.getdoc(endpoint) or ""
 
         # 提取标签
-        tags = getattr(route, "tags", ["default"])
+        tags: list[str] = getattr(route, "tags", ["default"])
         for tag in tags:
             if tag not in self.docs_data["tags"]:
                 self.docs_data["tags"].append({"name": tag})
@@ -93,12 +98,12 @@ class APIDocGenerator:
         self,
         path: str,
         method: str,
-        endpoint,
+        endpoint: EndpointFunction,
         docstring: str,
-        path_params: list,
-        query_params: list,
+        path_params: dict[str, Any],
+        query_params: list[Any],
         tags: list[str],
-    ):
+    ) -> None:
         """添加HTTP方法到文档"""
         if path not in self.docs_data["paths"]:
             self.docs_data["paths"][path] = {}
@@ -107,7 +112,7 @@ class APIDocGenerator:
         summary, description, parameters = self._parse_docstring(docstring)
 
         # 构建操作对象
-        operation = {
+        operation: dict[str, Any] = {
             "summary": summary or f"{method} {path}",
             "description": description or "",
             "tags": tags,
@@ -129,7 +134,8 @@ class APIDocGenerator:
 
             # 路径参数
             for param in path_params:
-                operation["parameters"].append(
+                param_list: list[dict[str, Any]] = operation["parameters"]
+                param_list.append(
                     {
                         "name": param,
                         "in": "path",
@@ -141,11 +147,13 @@ class APIDocGenerator:
             # 查询参数（简化处理）
             for param in query_params:
                 if hasattr(param, "name") and hasattr(param, "type_"):
-                    operation["parameters"].append(
+                    param_list = operation["parameters"]
+                    param_default = getattr(param, "default", inspect.Parameter.empty)
+                    param_list.append(
                         {
                             "name": param.name,
                             "in": "query",
-                            "required": param.default == inspect.Parameter.empty,
+                            "required": param_default == inspect.Parameter.empty,
                             "schema": {"type": "string"},
                         }
                     )
@@ -160,14 +168,14 @@ class APIDocGenerator:
 
         self.docs_data["paths"][path][method.lower()] = operation
 
-    def _parse_docstring(self, docstring: str) -> tuple[str, str, list[dict]]:
+    def _parse_docstring(self, docstring: str) -> tuple[str, str, list[dict[str, Any]]]:
         """解析文档字符串"""
-        lines = docstring.split("\n")
-        summary = ""
-        description = ""
-        parameters = []
+        lines: list[str] = docstring.split("\n")
+        summary: str = ""
+        description: str = ""
+        parameters: list[dict[str, Any]] = []
 
-        current_section = None
+        current_section: str | None = None
         for line in lines:
             line = line.strip()
             if not line:
@@ -176,8 +184,8 @@ class APIDocGenerator:
             if line.startswith("- **"):
                 # 参数描述
                 if ":" in line:
-                    param_name = line[4:].split(":")[0]
-                    param_desc = line[4:].split(":", 1)[1].strip()
+                    param_name: str = line[4:].split(":")[0]
+                    param_desc: str = line[4:].split(":", 1)[1].strip()
                     parameters.append({"name": param_name, "description": param_desc})
             elif not summary:
                 summary = line
@@ -186,13 +194,19 @@ class APIDocGenerator:
 
         return summary, description.strip(), parameters
 
-    def _generate_tags_info(self):
+    def _generate_tags_info(self) -> None:
         """生成标签详细信息"""
-        tag_details = {
-            "资产": {"description": "资产信息管理相关接口，包括资产的增删改查、批量操作等功能"},
-            "项目": {"description": "项目管理相关接口，包括项目的创建、查询、更新等操作"},
+        tag_details: dict[str, dict[str, str]] = {
+            "资产": {
+                "description": "资产信息管理相关接口，包括资产的增删改查、批量操作等功能"
+            },
+            "项目": {
+                "description": "项目管理相关接口，包括项目的创建、查询、更新等操作"
+            },
             "权属方": {"description": "权属方管理相关接口，包括权属方信息的维护和查询"},
-            "统计": {"description": "数据统计分析接口，提供各种维度的数据统计和报表功能"},
+            "统计": {
+                "description": "数据统计分析接口，提供各种维度的数据统计和报表功能"
+            },
             "Excel": {"description": "Excel导入导出功能，支持异步处理和任务跟踪"},
             "PDF": {"description": "PDF文件处理功能，支持智能提取和批量导入"},
             "任务管理": {"description": "异步任务管理，提供任务状态跟踪和历史记录查询"},
@@ -201,14 +215,14 @@ class APIDocGenerator:
 
         # 更新标签信息
         for tag in self.docs_data["tags"]:
-            tag_name = tag.get("name", "")
+            tag_name: str = tag.get("name", "")
             if tag_name in tag_details:
                 tag["description"] = tag_details[tag_name]["description"]
 
-    def _generate_schemas(self):
+    def _generate_schemas(self) -> None:
         """生成数据模型文档"""
         # 常用数据模型
-        common_schemas = {
+        common_schemas: dict[str, dict[str, Any]] = {
             "Asset": {
                 "type": "object",
                 "properties": {
@@ -289,9 +303,9 @@ class APIDocGenerator:
 
         self.docs_data["schemas"] = common_schemas
 
-    def _generate_examples(self):
+    def _generate_examples(self) -> None:
         """生成示例数据"""
-        examples = {
+        examples: dict[str, dict[str, Any]] = {
             "AssetExample": {
                 "id": "550e8400-e29b-41d4-a716-446655440000",
                 "property_name": "示例物业",
@@ -317,12 +331,12 @@ class APIDocGenerator:
 
         self.docs_data["examples"] = examples
 
-    def save_docs(self, output_dir: str = "docs/api"):
+    def save_docs(self, output_dir: str = "docs/api") -> None:
         """保存文档到文件"""
         os.makedirs(output_dir, exist_ok=True)
 
         # 生成JSON格式文档
-        json_path = os.path.join(output_dir, "api-docs.json")
+        json_path: str = os.path.join(output_dir, "api-docs.json")
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(self.docs_data, f, ensure_ascii=False, indent=2)
 
@@ -333,14 +347,15 @@ class APIDocGenerator:
         print(f"   📄 JSON文档: {json_path}")
         print(f"   📖 Markdown文档: {os.path.join(output_dir, 'README.md')}")
 
-    def _generate_markdown_docs(self, output_dir: str):
+    def _generate_markdown_docs(self, output_dir: str) -> None:
         """生成Markdown格式文档"""
-        md_content = f"""# {self.docs_data["info"]["title"]}
+        info_dict: dict[str, Any] = self.docs_data["info"]
+        md_content: str = f"""# {info_dict["title"]}
 
-{self.docs_data["info"]["description"]}
+{info_dict["description"]}
 
-**版本:** {self.docs_data["info"]["version"]}
-**生成时间:** {self.docs_data["info"]["generated_at"]}
+**版本:** {info_dict["version"]}
+**生成时间:** {info_dict["generated_at"]}
 
 ## 目录
 
@@ -348,7 +363,7 @@ class APIDocGenerator:
 
         # 生成目录
         for tag in self.docs_data["tags"]:
-            tag_name = tag.get("name", "")
+            tag_name: str = tag.get("name", "")
             md_content += f"- [{tag_name}](#{tag_name})\n"
 
         md_content += "\n---\n\n"
@@ -356,7 +371,7 @@ class APIDocGenerator:
         # 生成各标签的API文档
         for tag in self.docs_data["tags"]:
             tag_name = tag.get("name", "")
-            tag_desc = tag.get("description", "")
+            tag_desc: str = tag.get("description", "")
 
             md_content += f"## {tag_name}\n\n"
             if tag_desc:
@@ -371,42 +386,44 @@ class APIDocGenerator:
             md_content += "\n---\n\n"
 
         # 保存Markdown文档
-        md_path = os.path.join(output_dir, "README.md")
+        md_path: str = os.path.join(output_dir, "README.md")
         with open(md_path, "w", encoding="utf-8") as f:
             f.write(md_content)
 
-    def _generate_api_md(self, path: str, method: str, operation: dict) -> str:
+    def _generate_api_md(
+        self, path: str, method: str, operation: dict[str, Any]
+    ) -> str:
         """生成单个API的Markdown文档"""
-        summary = operation.get("summary", f"{method.upper()} {path}")
-        description = operation.get("description", "")
+        summary: str = operation.get("summary", f"{method.upper()} {path}")
+        description: str = operation.get("description", "")
 
-        md = f"### {method.upper()} {path}\n\n"
+        md: str = f"### {method.upper()} {path}\n\n"
         md += f"**摘要:** {summary}\n\n"
 
         if description:
             md += f"**描述:** {description}\n\n"
 
         # 参数
-        parameters = operation.get("parameters", [])
+        parameters: list[dict[str, Any]] = operation.get("parameters", [])
         if parameters:
             md += "**参数:**\n\n"
             md += "| 参数名 | 位置 | 类型 | 必填 | 描述 |\n"
             md += "|--------|------|------|------|------|\n"
 
             for param in parameters:
-                param_name = param.get("name", "")
-                param_in = param.get("in", "")
-                param_required = param.get("required", False)
-                param_schema = param.get("schema", {})
-                param_type = param_schema.get("type", "string")
-                param_desc = param.get("description", "")
+                param_name: str = param.get("name", "")
+                param_in: str = param.get("in", "")
+                param_required: bool = param.get("required", False)
+                param_schema: dict[str, str] = param.get("schema", {})
+                param_type: str = param_schema.get("type", "string")
+                param_desc: str = param.get("description", "")
 
                 md += f"| {param_name} | {param_in} | {param_type} | {'是' if param_required else '否'} | {param_desc} |\n"
 
             md += "\n"
 
         # 响应示例
-        responses = operation.get("responses", {})
+        responses: dict[str, Any] = operation.get("responses", {})
         if "200" in responses:
             md += "**响应示例:**\n\n"
             md += "```json\n"
@@ -417,7 +434,7 @@ class APIDocGenerator:
         return md
 
 
-def generate_api_docs(app: FastAPI, output_dir: str = "docs/api"):
+def generate_api_docs(app: FastAPI, output_dir: str = "docs/api") -> dict[str, Any]:
     """
     生成API文档的便捷函数
 
@@ -425,8 +442,8 @@ def generate_api_docs(app: FastAPI, output_dir: str = "docs/api"):
         app: FastAPI应用实例
         output_dir: 输出目录
     """
-    generator = APIDocGenerator(app)
-    docs = generator.generate_docs()
+    generator: APIDocGenerator = APIDocGenerator(app)
+    docs: dict[str, Any] = generator.generate_docs()
     generator.save_docs(output_dir)
     return docs
 

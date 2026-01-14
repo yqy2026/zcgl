@@ -13,6 +13,7 @@ from ..config import LLMProvider
 from .base import ContractExtractorInterface
 from .deepseek_adapter import DeepSeekAdapter
 from .glm_adapter import GLMAdapter
+from .hunyuan_adapter import HunyuanAdapter
 from .qwen_adapter import QwenAdapter
 
 logger = logging.getLogger(__name__)
@@ -27,6 +28,7 @@ EXTRACTOR_MAP: dict[LLMProvider, type[ContractExtractorInterface]] = {
     LLMProvider.QWEN: QwenAdapter,
     LLMProvider.DEEPSEEK: DeepSeekAdapter,
     LLMProvider.GLM: GLMAdapter,
+    LLMProvider.HUNYUAN: HunyuanAdapter,
 }
 
 
@@ -94,6 +96,7 @@ class ExtractorFactory:
                 "dashscope",
             ],
             "deepseek": ["deepseek-vl", "deepseek", "深度求索"],
+            "hunyuan": ["hunyuan-vision", "hunyuan", "tencent", "腾讯", "混元"],
         }
 
 

@@ -12,12 +12,13 @@ from sqlalchemy.orm import Session
 from ..core.performance import cached, monitor_query
 from ..models.asset import Asset, AssetHistory
 from ..schemas.asset import AssetCreate, AssetUpdate
+from .base import CRUDBase
 
 
 class SensitiveDataHandler:
     """敏感数据处理器"""
 
-    def encrypt_sensitive_data(self, data):
+    def encrypt_sensitive_data(self, data: Any) -> Any:
         """加密敏感数据"""
 
         # 在实际应用中，这里应该实现真正的数据加密逻辑
@@ -27,13 +28,10 @@ class SensitiveDataHandler:
         return data
 
 
-from .base import CRUDBase
-
-
 class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
     """资产CRUD操作类 - 优化版本"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__(Asset)
         self.sensitive_data_handler = SensitiveDataHandler()
 
@@ -46,7 +44,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         return self.get_by_name(db, property_name)
 
     @monitor_query("asset_get_multi_with_search")
-    @cached(ttl=600)  # 10分钟缓存
+    @cached(ttl=600)
     def get_multi_with_search(
         self,
         db: Session,
@@ -83,7 +81,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
 
         # 使用 CRUDBase (QueryBuilder) 获取数据
         # 注意：QueryBuilder 默认处理 skip/limit
-        assets = self.get_with_filters(
+        assets: list[Asset] = self.get_with_filters(
             db,
             filters=qb_filters,
             search=search,
@@ -104,7 +102,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
 
     def create_with_history(self, db: Session, obj_in: AssetCreate) -> Asset:
         """创建资产并记录历史"""
-        db_obj = self.create(db=db, obj_in=obj_in)
+        db_obj: Asset = self.create(db=db, obj_in=obj_in)
 
         history = AssetHistory(
             asset_id=db_obj.id,
@@ -117,9 +115,16 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         return db_obj
 
     def update(
-        self, db: Session, db_obj: Asset, obj_in: AssetUpdate | dict[str, Any]
+        self,
+        db: Session,
+        *,
+        db_obj: Asset,
+        obj_in: AssetUpdate | dict[str, Any],
     ) -> Asset:
-        """更新资产，增加版本号"""
+        """更新资产，增加版本号
+
+        Note: Signature intentionally specializes generic CRUDBase.update for Asset type
+        """
         # CRUDBase.update returns db_obj
         # We need to hook in before commit?
         # CRUDBase.update does commit.
@@ -136,17 +141,23 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         # or rely on model events or adjust obj_in.
 
         # Let's use the explicit implementation for update to ensure version increment works
-        if hasattr(db_obj, "version"):
-            db_obj.version = (db_obj.version or 0) + 1
+        if hasattr(db_obj, "version") and db_obj.version is not None:
+            current_version = int(db_obj.version)
+            db_obj.version = current_version + 1
 
         # Call super().update (which handles mapping obj_in to db_obj and commit)
-        return super().update(db=db, db_obj=db_obj, obj_in=obj_in)
+        result: Asset = super().update(db=db, db_obj=db_obj, obj_in=obj_in)
+        return result
 
     def update_with_history(
         self, db: Session, db_obj: Asset, obj_in: AssetUpdate
     ) -> Asset:
         """更新资产并记录历史"""
-        update_data = obj_in.dict(exclude_unset=True)
+        if hasattr(obj_in, "model_dump"):
+            update_data = obj_in.model_dump(exclude_unset=True)
+        else:
+            update_data = obj_in.dict(exclude_unset=True)
+
         for field, new_value in update_data.items():
             if hasattr(db_obj, field):
                 old_value = getattr(db_obj, field)

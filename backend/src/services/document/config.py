@@ -7,6 +7,7 @@ PDF/OCR 统一配置
 import logging
 import os
 from enum import Enum
+from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -25,6 +26,7 @@ class LLMProvider(str, Enum):
     QWEN = "qwen"  # 通义千问 (阿里云 DashScope)
     DEEPSEEK = "deepseek"  # DeepSeek-VL
     GLM = "glm"  # 智谱 GLM (GLM-4V)
+    HUNYUAN = "hunyuan"  # 腾讯混元 (2026-01 新增)
 
     @classmethod
     def normalize(cls, value: str) -> "LLMProvider":
@@ -57,6 +59,11 @@ class LLMProvider(str, Enum):
             "阿里": cls.QWEN,  # Chinese alias
             # DeepSeek 别名
             "deepseek-vl": cls.DEEPSEEK,
+            # Hunyuan 别名 (2026-01 新增)
+            "hunyuan-vision": cls.HUNYUAN,
+            "tencent": cls.HUNYUAN,
+            "腾讯": cls.HUNYUAN,  # Chinese alias
+            "混元": cls.HUNYUAN,  # Chinese alias
         }
 
         normalized = value_map.get(value.lower())
@@ -493,7 +500,11 @@ def validate_config(config: PDFImportConfig) -> list[str]:
         try:
             import paddle
 
-            if not paddle.is_compiled_with_cuda():
+            # PaddlePaddle 的 CUDA 检查
+            cuda_available: bool = getattr(
+                paddle, "is_compiled_with_cuda", lambda: False
+            )()
+            if not cuda_available:
                 warnings.append(
                     "use_gpu=True but CUDA is not available in PaddlePaddle"
                 )
@@ -508,7 +519,7 @@ def validate_config(config: PDFImportConfig) -> list[str]:
 # ============================================================================
 
 
-def export_config_dict(config: PDFImportConfig | None = None) -> dict:
+def export_config_dict(config: PDFImportConfig | None = None) -> dict[str, Any]:
     """
     导出配置为字典
 

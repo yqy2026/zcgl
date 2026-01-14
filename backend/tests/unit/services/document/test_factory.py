@@ -4,10 +4,11 @@ Unit tests for ExtractorFactory
 提取器工厂单元测试
 """
 
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
+from src.services.document.config import LLMProvider
 from src.services.document.extractors.base import ContractExtractorInterface
 from src.services.document.extractors.factory import (
     EXTRACTOR_MAP,
@@ -15,7 +16,6 @@ from src.services.document.extractors.factory import (
     get_llm_extractor,
     reset_extractor,
 )
-from src.services.document.config import LLMProvider
 
 
 class TestExtractorMap:
@@ -29,9 +29,9 @@ class TestExtractorMap:
 
     def test_extractor_map_values_are_classes(self):
         """测试映射值是提取器类"""
+        from src.services.document.extractors.deepseek_adapter import DeepSeekAdapter
         from src.services.document.extractors.glm_adapter import GLMAdapter
         from src.services.document.extractors.qwen_adapter import QwenAdapter
-        from src.services.document.extractors.deepseek_adapter import DeepSeekAdapter
 
         assert EXTRACTOR_MAP[LLMProvider.GLM] == GLMAdapter
         assert EXTRACTOR_MAP[LLMProvider.QWEN] == QwenAdapter
@@ -171,9 +171,9 @@ class TestExtractorCreation:
 
     def test_each_provider_creates_correct_instance(self):
         """测试每个提供商创建正确的实例"""
+        from src.services.document.extractors.deepseek_adapter import DeepSeekAdapter
         from src.services.document.extractors.glm_adapter import GLMAdapter
         from src.services.document.extractors.qwen_adapter import QwenAdapter
-        from src.services.document.extractors.deepseek_adapter import DeepSeekAdapter
 
         # GLM
         glm_extractor = ExtractorFactory.get_extractor(LLMProvider.GLM)

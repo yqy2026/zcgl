@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from ...crud.asset import asset_crud
 from ...database import get_db
 from ...middleware.auth import get_current_active_user, require_permission
+from ...models.asset import Asset
 from ...models.auth import User
 from ...schemas.asset import (
     AssetBatchUpdateRequest,
@@ -51,7 +52,7 @@ async def batch_update_assets(
             asset_ids=request.asset_ids,
             updates=request.updates,
             update_all=request.update_all,
-            operator=current_user.username if current_user else "system",
+            operator=str(current_user.username) if current_user else "system",
         )
 
         return AssetBatchUpdateResponse(**result.to_dict())
@@ -195,12 +196,12 @@ async def get_all_assets(
                 pass
 
         # 获取所有资产（不分页）
-        assets = asset_crud.get_with_filters(
+        assets: list[Asset] = asset_crud.get_with_filters(
             db=db,
             filters=filters if filters else None,
             search=search,
             order_by=sort_by,
-            order_desc=(sort_order and sort_order.lower() == "desc"),
+            order_desc=bool(sort_order and sort_order.lower() == "desc"),
             limit=limit,
         )
 
@@ -235,7 +236,7 @@ async def get_assets_by_ids(
     try:
         asset_ids = request.get("ids", [])
         if not asset_ids:
-            return []
+            return {"success": True, "data": [], "message": "未提供资产ID列表"}
 
         # 批量查询资产
         assets = asset_crud.get_multi_by_ids(db=db, ids=asset_ids)
@@ -277,7 +278,7 @@ async def batch_delete_assets(
         service = AssetBatchService(db)
         result = service.batch_delete(
             asset_ids=asset_ids,
-            operator=current_user.username if current_user else "system",
+            operator=str(current_user.username) if current_user else "system",
         )
 
         return {

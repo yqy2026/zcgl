@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -28,13 +29,13 @@ class RBACService:
             raise ValueError(f"角色名称 '{obj_in.name}' 已存在")
 
         # Create role
-        role = role_crud.create(db, obj_in=obj_in, created_by=created_by)
+        role: Role = role_crud.create(db, obj_in=obj_in, created_by=created_by)
 
         # Handle initial permissions
         if obj_in.permission_ids:
             self.update_role_permissions(
                 db,
-                role_id=role.id,
+                role_id=str(role.id),
                 permission_ids=obj_in.permission_ids,
                 updated_by=created_by,
             )
@@ -55,7 +56,12 @@ class RBACService:
             pass
 
         # Update basic fields
-        role = role_crud.update(db, db_obj=role, obj_in=obj_in, updated_by=updated_by)
+        role = role_crud.update(db, db_obj=role, obj_in=obj_in)
+        # Set audit fields manually (needs separate commit)
+        role.updated_by = updated_by
+        db.add(role)
+        db.commit()
+        db.refresh(role)
 
         # Update permissions if provided
         if obj_in.permission_ids is not None:
@@ -82,13 +88,16 @@ class RBACService:
         if user_count > 0:
             raise ValueError(f"角色正在被 {user_count} 个用户使用，无法删除")
 
-        return role_crud.delete(
-            db, id=role_id
-        )  # Using hard delete or soft? Base uses soft by default if model supports it. Role has no is_deleted.
+        # Use remove instead of delete (CRUDBase has remove, not delete)
+        try:
+            role_crud.remove(db, id=role_id)
+            return True
+        except Exception:
+            return False
 
     def update_role_permissions(
         self, db: Session, *, role_id: str, permission_ids: list[str], updated_by: str
-    ):
+    ) -> None:
         """更新角色权限"""
         role = role_crud.get(db, id=role_id)
         if not role:

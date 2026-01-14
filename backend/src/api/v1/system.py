@@ -4,6 +4,7 @@
 """
 
 from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import APIRouter
 
@@ -40,7 +41,8 @@ async def health_check():
                 pool_status = db_status.get("pool_status", {})
                 metrics = db_status.get("enhanced_metrics", {})
 
-                health_data["database"].update(
+                database_data: dict[str, Any] = health_data["database"]  # type: ignore[assignment]
+                database_data.update(
                     {
                         "connection_pool_utilization": pool_status.get(
                             "utilization", 0
@@ -59,7 +61,7 @@ async def health_check():
 
                 logger = logging.getLogger(__name__)
                 logger.warning(f"Failed to get detailed database metrics: {db_e}")
-                health_data["database"]["metrics_error"] = str(db_e)
+                database_data["metrics_error"] = str(db_e)
 
         return success_response(data=health_data, message="系统运行正常")
 

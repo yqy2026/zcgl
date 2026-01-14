@@ -130,7 +130,7 @@ class DefectPrevention(BaseModel):
 
 
 # 数据库连接
-def get_db_connection():
+def get_db_connection() -> sqlite3.Connection:
     """获取数据库连接"""
     db_path = Path(__file__).parent.parent.parent / "data" / "defect_tracking.db"
     os.makedirs(db_path.parent, exist_ok=True)
@@ -139,7 +139,7 @@ def get_db_connection():
     return conn
 
 
-def init_defect_db():
+def init_defect_db() -> None:
     """初始化缺陷跟踪数据库"""
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -234,7 +234,7 @@ init_defect_db()
 
 
 @router.post("/", response_model=DefectReport)
-async def create_defect(defect: DefectReport):
+async def create_defect(defect: DefectReport) -> DefectReport:
     """
     创建新的缺陷报告
 
@@ -290,6 +290,7 @@ async def create_defect(defect: DefectReport):
             cursor=cursor,
             defect_id=defect_id,
             action="created",
+            old_value=None,
             new_value=defect.title,
             changed_by=defect.reporter,
             comment="缺陷报告创建",
@@ -322,7 +323,7 @@ async def get_defects(
     offset: int = Query(default=0, ge=0),
     sort_by: str = Query(default="created_at", description="排序字段"),
     sort_order: str = Query(default="desc", description="排序方向"),
-):
+) -> dict[str, Any]:
     """
     获取缺陷列表
 
@@ -346,7 +347,7 @@ async def get_defects(
 
     # 构建查询
     query = "SELECT * FROM defect_reports WHERE 1=1"
-    params = []
+    params: list[Any] = []
 
     if status:
         query += " AND status = ?"
@@ -412,7 +413,7 @@ async def get_defects(
 
     # 获取总数
     count_query = "SELECT COUNT(*) as total FROM defect_reports WHERE 1=1"
-    count_params = []
+    count_params: list[Any] = []
 
     if status:
         count_query += " AND status = ?"
@@ -457,7 +458,7 @@ async def get_defects(
 
 
 @router.get("/{defect_id}", response_model=DefectReport)
-async def get_defect(defect_id: str):
+async def get_defect(defect_id: str) -> DefectReport:
     """
     获取缺陷详情
 
@@ -482,7 +483,7 @@ async def get_defect(defect_id: str):
 
 
 @router.put("/{defect_id}", response_model=DefectReport)
-async def update_defect(defect_id: str, updates: dict[str, Any]):
+async def update_defect(defect_id: str, updates: dict[str, Any]) -> DefectReport:
     """
     更新缺陷报告
 
@@ -615,7 +616,7 @@ async def update_defect(defect_id: str, updates: dict[str, Any]):
 
 
 @router.get("/{defect_id}/history")
-async def get_defect_history(defect_id: str):
+async def get_defect_history(defect_id: str) -> list[dict[str, Any]]:
     """
     获取缺陷历史记录
 
@@ -660,7 +661,7 @@ async def get_defect_history(defect_id: str):
 async def get_defect_trends(
     days: int = Query(default=30, ge=1, le=365, description="查询天数"),
     group_by: str = Query(default="day", description="分组方式: day, week, month"),
-):
+) -> list[DefectTrend]:
     """
     获取缺陷趋势数据
 
@@ -739,7 +740,7 @@ async def get_defect_trends(
 @router.get("/analysis", response_model=DefectAnalysis)
 async def get_defect_analysis(
     days: int = Query(default=30, ge=1, le=365, description="分析天数"),
-):
+) -> DefectAnalysis:
     """
     获取缺陷分析报告
 
@@ -865,7 +866,7 @@ async def get_defect_analysis(
 
 
 @router.post("/prevention", response_model=DefectPrevention)
-async def create_prevention_measure(prevention: DefectPrevention):
+async def create_prevention_measure(prevention: DefectPrevention) -> DefectPrevention:
     """
     创建缺陷预防措施
 
@@ -923,7 +924,7 @@ async def create_prevention_measure(prevention: DefectPrevention):
 async def get_prevention_measures(
     category: DefectCategory | None = Query(None, description="分类过滤"),
     priority: DefectPriority | None = Query(None, description="优先级过滤"),
-):
+) -> list[DefectPrevention]:
     """
     获取预防措施列表
 
@@ -938,7 +939,7 @@ async def get_prevention_measures(
     cursor = conn.cursor()
 
     query = "SELECT * FROM defect_prevention WHERE 1=1"
-    params = []
+    params: list[Any] = []
 
     if category:
         query += " AND category = ?"
@@ -958,7 +959,7 @@ async def get_prevention_measures(
 
 
 # 辅助函数
-def _row_to_defect_report(row) -> DefectReport:
+def _row_to_defect_report(row: sqlite3.Row) -> DefectReport:
     """将数据库行转换为DefectReport对象"""
     return DefectReport(
         defect_id=row["defect_id"],
@@ -989,7 +990,7 @@ def _row_to_defect_report(row) -> DefectReport:
     )
 
 
-def _row_to_prevention(row) -> DefectPrevention:
+def _row_to_prevention(row: sqlite3.Row) -> DefectPrevention:
     """将数据库行转换为DefectPrevention对象"""
     return DefectPrevention(
         prevention_id=row["prevention_id"],
@@ -1004,14 +1005,14 @@ def _row_to_prevention(row) -> DefectPrevention:
 
 
 async def _add_defect_history(
-    cursor,
+    cursor: sqlite3.Cursor,
     defect_id: str,
     action: str,
     old_value: str | None,
     new_value: str | None,
     changed_by: str,
     comment: str,
-):
+) -> None:
     """添加缺陷历史记录"""
     cursor.execute(
         """
@@ -1023,7 +1024,7 @@ async def _add_defect_history(
     )
 
 
-def _get_module_severity(conn, module: str, start_date: datetime) -> str:
+def _get_module_severity(conn: sqlite3.Connection, module: str, start_date: datetime) -> str:
     """获取模块的缺陷严重程度"""
     cursor = conn.cursor()
     cursor.execute(

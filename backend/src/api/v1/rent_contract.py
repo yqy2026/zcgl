@@ -132,7 +132,7 @@ def get_contracts(
     contract_status: str | None = Query(None, description="合同状态筛选"),
     start_date: date | None = Query(None, description="开始日期筛选"),
     end_date: date | None = Query(None, description="结束日期筛选"),
-) -> Any:
+) -> RentContractListResponse:
     """
     获取租金合同列表，支持分页和筛选
     """
@@ -152,8 +152,11 @@ def get_contracts(
 
     pages = (total + limit - 1) // limit
 
+    # Convert ORM models to response schemas
+    contract_responses = [RentContractResponse.model_validate(c) for c in contracts]
+
     return RentContractListResponse(
-        items=contracts, total=total, page=page, limit=limit, pages=pages
+        items=contract_responses, total=total, page=page, limit=limit, pages=pages
     )
 
 
@@ -312,7 +315,7 @@ def get_contract_deposit_ledger(
     contract_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> list[DepositLedgerResponse]:
     """
     获取指定合同的押金变动记录
 
@@ -346,7 +349,7 @@ def get_contract_service_fee_ledger(
     contract_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-):
+) -> list[ServiceFeeLedgerResponse]:
     """
     获取指定合同的服务费台账记录
 
@@ -460,7 +463,7 @@ def get_rent_ledger(
     payment_status: str | None = Query(None, description="支付状态筛选"),
     start_date: date | None = Query(None, description="开始日期筛选"),
     end_date: date | None = Query(None, description="结束日期筛选"),
-) -> Any:
+) -> RentLedgerListResponse:
     """
     获取租金台账列表，支持分页和筛选
     """
@@ -480,8 +483,11 @@ def get_rent_ledger(
 
     pages = (total + limit - 1) // limit
 
+    # Convert ORM models to response schemas
+    ledger_responses = [RentLedgerResponse.model_validate(l) for l in ledgers]
+
     return RentLedgerListResponse(
-        items=ledgers, total=total, page=page, limit=limit, pages=pages
+        items=ledger_responses, total=total, page=page, limit=limit, pages=pages
     )
 
 
@@ -572,6 +578,7 @@ def get_rent_statistics(
     end_date: date | None = Query(None, description="结束日期"),
     ownership_ids: list[str] | None = Query(None, description="权属方ID列表"),
     asset_ids: list[str] | None = Query(None, description="资产ID列表"),
+    contract_status: str | None = Query(None, description="合同状态"),
 ) -> Any:
     """
     获取租金统计概览信息
@@ -581,6 +588,7 @@ def get_rent_statistics(
         end_date=end_date,
         ownership_ids=ownership_ids,
         asset_ids=asset_ids,
+        contract_status=contract_status,
     )
 
     try:
@@ -695,7 +703,9 @@ def export_statistics(
         # 获取统计数据
         overview_stats = rent_contract_service.get_statistics(
             db=db,
-            query_params=RentStatisticsQuery(start_date=start_date, end_date=end_date),
+            query_params=RentStatisticsQuery(
+                start_date=start_date, end_date=end_date, ownership_ids=None, asset_ids=None, contract_status=None
+            ),
         )
 
         ownership_stats = rent_contract_service.get_ownership_statistics(
@@ -779,7 +789,7 @@ def get_asset_contracts(
 @router.get("/excel/template", summary="下载Excel导入模板")
 def download_excel_template(
     current_user: User = Depends(get_current_active_user),
-):
+) -> FileResponse:
     """
     下载租金合同Excel导入模板
     """
@@ -807,14 +817,16 @@ def import_contracts_from_excel(
     import_terms: bool = Form(True, description="是否导入租金条款"),
     import_ledger: bool = Form(False, description="是否导入台账数据"),
     overwrite_existing: bool = Form(False, description="是否覆盖已存在的数据"),
-):
+) -> dict[str, Any]:
     """
     从Excel文件导入租金合同数据
     """
+    from typing import cast
+
     try:
         # 保存上传的文件
         temp_dir = tempfile.gettempdir()
-        file_path = os.path.join(temp_dir, file.filename)
+        file_path = os.path.join(temp_dir, file.filename or "upload.xlsx")
 
         with open(file_path, "wb") as buffer:
             content = file.file.read()
@@ -831,7 +843,7 @@ def import_contracts_from_excel(
         # 清理临时文件
         rent_contract_excel_service.cleanup_file(file_path)
 
-        return result
+        return cast(dict[str, Any], result)
 
     except Exception as e:
         # Don't catch HTTPException - let it propagate
@@ -848,7 +860,7 @@ def export_contracts_to_excel(
     include_ledger: bool = Query(True, description="是否包含台账数据"),
     start_date: date | None = Query(None, description="开始日期"),
     end_date: date | None = Query(None, description="结束日期"),
-):
+) -> FileResponse:
     """
     导出租金合同数据到Excel文件
     """
@@ -880,7 +892,7 @@ def export_contracts_to_excel(
 # ==================== 合同附件管理 ====================
 
 
-@router.post("/{contract_id}/attachments", response_model=dict, summary="上传合同附件")
+@router.post("/{contract_id}/attachments", response_model=dict[str, Any], summary="上传合同附件")
 async def upload_contract_attachment(
     contract_id: str,
     file: UploadFile = File(..., description="附件文件"),
@@ -888,7 +900,7 @@ async def upload_contract_attachment(
     description: str | None = Form(None, description="附件描述"),
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, Any]:
     """
     上传合同附件
 
@@ -964,13 +976,13 @@ async def upload_contract_attachment(
 
 
 @router.get(
-    "/{contract_id}/attachments", response_model=list, summary="获取合同附件列表"
+    "/{contract_id}/attachments", response_model=list[Any], summary="获取合同附件列表"
 )
 async def get_contract_attachments(
     contract_id: str,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
-):
+) -> list[dict[str, Any]]:
     """
     获取指定合同的所有附件
     """
@@ -1012,7 +1024,7 @@ async def download_contract_attachment(
     attachment_id: str,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
-):
+) -> FileResponse:
     """
     下载指定的合同附件
     """
@@ -1047,7 +1059,7 @@ async def download_contract_attachment(
 
 @router.delete(
     "/{contract_id}/attachments/{attachment_id}",
-    response_model=dict,
+    response_model=dict[str, Any],
     summary="删除合同附件",
 )
 async def delete_contract_attachment(
@@ -1055,7 +1067,7 @@ async def delete_contract_attachment(
     attachment_id: str,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
-):
+) -> dict[str, str]:
     """
     删除指定的合同附件
     """

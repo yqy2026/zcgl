@@ -1,4 +1,4 @@
-from typing import Any, TypeVar
+from typing import Any, Generic, TypeVar
 
 from sqlalchemy import Select, and_, or_, select
 from sqlalchemy.orm import DeclarativeMeta
@@ -6,7 +6,7 @@ from sqlalchemy.orm import DeclarativeMeta
 ModelType = TypeVar("ModelType", bound=DeclarativeMeta)
 
 
-class QueryBuilder[ModelType: DeclarativeMeta]:
+class QueryBuilder(Generic[ModelType]):
     """
     Unified Query Builder for SQLAlchemy models.
     Supports dynamic filtering, searching, sorting, and pagination.
@@ -20,7 +20,7 @@ class QueryBuilder[ModelType: DeclarativeMeta]:
         filters: dict[str, Any] | None = None,
         search_query: str | None = None,
         search_fields: list[str] | None = None,
-    ) -> Select:
+    ) -> Select[Any]:
         """
         Builds a query to count records matching criteria.
         """
@@ -45,8 +45,8 @@ class QueryBuilder[ModelType: DeclarativeMeta]:
         sort_desc: bool = True,
         skip: int = 0,
         limit: int = 100,
-        base_query: Select | None = None,
-    ) -> Select:
+        base_query: Select[Any] | None = None,
+    ) -> Select[Any]:
         """
         Builds a SQLAlchemy query with the given parameters.
 
@@ -85,14 +85,15 @@ class QueryBuilder[ModelType: DeclarativeMeta]:
         else:
             # Default sort by id desc if available, closely matching standard expectations
             if hasattr(self.model, "id"):
-                query = query.order_by(self.model.id.desc())
+                id_column = getattr(self.model, "id")
+                query = query.order_by(id_column.desc())
 
         # 4. Apply Pagination
         query = query.offset(skip).limit(limit)
 
         return query
 
-    def _apply_filters(self, query: Select, filters: dict[str, Any]) -> Select:
+    def _apply_filters(self, query: Select[Any], filters: dict[str, Any]) -> Select[Any]:
         conditions = []
         for key, value in filters.items():
             if value is None:
@@ -142,8 +143,8 @@ class QueryBuilder[ModelType: DeclarativeMeta]:
         return query
 
     def _apply_search(
-        self, query: Select, search_term: str, search_fields: list[str]
-    ) -> Select:
+        self, query: Select[Any], search_term: str, search_fields: list[str]
+    ) -> Select[Any]:
         search_conditions = []
         for field in search_fields:
             if hasattr(self.model, field):
@@ -158,7 +159,7 @@ class QueryBuilder[ModelType: DeclarativeMeta]:
 
         return query
 
-    def _apply_sorting(self, query: Select, sort_by: str, sort_desc: bool) -> Select:
+    def _apply_sorting(self, query: Select[Any], sort_by: str, sort_desc: bool) -> Select[Any]:
         if hasattr(self.model, sort_by):
             column = getattr(self.model, sort_by)
             if sort_desc:
