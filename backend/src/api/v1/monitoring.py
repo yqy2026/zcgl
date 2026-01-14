@@ -131,7 +131,7 @@ async def get_system_health() -> HealthCheck:
 
 
 @router.get("/performance/dashboard", summary="获取性能监控仪表板数据")
-@permission_required("system", "monitoring")  # type: ignore[misc]
+@permission_required("system", "monitoring")
 async def get_performance_dashboard() -> dict[str, Any]:
     """
     获取性能监控仪表板数据
@@ -319,7 +319,7 @@ def collect_application_metrics() -> ApplicationMetrics:
 
 
 @router.get("/system-metrics", response_model=SystemMetrics, summary="获取系统性能指标")
-@permission_required("system_monitoring", "read")  # type: ignore[misc]
+@permission_required("system_monitoring", "read")
 async def get_system_metrics(current_user: User = Depends(get_current_user)) -> SystemMetrics:
     """获取当前系统性能指标"""
     return collect_system_metrics()
@@ -330,14 +330,14 @@ async def get_system_metrics(current_user: User = Depends(get_current_user)) -> 
     response_model=ApplicationMetrics,
     summary="获取应用性能指标",
 )
-@permission_required("system_monitoring", "read")  # type: ignore[misc]
+@permission_required("system_monitoring", "read")
 async def get_application_metrics(current_user: User = Depends(get_current_user)) -> ApplicationMetrics:
     """获取应用性能指标"""
     return collect_application_metrics()
 
 
 @router.get("/dashboard", summary="获取系统监控仪表板")
-@permission_required("system_monitoring", "read")  # type: ignore[misc]
+@permission_required("system_monitoring", "read")
 async def get_system_monitoring_dashboard(
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
@@ -450,7 +450,7 @@ async def get_system_monitoring_dashboard(
 
 
 @router.post("/metrics/collect", summary="手动触发指标收集")
-@permission_required("system_monitoring", "write")  # type: ignore[misc]
+@permission_required("system_monitoring", "write")
 async def trigger_metrics_collection(current_user: User = Depends(get_current_user)) -> dict[str, Any]:
     """手动触发一次指标收集"""
     try:

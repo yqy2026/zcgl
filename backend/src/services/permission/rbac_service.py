@@ -419,13 +419,13 @@ class RBACService:
     ) -> PermissionCheckResponse:
         """检查用户权限"""
         user = self.db.query(User).filter(User.id == user_id).first()
-        if not user or not cast("bool", user.is_active):
+        if not user or not user.is_active:
             return PermissionCheckResponse(
                 has_permission=False, reason="用户不存在或已禁用", conditions=None
             )
 
         # 管理员拥有所有权限
-        if cast("str", user.role) == "admin":
+        if user.role == "admin":
             return PermissionCheckResponse(
                 has_permission=True,
                 granted_by=["admin_role"],
@@ -514,7 +514,7 @@ class RBACService:
 
         return UserPermissionSummary(
             user_id=user_id,
-            username=cast("str", user.username),
+            username=user.username,
             roles=roles,  # type: ignore
             permissions=list[Any](role_permissions),
             resource_permissions=resource_permissions,  # type: ignore

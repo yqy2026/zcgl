@@ -3,9 +3,11 @@ JWT令牌黑名单管理器
 用于管理被撤销的JWT令牌，防止令牌重放攻击
 """
 
+from datetime import UTC, datetime
+from typing import Any, Callable
+
 import json
 import time
-from datetime import UTC, datetime
 
 from ..core.config import settings
 
@@ -13,13 +15,13 @@ from ..core.config import settings
 class TokenBlacklistManager:
     """令牌黑名单管理器"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._blacklisted_tokens: set[str] = set()
         self._blacklist_expiry: dict[str, float] = {}
         self._cleanup_interval = 3600  # 1小时清理一次过期令牌
         self._last_cleanup = time.time()
 
-    def add_token(self, jti: str, expires_at: float | datetime):
+    def add_token(self, jti: str, expires_at: float | datetime) -> None:
         """添加令牌到黑名单"""
         # 统一转换为时间戳
         if isinstance(expires_at, datetime):
@@ -44,17 +46,17 @@ class TokenBlacklistManager:
 
         return jti in self._blacklisted_tokens
 
-    def remove_token(self, jti: str):
+    def remove_token(self, jti: str) -> None:
         """从黑名单中移除令牌"""
         self._blacklisted_tokens.discard(jti)
         self._blacklist_expiry.pop(jti, None)
 
-    def add_token_by_jti(self, jti: str, expires_in_seconds: int):
+    def add_token_by_jti(self, jti: str, expires_in_seconds: int) -> None:
         """通过JTI和过期时间添加令牌到黑名单"""
         expires_at = time.time() + expires_in_seconds
         self.add_token(jti, expires_at)
 
-    def revoke_all_user_tokens(self, user_id: str, token_patterns: list[str]):
+    def revoke_all_user_tokens(self, user_id: str, token_patterns: list[str]) -> None:
         """撤销用户的所有令牌"""
         current_time = time.time()
         for pattern in token_patterns:
@@ -67,7 +69,7 @@ class TokenBlacklistManager:
             self._blacklisted_tokens.add(jti_pattern)
             self._blacklist_expiry[jti_pattern] = expiry_time
 
-    def _cleanup_expired_tokens(self):
+    def _cleanup_expired_tokens(self) -> None:
         """清理过期的令牌"""
         current_time = time.time()
 
@@ -91,7 +93,7 @@ class TokenBlacklistManager:
         if expired_tokens:
             print(f"清理了 {len(expired_tokens)} 个过期令牌")
 
-    def get_blacklist_stats(self) -> dict:
+    def get_blacklist_stats(self) -> dict[str, Any]:
         """获取黑名单统计信息"""
         self._cleanup_expired_tokens()
 
@@ -103,12 +105,12 @@ class TokenBlacklistManager:
             ).isoformat(),
         }
 
-    def clear_blacklist(self):
+    def clear_blacklist(self) -> None:
         """清空黑名单（谨慎使用）"""
         self._blacklisted_tokens.clear()
         self._blacklist_expiry.clear()
 
-    def save_to_file(self, filepath: str):
+    def save_to_file(self, filepath: str) -> None:
         """保存黑名单到文件"""
         try:
             data = {
@@ -123,7 +125,7 @@ class TokenBlacklistManager:
         except Exception as e:
             print(f"保存黑名单到文件失败: {e}")
 
-    def load_from_file(self, filepath: str):
+    def load_from_file(self, filepath: str) -> None:
         """从文件加载黑名单"""
         try:
             with open(filepath, encoding="utf-8") as f:
@@ -147,10 +149,10 @@ blacklist_manager = TokenBlacklistManager()
 
 
 # 黑名单装饰器
-def blacklist_token_on_revoke(revoke_func):
+def blacklist_token_on_revoke(revoke_func: Callable[..., Any]) -> Callable[..., Any]:
     """装饰器：在撤销令牌时自动添加到黑名单"""
 
-    def wrapper(self, refresh_token: str, *args, **kwargs):
+    def wrapper(self: Any, refresh_token: str, *args: Any, **kwargs: Any) -> Any:
         # 先执行原有的撤销逻辑
         result = revoke_func(self, refresh_token, *args, **kwargs)
 
@@ -178,7 +180,7 @@ def blacklist_token_on_revoke(revoke_func):
 
 
 # 定期清理任务
-async def periodic_cleanup():
+async def periodic_cleanup() -> None:
     """定期清理过期令牌的后台任务"""
     import asyncio
 
