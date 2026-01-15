@@ -2,7 +2,7 @@
 
 本文件为 Claude Code 提供项目上下文。详细文档请参阅 `README.md` 和 `docs/` 目录。
 
-**最后更新**: 2026-01-11
+**最后更新**: 2026-01-15
 
 ---
 
@@ -14,7 +14,7 @@
 |---|-------|
 | **前端** | React 18 + TypeScript + Vite + Ant Design 5 |
 | **后端** | FastAPI + Python 3.12 + SQLAlchemy 2.0 + Pydantic v2 |
-| **数据库** | SQLite (dev) / PostgreSQL (prod) |
+| **数据库** | PostgreSQL |
 | **缓存** | Redis |
 
 ---
