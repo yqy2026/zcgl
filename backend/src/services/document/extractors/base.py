@@ -9,6 +9,8 @@ import re
 from abc import ABC, abstractmethod
 from typing import Any
 
+from ..retry import retry_on_vision_api
+
 logger = logging.getLogger(__name__)
 
 
@@ -147,7 +149,7 @@ class BaseVisionAdapter(ContractExtractorInterface):
                 prompt = self._build_extraction_prompt(len(batch))
 
                 try:
-                    response = await self.vision_service.extract_from_images(
+                    response = await self._extract_with_retry(
                         image_paths=batch, prompt=prompt, temperature=0.1
                     )
 
@@ -195,6 +197,15 @@ class BaseVisionAdapter(ContractExtractorInterface):
         finally:
             if image_paths:
                 cleanup_temp_images(image_paths)
+
+    @retry_on_vision_api(max_attempts=3)
+    async def _extract_with_retry(
+        self, image_paths: list[str], prompt: str, temperature: float = 0.1
+    ):
+        """Extract from images with automatic retry on transient errors"""
+        return await self.vision_service.extract_from_images(
+            image_paths=image_paths, prompt=prompt, temperature=temperature
+        )
 
     def _parse_json(self, content: str) -> dict[str, Any]:
         """Parse JSON from model response (common logic)"""

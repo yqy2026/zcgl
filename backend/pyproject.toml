@@ -211,8 +211,8 @@ testpaths = ["tests"]
 python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
-addopts = "-v --strict-markers --tb=short --disable-warnings -ra --import-mode=importlib"
-norecursedirs = ["archive", "*.egg-info", ".git", ".tox", "dist", "build"]
+addopts = "-v --strict-markers --tb=short --disable-warnings -ra --import-mode=importlib --cov=src --cov-report=term-missing --cov-report=html:htmlcov --cov-report=xml:coverage.xml --cov-report=json:coverage.json --cov-fail-under=75 --junitxml=junit-report.xml"
+norecursedirs = ["archive", "*.egg-info", ".git", ".tox", "dist", "build", "node_modules", "__pycache__", ".pytest_cache"]
 log_cli = true
 log_cli_level = "INFO"
 log_cli_format = "%(asctime)s [%(levelname)8s] %(name)s: %(message)s"
@@ -221,16 +221,22 @@ markers = [
     "unit: Unit tests - single function or class",
     "integration: Integration tests - module collaboration",
     "e2e: End-to-end tests - complete workflow",
-    "slow: Slow running tests",
+    "slow: Slow running tests (execution time > 10s)",
     "database: Database tests - requires database connection",
     "api: API tests - API endpoint testing",
     "ocr: OCR tests - OCR functionality",
     "pdf: PDF processing tests",
     "rbac: RBAC tests - permission functionality",
-    "performance: Performance tests",
+    "security: Security tests - vulnerability and penetration testing",
+    "performance: Performance tests - load and stress testing",
+    "load: Load tests - high volume and sustained load testing",
+    "stress: Stress tests - maximum capacity and pressure testing",
     "core: Core functionality tests",
     "asyncio: Async tests"
 ]
+minversion = "7.4"
+timeout = 300
+timeout_method = "thread"
 
 [tool.coverage.run]
 source = ["src"]
@@ -240,7 +246,8 @@ omit = [
     "*/__pycache__/*",
     "*/migrations/*",
     "*/venv/*",
-    "*/env/*"
+    "*/env/*",
+    "*/archive/*"
 ]
 
 [tool.coverage.report]
@@ -251,8 +258,15 @@ exclude_lines = [
     "raise NotImplementedError",
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",
-    "@abstractmethod"
+    "@abstractmethod",
+    "@abc.abstractmethod"
 ]
+precision = 2
+show_missing = true
+skip_covered = false
+
+[tool.coverage.html]
+directory = "htmlcov"
 
 [dependency-groups]
 dev = [
