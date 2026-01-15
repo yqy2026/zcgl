@@ -158,8 +158,6 @@ class DatabaseManager:
             with self._metrics_lock:
                 self.metrics.active_connections += 1
                 self.metrics.last_activity = datetime.now()
-                if self.engine and "sqlite" in str(self.engine.url).lower():
-                    self._optimize_sqlite_connection(dbapi_connection)
 
         @event.listens_for(self.engine, "checkout")
         def on_checkout(
@@ -234,23 +232,6 @@ class DatabaseManager:
             except Exception as e:  # pragma: no cover
                 logger.error(f"记录查询指标时出错: {e}")  # pragma: no cover
 
-    def _optimize_sqlite_connection(self, dbapi_connection: DBAPIConnection) -> None:
-        """优化SQLite连接"""
-        cursor = dbapi_connection.cursor()
-        try:
-            cursor.execute("PRAGMA foreign_keys=ON")
-            cursor.execute("PRAGMA journal_mode=WAL")
-            cursor.execute("PRAGMA synchronous=NORMAL")
-            cursor.execute("PRAGMA cache_size=10000")
-            cursor.execute("PRAGMA temp_store=MEMORY")
-            cursor.execute("PRAGMA optimize")
-            cursor.execute("PRAGMA wal_autocheckpoint=1000")
-            logger.debug("SQLite连接优化完成")
-        except Exception as e:  # pragma: no cover
-            logger.error(f"优化SQLite连接时出错: {e}")  # pragma: no cover
-        finally:
-            cursor.close()
-
     @contextmanager
     def get_session(self) -> Generator[Session, None, None]:
         """获取数据库会话"""
@@ -314,14 +295,6 @@ def get_database_url() -> str:
 
 # 向后兼容的模块级变量（现在通过函数获取）
 DATABASE_URL = get_database_url()
-
-# 确保SQLite数据目录存在
-if "sqlite" in DATABASE_URL.lower():
-    db_path = DATABASE_URL.replace("sqlite:///", "")
-    db_dir = os.path.dirname(db_path)
-    if db_dir and not os.path.exists(db_dir):  # pragma: no cover
-        os.makedirs(db_dir, exist_ok=True)  # pragma: no cover
-        logger.info(f"Created database directory: {db_dir}")  # pragma: no cover
 
 # 全局数据库管理器实例（延迟初始化）
 _database_manager: DatabaseManager | None = None
