@@ -12,6 +12,23 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from src.database import Base
 
+# Import all models so Alembic can detect them
+from src.models import (
+    asset,
+    auth,
+    collection,
+    contact,
+    dynamic_permission,
+    enum_field,
+    notification,
+    operation_log,
+    organization,
+    pdf_import_session,
+    rbac,
+    rent_contract,
+    task,
+)
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
