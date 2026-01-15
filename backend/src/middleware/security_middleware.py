@@ -24,7 +24,8 @@ try:
 
     ADAPTIVE_LIMITER_AVAILABLE = True
 except ImportError:
-    adaptive_limiter_var: AdaptiveRateLimiter | None = None
+    # Use string annotation to avoid NameError when AdaptiveRateLimiter is not defined
+    adaptive_limiter_var: "AdaptiveRateLimiter | None" = None
     ADAPTIVE_LIMITER_AVAILABLE = False
     # Create a compatible wrapper for type checking
     adaptive_limiter = adaptive_limiter_var  # type: ignore[assignment]
