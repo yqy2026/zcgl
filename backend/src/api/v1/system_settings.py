@@ -5,6 +5,7 @@ from typing import Annotated, Any
 """
 
 import json
+import logging
 import os
 from datetime import datetime
 
@@ -28,6 +29,7 @@ from ...schemas.auth import UserResponse
 
 # 创建系统设置路由器
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 class SystemSettings(BaseModel):
@@ -120,7 +122,7 @@ async def update_system_settings(
     settings: SystemSettings,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[UserResponse, Depends(get_current_active_user)],
-    request: Request | None = None,
+    request: Request,
 ) -> SystemSettingsResponse:
     """
     更新系统设置
@@ -134,11 +136,9 @@ async def update_system_settings(
         # 记录审计日志
         try:
             ip_address: str | None = None
-            user_agent: str = ""
-            if request is not None:
-                if request.client is not None:
-                    ip_address = request.client.host
-                user_agent = str(request.headers.get("user-agent", ""))
+            if request.client is not None:
+                ip_address = request.client.host
+            user_agent = str(request.headers.get("user-agent", ""))
 
             audit_crud = AuditLogCRUD()
             audit_crud.create(
@@ -210,7 +210,7 @@ async def backup_system(
     background_tasks: BackgroundTasks,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[UserResponse, Depends(get_current_active_user)],
-    request: Request | None = None,
+    request: Request,
 ) -> SystemBackupResponse:
     """
     备份系统数据
@@ -232,11 +232,9 @@ async def backup_system(
         # 记录审计日志
         try:
             ip_address: str | None = None
-            user_agent: str = ""
-            if request is not None:
-                if request.client is not None:
-                    ip_address = request.client.host
-                user_agent = str(request.headers.get("user-agent", ""))
+            if request.client is not None:
+                ip_address = request.client.host
+            user_agent = str(request.headers.get("user-agent", ""))
 
             audit_crud = AuditLogCRUD()
             audit_crud.create(
@@ -270,7 +268,7 @@ async def restore_system(
     backup_file: Annotated[UploadFile, File(...)],
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[UserResponse, Depends(get_current_active_user)],
-    request: Request | None = None,
+    request: Request,
 ) -> SystemRestoreResponse:
     """
     恢复系统数据
@@ -306,11 +304,9 @@ async def restore_system(
         # 记录审计日志
         try:
             ip_address: str | None = None
-            user_agent: str = ""
-            if request is not None:
-                if request.client is not None:
-                    ip_address = request.client.host
-                user_agent = str(request.headers.get("user-agent", ""))
+            if request.client is not None:
+                ip_address = request.client.host
+            user_agent = str(request.headers.get("user-agent", ""))
 
             audit_crud = AuditLogCRUD()
             audit_crud.create(
