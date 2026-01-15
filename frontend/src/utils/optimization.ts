@@ -7,7 +7,7 @@ export const useDebounce = <T extends (...args: unknown[]) => unknown>(
   callback: T,
   delay: number
 ): T => {
-  const timeoutRef = useRef<NodeJS.Timeout>()
+  const timeoutRef = useRef<NodeJS.Timeout | undefined>()
 
   return useCallback(
     ((...args: Parameters<T>) => {
@@ -121,14 +121,14 @@ export const useLazyImage = (src: string, options?: IntersectionObserverInit) =>
 
 // 内存泄漏检测
 export const useMemoryLeakDetection = (componentName: string) => {
-  const mountTimeRef = useRef<number>()
+  const mountTimeRef = useRef<number | undefined>()
   const timersRef = useRef<Set<NodeJS.Timeout>>(new Set())
   const intervalsRef = useRef<Set<NodeJS.Timeout>>(new Set())
   const listenersRef = useRef<Map<string, EventListener>>(new Map())
 
   useEffect(() => {
     mountTimeRef.current = Date.now()
-    
+
     return () => {
       const unmountTime = Date.now()
       const _lifeTime = unmountTime - (mountTimeRef.current ?? 0)
@@ -182,7 +182,7 @@ export const useMemoryLeakDetection = (componentName: string) => {
 // 组件渲染性能监控
 export const useRenderPerformance = (componentName: string) => {
   const renderCountRef = useRef(0)
-  const lastRenderTimeRef = useRef<number>()
+  const lastRenderTimeRef = useRef<number | undefined>()
 
   useEffect(() => {
     renderCountRef.current++
@@ -216,14 +216,14 @@ export const useCache = <T>(key: string, factory: () => T, deps: unknown[] = [])
 
   return useMemo(() => {
     const cacheKey = `${key}_${JSON.stringify(deps)}`
-    
+
     if (cache.current.has(cacheKey)) {
       return cache.current.get(cacheKey)!
     }
-    
+
     const value = factory()
     cache.current.set(cacheKey, value)
-    
+
     // 限制缓存大小
     if (cache.current.size > 100) {
       const firstKey = cache.current.keys().next().value
@@ -231,7 +231,7 @@ export const useCache = <T>(key: string, factory: () => T, deps: unknown[] = [])
         cache.current.delete(firstKey)
       }
     }
-    
+
     return value
   }, deps)
 }
@@ -240,15 +240,15 @@ export const useCache = <T>(key: string, factory: () => T, deps: unknown[] = [])
 export const useBatchUpdate = <T>(initialValue: T) => {
   const [value, setValue] = useState(initialValue)
   const pendingUpdatesRef = useRef<Array<(prev: T) => T>>([])
-  const timeoutRef = useRef<NodeJS.Timeout>()
+  const timeoutRef = useRef<NodeJS.Timeout | undefined>()
 
   const batchUpdate = useCallback((updater: (prev: T) => T) => {
     pendingUpdatesRef.current.push(updater)
-    
+
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current)
     }
-    
+
     timeoutRef.current = setTimeout(() => {
       setValue(prev => {
         return pendingUpdatesRef.current.reduce((acc, update) => update(acc), prev)
@@ -262,19 +262,19 @@ export const useBatchUpdate = <T>(initialValue: T) => {
 
 // Web Worker Hook
 export const useWebWorker = (workerScript: string) => {
-  const workerRef = useRef<Worker>()
+  const workerRef = useRef<Worker | undefined>()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<Error>()
 
   useEffect(() => {
     try {
       workerRef.current = new Worker(workerScript)
-      
+
       workerRef.current.onerror = (error) => {
         setError(new Error(error.message))
         setIsLoading(false)
       }
-      
+
       return () => {
         workerRef.current?.terminate()
       }
@@ -316,16 +316,16 @@ export const preloadResource = (url: string, type: 'script' | 'style' | 'image' 
     switch (type) {
       case 'script':
         element = document.createElement('script')
-        ;(element as HTMLScriptElement).src = url
+          ; (element as HTMLScriptElement).src = url
         break
       case 'style':
         element = document.createElement('link')
-        ;(element as HTMLLinkElement).rel = 'stylesheet'
-        ;(element as HTMLLinkElement).href = url
+          ; (element as HTMLLinkElement).rel = 'stylesheet'
+          ; (element as HTMLLinkElement).href = url
         break
       case 'image':
         element = document.createElement('img')
-        ;(element as HTMLImageElement).src = url
+          ; (element as HTMLImageElement).src = url
         break
     }
 

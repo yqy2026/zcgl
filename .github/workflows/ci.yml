@@ -83,6 +83,13 @@ jobs:
         uv run bandit -r src/ -f json -o bandit-report.json || true
         uv run bandit -r src/ -f txt || true
 
+    - name: Initialize test database
+      run: |
+        cd backend
+        export DATABASE_URL="sqlite:///./test_database.db"
+        uv run alembic upgrade head || true
+        uv run pytest tests/ -m unit --create-db --quiet || true
+
     - name: Run unit tests
       run: |
         cd backend
@@ -159,8 +166,7 @@ jobs:
     - name: Run ESLint
       run: |
         cd frontend
-        pnpm lint -- --format=json --output-file=eslint-report.json || true
-        pnpm lint
+        pnpm lint --format=json --output-file=eslint-report.json || pnpm lint
 
     - name: Run Prettier check
       run: |
