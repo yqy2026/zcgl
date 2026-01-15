@@ -31,7 +31,7 @@ from ....schemas.auth import (
 )
 from ....services import AuthService
 
-router = APIRouter(prefix="/authentication", tags=["认证管理"])
+router = APIRouter(tags=["认证管理"])
 
 
 @router.post("/login", summary="用户登录")

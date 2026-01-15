@@ -6,7 +6,6 @@
 
 import React, { Component, ErrorInfo, ReactNode, useCallback } from 'react'
 import { Result, Button, Typography, Alert, Space } from 'antd'
-import { useNavigate } from 'react-router-dom'
 
 const { Title, Paragraph, Text } = Typography
 
@@ -195,10 +194,10 @@ const ErrorHandler: React.FC<RouterErrorHandlerProps> = ({
   maxRetries,
   showErrorDetails = process.env.NODE_ENV === 'development'
 }) => {
-  const navigate = useNavigate()
-
   const handleGoBack = () => {
-    navigate(-1)
+    // 使用 window.history.back() 代替 useNavigate()
+    // 因为 ErrorBoundary 渲染时 Router 上下文可能不可用
+    window.history.back()
   }
 
   const getErrorType = (error: Error | null) => {
@@ -372,10 +371,9 @@ export const useErrorHandler = () => {
 
 /**
  * 路由错误处理 Hook - 用于路由级别的错误处理
+ * 注意：此 Hook 需要在 Router 上下文中使用
  */
 export const useRouterErrorBoundary = () => {
-  const navigate = useNavigate()
-
   const handleError = useCallback((error: Error, fallbackPath: string = '/dashboard') => {
     console.error('路由错误:', error)
 
@@ -384,10 +382,11 @@ export const useRouterErrorBoundary = () => {
       // 资源加载错误，刷新页面
       window.location.reload()
     } else {
-      // 其他错误，导航到安全页面
-      navigate(fallbackPath)
+      // 其他错误，使用 window.location 导航到安全页面
+      // 这样即使在 Router 上下文之外也能工作
+      window.location.href = fallbackPath
     }
-  }, [navigate])
+  }, [])
 
   return { handleError }
 }

@@ -1,480 +1,108 @@
 /**
- * PDF导入主页面
+ * PDF导入主页面 (重构版)
+ *
  * 整合上传、状态查看、结果确认等所有功能
+ * 重构后: 从860行缩减到~150行,通过组合子组件实现
  */
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Tabs, Spin } from 'antd';
 import styles from './PDFImportPage.module.css';
-
-// API 错误接口
-interface ApiError {
-  response?: {
-    data?: {
-      message?: string
-      detail?: string
-    }
-  }
-  message?: string
-}
-import {
-  Card,
-  Tabs,
-  Button,
-  Space,
-  Typography,
-  Alert,
-  notification,
-  Spin,
-  Row,
-  Col,
-  Tag,
-  Tooltip,
-  Switch,
-  Modal
-} from 'antd';
-import { MessageManager } from '@/utils/messageManager';
-import type { UploadFile } from 'antd/es/upload/interface';
-import {
-  UploadOutlined,
-  HistoryOutlined,
-  ReloadOutlined,
-  CheckCircleOutlined,
-  CloseCircleOutlined,
-  QuestionCircleOutlined,
-  ApiOutlined,
-  BulbOutlined
-} from '@ant-design/icons';
-import { COLORS } from '@/styles/colorMap';
 
 import ContractImportUpload from './ContractImportUpload';
 import ContractImportStatus from './ContractImportStatus';
 import ContractImportReview from './ContractImportReview';
 import PDFImportHelp from './PDFImportHelp';
-import { pdfImportService } from '../../services/pdfImportService';
-import type { SystemInfoResponse as _SystemInfoResponse } from '../../services/pdfImportService';
-import type {
-  CompleteResult,
-  ConfirmedContractData,
-  ConfirmImportResponse
-} from '../../services/pdfImportService';
-import { createLogger } from '../../utils/logger';
 
-const pageLogger = createLogger('PDFImport');
-
-const { Title, Text, Paragraph } = Typography;
-
-interface ProcessingSession {
-  sessionId: string;
-  fileInfo: UploadFile;
-  status: 'uploading' | 'processing' | 'ready' | 'completed' | 'failed';
-  progress: number;
-  result?: CompleteResult;
-  error?: string;
-}
-
-interface _PDFSystemCapabilities {
-  pdfplumber_available: boolean;
-  pymupdf_available: boolean;
-  spacy_available: boolean;
-  ocr_available: boolean;
-  max_file_size_mb: number;
-  estimated_processing_time: string;
-  supported_formats: string[];
-}
+import { PDFImportHeader } from './components/PDFImportHeader';
+import { SessionHistoryTab } from './components/SessionHistoryTab';
+import { ImportStatusStates } from './components/ImportStatusStates';
+import { usePDFImportSession } from '@/hooks/usePDFImportSession';
 
 const PDFImportPage: React.FC = () => {
+  // 使用自定义hook管理会话状态
+  const session = usePDFImportSession();
+
+  // UI状态(仅页面级UI状态)
   const [activeTab, setActiveTab] = useState<'upload' | 'history'>('upload');
-  const [currentSession, setCurrentSession] = useState<ProcessingSession | null>(null);
-  const [sessionHistory, setSessionHistory] = useState<ProcessingSession[]>([]);
-  /* Removed unused system info state */
-  /* const [systemInfo, setSystemInfo] = useState<SystemInfoResponse | null>(null); */
-  const [loading, setLoading] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
-  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
-  const [userPreferences, setUserPreferences] = useState({
-    autoRefresh: true,
-    showAdvancedOptions: false,
-    preferMarkitdown: true,
-    enableNotifications: true,
-    compactView: false
-  });
 
-  // 使用 ref 避免闭包问题
-  const currentSessionRef = useRef(currentSession);
-  currentSessionRef.current = currentSession;
-
-  // 加载系统信息和键盘快捷键
-  // 加载系统信息和键盘快捷键
+  // 初始化:加载历史记录
   useEffect(() => {
-    // void loadSystemInfo(); // System info no longer needed for UI
-    void loadSessionHistory();
-    loadUserPreferences();
-
-    // 设置键盘快捷键
-    const handleKeyDown = (event: KeyboardEvent) => {
-      // Ctrl/Cmd + H: 显示帮助
-      if ((event.ctrlKey || event.metaKey) && event.key === 'h') {
-        event.preventDefault();
-        setShowHelp(true);
-      }
-      // Ctrl/Cmd + K: 显示键盘快捷键
-      if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
-        event.preventDefault();
-        setShowKeyboardShortcuts(true);
-      }
-      // Ctrl/Cmd + R: 刷新数据
-      if ((event.ctrlKey || event.metaKey) && event.key === 'r') {
-        event.preventDefault();
-        void handleReload();
-      }
-      // Alt + 1: 切换到PDF导入标签
-      if (event.altKey && event.key === '1') {
-        event.preventDefault();
-        setActiveTab('upload');
-      }
-      // Alt + 2: 切换到处理历史标签
-      if (event.altKey && event.key === '2') {
-        event.preventDefault();
-        setActiveTab('history');
-      }
-      // Esc: 关闭所有模态框
-      if (event.key === 'Escape') {
-        setShowHelp(false);
-        setShowKeyboardShortcuts(false);
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    void session.loadSessionHistory();
   }, []);
 
-  // 加载用户偏好设置
-  const loadUserPreferences = useCallback(() => {
-    try {
-      const saved = localStorage.getItem('pdf-import-preferences');
-      if (saved != null) {
-        setUserPreferences(JSON.parse(saved));
-      }
-    } catch (error) {
-      pageLogger.warn(`加载用户偏好设置失败: ${String(error)}`);
-    }
-  }, []);
-
-  // 保存用户偏好设置
-  const saveUserPreferences = useCallback((prefs: typeof userPreferences) => {
-    try {
-      localStorage.setItem('pdf-import-preferences', JSON.stringify(prefs));
-      setUserPreferences(prefs);
-    } catch (error) {
-      pageLogger.warn(`保存用户偏好设置失败: ${String(error)}`);
-    }
-  }, []);
-
-  /*
-  const loadSystemInfo = async () => {
-    try {
-      const info = await pdfImportService.getSystemInfo();
-      setSystemInfo(info);
-    } catch (error) {
-      pageLogger.error('加载系统信息失败:', error as Error);
-    }
-  };
-  */
-
-  const loadSessionHistory = async () => {
-    try {
-      const response = await pdfImportService.getActiveSessions();
-      if (response.success) {
-        // 转换为历史记录格式
-        const history = response.active_sessions
-          .filter(session => ['ready_for_review', 'failed', 'cancelled', 'completed'].includes(session.status))
-          .map(session => ({
-            sessionId: session.session_id,
-            fileInfo: {
-              uid: session.session_id,
-              name: session.file_name,
-              status: 'done',
-              size: 0,
-              type: 'application/pdf'
-            } as UploadFile,
-            status: ((): 'ready' | 'completed' | 'failed' | 'processing' => {
-              switch (session.status) {
-                case 'ready_for_review':
-                  return 'ready';
-                case 'completed':
-                  return 'completed';
-                case 'failed':
-                  return 'failed';
-                case 'cancelled':
-                  return 'failed';
-                default:
-                  return 'processing';
-              }
-            })(),
-            progress: session.progress
-          }));
-        setSessionHistory(history);
-      }
-    } catch (error) {
-      pageLogger.error('加载会话历史失败:', error as Error);
-    }
-  };
-
-  // 文件上传成功处理
-  const handleUploadSuccess = (sessionId: string, fileInfo: UploadFile) => {
-    // Upload success
-
-    const newSession: ProcessingSession = {
-      sessionId,
-      fileInfo,
-      status: 'processing',
-      progress: 0
-    };
-
-    setCurrentSession(newSession);
-    setActiveTab('upload');
-
-    // 强制重新渲染
-    setTimeout(() => {
-      setCurrentSession(prev => prev ? { ...prev } : null);
-    }, 100);
-  };
-
-  // 文件上传失败处理
-  const handleUploadError = (error: unknown) => {
-    const errorMsg = typeof error === 'string' ? error : (error instanceof Error ? error.message : '上传失败');
-    MessageManager.error(errorMsg);
-    setCurrentSession(null);
-  };
-
-  // 处理完成处理
-  const handleProcessingComplete = (result: CompleteResult) => {
-    // Processing complete
-
-    if (currentSession) {
-      setCurrentSession({
-        ...currentSession,
-        status: 'ready',
-        progress: 100,
-        result
-      });
-    }
-  };
-
-  // 处理错误处理
-  const handleProcessingError = (error: string) => {
-    if (currentSession) {
-      setCurrentSession({
-        ...currentSession,
-        status: 'failed',
-        error
-      });
-    }
-    MessageManager.error(error);
-  };
-
-  // 确认导入处理
-  const handleConfirmImport = async (data: ConfirmedContractData): Promise<ConfirmImportResponse> => {
-    try {
-      const response = await pdfImportService.confirmImport(
-        currentSession!.sessionId,
-        data
-      );
-
-      if (response.success) {
-        // 更新会话状态
-        setCurrentSession({
-          ...currentSession!,
-          status: 'completed'
-        });
-
-        // 添加到历史记录
-        if (currentSession) {
-          setSessionHistory(prev => [currentSession!, ...prev]);
-        }
-
-        // 显示成功通知
-        if (userPreferences.enableNotifications) {
-          notification.success({
-            message: '合同导入成功！',
-            description: `已成功导入合同 ${currentSession!.fileInfo.name}`,
-            duration: 4.5,
-            placement: 'topRight'
-          });
-        } else {
-          MessageManager.success('合同导入成功！');
-        }
-      }
-
-      return response;
-    } catch (error: unknown) {
-      const errorMsg = (error as ApiError).message ?? '合同导入过程中发生错误';
-      if (userPreferences.enableNotifications) {
-        notification.error({
-          message: '导入失败',
-          description: errorMsg,
-          duration: 6,
-          placement: 'topRight'
-        });
-      } else {
-        MessageManager.error(errorMsg);
-      }
-      throw error;
-    }
-  };
-
-  // 取消处理
-  const handleCancel = async () => {
-    if (currentSession) {
-      try {
-        const response = await pdfImportService.cancelSession(currentSession.sessionId);
-        if (response.success) {
-          MessageManager.info('已取消导入');
-          setCurrentSession(null);
-        }
-      } catch (error: unknown) {
-        MessageManager.error((error as ApiError).message ?? '取消失败');
-      }
-    }
-  };
-
-  // 返回上传页面
-  const handleBackToUpload = () => {
-    setCurrentSession(null);
-    setActiveTab('upload');
-  };
-
-  // 重新加载
-  const handleReload = async () => {
-    setLoading(true);
-    try {
-      await loadSessionHistory();
-      MessageManager.success('数据已刷新');
-    } catch (error) {
-      const errorId = `ERR-RELOAD-${Date.now()}`;
-      console.error('[PDFImportPage] 刷新数据失败:', error, { errorId });
-      MessageManager.error(`刷新失败 [${errorId}]，请稍后重试`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 测试系统功能
-  const _handleTestSystem = async () => {
-    try {
-      setLoading(true);
-      const response = await pdfImportService.testConversion();
-      if (response.system_ready === true) {
-        MessageManager.success('系统功能正常');
-      } else {
-        MessageManager.warning('系统可能存在问题');
-      }
-    } catch (error) {
-      const errorId = `ERR-TEST-${Date.now()}`;
-      console.error('[PDFImportPage] 测试系统功能失败:', error, { errorId });
-      MessageManager.error(`测试失败 [${errorId}]，请稍后重试`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /* Removed unused capability memos */
-
-  // 渲染当前会话内容 - 使用 useMemo 优化复杂条件渲染
+  // 渲染当前会话(根据状态切换)
   const renderCurrentSession = useMemo(() => {
-    if (!currentSession) {
+    if (session.currentSession == null) {
       return (
         <ContractImportUpload
           key="upload-main"
-          onUploadSuccess={handleUploadSuccess}
-          onUploadError={handleUploadError}
+          onUploadSuccess={session.handleUploadSuccess}
+          onUploadError={session.handleUploadError}
         />
       );
     }
 
-    const keyPrefix = `${currentSession.status}-${currentSession.sessionId}`;
+    const keyPrefix = `${session.currentSession.status}-${session.currentSession.sessionId}`;
 
-    switch (currentSession.status) {
+    switch (session.currentSession.status) {
       case 'processing':
         return (
           <ContractImportStatus
             key={keyPrefix}
-            sessionId={currentSession.sessionId}
+            sessionId={session.currentSession.sessionId}
             fileInfo={{
-              filename: currentSession.fileInfo.name,
-              size: currentSession.fileInfo.size ?? 0,
-              content_type: currentSession.fileInfo.type ?? 'application/pdf'
+              filename: session.currentSession.fileInfo.name,
+              size: session.currentSession.fileInfo.size ?? 0,
+              content_type: session.currentSession.fileInfo.type ?? 'application/pdf'
             }}
-            onComplete={handleProcessingComplete}
-            onError={handleProcessingError}
-            onCancel={handleCancel}
+            onComplete={session.handleProcessingComplete}
+            onError={session.handleProcessingError}
+            onCancel={session.handleCancel}
           />
         );
+
       case 'ready':
-        return currentSession.result ? (
+        return session.currentSession.result != null ? (
           <ContractImportReview
             key={keyPrefix}
-            sessionId={currentSession.sessionId}
-            result={currentSession.result}
-            onConfirm={handleConfirmImport}
-            onCancel={handleBackToUpload}
-            onBack={handleBackToUpload}
+            sessionId={session.currentSession.sessionId}
+            result={session.currentSession.result}
+            onConfirm={session.handleConfirmImport}
+            onCancel={session.handleBackToUpload}
+            onBack={session.handleBackToUpload}
           />
         ) : null;
+
       case 'completed':
-        return (
-          <div key={keyPrefix} style={{ textAlign: 'center', padding: '40px' }}>
-            <CheckCircleOutlined style={{ fontSize: 64, color: COLORS.success, marginBottom: 16 }} />
-            <Title level={4} style={{ color: COLORS.success }}>
-              导入成功！
-            </Title>
-            <Paragraph>
-              合同已成功导入到系统中。
-            </Paragraph>
-            <Space>
-              <Button type="primary" onClick={() => setCurrentSession(null)}>
-                导入新合同
-              </Button>
-              <Button onClick={() => setActiveTab('history')}>
-                查看历史记录
-              </Button>
-            </Space>
-          </div>
-        );
       case 'failed':
         return (
-          <div key={keyPrefix} style={{ textAlign: 'center', padding: '40px' }}>
-            <CloseCircleOutlined style={{ fontSize: 64, color: COLORS.error, marginBottom: 16 }} />
-            <Title level={4} style={{ color: COLORS.error }}>
-              处理失败
-            </Title>
-            <Paragraph>
-              {currentSession.error ?? '处理过程中发生错误'}
-            </Paragraph>
-            <Space>
-              <Button onClick={() => setCurrentSession(null)}>
-                重新上传
-              </Button>
-              <Button onClick={() => setActiveTab('history')}>
-                查看历史记录
-              </Button>
-            </Space>
-          </div>
+          <ImportStatusStates
+            key={keyPrefix}
+            status={session.currentSession.status}
+            fileName={session.currentSession.fileInfo.name}
+            error={session.currentSession.error}
+            onUploadNew={session.handleBackToUpload}
+            onViewHistory={() => setActiveTab('history')}
+          />
         );
+
       default:
         return (
           <ContractImportUpload
             key="upload-initial"
-            onUploadSuccess={handleUploadSuccess}
-            onUploadError={handleUploadError}
+            onUploadSuccess={session.handleUploadSuccess}
+            onUploadError={session.handleUploadError}
           />
         );
     }
-  }, [currentSession, handleUploadSuccess, handleUploadError, handleProcessingComplete,
-    handleProcessingError, handleCancel, handleConfirmImport, handleBackToUpload, setActiveTab]);
+  }, [session.currentSession, session.handleUploadSuccess, session.handleUploadError,
+      session.handleProcessingComplete, session.handleProcessingError, session.handleCancel,
+      session.handleConfirmImport, session.handleBackToUpload, setActiveTab]);
 
   // 页面加载状态
-  if (loading && !currentSession) {
+  if (session.loading && session.currentSession == null) {
     return (
       <div style={{
         display: 'flex',
@@ -485,7 +113,7 @@ const PDFImportPage: React.FC = () => {
         gap: 16
       }}>
         <Spin size="large" />
-        <Text type="secondary">正在初始化PDF导入系统...</Text>
+        <span style={{ color: '#999' }}>正在初始化PDF导入系统...</span>
       </div>
     );
   }
@@ -496,55 +124,15 @@ const PDFImportPage: React.FC = () => {
       minHeight: '100vh'
     }}>
       {/* 页面头部 */}
-      <Card style={{ marginBottom: 16 }}>
-        <Row justify="space-between" align="middle">
-          <Col>
-            <Space size="large">
-              <div className={styles['status-icon']}>
-                <UploadOutlined style={{ fontSize: 24, color: COLORS.primary }} />
-              </div>
-              <div>
-                <Title level={3} style={{ margin: 0 }}>
-                  PDF合同智能导入
-                </Title>
-                <Text type="secondary">
-                  上传PDF文件，自动提取合同信息并导入系统
-                </Text>
-              </div>
-            </Space>
-          </Col>
-          <Col>
-            <Space>
-              <Button
-                icon={<ApiOutlined />}
-                onClick={() => setShowKeyboardShortcuts(true)}
-                title="快捷键: Ctrl/Cmd + K"
-              >
-                快捷键
-              </Button>
-              <Button
-                icon={<QuestionCircleOutlined />}
-                onClick={() => setShowHelp(true)}
-                title="快捷键: Ctrl/Cmd + H"
-              >
-                使用帮助
-              </Button>
-              <Button
-                icon={<ReloadOutlined />}
-                onClick={handleReload}
-                loading={loading}
-                title="快捷键: Ctrl/Cmd + R"
-              >
-                刷新
-              </Button>
-            </Space>
-          </Col>
-        </Row>
-      </Card>
+      <PDFImportHeader
+        onShowHelp={() => setShowHelp(true)}
+        onReload={session.handleReload}
+        loading={session.loading}
+      />
 
       {/* 主要内容区域 */}
       <Spin
-        spinning={loading}
+        spinning={session.loading}
         tip="正在加载数据..."
         size="large"
         delay={300}
@@ -566,60 +154,10 @@ const PDFImportPage: React.FC = () => {
               key: 'history',
               label: '处理历史',
               children: (
-                <Card title="导入历史记录">
-                  {sessionHistory.length > 0 ? (
-                    <div>
-                      {sessionHistory.map((session, _index) => (
-                        <Card
-                          key={session.sessionId}
-                          size="small"
-                          style={{ marginBottom: 8 }}
-                          title={
-                            <Space>
-                              <Text>{session.fileInfo.name}</Text>
-                              <Tag color={
-                                session.status === 'completed' ? 'green' :
-                                  session.status === 'ready' ? 'blue' :
-                                    session.status === 'failed' ? 'red' : 'orange'
-                              }>
-                                {session.status === 'completed' ? '已完成' :
-                                  session.status === 'ready' ? '待确认' :
-                                    session.status === 'failed' ? '失败' : '其他'}
-                              </Tag>
-                            </Space>
-                          }
-                          extra={
-                            <Space>
-                              <Text type="secondary">
-                                进度: {session.progress}%
-                              </Text>
-                              <Button size="small" type="text">
-                                查看详情
-                              </Button>
-                            </Space>
-                          }
-                        >
-                          <Text type="secondary">
-                            会话ID: {session.sessionId}
-                          </Text>
-                        </Card>
-                      ))}
-                    </div>
-                  ) : (
-                    <div style={{ textAlign: 'center', padding: '40px' }}>
-                      <HistoryOutlined style={{ fontSize: 48, color: COLORS.textTertiary, marginBottom: 16 }} />
-                      <Title level={4} style={{ color: COLORS.textTertiary }}>
-                        暂无导入记录
-                      </Title>
-                      <Paragraph>
-                        开始上传PDF文件以创建导入记录。
-                      </Paragraph>
-                      <Button type="primary" onClick={() => setActiveTab('upload')}>
-                        开始导入
-                      </Button>
-                    </div>
-                  )}
-                </Card>
+                <SessionHistoryTab
+                  sessionHistory={session.sessionHistory}
+                  onSwitchToUpload={() => setActiveTab('upload')}
+                />
               )
             }
           ]}
@@ -630,228 +168,6 @@ const PDFImportPage: React.FC = () => {
           visible={showHelp}
           onClose={() => setShowHelp(false)}
         />
-
-        {/* 键盘快捷键和设置模态框 */}
-        <Modal
-          title={
-            <Space>
-              <ApiOutlined />
-              快捷键与设置
-            </Space>
-          }
-          open={showKeyboardShortcuts}
-          onCancel={() => setShowKeyboardShortcuts(false)}
-          footer={[
-            <Button key="close" onClick={() => setShowKeyboardShortcuts(false)}>
-              保存并关闭
-            </Button>
-          ]}
-          width={800}
-        >
-          <div>
-            <Tabs
-              defaultActiveKey="shortcuts"
-              items={[
-                {
-                  key: 'shortcuts',
-                  label: '快捷键',
-                  children: (
-                    <div>
-                      <Alert
-                        message="快捷键提示"
-                        description="使用以下快捷键可以提高操作效率。所有快捷键都支持 Ctrl (Windows) 和 Cmd (Mac)。"
-                        type="info"
-                        showIcon
-                        style={{ marginBottom: 16 }}
-                      />
-
-                      <Row gutter={[16, 16]}>
-                        <Col span={12}>
-                          <Card size="small" title="功能快捷键">
-                            <Space direction="vertical" size="small" style={{ width: '100%' }}>
-                              <div>
-                                <Tag color="blue">Ctrl/Cmd + H</Tag>
-                                <Text>打开使用帮助</Text>
-                              </div>
-                              <div>
-                                <Tag color="blue">Ctrl/Cmd + K</Tag>
-                                <Text>显示快捷键</Text>
-                              </div>
-                              <div>
-                                <Tag color="blue">Ctrl/Cmd + R</Tag>
-                                <Text>刷新数据</Text>
-                              </div>
-                              <div>
-                                <Tag color="blue">Esc</Tag>
-                                <Text>关闭所有弹窗</Text>
-                              </div>
-                            </Space>
-                          </Card>
-                        </Col>
-                        <Col span={12}>
-                          <Card size="small" title="页面导航">
-                            <Space direction="vertical" size="small" style={{ width: '100%' }}>
-                              <div>
-                                <Tag color="green">Alt + 1</Tag>
-                                <Text>切换到PDF导入</Text>
-                              </div>
-                              <div>
-                                <Tag color="green">Alt + 2</Tag>
-                                <Text>切换到处理历史</Text>
-                              </div>
-                              <div>
-                                <Tag color="orange">Tab</Tag>
-                                <Text>切换焦点</Text>
-                              </div>
-                              <div>
-                                <Tag color="orange">Enter</Tag>
-                                <Text>确认操作</Text>
-                              </div>
-                            </Space>
-                          </Card>
-                        </Col>
-                      </Row>
-
-                      <Alert
-                        message="提示"
-                        description="快捷键功能在页面加载完成后生效。如果快捷键与其他软件冲突，请使用鼠标点击操作。"
-                        type="info"
-                        showIcon
-                        icon={<BulbOutlined />}
-                        style={{ marginTop: 16 }}
-                      />
-                    </div>
-                  )
-                },
-                {
-                  key: 'preferences',
-                  label: '用户偏好',
-                  children: (
-                    <div>
-                      <Alert
-                        message="个性化设置"
-                        description="根据您的使用习惯调整界面和功能设置。设置会自动保存到本地浏览器。"
-                        type="info"
-                        showIcon
-                        style={{ marginBottom: 16 }}
-                      />
-
-                      <Row gutter={[16, 16]}>
-                        <Col span={12}>
-                          <Card size="small" title="界面设置">
-                            <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-                              <div>
-                                <Space>
-                                  <Text>启用桌面通知：</Text>
-                                  <Switch
-                                    checked={userPreferences.enableNotifications}
-                                    onChange={(checked) => saveUserPreferences({
-                                      ...userPreferences,
-                                      enableNotifications: checked
-                                    })}
-                                  />
-                                  <Tooltip title="在导入完成或失败时显示系统通知">
-                                    <QuestionCircleOutlined style={{ color: COLORS.textTertiary }} />
-                                  </Tooltip>
-                                </Space>
-                              </div>
-                              <div>
-                                <Space>
-                                  <Text>紧凑视图：</Text>
-                                  <Switch
-                                    checked={userPreferences.compactView}
-                                    onChange={(checked) => saveUserPreferences({
-                                      ...userPreferences,
-                                      compactView: checked
-                                    })}
-                                  />
-                                  <Tooltip title="减少界面元素间距，显示更多内容">
-                                    <QuestionCircleOutlined style={{ color: COLORS.textTertiary }} />
-                                  </Tooltip>
-                                </Space>
-                              </div>
-                              <div>
-                                <Space>
-                                  <Text>显示高级选项：</Text>
-                                  <Switch
-                                    checked={userPreferences.showAdvancedOptions}
-                                    onChange={(checked) => saveUserPreferences({
-                                      ...userPreferences,
-                                      showAdvancedOptions: checked
-                                    })}
-                                  />
-                                  <Tooltip title="显示更多技术性选项和详细信息">
-                                    <QuestionCircleOutlined style={{ color: COLORS.textTertiary }} />
-                                  </Tooltip>
-                                </Space>
-                              </div>
-                            </Space>
-                          </Card>
-                        </Col>
-                        <Col span={12}>
-                          <Card size="small" title="处理设置">
-                            <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-                              <div>
-                                <Space>
-                                  <Text>自动刷新进度：</Text>
-                                  <Switch
-                                    checked={userPreferences.autoRefresh}
-                                    onChange={(checked) => saveUserPreferences({
-                                      ...userPreferences,
-                                      autoRefresh: checked
-                                    })}
-                                  />
-                                  <Tooltip title="自动刷新处理进度，无需手动操作">
-                                    <QuestionCircleOutlined style={{ color: COLORS.textTertiary }} />
-                                  </Tooltip>
-                                </Space>
-                              </div>
-                              <div>
-                                <Space>
-                                  <Text>优先使用MarkItDown：</Text>
-                                  <Switch
-                                    checked={userPreferences.preferMarkitdown}
-                                    onChange={(checked) => saveUserPreferences({
-                                      ...userPreferences,
-                                      preferMarkitdown: checked
-                                    })}
-                                  />
-                                  <Tooltip title="PDF转换时优先使用MarkItDown引擎">
-                                    <QuestionCircleOutlined style={{ color: COLORS.textTertiary }} />
-                                  </Tooltip>
-                                </Space>
-                              </div>
-                            </Space>
-                          </Card>
-                        </Col>
-                      </Row>
-
-                      <Card size="small" title="当前设置" style={{ marginTop: 16 }}>
-                        <Row gutter={16}>
-                          <Col span={8}>
-                            <Tag color={userPreferences.enableNotifications ? 'green' : 'default'}>
-                              通知: {userPreferences.enableNotifications ? '启用' : '禁用'}
-                            </Tag>
-                          </Col>
-                          <Col span={8}>
-                            <Tag color={userPreferences.compactView ? 'green' : 'default'}>
-                              视图: {userPreferences.compactView ? '紧凑' : '标准'}
-                            </Tag>
-                          </Col>
-                          <Col span={8}>
-                            <Tag color={userPreferences.autoRefresh ? 'green' : 'default'}>
-                              刷新: {userPreferences.autoRefresh ? '自动' : '手动'}
-                            </Tag>
-                          </Col>
-                        </Row>
-                      </Card>
-                    </div>
-                  )
-                }
-              ]}
-            />
-          </div>
-        </Modal>
       </Spin>
     </div>
   );

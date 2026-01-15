@@ -548,3 +548,27 @@ export interface ConfirmImportResponse {
   processing_time?: number;
   error?: string;
 }
+
+// ==================== 会话管理类型 ====================
+
+// 导入自 antd UploadFile 类型（避免直接导入）
+export interface UploadFileInfo {
+  uid: string;
+  name: string;
+  status?: 'uploading' | 'done' | 'error';
+  size?: number;
+  type?: string;
+}
+
+// PDF导入会话状态
+export type SessionStatus = 'uploading' | 'processing' | 'ready' | 'completed' | 'failed';
+
+// PDF导入会话接口
+export interface ProcessingSession {
+  sessionId: string;
+  fileInfo: UploadFileInfo;
+  status: SessionStatus;
+  progress: number;
+  result?: CompleteResult;
+  error?: string;
+}
