@@ -53,6 +53,16 @@ class Settings:
     DATA_ENCRYPTION_KEY: str = os.getenv("DATA_ENCRYPTION_KEY", "")
     DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"
 
+    # 验证数据加密密钥配置
+    # 注意: 空字符串是可接受的（优雅降级），但在生产环境中应该配置
+    if not DATA_ENCRYPTION_KEY and not DEBUG:
+        logger.warning(
+            "DATA_ENCRYPTION_KEY not set - PII encryption disabled. "
+            "Sensitive data will be stored in plaintext. "
+            "Set DATA_ENCRYPTION_KEY for production use. "
+            "Generate one with: python -m src.core.encryption"
+        )
+
     # CORS配置
     CORS_ORIGINS: list[str] = os.getenv(
         "CORS_ORIGINS", "http://localhost:3000,http://localhost:5173,http://localhost"
