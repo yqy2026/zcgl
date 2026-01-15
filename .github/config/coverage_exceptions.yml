@@ -1,0 +1,124 @@
+# Coverage Exceptions Configuration
+# 覆盖率例外配置
+#
+# This file manages temporary coverage exceptions for modules that cannot reach
+# the target coverage (85% backend / 75% frontend) due to technical constraints.
+#
+# 此文件管理因技术限制无法达到目标覆盖率（85%后端/75%前端）的模块的临时例外。
+#
+# Version: 1.0.0
+# Last Updated: 2026-01-15
+
+version: 1.0
+
+# Coverage target thresholds (from .github/config/ci.yml)
+# 覆盖率目标阈值（来自.github/config/ci.yml）
+targets:
+  backend: 85
+  frontend: 75
+
+# Exceptions list
+# 例外清单
+exceptions:
+  # ===========================
+  # Backend Exceptions
+  # ===========================
+
+  - module: "src/services/document/paddleocr_service.py"
+    current_coverage: 45
+    target_coverage: 60
+    reason: "Requires local PaddleOCR model and GPU for full functionality, unavailable in CI environment (需要本地PaddleOCR模型和GPU，CI环境不可用)"
+    improvement_plan: "Mock OCR responses in tests to increase coverage to 60%+ (在测试中使用Mock响应提升覆盖率至60%+)"
+    expires: "2026-02-28"
+    owner: "@team-ai"
+    status: "active"
+
+  - module: "src/services/document/llm_contract_extractor.py"
+    current_coverage: 55
+    target_coverage: 70
+    reason: "LLM integration requires API keys and external services, difficult to test in CI (LLM集成需要API密钥和外部服务，CI中难以测试)"
+    improvement_plan: "Implement comprehensive mocking for LLM responses (为LLM响应实现全面Mock)"
+    expires: "2026-03-31"
+    owner: "@team-ai"
+    status: "active"
+
+  - module: "src/services/excel/batch_export_service.py"
+    current_coverage: 60
+    target_coverage: 75
+    reason: "Complex Excel formatting logic requires visual verification (复杂Excel格式化逻辑需要视觉验证)"
+    improvement_plan: "Add unit tests for export logic with mocked Excel libraries (为导出逻辑添加带Mock Excel库的单元测试)"
+    expires: "2026-02-15"
+    owner: "@team-backend"
+    status: "active"
+
+  # ===========================
+  # Frontend Exceptions
+  # ===========================
+
+  - module: "src/monitoring/ApiMonitor.tsx"
+    current_coverage: 40
+    target_coverage: 60
+    reason: "API monitoring component requires complex mocking of fetch and WebSocket (API监控组件需要复杂Mock fetch和WebSocket)"
+    improvement_plan: "Refactor to use dependency injection for better testability (重构以使用依赖注入提高可测试性)"
+    expires: "2026-02-28"
+    owner: "@team-frontend"
+    status: "active"
+
+  - module: "src/monitoring/SmartErrorHandler.tsx"
+    current_coverage: 50
+    target_coverage: 70
+    reason: "Error boundary testing requires specialized React testing utilities (错误边界测试需要专用React测试工具)"
+    improvement_plan: "Implement tests with react-error-boundary library (使用react-error-boundary库实现测试)"
+    expires: "2026-02-15"
+    owner: "@team-frontend"
+    status: "active"
+
+# ===========================
+# Validation Rules
+# ===========================
+
+# Rules that all exceptions must follow
+# 所有例外必须遵循的规则
+validation_rules:
+  # Maximum allowed exception duration (days)
+  max_duration_days: 90
+
+  # Minimum required coverage for exceptions
+  min_coverage_percentage: 40
+
+  # Required fields for each exception
+  required_fields:
+    - module
+    - current_coverage
+    - target_coverage
+    - reason
+    - improvement_plan
+    - expires
+    - owner
+    - status
+
+# ===========================
+# Status Values
+# ===========================
+
+# Possible status values:
+# - active: Exception is currently active (例外当前有效)
+# - expired: Exception has passed expiration date (例外已过期)
+# - completed: Module has reached target, exception no longer needed (模块已达标，不再需要例外)
+# - revoked: Exception was revoked before completion (例外在完成前被撤销)
+
+# ===========================
+# Automated Enforcement
+# ===========================
+
+# The CI pipeline should validate this file and:
+# 1. Reject expired exceptions
+# 2. Warn about exceptions expiring within 7 days
+# 3. Require renewal of active exceptions before expiration
+# 4. Track coverage progress toward target_coverage
+
+# CI管道应验证此文件并:
+# 1. 拒绝已过期的例外
+# 2. 警告7天内到期的例外
+# 3. 要求在到期前续期活跃例外
+# 4. 跟踪覆盖率向target_coverage的进展

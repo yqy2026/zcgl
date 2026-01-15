@@ -1,0 +1,199 @@
+name: Quality Trends Analysis
+
+on:
+  schedule:
+    - cron: '0 2 * * 1'  # Weekly Monday 2 AM UTC (每周一凌晨2点)
+  workflow_dispatch: {}  # Allow manual trigger (允许手动触发)
+
+jobs:
+  weekly-analysis:
+    name: Weekly Quality Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Full history for trends (完整历史用于趋势分析)
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install Python dependencies
+      run: |
+        cd backend
+        pip install uv
+        uv sync --dev
+
+    - name: Install Node.js tools
+      run: |
+        npm install -g jscpd
+
+    - name: Create reports directory
+      run: mkdir -p reports
+
+    # ===========================
+    # Code Complexity Analysis
+    # ===========================
+    - name: Run complexity analysis (Radon)
+      run: |
+        cd backend
+        uv run radon cc --average --min C src/ > ../reports/complexity.txt 2>&1 || true
+        uv run radon mi src/ > ../reports/maintainability.txt 2>&1 || true
+
+    - name: Summarize complexity
+      run: |
+        echo "## Code Complexity Analysis" > reports/summary.md
+        echo "" >> reports/summary.md
+        echo "### Cyclomatic Complexity" >> reports/summary.md
+        echo '```' >> reports/summary.md
+        cat reports/complexity.txt | head -50 >> reports/summary.md
+        echo '```' >> reports/summary.md
+
+    # ===========================
+    # Code Duplication Analysis
+    # ===========================
+    - name: Run duplication analysis (jscpd)
+      run: |
+        npx jscpd backend/src \
+          --min-lines 5 \
+          --min-tokens 50 \
+          --format json \
+          --output reports/ \
+          --reporters json txt || true
+
+    - name: Summarize duplication
+      run: |
+        if [ -f reports/jscpd-report.json ]; then
+          echo "" >> reports/summary.md
+          echo "### Code Duplication" >> reports/summary.md
+          node -e "
+            const fs = require('fs');
+            const data = JSON.parse(fs.readFileSync('reports/jscpd-report.json', 'utf8'));
+            const stats = data.statistics;
+            console.log('Total duplication: ' + ((stats.total.percentage || 0).toFixed(2)) + '%');
+            console.log('Duplicated lines: ' + (statistics?.total?.lines || 0));
+            console.log('Total lines: ' + (statistics?.total?.lines || 0));
+          " >> reports/summary.md || true
+        fi
+
+    # ===========================
+    # Coverage Trends
+    # ===========================
+    - name: Fetch coverage history
+      run: |
+        echo "" >> reports/summary.md
+        echo "### Coverage Trends (Last 4 weeks)" >> reports/summary.md
+        echo "Fetching coverage data from Codecov..." >> reports/summary.md
+        # Note: Would need Codecov API token for detailed trends
+        echo "See Codecov dashboard for detailed trends: https://codecov.io" >> reports/summary.md
+
+    # ===========================
+    # Test Trends
+    # ===========================
+    - name: Analyze test trends
+      run: |
+        cd backend
+        echo "" >> ../reports/summary.md
+        echo "### Test Statistics" >> ../reports/summary.md
+        TEST_COUNT=$(uv run pytest --collect-only -q 2>/dev/null | grep "test session starts" -A 100 | grep -E "^\d+ test" || echo "N/A")
+        echo "Total tests: ${TEST_COUNT}" >> ../reports/summary.md
+
+    # ===========================
+    # Generate Trend Report
+    # ===========================
+    - name: Generate comprehensive report
+      run: |
+        echo "" >> reports/summary.md
+        echo "## Summary" >> reports/summary.md
+        echo "" >> reports/summary.md
+        echo "- **Date**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> reports/summary.md
+        echo "- **Commit**: ${{ github.sha }}" >> reports/summary.md
+        echo "- **Branch**: ${{ github.ref_name }}" >> reports/summary.md
+
+    # ===========================
+    # Upload Reports
+    # ===========================
+    - name: Upload quality reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: weekly-quality-report-${{ github.run_number }}
+        path: reports/
+        retention-days: 90
+
+    # ===========================
+    # Create Issue on Degradation
+    # ===========================
+    - name: Check for quality degradation
+      id: degradation-check
+      run: |
+        # Simple threshold checks (can be enhanced)
+        DEGRADED=false
+
+        # Check duplication threshold (5% max)
+        if [ -f reports/jscpd-report.json ]; then
+          DUPLICATION=$(node -e "
+            const fs = require('fs');
+            const data = JSON.parse(fs.readFileSync('reports/jscpd-report.json', 'utf8'));
+            console.log(data.statistics.total.percentage || 0);
+          " 2>/dev/null || echo "0")
+
+          if (( $(echo "$DUPLICATION > 5" | bc -l) )); then
+            echo "❌ Code duplication too high: ${DUPLICATION}%"
+            DEGRADED=true
+          fi
+        fi
+
+        # Check if degraded
+        if [ "$DEGRADED" = "true" ]; then
+          echo "degraded=true" >> $GITHUB_OUTPUT
+        else
+          echo "degraded=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Create issue for degradation
+      if: steps.degradation-check.outputs.degraded == 'true'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const summary = fs.readFileSync('reports/summary.md', 'utf8');
+
+          github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: '📉 代码质量下降警报 - Weekly Quality Report',
+            body: `## Quality Metrics Degraded
+
+            The weekly quality analysis detected degradation in code quality metrics.
+
+            ### Report Details
+            **Date**: ${new Date().toISOString()}
+            **Workflow Run**: ${context.serverUrl}/${context.repository}/actions/runs/${context.runId}
+
+            ### Summary
+            ${summary}
+
+            ---
+            *This issue was automatically generated by the Quality Trends Analysis workflow*
+            `,
+            labels: ['quality', 'automated', 'weekly-report'],
+            assignees: ['repository-owner']  # Update with actual owner
+          });
+
+    # ===========================
+    # Comment on Summary
+    # ===========================
+    - name: Generate step summary
+      run: |
+        echo "# 📊 Weekly Quality Trends Report" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        cat reports/summary.md >> $GITHUB_STEP_SUMMARY
