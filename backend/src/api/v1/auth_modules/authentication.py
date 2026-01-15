@@ -15,18 +15,16 @@ from sqlalchemy.orm import Session
 logger = logging.getLogger(__name__)
 
 from ....core.route_guards import debug_only
-from ....crud.auth import AuditLogCRUD, UserCRUD, UserSessionCRUD
+from ....crud.auth import AuditLogCRUD, UserCRUD
 from ....database import get_db
 from ....exceptions import BusinessLogicError
 from ....middleware.auth import (
     ALGORITHM,
     SECRET_KEY,
-    SecurityConfig,
     get_current_active_user,
 )
 from ....schemas.auth import (
     LoginRequest,
-    PasswordChangeRequest,
     RefreshTokenRequest,
     TokenResponse,
     UserResponse,

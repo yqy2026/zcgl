@@ -8,7 +8,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends
 
-from ....middleware.auth import require_admin, SecurityConfig
+from ....middleware.auth import SecurityConfig, require_admin
 from ....schemas.auth import UserResponse
 
 router = APIRouter(prefix="/security", tags=["安全配置"])

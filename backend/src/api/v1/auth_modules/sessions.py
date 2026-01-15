@@ -4,8 +4,6 @@
 包含: 会话查询、会话撤销
 """
 
-from typing import Any
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 

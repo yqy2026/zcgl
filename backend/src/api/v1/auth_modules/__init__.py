@@ -10,7 +10,8 @@
 """
 
 from fastapi import APIRouter
-from . import authentication, users, sessions, audit, security
+
+from . import audit, authentication, security, sessions, users
 
 # 创建主路由器
 router = APIRouter()

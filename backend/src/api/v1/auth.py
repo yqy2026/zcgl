@@ -17,7 +17,6 @@ Backward Compatibility:
 - Example: POST /api/v1/auth/login → authentication.router with prefix="/login"
 """
 
-from fastapi import APIRouter
 from .auth_modules import router as auth_modules_router
 
 # Use the router from auth_modules which includes all sub-routers

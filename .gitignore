@@ -1,17 +1,19 @@
 # ============================================
-# Land Property Asset Management System - Git Ignore File
-# Configured following best practices to avoid sensitive and unnecessary files
-# Updated: 2025-10-20
+# Land Property Asset Management System
+# Updated: 2025-01-15
 # ============================================
 
-# ----------
-# Python & Backend
-# ----------
+# ============================================================================
+# 1. Python & Backend
+# ============================================================================
+
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
-.Python
+
+# Distribution / packaging
 build/
 develop-eggs/
 dist/
@@ -30,7 +32,7 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# UV 包管理器
+# Virtual environments
 .venv/
 venv/
 env/
@@ -38,117 +40,193 @@ ENV/
 env.bak/
 venv.bak/
 
-# Python 测试和覆盖率
-.coverage
+# UV package manager
+.python-version
+uv.lock
+
+# Testing & Coverage
 .pytest_cache/
+.coverage
+.coverage.*
+.coverage_html/
+htmlcov/
+backend/htmlcov/
 .hypothesis/
 .tox/
-.coverage.*
-.cache
-nosetests.xml
+.nox/
 coverage.xml
 coverage.json
 junit-report.xml
 *.cover
 *.py,cover
-htmlcov/
-backend/htmlcov/
+*.report.json
 
-# Python 环境
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
-# mypy 类型检查
+# Type checking
 .mypy_cache/
 .dmypy.json
 dmypy.json
+.mypy_reports/
+.pyre/
+.pytype/
 
-# 后端日志文件 - 已合并到统一日志部分
-
-# 测试覆盖率报告
-htmlcov/
-backend/htmlcov/
-.coverage
-.coverage.*
-coverage.json
-coverage.xml
-junit-report.xml
-*.cover
-.pytest_cache/
-.coverage_html/
-
-# 缓存文件
-.cache/
-__pycache__/
-# Note: *.py[cod] above already covers *.pyc and *.pyo
-
-# 质量监控报告
-backend/reports/quality_check_*.txt
-backend/quality_monitor_*.json
+# Linting & Formatting
+.ruff_cache/
 ruff-report.json
-*.report.json
-mypy-report.txt
-pylint-report.txt
+*.report.txt
 
-# ----------
-# Node.js / Frontend
-# ----------
+# Jupyter / IPython
+.ipynb_checkpoints/
+profile_default/
+ipython_config.py
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# Database migrations (keep versions structure, ignore temp files)
+*.sql.backup
+*_dump.sql
+*.sql.gz
+migration_backup/
+*_migration.sql
+
+# ============================================================================
+# 2. Node.js / Frontend
+# ============================================================================
+
+# Dependencies
 node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
 
-# 运行时数据
-pids
-*.pid
-*.seed
-*.pid.lock
-
-# 覆盖率目录
-coverage/
-*.lcov
-.nyc_output
-
-# 依赖锁定文件（根据团队需求选择）
-# package-lock.json
-# yarn.lock
-
-# 构建输出
+# Build outputs
 dist/
 build/
+.out/
 .next/
-out/
-
-# TypeScript & JavaScript
-*.tsbuildinfo
-next-env.d.ts
 
 # Vite
 .vite/
 .vite-cache/
 
-# React & Build Artifacts
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Testing
+coverage/
+*.lcov
+.nyc_output/
+test-results/
+playwright-report/
+.playwright-mcp/
+
+# Package managers
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+package-lock.json
+yarn.lock
+# pnpm-lock.yaml is now tracked (project uses pnpm)
+
+# Caches
 .eslintcache
 .stylelintcache
 .turbo/
+.parcel-cache/
 
-# Package managers
-.pnpm-debug.log*
-.yarn-integrity
+# React Router
+.react-router/
 
-# ----------
-# IDE 和编辑器
-# ----------
-.vscode/
+# ============================================================================
+# 3. Database Files
+# ============================================================================
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.sqlite-journal
+*.sqlite3-journal
+*.db-shm
+*.db-wal
+
+# Development databases (keep examples only)
+# backend/data/land_property.db
+backend/database.sqlite
+backend/test_*.db-journal
+
+# Production databases (never commit)
+/backend/data/production/
+/backend/data/prod/
+/data/production/
+/data/prod/
+
+# Backup databases
+backup_*.db
+*_backup_*.db
+backend/src/data/defect_tracking.db
+
+# ============================================================================
+# 4. Logs
+# ============================================================================
+
+# Application logs
+logs/
+*.log
+*.log.*
+*.log.[0-9]*
+app.log
+requests.log
+security.log
+
+# Specific directories
+/backend/logs/
+/frontend/logs/
+/logs/
+
+# ============================================================================
+# 5. Environment & Configuration
+# ============================================================================
+
+# Environment files (keep .env.example and .env.template)
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Production configs (never commit)
+production/
+prod/
+.env.production
+.env.prod
+
+# Local config overrides
+config.local.js
+config.local.ts
+local.properties
+
+# ============================================================================
+# 6. IDE & Editors
+# ============================================================================
+
+# JetBrains IDEs
 .idea/
-.cursor/
+*.iws
+*.iml
+*.ipr
+out/
+
+# VS Code (allow specific configs)
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/*.code-snippets
 
 # Vim
 *.swp
@@ -168,167 +246,79 @@ tramp
 *.sublime-project
 *.sublime-workspace
 
-# JetBrains
-.idea/
-*.iws
-*.iml
-*.ipr
-out/
+# Cursor
+.cursor/
 
-# VS Code
-.vscode/
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-!.vscode/*.code-snippets
+# ============================================================================
+# 7. Operating System Files
+# ============================================================================
 
-# ----------
-# 操作系统生成文件
-# ----------
+# macOS
 .DS_Store
 .DS_Store?
 ._*
 .Spotlight-V100
 .Trashes
-ehthumbs.db
+
+# Windows
 Thumbs.db
+ehthumbs.db
 desktop.ini
+$RECYCLE.BIN/
 
-# ----------
-# Database Files
-# ----------
-*.db
-*.sqlite
-*.sqlite3
-*.db-journal
-*.sqlite-journal
-*.sqlite3-journal
-*.db-shm
-*.db-wal
+# Linux
+*~
+.nfs*
 
-# Production databases (keep examples only)
-# backend/data/land_property.db
+# ============================================================================
+# 8. Temporary & Cache Files
+# ============================================================================
 
-# Database backups and exports
-*.sql.backup
-*_dump.sql
-*.sql.gz
-backup_*.db
-*_backup_*.db
-# 缺陷跟踪临时数据库
-backend/src/data/defect_tracking.db
-
-# ----------
-# 日志文件
-# ----------
-logs/
-*.log
-# 确保所有日志文件都被忽略
-*.log.*
-*.log.[0-9]*
-app.log
-requests.log
-security.log
-
-# Node.js package manager logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-# 应用日志目录
-/backend/logs/
-/frontend/logs/
-/logs/
-
-# ----------
-# 临时文件和缓存
-# ----------
 tmp/
 temp/
 .tmp/
 *.tmp
 *.temp
 .cache/
-.parcel-cache/
-
-# Windows 特殊文件
-nul
-*.nul
-
-# 测试快照和临时测试文件（在test-reports目录中）
-# Note: Moved to unified section below
-
-# ----------
-# 环境变量和配置文件
-# ----------
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-.env.*.local
-
-# 配置文件
-config.local.js
-config.local.ts
-local.properties
-
-# ----------
-# 备份文件
-# ----------
-backups/
-backend/backups/
-*.backup
 *.bak
 *.old
 *.orig
 *.rej
-backup_*.db
-*_backup.db
 
-# ----------
-# 上传文件
-# ----------
+# Windows special
+nul
+*.nul
+
+# ============================================================================
+# 9. Uploads & User Content
+# ============================================================================
+
 uploads/
 !uploads/.gitkeep
 
-# ----------
-# 性能和测试报告
-# ----------
-performance-reports/
-test-results/
-benchmark/
+# Document processing
+*_temp.pdf
+*_processing.pdf
+temp_*.pdf
+*_ocr.pdf
+*_extracted.pdf
 
-# ----------
-# 编译文件和可执行文件
-# ----------
-*.com
-*.class
-*.dll
-*.exe
-*.o
-*.so
+# Excel processing
+*_temp.xlsx
+*_processing.xlsx
+temp_*.xlsx
 
-# ----------
-# 压缩文件和包
-# ----------
-*.7z
-*.dmg
-*.gz
-*.iso
-*.jar
-*.rar
-*.tar
-*.zip
+# Asset uploads
+contract_uploads/
+asset_images/
+document_scans/
+receipt_uploads/
 
-# ----------
-# 敏感信息和证书
-# ----------
-secrets/
-private/
+# ============================================================================
+# 10. Security & Certificates
+# ============================================================================
+
+# Certificates & keys
 *.key
 *.pem
 *.p12
@@ -337,74 +327,55 @@ private/
 *.cer
 *.der
 
-# ----------
-# Project-Specific Ignores
-# ----------
-# Land Property Asset Management System
+# Production SSL
+/ssl/production/
+/ssl/prod/
+*.production.key
+*.production.crt
 
-# PDF processing temporary files
-*_temp.pdf
-*_processing.pdf
-temp_*.pdf
-*_ocr.pdf
-*_extracted.pdf
+# Secrets
+secrets/
+private/
 
-# Excel import/export temporary files
-*_temp.xlsx
-*_processing.xlsx
-temp_*.xlsx
-*_template.xlsx
+# ============================================================================
+# 11. Documentation & Reports
+# ============================================================================
 
-# Data migration and backup files
-migration_backup/
-*_migration.sql
-*_data_export.*
+# Generated docs
+docs/_build/
+docs/.doctrees/
+site/
 
-# Asset management specific
-contract_uploads/
-asset_images/
-document_scans/
-receipt_uploads/
+# Test & Quality Reports
+test-reports/
+/reports/
+backend/reports/quality_check_*.txt
+backend/quality_monitor_*.json
 
-# OCR and AI processing
-ocr_cache/
-nlp_models/
-*.tessdata
-*.traineddata
-
-# Monitoring and analytics
+# Performance & Analytics
+performance-reports/
+benchmark/
 monitoring_data/
 analytics_cache/
 performance_metrics/
 
-# Development tools generated files
-.eslintcache
-.stylelintcache
+# Exception: Allow docs/reports/ for project documentation
+!docs/reports/
 
-# Docker
-.dockerignore
-docker-compose.override.yml
+# ============================================================================
+# 12. AI/ML & Development Tools
+# ============================================================================
 
-# ----------
-# Experimental Features
-# ----------
-experimental/
-beta/
-feature-flags/
-
-# ----------
-# Modern Development Tools
-# ----------
-# AI/ML development
+# MLflow & DVC
 .mlflow/
 .dvc/
 *.pkl
 *.joblib
 
-# API development
-.postman_collection.json
+# API Tools
 .insomnia/
 .openapi-generator/
+.postman_collection.json
 
 # Security scanning
 .bandit/
@@ -416,104 +387,26 @@ feature-flags/
 *.profile
 py-spy*
 
-# Container and orchestration
+# OCR & NLP
+ocr_cache/
+nlp_models/
+*.tessdata
+*.traineddata
+
+# ============================================================================
+# 13. Docker & Containers
+# ============================================================================
+
+.dockerignore
+docker-compose.override.yml
 .skaffold/
 helm/charts/templates/
 k8s/overlays/
 
-# ----------
-# 文档生成
-# ----------
-docs/_build/
-docs/.doctrees/
-site/
+# ============================================================================
+# 14. Claude AI Assistant
+# ============================================================================
 
-# ============================================
-# 特殊保留规则（需要版本控制的文件）
-# ============================================
-
-# 保留空的目录结构
-!uploads/.gitkeep
-!logs/.gitkeep
-!data/.gitkeep
-
-# 保留示例配置文件
-!.env.example
-!.env.template
-!config.example.js
-
-# 保留文档
-!README.md
-!CHANGELOG.md
-!CONTRIBUTING.md
-
-# 保留许可证文件
-!LICENSE
-!LICENCE
-
-# 保留包管理文件
-!package.json
-!package-lock.json
-!requirements.txt
-!pyproject.toml
-!poetry.lock
-
-# ============================================
-# Project Cleanup & Maintenance Rules
-# ============================================
-
-# Prevent re-introduction of cleaned test files
-/tools/
-/test_contract.pdf
-/dictionaries_page_test.png
-/backend/single_page_test.pdf
-/dashboard_optimization_screenshot.png
-
-# Prevent temporary debug files from being committed
-# Note: Allow legitimate debugging tools with "debug" in name
-debug_*.tmp
-debug_*.log
-debug_*.bak
-/temp_*
-/test_*.py
-/test_*.db
-demo_*
-sample_*
-# Only ignore debug backups, not source files
-*_debug.bak
-*_debug.tmp
-
-# 临时分析脚本（一次性使用）
-backend/find_quick_wins.py
-backend/find_quickest_wins.py
-backend/find_all_quick_wins.py
-backend/check_cache_coverage.py
-backend/check_*_coverage.py
-backend/find_*_wins.py
-backend/analyze_*.py
-
-# Prevent backup and archive files from being committed
-# Note: Only ignore backup files with date patterns or common backup extensions
-# Avoid ignoring legitimate source files with backup-related names
-*.backup.*
-*.archive.*
-backup_*.*
-*_backup_*.*
-*.$(date +%Y%m%d)*
-# Be more specific about _old and _orig to avoid false positives
-*_old.py.bak
-*_orig.py.bak
-
-# Prevent IDE and editor backup files
-*.bak
-*.tmp
-*.swp
-*.swo
-*~
-
-# ----------
-# Claude AI Code Assistant
-# ----------
 .claude/agents/
 .claude/cache/
 .claude/temp/
@@ -523,81 +416,91 @@ tmpclaude-*
 # BMad-Method Framework
 .bmad-core/
 .claude/commands/BMad/
-# docs/ - Removed: Allow documentation files to be committed
-# BMad-specific docs should use .bmad-core/docs/ instead
 
-# ============================================
-# Production Environment Protection
-# ============================================
+# Serena
+.serena/cache
 
-# Production environment configurations
-production/
-prod/
-.env.production
-.env.prod
+# ============================================================================
+# 15. Project-Specific Exclusions
+# ============================================================================
 
-# Production data directories
-/data/production/
-/data/prod/
-/backend/data/production/
+# Development tools and scripts
+/tools/
+backend/find_quick_wins.py
+backend/find_quickest_wins.py
+backend/find_all_quick_wins.py
+backend/check_cache_coverage.py
+backend/check_*_coverage.py
+backend/find_*_wins.py
+backend/analyze_*.py
 
-# Production logs
-/logs/production/
-/logs/prod/
-/backend/logs/production/
+# Test artifacts
+/test_contract.pdf
+/dictionaries_page_test.png
+/backend/single_page_test.pdf
+/dashboard_optimization_screenshot.png
+lint-results.txt
 
-# Production backups
-/backups/production/
-/backups/prod/
+# Debug files (but keep source files named debug_*)
+debug_*.tmp
+debug_*.log
+debug_*.bak
+*_debug.bak
+*_debug.tmp
 
-# Production SSL certificates and keys
-/ssl/production/
-/ssl/prod/
-*.production.key
-*.production.crt
-
-# ============================================
-# 测试和报告文件忽略
-# ============================================
-
-.playwright-mcp/
-*test-report*.md
-test-reports/
-/reports/
-# Exception: Allow docs/reports/ for project documentation
-!docs/reports/
-
-# 权限控制测试目录（临时测试文件）
+# Permission test directory
 权限控制测试/
 
+# Backup patterns (more specific)
+*.backup.*
+*.archive.*
+backup_*.*
+*_backup_*.*
+*_old.py.bak
+*_orig.py.bak
 
-# 自动添加的清理规则
-# 测试输出
-test_output*.txt
-test_output*.log
-backend/test_output*.txt
-backend/test_output*.log
-# 前端构建产物
-# 后端测试产物
-backend/database.sqlite
-backend/test_*.db-journal
-# 调试产物
+# ============================================================================
+# 16. Compressed & Archive Files
+# ============================================================================
 
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
 
-# 智能清理脚本建议的规则
-# 测试和覆盖率文件
-# 临时数据库文件
-test*.db
-# 缓存目录
-.ruff_cache/
-# 构建产物
-*-report.json
-*-report.xml
+# ============================================================================
+# 17. Preserve Rules (Exceptions)
+# ============================================================================
 
-# ============================================
-# Explicit Preserve Rules for Test Directories
-# ============================================
-# Always track pytest test files in standard test directories
+# Empty directory placeholders
+!uploads/.gitkeep
+!logs/.gitkeep
+!data/.gitkeep
+
+# Example configs
+!.env.example
+!.env.template
+!config.example.js
+!backend/.env.example
+
+# Documentation
+!README.md
+!CHANGELOG.md
+!CONTRIBUTING.md
+!LICENSE
+!LICENCE
+
+# Package management
+!package.json
+!requirements.txt
+!pyproject.toml
+!uv.lock
+
+# Test files (always track in standard locations)
 !backend/tests/**/*.py
 !tests/**/*.py
 !frontend/src/**/__tests__/**/*.ts*
@@ -605,25 +508,24 @@ test*.db
 !frontend/src/**/*.test.tsx
 !frontend/src/**/*.spec.ts*
 
-# ============================================
-# Explicit Preserve Rules for Source Files
-# ============================================
-# Ensure legitimate source files with certain patterns are tracked
-# Debug tools and utilities
+# Source files with specific patterns (but not backup files)
 !**/debug_*.py
 !**/debug_*.ts
 !**/debug_*.tsx
 !**/utils/**/*debug*.py
 !**/utils/**/*debug*.ts
-
-# Backup and archive utilities (but not backup files)
 !**/backup_service.py
 !**/archive_*.py
 !**/*_manager.py
-
-# Configuration examples
 !**/*.example
 !**/*.example.*
 !**/*.template
 !**/*.template.*
-lint-results.txt
+
+# Alembic
+!alembic/versions/__init__.py
+!alembic/versions/*.py
+
+# ============================================================================
+# END OF GITIGNORE
+# ============================================================================
