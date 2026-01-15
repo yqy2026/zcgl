@@ -56,37 +56,72 @@ class SystemInfo(BaseModel):
     environment: str = "development"
 
 
+# Response models for API endpoints
+class SystemSettingsResponse(BaseModel):
+    """系统设置响应模型"""
+
+    success: bool
+    data: SystemSettings
+    timestamp: str
+
+
+class SystemInfoResponse(BaseModel):
+    """系统信息响应模型"""
+
+    success: bool
+    data: SystemInfo
+    timestamp: str
+
+
+class SystemBackupResponse(BaseModel):
+    """系统备份响应模型"""
+
+    success: bool
+    message: str
+    data: dict[str, Any]
+    timestamp: str
+
+
+class SystemRestoreResponse(BaseModel):
+    """系统恢复响应模型"""
+
+    success: bool
+    message: str
+    restored_backup: dict[str, Any]
+    timestamp: str
+
+
 # 内存存储设置（实际应用中应该存储在数据库或配置文件中）
 _system_settings = SystemSettings()
 
 
-@router.get("/settings", summary="获取系统设置")
+@router.get("/settings", summary="获取系统设置", response_model=SystemSettingsResponse)
 async def get_system_settings(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[UserResponse, Depends(get_current_active_user)],
-) -> dict[str, Any]:
+) -> SystemSettingsResponse:
     """
     获取系统设置
 
     返回当前系统的所有设置项
     """
     try:
-        return {
-            "success": True,
-            "data": _system_settings.model_dump(),
-            "timestamp": datetime.now().isoformat(),
-        }
+        return SystemSettingsResponse(
+            success=True,
+            data=_system_settings,
+            timestamp=datetime.now().isoformat(),
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取系统设置失败: {str(e)}")
 
 
-@router.put("/settings", summary="更新系统设置")
+@router.put("/settings", summary="更新系统设置", response_model=SystemSettingsResponse)
 async def update_system_settings(
     settings: SystemSettings,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[UserResponse, Depends(get_current_active_user)],
     request: Request | None = None,
-) -> dict[str, Any]:
+) -> SystemSettingsResponse:
     """
     更新系统设置
 
@@ -122,21 +157,20 @@ async def update_system_settings(
             logger = logging.getLogger(__name__)
             logger.warning("记录系统设置审计日志失败", exc_info=True)
 
-        return {
-            "success": True,
-            "message": "系统设置更新成功",
-            "data": _system_settings.model_dump(),
-            "timestamp": datetime.now().isoformat(),
-        }
+        return SystemSettingsResponse(
+            success=True,
+            data=_system_settings,
+            timestamp=datetime.now().isoformat(),
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"更新系统设置失败: {str(e)}")
 
 
-@router.get("/info", summary="获取系统信息")
+@router.get("/info", summary="获取系统信息", response_model=SystemInfoResponse)
 async def get_system_info(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[UserResponse, Depends(get_current_active_user)],
-) -> dict[str, Any]:
+) -> SystemInfoResponse:
     """
     获取系统信息
 
@@ -162,22 +196,22 @@ async def get_system_info(
             environment=environment,
         )
 
-        return {
-            "success": True,
-            "data": system_info.model_dump(),
-            "timestamp": datetime.now().isoformat(),
-        }
+        return SystemInfoResponse(
+            success=True,
+            data=system_info,
+            timestamp=datetime.now().isoformat(),
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取系统信息失败: {str(e)}")
 
 
-@router.post("/backup", summary="备份系统数据")
+@router.post("/backup", summary="备份系统数据", response_model=SystemBackupResponse)
 async def backup_system(
     background_tasks: BackgroundTasks,
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[UserResponse, Depends(get_current_active_user)],
     request: Request | None = None,
-) -> dict[str, Any]:
+) -> SystemBackupResponse:
     """
     备份系统数据
 
@@ -221,23 +255,23 @@ async def backup_system(
             logger = logging.getLogger(__name__)
             logger.warning("记录备份审计日志失败", exc_info=True)
 
-        return {
-            "success": True,
-            "message": "系统数据备份成功",
-            "data": backup_data,
-            "timestamp": datetime.now().isoformat(),
-        }
+        return SystemBackupResponse(
+            success=True,
+            message="系统数据备份成功",
+            data=backup_data,
+            timestamp=datetime.now().isoformat(),
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"系统备份失败: {str(e)}")
 
 
-@router.post("/restore", summary="恢复系统数据")
+@router.post("/restore", summary="恢复系统数据", response_model=SystemRestoreResponse)
 async def restore_system(
     backup_file: Annotated[UploadFile, File(...)],
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[UserResponse, Depends(get_current_active_user)],
     request: Request | None = None,
-) -> dict[str, Any]:
+) -> SystemRestoreResponse:
     """
     恢复系统数据
 
@@ -301,16 +335,16 @@ async def restore_system(
             logger = logging.getLogger(__name__)
             logger.warning("记录恢复审计日志失败", exc_info=True)
 
-        return {
-            "success": True,
-            "message": "系统数据恢复成功",
-            "restored_backup": {
+        return SystemRestoreResponse(
+            success=True,
+            message="系统数据恢复成功",
+            restored_backup={
                 "backup_time": backup_data.get("backup_time"),
                 "version": backup_data.get("version"),
                 "filename": filename,
             },
-            "timestamp": datetime.now().isoformat(),
-        }
+            timestamp=datetime.now().isoformat(),
+        )
     except HTTPException:
         raise
     except Exception as e:
