@@ -109,7 +109,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   };
 
   // 导出菜单
-  const exportMenu = (
+  const _exportMenu = (
     <Menu
       items={[
         {
@@ -242,7 +242,28 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             <Button icon={<ReloadOutlined />} onClick={handleRefresh} loading={isLoading}>
               刷新
             </Button>
-            <Dropdown overlay={exportMenu} placement="bottomRight">
+            <Dropdown
+              menu={{
+                items: [
+                  {
+                    key: "excel",
+                    label: "导出为 Excel",
+                    onClick: () => handleExport("excel"),
+                  },
+                  {
+                    key: "pdf",
+                    label: "导出为 PDF",
+                    onClick: () => handleExport("pdf"),
+                  },
+                  {
+                    key: "csv",
+                    label: "导出为 CSV",
+                    onClick: () => handleExport("csv"),
+                  },
+                ],
+              }}
+              placement="bottomRight"
+            >
               <Button icon={<DownloadOutlined />}>导出</Button>
             </Dropdown>
             <Button

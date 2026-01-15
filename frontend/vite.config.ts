@@ -12,30 +12,32 @@ export default defineConfig(({ command, mode }) => {
 
   return {
     plugins: [
-      react(),
+      react({
+        jsxImportSource: 'react',
+      }),
 
       // 生产环境压缩
       isProduction &&
-        compression({
-          algorithm: 'gzip',
-          ext: '.gz',
-        }),
+      compression({
+        algorithm: 'gzip',
+        ext: '.gz',
+      }),
 
       isProduction &&
-        compression({
-          algorithm: 'brotliCompress',
-          ext: '.br',
-        }),
+      compression({
+        algorithm: 'brotliCompress',
+        ext: '.br',
+      }),
 
       // 包分析报告（可选）
       process.env.ANALYZE &&
-        visualizer({
-          filename: 'dist/stats.html',
-          open: true,
-          gzipSize: true,
-          brotliSize: true,
-          template: 'treemap',
-        }),
+      visualizer({
+        filename: 'dist/stats.html',
+        open: true,
+        gzipSize: true,
+        brotliSize: true,
+        template: 'treemap',
+      }),
     ].filter(Boolean),
 
     resolve: {
@@ -78,7 +80,7 @@ export default defineConfig(({ command, mode }) => {
     },
 
     build: {
-      target: ['es2015', 'chrome58', 'firefox57', 'safari11'],
+      target: ['es2022', 'chrome90', 'firefox98', 'safari14'],
       outDir: 'dist',
       assetsDir: 'assets',
       sourcemap: isDevelopment || env.VITE_SOURCEMAP === 'true',
@@ -106,15 +108,6 @@ export default defineConfig(({ command, mode }) => {
               // Ant Design图表组件（按需分包）
               if (id.includes('@ant-design/plots') || id.includes('@ant-design/charts')) {
                 return 'antd-charts';
-              }
-
-              // 图表库（独立分包）
-              if (id.includes('chart.js') || id.includes('react-chartjs-2')) {
-                return 'chartjs';
-              }
-
-              if (id.includes('recharts')) {
-                return 'recharts';
               }
 
               // 表单处理库（独立分包）
@@ -229,18 +222,18 @@ export default defineConfig(({ command, mode }) => {
       minify: isProduction ? 'terser' : false,
       terserOptions: isProduction
         ? {
-            compress: {
-              drop_console: true,
-              drop_debugger: true,
-              pure_funcs: ['console.log', 'console.info'],
-            },
-            mangle: {
-              safari10: true,
-            },
-            format: {
-              comments: false,
-            },
-          }
+          compress: {
+            drop_console: true,
+            drop_debugger: true,
+            pure_funcs: ['console.log', 'console.info'],
+          },
+          mangle: {
+            safari10: true,
+          },
+          format: {
+            comments: false,
+          },
+        }
         : {},
 
       // 资源内联阈值
@@ -267,6 +260,7 @@ export default defineConfig(({ command, mode }) => {
         'react-hook-form',
         'zod',
       ],
+      force: env.FORCE_OPTIMIZE === 'true',
     },
 
     // 环境变量
@@ -284,7 +278,7 @@ export default defineConfig(({ command, mode }) => {
         less: {
           javascriptEnabled: true,
           modifyVars: {
-            '@primary-color': '#1890ff',
+            '@primary-color': '#1677ff',
             '@border-radius-base': '6px',
           },
         },
