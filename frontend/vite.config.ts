@@ -13,6 +13,9 @@ export default defineConfig(({ command, mode }) => {
   return {
     plugins: [
       react({
+        // React 19 JSX runtime configuration
+        // Explicitly set to 'react' for compatibility
+        // See: https://react.dev/blog/2024/12/05/react-19
         jsxImportSource: 'react',
       }),
 
@@ -227,9 +230,7 @@ export default defineConfig(({ command, mode }) => {
             drop_debugger: true,
             pure_funcs: ['console.log', 'console.info'],
           },
-          mangle: {
-            safari10: true,
-          },
+          mangle: {},
           format: {
             comments: false,
           },
@@ -260,6 +261,8 @@ export default defineConfig(({ command, mode }) => {
         'react-hook-form',
         'zod',
       ],
+      // Force dependency pre-bundling (useful for debugging dependency issues)
+      // Enable via: FORCE_OPTIMIZE=true pnpm dev
       force: env.FORCE_OPTIMIZE === 'true',
     },
 
@@ -278,6 +281,8 @@ export default defineConfig(({ command, mode }) => {
         less: {
           javascriptEnabled: true,
           modifyVars: {
+            // Ant Design 6 new default primary color
+            // Updated from #1890ff (Ant Design 5)
             '@primary-color': '#1677ff',
             '@border-radius-base': '6px',
           },

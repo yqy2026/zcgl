@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Row, Col, Card, Typography, Button, Space, Dropdown, Menu } from "antd";
+import { Row, Col, Card, Typography, Button, Space, Dropdown } from "antd";
 import {
   ReloadOutlined,
   DownloadOutlined,
@@ -73,8 +73,6 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
 
   const hasData = (analytics?.area_summary?.total_assets ?? 0) > 0;
 
-  // 导出选项 - removed unused variable
-
   const handleExport = (_format: "excel" | "pdf" | "csv") => {
     // TODO: Implement export functionality
   };
@@ -107,29 +105,6 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   const toggleAdvancedFilters = () => {
     setShowAdvanced(!showAdvanced);
   };
-
-  // 导出菜单
-  const _exportMenu = (
-    <Menu
-      items={[
-        {
-          key: "excel",
-          label: "导出为 Excel",
-          onClick: () => handleExport("excel"),
-        },
-        {
-          key: "pdf",
-          label: "导出为 PDF",
-          onClick: () => handleExport("pdf"),
-        },
-        {
-          key: "csv",
-          label: "导出为 CSV",
-          onClick: () => handleExport("csv"),
-        },
-      ]}
-    />
-  );
 
   // 关键指标数据
   const keyMetrics = useMemo(() => {
