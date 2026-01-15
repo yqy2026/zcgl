@@ -60,7 +60,7 @@ class SystemInfo(BaseModel):
 _system_settings = SystemSettings()
 
 
-@router.get("/settings", summary="获取系统设置", response_model=None)
+@router.get("/settings", summary="获取系统设置")
 async def get_system_settings(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[UserResponse, Depends(get_current_active_user)],
@@ -80,7 +80,7 @@ async def get_system_settings(
         raise HTTPException(status_code=500, detail=f"获取系统设置失败: {str(e)}")
 
 
-@router.put("/settings", summary="更新系统设置", response_model=None)
+@router.put("/settings", summary="更新系统设置")
 async def update_system_settings(
     settings: SystemSettings,
     db: Annotated[Session, Depends(get_db)],
@@ -132,7 +132,7 @@ async def update_system_settings(
         raise HTTPException(status_code=500, detail=f"更新系统设置失败: {str(e)}")
 
 
-@router.get("/info", summary="获取系统信息", response_model=None)
+@router.get("/info", summary="获取系统信息")
 async def get_system_info(
     db: Annotated[Session, Depends(get_db)],
     current_user: Annotated[UserResponse, Depends(get_current_active_user)],
@@ -171,7 +171,7 @@ async def get_system_info(
         raise HTTPException(status_code=500, detail=f"获取系统信息失败: {str(e)}")
 
 
-@router.post("/backup", summary="备份系统数据", response_model=None)
+@router.post("/backup", summary="备份系统数据")
 async def backup_system(
     background_tasks: BackgroundTasks,
     db: Annotated[Session, Depends(get_db)],
@@ -231,7 +231,7 @@ async def backup_system(
         raise HTTPException(status_code=500, detail=f"系统备份失败: {str(e)}")
 
 
-@router.post("/restore", summary="恢复系统数据", response_model=None)
+@router.post("/restore", summary="恢复系统数据")
 async def restore_system(
     backup_file: Annotated[UploadFile, File(...)],
     db: Annotated[Session, Depends(get_db)],
