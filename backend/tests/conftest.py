@@ -88,7 +88,7 @@ def setup_test_database():
     if run_migrations and "sqlite" in database_url:
         try:
             # Run Alembic migrations
-            print(f"\n🔧 Setting up test database: {database_url}")
+            print(f"\n[*] Setting up test database: {database_url}")
             result = subprocess.run(
                 [sys.executable, "-m", "alembic", "upgrade", "head"],
                 capture_output=True,
@@ -96,9 +96,9 @@ def setup_test_database():
                 timeout=60,
             )
             if result.returncode == 0:
-                print("✅ Database migrations completed successfully")
+                print("[OK] Database migrations completed successfully")
             else:
-                print(f"⚠️  Migration warnings: {result.stderr}")
+                print(f"[!] Migration warnings: {result.stderr}")
                 # Fallback: create tables directly
                 from sqlalchemy import create_engine
 
@@ -107,9 +107,9 @@ def setup_test_database():
 
                 engine = create_engine(database_url)
                 Base.metadata.create_all(bind=engine)
-                print("✅ Database tables created (fallback)")
+                print("[OK] Database tables created (fallback)")
         except Exception as e:
-            print(f"⚠️  Database setup failed: {e}")
+            print(f"[!] Database setup failed: {e}")
             # Try to create tables directly as fallback
             try:
                 from sqlalchemy import create_engine
@@ -119,9 +119,9 @@ def setup_test_database():
 
                 engine = create_engine(database_url)
                 Base.metadata.create_all(bind=engine)
-                print("✅ Database tables created (fallback)")
+                print("[OK] Database tables created (fallback)")
             except Exception as e2:
-                print(f"❌ Database setup failed completely: {e2}")
+                print(f"[ERROR] Database setup failed completely: {e2}")
 
     yield
 
