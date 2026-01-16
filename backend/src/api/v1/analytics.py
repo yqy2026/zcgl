@@ -1,6 +1,5 @@
 """
 资产分析API路由 (简化版)
-Version: 2026-01-04 - Service层重构版
 
 重构说明:
 - 业务逻辑已迁移到 AnalyticsService

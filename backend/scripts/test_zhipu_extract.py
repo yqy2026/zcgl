@@ -4,20 +4,66 @@ Zhipu GLM-4V Multi-Page Extraction Test
 智谱 GLM-4V 多页合同提取测试
 
 Usage:
-    cd backend
+    # Using command-line argument
+    python scripts/test_zhipu_extract.py --pdf path/to/contract.pdf
+
+    # Using environment variable
+    export TEST_CONTRACT_PDF_PATH=path/to/contract.pdf  # Linux/Mac
+    set TEST_CONTRACT_PDF_PATH=path/to/contract.pdf     # Windows
+    python scripts/test_zhipu_extract.py
+
+    # Using default (backend/tests/fixtures/sample_contract.pdf)
     python scripts/test_zhipu_extract.py
 """
 
+import argparse
 import asyncio
 import base64
 import json
 import os
 from pathlib import Path
+from typing import Union
 
 import httpx
 from dotenv import load_dotenv
 
 load_dotenv()
+
+
+def parse_arguments() -> argparse.Namespace:
+    """Parse command-line arguments"""
+    parser = argparse.ArgumentParser(
+        description="Test Zhipu GLM-4V for multi-page contract extraction"
+    )
+    parser.add_argument(
+        "--pdf",
+        type=str,
+        help="Path to PDF file for testing",
+        default=None,
+    )
+    return parser.parse_args()
+
+
+def resolve_pdf_path(cli_arg: Union[str, None]) -> Path:
+    """
+    Resolve PDF path with fallback hierarchy:
+    1. Command-line argument (highest priority)
+    2. Environment variable (TEST_CONTRACT_PDF_PATH)
+    3. Default relative path to test fixtures
+    """
+    # Check environment variable
+    env_path = os.getenv("TEST_CONTRACT_PDF_PATH")
+
+    # Use CLI argument, environment variable, or default
+    pdf_path_str = cli_arg or env_path
+
+    if pdf_path_str:
+        return Path(pdf_path_str)
+
+    # Default: look in test fixtures directory
+    script_dir = Path(__file__).parent
+    default_path = script_dir.parent / "tests" / "fixtures" / "sample_contract.pdf"
+    return default_path
 
 
 async def test_zhipu_extraction():
@@ -38,12 +84,28 @@ async def test_zhipu_extraction():
         print("Please set ZHIPU_API_KEY in .env")
         return
 
-    pdf_path = Path(
-        "D:/code/zcgl/tools/pdf-samples/【包装合字（2025）第022号】租赁合同-番禺区洛浦南浦环岛西路29号1号商业楼14号铺-王军20250401-20280331.pdf"
-    )
+    # Get PDF path from command-line argument (passed via main function)
+    # This is set in the main() function before calling test_zhipu_extraction
+    pdf_path_str = os.getenv("CURRENT_TEST_PDF_PATH")
+
+    if not pdf_path_str:
+        print("[ERROR] PDF path not configured")
+        print("\n[HELP] Provide PDF path via:")
+        print("  1. Command-line: python scripts/test_zhipu_extract.py --pdf path/to/file.pdf")
+        print("  2. Environment: export TEST_CONTRACT_PDF_PATH=path/to/file.pdf")
+        print("  3. Default location: backend/tests/fixtures/sample_contract.pdf")
+        return
+
+    pdf_path = Path(pdf_path_str)
 
     if not pdf_path.exists():
-        print("[ERROR] PDF not found")
+        print(f"[ERROR] PDF not found at: {pdf_path}")
+        print("\n[HELP] Provide PDF path via:")
+        print("  1. Command-line: python scripts/test_zhipu_extract.py --pdf path/to/file.pdf")
+        print("  2. Environment: export TEST_CONTRACT_PDF_PATH=path/to/file.pdf")
+        script_dir = Path(__file__).parent
+        default_path = script_dir.parent / "tests" / "fixtures" / "sample_contract.pdf"
+        print(f"  3. Default location: {default_path}")
         return
 
     # Convert pages to images
@@ -182,4 +244,14 @@ async def test_zhipu_extraction():
 
 
 if __name__ == "__main__":
+    # Parse command-line arguments
+    args = parse_arguments()
+
+    # Resolve PDF path with fallback hierarchy
+    pdf_path = resolve_pdf_path(args.pdf)
+
+    # Set environment variable for the async function to access
+    os.environ["CURRENT_TEST_PDF_PATH"] = str(pdf_path)
+
+    # Run the test
     asyncio.run(test_zhipu_extraction())

@@ -175,9 +175,19 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
 
     def __init__(self) -> None:
         super().__init__(Asset)
-        # Asset 模型的敏感字段（只有项目电话需要加密）
+        # Asset 模型的敏感字段（需要加密的PII字段）
         self.sensitive_data_handler = SensitiveDataHandler(
-            searchable_fields={"project_phone"}  # 项目电话 - 可搜索
+            # 可搜索字段（需要精确匹配查询）
+            searchable_fields={
+                "tenant_name",  # 租户名称
+                "ownership_entity",  # 权属方
+                "address",  # 地址
+            },
+            # 不可搜索字段（只需要保护）
+            non_searchable_fields={
+                "manager_name",  # 经理姓名
+                "project_phone",  # 项目电话
+            }
         )
 
     def create(

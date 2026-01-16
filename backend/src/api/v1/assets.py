@@ -36,10 +36,10 @@ from sqlalchemy.orm import Session
 from starlette.status import HTTP_204_NO_CONTENT
 
 from ...core.exception_handler import DuplicateResourceError, ResourceNotFoundError
+from ...crud.asset import asset_crud
 from ...crud.history import history_crud
 from ...database import get_db
 from ...middleware.auth import audit_action, get_current_active_user, require_permission
-from ...models.asset import Asset
 from ...models.auth import User
 from ...schemas.asset import (
     AssetCreate,
@@ -155,18 +155,7 @@ async def get_ownership_entities(
 ) -> list[str]:
     """获取所有权属方列表，用于搜索筛选"""
     try:
-        # 从资产表中获取所有不重复的权属方
-        entities = (
-            db.query(Asset.ownership_entity)
-            .filter(Asset.ownership_entity.isnot(None))
-            .filter(Asset.ownership_entity != "")
-            .distinct()
-            .order_by(Asset.ownership_entity)
-            .all()
-        )
-
-        return [entity[0] for entity in entities if entity[0]]
-
+        return asset_crud.get_distinct_field_values(db, "ownership_entity")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取权属方列表失败: {str(e)}")
 
@@ -179,18 +168,7 @@ async def get_business_categories(
 ) -> list[str]:
     """获取所有业态类别列表，用于搜索筛选"""
     try:
-        # 从资产表中获取所有不重复的业态类别
-        categories = (
-            db.query(Asset.business_category)
-            .filter(Asset.business_category.isnot(None))
-            .filter(Asset.business_category != "")
-            .distinct()
-            .order_by(Asset.business_category)
-            .all()
-        )
-
-        return [category[0] for category in categories if category[0]]
-
+        return asset_crud.get_distinct_field_values(db, "business_category")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取业态类别列表失败: {str(e)}")
 
@@ -201,16 +179,7 @@ async def get_usage_statuses(
 ) -> list[str]:
     """获取所有使用情况列表，用于搜索筛选"""
     try:
-        # 从资产表中获取所有不重复的使用情况
-        statuses = (
-            db.query(Asset.usage_status)
-            .filter(Asset.usage_status.isnot(None))
-            .filter(Asset.usage_status != "")
-            .distinct()
-            .order_by(Asset.usage_status)
-            .all()
-        )
-        return [status[0] for status in statuses if status[0]]
+        return asset_crud.get_distinct_field_values(db, "usage_status")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取使用情况列表失败: {str(e)}")
 
@@ -221,16 +190,7 @@ async def get_property_natures(
 ) -> list[str]:
     """获取所有物业性质列表，用于搜索筛选"""
     try:
-        # 从资产表中获取所有不重复的物业性质
-        natures = (
-            db.query(Asset.property_nature)
-            .filter(Asset.property_nature.isnot(None))
-            .filter(Asset.property_nature != "")
-            .distinct()
-            .order_by(Asset.property_nature)
-            .all()
-        )
-        return [nature[0] for nature in natures if nature[0]]
+        return asset_crud.get_distinct_field_values(db, "property_nature")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取物业性质列表失败: {str(e)}")
 
@@ -241,16 +201,7 @@ async def get_ownership_statuses(
 ) -> list[str]:
     """获取所有确权状态列表，用于搜索筛选"""
     try:
-        # 从资产表中获取所有不重复的确权状态
-        statuses = (
-            db.query(Asset.ownership_status)
-            .filter(Asset.ownership_status.isnot(None))
-            .filter(Asset.ownership_status != "")
-            .distinct()
-            .order_by(Asset.ownership_status)
-            .all()
-        )
-        return [status[0] for status in statuses if status[0]]
+        return asset_crud.get_distinct_field_values(db, "ownership_status")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取确权状态列表失败: {str(e)}")
 

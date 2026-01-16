@@ -131,12 +131,12 @@ def setup_test_database():
         if os.path.exists(db_path):
             try:
                 os.remove(db_path)
-                print(f"🧹 Cleaned up test database: {db_path}")
+                print(f"[*] Cleaned up test database: {db_path}")
             except PermissionError:
                 # File might be locked, especially on Windows
-                print(f"⚠️  Could not remove test database (file locked): {db_path}")
+                print(f"[!] Could not remove test database (file locked): {db_path}")
             except Exception as e:
-                print(f"⚠️  Could not remove test database: {e}")
+                print(f"[!] Could not remove test database: {e}")
 
 
 @pytest.fixture(autouse=True)

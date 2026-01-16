@@ -9,7 +9,6 @@
 """
 
 import base64
-from unittest.mock import patch
 
 import pytest
 from sqlalchemy.orm import Session
@@ -31,24 +30,48 @@ def valid_encryption_key():
 
 
 @pytest.fixture
-def asset_crud_with_encryption(valid_encryption_key):
+def asset_crud_with_encryption(valid_encryption_key, monkeypatch):
     """创建启用加密的 AssetCRUD fixture"""
-    with patch("src.core.encryption.settings.DATA_ENCRYPTION_KEY", valid_encryption_key):
-        with patch("src.config.settings.DATA_ENCRYPTION_KEY", valid_encryption_key):
-            # 重新创建 AssetCRUD 实例以加载新的环境变量
-            from src.crud.asset import AssetCRUD
+    # Set environment variable before importing modules
+    monkeypatch.setenv("DATA_ENCRYPTION_KEY", valid_encryption_key)
 
-            return AssetCRUD()
+    # Clear any cached modules to force reload with new env var
+    import sys
+    modules_to_clear = [
+        "src.core.config",
+        "src.core.encryption",
+        "src.crud.asset",
+    ]
+    for mod in modules_to_clear:
+        if mod in sys.modules:
+            del sys.modules[mod]
+
+    # Re-import with new environment variable
+    from src.crud.asset import AssetCRUD
+
+    return AssetCRUD()
 
 
 @pytest.fixture
-def asset_crud_no_encryption():
+def asset_crud_no_encryption(monkeypatch):
     """创建禁用加密的 AssetCRUD fixture"""
-    with patch("src.core.encryption.settings.DATA_ENCRYPTION_KEY", ""):
-        with patch("src.config.settings.DATA_ENCRYPTION_KEY", ""):
-            from src.crud.asset import AssetCRUD
+    # Unset environment variable
+    monkeypatch.delenv("DATA_ENCRYPTION_KEY", raising=False)
+    monkeypatch.setenv("DATA_ENCRYPTION_KEY", "")
 
-            return AssetCRUD()
+    # Clear cached modules
+    import sys
+    modules_to_clear = [
+        "src.core.config",
+        "src.core.encryption",
+        "src.crud.asset",
+    ]
+    for mod in modules_to_clear:
+        if mod in sys.modules:
+            del sys.modules[mod]
+
+    from src.crud.asset import AssetCRUD
+    return AssetCRUD()
 
 
 @pytest.fixture
@@ -64,12 +87,19 @@ def sample_asset_data():
         "actual_property_area": 100.5,
         "monthly_rent": 5000.0,
         "deposit": 15000.0,
+        # Required fields
+        "ownership_status": "已确权",
+        "property_nature": "商业",
+        "usage_status": "在用",
+        "is_litigated": 0,
+        "data_status": "正常",
     }
 
 
 # ============================================================================
 # CRUD 操作加密测试
 # ============================================================================
+@pytest.mark.usefixtures("db_tables")
 class TestAssetCRUDEncryption:
     """测试 AssetCRUD 的加密功能"""
 
@@ -179,6 +209,7 @@ class TestAssetCRUDEncryption:
 # ============================================================================
 # 搜索加密字段测试
 # ============================================================================
+@pytest.mark.usefixtures("db_tables")
 class TestSearchEncryptedFields:
     """测试搜索加密字段的功能"""
 
@@ -210,6 +241,7 @@ class TestSearchEncryptedFields:
 # ============================================================================
 # 优雅降级测试
 # ============================================================================
+@pytest.mark.usefixtures("db_tables")
 class TestGracefulDegradation:
     """测试密钥缺失时的优雅降级"""
 
@@ -280,6 +312,7 @@ class TestGracefulDegradation:
 # ============================================================================
 # 并发访问测试
 # ============================================================================
+@pytest.mark.usefixtures("db_tables")
 class TestConcurrentAccess:
     """测试并发访问时的加密功能"""
 
@@ -326,6 +359,7 @@ class TestConcurrentAccess:
 # ============================================================================
 # 加密前缀格式验证
 # ============================================================================
+@pytest.mark.usefixtures("db_tables")
 class TestEncryptionFormat:
     """验证加密数据格式"""
 

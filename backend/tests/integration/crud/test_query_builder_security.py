@@ -10,6 +10,7 @@ from src.crud.query_builder import QueryBuilder
 from src.models.asset import Asset
 
 
+@pytest.mark.usefixtures("db_tables")
 class TestQueryBuilderSecurityIntegration:
     """Integration tests for whitelist enforcement with real queries."""
 
@@ -266,6 +267,7 @@ class TestQueryBuilderSecurityIntegration:
         assert isinstance(result, list)
 
 
+@pytest.mark.usefixtures("db_tables")
 class TestSecurityAttackScenarios:
     """Test realistic security attack scenarios."""
 

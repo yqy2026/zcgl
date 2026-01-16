@@ -3,7 +3,6 @@
  *
  * @description 权属方管理核心服务，提供权属方CRUD、搜索、统计等完整功能
  * @author Claude Code
- * @updated 2026-01-09
  */
 
 import { enhancedApiClient } from '@/api/client';

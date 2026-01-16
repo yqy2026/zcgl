@@ -3,7 +3,6 @@
  *
  * @description 字典的完整CRUD操作，主要用于管理界面，支持枚举类型和枚举值的管理
  * @author Claude Code
- * @updated 2025-11-10
  */
 
 import { enhancedApiClient } from '@/api/client';

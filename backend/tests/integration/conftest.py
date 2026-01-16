@@ -94,30 +94,21 @@ def db_tables(engine):
     from alembic.config import Config
     from alembic.script import ScriptDirectory
 
-    # Run Alembic migrations to create tables
-    if "sqlite" in TEST_DATABASE_URL:
-        # For SQLite, we can use SQLAlchemy's create_all as a fallback
-        # or run Alembic migrations
-        try:
-            from alembic import command
+    # Check if Alembic migrations exist
+    from pathlib import Path
+    versions_dir = Path("alembic/versions")
+    has_migrations = versions_dir.exists() and len(list(versions_dir.glob("*.py"))) > 0
 
-            alembic_cfg = Config("alembic.ini")
-
-            # Override database URL in alembic.ini
-            alembic_cfg.set_main_option("sqlalchemy.url", TEST_DATABASE_URL)
-
-            # Run migrations
-            command.upgrade(alembic_cfg, "head")
-        except Exception as e:
-            # Fallback: Create tables directly if migrations fail
-            Base.metadata.create_all(bind=engine)
-    else:
-        # For PostgreSQL, always use migrations
+    # Run Alembic migrations to create tables, or create directly if no migrations
+    if has_migrations:
+        # Use Alembic migrations if they exist
         from alembic import command
-
         alembic_cfg = Config("alembic.ini")
         alembic_cfg.set_main_option("sqlalchemy.url", TEST_DATABASE_URL)
         command.upgrade(alembic_cfg, "head")
+    else:
+        # No migrations exist, create tables directly
+        Base.metadata.create_all(bind=engine)
 
     yield
 

@@ -3,7 +3,6 @@
  *
  * @description 数据统计和分析核心服务，提供仪表板、图表数据、趋势分析等功能
  * @author Claude Code
- * @updated 2025-11-10
  */
 
 import { enhancedApiClient } from '@/api/client';

@@ -3,7 +3,6 @@ from typing import Any
 """
 统一缓存管理器
 提供标准化的缓存操作和策略
-Version: 1.1 - 添加了get_stats方法
 """
 
 import json

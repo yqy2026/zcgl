@@ -1,6 +1,5 @@
 """
 Analytics Service - 综合分析服务
-Version: 2026-01-04
 
 重构目标: 将 analytics.py 中的业务逻辑迁移到服务层
 
