@@ -394,12 +394,12 @@ const AssetList: React.FC<AssetListProps> = ({
   // 行选择配置
   const rowSelection = onSelectChange
     ? {
-        selectedRowKeys,
-        onChange: onSelectChange,
-        getCheckboxProps: (record: Asset) => ({
-          name: record.property_name,
-        }),
-      }
+      selectedRowKeys,
+      onChange: onSelectChange,
+      getCheckboxProps: (record: Asset) => ({
+        name: record.property_name,
+      }),
+    }
     : undefined;
 
   return (
@@ -419,7 +419,7 @@ const AssetList: React.FC<AssetListProps> = ({
         showQuickJumper: true,
         showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条记录`,
         pageSizeOptions: ["10", "20", "50", "100"],
-        size: "default",
+        size: "middle",
       }}
       onChange={onTableChange as any}
       size="middle"

@@ -268,7 +268,7 @@ def assign_roles_to_users(db, roles, users):
                 .filter(
                     UserRoleAssignment.user_id == user.id,
                     UserRoleAssignment.role_id == role.id,
-                    UserRoleAssignment.is_active == True,
+                    UserRoleAssignment.is_active,
                 )
                 .first()
             )
@@ -357,7 +357,7 @@ def main():
         roles = create_basic_roles(db)
 
         # 3. 创建管理员用户
-        admin_user = create_admin_user(db)
+        create_admin_user(db)
 
         # 4. 为角色分配权限
         assign_permissions_to_roles(db, roles, permissions)

@@ -1,6 +1,13 @@
-.DS_Store
-/node_modules/
+# ============================================
+# Frontend-specific Git Ignore Rules
+# Land Property Asset Management System
+# ============================================
+
+# Note: Most rules are inherited from root .gitignore
+# This file only contains frontend-specific additions
+
+# Vite build output
+/dist/
 
 # React Router
 /.react-router/
-/build/

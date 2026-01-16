@@ -3,7 +3,6 @@
  *
  * @description 租赁合同管理核心服务，包含合同、条款、台账、统计、续签、终止等完整功能
  * @author Claude Code
- * @updated 2026-01-07
  */
 
 import {

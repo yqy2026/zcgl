@@ -3,7 +3,6 @@
  *
  * @description 整合基础功能和管理功能，提供简化的使用接口和向后兼容性
  * @author Claude Code
- * @updated 2025-11-10
  */
 
 // 导入核心功能

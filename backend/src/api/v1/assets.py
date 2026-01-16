@@ -35,11 +35,13 @@ from fastapi import (
 from sqlalchemy.orm import Session
 from starlette.status import HTTP_204_NO_CONTENT
 
+from ...constants.datetime.fields import DateTimeFields
+from ...constants.pagination.limits import PaginationLimits
 from ...core.exception_handler import DuplicateResourceError, ResourceNotFoundError
+from ...crud.asset import asset_crud
 from ...crud.history import history_crud
 from ...database import get_db
 from ...middleware.auth import audit_action, get_current_active_user, require_permission
-from ...models.asset import Asset
 from ...models.auth import User
 from ...schemas.asset import (
     AssetCreate,
@@ -67,8 +69,13 @@ router.include_router(asset_import.router, tags=["资产导入"])
 
 @router.get("", response_model=AssetListResponse, summary="获取资产列表")
 async def get_assets(
-    page: int = Query(1, ge=1, description="页码"),
-    limit: int = Query(20, ge=1, le=100, description="每页记录数"),
+    page: int = Query(PaginationLimits.DEFAULT_PAGE, ge=1, description="页码"),
+    limit: int = Query(
+        PaginationLimits.DEFAULT_PAGE_SIZE,
+        ge=PaginationLimits.MIN_PAGE_SIZE,
+        le=PaginationLimits.MAX_PAGE_SIZE,
+        description="每页记录数",
+    ),
     search: str | None = Query(None, description="搜索关键词"),
     ownership_status: str | None = Query(None, description="确权状态筛选"),
     property_nature: str | None = Query(None, description="物业性质筛选"),
@@ -81,7 +88,7 @@ async def get_assets(
     is_litigated: str | None = Query(None, description="是否涉诉筛选"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
-    sort_field: str = Query("created_at", description="排序字段"),
+    sort_field: str = Query(DateTimeFields.CREATED_AT, description="排序字段"),
     sort_order: str = Query("desc", pattern="^(asc|desc)$", description="排序方向"),
 ) -> AssetListResponse:
     """
@@ -97,53 +104,49 @@ async def get_assets(
     - **sort_field**: 排序字段
     - **sort_order**: 排序方向（asc/desc）
     """
-    try:
-        # 构建筛选条件
-        filters = {}
-        if ownership_status:
-            filters["ownership_status"] = ownership_status
-        if property_nature:
-            filters["property_nature"] = property_nature
-        if usage_status:
-            filters["usage_status"] = usage_status
-        if ownership_entity:
-            filters["ownership_entity"] = ownership_entity
-        if management_entity:
-            filters["management_entity"] = management_entity
-        if business_category:
-            filters["business_category"] = business_category
-        if min_area is not None:
-            filters["min_area"] = str(min_area)
-        if max_area is not None:
-            filters["max_area"] = str(max_area)
-        if is_litigated:
-            filters["is_litigated"] = is_litigated
+    # 构建筛选条件
+    filters = {}
+    if ownership_status:
+        filters["ownership_status"] = ownership_status
+    if property_nature:
+        filters["property_nature"] = property_nature
+    if usage_status:
+        filters["usage_status"] = usage_status
+    if ownership_entity:
+        filters["ownership_entity"] = ownership_entity
+    if management_entity:
+        filters["management_entity"] = management_entity
+    if business_category:
+        filters["business_category"] = business_category
+    if min_area is not None:
+        filters["min_area"] = str(min_area)
+    if max_area is not None:
+        filters["max_area"] = str(max_area)
+    if is_litigated:
+        filters["is_litigated"] = is_litigated
 
-        asset_service = AssetService(db)
-        assets, total = asset_service.get_assets(
-            skip=(page - 1) * limit,
-            limit=limit,
-            search=search,
-            filters=filters,
-            sort_field=sort_field,
-            sort_order=sort_order,
-        )
+    asset_service = AssetService(db)
+    assets, total = asset_service.get_assets(
+        skip=(page - 1) * limit,
+        limit=limit,
+        search=search,
+        filters=filters,
+        sort_field=sort_field,
+        sort_order=sort_order,
+    )
 
-        # Convert Asset models to AssetResponse
-        from ...schemas.asset import AssetResponse
+    # Convert Asset models to AssetResponse
+    from ...schemas.asset import AssetResponse
 
-        items = [AssetResponse.model_validate(asset) for asset in assets]
+    items = [AssetResponse.model_validate(asset) for asset in assets]
 
-        return AssetListResponse(
-            items=items,
-            total=total,
-            page=page,
-            limit=limit,
-            pages=(total + limit - 1) // limit,
-        )
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取资产列表失败: {str(e)}")
+    return AssetListResponse(
+        items=items,
+        total=total,
+        page=page,
+        limit=limit,
+        pages=(total + limit - 1) // limit,
+    )
 
 
 # ===== 搜索筛选辅助接口 ===== (必须在 /{asset_id} 路由之前)
@@ -154,21 +157,8 @@ async def get_ownership_entities(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
 ) -> list[str]:
     """获取所有权属方列表，用于搜索筛选"""
-    try:
-        # 从资产表中获取所有不重复的权属方
-        entities = (
-            db.query(Asset.ownership_entity)
-            .filter(Asset.ownership_entity.isnot(None))
-            .filter(Asset.ownership_entity != "")
-            .distinct()
-            .order_by(Asset.ownership_entity)
-            .all()
-        )
-
-        return [entity[0] for entity in entities if entity[0]]
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取权属方列表失败: {str(e)}")
+    asset_service = AssetService(db)
+    return asset_service.get_distinct_field_values("ownership_entity")
 
 
 @router.get(
@@ -178,21 +168,8 @@ async def get_business_categories(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
 ) -> list[str]:
     """获取所有业态类别列表，用于搜索筛选"""
-    try:
-        # 从资产表中获取所有不重复的业态类别
-        categories = (
-            db.query(Asset.business_category)
-            .filter(Asset.business_category.isnot(None))
-            .filter(Asset.business_category != "")
-            .distinct()
-            .order_by(Asset.business_category)
-            .all()
-        )
-
-        return [category[0] for category in categories if category[0]]
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取业态类别列表失败: {str(e)}")
+    asset_service = AssetService(db)
+    return asset_service.get_distinct_field_values("business_category")
 
 
 @router.get("/usage-statuses", response_model=list[str], summary="获取使用情况列表")
@@ -200,19 +177,8 @@ async def get_usage_statuses(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
 ) -> list[str]:
     """获取所有使用情况列表，用于搜索筛选"""
-    try:
-        # 从资产表中获取所有不重复的使用情况
-        statuses = (
-            db.query(Asset.usage_status)
-            .filter(Asset.usage_status.isnot(None))
-            .filter(Asset.usage_status != "")
-            .distinct()
-            .order_by(Asset.usage_status)
-            .all()
-        )
-        return [status[0] for status in statuses if status[0]]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取使用情况列表失败: {str(e)}")
+    asset_service = AssetService(db)
+    return asset_service.get_distinct_field_values("usage_status")
 
 
 @router.get("/property-natures", response_model=list[str], summary="获取物业性质列表")
@@ -220,19 +186,8 @@ async def get_property_natures(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
 ) -> list[str]:
     """获取所有物业性质列表，用于搜索筛选"""
-    try:
-        # 从资产表中获取所有不重复的物业性质
-        natures = (
-            db.query(Asset.property_nature)
-            .filter(Asset.property_nature.isnot(None))
-            .filter(Asset.property_nature != "")
-            .distinct()
-            .order_by(Asset.property_nature)
-            .all()
-        )
-        return [nature[0] for nature in natures if nature[0]]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取物业性质列表失败: {str(e)}")
+    asset_service = AssetService(db)
+    return asset_service.get_distinct_field_values("property_nature")
 
 
 @router.get("/ownership-statuses", response_model=list[str], summary="获取确权状态列表")
@@ -240,19 +195,8 @@ async def get_ownership_statuses(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
 ) -> list[str]:
     """获取所有确权状态列表，用于搜索筛选"""
-    try:
-        # 从资产表中获取所有不重复的确权状态
-        statuses = (
-            db.query(Asset.ownership_status)
-            .filter(Asset.ownership_status.isnot(None))
-            .filter(Asset.ownership_status != "")
-            .distinct()
-            .order_by(Asset.ownership_status)
-            .all()
-        )
-        return [status[0] for status in statuses if status[0]]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取确权状态列表失败: {str(e)}")
+    asset_service = AssetService(db)
+    return asset_service.get_distinct_field_values("ownership_status")
 
 
 # ===== 单个资产操作接口 =====
@@ -269,13 +213,8 @@ async def get_asset(
 
     - **asset_id**: 资产ID
     """
-    try:
-        asset_service = AssetService(db)
-        return asset_service.get_asset(asset_id)
-    except ResourceNotFoundError:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取资产详情失败: {str(e)}")
+    asset_service = AssetService(db)
+    return asset_service.get_asset(asset_id)
 
 
 @router.post("", response_model=AssetResponse, summary="创建新资产", status_code=201)
@@ -290,16 +229,8 @@ async def create_asset(
 
     - **asset_in**: 资产创建数据
     """
-    try:
-        asset_service = AssetService(db)
-        return asset_service.create_asset(asset_in, current_user)
-
-    except DuplicateResourceError:
-        raise
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"创建资产失败: {str(e)}")
+    asset_service = AssetService(db)
+    return asset_service.create_asset(asset_in, current_user)
 
 
 @router.put("/{asset_id}", response_model=AssetResponse, summary="更新资产")
@@ -316,16 +247,8 @@ async def update_asset(
     - **asset_id**: 资产ID
     - **asset_in**: 资产更新数据
     """
-    try:
-        asset_service = AssetService(db)
-        return asset_service.update_asset(asset_id, asset_in, current_user)
-
-    except (AssetNotFoundError, DuplicateAssetError, ResourceNotFoundError):
-        raise
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"更新资产失败: {str(e)}")
+    asset_service = AssetService(db)
+    return asset_service.update_asset(asset_id, asset_in, current_user)
 
 
 @router.delete("/{asset_id}", summary="删除资产")
@@ -340,15 +263,9 @@ async def delete_asset(
 
     - **asset_id**: 资产ID
     """
-    try:
-        asset_service = AssetService(db)
-        asset_service.delete_asset(asset_id, current_user)
-        return Response(status_code=HTTP_204_NO_CONTENT)
-
-    except ResourceNotFoundError:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"删除资产失败: {str(e)}")
+    asset_service = AssetService(db)
+    asset_service.delete_asset(asset_id, current_user)
+    return Response(status_code=HTTP_204_NO_CONTENT)
 
 
 @router.get("/{asset_id}/history", summary="获取资产历史")
@@ -362,20 +279,14 @@ async def get_asset_history(
 
     - **asset_id**: 资产ID
     """
-    try:
-        # 检查资产是否存在
-        # 这里的检查可以交给 service，History 获取也可以封装进 Service
-        # 但鉴于 get_asset_history 单独存在，这里暂时简单调用 existing crud
-        # 更好的做法是 AssetService.get_asset_history(asset_id)
+    # 检查资产是否存在
+    # 这里的检查可以交给 service，History 获取也可以封装进 Service
+    # 但鉴于 get_asset_history 单独存在，这里暂时简单调用 existing crud
+    # 更好的做法是 AssetService.get_asset_history(asset_id)
 
-        asset_service = AssetService(db)
-        asset_service.get_asset(asset_id)  # Validate existence
+    asset_service = AssetService(db)
+    asset_service.get_asset(asset_id)  # Validate existence
 
-        # 获取历史记录
-        history_records = history_crud.get_by_asset_id(db=db, asset_id=asset_id)
-        return {"asset_id": asset_id, "history": history_records}
-
-    except ResourceNotFoundError:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取资产历史失败: {str(e)}")
+    # 获取历史记录
+    history_records = history_crud.get_by_asset_id(db=db, asset_id=asset_id)
+    return {"asset_id": asset_id, "history": history_records}

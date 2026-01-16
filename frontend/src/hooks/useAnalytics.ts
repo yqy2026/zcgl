@@ -2,54 +2,17 @@ import { useQuery } from '@tanstack/react-query'
 import { analyticsService } from '../services/analyticsService'
 import type { AssetSearchParams } from '../types/asset'
 import type { AnalyticsResponse } from '../types/analytics'
-import { createLogger } from '../utils/logger'
-
-const analyticsLogger = createLogger('useAnalytics')
 
 export const useAnalytics = (filters?: AssetSearchParams) => {
   return useQuery<AnalyticsResponse>({
     queryKey: ['analytics', 'comprehensive', filters],
     queryFn: async (): Promise<AnalyticsResponse> => {
-      try {
-        const result = await analyticsService.getComprehensiveAnalytics(filters)
-        return result
-      } catch (error) {
-        analyticsLogger.error('Analytics query error:', error as Error)
-        // 返回模拟数据以避免页面崩溃
-        return {
-          success: true,
-          message: '使用模拟数据',
-          data: {
-            area_summary: {
-              total_assets: 696,
-              total_area: 90466.8,
-              rentable_area: 122246.02,
-              rented_area: 119170.36,
-              unrented_area: 3075.66,
-              assets_with_area_data: 669,
-              occupancy_rate: 97.48,
-            } as any,
-            financial_summary: {
-              total_annual_income: 0.0,
-              total_annual_expense: 0.0,
-              total_net_income: 0.0,
-              assets_with_income_data: 0,
-            } as any,
-            business_category_distribution: [],
-            property_nature_distribution: [],
-            ownership_status_distribution: [],
-            usage_status_distribution: [],
-            occupancy_distribution: [],
-            occupancy_trend: [],
-          },
-          cache_stats: { cache_size: 0, hits: 0, misses: 0, hit_rate: 0 },
-          performance_info: { calculation_time: 0, asset_count: 696, cache_enabled: true },
-        } as any
-      }
+      const result = await analyticsService.getComprehensiveAnalytics(filters)
+      return result
     },
     staleTime: 5 * 60 * 1000, // 5分钟缓存
     gcTime: 10 * 60 * 1000, // 10分钟缓存
-    retry: 1, // 减少重试次数避免重复请求
+    retry: 2, // 失败时重试2次
     retryDelay: 1000,
     refetchOnWindowFocus: false, // 禁用自动刷新避免循环请求
     refetchOnMount: true,

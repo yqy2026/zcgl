@@ -171,7 +171,7 @@ const SystemSettingsPage: React.FC = () => {
                 <Input type="number" placeholder="请输入会话超时时间" />
               </Form.Item>
 
-              <Divider orientation="left">密码策略</Divider>
+              <Divider titlePlacement="start">密码策略</Divider>
 
               <Form.Item
                 label={['password_policy', 'min_length']}

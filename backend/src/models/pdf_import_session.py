@@ -92,8 +92,9 @@ class PDFImportSession(Base):  # type: ignore[valid-type, misc]
     # 处理配置
     processing_method: Mapped[str | None] = mapped_column(
         String(50)
-    )  # pdfplumber, markitdown, ocr
-    ocr_used: Mapped[bool] = mapped_column(Boolean, default=False)
+    )  # pdfplumber, markitdown, llm_vision
+    # OCR 功能已移除（v2.0），字段保留用于历史数据兼容
+    ocr_used: Mapped[bool] = mapped_column(Boolean, default=False)  # REMOVED: OCR engine
     processing_options: Mapped[dict[str, Any] | None] = mapped_column(
         JSON
     )  # 用户选择的处理选项
@@ -181,11 +182,12 @@ class ProcessingConfiguration(Base):  # type: ignore[valid-type, misc]
     )
 
     # PDF处理配置
-    prefer_ocr: Mapped[bool] = mapped_column(Boolean, default=False)
+    # OCR 功能已移除（v2.0），配置保留用于历史数据兼容
+    prefer_ocr: Mapped[bool] = mapped_column(Boolean, default=False)  # REMOVED: OCR preference
     ocr_languages: Mapped[dict[str, Any] | None] = mapped_column(
         JSON, default=list
-    )  # OCR识别语言
-    dpi: Mapped[int] = mapped_column(Integer, default=300)  # OCR分辨率
+    )  # DEPRECATED: OCR识别语言
+    dpi: Mapped[int] = mapped_column(Integer, default=300)  # DEPRECATED: OCR分辨率
     max_pages: Mapped[int] = mapped_column(Integer, default=100)  # 最大处理页数
 
     # 信息提取配置
@@ -212,4 +214,4 @@ class ProcessingConfiguration(Base):  # type: ignore[valid-type, misc]
     )
 
     def __repr__(self) -> str:
-        return f"<ProcessingConfiguration(session_id='{self.session_id}', prefer_ocr={self.prefer_ocr})>"  # pragma: no cover
+        return f"<ProcessingConfiguration(session_id='{self.session_id}')>"  # pragma: no cover

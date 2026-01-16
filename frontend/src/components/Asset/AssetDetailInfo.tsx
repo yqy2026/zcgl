@@ -234,7 +234,7 @@ const AssetDetailInfo: React.FC<AssetDetailInfoProps> = ({ asset }) => {
         {/* 出租率进度条 */}
         {asset.property_nature === '经营性' && asset.rentable_area !== undefined && asset.rentable_area !== null && asset.rentable_area > 0 && (
           <div style={{ marginTop: 24 }}>
-            <Divider orientation="left">出租率分析</Divider>
+            <Divider titlePlacement="start">出租率分析</Divider>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <div style={{ flex: 1 }}>
                 <Progress

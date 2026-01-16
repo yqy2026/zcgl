@@ -48,42 +48,81 @@ class OccupancyRateCalculator:
         return round(occupancy_rate, 2)
 
     @staticmethod
-    def calculate_overall_occupancy_rate(assets: list[Asset]) -> dict[str, Any]:
+    def calculate_overall_occupancy_rate(
+        assets: list[Asset] | None = None,
+        filters: dict | None = None,
+    ) -> dict[str, Any]:
         """
         计算整体出租率
 
         Args:
-            assets: 资产列表
+            assets: 资产列表（可选，如果提供则从内存计算，否则查询数据库）
+            filters: 数据库筛选条件（仅在assets为None时使用）
 
         Returns:
             整体出租率统计信息
         """
         try:
-            if not assets:
-                return {
-                    "overall_rate": 0.0,
-                    "total_rentable_area": 0.0,
-                    "total_rented_area": 0.0,
-                    "total_unrented_area": 0.0,
-                    "asset_count": 0,
-                    "rentable_asset_count": 0,
-                }
+            # 如果提供了资产列表，从内存计算
+            if assets is not None:
+                if not assets:
+                    return {
+                        "overall_rate": 0.0,
+                        "total_rentable_area": 0.0,
+                        "total_rented_area": 0.0,
+                        "total_unrented_area": 0.0,
+                        "asset_count": 0,
+                        "rentable_asset_count": 0,
+                    }
 
-            # 筛选出有可出租面积的资产
-            rentable_assets = [
-                asset
-                for asset in assets
-                if asset.rentable_area and asset.rentable_area > 0
-            ]
+                # 筛选符合计算条件的资产（匹配数据库查询的过滤条件）
+                filtered_assets = [
+                    asset
+                    for asset in assets
+                    if getattr(asset, "include_in_occupancy_rate", True)
+                    and getattr(asset, "data_status", "正常") in ["正常", "正常数据"]
+                ]
 
-            if not rentable_assets:
+                # 筛选出有可出租面积的资产
+                rentable_assets = [
+                    asset
+                    for asset in filtered_assets
+                    if asset.rentable_area and asset.rentable_area > 0
+                ]
+
+                if not rentable_assets:
+                    return {
+                        "overall_rate": 0.0,
+                        "total_rentable_area": 0.0,
+                        "total_rented_area": 0.0,
+                        "total_unrented_area": 0.0,
+                        "asset_count": len(assets),  # Count all assets when no rentable assets
+                        "rentable_asset_count": 0,
+                    }
+
+                # 从内存计算（用于单元测试）
+                total_rentable = sum(
+                    float(asset.rentable_area or 0) for asset in rentable_assets
+                )
+                total_rented = sum(
+                    float(asset.rented_area or 0) for asset in rentable_assets
+                )
+                total_unrented = total_rentable - total_rented
+                asset_count = len(rentable_assets)  # Count only rentable assets
+                rentable_asset_count = len(rentable_assets)
+
+                # 计算整体出租率
+                overall_rate = (
+                    (total_rented / total_rentable * 100) if total_rentable > 0 else 0.0
+                )
+
                 return {
-                    "overall_rate": 0.0,
-                    "total_rentable_area": 0.0,
-                    "total_rented_area": 0.0,
-                    "total_unrented_area": 0.0,
-                    "asset_count": len(assets),
-                    "rentable_asset_count": 0,
+                    "overall_rate": round(overall_rate, 2),
+                    "total_rentable_area": round(total_rentable, 2),
+                    "total_rented_area": round(total_rented, 2),
+                    "total_unrented_area": round(total_unrented, 2),
+                    "asset_count": asset_count,
+                    "rentable_asset_count": rentable_asset_count,
                 }
 
             # 使用数据库聚合计算，避免在内存中加载所有数据
@@ -101,26 +140,37 @@ class OccupancyRateCalculator:
             try:
                 from sqlalchemy import case
 
-                # 使用SQL聚合函数计算总面积
-                occupancy_stats = (
-                    db.query(
-                        func.sum(func.coalesce(Asset.rentable_area, 0)).label(
-                            "total_rentable"
-                        ),
-                        func.sum(func.coalesce(Asset.rented_area, 0)).label(
-                            "total_rented"
-                        ),
-                        func.count(Asset.id).label("total_count"),
-                        func.count(case((Asset.rentable_area > 0, Asset.id))).label(
-                            "rentable_count"
-                        ),
-                    )
-                    .filter(
-                        Asset.include_in_occupancy_rate,
-                        Asset.data_status.in_(["正常", "正常数据"]),
-                    )
-                    .first()
+                # 构建查询
+                query = db.query(
+                    func.sum(func.coalesce(Asset.rentable_area, 0)).label(
+                        "total_rentable"
+                    ),
+                    func.sum(func.coalesce(Asset.rented_area, 0)).label(
+                        "total_rented"
+                    ),
+                    func.count(Asset.id).label("total_count"),
+                    func.count(case((Asset.rentable_area > 0, Asset.id))).label(
+                        "rentable_count"
+                    ),
                 )
+
+                # 应用默认筛选条件
+                query = query.filter(
+                    Asset.include_in_occupancy_rate,
+                    Asset.data_status.in_(["正常", "正常数据"]),
+                )
+
+                # 应用额外的筛选条件
+                if filters:
+                    if "include_in_occupancy_rate" in filters:
+                        query = query.filter(
+                            Asset.include_in_occupancy_rate == filters["include_in_occupancy_rate"]
+                        )
+                    if "data_status" in filters:
+                        query = query.filter(Asset.data_status == filters["data_status"])
+
+                # 使用SQL聚合函数计算总面积
+                occupancy_stats = query.first()
 
                 # Add None check for occupancy_stats
                 if occupancy_stats is None:

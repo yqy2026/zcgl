@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Row, Col, Card, Typography, Button, Space, Dropdown, Menu } from "antd";
+import { Row, Col, Card, Typography, Button, Space, Dropdown, message } from "antd";
 import {
   ReloadOutlined,
   DownloadOutlined,
@@ -10,6 +10,7 @@ import {
 import { useAnalytics } from "../../hooks/useAnalytics";
 import type { AssetSearchParams } from "../../types/asset";
 import type { AnalyticsResponse } from "../../types/analytics";
+import { exportAnalytics } from "../../utils/exportAnalytics";
 
 // Analytics数据类型定义
 interface DistributionItem {
@@ -73,10 +74,22 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
 
   const hasData = (analytics?.area_summary?.total_assets ?? 0) > 0;
 
-  // 导出选项 - removed unused variable
+  const handleExport = async (format: "excel" | "pdf" | "csv") => {
+    if (!analytics) {
+      message.warning('没有数据可导出')
+      return
+    }
 
-  const handleExport = (_format: "excel" | "pdf" | "csv") => {
-    // TODO: Implement export functionality
+    try {
+      message.loading('正在导出...', 0)
+      await exportAnalytics(analytics, format)
+      message.success('导出成功')
+    } catch (error) {
+      console.error('导出失败:', error)
+      message.error('导出失败，请重试')
+    } finally {
+      message.destroy()
+    }
   };
 
   const handleRefresh = () => {
@@ -107,29 +120,6 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   const toggleAdvancedFilters = () => {
     setShowAdvanced(!showAdvanced);
   };
-
-  // 导出菜单
-  const exportMenu = (
-    <Menu
-      items={[
-        {
-          key: "excel",
-          label: "导出为 Excel",
-          onClick: () => handleExport("excel"),
-        },
-        {
-          key: "pdf",
-          label: "导出为 PDF",
-          onClick: () => handleExport("pdf"),
-        },
-        {
-          key: "csv",
-          label: "导出为 CSV",
-          onClick: () => handleExport("csv"),
-        },
-      ]}
-    />
-  );
 
   // 关键指标数据
   const keyMetrics = useMemo(() => {
@@ -242,7 +232,28 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             <Button icon={<ReloadOutlined />} onClick={handleRefresh} loading={isLoading}>
               刷新
             </Button>
-            <Dropdown overlay={exportMenu} placement="bottomRight">
+            <Dropdown
+              menu={{
+                items: [
+                  {
+                    key: "excel",
+                    label: "导出为 Excel",
+                    onClick: () => handleExport("excel"),
+                  },
+                  {
+                    key: "pdf",
+                    label: "导出为 PDF",
+                    onClick: () => handleExport("pdf"),
+                  },
+                  {
+                    key: "csv",
+                    label: "导出为 CSV",
+                    onClick: () => handleExport("csv"),
+                  },
+                ],
+              }}
+              placement="bottomRight"
+            >
               <Button icon={<DownloadOutlined />}>导出</Button>
             </Dropdown>
             <Button

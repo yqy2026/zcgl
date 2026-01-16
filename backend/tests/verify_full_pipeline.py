@@ -21,10 +21,21 @@ except ImportError:
     pass
 
 from services.document.llm_contract_extractor import LLMContractExtractor
-from services.document.paddleocr_service import get_paddleocr_service
+
+# PaddleOCR is an optional dependency
+try:
+    from services.document.paddleocr_service import get_paddleocr_service
+    PADDLEOCR_AVAILABLE = True
+except (ImportError, ModuleNotFoundError):
+    PADDLEOCR_AVAILABLE = False
+    print("WARNING: PaddleOCR service not available. Install with: pip install paddleocr")
 
 
 async def verify_full_pipeline(pdf_path_str: str):
+    if not PADDLEOCR_AVAILABLE:
+        print("ERROR: PaddleOCR service is not available. Cannot run full pipeline verification.")
+        return
+
     pdf_path = Path(pdf_path_str)
     if not pdf_path.exists():
         print(f"ERROR: File not found at {pdf_path}")

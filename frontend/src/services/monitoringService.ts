@@ -5,7 +5,6 @@
  *
  * @author Claude Code
  * @created 2025-11-01
- * @updated 2025-11-10
  */
 
 import { enhancedApiClient } from '@/api/client';

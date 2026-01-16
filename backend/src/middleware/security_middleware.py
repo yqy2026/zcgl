@@ -15,6 +15,8 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
+from ..constants.errors.messages import ErrorMessages
+from ..constants.http.methods import HTTPMethods
 from ..core.exception_handler import BusinessValidationError
 from ..core.logging_security import security_auditor
 from ..core.security import RateLimiter
@@ -24,7 +26,8 @@ try:
 
     ADAPTIVE_LIMITER_AVAILABLE = True
 except ImportError:
-    adaptive_limiter_var: AdaptiveRateLimiter | None = None
+    # Use string annotation to avoid NameError when AdaptiveRateLimiter is not defined
+    adaptive_limiter_var: "AdaptiveRateLimiter | None" = None
     ADAPTIVE_LIMITER_AVAILABLE = False
     # Create a compatible wrapper for type checking
     adaptive_limiter = adaptive_limiter_var  # type: ignore[assignment]
@@ -89,7 +92,8 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
             if self._is_ip_blocked(client_ip):
                 await self._log_blocked_request(request, client_ip, "IP_BLOCKED")
                 raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN, detail="IP地址已被封禁"
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=ErrorMessages.IP_BLOCKED,
                 )
 
             # 请求频率限制
@@ -99,7 +103,7 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
                 )
                 raise HTTPException(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    detail="请求过于频繁，请稍后重试",
+                    detail=ErrorMessages.RATE_LIMIT_EXCEEDED,
                 )
 
             # 请求内容验证
@@ -234,7 +238,7 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         elif path.startswith("/api/v1/excel"):
             # Excel操作限制
             rate_limit_key = f"{ip}:excel"
-        elif request.method == "POST":
+        elif request.method == HTTPMethods.POST:
             # POST请求限制
             rate_limit_key = f"{ip}:post"
 
@@ -407,7 +411,7 @@ class FileUploadSecurityMiddleware(BaseHTTPMiddleware):
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     content={
                         "success": False,
-                        "message": "文件上传验证失败",
+                        "message": ErrorMessages.FILE_UPLOAD_VALIDATION_FAILED,
                         "error_type": "security_error",
                     },
                 )
@@ -452,13 +456,7 @@ class CORSExtendedMiddleware(BaseHTTPMiddleware):
             "http://localhost:5173",
             "http://localhost:3000",
         ]
-        self.allowed_methods = allowed_methods or [
-            "GET",
-            "POST",
-            "PUT",
-            "DELETE",
-            "OPTIONS",
-        ]
+        self.allowed_methods = allowed_methods or HTTPMethods.get_common_methods() + [HTTPMethods.OPTIONS]
 
     async def dispatch(
         self, request: Request, call_next: Callable[[Request], Any]
@@ -466,7 +464,7 @@ class CORSExtendedMiddleware(BaseHTTPMiddleware):
         """处理CORS和安全头部"""
 
         # 预检请求处理
-        if request.method == "OPTIONS":
+        if request.method == HTTPMethods.OPTIONS:
             return Response()
 
         response: Response = await call_next(request)
@@ -518,7 +516,7 @@ def setup_security_middleware(app: Any) -> None:
     """设置安全中间件"""
     config = {
         "allowed_origins": ["http://localhost:5173", "http://localhost:3000"],
-        "allowed_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+        "allowed_methods": HTTPMethods.get_common_methods() + [HTTPMethods.OPTIONS, HTTPMethods.PATCH],
         "max_file_size": 100 * 1024 * 1024,  # 100MB
         "rate_limit": {
             "pdf_import": {"max_requests": 5, "time_window": 60},

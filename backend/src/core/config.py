@@ -74,10 +74,11 @@ class Settings(BaseSettings):
         json_schema_extra={"env": "CORS_ORIGINS"},
     )
 
-    # JWT配置 - 生产环境必须设置环境变量
+    # JWT配置 - 必须通过环境变量设置
     SECRET_KEY: str = Field(
-        default="EMERGENCY-ONLY-REPLACE-WITH-ENV-SECRET-KEY-NOW",
-        description="JWT密钥 - 生产环境必须通过环境变量设置强密钥",
+        ...,
+        min_length=32,
+        description="JWT密钥 - 必须32+字符的强随机字符串",
         json_schema_extra={"env": "SECRET_KEY"},
     )
     ALGORITHM: str = Field(default="HS256", json_schema_extra={"env": "ALGORITHM"})
@@ -100,6 +101,13 @@ class Settings(BaseSettings):
     )
     TOKEN_BLACKLIST_ENABLED: bool = Field(
         default=True, json_schema_extra={"env": "TOKEN_BLACKLIST_ENABLED"}
+    )
+
+    # 数据加密配置
+    DATA_ENCRYPTION_KEY: str | None = Field(
+        default=None,
+        description="Encryption key for PII fields (format: base64:key:version)",
+        json_schema_extra={"env": "DATA_ENCRYPTION_KEY"},
     )
 
     # 文件上传配置
@@ -245,28 +253,6 @@ class Settings(BaseSettings):
         default=False, json_schema_extra={"env": "WECOM_MENTION_ALL"}
     )
 
-    # V2.0 NVIDIA Cloud OCR配置
-    NVIDIA_API_KEY: str | None = Field(
-        default=None,
-        description="NVIDIA API Key for Cloud OCR",
-        json_schema_extra={"env": "NVIDIA_API_KEY"},
-    )
-    NVIDIA_OCR_BASE_URL: str = Field(
-        default="https://ai.api.nvidia.com/v1/cv/baidu/paddleocr",
-        description="NVIDIA Cloud PaddleOCR API endpoint",
-        json_schema_extra={"env": "NVIDIA_OCR_BASE_URL"},
-    )
-    NVIDIA_OCR_TIMEOUT: int = Field(
-        default=60,
-        description="NVIDIA OCR API timeout in seconds",
-        json_schema_extra={"env": "NVIDIA_OCR_TIMEOUT"},
-    )
-    OCR_PROVIDER: str = Field(
-        default="auto",
-        description="OCR provider: auto, local, nvidia_cloud",
-        json_schema_extra={"env": "OCR_PROVIDER"},
-    )
-
     # LLM Provider Configuration (2026.01 更新)
     LLM_PROVIDER: str = Field(
         default="qwen",
@@ -379,58 +365,56 @@ class Settings(BaseSettings):
     @classmethod
     def validate_secret_key(cls, v: str, info: ValidationInfo) -> str:
         """验证 SECRET_KEY 强度，生产环境必须使用强密钥"""
+        import os
+
         # 定义弱密钥模式（不应在生产环境使用）
+        # 包括硬编码默认值、示例值、常见弱密钥等
         weak_patterns = [
             "EMERGENCY-ONLY",
+            "REPLACE-WITH",
+            "REPLACE_WITH",
             "dev-secret-key",
+            "your-secret-key",
             "secret-key",
             "test-key",
             "example",
             "default",
             "changeme",
+            "change-this",
+            "minimum-32-characters",
         ]
 
-        # 检查是否为弱密钥
-        is_weak = any(pattern.lower() in v.lower() for pattern in weak_patterns)
+        # 检查是否为弱密钥模式
+        is_weak_pattern = any(pattern.lower() in v.lower() for pattern in weak_patterns)
 
         # 检查长度
         is_too_short = len(v) < 32
 
         # 生产环境强制检查
-        environment = info.data.get("ENVIRONMENT", "development")
+        # 直接从环境变量读取，因为 ENVIRONMENT 不是 Settings 的字段
+        environment = os.getenv("ENVIRONMENT", "production")
 
         if environment == "production":
-            if is_weak:
+            if is_weak_pattern:
                 raise ValueError(
-                    "生产环境禁止使用弱密钥。SECRET_KEY 包含常见弱密钥模式。"
-                    "请设置至少 32 字符的强随机密钥。"
+                    "生产环境禁止使用弱密钥模式。检测到包含常见弱密钥标识符。"
+                    "请使用 python -c 'import secrets; print(secrets.token_urlsafe(32))' 生成强密钥。"
                 )
             if is_too_short:
                 raise ValueError(
                     f"生产环境 SECRET_KEY 长度必须至少 32 字符，当前: {len(v)} 字符"
                 )
-        elif is_weak or is_too_short:
+        elif is_weak_pattern or is_too_short:
             # 非生产环境发出警告
-            if is_weak:
+            if is_weak_pattern:
                 logger.warning(
-                    "使用弱 SECRET_KEY（仅用于开发环境）。生产环境必须设置强密钥。"
+                    "检测到弱 SECRET_KEY 模式（仅用于开发环境）。生产环境必须设置强密钥。"
                 )
             if is_too_short:
                 logger.warning(
                     f"SECRET_KEY 长度不足 ({len(v)} < 32)。生产环境建议使用至少 32 字符的密钥。"
                 )
 
-        return v
-
-    @field_validator("OCR_PROVIDER")
-    @classmethod
-    def validate_ocr_provider(cls, v: str) -> str:
-        """验证 OCR 提供商"""
-        valid_providers = {"auto", "local", "nvidia_cloud"}
-        if v not in valid_providers:
-            raise ValueError(
-                f"无效的 OCR 提供商: {v}. 有效值为: {', '.join(sorted(valid_providers))}"
-            )
         return v
 
     @field_validator("LLM_PROVIDER")
@@ -573,16 +557,6 @@ class Settings(BaseSettings):
         return self
 
     @model_validator(mode="after")
-    def validate_nvidia_ocr_configuration(self) -> "Settings":
-        """验证 NVIDIA OCR 配置一致性"""
-        if self.OCR_PROVIDER == "nvidia_cloud" and not self.NVIDIA_API_KEY:
-            logger.warning(
-                "OCR 提供商设置为 NVIDIA Cloud 但未配置 NVIDIA_API_KEY，"
-                "将回退到本地 OCR"
-            )
-        return self
-
-    @model_validator(mode="after")
     def validate_cache_configuration(self) -> "Settings":
         """验证缓存配置一致性"""
         if self.CACHE_TTL < 0:
@@ -640,7 +614,7 @@ class Settings(BaseSettings):
     # 创建全局配置实例
 
 
-settings = Settings()
+settings = Settings()  # type: ignore[call-arg]
 
 # 根据环境变量覆盖配置
 if os.getenv("ENVIRONMENT") == "production":  # pragma: no cover

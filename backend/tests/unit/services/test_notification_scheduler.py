@@ -166,7 +166,7 @@ class TestContractExpiryNotifications:
         assert notification.priority == NotificationPriority.URGENT
         assert "已到期" in notification.title
         assert expiring_contract_today.contract_number in notification.content
-        assert notification.is_read == False
+        assert not notification.is_read
 
     def test_contract_expiring_in_7days_creates_urgent_notification(
         self, test_db: Session, active_user: User, expiring_contract_7days: RentContract

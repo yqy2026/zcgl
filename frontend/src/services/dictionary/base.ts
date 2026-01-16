@@ -3,7 +3,6 @@
  *
  * @description 提供核心的字典数据获取功能，支持缓存、批量操作、预加载等高级特性
  * @author Claude Code
- * @updated 2025-11-10
  */
 
 import { enhancedApiClient } from '@/api/client';

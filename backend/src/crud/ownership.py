@@ -3,7 +3,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from ..crud.base import CRUDBase
-from ..models import Ownership
+from ..models.asset import Ownership
 from ..schemas.ownership import OwnershipCreate, OwnershipUpdate
 
 

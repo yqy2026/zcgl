@@ -42,7 +42,7 @@ def safe_import(
         >>> router_registry = safe_import("core.router_registry", critical=True)
 
         >>> # 可选依赖 - 允许降级
-        >>> ocr_service = safe_import("services.ocr", fallback=None)
+        >>> vision_service = safe_import("services.core.qwen_vision_service", fallback=None)
 
         >>> # 使用 mock 工厂
         >>> mock_redis = safe_import("redis", mock_factory=lambda: MockRedis())
@@ -104,9 +104,9 @@ def safe_import_from(
         导入的属性或降级值
 
     Examples:
-        >>> get_ocr_service = safe_import_from(
-        ...     "services.providers.ocr_provider",
-        ...     "get_ocr_service",
+        >>> get_vision_service = safe_import_from(
+        ...     "services.core.qwen_vision_service",
+        ...     "QwenVisionService",
         ...     fallback=lambda: None
         ... )
     """

@@ -43,7 +43,6 @@ import {
 import { COLORS } from '@/styles/colorMap';
 
 const { Title, Text } = Typography;
-const { Step } = Steps;
 
 interface ContractImportStatusProps {
   sessionId: string;
@@ -351,26 +350,23 @@ const ContractImportStatus: React.FC<ContractImportStatusProps> = ({
         <Steps
           current={steps.findIndex(step => step.status === 'process')}
           status={steps.some(step => step.status === 'error') ? 'error' : 'process'}
-        >
-          {steps.map((step, index) => (
-            <Step
-              key={index}
-              title={step.title}
-              description={
-                <div>
-                  <div>{step.description}</div>
-                  {(step.details != null) && (
-                    <Text type="secondary" style={{ fontSize: 12 }}>
-                      {step.details}
-                    </Text>
-                  )}
-                </div>
-              }
-              icon={step.icon}
-              status={step.status}
-            />
-          ))}
-        </Steps>
+          items={steps.map((step, index) => ({
+            key: index,
+            title: step.title,
+            description: (
+              <div>
+                <div>{step.description}</div>
+                {(step.details != null) && (
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    {step.details}
+                  </Text>
+                )}
+              </div>
+            ),
+            icon: step.icon,
+            status: step.status,
+          }))}
+        />
       </Card>
 
       {/* 详细信息 */}

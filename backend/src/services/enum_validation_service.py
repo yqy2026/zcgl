@@ -14,6 +14,7 @@ from typing import Any
 from sqlalchemy import and_, not_
 from sqlalchemy.orm import Session
 
+from ..constants.strings.empty import EMPTY_STRING
 from ..models.enum_field import EnumFieldType, EnumFieldValue
 
 logger = logging.getLogger(__name__)
@@ -154,7 +155,7 @@ class EnumValidationService:
         stats["total_validations"] += 1
 
         # 空值处理
-        if not value or value.strip() == "":
+        if not value or value.strip() == EMPTY_STRING:
             if allow_empty:
                 logger.debug(
                     f"枚举字段 '{enum_type_code}' 空值验证通过（allow_empty=True）"

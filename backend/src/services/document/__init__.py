@@ -51,45 +51,11 @@ try:
 except Exception:  # nosec - B110: Intentional graceful degradation
     pass
 
-# OCR services
-try:
-    from .caching_ocr_service import CachingOCRService as CachingOCRService
-
-    __all__.append("CachingOCRService")
-except Exception:  # nosec - B110: Intentional graceful degradation
-    pass
-
-try:
-    from .ocr_engine_selector import OCREngineSelector as OCREngineSelector
-
-    __all__.append("OCREngineSelector")
-except Exception:  # nosec - B110: Intentional graceful degradation
-    pass
-
-try:
-    from .ocr_text_processor import OCRTextProcessor as OCRTextProcessor
-
-    __all__.append("OCRTextProcessor")
-except Exception:  # nosec - B110: Intentional graceful degradation
-    pass
-
 # Contract extraction services
 try:
     from .contract_extractor import ContractExtractor as ContractExtractor
-    from .contract_extractor import (
-        extract_contract_from_pdf as extract_contract_from_pdf,
-    )
-    from .contract_extractor import (
-        extract_contract_from_pdf_cloud as extract_contract_from_pdf_cloud,
-    )
 
-    __all__.extend(
-        [
-            "ContractExtractor",
-            "extract_contract_from_pdf",
-            "extract_contract_from_pdf_cloud",
-        ]
-    )
+    __all__.extend(["ContractExtractor"])
 except Exception:  # nosec - B110: Intentional graceful degradation
     pass
 
@@ -121,58 +87,6 @@ try:
     from .excel_import import ExcelImportService as ExcelImportService
 
     __all__.append("ExcelImportService")
-except Exception:  # nosec - B110: Intentional graceful degradation
-    pass
-
-# PaddleOCR 3.3 services
-try:
-    from .paddleocr_service import PaddleOCRService as PaddleOCRService
-    from .paddleocr_service import get_paddleocr_service as get_paddleocr_service
-
-    __all__.extend(["PaddleOCRService", "get_paddleocr_service"])
-except Exception:  # nosec - B110: Intentional graceful degradation
-    pass
-
-try:
-    from .markdown_contract_parser import (
-        MarkdownContractParser as MarkdownContractParser,
-    )
-    from .markdown_contract_parser import (
-        get_markdown_contract_parser as get_markdown_contract_parser,
-    )
-    from .markdown_contract_parser import (
-        parse_contract_markdown as parse_contract_markdown,
-    )
-
-    __all__.extend(
-        [
-            "MarkdownContractParser",
-            "get_markdown_contract_parser",
-            "parse_contract_markdown",
-        ]
-    )
-except Exception:  # nosec - B110: Intentional graceful degradation
-    pass
-
-# NVIDIA Cloud OCR services
-try:
-    from .nvidia_cloud_ocr_service import (
-        NvidiaCloudOCRService as NvidiaCloudOCRService,
-    )
-    from .nvidia_cloud_ocr_service import (
-        extract_text_from_pdf as extract_text_from_pdf_nvidia,  # noqa: F401
-    )
-    from .nvidia_cloud_ocr_service import (
-        get_nvidia_ocr_service as get_nvidia_ocr_service,
-    )
-
-    __all__.extend(
-        [
-            "NvidiaCloudOCRService",
-            "get_nvidia_ocr_service",
-            "extract_text_from_pdf_nvidia",
-        ]
-    )
 except Exception:  # nosec - B110: Intentional graceful degradation
     pass
 

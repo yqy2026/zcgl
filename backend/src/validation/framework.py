@@ -12,6 +12,9 @@ from decimal import Decimal
 
 from pydantic import BaseModel
 
+from ..constants.strings.empty import EMPTY_STRING
+from ..constants.validation.lengths import FieldLengthLimits
+
 
 # 创建自定义业务验证异常
 class BusinessValidationError(Exception):
@@ -52,7 +55,7 @@ class RequiredRule(ValidationRule):
 
     def validate(self, value: Any) -> bool:
         if self.required:
-            return value is not None and value != ""
+            return value is not None and value != EMPTY_STRING
         return True
 
 
@@ -368,7 +371,10 @@ def create_asset_validation_schema() -> ValidationSchema:
         ),
     )
     schema.add_rule(
-        "property_name", LengthRule(min_length=1, max_length=200, required=False)
+        "property_name",
+        LengthRule(
+            min_length=1, max_length=FieldLengthLimits.SHORT_TEXT_MAX, required=False
+        ),
     )
 
     schema.add_rule(
@@ -380,7 +386,9 @@ def create_asset_validation_schema() -> ValidationSchema:
             error_message="地址不能为空",
         ),
     )
-    schema.add_rule("address", LengthRule(max_length=500, required=False))
+    schema.add_rule(
+        "address", LengthRule(max_length=FieldLengthLimits.MEDIUM_TEXT_MAX, required=False)
+    )
 
     # 状态枚举验证
     schema.add_rule(
@@ -472,12 +480,22 @@ def create_project_validation_schema() -> ValidationSchema:
     schema.add_rule(
         "name", RequiredRule(name="required", description="项目名称必填", required=True)
     )
-    schema.add_rule("name", LengthRule(min_length=1, max_length=200, required=False))
+    schema.add_rule(
+        "name",
+        LengthRule(
+            min_length=1, max_length=FieldLengthLimits.SHORT_TEXT_MAX, required=False
+        ),
+    )
 
     schema.add_rule(
         "code", RequiredRule(name="required", description="项目编码必填", required=True)
     )
-    schema.add_rule("code", LengthRule(min_length=1, max_length=100, required=False))
+    schema.add_rule(
+        "code",
+        LengthRule(
+            min_length=1, max_length=FieldLengthLimits.SHORT_TEXT_MAX // 2, required=False
+        ),
+    )
 
     return schema
 

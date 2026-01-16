@@ -8,11 +8,11 @@
 
 ```bash
 cd frontend
-npm install             # 安装依赖
-npm run dev             # 启动开发服务器 (port 5173)
-npm test                # 运行测试
-npm run lint            # ESLint 检查
-npm run type-check      # TypeScript 类型检查
+pnpm install            # 安装依赖
+pnpm dev                # 启动开发服务器 (port 5173)
+pnpm test               # 运行测试
+pnpm lint               # ESLint 检查
+pnpm type-check         # TypeScript 类型检查
 ```
 
 ---
@@ -299,9 +299,9 @@ src/
 ## 测试
 
 ```bash
-npm test                    # 运行测试
-npm run test:coverage       # 覆盖率报告
-npm run test:watch          # 监听模式
+pnpm test                   # 运行测试
+pnpm test:coverage          # 覆盖率报告
+pnpm test:watch             # 监听模式
 ```
 
 测试文件位置: `src/**/__tests__/*.test.tsx`
@@ -325,7 +325,7 @@ npm run test:watch          # 监听模式
 |------|---------|
 | Port 5173 被占用 | 修改 `vite.config.ts` |
 | API 请求失败 | 确保后端运行在 8002 端口 |
-| TypeScript 错误 | `npm run type-check` 查看详情 |
+| TypeScript 错误 | `pnpm type-check` 查看详情 |
 
 
 <claude-mem-context>

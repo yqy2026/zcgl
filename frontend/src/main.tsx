@@ -8,6 +8,10 @@ import 'dayjs/locale/zh-cn'
 import App from './App.tsx'
 import './styles/index.css'
 import { baseThemeConfig, appLocale } from './theme/config'
+import { initErrorMonitoring } from './utils/errorMonitoring'
+
+// Initialize error monitoring as early as possible
+initErrorMonitoring()
 
 // 配置dayjs中文
 dayjs.locale('zh-cn')

@@ -1,6 +1,5 @@
 """
 Analytics Service - 综合分析服务
-Version: 2026-01-04
 
 重构目标: 将 analytics.py 中的业务逻辑迁移到服务层
 
@@ -18,6 +17,7 @@ from typing import Any, cast
 
 from sqlalchemy.orm import Session
 
+from ...constants.status.data import DataStatusValues
 from ...core.cache_manager import analytics_cache
 from ...core.response_handler import ResponseHandler
 from ...models.asset import Asset
@@ -118,7 +118,7 @@ class AnalyticsService:
 
             query = query.filter(
                 or_(
-                    Asset.data_status == "正常",
+                    Asset.data_status == DataStatusValues.ASSET_NORMAL,
                     Asset.data_status.is_(None),
                 )
             )
@@ -201,7 +201,7 @@ class AnalyticsService:
 
             query = query.filter(
                 or_(
-                    Asset.data_status == "正常",
+                    Asset.data_status == DataStatusValues.ASSET_NORMAL,
                     Asset.data_status.is_(None),
                 )
             )
@@ -278,7 +278,7 @@ class AnalyticsService:
 
             query = query.filter(
                 or_(
-                    Asset.data_status == "正常",
+                    Asset.data_status == DataStatusValues.ASSET_NORMAL,
                     Asset.data_status.is_(None),
                 )
             )

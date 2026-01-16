@@ -586,7 +586,7 @@ const OrganizationPage: React.FC = () => {
             />
           </Form.Item>
 
-          <Divider orientation="left">负责人信息</Divider>
+          <Divider titlePlacement="start">负责人信息</Divider>
 
           <Row gutter={16}>
             <Col span={8}>
@@ -616,7 +616,7 @@ const OrganizationPage: React.FC = () => {
             </Col>
           </Row>
 
-          <Divider orientation="left">联系信息</Divider>
+          <Divider titlePlacement="start">联系信息</Divider>
 
           <Row gutter={16}>
             <Col span={8}>

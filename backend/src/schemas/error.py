@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 统一错误响应模式
-定义 PDF 处理和 OCR 相关的标准错误响应格式
+定义 PDF 处理和 LLM Vision 相关的标准错误响应格式
 """
 
 from datetime import datetime
@@ -33,7 +33,6 @@ class ErrorCode(str, Enum):
     UNSUPPORTED_FILE_TYPE = "UNSUPPORTED_FILE_TYPE"
 
     # 服务相关
-    OCR_UNAVAILABLE = "OCR_UNAVAILABLE"
     LLM_UNAVAILABLE = "LLM_UNAVAILABLE"
     VISION_UNAVAILABLE = "VISION_UNAVAILABLE"
     SERVICE_ERROR = "SERVICE_ERROR"
@@ -144,14 +143,14 @@ class DetailedErrorResponse(ErrorResponse):
         "json_schema_extra": {
             "example": {
                 "success": False,
-                "error_code": "OCR_UNAVAILABLE",
-                "error_message": "OCR service is not available",
+                "error_code": "VISION_UNAVAILABLE",
+                "error_message": "Vision service is not available",
                 "severity": "high",
                 "source": "service",
                 "retry_suggested": False,
                 "suggestions": [
-                    "Install OCR dependencies: uv sync --extra pdf-ocr",
-                    "Check OCR service status: /api/v1/ocr/status",
+                    "Configure LLM API keys in environment",
+                    "Check vision service status: /api/v1/pdf-import/info",
                 ],
             }
         }
@@ -296,33 +295,6 @@ class ErrorBuilder:
             error_type=None,
             stack_trace=None,
             request_id=None,
-        )
-
-    @staticmethod
-    def ocr_unavailable(
-        details: dict[str, Any] | None = None,
-    ) -> DetailedErrorResponse:
-        """创建 OCR 不可用错误响应"""
-        return DetailedErrorResponse(
-            error_code=ErrorCode.OCR_UNAVAILABLE,
-            error_message="OCR service is not available",
-            severity=ErrorSeverity.HIGH,
-            source="service",
-            retry_suggested=False,
-            retry_after_seconds=None,
-            details=details,
-            error_type=None,
-            stack_trace=None,
-            request_id=None,
-            session_id=None,
-            file_path=None,
-            support_url=None,
-            issue_tracking_id=None,
-            suggestions=[
-                "Install OCR dependencies: uv sync --extra pdf-ocr",
-                "Check OCR service status",
-                "Use vision extraction as fallback",
-            ],
         )
 
     @staticmethod
@@ -560,9 +532,6 @@ if __name__ == "__main__":  # pragma: no cover
 
     # 文件过大
     logger.info(ErrorBuilder.file_too_large(80.5, 50))
-
-    # OCR 不可用
-    logger.info(ErrorBuilder.ocr_unavailable())
 
     # 低置信度
     logger.info(ErrorBuilder.low_confidence(0.5, 0.7))

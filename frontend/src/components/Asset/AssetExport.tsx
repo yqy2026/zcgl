@@ -347,7 +347,7 @@ const AssetExport: React.FC<AssetExportProps> = ({
           {/* 筛选条件预览 */}
           {(searchParams !== undefined || (selectedAssetIds !== undefined && selectedAssetIds !== null && selectedAssetIds.length > 0)) && (
             <div>
-              <Divider orientation="left">导出范围</Divider>
+              <Divider titlePlacement="start">导出范围</Divider>
 
               {selectedAssetIds !== undefined && selectedAssetIds !== null && selectedAssetIds.length > 0 ? (
                 <Alert

@@ -74,7 +74,6 @@ class TaskQueueBenchmark:
         start_wait = time.time()
 
         completed = 0
-        failed = 0
 
         while time.time() - start_wait < max_wait:
             completed = sum(

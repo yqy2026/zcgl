@@ -3,7 +3,6 @@
  *
  * @description 组织架构管理核心服务，提供组织树、搜索、批量操作等完整功能
  * @author Claude Code
- * @updated 2025-11-10
  */
 
 import {

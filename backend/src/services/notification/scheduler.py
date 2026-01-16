@@ -13,6 +13,7 @@ from typing import Any
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
+from ...constants.status.data import DataStatusValues
 from ...database import get_db
 from ...models.auth import User
 
@@ -230,7 +231,7 @@ class NotificationSchedulerService:
                 and_(
                     RentLedger.payment_status.in_(["未支付", "部分支付"]),
                     RentLedger.due_date < today,  # 应缴日期已过
-                    RentLedger.data_status == "正常",
+                    RentLedger.data_status == DataStatusValues.ASSET_NORMAL,
                 )
             )
             .all()
@@ -320,7 +321,7 @@ class NotificationSchedulerService:
                     RentLedger.payment_status == "未支付",
                     RentLedger.due_date <= warning_date,
                     RentLedger.due_date >= today,
-                    RentLedger.data_status == "正常",
+                    RentLedger.data_status == DataStatusValues.ASSET_NORMAL,
                 )
             )
             .all()

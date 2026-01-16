@@ -13,6 +13,7 @@ import bcrypt
 from sqlalchemy import and_, desc, func, or_
 from sqlalchemy.orm import Session
 
+from ..constants.auth.fields import AuthFields
 from ..models.auth import AuditLog, User, UserRole, UserSession
 from ..schemas.auth import UserCreate, UserUpdate
 
@@ -248,7 +249,7 @@ class UserSessionCRUD:
         count = (
             db.query(UserSession)
             .filter(UserSession.user_id == user_id, UserSession.is_active)
-            .update({"is_active": False})
+            .update({AuthFields.IS_ACTIVE: False})
         )
         db.commit()
         return count
@@ -258,7 +259,7 @@ class UserSessionCRUD:
         count = (
             db.query(UserSession)
             .filter(UserSession.expires_at < datetime.now(), UserSession.is_active)
-            .update({"is_active": False})
+            .update({AuthFields.IS_ACTIVE: False})
         )
         db.commit()
         return count

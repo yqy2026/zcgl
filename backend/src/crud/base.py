@@ -1,4 +1,4 @@
-from typing import Any, Protocol, TypeVar, cast
+from typing import Any, Literal, Protocol, TypeVar, cast
 
 """
 增强的基础CRUD操作类 - 支持缓存、性能监控和错误处理
@@ -12,6 +12,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.orm import Session
 
+from ..constants.performance.cache import CacheLimits, CacheTTL
 from ..core.response_handler import ResponseHandler
 from .query_builder import QueryBuilder
 
@@ -47,7 +48,7 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
         self.model = model
         self.query_builder = QueryBuilder(model)
         self._cache: dict[str, tuple[Any, float]] = {}  # 简单内存缓存
-        self._cache_timeout = 300  # 5分钟缓存超时
+        self._cache_timeout = CacheTTL.SHORT_SECONDS  # 5分钟缓存超时
 
     def _get_cache_key(self, method: str, **kwargs: Any) -> str:
         """生成缓存键"""
@@ -71,7 +72,7 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
         """设置缓存数据"""
         self._cache[cache_key] = (data, time.time())
         # 限制缓存大小
-        if len(self._cache) > 100:
+        if len(self._cache) > CacheLimits.MAX_CRUD_ENTRIES:
             oldest_key = min(self._cache.keys(), key=lambda k: self._cache[k][1])
             del self._cache[oldest_key]
 
@@ -320,3 +321,101 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
             "cache_size": len(self._cache),
             "cache_timeout": self._cache_timeout,
         }
+
+    def get_distinct_field_values(
+        self,
+        db: Session,
+        field_name: str,
+        *,
+        filters: dict[str, Any] | None = None,
+        sort_order: Literal["asc", "desc"] = "asc",
+        use_cache: bool = True,
+        exclude_empty: bool = True,
+    ) -> list[Any]:
+        """
+        获取模型字段的不重复值列表,用于下拉框/筛选器UI组件
+
+        Args:
+            db: 数据库会话
+            field_name: 要获取不重复值的字段名
+            filters: 可选的额外筛选条件
+            sort_order: 排序方向 ('asc' 或 'desc')
+            use_cache: 是否使用缓存 (默认: True)
+            exclude_empty: 是否排除 None 和空字符串 (默认: True)
+
+        Returns:
+            字段的不重复值列表
+
+        Raises:
+            AttributeError: 如果字段名在模型上不存在
+            ValueError: 如果 sort_order 不是 'asc' 或 'desc'
+
+        Examples:
+            >>> # 获取所有不重复的权属方
+            >>> values = asset_crud.get_distinct_field_values(db, "ownership_entity")
+            >>> # 降序排列的业态类别
+            >>> values = asset_crud.get_distinct_field_values(
+            ...     db, "business_category", sort_order="desc"
+            ... )
+            >>> # 带额外筛选条件的使用状态
+            >>> values = asset_crud.get_distinct_field_values(
+            ...     db, "usage_status", filters={"is_active": True}
+            ... )
+        """
+        # 验证字段存在
+        if not hasattr(self.model, field_name):
+            raise AttributeError(
+                f"Field '{field_name}' does not exist on model {self.model.__name__}"
+            )
+
+        # 验证排序参数
+        if sort_order not in ("asc", "desc"):
+            raise ValueError(f"sort_order must be 'asc' or 'desc', got '{sort_order}'")
+
+        # 检查缓存
+        cache_key = None
+        if use_cache:
+            cache_key = self._get_cache_key(
+                "distinct_values",
+                field=field_name,
+                filters=str(sorted(filters.items())) if filters else None,
+                sort=sort_order,
+            )
+            cached_result = self._get_from_cache(cache_key)
+            if cached_result is not None:
+                return cast(list[Any], cached_result)
+
+        # 构建查询
+        field_attr = getattr(self.model, field_name)
+        query = db.query(field_attr)
+
+        # 应用空值筛选
+        if exclude_empty:
+            query = query.filter(field_attr.isnot(None), field_attr != "")
+
+        # 应用额外筛选条件
+        if filters:
+            for filter_key, filter_value in filters.items():
+                if hasattr(self.model, filter_key):
+                    query = query.filter(
+                        getattr(self.model, filter_key) == filter_value
+                    )
+
+        # 应用去重和排序
+        query = query.distinct()
+        if sort_order == "asc":
+            query = query.order_by(field_attr.asc())
+        else:
+            query = query.order_by(field_attr.desc())
+
+        # 执行查询
+        result = query.all()
+
+        # 从结果元组中提取值
+        values = [row[0] for row in result if row[0]]
+
+        # 缓存结果
+        if use_cache and cache_key:
+            self._set_cache(cache_key, values)
+
+        return values

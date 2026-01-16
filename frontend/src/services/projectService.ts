@@ -3,7 +3,6 @@
  *
  * @description 项目管理核心服务，提供项目CRUD、搜索、统计等完整功能
  * @author Claude Code
- * @updated 2025-11-10
  */
 
 import { enhancedApiClient } from '@/api/client';

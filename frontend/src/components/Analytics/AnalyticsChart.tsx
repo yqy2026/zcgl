@@ -140,7 +140,7 @@ export const AnalyticsBarChart: React.FC<BarChartProps> = ({
   barSize = 30,
   showLegend = false,
   showTooltip = true,
-  showGrid: _showGrid = true,  // TODO: Implement grid control
+  showGrid = true,  // Grid control implemented
   color = CHART_COLORS[0],
   className
 }) => {
@@ -178,6 +178,14 @@ export const AnalyticsBarChart: React.FC<BarChartProps> = ({
       label: {
         formatter: (value: number) => formatAggressive(value),
       },
+      grid: {
+        line: {
+          style: {
+            stroke: showGrid ? '#d9d9d9' : 'transparent',
+            lineWidth: 1,
+          },
+        },
+      },
     },
     xAxis: {
       label: {
@@ -187,6 +195,14 @@ export const AnalyticsBarChart: React.FC<BarChartProps> = ({
         offset: 30,
         style: {
           fontSize: 12,
+        },
+      },
+      grid: {
+        line: {
+          style: {
+            stroke: showGrid ? '#d9d9d9' : 'transparent',
+            lineWidth: 1,
+          },
         },
       },
     },
@@ -243,7 +259,7 @@ export const AnalyticsLineChart: React.FC<LineChartProps> = ({
   xAxisKey,
   loading = false,
   height = 300,
-  showGrid: _showGrid = true,  // TODO: Implement grid control
+  showGrid = true,  // Grid control implemented
   showLegend = true,
   showTooltip = true,
   showDots = true,
@@ -286,6 +302,27 @@ export const AnalyticsLineChart: React.FC<LineChartProps> = ({
         value: datum.value as number,
       }),
     } : false,
+
+    yAxis: {
+      grid: {
+        line: {
+          style: {
+            stroke: showGrid ? '#d9d9d9' : 'transparent',
+            lineWidth: 1,
+          },
+        },
+      },
+    },
+    xAxis: {
+      grid: {
+        line: {
+          style: {
+            stroke: showGrid ? '#d9d9d9' : 'transparent',
+            lineWidth: 1,
+          },
+        },
+      },
+    },
 
   }
 

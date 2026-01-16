@@ -164,3 +164,11 @@ class AssetService:
 
         # 2. 删除
         asset_crud.remove(db=self.db, id=asset_id)
+
+    def get_distinct_field_values(self, field_name: str) -> list[str]:
+        """
+        获取指定字段的所有唯一值
+
+        常用于搜索筛选下拉框，如权属方、业态类别等
+        """
+        return asset_crud.get_distinct_field_values(self.db, field_name)
