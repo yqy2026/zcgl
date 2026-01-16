@@ -51,4 +51,4 @@ def handle_service_exception(
         raise BusinessValidationError("数据验证失败")
 
     # 其他异常重新抛出，让全局处理器处理
-    raise
+    raise e

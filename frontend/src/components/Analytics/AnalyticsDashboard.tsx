@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Row, Col, Card, Typography, Button, Space, Dropdown } from "antd";
+import { Row, Col, Card, Typography, Button, Space, Dropdown, message } from "antd";
 import {
   ReloadOutlined,
   DownloadOutlined,
@@ -10,6 +10,7 @@ import {
 import { useAnalytics } from "../../hooks/useAnalytics";
 import type { AssetSearchParams } from "../../types/asset";
 import type { AnalyticsResponse } from "../../types/analytics";
+import { exportAnalytics } from "../../utils/exportAnalytics";
 
 // Analytics数据类型定义
 interface DistributionItem {
@@ -73,8 +74,22 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
 
   const hasData = (analytics?.area_summary?.total_assets ?? 0) > 0;
 
-  const handleExport = (_format: "excel" | "pdf" | "csv") => {
-    // TODO: Implement export functionality
+  const handleExport = async (format: "excel" | "pdf" | "csv") => {
+    if (!analytics) {
+      message.warning('没有数据可导出')
+      return
+    }
+
+    try {
+      message.loading('正在导出...', 0)
+      await exportAnalytics(analytics, format)
+      message.success('导出成功')
+    } catch (error) {
+      console.error('导出失败:', error)
+      message.error('导出失败，请重试')
+    } finally {
+      message.destroy()
+    }
   };
 
   const handleRefresh = () => {

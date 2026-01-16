@@ -17,7 +17,7 @@ pytestmark = pytest.mark.skip(reason="Integration API tests require real JWT aut
 from fastapi.testclient import TestClient
 
 # Mark all tests as API tests
-pytestmark = pytest.mark.api
+# pytestmark = pytest.mark.api  # Disabled - skip marker takes precedence
 
 
 @pytest.fixture

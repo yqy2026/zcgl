@@ -151,3 +151,16 @@ def reset_settings_debug():
     yield
     # Always restore to original value after test
     settings.DEBUG = original_debug
+
+
+@pytest.fixture(autouse=True)
+def reset_encryption_key(monkeypatch):
+    """
+    Auto-used fixture to reset DATA_ENCRYPTION_KEY before each test.
+    This prevents test isolation issues for encryption tests.
+    """
+    # Remove DATA_ENCRYPTION_KEY from environment before each test
+    monkeypatch.delenv("DATA_ENCRYPTION_KEY", raising=False)
+    yield
+    # Clean up after test
+    monkeypatch.delenv("DATA_ENCRYPTION_KEY", raising=False)
