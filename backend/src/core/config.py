@@ -74,10 +74,11 @@ class Settings(BaseSettings):
         json_schema_extra={"env": "CORS_ORIGINS"},
     )
 
-    # JWT配置 - 生产环境必须设置环境变量
+    # JWT配置 - 必须通过环境变量设置
     SECRET_KEY: str = Field(
-        default="EMERGENCY-ONLY-REPLACE-WITH-ENV-SECRET-KEY-NOW",
-        description="JWT密钥 - 生产环境必须通过环境变量设置强密钥",
+        ...,
+        min_length=32,
+        description="JWT密钥 - 必须32+字符的强随机字符串",
         json_schema_extra={"env": "SECRET_KEY"},
     )
     ALGORITHM: str = Field(default="HS256", json_schema_extra={"env": "ALGORITHM"})
@@ -379,41 +380,50 @@ class Settings(BaseSettings):
     @classmethod
     def validate_secret_key(cls, v: str, info: ValidationInfo) -> str:
         """验证 SECRET_KEY 强度，生产环境必须使用强密钥"""
+        import os
+
         # 定义弱密钥模式（不应在生产环境使用）
+        # 包括硬编码默认值、示例值、常见弱密钥等
         weak_patterns = [
             "EMERGENCY-ONLY",
+            "REPLACE-WITH",
+            "REPLACE_WITH",
             "dev-secret-key",
+            "your-secret-key",
             "secret-key",
             "test-key",
             "example",
             "default",
             "changeme",
+            "change-this",
+            "minimum-32-characters",
         ]
 
-        # 检查是否为弱密钥
-        is_weak = any(pattern.lower() in v.lower() for pattern in weak_patterns)
+        # 检查是否为弱密钥模式
+        is_weak_pattern = any(pattern.lower() in v.lower() for pattern in weak_patterns)
 
         # 检查长度
         is_too_short = len(v) < 32
 
         # 生产环境强制检查
-        environment = info.data.get("ENVIRONMENT", "development")
+        # 直接从环境变量读取，因为 ENVIRONMENT 不是 Settings 的字段
+        environment = os.getenv("ENVIRONMENT", "production")
 
         if environment == "production":
-            if is_weak:
+            if is_weak_pattern:
                 raise ValueError(
-                    "生产环境禁止使用弱密钥。SECRET_KEY 包含常见弱密钥模式。"
-                    "请设置至少 32 字符的强随机密钥。"
+                    f"生产环境禁止使用弱密钥模式。检测到包含常见弱密钥标识符。"
+                    f"请使用 python -c 'import secrets; print(secrets.token_urlsafe(32))' 生成强密钥。"
                 )
             if is_too_short:
                 raise ValueError(
                     f"生产环境 SECRET_KEY 长度必须至少 32 字符，当前: {len(v)} 字符"
                 )
-        elif is_weak or is_too_short:
+        elif is_weak_pattern or is_too_short:
             # 非生产环境发出警告
-            if is_weak:
+            if is_weak_pattern:
                 logger.warning(
-                    "使用弱 SECRET_KEY（仅用于开发环境）。生产环境必须设置强密钥。"
+                    "检测到弱 SECRET_KEY 模式（仅用于开发环境）。生产环境必须设置强密钥。"
                 )
             if is_too_short:
                 logger.warning(
