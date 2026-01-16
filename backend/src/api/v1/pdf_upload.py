@@ -102,7 +102,7 @@ async def upload_pdf_file(
     temp_dir.mkdir(exist_ok=True)
 
     # 安全文件名处理 - 防止路径遍历攻击
-    from ..utils.file_security import generate_safe_filename
+    from src.utils.file_security import generate_safe_filename
 
     file_id = str(uuid.uuid4())
     safe_filename = generate_safe_filename(file.filename, file_id)
@@ -319,7 +319,7 @@ async def upload_and_extract_pdf_v1_compatible(
             )
 
         # 使用V1的提取器处理文本
-        from ...services.contract_extractor import extract_contract_info
+        from src.services.contract_extractor import extract_contract_info
 
         extraction_result = extract_contract_info(text_result.get("text", ""))
 
