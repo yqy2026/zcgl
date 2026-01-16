@@ -48,8 +48,6 @@ async def get_system_info() -> SystemInfoResponse:
                 pymupdf_available=True,
                 spacy_available=True,
                 ocr_available=True,
-                paddleocr_available=False,
-                paddleocr_version=None,
                 supported_formats=[".pdf", ".jpg", ".jpeg", ".png"],
                 max_file_size_mb=50,
                 estimated_processing_time="10-30秒",
@@ -58,7 +56,6 @@ async def get_system_info() -> SystemInfoResponse:
                 "method": "multi_engine",
                 "description": "支持多种PDF处理引擎，包括PyMuPDF、PDFPlumber和LLM Vision",
                 "engines": ["PyMuPDF", "PDFPlumber", "LLM Vision (Qwen/DeepSeek/GLM)"],
-                "paddleocr_version": None,
             },
             validator_summary={
                 "enabled": True,

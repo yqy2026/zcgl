@@ -43,7 +43,7 @@ class OptionalServices:
     """
     可选服务容器
 
-    某些 PDF 处理服务可能未安装（如 PaddleOCR），
+    某些 PDF 处理服务可能未安装（如 LLM Vision API），
     这些服务应标记为可选并提供降级方案
     """
 

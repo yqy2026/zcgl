@@ -100,8 +100,10 @@ def setup_test_database():
             else:
                 print(f"⚠️  Migration warnings: {result.stderr}")
                 # Fallback: create tables directly
-                from src.models.base import Base
                 from sqlalchemy import create_engine
+
+                # Lazy import to avoid ModuleNotFoundError during pytest collection
+                from src.models.base import Base
 
                 engine = create_engine(database_url)
                 Base.metadata.create_all(bind=engine)
@@ -110,8 +112,10 @@ def setup_test_database():
             print(f"⚠️  Database setup failed: {e}")
             # Try to create tables directly as fallback
             try:
-                from src.models.base import Base
                 from sqlalchemy import create_engine
+
+                # Lazy import to avoid ModuleNotFoundError during pytest collection
+                from src.models.base import Base
 
                 engine = create_engine(database_url)
                 Base.metadata.create_all(bind=engine)

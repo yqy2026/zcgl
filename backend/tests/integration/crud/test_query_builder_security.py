@@ -387,7 +387,7 @@ class TestWhitelistCompliance:
 
     def test_ownership_has_whitelist(self):
         """Ownership model should have a whitelist registered."""
-        from src.models.ownership import Ownership
+        from src.models.asset import Ownership  # Ownership is in models/asset.py
         from src.crud.field_whitelist import get_whitelist_for_model, PermissiveWhitelist
 
         whitelist = get_whitelist_for_model(Ownership)

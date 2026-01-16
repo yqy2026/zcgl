@@ -122,11 +122,9 @@ class SystemCapabilities(BaseModel):
     pymupdf_available: bool = True
     spacy_available: bool = True
     ocr_available: bool = True
-    paddleocr_available: bool = False  # PaddleOCR 3.3+ PP-StructureV3
-    paddleocr_version: str | None = None
     supported_formats: list[str] = [".pdf", ".jpg", ".jpeg", ".png"]
     max_file_size_mb: int = 50
-    estimated_processing_time: str = "30-60秒"
+    estimated_processing_time: str = "10-30秒"
 
 
 class SystemInfoResponse(BaseModel):
