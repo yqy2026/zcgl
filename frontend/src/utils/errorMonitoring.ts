@@ -50,61 +50,61 @@ export function initErrorMonitoring(): void {
 /**
  * Initialize Sentry SDK
  */
-function initSentry(): void {
+async function initSentry(): Promise<void> {
   // Dynamic import for optional Sentry dependency
-  import('@sentry/react')
-    .then((SentryModule) => {
-      const Sentry = SentryModule.default || SentryModule
+  try {
+    const SentryModule = await import('@sentry/react')
+    const Sentry = SentryModule.default || SentryModule
 
-      // Type-safe access to Sentry integrations
-      const BrowserTracing = (SentryModule as { BrowserTracing?: unknown }).BrowserTracing
-      const Replay = (SentryModule as { Replay?: unknown }).Replay
+    // Type-safe access to Sentry integrations
+    const BrowserTracing = (SentryModule as { BrowserTracing?: unknown }).BrowserTracing
+    const Replay = (SentryModule as { Replay?: unknown }).Replay
 
-      const integrations: unknown[] = []
-      if (BrowserTracing) {
-        integrations.push(new (BrowserTracing as new () => unknown)())
-      }
-      if (Replay) {
-        integrations.push(new (Replay as new () => unknown)())
-      }
+    const integrations: unknown[] = []
+    if (BrowserTracing) {
+      integrations.push(new (BrowserTracing as new () => unknown)())
+    }
+    if (Replay) {
+      integrations.push(new (Replay as new () => unknown)())
+    }
 
-      Sentry.init({
-        dsn: import.meta.env.VITE_SENTRY_DSN,
-        environment: import.meta.env.MODE,
-        release: import.meta.env.VITE_APP_VERSION || '1.0.0',
-        integrations: integrations as [],
-        tracesSampleRate: 0.1, // 10% of transactions for tracing
-        replaysSessionSampleRate: 0.1, // 10% of sessions for replay
-        replaysOnErrorSampleRate: 1.0, // 100% of sessions with errors for replay
-        beforeSend(event: unknown) {
-          // Filter sensitive information
-          if (event && typeof event === 'object' && 'request' in event) {
-            const req = event as { request: { cookies?: unknown; headers?: { authorization?: unknown } } }
-            if (req.request) {
-              delete req.request.cookies
-              if (req.request.headers) {
-                delete req.request.headers.authorization
-              }
+    Sentry.init({
+      dsn: import.meta.env.VITE_SENTRY_DSN,
+      environment: import.meta.env.MODE,
+      release: import.meta.env.VITE_APP_VERSION || '1.0.0',
+      integrations: integrations as [],
+      tracesSampleRate: 0.1, // 10% of transactions for tracing
+      replaysSessionSampleRate: 0.1, // 10% of sessions for replay
+      replaysOnErrorSampleRate: 1.0, // 100% of sessions with errors for replay
+      beforeSend(event: unknown) {
+        // Filter sensitive information
+        if (event && typeof event === 'object' && 'request' in event) {
+          const req = event as { request: { cookies?: unknown; headers?: { authorization?: unknown } } }
+          if (req.request) {
+            delete req.request.cookies
+            if (req.request.headers) {
+              delete req.request.headers.authorization
             }
           }
-          return event
-        },
-        beforeBreadcrumb(breadcrumb: unknown) {
-          // Filter sensitive breadcrumbs
-          if (breadcrumb && typeof breadcrumb === 'object' && 'category' in breadcrumb) {
-            const bc = breadcrumb as { category: string }
-            if (bc.category === 'xhr' || bc.category === 'fetch') {
-              return null // Don't log API calls
-            }
+        }
+        return event
+      },
+      beforeBreadcrumb(breadcrumb: unknown) {
+        // Filter sensitive breadcrumbs
+        if (breadcrumb && typeof breadcrumb === 'object' && 'category' in breadcrumb) {
+          const bc = breadcrumb as { category: string }
+          if (bc.category === 'xhr' || bc.category === 'fetch') {
+            return null // Don't log API calls
           }
-          return breadcrumb
-        },
-      })
-      console.info('[ErrorMonitoring] Sentry initialized')
+        }
+        return breadcrumb
+      },
     })
-    .catch((error: unknown) => {
-      console.error('[ErrorMonitoring] Failed to initialize Sentry:', error)
-    })
+    console.info('[ErrorMonitoring] Sentry initialized')
+  } catch (error) {
+    // Sentry not installed or failed to load
+    console.warn('[ErrorMonitoring] Sentry not available:', error instanceof Error ? error.message : String(error))
+  }
 }
 
 /**

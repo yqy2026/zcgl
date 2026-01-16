@@ -186,10 +186,21 @@ class TestGetOrganizationTree:
             org.sort_order = i
             mock_child_orgs.append(org)
 
+        # Setup side_effect to handle recursive calls properly
+        # The build_tree function will call get_tree multiple times recursively:
+        # 1. get_tree(None) → returns 2 root orgs
+        # 2. get_tree("root-org-0") → returns 3 child orgs
+        # 3. get_tree("child-org-0") → returns []
+        # 4. get_tree("child-org-1") → returns []
+        # 5. get_tree("child-org-2") → returns []
+        # 6. get_tree("root-org-1") → returns [] (second root org has no children)
         mock_org_crud.get_tree.side_effect = [
-            mock_root_orgs,  # First call for root
-            mock_child_orgs,  # Second call for children
-            [],  # No more children
+            mock_root_orgs,  # Call 1: get root orgs (parent_id=None)
+            mock_child_orgs,  # Call 2: get children of root-org-0
+            [],  # Call 3: get children of child-org-0
+            [],  # Call 4: get children of child-org-1
+            [],  # Call 5: get children of child-org-2
+            [],  # Call 6: get children of root-org-1 (second root has no children)
         ]
 
         result = await get_organization_tree(parent_id=None, db=mock_db, current_user=mock_current_user)
