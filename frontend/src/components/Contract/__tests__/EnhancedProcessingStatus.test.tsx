@@ -474,7 +474,7 @@ describe('EnhancedProcessingStatus 组件测试', () => {
     });
 
     it('应该显示引擎信息', async () => {
-      const element = await createElement({ progressData: { engine: 'paddleocr' } });
+      const element = await createElement({ progressData: { engine: 'llm-vision' } });
       expect(element).toBeTruthy();
     });
   });

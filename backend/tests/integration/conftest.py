@@ -87,7 +87,8 @@ def db_tables(engine):
     Runs once per test session for performance.
     """
     # Import Base here - after pytest has set up the path
-    from src.models.base import Base
+    # Base is defined in src/database.py, NOT src/models/base.py!
+    from src.database import Base
 
     # Import Alembic configuration
     from alembic.config import Config

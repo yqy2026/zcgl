@@ -102,8 +102,8 @@ def setup_test_database():
                 # Fallback: create tables directly
                 from sqlalchemy import create_engine
 
-                # Lazy import to avoid ModuleNotFoundError during pytest collection
-                from src.models.base import Base
+                # Base is defined in src/database.py, NOT src/models/base.py!
+                from src.database import Base
 
                 engine = create_engine(database_url)
                 Base.metadata.create_all(bind=engine)
@@ -114,8 +114,8 @@ def setup_test_database():
             try:
                 from sqlalchemy import create_engine
 
-                # Lazy import to avoid ModuleNotFoundError during pytest collection
-                from src.models.base import Base
+                # Base is defined in src/database.py, NOT src/models/base.py!
+                from src.database import Base
 
                 engine = create_engine(database_url)
                 Base.metadata.create_all(bind=engine)
