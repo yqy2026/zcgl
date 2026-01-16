@@ -4,7 +4,7 @@ from typing import Any, TypeVar
 from sqlalchemy import Select, and_, or_, select
 from sqlalchemy.orm import DeclarativeMeta
 
-from .field_whitelist import get_whitelist_for_model, PermissiveWhitelist
+from .field_whitelist import PermissiveWhitelist, get_whitelist_for_model
 
 ModelType = TypeVar("ModelType", bound=DeclarativeMeta)
 
@@ -117,9 +117,36 @@ class QueryBuilder[ModelType]:
 
         return query
 
+    def _validate_filter_field(self, field_name: str) -> None:
+        """
+        Validate filter field against whitelist.
+
+        Args:
+            field_name: The field name to validate
+
+        Raises:
+            ValueError: If field is blocked for filtering
+
+        Security: Logs all blocked access attempts for monitoring.
+        """
+        if not self.whitelist.can_filter(field_name):
+            logger.error(
+                f"Blocked filter on '{field_name}' for {self.model.__name__}. "
+                f"Field not in filter whitelist or explicitly blocked."
+            )
+            raise ValueError(
+                f"Filtering by field '{field_name}' is not allowed for {self.model.__name__}. "
+                f"Field is either blocked or not in the filter whitelist."
+            )
+
     def _apply_filters(
         self, query: Select[Any], filters: dict[str, Any]
     ) -> Select[Any]:
+        """
+        Apply filters with whitelist validation.
+
+        Security: Validates each field against filter whitelist before use.
+        """
         conditions = []
         for key, value in filters.items():
             if value is None:
@@ -128,14 +155,20 @@ class QueryBuilder[ModelType]:
             # Parse special operators
             if key.startswith("min_"):
                 field_name = key[4:]
+                self._validate_filter_field(field_name)
+
                 if hasattr(self.model, field_name):
                     conditions.append(getattr(self.model, field_name) >= value)
             elif key.startswith("max_"):
                 field_name = key[4:]
+                self._validate_filter_field(field_name)
+
                 if hasattr(self.model, field_name):
                     conditions.append(getattr(self.model, field_name) <= value)
             elif "__" in key:
                 field_name, op = key.rsplit("__", 1)
+                self._validate_filter_field(field_name)
+
                 if hasattr(self.model, field_name):
                     column = getattr(self.model, field_name)
                     if op == "in":
@@ -155,11 +188,12 @@ class QueryBuilder[ModelType]:
                     elif op == "le":
                         conditions.append(column <= value)
                     else:
-                        # Fallback to equality if op is unknown but potentially part of name?
-                        # Ideally shouldn't happen with this convention.
+                        # Unknown operator, skip
                         pass
             else:
                 # Direct equality
+                self._validate_filter_field(key)
+
                 if hasattr(self.model, key):
                     conditions.append(getattr(self.model, key) == value)
 
@@ -171,8 +205,22 @@ class QueryBuilder[ModelType]:
     def _apply_search(
         self, query: Select[Any], search_term: str, search_fields: list[str]
     ) -> Select[Any]:
+        """
+        Apply search with whitelist validation.
+
+        Security: Validates each search field against search whitelist.
+        Blocked fields are skipped with a warning.
+        """
         search_conditions = []
         for field in search_fields:
+            # Validate search field
+            if not self.whitelist.can_search(field):
+                logger.warning(
+                    f"Blocked search on '{field}' for {self.model.__name__}. "
+                    f"Field not in search whitelist. Skipping."
+                )
+                continue  # Skip this field silently
+
             if hasattr(self.model, field):
                 column = getattr(self.model, field)
                 # Check column type to ensure it's text-compatible if needed, or just try ilike
@@ -188,6 +236,33 @@ class QueryBuilder[ModelType]:
     def _apply_sorting(
         self, query: Select[Any], sort_by: str, sort_desc: bool
     ) -> Select[Any]:
+        """
+        Apply sorting with whitelist validation.
+
+        Args:
+            query: The SQLAlchemy query
+            sort_by: Field name to sort by
+            sort_desc: Sort descending if True, ascending if False
+
+        Returns:
+            The modified query with sorting applied
+
+        Raises:
+            ValueError: If field is blocked for sorting
+
+        Security: Validates sort field against sort whitelist.
+        """
+        # Validate sort field
+        if not self.whitelist.can_sort(sort_by):
+            logger.error(
+                f"Blocked sort on '{sort_by}' for {self.model.__name__}. "
+                f"Field not in sort whitelist or explicitly blocked."
+            )
+            raise ValueError(
+                f"Sorting by field '{sort_by}' is not allowed for {self.model.__name__}. "
+                f"Field is either blocked or not in the sort whitelist."
+            )
+
         if hasattr(self.model, sort_by):
             column = getattr(self.model, sort_by)
             if sort_desc:

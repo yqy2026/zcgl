@@ -19,10 +19,9 @@ import base64
 import logging
 import secrets
 
-from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives import hashes, padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from cryptography.hazmat.primitives import padding
 
 from ..core.config import settings
 

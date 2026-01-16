@@ -13,7 +13,6 @@ Security Design:
 
 import logging
 from dataclasses import dataclass, field
-from typing import Set, type
 
 logger = logging.getLogger(__name__)
 
@@ -30,16 +29,16 @@ class ModelFieldWhitelist:
     """
 
     # Fields allowed for equality/range filters
-    filter_fields: Set[str] = field(default_factory=set)
+    filter_fields: set[str] = field(default_factory=set)
 
     # Fields allowed for text search (ILIKE operations)
-    search_fields: Set[str] = field(default_factory=set)
+    search_fields: set[str] = field(default_factory=set)
 
     # Fields allowed for sorting
-    sort_fields: Set[str] = field(default_factory=set)
+    sort_fields: set[str] = field(default_factory=set)
 
     # Blocked fields (explicitly denied, even if in model)
-    blocked_fields: Set[str] = field(default_factory=set)
+    blocked_fields: set[str] = field(default_factory=set)
 
     def can_filter(self, field_name: str) -> bool:
         """Check if field can be used for filtering."""
@@ -78,7 +77,7 @@ class AssetWhitelist(ModelFieldWhitelist):
     """
 
     # Safe filtering fields (public/internal metadata)
-    filter_fields: Set[str] = {
+    filter_fields: set[str] = {
         # Basic identifiers
         "id",
         # Public classification fields
@@ -117,7 +116,7 @@ class AssetWhitelist(ModelFieldWhitelist):
     }
 
     # Search fields (text fields for partial matching)
-    search_fields: Set[str] = {
+    search_fields: set[str] = {
         "property_name",  # Primary identifier
         "ownership_entity",  # Organization name (public info)
         "address",  # Address is public record for properties
@@ -133,7 +132,7 @@ class AssetWhitelist(ModelFieldWhitelist):
     }
 
     # Sort fields (numeric/date fields for ordering)
-    sort_fields: Set[str] = {
+    sort_fields: set[str] = {
         # Time-based sorting
         "created_at",
         "updated_at",
@@ -156,7 +155,7 @@ class AssetWhitelist(ModelFieldWhitelist):
     }
 
     # BLOCKED: Never allowed in dynamic queries
-    blocked_fields: Set[str] = {
+    blocked_fields: set[str] = {
         # PII - Personal identifiable information
         "manager_name",  # PII: Manager name
         "tenant_name",  # PII: Tenant name
@@ -181,7 +180,7 @@ class AssetWhitelist(ModelFieldWhitelist):
 class RentContractWhitelist(ModelFieldWhitelist):
     """Whitelist for RentContract model."""
 
-    filter_fields: Set[str] = {
+    filter_fields: set[str] = {
         # Basic identifiers
         "id",
         # Contract fields
@@ -202,12 +201,12 @@ class RentContractWhitelist(ModelFieldWhitelist):
         "updated_at",
     }
 
-    search_fields: Set[str] = {
+    search_fields: set[str] = {
         "contract_number",
         "notes",
     }
 
-    sort_fields: Set[str] = {
+    sort_fields: set[str] = {
         # Time-based
         "created_at",
         "updated_at",
@@ -218,7 +217,7 @@ class RentContractWhitelist(ModelFieldWhitelist):
         "deposit",
     }
 
-    blocked_fields: Set[str] = {
+    blocked_fields: set[str] = {
         # PII (even if encrypted, should not be discoverable)
         "owner_phone",
         "tenant_phone",
@@ -237,7 +236,7 @@ class RentContractWhitelist(ModelFieldWhitelist):
 class OwnershipWhitelist(ModelFieldWhitelist):
     """Whitelist for Ownership model."""
 
-    filter_fields: Set[str] = {
+    filter_fields: set[str] = {
         # Basic identifiers
         "id",
         # Name fields
@@ -252,20 +251,20 @@ class OwnershipWhitelist(ModelFieldWhitelist):
         "updated_at",
     }
 
-    search_fields: Set[str] = {
+    search_fields: set[str] = {
         "name",
         "short_name",
         "notes",
     }
 
-    sort_fields: Set[str] = {
+    sort_fields: set[str] = {
         "name",
         "code",
         "created_at",
         "updated_at",
     }
 
-    blocked_fields: Set[str] = {
+    blocked_fields: set[str] = {
         # Contact information
         "address",
         # Audit trail
