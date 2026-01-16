@@ -76,7 +76,7 @@ class AssetWhitelist(ModelFieldWhitelist):
     """
 
     # Safe filtering fields (public/internal metadata)
-    filter_fields: set[str] = {
+    filter_fields: ClassVar[set[str]] = {
         # Basic identifiers
         "id",
         # Public classification fields
@@ -115,7 +115,7 @@ class AssetWhitelist(ModelFieldWhitelist):
     }
 
     # Search fields (text fields for partial matching)
-    search_fields: set[str] = {
+    search_fields: ClassVar[set[str]] = {
         "property_name",  # Primary identifier
         "ownership_entity",  # Organization name (public info)
         "address",  # Address is public record for properties
@@ -131,7 +131,7 @@ class AssetWhitelist(ModelFieldWhitelist):
     }
 
     # Sort fields (numeric/date fields for ordering)
-    sort_fields: set[str] = {
+    sort_fields: ClassVar[set[str]] = {
         # Time-based sorting
         "created_at",
         "updated_at",
@@ -154,7 +154,7 @@ class AssetWhitelist(ModelFieldWhitelist):
     }
 
     # BLOCKED: Never allowed in dynamic queries
-    blocked_fields: set[str] = {
+    blocked_fields: ClassVar[set[str]] = {
         # PII - Personal identifiable information
         "manager_name",  # PII: Manager name
         "tenant_name",  # PII: Tenant name
@@ -179,7 +179,7 @@ class AssetWhitelist(ModelFieldWhitelist):
 class RentContractWhitelist(ModelFieldWhitelist):
     """Whitelist for RentContract model."""
 
-    filter_fields: set[str] = {
+    filter_fields: ClassVar[set[str]] = {
         # Basic identifiers
         "id",
         # Contract fields
@@ -200,12 +200,12 @@ class RentContractWhitelist(ModelFieldWhitelist):
         "updated_at",
     }
 
-    search_fields: set[str] = {
+    search_fields: ClassVar[set[str]] = {
         "contract_number",
         "notes",
     }
 
-    sort_fields: set[str] = {
+    sort_fields: ClassVar[set[str]] = {
         # Time-based
         "created_at",
         "updated_at",
@@ -216,7 +216,7 @@ class RentContractWhitelist(ModelFieldWhitelist):
         "deposit",
     }
 
-    blocked_fields: set[str] = {
+    blocked_fields: ClassVar[set[str]] = {
         # PII (even if encrypted, should not be discoverable)
         "owner_phone",
         "tenant_phone",
@@ -235,7 +235,7 @@ class RentContractWhitelist(ModelFieldWhitelist):
 class OwnershipWhitelist(ModelFieldWhitelist):
     """Whitelist for Ownership model."""
 
-    filter_fields: set[str] = {
+    filter_fields: ClassVar[set[str]] = {
         # Basic identifiers
         "id",
         # Name fields
@@ -250,20 +250,20 @@ class OwnershipWhitelist(ModelFieldWhitelist):
         "updated_at",
     }
 
-    search_fields: set[str] = {
+    search_fields: ClassVar[set[str]] = {
         "name",
         "short_name",
         "notes",
     }
 
-    sort_fields: set[str] = {
+    sort_fields: ClassVar[set[str]] = {
         "name",
         "code",
         "created_at",
         "updated_at",
     }
 
-    blocked_fields: set[str] = {
+    blocked_fields: ClassVar[set[str]] = {
         # Contact information
         "address",
         # Audit trail
