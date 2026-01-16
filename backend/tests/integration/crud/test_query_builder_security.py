@@ -6,6 +6,8 @@ Tests actual database queries with whitelist validation.
 
 import pytest
 
+# Import crud module to trigger whitelist registration
+import src.crud  # noqa: F401
 from src.crud.query_builder import QueryBuilder
 from src.models.asset import Asset
 
@@ -129,15 +131,14 @@ class TestQueryBuilderSecurityIntegration:
         search_fields = ["manager_name", "tenant_name", "project_phone"]
 
         # Should log warnings but not raise error
-        with pytest.raises(pytest.fail.Exception):
-            # This will actually succeed because blocked fields are skipped
-            # No search conditions will be added
-            query = qb.build_query(
-                search_query="test",
-                search_fields=search_fields,
-            )
-            # Query succeeds but no search is applied
-            result = db_session.execute(query).scalars().all()
+        # Blocked fields are skipped, so query succeeds but no search is applied
+        query = qb.build_query(
+            search_query="test",
+            search_fields=search_fields,
+        )
+        # Query succeeds but no search is applied (all blocked fields were skipped)
+        result = db_session.execute(query).scalars().all()
+        assert isinstance(result, list)
 
     def test_safe_sort_succeeds(self, db_session):
         """Allowed sort fields should work."""
@@ -202,20 +203,20 @@ class TestQueryBuilderSecurityIntegration:
         """Blocked sort should raise error even with safe filters."""
         qb = QueryBuilder(Asset)
 
-        # Safe filter but blocked sort
-        with pytest.raises(ValueError) as exc_info:
-            qb.build_query(
-                filters={"ownership_status": "已确权"},
-                sort_by="monthly_rent",  # Blocked for filtering, allowed for sorting
-                sort_desc=True,
-            )
+        # Safe filter + safe sort (monthly_rent is allowed for sorting, just not filtering)
+        query = qb.build_query(
+            filters={"ownership_status": "已确权"},
+            sort_by="monthly_rent",  # Allowed for sorting (display), blocked for filtering (discovery)
+            sort_desc=True,
+        )
+        result = db_session.execute(query).scalars().all()
+        assert isinstance(result, list)
 
-        # monthly_rent is actually allowed for sorting, so this should succeed
-        # Let's test with a truly blocked field
+        # Now test with a truly blocked field (manager_name)
         with pytest.raises(ValueError) as exc_info:
             qb.build_query(
                 filters={"ownership_status": "已确权"},
-                sort_by="manager_name",  # Blocked
+                sort_by="manager_name",  # Blocked for sorting (PII field)
                 sort_desc=True,
             )
 
@@ -366,38 +367,37 @@ class TestWhitelistCompliance:
 
     def test_asset_has_whitelist(self):
         """Asset model should have a whitelist registered."""
-        from src.crud.field_whitelist import get_whitelist_for_model
+        from src.crud.field_whitelist import EmptyWhitelist, get_whitelist_for_model
 
         whitelist = get_whitelist_for_model(Asset)
 
-        # Should not be PermissiveWhitelist (should have explicit whitelist)
-        from src.crud.field_whitelist import PermissiveWhitelist
+        # Should not be EmptyWhitelist (should have explicit whitelist)
         assert not isinstance(
-            whitelist, PermissiveWhitelist
-        ), "Asset should have explicit whitelist, not permissive"
+            whitelist, EmptyWhitelist
+        ), "Asset should have explicit whitelist, not empty"
 
     def test_rent_contract_has_whitelist(self):
         """RentContract model should have a whitelist registered."""
         from src.crud.field_whitelist import (
-            PermissiveWhitelist,
+            EmptyWhitelist,
             get_whitelist_for_model,
         )
         from src.models.rent_contract import RentContract
 
         whitelist = get_whitelist_for_model(RentContract)
         assert not isinstance(
-            whitelist, PermissiveWhitelist
+            whitelist, EmptyWhitelist
         ), "RentContract should have explicit whitelist"
 
     def test_ownership_has_whitelist(self):
         """Ownership model should have a whitelist registered."""
         from src.crud.field_whitelist import (
-            PermissiveWhitelist,
+            EmptyWhitelist,
             get_whitelist_for_model,
         )
         from src.models.asset import Ownership  # Ownership is in models/asset.py
 
         whitelist = get_whitelist_for_model(Ownership)
         assert not isinstance(
-            whitelist, PermissiveWhitelist
+            whitelist, EmptyWhitelist
         ), "Ownership should have explicit whitelist"

@@ -177,11 +177,11 @@ def update_contract(
 
     权限要求:
     - 管理员可以编辑任何合同
-    - 其他活跃用户可以编辑（TODO: 未来应增加更细粒度的权限控制）
+    - 其他用户需要通过RBAC权限检查
     """
     # 权限检查
-    if not can_edit_contract(current_user):
-        raise HTTPException(status_code=403, detail="权限不足: 只有管理员可以编辑合同")
+    if not can_edit_contract(current_user, db, contract_id):
+        raise HTTPException(status_code=403, detail="权限不足: 您没有权限编辑此合同")
 
     contract = rent_contract.get_with_details(db, id=contract_id)
     if not contract:

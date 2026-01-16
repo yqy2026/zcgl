@@ -81,6 +81,8 @@ class AssetWhitelist(ModelFieldWhitelist):
     filter_fields: ClassVar[set[str]] = {
         # Basic identifiers
         "id",
+        # Primary property identifier (public name)
+        "property_name",
         # Public classification fields
         "ownership_status",
         "property_nature",
@@ -298,8 +300,8 @@ def get_whitelist_for_model(model_class: type) -> ModelFieldWhitelist:
     """
     Get whitelist configuration for a model.
 
-    Returns PermissiveWhitelist if no specific configuration exists
-    (backward compatibility for models without whitelists).
+    Returns EmptyWhitelist if no specific configuration exists
+    (security-first approach: deny all fields by default).
 
     Args:
         model_class: The SQLAlchemy model class
@@ -310,14 +312,14 @@ def get_whitelist_for_model(model_class: type) -> ModelFieldWhitelist:
     if model_class in WHITELIST_REGISTRY:
         return WHITELIST_REGISTRY[model_class]
 
-    # Return permissive whitelist for backward compatibility
-    # TODO: After all models have whitelists, change to EmptyWhitelist
-    logger.warning(
+    # Return empty whitelist for security (deny all fields by default)
+    # Models must have explicit whitelist configuration to allow field access
+    logger.info(
         f"No whitelist found for {model_class.__name__}. "
-        "Using PermissiveWhitelist (allows all fields). "
-        "Define explicit whitelist for security."
+        "Using EmptyWhitelist (denies all fields). "
+        "Define explicit whitelist to enable field access."
     )
-    return PermissiveWhitelist()
+    return EmptyWhitelist()
 
 
 # ============================================================================

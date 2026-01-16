@@ -7,6 +7,7 @@ import {
   CheckCircleOutlined,
   ExclamationCircleOutlined
 } from '@ant-design/icons'
+import { useErrorHandling } from '../../contexts/ErrorHandlingContext'
 
 const { Text } = Typography
 const { Panel } = Collapse
@@ -107,6 +108,7 @@ export const SmartErrorHandler: React.FC<SmartErrorHandlerProps> = ({
   const [selectedError, setSelectedError] = useState<ErrorInfo | null>(null)
   const retryAttempts = useRef<Record<string, number>>({})
   const autoHideTimeouts = useRef<Record<string, NodeJS.Timeout>>({})
+  const { executeRetry, clearRetry } = useErrorHandling()
 
   const generateErrorId = useCallback(() => {
     return `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -187,7 +189,7 @@ export const SmartErrorHandler: React.FC<SmartErrorHandlerProps> = ({
     autoHideTimeouts.current = {}
   }, [])
 
-  const retryError = useCallback((id: string) => {
+  const retryError = useCallback(async (id: string) => {
     if (enableRetry !== true) return
 
     const error = errors.find(e => e.id === id)
@@ -202,17 +204,31 @@ export const SmartErrorHandler: React.FC<SmartErrorHandlerProps> = ({
         title: '重试失败',
         message: `已达到最大重试次数 (${maxRetryAttempts}次)，请检查网络连接或联系管理员`
       })
+      clearRetry(id) // Clear retry action from context
       return
     }
 
-    // 增加重试次数
-    retryAttempts.current[id] = currentAttempts + 1
+    try {
+      // Use ErrorHandlingContext to execute retry
+      await executeRetry(id)
 
-    // 执行重试操作
-    if (error.action != null) {
-      error.action.onClick()
+      // Increment retry count on success
+      retryAttempts.current[id] = currentAttempts + 1
+
+      // Clear error after successful retry
+      clearError(id)
+    } catch (retryError) {
+      // Increment retry count even on failure
+      retryAttempts.current[id] = currentAttempts + 1
+
+      showError({
+        type: 'error',
+        severity: 'medium',
+        title: '重试失败',
+        message: `操作失败: ${retryError instanceof Error ? retryError.message : '未知错误'}`
+      })
     }
-  }, [errors, enableRetry, maxRetryAttempts])
+  }, [errors, enableRetry, maxRetryAttempts, executeRetry, clearRetry, showError, clearError])
 
   const getErrors = useCallback(() => errors, [errors])
 
@@ -338,18 +354,21 @@ const ErrorNotificationContainer: React.FC<ErrorNotificationContainerProps> = ({
               >
                 查看详情
               </Button>
-              {/* TODO: Implement retry functionality through context */}
-              {/* {error.action && (
+              {/* Retry functionality through ErrorHandlingContext */}
+              {error.action && (
                 <Button
                   type="default"
                   size="small"
                   onClick={() => {
-                    // 重试会在父组件中处理
+                    // Retry will be handled by parent context
+                    if (error.onRetry) {
+                      error.onRetry(error.id)
+                    }
                   }}
                 >
                   重试
                 </Button>
-              )} */}
+              )}
             </Space>
           </div>
         </div>

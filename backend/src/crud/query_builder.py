@@ -4,7 +4,7 @@ from typing import Any, TypeVar
 from sqlalchemy import Select, and_, or_, select
 from sqlalchemy.orm import DeclarativeMeta
 
-from .field_whitelist import PermissiveWhitelist, get_whitelist_for_model
+from .field_whitelist import EmptyWhitelist, get_whitelist_for_model
 
 ModelType = TypeVar("ModelType", bound=DeclarativeMeta)
 
@@ -27,11 +27,12 @@ class QueryBuilder[ModelType]:
         self.model = model
         self.whitelist = get_whitelist_for_model(model)
 
-        # Log if using permissive whitelist (security warning)
-        if isinstance(self.whitelist, PermissiveWhitelist):
-            logger.warning(
-                f"QueryBuilder using PERMISSIVE whitelist for {model.__name__}. "
-                "This allows all fields. Define explicit whitelist for security."
+        # Log if using empty whitelist (no fields allowed)
+        if isinstance(self.whitelist, EmptyWhitelist):
+            logger.info(
+                f"QueryBuilder using EMPTY whitelist for {model.__name__}. "
+                "No fields allowed for filtering/searching/sorting. "
+                "Define explicit whitelist to enable field access."
             )
 
     def build_count_query(

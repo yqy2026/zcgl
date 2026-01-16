@@ -206,7 +206,7 @@ def client(db_session):
     our test database session instead of the real database.
     """
     from fastapi.testclient import TestClient
-    from src.core.database import get_db
+    from src.database import get_db
 
     from src.main import app
 
@@ -224,3 +224,20 @@ def client(db_session):
 
     # Clean up dependency override
     app.dependency_overrides.clear()
+
+
+@pytest.fixture(scope="function")
+def test_token():
+    """
+    Provide a test token for API authentication.
+
+    NOTE: This is a dummy token for testing. In a real test setup,
+    you would generate a valid JWT token using the test user.
+    """
+    return "test_token"
+
+
+@pytest.fixture(scope="function")
+def auth_headers(test_token: str):
+    """Provide authentication headers for API requests."""
+    return {"Authorization": f"Bearer {test_token}"}

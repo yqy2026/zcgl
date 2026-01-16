@@ -250,35 +250,48 @@ class TestWhitelistRegistry:
         # Should be the same instance
         assert retrieved is custom_whitelist
 
-    def test_unregistered_model_returns_permissive(self):
-        """Models without whitelists should get PermissiveWhitelist."""
+    def test_unregistered_model_returns_empty(self):
+        """Models without whitelists should get EmptyWhitelist (security-first)."""
         # Create a mock model class (not registered)
         class UnregisteredModel:
             __name__ = "UnregisteredModel"
 
-        # Should return PermissiveWhitelist
+        # Should return EmptyWhitelist (deny all fields)
         whitelist = get_whitelist_for_model(UnregisteredModel)
-        assert isinstance(whitelist, PermissiveWhitelist)
+        assert isinstance(whitelist, EmptyWhitelist)
+        # Verify it blocks all fields
+        assert not whitelist.can_filter("any_field")
+        assert not whitelist.can_search("any_field")
+        assert not whitelist.can_sort("any_field")
 
     def test_registry_isolation(self):
         """Registry should maintain separate entries per model."""
-        # Clear registry for clean test
-        WHITELIST_REGISTRY.clear()
+        # Save original registry state
+        original_registry = dict(WHITELIST_REGISTRY)
 
-        class Model1:
-            __name__ = "Model1"
+        try:
+            # Clear registry for clean test
+            WHITELIST_REGISTRY.clear()
 
-        class Model2:
-            __name__ = "Model2"
+            class Model1:
+                __name__ = "Model1"
 
-        whitelist1 = AssetWhitelist()
-        whitelist2 = RentContractWhitelist()
+            class Model2:
+                __name__ = "Model2"
 
-        register_whitelist(Model1, whitelist1)
-        register_whitelist(Model2, whitelist2)
+            whitelist1 = AssetWhitelist()
+            whitelist2 = RentContractWhitelist()
 
-        assert get_whitelist_for_model(Model1) is whitelist1
-        assert get_whitelist_for_model(Model2) is whitelist2
+            register_whitelist(Model1, whitelist1)
+            register_whitelist(Model2, whitelist2)
+
+            assert get_whitelist_for_model(Model1) is whitelist1
+            assert get_whitelist_for_model(Model2) is whitelist2
+        finally:
+            # Restore original registry
+            WHITELIST_REGISTRY.clear()
+            for model, whitelist in original_registry.items():
+                WHITELIST_REGISTRY[model] = whitelist
 
 
 class TestQueryBuilderIntegration:
@@ -302,8 +315,8 @@ class TestQueryBuilderIntegration:
         # Should be the registered AssetWhitelist
         assert isinstance(qb.whitelist, AssetWhitelist)
 
-    def test_querybuilder_logs_permissive_warning(self, caplog):
-        """QueryBuilder should log warning when using PermissiveWhitelist."""
+    def test_querybuilder_logs_empty_whitelist_info(self, caplog):
+        """QueryBuilder should log info when using EmptyWhitelist."""
         import logging
 
         from src.crud.query_builder import QueryBuilder
@@ -312,13 +325,13 @@ class TestQueryBuilderIntegration:
         class UnregisteredModel:
             __name__ = "UnregisteredModel"
 
-        # Should log warning
-        with caplog.at_level(logging.WARNING):
+        # Should log info
+        with caplog.at_level(logging.INFO):
             qb = QueryBuilder(UnregisteredModel)
 
-        # Check warning was logged
+        # Check info was logged
         assert any(
-            "PERMISSIVE whitelist" in record.message
+            "EMPTY whitelist" in record.message
             for record in caplog.records
         )
 

@@ -6,6 +6,7 @@
 
 import React, { Component, ErrorInfo, ReactNode, useCallback } from 'react'
 import { Result, Button, Typography, Alert, Space } from 'antd'
+import { captureException } from '@/utils/errorMonitoring'
 
 const { Title, Paragraph, Text } = Typography
 
@@ -357,7 +358,11 @@ export const useErrorHandler = () => {
 
     // 生产环境下上报错误
     if (process.env.NODE_ENV === 'production') {
-      // TODO: 集成错误监控服务
+      captureException(error, {
+        component: 'ErrorBoundary',
+        action: 'captureError',
+        route: window.location.pathname,
+      })
     }
   }, [])
 

@@ -21,13 +21,11 @@ register_whitelist(Asset, AssetWhitelist())
 register_whitelist(RentContract, RentContractWhitelist())
 register_whitelist(Ownership, OwnershipWhitelist())
 
-# TODO: Add registrations for other models as whitelists are created
-# from .field_whitelist import ProjectWhitelist, UserWhitelist, RoleWhitelist
-# from ..models.project import Project
-# from ..models.user import User
-# from ..models.role import Role
-# register_whitelist(Project, ProjectWhitelist())
-# register_whitelist(User, UserWhitelist())
-# register_whitelist(Role, RoleWhitelist())
+# Additional models can be registered as needed with explicit whitelists
+# Security: Models without whitelists will use EmptyWhitelist (deny all fields)
+# To enable field access for a model, create a whitelist class and register it:
+# from .field_whitelist import ModelNameWhitelist
+# from ..models.model_name import ModelName
+# register_whitelist(ModelName, ModelNameWhitelist())
 
 __all__ = ["asset_crud", "project_crud", "rent_contract", "rent_term", "rent_ledger"]
