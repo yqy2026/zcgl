@@ -7,7 +7,7 @@ export const useDebounce = <T extends (...args: unknown[]) => unknown>(
   callback: T,
   delay: number
 ): T => {
-  const timeoutRef = useRef<NodeJS.Timeout | undefined>()
+  const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
   return useCallback(
     ((...args: Parameters<T>) => {
@@ -121,7 +121,7 @@ export const useLazyImage = (src: string, options?: IntersectionObserverInit) =>
 
 // 内存泄漏检测
 export const useMemoryLeakDetection = (componentName: string) => {
-  const mountTimeRef = useRef<number | undefined>()
+  const mountTimeRef = useRef<number | undefined>(undefined)
   const timersRef = useRef<Set<NodeJS.Timeout>>(new Set())
   const intervalsRef = useRef<Set<NodeJS.Timeout>>(new Set())
   const listenersRef = useRef<Map<string, EventListener>>(new Map())
@@ -155,7 +155,8 @@ export const useMemoryLeakDetection = (componentName: string) => {
         }
       }
     }
-  }, [componentName])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const addTimer = useCallback((timer: NodeJS.Timeout) => {
     timersRef.current.add(timer)
@@ -182,7 +183,7 @@ export const useMemoryLeakDetection = (componentName: string) => {
 // 组件渲染性能监控
 export const useRenderPerformance = (componentName: string) => {
   const renderCountRef = useRef(0)
-  const lastRenderTimeRef = useRef<number | undefined>()
+  const lastRenderTimeRef = useRef<number | undefined>(undefined)
 
   useEffect(() => {
     renderCountRef.current++
@@ -205,7 +206,8 @@ export const useRenderPerformance = (componentName: string) => {
         // Component rendered
       }
     }
-  }, [componentName])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return renderCountRef.current
 }
@@ -240,7 +242,7 @@ export const useCache = <T>(key: string, factory: () => T, deps: unknown[] = [])
 export const useBatchUpdate = <T>(initialValue: T) => {
   const [value, setValue] = useState(initialValue)
   const pendingUpdatesRef = useRef<Array<(prev: T) => T>>([])
-  const timeoutRef = useRef<NodeJS.Timeout | undefined>()
+  const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
   const batchUpdate = useCallback((updater: (prev: T) => T) => {
     pendingUpdatesRef.current.push(updater)
@@ -262,7 +264,7 @@ export const useBatchUpdate = <T>(initialValue: T) => {
 
 // Web Worker Hook
 export const useWebWorker = (workerScript: string) => {
-  const workerRef = useRef<Worker | undefined>()
+  const workerRef = useRef<Worker | undefined>(undefined)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<Error>()
 

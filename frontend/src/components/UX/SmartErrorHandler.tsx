@@ -28,6 +28,7 @@ interface ErrorInfo {
     text: string
     onClick: () => void
   }
+  onRetry?: (id: string) => void
   retryCount?: number
   resolved?: boolean
 }

@@ -3,6 +3,8 @@
  * 对应后端新的中文合同识别优化组件
  */
 
+import type { CompleteResult } from '@/services/pdfImportService';
+
 // 引擎类型枚举
 export enum EngineType {
   PADDLE_OCR = 'paddle_ocr',
@@ -552,10 +554,12 @@ export interface ConfirmImportResponse {
 // ==================== 会话管理类型 ====================
 
 // 导入自 antd UploadFile 类型（避免直接导入）
+export type UploadFileStatus = 'uploading' | 'done' | 'error' | 'removed';
+
 export interface UploadFileInfo {
   uid: string;
   name: string;
-  status?: 'uploading' | 'done' | 'error';
+  status?: UploadFileStatus;
   size?: number;
   type?: string;
 }
