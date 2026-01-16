@@ -8,8 +8,12 @@ This conftest.py is specifically for integration tests and ensures:
 """
 
 import os
-import tempfile
+import sys
 from pathlib import Path
+
+# Add backend directory to Python path for imports
+backend_dir = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(backend_dir))
 
 import pytest
 from sqlalchemy import create_engine
