@@ -66,27 +66,23 @@ async def download_template(
     """
     下载Excel导入模板文件 - 已优化与新增资产表单字段保持一致
     """
-    try:
-        # 使用ExcelTemplateService生成模板
-        service = ExcelTemplateService(db)
-        buffer = service.generate_template()
+    # 使用ExcelTemplateService生成模板
+    service = ExcelTemplateService(db)
+    buffer = service.generate_template()
 
-        # 返回文件流（避免重复读取buffer）
-        async def file_generator() -> AsyncGenerator[bytes, None]:
-            data = buffer.getvalue()
-            yield data
-            buffer.close()
+    # 返回文件流（避免重复读取buffer）
+    async def file_generator() -> AsyncGenerator[bytes, None]:
+        data = buffer.getvalue()
+        yield data
+        buffer.close()
 
-        return StreamingResponse(
-            file_generator(),
-            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={
-                "Content-Disposition": "attachment; filename=land_property_asset_template.xlsx"
-            },
-        )
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"生成模板失败: {str(e)}")
+    return StreamingResponse(
+        file_generator(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": "attachment; filename=land_property_asset_template.xlsx"
+        },
+    )
 
 
 @router.get("/test", summary="测试端点")
@@ -110,17 +106,14 @@ async def create_excel_config(
 
     - **config_in**: 配置信息
     """
-    try:
-        from ...crud.task import excel_task_config_crud
+    from ...crud.task import excel_task_config_crud
 
-        config = excel_task_config_crud.create(db=db, obj_in=config_in.model_dump())
-        return {
-            "message": "配置创建成功",
-            "config_id": config.id,
-            "config_name": config.config_name,
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"创建配置失败: {str(e)}")
+    config = excel_task_config_crud.create(db=db, obj_in=config_in.model_dump())
+    return {
+        "message": "配置创建成功",
+        "config_id": config.id,
+        "config_name": config.config_name,
+    }
 
 
 @router.get("/configs", summary="获取Excel配置列表")
@@ -136,15 +129,12 @@ async def get_excel_configs(
     - **config_type**: 按配置类型筛选
     - **task_type**: 按任务类型筛选
     """
-    try:
-        from ...crud.task import excel_task_config_crud
+    from ...crud.task import excel_task_config_crud
 
-        configs = excel_task_config_crud.get_multi(
-            db=db, limit=50, config_type=config_type, task_type=task_type
-        )
-        return {"items": configs, "total": len(configs)}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取配置失败: {str(e)}")
+    configs = excel_task_config_crud.get_multi(
+        db=db, limit=50, config_type=config_type, task_type=task_type
+    )
+    return {"items": configs, "total": len(configs)}
 
 
 @router.get("/configs/default", summary="获取默认Excel配置")
@@ -159,19 +149,14 @@ async def get_default_excel_config(
     - **config_type**: 配置类型
     - **task_type**: 任务类型
     """
-    try:
-        from ...crud.task import excel_task_config_crud
+    from ...crud.task import excel_task_config_crud
 
-        config = excel_task_config_crud.get_default(
-            db=db, config_type=config_type, task_type=task_type
-        )
-        if not config:
-            raise HTTPException(status_code=404, detail="未找到默认配置")
-        return config
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取默认配置失败: {str(e)}")
+    config = excel_task_config_crud.get_default(
+        db=db, config_type=config_type, task_type=task_type
+    )
+    if not config:
+        raise HTTPException(status_code=404, detail="未找到默认配置")
+    return config
 
 
 @router.get("/configs/{config_id}", summary="获取Excel配置详情")
@@ -181,17 +166,12 @@ async def get_excel_config(config_id: str, db: Session = Depends(get_db)) -> Any
 
     - **config_id**: 配置ID
     """
-    try:
-        from ...crud.task import excel_task_config_crud
+    from ...crud.task import excel_task_config_crud
 
-        config = excel_task_config_crud.get(db=db, id=config_id)
-        if not config:
-            raise HTTPException(status_code=404, detail="配置不存在")
-        return config
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取配置详情失败: {str(e)}")
+    config = excel_task_config_crud.get(db=db, id=config_id)
+    if not config:
+        raise HTTPException(status_code=404, detail="配置不存在")
+    return config
 
 
 @router.put("/configs/{config_id}", summary="更新Excel配置")
@@ -204,21 +184,16 @@ async def update_excel_config(
     - **config_id**: 配置ID
     - **config_in**: 更新数据
     """
-    try:
-        from ...crud.task import excel_task_config_crud
+    from ...crud.task import excel_task_config_crud
 
-        config = excel_task_config_crud.get(db=db, id=config_id)
-        if not config:
-            raise HTTPException(status_code=404, detail="配置不存在")
+    config = excel_task_config_crud.get(db=db, id=config_id)
+    if not config:
+        raise HTTPException(status_code=404, detail="配置不存在")
 
-        updated_config = excel_task_config_crud.update(
-            db=db, db_obj=config, obj_in=config_in
-        )
-        return {"message": "配置更新成功", "config_id": updated_config.id}
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"更新配置失败: {str(e)}")
+    updated_config = excel_task_config_crud.update(
+        db=db, db_obj=config, obj_in=config_in
+    )
+    return {"message": "配置更新成功", "config_id": updated_config.id}
 
 
 @router.delete("/configs/{config_id}", summary="删除Excel配置")
@@ -230,13 +205,10 @@ async def delete_excel_config(
 
     - **config_id**: 配置ID
     """
-    try:
-        from ...crud.task import excel_task_config_crud
+    from ...crud.task import excel_task_config_crud
 
-        excel_task_config_crud.remove(db=db, id=config_id)
-        return {"message": "配置删除成功"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"删除配置失败: {str(e)}")
+    excel_task_config_crud.remove(db=db, id=config_id)
+    return {"message": "配置删除成功"}
 
 
 # ===== Excel预览增强 =====
@@ -256,110 +228,102 @@ async def preview_excel_advanced(
     - **file**: Excel文件
     - **request**: 预览配置参数
     """
-    try:
-        # 安全验证文件
-        await security_middleware.validate_file_upload(
-            file,
-            allowed_types=[
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                "application/vnd.ms-excel",
-            ],
-            max_size=50 * 1024 * 1024,  # 50MB
-        )
+    # 安全验证文件
+    await security_middleware.validate_file_upload(
+        file,
+        allowed_types=[
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/vnd.ms-excel",
+        ],
+        max_size=50 * 1024 * 1024,  # 50MB
+    )
 
-        # 创建验证结果
-        validation_result = {
-            "hash": f"computed_hash_{file.filename}",
-            "validation_time": datetime.now(UTC).isoformat(),
-        }
+    # 创建验证结果
+    validation_result = {
+        "hash": f"computed_hash_{file.filename}",
+        "validation_time": datetime.now(UTC).isoformat(),
+    }
 
-        # 记录文件验证成功
-        security_auditor.log_security_event(
-            event_type="FILE_UPLOAD_VALIDATED",
-            message=f"Excel file validated successfully: {file.filename}",
-            details={
-                "filename": file.filename,
-                "size": file.size,
-                "hash": validation_result.get("hash"),
-                "validation_time": validation_result.get("validation_time"),
-            },
-        )
+    # 记录文件验证成功
+    security_auditor.log_security_event(
+        event_type="FILE_UPLOAD_VALIDATED",
+        message=f"Excel file validated successfully: {file.filename}",
+        details={
+            "filename": file.filename,
+            "size": file.size,
+            "hash": validation_result.get("hash"),
+            "validation_time": validation_result.get("validation_time"),
+        },
+    )
 
-        # 读取文件内容
-        content = await file.read()
+    # 读取文件内容
+    content = await file.read()
 
-        # 直接从内存读取Excel
-        df = pd.read_excel(io.BytesIO(content))
+    # 直接从内存读取Excel
+    df = pd.read_excel(io.BytesIO(content))
 
-        # 获取基本信息
-        total = len(df)
-        columns = df.columns.tolist()
+    # 获取基本信息
+    total = len(df)
+    columns = df.columns.tolist()
 
-        # 限制预览行数
-        preview_rows = min(request.max_rows, total)
-        preview_df = df.head(preview_rows)
+    # 限制预览行数
+    preview_rows = min(request.max_rows, total)
+    preview_df = df.head(preview_rows)
 
-        # 转换为字典格式，处理NaN值
-        preview_data: list[dict[str, Any]] = []
-        for _, row in preview_df.iterrows():
-            row_dict: dict[str, Any] = {}
-            for col in columns:
-                value = row[col]
-                # 处理NaN和None值
-                if pd.isna(value):
-                    row_dict[col] = None
-                else:
-                    row_dict[col] = (
-                        str(value)
-                        if not isinstance(value, (str, int, float))
-                        else value
-                    )
-            preview_data.append(row_dict)
-
-        # 检测字段映射（简化版本）
-        detected_mapping = []
-        field_mapping_rules = {
-            "物业名称": ["property_name", "物业名称", "资产名称"],
-            "地址": ["address", "物业地址", "地址", "位置"],
-            "确权状态": ["ownership_status", "确权状态", "权属状态"],
-            "物业性质": ["property_nature", "物业性质", "资产性质"],
-            "使用状态": ["usage_status", "使用状态", "状态"],
-            "权属方": ["ownership_entity", "权属方", "所有权人"],
-            "土地面积": ["land_area", "土地面积", "占地面积"],
-            "实际房产面积": ["actual_property_area", "实际房产面积", "建筑面积"],
-            "可出租面积": ["rentable_area", "可出租面积", "出租面积"],
-            "已出租面积": ["rented_area", "已出租面积", "已租面积"],
-        }
-
+    # 转换为字典格式，处理NaN值
+    preview_data: list[dict[str, Any]] = []
+    for _, row in preview_df.iterrows():
+        row_dict: dict[str, Any] = {}
         for col in columns:
-            for chinese_name, possible_names in field_mapping_rules.items():
-                if any(name.lower() in str(col).lower() for name in possible_names):
-                    detected_mapping.append(
-                        {
-                            "excel_column": col,
-                            "system_field": possible_names[0],
-                            "data_type": "string",
-                            "required": chinese_name in ["物业名称", "地址"],
-                            "confidence": 0.8,
-                        }
-                    )
-                    break
+            value = row[col]
+            # 处理NaN和None值
+            if pd.isna(value):
+                row_dict[col] = None
+            else:
+                row_dict[col] = (
+                    str(value)
+                    if not isinstance(value, (str, int, float))
+                    else value
+                )
+        preview_data.append(row_dict)
 
-        return ExcelPreviewResponse(
-            file_name=file.filename or "unknown.xlsx",
-            sheet_names=[f"Sheet{i + 1}" for i in range(1)],  # 简化处理
-            total_rows=total,
-            columns=columns,
-            preview_data=preview_data,
-            detected_field_mapping=None,  # Type mismatch: list[dict[...]] vs list[ExcelFieldMapping]
-        )
+    # 检测字段映射（简化版本）
+    detected_mapping = []
+    field_mapping_rules = {
+        "物业名称": ["property_name", "物业名称", "资产名称"],
+        "地址": ["address", "物业地址", "地址", "位置"],
+        "确权状态": ["ownership_status", "确权状态", "权属状态"],
+        "物业性质": ["property_nature", "物业性质", "资产性质"],
+        "使用状态": ["usage_status", "使用状态", "状态"],
+        "权属方": ["ownership_entity", "权属方", "所有权人"],
+        "土地面积": ["land_area", "土地面积", "占地面积"],
+        "实际房产面积": ["actual_property_area", "实际房产面积", "建筑面积"],
+        "可出租面积": ["rentable_area", "可出租面积", "出租面积"],
+        "已出租面积": ["rented_area", "已出租面积", "已租面积"],
+    }
 
-    except BusinessValidationError as e:
-        logger.error(f"Excel preview validation failed: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"Excel preview failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"预览Excel文件失败: {str(e)}")
+    for col in columns:
+        for chinese_name, possible_names in field_mapping_rules.items():
+            if any(name.lower() in str(col).lower() for name in possible_names):
+                detected_mapping.append(
+                    {
+                        "excel_column": col,
+                        "system_field": possible_names[0],
+                        "data_type": "string",
+                        "required": chinese_name in ["物业名称", "地址"],
+                        "confidence": 0.8,
+                    }
+                )
+                break
+
+    return ExcelPreviewResponse(
+        file_name=file.filename or "unknown.xlsx",
+        sheet_names=[f"Sheet{i + 1}" for i in range(1)],  # 简化处理
+        total_rows=total,
+        columns=columns,
+        preview_data=preview_data,
+        detected_field_mapping=None,  # Type mismatch: list[dict[...]] vs list[ExcelFieldMapping]
+    )
 
 
 @router.post("/preview", summary="预览Excel文件内容")
@@ -371,67 +335,59 @@ async def preview_excel(
     """
     预览Excel文件内容，用于导入前确认
     """
-    try:
-        # 安全验证文件
-        await security_middleware.validate_file_upload(
-            file,
-            allowed_types=[
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                "application/vnd.ms-excel",
-            ],
-            max_size=50 * 1024 * 1024,  # 50MB
-        )
+    # 安全验证文件
+    await security_middleware.validate_file_upload(
+        file,
+        allowed_types=[
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/vnd.ms-excel",
+        ],
+        max_size=50 * 1024 * 1024,  # 50MB
+    )
 
-        # 验证文件类型（额外检查）
-        if not file.filename or not file.filename.endswith((".xlsx", ".xls")):
-            raise BusinessValidationError("文件格式不支持，请上传Excel文件(.xlsx/.xls)")
+    # 验证文件类型（额外检查）
+    if not file.filename or not file.filename.endswith((".xlsx", ".xls")):
+        raise BusinessValidationError("文件格式不支持，请上传Excel文件(.xlsx/.xls)")
 
-        # 读取文件内容
-        content = await file.read()
+    # 读取文件内容
+    content = await file.read()
 
-        # 直接从内存读取Excel
-        df = pd.read_excel(io.BytesIO(content))
+    # 直接从内存读取Excel
+    df = pd.read_excel(io.BytesIO(content))
 
-        # 获取基本信息
-        total = len(df)
-        columns = df.columns.tolist()
+    # 获取基本信息
+    total = len(df)
+    columns = df.columns.tolist()
 
-        # 限制预览行数
-        preview_rows = min(max_rows, total)
-        preview_df = df.head(preview_rows)
+    # 限制预览行数
+    preview_rows = min(max_rows, total)
+    preview_df = df.head(preview_rows)
 
-        # 转换为字典格式，处理NaN值
-        preview_data: list[dict[str, Any]] = []
-        for _, row in preview_df.iterrows():
-            row_dict: dict[str, Any] = {}
-            for col in columns:
-                value = row[col]
-                # 处理NaN和None值
-                if pd.isna(value):
-                    row_dict[col] = None
-                else:
-                    row_dict[col] = (
-                        str(value)
-                        if not isinstance(value, (str, int, float))
-                        else value
-                    )
-            preview_data.append(row_dict)
+    # 转换为字典格式，处理NaN值
+    preview_data: list[dict[str, Any]] = []
+    for _, row in preview_df.iterrows():
+        row_dict: dict[str, Any] = {}
+        for col in columns:
+            value = row[col]
+            # 处理NaN和None值
+            if pd.isna(value):
+                row_dict[col] = None
+            else:
+                row_dict[col] = (
+                    str(value)
+                    if not isinstance(value, (str, int, float))
+                    else value
+                )
+        preview_data.append(row_dict)
 
-        return {
-            "message": "预览成功",
-            "filename": file.filename,
-            "total": total,
-            "preview_rows": preview_rows,
-            "columns": columns,
-            "data": preview_data,
-        }
-
-    except BusinessValidationError as e:
-        logger.error(f"Excel preview validation failed: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"Excel preview failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"预览Excel文件失败: {str(e)}")
+    return {
+        "message": "预览成功",
+        "filename": file.filename,
+        "total": total,
+        "preview_rows": preview_rows,
+        "columns": columns,
+        "data": preview_data,
+    }
 
 
 @router.post("/import", summary="导入Excel数据（同步）")
@@ -449,76 +405,62 @@ async def import_excel(
     - **skip_errors**: 是否跳过错误行继续导入
     - **sheet_name**: Excel工作表名称，默认为"{STANDARD_SHEET_NAME}"
     """
+    # 安全验证文件
+    validation_result = await security_middleware.validate_file_upload(
+        file,
+        allowed_types=[
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/vnd.ms-excel",
+        ],
+        max_size=100 * 1024 * 1024,  # 100MB for import
+    )
+
+    # 验证文件类型（额外检查）
+    if not file.filename or not file.filename.endswith((".xlsx", ".xls")):
+        raise BusinessValidationError("文件格式不支持，请上传Excel文件(.xlsx/.xls)")
+
+    # 记录导入操作开始
+    security_auditor.log_security_event(
+        event_type="EXCEL_IMPORT_STARTED",
+        message=f"Excel import started: {file.filename} (sheet: {sheet_name})",
+        details={
+            "filename": file.filename,
+            "size": file.size,
+            "sheet_name": sheet_name,
+            "skip_errors": skip_errors,
+        },
+    )
+
+    # 保存上传的文件到临时位置
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp_file:
+        # 写入上传的文件内容
+        content = await file.read()
+        tmp_file.write(content)
+        tmp_file_path = tmp_file.name
+
     try:
-        # 安全验证文件
-        validation_result = await security_middleware.validate_file_upload(
-            file,
-            allowed_types=[
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                "application/vnd.ms-excel",
-            ],
-            max_size=100 * 1024 * 1024,  # 100MB for import
+        # 使用ExcelImportService进行导入
+        import_service = ExcelImportService(db)
+
+        # 执行导入
+        result = await import_service.import_assets_from_excel(
+            file_path=tmp_file_path,
+            sheet_name=sheet_name,
+            skip_errors=skip_errors,
         )
 
-        # 验证文件类型（额外检查）
-        if not file.filename or not file.filename.endswith((".xlsx", ".xls")):
-            raise BusinessValidationError("文件格式不支持，请上传Excel文件(.xlsx/.xls)")
+        # 转换结果格式以匹配前端期望
+        return {
+            "message": "导入完成",
+            "total": result.get("total", 0),
+            "success": result.get("success", 0),
+            "failed": result.get("failed", 0),
+            "errors": result.get("errors", []),
+        }
 
-        # 记录导入操作开始
-        security_auditor.log_security_event(
-            event_type="EXCEL_IMPORT_STARTED",
-            message=f"Excel import started: {file.filename} (sheet: {sheet_name})",
-            details={
-                "filename": file.filename,
-                "size": file.size,
-                "sheet_name": sheet_name,
-                "skip_errors": skip_errors,
-            },
-        )
-
-        # 保存上传的文件到临时位置
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp_file:
-            # 写入上传的文件内容
-            content = await file.read()
-            tmp_file.write(content)
-            tmp_file_path = tmp_file.name
-
-        try:
-            # 使用ExcelImportService进行导入
-            import_service = ExcelImportService(db)
-
-            # 执行导入
-            result = await import_service.import_assets_from_excel(
-                file_path=tmp_file_path,
-                sheet_name=sheet_name,
-                skip_errors=skip_errors,
-            )
-
-            # 转换结果格式以匹配前端期望
-            return {
-                "message": "导入完成",
-                "total": result.get("total", 0),
-                "success": result.get("success", 0),
-                "failed": result.get("failed", 0),
-                "errors": result.get("errors", []),
-            }
-
-        finally:
-            # 清理临时文件
-            if os.path.exists(tmp_file_path):
-                os.unlink(tmp_file_path)
-
-    except BusinessValidationError as e:
-        logger.error(f"Excel import validation failed: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Excel import failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"导入失败: {str(e)}")
     finally:
         # 清理临时文件
-        if "tmp_file_path" in locals() and os.path.exists(tmp_file_path):
+        if os.path.exists(tmp_file_path):
             os.unlink(tmp_file_path)
 
 
@@ -536,75 +478,71 @@ async def import_excel_async(
     - **file**: Excel文件
     - **request**: 导入配置参数
     """
-    try:
-        # 安全验证文件
-        validation_result = await security_middleware.validate_file_upload(
-            file,
-            allowed_types=[
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                "application/vnd.ms-excel",
-            ],
-            max_size=100 * 1024 * 1024,  # 100MB for import
-        )
+    # 安全验证文件
+    validation_result = await security_middleware.validate_file_upload(
+        file,
+        allowed_types=[
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/vnd.ms-excel",
+        ],
+        max_size=100 * 1024 * 1024,  # 100MB for import
+    )
 
-        # 验证文件类型（额外检查）
-        if not file.filename or not file.filename.endswith((".xlsx", ".xls")):
-            raise BusinessValidationError("文件格式不支持，请上传Excel文件(.xlsx/.xls)")
+    # 验证文件类型（额外检查）
+    if not file.filename or not file.filename.endswith((".xlsx", ".xls")):
+        raise BusinessValidationError("文件格式不支持，请上传Excel文件(.xlsx/.xls)")
 
-        # 记录异步导入操作开始
-        security_auditor.log_security_event(
-            event_type="EXCEL_ASYNC_IMPORT_STARTED",
-            message=f"Async Excel import started: {file.filename}",
-            details={
-                "filename": file.filename,
-                "size": file.size,
-                "request_config": request.model_dump(),
-                "validation_hash": validation_result.get("hash"),
-            },
-        )
-        # 创建导入任务
-        task_in = TaskCreate(
-            task_type=TaskType.EXCEL_IMPORT,
-            title=f"Excel导入任务 - {file.filename}",
-            description=f"异步导入Excel文件: {file.filename}",
-            parameters={
-                "filename": file.filename,
-                "sheet_name": STANDARD_SHEET_NAME,
-                "validate_data": request.validate_data,
-                "create_assets": request.create_assets,
-                "update_existing": request.update_existing,
-                "skip_errors": request.skip_errors,
-                "batch_size": request.batch_size,
-            },
-            config={"config_id": request.config_id} if request.config_id else None,
-        )
+    # 记录异步导入操作开始
+    security_auditor.log_security_event(
+        event_type="EXCEL_ASYNC_IMPORT_STARTED",
+        message=f"Async Excel import started: {file.filename}",
+        details={
+            "filename": file.filename,
+            "size": file.size,
+            "request_config": request.model_dump(),
+            "validation_hash": validation_result.get("hash"),
+        },
+    )
+    # 创建导入任务
+    task_in = TaskCreate(
+        task_type=TaskType.EXCEL_IMPORT,
+        title=f"Excel导入任务 - {file.filename}",
+        description=f"异步导入Excel文件: {file.filename}",
+        parameters={
+            "filename": file.filename,
+            "sheet_name": STANDARD_SHEET_NAME,
+            "validate_data": request.validate_data,
+            "create_assets": request.create_assets,
+            "update_existing": request.update_existing,
+            "skip_errors": request.skip_errors,
+            "batch_size": request.batch_size,
+        },
+        config={"config_id": request.config_id} if request.config_id else None,
+    )
 
-        task = task_crud.create(db=db, obj_in=task_in)
+    task = task_crud.create(db=db, obj_in=task_in)
 
-        # 保存上传文件到临时位置
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp_file:
-            content = await file.read()
-            tmp_file.write(content)
-            tmp_file_path = tmp_file.name
+    # 保存上传文件到临时位置
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp_file:
+        content = await file.read()
+        tmp_file.write(content)
+        tmp_file_path = tmp_file.name
 
-        # 添加后台任务
-        background_tasks.add_task(
-            _process_excel_import_async,
-            task_id=str(task.id),
-            file_path=tmp_file_path,
-            request=request,
-            db_session=db,
-        )
+    # 添加后台任务
+    background_tasks.add_task(
+        _process_excel_import_async,
+        task_id=str(task.id),
+        file_path=tmp_file_path,
+        request=request,
+        db_session=db,
+    )
 
-        return {
-            "message": "导入任务已创建",
-            "task_id": task.id,
-            "status": task.status,
-            "estimated_time": "预计需要2-5分钟，请使用task_id查询进度",
-        }
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"创建导入任务失败: {str(e)}")
+    return {
+        "message": "导入任务已创建",
+        "task_id": task.id,
+        "status": task.status,
+        "estimated_time": "预计需要2-5分钟，请使用task_id查询进度",
+    }
 
 
 async def _process_excel_import_async(
@@ -710,40 +648,34 @@ async def export_excel(
 
     支持按条件筛选导出
     """
-    try:
-        # 构建筛选条件
-        filters: dict[str, Any] = {}
-        if ownership_status:
-            filters["ownership_status"] = ownership_status
-        if property_nature:
-            filters["property_nature"] = property_nature
-        if usage_status:
-            filters["usage_status"] = usage_status
+    # 构建筛选条件
+    filters: dict[str, Any] = {}
+    if ownership_status:
+        filters["ownership_status"] = ownership_status
+    if property_nature:
+        filters["property_nature"] = property_nature
+    if usage_status:
+        filters["usage_status"] = usage_status
 
-        # 使用ExcelExportService进行导出
-        service = ExcelExportService(db)
-        buffer = service.export_assets_to_excel(
-            filters=filters,
-            search=search,
-            limit=1000,
-        )
+    # 使用ExcelExportService进行导出
+    service = ExcelExportService(db)
+    buffer = service.export_assets_to_excel(
+        filters=filters,
+        search=search,
+        limit=1000,
+    )
 
-        # 返回文件流（避免重复读取buffer）
-        async def file_generator() -> AsyncGenerator[bytes, None]:
-            data = buffer.getvalue()
-            yield data
-            buffer.close()
+    # 返回文件流（避免重复读取buffer）
+    async def file_generator() -> AsyncGenerator[bytes, None]:
+        data = buffer.getvalue()
+        yield data
+        buffer.close()
 
-        return StreamingResponse(
-            file_generator(),
-            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": "attachment; filename=assets_export.xlsx"},
-        )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"导出失败: {str(e)}")
+    return StreamingResponse(
+        file_generator(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=assets_export.xlsx"},
+    )
 
 
 @router.post("/export/async", summary="异步导出Excel文件")
@@ -758,42 +690,38 @@ async def export_excel_async(
 
     - **request**: 导出配置参数
     """
-    try:
-        # 创建导出任务
-        task_in = TaskCreate(
-            task_type=TaskType.EXCEL_EXPORT,
-            title="Excel导出任务",
-            description="异步导出资产数据为Excel文件",
-            parameters={
-                "filters": request.filters or {},
-                "fields": request.fields or [],
-                "export_format": request.export_format,
-                "sheet_name": request.sheet_name or STANDARD_SHEET_NAME,
-                "include_headers": request.include_headers,
-                "date_format": request.date_format,
-            },
-            config={"config_id": request.config_id} if request.config_id else None,
-        )
+    # 创建导出任务
+    task_in = TaskCreate(
+        task_type=TaskType.EXCEL_EXPORT,
+        title="Excel导出任务",
+        description="异步导出资产数据为Excel文件",
+        parameters={
+            "filters": request.filters or {},
+            "fields": request.fields or [],
+            "export_format": request.export_format,
+            "sheet_name": request.sheet_name or STANDARD_SHEET_NAME,
+            "include_headers": request.include_headers,
+            "date_format": request.date_format,
+        },
+        config={"config_id": request.config_id} if request.config_id else None,
+    )
 
-        task = task_crud.create(db=db, obj_in=task_in)
+    task = task_crud.create(db=db, obj_in=task_in)
 
-        # 添加后台任务
-        background_tasks.add_task(
-            _process_excel_export_async,
-            task_id=str(task.id),
-            request=request,
-            db_session=db,
-        )
+    # 添加后台任务
+    background_tasks.add_task(
+        _process_excel_export_async,
+        task_id=str(task.id),
+        request=request,
+        db_session=db,
+    )
 
-        return {
-            "message": "导出任务已创建",
-            "task_id": task.id,
-            "status": task.status,
-            "estimated_time": "预计需要1-3分钟，请使用task_id查询进度",
-        }
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"创建导出任务失败: {str(e)}")
+    return {
+        "message": "导出任务已创建",
+        "task_id": task.id,
+        "status": task.status,
+        "estimated_time": "预计需要1-3分钟，请使用task_id查询进度",
+    }
 
 
 async def _process_excel_export_async(
@@ -892,42 +820,36 @@ async def download_export_file(
     """
     下载异步导出的文件
     """
-    try:
-        # 获取任务信息
-        task = task_crud.get(db=db, id=task_id)
-        if not task:
-            raise HTTPException(status_code=404, detail="任务不存在")
+    # 获取任务信息
+    task = task_crud.get(db=db, id=task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="任务不存在")
 
-        if task.status != TaskStatus.COMPLETED:
-            raise HTTPException(status_code=400, detail="任务尚未完成")
+    if task.status != TaskStatus.COMPLETED:
+        raise HTTPException(status_code=400, detail="任务尚未完成")
 
-        # 获取文件信息
-        result_data_raw = task.result_data if task.result_data else {}
-        result_data: dict[str, Any] = (
-            result_data_raw if isinstance(result_data_raw, dict) else {}
-        )
-        file_path = result_data.get("file_path")
-        file_name = result_data.get("file_name", f"export_{task_id}.xlsx")
+    # 获取文件信息
+    result_data_raw = task.result_data if task.result_data else {}
+    result_data: dict[str, Any] = (
+        result_data_raw if isinstance(result_data_raw, dict) else {}
+    )
+    file_path = result_data.get("file_path")
+    file_name = result_data.get("file_name", f"export_{task_id}.xlsx")
 
-        if not file_path or not os.path.exists(file_path):
-            raise HTTPException(status_code=404, detail="导出文件不存在")
+    if not file_path or not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="导出文件不存在")
 
-        # 返回文件流
-        def file_iter() -> Generator[bytes, None, None]:
-            with open(file_path, "rb") as f:
-                while chunk := f.read(8192):
-                    yield chunk
+    # 返回文件流
+    def file_iter() -> Generator[bytes, None, None]:
+        with open(file_path, "rb") as f:
+            while chunk := f.read(8192):
+                yield chunk
 
-        return StreamingResponse(
-            file_iter(),
-            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": f"attachment; filename={file_name}"},
-        )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"下载文件失败: {str(e)}")
+    return StreamingResponse(
+        file_iter(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={file_name}"},
+    )
 
 
 @router.get(
@@ -941,43 +863,37 @@ async def get_excel_task_status(
 
     - **task_id**: 任务ID
     """
-    try:
-        task = task_crud.get(db=db, id=task_id)
-        if not task:
-            raise HTTPException(status_code=404, detail="任务不存在")
+    task = task_crud.get(db=db, id=task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="任务不存在")
 
-        # Extract values from Column objects - use getattr to get actual values
-        task_id_val = str(getattr(task, "id", ""))
-        status_val = str(getattr(task, "status", ""))
-        progress_val = int(getattr(task, "progress", 0)) or 0
-        total_items_val = getattr(task, "total_items", None)
-        total_items_final = (
-            int(total_items_val) if total_items_val is not None else None
-        )
-        processed_items_val = int(getattr(task, "processed_items", 0)) or 0
-        error_message_val = getattr(task, "error_message", None)
-        created_at_val = getattr(task, "created_at")
-        started_at_val = getattr(task, "started_at")
-        completed_at_val = getattr(task, "completed_at")
+    # Extract values from Column objects - use getattr to get actual values
+    task_id_val = str(getattr(task, "id", ""))
+    status_val = str(getattr(task, "status", ""))
+    progress_val = int(getattr(task, "progress", 0)) or 0
+    total_items_val = getattr(task, "total_items", None)
+    total_items_final = (
+        int(total_items_val) if total_items_val is not None else None
+    )
+    processed_items_val = int(getattr(task, "processed_items", 0)) or 0
+    error_message_val = getattr(task, "error_message", None)
+    created_at_val = getattr(task, "created_at")
+    started_at_val = getattr(task, "started_at")
+    completed_at_val = getattr(task, "completed_at")
 
-        return ExcelStatusResponse(
-            task_id=task_id_val,
-            status=status_val,
-            progress=progress_val,
-            total_items=total_items_final,
-            processed_items=processed_items_val,
-            error_message=str(error_message_val)
-            if error_message_val is not None
-            else None,
-            created_at=created_at_val,
-            started_at=started_at_val,
-            completed_at=completed_at_val,
-        )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取任务状态失败: {str(e)}")
+    return ExcelStatusResponse(
+        task_id=task_id_val,
+        status=status_val,
+        progress=progress_val,
+        total_items=total_items_final,
+        processed_items=processed_items_val,
+        error_message=str(error_message_val)
+        if error_message_val is not None
+        else None,
+        created_at=created_at_val,
+        started_at=started_at_val,
+        completed_at=completed_at_val,
+    )
 
 
 @router.get("/history", summary="获取Excel操作历史")
@@ -996,51 +912,47 @@ async def get_excel_history(
     - **limit**: 返回数量
     - **skip**: 跳过数量
     """
-    try:
-        tasks = task_crud.get_multi(
-            db=db,
-            skip=skip,
-            limit=limit,
-            task_type=task_type,
-            status=status,
-            order_by="created_at",
-            order_dir="desc",
+    tasks = task_crud.get_multi(
+        db=db,
+        skip=skip,
+        limit=limit,
+        task_type=task_type,
+        status=status,
+        order_by="created_at",
+        order_dir="desc",
+    )
+
+    # 转换为响应格式
+    history_items: list[dict[str, Any]] = []
+    for task in tasks:
+        result_data_raw = task.result_data if task.result_data else {}
+        result_data: dict[str, Any] = (
+            result_data_raw if isinstance(result_data_raw, dict) else {}
+        )
+        history_items.append(
+            {
+                "task_id": task.id,
+                "task_type": task.task_type,
+                "title": task.title,
+                "status": task.status,
+                "progress": task.progress or 0,
+                "created_at": task.created_at,
+                "completed_at": task.completed_at,
+                "result_summary": {
+                    "total": result_data.get("total", 0),
+                    "success": result_data.get("success", 0),
+                    "failed": result_data.get("failed", 0),
+                    "record_count": result_data.get("record_count", 0),
+                },
+            }
         )
 
-        # 转换为响应格式
-        history_items: list[dict[str, Any]] = []
-        for task in tasks:
-            result_data_raw = task.result_data if task.result_data else {}
-            result_data: dict[str, Any] = (
-                result_data_raw if isinstance(result_data_raw, dict) else {}
-            )
-            history_items.append(
-                {
-                    "task_id": task.id,
-                    "task_type": task.task_type,
-                    "title": task.title,
-                    "status": task.status,
-                    "progress": task.progress or 0,
-                    "created_at": task.created_at,
-                    "completed_at": task.completed_at,
-                    "result_summary": {
-                        "total": result_data.get("total", 0),
-                        "success": result_data.get("success", 0),
-                        "failed": result_data.get("failed", 0),
-                        "record_count": result_data.get("record_count", 0),
-                    },
-                }
-            )
-
-        return {
-            "items": history_items,
-            "total": len(history_items),
-            "skip": skip,
-            "limit": limit,
-        }
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取历史记录失败: {str(e)}")
+    return {
+        "items": history_items,
+        "total": len(history_items),
+        "skip": skip,
+        "limit": limit,
+    }
 
 
 @router.post("/export", summary="导出选中资产Excel文件")
@@ -1059,45 +971,39 @@ async def export_selected_assets(
 
     支持按条件筛选导出和指定资产ID导出
     """
-    try:
-        # 构建筛选条件
-        filters: dict[str, Any] = {}
-        if ownership_status:
-            filters["ownership_status"] = ownership_status
-        if property_nature:
-            filters["property_nature"] = property_nature
-        if usage_status:
-            filters["usage_status"] = usage_status
+    # 构建筛选条件
+    filters: dict[str, Any] = {}
+    if ownership_status:
+        filters["ownership_status"] = ownership_status
+    if property_nature:
+        filters["property_nature"] = property_nature
+    if usage_status:
+        filters["usage_status"] = usage_status
 
-        # 使用ExcelExportService进行导出
-        service = ExcelExportService(db)
-        buffer = service.export_assets_to_excel(
-            filters=filters,
-            search=search,
-            asset_ids=asset_ids,
-            limit=1000,
-        )
+    # 使用ExcelExportService进行导出
+    service = ExcelExportService(db)
+    buffer = service.export_assets_to_excel(
+        filters=filters,
+        search=search,
+        asset_ids=asset_ids,
+        limit=1000,
+    )
 
-        # 根据导出类型确定文件名
-        filename = (
-            "selected_assets_export.xlsx"
-            if asset_ids
-            else "filtered_assets_export.xlsx"
-        )
+    # 根据导出类型确定文件名
+    filename = (
+        "selected_assets_export.xlsx"
+        if asset_ids
+        else "filtered_assets_export.xlsx"
+    )
 
-        # 返回文件流（避免重复读取buffer）
-        async def file_generator() -> AsyncGenerator[bytes, None]:
-            data = buffer.getvalue()
-            yield data
-            buffer.close()
+    # 返回文件流（避免重复读取buffer）
+    async def file_generator() -> AsyncGenerator[bytes, None]:
+        data = buffer.getvalue()
+        yield data
+        buffer.close()
 
-        return StreamingResponse(
-            file_generator(),
-            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": f"attachment; filename={filename}"},
-        )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"导出选中资产失败: {str(e)}")
+    return StreamingResponse(
+        file_generator(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
