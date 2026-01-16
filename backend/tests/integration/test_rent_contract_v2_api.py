@@ -180,9 +180,9 @@ class TestContractV2Validation:
 
     def test_entrusted_contract_requires_service_fee_rate(self):
         """Entrusted contract should have service_fee_rate"""
-        from src.schemas.rent_contract import RentContractCreate
+        from src.schemas.rent_contract import RentContractCreate, RentTermCreate
 
-        # Valid entrusted contract
+        # Valid entrusted contract with rent_terms
         valid_data = {
             "contract_number": "EN001",
             "contract_type": "entrusted",
@@ -192,13 +192,20 @@ class TestContractV2Validation:
             "sign_date": date(2026, 1, 1),
             "start_date": date(2026, 1, 1),
             "end_date": date(2026, 12, 31),
+            "rent_terms": [
+                RentTermCreate(
+                    start_date=date(2026, 1, 1),
+                    end_date=date(2026, 12, 31),
+                    monthly_rent=5000.0,
+                )
+            ],
         }
         contract = RentContractCreate(**valid_data)
         assert contract.service_fee_rate == Decimal("0.05")
 
     def test_downstream_contract_allows_tenant_usage(self):
         """Downstream contract should accept tenant_usage field"""
-        from src.schemas.rent_contract import RentContractCreate
+        from src.schemas.rent_contract import RentContractCreate, RentTermCreate
 
         data = {
             "contract_number": "DN001",
@@ -209,13 +216,20 @@ class TestContractV2Validation:
             "sign_date": date(2026, 1, 1),
             "start_date": date(2026, 1, 1),
             "end_date": date(2026, 12, 31),
+            "rent_terms": [
+                RentTermCreate(
+                    start_date=date(2026, 1, 1),
+                    end_date=date(2026, 12, 31),
+                    monthly_rent=5000.0,
+                )
+            ],
         }
         contract = RentContractCreate(**data)
         assert contract.tenant_usage == "餐饮用途"
 
     def test_payment_cycle_validation(self):
         """Payment cycle should accept valid enum values"""
-        from src.schemas.rent_contract import RentContractCreate
+        from src.schemas.rent_contract import RentContractCreate, RentTermCreate
 
         for cycle in ["monthly", "quarterly", "semi_annual", "annual"]:
             data = {
@@ -227,6 +241,13 @@ class TestContractV2Validation:
                 "start_date": date(2026, 1, 1),
                 "end_date": date(2026, 12, 31),
                 "payment_cycle": cycle,
+                "rent_terms": [
+                    RentTermCreate(
+                        start_date=date(2026, 1, 1),
+                        end_date=date(2026, 12, 31),
+                        monthly_rent=5000.0,
+                    )
+                ],
             }
             contract = RentContractCreate(**data)
             assert contract.payment_cycle == cycle
