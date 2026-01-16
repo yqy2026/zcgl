@@ -37,3 +37,13 @@ def normal_user():
     mock_user.role = "user"
     mock_user.is_active = True
     return mock_user
+
+
+@pytest.fixture
+def unauthenticated_client():
+    """Create a test client without authentication for testing unauthorized access"""
+    from fastapi.testclient import TestClient
+    from src.main import app
+
+    # Return client without auth headers
+    return TestClient(app)
