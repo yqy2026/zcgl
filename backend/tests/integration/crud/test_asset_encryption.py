@@ -74,14 +74,14 @@ class TestAssetCRUDEncryption:
     """测试 AssetCRUD 的加密功能"""
 
     def test_create_encrypts_pii_fields(
-        self, db: Session, asset_crud_with_encryption: AssetCRUD, sample_asset_data: dict
+        self, db_session: Session, asset_crud_with_encryption: AssetCRUD, sample_asset_data: dict
     ):
         """测试创建资产时加密PII字段"""
         # 创建资产
-        asset = asset_crud_with_encryption.create(db=db, obj_in=sample_asset_data)
+        asset = asset_crud_with_encryption.create(db=db_session, obj_in=sample_asset_data)
 
         # 从数据库直接查询（绕过 CRUD 解密）
-        db_asset = db.query(Asset).filter(Asset.id == asset.id).first()
+        db_asset = db_session.query(Asset).filter(Asset.id == asset.id).first()
 
         # PII字段应该在数据库中是加密格式
         assert db_asset.tenant_name.startswith("enc:v1:")
@@ -93,14 +93,14 @@ class TestAssetCRUDEncryption:
         assert db_asset.property_name == "测试物业A"
 
     def test_get_decrypts_pii_fields(
-        self, db: Session, asset_crud_with_encryption: AssetCRUD, sample_asset_data: dict
+        self, db_session: Session, asset_crud_with_encryption: AssetCRUD, sample_asset_data: dict
     ):
         """测试获取资产时解密PII字段"""
         # 创建资产
-        created = asset_crud_with_encryption.create(db=db, obj_in=sample_asset_data)
+        created = asset_crud_with_encryption.create(db=db_session, obj_in=sample_asset_data)
 
         # 获取资产
-        asset = asset_crud_with_encryption.get(db=db, id=created.id)
+        asset = asset_crud_with_encryption.get(db=db_session, id=created.id)
 
         # PII字段应该被解密为明文
         assert asset.tenant_name == "张三公司"
@@ -109,7 +109,7 @@ class TestAssetCRUDEncryption:
         assert asset.manager_name == "王经理"
 
     def test_get_multi_decrypts_all_records(
-        self, db: Session, asset_crud_with_encryption: AssetCRUD, sample_asset_data: dict
+        self, db_session: Session, asset_crud_with_encryption: AssetCRUD, sample_asset_data: dict
     ):
         """测试获取多个资产时解密所有记录"""
         # 创建多个资产
@@ -117,10 +117,10 @@ class TestAssetCRUDEncryption:
             data = sample_asset_data.copy()
             data["property_name"] = f"测试物业{i}"
             data["tenant_name"] = f"租户{i}"
-            asset_crud_with_encryption.create(db=db, obj_in=data)
+            asset_crud_with_encryption.create(db=db_session, obj_in=data)
 
         # 获取所有资产
-        assets = asset_crud_with_encryption.get_multi(db=db, limit=10)
+        assets = asset_crud_with_encryption.get_multi(db=db_session, limit=10)
 
         # 所有记录的PII字段都应该被解密
         assert len(assets) >= 3
@@ -129,44 +129,44 @@ class TestAssetCRUDEncryption:
             assert not asset.ownership_entity.startswith("enc:v1:")
 
     def test_update_encrypts_new_pii_values(
-        self, db: Session, asset_crud_with_encryption: AssetCRUD, sample_asset_data: dict
+        self, db_session: Session, asset_crud_with_encryption: AssetCRUD, sample_asset_data: dict
     ):
         """测试更新资产时加密新的PII值"""
         # 创建资产
-        created = asset_crud_with_encryption.create(db=db, obj_in=sample_asset_data)
+        created = asset_crud_with_encryption.create(db=db_session, obj_in=sample_asset_data)
 
         # 更新PII字段
         update_data = AssetUpdate(
             tenant_name="新租户公司", ownership_entity="新权属方"
         )
         updated = asset_crud_with_encryption.update(
-            db=db, db_obj=created, obj_in=update_data
+            db=db_session, db_obj=created, obj_in=update_data
         )
 
         # 从数据库直接查询（绕过 CRUD 解密）
-        db_asset = db.query(Asset).filter(Asset.id == updated.id).first()
+        db_asset = db_session.query(Asset).filter(Asset.id == updated.id).first()
 
         # 更新的字段应该是加密格式
         assert db_asset.tenant_name.startswith("enc:v1:")
         assert db_asset.ownership_entity.startswith("enc:v1:")
 
         # 通过 CRUD 获取应该是明文
-        asset = asset_crud_with_encryption.get(db=db, id=updated.id)
+        asset = asset_crud_with_encryption.get(db=db_session, id=updated.id)
         assert asset.tenant_name == "新租户公司"
         assert asset.ownership_entity == "新权属方"
 
     def test_update_preserves_non_pii_fields(
-        self, db: Session, asset_crud_with_encryption: AssetCRUD, sample_asset_data: dict
+        self, db_session: Session, asset_crud_with_encryption: AssetCRUD, sample_asset_data: dict
     ):
         """测试更新非PII字段不受影响"""
         # 创建资产
-        created = asset_crud_with_encryption.create(db=db, obj_in=sample_asset_data)
+        created = asset_crud_with_encryption.create(db=db_session, obj_in=sample_asset_data)
 
         # 更新非PII字段
         original_tenant = created.tenant_name  # 已加密
         update_data = AssetUpdate(business_category="办公")
         updated = asset_crud_with_encryption.update(
-            db=db, db_obj=created, obj_in=update_data
+            db=db_session, db_obj=created, obj_in=update_data
         )
 
         # PII字段应该保持不变
@@ -183,7 +183,7 @@ class TestSearchEncryptedFields:
     """测试搜索加密字段的功能"""
 
     def test_search_on_encrypted_field(
-        self, db: Session, asset_crud_with_encryption: AssetCRUD, sample_asset_data: dict
+        self, db_session: Session, asset_crud_with_encryption: AssetCRUD, sample_asset_data: dict
     ):
         """测试搜索加密的PII字段"""
         # 创建多个资产
@@ -191,13 +191,13 @@ class TestSearchEncryptedFields:
             data = sample_asset_data.copy()
             data["property_name"] = f"物业{i}"
             data["tenant_name"] = f"搜索测试公司{i}" if i < 2 else f"其他公司{i}"
-            asset_crud_with_encryption.create(db=db, obj_in=data)
+            asset_crud_with_encryption.create(db=db_session, obj_in=data)
 
         # 搜索 tenant_name（加密字段）
         # 注意：当前实现中，QueryBuilder 可能不支持直接搜索加密字段
         # 这里测试至少不会崩溃，且返回解密后的结果
         assets, total = asset_crud_with_encryption.get_multi_with_search(
-            db=db, search="搜索测试公司", skip=0, limit=10
+            db=db_session, search="搜索测试公司", skip=0, limit=10
         )
 
         # 结果应该被解密
@@ -214,14 +214,14 @@ class TestGracefulDegradation:
     """测试密钥缺失时的优雅降级"""
 
     def test_create_without_key_stores_plaintext(
-        self, db: Session, asset_crud_no_encryption: AssetCRUD, sample_asset_data: dict
+        self, db_session: Session, asset_crud_no_encryption: AssetCRUD, sample_asset_data: dict
     ):
         """测试密钥缺失时创建资产存储明文"""
         # 创建资产
-        asset = asset_crud_no_encryption.create(db=db, obj_in=sample_asset_data)
+        asset = asset_crud_no_encryption.create(db=db_session, obj_in=sample_asset_data)
 
         # 从数据库直接查询
-        db_asset = db.query(Asset).filter(Asset.id == asset.id).first()
+        db_asset = db_session.query(Asset).filter(Asset.id == asset.id).first()
 
         # 所有字段都应该是明文
         assert db_asset.tenant_name == "张三公司"
@@ -229,14 +229,14 @@ class TestGracefulDegradation:
         assert db_asset.address == "北京市朝阳区某某街道123号"
 
     def test_get_without_key_returns_plaintext(
-        self, db: Session, asset_crud_no_encryption: AssetCRUD, sample_asset_data: dict
+        self, db_session: Session, asset_crud_no_encryption: AssetCRUD, sample_asset_data: dict
     ):
         """测试密钥缺失时获取资产返回明文"""
         # 创建资产（存储为明文）
-        asset = asset_crud_no_encryption.create(db=db, obj_in=sample_asset_data)
+        asset = asset_crud_no_encryption.create(db=db_session, obj_in=sample_asset_data)
 
         # 获取资产
-        result = asset_crud_no_encryption.get(db=db, id=asset.id)
+        result = asset_crud_no_encryption.get(db=db_session, id=asset.id)
 
         # 应该返回明文
         assert result.tenant_name == "张三公司"
@@ -244,22 +244,22 @@ class TestGracefulDegradation:
 
     def test_mixed_encrypted_plaintext_data(
         self,
-        db: Session,
+        db_session: Session,
         asset_crud_with_encryption: AssetCRUD,
         asset_crud_no_encryption: AssetCRUD,
         sample_asset_data: dict,
     ):
         """测试混合加密和明文数据（加密前已存在的记录）"""
         # 先用无加密创建一条记录（模拟旧数据）
-        old_asset = asset_crud_no_encryption.create(db=db, obj_in=sample_asset_data)
+        old_asset = asset_crud_no_encryption.create(db=db_session, obj_in=sample_asset_data)
 
         # 再用加密创建一条记录
         data2 = sample_asset_data.copy()
         data2["property_name"] = "新物业"
-        new_asset = asset_crud_with_encryption.create(db=db, obj_in=data2)
+        new_asset = asset_crud_with_encryption.create(db=db_session, obj_in=data2)
 
         # 通过加密CRUD获取所有记录
-        assets = asset_crud_with_encryption.get_multi(db=db, limit=10)
+        assets = asset_crud_with_encryption.get_multi(db=db_session, limit=10)
 
         # 应该能同时处理加密和明文数据
         assert len(assets) >= 2
@@ -284,7 +284,7 @@ class TestConcurrentAccess:
     """测试并发访问时的加密功能"""
 
     def test_concurrent_creates(
-        self, db: Session, asset_crud_with_encryption: AssetCRUD, sample_asset_data: dict
+        self, db_session: Session, asset_crud_with_encryption: AssetCRUD, sample_asset_data: dict
     ):
         """测试并发创建加密资产"""
         import threading
@@ -297,7 +297,7 @@ class TestConcurrentAccess:
                 data = sample_asset_data.copy()
                 data["property_name"] = f"并发测试{index}"
                 data["tenant_name"] = f"租户{index}"
-                asset = asset_crud_with_encryption.create(db=db, obj_in=data)
+                asset = asset_crud_with_encryption.create(db=db_session, obj_in=data)
                 results.append(asset.id)
             except Exception as e:
                 errors.append(e)
@@ -319,7 +319,7 @@ class TestConcurrentAccess:
 
         # 验证所有记录都正确加密
         for asset_id in results:
-            db_asset = db.query(Asset).filter(Asset.id == asset_id).first()
+            db_asset = db_session.query(Asset).filter(Asset.id == asset_id).first()
             assert db_asset.tenant_name.startswith("enc:v1:")
 
 
@@ -330,13 +330,13 @@ class TestEncryptionFormat:
     """验证加密数据格式"""
 
     def test_deterministic_encryption_format(
-        self, db: Session, asset_crud_with_encryption: AssetCRUD, sample_asset_data: dict
+        self, db_session: Session, asset_crud_with_encryption: AssetCRUD, sample_asset_data: dict
     ):
         """测试确定性加密格式（可搜索字段）"""
-        asset = asset_crud_with_encryption.create(db=db, obj_in=sample_asset_data)
+        asset = asset_crud_with_encryption.create(db=db_session, obj_in=sample_asset_data)
 
         # 从数据库查询
-        db_asset = db.query(Asset).filter(Asset.id == asset.id).first()
+        db_asset = db_session.query(Asset).filter(Asset.id == asset.id).first()
 
         # 可搜索字段应该是确定性加密（相同明文 → 相同密文）
         # 格式: enc:v1:base64(ciphertext)
@@ -351,13 +351,13 @@ class TestEncryptionFormat:
             assert parts[1] == "v1"
 
     def test_standard_encryption_format(
-        self, db: Session, asset_crud_with_encryption: AssetCRUD, sample_asset_data: dict
+        self, db_session: Session, asset_crud_with_encryption: AssetCRUD, sample_asset_data: dict
     ):
         """测试标准加密格式（非搜索字段）"""
-        asset = asset_crud_with_encryption.create(db=db, obj_in=sample_asset_data)
+        asset = asset_crud_with_encryption.create(db=db_session, obj_in=sample_asset_data)
 
         # 从数据库查询
-        db_asset = db.query(Asset).filter(Asset.id == asset.id).first()
+        db_asset = db_session.query(Asset).filter(Asset.id == asset.id).first()
 
         # 非搜索字段应该是标准加密（随机nonce）
         # 格式: enc:v1:base64(nonce):base64(ciphertext)
