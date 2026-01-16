@@ -5,6 +5,7 @@ Configuration Security Tests - Verify security requirements for SECRET_KEY and o
 """
 
 import os
+
 import pytest
 from pydantic import ValidationError
 
@@ -95,7 +96,6 @@ class TestSecretKeySecurity:
 
     def test_weak_key_warning_in_development(self):
         """测试开发环境弱密钥被接受但可能发出警告"""
-        import logging
 
         original_key = os.environ.get("SECRET_KEY")
         original_env = os.environ.get("ENVIRONMENT")

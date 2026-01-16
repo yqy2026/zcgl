@@ -11,7 +11,7 @@ This test module covers Excel import/export functionality:
 """
 
 from io import BytesIO
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -306,6 +306,5 @@ def mock_excel_file():
 @pytest.fixture
 def unauthenticated_client():
     """Fixture providing unauthenticated client for testing"""
-    from fastapi.testclient import TestClient
     from src.main import app
     return TestClient(app)

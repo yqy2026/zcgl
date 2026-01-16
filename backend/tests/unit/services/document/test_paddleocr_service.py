@@ -10,7 +10,10 @@ import pytest
 # Try to import the optional paddleocr_service module
 # If it doesn't exist, skip all tests in this file
 try:
-    from src.services.document.paddleocr_service import PADDLEOCR_AVAILABLE, PaddleOCRService
+    from src.services.document.paddleocr_service import (
+        PADDLEOCR_AVAILABLE,
+        PaddleOCRService,
+    )
     _paddleocr_exists = True
 except (ImportError, ModuleNotFoundError):
     _paddleocr_exists = False

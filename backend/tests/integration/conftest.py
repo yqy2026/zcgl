@@ -8,7 +8,6 @@ This conftest.py is specifically for integration tests and ensures:
 """
 
 import os
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -88,14 +87,12 @@ def db_tables(engine):
     """
     # Import Base here - after pytest has set up the path
     # Base is defined in src/database.py, NOT src/models/base.py!
-    from src.database import Base
-
     # Import Alembic configuration
     from alembic.config import Config
-    from alembic.script import ScriptDirectory
+
+    from src.database import Base
 
     # Check if Alembic migrations exist
-    from pathlib import Path
     versions_dir = Path("alembic/versions")
     has_migrations = versions_dir.exists() and len(list(versions_dir.glob("*.py"))) > 0
 
@@ -165,8 +162,9 @@ def test_data(db_session):
     """
     # Import models needed for test data
     from src.models.user import User
-    from src.models.organization import Organization
+
     from src.core.security import get_password_hash
+    from src.models.organization import Organization
 
     # Create test organization
     test_org = Organization(
@@ -208,8 +206,9 @@ def client(db_session):
     our test database session instead of the real database.
     """
     from fastapi.testclient import TestClient
-    from src.main import app
     from src.core.database import get_db
+
+    from src.main import app
 
     # Override the database dependency
     def override_get_db():

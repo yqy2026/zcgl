@@ -307,11 +307,11 @@ class TestModuleImports:
     def test_auth_modules_imports(self):
         """测试所有auth子模块可以正确导入"""
         from src.api.v1.auth_modules import (
-            authentication,
-            users,
-            sessions,
             audit,
-            security
+            authentication,
+            security,
+            sessions,
+            users,
         )
 
         assert authentication.router is not None
@@ -322,11 +322,11 @@ class TestModuleImports:
 
     def test_service_imports(self):
         """测试服务层导入"""
-        from src.services.core.authentication_service import AuthenticationService
-        from src.services.core.user_management_service import UserManagementService
-        from src.services.core.session_service import SessionService
-        from src.services.core.password_service import PasswordService
         from src.services.core.audit_service import AuditService
+        from src.services.core.authentication_service import AuthenticationService
+        from src.services.core.password_service import PasswordService
+        from src.services.core.session_service import SessionService
+        from src.services.core.user_management_service import UserManagementService
 
         assert AuthenticationService is not None
         assert UserManagementService is not None

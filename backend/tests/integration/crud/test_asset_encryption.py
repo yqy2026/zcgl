@@ -13,9 +13,9 @@ import base64
 import pytest
 from sqlalchemy.orm import Session
 
-from src.crud.asset import AssetCRUD, SensitiveDataHandler
+from src.crud.asset import AssetCRUD
 from src.models.asset import Asset
-from src.schemas.asset import AssetCreate, AssetUpdate
+from src.schemas.asset import AssetUpdate
 
 
 # ============================================================================

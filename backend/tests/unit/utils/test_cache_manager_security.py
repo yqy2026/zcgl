@@ -4,12 +4,10 @@ Cache Manager Security Tests
 测试缓存管理器的安全性，确保不再使用不安全的pickle序列化。
 """
 
-import pytest
 from datetime import datetime
 from decimal import Decimal
 
 from src.utils.cache_manager import (
-    CacheJSONEncoder,
     cache_json_dumps,
     cache_json_loads,
 )

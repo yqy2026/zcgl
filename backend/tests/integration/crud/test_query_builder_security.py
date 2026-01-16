@@ -122,7 +122,6 @@ class TestQueryBuilderSecurityIntegration:
 
     def test_blocked_search_field_skipped(self, db_session):
         """Blocked search fields should be skipped with warning."""
-        import logging
 
         qb = QueryBuilder(Asset)
 
@@ -379,8 +378,11 @@ class TestWhitelistCompliance:
 
     def test_rent_contract_has_whitelist(self):
         """RentContract model should have a whitelist registered."""
+        from src.crud.field_whitelist import (
+            PermissiveWhitelist,
+            get_whitelist_for_model,
+        )
         from src.models.rent_contract import RentContract
-        from src.crud.field_whitelist import get_whitelist_for_model, PermissiveWhitelist
 
         whitelist = get_whitelist_for_model(RentContract)
         assert not isinstance(
@@ -389,8 +391,11 @@ class TestWhitelistCompliance:
 
     def test_ownership_has_whitelist(self):
         """Ownership model should have a whitelist registered."""
+        from src.crud.field_whitelist import (
+            PermissiveWhitelist,
+            get_whitelist_for_model,
+        )
         from src.models.asset import Ownership  # Ownership is in models/asset.py
-        from src.crud.field_whitelist import get_whitelist_for_model, PermissiveWhitelist
 
         whitelist = get_whitelist_for_model(Ownership)
         assert not isinstance(

@@ -12,9 +12,7 @@ This test module covers all endpoints in the collection management API:
 
 from datetime import date
 from decimal import Decimal
-from unittest.mock import MagicMock
 
-import pytest
 from fastapi.testclient import TestClient
 
 from src.main import app
@@ -76,8 +74,6 @@ class TestCollectionSummary:
     def test_get_collection_summary_unauthorized(self, client):
         """Test that unauthorized requests are rejected"""
         # Create a new client without auth
-        from fastapi.testclient import TestClient
-        from src.main import app
 
         unauthenticated_client = TestClient(app)
         response = unauthenticated_client.get("/api/v1/collection/summary")

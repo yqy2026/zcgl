@@ -8,17 +8,16 @@ Tests cover:
 - Special cases (sorting allowed, filtering blocked)
 """
 
-import pytest
 
 from src.crud.field_whitelist import (
+    WHITELIST_REGISTRY,
     AssetWhitelist,
-    RentContractWhitelist,
+    EmptyWhitelist,
     OwnershipWhitelist,
     PermissiveWhitelist,
-    EmptyWhitelist,
-    register_whitelist,
+    RentContractWhitelist,
     get_whitelist_for_model,
-    WHITELIST_REGISTRY,
+    register_whitelist,
 )
 
 
@@ -287,8 +286,8 @@ class TestQueryBuilderIntegration:
 
     def test_querybuilder_loads_whitelist(self):
         """QueryBuilder should load whitelist on initialization."""
+        from src.crud.field_whitelist import AssetWhitelist, register_whitelist
         from src.crud.query_builder import QueryBuilder
-        from src.crud.field_whitelist import register_whitelist, AssetWhitelist
         from src.models.asset import Asset
 
         # Explicitly register whitelist for this test
@@ -306,6 +305,7 @@ class TestQueryBuilderIntegration:
     def test_querybuilder_logs_permissive_warning(self, caplog):
         """QueryBuilder should log warning when using PermissiveWhitelist."""
         import logging
+
         from src.crud.query_builder import QueryBuilder
 
         # Create a mock model without whitelist

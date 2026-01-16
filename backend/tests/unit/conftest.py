@@ -43,6 +43,7 @@ def normal_user():
 def unauthenticated_client():
     """Create a test client without authentication for testing unauthorized access"""
     from fastapi.testclient import TestClient
+
     from src.main import app
 
     # Return client without auth headers

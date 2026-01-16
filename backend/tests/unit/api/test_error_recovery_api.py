@@ -13,10 +13,8 @@ This test module covers error recovery management endpoints:
 - GET /error-recovery/health - Get health status
 """
 
-from datetime import datetime
 from unittest.mock import MagicMock, patch
 
-import pytest
 from fastapi.testclient import TestClient
 
 
@@ -290,7 +288,6 @@ class TestGetErrorRecoveryHealth:
             "success_rate": 92.0,
         }
 
-        from fastapi.testclient import TestClient
         from src.main import app
 
         client = TestClient(app)
@@ -309,7 +306,6 @@ class TestGetErrorRecoveryHealth:
             "success_rate": 80.0,
         }
 
-        from fastapi.testclient import TestClient
         from src.main import app
 
         client = TestClient(app)
@@ -328,7 +324,6 @@ class TestGetErrorRecoveryHealth:
             "success_rate": 60.0,
         }
 
-        from fastapi.testclient import TestClient
         from src.main import app
 
         client = TestClient(app)

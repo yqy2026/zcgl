@@ -10,7 +10,7 @@ This test module covers batch operations for assets:
 - POST /batch-delete - Batch delete assets
 """
 
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -395,6 +395,5 @@ class TestBatchOperationsUnauthorized:
 @pytest.fixture
 def unauthenticated_client():
     """Fixture providing unauthenticated client"""
-    from fastapi.testclient import TestClient
     from src.main import app
     return TestClient(app)

@@ -3,7 +3,7 @@
 """
 import sys
 import uuid
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from pathlib import Path
 
 # 添加项目根目录到路径
@@ -55,7 +55,7 @@ with engine.connect() as conn:
             "updated_by": "system"
         })
         conn.commit()
-        print(f"SUCCESS: Created user admin (password: admin123)")
+        print("SUCCESS: Created user admin (password: admin123)")
         print(f"   User ID: {user_id}")
     except Exception as e:
         print(f"ERROR: Failed to create user: {e}")

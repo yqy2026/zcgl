@@ -5,8 +5,7 @@ This test module covers the asset import functionality:
 - POST /import - Batch import assets with different modes
 """
 
-from datetime import datetime
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -240,6 +239,5 @@ class TestAssetImportUnauthorized:
 @pytest.fixture
 def unauthenticated_client():
     """Fixture providing unauthenticated client"""
-    from fastapi.testclient import TestClient
     from src.main import app
     return TestClient(app)

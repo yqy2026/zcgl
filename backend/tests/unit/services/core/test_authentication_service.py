@@ -2,14 +2,13 @@
 Tests for AuthenticationService (services/core/authentication_service.py)
 """
 
-from datetime import datetime, timedelta, UTC
 from unittest.mock import MagicMock, Mock, patch
+
 import pytest
 from sqlalchemy.orm import Session
 
-from src.services.core.authentication_service import AuthenticationService
 from src.models.auth import User
-from src.exceptions import BusinessLogicError
+from src.services.core.authentication_service import AuthenticationService
 
 
 class TestAuthenticateUser:

@@ -1,6 +1,6 @@
 """Tests for CRUDBase.get_distinct_field_values() method"""
 
-from unittest.mock import MagicMock, Mock
+from unittest.mock import MagicMock
 
 import pytest
 from sqlalchemy.orm import Session

@@ -8,7 +8,6 @@ from unittest.mock import Mock
 
 import httpx
 import pytest
-
 from src.services.document.retry import (
     RetryContext,
     retry_async_call,

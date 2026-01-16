@@ -9,7 +9,7 @@ import json
 import os
 import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch, mock_open
+from unittest.mock import AsyncMock, Mock, patch
 
 import httpx
 import pytest

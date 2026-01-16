@@ -3,7 +3,6 @@ Root conftest.py - runs before any test collection
 """
 
 import os
-import secrets
 
 import pytest
 

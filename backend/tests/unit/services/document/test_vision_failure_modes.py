@@ -6,12 +6,12 @@ Vision API 失败模式测试
 """
 
 import json
-from unittest.mock import AsyncMock, Mock, patch
+from typing import Any
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import HTTPStatusError, Request, Response
 from pydantic import BaseModel
-from typing import Any
 
 
 # Mock VisionResponse class

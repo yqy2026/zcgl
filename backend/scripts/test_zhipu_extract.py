@@ -22,7 +22,6 @@ import base64
 import json
 import os
 from pathlib import Path
-from typing import Union
 
 import httpx
 from dotenv import load_dotenv
@@ -44,7 +43,7 @@ def parse_arguments() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def resolve_pdf_path(cli_arg: Union[str, None]) -> Path:
+def resolve_pdf_path(cli_arg: str | None) -> Path:
     """
     Resolve PDF path with fallback hierarchy:
     1. Command-line argument (highest priority)
