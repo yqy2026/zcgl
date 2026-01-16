@@ -6,9 +6,10 @@ from typing import TYPE_CHECKING, Any
 提供Redis缓存功能，用于优化API性能
 """
 
+import json
 import logging
-import pickle  # nosec - B403: Internal cache data, validated source
 from datetime import datetime, timedelta
+from decimal import Decimal
 
 try:
     import redis.asyncio as redis
@@ -33,6 +34,37 @@ class Settings:
 settings = Settings()
 
 logger = logging.getLogger(__name__)
+
+
+class CacheJSONEncoder(json.JSONEncoder):
+    """自定义JSON编码器，用于序列化缓存数据"""
+
+    def default(self, obj: Any) -> Any:
+        """处理非JSON原生类型"""
+        if isinstance(obj, datetime):
+            return {"__datetime__": obj.isoformat()}
+        if isinstance(obj, Decimal):
+            return float(obj)
+        return super().default(obj)
+
+
+def cache_json_dumps(obj: Any) -> bytes:
+    """序列化对象为JSON字节串"""
+    return json.dumps(obj, cls=CacheJSONEncoder).encode("utf-8")
+
+
+def cache_json_loads(data: bytes) -> Any:
+    """反序列化JSON字节串为对象"""
+    def object_hook(dct: dict[str, Any]) -> Any:
+        if "__datetime__" in dct:
+            return datetime.fromisoformat(dct["__datetime__"])
+        return dct
+
+    try:
+        return json.loads(data.decode("utf-8"), object_hook=object_hook)
+    except (json.JSONDecodeError, UnicodeDecodeError, ValueError) as e:
+        logger.warning(f"JSON反序列化失败: {e}")
+        return None
 
 
 class CacheManager:
@@ -102,7 +134,9 @@ class CacheManager:
             try:
                 data = await self.redis_client.get(cache_key)
                 if data:
-                    return pickle.loads(data)  # nosec - B301: Internal cache data from trusted source
+                    result = cache_json_loads(data)
+                    if result is not None:
+                        return result
             except Exception as e:
                 logger.warning(f"Redis缓存获取失败: {e}")
 
@@ -118,7 +152,7 @@ class CacheManager:
     async def set(self, prefix: str, key: str, value: Any, expire: int = 3600) -> bool:
         """设置缓存数据"""
         cache_key = self._get_key(prefix, key)
-        data = pickle.dumps(value)
+        data = cache_json_dumps(value)
         success = False
 
         # 首先尝试Redis缓存

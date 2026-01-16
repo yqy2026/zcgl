@@ -172,7 +172,7 @@ class RedisTaskStore:
                 if data:
                     import json
 
-                    # TODO: Use json.loads() or pickle.loads() for safer deserialization
+                    # Using json.loads() for safe deserialization
                     parsed = json.loads(data.decode("utf-8"))
                     return parsed  # type: ignore[no-any-return]
             except Exception as e:
