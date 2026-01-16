@@ -19,21 +19,61 @@ from src.core.encryption import (
 # ============================================================================
 # EncryptionKeyManager 测试
 # ============================================================================
+
+@pytest.fixture(autouse=True)
+def reset_encryption_modules(monkeypatch):
+    """
+    Auto-used fixture to reset encryption-related modules before each test.
+    This prevents test isolation issues when other tests set DATA_ENCRYPTION_KEY.
+    """
+    # Remove DATA_ENCRYPTION_KEY from environment
+    monkeypatch.delenv("DATA_ENCRYPTION_KEY", raising=False)
+
+    # Clear cached modules to force reload
+    import sys
+    modules_to_clear = [
+        "src.core.config",
+        "src.core.encryption",
+    ]
+    for mod in modules_to_clear:
+        if mod in sys.modules:
+            del sys.modules[mod]
+
+    yield
+
+    # Cleanup after test
+    for mod in modules_to_clear:
+        if mod in sys.modules:
+            del sys.modules[mod]
+
+
 class TestEncryptionKeyManager:
     """测试密钥管理器的加载、验证和版本管理功能"""
 
     def test_load_valid_key_with_version(self, monkeypatch):
         """测试加载带版本号的有效密钥"""
+        # Clear any cached modules first
+        import sys
+        for mod in list(sys.modules.keys()):
+            if "src.core.config" in mod or "src.core.encryption" in mod:
+                del sys.modules[mod]
+
         # 生成一个有效的密钥
         key_bytes = b"a" * 32  # 32字节密钥
         key_b64 = base64.b64encode(key_bytes).decode("ascii")
         test_key = f"{key_b64}:1"
 
+        # Set environment variable
         monkeypatch.setenv("DATA_ENCRYPTION_KEY", test_key)
 
-        # 需要重新创建实例以加载环境变量
-        with patch("src.core.config.settings.DATA_ENCRYPTION_KEY", test_key):
-            manager = EncryptionKeyManager()
+        # Import fresh and patch settings directly
+        from src.core import config
+        from src.core.encryption import EncryptionKeyManager
+
+        # Use monkeypatch to persist the value for the entire test
+        monkeypatch.setattr(config.settings, 'DATA_ENCRYPTION_KEY', test_key)
+
+        manager = EncryptionKeyManager()
 
         assert manager.is_available() is True
         assert manager.get_version() == 1
@@ -41,13 +81,26 @@ class TestEncryptionKeyManager:
 
     def test_load_valid_key_without_version(self, monkeypatch):
         """测试加载不带版本号的有效密钥（默认版本1）"""
+        # Clear any cached modules first
+        import sys
+        for mod in list(sys.modules.keys()):
+            if "src.core.config" in mod or "src.core.encryption" in mod:
+                del sys.modules[mod]
+
         key_bytes = b"b" * 32
         key_b64 = base64.b64encode(key_bytes).decode("ascii")
 
+        # Set environment variable
         monkeypatch.setenv("DATA_ENCRYPTION_KEY", key_b64)
 
-        with patch("src.core.config.settings.DATA_ENCRYPTION_KEY", key_b64):
-            manager = EncryptionKeyManager()
+        # Import fresh and patch settings directly
+        from src.core import config
+        from src.core.encryption import EncryptionKeyManager
+
+        # Use monkeypatch to persist the value for the entire test
+        monkeypatch.setattr(config.settings, 'DATA_ENCRYPTION_KEY', key_b64)
+
+        manager = EncryptionKeyManager()
 
         assert manager.is_available() is True
         assert manager.get_version() == 1
@@ -55,49 +108,99 @@ class TestEncryptionKeyManager:
 
     def test_load_invalid_base64_key(self, monkeypatch):
         """测试加载无效的base64密钥"""
+        # Clear any cached modules first
+        import sys
+        for mod in list(sys.modules.keys()):
+            if "src.core.config" in mod or "src.core.encryption" in mod:
+                del sys.modules[mod]
+
+        # Set environment variable
         monkeypatch.setenv("DATA_ENCRYPTION_KEY", "not-valid-base64:1")
 
-        with patch(
-            "src.core.config.settings.DATA_ENCRYPTION_KEY", "not-valid-base64:1"
-        ):
-            manager = EncryptionKeyManager()
+        # Import fresh and patch settings directly
+        from src.core import config
+        from src.core.encryption import EncryptionKeyManager
+
+        # Use monkeypatch to persist the value for the entire test
+        monkeypatch.setattr(config.settings, 'DATA_ENCRYPTION_KEY', "not-valid-base64:1")
+
+        manager = EncryptionKeyManager()
 
         assert manager.is_available() is False
         assert manager.get_key() is None
 
     def test_load_short_key(self, monkeypatch):
         """测试加载过短的密钥（< 32字节）"""
+        # Clear any cached modules first
+        import sys
+        for mod in list(sys.modules.keys()):
+            if "src.core.config" in mod or "src.core.encryption" in mod:
+                del sys.modules[mod]
+
         key_bytes = b"short"  # 5字节，不足32字节
         key_b64 = base64.b64encode(key_bytes).decode("ascii")
 
+        # Set environment variable
         monkeypatch.setenv("DATA_ENCRYPTION_KEY", key_b64)
 
-        with patch("src.core.config.settings.DATA_ENCRYPTION_KEY", key_b64):
-            manager = EncryptionKeyManager()
+        # Import fresh and patch settings directly
+        from src.core import config
+        from src.core.encryption import EncryptionKeyManager
+
+        # Use monkeypatch to persist the value for the entire test
+        monkeypatch.setattr(config.settings, 'DATA_ENCRYPTION_KEY', key_b64)
+
+        manager = EncryptionKeyManager()
 
         assert manager.is_available() is False
         assert manager.get_key() is None
 
     def test_load_missing_key(self, monkeypatch):
         """测试密钥缺失的情况"""
+        # Remove environment variable completely
         monkeypatch.delenv("DATA_ENCRYPTION_KEY", raising=False)
 
-        with patch("src.core.config.settings.DATA_ENCRYPTION_KEY", ""):
-            manager = EncryptionKeyManager()
+        # Clear all cached modules to force reload
+        import sys
+        for mod in list(sys.modules.keys()):
+            if "src.core.config" in mod or "src.core.encryption" in mod:
+                del sys.modules[mod]
+
+        # Import modules fresh - settings will read from environment (which is now deleted)
+        from src.core import config
+        from src.core.encryption import EncryptionKeyManager
+
+        # Use monkeypatch to persist the empty value for the entire test
+        monkeypatch.setattr(config.settings, 'DATA_ENCRYPTION_KEY', "")
+
+        manager = EncryptionKeyManager()
 
         assert manager.is_available() is False
         assert manager.get_key() is None
 
     def test_extract_version_v2(self, monkeypatch):
         """测试提取版本号2"""
+        # Clear modules first
+        import sys
+        for mod in list(sys.modules.keys()):
+            if "src.core.config" in mod or "src.core.encryption" in mod:
+                del sys.modules[mod]
+
         key_bytes = b"c" * 32
         key_b64 = base64.b64encode(key_bytes).decode("ascii")
         test_key = f"{key_b64}:2"
 
+        # Set environment variable
         monkeypatch.setenv("DATA_ENCRYPTION_KEY", test_key)
 
-        with patch("src.core.config.settings.DATA_ENCRYPTION_KEY", test_key):
-            manager = EncryptionKeyManager()
+        # Import fresh and patch settings directly
+        from src.core import config
+        from src.core.encryption import EncryptionKeyManager
+
+        # Use monkeypatch to persist the value for the entire test
+        monkeypatch.setattr(config.settings, 'DATA_ENCRYPTION_KEY', test_key)
+
+        manager = EncryptionKeyManager()
 
         assert manager.get_version() == 2
 
@@ -105,25 +208,87 @@ class TestEncryptionKeyManager:
 # ============================================================================
 # FieldEncryptor 测试
 # ============================================================================
+
+@pytest.fixture(autouse=True)
+def reset_encryption_modules_for_field(monkeypatch):
+    """
+    Auto-used fixture to reset encryption-related modules before each test.
+    This prevents test isolation issues when other tests set DATA_ENCRYPTION_KEY.
+    """
+    # Remove DATA_ENCRYPTION_KEY from environment
+    monkeypatch.delenv("DATA_ENCRYPTION_KEY", raising=False)
+
+    # Clear cached modules to force reload
+    import sys
+    modules_to_clear = [
+        "src.core.config",
+        "src.core.encryption",
+    ]
+    for mod in modules_to_clear:
+        if mod in sys.modules:
+            del sys.modules[mod]
+
+    yield
+
+    # Cleanup after test
+    for mod in modules_to_clear:
+        if mod in sys.modules:
+            del sys.modules[mod]
+
+
 class TestFieldEncryptor:
     """测试字段加密器的加密和解密功能"""
 
     @pytest.fixture
-    def valid_key_manager(self):
+    def valid_key_manager(self, monkeypatch):
         """创建有效的密钥管理器fixture"""
+        # Clear cached modules first
+        import sys
+        for mod in list(sys.modules.keys()):
+            if "src.core.config" in mod or "src.core.encryption" in mod:
+                del sys.modules[mod]
+
         key_bytes = b"d" * 32
         key_b64 = base64.b64encode(key_bytes).decode("ascii")
         test_key = f"{key_b64}:1"
 
-        with patch("src.core.config.settings.DATA_ENCRYPTION_KEY", test_key):
-            manager = EncryptionKeyManager()
+        # Set environment variable
+        monkeypatch.setenv("DATA_ENCRYPTION_KEY", test_key)
+
+        # Import fresh and patch settings directly
+        from src.core import config
+        from src.core.encryption import EncryptionKeyManager
+
+        # Use monkeypatch to persist the value for the entire test
+        monkeypatch.setattr(config.settings, 'DATA_ENCRYPTION_KEY', test_key)
+
+        manager = EncryptionKeyManager()
         return manager
 
     @pytest.fixture
-    def missing_key_manager(self):
+    def missing_key_manager(self, monkeypatch):
         """创建缺失密钥的管理器fixture"""
-        with patch("src.core.config.settings.DATA_ENCRYPTION_KEY", ""):
-            manager = EncryptionKeyManager()
+        # Remove environment variable completely
+        monkeypatch.delenv("DATA_ENCRYPTION_KEY", raising=False)
+
+        # Clear cached modules to force reload
+        import sys
+        modules_to_clear = [
+            "src.core.config",
+            "src.core.encryption",
+        ]
+        for mod in modules_to_clear:
+            if mod in sys.modules:
+                del sys.modules[mod]
+
+        # Import modules fresh - settings will read from environment (which is now deleted)
+        from src.core import config
+        from src.core.encryption import EncryptionKeyManager
+
+        # Use monkeypatch to persist the empty value for the entire test
+        monkeypatch.setattr(config.settings, 'DATA_ENCRYPTION_KEY', "")
+
+        manager = EncryptionKeyManager()
         return manager
 
     def test_deterministic_encryption_same_plaintext(self, valid_key_manager):
@@ -218,6 +383,9 @@ class TestFieldEncryptor:
 
     def test_missing_key_encrypt_returns_none(self, missing_key_manager):
         """测试密钥缺失时加密返回None"""
+        # Double-check that manager truly has no key
+        assert missing_key_manager.is_available() is False
+
         encryptor = FieldEncryptor(missing_key_manager)
 
         assert encryptor.encrypt_deterministic("test") is None
@@ -225,6 +393,9 @@ class TestFieldEncryptor:
 
     def test_missing_key_decrypt_returns_original(self, missing_key_manager):
         """测试密钥缺失时解密返回原值"""
+        # Double-check that manager truly has no key
+        assert missing_key_manager.is_available() is False
+
         encryptor = FieldEncryptor(missing_key_manager)
         ciphertext = "enc:v1:some-ciphertext"
 
@@ -280,30 +451,59 @@ class TestSensitiveDataHandler:
     """测试敏感数据处理器"""
 
     @pytest.fixture
-    def valid_handler(self):
+    def valid_handler(self, monkeypatch):
         """创建有效的敏感数据处理器fixture - 配置测试字段"""
+        # Clear cached modules first
+        import sys
+        for mod in list(sys.modules.keys()):
+            if "src.core.config" in mod or "src.core.encryption" in mod or "src.crud.asset" in mod:
+                del sys.modules[mod]
+
         key_bytes = b"e" * 32
         key_b64 = base64.b64encode(key_bytes).decode("ascii")
         test_key = f"{key_b64}:1"
 
-        # Patch settings module for encryption
-        with patch("src.core.config.settings.DATA_ENCRYPTION_KEY", test_key):
-            # 需要重新导入以使用新的环境变量
-            from src.crud.asset import SensitiveDataHandler
+        # Set environment variable
+        monkeypatch.setenv("DATA_ENCRYPTION_KEY", test_key)
 
-            # 创建配置了测试字段的处理器
-            return SensitiveDataHandler(
-                searchable_fields={"phone", "id_card"},  # 可搜索字段（手机号、身份证）
-                non_searchable_fields={"note"}  # 非搜索字段
-            )
+        # Import fresh and patch settings directly
+        from src.core import config
+        from src.crud.asset import SensitiveDataHandler
+
+        # Use monkeypatch to persist the value for the entire test
+        monkeypatch.setattr(config.settings, 'DATA_ENCRYPTION_KEY', test_key)
+
+        # 创建配置了测试字段的处理器
+        return SensitiveDataHandler(
+            searchable_fields={"phone", "id_card"},  # 可搜索字段（手机号、身份证）
+            non_searchable_fields={"note"}  # 非搜索字段
+        )
 
     @pytest.fixture
-    def missing_key_handler(self):
+    def missing_key_handler(self, monkeypatch):
         """创建缺失密钥的敏感数据处理器fixture"""
-        with patch("src.core.config.settings.DATA_ENCRYPTION_KEY", ""):
-            from src.crud.asset import SensitiveDataHandler
+        # Remove environment variable completely
+        monkeypatch.delenv("DATA_ENCRYPTION_KEY", raising=False)
 
-            return SensitiveDataHandler()
+        # Clear cached modules to force reload
+        import sys
+        modules_to_clear = [
+            "src.core.config",
+            "src.core.encryption",
+            "src.crud.asset",
+        ]
+        for mod in modules_to_clear:
+            if mod in sys.modules:
+                del sys.modules[mod]
+
+        # Import modules fresh - settings will read from environment (which is now deleted)
+        from src.core import config
+        from src.crud.asset import SensitiveDataHandler
+
+        # Use monkeypatch to persist the empty value for the entire test
+        monkeypatch.setattr(config.settings, 'DATA_ENCRYPTION_KEY', "")
+
+        return SensitiveDataHandler()
 
     def test_pii_field_classification(self):
         """测试PII字段分类 - 验证默认配置为空（子类应覆盖）"""

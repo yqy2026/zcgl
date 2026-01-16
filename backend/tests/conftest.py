@@ -51,6 +51,34 @@ def pytest_collection_modifyitems(items, config):
 
 
 @pytest.fixture(scope="session", autouse=True)
+def hide_env_file():
+    """
+    Session-scoped fixture to temporarily hide .env file during tests.
+    This prevents Pydantic Settings from reading DATA_ENCRYPTION_KEY from .env,
+    allowing tests to control the encryption key via environment variables.
+
+    The .env file is renamed to .env.backup before tests and restored after.
+    """
+    import shutil
+
+    env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
+    backup_path = env_path + ".backup"
+
+    # Check if .env file exists
+    if os.path.exists(env_path):
+        # Rename .env to .env.backup
+        shutil.move(env_path, backup_path)
+        print(f"[*] Temporarily hid .env file for tests (backed up as .env.backup)")
+
+    yield
+
+    # Restore .env file after all tests complete
+    if os.path.exists(backup_path):
+        shutil.move(backup_path, env_path)
+        print(f"[*] Restored .env file after tests")
+
+
+@pytest.fixture(scope="session", autouse=True)
 def setup_test_database():
     """
     Session-scoped fixture to set up the test database before any tests run.

@@ -49,7 +49,12 @@ def asset_crud_with_encryption(valid_encryption_key, monkeypatch):
     # Re-import with new environment variable
     from src.crud.asset import AssetCRUD
 
-    return AssetCRUD()
+    yield AssetCRUD()
+
+    # Cleanup: Clear modules again after test to prevent pollution
+    for mod in modules_to_clear:
+        if mod in sys.modules:
+            del sys.modules[mod]
 
 
 @pytest.fixture
@@ -71,7 +76,12 @@ def asset_crud_no_encryption(monkeypatch):
             del sys.modules[mod]
 
     from src.crud.asset import AssetCRUD
-    return AssetCRUD()
+    yield AssetCRUD()
+
+    # Cleanup: Clear modules again after test to prevent pollution
+    for mod in modules_to_clear:
+        if mod in sys.modules:
+            del sys.modules[mod]
 
 
 @pytest.fixture
