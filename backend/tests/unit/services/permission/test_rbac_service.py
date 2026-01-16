@@ -27,6 +27,8 @@ from src.services.permission.rbac_service import RBACService
 # ============================================================================
 # Fixtures
 # ============================================================================
+
+
 @pytest.fixture
 def mock_db():
     """模拟数据库会话"""
@@ -62,7 +64,7 @@ def sample_role():
     role.is_active = True
     role.created_at = datetime.now(UTC)
     role.created_by = "admin"
-    role.updated_at = None
+    role.updated_at = datetime.now(UTC)
     role.updated_by = None
     role.permissions = []
     return role
@@ -82,6 +84,10 @@ def sample_permission():
     permission.conditions = None
     permission.is_system_permission = False
     permission.requires_approval = False
+    permission.is_active = True
+    permission.created_at = datetime.now(UTC)
+    permission.updated_at = datetime.now(UTC)
+    permission.created_by = "admin"
     return permission
 
 
@@ -99,6 +105,8 @@ def sample_user():
 # ============================================================================
 # create_role 测试
 # ============================================================================
+
+
 class TestCreateRole:
     """测试创建角色"""
 
@@ -176,6 +184,8 @@ class TestCreateRole:
 # ============================================================================
 # update_role 测试
 # ============================================================================
+
+
 class TestUpdateRole:
     """测试更新角色"""
 
@@ -282,6 +292,8 @@ class TestUpdateRole:
 # ============================================================================
 # delete_role 测试
 # ============================================================================
+
+
 class TestDeleteRole:
     """测试删除角色"""
 
@@ -368,6 +380,8 @@ class TestDeleteRole:
 # ============================================================================
 # get_role 测试
 # ============================================================================
+
+
 class TestGetRole:
     """测试获取角色"""
 
@@ -398,6 +412,8 @@ class TestGetRole:
 # ============================================================================
 # get_roles 测试
 # ============================================================================
+
+
 class TestGetRoles:
     """测试获取角色列表"""
 
@@ -469,6 +485,8 @@ class TestGetRoles:
 # ============================================================================
 # create_permission 测试
 # ============================================================================
+
+
 class TestCreatePermission:
     """测试创建权限"""
 
@@ -547,6 +565,8 @@ class TestCreatePermission:
 # ============================================================================
 # get_permission 测试
 # ============================================================================
+
+
 class TestGetPermission:
     """测试获取权限"""
 
@@ -577,6 +597,8 @@ class TestGetPermission:
 # ============================================================================
 # get_permissions 测试
 # ============================================================================
+
+
 class TestGetPermissions:
     """测试获取权限列表"""
 
@@ -636,6 +658,8 @@ class TestGetPermissions:
 # ============================================================================
 # assign_role_to_user 测试
 # ============================================================================
+
+
 class TestAssignRoleToUser:
     """测试为用户分配角色"""
 
@@ -780,6 +804,8 @@ class TestAssignRoleToUser:
 # ============================================================================
 # revoke_role_from_user 测试
 # ============================================================================
+
+
 class TestRevokeRoleFromUser:
     """测试撤销用户角色"""
 
@@ -814,6 +840,8 @@ class TestRevokeRoleFromUser:
 # ============================================================================
 # get_user_roles 测试
 # ============================================================================
+
+
 class TestGetUserRoles:
     """测试获取用户角色"""
 
@@ -846,6 +874,8 @@ class TestGetUserRoles:
 # ============================================================================
 # check_permission 测试
 # ============================================================================
+
+
 class TestCheckPermission:
     """测试权限检查"""
 
@@ -927,8 +957,152 @@ class TestCheckPermission:
 
 
 # ============================================================================
+# get_user_permissions_summary 测试
+# ============================================================================
+
+
+class TestGetUserPermissionsSummary:
+    """测试获取用户权限汇总"""
+
+    def test_get_summary_success(
+        self, rbac_service, mock_db, sample_user, sample_role, sample_permission
+    ):
+        """测试成功获取权限汇总"""
+        sample_role.permissions = [sample_permission]
+
+        # Mock用户存在
+        user_query = Mock()
+        user_filter = Mock(return_value=user_query)
+        user_query.filter = Mock(return_value=user_filter)
+        user_filter.first = Mock(return_value=sample_user)
+
+        # Mock资源权限
+        resource_query = Mock()
+        resource_filter = Mock(return_value=resource_query)
+        resource_query.filter = Mock(return_value=resource_filter)
+        resource_filter.all = Mock(return_value=[])
+
+        call_count = [0]
+
+        def query_side_effect(model):
+            call_count[0] += 1
+            if call_count[0] == 1:
+                return user_query
+            return resource_query
+
+        mock_db.query = Mock(side_effect=query_side_effect)
+
+        with patch.object(rbac_service, "get_user_roles", return_value=[sample_role]):
+            summary = rbac_service.get_user_permissions_summary("user-1")
+
+            assert summary.user_id == "user-1"
+            assert summary.username == "testuser"
+            assert len(summary.roles) == 1
+
+    def test_get_summary_user_not_found(self, rbac_service, mock_db):
+        """测试用户不存在"""
+        mock_query = Mock()
+        mock_filter = Mock(return_value=mock_query)
+        mock_query.filter = Mock(return_value=mock_filter)
+        mock_filter.first = Mock(return_value=None)
+        mock_db.query = Mock(return_value=mock_query)
+
+        with pytest.raises(BusinessLogicError, match="用户不存在"):
+            rbac_service.get_user_permissions_summary("nonexistent")
+
+
+# ============================================================================
+# _assign_permissions_to_role 测试
+# ============================================================================
+
+
+class TestAssignPermissionsToRole:
+    """测试为角色分配权限"""
+
+    def test_assign_permissions_success(self, rbac_service, mock_db):
+        """测试成功分配权限"""
+        mock_execute_result = Mock()
+        mock_db.execute.return_value = mock_execute_result
+
+        rbac_service._assign_permissions_to_role("role-1", ["perm-1", "perm-2"], "admin")
+
+        assert mock_db.execute.call_count == 3  # delete + 2 inserts
+
+
+# ============================================================================
+# _get_user_resource_permissions 测试
+# ============================================================================
+
+
+class TestGetUserResourcePermissions:
+    """测试获取用户资源权限"""
+
+    def test_get_resource_permissions_found(self, rbac_service, mock_db):
+        """测试找到资源权限"""
+        mock_permission = Mock()
+        mock_permission.permission_level = "write"
+        mock_permission.conditions = None
+
+        mock_query = Mock()
+        mock_filter = Mock(return_value=mock_query)
+        mock_query.filter = Mock(return_value=mock_filter)
+        mock_filter.first = Mock(return_value=mock_permission)
+        mock_db.query = Mock(return_value=mock_query)
+
+        request = PermissionCheckRequest(
+            resource="asset", action="read", resource_id="asset-1", context=None
+        )
+
+        result = rbac_service._get_user_resource_permissions("user-1", request)
+
+        assert result is not None
+        assert result["permission_level"] == "write"
+
+    def test_get_resource_permissions_not_found(self, rbac_service, mock_db):
+        """测试未找到资源权限"""
+        mock_query = Mock()
+        mock_filter = Mock(return_value=mock_query)
+        mock_query.filter = Mock(return_value=mock_filter)
+        mock_filter.first = Mock(return_value=None)
+        mock_db.query = Mock(return_value=mock_query)
+
+        request = PermissionCheckRequest(
+            resource="asset", action="read", resource_id=None, context=None
+        )
+
+        result = rbac_service._get_user_resource_permissions("user-1", request)
+
+        assert result is None
+
+    def test_get_resource_permissions_insufficient_level(
+        self, rbac_service, mock_db
+    ):
+        """测试权限级别不足"""
+        mock_permission = Mock()
+        mock_permission.permission_level = "read"
+        mock_permission.conditions = None
+
+        mock_query = Mock()
+        mock_filter = Mock(return_value=mock_query)
+        mock_query.filter = Mock(return_value=mock_filter)
+        mock_filter.first = Mock(return_value=mock_permission)
+        mock_db.query = Mock(return_value=mock_query)
+
+        request = PermissionCheckRequest(
+            resource="asset", action="delete", resource_id=None, context=None
+        )
+
+        result = rbac_service._get_user_resource_permissions("user-1", request)
+
+        # read权限不能执行delete操作
+        assert result is None
+
+
+# ============================================================================
 # _check_permission_level 测试
 # ============================================================================
+
+
 class TestCheckPermissionLevel:
     """测试权限级别检查"""
 
@@ -983,6 +1157,8 @@ class TestCheckPermissionLevel:
 # ============================================================================
 # _can_manage_role 测试
 # ============================================================================
+
+
 class TestCanManageRole:
     """测试角色管理权限检查"""
 
@@ -1005,6 +1181,8 @@ class TestCanManageRole:
 # ============================================================================
 # _role_has_permission 测试
 # ============================================================================
+
+
 class TestRoleHasPermission:
     """测试角色权限检查"""
 
@@ -1043,3 +1221,195 @@ class TestRoleHasPermission:
 
         result = rbac_service._role_has_permission(sample_role, request)
         assert result is False
+
+
+# ============================================================================
+# _get_role_permission_conditions 测试
+# ============================================================================
+
+
+class TestGetRolePermissionConditions:
+    """测试获取角色权限条件"""
+
+    def test_get_conditions_with_permission(self, rbac_service, sample_role):
+        """测试获取权限条件"""
+        mock_permission = Mock()
+        mock_permission.resource = "asset"
+        mock_permission.action = "view"
+        mock_permission.conditions = {"department": "finance"}
+
+        sample_role.permissions = [mock_permission]
+
+        request = PermissionCheckRequest(
+            resource="asset", action="view", resource_id=None, context=None
+        )
+
+        result = rbac_service._get_role_permission_conditions(sample_role, request)
+
+        assert result is not None
+        assert result["department"] == "finance"
+
+    def test_get_conditions_no_permission(self, rbac_service, sample_role):
+        """测试权限不存在时返回None"""
+        sample_role.permissions = []
+
+        request = PermissionCheckRequest(
+            resource="asset", action="view", resource_id=None, context=None
+        )
+
+        result = rbac_service._get_role_permission_conditions(sample_role, request)
+
+        assert result is None
+
+
+# ============================================================================
+# _calculate_effective_permissions 测试
+# ============================================================================
+
+
+class TestCalculateEffectivePermissions:
+    """测试计算有效权限"""
+
+    def test_calculate_with_roles_only(self, rbac_service, sample_role):
+        """测试仅从角色计算权限"""
+        mock_permission = Mock()
+        mock_permission.resource = "asset"
+        mock_permission.action = "view"
+        sample_role.permissions = [mock_permission]
+
+        result = rbac_service._calculate_effective_permissions([sample_role], [])
+
+        assert "asset" in result
+        assert "view" in result["asset"]
+
+    def test_calculate_with_resource_permissions(self, rbac_service):
+        """测试从资源权限计算权限"""
+        mock_resource_perm = Mock()
+        mock_resource_perm.resource_type = "contract"
+        mock_resource_perm.permission_level = "write"
+
+        result = rbac_service._calculate_effective_permissions([], [mock_resource_perm])
+
+        assert "contract" in result
+        assert "read" in result["contract"]
+        assert "write" in result["contract"]
+
+    def test_calculate_combined_permissions(self, rbac_service, sample_role):
+        """测试组合角色和资源权限"""
+        # 角色权限
+        mock_permission = Mock()
+        mock_permission.resource = "asset"
+        mock_permission.action = "view"
+        sample_role.permissions = [mock_permission]
+
+        # 资源权限
+        mock_resource_perm = Mock()
+        mock_resource_perm.resource_type = "contract"
+        mock_resource_perm.permission_level = "admin"
+
+        result = rbac_service._calculate_effective_permissions(
+            [sample_role], [mock_resource_perm]
+        )
+
+        assert "asset" in result
+        assert "view" in result["asset"]
+        assert "contract" in result
+        assert "read" in result["contract"]
+        assert "write" in result["contract"]
+        assert "delete" in result["contract"]
+        assert "admin" in result["contract"]
+
+
+# ============================================================================
+# _create_permission_audit_log 测试
+# ============================================================================
+
+
+class TestCreatePermissionAuditLog:
+    """测试创建审计日志"""
+
+    def test_create_audit_log_success(self, rbac_service, mock_db):
+        """测试成功创建审计日志"""
+        rbac_service._create_permission_audit_log(
+            action="role_create",
+            resource_type="role",
+            resource_id="role-1",
+            operator_id="admin",
+            old_permissions=None,
+            new_permissions={"role_name": "new_role"},
+            reason="创建新角色",
+        )
+
+        mock_db.add.assert_called_once()
+        mock_db.commit.assert_called_once()
+
+    def test_create_audit_log_with_all_params(self, rbac_service, mock_db):
+        """测试创建带所有参数的审计日志"""
+        rbac_service._create_permission_audit_log(
+            action="role_update",
+            resource_type="role",
+            resource_id="role-1",
+            operator_id="admin",
+            old_permissions={"old": "data"},
+            new_permissions={"new": "data"},
+            reason="更新角色",
+            ip_address="192.168.1.1",
+            user_agent="Mozilla/5.0",
+        )
+
+        mock_db.add.assert_called_once()
+        mock_db.commit.assert_called_once()
+
+
+# ============================================================================
+# 异步适配器方法测试
+# ============================================================================
+
+
+class TestAsyncAdapterMethods:
+    """测试异步适配器方法"""
+
+    @pytest.mark.asyncio
+    async def test_check_user_permission(self, rbac_service, mock_db, sample_user):
+        """测试检查用户权限（异步适配器）"""
+        mock_query = Mock()
+        mock_filter = Mock(return_value=mock_query)
+        mock_query.filter = Mock(return_value=mock_filter)
+        mock_filter.first = Mock(return_value=sample_user)
+        mock_db.query = Mock(return_value=mock_query)
+
+        with patch.object(rbac_service, "get_user_roles", return_value=[]):
+            result = await rbac_service.check_user_permission("user-1", "asset", "view")
+            assert result is False
+
+    @pytest.mark.asyncio
+    async def test_check_resource_access(self, rbac_service, mock_db, sample_user):
+        """测试检查资源访问权限（异步适配器）"""
+        mock_query = Mock()
+        mock_filter = Mock(return_value=mock_query)
+        mock_query.filter = Mock(return_value=mock_filter)
+        mock_filter.first = Mock(return_value=sample_user)
+        mock_db.query = Mock(return_value=mock_query)
+
+        with patch.object(rbac_service, "get_user_roles", return_value=[]):
+            result = await rbac_service.check_resource_access(
+                "user-1", "asset", "asset-1", "view"
+            )
+            assert result is False
+
+    @pytest.mark.asyncio
+    async def test_check_organization_access(
+        self, rbac_service, mock_db, sample_user
+    ):
+        """测试检查组织访问权限（异步适配器）"""
+        mock_query = Mock()
+        mock_filter = Mock(return_value=mock_query)
+        mock_query.filter = Mock(return_value=mock_filter)
+        mock_filter.first = Mock(return_value=sample_user)
+        mock_db.query = Mock(return_value=mock_query)
+
+        with patch.object(rbac_service, "get_user_roles", return_value=[]):
+            result = await rbac_service.check_organization_access(
+                "user-1", "org-1"
+            )
+            assert result is False
