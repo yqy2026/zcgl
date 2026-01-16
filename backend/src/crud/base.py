@@ -12,6 +12,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.orm import Session
 
+from ..constants.performance.cache import CacheLimits, CacheTTL
 from ..core.response_handler import ResponseHandler
 from .query_builder import QueryBuilder
 
@@ -47,7 +48,7 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
         self.model = model
         self.query_builder = QueryBuilder(model)
         self._cache: dict[str, tuple[Any, float]] = {}  # 简单内存缓存
-        self._cache_timeout = 300  # 5分钟缓存超时
+        self._cache_timeout = CacheTTL.SHORT_SECONDS  # 5分钟缓存超时
 
     def _get_cache_key(self, method: str, **kwargs: Any) -> str:
         """生成缓存键"""
@@ -71,7 +72,7 @@ class CRUDBase[ModelType, CreateSchemaType, UpdateSchemaType]:
         """设置缓存数据"""
         self._cache[cache_key] = (data, time.time())
         # 限制缓存大小
-        if len(self._cache) > 100:
+        if len(self._cache) > CacheLimits.MAX_CRUD_ENTRIES:
             oldest_key = min(self._cache.keys(), key=lambda k: self._cache[k][1])
             del self._cache[oldest_key]
 
