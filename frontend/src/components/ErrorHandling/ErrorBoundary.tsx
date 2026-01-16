@@ -196,9 +196,14 @@ const ErrorHandler: React.FC<RouterErrorHandlerProps> = ({
   showErrorDetails = process.env.NODE_ENV === 'development'
 }) => {
   const handleGoBack = () => {
-    // 使用 window.history.back() 代替 useNavigate()
-    // 因为 ErrorBoundary 渲染时 Router 上下文可能不可用
-    window.history.back()
+    // React 19 兼容性：ErrorBoundary 可能在 Router 上下文外渲染
+    // 使用 window.history API 作为回退方案
+    if (window.history.length > 1) {
+      window.history.back()
+    } else {
+      // 没有历史记录时，导航到首页
+      window.location.href = '/dashboard'
+    }
   }
 
   const getErrorType = (error: Error | null) => {

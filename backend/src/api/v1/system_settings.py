@@ -151,14 +151,17 @@ async def update_system_settings(
                 user_agent=user_agent,
                 request_body=json.dumps({"updated_settings": settings.model_dump()}),
             )
-        except (SQLAlchemyError, ValueError, json.JSONDecodeError) as audit_error:
+        except (SQLAlchemyError, ValueError, TypeError) as audit_error:
             # 审计日志失败不应该影响系统设置更新
+            # TypeError: JSON 序列化失败（如循环引用、不支持的对象）
+            # SQLAlchemyError: 数据库操作失败
+            # ValueError: 数据验证失败
             logger.warning(
                 "记录系统设置审计日志失败",
                 exc_info=True,
                 extra={
                     "error_type": type(audit_error).__name__,
-                    "user_id": current_user.id,
+                    "user_id": str(current_user.id),
                     "action": "UPDATE_SYSTEM_SETTINGS",
                 },
             )

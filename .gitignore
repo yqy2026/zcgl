@@ -327,6 +327,11 @@ receipt_uploads/
 *.cer
 *.der
 
+# Backend encryption keys (never commit these)
+backend/key_*
+DATA_ENCRYPTION_KEY
+SECRET_KEY
+
 # Production SSL
 /ssl/production/
 /ssl/prod/

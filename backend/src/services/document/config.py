@@ -82,17 +82,17 @@ class LLMProvider(str, Enum):
 
 class OCRConfig(BaseModel):
     """
-    PDF 处理配置（OCR 已废弃）
+    PDF 文件处理配置
 
-    .. deprecated::
-        OCR 功能已完全移除。
-        请使用 LLM Vision API (services/core/qwen_vision_service.py)。
-        此配置仅保留用于文件限制等通用设置。
+    .. note::
+        OCR 引擎（PaddleOCR, Tesseract）已在 v2.0 中完全移除。
+        现在使用 LLM Vision API 进行合同提取：
+        - Qwen3-VL-Flash: services/document/extractors/qwen_adapter.py
+        - DeepSeek-VL: services/document/extractors/deepseek_adapter.py
+        - GLM-4V: services/document/extractors/glm_adapter.py
 
-    推荐方案:
-    - Qwen3-VL-Flash: services/core/qwen_vision_service.py
-    - DeepSeek-OCR: services/core/deepseek_vision_service.py
-    - Zhipu GLM-4V: services/core/zhipu_vision_service.py
+        此配置类名称 OCRConfig 保留用于向后兼容，
+        实际仅用于文件大小、页数限制等通用设置。
     """
 
     # 文件限制（通用配置）

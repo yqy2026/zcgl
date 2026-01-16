@@ -157,7 +157,8 @@ async def get_ownership_entities(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
 ) -> list[str]:
     """获取所有权属方列表，用于搜索筛选"""
-    return asset_crud.get_distinct_field_values(db, "ownership_entity")
+    asset_service = AssetService(db)
+    return asset_service.get_distinct_field_values("ownership_entity")
 
 
 @router.get(
@@ -167,7 +168,8 @@ async def get_business_categories(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
 ) -> list[str]:
     """获取所有业态类别列表，用于搜索筛选"""
-    return asset_crud.get_distinct_field_values(db, "business_category")
+    asset_service = AssetService(db)
+    return asset_service.get_distinct_field_values("business_category")
 
 
 @router.get("/usage-statuses", response_model=list[str], summary="获取使用情况列表")
@@ -175,7 +177,8 @@ async def get_usage_statuses(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
 ) -> list[str]:
     """获取所有使用情况列表，用于搜索筛选"""
-    return asset_crud.get_distinct_field_values(db, "usage_status")
+    asset_service = AssetService(db)
+    return asset_service.get_distinct_field_values("usage_status")
 
 
 @router.get("/property-natures", response_model=list[str], summary="获取物业性质列表")
@@ -183,7 +186,8 @@ async def get_property_natures(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
 ) -> list[str]:
     """获取所有物业性质列表，用于搜索筛选"""
-    return asset_crud.get_distinct_field_values(db, "property_nature")
+    asset_service = AssetService(db)
+    return asset_service.get_distinct_field_values("property_nature")
 
 
 @router.get("/ownership-statuses", response_model=list[str], summary="获取确权状态列表")
@@ -191,7 +195,8 @@ async def get_ownership_statuses(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)
 ) -> list[str]:
     """获取所有确权状态列表，用于搜索筛选"""
-    return asset_crud.get_distinct_field_values(db, "ownership_status")
+    asset_service = AssetService(db)
+    return asset_service.get_distinct_field_values("ownership_status")
 
 
 # ===== 单个资产操作接口 =====
