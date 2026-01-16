@@ -34,7 +34,6 @@ import { COLORS } from '@/styles/colorMap';
 
 const { Title, Text } = Typography;
 const { Panel } = Collapse;
-const { Step } = Steps;
 
 interface PDFImportHelpProps {
   visible: boolean;
@@ -259,17 +258,17 @@ const PDFImportHelp: React.FC<PDFImportHelpProps> = ({ visible, onClose }) => {
             />
 
             <Card title="使用流程" style={{ marginBottom: 16 }}>
-              <Steps direction="vertical" current={0}>
-                {usageSteps.map((step, index) => (
-                  <Step
-                    key={index}
-                    title={step.title}
-                    description={step.description}
-                    icon={step.icon}
-                    status={index === 0 ? 'process' : 'wait'}
-                  />
-                ))}
-              </Steps>
+              <Steps
+                direction="vertical"
+                current={0}
+                items={usageSteps.map((step, index) => ({
+                  key: index,
+                  title: step.title,
+                  description: step.description,
+                  icon: step.icon,
+                  status: index === 0 ? 'process' : 'wait',
+                }))}
+              />
             </Card>
 
             <Card title="详细步骤说明">

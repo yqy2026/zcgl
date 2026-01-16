@@ -57,12 +57,11 @@ class RouteRegistry:
             "version": version,
         }
 
-        # Only add to versioned_routers if version is not None
-        if version is not None:
-            if version not in self.versioned_routers:
-                self.versioned_routers[version] = []
+        # 添加到versioned_routers（支持None版本用于非版本化路由）
+        if version not in self.versioned_routers:
+            self.versioned_routers[version] = []
 
-            self.versioned_routers[version].append(router_config)
+        self.versioned_routers[version].append(router_config)
         logger.info(f"注册路由: {prefix} (版本: {version}, 标签: {tags})")
 
     def register_global_middleware(self, middleware: Callable[..., Any]) -> None:
@@ -81,11 +80,17 @@ class RouteRegistry:
 
         Args:
             app: FastAPI应用实例
-            version: API版本，默认使用版本化路由
+            version: API版本，None表示包含所有非版本化路由
         """
-        # 确保使用版本化路由
+        # 处理None版本 - 用于非版本化路由（如PDF导入）
         if version is None:
             version = "v1"  # 默认使用v1版本
+            # 先检查是否有None版本的路由（非版本化路由）
+            if None in self.versioned_routers:
+                logger.info(f"包含 {len(self.versioned_routers[None])} 个非版本化路由")
+                for router_config in self.versioned_routers[None]:
+                    self._include_single_router(app, router_config)
+            # 再处理v1版本
             if version not in self.versioned_routers:
                 logger.warning(f"版本 {version} 没有注册的路由")
                 return
@@ -95,36 +100,40 @@ class RouteRegistry:
                 return
 
         for router_config in self.versioned_routers[version]:
-            router = router_config["router"]
-            prefix = router_config["prefix"]
-            tags = router_config["tags"]
-            middleware = router_config["middleware"]
-            dependencies = router_config["dependencies"]
-            include_in_schema = router_config["include_in_schema"]
-            deprecated = router_config["deprecated"]
-
-            # 应用全局依赖
-            all_dependencies = list(self.global_dependencies) + list(dependencies)
-
-            # 注册路由
-            app.include_router(
-                router,
-                prefix=prefix,
-                tags=tags,
-                dependencies=all_dependencies,
-                include_in_schema=include_in_schema,
-            )
-
-            # 应用路由级中间件
-            for mw in middleware:
-                router.middleware("http")(mw)
-
-            if deprecated:
-                logger.warning(f"路由 {prefix} 已标记为废弃")
+            self._include_single_router(app, router_config)
 
         logger.info(
             f"完成版本 {version} 的路由注册，共 {len(self.versioned_routers[version])} 个路由"
         )
+
+    def _include_single_router(self, app: FastAPI, router_config: dict[str, Any]) -> None:
+        """包含单个路由器"""
+        router = router_config["router"]
+        prefix = router_config["prefix"]
+        tags = router_config["tags"]
+        middleware = router_config["middleware"]
+        dependencies = router_config["dependencies"]
+        include_in_schema = router_config["include_in_schema"]
+        deprecated = router_config["deprecated"]
+
+        # 应用全局依赖
+        all_dependencies = list(self.global_dependencies) + list(dependencies)
+
+        # 注册路由
+        app.include_router(
+            router,
+            prefix=prefix,
+            tags=tags,
+            dependencies=all_dependencies,
+            include_in_schema=include_in_schema,
+        )
+
+        # 应用路由级中间件
+        for mw in middleware:
+            router.middleware("http")(mw)
+
+        if deprecated:
+            logger.warning(f"路由 {prefix} 已标记为废弃")
 
     def include_all(self, app: FastAPI, version: str | None = None) -> None:
         """与 include_all_routers 等价的便捷别名，便于主入口统一调用"""
@@ -228,7 +237,7 @@ def register_api_routes() -> None:
 
     # 注册PDF导入路由（独立注册）- 添加异常处理
     try:
-        from ..api.v1.pdf_import_unified import router as pdf_import_router
+        from ..api.v1.pdf_import import router as pdf_import_router
 
         route_registry.register_router(
             router=pdf_import_router,
@@ -236,7 +245,7 @@ def register_api_routes() -> None:
             tags=["PDF智能导入"],
             version=None,
         )
-        logger.info("PDF导入路由注册成功（版本化）")
+        logger.info("PDF导入路由注册成功（模块化版本）")
     except Exception as e:  # pragma: no cover
         logger.warning(f"PDF导入路由注册失败（将跳过）: {e}")  # pragma: no cover
         logger.info("系统将继续运行，但PDF导入功能可能不可用")  # pragma: no cover

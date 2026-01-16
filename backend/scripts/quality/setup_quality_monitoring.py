@@ -122,7 +122,7 @@ class QualityMonitorSetup:
             working_dir = None
 
         try:
-            result = subprocess.run(
+            subprocess.run(
                 cmd, cwd=working_dir, capture_output=True, text=True, check=True
             )
             print("  ✅ 依赖安装完成")

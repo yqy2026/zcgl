@@ -87,9 +87,9 @@ const DictionarySelect: React.FC<DictionarySelectProps> = ({
       filterOption={(input, option) => {
         // 处理React元素类型的label
         const label = typeof option?.label === 'string' ? option.label :
-                     (option?.label !== null && option?.label !== undefined && React.isValidElement(option?.label) ?
-                       (option?.label as React.ReactElement)?.props?.children?.toString() ?? '' :
-                       String(option?.label ?? ''))
+          (option?.label !== null && option?.label !== undefined && React.isValidElement(option?.label) ?
+            (option?.label as React.ReactElement<{ children?: string }>)?.props?.children?.toString() ?? '' :
+            String(option?.label ?? ''))
         return label.toLowerCase().includes(input.toLowerCase())
       }}
       virtual

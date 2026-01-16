@@ -5,7 +5,7 @@ V2 合同CRUD测试
 
 from datetime import date
 from decimal import Decimal
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from sqlalchemy.orm import Session
@@ -94,34 +94,39 @@ class TestContractV2MultiAsset:
 
     def test_get_contracts_without_asset_filter(self, mock_db, sample_contract):
         """测试不带资产筛选的查询"""
-        mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.join.return_value = mock_query
-        mock_query.filter.return_value = mock_query
+        # Mock chain for items query (include join since it's called)
+        mock_items_query = MagicMock()
+        mock_items_query.join.return_value = mock_items_query  # For include_relations=True
+        mock_items_query.filter.return_value = mock_items_query
+        mock_items_query.order_by.return_value = mock_items_query
+        mock_items_query.offset.return_value = mock_items_query
+        mock_items_query.limit.return_value = mock_items_query
+        mock_items_query.all.return_value = [sample_contract]
 
-        # Mock execute chain for query_builder
-        mock_stmt = MagicMock()
-        mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = [sample_contract]
-        mock_db.execute.return_value = mock_result
-
-        # Mock count query
+        # Mock chain for count query
         mock_count_query = MagicMock()
-        mock_db.query.return_value = mock_count_query
         mock_count_query.join.return_value = mock_count_query
         mock_count_query.filter.return_value = mock_count_query
         mock_count_query.count.return_value = 1
 
-        # Mock query_builder.build_query to return mock statement
-        with patch.object(
-            rent_contract.query_builder, "build_query", return_value=mock_stmt
-        ):
-            # 不带asset_id的查询 - 使用 get_multi_with_filters
-            contracts, count = rent_contract.get_multi_with_filters(
-                db=mock_db,
-                skip=0,
-                limit=10,
-            )
+        # Configure mock_db.query to return appropriate mock based on call
+        call_count = [0]
+
+        def query_side_effect(*args, **kwargs):
+            call_count[0] += 1
+            if call_count[0] == 1:  # First call is for items
+                return mock_items_query
+            else:  # Second call is for count
+                return mock_count_query
+
+        mock_db.query.side_effect = query_side_effect
+
+        # 不带asset_id的查询 - 使用 get_multi_with_filters
+        contracts, count = rent_contract.get_multi_with_filters(
+            db=mock_db,
+            skip=0,
+            limit=10,
+        )
 
         # 验证基本查询
         assert contracts == [sample_contract]
@@ -136,7 +141,7 @@ class TestContractV2MultiAsset:
         mock_query.first.return_value = None
 
         # get_with_details 应该join Ownership表
-        result = rent_contract.get_with_details(mock_db, "contract_123")
+        rent_contract.get_with_details(mock_db, "contract_123")
 
         # 验证join调用
         assert mock_query.join.called
@@ -253,35 +258,40 @@ class TestQueryBuilderIntegration:
 
     def test_query_builder_without_db_session_param(self, mock_db):
         """测试QueryBuilder不使用db_session参数（V2更新）"""
-        mock_query = MagicMock()
-        mock_db.query.return_value = mock_query
-        mock_query.join.return_value = mock_query
-        mock_query.filter.return_value = mock_query
+        # Mock chain for items query (include join since it's called)
+        mock_items_query = MagicMock()
+        mock_items_query.join.return_value = mock_items_query  # For include_relations=True
+        mock_items_query.filter.return_value = mock_items_query
+        mock_items_query.order_by.return_value = mock_items_query
+        mock_items_query.offset.return_value = mock_items_query
+        mock_items_query.limit.return_value = mock_items_query
+        mock_items_query.all.return_value = []
 
-        # Mock execute chain for query_builder
-        mock_stmt = MagicMock()
-        mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = []
-        mock_db.execute.return_value = mock_result
-
-        # Mock count query
+        # Mock chain for count query
         mock_count_query = MagicMock()
-        mock_db.query.return_value = mock_count_query
         mock_count_query.join.return_value = mock_count_query
         mock_count_query.filter.return_value = mock_count_query
         mock_count_query.count.return_value = 0
 
-        # Mock query_builder.build_query to return mock statement
-        with patch.object(
-            rent_contract.query_builder, "build_query", return_value=mock_stmt
-        ):
-            # V2: build_query 不再需要 db_session 和 model 参数
-            # 使用 base_query 替代 - 使用 get_multi_with_filters
-            contracts, count = rent_contract.get_multi_with_filters(
-                db=mock_db,
-                skip=0,
-                limit=10,
-            )
+        # Configure mock_db.query to return appropriate mock based on call
+        call_count = [0]
+
+        def query_side_effect(*args, **kwargs):
+            call_count[0] += 1
+            if call_count[0] == 1:  # First call is for items
+                return mock_items_query
+            else:  # Second call is for count
+                return mock_count_query
+
+        mock_db.query.side_effect = query_side_effect
+
+        # V2: build_query 不再需要 db_session 和 model 参数
+        # 使用 base_query 替代 - 使用 get_multi_with_filters
+        contracts, count = rent_contract.get_multi_with_filters(
+            db=mock_db,
+            skip=0,
+            limit=10,
+        )
 
         # 验证查询成功执行
         assert contracts == []

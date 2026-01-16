@@ -37,7 +37,6 @@ import { COLORS } from "@/styles/colorMap";
 const importLogger = createLogger('AssetImport');
 
 const { Title, Text } = Typography;
-const { Step } = Steps;
 const { Option } = Select;
 
 interface ImportResult {
@@ -318,11 +317,15 @@ const OptimizedAssetImport: React.FC = () => {
       )}
 
       <Card>
-        <Steps current={currentStep} style={{ marginBottom: "32px" }}>
-          <Step title="选择文件" description="上传Excel文件" />
-          <Step title="执行导入" description="处理数据" />
-          <Step title="查看结果" description="导入完成" />
-        </Steps>
+        <Steps
+          current={currentStep}
+          style={{ marginBottom: "32px" }}
+          items={[
+            { title: "选择文件", description: "上传Excel文件" },
+            { title: "执行导入", description: "处理数据" },
+            { title: "查看结果", description: "导入完成" },
+          ]}
+        />
 
         {/* 步骤0: 选择文件 */}
         {currentStep === 0 && (

@@ -301,8 +301,8 @@ class TestCachedExtractor:
             return {"success": True}
 
         # 使用不同文件路径，但缓存键函数返回相同路径
-        result1 = await extract_func("file1.pdf")
-        result2 = await extract_func("file2.pdf")
+        await extract_func("file1.pdf")
+        await extract_func("file2.pdf")
 
         # 第二次调用应使用缓存，因为 cache_key_func 返回相同路径
         assert call_count == 1, f"Expected 1 call, got {call_count}"

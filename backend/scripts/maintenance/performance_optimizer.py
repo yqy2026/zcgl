@@ -347,16 +347,16 @@ def main():
     subparsers = parser.add_subparsers(dest="command", help="可用命令")
 
     # 分析命令
-    analyze_parser = subparsers.add_parser("analyze", help="分析数据库性能")
+    subparsers.add_parser("analyze", help="分析数据库性能")
 
     # 优化命令
-    optimize_parser = subparsers.add_parser("optimize", help="优化数据库")
+    subparsers.add_parser("optimize", help="优化数据库")
 
     # 创建索引命令
-    index_parser = subparsers.add_parser("create-indexes", help="创建性能索引")
+    subparsers.add_parser("create-indexes", help="创建性能索引")
 
     # 基准测试命令
-    benchmark_parser = subparsers.add_parser("benchmark", help="查询性能基准测试")
+    subparsers.add_parser("benchmark", help="查询性能基准测试")
 
     # 生成报告命令
     report_parser = subparsers.add_parser("report", help="生成性能报告")

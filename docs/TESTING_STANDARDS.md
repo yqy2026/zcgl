@@ -1,8 +1,8 @@
 # Testing Standards
 # Land Property Asset Management System
 
-**Version**: 1.0
-**Date**: 2025-12-25
+**Version**: 2.0
+**Date**: 2026-01-15
 **Status**: Active
 
 ---
@@ -13,7 +13,7 @@
 2. [Test File Naming Conventions](#test-file-naming-conventions)
 3. [Test Directory Structure](#test-directory-structure)
 4. [Backend Testing Standards (pytest)](#backend-testing-standards-pytest)
-5. [Frontend Testing Standards (Jest/React Testing Library)](#frontend-testing-standards-jestreact-testing-library)
+5. [Frontend Testing Standards (Vitest/React Testing Library)](#frontend-testing-standards-vitestreact-testing-library)
 6. [Coverage Targets](#coverage-targets)
 7. [Test Execution Standards](#test-execution-standards)
 8. [CI/CD Integration](#cicd-integration)
@@ -45,7 +45,7 @@ This document defines the testing standards and best practices for the Land Prop
 | Security Tests | `test_<security_feature>.py` | `test_rbac_core.py` | `tests/security/` |
 | Performance Tests | `test_<component>_performance.py` | `test_api_performance.py` | `tests/performance/` |
 
-### Frontend (Jest/React)
+### Frontend (Vitest/React)
 
 | Test Type | Naming Pattern | Example | Location |
 |-----------|---------------|---------|----------|
@@ -325,7 +325,7 @@ async def test_async_pdf_processing():
 
 ---
 
-## Frontend Testing Standards (Jest/React Testing Library)
+## Frontend Testing Standards (Vitest/React Testing Library)
 
 ### Component Test Template
 
@@ -334,13 +334,14 @@ async def test_async_pdf_processing():
  * AssetForm component tests
  */
 
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { AssetForm } from './AssetForm'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Mock dependencies
-jest.mock('@/api/client', () => ({
+vi.mock('@/api/client', () => ({
   enhancedApiClient: {
     post: vi.fn(),
   },
@@ -452,9 +453,10 @@ describe('AssetForm', () => {
  * useAssets hook tests
  */
 
-import { renderHook, act, waitFor } from '@testing-library/react'
+import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useAssets } from './useAssets'
+import { describe, it, expect, vi } from 'vitest'
 
 const wrapper = ({ children }: { children: React.ReactNode }) => {
   const queryClient = new QueryClient({
@@ -505,6 +507,7 @@ describe('useAssets', () => {
 
 import { enhancedApiClient } from '@/api/client'
 import { assetService } from './assetService'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Mock the API client
 vi.mock('@/api/client', () => ({
@@ -602,8 +605,8 @@ describe('assetService', () => {
 cd backend
 pytest
 
-# Run with coverage
-pytest --cov=src --cov-report=html --cov-report=term
+# Run with coverage(auto-generated xml/html)
+pytest --cov=src
 
 # Run specific test types
 pytest -m unit                    # Fast unit tests only
@@ -618,9 +621,6 @@ pytest -v --tb=short
 
 # Run failed tests only
 pytest --lf
-
-# Stop on first failure
-pytest -x
 ```
 
 ### Frontend Test Execution
@@ -628,34 +628,34 @@ pytest -x
 ```bash
 # Run all tests
 cd frontend
-npm test
+pnpm test
 
 # Run with coverage
-npm run test:coverage
+pnpm test:coverage
 
 # Run in watch mode
-npm test -- --watch
+pnpm test:watch
 
 # Run specific test file
-npm test -- AssetForm.test.tsx
+pnpm test AssetForm.test.tsx
 
 # Run tests matching pattern
-npm test -- --testNamePattern="AssetForm"
+pnpm test -t "AssetForm"
 
 # Run tests for specific directory
-npm test -- components/Asset
+pnpm test components/Asset
 
 # Update snapshots
-npm test -- -u
+pnpm test -u
 ```
 
 ### Test Execution Time Targets
 
 | Test Type | Maximum Time | Notes |
 |-----------|--------------|-------|
-| Unit Tests | < 5 minutes | Fast, isolated tests |
-| Integration Tests | < 15 minutes | Database/API integration |
-| Full Suite | < 30 minutes | All tests combined |
+| Unit Tests | < 1 minute | Fast, isolated tests |
+| Integration Tests | < 5 minutes | Database/API integration |
+| Full Suite | < 10 minutes | All tests combined |
 
 ---
 
@@ -677,12 +677,13 @@ jobs:
         python-version: ['3.12']
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+          cache: 'pip'
 
       - name: Install dependencies
         run: |
@@ -693,7 +694,7 @@ jobs:
           pytest -m ${{ matrix.test-type }} --cov=src --cov-report=xml
 
       - name: Upload coverage
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
 ```
 
 ### Frontend CI Pipeline
@@ -708,24 +709,31 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'pnpm'
+          cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: Install dependencies
-        run: cd frontend && npm ci
+        run: cd frontend && pnpm install --frozen-lockfile
 
       - name: Run tests
-        run: cd frontend && npm run test:coverage
+        run: cd frontend && pnpm test:ci
 
       - name: Type check
-        run: cd frontend && npm run type-check
+        run: cd frontend && pnpm type-check
 
       - name: Lint
-        run: cd frontend && npm run lint
+        run: cd frontend && pnpm lint
 ```
 
 ---
@@ -742,12 +750,13 @@ jobs:
 6. **Mock external dependencies** - databases, APIs, file systems
 7. **Use appropriate assertions** - most specific to least specific
 8. **Clean up resources** - use `finally` blocks or fixture teardown
+9. **Use `vi.mock` for Vitest** mocking standard
 
 ### DON'Ts ❌
 
 1. **Don't test third-party libraries** - trust that they work
 2. **Don't write tests that depend on execution order**
-3. **Don't use random data in tests** - use deterministic fixtures
+3. **Don't use random data in tests** - use deterministic fixtures or seeded random
 4. **Don't ignore test failures** - fix them immediately
 5. **Don't test trivial code** - getters/setters, simple pass-through functions
 6. **Don't hardcode values** that should come from configuration
@@ -756,42 +765,6 @@ jobs:
 
 ---
 
-## Quick Reference
-
-### Common Backend Commands
-
-```bash
-# Quick test run
-pytest tests/unit/models/ -v
-
-# Coverage report
-pytest --cov=src --cov-report=html
-
-# Find failing tests
-pytest -v --tb=short | grep FAILED
-
-# Run specific marker
-pytest -m "api and not slow"
-```
-
-### Common Frontend Commands
-
-```bash
-# Quick test run
-npm test -- --testPathPattern=AssetForm
-
-# Coverage report
-npm run test:coverage
-
-# Find failing tests
-npm test 2>&1 | grep "FAIL"
-
-# Run specific file
-npm test -- AssetForm.test.tsx
-```
-
----
-
 **Document Owner**: Development Team
-**Last Updated**: 2025-12-25
-**Next Review**: 2026-01-01
+**Last Updated**: 2026-01-15
+**Next Review**: 2026-07-15

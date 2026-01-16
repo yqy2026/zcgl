@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """Count mypy errors from output"""
-import sys
 from collections import defaultdict
 
 # 从任务输出复制的错误列表
@@ -90,7 +89,7 @@ def main():
         for err in errs:
             error_codes[err['code']] += 1
 
-    print(f"\nError code distribution:")
+    print("\nError code distribution:")
     for code, count in sorted(error_codes.items(), key=lambda x: -x[1]):
         print(f"  {code:20s}: {count:3d}")
 
@@ -101,14 +100,14 @@ def main():
         reverse=True
     )
 
-    print(f"\nTop 20 files with most errors:")
+    print("\nTop 20 files with most errors:")
     for i, (file_path, errs) in enumerate(sorted_files[:20], 1):
         file_name = file_path.split('\\')[-1]
         print(f"{i:2d}. {file_name:40s} ({len(errs):2d} errors)")
 
     print("\n" + "="*70)
     print(f"REMAINING: {total_errors} errors")
-    print(f"TARGET: <50 errors")
+    print("TARGET: <50 errors")
     print(f"NEED TO FIX: {max(0, total_errors - 50)} errors")
     print("="*70)
 

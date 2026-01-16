@@ -262,7 +262,7 @@ let globalPreloadManager: SmartPreloadManager | null = null;
 
 export const useSmartPreload = (config?: Partial<PreloadConfig>) => {
   const location = useLocation();
-  const managerRef = useRef<SmartPreloadManager>();
+  const managerRef = useRef<SmartPreloadManager | null>(null);
 
   // 初始化管理器
   if (!managerRef.current) {

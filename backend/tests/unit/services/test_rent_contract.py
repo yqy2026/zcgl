@@ -195,7 +195,7 @@ class TestRentContractService:
         )
 
         # Execute
-        result = service.batch_update_payment(mock_db, request=request)
+        service.batch_update_payment(mock_db, request=request)
 
         # Verify
         assert ledger1.payment_status == "已支付"

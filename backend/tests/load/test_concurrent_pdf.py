@@ -159,7 +159,7 @@ class TestConcurrentPDFProcessing:
 
         # 创建并执行多个任务
         task_ids = list(range(5))
-        results = await asyncio.gather(
+        await asyncio.gather(
             *[mock_task_with_tracking(tid) for tid in task_ids],
             return_exceptions=True
         )
@@ -182,7 +182,7 @@ class TestConcurrentPDFProcessing:
             completed.append(task_id)
             return {"success": True}
 
-        results = await asyncio.gather(
+        await asyncio.gather(
             *[flaky_task(i) for i in range(5)],
             return_exceptions=True
         )
@@ -307,7 +307,7 @@ class TestResourceLimits:
 
         # 获取初始内存使用
         # 注意：这只是粗略估计
-        initial_objects = len(gc.get_objects()) if 'gc' in sys.modules else 0
+        len(gc.get_objects()) if 'gc' in sys.modules else 0
 
         # 处理多个任务
         async def _process_mock_pdf(pdf_id):
@@ -392,7 +392,7 @@ class TestResourceLimits:
         ]
 
         # 设置总体超时
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        await asyncio.gather(*tasks, return_exceptions=True)
 
         # 验证结果
         assert len(successes) > 0  # 应该有成功的
@@ -415,14 +415,13 @@ class TestStressScenarios:
     @pytest.mark.stress
     async def test_max_concurrent_capacity(self):
         """测试最大并发容量"""
-        service = PDFImportService()
+        PDFImportService()
 
         # 创建刚好达到限制的任务数
         tasks = []
         task_count = MAX_CONCURRENT_PDF_TASKS
 
         for i in range(task_count):
-            task_id = f"task-{i}"
 
             async def single_task():
                 await asyncio.sleep(0.05)

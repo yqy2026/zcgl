@@ -4,9 +4,9 @@
 
 ## 技术栈
 
-- **框架**: React 18 + TypeScript
-- **构建工具**: Vite
-- **UI组件库**: Ant Design 5
+- **框架**: React 19 + TypeScript
+- **构建工具**: Vite 6
+- **UI组件库**: Ant Design 6
 - **路由**: React Router v6
 - **状态管理**: Zustand
 - **数据获取**: TanStack Query (React Query)
@@ -118,13 +118,13 @@ frontend/
 
 ```bash
 cd frontend
-npm install
+pnpm install
 ```
 
 ### 启动开发服务器
 
 ```bash
-npm run dev
+pnpm dev
 ```
 
 应用将在 http://localhost:5173 启动
@@ -138,7 +138,7 @@ npm run build
 ### 预览生产版本
 
 ```bash
-npm run preview
+pnpm preview
 ```
 
 ## 配置说明
@@ -330,13 +330,13 @@ server: {
 ### 单元测试
 
 ```bash
-npm run test
+pnpm test
 ```
 
 ### 端到端测试
 
 ```bash
-npm run test:e2e
+pnpm test:e2e
 ```
 
 ## 部署
@@ -386,9 +386,9 @@ CMD ["nginx", "-g", "daemon off;"]
 
 ### 前端开发
 
-- 使用React 18和TypeScript
-- Ant Design 5组件库
-- Vite构建工具
+- 使用React 19和TypeScript
+- Ant Design 6组件库
+- Vite 6构建工具
 - 遵循组件化开发模式
 - 使用ESLint和Prettier进行代码检查和格式化
 - 实现单元测试和端到端测试

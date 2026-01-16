@@ -89,6 +89,32 @@ class PerformanceMonitor:
             ),
         }
 
+    async def get_real_time_performance(self) -> dict[str, Any]:
+        """获取实时性能监控数据 (API兼容)"""
+        return {
+            "enabled": self.enabled,
+            "threshold_ms": self.slow_query_threshold,
+            "stats": self.get_stats(),
+            "timestamp": datetime.now(UTC).isoformat(),
+        }
+
+    async def get_performance_report(self, hours: int = 24) -> dict[str, Any]:
+        """获取性能报告 (API兼容)"""
+        return {
+            "hours": hours,
+            "stats": self.get_stats(),
+            "report_generated_at": datetime.now(UTC).isoformat(),
+        }
+
+    async def get_health_status(self) -> dict[str, Any]:
+        """获取系统健康状态 (API兼容)"""
+        return {
+            "status": "healthy" if self.enabled else "disabled",
+            "monitoring_enabled": self.enabled,
+            "total_queries": sum(stats["count"] for stats in self.query_stats.values()),
+            "slow_queries": sum(stats["slow_queries"] for stats in self.query_stats.values()),
+        }
+
     def reset_stats(self) -> None:
         """重置统计信息"""
         self.query_stats.clear()

@@ -8,7 +8,6 @@ import {
 } from '@ant-design/icons';
 
 const { Text, Title } = Typography;
-const { Step } = Steps;
 
 export type ProgressType = 'line' | 'circle' | 'dashboard' | 'steps' | 'timeline';
 export type ProgressStatus = 'normal' | 'success' | 'exception' | 'active';
@@ -118,17 +117,14 @@ const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({
             status={status === 'exception' ? 'error' : undefined}
             direction={direction}
             size={size === 'large' ? 'default' : size}
-          >
-            {steps.map((step, index) => (
-              <Step
-                key={index}
-                title={step.title}
-                description={step.description}
-                status={step.status}
-                icon={step.icon}
-              />
-            ))}
-          </Steps>
+            items={steps.map((step, index) => ({
+              key: index,
+              title: step.title,
+              description: step.description,
+              status: step.status,
+              icon: step.icon,
+            }))}
+          />
         );
 
       case 'timeline':

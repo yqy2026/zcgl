@@ -3,6 +3,8 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from ..crud.asset import SensitiveDataHandler
+from ..crud.base import CRUDBase
 from ..models import Ownership
 from ..models.rent_contract import (
     RentContract,
@@ -18,8 +20,6 @@ from ..schemas.rent_contract import (
     RentTermCreate,
     RentTermUpdate,
 )
-from .base import CRUDBase
-from .asset import SensitiveDataHandler
 
 
 class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUpdate]):

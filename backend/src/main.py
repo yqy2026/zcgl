@@ -206,6 +206,14 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# PDF智能导入API - 直接注册到应用
+try:
+    from .api.v1.pdf_import import router as pdf_import_router
+    app.include_router(pdf_import_router, prefix="/api/pdf-import", tags=["PDF智能导入"])
+    safe_print("✓ PDF导入路由已注册")
+except Exception as e:
+    safe_print(f"✗ PDF导入路由注册失败: {e}")
+
 # 初始化配置
 initialize_config()
 
@@ -302,19 +310,30 @@ async def root_endpoint() -> JSONResponse:
 
 
 # 统一通过路由注册器注册路由与全局依赖
+logger.info(f"检查路由注册器: route_registry={route_registry is not None}, register_api_routes={register_api_routes is not None}")
 if route_registry and register_api_routes:
+    logger.info("开始通过路由注册器注册路由...")
     try:
         register_api_routes()
+        logger.info("register_api_routes() 调用成功")
         # 全局依赖：OCR 服务（确保每个请求上下文可用）
         route_registry.register_global_dependency(Depends(get_ocr_service))
         # 统一注册路由（版本化架构）
         route_registry.include_all(app, version="v1")
         logger.info("已通过路由注册器统一注册 API 路由（版本化）")
+        # 单独注册非版本化路由（如 PDF 导入）
+        route_registry.include_all(app, version=None)
+        logger.info("已通过路由注册器注册非版本化路由")
+        logger.info(f"总路由数: {len(app.routes)}")
     except Exception as e:
         logger.error(f"路由注册器注册失败: {e}")
+        import traceback
+        traceback.print_exc()
 
     # 手动路由注册已移除，统一使用路由注册器管理所有API路由
     logger.info("手动路由注册已移除，统一使用路由注册器管理所有API路由")
+else:
+    logger.warning("路由注册器或register_api_routes不可用，跳过路由注册")
 
 # PDF智能导入API端点已迁移到路由注册器
 # /api/pdf-import/* → /api/v1/pdf-import/*

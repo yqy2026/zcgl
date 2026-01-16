@@ -412,8 +412,8 @@ class Settings(BaseSettings):
         if environment == "production":
             if is_weak_pattern:
                 raise ValueError(
-                    f"生产环境禁止使用弱密钥模式。检测到包含常见弱密钥标识符。"
-                    f"请使用 python -c 'import secrets; print(secrets.token_urlsafe(32))' 生成强密钥。"
+                    "生产环境禁止使用弱密钥模式。检测到包含常见弱密钥标识符。"
+                    "请使用 python -c 'import secrets; print(secrets.token_urlsafe(32))' 生成强密钥。"
                 )
             if is_too_short:
                 raise ValueError(

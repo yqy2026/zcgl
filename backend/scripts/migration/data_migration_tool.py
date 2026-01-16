@@ -296,10 +296,10 @@ def main():
     migrate_parser.add_parameter("--script", required=True, help="迁移脚本文件")
 
     # 验证命令
-    validate_parser = subparsers.add_parser("validate", help="验证数据完整性")
+    subparsers.add_parser("validate", help="验证数据完整性")
 
     # 修复命令
-    fix_parser = subparsers.add_parser("fix", help="修复数据问题")
+    subparsers.add_parser("fix", help="修复数据问题")
 
     # 报告命令
     report_parser = subparsers.add_parser("report", help="生成迁移报告")

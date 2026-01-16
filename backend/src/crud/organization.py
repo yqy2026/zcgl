@@ -3,8 +3,8 @@ from typing import Any
 from sqlalchemy import and_, not_
 from sqlalchemy.orm import Session
 
-from ..crud.base import CRUDBase
 from ..crud.asset import SensitiveDataHandler
+from ..crud.base import CRUDBase
 from ..models.organization import Organization
 from ..schemas.organization import OrganizationCreate, OrganizationUpdate
 

@@ -45,7 +45,7 @@ const AppBreadcrumb: React.FC = () => {
   // 生成面包屑项
   const generateBreadcrumbItems = () => {
     const pathSnippets = pathname.split('/').filter(i => i)
-    
+
     // 首页面包屑
     const breadcrumbItems = [
       {
@@ -148,12 +148,12 @@ const AppBreadcrumb: React.FC = () => {
 
     // 构建普通路径的面包屑
     let currentPath = ''
-    
+
     pathSnippets.forEach((snippet, index) => {
       currentPath += `/${snippet}`
       const isLast = index === pathSnippets.length - 1
       const breadcrumbConfig = breadcrumbNameMap[currentPath]
-      
+
       if (breadcrumbConfig != null) {
         if (isLast !== undefined && isLast !== null) {
           // 最后一项不添加链接
@@ -187,7 +187,7 @@ const AppBreadcrumb: React.FC = () => {
     if (pathname.startsWith('/assets') && !breadcrumbItems.some(item =>
       typeof item.title === 'object' &&
       React.isValidElement(item.title) &&
-      ((item.title as React.ReactElement).props?.children?.includes?.('资产管理') === true)
+      (item.title as React.ReactElement<{ children?: string }>).props?.children?.includes?.('资产管理') === true
     )) {
       breadcrumbItems.splice(1, 0, {
         title: (
@@ -202,7 +202,7 @@ const AppBreadcrumb: React.FC = () => {
     if (pathname.startsWith('/data') && !breadcrumbItems.some(item =>
       typeof item.title === 'object' &&
       React.isValidElement(item.title) &&
-      ((item.title as React.ReactElement).props?.children?.includes?.('数据管理') === true)
+      (item.title as React.ReactElement<{ children?: string }>).props?.children?.includes?.('数据管理') === true
     )) {
       breadcrumbItems.splice(1, 0, {
         title: (
@@ -217,7 +217,7 @@ const AppBreadcrumb: React.FC = () => {
     if (pathname.startsWith('/analytics') && !breadcrumbItems.some(item =>
       typeof item.title === 'object' &&
       React.isValidElement(item.title) &&
-      ((item.title as React.ReactElement).props?.children?.includes?.('数据分析') === true)
+      (item.title as React.ReactElement<{ children?: string }>).props?.children?.includes?.('数据分析') === true
     )) {
       breadcrumbItems.splice(1, 0, {
         title: (
@@ -232,7 +232,7 @@ const AppBreadcrumb: React.FC = () => {
     if (pathname.startsWith('/system') && !breadcrumbItems.some(item =>
       typeof item.title === 'object' &&
       React.isValidElement(item.title) &&
-      ((item.title as React.ReactElement).props?.children?.includes?.('系统管理') === true)
+      (item.title as React.ReactElement<{ children?: string }>).props?.children?.includes?.('系统管理') === true
     )) {
       breadcrumbItems.splice(1, 0, {
         title: (
@@ -247,7 +247,7 @@ const AppBreadcrumb: React.FC = () => {
     if (pathname.startsWith('/ownership') && !breadcrumbItems.some(item =>
       typeof item.title === 'object' &&
       React.isValidElement(item.title) &&
-      ((item.title as React.ReactElement).props?.children?.includes?.('资产管理') === true)
+      (item.title as React.ReactElement<{ children?: string }>).props?.children?.includes?.('资产管理') === true
     )) {
       breadcrumbItems.splice(1, 0, {
         title: (

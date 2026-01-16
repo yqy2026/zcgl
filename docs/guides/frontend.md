@@ -14,9 +14,9 @@
 - 常见问题解决
 
 ## ✅ Status
-**当前状态**: Active (2026-01-08 更新)
+**当前状态**: Active (2026-01-15 更新)
 **适用版本**: v2.0.0
-**技术栈**: React 18 + TypeScript + Vite + Ant Design
+**技术栈**: React 19 + TypeScript + Vite 6 + Ant Design 6
 
 ---
 
@@ -26,10 +26,10 @@
 
 | 类别 | 技术 | 版本 | 用途 |
 |------|------|------|------|
-| **框架** | React | 18.3.1 | UI 框架 |
+| **框架** | React | 19.2.0 | UI 框架 |
 | **语言** | TypeScript | 5.9.3 | 类型安全 |
-| **构建工具** | Vite | 5.4.20 | 开发服务器和打包 |
-| **UI 库** | Ant Design | 5.27.5 | 组件库 |
+| **构建工具** | Vite | 6.0.0 | 开发服务器和打包 |
+| **UI 库** | Ant Design | 6.2.0 | 组件库 |
 | **状态管理** | Zustand | 4.4.7 | 全局状态 |
 | **数据获取** | React Query | 5.90.7 | 服务端状态 |
 | **路由** | React Router | 6.20.1 | 页面路由 |
@@ -87,10 +87,10 @@ frontend/
 cd frontend
 
 # 2. 安装依赖
-npm install
+pnpm install
 
 # 3. 启动开发服务器
-npm run dev
+pnpm dev
 
 # 4. 访问应用
 # 浏览器打开: http://localhost:5173
@@ -100,21 +100,21 @@ npm run dev
 
 ```bash
 # 开发
-npm run dev              # 启动开发服务器 (端口 5173)
+pnpm dev              # 启动开发服务器 (端口 5173)
 
 # 代码质量
-npm run type-check       # TypeScript 类型检查
-npm run lint            # ESLint 代码检查
-npm run lint:fix        # 自动修复 ESLint 问题
+pnpm type-check       # TypeScript 类型检查
+pnpm lint            # ESLint 代码检查
+pnpm lint:fix        # 自动修复 ESLint 问题
 
 # 测试
-npm test                # 运行所有测试
-npm run test:coverage   # 生成覆盖率报告
-npm run test:watch      # 监听模式
+pnpm test            # 运行所有测试
+pnpm test:coverage   # 生成覆盖率报告
+pnpm test:watch      # 监听模式
 
 # 构建
-npm run build           # 生产环境构建
-npm run preview         # 预览生产构建
+pnpm build           # 生产环境构建
+pnpm preview         # 预览生产构建
 ```
 
 **证据来源**: `frontend/package.json.scripts`

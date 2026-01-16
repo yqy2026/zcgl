@@ -59,11 +59,11 @@ class TestExcelImportServiceErrorHandling:
                 ]
             )
 
-            # Mock _map_excel_row_to_asset_data
+            # Mock _map_excel_row_to_asset_data (returns tuple)
             excel_service._map_excel_row_to_asset_data = MagicMock(
                 side_effect=[
-                    {"property_name": "", "address": "地址1"},
-                    {"property_name": "有效资产", "address": "地址2"},
+                    ({"property_name": "", "address": "地址1"}, []),
+                    ({"property_name": "有效资产", "address": "地址2"}, []),
                 ]
             )
 
@@ -75,8 +75,11 @@ class TestExcelImportServiceErrorHandling:
             )
 
             assert result["total"] == 2
+            # Row 1: validation error → failed
+            # Row 2: passes validation, counted as success (even though not created due to create_assets=False)
             assert result["failed"] == 1
             assert result["success"] == 1
+            assert result["created_assets"] == 0  # Nothing created because create_assets=False
             assert len(result["errors"]) == 1
             assert "property_name" in result["errors"][0]["error"]
 
@@ -101,7 +104,7 @@ class TestExcelImportServiceErrorHandling:
             )
 
             excel_service._map_excel_row_to_asset_data = MagicMock(
-                return_value={"property_name": "", "address": "地址1"}
+                return_value=({"property_name": "", "address": "地址1"}, [])
             )
 
             with pytest.raises(BusinessValidationError) as excinfo:
@@ -130,7 +133,7 @@ class TestExcelImportServiceErrorHandling:
             )
 
             excel_service._map_excel_row_to_asset_data = MagicMock(
-                return_value={"property_name": "已存在资产", "address": "地址1"}
+                return_value=({"property_name": "已存在资产", "address": "地址1"}, [])
             )
 
             # Mock 找到已存在的资产
@@ -168,14 +171,17 @@ class TestExcelImportServiceErrorHandling:
 
             # 提供完整的资产数据（包含必填字段）
             def make_asset_data(row, idx):
-                return {
-                    "property_name": f"资产{idx}",
-                    "address": f"地址{idx}",
-                    "ownership_entity": "测试单位",
-                    "ownership_status": "自有",
-                    "property_nature": "商业",
-                    "usage_status": "使用中",
-                }
+                return (
+                    {
+                        "property_name": f"资产{idx}",
+                        "address": f"地址{idx}",
+                        "ownership_entity": "测试单位",
+                        "ownership_status": "自有",
+                        "property_nature": "商业",
+                        "usage_status": "使用中",
+                    },
+                    [],  # parse_warnings
+                )
 
             excel_service._map_excel_row_to_asset_data = MagicMock(
                 side_effect=make_asset_data
@@ -219,22 +225,28 @@ class TestExcelImportServiceErrorHandling:
 
             # 提供完整的资产数据（包含必填字段）
             complete_assets = [
-                {
-                    "property_name": "资产1",
-                    "address": "地址1",
-                    "ownership_entity": "测试单位",
-                    "ownership_status": "自有",
-                    "property_nature": "商业",
-                    "usage_status": "使用中",
-                },
-                {
-                    "property_name": "资产2",
-                    "address": "地址2",
-                    "ownership_entity": "测试单位",
-                    "ownership_status": "自有",
-                    "property_nature": "商业",
-                    "usage_status": "使用中",
-                },
+                (
+                    {
+                        "property_name": "资产1",
+                        "address": "地址1",
+                        "ownership_entity": "测试单位",
+                        "ownership_status": "自有",
+                        "property_nature": "商业",
+                        "usage_status": "使用中",
+                    },
+                    [],  # parse_warnings
+                ),
+                (
+                    {
+                        "property_name": "资产2",
+                        "address": "地址2",
+                        "ownership_entity": "测试单位",
+                        "ownership_status": "自有",
+                        "property_nature": "商业",
+                        "usage_status": "使用中",
+                    },
+                    [],  # parse_warnings
+                ),
             ]
 
             excel_service._map_excel_row_to_asset_data = MagicMock(
@@ -277,11 +289,14 @@ class TestExcelImportServiceErrorHandling:
 
             # Mock _map_excel_row_to_asset_data 正常处理
             excel_service._map_excel_row_to_asset_data = MagicMock(
-                return_value={
-                    "property_name": "资产1",
-                    "address": "地址1",
-                    "operation_agreement_start_date": None,  # 日期解析失败返回None
-                }
+                return_value=(
+                    {
+                        "property_name": "资产1",
+                        "address": "地址1",
+                        "operation_agreement_start_date": None,  # 日期解析失败返回None
+                    },
+                    [],  # parse_warnings
+                )
             )
 
             excel_service.validator.validate_all = MagicMock(
