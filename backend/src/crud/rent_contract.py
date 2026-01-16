@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from ..crud.asset import SensitiveDataHandler
 from ..crud.base import CRUDBase
-from ..models import Ownership
+from ..models.asset import Ownership
 from ..models.rent_contract import (
     RentContract,
     RentLedger,

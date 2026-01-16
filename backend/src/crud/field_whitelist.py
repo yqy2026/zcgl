@@ -12,12 +12,11 @@ Security Design:
 """
 
 import logging
-from dataclasses import dataclass, field
+from typing import ClassVar
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass
 class ModelFieldWhitelist:
     """
     Field whitelist configuration for a single model.
@@ -29,16 +28,16 @@ class ModelFieldWhitelist:
     """
 
     # Fields allowed for equality/range filters
-    filter_fields: set[str] = field(default_factory=set)
+    filter_fields: ClassVar[set[str]] = set()
 
     # Fields allowed for text search (ILIKE operations)
-    search_fields: set[str] = field(default_factory=set)
+    search_fields: ClassVar[set[str]] = set()
 
     # Fields allowed for sorting
-    sort_fields: set[str] = field(default_factory=set)
+    sort_fields: ClassVar[set[str]] = set()
 
     # Blocked fields (explicitly denied, even if in model)
-    blocked_fields: set[str] = field(default_factory=set)
+    blocked_fields: ClassVar[set[str]] = set()
 
     def can_filter(self, field_name: str) -> bool:
         """Check if field can be used for filtering."""

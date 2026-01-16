@@ -288,16 +288,19 @@ class TestQueryBuilderIntegration:
     def test_querybuilder_loads_whitelist(self):
         """QueryBuilder should load whitelist on initialization."""
         from src.crud.query_builder import QueryBuilder
+        from src.crud.field_whitelist import register_whitelist, AssetWhitelist
         from src.models.asset import Asset
 
-        # This should load AssetWhitelist (registered in crud/__init__.py)
+        # Explicitly register whitelist for this test
+        register_whitelist(Asset, AssetWhitelist())
+
+        # Create QueryBuilder - it should use the registered whitelist
         qb = QueryBuilder(Asset)
 
         # Should have a whitelist
         assert qb.whitelist is not None
 
         # Should be the registered AssetWhitelist
-        # Note: This test assumes registration happened in crud/__init__.py
         assert isinstance(qb.whitelist, AssetWhitelist)
 
     def test_querybuilder_logs_permissive_warning(self, caplog):

@@ -2,8 +2,7 @@
 CRUD操作模块
 """
 
-from ..models.asset import Asset
-from ..models.ownership import Ownership
+from ..models.asset import Asset, Ownership
 from ..models.rent_contract import RentContract
 from .asset import asset_crud
 
