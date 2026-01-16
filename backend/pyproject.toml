@@ -46,6 +46,7 @@ dev = [
     "bandit>=1.8.6",
     "radon>=6.0.1",
     "safety>=3.6.2",
+    "testcontainers>=4.0.0",
 ]
 
 # PDF基础处理功能（轻量级）
