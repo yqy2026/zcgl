@@ -26,7 +26,7 @@ class TestAuthenticationEndpoints:
     def test_login_endpoint_exists(self, client):
         """测试登录端点是否存在"""
         response = client.post(
-            "/api/v1/auth/authentication/login",
+            "/api/v1/auth/login",
             json={"username": "admin", "password": "wrong_password"}
         )
         # 应该返回 401 (密码错误) 或 422 (验证错误)，但不应该是 404
@@ -38,7 +38,7 @@ class TestAuthenticationEndpoints:
         # 注意：这需要数据库中有admin用户
         # 如果测试环境没有admin用户，这个测试会失败
         response = client.post(
-            "/api/v1/auth/authentication/login",
+            "/api/v1/auth/login",
             json={"username": "admin", "password": "Admin123!@#"}
         )
         # 可能的响应: 200 (成功), 401 (密码错误), 404 (用户不存在)
@@ -47,13 +47,13 @@ class TestAuthenticationEndpoints:
     def test_logout_endpoint_exists(self, client):
         """测试登出端点是否存在"""
         # 登出需要认证，所以预期返回 401
-        response = client.post("/api/v1/auth/authentication/logout")
+        response = client.post("/api/v1/auth/logout")
         assert response.status_code == 401
 
     def test_refresh_token_endpoint_exists(self, client):
         """测试刷新令牌端点是否存在"""
         response = client.post(
-            "/api/v1/auth/authentication/refresh",
+            "/api/v1/auth/refresh",
             json={"refresh_token": "invalid_token"}
         )
         # 应该返回 401 (无效令牌) 或 422 (验证错误)
@@ -61,7 +61,7 @@ class TestAuthenticationEndpoints:
 
     def test_me_endpoint_exists(self, client):
         """测试获取当前用户信息端点是否存在"""
-        response = client.get("/api/v1/auth/authentication/me")
+        response = client.get("/api/v1/auth/me")
         # 需要认证，所以预期返回 401
         assert response.status_code == 401
 
@@ -206,10 +206,10 @@ class TestRouterStructure:
         """测试所有路由都可以访问（不会返回404）"""
         routes_to_test = [
             # Authentication routes
-            ("POST", "/api/v1/auth/authentication/login"),
-            ("POST", "/api/v1/auth/authentication/logout"),
-            ("POST", "/api/v1/auth/authentication/refresh"),
-            ("GET", "/api/v1/auth/authentication/me"),
+            ("POST", "/api/v1/auth/login"),
+            ("POST", "/api/v1/auth/logout"),
+            ("POST", "/api/v1/auth/refresh"),
+            ("GET", "/api/v1/auth/me"),
 
             # User management routes
             ("GET", "/api/v1/auth/users"),
@@ -284,7 +284,7 @@ class TestBackwardCompatibility:
         """测试旧的API URL仍然工作"""
         # 这些URL在重构前就存在，重构后应该仍然可以访问
         old_urls = [
-            "/api/v1/auth/authentication/login",  # 旧的登录URL
+            "/api/v1/auth/login",  # 旧的登录URL
             "/api/v1/auth/users",  # 旧的用户列表URL
             "/api/v1/auth/sessions",  # 旧的会话URL
         ]
