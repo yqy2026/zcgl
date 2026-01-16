@@ -8,20 +8,16 @@ This conftest.py is specifically for integration tests and ensures:
 """
 
 import os
-import sys
+import tempfile
 from pathlib import Path
-
-# Add backend directory to Python path for imports
-backend_dir = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(backend_dir))
 
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from testcontainers.postgres import PostgresContainer
 
-from src.core.config import settings
-from src.models.base import Base
+# Lazy imports - only import when fixtures are actually used
+# This avoids ModuleNotFoundError during pytest collection
 
 
 # Use the same database file as CI for consistency
@@ -90,6 +86,9 @@ def db_tables(engine):
 
     Runs once per test session for performance.
     """
+    # Import Base here - after pytest has set up the path
+    from src.models.base import Base
+
     # Import Alembic configuration
     from alembic.config import Config
     from alembic.script import ScriptDirectory
