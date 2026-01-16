@@ -4,7 +4,6 @@ PDF导入相关的Pydantic模型
 从 pdf_import_unified.py 提取的DTOs
 """
 
-from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, Field

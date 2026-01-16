@@ -12,8 +12,6 @@ from sqlalchemy.orm import Session
 from ...core.performance import PerformanceMonitor
 from ...database import get_db
 from ...services.document.pdf_import_service import PDFImportService
-from ...services.providers.ocr_provider import get_ocr_service
-
 
 # ============================================================================
 # 服务依赖工厂

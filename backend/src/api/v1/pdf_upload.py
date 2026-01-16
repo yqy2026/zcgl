@@ -34,8 +34,8 @@ from sqlalchemy.orm import Session
 from ...database import get_db
 from ...schemas.pdf_import import ExtractionResponse, FileUploadResponse
 from ...services.document.pdf_import_service import PDFImportService
-from .dependencies import get_optional_services, get_pdf_import_service
 from ...services.providers.ocr_provider import get_ocr_service
+from .dependencies import get_optional_services, get_pdf_import_service
 
 logger = logging.getLogger(__name__)
 

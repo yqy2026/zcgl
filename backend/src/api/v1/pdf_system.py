@@ -21,10 +21,10 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from ...core.performance import PerformanceMonitor
 from ...core.route_guards import debug_only
 from ...schemas.pdf_import import SystemCapabilities, SystemInfoResponse
 from .dependencies import get_performance_monitor
-from ...core.performance import PerformanceMonitor
 
 logger = logging.getLogger(__name__)
 
@@ -40,48 +40,25 @@ async def get_system_info() -> SystemInfoResponse:
     - SystemInfoResponse: 包含系统能力、OCR可用性等信息
     """
     try:
-        # 检测 PaddleOCR 3.3+ 可用性
-        paddleocr_available = False
-        paddleocr_version = None
-        try:
-            from ...services.document.paddleocr_service import (
-                PADDLEOCR_AVAILABLE,
-            )
-
-            if PADDLEOCR_AVAILABLE:
-                paddleocr_available = True
-                try:
-                    import paddleocr
-
-                    paddleocr_version = getattr(paddleocr, "__version__", "3.3.0+")
-                except ImportError:
-                    paddleocr_version = "3.3.0+"
-        except ImportError:
-            pass
-
         return SystemInfoResponse(
             success=True,
-            message="PDF导入系统正常运行"
-            + (" (PaddleOCR PP-StructureV3 可用)" if paddleocr_available else ""),
+            message="PDF导入系统正常运行 (LLM Vision 模式)",
             capabilities=SystemCapabilities(
                 pdfplumber_available=True,
                 pymupdf_available=True,
                 spacy_available=True,
                 ocr_available=True,
-                paddleocr_available=paddleocr_available,
-                paddleocr_version=paddleocr_version,
+                paddleocr_available=False,
+                paddleocr_version=None,
                 supported_formats=[".pdf", ".jpg", ".jpeg", ".png"],
                 max_file_size_mb=50,
-                estimated_processing_time="20-40秒"
-                if paddleocr_available
-                else "30-60秒",
+                estimated_processing_time="10-30秒",
             ),
             extractor_summary={
                 "method": "multi_engine",
-                "description": "支持多种PDF处理引擎，包括PyMuPDF、PDFPlumber和OCR（PaddleOCR PP-StructureV3）",
-                "engines": ["PyMuPDF", "PDFPlumber", "PaddleOCR"]
-                + (["PP-StructureV3"] if paddleocr_available else []),
-                "paddleocr_version": paddleocr_version,
+                "description": "支持多种PDF处理引擎，包括PyMuPDF、PDFPlumber和LLM Vision",
+                "engines": ["PyMuPDF", "PDFPlumber", "LLM Vision (Qwen/DeepSeek/GLM)"],
+                "paddleocr_version": None,
             },
             validator_summary={
                 "enabled": True,

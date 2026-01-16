@@ -16,7 +16,6 @@ PDF质量评估API路由模块
 import logging
 import tempfile
 import uuid
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -24,9 +23,9 @@ from fastapi import APIRouter, Depends, File, UploadFile
 from sqlalchemy.orm import Session
 
 from ...database import get_db
-from .dependencies import get_optional_services
 from ...services.providers.ocr_provider import get_ocr_service
 from ...utils.file_security import generate_safe_filename
+from .dependencies import get_optional_services
 
 logger = logging.getLogger(__name__)
 

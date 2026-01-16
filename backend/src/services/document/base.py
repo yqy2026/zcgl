@@ -19,7 +19,6 @@ class ExtractionMethod(str, Enum):
     VISION_GLM4V = "vision_glm4v"  # GLM-4V 视觉提取
     REGEX_PATTERN = "regex_pattern"  # 正则表达式提取
     SMART_AUTO = "smart_auto"  # 智能自动检测
-    OCR_PADDLE = "ocr_paddle"  # PaddleOCR 提取
     NVIDIA_CLOUD = "nvidia_cloud"  # NVIDIA Cloud OCR
     UNKNOWN = "unknown"  # 未知方法
 

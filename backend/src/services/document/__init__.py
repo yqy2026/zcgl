@@ -76,20 +76,8 @@ except Exception:  # nosec - B110: Intentional graceful degradation
 # Contract extraction services
 try:
     from .contract_extractor import ContractExtractor as ContractExtractor
-    from .contract_extractor import (
-        extract_contract_from_pdf as extract_contract_from_pdf,
-    )
-    from .contract_extractor import (
-        extract_contract_from_pdf_cloud as extract_contract_from_pdf_cloud,
-    )
 
-    __all__.extend(
-        [
-            "ContractExtractor",
-            "extract_contract_from_pdf",
-            "extract_contract_from_pdf_cloud",
-        ]
-    )
+    __all__.extend(["ContractExtractor"])
 except Exception:  # nosec - B110: Intentional graceful degradation
     pass
 
@@ -121,36 +109,6 @@ try:
     from .excel_import import ExcelImportService as ExcelImportService
 
     __all__.append("ExcelImportService")
-except Exception:  # nosec - B110: Intentional graceful degradation
-    pass
-
-# PaddleOCR 3.3 services
-try:
-    from .paddleocr_service import PaddleOCRService as PaddleOCRService
-    from .paddleocr_service import get_paddleocr_service as get_paddleocr_service
-
-    __all__.extend(["PaddleOCRService", "get_paddleocr_service"])
-except Exception:  # nosec - B110: Intentional graceful degradation
-    pass
-
-try:
-    from .markdown_contract_parser import (
-        MarkdownContractParser as MarkdownContractParser,
-    )
-    from .markdown_contract_parser import (
-        get_markdown_contract_parser as get_markdown_contract_parser,
-    )
-    from .markdown_contract_parser import (
-        parse_contract_markdown as parse_contract_markdown,
-    )
-
-    __all__.extend(
-        [
-            "MarkdownContractParser",
-            "get_markdown_contract_parser",
-            "parse_contract_markdown",
-        ]
-    )
 except Exception:  # nosec - B110: Intentional graceful degradation
     pass
 

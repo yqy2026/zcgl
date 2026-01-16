@@ -24,13 +24,21 @@ import logging
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    UploadFile,
+)
 from sqlalchemy.orm import Session
 
 from ...database import get_db
 from ...schemas.pdf_import import ExtractionRequest, ExtractionResponse
-from .dependencies import get_optional_services, get_pdf_import_service
 from ...services.providers.ocr_provider import get_ocr_service
+from .dependencies import get_optional_services, get_pdf_import_service
 
 logger = logging.getLogger(__name__)
 

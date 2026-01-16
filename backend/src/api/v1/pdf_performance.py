@@ -98,7 +98,9 @@ async def get_system_health(
 
         # 尝试获取增强的健康监控（如果可用）
         try:
-            from ...services.core.enhanced_error_handler import monitor_processing_health
+            from ...services.core.enhanced_error_handler import (
+                monitor_processing_health,
+            )
 
             enhanced_health = await monitor_processing_health()
             # 合并健康数据
