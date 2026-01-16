@@ -5,7 +5,7 @@
 """
 
 import logging
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -54,7 +54,7 @@ def to_decimal(value: Any, default: Decimal | None = None) -> Decimal:
         if isinstance(value, Decimal):
             return value
         return Decimal(str(value))
-    except (ValueError, TypeError) as e:
+    except (ValueError, TypeError, InvalidOperation) as e:
         logger.warning(f"Decimal转换失败: {value} -> {e}")
         return default
 
@@ -79,7 +79,7 @@ def safe_divide(
         if denominator == 0:
             return default
         return float(to_decimal(numerator) / to_decimal(denominator))
-    except (ValueError, TypeError, ZeroDivisionError):
+    except (ValueError, TypeError, ZeroDivisionError, InvalidOperation):
         return default
 
 
