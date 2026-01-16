@@ -37,18 +37,18 @@ class CRUDOrganization(CRUDBase[Organization, OrganizationCreate, OrganizationUp
         encrypted_data = self.sensitive_data_handler.encrypt_data(obj_in_data)
         return super().create(db=db, obj_in=encrypted_data, **kwargs)
 
-    def get(self, db: Session, id: Any) -> Organization | None:
+    def get(self, db: Session, id: Any, use_cache: bool = True) -> Organization | None:
         """获取组织 - 解密敏感字段"""
-        result = super().get(db=db, id=id)
+        result = super().get(db=db, id=id, use_cache=use_cache)
         if result is not None:
             self.sensitive_data_handler.decrypt_data(result.__dict__)
         return result
 
     def get_multi(
-        self, db: Session, *, skip: int = 0, limit: int = 100
+        self, db: Session, *, skip: int = 0, limit: int = 100, use_cache: bool = False
     ) -> list[Organization]:
         """获取多个组织 - 解密敏感字段"""
-        results = super().get_multi(db=db, skip=skip, limit=limit)
+        results = super().get_multi(db=db, skip=skip, limit=limit, use_cache=use_cache)
         for item in results:
             self.sensitive_data_handler.decrypt_data(item.__dict__)
         return results
@@ -154,11 +154,12 @@ class CRUDOrganization(CRUDBase[Organization, OrganizationCreate, OrganizationUp
             )
         else:
             # 递归获取所有子组织
-            result: list[Organization] = []
+            recursive_result: list[Organization] = []
             direct_children = self.get_children(db, parent_id, False)
             for child in direct_children:
-                result.append(child)
-                result.extend(self.get_children(db, str(child.id), True))
+                recursive_result.append(child)
+                recursive_result.extend(self.get_children(db, str(child.id), True))
+            result = recursive_result
 
         # 解密敏感字段
         for item in result:

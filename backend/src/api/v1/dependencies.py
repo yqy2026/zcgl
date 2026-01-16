@@ -100,15 +100,8 @@ def get_optional_services() -> OptionalServices:
 # 数据库会话依赖
 # ============================================================================
 
-
-def get_db_session() -> Session:
-    """
-    获取数据库会话
-
-    这是 FastAPI 的标准依赖注入方式
-    """
-    return Depends(get_db)
-
+# Note: Use get_db from database.py directly for FastAPI dependency injection
+# from ...database import get_db
 
 # ============================================================================
 # 类型别名（用于类型提示）

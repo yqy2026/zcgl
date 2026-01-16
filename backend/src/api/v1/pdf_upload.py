@@ -302,8 +302,9 @@ async def upload_and_extract_pdf_v1_compatible(
         from ...services.document.pdf_import_service import PDFImportService
 
         pdf_import_service_instance = PDFImportService()
+        filename = file.filename or "uploaded_file.pdf"
         file_info = await pdf_import_service_instance.upload_file(
-            file_content, file.filename
+            file_content, filename
         )
 
         # 使用V2的处理服务提取文本

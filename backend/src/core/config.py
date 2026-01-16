@@ -650,7 +650,7 @@ class Settings(BaseSettings):
     # 创建全局配置实例
 
 
-settings = Settings()
+settings = Settings()  # type: ignore[call-arg]
 
 # 根据环境变量覆盖配置
 if os.getenv("ENVIRONMENT") == "production":  # pragma: no cover

@@ -18,7 +18,7 @@ class RouteRegistry:
 
     def __init__(self) -> None:
         self.routers: list[dict[str, Any]] = []
-        self.versioned_routers: dict[str, list[dict[str, Any]]] = {}
+        self.versioned_routers: dict[str | None, list[dict[str, Any]]] = {}
         self.global_middlewares: list[Callable[..., Any]] = []
         self.global_dependencies: list[Any] = []
 
@@ -319,9 +319,10 @@ def setup_app_routing(app: FastAPI) -> None:
 # 路由信息工具函数
 def get_all_routes_info() -> dict[str, list[dict[str, Any]]]:
     """获取所有版本的路由信息"""
-    routes_info = {}
+    routes_info: dict[str, list[dict[str, Any]]] = {}
     for version in route_registry.versioned_routers:
-        routes_info[version] = route_registry.get_router_info(version)
+        if version is not None:
+            routes_info[version] = route_registry.get_router_info(version)
     return routes_info
 
 
