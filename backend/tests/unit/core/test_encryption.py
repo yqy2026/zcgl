@@ -33,7 +33,7 @@ class TestEncryptionKeyManager:
         monkeypatch.setenv("DATA_ENCRYPTION_KEY", test_key)
 
         # 需要重新创建实例以加载环境变量
-        with patch("src.core.encryption.settings.DATA_ENCRYPTION_KEY", test_key):
+        with patch("src.core.config.settings.DATA_ENCRYPTION_KEY", test_key):
             manager = EncryptionKeyManager()
 
         assert manager.is_available() is True
@@ -47,7 +47,7 @@ class TestEncryptionKeyManager:
 
         monkeypatch.setenv("DATA_ENCRYPTION_KEY", key_b64)
 
-        with patch("src.core.encryption.settings.DATA_ENCRYPTION_KEY", key_b64):
+        with patch("src.core.config.settings.DATA_ENCRYPTION_KEY", key_b64):
             manager = EncryptionKeyManager()
 
         assert manager.is_available() is True
@@ -59,7 +59,7 @@ class TestEncryptionKeyManager:
         monkeypatch.setenv("DATA_ENCRYPTION_KEY", "not-valid-base64:1")
 
         with patch(
-            "src.core.encryption.settings.DATA_ENCRYPTION_KEY", "not-valid-base64:1"
+            "src.core.config.settings.DATA_ENCRYPTION_KEY", "not-valid-base64:1"
         ):
             manager = EncryptionKeyManager()
 
@@ -73,7 +73,7 @@ class TestEncryptionKeyManager:
 
         monkeypatch.setenv("DATA_ENCRYPTION_KEY", key_b64)
 
-        with patch("src.core.encryption.settings.DATA_ENCRYPTION_KEY", key_b64):
+        with patch("src.core.config.settings.DATA_ENCRYPTION_KEY", key_b64):
             manager = EncryptionKeyManager()
 
         assert manager.is_available() is False
@@ -83,7 +83,7 @@ class TestEncryptionKeyManager:
         """测试密钥缺失的情况"""
         monkeypatch.delenv("DATA_ENCRYPTION_KEY", raising=False)
 
-        with patch("src.core.encryption.settings.DATA_ENCRYPTION_KEY", ""):
+        with patch("src.core.config.settings.DATA_ENCRYPTION_KEY", ""):
             manager = EncryptionKeyManager()
 
         assert manager.is_available() is False
@@ -97,7 +97,7 @@ class TestEncryptionKeyManager:
 
         monkeypatch.setenv("DATA_ENCRYPTION_KEY", test_key)
 
-        with patch("src.core.encryption.settings.DATA_ENCRYPTION_KEY", test_key):
+        with patch("src.core.config.settings.DATA_ENCRYPTION_KEY", test_key):
             manager = EncryptionKeyManager()
 
         assert manager.get_version() == 2
@@ -116,14 +116,14 @@ class TestFieldEncryptor:
         key_b64 = base64.b64encode(key_bytes).decode("ascii")
         test_key = f"{key_b64}:1"
 
-        with patch("src.core.encryption.settings.DATA_ENCRYPTION_KEY", test_key):
+        with patch("src.core.config.settings.DATA_ENCRYPTION_KEY", test_key):
             manager = EncryptionKeyManager()
         return manager
 
     @pytest.fixture
     def missing_key_manager(self):
         """创建缺失密钥的管理器fixture"""
-        with patch("src.core.encryption.settings.DATA_ENCRYPTION_KEY", ""):
+        with patch("src.core.config.settings.DATA_ENCRYPTION_KEY", ""):
             manager = EncryptionKeyManager()
         return manager
 
@@ -287,26 +287,24 @@ class TestSensitiveDataHandler:
         key_b64 = base64.b64encode(key_bytes).decode("ascii")
         test_key = f"{key_b64}:1"
 
-        # Patch both settings modules (SensitiveDataHandler reads from both)
-        with patch("src.core.encryption.settings.DATA_ENCRYPTION_KEY", test_key):
-            with patch("src.config.settings.DATA_ENCRYPTION_KEY", test_key):
-                # 需要重新导入以使用新的环境变量
-                from src.crud.asset import SensitiveDataHandler
+        # Patch settings module for encryption
+        with patch("src.core.config.settings.DATA_ENCRYPTION_KEY", test_key):
+            # 需要重新导入以使用新的环境变量
+            from src.crud.asset import SensitiveDataHandler
 
-                # 创建配置了测试字段的处理器
-                return SensitiveDataHandler(
-                    searchable_fields={"phone", "id_card"},  # 可搜索字段（手机号、身份证）
-                    non_searchable_fields={"note"}  # 非搜索字段
-                )
+            # 创建配置了测试字段的处理器
+            return SensitiveDataHandler(
+                searchable_fields={"phone", "id_card"},  # 可搜索字段（手机号、身份证）
+                non_searchable_fields={"note"}  # 非搜索字段
+            )
 
     @pytest.fixture
     def missing_key_handler(self):
         """创建缺失密钥的敏感数据处理器fixture"""
-        with patch("src.core.encryption.settings.DATA_ENCRYPTION_KEY", ""):
-            with patch("src.config.settings.DATA_ENCRYPTION_KEY", ""):
-                from src.crud.asset import SensitiveDataHandler
+        with patch("src.core.config.settings.DATA_ENCRYPTION_KEY", ""):
+            from src.crud.asset import SensitiveDataHandler
 
-                return SensitiveDataHandler()
+            return SensitiveDataHandler()
 
     def test_pii_field_classification(self):
         """测试PII字段分类 - 验证默认配置为空（子类应覆盖）"""

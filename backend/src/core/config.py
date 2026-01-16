@@ -103,6 +103,13 @@ class Settings(BaseSettings):
         default=True, json_schema_extra={"env": "TOKEN_BLACKLIST_ENABLED"}
     )
 
+    # 数据加密配置
+    DATA_ENCRYPTION_KEY: str | None = Field(
+        default=None,
+        description="Encryption key for PII fields (format: base64:key:version)",
+        json_schema_extra={"env": "DATA_ENCRYPTION_KEY"},
+    )
+
     # 文件上传配置
     MAX_FILE_SIZE: int = Field(
         default=50 * 1024 * 1024, json_schema_extra={"env": "MAX_FILE_SIZE"}

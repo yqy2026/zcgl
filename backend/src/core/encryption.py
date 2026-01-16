@@ -21,8 +21,10 @@ import secrets
 
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.primitives import padding
 
-from ..config import settings
+from ..core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -407,13 +409,6 @@ class FieldEncryptor:
         if value is None:
             return False
         return value.startswith(FieldEncryptor.ENCRYPTION_PREFIX)
-
-
-# ============================================================================
-# 补充导入
-# ============================================================================
-from cryptography.hazmat.primitives import padding
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 
 # ============================================================================

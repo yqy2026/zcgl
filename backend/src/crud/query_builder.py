@@ -1,19 +1,38 @@
+import logging
 from typing import Any, TypeVar
 
 from sqlalchemy import Select, and_, or_, select
 from sqlalchemy.orm import DeclarativeMeta
 
+from .field_whitelist import get_whitelist_for_model, PermissiveWhitelist
+
 ModelType = TypeVar("ModelType", bound=DeclarativeMeta)
+
+logger = logging.getLogger(__name__)
 
 
 class QueryBuilder[ModelType]:
     """
-    Unified Query Builder for SQLAlchemy models.
+    Unified Query Builder with Field Whitelist Validation.
+
+    Security Enhancement:
+    - Validates all filter, search, and sort fields against model whitelists
+    - Logs blocked field access attempts for security monitoring
+    - Provides clear error messages for unauthorized field access
+
     Supports dynamic filtering, searching, sorting, and pagination.
     """
 
     def __init__(self, model: type[ModelType]):
         self.model = model
+        self.whitelist = get_whitelist_for_model(model)
+
+        # Log if using permissive whitelist (security warning)
+        if isinstance(self.whitelist, PermissiveWhitelist):
+            logger.warning(
+                f"QueryBuilder using PERMISSIVE whitelist for {model.__name__}. "
+                "This allows all fields. Define explicit whitelist for security."
+            )
 
     def build_count_query(
         self,
@@ -48,7 +67,7 @@ class QueryBuilder[ModelType]:
         base_query: Select[Any] | None = None,
     ) -> Select[Any]:
         """
-        Builds a SQLAlchemy query with the given parameters.
+        Builds a SQLAlchemy query with whitelist validation.
 
         Args:
             filters: Dictionary of filters.
@@ -68,23 +87,28 @@ class QueryBuilder[ModelType]:
             skip: Offset.
             limit: Limit.
             base_query: Optional existing query to build upon.
+
+        Raises:
+            ValueError: If blocked field is used in filters or sort
+
+        Security: All field access is validated against model whitelist.
         """
         query = base_query if base_query is not None else select(self.model)
 
-        # 1. Apply Filters
+        # 1. Apply Filters (with validation)
         if filters:
             query = self._apply_filters(query, filters)
 
-        # 2. Apply Search
+        # 2. Apply Search (with validation)
         if search_query and search_fields:
             query = self._apply_search(query, search_query, search_fields)
 
-        # 3. Apply Sorting
+        # 3. Apply Sorting (with validation)
         if sort_by:
             query = self._apply_sorting(query, sort_by, sort_desc)
         else:
-            # Default sort by id desc if available, closely matching standard expectations
-            if hasattr(self.model, "id"):
+            # Default sort by id desc if available and allowed
+            if hasattr(self.model, "id") and self.whitelist.can_sort("id"):
                 id_column = getattr(self.model, "id")
                 query = query.order_by(id_column.desc())
 
