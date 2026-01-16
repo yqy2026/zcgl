@@ -9,6 +9,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from ..constants.datetime.fields import DateTimeFields
 from ..core.encryption import EncryptionKeyManager, FieldEncryptor
 from ..core.performance import cached, monitor_query
 from ..models.asset import Asset, AssetHistory
@@ -297,7 +298,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
         limit: int = 100,
         search: str | None = None,
         filters: dict[str, Any] | None = None,
-        sort_field: str = "created_at",
+        sort_field: str = DateTimeFields.CREATED_AT,
         sort_order: str = "desc",
     ) -> tuple[list[Asset], int]:
         """

@@ -71,5 +71,5 @@ class PerformanceThresholds:
 
 
 # Legacy compatibility aliases (deprecated, will be removed in v2.0)
-SLOW_QUERY_THRESHOLD = SLOW_QUERY_MS
-FAST_RESPONSE_THRESHOLD = FAST_RESPONSE_MS
+SLOW_QUERY_THRESHOLD = PerformanceThresholds.SLOW_QUERY_MS
+FAST_RESPONSE_THRESHOLD = PerformanceThresholds.FAST_RESPONSE_MS

@@ -44,6 +44,6 @@ class FieldLengthLimits:
 
 
 # Legacy compatibility aliases (deprecated, will be removed in v2.0)
-MAX_SHORT_TEXT_LENGTH = SHORT_TEXT_MAX
-MAX_LONG_TEXT_LENGTH = MEDIUM_TEXT_MAX
-MAX_FILENAME_LENGTH = FILENAME_MAX
+MAX_SHORT_TEXT_LENGTH = FieldLengthLimits.SHORT_TEXT_MAX
+MAX_LONG_TEXT_LENGTH = FieldLengthLimits.MEDIUM_TEXT_MAX
+MAX_FILENAME_LENGTH = FieldLengthLimits.FILENAME_MAX

@@ -54,6 +54,6 @@ class DatabasePoolConfig:
 
 
 # Legacy compatibility aliases (deprecated, will be removed in v2.0)
-POOL_SIZE = SIZE_DEFAULT
-MAX_OVERFLOW = MAX_OVERFLOW
-POOL_TIMEOUT = TIMEOUT_SECONDS
+POOL_SIZE = DatabasePoolConfig.SIZE_DEFAULT
+MAX_OVERFLOW = DatabasePoolConfig.MAX_OVERFLOW
+POOL_TIMEOUT = DatabasePoolConfig.TIMEOUT_SECONDS

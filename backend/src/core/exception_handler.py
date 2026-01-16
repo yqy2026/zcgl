@@ -13,6 +13,8 @@ from fastapi import HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from ..constants.errors.messages import ErrorMessages
+
 logger = logging.getLogger(__name__)
 
 
@@ -73,7 +75,7 @@ class ResourceNotFoundError(BaseBusinessError):
         resource_id: str | None = None,
         details: dict[str, Any] | None = None,
     ):
-        message = f"{resource_type}未找到"
+        message = f"{resource_type}{ErrorMessages.RESOURCE_NOT_FOUND.replace('资源', '')}"
         if resource_id:
             message += f" (ID: {resource_id})"
 
@@ -99,7 +101,7 @@ class DuplicateResourceError(BaseBusinessError):
         value: str,
         details: dict[str, Any] | None = None,
     ):
-        message = f"{resource_type}已存在，{field}: {value}"
+        message = f"{resource_type}{ErrorMessages.RESOURCE_ALREADY_EXISTS.replace('资源', '')}，{field}: {value}"
 
         super().__init__(
             message=message,
@@ -119,12 +121,12 @@ class PermissionDeniedError(BaseBusinessError):
 
     def __init__(
         self,
-        message: str = "权限不足",
+        message: str | None = None,
         required_permission: str | None = None,
         details: dict[str, Any] | None = None,
     ):
         super().__init__(
-            message=message,
+            message=message or ErrorMessages.PERMISSION_DENIED,
             code="PERMISSION_DENIED",
             details={"required_permission": required_permission, **(details or {})},
             status_code=status.HTTP_403_FORBIDDEN,
@@ -135,10 +137,12 @@ class AuthenticationError(BaseBusinessError):
     """认证异常"""
 
     def __init__(
-        self, message: str = "认证失败", details: dict[str, Any] | None = None
+        self,
+        message: str | None = None,
+        details: dict[str, Any] | None = None,
     ):
         super().__init__(
-            message=message,
+            message=message or ErrorMessages.AUTHENTICATION_FAILED,
             code="AUTHENTICATION_ERROR",
             details=details,
             status_code=status.HTTP_401_UNAUTHORIZED,

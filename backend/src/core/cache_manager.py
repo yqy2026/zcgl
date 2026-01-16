@@ -12,6 +12,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from hashlib import md5
 
+from ..constants.performance.cache import CacheTTL
 from .config import settings
 
 logger = logging.getLogger(__name__)
@@ -80,7 +81,9 @@ class MemoryCache(CacheBackend):
                 del self._cache[oldest_key]
 
             # 设置缓存项
-            expires_at = datetime.now(UTC) + timedelta(seconds=ttl or 300)  # 默认5分钟
+            expires_at = datetime.now(UTC) + timedelta(
+                seconds=ttl or CacheTTL.SHORT_SECONDS
+            )  # 默认5分钟
             self._cache[key] = {
                 "value": value,
                 "created_at": datetime.now(UTC),
@@ -132,7 +135,9 @@ class CacheManager:
             backend: 缓存后端实现
         """
         self.backend = backend or MemoryCache()
-        self.default_ttl = settings.CACHE_TTL if hasattr(settings, "CACHE_TTL") else 300
+        self.default_ttl = (
+            settings.CACHE_TTL if hasattr(settings, "CACHE_TTL") else CacheTTL.SHORT_SECONDS
+        )
         self.key_prefix = (
             settings.CACHE_KEY_PREFIX
             if hasattr(settings, "CACHE_KEY_PREFIX")

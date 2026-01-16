@@ -15,6 +15,7 @@ from functools import wraps
 from sqlalchemy import Index, func
 from sqlalchemy.orm import Session, joinedload
 
+from ..constants.performance.monitoring import PerformanceThresholds
 from .config import get_config
 
 logger = logging.getLogger(__name__)
@@ -445,7 +446,9 @@ class DatabaseOptimizer:
 
         slow_queries = []
         for query_name, query_stats in stats["query_stats"].items():
-            if query_stats["avg_duration_ms"] > 200:  # 超过200ms的查询
+            if (
+                query_stats["avg_duration_ms"] > PerformanceThresholds.FAST_QUERY_MS
+            ):  # 超过200ms的查询
                 slow_queries.append(
                     {
                         "query_name": query_name,
@@ -473,17 +476,17 @@ class DatabaseOptimizer:
         for query in slow_queries:
             query_name = query["query_name"]
 
-            if "batch_update" in query_name and query["avg_duration_ms"] > 500:
+            if "batch_update" in query_name and query["avg_duration_ms"] > PerformanceThresholds.BATCH_UPDATE_THRESHOLD_MS:
                 recommendations.append(
                     f"考虑优化批量更新操作: {query_name} (平均耗时: {query['avg_duration_ms']:.2f}ms)"
                 )
 
-            if "list" in query_name and query["avg_duration_ms"] > 300:
+            if "list" in query_name and query["avg_duration_ms"] > PerformanceThresholds.LIST_QUERY_THRESHOLD_MS:
                 recommendations.append(
                     f"考虑为列表查询添加分页和索引: {query_name} (平均耗时: {query['avg_duration_ms']:.2f}ms)"
                 )
 
-            if "statistics" in query_name and query["avg_duration_ms"] > 200:
+            if "statistics" in query_name and query["avg_duration_ms"] > PerformanceThresholds.STATISTICS_QUERY_THRESHOLD_MS:
                 recommendations.append(
                     f"考虑缓存统计查询结果: {query_name} (平均耗时: {query['avg_duration_ms']:.2f}ms)"
                 )

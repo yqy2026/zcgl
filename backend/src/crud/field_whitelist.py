@@ -14,6 +14,8 @@ Security Design:
 import logging
 from typing import ClassVar
 
+from ..constants.datetime.fields import DateTimeFields
+
 logger = logging.getLogger(__name__)
 
 
@@ -105,8 +107,8 @@ class AssetWhitelist(ModelFieldWhitelist):
         "version",
         "tags",
         # Date fields (non-sensitive)
-        "created_at",
-        "updated_at",
+        DateTimeFields.CREATED_AT,
+        DateTimeFields.UPDATED_AT,
         # Usage classification
         "certificated_usage",
         "actual_usage",
@@ -133,8 +135,8 @@ class AssetWhitelist(ModelFieldWhitelist):
     # Sort fields (numeric/date fields for ordering)
     sort_fields: ClassVar[set[str]] = {
         # Time-based sorting
-        "created_at",
-        "updated_at",
+        DateTimeFields.CREATED_AT,
+        DateTimeFields.UPDATED_AT,
         "contract_start_date",
         "contract_end_date",
         # Numeric sorting
