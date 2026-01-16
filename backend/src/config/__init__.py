@@ -107,7 +107,6 @@ class Settings:
     PDF_PROCESSING_TIMEOUT: int = int(os.getenv("PDF_PROCESSING_TIMEOUT", "300"))
 
     # OCR配置
-    OCR_DEFAULT_ENGINE: str = os.getenv("OCR_DEFAULT_ENGINE", "paddleocr")
     OCR_HIGH_ACCURACY_THRESHOLD: float = float(
         os.getenv("OCR_HIGH_ACCURACY_THRESHOLD", "0.8")
     )

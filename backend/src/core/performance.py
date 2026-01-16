@@ -112,7 +112,9 @@ class PerformanceMonitor:
             "status": "healthy" if self.enabled else "disabled",
             "monitoring_enabled": self.enabled,
             "total_queries": sum(stats["count"] for stats in self.query_stats.values()),
-            "slow_queries": sum(stats["slow_queries"] for stats in self.query_stats.values()),
+            "slow_queries": sum(
+                stats["slow_queries"] for stats in self.query_stats.values()
+            ),
         }
 
     def reset_stats(self) -> None:

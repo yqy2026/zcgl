@@ -106,7 +106,9 @@ class RouteRegistry:
             f"完成版本 {version} 的路由注册，共 {len(self.versioned_routers[version])} 个路由"
         )
 
-    def _include_single_router(self, app: FastAPI, router_config: dict[str, Any]) -> None:
+    def _include_single_router(
+        self, app: FastAPI, router_config: dict[str, Any]
+    ) -> None:
         """包含单个路由器"""
         router = router_config["router"]
         prefix = router_config["prefix"]

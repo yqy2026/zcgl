@@ -25,7 +25,6 @@ from ...models.rent_contract import (
 )
 from .contract_extractor import ContractExtractor
 from .llm_contract_extractor import get_llm_contract_extractor
-from .paddleocr_service import get_paddleocr_service
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +50,6 @@ class PDFImportService:
     _active_tasks_lock = asyncio.Lock()
 
     def __init__(self) -> None:
-        self.paddle_service = get_paddleocr_service()
         self.regex_extractor = ContractExtractor()
         self.llm_extractor = get_llm_contract_extractor()
         self.task_queue = get_task_queue()

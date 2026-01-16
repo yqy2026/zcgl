@@ -78,7 +78,9 @@ class EncryptionKeyManager:
                 try:
                     self.version = int(version_str)
                 except ValueError:
-                    logger.warning(f"Invalid key version: {version_str}, using version 1")
+                    logger.warning(
+                        f"Invalid key version: {version_str}, using version 1"
+                    )
                     self.version = 1
                     key_b64 = env_key  # 整个字符串作为 key
             else:
@@ -100,7 +102,9 @@ class EncryptionKeyManager:
             logger.info(f"Encryption key loaded (version {self.version})")
 
         except Exception as e:
-            logger.error(f"Failed to load DATA_ENCRYPTION_KEY: {e}. Encryption disabled.")
+            logger.error(
+                f"Failed to load DATA_ENCRYPTION_KEY: {e}. Encryption disabled."
+            )
             self.key = None
 
     def is_available(self) -> bool:
@@ -314,7 +318,9 @@ class FieldEncryptor:
             nonce = secrets.token_bytes(12)
 
             # 加密
-            ciphertext = aesgcm.encrypt(nonce, plaintext.encode("utf-8"), associated_data=None)
+            ciphertext = aesgcm.encrypt(
+                nonce, plaintext.encode("utf-8"), associated_data=None
+            )
 
             # Base64 编码
             nonce_b64 = base64.b64encode(nonce).decode("ascii")
@@ -368,7 +374,9 @@ class FieldEncryptor:
 
             # 解密（AES-GCM）
             aesgcm = AESGCM(key)
-            plaintext_bytes = aesgcm.decrypt(nonce, ciphertext_bytes, associated_data=None)
+            plaintext_bytes = aesgcm.decrypt(
+                nonce, ciphertext_bytes, associated_data=None
+            )
 
             return plaintext_bytes.decode("utf-8")
 
@@ -444,7 +452,7 @@ def main() -> None:
     print()
     print("Add this to your .env file:")
     print("-" * 70)
-    print(f"DATA_ENCRYPTION_KEY=\"{key}\"")
+    print(f'DATA_ENCRYPTION_KEY="{key}"')
     print("-" * 70)
     print()
     print("IMPORTANT SECURITY NOTES:")

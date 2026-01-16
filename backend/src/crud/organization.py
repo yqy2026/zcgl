@@ -24,7 +24,9 @@ class CRUDOrganization(CRUDBase[Organization, OrganizationCreate, OrganizationUp
             }
         )
 
-    def create(self, db: Session, *, obj_in: OrganizationCreate | dict[str, Any], **kwargs: Any) -> Organization:
+    def create(
+        self, db: Session, *, obj_in: OrganizationCreate | dict[str, Any], **kwargs: Any
+    ) -> Organization:
         """创建组织 - 加密敏感字段"""
         if isinstance(obj_in, dict):
             obj_in_data = obj_in
@@ -42,14 +44,22 @@ class CRUDOrganization(CRUDBase[Organization, OrganizationCreate, OrganizationUp
             self.sensitive_data_handler.decrypt_data(result.__dict__)
         return result
 
-    def get_multi(self, db: Session, *, skip: int = 0, limit: int = 100) -> list[Organization]:
+    def get_multi(
+        self, db: Session, *, skip: int = 0, limit: int = 100
+    ) -> list[Organization]:
         """获取多个组织 - 解密敏感字段"""
         results = super().get_multi(db=db, skip=skip, limit=limit)
         for item in results:
             self.sensitive_data_handler.decrypt_data(item.__dict__)
         return results
 
-    def update(self, db: Session, *, db_obj: Organization, obj_in: OrganizationUpdate | dict[str, Any]) -> Organization:
+    def update(
+        self,
+        db: Session,
+        *,
+        db_obj: Organization,
+        obj_in: OrganizationUpdate | dict[str, Any],
+    ) -> Organization:
         """更新组织 - 加密新的敏感字段值"""
         if isinstance(obj_in, dict):
             update_data = obj_in

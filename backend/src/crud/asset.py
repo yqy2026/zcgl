@@ -36,7 +36,11 @@ class SensitiveDataHandler:
     NON_SEARCHABLE_FIELDS: set[str] = set()
     ALL_PII_FIELDS = SEARCHABLE_FIELDS | NON_SEARCHABLE_FIELDS
 
-    def __init__(self, searchable_fields: set[str] | None = None, non_searchable_fields: set[str] | None = None) -> None:
+    def __init__(
+        self,
+        searchable_fields: set[str] | None = None,
+        non_searchable_fields: set[str] | None = None,
+    ) -> None:
         """
         初始化敏感数据处理器
 
@@ -246,9 +250,7 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
                     )
                     setattr(asset, field_name, decrypted_value)
 
-    def _encrypt_update_data(
-        self, update_data: dict[str, Any]
-    ) -> dict[str, Any]:
+    def _encrypt_update_data(self, update_data: dict[str, Any]) -> dict[str, Any]:
         """
         加密更新数据中的PII字段
 
@@ -334,7 +336,9 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
 
         # 获取总数 (用于分页)
         cnt_query = self.query_builder.build_count_query(
-            filters=qb_filters, search_query=search_query, search_fields=all_search_fields
+            filters=qb_filters,
+            search_query=search_query,
+            search_fields=all_search_fields,
         )
         total = db.execute(cnt_query).scalar() or 0
 

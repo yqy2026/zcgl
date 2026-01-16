@@ -55,6 +55,7 @@ def cache_json_dumps(obj: Any) -> bytes:
 
 def cache_json_loads(data: bytes) -> Any:
     """反序列化JSON字节串为对象"""
+
     def object_hook(dct: dict[str, Any]) -> Any:
         if "__datetime__" in dct:
             return datetime.fromisoformat(dct["__datetime__"])

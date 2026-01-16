@@ -209,7 +209,10 @@ app = FastAPI(
 # PDF智能导入API - 直接注册到应用
 try:
     from .api.v1.pdf_import import router as pdf_import_router
-    app.include_router(pdf_import_router, prefix="/api/pdf-import", tags=["PDF智能导入"])
+
+    app.include_router(
+        pdf_import_router, prefix="/api/pdf-import", tags=["PDF智能导入"]
+    )
     safe_print("✓ PDF导入路由已注册")
 except Exception as e:
     safe_print(f"✗ PDF导入路由注册失败: {e}")
@@ -310,7 +313,9 @@ async def root_endpoint() -> JSONResponse:
 
 
 # 统一通过路由注册器注册路由与全局依赖
-logger.info(f"检查路由注册器: route_registry={route_registry is not None}, register_api_routes={register_api_routes is not None}")
+logger.info(
+    f"检查路由注册器: route_registry={route_registry is not None}, register_api_routes={register_api_routes is not None}"
+)
 if route_registry and register_api_routes:
     logger.info("开始通过路由注册器注册路由...")
     try:
@@ -328,6 +333,7 @@ if route_registry and register_api_routes:
     except Exception as e:
         logger.error(f"路由注册器注册失败: {e}")
         import traceback
+
         traceback.print_exc()
 
     # 手动路由注册已移除，统一使用路由注册器管理所有API路由

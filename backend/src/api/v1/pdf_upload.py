@@ -316,8 +316,7 @@ async def upload_and_extract_pdf_v1_compatible(
             return ExtractionResponse(
                 success=False,
                 error="PDF文本提取失败",
-                processing_time_ms=(datetime.now() - start_time).total_seconds()
-                * 1000,
+                processing_time_ms=(datetime.now() - start_time).total_seconds() * 1000,
                 real_data_verified=False,
             )
 

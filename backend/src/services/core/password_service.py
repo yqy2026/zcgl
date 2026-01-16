@@ -138,7 +138,9 @@ class PasswordService:
         # 处理timezone-aware和naive datetime的兼容性
         if password_last_changed_value.tzinfo is not None:
             # 如果数据库返回timezone-aware datetime，转换为naive
-            password_last_changed_value = password_last_changed_value.replace(tzinfo=None)
+            password_last_changed_value = password_last_changed_value.replace(
+                tzinfo=None
+            )
 
         expire_time = password_last_changed_value + timedelta(days=PASSWORD_EXPIRE_DAYS)
         return bool(datetime.now() > expire_time)
