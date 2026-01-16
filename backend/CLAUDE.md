@@ -108,16 +108,44 @@ route_registry.register_router(router, prefix="/api/v1", tags=["My Feature"], ve
 
 ### 加密字段
 
+以下字段的敏感信息已启用加密存储（手机号、身份证号）：
+
+#### Organization 模型
+
 | 字段 | 类型 | 加密方式 | 说明 |
 |------|------|----------|------|
-| `tenant_name` | 可搜索 PII | AES-256-SIV (确定性) | 租户名称 |
-| `ownership_entity` | 可搜索 PII | AES-256-SIV (确定性) | 权属方 |
-| `address` | 可搜索 PII | AES-256-SIV (确定性) | 物业地址 |
-| `manager_name` | 非搜索 PII | AES-256-GCM (标准) | 管理责任人 |
+| `id_card` | 🔴 高度敏感 PII | AES-256-CBC (确定性) | 身份证号 |
+| `phone` | 🟡 敏感 PII | AES-256-CBC (确定性) | 联系电话 |
+| `leader_phone` | 🟡 敏感 PII | AES-256-CBC (确定性) | 负责人电话 |
+| `emergency_phone` | 🟡 敏感 PII | AES-256-CBC (确定性) | 紧急联系电话 |
+
+#### RentContract 模型
+
+| 字段 | 类型 | 加密方式 | 说明 |
+|------|------|----------|------|
+| `owner_phone` | 🟡 敏感 PII | AES-256-CBC (确定性) | 业主电话 |
+| `tenant_phone` | 🟡 敏感 PII | AES-256-CBC (确定性) | 租户电话 |
+
+#### Contact 模型
+
+| 字段 | 类型 | 加密方式 | 说明 |
+|------|------|----------|------|
+| `phone` | 🟡 敏感 PII | AES-256-CBC (确定性) | 手机号码 |
+| `office_phone` | 🟡 敏感 PII | AES-256-CBC (确定性) | 办公电话 |
+
+#### Asset 模型
+
+| 字段 | 类型 | 加密方式 | 说明 |
+|------|------|----------|------|
+| `project_phone` | 🟡 敏感 PII | AES-256-CBC (确定性) | 项目电话 |
+
+**总计**: 11个敏感字段已启用加密
+- 🔴 高度敏感: 1个（身份证号）
+- 🟡 敏感: 10个（手机号）
 
 ### 加密方式
 
-- **确定性加密 (AES-256-SIV)**: 相同明文产生相同密文，支持数据库搜索和精确匹配
+- **确定性加密 (AES-256-CBC with derived IV)**: 相同明文产生相同密文，支持数据库搜索和精确匹配
 - **标准加密 (AES-256-GCM)**: 相同明文产生不同密文（随机 nonce），安全性更高
 
 ### 加密策略

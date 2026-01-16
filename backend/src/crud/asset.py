@@ -21,23 +21,36 @@ class SensitiveDataHandler:
     敏感数据处理器 - PII字段加密
 
     支持两种加密模式：
-    - 确定性加密 (AES-256-CBC with derived IV): 用于可搜索字段
+    - 确定性加密 (AES-256-CBC with derived IV): 用于可搜索字段（手机号等）
     - 标准加密 (AES-256-GCM): 用于非搜索字段
+
+    使用方法：
+    # 在子类中定义敏感字段
+    class MySensitiveDataHandler(SensitiveDataHandler):
+        SEARCHABLE_FIELDS = {"phone", "id_card"}
+        NON_SEARCHABLE_FIELDS = {"note"}
     """
 
-    # PII字段配置
-    SEARCHABLE_FIELDS = {
-        "tenant_name",  # 租户名称 - 需要搜索
-        "ownership_entity",  # 权属方 - 需要搜索
-        "address",  # 物业地址 - 需要搜索
-    }
-    NON_SEARCHABLE_FIELDS = {
-        "manager_name",  # 管理责任人 - 不需要搜索
-    }
+    # 默认无敏感字段（子类应覆盖）
+    SEARCHABLE_FIELDS: set[str] = set()
+    NON_SEARCHABLE_FIELDS: set[str] = set()
     ALL_PII_FIELDS = SEARCHABLE_FIELDS | NON_SEARCHABLE_FIELDS
 
-    def __init__(self) -> None:
-        """初始化敏感数据处理器"""
+    def __init__(self, searchable_fields: set[str] | None = None, non_searchable_fields: set[str] | None = None) -> None:
+        """
+        初始化敏感数据处理器
+
+        Args:
+            searchable_fields: 需要加密且可搜索的字段（如手机号）
+            non_searchable_fields: 需要加密但不需要搜索的字段（如备注）
+        """
+        # 如果提供了参数，使用参数；否则使用类属性
+        if searchable_fields is not None:
+            self.SEARCHABLE_FIELDS = searchable_fields
+        if non_searchable_fields is not None:
+            self.NON_SEARCHABLE_FIELDS = non_searchable_fields
+        self.ALL_PII_FIELDS = self.SEARCHABLE_FIELDS | self.NON_SEARCHABLE_FIELDS
+
         key_manager = EncryptionKeyManager()
         self.encryptor = FieldEncryptor(key_manager)
         self.encryption_enabled = key_manager.is_available()
@@ -158,7 +171,10 @@ class AssetCRUD(CRUDBase[Asset, AssetCreate, AssetUpdate]):
 
     def __init__(self) -> None:
         super().__init__(Asset)
-        self.sensitive_data_handler = SensitiveDataHandler()
+        # Asset 模型的敏感字段（只有项目电话需要加密）
+        self.sensitive_data_handler = SensitiveDataHandler(
+            searchable_fields={"project_phone"}  # 项目电话 - 可搜索
+        )
 
     def create(
         self, db: Session, *, obj_in: AssetCreate | dict[str, Any], **kwargs: Any

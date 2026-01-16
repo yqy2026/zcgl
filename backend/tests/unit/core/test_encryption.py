@@ -282,7 +282,7 @@ class TestSensitiveDataHandler:
 
     @pytest.fixture
     def valid_handler(self):
-        """创建有效的敏感数据处理器fixture"""
+        """创建有效的敏感数据处理器fixture - 配置测试字段"""
         key_bytes = b"e" * 32
         key_b64 = base64.b64encode(key_bytes).decode("ascii")
         test_key = f"{key_b64}:1"
@@ -293,7 +293,11 @@ class TestSensitiveDataHandler:
                 # 需要重新导入以使用新的环境变量
                 from src.crud.asset import SensitiveDataHandler
 
-                return SensitiveDataHandler()
+                # 创建配置了测试字段的处理器
+                return SensitiveDataHandler(
+                    searchable_fields={"phone", "id_card"},  # 可搜索字段（手机号、身份证）
+                    non_searchable_fields={"note"}  # 非搜索字段
+                )
 
     @pytest.fixture
     def missing_key_handler(self):
@@ -305,29 +309,46 @@ class TestSensitiveDataHandler:
                 return SensitiveDataHandler()
 
     def test_pii_field_classification(self):
-        """测试PII字段分类"""
+        """测试PII字段分类 - 验证默认配置为空（子类应覆盖）"""
         from src.crud.asset import SensitiveDataHandler
 
-        assert "tenant_name" in SensitiveDataHandler.SEARCHABLE_FIELDS
-        assert "ownership_entity" in SensitiveDataHandler.SEARCHABLE_FIELDS
-        assert "address" in SensitiveDataHandler.SEARCHABLE_FIELDS
-        assert "manager_name" in SensitiveDataHandler.NON_SEARCHABLE_FIELDS
+        # 默认情况下，SensitiveDataHandler 没有配置任何字段
+        # 子类（如 OrganizationCRUD, RentContractCRUD）应该通过参数配置
+        assert len(SensitiveDataHandler.SEARCHABLE_FIELDS) == 0
+        assert len(SensitiveDataHandler.NON_SEARCHABLE_FIELDS) == 0
+
+        # 创建一个配置了字段的实例用于测试
+        handler = SensitiveDataHandler(
+            searchable_fields={"id_card", "phone"},
+            non_searchable_fields={"note"}
+        )
+        assert "id_card" in handler.SEARCHABLE_FIELDS
+        assert "phone" in handler.SEARCHABLE_FIELDS
+        assert "note" in handler.NON_SEARCHABLE_FIELDS
 
     def test_encrypt_pii_field(self, valid_handler):
-        """测试加密PII字段"""
-        plaintext = "张三"
+        """测试加密PII字段 - 使用手机号和身份证作为测试数据"""
+        plaintext_phone = "13800138000"
+        plaintext_id_card = "110101199001011234"
 
-        # 测试可搜索字段（确定性加密）
-        encrypted = valid_handler.encrypt_field("tenant_name", plaintext)
-        assert encrypted is not None
-        assert encrypted != plaintext
-        assert encrypted.startswith("enc:v1:")
+        # 测试可搜索字段（手机号 - 确定性加密）
+        encrypted_phone = valid_handler.encrypt_field("phone", plaintext_phone)
+        assert encrypted_phone is not None
+        assert encrypted_phone != plaintext_phone
+        assert encrypted_phone.startswith("enc:v1:")
+
+        # 测试可搜索字段（身份证号 - 确定性加密）
+        encrypted_id = valid_handler.encrypt_field("id_card", plaintext_id_card)
+        assert encrypted_id is not None
+        assert encrypted_id != plaintext_id_card
+        assert encrypted_id.startswith("enc:v1:")
 
         # 测试非搜索字段（标准加密）
-        encrypted2 = valid_handler.encrypt_field("manager_name", plaintext)
-        assert encrypted2 is not None
-        assert encrypted2 != plaintext
-        assert encrypted2.startswith("enc:v1:")
+        plaintext_note = "这是备注信息"
+        encrypted_note = valid_handler.encrypt_field("note", plaintext_note)
+        assert encrypted_note is not None
+        assert encrypted_note != plaintext_note
+        assert encrypted_note.startswith("enc:v1:")
 
     def test_non_pii_field_unchanged(self, valid_handler):
         """测试非PII字段不变"""
@@ -338,42 +359,44 @@ class TestSensitiveDataHandler:
 
     def test_decrypt_pii_field(self, valid_handler):
         """测试解密PII字段"""
-        plaintext = "李四"
+        plaintext_phone = "13900139000"
 
         # 先加密
-        encrypted = valid_handler.encrypt_field("tenant_name", plaintext)
+        encrypted = valid_handler.encrypt_field("phone", plaintext_phone)
+        assert encrypted != plaintext_phone
 
         # 再解密
-        decrypted = valid_handler.decrypt_field("tenant_name", encrypted)
-
-        assert decrypted == plaintext
+        decrypted = valid_handler.decrypt_field("phone", encrypted)
+        assert decrypted == plaintext_phone
 
     def test_batch_encrypt_dict(self, valid_handler):
         """测试批量加密字典"""
         data = {
-            "tenant_name": "租户A",
-            "ownership_entity": "公司B",
-            "property_name": "物业C",  # 非PII字段
-            "manager_name": "经理D",
+            "phone": "13800138000",  # PII字段
+            "id_card": "110101199001011234",  # PII字段
+            "name": "张三",  # 非PII字段
+            "note": "备注信息",  # PII字段
         }
 
         result = valid_handler.encrypt_data(data.copy())
 
         # PII字段应该被加密
-        assert result["tenant_name"] != "租户A"
-        assert result["tenant_name"].startswith("enc:v1:")
-        assert result["ownership_entity"] != "公司B"
-        assert result["manager_name"] != "经理D"
+        assert result["phone"] != "13800138000"
+        assert result["phone"].startswith("enc:v1:")
+        assert result["id_card"] != "110101199001011234"
+        assert result["id_card"].startswith("enc:v1:")
+        assert result["note"] != "备注信息"
+        assert result["note"].startswith("enc:v1:")
 
         # 非PII字段应该不变
-        assert result["property_name"] == "物业C"
+        assert result["name"] == "张三"
 
     def test_batch_decrypt_dict(self, valid_handler):
         """测试批量解密字典"""
         # 先加密
         data = {
-            "tenant_name": "租户A",
-            "ownership_entity": "公司B",
+            "phone": "13900139000",
+            "id_card": "110101199001011235",
         }
 
         encrypted_data = valid_handler.encrypt_data(data.copy())
@@ -382,25 +405,25 @@ class TestSensitiveDataHandler:
         decrypted_data = valid_handler.decrypt_data(encrypted_data)
 
         # 应该恢复为原始值
-        assert decrypted_data["tenant_name"] == "租户A"
-        assert decrypted_data["ownership_entity"] == "公司B"
+        assert decrypted_data["phone"] == "13900139000"
+        assert decrypted_data["id_card"] == "110101199001011235"
 
     def test_batch_encrypt_list(self, valid_handler):
         """测试批量加密列表"""
         data = [
-            {"tenant_name": "租户A", "property_name": "物业A"},
-            {"tenant_name": "租户B", "property_name": "物业B"},
+            {"phone": "13800138000", "name": "张三"},
+            {"phone": "13900139000", "name": "李四"},
         ]
 
         result = valid_handler.encrypt_data(data)
 
         # 所有记录的PII字段都应被加密
-        assert result[0]["tenant_name"] != "租户A"
-        assert result[1]["tenant_name"] != "租户B"
+        assert result[0]["phone"] != "13800138000"
+        assert result[1]["phone"] != "13900139000"
 
         # 非PII字段不变
-        assert result[0]["property_name"] == "物业A"
-        assert result[1]["property_name"] == "物业B"
+        assert result[0]["name"] == "张三"
+        assert result[1]["name"] == "李四"
 
     def test_encryption_disabled_missing_key(self, missing_key_handler):
         """测试密钥缺失时加密被禁用"""
@@ -408,7 +431,7 @@ class TestSensitiveDataHandler:
 
         # 加密操作应该返回原值
         value = "test_value"
-        encrypted = missing_key_handler.encrypt_field("tenant_name", value)
+        encrypted = missing_key_handler.encrypt_field("phone", value)
         assert encrypted == value
 
     def test_encrypt_none_value(self, valid_handler):
