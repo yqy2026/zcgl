@@ -23,7 +23,6 @@ from fastapi import APIRouter, Depends, File, UploadFile
 from sqlalchemy.orm import Session
 
 from ...database import get_db
-from ...services.providers.ocr_provider import get_ocr_service
 from ...utils.file_security import generate_safe_filename
 from .dependencies import get_optional_services
 
@@ -112,7 +111,6 @@ async def get_quality_assessment(
 async def analyze_pdf_quality(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    ocr_service: Any = Depends(get_ocr_service),
     optional: Any = Depends(get_optional_services),
 ) -> dict[str, Any]:
     """
@@ -164,7 +162,6 @@ async def analyze_pdf_quality(
             result = await pdf_processing_service.extract_text_from_pdf(
                 str(temp_file_path),
                 prefer_ocr=False,  # 默认不使用OCR进行质量评估
-                ocr_service=ocr_service,
             )
 
             if not result.get("success"):

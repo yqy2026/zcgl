@@ -106,11 +106,6 @@ class Settings:
     PDF_MAX_FILE_SIZE_MB: int = int(os.getenv("PDF_MAX_FILE_SIZE_MB", "50"))
     PDF_PROCESSING_TIMEOUT: int = int(os.getenv("PDF_PROCESSING_TIMEOUT", "300"))
 
-    # OCR配置
-    OCR_HIGH_ACCURACY_THRESHOLD: float = float(
-        os.getenv("OCR_HIGH_ACCURACY_THRESHOLD", "0.8")
-    )
-
 
 # 创建全局设置实例
 settings = Settings()

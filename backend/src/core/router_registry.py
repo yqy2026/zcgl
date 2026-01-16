@@ -265,7 +265,7 @@ def register_api_routes() -> None:
                 "data": {  # pragma: no cover
                     "supported_formats": [".pdf"],  # pragma: no cover
                     "max_file_size": 50 * 1024 * 1024,  # 50MB  # pragma: no cover
-                    "ocr_engines": ["paddle", "tesseract"],  # pragma: no cover
+                    "vision_engines": ["qwen", "deepseek", "glm"],  # pragma: no cover
                     "processing_status": "available",  # pragma: no cover
                 },  # pragma: no cover
                 "message": "PDF导入系统信息获取成功",  # pragma: no cover

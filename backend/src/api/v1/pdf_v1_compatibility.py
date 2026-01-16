@@ -37,7 +37,6 @@ from sqlalchemy.orm import Session
 
 from ...database import get_db
 from ...schemas.pdf_import import ExtractionRequest, ExtractionResponse
-from ...services.providers.ocr_provider import get_ocr_service
 from .dependencies import get_optional_services, get_pdf_import_service
 
 logger = logging.getLogger(__name__)
@@ -126,7 +125,6 @@ async def upload_and_extract_pdf_v1_compatible(
     include_raw_text: bool = Form(default=False),
     validate_fields: bool = Form(default=True),
     background_tasks: BackgroundTasks = BackgroundTasks(),
-    ocr_service: Any = Depends(get_ocr_service),
     optional: Any = Depends(get_optional_services),
 ) -> ExtractionResponse:
     """
@@ -178,7 +176,6 @@ async def upload_and_extract_pdf_v1_compatible(
         # 使用V2的处理服务提取文本
         text_result = await pdf_processing_service.extract_text_from_pdf(
             file_info["file_path"],
-            ocr_service=ocr_service,
         )
 
         if not text_result.get("success"):

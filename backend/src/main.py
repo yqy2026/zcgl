@@ -49,27 +49,6 @@ env = get_environment()
 logger.info(f"当前环境: {env.value}")
 logger.info(f"依赖策略: {get_dependency_policy().value}")
 
-# OCR服务已完全禁用 - 功能已移除
-# OCR functionality has been completely removed due to encoding issues
-# The system will run without PDF OCR text extraction capabilities
-OCR_SERVICE_AVAILABLE = False
-OCR_PROVIDER_AVAILABLE = False
-PaddleOCREngineAdapter: Any = None
-OptimizedOCRService: Any = None
-
-
-def get_ocr_service() -> Any:
-    """OCR服务占位函数 - 返回None"""
-    return None
-
-
-def set_ocr_service(service: Any) -> None:
-    """OCR服务占位函数 - 不执行任何操作"""
-    pass
-
-
-safe_print("Info: OCR service disabled - PDF intelligent import unavailable")
-
 # ===== 关键依赖（生产环境必须存在）=====
 # 路由注册器 - 关键依赖
 router_registry_module = safe_import(
@@ -321,8 +300,6 @@ if route_registry and register_api_routes:
     try:
         register_api_routes()
         logger.info("register_api_routes() 调用成功")
-        # 全局依赖：OCR 服务（确保每个请求上下文可用）
-        route_registry.register_global_dependency(Depends(get_ocr_service))
         # 统一注册路由（版本化架构）
         route_registry.include_all(app, version="v1")
         logger.info("已通过路由注册器统一注册 API 路由（版本化）")

@@ -82,66 +82,20 @@ class LLMProvider(str, Enum):
 
 class OCRConfig(BaseModel):
     """
-    OCR 统一配置
+    PDF 处理配置（OCR 已废弃）
 
-    从环境变量读取配置，提供默认值和验证
+    .. deprecated::
+        OCR 功能已完全移除。
+        请使用 LLM Vision API (services/core/qwen_vision_service.py)。
+        此配置仅保留用于文件限制等通用设置。
+
+    推荐方案:
+    - Qwen3-VL-Flash: services/core/qwen_vision_service.py
+    - DeepSeek-OCR: services/core/deepseek_vision_service.py
+    - Zhipu GLM-4V: services/core/zhipu_vision_service.py
     """
 
-    # 引擎配置
-    engine_provider: str = Field(
-        default="paddle",
-        description="OCR 引擎提供商: paddle, optimized, tesseract",
-    )
-    language: str = Field(
-        default="ch",
-        description="OCR 语言: ch(中文), en(英文), ch_en(中英混合)",
-    )
-
-    # GPU 配置
-    use_gpu: bool = Field(
-        default=False,
-        description="是否使用 GPU 加速",
-    )
-
-    # CPU 优化
-    enable_mkldnn: bool = Field(
-        default=True,
-        description="是否启用 MKLDNN 加速 (CPU)",
-    )
-    use_textline_orientation: bool = Field(
-        default=True,
-        description="是否使用文本方向检测",
-    )
-
-    # 检测参数
-    det_db_thresh: float = Field(
-        default=0.3,
-        ge=0.0,
-        le=1.0,
-        description="检测阈值 (0-1)",
-    )
-    drop_score: float = Field(
-        default=0.5,
-        ge=0.0,
-        le=1.0,
-        description="置信度阈值 (0-1)",
-    )
-
-    # 超时配置
-    vision_timeout: int = Field(
-        default=180,
-        ge=1,
-        le=600,
-        description="视觉模型超时时间（秒）",
-    )
-    text_timeout: int = Field(
-        default=60,
-        ge=1,
-        le=600,
-        description="文本提取超时时间（秒）",
-    )
-
-    # 文件限制
+    # 文件限制（通用配置）
     max_pdf_pages: int = Field(
         default=20,
         ge=1,
@@ -154,8 +108,6 @@ class OCRConfig(BaseModel):
         le=500,
         description="最大 PDF 文件大小（MB）",
     )
-
-    # 并发控制
     max_concurrent_tasks: int = Field(
         default=3,
         ge=1,
@@ -163,69 +115,23 @@ class OCRConfig(BaseModel):
         description="最大并发处理任务数",
     )
 
-    # 图像质量
-    dpi: int = Field(
-        default=200,
-        ge=100,
-        le=600,
-        description="PDF 转图片的 DPI",
-    )
-
-    @field_validator("language")
-    @classmethod
-    def validate_language(cls, v: str) -> str:
-        """验证语言配置"""
-        valid_languages = ["ch", "en", "ch_en", "fr", "german", "korean", "japan"]
-        if v not in valid_languages:
-            raise ValueError(f"Invalid language. Must be one of: {valid_languages}")
-        return v
-
-    @field_validator("max_pdf_pages", "max_pdf_size_mb")
-    @classmethod
-    def validate_limits(cls, v: int, info) -> int:
-        """验证限制参数"""
-        if info.field_name == "max_pdf_pages" and v > 100:
-            raise ValueError("max_pdf_pages cannot exceed 100 (memory constraints)")
-        if info.field_name == "max_pdf_size_mb" and v > 500:
-            raise ValueError("max_pdf_size_mb cannot exceed 500MB (memory constraints)")
-        return v
-
     @classmethod
     def from_env(cls) -> "OCRConfig":
         """
         从环境变量加载配置
 
         Environment variables:
-            OCR_ENGINE_PROVIDER: 引擎提供商
-            OCR_LANG: 语言
-            OCR_USE_GPU: 是否使用 GPU (true/false)
-            OCR_ENABLE_MKLDNN: 是否启用 MKLDNN (true/false)
-            OCR_USE_TEXTLINE_ORIENTATION: 文本方向检测 (true/false)
-            OCR_DET_DB_THRESH: 检测阈值
-            OCR_DROP_SCORE: 置信度阈值
-            OCR_VISION_TIMEOUT: 视觉超时（秒）
-            OCR_TEXT_TIMEOUT: 文本超时（秒）
-            OCR_MAX_PAGES: 最大页数
-            OCR_MAX_SIZE_MB: 最大文件大小（MB）
-            OCR_MAX_CONCURRENT: 最大并发数
+            OCR_MAX_PAGES: 最大页数（默认: 20）
+            OCR_MAX_SIZE_MB: 最大文件大小（MB）（默认: 50）
+            OCR_MAX_CONCURRENT: 最大并发数（默认: 3）
+
+        Returns:
+            OCRConfig: 配置实例
         """
         return cls(
-            engine_provider=os.getenv("OCR_ENGINE_PROVIDER", "paddle"),
-            language=os.getenv("OCR_LANG", "ch"),
-            use_gpu=os.getenv("OCR_USE_GPU", "false").lower() == "true",
-            enable_mkldnn=os.getenv("OCR_ENABLE_MKLDNN", "true").lower() == "true",
-            use_textline_orientation=os.getenv(
-                "OCR_USE_TEXTLINE_ORIENTATION", "true"
-            ).lower()
-            == "true",
-            det_db_thresh=float(os.getenv("OCR_DET_DB_THRESH", "0.3")),
-            drop_score=float(os.getenv("OCR_DROP_SCORE", "0.5")),
-            vision_timeout=int(os.getenv("OCR_VISION_TIMEOUT", "180")),
-            text_timeout=int(os.getenv("OCR_TEXT_TIMEOUT", "60")),
             max_pdf_pages=int(os.getenv("OCR_MAX_PAGES", "20")),
             max_pdf_size_mb=int(os.getenv("OCR_MAX_SIZE_MB", "50")),
             max_concurrent_tasks=int(os.getenv("OCR_MAX_CONCURRENT", "3")),
-            dpi=int(os.getenv("OCR_DPI", "200")),
         )
 
 
@@ -489,28 +395,6 @@ def validate_config(config: PDFImportConfig) -> list[str]:
             "Large max_pdf_pages and max_pdf_size_mb may cause memory issues"
         )
 
-    # 检查超时配置
-    if config.ocr.vision_timeout < 60:
-        warnings.append(
-            f"vision_timeout={config.ocr.vision_timeout}s may be too short for large PDFs"
-        )
-
-    # 检查 GPU 配置
-    if config.ocr.use_gpu:
-        try:
-            import paddle
-
-            # PaddlePaddle 的 CUDA 检查
-            cuda_available: bool = getattr(
-                paddle, "is_compiled_with_cuda", lambda: False
-            )()
-            if not cuda_available:
-                warnings.append(
-                    "use_gpu=True but CUDA is not available in PaddlePaddle"
-                )
-        except ImportError:
-            warnings.append("use_gpu=True but PaddlePaddle is not installed")
-
     return warnings
 
 
@@ -543,18 +427,9 @@ def export_config_env() -> list[str]:
     """
     config = get_config()
     lines = [
-        "# PDF/OCR Configuration",
+        "# PDF/LLM Vision Configuration",
         "",
-        "# OCR Engine",
-        f"export OCR_ENGINE_PROVIDER={config.ocr.engine_provider}",
-        f"export OCR_LANG={config.ocr.language}",
-        f"export OCR_USE_GPU={'true' if config.ocr.use_gpu else 'false'}",
-        "",
-        "# Timeouts",
-        f"export OCR_VISION_TIMEOUT={config.ocr.vision_timeout}",
-        f"export OCR_TEXT_TIMEOUT={config.ocr.text_timeout}",
-        "",
-        "# Limits",
+        "# File Limits",
         f"export OCR_MAX_PAGES={config.ocr.max_pdf_pages}",
         f"export OCR_MAX_SIZE_MB={config.ocr.max_pdf_size_mb}",
         f"export OCR_MAX_CONCURRENT={config.ocr.max_concurrent_tasks}",
@@ -577,15 +452,13 @@ if __name__ == "__main__":  # pragma: no cover
 
     logger = logging.getLogger(__name__)
 
-    logger.info("=== OCR Configuration ===")
-    logger.info(f"Engine: {config.ocr.engine_provider}")
-    logger.info(f"Language: {config.ocr.language}")
-    logger.info(f"GPU: {config.ocr.use_gpu}")
-    logger.info(f"Timeout: {config.ocr.vision_timeout}s")
+    logger.info("=== PDF Processing Configuration ===")
     logger.info(f"Max Pages: {config.ocr.max_pdf_pages}")
-    logger.info(f"Concurrent: {config.ocr.max_concurrent_tasks}")
+    logger.info(f"Max File Size: {config.ocr.max_pdf_size_mb}MB")
+    logger.info(f"Max Concurrent Tasks: {config.ocr.max_concurrent_tasks}")
 
     logger.info("=== Extraction Configuration ===")
+    logger.info(f"LLM Provider: {config.extraction.llm_provider}")
     logger.info(f"Confidence Threshold: {config.extraction.confidence_threshold}")
     logger.info(f"Max Retries: {config.extraction.max_retries}")
     logger.info(f"Cache: {config.extraction.enable_cache}")

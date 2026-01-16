@@ -3,13 +3,12 @@ Contract Extractor Base Classes and Utilities
 合同提取器基类和工具函数
 """
 
+import asyncio
 import json
 import logging
 import re
 from abc import ABC, abstractmethod
 from typing import Any
-
-from ..retry import retry_on_vision_api
 
 logger = logging.getLogger(__name__)
 
@@ -198,14 +197,57 @@ class BaseVisionAdapter(ContractExtractorInterface):
             if image_paths:
                 cleanup_temp_images(image_paths)
 
-    @retry_on_vision_api(max_attempts=3)
     async def _extract_with_retry(
         self, image_paths: list[str], prompt: str, temperature: float = 0.1
     ):
-        """Extract from images with automatic retry on transient errors"""
-        return await self.vision_service.extract_from_images(
-            image_paths=image_paths, prompt=prompt, temperature=temperature
-        )
+        """
+        Extract from images with automatic retry on transient errors
+
+        Implements retry logic inline for vision API calls.
+        Retries up to 3 times on transient errors (network, timeout, rate limit).
+        """
+        max_attempts = 3
+        last_error = None
+
+        for attempt in range(1, max_attempts + 1):
+            try:
+                return await self.vision_service.extract_from_images(
+                    image_paths=image_paths, prompt=prompt, temperature=temperature
+                )
+            except Exception as e:
+                last_error = e
+                error_type = type(e).__name__
+
+                # Check if error is retryable
+                retryable_errors = (
+                    "ConnectionError", "TimeoutError", "ConnectTimeout",
+                    "ReadTimeout", "RateLimitError", "APIError"
+                )
+
+                if error_type not in retryable_errors:
+                    # Non-retryable error, raise immediately
+                    logger.warning(f"Non-retryable error in vision API call: {error_type}: {e}")
+                    raise
+
+                if attempt < max_attempts:
+                    # Exponential backoff: 1s, 2s, 4s
+                    wait_time = 2 ** (attempt - 1)
+                    logger.warning(
+                        f"Vision API call failed (attempt {attempt}/{max_attempts}): "
+                        f"{error_type}: {e}. Retrying in {wait_time}s..."
+                    )
+                    await asyncio.sleep(wait_time)
+                else:
+                    logger.error(
+                        f"Vision API call failed after {max_attempts} attempts: "
+                        f"{error_type}: {e}"
+                    )
+
+        # All retries exhausted
+        raise RuntimeError(
+            f"Vision API call failed after {max_attempts} attempts. "
+            f"Last error: {type(last_error).__name__}: {last_error}"
+        ) from last_error
 
     def _parse_json(self, content: str) -> dict[str, Any]:
         """Parse JSON from model response (common logic)"""

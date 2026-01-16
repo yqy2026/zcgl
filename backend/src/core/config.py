@@ -253,28 +253,6 @@ class Settings(BaseSettings):
         default=False, json_schema_extra={"env": "WECOM_MENTION_ALL"}
     )
 
-    # V2.0 NVIDIA Cloud OCR配置
-    NVIDIA_API_KEY: str | None = Field(
-        default=None,
-        description="NVIDIA API Key for Cloud OCR",
-        json_schema_extra={"env": "NVIDIA_API_KEY"},
-    )
-    NVIDIA_OCR_BASE_URL: str = Field(
-        default="https://ai.api.nvidia.com/v1/cv/baidu/paddleocr",
-        description="NVIDIA Cloud PaddleOCR API endpoint",
-        json_schema_extra={"env": "NVIDIA_OCR_BASE_URL"},
-    )
-    NVIDIA_OCR_TIMEOUT: int = Field(
-        default=60,
-        description="NVIDIA OCR API timeout in seconds",
-        json_schema_extra={"env": "NVIDIA_OCR_TIMEOUT"},
-    )
-    OCR_PROVIDER: str = Field(
-        default="auto",
-        description="OCR provider: auto, local, nvidia_cloud",
-        json_schema_extra={"env": "OCR_PROVIDER"},
-    )
-
     # LLM Provider Configuration (2026.01 更新)
     LLM_PROVIDER: str = Field(
         default="qwen",
@@ -439,17 +417,6 @@ class Settings(BaseSettings):
 
         return v
 
-    @field_validator("OCR_PROVIDER")
-    @classmethod
-    def validate_ocr_provider(cls, v: str) -> str:
-        """验证 OCR 提供商"""
-        valid_providers = {"auto", "local", "nvidia_cloud"}
-        if v not in valid_providers:
-            raise ValueError(
-                f"无效的 OCR 提供商: {v}. 有效值为: {', '.join(sorted(valid_providers))}"
-            )
-        return v
-
     @field_validator("LLM_PROVIDER")
     @classmethod
     def validate_llm_provider(cls, v: str) -> str:
@@ -587,16 +554,6 @@ class Settings(BaseSettings):
         """验证企业微信配置一致性"""
         if self.WECOM_ENABLED and not self.WECOM_WEBHOOK_URL:
             logger.warning("企业微信通知已启用但未配置 Webhook URL，通知功能将无法工作")
-        return self
-
-    @model_validator(mode="after")
-    def validate_nvidia_ocr_configuration(self) -> "Settings":
-        """验证 NVIDIA OCR 配置一致性"""
-        if self.OCR_PROVIDER == "nvidia_cloud" and not self.NVIDIA_API_KEY:
-            logger.warning(
-                "OCR 提供商设置为 NVIDIA Cloud 但未配置 NVIDIA_API_KEY，"
-                "将回退到本地 OCR"
-            )
         return self
 
     @model_validator(mode="after")
