@@ -236,5 +236,5 @@ def get_zhipu_vision_service() -> ZhipuVisionService:
     global _vision_service
     if _vision_service is None:
         _vision_service = ZhipuVisionService()  # type: ignore[no-untyped-call]
-    assert _vision_service is not None  # for type narrowing
+    assert _vision_service is not None  # nosec B101  # Type narrowing for singleton pattern
     return _vision_service

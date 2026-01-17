@@ -98,7 +98,7 @@ async def import_assets(
                     # 创建新资产
                     asset_create = AssetCreate(**asset_data)
                     new_asset = asset_crud.create(db=db, obj_in=asset_create)
-                    assert new_asset is not None  # for mypy
+                    assert new_asset is not None  # nosec B101  # Type narrowing for mypy
                     imported_assets.append(new_asset.id)
                     success_count += 1
 
@@ -130,7 +130,7 @@ async def import_assets(
                     # 创建新资产（默认情况）
                     asset_create = AssetCreate(**asset_data)
                     new_asset = asset_crud.create(db=db, obj_in=asset_create)
-                    assert new_asset is not None  # for mypy
+                    assert new_asset is not None  # nosec B101  # Type narrowing for mypy
                     imported_assets.append(new_asset.id)
                     success_count += 1
 

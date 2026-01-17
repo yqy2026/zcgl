@@ -196,7 +196,7 @@ class MarkdownContractParser:
         if area:
             try:
                 contract.property_info.area = Decimal(area)
-            except Exception:
+            except Exception:  # nosec B110  # Intentional: skip field if parsing fails
                 pass
 
         # 提取期限
@@ -204,7 +204,7 @@ class MarkdownContractParser:
         if duration:
             try:
                 contract.duration_years = int(duration)
-            except Exception:
+            except Exception:  # nosec B110  # Intentional: skip field if parsing fails
                 pass
 
         # 提取免租期
@@ -212,7 +212,7 @@ class MarkdownContractParser:
         if rent_free:
             try:
                 contract.rent_free_period = int(rent_free)
-            except Exception:
+            except Exception:  # nosec B110  # Intentional: skip field if parsing fails
                 pass
 
         # 提取阶梯租金表格

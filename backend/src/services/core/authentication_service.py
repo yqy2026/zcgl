@@ -164,7 +164,7 @@ class AuthenticationService:
         return TokenResponse(
             access_token=access_token,
             refresh_token=refresh_token,
-            token_type="bearer",
+            token_type="bearer",  # nosec B106  # Standard OAuth token type, not a password
             expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
             session_id=session_id,
         )
@@ -189,7 +189,7 @@ class AuthenticationService:
             jti: Any = payload.get("jti")
             session_id: Any = payload.get("session_id")
 
-            if user_id is None or token_type != "refresh":
+            if user_id is None or token_type != "refresh":  # nosec B105  # Token type string, not a password
                 return None
 
             if jti and self._is_token_revoked(jti):

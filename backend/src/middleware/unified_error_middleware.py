@@ -329,25 +329,25 @@ class MetricsMiddleware(BaseHTTPMiddleware):
 
         # 总请求数
         total_requests = self.metrics["total_requests"]
-        assert isinstance(total_requests, int)
+        assert isinstance(total_requests, int)  # nosec B101  # Defensive type check
         self.metrics["total_requests"] = total_requests + 1
 
         # 错误数
         if is_error:
             total_errors = self.metrics["total_errors"]
-            assert isinstance(total_errors, int)
+            assert isinstance(total_errors, int)  # nosec B101  # Defensive type check
             self.metrics["total_errors"] = total_errors + 1
 
         # 请求持续时间
         request_duration = self.metrics["request_duration"]
-        assert isinstance(request_duration, list)
+        assert isinstance(request_duration, list)  # nosec B101  # Defensive type check
         request_duration.append(process_time)
 
         # 状态码统计
         if response:
             status_code = response.status_code
             status_codes = self.metrics["status_codes"]
-            assert isinstance(status_codes, dict)
+            assert isinstance(status_codes, dict)  # nosec B101  # Defensive type check
             status_codes[status_code] = status_codes.get(status_code, 0) + 1
 
         # 保持最近1000个请求的持续时间
@@ -357,14 +357,14 @@ class MetricsMiddleware(BaseHTTPMiddleware):
     def get_metrics(self) -> dict[str, Any]:
         """获取指标"""
         durations = self.metrics["request_duration"]
-        assert isinstance(durations, list)
+        assert isinstance(durations, list)  # nosec B101  # Defensive type check
 
         total_requests = self.metrics["total_requests"]
-        assert isinstance(total_requests, int)
+        assert isinstance(total_requests, int)  # nosec B101  # Defensive type check
         total_errors = self.metrics["total_errors"]
-        assert isinstance(total_errors, int)
+        assert isinstance(total_errors, int)  # nosec B101  # Defensive type check
         status_codes = self.metrics["status_codes"]
-        assert isinstance(status_codes, dict)
+        assert isinstance(status_codes, dict)  # nosec B101  # Defensive type check
 
         return {
             "total_requests": total_requests,
