@@ -9,6 +9,7 @@ from .occupancy_stats import router as occupancy_stats_router
 from .area_stats import router as area_stats_router
 from .financial_stats import router as financial_stats_router
 from .trend_stats import router as trend_stats_router
+from .basic_stats import router as basic_stats_router
 
 __all__ = [
     "distribution_router",
@@ -16,4 +17,5 @@ __all__ = [
     "area_stats_router",
     "financial_stats_router",
     "trend_stats_router",
+    "basic_stats_router",
 ]
