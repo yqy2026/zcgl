@@ -256,50 +256,45 @@ def check_component_health() -> dict[str, dict[str, Any]]:
     components: dict[str, dict[str, Any]] = {}
 
     # 数据库健康检查 - 使用增强的数据库管理器
-    try:
-        db_manager: Any = get_database_manager()
-        if db_manager:
-            health_check = db_manager.run_health_check()
-            pool_status: dict[str, Any] = db_manager.get_connection_pool_status()
+    # ✅ 修复: 不再捕获异常，让数据库失败的异常传播到顶层处理
+    # 这样 get_health_status() 中的 503 错误才能正常工作
+    db_manager: Any = get_database_manager()
+    if db_manager:
+        health_check = db_manager.run_health_check()
+        pool_status: dict[str, Any] = db_manager.get_connection_pool_status()
 
-            # 根据健康检查结果确定状态
-            if health_check["healthy"] and pool_status.get("utilization", 0) < 80:
-                status = "healthy"
-            elif health_check["healthy"] and pool_status.get("utilization", 0) < 90:
-                status = "warning"
-            else:
-                status = "unhealthy"
-
-            components["database"] = {
-                "status": status,
-                "response_time_ms": health_check["checks"]
-                .get("basic_connection", {})
-                .get("response_time_ms", 0),
-                "connection_pool_utilization": pool_status.get("utilization", 0),
-                "active_connections": pool_status.get("active_connections", 0),
-                "total_queries": pool_status.get("total_queries", 0),
-                "slow_queries": pool_status.get("slow_queries", 0),
-                "avg_response_time_ms": pool_status.get("avg_response_time_ms", 0),
-                "pool_hit_rate": pool_status.get("pool_hit_rate", 0),
-                "database_size_mb": health_check["checks"]
-                .get("database_size", {})
-                .get("size_mb", 0),
-                "last_check": health_check["timestamp"],
-                "details": f"数据库连接正常，健康评分: {health_check.get('overall_score', 'N/A')}",
-            }
+        # 根据健康检查结果确定状态
+        if health_check["healthy"] and pool_status.get("utilization", 0) < 80:
+            status = "healthy"
+        elif health_check["healthy"] and pool_status.get("utilization", 0) < 90:
+            status = "warning"
         else:
-            # 回退到基本检查
-            components["database"] = {
-                "status": "healthy",
-                "response_time_ms": 15,
-                "last_check": datetime.now().isoformat(),
-                "details": "数据库连接正常（基本检查）",
-            }
-    except Exception as e:
+            status = "unhealthy"
+
         components["database"] = {
-            "status": "unhealthy",
-            "error": str(e),
+            "status": status,
+            "response_time_ms": health_check["checks"]
+            .get("basic_connection", {})
+            .get("response_time_ms", 0),
+            "connection_pool_utilization": pool_status.get("utilization", 0),
+            "active_connections": pool_status.get("active_connections", 0),
+            "total_queries": pool_status.get("total_queries", 0),
+            "slow_queries": pool_status.get("slow_queries", 0),
+            "avg_response_time_ms": pool_status.get("avg_response_time_ms", 0),
+            "pool_hit_rate": pool_status.get("pool_hit_rate", 0),
+            "database_size_mb": health_check["checks"]
+            .get("database_size", {})
+            .get("size_mb", 0),
+            "last_check": health_check["timestamp"],
+            "details": f"数据库连接正常，健康评分: {health_check.get('overall_score', 'N/A')}",
+        }
+    else:
+        # 回退到基本检查
+        components["database"] = {
+            "status": "healthy",
+            "response_time_ms": 15,
             "last_check": datetime.now().isoformat(),
+            "details": "数据库连接正常（基本检查）",
         }
 
     # 缓存健康检查
@@ -542,9 +537,26 @@ async def get_health_status(
     - **overall_score**: 总体健康评分(0-100)
 
     需要system_monitoring读取权限
+
+    ✅ 修复: 数据库不健康时抛出503错误，而不是返回HTTP 200
     """
+    from fastapi import HTTPException
+
     components = check_component_health()
     overall_score = calculate_overall_health_score(components)
+
+    # ✅ 检查数据库状态 - 如果数据库不健康，立即返回503
+    db_status = components.get("database", {}).get("status")
+    if db_status == "unhealthy":
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "Database unavailable",
+                "database_status": db_status,
+                "database_error": components.get("database", {}).get("error"),
+                "timestamp": datetime.now().isoformat(),
+            },
+        )
 
     # 确定整体状态
     if overall_score >= 90:
