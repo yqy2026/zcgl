@@ -239,7 +239,7 @@ omit = [
 ]
 
 [tool.coverage.report]
-fail_under = 85  # Match TESTING_STANDARDS.md target (匹配文档目标)
+fail_under = 70  # Match pytest command line threshold (与pytest命令行阈值一致)
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",

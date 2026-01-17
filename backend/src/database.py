@@ -143,21 +143,53 @@ class DatabaseManager:
                 }  # pragma: no cover
             )
 
-        self.engine = create_engine(database_url, **engine_kwargs)
+        try:
+            self.engine = create_engine(database_url, **engine_kwargs)
 
-        # 增强数据库安全
-        enhance_database_security(self.engine)
+            # Test connection immediately
+            with self.engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
 
-        # 设置事件监听器
-        self._setup_event_listeners()
+            # 增强数据库安全
+            enhance_database_security(self.engine)
 
-        # 创建会话工厂
-        self.session_factory = sessionmaker(
-            bind=self.engine, autocommit=False, autoflush=False, expire_on_commit=False
-        )
+            # 设置事件监听器
+            self._setup_event_listeners()
 
-        logger.info("数据库引擎初始化完成")
-        return self.engine
+            # 创建会话工厂
+            self.session_factory = sessionmaker(
+                bind=self.engine, autocommit=False, autoflush=False, expire_on_commit=False
+            )
+
+            logger.info("数据库引擎初始化完成")
+            return self.engine
+
+        except OperationalError as e:
+            logger.critical(
+                "无法连接到PostgreSQL数据库",
+                extra={
+                    "error_id": "DB_CONNECTION_FAILED",
+                    "database": database_url.split("@")[-1] if "@" in database_url else database_url,
+                    "error_details": str(e)
+                }
+            )
+            raise RuntimeError(
+                f"数据库连接失败: 请检查PostgreSQL是否运行，且DATABASE_URL配置正确。\n"
+                f"错误详情: {e}\n"
+                f"提示: 请确保数据库已创建，且用户权限正确。\n"
+                f"帮助文档: docs/POSTGRESQL_MIGRATION.md"
+            ) from e
+
+        except (ValueError, AttributeError) as e:
+            logger.critical(
+                "DATABASE_URL配置错误",
+                extra={"error_id": "DB_URL_MALFORMED", "error_details": str(e)}
+            )
+            raise ValueError(
+                f"DATABASE_URL格式错误: {database_url}\n"
+                f"正确格式: postgresql://user:password@host:port/database\n"
+                f"错误详情: {e}"
+            ) from e
 
     def _setup_event_listeners(self) -> None:
         """设置数据库事件监听器"""
@@ -325,7 +357,64 @@ class DatabaseManager:
 # 数据库URL配置 - 动态读取环境变量，支持测试模式
 def get_database_url() -> str:
     """获取数据库URL（支持动态环境变量）"""
-    return os.getenv("DATABASE_URL", "sqlite:///./data/land_property.db")
+    database_url = os.getenv("DATABASE_URL")
+
+    if not database_url:
+        environment = os.getenv("ENVIRONMENT", "production")
+
+        if environment == "production":
+            logger.critical(
+                "生产环境必须设置DATABASE_URL环境变量",
+                extra={"error_id": "MISSING_DATABASE_URL"}
+            )
+            raise ValueError(
+                "生产环境必须设置DATABASE_URL环境变量！\n"
+                "请在.env文件中配置:\n"
+                "DATABASE_URL=postgresql://user:password@host:port/database\n"
+                "帮助文档: docs/POSTGRESQL_MIGRATION.md"
+            )
+        else:
+            # 开发环境: 使用SQLite并警告
+            logger.warning(
+                "未设置DATABASE_URL，使用默认SQLite数据库（仅用于开发）",
+                extra={"error_id": "USING_DEFAULT_SQLITE"}
+            )
+            return "sqlite:///./data/land_property.db"
+
+    # 验证PostgreSQL URL格式
+    if database_url.startswith("postgresql://"):
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(database_url)
+
+            # 检查必需组件
+            if not parsed.hostname:
+                raise ValueError("缺少主机名 (hostname)")
+            if not parsed.username:
+                raise ValueError("缺少用户名 (username)")
+            if not parsed.password:
+                logger.warning("DATABASE_URL缺少密码 (password)")
+            if not parsed.path or len(parsed.path) <= 1:
+                raise ValueError("缺少数据库名称 (database name)")
+            if parsed.port and not (1 <= parsed.port <= 65535):
+                raise ValueError(f"无效端口号: {parsed.port}")
+
+            # 记录安全信息（不含密码）
+            safe_url = f"postgresql://{parsed.username}@{parsed.hostname}:{parsed.port or 5432}{parsed.path}"
+            logger.info(f"PostgreSQL URL验证通过: {safe_url}")
+
+        except ValueError as e:
+            logger.error(
+                f"DATABASE_URL验证失败: {e}",
+                extra={"error_id": "DATABASE_URL_INVALID"}
+            )
+            raise ValueError(
+                f"DATABASE_URL格式错误: {e}\n"
+                f"正确格式: postgresql://user:password@host:port/database\n"
+                f"示例: postgresql://postgres:password@localhost:5432/zcgl_db"
+            ) from e
+
+    return database_url
 
 
 # 向后兼容的模块级变量（现在通过函数获取）

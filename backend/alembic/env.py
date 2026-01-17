@@ -1,12 +1,13 @@
 import os
-
-# 导入我们的模型
 import sys
 from logging.config import fileConfig
 
+from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from alembic import context
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv()
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
@@ -15,6 +16,18 @@ from src.database import Base
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
+
+# Get DATABASE_URL from environment variable and override alembic.ini
+database_url = os.getenv("DATABASE_URL")
+if not database_url:
+    raise ValueError(
+        "DATABASE_URL environment variable is not set!\n"
+        "Please configure DATABASE_URL in your .env file.\n"
+        "Example: DATABASE_URL=postgresql+psycopg://user:password@host:port/database"
+    )
+
+# Override sqlalchemy.url from alembic.ini with environment variable
+config.set_main_option("sqlalchemy.url", database_url)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

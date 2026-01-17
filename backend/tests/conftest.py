@@ -112,7 +112,7 @@ def setup_test_database():
         # If we can't determine, be safe and run migrations
         run_migrations = True
 
-    if run_migrations and "sqlite" in database_url:
+    if run_migrations and ("sqlite" in database_url or "postgresql" in database_url):
         try:
             # Run Alembic migrations
             print(f"\n[*] Setting up test database: {database_url}")
@@ -153,7 +153,7 @@ def setup_test_database():
     yield
 
     # Cleanup: Optionally remove test database file
-    if "sqlite" in database_url and "test_database.db" in database_url:
+    if ("sqlite" in database_url or "postgresql" in database_url) and "test" in database_url:
         db_path = database_url.replace("sqlite:///", "")
         if os.path.exists(db_path):
             try:
