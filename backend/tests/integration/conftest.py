@@ -13,10 +13,17 @@ from pathlib import Path
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from testcontainers.postgres import PostgresContainer
 
 # Lazy imports - only import when fixtures are actually used
 # This avoids ModuleNotFoundError during pytest collection
+
+# Conditionally import testcontainers
+try:
+    from testcontainers.postgres import PostgresContainer
+    HAS_TESTCONTAINERS = True
+except ImportError:
+    HAS_TESTCONTAINERS = False
+    PostgresContainer = None
 
 
 # Use the same database file as CI for consistency
@@ -44,7 +51,7 @@ def engine(test_database_url):
     For PostgreSQL: Uses testcontainers for isolated test database
     """
     # Check if we should use PostgreSQL (for more realistic integration tests)
-    if os.getenv("TEST_USE_POSTGRES") == "true":
+    if os.getenv("TEST_USE_POSTGRES") == "true" and HAS_TESTCONTAINERS:
         postgres = PostgresContainer("postgres:15")
         postgres.start()
 
