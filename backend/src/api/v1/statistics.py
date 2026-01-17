@@ -35,6 +35,13 @@ logger = logging.getLogger(__name__)
 # 创建统计路由器
 router = APIRouter(tags=["统计分析"])
 
+# Phase 2 架构改进：集成模块化路由
+# 分布统计端点已迁移到 statistics_modules/distribution.py
+from .statistics_modules import distribution_router
+
+# 集成分布统计模块路由
+router.include_router(distribution_router)
+
 
 # 私有函数已迁移到 Service 层:
 # - _calculate_occupancy_with_aggregation -> OccupancyService.calculate_with_aggregation
@@ -990,66 +997,7 @@ async def get_occupancy_rate_statistics(
     }
 
 
-@router.get("/asset-distribution", summary="获取资产分布统计")
-async def get_asset_distribution(
-    group_by: str = Query("ownership_status", description="分组字段"),
-    include_deleted: bool = Query(False, description="是否包含已删除资产"),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
-) -> dict[str, Any]:
-    """
-    获取资产分布统计数据
-    """
-    # 使用字段验证框架验证 group_by 字段
-    # 这会自动检查字段是否在 Asset 模型的 filter_fields 白名单中
-    from ...security.field_validator import FieldValidator
-
-    FieldValidator.validate_group_by_field("Asset", group_by, raise_on_invalid=True)
-
-    # 构建筛选条件
-    filters: dict[str, Any] = {}
-    if not include_deleted:
-        filters["data_status"] = "正常"
-
-    # 获取资产数据
-    assets, _ = asset_crud.get_multi_with_search(
-        db=db, skip=0, limit=10000, filters=filters
-    )
-
-    # 按字段分组统计
-    distribution: dict[str, Any] = {}
-    total_assets = len(assets)
-
-    for asset in assets:
-        group_value = getattr(asset, group_by, None) or "未知"
-        if group_value not in distribution:
-            distribution[group_value] = 0
-        distribution[group_value] += 1
-
-    # 构建响应数据
-    distribution_data = [
-        {
-            "name": key,
-            "value": count,
-            "percentage": round((count / total_assets * 100), 2)
-            if total_assets > 0
-            else 0,
-        }
-        for key, count in distribution.items()
-    ]
-
-    return {
-        "success": True,
-        "data": {
-            "group_by": group_by,
-            "distribution": distribution_data,
-            "total_assets": total_assets,
-            "generated_at": datetime.now().isoformat(),
-            "filters_applied": filters,
-        },
-        "message": "资产分布统计数据获取成功",
-    }
-
+# asset-distribution endpoint also migrated to statistics_modules/distribution.py
 
 @router.get("/area-statistics", summary="获取面积统计")
 async def get_area_statistics(
