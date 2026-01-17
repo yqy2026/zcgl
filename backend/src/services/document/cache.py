@@ -127,7 +127,7 @@ class PDFCache:
                 # 删除损坏的缓存文件
                 try:
                     cache_file.unlink()
-                except Exception:
+                except Exception:  # nosec B110  # Intentional: continue if cache file deletion fails
                     pass
                 self._evictions += 1
                 self._misses += 1
@@ -471,7 +471,7 @@ class AsyncDocumentCache:
             # 删除损坏的缓存
             try:
                 await asyncio.to_thread(cache_file.unlink)
-            except Exception:
+            except Exception:  # nosec B110  # Intentional: continue if cache file deletion fails
                 pass
             self._evictions += 1
             self._misses += 1

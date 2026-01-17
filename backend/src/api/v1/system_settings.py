@@ -166,6 +166,9 @@ async def update_system_settings(
                 },
             )
 
+            logger = logging.getLogger(__name__)
+            logger.warning("记录系统设置审计日志失败", exc_info=True)
+
         return SystemSettingsResponse(
             success=True,
             data=_system_settings,
@@ -275,6 +278,9 @@ async def backup_system(
                 },
             )
 
+            logger = logging.getLogger(__name__)
+            logger.warning("记录备份审计日志失败", exc_info=True)
+
         return SystemBackupResponse(
             success=True,
             message="系统数据备份成功",
@@ -357,6 +363,9 @@ async def restore_system(
                     "action": "SYSTEM_RESTORE",
                 },
             )
+
+            logger = logging.getLogger(__name__)
+            logger.warning("记录恢复审计日志失败", exc_info=True)
 
         return SystemRestoreResponse(
             success=True,

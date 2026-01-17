@@ -95,7 +95,7 @@ class AnalyticsService:
         import json
 
         filter_str = json.dumps(filters, sort_keys=True)
-        return f"analytics:{hashlib.md5(filter_str.encode()).hexdigest()}"
+        return f"analytics:{hashlib.md5(filter_str.encode(), usedforsecurity=False).hexdigest()}"
 
     def _calculate_analytics(self, filters: dict[str, Any]) -> dict[str, Any]:
         """

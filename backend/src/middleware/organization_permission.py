@@ -109,7 +109,7 @@ class OrganizationDataFilter:
     def get_accessible_organizations(self) -> list[str]:
         """获取可访问的组织ID列表"""
         result = self.org_service.get_user_accessible_organizations(self.user_id)
-        assert isinstance(result, list)
+        assert isinstance(result, list)  # nosec B101  # Defensive type check
         return result
 
     def get_accessible_organizations_with_details(self) -> list[dict[str, Any]]:
@@ -117,13 +117,13 @@ class OrganizationDataFilter:
         result = self.org_service.get_user_accessible_organizations_with_details(
             self.user_id
         )
-        assert isinstance(result, list)
+        assert isinstance(result, list)  # nosec B101  # Defensive type check
         return result
 
     def get_organization_hierarchy(self) -> list[dict[str, Any]]:
         """获取组织层次结构"""
         result = self.org_service.get_organization_hierarchy(self.user_id)
-        assert isinstance(result, list)
+        assert isinstance(result, list)  # nosec B101  # Defensive type check
         return result
 
 
@@ -146,7 +146,7 @@ def get_accessible_organizations(
     """
     org_service = OrganizationPermissionService(db)
     result = org_service.get_user_accessible_organizations_with_details(current_user.id)
-    assert isinstance(result, list)
+    assert isinstance(result, list)  # nosec B101  # Defensive type check
     return result
 
 

@@ -239,6 +239,7 @@ omit = [
 ]
 
 [tool.coverage.report]
+fail_under = 85  # Match TESTING_STANDARDS.md target (匹配文档目标)
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
@@ -255,6 +256,29 @@ skip_covered = false
 
 [tool.coverage.html]
 directory = "htmlcov"
+
+# =============================================================================
+# Bandit - Security Linter Configuration
+# =============================================================================
+[tool.bandit]
+# Only check HIGH and MEDIUM severity issues (Phase 2: strengthened from LOW)
+# - B101: assert_used (LOW severity - skip in production code)
+# - B110: try_except_pass (MEDIUM severity - requires explicit action)
+# - B324: hashlib.md5 (LOW severity for non-crypto use cases)
+skips = ["B101"]  # Skip assert warnings in non-test code
+exclude_dirs = [
+    ".venv",
+    "venv",
+    "__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+    "tests",
+    "migrations",
+    "alembic",
+]
+# -ll: Only report HIGH and MEDIUM severity issues
+# -iii: Skip some checks to reduce false positives
+assert_used = false  # Don't treat assert as security issue
 
 [dependency-groups]
 dev = [

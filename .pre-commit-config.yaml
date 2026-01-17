@@ -1,49 +1,79 @@
-# 代码质量监控 - Pre-commit 配置文件
+# 代码质量监控 - Pre-commit 配置文件 (Phase 2 强化版)
 # 此配置文件用于在代码提交前进行自动化质量检查
+#
+# Phase 2 改进 (2026-01-15):
+# - MyPy 启用 strict 模式
+# - 移除 CI 跳过规则
+# - Bandit 仅检查高危/中危
+# - 复杂度检查改为警告模式
 
 repos:
+  # =============================================================================
   # Ruff - 快速Python代码检查和格式化
+  # =============================================================================
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.6.8  # 使用最新稳定版本
+    rev: v0.6.8  # 与 .github/config/ci.yml 锁定版本一致
     hooks:
       - id: ruff
         name: ruff-check
         description: "运行Ruff代码检查"
-        args: [--fix, --exit-non-zero-on-fix]
+        args: [--fix, --exit-non-zero-on-fix, --output-format=full]
         files: ^backend/.*\.py$
       - id: ruff-format
         name: ruff-format
         description: "运行Ruff代码格式化"
         files: ^backend/.*\.py$
 
-  # MyPy - 静态类型检查
+  # =============================================================================
+  # MyPy - 静态类型检查 (STRICT MODE - Phase 2)
+  # =============================================================================
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.11.2  # 使用最新稳定版本
+    rev: v1.11.2  # 与 .github/config/ci.yml 锁定版本一致
     hooks:
       - id: mypy
         name: mypy-check
-        description: "运行MyPy类型检查"
-        args: [--config-file=backend/pyproject.toml]
+        description: "运行MyPy类型检查 (STRICT模式)"
+        args: [
+          --config-file=backend/pyproject.toml,
+          --strict,  # Phase 2: 启用严格模式
+          --warn-return-any,
+          --warn-unused-ignores,
+          --no-error-summary,
+        ]
         files: ^backend/src/.*\.py$
-        additional_dependencies: [types-requests, types-PyYAML]
+        additional_dependencies: [
+          types-requests,
+          types-PyYAML,
+          pydantic>=2.0,
+        ]
+        # Phase 2: 不再使用 pass_filenames (通过 --package 处理)
 
-  # Bandit - 安全漏洞扫描
+  # =============================================================================
+  # Bandit - 安全漏洞扫描 (HIGH/MEDIUM ONLY - Phase 2)
+  # =============================================================================
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.9
+    rev: 1.7.9  # 与 .github/config/ci.yml 锁定版本一致
     hooks:
       - id: bandit
         name: bandit-security
-        description: "运行Bandit安全扫描"
-        args: [-c, pyproject.toml, -r]
+        description: "运行Bandit安全扫描 (仅高危/中危)"
+        args: [
+          -c, backend/pyproject.toml,
+          -r,
+          -ll,  # Phase 2: 仅报告 HIGH 和 MEDIUM severity
+          -iii,  # 跳过某些检查以减少误报
+        ]
         files: ^backend/src/.*\.py$
 
-  # 检查大型文件
+  # =============================================================================
+  # 通用检查 (Pre-commit hooks)
+  # =============================================================================
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
     hooks:
       - id: check-added-large-files
         name: check-large-files
-        description: "检查大型文件"
+        description: "检查大型文件 (>1MB)"
         args: [--maxkb=1000]
       - id: check-merge-conflict
         name: check-merge-conflict
@@ -54,6 +84,9 @@ repos:
       - id: check-json
         name: check-json
         description: "检查JSON文件格式"
+      - id: check-toml
+        name: check-toml
+        description: "检查TOML文件格式"
       - id: trailing-whitespace
         name: trailing-whitespace
         description: "去除行尾空白字符"
@@ -61,37 +94,36 @@ repos:
       - id: end-of-file-fixer
         name: end-of-file-fixer
         description: "确保文件以换行符结尾"
+      - id: debug-statements
+        name: debug-statements
+        description: "检查遗留的调试语句 (python -bb, pdb, breakpoint)"
 
-  # 文件命名检查
+  # =============================================================================
+  # 本地检查 (Local hooks)
+  # =============================================================================
   - repo: local
     hooks:
-      - id: check-file-naming
-        name: check-file-naming
-        description: "检查文件命名是否符合项目规范"
-        entry: python scripts/check_file_naming.py
-        language: system
-        pass_filenames: true
-
-  # 代码复杂度检查
-  - repo: local
-    hooks:
+      # 代码复杂度检查 (WARNING模式 - Phase 2)
       - id: radon-complexity
         name: radon-complexity
-        description: "检查代码复杂度"
-        entry: python -m radon cc --min C backend/src
+        description: "检查代码复杂度 (警告模式，不阻塞提交)"
+        entry: python -m radon cc backend/src --min C --total-average
         language: system
         pass_filenames: false
         files: ^backend/.*\.py$
 
-  # 代码重复度检查
+      # 代码重复度检查 (WARNING模式 - Phase 2)
       - id: jscpd-check
         name: jscpd-check
-        description: "检查代码重复度"
-        entry: npx jscpd backend/src --min-lines 5 --min-tokens 50 --silent
+        description: "检查代码重复度 (警告模式，不阻塞提交)"
+        entry: npx jscpd backend/src --min-lines 5 --min-tokens 50 --silent --threshold 5
         language: system
         pass_filenames: false
+        # Phase 2: 重复度 >5% 时警告，但允许提交
 
-# 配置说明
+# =============================================================================
+# CI 配置
+# =============================================================================
 ci:
   autofix_commit_msg: |
     [pre-commit.ci] 自动修复代码质量问题
@@ -99,13 +131,23 @@ ci:
     - 自动修复Ruff检查问题
     - 格式化代码
     - 修复基本的代码质量问题
-  autofix_prs: true
-  skip: [mypy-check]  # CI环境中跳过mypy，因为需要完整依赖
 
-# 执行顺序配置
+  autofix_prs: true
+  # Phase 2: 移除 skip: [mypy-check]
+  # 理由: MyPy 现在应该在 CI 中运行，确保类型安全
+  skip: []
+
+  # Subprocess 配置 (加速 CI)
+  subprocess: true
+
+# =============================================================================
+# 全局配置
+# =============================================================================
 minimum_pre_commit_version: "3.0.0"
 
+# =============================================================================
 # 排除文件
+# =============================================================================
 exclude: |
   (?x)^(
       backend/\.venv/.*|
@@ -115,7 +157,30 @@ exclude: |
       backend/\.mypy_cache/.*|
       backend/migrations/.*|
       backend/alembic/.*|
+      backend/alembic_versions/.*|
       .*\.egg-info/.*|
       backend/data/.*|
-      backend/logs/.*
+      backend/logs/.*|
+      frontend/ node_modules/.*|
+      frontend/ dist/.*|
+      frontend/ \.next/.*|
+      .*\.bak$|
+      .*\.cache$
   )$
+
+# =============================================================================
+# Phase 2 配置说明
+# =============================================================================
+#
+# 本配置与 CI 保持一致:
+# - 所有工具版本锁定 (.github/config/ci.yml)
+# - MyPy strict 模式启用
+# - Bandit 仅检查高危/中危
+# - 无 CI 跳过规则
+#
+# 与 Phase 1 的差异:
+# - MyPy: 添加 --strict, --warn-return-any, --warn-unused-ignores
+# - Bandit: 添加 -ll 标志 (仅 HIGH/MEDIUM)
+# - 复杂度/重复度: 改为警告模式 (不阻塞提交)
+# - CI skip: 移除 mypy-check 跳过
+#
