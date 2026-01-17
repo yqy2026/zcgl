@@ -30,9 +30,10 @@ from fastapi import (
     Depends,
     File,
     Form,
-    HTTPException,
     UploadFile,
 )
+
+from ...core.api_errors import bad_request
 from sqlalchemy.orm import Session
 
 from ...database import get_db
@@ -148,15 +149,13 @@ async def upload_and_extract_pdf_v1_compatible(
 
     # 验证文件类型
     if not file.content_type == "application/pdf":
-        raise HTTPException(status_code=400, detail="只支持PDF文件上传")
+        raise bad_request("只支持PDF文件上传")
 
     # 验证文件大小（50MB限制）
     max_size = 50 * 1024 * 1024  # 50MB
     file_content = await file.read()
     if len(file_content) > max_size:
-        raise HTTPException(
-            status_code=400, detail=f"文件大小超过限制({max_size // (1024 * 1024)}MB)"
-        )
+        raise bad_request(f"文件大小超过限制({max_size // (1024 * 1024)}MB)")
 
     if pdf_processing_service is None:
         return ExtractionResponse(
@@ -169,7 +168,7 @@ async def upload_and_extract_pdf_v1_compatible(
     try:
         # 使用V2的文件管理服务
         if not file.filename:
-            raise HTTPException(status_code=400, detail="文件名不能为空")
+            raise bad_request("文件名不能为空")
 
         file_info = await pdf_import_service.upload_file(file_content, file.filename)
 

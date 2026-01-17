@@ -13,7 +13,9 @@ from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Query
+
+from ...core.api_errors import bad_request, internal_error, not_found
 from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/defects", tags=["defect-tracking"])
@@ -305,7 +307,7 @@ async def create_defect(defect: DefectReport) -> DefectReport:
 
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=f"创建缺陷失败: {str(e)}")
+        raise internal_error(f"创建缺陷失败: {str(e)}")
     finally:
         conn.close()
 
@@ -476,7 +478,7 @@ async def get_defect(defect_id: str) -> DefectReport:
 
     if not row:
         conn.close()
-        raise HTTPException(status_code=404, detail="未找到指定的缺陷")
+        raise not_found("未找到指定的缺陷", resource_type="defect", resource_id=defect_id)
 
     conn.close()
     return _row_to_defect_report(row)
@@ -504,7 +506,7 @@ async def update_defect(defect_id: str, updates: dict[str, Any]) -> DefectReport
 
         if not current_defect:
             conn.close()
-            raise HTTPException(status_code=404, detail="未找到指定的缺陷")
+            raise not_found("未找到指定的缺陷", resource_type="defect", resource_id=defect_id)
 
         # 构建更新语句
         update_fields = []
@@ -538,7 +540,7 @@ async def update_defect(defect_id: str, updates: dict[str, Any]) -> DefectReport
 
         if not update_fields:
             conn.close()
-            raise HTTPException(status_code=400, detail="没有有效的更新字段")
+            raise bad_request("没有有效的更新字段")
 
         # 添加更新时间
         update_fields.append("updated_at = ?")
@@ -570,9 +572,7 @@ async def update_defect(defect_id: str, updates: dict[str, Any]) -> DefectReport
             field_name = field_part.split(" = ")[0]
             if field_name not in allowed_fields:
                 conn.close()
-                raise HTTPException(
-                    status_code=400, detail=f"不允许的字段: {field_name}"
-                )
+                raise bad_request(f"不允许的字段: {field_name}")
 
         update_query = (
             f"UPDATE defect_reports SET {', '.join(update_fields)} WHERE defect_id = ?"  # nosec - B608: update_fields validated against allowlist above
@@ -610,7 +610,7 @@ async def update_defect(defect_id: str, updates: dict[str, Any]) -> DefectReport
 
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=f"更新缺陷失败: {str(e)}")
+        raise internal_error(f"更新缺陷失败: {str(e)}")
     finally:
         conn.close()
 
@@ -915,7 +915,7 @@ async def create_prevention_measure(prevention: DefectPrevention) -> DefectPreve
 
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=f"创建预防措施失败: {str(e)}")
+        raise internal_error(f"创建预防措施失败: {str(e)}")
     finally:
         conn.close()
 

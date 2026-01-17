@@ -4,7 +4,9 @@
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Depends, Path, Query
+
+from ...core.api_errors import bad_request, conflict, not_found
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
@@ -133,7 +135,7 @@ async def get_enum_field_type(
     crud = get_enum_field_type_crud(db)
     enum_type = crud.get(type_id)
     if not enum_type:
-        raise HTTPException(status_code=404, detail="枚举类型不存在")
+        raise not_found("枚举类型不存在", resource_type="enum_type", resource_id=type_id)
     return enum_type
 
 
@@ -147,13 +149,13 @@ async def create_enum_field_type(
     # 检查编码是否已存在
     existing = crud.get_by_code(enum_type.code)
     if existing:
-        raise HTTPException(status_code=400, detail=f"编码 {enum_type.code} 已存在")
+        raise conflict(f"编码 {enum_type.code} 已存在", resource_type="enum_type")
 
     try:
         db_enum_type = crud.create(enum_type)
         return db_enum_type
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise bad_request(str(e))
 
 
 @router.put("/types/{type_id}", response_model=EnumFieldTypeResponse)
@@ -165,19 +167,19 @@ async def update_enum_field_type(
 
     db_enum_type = crud.get(type_id)
     if not db_enum_type:
-        raise HTTPException(status_code=404, detail="枚举类型不存在")
+        raise not_found("枚举类型不存在", resource_type="enum_type", resource_id=type_id)
 
     # 如果更新了编码，检查是否重复
     if enum_type.code and enum_type.code != db_enum_type.code:
         existing = crud.get_by_code(enum_type.code)
         if existing and existing.id != type_id:
-            raise HTTPException(status_code=400, detail=f"编码 {enum_type.code} 已存在")
+            raise conflict(f"编码 {enum_type.code} 已存在", resource_type="enum_type")
 
     try:
         updated_enum_type = crud.update(db_enum_type, enum_type)
         return updated_enum_type
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise bad_request(str(e))
 
 
 @router.delete("/types/{type_id}")
@@ -192,10 +194,10 @@ async def delete_enum_field_type(
     try:
         success = crud.delete(type_id, deleted_by=deleted_by)
         if not success:
-            raise HTTPException(status_code=404, detail="枚举类型不存在")
+            raise not_found("枚举类型不存在", resource_type="enum_type", resource_id=type_id)
         return {"message": "枚举类型删除成功"}
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise bad_request(str(e))
 
 
 @router.get("/types/categories/list[Any]")
@@ -260,7 +262,7 @@ async def get_enum_field_value(
     crud = get_enum_field_value_crud(db)
     enum_value = crud.get(value_id)
     if not enum_value:
-        raise HTTPException(status_code=404, detail="枚举值不存在")
+        raise not_found("枚举值不存在", resource_type="enum_value", resource_id=value_id)
     return enum_value
 
 
@@ -275,12 +277,12 @@ async def create_enum_field_value(
     type_crud = get_enum_field_type_crud(db)
     enum_type = type_crud.get(type_id)
     if not enum_type:
-        raise HTTPException(status_code=404, detail="枚举类型不存在")
+        raise not_found("枚举类型不存在", resource_type="enum_type", resource_id=type_id)
 
     # 检查值是否已存在
     existing = crud.get_by_type_and_value(type_id, enum_value.value)
     if existing:
-        raise HTTPException(status_code=400, detail=f"值 {enum_value.value} 已存在")
+        raise conflict(f"值 {enum_value.value} 已存在", resource_type="enum_value")
 
     enum_value.enum_type_id = type_id
 
@@ -288,7 +290,7 @@ async def create_enum_field_value(
         db_enum_value = crud.create(enum_value)
         return db_enum_value
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise bad_request(str(e))
 
 
 @router.put("/values/{value_id}", response_model=EnumFieldValueResponse)
@@ -300,7 +302,7 @@ async def update_enum_field_value(
 
     db_enum_value = crud.get(value_id)
     if not db_enum_value:
-        raise HTTPException(status_code=404, detail="枚举值不存在")
+        raise not_found("枚举值不存在", resource_type="enum_value", resource_id=value_id)
 
     # 如果更新了值，检查是否重复
     if enum_value.value and enum_value.value != db_enum_value.value:
@@ -308,13 +310,13 @@ async def update_enum_field_value(
             getattr(db_enum_value, "enum_type_id", ""), enum_value.value
         )
         if existing and existing.id != value_id:
-            raise HTTPException(status_code=400, detail=f"值 {enum_value.value} 已存在")
+            raise conflict(f"值 {enum_value.value} 已存在", resource_type="enum_value")
 
     try:
         updated_enum_value = crud.update(db_enum_value, enum_value)
         return updated_enum_value
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise bad_request(str(e))
 
 
 @router.delete("/values/{value_id}")
@@ -329,10 +331,10 @@ async def delete_enum_field_value(
     try:
         success = crud.delete(value_id, deleted_by=deleted_by)
         if not success:
-            raise HTTPException(status_code=404, detail="枚举值不存在")
+            raise not_found("枚举值不存在", resource_type="enum_value", resource_id=value_id)
         return {"message": "枚举值删除成功"}
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise bad_request(str(e))
 
 
 @router.post(
@@ -348,7 +350,7 @@ async def batch_create_enum_field_values(
     type_crud = get_enum_field_type_crud(db)
     enum_type = type_crud.get(type_id)
     if not enum_type:
-        raise HTTPException(status_code=404, detail="枚举类型不存在")
+        raise not_found("枚举类型不存在", resource_type="enum_type", resource_id=type_id)
 
     try:
         created_values = crud.batch_create(
@@ -356,7 +358,7 @@ async def batch_create_enum_field_values(
         )
         return created_values  # type: ignore[return-value]
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise bad_request(str(e))
 
 
 # 枚举字段使用记录管理
@@ -385,9 +387,9 @@ async def create_enum_field_usage(
     # 检查是否已存在相同的使用记录
     existing = crud.get_by_field(usage.table_name, usage.field_name)
     if existing:
-        raise HTTPException(
-            status_code=400,
-            detail=f"表 {usage.table_name} 的字段 {usage.field_name} 已存在使用记录",
+        raise conflict(
+            f"表 {usage.table_name} 的字段 {usage.field_name} 已存在使用记录",
+            resource_type="enum_usage",
         )
 
     db_usage = crud.create(usage)
@@ -403,7 +405,7 @@ async def update_enum_field_usage(
 
     db_usage = crud.get(usage_id)
     if not db_usage:
-        raise HTTPException(status_code=404, detail="使用记录不存在")
+        raise not_found("使用记录不存在", resource_type="enum_usage", resource_id=usage_id)
 
     updated_usage = crud.update(db_usage, usage)
     return updated_usage
@@ -418,7 +420,7 @@ async def delete_enum_field_usage(
 
     success = crud.delete(usage_id)
     if not success:
-        raise HTTPException(status_code=404, detail="使用记录不存在")
+        raise not_found("使用记录不存在", resource_type="enum_usage", resource_id=usage_id)
     return {"message": "使用记录删除成功"}
 
 

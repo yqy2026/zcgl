@@ -4,7 +4,9 @@
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
+
+from ...core.api_errors import bad_request, not_found
 from sqlalchemy.orm import Session
 
 from ...crud.organization import organization as organization_crud
@@ -109,7 +111,7 @@ async def get_organization(
 
     organization: Organization | None = organization_crud.get(db, id=org_id)
     if not organization:
-        raise HTTPException(status_code=404, detail="组织不存在")
+        raise not_found("组织不存在", resource_type="organization", resource_id=org_id)
     return organization
 
 
@@ -124,7 +126,7 @@ async def get_organization_children(
     # 先检查父组织是否存在
     parent = organization_crud.get(db, id=org_id)
     if not parent:
-        raise HTTPException(status_code=404, detail="组织不存在")
+        raise not_found("组织不存在", resource_type="organization", resource_id=org_id)
 
     children = organization_crud.get_children(db, parent_id=org_id, recursive=recursive)
     return list(children)
@@ -140,7 +142,7 @@ async def get_organization_path(
     # 检查组织是否存在
     organization = organization_crud.get(db, id=org_id)
     if not organization:
-        raise HTTPException(status_code=404, detail="组织不存在")
+        raise not_found("组织不存在", resource_type="organization", resource_id=org_id)
 
     path = organization_crud.get_path_to_root(db, org_id=org_id)
     return list(path)
@@ -158,7 +160,7 @@ async def get_organization_history(
     # 检查组织是否存在
     organization = organization_crud.get(db, id=org_id)
     if not organization:
-        raise HTTPException(status_code=404, detail="组织不存在")
+        raise not_found("组织不存在", resource_type="organization", resource_id=org_id)
 
     history = organization_service.get_history(
         db, org_id=org_id, skip=skip, limit=limit
@@ -179,7 +181,7 @@ async def create_organization(
         )
         return db_organization
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise bad_request(str(e))
 
 
 @router.put("/{org_id}", response_model=OrganizationResponse)
@@ -197,8 +199,8 @@ async def update_organization(
         return db_organization
     except ValueError as e:
         if str(e).startswith("组织ID"):
-            raise HTTPException(status_code=404, detail=str(e))
-        raise HTTPException(status_code=400, detail=str(e))
+            raise not_found(str(e), resource_type="organization")
+        raise bad_request(str(e))
 
 
 @router.delete("/{org_id}")
@@ -214,10 +216,10 @@ async def delete_organization(
             db, org_id=org_id, deleted_by=deleted_by
         )
         if not success:
-            raise HTTPException(status_code=404, detail="组织不存在")
+            raise not_found("组织不存在", resource_type="organization", resource_id=org_id)
         return {"message": "组织删除成功"}
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise bad_request(str(e))
 
 
 @router.post("/{org_id}/move")
@@ -243,8 +245,8 @@ async def move_organization(
         return {"message": "组织移动成功", "organization": db_organization}
     except ValueError as e:
         if str(e).startswith("组织ID"):
-            raise HTTPException(status_code=404, detail=str(e))
-        raise HTTPException(status_code=400, detail=str(e))
+            raise not_found(str(e), resource_type="organization")
+        raise bad_request(str(e))
 
 
 @router.post("/batch")

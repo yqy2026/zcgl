@@ -4,7 +4,9 @@
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Depends, Path, Query
+
+from ...core.api_errors import internal_error, not_found
 from sqlalchemy.orm import Session
 
 from ...core.exception_handler import ResourceNotFoundError
@@ -70,7 +72,7 @@ async def get_history_list(
     except ResourceNotFoundError:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取历史记录失败: {str(e)}")
+        raise internal_error(f"获取历史记录失败: {str(e)}")
 
 
 @router.get(
@@ -87,14 +89,14 @@ async def get_history_detail(
     try:
         history_record = history_crud.get(db=db, id=history_id)
         if not history_record:
-            raise HTTPException(status_code=404, detail=f"历史记录 {history_id} 不存在")
+            raise not_found(f"历史记录 {history_id} 不存在", resource_type="history", resource_id=history_id)
 
         return history_record
 
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取历史记录详情失败: {str(e)}")
+        if "UnifiedError" in type(e).__name__:
+            raise
+        raise internal_error(f"获取历史记录详情失败: {str(e)}")
 
 
 @router.delete("/{history_id}", summary="删除历史记录")
@@ -109,12 +111,12 @@ async def delete_history(
     try:
         history_record = history_crud.get(db=db, id=history_id)
         if not history_record:
-            raise HTTPException(status_code=404, detail=f"历史记录 {history_id} 不存在")
+            raise not_found(f"历史记录 {history_id} 不存在", resource_type="history", resource_id=history_id)
 
         history_crud.remove(db=db, id=history_id)
         return {"message": f"历史记录 {history_id} 已成功删除"}
 
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"删除历史记录失败: {str(e)}")
+        if "UnifiedError" in type(e).__name__:
+            raise
+        raise internal_error(f"删除历史记录失败: {str(e)}")

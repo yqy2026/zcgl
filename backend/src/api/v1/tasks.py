@@ -1,7 +1,9 @@
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Body, Depends, Path, Query
+
+from ...core.api_errors import bad_request, internal_error, not_found
 from sqlalchemy.orm import Session
 
 from ...crud.task import excel_task_config_crud, task_crud
@@ -43,7 +45,7 @@ async def create_task(
         task = task_service.create_task(db=db, obj_in=task_in, user_id=current_user.id)
         return task
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"创建任务失败: {str(e)}")
+        raise internal_error(f"创建任务失败: {str(e)}")
 
 
 @router.get("", response_model=TaskListResponse, summary="获取任务列表")
@@ -100,7 +102,7 @@ async def get_tasks(
             pages=(total + limit - 1) // limit,
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取任务列表失败: {str(e)}")
+        raise internal_error(f"获取任务列表失败: {str(e)}")
 
 
 @router.get("/{task_id}", response_model=TaskResponse, summary="获取任务详情")
@@ -114,7 +116,7 @@ async def get_task(
     """
     task = task_crud.get(db=db, id=task_id)
     if not task:
-        raise HTTPException(status_code=404, detail="任务不存在")
+        raise not_found("任务不存在", resource_type="task", resource_id=task_id)
     result: TaskResponse = TaskResponse.model_validate(task)
     return result
 
@@ -133,9 +135,9 @@ async def update_task(
         updated_task = task_service.update_task(db=db, task_id=task_id, obj_in=task_in)
         return updated_task
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise bad_request(str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"更新任务失败: {str(e)}")
+        raise internal_error(f"更新任务失败: {str(e)}")
 
 
 @router.post("/{task_id}/cancel", response_model=TaskResponse, summary="取消任务")
@@ -157,10 +159,10 @@ async def cancel_task(
         return updated_task
     except ValueError as e:
         if "任务不存在" in str(e):
-            raise HTTPException(status_code=404, detail=str(e))
-        raise HTTPException(status_code=400, detail=str(e))
+            raise not_found(str(e), resource_type="task")
+        raise bad_request(str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"取消任务失败: {str(e)}")
+        raise internal_error(f"取消任务失败: {str(e)}")
 
 
 @router.delete("/{task_id}", summary="删除任务")
@@ -176,9 +178,9 @@ async def delete_task(
         task_service.delete_task(db=db, task_id=task_id)
         return {"message": "任务删除成功"}
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise not_found(str(e), resource_type="task")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"删除任务失败: {str(e)}")
+        raise internal_error(f"删除任务失败: {str(e)}")
 
 
 @router.get(
@@ -196,7 +198,7 @@ async def get_task_history(
     """
     task = task_crud.get(db=db, id=task_id)
     if not task:
-        raise HTTPException(status_code=404, detail="任务不存在")
+        raise not_found("任务不存在", resource_type="task", resource_id=task_id)
 
     try:
         history = task_crud.get_history(db=db, task_id=task_id)
@@ -206,7 +208,7 @@ async def get_task_history(
         ]
         return result
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取任务历史失败: {str(e)}")
+        raise internal_error(f"获取任务历史失败: {str(e)}")
 
 
 @router.get("/statistics", response_model=TaskStatistics, summary="获取任务统计")
@@ -222,7 +224,7 @@ async def get_task_statistics(
         stats = task_service.get_statistics(db=db, user_id=user_id)
         return TaskStatistics.model_validate(stats)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取任务统计失败: {str(e)}")
+        raise internal_error(f"获取任务统计失败: {str(e)}")
 
 
 @router.get("/running", response_model=list[TaskResponse], summary="获取正在运行的任务")
@@ -243,7 +245,7 @@ async def get_running_tasks(
         )
         return [TaskResponse.model_validate(task) for task in tasks]
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取运行任务失败: {str(e)}")
+        raise internal_error(f"获取运行任务失败: {str(e)}")
 
 
 @router.get("/recent", response_model=list[TaskResponse], summary="获取最近任务")
@@ -261,7 +263,7 @@ async def get_recent_tasks(
         )
         return [TaskResponse.model_validate(task) for task in tasks]
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取最近任务失败: {str(e)}")
+        raise internal_error(f"获取最近任务失败: {str(e)}")
 
 
 # ===== Excel任务配置管理 =====
@@ -286,7 +288,7 @@ async def create_excel_config(
         )
         return config
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"创建Excel配置失败: {str(e)}")
+        raise internal_error(f"创建Excel配置失败: {str(e)}")
 
 
 @router.get(
@@ -308,7 +310,7 @@ async def get_excel_configs(
         )
         return [ExcelTaskConfigResponse.model_validate(cfg) for cfg in configs]
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取Excel配置失败: {str(e)}")
+        raise internal_error(f"获取Excel配置失败: {str(e)}")
 
 
 @router.get(
@@ -329,12 +331,12 @@ async def get_default_excel_config(
             db=db, config_type=config_type, task_type=task_type
         )
         if not config:
-            raise HTTPException(status_code=404, detail="未找到默认配置")
+            raise not_found("未找到默认配置", resource_type="excel_config")
         return config
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取默认Excel配置失败: {str(e)}")
+        if "UnifiedError" in type(e).__name__:
+            raise
+        raise internal_error(f"获取默认Excel配置失败: {str(e)}")
 
 
 @router.get(
@@ -350,7 +352,7 @@ async def get_excel_config(
     """
     config = excel_task_config_crud.get(db=db, id=config_id)
     if not config:
-        raise HTTPException(status_code=404, detail="配置不存在")
+        raise not_found("配置不存在", resource_type="excel_config", resource_id=config_id)
     result: ExcelTaskConfigResponse = ExcelTaskConfigResponse.model_validate(config)
     return result
 
@@ -370,7 +372,7 @@ async def update_excel_config(
     """
     config = excel_task_config_crud.get(db=db, id=config_id)
     if not config:
-        raise HTTPException(status_code=404, detail="配置不存在")
+        raise not_found("配置不存在", resource_type="excel_config", resource_id=config_id)
 
     try:
         updated_config = excel_task_config_crud.update(
@@ -381,7 +383,7 @@ async def update_excel_config(
         )
         return result
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"更新Excel配置失败: {str(e)}")
+        raise internal_error(f"更新Excel配置失败: {str(e)}")
 
 
 @router.delete("/configs/excel/{config_id}", summary="删除Excel配置")
@@ -395,12 +397,12 @@ async def delete_excel_config(
         # Use soft deletion by setting is_active=False
         config = excel_task_config_crud.get(db=db, id=config_id)
         if not config:
-            raise HTTPException(status_code=404, detail="配置不存在")
+            raise not_found("配置不存在", resource_type="excel_config", resource_id=config_id)
 
         excel_task_config_crud.update(db=db, db_obj=config, obj_in={"is_active": False})
         return {"message": "Excel配置删除成功"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"删除Excel配置失败: {str(e)}")
+        raise internal_error(f"删除Excel配置失败: {str(e)}")
 
 
 @router.get("/cleanup", summary="清理过期任务")
@@ -416,4 +418,4 @@ async def cleanup_old_tasks(
     try:
         return task_service.cleanup_old_tasks(db=db, days=days, dry_run=dry_run)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"清理任务失败: {str(e)}")
+        raise internal_error(f"清理任务失败: {str(e)}")

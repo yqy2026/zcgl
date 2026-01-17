@@ -7,7 +7,9 @@
 from datetime import datetime
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, Query
+
+from ...core.api_errors import bad_request, internal_error, not_found
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -129,7 +131,7 @@ async def get_recovery_statistics(
         return ErrorStatisticsResponse(**statistics)
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取统计信息失败: {str(e)}")
+        raise internal_error(f"获取统计信息失败: {str(e)}")
 
 
 @router.get(
@@ -166,7 +168,7 @@ async def get_recovery_strategies(
         return strategies
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取策略配置失败: {str(e)}")
+        raise internal_error(f"获取策略配置失败: {str(e)}")
 
 
 @router.put(
@@ -191,13 +193,13 @@ async def update_recovery_strategy(
                 break
 
         if not error_category:
-            raise HTTPException(status_code=400, detail=f"无效的错误类别: {category}")
+            raise bad_request(f"无效的错误类别: {category}")
 
         # 获取现有策略
         existing_strategy = error_recovery_engine.strategies.get(error_category)
         if not existing_strategy:
-            raise HTTPException(
-                status_code=404, detail=f"未找到错误类别 {category} 的策略"
+            raise not_found(
+                f"未找到错误类别 {category} 的策略", resource_type="recovery_strategy"
             )
 
         # 更新策略配置
@@ -226,10 +228,10 @@ async def update_recovery_strategy(
             },
         }
 
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"更新策略失败: {str(e)}")
+        if "UnifiedError" in type(e).__name__:
+            raise
+        raise internal_error(f"更新策略失败: {str(e)}")
 
 
 @router.get(
@@ -266,7 +268,7 @@ async def get_circuit_breaker_status(
         return circuit_breakers
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取熔断器状态失败: {str(e)}")
+        raise internal_error(f"获取熔断器状态失败: {str(e)}")
 
 
 @router.post(
@@ -290,7 +292,7 @@ async def reset_circuit_breaker(
                 break
 
         if not error_category:
-            raise HTTPException(status_code=400, detail=f"无效的错误类别: {category}")
+            raise bad_request(f"无效的错误类别: {category}")
 
         # 重置熔断器
         if category in error_recovery_engine.circuit_breakers:
@@ -304,10 +306,10 @@ async def reset_circuit_breaker(
                 "message": f"错误类别 {category} 没有熔断器需要重置",
             }
 
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"重置熔断器失败: {str(e)}")
+        if "UnifiedError" in type(e).__name__:
+            raise
+        raise internal_error(f"重置熔断器失败: {str(e)}")
 
 
 @router.get(
@@ -348,7 +350,7 @@ async def get_recovery_history(
         }
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取历史记录失败: {str(e)}")
+        raise internal_error(f"获取历史记录失败: {str(e)}")
 
 
 @router.post(
@@ -373,7 +375,7 @@ async def test_error_recovery(
                 break
 
         if not error_category:
-            raise HTTPException(status_code=400, detail=f"无效的错误类别: {category}")
+            raise bad_request(f"无效的错误类别: {category}")
 
         # 执行测试
         async def test_function():
@@ -410,10 +412,10 @@ async def test_error_recovery(
             },
         }
 
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"测试失败: {str(e)}")
+        if "UnifiedError" in type(e).__name__:
+            raise
+        raise internal_error(f"测试失败: {str(e)}")
 
 
 @router.delete(
@@ -451,7 +453,7 @@ async def clear_recovery_history(
         return {"success": True, "message": f"已清理 {cleared_count} 条历史记录"}
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"清理历史记录失败: {str(e)}")
+        raise internal_error(f"清理历史记录失败: {str(e)}")
 
 
 @router.get(

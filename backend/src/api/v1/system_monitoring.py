@@ -21,7 +21,9 @@ from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
 import psutil
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
+
+from ...core.api_errors import internal_error, not_found, service_unavailable
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
@@ -269,7 +271,7 @@ def collect_system_metrics() -> SystemMetrics:
         return metrics
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"收集系统指标失败: {str(e)}")
+        raise internal_error(f"收集系统指标失败: {str(e)}")
 
 
 def collect_application_metrics() -> ApplicationMetrics:
@@ -294,7 +296,7 @@ def collect_application_metrics() -> ApplicationMetrics:
         return metrics
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"收集应用指标失败: {str(e)}")
+        raise internal_error(f"收集应用指标失败: {str(e)}")
 
 
 def check_component_health() -> dict[str, dict[str, Any]]:
@@ -753,7 +755,7 @@ async def resolve_alert(
             alert.resolved = True
             return {"message": f"告警 {alert_id} 已标记为解决", "success": True}
 
-    raise HTTPException(status_code=404, detail=f"告警 {alert_id} 未找到")
+    raise not_found(f"告警 {alert_id} 未找到", resource_type="alert", resource_id=alert_id)
 
 
 @router.get("/dashboard", summary="获取监控仪表板数据")
@@ -851,7 +853,7 @@ async def get_database_health_metrics(
     try:
         db_manager: Any = get_database_manager()
         if not db_manager:
-            raise HTTPException(status_code=503, detail="数据库管理器不可用")
+            raise service_unavailable("数据库管理器不可用")
 
         # 获取健康检查结果
         health_check = db_manager.run_health_check()
@@ -900,10 +902,10 @@ async def get_database_health_metrics(
             health_score=health_score,
         )
 
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取数据库健康指标失败: {str(e)}")
+        if "UnifiedError" in type(e).__name__:
+            raise
+        raise internal_error(f"获取数据库健康指标失败: {str(e)}")
 
 
 @router.get("/database/slow-queries", summary="获取慢查询列表")
@@ -921,7 +923,7 @@ async def get_slow_queries(
     try:
         db_manager: Any = get_database_manager()
         if not db_manager:
-            raise HTTPException(status_code=503, detail="数据库管理器不可用")
+            raise service_unavailable("数据库管理器不可用")
 
         slow_queries = db_manager.get_slow_queries(limit=limit)
 
@@ -932,10 +934,10 @@ async def get_slow_queries(
             "timestamp": datetime.now().isoformat(),
         }
 
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取慢查询失败: {str(e)}")
+        if "UnifiedError" in type(e).__name__:
+            raise
+        raise internal_error(f"获取慢查询失败: {str(e)}")
 
 
 @router.post(
@@ -961,7 +963,7 @@ async def optimize_database(
     try:
         db_manager: Any = get_database_manager()
         if not db_manager:
-            raise HTTPException(status_code=503, detail="数据库管理器不可用")
+            raise service_unavailable("数据库管理器不可用")
 
         # 记录优化前的指标
         before_metrics = db_manager.get_metrics()
@@ -1008,10 +1010,10 @@ async def optimize_database(
             },
         )
 
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"数据库优化失败: {str(e)}")
+        if "UnifiedError" in type(e).__name__:
+            raise
+        raise internal_error(f"数据库优化失败: {str(e)}")
 
 
 @router.post("/database/cleanup", summary="清理数据库过期数据")
@@ -1035,7 +1037,7 @@ async def cleanup_database(
     try:
         db_manager: Any = get_database_manager()
         if not db_manager:
-            raise HTTPException(status_code=503, detail="数据库管理器不可用")
+            raise service_unavailable("数据库管理器不可用")
 
         cleaned_count: int = db_manager.cleanup_old_sessions(days=days)
 
@@ -1046,10 +1048,10 @@ async def cleanup_database(
             "timestamp": datetime.now().isoformat(),
         }
 
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"数据库清理失败: {str(e)}")
+        if "UnifiedError" in type(e).__name__:
+            raise
+        raise internal_error(f"数据库清理失败: {str(e)}")
 
 
 @router.get("/database/connection-pool", summary="获取连接池状态")
@@ -1068,7 +1070,7 @@ async def get_connection_pool_status(
     try:
         db_manager: Any = get_database_manager()
         if not db_manager:
-            raise HTTPException(status_code=503, detail="数据库管理器不可用")
+            raise service_unavailable("数据库管理器不可用")
 
         pool_status: dict[str, Any] = db_manager.get_connection_pool_status()
 
@@ -1085,10 +1087,10 @@ async def get_connection_pool_status(
             "timestamp": datetime.now().isoformat(),
         }
 
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取连接池状态失败: {str(e)}")
+        if "UnifiedError" in type(e).__name__:
+            raise
+        raise internal_error(f"获取连接池状态失败: {str(e)}")
 
 
 @router.get("/encryption-status", summary="获取加密状态")
@@ -1144,7 +1146,4 @@ async def get_encryption_status(
         return response
 
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"获取加密状态失败: {str(e)}"
-        )
+        raise internal_error(f"获取加密状态失败: {str(e)}")

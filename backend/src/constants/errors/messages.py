@@ -15,8 +15,8 @@ Usage:
 
 from typing import Final
 
-# Legacy aliases for backward compatibility
-# TODO: Remove in v2.0
+# Legacy aliases for backward compatibility (deprecated, use ErrorMessages.* instead)
+# Will be removed in v2.0 - migrate to ErrorMessages.CONSTANT_NAME pattern
 
 
 class ErrorMessages:

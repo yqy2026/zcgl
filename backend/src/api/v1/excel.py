@@ -20,10 +20,11 @@ from fastapi import (
     Body,
     Depends,
     File,
-    HTTPException,
     Query,
     UploadFile,
 )
+
+from ...core.api_errors import bad_request, not_found
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
@@ -155,7 +156,7 @@ async def get_default_excel_config(
         db=db, config_type=config_type, task_type=task_type
     )
     if not config:
-        raise HTTPException(status_code=404, detail="未找到默认配置")
+        raise not_found("未找到默认配置", resource_type="excel_config", resource_id=f"{config_type}_{task_type}")
     return config
 
 
@@ -170,7 +171,7 @@ async def get_excel_config(config_id: str, db: Session = Depends(get_db)) -> Any
 
     config = excel_task_config_crud.get(db=db, id=config_id)
     if not config:
-        raise HTTPException(status_code=404, detail="配置不存在")
+        raise not_found("配置不存在", resource_type="excel_config", resource_id=config_id)
     return config
 
 
@@ -188,7 +189,7 @@ async def update_excel_config(
 
     config = excel_task_config_crud.get(db=db, id=config_id)
     if not config:
-        raise HTTPException(status_code=404, detail="配置不存在")
+        raise not_found("配置不存在", resource_type="excel_config", resource_id=config_id)
 
     updated_config = excel_task_config_crud.update(
         db=db, db_obj=config, obj_in=config_in
@@ -819,10 +820,10 @@ async def download_export_file(
     # 获取任务信息
     task = task_crud.get(db=db, id=task_id)
     if not task:
-        raise HTTPException(status_code=404, detail="任务不存在")
+        raise not_found("任务不存在", resource_type="task", resource_id=task_id)
 
     if task.status != TaskStatus.COMPLETED:
-        raise HTTPException(status_code=400, detail="任务尚未完成")
+        raise bad_request("任务尚未完成")
 
     # 获取文件信息
     result_data_raw = task.result_data if task.result_data else {}
@@ -833,7 +834,7 @@ async def download_export_file(
     file_name = result_data.get("file_name", f"export_{task_id}.xlsx")
 
     if not file_path or not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="导出文件不存在")
+        raise not_found("导出文件不存在", resource_type="file", resource_id=str(file_path))
 
     # 返回文件流
     def file_iter() -> Generator[bytes, None, None]:
@@ -861,7 +862,7 @@ async def get_excel_task_status(
     """
     task = task_crud.get(db=db, id=task_id)
     if not task:
-        raise HTTPException(status_code=404, detail="任务不存在")
+        raise not_found("任务不存在", resource_type="task", resource_id=task_id)
 
     # Extract values from Column objects - use getattr to get actual values
     task_id_val = str(getattr(task, "id", ""))

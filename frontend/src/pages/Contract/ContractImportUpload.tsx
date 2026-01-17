@@ -15,10 +15,8 @@ import {
 import type { UploadFile, UploadProps, RcFile } from 'antd/es/upload/interface';
 
 import { pdfImportService, type FileUploadResponse } from '../../services/pdfImportService';
-import { createLogger } from '../../utils/logger';
 import { COLORS } from '@/styles/colorMap';
 
-const _pageLogger = createLogger('ContractImportUpload');
 
 const { Title, Text, Paragraph } = Typography;
 

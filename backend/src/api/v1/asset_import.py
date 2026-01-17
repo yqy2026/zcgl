@@ -7,7 +7,9 @@
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
+
+from ...core.api_errors import internal_error
 from sqlalchemy.orm import Session
 
 from ...crud.asset import asset_crud
@@ -161,4 +163,4 @@ async def import_assets(
         )
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"资产导入失败: {str(e)}")
+        raise internal_error(f"资产导入失败: {str(e)}")

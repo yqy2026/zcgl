@@ -434,6 +434,22 @@ exception_handler = ExceptionHandler()
 
 def setup_exception_handlers(app: Any) -> None:
     """设置应用异常处理器"""
+    # 导入UnifiedError用于统一错误处理
+    from .unified_error_handler import UnifiedError
+
+    # UnifiedError异常处理器（来自统一错误处理系统）
+    @app.exception_handler(UnifiedError)  # type: ignore[misc]
+    async def unified_error_exception_handler(
+        request: Request, exc: UnifiedError
+    ) -> JSONResponse:
+        """处理UnifiedError异常，与api_errors.py配合使用"""
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "success": False,
+                "error": exc.to_dict(),
+            },
+        )
 
     # 业务异常处理器
     @app.exception_handler(BaseBusinessError)  # type: ignore[misc]

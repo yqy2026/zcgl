@@ -13,7 +13,9 @@ import logging
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
+
+from ....core.api_errors import bad_request
 from sqlalchemy.orm import Session
 
 from ....database import get_db
@@ -120,9 +122,8 @@ def get_occupancy_rate_by_category(
     ]
 
     if category_field not in valid_fields:
-        raise HTTPException(
-            status_code=400,
-            detail=f"无效的分类字段。支持的字段: {', '.join(valid_fields)}",
+        raise bad_request(
+            f"无效的分类字段。支持的字段: {', '.join(valid_fields)}"
         )
 
     # 构建筛选条件

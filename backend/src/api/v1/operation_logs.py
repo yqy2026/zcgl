@@ -6,7 +6,9 @@
 from datetime import datetime, timedelta
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
+
+from ...core.api_errors import bad_request, internal_error, not_found
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
@@ -104,17 +106,13 @@ async def get_operation_logs(
             try:
                 start_dt = datetime.strptime(start_date, "%Y-%m-%d")
             except ValueError:
-                raise HTTPException(
-                    status_code=400, detail="开始日期格式错误，应为YYYY-MM-DD"
-                )
+                    raise bad_request("开始日期格式错误，应为YYYY-MM-DD")
 
         if end_date:
             try:
                 end_dt = datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)
             except ValueError:
-                raise HTTPException(
-                    status_code=400, detail="结束日期格式错误，应为YYYY-MM-DD"
-                )
+                    raise bad_request("结束日期格式错误，应为YYYY-MM-DD")
 
         logs, total = log_crud.get_multi(
             db=db,
@@ -138,10 +136,10 @@ async def get_operation_logs(
             limit=limit,
             pages=pages,
         )
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        if "UnifiedError" in type(e).__name__:
+            raise
+        raise internal_error(str(e))
 
 
 @router.get("/{log_id}", response_model=OperationLogResponse, summary="获取日志详情")
@@ -156,15 +154,13 @@ async def get_operation_log(
         log = log_crud.get(db, log_id)
 
         if not log:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="日志不存在"
-            )
+            raise not_found("日志不存在", resource_type="operation_log", resource_id=log_id)
 
         return OperationLogResponse.model_validate(log)
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        if "UnifiedError" in type(e).__name__:
+            raise
+        raise internal_error(str(e))
 
 
 # ==================== 统计端点 ====================
@@ -191,7 +187,7 @@ async def get_user_operation_statistics(
             data=stats,
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise internal_error(str(e))
 
 
 @router.get(
@@ -215,7 +211,7 @@ async def get_module_operation_statistics(
             data=stats,
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise internal_error(str(e))
 
 
 @router.get(
@@ -238,7 +234,7 @@ async def get_daily_operation_statistics(
             data=stats,
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise internal_error(str(e))
 
 
 @router.get(
@@ -261,7 +257,7 @@ async def get_error_operation_statistics(
             data=stats,
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise internal_error(str(e))
 
 
 @router.get(
@@ -290,7 +286,7 @@ async def get_operation_log_summary(
             },
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise internal_error(str(e))
 
 
 # ==================== 导出端点 ====================
@@ -332,7 +328,7 @@ async def export_operation_logs(
                 "format": "excel",
             }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise internal_error(str(e))
 
 
 # ==================== 维护端点 ====================
@@ -360,4 +356,4 @@ async def cleanup_old_logs(
             "days": days,
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise internal_error(str(e))

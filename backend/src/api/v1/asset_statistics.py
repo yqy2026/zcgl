@@ -6,7 +6,9 @@
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
+
+from ...core.api_errors import internal_error
 from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 
@@ -52,7 +54,7 @@ async def test_statistics(
         import traceback
 
         logger.error(f"详细错误: {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"测试失败: {str(e)}")
+        raise internal_error(f"测试失败: {str(e)}")
 
 
 @router.get("/summary", summary="获取资产统计摘要")
@@ -74,7 +76,7 @@ async def get_asset_statistics(
             db.execute(text("SELECT 1"))
         except Exception as e:
             logger.error(f"数据库连接检查失败: {e}")
-            raise HTTPException(status_code=500, detail="数据库连接失败")
+            raise internal_error("数据库连接失败")
 
         # 总资产数 - 直接查询避免缓存问题
         total_assets = db.query(Asset).count()
@@ -189,9 +191,8 @@ async def get_asset_statistics(
         error_detail = traceback.format_exc()
         logger.error(f"资产统计查询失败: {str(e)}")
         logger.error(f"详细错误信息: {error_detail}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"获取统计信息失败: {str(e)}. 请检查数据库连接和表结构。",
+        raise internal_error(
+            f"获取统计信息失败: {str(e)}. 请检查数据库连接和表结构。"
         )
 
 
@@ -262,7 +263,6 @@ async def get_asset_area_statistics(
         error_detail = traceback.format_exc()
         logger.error(f"面积统计查询失败: {str(e)}")
         logger.error(f"详细错误信息: {error_detail}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"获取面积统计信息失败: {str(e)}. 请检查数据库连接和表结构。",
+        raise internal_error(
+            f"获取面积统计信息失败: {str(e)}. 请检查数据库连接和表结构。"
         )

@@ -13,11 +13,12 @@ from fastapi import (
     Depends,
     File,
     Form,
-    HTTPException,
     Query,
     Response,
     UploadFile,
 )
+
+from ...core.api_errors import bad_request, forbidden, internal_error, not_found
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
@@ -70,32 +71,29 @@ def create_contract(
     """
     创建新的租金合同，包含租金条款信息 - V2 支持多资产
     """
-    # HTTPException should propagate through
-    from fastapi import HTTPException
-
     # V2: 验证关联的资产（多资产）
     if contract_in.asset_ids:
         for asset_id in contract_in.asset_ids:
             asset = asset_crud.get(db, id=asset_id)
             if not asset:
-                raise HTTPException(
-                    status_code=404, detail=f"关联的资产不存在: {asset_id}"
+                raise not_found(
+                    f"关联的资产不存在: {asset_id}", resource_type="asset", resource_id=asset_id
                 )
 
     ownership_obj = ownership.get(db, id=contract_in.ownership_id)
     if not ownership_obj:
-        raise HTTPException(status_code=404, detail="关联的权属方不存在")
+        raise not_found("关联的权属方不存在", resource_type="ownership", resource_id=contract_in.ownership_id)
 
     try:
         contract = rent_contract_service.create_contract(db=db, obj_in=contract_in)
         return contract
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise bad_request(str(e))
     except Exception as e:
-        # Don't catch HTTPException - let it propagate
-        if isinstance(e, HTTPException):
+        # Don't catch UnifiedError - let it propagate
+        if "UnifiedError" in type(e).__name__:
             raise
-        raise HTTPException(status_code=500, detail=f"创建合同失败: {str(e)}")
+        raise internal_error(f"创建合同失败: {str(e)}")
 
 
 @router.get(
@@ -113,7 +111,7 @@ def get_contract(
     """
     contract = rent_contract.get_with_details(db, id=contract_id)
     if not contract:
-        raise HTTPException(status_code=404, detail="合同不存在")
+        raise not_found("合同不存在", resource_type="contract", resource_id=contract_id)
     return contract
 
 
@@ -181,11 +179,11 @@ def update_contract(
     """
     # 权限检查
     if not can_edit_contract(current_user, db, contract_id):
-        raise HTTPException(status_code=403, detail="权限不足: 您没有权限编辑此合同")
+        raise forbidden("权限不足: 您没有权限编辑此合同")
 
     contract = rent_contract.get_with_details(db, id=contract_id)
     if not contract:
-        raise HTTPException(status_code=404, detail="合同不存在")
+        raise not_found("合同不存在", resource_type="contract", resource_id=contract_id)
 
     try:
         updated_contract = rent_contract_service.update_contract(
@@ -193,12 +191,12 @@ def update_contract(
         )
         return updated_contract
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise bad_request(str(e))
     except Exception as e:
-        # Don't catch HTTPException - let it propagate
-        if isinstance(e, HTTPException):
+        # Don't catch UnifiedError - let it propagate
+        if "UnifiedError" in type(e).__name__:
             raise
-        raise HTTPException(status_code=500, detail=f"更新合同失败: {str(e)}")
+        raise internal_error(f"更新合同失败: {str(e)}")
 
 
 @router.delete("/contracts/{contract_id}", summary="删除租金合同")
@@ -214,20 +212,20 @@ def delete_contract(
     """
     # 权限检查 - 删除是敏感操作,仅管理员可以执行
     if current_user.role != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="权限不足: 只有管理员可以删除合同")
+        raise forbidden("权限不足: 只有管理员可以删除合同")
 
     contract = rent_contract.get(db, id=contract_id)
     if not contract:
-        raise HTTPException(status_code=404, detail="合同不存在")
+        raise not_found("合同不存在", resource_type="contract", resource_id=contract_id)
 
     try:
         rent_contract.remove(db, id=contract_id)
         return {"message": "合同删除成功"}
     except Exception as e:
-        # Don't catch HTTPException - let it propagate
-        if isinstance(e, HTTPException):
+        # Don't catch UnifiedError - let it propagate
+        if "UnifiedError" in type(e).__name__:
             raise
-        raise HTTPException(status_code=500, detail=f"删除合同失败: {str(e)}")
+        raise internal_error(f"删除合同失败: {str(e)}")
 
 
 # V2: 续签和终止API
@@ -258,11 +256,11 @@ def renew_contract(
         )
         return new_contract
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise bad_request(str(e))
     except Exception as e:
-        if isinstance(e, HTTPException):
+        if "UnifiedError" in type(e).__name__:
             raise
-        raise HTTPException(status_code=500, detail=f"合同续签失败: {str(e)}")
+        raise internal_error(f"合同续签失败: {str(e)}")
 
 
 @router.post(
@@ -298,11 +296,11 @@ def terminate_contract(
         )
         return contract
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise bad_request(str(e))
     except Exception as e:
-        if isinstance(e, HTTPException):
+        if "UnifiedError" in type(e).__name__:
             raise
-        raise HTTPException(status_code=500, detail=f"合同终止失败: {str(e)}")
+        raise internal_error(f"合同终止失败: {str(e)}")
 
 
 # V2: 押金台账API
@@ -326,7 +324,7 @@ def get_contract_deposit_ledger(
     # 检查合同是否存在
     contract = db.query(RentContract).filter(RentContract.id == contract_id).first()
     if not contract:
-        raise HTTPException(status_code=404, detail="合同不存在")
+        raise not_found("合同不存在", resource_type="contract", resource_id=contract_id)
 
     # 获取押金变动记录，按时间倒序
     ledgers = (
@@ -361,7 +359,7 @@ def get_contract_service_fee_ledger(
     # 检查合同是否存在
     contract = db.query(RentContract).filter(RentContract.id == contract_id).first()
     if not contract:
-        raise HTTPException(status_code=404, detail="合同不存在")
+        raise not_found("合同不存在", resource_type="contract", resource_id=contract_id)
 
     # 获取服务费台账，按年月倒序
     ledgers = (
@@ -410,7 +408,7 @@ def add_rent_term(
     # 验证合同是否存在
     contract = rent_contract.get(db, id=contract_id)
     if not contract:
-        raise HTTPException(status_code=404, detail="合同不存在")
+        raise not_found("合同不存在", resource_type="contract", resource_id=contract_id)
 
     term_data = term_in.model_dump()
     term_data["contract_id"] = contract_id
@@ -440,12 +438,12 @@ def generate_monthly_ledger(
             "ledgers": ledger_responses,
         }
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise bad_request(str(e))
     except Exception as e:
-        # Don't catch HTTPException - let it propagate
-        if isinstance(e, HTTPException):
+        # Don't catch UnifiedError - let it propagate
+        if "UnifiedError" in type(e).__name__:
             raise
-        raise HTTPException(status_code=500, detail=f"生成台账失败: {str(e)}")
+        raise internal_error(f"生成台账失败: {str(e)}")
 
 
 @router.get(
@@ -504,7 +502,7 @@ def get_rent_ledger_detail(
     """
     ledger = rent_ledger.get(db, id=ledger_id)
     if not ledger:
-        raise HTTPException(status_code=404, detail="台账记录不存在")
+        raise not_found("台账记录不存在", resource_type="ledger", resource_id=ledger_id)
     return ledger
 
 
@@ -529,10 +527,10 @@ def batch_update_rent_ledger(
             "ledgers": ledger_responses,
         }
     except Exception as e:
-        # Don't catch HTTPException - let it propagate
-        if isinstance(e, HTTPException):
+        # Don't catch UnifiedError - let it propagate
+        if "UnifiedError" in type(e).__name__:
             raise
-        raise HTTPException(status_code=500, detail=f"批量更新失败: {str(e)}")
+        raise internal_error(f"批量更新失败: {str(e)}")
 
 
 @router.put(
@@ -549,24 +547,24 @@ def update_rent_ledger(
     """
     ledger = rent_ledger.get(db, id=ledger_id)
     if not ledger:
-        raise HTTPException(status_code=404, detail="台账记录不存在")
+        raise not_found("台账记录不存在", resource_type="ledger", resource_id=ledger_id)
 
     # 验证支付状态
     if ledger_in.payment_status is not None:
         valid_statuses = ["未支付", "部分支付", "已支付", "逾期"]
         if ledger_in.payment_status not in valid_statuses:
-            raise HTTPException(
-                status_code=422, detail=f"支付状态必须是: {', '.join(valid_statuses)}"
+            raise bad_request(
+                f"支付状态必须是: {', '.join(valid_statuses)}"
             )
 
     try:
         updated_ledger = rent_ledger.update(db=db, db_obj=ledger, obj_in=ledger_in)
         return updated_ledger
     except Exception as e:
-        # Don't catch HTTPException - let it propagate
-        if isinstance(e, HTTPException):
+        # Don't catch UnifiedError - let it propagate
+        if "UnifiedError" in type(e).__name__:
             raise
-        raise HTTPException(status_code=500, detail=f"更新台账失败: {str(e)}")
+        raise internal_error(f"更新台账失败: {str(e)}")
 
 
 # 统计报表API
@@ -598,9 +596,9 @@ def get_rent_statistics(
         return statistics
     except Exception as e:
         # Don't catch HTTPException - let it propagate
-        if isinstance(e, HTTPException):
+        if "UnifiedError" in type(e).__name__:
             raise
-        raise HTTPException(status_code=500, detail=f"获取统计信息失败: {str(e)}")
+        raise internal_error(f"获取统计信息失败: {str(e)}")
 
 
 @router.get(
@@ -625,9 +623,9 @@ def get_ownership_statistics(
         return statistics
     except Exception as e:
         # Don't catch HTTPException - let it propagate
-        if isinstance(e, HTTPException):
+        if "UnifiedError" in type(e).__name__:
             raise
-        raise HTTPException(status_code=500, detail=f"获取权属方统计失败: {str(e)}")
+        raise internal_error(f"获取权属方统计失败: {str(e)}")
 
 
 @router.get(
@@ -652,9 +650,9 @@ def get_asset_statistics(
         return statistics
     except Exception as e:
         # Don't catch HTTPException - let it propagate
-        if isinstance(e, HTTPException):
+        if "UnifiedError" in type(e).__name__:
             raise
-        raise HTTPException(status_code=500, detail=f"获取资产统计失败: {str(e)}")
+        raise internal_error(f"获取资产统计失败: {str(e)}")
 
 
 @router.get(
@@ -679,9 +677,9 @@ def get_monthly_statistics(
         return statistics
     except Exception as e:
         # Don't catch HTTPException - let it propagate
-        if isinstance(e, HTTPException):
+        if "UnifiedError" in type(e).__name__:
             raise
-        raise HTTPException(status_code=500, detail=f"获取月度统计失败: {str(e)}")
+        raise internal_error(f"获取月度统计失败: {str(e)}")
 
 
 @router.get("/statistics/export", summary="导出统计数据")
@@ -741,9 +739,9 @@ def export_statistics(
         )
     except Exception as e:
         # Don't catch HTTPException - let it propagate
-        if isinstance(e, HTTPException):
+        if "UnifiedError" in type(e).__name__:
             raise
-        raise HTTPException(status_code=500, detail=f"导出统计数据失败: {str(e)}")
+        raise internal_error(f"导出统计数据失败: {str(e)}")
 
 
 # 辅助API
@@ -800,7 +798,7 @@ def download_excel_template(
     try:
         result = rent_contract_excel_service.download_contract_template()
         if not result["success"]:
-            raise HTTPException(status_code=500, detail=result["message"])
+            raise internal_error(result["message"])
 
         return FileResponse(
             result["file_path"],
@@ -809,9 +807,9 @@ def download_excel_template(
         )
     except Exception as e:
         # Don't catch HTTPException - let it propagate
-        if isinstance(e, HTTPException):
+        if "UnifiedError" in type(e).__name__:
             raise
-        raise HTTPException(status_code=500, detail=f"下载模板失败: {str(e)}")
+        raise internal_error(f"下载模板失败: {str(e)}")
 
 
 @router.post("/excel/import", summary="Excel导入合同数据")
@@ -851,9 +849,9 @@ def import_contracts_from_excel(
 
     except Exception as e:
         # Don't catch HTTPException - let it propagate
-        if isinstance(e, HTTPException):
+        if "UnifiedError" in type(e).__name__:
             raise
-        raise HTTPException(status_code=500, detail=f"导入失败: {str(e)}")
+        raise internal_error(f"导入失败: {str(e)}")
 
 
 @router.get("/excel/export", summary="Excel导出合同数据")
@@ -878,7 +876,7 @@ def export_contracts_to_excel(
         )
 
         if not result["success"]:
-            raise HTTPException(status_code=500, detail=result["message"])
+            raise internal_error(result["message"])
 
         return FileResponse(
             result["file_path"],
@@ -888,9 +886,9 @@ def export_contracts_to_excel(
 
     except Exception as e:
         # Don't catch HTTPException - let it propagate
-        if isinstance(e, HTTPException):
+        if "UnifiedError" in type(e).__name__:
             raise
-        raise HTTPException(status_code=500, detail=f"导出失败: {str(e)}")
+        raise internal_error(f"导出失败: {str(e)}")
 
 
 # ==================== 合同附件管理 ====================
@@ -925,16 +923,15 @@ async def upload_contract_attachment(
     # 验证合同是否存在
     contract = rent_contract.get(db, id=contract_id)
     if not contract:
-        raise HTTPException(status_code=404, detail="合同不存在")
+        raise not_found("合同不存在", resource_type="contract", resource_id=contract_id)
 
     # 验证文件类型
     allowed_extensions = {".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx"}
     file_ext = Path(file.filename).suffix.lower() if file.filename else ""
 
     if file_ext not in allowed_extensions:
-        raise HTTPException(
-            status_code=400,
-            detail=f"不支持的文件类型: {file_ext}。支持的类型: {', '.join(allowed_extensions)}",
+        raise bad_request(
+            f"不支持的文件类型: {file_ext}。支持的类型: {', '.join(allowed_extensions)}"
         )
 
     # 创建上传目录
@@ -952,7 +949,7 @@ async def upload_contract_attachment(
             f.write(contents)
         file_size = len(contents)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"文件保存失败: {str(e)}")
+        raise internal_error(f"文件保存失败: {str(e)}")
 
     # 创建附件记录
     attachment = RentContractAttachment(
@@ -997,7 +994,7 @@ async def get_contract_attachments(
     # 验证合同是否存在
     contract = rent_contract.get(db, id=contract_id)
     if not contract:
-        raise HTTPException(status_code=404, detail="合同不存在")
+        raise not_found("合同不存在", resource_type="contract", resource_id=contract_id)
 
     # 查询附件列表
     attachments = (
@@ -1049,12 +1046,12 @@ async def download_contract_attachment(
     )
 
     if not attachment:
-        raise HTTPException(status_code=404, detail="附件不存在")
+        raise not_found("附件不存在", resource_type="attachment", resource_id=attachment_id)
 
     # 验证文件是否存在
     file_path = Path(attachment.file_path)
     if not file_path.exists():
-        raise HTTPException(status_code=404, detail="文件不存在")
+        raise not_found("文件不存在", resource_type="file", resource_id=str(file_path))
 
     return FileResponse(
         path=str(file_path),
@@ -1092,7 +1089,7 @@ async def delete_contract_attachment(
     )
 
     if not attachment:
-        raise HTTPException(status_code=404, detail="附件不存在")
+        raise not_found("附件不存在", resource_type="attachment", resource_id=attachment_id)
 
     # 删除物理文件
     file_path = Path(attachment.file_path)

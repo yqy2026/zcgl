@@ -8,7 +8,9 @@ import os
 import shutil
 from typing import Any
 
-from fastapi import APIRouter, Depends, File, HTTPException, Path, UploadFile
+from fastapi import APIRouter, Depends, File, Path, UploadFile
+
+from ...core.api_errors import bad_request, internal_error, not_found
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
@@ -100,7 +102,7 @@ async def upload_asset_attachments(
     except ResourceNotFoundError:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"上传附件失败: {str(e)}")
+        raise internal_error(f"上传附件失败: {str(e)}")
 
 
 @router.get("/{asset_id}/attachments", summary="获取资产附件列表")
@@ -147,7 +149,7 @@ async def get_asset_attachments(
     except ResourceNotFoundError:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取附件列表失败: {str(e)}")
+        raise internal_error(f"获取附件列表失败: {str(e)}")
 
 
 @router.get("/{asset_id}/attachments/{filename}", summary="下载资产附件")
@@ -173,20 +175,20 @@ async def download_asset_attachment(
         file_path = f"uploads/attachments/{asset_id}/{filename}"
 
         if not os.path.exists(file_path):
-            raise HTTPException(status_code=404, detail="文件不存在")
+            raise not_found("文件不存在", resource_type="attachment")
 
         # 验证文件类型
         if not filename.lower().endswith(".pdf"):
-            raise HTTPException(status_code=400, detail="仅支持PDF文件")
+            raise bad_request("仅支持PDF文件")
 
         return FileResponse(file_path, filename=filename, media_type="application/pdf")
 
     except ResourceNotFoundError:
         raise
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"下载附件失败: {str(e)}")
+        if "UnifiedError" in type(e).__name__:
+            raise
+        raise internal_error(f"下载附件失败: {str(e)}")
 
 
 @router.delete("/{asset_id}/attachments/{attachment_id}", summary="删除资产附件")
@@ -212,7 +214,7 @@ async def delete_asset_attachment(
         file_path = f"uploads/attachments/{asset_id}/{attachment_id}"
 
         if not os.path.exists(file_path):
-            raise HTTPException(status_code=404, detail="文件不存在")
+            raise not_found("文件不存在", resource_type="attachment")
 
         # 删除文件
         os.remove(file_path)
@@ -221,7 +223,7 @@ async def delete_asset_attachment(
 
     except ResourceNotFoundError:
         raise
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"删除附件失败: {str(e)}")
+        if "UnifiedError" in type(e).__name__:
+            raise
+        raise internal_error(f"删除附件失败: {str(e)}")

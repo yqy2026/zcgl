@@ -6,7 +6,9 @@
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
+
+from ...core.api_errors import bad_request, internal_error
 from sqlalchemy.orm import Session
 
 from ...crud.asset import asset_crud
@@ -58,7 +60,7 @@ async def batch_update_assets(
         return AssetBatchUpdateResponse(**result.to_dict())
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"批量更新失败: {str(e)}")
+        raise internal_error(f"批量更新失败: {str(e)}")
 
 
 @router.post(
@@ -95,7 +97,7 @@ async def validate_asset_data(
         )
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"数据验证失败: {str(e)}")
+        raise internal_error(f"数据验证失败: {str(e)}")
 
 
 @router.post(
@@ -145,7 +147,7 @@ async def batch_update_custom_fields(
         )
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"批量更新自定义字段失败: {str(e)}")
+        raise internal_error(f"批量更新自定义字段失败: {str(e)}")
 
 
 @router.get("/all", summary="获取所有资产（不分页）")
@@ -219,7 +221,7 @@ async def get_all_assets(
         }
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取资产列表失败: {str(e)}")
+        raise internal_error(f"获取资产列表失败: {str(e)}")
 
 
 @router.post("/by-ids", summary="根据ID列表获取资产")
@@ -255,7 +257,7 @@ async def get_assets_by_ids(
         }
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"根据ID列表获取资产失败: {str(e)}")
+        raise internal_error(f"根据ID列表获取资产失败: {str(e)}")
 
 
 @router.post("/batch-delete", summary="批量删除资产")
@@ -272,7 +274,7 @@ async def batch_delete_assets(
     try:
         asset_ids = request.get("asset_ids", [])
         if not asset_ids:
-            raise HTTPException(status_code=400, detail="未提供要删除的资产ID列表")
+            raise bad_request("未提供要删除的资产ID列表")
 
         # 使用新的Service层
         service = AssetBatchService(db)
@@ -288,4 +290,4 @@ async def batch_delete_assets(
         }
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"批量删除资产失败: {str(e)}")
+        raise internal_error(f"批量删除资产失败: {str(e)}")
