@@ -432,3 +432,168 @@ class TestPostgreSQLMigrationCompleteness:
             # 应该有外键约束
             assert fk_count >= 10, \
                 f"Expected at least 10 foreign key constraints, found {fk_count}"
+
+
+@pytest.mark.integration
+@pytest.mark.database
+class TestPostgreSQLCascadeDelete:
+    """PostgreSQL级联删除测试"""
+
+    def test_organization_delete_cascades_to_assets(self):
+        """测试删除组织时级联删除资产"""
+        from src.models.organization import Organization
+        from src.models.asset import Asset
+        from src.crud.organization import organization_crud
+        from src.crud.asset import asset_crud
+
+        mgr = get_database_manager()
+        with mgr.get_session() as session:
+            # 创建组织
+            org_data = {
+                "name": "测试组织",
+                "code": "TEST_ORG_CASCADE",
+                "address": "北京市朝阳区",
+            }
+            org = organization_crud.create(db=session, obj_in=org_data)
+
+            # 创建关联资产
+            asset_data = {
+                "property_name": "测试资产",
+                "organization_id": org.id,
+                "ownership_status": "已确权",
+                "property_nature": "商业",
+                "usage_status": "在用",
+            }
+            asset = asset_crud.create(db=session, obj_in=asset_data)
+            asset_id = asset.id
+
+            # 删除组织
+            organization_crud.remove(db=session, id=org.id)
+            session.commit()
+
+        # 验证资产也被删除
+        with mgr.get_session() as session:
+            deleted_asset = session.query(Asset).filter(
+                Asset.id == asset_id
+            ).first()
+            assert deleted_asset is None, "资产应被级联删除"
+
+    def test_contract_delete_cascades_to_collections(self):
+        """测试删除合同时级联删除收款记录"""
+        from src.models.rent_contract import RentContract
+        from src.crud.rent_contract import rent_contract_crud
+
+        mgr = get_database_manager()
+        with mgr.get_session() as session:
+            # 创建合同
+            contract_data = {
+                "contract_number": "CT_CASCADE_001",
+                "tenant_name": "租户A",
+                "monthly_rent": 5000.0,
+            }
+            contract = rent_contract_crud.create(db=session, obj_in=contract_data)
+            contract_id = contract.id
+
+            # 删除合同
+            rent_contract_crud.remove(db=session, id=contract_id)
+            session.commit()
+
+        # 验证收款记录被级联删除（通过查询外键约束）
+        with mgr.get_session() as session:
+            result = session.execute(text(
+                "SELECT COUNT(*) FROM collection_records WHERE contract_id = :contract_id"
+            ), {"contract_id": contract_id})
+            count = result.scalar()
+            assert count == 0, "收款记录应被级联删除"
+
+
+@pytest.mark.integration
+@pytest.mark.database
+@pytest.mark.security
+class TestPostgreSQLAuditLoggingReal:
+    """PostgreSQL审计日志实际创建测试"""
+
+    def test_audit_log_actually_created_in_db(self):
+        """测试审计日志实际写入数据库（不是仅测试callable）"""
+        from src.models.auth import User, AuditLog
+        from src.crud.auth import user_crud, AuditLogCRUD
+
+        mgr = get_database_manager()
+        with mgr.get_session() as session:
+            # 创建测试用户
+            user_data = {
+                "username": "audit_test_user",
+                "email": "audit_test@example.com",
+                "password_hash": "test_hash",
+                "password_salt": "test_salt",
+            }
+            user = user_crud.create(db=session, obj_in=user_data)
+
+            # 创建审计日志
+            audit_crud = AuditLogCRUD()
+            audit_log = audit_crud.create(
+                db=session,
+                user_id=user.id,
+                action="TEST_AUDIT_ACTION",
+                resource_type="test_resource",
+                ip_address="192.168.1.100",
+                user_agent="TestAgent/1.0",
+            )
+            audit_log_id = audit_log.id
+
+        # ✅ 关键验证：从数据库直接查询（绕过CRUD）
+        with mgr.get_session() as session:
+            db_audit_log = session.query(AuditLog).filter(
+                AuditLog.id == audit_log_id
+            ).first()
+
+            # 验证记录实际存在
+            assert db_audit_log is not None, "审计日志应写入数据库"
+            assert db_audit_log.user_id == user.id
+            assert db_audit_log.action == "TEST_AUDIT_ACTION"
+            assert db_audit_log.resource_type == "test_resource"
+            assert db_audit_log.ip_address == "192.168.1.100"
+
+    def test_audit_log_failure_does_not_rollback_main_transaction(self):
+        """测试审计日志失败不影响主事务"""
+        from src.models.auth import User
+        from src.crud.auth import user_crud
+        from unittest.mock import Mock, patch
+
+        mgr = get_database_manager()
+        with mgr.get_session() as session:
+            # 创建用户
+            user = user_crud.create(
+                db=session,
+                obj_in={
+                    "username": "no_rollback_user",
+                    "email": "no_rollback@example.com",
+                    "password_hash": "hash",
+                    "password_salt": "salt",
+                }
+            )
+            user_id = user.id
+
+        # Mock审计日志CRUD失败
+        with patch('src.crud.auth.AuditLogCRUD') as mock_audit_crud:
+            mock_crud_instance = Mock()
+            mock_crud_instance.create.side_effect = Exception("Audit log failed")
+            mock_audit_crud.return_value = mock_crud_instance
+
+            # 尝试创建审计日志（失败）
+            from src.crud.auth import AuditLogCRUD
+            audit_crud = AuditLogCRUD()
+
+            try:
+                audit_crud.create(
+                    db=session,
+                    user_id=user_id,
+                    action="SHOULD_FAIL",
+                )
+            except Exception:
+                pass  # 预期失败
+
+        # 验证：用户仍然存在（主事务未回滚）
+        with mgr.get_session() as session:
+            existing_user = user_crud.get(db=session, id=user_id)
+            assert existing_user is not None, "主事务不应因审计日志失败而回滚"

@@ -33,6 +33,97 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+def handle_audit_log_failure(
+    db: Session,
+    current_user: Any,
+    action: str,
+    error: Exception,
+) -> None:
+    """
+    统一处理审计日志失败
+
+    Args:
+        db: 数据库会话
+        current_user: 当前用户
+        action: 操作类型
+        error: 捕获的异常
+    """
+    # 1. 记录CRITICAL级别日志
+    logger.critical(
+        "审计日志失败 - 安全违规未记录",
+        exc_info=True,
+        extra={
+            "error_id": "AUDIT_LOG_FAILED",
+            "error_type": type(error).__name__,
+            "user_id": str(current_user.id),
+            "action": action,
+            "severity": "CRITICAL",
+            "security_impact": "Audit trail compromised"
+        }
+    )
+
+    # 2. 生产环境发送安全警报
+    environment = os.getenv("ENVIRONMENT", "development")
+    if environment == "production":
+        # TODO: 集成到监控系统 (Sentry, PagerDuty等)
+        # send_security_alert(...)
+        pass
+
+    # 3. 回退: 写入文件审计日志
+    try:
+        from pathlib import Path
+
+        audit_log_path = Path("logs/audit_log_fallback.txt")
+        audit_log_path.parent.mkdir(exist_ok=True)
+
+        timestamp = datetime.now().isoformat()
+        with open(audit_log_path, "a", encoding="utf-8") as f:
+            f.write(f"{timestamp} | {action} | {current_user.id} | ERROR: {error}\n")
+    except (PermissionError, OSError, IOError) as fallback_error:
+        # 最后手段: 记录到系统日志
+        import sys
+        print(
+            f"[AUDIT LOG FALLBACK FAILED] {timestamp} | {action} | {current_user.id} | "
+            f"PRIMARY: {error} | FALLBACK: {fallback_error}",
+            file=sys.stderr
+        )
+
+
+def create_audit_log_with_fallback(
+    db: Session,
+    current_user: Any,
+    action: str,
+    resource_type: str,
+    request: Request,
+    **kwargs
+) -> bool:
+    """
+    创建审计日志，带统一错误处理
+
+    Returns:
+        bool: 是否成功创建审计日志
+    """
+    try:
+        ip_address = request.client.host if request.client else None
+        user_agent = str(request.headers.get("user-agent", ""))
+
+        audit_crud = AuditLogCRUD()
+        audit_crud.create(
+            db,
+            user_id=current_user.id,
+            action=action,
+            resource_type=resource_type,
+            ip_address=ip_address,
+            user_agent=user_agent,
+            request_body=json.dumps(kwargs),
+        )
+        return True
+
+    except (SQLAlchemyError, ValueError, TypeError, json.JSONDecodeError) as audit_error:
+        handle_audit_log_failure(db, current_user, action, audit_error)
+        return False
+
+
 class SystemSettings(BaseModel):
     """系统设置模型"""
 
@@ -151,65 +242,15 @@ async def update_system_settings(
         global _system_settings
         _system_settings = settings
 
-        # 记录审计日志
-        try:
-            ip_address: str | None = None
-            if request.client is not None:
-                ip_address = request.client.host
-            user_agent = str(request.headers.get("user-agent", ""))
-
-            audit_crud = AuditLogCRUD()
-            audit_crud.create(
-                db,
-                user_id=current_user.id,
-                action="UPDATE_SYSTEM_SETTINGS",
-                resource_type="system_settings",
-                ip_address=ip_address,
-                user_agent=user_agent,
-                request_body=json.dumps({"updated_settings": settings.model_dump()}),
-            )
-        except (SQLAlchemyError, ValueError, TypeError) as audit_error:
-            # 审计日志失败 - 视为CRITICAL安全事件
-            # TypeError: JSON 序列化失败（如循环引用、不支持的对象）
-            # SQLAlchemyError: 数据库操作失败
-            # ValueError: 数据验证失败
-
-            # 记录CRITICAL级别日志
-            logger.critical(
-                "审计日志失败 - 安全违规未记录",
-                exc_info=True,
-                extra={
-                    "error_id": "AUDIT_LOG_FAILED",
-                    "error_type": type(audit_error).__name__,
-                    "user_id": str(current_user.id),
-                    "action": "UPDATE_SYSTEM_SETTINGS",
-                    "severity": "CRITICAL",
-                    "security_impact": "Audit trail compromised"
-                },
-            )
-
-            # 生产环境: 发送安全警报
-            environment = os.getenv("ENVIRONMENT", "development")
-            if environment == "production":
-                # TODO: 集成到监控系统 (Sentry, PagerDuty等)
-                # send_security_alert(...)
-                pass
-
-            # 回退: 写入文件审计日志
-            try:
-                from pathlib import Path
-                from datetime import datetime
-                audit_log_path = Path("logs/audit_log_fallback.txt")
-                audit_log_path.parent.mkdir(exist_ok=True)
-
-                with open(audit_log_path, "a", encoding="utf-8") as f:
-                    timestamp = datetime.now().isoformat()
-                    f.write(f"{timestamp} | UPDATE_SYSTEM_SETTINGS | {current_user.id} | ERROR: {audit_error}\n")
-            except Exception:
-                # 最后手段: 记录到系统日志
-                import sys
-                print(f"[AUDIT LOG FALLBACK] {datetime.now().isoformat()} | UPDATE_SYSTEM_SETTINGS | {current_user.id} | ERROR: {audit_error}", file=sys.stderr)
-            logger.warning("记录系统设置审计日志失败", exc_info=True)
+        # 使用统一的审计日志处理函数
+        create_audit_log_with_fallback(
+            db=db,
+            current_user=current_user,
+            action="UPDATE_SYSTEM_SETTINGS",
+            resource_type="system_settings",
+            request=request,
+            updated_settings=settings.model_dump()
+        )
 
         return SystemSettingsResponse(
             success=True,
@@ -291,37 +332,15 @@ async def backup_system(
             "version": "2.0.0",
         }
 
-        # 记录审计日志
-        try:
-            ip_address: str | None = None
-            if request.client is not None:
-                ip_address = request.client.host
-            user_agent = str(request.headers.get("user-agent", ""))
-
-            audit_crud = AuditLogCRUD()
-            audit_crud.create(
-                db,
-                user_id=current_user.id,
-                action="SYSTEM_BACKUP",
-                resource_type="system",
-                request_body=json.dumps({"backup_time": backup_data["backup_time"]}),
-                ip_address=ip_address,
-                user_agent=user_agent,
-            )
-        except (SQLAlchemyError, ValueError, json.JSONDecodeError) as audit_error:
-            # 审计日志失败不应该影响备份流程
-            logger.warning(
-                "记录备份审计日志失败",
-                exc_info=True,
-                extra={
-                    "error_type": type(audit_error).__name__,
-                    "user_id": current_user.id,
-                    "action": "SYSTEM_BACKUP",
-                },
-            )
-
-            logger = logging.getLogger(__name__)
-            logger.warning("记录备份审计日志失败", exc_info=True)
+        # 使用统一的审计日志处理函数
+        create_audit_log_with_fallback(
+            db=db,
+            current_user=current_user,
+            action="SYSTEM_BACKUP",
+            resource_type="system",
+            request=request,
+            backup_time=backup_data["backup_time"]
+        )
 
         return SystemBackupResponse(
             success=True,
@@ -371,43 +390,17 @@ async def restore_system(
         if "system_settings" in backup_data:
             _system_settings = SystemSettings(**backup_data["system_settings"])
 
-        # 记录审计日志
-        try:
-            ip_address: str | None = None
-            if request.client is not None:
-                ip_address = request.client.host
-            user_agent = str(request.headers.get("user-agent", ""))
-
-            audit_crud = AuditLogCRUD()
-            audit_crud.create(
-                db,
-                user_id=current_user.id,
-                action="SYSTEM_RESTORE",
-                resource_type="system",
-                request_body=json.dumps(
-                    {
-                        "backup_time": backup_data.get("backup_time"),
-                        "backup_file": filename,
-                        "restored_settings": backup_data.get("system_settings", {}),
-                    }
-                ),
-                ip_address=ip_address,
-                user_agent=user_agent,
-            )
-        except (SQLAlchemyError, ValueError, json.JSONDecodeError) as audit_error:
-            # 审计日志失败不应该影响恢复流程
-            logger.warning(
-                "记录恢复审计日志失败",
-                exc_info=True,
-                extra={
-                    "error_type": type(audit_error).__name__,
-                    "user_id": current_user.id,
-                    "action": "SYSTEM_RESTORE",
-                },
-            )
-
-            logger = logging.getLogger(__name__)
-            logger.warning("记录恢复审计日志失败", exc_info=True)
+        # 使用统一的审计日志处理函数
+        create_audit_log_with_fallback(
+            db=db,
+            current_user=current_user,
+            action="SYSTEM_RESTORE",
+            resource_type="system",
+            request=request,
+            backup_time=backup_data.get("backup_time"),
+            backup_file=filename,
+            restored_settings=backup_data.get("system_settings", {})
+        )
 
         return SystemRestoreResponse(
             success=True,

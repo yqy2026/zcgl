@@ -355,11 +355,11 @@ class DatabaseManager:
                 f"数据库健康检查失败 - 连接错误: {e}",
                 extra={
                     "error_id": "DB_HEALTH_CHECK_FAILED",
-                    "error_type": "OperationalError"
+                    "error_type": "OperationalError",
+                    "severity": "ERROR"
                 }
             )
-            # 重新抛出异常 - 让监控系统捕获
-            raise
+            # ❌ 移除 raise - 让调用者检查healthy字段
 
         except Exception as e:
             health_status["healthy"] = False
@@ -373,10 +373,9 @@ class DatabaseManager:
             logger.error(
                 f"数据库健康检查失败 - 未知错误: {e}",
                 exc_info=True,
-                extra={"error_id": "DB_HEALTH_CHECK_UNKNOWN_ERROR"}
+                extra={"error_id": "DB_HEALTH_CHECK_UNKNOWN_ERROR", "severity": "ERROR"}
             )
-            # 重新抛出所有异常
-            raise
+            # ❌ 移除 raise - 让调用者检查healthy字段
 
         return health_status
 
@@ -440,6 +439,47 @@ def get_database_url() -> str:
                 f"正确格式: postgresql://user:password@host:port/database\n"
                 f"示例: postgresql://postgres:password@localhost:5432/zcgl_db"
             ) from e
+
+    # 验证SQLite URL
+    elif database_url.startswith("sqlite://"):
+        environment = os.getenv("ENVIRONMENT", "production")
+        if environment == "production":
+            logger.critical(
+                "生产环境禁止使用SQLite数据库",
+                extra={"error_id": "SQLITE_IN_PRODUCTION"}
+            )
+            raise ValueError(
+                "生产环境必须使用PostgreSQL数据库！\n"
+                "当前配置: SQLite\n"
+                "请配置DATABASE_URL为PostgreSQL连接字符串\n"
+                "帮助文档: docs/POSTGRESQL_MIGRATION.md"
+            )
+
+        # 验证SQLite路径
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(database_url)
+            db_path = parsed.path
+
+            if not db_path or db_path == "/":
+                raise ValueError("SQLite数据库路径为空")
+
+        except Exception as e:
+            logger.error(
+                f"SQLite URL验证失败: {e}",
+                extra={"error_id": "SQLITE_URL_INVALID"}
+            )
+            raise ValueError(f"SQLite数据库URL格式错误: {e}") from e
+
+    else:
+        logger.error(
+            f"不支持的数据库类型: {database_url[:20]}...",
+            extra={"error_id": "UNSUPPORTED_DATABASE_TYPE"}
+        )
+        raise ValueError(
+            f"不支持的数据库类型。支持: postgresql://, sqlite://\n"
+            f"当前URL: {database_url[:50]}"
+        )
 
     return database_url
 

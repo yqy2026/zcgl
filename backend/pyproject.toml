@@ -220,7 +220,8 @@ markers = [
     "load: Load tests - high volume and sustained load testing",
     "stress: Stress tests - maximum capacity and pressure testing",
     "core: Core functionality tests",
-    "asyncio: Async tests"
+    "asyncio: Async tests",
+    "concurrency: Concurrency and stress tests"
 ]
 minversion = "7.4"
 timeout = 300
