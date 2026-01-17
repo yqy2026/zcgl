@@ -36,13 +36,26 @@ logger = logging.getLogger(__name__)
 router = APIRouter(tags=["统计分析"])
 
 # Phase 2 架构改进：集成模块化路由
-# 分布统计端点已迁移到 statistics_modules/distribution.py
-# 占用率统计端点已迁移到 statistics_modules/occupancy_stats.py
-from .statistics_modules import distribution_router, occupancy_stats_router
+# 已迁移的模块：
+# - distribution.py (4 endpoints): 分布统计
+# - occupancy_stats.py (3 endpoints): 占用率统计
+# - area_stats.py (2 endpoints): 面积统计
+# - financial_stats.py (1 endpoint): 财务统计
+# - trend_stats.py (1 endpoint): 趋势分析
+from .statistics_modules import (
+    distribution_router,
+    occupancy_stats_router,
+    area_stats_router,
+    financial_stats_router,
+    trend_stats_router,
+)
 
-# 集成模块路由
+# 集成所有模块路由
 router.include_router(distribution_router)
 router.include_router(occupancy_stats_router)
+router.include_router(area_stats_router)
+router.include_router(financial_stats_router)
+router.include_router(trend_stats_router)
 
 
 # 私有函数已迁移到 Service 层:
