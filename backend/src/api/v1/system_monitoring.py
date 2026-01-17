@@ -1089,3 +1089,62 @@ async def get_connection_pool_status(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取连接池状态失败: {str(e)}")
+
+
+@router.get("/encryption-status", summary="获取加密状态")
+async def get_encryption_status(
+    current_user: User = Depends(require_permission("system_monitoring", "read")),
+) -> dict[str, Any]:
+    """
+    获取数据加密系统状态
+
+    返回加密系统的配置和状态信息，包括:
+    - 加密是否启用
+    - 加密算法
+    - 保护的字段列表
+    - 密钥版本
+
+    需要 system_monitoring 读取权限
+    """
+    try:
+        from ...core.encryption import EncryptionKeyManager
+
+        # 初始化密钥管理器
+        key_manager = EncryptionKeyManager()
+
+        # 获取加密状态
+        encryption_enabled = key_manager.is_available()
+
+        # PII 字段列表（来自各模型）
+        protected_fields = {
+            "Organization": ["id_card", "phone", "leader_phone", "emergency_phone"],
+            "RentContract": ["owner_phone", "tenant_phone"],
+            "Contact": ["phone", "office_phone"],
+            "Asset": ["project_phone"],
+        }
+
+        total_protected_fields = sum(len(fields) for fields in protected_fields.values())
+
+        response = {
+            "encryption_enabled": encryption_enabled,
+            "encryption_algorithm": "AES-256-CBC (deterministic) / AES-256-GCM (standard)",
+            "key_version": key_manager.get_version() if encryption_enabled else None,
+            "protected_fields": protected_fields,
+            "total_protected_fields": total_protected_fields,
+            "status": "active" if encryption_enabled else "disabled",
+            "timestamp": datetime.now().isoformat(),
+        }
+
+        if not encryption_enabled:
+            response["warning"] = (
+                "数据加密未启用。敏感数据（PII）将以明文存储。"
+                "强烈建议设置 DATA_ENCRYPTION_KEY 环境变量以保护敏感信息。"
+            )
+
+        return response
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"获取加密状态失败: {str(e)}"
+        )

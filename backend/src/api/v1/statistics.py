@@ -1000,21 +1000,11 @@ async def get_asset_distribution(
     """
     获取资产分布统计数据
     """
-    # 验证分组字段
-    valid_fields = [
-        "ownership_status",
-        "property_nature",
-        "usage_status",
-        "business_category",
-        "manager_name",
-        "project_name",
-    ]
+    # 使用字段验证框架验证 group_by 字段
+    # 这会自动检查字段是否在 Asset 模型的 filter_fields 白名单中
+    from ...security.field_validator import FieldValidator
 
-    if group_by not in valid_fields:
-        raise HTTPException(
-            status_code=400,
-            detail=f"无效的分组字段。支持的字段: {', '.join(valid_fields)}",
-        )
+    FieldValidator.validate_group_by_field("Asset", group_by, raise_on_invalid=True)
 
     # 构建筛选条件
     filters: dict[str, Any] = {}
