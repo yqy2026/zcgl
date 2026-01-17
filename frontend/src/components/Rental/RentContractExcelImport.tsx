@@ -339,7 +339,7 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
 
                 {importResult.warnings.length > 0 && (
                   <>
-                    <Divider orientation="left">警告</Divider>
+                    <Divider titlePlacement="start">警告</Divider>
                     <List
                       size="small"
                       dataSource={importResult.warnings.slice(0, 3)}
@@ -359,7 +359,7 @@ const RentContractExcelImport: React.FC<RentContractExcelImportProps> = ({
 
                 {importResult.errors.length > 0 && (
                   <>
-                    <Divider orientation="left">错误</Divider>
+                    <Divider titlePlacement="start">错误</Divider>
                     <List
                       size="small"
                       dataSource={importResult.errors.slice(0, 3)}

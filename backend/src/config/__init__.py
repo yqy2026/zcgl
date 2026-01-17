@@ -53,6 +53,16 @@ class Settings:
     DATA_ENCRYPTION_KEY: str = os.getenv("DATA_ENCRYPTION_KEY", "")
     DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"
 
+    # 验证数据加密密钥配置
+    # 注意: 空字符串是可接受的（优雅降级），但在生产环境中应该配置
+    if not DATA_ENCRYPTION_KEY and not DEBUG:
+        logger.warning(
+            "DATA_ENCRYPTION_KEY not set - PII encryption disabled. "
+            "Sensitive data will be stored in plaintext. "
+            "Set DATA_ENCRYPTION_KEY for production use. "
+            "Generate one with: python -m src.core.encryption"
+        )
+
     # CORS配置
     CORS_ORIGINS: list[str] = os.getenv(
         "CORS_ORIGINS", "http://localhost:3000,http://localhost:5173,http://localhost"
@@ -95,12 +105,6 @@ class Settings:
     # PDF处理配置
     PDF_MAX_FILE_SIZE_MB: int = int(os.getenv("PDF_MAX_FILE_SIZE_MB", "50"))
     PDF_PROCESSING_TIMEOUT: int = int(os.getenv("PDF_PROCESSING_TIMEOUT", "300"))
-
-    # OCR配置
-    OCR_DEFAULT_ENGINE: str = os.getenv("OCR_DEFAULT_ENGINE", "paddleocr")
-    OCR_HIGH_ACCURACY_THRESHOLD: float = float(
-        os.getenv("OCR_HIGH_ACCURACY_THRESHOLD", "0.8")
-    )
 
 
 # 创建全局设置实例
@@ -162,7 +166,7 @@ class RedisTaskStore:
                 if data:
                     import json
 
-                    # TODO: Use json.loads() or pickle.loads() for safer deserialization
+                    # Using json.loads() for safe deserialization
                     parsed = json.loads(data.decode("utf-8"))
                     return parsed  # type: ignore[no-any-return]
             except Exception as e:

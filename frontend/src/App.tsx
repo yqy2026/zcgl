@@ -7,6 +7,7 @@ import LoginPage from './pages/LoginPage'
 import ErrorBoundary from './components/ErrorHandling/ErrorBoundary'
 import { AuthService } from './services/authService'
 import { AuthProvider } from './contexts/AuthContext'
+import { ErrorHandlingProvider } from './contexts/ErrorHandlingContext'
 import { MessageManager } from './utils/messageManager'
 // App.css removed - classes were unused default React template styles
 
@@ -108,20 +109,22 @@ const AppInitializer: React.FC<{ children: React.ReactNode }> = ({ children }) =
 const App: React.FC = () => {
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <AntdApp>
-          <AppInitializer>
-            <BrowserRouter
-              future={{
-                v7_startTransition: true,
-                v7_relativeSplatPath: true,
-              }}
-            >
-              <AppContent />
-            </BrowserRouter>
-          </AppInitializer>
-        </AntdApp>
-      </AuthProvider>
+      <ErrorHandlingProvider>
+        <AuthProvider>
+          <AntdApp>
+            <AppInitializer>
+              <BrowserRouter
+                future={{
+                  v7_startTransition: true,
+                  v7_relativeSplatPath: true,
+                }}
+              >
+                <AppContent />
+              </BrowserRouter>
+            </AppInitializer>
+          </AntdApp>
+        </AuthProvider>
+      </ErrorHandlingProvider>
     </ErrorBoundary>
   )
 }

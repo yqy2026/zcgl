@@ -7,8 +7,7 @@ import React, { useState, useEffect } from 'react'
 import { Card, Row, Col, Statistic, Alert, Table, Tag, Progress, Button } from 'antd'
 import { CloudServerOutlined, CheckCircleOutlined, ExclamationCircleOutlined, ReloadOutlined } from '@ant-design/icons'
 import { createLogger } from '../../utils/logger'
-// TODO: Create apiHealthCheck service or remove this component
-// import { apiHealthCheck } from '../services/apiHealthCheck'
+import { apiHealthCheck } from '../../services/apiHealthCheck'
 
 const componentLogger = createLogger('ApiMonitor')
 
@@ -34,22 +33,17 @@ const ApiMonitor: React.FC = () => {
   const loadApiStatus = async () => {
     setLoading(true)
     try {
-      // TODO: Implement apiHealthCheck service
-      // const results = await apiHealthCheck.checkCriticalEndpoints()
-      // const statusArray = Array.from(apiHealthCheck.getResults().values())
+      // Check all critical endpoints
+      await apiHealthCheck.checkCriticalEndpoints()
 
-      // Mock data for now
-      const mockResults: ApiStatus[] = []
-      const results: ApiStatus[] = []
+      // Get results and convert to array
+      const statusArray = Array.from(apiHealthCheck.getResults().values())
 
-      setApiStatus(mockResults)
-      setSummary({
-        total: results.length,
-        healthy: results.filter((r: ApiStatus) => r.status === 'healthy').length,
-        unhealthy: results.filter((r: ApiStatus) => r.status === 'unhealthy').length,
-        unknown: results.filter((r: ApiStatus) => r.status === 'unknown').length,
-        healthPercentage: results.length > 0 ? (results.filter((r: ApiStatus) => r.status === 'healthy').length / results.length) * 100 : 0
-      })
+      setApiStatus(statusArray)
+
+      // Calculate summary
+      const healthSummary = apiHealthCheck.getHealthSummary()
+      setSummary(healthSummary)
     } catch (error) {
       componentLogger.error('Failed to load API status:', error as Error)
     } finally {

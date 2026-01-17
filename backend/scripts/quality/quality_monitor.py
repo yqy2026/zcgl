@@ -563,7 +563,7 @@ class QualityMonitor:
 
             start_time = time.time()
 
-            result = subprocess.run(
+            subprocess.run(
                 ["python", "-m", "pytest"] + test_files + ["--tb=no"],
                 capture_output=True,
                 text=True,

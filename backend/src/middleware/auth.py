@@ -547,24 +547,35 @@ def require_roles(required_roles: list[str]) -> RoleBasedAccessChecker:
     return RoleBasedAccessChecker(required_roles)
 
 
-def can_edit_contract(user: User) -> bool:
+def can_edit_contract(user: User, db: Session, contract_id: str) -> bool:
     """
     检查用户是否可以编辑合同
 
     规则:
     - 管理员可以编辑任何合同
-    - 其他角色需要有特定权限
+    - 其他角色需要通过RBAC服务检查特定权限
     """
     if user.role == UserRole.ADMIN:
         return True
 
-    # TODO: 扩展更细粒度的权限检查
-    # 例如: 检查用户是否是合同的创建者
-    # 或者: 检查用户是否有合同编辑权限
+    # 使用RBAC服务进行细粒度权限检查
+    try:
+        from ..services.permission.rbac_service import RBACService
+        from ..schemas.rbac import PermissionCheckRequest
 
-    # 目前暂时允许所有认证用户编辑
-    # 在实际生产环境中应该更严格
-    return user.is_active
+        rbac_service = RBACService(db)
+        permission_request = PermissionCheckRequest(
+            resource="rent_contract",
+            action="edit",
+            resource_id=contract_id,
+            context=None
+        )
+
+        result = rbac_service.check_permission(user.id, permission_request)
+        return result.has_permission
+    except Exception:
+        # 如果RBAC检查失败，默认拒绝权限（安全优先）
+        return False
 
 
 def get_user_rbac_permissions(

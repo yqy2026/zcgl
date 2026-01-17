@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
+from ...constants.strings.empty import EMPTY_STRING
 from ...core.route_guards import debug_only
 from ...crud.enum_field import (
     get_enum_field_type_crud,
@@ -64,9 +65,9 @@ async def get_enum_field_types(
     actual_limit = int(limit) if limit is not None else 100
 
     # 对于Optional参数，确保None值被正确传递
-    actual_category = str(category) if category is not None and category != "" else None
-    actual_status = str(status) if status is not None and status != "" else None
-    actual_keyword = str(keyword) if keyword is not None and keyword != "" else None
+    actual_category = str(category) if category is not None and category != EMPTY_STRING else None
+    actual_status = str(status) if status is not None and status != EMPTY_STRING else None
+    actual_keyword = str(keyword) if keyword is not None and keyword != EMPTY_STRING else None
 
     # 对于布尔值，需要特殊处理
     actual_is_system = None

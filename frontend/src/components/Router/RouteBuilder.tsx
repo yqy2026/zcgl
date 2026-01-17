@@ -15,8 +15,8 @@ export interface RouteComponentProps {
 interface RouteBuilderConfig extends RouteConfig {
   lazy?: boolean;
   component?:
-    | React.ComponentType<RouteComponentProps>
-    | React.LazyExoticComponent<React.ComponentType<RouteComponentProps>>;
+  | React.ComponentType<RouteComponentProps>
+  | React.LazyExoticComponent<React.ComponentType<RouteComponentProps>>;
   preload?: () => void;
   children?: RouteBuilderConfig[];
   errorBoundary?: boolean;
@@ -32,7 +32,7 @@ class RouteBuilder {
   /**
    * 构建单个路由
    */
-  static buildRoute(config: RouteBuilderConfig): JSX.Element {
+  static buildRoute(config: RouteBuilderConfig): React.JSX.Element {
     const {
       path,
       component: Component,
@@ -100,14 +100,14 @@ class RouteBuilder {
   /**
    * 构建路由树
    */
-  static buildRoutes(configs: RouteBuilderConfig[]): JSX.Element[] {
+  static buildRoutes(configs: RouteBuilderConfig[]): React.JSX.Element[] {
     return configs.map(config => RouteBuilder.buildRoute(config));
   }
 
   /**
    * 创建重定向路由
    */
-  static createRedirect(from: string, to: string, replace = true): JSX.Element {
+  static createRedirect(from: string, to: string, replace = true): React.JSX.Element {
     return <Route key={from} path={from} element={<Navigate to={to} replace={replace} />} />;
   }
 
@@ -119,7 +119,7 @@ class RouteBuilder {
     component: React.ComponentType<RouteComponentProps>,
     permissionKey: keyof typeof PERMISSIONS,
     title?: string
-  ): JSX.Element {
+  ): React.JSX.Element {
     const pathParts = path.split('/');
     const lastPart = pathParts[pathParts.length - 1];
     return RouteBuilder.buildRoute({
@@ -142,7 +142,7 @@ class RouteBuilder {
       preload?: () => void;
       fallback?: React.ReactNode;
     }
-  ): JSX.Element {
+  ): React.JSX.Element {
     const pathParts = path.split('/');
     const lastPart = pathParts[pathParts.length - 1];
     const optionsTitle = options?.title;

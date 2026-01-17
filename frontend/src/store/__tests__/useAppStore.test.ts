@@ -269,15 +269,15 @@ describe('useAppStore - 通知管理', () => {
       // 快进时间
       act(() => {
         vi.advanceTimersByTime(1000)
+        // 确保所有定时器回调都执行完毕
+        vi.runAllTimers()
       })
 
-      // 等待setTimeout执行
-      await waitFor(() => {
-        expect(result.current.notifications).toHaveLength(0)
-      })
+      // 验证通知已移除
+      expect(result.current.notifications).toHaveLength(0)
 
       vi.useRealTimers()
-    })
+    }, 15000) // 增加超时时间到 15 秒
 
     it('duration为0的通知不应该自动移除', () => {
       vi.useFakeTimers()

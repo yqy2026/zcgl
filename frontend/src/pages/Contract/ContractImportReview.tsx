@@ -85,22 +85,12 @@ const ContractImportReview: React.FC<ContractImportReviewProps> = ({
 
   }, [result, form]);
 
-  // 表单字段变更接口
-interface FormFieldChange {
-  name: string[];
-  value: unknown;
-  touched?: boolean;
-  validating?: boolean;
-}
-
-// 表单字段变更处理
-  const handleFieldChange = (changedFields: FormFieldChange[]) => {
+  // 表单字段变更处理
+  const handleFieldChange = (changedValues: Record<string, unknown>) => {
     // 标记已修改的字段
     const newModifiedFields = new Set(modifiedFields);
-    changedFields.forEach((field: FormFieldChange) => {
-      if (field.name != null) {
-        newModifiedFields.add(field.name[0]);
-      }
+    Object.keys(changedValues).forEach((fieldName: string) => {
+      newModifiedFields.add(fieldName);
     });
     setModifiedFields(newModifiedFields);
   };

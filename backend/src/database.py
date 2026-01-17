@@ -21,6 +21,8 @@ from sqlalchemy.ext.declarative import DeclarativeMeta
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 from sqlalchemy.pool import QueuePool, StaticPool
 
+from src.constants.database.pool import DatabasePoolConfig
+
 try:
     from .database_security import enhance_database_security
 except ImportError:  # pragma: no cover
@@ -61,12 +63,12 @@ class DatabaseMetrics:
 class ConnectionPoolConfig:
     """连接池配置"""
 
-    pool_size: int = 20
-    max_overflow: int = 30
-    pool_timeout: int = 30
-    pool_recycle: int = 3600
-    pool_pre_ping: bool = True
-    echo: bool = False
+    pool_size: int = DatabasePoolConfig.SIZE_DEFAULT
+    max_overflow: int = DatabasePoolConfig.MAX_OVERFLOW
+    pool_timeout: int = DatabasePoolConfig.TIMEOUT_SECONDS
+    pool_recycle: int = DatabasePoolConfig.RECYCLE_SECONDS
+    pool_pre_ping: bool = DatabasePoolConfig.PRE_PING_ENABLED
+    echo: bool = DatabasePoolConfig.ECHO_ENABLED
     connect_args: dict[str, Any] = field(default_factory=dict)
 
 
@@ -78,20 +80,32 @@ class DatabaseManager:
         self.session_factory: sessionmaker[Session] | None = None
         self.config: ConnectionPoolConfig = self._load_config()
         self.metrics: DatabaseMetrics = DatabaseMetrics()
-        self.query_history: Queue[dict[str, Any]] = Queue(maxsize=1000)
+        self.query_history: Queue[dict[str, Any]] = Queue(
+            maxsize=DatabasePoolConfig.QUERY_HISTORY_QUEUE_SIZE
+        )
         self._metrics_lock = threading.Lock()
-        self.slow_query_threshold = 100.0  # ms
-        self.enable_query_logging = get_config("database.enable_query_logging", False)
+        self.slow_query_threshold = DatabasePoolConfig.SLOW_QUERY_THRESHOLD_MS
+        self.enable_query_logging = DatabasePoolConfig.ENABLE_QUERY_LOGGING
 
     def _load_config(self) -> ConnectionPoolConfig:
         """加载数据库配置"""
         return ConnectionPoolConfig(
-            pool_size=get_config("database.pool_size", 20),
-            max_overflow=get_config("database.max_overflow", 30),
-            pool_timeout=get_config("database.pool_timeout", 30),
-            pool_recycle=get_config("database.pool_recycle", 3600),
-            pool_pre_ping=get_config("database.pool_pre_ping", True),
-            echo=get_config("database.echo", False),
+            pool_size=get_config(
+                "database.pool_size", DatabasePoolConfig.SIZE_DEFAULT
+            ),
+            max_overflow=get_config(
+                "database.max_overflow", DatabasePoolConfig.MAX_OVERFLOW
+            ),
+            pool_timeout=get_config(
+                "database.pool_timeout", DatabasePoolConfig.TIMEOUT_SECONDS
+            ),
+            pool_recycle=get_config(
+                "database.pool_recycle", DatabasePoolConfig.RECYCLE_SECONDS
+            ),
+            pool_pre_ping=get_config(
+                "database.pool_pre_ping", DatabasePoolConfig.PRE_PING_ENABLED
+            ),
+            echo=get_config("database.echo", DatabasePoolConfig.ECHO_ENABLED),
             connect_args={},
         )
 
@@ -111,7 +125,7 @@ class DatabaseManager:
                     "poolclass": StaticPool,
                     "connect_args": {
                         "check_same_thread": False,
-                        "timeout": 20,
+                        "timeout": DatabasePoolConfig.SQLITE_TIMEOUT_SECONDS,
                         "isolation_level": None,
                     },
                 }
@@ -241,10 +255,12 @@ class DatabaseManager:
             cursor.execute("PRAGMA foreign_keys=ON")
             cursor.execute("PRAGMA journal_mode=WAL")
             cursor.execute("PRAGMA synchronous=NORMAL")
-            cursor.execute("PRAGMA cache_size=10000")
+            cursor.execute(f"PRAGMA cache_size={DatabasePoolConfig.SQLITE_CACHE_SIZE}")
             cursor.execute("PRAGMA temp_store=MEMORY")
             cursor.execute("PRAGMA optimize")
-            cursor.execute("PRAGMA wal_autocheckpoint=1000")
+            cursor.execute(
+                f"PRAGMA wal_autocheckpoint={DatabasePoolConfig.SQLITE_WAL_AUTOCHECKPOINT}"
+            )
             logger.debug("SQLite连接优化完成")
         except Exception as e:  # pragma: no cover
             logger.error(f"优化SQLite连接时出错: {e}")  # pragma: no cover

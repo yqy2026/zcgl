@@ -527,5 +527,4 @@ export type Values<T> = T[keyof T];
 export const TypeInfo = {
   version: '1.0.0',
   description: '统一类型定义模块',
-  lastUpdated: '2026-01-09',
 } as const;

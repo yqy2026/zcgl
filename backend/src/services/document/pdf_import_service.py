@@ -9,7 +9,9 @@ import logging
 import os
 import time
 import traceback
+import uuid
 from datetime import UTC, date
+from pathlib import Path
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -23,7 +25,6 @@ from ...models.rent_contract import (
 )
 from .contract_extractor import ContractExtractor
 from .llm_contract_extractor import get_llm_contract_extractor
-from .paddleocr_service import get_paddleocr_service
 
 logger = logging.getLogger(__name__)
 
@@ -49,10 +50,42 @@ class PDFImportService:
     _active_tasks_lock = asyncio.Lock()
 
     def __init__(self) -> None:
-        self.paddle_service = get_paddleocr_service()
         self.regex_extractor = ContractExtractor()
         self.llm_extractor = get_llm_contract_extractor()
         self.task_queue = get_task_queue()
+
+    async def upload_file(self, file_content: bytes, filename: str) -> dict[str, Any]:
+        """
+        上传文件到临时目录
+
+        参数：
+            file_content: 文件内容
+            filename: 原始文件名
+
+        返回：
+            包含文件路径的字典
+        """
+        import tempfile
+
+        from ....utils.file_security import generate_safe_filename
+
+        temp_dir = Path(tempfile.gettempdir())
+        file_id = str(uuid.uuid4())
+        safe_filename = generate_safe_filename(filename, file_id)
+        temp_file_path = temp_dir / safe_filename
+
+        # 保存文件
+        with open(temp_file_path, "wb") as temp_file:
+            temp_file.write(file_content)
+
+        logger.info(f"文件已上传到临时路径: {temp_file_path}")
+
+        return {
+            "file_path": str(temp_file_path),
+            "filename": safe_filename,
+            "original_filename": filename,
+            "file_size": len(file_content),
+        }
 
     @classmethod
     def get_available_slots(cls) -> int:

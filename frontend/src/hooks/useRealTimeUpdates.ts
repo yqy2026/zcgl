@@ -28,7 +28,7 @@ export const useRealTimeUpdates = (
   } = options
 
   const queryClient = useQueryClient()
-  const intervalRef = useRef<NodeJS.Timeout>()
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const lastUpdateRef = useRef<number>(Date.now())
 
   useEffect(() => {
@@ -81,7 +81,7 @@ export const useRealTimeUpdates = (
   const stopUpdates = () => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current)
-      intervalRef.current = undefined
+      intervalRef.current = null
     }
   }
 
@@ -134,8 +134,8 @@ export const useWebSocketUpdates = (
   } = options
 
   const queryClient = useQueryClient()
-  const wsRef = useRef<WebSocket>()
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout>()
+  const wsRef = useRef<WebSocket | null>(null)
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const reconnectAttempts = useRef(0)
   const maxReconnectAttempts = 5
 

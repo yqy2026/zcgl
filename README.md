@@ -12,8 +12,8 @@
 - **质量保障**：测试策略、性能基准、事故复盘
 
 ## ✅ Status
-**当前状态**: Active (2026-01-08 更新)
-**文档版本**: v1.3.0
+**当前状态**: Active (2026-01-15 更新)
+**文档版本**: v1.4.0
 **维护周期**: 每次功能发布后同步更新
 
 ---
@@ -79,7 +79,7 @@
 
 **项目名称**: 土地物业资产管理系统 (Land Property Asset Management System)
 
-**技术架构**: React 18 + TypeScript (Frontend) + FastAPI + Python 3.12 (Backend)
+**技术架构**: React 19 + TypeScript (Frontend) + FastAPI + Python 3.12 (Backend)
 
 **核心功能**:
 - 🏢 资产管理 (58字段资产信息管理)
@@ -190,6 +190,13 @@
 ---
 
 ## 📋 Changelog
+
+### 2026-01-15 v1.4.0 - 2026 技术栈升级
+- ✨ 升级：React 18 → React 19
+- ✨ 升级：Ant Design 5 → Ant Design 6
+- ✨ 升级：Vite 5 → Vite 6
+- 🔄 迁移：npm → pnpm (前端包管理器)
+- 📝 更新：所有文档命令同步更新为 pnpm
 
 ### 2026-01-08 v1.3.0 - 项目统计更新
 - 📊 更新：后端 API 端点数量从 33 更新到 37

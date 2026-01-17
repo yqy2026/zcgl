@@ -29,6 +29,8 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session
 
+from ..constants.strings.empty import EMPTY_STRING
+
 
 class BaseValidator:
     """基础验证器类"""
@@ -434,7 +436,7 @@ def validate_required_fields(
     """验证必填字段"""
     errors = []
     for field in required_fields:
-        if field not in data or data[field] is None or data[field] == "":
+        if field not in data or data[field] is None or data[field] == EMPTY_STRING:
             errors.append(f"缺少必填字段: {field}")
     return errors
 

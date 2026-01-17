@@ -11,21 +11,21 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class QualityAssessment(BaseModel):
-    """质量评估结构，与 optimized_ocr_service._assess_quality 输出对齐。
+    """质量评估结构，与 PDF 质量评估服务输出对齐。
 
     约定字段：
     - overall_quality: 总体质量等级，例如 high/medium/low
     - confidence_score: 质量评估置信度 [0,1]
     - page_quality: 分页质量统计（可选）
-    - ocr_suitability: 是否适合OCR及说明
+    - vision_suitability: 是否适合 Vision API 处理及说明
     - issues: 发现的问题列表及建议
-    - recommendations: 建议的处理动作（如提高DPI、启用特定语言等）
+    - recommendations: 建议的处理动作（如提高图像质量、启用特定 LLM 等）
     """
 
     overall_quality: str | None = None
     confidence_score: float | None = Field(default=None, ge=0.0, le=1.0)
     page_quality: dict[str, Any] | None = None
-    ocr_suitability: dict[str, Any] | None = None
+    vision_suitability: dict[str, Any] | None = None
     issues: list[dict[str, Any]] | None = None
     recommendations: list[str] | None = None
 
@@ -46,7 +46,7 @@ class QualityMetrics(BaseModel):
 class ProcessingResultEnvelope(BaseModel):
     """统一处理结果包。
 
-    在不同处理路径（优化OCR、内置OCR或纯文本提取）下，
+    在不同处理路径（LLM Vision、纯文本提取等）下，
     提供稳定一致的顶层结构，便于持久化与API对齐。
     """
 
@@ -55,6 +55,7 @@ class ProcessingResultEnvelope(BaseModel):
     pages: list[dict[str, Any]] | None = None
     total_pages: int | None = None
     processing_method: str | None = None
+    # DEPRECATED: OCR 已移除，保留用于历史数据兼容
     ocr_used: bool | None = None
     overall_confidence_score: float | None = None
 

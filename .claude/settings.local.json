@@ -61,7 +61,25 @@
       "Bash(.venv/Scripts/python.exe -m ruff check:*)",
       "Bash(uv run mypy:*)",
       "Bash(uv sync:*)",
-      "Bash(uv run:*)"
+      "Bash(uv run:*)",
+      "Bash(pnpm remove:*)",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm list:*)",
+      "Bash(pnpm type-check:*)",
+      "Bash(pnpm lint)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm build)",
+      "Bash(gh api:*)",
+      "Bash(gh run view:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh pr diff:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr checks:*)",
+      "Bash(node scripts/check-api-consistency.js:*)",
+      "mcp__plugin_serena_serena__find_symbol",
+      "Bash(gh pr list:*)",
+      "Bash(ruff check:*)",
+      "Bash(mypy:*)"
     ]
   },
   "outputStyle": "Structural Thinking"

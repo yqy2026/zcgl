@@ -54,14 +54,6 @@ def fix_dictionary_encoding():
         "collective": "集体资产",
         "private": "私有资产",
         "mixed": "混合所有制",
-        # certificated_usage - note: commercial maps to 商业 here
-        "office": "办公",
-        "residential": "住宅",
-        "industrial": "工业",
-        # actual_usage - note: commercial maps to 商业 here
-        "office": "办公",
-        "residential": "住宅",
-        "industrial": "工业",
     }
 
     # Connect to database with UTF-8 encoding

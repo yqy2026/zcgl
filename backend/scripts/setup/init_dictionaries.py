@@ -140,7 +140,7 @@ async def init_asset_dictionaries():
                 )
 
                 # 调用API创建字典
-                result = await quick_create_dictionary(
+                await quick_create_dictionary(
                     dict_type=dict_type, dictionary_data=dictionary_data, db=db
                 )
 

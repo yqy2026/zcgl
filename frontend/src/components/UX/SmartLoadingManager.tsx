@@ -43,7 +43,7 @@ export const SmartLoadingManager: React.FC<SmartLoadingManagerProps> = ({
 }) => {
   const [loadingState, setLoadingState] = useState<LoadingState | null>(null)
   const loadingQueue = useRef<LoadingState[]>([])
-  const loadingTimeoutRef = useRef<NodeJS.Timeout>()
+  const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const showLoading = useCallback((state: LoadingState) => {
     // 添加到队列
@@ -152,7 +152,7 @@ const SmartLoadingOverlay: React.FC<SmartLoadingOverlayProps> = ({ state }) => {
                   '0%': '#108ee9',
                   '100%': '#52c41a',
                 }}
-              strokeWidth={8}
+                strokeWidth={8}
                 size="small"
               />
               <div style={{ marginTop: 8 }}>
@@ -358,7 +358,7 @@ export const SmartPreloader: React.FC<PreloaderProps> = ({
   const [isPreloading, setIsPreloading] = useState(false)
 
   React.useEffect(() => {
-    if (resource !== undefined && resource !== null &&  !isPreloaded && !isPreloading) {
+    if (resource !== undefined && resource !== null && !isPreloaded && !isPreloading) {
       setIsPreloading(true)
 
       // 创建预加载链接
@@ -384,7 +384,7 @@ export const SmartPreloader: React.FC<PreloaderProps> = ({
     }
   }, [resource, isPreloaded, isPreloading])
 
-  if (fallback !== undefined && fallback !== null &&  !isPreloaded) {
+  if (fallback !== undefined && fallback !== null && !isPreloaded) {
     return <>{fallback}</>
   }
 
@@ -454,8 +454,8 @@ export const SmartProgressTracker: React.FC<ProgressTrackerProps> = ({
               height: '20px',
               borderRadius: '50%',
               backgroundColor: step.status === 'finish' ? '#52c41a' :
-                               step.status === 'process' ? '#1890ff' :
-                               step.status === 'error' ? '#ff4d4f' : '#d9d9d9',
+                step.status === 'process' ? '#1890ff' :
+                  step.status === 'error' ? '#ff4d4f' : '#d9d9d9',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -464,8 +464,8 @@ export const SmartProgressTracker: React.FC<ProgressTrackerProps> = ({
               fontWeight: 'bold'
             }}>
               {step.status === 'finish' ? '✓' :
-               step.status === 'error' ? '!' :
-               step.status === 'process' ? '⟳' : index + 1}
+                step.status === 'error' ? '!' :
+                  step.status === 'process' ? '⟳' : index + 1}
             </div>
             <div style={{ marginLeft: '12px' }}>
               <div style={{ fontWeight: index === current ? 'bold' : 'normal' }}>

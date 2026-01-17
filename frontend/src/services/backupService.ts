@@ -3,7 +3,6 @@
  *
  * @description 数据备份和恢复核心服务，提供备份管理、恢复、调度等功能
  * @author Claude Code
- * @updated 2025-11-10
  */
 
 import { enhancedApiClient } from '@/api/client';

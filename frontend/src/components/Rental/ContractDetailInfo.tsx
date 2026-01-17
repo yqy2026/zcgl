@@ -320,7 +320,7 @@ const ContractDetailInfo: React.FC<ContractDetailInfoProps> = ({
           {/* 服务费台账表格 */}
           {(serviceFeeLoading != null && serviceFeeLoading) || ((serviceFeeLedgers ?? []).length > 0) ? (
             <>
-              <Divider orientation="left" style={{ margin: '12px 0' }}>服务费台账</Divider>
+              <Divider titlePlacement="start" style={{ margin: '12px 0' }}>服务费台账</Divider>
               <ServiceFeeLedgerTable ledgers={serviceFeeLedgers ?? []} loading={serviceFeeLoading} />
             </>
           ) : null}

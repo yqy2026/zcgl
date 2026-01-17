@@ -89,12 +89,18 @@ class TestProjectService:
     def test_delete_project_success(self, service, mock_db):
         with patch("src.services.project.service.project_crud") as mock_crud:
             mock_crud.get_asset_count.return_value = 0
+            mock_project = MagicMock()
+            mock_crud.get.return_value = mock_project
+
             service.delete_project(mock_db, project_id=TEST_PROJECT_ID)
-            mock_crud.delete.assert_called_with(mock_db, id=TEST_PROJECT_ID)
+
+            # Verify db.delete was called with the project object
+            mock_db.delete.assert_called_once_with(mock_project)
+            mock_db.commit.assert_called_once()
 
     def test_generate_project_code_fallback(self, service, mock_db):
         # Test the fallback logic when pinyin/name fails or no name
-        with patch("src.models.Project") as MockProject:
+        with patch("src.models.Project"):
             # Mock the query for last project
             mock_query = mock_db.query.return_value
             mock_query.filter.return_value.order_by.return_value.first.return_value = (

@@ -1,20 +1,33 @@
 """
-联系人 CRUD 操作
+联系人 CRUD 操作 - 支持敏感字段加密
 """
 
 from typing import Any
 
 from sqlalchemy.orm import Session
 
+from ..crud.asset import SensitiveDataHandler
 from ..models.contact import Contact, ContactType
 
 
 class ContactCRUD:
-    """联系人 CRUD 操作类"""
+    """联系人 CRUD 操作类 - 支持敏感字段加密"""
+
+    def __init__(self) -> None:
+        """初始化联系人CRUD - 配置敏感字段"""
+        self.sensitive_data_handler = SensitiveDataHandler(
+            searchable_fields={
+                "phone",  # 手机号码 - 敏感，需要搜索
+                "office_phone",  # 办公电话 - 敏感，需要搜索
+            }
+        )
 
     def get(self, db: Session, id: str) -> Contact | None:
-        """根据ID获取联系人"""
-        return db.query(Contact).filter(Contact.id == id).first()
+        """根据ID获取联系人 - 解密敏感字段"""
+        obj = db.query(Contact).filter(Contact.id == id).first()
+        if obj is not None:
+            self.sensitive_data_handler.decrypt_data(obj.__dict__)
+        return obj
 
     def get_multi(
         self,
@@ -24,7 +37,7 @@ class ContactCRUD:
         skip: int = 0,
         limit: int = 100,
     ) -> tuple[list[Contact], int]:
-        """获取指定实体的所有联系人"""
+        """获取指定实体的所有联系人 - 解密敏感字段"""
         query = db.query(Contact).filter(
             Contact.entity_type == entity_type,
             Contact.entity_id == entity_id,
@@ -39,13 +52,17 @@ class ContactCRUD:
             .all()
         )
 
+        # 解密敏感字段
+        for contact in contacts:
+            self.sensitive_data_handler.decrypt_data(contact.__dict__)
+
         return contacts, total
 
     def get_primary(
         self, db: Session, entity_type: str, entity_id: str
     ) -> Contact | None:
-        """获取指定实体的主要联系人"""
-        return (
+        """获取指定实体的主要联系人 - 解密敏感字段"""
+        obj = (
             db.query(Contact)
             .filter(
                 Contact.entity_type == entity_type,
@@ -55,39 +72,61 @@ class ContactCRUD:
             )
             .first()
         )
+        if obj is not None:
+            self.sensitive_data_handler.decrypt_data(obj.__dict__)
+        return obj
 
     def create(self, db: Session, obj_in: dict[str, Any]) -> Contact:
-        """创建联系人"""
+        """创建联系人 - 加密敏感字段"""
+        # 加密敏感字段
+        encrypted_data = self.sensitive_data_handler.encrypt_data(obj_in.copy())
+
         # 如果设置为主要联系人，先取消该实体的其他主要联系人
-        if obj_in.get("is_primary", False):
+        if encrypted_data.get("is_primary", False):
             db.query(Contact).filter(
-                Contact.entity_type == obj_in["entity_type"],
-                Contact.entity_id == obj_in["entity_id"],
+                Contact.entity_type == encrypted_data["entity_type"],
+                Contact.entity_id == encrypted_data["entity_id"],
                 Contact.is_primary.is_(True),
             ).update({"is_primary": False}, synchronize_session=False)
 
-        db_obj = Contact(**obj_in)
+        db_obj = Contact(**encrypted_data)
         db.add(db_obj)
         db.commit()
         db.refresh(db_obj)
+
+        # 解密后返回
+        self.sensitive_data_handler.decrypt_data(db_obj.__dict__)
         return db_obj
 
     def update(self, db: Session, db_obj: Contact, obj_in: dict[str, Any]) -> Contact:
-        """更新联系人"""
+        """更新联系人 - 加密新的敏感字段值"""
+        # 加密敏感字段
+        encrypted_data = {}
+        for field_name, value in obj_in.items():
+            if field_name in self.sensitive_data_handler.ALL_PII_FIELDS:
+                encrypted_data[field_name] = self.sensitive_data_handler.encrypt_field(
+                    field_name, value
+                )
+            else:
+                encrypted_data[field_name] = value
+
         # 如果设置为主要联系人，先取消其他主要联系人
-        if obj_in.get("is_primary", False) and not db_obj.is_primary:
+        if encrypted_data.get("is_primary", False) and not db_obj.is_primary:
             db.query(Contact).filter(
                 Contact.entity_type == db_obj.entity_type,
                 Contact.entity_id == db_obj.entity_id,
                 Contact.is_primary.is_(True),
             ).update({"is_primary": False}, synchronize_session=False)
 
-        for field, value in obj_in.items():
+        for field, value in encrypted_data.items():
             if hasattr(db_obj, field):
                 setattr(db_obj, field, value)
 
         db.commit()
         db.refresh(db_obj)
+
+        # 解密后返回
+        self.sensitive_data_handler.decrypt_data(db_obj.__dict__)
         return db_obj
 
     def delete(self, db: Session, id: str) -> Contact | None:
@@ -106,7 +145,7 @@ class ContactCRUD:
         entity_ids: list[str],
         contact_type: ContactType | None = None,
     ) -> list[Contact]:
-        """批量获取联系人"""
+        """批量获取联系人 - 解密敏感字段"""
         query = db.query(Contact).filter(
             Contact.entity_type == entity_type,
             Contact.entity_id.in_(entity_ids),
@@ -116,7 +155,13 @@ class ContactCRUD:
         if contact_type:
             query = query.filter(Contact.contact_type == contact_type)
 
-        return query.all()
+        results = query.all()
+
+        # 解密敏感字段
+        for contact in results:
+            self.sensitive_data_handler.decrypt_data(contact.__dict__)
+
+        return results
 
 
 contact_crud = ContactCRUD()

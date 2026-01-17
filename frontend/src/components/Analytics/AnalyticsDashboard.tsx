@@ -10,6 +10,7 @@ import {
 import { useAnalytics } from "../../hooks/useAnalytics";
 import type { AssetSearchParams } from "../../types/asset";
 import type { AnalyticsResponse } from "../../types/analytics";
+import { exportAnalytics } from "../../utils/exportAnalytics";
 
 // Analytics数据类型定义
 interface DistributionItem {

@@ -366,7 +366,7 @@ class SystemDocumentationGenerator:
         system_info = self.get_system_info()
         project_structure = self.get_project_structure()
         dependencies = self.get_dependencies()
-        configuration = self.get_configuration()
+        self.get_configuration()
         deployment = self.get_deployment_info()
         monitoring = self.get_monitoring_info()
 
@@ -475,7 +475,7 @@ class SystemDocumentationGenerator:
         system_info = self.get_system_info()
         project_structure = self.get_project_structure()
         dependencies = self.get_dependencies()
-        configuration = self.get_configuration()
+        self.get_configuration()
         deployment = self.get_deployment_info()
         monitoring = self.get_monitoring_info()
 

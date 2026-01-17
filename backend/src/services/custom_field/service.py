@@ -6,6 +6,7 @@ from typing import Any, cast
 
 from sqlalchemy.orm import Session
 
+from ...constants.strings.empty import EMPTY_STRING
 from ...crud.custom_field import custom_field_crud
 from ...models.asset import AssetCustomField
 from ...schemas.asset import AssetCustomFieldCreate, AssetCustomFieldUpdate
@@ -59,11 +60,11 @@ class CustomFieldService:
         """验证字段值是否符合配置要求 (Refactored from CRUD)"""
         try:
             # 必填验证
-            if field.is_required and (value is None or value == ""):
+            if field.is_required and (value is None or value == EMPTY_STRING):
                 return False, f"字段 {field.display_name} 为必填项"
 
             # 如果值为空且非必填，则通过验证
-            if value is None or value == "":
+            if value is None or value == EMPTY_STRING:
                 return True, None
 
             # 根据字段类型验证

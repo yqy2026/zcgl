@@ -5,6 +5,7 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
+
 def run_mypy():
     """Run mypy and capture output"""
     cmd = [
@@ -51,7 +52,7 @@ def parse_errors(output: str):
                         'line': line_num,
                         'message': error_part
                     })
-        except Exception as e:
+        except Exception:
             print(f"Warning: Failed to parse line: {line[:100]}", file=sys.stderr)
 
     return errors_by_file, total_errors
@@ -86,7 +87,7 @@ def main():
     # Save detailed report
     report_path = Path(__file__).parent.parent.parent / "mypy_error_report.txt"
     with open(report_path, 'w', encoding='utf-8') as f:
-        f.write(f"MyPy Error Report\n")
+        f.write("MyPy Error Report\n")
         f.write(f"{'='*60}\n")
         f.write(f"Total errors: {total_errors}\n")
         f.write(f"Files with errors: {len(errors_by_file)}\n")

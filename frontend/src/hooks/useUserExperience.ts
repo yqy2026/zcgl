@@ -24,7 +24,7 @@ export const useUserExperience = (options: UseUserExperienceOptions = {}) => {
   const [isLoading, setIsLoading] = useState(false)
   const [loadingText, setLoadingText] = useState('')
   const [progress, setProgress] = useState(0)
-  const autoSaveTimerRef = useRef<NodeJS.Timeout>()
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null)
   const performanceRef = useRef<{ [key: string]: number }>({})
 
   // 网络状态监听
@@ -105,7 +105,7 @@ export const useUserExperience = (options: UseUserExperienceOptions = {}) => {
   const stopAutoSave = useCallback(() => {
     if (autoSaveTimerRef.current) {
       clearInterval(autoSaveTimerRef.current)
-      autoSaveTimerRef.current = undefined
+      autoSaveTimerRef.current = null
     }
   }, [])
 

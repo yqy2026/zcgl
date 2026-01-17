@@ -195,7 +195,7 @@ class RoutePerformanceMonitor {
     if (this.metrics.length === 0) return
 
     const currentMetric = this.metrics[this.metrics.length - 1]
-    ;(currentMetric as unknown as Record<string, unknown>)[key] = value
+      ; (currentMetric as unknown as Record<string, unknown>)[key] = value
   }
 
   startRouteMonitoring(route: string, navigationType: string) {
@@ -403,7 +403,7 @@ class RoutePerformanceMonitor {
 export const useRoutePerformanceMonitor = (config?: Partial<RoutePerformanceConfig>) => {
   const location = useLocation()
   const navigationType = useNavigationType()
-  const monitorRef = useRef<RoutePerformanceMonitor>()
+  const monitorRef = useRef<RoutePerformanceMonitor | null>(null)
   const monitoringRef = useRef<{
     endComponentLoad: () => void;
     endRender: () => void;
@@ -423,7 +423,7 @@ export const useRoutePerformanceMonitor = (config?: Partial<RoutePerformanceConf
 
     const route = location.pathname
     const navType = navigationType === 'POP' ? 'back' :
-                     navigationType === 'PUSH' ? 'navigate' : 'replace'
+      navigationType === 'PUSH' ? 'navigate' : 'replace'
 
     const monitoring = monitor.startRouteMonitoring(route, navType)
     monitoringRef.current = monitoring ?? null
@@ -485,15 +485,17 @@ export const usePerformanceDebug = () => {
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
       // 暴露到全局对象用于调试
-      (window as unknown as { __ROUTE_PERFORMANCE__?: {
-        getMetrics: () => RoutePerformanceMetrics[];
-        getAggregatedMetrics: () => ReturnType<RoutePerformanceMonitor['getAggregatedMetrics']>;
-        exportData: () => {
-          metrics: RoutePerformanceMetrics[];
-          aggregated: ReturnType<RoutePerformanceMonitor['getAggregatedMetrics']>;
-          timestamp: number
+      (window as unknown as {
+        __ROUTE_PERFORMANCE__?: {
+          getMetrics: () => RoutePerformanceMetrics[];
+          getAggregatedMetrics: () => ReturnType<RoutePerformanceMonitor['getAggregatedMetrics']>;
+          exportData: () => {
+            metrics: RoutePerformanceMetrics[];
+            aggregated: ReturnType<RoutePerformanceMonitor['getAggregatedMetrics']>;
+            timestamp: number
+          }
         }
-      } }).__ROUTE_PERFORMANCE__ = {
+      }).__ROUTE_PERFORMANCE__ = {
         getMetrics,
         getAggregatedMetrics,
         exportData: () => ({

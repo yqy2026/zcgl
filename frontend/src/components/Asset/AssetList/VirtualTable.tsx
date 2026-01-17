@@ -68,280 +68,280 @@ const getColumns = (
   onDelete: (id: string) => void,
   onViewHistory: (asset: Asset) => void
 ): ColumnsType<Asset> => [
-  {
-    title: '所属项目',
-    dataIndex: 'project_name',
-    key: 'project_name',
-    width: 150,
-    fixed: 'left',
-    sorter: true,
-    ellipsis: {
-      showTitle: false,
-    },
-    render: (text, record) => {
-      const projectName = record.project_name ?? text
-      const isId = typeof projectName === 'string' && projectName.length === 36
+    {
+      title: '所属项目',
+      dataIndex: 'project_name',
+      key: 'project_name',
+      width: 150,
+      fixed: 'left',
+      sorter: true,
+      ellipsis: {
+        showTitle: false,
+      },
+      render: (text, record) => {
+        const projectName = record.project_name ?? text
+        const isId = typeof projectName === 'string' && projectName.length === 36
 
-      let displayText = projectName
-      if (isId !== undefined && isId !== null) {
-        displayText = '未配置项目'
-      }
+        let displayText = projectName
+        if (isId !== undefined && isId !== null) {
+          displayText = '未配置项目'
+        }
 
-      return (
-        <Tooltip title={displayText ?? '未设置'}>
-          {displayText ?? '-'}
-        </Tooltip>
-      )
+        return (
+          <Tooltip title={displayText ?? '未设置'}>
+            {displayText ?? '-'}
+          </Tooltip>
+        )
+      },
     },
-  },
-  {
-    title: '物业名称',
-    dataIndex: 'property_name',
-    key: 'property_name',
-    width: 200,
-    fixed: 'left',
-    sorter: true,
-    render: (text, record) => (
-      <Button
-        type="link"
-        onClick={() => onView(record)}
-        style={{ padding: 0, height: 'auto', textAlign: 'left' }}
-      >
-        <Tooltip title="点击查看详情">
+    {
+      title: '物业名称',
+      dataIndex: 'property_name',
+      key: 'property_name',
+      width: 200,
+      fixed: 'left',
+      sorter: true,
+      render: (text, record) => (
+        <Button
+          type="link"
+          onClick={() => onView(record)}
+          style={{ padding: 0, height: 'auto', textAlign: 'left' }}
+        >
+          <Tooltip title="点击查看详情">
+            {text}
+          </Tooltip>
+        </Button>
+      ),
+    },
+    {
+      title: '权属方',
+      dataIndex: 'ownership_entity',
+      key: 'ownership_entity',
+      width: 150,
+      sorter: true,
+      ellipsis: {
+        showTitle: false,
+      },
+      render: (text) => (
+        <Tooltip title={text}>
           {text}
         </Tooltip>
-      </Button>
-    ),
-  },
-  {
-    title: '权属方',
-    dataIndex: 'ownership_entity',
-    key: 'ownership_entity',
-    width: 150,
-    sorter: true,
-    ellipsis: {
-      showTitle: false,
+      ),
     },
-    render: (text) => (
-      <Tooltip title={text}>
-        {text}
-      </Tooltip>
-    ),
-  },
-  {
-    title: '所在地址',
-    dataIndex: 'address',
-    key: 'address',
-    width: 200,
-    ellipsis: {
-      showTitle: false,
+    {
+      title: '所在地址',
+      dataIndex: 'address',
+      key: 'address',
+      width: 200,
+      ellipsis: {
+        showTitle: false,
+      },
+      render: (text) => (
+        <Tooltip title={text}>
+          {text}
+        </Tooltip>
+      ),
     },
-    render: (text) => (
-      <Tooltip title={text}>
-        {text}
-      </Tooltip>
-    ),
-  },
-  {
-    title: '土地面积',
-    dataIndex: 'land_area',
-    key: 'land_area',
-    width: 120,
-    align: 'right',
-    sorter: true,
-    render: (value) => formatArea(value),
-  },
-  {
-    title: '实际面积',
-    dataIndex: 'actual_property_area',
-    key: 'actual_property_area',
-    width: 120,
-    align: 'right',
-    sorter: true,
-    render: (value) => formatArea(value),
-  },
-  {
-    title: '可出租面积',
-    dataIndex: 'rentable_area',
-    key: 'rentable_area',
-    width: 130,
-    align: 'right',
-    sorter: true,
-    render: (value) => formatArea(value),
-  },
-  {
-    title: '已出租面积',
-    dataIndex: 'rented_area',
-    key: 'rented_area',
-    width: 130,
-    align: 'right',
-    sorter: true,
-    render: (value) => formatArea(value),
-  },
-  {
-    title: '确权状态',
-    dataIndex: 'ownership_status',
-    key: 'ownership_status',
-    width: 100,
-    filters: [
-      { text: '已确权', value: '已确权' },
-      { text: '未确权', value: '未确权' },
-      { text: '部分确权', value: '部分确权' },
-    ],
-    render: (status) => (
-      <Tag color={getStatusColor(status, 'ownership')}>
-        {status}
-      </Tag>
-    ),
-  },
-  {
-    title: '物业性质',
-    dataIndex: 'property_nature',
-    key: 'property_nature',
-    width: 100,
-    filters: [
-      { text: '经营性', value: '经营性' },
-      { text: '非经营性', value: '非经营性' },
-    ],
-    render: (nature) => (
-      <Tag color={getStatusColor(nature, 'property')}>
-        {nature}
-      </Tag>
-    ),
-  },
-  {
-    title: '使用状态',
-    dataIndex: 'usage_status',
-    key: 'usage_status',
-    width: 100,
-    filters: [
-      { text: '出租', value: '出租' },
-      { text: '空置', value: '空置' },
-      { text: '自用', value: '自用' },
-      { text: '公房', value: '公房' },
-      { text: '待移交', value: '待移交' },
-      { text: '待处置', value: '待处置' },
-      { text: '其他', value: '其他' },
-    ],
-    render: (status) => (
-      <Tag color={getStatusColor(status, 'usage')}>
-        {status}
-      </Tag>
-    ),
-  },
-  {
-    title: '出租率',
-    dataIndex: 'occupancy_rate',
-    key: 'occupancy_rate',
-    width: 100,
-    align: 'right',
-    sorter: true,
-    render: (rate, record) => {
-      if (rate != null) {
-        return formatPercentage(rate)
-      }
-
-      if (record.rentable_area != null && record.rented_area != null) {
-        const calculatedRate = (record.rented_area / record.rentable_area) * 100
-        return (
-          <span style={{
-            color: calculatedRate >= 80 ? '#52c41a' :
-                   calculatedRate >= 60 ? '#faad14' : '#ff4d4f'
-          }}>
-            {formatPercentage(calculatedRate)}
-          </span>
-        )
-      }
-
-      return '-'
+    {
+      title: '土地面积',
+      dataIndex: 'land_area',
+      key: 'land_area',
+      width: 120,
+      align: 'right',
+      sorter: true,
+      render: (value) => formatArea(value),
     },
-  },
-  {
-    title: '是否涉诉',
-    dataIndex: 'is_litigated',
-    key: 'is_litigated',
-    width: 100,
-    filters: [
-      { text: '是', value: true },
-      { text: '否', value: false },
-    ],
-    render: (isLitigated) => (
-      <Tag color={isLitigated === true ? 'red' : 'green'}>
-        {isLitigated === true ? '是' : '否'}
-      </Tag>
-    ),
-  },
-  {
-    title: '创建时间',
-    dataIndex: 'created_at',
-    key: 'created_at',
-    width: 120,
-    sorter: true,
-    render: (date) => formatDate(date),
-  },
-  {
-    title: '更新时间',
-    dataIndex: 'updated_at',
-    key: 'updated_at',
-    width: 120,
-    sorter: true,
-    render: (date) => formatDate(date),
-  },
-  {
-    title: '操作',
-    key: 'actions',
-    width: 150,
-    fixed: 'right',
-    render: (_, record) => (
-      <Space size="small">
-        <Tooltip title="查看详情">
-          <Button
-            type="text"
-            icon={<EyeOutlined />}
-            onClick={() => onView(record)}
-            size="small"
-          />
-        </Tooltip>
+    {
+      title: '实际面积',
+      dataIndex: 'actual_property_area',
+      key: 'actual_property_area',
+      width: 120,
+      align: 'right',
+      sorter: true,
+      render: (value) => formatArea(value),
+    },
+    {
+      title: '可出租面积',
+      dataIndex: 'rentable_area',
+      key: 'rentable_area',
+      width: 130,
+      align: 'right',
+      sorter: true,
+      render: (value) => formatArea(value),
+    },
+    {
+      title: '已出租面积',
+      dataIndex: 'rented_area',
+      key: 'rented_area',
+      width: 130,
+      align: 'right',
+      sorter: true,
+      render: (value) => formatArea(value),
+    },
+    {
+      title: '确权状态',
+      dataIndex: 'ownership_status',
+      key: 'ownership_status',
+      width: 100,
+      filters: [
+        { text: '已确权', value: '已确权' },
+        { text: '未确权', value: '未确权' },
+        { text: '部分确权', value: '部分确权' },
+      ],
+      render: (status) => (
+        <Tag color={getStatusColor(status, 'ownership')}>
+          {status}
+        </Tag>
+      ),
+    },
+    {
+      title: '物业性质',
+      dataIndex: 'property_nature',
+      key: 'property_nature',
+      width: 100,
+      filters: [
+        { text: '经营性', value: '经营性' },
+        { text: '非经营性', value: '非经营性' },
+      ],
+      render: (nature) => (
+        <Tag color={getStatusColor(nature, 'property')}>
+          {nature}
+        </Tag>
+      ),
+    },
+    {
+      title: '使用状态',
+      dataIndex: 'usage_status',
+      key: 'usage_status',
+      width: 100,
+      filters: [
+        { text: '出租', value: '出租' },
+        { text: '空置', value: '空置' },
+        { text: '自用', value: '自用' },
+        { text: '公房', value: '公房' },
+        { text: '待移交', value: '待移交' },
+        { text: '待处置', value: '待处置' },
+        { text: '其他', value: '其他' },
+      ],
+      render: (status) => (
+        <Tag color={getStatusColor(status, 'usage')}>
+          {status}
+        </Tag>
+      ),
+    },
+    {
+      title: '出租率',
+      dataIndex: 'occupancy_rate',
+      key: 'occupancy_rate',
+      width: 100,
+      align: 'right',
+      sorter: true,
+      render: (rate, record) => {
+        if (rate != null) {
+          return formatPercentage(rate)
+        }
 
-        <Tooltip title="编辑">
-          <Button
-            type="text"
-            icon={<EditOutlined />}
-            onClick={() => onEdit(record)}
-            size="small"
-          />
-        </Tooltip>
+        if (record.rentable_area != null && record.rented_area != null) {
+          const calculatedRate = (record.rented_area / record.rentable_area) * 100
+          return (
+            <span style={{
+              color: calculatedRate >= 80 ? '#52c41a' :
+                calculatedRate >= 60 ? '#faad14' : '#ff4d4f'
+            }}>
+              {formatPercentage(calculatedRate)}
+            </span>
+          )
+        }
 
-        <Tooltip title="查看历史">
-          <Button
-            type="text"
-            icon={<HistoryOutlined />}
-            onClick={() => onViewHistory(record)}
-            size="small"
-          />
-        </Tooltip>
-
-        <Popconfirm
-          title="确定要删除这个资产吗？"
-          description="删除后无法恢复，请谨慎操作"
-          onConfirm={() => onDelete(record.id)}
-          okText="确定"
-          cancelText="取消"
-          okType="danger"
-        >
-          <Tooltip title="删除">
+        return '-'
+      },
+    },
+    {
+      title: '是否涉诉',
+      dataIndex: 'is_litigated',
+      key: 'is_litigated',
+      width: 100,
+      filters: [
+        { text: '是', value: true },
+        { text: '否', value: false },
+      ],
+      render: (isLitigated) => (
+        <Tag color={isLitigated === true ? 'red' : 'green'}>
+          {isLitigated === true ? '是' : '否'}
+        </Tag>
+      ),
+    },
+    {
+      title: '创建时间',
+      dataIndex: 'created_at',
+      key: 'created_at',
+      width: 120,
+      sorter: true,
+      render: (date) => formatDate(date),
+    },
+    {
+      title: '更新时间',
+      dataIndex: 'updated_at',
+      key: 'updated_at',
+      width: 120,
+      sorter: true,
+      render: (date) => formatDate(date),
+    },
+    {
+      title: '操作',
+      key: 'actions',
+      width: 150,
+      fixed: 'right',
+      render: (_, record) => (
+        <Space size="small">
+          <Tooltip title="查看详情">
             <Button
               type="text"
-              danger
-              icon={<DeleteOutlined />}
+              icon={<EyeOutlined />}
+              onClick={() => onView(record)}
               size="small"
             />
           </Tooltip>
-        </Popconfirm>
-      </Space>
-    ),
-  },
-]
+
+          <Tooltip title="编辑">
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              onClick={() => onEdit(record)}
+              size="small"
+            />
+          </Tooltip>
+
+          <Tooltip title="查看历史">
+            <Button
+              type="text"
+              icon={<HistoryOutlined />}
+              onClick={() => onViewHistory(record)}
+              size="small"
+            />
+          </Tooltip>
+
+          <Popconfirm
+            title="确定要删除这个资产吗？"
+            description="删除后无法恢复，请谨慎操作"
+            onConfirm={() => onDelete(record.id)}
+            okText="确定"
+            cancelText="取消"
+            okType="danger"
+          >
+            <Tooltip title="删除">
+              <Button
+                type="text"
+                danger
+                icon={<DeleteOutlined />}
+                size="small"
+              />
+            </Tooltip>
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ]
 
 /**
  * 虚拟滚动表格组件
@@ -526,7 +526,7 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
             `第 ${range[0]}-${range[1]} 条，共 ${total} 条记录`
           }
           pageSizeOptions={['10', '20', '50', '100']}
-          size="default"
+          size="middle"
         />
       </div>
 

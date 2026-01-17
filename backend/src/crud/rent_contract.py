@@ -1,8 +1,11 @@
 from datetime import date
+from typing import Any
 
 from sqlalchemy.orm import Session
 
-from ..models import Ownership
+from ..crud.asset import SensitiveDataHandler
+from ..crud.base import CRUDBase
+from ..models.asset import Ownership
 from ..models.rent_contract import (
     RentContract,
     RentLedger,
@@ -17,11 +20,78 @@ from ..schemas.rent_contract import (
     RentTermCreate,
     RentTermUpdate,
 )
-from .base import CRUDBase
 
 
 class CRUDRentContract(CRUDBase[RentContract, RentContractCreate, RentContractUpdate]):
-    """租金合同CRUD操作"""
+    """租金合同CRUD操作 - 支持敏感字段加密"""
+
+    def __init__(self, model: type[RentContract]) -> None:
+        super().__init__(model)
+        # RentContract 模型的敏感字段
+        self.sensitive_data_handler = SensitiveDataHandler(
+            searchable_fields={
+                "owner_phone",  # 业主电话 - 敏感，需要搜索
+                "tenant_phone",  # 租户电话 - 敏感，需要搜索
+            }
+        )
+
+    def create(
+        self, db: Session, *, obj_in: RentContractCreate | dict[str, Any], **kwargs: Any
+    ) -> RentContract:
+        """创建合同 - 加密敏感字段"""
+        if isinstance(obj_in, dict):
+            obj_in_data = obj_in
+        else:
+            obj_in_data = obj_in.model_dump()
+
+        # 加密敏感字段
+        encrypted_data = self.sensitive_data_handler.encrypt_data(obj_in_data)
+        return super().create(db=db, obj_in=encrypted_data, **kwargs)
+
+    def get(self, db: Session, id: Any, use_cache: bool = True) -> RentContract | None:
+        """获取合同 - 解密敏感字段"""
+        result = super().get(db=db, id=id, use_cache=use_cache)
+        if result is not None:
+            self.sensitive_data_handler.decrypt_data(result.__dict__)
+        return result
+
+    def get_multi(
+        self, db: Session, *, skip: int = 0, limit: int = 100, use_cache: bool = False
+    ) -> list[RentContract]:
+        """获取多个合同 - 解密敏感字段"""
+        results = super().get_multi(db=db, skip=skip, limit=limit, use_cache=use_cache)
+        for item in results:
+            self.sensitive_data_handler.decrypt_data(item.__dict__)
+        return results
+
+    def update(
+        self,
+        db: Session,
+        *,
+        db_obj: RentContract,
+        obj_in: RentContractUpdate | dict[str, Any],
+    ) -> RentContract:
+        """更新合同 - 加密新的敏感字段值"""
+        if isinstance(obj_in, dict):
+            update_data = obj_in
+        else:
+            update_data = obj_in.model_dump(exclude_unset=True)
+
+        # 加密敏感字段
+        encrypted_data = self._encrypt_update_data(update_data)
+        return super().update(db=db, db_obj=db_obj, obj_in=encrypted_data)
+
+    def _encrypt_update_data(self, update_data: dict[str, Any]) -> dict[str, Any]:
+        """加密更新数据中的敏感字段"""
+        encrypted_data = {}
+        for field_name, value in update_data.items():
+            if field_name in self.sensitive_data_handler.ALL_PII_FIELDS:
+                encrypted_data[field_name] = self.sensitive_data_handler.encrypt_field(
+                    field_name, value
+                )
+            else:
+                encrypted_data[field_name] = value
+        return encrypted_data
 
     def get_with_details(self, db: Session, id: str) -> RentContract | None:
         """获取合同详情（包含关联的租金条款和资产）- V2使用多对多关系"""

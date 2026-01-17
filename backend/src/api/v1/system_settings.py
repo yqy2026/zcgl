@@ -20,6 +20,7 @@ from fastapi import (
 )
 from pydantic import BaseModel
 from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from ...crud.auth import AuditLogCRUD
@@ -150,9 +151,20 @@ async def update_system_settings(
                 user_agent=user_agent,
                 request_body=json.dumps({"updated_settings": settings.model_dump()}),
             )
-        except Exception:
+        except (SQLAlchemyError, ValueError, TypeError) as audit_error:
             # 审计日志失败不应该影响系统设置更新
-            import logging
+            # TypeError: JSON 序列化失败（如循环引用、不支持的对象）
+            # SQLAlchemyError: 数据库操作失败
+            # ValueError: 数据验证失败
+            logger.warning(
+                "记录系统设置审计日志失败",
+                exc_info=True,
+                extra={
+                    "error_type": type(audit_error).__name__,
+                    "user_id": str(current_user.id),
+                    "action": "UPDATE_SYSTEM_SETTINGS",
+                },
+            )
 
             logger = logging.getLogger(__name__)
             logger.warning("记录系统设置审计日志失败", exc_info=True)
@@ -181,8 +193,16 @@ async def get_system_info(
         try:
             db.execute(text("SELECT 1"))
             database_status: str = "connected"
-        except Exception:
+        except SQLAlchemyError as db_error:
             database_status = "disconnected"
+            logger.error(
+                "数据库连接检查失败",
+                exc_info=True,
+                extra={
+                    "error_type": type(db_error).__name__,
+                    "database_status": "disconnected",
+                },
+            )
 
         # 获取环境变量
         environment = os.getenv("ENVIRONMENT", "development")
@@ -246,9 +266,17 @@ async def backup_system(
                 ip_address=ip_address,
                 user_agent=user_agent,
             )
-        except Exception:
+        except (SQLAlchemyError, ValueError, json.JSONDecodeError) as audit_error:
             # 审计日志失败不应该影响备份流程
-            import logging
+            logger.warning(
+                "记录备份审计日志失败",
+                exc_info=True,
+                extra={
+                    "error_type": type(audit_error).__name__,
+                    "user_id": current_user.id,
+                    "action": "SYSTEM_BACKUP",
+                },
+            )
 
             logger = logging.getLogger(__name__)
             logger.warning("记录备份审计日志失败", exc_info=True)
@@ -324,9 +352,17 @@ async def restore_system(
                 ip_address=ip_address,
                 user_agent=user_agent,
             )
-        except Exception:
+        except (SQLAlchemyError, ValueError, json.JSONDecodeError) as audit_error:
             # 审计日志失败不应该影响恢复流程
-            import logging
+            logger.warning(
+                "记录恢复审计日志失败",
+                exc_info=True,
+                extra={
+                    "error_type": type(audit_error).__name__,
+                    "user_id": current_user.id,
+                    "action": "SYSTEM_RESTORE",
+                },
+            )
 
             logger = logging.getLogger(__name__)
             logger.warning("记录恢复审计日志失败", exc_info=True)

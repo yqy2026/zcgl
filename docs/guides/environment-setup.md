@@ -171,28 +171,27 @@ LOG_LEVEL=INFO
 LOG_FILE=logs/app.log
 ```
 
-#### 9. OCR 配置
+#### 9. LLM Vision 配置
 ```bash
-# OCR 引擎选择
-OCR_ENGINE_PROVIDER=optimized  # optimized | paddle
+# LLM Vision 提供商选择
+EXTRACTION_LLM_PROVIDER=qwen  # qwen | deepseek | zhipu | auto
 
-# PaddleOCR 详细配置
-OCR_LANG=ch
-OCR_USE_GPU=false
-OCR_ENABLE_MKLDNN=true
-OCR_USE_TEXTLINE_ORIENTATION=true
-
-# 阈值配置
-OCR_HIGH_ACCURACY_THRESHOLD=0.8
-OCR_DET_DB_THRESH=0.3
-OCR_DROP_SCORE=0.1
+# API 密钥 (根据提供商选择)
+# QWEN_API_KEY=your_qwen_api_key
+# DEEPSEEK_API_KEY=your_deepseek_api_key
+# ZHIPU_API_KEY=your_zhipu_api_key
+# HUNYUAN_API_KEY=your_hunyuan_api_key
 ```
 
-**OCR 引擎选择**:
-| 引擎 | 优点 | 缺点 | 适用场景 |
-|------|------|------|----------|
-| optimized | 轻量级，启动快 | 精度较低 | 开发环境 |
-| paddle | 高精度，功能全 | 资源占用大 | 生产环境 |
+**LLM Vision 提供商**:
+| 提供商 | 说明 | 适用场景 |
+|--------|------|----------|
+| qwen | 通义千问 VL-Flash | 推荐，快速准确 |
+| deepseek | DeepSeek-VL | 高精度 |
+| glm | 智谱 GLM-4V | 中文优化 |
+| hunyuan | 腾讯混元 Vision | 2026-01 新增 |
+
+**注意**: PaddleOCR/Tesseract/NVIDIA OCR 已废弃，推荐使用 LLM Vision API。
 
 #### 10. 性能监控配置
 ```bash

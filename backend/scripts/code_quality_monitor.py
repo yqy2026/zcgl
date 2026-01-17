@@ -159,7 +159,7 @@ class CodeQualityMonitor:
         logger.info("运行Bandit安全扫描...")
         try:
             report_file = self.reports_dir / "bandit_report.json"
-            result = subprocess.run(
+            subprocess.run(
                 [
                     "python",
                     "-m",
@@ -241,7 +241,7 @@ class CodeQualityMonitor:
         """运行代码重复度分析"""
         logger.info("运行代码重复度分析...")
         try:
-            result = subprocess.run(
+            subprocess.run(
                 [
                     "python",
                     "-m",
@@ -536,10 +536,10 @@ def main():
 
     # 生成其他格式报告
     if args.format == "csv" or args.history:
-        csv_file = monitor.generate_csv_report(issues)
+        monitor.generate_csv_report(issues)
 
     if args.history:
-        chart_file = monitor.generate_trend_chart()
+        monitor.generate_trend_chart()
 
     # 打印摘要
     monitor.print_summary(issues, metrics)
