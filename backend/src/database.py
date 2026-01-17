@@ -341,15 +341,41 @@ class DatabaseManager:
                         "status": "healthy" if response_time < 1000 else "degraded",
                         "response_time_ms": response_time,
                     }
-        except Exception as e:  # pragma: no cover
-            health_status["healthy"] = False  # pragma: no cover
+        except OperationalError as e:
+            health_status["healthy"] = False
             checks = health_status["checks"]
-            if isinstance(checks, dict):  # pragma: no cover
-                checks["connection_test"] = {  # pragma: no cover
-                    "status": "failed",  # pragma: no cover
-                    "error": str(e),  # pragma: no cover
-                }  # pragma: no cover
-            logger.error(f"数据库健康检查失败: {e}")  # pragma: no cover
+            if isinstance(checks, dict):
+                checks["connection_test"] = {
+                    "status": "failed",
+                    "error": "数据库连接失败",
+                    "error_details": str(e),
+                }
+            logger.error(
+                f"数据库健康检查失败 - 连接错误: {e}",
+                extra={
+                    "error_id": "DB_HEALTH_CHECK_FAILED",
+                    "error_type": "OperationalError"
+                }
+            )
+            # 重新抛出异常 - 让监控系统捕获
+            raise
+
+        except Exception as e:
+            health_status["healthy"] = False
+            checks = health_status["checks"]
+            if isinstance(checks, dict):
+                checks["connection_test"] = {
+                    "status": "failed",
+                    "error": "未知数据库错误",
+                    "error_details": str(e),
+                }
+            logger.error(
+                f"数据库健康检查失败 - 未知错误: {e}",
+                exc_info=True,
+                extra={"error_id": "DB_HEALTH_CHECK_UNKNOWN_ERROR"}
+            )
+            # 重新抛出所有异常
+            raise
 
         return health_status
 

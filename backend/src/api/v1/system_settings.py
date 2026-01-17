@@ -114,8 +114,25 @@ async def get_system_settings(
             data=_system_settings,
             timestamp=datetime.now().isoformat(),
         )
+    except (ValueError, TypeError, AttributeError) as e:
+        # 预期的验证/格式化错误
+        logger.error(
+            f"系统设置验证错误: {e}",
+            extra={"error_id": "SYSTEM_SETTINGS_VALIDATION_ERROR"}
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"获取系统设置失败: {str(e)}"
+        ) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取系统设置失败: {str(e)}")
+        # 未预期的错误 - 记录完整详情并重新抛出
+        logger.critical(
+            f"系统设置未知错误: {e}",
+            exc_info=True,
+            extra={"error_id": "SYSTEM_SETTINGS_UNEXPECTED_ERROR"}
+        )
+        # 不捕获系统错误 - 让中间件处理
+        raise
 
 
 @router.put("/settings", summary="更新系统设置", response_model=SystemSettingsResponse)
@@ -152,21 +169,46 @@ async def update_system_settings(
                 request_body=json.dumps({"updated_settings": settings.model_dump()}),
             )
         except (SQLAlchemyError, ValueError, TypeError) as audit_error:
-            # 审计日志失败不应该影响系统设置更新
+            # 审计日志失败 - 视为CRITICAL安全事件
             # TypeError: JSON 序列化失败（如循环引用、不支持的对象）
             # SQLAlchemyError: 数据库操作失败
             # ValueError: 数据验证失败
-            logger.warning(
-                "记录系统设置审计日志失败",
+
+            # 记录CRITICAL级别日志
+            logger.critical(
+                "审计日志失败 - 安全违规未记录",
                 exc_info=True,
                 extra={
+                    "error_id": "AUDIT_LOG_FAILED",
                     "error_type": type(audit_error).__name__,
                     "user_id": str(current_user.id),
                     "action": "UPDATE_SYSTEM_SETTINGS",
+                    "severity": "CRITICAL",
+                    "security_impact": "Audit trail compromised"
                 },
             )
 
-            logger = logging.getLogger(__name__)
+            # 生产环境: 发送安全警报
+            environment = os.getenv("ENVIRONMENT", "development")
+            if environment == "production":
+                # TODO: 集成到监控系统 (Sentry, PagerDuty等)
+                # send_security_alert(...)
+                pass
+
+            # 回退: 写入文件审计日志
+            try:
+                from pathlib import Path
+                from datetime import datetime
+                audit_log_path = Path("logs/audit_log_fallback.txt")
+                audit_log_path.parent.mkdir(exist_ok=True)
+
+                with open(audit_log_path, "a", encoding="utf-8") as f:
+                    timestamp = datetime.now().isoformat()
+                    f.write(f"{timestamp} | UPDATE_SYSTEM_SETTINGS | {current_user.id} | ERROR: {audit_error}\n")
+            except Exception:
+                # 最后手段: 记录到系统日志
+                import sys
+                print(f"[AUDIT LOG FALLBACK] {datetime.now().isoformat()} | UPDATE_SYSTEM_SETTINGS | {current_user.id} | ERROR: {audit_error}", file=sys.stderr)
             logger.warning("记录系统设置审计日志失败", exc_info=True)
 
         return SystemSettingsResponse(
