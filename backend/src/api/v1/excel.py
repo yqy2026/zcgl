@@ -2,7 +2,35 @@ from collections.abc import AsyncGenerator, Generator
 from typing import Any
 
 """
-Excel导入导出API路由 - 增强版，支持任务管理和状态跟踪
+Excel导入导出API路由模块 / Excel Import/Export API Routes
+
+🏷️ MODULE_TYPE: API_ROUTES
+🎯 LAYER: API (Presentation Layer)
+📋 ARCHITECTURE: ✅ Compliant (Delegates to Service Layer)
+✅ DELEGATES_TO: services/excel/ (ExcelImportService, ExcelExportService, ExcelTemplateService)
+
+增强版Excel导入导出API，支持任务管理和状态跟踪
+
+职责 / Responsibilities:
+- 定义Excel导入导出相关的HTTP端点
+- 文件上传验证和安全检查
+- 委托导入/导出逻辑给ExcelService层
+- 异步任务管理和状态跟踪
+
+不包含 / Does NOT Contain:
+- ❌ Excel文件解析逻辑 (No Excel Parsing Logic)
+- ❌ 数据验证规则 (No Data Validation Rules)
+- ❌ 业务逻辑实现 (No Business Logic)
+
+端点分组 / Endpoint Groups:
+- 模板管理: GET /excel/template
+- 预览功能: POST /excel/preview, POST /excel/preview/advanced
+- 导入功能: POST /excel/import, POST /excel/import/async
+- 导出功能: GET /excel/export, POST /excel/export/async
+- 配置管理: GET/POST/PUT/DELETE /excel/configs/*
+
+注意 / Note:
+此文件较大(1000+ lines)，包含多个相关端点。建议未来重构为多个子模块。
 """
 
 # 标准库导入

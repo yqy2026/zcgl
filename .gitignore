@@ -51,9 +51,11 @@ uv.lock
 .coverage_html/
 htmlcov/
 backend/htmlcov/
+frontend/coverage/
 .hypothesis/
 .tox/
 .nox/
+.benchmarks/
 coverage.xml
 coverage.json
 junit-report.xml
@@ -73,6 +75,8 @@ dmypy.json
 .ruff_cache/
 ruff-report.json
 *.report.txt
+lint_output.txt
+lint-results.txt
 
 # Jupyter / IPython
 .ipynb_checkpoints/
