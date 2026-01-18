@@ -3,14 +3,164 @@ Property Certificate CRUD Operations
 产权证CRUD操作
 """
 
+from typing import Any
+
 from sqlalchemy.orm import Session
 
-from ..models.property_certificate import PropertyCertificate
+from ..models.property_certificate import PropertyCertificate, PropertyOwner
 from ..schemas.property_certificate import (
     PropertyCertificateCreate,
     PropertyCertificateUpdate,
+    PropertyOwnerCreate,
+    PropertyOwnerUpdate,
 )
+from .asset import SensitiveDataHandler
 from .base import CRUDBase
+
+
+class CRUDPropertyOwner(
+    CRUDBase[PropertyOwner, PropertyOwnerCreate, PropertyOwnerUpdate]
+):
+    """权利人CRUD操作 - 支持敏感字段加密"""
+
+    def __init__(self, model: type[PropertyOwner]) -> None:
+        super().__init__(model)
+        # 🔒 安全修复: PropertyOwner 敏感字段处理（使用确定性加密以支持搜索）
+        self.sensitive_data_handler = SensitiveDataHandler(
+            searchable_fields={
+                "id_number",  # 证件号码 - 高度敏感PII，需要搜索
+                "phone",  # 联系电话 - 敏感PII，需要搜索
+            }
+        )
+
+    def create(
+        self,
+        db: Session,
+        *,
+        obj_in: PropertyOwnerCreate | dict[str, Any],
+        **kwargs: Any,
+    ) -> PropertyOwner:
+        """
+        创建权利人 - 加密敏感字段
+
+        Args:
+            db: 数据库会话
+            obj_in: 创建数据
+            **kwargs: 额外参数
+
+        Returns:
+            PropertyOwner: 创建的权利人对象
+        """
+        if isinstance(obj_in, dict):
+            obj_in_data = obj_in
+        else:
+            obj_in_data = obj_in.model_dump()
+
+        # 🔒 安全修复: 加密敏感字段（id_number, phone）
+        encrypted_data = self.sensitive_data_handler.encrypt_data(obj_in_data)
+        return super().create(db=db, obj_in=encrypted_data, **kwargs)
+
+    def get(self, db: Session, id: Any, use_cache: bool = True) -> PropertyOwner | None:
+        """
+        获取权利人 - 解密敏感字段
+
+        Args:
+            db: 数据库会话
+            id: 权利人ID
+            use_cache: 是否使用缓存
+
+        Returns:
+            PropertyOwner | None: 权利人对象或None
+        """
+        result = super().get(db=db, id=id, use_cache=use_cache)
+        if result is not None:
+            # 🔒 安全修复: 解密敏感字段
+            self.sensitive_data_handler.decrypt_data(result.__dict__)
+        return result
+
+    def get_multi(
+        self,
+        db: Session,
+        *,
+        skip: int = 0,
+        limit: int = 100,
+        use_cache: bool = False,
+    ) -> list[PropertyOwner]:
+        """
+        获取多个权利人 - 解密敏感字段
+
+        Args:
+            db: 数据库会话
+            skip: 跳过记录数
+            limit: 返回记录数
+            use_cache: 是否使用缓存
+
+        Returns:
+            list[PropertyOwner]: 权利人对象列表
+        """
+        results = super().get_multi(db=db, skip=skip, limit=limit, use_cache=use_cache)
+        for item in results:
+            # 🔒 安全修复: 解密敏感字段
+            self.sensitive_data_handler.decrypt_data(item.__dict__)
+        return results
+
+    def update(
+        self,
+        db: Session,
+        *,
+        db_obj: PropertyOwner,
+        obj_in: PropertyOwnerUpdate | dict[str, Any],
+    ) -> PropertyOwner:
+        """
+        更新权利人 - 加密敏感字段
+
+        Args:
+            db: 数据库会话
+            db_obj: 数据库对象
+            obj_in: 更新数据
+
+        Returns:
+            PropertyOwner: 更新后的权利人对象
+        """
+        if isinstance(obj_in, dict):
+            update_data = obj_in
+        else:
+            update_data = obj_in.model_dump(exclude_unset=True)
+
+        # 🔒 安全修复: 加密敏感字段
+        encrypted_data = self.sensitive_data_handler.encrypt_data(update_data)
+        return super().update(db=db, db_obj=db_obj, obj_in=encrypted_data)
+
+    def search_by_id_number(
+        self, db: Session, id_number: str, skip: int = 0, limit: int = 100
+    ) -> list[PropertyOwner]:
+        """
+        根据证件号码搜索权利人（使用加密值）
+
+        Args:
+            db: 数据库会话
+            id_number: 证件号码
+            skip: 跳过记录数
+            limit: 返回记录数
+
+        Returns:
+            list[PropertyOwner]: 匹配的权利人列表
+        """
+        # 🔒 安全修复: 使用加密值进行搜索
+        encrypted_id_number = self.sensitive_data_handler.encrypt_value(id_number)
+
+        query = (
+            db.query(self.model)
+            .filter(self.model.id_number == encrypted_id_number)
+            .offset(skip)
+            .limit(limit)
+        )
+
+        results = query.all()
+        for item in results:
+            self.sensitive_data_handler.decrypt_data(item.__dict__)
+
+        return results
 
 
 class CRUDPropertyCertificate(
@@ -55,8 +205,6 @@ class CRUDPropertyCertificate(
         Returns:
             PropertyCertificate: 创建的产权证对象
         """
-        from ..models.property_certificate import PropertyOwner
-
         db_obj = PropertyCertificate(**obj_in.model_dump())
         db.add(db_obj)
         db.flush()  # Flush to get the ID without committing
@@ -76,3 +224,4 @@ class CRUDPropertyCertificate(
 
 
 property_certificate_crud = CRUDPropertyCertificate(PropertyCertificate)
+property_owner_crud = CRUDPropertyOwner(PropertyOwner)

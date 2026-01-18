@@ -213,6 +213,11 @@ class ExtractionFeedback(Base):
         String(50), comment="用户动作: corrected, accepted, rejected"
     )
 
+    # 🔒 安全修复: 添加用户ID用于审计和追踪
+    user_id: Mapped[str | None] = mapped_column(
+        String, ForeignKey("users.id"), index=True, comment="提交反馈的用户ID"
+    )
+
     # 审计字段
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, comment="创建时间"

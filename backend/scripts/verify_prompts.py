@@ -18,8 +18,8 @@ from src.models.llm_prompt import PromptTemplate
 
 def verify_prompts():
     """Verify property cert prompts exist"""
-    SessionLocal = get_session_factory()
-    db = SessionLocal()
+    session_local = get_session_factory()
+    db = session_local()
     try:
         prompts = (
             db.query(PromptTemplate)

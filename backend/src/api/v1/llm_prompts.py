@@ -306,6 +306,7 @@ async def collect_feedback(
     file_path: str,
     session_id: str | None = None,
     user_action: str = "corrected",
+    current_user: User = Depends(get_current_active_user),  # 🔒 安全修复: 添加身份验证
 ):
     """
     收集用户反馈(修正数据)
@@ -317,6 +318,7 @@ async def collect_feedback(
     - **original_value**: 原始识别值
     - **corrected_value**: 用户修正后的值
     - **confidence_before**: 修正前的置信度
+    - **current_user**: 当前登录用户（自动注入）
     """
 
     from ...models.llm_prompt import ExtractionFeedback
@@ -329,7 +331,7 @@ async def collect_feedback(
     # 获取当前版本ID
     current_version_id = template.current_version_id
 
-    # 创建反馈记录
+    # 创建反馈记录（包含用户ID用于审计）
     feedback = ExtractionFeedback(
         id=str(uuid4()),
         template_id=template_id,
@@ -342,6 +344,7 @@ async def collect_feedback(
         corrected_value=corrected_value,
         confidence_before=confidence_before,
         user_action=user_action,
+        user_id=current_user.id,  # 🔒 记录提交反馈的用户ID
     )
 
     db.add(feedback)

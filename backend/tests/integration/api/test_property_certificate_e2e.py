@@ -8,9 +8,10 @@ This module tests the complete workflow:
 4. CRUD operations
 """
 
-import pytest
 import tempfile
 from pathlib import Path
+
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
@@ -32,7 +33,7 @@ def test_upload_extract_confirm_flow(db_session: Session):
         with open(temp_path, "rb") as f:
             response = client.post(
                 "/api/v1/property-certificates/upload",
-                files={"file": ("test_cert.pdf", f, "application/pdf")}
+                files={"file": ("test_cert.pdf", f, "application/pdf")},
             )
 
         # Note: This test documents the expected flow
@@ -60,12 +61,11 @@ def test_upload_extract_confirm_flow(db_session: Session):
                     "asset_link_id": None,
                     "create_new_asset": False,
                     "owners": [],
-                    "verified": True
+                    "verified": True,
                 }
 
                 response = client.post(
-                    "/api/v1/property-certificates/confirm-import",
-                    json=confirm_data
+                    "/api/v1/property-certificates/confirm-import", json=confirm_data
                 )
 
                 assert response.status_code in [200, 400, 500]
@@ -91,7 +91,7 @@ def test_crud_operations(db_session: Session):
         "certificate_type": "other",
         "property_address": "测试地址",
         "asset_ids": [],
-        "owner_ids": []
+        "owner_ids": [],
     }
 
     response = client.post("/api/v1/property-certificates/", json=create_data)
@@ -138,7 +138,7 @@ def test_validation_errors(db_session: Session):
     invalid_data = {
         "certificate_number": "",  # Empty string
         "certificate_type": "real_estate",
-        "property_address": "测试地址"
+        "property_address": "测试地址",
     }
 
     response = client.post("/api/v1/property-certificates/", json=invalid_data)
@@ -156,7 +156,7 @@ def test_certificate_with_asset_link(db_session: Session, db_session_factory):
         "name": "测试资产",
         "address": "测试地址123号",
         "area": 100.0,
-        "asset_type": "building"
+        "asset_type": "building",
     }
 
     asset_response = client.post("/api/v1/assets/", json=asset_data)
@@ -169,7 +169,7 @@ def test_certificate_with_asset_link(db_session: Session, db_session_factory):
         "certificate_type": "real_estate",
         "property_address": "测试地址123号",
         "asset_ids": [asset_id],
-        "owner_ids": []
+        "owner_ids": [],
     }
 
     response = client.post("/api/v1/property-certificates/", json=cert_data)
@@ -201,7 +201,7 @@ def test_list_and_filter_certificates(db_session: Session):
             "certificate_type": "other",
             "property_address": f"测试地址{num}",
             "asset_ids": [],
-            "owner_ids": []
+            "owner_ids": [],
         }
         response = client.post("/api/v1/property-certificates/", json=data)
         assert response.status_code == 200

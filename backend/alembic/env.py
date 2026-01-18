@@ -19,7 +19,8 @@ try:
     logger = None
 
     # Import all models so Alembic can detect them
-    from src.models import (  # noqa: F401
+    # noqa: F401 - Models are imported for side effects (Alembic metadata)
+    from src.models import (
         asset,
         auth,
         collection,
@@ -36,31 +37,22 @@ try:
     )
 
 except ImportError as e:
-    error_msg = f"""
-{"=" * 60}
-CRITICAL: 无法导入模型进行数据库迁移
-错误: {e}
-
-可能的解决方案:
-1. 运行: uv pip install -e .
-2. 检查src/models/目录是否存在所有模型文件
-3. 检查数据库依赖是否已安装 (psycopg2等)
-4. 查看 docs/POSTGRESQL_MIGRATION.md 获取帮助
-{"=" * 60}
-"""
-    print(error_msg)
-    # ✅ 抛出异常而不是退出
-    raise ImportError(f"Alembic模型导入失败: {e}\n请运行: uv pip install -e .") from e
+    print(f"\n{'=' * 60}")
+    print("CRITICAL: 无法导入模型进行数据库迁移")
+    print(f"错误: {e}")
+    print("\n可能的解决方案:")
+    print("1. 运行: uv pip install -e .")
+    print("2. 检查src/models/目录是否存在所有模型文件")
+    print("3. 检查数据库依赖是否已安装 (psycopg2等)")
+    print("4. 查看 docs/POSTGRESQL_MIGRATION.md 获取帮助")
+    print(f"{'=' * 60}\n")
+    sys.exit(1)
 
 except Exception as e:
-    error_msg = f"""
-{"=" * 60}
-Alembic初始化失败: {e}
-{"=" * 60}
-"""
-    print(error_msg)
-    # ✅ 抛出异常而不是退出
-    raise RuntimeError(f"Alembic初始化失败: {e}") from e
+    print(f"\n{'=' * 60}")
+    print(f"Alembic初始化失败: {e}")
+    print(f"{'=' * 60}\n")
+    sys.exit(1)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
