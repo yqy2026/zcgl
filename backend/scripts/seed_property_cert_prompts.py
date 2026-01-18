@@ -7,7 +7,7 @@ Seed Property Certificate Prompts
 import json
 import sys
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -25,7 +25,7 @@ from src.database import get_session_factory
 def seed_prompts(db):
     """创建产权证提取Prompt模板"""
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     prompts = [
         {
             "name": "property_cert_extraction_v1",
