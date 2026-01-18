@@ -48,6 +48,17 @@ interface ProjectQueryParams {
   ownership_id?: string;
 }
 
+// 嵌套响应格式（API兼容）
+interface NestedProjectListResponse {
+  data: {
+    items: Project[];
+    total?: number;
+    total_count?: number;
+    page?: number;
+    size?: number;
+  };
+}
+
 const { Search } = Input;
 const { Option } = Select;
 const { confirm } = Modal;
@@ -115,14 +126,15 @@ const ProjectList: React.FC<ProjectListProps> = ({
           current: response.page ?? prev.current,
           pageSize: response.size ?? prev.pageSize
         }));
-      } else if (response != null && (response as any).data != null && (response as any).data.items != null) {
+      } else if (response != null && 'data' in response && response.data?.items != null) {
         // 嵌套响应格式：{data: {items: [...], total: number}}
-        setProjects((response as any).data.items ?? []);
+        const nestedResponse = response as NestedProjectListResponse;
+        setProjects(nestedResponse.data.items ?? []);
         setPagination(prev => ({
           ...prev,
-          total: (response as any).data.total ?? (response as any).data.total_count ?? 0,
-          current: (response as any).data.page ?? prev.current,
-          pageSize: (response as any).data.size ?? prev.pageSize
+          total: nestedResponse.data.total ?? nestedResponse.data.total_count ?? 0,
+          current: nestedResponse.data.page ?? prev.current,
+          pageSize: nestedResponse.data.size ?? prev.pageSize
         }));
       } else {
         // eslint-disable-next-line no-console
@@ -135,7 +147,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
       }
 
       // 在项目数据加载后，基于实际数据计算统计信息
-      const loadedProjects = response?.items ?? (response as any)?.data?.items ?? [];
+      const loadedProjects = response?.items ?? ('data' in response && response.data?.items) ?? [];
       const activeCount = loadedProjects.filter(p => p.is_active === true).length;
       const inactiveCount = loadedProjects.length - activeCount;
 
@@ -143,13 +155,11 @@ const ProjectList: React.FC<ProjectListProps> = ({
         total_count: loadedProjects.length,
         active_count: activeCount,
         inactive_count: inactiveCount,
-        type_distribution: {} as any, // 如需要可基于项目数据计算
-        status_distribution: {} as any // 如需要可基于项目数据计算
-      } as any);
+      });
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('获取项目列表失败:', error);
-      const err = error as any;
+      const err = error as Error & { response?: { status?: number; data?: unknown } };
       // eslint-disable-next-line no-console
       console.error('Error details:', {
         message: err.message,
@@ -171,9 +181,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
         total_count: 0,
         active_count: 0,
         inactive_count: 0,
-        type_distribution: {} as any,
-        status_distribution: {} as any
-      } as any);
+      });
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('获取统计信息失败:', error);
@@ -306,7 +314,7 @@ const ProjectList: React.FC<ProjectListProps> = ({
               <div>
                 {activeRelations.slice(0, 2).map((rel, _index) => (
                   <Tag key={rel.id} color="blue" style={{ marginRight: 4 }}>
-                    {rel.ownership_name ?? (record as any).ownership_entity ?? '权属方已关联'}
+                    {rel.ownership_name ?? '权属方已关联'}
                   </Tag>
                 ))}
                 {activeRelations.length > 2 && (

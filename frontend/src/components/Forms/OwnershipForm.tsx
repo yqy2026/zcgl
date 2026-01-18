@@ -24,6 +24,15 @@ import { projectService } from '@/services/projectService';
 import type { Ownership, OwnershipCreate, OwnershipUpdate } from '@/types/ownership';
 import type { ProjectDropdownOption } from '@/types/project';
 
+interface OwnershipFormValues {
+  name: string;
+  code?: string;
+  short_name?: string;
+  is_active?: boolean;
+  description?: string;
+  related_projects?: string[];
+}
+
 interface OwnershipFormProps {
   initialValues?: Ownership | null;
   onSuccess: () => void;
@@ -47,10 +56,13 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
       // Got project options response
 
       // 确保响应数据是数组
-      const projects = Array.isArray(response) ? response : (((response as any)?.data != null ? (response as any).data : []) as ProjectDropdownOption[]);
-      // Processed project options
+      const projects = Array.isArray(response)
+        ? response
+        : (typeof response === 'object' && response != null && 'data' in response
+            ? Array.isArray(response.data) ? response.data : []
+            : []);
 
-      setProjectOptions(projects);
+      setProjectOptions(projects as ProjectDropdownOption[]);
     } catch {
       MessageManager.error('加载项目选项失败');
       setProjectOptions([]); // 设置为空数组避免 undefined 错误
@@ -93,7 +105,7 @@ const OwnershipForm: React.FC<OwnershipFormProps> = ({
   // 提交表单
   const handleSubmit = async () => {
     try {
-      const values = await form.validateFields();
+      const values = await form.validateFields() as OwnershipFormValues;
       setLoading(true);
 
       if (initialValues !== undefined && initialValues !== null) {

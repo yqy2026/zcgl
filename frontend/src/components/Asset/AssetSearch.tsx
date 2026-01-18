@@ -16,6 +16,7 @@ import {
   Popconfirm,
   Tag,
 } from 'antd'
+import type { Dayjs } from 'dayjs'
 import { MessageManager } from '@/utils/messageManager'
 import {
   SearchOutlined,
@@ -38,6 +39,22 @@ const componentLogger = createLogger('AssetSearch')
 const { Option } = Select
 const { RangePicker } = DatePicker
 const { Text } = Typography
+
+interface AssetSearchFormValues {
+  search?: string
+  ownership_status?: string
+  property_nature?: string
+  usage_status?: string
+  ownership_entity?: string
+  business_category?: string
+  areaRange?: [number, number]
+  dateRange?: [Dayjs, Dayjs]
+  area_min?: number
+  area_max?: number
+  created_start?: string
+  created_end?: string
+  [key: string]: unknown
+}
 
 interface AssetSearchProps {
   onSearch: (params: AssetSearchParams) => void
@@ -127,31 +144,31 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
 
   // 处理搜索
   const handleSearch = () => {
-    const values = form.getFieldsValue()
+    const values = form.getFieldsValue() as AssetSearchFormValues
 
     // 处理日期范围
-    if (values.dateRange !== undefined && values.dateRange !== null) {
+    if (values.dateRange != null) {
       values.created_start = values.dateRange[0]?.format('YYYY-MM-DD')
       values.created_end = values.dateRange[1]?.format('YYYY-MM-DD')
       delete values.dateRange
     }
 
     // 处理面积范围
-    if (values.areaRange !== undefined && values.areaRange !== null) {
+    if (values.areaRange != null) {
       values.area_min = values.areaRange[0]
       values.area_max = values.areaRange[1]
       delete values.areaRange
     }
 
     // 过滤空值
-    const searchParams = Object.entries(values).reduce((acc, [key, value]) => {
+    const searchParams = Object.entries(values).reduce<Record<string, unknown>>((acc, [key, value]) => {
       if (value !== undefined && value !== null && value !== '') {
         acc[key] = value
       }
       return acc
-    }, {} as any)
+    }, {})
 
-    onSearch(searchParams)
+    onSearch(searchParams as AssetSearchParams)
   }
 
   // 处理重置
@@ -163,7 +180,7 @@ const AssetSearch: React.FC<AssetSearchProps> = ({
 
   // 处理保存搜索条件
   const handleSaveSearch = () => {
-    const values = form.getFieldsValue()
+    const values = form.getFieldsValue() as AssetSearchFormValues
 
     // 检查是否有搜索条件
     const hasConditions = Object.values(values).some(value =>

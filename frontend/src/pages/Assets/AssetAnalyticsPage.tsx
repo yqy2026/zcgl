@@ -30,7 +30,7 @@ import {
 } from "@/components/Analytics/AnalyticsChart";
 import AnalyticsFilters from "@/components/Analytics/AnalyticsFilters";
 import type { AssetSearchParams } from "@/types/asset";
-import type { AnalyticsData } from "@/types/analytics";
+import type { AnalyticsData, OwnershipStatusDistribution, UsageStatusDistribution } from "@/types/analytics";
 import { createLogger } from "@/utils/logger";
 import { MessageManager } from "@/utils/messageManager";
 import { COLORS } from '@/styles/colorMap';
@@ -41,6 +41,28 @@ const { Text } = Typography;
 
 // 分析维度类型
 type AnalysisDimension = "count" | "area";
+
+// Area distribution data types (extend base types with area-specific fields)
+interface OwnershipStatusAreaDistribution extends OwnershipStatusDistribution {
+  total_area: number;
+  area_percentage?: number;
+  average_area: number;
+}
+
+interface UsageStatusAreaDistribution extends UsageStatusDistribution {
+  total_area: number;
+  area_percentage?: number;
+  average_area: number;
+}
+
+interface BusinessCategoryAreaDistribution {
+  category: string;
+  count: number;
+  occupancy_rate?: number;
+  total_area?: number;
+  area_percentage?: number;
+  avg_annual_income?: number;
+}
 
 const AssetAnalyticsPage: React.FC = () => {
   const [filters, setFilters] = useState<AssetSearchParams>({});
@@ -324,7 +346,7 @@ const AssetAnalyticsPage: React.FC = () => {
                       })),
                     )
                     : chartDataUtils.toAreaData(
-                      (analyticsData.ownership_status_area_distribution as any)?.map((item: any) => ({
+                      (analyticsData.ownership_status_area_distribution as OwnershipStatusAreaDistribution[] | undefined)?.map((item) => ({
                         name: item.status,
                         total_area: item.total_area,
                         area_percentage: item.area_percentage ?? item.percentage ?? 0,
@@ -348,7 +370,7 @@ const AssetAnalyticsPage: React.FC = () => {
                       value: item.count,
                     }))
                     : chartDataUtils.toAreaBarData(
-                      (analyticsData.usage_status_area_distribution as any)?.map((item: any) => ({
+                      (analyticsData.usage_status_area_distribution as UsageStatusAreaDistribution[] | undefined)?.map((item) => ({
                         name: item.status,
                         total_area: item.total_area,
                         count: item.count,
@@ -491,30 +513,36 @@ const AssetAnalyticsPage: React.FC = () => {
                       {(dimension === "count"
                         ? analyticsData.business_category_distribution ?? []
                         : analyticsData.business_category_area_distribution ?? []
-                      ).map((item, index) => (
-                        <div key={index} className={styles.distributionItem}>
-                          <span className={styles.itemName}>
-                            {dimension === "count" ? (item as { category: string }).category : (item as { category: string }).category}
-                          </span>
-                          <span className={styles.itemStats}>
-                            {dimension === "count"
-                              ? `${(item as any).count}个 (占比${(item as any).percentage}%)`
-                              : `${(item as any).total_area?.toFixed(0)}㎡ (占比${(item as any).area_percentage}%)`}
-                            {dimension === "count" && Number((item as any).occupancy_rate) > 0 && (
-                              <span className={styles.occupancyRate}>
-                                ，出租率{Number((item as any).occupancy_rate).toFixed(2)}%
-                              </span>
-                            )}
-                            {dimension === "area" &&
-                              (item as any).occupancy_rate != null &&
-                              Number((item as any).occupancy_rate) > 0 && (
+                      ).map((item, index) => {
+                        const isCount = dimension === "count";
+                        const countItem = isCount ? item : null;
+                        const areaItem = isCount ? null : item as BusinessCategoryAreaDistribution;
+
+                        return (
+                          <div key={index} className={styles.distributionItem}>
+                            <span className={styles.itemName}>
+                              {isCount && countItem ? countItem.category : areaItem?.category ?? ''}
+                            </span>
+                            <span className={styles.itemStats}>
+                              {isCount && countItem
+                                ? `${countItem.count}个 (占比${((countItem.count / (analyticsData.business_category_distribution?.reduce((sum, i) => sum + i.count, 0) ?? 1)) * 100).toFixed(1)}%)`
+                                : areaItem
+                                  ? `${areaItem.total_area?.toFixed(0) ?? 0}㎡ (占比${areaItem.area_percentage ?? 0}%)`
+                                  : ''}
+                              {isCount && countItem && countItem.occupancy_rate != null && countItem.occupancy_rate > 0 && (
                                 <span className={styles.occupancyRate}>
-                                  ，出租率{Number((item as any).occupancy_rate).toFixed(2)}%
+                                  ，出租率{countItem.occupancy_rate.toFixed(2)}%
                                 </span>
                               )}
-                          </span>
-                        </div>
-                      ))}
+                              {!isCount && areaItem && areaItem.occupancy_rate != null && areaItem.occupancy_rate > 0 && (
+                                <span className={styles.occupancyRate}>
+                                  ，出租率{areaItem.occupancy_rate.toFixed(2)}%
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </Col>
                 </Row>

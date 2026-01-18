@@ -62,6 +62,39 @@ export interface RentTermFormData {
     other_fees?: number;
 }
 
+// Form data interfaces for type-safe validateFields
+export interface RentContractFormValues {
+    contract_number?: string;
+    asset_ids: string[];
+    ownership_id: string;
+    contract_type?: ContractType;
+    upstream_contract_id?: string;
+    service_fee_rate?: number;
+    tenant_name: string;
+    tenant_usage?: string;
+    tenant_contact?: string;
+    tenant_phone?: string;
+    tenant_address?: string;
+    sign_date?: Dayjs;
+    start_date: Dayjs;
+    end_date: Dayjs;
+    total_deposit?: number;
+    monthly_rent_base?: number;
+    payment_cycle?: PaymentCycle;
+    payment_terms?: string;
+    contract_status?: string;
+    contract_notes?: string;
+}
+
+export interface RentTermFormValues {
+    start_date: Dayjs;
+    end_date: Dayjs;
+    monthly_rent: number;
+    rent_description?: string;
+    management_fee?: number;
+    other_fees?: number;
+}
+
 export interface RentContractFormContextValue {
     form: FormInstance;
     termForm: FormInstance;
@@ -187,7 +220,7 @@ export const RentContractFormProvider: React.FC<RentContractFormProviderProps> =
 
     const handleSubmit = async () => {
         try {
-            const values = await form.validateFields();
+            const values = await form.validateFields() as RentContractFormValues;
 
             if (rentTerms.length === 0) {
                 MessageManager.error('请至少添加一个租金条款');
@@ -205,26 +238,26 @@ export const RentContractFormProvider: React.FC<RentContractFormProviderProps> =
             }));
 
             const contractData: RentContractCreate = {
-                contract_number: values.contract_number as string,
-                asset_ids: values.asset_ids as string[], // V2
-                ownership_id: values.ownership_id as string,
-                contract_type: values.contract_type as ContractType | undefined, // V2
-                upstream_contract_id: values.upstream_contract_id as string | undefined, // V2
-                service_fee_rate: values.service_fee_rate as number | undefined, // V2
-                tenant_name: values.tenant_name as string,
-                tenant_usage: values.tenant_usage as string | undefined, // V2
-                tenant_contact: values.tenant_contact as string | undefined,
-                tenant_phone: values.tenant_phone as string | undefined,
-                tenant_address: values.tenant_address as string | undefined,
-                sign_date: values.sign_date.format('YYYY-MM-DD'),
+                contract_number: values.contract_number,
+                asset_ids: values.asset_ids, // V2
+                ownership_id: values.ownership_id,
+                contract_type: values.contract_type, // V2
+                upstream_contract_id: values.upstream_contract_id, // V2
+                service_fee_rate: values.service_fee_rate, // V2
+                tenant_name: values.tenant_name,
+                tenant_usage: values.tenant_usage, // V2
+                tenant_contact: values.tenant_contact,
+                tenant_phone: values.tenant_phone,
+                tenant_address: values.tenant_address,
+                sign_date: values.sign_date?.format('YYYY-MM-DD') ?? '',
                 start_date: values.start_date.format('YYYY-MM-DD'),
                 end_date: values.end_date.format('YYYY-MM-DD'),
                 total_deposit: values.total_deposit ?? 0,
-                monthly_rent_base: values.monthly_rent_base as number,
+                monthly_rent_base: values.monthly_rent_base ?? 0,
                 contract_status: values.contract_status ?? '有效',
-                payment_cycle: values.payment_cycle as PaymentCycle | undefined, // V2
-                payment_terms: values.payment_terms as string | undefined,
-                contract_notes: values.contract_notes as string | undefined,
+                payment_cycle: values.payment_cycle, // V2
+                payment_terms: values.payment_terms,
+                contract_notes: values.contract_notes,
                 rent_terms,
             };
 
@@ -252,7 +285,7 @@ export const RentContractFormProvider: React.FC<RentContractFormProviderProps> =
 
     const handleSaveRentTerm = async () => {
         try {
-            const values = await termForm.validateFields();
+            const values = await termForm.validateFields() as RentTermFormValues;
             const termData: RentTermFormData = {
                 key: editingTerm ? editingTerm.key : `term-${Date.now()}`,
                 start_date: values.start_date,
