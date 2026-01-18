@@ -19,7 +19,7 @@ try:
     REDIS_AVAILABLE = True
 except ImportError:
     REDIS_AVAILABLE = False
-    redis = None  # type: ignore
+    redis = None
 
 from ...enums.status import TaskExecutionStatus
 from ...models.pdf_import_session import (

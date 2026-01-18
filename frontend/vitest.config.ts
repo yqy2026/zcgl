@@ -130,6 +130,8 @@ export default defineConfig({
       '@/api': path.resolve(__dirname, './src/api'),
       '@/store': path.resolve(__dirname, './src/store'),
       '@/monitoring': path.resolve(__dirname, './src/monitoring'),
+      // Mock @sentry/react for tests (optional dependency)
+      '@sentry/react': path.resolve(__dirname, './src/mocks/sentry.ts'),
     },
   },
 });
