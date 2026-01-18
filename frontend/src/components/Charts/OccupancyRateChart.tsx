@@ -11,6 +11,14 @@ import { Line, Column, Pie } from '@ant-design/plots'
 
 import { assetService } from '@/services/assetService'
 import type { AssetSearchParams } from '@/types/asset'
+import type {
+  ChartDataPoint,
+  TrendDataPoint,
+  DistributionDataPoint,
+  ColumnDataPoint,
+  TooltipFormatterResult,
+  TooltipCustomContentProps,
+} from '@/types/charts'
 
 const { Text } = Typography
 
@@ -65,14 +73,14 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
 
   // 趋势图表配置
   const trendChartConfig = {
-    data: data?.monthly_trend?.map(item => ({
+    data: data?.monthly_trend?.map((item): TrendDataPoint => ({
       month: item.month,
       rate: item.rate,
       total_area: item.total_area,
       rented_area: item.rented_area,
     })) ?? [],
-    xField: 'month',
-    yField: 'rate',
+    xField: 'month' as const,
+    yField: 'rate' as const,
     smooth: true,
     color: '#1890ff',
     areaStyle: {
@@ -80,15 +88,15 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
     },
     point: {
       size: 4,
-      shape: 'circle',
+      shape: 'circle' as const,
     },
     tooltip: {
-      formatter: (datum: any) => ({
+      formatter: (datum: ChartDataPoint): TooltipFormatterResult => ({
         name: '出租率',
-        value: `${datum.rate.toFixed(2)}%`,
+        value: `${(datum.rate as number).toFixed(2)}%`,
       }),
-      customContent: (title: any, data: any) => {
-        const datum = data?.[0]?.data
+      customContent: (_title: string, data: TooltipCustomContentProps['data']) => {
+        const datum = data?.[0]?.data as TrendDataPoint | undefined
         if (datum == null) return null
         return (
           <div style={{ padding: '8px' }}>
@@ -109,7 +117,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
     },
     animation: {
       appear: {
-        animation: 'path-in',
+        animation: 'path-in' as const,
         duration: 1000,
       },
     },
@@ -117,38 +125,38 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
 
   // 物业性质分布图表配置
   const propertyNatureChartConfig = {
-    data: data?.by_property_nature?.map(item => ({
+    data: data?.by_property_nature?.map((item): DistributionDataPoint => ({
       type: item.property_nature,
       value: item.rate,
       total_area: item.total_area,
       rented_area: item.rented_area,
     })) ?? [],
-    angleField: 'value',
-    colorField: 'type',
+    angleField: 'value' as const,
+    colorField: 'type' as const,
     color: ['#1890ff', '#52c41a', '#faad14', '#f5222d', '#722ed1', '#fa8c16'],
     radius: 0.8,
     innerRadius: 0.6,
     label: {
-      type: 'inner',
+      type: 'inner' as const,
       offset: '-50%',
       content: '{value}%',
       style: {
-        textAlign: 'center',
+        textAlign: 'center' as const,
         fontSize: 14,
         fill: '#fff',
       },
     },
     legend: {
-      layout: 'vertical',
-      position: 'right',
+      layout: 'vertical' as const,
+      position: 'right' as const,
     },
     tooltip: {
-      formatter: (datum: any) => ({
-        name: datum.type,
-        value: `${datum.value.toFixed(2)}%`,
+      formatter: (datum: ChartDataPoint): TooltipFormatterResult => ({
+        name: (datum.type as string) ?? '',
+        value: `${(datum.value as number).toFixed(2)}%`,
       }),
-      customContent: (title: any, data: any) => {
-        const datum = data?.[0]?.data
+      customContent: (_title: string, data: TooltipCustomContentProps['data']) => {
+        const datum = data?.[0]?.data as DistributionDataPoint | undefined
         if (datum == null) return null
         return (
           <div style={{ padding: '8px' }}>
@@ -172,7 +180,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
         offsetY: 4,
         style: {
           fontSize: '20px',
-          fontWeight: 'bold',
+          fontWeight: 'bold' as const,
         },
         content: `${data?.overall_rate?.toFixed(2) ?? 0}%`,
       },
@@ -181,7 +189,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
 
   // 权属方出租率柱状图配置
   const ownershipChartConfig = {
-    data: data?.by_ownership_entity?.map(item => ({
+    data: data?.by_ownership_entity?.map((item): ColumnDataPoint => ({
       ownership: item.ownership_entity.length > 10
         ? item.ownership_entity.substring(0, 10) + '...'
         : item.ownership_entity,
@@ -189,8 +197,8 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
       asset_count: item.asset_count,
       full_name: item.ownership_entity,
     })) ?? [],
-    xField: 'ownership',
-    yField: 'rate',
+    xField: 'ownership' as const,
+    yField: 'rate' as const,
     color: '#1890ff',
     columnStyle: {
       fillOpacity: 0.6,
@@ -199,25 +207,27 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
     },
     label: {
       position: 'top' as const,
-      formatter: (datum: any) => `${datum.rate.toFixed(1)}%`,
+      formatter: (datum: ChartDataPoint): string => `${(datum.rate as number).toFixed(1)}%`,
       style: {
         fill: '#333',
         fontSize: 12,
       },
     },
     tooltip: {
-      formatter: (datum: any) => ({
-        name: datum.full_name ?? datum.ownership,
-        value: `${datum.rate.toFixed(2)}%`,
+      formatter: (datum: ChartDataPoint): TooltipFormatterResult => ({
+        name: ((datum.full_name as string | undefined) ?? (datum.ownership as string)) ?? '',
+        value: `${(datum.rate as number).toFixed(2)}%`,
       }),
-      customContent: (title: any, data: any) => {
-        const datum = data?.[0]?.data
+      customContent: (_title: string, data: TooltipCustomContentProps['data']) => {
+        const datum = data?.[0]?.data as ColumnDataPoint | undefined
         if (datum == null) return null
         return (
           <div style={{ padding: '8px' }}>
-            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{datum.full_name ?? datum.ownership}</div>
-            <div>出租率: {datum.rate.toFixed(2)}%</div>
-            <div>资产数量: {datum.asset_count} 个</div>
+            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+              {(datum.full_name as string | undefined) ?? (datum.ownership as string)}
+            </div>
+            <div>出租率: {(datum.rate as number).toFixed(2)}%</div>
+            <div>资产数量: {datum.asset_count as number} 个</div>
           </div>
         )
       },
@@ -239,7 +249,7 @@ const OccupancyRateChart: React.FC<OccupancyRateChartProps> = ({
     },
     animation: {
       appear: {
-        animation: 'scale-in-y',
+        animation: 'scale-in-y' as const,
         duration: 1000,
       },
     },

@@ -10,6 +10,14 @@ import { Column, DualAxes } from '@ant-design/plots'
 
 import { assetService } from '@/services/assetService'
 import type { AssetSearchParams } from '@/types/asset'
+import type {
+  ChartDataPoint,
+  DualAxesDataPoint,
+  AreaRangeDataPoint,
+  TooltipFormatterResult,
+  TooltipCustomContentProps,
+  ChartColorFunction,
+} from '@/types/charts'
 
 // Local interface matching the actual API response structure
 interface AreaStatisticsData {
@@ -89,16 +97,17 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
 
   const propertyNatureChartConfig = {
     data: propertyNatureChartData,
-    xField: 'property_nature',
-    yField: 'value',
-    seriesField: 'type',
-    color: ({ type }: any) => {
-      if (type === '土地面积') return '#1890ff'
-      if (type === '房产面积') return '#52c41a'
-      if (type === '可租面积') return '#faad14'
-      if (type === '已租面积') return '#722ed1'
+    xField: 'property_nature' as const,
+    yField: 'value' as const,
+    seriesField: 'type' as const,
+    color: (({ type }: ChartDataPoint): string => {
+      const typeStr = type as string
+      if (typeStr === '土地面积') return '#1890ff'
+      if (typeStr === '房产面积') return '#52c41a'
+      if (typeStr === '可租面积') return '#faad14'
+      if (typeStr === '已租面积') return '#722ed1'
       return '#1890ff'
-    },
+    }) as ChartColorFunction,
     columnStyle: {
       fillOpacity: 0.6,
       lineWidth: 1,
@@ -107,9 +116,9 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
       position: 'top' as const,
     },
     tooltip: {
-      formatter: (datum: any) => ({
-        name: datum.type,
-        value: `${datum.value?.toLocaleString()} ㎡`,
+      formatter: (datum: ChartDataPoint): TooltipFormatterResult => ({
+        name: (datum.type as string) ?? '',
+        value: `${(datum.value as number | undefined)?.toLocaleString()} ㎡`,
       }),
     },
     yAxis: {
@@ -120,14 +129,14 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
     },
     animation: {
       appear: {
-        animation: 'scale-in-y',
+        animation: 'scale-in-y' as const,
         duration: 1000,
       },
     },
   }
 
   // 权属方面积对比图表配置 - DualAxes for area + occupancy rate
-  const ownershipEntityData = data?.by_ownership_entity?.slice(0, 10).map(item => ({
+  const ownershipEntityData = data?.by_ownership_entity?.slice(0, 10).map((item): DualAxesDataPoint => ({
     entity: item.ownership_entity.length > 8
       ? item.ownership_entity.substring(0, 8) + '...'
       : item.ownership_entity,
@@ -138,18 +147,18 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
 
   const ownershipEntityChartConfig = {
     data: [ownershipEntityData, ownershipEntityData],
-    xField: 'entity',
-    yField: ['total_area', 'occupancy_rate'],
+    xField: 'entity' as const,
+    yField: ['total_area', 'occupancy_rate'] as const,
     geometryOptions: [
       {
-        geometry: 'column',
+        geometry: 'column' as const,
         color: '#1890ff',
         columnStyle: {
           fillOpacity: 0.6,
         },
       },
       {
-        geometry: 'line',
+        geometry: 'line' as const,
         color: '#f5222d',
         lineStyle: {
           lineWidth: 2,
@@ -175,24 +184,26 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
       },
     },
     tooltip: {
-      formatter: (datum: any, type: string) => {
+      formatter: (datum: ChartDataPoint, type: string): TooltipFormatterResult => {
         if (type === 'total_area') {
           return {
             name: '总面积',
-            value: `${datum.total_area?.toLocaleString()} ㎡`,
+            value: `${(datum.total_area as number | undefined)?.toLocaleString()} ㎡`,
           }
         }
         return {
           name: '出租率',
-          value: `${datum.occupancy_rate?.toFixed(2)}%`,
+          value: `${(datum.occupancy_rate as number | undefined)?.toFixed(2)}%`,
         }
       },
-      customContent: (title: any, data: any) => {
-        const datum = data?.[0]?.data
+      customContent: (_title: string, data: TooltipCustomContentProps['data']) => {
+        const datum = data?.[0]?.data as DualAxesDataPoint | undefined
         if (datum == null) return null
         return (
           <div style={{ padding: '8px' }}>
-            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{datum.full_name ?? datum.entity}</div>
+            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+              {(datum.full_name as string | undefined) ?? (datum.entity as string)}
+            </div>
             <div>总面积: {datum.total_area?.toLocaleString()} ㎡</div>
             <div>出租率: {datum.occupancy_rate?.toFixed(2)}%</div>
           </div>
@@ -211,14 +222,14 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
 
   // 面积区间分布图表配置
   const areaRangeChartConfig = {
-    data: data?.area_ranges?.map(item => ({
+    data: data?.area_ranges?.map((item): AreaRangeDataPoint => ({
       range: item.range,
       count: item.count,
       total_area: item.total_area,
       percentage: item.percentage,
     })) ?? [],
-    xField: 'range',
-    yField: 'count',
+    xField: 'range' as const,
+    yField: 'count' as const,
     color: '#52c41a',
     columnStyle: {
       fillOpacity: 0.6,
@@ -227,19 +238,19 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
     },
     label: {
       position: 'top' as const,
-      formatter: (datum: any) => `${datum.count} 个`,
+      formatter: (datum: ChartDataPoint): string => `${datum.count as number} 个`,
       style: {
         fill: '#333',
         fontSize: 12,
       },
     },
     tooltip: {
-      formatter: (datum: any) => ({
-        name: datum.range,
-        value: `${datum.count} 个`,
+      formatter: (datum: ChartDataPoint): TooltipFormatterResult => ({
+        name: (datum.range as string) ?? '',
+        value: `${datum.count as number} 个`,
       }),
-      customContent: (title: any, data: any) => {
-        const datum = data?.[0]?.data
+      customContent: (_title: string, data: TooltipCustomContentProps['data']) => {
+        const datum = data?.[0]?.data as AreaRangeDataPoint | undefined
         if (datum == null) return null
         return (
           <div style={{ padding: '8px' }}>
@@ -264,7 +275,7 @@ const AreaStatisticsChart: React.FC<AreaStatisticsChartProps> = ({
     },
     animation: {
       appear: {
-        animation: 'scale-in-y',
+        animation: 'scale-in-y' as const,
         duration: 1000,
       },
     },
